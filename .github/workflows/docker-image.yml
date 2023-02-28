@@ -22,4 +22,4 @@ jobs:
           push: true
           tags: ${{ secrets.APP_IMAGE }}
       - name: Deploy on cap rover
-        run: docker run caprover/cli-caprover:latest caprover deploy --caproverUrl "${{ secrets.APP_URL }}" --appToken "${{ secrets.APP_TOKEN }}" --caproverApp "${{ secrets.APP_NAME }}" --imageName "{{ secrets.APP_IMAGE }}"
+        run: docker run caprover/cli-caprover:latest caprover deploy --caproverUrl "${{ secrets.APP_URL }}" --appToken "${{ secrets.APP_TOKEN }}" --caproverApp "${{ secrets.APP_NAME }}" --imageName "${{ secrets.APP_IMAGE }}"
