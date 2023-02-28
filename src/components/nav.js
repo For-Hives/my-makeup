@@ -56,9 +56,9 @@ const navigation = [
         ]
     },
     {name: 'Blog', href: '/blog'},
-    {name: 'Trouvez une maquilleuse', href: '#', mode: 'search'},
-    {name: 'Créer mon compte', href: '/signup', mode: 'signup'},
-    {name: 'Me connecter', href: '/login', mode: 'login'},
+    // {name: 'Trouvez une maquilleuse', href: '#', mode: 'search', side:'right'},
+    // {name: 'Créer mon compte', href: '/signup', mode: 'signup', side:'right'},
+    // {name: 'Me connecter', href: '/login', mode: 'login', side:'right'},
 ]
 
 function Nav(props) {
@@ -67,9 +67,9 @@ function Nav(props) {
     return (
         <>
             <div className="relative bg-white">
-                <div className="mx-auto max-w-7xl">
-                    <div className="relative z-10 lg:w-full lg:max-w-7xl">
-                        <div className="relative px-6 pt-6 lg:pl-8 lg:pr-0">
+                <div className="mx-auto">
+                    <div className="relative z-10 lg:w-full">
+                        <div className="relative px-6 py-6 lg:px-16 lg:border lg:border-b lg:border-slate-300">
                             <nav className="flex items-center justify-between sm:h-10 lg:justify-start"
                                  aria-label="Global">
                                 <a href="#" className="-m-1.5 p-1.5">
@@ -82,19 +82,29 @@ function Nav(props) {
                                 </a>
                                 <button
                                     type="button"
-                                    className="-m-2.5 rounded-md p-2.5 text-gray-700 lg:hidden"
+                                    className="-m-2.5 rounded-md p-2.5 text-slate-700 lg:hidden"
                                     onClick={() => setMobileMenuOpen(true)}
                                 >
                                     <span className="sr-only">Ouvrir le menu</span>
                                     <Bars3Icon className="h-6 w-6" aria-hidden="true"/>
                                 </button>
-                                <div className="hidden lg:block lg:gap-10 flex w-full justify-between">
-                                    {navigation.map((item) => (
-                                        <a key={item.name} href={item.href}
-                                           className="text-sm font-semibold leading-6 text-gray-900">
-                                            {item.name}
+                                <div className="hidden lg:ml-10 lg:flex lg:w-full lg:justify-between">
+                                    <div className={"lg:gap-10 lg:flex lg:w-full"}>
+                                        {navigation.map((item) => (
+                                            <a key={item.name} href={item.href}
+                                               className="text-sm font-semibold leading-6 text-slate-900">
+                                                {item.name}
+                                            </a>
+                                        ))}
+                                    </div>
+                                    <div className={"lg:gap-10 lg:flex lg:w-full lg:justify-end"}>
+                                        <a href="/signup" className={"text-sm font-bold leading-6 bg-indigo-900 text-slate-50 px-4 py-2 rounded-lg  border-b border-indigo-900"}>
+                                            Créer mon compte
                                         </a>
-                                    ))}
+                                        <a href="#" className="">
+                                            <span className={"text-sm font-bold leading-6 text-indigo-900 border-b-2 border-indigo-900"}>Me connecter</span>
+                                        </a>
+                                    </div>
                                 </div>
                             </nav>
                             <Dialog as="div" open={mobileMenuOpen} onClose={setMobileMenuOpen}>
@@ -103,14 +113,14 @@ function Nav(props) {
                                     <div className="flex flex-row-reverse items-center justify-between">
                                         <button
                                             type="button"
-                                            className="-m-2.5 inline-flex items-center justify-center rounded-md p-2.5 text-gray-700"
+                                            className="-m-2.5 inline-flex items-center justify-center rounded-md p-2.5 text-slate-700"
                                             onClick={() => setMobileMenuOpen(false)}
                                         >
-                                            <span className="sr-only">Close menu</span>
+                                            <span className="sr-only">Fermer le menu</span>
                                             <XMarkIcon className="h-6 w-6" aria-hidden="true"/>
                                         </button>
                                         <a href="#" className="-m-1.5 p-1.5">
-                                            <span className="sr-only">Your Company</span>
+                                            <span className="sr-only">My Makeup</span>
                                             <img
                                                 className="h-8"
                                                 src="https://tailwindui.com/img/logos/mark.svg?color=indigo&shade=600"
@@ -123,7 +133,7 @@ function Nav(props) {
                                             <a
                                                 key={item.name}
                                                 href={item.href}
-                                                className="-mx-3 block rounded-lg py-2 px-3 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-400/10"
+                                                className="-mx-3 block rounded-lg py-2 px-3 text-base font-semibold leading-7 text-slate-900 hover:bg-slate-400/10"
                                             >
                                                 {item.name}
                                             </a>
