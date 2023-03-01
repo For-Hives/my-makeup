@@ -68,7 +68,7 @@ function Nav(props) {
 
     return (
         <>
-            <div className="relative bg-[#17181c]">
+            <div className="relative bg-white">
                 <div className="mx-auto">
                     <div className="relative z-10 lg:w-full">
                         <div className="relative px-6 py-6 lg:px-16 lg:border-b lg:border-slate-300">
@@ -86,7 +86,7 @@ function Nav(props) {
                                 </a>
                                 <button
                                     type="button"
-                                    className="-m-2.5 rounded-md p-2.5 text-slate-100 lg:hidden"
+                                    className="-m-2.5 rounded-md p-2.5 text-slate-900 lg:hidden"
                                     onClick={() => setMobileMenuOpen(true)}
                                 >
                                     <span className="sr-only">Ouvrir le menu</span>
