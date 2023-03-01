@@ -7,13 +7,20 @@ import PopoverComponent from "@/components/popover";
 
 const navigation = [
     {
-        name: 'Particulier', href: '/particulier', mode: 'dropdown', children: [
+        name: 'Particulier',
+        href: '/particulier',
+        mode: 'dropdown',
+        children: [
             {
-                name: 'Pourquoi My Makeup ?', href: '/particulier', icon: 'handshake',
+                name: 'Pourquoi My Makeup ?',
+                href: '/particulier',
+                icon: 'handshake',
                 description: 'My Makeup est une plateforme de mise en relation entre les particuliers et les professionnels de la beauté.'
             },
             {
-                name: 'Trouver des maquilleuses', href: '/particulier/trouver-une-maquilleuse', icon: 'diversity_1',
+                name: 'Trouver des maquilleuses',
+                href: '/particulier/trouver-une-maquilleuse',
+                icon: 'diversity_1',
                 description: 'Trouvez la maquilleuse qui vous correspond parmi les profils disponibles.'
             },
             {
@@ -23,24 +30,35 @@ const navigation = [
                 description: 'Centralisez vos recherches pour comparer et trouver la maquilleuse qui vous correspond.'
             },
             {
-                name: 'Explorer les profils', href: '/particulier/explorer-les-profils', icon: 'person_search',
+                name: 'Explorer les profils',
+                href: '/particulier/explorer-les-profils',
+                icon: 'person_search',
                 description: 'Cherchez par critères et par villes !'
             }
         ]
     },
     {
-        name: 'Maquilleuse', href: '/maquilleuse', mode: 'dropdown', children: [
+        name: 'Maquilleuse',
+        href: '/maquilleuse',
+        mode: 'dropdown',
+        children: [
             {
-                name: 'Pourquoi My Makeup ?', href: '/maquilleuse', icon: 'brush',
+                name: 'Pourquoi My Makeup ?',
+                href: '/maquilleuse',
+                icon: 'brush',
                 description: 'Rejoignez la communauté My Makeup pour développer votre activité, trouver de nouveaux clients,' +
                     ' gagner en visibilité. Et facilité votre gestion quotidienne !'
             },
             {
-                name: "Community & Partenariats", href: '/maquilleuse/partenariats', icon: 'group',
+                name: "Community & Partenariats",
+                href: '/maquilleuse/partenariats',
+                icon: 'group',
                 description: 'Nous sommes là pour vous accompagner dans votre développement !'
             },
             {
-                name: 'Nos partenaires', href: '/maquilleuse/partenaires', icon: 'social_leaderboard',
+                name: 'Nos partenaires',
+                href: '/maquilleuse/partenaires',
+                icon: 'social_leaderboard',
                 description: 'Utilisez les outils de nos partenaires pour développer votre activité ! ' +
                     'Et Facilitez votre vie !'
             }
@@ -49,16 +67,23 @@ const navigation = [
     {
         name: 'Solutions', href: '/solutions', mode: 'dropdown', children: [
             {
-                name: 'Pour les particuliers', href: '/solutions/pour-les-particuliers', icon: 'groups',
+                name: 'Pour les particuliers',
+                href: '/solutions/pour-les-particuliers',
+                icon: 'groups',
                 description: 'Trouvez la maquilleuse de vos rêves, n\'a jamais été aussi simple !'
             },
             {
-                name: 'Pour les maquilleuses', href: '/solutions/pour-les-maquilleuses', icon: 'diversity_2',
+                name: 'Pour les maquilleuses',
+                href: '/solutions/pour-les-maquilleuses',
+                icon: 'diversity_2',
                 description: 'Le seul endroit pour trouver des clients, développer votre activité et trouver des opportunités !'
             }
         ]
     },
-    {name: 'Blog', href: '/blog'},
+    {
+        name: 'Blog',
+        href: '/blog'
+    },
     // {name: 'Trouvez une maquilleuse', href: '#', mode: 'search', side:'right'},
     // {name: 'Créer mon compte', href: '/signup', mode: 'signup', side:'right'},
     // {name: 'Me connecter', href: '/login', mode: 'login', side:'right'},
