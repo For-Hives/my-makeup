@@ -1,6 +1,8 @@
 import React, {useState} from 'react';
 import {Bars3Icon, XMarkIcon} from "@heroicons/react/24/outline";
 import {Dialog} from "@headlessui/react";
+import {MagnifyingGlassIcon} from "@heroicons/react/20/solid";
+import Image from "next/image"
 
 const navigation = [
     {
@@ -66,43 +68,49 @@ function Nav(props) {
 
     return (
         <>
-            <div className="relative bg-white">
+            <div className="relative bg-[#17181c]">
                 <div className="mx-auto">
                     <div className="relative z-10 lg:w-full">
-                        <div className="relative px-6 py-6 lg:px-16 lg:border lg:border-b lg:border-slate-300">
+                        <div className="relative px-6 py-6 lg:px-16 lg:border-b lg:border-slate-300">
                             <nav className="flex items-center justify-between sm:h-10 lg:justify-start"
                                  aria-label="Global">
                                 <a href="#" className="-m-1.5 p-1.5">
                                     <span className="sr-only">My Makeup</span>
-                                    <img
-                                        alt="Your Company"
-                                        className="h-8 w-auto"
-                                        src="https://tailwindui.com/img/logos/mark.svg?color=indigo&shade=600"
+                                    <Image
+                                        alt="Logo My Makeup"
+                                        width={50}
+                                        height={50}
+                                        src="/assets/logo_2.webp"
                                     />
+
                                 </a>
                                 <button
                                     type="button"
-                                    className="-m-2.5 rounded-md p-2.5 text-slate-700 lg:hidden"
+                                    className="-m-2.5 rounded-md p-2.5 text-slate-100 lg:hidden"
                                     onClick={() => setMobileMenuOpen(true)}
                                 >
                                     <span className="sr-only">Ouvrir le menu</span>
                                     <Bars3Icon className="h-6 w-6" aria-hidden="true"/>
                                 </button>
                                 <div className="hidden lg:ml-10 lg:flex lg:w-full lg:justify-between">
-                                    <div className={"lg:gap-10 lg:flex lg:w-full"}>
+                                    <div className={"lg:gap-10 lg:flex lg:w-full lg:items-center"}>
                                         {navigation.map((item) => (
                                             <a key={item.name} href={item.href}
-                                               className="text-sm font-semibold leading-6 text-slate-900">
+                                               className="text-sm font-semibold leading-6 text-slate-100">
                                                 {item.name}
                                             </a>
                                         ))}
                                     </div>
-                                    <div className={"lg:gap-10 lg:flex lg:w-full lg:justify-end"}>
-                                        <a href="/signup" className={"text-sm font-bold leading-6 bg-indigo-900 text-slate-50 px-4 py-2 rounded-lg  border-b border-indigo-900"}>
+                                    <div className={"lg:gap-10 lg:flex lg:w-full lg:justify-end lg:items-center"}>
+                                        <button className={"text-sm leading-6 bg-transparent text-indigo-200 px-4 py-2 rounded-lg border-2 border-indigo-200 flex items-center"}>
+                                            <MagnifyingGlassIcon className="mr-2 h-5 w-5 text-indigo-200" aria-hidden="true"/>
+                                            Trouver une maquilleuse
+                                        </button>
+                                        <a href="/signup" className={"text-sm font-bold leading-6 bg-indigo-200 text-slate-800 px-4 py-2 rounded-lg border-2 border-indigo-200"}>
                                             Créer mon compte
                                         </a>
                                         <a href="#" className="">
-                                            <span className={"text-sm font-bold leading-6 text-indigo-900 border-b-2 border-indigo-900"}>Me connecter</span>
+                                            <span className={"text-sm font-bold leading-6 text-indigo-200 border-b-2 border-indigo-200"}>Me connecter</span>
                                         </a>
                                     </div>
                                 </div>
@@ -113,7 +121,7 @@ function Nav(props) {
                                     <div className="flex flex-row-reverse items-center justify-between">
                                         <button
                                             type="button"
-                                            className="-m-2.5 inline-flex items-center justify-center rounded-md p-2.5 text-slate-700"
+                                            className="-m-2.5 inline-flex items-center justify-center rounded-md p-2.5 text-slate-100"
                                             onClick={() => setMobileMenuOpen(false)}
                                         >
                                             <span className="sr-only">Fermer le menu</span>
