@@ -82,7 +82,6 @@ function Nav(props) {
                                         height={50}
                                         src="/assets/logo_2.webp"
                                     />
-
                                 </a>
                                 <button
                                     type="button"
