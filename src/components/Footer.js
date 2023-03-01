@@ -1,6 +1,5 @@
 import React from 'react';
 import Image from 'next/image';
-
 function Footer() {
     // get actuel year
     const year = new Date().getFullYear();

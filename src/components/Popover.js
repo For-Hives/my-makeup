@@ -2,7 +2,6 @@ import {Fragment} from 'react'
 import {Popover, Transition} from '@headlessui/react'
 import {ChevronDownIcon} from '@heroicons/react/20/solid'
 
-
 export default function PopoverComponent(props) {
     return (
         <Popover className="relative z-30">

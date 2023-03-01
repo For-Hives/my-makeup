@@ -1,8 +1,8 @@
 import Head from 'next/head'
 import {Inter} from 'next/font/google'
-import Hero from "@/components/hero";
-import Nav from "@/components/nav";
-import Presentation from "@/components/presentation";
+import Hero from "@/components/Hero";
+import Nav from "@/components/Nav";
+import Presentation from "@/components/Presentation";
 import Footer from "@/components/Footer";
 
 const inter = Inter({subsets: ['latin']})
@@ -18,7 +18,6 @@ export default function Home() {
                 <link rel="icon" href="/favicon.ico"/>
                 <link rel="stylesheet"
                       href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"/>
-
             </Head>
             <main>
                 <Nav/>
