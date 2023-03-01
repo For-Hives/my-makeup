@@ -3,6 +3,7 @@ import {Bars3Icon, XMarkIcon} from "@heroicons/react/24/outline";
 import {Dialog} from "@headlessui/react";
 import {MagnifyingGlassIcon} from "@heroicons/react/20/solid";
 import Image from "next/image"
+import PopoverComponent from "@/components/popover";
 
 const navigation = [
     {
@@ -70,7 +71,7 @@ function Nav(props) {
         <>
             <div className="relative bg-white">
                 <div className="mx-auto">
-                    <div className="relative z-10 lg:w-full">
+                    <div className="relative z-20 lg:w-full">
                         <div className="relative px-6 py-6 lg:px-16 lg:border-b lg:border-slate-300">
                             <nav className="flex items-center justify-between sm:h-10 lg:justify-start"
                                  aria-label="Global">
@@ -93,12 +94,21 @@ function Nav(props) {
                                 </button>
                                 <div className="hidden lg:ml-10 lg:flex lg:w-full lg:justify-between">
                                     <div className={"lg:gap-10 lg:flex lg:w-full lg:items-center"}>
-                                        {navigation.map((item) => (
-                                            <a key={item.name} href={item.href}
-                                               className="text-sm font-semibold leading-6 text-slate-900">
-                                                {item.name}
-                                            </a>
-                                        ))}
+                                        {navigation.map((item) => {
+                                                if (item.mode === 'dropdown') {
+                                                    return (
+                                                        <PopoverComponent key={item.name} name={item.name} translate={"30%"} content={item.children}/>
+                                                    )
+                                                } else {
+                                                    return (
+                                                        <a key={item.name} href={item.href}
+                                                           className="text-sm font-semibold leading-6 text-slate-900">
+                                                            {item.name}
+                                                        </a>
+                                                    )
+                                                }
+                                            }
+                                        )}
                                     </div>
                                     <div className={"lg:gap-10 lg:flex lg:w-full lg:justify-end lg:items-center"}>
                                         <button className={"text-sm leading-6 bg-transparent text-indigo-900 px-4 py-2 rounded-lg border-2 border-indigo-900 flex items-center"}>
