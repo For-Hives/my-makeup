@@ -96,21 +96,21 @@ function Nav(props) {
                                     <div className={"lg:gap-10 lg:flex lg:w-full lg:items-center"}>
                                         {navigation.map((item) => (
                                             <a key={item.name} href={item.href}
-                                               className="text-sm font-semibold leading-6 text-slate-100">
+                                               className="text-sm font-semibold leading-6 text-slate-900">
                                                 {item.name}
                                             </a>
                                         ))}
                                     </div>
                                     <div className={"lg:gap-10 lg:flex lg:w-full lg:justify-end lg:items-center"}>
-                                        <button className={"text-sm leading-6 bg-transparent text-indigo-200 px-4 py-2 rounded-lg border-2 border-indigo-200 flex items-center"}>
-                                            <MagnifyingGlassIcon className="mr-2 h-5 w-5 text-indigo-200" aria-hidden="true"/>
+                                        <button className={"text-sm leading-6 bg-transparent text-indigo-900 px-4 py-2 rounded-lg border-2 border-indigo-900 flex items-center"}>
+                                            <MagnifyingGlassIcon className="mr-2 h-5 w-5 text-indigo-900" aria-hidden="true"/>
                                             Trouver une maquilleuse
                                         </button>
-                                        <a href="/signup" className={"text-sm font-bold leading-6 bg-indigo-200 text-slate-800 px-4 py-2 rounded-lg border-2 border-indigo-200"}>
+                                        <a href="/signup" className={"text-sm font-bold leading-6 bg-indigo-900 text-white px-4 py-2 rounded-lg border-2 border-indigo-900"}>
                                             Créer mon compte
                                         </a>
                                         <a href="#" className="">
-                                            <span className={"text-sm font-bold leading-6 text-indigo-200 border-b-2 border-indigo-200"}>Me connecter</span>
+                                            <span className={"text-sm font-bold leading-6 text-indigo-900 border-b-2 border-indigo-900"}>Me connecter</span>
                                         </a>
                                     </div>
                                 </div>
