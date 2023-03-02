@@ -5,6 +5,7 @@ import Nav from "@/components/Global/Nav";
 import Presentation from "@/components/Home/Presentation";
 import Footer from "@/components/Global/Footer";
 import Talents from "@/components/Home/Talents";
+import Collaboration from "@/components/Home/Collaboration";
 
 const inter = Inter({subsets: ['latin']})
 
@@ -21,6 +22,7 @@ export default function Home() {
                 <Hero/>
                 <Presentation/>
                 <Talents/>
+                <Collaboration/>
                 <Footer/>
             </main>
         </>
