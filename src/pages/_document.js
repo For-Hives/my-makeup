@@ -6,11 +6,11 @@ export default function Document() {
         <Html lang="fr">
             <Head>
                 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-                <link rel="icon" href="/favicon.ico"/>
+                <link rel="icon" href="/favicon.webp"/>
                 <link rel="stylesheet"
                       href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=optional"/>
-                <Script async src="https://www.googletagmanager.com/gtag/js?id=G-7M05RC6YDH"></Script>
-                <Script id={"script"}>
+                <script async src="https://www.googletagmanager.com/gtag/js?id=G-7M05RC6YDH"></script>
+                <Script>
                     dangerouslySetInnerHTML={{
                     __html: `
                     window.dataLayer = window.dataLayer || [];
