@@ -50,7 +50,7 @@ function Collaboration(props) {
                 <div className={"w-3/5 flex justify-center items-center"}>
                     <div className={"mr-32 flex justify-center items-center w-full relative h-full"}>
                         <Image className={"object-cover rounded-xl transform -scale-x-100"} src={"/assets/maquilleuse_soiree.webp"} fill={"cover"}
-                               alt={"Maquilleuse pour un mariage"}/>
+                               alt={"Maquilleuse soirées"}/>
                     </div>
                 </div>
                 <div className={"w-2/5 flex flex-col justify-center items-start h-auto relative gap-8"}>
@@ -116,7 +116,7 @@ function Collaboration(props) {
                 </div>
                 <div className={"w-3/5 flex justify-center items-center"}>
                     <div className={"ml-32 flex justify-center items-center w-full relative h-full"}>
-                        <Image className={"object-cover rounded-xl"} src={"/assets/maquilleuse_evenementiel.webp"} fill={"cover"} alt={"Maquilleuse pour un mariage"}/>
+                        <Image className={"object-cover rounded-xl"} src={"/assets/maquilleuse_evenementiel.webp"} fill={"cover"} alt={"Maquilleuse evenementiel"}/>
                     </div>
                 </div>
             </div>
@@ -126,7 +126,7 @@ function Collaboration(props) {
                 <div className={"w-3/5 flex justify-center items-center"}>
                     <div className={"mr-32 flex justify-center items-center w-full relative h-full"}>
                         <Image className={"object-cover rounded-xl transform"} src={"/assets/maquilleuse_fx.webp"} fill={"cover"}
-                               alt={"Maquilleuse pour un mariage"}/>
+                               alt={"Maquilleuse fx"}/>
                     </div>
                 </div>
                 <div className={"w-2/5 flex flex-col justify-center items-start h-auto relative gap-8"}>
