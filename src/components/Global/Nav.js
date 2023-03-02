@@ -3,7 +3,7 @@ import {Bars3Icon, XMarkIcon} from "@heroicons/react/24/outline";
 import {Dialog} from "@headlessui/react";
 import {MagnifyingGlassIcon} from "@heroicons/react/20/solid";
 import Image from "next/image"
-import PopoverComponent from "@/components/Popover";
+import PopoverComponent from "@/components/Global/Popover";
 
 const navigation = [
     {
@@ -100,7 +100,7 @@ function Nav(props) {
                         <div className="relative px-6 py-6 lg:px-16 lg:border-b lg:border-slate-300">
                             <nav className="flex items-center justify-between sm:h-10 lg:justify-start"
                                  aria-label="Global">
-                                <a href="#" className="-m-1.5 p-1.5">
+                                <a href="src/components#" className="-m-1.5 p-1.5">
                                     <span className="sr-only">My Makeup</span>
                                     <Image
                                         alt="Logo My Makeup"
@@ -143,7 +143,7 @@ function Nav(props) {
                                         <a href="/signup" className={"text-sm font-bold leading-6 bg-indigo-900 text-white px-4 py-2 rounded-lg border-2 border-indigo-900"}>
                                             Créer mon compte
                                         </a>
-                                        <a href="#" className="">
+                                        <a href="src/components#" className="">
                                             <span className={"text-sm font-bold leading-6 text-indigo-900 border-b-2 border-indigo-900"}>Me connecter</span>
                                         </a>
                                     </div>
@@ -161,7 +161,7 @@ function Nav(props) {
                                             <span className="sr-only">Fermer le menu</span>
                                             <XMarkIcon className="h-6 w-6" aria-hidden="true"/>
                                         </button>
-                                        <a href="#" className="-m-1.5 p-1.5">
+                                        <a href="src/components#" className="-m-1.5 p-1.5">
                                             <span className="sr-only">My Makeup</span>
                                             <Image
                                                 className="h-8"

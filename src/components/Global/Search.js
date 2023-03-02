@@ -26,7 +26,7 @@ function Search(props) {
                 <div className={"flex justify-center items-center"}>
                     ou
                 </div>
-                <a href="#" className="">
+                <a href="src/components#" className="">
                     <span className={"text-sm font-bold leading-6 text-indigo-900 border-b-2 border-indigo-900"}>Déposer un projet</span>
                 </a>
             </div>

@@ -6,7 +6,7 @@ function Footer() {
 
     return (
         <>
-            <footer className={"mt-52 w-full bg-white flex mx-auto max-w-7xl gap-20"}>
+            <footer className={"relative pt-52 w-full flex mx-auto max-w-7xl gap-20"}>
                 <div className={"flex flex-col gap-6"}>
                     <div className={"flex justify-start items-center gap-3"}>
                         <Image src={"/assets/logo_2.webp"} alt={"Logo My Makeup"} width={"50"} height={"50"}/>
@@ -18,15 +18,15 @@ function Footer() {
                         44000 Nantes
                     </p>
                     <div className={"flex gap-3"}>
-                        <a href="#">
+                        <a href="src/components#">
                             <Image src={"/assets/vectorials-used/fi-brands-instagram.svg"} className={"fill-indigo-700"}
                                    width={"20"} height={"20"} alt={"Instagram My Makeup"}/>
                         </a>
-                        <a href="#">
+                        <a href="src/components#">
                             <Image src={"/assets/vectorials-used/fi-brands-linkedin.svg"} className={"fill-indigo-700"}
                                    width={"20"} height={"20"} alt={"Linkedin My Makeup"}/>
                         </a>
-                        <a href="#">
+                        <a href="src/components#">
                             <Image src={"/assets/vectorials-used/fi-brands-telegram.svg"} className={"fill-indigo-700"}
                                    width={"20"} height={"20"} alt={"Mail My Makeup"}/>
                         </a>
@@ -34,7 +34,7 @@ function Footer() {
                 </div>
                 <div className={"flex flex-col gap-6"}>
                     <div className={"flex justify-start items-center gap-3 mb-2"}>
-                        <h4 className={"text-xl font-bold text-indigo-800"}>Pour les particuliers</h4>
+                        <h4 className={"text-xl font-bold text-indigo-800"}>Particuliers</h4>
                     </div>
                     <a href={"/particulier"} className={"text-sm text-slate-600"}>
                         Pourquoi My Makeup ?
@@ -51,7 +51,7 @@ function Footer() {
                 </div>
                 <div className={"flex flex-col gap-6"}>
                     <div className={"flex justify-start items-center gap-3 mb-2"}>
-                        <h4 className={"text-xl font-bold text-indigo-800"}>Pour les maquilleuses</h4>
+                        <h4 className={"text-xl font-bold text-indigo-800"}>Maquilleuses</h4>
                     </div>
                     <a href={"/maquilleuse"} className={"text-sm text-slate-600"}>
                         Pourquoi My Makeup ?

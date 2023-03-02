@@ -3,7 +3,7 @@ import Image from 'next/image';
 
 function Presentation(props) {
     return (
-        <section className={"relative bg-white mt-20"}>
+        <section className={"relative py-20"}>
             <div className="mx-auto max-w-7xl">
                 <div className="mx-auto">
                     <h2 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-4xl text-center">
