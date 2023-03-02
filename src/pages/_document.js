@@ -9,8 +9,8 @@ export default function Document() {
                 <link rel="icon" href="/favicon.webp"/>
                 <link rel="stylesheet"
                       href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=optional"/>
-                <script async src="https://www.googletagmanager.com/gtag/js?id=G-7M05RC6YDH"></script>
-                <Script>
+                <Script strategy={"afterInteractive"} src="https://www.googletagmanager.com/gtag/js?id=G-7M05RC6YDH"/>
+                <Script id={"analytics"} strategy="afterInteractive">
                     dangerouslySetInnerHTML={{
                     __html: `
                     window.dataLayer = window.dataLayer || [];
@@ -22,7 +22,6 @@ export default function Document() {
                 }}
                 </Script>
             </Head>
-
             <body>
             <Main/>
             <NextScript/>
