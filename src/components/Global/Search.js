@@ -19,13 +19,13 @@ function Search(props) {
                 </div>
             </div>
             <div className={"flex justify-end items-center gap-6"}>
-                <a href="/signup" className={"text-sm font-bold leading-6 bg-indigo-900 text-white px-4 py-2 rounded-lg border-2 border-indigo-900"}>
+                <a href="/recrutement" className={"text-sm font-bold leading-6 bg-indigo-900 text-white px-4 py-2 rounded-lg border-2 border-indigo-900"}>
                     Trouver une maquilleuse
                 </a>
                 <div className={"flex justify-center items-center"}>
                     ou
                 </div>
-                <a href="src/components#" className="">
+                <a href="/deposer-un-projet" className="">
                     <span className={"text-sm font-bold leading-6 text-indigo-900 border-b-2 border-indigo-900"}>Déposer un projet</span>
                 </a>
             </div>
