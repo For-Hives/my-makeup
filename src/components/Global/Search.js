@@ -3,8 +3,7 @@ import {MagnifyingGlassIcon} from "@heroicons/react/20/solid";
 import {MapPinIcon} from "@heroicons/react/24/outline";
 
 function Search(props) {
-    return (
-        <div className={"px-12 py-8 shadow-2xl w-full max-w-7xl bg-white rounded-2xl mb-20 flex justify-between"}>
+    return (<div className={"px-12 py-8 shadow-2xl w-full max-w-7xl bg-white rounded-2xl mb-20 flex justify-between"}>
             <div className={"flex items-center gap-6"}>
                 <div className={"relative"}>
                     <MagnifyingGlassIcon className="absolute top-1/2 left-4 transform -translate-y-1/2 h-5 w-5 text-indigo-900" aria-hidden="true"/>
