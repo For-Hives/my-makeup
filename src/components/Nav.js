@@ -163,7 +163,7 @@ function Nav(props) {
                                         </button>
                                         <a href="#" className="-m-1.5 p-1.5">
                                             <span className="sr-only">My Makeup</span>
-                                            <img
+                                            <Image
                                                 className="h-8"
                                                 src="https://tailwindui.com/img/logos/mark.svg?color=indigo&shade=600"
                                                 alt=""
