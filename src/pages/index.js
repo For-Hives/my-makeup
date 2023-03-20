@@ -8,6 +8,7 @@ import Talents from "@/components/Home/Talents";
 import Collaboration from "@/components/Home/Collaboration";
 import Image from "next/image";
 import React from "react";
+import Project from "@/components/Home/Project";
 
 const inter = Inter({subsets: ['latin']})
 
@@ -26,6 +27,7 @@ export default function Home() {
             <Presentation/>
             <Talents/>
             <Collaboration/>
+            <Project/>
             <Footer/>
         </main>
     </>)
