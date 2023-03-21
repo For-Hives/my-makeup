@@ -1,4 +1,5 @@
 import React from 'react';
+import Image from "next/image";
 
 const tabs = [
 
@@ -34,18 +35,21 @@ function Project() {
                 </p>
             </div>
 
-            <section className={"mx-auto max-w-7xl flex gap-2"}>
+            <section className={"mx-auto max-w-7xl flex gap-32"}>
                 <div className={"w-1/2"}>
                     <div className={"flex flex-col gap-2"}>
                         {tabs.map((tab, index) => (
                             <div key={tab.title}>
-                                <div className={"bg-slate-50 shadow-lg rounded-2xl p-10"}>
+                                <div className={"transition-all ease-in-out duration-300 hover:bg-slate-50 hover:shadow-lg hover:rounded-2xl p-10"}>
                                     <h3 className={"text-xl font-bold text-slate-700 mb-4"}>{tab.title}</h3>
                                     <p className={"text-sm text-slate-500"}>{tab.content}</p>
                                 </div>
                             </div>
                         ))}
                     </div>
+                </div>
+                <div className={"w-1/2 flex justify-center items-center"}>
+                        <Image className={"w-full h-[500px] object-cover object-top rounded-2xl"} src={"/assets/maquilleuse_project.webp"} alt={"illustration"} width={"500"} height={"350"}/>
                 </div>
             </section>
         </div>
