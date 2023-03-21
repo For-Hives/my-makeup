@@ -4,7 +4,7 @@ import Search from "@/components/Global/Search";
 
 export default function Hero() {
 
-    return (<div className="relative bg-white">
+    return (<div className="relative bg-white pt-[90px]">
         <div className={"absolute bottom-0 left-1/2 transform -translate-x-1/2 z-20 flex justify-center items-end w-full"}>
             <Search/>
         </div>

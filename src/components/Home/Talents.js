@@ -46,7 +46,7 @@ function Talents(props) {
             <div className="mx-auto flex w-full gap-24">
                 <div className={"w-1/5 flex justify-center items-center h-auto relative"}>
                     <div className={"absolute top-1/2 left-1/2 -translate-x-[40%] -translate-y-[40%] z-20"}>
-                        <CardDemo src={"/assets/Maquilleuse_Professionnelle.jpg"} heart={true}/>
+                        <CardDemo src={"/assets/Maquilleuse_Professionnelle.webp"} heart={true}/>
                     </div>
                     <div className={"absolute top-1/2 left-1/2 -translate-x-[90%] -translate-y-[90%] z-10"}>
                         <CardDemo src={"/assets/Maquilleuse_cinema.webp"} heart={false}/>

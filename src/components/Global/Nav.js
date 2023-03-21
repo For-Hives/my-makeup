@@ -58,8 +58,8 @@ function Nav(props) {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
     return (<>
-        <div className="relative bg-white">
-            <div className="mx-auto">
+        <div className="fixed top-0 left-0 w-full bg-white z-30 h-[90px] flex items-center justify-center">
+            <div className="mx-auto w-full h-full">
                 <div className="relative z-20 lg:w-full">
                     <div className="relative px-6 py-6 lg:px-16 lg:border-b lg:border-slate-300">
                         <nav className="flex items-center justify-between sm:h-10 lg:justify-start"
