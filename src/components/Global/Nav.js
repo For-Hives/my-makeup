@@ -49,10 +49,7 @@ const navigation = [{
     }]
 }, {
     name: 'Blog', href: '/blog'
-}, // {name: 'Trouvez une maquilleuse', href: '#', mode: 'search', side:'right'},
-    // {name: 'Créer mon compte', href: '/signup', mode: 'signup', side:'right'},
-    // {name: 'Me connecter', href: '/login', mode: 'login', side:'right'},
-]
+}]
 
 function Nav(props) {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -99,10 +96,10 @@ function Nav(props) {
                                         <MagnifyingGlassIcon className="mr-2 h-5 w-5 text-indigo-900" aria-hidden="true"/>
                                         Trouver une maquilleuse
                                     </button>
-                                    <a href="/signup" className={"text-sm font-bold leading-6 bg-indigo-900 text-white px-4 py-2 rounded-lg border-2 border-indigo-900"}>
-                                        Créer mon compte
-                                    </a>
-                                    <a href="src/components#" className="">
+                                    {/*<a href="/signup" className={"text-sm font-bold leading-6 bg-indigo-900 text-white px-4 py-2 rounded-lg border-2 border-indigo-900"}>*/}
+                                    {/*    Créer mon compte*/}
+                                    {/*</a>*/}
+                                    <a href="/signin" className="">
                                         <span className={"text-sm font-bold leading-6 text-indigo-900 border-b-2 border-indigo-900"}>Me connecter</span>
                                     </a>
                                 </div>
