@@ -1,9 +1,9 @@
-import React, {useState} from 'react';
-import {Bars3Icon, XMarkIcon} from "@heroicons/react/24/outline";
-import {Dialog} from "@headlessui/react";
-import {MagnifyingGlassIcon} from "@heroicons/react/20/solid";
-import Image from "next/image"
-import PopoverComponent from "@/components/Global/Popover";
+import React, { useState } from 'react';
+import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
+import { Dialog } from '@headlessui/react';
+import { MagnifyingGlassIcon } from '@heroicons/react/20/solid';
+import Image from 'next/image';
+import PopoverComponent from '@/components/Global/Popover';
 
 const navigation = [{
     name: 'Particulier', href: '/particulier', mode: 'dropdown', children: [{
@@ -52,7 +52,7 @@ const navigation = [{
 }]
 
 function Nav(props) {
-    const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+	const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     return (<>
         <div className="fixed top-0 left-0 w-full bg-white z-30 h-[90px] flex items-center justify-center">

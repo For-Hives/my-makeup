@@ -1,5 +1,5 @@
-import {Html, Head, Main, NextScript} from 'next/document'
-import Script from "next/script";
+import { Html, Head, Main, NextScript } from 'next/document';
+import Script from 'next/script';
 
 export default function Document() {
     return (<Html lang="fr">
@@ -15,11 +15,12 @@ export default function Document() {
     
                         gtag('config', 'G-7M05RC6YDH');
                     `}
-            </Script>
-        </Head>
-        <body>
-        <Main/>
-        <NextScript/>
-        </body>
-    </Html>)
+				</Script>
+			</Head>
+			<body>
+				<Main />
+				<NextScript />
+			</body>
+		</Html>
+	);
 }
