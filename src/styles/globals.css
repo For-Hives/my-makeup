@@ -3,34 +3,34 @@
 @tailwind utilities;
 
 * {
-    box-sizing: border-box;
-    padding: 0;
-    margin: 0;
-    border-color: #fff;
+	box-sizing: border-box;
+	padding: 0;
+	margin: 0;
+	border-color: #fff;
 }
 
 html,
 body {
-    max-width: 100vw;
-    overflow-x: hidden;
+	max-width: 100vw;
+	overflow-x: hidden;
 }
 
 a {
-    color: inherit;
-    text-decoration: none;
+	color: inherit;
+	text-decoration: none;
 }
 
 @media screen and (min-width: 768px) {
-    ::-webkit-scrollbar {
-        -webkit-appearance: none;
-        width: 7px;
-    }
+	::-webkit-scrollbar {
+		-webkit-appearance: none;
+		width: 7px;
+	}
 }
 
 @media screen and (min-width: 768px) {
-    ::-webkit-scrollbar-thumb {
-        border-radius: 2rem;
-        background-color: #19191e4d;
-        -webkit-box-shadow: 0 0 1px hsl(0deg 0% 100% / 50%);
-    }
+	::-webkit-scrollbar-thumb {
+		border-radius: 2rem;
+		background-color: #19191e4d;
+		-webkit-box-shadow: 0 0 1px hsl(0deg 0% 100% / 50%);
+	}
 }
