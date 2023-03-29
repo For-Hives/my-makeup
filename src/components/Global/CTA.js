@@ -1,6 +1,7 @@
 import Image from 'next/image';
+import Link from 'next/link';
 
-function Cta(props) {
+function Cta() {
 	return (
 		<div className={'w-full relative'}>
 			<div
@@ -22,22 +23,22 @@ function Cta(props) {
 						la&nbsp;communauté&nbsp;qui&nbsp;fait&nbsp;la&nbsp;différence.
 					</h2>
 					<div className={'flex justify-center gap-8'}>
-						<a
+						<Link
 							href="/signup"
 							className={
 								'text-sm font-bold leading-6 bg-indigo-50 text-indigo-900 px-4 py-2 rounded-lg border-2 border-indigo-50'
 							}
 						>
 							Je cherche des maquilleuses
-						</a>
-						<a
+						</Link>
+						<Link
 							href="/signup"
 							className={
 								'text-sm font-bold leading-6 bg-transparent text-indigo-50 px-4 py-2 rounded-lg border-2 border-indigo-50'
 							}
 						>
 							Je cherche des missions
-						</a>
+						</Link>
 					</div>
 				</div>
 			</div>

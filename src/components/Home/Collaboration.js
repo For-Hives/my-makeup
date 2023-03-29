@@ -1,7 +1,8 @@
 import React from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 
-function Collaboration(props) {
+function Collaboration() {
 	return (
 		<section className={'relative py-20 flex flex-col gap-10'}>
 			<div className="mx-auto max-w-7xl">
@@ -40,14 +41,14 @@ function Collaboration(props) {
 							</p>
 						</div>
 						<div className={'flex'}>
-							<a
+							<Link
 								href="/signup"
 								className={
 									'text-sm font-bold leading-6 bg-indigo-900 text-white px-4 py-2 rounded-lg border-2 border-indigo-900'
 								}
 							>
 								Rejoindre la communauté
-							</a>
+							</Link>
 						</div>
 					</div>
 					<div className={'w-3/5 flex justify-center items-center'}>
@@ -59,7 +60,7 @@ function Collaboration(props) {
 							<Image
 								className={'object-cover rounded-xl'}
 								src={'/assets/maquilleuse_mariage.webp'}
-								fill={'cover'}
+								fill
 								alt={'Maquilleuse pour un mariage'}
 							/>
 						</div>
@@ -77,7 +78,7 @@ function Collaboration(props) {
 							<Image
 								className={'object-cover rounded-xl transform -scale-x-100'}
 								src={'/assets/maquilleuse_soiree.webp'}
-								fill={'cover'}
+								fill
 								alt={'Maquilleuse soirées'}
 							/>
 						</div>
@@ -109,14 +110,14 @@ function Collaboration(props) {
 							</p>
 						</div>
 						<div className={'flex'}>
-							<a
+							<Link
 								href="/signup"
 								className={
 									'text-sm font-bold leading-6 bg-indigo-900 text-white px-4 py-2 rounded-lg border-2 border-indigo-900'
 								}
 							>
 								J&apos;améliore ma visibilité
-							</a>
+							</Link>
 						</div>
 					</div>
 				</div>
@@ -176,7 +177,7 @@ function Collaboration(props) {
 							<Image
 								className={'object-cover rounded-xl'}
 								src={'/assets/maquilleuse_evenementiel.webp'}
-								fill={'cover'}
+								fill
 								alt={'Maquilleuse evenementiel'}
 							/>
 						</div>
@@ -194,7 +195,7 @@ function Collaboration(props) {
 							<Image
 								className={'object-cover rounded-xl transform'}
 								src={'/assets/maquilleuse_fx.webp'}
-								fill={'cover'}
+								fill
 								alt={'Maquilleuse fx'}
 							/>
 						</div>

@@ -1,7 +1,7 @@
 import React from 'react';
 import Image from 'next/image';
 
-function Presentation(props) {
+function Presentation() {
 	return (
 		<section className={'relative py-20'}>
 			<div className="mx-auto max-w-7xl">

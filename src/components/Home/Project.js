@@ -42,7 +42,7 @@ function Project() {
 				<section className={'mx-auto max-w-7xl flex gap-32'}>
 					<div className={'w-1/2'}>
 						<div className={'flex flex-col gap-2'}>
-							{tabs.map((tab, index) => (
+							{tabs.map(tab => (
 								<div key={tab.title}>
 									<div
 										className={

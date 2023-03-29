@@ -4,6 +4,7 @@ import { Dialog } from '@headlessui/react';
 import { MagnifyingGlassIcon } from '@heroicons/react/20/solid';
 import Image from 'next/image';
 import PopoverComponent from '@/components/Global/Popover';
+import Link from 'next/link';
 
 const navigation = [
 	{
@@ -97,7 +98,7 @@ const navigation = [
 	},
 ];
 
-function Nav(props) {
+function Nav() {
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
 	return (
@@ -110,7 +111,7 @@ function Nav(props) {
 								className="flex items-center justify-between sm:h-10 lg:justify-start"
 								aria-label="Global"
 							>
-								<a href="src/components#" className="-m-1.5 p-1.5">
+								<Link href="#" className="-m-1.5 p-1.5">
 									<span className="sr-only">My Makeup</span>
 									<Image
 										alt="Logo My Makeup"
@@ -118,7 +119,7 @@ function Nav(props) {
 										height={50}
 										src="/assets/logo_2.webp"
 									/>
-								</a>
+								</Link>
 								<button
 									type="button"
 									className="-m-2.5 rounded-md p-2.5 text-slate-900 lg:hidden"
@@ -143,13 +144,13 @@ function Nav(props) {
 												);
 											} else {
 												return (
-													<a
+													<Link
 														key={item.name}
 														href={item.href}
 														className="text-sm font-semibold leading-6 text-slate-900"
 													>
 														{item.name}
-													</a>
+													</Link>
 												);
 											}
 										})}
@@ -173,7 +174,7 @@ function Nav(props) {
 										{/*<a href="/signup" className={"text-sm font-bold leading-6 bg-indigo-900 text-white px-4 py-2 rounded-lg border-2 border-indigo-900"}>*/}
 										{/*    Créer mon compte*/}
 										{/*</a>*/}
-										<a href="/signin" className="">
+										<Link href="/signin" className="">
 											<span
 												className={
 													'text-sm font-bold leading-6 text-indigo-900 border-b-2 border-indigo-900'
@@ -181,7 +182,7 @@ function Nav(props) {
 											>
 												Me connecter
 											</span>
-										</a>
+										</Link>
 									</div>
 								</div>
 							</nav>
