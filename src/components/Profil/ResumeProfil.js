@@ -1,6 +1,7 @@
 import React from 'react'
 import Image from 'next/image'
 import { Stars } from '@/components/Profil/Stars'
+import { BadgeDispo } from '@/components/Profil/BadgeDispo'
 
 // Head : General
 // left
@@ -83,7 +84,7 @@ function ResumeProfil(props) {
 						}
 					>
 						<div className={'flex flex-col gap-5'}>
-							<div className={'bg-purple-600 px-4 py-2'}>badge dispo</div>
+							<BadgeDispo />
 							<div>date dispo</div>
 							<button>Editer ma disponibilité</button>
 						</div>
