@@ -16,43 +16,6 @@ import React from 'react';
 // - Date de disponibilité
 // - Boutton d'édition de la disponibilité
 
-// Cat : Partager votre profil :
-// - Influence ( tous les réseaux sociaux, sites web ajoutable, chaine youtube etc )
-// - Langues
-
-// Cat : Localisation et déplacement
-// - Ville principale
-// - Rayon d'action
-// - Les frais kilométriques
-
-// Cat : Vos compétences
-// - Liste de compétences, spécialité, possibilité
-
-// Principal
-// - Description en quelques mots ( 2000 caractères maximums )
-// - Les prestations proposées
-// 		- Nom
-// 		- Description
-// 		- Tarif + type de tarification ( Heure / jour / Package ) // Sur devis // Tarif dégressif en fonction des heures
-// 		- Option supplémentaire (liste possible)
-// 				- Nom
-// 				- description
-// 		- Prix
-// - Portefolio (galerie de photos)
-// - Expérience
-// 		- Nom de la société / personne qui a embauché
-// 		- titre de l'expérience
-// 		- Ville où ça a eu lieu
-// 		- Date
-// 		- Description
-// 		- compétences mise en oeuvre
-// - Les formations suivies
-// - Diplome
-// - Ecole
-// 		- Année d'obtention
-// 		- Contenu de la formation
-//
-
 function ResumeProfil(props) {
 	return (
 		<div className="mx-auto max-w-7xl pt-[90px]">
