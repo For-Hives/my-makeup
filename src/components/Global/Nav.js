@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
-import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
-import { Dialog } from '@headlessui/react';
-import { MagnifyingGlassIcon } from '@heroicons/react/20/solid';
-import Image from 'next/image';
-import PopoverComponent from '@/components/Global/Popover';
-import Link from 'next/link';
+import React, { useState } from 'react'
+import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline'
+import { Dialog } from '@headlessui/react'
+import { MagnifyingGlassIcon } from '@heroicons/react/20/solid'
+import Image from 'next/image'
+import PopoverComponent from '@/components/Global/Popover'
+import Link from 'next/link'
 
 const navigation = [
 	{
@@ -96,17 +96,17 @@ const navigation = [
 		name: 'Blog',
 		href: '/blog',
 	},
-];
+]
 
 function Nav() {
-	const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+	const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
 	return (
 		<>
-			<div className="fixed top-0 left-0 w-full bg-white z-30 h-[90px] flex items-center justify-center">
-				<div className="mx-auto w-full h-full">
+			<div className="fixed left-0 top-0 z-30 flex h-[90px] w-full items-center justify-center bg-white">
+				<div className="mx-auto h-full w-full">
 					<div className="relative z-20 lg:w-full">
-						<div className="relative px-6 py-6 lg:px-16 lg:border-b lg:border-slate-300">
+						<div className="relative px-6 py-6 lg:border-b lg:border-slate-300 lg:px-16">
 							<nav
 								className="flex items-center justify-between sm:h-10 lg:justify-start"
 								aria-label="Global"
@@ -130,7 +130,7 @@ function Nav() {
 								</button>
 								<div className="hidden lg:ml-10 lg:flex lg:w-full lg:justify-between">
 									<div
-										className={'lg:gap-10 lg:flex lg:w-full lg:items-center'}
+										className={'lg:flex lg:w-full lg:items-center lg:gap-10'}
 									>
 										{navigation.map(item => {
 											if (item.mode === 'dropdown') {
@@ -141,7 +141,7 @@ function Nav() {
 														translate={'30%'}
 														content={item.children}
 													/>
-												);
+												)
 											} else {
 												return (
 													<Link
@@ -151,18 +151,18 @@ function Nav() {
 													>
 														{item.name}
 													</Link>
-												);
+												)
 											}
 										})}
 									</div>
 									<div
 										className={
-											'lg:gap-10 lg:flex lg:w-full lg:justify-end lg:items-center'
+											'lg:flex lg:w-full lg:items-center lg:justify-end lg:gap-10'
 										}
 									>
 										<button
 											className={
-												'text-sm leading-6 bg-transparent text-indigo-900 px-4 py-2 rounded-lg border-2 border-indigo-900 flex items-center'
+												'flex items-center rounded-lg border-2 border-indigo-900 bg-transparent px-4 py-2 text-sm leading-6 text-indigo-900'
 											}
 										>
 											<MagnifyingGlassIcon
@@ -177,7 +177,7 @@ function Nav() {
 										<Link href="/signin" className="">
 											<span
 												className={
-													'text-sm font-bold leading-6 text-indigo-900 border-b-2 border-indigo-900'
+													'border-b-2 border-indigo-900 text-sm font-bold leading-6 text-indigo-900'
 												}
 											>
 												Me connecter
@@ -215,7 +215,7 @@ function Nav() {
 											<a
 												key={item.name}
 												href={item.href}
-												className="-mx-3 block rounded-lg py-2 px-3 text-base font-semibold leading-7 text-slate-900 hover:bg-slate-400/10"
+												className="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-slate-900 hover:bg-slate-400/10"
 											>
 												{item.name}
 											</a>
@@ -228,7 +228,7 @@ function Nav() {
 				</div>
 			</div>
 		</>
-	);
+	)
 }
 
-export default Nav;
+export default Nav

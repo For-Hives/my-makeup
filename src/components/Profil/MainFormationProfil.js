@@ -3,10 +3,10 @@
 // - Ecole
 // 		- Année d'obtention
 // 		- Contenu de la formation
-import React from 'react';
+import React from 'react'
 
 function MainFormationProfil(props) {
-	return <div></div>;
+	return <div></div>
 }
 
-export default MainFormationProfil;
+export default MainFormationProfil

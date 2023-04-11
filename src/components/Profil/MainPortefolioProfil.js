@@ -1,9 +1,9 @@
-import React from 'react';
+import React from 'react'
 
 // - Portefolio (galerie de photos)
 
 function MainPortefolioProfil(props) {
-	return <div></div>;
+	return <div></div>
 }
 
-export default MainPortefolioProfil;
+export default MainPortefolioProfil

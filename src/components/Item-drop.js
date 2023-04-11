@@ -1,17 +1,17 @@
-import { Fragment } from 'react';
-import { Popover, Transition } from '@headlessui/react';
+import { Fragment } from 'react'
+import { Popover, Transition } from '@headlessui/react'
 import {
 	ChevronDownIcon,
 	PhoneIcon,
 	PlayCircleIcon,
-} from '@heroicons/react/20/solid';
+} from '@heroicons/react/20/solid'
 import {
 	ArrowPathIcon,
 	ChartPieIcon,
 	CursorArrowRaysIcon,
 	FingerPrintIcon,
 	SquaresPlusIcon,
-} from '@heroicons/react/24/outline';
+} from '@heroicons/react/24/outline'
 
 const solutions = [
 	{
@@ -44,11 +44,11 @@ const solutions = [
 		href: '#',
 		icon: ArrowPathIcon,
 	},
-];
+]
 const callsToAction = [
 	{ name: 'Watch demo', href: '#', icon: PlayCircleIcon },
 	{ name: 'Contact sales', href: '#', icon: PhoneIcon },
-];
+]
 
 export default function ItemDrop() {
 	return (
@@ -110,5 +110,5 @@ export default function ItemDrop() {
 				</Popover.Panel>
 			</Transition>
 		</Popover>
-	);
+	)
 }

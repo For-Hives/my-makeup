@@ -1,6 +1,6 @@
-import React from 'react';
-import Image from 'next/image';
-import { Stars } from '@/components/Profil/Stars';
+import React from 'react'
+import Image from 'next/image'
+import { Stars } from '@/components/Profil/Stars'
 
 // Head : General
 // left
@@ -19,32 +19,32 @@ import { Stars } from '@/components/Profil/Stars';
 // - Boutton d'édition de la disponibilité
 
 function ResumeProfil(props) {
-	const [starsToDisplay, setStarsToDisplay] = React.useState(5);
+	const [starsToDisplay, setStarsToDisplay] = React.useState(5)
 
 	return (
 		<div className="mx-auto max-w-7xl pt-[90px]">
-			<div className={'grid grid-cols-12 pt-[100px] gap-5'}>
+			<div className={'grid grid-cols-12 gap-5 pt-[100px]'}>
 				<div className={'col-span-2 flex items-center'}>
 					<Image
 						src={'/assets/pp_makeup_2.png'}
 						alt={'ppmakeup'}
 						width={500}
 						height={500}
-						className={'object-cover rounded-full w-[200px] h-[200px]'}
+						className={'h-[200px] w-[200px] rounded-full object-cover'}
 					></Image>
 				</div>
 				<div className={'col-span-8 flex items-center'}>
-					<div className={'pl-20 w-full h-full flex flex-col gap-4'}>
-						<div className={'w-full flex flex-col gap-2'}>
+					<div className={'flex h-full w-full flex-col gap-4 pl-20'}>
+						<div className={'flex w-full flex-col gap-2'}>
 							<h3
-								className={'font-bold tracking-tight text-slate-800 text-3xl'}
+								className={'text-3xl font-bold tracking-tight text-slate-800'}
 							>
 								{/* todo : Nom prénom */}
 								{'Nom prénom'}
 							</h3>
 							<h2
 								className={
-									'font-semibold tracking-tight text-slate-700 text-xl'
+									'text-xl font-semibold tracking-tight text-slate-700'
 								}
 							>
 								{/* todo : Maquilleuse poste */}
@@ -59,27 +59,27 @@ function ResumeProfil(props) {
 								peut se déplacer à {'[ville]'} & dans un rayon de {'50km'}
 							</div>
 							<div className={'flex items-center gap-4'}>
-								<div className={'font-semibold text-sm'}>
+								<div className={'text-sm font-semibold'}>
 									{'12'} missions réalisées
 								</div>
 
 								<div
 									className={
-										'flex items-center italic text-xs text-indigo-900/50'
+										'flex items-center text-xs italic text-indigo-900/50'
 									}
 								></div>
 							</div>
 						</div>
-						<div className={'flex gap-4 flex-row items-center'}>
+						<div className={'flex flex-row items-center gap-4'}>
 							<Stars starsToDisplay={starsToDisplay} />{' '}
-							<span className={'italic text-sm'}>( 5 avis )</span>
+							<span className={'text-sm italic'}>( 5 avis )</span>
 						</div>
 					</div>
 				</div>
 				<div className={'col-span-2 flex items-center'}>
 					<div
 						className={
-							'w-full h-full flex flex-col justify-between items-center'
+							'flex h-full w-full flex-col items-center justify-between'
 						}
 					>
 						<div className={'flex flex-col gap-5'}>
@@ -96,7 +96,7 @@ function ResumeProfil(props) {
 				</div>
 			</div>
 		</div>
-	);
+	)
 }
 
-export default ResumeProfil;
+export default ResumeProfil

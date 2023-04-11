@@ -1,9 +1,9 @@
-import React from 'react';
+import React from 'react'
 
 export function Stars(props) {
 	return (
 		<div
-			className={'stars w-[115px] h-[18px] scale-90 lg:scale-100'}
+			className={'stars h-[18px] w-[115px] scale-90 lg:scale-100'}
 			style={{
 				background: `linear-gradient(to right, #4f46e5 0%, #4f46e5 ${
 					props.starsToDisplay * 20
@@ -11,5 +11,5 @@ export function Stars(props) {
                             #fff 100%) no-repeat center`,
 			}}
 		></div>
-	);
+	)
 }

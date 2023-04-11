@@ -1,7 +1,7 @@
-import '@/styles/globals.css';
-import '@/styles/icons.css';
-import '@/styles/stars.css';
-import Head from 'next/head';
+import '@/styles/globals.css'
+import '@/styles/icons.css'
+import '@/styles/stars.css'
+import Head from 'next/head'
 
 export default function App({ Component, pageProps }) {
 	return (
@@ -11,5 +11,5 @@ export default function App({ Component, pageProps }) {
 			</Head>
 			<Component {...pageProps} />
 		</>
-	);
+	)
 }

@@ -1,15 +1,15 @@
-import React from 'react';
-import Image from 'next/image';
+import React from 'react'
+import Image from 'next/image'
 
 function Footer() {
 	// get actuel year
-	const year = new Date().getFullYear();
+	const year = new Date().getFullYear()
 
 	return (
 		<>
-			<footer className={'relative pt-52 w-full flex mx-auto max-w-7xl gap-20'}>
+			<footer className={'relative mx-auto flex w-full max-w-7xl gap-20 pt-52'}>
 				<div className={'flex flex-col gap-6'}>
-					<div className={'flex justify-start items-center gap-3'}>
+					<div className={'flex items-center justify-start gap-3'}>
 						<Image
 							src={'/assets/logo_2.webp'}
 							alt={'Logo My Makeup'}
@@ -56,7 +56,7 @@ function Footer() {
 					</div>
 				</div>
 				<div className={'flex flex-col gap-6'}>
-					<div className={'flex justify-start items-center gap-3 mb-2'}>
+					<div className={'mb-2 flex items-center justify-start gap-3'}>
 						<h4 className={'text-xl font-bold text-indigo-800'}>
 							Particuliers
 						</h4>
@@ -84,7 +84,7 @@ function Footer() {
 					</a>
 				</div>
 				<div className={'flex flex-col gap-6'}>
-					<div className={'flex justify-start items-center gap-3 mb-2'}>
+					<div className={'mb-2 flex items-center justify-start gap-3'}>
 						<h4 className={'text-xl font-bold text-indigo-800'}>
 							Maquilleuses
 						</h4>
@@ -112,7 +112,7 @@ function Footer() {
 					</a>
 				</div>
 				<div className={'flex flex-col gap-6'}>
-					<div className={'flex justify-start items-center gap-3 mb-2'}>
+					<div className={'mb-2 flex items-center justify-start gap-3'}>
 						<h4 className={'text-xl font-bold text-indigo-800'}>Ressources</h4>
 					</div>
 					<a
@@ -135,7 +135,7 @@ function Footer() {
 					</a>
 				</div>
 				<div className={'flex flex-col gap-6'}>
-					<div className={'flex justify-start items-center gap-3 mb-2'}>
+					<div className={'mb-2 flex items-center justify-start gap-3'}>
 						<h4 className={'text-xl font-bold text-indigo-800'}>My Makeup</h4>
 					</div>
 					<a href={'/a-propos'} className={'text-sm text-slate-600'}>
@@ -164,8 +164,8 @@ function Footer() {
 					</a>
 				</div>
 			</footer>
-			<div className={'py-20 w-full bg-white flex mx-auto max-w-7xl'}>
-				<p className={'text-sm text-slate-600 mx-auto'}>
+			<div className={'mx-auto flex w-full max-w-7xl bg-white py-20'}>
+				<p className={'mx-auto text-sm text-slate-600'}>
 					© {year} My Makeup - Tous droits réservés - Developed with ❤️ by{' '}
 					<a
 						className={'text-sm text-slate-600'}
@@ -176,7 +176,7 @@ function Footer() {
 				</p>
 			</div>
 		</>
-	);
+	)
 }
 
-export default Footer;
+export default Footer

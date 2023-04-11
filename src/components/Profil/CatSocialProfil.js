@@ -1,11 +1,11 @@
-import React from 'react';
+import React from 'react'
 
 // Cat : Partager votre profil :
 // - Influence ( tous les réseaux sociaux, sites web ajoutable, chaine youtube etc )
 // - Langues
 
 function CatSocialProfil(props) {
-	return <div></div>;
+	return <div></div>
 }
 
-export default CatSocialProfil;
+export default CatSocialProfil

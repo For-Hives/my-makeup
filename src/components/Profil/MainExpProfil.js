@@ -5,10 +5,10 @@
 // 		- Date
 // 		- Description
 // 		- compétences mise en oeuvre
-import React from 'react';
+import React from 'react'
 
 function MainExpProfil(props) {
-	return <div></div>;
+	return <div></div>
 }
 
-export default MainExpProfil;
+export default MainExpProfil

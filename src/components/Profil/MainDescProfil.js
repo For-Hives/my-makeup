@@ -1,9 +1,9 @@
 // Principal
 // - Description en quelques mots ( 2000 caractères maximums )
-import React from 'react';
+import React from 'react'
 
 function MainDescProfil(props) {
-	return <div></div>;
+	return <div></div>
 }
 
-export default MainDescProfil;
+export default MainDescProfil

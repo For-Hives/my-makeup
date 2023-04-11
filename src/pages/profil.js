@@ -1,9 +1,9 @@
-import Head from 'next/head';
-import React from 'react';
-import Image from 'next/image';
-import Nav from '@/components/Global/Nav';
-import Footer from '@/components/Global/Footer';
-import ResumeProfil from '@/components/Profil/ResumeProfil';
+import Head from 'next/head'
+import React from 'react'
+import Image from 'next/image'
+import Nav from '@/components/Global/Nav'
+import Footer from '@/components/Global/Footer'
+import ResumeProfil from '@/components/Profil/ResumeProfil'
 
 function Profil() {
 	return (
@@ -22,7 +22,7 @@ function Profil() {
 					width={'80'}
 					height={'80'}
 					className={
-						'top-0 left-0 fixed z-50 m-4 p-2 bg-amber-300/75 rounded-full'
+						'fixed left-0 top-0 z-50 m-4 rounded-full bg-amber-300/75 p-2'
 					}
 				/>
 				<Nav />
@@ -30,7 +30,7 @@ function Profil() {
 				<Footer />
 			</main>
 		</>
-	);
+	)
 }
 
-export default Profil;
+export default Profil

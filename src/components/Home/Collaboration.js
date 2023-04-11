@@ -1,25 +1,25 @@
-import React from 'react';
-import Image from 'next/image';
-import Link from 'next/link';
+import React from 'react'
+import Image from 'next/image'
+import Link from 'next/link'
 
 function Collaboration() {
 	return (
-		<section className={'relative py-20 flex flex-col gap-10'}>
+		<section className={'relative flex flex-col gap-10 py-20'}>
 			<div className="mx-auto max-w-7xl">
 				<div className="mx-auto">
-					<h2 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-4xl text-center">
+					<h2 className="text-center text-4xl font-bold tracking-tight text-slate-900 sm:text-4xl">
 						Vous allez adorer cette nouvelle façon de collaborer
 					</h2>
 				</div>
 			</div>
-			<div className="mx-auto max-w-7xl mt-20">
+			<div className="mx-auto mt-20 max-w-7xl">
 				<div className="mx-auto flex w-full gap-16">
 					<div
 						className={
-							'w-2/5 flex flex-col justify-center items-start relative gap-8'
+							'relative flex w-2/5 flex-col items-start justify-center gap-8'
 						}
 					>
-						<h3 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-3xl text-left">
+						<h3 className="text-left text-4xl font-bold tracking-tight text-slate-900 sm:text-3xl">
 							Boostez votre activité
 						</h3>
 						<div className={'flex flex-col gap-4'}>
@@ -44,21 +44,21 @@ function Collaboration() {
 							<Link
 								href="/signup"
 								className={
-									'text-sm font-bold leading-6 bg-indigo-900 text-white px-4 py-2 rounded-lg border-2 border-indigo-900'
+									'rounded-lg border-2 border-indigo-900 bg-indigo-900 px-4 py-2 text-sm font-bold leading-6 text-white'
 								}
 							>
 								Rejoindre la communauté
 							</Link>
 						</div>
 					</div>
-					<div className={'w-3/5 flex justify-center items-center'}>
+					<div className={'flex w-3/5 items-center justify-center'}>
 						<div
 							className={
-								'ml-32 flex justify-center items-center w-full relative h-full'
+								'relative ml-32 flex h-full w-full items-center justify-center'
 							}
 						>
 							<Image
-								className={'object-cover rounded-xl'}
+								className={'rounded-xl object-cover'}
 								src={'/assets/maquilleuse_mariage.webp'}
 								fill
 								alt={'Maquilleuse pour un mariage'}
@@ -67,16 +67,16 @@ function Collaboration() {
 					</div>
 				</div>
 			</div>
-			<div className="mx-auto max-w-7xl mt-20">
+			<div className="mx-auto mt-20 max-w-7xl">
 				<div className="mx-auto flex w-full">
-					<div className={'w-3/5 flex justify-center items-center'}>
+					<div className={'flex w-3/5 items-center justify-center'}>
 						<div
 							className={
-								'mr-32 flex justify-center items-center w-full relative h-full'
+								'relative mr-32 flex h-full w-full items-center justify-center'
 							}
 						>
 							<Image
-								className={'object-cover rounded-xl transform -scale-x-100'}
+								className={'-scale-x-100 transform rounded-xl object-cover'}
 								src={'/assets/maquilleuse_soiree.webp'}
 								fill
 								alt={'Maquilleuse soirées'}
@@ -85,10 +85,10 @@ function Collaboration() {
 					</div>
 					<div
 						className={
-							'w-2/5 flex flex-col justify-center items-start h-auto relative gap-8'
+							'relative flex h-auto w-2/5 flex-col items-start justify-center gap-8'
 						}
 					>
-						<h3 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-3xl text-left">
+						<h3 className="text-left text-4xl font-bold tracking-tight text-slate-900 sm:text-3xl">
 							Pour toutes & tous !
 						</h3>
 						<div className={'flex flex-col gap-4'}>
@@ -113,7 +113,7 @@ function Collaboration() {
 							<Link
 								href="/signup"
 								className={
-									'text-sm font-bold leading-6 bg-indigo-900 text-white px-4 py-2 rounded-lg border-2 border-indigo-900'
+									'rounded-lg border-2 border-indigo-900 bg-indigo-900 px-4 py-2 text-sm font-bold leading-6 text-white'
 								}
 							>
 								J&apos;améliore ma visibilité
@@ -122,14 +122,14 @@ function Collaboration() {
 					</div>
 				</div>
 			</div>
-			<div className="mx-auto max-w-7xl mt-20">
+			<div className="mx-auto mt-20 max-w-7xl">
 				<div className="mx-auto flex w-full gap-16">
 					<div
 						className={
-							'w-2/5 flex flex-col justify-center items-start relative gap-8'
+							'relative flex w-2/5 flex-col items-start justify-center gap-8'
 						}
 					>
-						<h3 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-3xl text-left">
+						<h3 className="text-left text-4xl font-bold tracking-tight text-slate-900 sm:text-3xl">
 							Trouvez le profil idéal en seulement deux clics
 						</h3>
 						<div className={'flex flex-col gap-4'}>
@@ -161,21 +161,21 @@ function Collaboration() {
 							<a
 								href="/recrutement"
 								className={
-									'text-sm font-bold leading-6 bg-indigo-900 text-white px-4 py-2 rounded-lg border-2 border-indigo-900'
+									'rounded-lg border-2 border-indigo-900 bg-indigo-900 px-4 py-2 text-sm font-bold leading-6 text-white'
 								}
 							>
 								Trouver la maquilleuse parfaite
 							</a>
 						</div>
 					</div>
-					<div className={'w-3/5 flex justify-center items-center'}>
+					<div className={'flex w-3/5 items-center justify-center'}>
 						<div
 							className={
-								'ml-32 flex justify-center items-center w-full relative h-full'
+								'relative ml-32 flex h-full w-full items-center justify-center'
 							}
 						>
 							<Image
-								className={'object-cover rounded-xl'}
+								className={'rounded-xl object-cover'}
 								src={'/assets/maquilleuse_evenementiel.webp'}
 								fill
 								alt={'Maquilleuse evenementiel'}
@@ -184,16 +184,16 @@ function Collaboration() {
 					</div>
 				</div>
 			</div>
-			<div className="mx-auto max-w-7xl mt-20">
+			<div className="mx-auto mt-20 max-w-7xl">
 				<div className="mx-auto flex w-full">
-					<div className={'w-3/5 flex justify-center items-center'}>
+					<div className={'flex w-3/5 items-center justify-center'}>
 						<div
 							className={
-								'mr-32 flex justify-center items-center w-full relative h-full'
+								'relative mr-32 flex h-full w-full items-center justify-center'
 							}
 						>
 							<Image
-								className={'object-cover rounded-xl transform'}
+								className={'transform rounded-xl object-cover'}
 								src={'/assets/maquilleuse_fx.webp'}
 								fill
 								alt={'Maquilleuse fx'}
@@ -202,10 +202,10 @@ function Collaboration() {
 					</div>
 					<div
 						className={
-							'w-2/5 flex flex-col justify-center items-start h-auto relative gap-8'
+							'relative flex h-auto w-2/5 flex-col items-start justify-center gap-8'
 						}
 					>
-						<h3 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-3xl text-left">
+						<h3 className="text-left text-4xl font-bold tracking-tight text-slate-900 sm:text-3xl">
 							Centralisez vos recherches dans une seule plateforme
 						</h3>
 						<div className={'flex flex-col gap-4'}>
@@ -240,7 +240,7 @@ function Collaboration() {
 							<a
 								href="/recrutement"
 								className={
-									'text-sm font-bold leading-6 bg-indigo-900 text-white px-4 py-2 rounded-lg border-2 border-indigo-900'
+									'rounded-lg border-2 border-indigo-900 bg-indigo-900 px-4 py-2 text-sm font-bold leading-6 text-white'
 								}
 							>
 								Découvrir notre solution
@@ -250,7 +250,7 @@ function Collaboration() {
 				</div>
 			</div>
 		</section>
-	);
+	)
 }
 
-export default Collaboration;
+export default Collaboration

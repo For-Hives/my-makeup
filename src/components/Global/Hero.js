@@ -1,12 +1,12 @@
-import Image from 'next/image';
-import Search from '@/components/Global/Search';
+import Image from 'next/image'
+import Search from '@/components/Global/Search'
 
 export default function Hero() {
 	return (
 		<div className="relative bg-white pt-[90px]">
 			<div
 				className={
-					'absolute bottom-0 left-1/2 transform -translate-x-1/2 z-20 flex justify-center items-end w-full'
+					'absolute bottom-0 left-1/2 z-20 flex w-full -translate-x-1/2 transform items-end justify-center'
 				}
 			>
 				<Search />
@@ -21,7 +21,7 @@ export default function Hero() {
 					>
 						<polygon points="0,0 90,0 50,100 0,100" />
 					</svg>
-					<div className="relative py-32 px-6 sm:py-40 lg:pt-52 lg:pb-80 lg:px-8 lg:pr-0 z-10">
+					<div className="relative z-10 px-6 py-32 sm:py-40 lg:px-8 lg:pb-80 lg:pr-0 lg:pt-52">
 						<div className="mx-auto max-w-2xl lg:mx-0 lg:max-w-xl">
 							<h1 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">
 								Trouver la maquilleuse qui vous correspond n&apos;a jamais été
@@ -46,5 +46,5 @@ export default function Hero() {
 				/>
 			</div>
 		</div>
-	);
+	)
 }

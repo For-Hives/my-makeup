@@ -1,7 +1,7 @@
-import React from 'react';
+import React from 'react'
 
 function Separator() {
-	return <div className={'py-32 bg-white'}></div>;
+	return <div className={'bg-white py-32'}></div>
 }
 
-export default Separator;
+export default Separator

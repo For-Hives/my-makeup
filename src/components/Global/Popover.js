@@ -1,6 +1,6 @@
-import { Fragment } from 'react';
-import { Popover, Transition } from '@headlessui/react';
-import { ChevronDownIcon } from '@heroicons/react/20/solid';
+import { Fragment } from 'react'
+import { Popover, Transition } from '@headlessui/react'
+import { ChevronDownIcon } from '@heroicons/react/20/solid'
 
 export default function PopoverComponent(props) {
 	return (
@@ -21,7 +21,7 @@ export default function PopoverComponent(props) {
 			>
 				<Popover.Panel
 					className={
-						'absolute left-1/2 z-30 mt-5 flex w-screen max-w-max px-4 -translate-x-[30%]'
+						'absolute left-1/2 z-30 mt-5 flex w-screen max-w-max -translate-x-[30%] px-4'
 					}
 				>
 					<div className="w-screen max-w-md flex-auto overflow-hidden rounded-3xl bg-white text-sm leading-6 shadow-lg ring-1 ring-gray-900/5">
@@ -51,5 +51,5 @@ export default function PopoverComponent(props) {
 				</Popover.Panel>
 			</Transition>
 		</Popover>
-	);
+	)
 }

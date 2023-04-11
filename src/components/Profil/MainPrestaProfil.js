@@ -6,10 +6,10 @@
 // 				- Nom
 // 				- description
 // 		- Prix
-import React from 'react';
+import React from 'react'
 
 function MainPrestaProfil(props) {
-	return <div></div>;
+	return <div></div>
 }
 
-export default MainPrestaProfil;
+export default MainPrestaProfil

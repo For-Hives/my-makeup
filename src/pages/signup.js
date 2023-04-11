@@ -1,6 +1,6 @@
-import Head from 'next/head';
-import React from 'react';
-import Image from 'next/image';
+import Head from 'next/head'
+import React from 'react'
+import Image from 'next/image'
 
 function Signup() {
 	return (
@@ -13,8 +13,8 @@ function Signup() {
                 recherche de maquilleuses professionnelles, ou votre recherche de client !"
 				/>
 			</Head>
-			<div className="flex min-h-screen bg-">
-				<div className="flex flex-1 flex-col justify-center py-12 px-4 sm:px-6 lg:flex-none lg:px-20 xl:px-24">
+			<div className="bg- flex min-h-screen">
+				<div className="flex flex-1 flex-col justify-center px-4 py-12 sm:px-6 lg:flex-none lg:px-20 xl:px-24">
 					<div className="mx-auto w-full max-w-sm lg:w-96">
 						<div>
 							<span className="sr-only">My Makeup</span>
@@ -36,7 +36,7 @@ function Signup() {
 										<div>
 											<a
 												href="#"
-												className="inline-flex w-full justify-center rounded-md bg-white py-2 px-3 text-gray-500 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:outline-offset-0"
+												className="inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-gray-500 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:outline-offset-0"
 											>
 												<span className="sr-only">
 													Se connecter via Facebook
@@ -59,7 +59,7 @@ function Signup() {
 										<div>
 											<a
 												href="#"
-												className="inline-flex w-full justify-center rounded-md bg-white py-2 px-3 text-gray-500 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:outline-offset-0"
+												className="inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-gray-500 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:outline-offset-0"
 											>
 												<span className="sr-only">
 													Se connecter via instagram
@@ -81,7 +81,7 @@ function Signup() {
 										<div>
 											<a
 												href="#"
-												className="inline-flex w-full justify-center rounded-md bg-white py-2 px-3 text-gray-500 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:outline-offset-0"
+												className="inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-gray-500 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:outline-offset-0"
 											>
 												<span className="sr-only">Se connecter via Google</span>
 												<svg
@@ -199,7 +199,7 @@ function Signup() {
 									<div>
 										<button
 											type="submit"
-											className="flex w-full justify-center rounded-md bg-indigo-900 py-2 px-3 text-sm font-semibold text-white hover:bg-indigo-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-900"
+											className="flex w-full justify-center rounded-md bg-indigo-900 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-900"
 										>
 											S&apos;inscrire
 										</button>
@@ -212,19 +212,19 @@ function Signup() {
 				<div className="relative hidden w-full flex-1 lg:block lg:object-contain">
 					<div
 						className={
-							'w-full h-full bg-gradient-to-r from-white via-transparent to-transparent absolute top-0 left-0 z-20'
+							'absolute left-0 top-0 z-20 h-full w-full bg-gradient-to-r from-white via-transparent to-transparent'
 						}
 					></div>
 					<Image
 						alt={'background my-makeup'}
 						fill
 						src="/assets/bg_makeup.webp"
-						className={'object-cover transform -scale-x-100 z-10'}
+						className={'z-10 -scale-x-100 transform object-cover'}
 					></Image>
 				</div>
 			</div>
 		</>
-	);
+	)
 }
 
-export default Signup;
+export default Signup

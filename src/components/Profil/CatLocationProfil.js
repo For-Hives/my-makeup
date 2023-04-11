@@ -1,4 +1,4 @@
-import React from 'react';
+import React from 'react'
 
 // Cat : Localisation et déplacement
 // - Ville principale
@@ -6,7 +6,7 @@ import React from 'react';
 // - Les frais kilométriques
 
 function CatLocationProfil(props) {
-	return <div></div>;
+	return <div></div>
 }
 
-export default CatLocationProfil;
+export default CatLocationProfil
