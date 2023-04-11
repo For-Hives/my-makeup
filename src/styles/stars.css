@@ -1,0 +1,26 @@
+/* stars */
+.stars {
+    position: relative;
+    background-size: contain;
+    mask: url("../../public/assets/stars.svg");
+    -webkit-mask-image: url("../../public/assets/stars.svg");
+    -webkit-mask-size: cover;
+    mask-size: cover;
+    overflow: visible;
+}
+
+.stars:after {
+    content: "";
+    position: absolute;
+    background-size: contain;
+    mask: url("../../public/assets/stars_border.svg");
+    -webkit-mask-image: url("../../public/assets/stars_border.svg");
+    -webkit-mask-size: cover;
+    mask-size: cover;
+    background: linear-gradient(to right, #312e81 0%, #312e81 100%) no-repeat center;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    overflow: visible;
+}

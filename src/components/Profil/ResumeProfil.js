@@ -1,4 +1,6 @@
 import React from 'react';
+import Image from 'next/image';
+import { Stars } from '@/components/Profil/Stars';
 
 // Head : General
 // left
@@ -17,31 +19,60 @@ import React from 'react';
 // - Boutton d'édition de la disponibilité
 
 function ResumeProfil(props) {
+	const [starsToDisplay, setStarsToDisplay] = React.useState(5);
+
 	return (
 		<div className="mx-auto max-w-7xl pt-[90px]">
-			<div className={'grid grid-cols-12'}>
-				<div className={'col-span-2 flex items-center'}>image</div>
+			<div className={'grid grid-cols-12 pt-[100px] gap-5'}>
+				<div className={'col-span-2 flex items-center'}>
+					<Image
+						src={'/assets/pp_makeup_2.png'}
+						alt={'ppmakeup'}
+						width={500}
+						height={500}
+						className={'object-cover rounded-full w-[200px] h-[200px]'}
+					></Image>
+				</div>
 				<div className={'col-span-8 flex items-center'}>
-					<div className={'w-full h-full flex flex-col'}>
-						<h3 className={'font-bold tracking-tight text-slate-900 text-3xl'}>
-							Nom prénom
-						</h3>
-						<h2>Spécialité</h2>
-						<div>
-							<div>
-								<span>people</span> peut se déplacer à [villes]
-							</div>
-							<div>
-								nombre de missions réalisées : <span>0</span>
-							</div>
+					<div className={'pl-20 w-full h-full flex flex-col gap-4'}>
+						<div className={'w-full flex flex-col gap-2'}>
+							<h3
+								className={'font-bold tracking-tight text-slate-800 text-3xl'}
+							>
+								{/* todo : Nom prénom */}
+								{'Nom prénom'}
+							</h3>
+							<h2
+								className={
+									'font-semibold tracking-tight text-slate-700 text-xl'
+								}
+							>
+								{/* todo : Maquilleuse poste */}
+								{'Spécialité de maquilleuse principale'}
+							</h2>
 						</div>
 						<div>
-							<div>
-								<span>star</span> note moyenne : <span>5</span>
+							<div className={'flex items-center'}>
+								<span className="material-symbols-rounded text-indigo-900">
+									directions_run
+								</span>
+								peut se déplacer à {'[ville]'} & dans un rayon de {'50km'}
 							</div>
-							<div>
-								<span>Thumbs</span> nombre de recommandations : <span>10</span>
+							<div className={'flex items-center gap-4'}>
+								<div className={'font-semibold text-sm'}>
+									{'12'} missions réalisées
+								</div>
+
+								<div
+									className={
+										'flex items-center italic text-xs text-indigo-900/50'
+									}
+								></div>
 							</div>
+						</div>
+						<div className={'flex gap-4 flex-row items-center'}>
+							<Stars starsToDisplay={starsToDisplay} />{' '}
+							<span className={'italic text-sm'}>( 5 avis )</span>
 						</div>
 					</div>
 				</div>
