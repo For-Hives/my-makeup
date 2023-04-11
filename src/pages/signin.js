@@ -28,7 +28,6 @@ function Signin() {
 								Espace maquilleuse
 							</h2>
 						</div>
-
 						<div className="mt-8">
 							<div>
 								<div>
