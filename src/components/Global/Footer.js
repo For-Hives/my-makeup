@@ -1,5 +1,6 @@
 import React from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 
 function Footer() {
 	// get actuel year
@@ -153,12 +154,12 @@ function Footer() {
 					<a href={'/cgu'} className={'text-sm text-slate-600'}>
 						Conditions générales d&apos;utilisation
 					</a>
-					<a
-						href={'/politique-confidentialite'}
+					<Link
+						href={'/politique-de-confidentialite'}
 						className={'text-sm text-slate-600'}
 					>
 						Politique de confidentialité
-					</a>
+					</Link>
 					<a href={'/site-map'} className={'text-sm text-slate-600'}>
 						Plan du site
 					</a>
