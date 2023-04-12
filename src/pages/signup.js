@@ -1,6 +1,7 @@
 import Head from 'next/head'
 import React from 'react'
 import Image from 'next/image'
+import Link from 'next/link'
 
 function Signup() {
 	return (
@@ -25,7 +26,7 @@ function Signup() {
 								src="/assets/logo_2.webp"
 							/>
 							<h2 className="mt-6 text-3xl font-bold tracking-tight text-gray-900">
-								S&apos;inscrire
+								Inscrit toi !
 							</h2>
 						</div>
 
@@ -200,6 +201,17 @@ function Signup() {
 										<button type="submit" className="btn-primary-large">
 											S&apos;inscrire
 										</button>
+									</div>
+									<div className={'flex items-center justify-center '}>
+										tu as déjà un compte ?&nbsp;
+										<Link
+											className={
+												'font-semibold text-indigo-700 hover:text-indigo-700 hover:underline'
+											}
+											href={'/signin'}
+										>
+											Connecte-toi
+										</Link>
 									</div>
 								</form>
 							</div>
