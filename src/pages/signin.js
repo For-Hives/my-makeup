@@ -175,10 +175,7 @@ function Signin() {
 									</div>
 
 									<div>
-										<button
-											type="submit"
-											className="flex w-full justify-center rounded-md bg-indigo-900 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-900"
-										>
+										<button type="submit" className="btn-primary-large">
 											Se connecter
 										</button>
 									</div>

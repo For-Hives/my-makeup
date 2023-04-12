@@ -160,11 +160,7 @@ function Nav() {
 											'lg:flex lg:w-full lg:items-center lg:justify-end lg:gap-10'
 										}
 									>
-										<button
-											className={
-												'flex items-center rounded-lg border-2 border-indigo-900 bg-transparent px-4 py-2 text-sm leading-6 text-indigo-900'
-											}
-										>
+										<button className={'btn-primary-with-icon'}>
 											<MagnifyingGlassIcon
 												className="mr-2 h-5 w-5 text-indigo-900"
 												aria-hidden="true"
@@ -175,13 +171,7 @@ function Nav() {
 										{/*    Créer mon compte*/}
 										{/*</a>*/}
 										<Link href="/signin" className="">
-											<span
-												className={
-													'border-b-2 border-indigo-900 text-sm font-bold leading-6 text-indigo-900'
-												}
-											>
-												Me connecter
-											</span>
+											<span className={'btn-primary-simple'}>Me connecter</span>
 										</Link>
 									</div>
 								</div>

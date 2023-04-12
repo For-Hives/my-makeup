@@ -38,23 +38,12 @@ function Search() {
 				</div>
 			</div>
 			<div className={'flex items-center justify-end gap-6'}>
-				<a
-					href="/recrutement"
-					className={
-						'rounded-lg border-2 border-indigo-900 bg-indigo-900 px-4 py-2 text-sm font-bold leading-6 text-white'
-					}
-				>
+				<a href="/recrutement" className={'btn-primary'}>
 					Trouver une maquilleuse
 				</a>
 				<div className={'flex items-center justify-center'}>ou</div>
 				<a href="/deposer-un-projet" className="">
-					<span
-						className={
-							'border-b-2 border-indigo-900 text-sm font-bold leading-6 text-indigo-900'
-						}
-					>
-						Déposer un projet
-					</span>
+					<span className={'btn-primary-simple'}>Déposer un projet</span>
 				</a>
 			</div>
 		</div>

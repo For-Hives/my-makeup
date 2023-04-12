@@ -34,8 +34,8 @@ function ResumeProfil(props) {
 						className={'h-[200px] w-[200px] rounded-full object-cover'}
 					></Image>
 				</div>
-				<div className={'col-span-8 flex items-center'}>
-					<div className={'flex h-full w-full flex-col gap-4 pl-20'}>
+				<div className={'col-span-7 flex items-center'}>
+					<div className={'flex h-full w-full flex-col justify-between pl-20'}>
 						<div className={'flex w-full flex-col gap-2'}>
 							<h3
 								className={'text-3xl font-bold tracking-tight text-slate-800'}
@@ -77,20 +77,33 @@ function ResumeProfil(props) {
 						</div>
 					</div>
 				</div>
-				<div className={'col-span-2 flex items-center'}>
+				<div className={'col-span-3 flex items-center'}>
 					<div
 						className={
-							'flex h-full w-full flex-col items-center justify-between'
+							'flex h-full w-full flex-col items-start justify-between'
 						}
 					>
 						<div className={'flex flex-col gap-5'}>
 							<BadgeDispo />
-							<div>date dispo</div>
-							<button>Editer ma disponibilité</button>
+							<div className={'text-sm font-semibold text-slate-900/90'}>
+								{
+									// todo : Date de disponibilité
+									'Disponible à partir du ' + '01/01/2021'
+								}
+							</div>
+							<button className={'btn-primary'}>Editer ma disponibilité</button>
 						</div>
 						<div>
-							<a href="#">
-								<span>eye</span>Voir mon profil public
+							<a
+								href="#"
+								className={'flex gap-2 font-semibold text-indigo-900 '}
+							>
+								<span className="material-symbols-rounded text-indigo-900">
+									visibility
+								</span>
+								<span className={'hover:underline'}>
+									Voir mon profil public
+								</span>
 							</a>
 						</div>
 					</div>

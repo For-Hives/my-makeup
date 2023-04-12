@@ -41,12 +41,7 @@ function Collaboration() {
 							</p>
 						</div>
 						<div className={'flex'}>
-							<Link
-								href="/signup"
-								className={
-									'rounded-lg border-2 border-indigo-900 bg-indigo-900 px-4 py-2 text-sm font-bold leading-6 text-white'
-								}
-							>
+							<Link href="/signup" className={'btn-primary'}>
 								Rejoindre la communauté
 							</Link>
 						</div>
@@ -110,12 +105,7 @@ function Collaboration() {
 							</p>
 						</div>
 						<div className={'flex'}>
-							<Link
-								href="/signup"
-								className={
-									'rounded-lg border-2 border-indigo-900 bg-indigo-900 px-4 py-2 text-sm font-bold leading-6 text-white'
-								}
-							>
+							<Link href="/signup" className={'btn-primary'}>
 								J&apos;améliore ma visibilité
 							</Link>
 						</div>
@@ -158,14 +148,10 @@ function Collaboration() {
 							</p>
 						</div>
 						<div className={'flex'}>
-							<a
-								href="/recrutement"
-								className={
-									'rounded-lg border-2 border-indigo-900 bg-indigo-900 px-4 py-2 text-sm font-bold leading-6 text-white'
-								}
-							>
+							{/*todo page "recrutement"*/}
+							<Link href="/recrutement" className={'btn-primary'}>
 								Trouver la maquilleuse parfaite
-							</a>
+							</Link>
 						</div>
 					</div>
 					<div className={'flex w-3/5 items-center justify-center'}>
@@ -237,14 +223,10 @@ function Collaboration() {
 							</p>
 						</div>
 						<div className={'flex'}>
-							<a
-								href="/recrutement"
-								className={
-									'rounded-lg border-2 border-indigo-900 bg-indigo-900 px-4 py-2 text-sm font-bold leading-6 text-white'
-								}
-							>
+							{/*todo recrutement page */}
+							<Link href="/recrutement" className={'btn-primary'}>
 								Découvrir notre solution
-							</a>
+							</Link>
 						</div>
 					</div>
 				</div>

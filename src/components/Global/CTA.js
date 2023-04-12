@@ -23,20 +23,10 @@ function Cta() {
 						la&nbsp;communauté&nbsp;qui&nbsp;fait&nbsp;la&nbsp;différence.
 					</h2>
 					<div className={'flex justify-center gap-8'}>
-						<Link
-							href="/signup"
-							className={
-								'rounded-lg border-2 border-indigo-50 bg-indigo-50 px-4 py-2 text-sm font-bold leading-6 text-indigo-900'
-							}
-						>
+						<Link href="/signup" className={'btn-secondary-white'}>
 							Je cherche des maquilleuses
 						</Link>
-						<Link
-							href="/signup"
-							className={
-								'rounded-lg border-2 border-indigo-50 bg-transparent px-4 py-2 text-sm font-bold leading-6 text-indigo-50'
-							}
-						>
+						<Link href="/signup" className={'btn-secondary-white-bordered'}>
 							Je cherche des missions
 						</Link>
 					</div>
