@@ -5,6 +5,7 @@ import { MagnifyingGlassIcon } from '@heroicons/react/20/solid'
 import Image from 'next/image'
 import PopoverComponent from '@/components/Global/Popover'
 import Link from 'next/link'
+import { signOut, useSession } from 'next-auth/react'
 
 const navigation = [
 	{
@@ -99,6 +100,8 @@ const navigation = [
 ]
 
 function Nav() {
+	const { data: session } = useSession()
+
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
 	return (
@@ -167,12 +170,25 @@ function Nav() {
 											/>
 											Trouver une maquilleuse
 										</button>
-										{/*<a href="/signup" className={"text-sm font-bold leading-6 bg-indigo-900 text-white px-4 py-2 rounded-lg border-2 border-indigo-900"}>*/}
-										{/*    Créer mon compte*/}
-										{/*</a>*/}
-										<Link href="/signin" className="">
-											<span className={'btn-primary-simple'}>Me connecter</span>
-										</Link>
+										{session ? (
+											<Link
+												onClick={() => {
+													signOut()
+												}}
+												className=""
+												href={'/signin'}
+											>
+												<span className={'btn-primary-simple'}>
+													Me déconnecter
+												</span>
+											</Link>
+										) : (
+											<Link href="/signin" className="">
+												<span className={'btn-primary-simple'}>
+													Me connecter
+												</span>
+											</Link>
+										)}
 									</div>
 								</div>
 							</nav>

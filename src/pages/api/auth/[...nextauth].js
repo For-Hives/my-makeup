@@ -1,8 +1,8 @@
 import NextAuth from 'next-auth'
 // import google provider
 import GoogleProvider from 'next-auth/providers/google'
-// import instagram provider
-import InstagramProvider from 'next-auth/providers/instagram'
+// import facebook provider
+import FacebookProvider from 'next-auth/providers/facebook'
 
 export const authOptions = {
 	providers: [
@@ -10,11 +10,19 @@ export const authOptions = {
 			clientId: process.env.GOOGLE_CLIENT_ID,
 			clientSecret: process.env.GOOGLE_CLIENT_SECRET,
 		}),
-		InstagramProvider({
-			clientId: process.env.INSTAGRAM_CLIENT_ID,
-			clientSecret: process.env.INSTAGRAM_CLIENT_SECRET,
+		FacebookProvider({
+			clientId: process.env.FACEBOOK_CLIENT_ID,
+			clientSecret: process.env.FACEBOOK_CLIENT_SECRET,
 		}),
 	],
+
+	pages: {
+		signIn: '/signin',
+		signOut: '/signout',
+		error: '/error', // Error code passed in query string as ?error=
+		verifyRequest: '/verify-request', // (used for check email message)
+		newUser: '/profil', // New users will be directed here on first sign in (leave the property out if not of interest)
+	},
 
 	session: { strategy: 'jwt' },
 

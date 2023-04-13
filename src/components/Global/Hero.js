@@ -21,6 +21,7 @@ export default function Hero() {
 					>
 						<polygon points="0,0 90,0 50,100 0,100" />
 					</svg>
+					{/* loop to repeat div */}
 					<div className="relative z-10 px-6 py-32 sm:py-40 lg:px-8 lg:pb-80 lg:pr-0 lg:pt-52">
 						<div className="mx-auto max-w-2xl lg:mx-0 lg:max-w-xl">
 							<h1 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">
