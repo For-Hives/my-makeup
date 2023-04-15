@@ -13,6 +13,7 @@
 	"dependencies": {
 		"@headlessui/react": "1.7.13",
 		"@heroicons/react": "2.0.17",
+		"@hookform/resolvers": "^3.0.1",
 		"eslint": "8.38.0",
 		"eslint-config-next": "13.3.0",
 		"next": "13.3.0",
@@ -20,8 +21,10 @@
 		"prettier-plugin-tailwindcss": "0.2.7",
 		"react": "18.2.0",
 		"react-dom": "18.2.0",
+		"react-hook-form": "^7.43.9",
 		"sharp": "0.32.0",
-		"typescript": "5.0.4"
+		"typescript": "5.0.4",
+		"yup": "^1.1.1"
 	},
 	"devDependencies": {
 		"@tailwindcss/forms": "0.5.3",

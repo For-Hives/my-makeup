@@ -3,9 +3,65 @@ import Head from 'next/head'
 import Link from 'next/link'
 import Image from 'next/image'
 import { signIn, signOut, useSession } from 'next-auth/react'
+import { useForm, Controller } from 'react-hook-form'
+import { yupResolver } from '@hookform/resolvers/yup'
+import * as yup from 'yup'
+import { router } from 'next/client'
+
+const schema = yup.object().shape({
+	email: yup.string().required('Email est requis').email('Email invalide'),
+	password: yup
+		.string()
+		.required('Mot de passe est requis')
+		.matches(
+			/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])(?=.{8,})/,
+			'Le mot de passe doit contenir au moins 8 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial'
+		),
+})
+
+const menu = [
+	{
+		name: 'Accueil',
+		href: '/',
+	},
+	{
+		name: 'Inscription',
+		href: '/signup',
+	},
+	{
+		name: 'Connexion',
+		href: '/signin',
+	},
+]
 
 function Signin() {
+	const {
+		register,
+		handleSubmit,
+		formState: { errors },
+	} = useForm({
+		resolver: yupResolver(schema),
+	})
+
 	const { data: session } = useSession()
+
+	const onSubmit = async e => {
+		e.preventDefault()
+		const result = await signIn('credentials', {
+			email: e.target.email.value,
+			password: e.target.password.value,
+			redirect: false,
+		})
+
+		if (result.error) {
+			console.log(result.error)
+		}
+		if (result.ok) {
+			await router.replace('/')
+		} else {
+			console.log(result)
+		}
+	}
 
 	return (
 		<>
@@ -17,7 +73,7 @@ function Signin() {
 	            recherche de maquilleuses professionnelles, ou votre recherche de client !"
 				/>
 			</Head>
-			<div className="bg- flex min-h-screen">
+			<div className="flex min-h-screen">
 				<div className="flex flex-1 flex-col justify-center px-4 py-12 sm:px-6 lg:flex-none lg:px-20 xl:px-24">
 					<div className="mx-auto w-full max-w-sm lg:w-96">
 						<div>
@@ -111,7 +167,7 @@ function Signin() {
 								</div>
 
 								<div className="mt-6">
-									<form action="#" method="POST" className="space-y-6">
+									<form onSubmit={onSubmit} method="POST" className="space-y-6">
 										<div>
 											<label
 												htmlFor="email"
@@ -123,11 +179,19 @@ function Signin() {
 												<input
 													id="email"
 													name="email"
-													type="email"
+													type="text"
 													autoComplete="email"
+													{...register('email', {
+														required: true,
+													})}
 													required
 													className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
 												/>
+												{errors.email && (
+													<p className={'mt-2 text-xs text-red-500/80'}>
+														{errors.email.message}
+													</p>
+												)}
 											</div>
 										</div>
 
@@ -144,9 +208,17 @@ function Signin() {
 													name="password"
 													type="password"
 													autoComplete="current-password"
+													{...register('password', {
+														required: true,
+													})}
 													required
 													className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
 												/>
+												{errors.password && (
+													<p className={'mt-2 text-xs text-red-500/80'}>
+														{errors.password.message}
+													</p>
+												)}
 											</div>
 										</div>
 
@@ -168,11 +240,7 @@ function Signin() {
 										</div>
 
 										<div>
-											<button
-												type="submit"
-												className="btn-primary-large"
-												onClick={() => {}}
-											>
+											<button type="submit" className="btn-primary-large">
 												Se connecter
 											</button>
 										</div>
