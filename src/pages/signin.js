@@ -19,21 +19,6 @@ const schema = yup.object().shape({
 		),
 })
 
-const menu = [
-	{
-		name: 'Accueil',
-		href: '/',
-	},
-	{
-		name: 'Inscription',
-		href: '/signup',
-	},
-	{
-		name: 'Connexion',
-		href: '/signin',
-	},
-]
-
 function Signin() {
 	const {
 		register,
@@ -57,7 +42,7 @@ function Signin() {
 			console.log(result.error)
 		}
 		if (result.ok) {
-			await router.replace('/')
+			// await router.replace('/')
 		} else {
 			console.log(result)
 		}
@@ -85,7 +70,10 @@ function Signin() {
 								src="/assets/logo_2.webp"
 							/>
 							<h2 className="mt-6 text-3xl font-bold tracking-tight text-gray-900">
-								{session ? 'Bonjour ' + session.user.name : 'Se connecter'}
+								{session
+									? 'Bonjour ' +
+									  (session.user.name ? session.user.name : session.user.email)
+									: 'Se connecter'}
 							</h2>
 						</div>
 						{!session && (

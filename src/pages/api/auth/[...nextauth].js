@@ -44,7 +44,7 @@ export const authOptions = {
 			// e.g. domain, username, password, 2FA token, etc.
 			// You can pass any HTML attribute to the <input> tag through the object.
 			credentials: {
-				email: { label: 'Email', type: 'text' },
+				identifier: { label: 'Email', type: 'text' },
 				password: { label: 'Password', type: 'password' },
 			},
 			async authorize(credentials) {
@@ -92,16 +92,23 @@ export const authOptions = {
 
 	callbacks: {
 		async session({ session, token, user }) {
-			console.log('session')
-			console.log(session)
-			console.log('token')
-			console.log(token)
-			session.jwt = token.jwt
-			session.id = token.id
+			if (token) {
+				console.log('session')
+				console.log(session)
+				console.log('token session')
+				console.log(token)
+				session.jwt = token.jwt
+				session.id = token.id
+			}
 			return session
 		},
 
 		async jwt({ token, user, account }) {
+			console.log('jwt')
+			console.log(token)
+			console.log(user)
+			console.log(account)
+
 			const isSignIn = !!user
 			if (isSignIn) {
 				if (account.type === 'credentials') {
@@ -117,7 +124,7 @@ export const authOptions = {
 					token.jwt = data.jwt
 					token.id = data.user.id
 				}
-				console.log('token')
+				console.log('token test')
 				console.log(token)
 				return token
 			}
