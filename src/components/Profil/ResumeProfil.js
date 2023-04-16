@@ -2,6 +2,9 @@ import React from 'react'
 import Image from 'next/image'
 import { Stars } from '@/components/Profil/Stars'
 import { BadgeDispo } from '@/components/Profil/BadgeDispo'
+import { useSession } from 'next-auth/react'
+import { useQuery } from 'react-query'
+import { fetchApi } from '@/services/api'
 
 // Head : General
 // left
@@ -22,6 +25,13 @@ import { BadgeDispo } from '@/components/Profil/BadgeDispo'
 function ResumeProfil(props) {
 	const [starsToDisplay, setStarsToDisplay] = React.useState(5)
 
+	// get current user id
+	const { data: session } = useSession()
+	// get current user data
+	const { isLoading, isError, data, error } = useQuery('makeup-artiste', () =>
+		fetchApi('/makeup-artiste/' + session.user.id ? session.user.id : 1)
+	)
+
 	return (
 		<div className="mx-auto max-w-7xl pt-[90px]">
 			<div className={'grid grid-cols-12 gap-5 pt-[100px]'}>
@@ -40,8 +50,10 @@ function ResumeProfil(props) {
 							<h3
 								className={'text-3xl font-bold tracking-tight text-slate-800'}
 							>
-								{/* todo : Nom prénom */}
-								{'Nom prénom'}
+								{session
+									? 'Bonjour ' +
+									  (session.user.name ? session.user.name : session.user.email)
+									: 'Se connecter'}
 							</h3>
 							<h2
 								className={

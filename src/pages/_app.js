@@ -3,6 +3,9 @@ import '@/styles/icons.css'
 import '@/styles/stars.css'
 import Head from 'next/head'
 import { SessionProvider } from 'next-auth/react'
+import { QueryClient, QueryClientProvider } from 'react-query'
+
+const queryClient = new QueryClient()
 
 export default function App({
 	Component,
@@ -14,7 +17,9 @@ export default function App({
 				<meta name="viewport" content="width=device-width, initial-scale=1" />
 			</Head>
 			<SessionProvider session={session}>
-				<Component {...pageProps} />
+				<QueryClientProvider client={queryClient}>
+					<Component {...pageProps} />
+				</QueryClientProvider>
 			</SessionProvider>
 		</>
 	)

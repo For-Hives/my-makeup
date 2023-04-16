@@ -4,8 +4,23 @@ import Image from 'next/image'
 import Nav from '@/components/Global/Nav'
 import Footer from '@/components/Global/Footer'
 import ResumeProfil from '@/components/Profil/ResumeProfil'
+import { useQuery } from 'react-query'
+import { fetchApi } from '@/services/api'
+import { useSession } from 'next-auth/react'
 
 function Profil() {
+	// get current user id
+	const { data: session } = useSession()
+	// get current user data
+	const { isLoading, isError, data, error } = useQuery('makeup-artiste', () =>
+		fetchApi('/makeup-artiste/' + session.user.id ? session.user.id : 1)
+	)
+
+	// if (isLoading) return <div>Loading...</div>
+	// if (isError) return <div>Error: {error.message}</div>
+
+	console.log(data)
+
 	return (
 		<>
 			<Head>

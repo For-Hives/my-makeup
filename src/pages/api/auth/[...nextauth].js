@@ -5,8 +5,6 @@ import GoogleProvider from 'next-auth/providers/google'
 import FacebookProvider from 'next-auth/providers/facebook'
 // import credential provider
 import CredentialsProvider from 'next-auth/providers/credentials'
-// import strapi service
-import { StrapiService } from '@/services/strapi'
 
 export const authOptions = {
 	providers: [
@@ -18,24 +16,6 @@ export const authOptions = {
 			clientId: process.env.FACEBOOK_CLIENT_ID,
 			clientSecret: process.env.FACEBOOK_CLIENT_SECRET,
 		}),
-		// CredentialProvider({
-		// 	name: 'Credentials',
-		// 	async authorize(credentials) {
-		// 		try {
-		// 			const strapi = new StrapiService()
-		// 			const user = await strapi.authenticate(credentials)
-		// 			if (user) {
-		// 				console.log(user)
-		// 				return user
-		// 			} else {
-		// 				return null
-		// 			}
-		// 		} catch (error) {
-		// 			console.log(error)
-		// 			throw error
-		// 		}
-		// 	},
-		// }),
 		CredentialsProvider({
 			// The name to display on the sign in form (e.g. 'Sign in with...')
 			name: 'Credentials',
@@ -92,28 +72,15 @@ export const authOptions = {
 
 	callbacks: {
 		async session({ session, token, user }) {
-			if (token) {
-				console.log('session')
-				console.log(session)
-				console.log('token session')
-				console.log(token)
-				session.jwt = token.jwt
-				session.id = token.id
-			}
+			session.jwt = token.jwt
+			session.id = token.id
 			return session
 		},
 
 		async jwt({ token, user, account }) {
-			console.log('jwt')
-			console.log(token)
-			console.log(user)
-			console.log(account)
-
 			const isSignIn = !!user
 			if (isSignIn) {
 				if (account.type === 'credentials') {
-					console.log('user')
-					console.log(user)
 					token.jwt = user.jwt
 					token.id = user.id
 				} else {
@@ -124,8 +91,6 @@ export const authOptions = {
 					token.jwt = data.jwt
 					token.id = data.user.id
 				}
-				console.log('token test')
-				console.log(token)
 				return token
 			}
 		},

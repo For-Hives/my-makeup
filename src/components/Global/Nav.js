@@ -171,17 +171,22 @@ function Nav() {
 											Trouver une maquilleuse
 										</button>
 										{session ? (
-											<Link
-												onClick={() => {
-													signOut()
-												}}
-												className=""
-												href={'/signin'}
-											>
-												<span className={'btn-primary-simple'}>
-													Me déconnecter
-												</span>
-											</Link>
+											<>
+												<Link
+													onClick={() => {
+														signOut()
+													}}
+													className=""
+													href={'/signin'}
+												>
+													<span className={'btn-primary-simple'}>
+														Me déconnecter
+													</span>
+												</Link>
+												<Link className="" href={'/profil'}>
+													<span className={'btn-primary'}>Profil</span>
+												</Link>
+											</>
 										) : (
 											<Link href="/signin" className="">
 												<span className={'btn-primary-simple'}>

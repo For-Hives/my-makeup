@@ -30,22 +30,12 @@ function Signin() {
 
 	const { data: session } = useSession()
 
-	const onSubmit = async e => {
-		e.preventDefault()
-		const result = await signIn('credentials', {
-			email: e.target.email.value,
-			password: e.target.password.value,
-			redirect: false,
+	const onSubmit = data => {
+		const result = signIn('credentials', {
+			email: data.email,
+			password: data.password,
+			callbackUrl: '/profil',
 		})
-
-		if (result.error) {
-			console.log(result.error)
-		}
-		if (result.ok) {
-			// await router.replace('/')
-		} else {
-			console.log(result)
-		}
 	}
 
 	return (
@@ -155,7 +145,11 @@ function Signin() {
 								</div>
 
 								<div className="mt-6">
-									<form onSubmit={onSubmit} method="POST" className="space-y-6">
+									<form
+										onSubmit={handleSubmit(onSubmit)}
+										method="POST"
+										className="space-y-6"
+									>
 										<div>
 											<label
 												htmlFor="email"
