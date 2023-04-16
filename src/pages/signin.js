@@ -6,7 +6,7 @@ import { signIn, signOut, useSession } from 'next-auth/react'
 import { useForm, Controller } from 'react-hook-form'
 import { yupResolver } from '@hookform/resolvers/yup'
 import * as yup from 'yup'
-import { router } from 'next/client'
+// import { router } from 'next/client'
 
 const schema = yup.object().shape({
 	email: yup.string().required('Email est requis').email('Email invalide'),

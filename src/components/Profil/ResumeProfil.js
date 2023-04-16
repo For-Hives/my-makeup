@@ -26,11 +26,17 @@ function ResumeProfil(props) {
 	const [starsToDisplay, setStarsToDisplay] = React.useState(5)
 
 	// get current user id
-	const { data: session } = useSession()
-	// get current user data
-	const { isLoading, isError, data, error } = useQuery('makeup-artiste', () =>
-		fetchApi('/makeup-artiste/' + session.user.id ? session.user.id : 1)
-	)
+	const { data: session, status } = useSession()
+	if (status !== 'authenticated') {
+		console.log(status)
+		console.log(session)
+		return <p className={'mt-[300px]'}>not authenticated</p>
+	}
+
+	// // get current user data
+	// const { isLoading, isError, data, error } = useQuery('makeup-artiste', () =>
+	// 	fetchApi('/makeup-artiste/' + session.user.id ? session.user.id : 1)
+	// )
 
 	return (
 		<div className="mx-auto max-w-7xl pt-[90px]">

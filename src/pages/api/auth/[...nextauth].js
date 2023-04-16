@@ -68,12 +68,17 @@ export const authOptions = {
 		newUser: '/profil', // New users will be directed here on first sign in (leave the property out if not of interest)
 	},
 
-	session: { strategy: 'jwt' },
+	session: {
+		strategy: 'jwt',
+		maxAge: 30 * 24 * 60 * 60, // 30 days
+	},
 
 	callbacks: {
 		async session({ session, token, user }) {
-			session.jwt = token.jwt
-			session.id = token.id
+			if (token) {
+				session.jwt = token.jwt
+				session.id = token.id
+			}
 			return session
 		},
 
