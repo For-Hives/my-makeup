@@ -6,6 +6,7 @@ import { signIn, signOut, useSession } from 'next-auth/react'
 import { useForm, Controller } from 'react-hook-form'
 import { yupResolver } from '@hookform/resolvers/yup'
 import * as yup from 'yup'
+import _ from 'lodash'
 // import { router } from 'next/client'
 
 const schema = yup.object().shape({
@@ -60,13 +61,13 @@ function Signin() {
 								src="/assets/logo_2.webp"
 							/>
 							<h2 className="mt-6 text-3xl font-bold tracking-tight text-gray-900">
-								{session
+								{session && session.user && !_.isEmpty(session.user)
 									? 'Bonjour ' +
 									  (session.user.name ? session.user.name : session.user.email)
 									: 'Se connecter'}
 							</h2>
 						</div>
-						{!session && (
+						{!(session.user && !_.isEmpty(session.user)) && (
 							<div className="mt-8">
 								<div>
 									<div>
@@ -241,7 +242,7 @@ function Signin() {
 								</div>
 							</div>
 						)}
-						{!!session && (
+						{!!(session && session.user && !_.isEmpty(session.user)) && (
 							<div className={'mt-8'}>
 								<button
 									type="submit"

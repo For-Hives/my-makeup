@@ -6,6 +6,7 @@ import Image from 'next/image'
 import PopoverComponent from '@/components/Global/Popover'
 import Link from 'next/link'
 import { signOut, useSession } from 'next-auth/react'
+import _ from 'lodash'
 
 const navigation = [
 	{
@@ -114,7 +115,7 @@ function Nav() {
 								className="flex items-center justify-between sm:h-10 lg:justify-start"
 								aria-label="Global"
 							>
-								<Link href="#" className="-m-1.5 p-1.5">
+								<Link href="/" className="-m-1.5 p-1.5">
 									<span className="sr-only">My Makeup</span>
 									<Image
 										alt="Logo My Makeup"
@@ -170,7 +171,7 @@ function Nav() {
 											/>
 											Trouver une maquilleuse
 										</button>
-										{session ? (
+										{session && session.user && !_.isEmpty(session.user) ? (
 											<>
 												<Link
 													onClick={() => {
@@ -223,13 +224,13 @@ function Nav() {
 									</div>
 									<div className="mt-6 space-y-2">
 										{navigation.map(item => (
-											<a
+											<Link
 												key={item.name}
 												href={item.href}
 												className="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-slate-900 hover:bg-slate-400/10"
 											>
 												{item.name}
-											</a>
+											</Link>
 										))}
 									</div>
 								</Dialog.Panel>

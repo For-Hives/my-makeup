@@ -5,6 +5,7 @@ import { BadgeDispo } from '@/components/Profil/BadgeDispo'
 import { useSession } from 'next-auth/react'
 import { useQuery } from 'react-query'
 import { fetchApi } from '@/services/api'
+import _ from 'lodash'
 
 // Head : General
 // left
@@ -38,6 +39,8 @@ function ResumeProfil(props) {
 	// 	fetchApi('/makeup-artiste/' + session.user.id ? session.user.id : 1)
 	// )
 
+	console.log(session.user)
+
 	return (
 		<div className="mx-auto max-w-7xl pt-[90px]">
 			<div className={'grid grid-cols-12 gap-5 pt-[100px]'}>
@@ -56,7 +59,7 @@ function ResumeProfil(props) {
 							<h3
 								className={'text-3xl font-bold tracking-tight text-slate-800'}
 							>
-								{session
+								{session && session.user && !_.isEmpty(session.user)
 									? 'Bonjour ' +
 									  (session.user.name ? session.user.name : session.user.email)
 									: 'Se connecter'}

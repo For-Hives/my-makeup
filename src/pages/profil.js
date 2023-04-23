@@ -7,6 +7,7 @@ import ResumeProfil from '@/components/Profil/ResumeProfil'
 import { useQuery } from 'react-query'
 import { fetchApi } from '@/services/api'
 import { useSession } from 'next-auth/react'
+import _ from 'lodash'
 
 function Profil() {
 	// get current user id
@@ -19,7 +20,7 @@ function Profil() {
 	// if (isLoading) return <div>Loading...</div>
 	// if (isError) return <div>Error: {error.message}</div>
 
-	console.log(data)
+	console.log(session)
 
 	return (
 		<>
@@ -41,7 +42,17 @@ function Profil() {
 					}
 				/>
 				<Nav />
-				<ResumeProfil />
+				{session && session.user && !_.isEmpty(session.user) ? (
+					<>
+						<ResumeProfil />
+					</>
+				) : (
+					<div className="flex h-screen flex-col items-center justify-center">
+						<h1 className="text-center text-4xl font-bold text-gray-700">
+							You are not logged in
+						</h1>
+					</div>
+				)}
 				<Footer />
 			</main>
 		</>
