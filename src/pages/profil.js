@@ -12,6 +12,8 @@ import _ from 'lodash'
 function Profil() {
 	// get current user id
 	const { data: session } = useSession()
+
+	// console.log(session)
 	// get current user data
 	const { isLoading, isError, data, error } = useQuery('makeup-artiste', () =>
 		fetchApi('/makeup-artiste/' + session.user.id ? session.user.id : 1)
@@ -20,7 +22,7 @@ function Profil() {
 	// if (isLoading) return <div>Loading...</div>
 	// if (isError) return <div>Error: {error.message}</div>
 
-	console.log(session)
+	// console.log(session)
 
 	return (
 		<>

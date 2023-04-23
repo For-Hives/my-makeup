@@ -78,6 +78,8 @@ export const authOptions = {
 
 	callbacks: {
 		async session({ session, token, user }) {
+			console.log('session', session)
+			console.log('token', token)
 			if (token) {
 				session.jwt = token.jwt
 				session.id = token.id

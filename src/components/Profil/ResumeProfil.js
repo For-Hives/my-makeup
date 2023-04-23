@@ -3,8 +3,6 @@ import Image from 'next/image'
 import { Stars } from '@/components/Profil/Stars'
 import { BadgeDispo } from '@/components/Profil/BadgeDispo'
 import { useSession } from 'next-auth/react'
-import { useQuery } from 'react-query'
-import { fetchApi } from '@/services/api'
 import _ from 'lodash'
 
 // Head : General
@@ -29,8 +27,6 @@ function ResumeProfil(props) {
 	// get current user id
 	const { data: session, status } = useSession()
 	if (status !== 'authenticated') {
-		console.log(status)
-		console.log(session)
 		return <p className={'mt-[300px]'}>not authenticated</p>
 	}
 
@@ -38,8 +34,6 @@ function ResumeProfil(props) {
 	// const { isLoading, isError, data, error } = useQuery('makeup-artiste', () =>
 	// 	fetchApi('/makeup-artiste/' + session.user.id ? session.user.id : 1)
 	// )
-
-	console.log(session.user)
 
 	return (
 		<div className="mx-auto max-w-7xl pt-[90px]">
