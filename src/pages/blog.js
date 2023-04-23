@@ -2,6 +2,12 @@ import React from 'react'
 import Footer from '@/components/Global/Footer'
 import Nav from '@/components/Global/Nav'
 
+/**
+ * todo : add content
+ * @param props
+ * @returns {JSX.Element}
+ * @constructor
+ */
 function Blog(props) {
 	return (
 		<>

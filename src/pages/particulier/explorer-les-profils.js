@@ -2,6 +2,12 @@ import React from 'react'
 import Nav from '@/components/Global/Nav'
 import Footer from '@/components/Global/Footer'
 
+/**
+ * todo : add content
+ * @param props
+ * @returns {JSX.Element}
+ * @constructor
+ */
 function ExplorerLesProfils(props) {
 	return (
 		<>
