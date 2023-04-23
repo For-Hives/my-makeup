@@ -11,7 +11,7 @@
 		"prepare": "husky install"
 	},
 	"dependencies": {
-		"@headlessui/react": "1.7.13",
+		"@headlessui/react": "1.7.14",
 		"@heroicons/react": "2.0.17",
 		"@hookform/resolvers": "^3.0.1",
 		"eslint": "8.38.0",
@@ -32,7 +32,7 @@
 		"autoprefixer": "10.4.14",
 		"eslint-config-prettier": "8.8.0",
 		"husky": "8.0.3",
-		"postcss": "8.4.21",
+		"postcss": "8.4.23",
 		"prettier": "2.8.7",
 		"tailwindcss": "3.3.1"
 	}
