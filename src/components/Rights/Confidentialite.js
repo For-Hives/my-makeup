@@ -1,14 +1,14 @@
-import React from 'react';
+import React from 'react'
 
 function Confidentialite(props) {
 	return (
 		<section className={'relative py-40'}>
-			<div className="mx-auto max-w-7xl flex flex-col gap-10">
+			<div className="mx-auto flex max-w-7xl flex-col gap-10">
 				<div className="mx-auto w-full">
-					<h2 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-4xl text-left">
+					<h2 className="text-left text-4xl font-bold tracking-tight text-slate-900 sm:text-4xl">
 						Politique de confidentialité
 					</h2>
-					<p className="mt-6 text-lg leading-8 text-slate-700 text-left">
+					<p className="mt-6 text-left text-lg leading-8 text-slate-700">
 						Nous sommes engagés à protéger vos données personnelles conformément
 						{/* eslint-disable-next-line react/no-unescaped-entities */}
 						aux lois RGPD de l'Union Européenne sur la protection des données
@@ -18,11 +18,11 @@ function Confidentialite(props) {
 					</p>
 				</div>
 				<div className="mx-auto w-full">
-					<h2 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-4xl text-left">
+					<h2 className="text-left text-4xl font-bold tracking-tight text-slate-900 sm:text-4xl">
 						{/* eslint-disable-next-line react/no-unescaped-entities */}
 						Collecte d'informations
 					</h2>
-					<p className="mt-6 text-lg leading-8 text-slate-700 text-left">
+					<p className="mt-6 text-left text-lg leading-8 text-slate-700">
 						Nous collectons des informations vous concernant lorsque vous vous
 						inscrivez sur notre site web ou lorsque vous utilisez nos services.
 						Les informations que nous collectons peuvent inclure votre nom,
@@ -37,11 +37,11 @@ function Confidentialite(props) {
 					</p>
 				</div>
 				<div className="mx-auto w-full">
-					<h2 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-4xl text-left">
+					<h2 className="text-left text-4xl font-bold tracking-tight text-slate-900 sm:text-4xl">
 						{/* eslint-disable-next-line react/no-unescaped-entities */}
 						Utilisation d'informations
 					</h2>
-					<p className="mt-6 text-lg leading-8 text-slate-700 text-left">
+					<p className="mt-6 text-left text-lg leading-8 text-slate-700">
 						Nous utilisons les informations que nous collectons pour fournir et
 						améliorer nos services. Nous pouvons également utiliser ces
 						informations pour vous contacter concernant des offres
@@ -57,10 +57,10 @@ function Confidentialite(props) {
 					</p>
 				</div>
 				<div className="mx-auto w-full">
-					<h2 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-4xl text-left">
+					<h2 className="text-left text-4xl font-bold tracking-tight text-slate-900 sm:text-4xl">
 						Protection des informations
 					</h2>
-					<p className="mt-6 text-lg leading-8 text-slate-700 text-left">
+					<p className="mt-6 text-left text-lg leading-8 text-slate-700">
 						Nous prenons des mesures de sécurité appropriées pour protéger vos
 						informations personnelles contre les accès non autorisés ou la
 						modification. Nous ne vendons pas ou ne louons pas vos informations
@@ -69,10 +69,10 @@ function Confidentialite(props) {
 					</p>
 				</div>
 				<div className="mx-auto w-full">
-					<h2 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-4xl text-left">
+					<h2 className="text-left text-4xl font-bold tracking-tight text-slate-900 sm:text-4xl">
 						Cookies
 					</h2>
-					<p className="mt-6 text-lg leading-8 text-slate-700 text-left">
+					<p className="mt-6 text-left text-lg leading-8 text-slate-700">
 						Nous utilisons des cookies pour collecter des informations sur la
 						façon dont vous utilisez notre site web. Les cookies sont des
 						fichiers texte stockés sur votre ordinateur qui nous aident à
@@ -83,10 +83,10 @@ function Confidentialite(props) {
 					</p>
 				</div>
 				<div className="mx-auto w-full">
-					<h2 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-4xl text-left">
+					<h2 className="text-left text-4xl font-bold tracking-tight text-slate-900 sm:text-4xl">
 						Accès aux informations
 					</h2>
-					<p className="mt-6 text-lg leading-8 text-slate-700 text-left">
+					<p className="mt-6 text-left text-lg leading-8 text-slate-700">
 						Vous pouvez accéder et mettre à jour les informations que nous avons
 						sur vous en vous connectant à votre compte sur notre site web. De
 						même, les maquilleuses professionnelles peuvent accéder et mettre à
@@ -95,21 +95,21 @@ function Confidentialite(props) {
 					</p>
 				</div>
 				<div className="mx-auto w-full">
-					<h2 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-4xl text-left">
+					<h2 className="text-left text-4xl font-bold tracking-tight text-slate-900 sm:text-4xl">
 						Modifications de la politique de confidentialité
 					</h2>
-					<p className="mt-6 text-lg leading-8 text-slate-700 text-left">
+					<p className="mt-6 text-left text-lg leading-8 text-slate-700">
 						Nous pouvons modifier cette politique de confidentialité de temps à
 						autre. Si nous apportons des modifications importantes, nous vous
 						informerons par e-mail ou en publiant un avis sur notre site web.
 					</p>
 				</div>
 				<div className="mx-auto w-full">
-					<h2 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-4xl text-left">
+					<h2 className="text-left text-4xl font-bold tracking-tight text-slate-900 sm:text-4xl">
 						{/* eslint-disable-next-line react/no-unescaped-entities */}
 						Droit à l'oubli et suppression de données
 					</h2>
-					<p className="mt-6 text-lg leading-8 text-slate-700 text-left">
+					<p className="mt-6 text-left text-lg leading-8 text-slate-700">
 						{/* eslint-disable-next-line react/no-unescaped-entities */}
 						Conformément aux lois RGPD de l'Union Européenne sur la protection
 						des données personnelles et aux lois françaises informatiques et
@@ -121,21 +121,21 @@ function Confidentialite(props) {
 					</p>
 				</div>
 				<div className="mx-auto w-full">
-					<h2 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-4xl text-left">
+					<h2 className="text-left text-4xl font-bold tracking-tight text-slate-900 sm:text-4xl">
 						{/* eslint-disable-next-line react/no-unescaped-entities */}
 						Date d'entrée en vigueur
 					</h2>
-					<p className="mt-6 text-lg leading-8 text-slate-700 text-left">
+					<p className="mt-6 text-left text-lg leading-8 text-slate-700">
 						Cette politique de confidentialité est entrée en vigueur le
 						08/04/2023 et remplace toutes les politiques de confidentialité
 						antérieures.
 					</p>
 				</div>
 				<div className="mx-auto w-full">
-					<h2 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-4xl text-left">
+					<h2 className="text-left text-4xl font-bold tracking-tight text-slate-900 sm:text-4xl">
 						Contactez-nous
 					</h2>
-					<p className="mt-6 text-lg leading-8 text-slate-700 text-left">
+					<p className="mt-6 text-left text-lg leading-8 text-slate-700">
 						Si vous avez des questions ou des préoccupations concernant notre
 						politique de confidentialité ou la manière dont nous collectons et
 						{/* eslint-disable-next-line react/no-unescaped-entities */}
@@ -150,7 +150,7 @@ function Confidentialite(props) {
 				</div>
 			</div>
 		</section>
-	);
+	)
 }
 
-export default Confidentialite;
+export default Confidentialite

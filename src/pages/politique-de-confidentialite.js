@@ -1,15 +1,15 @@
-import React from 'react';
-import Nav from '@/components/Global/Nav';
-import Footer from '@/components/Global/Footer';
-import Head from 'next/head';
-import Image from 'next/image';
-import Hero from '@/components/Global/Hero';
-import Presentation from '@/components/Home/Presentation';
-import Talents from '@/components/Home/Talents';
-import Collaboration from '@/components/Home/Collaboration';
-import Project from '@/components/Home/Project';
-import CTA from '@/components/Global/CTA';
-import Confidentialite from '@/components/Rights/Confidentialite';
+import React from 'react'
+import Nav from '@/components/Global/Nav'
+import Footer from '@/components/Global/Footer'
+import Head from 'next/head'
+import Image from 'next/image'
+import Hero from '@/components/Global/Hero'
+import Presentation from '@/components/Home/Presentation'
+import Talents from '@/components/Home/Talents'
+import Collaboration from '@/components/Home/Collaboration'
+import Project from '@/components/Home/Project'
+import CTA from '@/components/Global/CTA'
+import Confidentialite from '@/components/Rights/Confidentialite'
 
 function PolitiqueDeConfidentialite(props) {
 	return (
@@ -38,7 +38,7 @@ function PolitiqueDeConfidentialite(props) {
 				<Footer />
 			</main>
 		</>
-	);
+	)
 }
 
-export default PolitiqueDeConfidentialite;
+export default PolitiqueDeConfidentialite
