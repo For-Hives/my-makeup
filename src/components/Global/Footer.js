@@ -172,7 +172,7 @@ function Footer() {
 						className={'text-sm text-slate-600'}
 						href={'https://andy-cinquin.fr'}
 					>
-						Andy Cinquin
+						Andy Cinquin & Bréval Le Floch
 					</Link>
 				</p>
 			</div>
