@@ -27,7 +27,7 @@ function Footer() {
 						44000 Nantes
 					</p>
 					<div className={'flex gap-3'}>
-						<a href="src/components#">
+						<Link href="/">
 							<Image
 								src={'/assets/vectorials-used/fi-brands-instagram.svg'}
 								className={'fill-indigo-700'}
@@ -35,8 +35,8 @@ function Footer() {
 								height={'20'}
 								alt={'Instagram My Makeup'}
 							/>
-						</a>
-						<a href="src/components#">
+						</Link>
+						<Link href="/">
 							<Image
 								src={'/assets/vectorials-used/fi-brands-linkedin.svg'}
 								className={'fill-indigo-700'}
@@ -44,8 +44,8 @@ function Footer() {
 								height={'20'}
 								alt={'Linkedin My Makeup'}
 							/>
-						</a>
-						<a href="src/components#">
+						</Link>
+						<Link href="s/">
 							<Image
 								src={'/assets/vectorials-used/fi-brands-telegram.svg'}
 								className={'fill-indigo-700'}
@@ -53,7 +53,7 @@ function Footer() {
 								height={'20'}
 								alt={'Mail My Makeup'}
 							/>
-						</a>
+						</Link>
 					</div>
 				</div>
 				<div className={'flex flex-col gap-6'}>
@@ -62,27 +62,27 @@ function Footer() {
 							Particuliers
 						</h4>
 					</div>
-					<a href={'/particulier'} className={'text-sm text-slate-600'}>
+					<Link href={'/particulier'} className={'text-sm text-slate-600'}>
 						Pourquoi My Makeup ?
-					</a>
-					<a
+					</Link>
+					<Link
 						href={'/particulier/trouver-une-maquilleuse'}
 						className={'text-sm text-slate-600'}
 					>
 						Trouver des maquilleuses
-					</a>
-					<a
+					</Link>
+					<Link
 						href={'/particulier/centraliser-ses-recherches'}
 						className={'text-sm text-slate-600'}
 					>
 						Centraliser ses recherches
-					</a>
-					<a
+					</Link>
+					<Link
 						href={'/particulier/explorer-les-profils'}
 						className={'text-sm text-slate-600'}
 					>
 						Explorer les profils
-					</a>
+					</Link>
 				</div>
 				<div className={'flex flex-col gap-6'}>
 					<div className={'mb-2 flex items-center justify-start gap-3'}>
@@ -90,90 +90,90 @@ function Footer() {
 							Maquilleuses
 						</h4>
 					</div>
-					<a href={'/maquilleuse'} className={'text-sm text-slate-600'}>
+					<Link href={'/maquilleuse'} className={'text-sm text-slate-600'}>
 						Pourquoi My Makeup ?
-					</a>
-					<a
+					</Link>
+					<Link
 						href={'/maquilleuse/partenariats'}
 						className={'text-sm text-slate-600'}
 					>
 						Community & Partenariats
-					</a>
-					<a
+					</Link>
+					<Link
 						href={'/maquilleuse/partenaires'}
 						className={'text-sm text-slate-600'}
 					>
 						Nos partenaires
-					</a>
-					<a href={'/affiliation'} className={'text-sm text-slate-600'}>
+					</Link>
+					<Link href={'/affiliation'} className={'text-sm text-slate-600'}>
 						Programme d&apos;affiliation
-					</a>
-					<a href={'/parrainage'} className={'text-sm text-slate-600'}>
+					</Link>
+					<Link href={'/parrainage'} className={'text-sm text-slate-600'}>
 						Programme de parrainage
-					</a>
+					</Link>
 				</div>
 				<div className={'flex flex-col gap-6'}>
 					<div className={'mb-2 flex items-center justify-start gap-3'}>
 						<h4 className={'text-xl font-bold text-indigo-800'}>Ressources</h4>
 					</div>
-					<a
+					<Link
 						href={'/solutions/pour-les-particuliers'}
 						className={'text-sm text-slate-600'}
 					>
 						Solution pour les particuliers
-					</a>
-					<a
+					</Link>
+					<Link
 						href={'/solutions/pour-les-maquilleuses'}
 						className={'text-sm text-slate-600'}
 					>
 						Solution pour les maquilleuses
-					</a>
-					<a href={'/blog'} className={'text-sm text-slate-600'}>
+					</Link>
+					<Link href={'/blog'} className={'text-sm text-slate-600'}>
 						Blog
-					</a>
-					<a href={'/help'} className={'text-sm text-slate-600'}>
+					</Link>
+					<Link href={'/help'} className={'text-sm text-slate-600'}>
 						Aide
-					</a>
+					</Link>
 				</div>
 				<div className={'flex flex-col gap-6'}>
 					<div className={'mb-2 flex items-center justify-start gap-3'}>
 						<h4 className={'text-xl font-bold text-indigo-800'}>My Makeup</h4>
 					</div>
-					<a href={'/a-propos'} className={'text-sm text-slate-600'}>
+					<Link href={'/a-propos'} className={'text-sm text-slate-600'}>
 						À propos de My Makeup
-					</a>
-					<a href={'/contact'} className={'text-sm text-slate-600'}>
+					</Link>
+					<Link href={'/contact'} className={'text-sm text-slate-600'}>
 						Contact
-					</a>
-					<a href={'/mentions-legales'} className={'text-sm text-slate-600'}>
+					</Link>
+					<Link href={'/mentions-legales'} className={'text-sm text-slate-600'}>
 						Mentions légales
-					</a>
-					<a href={'/cgv'} className={'text-sm text-slate-600'}>
+					</Link>
+					<Link href={'/cgv'} className={'text-sm text-slate-600'}>
 						Conditions générales de vente
-					</a>
-					<a href={'/cgu'} className={'text-sm text-slate-600'}>
+					</Link>
+					<Link href={'/cgu'} className={'text-sm text-slate-600'}>
 						Conditions générales d&apos;utilisation
-					</a>
+					</Link>
 					<Link
 						href={'/politique-de-confidentialite'}
 						className={'text-sm text-slate-600'}
 					>
 						Politique de confidentialité
 					</Link>
-					<a href={'/site-map'} className={'text-sm text-slate-600'}>
+					<Link href={'/site-map'} className={'text-sm text-slate-600'}>
 						Plan du site
-					</a>
+					</Link>
 				</div>
 			</footer>
 			<div className={'mx-auto flex w-full max-w-7xl bg-white py-20'}>
 				<p className={'mx-auto text-sm text-slate-600'}>
 					© {year} My Makeup - Tous droits réservés - Developed with ❤️ by{' '}
-					<a
+					<Link
 						className={'text-sm text-slate-600'}
 						href={'https://andy-cinquin.fr'}
 					>
 						Andy Cinquin
-					</a>
+					</Link>
 				</p>
 			</div>
 		</>

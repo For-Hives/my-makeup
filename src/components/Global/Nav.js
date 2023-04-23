@@ -164,13 +164,13 @@ function Nav() {
 											'lg:flex lg:w-full lg:items-center lg:justify-end lg:gap-10'
 										}
 									>
-										<button className={'btn-primary-with-icon'}>
+										<Link className={'btn-primary-with-icon'} href={'/'}>
 											<MagnifyingGlassIcon
 												className="mr-2 h-5 w-5 text-indigo-900"
 												aria-hidden="true"
 											/>
 											Trouver une maquilleuse
-										</button>
+										</Link>
 										{session && session.user && !_.isEmpty(session.user) ? (
 											<>
 												<Link
@@ -213,14 +213,14 @@ function Nav() {
 											<span className="sr-only">Fermer le menu</span>
 											<XMarkIcon className="h-6 w-6" aria-hidden="true" />
 										</button>
-										<a href="src/components#" className="-m-1.5 p-1.5">
+										<Link href="src/components#" className="-m-1.5 p-1.5">
 											<span className="sr-only">My Makeup</span>
 											<Image
 												className="h-8"
 												src="https://tailwindui.com/img/logos/mark.svg?color=indigo&shade=600"
 												alt=""
 											/>
-										</a>
+										</Link>
 									</div>
 									<div className="mt-6 space-y-2">
 										{navigation.map(item => (

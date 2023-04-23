@@ -1,6 +1,7 @@
 import { Fragment } from 'react'
 import { Popover, Transition } from '@headlessui/react'
 import { ChevronDownIcon } from '@heroicons/react/20/solid'
+import Link from 'next/link'
 
 export default function PopoverComponent(props) {
 	return (
@@ -38,10 +39,13 @@ export default function PopoverComponent(props) {
 										</span>
 									</div>
 									<div>
-										<a href={item.href} className="font-semibold text-gray-900">
+										<Link
+											href={item.href}
+											className="font-semibold text-gray-900"
+										>
 											{item.name}
 											<span className="absolute inset-0" />
-										</a>
+										</Link>
 										<p className="mt-1 text-gray-600">{item.description}</p>
 									</div>
 								</div>
