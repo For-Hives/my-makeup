@@ -97,7 +97,7 @@ function Footer() {
 						href={'/maquilleuse/partenariats'}
 						className={'text-sm text-slate-600'}
 					>
-						Community & Partenariats
+						Communautés & Partenariats
 					</Link>
 					<Link
 						href={'/maquilleuse/partenaires'}
