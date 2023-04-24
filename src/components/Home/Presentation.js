@@ -67,7 +67,7 @@ function Presentation() {
 								'text-center text-4xl font-bold tracking-tight text-slate-700 sm:text-xl'
 							}
 						>
-							1 solution dédiée
+							Une solution dédiée
 						</h3>
 						<p className={'text-center text-sm leading-8 text-slate-600'}>
 							Pensée et conçue pour collaborer
