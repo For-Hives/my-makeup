@@ -4,7 +4,7 @@ import Link from 'next/link'
 
 function Footer() {
 	// get actuel year
-	const year = new Date().getFullYear()
+	const actualYear = new Date().getFullYear()
 
 	return (
 		<>
