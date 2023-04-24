@@ -45,7 +45,7 @@ function Footer() {
 								alt={'Linkedin My Makeup'}
 							/>
 						</Link>
-						<Link href="s/">
+						<Link href="/">
 							<Image
 								src={'/assets/vectorials-used/fi-brands-telegram.svg'}
 								className={'fill-indigo-700'}
@@ -167,7 +167,7 @@ function Footer() {
 			</footer>
 			<div className={'mx-auto flex w-full max-w-7xl bg-white py-20'}>
 				<p className={'mx-auto text-sm text-slate-600'}>
-					© {year} My Makeup - Tous droits réservés - Developed with ❤️ by{' '}
+					© {actualYear} My Makeup - Tous droits réservés - Developed with ❤️ by{' '}
 					<Link
 						className={'text-sm text-slate-600'}
 						href={'https://andy-cinquin.fr'}
