@@ -4,8 +4,8 @@ import React from 'react'
 // - Influence ( tous les réseaux sociaux, sites web ajoutable, chaine youtube etc )
 // - Langues
 
-function CatSocialProfil(props) {
+function SocialProfil(props) {
 	return <div></div>
 }
 
-export default CatSocialProfil
+export default SocialProfil

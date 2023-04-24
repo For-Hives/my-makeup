@@ -172,7 +172,14 @@ function Footer() {
 						className={'text-sm text-slate-600'}
 						href={'https://andy-cinquin.fr'}
 					>
-						Andy Cinquin & Bréval Le Floch
+						Andy Cinquin & Bréval Le Floch,
+					</Link>
+					&nbsp;
+					<Link
+						className={'text-sm text-slate-600'}
+						href={'https://forhives.fr/'}
+					>
+						ForHives co-founders
 					</Link>
 				</p>
 			</div>

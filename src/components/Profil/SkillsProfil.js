@@ -3,8 +3,8 @@ import React from 'react'
 // Cat : Vos compétences
 // - Liste de compétences, spécialité, possibilité
 
-function CatSkillsProfil(props) {
+function SkillsProfil(props) {
 	return <div></div>
 }
 
-export default CatSkillsProfil
+export default SkillsProfil

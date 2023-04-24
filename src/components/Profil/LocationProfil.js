@@ -5,8 +5,8 @@ import React from 'react'
 // - Rayon d'action
 // - Les frais kilométriques
 
-function CatLocationProfil(props) {
+function LocationProfil(props) {
 	return <div></div>
 }
 
-export default CatLocationProfil
+export default LocationProfil
