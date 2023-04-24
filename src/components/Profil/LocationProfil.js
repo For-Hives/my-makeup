@@ -6,7 +6,7 @@ import React from 'react'
 // - Les frais kilométriques
 
 function LocationProfil(props) {
-	return <div></div>
+	return <div>catégorie : Localisation et déplacement</div>
 }
 
 export default LocationProfil

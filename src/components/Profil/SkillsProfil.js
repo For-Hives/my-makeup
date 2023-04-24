@@ -4,7 +4,7 @@ import React from 'react'
 // - Liste de compétences, spécialité, possibilité
 
 function SkillsProfil(props) {
-	return <div></div>
+	return <div>catégorie : Vos compétences</div>
 }
 
 export default SkillsProfil

@@ -1,11 +1,11 @@
 import React from 'react'
 
-// Cat : Partager votre profil :
+// Catégorie : Partager votre profil :
 // - Influence ( tous les réseaux sociaux, sites web ajoutable, chaine youtube etc )
 // - Langues
 
 function SocialProfil(props) {
-	return <div></div>
+	return <div>catégorie : Partager votre profil</div>
 }
 
 export default SocialProfil
