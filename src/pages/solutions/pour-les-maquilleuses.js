@@ -11,15 +11,15 @@ import Footer from '@/components/Global/Footer'
 function PourLesMaquilleuses(props) {
 	return (
 		<>
-			<main>
+			<div>
 				<Nav />
-				<section className={'flex h-screen w-full items-center justify-center'}>
+				<main className={'flex h-screen w-full items-center justify-center'}>
 					<h1 className={'text-center text-3xl text-gray-700'}>
 						Pour les maquilleuses
 					</h1>
-				</section>
+				</main>
 				<Footer />
-			</main>
+			</div>
 		</>
 	)
 }

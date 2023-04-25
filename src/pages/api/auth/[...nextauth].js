@@ -99,7 +99,7 @@ export const authOptions = {
 					)
 					const data = await response.json()
 					token.jwt = data.jwt
-					token.id = data.user.id
+					token.id = data.user?.id
 				}
 				return token
 			}

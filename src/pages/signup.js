@@ -14,7 +14,7 @@ function Signup() {
                 recherche de maquilleuses professionnelles, ou votre recherche de client !"
 				/>
 			</Head>
-			<div className="bg- flex min-h-screen">
+			<main className="bg- flex min-h-screen">
 				<div className="flex flex-1 flex-col justify-center px-4 py-12 sm:px-6 lg:flex-none lg:px-20 xl:px-24">
 					<div className="mx-auto w-full max-w-sm lg:w-96">
 						<div>
@@ -231,7 +231,7 @@ function Signup() {
 						className={'z-10 -scale-x-100 transform object-cover'}
 					></Image>
 				</div>
-			</div>
+			</main>
 		</>
 	)
 }

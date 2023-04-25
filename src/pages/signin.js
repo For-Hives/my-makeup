@@ -67,7 +67,7 @@ function Signin() {
 									: 'Se connecter'}
 							</h2>
 						</div>
-						{!(session.user && !_.isEmpty(session.user)) && (
+						{!(session && session.user && !_.isEmpty(session.user)) && (
 							<div className="mt-8">
 								<div>
 									<div>

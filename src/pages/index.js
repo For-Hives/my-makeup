@@ -24,7 +24,7 @@ export default function Home() {
                     vous trouverez votre bonheur pour vous sublimer dans n'importe quelle situation !"
 				/>
 			</Head>
-			<main className={'relative'}>
+			<div className={'relative'}>
 				<Image
 					src={'/assets/coming-soon.svg'}
 					alt={'Coming soon'}
@@ -35,14 +35,16 @@ export default function Home() {
 					}
 				/>
 				<Nav />
-				<Hero />
-				<Presentation />
-				<Talents />
-				<Collaboration />
-				<Project />
-				<CTA />
+				<main>
+					<Hero />
+					<Presentation />
+					<Talents />
+					<Collaboration />
+					<Project />
+					<CTA />
+				</main>
 				<Footer />
-			</main>
+			</div>
 		</>
 	)
 }

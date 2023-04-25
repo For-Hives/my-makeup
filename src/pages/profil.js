@@ -11,18 +11,30 @@ import _ from 'lodash'
 
 function Profil() {
 	// get current user id
-	const { data: session } = useSession()
+	const { data: session, status } = useSession()
 
-	// console.log(session)
+	console.log(session)
 	// get current user data
-	const { isLoading, isError, data, error } = useQuery('makeup-artiste', () =>
-		fetchApi('/makeup-artiste/' + session.user.id ? session.user.id : 1)
-	)
+	const { isLoading, isError, data, error } = useQuery('makeup-artiste', () => {
+		if (status === 'authenticated') {
+			fetchApi('/users/me').then(res => {
+				if (res.data) {
+					console.log(res.data)
+					return fetchApi('/makeup-artiste/' + res.data.id)
+				}
+			})
+		}
+	})
 
-	// if (isLoading) return <div>Loading...</div>
-	// if (isError) return <div>Error: {error.message}</div>
-
-	// console.log(session)
+	if (status !== 'authenticated') {
+		return (
+			<div className="flex h-screen flex-col items-center justify-center">
+				<h1 className="text-center text-4xl font-bold text-gray-700">
+					You are not logged in
+				</h1>
+			</div>
+		)
+	}
 
 	return (
 		<>
