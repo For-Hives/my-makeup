@@ -13,14 +13,14 @@ function Profil() {
 	// get current user id
 	const { data: session, status } = useSession()
 
-	console.log(session)
+	console.log('session in profil', session)
 	// get current user data
 	const { isLoading, isError, data, error } = useQuery('makeup-artiste', () => {
 		if (status === 'authenticated') {
-			fetchApi('/users/me').then(res => {
+			fetchApi('users/me').then(res => {
 				if (res.data) {
 					console.log(res.data)
-					return fetchApi('/makeup-artiste/' + res.data.id)
+					return fetchApi('makeup-artiste/' + res.data.id)
 				}
 			})
 		}
