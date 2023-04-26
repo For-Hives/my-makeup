@@ -6,7 +6,7 @@ import Footer from '@/components/Global/Footer'
 import ResumeProfil from '@/components/Profil/ResumeProfil'
 import { useQuery } from 'react-query'
 import { fetchApi } from '@/services/api'
-import { useSession } from 'next-auth/react'
+import { useSession, getSession } from 'next-auth/react'
 import _ from 'lodash'
 
 function Profil() {
@@ -17,7 +17,9 @@ function Profil() {
 	// get current user data
 	const { isLoading, isError, data, error } = useQuery('makeup-artiste', () => {
 		if (status === 'authenticated') {
-			fetchApi('users/me').then(res => {
+			fetchApi('users/me', {
+				// 	jwt: session.jwt,
+			}).then(res => {
 				if (res.data) {
 					console.log(res.data)
 					return fetchApi('makeup-artiste/' + res.data.id)
@@ -27,6 +29,7 @@ function Profil() {
 	})
 
 	if (status !== 'authenticated') {
+		console.log('status', status)
 		return (
 			<div className="flex h-screen flex-col items-center justify-center">
 				<h1 className="text-center text-4xl font-bold text-gray-700">

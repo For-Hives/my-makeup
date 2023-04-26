@@ -6,7 +6,7 @@ import FacebookProvider from 'next-auth/providers/facebook'
 // import credential provider
 import CredentialsProvider from 'next-auth/providers/credentials'
 
-export const authOptions = {
+const authOptions = {
 	providers: [
 		GoogleProvider({
 			clientId: process.env.GOOGLE_CLIENT_ID,
@@ -69,26 +69,22 @@ export const authOptions = {
 	},
 
 	session: {
-		strategy: 'jwt',
-		maxAge: 30 * 24 * 60 * 60, // 30 days
-		updateAge: 24 * 60 * 60, // 24 hours
+		// strategy: 'jwt',
+		// maxAge: 30 * 24 * 60 * 60, // 30 days
+		// updateAge: 24 * 60 * 60, // 24 hours
 		jwt: true,
 		// 	keep session in local storage
-		persistSession: true,
+		// persistSession: true,
 	},
-
+	database: process.env.NEXT_PUBLIC_DATABASE_URL,
 	callbacks: {
-		async session({ session, token, user }) {
-			console.log('session', session)
-			console.log('token', token)
-			if (token) {
-				session.jwt = token.jwt
-				session.id = token.id
-			}
-			return session
+		session: async (session, user) => {
+			session.jwt = user?.jwt
+			session.id = user?.id
+			return Promise.resolve(session)
 		},
 
-		async jwt({ token, user, account }) {
+		jwt: async ({ token, user, account }) => {
 			const isSignIn = !!user
 			if (isSignIn) {
 				if (account.type === 'credentials') {
@@ -102,9 +98,11 @@ export const authOptions = {
 					token.jwt = data.jwt
 					token.id = data.user?.id
 				}
-				return token
+				return Promise.resolve(token)
 			}
 		},
 	},
 }
-export default NextAuth(authOptions)
+
+const Auth = (req, res) => NextAuth(req, res, authOptions)
+export default Auth
