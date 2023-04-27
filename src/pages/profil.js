@@ -13,31 +13,18 @@ function Profil() {
 	// get current user id
 	const { data: session, status } = useSession()
 
-	console.log('session in profil', session)
-	// get current user data
-	const { isLoading, isError, data, error } = useQuery('makeup-artiste', () => {
-		if (status === 'authenticated') {
-			fetchApi('users/me', {
-				// 	jwt: session.jwt,
-			}).then(res => {
-				if (res.data) {
-					console.log(res.data)
-					return fetchApi('makeup-artiste/' + res.data.id)
-				}
-			})
-		}
-	})
-
-	if (status !== 'authenticated') {
-		console.log('status', status)
-		return (
-			<div className="flex h-screen flex-col items-center justify-center">
-				<h1 className="text-center text-4xl font-bold text-gray-700">
-					You are not logged in
-				</h1>
-			</div>
-		)
-	}
+	// // get current user data
+	// const { isLoading, isError, data, error } = useQuery('makeup-artiste', () => {
+	// 	if (status === 'authenticated') {
+	// 		fetchApi('users/me', {
+	// 			// 	jwt: session.jwt,
+	// 		}).then(res => {
+	// 			if (res.data) {
+	// 				return fetchApi('makeup-artiste/' + res.data.id)
+	// 			}
+	// 		})
+	// 	}
+	// })
 
 	return (
 		<>
@@ -74,6 +61,15 @@ function Profil() {
 			</main>
 		</>
 	)
+}
+
+export const getServerSideProps = async ({ req }) => {
+	const session = await getSession({ req })
+	return {
+		props: {
+			session,
+		},
+	}
 }
 
 export default Profil

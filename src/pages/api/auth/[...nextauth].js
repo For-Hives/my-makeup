@@ -6,7 +6,7 @@ import FacebookProvider from 'next-auth/providers/facebook'
 // import credential provider
 import CredentialsProvider from 'next-auth/providers/credentials'
 
-const authOptions = {
+const options = {
 	providers: [
 		GoogleProvider({
 			clientId: process.env.GOOGLE_CLIENT_ID,
@@ -17,49 +17,41 @@ const authOptions = {
 			clientSecret: process.env.FACEBOOK_CLIENT_SECRET,
 		}),
 		CredentialsProvider({
-			// The name to display on the sign in form (e.g. 'Sign in with...')
 			name: 'Credentials',
-			// The credentials is used to generate a suitable form on the sign in page.
-			// You can specify whatever fields you are expecting to be submitted.
-			// e.g. domain, username, password, 2FA token, etc.
-			// You can pass any HTML attribute to the <input> tag through the object.
 			credentials: {
-				identifier: { label: 'Email', type: 'text' },
-				password: { label: 'Password', type: 'password' },
+				email: { label: 'Email', type: 'email', placeholder: 'Email' },
+				password: { label: 'Password', type: 'Password' },
 			},
-			async authorize(credentials) {
-				// You need to provide your own logic here that takes the credentials
-				// submitted and returns either a object representing a user or value
-				// that is false/null if the credentials are invalid.
-				// e.g. return { id: 1, name: 'J Smith', email: 'jsmith@example.com' }
-				// You can also use the `req` object to obtain additional parameters
-				// (i.e., the request IP address)
-				const fetch_url = `${process.env.NEXT_PUBLIC_API_URL}/api/auth/local`
-				const params = {
-					method: 'POST',
-					headers: {
-						Accept: 'application/json',
-						'Content-Type': 'application/json',
-					},
-					body: JSON.stringify({
-						identifier: credentials.email,
-						password: credentials.password,
-					}),
-				}
+			authorize: async ({ password, email }) => {
+				const response = await fetch(
+					`${process.env.NEXT_PUBLIC_API_URL}api/auth/local`,
+					{
+						method: 'POST',
+						headers: {
+							Accept: 'application/json',
+							'Content-Type': 'application/json',
+						},
+						body: JSON.stringify({
+							identifier: email,
+							password: password,
+						}),
+					}
+				)
+				const authenticated = await response.json()
 
-				let response = await fetch(fetch_url, params)
-				const data = await response.json()
-				const user = { ...data.user, jwt: data.jwt }
-
-				if (user) {
-					return user
+				if (authenticated) {
+					return Promise.resolve({
+						id: authenticated.user.id,
+						name: authenticated.user.username,
+						email: authenticated.user.email,
+						jwt: authenticated.jwt,
+					})
 				} else {
-					return null
+					return Promise.resolve(null)
 				}
 			},
 		}),
 	],
-
 	pages: {
 		signIn: '/signin',
 		signOut: '/signout',
@@ -67,42 +59,44 @@ const authOptions = {
 		verifyRequest: '/verify-request', // (used for check email message)
 		newUser: '/profil', // New users will be directed here on first sign in (leave the property out if not of interest)
 	},
-
+	secret: `${process.env.NEXTAUTH_SECRET}`, //PUT YOUR OWN SECRET (command: openssl rand -base64 32)
+	database: `${process.env.NEXT_PUBLIC_DATABASE_URL}`,
 	session: {
-		// strategy: 'jwt',
-		// maxAge: 30 * 24 * 60 * 60, // 30 days
-		// updateAge: 24 * 60 * 60, // 24 hours
-		jwt: true,
-		// 	keep session in local storage
-		// persistSession: true,
+		strategy: 'jwt',
 	},
-	database: process.env.NEXT_PUBLIC_DATABASE_URL,
+	debug: true,
 	callbacks: {
-		session: async (session, user) => {
-			session.jwt = user?.jwt
-			session.id = user?.id
-			return Promise.resolve(session)
-		},
+		async session({ session, token, user }) {
+			session.jwt = token.jwt
+			session.id = token.id
 
-		jwt: async ({ token, user, account }) => {
+			return session
+		},
+		async jwt({ token, user, account, profile, isNewUser }) {
 			const isSignIn = !!user
+
 			if (isSignIn) {
-				if (account.type === 'credentials') {
-					token.jwt = user.jwt
-					token.id = user.id
-				} else {
+				if (
+					typeof account.provider !== 'undefined' &&
+					account.type !== 'credentials'
+				) {
 					const response = await fetch(
-						`${process.env.NEXT_PUBLIC_API_URL}/api/auth/${account?.provider}/callback?access_token=${account?.access_token}`
+						`${process.env.NEXT_PUBLIC_API_URL}api/auth/${account.provider}/callback?access_token=${account?.access_token}`
 					)
 					const data = await response.json()
 					token.jwt = data.jwt
-					token.id = data.user?.id
+					token.id = data.user.id
+				} else {
+					token.id = user.id
+					token.jwt = user.jwt
 				}
-				return Promise.resolve(token)
 			}
+
+			return token
 		},
 	},
 }
 
-const Auth = (req, res) => NextAuth(req, res, authOptions)
+const Auth = (req, res) => NextAuth(req, res, options)
+
 export default Auth
