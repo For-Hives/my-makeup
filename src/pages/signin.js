@@ -15,7 +15,7 @@ const schema = yup.object().shape({
 		.string()
 		.required('Mot de passe est requis')
 		.matches(
-			/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])(?=.{8,})/,
+			/^(?=.+[a-z])(?=.+[A-Z])(?=.+\d)(?=.+[!@#$%^&*]).{8,}/,
 			'Le mot de passe doit contenir au moins 8 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial'
 		),
 })

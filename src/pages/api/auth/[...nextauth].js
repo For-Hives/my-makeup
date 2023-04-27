@@ -20,7 +20,7 @@ const options = {
 			name: 'Credentials',
 			credentials: {
 				email: { label: 'Email', type: 'email', placeholder: 'Email' },
-				password: { label: 'Password', type: 'Password' },
+				password: { label: 'Password', type: 'password' },
 				name: { label: 'Name', type: 'text' },
 			},
 			/**
