@@ -5,7 +5,7 @@ import Nav from '@/components/Global/Nav'
 import Footer from '@/components/Global/Footer'
 import ResumeProfil from '@/components/Profil/ResumeProfil'
 import { useQuery } from '@tanstack/react-query'
-import { fetchApi } from '@/services/api'
+import { fetchApi, fetchMakeupArtistes, fetchUsersMe } from '@/services/api'
 import { useSession, getSession } from 'next-auth/react'
 import _ from 'lodash'
 
@@ -13,19 +13,51 @@ function Profil() {
 	// get current user id
 	const { data: session, status } = useSession()
 
-	// // get current user data
-	// const { isLoading, isError, data, error } = useQuery('makeup-artiste', () => {
-	// 	if (status === 'authenticated') {
-	// 		fetchApi('users/me', {
-	// 			// 	jwt: session.jwt,
-	// 		}).then(res => {
-	// 			if (res.data) {
-	// 				return fetchApi('makeup-artiste/' + res.data.id)
-	// 			}
-	// 		})
-	// 	}
-	// })
+	console.log('session', session)
+	// get current user data
+	const { data: user } = useQuery({
+		queryKey: ['users/me'],
+		queryFn: async () => {
+			const res = await fetch(
+				`${process.env.NEXT_PUBLIC_API_URL}api/users/me`,
+				{
+					method: 'GET',
+					headers: {
+						// 	token
+						'Content-Type': 'application/json',
+						Accept: 'application/json',
+						Authorization: `Bearer ${session.jwt}`,
+					},
+				}
+			)
+			return res.json()
+		},
+	})
 
+	const { isLoading, isError, data, error } = useQuery({
+		queryKey: ['makeup-artiste'],
+		queryFn: async () => {
+			const res = await fetch(
+				`${process.env.NEXT_PUBLIC_API_URL}api/makeup-artistes`,
+				{
+					method: 'GET',
+					headers: {
+						'Content-Type': 'application/json',
+						Accept: 'application/json',
+						Authorization: `Bearer ${session.jwt}`,
+					},
+				}
+			)
+			return res.json()
+		},
+		enabled: !!user,
+	})
+
+	if (isLoading) return 'Loading...'
+
+	if (error) return 'An error has occurred: ' + error.message
+	console.log('data_user', user)
+	console.log('data', data)
 	return (
 		<>
 			<Head>
