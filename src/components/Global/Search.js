@@ -1,6 +1,7 @@
 import React from 'react'
 import { MagnifyingGlassIcon } from '@heroicons/react/20/solid'
 import { MapPinIcon } from '@heroicons/react/24/outline'
+import Link from 'next/link'
 
 function Search() {
 	return (
@@ -38,13 +39,13 @@ function Search() {
 				</div>
 			</div>
 			<div className={'flex items-center justify-end gap-6'}>
-				<a href="/recrutement" className={'btn-primary'}>
+				<Link href="/recrutement" className={'btn-primary'}>
 					Trouver une maquilleuse
-				</a>
+				</Link>
 				<div className={'flex items-center justify-center'}>ou</div>
-				<a href="/deposer-un-projet" className="">
+				<Link href="/deposer-un-projet" className="">
 					<span className={'btn-primary-simple'}>Déposer un projet</span>
-				</a>
+				</Link>
 			</div>
 		</div>
 	)

@@ -3,7 +3,7 @@ import '@/styles/icons.css'
 import '@/styles/stars.css'
 import Head from 'next/head'
 import { SessionProvider } from 'next-auth/react'
-import { QueryClient, QueryClientProvider } from 'react-query'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 const queryClient = new QueryClient()
 
