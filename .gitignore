@@ -32,7 +32,6 @@ yarn-error.log*
 .vercel
 
 .idea
-.pnpm-lock.yaml
-yarn.lock
-
 pnpm-lock.yaml
+
+.env

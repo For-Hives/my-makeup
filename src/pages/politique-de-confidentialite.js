@@ -1,15 +1,10 @@
-import React from 'react';
-import Nav from '@/components/Global/Nav';
-import Footer from '@/components/Global/Footer';
-import Head from 'next/head';
-import Image from 'next/image';
-import Hero from '@/components/Global/Hero';
-import Presentation from '@/components/Home/Presentation';
-import Talents from '@/components/Home/Talents';
-import Collaboration from '@/components/Home/Collaboration';
-import Project from '@/components/Home/Project';
-import CTA from '@/components/Global/CTA';
-import Confidentialite from '@/components/Rights/Confidentialite';
+import React from 'react'
+import Nav from '@/components/Global/Nav'
+import Footer from '@/components/Global/Footer'
+import Head from 'next/head'
+import Image from 'next/image'
+import CTA from '@/components/Global/CTA'
+import Confidentialite from '@/components/Rights/Confidentialite'
 
 function PolitiqueDeConfidentialite(props) {
 	return (
@@ -22,7 +17,7 @@ function PolitiqueDeConfidentialite(props) {
                     vous trouverez votre bonheur pour vous sublimer dans n'importe quelle situation !"
 				/>
 			</Head>
-			<main className={'relative'}>
+			<div className={'relative'}>
 				<Image
 					src={'/assets/coming-soon.svg'}
 					alt={'Coming soon'}
@@ -33,12 +28,14 @@ function PolitiqueDeConfidentialite(props) {
 					}
 				/>
 				<Nav />
-				<Confidentialite />
-				<CTA />
-				<Footer />
-			</main>
+				<main>
+					<Confidentialite />
+					<CTA />
+					<Footer />
+				</main>
+			</div>
 		</>
-	);
+	)
 }
 
-export default PolitiqueDeConfidentialite;
+export default PolitiqueDeConfidentialite

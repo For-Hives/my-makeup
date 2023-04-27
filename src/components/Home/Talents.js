@@ -1,5 +1,5 @@
-import React from 'react';
-import CardDemo from '@/components/Global/Card-demo';
+import React from 'react'
+import CardDemo from '@/components/Global/Card-demo'
 
 const TalentList = [
 	{
@@ -47,14 +47,14 @@ const TalentList = [
 	{
 		name: 'Maquillage cinéma',
 	},
-];
+]
 
 function Talents(props) {
 	return (
 		<section className={'relative py-20'}>
 			<div className="mx-auto max-w-7xl py-10">
 				<div className="mx-auto">
-					<h2 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-4xl text-right">
+					<h2 className="text-right text-4xl font-bold tracking-tight text-slate-900 sm:text-4xl">
 						Vos projets, nos meilleurs talents.
 					</h2>
 				</div>
@@ -62,11 +62,11 @@ function Talents(props) {
 			<div className="mx-auto max-w-7xl">
 				<div className="mx-auto flex w-full gap-24">
 					<div
-						className={'w-1/5 flex justify-center items-center h-auto relative'}
+						className={'relative flex h-auto w-1/5 items-center justify-center'}
 					>
 						<div
 							className={
-								'absolute top-1/2 left-1/2 -translate-x-[40%] -translate-y-[40%] z-20'
+								'absolute left-1/2 top-1/2 z-20 -translate-x-[40%] -translate-y-[40%]'
 							}
 						>
 							<CardDemo
@@ -76,13 +76,13 @@ function Talents(props) {
 						</div>
 						<div
 							className={
-								'absolute top-1/2 left-1/2 -translate-x-[90%] -translate-y-[90%] z-10'
+								'absolute left-1/2 top-1/2 z-10 -translate-x-[90%] -translate-y-[90%]'
 							}
 						>
 							<CardDemo src={'/assets/Maquilleuse_cinema.webp'} heart={false} />
 						</div>
 					</div>
-					<div className={'w-4/5 grid grid-cols-4 gap-8'}>
+					<div className={'grid w-4/5 grid-cols-4 gap-8'}>
 						{TalentList.map((talent, index) => (
 							<a
 								key={talent.name}
@@ -91,15 +91,15 @@ function Talents(props) {
 							>
 								<h2
 									className={
-										'transition ease-in duration-100 min-h-[120px] h-full py-8 px-4 border border-indigo-900/10 rounded-xl flex items-center justify-center font-semibold text-slate-900/70 group-hover:opacity-0  text-center'
+										'flex h-full min-h-[120px] items-center justify-center rounded-xl border border-indigo-900/10 px-4 py-8 text-center font-semibold text-slate-900/70 transition duration-100 ease-in  group-hover:opacity-0'
 									}
 								>
 									{talent.name}
 								</h2>
 								<h2
 									className={
-										'absolute top-0 left-0 h-full w-full transition ease-in duration-100 py-8 px-4 border border-indigo-900 bg-indigo-900 ' +
-										'rounded-xl flex items-center justify-center font-semibold text-slate-50 opacity-0 -z-10 group-hover:opacity-100 group-hover:z-10 text-center'
+										'absolute left-0 top-0 h-full w-full border border-indigo-900 bg-indigo-900 px-4 py-8 transition duration-100 ease-in ' +
+										'-z-10 flex items-center justify-center rounded-xl text-center font-semibold text-slate-50 opacity-0 group-hover:z-10 group-hover:opacity-100'
 									}
 								>
 									Voir tous les talents
@@ -110,7 +110,7 @@ function Talents(props) {
 				</div>
 			</div>
 		</section>
-	);
+	)
 }
 
-export default Talents;
+export default Talents

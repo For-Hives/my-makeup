@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
-import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
-import { Dialog } from '@headlessui/react';
-import { MagnifyingGlassIcon } from '@heroicons/react/20/solid';
-import Image from 'next/image';
-import PopoverComponent from '@/components/Global/Popover';
-import Link from 'next/link';
+import React, { useState } from 'react'
+import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline'
+import { Dialog } from '@headlessui/react'
+import { MagnifyingGlassIcon } from '@heroicons/react/20/solid'
+import Image from 'next/image'
+import PopoverComponent from '@/components/Global/Popover'
+import Link from 'next/link'
+import { signOut, useSession } from 'next-auth/react'
+import _ from 'lodash'
 
 const navigation = [
 	{
@@ -96,22 +98,24 @@ const navigation = [
 		name: 'Blog',
 		href: '/blog',
 	},
-];
+]
 
 function Nav() {
-	const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+	const { data: session } = useSession()
+
+	const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
 	return (
 		<>
-			<div className="fixed top-0 left-0 w-full bg-white z-30 h-[90px] flex items-center justify-center">
-				<div className="mx-auto w-full h-full">
+			<div className="fixed left-0 top-0 z-30 flex h-[90px] w-full items-center justify-center bg-white">
+				<div className="mx-auto h-full w-full">
 					<div className="relative z-20 lg:w-full">
-						<div className="relative px-6 py-6 lg:px-16 lg:border-b lg:border-slate-300">
+						<div className="relative px-6 py-6 lg:border-b lg:border-slate-300 lg:px-16">
 							<nav
 								className="flex items-center justify-between sm:h-10 lg:justify-start"
 								aria-label="Global"
 							>
-								<Link href="#" className="-m-1.5 p-1.5">
+								<Link href="/" className="-m-1.5 p-1.5">
 									<span className="sr-only">My Makeup</span>
 									<Image
 										alt="Logo My Makeup"
@@ -130,7 +134,7 @@ function Nav() {
 								</button>
 								<div className="hidden lg:ml-10 lg:flex lg:w-full lg:justify-between">
 									<div
-										className={'lg:gap-10 lg:flex lg:w-full lg:items-center'}
+										className={'lg:flex lg:w-full lg:items-center lg:gap-10'}
 									>
 										{navigation.map(item => {
 											if (item.mode === 'dropdown') {
@@ -141,7 +145,7 @@ function Nav() {
 														translate={'30%'}
 														content={item.children}
 													/>
-												);
+												)
 											} else {
 												return (
 													<Link
@@ -151,38 +155,46 @@ function Nav() {
 													>
 														{item.name}
 													</Link>
-												);
+												)
 											}
 										})}
 									</div>
 									<div
 										className={
-											'lg:gap-10 lg:flex lg:w-full lg:justify-end lg:items-center'
+											'lg:flex lg:w-full lg:items-center lg:justify-end lg:gap-10'
 										}
 									>
-										<button
-											className={
-												'text-sm leading-6 bg-transparent text-indigo-900 px-4 py-2 rounded-lg border-2 border-indigo-900 flex items-center'
-											}
-										>
+										<Link className={'btn-primary-with-icon'} href={'/'}>
 											<MagnifyingGlassIcon
 												className="mr-2 h-5 w-5 text-indigo-900"
 												aria-hidden="true"
 											/>
 											Trouver une maquilleuse
-										</button>
-										{/*<a href="/signup" className={"text-sm font-bold leading-6 bg-indigo-900 text-white px-4 py-2 rounded-lg border-2 border-indigo-900"}>*/}
-										{/*    Créer mon compte*/}
-										{/*</a>*/}
-										<Link href="/signin" className="">
-											<span
-												className={
-													'text-sm font-bold leading-6 text-indigo-900 border-b-2 border-indigo-900'
-												}
-											>
-												Me connecter
-											</span>
 										</Link>
+										{session && session.user && !_.isEmpty(session.user) ? (
+											<>
+												<Link
+													onClick={() => {
+														signOut()
+													}}
+													className=""
+													href={'/signin'}
+												>
+													<span className={'btn-primary-simple'}>
+														Me déconnecter
+													</span>
+												</Link>
+												<Link className="" href={'/profil'}>
+													<span className={'btn-primary'}>Profil</span>
+												</Link>
+											</>
+										) : (
+											<Link href="/signin" className="">
+												<span className={'btn-primary-simple'}>
+													Me connecter
+												</span>
+											</Link>
+										)}
 									</div>
 								</div>
 							</nav>
@@ -201,24 +213,24 @@ function Nav() {
 											<span className="sr-only">Fermer le menu</span>
 											<XMarkIcon className="h-6 w-6" aria-hidden="true" />
 										</button>
-										<a href="src/components#" className="-m-1.5 p-1.5">
+										<Link href="src/components#" className="-m-1.5 p-1.5">
 											<span className="sr-only">My Makeup</span>
 											<Image
 												className="h-8"
 												src="https://tailwindui.com/img/logos/mark.svg?color=indigo&shade=600"
 												alt=""
 											/>
-										</a>
+										</Link>
 									</div>
 									<div className="mt-6 space-y-2">
 										{navigation.map(item => (
-											<a
+											<Link
 												key={item.name}
 												href={item.href}
-												className="-mx-3 block rounded-lg py-2 px-3 text-base font-semibold leading-7 text-slate-900 hover:bg-slate-400/10"
+												className="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-slate-900 hover:bg-slate-400/10"
 											>
 												{item.name}
-											</a>
+											</Link>
 										))}
 									</div>
 								</Dialog.Panel>
@@ -228,7 +240,7 @@ function Nav() {
 				</div>
 			</div>
 		</>
-	);
+	)
 }
 
-export default Nav;
+export default Nav

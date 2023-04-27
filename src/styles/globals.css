@@ -34,3 +34,35 @@ a {
 		-webkit-box-shadow: 0 0 1px hsl(0deg 0% 100% / 50%);
 	}
 }
+
+/* Custom Tailwindcss components */
+@layer components {
+	/*	Custom Button */
+	.btn-primary {
+		@apply rounded-lg border-2 border-indigo-900 bg-indigo-900 px-4 py-2 text-sm font-bold leading-6 text-white;
+	}
+
+	.btn-primary-large {
+		@apply flex w-full justify-center rounded-md bg-indigo-900 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-900;
+	}
+
+	.btn-alt-primary {
+		@apply rounded-lg border-2 border-indigo-900 bg-transparent px-4 py-2 text-sm font-bold leading-6 text-indigo-900;
+	}
+
+	.btn-primary-simple {
+		@apply border-b-2 border-indigo-900 text-sm font-bold leading-6 text-indigo-900;
+	}
+
+	.btn-primary-with-icon {
+		@apply flex items-center rounded-lg border-2 border-indigo-900 bg-transparent px-4 py-2 text-sm leading-6 text-indigo-900;
+	}
+
+	.btn-secondary-white {
+		@apply rounded-lg border-2 border-white bg-white px-4 py-2 text-sm font-bold leading-6 text-indigo-900;
+	}
+
+	.btn-secondary-white-bordered {
+		@apply rounded-lg border-2 border-white bg-transparent px-4 py-2 text-sm font-bold leading-6 text-white;
+	}
+}
