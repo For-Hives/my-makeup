@@ -5,21 +5,25 @@ import Nav from '@/components/Global/Nav'
 import Footer from '@/components/Global/Footer'
 import ResumeProfil from '@/components/Profil/ResumeProfil'
 import { useQuery } from '@tanstack/react-query'
-import { fetchApi, fetchMakeupArtistes, fetchUsersMe } from '@/services/api'
+import { fetchMeMakeup } from '@/services/api'
 import { useSession, getSession } from 'next-auth/react'
 import _ from 'lodash'
+import Loader from '@/components/Global/Loader'
+import { redirect } from 'next/navigation'
+import Router from 'next/router'
 
 function Profil() {
 	// get current user id
 	const { data: session, status } = useSession()
 
 	console.log('session', session)
+
 	// get current user data
-	const { data: user } = useQuery({
+	const { isLoading, isError, data, error } = useQuery({
 		queryKey: ['users/me'],
 		queryFn: async () => {
 			const res = await fetch(
-				`${process.env.NEXT_PUBLIC_API_URL}api/users/me`,
+				`${process.env.NEXT_PUBLIC_API_URL}api/me-makeup`,
 				{
 					method: 'GET',
 					headers: {
@@ -34,30 +38,16 @@ function Profil() {
 		},
 	})
 
-	const { isLoading, isError, data, error } = useQuery({
-		queryKey: ['makeup-artiste'],
-		queryFn: async () => {
-			const res = await fetch(
-				`${process.env.NEXT_PUBLIC_API_URL}api/makeup-artistes`,
-				{
-					method: 'GET',
-					headers: {
-						'Content-Type': 'application/json',
-						Accept: 'application/json',
-						Authorization: `Bearer ${session.jwt}`,
-					},
-				}
-			)
-			return res.json()
-		},
-		enabled: !!user,
-	})
+	// get current user id
+	if (status !== 'authenticated') {
+		// 	redirect to signin page
+		Router.push('/signin')
+	}
 
-	if (isLoading) return 'Loading...'
+	if (isLoading) return <Loader />
 
 	if (error) return 'An error has occurred: ' + error.message
-	console.log('data_user', user)
-	console.log('data', data)
+	const user = data[0]
 	return (
 		<>
 			<Head>
@@ -80,7 +70,7 @@ function Profil() {
 				<Nav />
 				{session && session.user && !_.isEmpty(session.user) ? (
 					<>
-						<ResumeProfil />
+						<ResumeProfil user={user} />
 					</>
 				) : (
 					<div className="flex h-screen flex-col items-center justify-center">

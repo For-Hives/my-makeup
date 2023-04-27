@@ -4,6 +4,7 @@ import { Stars } from '@/components/Profil/Stars'
 import { BadgeDispo } from '@/components/Profil/BadgeDispo'
 import { useSession } from 'next-auth/react'
 import _ from 'lodash'
+import { BadgeIndispo } from '@/components/Profil/BadgeIndispo'
 
 // Head : General
 // left
@@ -22,18 +23,9 @@ import _ from 'lodash'
 // - Boutton d'édition de la disponibilité
 
 function ResumeProfil(props) {
+	console.log('props', props)
+	const user = props.user
 	const [starsToDisplay, setStarsToDisplay] = React.useState(5)
-
-	// get current user id
-	const { data: session, status } = useSession()
-	if (status !== 'authenticated') {
-		return <p className={'mt-[300px]'}>not authenticated</p>
-	}
-
-	// // get current user data
-	// const { isLoading, isError, data, error } = useQuery('makeup-artiste', () =>
-	// 	fetchApi('/makeup-artiste/' + session.user.id ? session.user.id : 1)
-	// )
 
 	return (
 		<div className="mx-auto max-w-7xl pt-[90px]">
@@ -53,18 +45,14 @@ function ResumeProfil(props) {
 							<h3
 								className={'text-3xl font-bold tracking-tight text-slate-800'}
 							>
-								{session && session.user && !_.isEmpty(session.user)
-									? 'Bonjour ' +
-									  (session.user.name ? session.user.name : session.user.email)
-									: 'Se connecter'}
+								{user.first_name} {user.last_name}
 							</h3>
 							<h2
 								className={
 									'text-xl font-semibold tracking-tight text-slate-700'
 								}
 							>
-								{/* todo : Maquilleuse poste */}
-								{'Spécialité de maquilleuse principale'}
+								{user.speciality}
 							</h2>
 						</div>
 						<div>
@@ -72,23 +60,23 @@ function ResumeProfil(props) {
 								<span className="material-symbols-rounded text-indigo-900">
 									directions_run
 								</span>
-								peut se déplacer à {'[ville]'} & dans un rayon de {'50km'}
+								peut se déplacer à {user.city} & dans un rayon de{' '}
+								{user.action_radius}km
 							</div>
-							<div className={'flex items-center gap-4'}>
-								<div className={'text-sm font-semibold'}>
-									{'12'} missions réalisées
-								</div>
-
-								<div
-									className={
-										'flex items-center text-xs italic text-indigo-900/50'
-									}
-								></div>
-							</div>
+							{/*<div className={'flex items-center gap-4'}>*/}
+							{/*	/!*<div className={'text-sm font-semibold'}>*!/*/}
+							{/*	/!*	{'12'} missions réalisées*!/*/}
+							{/*	/!*</div>*!/*/}
+							{/*	<div*/}
+							{/*		className={*/}
+							{/*			'flex items-center text-xs italic text-indigo-900/50'*/}
+							{/*		}*/}
+							{/*	></div>*/}
+							{/*</div>*/}
 						</div>
 						<div className={'flex flex-row items-center gap-4'}>
-							<Stars starsToDisplay={starsToDisplay} />{' '}
-							<span className={'text-sm italic'}>( 5 avis )</span>
+							<Stars starsToDisplay={user.score} />{' '}
+							<span className={'text-sm italic'}>( {user.score} avis )</span>
 						</div>
 					</div>
 				</div>
@@ -99,13 +87,19 @@ function ResumeProfil(props) {
 						}
 					>
 						<div className={'flex flex-col gap-5'}>
-							<BadgeDispo />
-							<div className={'text-sm font-semibold text-slate-900/90'}>
-								{
-									// todo : Date de disponibilité
-									'Disponible à partir du ' + '01/01/2021'
-								}
-							</div>
+							{user.available ? (
+								<>
+									<BadgeIndispo />
+									<div className={'text-sm font-semibold text-slate-900/90'}>
+										{'Disponible à partir du ' + '01/01/2021'}
+									</div>
+								</>
+							) : (
+								<>
+									<BadgeDispo />
+								</>
+							)}
+
 							<button className={'btn-primary'}>Editer ma disponibilité</button>
 						</div>
 						<div>
