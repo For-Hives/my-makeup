@@ -45,7 +45,7 @@ function Signin() {
 				<title>My Makeup</title>
 				<meta
 					name="description"
-					content="Inscription sur my-makeup.fr la plateforme qui va révolutionner votre
+					content="Connexion sur my-makeup.fr la plateforme qui va révolutionner votre
 	            recherche de maquilleuses professionnelles, ou votre recherche de client !"
 				/>
 			</Head>
@@ -208,11 +208,19 @@ function Signin() {
 										<div className="flex items-center justify-end">
 											<p className={'text-xs'}>
 												En entrant sur My-Makeup vous confirmez que vous
-												acceptez les conditions générales.
+												acceptez les{' '}
+												<Link
+													href={'/cgu'}
+													className={'text-indigo-700 underline'}
+													target={'_blank'}
+												>
+													conditions générales.
+												</Link>
 											</p>
 										</div>
 										<div className="flex items-center justify-end">
 											<div className="text-sm">
+												{/* todo */}
 												<a
 													href="#"
 													className="font-medium text-indigo-700 hover:text-indigo-500"

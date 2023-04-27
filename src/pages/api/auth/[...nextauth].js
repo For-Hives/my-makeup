@@ -21,22 +21,36 @@ const options = {
 			credentials: {
 				email: { label: 'Email', type: 'email', placeholder: 'Email' },
 				password: { label: 'Password', type: 'Password' },
+				name: { label: 'Name', type: 'text' },
 			},
-			authorize: async ({ password, email }) => {
-				const response = await fetch(
-					`${process.env.NEXT_PUBLIC_API_URL}api/auth/local`,
-					{
-						method: 'POST',
-						headers: {
-							Accept: 'application/json',
-							'Content-Type': 'application/json',
-						},
-						body: JSON.stringify({
-							identifier: email,
-							password: password,
-						}),
-					}
-				)
+			/**
+			 * if name is set we are in register mode
+			 * @param password
+			 * @param email
+			 * @param name
+			 */
+			authorize: async ({ password, email, name }) => {
+				let callUrl = `${process.env.NEXT_PUBLIC_API_URL}api/auth/local`
+				let body = JSON.stringify({
+					identifier: email,
+					password: password,
+				})
+				if (name !== undefined && name !== null && name !== '') {
+					callUrl = `${process.env.NEXT_PUBLIC_API_URL}api/auth/local/register`
+					body = JSON.stringify({
+						username: name,
+						email: email,
+						password: password,
+					})
+				}
+				const response = await fetch(callUrl, {
+					method: 'POST',
+					headers: {
+						Accept: 'application/json',
+						'Content-Type': 'application/json',
+					},
+					body,
+				})
 				const authenticated = await response.json()
 
 				if (authenticated) {
