@@ -213,7 +213,7 @@ function Nav() {
 											<span className="sr-only">Fermer le menu</span>
 											<XMarkIcon className="h-6 w-6" aria-hidden="true" />
 										</button>
-										<Link href="src/components#" className="-m-1.5 p-1.5">
+										<Link href="/" className="-m-1.5 p-1.5">
 											<span className="sr-only">My Makeup</span>
 											<Image
 												className="h-8"
