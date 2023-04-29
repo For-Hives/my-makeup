@@ -41,7 +41,7 @@ function Profil() {
 	// get current user id
 	if (status !== 'authenticated') {
 		// 	redirect to signin page
-		Router.push('/signin')
+		typeof window !== 'undefined' && Router.push('/signin')
 	}
 
 	if (isLoading) return <Loader />
