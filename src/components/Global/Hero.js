@@ -1,5 +1,5 @@
 import Image from 'next/image'
-import Search from '@/components/Global/Search'
+import SearchBloc from '@/components/Global/SearchBloc'
 
 export default function Hero() {
 	return (
@@ -9,7 +9,7 @@ export default function Hero() {
 					'absolute bottom-0 left-1/2 z-20 flex w-full -translate-x-1/2 transform items-end justify-center'
 				}
 			>
-				<Search />
+				<SearchBloc />
 			</div>
 			<div className="mx-auto max-w-7xl">
 				<div className="relative z-10 lg:w-full lg:max-w-2xl">
