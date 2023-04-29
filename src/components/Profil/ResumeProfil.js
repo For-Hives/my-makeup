@@ -65,11 +65,6 @@ function ResumeProfil(props) {
 									peut se déplacer à {user.city} & dans un rayon de{' '}
 									{user.action_radius}km
 								</div>
-								{/*<div className={'flex items-center gap-4'}>*/}
-								{/*	<div className={'text-sm font-semibold'}>*/}
-								{/*		{'12'} missions réalisées*/}
-								{/*	</div>*/}
-								{/*</div>*/}
 							</div>
 							<div className={'flex flex-row items-center gap-4'}>
 								<Stars starsToDisplay={user.score} />{' '}
@@ -87,9 +82,6 @@ function ResumeProfil(props) {
 								{user.available ? (
 									<>
 										<BadgeIndispo />
-										{/*<div className={'text-sm font-semibold text-slate-900/90'}>*/}
-										{/*	{'Disponible à partir du ' + '01/01/2021'}*/}
-										{/*</div>*/}
 									</>
 								) : (
 									<>

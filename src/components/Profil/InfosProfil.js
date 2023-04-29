@@ -24,12 +24,13 @@ function InfosProfil(props) {
 					<div className={'col-span-8 flex items-center'}>
 						<div
 							className={
-								'flex h-full w-full flex-col rounded border border-slate-300 bg-white p-5'
+								'flex h-full w-full flex-col gap-4 rounded border border-slate-300 bg-white p-5'
 							}
 						>
 							<h2 className={'text-xl font-bold text-slate-700'}>
 								Vous en quelques mots
 							</h2>
+							<p className={'text-slate-800'}>{user.description}</p>
 						</div>
 					</div>
 				</div>
