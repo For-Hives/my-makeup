@@ -81,11 +81,11 @@ function ResumeProfil(props) {
 							<div className={'flex flex-col gap-5'}>
 								{user.available ? (
 									<>
-										<BadgeIndispo />
+										<BadgeDispo />
 									</>
 								) : (
 									<>
-										<BadgeDispo />
+										<BadgeIndispo />
 									</>
 								)}
 
