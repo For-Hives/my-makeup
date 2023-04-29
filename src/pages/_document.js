@@ -1,5 +1,6 @@
-import { Html, Head, Main, NextScript } from 'next/document'
+import { Head, Html, Main, NextScript } from 'next/document'
 import Script from 'next/script'
+import { ResponsiveTemporary } from '@/components/Global/ResponsiveTemporary'
 
 export default function Document() {
 	return (

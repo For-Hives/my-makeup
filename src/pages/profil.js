@@ -11,6 +11,7 @@ import _ from 'lodash'
 import Loader from '@/components/Global/Loader'
 import { redirect } from 'next/navigation'
 import Router from 'next/router'
+import ResponsiveTemporary from '@/components/Global/ResponsiveTemporary'
 
 function Profil() {
 	// get current user id
@@ -58,6 +59,8 @@ function Profil() {
 				/>
 			</Head>
 			<main className={'relative'}>
+				<ResponsiveTemporary />
+
 				<Image
 					src={'/assets/coming-soon.svg'}
 					alt={'Coming soon'}
