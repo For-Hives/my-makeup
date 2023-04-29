@@ -16,9 +16,6 @@ function Profil() {
 	// get current user id
 	const { data: session, status } = useSession()
 
-	console.log('session', session)
-
-	// get current user data
 	const { isLoading, isError, data, error } = useQuery({
 		queryKey: ['users/me'],
 		queryFn: async () => {

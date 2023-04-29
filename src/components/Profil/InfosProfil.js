@@ -10,27 +10,37 @@ function InfosProfil(props) {
 		<div className={''}>
 			<div className="mx-auto max-w-7xl">
 				<div className={'grid grid-cols-12 gap-5 pt-[100px]'}>
-					<div className={'col-span-4 flex items-center'}>
+					<div className={'col-span-4 flex items-start'}>
 						<div
 							className={
-								'flex h-full w-full flex-col rounded border border-slate-300 bg-white p-5'
+								'flex w-full flex-col rounded border border-slate-300 bg-white p-8'
 							}
 						>
 							<h2 className={'text-xl font-bold text-slate-700'}>
-								Vous en quelques mots
+								Localisation & département
 							</h2>
 						</div>
 					</div>
-					<div className={'col-span-8 flex items-center'}>
+					<div className={'col-span-8 flex items-start'}>
 						<div
 							className={
-								'flex h-full w-full flex-col gap-4 rounded border border-slate-300 bg-white p-5'
+								'flex w-full flex-col gap-4 rounded border border-slate-300 bg-white p-8'
 							}
 						>
 							<h2 className={'text-xl font-bold text-slate-700'}>
 								Vous en quelques mots
 							</h2>
-							<p className={'text-slate-800'}>{user.description}</p>
+							{
+								// display the user description
+								// if \n is present, split the string and display each part in a new line
+								user.description.split('\n').map((item, i) => {
+									return (
+										<p key={i} className={'text-slate-800'}>
+											{item}
+										</p>
+									)
+								})
+							}
 						</div>
 					</div>
 				</div>
