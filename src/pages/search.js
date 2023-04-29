@@ -13,9 +13,9 @@ function SearchPage() {
 
 	const router = useRouter()
 
-	// useEffect(() => {
-	// 	loadSearchBar();
-	// }, []);
+	useEffect(() => {
+		loadSearchBar()
+	}, [])
 
 	useEffect(() => {
 		if (!hasSearched) {
@@ -123,75 +123,14 @@ function SearchPage() {
 					'relative mt-36 flex min-h-[50vh] items-center justify-center'
 				}
 			>
-				{/*/!*## Formulaire plein écran si not hasSearched*!/*/}
+				{/*## Formulaire plein écran si not hasSearched*/}
 
-				{/*{!hasSearched && !isSearching && (<div className='flex flex-col items-center justify-center'>*/}
-
-				{/*	<form autoComplete='off' onSubmit={handleSubmit}>*/}
-				{/*		<div className='finder'>*/}
-				{/*			<div className='finder__outer'>*/}
-				{/*				<div className='finder__inner'>*/}
-				{/*					<div className='finder__icon'></div>*/}
-				{/*					<input className='finder__input'*/}
-				{/*								 type='text'*/}
-				{/*								 placeholder='Recherche'*/}
-				{/*								 value={searchTerm}*/}
-				{/*								 onChange={e => setSearchTerm(e.target.value)}*/}
-				{/*					/>*/}
-				{/*				</div>*/}
-				{/*			</div>*/}
-				{/*		</div>*/}
-
-				{/*		<div className=' flex '>*/}
-
-				{/*			<div className='finder mt-8 w-1/2 mr-4'>*/}
-				{/*				<div className='finder__outer w-1/2'>*/}
-				{/*					<div className='finder__inner w-1/2'>*/}
-				{/*						<input className='finder__input w-1/2'*/}
-				{/*									 type='text'*/}
-				{/*									 placeholder='Ville'*/}
-				{/*									 value={city}*/}
-				{/*									 onChange={e => setCity(e.target.value)}*/}
-				{/*						/>*/}
-				{/*					</div>*/}
-				{/*				</div>*/}
-				{/*			</div>*/}
-
-				{/*			<div className='finder mt-8 w-1/2 ml-4'>*/}
-				{/*				<div className='finder_submit__outer w-1/2'>*/}
-				{/*					<div className='finder__inner w-1/2 cursor-pointer'>*/}
-				{/*						<input className='finder__input w-1/2 cursor-pointer' type='submit' name='q' />*/}
-				{/*					</div>*/}
-				{/*				</div>*/}
-				{/*			</div>*/}
-
-				{/*		</div>*/}
-
-				{/*	</form>*/}
-
-				{/*</div>)}*/}
-
-				{/*##			Loading animation if isSearching*/}
-
-				{/*<div*/}
-				{/*	// className={'mx-8 mt-8 grid w-full grid-cols-3 gap-4' + (isSearching ? ' visible' : ' hidden')}*/}
-				{/*	className={'mx-8 mt-8 grid w-full grid-cols-3 gap-4'}*/}
-				{/*>*/}
-				{/*	<div id='loader'>*/}
-				{/*		<div id='box'></div>*/}
-				{/*		<div id='hill'></div>*/}
-				{/*	</div>*/}
-				{/*</div>*/}
-
-				{/*## divided screen with cards if hasSearched*/}
-
-				<div className={'flex h-full w-screen justify-evenly  bg-pink-500'}>
-					<div className="mx-auto h-auto w-1/4 bg-amber-300">
+				{!hasSearched && !isSearching && (
+					<div className="flex flex-col items-center justify-center">
 						<form autoComplete="off" onSubmit={handleSubmit}>
 							<div className="finder">
 								<div className="finder__outer">
 									<div className="finder__inner">
-										<div className="finder__icon"></div>
 										<input
 											className="finder__input"
 											type="text"
@@ -202,11 +141,81 @@ function SearchPage() {
 									</div>
 								</div>
 							</div>
-							<div className="finder mr-4 mt-8 w-1/2">
-								<div className="finder__outer w-1/2">
-									<div className="finder__inner w-1/2">
+
+							<div className=" flex ">
+								<div className="finder mr-4 mt-8 w-1/2">
+									<div className="finder__outer w-1/2">
+										<div className="finder__inner w-1/2">
+											<input
+												className="finder__input w-1/2"
+												type="text"
+												placeholder="Ville"
+												value={city}
+												onChange={e => setCity(e.target.value)}
+											/>
+										</div>
+									</div>
+								</div>
+
+								<div className="finder ml-4 mt-8 w-1/2">
+									<div className="finder_submit__outer w-1/2">
+										<div className="finder__inner w-1/2 cursor-pointer">
+											<input
+												className="finder__input w-1/2 cursor-pointer"
+												type="submit"
+												name="q"
+											/>
+										</div>
+									</div>
+								</div>
+							</div>
+						</form>
+					</div>
+				)}
+
+				{/*##			Loading animation if isSearching*/}
+
+				<div
+					className={
+						'mx-8 mt-8 grid w-full grid-cols-3 gap-4' +
+						(isSearching ? ' visible' : ' hidden')
+					}
+					// className={'mx-8 mt-8 grid w-full grid-cols-3 gap-4'}
+				>
+					<div id="loader">
+						<div id="box"></div>
+						<div id="hill"></div>
+					</div>
+				</div>
+
+				{/*## divided screen with cards if hasSearched*/}
+
+				<div
+					className={
+						'm-4 flex h-full w-screen justify-evenly ' +
+						(searchResults.length === 0 || isSearching ? ' hidden' : '')
+					}
+				>
+					<div className=" hidden h-auto w-[400px] lg:block">
+						<form autoComplete="off" onSubmit={handleSubmit}>
+							<div className="finder">
+								<div className="finder__outer">
+									<div className="finder__inner">
 										<input
-											className="finder__input w-1/2"
+											className="finder__input"
+											type="text"
+											placeholder="Recherche"
+											value={searchTerm}
+											onChange={e => setSearchTerm(e.target.value)}
+										/>
+									</div>
+								</div>
+							</div>
+							<div className="finder  mt-8">
+								<div className="finder__outer ">
+									<div className="finder__inner ">
+										<input
+											className="finder__input "
 											type="text"
 											placeholder="Ville"
 											value={city}
@@ -215,11 +224,25 @@ function SearchPage() {
 									</div>
 								</div>
 							</div>
+							<div className="finder mt-8  ">
+								<div className="finder_submit__outer ">
+									<div className="finder__inner  cursor-pointer">
+										<input
+											className="finder__input  cursor-pointer"
+											type="submit"
+											name="q"
+										/>
+									</div>
+								</div>
+							</div>
 						</form>
 					</div>
+
+					<div className="m-4 hidden h-auto w-[1px] bg-gray-400 lg:block"></div>
+
 					<div
-						// className={'mx-8 mt-8 grid w-full grid-cols-3 gap-4' + (searchResults.length === 0 || isSearching ? ' hidden' : '')}
-						className={' mt-8 grid w-full grid-cols-3 gap-4 bg-blue-300'}
+						className={' mt-8 grid w-full grid-cols-3 gap-4'}
+						// className={'grid w-full grid-cols-3 gap-4'}
 					>
 						{searchResults.map(
 							(
