@@ -32,12 +32,14 @@ function ResumeProfil(props) {
 			<div className={'grid grid-cols-12 gap-5 pt-[100px]'}>
 				<div className={'col-span-2 flex items-center'}>
 					<Image
-						src={'/assets/pp_makeup_2.png'}
+						src={user.main_picture.url}
 						alt={'ppmakeup'}
 						width={500}
 						height={500}
 						className={'h-[200px] w-[200px] rounded-full object-cover'}
 					></Image>
+					{/*	log */}
+					{console.log('user', user)}
 				</div>
 				<div className={'col-span-7 flex items-center'}>
 					<div className={'flex h-full w-full flex-col justify-between pl-20'}>
@@ -64,14 +66,9 @@ function ResumeProfil(props) {
 								{user.action_radius}km
 							</div>
 							{/*<div className={'flex items-center gap-4'}>*/}
-							{/*	/!*<div className={'text-sm font-semibold'}>*!/*/}
-							{/*	/!*	{'12'} missions réalisées*!/*/}
-							{/*	/!*</div>*!/*/}
-							{/*	<div*/}
-							{/*		className={*/}
-							{/*			'flex items-center text-xs italic text-indigo-900/50'*/}
-							{/*		}*/}
-							{/*	></div>*/}
+							{/*	<div className={'text-sm font-semibold'}>*/}
+							{/*		{'12'} missions réalisées*/}
+							{/*	</div>*/}
 							{/*</div>*/}
 						</div>
 						<div className={'flex flex-row items-center gap-4'}>
@@ -90,9 +87,9 @@ function ResumeProfil(props) {
 							{user.available ? (
 								<>
 									<BadgeIndispo />
-									<div className={'text-sm font-semibold text-slate-900/90'}>
-										{'Disponible à partir du ' + '01/01/2021'}
-									</div>
+									{/*<div className={'text-sm font-semibold text-slate-900/90'}>*/}
+									{/*	{'Disponible à partir du ' + '01/01/2021'}*/}
+									{/*</div>*/}
 								</>
 							) : (
 								<>
@@ -110,6 +107,7 @@ function ResumeProfil(props) {
 								<span className="material-symbols-rounded text-indigo-900">
 									visibility
 								</span>
+								{/* todo : switch vision du profil */}
 								<span className={'hover:underline'}>
 									Voir mon profil public
 								</span>
