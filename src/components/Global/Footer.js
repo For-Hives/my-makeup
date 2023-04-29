@@ -8,7 +8,9 @@ function Footer() {
 
 	return (
 		<>
-			<footer className={'relative mx-auto flex w-full max-w-7xl gap-20 pt-52'}>
+			<footer
+				className={'relative mx-auto flex w-full max-w-7xl gap-20 pt-52 '}
+			>
 				<div className={'flex flex-col gap-6'}>
 					<div className={'flex items-center justify-start gap-3'}>
 						<Image
@@ -165,7 +167,7 @@ function Footer() {
 					</Link>
 				</div>
 			</footer>
-			<div className={'mx-auto flex w-full max-w-7xl bg-white py-20'}>
+			<div className={'mx-auto flex w-full max-w-7xl py-20'}>
 				<p className={'mx-auto text-sm text-slate-600'}>
 					© {actualYear} My Makeup - Tous droits réservés - Developed with ❤️ by{' '}
 					<Link

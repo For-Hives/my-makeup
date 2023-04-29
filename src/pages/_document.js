@@ -25,7 +25,7 @@ export default function Document() {
                     `}
 				</Script>
 			</Head>
-			<body>
+			<body className={'bg-neutral-50'}>
 				<Main />
 				<NextScript />
 			</body>
