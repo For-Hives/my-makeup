@@ -1,9 +1,9 @@
 import React, { useEffect } from 'react'
 import Image from 'next/image'
-import { Stars } from '@/components/Profil/Stars'
-import { BadgeDispo } from '@/components/Profil/BadgeDispo'
-import { BadgeIndispo } from '@/components/Profil/BadgeIndispo'
-import ToggleButton from '@/components/Profil/ToggleButton'
+import { Stars } from '@/components/Profil/Childs/Stars'
+import { BadgeDispo } from '@/components/Profil/Childs/BadgeDispo'
+import { BadgeIndispo } from '@/components/Profil/Childs/BadgeIndispo'
+import ToggleButton from '@/components/Profil/Childs/ToggleButton'
 
 // Head : General
 // left
@@ -105,7 +105,7 @@ function ResumeProfil(props) {
 							</div>
 							<div>
 								<a
-									href="#"
+									href="src/components/Profil#"
 									className={'flex gap-2 font-semibold text-indigo-900 '}
 								>
 									<span className="material-symbols-rounded text-indigo-900">

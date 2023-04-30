@@ -3,14 +3,14 @@ import React from 'react'
 import Image from 'next/image'
 import Nav from '@/components/Global/Nav'
 import Footer from '@/components/Global/Footer'
-import ResumeProfil from '@/components/Profil/ResumeProfil'
+import ResumeProfil from '@/components/Profil/Parents/ResumeProfil'
 import { useQuery } from '@tanstack/react-query'
 import { getSession, useSession } from 'next-auth/react'
 import _ from 'lodash'
 import Loader from '@/components/Global/Loader'
 import Router from 'next/router'
 import ResponsiveTemporary from '@/components/Global/ResponsiveTemporary'
-import InfosProfil from '@/components/Profil/InfosProfil'
+import InfosProfil from '@/components/Profil/Parents/InfosProfil'
 
 function Profil() {
 	// get current user id

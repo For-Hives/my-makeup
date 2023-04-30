@@ -1,7 +1,7 @@
 import React from 'react'
-import { LocationProfil } from '@/components/Profil/LocationProfil'
-import { DescriptionProfil } from '@/components/Profil/DescriptionProfil'
-import { SocialMediaProfil } from '@/components/Profil/SocialMediaProfil'
+import { LocationProfil } from '@/components/Profil/Childs/LocationProfil'
+import { DescriptionProfil } from '@/components/Profil/Childs/DescriptionProfil'
+import { SocialMediaProfil } from '@/components/Profil/Childs/SocialMediaProfil'
 
 function InfosProfil(props) {
 	const user = props.user
