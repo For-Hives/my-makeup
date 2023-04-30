@@ -1,11 +1,8 @@
 import React, { useState } from 'react'
 import { Switch } from '@headlessui/react'
+import { classNames } from '@/services/utils'
 
 export default function ToggleButton(props) {
-	function classNames(...classes) {
-		return classes.filter(Boolean).join(' ')
-	}
-
 	const [enabled, setEnabled] = useState(!!props.state)
 
 	return (
