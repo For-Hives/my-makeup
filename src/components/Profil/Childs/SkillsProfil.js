@@ -9,10 +9,18 @@ export function SkillsProfil(props) {
 			}
 		>
 			<h2 className={'text-xl font-bold text-slate-700'}>Compétences</h2>
-			<div className={'flex gap-3'}>
-				<span className="inline-flex items-center rounded-full bg-indigo-100 px-2 py-1 text-xs font-medium text-indigo-700">
-					Badge
-				</span>
+			<div className={'flex flex-wrap gap-4'}>
+				{/* map on skills -> name */}
+				{user.skills.map((skill, index) => {
+					return (
+						<div
+							key={index}
+							className="inline-flex flex-nowrap items-center rounded-full bg-indigo-100 px-3 py-2 text-xs font-medium text-indigo-700"
+						>
+							{skill.name}
+						</div>
+					)
+				})}
 			</div>
 		</div>
 	)

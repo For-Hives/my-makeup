@@ -2,6 +2,7 @@ import React from 'react'
 import { LocationProfil } from '@/components/Profil/Childs/LocationProfil'
 import { DescriptionProfil } from '@/components/Profil/Childs/DescriptionProfil'
 import { SocialMediaProfil } from '@/components/Profil/Childs/SocialMediaProfil'
+import { SkillsProfil } from '@/components/Profil/Childs/SkillsProfil'
 
 function InfosProfil(props) {
 	const user = props.user
@@ -12,6 +13,7 @@ function InfosProfil(props) {
 					<div className={'col-span-4 flex flex-col items-start gap-5'}>
 						<LocationProfil user={user} />
 						<SocialMediaProfil user={user} />
+						<SkillsProfil user={user} />
 					</div>
 					<div className={'col-span-8 flex items-start'}>
 						<DescriptionProfil user={user} />
