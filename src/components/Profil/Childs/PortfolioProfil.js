@@ -7,6 +7,7 @@ import { Pagination } from 'swiper'
 import 'swiper/css'
 import 'swiper/css/pagination'
 import Image from 'next/image'
+import { classNames } from '@/services/utils'
 
 export function PortfolioProfil(props) {
 	const user = props.user
