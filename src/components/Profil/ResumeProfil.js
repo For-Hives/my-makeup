@@ -1,10 +1,9 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import Image from 'next/image'
 import { Stars } from '@/components/Profil/Stars'
 import { BadgeDispo } from '@/components/Profil/BadgeDispo'
-import { useSession } from 'next-auth/react'
-import _ from 'lodash'
 import { BadgeIndispo } from '@/components/Profil/BadgeIndispo'
+import ToggleButton from '@/components/Profil/ToggleButton'
 
 // Head : General
 // left
@@ -24,7 +23,13 @@ import { BadgeIndispo } from '@/components/Profil/BadgeIndispo'
 
 function ResumeProfil(props) {
 	const user = props.user
+
 	const [starsToDisplay, setStarsToDisplay] = React.useState(5)
+	const [availability, setAvailability] = React.useState(!!user.available)
+
+	const handleAvailability = () => {
+		setAvailability(!availability)
+	}
 
 	return (
 		<div className={'bg-white pb-24 shadow-xl'}>
@@ -78,8 +83,8 @@ function ResumeProfil(props) {
 								'flex h-full w-full flex-col items-start justify-between'
 							}
 						>
-							<div className={'flex flex-col gap-5'}>
-								{user.available ? (
+							<div className={'flex items-center gap-5'}>
+								{availability ? (
 									<>
 										<BadgeDispo />
 									</>
@@ -89,9 +94,14 @@ function ResumeProfil(props) {
 									</>
 								)}
 
-								<button className={'btn-primary'}>
-									Editer ma disponibilité
-								</button>
+								{/*<button className={'btn-primary'}>*/}
+								{/*	Editer ma disponibilité*/}
+								{/*</button>*/}
+								{/* fixme : handle change mode */}
+								{/*<ToggleButton*/}
+								{/*	state={availability}*/}
+								{/*	onChange={handleAvailability}*/}
+								{/*/>*/}
 							</div>
 							<div>
 								<a
