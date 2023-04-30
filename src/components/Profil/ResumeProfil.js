@@ -27,9 +27,9 @@ function ResumeProfil(props) {
 	const [starsToDisplay, setStarsToDisplay] = React.useState(5)
 
 	return (
-		<div className={'bg-white pb-20 shadow-xl'}>
+		<div className={'bg-white pb-24 shadow-xl'}>
 			<div className="mx-auto max-w-7xl pt-[90px]">
-				<div className={'grid grid-cols-12 gap-5 pt-[100px]'}>
+				<div className={'grid grid-cols-12 gap-5 pt-24'}>
 					<div className={'col-span-2 flex items-center'}>
 						<Image
 							src={user.main_picture.url}

@@ -9,7 +9,7 @@ function InfosProfil(props) {
 	return (
 		<div className={''}>
 			<div className="mx-auto max-w-7xl">
-				<div className={'grid grid-cols-12 gap-5 pt-[100px]'}>
+				<div className={'grid grid-cols-12 gap-5 pt-24'}>
 					<div className={'col-span-4 flex items-start'}>
 						<div
 							className={
