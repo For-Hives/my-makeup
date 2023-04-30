@@ -29,31 +29,40 @@ function Footer() {
 						44000 Nantes
 					</p>
 					<div className={'flex gap-3'}>
-						<Link href="/">
+						<Link href="/" rel={'noopener nofollow noreferrer'}>
 							<Image
-								src={'/assets/vectorials-used/fi-brands-instagram.svg'}
-								className={'fill-indigo-700'}
-								width={'20'}
-								height={'20'}
+								src={'/assets/brand/037-instagram.svg'}
+								className={'fill-white'}
+								width={'35'}
+								height={'35'}
 								alt={'Instagram My Makeup'}
 							/>
 						</Link>
-						<Link href="/">
+						<Link href="/" rel={'noopener nofollow noreferrer'}>
 							<Image
-								src={'/assets/vectorials-used/fi-brands-linkedin.svg'}
+								src={'/assets/brand/030-linkedin.svg'}
 								className={'fill-indigo-700'}
-								width={'20'}
-								height={'20'}
+								width={'35'}
+								height={'35'}
 								alt={'Linkedin My Makeup'}
 							/>
 						</Link>
-						<Link href="/">
+						<Link href="/" rel={'noopener nofollow noreferrer'}>
 							<Image
-								src={'/assets/vectorials-used/fi-brands-telegram.svg'}
+								src={'/assets/brand/017-telegram.svg'}
 								className={'fill-indigo-700'}
-								width={'20'}
-								height={'20'}
+								width={'35'}
+								height={'35'}
 								alt={'Mail My Makeup'}
+							/>
+						</Link>
+						<Link href="/" rel={'noopener nofollow noreferrer'}>
+							<Image
+								src={'/assets/brand/006-facebook.svg'}
+								className={'fill-indigo-700'}
+								width={'35'}
+								height={'35'}
+								alt={'Facebook My Makeup'}
 							/>
 						</Link>
 					</div>
