@@ -25,7 +25,7 @@ function ResumeProfil(props) {
 	const user = props.user
 
 	const [starsToDisplay, setStarsToDisplay] = React.useState(5)
-	const [availability, setAvailability] = React.useState(!!user.available)
+	const [availability, setAvailability] = React.useState(!!user?.available)
 
 	const handleAvailability = () => {
 		setAvailability(!availability)
@@ -37,7 +37,7 @@ function ResumeProfil(props) {
 				<div className={'grid grid-cols-12 gap-5 pt-24'}>
 					<div className={'col-span-2 flex items-center'}>
 						<Image
-							src={user.main_picture.url}
+							src={user?.main_picture?.url}
 							alt={'ppmakeup'}
 							width={500}
 							height={500}
@@ -52,14 +52,14 @@ function ResumeProfil(props) {
 								<h3
 									className={'text-3xl font-bold tracking-tight text-slate-800'}
 								>
-									{user.first_name} {user.last_name}
+									{user?.first_name} {user?.last_name}
 								</h3>
 								<h2
 									className={
 										'text-xl font-semibold tracking-tight text-slate-700'
 									}
 								>
-									{user.speciality}
+									{user?.speciality}
 								</h2>
 							</div>
 							<div>
@@ -67,13 +67,13 @@ function ResumeProfil(props) {
 									<span className="material-symbols-rounded text-indigo-900">
 										directions_run
 									</span>
-									peut se déplacer à {user.city} & dans un rayon de{' '}
-									{user.action_radius}km
+									peut se déplacer à {user?.city} & dans un rayon de{' '}
+									{user?.action_radius}km
 								</div>
 							</div>
 							<div className={'flex flex-row items-center gap-4'}>
-								<Stars starsToDisplay={user.score} />{' '}
-								<span className={'text-sm italic'}>( {user.score} avis )</span>
+								<Stars starsToDisplay={user?.score} />{' '}
+								<span className={'text-sm italic'}>( {user?.score} avis )</span>
 							</div>
 						</div>
 					</div>

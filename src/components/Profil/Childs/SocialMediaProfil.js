@@ -16,13 +16,13 @@ export function SocialMediaProfil(props) {
 			<div className={'flex flex-col gap-3'}>
 				{
 					// display :
-					// 	- instagram if user.network.instagram is not null
-					// 	- facebook if user.network.facebook is not null
-					// 	- linkedin if user.network.linkedin is not null
-					// 	- youtube if user.network.youtube is not null
-					// 	- email if user.user.email is not null
-					// 	- phone if user.user.phone is not null
-					// 	- website if user.network.website is not null
+					// 	- instagram if user?.network.instagram is not null
+					// 	- facebook if user?.network.facebook is not null
+					// 	- linkedin if user?.network.linkedin is not null
+					// 	- youtube if user?.network.youtube is not null
+					// 	- email if user?.user?.email is not null
+					// 	- phone if user?.user?.phone is not null
+					// 	- website if user?.network.website is not null
 				}
 				{user?.network.instagram && (
 					<Link
@@ -36,7 +36,7 @@ export function SocialMediaProfil(props) {
 							className={'fill-indigo-700'}
 							width={'35'}
 							height={'35'}
-							alt={`${user.user.first_name} ${user.user.last_name} Instagram`}
+							alt={`${user?.user?.first_name} ${user?.user?.last_name} Instagram`}
 						/>
 						<p className={'text-sm text-slate-700 group-hover:underline'}>
 							{user?.network.instagram}
@@ -55,7 +55,7 @@ export function SocialMediaProfil(props) {
 							className={'fill-indigo-700'}
 							width={'35'}
 							height={'35'}
-							alt={`${user.user.first_name} ${user.user.last_name} Facebook`}
+							alt={`${user?.user?.first_name} ${user?.user?.last_name} Facebook`}
 						/>
 						<p className={'text-sm text-slate-700 group-hover:underline'}>
 							{user?.network.facebook}
@@ -74,7 +74,7 @@ export function SocialMediaProfil(props) {
 							className={'fill-indigo-700'}
 							width={'35'}
 							height={'35'}
-							alt={`${user.user.first_name} ${user.user.last_name} Linkedin`}
+							alt={`${user?.user?.first_name} ${user?.user?.last_name} Linkedin`}
 						/>
 						<p className={'text-sm text-slate-700 group-hover:underline'}>
 							{user?.network.linkedin}
@@ -93,16 +93,16 @@ export function SocialMediaProfil(props) {
 							className={'fill-indigo-700'}
 							width={'35'}
 							height={'35'}
-							alt={`${user.user.first_name} ${user.user.last_name} Youtube`}
+							alt={`${user?.user?.first_name} ${user?.user?.last_name} Youtube`}
 						/>
 						<p className={'text-sm text-slate-700 group-hover:underline'}>
 							{user?.network.youtube}
 						</p>
 					</Link>
 				)}
-				{user?.user.email && (
+				{user?.user?.email && (
 					<Link
-						href={`mailto:${user?.user.email}`}
+						href={`mailto:${user?.user?.email}`}
 						rel={'noopener nofollow noreferrer'}
 						className={'group flex items-center gap-3'}
 					>
@@ -111,16 +111,16 @@ export function SocialMediaProfil(props) {
 							className={'fill-indigo-700'}
 							width={'35'}
 							height={'35'}
-							alt={`${user.user.first_name} ${user.user.last_name} Email`}
+							alt={`${user?.user?.first_name} ${user?.user?.last_name} Email`}
 						/>
 						<p className={'text-sm text-slate-700 group-hover:underline'}>
-							{user?.user.email}
+							{user?.user?.email}
 						</p>
 					</Link>
 				)}
-				{user?.user.phone && (
+				{user?.user?.phone && (
 					<Link
-						href={`tel:${user?.user.phone}`}
+						href={`tel:${user?.user?.phone}`}
 						rel={'noopener nofollow noreferrer'}
 						className={'group flex items-center gap-3'}
 					>
@@ -129,10 +129,10 @@ export function SocialMediaProfil(props) {
 							className={'fill-indigo-700'}
 							width={'35'}
 							height={'35'}
-							alt={`${user.user.first_name} ${user.user.last_name} Téléphone`}
+							alt={`${user?.user?.first_name} ${user?.user?.last_name} Téléphone`}
 						/>
 						<p className={'text-sm text-slate-700 group-hover:underline'}>
-							{user?.user.phone}
+							{user?.user?.phone}
 						</p>
 					</Link>
 				)}
@@ -148,7 +148,7 @@ export function SocialMediaProfil(props) {
 							className={'fill-indigo-700'}
 							width={'35'}
 							height={'35'}
-							alt={`${user.user.first_name} ${user.user.last_name} website`}
+							alt={`${user?.user?.first_name} ${user?.user?.last_name} website`}
 						/>
 						<p className={'text-sm text-slate-700 group-hover:underline'}>
 							{user?.network.website}

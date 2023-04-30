@@ -18,7 +18,7 @@ export function LocationProfil(props) {
 					<h3 className={'text-lg font-semibold text-slate-700'}>
 						Localisation
 					</h3>
-					<p className={'text-slate-800'}>{props.user.city}</p>
+					<p className={'text-slate-800'}>{props.user?.city}</p>
 				</div>
 			</div>
 			<div className={'flex gap-2'}>
@@ -30,7 +30,7 @@ export function LocationProfil(props) {
 						Peut travailer chez vous à
 					</h3>
 					<p className={'text-slate-800'}>
-						{props.user.city} & {props.user.action_radius}km autour
+						{props.user?.city} & {props.user?.action_radius}km autour
 					</p>
 				</div>
 			</div>

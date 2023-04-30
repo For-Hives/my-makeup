@@ -11,7 +11,7 @@ export function LanguageProfil(props) {
 			<h2 className={'text-xl font-bold text-slate-700'}>Langues</h2>
 			<ul className={'flex flex-col gap-4'}>
 				{/* map on skills -> name */}
-				{user.language.map((language, index) => {
+				{user?.language?.map((language, index) => {
 					return (
 						<li key={index} className={'text-slate-700'}>
 							→&nbsp;

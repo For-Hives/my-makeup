@@ -29,9 +29,9 @@ export function PortfolioProfil(props) {
 					className="h-[500px] w-full"
 				>
 					{
-						// 	map on user.image_gallery and return a SwiperSlide with the image
+						// 	map on user?.image_gallery and return a SwiperSlide with the image
 					}
-					{user.image_gallery.map((image, index) => {
+					{user?.image_gallery?.map((image, index) => {
 						return (
 							<SwiperSlide
 								key={index}
