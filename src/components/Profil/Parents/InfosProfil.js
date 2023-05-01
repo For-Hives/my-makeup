@@ -7,6 +7,7 @@ import { PortfolioProfil } from '@/components/Profil/Childs/PortfolioProfil'
 import { LanguageProfil } from '@/components/Profil/Childs/LanguageProfil'
 import { ServiceOffersProfil } from '@/components/Profil/Childs/ServiceOffers/ServiceOffersProfil'
 import { CoursesProfil } from '@/components/Profil/Childs/CoursesProfil'
+import { ExperiencesProfil } from '@/components/Profil/Childs/ExperiencesProfil'
 
 function InfosProfil(props) {
 	const user = props.user
@@ -25,6 +26,7 @@ function InfosProfil(props) {
 						<DescriptionProfil user={user} />
 						<PortfolioProfil user={user} />
 						<ServiceOffersProfil user={user} />
+						<ExperiencesProfil user={user} />
 					</div>
 				</div>
 			</div>
