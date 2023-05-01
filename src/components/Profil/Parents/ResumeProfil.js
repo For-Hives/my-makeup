@@ -1,9 +1,9 @@
 import React, { useEffect } from 'react'
 import Image from 'next/image'
-import { Stars } from '@/components/Profil/Childs/Stars'
-import { BadgeDispo } from '@/components/Profil/Childs/BadgeDispo'
-import { BadgeIndispo } from '@/components/Profil/Childs/BadgeIndispo'
-import ToggleButton from '@/components/Profil/Childs/ToggleButton'
+import { Stars } from '@/components/Profil/Atoms/Stars'
+import { BadgeDispo } from '@/components/Profil/Atoms/BadgeDispo'
+import { BadgeIndispo } from '@/components/Profil/Atoms/BadgeIndispo'
+import ToggleButton from '@/components/Profil/Atoms/ToggleButton'
 
 // Head : General
 // left
