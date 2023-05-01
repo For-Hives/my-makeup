@@ -1,8 +1,15 @@
 import { Disclosure } from '@headlessui/react'
 import { ChevronRightIcon } from '@heroicons/react/20/solid'
 import React from 'react'
+import { DescriptionPriceOffer } from '@/components/Profil/Childs/ServiceOffers/DescriptionPriceOffer'
 
+/**
+ * Display the options of a service offer -> pass the service offer as props
+ * @param props
+ * @constructor
+ */
 export function OptionsOffers(props) {
+	const service_offer = props.serviceOffer
 	const options = props.serviceOffer.options
 	return (
 		<div className={'flex w-full flex-col gap-2 py-2'}>
@@ -24,53 +31,13 @@ export function OptionsOffers(props) {
 										{option.name}
 										<ChevronRightIcon
 											className={
-												'h-6 w-6 ' + (open ? 'rotate-90 transform' : '')
+												'h-5 w-5 ' + (open ? 'rotate-90 transform' : '')
 											}
 										/>
 									</Disclosure.Button>
 									<Disclosure.Panel>
-										<div>
-											{
-												// display the user description
-												// if \n is present, split the string and display each part in a new line
-												option.description &&
-													option.description
-														.split('\n')
-														.map((item_option, i) => {
-															return (
-																<p
-																	key={i}
-																	className={
-																		'border-l border-slate-300 pl-4 text-slate-700 '
-																	}
-																>
-																	{item_option}
-																</p>
-															)
-														})
-											}
-										</div>
-										<div
-											className={
-												'flex w-full flex-col items-end justify-center gap-2'
-											}
-										>
-											{
-												// display the user description
-												// if \n is present, split the string and display each part in a new line
-												option.price.split('\n').map((item_price, i) => {
-													return (
-														<h3
-															key={i}
-															className={
-																'text-md flex justify-end rounded-full bg-slate-50 px-3 py-2 text-right italic text-slate-500'
-															}
-														>
-															{item_price}
-														</h3>
-													)
-												})
-											}
+										<div className={'pb-4'}>
+											<DescriptionPriceOffer serviceOffer={option} />
 										</div>
 									</Disclosure.Panel>
 								</>

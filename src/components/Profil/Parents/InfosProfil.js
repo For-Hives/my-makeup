@@ -5,7 +5,7 @@ import { SocialMediaProfil } from '@/components/Profil/Childs/SocialMediaProfil'
 import { SkillsProfil } from '@/components/Profil/Childs/SkillsProfil'
 import { PortfolioProfil } from '@/components/Profil/Childs/PortfolioProfil'
 import { LanguageProfil } from '@/components/Profil/Childs/LanguageProfil'
-import { ServiceOffersProfil } from '@/components/Profil/Childs/ServiceOffersProfil'
+import { ServiceOffersProfil } from '@/components/Profil/Childs/ServiceOffers/ServiceOffersProfil'
 
 function InfosProfil(props) {
 	const user = props.user
