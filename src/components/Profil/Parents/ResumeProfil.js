@@ -52,7 +52,7 @@ function ResumeProfil(props) {
 						{mode ? (
 							<button
 								className={
-									'absolute left-0 top-0 flex h-full w-full flex-col items-center justify-center rounded-full bg-indigo-700/25  text-white'
+									'absolute left-0 top-0 flex h-full w-full flex-col items-center justify-center rounded-full bg-indigo-700/0 text-white/0 transition hover:bg-indigo-700/25 hover:text-white'
 								}
 								onClick={handleModalUpdateResumeProfil}
 							>
