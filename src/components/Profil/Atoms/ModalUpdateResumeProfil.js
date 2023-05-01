@@ -1,10 +1,11 @@
 import { Fragment, useEffect, useRef, useState } from 'react'
 import { Dialog, Transition } from '@headlessui/react'
 import { PhotoIcon } from '@heroicons/react/20/solid'
+import Image from 'next/image'
 
 export default function ModalUpdateResumeProfil(props) {
 	const [open, setOpen] = useState(props.modalUpdateResumeProfil)
-	const [imageUrl, setImageUrl] = useState(null)
+	const [imageUrl, setImageUrl] = useState('')
 
 	useEffect(() => {
 		setOpen(props.modalUpdateResumeProfil)
@@ -26,18 +27,20 @@ export default function ModalUpdateResumeProfil(props) {
 			return
 		}
 
-		console.log('fileObj is', fileObj)
+		const imageUrl = URL.createObjectURL(fileObj)
+		setImageUrl(imageUrl)
 
-		// 👇️ reset file input
+		// reset file input
 		event.target.value = null
-
-		// 👇️ is now empty
-		console.log(event.target.files)
-
-		// 👇️ can still access file object here
-		console.log(fileObj)
-		console.log(fileObj.name)
 	}
+
+	useEffect(() => {
+		return () => {
+			if (imageUrl) {
+				URL.revokeObjectURL(imageUrl)
+			}
+		}
+	}, [imageUrl])
 
 	return (
 		<Transition.Root show={open} as={Fragment}>
@@ -102,8 +105,29 @@ export default function ModalUpdateResumeProfil(props) {
 												className="mt-2 sm:col-span-2 sm:mt-0"
 												onClick={handleClick}
 											>
-												<div className="flex justify-center rounded-lg border border-dashed border-slate-900/25 px-6 py-10">
-													<div className="text-center">
+												<div className="relative flex justify-center rounded-lg border border-dashed border-slate-900/25 px-6 py-10">
+													{!!imageUrl && imageUrl !== '' ? (
+														<div
+															className={
+																'relative flex h-[200px] w-[200px] items-center justify-center overflow-hidden rounded-full'
+															}
+														>
+															<Image
+																src={imageUrl}
+																alt={'photo de profil'}
+																fill={true}
+																className="rounded-full object-cover object-center"
+															/>
+														</div>
+													) : null}
+													<div
+														className={
+															'text-center' +
+															(!!imageUrl && imageUrl !== ''
+																? ' hidden'
+																: ' block')
+														}
+													>
 														<PhotoIcon
 															className="mx-auto h-12 w-12 text-slate-300"
 															aria-hidden="true"
