@@ -11,6 +11,8 @@ import { ExperiencesProfil } from '@/components/Profil/Childs/ExperiencesProfil'
 
 function InfosProfil(props) {
 	const user = props.user
+	const mode = props.mode
+
 	return (
 		<div className={''}>
 			<div className="mx-auto max-w-7xl">

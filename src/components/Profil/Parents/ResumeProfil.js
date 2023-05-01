@@ -4,6 +4,8 @@ import { Stars } from '@/components/Profil/Atoms/Stars'
 import { BadgeDispo } from '@/components/Profil/Atoms/BadgeDispo'
 import { BadgeIndispo } from '@/components/Profil/Atoms/BadgeIndispo'
 import ToggleButton from '@/components/Profil/Atoms/ToggleButton'
+import ModalUpdateResumeProfil from '@/components/Profil/Atoms/ModalUpdateResumeProfil'
+import Link from 'next/link'
 
 // Head : General
 // left
@@ -23,19 +25,41 @@ import ToggleButton from '@/components/Profil/Atoms/ToggleButton'
 
 function ResumeProfil(props) {
 	const user = props.user
+	const mode = props.mode
 
 	const [starsToDisplay, setStarsToDisplay] = React.useState(5)
 	const [availability, setAvailability] = React.useState(!!user?.available)
+	const [modalUpdateResumeProfil, setModalUpdateResumeProfil] =
+		React.useState(false)
 
 	const handleAvailability = () => {
 		setAvailability(!availability)
 	}
 
+	const handleModalUpdateResumeProfil = () => {
+		setModalUpdateResumeProfil(!modalUpdateResumeProfil)
+	}
+
 	return (
 		<div className={'bg-white pb-24 shadow-xl'}>
+			<ModalUpdateResumeProfil
+				modalUpdateResumeProfil={modalUpdateResumeProfil}
+				handleModalUpdateResumeProfil={handleModalUpdateResumeProfil}
+			/>
 			<div className="mx-auto max-w-7xl pt-[90px]">
 				<div className={'grid grid-cols-12 gap-5 pt-24'}>
-					<div className={'col-span-2 flex items-center'}>
+					<div className={'relative col-span-2 flex items-center'}>
+						{mode ? (
+							<button
+								className={
+									'absolute left-0 top-0 flex h-full w-full flex-col items-center justify-center rounded-full bg-indigo-700/25  text-white'
+								}
+								onClick={handleModalUpdateResumeProfil}
+							>
+								<span className="material-symbols-rounded">add_a_photo</span>
+								<p className={'text-sm font-semibold'}>modifier votre photo</p>
+							</button>
+						) : null}
 						<Image
 							src={user?.main_picture?.url}
 							alt={'ppmakeup'}
