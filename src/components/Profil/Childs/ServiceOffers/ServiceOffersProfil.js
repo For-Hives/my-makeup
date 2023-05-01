@@ -15,19 +15,15 @@ export function ServiceOffersProfil(props) {
 				Service(s) proposé(s)
 			</h2>
 			<Tab.Group>
-				<Tab.List
-					className={
-						'flex w-full justify-center gap-8 rounded-xl bg-indigo-900/10 p-2'
-					}
-				>
+				<Tab.List className={'flex w-full justify-center py-4'}>
 					{user?.service_offers.map((service_offer, index) => {
 						return (
 							<Tab
 								key={index}
 								className={
-									'btn-primary ring-offset border-none  text-xs font-medium text-slate-700 outline-none ring-indigo-800 hover:bg-slate-700/10 focus:outline-none focus:ring-2' +
+									'h-full w-full border-b border-slate-300 bg-slate-50/30 p-4 text-xs text-slate-600 hover:bg-slate-50/50 focus:outline-none ' +
 									// 	aria selected
-									' bg-indigo-900/0 aria-selected:bg-white aria-selected:text-indigo-900/100'
+									' aria-selected:border-b-2 aria-selected:border-indigo-800 aria-selected:font-semibold aria-selected:text-slate-900'
 								}
 							>
 								{service_offer.name}
