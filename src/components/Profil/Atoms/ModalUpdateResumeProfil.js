@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useRef, useState } from 'react'
 import { Dialog, Transition } from '@headlessui/react'
-import { PhotoIcon } from '@heroicons/react/20/solid'
 import Image from 'next/image'
+import { PhotoIcon } from '@heroicons/react/20/solid'
 
 export default function ModalUpdateResumeProfil(props) {
 	const [open, setOpen] = useState(props.modalUpdateResumeProfil)
@@ -94,63 +94,65 @@ export default function ModalUpdateResumeProfil(props) {
 										</Dialog.Title>
 									</div>
 									<div>
-										<div className="grid grid-cols-1 gap-4 ">
-											<label
-												htmlFor="cover-photo"
-												className="text-base font-normal text-slate-700"
-											>
-												Modifier votre photo de profil
-											</label>
-											<button
-												className="mt-2 sm:col-span-2 sm:mt-0"
-												onClick={handleClick}
-											>
-												<div className="relative flex justify-center rounded-lg border border-dashed border-slate-900/25 px-6 py-10">
-													{!!imageUrl && imageUrl !== '' ? (
+										<div className="grid grid-cols-1 gap-4">
+											<div className={'flex flex-col gap-4'}>
+												<label
+													htmlFor="cover-photo"
+													className="text-base font-normal text-slate-700"
+												>
+													Modifier votre photo de profil
+												</label>
+												<button
+													className="mt-2 sm:col-span-2 sm:mt-0"
+													onClick={handleClick}
+												>
+													<div className="relative flex justify-center rounded-lg border border-dashed border-slate-900/25 px-6 py-10">
+														{!!imageUrl && imageUrl !== '' ? (
+															<div
+																className={
+																	'relative flex h-[200px] w-[200px] items-center justify-center overflow-hidden rounded-full'
+																}
+															>
+																<Image
+																	src={imageUrl}
+																	alt={'photo de profil'}
+																	fill={true}
+																	className="rounded-full object-cover object-center"
+																/>
+															</div>
+														) : null}
 														<div
 															className={
-																'relative flex h-[200px] w-[200px] items-center justify-center overflow-hidden rounded-full'
+																'text-center' +
+																(!!imageUrl && imageUrl !== ''
+																	? ' hidden'
+																	: ' block')
 															}
 														>
-															<Image
-																src={imageUrl}
-																alt={'photo de profil'}
-																fill={true}
-																className="rounded-full object-cover object-center"
+															<PhotoIcon
+																className="mx-auto h-12 w-12 text-slate-300"
+																aria-hidden="true"
 															/>
+															<div className="mt-4 flex text-sm leading-6 text-slate-600">
+																<label className="relative rounded-md bg-white font-semibold text-indigo-600 focus-within:outline-none focus-within:ring-2 focus-within:ring-indigo-600 focus-within:ring-offset-2 hover:text-indigo-500">
+																	<span>Télécharger une nouvelle photo</span>
+																</label>
+																<input
+																	id="file-upload"
+																	name="file-upload"
+																	type="file"
+																	className="sr-only hidden"
+																	ref={inputRef}
+																	onChange={handleFileChange}
+																/>
+															</div>
+															<p className="text-xs leading-5 text-slate-600">
+																{"PNG, JPG, WEBP jusqu'à 5MB"}
+															</p>
 														</div>
-													) : null}
-													<div
-														className={
-															'text-center' +
-															(!!imageUrl && imageUrl !== ''
-																? ' hidden'
-																: ' block')
-														}
-													>
-														<PhotoIcon
-															className="mx-auto h-12 w-12 text-slate-300"
-															aria-hidden="true"
-														/>
-														<div className="mt-4 flex text-sm leading-6 text-slate-600">
-															<label className="relative rounded-md bg-white font-semibold text-indigo-600 focus-within:outline-none focus-within:ring-2 focus-within:ring-indigo-600 focus-within:ring-offset-2 hover:text-indigo-500">
-																<span>Télécharger une nouvelle photo</span>
-															</label>
-															<input
-																id="file-upload"
-																name="file-upload"
-																type="file"
-																className="sr-only hidden"
-																ref={inputRef}
-																onChange={handleFileChange}
-															/>
-														</div>
-														<p className="text-xs leading-5 text-slate-600">
-															{"PNG, JPG, WEBP jusqu'à 5MB"}
-														</p>
 													</div>
-												</div>
-											</button>
+												</button>
+											</div>
 										</div>
 									</div>
 								</div>
