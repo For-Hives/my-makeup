@@ -6,6 +6,7 @@ import { SkillsProfil } from '@/components/Profil/Childs/SkillsProfil'
 import { PortfolioProfil } from '@/components/Profil/Childs/PortfolioProfil'
 import { LanguageProfil } from '@/components/Profil/Childs/LanguageProfil'
 import { ServiceOffersProfil } from '@/components/Profil/Childs/ServiceOffers/ServiceOffersProfil'
+import { CoursesProfil } from '@/components/Profil/Childs/CoursesProfil'
 
 function InfosProfil(props) {
 	const user = props.user
@@ -18,6 +19,7 @@ function InfosProfil(props) {
 						<SocialMediaProfil user={user} />
 						<SkillsProfil user={user} />
 						<LanguageProfil user={user} />
+						<CoursesProfil user={user} />
 					</div>
 					<div className={'col-span-8 flex flex-col items-start gap-5'}>
 						<DescriptionProfil user={user} />

@@ -118,9 +118,9 @@ export function SocialMediaProfil(props) {
 						</p>
 					</Link>
 				)}
-				{user?.user?.phone && (
+				{user?.phone && (
 					<Link
-						href={`tel:${user?.user?.phone}`}
+						href={`tel:${user?.phone}`}
 						rel={'noopener nofollow noreferrer'}
 						className={'group flex items-center gap-3'}
 					>
@@ -129,10 +129,10 @@ export function SocialMediaProfil(props) {
 							className={'fill-indigo-700'}
 							width={'35'}
 							height={'35'}
-							alt={`${user?.user?.first_name} ${user?.user?.last_name} Téléphone`}
+							alt={`${user?.phone} ${user?.phone} Téléphone`}
 						/>
 						<p className={'text-sm text-slate-700 group-hover:underline'}>
-							{user?.user?.phone}
+							{user?.phone}
 						</p>
 					</Link>
 				)}
