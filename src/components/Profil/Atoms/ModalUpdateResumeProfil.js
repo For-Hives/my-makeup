@@ -9,7 +9,10 @@ import { signIn, useSession } from 'next-auth/react'
 import * as yup from 'yup'
 
 const schema = yup.object().shape({
-	name: yup.string().required('Nom est requis'),
+	first_name: yup.string().required('Nom est requis'),
+	last_name: yup.string().required('Prénom est requis'),
+	speciality: yup.string().required('Spécialité est requise'),
+	availability: yup.boolean().required('Disponibilité est requise'),
 })
 
 export default function ModalUpdateResumeProfil(props) {
@@ -180,31 +183,108 @@ export default function ModalUpdateResumeProfil(props) {
 												<form
 													onSubmit={handleSubmit(onSubmit)}
 													method="POST"
-													className="space-y-4"
+													className="flex flex-col gap-4"
 												>
+													<div className={'flex gap-2'}>
+														<div>
+															<label
+																htmlFor="last_name"
+																className="block text-sm text-slate-700"
+															>
+																Nom
+															</label>
+															<div className="mt-2">
+																<input
+																	id="last_name"
+																	name="last_name"
+																	type="text"
+																	{...register('last_name', {
+																		required: true,
+																	})}
+																	required
+																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
+																/>
+																{errors.name && (
+																	<p className={'mt-2 text-xs text-red-500/80'}>
+																		{errors.last_name.message}
+																	</p>
+																)}
+															</div>
+														</div>
+														<div>
+															<label
+																htmlFor="first_name"
+																className="block text-sm text-slate-700"
+															>
+																Prénom
+															</label>
+															<div className="mt-2">
+																<input
+																	id="first_name"
+																	name="first_name"
+																	type="text"
+																	{...register('first_name', {
+																		required: true,
+																	})}
+																	required
+																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
+																/>
+																{errors.name && (
+																	<p className={'mt-2 text-xs text-red-500/80'}>
+																		{errors.first_name.message}
+																	</p>
+																)}
+															</div>
+														</div>
+													</div>
 													<div>
 														<label
-															htmlFor="name"
-															className="block text-base font-normal text-slate-700"
+															htmlFor="speciality"
+															className="block text-sm text-slate-700"
 														>
-															Nom
+															Specialité
 														</label>
 														<div className="mt-2">
 															<input
-																id="name"
-																name="name"
+																id="speciality"
+																name="speciality"
 																type="text"
-																{...register('name', {
+																{...register('speciality', {
 																	required: true,
 																})}
 																required
-																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 															/>
 															{errors.name && (
 																<p className={'mt-2 text-xs text-red-500/80'}>
-																	{errors.name.message}
+																	{errors.speciality.message}
 																</p>
 															)}
+														</div>
+													</div>
+													<div>
+														<label
+															htmlFor="availability"
+															className="block text-sm text-slate-700"
+														>
+															Disponibilité
+														</label>
+														<div className="mt-2">
+															{/*    <input*/}
+															{/*        id="availability"*/}
+															{/*        name="availability"*/}
+															{/*        type="checkbox"*/}
+															{/*        {...register('availability', {*/}
+															{/*            required: true,*/}
+															{/*        })}*/}
+															{/*        required*/}
+															{/*        className="block rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-600 sm:text-sm "*/}
+															{/*    />*/}
+															{/*    {errors.name && (*/}
+															{/*        <p className={'mt-2 text-xs text-red-500/80'}>*/}
+															{/*            {errors.availability.message}*/}
+															{/*        </p>*/}
+															{/*    )}*/}
 														</div>
 													</div>
 												</form>

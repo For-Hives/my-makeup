@@ -69,7 +69,7 @@ function Signup() {
 								src="/assets/logo_2.webp"
 							/>
 							<h2 className="mt-6 text-3xl font-bold tracking-tight text-slate-900">
-								{"S'inscrire sur My Makeup"}
+								{"S'inscrire"}
 							</h2>
 						</div>
 						{!(session && session.user && !_.isEmpty(session.user)) && (
@@ -253,7 +253,7 @@ function Signup() {
 											</button>
 										</div>
 										<div className={'flex items-center justify-center '}>
-											tu as déjà un compte ?&nbsp;
+											Déjà un compte ?&nbsp;
 											<Link
 												className={
 													'font-semibold text-indigo-700 hover:text-indigo-700 hover:underline'

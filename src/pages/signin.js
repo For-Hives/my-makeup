@@ -131,7 +131,6 @@ function Signin() {
 											</div>
 										</div>
 									</div>
-
 									<div className="relative mt-6">
 										<div
 											className="absolute inset-0 flex items-center"
@@ -225,7 +224,7 @@ function Signin() {
 													href="#"
 													className="font-medium text-indigo-700 hover:text-indigo-500"
 												>
-													J&apos;ai perdu mon mot de passe
+													Mot de passe oublié ?
 												</a>
 											</div>
 										</div>
@@ -236,7 +235,7 @@ function Signin() {
 											</button>
 										</div>
 										<div className={'flex items-center justify-center '}>
-											tu n&apos;as pas de compte ?&nbsp;
+											Pas de compte ?&nbsp;
 											<Link
 												className={
 													'font-semibold text-indigo-700 hover:text-indigo-700 hover:underline'
