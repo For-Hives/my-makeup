@@ -45,6 +45,7 @@ function ResumeProfil(props) {
 			<ModalUpdateResumeProfil
 				modalUpdateResumeProfil={modalUpdateResumeProfil}
 				handleModalUpdateResumeProfil={handleModalUpdateResumeProfil}
+				user={user}
 			/>
 			<div className="mx-auto max-w-7xl pt-[90px]">
 				<div className={'grid grid-cols-12 gap-5 pt-24'}>

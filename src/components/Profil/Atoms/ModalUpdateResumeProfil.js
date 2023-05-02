@@ -1,5 +1,5 @@
 import React, { Fragment, useEffect, useRef, useState } from 'react'
-import { Dialog, Transition } from '@headlessui/react'
+import { Dialog, Switch, Transition } from '@headlessui/react'
 import Image from 'next/image'
 import { PhotoIcon } from '@heroicons/react/20/solid'
 import Link from 'next/link'
@@ -7,15 +7,19 @@ import { useForm } from 'react-hook-form'
 import { yupResolver } from '@hookform/resolvers/yup'
 import { signIn, useSession } from 'next-auth/react'
 import * as yup from 'yup'
+import { classNames } from '@/services/utils'
+import { BadgeDispo } from '@/components/Profil/Atoms/BadgeDispo'
+import { BadgeIndispo } from '@/components/Profil/Atoms/BadgeIndispo'
 
 const schema = yup.object().shape({
 	first_name: yup.string().required('Nom est requis'),
 	last_name: yup.string().required('Prénom est requis'),
 	speciality: yup.string().required('Spécialité est requise'),
-	availability: yup.boolean().required('Disponibilité est requise'),
 })
 
 export default function ModalUpdateResumeProfil(props) {
+	const user = props.user
+
 	const {
 		register,
 		handleSubmit,
@@ -26,6 +30,7 @@ export default function ModalUpdateResumeProfil(props) {
 
 	const [open, setOpen] = useState(props.modalUpdateResumeProfil)
 	const [imageUrl, setImageUrl] = useState('')
+	const [available, setAvailable] = useState(user.available)
 
 	const { data: session } = useSession()
 
@@ -202,6 +207,7 @@ export default function ModalUpdateResumeProfil(props) {
 																		required: true,
 																	})}
 																	required
+																	placeholder={user.last_name}
 																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																/>
 																{errors.name && (
@@ -227,6 +233,7 @@ export default function ModalUpdateResumeProfil(props) {
 																		required: true,
 																	})}
 																	required
+																	placeholder={user.first_name}
 																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																/>
 																{errors.name && (
@@ -253,6 +260,7 @@ export default function ModalUpdateResumeProfil(props) {
 																	required: true,
 																})}
 																required
+																placeholder={user.speciality}
 																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 															/>
 															{errors.name && (
@@ -264,27 +272,46 @@ export default function ModalUpdateResumeProfil(props) {
 													</div>
 													<div>
 														<label
-															htmlFor="availability"
+															htmlFor="available"
 															className="block text-sm text-slate-700"
 														>
 															Disponibilité
 														</label>
-														<div className="mt-2">
-															{/*    <input*/}
-															{/*        id="availability"*/}
-															{/*        name="availability"*/}
-															{/*        type="checkbox"*/}
-															{/*        {...register('availability', {*/}
-															{/*            required: true,*/}
-															{/*        })}*/}
-															{/*        required*/}
-															{/*        className="block rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-600 sm:text-sm "*/}
-															{/*    />*/}
-															{/*    {errors.name && (*/}
-															{/*        <p className={'mt-2 text-xs text-red-500/80'}>*/}
-															{/*            {errors.availability.message}*/}
-															{/*        </p>*/}
-															{/*    )}*/}
+														<div className="mt-2 flex items-center gap-4">
+															<Switch
+																checked={available}
+																onChange={() => {
+																	setAvailable(!available)
+																}}
+																className="group relative inline-flex h-5 w-10 flex-shrink-0 cursor-pointer items-center justify-center rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2"
+															>
+																<span className="sr-only">
+																	Toggle disponibility
+																</span>
+																<span
+																	aria-hidden="true"
+																	className="pointer-events-none absolute h-full w-full rounded-md bg-white"
+																/>
+																<span
+																	aria-hidden="true"
+																	className={classNames(
+																		available
+																			? 'bg-indigo-600'
+																			: 'bg-slate-200',
+																		'pointer-events-none absolute mx-auto h-4 w-9 rounded-full transition-colors duration-200 ease-in-out'
+																	)}
+																/>
+																<span
+																	aria-hidden="true"
+																	className={classNames(
+																		available
+																			? 'translate-x-5'
+																			: 'translate-x-0',
+																		'pointer-events-none absolute left-0 inline-block h-5 w-5 transform rounded-full border border-slate-200 bg-white shadow ring-0 transition-transform duration-200 ease-in-out'
+																	)}
+																/>
+															</Switch>
+															{available ? <BadgeDispo /> : <BadgeIndispo />}
 														</div>
 													</div>
 												</form>
