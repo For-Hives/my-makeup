@@ -1,11 +1,34 @@
-import { Fragment, useEffect, useRef, useState } from 'react'
+import React, { Fragment, useEffect, useRef, useState } from 'react'
 import { Dialog, Transition } from '@headlessui/react'
 import Image from 'next/image'
 import { PhotoIcon } from '@heroicons/react/20/solid'
+import Link from 'next/link'
+import { useForm } from 'react-hook-form'
+import { yupResolver } from '@hookform/resolvers/yup'
+import { signIn, useSession } from 'next-auth/react'
+import * as yup from 'yup'
+
+const schema = yup.object().shape({
+	name: yup.string().required('Nom est requis'),
+})
 
 export default function ModalUpdateResumeProfil(props) {
+	const {
+		register,
+		handleSubmit,
+		formState: { errors },
+	} = useForm({
+		resolver: yupResolver(schema),
+	})
+
 	const [open, setOpen] = useState(props.modalUpdateResumeProfil)
 	const [imageUrl, setImageUrl] = useState('')
+
+	const { data: session } = useSession()
+
+	const onSubmit = data => {
+		console.log(data)
+	}
 
 	useEffect(() => {
 		setOpen(props.modalUpdateResumeProfil)
@@ -152,6 +175,39 @@ export default function ModalUpdateResumeProfil(props) {
 														</div>
 													</div>
 												</button>
+											</div>
+											<div className={'flex flex-col gap-4'}>
+												<form
+													onSubmit={handleSubmit(onSubmit)}
+													method="POST"
+													className="space-y-4"
+												>
+													<div>
+														<label
+															htmlFor="name"
+															className="block text-base font-normal text-slate-700"
+														>
+															Nom
+														</label>
+														<div className="mt-2">
+															<input
+																id="name"
+																name="name"
+																type="text"
+																{...register('name', {
+																	required: true,
+																})}
+																required
+																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+															/>
+															{errors.name && (
+																<p className={'mt-2 text-xs text-red-500/80'}>
+																	{errors.name.message}
+																</p>
+															)}
+														</div>
+													</div>
+												</form>
 											</div>
 										</div>
 									</div>
