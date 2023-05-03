@@ -3,7 +3,6 @@ import Image from 'next/image'
 import { Stars } from '@/components/Profil/Atoms/Stars'
 import { BadgeDispo } from '@/components/Profil/Atoms/BadgeDispo'
 import { BadgeIndispo } from '@/components/Profil/Atoms/BadgeIndispo'
-import ToggleButton from '@/components/Profil/Atoms/ToggleButton'
 import ModalUpdateResumeProfil from '@/components/Profil/Atoms/ModalUpdateResumeProfil'
 import Link from 'next/link'
 

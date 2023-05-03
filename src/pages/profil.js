@@ -21,7 +21,7 @@ function Profil() {
 	const { data: session, status } = useSession()
 
 	const { isLoading, isError, data, error } = useQuery({
-		queryKey: ['users/me'],
+		queryKey: ['users/me-makeup'],
 		queryFn: async () => {
 			const res = await fetch(
 				`${process.env.NEXT_PUBLIC_API_URL}api/me-makeup`,

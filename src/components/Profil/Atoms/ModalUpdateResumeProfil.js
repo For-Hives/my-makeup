@@ -10,6 +10,7 @@ import * as yup from 'yup'
 import { classNames } from '@/services/utils'
 import { BadgeDispo } from '@/components/Profil/Atoms/BadgeDispo'
 import { BadgeIndispo } from '@/components/Profil/Atoms/BadgeIndispo'
+import { useQueryClient } from '@tanstack/react-query'
 
 const schema = yup.object().shape({
 	first_name: yup.string().required('Nom est requis'),
@@ -17,7 +18,64 @@ const schema = yup.object().shape({
 	speciality: yup.string().required('Spécialité est requise'),
 })
 
+/**
+ * PUT /api/makeup-artistes/{id}
+ * @param user
+ * @param session
+ * @param data
+ * @param data_blob
+ */
+function putMakeupArtisteViaId(
+	queryClient,
+	user,
+	session,
+	data,
+	data_blob = { id: 2 }
+) {
+	fetch(`${process.env.NEXT_PUBLIC_API_URL}api/makeup-artistes/${user.id}`, {
+		method: 'PUT',
+		headers: {
+			// 	token
+			'Content-Type': 'application/json',
+			Accept: 'application/json',
+			Authorization: `Bearer ${session.jwt}`,
+		},
+		body: JSON.stringify({
+			data: {
+				last_name: data.last_name,
+				first_name: data.first_name,
+				speciality: data.speciality,
+				city: data.city,
+				action_radius: data.action_radius,
+				score: data.score,
+				available: data.available,
+				skills: data.skills,
+				description: data.description,
+				network: data.network,
+				user: data.user,
+				experiences: data.experiences,
+				courses: data.courses,
+				service_offers: data.service_offers,
+				image_gallery: data.image_gallery,
+				main_picture: data_blob.id ?? data.main_picture,
+				language: data.language,
+				phone: data.phone,
+			},
+		}),
+	})
+		.then(res => {
+			console.log(res)
+			// 	invalidate the cache, to refresh the page and get the new data , with tanstack/react-query
+			queryClient.invalidateQueries('users/me-makeup')
+		})
+		.catch(err => {
+			console.log(err)
+		})
+}
+
 export default function ModalUpdateResumeProfil(props) {
+	const queryClient = useQueryClient()
+
 	const user = props.user
 
 	const {
@@ -28,14 +86,52 @@ export default function ModalUpdateResumeProfil(props) {
 		resolver: yupResolver(schema),
 	})
 
+	const [fileObj, setFileObj] = useState('')
 	const [open, setOpen] = useState(props.modalUpdateResumeProfil)
 	const [imageUrl, setImageUrl] = useState('')
 	const [available, setAvailable] = useState(user.available)
+	const [userLastName, setUserLastName] = useState(user.last_name ?? '')
+	const [userFirstName, setUserFirstName] = useState(user.first_name ?? '')
+	const [userSpeciality, setUserSpeciality] = useState(user.speciality ?? '')
 
 	const { data: session } = useSession()
 
 	const onSubmit = data => {
-		console.log(data)
+		data = {
+			...user,
+			...data,
+			available: available,
+		}
+
+		// 	upload file if fileObj is not empty
+		if (fileObj !== '' && fileObj !== undefined && fileObj !== null) {
+			const form = new FormData()
+			console.log(fileObj)
+			console.log(form)
+			form.append('files', fileObj)
+			console.log(form)
+
+			const res_post = fetch(`${process.env.NEXT_PUBLIC_API_URL}api/upload`, {
+				method: 'POST',
+				headers: {
+					Authorization: `Bearer ${session.jwt}`,
+				},
+				body: form,
+			})
+				.then(response => {
+					console.log(response)
+					return response.json()
+				})
+				.then(data_blob => {
+					data_blob = data_blob[0]
+					console.log(data_blob)
+					// 	put data in api : with fetch : /api/makeup-artistes/{user.id}
+					putMakeupArtisteViaId(queryClient, user, session, data, data_blob)
+				})
+				.catch(err => console.error(err))
+		} else {
+			putMakeupArtisteViaId(queryClient, user, session, data)
+		}
 	}
 
 	useEffect(() => {
@@ -43,7 +139,6 @@ export default function ModalUpdateResumeProfil(props) {
 	}, [props.modalUpdateResumeProfil])
 
 	const cancelButtonRef = useRef(null)
-
 	const inputRef = useRef(null)
 
 	const handleClick = event => {
@@ -53,16 +148,30 @@ export default function ModalUpdateResumeProfil(props) {
 	}
 
 	const handleFileChange = event => {
-		const fileObj = event.target.files && event.target.files[0]
-		if (!fileObj) {
+		const fileObject = event.target.files && event.target.files[0]
+		if (!fileObject) {
 			return
 		}
 
-		const imageUrl = URL.createObjectURL(fileObj)
+		const imageUrl = URL.createObjectURL(fileObject)
+		console.log('imageUrl created', imageUrl)
 		setImageUrl(imageUrl)
+		setFileObj(fileObject)
 
 		// reset file input
 		event.target.value = null
+	}
+
+	const handleUpdateLastName = event => {
+		setUserLastName(event.target.value)
+	}
+
+	const handleUpdateFirstName = event => {
+		setUserFirstName(event.target.value)
+	}
+
+	const handleUpdateSpeciality = event => {
+		setUserSpeciality(event.target.value)
 	}
 
 	useEffect(() => {
@@ -207,7 +316,8 @@ export default function ModalUpdateResumeProfil(props) {
 																		required: true,
 																	})}
 																	required
-																	placeholder={user.last_name}
+																	value={userLastName ?? ''}
+																	onChange={handleUpdateLastName}
 																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																/>
 																{errors.name && (
@@ -233,7 +343,8 @@ export default function ModalUpdateResumeProfil(props) {
 																		required: true,
 																	})}
 																	required
-																	placeholder={user.first_name}
+																	value={userFirstName ?? ''}
+																	onChange={handleUpdateFirstName}
 																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																/>
 																{errors.name && (
@@ -260,7 +371,8 @@ export default function ModalUpdateResumeProfil(props) {
 																	required: true,
 																})}
 																required
-																placeholder={user.speciality}
+																value={userSpeciality ?? ''}
+																onChange={handleUpdateSpeciality}
 																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 															/>
 															{errors.name && (
@@ -323,7 +435,7 @@ export default function ModalUpdateResumeProfil(props) {
 									<button
 										type="button"
 										className="btn-primary"
-										onClick={props.handleModalUpdateResumeProfil}
+										onClick={handleSubmit(onSubmit)}
 									>
 										Sauvegarder
 									</button>
