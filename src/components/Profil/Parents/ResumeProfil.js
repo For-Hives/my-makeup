@@ -3,7 +3,7 @@ import Image from 'next/image'
 import { Stars } from '@/components/Profil/Atoms/Stars'
 import { BadgeDispo } from '@/components/Profil/Atoms/BadgeDispo'
 import { BadgeIndispo } from '@/components/Profil/Atoms/BadgeIndispo'
-import ModalUpdateResumeProfil from '@/components/Profil/Atoms/ModalUpdateResumeProfil'
+import ModalUpdateResumeProfil from '@/components/Profil/Atoms/ModalUpdate/ModalUpdateResumeProfil'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 
@@ -46,7 +46,7 @@ function ResumeProfil(props) {
 	}
 
 	return (
-		<div className={'group relative bg-white pb-24 shadow-xl'}>
+		<div className={'relative bg-white pb-24 shadow-xl'}>
 			<ModalUpdateResumeProfil
 				modalUpdateResumeProfil={modalUpdateResumeProfil}
 				handleModalUpdateResumeProfil={handleModalUpdateResumeProfil}
