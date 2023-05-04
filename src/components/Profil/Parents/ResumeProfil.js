@@ -40,11 +40,35 @@ function ResumeProfil(props) {
 	}
 
 	const handleModalUpdateResumeProfil = () => {
-		setModalUpdateResumeProfil(!modalUpdateResumeProfil)
+		if (!mode) {
+			setModalUpdateResumeProfil(!modalUpdateResumeProfil)
+		}
 	}
 
 	return (
-		<div className={'bg-white pb-24 shadow-xl'}>
+		<div className={'group relative bg-white pb-24 shadow-xl'}>
+			{/*{!mode ? (*/}
+			{/*	<button*/}
+			{/*		onClick={handleModalUpdateResumeProfil}*/}
+			{/*		className={*/}
+			{/*			'absolute left-0 top-0 -z-10 flex h-full w-full items-center justify-center opacity-0 ' +*/}
+			{/*			'bg-white/75 backdrop-blur-none group-hover:z-20 group-hover:opacity-100 ' +*/}
+			{/*			'pointer-events-none transition duration-300 group-hover:pointer-events-auto group-hover:backdrop-blur-[2px] ' +*/}
+			{/*			'user-select-none group-hover:user-select-auto'*/}
+			{/*		}*/}
+			{/*	>*/}
+			{/*		<button*/}
+			{/*			className={*/}
+			{/*				'btn-alt-primary mt-[90px] flex items-center gap-3 text-indigo-900'*/}
+			{/*			}*/}
+			{/*		>*/}
+			{/*			<span className="material-symbols-rounded">edit</span>*/}
+			{/*			<span className={'font-semibold'}>*/}
+			{/*				Modifier vos informations principales*/}
+			{/*			</span>*/}
+			{/*		</button>*/}
+			{/*	</button>*/}
+			{/*) : null}*/}
 			<ModalUpdateResumeProfil
 				modalUpdateResumeProfil={modalUpdateResumeProfil}
 				handleModalUpdateResumeProfil={handleModalUpdateResumeProfil}
@@ -76,7 +100,13 @@ function ResumeProfil(props) {
 						<div
 							className={'flex h-full w-full flex-col justify-between pl-20'}
 						>
-							<div className={'flex w-full flex-col gap-2'}>
+							<div
+								className={
+									'flex w-full flex-col gap-2' +
+									(!mode ? ' cursor-pointer' : ' cursor-default')
+								}
+								onClick={handleModalUpdateResumeProfil}
+							>
 								<h3
 									className={'text-3xl font-bold tracking-tight text-slate-800'}
 								>
@@ -120,33 +150,6 @@ function ResumeProfil(props) {
 									<>
 										<BadgeIndispo />
 									</>
-								)}
-							</div>
-							<div>
-								{!mode ? (
-									<Link
-										href={{ pathname: '/profil', query: { view: true } }}
-										className={'flex gap-2 font-semibold text-indigo-900 '}
-									>
-										<span className="material-symbols-rounded text-indigo-900">
-											visibility
-										</span>
-										<span className={'hover:underline'}>
-											Voir mon profil public
-										</span>
-									</Link>
-								) : (
-									<Link
-										href={{ pathname: '/profil' }}
-										className={'flex gap-2 font-semibold text-indigo-900'}
-									>
-										<span className="material-symbols-rounded text-indigo-900">
-											edit
-										</span>
-										<span className={'hover:underline'}>
-											Modifier mon profil
-										</span>
-									</Link>
 								)}
 							</div>
 						</div>

@@ -13,10 +13,6 @@ import ResponsiveTemporary from '@/components/Global/ResponsiveTemporary'
 import InfosProfil from '@/components/Profil/Parents/InfosProfil'
 
 function Profil() {
-	// default mode is true for update mode
-	// fixme set it to false for view mode
-	const [mode, setMode] = React.useState(true)
-
 	// get current user id
 	const { data: session, status } = useSession()
 
@@ -72,8 +68,8 @@ function Profil() {
 				/>
 				{session && session.user && !_.isEmpty(session.user) ? (
 					<>
-						<ResumeProfil user={user} mode={mode} />
-						<InfosProfil user={user} mode={mode} />
+						<ResumeProfil user={user} />
+						<InfosProfil user={user} />
 					</>
 				) : (
 					<div className="flex h-screen flex-col items-center justify-center">

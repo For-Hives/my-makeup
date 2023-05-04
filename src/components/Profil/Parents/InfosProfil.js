@@ -8,14 +8,44 @@ import { LanguageProfil } from '@/components/Profil/Childs/LanguageProfil'
 import { ServiceOffersProfil } from '@/components/Profil/Childs/ServiceOffers/ServiceOffersProfil'
 import { CoursesProfil } from '@/components/Profil/Childs/CoursesProfil'
 import { ExperiencesProfil } from '@/components/Profil/Childs/ExperiencesProfil'
+import { useRouter } from 'next/router'
+import Link from 'next/link'
 
 function InfosProfil(props) {
+	// import router
+	const router = useRouter()
+	// get query param
+	const { view } = router.query
+
 	const user = props.user
-	const mode = props.mode
+	const mode = !!view
 
 	return (
 		<div className={''}>
-			<div className="mx-auto max-w-7xl">
+			<div className="relative mx-auto max-w-7xl pt-4">
+				<div className={'absolute right-0 top-0 m-8 mt-16 flex'}>
+					{!mode ? (
+						<Link
+							href={{ pathname: '/profil', query: { view: true } }}
+							className={'flex gap-2 font-semibold text-indigo-900 '}
+						>
+							<span className="material-symbols-rounded text-indigo-900">
+								visibility
+							</span>
+							<span className={'hover:underline'}>Voir mon profil public</span>
+						</Link>
+					) : (
+						<Link
+							href={{ pathname: '/profil' }}
+							className={'flex gap-2 font-semibold text-indigo-900'}
+						>
+							<span className="material-symbols-rounded text-indigo-900">
+								edit
+							</span>
+							<span className={'hover:underline'}>Modifier mon profil</span>
+						</Link>
+					)}
+				</div>
 				<div className={'grid grid-cols-12 gap-5 pt-24'}>
 					<div className={'col-span-4 flex flex-col items-start gap-5'}>
 						<LocationProfil user={user} />
