@@ -5,6 +5,7 @@ import { BadgeDispo } from '@/components/Profil/Atoms/BadgeDispo'
 import { BadgeIndispo } from '@/components/Profil/Atoms/BadgeIndispo'
 import ModalUpdateResumeProfil from '@/components/Profil/Atoms/ModalUpdateResumeProfil'
 import Link from 'next/link'
+import { useRouter } from 'next/router'
 
 // Head : General
 // left
@@ -23,8 +24,11 @@ import Link from 'next/link'
 // - Boutton d'édition de la disponibilité
 
 function ResumeProfil(props) {
+	const router = useRouter()
+	const { view } = router.query
+
 	const user = props.user
-	const mode = props.mode
+	const mode = !!view
 
 	const [starsToDisplay, setStarsToDisplay] = React.useState(5)
 	const [availability, setAvailability] = React.useState(!!user?.available)
@@ -49,7 +53,7 @@ function ResumeProfil(props) {
 			<div className="mx-auto max-w-7xl pt-[90px]">
 				<div className={'grid grid-cols-12 gap-5 pt-24'}>
 					<div className={'relative col-span-2 flex items-center'}>
-						{mode ? (
+						{!mode ? (
 							<button
 								className={
 									'absolute left-0 top-0 flex h-full w-full flex-col items-center justify-center rounded-full bg-indigo-700/0 text-white/0 transition hover:bg-indigo-700/25 hover:text-white'
@@ -117,29 +121,33 @@ function ResumeProfil(props) {
 										<BadgeIndispo />
 									</>
 								)}
-
-								{/*<button className={'btn-primary'}>*/}
-								{/*	Editer ma disponibilité*/}
-								{/*</button>*/}
-								{/* fixme : handle change mode */}
-								{/*<ToggleButton*/}
-								{/*	state={availability}*/}
-								{/*	onChange={handleAvailability}*/}
-								{/*/>*/}
 							</div>
 							<div>
-								<a
-									href="src/components/Profil#"
-									className={'flex gap-2 font-semibold text-indigo-900 '}
-								>
-									<span className="material-symbols-rounded text-indigo-900">
-										visibility
-									</span>
-									{/* todo : switch vision du profil */}
-									<span className={'hover:underline'}>
-										Voir mon profil public
-									</span>
-								</a>
+								{!mode ? (
+									<Link
+										href={{ pathname: '/profil', query: { view: true } }}
+										className={'flex gap-2 font-semibold text-indigo-900 '}
+									>
+										<span className="material-symbols-rounded text-indigo-900">
+											visibility
+										</span>
+										<span className={'hover:underline'}>
+											Voir mon profil public
+										</span>
+									</Link>
+								) : (
+									<Link
+										href={{ pathname: '/profil' }}
+										className={'flex gap-2 font-semibold text-indigo-900'}
+									>
+										<span className="material-symbols-rounded text-indigo-900">
+											edit
+										</span>
+										<span className={'hover:underline'}>
+											Modifier mon profil
+										</span>
+									</Link>
+								)}
 							</div>
 						</div>
 					</div>
