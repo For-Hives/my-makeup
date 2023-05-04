@@ -28,7 +28,8 @@ export function LocationProfil(props) {
 			/>
 			<div
 				className={
-					'group relative flex w-full flex-col gap-4 rounded border border-slate-300 bg-white p-8'
+					(!mode ? 'group relative' : '') +
+					' flex w-full flex-col gap-4 rounded border border-slate-300 bg-white p-8'
 				}
 			>
 				{!mode ? (
