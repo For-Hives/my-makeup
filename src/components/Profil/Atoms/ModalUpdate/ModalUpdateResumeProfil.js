@@ -2,76 +2,21 @@ import React, { Fragment, useEffect, useRef, useState } from 'react'
 import { Dialog, Switch, Transition } from '@headlessui/react'
 import Image from 'next/image'
 import { PhotoIcon } from '@heroicons/react/20/solid'
-import Link from 'next/link'
 import { useForm } from 'react-hook-form'
 import { yupResolver } from '@hookform/resolvers/yup'
-import { signIn, useSession } from 'next-auth/react'
+import { useSession } from 'next-auth/react'
 import * as yup from 'yup'
 import { classNames } from '@/services/utils'
 import { BadgeDispo } from '@/components/Profil/Atoms/BadgeDispo'
 import { BadgeIndispo } from '@/components/Profil/Atoms/BadgeIndispo'
 import { useQueryClient } from '@tanstack/react-query'
+import { putMakeupArtisteViaId } from '@/components/Profil/Atoms/ModalUpdate/PutMakeupArtisteViaId'
 
 const schema = yup.object().shape({
 	first_name: yup.string().required('Nom est requis'),
 	last_name: yup.string().required('Prénom est requis'),
 	speciality: yup.string().required('Spécialité est requise'),
 })
-
-/**
- * PUT /api/makeup-artistes/{id}
- * @param user
- * @param session
- * @param data
- * @param data_blob
- */
-function putMakeupArtisteViaId(
-	queryClient,
-	user,
-	session,
-	data,
-	data_blob = { id: 2 }
-) {
-	fetch(`${process.env.NEXT_PUBLIC_API_URL}api/makeup-artistes/${user.id}`, {
-		method: 'PUT',
-		headers: {
-			// 	token
-			'Content-Type': 'application/json',
-			Accept: 'application/json',
-			Authorization: `Bearer ${session.jwt}`,
-		},
-		body: JSON.stringify({
-			data: {
-				last_name: data.last_name,
-				first_name: data.first_name,
-				speciality: data.speciality,
-				city: data.city,
-				action_radius: data.action_radius,
-				score: data.score,
-				available: data.available,
-				skills: data.skills,
-				description: data.description,
-				network: data.network,
-				user: data.user,
-				experiences: data.experiences,
-				courses: data.courses,
-				service_offers: data.service_offers,
-				image_gallery: data.image_gallery,
-				main_picture: data_blob.id ?? data.main_picture,
-				language: data.language,
-				phone: data.phone,
-			},
-		}),
-	})
-		.then(res => {
-			console.log(res)
-			// 	invalidate the cache, to refresh the page and get the new data , with tanstack/react-query
-			queryClient.invalidateQueries('users/me-makeup')
-		})
-		.catch(err => {
-			console.log(err)
-		})
-}
 
 export default function ModalUpdateResumeProfil(props) {
 	const queryClient = useQueryClient()
