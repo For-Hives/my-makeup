@@ -118,10 +118,10 @@ export default function ModalUpdateLocationProfil(props) {
 											as="h3"
 											className="text-lg font-semibold text-slate-900"
 										>
-											Modifier votre profil
+											{"Modifier votre localisation et votre rayon d'action"}
 										</Dialog.Title>
 									</div>
-									<div>
+									<div className={'w-3/5'}>
 										<div className="grid grid-cols-1 gap-4">
 											<div className={'flex flex-col gap-4'}>
 												<form
