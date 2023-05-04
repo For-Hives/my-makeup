@@ -47,28 +47,6 @@ function ResumeProfil(props) {
 
 	return (
 		<div className={'group relative bg-white pb-24 shadow-xl'}>
-			{/*{!mode ? (*/}
-			{/*	<button*/}
-			{/*		onClick={handleModalUpdateResumeProfil}*/}
-			{/*		className={*/}
-			{/*			'absolute left-0 top-0 -z-10 flex h-full w-full items-center justify-center opacity-0 ' +*/}
-			{/*			'bg-white/75 backdrop-blur-none group-hover:z-20 group-hover:opacity-100 ' +*/}
-			{/*			'pointer-events-none transition duration-300 group-hover:pointer-events-auto group-hover:backdrop-blur-[2px] ' +*/}
-			{/*			'user-select-none group-hover:user-select-auto'*/}
-			{/*		}*/}
-			{/*	>*/}
-			{/*		<button*/}
-			{/*			className={*/}
-			{/*				'btn-alt-primary mt-[90px] flex items-center gap-3 text-indigo-900'*/}
-			{/*			}*/}
-			{/*		>*/}
-			{/*			<span className="material-symbols-rounded">edit</span>*/}
-			{/*			<span className={'font-semibold'}>*/}
-			{/*				Modifier vos informations principales*/}
-			{/*			</span>*/}
-			{/*		</button>*/}
-			{/*	</button>*/}
-			{/*) : null}*/}
 			<ModalUpdateResumeProfil
 				modalUpdateResumeProfil={modalUpdateResumeProfil}
 				handleModalUpdateResumeProfil={handleModalUpdateResumeProfil}
@@ -141,7 +119,13 @@ function ResumeProfil(props) {
 								'flex h-full w-full flex-col items-start justify-between'
 							}
 						>
-							<div className={'flex items-center gap-5'}>
+							<div
+								className={
+									'flex items-center gap-5' +
+									(!mode ? ' cursor-pointer' : ' cursor-default')
+								}
+								onClick={handleModalUpdateResumeProfil}
+							>
 								{availability ? (
 									<>
 										<BadgeDispo />
