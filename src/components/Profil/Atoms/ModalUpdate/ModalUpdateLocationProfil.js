@@ -110,7 +110,7 @@ export default function ModalUpdateLocationProfil(props) {
 										'absolute right-0 top-0 m-6 flex items-center justify-center'
 									}
 								>
-									<span className="material-symbols-rounded">close</span>
+									<span className="material-icons-round">close</span>
 								</button>
 								<div className="flex flex-col items-start gap-8">
 									<div className="text-left">

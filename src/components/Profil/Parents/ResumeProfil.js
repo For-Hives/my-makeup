@@ -62,7 +62,7 @@ function ResumeProfil(props) {
 								}
 								onClick={handleModalUpdateResumeProfil}
 							>
-								<span className="material-symbols-rounded">add_a_photo</span>
+								<span className="material-icons-round">add_a_photo</span>
 								<p className={'text-sm font-semibold'}>modifier votre photo</p>
 							</button>
 						) : null}
@@ -100,7 +100,7 @@ function ResumeProfil(props) {
 							</div>
 							<div>
 								<div className={'flex items-center'}>
-									<span className="material-symbols-rounded text-indigo-900">
+									<span className="material-icons-round text-indigo-900">
 										directions_run
 									</span>
 									peut se déplacer à {user?.city} & dans un rayon de{' '}

@@ -46,7 +46,7 @@ export function DescriptionProfil(props) {
 								'btn-alt-primary flex items-center gap-3 bg-white text-indigo-900'
 							}
 						>
-							<span className="material-symbols-rounded">edit</span>
+							<span className="material-icons-round">edit</span>
 							<span className={'font-semibold'}>
 								Modifier votre description
 							</span>

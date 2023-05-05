@@ -25,7 +25,7 @@ export function ExperiencesProfil(props) {
 					{user?.experiences?.map((experience, index) => {
 						return (
 							<div key={index} className={'flex text-indigo-800'}>
-								<span className="material-symbols-rounded">apartment</span>
+								<span className="material-icons-round">apartment</span>
 								<div className={'ml-2 flex flex-col gap-2'}>
 									<div className={'flex flex-col'}>
 										<p className={'font-semibold text-slate-700'}>

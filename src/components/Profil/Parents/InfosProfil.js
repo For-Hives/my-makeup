@@ -29,7 +29,7 @@ function InfosProfil(props) {
 							href={{ pathname: '/profil', query: { view: true } }}
 							className={'flex gap-2 font-semibold text-indigo-900 '}
 						>
-							<span className="material-symbols-rounded text-indigo-900">
+							<span className="material-icons-round text-indigo-900">
 								visibility
 							</span>
 							<span className={'hover:underline'}>Voir mon profil public</span>
@@ -39,9 +39,7 @@ function InfosProfil(props) {
 							href={{ pathname: '/profil' }}
 							className={'flex gap-2 font-semibold text-indigo-900'}
 						>
-							<span className="material-symbols-rounded text-indigo-900">
-								edit
-							</span>
+							<span className="material-icons-round text-indigo-900">edit</span>
 							<span className={'hover:underline'}>Modifier mon profil</span>
 						</Link>
 					)}

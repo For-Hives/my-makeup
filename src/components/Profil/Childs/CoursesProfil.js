@@ -15,7 +15,9 @@ export function CoursesProfil(props) {
 				{user?.courses?.map((course, index) => {
 					return (
 						<div key={index} className={'flex text-slate-700'}>
-							<span className="material-symbols-rounded">school</span>
+							<span className="material-icons-round text-indigo-900">
+								school
+							</span>
 							<div className={'ml-2 flex flex-col gap-2'}>
 								<div className={'flex flex-col'}>
 									<p className={'font-semibold text-slate-700'}>

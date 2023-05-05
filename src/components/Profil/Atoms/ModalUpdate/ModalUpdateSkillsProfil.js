@@ -9,15 +9,15 @@ import { useQueryClient } from '@tanstack/react-query'
 import { putMakeupArtisteViaId } from '@/components/Profil/Atoms/ModalUpdate/PutMakeupArtisteViaId'
 
 const schema = yup.object().shape({
-	description: yup.string().required('La description est requise'),
+	skills: yup.string().required('La skills est requise'),
 })
 
 /**
- * ModalUpdateDescriptionProfil
+ * ModalUpdateSkillsProfil
  * @param props
  * @constructor
  */
-export default function ModalUpdateDescriptionProfil(props) {
+export default function ModalUpdateSkillsProfil(props) {
 	const queryClient = useQueryClient()
 
 	const user = props.user
@@ -30,8 +30,11 @@ export default function ModalUpdateDescriptionProfil(props) {
 		resolver: yupResolver(schema),
 	})
 
-	const [open, setOpen] = useState(props.modalUpdateDescriptionProfil)
-	const [userDescription, setUserDescription] = useState(user.description ?? '')
+	const [open, setOpen] = useState(props.modalUpdateSkillsProfil)
+	const [userSkills, setUserSkills] = useState('')
+	const [userSkillsSelected, setUserSkillsSelected] = useState(
+		user.skills ?? []
+	)
 
 	const { data: session } = useSession()
 
@@ -42,12 +45,12 @@ export default function ModalUpdateDescriptionProfil(props) {
 		}
 		putMakeupArtisteViaId(queryClient, user, session, data)
 
-		props.handleModalUpdateDescriptionProfil()
+		props.handleModalUpdateSkillsProfil()
 	}
 
 	useEffect(() => {
-		setOpen(props.modalUpdateDescriptionProfil)
-	}, [props.modalUpdateDescriptionProfil])
+		setOpen(props.modalUpdateSkillsProfil)
+	}, [props.modalUpdateSkillsProfil])
 
 	const cancelButtonRef = useRef(null)
 	const inputRef = useRef(null)
@@ -58,8 +61,12 @@ export default function ModalUpdateDescriptionProfil(props) {
 		inputRef.current.click()
 	}
 
-	const handleUpdateDescription = event => {
-		setUserDescription(event.target.value)
+	const handleUpdateSkills = event => {
+		setUserSkills(event.target.value)
+	}
+
+	const handleDeleteSkillSelected = id => {
+		setUserSkillsSelected(userSkillsSelected.filter(item => item.id !== id))
 	}
 
 	return (
@@ -68,18 +75,18 @@ export default function ModalUpdateDescriptionProfil(props) {
 				as="div"
 				className="relative z-10"
 				initialFocus={cancelButtonRef}
-				onClose={props.handleModalUpdateDescriptionProfil}
+				onClose={props.handleModalUpdateSkillsProfil}
 			>
 				<Transition.Child
 					as={Fragment}
 					enter="ease-out duration-300"
-					enterFrom="opadescription-0"
-					enterTo="opadescription-100"
+					enterFrom="opaskills-0"
+					enterTo="opaskills-100"
 					leave="ease-in duration-200"
-					leaveFrom="opadescription-100"
-					leaveTo="opadescription-0"
+					leaveFrom="opaskills-100"
+					leaveTo="opaskills-0"
 				>
-					<div className="bg-opadescription-75 transition-opadescription fixed inset-0 bg-slate-500" />
+					<div className="bg-opaskills-75 transition-opaskills fixed inset-0 bg-slate-500" />
 				</Transition.Child>
 
 				<div className="fixed inset-0 z-10 overflow-y-auto">
@@ -87,22 +94,22 @@ export default function ModalUpdateDescriptionProfil(props) {
 						<Transition.Child
 							as={Fragment}
 							enter="ease-out duration-300"
-							enterFrom="opadescription-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-							enterTo="opadescription-100 translate-y-0 sm:scale-100"
+							enterFrom="opaskills-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+							enterTo="opaskills-100 translate-y-0 sm:scale-100"
 							leave="ease-in duration-200"
-							leaveFrom="opadescription-100 translate-y-0 sm:scale-100"
-							leaveTo="opadescription-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+							leaveFrom="opaskills-100 translate-y-0 sm:scale-100"
+							leaveTo="opaskills-0 translate-y-4 sm:translate-y-0 sm:scale-95"
 						>
 							<Dialog.Panel className="relative w-full transform rounded-lg bg-white p-8 text-left shadow-2xl transition-all sm:max-w-3xl">
 								<button
 									type="button"
-									onClick={props.handleModalUpdateDescriptionProfil}
+									onClick={props.handleModalUpdateSkillsProfil}
 									ref={cancelButtonRef}
 									className={
 										'absolute right-0 top-0 m-6 flex items-center justify-center'
 									}
 								>
-									<span className="material-symbols-rounded">close</span>
+									<span className="material-icons-round">close</span>
 								</button>
 								<div className="flex flex-col items-start gap-8">
 									<div className="text-left">
@@ -113,7 +120,7 @@ export default function ModalUpdateDescriptionProfil(props) {
 											Vous en quelques mots
 										</Dialog.Title>
 									</div>
-									<div className={'w-4/5'}>
+									<div className={'w-3/5'}>
 										<div className="grid grid-cols-1 gap-4">
 											<div className={'flex flex-col gap-4'}>
 												<form
@@ -123,28 +130,57 @@ export default function ModalUpdateDescriptionProfil(props) {
 												>
 													<div>
 														<label
-															htmlFor="description"
+															htmlFor="skills"
 															className="block text-sm text-slate-700"
 														>
-															Description
+															Skills
 														</label>
 														<div className="mt-2">
-															<textarea
-																id="description"
-																name="description"
-																{...register('description', {
+															<input
+																id="skills"
+																name="skills"
+																type={'text'}
+																{...register('skills', {
 																	required: true,
 																})}
 																required
-																value={userDescription ?? ''}
-																onChange={handleUpdateDescription}
-																className="block min-h-[500px] w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
+																value={userSkills ?? ''}
+																onChange={handleUpdateSkills}
+																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 															/>
-															{errors.description && (
+															{errors.skills && (
 																<p className={'mt-2 text-xs text-red-500/80'}>
-																	{errors.description.message}
+																	{errors.skills.message}
 																</p>
 															)}
+														</div>
+													</div>
+													<div className={'flex flex-col gap-2'}>
+														<h3 className={'text-sm text-slate-700'}>
+															Compétences ajoutées
+														</h3>
+														<div
+															className={
+																'flex w-full flex-wrap items-center gap-2 '
+															}
+														>
+															{userSkillsSelected.map((skill, index) => (
+																<button
+																	type={'button'}
+																	onClick={() => {
+																		handleDeleteSkillSelected(skill.id)
+																	}}
+																	key={skill.id}
+																	className={
+																		'flex items-center gap-2 rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-700'
+																	}
+																>
+																	<span>{skill.name}</span>
+																	<span className="material-icons-round text-xs">
+																		close
+																	</span>
+																</button>
+															))}
 														</div>
 													</div>
 												</form>

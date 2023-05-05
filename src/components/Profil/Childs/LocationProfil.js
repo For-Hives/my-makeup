@@ -47,7 +47,7 @@ export function LocationProfil(props) {
 								'btn-alt-primary flex items-center gap-3 bg-white text-indigo-900'
 							}
 						>
-							<span className="material-symbols-rounded">edit</span>
+							<span className="material-icons-round">edit</span>
 							<span className={'font-semibold'}>
 								Modifier vos informations de localisation
 							</span>
@@ -58,7 +58,7 @@ export function LocationProfil(props) {
 					Localisation & département
 				</h2>
 				<div className={'flex gap-2'}>
-					<span className="material-symbols-rounded text-lg text-indigo-900">
+					<span className="material-icons-round text-lg text-indigo-900">
 						location_on
 					</span>
 					<div className={'flex flex-col gap-2'}>
@@ -69,7 +69,7 @@ export function LocationProfil(props) {
 					</div>
 				</div>
 				<div className={'flex gap-2'}>
-					<span className="material-symbols-rounded text-lg text-indigo-900">
+					<span className="material-icons-round text-lg text-indigo-900">
 						<span className="material-symbols-outlined">directions_run</span>
 					</span>
 					<div className={'flex flex-col gap-2'}>
