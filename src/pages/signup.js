@@ -7,6 +7,7 @@ import { useForm, Controller } from 'react-hook-form'
 import { yupResolver } from '@hookform/resolvers/yup'
 import * as yup from 'yup'
 import _ from 'lodash'
+import ResponsiveTemporary from '@/components/Global/ResponsiveTemporary'
 // import { router } from 'next/client'
 
 const schema = yup.object().shape({
@@ -57,7 +58,8 @@ function Signup() {
 	            recherche de maquilleuses professionnelles, ou votre recherche de client !"
 				/>
 			</Head>
-			<div className="flex min-h-screen bg-white">
+			<div className="relative flex min-h-screen bg-white">
+				<ResponsiveTemporary />
 				<div className="flex flex-1 flex-col justify-center px-4 py-12 sm:px-6 lg:flex-none lg:px-20 xl:px-24">
 					<div className="mx-auto w-full max-w-sm lg:w-96">
 						<div>

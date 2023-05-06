@@ -157,7 +157,7 @@ export default function ModalUpdateSkillsProfil(props) {
 													</div>
 													<div className={'flex flex-col gap-2'}>
 														<h3 className={'text-sm text-slate-700'}>
-															Compétences ajoutées
+															Compétences
 														</h3>
 														<div
 															className={
@@ -176,7 +176,7 @@ export default function ModalUpdateSkillsProfil(props) {
 																	}
 																>
 																	<span>{skill.name}</span>
-																	<span className="material-icons-round text-xs">
+																	<span className="material-icons-round text-sm">
 																		close
 																	</span>
 																</button>

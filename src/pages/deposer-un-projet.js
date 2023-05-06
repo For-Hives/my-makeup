@@ -1,6 +1,7 @@
 import React from 'react'
 import Nav from '@/components/Global/Nav'
 import Footer from '@/components/Global/Footer'
+import ResponsiveTemporary from '@/components/Global/ResponsiveTemporary'
 
 /**
  * todo : add content
@@ -12,7 +13,12 @@ function DeposerUnProjet(props) {
 		<>
 			<div>
 				<Nav />
-				<main className={'flex h-screen w-full items-center justify-center'}>
+				<main
+					className={
+						'relative flex h-screen w-full items-center justify-center'
+					}
+				>
+					<ResponsiveTemporary />
 					<h1 className={'text-center text-3xl text-gray-700'}>
 						Déposer un projet
 					</h1>

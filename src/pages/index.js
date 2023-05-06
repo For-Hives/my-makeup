@@ -10,6 +10,7 @@ import Image from 'next/image'
 import React from 'react'
 import Project from '@/components/Home/Project'
 import CTA from '@/components/Global/CTA'
+import ResponsiveTemporary from '@/components/Global/ResponsiveTemporary'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -35,7 +36,8 @@ export default function Home() {
 					}
 				/>
 				<Nav />
-				<main>
+				<main className={'relative'}>
+					<ResponsiveTemporary />
 					<Hero />
 					<Presentation />
 					<Talents />
