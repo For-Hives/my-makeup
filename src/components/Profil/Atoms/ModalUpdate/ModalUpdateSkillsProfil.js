@@ -38,13 +38,23 @@ export default function ModalUpdateSkillsProfil(props) {
 
 	const { data: session } = useSession()
 
+	/**
+	 * onSubmit function called when the form is submitted
+	 * @param data
+	 */
 	const onSubmit = data => {
-		data = {
+		// for each skill selected, we only keep the name, the id is not necessary
+		const userSkillsSelectedCleaned = userSkillsSelected.map(item => {
+			return {
+				name: item.name,
+			}
+		})
+		const data_clean = {
 			...user,
-			...data,
+			skills: userSkillsSelectedCleaned,
 		}
-		putMakeupArtisteViaId(queryClient, user, session, data)
-
+		putMakeupArtisteViaId(queryClient, user, session, data_clean)
+		// close the modal
 		props.handleModalUpdateSkillsProfil()
 	}
 
@@ -76,7 +86,6 @@ export default function ModalUpdateSkillsProfil(props) {
 			return
 		}
 		// check if the entered value is a 'enter' and if so, add it to the array
-
 		setUserSkills(event.target.value)
 	}
 
