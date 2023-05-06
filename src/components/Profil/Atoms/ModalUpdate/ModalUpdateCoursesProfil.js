@@ -31,6 +31,7 @@ export default function ModalUpdateCoursesProfil(props) {
 		register,
 		handleSubmit,
 		formState: { errors },
+		reset,
 	} = useForm({
 		resolver: yupResolver(schema),
 	})
@@ -53,32 +54,47 @@ export default function ModalUpdateCoursesProfil(props) {
 	 * @param data
 	 */
 	const onSubmit = data => {
-		// 	add a new course to the user courses
-		const userCoursesUpdated = [
-			...userCourses,
-			{
-				id: userCoursesDiploma + userCoursesSchool,
-				diploma: userCoursesDiploma,
-				school: userCoursesSchool,
-				date_graduation: userCoursesDateGraduation,
-				course_description: userCoursesDescription,
-			},
-		]
-		setUserCourses(userCoursesUpdated)
-		// reset the form
+		// add a new course to the user courses only if the form is valid
+		if (data) {
+			const userCoursesUpdated = [
+				...userCourses,
+				{
+					id: userCoursesDiploma + userCoursesSchool,
+					diploma: userCoursesDiploma,
+					school: userCoursesSchool,
+					date_graduation: userCoursesDateGraduation,
+					course_description: userCoursesDescription,
+				},
+			]
+			setUserCourses(userCoursesUpdated)
+			// reset the form
+			setUserCoursesDiploma('')
+			setUserCoursesSchool('')
+			setUserCoursesDateGraduation('')
+			setUserCoursesDescription('')
+			reset()
+		}
+	}
+
+	const handleSubmitCourses = event => {
+		// clean the courses, remove the id field
+		const userCoursesCleaned = userCourses.map(course => {
+			const { id, ...rest } = course
+			return rest
+		})
+		const data = {
+			...user,
+			courses: userCoursesCleaned,
+		}
+		putMakeupArtisteViaId(queryClient, user, session, data)
+		// close the modal & reset the yup form
 		setUserCoursesDiploma('')
 		setUserCoursesSchool('')
 		setUserCoursesDateGraduation('')
 		setUserCoursesDescription('')
-	}
+		// formState.reset()
+		reset()
 
-	const handleSubmitCourses = event => {
-		const data = {
-			...user,
-			courses: userCourses,
-		}
-		putMakeupArtisteViaId(queryClient, user, session, data)
-		// close the modal
 		props.handleModalUpdateCoursesProfil()
 	}
 
@@ -383,7 +399,7 @@ export default function ModalUpdateCoursesProfil(props) {
 									<button
 										type="button"
 										className="btn-primary"
-										onClick={handleSubmit(onSubmit)}
+										onClick={handleSubmitCourses}
 									>
 										Sauvegarder
 									</button>

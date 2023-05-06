@@ -63,12 +63,12 @@ export function CoursesProfil(props) {
 								<span className="material-icons-round text-indigo-900">
 									school
 								</span>
-								<div className={'ml-2 flex flex-col gap-2'}>
+								<div className={'ml-2 flex w-full flex-col gap-2'}>
 									<div className={'flex flex-col'}>
 										<p className={'font-semibold text-slate-700'}>
 											{course.diploma}
 										</p>
-										<div className={'flex justify-between'}>
+										<div className={'flex w-full justify-between'}>
 											<p className={'text-sm italic text-slate-600'}>
 												{course.school}
 											</p>

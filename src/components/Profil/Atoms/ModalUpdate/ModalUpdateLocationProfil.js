@@ -27,6 +27,7 @@ export default function ModalUpdateLocationProfil(props) {
 		register,
 		handleSubmit,
 		formState: { errors },
+		reset,
 	} = useForm({
 		resolver: yupResolver(schema),
 	})

@@ -26,6 +26,7 @@ export default function ModalUpdateDescriptionProfil(props) {
 		register,
 		handleSubmit,
 		formState: { errors },
+		reset,
 	} = useForm({
 		resolver: yupResolver(schema),
 	})
