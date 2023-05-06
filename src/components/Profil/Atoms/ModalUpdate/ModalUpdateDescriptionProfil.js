@@ -6,7 +6,7 @@ import { yupResolver } from '@hookform/resolvers/yup'
 import { useSession } from 'next-auth/react'
 import * as yup from 'yup'
 import { useQueryClient } from '@tanstack/react-query'
-import { putMakeupArtisteViaId } from '@/components/Profil/Atoms/ModalUpdate/PutMakeupArtisteViaId'
+import { putMakeupArtisteViaId } from '@/services/PutMakeupArtisteViaId'
 
 const schema = yup.object().shape({
 	description: yup.string().required('La description est requise'),
@@ -66,7 +66,7 @@ export default function ModalUpdateDescriptionProfil(props) {
 		<Transition.Root show={open} as={Fragment}>
 			<Dialog
 				as="div"
-				className="relative z-10"
+				className="relative z-30"
 				initialFocus={cancelButtonRef}
 				onClose={props.handleModalUpdateDescriptionProfil}
 			>
@@ -82,7 +82,7 @@ export default function ModalUpdateDescriptionProfil(props) {
 					<div className="bg-opadescription-75 transition-opadescription fixed inset-0 bg-slate-500" />
 				</Transition.Child>
 
-				<div className="fixed inset-0 z-10 overflow-y-auto">
+				<div className="fixed inset-0 z-30 overflow-y-auto">
 					<div className="flex min-h-full items-center justify-center p-4 text-center">
 						<Transition.Child
 							as={Fragment}
