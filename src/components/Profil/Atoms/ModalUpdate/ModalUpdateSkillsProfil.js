@@ -9,7 +9,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { putMakeupArtisteViaId } from '@/components/Profil/Atoms/ModalUpdate/PutMakeupArtisteViaId'
 
 const schema = yup.object().shape({
-	skills: yup.string().required('La skills est requise'),
+	skills: yup.string(),
 })
 
 /**
@@ -62,6 +62,21 @@ export default function ModalUpdateSkillsProfil(props) {
 	}
 
 	const handleUpdateSkills = event => {
+		// check if the entered value is a ';' and if so, add it to the array
+		if (event.target.value.slice(-1) === ';') {
+			setUserSkillsSelected([
+				...userSkillsSelected,
+				{
+					// id is the name of the skill without the ';' at the end, to be able to delete it later
+					id: event.target.value.slice(0, -1),
+					name: event.target.value.slice(0, -1),
+				},
+			])
+			setUserSkills('')
+			return
+		}
+		// check if the entered value is a 'enter' and if so, add it to the array
+
 		setUserSkills(event.target.value)
 	}
 
@@ -144,6 +159,21 @@ export default function ModalUpdateSkillsProfil(props) {
 																	required: true,
 																})}
 																required
+																onKeyPress={event => {
+																	if (event.key === 'Enter') {
+																		event.preventDefault()
+																		// 	add the skill to the array
+																		// 	empty the input
+																		setUserSkillsSelected([
+																			...userSkillsSelected,
+																			{
+																				id: event.target.value,
+																				name: event.target.value,
+																			},
+																		])
+																		setUserSkills('')
+																	}
+																}}
 																value={userSkills ?? ''}
 																onChange={handleUpdateSkills}
 																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
@@ -170,7 +200,7 @@ export default function ModalUpdateSkillsProfil(props) {
 																	onClick={() => {
 																		handleDeleteSkillSelected(skill.id)
 																	}}
-																	key={skill.id}
+																	key={index}
 																	className={
 																		'flex items-center gap-2 rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-700'
 																	}

@@ -1,5 +1,6 @@
 /**
  * PUT /api/makeup-artistes/{id}
+ * @param queryClient
  * @param user
  * @param session
  * @param data
@@ -10,7 +11,7 @@ export function putMakeupArtisteViaId(
 	user,
 	session,
 	data,
-	data_blob = { id: 2 }
+	data_blob = { id: null }
 ) {
 	fetch(`${process.env.NEXT_PUBLIC_API_URL}api/makeup-artistes/${user.id}`, {
 		method: 'PUT',
@@ -43,6 +44,10 @@ export function putMakeupArtisteViaId(
 			},
 		}),
 	})
+		.then(response => {
+			console.log(response)
+			return response.json()
+		})
 		.then(res => {
 			console.log(res)
 			// 	invalidate the cache, to refresh the page and get the new data , with tanstack/react-query

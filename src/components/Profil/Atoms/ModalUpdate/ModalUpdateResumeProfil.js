@@ -13,9 +13,9 @@ import { useQueryClient } from '@tanstack/react-query'
 import { putMakeupArtisteViaId } from '@/components/Profil/Atoms/ModalUpdate/PutMakeupArtisteViaId'
 
 const schema = yup.object().shape({
-	first_name: yup.string().required('Nom est requis'),
-	last_name: yup.string().required('Prénom est requis'),
-	speciality: yup.string().required('Spécialité est requise'),
+	first_name: yup.string().required('Le nom est requis'),
+	last_name: yup.string().required('Le prénom est requis'),
+	speciality: yup.string().required('La spécialité est requise'),
 })
 
 export default function ModalUpdateResumeProfil(props) {
@@ -51,10 +51,7 @@ export default function ModalUpdateResumeProfil(props) {
 		// 	upload file if fileObj is not empty
 		if (fileObj !== '' && fileObj !== undefined && fileObj !== null) {
 			const form = new FormData()
-			console.log(fileObj)
-			console.log(form)
 			form.append('files', fileObj)
-			console.log(form)
 
 			const res_post = fetch(`${process.env.NEXT_PUBLIC_API_URL}api/upload`, {
 				method: 'POST',
@@ -64,20 +61,20 @@ export default function ModalUpdateResumeProfil(props) {
 				body: form,
 			})
 				.then(response => {
-					console.log(response)
 					return response.json()
 				})
 				.then(data_blob => {
 					data_blob = data_blob[0]
-					console.log(data_blob)
 					// 	put data in api : with fetch : /api/makeup-artistes/{user.id}
 					putMakeupArtisteViaId(queryClient, user, session, data, data_blob)
 					props.handleModalUpdateResumeProfil()
+					setImageUrl('')
 				})
 				.catch(err => console.error(err))
 		} else {
 			putMakeupArtisteViaId(queryClient, user, session, data)
 			props.handleModalUpdateResumeProfil()
+			setImageUrl('')
 		}
 	}
 
@@ -101,7 +98,6 @@ export default function ModalUpdateResumeProfil(props) {
 		}
 
 		const imageUrl = URL.createObjectURL(fileObject)
-		console.log('imageUrl created', imageUrl)
 		setImageUrl(imageUrl)
 		setFileObj(fileObject)
 
