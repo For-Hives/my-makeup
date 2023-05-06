@@ -94,7 +94,6 @@ export default function ModalUpdateCoursesProfil(props) {
 		setUserCoursesDescription('')
 		// formState.reset()
 		reset()
-
 		props.handleModalUpdateCoursesProfil()
 	}
 

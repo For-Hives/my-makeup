@@ -55,6 +55,7 @@ export default function ModalUpdateSkillsProfil(props) {
 			skills: userSkillsSelectedCleaned,
 		}
 		putMakeupArtisteViaId(queryClient, user, session, data_clean)
+		reset()
 		// close the modal
 		props.handleModalUpdateSkillsProfil()
 	}

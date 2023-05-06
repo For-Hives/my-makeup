@@ -55,6 +55,7 @@ export default function ModalUpdateLanguageProfil(props) {
 			language: userLanguageSelectedCleaned,
 		}
 		putMakeupArtisteViaId(queryClient, user, session, data_clean)
+		reset()
 		// close the modal
 		props.handleModalUpdateLanguageProfil()
 	}

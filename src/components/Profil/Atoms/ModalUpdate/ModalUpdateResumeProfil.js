@@ -68,12 +68,14 @@ export default function ModalUpdateResumeProfil(props) {
 					data_blob = data_blob[0]
 					// 	put data in api : with fetch : /api/makeup-artistes/{user.id}
 					putMakeupArtisteViaId(queryClient, user, session, data, data_blob)
+					reset()
 					props.handleModalUpdateResumeProfil()
 					setImageUrl('')
 				})
 				.catch(err => console.error(err))
 		} else {
 			putMakeupArtisteViaId(queryClient, user, session, data)
+			reset()
 			props.handleModalUpdateResumeProfil()
 			setImageUrl('')
 		}

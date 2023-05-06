@@ -58,6 +58,7 @@ export default function ModalUpdateSocialMediaProfil(props) {
 		}
 		putMakeupArtisteViaId(queryClient, user, session, data)
 
+		reset()
 		props.handleModalUpdateSocialMediaProfil()
 	}
 

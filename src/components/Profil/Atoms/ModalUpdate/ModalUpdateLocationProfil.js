@@ -47,6 +47,7 @@ export default function ModalUpdateLocationProfil(props) {
 		}
 		putMakeupArtisteViaId(queryClient, user, session, data)
 
+		reset()
 		props.handleModalUpdateLocationProfil()
 	}
 

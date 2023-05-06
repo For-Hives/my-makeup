@@ -43,6 +43,7 @@ export default function ModalUpdateDescriptionProfil(props) {
 		}
 		putMakeupArtisteViaId(queryClient, user, session, data)
 
+		reset()
 		props.handleModalUpdateDescriptionProfil()
 	}
 
