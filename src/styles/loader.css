@@ -51,3 +51,13 @@
         transform: translateX(-31px);
     }
 }
+
+.swiper-pagination.swiper-pagination-clickable.swiper-pagination-bullets.swiper-pagination-horizontal{
+    border-radius: 10px;
+    padding: 2px 0;
+}
+
+.swiper-pagination-bullet{
+    outline: #cbd5e1 1px solid !important;
+    filter: drop-shadow(0 10px 8px rgb(0 0 0 / 0.04)) drop-shadow(0 4px 3px rgb(0 0 0 / 0.1)) !important;
+}
