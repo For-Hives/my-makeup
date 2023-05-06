@@ -30,11 +30,6 @@ export default function ModalUpdatePortfolioProfil(props) {
 	const { data: session } = useSession()
 
 	const onSubmit = data => {
-		data = {
-			...user,
-			...data,
-		}
-
 		// 	upload file if fileObj is not empty
 		if (fileObj !== '' && fileObj !== undefined && fileObj !== null) {
 			const form = new FormData()
@@ -52,19 +47,28 @@ export default function ModalUpdatePortfolioProfil(props) {
 				})
 				.then(data_blob => {
 					data_blob = data_blob[0]
-					// 	put data in api : with fetch : /api/makeup-artistes/{user.id}
-					putMakeupArtisteViaId(queryClient, user, session, data, data_blob)
-					reset()
-					props.handleModalUpdatePortfolioProfil()
+					// props.handleModalUpdatePortfolioProfil()
+					// 	add image to gallery
+					setUserImageGallery([...userImageGallery, data_blob])
 					setImageUrl('')
+					reset()
 				})
 				.catch(err => console.error(err))
 		} else {
-			putMakeupArtisteViaId(queryClient, user, session, data)
+			// putMakeupArtisteViaId(queryClient, user, session, data)
 			reset()
-			props.handleModalUpdatePortfolioProfil()
+			// props.handleModalUpdatePortfolioProfil()
 			setImageUrl('')
 		}
+	}
+
+	const handleSubmitGallery = () => {
+		const data = {
+			image_gallery: userImageGallery,
+		}
+		putMakeupArtisteViaId(queryClient, user, session, data)
+		setImageUrl('')
+		props.handleModalUpdatePortfolioProfil()
 	}
 
 	useEffect(() => {
@@ -154,8 +158,8 @@ export default function ModalUpdatePortfolioProfil(props) {
 												Modifier votre portfolio
 											</Dialog.Title>
 										</div>
-										<div className={'flex w-full flex-wrap gap-16'}>
-											<div className="grid  w-full grid-cols-1 gap-4 ">
+										<div className={'flex w-full gap-16'}>
+											<div className="grid w-2/6 grid-cols-1 gap-4 ">
 												<div className={'flex flex-col gap-4'}>
 													<label
 														htmlFor="cover-photo"
@@ -224,7 +228,7 @@ export default function ModalUpdatePortfolioProfil(props) {
 													</div>
 												</div>
 											</div>
-											<div className={'flex w-full'}>
+											<div className={'flex w-4/6'}>
 												<div className={'flex w-full flex-col gap-4 rounded'}>
 													<h2 className={'text-xl font-bold text-slate-700'}>
 														Portfolio
@@ -232,14 +236,14 @@ export default function ModalUpdatePortfolioProfil(props) {
 													<>
 														<Swiper
 															slidesPerView={'auto'}
-															spaceBetween={16}
+															spaceBetween={32}
 															pagination={{
 																clickable: true,
 															}}
 															modules={[Pagination]}
 															className="h-[500px] w-full"
 															onSlideChange={swiper => {
-																console.log(swiper.activeIndex)
+																// console.log(swiper.activeIndex)
 															}}
 															onInit={eve => {
 																console.log(eve)
@@ -287,6 +291,7 @@ export default function ModalUpdatePortfolioProfil(props) {
 																}
 																onClick={() => {
 																	if (mySwiperModal.activeIndex === 0) {
+																		console.log(mySwiperModal)
 																		// 	go to the last slide
 																		mySwiperModal.slideTo(
 																			mySwiperModal.slides.length - 1
@@ -351,7 +356,7 @@ export default function ModalUpdatePortfolioProfil(props) {
 									<button
 										type="button"
 										className="btn-primary"
-										onClick={handleSubmit(onSubmit)}
+										onClick={handleSubmitGallery}
 									>
 										Sauvegarder
 									</button>

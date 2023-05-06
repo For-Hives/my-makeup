@@ -132,6 +132,8 @@ export function PortfolioProfil(props) {
 						<button
 							className={'flex items-center justify-center gap-2'}
 							onClick={() => {
+								console.log(mySwiper.activeIndex)
+								console.log(mySwiper.slides.length - 1)
 								if (mySwiper.activeIndex === mySwiper.slides.length - 1) {
 									// 	go to the first slide
 									mySwiper.slideTo(0)
