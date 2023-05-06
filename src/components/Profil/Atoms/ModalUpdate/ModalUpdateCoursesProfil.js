@@ -53,15 +53,29 @@ export default function ModalUpdateCoursesProfil(props) {
 	 * @param data
 	 */
 	const onSubmit = data => {
-		// for each skill selected, we only keep the name, the id is not necessary
-		// const userCoursesSelectedCleaned = userCoursesSelected.map(item => {
-		// 	return {
-		// 		name: item.name,
-		// 	}
-		// })
-		data = {
+		// 	add a new course to the user courses
+		const userCoursesUpdated = [
+			...userCourses,
+			{
+				id: userCoursesDiploma + userCoursesSchool,
+				diploma: userCoursesDiploma,
+				school: userCoursesSchool,
+				date_graduation: userCoursesDateGraduation,
+				course_description: userCoursesDescription,
+			},
+		]
+		setUserCourses(userCoursesUpdated)
+		// reset the form
+		setUserCoursesDiploma('')
+		setUserCoursesSchool('')
+		setUserCoursesDateGraduation('')
+		setUserCoursesDescription('')
+	}
+
+	const handleSubmitCourses = event => {
+		const data = {
 			...user,
-			// courses: userCoursesSelectedCleaned,
+			courses: userCourses,
 		}
 		putMakeupArtisteViaId(queryClient, user, session, data)
 		// close the modal
@@ -95,6 +109,11 @@ export default function ModalUpdateCoursesProfil(props) {
 
 	const handleUpdateCoursesDescription = event => {
 		setUserCoursesDescription(event.target.value)
+	}
+
+	const handleDeleteCourse = id => {
+		const userCoursesFiltered = userCourses.filter(course => course.id !== id)
+		setUserCourses(userCoursesFiltered)
 	}
 
 	return (
@@ -277,14 +296,14 @@ export default function ModalUpdateCoursesProfil(props) {
 												</div>
 											</div>
 										</div>
-										<div className={'flex h-full w-3/5 flex-col gap-4'}>
+										<div className={'flex w-3/5 flex-col gap-4'}>
 											{/*	display the courses already added */}
 											<h3 className={'text-sm text-slate-900'}>
 												Les formations & diplômes déjà ajoutés
 											</h3>
 											<div
 												className={
-													'flex w-full flex-col gap-4 overflow-y-scroll'
+													'flex max-h-[600px] w-full flex-col gap-4 overflow-y-scroll'
 												}
 											>
 												{userCourses.map((course, index) => {
@@ -299,6 +318,7 @@ export default function ModalUpdateCoursesProfil(props) {
 																className={
 																	'absolute right-0 top-0 m-2 flex items-center justify-center'
 																}
+																onClick={() => handleDeleteCourse(course.id)}
 															>
 																<span className="material-icons-round text-lg text-red-500">
 																	delete
@@ -332,15 +352,24 @@ export default function ModalUpdateCoursesProfil(props) {
 																	</div>
 																</div>
 																<div>
-																	<p className={'text-sm text-slate-600'}>
-																		{/* max 50 char displayed */}
-																		{course.course_description.length > 50
-																			? course.course_description.substring(
-																					0,
-																					50
-																			  ) + '(...)'
-																			: course.course_description}
-																	</p>
+																	{
+																		// display the user description
+																		// if \n is present, split the string and display each part in a new line
+																		course.course_description
+																			.split('\n')
+																			.map((item, i) => {
+																				return (
+																					<p
+																						key={i}
+																						className={
+																							'text-sm italic text-slate-500'
+																						}
+																					>
+																						{item}
+																					</p>
+																				)
+																			})
+																	}
 																</div>
 															</div>
 														</div>
