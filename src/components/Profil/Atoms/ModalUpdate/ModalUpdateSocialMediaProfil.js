@@ -6,7 +6,7 @@ import { yupResolver } from '@hookform/resolvers/yup'
 import { useSession } from 'next-auth/react'
 import * as yup from 'yup'
 import { useQueryClient } from '@tanstack/react-query'
-import { putMakeupArtisteViaId } from '@/services/PutMakeupArtisteViaId'
+import { patchMeMakeup } from '@/services/PatchMeMakeup'
 
 const schema = yup.object().shape({
 	youtube: yup.string(),
@@ -53,10 +53,9 @@ export default function ModalUpdateSocialMediaProfil(props) {
 
 	const onSubmit = data => {
 		data = {
-			...user,
 			...data,
 		}
-		putMakeupArtisteViaId(queryClient, user, session, data)
+		patchMeMakeup(queryClient, user, session, data)
 
 		reset()
 		props.handleModalUpdateSocialMediaProfil()

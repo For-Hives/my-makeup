@@ -6,7 +6,7 @@ import { yupResolver } from '@hookform/resolvers/yup'
 import { useSession } from 'next-auth/react'
 import * as yup from 'yup'
 import { useQueryClient } from '@tanstack/react-query'
-import { putMakeupArtisteViaId } from '@/services/PutMakeupArtisteViaId'
+import { patchMeMakeup } from '@/services/PatchMeMakeup'
 
 const schema = yup.object().shape({
 	description: yup.string().required('La description est requise'),
@@ -38,10 +38,9 @@ export default function ModalUpdateDescriptionProfil(props) {
 
 	const onSubmit = data => {
 		data = {
-			...user,
 			...data,
 		}
-		putMakeupArtisteViaId(queryClient, user, session, data)
+		patchMeMakeup(queryClient, user, session, data)
 
 		reset()
 		props.handleModalUpdateDescriptionProfil()

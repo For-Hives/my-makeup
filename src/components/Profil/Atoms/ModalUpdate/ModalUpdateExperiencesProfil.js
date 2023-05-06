@@ -6,7 +6,7 @@ import { yupResolver } from '@hookform/resolvers/yup'
 import { useSession } from 'next-auth/react'
 import * as yup from 'yup'
 import { useQueryClient } from '@tanstack/react-query'
-import { putMakeupArtisteViaId } from '@/services/PutMakeupArtisteViaId'
+import { patchMeMakeup } from '@/services/PatchMeMakeup'
 
 const schema = yup.object().shape({
 	company: yup.string().required("Le nom de l'entreprise est requise"),
@@ -97,11 +97,9 @@ export default function ModalUpdateExperiencesProfil(props) {
 			return rest
 		})
 		const data = {
-			...user,
 			experiences: userExperiencesCleaned,
 		}
-		console.log(data)
-		putMakeupArtisteViaId(queryClient, user, session, data)
+		patchMeMakeup(queryClient, user, session, data)
 		// close the modal & reset the yup form
 		setUserExperiencesCompany('')
 		setUserExperiencesJobName('')

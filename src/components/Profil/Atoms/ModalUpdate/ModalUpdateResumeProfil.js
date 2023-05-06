@@ -10,7 +10,7 @@ import { classNames } from '@/services/utils'
 import { BadgeDispo } from '@/components/Profil/Atoms/BadgeDispo'
 import { BadgeIndispo } from '@/components/Profil/Atoms/BadgeIndispo'
 import { useQueryClient } from '@tanstack/react-query'
-import { putMakeupArtisteViaId } from '@/services/PutMakeupArtisteViaId'
+import { patchMeMakeup } from '@/services/PatchMeMakeup'
 
 const schema = yup.object().shape({
 	first_name: yup.string().required('Le nom est requis'),
@@ -44,7 +44,6 @@ export default function ModalUpdateResumeProfil(props) {
 
 	const onSubmit = data => {
 		data = {
-			...user,
 			...data,
 			available: available,
 		}
@@ -67,14 +66,14 @@ export default function ModalUpdateResumeProfil(props) {
 				.then(data_blob => {
 					data_blob = data_blob[0]
 					// 	put data in api : with fetch : /api/makeup-artistes/{user.id}
-					putMakeupArtisteViaId(queryClient, user, session, data, data_blob)
+					patchMeMakeup(queryClient, user, session, data, data_blob)
 					reset()
 					props.handleModalUpdateResumeProfil()
 					setImageUrl('')
 				})
 				.catch(err => console.error(err))
 		} else {
-			putMakeupArtisteViaId(queryClient, user, session, data)
+			patchMeMakeup(queryClient, user, session, data)
 			reset()
 			props.handleModalUpdateResumeProfil()
 			setImageUrl('')

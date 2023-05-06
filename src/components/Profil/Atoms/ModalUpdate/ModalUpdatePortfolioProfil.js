@@ -7,9 +7,9 @@ import { yupResolver } from '@hookform/resolvers/yup'
 import { useSession } from 'next-auth/react'
 import * as yup from 'yup'
 import { useQueryClient } from '@tanstack/react-query'
-import { putMakeupArtisteViaId } from '@/services/PutMakeupArtisteViaId'
 import { Swiper, SwiperSlide } from 'swiper/react'
 import { Pagination } from 'swiper'
+import { patchMeMakeup } from '@/services/PatchMeMakeup'
 
 const schema = yup.object().shape({})
 export default function ModalUpdatePortfolioProfil(props) {
@@ -66,7 +66,7 @@ export default function ModalUpdatePortfolioProfil(props) {
 		const data = {
 			image_gallery: userImageGallery,
 		}
-		putMakeupArtisteViaId(queryClient, user, session, data)
+		patchMeMakeup(queryClient, user, session, data)
 		setImageUrl('')
 		props.handleModalUpdatePortfolioProfil()
 	}

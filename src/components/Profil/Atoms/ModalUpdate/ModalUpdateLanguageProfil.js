@@ -6,7 +6,7 @@ import { yupResolver } from '@hookform/resolvers/yup'
 import { useSession } from 'next-auth/react'
 import * as yup from 'yup'
 import { useQueryClient } from '@tanstack/react-query'
-import { putMakeupArtisteViaId } from '@/services/PutMakeupArtisteViaId'
+import { patchMeMakeup } from '@/services/PatchMeMakeup'
 
 const schema = yup.object().shape({
 	language: yup.string(),
@@ -51,10 +51,9 @@ export default function ModalUpdateLanguageProfil(props) {
 			}
 		})
 		const data_clean = {
-			...user,
 			language: userLanguageSelectedCleaned,
 		}
-		putMakeupArtisteViaId(queryClient, user, session, data_clean)
+		patchMeMakeup(queryClient, user, session, data_clean)
 		reset()
 		// close the modal
 		props.handleModalUpdateLanguageProfil()
