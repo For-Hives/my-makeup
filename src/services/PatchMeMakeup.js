@@ -6,6 +6,8 @@
  * @param data
  */
 export function patchMeMakeup(queryClient, user, session, data) {
+	console.log('patchMeMakeup')
+	console.log('data', data)
 	fetch(`${process.env.NEXT_PUBLIC_API_URL}api/me-makeup`, {
 		method: 'PATCH',
 		headers: {
@@ -15,9 +17,7 @@ export function patchMeMakeup(queryClient, user, session, data) {
 			Authorization: `Bearer ${session.jwt}`,
 		},
 		body: JSON.stringify({
-			data: {
-				...data,
-			},
+			...data,
 		}),
 	})
 		.then(response => {

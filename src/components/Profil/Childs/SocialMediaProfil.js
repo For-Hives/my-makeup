@@ -66,13 +66,13 @@ export function SocialMediaProfil(props) {
 						// 	- facebook if user?.network.facebook is not null
 						// 	- linkedin if user?.network.linkedin is not null
 						// 	- youtube if user?.network.youtube is not null
-						// 	- email if user?.user?.email is not null
-						// 	- phone if user?.user?.phone is not null
+						// 	- email if user?.network?.email is not null
+						// 	- phone if user?.network?.phone is not null
 						// 	- website if user?.network.website is not null
 					}
-					{user?.network.instagram && (
+					{user?.network?.instagram && (
 						<Link
-							href={user?.network.instagram}
+							href={user?.network?.instagram}
 							target={'_blank'}
 							rel={'noopener nofollow noreferrer'}
 							className={'group flex items-center gap-3'}
@@ -85,13 +85,13 @@ export function SocialMediaProfil(props) {
 								alt={`${user?.user?.first_name} ${user?.user?.last_name} Instagram`}
 							/>
 							<p className={'text-sm text-slate-700 group-hover:underline'}>
-								{user?.network.instagram}
+								{user?.network?.instagram}
 							</p>
 						</Link>
 					)}
-					{user?.network.facebook && (
+					{user?.network?.facebook && (
 						<Link
-							href={user?.network.facebook}
+							href={user?.network?.facebook}
 							target={'_blank'}
 							rel={'noopener nofollow noreferrer'}
 							className={'group flex items-center gap-3'}
@@ -104,13 +104,13 @@ export function SocialMediaProfil(props) {
 								alt={`${user?.user?.first_name} ${user?.user?.last_name} Facebook`}
 							/>
 							<p className={'text-sm text-slate-700 group-hover:underline'}>
-								{user?.network.facebook}
+								{user?.network?.facebook}
 							</p>
 						</Link>
 					)}
-					{user?.network.linkedin && (
+					{user?.network?.linkedin && (
 						<Link
-							href={user?.network.linkedin}
+							href={user?.network?.linkedin}
 							target={'_blank'}
 							rel={'noopener nofollow noreferrer'}
 							className={'group flex items-center gap-3'}
@@ -123,13 +123,13 @@ export function SocialMediaProfil(props) {
 								alt={`${user?.user?.first_name} ${user?.user?.last_name} Linkedin`}
 							/>
 							<p className={'text-sm text-slate-700 group-hover:underline'}>
-								{user?.network.linkedin}
+								{user?.network?.linkedin}
 							</p>
 						</Link>
 					)}
-					{user?.network.youtube && (
+					{user?.network?.youtube && (
 						<Link
-							href={user?.network.youtube}
+							href={user?.network?.youtube}
 							target={'_blank'}
 							rel={'noopener nofollow noreferrer'}
 							className={'group flex items-center gap-3'}
@@ -142,13 +142,13 @@ export function SocialMediaProfil(props) {
 								alt={`${user?.user?.first_name} ${user?.user?.last_name} Youtube`}
 							/>
 							<p className={'text-sm text-slate-700 group-hover:underline'}>
-								{user?.network.youtube}
+								{user?.network?.youtube}
 							</p>
 						</Link>
 					)}
-					{user?.user?.email && (
+					{user?.network?.email && (
 						<Link
-							href={`mailto:${user?.user?.email}`}
+							href={`mailto:${user?.network?.email}`}
 							rel={'noopener nofollow noreferrer'}
 							className={'group flex items-center gap-3'}
 						>
@@ -160,13 +160,13 @@ export function SocialMediaProfil(props) {
 								alt={`${user?.user?.first_name} ${user?.user?.last_name} Email`}
 							/>
 							<p className={'text-sm text-slate-700 group-hover:underline'}>
-								{user?.user?.email}
+								{user?.network?.email}
 							</p>
 						</Link>
 					)}
-					{user?.phone && (
+					{user?.network?.phone && (
 						<Link
-							href={`tel:${user?.phone}`}
+							href={`tel:${user?.network?.phone}`}
 							rel={'noopener nofollow noreferrer'}
 							className={'group flex items-center gap-3'}
 						>
@@ -175,16 +175,16 @@ export function SocialMediaProfil(props) {
 								className={'fill-indigo-700'}
 								width={'35'}
 								height={'35'}
-								alt={`${user?.phone} ${user?.phone} Téléphone`}
+								alt={`${user?.network?.phone} ${user?.network?.phone} Téléphone`}
 							/>
 							<p className={'text-sm text-slate-700 group-hover:underline'}>
-								{user?.phone}
+								{user?.network?.phone}
 							</p>
 						</Link>
 					)}
-					{user?.network.website && (
+					{user?.network?.website && (
 						<Link
-							href={user?.network.website}
+							href={user?.network?.website}
 							target={'_blank'}
 							rel={'noopener nofollow noreferrer'}
 							className={'group flex items-center gap-3'}
@@ -197,7 +197,7 @@ export function SocialMediaProfil(props) {
 								alt={`${user?.user?.first_name} ${user?.user?.last_name} website`}
 							/>
 							<p className={'text-sm text-slate-700 group-hover:underline'}>
-								{user?.network.website}
+								{user?.network?.website}
 							</p>
 						</Link>
 					)}

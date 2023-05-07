@@ -44,6 +44,7 @@ export default function ModalUpdateLocationProfil(props) {
 		data = {
 			...data,
 		}
+		console.log(data)
 		patchMeMakeup(queryClient, user, session, data)
 
 		reset()

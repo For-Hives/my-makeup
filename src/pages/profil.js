@@ -44,7 +44,7 @@ function Profil() {
 	if (isLoading) return <Loader />
 
 	if (error) return 'An error has occurred: ' + error.message
-	const user = data[0]
+	const user = data
 	return (
 		<>
 			<Head>

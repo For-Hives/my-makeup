@@ -53,7 +53,9 @@ export default function ModalUpdateSocialMediaProfil(props) {
 
 	const onSubmit = data => {
 		data = {
-			...data,
+			network: {
+				...data,
+			},
 		}
 		patchMeMakeup(queryClient, user, session, data)
 
@@ -157,6 +159,60 @@ export default function ModalUpdateSocialMediaProfil(props) {
 												>
 													<div>
 														<label
+															htmlFor="email"
+															className="block text-sm text-slate-700"
+														>
+															Email
+														</label>
+														<div className="mt-2">
+															<input
+																id="email"
+																name="email"
+																type="text"
+																{...register('email', {
+																	required: true,
+																})}
+																required
+																value={userEmail ?? ''}
+																onChange={handleUpdateEmail}
+																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
+															/>
+															{errors.email && (
+																<p className={'mt-2 text-xs text-red-500/80'}>
+																	{errors.email.message}
+																</p>
+															)}
+														</div>
+													</div>
+													<div>
+														<label
+															htmlFor="phone"
+															className="block text-sm text-slate-700"
+														>
+															Numéro de téléphone
+														</label>
+														<div className="mt-2">
+															<input
+																id="phone"
+																name="phone"
+																type="text"
+																{...register('phone', {
+																	required: true,
+																})}
+																required
+																value={userPhone ?? ''}
+																onChange={handleUpdatePhone}
+																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
+															/>
+															{errors.phone && (
+																<p className={'mt-2 text-xs text-red-500/80'}>
+																	{errors.phone.message}
+																</p>
+															)}
+														</div>
+													</div>
+													<div>
+														<label
 															htmlFor="youtube"
 															className="block text-sm text-slate-700"
 														>
@@ -187,7 +243,7 @@ export default function ModalUpdateSocialMediaProfil(props) {
 															htmlFor="facebook"
 															className="block text-sm text-slate-700"
 														>
-															Lien facebook
+															Lien Facebook
 														</label>
 														<div className="mt-2">
 															<input
@@ -241,7 +297,7 @@ export default function ModalUpdateSocialMediaProfil(props) {
 															htmlFor="website"
 															className="block text-sm text-slate-700"
 														>
-															Lien website
+															Lien de votre site internet
 														</label>
 														<div className="mt-2">
 															<input
