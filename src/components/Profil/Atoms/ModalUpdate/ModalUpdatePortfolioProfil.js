@@ -100,6 +100,11 @@ export default function ModalUpdatePortfolioProfil(props) {
 		event.target.value = null
 	}
 
+	const handleDeletePortfolio = index => {
+		const newGallery = userImageGallery.filter(item => item.id !== index)
+		setUserImageGallery(newGallery)
+	}
+
 	useEffect(() => {
 		return () => {
 			if (imageUrl) {
@@ -273,8 +278,20 @@ export default function ModalUpdatePortfolioProfil(props) {
 																			aspectRatio: `${image.width}/${image.height}`,
 																			height: '100%',
 																		}}
-																		className={'!h-[500px] !w-auto'}
+																		className={'relative !h-[500px] !w-auto'}
 																	>
+																		<button
+																			className={
+																				'absolute right-0 top-0 z-40 m-4 flex h-8 w-8 items-center justify-center rounded-full bg-red-50 shadow'
+																			}
+																			onClick={() =>
+																				handleDeletePortfolio(image.id)
+																			}
+																		>
+																			<span className="material-icons-round text-xl text-red-500">
+																				delete
+																			</span>
+																		</button>
 																		<Image
 																			src={image.url}
 																			alt={
