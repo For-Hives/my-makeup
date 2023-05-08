@@ -1,6 +1,5 @@
 import React, { Fragment, useEffect, useRef, useState } from 'react'
 import { Dialog, Transition } from '@headlessui/react'
-import Link from 'next/link'
 import { useForm } from 'react-hook-form'
 import { yupResolver } from '@hookform/resolvers/yup'
 import { useSession } from 'next-auth/react'
@@ -9,6 +8,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
 
 const schema = yup.object().shape({
+	id: yup.string(),
 	diploma: yup.string().required('Le nom du diplôme est requis'),
 	school: yup.string().required("Le nom de l'école est requis"),
 	date_graduation: yup
@@ -42,6 +42,7 @@ export default function ModalUpdateCoursesProfil(props) {
 	// date_graduation
 	// course_description
 	const [userCourses, setUserCourses] = useState(user.courses ?? [])
+	const [userCoursesId, setUserCoursesId] = useState('')
 	const [userCoursesDiploma, setUserCoursesDiploma] = useState('')
 	const [userCoursesSchool, setUserCoursesSchool] = useState('')
 	const [userCoursesDateGraduation, setUserCoursesDateGraduation] = useState('')
@@ -55,38 +56,89 @@ export default function ModalUpdateCoursesProfil(props) {
 	 */
 	const onSubmit = data => {
 		// add a new course to the user courses only if the form is valid
-		if (data) {
-			const userCoursesUpdated = [
-				...userCourses,
-				{
-					id: userCoursesDiploma + userCoursesSchool,
-					diploma: userCoursesDiploma,
-					school: userCoursesSchool,
-					date_graduation: userCoursesDateGraduation,
-					course_description: userCoursesDescription,
-				},
-			]
-			setUserCourses(userCoursesUpdated)
-			// reset the form
-			setUserCoursesDiploma('')
-			setUserCoursesSchool('')
-			setUserCoursesDateGraduation('')
-			setUserCoursesDescription('')
-			reset()
+		// check if the course is already in the user courses
+		const courseAlreadyInUserCourses = userCourses.filter(
+			course =>
+				course.diploma === userCoursesDiploma &&
+				course.school === userCoursesSchool &&
+				course.date_graduation === userCoursesDateGraduation &&
+				course.course_description === userCoursesDescription
+		)
+		// if the course is not already in the user courses, add it
+		if (courseAlreadyInUserCourses.length === 0) {
+			// if the course id is not empty, it means that we are updating a course
+			if (userCoursesId !== '') {
+				console.log('update course')
+				console.log('userCoursesId', userCoursesId)
+				console.log('userCoursesDiploma', userCoursesDiploma)
+				console.log('userCoursesSchool', userCoursesSchool)
+				console.log('userCoursesDateGraduation', userCoursesDateGraduation)
+				console.log('userCoursesDescription', userCoursesDescription)
+
+				// 	then update the course, replace the course with the same id by the new course
+				const userCoursesUpdated = userCourses.map(course => {
+					if (course.id === userCoursesId) {
+						return {
+							id: userCoursesId,
+							diploma: userCoursesDiploma,
+							school: userCoursesSchool,
+							date_graduation: userCoursesDateGraduation,
+							course_description: userCoursesDescription,
+						}
+					} else {
+						return course
+					}
+				})
+				setUserCourses(userCoursesUpdated)
+
+				// reset the form
+				setUserCoursesId('')
+				setUserCoursesDiploma('')
+				setUserCoursesSchool('')
+				setUserCoursesDateGraduation('')
+				setUserCoursesDescription('')
+			} else {
+				if (data) {
+					const userCoursesUpdated = [
+						...userCourses,
+						{
+							id: 'added' + userCoursesDiploma + userCoursesSchool,
+							diploma: userCoursesDiploma,
+							school: userCoursesSchool,
+							date_graduation: userCoursesDateGraduation,
+							course_description: userCoursesDescription,
+						},
+					]
+					setUserCourses(userCoursesUpdated)
+					// reset the form
+					setUserCoursesId('')
+					setUserCoursesDiploma('')
+					setUserCoursesSchool('')
+					setUserCoursesDateGraduation('')
+					setUserCoursesDescription('')
+					reset()
+				}
+			}
 		}
 	}
 
 	const handleSubmitCourses = event => {
-		// clean the courses, remove the id field
-		const userCoursesCleaned = userCourses.map(course => {
-			const { id, ...rest } = course
-			return rest
-		})
+		// clean the courses, remove the id field from the courses, only if the id is not empty
+		let userCoursesCleaned = []
+		if (userCoursesId === '') {
+			userCoursesCleaned = userCourses.map(course => {
+				const { id, ...rest } = course
+				return rest
+			})
+		} else {
+			userCoursesCleaned = userCourses
+		}
 		const data = {
 			courses: userCoursesCleaned,
 		}
 		patchMeMakeup(queryClient, user, session, data)
 		// close the modal & reset the yup form
+		setUserCoursesId('')
 		setUserCoursesDiploma('')
 		setUserCoursesSchool('')
 		setUserCoursesDateGraduation('')
@@ -131,11 +183,12 @@ export default function ModalUpdateCoursesProfil(props) {
 	}
 
 	const handleEditCourse = id => {
-		const userCoursesFiltered = userCourses.filter(course => course.id !== id)
-		setUserCourses(userCoursesFiltered)
+		// const userCoursesFiltered = userCourses.filter(course => course.id !== id)
+		// setUserCourses(userCoursesFiltered)
 		// set the form with the course to update
 		const courseToUpdate = userCourses.filter(course => course.id === id)
 		reset()
+		setUserCoursesId(courseToUpdate[0].id)
 		setUserCoursesDiploma(courseToUpdate[0].diploma)
 		setUserCoursesSchool(courseToUpdate[0].school)
 		setUserCoursesDateGraduation(courseToUpdate[0].date_graduation)
@@ -316,7 +369,9 @@ export default function ModalUpdateCoursesProfil(props) {
 															className="btn-primary"
 															onClick={handleSubmit(onSubmit)}
 														>
-															Ajouter une formation / diplôme
+															{userCoursesId === ''
+																? 'Ajouter une formation / diplôme'
+																: 'Modifier la formation / diplôme'}
 														</button>
 													</div>
 												</div>

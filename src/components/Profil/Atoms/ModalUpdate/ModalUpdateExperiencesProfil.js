@@ -156,6 +156,23 @@ export default function ModalUpdateExperiencesProfil(props) {
 		setUserExperiences(userExperiencesFiltered)
 	}
 
+	const handleEditExperience = id => {
+		const userExperiencesFiltered = userExperiences.filter(
+			experience => experience.id !== id
+		)
+		setUserExperiences(userExperiencesFiltered)
+		const userExperiencesToUpdate = userExperiences.filter(
+			experience => experience.id === id
+		)
+		reset()
+		setUserExperiencesCompany(userExperiencesToUpdate[0].company)
+		setUserExperiencesJobName(userExperiencesToUpdate[0].job_name)
+		setUserExperiencesCity(userExperiencesToUpdate[0].city)
+		setUserExperiencesDateStart(userExperiencesToUpdate[0].date_start)
+		setUserExperiencesDateEnd(userExperiencesToUpdate[0].date_end)
+		setUserExperiencesDescription(userExperiencesToUpdate[0].description)
+	}
+
 	return (
 		<Transition.Root show={open} as={Fragment}>
 			<Dialog
@@ -405,18 +422,32 @@ export default function ModalUpdateExperiencesProfil(props) {
 																'relative flex w-full rounded bg-indigo-50/20 p-4 text-slate-700'
 															}
 														>
-															<button
+															<div
 																className={
-																	'absolute right-0 top-0 m-2 flex items-center justify-center'
-																}
-																onClick={() =>
-																	handleDeleteExperience(experience.id)
+																	'absolute right-0 top-0 m-2 flex items-center justify-center gap-4'
 																}
 															>
-																<span className="material-icons-round text-lg text-red-500">
-																	delete
-																</span>
-															</button>
+																<button
+																	className={'flex items-center justify-center'}
+																	onClick={() =>
+																		handleEditExperience(experience.id)
+																	}
+																>
+																	<span className="material-icons-round text-xl text-orange-600">
+																		edit
+																	</span>
+																</button>
+																<button
+																	className={'flex items-center justify-center'}
+																	onClick={() =>
+																		handleDeleteExperience(experience.id)
+																	}
+																>
+																	<span className="material-icons-round text-xl text-red-500">
+																		delete
+																	</span>
+																</button>
+															</div>
 															<span className="material-icons-round">
 																apartment
 															</span>
