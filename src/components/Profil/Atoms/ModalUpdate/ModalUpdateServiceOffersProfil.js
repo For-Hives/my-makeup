@@ -40,6 +40,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 	const [userServiceOffers, setUserServiceOffers] = useState(
 		user.service_offers
 	)
+	const [userServiceOffersId, setUserServiceOffersId] = useState('')
 	const [userServiceOffersName, setUserServiceOffersName] = useState('')
 	const [userServiceOffersPrice, setUserServiceOffersPrice] = useState('')
 	const [userServiceOffersDescription, setUserServiceOffersDescription] =
@@ -55,8 +56,6 @@ export default function ModalUpdateServiceOffersProfil(props) {
 	const onSubmit = data => {
 		// add a new experience to the user serviceOffers only if the form is valid
 		if (data) {
-			console.log('data', data)
-			console.log('userServiceOffers', userServiceOffers)
 			setUserServiceOffers([
 				...userServiceOffers,
 				{
@@ -69,6 +68,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 			])
 			console.log('userServiceOffers', userServiceOffers)
 			// reset the form
+			setUserServiceOffersId('')
 			setUserServiceOffersName('')
 			setUserServiceOffersPrice('')
 			setUserServiceOffersDescription('')
@@ -122,15 +122,13 @@ export default function ModalUpdateServiceOffersProfil(props) {
 			}
 		})
 
-		console.log('userServiceOffersCopy', userServiceOffersCopy)
-
 		// set data
 		const data = {
 			service_offers: userServiceOffersCopy,
 		}
-		console.log('data', data)
 		patchMeMakeup(queryClient, user, session, data)
 		// close the modal & reset the yup form
+		setUserServiceOffersId('')
 		setUserServiceOffersName('')
 		setUserServiceOffersPrice('')
 		setUserServiceOffersDescription('')
@@ -164,13 +162,6 @@ export default function ModalUpdateServiceOffersProfil(props) {
 		setUserServiceOffersDescription(event.target.value)
 	}
 
-	const handleDeleteExperience = id => {
-		const userServiceOffersFiltered = userServiceOffers.filter(
-			experience => experience.id !== id
-		)
-		setUserServiceOffers(userServiceOffersFiltered)
-	}
-
 	const handleAddServiceOffersOption = () => {
 		const userServiceOffersOptionsUpdated = [
 			...userServiceOffersOptions,
@@ -186,10 +177,30 @@ export default function ModalUpdateServiceOffersProfil(props) {
 		console.log('userServiceOffersOptionsUpdated', userServiceOffersOptions)
 	}
 
+	const handleEditServiceOffers = id => {
+		const userServiceOffersFiltered = userServiceOffers.filter(
+			service_offers => service_offers.id === id
+		)
+		reset()
+		setUserServiceOffersId(userServiceOffersFiltered[0].id)
+		setUserServiceOffersName(userServiceOffersFiltered[0].name)
+		setUserServiceOffersPrice(userServiceOffersFiltered[0].price)
+		setUserServiceOffersDescription(userServiceOffersFiltered[0].description)
+		setUserServiceOffersOptions(userServiceOffersFiltered[0].options)
+	}
+
+	const handleDeleteServiceOffers = id => {
+		const userServiceOffersFiltered = userServiceOffers.filter(
+			service_offers => service_offers.id !== id
+		)
+		setUserServiceOffers(userServiceOffersFiltered)
+	}
+
 	// reset the form when the modal is closed
 	useEffect(() => {
 		if (!open) {
 			setUserServiceOffers(user.service_offers)
+			setUserServiceOffersId('')
 			setUserServiceOffersName('')
 			setUserServiceOffersPrice('')
 			setUserServiceOffersDescription('')
@@ -366,7 +377,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																	>
 																		Nom de la prestation
 																	</label>
-																	<div className="mt-2">
+																	<div className="relative mt-2">
 																		<input
 																			id={`name${index}`}
 																			name={`name${index}`}
@@ -494,7 +505,9 @@ export default function ModalUpdateServiceOffersProfil(props) {
 															className="btn-primary"
 															onClick={handleSubmit(onSubmit)}
 														>
-															Ajouter une expérience
+															{userServiceOffersId === ''
+																? 'Ajouter une prestation'
+																: 'Modifier une prestation'}
 														</button>
 													</div>
 												</div>
@@ -535,9 +548,43 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																<Tab.Panel key={index}>
 																	<div
 																		className={
-																			'flex flex-col gap-4 bg-white py-4'
+																			'relative flex flex-col gap-4 bg-white py-4'
 																		}
 																	>
+																		<div
+																			className={
+																				'absolute right-0 top-0 m-2 flex items-center justify-center gap-4'
+																			}
+																		>
+																			<button
+																				className={
+																					'flex items-center justify-center'
+																				}
+																				onClick={() =>
+																					handleEditServiceOffers(
+																						service_offer.id
+																					)
+																				}
+																			>
+																				<span className="material-icons-round text-xl text-orange-600">
+																					edit
+																				</span>
+																			</button>
+																			<button
+																				className={
+																					'flex items-center justify-center'
+																				}
+																				onClick={() =>
+																					handleDeleteServiceOffers(
+																						service_offer.id
+																					)
+																				}
+																			>
+																				<span className="material-icons-round text-xl text-red-500">
+																					delete
+																				</span>
+																			</button>
+																		</div>
 																		<div className={'flex flex-col'}>
 																			<h2
 																				className={

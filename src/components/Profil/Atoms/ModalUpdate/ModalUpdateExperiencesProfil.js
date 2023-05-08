@@ -460,7 +460,9 @@ export default function ModalUpdateExperiencesProfil(props) {
 															className="btn-primary"
 															onClick={handleSubmit(onSubmit)}
 														>
-															Ajouter une expérience
+															{userExperiencesId === ''
+																? 'Ajouter une expérience'
+																: 'Modifier une expérience'}
 														</button>
 													</div>
 												</div>
