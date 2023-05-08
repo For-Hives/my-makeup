@@ -164,7 +164,7 @@ function Nav() {
 											'lg:flex lg:w-full lg:items-center lg:justify-end lg:gap-10'
 										}
 									>
-										<Link className={'btn-primary-with-icon'} href={'/'}>
+										<Link className={'btn-primary-with-icon'} href={'/search'}>
 											<MagnifyingGlassIcon
 												className="mr-2 h-5 w-5 text-indigo-900"
 												aria-hidden="true"
