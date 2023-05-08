@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react'
 import Nav from '@/components/Global/Nav'
 import Footer from '@/components/Global/Footer'
 import { useRouter } from 'next/router'
+import Image from 'next/image'
 
 function SearchPage() {
 	const [searchTerm, setSearchTerm] = useState(undefined)
@@ -39,7 +40,7 @@ function SearchPage() {
 			return
 		}
 
-		if (city !== '') {
+		if (city !== '' && city !== undefined) {
 			router.push(`/search?search=${searchTerm}&city=${city}`)
 			performSearch(searchTerm, city)
 		} else {
@@ -215,14 +216,17 @@ function SearchPage() {
 								result // show cards
 							) => (
 								<div
-									key={result.item.id}
+									key={result.id}
 									className="flex transform cursor-pointer flex-col justify-between rounded border border-gray-200 bg-white p-4 leading-normal shadow transition duration-300 ease-in-out hover:translate-y-1 hover:scale-105 hover:border-gray-400 hover:shadow-lg"
 								>
 									<h3 className="mb-2 font-bold">
-										{result.item.first_name} {result.item.last_name}
+										{result.first_name} {result.last_name}
 									</h3>
-									<p>Spécialité : {result.item.speciality}</p>
-									<p>Ville : {result.item.city}</p>
+
+									{console.log(result)}
+									{/*<Image src={result.} alt={}></Image> */}
+									<p>Spécialité : {result.speciality}</p>
+									<p>Ville : {result.city}</p>
 									{/* ... Afficher d'autres informations si vous le souhaitez */}
 								</div>
 							)
