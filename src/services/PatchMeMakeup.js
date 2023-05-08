@@ -6,8 +6,6 @@
  * @param data
  */
 export function patchMeMakeup(queryClient, user, session, data) {
-	console.log('patchMeMakeup')
-	console.log('data', data)
 	fetch(`${process.env.NEXT_PUBLIC_API_URL}api/me-makeup`, {
 		method: 'PATCH',
 		headers: {
@@ -21,11 +19,9 @@ export function patchMeMakeup(queryClient, user, session, data) {
 		}),
 	})
 		.then(response => {
-			console.log(response)
 			return response.json()
 		})
 		.then(res => {
-			console.log(res)
 			// 	invalidate the cache, to refresh the page and get the new data , with tanstack/react-query
 			queryClient.invalidateQueries('users/me-makeup')
 		})

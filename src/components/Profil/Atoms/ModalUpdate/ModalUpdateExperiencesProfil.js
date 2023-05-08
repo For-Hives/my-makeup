@@ -102,7 +102,7 @@ export default function ModalUpdateExperiencesProfil(props) {
 					const userExperiencesUpdated = [
 						...userExperiences,
 						{
-							id: userExperiencesCompany + userExperiencesJobName,
+							id: 'added' + userExperiencesCompany + userExperiencesJobName,
 							company: userExperiencesCompany,
 							job_name: userExperiencesJobName,
 							city: userExperiencesCity,
@@ -204,10 +204,6 @@ export default function ModalUpdateExperiencesProfil(props) {
 	}
 
 	const handleEditExperience = id => {
-		// const userExperiencesFiltered = userExperiences.filter(
-		// 	experience => experience.id !== id
-		// )
-		// setUserExperiences(userExperiencesFiltered)
 		const userExperiencesToUpdate = userExperiences.filter(
 			experience => experience.id === id
 		)

@@ -38,7 +38,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 	const [open, setOpen] = useState(props.modalUpdateServiceOffersProfil)
 
 	const [userServiceOffers, setUserServiceOffers] = useState(
-		user.service_offers
+		user.service_offers ?? []
 	)
 	const [userServiceOffersId, setUserServiceOffersId] = useState('')
 	const [userServiceOffersName, setUserServiceOffersName] = useState('')
@@ -54,53 +54,111 @@ export default function ModalUpdateServiceOffersProfil(props) {
 	 * @param data
 	 */
 	const onSubmit = data => {
-		// add a new experience to the user serviceOffers only if the form is valid
-		if (data) {
-			setUserServiceOffers([
-				...userServiceOffers,
-				{
-					id: 'added' + data.name + data.price,
-					name: data.name,
-					price: data.price,
-					description: data.description,
-					options: userServiceOffersOptions,
-				},
-			])
-			console.log('userServiceOffers', userServiceOffers)
-			// reset the form
-			setUserServiceOffersId('')
-			setUserServiceOffersName('')
-			setUserServiceOffersPrice('')
-			setUserServiceOffersDescription('')
-			setUserServiceOffersOptions([])
+		// add a new serviceOffers to the user serviceOffers only if the form is valid
+		// check if the serviceOffers is already in the user serviceOffers
+		const serviceOffersAlreadyInUserServiceOffers = userServiceOffers.filter(
+			service_offers =>
+				service_offers.name === userServiceOffersName &&
+				service_offers.price === userServiceOffersPrice &&
+				service_offers.description === userServiceOffersDescription &&
+				service_offers.options === userServiceOffersOptions
+		)
+		// if the service_offers is not already in the service_offers courses, add it
+		if (serviceOffersAlreadyInUserServiceOffers.length === 0) {
+			if (userServiceOffersId !== '') {
+				// if the service_offers is already in the service_offers courses, update it
+				const userServiceOffersCopy = userServiceOffers.map(serviceOffer => {
+					if (serviceOffer.id === userServiceOffersId) {
+						return {
+							id: serviceOffer.id,
+							name: userServiceOffersName,
+							price: userServiceOffersPrice,
+							description: userServiceOffersDescription,
+							options: userServiceOffersOptions,
+						}
+					} else {
+						return serviceOffer
+					}
+				})
 
-			reset()
+				setUserServiceOffers(userServiceOffersCopy)
+				setUserServiceOffersId('')
+				setUserServiceOffersName('')
+				setUserServiceOffersPrice('')
+				setUserServiceOffersDescription('')
+				setUserServiceOffersOptions([])
+				reset()
+			} else {
+				// if the service_offers is not already in the service_offers courses, add it
+				if (data) {
+					setUserServiceOffers([
+						...userServiceOffers,
+						{
+							id: 'added' + userServiceOffersName + userServiceOffersPrice,
+							name: userServiceOffersName,
+							price: userServiceOffersPrice,
+							description: userServiceOffersDescription,
+							options: userServiceOffersOptions,
+						},
+					])
+					setUserServiceOffersId('')
+					setUserServiceOffersName('')
+					setUserServiceOffersPrice('')
+					setUserServiceOffersDescription('')
+					setUserServiceOffersOptions([])
+					reset()
+				}
+			}
 		}
 	}
 
 	const handleSubmitServiceOffers = event => {
 		// copy userServiceOffers to data, but remove the id field (only if the id start by "added"),
 		// and in the options array, remove the id field on each object too (only if the id start by "added")
-		const userServiceOffersCopy = userServiceOffers.map(serviceOffer => {
-			if (serviceOffer.id.toString().startsWith('added')) {
-				const options = serviceOffer.options.map(option => {
-					if (option.id.toString().startsWith('added')) {
-						return {
-							name: option.name,
-							price: option.price,
-							description: option.description,
+		let userServiceOffersCopy = []
+		if (userServiceOffersId === '') {
+			userServiceOffersCopy = userServiceOffers.map(serviceOffer => {
+				if (serviceOffer.id.toString().startsWith('added')) {
+					const options = serviceOffer.options.map(option => {
+						if (option.id.toString().startsWith('added')) {
+							return {
+								name: option.name,
+								price: option.price,
+								description: option.description,
+							}
+						} else {
+							return option
 						}
-					} else {
-						return option
+					})
+					return {
+						name: serviceOffer.name,
+						price: serviceOffer.price,
+						description: serviceOffer.description,
+						options: options,
 					}
-				})
-				return {
-					name: serviceOffer.name,
-					price: serviceOffer.price,
-					description: serviceOffer.description,
-					options: options,
+				} else {
+					const options = serviceOffer.options.map(option => {
+						if (option.id.toString().startsWith('added')) {
+							return {
+								name: option.name,
+								price: option.price,
+								description: option.description,
+							}
+						} else {
+							return option
+						}
+					})
+					return {
+						id: serviceOffer.id,
+						name: serviceOffer.name,
+						price: serviceOffer.price,
+						description: serviceOffer.description,
+						options: options,
+					}
 				}
-			} else {
+			})
+		} else {
+			userServiceOffersCopy = userServiceOffers.map(serviceOffer => {
 				const options = serviceOffer.options.map(option => {
 					if (option.id.toString().startsWith('added')) {
 						return {
@@ -119,8 +177,8 @@ export default function ModalUpdateServiceOffersProfil(props) {
 					description: serviceOffer.description,
 					options: options,
 				}
-			}
-		})
+			})
+		}
 
 		// set data
 		const data = {
@@ -174,7 +232,6 @@ export default function ModalUpdateServiceOffersProfil(props) {
 		]
 
 		setUserServiceOffersOptions(userServiceOffersOptionsUpdated)
-		console.log('userServiceOffersOptionsUpdated', userServiceOffersOptions)
 	}
 
 	const handleEditServiceOffers = id => {
