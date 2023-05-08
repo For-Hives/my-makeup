@@ -94,6 +94,15 @@ export default function ModalUpdateLanguageProfil(props) {
 		setUserLanguageSelected(userLanguageSelected.filter(item => item.id !== id))
 	}
 
+	// reset the form when the modal is closed
+	useEffect(() => {
+		if (!open) {
+			setUserLanguage('')
+			setUserLanguageSelected(user.language ?? [])
+			reset()
+		}
+	}, [open, reset, user.language])
+
 	return (
 		<Transition.Root show={open} as={Fragment}>
 			<Dialog

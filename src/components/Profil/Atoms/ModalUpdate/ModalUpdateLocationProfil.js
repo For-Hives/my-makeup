@@ -72,6 +72,15 @@ export default function ModalUpdateLocationProfil(props) {
 		setUserActionRadius(event.target.value)
 	}
 
+	// reset the form when the modal is closed
+	useEffect(() => {
+		if (!open) {
+			setUserActionRadius(user.action_radius ?? '')
+			setUserCity(user.city ?? '')
+			reset()
+		}
+	}, [open, reset, user.action_radius, user.city])
+
 	return (
 		<Transition.Root show={open} as={Fragment}>
 			<Dialog

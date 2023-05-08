@@ -98,6 +98,29 @@ export default function ModalUpdateSocialMediaProfil(props) {
 		setUserPhone(event.target.value)
 	}
 
+	useEffect(() => {
+		if (!open) {
+			setUserYoutube(user.network.youtube ?? '')
+			setUserFacebook(user.network.facebook ?? '')
+			setUserInstagram(user.network.instagram ?? '')
+			setUserWebsite(user.network.website ?? '')
+			setUserLinkedin(user.network.linkedin ?? '')
+			setUserEmail(user.network.email ?? '')
+			setUserPhone(user.network.phone ?? '')
+			reset()
+		}
+	}, [
+		open,
+		reset,
+		user.network.email,
+		user.network.facebook,
+		user.network.instagram,
+		user.network.linkedin,
+		user.network.phone,
+		user.network.website,
+		user.network.youtube,
+	])
+
 	return (
 		<Transition.Root show={open} as={Fragment}>
 			<Dialog

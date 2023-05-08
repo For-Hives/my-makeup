@@ -94,6 +94,14 @@ export default function ModalUpdateSkillsProfil(props) {
 		setUserSkillsSelected(userSkillsSelected.filter(item => item.id !== id))
 	}
 
+	useEffect(() => {
+		if (!open) {
+			setUserSkills('')
+			setUserSkillsSelected(user.skills ?? [])
+			reset()
+		}
+	}, [open, reset, user.skills])
+
 	return (
 		<Transition.Root show={open} as={Fragment}>
 			<Dialog

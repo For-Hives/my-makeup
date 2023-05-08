@@ -68,13 +68,6 @@ export default function ModalUpdateCoursesProfil(props) {
 		if (courseAlreadyInUserCourses.length === 0) {
 			// if the course id is not empty, it means that we are updating a course
 			if (userCoursesId !== '') {
-				console.log('update course')
-				console.log('userCoursesId', userCoursesId)
-				console.log('userCoursesDiploma', userCoursesDiploma)
-				console.log('userCoursesSchool', userCoursesSchool)
-				console.log('userCoursesDateGraduation', userCoursesDateGraduation)
-				console.log('userCoursesDescription', userCoursesDescription)
-
 				// 	then update the course, replace the course with the same id by the new course
 				const userCoursesUpdated = userCourses.map(course => {
 					if (course.id === userCoursesId) {
@@ -92,6 +85,7 @@ export default function ModalUpdateCoursesProfil(props) {
 				setUserCourses(userCoursesUpdated)
 
 				// reset the form
+				reset()
 				setUserCoursesId('')
 				setUserCoursesDiploma('')
 				setUserCoursesSchool('')
@@ -194,6 +188,18 @@ export default function ModalUpdateCoursesProfil(props) {
 		setUserCoursesDateGraduation(courseToUpdate[0].date_graduation)
 		setUserCoursesDescription(courseToUpdate[0].course_description)
 	}
+
+	// reset the form when the modal is closed
+	useEffect(() => {
+		if (!open) {
+			setUserCoursesId('')
+			setUserCoursesDiploma('')
+			setUserCoursesSchool('')
+			setUserCoursesDateGraduation('')
+			setUserCoursesDescription('')
+			reset()
+		}
+	}, [open, reset])
 
 	return (
 		<Transition.Root show={open} as={Fragment}>

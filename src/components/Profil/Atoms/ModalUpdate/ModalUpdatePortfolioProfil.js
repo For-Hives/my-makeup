@@ -25,7 +25,9 @@ export default function ModalUpdatePortfolioProfil(props) {
 	const [open, setOpen] = useState(props.modalUpdatePortfolioProfil)
 	const [imageUrl, setImageUrl] = useState('')
 	const [mySwiperModal, setMySwiperModal] = React.useState(null)
-	const [userImageGallery, setUserImageGallery] = useState(user.image_gallery)
+	const [userImageGallery, setUserImageGallery] = useState(
+		user.image_gallery ?? []
+	)
 
 	const { data: session } = useSession()
 
@@ -105,6 +107,16 @@ export default function ModalUpdatePortfolioProfil(props) {
 			}
 		}
 	}, [imageUrl])
+
+	// reset the form when the modal is closed
+	useEffect(() => {
+		if (!open) {
+			setFileObj('')
+			setImageUrl('')
+			setUserImageGallery(user.image_gallery ?? [])
+			reset()
+		}
+	}, [open, reset, user.image_gallery])
 
 	return (
 		<Transition.Root show={open} as={Fragment}>

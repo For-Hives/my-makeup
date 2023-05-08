@@ -127,6 +127,26 @@ export default function ModalUpdateResumeProfil(props) {
 		}
 	}, [imageUrl])
 
+	// reset the form when the modal is closed
+	useEffect(() => {
+		if (!open) {
+			setFileObj('')
+			setImageUrl('')
+			setAvailable(user.available)
+			setUserLastName(user.last_name ?? '')
+			setUserFirstName(user.first_name ?? '')
+			setUserSpeciality(user.speciality ?? '')
+			reset()
+		}
+	}, [
+		open,
+		reset,
+		user.available,
+		user.first_name,
+		user.last_name,
+		user.speciality,
+	])
+
 	return (
 		<Transition.Root show={open} as={Fragment}>
 			<Dialog

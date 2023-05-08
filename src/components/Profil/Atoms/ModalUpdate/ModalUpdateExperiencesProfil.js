@@ -44,6 +44,7 @@ export default function ModalUpdateExperiencesProfil(props) {
 	// date_graduation
 	// experience_description
 	const [userExperiences, setUserExperiences] = useState(user.experiences ?? [])
+	const [userExperiencesId, setUserExperiencesId] = useState('')
 	const [userExperiencesCompany, setUserExperiencesCompany] = useState('')
 	const [userExperiencesJobName, setUserExperiencesJobName] = useState('')
 	const [userExperiencesCity, setUserExperiencesCity] = useState('')
@@ -59,48 +60,94 @@ export default function ModalUpdateExperiencesProfil(props) {
 	 * @param data
 	 */
 	const onSubmit = data => {
-		// add a new experience to the user experiences only if the form is valid
-		if (data) {
-			console.log('data', data)
-			const userExperiencesUpdated = [
-				...userExperiences,
-				{
-					id: userExperiencesCompany + userExperiencesJobName,
-					company: userExperiencesCompany,
-					job_name: userExperiencesJobName,
-					city: userExperiencesCity,
-					date_start: userExperiencesDateStart,
-					date_end: userExperiencesDateEnd,
-					description: userExperiencesDescription,
-				},
-			]
-			setUserExperiences(userExperiencesUpdated)
-			// reset the form
-			setUserExperiencesCompany('')
-			setUserExperiencesJobName('')
-			setUserExperiencesCity('')
-			setUserExperiencesDateStart('')
-			setUserExperiencesDateEnd('')
-			setUserExperiencesDescription('')
-			reset()
+		// add a new experience to the user courses only if the form is valid
+		// check if the experience is already in the user courses
+		const experienceAlreadyInUserExperiences = userExperiences.filter(
+			experience =>
+				experience.company === userExperiencesCompany &&
+				experience.job_name === userExperiencesJobName &&
+				experience.city === userExperiencesCity &&
+				experience.date_start === userExperiencesDateStart &&
+				experience.date_end === userExperiencesDateEnd &&
+				experience.description === userExperiencesDescription
+		)
+		// if the experience is not already in the user courses, add it
+		if (experienceAlreadyInUserExperiences.length === 0) {
+			// if the experience has an id, it's an existing experience
+			if (userExperiencesId !== '') {
+				// 	then update the experience
+				const userExperiencesUpdated = userExperiences.map(experience => {
+					if (experience.id === userExperiencesId) {
+						experience.company = userExperiencesCompany
+						experience.job_name = userExperiencesJobName
+						experience.city = userExperiencesCity
+						experience.date_start = userExperiencesDateStart
+						experience.date_end = userExperiencesDateEnd
+						experience.description = userExperiencesDescription
+					}
+					return experience
+				})
+				setUserExperiences(userExperiencesUpdated)
+				// reset the form
+				setUserExperiencesId('')
+				setUserExperiencesCompany('')
+				setUserExperiencesJobName('')
+				setUserExperiencesCity('')
+				setUserExperiencesDateStart('')
+				setUserExperiencesDateEnd('')
+				setUserExperiencesDescription('')
+				reset()
+			} else {
+				if (data) {
+					const userExperiencesUpdated = [
+						...userExperiences,
+						{
+							id: userExperiencesCompany + userExperiencesJobName,
+							company: userExperiencesCompany,
+							job_name: userExperiencesJobName,
+							city: userExperiencesCity,
+							date_start: userExperiencesDateStart,
+							date_end: userExperiencesDateEnd,
+							description: userExperiencesDescription,
+						},
+					]
+					setUserExperiences(userExperiencesUpdated)
+					// reset the form
+					setUserExperiencesId('')
+					setUserExperiencesCompany('')
+					setUserExperiencesJobName('')
+					setUserExperiencesCity('')
+					setUserExperiencesDateStart('')
+					setUserExperiencesDateEnd('')
+					setUserExperiencesDescription('')
+					reset()
+				}
+			}
 		}
 	}
 
 	const handleSubmitExperiences = event => {
 		// clean the experiences, remove the id field
-		const userExperiencesCleaned = userExperiences.map(experience => {
-			const { id, ...rest } = experience
-			// replace the date_end field if it's empty by null
-			if (rest.date_end === '') {
-				rest.date_end = null
-			}
-			return rest
-		})
+		let userExperiencesCleaned
+		if (userExperiencesId !== '') {
+			userExperiencesCleaned = userExperiences.map(experience => {
+				const { id, ...rest } = experience
+				// replace the date_end field if it's empty by null
+				if (rest.date_end === '') {
+					rest.date_end = null
+				}
+				return rest
+			})
+		} else {
+			userExperiencesCleaned = userExperiences
+		}
+
 		const data = {
 			experiences: userExperiencesCleaned,
 		}
 		patchMeMakeup(queryClient, user, session, data)
 		// close the modal & reset the yup form
+		setUserExperiencesId('')
 		setUserExperiencesCompany('')
 		setUserExperiencesJobName('')
 		setUserExperiencesCity('')
@@ -157,14 +204,15 @@ export default function ModalUpdateExperiencesProfil(props) {
 	}
 
 	const handleEditExperience = id => {
-		const userExperiencesFiltered = userExperiences.filter(
-			experience => experience.id !== id
-		)
-		setUserExperiences(userExperiencesFiltered)
+		// const userExperiencesFiltered = userExperiences.filter(
+		// 	experience => experience.id !== id
+		// )
+		// setUserExperiences(userExperiencesFiltered)
 		const userExperiencesToUpdate = userExperiences.filter(
 			experience => experience.id === id
 		)
 		reset()
+		setUserExperiencesId(userExperiencesToUpdate[0].id)
 		setUserExperiencesCompany(userExperiencesToUpdate[0].company)
 		setUserExperiencesJobName(userExperiencesToUpdate[0].job_name)
 		setUserExperiencesCity(userExperiencesToUpdate[0].city)
@@ -172,6 +220,20 @@ export default function ModalUpdateExperiencesProfil(props) {
 		setUserExperiencesDateEnd(userExperiencesToUpdate[0].date_end)
 		setUserExperiencesDescription(userExperiencesToUpdate[0].description)
 	}
+
+	// reset the form when the modal is closed
+	useEffect(() => {
+		if (!open) {
+			setUserExperiencesId('')
+			setUserExperiencesCompany('')
+			setUserExperiencesJobName('')
+			setUserExperiencesCity('')
+			setUserExperiencesDateStart('')
+			setUserExperiencesDateEnd('')
+			setUserExperiencesDescription('')
+			reset()
+		}
+	}, [open, reset])
 
 	return (
 		<Transition.Root show={open} as={Fragment}>

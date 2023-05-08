@@ -46,10 +46,6 @@ export default function ModalUpdateDescriptionProfil(props) {
 		props.handleModalUpdateDescriptionProfil()
 	}
 
-	useEffect(() => {
-		setOpen(props.modalUpdateDescriptionProfil)
-	}, [props.modalUpdateDescriptionProfil])
-
 	const cancelButtonRef = useRef(null)
 	const inputRef = useRef(null)
 
@@ -62,6 +58,18 @@ export default function ModalUpdateDescriptionProfil(props) {
 	const handleUpdateDescription = event => {
 		setUserDescription(event.target.value)
 	}
+
+	useEffect(() => {
+		setOpen(props.modalUpdateDescriptionProfil)
+	}, [props.modalUpdateDescriptionProfil])
+
+	// reset the form when the modal is closed
+	useEffect(() => {
+		if (!open) {
+			setUserDescription(user.description ?? '')
+			reset()
+		}
+	}, [open, reset, user.description])
 
 	return (
 		<Transition.Root show={open} as={Fragment}>

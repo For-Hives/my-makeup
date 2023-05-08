@@ -36,10 +36,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 	})
 
 	const [open, setOpen] = useState(props.modalUpdateServiceOffersProfil)
-	// diploma
-	// school
-	// date_graduation
-	// experience_description
+
 	const [userServiceOffers, setUserServiceOffers] = useState(
 		user.service_offers
 	)
@@ -188,6 +185,18 @@ export default function ModalUpdateServiceOffersProfil(props) {
 		setUserServiceOffersOptions(userServiceOffersOptionsUpdated)
 		console.log('userServiceOffersOptionsUpdated', userServiceOffersOptions)
 	}
+
+	// reset the form when the modal is closed
+	useEffect(() => {
+		if (!open) {
+			setUserServiceOffers(user.service_offers)
+			setUserServiceOffersName('')
+			setUserServiceOffersPrice('')
+			setUserServiceOffersDescription('')
+			setUserServiceOffersOptions([])
+			reset()
+		}
+	}, [open, reset, user.service_offers])
 
 	return (
 		<Transition.Root show={open} as={Fragment}>
