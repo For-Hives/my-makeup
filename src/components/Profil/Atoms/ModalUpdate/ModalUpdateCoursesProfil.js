@@ -130,6 +130,18 @@ export default function ModalUpdateCoursesProfil(props) {
 		setUserCourses(userCoursesFiltered)
 	}
 
+	const handleEditCourse = id => {
+		const userCoursesFiltered = userCourses.filter(course => course.id !== id)
+		setUserCourses(userCoursesFiltered)
+		// set the form with the course to update
+		const courseToUpdate = userCourses.filter(course => course.id === id)
+		reset()
+		setUserCoursesDiploma(courseToUpdate[0].diploma)
+		setUserCoursesSchool(courseToUpdate[0].school)
+		setUserCoursesDateGraduation(courseToUpdate[0].date_graduation)
+		setUserCoursesDescription(courseToUpdate[0].course_description)
+	}
+
 	return (
 		<Transition.Root show={open} as={Fragment}>
 			<Dialog
@@ -328,16 +340,28 @@ export default function ModalUpdateCoursesProfil(props) {
 																'relative flex w-full rounded bg-indigo-50/20 p-4 text-slate-700'
 															}
 														>
-															<button
+															<div
 																className={
-																	'absolute right-0 top-0 m-2 flex items-center justify-center'
+																	'absolute right-0 top-0 m-2 flex items-center justify-center gap-4'
 																}
-																onClick={() => handleDeleteCourse(course.id)}
 															>
-																<span className="material-icons-round text-lg text-red-500">
-																	delete
-																</span>
-															</button>
+																<button
+																	className={'flex items-center justify-center'}
+																	onClick={() => handleEditCourse(course.id)}
+																>
+																	<span className="material-icons-round text-xl text-orange-600">
+																		edit
+																	</span>
+																</button>
+																<button
+																	className={'flex items-center justify-center'}
+																	onClick={() => handleDeleteCourse(course.id)}
+																>
+																	<span className="material-icons-round text-xl text-red-500">
+																		delete
+																	</span>
+																</button>
+															</div>
 															<span className="material-icons-round text-indigo-900">
 																school
 															</span>
