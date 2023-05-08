@@ -9,7 +9,6 @@ import { useQueryClient } from '@tanstack/react-query'
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
 import { DescriptionPriceOffer } from '@/components/Profil/Childs/ServiceOffers/DescriptionPriceOffer'
 import { OptionsOffers } from '@/components/Profil/Childs/ServiceOffers/OptionsOffers'
-import { value } from 'lodash/seq'
 
 const schema = yup.object().shape({
 	name: yup.string().required("Le nom de l'entreprise est requise"),
@@ -42,7 +41,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 	// date_graduation
 	// experience_description
 	const [userServiceOffers, setUserServiceOffers] = useState(
-		user.serviceOffers ?? []
+		user.service_offers
 	)
 	const [userServiceOffersName, setUserServiceOffersName] = useState('')
 	const [userServiceOffersPrice, setUserServiceOffersPrice] = useState('')
@@ -60,33 +59,85 @@ export default function ModalUpdateServiceOffersProfil(props) {
 		// add a new experience to the user serviceOffers only if the form is valid
 		if (data) {
 			console.log('data', data)
-			const userServiceOffersUpdated = [
+			console.log('userServiceOffers', userServiceOffers)
+			setUserServiceOffers([
 				...userServiceOffers,
 				{
-					id: userServiceOffersName + userServiceOffersPrice,
-					name: userServiceOffersName,
-					price: userServiceOffersPrice,
-					description: userServiceOffersDescription,
+					id: 'added' + data.name + data.price,
+					name: data.name,
+					price: data.price,
+					description: data.description,
+					options: userServiceOffersOptions,
 				},
-			]
-			setUserServiceOffers(userServiceOffersUpdated)
+			])
+			console.log('userServiceOffers', userServiceOffers)
 			// reset the form
 			setUserServiceOffersName('')
 			setUserServiceOffersPrice('')
 			setUserServiceOffersDescription('')
+			setUserServiceOffersOptions([])
+
 			reset()
 		}
 	}
 
 	const handleSubmitServiceOffers = event => {
+		// copy userServiceOffers to data, but remove the id field (only if the id start by "added"),
+		// and in the options array, remove the id field on each object too (only if the id start by "added")
+		const userServiceOffersCopy = userServiceOffers.map(serviceOffer => {
+			if (serviceOffer.id.toString().startsWith('added')) {
+				const options = serviceOffer.options.map(option => {
+					if (option.id.toString().startsWith('added')) {
+						return {
+							name: option.name,
+							price: option.price,
+							description: option.description,
+						}
+					} else {
+						return option
+					}
+				})
+				return {
+					name: serviceOffer.name,
+					price: serviceOffer.price,
+					description: serviceOffer.description,
+					options: options,
+				}
+			} else {
+				const options = serviceOffer.options.map(option => {
+					if (option.id.toString().startsWith('added')) {
+						return {
+							name: option.name,
+							price: option.price,
+							description: option.description,
+						}
+					} else {
+						return option
+					}
+				})
+				return {
+					id: serviceOffer.id,
+					name: serviceOffer.name,
+					price: serviceOffer.price,
+					description: serviceOffer.description,
+					options: options,
+				}
+			}
+		})
+
+		console.log('userServiceOffersCopy', userServiceOffersCopy)
+
+		// set data
 		const data = {
-			serviceOffers: userServiceOffers,
+			service_offers: userServiceOffersCopy,
 		}
+		console.log('data', data)
 		patchMeMakeup(queryClient, user, session, data)
 		// close the modal & reset the yup form
 		setUserServiceOffersName('')
 		setUserServiceOffersPrice('')
 		setUserServiceOffersDescription('')
+		setUserServiceOffersOptions([])
 		reset()
 		props.handleModalUpdateServiceOffersProfil()
 	}
@@ -124,14 +175,6 @@ export default function ModalUpdateServiceOffersProfil(props) {
 	}
 
 	const handleAddServiceOffersOption = () => {
-		// 	add new option
-		// let userServiceOffersOptionsUpdated = userServiceOffersOptions
-		// userServiceOffersOptionsUpdated.push({
-		// 	id: 'added' + userServiceOffersOptions.length,
-		// 	name: '',
-		// 	price: '',
-		// 	description: '',
-		// })
 		const userServiceOffersOptionsUpdated = [
 			...userServiceOffersOptions,
 			{
@@ -336,19 +379,9 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																					)
 																				)
 																			}}
-																			value={event => {
-																				userServiceOffersOptions.map(
-																					(option, optionIndex) => {
-																						if (optionIndex === index) {
-																							return {
-																								...option,
-																								name: event.target.value,
-																							}
-																						}
-																						return option
-																					}
-																				)
-																			}}
+																			value={
+																				userServiceOffersOptions[index].name
+																			}
 																			className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																		/>
 																	</div>
@@ -365,14 +398,27 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																			id="description"
 																			name="description"
 																			required
-																			value={() => {
-																				// userServiceOffersOptions[index]
-																				// 	.description ?? ''
+																			onChange={event => {
+																				// 	change the name value of the correct option
+																				setUserServiceOffersOptions(
+																					userServiceOffersOptions.map(
+																						(option, optionIndex) => {
+																							if (optionIndex === index) {
+																								return {
+																									...option,
+																									description:
+																										event.target.value,
+																								}
+																							}
+																							return option
+																						}
+																					)
+																				)
 																			}}
-																			onChange={() => {
-																				// setUserServiceOffersOptions[index]
-																				// 	.description
-																			}}
+																			value={
+																				userServiceOffersOptions[index]
+																					.description
+																			}
 																			className="block min-h-[150px] w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																		/>
 																	</div>
@@ -390,13 +436,25 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																			name="price"
 																			type={'text'}
 																			required
-																			value={() => {
-																				// userServiceOffersOptions[index].price ??
-																				// 	''
+																			onChange={event => {
+																				// 	change the name value of the correct option
+																				setUserServiceOffersOptions(
+																					userServiceOffersOptions.map(
+																						(option, optionIndex) => {
+																							if (optionIndex === index) {
+																								return {
+																									...option,
+																									price: event.target.value,
+																								}
+																							}
+																							return option
+																						}
+																					)
+																				)
 																			}}
-																			onChange={() => {
-																				// setUserServiceOffersOptions[index].price
-																			}}
+																			value={
+																				userServiceOffersOptions[index].price
+																			}
 																			className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																		/>
 																	</div>
@@ -447,59 +505,55 @@ export default function ModalUpdateServiceOffersProfil(props) {
 													<Tab.List
 														className={'flex w-full justify-center py-4'}
 													>
-														{user?.service_offers.map(
-															(service_offer, index) => {
-																return (
-																	<Tab
-																		key={index}
-																		className={
-																			'h-full w-full border-b border-slate-300 bg-slate-50/30 p-4 text-xs text-slate-600 hover:bg-slate-50/50 focus:outline-none ' +
-																			// 	aria selected
-																			' aria-selected:border-b-2 aria-selected:border-indigo-800 aria-selected:font-semibold aria-selected:text-slate-900'
-																		}
-																	>
-																		{service_offer.name}
-																	</Tab>
-																)
-															}
-														)}
+														{userServiceOffers.map((service_offer, index) => {
+															return (
+																<Tab
+																	key={index}
+																	className={
+																		'h-full w-full border-b border-slate-300 bg-slate-50/30 p-4 text-xs text-slate-600 hover:bg-slate-50/50 focus:outline-none ' +
+																		// 	aria selected
+																		' aria-selected:border-b-2 aria-selected:border-indigo-800 aria-selected:font-semibold aria-selected:text-slate-900'
+																	}
+																>
+																	{service_offer.name}
+																</Tab>
+															)
+														})}
 													</Tab.List>
 													<Tab.Panels>
-														{user?.service_offers.map(
-															(service_offer, index) => {
-																return (
-																	<Tab.Panel key={index}>
-																		<div
-																			className={
-																				'flex flex-col gap-4 bg-white py-4'
-																			}
-																		>
-																			<div className={'flex flex-col'}>
-																				<h2
-																					className={
-																						'text-start text-lg font-bold text-indigo-900'
-																					}
-																				>
-																					{service_offer.name}
-																				</h2>
-																			</div>
-																			<DescriptionPriceOffer
-																				serviceOffer={service_offer}
-																			/>
+														{userServiceOffers.map((service_offer, index) => {
+															return (
+																<Tab.Panel key={index}>
+																	<div
+																		className={
+																			'flex flex-col gap-4 bg-white py-4'
+																		}
+																	>
+																		<div className={'flex flex-col'}>
+																			<h2
+																				className={
+																					'text-start text-lg font-bold text-indigo-900'
+																				}
+																			>
+																				{service_offer.name}
+																			</h2>
 																		</div>
-																		<div
-																			className={
-																				'flex w-full flex-col gap-2 py-2'
-																			}
-																		>
-																			<OptionsOffers
-																				serviceOffer={service_offer}
-																			/>
-																		</div>
-																	</Tab.Panel>
-																)
-															}
-														)}
+																		<DescriptionPriceOffer
+																			serviceOffer={service_offer}
+																		/>
+																	</div>
+																	<div
+																		className={
+																			'flex w-full flex-col gap-2 py-2'
+																		}
+																	>
+																		<OptionsOffers
+																			serviceOffer={service_offer}
+																		/>
+																	</div>
+																</Tab.Panel>
+															)
+														})}
 													</Tab.Panels>
 												</Tab.Group>
 											</div>
