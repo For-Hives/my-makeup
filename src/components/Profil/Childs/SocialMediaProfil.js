@@ -194,7 +194,7 @@ export function SocialMediaProfil(props) {
 								className={'fill-indigo-700'}
 								width={'35'}
 								height={'35'}
-								alt={`${user?.user?.first_name} ${user?.user?.last_name} website`}
+								alt={`${user?.user?.first_name} ${user?.user?.last_name} - site internet`}
 							/>
 							<p className={'text-sm text-slate-700 group-hover:underline'}>
 								{user?.network?.website}
