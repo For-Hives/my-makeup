@@ -1,5 +1,5 @@
 import React, { Fragment, useEffect, useRef, useState } from 'react'
-import { Dialog, Switch, Transition } from '@headlessui/react'
+import { Dialog, Transition } from '@headlessui/react'
 import Image from 'next/image'
 import { PhotoIcon } from '@heroicons/react/20/solid'
 import { useForm } from 'react-hook-form'
