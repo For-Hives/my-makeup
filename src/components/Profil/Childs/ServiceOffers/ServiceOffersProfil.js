@@ -14,21 +14,18 @@ export function ServiceOffersProfil(props) {
 
 	const user = props.user
 
-	const [modalUpdateServiceOffersProfil, setModalUpdateServiceOffersProfil] =
-		React.useState(false)
-	const handleModalUpdateServiceOffersProfil = () => {
+	const [isModalOpen, setIsModalOpen] = React.useState(false)
+	const handleIsModalOpen = () => {
 		if (!isPublic) {
-			setModalUpdateServiceOffersProfil(!modalUpdateServiceOffersProfil)
+			setIsModalOpen(!isModalOpen)
 		}
 	}
 
 	return (
 		<div className={'relative w-full'}>
 			<ModalUpdateServiceOffersProfil
-				modalUpdateServiceOffersProfil={modalUpdateServiceOffersProfil}
-				handleModalUpdateServiceOffersProfil={
-					handleModalUpdateServiceOffersProfil
-				}
+				isModalOpen={isModalOpen}
+				handleIsModalOpen={handleIsModalOpen}
 				user={user}
 			/>
 			<div
@@ -39,7 +36,7 @@ export function ServiceOffersProfil(props) {
 			>
 				{!isPublic ? (
 					<button
-						onClick={handleModalUpdateServiceOffersProfil}
+						onClick={handleIsModalOpen}
 						className={
 							'absolute left-0 top-0 -z-10 flex h-full w-full items-center justify-center opacity-0 ' +
 							'bg-white/75 backdrop-blur-none group-hover:z-20 group-hover:opacity-100 ' +

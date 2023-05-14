@@ -30,7 +30,7 @@ export default function ModalUpdateDescriptionProfil(props) {
 		resolver: yupResolver(schema),
 	})
 
-	const [open, setOpen] = useState(props.modalUpdateDescriptionProfil)
+	const [open, setOpen] = useState(props.isModalOpen)
 	const [userDescription, setUserDescription] = useState(user.description ?? '')
 
 	const { data: session } = useSession()
@@ -59,8 +59,8 @@ export default function ModalUpdateDescriptionProfil(props) {
 	}
 
 	useEffect(() => {
-		setOpen(props.modalUpdateDescriptionProfil)
-	}, [props.modalUpdateDescriptionProfil])
+		setOpen(props.isModalOpen)
+	}, [props.isModalOpen])
 
 	// reset the form when the modal is closed
 	useEffect(() => {

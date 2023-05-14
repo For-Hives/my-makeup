@@ -11,18 +11,17 @@ export function DescriptionProfil(props) {
 
 	const user = props.user
 
-	const [modalUpdateDescriptionProfil, setModalUpdateDescriptionProfil] =
-		React.useState(false)
-	const handleModalUpdateDescriptionProfil = () => {
+	const [isModalOpen, setIsModalOpen] = React.useState(false)
+	const handleIsModalOpen = () => {
 		if (!isPublic) {
-			setModalUpdateDescriptionProfil(!modalUpdateDescriptionProfil)
+			setIsModalOpen(!isModalOpen)
 		}
 	}
 	return (
 		<div className={'relative w-full'}>
 			<ModalUpdateDescriptionProfil
-				modalUpdateDescriptionProfil={modalUpdateDescriptionProfil}
-				handleModalUpdateDescriptionProfil={handleModalUpdateDescriptionProfil}
+				isModalOpen={isModalOpen}
+				handleIsModalOpen={handleIsModalOpen}
 				user={user}
 			/>
 			<div
@@ -33,7 +32,7 @@ export function DescriptionProfil(props) {
 			>
 				{!isPublic ? (
 					<button
-						onClick={handleModalUpdateDescriptionProfil}
+						onClick={handleIsModalOpen}
 						className={
 							'absolute left-0 top-0 -z-10 flex h-full w-full items-center justify-center opacity-0 ' +
 							'bg-white/75 backdrop-blur-none group-hover:z-20 group-hover:opacity-100 ' +

@@ -30,7 +30,7 @@ export default function ModalUpdateSkillsProfil(props) {
 		resolver: yupResolver(schema),
 	})
 
-	const [open, setOpen] = useState(props.modalUpdateSkillsProfil)
+	const [open, setOpen] = useState(props.isModalOpen)
 	const [userSkills, setUserSkills] = useState('')
 	const [userSkillsSelected, setUserSkillsSelected] = useState(
 		user.skills ?? []
@@ -59,8 +59,8 @@ export default function ModalUpdateSkillsProfil(props) {
 	}
 
 	useEffect(() => {
-		setOpen(props.modalUpdateSkillsProfil)
-	}, [props.modalUpdateSkillsProfil])
+		setOpen(props.isModalOpen)
+	}, [props.isModalOpen])
 
 	const cancelButtonRef = useRef(null)
 	const inputRef = useRef(null)

@@ -13,19 +13,18 @@ export function SocialMediaProfil(props) {
 
 	const user = props.user
 
-	const [modalUpdateSocialMediaProfil, setModalUpdateSocialMediaProfil] =
-		React.useState(false)
-	const handleModalUpdateSocialMediaProfil = () => {
+	const [isModalOpen, setIsModalOpen] = React.useState(false)
+	const handleIsModalOpen = () => {
 		if (!isPublic) {
-			setModalUpdateSocialMediaProfil(!modalUpdateSocialMediaProfil)
+			setIsModalOpen(!isModalOpen)
 		}
 	}
 
 	return (
 		<div className={'w-full'}>
 			<ModalUpdateSocialMediaProfil
-				modalUpdateSocialMediaProfil={modalUpdateSocialMediaProfil}
-				handleModalUpdateSocialMediaProfil={handleModalUpdateSocialMediaProfil}
+				isModalOpen={isModalOpen}
+				handleIsModalOpen={handleIsModalOpen}
 				user={user}
 			/>
 			<div
@@ -36,7 +35,7 @@ export function SocialMediaProfil(props) {
 			>
 				{!isPublic ? (
 					<button
-						onClick={handleModalUpdateSocialMediaProfil}
+						onClick={handleIsModalOpen}
 						className={
 							'absolute left-0 top-0 -z-10 flex h-full w-full items-center justify-center opacity-0 ' +
 							'bg-white/75 backdrop-blur-none group-hover:z-20 group-hover:opacity-100 ' +

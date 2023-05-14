@@ -32,7 +32,7 @@ export default function ModalUpdateResumeProfil(props) {
 	})
 
 	const [fileObj, setFileObj] = useState('')
-	const [open, setOpen] = useState(props.modalUpdateResumeProfil)
+	const [open, setOpen] = useState(props.isModalOpen)
 	const [imageUrl, setImageUrl] = useState('')
 	const [available, setAvailable] = useState(user.available)
 	const [userLastName, setUserLastName] = useState(user.last_name ?? '')
@@ -80,8 +80,8 @@ export default function ModalUpdateResumeProfil(props) {
 	}
 
 	useEffect(() => {
-		setOpen(props.modalUpdateResumeProfil)
-	}, [props.modalUpdateResumeProfil])
+		setOpen(props.isModalOpen)
+	}, [props.isModalOpen])
 
 	const cancelButtonRef = useRef(null)
 	const inputRef = useRef(null)

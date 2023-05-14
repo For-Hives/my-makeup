@@ -31,7 +31,7 @@ export default function ModalUpdateLocationProfil(props) {
 		resolver: yupResolver(schema),
 	})
 
-	const [open, setOpen] = useState(props.modalUpdateLocationProfil)
+	const [open, setOpen] = useState(props.isModalOpen)
 	const [userCity, setUserCity] = useState(user.city ?? '')
 	const [userActionRadius, setUserActionRadius] = useState(
 		user.action_radius ?? ''
@@ -51,8 +51,8 @@ export default function ModalUpdateLocationProfil(props) {
 	}
 
 	useEffect(() => {
-		setOpen(props.modalUpdateLocationProfil)
-	}, [props.modalUpdateLocationProfil])
+		setOpen(props.isModalOpen)
+	}, [props.isModalOpen])
 
 	const cancelButtonRef = useRef(null)
 	const inputRef = useRef(null)

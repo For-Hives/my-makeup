@@ -34,7 +34,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 		resolver: yupResolver(schema),
 	})
 
-	const [open, setOpen] = useState(props.modalUpdateServiceOffersProfil)
+	const [open, setOpen] = useState(props.isModalOpen)
 
 	const [userServiceOffers, setUserServiceOffers] = useState(
 		user.service_offers ?? []
@@ -195,8 +195,8 @@ export default function ModalUpdateServiceOffersProfil(props) {
 	}
 
 	useEffect(() => {
-		setOpen(props.modalUpdateServiceOffersProfil)
-	}, [props.modalUpdateServiceOffersProfil])
+		setOpen(props.isModalOpen)
+	}, [props.isModalOpen])
 
 	const cancelButtonRef = useRef(null)
 	const inputRef = useRef(null)

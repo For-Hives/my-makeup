@@ -36,7 +36,7 @@ export default function ModalUpdateCoursesProfil(props) {
 		resolver: yupResolver(schema),
 	})
 
-	const [open, setOpen] = useState(props.modalUpdateCoursesProfil)
+	const [open, setOpen] = useState(props.isModalOpen)
 	// diploma
 	// school
 	// date_graduation
@@ -143,8 +143,8 @@ export default function ModalUpdateCoursesProfil(props) {
 	}
 
 	useEffect(() => {
-		setOpen(props.modalUpdateCoursesProfil)
-	}, [props.modalUpdateCoursesProfil])
+		setOpen(props.isModalOpen)
+	}, [props.isModalOpen])
 
 	const cancelButtonRef = useRef(null)
 	const inputRef = useRef(null)
