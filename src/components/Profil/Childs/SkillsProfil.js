@@ -6,15 +6,15 @@ export function SkillsProfil(props) {
 	// import router
 	const router = useRouter()
 	// get query param
-	const { view } = router.query
-	const mode = !!view
+	const { publicView } = router.query
+	const isPublic = !!publicView
 
 	const user = props.user
 
 	const [modalUpdateSkillsProfil, setModalUpdateSkillsProfil] =
 		React.useState(false)
 	const handleModalUpdateSkillsProfil = () => {
-		if (!mode) {
+		if (!isPublic) {
 			setModalUpdateSkillsProfil(!modalUpdateSkillsProfil)
 		}
 	}
@@ -27,11 +27,11 @@ export function SkillsProfil(props) {
 			/>
 			<div
 				className={
-					(!mode ? 'group relative' : '') +
+					(!isPublic ? 'group relative' : '') +
 					' flex w-full flex-col gap-4 rounded border border-slate-300 bg-white p-8 '
 				}
 			>
-				{!mode ? (
+				{!isPublic ? (
 					<button
 						onClick={handleModalUpdateSkillsProfil}
 						className={

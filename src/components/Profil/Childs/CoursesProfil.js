@@ -6,15 +6,15 @@ export function CoursesProfil(props) {
 	// import router
 	const router = useRouter()
 	// get query param
-	const { view } = router.query
-	const mode = !!view
+	const { publicView } = router.query
+	const isPublic = !!publicView
 
 	const user = props.user
 
 	const [modalUpdateCoursesProfil, setModalUpdateCoursesProfil] =
 		React.useState(false)
 	const handleModalUpdateCoursesProfil = () => {
-		if (!mode) {
+		if (!isPublic) {
 			setModalUpdateCoursesProfil(!modalUpdateCoursesProfil)
 		}
 	}
@@ -27,11 +27,11 @@ export function CoursesProfil(props) {
 			/>
 			<div
 				className={
-					(!mode ? 'group relative' : '') +
+					(!isPublic ? 'group relative' : '') +
 					' flex w-full flex-col gap-4 rounded border border-slate-300 bg-white p-8 '
 				}
 			>
-				{!mode ? (
+				{!isPublic ? (
 					<button
 						onClick={handleModalUpdateCoursesProfil}
 						className={

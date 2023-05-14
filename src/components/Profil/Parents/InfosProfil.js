@@ -15,18 +15,18 @@ function InfosProfil(props) {
 	// import router
 	const router = useRouter()
 	// get query param
-	const { view } = router.query
+	const { publicView } = router.query
 
 	const user = props.user
-	const mode = !!view
+	const isPublic = !!publicView
 
 	return (
 		<div className={''}>
 			<div className="relative mx-auto max-w-7xl pt-4">
 				<div className={'absolute right-0 top-0 m-8 mt-16 flex'}>
-					{!mode ? (
+					{!isPublic ? (
 						<Link
-							href={{ pathname: '/profil', query: { view: true } }}
+							href={{ pathname: '/profil', query: { publicView: true } }}
 							className={'flex gap-2 font-semibold text-indigo-900 '}
 						>
 							<span className="material-icons-round text-indigo-900">
