@@ -71,11 +71,7 @@ export function PortfolioProfil(props) {
 						}}
 						modules={[Pagination]}
 						className="h-[500px] w-full"
-						onSlideChange={swiper => {
-							console.log(swiper.activeIndex)
-						}}
 						onInit={ev => {
-							console.log(ev)
 							setMySwiper(ev)
 						}}
 					>
@@ -131,8 +127,6 @@ export function PortfolioProfil(props) {
 						<button
 							className={'flex items-center justify-center gap-2'}
 							onClick={() => {
-								console.log(mySwiper.activeIndex)
-								console.log(mySwiper.slides.length - 1)
 								if (mySwiper.activeIndex === mySwiper.slides.length - 1) {
 									// 	go to the first slide
 									mySwiper.slideTo(0)
