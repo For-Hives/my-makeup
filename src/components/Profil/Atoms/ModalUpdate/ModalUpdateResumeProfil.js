@@ -17,7 +17,7 @@ const schema = yup.object().shape({
 	speciality: yup.string().required('La spécialité est requise'),
 })
 
-export default function ModalUpdateResumeProfil(props) {
+export default function IsModalOpen(props) {
 	const queryClient = useQueryClient()
 
 	const user = props.user
@@ -67,14 +67,14 @@ export default function ModalUpdateResumeProfil(props) {
 					// 	put data in api : with fetch : /api/makeup-artistes/{user.id}
 					patchMeMakeup(queryClient, user, session, data, data_blob)
 					reset()
-					props.handleModalUpdateResumeProfil()
+					props.handleIsModalOpen()
 					setImageUrl('')
 				})
 				.catch(err => console.error(err))
 		} else {
 			patchMeMakeup(queryClient, user, session, data)
 			reset()
-			props.handleModalUpdateResumeProfil()
+			props.handleIsModalOpen()
 			setImageUrl('')
 		}
 	}
@@ -152,7 +152,7 @@ export default function ModalUpdateResumeProfil(props) {
 				as="div"
 				className="relative z-30"
 				initialFocus={cancelButtonRef}
-				onClose={props.handleModalUpdateResumeProfil}
+				onClose={props.handleIsModalOpen}
 			>
 				<Transition.Child
 					as={Fragment}
@@ -180,7 +180,7 @@ export default function ModalUpdateResumeProfil(props) {
 							<Dialog.Panel className="relative w-full transform rounded-lg bg-white p-8 text-left shadow-2xl transition-all sm:max-w-3xl">
 								<button
 									type="button"
-									onClick={props.handleModalUpdateResumeProfil}
+									onClick={props.handleIsModalOpen}
 									ref={cancelButtonRef}
 									className={
 										'absolute right-0 top-0 m-6 flex items-center justify-center'

@@ -19,11 +19,11 @@ const schema = yup.object().shape({
 })
 
 /**
- * ModalUpdateExperiencesProfil
+ * IsModalOpen
  * @param props
  * @constructor
  */
-export default function ModalUpdateExperiencesProfil(props) {
+export default function IsModalOpen(props) {
 	const queryClient = useQueryClient()
 
 	const user = props.user
@@ -155,7 +155,7 @@ export default function ModalUpdateExperiencesProfil(props) {
 		setUserExperiencesDescription('')
 		// formState.reset()
 		reset()
-		props.handleModalUpdateExperiencesProfil()
+		props.handleIsModalOpen()
 	}
 
 	useEffect(() => {
@@ -236,7 +236,7 @@ export default function ModalUpdateExperiencesProfil(props) {
 				as="div"
 				className="relative z-30"
 				initialFocus={cancelButtonRef}
-				onClose={props.handleModalUpdateExperiencesProfil}
+				onClose={props.handleIsModalOpen}
 			>
 				<Transition.Child
 					as={Fragment}
@@ -264,7 +264,7 @@ export default function ModalUpdateExperiencesProfil(props) {
 							<Dialog.Panel className="relative w-full transform rounded-lg bg-white p-8 text-left shadow-2xl transition-all sm:max-w-7xl">
 								<button
 									type="button"
-									onClick={props.handleModalUpdateExperiencesProfil}
+									onClick={props.handleIsModalOpen}
 									ref={cancelButtonRef}
 									className={
 										'absolute right-0 top-0 m-6 flex items-center justify-center'

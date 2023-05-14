@@ -12,11 +12,11 @@ const schema = yup.object().shape({
 })
 
 /**
- * ModalUpdateLanguageProfil
+ * IsModalOpen
  * @param props
  * @constructor
  */
-export default function ModalUpdateLanguageProfil(props) {
+export default function IsModalOpen(props) {
 	const queryClient = useQueryClient()
 
 	const user = props.user
@@ -55,7 +55,7 @@ export default function ModalUpdateLanguageProfil(props) {
 		patchMeMakeup(queryClient, user, session, data_clean)
 		reset()
 		// close the modal
-		props.handleModalUpdateLanguageProfil()
+		props.handleIsModalOpen()
 	}
 
 	useEffect(() => {
@@ -108,7 +108,7 @@ export default function ModalUpdateLanguageProfil(props) {
 				as="div"
 				className="relative z-30"
 				initialFocus={cancelButtonRef}
-				onClose={props.handleModalUpdateLanguageProfil}
+				onClose={props.handleIsModalOpen}
 			>
 				<Transition.Child
 					as={Fragment}
@@ -136,7 +136,7 @@ export default function ModalUpdateLanguageProfil(props) {
 							<Dialog.Panel className="relative w-full transform rounded-lg bg-white p-8 text-left shadow-2xl transition-all sm:max-w-3xl">
 								<button
 									type="button"
-									onClick={props.handleModalUpdateLanguageProfil}
+									onClick={props.handleIsModalOpen}
 									ref={cancelButtonRef}
 									className={
 										'absolute right-0 top-0 m-6 flex items-center justify-center'

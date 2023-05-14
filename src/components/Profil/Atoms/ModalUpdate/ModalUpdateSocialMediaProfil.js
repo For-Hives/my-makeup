@@ -18,11 +18,11 @@ const schema = yup.object().shape({
 })
 
 /**
- * ModalUpdateSocialMediaProfil
+ * IsModalOpen
  * @param props
  * @constructor
  */
-export default function ModalUpdateSocialMediaProfil(props) {
+export default function IsModalOpen(props) {
 	const queryClient = useQueryClient()
 
 	const user = props.user
@@ -59,7 +59,7 @@ export default function ModalUpdateSocialMediaProfil(props) {
 		patchMeMakeup(queryClient, user, session, data)
 
 		reset()
-		props.handleModalUpdateSocialMediaProfil()
+		props.handleIsModalOpen()
 	}
 
 	useEffect(() => {
@@ -126,7 +126,7 @@ export default function ModalUpdateSocialMediaProfil(props) {
 				as="div"
 				className="relative z-30"
 				initialFocus={cancelButtonRef}
-				onClose={props.handleModalUpdateSocialMediaProfil}
+				onClose={props.handleIsModalOpen}
 			>
 				<Transition.Child
 					as={Fragment}
@@ -154,7 +154,7 @@ export default function ModalUpdateSocialMediaProfil(props) {
 							<Dialog.Panel className="relative w-full transform rounded-lg bg-white p-8 text-left shadow-2xl transition-all sm:max-w-2xl">
 								<button
 									type="button"
-									onClick={props.handleModalUpdateSocialMediaProfil}
+									onClick={props.handleIsModalOpen}
 									ref={cancelButtonRef}
 									className={
 										'absolute right-0 top-0 m-6 flex items-center justify-center'

@@ -12,7 +12,7 @@ import { Pagination } from 'swiper'
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
 
 const schema = yup.object().shape({})
-export default function ModalUpdatePortfolioProfil(props) {
+export default function IsModalOpen(props) {
 	const queryClient = useQueryClient()
 
 	const user = props.user
@@ -49,7 +49,7 @@ export default function ModalUpdatePortfolioProfil(props) {
 				})
 				.then(data_blob => {
 					data_blob = data_blob[0]
-					// props.handleModalUpdatePortfolioProfil()
+					// props.handleIsModalOpen()
 					// 	add image to gallery
 					setUserImageGallery([...userImageGallery, data_blob])
 					setImageUrl('')
@@ -59,7 +59,7 @@ export default function ModalUpdatePortfolioProfil(props) {
 		} else {
 			// putMakeupArtisteViaId(queryClient, user, session, data)
 			reset()
-			// props.handleModalUpdatePortfolioProfil()
+			// props.handleIsModalOpen()
 			setImageUrl('')
 		}
 	}
@@ -70,7 +70,7 @@ export default function ModalUpdatePortfolioProfil(props) {
 		}
 		patchMeMakeup(queryClient, user, session, data)
 		setImageUrl('')
-		props.handleModalUpdatePortfolioProfil()
+		props.handleIsModalOpen()
 	}
 
 	useEffect(() => {
@@ -129,7 +129,7 @@ export default function ModalUpdatePortfolioProfil(props) {
 				as="div"
 				className="relative z-30"
 				initialFocus={cancelButtonRef}
-				onClose={props.handleModalUpdatePortfolioProfil}
+				onClose={props.handleIsModalOpen}
 			>
 				<Transition.Child
 					as={Fragment}
@@ -157,7 +157,7 @@ export default function ModalUpdatePortfolioProfil(props) {
 							<Dialog.Panel className="relative w-full transform rounded-lg bg-white p-8 text-left shadow-2xl transition-all sm:max-w-7xl">
 								<button
 									type="button"
-									onClick={props.handleModalUpdatePortfolioProfil}
+									onClick={props.handleIsModalOpen}
 									ref={cancelButtonRef}
 									className={
 										'absolute right-0 top-0 m-6 flex items-center justify-center'
