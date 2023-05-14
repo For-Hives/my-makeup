@@ -22,7 +22,7 @@ export default function ModalUpdatePortfolioProfil(props) {
 	})
 
 	const [fileObj, setFileObj] = useState('')
-	const [open, setOpen] = useState(props.modalUpdatePortfolioProfil)
+	const [open, setOpen] = useState(props.isModalOpen)
 	const [imageUrl, setImageUrl] = useState('')
 	const [mySwiperModal, setMySwiperModal] = React.useState(null)
 	const [userImageGallery, setUserImageGallery] = useState(
@@ -74,8 +74,8 @@ export default function ModalUpdatePortfolioProfil(props) {
 	}
 
 	useEffect(() => {
-		setOpen(props.modalUpdatePortfolioProfil)
-	}, [props.modalUpdatePortfolioProfil])
+		setOpen(props.isModalOpen)
+	}, [props.isModalOpen])
 
 	const cancelButtonRef = useRef(null)
 	const inputRef = useRef(null)

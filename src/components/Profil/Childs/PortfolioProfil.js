@@ -19,21 +19,20 @@ export function PortfolioProfil(props) {
 
 	const user = props.user
 
-	const [modalUpdatePortfolioProfil, setModalUpdatePortfolioProfil] =
-		React.useState(false)
+	const [isModalOpen, setIsModalOpen] = React.useState(false)
 	const [mySwiper, setMySwiper] = React.useState(null)
 
-	const handleModalUpdatePortfolioProfil = () => {
+	const handleIsModalOpen = () => {
 		if (!isPublic) {
-			setModalUpdatePortfolioProfil(!modalUpdatePortfolioProfil)
+			setIsModalOpen(!isModalOpen)
 		}
 	}
 
 	return (
 		<div className={'w-full'}>
 			<ModalUpdatePortfolioProfil
-				modalUpdatePortfolioProfil={modalUpdatePortfolioProfil}
-				handleModalUpdatePortfolioProfil={handleModalUpdatePortfolioProfil}
+				isModalOpen={isModalOpen}
+				handleIsModalOpen={handleIsModalOpen}
 				user={user}
 			/>
 			<div
@@ -44,7 +43,7 @@ export function PortfolioProfil(props) {
 			>
 				{!isPublic ? (
 					<button
-						onClick={handleModalUpdatePortfolioProfil}
+						onClick={handleIsModalOpen}
 						className={
 							'absolute left-0 top-0 -z-10 flex h-full w-full items-center justify-center opacity-0 ' +
 							'bg-white/75 backdrop-blur-none group-hover:z-20 group-hover:opacity-100 ' +

@@ -36,7 +36,7 @@ export default function ModalUpdateSocialMediaProfil(props) {
 		resolver: yupResolver(schema),
 	})
 
-	const [open, setOpen] = useState(props.modalUpdateSocialMediaProfil)
+	const [open, setOpen] = useState(props.isModalOpen)
 
 	const [userYoutube, setUserYoutube] = useState(user.network.youtube ?? '')
 	const [userFacebook, setUserFacebook] = useState(user.network.facebook ?? '')
@@ -63,8 +63,8 @@ export default function ModalUpdateSocialMediaProfil(props) {
 	}
 
 	useEffect(() => {
-		setOpen(props.modalUpdateSocialMediaProfil)
-	}, [props.modalUpdateSocialMediaProfil])
+		setOpen(props.isModalOpen)
+	}, [props.isModalOpen])
 
 	const cancelButtonRef = useRef(null)
 	const inputRef = useRef(null)

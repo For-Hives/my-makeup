@@ -12,18 +12,17 @@ export function LocationProfil(props) {
 
 	const user = props.user
 
-	const [modalUpdateLocationProfil, setModalUpdateLocationProfil] =
-		React.useState(false)
-	const handleModalUpdateLocationProfil = () => {
+	const [isModalOpen, setIsModalOpen] = React.useState(false)
+	const handleIsModalOpen = () => {
 		if (!isPublic) {
-			setModalUpdateLocationProfil(!modalUpdateLocationProfil)
+			setIsModalOpen(!isModalOpen)
 		}
 	}
 	return (
 		<div className={'w-full'}>
 			<ModalUpdateLocationProfil
-				modalUpdateLocationProfil={modalUpdateLocationProfil}
-				handleModalUpdateLocationProfil={handleModalUpdateLocationProfil}
+				isModalOpen={isModalOpen}
+				handleIsModalOpen={handleIsModalOpen}
 				user={user}
 			/>
 			<div
@@ -34,7 +33,7 @@ export function LocationProfil(props) {
 			>
 				{!isPublic ? (
 					<button
-						onClick={handleModalUpdateLocationProfil}
+						onClick={handleIsModalOpen}
 						className={
 							'absolute left-0 top-0 -z-10 flex h-full w-full items-center justify-center opacity-0 ' +
 							'bg-white/75 backdrop-blur-none group-hover:z-20 group-hover:opacity-100 ' +

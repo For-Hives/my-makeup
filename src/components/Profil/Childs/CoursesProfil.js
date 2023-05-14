@@ -11,18 +11,17 @@ export function CoursesProfil(props) {
 
 	const user = props.user
 
-	const [modalUpdateCoursesProfil, setModalUpdateCoursesProfil] =
-		React.useState(false)
-	const handleModalUpdateCoursesProfil = () => {
+	const [isModalOpen, setIsModalOpen] = React.useState(false)
+	const handleIsModalOpen = () => {
 		if (!isPublic) {
-			setModalUpdateCoursesProfil(!modalUpdateCoursesProfil)
+			setIsModalOpen(!isModalOpen)
 		}
 	}
 	return (
 		<div className={'relative w-full'}>
 			<ModalUpdateCoursesProfil
-				modalUpdateCoursesProfil={modalUpdateCoursesProfil}
-				handleModalUpdateCoursesProfil={handleModalUpdateCoursesProfil}
+				isModalOpen={isModalOpen}
+				handleIsModalOpen={handleIsModalOpen}
 				user={user}
 			/>
 			<div
@@ -33,7 +32,7 @@ export function CoursesProfil(props) {
 			>
 				{!isPublic ? (
 					<button
-						onClick={handleModalUpdateCoursesProfil}
+						onClick={handleIsModalOpen}
 						className={
 							'absolute left-0 top-0 -z-10 flex h-full w-full items-center justify-center opacity-0 ' +
 							'bg-white/75 backdrop-blur-none group-hover:z-20 group-hover:opacity-100 ' +

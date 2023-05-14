@@ -11,18 +11,17 @@ export function ExperiencesProfil(props) {
 
 	const user = props.user
 
-	const [modalUpdateExperiencesProfil, setModalUpdateExperiencesProfil] =
-		React.useState(false)
-	const handleModalUpdateExperiencesProfil = () => {
+	const [isModalOpen, setIsModalOpen] = React.useState(false)
+	const handleIsModalOpen = () => {
 		if (!isPublic) {
-			setModalUpdateExperiencesProfil(!modalUpdateExperiencesProfil)
+			setIsModalOpen(!isModalOpen)
 		}
 	}
 	return (
 		<div className={'relative w-full'}>
 			<ModalUpdateExperiencesProfil
-				modalUpdateExperiencesProfil={modalUpdateExperiencesProfil}
-				handleModalUpdateExperiencesProfil={handleModalUpdateExperiencesProfil}
+				isModalOpen={isModalOpen}
+				handleIsModalOpen={handleIsModalOpen}
 				user={user}
 			/>
 			<div
@@ -33,7 +32,7 @@ export function ExperiencesProfil(props) {
 			>
 				{!isPublic ? (
 					<button
-						onClick={handleModalUpdateExperiencesProfil}
+						onClick={handleIsModalOpen}
 						className={
 							'absolute left-0 top-0 -z-10 flex h-full w-full items-center justify-center opacity-0 ' +
 							'bg-white/75 backdrop-blur-none group-hover:z-20 group-hover:opacity-100 ' +

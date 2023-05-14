@@ -30,7 +30,7 @@ export default function ModalUpdateLanguageProfil(props) {
 		resolver: yupResolver(schema),
 	})
 
-	const [open, setOpen] = useState(props.modalUpdateLanguageProfil)
+	const [open, setOpen] = useState(props.isModalOpen)
 	const [userLanguage, setUserLanguage] = useState('')
 	const [userLanguageSelected, setUserLanguageSelected] = useState(
 		user.language ?? []
@@ -59,8 +59,8 @@ export default function ModalUpdateLanguageProfil(props) {
 	}
 
 	useEffect(() => {
-		setOpen(props.modalUpdateLanguageProfil)
-	}, [props.modalUpdateLanguageProfil])
+		setOpen(props.isModalOpen)
+	}, [props.isModalOpen])
 
 	const cancelButtonRef = useRef(null)
 	const inputRef = useRef(null)
