@@ -1,27 +1,10 @@
-import React, { useEffect } from 'react'
+import React from 'react'
 import Image from 'next/image'
 import { Stars } from '@/components/Profil/Atoms/Stars'
 import { BadgeDispo } from '@/components/Profil/Atoms/BadgeDispo'
 import { BadgeIndispo } from '@/components/Profil/Atoms/BadgeIndispo'
 import ModalUpdateResumeProfil from '@/components/Profil/Atoms/ModalUpdate/ModalUpdateResumeProfil'
-import Link from 'next/link'
 import { useRouter } from 'next/router'
-
-// Head : General
-// left
-// - Photo principale
-// middle
-// - Nom Prénom
-// - Spécialité principale
-// - Ville principale et rayon d'action
-// - Nombre de missions réalisées
-// - Note moyenne ( avis google + avis internes , moyenne entre les deux ou un truc du genre )
-// - Nombre de recommandations
-// Head : infos complémentaires
-// right
-// - Badge de disponibilité
-// - Date de disponibilité
-// - Boutton d'édition de la disponibilité
 
 function ResumeProfil(props) {
 	const router = useRouter()
