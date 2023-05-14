@@ -259,11 +259,7 @@ export default function IsModalOpen(props) {
 															}}
 															modules={[Pagination]}
 															className="h-[500px] w-full"
-															onSlideChange={swiper => {
-																// console.log(swiper.activeIndex)
-															}}
 															onInit={eve => {
-																console.log(eve)
 																setMySwiperModal(eve)
 															}}
 														>
@@ -320,7 +316,6 @@ export default function IsModalOpen(props) {
 																}
 																onClick={() => {
 																	if (mySwiperModal.activeIndex === 0) {
-																		console.log(mySwiperModal)
 																		// 	go to the last slide
 																		mySwiperModal.slideTo(
 																			mySwiperModal.slides.length - 1

@@ -43,7 +43,6 @@ export default function IsModalOpen(props) {
 		data = {
 			...data,
 		}
-		console.log(data)
 		patchMeMakeup(queryClient, user, session, data)
 
 		reset()
