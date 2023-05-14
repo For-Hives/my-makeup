@@ -1,6 +1,5 @@
 import React, { useState } from 'react'
 import { Switch } from '@headlessui/react'
-import { classNames } from '@/services/utils'
 
 export default function ToggleButton(props) {
 	const [enabled, setEnabled] = useState(!!props.state)
@@ -21,17 +20,17 @@ export default function ToggleButton(props) {
 			/>
 			<span
 				aria-hidden="true"
-				className={classNames(
-					enabled ? 'bg-indigo-600' : 'bg-slate-200',
-					'pointer-events-none absolute mx-auto h-4 w-9 rounded-full transition-colors duration-200 ease-in-out'
-				)}
+				className={
+					(enabled ? 'bg-indigo-600' : 'bg-slate-200') +
+					' pointer-events-none absolute mx-auto h-4 w-9 rounded-full transition-colors duration-200 ease-in-out'
+				}
 			/>
 			<span
 				aria-hidden="true"
-				className={classNames(
-					enabled ? 'translate-x-5' : 'translate-x-0',
-					'pointer-events-none absolute left-0 inline-block h-5 w-5 transform rounded-full border border-slate-200 bg-white shadow ring-0 transition-transform duration-200 ease-in-out'
-				)}
+				className={
+					(enabled ? 'translate-x-5' : 'translate-x-0') +
+					' pointer-events-none absolute left-0 inline-block h-5 w-5 transform rounded-full border border-slate-200 bg-white shadow ring-0 transition-transform duration-200 ease-in-out'
+				}
 			/>
 		</Switch>
 	)
