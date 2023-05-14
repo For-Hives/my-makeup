@@ -6,7 +6,6 @@ import { useForm } from 'react-hook-form'
 import { yupResolver } from '@hookform/resolvers/yup'
 import { useSession } from 'next-auth/react'
 import * as yup from 'yup'
-import { classNames } from '@/services/utils'
 import { BadgeDispo } from '@/components/Profil/Atoms/BadgeDispo'
 import { BadgeIndispo } from '@/components/Profil/Atoms/BadgeIndispo'
 import { useQueryClient } from '@tanstack/react-query'
@@ -371,21 +370,21 @@ export default function ModalUpdateResumeProfil(props) {
 																/>
 																<span
 																	aria-hidden="true"
-																	className={classNames(
-																		available
+																	className={
+																		(available
 																			? 'bg-indigo-600'
-																			: 'bg-slate-200',
-																		'pointer-events-none absolute mx-auto h-4 w-9 rounded-full transition-colors duration-200 ease-in-out'
-																	)}
+																			: 'bg-slate-200') +
+																		' pointer-events-none absolute mx-auto h-4 w-9 rounded-full transition-colors duration-200 ease-in-out'
+																	}
 																/>
 																<span
 																	aria-hidden="true"
-																	className={classNames(
-																		available
+																	className={
+																		(available
 																			? 'translate-x-5'
-																			: 'translate-x-0',
-																		'pointer-events-none absolute left-0 inline-block h-5 w-5 transform rounded-full border border-slate-200 bg-white shadow ring-0 transition-transform duration-200 ease-in-out'
-																	)}
+																			: 'translate-x-0') +
+																		' pointer-events-none absolute left-0 inline-block h-5 w-5 transform rounded-full border border-slate-200 bg-white shadow ring-0 transition-transform duration-200 ease-in-out'
+																	}
 																/>
 															</Switch>
 															{available ? <BadgeDispo /> : <BadgeIndispo />}
