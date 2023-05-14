@@ -7,15 +7,15 @@ export function LocationProfil(props) {
 	// import router
 	const router = useRouter()
 	// get query param
-	const { view } = router.query
-	const mode = !!view
+	const { publicView } = router.query
+	const isPublic = !!publicView
 
 	const user = props.user
 
 	const [modalUpdateLocationProfil, setModalUpdateLocationProfil] =
 		React.useState(false)
 	const handleModalUpdateLocationProfil = () => {
-		if (!mode) {
+		if (!isPublic) {
 			setModalUpdateLocationProfil(!modalUpdateLocationProfil)
 		}
 	}
@@ -28,11 +28,11 @@ export function LocationProfil(props) {
 			/>
 			<div
 				className={
-					(!mode ? 'group relative' : '') +
+					(!isPublic ? 'group relative' : '') +
 					' flex w-full flex-col gap-4 rounded border border-slate-300 bg-white p-8'
 				}
 			>
-				{!mode ? (
+				{!isPublic ? (
 					<button
 						onClick={handleModalUpdateLocationProfil}
 						className={

@@ -14,8 +14,8 @@ export function PortfolioProfil(props) {
 	// import router
 	const router = useRouter()
 	// get query param
-	const { view } = router.query
-	const mode = !!view
+	const { publicView } = router.query
+	const isPublic = !!publicView
 
 	const user = props.user
 
@@ -24,7 +24,7 @@ export function PortfolioProfil(props) {
 	const [mySwiper, setMySwiper] = React.useState(null)
 
 	const handleModalUpdatePortfolioProfil = () => {
-		if (!mode) {
+		if (!isPublic) {
 			setModalUpdatePortfolioProfil(!modalUpdatePortfolioProfil)
 		}
 	}
@@ -38,11 +38,11 @@ export function PortfolioProfil(props) {
 			/>
 			<div
 				className={
-					(!mode ? 'group relative' : '') +
+					(!isPublic ? 'group relative' : '') +
 					' flex w-full flex-col gap-4 rounded border border-slate-300 bg-white p-8'
 				}
 			>
-				{!mode ? (
+				{!isPublic ? (
 					<button
 						onClick={handleModalUpdatePortfolioProfil}
 						className={

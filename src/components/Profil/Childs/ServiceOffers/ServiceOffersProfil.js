@@ -9,15 +9,15 @@ export function ServiceOffersProfil(props) {
 	// import router
 	const router = useRouter()
 	// get query param
-	const { view } = router.query
-	const mode = !!view
+	const { publicView } = router.query
+	const isPublic = !!publicView
 
 	const user = props.user
 
 	const [modalUpdateServiceOffersProfil, setModalUpdateServiceOffersProfil] =
 		React.useState(false)
 	const handleModalUpdateServiceOffersProfil = () => {
-		if (!mode) {
+		if (!isPublic) {
 			setModalUpdateServiceOffersProfil(!modalUpdateServiceOffersProfil)
 		}
 	}
@@ -33,11 +33,11 @@ export function ServiceOffersProfil(props) {
 			/>
 			<div
 				className={
-					(!mode ? 'group relative' : '') +
+					(!isPublic ? 'group relative' : '') +
 					' flex w-full flex-col gap-4 rounded border border-slate-300 bg-white p-8 '
 				}
 			>
-				{!mode ? (
+				{!isPublic ? (
 					<button
 						onClick={handleModalUpdateServiceOffersProfil}
 						className={

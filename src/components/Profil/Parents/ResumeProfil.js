@@ -8,10 +8,10 @@ import { useRouter } from 'next/router'
 
 function ResumeProfil(props) {
 	const router = useRouter()
-	const { view } = router.query
+	const { publicView } = router.query
 
 	const user = props.user
-	const mode = !!view
+	const isPublic = !!publicView
 
 	const [starsToDisplay, setStarsToDisplay] = React.useState(5)
 	const [availability, setAvailability] = React.useState(!!user?.available)
@@ -23,7 +23,7 @@ function ResumeProfil(props) {
 	}
 
 	const handleModalUpdateResumeProfil = () => {
-		if (!mode) {
+		if (!isPublic) {
 			setModalUpdateResumeProfil(!modalUpdateResumeProfil)
 		}
 	}
@@ -38,7 +38,7 @@ function ResumeProfil(props) {
 			<div className="mx-auto max-w-7xl pt-[90px]">
 				<div className={'grid grid-cols-12 gap-5 pt-24'}>
 					<div className={'relative col-span-2 flex items-center'}>
-						{!mode ? (
+						{!isPublic ? (
 							<button
 								className={
 									'absolute left-0 top-0 flex h-full w-full flex-col items-center justify-center rounded-full bg-indigo-700/0 text-white/0 transition hover:bg-indigo-700/25 hover:text-white'
@@ -64,7 +64,7 @@ function ResumeProfil(props) {
 							<div
 								className={
 									'flex w-full flex-col gap-2' +
-									(!mode ? ' cursor-pointer' : ' cursor-default')
+									(!isPublic ? ' cursor-pointer' : ' cursor-default')
 								}
 								onClick={handleModalUpdateResumeProfil}
 							>
@@ -105,7 +105,7 @@ function ResumeProfil(props) {
 							<div
 								className={
 									'flex items-center gap-5' +
-									(!mode ? ' cursor-pointer' : ' cursor-default')
+									(!isPublic ? ' cursor-pointer' : ' cursor-default')
 								}
 								onClick={handleModalUpdateResumeProfil}
 							>
