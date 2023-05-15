@@ -1,11 +1,11 @@
 import React from 'react'
 import Footer from '@/components/Global/Footer'
 import Nav from '@/components/Global/Nav'
+import ResponsiveTemporary from '@/components/Global/ResponsiveTemporary'
 
 /**
  * todo : add content
  * @param props
- * @returns {JSX.Element}
  * @constructor
  */
 function Particulier(props) {
@@ -13,7 +13,12 @@ function Particulier(props) {
 		<>
 			<div>
 				<Nav />
-				<main className={'flex h-screen w-full items-center justify-center'}>
+				<main
+					className={
+						'relative flex h-screen w-full items-center justify-center'
+					}
+				>
+					<ResponsiveTemporary />
 					<h1 className={'text-center text-3xl text-gray-700'}>Particulier</h1>
 				</main>
 				<Footer />

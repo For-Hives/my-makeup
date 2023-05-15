@@ -3,29 +3,48 @@ import React from 'react'
 import Image from 'next/image'
 import Nav from '@/components/Global/Nav'
 import Footer from '@/components/Global/Footer'
-import ResumeProfil from '@/components/Profil/ResumeProfil'
+import ResumeProfil from '@/components/Profil/Parents/ResumeProfil'
 import { useQuery } from '@tanstack/react-query'
-import { fetchApi } from '@/services/api'
-import { useSession, getSession } from 'next-auth/react'
+import { getSession, useSession } from 'next-auth/react'
 import _ from 'lodash'
+import Loader from '@/components/Global/Loader'
+import Router from 'next/router'
+import ResponsiveTemporary from '@/components/Global/ResponsiveTemporary'
+import InfosProfil from '@/components/Profil/Parents/InfosProfil'
 
 function Profil() {
 	// get current user id
 	const { data: session, status } = useSession()
 
-	// // get current user data
-	// const { isLoading, isError, data, error } = useQuery('makeup-artiste', () => {
-	// 	if (status === 'authenticated') {
-	// 		fetchApi('users/me', {
-	// 			// 	jwt: session.jwt,
-	// 		}).then(res => {
-	// 			if (res.data) {
-	// 				return fetchApi('makeup-artiste/' + res.data.id)
-	// 			}
-	// 		})
-	// 	}
-	// })
+	const { isLoading, isError, data, error } = useQuery({
+		queryKey: ['users/me-makeup'],
+		queryFn: async () => {
+			const res = await fetch(
+				`${process.env.NEXT_PUBLIC_API_URL}api/me-makeup`,
+				{
+					method: 'GET',
+					headers: {
+						// 	token
+						'Content-Type': 'application/json',
+						Accept: 'application/json',
+						Authorization: `Bearer ${session.jwt}`,
+					},
+				}
+			)
+			return res.json()
+		},
+	})
 
+	// get current user id
+	if (status !== 'authenticated') {
+		// 	redirect to signin page
+		typeof window !== 'undefined' && Router.push('/signin')
+	}
+
+	if (isLoading) return <Loader />
+
+	if (error) return 'An error has occurred: ' + error.message
+	const user = data
 	return (
 		<>
 			<Head>
@@ -35,7 +54,9 @@ function Profil() {
 					content="Page de profil sur my-makeup.fr la plateforme qui va révolutionner votre façon de travailler !"
 				/>
 			</Head>
+			<Nav />
 			<main className={'relative'}>
+				<ResponsiveTemporary />
 				<Image
 					src={'/assets/coming-soon.svg'}
 					alt={'Coming soon'}
@@ -45,10 +66,10 @@ function Profil() {
 						'fixed left-0 top-0 z-50 m-4 rounded-full bg-amber-300/75 p-2'
 					}
 				/>
-				<Nav />
 				{session && session.user && !_.isEmpty(session.user) ? (
 					<>
-						<ResumeProfil />
+						<ResumeProfil user={user} />
+						<InfosProfil user={user} />
 					</>
 				) : (
 					<div className="flex h-screen flex-col items-center justify-center">
@@ -57,8 +78,8 @@ function Profil() {
 						</h1>
 					</div>
 				)}
-				<Footer />
 			</main>
+			<Footer />
 		</>
 	)
 }

@@ -1,6 +1,7 @@
+import 'material-icons/iconfont/material-icons.css'
 import '@/styles/globals.css'
-import '@/styles/icons.css'
 import '@/styles/stars.css'
+import '@/styles/loader.css'
 import '@/styles/loader/escalator.css'
 
 import Head from 'next/head'
