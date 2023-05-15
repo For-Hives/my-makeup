@@ -20,7 +20,7 @@ const schema = yup.object().shape({
  * @param props
  * @constructor
  */
-export default function IsModalOpen(props) {
+export default function ModalUpdateServiceOffersProfil(props) {
 	const queryClient = useQueryClient()
 
 	const user = props.user

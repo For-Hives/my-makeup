@@ -17,7 +17,7 @@ const schema = yup.object().shape({
 	speciality: yup.string().required('La spécialité est requise'),
 })
 
-export default function IsModalOpen(props) {
+export default function ModalUpdateResumeProfil(props) {
 	const queryClient = useQueryClient()
 
 	const user = props.user
