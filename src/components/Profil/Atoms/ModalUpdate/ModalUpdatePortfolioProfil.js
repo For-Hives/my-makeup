@@ -12,7 +12,7 @@ import { Pagination } from 'swiper'
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
 
 const schema = yup.object().shape({})
-export default function IsModalOpen(props) {
+export default function ModalUpdatePortfolioProfil(props) {
 	const queryClient = useQueryClient()
 
 	const user = props.user
