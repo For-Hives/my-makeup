@@ -17,11 +17,6 @@ const schema = yup.object().shape({
 	phone: yup.string(),
 })
 
-/**
- * IsModalOpen
- * @param props
- * @constructor
- */
 export default function ModalUpdateSocialMediaProfil(props) {
 	const queryClient = useQueryClient()
 

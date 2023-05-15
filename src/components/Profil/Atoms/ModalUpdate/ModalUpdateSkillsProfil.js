@@ -11,11 +11,6 @@ const schema = yup.object().shape({
 	skills: yup.string(),
 })
 
-/**
- * IsModalOpen
- * @param props
- * @constructor
- */
 export default function ModalUpdateSkillsProfil(props) {
 	const queryClient = useQueryClient()
 

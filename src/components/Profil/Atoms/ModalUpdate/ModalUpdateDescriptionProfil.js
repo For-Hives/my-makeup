@@ -11,11 +11,6 @@ const schema = yup.object().shape({
 	description: yup.string().required('La description est requise'),
 })
 
-/**
- * IsModalOpen
- * @param props
- * @constructor
- */
 export default function ModalUpdateDescriptionProfil(props) {
 	const queryClient = useQueryClient()
 

@@ -11,11 +11,6 @@ const schema = yup.object().shape({
 	language: yup.string(),
 })
 
-/**
- * IsModalOpen
- * @param props
- * @constructor
- */
 export default function ModalUpdateLanguageProfil(props) {
 	const queryClient = useQueryClient()
 
