@@ -12,11 +12,6 @@ const schema = yup.object().shape({
 	action_radius: yup.number().required("Le rayon d'action est requis"),
 })
 
-/**
- * IsModalOpen
- * @param props
- * @constructor
- */
 export default function ModalUpdateLocationProfil(props) {
 	const queryClient = useQueryClient()
 
