@@ -1,11 +1,11 @@
 import React from 'react'
 import Nav from '@/components/Global/Nav'
 import Footer from '@/components/Global/Footer'
-import ResponsiveTemporary from '@/components/Global/ResponsiveTemporary'
 
 /**
  * todo : add content
  * @param props
+ * @returns {JSX.Element}
  * @constructor
  */
 function APropos(props) {
@@ -13,12 +13,7 @@ function APropos(props) {
 		<>
 			<div>
 				<Nav />
-				<main
-					className={
-						'relative flex h-screen w-full items-center justify-center'
-					}
-				>
-					<ResponsiveTemporary />
+				<main className={'flex h-screen w-full items-center justify-center'}>
 					<h1 className={'text-center text-3xl text-gray-700'}>A propos</h1>
 				</main>
 				<Footer />

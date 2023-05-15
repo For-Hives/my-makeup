@@ -66,7 +66,7 @@ const navigation = [
 			{
 				name: 'Nos partenaires',
 				href: '/maquilleuse/partenaires',
-				icon: 'leaderboard',
+				icon: 'social_leaderboard',
 				description:
 					'Utilisez les outils de nos partenaires pour développer votre activité ! ' +
 					'Et Facilitez votre vie !',

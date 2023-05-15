@@ -5,6 +5,7 @@ import Footer from '@/components/Global/Footer'
 /**
  * todo : add content
  * @param props
+ * @returns {JSX.Element}
  * @constructor
  */
 function PourLesMaquilleuses(props) {

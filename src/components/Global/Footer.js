@@ -8,9 +8,7 @@ function Footer() {
 
 	return (
 		<>
-			<footer
-				className={'relative mx-auto flex w-full max-w-7xl gap-20 pt-52 '}
-			>
+			<footer className={'relative mx-auto flex w-full max-w-7xl gap-20 pt-52'}>
 				<div className={'flex flex-col gap-6'}>
 					<div className={'flex items-center justify-start gap-3'}>
 						<Image
@@ -29,40 +27,31 @@ function Footer() {
 						44000 Nantes
 					</p>
 					<div className={'flex gap-3'}>
-						<Link href="/" rel={'noopener nofollow noreferrer'}>
+						<Link href="/">
 							<Image
-								src={'/assets/brand/037-instagram.svg'}
-								className={'fill-white'}
-								width={'35'}
-								height={'35'}
+								src={'/assets/vectorials-used/fi-brands-instagram.svg'}
+								className={'fill-indigo-700'}
+								width={'20'}
+								height={'20'}
 								alt={'Instagram My Makeup'}
 							/>
 						</Link>
-						<Link href="/" rel={'noopener nofollow noreferrer'}>
+						<Link href="/">
 							<Image
-								src={'/assets/brand/030-linkedin.svg'}
+								src={'/assets/vectorials-used/fi-brands-linkedin.svg'}
 								className={'fill-indigo-700'}
-								width={'35'}
-								height={'35'}
+								width={'20'}
+								height={'20'}
 								alt={'Linkedin My Makeup'}
 							/>
 						</Link>
-						<Link href="/" rel={'noopener nofollow noreferrer'}>
+						<Link href="/">
 							<Image
-								src={'/assets/brand/017-telegram.svg'}
+								src={'/assets/vectorials-used/fi-brands-telegram.svg'}
 								className={'fill-indigo-700'}
-								width={'35'}
-								height={'35'}
+								width={'20'}
+								height={'20'}
 								alt={'Mail My Makeup'}
-							/>
-						</Link>
-						<Link href="/" rel={'noopener nofollow noreferrer'}>
-							<Image
-								src={'/assets/brand/006-facebook.svg'}
-								className={'fill-indigo-700'}
-								width={'35'}
-								height={'35'}
-								alt={'Facebook My Makeup'}
 							/>
 						</Link>
 					</div>
@@ -176,7 +165,7 @@ function Footer() {
 					</Link>
 				</div>
 			</footer>
-			<div className={'mx-auto flex w-full max-w-7xl py-20'}>
+			<div className={'mx-auto flex w-full max-w-7xl bg-white py-20'}>
 				<p className={'mx-auto text-sm text-slate-600'}>
 					© {actualYear} My Makeup - Tous droits réservés - Developed with ❤️ by{' '}
 					<Link

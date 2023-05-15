@@ -7,7 +7,6 @@ import { useForm, Controller } from 'react-hook-form'
 import { yupResolver } from '@hookform/resolvers/yup'
 import * as yup from 'yup'
 import _ from 'lodash'
-import ResponsiveTemporary from '@/components/Global/ResponsiveTemporary'
 // import { router } from 'next/client'
 
 const schema = yup.object().shape({
@@ -58,8 +57,7 @@ function Signup() {
 	            recherche de maquilleuses professionnelles, ou votre recherche de client !"
 				/>
 			</Head>
-			<div className="relative flex min-h-screen bg-white">
-				<ResponsiveTemporary />
+			<div className="flex min-h-screen">
 				<div className="flex flex-1 flex-col justify-center px-4 py-12 sm:px-6 lg:flex-none lg:px-20 xl:px-24">
 					<div className="mx-auto w-full max-w-sm lg:w-96">
 						<div>
@@ -70,15 +68,15 @@ function Signup() {
 								height={50}
 								src="/assets/logo_2.webp"
 							/>
-							<h2 className="mt-6 text-3xl font-bold tracking-tight text-slate-900">
-								{"S'inscrire"}
+							<h2 className="mt-6 text-3xl font-bold tracking-tight text-gray-900">
+								{"S'inscrire sur My Makeup"}
 							</h2>
 						</div>
 						{!(session && session.user && !_.isEmpty(session.user)) && (
 							<div className="mt-8">
 								<div>
 									<div>
-										<p className="text-sm font-medium leading-6 text-slate-900">
+										<p className="text-sm font-medium leading-6 text-gray-900">
 											Se connecter
 										</p>
 										<div className="mt-2 grid grid-cols-2 gap-3">
@@ -89,7 +87,7 @@ function Signup() {
 															callbackUrl: '/profil',
 														})
 													}}
-													className="inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-slate-500 shadow-sm ring-1 ring-inset ring-slate-300 hover:bg-slate-50 focus:outline-offset-0"
+													className="inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-gray-500 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:outline-offset-0"
 												>
 													<span className="sr-only">
 														Se connecter via Facebook
@@ -116,7 +114,7 @@ function Signup() {
 															callbackUrl: '/profil',
 														})
 													}}
-													className="inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-slate-500 shadow-sm ring-1 ring-inset ring-slate-300 hover:bg-slate-50 focus:outline-offset-0"
+													className="inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-gray-500 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:outline-offset-0"
 												>
 													<span className="sr-only">
 														Se connecter via Google
@@ -144,10 +142,10 @@ function Signup() {
 											className="absolute inset-0 flex items-center"
 											aria-hidden="true"
 										>
-											<div className="w-full border-t border-slate-300" />
+											<div className="w-full border-t border-gray-300" />
 										</div>
 										<div className="relative flex justify-center text-sm">
-											<span className="bg-white px-2 text-slate-500">Ou</span>
+											<span className="bg-white px-2 text-gray-500">Ou</span>
 										</div>
 									</div>
 								</div>
@@ -161,7 +159,7 @@ function Signup() {
 										<div className="space-y-1">
 											<label
 												htmlFor="name"
-												className="block text-sm font-medium leading-6 text-slate-900"
+												className="block text-sm font-medium leading-6 text-gray-900"
 											>
 												Nom
 											</label>
@@ -174,8 +172,8 @@ function Signup() {
 													{...register('name', {
 														required: true,
 													})}
-													className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-slate-300
-													placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+													className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300
+													placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
 												/>
 												{errors.name && (
 													<p className={'mt-2 text-xs text-red-500/80'}>
@@ -187,7 +185,7 @@ function Signup() {
 										<div>
 											<label
 												htmlFor="email"
-												className="block text-sm font-medium leading-6 text-slate-900"
+												className="block text-sm font-medium leading-6 text-gray-900"
 											>
 												Adresse email
 											</label>
@@ -200,7 +198,7 @@ function Signup() {
 													{...register('email', {
 														required: true,
 													})}
-													className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+													className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
 												/>
 												{errors.email && (
 													<p className={'mt-2 text-xs text-red-500/80'}>
@@ -213,7 +211,7 @@ function Signup() {
 										<div className="space-y-1">
 											<label
 												htmlFor="password"
-												className="block text-sm font-medium leading-6 text-slate-900"
+												className="block text-sm font-medium leading-6 text-gray-900"
 											>
 												Mot de passe
 											</label>
@@ -226,7 +224,7 @@ function Signup() {
 													{...register('password', {
 														required: true,
 													})}
-													className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+													className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
 												/>
 												{errors.password && (
 													<p className={'mt-2 text-xs text-red-500/80'}>
@@ -255,7 +253,7 @@ function Signup() {
 											</button>
 										</div>
 										<div className={'flex items-center justify-center '}>
-											Déjà un compte ?&nbsp;
+											tu as déjà un compte ?&nbsp;
 											<Link
 												className={
 													'font-semibold text-indigo-700 hover:text-indigo-700 hover:underline'
