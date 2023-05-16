@@ -15,24 +15,23 @@ function ResumeProfil(props) {
 
 	const [starsToDisplay, setStarsToDisplay] = React.useState(5)
 	const [availability, setAvailability] = React.useState(!!user?.available)
-	const [modalUpdateResumeProfil, setModalUpdateResumeProfil] =
-		React.useState(false)
+	const [isModalOpen, setIsModalOpen] = React.useState(false)
 
 	const handleAvailability = () => {
 		setAvailability(!availability)
 	}
 
-	const handleModalUpdateResumeProfil = () => {
+	const handleIsModalOpen = () => {
 		if (!isPublic) {
-			setModalUpdateResumeProfil(!modalUpdateResumeProfil)
+			setIsModalOpen(!isModalOpen)
 		}
 	}
 
 	return (
 		<div className={'relative bg-white pb-24 shadow-xl'}>
 			<ModalUpdateResumeProfil
-				modalUpdateResumeProfil={modalUpdateResumeProfil}
-				handleModalUpdateResumeProfil={handleModalUpdateResumeProfil}
+				isModalOpen={isModalOpen}
+				handleIsModalOpen={handleIsModalOpen}
 				user={user}
 			/>
 			<div className="mx-auto max-w-7xl pt-[90px]">
@@ -43,7 +42,7 @@ function ResumeProfil(props) {
 								className={
 									'absolute left-0 top-0 flex h-full w-full flex-col items-center justify-center rounded-full bg-indigo-700/0 text-white/0 transition hover:bg-indigo-700/25 hover:text-white'
 								}
-								onClick={handleModalUpdateResumeProfil}
+								onClick={handleIsModalOpen}
 							>
 								<span className="material-icons-round">add_a_photo</span>
 								<p className={'text-sm font-semibold'}>modifier votre photo</p>
@@ -66,7 +65,7 @@ function ResumeProfil(props) {
 									'flex w-full flex-col gap-2' +
 									(!isPublic ? ' cursor-pointer' : ' cursor-default')
 								}
-								onClick={handleModalUpdateResumeProfil}
+								onClick={handleIsModalOpen}
 							>
 								<h3
 									className={'text-3xl font-bold tracking-tight text-slate-800'}
@@ -107,7 +106,7 @@ function ResumeProfil(props) {
 									'flex items-center gap-5' +
 									(!isPublic ? ' cursor-pointer' : ' cursor-default')
 								}
-								onClick={handleModalUpdateResumeProfil}
+								onClick={handleIsModalOpen}
 							>
 								{availability ? (
 									<>
