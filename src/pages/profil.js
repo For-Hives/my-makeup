@@ -14,7 +14,7 @@ import InfosProfil from '@/components/Profil/Parents/InfosProfil'
 
 function Profil() {
 	// get current user id
-	const { data: session, status } = useSession()
+	const { data: session } = useSession()
 
 	const { isLoading, isError, data, error } = useQuery({
 		queryKey: ['users/me-makeup'],
@@ -34,12 +34,6 @@ function Profil() {
 			return res.json()
 		},
 	})
-
-	// get current user id
-	if (status !== 'authenticated') {
-		// 	redirect to signin page
-		typeof window !== 'undefined' && Router.push('/signin')
-	}
 
 	if (isLoading) return <Loader />
 
