@@ -50,8 +50,6 @@ function SearchPage() {
 	}
 
 	async function performSearch(search, city) {
-		console.log('performSearch', search, city)
-
 		if (search === undefined || search === '') {
 			return
 		}
@@ -222,8 +220,6 @@ function SearchPage() {
 									<h3 className="mb-2 font-bold">
 										{result.first_name} {result.last_name}
 									</h3>
-
-									{console.log(result.main_picture)}
 
 									{result.main_picture != null && (
 										<Image
