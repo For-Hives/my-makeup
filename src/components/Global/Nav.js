@@ -215,11 +215,6 @@ function Nav() {
 										</button>
 										<Link href="/" className="-m-1.5 p-1.5">
 											<span className="sr-only">My Makeup</span>
-											<Image
-												className="h-8"
-												src="https://tailwindui.com/img/logos/mark.svg?color=indigo&shade=600"
-												alt=""
-											/>
 										</Link>
 									</div>
 									<div className="mt-6 space-y-2">
