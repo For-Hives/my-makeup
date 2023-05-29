@@ -71,7 +71,7 @@ const options = {
 		signOut: '/signout',
 		error: '/error', // Error code passed in query string as ?error=
 		verifyRequest: '/verify-request', // (used for check email message)
-		newUser: '/profil', // New users will be directed here on first sign in (leave the property out if not of interest)
+		newUser: '/init-account', // New users will be directed here on first sign in (leave the property out if not of interest)
 	},
 	secret: `${process.env.NEXTAUTH_SECRET}`, //PUT YOUR OWN SECRET (command: openssl rand -base64 32)
 	database: `${process.env.NEXT_PUBLIC_DATABASE_URL}`,
