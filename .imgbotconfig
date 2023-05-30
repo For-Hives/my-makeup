@@ -1,0 +1,12 @@
+{
+    "schedule": "weekly",
+    "ignoredFiles": [
+        "*.jpg",
+        "*.png",
+        "*.webp",
+    ],
+    "aggressiveCompression": "false",
+    "compressWiki": "true",
+    "minKBReduced": 20,
+    "prTitle" : "chores(🤖ImgBot) : Optimize images",
+}
