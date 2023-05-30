@@ -92,7 +92,7 @@ function SearchPage() {
 			<Nav />
 			<main
 				className={
-					'relative mt-36 flex min-h-[50vh] items-center justify-center'
+					'relative mx-2 mt-36 flex min-h-[55vh] items-center justify-center'
 				}
 			>
 				{/*## Formulaire plein écran si not hasSearched*/}
@@ -213,7 +213,7 @@ function SearchPage() {
 					<div className="m-4 hidden h-auto w-[1px] bg-gray-400 lg:block"></div>
 
 					<div
-						className={' mt-8 grid w-full grid-cols-3 gap-4'}
+						className={' mt-8 flex w-full grid-cols-3 flex-col gap-4 md:grid'}
 						// className={'grid w-full grid-cols-3 gap-4'}
 					>
 						{searchResults.map(
@@ -227,7 +227,16 @@ function SearchPage() {
 									<h3 className="mb-2 font-bold">
 										{result.first_name} {result.last_name}
 									</h3>
-									{/*<Image src={result.} alt={}></Image> */}
+
+									{result.main_picture != null && (
+										<Image
+											src={result.main_picture.url}
+											alt=""
+											width="100"
+											height="100"
+										/>
+									)}
+
 									<p>Spécialité : {result.speciality}</p>
 									<p>Ville : {result.city}</p>
 									{/* ... Afficher d'autres informations si vous le souhaitez */}
