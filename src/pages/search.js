@@ -10,13 +10,19 @@ function SearchPage() {
 	const [city, setCity] = useState(undefined)
 	const [searchResults, setSearchResults] = useState([])
 	const [isSearching, setIsSearching] = useState(false)
+	const [lastSearch, setLastSearch] = useState(undefined)
 	const [hasSearched, setHasSearched] = useState(false)
 
 	const router = useRouter()
 
 	useEffect(() => {
-		if (!hasSearched) {
-			const { search, city } = router.query
+		const { search, city } = router.query
+
+		if (
+			!hasSearched ||
+			lastSearch.search !== search ||
+			lastSearch.city !== city
+		) {
 			if (search === undefined && city === undefined) {
 				return
 			}
@@ -50,8 +56,6 @@ function SearchPage() {
 	}
 
 	async function performSearch(search, city) {
-		console.log('performSearch', search, city)
-
 		if (search === undefined || search === '') {
 			return
 		}
@@ -70,6 +74,7 @@ function SearchPage() {
 		await new Promise(resolve => setTimeout(resolve, 2500))
 
 		setSearchResults(results)
+		setLastSearch({ search, city })
 		setIsSearching(false)
 		setHasSearched(true)
 	}
@@ -222,8 +227,6 @@ function SearchPage() {
 									<h3 className="mb-2 font-bold">
 										{result.first_name} {result.last_name}
 									</h3>
-
-									{console.log(result)}
 									{/*<Image src={result.} alt={}></Image> */}
 									<p>Spécialité : {result.speciality}</p>
 									<p>Ville : {result.city}</p>
