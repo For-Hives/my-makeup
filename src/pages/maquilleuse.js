@@ -1,20 +1,14 @@
 import Head from 'next/head'
 import Image from 'next/image'
-import SearchBloc from '@/components/Global/SearchBloc'
 import { CheckCircleIcon } from '@heroicons/react/24/outline'
 import Nav from '@/components/Global/Nav'
 import Footer from '@/components/Global/Footer'
 import ResponsiveTemporary from '@/components/Global/ResponsiveTemporary'
 import Hero from '@/components/Global/Hero'
-import Presentation from '@/components/Home/Presentation'
-import Talents from '@/components/Home/Talents'
-import Collaboration from '@/components/Home/Collaboration'
-import Project from '@/components/Home/Project'
 import CTA from '@/components/Global/CTA'
 import React from 'react'
 
 /**
- * todo : add content
  * @param props
  * @constructor
  */
@@ -99,42 +93,7 @@ function PourquoiMyMakeup() {
 			</Head>
 
 			<Nav />
-			{/*<main className="relative bg-white pt-[90px]">*/}
-			{/*	<div*/}
-			{/*		className={*/}
-			{/*			'absolute bottom-0 left-1/2 z-20 flex w-full -translate-x-1/2 transform items-end justify-center'*/}
-			{/*		}*/}
-			{/*	>*/}
-			{/*		<SearchBloc />*/}
-			{/*	</div>*/}
-			{/*	<div className="mx-auto max-w-7xl">*/}
-			{/*		<div className="relative z-10 lg:w-full lg:max-w-2xl">*/}
-			{/*			<svg*/}
-			{/*				className="absolute inset-y-0 right-8 hidden h-full w-full translate-x-1/2 transform fill-white lg:block"*/}
-			{/*				viewBox="0 0 100 100"*/}
-			{/*				preserveAspectRatio="none"*/}
-			{/*				aria-hidden="true"*/}
-			{/*			>*/}
-			{/*				<polygon points="0,0 90,0 50,100 0,100" />*/}
-			{/*			</svg>*/}
-			{/*			/!* loop to repeat div *!/*/}
-			{/*			<div className="relative z-10 px-6 py-32 sm:py-40 lg:px-8 lg:pb-80 lg:pr-0 lg:pt-52">*/}
-			{/*				<div className="mx-auto max-w-2xl lg:mx-0 lg:max-w-xl">*/}
-			{/*					<h1 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">*/}
-			{/*						Pourquoi rejoindre{' '}*/}
-			{/*						<span className={'text-indigo-900'}>My&nbsp;Makeup</span> en*/}
-			{/*						tant que maquilleuse professionnelle ?*/}
-			{/*					</h1>*/}
-			{/*					<p className="mt-6 text-lg leading-8 text-slate-700">*/}
-			{/*						Découvrez les avantages à rejoindre notre communauté pour*/}
-			{/*						développer votre activité et atteindre une nouvelle clientèle.*/}
-			{/*					</p>*/}
-			{/*				</div>*/}
-			{/*			</div>*/}
-			{/*		</div>*/}
-			{/*	</div>*/}
 
-			{/*</main>*/}
 			<div className={'relative'}>
 				<Image
 					src={'/assets/coming-soon.svg'}
@@ -156,10 +115,12 @@ function PourquoiMyMakeup() {
 								tant que maquilleuse professionnelle ?
 							</>
 						}
-						description="
-													Découvrez les avantages à rejoindre notre communauté pour
-									développer votre activité et atteindre une nouvelle clientèle.
-								"
+						description={
+							<>
+								Découvrez les avantages à rejoindre notre communauté pour
+								développer votre activité et atteindre une nouvelle clientèle.
+							</>
+						}
 					/>
 					<section className="bg-neutral-50 py-24">
 						<div className="overflow-hidden bg-neutral-50 px-4 py-16 sm:px-6 lg:px-8 lg:py-24">
