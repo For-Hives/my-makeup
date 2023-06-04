@@ -39,14 +39,19 @@ export default function Home() {
 				<main className={'relative'}>
 					<ResponsiveTemporary />
 					<Hero
-						title="
-								Trouver la maquilleuse qui vous correspond n'a jamais été
-										aussi simple"
-						description="
-							Trouvez la maquilleuse spécialisée dans le domaine que vous
-										recherchez, maquillage pour les mariées, maquillage de soirée,
-										maquillage professionnel...
-								"
+						title={
+							<>
+								Trouver la maquilleuse qui vous correspond n&apos;a jamais été
+								aussi simple
+							</>
+						}
+						description={
+							<>
+								Trouvez la maquilleuse spécialisée dans le domaine que vous
+								recherchez, maquillage pour les mariées, maquillage de soirée,
+								maquillage professionnel...
+							</>
+						}
 					/>
 					<Presentation />
 					<Talents />
