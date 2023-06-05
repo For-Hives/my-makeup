@@ -42,7 +42,7 @@ export default function Home() {
 						title={
 							<>
 								Trouver la maquilleuse qui vous correspond n&apos;a jamais été
-								aussi simple
+								aussi simple !
 							</>
 						}
 						description={
