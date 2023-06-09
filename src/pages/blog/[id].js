@@ -1,73 +1,17 @@
-import React from 'react'
-import Footer from '@/components/Global/Footer'
-import Nav from '@/components/Global/Nav'
-import ResponsiveTemporary from '@/components/Global/ResponsiveTemporary'
+import { getArticleIdList, getArticlesDetails } from '../../../lib/articles'
 import Head from 'next/head'
+import Nav from '@components/Global/Nav'
 import Image from 'next/image'
+import Router from 'next/router'
+import React from 'react'
+import Footer from '@components/Global/Footer'
+import ResponsiveTemporary from '@/components/Global/ResponsiveTemporary'
 import Hero from '@/components/Global/Hero'
-import CTA from '@/components/Global/CTA'
 import Link from 'next/link'
+import CTA from '@/components/Global/CTA'
 import { useQuery } from '@tanstack/react-query'
-import Loader from '@/components/Global/Loader'
-import { read } from 'to-vfile'
-import { unified } from 'unified'
-import remarkParse from 'remark-parse'
-import remarkHtml from 'remark-html'
 
-/**
- * todo : add content
- * @param props
- * @constructor
- */
-function Blog(props) {
-	const [file, setFile] = React.useState(null)
-
-	const { isLoading, isError, data, error } = useQuery({
-		queryKey: ['articles'],
-		queryFn: async () => {
-			const res = await fetch(
-				`${process.env.NEXT_PUBLIC_API_URL}api/articles`,
-				{
-					method: 'GET',
-					headers: {
-						// 	token
-						'Content-Type': 'application/json',
-						Accept: 'application/json',
-					},
-				}
-			)
-			return res.json()
-		},
-	})
-
-	async function test() {
-		setFile(
-			await unified()
-				.use(remarkParse)
-				.use(remarkHtml)
-				.process(await read())
-		)
-	}
-
-	React.useEffect(() => {
-		if (!isLoading && !isError) {
-			test()
-		}
-	}, [])
-
-	React.useEffect(() => {
-		if (!isLoading && !isError) {
-			console.log(file)
-		}
-	}, [file])
-
-	if (isLoading) return <Loader />
-
-	if (error) return 'An error has occurred: ' + error.message
-
-	const articles = data.data
-	console.log(data)
-
+export default function Article({ articleData }) {
 	return (
 		<>
 			<Head>
@@ -91,15 +35,6 @@ function Blog(props) {
 				<Nav />
 				<main className={'relative'}>
 					<ResponsiveTemporary />
-					<Hero
-						title={<>Blog & News</>}
-						description={
-							<>
-								Les actualités de My-Makeup, ce que nous faisons pour améliorer
-								votre quotidien ! Et les nouveautés qui arrivent bientôt !
-							</>
-						}
-					/>
 					<section className={'relative py-20'}>
 						<div className="mx-auto max-w-7xl">
 							<div className="mx-auto mb-10">
@@ -162,4 +97,55 @@ function Blog(props) {
 	)
 }
 
-export default Blog
+export async function getStaticPaths() {
+	const pb = initPocketBase()
+	const res = await pb.collection('albums_ids').getFullList()
+	/**
+	 * format the data for getStaticPaths
+	 * @type {{params: {id: *}}[]}
+	 */
+	const paths = res.map(record => ({
+		params: {
+			id: record.id,
+		},
+	}))
+	return {
+		paths,
+		fallback: false,
+	}
+}
+
+export async function getStaticProps({ params }) {
+	// const pb = initPocketBase()
+	const { isLoading, isError, data, error } = useQuery({
+		queryKey: ['article', params.id],
+		queryFn: async () => {
+			const res = await fetch(
+				`${process.env.NEXT_PUBLIC_API_URL}api/article/${params.id}`,
+				{
+					method: 'GET',
+					headers: {
+						// 	token
+						'Content-Type': 'application/json',
+						Accept: 'application/json',
+					},
+				}
+			)
+			return res.json()
+		},
+	})
+
+	const record = await pb.collection('albums').getOne(params.id)
+	const albumData = await getArticlesDetails(params.id)
+
+	if (!albumData) {
+		return {
+			props: { hasError: true },
+		}
+	}
+	return {
+		props: {
+			albumData,
+		},
+	}
+}
