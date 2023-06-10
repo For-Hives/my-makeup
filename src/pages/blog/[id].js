@@ -98,8 +98,15 @@ export default function Article({ articleData }) {
 }
 
 export async function getStaticPaths() {
-	const pb = initPocketBase()
-	const res = await pb.collection('albums_ids').getFullList()
+	const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}api/articles`, {
+		method: 'GET',
+		headers: {
+			// 	token
+			'Content-Type': 'application/json',
+			Accept: 'application/json',
+		},
+	})
+
 	/**
 	 * format the data for getStaticPaths
 	 * @type {{params: {id: *}}[]}
@@ -116,26 +123,18 @@ export async function getStaticPaths() {
 }
 
 export async function getStaticProps({ params }) {
-	// const pb = initPocketBase()
-	const { isLoading, isError, data, error } = useQuery({
-		queryKey: ['article', params.id],
-		queryFn: async () => {
-			const res = await fetch(
-				`${process.env.NEXT_PUBLIC_API_URL}api/article/${params.id}`,
-				{
-					method: 'GET',
-					headers: {
-						// 	token
-						'Content-Type': 'application/json',
-						Accept: 'application/json',
-					},
-				}
-			)
-			return res.json()
-		},
-	})
+	const res = await fetch(
+		`${process.env.NEXT_PUBLIC_API_URL}api/article/${params.id}`,
+		{
+			method: 'GET',
+			headers: {
+				// 	token
+				'Content-Type': 'application/json',
+				Accept: 'application/json',
+			},
+		}
+	)
 
-	const record = await pb.collection('albums').getOne(params.id)
 	const albumData = await getArticlesDetails(params.id)
 
 	if (!albumData) {

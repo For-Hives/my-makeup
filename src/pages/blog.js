@@ -9,19 +9,13 @@ import CTA from '@/components/Global/CTA'
 import Link from 'next/link'
 import { useQuery } from '@tanstack/react-query'
 import Loader from '@/components/Global/Loader'
-import { read } from 'to-vfile'
-import { unified } from 'unified'
-import remarkParse from 'remark-parse'
-import remarkHtml from 'remark-html'
+import { convertToStringDate } from '@/services/utils'
 
 /**
- * todo : add content
  * @param props
  * @constructor
  */
 function Blog(props) {
-	const [file, setFile] = React.useState(null)
-
 	const { isLoading, isError, data, error } = useQuery({
 		queryKey: ['articles'],
 		queryFn: async () => {
@@ -40,33 +34,13 @@ function Blog(props) {
 		},
 	})
 
-	async function test() {
-		setFile(
-			await unified()
-				.use(remarkParse)
-				.use(remarkHtml)
-				.process(await read())
-		)
-	}
-
-	React.useEffect(() => {
-		if (!isLoading && !isError) {
-			test()
-		}
-	}, [])
-
-	React.useEffect(() => {
-		if (!isLoading && !isError) {
-			console.log(file)
-		}
-	}, [file])
-
 	if (isLoading) return <Loader />
 
 	if (error) return 'An error has occurred: ' + error.message
 
 	const articles = data.data
-	console.log(data)
+	// take only the first 3 articles
+	const lastArticles = articles.slice(0, 3)
 
 	return (
 		<>
@@ -103,40 +77,56 @@ function Blog(props) {
 					<section className={'relative py-20'}>
 						<div className="mx-auto max-w-7xl">
 							<div className="mx-auto mb-10">
-								<h2 className="text-start text-4xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-									Gardez votre projet beauté en tête, on s&apos;occupe du reste
+								<h2 className="w-1/2 text-start text-4xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+									Nos derniers articles & actualités !
 								</h2>
 								<p className="mt-6 w-1/2 text-start text-lg text-slate-700">
-									Trouvez les meilleures maquilleuses, planifiez votre projet,
-									payez et recevez des paiements, le tout dans une solution
-									unifiée. Oui, vous avez bien lu.
+									{
+										"My Makeup, plus qu'une plateforme de mise en relation, une équipe de passionnés à votre service !"
+									}
 								</p>
 							</div>
 
-							<section className={'mx-auto flex max-w-7xl gap-32'}>
+							<section className={'mx-auto mb-32 mt-16 flex max-w-7xl gap-32'}>
 								<div className={'w-1/2'}>
-									<div className={'flex flex-col gap-2'}>
-										{articles &&
-											articles.map(article => (
-												<div key={article.id}>
-													{/*<p>{article.attributes.updatedAt.date}</p>*/}
+									<div className={'flex flex-col gap-16'}>
+										{articles ? (
+											lastArticles.map(article => (
+												<div className={'flex flex-col gap-2'} key={article.id}>
+													<p
+														className={'relative pl-2 text-base text-slate-400'}
+													>
+														{convertToStringDate(article.attributes.updatedAt)}
+														<div
+															className={
+																'absolute left-0 top-0 h-full w-0.5 bg-slate-300'
+															}
+														></div>
+													</p>
 													<h2
-														className={'mb-4 text-xl font-bold text-slate-700'}
+														className={'text-lg font-semibold text-slate-900'}
 													>
 														{article.attributes.title}
 													</h2>
-													{/*<div*/}
-													{/*	className={'text-sm text-slate-500'}*/}
-													{/*	dangerouslySetInnerHTML={article.attributes.content}*/}
-													{/*/>*/}
+													<p className={'text-sm text-slate-700'}>
+														{article.attributes.excerpt}
+													</p>
 													<Link
-														className={''}
+														className={
+															'flex items-center font-medium text-indigo-900'
+														}
 														href={`/blog/${article.attributes.slug}`}
 													>
-														Read article {'>'}
+														{"Lire l'article"}
+														<span className="material-icons-round text-base text-indigo-900">
+															chevron_right
+														</span>
 													</Link>
 												</div>
-											))}
+											))
+										) : (
+											<p>No articles</p>
+										)}
 									</div>
 								</div>
 								<div className={'flex w-1/2 items-center justify-center'}>
