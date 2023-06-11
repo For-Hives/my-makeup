@@ -26,9 +26,6 @@ function ArrowLeftIcon(props) {
 export default function Article({ articleData }) {
 	let router = useRouter()
 
-	console.log('----------- log ------------')
-	console.log('articleData', articleData)
-
 	const meta = articleData
 
 	return (
@@ -113,7 +110,6 @@ export async function getStaticPaths() {
 	const paths = res?.data?.map(record => ({
 		params: {
 			id: record.attributes.slug,
-			data: record.id,
 		},
 	}))
 	return {
@@ -122,7 +118,7 @@ export async function getStaticPaths() {
 	}
 }
 
-export async function getStaticProps({ params }) {
+export async function getStaticProps({ params, data }) {
 	const res = await fetch(
 		`${process.env.NEXT_PUBLIC_API_URL}api/article/${params.data}`,
 		{
