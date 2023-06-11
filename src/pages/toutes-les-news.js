@@ -15,7 +15,7 @@ import { convertToStringDate } from '@/services/utils'
  * @param props
  * @constructor
  */
-function Blog(props) {
+function ToutesLesNews(props) {
 	const { isLoading, isError, data, error } = useQuery({
 		queryKey: ['articles'],
 		queryFn: async () => {
@@ -39,13 +39,11 @@ function Blog(props) {
 	if (error) return 'An error has occurred: ' + error.message
 
 	const articles = data.data
-	// take only the first 3 articles
-	const lastArticles = articles.slice(0, 3)
 
 	return (
 		<>
 			<Head>
-				<title>My Makeup</title>
+				<title>My Makeup tous les articles !</title>
 				<meta
 					name="description"
 					content="L'actualité de My-Makeup, ce que nous faisons pour améliorer votre quotidien !
@@ -66,7 +64,7 @@ function Blog(props) {
 				<main className={'relative'}>
 					<ResponsiveTemporary />
 					<Hero
-						title={<>Blog & News</>}
+						title={<>Toutes nos news & articles</>}
 						description={
 							<>
 								Les actualités de My-Makeup, ce que nous faisons pour améliorer
@@ -78,7 +76,7 @@ function Blog(props) {
 						<div className="mx-auto max-w-7xl">
 							<div className="mx-auto mb-10">
 								<h2 className="w-1/2 text-start text-4xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-									Nos derniers articles & actualités !
+									Nos articles & actualités !
 								</h2>
 								<p className="mt-6 w-1/2 text-start text-lg text-slate-700">
 									{
@@ -88,10 +86,10 @@ function Blog(props) {
 							</div>
 
 							<section className={'mx-auto mb-32 mt-16 flex max-w-7xl gap-32'}>
-								<div className={'w-1/2'}>
-									<div className={'flex flex-col gap-16'}>
+								<div className={'w-full'}>
+									<div className={'grid grid-cols-4 gap-8'}>
 										{articles ? (
-											lastArticles.map(article => (
+											articles.map(article => (
 												<div className={'flex flex-col gap-2'} key={article.id}>
 													<div
 														className={'relative pl-2 text-base text-slate-400'}
@@ -129,32 +127,6 @@ function Blog(props) {
 										)}
 									</div>
 								</div>
-								<div
-									className={'flex w-1/2 flex-col items-center justify-center'}
-								>
-									<Image
-										className={
-											'h-[500px] w-full rounded-2xl object-cover object-top'
-										}
-										src={'/assets/maquilleuse_project.webp'}
-										alt={'illustration'}
-										width={'500'}
-										height={'350'}
-									/>
-									<div className={'mt-8 flex w-full justify-end'}>
-										<Link
-											href={'/toutes-les-news'}
-											className={
-												'flex items-center font-medium text-indigo-900'
-											}
-										>
-											Voir toutes les news & articles
-											<span className="material-icons-round text-base text-indigo-900">
-												chevron_right
-											</span>
-										</Link>
-									</div>
-								</div>
 							</section>
 						</div>
 					</section>
@@ -167,4 +139,4 @@ function Blog(props) {
 	)
 }
 
-export default Blog
+export default ToutesLesNews
