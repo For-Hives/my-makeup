@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -15,53 +15,74 @@ import { useQuery } from '@tanstack/react-query'
 import Loader from '@/components/Global/Loader'
 
 function InitAccount() {
-	console.log('InitAccount')
+	const [step, setStep] = useState(1)
+	const [userLoaded, setUserLoaded] = useState(false)
+
+	const router = useRouter()
 
 	// get current user id
 	const { data: session } = useSession()
-	const router = useRouter()
 
-	const { isLoading, isError, data, error } = useQuery({
-		queryKey: ['users/me-makeup'],
-		queryFn: async () => {
-			const res = await fetch(
-				`${process.env.NEXT_PUBLIC_API_URL}api/me-makeup`,
-				{
-					method: 'GET',
-					headers: {
-						// 	token
-						'Content-Type': 'application/json',
-						Accept: 'application/json',
-						Authorization: `Bearer ${session.jwt}`,
-					},
-				}
-			)
-			return res.json()
-		},
-	})
+	console.log('session', session)
 
 	useEffect(() => {
 		if (!session) return
+		//  get user data
 
-		fetch(`${process.env.NEXT_PUBLIC_API_URL}api/me-makeup`, {
-			method: 'POST',
-			headers: {
-				// 	token
-				'Content-Type': 'application/json',
-				Accept: 'application/json',
-				Authorization: `Bearer ${session.jwt}`,
-			},
-			body: JSON.stringify({}),
-		})
-			.then(response => {
-				if (response.status === 200) {
-					console.log('response', response.body)
-				}
+		if (session.user) {
+			console.log('Sessuion user', session.user)
+
+			// see if user is verified
+
+			if (session.user.emailVerified) {
+				// if not, 1 stepper : verify email
+
+				setUserLoaded(true)
+			}
+
+			// if yes, 2 stepper : init account
+			// if yes, 3 stepper : name + last name
+			// if yes, 4 stepper : go to profil page
+
+			const res = fetch(`${process.env.NEXT_PUBLIC_API_URL}api/users/me`, {
+				method: 'GET',
+				headers: {
+					// 	token
+					'Content-Type': 'application/json',
+					Accept: 'application/json',
+					Authorization: `Bearer ${session.jwt}`,
+				},
+			}).then(res => {
+				console.log('res', res)
+				setUserLoaded(true)
 			})
-			.catch(err => {
-				console.log(err)
+			return res.json()
+		}
+
+		if (userLoaded) {
+			fetch(`${process.env.NEXT_PUBLIC_API_URL}api/me-makeup`, {
+				method: 'POST',
+				headers: {
+					// 	token
+					'Content-Type': 'application/json',
+					Accept: 'application/json',
+					Authorization: `Bearer ${session.jwt}`,
+				},
+				body: JSON.stringify({}),
 			})
-	}, [session])
+				.then(response => {
+					if (response.status === 200) {
+						console.log('response', response.body)
+					}
+				})
+				.catch(err => {
+					console.log(err)
+				})
+			console.log('InitAccount')
+
+			console.log('userLoaded', userLoaded)
+		}
+	}, [session, userLoaded, step])
 
 	const steps = [
 		{ name: 'Step 1', href: '#', status: 'complete' },
@@ -94,7 +115,85 @@ function InitAccount() {
 						<div className="px-4 py-5 sm:px-6">
 							{/* Content goes here */}
 							{/* We use less vertical padding on card headers on desktop than on body sections */}
-							Nom et prenom
+
+							<nav aria-label="Progress">
+								<ol
+									role="list"
+									className="divide-y divide-gray-300 rounded-md border border-gray-300 md:flex md:divide-y-0"
+								>
+									{steps.map((step, stepIdx) => (
+										<li key={step.name} className="relative md:flex md:flex-1">
+											{step.status === 'complete' ? (
+												<a
+													href={step.href}
+													className="group flex w-full items-center"
+												>
+													<span className="flex items-center px-6 py-4 text-sm font-medium">
+														<span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-indigo-600 group-hover:bg-indigo-800">
+															<CheckIcon
+																className="h-6 w-6 text-white"
+																aria-hidden="true"
+															/>
+														</span>
+														<span className="ml-4 text-sm font-medium text-gray-900">
+															{step.name}
+														</span>
+													</span>
+												</a>
+											) : step.status === 'current' ? (
+												<a
+													href={step.href}
+													className="flex items-center px-6 py-4 text-sm font-medium"
+													aria-current="step"
+												>
+													<span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border-2 border-indigo-600">
+														<span className="text-indigo-600">{step.id}</span>
+													</span>
+													<span className="ml-4 text-sm font-medium text-indigo-600">
+														{step.name}
+													</span>
+												</a>
+											) : (
+												<a href={step.href} className="group flex items-center">
+													<span className="flex items-center px-6 py-4 text-sm font-medium">
+														<span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border-2 border-gray-300 group-hover:border-gray-400">
+															<span className="text-gray-500 group-hover:text-gray-900">
+																{step.id}
+															</span>
+														</span>
+														<span className="ml-4 text-sm font-medium text-gray-500 group-hover:text-gray-900">
+															{step.name}
+														</span>
+													</span>
+												</a>
+											)}
+											{stepIdx !== steps.length - 1 ? (
+												<>
+													{/* Arrow separator for lg screens and up */}
+													<div
+														className="absolute right-0 top-0 hidden h-full w-5 md:block"
+														aria-hidden="true"
+													>
+														<svg
+															className="h-full w-full text-gray-300"
+															viewBox="0 0 22 80"
+															fill="none"
+															preserveAspectRatio="none"
+														>
+															<path
+																d="M0 -2L20 40L0 82"
+																vectorEffect="non-scaling-stroke"
+																stroke="currentcolor"
+																strokeLinejoin="round"
+															/>
+														</svg>
+													</div>
+												</>
+											) : null}
+										</li>
+									))}
+								</ol>
+							</nav>
 						</div>
 						<div className="bg-gray-50 px-4 py-5 sm:p-6">
 							{/* Content goes here */}
