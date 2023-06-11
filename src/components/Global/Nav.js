@@ -178,18 +178,22 @@ function Nav() {
 														signOut()
 													}}
 													className=""
-													href={'/signin'}
+													href={'/auth/signin'}
 												>
-													<span className={'btn-primary-simple'}>
+													<span
+														className={
+															'btn-primary-simple border-red-500  text-red-600'
+														}
+													>
 														Me déconnecter
 													</span>
 												</Link>
-												<Link className="" href={'/profil'}>
+												<Link className="" href={'/auth/profil'}>
 													<span className={'btn-primary'}>Profil</span>
 												</Link>
 											</>
 										) : (
-											<Link href="/signin" className="">
+											<Link href="/auth/signin" className="">
 												<span className={'btn-primary-simple'}>
 													Me connecter
 												</span>

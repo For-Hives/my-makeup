@@ -86,7 +86,7 @@ function Signup() {
 												<button
 													onClick={() => {
 														signIn('facebook', {
-															callbackUrl: '/init-account',
+															callbackUrl: '/auth/init-account',
 														})
 													}}
 													className="inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-slate-500 shadow-sm ring-1 ring-inset ring-slate-300 hover:bg-slate-50 focus:outline-offset-0"
@@ -113,7 +113,7 @@ function Signup() {
 												<button
 													onClick={() => {
 														signIn('google', {
-															callbackUrl: '/init-account',
+															callbackUrl: '/auth/init-account',
 														})
 													}}
 													className="inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-slate-500 shadow-sm ring-1 ring-inset ring-slate-300 hover:bg-slate-50 focus:outline-offset-0"
@@ -260,7 +260,7 @@ function Signup() {
 												className={
 													'font-semibold text-indigo-700 hover:text-indigo-700 hover:underline'
 												}
-												href={'/signin'}
+												href={'/auth/signin'}
 											>
 												Connecte toi
 											</Link>
@@ -271,9 +271,22 @@ function Signup() {
 						)}
 						{!!(session && session.user && !_.isEmpty(session.user)) && (
 							<div className={'mt-8'}>
+								<h2 className={'my-8 text-2xl font-semibold text-slate-900'}>
+									Vous êtes déjà connecté
+								</h2>
+
+								<Link
+									href={'/auth/init-account'}
+									className={
+										'radius-2xl my-8 border-2 border-indigo-700 px-4 py-2 text-indigo-700 hover:text-indigo-700 hover:underline'
+									}
+								>
+									Retourner à mon profile
+								</Link>
+
 								<button
 									type="submit"
-									className="btn-primary-large"
+									className="btn-primary-large mt-8"
 									onClick={() => {
 										signOut()
 									}}
