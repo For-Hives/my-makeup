@@ -93,7 +93,7 @@ function Blog(props) {
 										{articles ? (
 											lastArticles.map(article => (
 												<div className={'flex flex-col gap-2'} key={article.id}>
-													<p
+													<div
 														className={'relative pl-2 text-base text-slate-400'}
 													>
 														{convertToStringDate(article.attributes.updatedAt)}
@@ -102,7 +102,7 @@ function Blog(props) {
 																'absolute left-0 top-0 h-full w-0.5 bg-slate-300'
 															}
 														></div>
-													</p>
+													</div>
 													<h2
 														className={'text-lg font-semibold text-slate-900'}
 													>
