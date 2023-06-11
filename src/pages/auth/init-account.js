@@ -16,7 +16,7 @@ import Loader from '@/components/Global/Loader'
 
 function InitAccount() {
 	const [step, setStep] = useState(1)
-	const [userLoaded, setUserLoaded] = useState(false)
+	const [user, setUser] = useState(null)
 
 	const router = useRouter()
 
@@ -34,55 +34,50 @@ function InitAccount() {
 
 			// see if user is verified
 
-			if (session.user.emailVerified) {
-				// if not, 1 stepper : verify email
-
-				setUserLoaded(true)
+			if (user === null) {
+				fetch(`${process.env.NEXT_PUBLIC_API_URL}api/users/me`, {
+					method: 'GET',
+					headers: {
+						// 	token
+						'Content-Type': 'application/json',
+						Accept: 'application/json',
+						Authorization: `Bearer ${session.jwt}`,
+					},
+				}).then(res => {
+					console.log('res', res.json())
+				})
 			}
 
-			// if yes, 2 stepper : init account
+			if (session.user.verified) {
+				// if not, 1 stepper : verify email
+			} else {
+				// if yes, 2 stepper : init account
+
+				fetch(`${process.env.NEXT_PUBLIC_API_URL}api/me-makeup`, {
+					method: 'POST',
+					headers: {
+						// 	token
+						'Content-Type': 'application/json',
+						Accept: 'application/json',
+						Authorization: `Bearer ${session.jwt}`,
+					},
+					body: JSON.stringify({}),
+				})
+					.then(response => {
+						if (response.status === 200) {
+							console.log('response', response.body)
+						}
+					})
+					.catch(err => {
+						console.log(err)
+					})
+				console.log('InitAccount')
+			}
+
 			// if yes, 3 stepper : name + last name
 			// if yes, 4 stepper : go to profil page
-
-			const res = fetch(`${process.env.NEXT_PUBLIC_API_URL}api/users/me`, {
-				method: 'GET',
-				headers: {
-					// 	token
-					'Content-Type': 'application/json',
-					Accept: 'application/json',
-					Authorization: `Bearer ${session.jwt}`,
-				},
-			}).then(res => {
-				console.log('res', res)
-				setUserLoaded(true)
-			})
-			return res.json()
 		}
-
-		if (userLoaded) {
-			fetch(`${process.env.NEXT_PUBLIC_API_URL}api/me-makeup`, {
-				method: 'POST',
-				headers: {
-					// 	token
-					'Content-Type': 'application/json',
-					Accept: 'application/json',
-					Authorization: `Bearer ${session.jwt}`,
-				},
-				body: JSON.stringify({}),
-			})
-				.then(response => {
-					if (response.status === 200) {
-						console.log('response', response.body)
-					}
-				})
-				.catch(err => {
-					console.log(err)
-				})
-			console.log('InitAccount')
-
-			console.log('userLoaded', userLoaded)
-		}
-	}, [session, userLoaded, step])
+	}, [session, user, step])
 
 	const steps = [
 		{ name: 'Step 1', href: '#', status: 'complete' },
@@ -92,10 +87,10 @@ function InitAccount() {
 		{ name: 'Step 5', href: '#', status: 'upcoming' },
 	]
 
-	if (isLoading) return <Loader />
+	// if (isLoading) return <Loader />
 
-	if (error) return 'An error has occurred: ' + error.message
-	const user = data
+	// if (error) return 'An error has occurred: ' + error.message
+	// const user = data
 
 	return (
 		<>
@@ -198,9 +193,7 @@ function InitAccount() {
 						<div className="bg-gray-50 px-4 py-5 sm:p-6">
 							{/* Content goes here */}
 
-							<div>
-								<ResumeProfil user={user}></ResumeProfil>
-							</div>
+							<div>{/*<ResumeProfil user={user}></ResumeProfil>*/}</div>
 						</div>
 					</div>
 				</div>
