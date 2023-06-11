@@ -8,6 +8,8 @@ import ResponsiveTemporary from '@/components/Global/ResponsiveTemporary'
 import CTA from '@/components/Global/CTA'
 import { convertToStringDate } from '@/services/utils'
 import Link from 'next/link'
+import { remark } from 'remark'
+import html from 'remark-html'
 
 function ArrowLeftIcon(props) {
 	return (
@@ -73,7 +75,7 @@ export default function Article({ articleData }) {
 											{meta.title}
 										</h1>
 										<time
-											dateTime={meta.updatedAt}
+											dateTime={meta.updatedAt.toString()}
 											className="order-first flex items-center text-base text-zinc-400 dark:text-zinc-500"
 										>
 											<span className="h-4 w-0.5 rounded-full bg-zinc-200 dark:bg-zinc-500" />
@@ -82,7 +84,12 @@ export default function Article({ articleData }) {
 											</span>
 										</time>
 									</header>
-									{/*<div className="prose mt-8 xl:prose-xl">{meta.content}</div>*/}
+									<div
+										className="prose mt-8 xl:prose-xl"
+										dangerouslySetInnerHTML={{
+											__html: meta.content.toString(),
+										}}
+									/>
 								</article>
 							)}
 						</div>
@@ -140,9 +147,23 @@ export async function getStaticProps({ params }) {
 			props: { hasError: true },
 		}
 	}
+
+	// Convert Markdown to HTML
+	const processedContent = await remark()
+		.use(html)
+		.process(articleData.attributes.content)
+
+	const newArticleData = {
+		...articleData,
+		attributes: {
+			...articleData.attributes,
+			content: processedContent.toString(),
+		},
+	}
+
 	return {
 		props: {
-			articleData,
+			articleData: newArticleData,
 		},
 	}
 }
