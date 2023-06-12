@@ -41,7 +41,7 @@ function Collaboration() {
 							</p>
 						</div>
 						<div className={'flex'}>
-							<Link href="/signup" className={'btn-primary'}>
+							<Link href="/auth/signup" className={'btn-primary'}>
 								Rejoindre la communauté
 							</Link>
 						</div>
@@ -105,7 +105,7 @@ function Collaboration() {
 							</p>
 						</div>
 						<div className={'flex'}>
-							<Link href="/signup" className={'btn-primary'}>
+							<Link href="/auth/signup" className={'btn-primary'}>
 								J&apos;améliore ma visibilité
 							</Link>
 						</div>

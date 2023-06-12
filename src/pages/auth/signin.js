@@ -11,21 +11,17 @@ import ResponsiveTemporary from '@/components/Global/ResponsiveTemporary'
 // import { router } from 'next/client'
 
 const schema = yup.object().shape({
-	email: yup
-		.string()
-		.required("L'email est requis")
-		.email("L'email est invalide"),
+	email: yup.string().required('Email est requis').email('Email invalide'),
 	password: yup
 		.string()
-		.required('Le mot de passe est requis')
+		.required('Mot de passe est requis')
 		.matches(
-			/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])(?=.{8,})/,
+			/^(?=.+[a-z])(?=.+[A-Z])(?=.+\d)(?=.+[!@#$%^&*]).{8,}/,
 			'Le mot de passe doit contenir au moins 8 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial'
 		),
-	name: yup.string().required('Le nom de compte est requis'),
 })
 
-function Signup() {
+function Signin() {
 	const {
 		register,
 		handleSubmit,
@@ -37,14 +33,10 @@ function Signup() {
 	const { data: session } = useSession()
 
 	const onSubmit = data => {
-		/**
-		 * Signin function with name setted : register mode
-		 */
 		const result = signIn('credentials', {
 			email: data.email,
 			password: data.password,
-			name: data.name,
-			callbackUrl: '/profil',
+			callbackUrl: '/auth/profil',
 		})
 	}
 
@@ -54,7 +46,7 @@ function Signup() {
 				<title>My Makeup</title>
 				<meta
 					name="description"
-					content="Inscription sur my-makeup.fr la plateforme qui va révolutionner votre
+					content="Connexion sur my-makeup.fr la plateforme qui va révolutionner votre
 	            recherche de maquilleuses professionnelles, ou votre recherche de client !"
 				/>
 			</Head>
@@ -71,7 +63,10 @@ function Signup() {
 								src="/assets/logo_2.webp"
 							/>
 							<h2 className="mt-6 text-3xl font-bold tracking-tight text-slate-900">
-								{"S'inscrire"}
+								{session && session.user && !_.isEmpty(session.user)
+									? 'Bonjour ' +
+									  (session.user.name ? session.user.name : session.user.email)
+									: 'Se connecter'}
 							</h2>
 						</div>
 						{!(session && session.user && !_.isEmpty(session.user)) && (
@@ -86,7 +81,7 @@ function Signup() {
 												<button
 													onClick={() => {
 														signIn('facebook', {
-															callbackUrl: '/profil',
+															callbackUrl: '/auth/profil',
 														})
 													}}
 													className="inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-slate-500 shadow-sm ring-1 ring-inset ring-slate-300 hover:bg-slate-50 focus:outline-offset-0"
@@ -113,7 +108,7 @@ function Signup() {
 												<button
 													onClick={() => {
 														signIn('google', {
-															callbackUrl: '/profil',
+															callbackUrl: '/auth/profil',
 														})
 													}}
 													className="inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-slate-500 shadow-sm ring-1 ring-inset ring-slate-300 hover:bg-slate-50 focus:outline-offset-0"
@@ -138,7 +133,6 @@ function Signup() {
 											</div>
 										</div>
 									</div>
-
 									<div className="relative mt-6">
 										<div
 											className="absolute inset-0 flex items-center"
@@ -158,32 +152,6 @@ function Signup() {
 										method="POST"
 										className="space-y-6"
 									>
-										<div className="space-y-1">
-											<label
-												htmlFor="name"
-												className="block text-sm font-medium leading-6 text-slate-900"
-											>
-												Nom
-											</label>
-											<div className="mt-2">
-												<input
-													id="name"
-													name="name"
-													type="text"
-													autoComplete="current-password"
-													{...register('name', {
-														required: true,
-													})}
-													className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-slate-300
-													placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-												/>
-												{errors.name && (
-													<p className={'mt-2 text-xs text-red-500/80'}>
-														{errors.name.message}
-													</p>
-												)}
-											</div>
-										</div>
 										<div>
 											<label
 												htmlFor="email"
@@ -200,6 +168,7 @@ function Signup() {
 													{...register('email', {
 														required: true,
 													})}
+													required
 													className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
 												/>
 												{errors.email && (
@@ -226,6 +195,7 @@ function Signup() {
 													{...register('password', {
 														required: true,
 													})}
+													required
 													className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
 												/>
 												{errors.password && (
@@ -238,7 +208,7 @@ function Signup() {
 
 										<div className="flex items-center justify-end">
 											<p className={'text-xs'}>
-												En vous inscrivant sur My-Makeup vous confirmez que vous
+												En entrant sur My-Makeup vous confirmez que vous
 												acceptez les{' '}
 												<Link
 													href={'/cgu'}
@@ -249,20 +219,32 @@ function Signup() {
 												</Link>
 											</p>
 										</div>
+										<div className="flex items-center justify-end">
+											<div className="text-sm">
+												{/* todo */}
+												<a
+													href="#"
+													className="font-medium text-indigo-700 hover:text-indigo-500"
+												>
+													Mot de passe oublié ?
+												</a>
+											</div>
+										</div>
+
 										<div>
 											<button type="submit" className="btn-primary-large">
-												{"S'inscrire"}
+												Se connecter
 											</button>
 										</div>
 										<div className={'flex items-center justify-center '}>
-											Déjà un compte ?&nbsp;
+											Pas de compte ?&nbsp;
 											<Link
 												className={
 													'font-semibold text-indigo-700 hover:text-indigo-700 hover:underline'
 												}
-												href={'/signin'}
+												href={'/auth/signup'}
 											>
-												Connecte toi
+												Inscris-toi
 											</Link>
 										</div>
 									</form>
@@ -271,9 +253,22 @@ function Signup() {
 						)}
 						{!!(session && session.user && !_.isEmpty(session.user)) && (
 							<div className={'mt-8'}>
+								<h2 className={'my-8 text-2xl font-semibold text-slate-900'}>
+									Vous êtes déjà connecté
+								</h2>
+
+								<Link
+									href={'/auth/profil'}
+									className={
+										'radius-2xl my-8 border-2 border-indigo-700 px-4 py-2 text-indigo-700 hover:text-indigo-700 hover:underline'
+									}
+								>
+									Retourner à mon profile
+								</Link>
+
 								<button
 									type="submit"
-									className="btn-primary-large"
+									className="btn-primary-large mt-8"
 									onClick={() => {
 										signOut()
 									}}
@@ -302,4 +297,4 @@ function Signup() {
 	)
 }
 
-export default Signup
+export default Signin

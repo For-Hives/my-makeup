@@ -26,7 +26,7 @@ function InfosProfil(props) {
 				<div className={'absolute right-0 top-0 m-8 mt-16 flex'}>
 					{!isPublic ? (
 						<Link
-							href={{ pathname: '/profil', query: { publicView: true } }}
+							href={{ pathname: '/auth/profil', query: { publicView: true } }}
 							className={'flex gap-2 font-semibold text-indigo-900 '}
 						>
 							<span className="material-icons-round text-indigo-900">
@@ -36,7 +36,7 @@ function InfosProfil(props) {
 						</Link>
 					) : (
 						<Link
-							href={{ pathname: '/profil' }}
+							href={{ pathname: '/auth/profil' }}
 							className={'flex gap-2 font-semibold text-indigo-900'}
 						>
 							<span className="material-icons-round text-indigo-900">edit</span>
