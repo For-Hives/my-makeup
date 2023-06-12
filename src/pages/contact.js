@@ -6,19 +6,41 @@ import Head from 'next/head'
 import Image from 'next/image'
 import Hero from '@/components/Global/Hero'
 import { Switch } from '@headlessui/react'
+import { z } from 'zod'
 
 import CTA from '@/components/Global/CTA'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useForm } from 'react-hook-form'
 
-/**
- * todo : add content
- * @param props
- * @constructor
- */
+function classNames(...classes) {
+	return classes.filter(Boolean).join(' ')
+}
+
+const schema = z.object({
+	first_name: z.string().nonempty({ message: 'Le prénom est requis' }),
+	last_name: z.string().nonempty({ message: 'Le nom est requis' }),
+	company: z.string().nonempty({ message: "L'entreprise est requise" }),
+	email: z.string().email({ message: "L'e-mail est invalide" }),
+	phone_number: z
+		.string()
+		.nonempty({ message: 'Le numéro de téléphone est requis' }),
+	message: z.string().nonempty({ message: 'Le message est requis' }),
+})
+
 function Contact(props) {
 	const [agreed, setAgreed] = useState(false)
 
+	const {
+		register,
+		handleSubmit,
+		formState: { errors },
+		reset, // pour réinitialiser le formulaire
+	} = useForm({
+		resolver: zodResolver(schema),
+	})
+
 	// Créez une nouvelle fonction pour gérer la soumission du formulaire
-	const handleSubmit = async event => {
+	const onSubmit = async event => {
 		event.preventDefault()
 
 		const response = await fetch('/api/sendMail', {
@@ -26,10 +48,10 @@ function Contact(props) {
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({
 				firstName: event.target['first-name'].value,
-				lastName: event.target['last-name'].value,
+				lastName: event.target['last_name'].value,
 				company: event.target.company.value,
 				email: event.target.email.value,
-				phoneNumber: event.target['phone-number'].value,
+				phoneNumber: event.target['phone_number'].value,
 				message: event.target.message.value,
 			}),
 		})
@@ -37,6 +59,7 @@ function Contact(props) {
 		if (response.ok) {
 			// Le mail a été envoyé avec succès
 			// Vous pouvez ici gérer le retour à donner à l'utilisateur
+			reset()
 		} else {
 			// Une erreur s'est produite lors de l'envoi du mail
 			// Vous pouvez ici gérer le retour à donner à l'utilisateur
@@ -86,13 +109,13 @@ function Contact(props) {
 						</p>
 					</div>
 					<form
-						onSubmit={handleSubmit}
+						onSubmit={handleSubmit(onSubmit)}
 						className="mx-auto my-32 max-w-xl sm:mt-20"
 					>
 						<div className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-2">
 							<div>
 								<label
-									htmlFor="first-name"
+									htmlFor="first_name"
 									className="block text-sm font-semibold leading-6 text-gray-900"
 								>
 									Prénom
@@ -100,16 +123,22 @@ function Contact(props) {
 								<div className="mt-2.5">
 									<input
 										type="text"
-										name="first-name"
-										id="first-name"
+										name="first_name"
+										id="first_name"
+										{...register('first_name')}
 										autoComplete="given-name"
 										className="block w-full rounded-md border-0 px-3.5 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
 									/>
+									{errors.first_name && (
+										<p className={'mt-2 text-xs text-red-500/80'}>
+											{errors.first_name.message}
+										</p>
+									)}
 								</div>
 							</div>
 							<div>
 								<label
-									htmlFor="last-name"
+									htmlFor="last_name"
 									className="block text-sm font-semibold leading-6 text-gray-900"
 								>
 									Nom
@@ -117,12 +146,17 @@ function Contact(props) {
 								<div className="mt-2.5">
 									<input
 										type="text"
-										name="last-name"
-										id="last-name"
+										name="last_name"
+										id="last_name"
 										autoComplete="family-name"
 										className="block w-full rounded-md border-0 px-3.5 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
 									/>
 								</div>
+								{errors.last_name && (
+									<p className={'mt-2 text-xs text-red-500/80'}>
+										{errors.last_name.message}
+									</p>
+								)}
 							</div>
 							<div className="sm:col-span-2">
 								<label
@@ -140,6 +174,11 @@ function Contact(props) {
 										className="block w-full rounded-md border-0 px-3.5 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
 									/>
 								</div>
+								{errors.company && (
+									<p className={'mt-2 text-xs text-red-500/80'}>
+										{errors.company.message}
+									</p>
+								)}
 							</div>
 							<div className="sm:col-span-2">
 								<label
@@ -157,10 +196,15 @@ function Contact(props) {
 										className="block w-full rounded-md border-0 px-3.5 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
 									/>
 								</div>
+								{errors.email && (
+									<p className={'mt-2 text-xs text-red-500/80'}>
+										{errors.email.message}
+									</p>
+								)}
 							</div>
 							<div className="sm:col-span-2">
 								<label
-									htmlFor="phone-number"
+									htmlFor="phone_number"
 									className="block text-sm font-semibold leading-6 text-gray-900"
 								>
 									Numéro de téléphone
@@ -168,12 +212,17 @@ function Contact(props) {
 								<div className="relative mt-2.5">
 									<input
 										type="tel"
-										name="phone-number"
-										id="phone-number"
+										name="phone_number"
+										id="phone_number"
 										autoComplete="tel"
 										className="block w-full rounded-md border-0 px-3.5 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
 									/>
 								</div>
+								{errors.phone_number && (
+									<p className={'mt-2 text-xs text-red-500/80'}>
+										{errors.phone_number.message}
+									</p>
+								)}
 							</div>
 							<div className="sm:col-span-2">
 								<label
@@ -191,38 +240,37 @@ function Contact(props) {
 										defaultValue={''}
 									/>
 								</div>
+								{errors.message && (
+									<p className={'mt-2 text-xs text-red-500/80'}>
+										{errors.message.message}
+									</p>
+								)}
 							</div>
 							<Switch.Group as="div" className="flex gap-x-4 sm:col-span-2">
-								<div className="flex h-6 items-center">
+								<div className="flex h-6 w-6 items-center">
 									<Switch
 										checked={agreed}
 										onChange={setAgreed}
-										className={
-											'flex w-8 flex-none cursor-pointer rounded-full p-px ring-1 ring-inset ring-gray-900/5 transition-colors duration-200 ease-in-out focus-visible:outline ' +
-											'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 ' +
-											agreed
-												? 'bg-indigo-600'
-												: 'bg-gray-200'
-										}
+										className={classNames(
+											agreed ? 'bg-indigo-900' : 'bg-gray-200',
+											'flex w-8 flex-none cursor-pointer rounded-full p-px ring-1 ring-inset ring-gray-900/5 transition-colors duration-200 ease-in-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-900'
+										)}
 									>
 										<span className="sr-only">
 											{"Accepter les conditions générales d'utilisation"}
 										</span>
 										<span
 											aria-hidden="true"
-											className={
-												'h-4 w-4 transform rounded-full bg-white shadow-sm ring-1 ring-gray-900/5 transition ' +
-												'duration-200 ease-in-out ' +
-												agreed
-													? 'translate-x-3.5'
-													: 'translate-x-0'
-											}
+											className={classNames(
+												agreed ? 'translate-x-3.5' : 'translate-x-0',
+												'h-4 w-4 transform rounded-full bg-white shadow-sm ring-1 ring-gray-900/5 transition duration-200 ease-in-out'
+											)}
 										/>
 									</Switch>
 								</div>
 								<Switch.Label className="text-sm leading-6 text-gray-600">
 									En sélectionnant cette option, vous acceptez notre{' '}
-									<a href="#" className="font-semibold text-indigo-600">
+									<a href="#" className="text-900-600 font-semibold">
 										politique&nbsp;de&nbsp;confidentialité.
 									</a>
 								</Switch.Label>
@@ -231,7 +279,7 @@ function Contact(props) {
 						<div className="mt-10">
 							<button
 								type="submit"
-								className="block w-full rounded-md bg-indigo-600 px-3.5 py-2.5 text-center text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+								className="block w-full rounded-md bg-indigo-900 px-3.5 py-2.5 text-center text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-900"
 							>
 								{"Envoyer l'email"}
 							</button>
