@@ -5,7 +5,6 @@ import ResponsiveTemporary from '@/components/Global/ResponsiveTemporary'
 import Head from 'next/head'
 import Image from 'next/image'
 import Hero from '@/components/Global/Hero'
-import { ChevronDownIcon } from '@heroicons/react/20/solid'
 import { Switch } from '@headlessui/react'
 
 import CTA from '@/components/Global/CTA'
@@ -49,19 +48,20 @@ function Contact(props) {
 							</>
 						}
 					/>
-					<div className="mx-auto max-w-2xl text-center">
+					<div className="mx-auto mt-32 max-w-2xl text-center">
 						<h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
 							Un message en particulier ?
 						</h2>
 						<p className="mt-2 text-lg leading-8 text-gray-600">
-							Une demande particulière, un bug, une idée ? N'hésitez pas à nous
-							contacter via le formulaire ci-dessous !
+							{
+								"Une demande particulière, un bug, une idée ? N'hésitez pas à nous contacter via le formulaire ci-dessous !"
+							}
 						</p>
 					</div>
 					<form
 						action="#"
 						method="POST"
-						className="mx-auto mt-16 max-w-xl sm:mt-20"
+						className="mx-auto my-32 max-w-xl sm:mt-20"
 					>
 						<div className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-2">
 							<div>
@@ -179,7 +179,9 @@ function Contact(props) {
 												: 'bg-gray-200'
 										}
 									>
-										<span className="sr-only">Agree to policies</span>
+										<span className="sr-only">
+											{"Accepter les conditions générales d'utilisation"}
+										</span>
 										<span
 											aria-hidden="true"
 											className={
@@ -193,11 +195,10 @@ function Contact(props) {
 									</Switch>
 								</div>
 								<Switch.Label className="text-sm leading-6 text-gray-600">
-									By selecting this, you agree to our{' '}
+									En sélectionnant cette option, vous acceptez notre{' '}
 									<a href="#" className="font-semibold text-indigo-600">
-										privacy&nbsp;policy
+										politique&nbsp;de&nbsp;confidentialité.
 									</a>
-									.
 								</Switch.Label>
 							</Switch.Group>
 						</div>
@@ -206,7 +207,7 @@ function Contact(props) {
 								type="submit"
 								className="block w-full rounded-md bg-indigo-600 px-3.5 py-2.5 text-center text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
 							>
-								Let's talk
+								{"Envoyer l'email"}
 							</button>
 						</div>
 					</form>
