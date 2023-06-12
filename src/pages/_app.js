@@ -3,6 +3,7 @@ import '@/styles/globals.css'
 import '@/styles/stars.css'
 import '@/styles/loader.css'
 import '@/styles/loader/escalator.css'
+import '@/styles/blog.css'
 
 import Head from 'next/head'
 import { SessionProvider } from 'next-auth/react'
