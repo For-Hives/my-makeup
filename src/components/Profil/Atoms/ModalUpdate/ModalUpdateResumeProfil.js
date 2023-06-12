@@ -3,19 +3,21 @@ import { Dialog, Switch, Transition } from '@headlessui/react'
 import Image from 'next/image'
 import { PhotoIcon } from '@heroicons/react/20/solid'
 import { useForm } from 'react-hook-form'
-import { yupResolver } from '@hookform/resolvers/yup'
+import { zodResolver } from '@hookform/resolvers/zod'
+import * as zod from 'zod'
 import { useSession } from 'next-auth/react'
-import * as yup from 'yup'
 import { BadgeDispo } from '@/components/Profil/Atoms/BadgeDispo'
 import { BadgeIndispo } from '@/components/Profil/Atoms/BadgeIndispo'
 import { useQueryClient } from '@tanstack/react-query'
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
 
-const schema = yup.object().shape({
-	first_name: yup.string().required('Le nom est requis'),
-	last_name: yup.string().required('Le prénom est requis'),
-	speciality: yup.string().required('La spécialité est requise'),
-})
+const schema = zod
+	.object({
+		first_name: zod.string({ required_error: 'Le nom est requis' }),
+		last_name: zod.string({ required_error: 'Le prénom est requis' }),
+		speciality: zod.string({ required_error: 'La spécialité est requise' }),
+	})
+	.required({ first_name: true, last_name: true, speciality: true })
 
 export default function ModalUpdateResumeProfil(props) {
 	const queryClient = useQueryClient()
@@ -28,7 +30,7 @@ export default function ModalUpdateResumeProfil(props) {
 		formState: { errors },
 		reset,
 	} = useForm({
-		resolver: yupResolver(schema),
+		resolver: zodResolver(schema),
 	})
 
 	const [fileObj, setFileObj] = useState('')
@@ -63,9 +65,12 @@ export default function ModalUpdateResumeProfil(props) {
 					return response.json()
 				})
 				.then(data_blob => {
-					data_blob = data_blob[0]
+					const data = {
+						main_picture: data_blob[0],
+					}
+
 					// 	put data in api : with fetch : /api/makeup-artistes/{user.id}
-					patchMeMakeup(queryClient, user, session, data, data_blob)
+					patchMeMakeup(queryClient, user, session, data)
 					reset()
 					props.handleIsModalOpen()
 					setImageUrl('')

@@ -1,21 +1,30 @@
 import React, { Fragment, useEffect, useRef, useState } from 'react'
 import { Dialog, Transition } from '@headlessui/react'
 import { useForm } from 'react-hook-form'
-import { yupResolver } from '@hookform/resolvers/yup'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { useSession } from 'next-auth/react'
-import * as yup from 'yup'
+import * as zod from 'zod'
 import { useQueryClient } from '@tanstack/react-query'
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
 
-const schema = yup.object().shape({
-	id: yup.string(),
-	diploma: yup.string().required('Le nom du diplôme est requis'),
-	school: yup.string().required("Le nom de l'école est requis"),
-	date_graduation: yup
-		.string()
-		.required("La date d'obtention du diplôme est requise"),
-	course_description: yup.string().required('La description est requise'),
-})
+const schema = zod
+	.object({
+		id: zod.string(),
+		diploma: zod.string({ required_error: 'Le nom du diplôme est requis' }),
+		school: zod.string({ required_error: "Le nom de l'école est requis" }),
+		date_graduation: zod.string({
+			required_error: "La date d'obtention du diplôme est requise",
+		}),
+		course_description: zod.string({
+			required_error: 'La description est requise',
+		}),
+	})
+	.required({
+		diploma: true,
+		school: true,
+		date_graduation: true,
+		course_description: true,
+	})
 
 export default function ModalUpdateCoursesProfil(props) {
 	const queryClient = useQueryClient()
@@ -28,7 +37,7 @@ export default function ModalUpdateCoursesProfil(props) {
 		formState: { errors },
 		reset,
 	} = useForm({
-		resolver: yupResolver(schema),
+		resolver: zodResolver(schema),
 	})
 
 	const [open, setOpen] = useState(props.isModalOpen)
@@ -126,7 +135,7 @@ export default function ModalUpdateCoursesProfil(props) {
 			courses: userCoursesCleaned,
 		}
 		patchMeMakeup(queryClient, user, session, data)
-		// close the modal & reset the yup form
+		// close the modal & reset the zod form
 		setUserCoursesId('')
 		setUserCoursesDiploma('')
 		setUserCoursesSchool('')

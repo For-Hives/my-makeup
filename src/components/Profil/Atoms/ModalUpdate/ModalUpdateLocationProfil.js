@@ -1,16 +1,20 @@
 import React, { Fragment, useEffect, useRef, useState } from 'react'
 import { Dialog, Transition } from '@headlessui/react'
 import { useForm } from 'react-hook-form'
-import { yupResolver } from '@hookform/resolvers/yup'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { useSession } from 'next-auth/react'
-import * as yup from 'yup'
+import * as zod from 'zod'
 import { useQueryClient } from '@tanstack/react-query'
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
 
-const schema = yup.object().shape({
-	city: yup.string().required('La ville est requise'),
-	action_radius: yup.number().required("Le rayon d'action est requis"),
-})
+const schema = zod
+	.object({
+		city: zod.string({ required_error: 'La ville est requise' }),
+		action_radius: zod.number({
+			required_error: "Le rayon d'action est requis",
+		}),
+	})
+	.required({ city: true, action_radius: true })
 
 export default function ModalUpdateLocationProfil(props) {
 	const queryClient = useQueryClient()
@@ -23,7 +27,7 @@ export default function ModalUpdateLocationProfil(props) {
 		formState: { errors },
 		reset,
 	} = useForm({
-		resolver: yupResolver(schema),
+		resolver: zodResolver(schema),
 	})
 
 	const [open, setOpen] = useState(props.isModalOpen)
