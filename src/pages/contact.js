@@ -37,17 +37,15 @@ function Contact(props) {
 
 	// Créez une nouvelle fonction pour gérer la soumission du formulaire
 	const onSubmit = async event => {
-		event.preventDefault()
-
 		const response = await fetch('/api/sendMail', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({
-				firstName: event.target['first-name'].value,
-				lastName: event.target['last_name'].value,
-				email: event.target.email.value,
-				phoneNumber: event.target['phone_number'].value,
-				message: event.target.message.value,
+				first_name: event.first_name,
+				last_name: event.last_name,
+				email: event.email,
+				phone_number: event.phone_number,
+				message: event.message,
 			}),
 		})
 
