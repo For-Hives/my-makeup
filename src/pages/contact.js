@@ -16,6 +16,33 @@ import CTA from '@/components/Global/CTA'
  */
 function Contact(props) {
 	const [agreed, setAgreed] = useState(false)
+
+	// Créez une nouvelle fonction pour gérer la soumission du formulaire
+	const handleSubmit = async event => {
+		event.preventDefault()
+
+		const response = await fetch('/api/sendEmail', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				firstName: event.target['first-name'].value,
+				lastName: event.target['last-name'].value,
+				company: event.target.company.value,
+				email: event.target.email.value,
+				phoneNumber: event.target['phone-number'].value,
+				message: event.target.message.value,
+			}),
+		})
+
+		if (response.ok) {
+			// Le mail a été envoyé avec succès
+			// Vous pouvez ici gérer le retour à donner à l'utilisateur
+		} else {
+			// Une erreur s'est produite lors de l'envoi du mail
+			// Vous pouvez ici gérer le retour à donner à l'utilisateur
+		}
+	}
+
 	return (
 		<>
 			<Head>
@@ -59,8 +86,7 @@ function Contact(props) {
 						</p>
 					</div>
 					<form
-						action="#"
-						method="POST"
+						onSubmit={handleSubmit}
 						className="mx-auto my-32 max-w-xl sm:mt-20"
 					>
 						<div className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-2">
