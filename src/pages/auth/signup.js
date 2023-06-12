@@ -4,26 +4,26 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { signIn, signOut, useSession } from 'next-auth/react'
 import { useForm, Controller } from 'react-hook-form'
-import { yupResolver } from '@hookform/resolvers/yup'
-import * as yup from 'yup'
+import { zodResolver } from '@hookform/resolvers/zod'
+import * as zod from 'zod'
 import _ from 'lodash'
 import ResponsiveTemporary from '@/components/Global/ResponsiveTemporary'
 // import { router } from 'next/client'
 
-const schema = yup.object().shape({
-	email: yup
-		.string()
-		.required("L'email est requis")
-		.email("L'email est invalide"),
-	password: yup
-		.string()
-		.required('Le mot de passe est requis')
-		.matches(
-			/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])(?=.{8,})/,
-			'Le mot de passe doit contenir au moins 8 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial'
-		),
-	name: yup.string().required('Le nom de compte est requis'),
-})
+const schema = zod
+	.object({
+		email: zod
+			.string({ required_error: 'Email est requis' })
+			.email('Email invalide'),
+		password: zod
+			.string({ required_error: 'Mot de passe est requis' })
+			.regex(
+				/^(?=.+[a-z])(?=.+[A-Z])(?=.+\d)(?=.+[!@#$%^&*]).{8,}/,
+				'Le mot de passe doit contenir au moins 8 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial'
+			),
+		name: zod.string({ required_error: 'Le nom de compte est requis' }),
+	})
+	.required({ email: true, password: true, name: true })
 
 function Signup() {
 	const {
@@ -31,7 +31,7 @@ function Signup() {
 		handleSubmit,
 		formState: { errors },
 	} = useForm({
-		resolver: yupResolver(schema),
+		resolver: zodResolver(schema),
 	})
 
 	const { data: session } = useSession()

@@ -1,20 +1,20 @@
 import React, { Fragment, useEffect, useRef, useState } from 'react'
 import { Dialog, Transition } from '@headlessui/react'
 import { useForm } from 'react-hook-form'
-import { yupResolver } from '@hookform/resolvers/yup'
+import { zodResolver } from '@hookform/resolvers/zod'
+import * as zod from 'zod'
 import { useSession } from 'next-auth/react'
-import * as yup from 'yup'
 import { useQueryClient } from '@tanstack/react-query'
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
 
-const schema = yup.object().shape({
-	youtube: yup.string(),
-	facebook: yup.string(),
-	instagram: yup.string(),
-	website: yup.string(),
-	linkedin: yup.string(),
-	email: yup.string(),
-	phone: yup.string(),
+const schema = zod.object({
+	youtube: zod.string().url(),
+	facebook: zod.string().url(),
+	instagram: zod.string().url(),
+	website: zod.string().url(),
+	linkedin: zod.string().url(),
+	email: zod.string().email(),
+	phone: zod.string(), // Il est possible de vérifier le numéro de téléphone avec la méthode refine de zod + la librairie validator.js
 })
 
 export default function ModalUpdateSocialMediaProfil(props) {
@@ -28,7 +28,7 @@ export default function ModalUpdateSocialMediaProfil(props) {
 		formState: { errors },
 		reset,
 	} = useForm({
-		resolver: yupResolver(schema),
+		resolver: zodResolver(schema),
 	})
 
 	const [open, setOpen] = useState(props.isModalOpen)
