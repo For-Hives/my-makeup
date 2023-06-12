@@ -49,106 +49,6 @@ function Contact(props) {
 							</>
 						}
 					/>
-					<section className={'relative py-20'}>
-						<div className="mx-auto flex max-w-7xl">
-							<div className="mx-auto mb-10 w-1/2">
-								<h2 className="w-1/2 text-start text-4xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-									Contactez-nous
-								</h2>
-								<p className="mt-6 w-1/2 text-start text-lg text-slate-700">
-									{
-										"My Makeup, plus qu'une plateforme de mise en relation, une équipe de passionnés à votre service !"
-									}
-								</p>
-							</div>
-							<div className="grid w-1/2 grid-cols-1 gap-6 sm:grid-cols-2 lg:col-span-2 lg:gap-8">
-								<div className="rounded-2xl bg-gray-50 p-10">
-									<h3 className="text-base font-semibold leading-7 text-gray-900">
-										Contact général
-									</h3>
-									<dl className="mt-3 space-y-1 text-sm leading-6 text-gray-600">
-										<div>
-											<dt className="sr-only">Email</dt>
-											<dd>
-												<a
-													className="font-semibold text-indigo-600"
-													href="mailto:contact@my-makeup.fr"
-												>
-													contact@my-makeup.fr
-												</a>
-											</dd>
-										</div>
-										<div className="mt-1">
-											<dt className="sr-only">Phone number</dt>
-											<dd>06 21 58 26 84</dd>
-										</div>
-									</dl>
-								</div>
-								<div className="rounded-2xl bg-gray-50 p-10">
-									<h3 className="text-base font-semibold leading-7 text-gray-900">
-										Travailler avec nous
-									</h3>
-									<dl className="mt-3 space-y-1 text-sm leading-6 text-gray-600">
-										<div>
-											<dt className="sr-only">Email</dt>
-											<dd>
-												<a
-													className="font-semibold text-indigo-600"
-													href="mailto:jobs@my-makeup.fr"
-												>
-													jobs@my-makeup.fr
-												</a>
-											</dd>
-										</div>
-									</dl>
-								</div>
-								<div className="rounded-2xl bg-gray-50 p-10">
-									<h3 className="text-base font-semibold leading-7 text-gray-900">
-										Relation entreprise
-									</h3>
-									<dl className="mt-3 space-y-1 text-sm leading-6 text-gray-600">
-										<div>
-											<dt className="sr-only">Email</dt>
-											<dd>
-												<a
-													className="font-semibold text-indigo-600"
-													href="mailto:pro@my-makeup.fr"
-												>
-													pro@my-makeup.fr
-												</a>
-											</dd>
-										</div>
-										<div className="mt-1">
-											<dt className="sr-only">Numéro de téléphone</dt>
-											<dd>06 21 58 26 84</dd>
-										</div>
-									</dl>
-								</div>
-								<div className="rounded-2xl bg-gray-50 p-10">
-									<h3 className="text-base font-semibold leading-7 text-gray-900">
-										Aide et questions
-									</h3>
-									<dl className="mt-3 space-y-1 text-sm leading-6 text-gray-600">
-										<div>
-											<dt className="sr-only">Email</dt>
-											<dd>
-												<a
-													className="font-semibold text-indigo-600"
-													href="mailto:help@my-makeup.fr"
-												>
-													help@my-makeup.fr
-												</a>
-											</dd>
-										</div>
-										<div className="mt-1">
-											<dt className="sr-only">Phone number</dt>
-											<dd>06 21 58 26 84</dd>
-										</div>
-									</dl>
-								</div>
-							</div>
-						</div>
-					</section>
 					<div className="mx-auto max-w-2xl text-center">
 						<h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
 							Un message en particulier ?
@@ -310,6 +210,106 @@ function Contact(props) {
 							</button>
 						</div>
 					</form>
+					<section className={'relative py-20'}>
+						<div className="mx-auto flex max-w-7xl">
+							<div className="mx-auto mb-10 w-1/2">
+								<h2 className="w-1/2 text-start text-4xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+									Contactez-nous
+								</h2>
+								<p className="mt-6 w-1/2 text-start text-lg text-slate-700">
+									{
+										"My Makeup, plus qu'une plateforme de mise en relation, une équipe de passionnés à votre service !"
+									}
+								</p>
+							</div>
+							<div className="grid w-1/2 grid-cols-1 gap-6 sm:grid-cols-2 lg:col-span-2 lg:gap-8">
+								<div className="rounded-2xl bg-gray-50 p-10">
+									<h3 className="text-base font-semibold leading-7 text-gray-900">
+										Contact général
+									</h3>
+									<dl className="mt-3 space-y-1 text-sm leading-6 text-gray-600">
+										<div>
+											<dt className="sr-only">Email</dt>
+											<dd>
+												<a
+													className="font-semibold text-indigo-600"
+													href="mailto:contact@my-makeup.fr"
+												>
+													contact@my-makeup.fr
+												</a>
+											</dd>
+										</div>
+										<div className="mt-1">
+											<dt className="sr-only">Phone number</dt>
+											<dd>06 21 58 26 84</dd>
+										</div>
+									</dl>
+								</div>
+								<div className="rounded-2xl bg-gray-50 p-10">
+									<h3 className="text-base font-semibold leading-7 text-gray-900">
+										Travailler avec nous
+									</h3>
+									<dl className="mt-3 space-y-1 text-sm leading-6 text-gray-600">
+										<div>
+											<dt className="sr-only">Email</dt>
+											<dd>
+												<a
+													className="font-semibold text-indigo-600"
+													href="mailto:jobs@my-makeup.fr"
+												>
+													jobs@my-makeup.fr
+												</a>
+											</dd>
+										</div>
+									</dl>
+								</div>
+								<div className="rounded-2xl bg-gray-50 p-10">
+									<h3 className="text-base font-semibold leading-7 text-gray-900">
+										Relation entreprise
+									</h3>
+									<dl className="mt-3 space-y-1 text-sm leading-6 text-gray-600">
+										<div>
+											<dt className="sr-only">Email</dt>
+											<dd>
+												<a
+													className="font-semibold text-indigo-600"
+													href="mailto:pro@my-makeup.fr"
+												>
+													pro@my-makeup.fr
+												</a>
+											</dd>
+										</div>
+										<div className="mt-1">
+											<dt className="sr-only">Numéro de téléphone</dt>
+											<dd>06 21 58 26 84</dd>
+										</div>
+									</dl>
+								</div>
+								<div className="rounded-2xl bg-gray-50 p-10">
+									<h3 className="text-base font-semibold leading-7 text-gray-900">
+										Aide et questions
+									</h3>
+									<dl className="mt-3 space-y-1 text-sm leading-6 text-gray-600">
+										<div>
+											<dt className="sr-only">Email</dt>
+											<dd>
+												<a
+													className="font-semibold text-indigo-600"
+													href="mailto:help@my-makeup.fr"
+												>
+													help@my-makeup.fr
+												</a>
+											</dd>
+										</div>
+										<div className="mt-1">
+											<dt className="sr-only">Phone number</dt>
+											<dd>06 21 58 26 84</dd>
+										</div>
+									</dl>
+								</div>
+							</div>
+						</div>
+					</section>
 
 					<CTA />
 				</main>
