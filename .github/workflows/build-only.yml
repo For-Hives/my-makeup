@@ -1,5 +1,8 @@
 name: Just Build Docker
 
+env:
+  NEXT_PUBLIC_API_URL: ${{secrets.NEXT_PUBLIC_API_URL}}
+
 on:
   pull_request:
     branches: ['main']
