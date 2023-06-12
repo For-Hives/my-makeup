@@ -3,22 +3,22 @@ import { Dialog, Transition } from '@headlessui/react'
 import Image from 'next/image'
 import { PhotoIcon } from '@heroicons/react/20/solid'
 import { useForm } from 'react-hook-form'
-import { yupResolver } from '@hookform/resolvers/yup'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { useSession } from 'next-auth/react'
-import * as yup from 'yup'
+import * as zod from 'zod'
 import { useQueryClient } from '@tanstack/react-query'
 import { Swiper, SwiperSlide } from 'swiper/react'
 import { Pagination } from 'swiper'
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
 
-const schema = yup.object().shape({})
+const schema = zod.object()
 export default function ModalUpdatePortfolioProfil(props) {
 	const queryClient = useQueryClient()
 
 	const user = props.user
 
 	const { handleSubmit, reset } = useForm({
-		resolver: yupResolver(schema),
+		resolver: zodResolver(schema),
 	})
 
 	const [fileObj, setFileObj] = useState('')
