@@ -1,22 +1,34 @@
 import React, { Fragment, useEffect, useRef, useState } from 'react'
 import { Dialog, Transition } from '@headlessui/react'
 import { useForm } from 'react-hook-form'
-import { yupResolver } from '@hookform/resolvers/yup'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { useSession } from 'next-auth/react'
-import * as yup from 'yup'
+import * as zod from 'zod'
 import { useQueryClient } from '@tanstack/react-query'
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
 
-const schema = yup.object().shape({
-	company: yup.string().required("Le nom de l'entreprise est requise"),
-	job_name: yup.string().required("Le nom de l'expérience est requis"),
-	city: yup.string().required('La ville est requise'),
-	date_start: yup
-		.string()
-		.required("La date de début de l'expérience est requise"),
-	date_end: yup.string(),
-	description: yup.string().required('La description est requise'),
-})
+const schema = zod
+	.object({
+		company: zod.string({
+			required_error: "Le nom de l'entreprise est requise",
+		}),
+		job_name: zod.string({
+			required_error: "Le nom de l'expérience est requis",
+		}),
+		city: zod.string({ required_error: 'La ville est requise' }),
+		date_start: zod.string({
+			required_error: "La date de début de l'expérience est requise",
+		}),
+		date_end: zod.string(),
+		description: zod.string({ required_error: 'La description est requise' }),
+	})
+	.required({
+		company: true,
+		job_name: true,
+		city: true,
+		date_start: true,
+		description: true,
+	})
 
 export default function ModalUpdateExperiencesProfil(props) {
 	const queryClient = useQueryClient()
@@ -29,7 +41,7 @@ export default function ModalUpdateExperiencesProfil(props) {
 		formState: { errors },
 		reset,
 	} = useForm({
-		resolver: yupResolver(schema),
+		resolver: zodResolver(schema),
 	})
 
 	const [open, setOpen] = useState(props.isModalOpen)
@@ -140,7 +152,7 @@ export default function ModalUpdateExperiencesProfil(props) {
 			experiences: userExperiencesCleaned,
 		}
 		patchMeMakeup(queryClient, user, session, data)
-		// close the modal & reset the yup form
+		// close the modal & reset the zod form
 		setUserExperiencesId('')
 		setUserExperiencesCompany('')
 		setUserExperiencesJobName('')

@@ -1,19 +1,23 @@
 import React, { Fragment, useEffect, useRef, useState } from 'react'
 import { Dialog, Tab, Transition } from '@headlessui/react'
 import { useForm } from 'react-hook-form'
-import { yupResolver } from '@hookform/resolvers/yup'
 import { useSession } from 'next-auth/react'
-import * as yup from 'yup'
+import { zodResolver } from '@hookform/resolvers/zod'
+import * as zod from 'zod'
 import { useQueryClient } from '@tanstack/react-query'
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
 import { DescriptionPriceOffer } from '@/components/Profil/Childs/ServiceOffers/DescriptionPriceOffer'
 import { OptionsOffers } from '@/components/Profil/Childs/ServiceOffers/OptionsOffers'
 
-const schema = yup.object().shape({
-	name: yup.string().required("Le nom de l'entreprise est requise"),
-	price: yup.string().required('Le prix de la préstation est requise'),
-	description: yup.string().required('La description est requise'),
-})
+const schema = zod
+	.object({
+		name: zod.string({ required_error: "Le nom de l'entreprise est requise" }),
+		price: zod.string({
+			required_error: 'Le prix de la préstation est requise',
+		}),
+		description: zod.string({ required_error: 'La description est requise' }),
+	})
+	.required({ name: true, price: true, description: true })
 
 export default function ModalUpdateServiceOffersProfil(props) {
 	const queryClient = useQueryClient()
@@ -26,7 +30,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 		formState: { errors },
 		reset,
 	} = useForm({
-		resolver: yupResolver(schema),
+		resolver: zodResolver(schema),
 	})
 
 	const [open, setOpen] = useState(props.isModalOpen)
@@ -179,7 +183,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 			service_offers: userServiceOffersCopy,
 		}
 		patchMeMakeup(queryClient, user, session, data)
-		// close the modal & reset the yup form
+		// close the modal & reset the zod form
 		setUserServiceOffersId('')
 		setUserServiceOffersName('')
 		setUserServiceOffersPrice('')

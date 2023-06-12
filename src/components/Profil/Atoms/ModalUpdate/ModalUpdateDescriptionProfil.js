@@ -1,15 +1,17 @@
 import React, { Fragment, useEffect, useRef, useState } from 'react'
 import { Dialog, Transition } from '@headlessui/react'
 import { useForm } from 'react-hook-form'
-import { yupResolver } from '@hookform/resolvers/yup'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { useSession } from 'next-auth/react'
-import * as yup from 'yup'
+import * as zod from 'zod'
 import { useQueryClient } from '@tanstack/react-query'
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
 
-const schema = yup.object().shape({
-	description: yup.string().required('La description est requise'),
-})
+const schema = zod
+	.object({
+		description: zod.string({ required_error: 'La description est requise' }),
+	})
+	.required({ description: true })
 
 export default function ModalUpdateDescriptionProfil(props) {
 	const queryClient = useQueryClient()
@@ -22,7 +24,7 @@ export default function ModalUpdateDescriptionProfil(props) {
 		formState: { errors },
 		reset,
 	} = useForm({
-		resolver: yupResolver(schema),
+		resolver: zodResolver(schema),
 	})
 
 	const [open, setOpen] = useState(props.isModalOpen)
