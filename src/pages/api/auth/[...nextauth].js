@@ -52,6 +52,7 @@ const options = {
 					body,
 				})
 				const authenticated = await response.json()
+				console.log(authenticated)
 
 				if (authenticated) {
 					return Promise.resolve({
@@ -82,7 +83,8 @@ const options = {
 	callbacks: {
 		async session({ session, token, user }) {
 			session.jwt = token.jwt
-			session.id = token.id
+			// session.id = token.id
+			console.log(token)
 
 			return session
 		},
@@ -98,10 +100,11 @@ const options = {
 						`${process.env.NEXT_PUBLIC_API_URL}api/auth/${account.provider}/callback?access_token=${account?.access_token}`
 					)
 					const data = await response.json()
+					console.log(data)
 					token.jwt = data.jwt
-					token.id = data.user.id
+					// token.id = data.user.id
 				} else {
-					token.id = user.id
+					// token.id = user.id
 					token.jwt = user.jwt
 				}
 			}
