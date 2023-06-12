@@ -1,11 +1,12 @@
 import mailgun from 'mailgun-js'
 
-const mg = mailgun({
+const mg = mailgun.client({
 	apiKey: process.env.MAILGUN_API_KEY,
 	domain: process.env.MAILGUN_DOMAIN,
 })
 
 export default function handler(req, res) {
+	console.log(req.body)
 	if (req.method === 'POST') {
 		const data = {
 			from: 'My Makeup <contact@my-makeup.fr>',
