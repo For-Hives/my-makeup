@@ -48,13 +48,24 @@ function ResumeProfil(props) {
 								<p className={'text-sm font-semibold'}>modifier votre photo</p>
 							</button>
 						) : null}
-						<Image
-							src={user?.main_picture?.url}
-							alt={'ppmakeup'}
-							width={500}
-							height={500}
-							className={'h-[200px] w-[200px] rounded-full object-cover'}
-						></Image>
+
+						{user && user?.main_picture && user?.main_picture?.url ? (
+							<Image
+								src={user?.main_picture?.url}
+								alt={'ppmakeup'}
+								width={500}
+								height={500}
+								className={'h-[200px] w-[200px] rounded-full object-cover'}
+							></Image>
+						) : (
+							<Image
+								src={'/assets/pp_makeup.webp'}
+								alt={'ppmakeup'}
+								width={500}
+								height={500}
+								className={'h-[200px] w-[200px] rounded-full object-cover'}
+							></Image>
+						)}
 					</div>
 					<div className={'col-span-7 flex items-center'}>
 						<div
