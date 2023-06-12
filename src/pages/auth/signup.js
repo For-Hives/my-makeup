@@ -44,7 +44,7 @@ function Signup() {
 			email: data.email,
 			password: data.password,
 			name: data.name,
-			callbackUrl: '/init-account',
+			callbackUrl: '/auth/init-account',
 		})
 	}
 

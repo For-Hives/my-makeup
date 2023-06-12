@@ -2,7 +2,7 @@ import React, {useEffect, useState} from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
 import Image from 'next/image'
-import {signIn, signOut, useSession} from 'next-auth/react'
+import {getSession, signIn, signOut, useSession} from 'next-auth/react'
 import {useForm, Controller} from 'react-hook-form'
 import {yupResolver} from '@hookform/resolvers/yup'
 import * as yup from 'yup'
@@ -29,6 +29,7 @@ function InitAccount() {
     // get current user id
     const {data: session} = useSession()
 
+    console.log('Session', session)
 
     useEffect(() => {
         if (!session) return
@@ -38,7 +39,7 @@ function InitAccount() {
 
 
             if (user === null) {
-                console.log('Sessuion user', session.user)
+                console.log('Session ee', session)
                 getUserFromSession(session).then(r => setUser(r));
             } else {
 
@@ -155,8 +156,8 @@ function InitAccount() {
             {/*<ResponsiveTemporary />*/}
 
             <div
-                className="container mx-auto flex flex-col items-center justify-center bg-amber-300 sm:px-6 lg:px-8">
-                <div className="overflow-hidden rounded-lg bg-white shadow">
+                className="container mx-auto flex flex-col sm:px-6 lg:px-8">
+                <div className="overflow-hidden rounded-lg h-full my-8 bg-white shadow">
                     <div className="px-4 py-5 sm:px-6">
                         {/* Content goes here */}
                         {/* We use less vertical padding on card headers on desktop than on body sections */}
@@ -238,6 +239,39 @@ function InitAccount() {
                     <div className="bg-gray-50 px-4 py-5 sm:p-6">
                         {/* Content goes here */}
 
+                        {step === 1 && <div className="flex flex-col items-center justify-center">
+                            <div className="flex flex-col items-center justify-center">
+                                <h1 className="text-3xl font-bold text-center">Verification de votre adresse email</h1>
+                                <p className="text-center">Vous avez recu un lien par email pour verifier votre compte !</p>
+                                <p className="text-center">Si vous ne recevez pas de mail, verifier dans vos courrier indesirable</p>
+                            </div>
+                        </div>
+
+                        }
+                        {step === 2 && <div className="flex flex-col items-center justify-center">
+                            <div className="w-[300px] h-[300px] ">
+                                Loading
+                                {/*    todo : Spinner */}
+                            </div>
+                        </div>}
+                        {step === 3 &&
+
+                            <div className="flex flex-col items-center justify-center">
+                                <div className="flex flex-col items-center justify-center">
+                                    <h1 className="text-3xl font-bold text-center">Choisissez votre formule</h1>
+
+                                </div>
+                            </div>
+
+                        }
+                        {step === 4 && <div className="flex flex-col items-center justify-center">
+                            <div className="flex flex-col items-center justify-center">
+                                <h1 className="text-3xl font-bold text-center">FINAL</h1>
+                            </div>
+                        </div>
+                        }
+
+
                         <div>{/*<ResumeProfil user={user}></ResumeProfil>*/}</div>
                     </div>
                 </div>
@@ -261,4 +295,13 @@ async function getUserFromSession(session) {
     })
 
     return userData.json();
+}
+
+export const getServerSideProps = async ({ req }) => {
+    const session = await getSession({ req })
+    return {
+        props: {
+            session,
+        },
+    }
 }
