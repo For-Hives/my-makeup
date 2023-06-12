@@ -16,7 +16,6 @@ export default function handler(req, res) {
 				text: `
                 Nom: ${req.body.lastName} \n
                 Prénom: ${req.body.firstName} \n
-                Entreprise: ${req.body.company} \n
                 Email: ${req.body.email} \n
                 Numéro de téléphone: ${req.body.phoneNumber} \n
                 Message: ${req.body.message}
