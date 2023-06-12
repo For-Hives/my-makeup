@@ -12,6 +12,7 @@ import CTA from '@/components/Global/CTA'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import Link from 'next/link'
+import { toast } from 'react-toastify'
 
 const schema = z
 	.object({
@@ -53,6 +54,7 @@ function Contact(props) {
 			// Le mail a été envoyé avec succès
 			// Vous pouvez ici gérer le retour à donner à l'utilisateur
 			reset()
+			toast('Le message a bien été envoyé !')
 		} else {
 			// Une erreur s'est produite lors de l'envoi du mail
 			// Vous pouvez ici gérer le retour à donner à l'utilisateur
