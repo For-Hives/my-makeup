@@ -20,3 +20,4 @@ jobs:
         with:
           push: false
           tags: ${{ secrets.APP_IMAGE }}
+          build-args: NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
