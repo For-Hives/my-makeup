@@ -18,7 +18,7 @@ const schema = zod
 		password: zod
 			.string({ required_error: 'Mot de passe est requis' })
 			.regex(
-				/^(?=.+[a-z])(?=.+[A-Z])(?=.+\d)(?=.+[!@#$%^&*]).{8,}/,
+				/^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[a-zA-Z]).{8,}$/gm,
 				'Le mot de passe doit contenir au moins 8 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial'
 			),
 	})
