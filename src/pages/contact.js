@@ -12,10 +12,6 @@ import CTA from '@/components/Global/CTA'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 
-function classNames(...classes) {
-	return classes.filter(Boolean).join(' ')
-}
-
 const schema = z.object({
 	first_name: z.string().nonempty({ message: 'Le prénom est requis' }),
 	last_name: z.string().nonempty({ message: 'Le nom est requis' }),
@@ -246,35 +242,14 @@ function Contact(props) {
 									</p>
 								)}
 							</div>
-							<Switch.Group as="div" className="flex gap-x-4 sm:col-span-2">
-								<div className="flex h-6 w-6 items-center">
-									<Switch
-										checked={agreed}
-										onChange={setAgreed}
-										className={classNames(
-											agreed ? 'bg-indigo-900' : 'bg-gray-200',
-											'flex w-8 flex-none cursor-pointer rounded-full p-px ring-1 ring-inset ring-gray-900/5 transition-colors duration-200 ease-in-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-900'
-										)}
-									>
-										<span className="sr-only">
-											{"Accepter les conditions générales d'utilisation"}
-										</span>
-										<span
-											aria-hidden="true"
-											className={classNames(
-												agreed ? 'translate-x-3.5' : 'translate-x-0',
-												'h-4 w-4 transform rounded-full bg-white shadow-sm ring-1 ring-gray-900/5 transition duration-200 ease-in-out'
-											)}
-										/>
-									</Switch>
-								</div>
-								<Switch.Label className="text-sm leading-6 text-gray-600">
-									En sélectionnant cette option, vous acceptez notre{' '}
+							<div className={'sm:col-span-2'}>
+								<p className="text-sm leading-6 text-gray-600">
+									En envoyant votre message, vous acceptez notre{' '}
 									<a href="#" className="text-900-600 font-semibold">
 										politique&nbsp;de&nbsp;confidentialité.
 									</a>
-								</Switch.Label>
-							</Switch.Group>
+								</p>
+							</div>
 						</div>
 						<div className="mt-10">
 							<button
