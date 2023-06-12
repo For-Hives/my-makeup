@@ -14,10 +14,10 @@ export default function handler(req, res) {
 				to: 'cinquin.andy@gmail.com',
 				subject: 'Nouveau message de contact',
 				text: `
-                Nom: ${req.body.lastName} \n
-                Prénom: ${req.body.firstName} \n
+                Nom: ${req.body.last_name} \n
+                Prénom: ${req.body.first_name} \n
                 Email: ${req.body.email} \n
-                Numéro de téléphone: ${req.body.phoneNumber} \n
+                Numéro de téléphone: ${req.body.phone_number} \n
                 Message: ${req.body.message}
             `,
 			})

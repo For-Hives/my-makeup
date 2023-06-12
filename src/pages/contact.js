@@ -37,23 +37,23 @@ function Contact(props) {
 	})
 
 	// Créez une nouvelle fonction pour gérer la soumission du formulaire
-	const onSubmit = async event => {
+	const onSubmit = async data => {
 		const response = await fetch('/api/sendMail', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({
-				first_name: event.first_name,
-				last_name: event.last_name,
-				email: event.email,
-				phone_number: event.phone_number,
-				message: event.message,
+				first_name: data.first_name,
+				last_name: data.last_name,
+				email: data.email,
+				phone_number: data.phone_number,
+				message: data.message,
 			}),
 		})
 
 		if (response.ok) {
 			// Le mail a été envoyé avec succès
 			// Vous pouvez ici gérer le retour à donner à l'utilisateur
-			reset()
+			// reset()
 			toast('Le message a bien été envoyé !')
 		} else {
 			// Une erreur s'est produite lors de l'envoi du mail
