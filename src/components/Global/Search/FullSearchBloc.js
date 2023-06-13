@@ -3,7 +3,7 @@ import { MagnifyingGlassIcon } from '@heroicons/react/20/solid'
 import { MapPinIcon } from '@heroicons/react/24/outline'
 import { useRouter } from 'next/router'
 
-function SearchBloc() {
+function FullSearchBloc(props) {
 	const [searchTerm, setSearchTerm] = useState('')
 	const [city, setCity] = useState('')
 
@@ -17,8 +17,10 @@ function SearchBloc() {
 		}
 		if (city !== '') {
 			router.push(`/search?search=${searchTerm}&city=${city}`)
+			props.performSearch(searchTerm, city)
 		} else {
 			router.push(`/search?search=${searchTerm}`)
+			props.performSearch(searchTerm)
 		}
 	}
 
@@ -82,4 +84,4 @@ function SearchBloc() {
 	)
 }
 
-export default SearchBloc
+export default FullSearchBloc
