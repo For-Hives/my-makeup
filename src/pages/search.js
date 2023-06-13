@@ -11,6 +11,7 @@ import Loader from '@/components/Global/Loader/Loader'
 import { BadgeDispo } from '@/components/Profil/Atoms/BadgeDispo'
 import { BadgeIndispo } from '@/components/Profil/Atoms/BadgeIndispo'
 import { BadgeSuperMaquilleuse } from '@/components/Global/BadgeSuperMaquilleuse'
+import { Stars } from '@/components/Profil/Atoms/Stars'
 
 function SearchPage() {
 	const [searchTerm, setSearchTerm] = useState(undefined)
@@ -168,11 +169,18 @@ function SearchPage() {
 														</div>
 													</div>
 													<div
-														className={'flex w-full flex-col gap-2 p-4 pt-8'}
+														className={'flex w-full flex-col gap-2 p-4 pt-6'}
 													>
 														<h2 className="text-lg font-bold text-gray-900">
 															{result.speciality}
 														</h2>
+														<div className={'flex flex-row items-center gap-4'}>
+															<Stars starsToDisplay={result.score} />{' '}
+															<span className={'text-sm italic'}>
+																{/* todo connect the score to the number of reviews */}
+																( {result.score.toFixed(0)} avis )
+															</span>
+														</div>
 													</div>
 												</div>
 											</>
