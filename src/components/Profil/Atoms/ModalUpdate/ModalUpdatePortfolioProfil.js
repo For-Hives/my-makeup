@@ -10,6 +10,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Swiper, SwiperSlide } from 'swiper/react'
 import { Pagination } from 'swiper'
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
+import { toast } from 'react-toastify'
 
 const schema = zod.object()
 export default function ModalUpdatePortfolioProfil(props) {
@@ -55,7 +56,12 @@ export default function ModalUpdatePortfolioProfil(props) {
 					setImageUrl('')
 					reset()
 				})
-				.catch(err => console.error(err))
+				.catch(err =>
+					toast('Une erreur est survenue, veuillez réessayer plus tard', {
+						type: 'error',
+						icon: '⛔',
+					})
+				)
 		} else {
 			// putMakeupArtisteViaId(queryClient, user, session, data)
 			reset()
@@ -68,7 +74,7 @@ export default function ModalUpdatePortfolioProfil(props) {
 		const data = {
 			image_gallery: userImageGallery,
 		}
-		patchMeMakeup(queryClient, user, session, data)
+		patchMeMakeup(session, data, queryClient)
 		setImageUrl('')
 		props.handleIsModalOpen()
 	}
