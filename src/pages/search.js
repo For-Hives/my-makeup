@@ -7,6 +7,7 @@ import Image from 'next/image'
 import ResponsiveTemporary from '@/components/Global/ResponsiveTemporary'
 import FullSearchBloc from '@/components/Global/Search/FullSearchBloc'
 import { CatSearch } from '@/components/Global/Search/catSearch'
+import Loader from '@/components/Global/Loader'
 
 function SearchPage() {
 	const [searchTerm, setSearchTerm] = useState(undefined)
