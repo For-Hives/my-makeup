@@ -4,10 +4,9 @@ import Nav from '@/components/Global/Nav'
 import Footer from '@/components/Global/Footer'
 import { useRouter } from 'next/router'
 import Image from 'next/image'
-import SearchBloc from '@/components/Global/Search/SearchBloc'
 import ResponsiveTemporary from '@/components/Global/ResponsiveTemporary'
-import CTA from '@/components/Global/CTA'
 import FullSearchBloc from '@/components/Global/Search/FullSearchBloc'
+import { CatSearch } from '@/components/Global/Search/catSearch'
 
 function SearchPage() {
 	const [searchTerm, setSearchTerm] = useState(undefined)
@@ -108,19 +107,7 @@ function SearchPage() {
 					<FullSearchBloc />
 					{!hasSearched && !isSearching && (
 						<div className={'flex w-full items-center justify-center py-32'}>
-							<div
-								className={'flex flex-col items-center justify-center gap-8'}
-							>
-								<Image
-									src={'/assets/vectorials-used/catSearch.svg'}
-									alt={'search'}
-									width={300}
-									height={300}
-								/>
-								<h2 className={'text-3xl text-gray-700'}>
-									Complétez la recherche pour voir des résultats
-								</h2>
-							</div>
+							<CatSearch />
 						</div>
 					)}
 				</main>
