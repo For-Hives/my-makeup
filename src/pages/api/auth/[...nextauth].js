@@ -54,7 +54,6 @@ const options = {
 					body,
 				})
 				const authenticated = await response.json()
-				console.log(authenticated)
 
 				if (authenticated) {
 					return Promise.resolve({
@@ -73,7 +72,6 @@ const options = {
 		signIn: '/auth/signin',
 		signOut: '/auth/signout',
 		error: '/auth/error', // Error code passed in query string as ?error=
-		verifyRequest: '/auth/init-account', // (used for check email message)
 		newUser: '/auth/init-account', // New users will be directed here on first sign in (leave the property out if not of interest)
 	},
 	secret: `${process.env.NEXTAUTH_SECRET}`, //PUT YOUR OWN SECRET (command: openssl rand -base64 32)
@@ -83,24 +81,11 @@ const options = {
 	},
 	debug: true,
 	callbacks: {
-		async signIn({ user, account, profile, email, credentials }) {
-			console.log('signIn >> ')
-
-			const isAllowedToSignIn = true
-			if (isAllowedToSignIn) {
-				return true
-			} else {
-				// Return false to display a default error message
-				return false
-				// Or you can return a URL to redirect to:
-				// return '/unauthorized'
-			}
-		},
 		async session({ session, token, user }) {
 			console.log('session >> ')
 
 			session.jwt = token.jwt
-			// session.id = token.id
+			session.id = token.id
 			console.log(token)
 
 			return session
@@ -125,9 +110,9 @@ const options = {
 					const data = await response.json()
 					console.log(data)
 					token.jwt = data.jwt
-					// token.id = data.user.id
+					token.id = data.user.id
 				} else {
-					// token.id = user.id
+					token.id = user.id
 					token.jwt = user.jwt
 				}
 			}

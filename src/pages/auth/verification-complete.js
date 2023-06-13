@@ -4,7 +4,7 @@ import Image from 'next/image'
 import { signIn, signOut, useSession } from 'next-auth/react'
 import { useRouter } from 'next/router'
 
-function VerificationWall() {
+function VerificationComplete() {
 	const { session } = useSession()
 	const router = useRouter()
 
@@ -54,4 +54,4 @@ function VerificationWall() {
 	)
 }
 
-export default VerificationWall
+export default VerificationComplete

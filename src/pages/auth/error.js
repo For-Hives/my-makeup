@@ -4,18 +4,31 @@ import Image from 'next/image'
 import { signIn, signOut, useSession } from 'next-auth/react'
 import { useRouter } from 'next/router'
 import Loader from '@/components/Global/Loader'
+import { toast } from 'react-toastify'
 
-function VerificationWall() {
+function Error() {
 	const { session } = useSession()
 	const router = useRouter()
+	const [showed, setShowed] = React.useState(false)
 
 	useEffect(() => {
+		console.log('useEffect')
+
 		if (session) {
+			console.log('session', session)
 			signOut()
 		}
 
-		router.push('/auth/signin')
-	}, [session])
+		if (showed === false) {
+			console.log('showed === false', showed)
+			toast('Veuillez confirmer votre adresse email', {
+				icon: '⚠️',
+				type: 'error',
+			})
+			setShowed(true)
+			router.push('/auth/signin')
+		}
+	}, [])
 
 	return (
 		<>
@@ -34,4 +47,4 @@ function VerificationWall() {
 	)
 }
 
-export default VerificationWall
+export default Error
