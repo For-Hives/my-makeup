@@ -7,7 +7,7 @@ import Image from 'next/image'
 import ResponsiveTemporary from '@/components/Global/ResponsiveTemporary'
 import FullSearchBloc from '@/components/Global/Search/FullSearchBloc'
 import { CatSearch } from '@/components/Global/Search/catSearch'
-import Loader from '@/components/Global/Loader'
+import Loader from '@/components/Global/Loader/Loader'
 
 function SearchPage() {
 	const [searchTerm, setSearchTerm] = useState(undefined)
@@ -109,6 +109,11 @@ function SearchPage() {
 					{!hasSearched && !isSearching && (
 						<div className={'flex w-full items-center justify-center py-32'}>
 							<CatSearch />
+						</div>
+					)}
+					{isSearching && (
+						<div className={'flex w-full items-center justify-center py-32'}>
+							<Loader />
 						</div>
 					)}
 				</main>

@@ -1,6 +1,6 @@
 import React from 'react'
 
-function Loader(props) {
+function FullLoader(props) {
 	return (
 		<>
 			<div
@@ -55,4 +55,4 @@ function Loader(props) {
 	)
 }
 
-export default Loader
+export default FullLoader

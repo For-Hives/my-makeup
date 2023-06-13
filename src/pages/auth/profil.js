@@ -7,10 +7,11 @@ import ResumeProfil from '@/components/Profil/Parents/ResumeProfil'
 import { useQuery } from '@tanstack/react-query'
 import { getSession, useSession } from 'next-auth/react'
 import _ from 'lodash'
-import Loader from '@/components/Global/Loader'
+import Loader from '@/components/Global/Loader/Loader'
 import Router from 'next/router'
 import ResponsiveTemporary from '@/components/Global/ResponsiveTemporary'
 import InfosProfil from '@/components/Profil/Parents/InfosProfil'
+import FullLoader from '@/components/Global/Loader/FullLoader'
 
 function Profil() {
 	// get current user id
@@ -35,7 +36,7 @@ function Profil() {
 		},
 	})
 
-	if (isLoading) return <Loader />
+	if (isLoading) return <FullLoader />
 
 	if (error) return 'An error has occurred: ' + error.message
 	const user = data
