@@ -8,6 +8,9 @@ import ResponsiveTemporary from '@/components/Global/ResponsiveTemporary'
 import FullSearchBloc from '@/components/Global/Search/FullSearchBloc'
 import { CatSearch } from '@/components/Global/Search/catSearch'
 import Loader from '@/components/Global/Loader/Loader'
+import { BadgeDispo } from '@/components/Profil/Atoms/BadgeDispo'
+import { BadgeIndispo } from '@/components/Profil/Atoms/BadgeIndispo'
+import { BadgeSuperMaquilleuse } from '@/components/Global/BadgeSuperMaquilleuse'
 
 function SearchPage() {
 	const [searchTerm, setSearchTerm] = useState(undefined)
@@ -100,21 +103,79 @@ function SearchPage() {
 						</div>
 					)}
 					{hasSearched && !isSearching && (
-						<div className={'mx-auto max-w-7xl'}>
-							<article className={'grid w-full grid-cols-5'}>
+						<div className={'w-full px-16'}>
+							<article className={'grid w-full grid-cols-6 gap-8'}>
 								{searchResults.length !== 0 && (
 									<>
 										{searchResults.map(result => (
-											<div
-												key={result.id}
-												className={'col-span-1 flex flex-col items-center'}
-											>
-												<div className={'flex flex-col items-center'}>
-													<h3 className="mb-2 to-emerald-900 text-sm font-bold">
-														{result.first_name} {result.last_name}
-													</h3>
+											<>
+												<div
+													className={
+														'col-span-1 flex w-full flex-col items-center rounded border border-slate-300 bg-white'
+													}
+												>
+													<div className={'relative w-full'}>
+														<Image
+															src={result.main_picture.url}
+															alt={
+																'profile picture Maquilleuse professionnelle'
+															}
+															width={200}
+															height={200}
+															className={
+																'h-[350px] w-full rounded-b-none rounded-t object-cover object-center'
+															}
+														/>
+														<div
+															className={
+																'absolute left-0 top-0 flex items-center justify-center p-4 opacity-90'
+															}
+														>
+															{result.available ? (
+																<>
+																	<BadgeDispo />
+																</>
+															) : (
+																<>
+																	<BadgeIndispo />
+																</>
+															)}
+														</div>
+														<div
+															className={
+																'absolute bottom-0 left-0 flex flex-col bg-gradient-to-t from-black to-black/0 p-4 pb-8'
+															}
+														>
+															<h3 className="text-2xl font-extrabold text-white">
+																{result.first_name} {result.last_name}
+															</h3>
+															<div>
+																<div
+																	className={
+																		'flex items-center gap-2 text-sm font-semibold text-white'
+																	}
+																>
+																	<span className="material-icons-round text-sm text-white">
+																		directions_run
+																	</span>
+																	peut se déplacer à {result?.city} & dans un
+																	rayon de {result?.action_radius}km
+																</div>
+															</div>
+														</div>
+														<div className={'absolute -bottom-2.5 left-4'}>
+															<BadgeSuperMaquilleuse />
+														</div>
+													</div>
+													<div
+														className={'flex w-full flex-col gap-2 p-4 pt-8'}
+													>
+														<h2 className="text-lg font-bold text-gray-900">
+															{result.speciality}
+														</h2>
+													</div>
 												</div>
-											</div>
+											</>
 										))}
 									</>
 								)}

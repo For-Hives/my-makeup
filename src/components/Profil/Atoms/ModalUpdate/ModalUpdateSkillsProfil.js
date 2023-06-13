@@ -165,7 +165,9 @@ export default function ModalUpdateSkillsProfil(props) {
 														<p className={'text-xs italic text-slate-700/70'}>
 															Vous pouvez ajouter plusieurs compétences en les
 															séparant par un point-virgule, ou en appuyant sur
-															la touche entrée.
+															la touche entrée. Attention, les 7 premières
+															compétences seront celles affichées en priorité
+															sur votre profil.
 														</p>
 														<div className="mt-2">
 															<input
