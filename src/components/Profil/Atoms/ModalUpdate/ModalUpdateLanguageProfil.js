@@ -47,7 +47,7 @@ export default function ModalUpdateLanguageProfil(props) {
 		const data_clean = {
 			language: userLanguageSelectedCleaned,
 		}
-		patchMeMakeup(queryClient, user, session, data_clean)
+		patchMeMakeup(session, data_clean, queryClient)
 		reset()
 		// close the modal
 		props.handleIsModalOpen()
