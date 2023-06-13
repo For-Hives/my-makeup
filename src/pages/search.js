@@ -4,6 +4,10 @@ import Nav from '@/components/Global/Nav'
 import Footer from '@/components/Global/Footer'
 import { useRouter } from 'next/router'
 import Image from 'next/image'
+import SearchBloc from '@/components/Global/Search/SearchBloc'
+import ResponsiveTemporary from '@/components/Global/ResponsiveTemporary'
+import CTA from '@/components/Global/CTA'
+import FullSearchBloc from '@/components/Global/Search/FullSearchBloc'
 
 function SearchPage() {
 	const [searchTerm, setSearchTerm] = useState(undefined)
@@ -82,172 +86,197 @@ function SearchPage() {
 	return (
 		<>
 			<Head>
-				<title>My Makeup - Search</title>
+				<title>Recherche de maquilleuse - My Makeup</title>
 				<meta
 					name="description"
-					content="Inscription sur my-makeup.fr la plateforme qui va révolutionner votre
-                recherche de maquilleuses professionnelles, ou votre recherche de client !"
+					content="Recherchez et trouvez votre maquilleuse professionnelle en quelques clics sur My Makeup."
 				/>
 			</Head>
-			<Nav />
-			<main
-				className={
-					'relative mx-2 mt-36 flex min-h-[55vh] items-center justify-center'
-				}
-			>
-				{/*## Formulaire plein écran si not hasSearched*/}
-
-				{!hasSearched && !isSearching && (
-					<div className="flex flex-col items-center justify-center">
-						<form autoComplete="off" onSubmit={handleSubmit}>
-							<div className="finder">
-								<div className="finder__outer">
-									<div className="finder__inner">
-										<input
-											className="finder__input"
-											type="text"
-											placeholder="Recherche"
-											value={searchTerm}
-											onChange={e => setSearchTerm(e.target.value)}
-										/>
-									</div>
-								</div>
-							</div>
-
-							<div className=" flex ">
-								<div className="finder mr-4 mt-8 w-1/2">
-									<div className="finder__outer w-1/2">
-										<div className="finder__inner w-1/2">
-											<input
-												className="finder__input w-1/2"
-												type="text"
-												placeholder="Ville"
-												value={city}
-												onChange={e => setCity(e.target.value)}
-											/>
-										</div>
-									</div>
-								</div>
-
-								<div className="finder ml-4 mt-8 w-1/2">
-									<div className="finder_submit__outer w-1/2">
-										<div className="finder__inner w-1/2 cursor-pointer">
-											<input
-												className="finder__input w-1/2 cursor-pointer"
-												type="submit"
-												name="q"
-											/>
-										</div>
-									</div>
-								</div>
-							</div>
-						</form>
-					</div>
-				)}
-
-				{/*##			Loading animation if isSearching*/}
-
-				<div
+			<div className={'relative'}>
+				<Image
+					src={'/assets/coming-soon.svg'}
+					alt={'Coming soon'}
+					width={'80'}
+					height={'80'}
 					className={
-						'mx-8 mt-8 grid w-full grid-cols-3 gap-4' +
-						(isSearching ? ' visible' : ' hidden')
+						'fixed left-0 top-0 z-50 m-4 rounded-full bg-amber-300/75 p-2'
 					}
-					// className={'mx-8 mt-8 grid w-full grid-cols-3 gap-4'}
-				>
-					<div id="loader">
-						<div id="box"></div>
-						<div id="hill"></div>
-					</div>
-				</div>
-
-				{/*## divided screen with cards if hasSearched*/}
-
-				<div
-					className={
-						'm-4 flex h-full w-screen justify-evenly ' +
-						(searchResults.length === 0 || isSearching ? ' hidden' : '')
-					}
-				>
-					<div className=" hidden h-auto w-[400px] lg:block">
-						<form autoComplete="off" onSubmit={handleSubmit}>
-							<div className="finder">
-								<div className="finder__outer">
-									<div className="finder__inner">
-										<input
-											className="finder__input"
-											type="text"
-											placeholder="Recherche"
-											value={searchTerm}
-											onChange={e => setSearchTerm(e.target.value)}
-										/>
-									</div>
-								</div>
-							</div>
-							<div className="finder  mt-8">
-								<div className="finder__outer ">
-									<div className="finder__inner ">
-										<input
-											className="finder__input "
-											type="text"
-											placeholder="Ville"
-											value={city}
-											onChange={e => setCity(e.target.value)}
-										/>
-									</div>
-								</div>
-							</div>
-							<div className="finder mt-8  ">
-								<div className="finder_submit__outer ">
-									<div className="finder__inner  cursor-pointer">
-										<input
-											className="finder__input  cursor-pointer"
-											type="submit"
-											name="q"
-										/>
-									</div>
-								</div>
-							</div>
-						</form>
-					</div>
-
-					<div className="m-4 hidden h-auto w-[1px] bg-gray-400 lg:block"></div>
-
-					<div
-						className={' mt-8 flex w-full grid-cols-3 flex-col gap-4 md:grid'}
-						// className={'grid w-full grid-cols-3 gap-4'}
-					>
-						{searchResults.map(
-							(
-								result // show cards
-							) => (
-								<div
-									key={result.id}
-									className="flex transform cursor-pointer flex-col justify-between rounded border border-gray-200 bg-white p-4 leading-normal shadow transition duration-300 ease-in-out hover:translate-y-1 hover:scale-105 hover:border-gray-400 hover:shadow-lg"
-								>
-									<h3 className="mb-2 font-bold">
-										{result.first_name} {result.last_name}
-									</h3>
-
-									{result.main_picture != null && (
-										<Image
-											src={result.main_picture.url}
-											alt=""
-											width="100"
-											height="100"
-										/>
-									)}
-
-									<p>Spécialité : {result.speciality}</p>
-									<p>Ville : {result.city}</p>
-									{/* ... Afficher d'autres informations si vous le souhaitez */}
-								</div>
-							)
-						)}
-					</div>
-				</div>
-			</main>
-			<Footer />;
+				/>
+				<Nav />
+				<main className={'relative'}>
+					<ResponsiveTemporary />
+					<FullSearchBloc />
+				</main>
+				<Footer />
+			</div>
 		</>
+		// <>
+		// 	<Head>
+		// 		<title>My Makeup - Search</title>
+		// 		<meta
+		// 			name="description"
+		// 			content="Inscription sur my-makeup.fr la plateforme qui va révolutionner votre
+		//             recherche de maquilleuses professionnelles, ou votre recherche de client !"
+		// 		/>
+		// 	</Head>
+		// 	<Nav />
+		// 	<main
+		// 		className={
+		// 			'relative mx-2 mt-36 flex min-h-[55vh] items-center justify-center'
+		// 		}
+		// 	>
+		// 		<SearchBloc />
+		//
+		// 		{/*## Formulaire plein écran si not hasSearched*/}
+		//
+		// 		{/*{!hasSearched && !isSearching && (*/}
+		// 		{/*	<div className="flex flex-col items-center justify-center">*/}
+		// 		{/*		<form autoComplete="off" onSubmit={handleSubmit}>*/}
+		// 		{/*			<div className="finder">*/}
+		// 		{/*				<div className="finder__outer">*/}
+		// 		{/*					<div className="finder__inner">*/}
+		// 		{/*						<input*/}
+		// 		{/*							className="finder__input"*/}
+		// 		{/*							type="text"*/}
+		// 		{/*							placeholder="Recherche"*/}
+		// 		{/*							value={searchTerm}*/}
+		// 		{/*							onChange={e => setSearchTerm(e.target.value)}*/}
+		// 		{/*						/>*/}
+		// 		{/*					</div>*/}
+		// 		{/*				</div>*/}
+		// 		{/*			</div>*/}
+		//
+		// 		{/*			<div className=" flex ">*/}
+		// 		{/*				<div className="finder mr-4 mt-8 w-1/2">*/}
+		// 		{/*					<div className="finder__outer w-1/2">*/}
+		// 		{/*						<div className="finder__inner w-1/2">*/}
+		// 		{/*							<input*/}
+		// 		{/*								className="finder__input w-1/2"*/}
+		// 		{/*								type="text"*/}
+		// 		{/*								placeholder="Ville"*/}
+		// 		{/*								value={city}*/}
+		// 		{/*								onChange={e => setCity(e.target.value)}*/}
+		// 		{/*							/>*/}
+		// 		{/*						</div>*/}
+		// 		{/*					</div>*/}
+		// 		{/*				</div>*/}
+		//
+		// 		{/*				<div className="finder ml-4 mt-8 w-1/2">*/}
+		// 		{/*					<div className="finder_submit__outer w-1/2">*/}
+		// 		{/*						<div className="finder__inner w-1/2 cursor-pointer">*/}
+		// 		{/*							<input*/}
+		// 		{/*								className="finder__input w-1/2 cursor-pointer"*/}
+		// 		{/*								type="submit"*/}
+		// 		{/*								name="q"*/}
+		// 		{/*							/>*/}
+		// 		{/*						</div>*/}
+		// 		{/*					</div>*/}
+		// 		{/*				</div>*/}
+		// 		{/*			</div>*/}
+		// 		{/*		</form>*/}
+		// 		{/*	</div>*/}
+		// 		{/*)}*/}
+		//
+		// 		{/*/!*##			Loading animation if isSearching*!/*/}
+		// 		{/*<div*/}
+		// 		{/*	className={*/}
+		// 		{/*		'mx-8 mt-8 grid w-full grid-cols-3 gap-4' +*/}
+		// 		{/*		(isSearching ? ' visible' : ' hidden')*/}
+		// 		{/*	}*/}
+		// 		{/*	// className={'mx-8 mt-8 grid w-full grid-cols-3 gap-4'}*/}
+		// 		{/*>*/}
+		// 		{/*	<div id="loader">*/}
+		// 		{/*		<div id="box"></div>*/}
+		// 		{/*		<div id="hill"></div>*/}
+		// 		{/*	</div>*/}
+		// 		{/*</div>*/}
+		//
+		// 		{/*## divided screen with cards if hasSearched*/}
+		// 		{/*<div*/}
+		// 		{/*	className={*/}
+		// 		{/*		'm-4 flex h-full w-screen justify-evenly ' +*/}
+		// 		{/*		(searchResults.length === 0 || isSearching ? ' hidden' : '')*/}
+		// 		{/*	}*/}
+		// 		{/*>*/}
+		// 		{/*	<div className=" hidden h-auto w-[400px] lg:block">*/}
+		// 		{/*		<form autoComplete="off" onSubmit={handleSubmit}>*/}
+		// 		{/*			<div className="finder">*/}
+		// 		{/*				<div className="finder__outer">*/}
+		// 		{/*					<div className="finder__inner">*/}
+		// 		{/*						<input*/}
+		// 		{/*							className="finder__input"*/}
+		// 		{/*							type="text"*/}
+		// 		{/*							placeholder="Recherche"*/}
+		// 		{/*							value={searchTerm}*/}
+		// 		{/*							onChange={e => setSearchTerm(e.target.value)}*/}
+		// 		{/*						/>*/}
+		// 		{/*					</div>*/}
+		// 		{/*				</div>*/}
+		// 		{/*			</div>*/}
+		// 		{/*			<div className="finder  mt-8">*/}
+		// 		{/*				<div className="finder__outer ">*/}
+		// 		{/*					<div className="finder__inner ">*/}
+		// 		{/*						<input*/}
+		// 		{/*							className="finder__input "*/}
+		// 		{/*							type="text"*/}
+		// 		{/*							placeholder="Ville"*/}
+		// 		{/*							value={city}*/}
+		// 		{/*							onChange={e => setCity(e.target.value)}*/}
+		// 		{/*						/>*/}
+		// 		{/*					</div>*/}
+		// 		{/*				</div>*/}
+		// 		{/*			</div>*/}
+		// 		{/*			<div className="finder mt-8  ">*/}
+		// 		{/*				<div className="finder_submit__outer ">*/}
+		// 		{/*					<div className="finder__inner  cursor-pointer">*/}
+		// 		{/*						<input*/}
+		// 		{/*							className="finder__input  cursor-pointer"*/}
+		// 		{/*							type="submit"*/}
+		// 		{/*						/>*/}
+		// 		{/*					</div>*/}
+		// 		{/*				</div>*/}
+		// 		{/*			</div>*/}
+		// 		{/*		</form>*/}
+		// 		{/*	</div>*/}
+		//
+		// 		{/*	<div className="m-4 hidden h-auto w-[1px] bg-gray-400 lg:block"></div>*/}
+		//
+		// 		{/*	<div*/}
+		// 		{/*		className={' mt-8 flex w-full grid-cols-3 flex-col gap-4 md:grid'}*/}
+		// 		{/*		// className={'grid w-full grid-cols-3 gap-4'}*/}
+		// 		{/*	>*/}
+		// 		{/*		{searchResults.map(*/}
+		// 		{/*			(*/}
+		// 		{/*				result // show cards*/}
+		// 		{/*			) => (*/}
+		// 		{/*				<div*/}
+		// 		{/*					key={result.id}*/}
+		// 		{/*					className="flex transform cursor-pointer flex-col justify-between rounded border border-gray-200 bg-white p-4 leading-normal shadow transition duration-300 ease-in-out hover:translate-y-1 hover:scale-105 hover:border-gray-400 hover:shadow-lg"*/}
+		// 		{/*				>*/}
+		// 		{/*					<h3 className="mb-2 font-bold">*/}
+		// 		{/*						{result.first_name} {result.last_name}*/}
+		// 		{/*					</h3>*/}
+		//
+		// 		{/*					{result.main_picture != null && (*/}
+		// 		{/*						<Image*/}
+		// 		{/*							src={result.main_picture.url}*/}
+		// 		{/*							alt=""*/}
+		// 		{/*							width="100"*/}
+		// 		{/*							height="100"*/}
+		// 		{/*						/>*/}
+		// 		{/*					)}*/}
+		//
+		// 		{/*					<p>Spécialité : {result.speciality}</p>*/}
+		// 		{/*					<p>Ville : {result.city}</p>*/}
+		// 		{/*					/!* ... Afficher d'autres informations si vous le souhaitez *!/*/}
+		// 		{/*				</div>*/}
+		// 		{/*			)*/}
+		// 		{/*		)}*/}
+		// 		{/*	</div>*/}
+		// 		{/*</div>*/}
+		// 	</main>
+		// 	<Footer />;
+		// </>
 	)
 }
 
