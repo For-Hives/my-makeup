@@ -30,8 +30,6 @@ const options = {
 			 * @param name
 			 */
 			authorize: async ({ password, email, name }) => {
-				console.log('authorize')
-
 				let callUrl = `${process.env.NEXT_PUBLIC_API_URL}api/auth/local`
 				let body = JSON.stringify({
 					identifier: email,
@@ -82,21 +80,12 @@ const options = {
 	debug: true,
 	callbacks: {
 		async session({ session, token, user }) {
-			console.log('session >> ')
-
 			session.jwt = token.jwt
 			session.id = token.id
-			console.log(token)
 
 			return session
 		},
 		async jwt({ token, user, account, profile, isNewUser }) {
-			console.log('jwt >> ')
-
-			console.log(token)
-			console.log(user)
-			console.log(account)
-
 			const isSignIn = !!user
 
 			if (isSignIn) {
@@ -108,7 +97,6 @@ const options = {
 						`${process.env.NEXT_PUBLIC_API_URL}api/auth/${account.provider}/callback?access_token=${account?.access_token}`
 					)
 					const data = await response.json()
-					console.log(data)
 					token.jwt = data.jwt
 					token.id = data.user.id
 				} else {

@@ -5,34 +5,39 @@ import { useRouter } from 'next/router'
 import { CheckIcon } from '@heroicons/react/24/outline'
 import Loader from '@/components/Global/Loader'
 import Link from 'next/link'
+import * as zod from 'zod'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { patchMeMakeup } from '@/services/PatchMeMakeup'
+import { toast } from 'react-toastify'
 
 function InitAccount() {
+	const {
+		register,
+		handleSubmit,
+		formState: { errors },
+		reset,
+	} = useForm({
+		resolver: zodResolver(schema),
+	})
+
 	const [step, setStep] = useState(0)
 	const [stepsList, setStepsList] = useState([
-		{
-			name: "Verification de l'email",
-			href: '#',
-			status: 'upcoming',
-		},
+		{ name: "Verification de l'email", href: '#', status: 'upcoming' },
 		{ name: 'Initialisation du compte', href: '#', status: 'upcoming' },
-		{
-			name: 'Nom et Prénom',
-			href: '#',
-			status: 'upcoming',
-		},
+		{ name: 'Nom et Prénom', href: '#', status: 'upcoming' },
 		{ name: 'Finalisation', href: '#', status: 'upcoming' },
 	])
 	const [user, setUser] = useState(null)
 	const [accountInit, setAccountInit] = useState(false)
 	const [userInterval, setUserInterval] = useState(null)
+	const [fistName, setFirstName] = useState('')
+	const [lastName, setLastName] = useState('')
 
 	const router = useRouter()
 
 	// get current user id
 	const { data: session } = useSession()
-
-	console.log('Session', session)
-	// todo : problem en developpement, session n'a pas de jwt
 
 	useEffect(
 		id => {
@@ -41,19 +46,15 @@ function InitAccount() {
 
 			if (session.user) {
 				if (user === null) {
-					console.log('set interval')
 					setUserInterval(getUserFromSession(session, user, setUser))
 				}
 				if (user != null) {
 					// see if user is verified
-					console.log('User', user)
-
 					if (!user.confirmed) {
 						// if yes, 1 stepper : verify email
 						setStep(1)
 					} else {
 						if (userInterval != null) {
-							console.log('clear interval with : ', userInterval)
 							clearInterval(userInterval)
 						}
 
@@ -73,33 +74,29 @@ function InitAccount() {
 								})
 									.then(response => {
 										if (response.status === 200) {
-											console.log('response', response.body)
 										}
 									})
 									.catch(err => {
-										console.log(err)
+										toast(
+											'Une erreur est survenue, veuillez réessayer plus tard',
+											{
+												type: 'error',
+												icon: '⛔',
+											}
+										)
 									})
-								console.log('InitAccount')
 								setAccountInit(true)
 							}
 							setStep(3)
 						}
 					}
 				}
-				// if yes, 3 stepper : name + last name
-
-				// if yes, 4 stepper : go to profil page
 			}
 		},
 		[session, user, step]
 	)
 
-	const [fistName, setFirstName] = useState('')
-	const [lastName, setLastName] = useState('')
-
 	useEffect(() => {
-		console.log('new step : ', step)
-
 		if (step === 0) {
 			setStepsList([
 				{
@@ -182,10 +179,13 @@ function InitAccount() {
 		}
 	}, [step])
 
-	if (step === 0) return <Loader />
+	function onSubmit(data) {
+		patchMeMakeup(session, data)
 
-	// if (error) return 'An error has occurred: ' + error.message
-	// const user = data
+		setStep(4)
+	}
+
+	if (step === 0) return <Loader />
 
 	return (
 		<>
@@ -315,7 +315,7 @@ function InitAccount() {
 							)}
 							{step === 3 && (
 								<div className="flex flex-col items-center justify-center">
-									<div className="flex flex-col items-center justify-center">
+									<div className="my-8 flex flex-col items-center justify-center">
 										<h1 className="text-center text-3xl font-bold">
 											Votre nom et votre prénom
 										</h1>
@@ -324,40 +324,76 @@ function InitAccount() {
 											utilisateurs
 										</p>
 
-										<form
-											onSubmit={e => {
-												e.preventDefault()
-												setStep(4)
-											}}
-										>
-											<div className="flex flex-col items-center justify-center">
-												<label htmlFor="first_name"></label>
-												<input
-													type="text"
-													value={fistName}
-													name="first_name"
-													onChange={e => {
-														setFirstName(e.target.value)
-													}}
-												/>
-												<label htmlFor="last_name"></label>
-												<input
-													type="text"
-													name="last_name"
-													value={lastName}
-													onChange={e => {
-														setLastName(e.target.value)
-													}}
-												/>
-												<button type="submit">Submit</button>
+										<div className="mt-10 sm:mx-auto sm:w-full sm:max-w-[480px]">
+											<div className="bg-white px-6 py-12 shadow sm:rounded-lg sm:px-12">
+												<form
+													className="space-y-6"
+													action="#"
+													method="POST"
+													onSubmit={handleSubmit(onSubmit)}
+												>
+													<div>
+														<label
+															htmlFor="first_name"
+															className="block text-sm font-medium leading-6 text-gray-900"
+														>
+															Prénom
+														</label>
+														<div className="mt-2">
+															<input
+																type="text"
+																required
+																value={fistName}
+																name="first_name"
+																{...register('first_name')}
+																onChange={e => {
+																	setFirstName(e.target.value)
+																}}
+																className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+															/>
+														</div>
+													</div>
+
+													<div>
+														<label
+															htmlFor="last_name"
+															className="block text-sm font-medium leading-6 text-gray-900"
+														>
+															Nom de famille
+														</label>
+														<div className="mt-2">
+															<input
+																id="last_name"
+																type="text"
+																required
+																name="last_name"
+																value={lastName}
+																{...register('last_name')}
+																onChange={e => {
+																	setLastName(e.target.value)
+																}}
+																className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+															/>
+														</div>
+													</div>
+
+													<div>
+														<button
+															type="submit"
+															className="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+														>
+															Suivant
+														</button>
+													</div>
+												</form>
 											</div>
-										</form>
+										</div>
 									</div>
 								</div>
 							)}
 							{step === 4 && (
 								<div className="flex flex-col items-center justify-center">
-									<div className="flex flex-col items-center justify-center">
+									<div className="my-16 flex flex-col items-center justify-center">
 										<h1 className="text-center text-3xl font-bold">
 											Bienvenue sur My-Makeup !
 										</h1>
@@ -368,7 +404,7 @@ function InitAccount() {
 										</h2>
 										<Link
 											href="/auth/profil"
-											className="border-2 border-black text-center"
+											className="my-16 rounded-md bg-indigo-600 px-3 py-1.5 text-white"
 										>
 											Mon profile
 										</Link>
@@ -419,3 +455,17 @@ export const getServerSideProps = async ({ req }) => {
 		},
 	}
 }
+
+const schema = zod
+	.object({
+		first_name: zod.string({
+			required_error: "Ce sera plus facile de t'appeler avec un prénom !",
+		}),
+		last_name: zod.string({
+			required_error: 'Je suis sur que tu as un nom de famille !',
+		}),
+	})
+	.required({
+		first_name: true,
+		last_name: true,
+	})

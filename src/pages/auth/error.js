@@ -12,15 +12,11 @@ function Error() {
 	const [showed, setShowed] = React.useState(false)
 
 	useEffect(() => {
-		console.log('useEffect')
-
 		if (session) {
-			console.log('session', session)
 			signOut()
 		}
 
 		if (showed === false) {
-			console.log('showed === false', showed)
 			toast('Veuillez confirmer votre adresse email', {
 				icon: '⚠️',
 				type: 'error',
