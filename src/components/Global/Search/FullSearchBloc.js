@@ -41,7 +41,7 @@ function SearchBloc() {
 							/>
 							<input
 								className={
-									'flex w-80 items-center rounded-lg border-2 border-indigo-900 bg-transparent py-2 pl-12 pr-6 text-sm leading-6 text-indigo-900'
+									'flex w-96 items-center rounded-lg border-2 border-indigo-900 bg-transparent py-2 pl-12 pr-6 text-sm leading-6 text-indigo-900'
 								}
 								placeholder={
 									"Essayez 'Maquilleuse mariée', 'Maquilleuse événements'..."
@@ -57,7 +57,7 @@ function SearchBloc() {
 							/>
 							<input
 								className={
-									'flex w-80 items-center rounded-lg border-2 border-indigo-900 bg-transparent py-2 pl-12 pr-6 text-sm leading-6 text-indigo-900'
+									'flex w-96 items-center rounded-lg border-2 border-indigo-900 bg-transparent py-2 pl-12 pr-6 text-sm leading-6 text-indigo-900'
 								}
 								placeholder={
 									'Lieu de la mission (ex: Paris, Lyon, Marseille...)'
