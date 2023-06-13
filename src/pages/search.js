@@ -100,21 +100,25 @@ function SearchPage() {
 						</div>
 					)}
 					{hasSearched && !isSearching && (
-						<div className={'flex w-full items-center justify-center py-32'}>
-							{searchResults.length === 0 && (
-								<div className={'flex flex-col items-center'}>
-									{searchResults.map(result => (
-										<div
-											key={result.id}
-											className={'flex flex-col items-center'}
-										>
-											<h3 className="mb-2 font-bold">
-												{result.first_name} {result.last_name}
-											</h3>
-										</div>
-									))}
-								</div>
-							)}
+						<div className={'mx-auto max-w-7xl'}>
+							<article className={'grid w-full grid-cols-5'}>
+								{searchResults.length !== 0 && (
+									<>
+										{searchResults.map(result => (
+											<div
+												key={result.id}
+												className={'col-span-1 flex flex-col items-center'}
+											>
+												<div className={'flex flex-col items-center'}>
+													<h3 className="mb-2 to-emerald-900 text-sm font-bold">
+														{result.first_name} {result.last_name}
+													</h3>
+												</div>
+											</div>
+										))}
+									</>
+								)}
+							</article>
 						</div>
 					)}
 				</main>
