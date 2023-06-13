@@ -1,11 +1,12 @@
+import { toast } from 'react-toastify'
+
 /**
  * PUT /api/makeup-artistes/{id}
- * @param queryClient
- * @param user
  * @param session
  * @param data
+ * @param queryClient
  */
-export function patchMeMakeup(queryClient, user, session, data) {
+export function patchMeMakeup(session, data, queryClient = null) {
 	fetch(`${process.env.NEXT_PUBLIC_API_URL}api/me-makeup`, {
 		method: 'PATCH',
 		headers: {
@@ -23,9 +24,14 @@ export function patchMeMakeup(queryClient, user, session, data) {
 		})
 		.then(res => {
 			// 	invalidate the cache, to refresh the page and get the new data , with tanstack/react-query
-			queryClient.invalidateQueries('users/me-makeup')
+			if (queryClient !== null) {
+				queryClient.invalidateQueries('users/me-makeup')
+			}
 		})
-		.catch(err => {
-			console.log(err)
-		})
+		.catch(err =>
+			toast('Une erreur est survenue, veuillez réessayer plus tard', {
+				type: 'error',
+				icon: '⛔',
+			})
+		)
 }
