@@ -39,6 +39,12 @@ function Profil() {
 
 	if (error) return 'An error has occurred: ' + error.message
 	const user = data
+
+	if (user.data === null) {
+		Router.push('/auth/init-account')
+		return <Loader />
+	}
+
 	return (
 		<>
 			<Head>

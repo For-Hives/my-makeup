@@ -30,6 +30,8 @@ const options = {
 			 * @param name
 			 */
 			authorize: async ({ password, email, name }) => {
+				console.log('authorize')
+
 				let callUrl = `${process.env.NEXT_PUBLIC_API_URL}api/auth/local`
 				let body = JSON.stringify({
 					identifier: email,
@@ -71,7 +73,7 @@ const options = {
 		signIn: '/auth/signin',
 		signOut: '/auth/signout',
 		error: '/auth/error', // Error code passed in query string as ?error=
-		verifyRequest: '/auth/verify-request', // (used for check email message)
+		verifyRequest: '/auth/init-account', // (used for check email message)
 		newUser: '/auth/init-account', // New users will be directed here on first sign in (leave the property out if not of interest)
 	},
 	secret: `${process.env.NEXTAUTH_SECRET}`, //PUT YOUR OWN SECRET (command: openssl rand -base64 32)
@@ -81,7 +83,22 @@ const options = {
 	},
 	debug: true,
 	callbacks: {
+		async signIn({ user, account, profile, email, credentials }) {
+			console.log('signIn >> ')
+
+			const isAllowedToSignIn = true
+			if (isAllowedToSignIn) {
+				return true
+			} else {
+				// Return false to display a default error message
+				return false
+				// Or you can return a URL to redirect to:
+				// return '/unauthorized'
+			}
+		},
 		async session({ session, token, user }) {
+			console.log('session >> ')
+
 			session.jwt = token.jwt
 			// session.id = token.id
 			console.log(token)
@@ -89,6 +106,12 @@ const options = {
 			return session
 		},
 		async jwt({ token, user, account, profile, isNewUser }) {
+			console.log('jwt >> ')
+
+			console.log(token)
+			console.log(user)
+			console.log(account)
+
 			const isSignIn = !!user
 
 			if (isSignIn) {
