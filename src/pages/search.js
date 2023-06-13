@@ -12,6 +12,7 @@ import { BadgeDispo } from '@/components/Profil/Atoms/BadgeDispo'
 import { BadgeIndispo } from '@/components/Profil/Atoms/BadgeIndispo'
 import { BadgeSuperMaquilleuse } from '@/components/Global/BadgeSuperMaquilleuse'
 import { Stars } from '@/components/Profil/Atoms/Stars'
+import Link from 'next/link'
 
 function SearchPage() {
 	const [searchTerm, setSearchTerm] = useState(undefined)
@@ -110,7 +111,8 @@ function SearchPage() {
 									<>
 										{searchResults.map(result => (
 											<>
-												<div
+												<Link
+													href={`/profil/${result.username}`}
 													className={
 														'col-span-1 flex w-full flex-col items-center rounded border border-slate-300 bg-white'
 													}
@@ -169,20 +171,50 @@ function SearchPage() {
 														</div>
 													</div>
 													<div
-														className={'flex w-full flex-col gap-2 p-4 pt-6'}
+														className={'flex w-full flex-col gap-4 p-4 pt-6'}
 													>
-														<h2 className="text-lg font-bold text-gray-900">
-															{result.speciality}
-														</h2>
-														<div className={'flex flex-row items-center gap-4'}>
-															<Stars starsToDisplay={result.score} />{' '}
-															<span className={'text-sm italic'}>
-																{/* todo connect the score to the number of reviews */}
-																( {result.score.toFixed(0)} avis )
-															</span>
+														<div className={'flex w-full flex-col'}>
+															<h2 className="text-lg font-bold text-gray-900">
+																{result.speciality}
+															</h2>
+															<div
+																className={'flex flex-row items-center gap-4'}
+															>
+																<Stars starsToDisplay={result.score} />{' '}
+																<span className={'text-sm italic'}>
+																	{/* todo connect the score to the number of reviews */}
+																	( {result.score.toFixed(0)} avis )
+																</span>
+															</div>
+														</div>
+														<div
+															className={'flex flex-wrap items-center gap-1'}
+														>
+															{result.skills.length ? (
+																<>
+																	{result?.skills.map((skill, index) => {
+																		return (
+																			<div
+																				key={index}
+																				className="inline-flex flex-nowrap items-center rounded-full bg-indigo-100 px-3 py-2 text-xs font-medium text-indigo-700"
+																			>
+																				{skill.name}
+																			</div>
+																		)
+																	})}
+																</>
+															) : (
+																<p
+																	className={
+																		'inline-flex flex-nowrap items-center rounded-full bg-gray-100 px-3 py-2 text-xs font-medium text-gray-700'
+																	}
+																>
+																	Aucune compétence renseignée
+																</p>
+															)}
 														</div>
 													</div>
-												</div>
+												</Link>
 											</>
 										))}
 									</>
