@@ -9,7 +9,7 @@ function ViewResumeProfil(props) {
 	const router = useRouter()
 	const { publicView } = router.query
 
-	const user = props.user
+	const user = props.user.attributes
 	const isPublic = !!publicView
 
 	const [starsToDisplay, setStarsToDisplay] = React.useState(5)
@@ -26,22 +26,20 @@ function ViewResumeProfil(props) {
 		}
 	}
 
+	let mainPicture
+	if (user?.main_picture && user?.main_picture?.data === undefined) {
+		mainPicture = user?.main_picture?.url
+	} else {
+		mainPicture = user?.main_picture?.data.attributes.url
+	}
 	return (
 		<div className={'relative bg-white pb-24 shadow-xl'}>
 			<div className="mx-auto max-w-7xl pt-[90px]">
 				<div className={'grid grid-cols-12 gap-5 pt-24'}>
 					<div className={'relative col-span-2 flex items-center'}>
-						{user && user?.main_picture && user?.main_picture?.url ? (
+						{mainPicture && (
 							<Image
-								src={user?.main_picture?.url}
-								alt={'ppmakeup'}
-								width={500}
-								height={500}
-								className={'h-[200px] w-[200px] rounded-full object-cover'}
-							></Image>
-						) : (
-							<Image
-								src={'/assets/pp_makeup.webp'}
+								src={mainPicture || '/assets/pp_makeup.webp'}
 								alt={'ppmakeup'}
 								width={500}
 								height={500}

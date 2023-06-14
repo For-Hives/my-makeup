@@ -16,35 +16,36 @@ export function OptionsOffers(props) {
 			{
 				// display the user description
 				// if \n is present, split the string and display each part in a new line
-				options.map((option, index) => {
-					return (
-						<Disclosure key={index}>
-							{({ open }) => (
-								/* Use the `open` state to conditionally change the direction of an icon. */
-								<>
-									<Disclosure.Button
-										className={
-											'flex w-full items-center justify-between border-t border-slate-300 pt-6 ' +
-											(open ? 'text-indigo-900' : 'pb-4 text-slate-700')
-										}
-									>
-										{option.name}
-										<ChevronRightIcon
+				options?.length &&
+					options?.map((option, index) => {
+						return (
+							<Disclosure key={index}>
+								{({ open }) => (
+									/* Use the `open` state to conditionally change the direction of an icon. */
+									<>
+										<Disclosure.Button
 											className={
-												'h-5 w-5 ' + (open ? 'rotate-90 transform' : '')
+												'flex w-full items-center justify-between border-t border-slate-300 pt-6 ' +
+												(open ? 'text-indigo-900' : 'pb-4 text-slate-700')
 											}
-										/>
-									</Disclosure.Button>
-									<Disclosure.Panel>
-										<div className={'pb-4'}>
-											<DescriptionPriceOffer serviceOffer={option} />
-										</div>
-									</Disclosure.Panel>
-								</>
-							)}
-						</Disclosure>
-					)
-				})
+										>
+											{option.name}
+											<ChevronRightIcon
+												className={
+													'h-5 w-5 ' + (open ? 'rotate-90 transform' : '')
+												}
+											/>
+										</Disclosure.Button>
+										<Disclosure.Panel>
+											<div className={'pb-4'}>
+												<DescriptionPriceOffer serviceOffer={option} />
+											</div>
+										</Disclosure.Panel>
+									</>
+								)}
+							</Disclosure>
+						)
+					})
 			}
 		</div>
 	)

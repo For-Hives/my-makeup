@@ -86,7 +86,7 @@ export async function getStaticPaths() {
 
 export async function getStaticProps({ params }) {
 	let profilData = await fetch(
-		`${process.env.NEXT_PUBLIC_API_URL}api/makeup-artistes?filters[username][$eq]=${params.username}`,
+		`${process.env.NEXT_PUBLIC_API_URL}api/makeup-artistes?filters[username][$eq]=${params.username}&populate=service_offers.options,network,language,image_gallery,courses,experiences,skills,main_picture`,
 		{
 			method: 'GET',
 			headers: {

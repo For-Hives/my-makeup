@@ -27,7 +27,7 @@ function ViewInfosProfil(props) {
 	// get query param
 	const { publicView } = router.query
 
-	const user = props.user
+	const user = props.user.attributes
 	const isPublic = !!publicView
 
 	return (
