@@ -46,7 +46,13 @@ function SearchPage() {
 				setHasSearched(true)
 			})
 		}
-	}, [hasSearched, performSearch, router.query])
+	}, [
+		hasSearched,
+		lastSearch.city,
+		lastSearch.search,
+		performSearch,
+		router.query,
+	])
 
 	async function performSearch(search, city) {
 		if (search === undefined || search === '') {
@@ -67,8 +73,6 @@ function SearchPage() {
 		setLastSearch({ search, city })
 		setIsSearching(false)
 		setHasSearched(true)
-
-		console.log(results)
 	}
 
 	return (

@@ -13,7 +13,7 @@ function Index(props) {
 		} else {
 			router.push('/auth/signin')
 		}
-	}, [])
+	}, [router, session])
 
 	return <div></div>
 }
