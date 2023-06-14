@@ -3,7 +3,7 @@ import React from 'react'
 function ViewDescriptionProfil(props) {
 	const user = props.user
 	return (
-		<div className={'flex flex-col gap-4'}>
+		<div className={'flex w-full flex-col gap-4'}>
 			<h2 className={'text-xl font-bold text-slate-700'}>
 				Vous en quelques mots
 			</h2>

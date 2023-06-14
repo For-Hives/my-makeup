@@ -5,6 +5,13 @@ import { useRouter } from 'next/router'
 import React from 'react'
 import Footer from '@/components/Global/Footer'
 import ResponsiveTemporary from '@/components/Global/ResponsiveTemporary'
+import ModalUpdateLocationProfil from '@/components/Profil/Atoms/ModalUpdate/ModalUpdateLocationProfil'
+import ViewLocationProfil from '@/components/Profil/Childs/Views/ViewLocationProfil'
+import _ from 'lodash'
+import ResumeProfil from '@/components/Profil/Parents/ResumeProfil'
+import InfosProfil from '@/components/Profil/Parents/InfosProfil'
+import ViewResumeProfil from '@/components/Profil/Parents/ViewResumeProfil'
+import ViewInfosProfil from '@/components/Profil/Parents/ViewInfosProfil'
 
 export default function Profil({ profilData }) {
 	let router = useRouter()
@@ -30,9 +37,22 @@ export default function Profil({ profilData }) {
 				/>
 				<Nav />
 				<main className={'relative'}>
-					<ResponsiveTemporary />
-					Profil
-					{profilData.attributes.username}
+					<main className={'relative'}>
+						<ResponsiveTemporary />
+						<Image
+							src={'/assets/coming-soon.svg'}
+							alt={'Coming soon'}
+							width={'80'}
+							height={'80'}
+							className={
+								'fixed left-0 top-0 z-50 m-4 rounded-full bg-amber-300/75 p-2'
+							}
+						/>
+						<>
+							<ViewResumeProfil user={user} />
+							<ViewInfosProfil user={user} />
+						</>
+					</main>
 				</main>
 				<Footer />
 			</div>
