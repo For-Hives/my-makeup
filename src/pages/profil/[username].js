@@ -5,24 +5,20 @@ import { useRouter } from 'next/router'
 import React from 'react'
 import Footer from '@/components/Global/Footer'
 import ResponsiveTemporary from '@/components/Global/ResponsiveTemporary'
-import ModalUpdateLocationProfil from '@/components/Profil/Atoms/ModalUpdate/ModalUpdateLocationProfil'
-import ViewLocationProfil from '@/components/Profil/Childs/Views/ViewLocationProfil'
-import _ from 'lodash'
-import ResumeProfil from '@/components/Profil/Parents/ResumeProfil'
-import InfosProfil from '@/components/Profil/Parents/InfosProfil'
 import ViewResumeProfil from '@/components/Profil/Parents/ViewResumeProfil'
 import ViewInfosProfil from '@/components/Profil/Parents/ViewInfosProfil'
 
 export default function Profil({ profilData }) {
 	let router = useRouter()
 
+	const user = profilData
 	return (
 		<>
 			<Head>
-				<title>{`${profilData.attributes.first_name} ${profilData.attributes.last_name} - My Makeup`}</title>
+				<title>{`${user.attributes.first_name} ${user.attributes.last_name} - My Makeup`}</title>
 				<meta
 					name="description"
-					content={`Découvrez le profil de la maquilleuse professionnelle de vos rêves ! ${profilData.attributes.first_name} ${profilData.attributes.last_name}  - ${profilData.attributes.speciality} `}
+					content={`Découvrez le profil de la maquilleuse professionnelle de vos rêves ! ${user.attributes.first_name} ${profilData.attributes.last_name}  - ${profilData.attributes.speciality} `}
 				/>
 			</Head>
 			<div className={'relative'}>
@@ -79,7 +75,7 @@ export async function getStaticPaths() {
 	 */
 	const paths = res?.data?.map(record => ({
 		params: {
-			id: record.attributes.username,
+			username: record.attributes.username,
 		},
 	}))
 	return {
@@ -90,7 +86,7 @@ export async function getStaticPaths() {
 
 export async function getStaticProps({ params }) {
 	let profilData = await fetch(
-		`${process.env.NEXT_PUBLIC_API_URL}api/makeup-artistes?filters[username][$eq]=${params.id}`,
+		`${process.env.NEXT_PUBLIC_API_URL}api/makeup-artistes?filters[username][$eq]=${params.username}`,
 		{
 			method: 'GET',
 			headers: {
