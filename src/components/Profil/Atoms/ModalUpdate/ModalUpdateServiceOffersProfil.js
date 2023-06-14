@@ -182,7 +182,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 		const data = {
 			service_offers: userServiceOffersCopy,
 		}
-		patchMeMakeup(queryClient, user, session, data)
+		patchMeMakeup(session, data, queryClient)
 		// close the modal & reset the zod form
 		setUserServiceOffersId('')
 		setUserServiceOffersName('')

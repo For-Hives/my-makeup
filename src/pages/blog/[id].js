@@ -29,8 +29,6 @@ export default function Article({ articleData }) {
 
 	const meta = articleData.attributes
 
-	console.log(articleData)
-
 	return (
 		<>
 			<Head>

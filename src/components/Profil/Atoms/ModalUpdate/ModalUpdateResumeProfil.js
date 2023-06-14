@@ -70,14 +70,19 @@ export default function ModalUpdateResumeProfil(props) {
 					}
 
 					// 	put data in api : with fetch : /api/makeup-artistes/{user.id}
-					patchMeMakeup(queryClient, user, session, data)
+					patchMeMakeup(session, data, queryClient)
 					reset()
 					props.handleIsModalOpen()
 					setImageUrl('')
 				})
-				.catch(err => console.error(err))
+				.catch(err =>
+					toast('Une erreur est survenue, veuillez réessayer plus tard', {
+						type: 'error',
+						icon: '⛔',
+					})
+				)
 		} else {
-			patchMeMakeup(queryClient, user, session, data)
+			patchMeMakeup(session, data, queryClient)
 			reset()
 			props.handleIsModalOpen()
 			setImageUrl('')

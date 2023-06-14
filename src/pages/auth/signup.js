@@ -43,7 +43,7 @@ function Signup() {
 			email: data.email,
 			password: data.password,
 			name: data.name,
-			callbackUrl: '/auth/init-account',
+			callbackUrl: '/auth/verification-wall',
 		})
 	}
 
@@ -85,7 +85,7 @@ function Signup() {
 												<button
 													onClick={() => {
 														signIn('facebook', {
-															callbackUrl: '/auth/init-account',
+															callbackUrl: '/auth/profil',
 														})
 													}}
 													className="inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-slate-500 shadow-sm ring-1 ring-inset ring-slate-300 hover:bg-slate-50 focus:outline-offset-0"
@@ -112,7 +112,7 @@ function Signup() {
 												<button
 													onClick={() => {
 														signIn('google', {
-															callbackUrl: '/auth/init-account',
+															callbackUrl: '/auth/profil',
 														})
 													}}
 													className="inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-slate-500 shadow-sm ring-1 ring-inset ring-slate-300 hover:bg-slate-50 focus:outline-offset-0"
@@ -275,7 +275,7 @@ function Signup() {
 								</h2>
 
 								<Link
-									href={'/auth/init-account'}
+									href={'/auth/profil'}
 									className={
 										'radius-2xl my-8 border-2 border-indigo-700 px-4 py-2 text-indigo-700 hover:text-indigo-700 hover:underline'
 									}

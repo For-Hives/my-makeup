@@ -134,7 +134,7 @@ export default function ModalUpdateCoursesProfil(props) {
 		const data = {
 			courses: userCoursesCleaned,
 		}
-		patchMeMakeup(queryClient, user, session, data)
+		patchMeMakeup(session, data, queryClient)
 		// close the modal & reset the zod form
 		setUserCoursesId('')
 		setUserCoursesDiploma('')
