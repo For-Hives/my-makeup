@@ -11,6 +11,20 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
 import { toast } from 'react-toastify'
 
+const schema = zod
+	.object({
+		first_name: zod.string({
+			required_error: "Ce sera plus facile de t'appeler avec un prénom !",
+		}),
+		last_name: zod.string({
+			required_error: 'Je suis sur que tu as un nom de famille !',
+		}),
+	})
+	.required({
+		first_name: true,
+		last_name: true,
+	})
+
 function InitAccount() {
 	const {
 		register,
@@ -455,17 +469,3 @@ export const getServerSideProps = async ({ req }) => {
 		},
 	}
 }
-
-const schema = zod
-	.object({
-		first_name: zod.string({
-			required_error: "Ce sera plus facile de t'appeler avec un prénom !",
-		}),
-		last_name: zod.string({
-			required_error: 'Je suis sur que tu as un nom de famille !',
-		}),
-	})
-	.required({
-		first_name: true,
-		last_name: true,
-	})
