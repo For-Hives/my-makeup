@@ -10,6 +10,7 @@ import _ from 'lodash'
 import ResponsiveTemporary from '@/components/Global/ResponsiveTemporary'
 import InfosProfil from '@/components/Profil/Parents/InfosProfil'
 import FullLoader from '@/components/Global/Loader/FullLoader'
+import { Router } from 'next/router'
 
 function Profil() {
 	// get current user id
@@ -41,7 +42,7 @@ function Profil() {
 
 	if (user.data === null) {
 		Router.push('/auth/init-account')
-		return <Loader />
+		return <FullLoader />
 	}
 
 	return (

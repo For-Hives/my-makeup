@@ -1,9 +1,8 @@
 import React, { useEffect } from 'react'
 import Head from 'next/head'
-import Image from 'next/image'
 import { signIn, signOut, useSession } from 'next-auth/react'
 import { useRouter } from 'next/router'
-import Loader from '@/components/Global/Loader'
+import Loader from '@/components/Global/Loader/Loader'
 import { toast } from 'react-toastify'
 
 function Error() {

@@ -46,13 +46,7 @@ function SearchPage() {
 				setHasSearched(true)
 			})
 		}
-	}, [
-		hasSearched,
-		lastSearch.city,
-		lastSearch.search,
-		performSearch,
-		router.query,
-	])
+	}, [hasSearched, performSearch, router.query])
 
 	async function performSearch(search, city) {
 		if (search === undefined || search === '') {
