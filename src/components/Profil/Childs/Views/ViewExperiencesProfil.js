@@ -25,16 +25,16 @@ function ViewExperiencesProfil(props) {
 								<div className={'ml-2 flex w-full flex-col gap-2'}>
 									<div className={'flex w-full flex-col'}>
 										<p className={'font-semibold text-slate-700'}>
-											{experience.company}
+											{experience?.company}
 										</p>
 										<div className={'flex justify-between'}>
 											<p className={'text-sm italic text-slate-600'}>
-												{experience.job_name}
+												{experience?.job_name}
 											</p>
 											<p className={'text-sm italic text-slate-600'}>
 												{/* format date to month year ( like july 1998 )  */}
 												{/*{experience.date_start} - {experience.date_end}*/}
-												{new Date(experience.date_start).toLocaleString(
+												{new Date(experience?.date_start).toLocaleString(
 													'default',
 													{
 														year: 'numeric',
@@ -42,10 +42,10 @@ function ViewExperiencesProfil(props) {
 													}
 												)}
 												{' - '}
-												{experience.date_end === null ||
-												experience.date_end === ''
+												{experience?.date_end === null ||
+												experience?.date_end === ''
 													? "Aujourd'hui"
-													: new Date(experience.date_end).toLocaleString(
+													: new Date(experience?.date_end).toLocaleString(
 															'default',
 															{
 																year: 'numeric',
@@ -57,7 +57,7 @@ function ViewExperiencesProfil(props) {
 									</div>
 									<div>
 										<p className={'text-sm italic text-slate-500'}>
-											{experience.description}
+											{experience?.description}
 										</p>
 									</div>
 								</div>

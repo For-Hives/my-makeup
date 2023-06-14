@@ -12,7 +12,7 @@ function ViewLanguageProfil(props) {
 						<li key={index} className={'text-slate-700'}>
 							→&nbsp;
 							<div className="inline-flex flex-nowrap items-center rounded-full px-3 py-2 text-sm font-medium text-slate-700">
-								{language.name}
+								{language?.name}
 							</div>
 						</li>
 					)

@@ -35,14 +35,14 @@ function ViewPortfolioProfil(props) {
 							<SwiperSlide
 								key={index}
 								style={{
-									aspectRatio: `${image.width}/${image.height}`,
+									aspectRatio: `${image?.width}/${image?.height}`,
 									height: '100%',
 								}}
 								className={'!h-[500px] !w-auto'}
 							>
 								<Image
-									src={image.url}
-									alt={image.alternativeText ?? image.name}
+									src={image?.url}
+									alt={image?.alternativeText ?? image?.name}
 									fill={true}
 									className={'rounded object-cover'}
 								/>

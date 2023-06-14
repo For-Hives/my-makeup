@@ -12,7 +12,7 @@ function ViewServiceOffersProfil(props) {
 			</h2>
 			<Tab.Group>
 				<Tab.List className={'flex h-full w-full justify-center py-4'}>
-					{user?.service_offers.map((service_offer, index) => {
+					{user?.service_offers?.map((service_offer, index) => {
 						return (
 							<Tab
 								key={index}
@@ -22,13 +22,13 @@ function ViewServiceOffersProfil(props) {
 									' aria-selected:border-b-2 aria-selected:border-indigo-800  aria-selected:text-slate-900'
 								}
 							>
-								{service_offer.name}
+								{service_offer?.name}
 							</Tab>
 						)
 					})}
 				</Tab.List>
 				<Tab.Panels>
-					{user?.service_offers.map((service_offer, index) => {
+					{user?.service_offers?.map((service_offer, index) => {
 						return (
 							<Tab.Panel key={index}>
 								<div className={'flex flex-col gap-4 bg-white py-4'}>
@@ -36,7 +36,7 @@ function ViewServiceOffersProfil(props) {
 										<h2
 											className={'text-start text-lg font-bold text-indigo-900'}
 										>
-											{service_offer.name}
+											{service_offer?.name}
 										</h2>
 									</div>
 									<DescriptionPriceOffer serviceOffer={service_offer} />

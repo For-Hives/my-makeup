@@ -10,7 +10,7 @@ function ViewDescriptionProfil(props) {
 			{
 				// display the user description
 				// if \n is present, split the string and display each part in a new line
-				user?.description.split('\n').map((item, i) => {
+				user?.description?.split('\n').map((item, i) => {
 					return (
 						<p key={i} className={'text-slate-800'}>
 							{item}
