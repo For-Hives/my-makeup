@@ -1,5 +1,4 @@
 import React from 'react'
-
 import ModalUpdatePortfolioProfil from '@/components/Profil/Atoms/ModalUpdate/ModalUpdatePortfolioProfil'
 import { useRouter } from 'next/router'
 import ViewPortfolioProfil from '@/components/Profil/Childs/Views/ViewPortfolioProfil'

@@ -1,6 +1,5 @@
 import React from 'react'
 import { useRouter } from 'next/router'
-import ModalUpdateResumeProfil from '@/components/Profil/Atoms/ModalUpdate/ModalUpdateResumeProfil'
 import ModalUpdateLocationProfil from '@/components/Profil/Atoms/ModalUpdate/ModalUpdateLocationProfil'
 import ViewLocationProfil from '@/components/Profil/Childs/Views/ViewLocationProfil'
 

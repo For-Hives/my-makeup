@@ -1,7 +1,4 @@
 import React from 'react'
-import { OptionsOffers } from '@/components/Profil/Childs/ServiceOffers/OptionsOffers'
-import { DescriptionPriceOffer } from '@/components/Profil/Childs/ServiceOffers/DescriptionPriceOffer'
-import { Tab } from '@headlessui/react'
 import { useRouter } from 'next/router'
 import ModalUpdateServiceOffersProfil from '@/components/Profil/Atoms/ModalUpdate/ModalUpdateServiceOffersProfil'
 import ViewServiceOffersProfil from '@/components/Profil/Childs/Views/ViewServiceOffersProfil'

@@ -224,43 +224,6 @@ function SearchPage() {
 				<Footer />
 			</div>
 		</>
-
-		// 		{/*	<div*/}
-		// 		{/*		className={' mt-8 flex w-full grid-cols-3 flex-col gap-4 md:grid'}*/}
-		// 		{/*		// className={'grid w-full grid-cols-3 gap-4'}*/}
-		// 		{/*	>*/}
-		// 		{/*		{searchResults.map(*/}
-		// 		{/*			(*/}
-		// 		{/*				result // show cards*/}
-		// 		{/*			) => (*/}
-		// 		{/*				<div*/}
-		// 		{/*					key={result.id}*/}
-		// 		{/*					className="flex transform cursor-pointer flex-col justify-between rounded border border-gray-200 bg-white p-4 leading-normal shadow transition duration-300 ease-in-out hover:translate-y-1 hover:scale-105 hover:border-gray-400 hover:shadow-lg"*/}
-		// 		{/*				>*/}
-		// 							<h3 className="mb-2 font-bold">
-		// 								{result.first_name} {result.last_name}
-		// 							</h3>
-		//
-		// 		{/*					{result.main_picture != null && (*/}
-		// 		{/*						<Image*/}
-		// 		{/*							src={result.main_picture.url}*/}
-		// 		{/*							alt=""*/}
-		// 		{/*							width="100"*/}
-		// 		{/*							height="100"*/}
-		// 		{/*						/>*/}
-		// 		{/*					)}*/}
-		//
-		// 		{/*					<p>Spécialité : {result.speciality}</p>*/}
-		// 		{/*					<p>Ville : {result.city}</p>*/}
-		// 		{/*					/!* ... Afficher d'autres informations si vous le souhaitez *!/*/}
-		// 		{/*				</div>*/}
-		// 		{/*			)*/}
-		// 		{/*		)}*/}
-		// 		{/*	</div>*/}
-		// 		{/*</div>*/}
-		// 	</main>
-		// 	<Footer />;
-		// </>
 	)
 }
 

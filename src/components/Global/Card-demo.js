@@ -1,6 +1,6 @@
 import React from 'react'
 import Image from 'next/image'
-import { StarIcon, HeartIcon } from '@heroicons/react/20/solid'
+import { HeartIcon, StarIcon } from '@heroicons/react/20/solid'
 import { BadgeSuperMaquilleuse } from '@/components/Global/BadgeSuperMaquilleuse'
 
 function CardDemo(props) {

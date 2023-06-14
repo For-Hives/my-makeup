@@ -3,12 +3,11 @@ import Head from 'next/head'
 import Link from 'next/link'
 import Image from 'next/image'
 import { signIn, signOut, useSession } from 'next-auth/react'
-import { useForm, Controller } from 'react-hook-form'
+import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as zod from 'zod'
 import _ from 'lodash'
 import ResponsiveTemporary from '@/components/Global/ResponsiveTemporary'
-// import { router } from 'next/client'
 
 const schema = zod
 	.object({
