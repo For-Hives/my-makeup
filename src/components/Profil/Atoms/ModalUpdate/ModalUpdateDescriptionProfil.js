@@ -36,7 +36,7 @@ export default function ModalUpdateDescriptionProfil(props) {
 		data = {
 			...data,
 		}
-		patchMeMakeup(queryClient, user, session, data)
+		patchMeMakeup(session, data, queryClient)
 
 		reset()
 		props.handleIsModalOpen()

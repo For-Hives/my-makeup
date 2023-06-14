@@ -51,7 +51,7 @@ export default function ModalUpdateSocialMediaProfil(props) {
 				...data,
 			},
 		}
-		patchMeMakeup(queryClient, user, session, data)
+		patchMeMakeup(session, data, queryClient)
 
 		reset()
 		props.handleIsModalOpen()

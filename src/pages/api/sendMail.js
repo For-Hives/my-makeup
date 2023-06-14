@@ -1,3 +1,5 @@
+import { toast } from 'react-toastify'
+
 const formData = require('form-data')
 const Mailgun = require('mailgun.js')
 const mailgun = new Mailgun(formData)
@@ -22,11 +24,13 @@ export default function handler(req, res) {
             `,
 			})
 			.then(msg => {
-				console.log(msg) // logs response data
 				res.status(200).json({ success: true })
 			})
 			.catch(err => {
-				console.log(err) // logs any error
+				toast('Une erreur est survenue, veuillez réessayer plus tard', {
+					type: 'error',
+					icon: '⛔',
+				})
 				res.status(500).json({ success: false })
 			})
 	} else {

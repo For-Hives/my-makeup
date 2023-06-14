@@ -151,7 +151,7 @@ export default function ModalUpdateExperiencesProfil(props) {
 		const data = {
 			experiences: userExperiencesCleaned,
 		}
-		patchMeMakeup(queryClient, user, session, data)
+		patchMeMakeup(session, data, queryClient)
 		// close the modal & reset the zod form
 		setUserExperiencesId('')
 		setUserExperiencesCompany('')

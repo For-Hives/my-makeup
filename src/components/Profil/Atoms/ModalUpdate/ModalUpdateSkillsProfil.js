@@ -47,7 +47,7 @@ export default function ModalUpdateSkillsProfil(props) {
 		const data_clean = {
 			skills: userSkillsSelectedCleaned,
 		}
-		patchMeMakeup(queryClient, user, session, data_clean)
+		patchMeMakeup(session, data_clean, queryClient)
 		reset()
 		// close the modal
 		props.handleIsModalOpen()
