@@ -1,7 +1,7 @@
 import React from 'react'
 import { CheckCircleIcon } from '@heroicons/react/24/outline'
 
-function Advantages(props) {
+function AdvantagesMaquillleuse(props) {
 	const advantages = [
 		{
 			title: 'Développez votre activité',
@@ -116,4 +116,4 @@ function Advantages(props) {
 	)
 }
 
-export default Advantages
+export default AdvantagesMaquillleuse
