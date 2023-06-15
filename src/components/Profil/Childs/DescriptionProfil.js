@@ -1,6 +1,7 @@
 import React from 'react'
 import { useRouter } from 'next/router'
 import ModalUpdateDescriptionProfil from '@/components/Profil/Atoms/ModalUpdate/ModalUpdateDescriptionProfil'
+import ViewDescriptionProfil from '@/components/Profil/Childs/Views/ViewDescriptionProfil'
 
 export function DescriptionProfil(props) {
 	// import router
@@ -52,20 +53,9 @@ export function DescriptionProfil(props) {
 						</div>
 					</button>
 				) : null}
-				<h2 className={'text-xl font-bold text-slate-700'}>
-					Vous en quelques mots
-				</h2>
-				{
-					// display the user description
-					// if \n is present, split the string and display each part in a new line
-					user?.description.split('\n').map((item, i) => {
-						return (
-							<p key={i} className={'text-slate-800'}>
-								{item}
-							</p>
-						)
-					})
-				}
+				<div className={'flex w-full flex-col gap-4'}>
+					<ViewDescriptionProfil user={user} />
+				</div>
 			</div>
 		</div>
 	)

@@ -1,5 +1,5 @@
 import Image from 'next/image'
-import SearchBloc from '@/components/Global/SearchBloc'
+import SearchBloc from '@/components/Global/Search/SearchBloc'
 
 export default function Hero(props) {
 	return (

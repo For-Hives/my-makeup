@@ -8,8 +8,8 @@ import Hero from '@/components/Global/Hero'
 import CTA from '@/components/Global/CTA'
 import Link from 'next/link'
 import { useQuery } from '@tanstack/react-query'
-import Loader from '@/components/Global/Loader'
 import { convertToStringDate } from '@/services/utils'
+import FullLoader from '@/components/Global/Loader/FullLoader'
 
 /**
  * @param props
@@ -34,7 +34,7 @@ function ToutesLesNews(props) {
 		},
 	})
 
-	if (isLoading) return <Loader />
+	if (isLoading) return <FullLoader />
 
 	if (error) return 'An error has occurred: ' + error.message
 

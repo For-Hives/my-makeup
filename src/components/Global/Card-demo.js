@@ -1,7 +1,7 @@
 import React from 'react'
 import Image from 'next/image'
-import { FireIcon } from '@heroicons/react/24/outline'
-import { StarIcon, HeartIcon } from '@heroicons/react/20/solid'
+import { HeartIcon, StarIcon } from '@heroicons/react/20/solid'
+import { BadgeSuperMaquilleuse } from '@/components/Global/BadgeSuperMaquilleuse'
 
 function CardDemo(props) {
 	return (
@@ -29,17 +29,9 @@ function CardDemo(props) {
 			<div
 				className={'absolute ml-3 mt-[135px] flex items-center justify-center'}
 			>
-				<div
-					className={
-						'w-full rounded-lg bg-white px-3 text-center shadow ' +
-						'flex items-center justify-center py-1 text-xs font-medium italic text-indigo-900/90'
-					}
-				>
-					<FireIcon className={'mr-2 h-4 w-4 text-indigo-900'} />
-					Super maquilleuse
-				</div>
+				<BadgeSuperMaquilleuse />
 			</div>
-			{/*    Square */}
+			{/* Square */}
 			<div
 				className={'mt-4 flex w-full items-center justify-center gap-1 px-4'}
 			>

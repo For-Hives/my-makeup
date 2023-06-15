@@ -1,6 +1,7 @@
 import React from 'react'
 import { useRouter } from 'next/router'
 import ModalUpdateSkillsProfil from '@/components/Profil/Atoms/ModalUpdate/ModalUpdateSkillsProfil'
+import ViewSkillsProfil from '@/components/Profil/Childs/Views/ViewSkillsProfil'
 
 export function SkillsProfil(props) {
 	// import router
@@ -50,19 +51,8 @@ export function SkillsProfil(props) {
 						</div>
 					</button>
 				) : null}
-				<h2 className={'text-xl font-bold text-slate-700'}>Compétences</h2>
-				<div className={'flex flex-wrap gap-4'}>
-					{/* map on skills -> name */}
-					{user?.skills.map((skill, index) => {
-						return (
-							<div
-								key={index}
-								className="inline-flex flex-nowrap items-center rounded-full bg-indigo-100 px-3 py-2 text-xs font-medium text-indigo-700"
-							>
-								{skill.name}
-							</div>
-						)
-					})}
+				<div className={'flex w-full flex-col gap-4'}>
+					<ViewSkillsProfil user={user} />
 				</div>
 			</div>
 		</div>

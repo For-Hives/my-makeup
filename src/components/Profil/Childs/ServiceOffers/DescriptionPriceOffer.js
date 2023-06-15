@@ -14,8 +14,8 @@ export function DescriptionPriceOffer(props) {
 				{
 					// display the user description
 					// if \n is present, split the string and display each part in a new line
-					service_offer.description &&
-						service_offer.description.split('\n').map((item, i) => {
+					service_offer?.description &&
+						service_offer?.description?.split('\n').map((item, i) => {
 							return (
 								<p
 									key={i}
@@ -31,8 +31,8 @@ export function DescriptionPriceOffer(props) {
 				{
 					// display the user description
 					// if \n is present, split the string and display each part in a new line
-					service_offer.price &&
-						service_offer.price.split('\n').map((item, i) => {
+					service_offer?.price &&
+						service_offer?.price?.split('\n').map((item, i) => {
 							return (
 								<h3
 									key={i}

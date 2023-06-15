@@ -9,7 +9,7 @@ import 'react-toastify/dist/ReactToastify.css'
 import Head from 'next/head'
 import { SessionProvider } from 'next-auth/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { ToastContainer, toast } from 'react-toastify'
+import { ToastContainer } from 'react-toastify'
 
 const queryClient = new QueryClient()
 

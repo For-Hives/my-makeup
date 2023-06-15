@@ -3,14 +3,13 @@ import Image from 'next/image'
 import { Stars } from '@/components/Profil/Atoms/Stars'
 import { BadgeDispo } from '@/components/Profil/Atoms/BadgeDispo'
 import { BadgeIndispo } from '@/components/Profil/Atoms/BadgeIndispo'
-import ModalUpdateResumeProfil from '@/components/Profil/Atoms/ModalUpdate/ModalUpdateResumeProfil'
 import { useRouter } from 'next/router'
 
-function ResumeProfil(props) {
+function ViewResumeProfil(props) {
 	const router = useRouter()
 	const { publicView } = router.query
 
-	const user = props.user
+	const user = props.user.attributes
 	const isPublic = !!publicView
 
 	const [starsToDisplay, setStarsToDisplay] = React.useState(5)
@@ -27,39 +26,20 @@ function ResumeProfil(props) {
 		}
 	}
 
+	let mainPicture
+	if (user?.main_picture && user?.main_picture?.data === undefined) {
+		mainPicture = user?.main_picture?.url
+	} else {
+		mainPicture = user?.main_picture?.data.attributes.url
+	}
 	return (
 		<div className={'relative bg-white pb-24 shadow-xl'}>
-			<ModalUpdateResumeProfil
-				isModalOpen={isModalOpen}
-				handleIsModalOpen={handleIsModalOpen}
-				user={user}
-			/>
 			<div className="mx-auto max-w-7xl pt-[90px]">
 				<div className={'grid grid-cols-12 gap-5 pt-24'}>
 					<div className={'relative col-span-2 flex items-center'}>
-						{!isPublic ? (
-							<button
-								className={
-									'absolute left-0 top-0 flex h-full w-full flex-col items-center justify-center rounded-full bg-indigo-700/0 text-white/0 transition hover:bg-indigo-700/25 hover:text-white'
-								}
-								onClick={handleIsModalOpen}
-							>
-								<span className="material-icons-round">add_a_photo</span>
-								<p className={'text-sm font-semibold'}>modifier votre photo</p>
-							</button>
-						) : null}
-
-						{user && user?.main_picture && user?.main_picture?.url ? (
+						{mainPicture && (
 							<Image
-								src={user?.main_picture?.url}
-								alt={'ppmakeup'}
-								width={500}
-								height={500}
-								className={'h-[200px] w-[200px] rounded-full object-cover'}
-							></Image>
-						) : (
-							<Image
-								src={'/assets/pp_makeup.webp'}
+								src={mainPicture || '/assets/pp_makeup.webp'}
 								alt={'ppmakeup'}
 								width={500}
 								height={500}
@@ -71,13 +51,7 @@ function ResumeProfil(props) {
 						<div
 							className={'flex h-full w-full flex-col justify-between pl-20'}
 						>
-							<div
-								className={
-									'flex w-full flex-col gap-2' +
-									(!isPublic ? ' cursor-pointer' : ' cursor-default')
-								}
-								onClick={handleIsModalOpen}
-							>
+							<div className={'flex w-full cursor-default flex-col gap-2'}>
 								<h3
 									className={'text-3xl font-bold tracking-tight text-slate-800'}
 								>
@@ -113,13 +87,7 @@ function ResumeProfil(props) {
 								'flex h-full w-full flex-col items-start justify-between'
 							}
 						>
-							<div
-								className={
-									'flex items-center gap-5' +
-									(!isPublic ? ' cursor-pointer' : ' cursor-default')
-								}
-								onClick={handleIsModalOpen}
-							>
+							<div className={'flex cursor-default items-center gap-5'}>
 								{availability ? (
 									<>
 										<BadgeDispo />
@@ -138,4 +106,4 @@ function ResumeProfil(props) {
 	)
 }
 
-export default ResumeProfil
+export default ViewResumeProfil
