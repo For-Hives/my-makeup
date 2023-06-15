@@ -116,12 +116,13 @@ function Footer() {
 					>
 						Nos partenaires
 					</Link>
-					<Link href={'/affiliation'} className={'text-sm text-slate-600'}>
-						Programme d&apos;affiliation
-					</Link>
-					<Link href={'/parrainage'} className={'text-sm text-slate-600'}>
-						Programme de parrainage
-					</Link>
+					{/* todo : plus tard */}
+					{/*<Link href={'/affiliation'} className={'text-sm text-slate-600'}>*/}
+					{/*	Programme d&apos;affiliation*/}
+					{/*</Link>*/}
+					{/*<Link href={'/parrainage'} className={'text-sm text-slate-600'}>*/}
+					{/*	Programme de parrainage*/}
+					{/*</Link>*/}
 				</div>
 				<div className={'flex flex-col gap-6'}>
 					<div className={'mb-2 flex items-center justify-start gap-3'}>
@@ -159,9 +160,10 @@ function Footer() {
 					<Link href={'/mentions-legales'} className={'text-sm text-slate-600'}>
 						Mentions légales
 					</Link>
-					<Link href={'/cgv'} className={'text-sm text-slate-600'}>
-						Conditions générales de vente
-					</Link>
+					{/* todo : plus tard */}
+					{/*<Link href={'/cgv'} className={'text-sm text-slate-600'}>*/}
+					{/*	Conditions générales de vente*/}
+					{/*</Link>*/}
 					<Link href={'/cgu'} className={'text-sm text-slate-600'}>
 						Conditions générales d&apos;utilisation
 					</Link>
