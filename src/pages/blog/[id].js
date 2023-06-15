@@ -10,6 +10,7 @@ import { convertToStringDate } from '@/services/utils'
 import Link from 'next/link'
 import { remark } from 'remark'
 import html from 'remark-html'
+import { Layout } from '@/components/Global/Layout'
 
 function ArrowLeftIcon(props) {
 	return (
@@ -82,12 +83,9 @@ export default function Article({ articleData }) {
 											</span>
 										</time>
 									</header>
-									<div
-										className="prose my-8 xl:prose-lg"
-										dangerouslySetInnerHTML={{
-											__html: meta.content.toString(),
-										}}
-									/>
+									<div className={'prose my-8 xl:prose-lg'}>
+										<Layout value={meta.content.toString()} />
+									</div>
 									<h3 className={'flex items-center text-base text-gray-400'}>
 										<span className="h-4 w-0.5 rounded-full bg-gray-200 dark:bg-gray-500" />
 										<span className="ml-3">Auteur.e : {meta.author}</span>
@@ -154,6 +152,8 @@ export async function getStaticProps({ params }) {
 	const processedContent = await remark()
 		.use(html)
 		.process(articleData.attributes.content)
+
+	// replace the img by Image from next
 
 	const newArticleData = {
 		...articleData,
