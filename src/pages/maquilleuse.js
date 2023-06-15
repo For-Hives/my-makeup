@@ -6,7 +6,7 @@ import ResponsiveTemporary from '@/components/Global/ResponsiveTemporary'
 import Hero from '@/components/Global/Hero'
 import CTA from '@/components/Global/CTA'
 import React from 'react'
-import Advantages from '@/components/Maquilleuse/Advantages'
+import AdvantagesMaquillleuse from '@/components/Maquilleuse/AdvantagesMaquillleuse'
 
 /**
  * @param props
@@ -53,7 +53,7 @@ function PourquoiMyMakeup() {
 							</>
 						}
 					/>
-					<Advantages />
+					<AdvantagesMaquillleuse />
 					<CTA />
 				</main>
 			</div>
