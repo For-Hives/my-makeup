@@ -57,7 +57,7 @@ const navigation = [
 					' gagner en visibilité. Et facilité votre gestion quotidienne !',
 			},
 			{
-				name: 'Community & Partenariats',
+				name: 'Communauté & Partenariats',
 				href: '/maquilleuse/partenariats',
 				icon: 'group',
 				description:
