@@ -110,12 +110,12 @@ function Footer() {
 					>
 						Communautés & Partenariats
 					</Link>
-					<Link
-						href={'/maquilleuse/partenaires'}
-						className={'text-sm text-slate-600'}
-					>
-						Nos partenaires
-					</Link>
+					{/*<Link*/}
+					{/*	href={'/maquilleuse/partenaires'}*/}
+					{/*	className={'text-sm text-slate-600'}*/}
+					{/*>*/}
+					{/*	Nos partenaires*/}
+					{/*</Link>*/}
 					{/* todo : plus tard */}
 					{/*<Link href={'/affiliation'} className={'text-sm text-slate-600'}>*/}
 					{/*	Programme d&apos;affiliation*/}
