@@ -6,8 +6,6 @@ import Head from 'next/head'
 import Image from 'next/image'
 import Hero from '@/components/Global/Hero'
 import CTA from '@/components/Global/CTA'
-import { useQueries, useQuery } from '@tanstack/react-query'
-import FullLoader from '@/components/Global/Loader/FullLoader'
 import Link from 'next/link'
 
 /**

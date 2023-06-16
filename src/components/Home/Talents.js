@@ -4,54 +4,6 @@ import { convertStringToKebabCase } from '@/services/utils'
 import { useQuery } from '@tanstack/react-query'
 import FullLoader from '@/components/Global/Loader/FullLoader'
 
-// const TalentList = [
-// 	{
-// 		name: 'Maquillage mariée',
-// 	},
-// 	{
-// 		name: 'Maquillage soirée',
-// 	},
-// 	{
-// 		name: 'Maquillage professionnel',
-// 	},
-// 	{
-// 		name: 'Maquillage enfant',
-// 	},
-// 	{
-// 		name: 'Maquillage spécialisé',
-// 	},
-// 	{
-// 		name: 'Maquillage homme',
-// 	},
-// 	{
-// 		name: 'Maquillage femme',
-// 	},
-// 	{
-// 		name: 'Maquillage de fête',
-// 	},
-// 	{
-// 		name: 'Maquillage de soirée',
-// 	},
-// 	{
-// 		name: 'Maquillage de film',
-// 	},
-// 	{
-// 		name: 'Maquillage de théâtre',
-// 	},
-// 	{
-// 		name: 'Maquillage FX',
-// 	},
-// 	{
-// 		name: 'Maquillage beauté',
-// 	},
-// 	{
-// 		name: 'Maquillage artistique',
-// 	},
-// 	{
-// 		name: 'Maquillage cinéma',
-// 	},
-// ]
-
 function Talents(props) {
 	const { isLoading, isError, data, error } = useQuery({
 		queryKey: ['talents'],
