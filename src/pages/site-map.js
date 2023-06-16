@@ -14,56 +14,7 @@ import Link from 'next/link'
  * @param props
  * @constructor
  */
-function SiteMap(props) {
-	const [articlesQuery, talentsQuery] = useQueries({
-		queries: [
-			{
-				queryKey: ['articles'],
-				queryFn: async () => {
-					const res = await fetch(
-						`${process.env.NEXT_PUBLIC_API_URL}api/articles`,
-						{
-							method: 'GET',
-							headers: {
-								// 	token
-								'Content-Type': 'application/json',
-								Accept: 'application/json',
-							},
-						}
-					)
-					return res.json()
-				},
-			},
-			{
-				queryKey: ['talents'],
-				queryFn: async () => {
-					const res = await fetch(
-						`${process.env.NEXT_PUBLIC_API_URL}api/talents`,
-						{
-							method: 'GET',
-							headers: {
-								// 	token
-								'Content-Type': 'application/json',
-								Accept: 'application/json',
-							},
-						}
-					)
-					return res.json()
-				},
-			},
-		],
-	})
-
-	if (articlesQuery.isLoading || talentsQuery.isLoading) return <FullLoader />
-
-	if (articlesQuery.error || talentsQuery.error)
-		return (
-			'An error has occurred: ' + (articlesQuery.error ?? talentsQuery.error)
-		)
-
-	const articles = articlesQuery.data.data
-	const talents = talentsQuery.data.data
-
+function SiteMap({ articles, talents }) {
 	return (
 		<>
 			<Head>
@@ -222,3 +173,27 @@ function SiteMap(props) {
 }
 
 export default SiteMap
+
+async function fetchAPI(url) {
+	const res = await fetch(url, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Accept: 'application/json',
+		},
+	})
+	return res.json()
+}
+
+export async function getStaticProps() {
+	const articles = await fetchAPI(
+		`${process.env.NEXT_PUBLIC_API_URL}api/articles`
+	)
+	const talents = await fetchAPI(
+		`${process.env.NEXT_PUBLIC_API_URL}api/talents`
+	)
+
+	return {
+		props: { articles: articles.data, talents: talents.data },
+	}
+}
