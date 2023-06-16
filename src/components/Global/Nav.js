@@ -63,14 +63,14 @@ const navigation = [
 				description:
 					'Nous sommes là pour vous accompagner dans votre développement !',
 			},
-			{
-				name: 'Nos partenaires',
-				href: '/maquilleuse/partenaires',
-				icon: 'leaderboard',
-				description:
-					'Utilisez les outils de nos partenaires pour développer votre activité ! ' +
-					'Et Facilitez votre vie !',
-			},
+			// {
+			// 	name: 'Nos partenaires',
+			// 	href: '/maquilleuse/partenaires',
+			// 	icon: 'leaderboard',
+			// 	description:
+			// 		'Utilisez les outils de nos partenaires pour développer votre activité ! ' +
+			// 		'Et Facilitez votre vie !',
+			// },
 		],
 	},
 	{
