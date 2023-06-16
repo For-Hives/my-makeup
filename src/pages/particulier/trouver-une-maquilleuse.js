@@ -5,14 +5,9 @@ import Head from 'next/head'
 import Image from 'next/image'
 import ResponsiveTemporary from '@/components/Global/ResponsiveTemporary'
 import Hero from '@/components/Global/Hero'
-import Advantages from '@/components/Maquilleuse/Advantages'
 import CTA from '@/components/Global/CTA'
-import Link from 'next/link'
-import { convertToStringDate } from '@/services/utils'
-import { ArrowLeftIcon } from '@heroicons/react/20/solid'
 
 /**
- * todo : add content
  * @param props
  * @constructor
  */
