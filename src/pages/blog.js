@@ -15,30 +15,7 @@ import FullLoader from '@/components/Global/Loader/FullLoader'
  * @param props
  * @constructor
  */
-function Blog(props) {
-	const { isLoading, isError, data, error } = useQuery({
-		queryKey: ['articles'],
-		queryFn: async () => {
-			const res = await fetch(
-				`${process.env.NEXT_PUBLIC_API_URL}api/articles`,
-				{
-					method: 'GET',
-					headers: {
-						// 	token
-						'Content-Type': 'application/json',
-						Accept: 'application/json',
-					},
-				}
-			)
-			return res.json()
-		},
-	})
-
-	if (isLoading) return <FullLoader />
-
-	if (error) return 'An error has occurred: ' + error.message
-
-	const articles = data.data
+function Blog({ articles }) {
 	// take only the first 3 articles
 	const lastArticles = articles.slice(0, 3)
 
@@ -168,3 +145,21 @@ function Blog(props) {
 }
 
 export default Blog
+
+export async function getServerSideProps() {
+	const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}api/articles`, {
+		method: 'GET',
+		headers: {
+			// 	token
+			'Content-Type': 'application/json',
+			Accept: 'application/json',
+		},
+	})
+	const data = await res.json()
+
+	return {
+		props: {
+			articles: data.data,
+		},
+	}
+}
