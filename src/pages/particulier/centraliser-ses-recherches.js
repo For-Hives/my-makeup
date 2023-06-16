@@ -40,7 +40,7 @@ function CentraliserSesRecherches(props) {
 					<Hero
 						title={
 							<>
-								Centraliser ses recherches ... avec&nbsp;
+								Centraliser ses recherches avec&nbsp;
 								<span className={'text-indigo-900'}>My&nbsp;Makeup</span>
 								&nbsp;{"ça n'a jamais été aussi simple !"}
 							</>

@@ -41,7 +41,7 @@ function ExplorerLesProfils(props) {
 					<Hero
 						title={
 							<>
-								Explorer les profils ... avec&nbsp;
+								Explorer les profils avec&nbsp;
 								<span className={'text-indigo-900'}>My&nbsp;Makeup</span>
 								&nbsp;{"ça n'a jamais été aussi simple !"}
 							</>

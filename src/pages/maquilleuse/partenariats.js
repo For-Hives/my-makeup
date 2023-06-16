@@ -40,7 +40,7 @@ function Partenariats(props) {
 					<Hero
 						title={
 							<>
-								Communauté et partenariats ... avec&nbsp;
+								Communauté et partenariats, avec&nbsp;
 								<span className={'text-indigo-900'}>My&nbsp;Makeup</span>
 								&nbsp;
 								{'vous avez accès à un réseau très largement avantageux !'}

@@ -40,7 +40,7 @@ function TrouverUneMaquilleuse(props) {
 					<Hero
 						title={
 							<>
-								Trouver une maquilleuse ... avec&nbsp;
+								Trouver une maquilleuse, avec&nbsp;
 								<span className={'text-indigo-900'}>My&nbsp;Makeup</span>
 								&nbsp;{"ça n'a jamais été aussi simple !"}
 							</>
