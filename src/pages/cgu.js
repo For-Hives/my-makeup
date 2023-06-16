@@ -80,8 +80,9 @@ function Cgu(props) {
 									</p>
 									<h3>{`Contact`}</h3>
 									<p>
-										{`support@my-makeup.fr
-                                            +33 (0)6 21 58 26 84`}
+										{`support@my-makeup.fr`}
+										<br />
+										+33 (0)6 21 58 26 84
 									</p>
 									<h3>{`Abus`}</h3>
 									<p>
@@ -114,13 +115,18 @@ function Cgu(props) {
                                             que votre matériel protégé par le droit d'auteur a été violé.`}
 									</p>
 									<p>
-										{`Une signature électronique ou physique de la personne autorisée à agir au nom du propriétaire des droits d'auteur ;
-                                            Une description de l'œuvre protégée par le droit d'auteur que vous estimez avoir été violée ;
-                                            Une description de l'endroit où le matériel que vous estimez être en violation se trouve sur le Site ;
-                                            Votre adresse, numéro de téléphone, et adresse e-mail ;
-                                            Une déclaration de votre part que vous avez une croyance de bonne foi que l'utilisation contestée n'est pas autorisée par le propriétaire du
-                                            droit d'auteur, son agent, ou la loi ;
-                                            Une déclaration de votre part, faite sous peine de parjure, que les informations ci-dessus dans votre avis sont précises et que vous êtes le
+										{`Une signature électronique ou physique de la personne autorisée à agir au nom du propriétaire des droits d'auteur ;`}
+										<br />
+										{`Une description de l'œuvre protégée par le droit d'auteur que vous estimez avoir été violée ;`}
+										<br />
+										{`Une description de l'endroit où le matériel que vous estimez être en violation se trouve sur le Site ;`}
+										<br />
+										{`Votre adresse, numéro de téléphone, et adresse e-mail ;`}
+										<br />
+										{`Une déclaration de votre part que vous avez une croyance de bonne foi que l'utilisation contestée n'est pas autorisée par le propriétaire du
+                                            droit d'auteur, son agent, ou la loi ;`}
+										<br />
+										{`Une déclaration de votre part, faite sous peine de parjure, que les informations ci-dessus dans votre avis sont précises et que vous êtes le
                                             propriétaire du droit d'auteur ou autorisé à agir au nom du propriétaire du droit d'auteur.`}
 									</p>
 								</div>
