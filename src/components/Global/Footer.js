@@ -157,7 +157,7 @@ function Footer() {
 					<Link href={'/contact'} className={'text-sm text-slate-600'}>
 						Contact
 					</Link>
-					<Link href={'/mentions-legales'} className={'text-sm text-slate-600'}>
+					<Link href={'/cgu'} className={'text-sm text-slate-600'}>
 						Mentions légales
 					</Link>
 					{/* todo : plus tard */}

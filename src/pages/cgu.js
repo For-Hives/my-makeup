@@ -92,7 +92,7 @@ function Cgu(props) {
 									<h3>{`Propriété intellectuelle`}</h3>
 									<p>
 										{`Ce site web et tous ses contenus (y compris les données, informations, photos, logos et marques) sont la propriété exclusive de My-Makeup
-                                            SAS ou
+                                            ou
                                             de ses partenaires. Toute reproduction, représentation, traduction, adaptation ou citation, intégrale ou partielle, quel que soit le procédé
                                             ou
                                             le support, est strictement interdite sauf disposition légale ou autorisation expresse de leur propriétaire. Les photos ne sont pas
