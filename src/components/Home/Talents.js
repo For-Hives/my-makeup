@@ -1,5 +1,6 @@
 import React from 'react'
 import CardDemo from '@/components/Global/Card-demo'
+import { convertStringToKebabCase } from '@/services/utils'
 
 const TalentList = [
 	{
@@ -86,7 +87,7 @@ function Talents(props) {
 						{TalentList.map((talent, index) => (
 							<a
 								key={talent.name}
-								href={'/' + talent.name}
+								href={'/' + convertStringToKebabCase(talent.name)}
 								className={'group relative'}
 							>
 								<h2
