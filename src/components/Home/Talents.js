@@ -1,31 +1,8 @@
 import React from 'react'
 import CardDemo from '@/components/Global/Card-demo'
 import { convertStringToKebabCase } from '@/services/utils'
-import { useQuery } from '@tanstack/react-query'
-import FullLoader from '@/components/Global/Loader/FullLoader'
 
-function Talents(props) {
-	const { isLoading, isError, data, error } = useQuery({
-		queryKey: ['talents'],
-		queryFn: async () => {
-			const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}api/talents`, {
-				method: 'GET',
-				headers: {
-					// 	token
-					'Content-Type': 'application/json',
-					Accept: 'application/json',
-				},
-			})
-			return res.json()
-		},
-	})
-
-	if (isLoading) return <FullLoader />
-
-	if (error) return 'An error has occurred: ' + error.message
-
-	const articles = data.data
-
+function Talents({ talents }) {
 	return (
 		<section className={'relative py-20'}>
 			<div className="mx-auto max-w-7xl py-10">
@@ -59,7 +36,7 @@ function Talents(props) {
 						</div>
 					</div>
 					<div className={'grid w-4/5 grid-cols-4 gap-8'}>
-						{articles.map((talent, index) => (
+						{talents?.map((talent, index) => (
 							<a
 								key={talent.attributes.title}
 								href={
