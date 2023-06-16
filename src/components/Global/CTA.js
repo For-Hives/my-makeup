@@ -23,7 +23,7 @@ function Cta() {
 						la&nbsp;communauté&nbsp;qui&nbsp;fait&nbsp;la&nbsp;différence.
 					</h2>
 					<div className={'flex justify-center gap-8'}>
-						<Link href="/auth/signup" className={'btn-secondary-white'}>
+						<Link href="/search" className={'btn-secondary-white'}>
 							Je cherche des maquilleuses
 						</Link>
 						<Link

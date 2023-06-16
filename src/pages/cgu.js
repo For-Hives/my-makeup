@@ -82,7 +82,7 @@ function Cgu(props) {
 									<p>
 										{`support@my-makeup.fr`}
 										<br />
-										+33 (0)6 21 58 26 84
+										{`+33(0)6 21 58 26 84`}
 									</p>
 									<h3>{`Abus`}</h3>
 									<p>
