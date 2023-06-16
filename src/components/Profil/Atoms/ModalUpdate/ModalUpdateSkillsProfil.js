@@ -4,7 +4,6 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useSession } from 'next-auth/react'
 import * as zod from 'zod'
-import { useQueryClient } from '@tanstack/react-query'
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
 
 const schema = zod.object({
@@ -12,8 +11,6 @@ const schema = zod.object({
 })
 
 export default function ModalUpdateSkillsProfil(props) {
-	const queryClient = useQueryClient()
-
 	const user = props.user
 
 	const {
@@ -47,7 +44,7 @@ export default function ModalUpdateSkillsProfil(props) {
 		const data_clean = {
 			skills: userSkillsSelectedCleaned,
 		}
-		patchMeMakeup(session, data_clean, queryClient)
+		patchMeMakeup(session, data_clean)
 		reset()
 		// close the modal
 		props.handleIsModalOpen()

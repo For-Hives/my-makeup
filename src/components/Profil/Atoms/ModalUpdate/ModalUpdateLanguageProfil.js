@@ -4,7 +4,6 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useSession } from 'next-auth/react'
 import * as zod from 'zod'
-import { useQueryClient } from '@tanstack/react-query'
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
 
 const schema = zod.object({
@@ -12,8 +11,6 @@ const schema = zod.object({
 })
 
 export default function ModalUpdateLanguageProfil(props) {
-	const queryClient = useQueryClient()
-
 	const user = props.user
 
 	const {
@@ -47,7 +44,7 @@ export default function ModalUpdateLanguageProfil(props) {
 		const data_clean = {
 			language: userLanguageSelectedCleaned,
 		}
-		patchMeMakeup(session, data_clean, queryClient)
+		patchMeMakeup(session, data_clean)
 		reset()
 		// close the modal
 		props.handleIsModalOpen()

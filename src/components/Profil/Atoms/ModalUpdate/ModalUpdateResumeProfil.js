@@ -8,8 +8,8 @@ import * as zod from 'zod'
 import { useSession } from 'next-auth/react'
 import { BadgeDispo } from '@/components/Profil/Atoms/BadgeDispo'
 import { BadgeIndispo } from '@/components/Profil/Atoms/BadgeIndispo'
-import { useQueryClient } from '@tanstack/react-query'
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
+import { toast } from 'react-toastify'
 
 const schema = zod
 	.object({
@@ -20,8 +20,6 @@ const schema = zod
 	.required({ first_name: true, last_name: true, speciality: true })
 
 export default function ModalUpdateResumeProfil(props) {
-	const queryClient = useQueryClient()
-
 	const user = props.user
 
 	const {
@@ -70,7 +68,7 @@ export default function ModalUpdateResumeProfil(props) {
 					}
 
 					// 	put data in api : with fetch : /api/makeup-artistes/{user.id}
-					patchMeMakeup(session, data, queryClient)
+					patchMeMakeup(session, data)
 					reset()
 					props.handleIsModalOpen()
 					setImageUrl('')
@@ -82,7 +80,7 @@ export default function ModalUpdateResumeProfil(props) {
 					})
 				)
 		} else {
-			patchMeMakeup(session, data, queryClient)
+			patchMeMakeup(session, data)
 			reset()
 			props.handleIsModalOpen()
 			setImageUrl('')

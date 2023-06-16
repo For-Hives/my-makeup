@@ -8,10 +8,6 @@ import CTA from '@/components/Global/CTA'
 import React from 'react'
 import AdvantagesMaquillleuse from '@/components/Maquilleuse/AdvantagesMaquillleuse'
 
-/**
- * @param props
- * @constructor
- */
 function PourquoiMyMakeup() {
 	return (
 		<>

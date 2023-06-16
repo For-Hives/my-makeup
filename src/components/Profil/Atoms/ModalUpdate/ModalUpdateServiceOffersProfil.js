@@ -4,7 +4,6 @@ import { useForm } from 'react-hook-form'
 import { useSession } from 'next-auth/react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as zod from 'zod'
-import { useQueryClient } from '@tanstack/react-query'
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
 import { DescriptionPriceOffer } from '@/components/Profil/Childs/ServiceOffers/DescriptionPriceOffer'
 import { OptionsOffers } from '@/components/Profil/Childs/ServiceOffers/OptionsOffers'
@@ -20,8 +19,6 @@ const schema = zod
 	.required({ name: true, price: true, description: true })
 
 export default function ModalUpdateServiceOffersProfil(props) {
-	const queryClient = useQueryClient()
-
 	const user = props.user
 
 	const {
@@ -182,7 +179,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 		const data = {
 			service_offers: userServiceOffersCopy,
 		}
-		patchMeMakeup(session, data, queryClient)
+		patchMeMakeup(session, data)
 		// close the modal & reset the zod form
 		setUserServiceOffersId('')
 		setUserServiceOffersName('')
