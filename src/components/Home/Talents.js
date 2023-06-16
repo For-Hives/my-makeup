@@ -128,7 +128,7 @@ function Talents(props) {
 										'-z-10 flex items-center justify-center rounded-xl text-center font-semibold text-slate-50 opacity-0 group-hover:z-10 group-hover:opacity-100'
 									}
 								>
-									Voir tous les talents
+									Voir cette spécialitée
 								</h2>
 							</a>
 						))}
