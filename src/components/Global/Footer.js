@@ -143,9 +143,9 @@ function Footer() {
 					<Link href={'/blog'} className={'text-sm text-slate-600'}>
 						Blog
 					</Link>
-					<Link href={'/help'} className={'text-sm text-slate-600'}>
-						Aide
-					</Link>
+					{/*<Link href={'/help'} className={'text-sm text-slate-600'}>*/}
+					{/*	Aide*/}
+					{/*</Link>*/}
 				</div>
 				<div className={'flex flex-col gap-6'}>
 					<div className={'mb-2 flex items-center justify-start gap-3'}>
