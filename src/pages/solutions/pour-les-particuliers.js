@@ -57,8 +57,8 @@ function PourLesParticuliers(props) {
 							<article>
 								<header className="flex flex-col">
 									<h1 className="mt-6 text-3xl font-bold tracking-tight text-gray-800 dark:text-gray-100 sm:text-4xl">
-										Solutions My Makeup pour les Particuliers : Trouver la
-										Maquilleuse de vos Rêves n'a Jamais été Aussi Simple !
+										{`Solutions My Makeup pour les Particuliers : Trouver la
+											Maquilleuse de vos Rêves n'a Jamais été Aussi Simple !`}
 									</h1>
 								</header>
 								<div className="prose my-8 xl:prose-lg">
