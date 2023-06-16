@@ -15,31 +15,7 @@ import FullLoader from '@/components/Global/Loader/FullLoader'
  * @param props
  * @constructor
  */
-function ToutesLesNews(props) {
-	const { isLoading, isError, data, error } = useQuery({
-		queryKey: ['articles'],
-		queryFn: async () => {
-			const res = await fetch(
-				`${process.env.NEXT_PUBLIC_API_URL}api/articles`,
-				{
-					method: 'GET',
-					headers: {
-						// 	token
-						'Content-Type': 'application/json',
-						Accept: 'application/json',
-					},
-				}
-			)
-			return res.json()
-		},
-	})
-
-	if (isLoading) return <FullLoader />
-
-	if (error) return 'An error has occurred: ' + error.message
-
-	const articles = data.data
-
+function ToutesLesNews({ articles }) {
 	return (
 		<>
 			<Head>
@@ -140,3 +116,21 @@ function ToutesLesNews(props) {
 }
 
 export default ToutesLesNews
+
+export async function getServerSideProps() {
+	const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}api/articles`, {
+		method: 'GET',
+		headers: {
+			// 	token
+			'Content-Type': 'application/json',
+			Accept: 'application/json',
+		},
+	})
+	const data = await res.json()
+
+	return {
+		props: {
+			articles: data.data,
+		},
+	}
+}
