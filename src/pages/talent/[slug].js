@@ -10,7 +10,6 @@ import { remark } from 'remark'
 import html from 'remark-html'
 import { useRouter } from 'next/router'
 import { Layout } from '@/components/Global/Layout'
-import { convertToStringDate } from '@/services/utils'
 
 /**
  * @param props

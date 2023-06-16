@@ -6,7 +6,7 @@ import Head from 'next/head'
 import Image from 'next/image'
 import Hero from '@/components/Global/Hero'
 import CTA from '@/components/Global/CTA'
-import { useQuery } from '@tanstack/react-query'
+import { useQueries, useQuery } from '@tanstack/react-query'
 import FullLoader from '@/components/Global/Loader/FullLoader'
 import Link from 'next/link'
 
@@ -15,29 +15,54 @@ import Link from 'next/link'
  * @constructor
  */
 function SiteMap(props) {
-	const { isLoading, isError, data, error } = useQuery({
-		queryKey: ['articles'],
-		queryFn: async () => {
-			const res = await fetch(
-				`${process.env.NEXT_PUBLIC_API_URL}api/articles`,
-				{
-					method: 'GET',
-					headers: {
-						// 	token
-						'Content-Type': 'application/json',
-						Accept: 'application/json',
-					},
-				}
-			)
-			return res.json()
-		},
+	const [articlesQuery, talentsQuery] = useQueries({
+		queries: [
+			{
+				queryKey: ['articles'],
+				queryFn: async () => {
+					const res = await fetch(
+						`${process.env.NEXT_PUBLIC_API_URL}api/articles`,
+						{
+							method: 'GET',
+							headers: {
+								// 	token
+								'Content-Type': 'application/json',
+								Accept: 'application/json',
+							},
+						}
+					)
+					return res.json()
+				},
+			},
+			{
+				queryKey: ['talents'],
+				queryFn: async () => {
+					const res = await fetch(
+						`${process.env.NEXT_PUBLIC_API_URL}api/talents`,
+						{
+							method: 'GET',
+							headers: {
+								// 	token
+								'Content-Type': 'application/json',
+								Accept: 'application/json',
+							},
+						}
+					)
+					return res.json()
+				},
+			},
+		],
 	})
 
-	if (isLoading) return <FullLoader />
+	if (articlesQuery.isLoading || talentsQuery.isLoading) return <FullLoader />
 
-	if (error) return 'An error has occurred: ' + error.message
+	if (articlesQuery.error || talentsQuery.error)
+		return (
+			'An error has occurred: ' + (articlesQuery.error ?? talentsQuery.error)
+		)
 
-	const articles = data.data
+	const articles = articlesQuery.data.data
+	const talents = talentsQuery.data.data
 
 	return (
 		<>
@@ -160,6 +185,20 @@ function SiteMap(props) {
 									<ul>
 										{articles
 											? articles.map(element => {
+													return (
+														<li key={element.id}>
+															<Link href={element?.attributes?.slug}>
+																{element?.attributes?.title}
+															</Link>
+														</li>
+													)
+											  })
+											: null}
+									</ul>
+									<h3>Talents</h3>
+									<ul>
+										{talents
+											? talents.map(element => {
 													return (
 														<li key={element.id}>
 															<Link href={element?.attributes?.slug}>

@@ -54,7 +54,7 @@ import FullLoader from '@/components/Global/Loader/FullLoader'
 
 function Talents(props) {
 	const { isLoading, isError, data, error } = useQuery({
-		queryKey: ['articles'],
+		queryKey: ['talents'],
 		queryFn: async () => {
 			const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}api/talents`, {
 				method: 'GET',
