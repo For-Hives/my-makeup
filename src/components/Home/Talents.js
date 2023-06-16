@@ -1,56 +1,79 @@
 import React from 'react'
 import CardDemo from '@/components/Global/Card-demo'
 import { convertStringToKebabCase } from '@/services/utils'
+import { useQuery } from '@tanstack/react-query'
+import FullLoader from '@/components/Global/Loader/FullLoader'
 
-const TalentList = [
-	{
-		name: 'Maquillage mariée',
-	},
-	{
-		name: 'Maquillage soirée',
-	},
-	{
-		name: 'Maquillage professionnel',
-	},
-	{
-		name: 'Maquillage enfant',
-	},
-	{
-		name: 'Maquillage spécialisé',
-	},
-	{
-		name: 'Maquillage homme',
-	},
-	{
-		name: 'Maquillage femme',
-	},
-	{
-		name: 'Maquillage de fête',
-	},
-	{
-		name: 'Maquillage de soirée',
-	},
-	{
-		name: 'Maquillage de film',
-	},
-	{
-		name: 'Maquillage de théâtre',
-	},
-	{
-		name: 'Maquillage FX',
-	},
-	{
-		name: 'Maquillage beauté',
-	},
-	{
-		name: 'Maquillage artistique',
-	},
-	{
-		name: 'Maquillage cinéma',
-	},
-]
+// const TalentList = [
+// 	{
+// 		name: 'Maquillage mariée',
+// 	},
+// 	{
+// 		name: 'Maquillage soirée',
+// 	},
+// 	{
+// 		name: 'Maquillage professionnel',
+// 	},
+// 	{
+// 		name: 'Maquillage enfant',
+// 	},
+// 	{
+// 		name: 'Maquillage spécialisé',
+// 	},
+// 	{
+// 		name: 'Maquillage homme',
+// 	},
+// 	{
+// 		name: 'Maquillage femme',
+// 	},
+// 	{
+// 		name: 'Maquillage de fête',
+// 	},
+// 	{
+// 		name: 'Maquillage de soirée',
+// 	},
+// 	{
+// 		name: 'Maquillage de film',
+// 	},
+// 	{
+// 		name: 'Maquillage de théâtre',
+// 	},
+// 	{
+// 		name: 'Maquillage FX',
+// 	},
+// 	{
+// 		name: 'Maquillage beauté',
+// 	},
+// 	{
+// 		name: 'Maquillage artistique',
+// 	},
+// 	{
+// 		name: 'Maquillage cinéma',
+// 	},
+// ]
 
 function Talents(props) {
+	const { isLoading, isError, data, error } = useQuery({
+		queryKey: ['articles'],
+		queryFn: async () => {
+			const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}api/talents`, {
+				method: 'GET',
+				headers: {
+					// 	token
+					'Content-Type': 'application/json',
+					Accept: 'application/json',
+				},
+			})
+			return res.json()
+		},
+	})
+
+	if (isLoading) return <FullLoader />
+
+	if (error) return 'An error has occurred: ' + error.message
+
+	const articles = data.data
+
 	return (
 		<section className={'relative py-20'}>
 			<div className="mx-auto max-w-7xl py-10">
@@ -84,10 +107,12 @@ function Talents(props) {
 						</div>
 					</div>
 					<div className={'grid w-4/5 grid-cols-4 gap-8'}>
-						{TalentList.map((talent, index) => (
+						{articles.map((talent, index) => (
 							<a
-								key={talent.name}
-								href={'/' + convertStringToKebabCase(talent.name)}
+								key={talent.attributes.title}
+								href={
+									'/talent/' + convertStringToKebabCase(talent.attributes.slug)
+								}
 								className={'group relative'}
 							>
 								<h2
@@ -95,7 +120,7 @@ function Talents(props) {
 										'flex h-full min-h-[120px] items-center justify-center rounded-xl border border-indigo-900/10 px-4 py-8 text-center font-semibold text-slate-900/70 transition duration-100 ease-in  group-hover:opacity-0'
 									}
 								>
-									{talent.name}
+									{talent.attributes.title}
 								</h2>
 								<h2
 									className={

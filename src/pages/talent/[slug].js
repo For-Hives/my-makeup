@@ -23,7 +23,7 @@ function Talent({ articleData }) {
 	return (
 		<>
 			<Head>
-				<title>{meta?.seo_title ?? 'My Makeup'}</title>
+				<title>{meta?.title ?? 'My Makeup'}</title>
 				<meta
 					name="description"
 					content={
@@ -49,7 +49,7 @@ function Talent({ articleData }) {
 				<main className={'relative'}>
 					<ResponsiveTemporary />
 					<Hero
-						title={<>{meta.title}</>}
+						title={<>{meta.seo_title}</>}
 						description={<>{meta.description}</>}
 					/>
 					<div className={'relative mx-auto my-48 max-w-7xl'}>
