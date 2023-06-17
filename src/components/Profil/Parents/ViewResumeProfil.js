@@ -32,6 +32,7 @@ function ViewResumeProfil(props) {
 	} else {
 		mainPicture = user?.main_picture?.data?.attributes?.url
 	}
+	const isPublicView = props.isPublicView ?? false
 	return (
 		<div className={'relative bg-white pb-24 shadow-xl'}>
 			<div className="mx-auto max-w-7xl pt-[90px]">
