@@ -103,16 +103,23 @@ const navigation = [
 function Nav() {
 	const { data: session } = useSession()
 
-	const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+	const [mobileMenuOpen, setMobileMenuOpen] = useState(true)
 
+	console.log(mobileMenuOpen)
 	return (
 		<>
-			<div className="fixed left-0 top-0 z-30 flex h-[90px] w-full items-center justify-center bg-white">
-				<div className="mx-auto h-full w-full">
+			<div
+				className={
+					'fixed left-0 top-0 z-30 flex w-full items-center justify-center bg-white lg:h-[90px] ' +
+					(mobileMenuOpen ? 'h-screen' : '')
+				}
+			>
+				{/* Desktop view */}
+				<div className="mx-auto hidden h-full w-full lg:block">
 					<div className="relative z-20 lg:w-full">
 						<div className="relative px-6 py-6 lg:border-b lg:border-slate-300 lg:px-16">
 							<nav
-								className="flex items-center justify-between sm:h-10 lg:justify-start"
+								className="flex justify-between sm:h-10 sm:items-center lg:justify-start"
 								aria-label="Global"
 							>
 								<Link href="/" className="-m-1.5 p-1.5">
@@ -124,15 +131,7 @@ function Nav() {
 										src="/assets/logo_2.webp"
 									/>
 								</Link>
-								<button
-									type="button"
-									className="-m-2.5 rounded-md p-2.5 text-slate-900 lg:hidden"
-									onClick={() => setMobileMenuOpen(true)}
-								>
-									<span className="sr-only">Ouvrir le menu</span>
-									<Bars3Icon className="h-6 w-6" aria-hidden="true" />
-								</button>
-								<div className="hidden lg:ml-10 lg:flex lg:w-full lg:justify-between">
+								<div className="bg-red flex flex-col lg:ml-10 lg:w-full lg:flex-row lg:justify-between">
 									<div
 										className={'lg:flex lg:w-full lg:items-center lg:gap-10'}
 									>
@@ -202,38 +201,113 @@ function Nav() {
 									</div>
 								</div>
 							</nav>
-							<Dialog
-								as="div"
-								open={mobileMenuOpen}
-								onClose={setMobileMenuOpen}
+						</div>
+					</div>
+				</div>
+				{/* Mobile view */}
+				<div className="mx-auto block h-full w-full lg:hidden">
+					<div className={'relative flex h-full w-full flex-col bg-gray-500'}>
+						<div className={'absolute right-0 top-0 m-6'}></div>
+						{/* Content mobile view */}
+						<div className={'flex h-full w-full flex-col gap-8 p-6'}>
+							<div>
+								<Link href="/" className="">
+									<span className="sr-only">My Makeup</span>
+									<Image
+										alt="Logo My Makeup"
+										width={50}
+										height={50}
+										src="/assets/logo_2.webp"
+									/>
+								</Link>
+							</div>
+						</div>
+					</div>
+					<div className="relative z-20 hidden lg:w-full">
+						<div className="px-6 py-6 lg:border-b lg:border-slate-300 lg:px-16">
+							<nav
+								className="flex justify-between sm:h-10 sm:items-center lg:justify-start"
+								aria-label="Global"
 							>
-								<Dialog.Panel className="fixed inset-0 z-10 overflow-y-auto bg-white px-6 py-6 lg:hidden">
-									<div className="flex flex-row-reverse items-center justify-between">
-										<button
-											type="button"
-											className="-m-2.5 inline-flex items-center justify-center rounded-md p-2.5 text-slate-100"
-											onClick={() => setMobileMenuOpen(false)}
-										>
-											<span className="sr-only">Fermer le menu</span>
-											<XMarkIcon className="h-6 w-6" aria-hidden="true" />
-										</button>
-										<Link href="/" className="-m-1.5 p-1.5">
-											<span className="sr-only">My Makeup</span>
+								<Link href="/" className="-m-1.5 p-1.5">
+									<span className="sr-only">My Makeup</span>
+									<Image
+										alt="Logo My Makeup"
+										width={50}
+										height={50}
+										src="/assets/logo_2.webp"
+									/>
+								</Link>
+								<div className="bg-red flex flex-col lg:ml-10 lg:w-full lg:flex-row lg:justify-between">
+									<div
+										className={'lg:flex lg:w-full lg:items-center lg:gap-10'}
+									>
+										{navigation.map(item => {
+											if (item.mode === 'dropdown') {
+												return (
+													<PopoverComponent
+														key={item.name}
+														name={item.name}
+														translate={'30%'}
+														content={item.children}
+													/>
+												)
+											} else {
+												return (
+													<Link
+														key={item.name}
+														href={item.href}
+														className="text-sm font-semibold leading-6 text-slate-900"
+													>
+														{item.name}
+													</Link>
+												)
+											}
+										})}
+									</div>
+									<div
+										className={
+											'lg:flex lg:w-full lg:items-center lg:justify-end lg:gap-10'
+										}
+									>
+										<Link className={'btn-primary-with-icon'} href={'/search'}>
+											<MagnifyingGlassIcon
+												className="mr-2 h-5 w-5 text-indigo-900"
+												aria-hidden="true"
+											/>
+											Trouver une maquilleuse
 										</Link>
-									</div>
-									<div className="mt-6 space-y-2">
-										{navigation.map(item => (
-											<Link
-												key={item.name}
-												href={item.href}
-												className="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-slate-900 hover:bg-slate-400/10"
-											>
-												{item.name}
+										{session && session.user && !_.isEmpty(session.user) ? (
+											<>
+												<Link
+													onClick={() => {
+														signOut()
+													}}
+													className=""
+													href={'/auth/signin'}
+												>
+													<span
+														className={
+															'btn-primary-simple border-red-500  text-red-600'
+														}
+													>
+														Me déconnecter
+													</span>
+												</Link>
+												<Link className="" href={'/auth/profil'}>
+													<span className={'btn-primary'}>Profil</span>
+												</Link>
+											</>
+										) : (
+											<Link href="/auth/signin" className="">
+												<span className={'btn-primary-simple'}>
+													Me connecter
+												</span>
 											</Link>
-										))}
+										)}
 									</div>
-								</Dialog.Panel>
-							</Dialog>
+								</div>
+							</nav>
 						</div>
 					</div>
 				</div>
