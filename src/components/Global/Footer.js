@@ -110,12 +110,12 @@ function Footer() {
 					>
 						Communautés & Partenariats
 					</Link>
-					<Link
-						href={'/maquilleuse/partenaires'}
-						className={'text-sm text-slate-600'}
-					>
-						Nos partenaires
-					</Link>
+					{/*<Link*/}
+					{/*	href={'/maquilleuse/partenaires'}*/}
+					{/*	className={'text-sm text-slate-600'}*/}
+					{/*>*/}
+					{/*	Nos partenaires*/}
+					{/*</Link>*/}
 					{/* todo : plus tard */}
 					{/*<Link href={'/affiliation'} className={'text-sm text-slate-600'}>*/}
 					{/*	Programme d&apos;affiliation*/}
@@ -143,9 +143,9 @@ function Footer() {
 					<Link href={'/blog'} className={'text-sm text-slate-600'}>
 						Blog
 					</Link>
-					<Link href={'/help'} className={'text-sm text-slate-600'}>
-						Aide
-					</Link>
+					{/*<Link href={'/help'} className={'text-sm text-slate-600'}>*/}
+					{/*	Aide*/}
+					{/*</Link>*/}
 				</div>
 				<div className={'flex flex-col gap-6'}>
 					<div className={'mb-2 flex items-center justify-start gap-3'}>
@@ -157,10 +157,10 @@ function Footer() {
 					<Link href={'/contact'} className={'text-sm text-slate-600'}>
 						Contact
 					</Link>
-					<Link href={'/mentions-legales'} className={'text-sm text-slate-600'}>
+					<Link href={'/cgu'} className={'text-sm text-slate-600'}>
 						Mentions légales
 					</Link>
-					{/* todo : plus tard */}
+					{/* todo : remplir les cgv plus tard */}
 					{/*<Link href={'/cgv'} className={'text-sm text-slate-600'}>*/}
 					{/*	Conditions générales de vente*/}
 					{/*</Link>*/}

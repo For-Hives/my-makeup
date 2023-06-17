@@ -4,7 +4,6 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useSession } from 'next-auth/react'
 import * as zod from 'zod'
-import { useQueryClient } from '@tanstack/react-query'
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
 
 const schema = zod
@@ -31,8 +30,6 @@ const schema = zod
 	})
 
 export default function ModalUpdateExperiencesProfil(props) {
-	const queryClient = useQueryClient()
-
 	const user = props.user
 
 	const {
@@ -151,7 +148,7 @@ export default function ModalUpdateExperiencesProfil(props) {
 		const data = {
 			experiences: userExperiencesCleaned,
 		}
-		patchMeMakeup(session, data, queryClient)
+		patchMeMakeup(session, data)
 		// close the modal & reset the zod form
 		setUserExperiencesId('')
 		setUserExperiencesCompany('')

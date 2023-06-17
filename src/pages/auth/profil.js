@@ -4,7 +4,6 @@ import Image from 'next/image'
 import Nav from '@/components/Global/Nav'
 import Footer from '@/components/Global/Footer'
 import ResumeProfil from '@/components/Profil/Parents/ResumeProfil'
-import { useQuery } from '@tanstack/react-query'
 import { getSession, useSession } from 'next-auth/react'
 import _ from 'lodash'
 import ResponsiveTemporary from '@/components/Global/ResponsiveTemporary'
@@ -12,35 +11,11 @@ import InfosProfil from '@/components/Profil/Parents/InfosProfil'
 import FullLoader from '@/components/Global/Loader/FullLoader'
 import { Router } from 'next/router'
 
-function Profil() {
+function Profil({ user }) {
 	// get current user id
 	const { data: session } = useSession()
 
-	const { isLoading, isError, data, error } = useQuery({
-		queryKey: ['users/me-makeup'],
-		queryFn: async () => {
-			const res = await fetch(
-				`${process.env.NEXT_PUBLIC_API_URL}api/me-makeup`,
-				{
-					method: 'GET',
-					headers: {
-						// 	token
-						'Content-Type': 'application/json',
-						Accept: 'application/json',
-						Authorization: `Bearer ${session.jwt}`,
-					},
-				}
-			)
-			return res.json()
-		},
-	})
-
-	if (isLoading) return <FullLoader />
-
-	if (error) return 'An error has occurred: ' + error.message
-	const user = data
-
-	if (user.data === null) {
+	if (!user) {
 		Router.push('/auth/init-account')
 		return <FullLoader />
 	}
@@ -84,11 +59,42 @@ function Profil() {
 	)
 }
 
-export const getServerSideProps = async ({ req }) => {
+export const getServerSideProps = async ({ req, res }) => {
 	const session = await getSession({ req })
+
+	let user
+
+	if (session) {
+		const response = await fetch(
+			`${process.env.NEXT_PUBLIC_API_URL}api/me-makeup`,
+			{
+				method: 'GET',
+				headers: {
+					// 	token
+					'Content-Type': 'application/json',
+					Accept: 'application/json',
+					Authorization: `Bearer ${session.jwt}`,
+				},
+			}
+		)
+
+		if (!response.ok) {
+			console.log('An error has occurred: ' + response.statusText)
+		} else {
+			user = await response.json()
+		}
+	}
+
+	// Set Cache Control header
+	res.setHeader(
+		'Cache-Control',
+		'public, s-maxage=10, stale-while-revalidate=59'
+	)
+
 	return {
 		props: {
 			session,
+			user: user,
 		},
 	}
 }

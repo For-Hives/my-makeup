@@ -7,38 +7,13 @@ import Image from 'next/image'
 import Hero from '@/components/Global/Hero'
 import CTA from '@/components/Global/CTA'
 import Link from 'next/link'
-import { useQuery } from '@tanstack/react-query'
 import { convertToStringDate } from '@/services/utils'
-import FullLoader from '@/components/Global/Loader/FullLoader'
 
 /**
  * @param props
  * @constructor
  */
-function Blog(props) {
-	const { isLoading, isError, data, error } = useQuery({
-		queryKey: ['articles'],
-		queryFn: async () => {
-			const res = await fetch(
-				`${process.env.NEXT_PUBLIC_API_URL}api/articles`,
-				{
-					method: 'GET',
-					headers: {
-						// 	token
-						'Content-Type': 'application/json',
-						Accept: 'application/json',
-					},
-				}
-			)
-			return res.json()
-		},
-	})
-
-	if (isLoading) return <FullLoader />
-
-	if (error) return 'An error has occurred: ' + error.message
-
-	const articles = data.data
+function Blog({ articles }) {
 	// take only the first 3 articles
 	const lastArticles = articles.slice(0, 3)
 
@@ -125,7 +100,7 @@ function Blog(props) {
 												</div>
 											))
 										) : (
-											<p>No articles</p>
+											<p>{"Il n'y a pas d'articles"}</p>
 										)}
 									</div>
 								</div>
@@ -144,12 +119,10 @@ function Blog(props) {
 									<div className={'mt-8 flex w-full justify-end'}>
 										<Link
 											href={'/toutes-les-news'}
-											className={
-												'flex items-center font-medium text-indigo-900'
-											}
+											className={'btn-primary flex items-center font-medium'}
 										>
 											Voir toutes les news & articles
-											<span className="material-icons-round text-base text-indigo-900">
+											<span className="material-icons-round text-base">
 												chevron_right
 											</span>
 										</Link>
@@ -168,3 +141,21 @@ function Blog(props) {
 }
 
 export default Blog
+
+export async function getServerSideProps() {
+	const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}api/articles`, {
+		method: 'GET',
+		headers: {
+			// 	token
+			'Content-Type': 'application/json',
+			Accept: 'application/json',
+		},
+	})
+	const data = await res.json()
+
+	return {
+		props: {
+			articles: data.data,
+		},
+	}
+}

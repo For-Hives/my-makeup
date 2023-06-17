@@ -148,8 +148,7 @@ function Collaboration() {
 							</p>
 						</div>
 						<div className={'flex'}>
-							{/*todo page "recrutement"*/}
-							<Link href="/recrutement" className={'btn-primary'}>
+							<Link href="/search" className={'btn-primary'}>
 								Trouver la maquilleuse parfaite
 							</Link>
 						</div>
@@ -223,8 +222,7 @@ function Collaboration() {
 							</p>
 						</div>
 						<div className={'flex'}>
-							{/*todo recrutement page */}
-							<Link href="/recrutement" className={'btn-primary'}>
+							<Link href="/search" className={'btn-primary'}>
 								Découvrir notre solution
 							</Link>
 						</div>

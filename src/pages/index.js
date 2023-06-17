@@ -14,7 +14,7 @@ import ResponsiveTemporary from '@/components/Global/ResponsiveTemporary'
 
 const inter = Inter({ subsets: ['latin'] })
 
-export default function Home() {
+export default function Home({ talents }) {
 	return (
 		<>
 			<Head>
@@ -54,7 +54,7 @@ export default function Home() {
 						}
 					/>
 					<Presentation />
-					<Talents />
+					<Talents talents={talents} />
 					<Collaboration />
 					<Project />
 					<CTA />
@@ -63,4 +63,22 @@ export default function Home() {
 			</div>
 		</>
 	)
+}
+
+export async function getServerSideProps() {
+	const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}api/talents`, {
+		method: 'GET',
+		headers: {
+			// 	token
+			'Content-Type': 'application/json',
+			Accept: 'application/json',
+		},
+	})
+	const data = await res.json()
+
+	return {
+		props: {
+			talents: data.data,
+		},
+	}
 }

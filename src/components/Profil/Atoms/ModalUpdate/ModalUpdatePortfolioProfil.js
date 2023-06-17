@@ -6,7 +6,6 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useSession } from 'next-auth/react'
 import * as zod from 'zod'
-import { useQueryClient } from '@tanstack/react-query'
 import { Swiper, SwiperSlide } from 'swiper/react'
 import { Pagination } from 'swiper'
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
@@ -14,8 +13,6 @@ import { toast } from 'react-toastify'
 
 const schema = zod.object()
 export default function ModalUpdatePortfolioProfil(props) {
-	const queryClient = useQueryClient()
-
 	const user = props.user
 
 	const { handleSubmit, reset } = useForm({
@@ -74,7 +71,7 @@ export default function ModalUpdatePortfolioProfil(props) {
 		const data = {
 			image_gallery: userImageGallery,
 		}
-		patchMeMakeup(session, data, queryClient)
+		patchMeMakeup(session, data)
 		setImageUrl('')
 		props.handleIsModalOpen()
 	}

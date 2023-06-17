@@ -1,55 +1,8 @@
 import React from 'react'
 import CardDemo from '@/components/Global/Card-demo'
+import { convertStringToKebabCase } from '@/services/utils'
 
-const TalentList = [
-	{
-		name: 'Maquillage mariée',
-	},
-	{
-		name: 'Maquillage soirée',
-	},
-	{
-		name: 'Maquillage professionnel',
-	},
-	{
-		name: 'Maquillage enfant',
-	},
-	{
-		name: 'Maquillage spécialisé',
-	},
-	{
-		name: 'Maquillage homme',
-	},
-	{
-		name: 'Maquillage femme',
-	},
-	{
-		name: 'Maquillage de fête',
-	},
-	{
-		name: 'Maquillage de soirée',
-	},
-	{
-		name: 'Maquillage de film',
-	},
-	{
-		name: 'Maquillage de théâtre',
-	},
-	{
-		name: 'Maquillage FX',
-	},
-	{
-		name: 'Maquillage beauté',
-	},
-	{
-		name: 'Maquillage artistique',
-	},
-	{
-		name: 'Maquillage cinéma',
-	},
-]
-
-function Talents(props) {
+function Talents({ talents }) {
 	return (
 		<section className={'relative py-20'}>
 			<div className="mx-auto max-w-7xl py-10">
@@ -83,10 +36,12 @@ function Talents(props) {
 						</div>
 					</div>
 					<div className={'grid w-4/5 grid-cols-4 gap-8'}>
-						{TalentList.map((talent, index) => (
+						{talents?.map((talent, index) => (
 							<a
-								key={talent.name}
-								href={'/' + talent.name}
+								key={talent.attributes.title}
+								href={
+									'/talent/' + convertStringToKebabCase(talent.attributes.slug)
+								}
 								className={'group relative'}
 							>
 								<h2
@@ -94,7 +49,7 @@ function Talents(props) {
 										'flex h-full min-h-[120px] items-center justify-center rounded-xl border border-indigo-900/10 px-4 py-8 text-center font-semibold text-slate-900/70 transition duration-100 ease-in  group-hover:opacity-0'
 									}
 								>
-									{talent.name}
+									{talent.attributes.title}
 								</h2>
 								<h2
 									className={
@@ -102,7 +57,7 @@ function Talents(props) {
 										'-z-10 flex items-center justify-center rounded-xl text-center font-semibold text-slate-50 opacity-0 group-hover:z-10 group-hover:opacity-100'
 									}
 								>
-									Voir tous les talents
+									Voir cette spécialitée
 								</h2>
 							</a>
 						))}

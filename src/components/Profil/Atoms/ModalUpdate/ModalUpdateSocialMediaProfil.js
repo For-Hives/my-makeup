@@ -4,7 +4,6 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as zod from 'zod'
 import { useSession } from 'next-auth/react'
-import { useQueryClient } from '@tanstack/react-query'
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
 
 const schema = zod.object({
@@ -18,8 +17,6 @@ const schema = zod.object({
 })
 
 export default function ModalUpdateSocialMediaProfil(props) {
-	const queryClient = useQueryClient()
-
 	const user = props.user
 
 	const {
@@ -51,7 +48,7 @@ export default function ModalUpdateSocialMediaProfil(props) {
 				...data,
 			},
 		}
-		patchMeMakeup(session, data, queryClient)
+		patchMeMakeup(session, data)
 
 		reset()
 		props.handleIsModalOpen()
