@@ -8,7 +8,6 @@ import Image from 'next/image'
 import Hero from '@/components/Global/Hero'
 
 /**
- * todo : add content
  * @param props
  * @constructor
  */

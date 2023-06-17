@@ -100,7 +100,7 @@ function Blog({ articles }) {
 												</div>
 											))
 										) : (
-											<p>No articles</p>
+											<p>{"Il n'y a pas d'articles"}</p>
 										)}
 									</div>
 								</div>
@@ -119,12 +119,10 @@ function Blog({ articles }) {
 									<div className={'mt-8 flex w-full justify-end'}>
 										<Link
 											href={'/toutes-les-news'}
-											className={
-												'flex items-center font-medium text-indigo-900'
-											}
+											className={'btn-primary flex items-center font-medium'}
 										>
 											Voir toutes les news & articles
-											<span className="material-icons-round text-base text-indigo-900">
+											<span className="material-icons-round text-base">
 												chevron_right
 											</span>
 										</Link>

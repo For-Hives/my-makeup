@@ -160,7 +160,7 @@ function Footer() {
 					<Link href={'/cgu'} className={'text-sm text-slate-600'}>
 						Mentions légales
 					</Link>
-					{/* todo : plus tard */}
+					{/* todo : remplir les cgv plus tard */}
 					{/*<Link href={'/cgv'} className={'text-sm text-slate-600'}>*/}
 					{/*	Conditions générales de vente*/}
 					{/*</Link>*/}
