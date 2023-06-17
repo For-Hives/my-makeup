@@ -25,17 +25,35 @@ function ViewInfosProfil(props) {
 			<div className="relative mx-auto max-w-7xl pt-4">
 				<div className={'grid grid-cols-12 gap-5 pt-24'}>
 					<div className={'col-span-4 flex flex-col items-start gap-5'}>
-						<ViewContainer user={user} Component={ViewLocationProfil} />
-						<ViewContainer user={user} Component={ViewSocialMediaProfil} />
-						<ViewContainer user={user} Component={ViewSkillsProfil} />
-						<ViewContainer user={user} Component={ViewLanguageProfil} />
-						<ViewContainer user={user} Component={ViewCoursesProfil} />
+						{user.city && (
+							<ViewContainer user={user} Component={ViewLocationProfil} />
+						)}
+						{user?.network && (
+							<ViewContainer user={user} Component={ViewSocialMediaProfil} />
+						)}
+						{user?.skills && (
+							<ViewContainer user={user} Component={ViewSkillsProfil} />
+						)}
+						{user?.language && (
+							<ViewContainer user={user} Component={ViewLanguageProfil} />
+						)}
+						{user?.courses && (
+							<ViewContainer user={user} Component={ViewCoursesProfil} />
+						)}
 					</div>
 					<div className={'col-span-8 flex flex-col items-start gap-5'}>
-						<ViewContainer user={user} Component={ViewDescriptionProfil} />
-						<ViewContainer user={user} Component={ViewPortfolioProfil} />
-						<ViewContainer user={user} Component={ViewServiceOffersProfil} />
-						<ViewContainer user={user} Component={ViewExperiencesProfil} />
+						{user?.description && (
+							<ViewContainer user={user} Component={ViewDescriptionProfil} />
+						)}
+						{user?.image_gallery && (
+							<ViewContainer user={user} Component={ViewPortfolioProfil} />
+						)}
+						{user?.service_offers && (
+							<ViewContainer user={user} Component={ViewServiceOffersProfil} />
+						)}
+						{user?.experiences && (
+							<ViewContainer user={user} Component={ViewExperiencesProfil} />
+						)}
 					</div>
 				</div>
 			</div>
