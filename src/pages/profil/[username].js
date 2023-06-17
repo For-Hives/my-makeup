@@ -45,8 +45,8 @@ export default function Profil({ profilData }) {
 							}
 						/>
 						<>
-							<ViewResumeProfil user={user} />
-							<ViewInfosProfil user={user} />
+							<ViewResumeProfil user={user} isPublicView={true} />
+							<ViewInfosProfil user={user} isPublicView={true} />
 						</>
 					</main>
 				</main>

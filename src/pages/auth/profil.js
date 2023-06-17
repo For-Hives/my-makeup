@@ -9,14 +9,14 @@ import _ from 'lodash'
 import ResponsiveTemporary from '@/components/Global/ResponsiveTemporary'
 import InfosProfil from '@/components/Profil/Parents/InfosProfil'
 import FullLoader from '@/components/Global/Loader/FullLoader'
-import { Router } from 'next/router'
 
 function Profil({ user }) {
-	// get current user id
 	const { data: session } = useSession()
+	// get current user id
 
-	if (!user) {
-		Router.push('/auth/init-account')
+	console.log(user)
+	if (!user?.data) {
+		// router.push('/auth/init-account')
 		return <FullLoader />
 	}
 
@@ -80,6 +80,8 @@ export const getServerSideProps = async ({ req, res }) => {
 
 		if (!response.ok) {
 			console.log('An error has occurred: ' + response.statusText)
+			res.writeHead(301, { location: '/auth/init-account' })
+			res.end()
 		} else {
 			user = await response.json()
 		}
@@ -94,7 +96,7 @@ export const getServerSideProps = async ({ req, res }) => {
 	return {
 		props: {
 			session,
-			user: user,
+			user: user ?? null,
 		},
 	}
 }
