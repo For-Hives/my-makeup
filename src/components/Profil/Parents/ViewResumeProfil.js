@@ -9,7 +9,7 @@ function ViewResumeProfil(props) {
 	const router = useRouter()
 	const { publicView } = router.query
 
-	const user = props.user.attributes
+	const user = props.user?.attributes
 	const isPublic = !!publicView
 
 	const [starsToDisplay, setStarsToDisplay] = React.useState(5)
@@ -30,8 +30,9 @@ function ViewResumeProfil(props) {
 	if (user?.main_picture && user?.main_picture?.data === undefined) {
 		mainPicture = user?.main_picture?.url
 	} else {
-		mainPicture = user?.main_picture?.data.attributes.url
+		mainPicture = user?.main_picture?.data?.attributes?.url
 	}
+	const isPublicView = props.isPublicView ?? false
 	return (
 		<div className={'relative bg-white pb-24 shadow-xl'}>
 			<div className="mx-auto max-w-7xl pt-[90px]">
