@@ -3,10 +3,10 @@ import SearchBloc from '@/components/Global/Search/SearchBloc'
 
 export default function Hero(props) {
 	return (
-		<div className="relative bg-white pt-[90px]">
+		<div className="relative bg-white 2xl:pt-[90px]">
 			<div
 				className={
-					'absolute bottom-0 left-1/2 z-20 flex w-full -translate-x-1/2 transform items-end justify-center'
+					'absolute bottom-0 left-1/2 z-20 flex w-full -translate-x-1/2 transform items-end justify-center px-4'
 				}
 			>
 				<SearchBloc />
