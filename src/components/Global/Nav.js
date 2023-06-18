@@ -322,7 +322,7 @@ function Nav({
 							)}
 							{mobileMenuOpen && (
 								<div className={'flex h-full w-full items-end'}>
-									<Signature />
+									<Signature isPaddingActivated={false} />
 								</div>
 							)}
 						</div>

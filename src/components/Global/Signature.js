@@ -1,10 +1,15 @@
 import Link from 'next/link'
 import React from 'react'
 
-export function Signature() {
+export function Signature({ isPaddingActivated = true }) {
 	const actualYear = new Date().getFullYear()
 	return (
-		<div className={'mx-auto flex w-full max-w-7xl py-20'}>
+		<div
+			className={
+				'mx-auto flex w-full max-w-7xl py-20 ' +
+				(isPaddingActivated ? 'px-4 md:px-8 2xl:px-0' : '')
+			}
+		>
 			<p className={'mx-auto text-sm text-slate-600'}>
 				© {actualYear} My Makeup - Tous droits réservés - Developed with ❤️ by{' '}
 				<Link
