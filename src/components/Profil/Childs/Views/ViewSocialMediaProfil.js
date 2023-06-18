@@ -34,7 +34,11 @@ function ViewSocialMediaProfil(props) {
 							height={'35'}
 							alt={`${user?.user?.first_name} ${user?.user?.last_name} Instagram`}
 						/>
-						<p className={'text-sm text-slate-700 group-hover:underline'}>
+						<p
+							className={
+								'overflow-hidden text-sm text-slate-700 group-hover:underline'
+							}
+						>
 							{user?.network?.instagram}
 						</p>
 					</Link>
@@ -53,7 +57,11 @@ function ViewSocialMediaProfil(props) {
 							height={'35'}
 							alt={`${user?.user?.first_name} ${user?.user?.last_name} Facebook`}
 						/>
-						<p className={'text-sm text-slate-700 group-hover:underline'}>
+						<p
+							className={
+								'overflow-hidden text-sm text-slate-700 group-hover:underline'
+							}
+						>
 							{user?.network?.facebook}
 						</p>
 					</Link>
@@ -72,7 +80,11 @@ function ViewSocialMediaProfil(props) {
 							height={'35'}
 							alt={`${user?.user?.first_name} ${user?.user?.last_name} Linkedin`}
 						/>
-						<p className={'text-sm text-slate-700 group-hover:underline'}>
+						<p
+							className={
+								'overflow-hidden text-sm text-slate-700 group-hover:underline'
+							}
+						>
 							{user?.network?.linkedin}
 						</p>
 					</Link>
@@ -91,7 +103,11 @@ function ViewSocialMediaProfil(props) {
 							height={'35'}
 							alt={`${user?.user?.first_name} ${user?.user?.last_name} Youtube`}
 						/>
-						<p className={'text-sm text-slate-700 group-hover:underline'}>
+						<p
+							className={
+								'overflow-hidden text-sm text-slate-700 group-hover:underline'
+							}
+						>
 							{user?.network?.youtube}
 						</p>
 					</Link>
@@ -109,7 +125,11 @@ function ViewSocialMediaProfil(props) {
 							height={'35'}
 							alt={`${user?.user?.first_name} ${user?.user?.last_name} Email`}
 						/>
-						<p className={'text-sm text-slate-700 group-hover:underline'}>
+						<p
+							className={
+								'overflow-hidden text-sm text-slate-700 group-hover:underline'
+							}
+						>
 							{user?.network?.email}
 						</p>
 					</Link>
@@ -127,7 +147,11 @@ function ViewSocialMediaProfil(props) {
 							height={'35'}
 							alt={`${user?.network?.phone} ${user?.network?.phone} Téléphone`}
 						/>
-						<p className={'text-sm text-slate-700 group-hover:underline'}>
+						<p
+							className={
+								'overflow-hidden text-sm text-slate-700 group-hover:underline'
+							}
+						>
 							{user?.network?.phone}
 						</p>
 					</Link>
@@ -146,7 +170,11 @@ function ViewSocialMediaProfil(props) {
 							height={'35'}
 							alt={`${user?.user?.first_name} ${user?.user?.last_name} - site internet`}
 						/>
-						<p className={'text-sm text-slate-700 group-hover:underline'}>
+						<p
+							className={
+								'overflow-hidden text-sm text-slate-700 group-hover:underline'
+							}
+						>
 							{user?.network?.website}
 						</p>
 					</Link>

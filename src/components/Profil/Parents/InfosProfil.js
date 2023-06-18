@@ -22,7 +22,7 @@ function InfosProfil(props) {
 
 	return (
 		<div className={''}>
-			<div className="relative mx-auto max-w-7xl pt-4">
+			<div className="relative mx-auto max-w-7xl px-4 pt-4 md:px-8 2xl:px-0">
 				<div className={'absolute right-0 top-0 m-8 mt-16 flex'}>
 					{!isPublic ? (
 						<Link
@@ -45,14 +45,22 @@ function InfosProfil(props) {
 					)}
 				</div>
 				<div className={'grid grid-cols-12 gap-5 pt-24'}>
-					<div className={'col-span-4 flex flex-col items-start gap-5'}>
+					<div
+						className={
+							'col-span-12 flex flex-col items-start gap-5 md:col-span-4'
+						}
+					>
 						<LocationProfil user={user} />
 						<SocialMediaProfil user={user} />
 						<SkillsProfil user={user} />
 						<LanguageProfil user={user} />
 						<CoursesProfil user={user} />
 					</div>
-					<div className={'col-span-8 flex flex-col items-start gap-5'}>
+					<div
+						className={
+							'col-span-12 flex flex-col items-start gap-5 md:col-span-8'
+						}
+					>
 						<DescriptionProfil user={user} />
 						<PortfolioProfil user={user} />
 						<ServiceOffersProfil user={user} />
