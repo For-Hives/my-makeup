@@ -22,7 +22,7 @@ export default function Hero(props) {
 						<polygon points="0,0 90,0 50,100 0,100" />
 					</svg>
 					{/* loop to repeat div */}
-					<div className="relative z-10 px-6 py-32 sm:py-40 lg:px-8 lg:pb-80 lg:pr-0 lg:pt-52">
+					<div className="relative z-10 px-6 py-32 pb-8 sm:py-40 sm:pb-24 lg:px-8 lg:pb-80 lg:pr-0 lg:pt-52">
 						<div className="mx-auto max-w-2xl lg:mx-0 lg:max-w-xl">
 							<h1 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">
 								{props.title}
@@ -34,7 +34,7 @@ export default function Hero(props) {
 					</div>
 				</div>
 			</div>
-			<div className="bg-white lg:absolute lg:inset-y-0 lg:right-0 lg:w-1/2">
+			<div className="bg-white pb-24 md:pb-8 lg:absolute lg:inset-y-0 lg:right-0 lg:w-1/2 lg:pb-0">
 				<Image
 					className="aspect-[3/2] object-cover md:object-center lg:aspect-auto lg:h-full lg:w-full xl:object-top "
 					width={1000}
