@@ -7,6 +7,7 @@ import PopoverComponent from '@/components/Global/Popover'
 import Link from 'next/link'
 import { signOut, useSession } from 'next-auth/react'
 import _ from 'lodash'
+import { Signature } from '@/components/Global/Signature'
 
 const navigation = [
 	{
@@ -100,7 +101,7 @@ const navigation = [
 	},
 ]
 
-function Nav() {
+function Nav({ isSignOutVisible = false }) {
 	const { data: session } = useSession()
 
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(true)
@@ -131,7 +132,7 @@ function Nav() {
 										src="/assets/logo_2.webp"
 									/>
 								</Link>
-								<div className="bg-red flex flex-col lg:ml-10 lg:w-full lg:flex-row lg:justify-between">
+								<div className="flex flex-col lg:ml-10 lg:w-full lg:flex-row lg:justify-between">
 									<div
 										className={'lg:flex lg:w-full lg:items-center lg:gap-10'}
 									>
@@ -172,21 +173,23 @@ function Nav() {
 										</Link>
 										{session && session.user && !_.isEmpty(session.user) ? (
 											<>
-												<Link
-													onClick={() => {
-														signOut()
-													}}
-													className=""
-													href={'/auth/signin'}
-												>
-													<span
-														className={
-															'btn-primary-simple border-red-500  text-red-600'
-														}
+												{isSignOutVisible && (
+													<Link
+														onClick={() => {
+															signOut()
+														}}
+														className=""
+														href={'/auth/signin'}
 													>
-														Me déconnecter
-													</span>
-												</Link>
+														<span
+															className={
+																'btn-primary-simple border-red-500  text-red-600'
+															}
+														>
+															Me déconnecter
+														</span>
+													</Link>
+												)}
 												<Link className="" href={'/auth/profil'}>
 													<span className={'btn-primary'}>Profil</span>
 												</Link>
@@ -206,8 +209,10 @@ function Nav() {
 				</div>
 				{/* Mobile view */}
 				<div className="mx-auto block h-full w-full lg:hidden">
-					<div className={'relative flex h-full w-full flex-col bg-gray-500'}>
-						<div className={'absolute right-0 top-0 m-6'}></div>
+					<div className={'relative flex h-full w-full flex-col'}>
+						<div className={'absolute right-0 top-0 m-6'}>
+							{/*	btn switch nav */}
+						</div>
 						{/* Content mobile view */}
 						<div className={'flex h-full w-full flex-col gap-8 p-6'}>
 							<div>
@@ -221,93 +226,71 @@ function Nav() {
 									/>
 								</Link>
 							</div>
-						</div>
-					</div>
-					<div className="relative z-20 hidden lg:w-full">
-						<div className="px-6 py-6 lg:border-b lg:border-slate-300 lg:px-16">
-							<nav
-								className="flex justify-between sm:h-10 sm:items-center lg:justify-start"
-								aria-label="Global"
-							>
-								<Link href="/" className="-m-1.5 p-1.5">
-									<span className="sr-only">My Makeup</span>
-									<Image
-										alt="Logo My Makeup"
-										width={50}
-										height={50}
-										src="/assets/logo_2.webp"
+							<div className={'flex w-full flex-col-reverse items-start gap-8'}>
+								<Link className={'btn-primary-with-icon'} href={'/search'}>
+									<MagnifyingGlassIcon
+										className="mr-2 h-5 w-5 text-indigo-900"
+										aria-hidden="true"
 									/>
+									Trouver une maquilleuse
 								</Link>
-								<div className="bg-red flex flex-col lg:ml-10 lg:w-full lg:flex-row lg:justify-between">
-									<div
-										className={'lg:flex lg:w-full lg:items-center lg:gap-10'}
-									>
-										{navigation.map(item => {
-											if (item.mode === 'dropdown') {
-												return (
-													<PopoverComponent
-														key={item.name}
-														name={item.name}
-														translate={'30%'}
-														content={item.children}
-													/>
-												)
-											} else {
-												return (
-													<Link
-														key={item.name}
-														href={item.href}
-														className="text-sm font-semibold leading-6 text-slate-900"
-													>
-														{item.name}
-													</Link>
-												)
-											}
-										})}
-									</div>
-									<div
-										className={
-											'lg:flex lg:w-full lg:items-center lg:justify-end lg:gap-10'
-										}
-									>
-										<Link className={'btn-primary-with-icon'} href={'/search'}>
-											<MagnifyingGlassIcon
-												className="mr-2 h-5 w-5 text-indigo-900"
-												aria-hidden="true"
+							</div>
+							<div className={'z-10 flex w-full flex-col items-start gap-10'}>
+								{navigation.map(item => {
+									if (item.mode === 'dropdown') {
+										return (
+											<PopoverComponent
+												key={item.name}
+												name={item.name}
+												translate={'30%'}
+												content={item.children}
 											/>
-											Trouver une maquilleuse
-										</Link>
-										{session && session.user && !_.isEmpty(session.user) ? (
-											<>
-												<Link
-													onClick={() => {
-														signOut()
-													}}
-													className=""
-													href={'/auth/signin'}
-												>
-													<span
-														className={
-															'btn-primary-simple border-red-500  text-red-600'
-														}
-													>
-														Me déconnecter
-													</span>
-												</Link>
-												<Link className="" href={'/auth/profil'}>
-													<span className={'btn-primary'}>Profil</span>
-												</Link>
-											</>
-										) : (
-											<Link href="/auth/signin" className="">
-												<span className={'btn-primary-simple'}>
-													Me connecter
-												</span>
+										)
+									} else {
+										return (
+											<Link
+												key={item.name}
+												href={item.href}
+												className="text-sm font-semibold leading-6 text-slate-900"
+											>
+												{item.name}
 											</Link>
-										)}
+										)
+									}
+								})}
+							</div>
+							<div className={'h-0.5 w-full bg-gray-300/50'}></div>
+							<div className={'flex'}>
+								{session && session.user && !_.isEmpty(session.user) ? (
+									<div className={'flex flex-row-reverse gap-8'}>
+										<Link
+											onClick={() => {
+												signOut()
+											}}
+											className=""
+											href={'/auth/signin'}
+										>
+											<span
+												className={
+													'btn-primary-simple border-red-500  text-red-600'
+												}
+											>
+												Me déconnecter
+											</span>
+										</Link>
+										<Link className="" href={'/auth/profil'}>
+											<span className={'btn-primary'}>Profil</span>
+										</Link>
 									</div>
-								</div>
-							</nav>
+								) : (
+									<Link href="/auth/signin" className="">
+										<span className={'btn-primary-simple'}>Me connecter</span>
+									</Link>
+								)}
+							</div>
+							<div className={'flex h-full w-full items-end'}>
+								<Signature />
+							</div>
 						</div>
 					</div>
 				</div>

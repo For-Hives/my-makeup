@@ -14,9 +14,7 @@ function Profil({ user }) {
 	const { data: session } = useSession()
 	// get current user id
 
-	console.log(user)
-	if (!user?.data) {
-		// router.push('/auth/init-account')
+	if (!user) {
 		return <FullLoader />
 	}
 
@@ -29,7 +27,7 @@ function Profil({ user }) {
 					content="Page de profil sur my-makeup.fr la plateforme qui va révolutionner votre façon de travailler !"
 				/>
 			</Head>
-			<Nav />
+			<Nav isSignOutVisible={true} />
 			<main className={'relative'}>
 				<ResponsiveTemporary />
 				<Image

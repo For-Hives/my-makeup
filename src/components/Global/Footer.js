@@ -1,11 +1,9 @@
 import React from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { Signature } from '@/components/Global/Signature'
 
 function Footer() {
-	// get actuel year
-	const actualYear = new Date().getFullYear()
-
 	return (
 		<>
 			<footer
@@ -178,34 +176,7 @@ function Footer() {
 					</Link>
 				</div>
 			</footer>
-			<div className={'mx-auto flex w-full max-w-7xl py-20'}>
-				<p className={'mx-auto text-sm text-slate-600'}>
-					© {actualYear} My Makeup - Tous droits réservés - Developed with ❤️ by{' '}
-					<Link
-						className={'text-sm text-slate-600 underline'}
-						href={'https://andy-cinquin.fr'}
-						target={'_blank'}
-					>
-						Andy Cinquin
-					</Link>
-					&nbsp;&&nbsp;
-					<Link
-						className={'text-sm text-slate-600 underline'}
-						href={'https://brev.al'}
-						target={'_blank'}
-					>
-						Bréval Le Floch
-					</Link>
-					&nbsp; - 🐝
-					<Link
-						className={'text-sm text-slate-600 underline'}
-						href={'https://forhives.fr/'}
-						target={'_blank'}
-					>
-						ForHives co-founders
-					</Link>
-				</p>
-			</div>
+			<Signature />
 		</>
 	)
 }
