@@ -13,7 +13,7 @@ import AdvantagesParticulier from '@/components/Particulier/AdvantagesParticulie
  * @param props
  * @constructor
  */
-function Particulier(props) {
+function PourquoiUtiliserMyMakeupEnTantQueParticulier(props) {
 	return (
 		<>
 			<Head>
@@ -65,4 +65,4 @@ function Particulier(props) {
 	)
 }
 
-export default Particulier
+export default PourquoiUtiliserMyMakeupEnTantQueParticulier

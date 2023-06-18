@@ -12,12 +12,12 @@ import { Signature } from '@/components/Global/Signature'
 const navigation = [
 	{
 		name: 'Particulier',
-		href: '/particulier',
+		href: '/pourquoi-utiliser-my-makeup-en-tant-que-particulier',
 		mode: 'dropdown',
 		children: [
 			{
 				name: 'Pourquoi My Makeup ?',
-				href: '/particulier',
+				href: '/pourquoi-utiliser-my-makeup-en-tant-que-particulier',
 				icon: 'handshake',
 				description:
 					'My Makeup est une plateforme de mise en relation entre les particuliers et les professionnels de la beauté.',
@@ -46,12 +46,12 @@ const navigation = [
 	},
 	{
 		name: 'Maquilleuse',
-		href: '/maquilleuse',
+		href: '/pourquoi-rejoindre-my-makeup-en-tant-que-maquilleuse',
 		mode: 'dropdown',
 		children: [
 			{
 				name: 'Pourquoi My Makeup ?',
-				href: '/maquilleuse',
+				href: '/pourquoi-rejoindre-my-makeup-en-tant-que-maquilleuse',
 				icon: 'brush',
 				description:
 					'Rejoignez la communauté My Makeup pour développer votre activité, trouver de nouveaux clients,' +
