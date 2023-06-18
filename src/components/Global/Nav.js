@@ -107,7 +107,7 @@ function Nav({
 }) {
 	const { data: session } = useSession()
 
-	const [mobileMenuOpen, setMobileMenuOpen] = useState(true)
+	const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
 	const handleClickMenuIcon = () => {
 		setMobileMenuOpen(!mobileMenuOpen)

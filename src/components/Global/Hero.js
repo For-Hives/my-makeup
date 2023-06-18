@@ -36,7 +36,7 @@ export default function Hero(props) {
 			</div>
 			<div className="bg-white lg:absolute lg:inset-y-0 lg:right-0 lg:w-1/2">
 				<Image
-					className="aspect-[3/2] object-cover lg:aspect-auto lg:h-full lg:w-full "
+					className="aspect-[3/2] object-cover md:object-center lg:aspect-auto lg:h-full lg:w-full xl:object-top "
 					width={1000}
 					height={1000}
 					src="/assets/back.png"
