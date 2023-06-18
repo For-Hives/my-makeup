@@ -19,9 +19,7 @@ function PourLesParticuliers(props) {
 					content="Découvrez comment My Makeup simplifie la recherche de la maquilleuse professionnelle idéale. Grâce à notre plateforme intuitive, trouver la maquilleuse de vos rêves n'a jamais été aussi simple !"
 				/>
 			</Head>
-
 			<Nav />
-
 			<main className={'relative'}>
 				<Hero
 					title={
