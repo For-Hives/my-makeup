@@ -44,7 +44,7 @@ function ResumeProfil(props) {
 						{!isPublic ? (
 							<button
 								className={
-									'absolute left-0 top-0 flex h-full w-full flex-col items-center justify-center rounded-full bg-indigo-700/0 text-white/0 transition hover:bg-indigo-700/25 hover:text-white'
+									'absolute left-0 top-0 flex h-full w-full flex-col items-center justify-center rounded-full text-white/0 transition hover:text-white xl:bg-indigo-700/0 xl:hover:bg-indigo-700/25'
 								}
 								onClick={handleIsModalOpen}
 							>
