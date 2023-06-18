@@ -59,14 +59,14 @@ export default function Article({ articleData }) {
 						{meta && (
 							<article>
 								<header className="flex flex-col">
-									<h1 className="mt-6 text-3xl font-bold tracking-tight text-gray-800 dark:text-gray-100 sm:text-4xl">
+									<h1 className="mt-6 text-3xl font-bold tracking-tight text-gray-800 sm:text-4xl">
 										{meta.title}
 									</h1>
 									<time
 										dateTime={meta.updatedAt.toString()}
-										className="order-first flex items-center text-base text-gray-400 dark:text-gray-500"
+										className="order-first flex items-center text-base text-gray-400"
 									>
-										<span className="h-4 w-0.5 rounded-full bg-gray-200 dark:bg-gray-500" />
+										<span className="h-4 w-0.5 rounded-full bg-gray-200" />
 										<span className="ml-3">
 											{convertToStringDate(meta.updatedAt)}
 										</span>
@@ -76,7 +76,7 @@ export default function Article({ articleData }) {
 									<Layout value={meta.content.toString()} />
 								</div>
 								<h3 className={'flex items-center text-base text-gray-400'}>
-									<span className="h-4 w-0.5 rounded-full bg-gray-200 dark:bg-gray-500" />
+									<span className="h-4 w-0.5 rounded-full bg-gray-200" />
 									<span className="ml-3">Auteur.e : {meta.author}</span>
 								</h3>
 							</article>
