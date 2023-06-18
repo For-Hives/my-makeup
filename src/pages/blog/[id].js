@@ -42,62 +42,50 @@ export default function Article({ articleData }) {
 					}
 				/>
 			</Head>
-			<div className={'relative'}>
-				<Image
-					src={'/assets/coming-soon.svg'}
-					alt={'Coming soon'}
-					width={'80'}
-					height={'80'}
-					className={
-						'fixed left-0 top-0 z-50 m-4 rounded-full bg-amber-300/75 p-2'
-					}
-				/>
-				<Nav />
-				<main className={'relative'}>
-					<ResponsiveTemporary />
-					<div className={'relative mx-auto my-48 max-w-7xl'}>
-						<div className="mx-auto max-w-2xl">
-							{
-								<Link
-									type="button"
-									href={'/blog'}
-									aria-label="Go back to articles"
-									className="group mb-8 flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-md shadow-gray-800/5 ring-1 ring-gray-900/5 transition dark:border dark:border-gray-700/50 dark:bg-gray-800 dark:ring-0 dark:ring-white/10 dark:hover:border-gray-700 dark:hover:ring-white/20 lg:absolute lg:-left-5 lg:-mt-2 lg:mb-0 xl:-top-1.5 xl:left-0 xl:mt-0"
-								>
-									<ArrowLeftIcon className="h-4 w-4 stroke-gray-500 transition group-hover:stroke-gray-700 dark:stroke-gray-500 dark:group-hover:stroke-gray-400" />
-								</Link>
-							}
-							{meta && (
-								<article>
-									<header className="flex flex-col">
-										<h1 className="mt-6 text-3xl font-bold tracking-tight text-gray-800 dark:text-gray-100 sm:text-4xl">
-											{meta.title}
-										</h1>
-										<time
-											dateTime={meta.updatedAt.toString()}
-											className="order-first flex items-center text-base text-gray-400 dark:text-gray-500"
-										>
-											<span className="h-4 w-0.5 rounded-full bg-gray-200 dark:bg-gray-500" />
-											<span className="ml-3">
-												{convertToStringDate(meta.updatedAt)}
-											</span>
-										</time>
-									</header>
-									<div className={'prose my-8 xl:prose-lg'}>
-										<Layout value={meta.content.toString()} />
-									</div>
-									<h3 className={'flex items-center text-base text-gray-400'}>
+			<Nav />
+			<main className={'relative'}>
+				<div className={'relative mx-auto my-48 max-w-7xl'}>
+					<div className="mx-auto max-w-2xl">
+						{
+							<Link
+								type="button"
+								href={'/blog'}
+								aria-label="Go back to articles"
+								className="group mb-8 flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-md shadow-gray-800/5 ring-1 ring-gray-900/5 transition lg:absolute lg:-left-5 lg:-mt-2 lg:mb-0 xl:-top-1.5 xl:left-0 xl:mt-0"
+							>
+								<ArrowLeftIcon className="h-4 w-4 stroke-gray-500 transition group-hover:stroke-gray-700" />
+							</Link>
+						}
+						{meta && (
+							<article>
+								<header className="flex flex-col">
+									<h1 className="mt-6 text-3xl font-bold tracking-tight text-gray-800 dark:text-gray-100 sm:text-4xl">
+										{meta.title}
+									</h1>
+									<time
+										dateTime={meta.updatedAt.toString()}
+										className="order-first flex items-center text-base text-gray-400 dark:text-gray-500"
+									>
 										<span className="h-4 w-0.5 rounded-full bg-gray-200 dark:bg-gray-500" />
-										<span className="ml-3">Auteur.e : {meta.author}</span>
-									</h3>
-								</article>
-							)}
-						</div>
+										<span className="ml-3">
+											{convertToStringDate(meta.updatedAt)}
+										</span>
+									</time>
+								</header>
+								<div className={'prose my-8 xl:prose-lg'}>
+									<Layout value={meta.content.toString()} />
+								</div>
+								<h3 className={'flex items-center text-base text-gray-400'}>
+									<span className="h-4 w-0.5 rounded-full bg-gray-200 dark:bg-gray-500" />
+									<span className="ml-3">Auteur.e : {meta.author}</span>
+								</h3>
+							</article>
+						)}
 					</div>
-					<CTA />
-				</main>
-				<Footer />
-			</div>
+				</div>
+				<CTA />
+			</main>
+			<Footer />
 		</>
 	)
 }
