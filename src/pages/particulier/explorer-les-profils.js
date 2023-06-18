@@ -26,18 +26,8 @@ function ExplorerLesProfils(props) {
 			<Nav />
 
 			<div className={'relative'}>
-				<Image
-					src={'/assets/coming-soon.svg'}
-					alt={'Coming soon'}
-					width={'80'}
-					height={'80'}
-					className={
-						'fixed left-0 top-0 z-50 m-4 rounded-full bg-amber-300/75 p-2'
-					}
-				/>
 				<Nav />
 				<main className={'relative'}>
-					<ResponsiveTemporary />
 					<Hero
 						title={
 							<>
@@ -54,11 +44,13 @@ function ExplorerLesProfils(props) {
 							</>
 						}
 					/>
-					<div className={'relative mx-auto my-48 max-w-7xl'}>
+					<div
+						className={'relative mx-auto my-24 max-w-7xl px-4 md:my-48 md:px-0'}
+					>
 						<div className="mx-auto max-w-2xl">
 							<article>
 								<header className="flex flex-col">
-									<h1 className="mt-6 text-3xl font-bold tracking-tight text-gray-800 dark:text-gray-100 sm:text-4xl">
+									<h1 className="mt-6 text-3xl font-bold tracking-tight text-gray-800 sm:text-4xl">
 										Explorer les profils de maquilleuses sur My Makeup :
 										Recherche par critères et par ville
 									</h1>
