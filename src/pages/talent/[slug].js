@@ -34,39 +34,29 @@ function Talent({ articleData }) {
 
 			<Nav />
 
-			<div className={'relative'}>
-				<Image
-					src={'/assets/coming-soon.svg'}
-					alt={'Coming soon'}
-					width={'80'}
-					height={'80'}
-					className={
-						'fixed left-0 top-0 z-50 m-4 rounded-full bg-amber-300/75 p-2'
-					}
+			<Nav />
+			<main className={'relative'}>
+				<Hero
+					title={<>{meta.seo_title}</>}
+					description={<>{meta.description}</>}
 				/>
-				<Nav />
-				<main className={'relative'}>
-					<ResponsiveTemporary />
-					<Hero
-						title={<>{meta.seo_title}</>}
-						description={<>{meta.description}</>}
-					/>
-					<div className={'relative mx-auto my-48 max-w-7xl'}>
-						<div className="mx-auto max-w-2xl">
-							<article>
-								<div className={'prose my-8 xl:prose-lg'}>
-									<Layout value={meta.content.toString()} />
-								</div>
-								<h3 className={'flex items-center text-base text-gray-400'}>
-									<span className="h-4 w-0.5 rounded-full bg-gray-200 dark:bg-gray-500" />
-									<span className="ml-3">{"L'équipe My-Makeup"}</span>
-								</h3>
-							</article>
-						</div>
+				<div
+					className={'relative mx-auto my-24 max-w-7xl px-4 md:my-48 md:px-0'}
+				>
+					<div className="mx-auto max-w-2xl">
+						<article>
+							<div className={'prose my-8 xl:prose-lg'}>
+								<Layout value={meta.content.toString()} />
+							</div>
+							<h3 className={'flex items-center text-base text-gray-400'}>
+								<span className="h-4 w-0.5 rounded-full bg-gray-200" />
+								<span className="ml-3">{"L'équipe My-Makeup"}</span>
+							</h3>
+						</article>
 					</div>
-					<CTA />
-				</main>
-			</div>
+				</div>
+				<CTA />
+			</main>
 
 			<Footer />
 		</>
