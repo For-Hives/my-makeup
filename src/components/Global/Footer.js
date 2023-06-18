@@ -7,7 +7,9 @@ function Footer() {
 	return (
 		<>
 			<footer
-				className={'relative mx-auto flex w-full max-w-7xl gap-20 pt-52 '}
+				className={
+					'relative mx-auto flex w-full max-w-7xl flex-col gap-20 px-4 pt-52 md:flex-row md:px-8 2xl:px-0'
+				}
 			>
 				<div className={'flex flex-col gap-6'}>
 					<div className={'flex items-center justify-start gap-3'}>
@@ -26,8 +28,8 @@ function Footer() {
 						<br />
 						44000 Nantes
 					</p>
-					<div className={'flex gap-3'}>
-						<Link href="/" rel={'noopener nofollow noreferrer'}>
+					<div className={'flex flex-row gap-3 md:flex-col lg:flex-row'}>
+						<Link href="/" rel={'noopener nofollow noreferrer '}>
 							<Image
 								src={'/assets/brand/037-instagram.svg'}
 								className={'fill-white'}
