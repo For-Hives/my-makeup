@@ -30,17 +30,23 @@ function SearchBloc() {
 		>
 			<form
 				onSubmit={handleSubmit}
-				className={'flex w-full items-center justify-between gap-2 lg:gap-6'}
+				className={
+					'flex w-full flex-col items-center justify-between gap-2 md:flex-row lg:gap-6'
+				}
 			>
-				<div className={'flex flex-col gap-2 md:flex-row lg:gap-6'}>
-					<div className={'relative'}>
+				<div
+					className={
+						'flex w-full flex-col gap-2 px-2 md:w-auto md:flex-row md:px-0 lg:gap-6'
+					}
+				>
+					<div className={'relative w-full lg:w-auto'}>
 						<MagnifyingGlassIcon
 							className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 transform text-indigo-900"
 							aria-hidden="true"
 						/>
 						<input
 							className={
-								'flex items-center rounded-lg border-2 border-indigo-900 bg-transparent py-2 pl-12 pr-6 text-sm leading-6 text-indigo-900 md:w-80'
+								'flex w-full items-center rounded-lg border-2 border-indigo-900 bg-transparent py-2 pl-12 pr-6 text-sm leading-6 text-indigo-900 md:w-80'
 							}
 							placeholder={
 								"Essayez 'Maquilleuse mariée', 'Maquilleuse événements'..."
@@ -49,14 +55,14 @@ function SearchBloc() {
 							onChange={e => setSearchTerm(e.target.value)}
 						/>
 					</div>
-					<div className={'relative'}>
+					<div className={'relative w-full lg:w-auto'}>
 						<MapPinIcon
 							className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 transform text-indigo-900"
 							aria-hidden="true"
 						/>
 						<input
 							className={
-								'flex items-center rounded-lg border-2 border-indigo-900 bg-transparent py-2 pl-12 pr-6 text-sm leading-6 text-indigo-900 md:w-80'
+								'flex w-full items-center rounded-lg border-2 border-indigo-900 bg-transparent py-2 pl-12 pr-6 text-sm leading-6 text-indigo-900 md:w-80'
 							}
 							placeholder={'Lieu de la mission (ex: Paris, Lyon, Marseille...)'}
 							value={city}
@@ -66,13 +72,13 @@ function SearchBloc() {
 				</div>
 				<div
 					className={
-						'flex h-full items-end justify-end md:h-auto md:items-center'
+						'flex h-full w-full items-center justify-center px-2 md:h-auto md:w-auto md:items-center'
 					}
 				>
 					<button
 						type="submit"
 						onSubmit={handleSubmit}
-						className={'btn-primary'}
+						className={'btn-primary w-full'}
 					>
 						Trouver une maquilleuse
 					</button>
