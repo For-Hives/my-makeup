@@ -18,41 +18,26 @@ function PourquoiMyMakeup() {
 					content="Découvrez pourquoi vous devriez rejoindre My Makeup en tant que maquilleuse professionnelle"
 				/>
 			</Head>
-
 			<Nav />
-
-			<div className={'relative'}>
-				<Image
-					src={'/assets/coming-soon.svg'}
-					alt={'Coming soon'}
-					width={'80'}
-					height={'80'}
-					className={
-						'fixed left-0 top-0 z-50 m-4 rounded-full bg-amber-300/75 p-2'
+			<main className={'relative'}>
+				<Hero
+					title={
+						<>
+							Pourquoi rejoindre{' '}
+							<span className={'text-indigo-900'}>My&nbsp;Makeup</span> en tant
+							que maquilleuse professionnelle ?
+						</>
+					}
+					description={
+						<>
+							Découvrez les avantages à rejoindre notre communauté pour
+							développer votre activité et atteindre une nouvelle clientèle.
+						</>
 					}
 				/>
-				<Nav />
-				<main className={'relative'}>
-					<ResponsiveTemporary />
-					<Hero
-						title={
-							<>
-								Pourquoi rejoindre{' '}
-								<span className={'text-indigo-900'}>My&nbsp;Makeup</span> en
-								tant que maquilleuse professionnelle ?
-							</>
-						}
-						description={
-							<>
-								Découvrez les avantages à rejoindre notre communauté pour
-								développer votre activité et atteindre une nouvelle clientèle.
-							</>
-						}
-					/>
-					<AdvantagesMaquillleuse />
-					<CTA />
-				</main>
-			</div>
+				<AdvantagesMaquillleuse />
+				<CTA />
+			</main>
 
 			<Footer />
 		</>

@@ -23,29 +23,27 @@ function PourquoiUtiliserMyMakeupEnTantQueParticulier(props) {
 				/>
 			</Head>
 			<Nav />
-			<div className={'relative'}>
-				<Nav />
-				<main className={'relative'}>
-					<Hero
-						title={
-							<>
-								Pourquoi utiliser{' '}
-								<span className={'text-indigo-900'}>My&nbsp;Makeup</span> en
-								tant que particulier ?
-							</>
-						}
-						description={
-							<>
-								Découvrez les avantages à utiliser notre plateforme pour
-								développer votre activité et trouver des passionnées
-								expérimentées !
-							</>
-						}
-					/>
-					<AdvantagesParticulier />
-					<CTA />
-				</main>
-			</div>
+
+			<main className={'relative'}>
+				<Hero
+					title={
+						<>
+							Pourquoi utiliser{' '}
+							<span className={'text-indigo-900'}>My&nbsp;Makeup</span> en tant
+							que particulier ?
+						</>
+					}
+					description={
+						<>
+							Découvrez les avantages à utiliser notre plateforme pour
+							développer votre activité et trouver des passionnées expérimentées
+							!
+						</>
+					}
+				/>
+				<AdvantagesParticulier />
+				<CTA />
+			</main>
 
 			<Footer />
 		</>
