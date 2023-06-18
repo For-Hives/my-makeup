@@ -42,14 +42,16 @@ export default function Article({ articleData }) {
 			</Head>
 			<Nav />
 			<main className={'relative'}>
-				<div className={'relative mx-auto my-48 max-w-7xl'}>
+				<div
+					className={'relative mx-auto my-48 max-w-7xl px-4 md:px-8 2xl:px-0'}
+				>
 					<div className="mx-auto max-w-2xl">
 						{
 							<Link
 								type="button"
 								href={'/blog'}
 								aria-label="Go back to articles"
-								className="group mb-8 flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-md shadow-gray-800/5 ring-1 ring-gray-900/5 transition lg:absolute lg:-left-5 lg:-mt-2 lg:mb-0 xl:-top-1.5 xl:left-0 xl:mt-0"
+								className="group mb-8 flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-md shadow-gray-800/5 ring-1 ring-gray-900/5 transition 2xl:absolute 2xl:-top-1.5 2xl:left-0 2xl:mt-0"
 							>
 								<ArrowLeftIcon className="h-4 w-4 stroke-gray-500 transition group-hover:stroke-gray-700" />
 							</Link>
@@ -70,13 +72,15 @@ export default function Article({ articleData }) {
 										</span>
 									</time>
 								</header>
-								<div className={'prose my-8 xl:prose-lg'}>
-									<Layout value={meta.content.toString()} />
+								<div className={'flex flex-col'}>
+									<div className={'prose my-8 xl:prose-lg'}>
+										<Layout value={meta.content.toString()} />
+									</div>
+									<h3 className={'flex items-center text-base text-gray-400'}>
+										<span className="h-4 w-0.5 rounded-full bg-gray-200" />
+										<span className="ml-3">Auteur.e : {meta.author}</span>
+									</h3>
 								</div>
-								<h3 className={'flex items-center text-base text-gray-400'}>
-									<span className="h-4 w-0.5 rounded-full bg-gray-200" />
-									<span className="ml-3">Auteur.e : {meta.author}</span>
-								</h3>
 							</article>
 						)}
 					</div>

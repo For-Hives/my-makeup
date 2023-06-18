@@ -38,7 +38,7 @@ function Blog({ articles }) {
 						</>
 					}
 				/>
-				<section className={'relative px-4 py-20 md:px-8 2xl:px-0 '}>
+				<section className={'relative px-4 py-20 md:px-8 2xl:px-0'}>
 					<div className="mx-auto max-w-7xl">
 						<div className="mx-auto md:mb-10">
 							<h2 className="w-full text-start text-4xl font-bold tracking-tight text-slate-900 sm:text-4xl md:w-1/2">
