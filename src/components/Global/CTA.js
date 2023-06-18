@@ -6,29 +6,48 @@ function Cta() {
 		<div className={'relative w-full'}>
 			<div
 				className={
-					'absolute left-0 top-0 -z-10 h-full w-[100%] overflow-visible'
+					'absolute left-0 top-0 -z-10 h-full w-full scale-125 transform overflow-visible md:scale-150 xl:scale-125 2xl:scale-100'
 				}
 			>
-				<Image
-					className={'-z-10 overflow-visible object-cover'}
-					alt={'blob'}
-					fill
-					src={'/assets/blob.svg'}
-				/>
+				<div
+					className={
+						'flex h-full w-full scale-125 scale-y-150 transform items-center justify-center md:scale-100'
+					}
+				>
+					<Image
+						className={
+							'-z-10 scale-150 transform overflow-visible object-cover md:scale-100'
+						}
+						alt={'blob'}
+						fill
+						src={'/assets/blob.svg'}
+					/>
+				</div>
 			</div>
-			<div className="relative mx-auto max-w-7xl py-64">
-				<div className="z-20 mx-auto flex w-1/2 flex-col gap-16">
-					<h2 className="text-center text-4xl font-bold tracking-tight text-white sm:text-4xl sm:leading-snug">
+			<div className="relative mx-auto max-w-7xl px-4 py-40 md:px-0 md:py-64">
+				<div className="z-20 mx-auto flex w-full flex-col gap-8 md:w-2/3 md:gap-16 xl:w-1/2">
+					<h2 className="text-center text-2xl font-bold tracking-tight text-white sm:text-4xl sm:leading-snug md:text-4xl">
 						Rejoignez&nbsp;My-Makeup,
 						la&nbsp;communauté&nbsp;qui&nbsp;fait&nbsp;la&nbsp;différence.
 					</h2>
-					<div className={'flex justify-center gap-8'}>
-						<Link href="/search" className={'btn-secondary-white'}>
+					<div
+						className={
+							'flex flex-col items-center justify-center gap-4 md:flex-row md:items-start md:gap-8'
+						}
+					>
+						<Link
+							href="/search"
+							className={
+								'btn-secondary-white flex w-2/3 items-center justify-center md:w-auto'
+							}
+						>
 							Je cherche des maquilleuses
 						</Link>
 						<Link
 							href="/auth/signup"
-							className={'btn-secondary-white-bordered'}
+							className={
+								'btn-secondary-white-bordered flex w-2/3 items-center justify-center md:w-auto'
+							}
 						>
 							Je cherche des missions
 						</Link>
