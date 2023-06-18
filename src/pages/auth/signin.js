@@ -7,7 +7,6 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as zod from 'zod'
 import _ from 'lodash'
-import ResponsiveTemporary from '@/components/Global/ResponsiveTemporary'
 
 const schema = zod
 	.object({
@@ -52,7 +51,6 @@ function Signin() {
 				/>
 			</Head>
 			<div className="relative flex min-h-screen bg-white">
-				<ResponsiveTemporary />
 				<div className="flex flex-1 flex-col justify-center px-4 py-12 sm:px-6 lg:flex-none lg:px-20 xl:px-24">
 					<div className="mx-auto w-full max-w-sm lg:w-96">
 						<div>

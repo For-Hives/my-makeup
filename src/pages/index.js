@@ -8,7 +8,6 @@ import Collaboration from '@/components/Home/Collaboration'
 import React from 'react'
 import Project from '@/components/Home/Project'
 import CTA from '@/components/Global/CTA'
-import ResponsiveTemporary from '@/components/Global/ResponsiveTemporary'
 
 export default function Home({ talents }) {
 	return (

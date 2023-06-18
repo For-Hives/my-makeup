@@ -4,7 +4,6 @@ import Footer from '@/components/Global/Footer'
 import Head from 'next/head'
 import CTA from '@/components/Global/CTA'
 import Confidentialite from '@/components/Rights/Confidentialite'
-import ResponsiveTemporary from '@/components/Global/ResponsiveTemporary'
 
 function PolitiqueDeConfidentialite(props) {
 	return (
@@ -19,7 +18,6 @@ function PolitiqueDeConfidentialite(props) {
 			</Head>
 			<Nav />
 			<main className={'relative'}>
-				<ResponsiveTemporary />
 				<Confidentialite />
 				<CTA />
 			</main>

@@ -2,8 +2,6 @@ import React from 'react'
 import Nav from '@/components/Global/Nav'
 import Footer from '@/components/Global/Footer'
 import Head from 'next/head'
-import Image from 'next/image'
-import ResponsiveTemporary from '@/components/Global/ResponsiveTemporary'
 import Hero from '@/components/Global/Hero'
 import CTA from '@/components/Global/CTA'
 

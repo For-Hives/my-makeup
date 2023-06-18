@@ -6,7 +6,6 @@ import Footer from '@/components/Global/Footer'
 import ResumeProfil from '@/components/Profil/Parents/ResumeProfil'
 import { getSession, useSession } from 'next-auth/react'
 import _ from 'lodash'
-import ResponsiveTemporary from '@/components/Global/ResponsiveTemporary'
 import InfosProfil from '@/components/Profil/Parents/InfosProfil'
 import FullLoader from '@/components/Global/Loader/FullLoader'
 
@@ -29,7 +28,6 @@ function Profil({ user }) {
 			</Head>
 			<Nav isSignOutVisible={true} />
 			<main className={'relative'}>
-				<ResponsiveTemporary />
 				<Image
 					src={'/assets/coming-soon.svg'}
 					alt={'Coming soon'}

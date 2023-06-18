@@ -1,7 +1,6 @@
 import React from 'react'
 import Nav from '@/components/Global/Nav'
 import Footer from '@/components/Global/Footer'
-import ResponsiveTemporary from '@/components/Global/ResponsiveTemporary'
 import Head from 'next/head'
 import Image from 'next/image'
 import Hero from '@/components/Global/Hero'
@@ -81,7 +80,6 @@ function Contact(props) {
 				/>
 				<Nav />
 				<main className={'relative'}>
-					<ResponsiveTemporary />
 					<Hero
 						title={<>Contact</>}
 						description={

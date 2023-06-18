@@ -1,7 +1,6 @@
 import React from 'react'
 import Footer from '@/components/Global/Footer'
 import Nav from '@/components/Global/Nav'
-import ResponsiveTemporary from '@/components/Global/ResponsiveTemporary'
 import Head from 'next/head'
 import Image from 'next/image'
 import Hero from '@/components/Global/Hero'
@@ -36,7 +35,6 @@ function ToutesLesNews({ articles }) {
 				/>
 				<Nav />
 				<main className={'relative'}>
-					<ResponsiveTemporary />
 					<Hero
 						title={<>Toutes nos news & articles</>}
 						description={

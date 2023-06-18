@@ -4,7 +4,6 @@ import Nav from '@/components/Global/Nav'
 import Footer from '@/components/Global/Footer'
 import { useRouter } from 'next/router'
 import Image from 'next/image'
-import ResponsiveTemporary from '@/components/Global/ResponsiveTemporary'
 import FullSearchBloc from '@/components/Global/Search/FullSearchBloc'
 import { CatSearch } from '@/components/Global/Search/CatSearch'
 import Loader from '@/components/Global/Loader/Loader'
@@ -90,7 +89,6 @@ function SearchPage() {
 				/>
 				<Nav isFindMakeupArtistBtnVisible={false} />
 				<main className={'relative'}>
-					<ResponsiveTemporary />
 					<FullSearchBloc performSearch={performSearch} />
 					{!hasSearched && !isSearching && (
 						<div className={'flex w-full items-center justify-center py-32'}>
