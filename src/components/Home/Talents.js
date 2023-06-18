@@ -4,7 +4,7 @@ import { convertStringToKebabCase } from '@/services/utils'
 
 function Talents({ talents }) {
 	return (
-		<section className={'relative px-4 py-20 md:px-8 lg:px-0'}>
+		<section className={'relative px-4 py-20 md:px-8 2xl:px-0'}>
 			<div className="mx-auto max-w-7xl py-10">
 				<div className="mx-auto">
 					<h2 className="text-right text-4xl font-bold tracking-tight text-slate-900 sm:text-4xl">

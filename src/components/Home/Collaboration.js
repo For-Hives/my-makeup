@@ -4,7 +4,9 @@ import Link from 'next/link'
 
 function Collaboration() {
 	return (
-		<section className={'relative flex flex-col gap-10 py-20'}>
+		<section
+			className={'relative flex flex-col gap-10 px-4 py-20 md:px-8 2xl:px-0'}
+		>
 			<div className="mx-auto max-w-7xl">
 				<div className="mx-auto">
 					<h2 className="text-center text-4xl font-bold tracking-tight text-slate-900 sm:text-4xl">
@@ -13,10 +15,10 @@ function Collaboration() {
 				</div>
 			</div>
 			<div className="mx-auto mt-20 max-w-7xl">
-				<div className="mx-auto flex w-full gap-16">
+				<div className="mx-auto flex w-full flex-col gap-16 md:flex-row">
 					<div
 						className={
-							'relative flex w-2/5 flex-col items-start justify-center gap-8'
+							'relative flex w-full flex-col items-start justify-center gap-8 md:w-2/5'
 						}
 					>
 						<h3 className="text-left text-4xl font-bold tracking-tight text-slate-900 sm:text-3xl">
@@ -46,10 +48,14 @@ function Collaboration() {
 							</Link>
 						</div>
 					</div>
-					<div className={'flex w-3/5 items-center justify-center'}>
+					<div
+						className={
+							'flex h-[250px] w-full items-center justify-center md:h-auto md:w-3/5'
+						}
+					>
 						<div
 							className={
-								'relative ml-32 flex h-full w-full items-center justify-center'
+								'relative flex h-full w-full items-center justify-center md:ml-32'
 							}
 						>
 							<Image
@@ -63,11 +69,15 @@ function Collaboration() {
 				</div>
 			</div>
 			<div className="mx-auto mt-20 max-w-7xl">
-				<div className="mx-auto flex w-full">
-					<div className={'flex w-3/5 items-center justify-center'}>
+				<div className="mx-auto flex w-full flex-col-reverse gap-16 md:flex-row md:gap-0">
+					<div
+						className={
+							'flex h-[250px] w-full items-center justify-center md:h-auto md:w-3/5'
+						}
+					>
 						<div
 							className={
-								'relative mr-32 flex h-full w-full items-center justify-center'
+								'relative flex h-full w-full items-center justify-center md:mr-32'
 							}
 						>
 							<Image
@@ -80,7 +90,7 @@ function Collaboration() {
 					</div>
 					<div
 						className={
-							'relative flex h-auto w-2/5 flex-col items-start justify-center gap-8'
+							'relative flex h-auto flex-col items-start justify-center gap-8 md:w-2/5'
 						}
 					>
 						<h3 className="text-left text-4xl font-bold tracking-tight text-slate-900 sm:text-3xl">
@@ -113,10 +123,10 @@ function Collaboration() {
 				</div>
 			</div>
 			<div className="mx-auto mt-20 max-w-7xl">
-				<div className="mx-auto flex w-full gap-16">
+				<div className="mx-auto flex w-full flex-col gap-16 md:flex-row">
 					<div
 						className={
-							'relative flex w-2/5 flex-col items-start justify-center gap-8'
+							'relative flex w-full flex-col items-start justify-center gap-8 md:w-2/5'
 						}
 					>
 						<h3 className="text-left text-4xl font-bold tracking-tight text-slate-900 sm:text-3xl">
@@ -153,10 +163,14 @@ function Collaboration() {
 							</Link>
 						</div>
 					</div>
-					<div className={'flex w-3/5 items-center justify-center'}>
+					<div
+						className={
+							'flex h-[250px] items-center justify-center md:h-auto md:w-3/5'
+						}
+					>
 						<div
 							className={
-								'relative ml-32 flex h-full w-full items-center justify-center'
+								'relative flex h-full w-full items-center justify-center md:ml-32'
 							}
 						>
 							<Image
@@ -170,11 +184,15 @@ function Collaboration() {
 				</div>
 			</div>
 			<div className="mx-auto mt-20 max-w-7xl">
-				<div className="mx-auto flex w-full">
-					<div className={'flex w-3/5 items-center justify-center'}>
+				<div className="mx-auto flex w-full flex-col-reverse gap-16 md:flex-row md:gap-0">
+					<div
+						className={
+							'flex h-[250px] w-full items-center justify-center md:h-auto md:w-3/5'
+						}
+					>
 						<div
 							className={
-								'relative mr-32 flex h-full w-full items-center justify-center'
+								'relative flex h-full w-full items-center justify-center md:mr-32'
 							}
 						>
 							<Image
@@ -187,7 +205,7 @@ function Collaboration() {
 					</div>
 					<div
 						className={
-							'relative flex h-auto w-2/5 flex-col items-start justify-center gap-8'
+							'relative flex h-auto w-full flex-col items-start justify-center gap-8 md:w-2/5'
 						}
 					>
 						<h3 className="text-left text-4xl font-bold tracking-tight text-slate-900 sm:text-3xl">
