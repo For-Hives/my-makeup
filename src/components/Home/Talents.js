@@ -4,7 +4,7 @@ import { convertStringToKebabCase } from '@/services/utils'
 
 function Talents({ talents }) {
 	return (
-		<section className={'relative py-20'}>
+		<section className={'relative px-4 py-20 md:px-8 lg:px-0'}>
 			<div className="mx-auto max-w-7xl py-10">
 				<div className="mx-auto">
 					<h2 className="text-right text-4xl font-bold tracking-tight text-slate-900 sm:text-4xl">
@@ -13,13 +13,15 @@ function Talents({ talents }) {
 				</div>
 			</div>
 			<div className="mx-auto max-w-7xl">
-				<div className="mx-auto flex w-full gap-24">
+				<div className="mx-auto flex w-full flex-col md:flex-row md:gap-24">
 					<div
-						className={'relative flex h-auto w-1/5 items-center justify-center'}
+						className={
+							'relative flex h-auto items-center justify-center gap-2 pb-10 md:w-1/5 md:gap-0 md:p-0'
+						}
 					>
 						<div
 							className={
-								'absolute left-1/2 top-1/2 z-20 -translate-x-[40%] -translate-y-[40%]'
+								'md:absolute md:left-1/2 md:top-1/2 md:z-20 md:-translate-x-[40%] md:-translate-y-[40%]'
 							}
 						>
 							<CardDemo
@@ -29,13 +31,17 @@ function Talents({ talents }) {
 						</div>
 						<div
 							className={
-								'absolute left-1/2 top-1/2 z-10 -translate-x-[90%] -translate-y-[90%]'
+								'md:absolute md:left-1/2 md:top-1/2 md:z-10 md:-translate-x-[90%] md:-translate-y-[90%]'
 							}
 						>
 							<CardDemo src={'/assets/Maquilleuse_cinema.webp'} heart={false} />
 						</div>
 					</div>
-					<div className={'grid w-4/5 grid-cols-4 gap-8'}>
+					<div
+						className={
+							'grid w-full grid-cols-3 gap-4 md:w-4/5 md:grid-cols-4 md:gap-8'
+						}
+					>
 						{talents?.map((talent, index) => (
 							<a
 								key={talent.attributes.title}
