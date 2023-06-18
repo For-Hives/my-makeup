@@ -4,6 +4,7 @@ import '@/styles/stars.css'
 import '@/styles/loader.css'
 import '@/styles/loader/escalator.css'
 import '@/styles/blog.css'
+import '@/styles/burger_menu.css'
 import 'react-toastify/dist/ReactToastify.css'
 
 import Head from 'next/head'

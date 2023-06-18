@@ -88,7 +88,7 @@ function SearchPage() {
 						'fixed left-0 top-0 z-50 m-4 rounded-full bg-amber-300/75 p-2'
 					}
 				/>
-				<Nav />
+				<Nav isFindMakeupArtistBtnVisible={false} />
 				<main className={'relative'}>
 					<ResponsiveTemporary />
 					<FullSearchBloc performSearch={performSearch} />
