@@ -11,8 +11,6 @@ import { DescriptionPriceOffer } from '@/components/Profil/Childs/ServiceOffers/
 export function OptionsOffers(props) {
 	const service_offer = props.serviceOffer
 	const options = props.serviceOffer.options
-	console.log(service_offer)
-	console.log(options)
 	return (
 		<div className={'flex w-full flex-col gap-2 py-2'}>
 			{
