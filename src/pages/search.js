@@ -186,7 +186,7 @@ function SearchPage() {
 														<div
 															className={'flex flex-wrap items-center gap-1'}
 														>
-															{result?.skills?.length ? (
+															{result?.skills?.length !== 0 ? (
 																<>
 																	{result?.skills.map((skill, index) => {
 																		return index < 7 ? (

@@ -12,7 +12,7 @@ function ViewServiceOffersProfil(props) {
 			</h2>
 			<Tab.Group>
 				<Tab.List className={'flex h-full w-full justify-center py-4'}>
-					{user?.service_offers?.length &&
+					{user?.service_offers?.length !== 0 &&
 						user?.service_offers?.map((service_offer, index) => {
 							return (
 								<Tab

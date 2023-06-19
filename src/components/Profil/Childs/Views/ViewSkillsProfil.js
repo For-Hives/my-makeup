@@ -7,7 +7,7 @@ function ViewSkillsProfil(props) {
 			<h2 className={'text-xl font-bold text-slate-700'}>Compétences</h2>
 			<div className={'flex flex-wrap gap-4'}>
 				{/* map on skills -> name */}
-				{user?.skills?.length &&
+				{user?.skills?.length !== 0 &&
 					user?.skills?.map((skill, index) => {
 						return (
 							<div
