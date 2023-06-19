@@ -40,7 +40,8 @@ function ViewPortfolioProfil(props) {
 					{
 						// 	map on user?.image_gallery and return a SwiperSlide with the image
 					}
-					{imageGallery?.length !== 0 &&
+					{imageGallery &&
+						imageGallery?.length !== 0 &&
 						imageGallery.map((image, index) => {
 							return (
 								<SwiperSlide
