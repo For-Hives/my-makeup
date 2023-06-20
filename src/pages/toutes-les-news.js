@@ -34,10 +34,10 @@ function ToutesLesNews({ articles }) {
 						</>
 					}
 				/>
-				<section className={'relative py-20'}>
+				<section className={'relative px-4 py-20 md:px-8 2xl:px-0'}>
 					<div className="mx-auto max-w-7xl">
 						<div className="mx-auto mb-10">
-							<h2 className="w-1/2 text-start text-4xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+							<h2 className="w-full text-start text-4xl font-bold tracking-tight text-slate-900 sm:text-4xl md:w-1/2">
 								Nos articles & actualités !
 							</h2>
 							<p className="mt-6 w-1/2 text-start text-lg text-slate-700">
@@ -47,9 +47,17 @@ function ToutesLesNews({ articles }) {
 							</p>
 						</div>
 
-						<section className={'mx-auto mb-32 mt-16 flex max-w-7xl gap-32'}>
+						<section
+							className={
+								'mx-auto mb-16 mt-16 flex max-w-7xl gap-16 md:mb-32 md:gap-32'
+							}
+						>
 							<div className={'w-full'}>
-								<div className={'grid grid-cols-4 gap-8'}>
+								<div
+									className={
+										'grid grid-cols-1 gap-8 md:grid-cols-2 xl:grid-cols-4'
+									}
+								>
 									{articles ? (
 										articles.map(article => (
 											<div className={'flex flex-col gap-2'} key={article.id}>
