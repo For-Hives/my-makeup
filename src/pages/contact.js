@@ -80,7 +80,7 @@ function Contact(props) {
 						</>
 					}
 				/>
-				<div className="mx-auto mt-32 max-w-2xl text-center">
+				<div className="mx-auto mt-32 max-w-2xl px-4 text-center md:px-0">
 					<h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
 						Un message en particulier ?
 					</h2>
@@ -92,7 +92,7 @@ function Contact(props) {
 				</div>
 				<form
 					onSubmit={handleSubmit(onSubmit)}
-					className="mx-auto my-32 max-w-xl sm:mt-20"
+					className="mx-auto my-32 max-w-xl px-4 sm:mt-20 md:px-0"
 				>
 					<div className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-2">
 						<div>
@@ -242,18 +242,18 @@ function Contact(props) {
 					</div>
 				</form>
 				<section className={'relative py-20'}>
-					<div className="mx-auto flex max-w-7xl">
-						<div className="mx-auto mb-10 w-1/2">
-							<h2 className="w-1/2 text-start text-4xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+					<div className="mx-auto flex max-w-7xl flex-col px-4 md:flex-row md:px-8 xl:px-0">
+						<div className="mx-auto mb-10 w-full md:w-1/2">
+							<h2 className="w-full text-start text-4xl font-bold tracking-tight text-slate-900 sm:text-4xl md:w-1/2">
 								Contactez-nous
 							</h2>
-							<p className="mt-6 w-1/2 text-start text-lg text-slate-700">
+							<p className="mt-6 w-full text-start text-lg text-slate-700 md:w-1/2">
 								{
 									"My Makeup, plus qu'une plateforme de mise en relation, une équipe de passionnés à votre service !"
 								}
 							</p>
 						</div>
-						<div className="grid w-1/2 grid-cols-1 gap-6 sm:grid-cols-2 lg:col-span-2 lg:gap-8">
+						<div className="grid w-full grid-cols-1 gap-6 sm:grid-cols-2 md:w-1/2 lg:col-span-2 lg:gap-8">
 							<div className="rounded-2xl bg-gray-50 p-10">
 								<h3 className="text-base font-semibold leading-7 text-gray-900">
 									Contact général
