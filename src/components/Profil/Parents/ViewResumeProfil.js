@@ -34,10 +34,14 @@ function ViewResumeProfil(props) {
 	}
 	const isPublicView = props.isPublicView ?? false
 	return (
-		<div className={'relative bg-white pb-24 shadow-xl'}>
+		<div className={'relative bg-white px-4 pb-24 shadow-xl md:px-8 2xl:px-0'}>
 			<div className="mx-auto max-w-7xl pt-[90px]">
 				<div className={'grid grid-cols-12 gap-5 pt-24'}>
-					<div className={'relative col-span-2 flex items-center'}>
+					<div
+						className={
+							'relative col-span-12 flex items-center justify-center xl:col-span-2 xl:justify-start'
+						}
+					>
 						{mainPicture && (
 							<Image
 								src={mainPicture || '/assets/pp_makeup.webp'}
@@ -48,9 +52,15 @@ function ViewResumeProfil(props) {
 							></Image>
 						)}
 					</div>
-					<div className={'col-span-7 flex items-center'}>
+					<div
+						className={
+							'col-span-12 flex items-center md:col-span-8 xl:col-span-7'
+						}
+					>
 						<div
-							className={'flex h-full w-full flex-col justify-between pl-20'}
+							className={
+								'flex h-full w-full flex-col justify-between py-8 md:py-0 md:pl-20'
+							}
 						>
 							<div className={'flex w-full cursor-default flex-col gap-2'}>
 								<h3
