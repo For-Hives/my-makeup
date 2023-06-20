@@ -23,11 +23,15 @@ function ViewInfosProfil(props) {
 	const isPublicView = props.isPublicView ?? false
 	return (
 		<div className={''}>
-			<div className="relative mx-auto max-w-7xl pt-4">
+			<div className="relative mx-auto max-w-7xl px-4 pt-4 md:px-8 2xl:px-0">
 				<div className={'grid grid-cols-12 gap-5 pt-24'}>
 					{props.isPublicView && (
 						<>
-							<div className={'col-span-4 flex flex-col items-start gap-5'}>
+							<div
+								className={
+									'col-span-12 flex flex-col items-start gap-5 md:col-span-4'
+								}
+							>
 								{user.city && (
 									<ViewContainer user={user} Component={ViewLocationProfil} />
 								)}
@@ -47,7 +51,11 @@ function ViewInfosProfil(props) {
 									<ViewContainer user={user} Component={ViewCoursesProfil} />
 								)}
 							</div>
-							<div className={'col-span-8 flex flex-col items-start gap-5'}>
+							<div
+								className={
+									'col-span-12 flex flex-col items-start gap-5 md:col-span-8'
+								}
+							>
 								{user?.description && (
 									<ViewContainer
 										user={user}
