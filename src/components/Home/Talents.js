@@ -68,7 +68,7 @@ function Talents({ talents }) {
 										width={50}
 										height={50}
 										className={
-											'absolute -bottom-3 -right-2 -rotate-6 transform opacity-75'
+											'absolute -bottom-3 -right-2 -rotate-6 scale-75 transform opacity-50'
 										}
 										alt={'icon ' + talent.attributes.title}
 									/>
