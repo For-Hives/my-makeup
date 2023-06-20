@@ -20,32 +20,31 @@ export default function Home({ talents }) {
                     vous trouverez votre bonheur pour vous sublimer dans n'importe quelle situation !"
 				/>
 			</Head>
-			<div className={'relative'}>
-				<Nav />
-				<main className={'relative'}>
-					<Hero
-						title={
-							<>
-								Trouver la maquilleuse qui vous correspond n&apos;a jamais été
-								aussi simple
-							</>
-						}
-						description={
-							<>
-								Trouvez la maquilleuse spécialisée dans le domaine que vous
-								recherchez, maquillage pour les mariées, maquillage de soirée,
-								maquillage professionnel...
-							</>
-						}
-					/>
-					<Presentation />
-					<Talents talents={talents} />
-					<Collaboration />
-					<Project />
-					<CTA />
-				</main>
-				<Footer />
-			</div>
+
+			<Nav />
+			<main className={'relative'}>
+				<Hero
+					title={
+						<>
+							Trouver la maquilleuse qui vous correspond n&apos;a jamais été
+							aussi simple
+						</>
+					}
+					description={
+						<>
+							Trouvez la maquilleuse spécialisée dans le domaine que vous
+							recherchez, maquillage pour les mariées, maquillage de soirée,
+							maquillage professionnel...
+						</>
+					}
+				/>
+				<Presentation />
+				<Talents talents={talents} />
+				<Collaboration />
+				<Project />
+				<CTA />
+			</main>
+			<Footer />
 		</>
 	)
 }

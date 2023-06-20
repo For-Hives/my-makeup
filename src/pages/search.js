@@ -78,15 +78,6 @@ function SearchPage() {
 				/>
 			</Head>
 			<div className={'relative'}>
-				<Image
-					src={'/assets/coming-soon.svg'}
-					alt={'Coming soon'}
-					width={'80'}
-					height={'80'}
-					className={
-						'fixed left-0 top-0 z-50 m-4 rounded-full bg-amber-300/75 p-2'
-					}
-				/>
 				<Nav isFindMakeupArtistBtnVisible={false} />
 				<main className={'relative'}>
 					<FullSearchBloc performSearch={performSearch} />
