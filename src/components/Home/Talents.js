@@ -1,6 +1,7 @@
 import React from 'react'
 import CardDemo from '@/components/Global/Card-demo'
 import { convertStringToKebabCase } from '@/services/utils'
+import Image from 'next/image'
 
 function Talents({ talents }) {
 	return (
@@ -57,6 +58,21 @@ function Talents({ talents }) {
 								>
 									{talent.attributes.title}
 								</h2>
+								<div
+									className={
+										'absolute left-0 top-0 flex h-full w-full items-center justify-center overflow-hidden rounded-xl'
+									}
+								>
+									<Image
+										src={'/assets/talents/' + talent.attributes.slug + '.svg'}
+										width={50}
+										height={50}
+										className={
+											'absolute -bottom-3 -right-2 -rotate-6 transform opacity-75'
+										}
+										alt={'icon ' + talent.attributes.title}
+									/>
+								</div>
 								<h2
 									className={
 										'absolute left-0 top-0 h-full w-full border border-indigo-900 bg-indigo-900 px-4 py-8 transition duration-100 ease-in ' +
