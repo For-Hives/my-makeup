@@ -18,6 +18,8 @@ function APropos(props) {
 					name="description"
 					content="Apprenez-en plus sur My Makeup, votre plateforme de mise en relation entre maquilleuses professionnelles et clients. "
 				/>
+				{/*	seo tag canonical link */}
+				<link rel="canonical" href="https://my-makeup.fr/a-propos" />
 			</Head>
 
 			<Nav />

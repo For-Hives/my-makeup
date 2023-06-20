@@ -18,6 +18,11 @@ function Partenariats(props) {
 					name="description"
 					content="Community et Partenariat chez My Makeup : Votre développement est notre priorité"
 				/>
+				{/*	seo tag canonical link */}
+				<link
+					rel="canonical"
+					href="https://my-makeup.fr/maquilleuse/partenariats"
+				/>
 			</Head>
 			<Nav />
 			<main className={'relative'}>
@@ -102,4 +107,4 @@ function Partenariats(props) {
 	)
 }
 
-export default Partenariats
+export default Partenariats;

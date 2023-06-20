@@ -23,6 +23,11 @@ function VerificationComplete() {
 					content="Connexion sur my-makeup.fr la plateforme qui va révolutionner votre
 	            recherche de maquilleuses professionnelles, ou votre recherche de client !"
 				/>
+				{/*	seo tag canonical link */}
+				<link
+					rel="canonical"
+					href="https://my-makeup.fr/auth/verification-complete"
+				/>
 			</Head>
 			<div className="relative flex min-h-screen bg-white">
 				<div className="flex  flex-col justify-center px-4 py-12 sm:px-6 lg:flex-none lg:px-20 xl:px-24">

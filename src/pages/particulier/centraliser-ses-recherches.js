@@ -18,6 +18,11 @@ function CentraliserSesRecherches(props) {
 					name="description"
 					content="Apprenez comment centraliser et organiser vos recherches pour comparer efficacement les maquilleuses et trouver celle qui vous correspond le mieux."
 				/>
+				{/*	seo tag canonical link */}
+				<link
+					rel="canonical"
+					href="https://my-makeup.fr/particulier/centraliser-ses-recherches"
+				/>
 			</Head>
 			<Nav />
 			<main className={'relative'}>

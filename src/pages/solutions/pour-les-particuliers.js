@@ -18,6 +18,11 @@ function PourLesParticuliers(props) {
 					name="description"
 					content="Découvrez comment My Makeup simplifie la recherche de la maquilleuse professionnelle idéale. Grâce à notre plateforme intuitive, trouver la maquilleuse de vos rêves n'a jamais été aussi simple !"
 				/>
+				{/*	seo tag canonical link */}
+				<link
+					rel="canonical"
+					href="https://my-makeup.fr/solutions/pour-les-particuliers"
+				/>
 			</Head>
 			<Nav />
 			<main className={'relative'}>

@@ -19,6 +19,11 @@ function ExplorerLesProfils(props) {
 					content="Découvrez comment utiliser les critères de recherche et la fonction de recherche par ville de My Makeup
                     pour explorer les profils de maquilleuses et trouver celle qui vous correspond le mieux."
 				/>
+				{/*	seo tag canonical link */}
+				<link
+					rel="canonical"
+					href="https://my-makeup.fr/particulier/explorer-les-profils"
+				/>
 			</Head>
 
 			<Nav />

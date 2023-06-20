@@ -15,6 +15,13 @@ function PourquoiMyMakeup() {
 					name="description"
 					content="Découvrez pourquoi vous devriez rejoindre My Makeup en tant que maquilleuse professionnelle"
 				/>
+				{/*	seo tag canonical link */}
+				<link
+					rel="canonical"
+					href={
+						'https://my-makeup.fr/pourquoi-my-makeup-en-tant-que-maquilleuse'
+					}
+				/>
 			</Head>
 			<Nav />
 			<main className={'relative'}>

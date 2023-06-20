@@ -22,6 +22,8 @@ function ToutesLesNews({ articles }) {
 					content="L'actualité de My-Makeup, ce que nous faisons pour améliorer votre quotidien !
 					Et les nouveautés qui arrivent bientôt !"
 				/>
+				{/*	seo tag canonical link */}
+				<link rel="canonical" href={'https://my-makeup.fr/toutes-les-news'} />
 			</Head>
 			<Nav />
 			<main className={'relative'}>

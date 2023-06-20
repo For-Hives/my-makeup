@@ -16,6 +16,8 @@ function SiteMap({ articles, talents }) {
 			<Head>
 				<title>Site Map My Makeup !</title>
 				<meta name="description" content="Le plan du site de My Makeup" />
+				{/*	seo tag canonical link */}
+				<link rel="canonical" href={'https://my-makeup.fr/site-map'} />
 			</Head>
 
 			<Nav />

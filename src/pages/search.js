@@ -76,6 +76,8 @@ function SearchPage() {
 					name="description"
 					content="Recherchez et trouvez votre maquilleuse professionnelle en quelques clics sur My Makeup."
 				/>
+				{/*	seo tag canonical link */}
+				<link rel="canonical" href={'https://my-makeup.fr/search'} />
 			</Head>
 			<div className={'relative'}>
 				<Nav isFindMakeupArtistBtnVisible={false} />

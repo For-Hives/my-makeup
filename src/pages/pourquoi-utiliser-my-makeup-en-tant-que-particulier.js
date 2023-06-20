@@ -19,6 +19,13 @@ function PourquoiUtiliserMyMakeupEnTantQueParticulier(props) {
 					name="description"
 					content="Découvrez pourquoi vous devriez utiliser My Makeup en tant que particulier & professionnel"
 				/>
+				{/*	seo tag canonical link */}
+				<link
+					rel="canonical"
+					href={
+						'https://my-makeup.fr/pourquoi-utiliser-my-makeup-en-tant-que-particulier'
+					}
+				/>
 			</Head>
 			<Nav />
 

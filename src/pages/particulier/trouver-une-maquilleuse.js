@@ -18,6 +18,11 @@ function TrouverUneMaquilleuse(props) {
 					name="description"
 					content="Découvrez comment vous pouvez trouver une maquilleuse simplement, et qui correspondra parfaitement à tout vos besoins !"
 				/>
+				{/*	seo tag canonical link */}
+				<link
+					rel="canonical"
+					href="https://my-makeup.fr/particulier/trouver-une-maquilleuse"
+				/>
 			</Head>
 			<Nav />
 			<main className={'relative'}>

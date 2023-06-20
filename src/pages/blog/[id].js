@@ -39,6 +39,11 @@ export default function Article({ articleData }) {
 						'Découvrez cet article passionnant de la part de My Makeup'
 					}
 				/>
+				{/*	seo tag canonical link */}
+				<link
+					rel="canonical"
+					href={'https://my-makeup.fr/blog/' + meta?.slug}
+				/>
 			</Head>
 			<Nav />
 			<main className={'relative'}>

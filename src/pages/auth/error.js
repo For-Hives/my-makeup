@@ -34,6 +34,8 @@ function Error() {
 					content="Connexion sur my-makeup.fr la plateforme qui va révolutionner votre
 	            recherche de maquilleuses professionnelles, ou votre recherche de client !"
 				/>
+				{/*	seo tag canonical link */}
+				<link rel="canonical" href="https://my-makeup.fr/auth/error" />
 			</Head>
 			<div className="relative flex min-h-screen bg-white">
 				<Loader />

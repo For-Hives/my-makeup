@@ -25,6 +25,8 @@ function Blog({ articles }) {
 					content="L'actualité de My-Makeup, ce que nous faisons pour améliorer votre quotidien !
 					Et les nouveautés qui arrivent bientôt !"
 				/>
+				{/*	seo tag canonical link */}
+				<link rel="canonical" href={'https://my-makeup.fr/blog'} />
 			</Head>
 
 			<Nav />

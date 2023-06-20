@@ -67,6 +67,8 @@ function Contact(props) {
 					name="description"
 					content="Contactez-nous pour toute question, suggestion ou collaboration ! L'équipe My Makeup est à votre écoute !"
 				/>
+				{/*	seo tag canonical link */}
+				<link rel="canonical" href={'https://my-makeup.fr/contact'} />
 			</Head>
 			<Nav />
 			<main className={'relative'}>

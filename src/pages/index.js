@@ -19,6 +19,8 @@ export default function Home({ talents }) {
 					content="Votre maquilleuse directement chez vous, pour un événement, un shooting, ou une soirée,
                     vous trouverez votre bonheur pour vous sublimer dans n'importe quelle situation !"
 				/>
+				{/*	seo tag canonical link */}
+				<link rel="canonical" href="https://my-makeup.fr" />
 			</Head>
 
 			<Nav />

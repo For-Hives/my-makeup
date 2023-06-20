@@ -18,6 +18,11 @@ function PourLesMaquilleuses(props) {
 					name="description"
 					content="Avec notre plateforme, donner un coup de boost à votre carrière n'a jamais été aussi simple !"
 				/>
+				{/*	seo tag canonical link */}
+				<link
+					rel="canonical"
+					href="https://my-makeup.fr/solutions/pour-les-maquilleuses"
+				/>
 			</Head>
 
 			<Nav />

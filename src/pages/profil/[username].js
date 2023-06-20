@@ -18,6 +18,11 @@ export default function Profil({ profilData }) {
 					name="description"
 					content={`Découvrez le profil de la maquilleuse professionnelle de vos rêves ! ${user.attributes.first_name} ${profilData.attributes.last_name}  - ${profilData.attributes.speciality} `}
 				/>
+				{/*	seo tag canonical link */}
+				<link
+					rel="canonical"
+					href={`https://my-makeup.fr/profil/${user.attributes.username}`}
+				/>
 			</Head>
 			<Nav />
 			<main className={'relative'}>
