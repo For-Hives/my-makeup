@@ -6,7 +6,6 @@ import Hero from '@/components/Global/Hero'
 import CTA from '@/components/Global/CTA'
 
 /**
- * todo : add content
  * @param props
  * @constructor
  */
