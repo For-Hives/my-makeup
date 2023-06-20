@@ -7,10 +7,10 @@ export function CatSearch() {
 			<Image
 				src={'/assets/vectorials-used/catSearch.svg'}
 				alt={'search'}
-				width={300}
-				height={300}
+				width={200}
+				height={200}
 			/>
-			<h2 className={'text-3xl text-gray-700'}>
+			<h2 className={'text-center text-lg text-gray-700 md:text-xl'}>
 				Complétez la recherche pour voir des résultats
 			</h2>
 		</div>

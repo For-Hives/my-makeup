@@ -91,7 +91,11 @@ function SearchPage() {
 				<main className={'relative'}>
 					<FullSearchBloc performSearch={performSearch} />
 					{!hasSearched && !isSearching && (
-						<div className={'flex w-full items-center justify-center py-32'}>
+						<div
+							className={
+								'flex w-full items-center justify-center py-8 md:py-16 2xl:py-32'
+							}
+						>
 							<CatSearch />
 						</div>
 					)}
