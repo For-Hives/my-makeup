@@ -105,8 +105,12 @@ function SearchPage() {
 						</div>
 					)}
 					{hasSearched && !isSearching && (
-						<div className={'w-full px-16'}>
-							<article className={'grid w-full grid-cols-6 gap-8'}>
+						<div className={'w-full px-4 md:px-16'}>
+							<article
+								className={
+									'grid w-full grid-cols-1 gap-8 md:grid-cols-3 2xl:grid-cols-6'
+								}
+							>
 								{searchResults.length !== 0 && (
 									<>
 										{searchResults.map(result => (
