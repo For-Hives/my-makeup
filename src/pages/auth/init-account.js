@@ -3,13 +3,15 @@ import Head from 'next/head'
 import { getSession, useSession } from 'next-auth/react'
 import { useRouter } from 'next/router'
 import { CheckIcon } from '@heroicons/react/24/outline'
-import Loader from '@/components/Global/Loader/Loader'
 import Link from 'next/link'
 import * as zod from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
 import { toast } from 'react-toastify'
+import FullLoader from '@/components/Global/Loader/FullLoader'
+import Image from 'next/image'
+import Loader from '@/components/Global/Loader/Loader'
 
 const schema = zod
 	.object({
@@ -35,7 +37,7 @@ function InitAccount() {
 		resolver: zodResolver(schema),
 	})
 
-	const [step, setStep] = useState(0)
+	const [step, setStep] = useState(2)
 	const [stepsList, setStepsList] = useState([
 		{ name: "Verification de l'email", href: '#', status: 'upcoming' },
 		{ name: 'Initialisation du compte', href: '#', status: 'upcoming' },
@@ -64,7 +66,8 @@ function InitAccount() {
 				}
 				if (user != null) {
 					// see if user is verified
-					if (!user.confirmed) {
+					// todo delete
+					if (true || !user.confirmed) {
 						// if yes, 1 stepper : verify email
 						setStep(1)
 					} else {
@@ -88,6 +91,7 @@ function InitAccount() {
 								})
 									.then(response => {
 										if (response.status === 200) {
+											// get 200
 										}
 									})
 									.catch(err => {
@@ -114,7 +118,7 @@ function InitAccount() {
 		if (step === 0) {
 			setStepsList([
 				{
-					name: "Verification de l'email",
+					name: "Vérification de l'email",
 					href: '#',
 					status: 'upcoming',
 				},
@@ -130,7 +134,7 @@ function InitAccount() {
 		if (step === 1) {
 			setStepsList([
 				{
-					name: "Verification de l'email",
+					name: "Vérification de l'email",
 					href: '#',
 					status: 'current',
 				},
@@ -146,7 +150,7 @@ function InitAccount() {
 		if (step === 2) {
 			setStepsList([
 				{
-					name: "Verification de l'email",
+					name: "Vérification de l'email",
 					href: '#',
 					status: 'complete',
 				},
@@ -162,7 +166,7 @@ function InitAccount() {
 		if (step === 3) {
 			setStepsList([
 				{
-					name: "Verification de l'email",
+					name: "Vérification de l'email",
 					href: '#',
 					status: 'complete',
 				},
@@ -178,7 +182,7 @@ function InitAccount() {
 		if (step === 4) {
 			setStepsList([
 				{
-					name: "Verification de l'email",
+					name: "Vérification de l'email",
 					href: '#',
 					status: 'complete',
 				},
@@ -194,12 +198,12 @@ function InitAccount() {
 	}, [step])
 
 	function onSubmit(data) {
-		patchMeMakeup(session, data)
+		// patchMeMakeup(session, data)
 
 		setStep(4)
 	}
 
-	if (step === 0) return <Loader />
+	// if (step === 0) return <FullLoader />
 
 	return (
 		<>
@@ -212,9 +216,9 @@ function InitAccount() {
 				/>
 			</Head>
 			<div className="relative flex min-h-screen bg-white">
-				<div className="container mx-auto flex flex-col sm:px-6 lg:px-8">
-					<div className="my-8 h-full overflow-hidden rounded-lg bg-white shadow">
-						<div className="px-4 py-5 sm:px-6">
+				<div className="container mx-auto flex max-w-7xl flex-col p-4 xl:container">
+					<div className="flex h-full flex-col rounded-lg bg-white shadow-xl">
+						<div className="p-4">
 							{/* Content goes here */}
 							{/* We use less vertical padding on card headers on desktop than on body sections */}
 							<nav aria-label="Progress">
@@ -225,55 +229,57 @@ function InitAccount() {
 									{stepsList.map((step, stepIdx) => (
 										<li key={step.name} className="relative md:flex md:flex-1">
 											{step.status === 'complete' ? (
-												<a
+												<Link
 													href={step.href}
 													className="group flex w-full items-center"
 												>
-													<span className="flex items-center px-6 py-4 text-sm font-medium">
-														<span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-indigo-600 group-hover:bg-indigo-800">
+													<div className="flex items-center gap-4 px-4 py-3 text-sm font-medium md:px-6 md:py-4">
+														<span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-indigo-600 group-hover:bg-indigo-800 md:h-10 md:w-10">
 															<CheckIcon
-																className="h-6 w-6 text-white"
+																className="h-4 w-4 text-white md:h-6 md:w-6"
 																aria-hidden="true"
 															/>
 														</span>
-														<span className="ml-4 text-sm font-medium text-gray-900">
+														<span className="text-sm font-medium text-gray-900">
 															{step.name}
 														</span>
-													</span>
-												</a>
+													</div>
+												</Link>
 											) : (
 												<>
 													{step.status === 'current' ? (
-														<a
+														<Link
 															href={step.href}
-															className="flex items-center px-6 py-4 text-sm font-medium"
+															className="flex items-center px-2 py-2 text-sm font-medium md:py-4 md:pl-2 md:pr-6"
 															aria-current="step"
 														>
-															<span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border-2 border-indigo-600">
-																<span className="text-indigo-600">
-																	{step.id}
+															<div className="flex items-center gap-4 px-4 py-3 text-sm font-medium md:px-6 md:py-4">
+																<div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border-2 border-indigo-600 md:h-10 md:w-10">
+																	<span className="text-indigo-600">
+																		{step.id}
+																	</span>
+																</div>
+																<span className="text-sm font-medium text-indigo-600">
+																	{step.name}
 																</span>
-															</span>
-															<span className="ml-4 text-sm font-medium text-indigo-600">
-																{step.name}
-															</span>
-														</a>
+															</div>
+														</Link>
 													) : (
-														<a
+														<Link
 															href={step.href}
 															className="group flex items-center"
 														>
-															<span className="flex items-center px-6 py-4 text-sm font-medium">
-																<span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border-2 border-gray-300 group-hover:border-gray-400">
+															<div className="flex items-center gap-4 px-4 py-3 text-sm font-medium md:px-6 md:py-4">
+																<span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border-2 border-gray-300 group-hover:border-gray-400 md:h-10 md:w-10">
 																	<span className="text-gray-500 group-hover:text-gray-900">
 																		{step.id}
 																	</span>
 																</span>
-																<span className="ml-4 text-sm font-medium text-gray-500 group-hover:text-gray-900">
+																<span className="text-sm font-medium text-gray-500 group-hover:text-gray-900">
 																	{step.name}
 																</span>
-															</span>
-														</a>
+															</div>
+														</Link>
 													)}
 												</>
 											)}
@@ -305,34 +311,53 @@ function InitAccount() {
 								</ol>
 							</nav>
 						</div>
-						<div className="bg-gray-50 px-4 py-5 sm:p-6">
+						<div className="flex h-full w-full items-center justify-center p-6">
 							{/* Content goes here */}
 							{step === 1 && (
-								<div className="flex flex-col items-center justify-center">
-									<div className="flex flex-col items-center justify-center">
-										<h1 className="text-center text-3xl font-bold">
-											Verification de votre adresse email
-										</h1>
-										<p className="text-center">
-											Vous avez recu un lien par email pour verifier votre
-											compte !
-										</p>
-										<p className="text-center">
-											Si vous ne recevez pas de mail, verifier dans vos courrier
-											indesirable
-										</p>
+								<div className="flex h-full w-full flex-col items-center justify-start md:justify-start">
+									<div className="relative flex h-full w-full flex-col items-center justify-start gap-4 overflow-hidden md:justify-start">
+										<div
+											className={
+												'absolute right-0 top-1/2 z-10 -rotate-12 transform opacity-50'
+											}
+										>
+											<div
+												className={'flex w-full items-center justify-center'}
+											>
+												<Image
+													src={'/assets/brand/050-email.svg'}
+													width={500}
+													height={500}
+													alt={'email Vérification'}
+													className={'opacity-5'}
+												/>
+											</div>
+										</div>
+										<div>
+											<h1 className="text-center text-3xl font-bold">
+												Vérification de votre adresse email
+											</h1>
+										</div>
+										<div>
+											<p className="text-center">
+												Vous avez reçu un lien par email pour vérifier votre
+												compte !
+											</p>
+											<p className="text-center">
+												Si vous ne recevez pas de mail, vérifiez dans vos
+												courriers indésirables
+											</p>
+										</div>
 									</div>
 								</div>
 							)}
 							{step === 2 && (
-								<div className="flex flex-col items-center justify-center">
-									<div className="h-[300px] w-[300px] ">
-										Loading
-										{/*    todo : Spinner */}
-									</div>
+								<div className="flex h-full w-full flex-col items-center justify-start md:justify-center">
+									<Loader />
 								</div>
 							)}
 							{step === 3 && (
+								// todo stop here 21/06/2023
 								<div className="flex flex-col items-center justify-center">
 									<div className="my-8 flex flex-col items-center justify-center">
 										<h1 className="text-center text-3xl font-bold">
