@@ -48,7 +48,7 @@ function Signup() {
 	return (
 		<>
 			<Head>
-				<title>My Makeup</title>
+				<title>Inscription sur My Makeup</title>
 				<meta
 					name="description"
 					content="Inscription sur my-makeup.fr la plateforme qui va révolutionner votre
@@ -76,9 +76,9 @@ function Signup() {
 							<div className="mt-8">
 								<div>
 									<div>
-										<p className="text-sm font-medium leading-6 text-slate-900">
-											Se connecter
-										</p>
+										<h1 className="text-sm font-medium leading-6 text-slate-900">
+											{`S'inscrire sur My Makeup`}
+										</h1>
 										<div className="mt-2 grid grid-cols-2 gap-3">
 											<div>
 												<button

@@ -13,7 +13,9 @@ export default function Home({ talents }) {
 	return (
 		<>
 			<Head>
-				<title>My Makeup</title>
+				<title>
+					Accueil - My Makeup le moteur de recherche pour les maquilleuses
+				</title>
 				<meta
 					name="description"
 					content="Votre maquilleuse directement chez vous, pour un événement, un shooting, ou une soirée,
