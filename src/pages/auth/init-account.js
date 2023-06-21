@@ -37,7 +37,7 @@ function InitAccount() {
 		resolver: zodResolver(schema),
 	})
 
-	const [step, setStep] = useState(2)
+	const [step, setStep] = useState(4)
 	const [stepsList, setStepsList] = useState([
 		{ name: "Verification de l'email", href: '#', status: 'upcoming' },
 		{ name: 'Initialisation du compte', href: '#', status: 'upcoming' },
@@ -66,8 +66,7 @@ function InitAccount() {
 				}
 				if (user != null) {
 					// see if user is verified
-					// todo delete
-					if (true || !user.confirmed) {
+					if (!user.confirmed) {
 						// if yes, 1 stepper : verify email
 						setStep(1)
 					} else {
@@ -352,24 +351,28 @@ function InitAccount() {
 								</div>
 							)}
 							{step === 2 && (
-								<div className="flex h-full w-full flex-col items-center justify-start md:justify-center">
-									<Loader />
+								<div className="mt-20 flex h-full w-full flex-col items-center justify-start md:m-0 md:justify-center">
+									<div className={'flex flex-col gap-4'}>
+										<Loader />
+										<p>Initialisation du compte en cours...</p>
+									</div>
 								</div>
 							)}
 							{step === 3 && (
-								// todo stop here 21/06/2023
 								<div className="flex flex-col items-center justify-center">
-									<div className="my-8 flex flex-col items-center justify-center">
-										<h1 className="text-center text-3xl font-bold">
-											Votre nom et votre prénom
-										</h1>
-										<p className="text-center">
-											Ces informations seront visible par les autres
-											utilisateurs
-										</p>
+									<div className="flex flex-col items-center justify-center md:my-8 md:gap-4 xl:gap-8">
+										<div>
+											<h1 className="text-center text-3xl font-bold">
+												Votre nom et votre prénom
+											</h1>
+											<p className="text-center text-gray-700">
+												Ces informations seront visibles par les autres
+												utilisateurs
+											</p>
+										</div>
 
-										<div className="mt-10 sm:mx-auto sm:w-full sm:max-w-[480px]">
-											<div className="bg-white px-6 py-12 shadow sm:rounded-lg sm:px-12">
+										<div className="mx-auto w-full sm:max-w-[480px]">
+											<div className="rounded-lg bg-white px-6 py-12 shadow-xl sm:px-12">
 												<form
 													className="space-y-6"
 													action="#"
@@ -437,26 +440,39 @@ function InitAccount() {
 							)}
 							{step === 4 && (
 								<div className="flex flex-col items-center justify-center">
-									<div className="my-16 flex flex-col items-center justify-center">
-										<h1 className="text-center text-3xl font-bold">
-											Bienvenue sur My-Makeup !
-										</h1>
-										<h2>
-											{' '}
-											Rendez-vous sur votre profile pour terminer de le
-											completer{' '}
+									<div className="flex flex-col items-center justify-center gap-8">
+										<h2 className="text-center text-3xl font-bold">
+											Bienvenue sur My&nbsp;Makeup !
 										</h2>
+										<div
+											className={
+												'flex h-full w-full flex-col items-center justify-center'
+											}
+										>
+											<h2 className={'text-center'}>
+												{' '}
+												Rendez-vous sur votre profil pour terminer de le
+												compléter{' '}
+											</h2>
+											<p
+												className={
+													'w-full gap-2 text-center text-red-500 md:w-1/2'
+												}
+											>
+												<span className={'font-bold'}>Attention !</span>
+												{` Votre profil ne sera pas visible tant qu'il ne sera pas
+												totalement rempli !`}
+											</p>
+										</div>
 										<Link
 											href="/auth/profil"
-											className="my-16 rounded-md bg-indigo-600 px-3 py-1.5 text-white"
+											className="rounded-md bg-indigo-600 px-3 py-1.5 text-white"
 										>
-											Mon profile
+											Mon profil
 										</Link>
 									</div>
 								</div>
 							)}
-
-							<div>{/*<ResumeProfil user={user}></ResumeProfil>*/}</div>
 						</div>
 					</div>
 				</div>
