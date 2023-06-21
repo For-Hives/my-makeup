@@ -4,7 +4,6 @@ import Image from 'next/image'
 import { signIn, signOut, useSession } from 'next-auth/react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
-import _ from 'lodash'
 
 function VerificationComplete() {
 	const { session } = useSession()
@@ -22,7 +21,7 @@ function VerificationComplete() {
 				<title>My Makeup</title>
 				<meta
 					name="description"
-					content="Verification de profil, sur My-Makeup, la plateforme pour les maquilleuses !"
+					content="Vérification de profil, sur My-Makeup, la plateforme pour les maquilleuses !"
 				/>
 				{/*	seo tag canonical link */}
 				<link
@@ -43,9 +42,9 @@ function VerificationComplete() {
 							/>
 						</Link>
 						<div className={'mt-8'}>
-							<h2 className={'my-8 text-2xl font-semibold text-slate-900'}>
-								Felicitation ! Votre compte est maintenant activé !
-							</h2>
+							<h1 className={'my-8 text-2xl font-semibold text-slate-900'}>
+								Felicitation ! Votre compte My Makeup est maintenant activé !
+							</h1>
 							<p className={'text-gray-700'}>
 								Vous pouvez désormais vous connecter
 							</p>
