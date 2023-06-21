@@ -40,9 +40,9 @@ function VerificationWall() {
 							/>
 						</Link>
 						<div className={'mt-8'}>
-							<h2 className={'my-8 text-2xl font-semibold text-slate-900'}>
-								Veuillez vérifier votre adresse email
-							</h2>
+							<h1 className={'my-8 text-2xl font-semibold text-slate-900'}>
+								Veuillez vérifier votre adresse email My Makeup
+							</h1>
 							<p className={'text-gray-700'}>
 								{`Vérifiez votre boite mail pour valider votre inscription
 									Vous n'avez pas reçu d'email ? Regardez dans vos spams !`}
