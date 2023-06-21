@@ -73,7 +73,10 @@ function Footer() {
 							Particuliers
 						</h4>
 					</div>
-					<Link href={'/particulier'} className={'text-sm text-slate-600'}>
+					<Link
+						href={'/pourquoi-utiliser-my-makeup-en-tant-que-particulier'}
+						className={'text-sm text-slate-600'}
+					>
 						Pourquoi My Makeup ?
 					</Link>
 					<Link
@@ -101,7 +104,10 @@ function Footer() {
 							Maquilleuses
 						</h4>
 					</div>
-					<Link href={'/maquilleuse'} className={'text-sm text-slate-600'}>
+					<Link
+						href={'/pourquoi-rejoindre-my-makeup-en-tant-que-maquilleuse'}
+						className={'text-sm text-slate-600'}
+					>
 						Pourquoi My Makeup ?
 					</Link>
 					<Link

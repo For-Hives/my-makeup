@@ -61,7 +61,13 @@ function SiteMap({ articles, talents }) {
 								<h2>Pour les particulier</h2>
 								<ul>
 									<li>
-										<Link href={'/particulier'}>Pourquoi My Makeup ?</Link>
+										<Link
+											href={
+												'/pourquoi-utiliser-my-makeup-en-tant-que-particulier'
+											}
+										>
+											Pourquoi My Makeup ?
+										</Link>
 									</li>
 									<li>
 										<Link href={'/particulier/trouver-une-maquilleuse'}>
@@ -82,7 +88,13 @@ function SiteMap({ articles, talents }) {
 								<h3>Pour les maquilleuses</h3>
 								<ul>
 									<li>
-										<Link href={'/maquilleuse'}>Pourquoi My Makeup ?</Link>
+										<Link
+											href={
+												'/pourquoi-rejoindre-my-makeup-en-tant-que-maquilleuse'
+											}
+										>
+											Pourquoi My Makeup ?
+										</Link>
 									</li>
 									<li>
 										<Link href={'/maquilleuse/partenariats'}>
@@ -126,7 +138,7 @@ function SiteMap({ articles, talents }) {
 										? articles.map(element => {
 												return (
 													<li key={element.id}>
-														<Link href={element?.attributes?.slug}>
+														<Link href={`/blog/${element?.attributes?.slug}`}>
 															{element?.attributes?.title}
 														</Link>
 													</li>
@@ -140,7 +152,7 @@ function SiteMap({ articles, talents }) {
 										? talents.map(element => {
 												return (
 													<li key={element.id}>
-														<Link href={element?.attributes?.slug}>
+														<Link href={`/talent/${element?.attributes?.slug}`}>
 															{element?.attributes?.title}
 														</Link>
 													</li>
