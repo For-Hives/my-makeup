@@ -4,6 +4,3 @@ Allow: /
 
 # Host
 Host: https://my-makeup.fr/
-
-# Sitemaps
-Sitemap: https://my-makeup.fr/sitemap.xml
