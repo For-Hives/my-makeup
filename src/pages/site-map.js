@@ -74,7 +74,7 @@ function SiteMap({ articles, talents }) {
 									</li>
 									<li>
 										<Link href={'/particulier/trouver-une-maquilleuse'}>
-											Trouver des maquilleuses
+											Trouver une maquilleuse
 										</Link>
 									</li>
 									<li>

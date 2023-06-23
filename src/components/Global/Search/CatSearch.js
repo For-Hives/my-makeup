@@ -10,7 +10,7 @@ export function CatSearch() {
 				width={200}
 				height={200}
 			/>
-			<h1 className={'text-center text-lg text-gray-700 md:text-xl'}>
+			<h1 className={'px-8 text-center text-lg text-gray-700 md:text-xl'}>
 				Complétez la recherche de maquilleuses pour voir des résultats
 			</h1>
 		</div>

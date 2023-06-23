@@ -23,7 +23,7 @@ const navigation = [
 					'My Makeup est une plateforme de mise en relation entre les particuliers et les professionnels de la beauté.',
 			},
 			{
-				name: 'Trouver des maquilleuses',
+				name: 'Trouver une maquilleuse',
 				href: '/particulier/trouver-une-maquilleuse',
 				icon: 'diversity_1',
 				description:

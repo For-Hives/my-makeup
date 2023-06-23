@@ -83,7 +83,7 @@ function Footer() {
 						href={'/particulier/trouver-une-maquilleuse'}
 						className={'text-sm text-slate-600'}
 					>
-						Trouver des maquilleuses
+						Trouver une maquilleuse
 					</Link>
 					<Link
 						href={'/particulier/centraliser-ses-recherches'}
