@@ -115,7 +115,7 @@ export default function ModalUpdateDescriptionProfil(props) {
 											Vous en quelques mots
 										</Dialog.Title>
 									</div>
-									<div className={'w-4/5'}>
+									<div className={'w-full md:w-4/5'}>
 										<div className="grid grid-cols-1 gap-4">
 											<div className={'flex flex-col gap-4'}>
 												<form

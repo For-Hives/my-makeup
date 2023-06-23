@@ -435,7 +435,11 @@ export default function ModalUpdateCoursesProfil(props) {
 																className={'ml-2 flex w-full flex-col gap-2'}
 															>
 																<div className={'flex flex-col'}>
-																	<p className={'font-semibold text-slate-700'}>
+																	<p
+																		className={
+																			'w-4/5 font-semibold text-slate-700 md:w-full'
+																		}
+																	>
 																		{course.diploma}
 																	</p>
 																	<div className={'flex justify-between'}>
