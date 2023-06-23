@@ -14,7 +14,7 @@ function ViewPortfolioProfil(props) {
 
 	let imageGallery = []
 	// check if user.image_gallery.data property exists
-	if (user.image_gallery.data === undefined) {
+	if (user?.image_gallery?.data === undefined) {
 		imageGallery = user?.image_gallery
 	} else {
 		// array to object conversion, {id: x, attributes: {...}} to {...} for each element

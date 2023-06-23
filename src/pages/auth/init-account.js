@@ -38,7 +38,7 @@ function InitAccount() {
 		resolver: zodResolver(schema),
 	})
 
-	const [step, setStep] = useState(4)
+	const [step, setStep] = useState(0)
 	const [stepsList, setStepsList] = useState([
 		{ name: "Verification de l'email", href: '#', status: 'upcoming' },
 		{ name: 'Initialisation du compte', href: '#', status: 'upcoming' },
