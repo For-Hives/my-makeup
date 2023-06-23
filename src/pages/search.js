@@ -128,22 +128,15 @@ function SearchPage() {
 														/>
 														<div
 															className={
-																'absolute left-0 top-0 flex items-center justify-center p-4 opacity-90'
+																'absolute left-0 top-0 flex items-center justify-center p-4'
 															}
 														>
-															{result.available ? (
-																<>
-																	<BadgeDispo />
-																</>
-															) : (
-																<>
-																	<BadgeIndispo />
-																</>
-															)}
+															{/* todo activate or not { if Makeup artist is validated from us ) */}
+															<BadgeSuperMaquilleuse />
 														</div>
 														<div
 															className={
-																'absolute bottom-0 left-0 flex flex-col bg-gradient-to-t from-black to-black/0 p-4 pb-8'
+																'absolute bottom-0 left-0 flex w-full flex-col bg-gradient-to-t from-black to-black/0 p-4'
 															}
 														>
 															<h3 className="text-2xl font-extrabold text-white">
@@ -158,14 +151,13 @@ function SearchPage() {
 																	<span className="material-icons-round text-sm text-white">
 																		directions_run
 																	</span>
-																	peut se déplacer à {result?.city} & dans un
-																	rayon de {result?.action_radius}km
+																	À {result?.city} & {result?.action_radius}km
+																	autour
 																</div>
 															</div>
 														</div>
-														<div className={'absolute -bottom-2.5 left-4'}>
-															<BadgeSuperMaquilleuse />
-														</div>
+														{/*<div className={'absolute -bottom-2.5 left-4'}>*/}
+														{/*</div>*/}
 													</div>
 													<div
 														className={'flex w-full flex-col gap-4 p-4 pt-6'}
