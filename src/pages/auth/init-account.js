@@ -249,7 +249,7 @@ function InitAccount() {
 													{step.status === 'current' ? (
 														<Link
 															href={step.href}
-															className="flex items-center px-2 py-2 text-sm font-medium md:py-4 md:pl-2 md:pr-6"
+															className="group flex w-full items-center"
 															aria-current="step"
 														>
 															<div className="flex items-center gap-4 px-4 py-3 text-sm font-medium md:px-6 md:py-4">

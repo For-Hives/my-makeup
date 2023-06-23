@@ -81,6 +81,9 @@ function Contact(props) {
 							}
 						</>
 					}
+					isSearchDisplayed={false}
+					isCTALoginDisplayed={false}
+					isSimpleVersionDisplayed={true}
 				/>
 				<div className="mx-auto mt-32 max-w-2xl px-4 text-center md:px-0">
 					<h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">

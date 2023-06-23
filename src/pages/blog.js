@@ -39,6 +39,9 @@ function Blog({ articles }) {
 							votre quotidien ! Et les nouveautés qui arrivent bientôt !
 						</>
 					}
+					isSearchDisplayed={false}
+					isCTALoginDisplayed={false}
+					isSimpleVersionDisplayed={true}
 				/>
 				<section className={'relative px-4 py-20 md:px-8 2xl:px-0'}>
 					<div className="mx-auto max-w-7xl">

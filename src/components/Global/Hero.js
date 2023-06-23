@@ -8,30 +8,33 @@ export default function Hero({
 	description,
 	isSearchDisplayed = true,
 	isCTALoginDisplayed = false,
+	isSimpleVersionDisplayed = false,
 }) {
 	return (
 		<div className="relative bg-white 2xl:pt-[90px]">
-			<div
-				className={
-					'absolute bottom-0 left-1/2 z-20 flex w-full -translate-x-1/2 transform items-end justify-center px-4'
-				}
-			>
-				{isSearchDisplayed ? (
-					<SearchBloc />
-				) : (
-					<>
-						<div
-							className={
-								'mb-16 flex items-center justify-center rounded-full border-2 border-indigo-900 bg-white p-2 text-center text-lg text-indigo-900 md:mb-8 md:p-4'
-							}
-						>
-							<span className="material-icons-round flex items-center justify-center text-center">
-								expand_more
-							</span>
-						</div>
-					</>
-				)}
-			</div>
+			{isSimpleVersionDisplayed === false && (
+				<div
+					className={
+						'absolute bottom-0 left-1/2 z-20 flex w-full -translate-x-1/2 transform items-end justify-center px-4'
+					}
+				>
+					{isSearchDisplayed ? (
+						<SearchBloc />
+					) : (
+						<>
+							<div
+								className={
+									'mb-16 flex items-center justify-center rounded-full border-2 border-indigo-900 bg-white p-2 text-center text-lg text-indigo-900 md:mb-8 md:p-4'
+								}
+							>
+								<span className="material-icons-round flex items-center justify-center text-center">
+									expand_more
+								</span>
+							</div>
+						</>
+					)}
+				</div>
+			)}
 			<div className="mx-auto max-w-7xl">
 				<div className="relative z-10 lg:w-full lg:max-w-2xl">
 					<svg

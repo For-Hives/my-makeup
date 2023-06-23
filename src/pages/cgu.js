@@ -31,7 +31,10 @@ function Cgu(props) {
 							<span className={'text-indigo-900'}>My&nbsp;Makeup</span>
 						</>
 					}
-					description={<>{"Tout l'aspect légale de la plateforme."}</>}
+					description={<>{"Tout l'aspect légal de la plateforme."}</>}
+					isSearchDisplayed={false}
+					isCTALoginDisplayed={false}
+					isSimpleVersionDisplayed={true}
 				/>
 				<div
 					className={'relative mx-auto my-24 max-w-7xl px-4 md:my-48 md:px-0'}
