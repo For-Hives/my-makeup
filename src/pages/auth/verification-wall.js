@@ -50,7 +50,7 @@ function VerificationWall() {
 									Vous n'avez pas reçu d'email ? Regardez dans vos spams !`}
 							</p>
 							<Link href={'/auth/signin'} className="btn-primary-large mt-8">
-								{'Retourner sur la page de login'}
+								{'Retourner sur la page de connexion'}
 							</Link>
 						</div>
 					</div>

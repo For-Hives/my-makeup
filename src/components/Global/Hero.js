@@ -1,16 +1,23 @@
 import Image from 'next/image'
 import SearchBloc from '@/components/Global/Search/SearchBloc'
 
-export default function Hero(props) {
+export default function Hero({
+	imgBackgroundSrc = '/assets/back.png',
+	title,
+	description,
+	isSearchDisplayed = true,
+}) {
 	return (
 		<div className="relative bg-white 2xl:pt-[90px]">
-			<div
-				className={
-					'absolute bottom-0 left-1/2 z-20 flex w-full -translate-x-1/2 transform items-end justify-center px-4'
-				}
-			>
-				<SearchBloc />
-			</div>
+			{isSearchDisplayed && (
+				<div
+					className={
+						'absolute bottom-0 left-1/2 z-20 flex w-full -translate-x-1/2 transform items-end justify-center px-4'
+					}
+				>
+					<SearchBloc />
+				</div>
+			)}
 			<div className="mx-auto max-w-7xl">
 				<div className="relative z-10 lg:w-full lg:max-w-2xl">
 					<svg
@@ -25,10 +32,10 @@ export default function Hero(props) {
 					<div className="relative z-10 px-6 py-32 pb-8 sm:py-40 sm:pb-24 lg:px-8 lg:pb-80 lg:pr-0 lg:pt-52">
 						<div className="mx-auto max-w-2xl lg:mx-0 lg:max-w-xl">
 							<h1 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">
-								{props.title}
+								{title}
 							</h1>
 							<p className="mt-6 text-lg leading-8 text-slate-700">
-								{props.description}
+								{description}
 							</p>
 						</div>
 					</div>
@@ -39,7 +46,7 @@ export default function Hero(props) {
 					className="aspect-[3/2] object-cover md:object-center lg:aspect-auto lg:h-full lg:w-full xl:object-top "
 					width={1000}
 					height={1000}
-					src="/assets/back.png"
+					src={imgBackgroundSrc}
 					alt="trouver une maquilleuse professionnelle freelance"
 				/>
 			</div>
