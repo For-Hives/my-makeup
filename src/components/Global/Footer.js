@@ -19,9 +19,7 @@ function Footer() {
 							width={'50'}
 							height={'50'}
 						/>
-						<h4 className={'text-2xl font-bold text-my-makeup-900'}>
-							My Makeup
-						</h4>
+						<p className={'text-2xl font-bold text-my-makeup-900'}>My Makeup</p>
 					</div>
 					<p className={'text-sm text-slate-600'}>
 						72 avenue Camus,
@@ -69,9 +67,7 @@ function Footer() {
 				</div>
 				<div className={'flex flex-col gap-6'}>
 					<div className={'mb-2 flex items-center justify-start gap-3'}>
-						<h4 className={'text-xl font-bold text-indigo-800'}>
-							Particuliers
-						</h4>
+						<p className={'text-xl font-bold text-indigo-800'}>Particuliers</p>
 					</div>
 					<Link
 						href={'/pourquoi-utiliser-my-makeup-en-tant-que-particulier'}
@@ -100,9 +96,7 @@ function Footer() {
 				</div>
 				<div className={'flex flex-col gap-6'}>
 					<div className={'mb-2 flex items-center justify-start gap-3'}>
-						<h4 className={'text-xl font-bold text-indigo-800'}>
-							Maquilleuses
-						</h4>
+						<p className={'text-xl font-bold text-indigo-800'}>Maquilleuses</p>
 					</div>
 					<Link
 						href={'/pourquoi-rejoindre-my-makeup-en-tant-que-maquilleuse'}
@@ -132,7 +126,7 @@ function Footer() {
 				</div>
 				<div className={'flex flex-col gap-6'}>
 					<div className={'mb-2 flex items-center justify-start gap-3'}>
-						<h4 className={'text-xl font-bold text-indigo-800'}>Ressources</h4>
+						<p className={'text-xl font-bold text-indigo-800'}>Ressources</p>
 					</div>
 					<Link
 						href={'/solutions/pour-les-particuliers'}
@@ -155,7 +149,7 @@ function Footer() {
 				</div>
 				<div className={'flex flex-col gap-6'}>
 					<div className={'mb-2 flex items-center justify-start gap-3'}>
-						<h4 className={'text-xl font-bold text-indigo-800'}>My Makeup</h4>
+						<p className={'text-xl font-bold text-indigo-800'}>My Makeup</p>
 					</div>
 					<Link href={'/a-propos'} className={'text-sm text-slate-600'}>
 						À propos de My Makeup
