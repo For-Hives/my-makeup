@@ -228,7 +228,11 @@ function Nav({
 						<div className={'absolute right-0 top-0 m-6'}>
 							{/*	btn switch nav */}
 							<div className="menu-icon" onClick={handleClickMenuIcon}>
-								<input className="menu-icon__cheeckbox" type="checkbox" />
+								<input
+									className="menu-icon__cheeckbox"
+									type="checkbox"
+									aria-label="menu_icon"
+								/>
 								<div>
 									<span></span>
 									<span></span>
