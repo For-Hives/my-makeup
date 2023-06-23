@@ -5,6 +5,7 @@ import { BadgeDispo } from '@/components/Profil/Atoms/BadgeDispo'
 import { BadgeIndispo } from '@/components/Profil/Atoms/BadgeIndispo'
 import ModalUpdateResumeProfil from '@/components/Profil/Atoms/ModalUpdate/ModalUpdateResumeProfil'
 import { useRouter } from 'next/router'
+import ViewLocationProfil from '@/components/Profil/Childs/Views/ViewLocationProfil'
 
 function ResumeProfil(props) {
 	const router = useRouter()
@@ -28,7 +29,33 @@ function ResumeProfil(props) {
 	}
 
 	return (
-		<div className={'relative bg-white px-4 pb-24 shadow-xl md:px-8 2xl:px-0'}>
+		<div
+			className={
+				'group relative bg-white px-4 pb-24 shadow-xl md:px-8 2xl:px-0'
+			}
+		>
+			{!isPublic && (
+				<button
+					onClick={handleIsModalOpen}
+					className={
+						'absolute left-0 top-0 -z-10 flex h-full w-full items-center justify-center opacity-0 ' +
+						'bg-white/75 backdrop-blur-none group-hover:z-20 group-hover:opacity-100 ' +
+						'pointer-events-none transition duration-300 group-hover:pointer-events-auto group-hover:backdrop-blur-[2px] ' +
+						'user-select-none group-hover:user-select-auto focus:outline-none'
+					}
+				>
+					<div
+						className={
+							'btn-alt-primary mt-[90px] flex items-center gap-3 bg-white text-indigo-900'
+						}
+					>
+						<span className="material-icons-round">edit</span>
+						<span className={'font-semibold'}>
+							Modifier vos informations personnelles
+						</span>
+					</div>
+				</button>
+			)}
 			<ModalUpdateResumeProfil
 				isModalOpen={isModalOpen}
 				handleIsModalOpen={handleIsModalOpen}
