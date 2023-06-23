@@ -39,6 +39,8 @@ function PourquoiMyMakeup() {
 							développer votre activité et atteindre une nouvelle clientèle.
 						</>
 					}
+					isSearchDisplayed={false}
+					isCTALoginDisplayed={true}
 				/>
 				<AdvantagesMaquillleuse />
 				<CTA />

@@ -42,6 +42,8 @@ function Partenariats(props) {
 							}
 						</>
 					}
+					isSearchDisplayed={false}
+					isCTALoginDisplayed={true}
 				/>
 				<div
 					className={'relative mx-auto my-24 max-w-7xl px-4 md:my-48 md:px-0'}
@@ -107,4 +109,4 @@ function Partenariats(props) {
 	)
 }
 
-export default Partenariats;
+export default Partenariats
