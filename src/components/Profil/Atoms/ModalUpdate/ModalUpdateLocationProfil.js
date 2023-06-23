@@ -112,7 +112,7 @@ export default function ModalUpdateLocationProfil(props) {
 									onClick={props.handleIsModalOpen}
 									ref={cancelButtonRef}
 									className={
-										'absolute right-0 top-0 m-6 flex items-center justify-center'
+										'absolute right-0 top-0 m-3 flex items-center justify-center md:m-6'
 									}
 								>
 									<span className="material-icons-round">close</span>
@@ -126,7 +126,7 @@ export default function ModalUpdateLocationProfil(props) {
 											{"Modifier votre localisation et votre rayon d'action"}
 										</Dialog.Title>
 									</div>
-									<div className={'w-3/5'}>
+									<div className={'w-full md:w-3/5'}>
 										<div className="grid grid-cols-1 gap-4">
 											<div className={'flex flex-col gap-4'}>
 												<form
