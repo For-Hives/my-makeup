@@ -253,8 +253,12 @@ export default function ModalUpdateCoursesProfil(props) {
 											Les formations & diplômes que vous avez suivis
 										</Dialog.Title>
 									</div>
-									<div className={'flex h-full w-full gap-16'}>
-										<div className={'w-2/5'}>
+									<div
+										className={
+											'flex h-full w-full flex-wrap gap-16 md:flex-nowrap'
+										}
+									>
+										<div className={'w-full md:w-2/5'}>
 											<div className="grid grid-cols-1 gap-4">
 												<div className={'flex flex-col gap-4'}>
 													<form
@@ -384,7 +388,7 @@ export default function ModalUpdateCoursesProfil(props) {
 												</div>
 											</div>
 										</div>
-										<div className={'flex w-3/5 flex-col gap-4'}>
+										<div className={'flex w-full flex-col gap-4 md:w-3/5'}>
 											{/*	display the courses already added */}
 											<h3 className={'text-sm text-slate-900'}>
 												Les formations & diplômes déjà ajoutés
@@ -431,7 +435,11 @@ export default function ModalUpdateCoursesProfil(props) {
 																className={'ml-2 flex w-full flex-col gap-2'}
 															>
 																<div className={'flex flex-col'}>
-																	<p className={'font-semibold text-slate-700'}>
+																	<p
+																		className={
+																			'w-4/5 font-semibold text-slate-700 md:w-full'
+																		}
+																	>
 																		{course.diploma}
 																	</p>
 																	<div className={'flex justify-between'}>

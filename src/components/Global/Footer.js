@@ -1,15 +1,15 @@
 import React from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { Signature } from '@/components/Global/Signature'
 
 function Footer() {
-	// get actuel year
-	const actualYear = new Date().getFullYear()
-
 	return (
 		<>
 			<footer
-				className={'relative mx-auto flex w-full max-w-7xl gap-20 pt-52 '}
+				className={
+					'relative mx-auto flex w-full max-w-7xl flex-col gap-20 px-4 pt-52 md:flex-row md:px-8 2xl:px-0'
+				}
 			>
 				<div className={'flex flex-col gap-6'}>
 					<div className={'flex items-center justify-start gap-3'}>
@@ -28,8 +28,8 @@ function Footer() {
 						<br />
 						44000 Nantes
 					</p>
-					<div className={'flex gap-3'}>
-						<Link href="/" rel={'noopener nofollow noreferrer'}>
+					<div className={'flex flex-row gap-3 md:flex-col lg:flex-row'}>
+						<Link href="/" rel={'noopener nofollow noreferrer '}>
 							<Image
 								src={'/assets/brand/037-instagram.svg'}
 								className={'fill-white'}
@@ -73,14 +73,17 @@ function Footer() {
 							Particuliers
 						</h4>
 					</div>
-					<Link href={'/particulier'} className={'text-sm text-slate-600'}>
+					<Link
+						href={'/pourquoi-utiliser-my-makeup-en-tant-que-particulier'}
+						className={'text-sm text-slate-600'}
+					>
 						Pourquoi My Makeup ?
 					</Link>
 					<Link
 						href={'/particulier/trouver-une-maquilleuse'}
 						className={'text-sm text-slate-600'}
 					>
-						Trouver des maquilleuses
+						Trouver une maquilleuse
 					</Link>
 					<Link
 						href={'/particulier/centraliser-ses-recherches'}
@@ -101,7 +104,10 @@ function Footer() {
 							Maquilleuses
 						</h4>
 					</div>
-					<Link href={'/maquilleuse'} className={'text-sm text-slate-600'}>
+					<Link
+						href={'/pourquoi-rejoindre-my-makeup-en-tant-que-maquilleuse'}
+						className={'text-sm text-slate-600'}
+					>
 						Pourquoi My Makeup ?
 					</Link>
 					<Link
@@ -178,34 +184,7 @@ function Footer() {
 					</Link>
 				</div>
 			</footer>
-			<div className={'mx-auto flex w-full max-w-7xl py-20'}>
-				<p className={'mx-auto text-sm text-slate-600'}>
-					© {actualYear} My Makeup - Tous droits réservés - Developed with ❤️ by{' '}
-					<Link
-						className={'text-sm text-slate-600 underline'}
-						href={'https://andy-cinquin.fr'}
-						target={'_blank'}
-					>
-						Andy Cinquin
-					</Link>
-					&nbsp;&&nbsp;
-					<Link
-						className={'text-sm text-slate-600 underline'}
-						href={'https://brev.al'}
-						target={'_blank'}
-					>
-						Bréval Le Floch
-					</Link>
-					&nbsp; - 🐝
-					<Link
-						className={'text-sm text-slate-600 underline'}
-						href={'https://forhives.fr/'}
-						target={'_blank'}
-					>
-						ForHives co-founders
-					</Link>
-				</p>
-			</div>
+			<Signature />
 		</>
 	)
 }

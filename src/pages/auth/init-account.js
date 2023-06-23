@@ -3,13 +3,16 @@ import Head from 'next/head'
 import { getSession, useSession } from 'next-auth/react'
 import { useRouter } from 'next/router'
 import { CheckIcon } from '@heroicons/react/24/outline'
-import Loader from '@/components/Global/Loader/Loader'
 import Link from 'next/link'
 import * as zod from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
 import { toast } from 'react-toastify'
+import FullLoader from '@/components/Global/Loader/FullLoader'
+import Image from 'next/image'
+import Loader from '@/components/Global/Loader/Loader'
+import Warning from '@/components/Global/Warning'
 
 const schema = zod
 	.object({
@@ -88,6 +91,7 @@ function InitAccount() {
 								})
 									.then(response => {
 										if (response.status === 200) {
+											// get 200
 										}
 									})
 									.catch(err => {
@@ -114,7 +118,7 @@ function InitAccount() {
 		if (step === 0) {
 			setStepsList([
 				{
-					name: "Verification de l'email",
+					name: "Vérification de l'email",
 					href: '#',
 					status: 'upcoming',
 				},
@@ -130,7 +134,7 @@ function InitAccount() {
 		if (step === 1) {
 			setStepsList([
 				{
-					name: "Verification de l'email",
+					name: "Vérification de l'email",
 					href: '#',
 					status: 'current',
 				},
@@ -146,7 +150,7 @@ function InitAccount() {
 		if (step === 2) {
 			setStepsList([
 				{
-					name: "Verification de l'email",
+					name: "Vérification de l'email",
 					href: '#',
 					status: 'complete',
 				},
@@ -162,7 +166,7 @@ function InitAccount() {
 		if (step === 3) {
 			setStepsList([
 				{
-					name: "Verification de l'email",
+					name: "Vérification de l'email",
 					href: '#',
 					status: 'complete',
 				},
@@ -178,7 +182,7 @@ function InitAccount() {
 		if (step === 4) {
 			setStepsList([
 				{
-					name: "Verification de l'email",
+					name: "Vérification de l'email",
 					href: '#',
 					status: 'complete',
 				},
@@ -199,7 +203,7 @@ function InitAccount() {
 		setStep(4)
 	}
 
-	if (step === 0) return <Loader />
+	if (step === 0) return <FullLoader />
 
 	return (
 		<>
@@ -212,14 +216,11 @@ function InitAccount() {
 				/>
 			</Head>
 			<div className="relative flex min-h-screen bg-white">
-				{/*<ResponsiveTemporary />*/}
-
-				<div className="container mx-auto flex flex-col sm:px-6 lg:px-8">
-					<div className="my-8 h-full overflow-hidden rounded-lg bg-white shadow">
-						<div className="px-4 py-5 sm:px-6">
+				<div className="container mx-auto flex max-w-7xl flex-col p-4 xl:container">
+					<div className="flex h-full flex-col rounded-lg bg-white shadow-xl">
+						<div className="p-4">
 							{/* Content goes here */}
 							{/* We use less vertical padding on card headers on desktop than on body sections */}
-
 							<nav aria-label="Progress">
 								<ol
 									role="list"
@@ -228,48 +229,59 @@ function InitAccount() {
 									{stepsList.map((step, stepIdx) => (
 										<li key={step.name} className="relative md:flex md:flex-1">
 											{step.status === 'complete' ? (
-												<a
+												<Link
 													href={step.href}
 													className="group flex w-full items-center"
 												>
-													<span className="flex items-center px-6 py-4 text-sm font-medium">
-														<span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-indigo-600 group-hover:bg-indigo-800">
+													<div className="flex items-center gap-4 px-4 py-3 text-sm font-medium md:px-6 md:py-4">
+														<span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-indigo-600 group-hover:bg-indigo-800 md:h-10 md:w-10">
 															<CheckIcon
-																className="h-6 w-6 text-white"
+																className="h-4 w-4 text-white md:h-6 md:w-6"
 																aria-hidden="true"
 															/>
 														</span>
-														<span className="ml-4 text-sm font-medium text-gray-900">
+														<span className="text-sm font-medium text-gray-900">
 															{step.name}
 														</span>
-													</span>
-												</a>
-											) : step.status === 'current' ? (
-												<a
-													href={step.href}
-													className="flex items-center px-6 py-4 text-sm font-medium"
-													aria-current="step"
-												>
-													<span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border-2 border-indigo-600">
-														<span className="text-indigo-600">{step.id}</span>
-													</span>
-													<span className="ml-4 text-sm font-medium text-indigo-600">
-														{step.name}
-													</span>
-												</a>
+													</div>
+												</Link>
 											) : (
-												<a href={step.href} className="group flex items-center">
-													<span className="flex items-center px-6 py-4 text-sm font-medium">
-														<span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border-2 border-gray-300 group-hover:border-gray-400">
-															<span className="text-gray-500 group-hover:text-gray-900">
-																{step.id}
-															</span>
-														</span>
-														<span className="ml-4 text-sm font-medium text-gray-500 group-hover:text-gray-900">
-															{step.name}
-														</span>
-													</span>
-												</a>
+												<>
+													{step.status === 'current' ? (
+														<Link
+															href={step.href}
+															className="group flex w-full items-center"
+															aria-current="step"
+														>
+															<div className="flex items-center gap-4 px-4 py-3 text-sm font-medium md:px-6 md:py-4">
+																<div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border-2 border-indigo-600 md:h-10 md:w-10">
+																	<span className="text-indigo-600">
+																		{step.id}
+																	</span>
+																</div>
+																<span className="text-sm font-medium text-indigo-600">
+																	{step.name}
+																</span>
+															</div>
+														</Link>
+													) : (
+														<Link
+															href={step.href}
+															className="group flex items-center"
+														>
+															<div className="flex items-center gap-4 px-4 py-3 text-sm font-medium md:px-6 md:py-4">
+																<span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border-2 border-gray-300 group-hover:border-gray-400 md:h-10 md:w-10">
+																	<span className="text-gray-500 group-hover:text-gray-900">
+																		{step.id}
+																	</span>
+																</span>
+																<span className="text-sm font-medium text-gray-500 group-hover:text-gray-900">
+																	{step.name}
+																</span>
+															</div>
+														</Link>
+													)}
+												</>
 											)}
 											{stepIdx !== stepsList.length - 1 ? (
 												<>
@@ -299,47 +311,69 @@ function InitAccount() {
 								</ol>
 							</nav>
 						</div>
-						<div className="bg-gray-50 px-4 py-5 sm:p-6">
+						<div className="flex h-full w-full items-center justify-center p-6">
 							{/* Content goes here */}
-
 							{step === 1 && (
-								<div className="flex flex-col items-center justify-center">
-									<div className="flex flex-col items-center justify-center">
-										<h1 className="text-center text-3xl font-bold">
-											Verification de votre adresse email
-										</h1>
-										<p className="text-center">
-											Vous avez recu un lien par email pour verifier votre
-											compte !
-										</p>
-										<p className="text-center">
-											Si vous ne recevez pas de mail, verifier dans vos courrier
-											indesirable
-										</p>
+								<div className="flex h-full w-full flex-col items-center justify-start md:justify-start">
+									<div className="relative flex h-full w-full flex-col items-center justify-start gap-4 overflow-hidden md:justify-start">
+										<div
+											className={
+												'absolute right-0 top-1/2 z-10 -rotate-12 transform opacity-50'
+											}
+										>
+											<div
+												className={'flex w-full items-center justify-center'}
+											>
+												<Image
+													src={'/assets/brand/050-email.svg'}
+													width={500}
+													height={500}
+													alt={'email Vérification'}
+													className={'opacity-5'}
+												/>
+											</div>
+										</div>
+										<div>
+											<h1 className="text-center text-3xl font-bold">
+												Vérification de votre adresse email
+											</h1>
+										</div>
+										<div>
+											<p className="text-center">
+												Vous avez reçu un lien par email pour vérifier votre
+												compte !
+											</p>
+											<p className="text-center">
+												Si vous ne recevez pas de mail, vérifiez dans vos
+												courriers indésirables
+											</p>
+										</div>
 									</div>
 								</div>
 							)}
 							{step === 2 && (
-								<div className="flex flex-col items-center justify-center">
-									<div className="h-[300px] w-[300px] ">
-										Loading
-										{/*    todo : Spinner */}
+								<div className="mt-20 flex h-full w-full flex-col items-center justify-start md:m-0 md:justify-center">
+									<div className={'flex flex-col gap-4'}>
+										<Loader />
+										<p>Initialisation du compte en cours...</p>
 									</div>
 								</div>
 							)}
 							{step === 3 && (
 								<div className="flex flex-col items-center justify-center">
-									<div className="my-8 flex flex-col items-center justify-center">
-										<h1 className="text-center text-3xl font-bold">
-											Votre nom et votre prénom
-										</h1>
-										<p className="text-center">
-											Ces informations seront visible par les autres
-											utilisateurs
-										</p>
+									<div className="flex flex-col items-center justify-center md:my-8 md:gap-4 xl:gap-8">
+										<div>
+											<h1 className="text-center text-3xl font-bold">
+												Votre nom et votre prénom
+											</h1>
+											<p className="text-center text-gray-700">
+												Ces informations seront visibles par les autres
+												utilisateurs
+											</p>
+										</div>
 
-										<div className="mt-10 sm:mx-auto sm:w-full sm:max-w-[480px]">
-											<div className="bg-white px-6 py-12 shadow sm:rounded-lg sm:px-12">
+										<div className="mx-auto w-full sm:max-w-[480px]">
+											<div className="rounded-lg bg-white px-6 py-12 shadow-xl sm:px-12">
 												<form
 													className="space-y-6"
 													action="#"
@@ -407,26 +441,38 @@ function InitAccount() {
 							)}
 							{step === 4 && (
 								<div className="flex flex-col items-center justify-center">
-									<div className="my-16 flex flex-col items-center justify-center">
-										<h1 className="text-center text-3xl font-bold">
-											Bienvenue sur My-Makeup !
-										</h1>
-										<h2>
-											{' '}
-											Rendez-vous sur votre profile pour terminer de le
-											completer{' '}
-										</h2>
+									<div className="flex flex-col items-center justify-center gap-4">
+										<div>
+											<h2 className="text-center text-3xl font-bold">
+												Bienvenue sur My&nbsp;Makeup !
+											</h2>
+											<div
+												className={
+													'flex h-full w-full flex-col items-center justify-center '
+												}
+											>
+												<h2 className={'text-center text-gray-700'}>
+													{' '}
+													Rendez-vous sur votre profil pour terminer de le
+													compléter{' '}
+												</h2>
+											</div>
+										</div>
+										<Warning
+											title={'Attention !'}
+											description={
+												"Votre profil ne sera pas visible tant qu'il ne sera pas totalement rempli !"
+											}
+										/>
 										<Link
 											href="/auth/profil"
-											className="my-16 rounded-md bg-indigo-600 px-3 py-1.5 text-white"
+											className="rounded-md bg-indigo-600 px-3 py-1.5 text-white"
 										>
-											Mon profile
+											Mon profil
 										</Link>
 									</div>
 								</div>
 							)}
-
-							<div>{/*<ResumeProfil user={user}></ResumeProfil>*/}</div>
 						</div>
 					</div>
 				</div>

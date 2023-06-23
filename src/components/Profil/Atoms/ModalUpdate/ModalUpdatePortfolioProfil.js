@@ -178,8 +178,10 @@ export default function ModalUpdatePortfolioProfil(props) {
 												Modifier votre portfolio
 											</Dialog.Title>
 										</div>
-										<div className={'flex w-full gap-16'}>
-											<div className="grid w-2/6 grid-cols-1 gap-4 ">
+										<div
+											className={'flex w-full flex-wrap gap-16 md:flex-nowrap'}
+										>
+											<div className="grid w-full grid-cols-1 gap-4 md:w-2/6 ">
 												<div className={'flex flex-col gap-4'}>
 													<label
 														htmlFor="cover-photo"
@@ -248,7 +250,7 @@ export default function ModalUpdatePortfolioProfil(props) {
 													</div>
 												</div>
 											</div>
-											<div className={'flex w-4/6'}>
+											<div className={'flex w-full md:w-4/6'}>
 												<div className={'flex w-full flex-col gap-4 rounded'}>
 													<h2 className={'text-xl font-bold text-slate-700'}>
 														Portfolio
@@ -281,7 +283,7 @@ export default function ModalUpdatePortfolioProfil(props) {
 																	>
 																		<button
 																			className={
-																				'absolute right-0 top-0 z-40 m-4 flex h-8 w-8 items-center justify-center rounded-full bg-red-50 shadow'
+																				'absolute left-0 top-0 z-40 m-4 flex h-8 w-8 items-center justify-center rounded-full bg-red-50 shadow md:left-auto md:right-0'
 																			}
 																			onClick={() =>
 																				handleDeletePortfolio(image.id)

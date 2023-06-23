@@ -312,9 +312,15 @@ export default function ModalUpdateServiceOffersProfil(props) {
 											Les expériences professionnelles que vous avez
 										</Dialog.Title>
 									</div>
-									<div className={'flex h-full w-full gap-16'}>
+									<div
+										className={
+											'flex h-full w-full flex-wrap gap-16 md:flex-nowrap'
+										}
+									>
 										<div
-											className={'max-h-[600px] w-2/5 overflow-y-scroll pr-4'}
+											className={
+												'max-h-[600px] w-full overflow-y-scroll  pr-4 md:w-2/5'
+											}
 										>
 											<div className="grid grid-cols-1 gap-4">
 												<div className={'flex flex-col gap-4'}>
@@ -567,7 +573,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 										</div>
 										<div
 											className={
-												'flex max-h-[600px] w-3/5 flex-col gap-4 overflow-y-scroll pr-4'
+												'flex max-h-[600px] w-full flex-col gap-4 overflow-y-scroll rounded-2xl border border-gray-300 p-4 pr-4 pt-6 md:w-3/5 md:rounded-none md:border-none md:p-0'
 											}
 										>
 											{/*	display the serviceOffers already added */}
@@ -577,7 +583,9 @@ export default function ModalUpdateServiceOffersProfil(props) {
 											<div className={'flex w-full flex-col gap-4 '}>
 												<Tab.Group>
 													<Tab.List
-														className={'flex w-full justify-center py-4'}
+														className={
+															'flex w-full flex-col justify-center py-4 md:flex-row'
+														}
 													>
 														{userServiceOffers.map((service_offer, index) => {
 															return (
@@ -605,7 +613,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																	>
 																		<div
 																			className={
-																				'absolute right-0 top-0 m-2 flex items-center justify-center gap-4'
+																				'absolute -top-6 right-0 m-2 flex items-center justify-center gap-4 md:top-0'
 																			}
 																		>
 																			<button

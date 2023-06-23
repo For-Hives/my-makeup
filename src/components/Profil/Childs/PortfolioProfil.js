@@ -37,7 +37,7 @@ export function PortfolioProfil(props) {
 					<button
 						onClick={handleIsModalOpen}
 						className={
-							'absolute left-0 top-0 -z-10 flex h-full w-full items-center justify-center opacity-0 ' +
+							'absolute left-0 top-0 -z-10 flex h-full w-full items-center justify-center px-4 opacity-0 ' +
 							'bg-white/75 backdrop-blur-none group-hover:z-20 group-hover:opacity-100 ' +
 							'pointer-events-none transition duration-300 group-hover:pointer-events-auto group-hover:backdrop-blur-[2px] ' +
 							'user-select-none group-hover:user-select-auto focus:outline-none'

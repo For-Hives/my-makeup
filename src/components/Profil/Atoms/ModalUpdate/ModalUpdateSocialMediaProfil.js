@@ -163,7 +163,7 @@ export default function ModalUpdateSocialMediaProfil(props) {
 											Réseaux sociaux & contacts
 										</Dialog.Title>
 									</div>
-									<div className={'w-3/5'}>
+									<div className={'w-full md:w-3/5'}>
 										<div className="grid grid-cols-1 gap-4">
 											<div className={'flex flex-col gap-4'}>
 												<form

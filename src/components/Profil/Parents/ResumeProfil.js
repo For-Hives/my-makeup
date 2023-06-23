@@ -5,6 +5,7 @@ import { BadgeDispo } from '@/components/Profil/Atoms/BadgeDispo'
 import { BadgeIndispo } from '@/components/Profil/Atoms/BadgeIndispo'
 import ModalUpdateResumeProfil from '@/components/Profil/Atoms/ModalUpdate/ModalUpdateResumeProfil'
 import { useRouter } from 'next/router'
+import ViewLocationProfil from '@/components/Profil/Childs/Views/ViewLocationProfil'
 
 function ResumeProfil(props) {
 	const router = useRouter()
@@ -28,7 +29,33 @@ function ResumeProfil(props) {
 	}
 
 	return (
-		<div className={'relative bg-white pb-24 shadow-xl'}>
+		<div
+			className={
+				'group relative bg-white px-4 pb-24 shadow-xl md:px-8 2xl:px-0'
+			}
+		>
+			{!isPublic && (
+				<button
+					onClick={handleIsModalOpen}
+					className={
+						'absolute left-0 top-0 -z-10 flex h-full w-full items-center justify-center opacity-0 ' +
+						'bg-white/75 backdrop-blur-none group-hover:z-20 group-hover:opacity-100 ' +
+						'pointer-events-none transition duration-300 group-hover:pointer-events-auto group-hover:backdrop-blur-[2px] ' +
+						'user-select-none group-hover:user-select-auto focus:outline-none'
+					}
+				>
+					<div
+						className={
+							'btn-alt-primary mt-[90px] flex items-center gap-3 bg-white text-indigo-900'
+						}
+					>
+						<span className="material-icons-round">edit</span>
+						<span className={'font-semibold'}>
+							Modifier vos informations personnelles
+						</span>
+					</div>
+				</button>
+			)}
 			<ModalUpdateResumeProfil
 				isModalOpen={isModalOpen}
 				handleIsModalOpen={handleIsModalOpen}
@@ -36,11 +63,15 @@ function ResumeProfil(props) {
 			/>
 			<div className="mx-auto max-w-7xl pt-[90px]">
 				<div className={'grid grid-cols-12 gap-5 pt-24'}>
-					<div className={'relative col-span-2 flex items-center'}>
+					<div
+						className={
+							'relative col-span-12 flex items-center justify-center xl:col-span-2 xl:justify-start'
+						}
+					>
 						{!isPublic ? (
 							<button
 								className={
-									'absolute left-0 top-0 flex h-full w-full flex-col items-center justify-center rounded-full bg-indigo-700/0 text-white/0 transition hover:bg-indigo-700/25 hover:text-white'
+									'absolute left-0 top-0 flex h-full w-full flex-col items-center justify-center rounded-full text-white/0 transition hover:text-white xl:bg-indigo-700/0 xl:hover:bg-indigo-700/25'
 								}
 								onClick={handleIsModalOpen}
 							>
@@ -67,9 +98,15 @@ function ResumeProfil(props) {
 							></Image>
 						)}
 					</div>
-					<div className={'col-span-7 flex items-center'}>
+					<div
+						className={
+							'col-span-12 flex items-center md:col-span-8 xl:col-span-7'
+						}
+					>
 						<div
-							className={'flex h-full w-full flex-col justify-between pl-20'}
+							className={
+								'flex h-full w-full flex-col justify-between py-8 md:py-0 md:pl-20'
+							}
 						>
 							<div
 								className={

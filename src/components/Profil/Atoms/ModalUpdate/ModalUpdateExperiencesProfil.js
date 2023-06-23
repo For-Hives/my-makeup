@@ -285,8 +285,12 @@ export default function ModalUpdateExperiencesProfil(props) {
 											Les expériences professionnelles que vous avez
 										</Dialog.Title>
 									</div>
-									<div className={'flex h-full w-full gap-16'}>
-										<div className={'w-2/5'}>
+									<div
+										className={
+											'flex h-full w-full flex-wrap gap-16 md:flex-nowrap'
+										}
+									>
+										<div className={'w-full md:w-2/5'}>
 											<div className="grid grid-cols-1 gap-4">
 												<div className={'flex flex-col gap-4'}>
 													<form
@@ -467,14 +471,16 @@ export default function ModalUpdateExperiencesProfil(props) {
 												</div>
 											</div>
 										</div>
-										<div className={'flex w-3/5 flex-col gap-4'}>
+										<div
+											className={'flex w-full flex-col gap-8 md:w-3/5 md:gap-4'}
+										>
 											{/*	display the experiences already added */}
 											<h3 className={'text-sm text-slate-900'}>
 												Les expériences déjà ajoutées
 											</h3>
 											<div
 												className={
-													'flex max-h-[600px] w-full flex-col gap-4 overflow-y-scroll'
+													'flex max-h-[600px] w-full flex-col gap-4 overflow-y-scroll pt-4 md:pt-0'
 												}
 											>
 												{userExperiences.map((experience, index) => {
@@ -482,12 +488,12 @@ export default function ModalUpdateExperiencesProfil(props) {
 														<div
 															key={index}
 															className={
-																'relative flex w-full rounded bg-indigo-50/20 p-4 text-slate-700'
+																'relative flex w-full rounded bg-indigo-50/20 p-4 pt-8 text-slate-700 md:pt-4'
 															}
 														>
 															<div
 																className={
-																	'absolute right-0 top-0 m-2 flex items-center justify-center gap-4'
+																	'absolute -top-2 right-0 m-2 flex items-center justify-center gap-4 md:top-0'
 																}
 															>
 																<button

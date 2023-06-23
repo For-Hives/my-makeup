@@ -16,7 +16,7 @@ export function OptionsOffers(props) {
 			{
 				// display the user description
 				// if \n is present, split the string and display each part in a new line
-				options?.length &&
+				options?.length !== 0 &&
 					options?.map((option, index) => {
 						return (
 							<Disclosure key={index}>

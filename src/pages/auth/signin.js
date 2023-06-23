@@ -7,7 +7,6 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as zod from 'zod'
 import _ from 'lodash'
-import ResponsiveTemporary from '@/components/Global/ResponsiveTemporary'
 
 const schema = zod
 	.object({
@@ -22,6 +21,7 @@ const schema = zod
 			),
 	})
 	.required({ email: true, password: true })
+
 function Signin() {
 	const {
 		register,
@@ -44,25 +44,28 @@ function Signin() {
 	return (
 		<>
 			<Head>
-				<title>My Makeup</title>
+				<title>Connexion sur My Makeup</title>
 				<meta
 					name="description"
 					content="Connexion sur my-makeup.fr la plateforme qui va révolutionner votre
 	            recherche de maquilleuses professionnelles, ou votre recherche de client !"
 				/>
+				{/*	seo tag canonical link */}
+				<link rel="canonical" href="https://my-makeup.fr/auth/signin" />
 			</Head>
-			<div className="relative flex min-h-screen bg-white">
-				<ResponsiveTemporary />
-				<div className="flex flex-1 flex-col justify-center px-4 py-12 sm:px-6 lg:flex-none lg:px-20 xl:px-24">
+			<div className="relative flex h-[95vh] max-h-screen overflow-hidden md:h-screen md:overflow-auto md:bg-white">
+				<div className="flex flex-1 flex-col justify-center bg-white px-4 sm:px-6 md:py-12 md:pt-12 lg:flex-none lg:px-20 xl:px-24">
 					<div className="mx-auto w-full max-w-sm lg:w-96">
 						<div>
-							<span className="sr-only">My Makeup</span>
-							<Image
-								alt="Logo My Makeup"
-								width={50}
-								height={50}
-								src="/assets/logo_2.webp"
-							/>
+							<Link href={'/'}>
+								<span className="sr-only">My Makeup</span>
+								<Image
+									alt="Logo My Makeup"
+									width={50}
+									height={50}
+									src="/assets/logo_2.webp"
+								/>
+							</Link>
 							<h2 className="mt-6 text-3xl font-bold tracking-tight text-slate-900">
 								{session && session.user && !_.isEmpty(session.user)
 									? 'Bonjour ' +
@@ -74,9 +77,9 @@ function Signin() {
 							<div className="mt-8">
 								<div>
 									<div>
-										<p className="text-sm font-medium leading-6 text-slate-900">
-											Se connecter
-										</p>
+										<h1 className="text-sm font-medium leading-6 text-slate-900">
+											Se connecter sur My Makeup
+										</h1>
 										<div className="mt-2 grid grid-cols-2 gap-3">
 											<div>
 												<button
@@ -259,12 +262,11 @@ function Signin() {
 								</h2>
 
 								<Link
+									type="submit"
+									className="btn-alt-primary mt-8"
 									href={'/auth/profil'}
-									className={
-										'radius-2xl my-8 border-2 border-indigo-700 px-4 py-2 text-indigo-700 hover:text-indigo-700 hover:underline'
-									}
 								>
-									Retourner à mon profile
+									Retourner sur mon profil
 								</Link>
 
 								<button

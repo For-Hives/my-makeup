@@ -7,7 +7,8 @@ function ViewCoursesProfil(props) {
 			<h2 className={'text-xl font-bold text-slate-700'}>
 				Formations & diplomes
 			</h2>
-			{user?.courses?.length &&
+			{user?.courses &&
+				user?.courses?.length !== 0 &&
 				user?.courses?.map((course, index) => {
 					return (
 						<div key={index} className={'flex text-slate-700'}>
@@ -49,4 +50,4 @@ function ViewCoursesProfil(props) {
 	)
 }
 
-export default ViewCoursesProfil
+export default ViewCoursesProfil;

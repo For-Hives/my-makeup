@@ -6,7 +6,6 @@ import Footer from '@/components/Global/Footer'
 import ResumeProfil from '@/components/Profil/Parents/ResumeProfil'
 import { getSession, useSession } from 'next-auth/react'
 import _ from 'lodash'
-import ResponsiveTemporary from '@/components/Global/ResponsiveTemporary'
 import InfosProfil from '@/components/Profil/Parents/InfosProfil'
 import FullLoader from '@/components/Global/Loader/FullLoader'
 
@@ -14,9 +13,7 @@ function Profil({ user }) {
 	const { data: session } = useSession()
 	// get current user id
 
-	console.log(user)
-	if (!user?.data) {
-		// router.push('/auth/init-account')
+	if (!user) {
 		return <FullLoader />
 	}
 
@@ -28,19 +25,11 @@ function Profil({ user }) {
 					name="description"
 					content="Page de profil sur my-makeup.fr la plateforme qui va révolutionner votre façon de travailler !"
 				/>
+				{/*	seo tag canonical link */}
+				<link rel="canonical" href="https://my-makeup.fr/auth/profil" />
 			</Head>
-			<Nav />
+			<Nav isSignOutVisible={true} />
 			<main className={'relative'}>
-				<ResponsiveTemporary />
-				<Image
-					src={'/assets/coming-soon.svg'}
-					alt={'Coming soon'}
-					width={'80'}
-					height={'80'}
-					className={
-						'fixed left-0 top-0 z-50 m-4 rounded-full bg-amber-300/75 p-2'
-					}
-				/>
 				{session && session.user && !_.isEmpty(session.user) ? (
 					<>
 						<ResumeProfil user={user} />

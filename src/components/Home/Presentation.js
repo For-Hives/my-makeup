@@ -3,7 +3,7 @@ import Image from 'next/image'
 
 function Presentation() {
 	return (
-		<section className={'relative py-20'}>
+		<section className={'relative px-4 py-20 md:px-0'}>
 			<div className="mx-auto max-w-7xl">
 				<div className="mx-auto">
 					<h2 className="text-center text-4xl font-bold tracking-tight text-slate-900 sm:text-4xl">
@@ -16,7 +16,11 @@ function Presentation() {
 				</div>
 			</div>
 			<div className={'mx-auto mt-10 max-w-7xl'}>
-				<div className={'mx-auto flex items-center justify-center gap-32'}>
+				<div
+					className={
+						'mx-auto flex flex-col items-center justify-center gap-16 md:flex-row lg:gap-32'
+					}
+				>
 					<div className={'flex flex-col items-center justify-center gap-2'}>
 						<Image
 							alt={'client à la recherche de maquilleuse'}

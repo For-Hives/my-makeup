@@ -7,7 +7,6 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as zod from 'zod'
 import _ from 'lodash'
-import ResponsiveTemporary from '@/components/Global/ResponsiveTemporary'
 
 const schema = zod
 	.object({
@@ -23,6 +22,7 @@ const schema = zod
 		name: zod.string({ required_error: 'Le nom de compte est requis' }),
 	})
 	.required({ email: true, password: true, name: true })
+
 function Signup() {
 	const {
 		register,
@@ -49,25 +49,28 @@ function Signup() {
 	return (
 		<>
 			<Head>
-				<title>My Makeup</title>
+				<title>Inscription sur My Makeup</title>
 				<meta
 					name="description"
 					content="Inscription sur my-makeup.fr la plateforme qui va révolutionner votre
 	            recherche de maquilleuses professionnelles, ou votre recherche de client !"
 				/>
+				{/*	seo tag canonical link */}
+				<link rel="canonical" href="https://my-makeup.fr/auth/signup" />
 			</Head>
-			<div className="relative flex min-h-screen bg-white">
-				<ResponsiveTemporary />
-				<div className="flex flex-1 flex-col justify-center px-4 py-12 sm:px-6 lg:flex-none lg:px-20 xl:px-24">
+			<div className="relative flex h-[92vh] max-h-screen overflow-hidden md:h-screen md:overflow-auto md:bg-white">
+				<div className="flex flex-1 flex-col justify-center bg-white px-4 sm:px-6 md:py-12 md:pt-12 lg:flex-none lg:px-20 xl:px-24">
 					<div className="mx-auto w-full max-w-sm lg:w-96">
 						<div>
-							<span className="sr-only">My Makeup</span>
-							<Image
-								alt="Logo My Makeup"
-								width={50}
-								height={50}
-								src="/assets/logo_2.webp"
-							/>
+							<Link href={'/'}>
+								<span className="sr-only">My Makeup</span>
+								<Image
+									alt="Logo My Makeup"
+									width={50}
+									height={50}
+									src="/assets/logo_2.webp"
+								/>
+							</Link>
 							<h2 className="mt-6 text-3xl font-bold tracking-tight text-slate-900">
 								{"S'inscrire"}
 							</h2>
@@ -76,9 +79,9 @@ function Signup() {
 							<div className="mt-8">
 								<div>
 									<div>
-										<p className="text-sm font-medium leading-6 text-slate-900">
-											Se connecter
-										</p>
+										<h1 className="text-sm font-medium leading-6 text-slate-900">
+											{`S'inscrire sur My Makeup`}
+										</h1>
 										<div className="mt-2 grid grid-cols-2 gap-3">
 											<div>
 												<button

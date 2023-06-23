@@ -2,8 +2,8 @@ import React, { useEffect } from 'react'
 import Head from 'next/head'
 import { signIn, signOut, useSession } from 'next-auth/react'
 import { useRouter } from 'next/router'
-import Loader from '@/components/Global/Loader/Loader'
 import { toast } from 'react-toastify'
+import FullLoader from '@/components/Global/Loader/FullLoader'
 
 function Error() {
 	const { session } = useSession()
@@ -34,9 +34,11 @@ function Error() {
 					content="Connexion sur my-makeup.fr la plateforme qui va révolutionner votre
 	            recherche de maquilleuses professionnelles, ou votre recherche de client !"
 				/>
+				{/*	seo tag canonical link */}
+				<link rel="canonical" href="https://my-makeup.fr/auth/error" />
 			</Head>
 			<div className="relative flex min-h-screen bg-white">
-				<Loader />
+				<FullLoader />
 			</div>
 		</>
 	)

@@ -33,9 +33,15 @@ function FullSearchBloc(props) {
 			<div className={'flex max-w-5xl justify-between'}>
 				<form
 					onSubmit={handleSubmit}
-					className={'flex w-full items-center justify-between gap-6'}
+					className={
+						'flex w-full flex-col flex-wrap items-center justify-between gap-6 md:flex-row lg:flex-nowrap'
+					}
 				>
-					<div className={'flex gap-6'}>
+					<div
+						className={
+							'flex w-full flex-col flex-wrap gap-6 md:w-auto md:flex-row lg:flex-nowrap'
+						}
+					>
 						<div className={'relative'}>
 							<MagnifyingGlassIcon
 								className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 transform text-indigo-900"
@@ -43,7 +49,7 @@ function FullSearchBloc(props) {
 							/>
 							<input
 								className={
-									'flex w-96 items-center rounded-lg border-2 border-indigo-900 bg-transparent py-2 pl-12 pr-6 text-sm leading-6 text-indigo-900'
+									'flex w-full items-center rounded-lg border-2 border-indigo-900 bg-transparent py-2 pl-12 pr-6 text-sm leading-6 text-indigo-900 lg:w-96'
 								}
 								placeholder={
 									"Essayez 'Maquilleuse mariée', 'Maquilleuse événements'..."
@@ -59,7 +65,7 @@ function FullSearchBloc(props) {
 							/>
 							<input
 								className={
-									'flex w-96 items-center rounded-lg border-2 border-indigo-900 bg-transparent py-2 pl-12 pr-6 text-sm leading-6 text-indigo-900'
+									'flex w-full items-center rounded-lg border-2 border-indigo-900 bg-transparent py-2 pl-12 pr-6 text-sm leading-6 text-indigo-900 lg:w-96'
 								}
 								placeholder={
 									'Lieu de la mission (ex: Paris, Lyon, Marseille...)'
@@ -69,11 +75,11 @@ function FullSearchBloc(props) {
 							/>
 						</div>
 					</div>
-					<div className={'flex items-center justify-end'}>
+					<div className={'w-full items-center justify-end md:w-auto'}>
 						<button
 							type="submit"
 							onSubmit={handleSubmit}
-							className={'btn-primary'}
+							className={'btn-primary w-full'}
 						>
 							Trouver une maquilleuse
 						</button>

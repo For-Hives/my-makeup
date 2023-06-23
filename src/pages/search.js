@@ -4,15 +4,13 @@ import Nav from '@/components/Global/Nav'
 import Footer from '@/components/Global/Footer'
 import { useRouter } from 'next/router'
 import Image from 'next/image'
-import ResponsiveTemporary from '@/components/Global/ResponsiveTemporary'
 import FullSearchBloc from '@/components/Global/Search/FullSearchBloc'
 import { CatSearch } from '@/components/Global/Search/CatSearch'
 import Loader from '@/components/Global/Loader/Loader'
-import { BadgeDispo } from '@/components/Profil/Atoms/BadgeDispo'
-import { BadgeIndispo } from '@/components/Profil/Atoms/BadgeIndispo'
 import { BadgeSuperMaquilleuse } from '@/components/Global/BadgeSuperMaquilleuse'
 import { Stars } from '@/components/Profil/Atoms/Stars'
 import Link from 'next/link'
+import { CheckCircleIcon } from '@heroicons/react/24/outline'
 
 function SearchPage() {
 	const [searchTerm, setSearchTerm] = useState(undefined)
@@ -77,23 +75,19 @@ function SearchPage() {
 					name="description"
 					content="Recherchez et trouvez votre maquilleuse professionnelle en quelques clics sur My Makeup."
 				/>
+				{/*	seo tag canonical link */}
+				<link rel="canonical" href={'https://my-makeup.fr/search'} />
 			</Head>
 			<div className={'relative'}>
-				<Image
-					src={'/assets/coming-soon.svg'}
-					alt={'Coming soon'}
-					width={'80'}
-					height={'80'}
-					className={
-						'fixed left-0 top-0 z-50 m-4 rounded-full bg-amber-300/75 p-2'
-					}
-				/>
-				<Nav />
+				<Nav isFindMakeupArtistBtnVisible={false} />
 				<main className={'relative'}>
-					<ResponsiveTemporary />
 					<FullSearchBloc performSearch={performSearch} />
 					{!hasSearched && !isSearching && (
-						<div className={'flex w-full items-center justify-center py-32'}>
+						<div
+							className={
+								'flex w-full items-center justify-center py-8 md:py-16 2xl:py-32'
+							}
+						>
 							<CatSearch />
 						</div>
 					)}
@@ -103,8 +97,12 @@ function SearchPage() {
 						</div>
 					)}
 					{hasSearched && !isSearching && (
-						<div className={'w-full px-16'}>
-							<article className={'grid w-full grid-cols-6 gap-8'}>
+						<div className={'w-full px-4 md:px-16'}>
+							<article
+								className={
+									'grid w-full grid-cols-1 gap-8 md:grid-cols-3 2xl:grid-cols-6'
+								}
+							>
 								{searchResults.length !== 0 && (
 									<>
 										{searchResults.map(result => (
@@ -129,44 +127,55 @@ function SearchPage() {
 														/>
 														<div
 															className={
-																'absolute left-0 top-0 flex items-center justify-center p-4 opacity-90'
+																'absolute left-0 top-0 flex items-center justify-center pt-4'
 															}
 														>
-															{result.available ? (
-																<>
-																	<BadgeDispo />
-																</>
-															) : (
-																<>
-																	<BadgeIndispo />
-																</>
-															)}
+															{/* todo activate or not { if Makeup artist is validated from us ) */}
+															<BadgeSuperMaquilleuse />
 														</div>
 														<div
 															className={
-																'absolute bottom-0 left-0 flex flex-col bg-gradient-to-t from-black to-black/0 p-4 pb-8'
+																'absolute bottom-0 left-0 flex w-full flex-col bg-gradient-to-t from-black to-black/0 p-4'
 															}
 														>
-															<h3 className="text-2xl font-extrabold text-white">
-																{result.first_name} {result.last_name}
-															</h3>
+															<div className={'flex flex-row items-baseline'}>
+																<div className={'flex'}>
+																	<h3 className="text-2xl font-extrabold text-white">
+																		{result.first_name} {result.last_name}{' '}
+																	</h3>
+																</div>
+																<span
+																	className={'ml-2 translate-y-0.5 transform'}
+																>
+																	<CheckCircleIcon className="h-5 w-5 text-white" />
+																</span>
+															</div>
 															<div>
 																<div
 																	className={
-																		'flex items-center gap-2 text-sm font-semibold text-white'
+																		'flex flex-row items-center gap-2 text-sm font-light font-semibold text-white'
 																	}
 																>
 																	<span className="material-icons-round text-sm text-white">
 																		directions_run
 																	</span>
-																	peut se déplacer à {result?.city} & dans un
-																	rayon de {result?.action_radius}km
+																	<span>
+																		À{' '}
+																		<span className={'font-bold'}>
+																			{result?.city}
+																		</span>{' '}
+																		&{' '}
+																		<span className={'font-bold'}>
+																			{result?.action_radius}
+																			km&nbsp;
+																		</span>
+																		autour
+																	</span>
 																</div>
 															</div>
 														</div>
-														<div className={'absolute -bottom-2.5 left-4'}>
-															<BadgeSuperMaquilleuse />
-														</div>
+														{/*<div className={'absolute -bottom-2.5 left-4'}>*/}
+														{/*</div>*/}
 													</div>
 													<div
 														className={'flex w-full flex-col gap-4 p-4 pt-6'}
@@ -188,7 +197,7 @@ function SearchPage() {
 														<div
 															className={'flex flex-wrap items-center gap-1'}
 														>
-															{result?.skills?.length ? (
+															{result?.skills?.length !== 0 ? (
 																<>
 																	{result?.skills.map((skill, index) => {
 																		return index < 7 ? (

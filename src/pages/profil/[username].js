@@ -1,12 +1,10 @@
 import Head from 'next/head'
-import Nav from '@/components/Global/Nav'
-import Image from 'next/image'
 import { useRouter } from 'next/router'
 import React from 'react'
 import Footer from '@/components/Global/Footer'
-import ResponsiveTemporary from '@/components/Global/ResponsiveTemporary'
 import ViewResumeProfil from '@/components/Profil/Parents/ViewResumeProfil'
 import ViewInfosProfil from '@/components/Profil/Parents/ViewInfosProfil'
+import Nav from '@/components/Global/Nav'
 
 export default function Profil({ profilData }) {
 	let router = useRouter()
@@ -20,38 +18,20 @@ export default function Profil({ profilData }) {
 					name="description"
 					content={`Découvrez le profil de la maquilleuse professionnelle de vos rêves ! ${user.attributes.first_name} ${profilData.attributes.last_name}  - ${profilData.attributes.speciality} `}
 				/>
-			</Head>
-			<div className={'relative'}>
-				<Image
-					src={'/assets/coming-soon.svg'}
-					alt={'Coming soon'}
-					width={'80'}
-					height={'80'}
-					className={
-						'fixed left-0 top-0 z-50 m-4 rounded-full bg-amber-300/75 p-2'
-					}
+				{/*	seo tag canonical link */}
+				<link
+					rel="canonical"
+					href={`https://my-makeup.fr/profil/${user.attributes.username}`}
 				/>
-				<Nav />
-				<main className={'relative'}>
-					<main className={'relative'}>
-						<ResponsiveTemporary />
-						<Image
-							src={'/assets/coming-soon.svg'}
-							alt={'Coming soon'}
-							width={'80'}
-							height={'80'}
-							className={
-								'fixed left-0 top-0 z-50 m-4 rounded-full bg-amber-300/75 p-2'
-							}
-						/>
-						<>
-							<ViewResumeProfil user={user} isPublicView={true} />
-							<ViewInfosProfil user={user} isPublicView={true} />
-						</>
-					</main>
-				</main>
-				<Footer />
-			</div>
+			</Head>
+			<Nav />
+			<main className={'relative'}>
+				<>
+					<ViewResumeProfil user={user} isPublicView={true} />
+					<ViewInfosProfil user={user} isPublicView={true} />
+				</>
+			</main>
+			<Footer />
 		</>
 	)
 }

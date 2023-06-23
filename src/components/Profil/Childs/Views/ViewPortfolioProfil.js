@@ -14,7 +14,7 @@ function ViewPortfolioProfil(props) {
 
 	let imageGallery = []
 	// check if user.image_gallery.data property exists
-	if (user.image_gallery.data === undefined) {
+	if (user?.image_gallery?.data === undefined) {
 		imageGallery = user?.image_gallery
 	} else {
 		// array to object conversion, {id: x, attributes: {...}} to {...} for each element
@@ -40,7 +40,8 @@ function ViewPortfolioProfil(props) {
 					{
 						// 	map on user?.image_gallery and return a SwiperSlide with the image
 					}
-					{imageGallery?.length &&
+					{imageGallery &&
+						imageGallery?.length !== 0 &&
 						imageGallery.map((image, index) => {
 							return (
 								<SwiperSlide
