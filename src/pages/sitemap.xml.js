@@ -1,14 +1,11 @@
 import React from 'react'
-import * as fs from 'fs'
+import { readdirSync } from 'fs'
 const Sitemap = () => {
 	return null
 }
 
 export const getServerSideProps = async ({ res }) => {
-	const BASE_URL = process.env.NEXT_PUBLIC_URL
-
-	const staticPaths = fs
-		.readdirSync('pages')
+	const staticPaths = readdirSync('./src/pages')
 		.filter(staticPage => {
 			return ![
 				'api',
@@ -19,7 +16,18 @@ export const getServerSideProps = async ({ res }) => {
 			].includes(staticPage)
 		})
 		.map(staticPagePath => {
-			return `${process.env.NEXT_PUBLIC_API_URL}/${staticPagePath}`
+			// todo <url>
+			// <loc>https://my-makeup.fr//profil</loc>
+			// <lastmod>2023-06-23T21:09:54.904Z</lastmod>
+			// <changefreq>weekly</changefreq>
+			// <priority>1.0</priority>
+			// </url>
+
+			// todo
+			// virer les .js
+			// le //
+			// le directory
+			return `${process.env.NEXT_PUBLIC_URL}/${staticPagePath}`
 		})
 
 	// get all users for dynamic paths
@@ -52,9 +60,10 @@ export const getServerSideProps = async ({ res }) => {
 		}
 	).then(res => res.json())
 
-	const pathsTalents = res?.data?.map(record => {
+	const pathsTalents = resultTalents?.data?.map(record => {
 		return `https://my-makeup.fr/talent/${record.attributes.slug}`
 	})
+	console.log(pathsTalents)
 
 	// get all article for dynamic paths
 	const resultBlog = await fetch(
@@ -69,7 +78,7 @@ export const getServerSideProps = async ({ res }) => {
 		}
 	).then(res => res.json())
 
-	const pathsBlog = res?.data?.map(record => {
+	const pathsBlog = resultBlog?.data?.map(record => {
 		return `https://my-makeup.fr/blog/${record.attributes.slug}`
 	})
 
