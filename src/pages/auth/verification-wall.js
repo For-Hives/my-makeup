@@ -30,15 +30,17 @@ function VerificationWall() {
 			<div className="relative flex h-[95vh] max-h-screen overflow-hidden md:h-screen md:overflow-auto md:bg-white">
 				<div className="flex flex-1 flex-col justify-center bg-white px-4 sm:px-6 md:py-12 md:pt-12 lg:flex-none lg:px-20 xl:px-24">
 					<div className="mx-auto w-full max-w-sm lg:w-96">
-						<Link href={'/'}>
-							<span className="sr-only">My Makeup</span>
-							<Image
-								alt="Logo My Makeup"
-								width={50}
-								height={50}
-								src="/assets/logo_2.webp"
-							/>
-						</Link>
+						<div>
+							<Link href={'/'}>
+								<span className="sr-only">My Makeup</span>
+								<Image
+									alt="Logo My Makeup"
+									width={50}
+									height={50}
+									src="/assets/logo_2.webp"
+								/>
+							</Link>
+						</div>
 						<div className={'mt-8'}>
 							<h1 className={'my-8 text-2xl font-semibold text-slate-900'}>
 								Veuillez vérifier votre adresse email My Makeup

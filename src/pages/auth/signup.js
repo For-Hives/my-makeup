@@ -22,6 +22,7 @@ const schema = zod
 		name: zod.string({ required_error: 'Le nom de compte est requis' }),
 	})
 	.required({ email: true, password: true, name: true })
+
 function Signup() {
 	const {
 		register,
@@ -60,18 +61,20 @@ function Signup() {
 			<div className="relative flex h-[92vh] max-h-screen overflow-hidden md:h-screen md:overflow-auto md:bg-white">
 				<div className="flex flex-1 flex-col justify-center bg-white px-4 sm:px-6 md:py-12 md:pt-12 lg:flex-none lg:px-20 xl:px-24">
 					<div className="mx-auto w-full max-w-sm lg:w-96">
-						<Link href={'/'}>
-							<span className="sr-only">My Makeup</span>
-							<Image
-								alt="Logo My Makeup"
-								width={50}
-								height={50}
-								src="/assets/logo_2.webp"
-							/>
+						<div>
+							<Link href={'/'}>
+								<span className="sr-only">My Makeup</span>
+								<Image
+									alt="Logo My Makeup"
+									width={50}
+									height={50}
+									src="/assets/logo_2.webp"
+								/>
+							</Link>
 							<h2 className="mt-6 text-3xl font-bold tracking-tight text-slate-900">
 								{"S'inscrire"}
 							</h2>
-						</Link>
+						</div>
 						{!(session && session.user && !_.isEmpty(session.user)) && (
 							<div className="mt-8">
 								<div>

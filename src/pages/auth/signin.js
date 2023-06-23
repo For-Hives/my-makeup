@@ -21,6 +21,7 @@ const schema = zod
 			),
 	})
 	.required({ email: true, password: true })
+
 function Signin() {
 	const {
 		register,
@@ -55,21 +56,23 @@ function Signin() {
 			<div className="relative flex h-[95vh] max-h-screen overflow-hidden md:h-screen md:overflow-auto md:bg-white">
 				<div className="flex flex-1 flex-col justify-center bg-white px-4 sm:px-6 md:py-12 md:pt-12 lg:flex-none lg:px-20 xl:px-24">
 					<div className="mx-auto w-full max-w-sm lg:w-96">
-						<Link href={'/'}>
-							<span className="sr-only">My Makeup</span>
-							<Image
-								alt="Logo My Makeup"
-								width={50}
-								height={50}
-								src="/assets/logo_2.webp"
-							/>
+						<div>
+							<Link href={'/'}>
+								<span className="sr-only">My Makeup</span>
+								<Image
+									alt="Logo My Makeup"
+									width={50}
+									height={50}
+									src="/assets/logo_2.webp"
+								/>
+							</Link>
 							<h2 className="mt-6 text-3xl font-bold tracking-tight text-slate-900">
 								{session && session.user && !_.isEmpty(session.user)
 									? 'Bonjour ' +
 									  (session.user.name ? session.user.name : session.user.email)
 									: 'Se connecter'}
 							</h2>
-						</Link>
+						</div>
 						{!(session && session.user && !_.isEmpty(session.user)) && (
 							<div className="mt-8">
 								<div>
