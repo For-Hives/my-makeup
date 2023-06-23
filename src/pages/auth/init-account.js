@@ -12,6 +12,7 @@ import { toast } from 'react-toastify'
 import FullLoader from '@/components/Global/Loader/FullLoader'
 import Image from 'next/image'
 import Loader from '@/components/Global/Loader/Loader'
+import Warning from '@/components/Global/Warning'
 
 const schema = zod
 	.object({
@@ -37,7 +38,7 @@ function InitAccount() {
 		resolver: zodResolver(schema),
 	})
 
-	const [step, setStep] = useState(0)
+	const [step, setStep] = useState(4)
 	const [stepsList, setStepsList] = useState([
 		{ name: "Verification de l'email", href: '#', status: 'upcoming' },
 		{ name: 'Initialisation du compte', href: '#', status: 'upcoming' },
@@ -440,30 +441,29 @@ function InitAccount() {
 							)}
 							{step === 4 && (
 								<div className="flex flex-col items-center justify-center">
-									<div className="flex flex-col items-center justify-center gap-8">
-										<h2 className="text-center text-3xl font-bold">
-											Bienvenue sur My&nbsp;Makeup !
-										</h2>
-										<div
-											className={
-												'flex h-full w-full flex-col items-center justify-center'
-											}
-										>
-											<h2 className={'text-center'}>
-												{' '}
-												Rendez-vous sur votre profil pour terminer de le
-												compléter{' '}
+									<div className="flex flex-col items-center justify-center gap-4">
+										<div>
+											<h2 className="text-center text-3xl font-bold">
+												Bienvenue sur My&nbsp;Makeup !
 											</h2>
-											<p
+											<div
 												className={
-													'w-full gap-2 text-center text-red-500 md:w-1/2'
+													'flex h-full w-full flex-col items-center justify-center '
 												}
 											>
-												<span className={'font-bold'}>Attention !</span>
-												{` Votre profil ne sera pas visible tant qu'il ne sera pas
-												totalement rempli !`}
-											</p>
+												<h2 className={'text-center text-gray-700'}>
+													{' '}
+													Rendez-vous sur votre profil pour terminer de le
+													compléter{' '}
+												</h2>
+											</div>
 										</div>
+										<Warning
+											title={'Attention !'}
+											description={
+												"Votre profil ne sera pas visible tant qu'il ne sera pas totalement rempli !"
+											}
+										/>
 										<Link
 											href="/auth/profil"
 											className="rounded-md bg-indigo-600 px-3 py-1.5 text-white"
