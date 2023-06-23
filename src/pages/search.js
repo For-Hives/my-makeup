@@ -110,7 +110,7 @@ function SearchPage() {
 												<Link
 													href={`/profil/${result.username}`}
 													className={
-														'col-span-1 flex w-full flex-col items-center rounded border border-slate-300 bg-white'
+														'col-span-1 flex w-full flex-col items-center rounded border border-gray-300 bg-white'
 													}
 												>
 													<div className={'relative w-full'}>

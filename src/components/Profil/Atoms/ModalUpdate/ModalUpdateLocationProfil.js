@@ -92,7 +92,7 @@ export default function ModalUpdateLocationProfil(props) {
 					leaveFrom="opacity-100"
 					leaveTo="opacity-0"
 				>
-					<div className="fixed inset-0 bg-slate-500 bg-opacity-75 transition-opacity" />
+					<div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" />
 				</Transition.Child>
 
 				<div className="fixed inset-0 z-30 overflow-y-auto">
@@ -121,7 +121,7 @@ export default function ModalUpdateLocationProfil(props) {
 									<div className="text-left">
 										<Dialog.Title
 											as="h3"
-											className="text-lg font-semibold text-slate-900"
+											className="text-lg font-semibold text-gray-900"
 										>
 											{"Modifier votre localisation et votre rayon d'action"}
 										</Dialog.Title>
@@ -137,7 +137,7 @@ export default function ModalUpdateLocationProfil(props) {
 													<div>
 														<label
 															htmlFor="city"
-															className="block text-sm text-slate-700"
+															className="block text-sm text-gray-700"
 														>
 															Localisation
 														</label>
@@ -152,7 +152,7 @@ export default function ModalUpdateLocationProfil(props) {
 																required
 																value={userCity ?? ''}
 																onChange={handleUpdateCity}
-																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
+																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 															/>
 															{errors.city && (
 																<p className={'mt-2 text-xs text-red-500/80'}>
@@ -164,7 +164,7 @@ export default function ModalUpdateLocationProfil(props) {
 													<div>
 														<label
 															htmlFor="action_radius"
-															className="block text-sm text-slate-700"
+															className="block text-sm text-gray-700"
 														>
 															{"Rayon d'action"}
 														</label>
@@ -179,7 +179,7 @@ export default function ModalUpdateLocationProfil(props) {
 																required
 																value={userActionRadius ?? ''}
 																onChange={handleUpdateActionRadius}
-																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
+																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 															/>
 															{errors.action_radius && (
 																<p className={'mt-2 text-xs text-red-500/80'}>

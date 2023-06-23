@@ -10,10 +10,10 @@ export function Signature({ isPaddingActivated = true }) {
 				(isPaddingActivated ? 'px-4 md:px-8 2xl:px-0' : '')
 			}
 		>
-			<p className={'mx-auto text-sm text-slate-600'}>
+			<p className={'mx-auto text-sm text-gray-600'}>
 				© {actualYear} My Makeup - Tous droits réservés - Developed with ❤️ by{' '}
 				<Link
-					className={'text-sm text-slate-600 underline'}
+					className={'text-sm text-gray-600 underline'}
 					href={'https://andy-cinquin.fr'}
 					target={'_blank'}
 				>
@@ -21,7 +21,7 @@ export function Signature({ isPaddingActivated = true }) {
 				</Link>
 				&nbsp;&&nbsp;
 				<Link
-					className={'text-sm text-slate-600 underline'}
+					className={'text-sm text-gray-600 underline'}
 					href={'https://brev.al'}
 					target={'_blank'}
 				>
@@ -29,7 +29,7 @@ export function Signature({ isPaddingActivated = true }) {
 				</Link>
 				&nbsp; - 🐝
 				<Link
-					className={'text-sm text-slate-600 underline'}
+					className={'text-sm text-gray-600 underline'}
 					href={'https://forhives.fr/'}
 					target={'_blank'}
 				>

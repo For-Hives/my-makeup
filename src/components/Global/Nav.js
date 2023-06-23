@@ -124,7 +124,7 @@ function Nav({
 				{/* Desktop view */}
 				<div className="mx-auto hidden h-full w-full lg:block">
 					<div className="relative z-20 lg:w-full">
-						<div className="relative px-6 py-6 lg:border-b lg:border-slate-300 lg:px-16">
+						<div className="relative px-6 py-6 lg:border-b lg:border-gray-300 lg:px-16">
 							<nav
 								className="flex justify-between sm:h-10 sm:items-center lg:justify-start"
 								aria-label="Global"
@@ -157,7 +157,7 @@ function Nav({
 													<Link
 														key={item.name}
 														href={item.href}
-														className="text-sm font-semibold leading-6 text-slate-900"
+														className="text-sm font-semibold leading-6 text-gray-900"
 													>
 														{item.name}
 													</Link>
@@ -282,7 +282,7 @@ function Nav({
 												<Link
 													key={item.name}
 													href={item.href}
-													className="text-sm font-semibold leading-6 text-slate-900"
+													className="text-sm font-semibold leading-6 text-gray-900"
 												>
 													{item.name}
 												</Link>

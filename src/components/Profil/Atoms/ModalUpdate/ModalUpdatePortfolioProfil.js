@@ -143,7 +143,7 @@ export default function ModalUpdatePortfolioProfil(props) {
 					leaveFrom="opacity-100"
 					leaveTo="opacity-0"
 				>
-					<div className="fixed inset-0 bg-slate-500 bg-opacity-75 transition-opacity" />
+					<div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" />
 				</Transition.Child>
 
 				<div className="fixed inset-0 z-30 overflow-y-auto">
@@ -173,7 +173,7 @@ export default function ModalUpdatePortfolioProfil(props) {
 										<div className="text-left">
 											<Dialog.Title
 												as="h3"
-												className="text-lg font-semibold text-slate-900"
+												className="text-lg font-semibold text-gray-900"
 											>
 												Modifier votre portfolio
 											</Dialog.Title>
@@ -185,7 +185,7 @@ export default function ModalUpdatePortfolioProfil(props) {
 												<div className={'flex flex-col gap-4'}>
 													<label
 														htmlFor="cover-photo"
-														className="text-base font-normal text-slate-700"
+														className="text-base font-normal text-gray-700"
 													>
 														Ajouter une photo à votre portfolio
 													</label>
@@ -193,7 +193,7 @@ export default function ModalUpdatePortfolioProfil(props) {
 														className="mt-2 sm:col-span-2 sm:mt-0"
 														onClick={handleClick}
 													>
-														<div className="relative flex justify-center rounded-lg border border-dashed border-slate-900/25 px-6 py-10">
+														<div className="relative flex justify-center rounded-lg border border-dashed border-gray-900/25 px-6 py-10">
 															{!!imageUrl && imageUrl !== '' ? (
 																<div
 																	className={
@@ -217,10 +217,10 @@ export default function ModalUpdatePortfolioProfil(props) {
 																}
 															>
 																<PhotoIcon
-																	className="mx-auto h-12 w-12 text-slate-300"
+																	className="mx-auto h-12 w-12 text-gray-300"
 																	aria-hidden="true"
 																/>
-																<div className="mt-4 flex text-sm leading-6 text-slate-600">
+																<div className="mt-4 flex text-sm leading-6 text-gray-600">
 																	<label className="relative rounded-md bg-white font-semibold text-indigo-600 focus-within:outline-none focus-within:ring-2 focus-within:ring-indigo-600 focus-within:ring-offset-2 hover:text-indigo-500">
 																		<span>Télécharger une nouvelle photo</span>
 																	</label>
@@ -233,7 +233,7 @@ export default function ModalUpdatePortfolioProfil(props) {
 																		onChange={handleFileChange}
 																	/>
 																</div>
-																<p className="text-xs leading-5 text-slate-600">
+																<p className="text-xs leading-5 text-gray-600">
 																	{"PNG, JPG, WEBP jusqu'à 5MB"}
 																</p>
 															</div>
@@ -252,7 +252,7 @@ export default function ModalUpdatePortfolioProfil(props) {
 											</div>
 											<div className={'flex w-full md:w-4/6'}>
 												<div className={'flex w-full flex-col gap-4 rounded'}>
-													<h2 className={'text-xl font-bold text-slate-700'}>
+													<h2 className={'text-xl font-bold text-gray-700'}>
 														Portfolio
 													</h2>
 													<>

@@ -27,7 +27,7 @@ function FullSearchBloc(props) {
 	return (
 		<div
 			className={
-				'mb-20 mt-[90px] flex w-full items-center justify-center bg-white px-12 py-8 shadow-2xl lg:border-b lg:border-slate-300'
+				'mb-20 mt-[90px] flex w-full items-center justify-center bg-white px-12 py-8 shadow-2xl lg:border-b lg:border-gray-300'
 			}
 		>
 			<div className={'flex max-w-5xl justify-between'}>

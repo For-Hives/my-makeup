@@ -6,7 +6,7 @@ function ViewSocialMediaProfil(props) {
 	const user = props.user
 	return (
 		<div className={'flex w-full flex-col gap-4'}>
-			<h2 className={'text-xl font-bold text-slate-700'}>
+			<h2 className={'text-xl font-bold text-gray-700'}>
 				Réseaux sociaux & contacts
 			</h2>
 			{user?.network && (
@@ -37,7 +37,7 @@ function ViewSocialMediaProfil(props) {
 							/>
 							<p
 								className={
-									'overflow-hidden text-sm text-slate-700 group-hover:underline'
+									'overflow-hidden text-sm text-gray-700 group-hover:underline'
 								}
 							>
 								{user?.network?.instagram}
@@ -60,7 +60,7 @@ function ViewSocialMediaProfil(props) {
 							/>
 							<p
 								className={
-									'overflow-hidden text-sm text-slate-700 group-hover:underline'
+									'overflow-hidden text-sm text-gray-700 group-hover:underline'
 								}
 							>
 								{user?.network?.facebook}
@@ -83,7 +83,7 @@ function ViewSocialMediaProfil(props) {
 							/>
 							<p
 								className={
-									'overflow-hidden text-sm text-slate-700 group-hover:underline'
+									'overflow-hidden text-sm text-gray-700 group-hover:underline'
 								}
 							>
 								{user?.network?.linkedin}
@@ -106,7 +106,7 @@ function ViewSocialMediaProfil(props) {
 							/>
 							<p
 								className={
-									'overflow-hidden text-sm text-slate-700 group-hover:underline'
+									'overflow-hidden text-sm text-gray-700 group-hover:underline'
 								}
 							>
 								{user?.network?.youtube}
@@ -128,7 +128,7 @@ function ViewSocialMediaProfil(props) {
 							/>
 							<p
 								className={
-									'overflow-hidden text-sm text-slate-700 group-hover:underline'
+									'overflow-hidden text-sm text-gray-700 group-hover:underline'
 								}
 							>
 								{user?.network?.email}
@@ -150,7 +150,7 @@ function ViewSocialMediaProfil(props) {
 							/>
 							<p
 								className={
-									'overflow-hidden text-sm text-slate-700 group-hover:underline'
+									'overflow-hidden text-sm text-gray-700 group-hover:underline'
 								}
 							>
 								{user?.network?.phone}
@@ -173,7 +173,7 @@ function ViewSocialMediaProfil(props) {
 							/>
 							<p
 								className={
-									'overflow-hidden text-sm text-slate-700 group-hover:underline'
+									'overflow-hidden text-sm text-gray-700 group-hover:underline'
 								}
 							>
 								{user?.network?.website}
@@ -186,4 +186,4 @@ function ViewSocialMediaProfil(props) {
 	)
 }
 
-export default ViewSocialMediaProfil;
+export default ViewSocialMediaProfil

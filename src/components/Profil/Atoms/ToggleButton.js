@@ -21,7 +21,7 @@ export default function ToggleButton(props) {
 			<span
 				aria-hidden="true"
 				className={
-					(enabled ? 'bg-indigo-600' : 'bg-slate-200') +
+					(enabled ? 'bg-indigo-600' : 'bg-gray-200') +
 					' pointer-events-none absolute mx-auto h-4 w-9 rounded-full transition-colors duration-200 ease-in-out'
 				}
 			/>
@@ -29,7 +29,7 @@ export default function ToggleButton(props) {
 				aria-hidden="true"
 				className={
 					(enabled ? 'translate-x-5' : 'translate-x-0') +
-					' pointer-events-none absolute left-0 inline-block h-5 w-5 transform rounded-full border border-slate-200 bg-white shadow ring-0 transition-transform duration-200 ease-in-out'
+					' pointer-events-none absolute left-0 inline-block h-5 w-5 transform rounded-full border border-gray-200 bg-white shadow ring-0 transition-transform duration-200 ease-in-out'
 				}
 			/>
 		</Switch>

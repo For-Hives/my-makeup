@@ -4,7 +4,7 @@ function ViewSkillsProfil(props) {
 	const user = props.user
 	return (
 		<div className={'flex w-full flex-col gap-4'}>
-			<h2 className={'text-xl font-bold text-slate-700'}>Compétences</h2>
+			<h2 className={'text-xl font-bold text-gray-700'}>Compétences</h2>
 			{user?.skills && (
 				<div className={'flex flex-wrap gap-4'}>
 					{/* map on skills -> name */}

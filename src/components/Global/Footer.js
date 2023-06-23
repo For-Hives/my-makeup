@@ -21,7 +21,7 @@ function Footer() {
 						/>
 						<p className={'text-2xl font-bold text-my-makeup-900'}>My Makeup</p>
 					</div>
-					<p className={'text-sm text-slate-600'}>
+					<p className={'text-sm text-gray-600'}>
 						72 avenue Camus,
 						<br />
 						44000 Nantes
@@ -71,25 +71,25 @@ function Footer() {
 					</div>
 					<Link
 						href={'/pourquoi-utiliser-my-makeup-en-tant-que-particulier'}
-						className={'text-sm text-slate-600'}
+						className={'text-sm text-gray-600'}
 					>
 						Pourquoi My Makeup ?
 					</Link>
 					<Link
 						href={'/particulier/trouver-une-maquilleuse'}
-						className={'text-sm text-slate-600'}
+						className={'text-sm text-gray-600'}
 					>
 						Trouver une maquilleuse
 					</Link>
 					<Link
 						href={'/particulier/centraliser-ses-recherches'}
-						className={'text-sm text-slate-600'}
+						className={'text-sm text-gray-600'}
 					>
 						Centraliser ses recherches
 					</Link>
 					<Link
 						href={'/particulier/explorer-les-profils'}
-						className={'text-sm text-slate-600'}
+						className={'text-sm text-gray-600'}
 					>
 						Explorer les profils
 					</Link>
@@ -100,27 +100,27 @@ function Footer() {
 					</div>
 					<Link
 						href={'/pourquoi-rejoindre-my-makeup-en-tant-que-maquilleuse'}
-						className={'text-sm text-slate-600'}
+						className={'text-sm text-gray-600'}
 					>
 						Pourquoi My Makeup ?
 					</Link>
 					<Link
 						href={'/maquilleuse/partenariats'}
-						className={'text-sm text-slate-600'}
+						className={'text-sm text-gray-600'}
 					>
 						Communautés & Partenariats
 					</Link>
 					{/*<Link*/}
 					{/*	href={'/maquilleuse/partenaires'}*/}
-					{/*	className={'text-sm text-slate-600'}*/}
+					{/*	className={'text-sm text-gray-600'}*/}
 					{/*>*/}
 					{/*	Nos partenaires*/}
 					{/*</Link>*/}
 					{/* todo : plus tard */}
-					{/*<Link href={'/affiliation'} className={'text-sm text-slate-600'}>*/}
+					{/*<Link href={'/affiliation'} className={'text-sm text-gray-600'}>*/}
 					{/*	Programme d&apos;affiliation*/}
 					{/*</Link>*/}
-					{/*<Link href={'/parrainage'} className={'text-sm text-slate-600'}>*/}
+					{/*<Link href={'/parrainage'} className={'text-sm text-gray-600'}>*/}
 					{/*	Programme de parrainage*/}
 					{/*</Link>*/}
 				</div>
@@ -130,20 +130,20 @@ function Footer() {
 					</div>
 					<Link
 						href={'/solutions/pour-les-particuliers'}
-						className={'text-sm text-slate-600'}
+						className={'text-sm text-gray-600'}
 					>
 						Solution pour les particuliers
 					</Link>
 					<Link
 						href={'/solutions/pour-les-maquilleuses'}
-						className={'text-sm text-slate-600'}
+						className={'text-sm text-gray-600'}
 					>
 						Solution pour les maquilleuses
 					</Link>
-					<Link href={'/blog'} className={'text-sm text-slate-600'}>
+					<Link href={'/blog'} className={'text-sm text-gray-600'}>
 						Blog
 					</Link>
-					{/*<Link href={'/help'} className={'text-sm text-slate-600'}>*/}
+					{/*<Link href={'/help'} className={'text-sm text-gray-600'}>*/}
 					{/*	Aide*/}
 					{/*</Link>*/}
 				</div>
@@ -151,29 +151,29 @@ function Footer() {
 					<div className={'mb-2 flex items-center justify-start gap-3'}>
 						<p className={'text-xl font-bold text-indigo-800'}>My Makeup</p>
 					</div>
-					<Link href={'/a-propos'} className={'text-sm text-slate-600'}>
+					<Link href={'/a-propos'} className={'text-sm text-gray-600'}>
 						À propos de My Makeup
 					</Link>
-					<Link href={'/contact'} className={'text-sm text-slate-600'}>
+					<Link href={'/contact'} className={'text-sm text-gray-600'}>
 						Contact
 					</Link>
-					<Link href={'/cgu'} className={'text-sm text-slate-600'}>
+					<Link href={'/cgu'} className={'text-sm text-gray-600'}>
 						Mentions légales
 					</Link>
 					{/* todo : remplir les cgv plus tard */}
-					{/*<Link href={'/cgv'} className={'text-sm text-slate-600'}>*/}
+					{/*<Link href={'/cgv'} className={'text-sm text-gray-600'}>*/}
 					{/*	Conditions générales de vente*/}
 					{/*</Link>*/}
-					<Link href={'/cgu'} className={'text-sm text-slate-600'}>
+					<Link href={'/cgu'} className={'text-sm text-gray-600'}>
 						Conditions générales d&apos;utilisation
 					</Link>
 					<Link
 						href={'/politique-de-confidentialite'}
-						className={'text-sm text-slate-600'}
+						className={'text-sm text-gray-600'}
 					>
 						Politique de confidentialité
 					</Link>
-					<Link href={'/site-map'} className={'text-sm text-slate-600'}>
+					<Link href={'/site-map'} className={'text-sm text-gray-600'}>
 						Plan du site
 					</Link>
 				</div>

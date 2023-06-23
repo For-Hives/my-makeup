@@ -25,8 +25,8 @@ export function OptionsOffers(props) {
 									<>
 										<Disclosure.Button
 											className={
-												'flex w-full items-center justify-between border-t border-slate-300 pt-6 ' +
-												(open ? 'text-indigo-900' : 'pb-4 text-slate-700')
+												'flex w-full items-center justify-between border-t border-gray-300 pt-6 ' +
+												(open ? 'text-indigo-900' : 'pb-4 text-gray-700')
 											}
 										>
 											{option.name}

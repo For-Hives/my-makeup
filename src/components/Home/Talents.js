@@ -8,7 +8,7 @@ function Talents({ talents }) {
 		<section className={'relative px-4 py-20 md:px-8 2xl:px-0'}>
 			<div className="mx-auto max-w-7xl py-10">
 				<div className="mx-auto">
-					<h2 className="text-right text-4xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+					<h2 className="text-right text-4xl font-bold tracking-tight text-gray-900 sm:text-4xl">
 						Vos projets, nos meilleurs talents.
 					</h2>
 				</div>
@@ -53,7 +53,7 @@ function Talents({ talents }) {
 							>
 								<h2
 									className={
-										'flex h-full min-h-[120px] items-center justify-center rounded-xl border border-indigo-900/10 px-4 py-8 text-center font-semibold text-slate-900/70 transition duration-100 ease-in  group-hover:opacity-0'
+										'flex h-full min-h-[120px] items-center justify-center rounded-xl border border-indigo-900/10 px-4 py-8 text-center font-semibold text-gray-900/70 transition duration-100 ease-in  group-hover:opacity-0'
 									}
 								>
 									{talent.attributes.title}
@@ -76,7 +76,7 @@ function Talents({ talents }) {
 								<h2
 									className={
 										'absolute left-0 top-0 h-full w-full border border-indigo-900 bg-indigo-900 px-4 py-8 transition duration-100 ease-in ' +
-										'-z-10 flex items-center justify-center rounded-xl text-center font-semibold text-slate-50 opacity-0 group-hover:z-10 group-hover:opacity-100'
+										'-z-10 flex items-center justify-center rounded-xl text-center font-semibold text-gray-50 opacity-0 group-hover:z-10 group-hover:opacity-100'
 									}
 								>
 									Voir cette spécialitée
