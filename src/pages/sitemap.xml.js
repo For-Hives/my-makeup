@@ -1,34 +1,82 @@
 import React from 'react'
-import { readdirSync } from 'fs'
+import { readdirSync, lstatSync } from 'fs'
+import * as path from 'path'
+
 const Sitemap = () => {
 	return null
 }
 
 export const getServerSideProps = async ({ res }) => {
-	const staticPaths = readdirSync('./src/pages')
-		.filter(staticPage => {
+	// Function to get files from a directory recursively
+	function getFilesFromDir(startPath) {
+		let results = []
+
+		function finder(startPath) {
+			let files = readdirSync(startPath)
+
+			for (const element of files) {
+				let filename = path.join(startPath, element)
+				let stat = lstatSync(filename)
+
+				if (stat.isDirectory()) {
+					finder(filename) // recurse
+				} else {
+					results.push(filename)
+				}
+			}
+		}
+
+		finder(startPath)
+
+		return results
+	}
+
+	let files = getFilesFromDir('./src/pages')
+
+	let staticPaths = files
+		.filter(staticPagePath => {
+			let base = path.basename(staticPagePath)
 			return ![
 				'api',
+				'api/sendMail',
 				'_app.js',
 				'_document.js',
 				'404.js',
 				'sitemap.xml.js',
-			].includes(staticPage)
+				'talent/[slug].js',
+				'profil/[username].js',
+				'index.js',
+				'blog/[id].js',
+				'auth/index.js',
+				'api/auth/[...nextauth].js',
+			].includes(base)
 		})
 		.map(staticPagePath => {
-			// todo <url>
-			// <loc>https://my-makeup.fr//profil</loc>
-			// <lastmod>2023-06-23T21:09:54.904Z</lastmod>
-			// <changefreq>weekly</changefreq>
-			// <priority>1.0</priority>
-			// </url>
-
-			// todo
-			// virer les .js
-			// le //
-			// le directory
-			return `${process.env.NEXT_PUBLIC_URL}/${staticPagePath}`
+			let parsedPath = path.parse(staticPagePath)
+			let newPath = `${parsedPath.dir}/${parsedPath.name}`
+				.replace('src\\pages\\', '')
+				.replace('src\\pages', '')
+			return `${process.env.NEXT_PUBLIC_URL}${newPath}`.replace(
+				'https://my-makeup.fr//',
+				'https://my-makeup.fr/'
+			)
 		})
+
+	// delete   'https://my-makeup.fr/profil/[username]', from the staticPaths
+	staticPaths = staticPaths.filter(item => {
+		return !(
+			item === `https://my-makeup.fr/api\\auth/[...nextauth]` ||
+			item === `https://my-makeup.fr/api/sendMail` ||
+			item === `https://my-makeup.fr/auth/profil` ||
+			item === `https://my-makeup.fr/auth/error` ||
+			item === `https://my-makeup.fr/auth/init-account` ||
+			item === `https://my-makeup.fr/blog/[id]` ||
+			item === `https://my-makeup.fr/talent/[slug]` ||
+			item === `https://my-makeup.fr/profil/[username]` ||
+			item === `https://my-makeup.fr/api/verification-complete` ||
+			item === `https://my-makeup.fr/api/verification-wall`
+		)
+	})
 
 	// get all users for dynamic paths
 	const resultUsers = await fetch(
@@ -63,7 +111,6 @@ export const getServerSideProps = async ({ res }) => {
 	const pathsTalents = resultTalents?.data?.map(record => {
 		return `https://my-makeup.fr/talent/${record.attributes.slug}`
 	})
-	console.log(pathsTalents)
 
 	// get all article for dynamic paths
 	const resultBlog = await fetch(
