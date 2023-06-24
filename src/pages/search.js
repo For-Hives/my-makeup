@@ -154,7 +154,7 @@ function SearchPage() {
 														<div>
 															<div
 																className={
-																	'flex flex-row items-center gap-2 text-sm font-light font-semibold text-white'
+																	'flex flex-row items-center gap-2 text-sm font-light text-white'
 																}
 															>
 																<span className="material-icons-round text-sm text-white">
@@ -183,13 +183,36 @@ function SearchPage() {
 														<h2 className="text-lg font-bold text-gray-900">
 															{result.speciality}
 														</h2>
-														<div className={'flex flex-row items-center gap-4'}>
-															<Stars starsToDisplay={result.score} />{' '}
-															<span className={'text-sm italic'}>
-																{/* todo connect the score to the number of reviews */}
-																( {result.score.toFixed(0)} avis )
-															</span>
-														</div>
+
+														{/* v2 v3 v4 v5 v6 v7 v8 vjsais pas */}
+														{/*{result?.score &&*/}
+														{/*	(result?.score === 0 ||*/}
+														{/*		result?.score !== null) && (*/}
+														{/*		<div*/}
+														{/*			className={'flex flex-row items-center gap-4'}*/}
+														{/*		>*/}
+														{/*			<div*/}
+														{/*				className={*/}
+														{/*					result?.score &&*/}
+														{/*					(result?.score === 0 ||*/}
+														{/*						result?.score !== null)*/}
+														{/*						? 'opacity-100'*/}
+														{/*						: 'opacity-25'*/}
+														{/*				}*/}
+														{/*			>*/}
+														{/*				<Stars starsToDisplay={result?.score} />{' '}*/}
+														{/*			</div>*/}
+														{/*			/!*<span className={'text-sm italic'}>*!/*/}
+														{/*			/!*	{result?.score &&*!/*/}
+														{/*			/!*	(result?.score === 0 ||*!/*/}
+														{/*			/!*		result?.score !== null) ? (*!/*/}
+														{/*			/!*		<>( {result?.score.toFixed(0)} avis )</>*!/*/}
+														{/*			/!*	) : (*!/*/}
+														{/*			/!*		<></>*!/*/}
+														{/*			/!*	)}*!/*/}
+														{/*			/!*</span>*!/*/}
+														{/*		</div>*/}
+														{/*	)}*/}
 													</div>
 													<div className={'flex flex-wrap items-center gap-1'}>
 														{result?.skills?.length !== 0 ? (
