@@ -19,7 +19,7 @@ function ToutesLesNews({ articles }) {
 				<title>My Makeup tous les articles !</title>
 				<meta
 					name="description"
-					content="L'actualité de My-Makeup, ce que nous faisons pour améliorer votre quotidien !
+					content="Toute l'actualité de My-Makeup, c'est ici que vous trouverez toutes les dernières news !
 					Et les nouveautés qui arrivent bientôt !"
 				/>
 				{/*	seo tag canonical link */}
