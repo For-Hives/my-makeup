@@ -123,14 +123,15 @@ function SearchPage() {
 															'h-[350px] w-full rounded-b-none rounded-t object-cover object-center'
 														}
 													/>
-													<div
-														className={
-															'absolute left-0 top-0 flex items-center justify-center pt-4'
-														}
-													>
-														{/* todo activate or not { if Makeup artist is validated from us ) */}
-														<BadgeSuperMaquilleuse />
-													</div>
+													{result?.pro === true && (
+														<div
+															className={
+																'absolute left-0 top-0 flex items-center justify-center pt-4'
+															}
+														>
+															<BadgeSuperMaquilleuse />
+														</div>
+													)}
 													<div
 														className={
 															'absolute bottom-0 left-0 flex w-full flex-col bg-gradient-to-t from-black to-black/0 p-4'
@@ -142,11 +143,13 @@ function SearchPage() {
 																	{result.first_name} {result.last_name}{' '}
 																</h3>
 															</div>
-															<span
-																className={'ml-2 translate-y-0.5 transform'}
-															>
-																<CheckCircleIcon className="h-5 w-5 text-white" />
-															</span>
+															{result?.pro === true && (
+																<span
+																	className={'ml-2 translate-y-0.5 transform'}
+																>
+																	<CheckCircleIcon className="h-5 w-5 text-white" />
+																</span>
+															)}
 														</div>
 														<div>
 															<div
