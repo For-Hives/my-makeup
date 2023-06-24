@@ -71,6 +71,7 @@ export default function ModalUpdateResumeProfil(props) {
 					patchMeMakeup(session, data)
 					reset()
 					props.handleIsModalOpen()
+					props.handleProfilPicture(imageUrl)
 					setImageUrl('')
 				})
 				.catch(err =>
@@ -83,6 +84,7 @@ export default function ModalUpdateResumeProfil(props) {
 			patchMeMakeup(session, data)
 			reset()
 			props.handleIsModalOpen()
+			props.handleProfilPicture(imageUrl)
 			setImageUrl('')
 		}
 	}
@@ -152,6 +154,7 @@ export default function ModalUpdateResumeProfil(props) {
 		user.first_name,
 		user.last_name,
 		user.speciality,
+		user.main_picture,
 	])
 
 	return (

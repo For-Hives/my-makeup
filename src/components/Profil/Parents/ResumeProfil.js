@@ -11,21 +11,29 @@ function ResumeProfil(props) {
 	const router = useRouter()
 	const { publicView } = router.query
 
-	const user = props.user
+	const [user, setUser] = React.useState(props.user)
 	const isPublic = !!publicView
 
 	const [starsToDisplay, setStarsToDisplay] = React.useState(5)
 	const [availability, setAvailability] = React.useState(!!user?.available)
 	const [isModalOpen, setIsModalOpen] = React.useState(false)
+	const [profilPicture, setProfilePicture] = React.useState(
+		user?.main_picture?.url
+	)
 
 	const handleAvailability = () => {
 		setAvailability(!availability)
+	}
+
+	const handleProfilPicture = pp => {
+		setProfilePicture(pp)
 	}
 
 	const handleIsModalOpen = () => {
 		if (!isPublic) {
 			setIsModalOpen(!isModalOpen)
 		}
+		setUser(props.user)
 	}
 
 	return (
@@ -59,6 +67,7 @@ function ResumeProfil(props) {
 			<ModalUpdateResumeProfil
 				isModalOpen={isModalOpen}
 				handleIsModalOpen={handleIsModalOpen}
+				handleProfilPicture={handleProfilPicture}
 				user={user}
 			/>
 			<div className="mx-auto max-w-7xl pt-[90px]">
@@ -82,7 +91,7 @@ function ResumeProfil(props) {
 
 						{user && user?.main_picture && user?.main_picture?.url ? (
 							<Image
-								src={user?.main_picture?.url}
+								src={profilPicture}
 								alt={'ppmakeup'}
 								width={500}
 								height={500}
