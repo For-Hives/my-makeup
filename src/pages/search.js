@@ -105,124 +105,115 @@ function SearchPage() {
 							>
 								{searchResults.length !== 0 && (
 									<>
-										{searchResults.map(result => (
-											<>
-												<Link
-													href={`/profil/${result.username}`}
-													className={
-														'col-span-1 flex w-full flex-col items-center rounded border border-gray-300 bg-white'
-													}
-												>
-													<div className={'relative w-full'}>
-														<Image
-															src={result.main_picture.url}
-															alt={
-																'profile picture Maquilleuse professionnelle'
-															}
-															width={200}
-															height={200}
-															className={
-																'h-[350px] w-full rounded-b-none rounded-t object-cover object-center'
-															}
-														/>
-														<div
-															className={
-																'absolute left-0 top-0 flex items-center justify-center pt-4'
-															}
-														>
-															{/* todo activate or not { if Makeup artist is validated from us ) */}
-															<BadgeSuperMaquilleuse />
-														</div>
-														<div
-															className={
-																'absolute bottom-0 left-0 flex w-full flex-col bg-gradient-to-t from-black to-black/0 p-4'
-															}
-														>
-															<div className={'flex flex-row items-baseline'}>
-																<div className={'flex'}>
-																	<h3 className="text-2xl font-extrabold text-white">
-																		{result.first_name} {result.last_name}{' '}
-																	</h3>
-																</div>
-																<span
-																	className={'ml-2 translate-y-0.5 transform'}
-																>
-																	<CheckCircleIcon className="h-5 w-5 text-white" />
-																</span>
-															</div>
-															<div>
-																<div
-																	className={
-																		'flex flex-row items-center gap-2 text-sm font-light font-semibold text-white'
-																	}
-																>
-																	<span className="material-icons-round text-sm text-white">
-																		directions_run
-																	</span>
-																	<span>
-																		À{' '}
-																		<span className={'font-bold'}>
-																			{result?.city}
-																		</span>{' '}
-																		&{' '}
-																		<span className={'font-bold'}>
-																			{result?.action_radius}
-																			km&nbsp;
-																		</span>
-																		autour
-																	</span>
-																</div>
-															</div>
-														</div>
-														{/*<div className={'absolute -bottom-2.5 left-4'}>*/}
-														{/*</div>*/}
+										{searchResults.map((result, index) => (
+											<Link
+												key={index}
+												href={`/profil/${result.username}`}
+												className={
+													'col-span-1 flex w-full flex-col items-center rounded border border-gray-300 bg-white'
+												}
+											>
+												<div className={'relative w-full'}>
+													<Image
+														src={result.main_picture.url}
+														alt={'profile picture Maquilleuse professionnelle'}
+														width={200}
+														height={200}
+														className={
+															'h-[350px] w-full rounded-b-none rounded-t object-cover object-center'
+														}
+													/>
+													<div
+														className={
+															'absolute left-0 top-0 flex items-center justify-center pt-4'
+														}
+													>
+														{/* todo activate or not { if Makeup artist is validated from us ) */}
+														<BadgeSuperMaquilleuse />
 													</div>
 													<div
-														className={'flex w-full flex-col gap-4 p-4 pt-6'}
+														className={
+															'absolute bottom-0 left-0 flex w-full flex-col bg-gradient-to-t from-black to-black/0 p-4'
+														}
 													>
-														<div className={'flex w-full flex-col'}>
-															<h2 className="text-lg font-bold text-gray-900">
-																{result.speciality}
-															</h2>
-															<div
-																className={'flex flex-row items-center gap-4'}
+														<div className={'flex flex-row items-baseline'}>
+															<div className={'flex'}>
+																<h3 className="text-2xl font-extrabold text-white">
+																	{result.first_name} {result.last_name}{' '}
+																</h3>
+															</div>
+															<span
+																className={'ml-2 translate-y-0.5 transform'}
 															>
-																<Stars starsToDisplay={result.score} />{' '}
-																<span className={'text-sm italic'}>
-																	{/* todo connect the score to the number of reviews */}
-																	( {result.score.toFixed(0)} avis )
+																<CheckCircleIcon className="h-5 w-5 text-white" />
+															</span>
+														</div>
+														<div>
+															<div
+																className={
+																	'flex flex-row items-center gap-2 text-sm font-light font-semibold text-white'
+																}
+															>
+																<span className="material-icons-round text-sm text-white">
+																	directions_run
+																</span>
+																<span>
+																	À{' '}
+																	<span className={'font-bold'}>
+																		{result?.city}
+																	</span>{' '}
+																	&{' '}
+																	<span className={'font-bold'}>
+																		{result?.action_radius}
+																		km&nbsp;
+																	</span>
+																	autour
 																</span>
 															</div>
 														</div>
-														<div
-															className={'flex flex-wrap items-center gap-1'}
-														>
-															{result?.skills?.length !== 0 ? (
-																<>
-																	{result?.skills.map((skill, index) => {
-																		return index < 7 ? (
-																			<div
-																				key={index}
-																				className="inline-flex flex-nowrap items-center rounded-full bg-indigo-100 px-3 py-2 text-xs font-medium text-indigo-700"
-																			>
-																				{skill.name}
-																			</div>
-																		) : null
-																	})}
-																</>
-															) : (
-																<p
-																	className={
-																		'inline-flex flex-nowrap items-center rounded-full bg-gray-100 px-3 py-2 text-xs font-medium text-gray-700'
-																	}
-																>
-																	Aucune compétence renseignée
-																</p>
-															)}
+													</div>
+													{/*<div className={'absolute -bottom-2.5 left-4'}>*/}
+													{/*</div>*/}
+												</div>
+												<div className={'flex w-full flex-col gap-4 p-4 pt-6'}>
+													<div className={'flex w-full flex-col'}>
+														<h2 className="text-lg font-bold text-gray-900">
+															{result.speciality}
+														</h2>
+														<div className={'flex flex-row items-center gap-4'}>
+															<Stars starsToDisplay={result.score} />{' '}
+															<span className={'text-sm italic'}>
+																{/* todo connect the score to the number of reviews */}
+																( {result.score.toFixed(0)} avis )
+															</span>
 														</div>
 													</div>
-												</Link>
-											</>
+													<div className={'flex flex-wrap items-center gap-1'}>
+														{result?.skills?.length !== 0 ? (
+															<>
+																{result?.skills.map((skill, index) => {
+																	return index < 7 ? (
+																		<div
+																			key={index}
+																			className="inline-flex flex-nowrap items-center rounded-full bg-indigo-100 px-3 py-2 text-xs font-medium text-indigo-700"
+																		>
+																			{skill.name}
+																		</div>
+																	) : null
+																})}
+															</>
+														) : (
+															<p
+																className={
+																	'inline-flex flex-nowrap items-center rounded-full bg-gray-100 px-3 py-2 text-xs font-medium text-gray-700'
+																}
+															>
+																Aucune compétence renseignée
+															</p>
+														)}
+													</div>
+												</div>
+											</Link>
 										))}
 									</>
 								)}

@@ -63,7 +63,7 @@ function Signin() {
 									alt="Logo My Makeup"
 									width={50}
 									height={50}
-									src="/assets/logo_2.webp"
+									src="/assets/logo.webp"
 								/>
 							</Link>
 							<h2 className="mt-6 text-3xl font-bold tracking-tight text-gray-900">
