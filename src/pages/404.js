@@ -55,8 +55,8 @@ function Custom404(props) {
 					<Image
 						alt={'background my-makeup'}
 						fill
-						src="/assets/bg_makeup.webp"
-						className={'z-10 -scale-x-100 transform object-cover'}
+						src="/assets/vectorials-used/cat404.svg"
+						className={'z-10 transform object-cover'}
 					></Image>
 				</div>
 			</div>
