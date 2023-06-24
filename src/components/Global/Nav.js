@@ -135,7 +135,7 @@ function Nav({
 										alt="Logo My Makeup"
 										width={50}
 										height={50}
-										src="/assets/logo_2.webp"
+										src="/assets/logo.webp"
 									/>
 								</Link>
 								<div className="flex flex-col lg:ml-10 lg:w-full lg:flex-row lg:justify-between">
@@ -244,7 +244,7 @@ function Nav({
 										alt="Logo My Makeup"
 										width={50}
 										height={50}
-										src="/assets/logo_2.webp"
+										src="/assets/logo.webp"
 									/>
 								</Link>
 							</div>

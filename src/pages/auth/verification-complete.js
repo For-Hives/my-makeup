@@ -39,7 +39,7 @@ function VerificationComplete() {
 									alt="Logo My Makeup"
 									width={50}
 									height={50}
-									src="/assets/logo_2.webp"
+									src="/assets/logo.webp"
 								/>
 							</Link>
 						</div>
