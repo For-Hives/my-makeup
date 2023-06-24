@@ -183,7 +183,6 @@ function SearchPage() {
 														<h2 className="text-lg font-bold text-gray-900">
 															{result.speciality}
 														</h2>
-
 														{/* v2 v3 v4 v5 v6 v7 v8 vjsais pas */}
 														{/*{result?.score &&*/}
 														{/*	(result?.score === 0 ||*/}
