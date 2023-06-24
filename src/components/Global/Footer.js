@@ -14,7 +14,7 @@ function Footer() {
 				<div className={'flex flex-col gap-6'}>
 					<div className={'flex items-center justify-start gap-3'}>
 						<Image
-							src={'/assets/logo_2.webp'}
+							src={'/assets/logo.webp'}
 							alt={'Logo My Makeup'}
 							width={'50'}
 							height={'50'}

@@ -26,14 +26,12 @@ function CardDemo(props) {
 					<HeartIcon className={'mr-2 mt-2 h-6 w-6 text-red-600'} />
 				</div>
 			) : null}
-			<div
-				className={'absolute ml-3 mt-[135px] flex items-center justify-center'}
-			>
-				<BadgeSuperMaquilleuse />
-			</div>
+			{/*<div className={'absolute mt-[135px] flex items-center justify-center'}>*/}
+			{/*	<BadgeSuperMaquilleuse />*/}
+			{/*</div>*/}
 			{/* Square */}
 			<div
-				className={'mt-4 flex w-full items-center justify-center gap-1 px-4'}
+				className={'mt-2 flex w-full items-center justify-center gap-1 px-4'}
 			>
 				<div className={'h-4 w-full rounded bg-gray-100 px-4'}></div>
 			</div>
