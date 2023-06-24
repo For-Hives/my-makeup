@@ -28,7 +28,7 @@ export function ExperiencesProfil(props) {
 			<div
 				className={
 					(!isPublic ? 'group relative' : '') +
-					' flex w-full flex-col gap-4 rounded border border-slate-300 bg-white p-8 '
+					' flex w-full flex-col gap-4 rounded border border-gray-300 bg-white p-8 '
 				}
 			>
 				{!isPublic ? (

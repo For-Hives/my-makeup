@@ -110,7 +110,7 @@ export default function ModalUpdateSkillsProfil(props) {
 					leaveFrom="opaskills-100"
 					leaveTo="opaskills-0"
 				>
-					<div className="bg-opaskills-75 transition-opaskills fixed inset-0 bg-slate-500" />
+					<div className="bg-opaskills-75 transition-opaskills fixed inset-0 bg-gray-500" />
 				</Transition.Child>
 
 				<div className="fixed inset-0 z-30 overflow-y-auto">
@@ -139,7 +139,7 @@ export default function ModalUpdateSkillsProfil(props) {
 									<div className="text-left">
 										<Dialog.Title
 											as="h3"
-											className="text-lg font-semibold text-slate-900"
+											className="text-lg font-semibold text-gray-900"
 										>
 											Vos compétences
 										</Dialog.Title>
@@ -155,11 +155,11 @@ export default function ModalUpdateSkillsProfil(props) {
 													<div>
 														<label
 															htmlFor="skills"
-															className="block text-sm text-slate-700"
+															className="block text-sm text-gray-700"
 														>
 															Skills
 														</label>
-														<p className={'text-xs italic text-slate-700/70'}>
+														<p className={'text-xs italic text-gray-700/70'}>
 															Vous pouvez ajouter plusieurs compétences en les
 															séparant par un point-virgule, ou en appuyant sur
 															la touche entrée. Attention, les 7 premières
@@ -192,7 +192,7 @@ export default function ModalUpdateSkillsProfil(props) {
 																}}
 																value={userSkills ?? ''}
 																onChange={handleUpdateSkills}
-																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
+																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 															/>
 															{errors.skills && (
 																<p className={'mt-2 text-xs text-red-500/80'}>
@@ -202,7 +202,7 @@ export default function ModalUpdateSkillsProfil(props) {
 														</div>
 													</div>
 													<div className={'flex flex-col gap-2'}>
-														<h3 className={'text-sm text-slate-700'}>
+														<h3 className={'text-sm text-gray-700'}>
 															Compétences
 														</h3>
 														<div
@@ -218,7 +218,7 @@ export default function ModalUpdateSkillsProfil(props) {
 																	}}
 																	key={index}
 																	className={
-																		'flex items-center gap-2 rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-700'
+																		'flex items-center gap-2 rounded-full bg-gray-100 px-2 py-1 text-xs text-gray-700'
 																	}
 																>
 																	<span>{skill.name}</span>

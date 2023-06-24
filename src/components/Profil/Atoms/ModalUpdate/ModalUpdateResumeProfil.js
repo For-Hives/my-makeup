@@ -171,7 +171,7 @@ export default function ModalUpdateResumeProfil(props) {
 					leaveFrom="opacity-100"
 					leaveTo="opacity-0"
 				>
-					<div className="fixed inset-0 bg-slate-500 bg-opacity-75 transition-opacity" />
+					<div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" />
 				</Transition.Child>
 
 				<div className="fixed inset-0 z-30 overflow-y-auto">
@@ -200,7 +200,7 @@ export default function ModalUpdateResumeProfil(props) {
 									<div className="text-left">
 										<Dialog.Title
 											as="h3"
-											className="text-lg font-semibold text-slate-900"
+											className="text-lg font-semibold text-gray-900"
 										>
 											Modifier votre profil
 										</Dialog.Title>
@@ -210,7 +210,7 @@ export default function ModalUpdateResumeProfil(props) {
 											<div className={'flex flex-col gap-4'}>
 												<label
 													htmlFor="cover-photo"
-													className="text-base font-normal text-slate-700"
+													className="text-base font-normal text-gray-700"
 												>
 													Modifier votre photo de profil
 												</label>
@@ -218,7 +218,7 @@ export default function ModalUpdateResumeProfil(props) {
 													className="mt-2 sm:col-span-2 sm:mt-0"
 													onClick={handleClick}
 												>
-													<div className="relative flex justify-center rounded-lg border border-dashed border-slate-900/25 px-6 py-10">
+													<div className="relative flex justify-center rounded-lg border border-dashed border-gray-900/25 px-6 py-10">
 														{!!imageUrl && imageUrl !== '' ? (
 															<div
 																className={
@@ -242,10 +242,10 @@ export default function ModalUpdateResumeProfil(props) {
 															}
 														>
 															<PhotoIcon
-																className="mx-auto h-12 w-12 text-slate-300"
+																className="mx-auto h-12 w-12 text-gray-300"
 																aria-hidden="true"
 															/>
-															<div className="mt-4 flex text-sm leading-6 text-slate-600">
+															<div className="mt-4 flex text-sm leading-6 text-gray-600">
 																<label className="relative rounded-md bg-white font-semibold text-indigo-600 focus-within:outline-none focus-within:ring-2 focus-within:ring-indigo-600 focus-within:ring-offset-2 hover:text-indigo-500">
 																	<span>Télécharger une nouvelle photo</span>
 																</label>
@@ -258,7 +258,7 @@ export default function ModalUpdateResumeProfil(props) {
 																	onChange={handleFileChange}
 																/>
 															</div>
-															<p className="text-xs leading-5 text-slate-600">
+															<p className="text-xs leading-5 text-gray-600">
 																{"PNG, JPG, WEBP jusqu'à 5MB"}
 															</p>
 														</div>
@@ -275,7 +275,7 @@ export default function ModalUpdateResumeProfil(props) {
 														<div>
 															<label
 																htmlFor="last_name"
-																className="block text-sm text-slate-700"
+																className="block text-sm text-gray-700"
 															>
 																Nom
 															</label>
@@ -290,7 +290,7 @@ export default function ModalUpdateResumeProfil(props) {
 																	required
 																	value={userLastName ?? ''}
 																	onChange={handleUpdateLastName}
-																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
+																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																/>
 																{errors.name && (
 																	<p className={'mt-2 text-xs text-red-500/80'}>
@@ -302,7 +302,7 @@ export default function ModalUpdateResumeProfil(props) {
 														<div>
 															<label
 																htmlFor="first_name"
-																className="block text-sm text-slate-700"
+																className="block text-sm text-gray-700"
 															>
 																Prénom
 															</label>
@@ -317,7 +317,7 @@ export default function ModalUpdateResumeProfil(props) {
 																	required
 																	value={userFirstName ?? ''}
 																	onChange={handleUpdateFirstName}
-																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
+																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																/>
 																{errors.name && (
 																	<p className={'mt-2 text-xs text-red-500/80'}>
@@ -330,7 +330,7 @@ export default function ModalUpdateResumeProfil(props) {
 													<div>
 														<label
 															htmlFor="speciality"
-															className="block text-sm text-slate-700"
+															className="block text-sm text-gray-700"
 														>
 															Specialité
 														</label>
@@ -345,7 +345,7 @@ export default function ModalUpdateResumeProfil(props) {
 																required
 																value={userSpeciality ?? ''}
 																onChange={handleUpdateSpeciality}
-																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
+																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 															/>
 															{errors.name && (
 																<p className={'mt-2 text-xs text-red-500/80'}>
@@ -357,7 +357,7 @@ export default function ModalUpdateResumeProfil(props) {
 													<div>
 														<label
 															htmlFor="available"
-															className="block text-sm text-slate-700"
+															className="block text-sm text-gray-700"
 														>
 															Disponibilité
 														</label>
@@ -381,7 +381,7 @@ export default function ModalUpdateResumeProfil(props) {
 																	className={
 																		(available
 																			? 'bg-indigo-600'
-																			: 'bg-slate-200') +
+																			: 'bg-gray-200') +
 																		' pointer-events-none absolute mx-auto h-4 w-9 rounded-full transition-colors duration-200 ease-in-out'
 																	}
 																/>
@@ -391,7 +391,7 @@ export default function ModalUpdateResumeProfil(props) {
 																		(available
 																			? 'translate-x-5'
 																			: 'translate-x-0') +
-																		' pointer-events-none absolute left-0 inline-block h-5 w-5 transform rounded-full border border-slate-200 bg-white shadow ring-0 transition-transform duration-200 ease-in-out'
+																		' pointer-events-none absolute left-0 inline-block h-5 w-5 transform rounded-full border border-gray-200 bg-white shadow ring-0 transition-transform duration-200 ease-in-out'
 																	}
 																/>
 															</Switch>

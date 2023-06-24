@@ -4,7 +4,7 @@ function ViewExperiencesProfil(props) {
 	const user = props.user
 	return (
 		<div className={'flex w-full flex-col gap-4'}>
-			<h2 className={'text-xl font-bold text-slate-700'}>
+			<h2 className={'text-xl font-bold text-gray-700'}>
 				Expériences professionnelles
 			</h2>
 			<div className={'flex flex-wrap gap-4'}>
@@ -25,14 +25,14 @@ function ViewExperiencesProfil(props) {
 									<span className="material-icons-round">apartment</span>
 									<div className={'ml-2 flex w-full flex-col gap-2'}>
 										<div className={'flex w-full flex-col'}>
-											<p className={'font-semibold text-slate-700'}>
+											<p className={'font-semibold text-gray-700'}>
 												{experience?.company}
 											</p>
 											<div className={'flex justify-between'}>
-												<p className={'text-sm italic text-slate-600'}>
+												<p className={'text-sm italic text-gray-600'}>
 													{experience?.job_name}
 												</p>
-												<p className={'text-sm italic text-slate-600'}>
+												<p className={'text-sm italic text-gray-600'}>
 													{/* format date to month year ( like july 1998 )  */}
 													{/*{experience.date_start} - {experience.date_end}*/}
 													{new Date(experience?.date_start).toLocaleString(
@@ -57,7 +57,7 @@ function ViewExperiencesProfil(props) {
 											</div>
 										</div>
 										<div>
-											<p className={'text-sm italic text-slate-500'}>
+											<p className={'text-sm italic text-gray-500'}>
 												{experience?.description}
 											</p>
 										</div>
@@ -72,4 +72,4 @@ function ViewExperiencesProfil(props) {
 	)
 }
 
-export default ViewExperiencesProfil;
+export default ViewExperiencesProfil

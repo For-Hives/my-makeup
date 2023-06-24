@@ -7,7 +7,7 @@ function ViewServiceOffersProfil(props) {
 	const user = props.user
 	return (
 		<div className={'flex w-full flex-col gap-4'}>
-			<h2 className={'text-xl font-bold text-slate-700'}>
+			<h2 className={'text-xl font-bold text-gray-700'}>
 				Service(s) proposé(s)
 			</h2>
 			{user?.service_offers && (
@@ -19,9 +19,9 @@ function ViewServiceOffersProfil(props) {
 									<Tab
 										key={index}
 										className={
-											'h-auto w-full border-b-2 border-slate-300/20 bg-slate-50/30 p-4 text-xs text-slate-600 hover:bg-slate-50/50 focus:outline-none ' +
+											'h-auto w-full border-b-2 border-gray-300/20 bg-gray-50/30 p-4 text-xs text-gray-600 hover:bg-gray-50/50 focus:outline-none ' +
 											// 	aria selected
-											' aria-selected:border-b-2 aria-selected:border-indigo-800  aria-selected:text-slate-900'
+											' aria-selected:border-b-2 aria-selected:border-indigo-800  aria-selected:text-gray-900'
 										}
 									>
 										{service_offer?.name}

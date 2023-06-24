@@ -44,7 +44,7 @@ function VerificationComplete() {
 							</Link>
 						</div>
 						<div className={'mt-8'}>
-							<h1 className={'my-8 text-2xl font-semibold text-slate-900'}>
+							<h1 className={'my-8 text-2xl font-semibold text-gray-900'}>
 								Felicitation ! Votre compte My Makeup est maintenant activé !
 							</h1>
 							<p className={'text-gray-700'}>

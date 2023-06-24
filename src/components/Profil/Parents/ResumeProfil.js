@@ -116,13 +116,13 @@ function ResumeProfil(props) {
 								onClick={handleIsModalOpen}
 							>
 								<h3
-									className={'text-3xl font-bold tracking-tight text-slate-800'}
+									className={'text-3xl font-bold tracking-tight text-gray-800'}
 								>
 									{user?.first_name} {user?.last_name}
 								</h3>
 								<h2
 									className={
-										'text-xl font-semibold tracking-tight text-slate-700'
+										'text-xl font-semibold tracking-tight text-gray-700'
 									}
 								>
 									{user?.speciality}

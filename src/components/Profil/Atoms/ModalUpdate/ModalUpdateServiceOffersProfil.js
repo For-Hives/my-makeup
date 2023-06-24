@@ -278,7 +278,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 					leaveFrom="opaserviceOffers-100"
 					leaveTo="opaserviceOffers-0"
 				>
-					<div className="bg-opaserviceOffers-75 transition-opaserviceOffers fixed inset-0 bg-slate-500" />
+					<div className="bg-opaserviceOffers-75 transition-opaserviceOffers fixed inset-0 bg-gray-500" />
 				</Transition.Child>
 
 				<div className="fixed inset-0 z-30 overflow-y-auto">
@@ -307,7 +307,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 									<div className="text-left">
 										<Dialog.Title
 											as="h3"
-											className="text-lg font-semibold text-slate-900"
+											className="text-lg font-semibold text-gray-900"
 										>
 											Les expériences professionnelles que vous avez
 										</Dialog.Title>
@@ -332,7 +332,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 														<div>
 															<label
 																htmlFor="name"
-																className="block text-sm text-slate-700"
+																className="block text-sm text-gray-700"
 															>
 																Nom de la prestation
 															</label>
@@ -347,7 +347,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																	required
 																	value={userServiceOffersName ?? ''}
 																	onChange={handleUpdateServiceOffersName}
-																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
+																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																/>
 																{errors.name && (
 																	<p className={'mt-2 text-xs text-red-500/80'}>
@@ -359,7 +359,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 														<div>
 															<label
 																htmlFor="description"
-																className="block text-sm text-slate-700"
+																className="block text-sm text-gray-700"
 															>
 																{"Description de l'expérience"}
 															</label>
@@ -375,7 +375,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																	onChange={
 																		handleUpdateServiceOffersDescription
 																	}
-																	className="block min-h-[150px] w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
+																	className="block min-h-[150px] w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																/>
 																{errors.description && (
 																	<p className={'mt-2 text-xs text-red-500/80'}>
@@ -387,7 +387,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 														<div>
 															<label
 																htmlFor="price"
-																className="block text-sm text-slate-700"
+																className="block text-sm text-gray-700"
 															>
 																Prix de la prestation
 															</label>
@@ -402,7 +402,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																	required
 																	value={userServiceOffersPrice ?? ''}
 																	onChange={handleUpdateServiceOffersPrice}
-																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
+																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																/>
 																{errors.price && (
 																	<p className={'mt-2 text-xs text-red-500/80'}>
@@ -423,7 +423,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 															>
 																<h3
 																	className={
-																		'text-sm font-semibold text-slate-900'
+																		'text-sm font-semibold text-gray-900'
 																	}
 																>
 																	Option {index + 1}
@@ -431,7 +431,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																<div>
 																	<label
 																		htmlFor="name"
-																		className="block text-sm text-slate-700"
+																		className="block text-sm text-gray-700"
 																	>
 																		Nom de la prestation
 																	</label>
@@ -460,14 +460,14 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																			value={
 																				userServiceOffersOptions[index].name
 																			}
-																			className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
+																			className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																		/>
 																	</div>
 																</div>
 																<div>
 																	<label
 																		htmlFor="description"
-																		className="block text-sm text-slate-700"
+																		className="block text-sm text-gray-700"
 																	>
 																		{"Description de l'expérience"}
 																	</label>
@@ -497,14 +497,14 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																				userServiceOffersOptions[index]
 																					.description
 																			}
-																			className="block min-h-[150px] w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
+																			className="block min-h-[150px] w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																		/>
 																	</div>
 																</div>
 																<div>
 																	<label
 																		htmlFor="price"
-																		className="block text-sm text-slate-700"
+																		className="block text-sm text-gray-700"
 																	>
 																		Prix de la prestation
 																	</label>
@@ -533,7 +533,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																			value={
 																				userServiceOffersOptions[index].price
 																			}
-																			className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
+																			className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																		/>
 																	</div>
 																</div>
@@ -545,14 +545,14 @@ export default function ModalUpdateServiceOffersProfil(props) {
 													>
 														<button
 															className={
-																'flex w-full items-center justify-center gap-2 rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400  focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm'
+																'flex w-full items-center justify-center gap-2 rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400  focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm'
 															}
 															onClick={handleAddServiceOffersOption}
 														>
-															<span className={'text-slate-700'}>
+															<span className={'text-gray-700'}>
 																Ajouter une option à la prestation
 															</span>
-															<span className="material-icons-round text-base text-slate-900">
+															<span className="material-icons-round text-base text-gray-900">
 																add
 															</span>
 														</button>
@@ -577,7 +577,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 											}
 										>
 											{/*	display the serviceOffers already added */}
-											<h3 className={'text-sm text-slate-900'}>
+											<h3 className={'text-sm text-gray-900'}>
 												Les services déjà ajoutés
 											</h3>
 											<div className={'flex w-full flex-col gap-4 '}>
@@ -592,9 +592,9 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																<Tab
 																	key={index}
 																	className={
-																		'h-full w-full border-b border-slate-300 bg-slate-50/30 p-4 text-xs text-slate-600 hover:bg-slate-50/50 focus:outline-none ' +
+																		'h-full w-full border-b border-gray-300 bg-gray-50/30 p-4 text-xs text-gray-600 hover:bg-gray-50/50 focus:outline-none ' +
 																		// 	aria selected
-																		' aria-selected:border-b-2 aria-selected:border-indigo-800 aria-selected:font-semibold aria-selected:text-slate-900'
+																		' aria-selected:border-b-2 aria-selected:border-indigo-800 aria-selected:font-semibold aria-selected:text-gray-900'
 																	}
 																>
 																	{service_offer.name}

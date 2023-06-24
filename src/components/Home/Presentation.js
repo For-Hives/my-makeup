@@ -6,10 +6,10 @@ function Presentation() {
 		<section className={'relative px-4 py-20 md:px-0'}>
 			<div className="mx-auto max-w-7xl">
 				<div className="mx-auto">
-					<h2 className="text-center text-4xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+					<h2 className="text-center text-4xl font-bold tracking-tight text-gray-900 sm:text-4xl">
 						My Makeup c&apos;est avant tout une communauté
 					</h2>
-					<p className="mt-6 text-center text-lg leading-8 text-slate-700">
+					<p className="mt-6 text-center text-lg leading-8 text-gray-700">
 						Où les maquilleuses et les particuliers se retrouvent pour
 						collaborer en tout simplicité.
 					</p>
@@ -30,12 +30,12 @@ function Presentation() {
 						/>
 						<h3
 							className={
-								'text-center text-4xl font-bold tracking-tight text-slate-700 sm:text-xl'
+								'text-center text-4xl font-bold tracking-tight text-gray-700 sm:text-xl'
 							}
 						>
 							Des milliers de particuliers
 						</h3>
-						<p className={'text-center text-sm leading-8 text-slate-600'}>
+						<p className={'text-center text-sm leading-8 text-gray-600'}>
 							À la recherche de maquilleuses expérimentées
 						</p>
 					</div>
@@ -48,12 +48,12 @@ function Presentation() {
 						/>
 						<h3
 							className={
-								'text-center text-4xl font-bold tracking-tight text-slate-700 sm:text-xl'
+								'text-center text-4xl font-bold tracking-tight text-gray-700 sm:text-xl'
 							}
 						>
 							Des milliers de maquilleuses
 						</h3>
-						<p className={'text-center text-sm leading-8 text-slate-600'}>
+						<p className={'text-center text-sm leading-8 text-gray-600'}>
 							Aux multiples spécialités et personnalités
 						</p>
 					</div>
@@ -68,12 +68,12 @@ function Presentation() {
 						/>
 						<h3
 							className={
-								'text-center text-4xl font-bold tracking-tight text-slate-700 sm:text-xl'
+								'text-center text-4xl font-bold tracking-tight text-gray-700 sm:text-xl'
 							}
 						>
 							Une solution dédiée
 						</h3>
-						<p className={'text-center text-sm leading-8 text-slate-600'}>
+						<p className={'text-center text-sm leading-8 text-gray-600'}>
 							Pensée et conçue pour collaborer
 						</p>
 					</div>

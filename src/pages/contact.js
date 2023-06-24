@@ -249,10 +249,10 @@ function Contact(props) {
 				<section className={'relative py-20'}>
 					<div className="mx-auto flex max-w-7xl flex-col px-4 md:flex-row md:px-8 xl:px-0">
 						<div className="mx-auto mb-10 w-full md:w-1/2">
-							<h2 className="w-full text-start text-4xl font-bold tracking-tight text-slate-900 sm:text-4xl md:w-1/2">
+							<h2 className="w-full text-start text-4xl font-bold tracking-tight text-gray-900 sm:text-4xl md:w-1/2">
 								Contactez-nous
 							</h2>
-							<p className="mt-6 w-full text-start text-lg text-slate-700 md:w-1/2">
+							<p className="mt-6 w-full text-start text-lg text-gray-700 md:w-1/2">
 								{
 									"My Makeup, plus qu'une plateforme de mise en relation, une équipe de passionnés à votre service !"
 								}

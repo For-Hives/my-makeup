@@ -219,7 +219,7 @@ export default function ModalUpdateCoursesProfil(props) {
 					leaveFrom="opacourses-100"
 					leaveTo="opacourses-0"
 				>
-					<div className="bg-opacourses-75 transition-opacourses fixed inset-0 bg-slate-500" />
+					<div className="bg-opacourses-75 transition-opacourses fixed inset-0 bg-gray-500" />
 				</Transition.Child>
 
 				<div className="fixed inset-0 z-30 overflow-y-auto">
@@ -248,7 +248,7 @@ export default function ModalUpdateCoursesProfil(props) {
 									<div className="text-left">
 										<Dialog.Title
 											as="h3"
-											className="text-lg font-semibold text-slate-900"
+											className="text-lg font-semibold text-gray-900"
 										>
 											Les formations & diplômes que vous avez suivis
 										</Dialog.Title>
@@ -269,7 +269,7 @@ export default function ModalUpdateCoursesProfil(props) {
 														<div>
 															<label
 																htmlFor="diploma"
-																className="block text-sm text-slate-700"
+																className="block text-sm text-gray-700"
 															>
 																Nom de la formation ou du diplôme
 															</label>
@@ -284,7 +284,7 @@ export default function ModalUpdateCoursesProfil(props) {
 																	required
 																	value={userCoursesDiploma ?? ''}
 																	onChange={handleUpdateCoursesDiploma}
-																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
+																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																/>
 																{errors.diploma && (
 																	<p className={'mt-2 text-xs text-red-500/80'}>
@@ -296,7 +296,7 @@ export default function ModalUpdateCoursesProfil(props) {
 														<div>
 															<label
 																htmlFor="school"
-																className="block text-sm text-slate-700"
+																className="block text-sm text-gray-700"
 															>
 																{"Nom de l'école ou de l'organisme"}
 															</label>
@@ -311,7 +311,7 @@ export default function ModalUpdateCoursesProfil(props) {
 																	required
 																	value={userCoursesSchool ?? ''}
 																	onChange={handleUpdateCoursesSchool}
-																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
+																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																/>
 																{errors.school && (
 																	<p className={'mt-2 text-xs text-red-500/80'}>
@@ -323,7 +323,7 @@ export default function ModalUpdateCoursesProfil(props) {
 														<div>
 															<label
 																htmlFor="date_graduation"
-																className="block text-sm text-slate-700"
+																className="block text-sm text-gray-700"
 															>
 																{"Date d'obtention du diplôme"}
 															</label>
@@ -338,7 +338,7 @@ export default function ModalUpdateCoursesProfil(props) {
 																	required
 																	value={userCoursesDateGraduation ?? ''}
 																	onChange={handleUpdateCoursesDateGraduation}
-																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
+																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																/>
 																{errors.date_graduation && (
 																	<p className={'mt-2 text-xs text-red-500/80'}>
@@ -350,7 +350,7 @@ export default function ModalUpdateCoursesProfil(props) {
 														<div>
 															<label
 																htmlFor="course_description"
-																className="block text-sm text-slate-700"
+																className="block text-sm text-gray-700"
 															>
 																Description, ce que vous avez appris
 															</label>
@@ -364,7 +364,7 @@ export default function ModalUpdateCoursesProfil(props) {
 																	required
 																	value={userCoursesDescription ?? ''}
 																	onChange={handleUpdateCoursesDescription}
-																	className="block min-h-[200px] w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
+																	className="block min-h-[200px] w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																/>
 																{errors.course_description && (
 																	<p className={'mt-2 text-xs text-red-500/80'}>
@@ -390,7 +390,7 @@ export default function ModalUpdateCoursesProfil(props) {
 										</div>
 										<div className={'flex w-full flex-col gap-4 md:w-3/5'}>
 											{/*	display the courses already added */}
-											<h3 className={'text-sm text-slate-900'}>
+											<h3 className={'text-sm text-gray-900'}>
 												Les formations & diplômes déjà ajoutés
 											</h3>
 											<div
@@ -403,7 +403,7 @@ export default function ModalUpdateCoursesProfil(props) {
 														<div
 															key={index}
 															className={
-																'relative flex w-full rounded bg-indigo-50/20 p-4 text-slate-700'
+																'relative flex w-full rounded bg-indigo-50/20 p-4 text-gray-700'
 															}
 														>
 															<div
@@ -437,23 +437,19 @@ export default function ModalUpdateCoursesProfil(props) {
 																<div className={'flex flex-col'}>
 																	<p
 																		className={
-																			'w-4/5 font-semibold text-slate-700 md:w-full'
+																			'w-4/5 font-semibold text-gray-700 md:w-full'
 																		}
 																	>
 																		{course.diploma}
 																	</p>
 																	<div className={'flex justify-between'}>
 																		<p
-																			className={
-																				'text-sm italic text-slate-600'
-																			}
+																			className={'text-sm italic text-gray-600'}
 																		>
 																			{course.school}
 																		</p>
 																		<p
-																			className={
-																				'text-sm italic text-slate-600'
-																			}
+																			className={'text-sm italic text-gray-600'}
 																		>
 																			{course.date_graduation}
 																		</p>
@@ -470,7 +466,7 @@ export default function ModalUpdateCoursesProfil(props) {
 																					<p
 																						key={i}
 																						className={
-																							'text-sm italic text-slate-500'
+																							'text-sm italic text-gray-500'
 																						}
 																					>
 																						{item}
