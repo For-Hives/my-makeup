@@ -43,12 +43,7 @@ export const getServerSideProps = async ({ res }) => {
 				'_document.js',
 				'404.js',
 				'sitemap.xml.js',
-				'talent/[slug].js',
-				'profil/[username].js',
 				'index.js',
-				'blog/[id].js',
-				'auth/index.js',
-				'api/auth/[...nextauth].js',
 			].includes(base)
 		})
 		.map(staticPagePath => {
