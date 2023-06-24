@@ -11,7 +11,7 @@ import { Pagination } from 'swiper'
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
 import { toast } from 'react-toastify'
 
-const schema = zod.object()
+const schema = zod.object({})
 export default function ModalUpdatePortfolioProfil(props) {
 	const user = props.user
 
@@ -34,6 +34,7 @@ export default function ModalUpdatePortfolioProfil(props) {
 		if (fileObj !== '' && fileObj !== undefined && fileObj !== null) {
 			const form = new FormData()
 			form.append('files', fileObj)
+			console.log(form)
 
 			const res_post = fetch(`${process.env.NEXT_PUBLIC_API_URL}api/upload`, {
 				method: 'POST',
