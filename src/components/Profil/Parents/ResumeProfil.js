@@ -137,11 +137,12 @@ function ResumeProfil(props) {
 									{user?.action_radius}km
 								</div>
 							</div>
-							<div className={'flex flex-row items-center gap-4'}>
-								<Stars starsToDisplay={user?.score} />{' '}
-								{/* todo connect the score to the number of reviews */}
-								<span className={'text-sm italic'}>( {user?.score} avis )</span>
-							</div>
+							<div></div>
+							{/*<div className={'flex flex-row items-center gap-4'}>*/}
+							{/*	<Stars starsToDisplay={user?.score} />{' '}*/}
+							{/*	/!* todo connect the score to the number of reviews *!/*/}
+							{/*	<span className={'text-sm italic'}>( {user?.score} avis )</span>*/}
+							{/*</div>*/}
 						</div>
 					</div>
 					<div className={'col-span-3 flex items-center'}>
