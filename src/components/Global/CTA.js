@@ -3,7 +3,7 @@ import Link from 'next/link'
 
 function Cta() {
 	return (
-		<div className={'relative w-full'}>
+		<div className={'relative w-full py-10 md:py-20'}>
 			<div
 				className={
 					'absolute left-0 top-0 -z-10 h-full w-full scale-125 transform overflow-visible md:scale-150 xl:scale-125 2xl:scale-100'
@@ -11,13 +11,11 @@ function Cta() {
 			>
 				<div
 					className={
-						'flex h-full w-full scale-125 scale-y-150 transform items-center justify-center md:scale-100'
+						'flex h-full w-full scale-125 scale-y-150 transform items-center justify-center overflow-visible md:scale-100'
 					}
 				>
 					<Image
-						className={
-							'-z-10 scale-150 transform overflow-visible object-cover md:scale-100'
-						}
+						className={'-z-10 scale-150 transform object-cover md:scale-100'}
 						alt={'blob'}
 						fill
 						src={'/assets/blob.svg'}

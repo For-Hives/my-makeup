@@ -19,7 +19,7 @@ function PourquoiMyMakeup() {
 				<link
 					rel="canonical"
 					href={
-						'https://my-makeup.fr/pourquoi-my-makeup-en-tant-que-maquilleuse'
+						'https://my-makeup.fr/pourquoi-rejoindre-my-makeup-en-tant-que-maquilleuse'
 					}
 				/>
 			</Head>
