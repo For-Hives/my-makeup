@@ -9,7 +9,7 @@ function Collaboration() {
 		>
 			<div className="mx-auto max-w-7xl">
 				<div className="mx-auto">
-					<h2 className="text-center text-4xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+					<h2 className="text-center text-4xl font-bold tracking-tight text-gray-900 sm:text-4xl">
 						Vous allez adorer cette nouvelle façon de collaborer
 					</h2>
 				</div>
@@ -21,7 +21,7 @@ function Collaboration() {
 							'relative flex w-full flex-col items-start justify-center gap-8 md:w-2/5'
 						}
 					>
-						<h3 className="text-left text-4xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+						<h3 className="text-left text-4xl font-bold tracking-tight text-gray-900 sm:text-3xl">
 							Boostez votre activité
 						</h3>
 						<div className={'flex flex-col gap-4'}>
@@ -93,7 +93,7 @@ function Collaboration() {
 							'relative flex h-auto flex-col items-start justify-center gap-8 md:w-2/5'
 						}
 					>
-						<h3 className="text-left text-4xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+						<h3 className="text-left text-4xl font-bold tracking-tight text-gray-900 sm:text-3xl">
 							Pour toutes & tous !
 						</h3>
 						<div className={'flex flex-col gap-4'}>
@@ -129,7 +129,7 @@ function Collaboration() {
 							'relative flex w-full flex-col items-start justify-center gap-8 md:w-2/5'
 						}
 					>
-						<h3 className="text-left text-4xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+						<h3 className="text-left text-4xl font-bold tracking-tight text-gray-900 sm:text-3xl">
 							Trouvez le profil idéal en seulement deux clics
 						</h3>
 						<div className={'flex flex-col gap-4'}>
@@ -208,7 +208,7 @@ function Collaboration() {
 							'relative flex h-auto w-full flex-col items-start justify-center gap-8 md:w-2/5'
 						}
 					>
-						<h3 className="text-left text-4xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+						<h3 className="text-left text-4xl font-bold tracking-tight text-gray-900 sm:text-3xl">
 							Centralisez vos recherches dans une seule plateforme
 						</h3>
 						<div className={'flex flex-col gap-4'}>

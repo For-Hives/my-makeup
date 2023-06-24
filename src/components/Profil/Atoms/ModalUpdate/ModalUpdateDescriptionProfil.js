@@ -81,7 +81,7 @@ export default function ModalUpdateDescriptionProfil(props) {
 					leaveFrom="opadescription-100"
 					leaveTo="opadescription-0"
 				>
-					<div className="bg-opadescription-75 transition-opadescription fixed inset-0 bg-slate-500" />
+					<div className="bg-opadescription-75 transition-opadescription fixed inset-0 bg-gray-500" />
 				</Transition.Child>
 
 				<div className="fixed inset-0 z-30 overflow-y-auto">
@@ -110,7 +110,7 @@ export default function ModalUpdateDescriptionProfil(props) {
 									<div className="text-left">
 										<Dialog.Title
 											as="h3"
-											className="text-lg font-semibold text-slate-900"
+											className="text-lg font-semibold text-gray-900"
 										>
 											Vous en quelques mots
 										</Dialog.Title>
@@ -126,7 +126,7 @@ export default function ModalUpdateDescriptionProfil(props) {
 													<div>
 														<label
 															htmlFor="description"
-															className="block text-sm text-slate-700"
+															className="block text-sm text-gray-700"
 														>
 															Description
 														</label>
@@ -140,7 +140,7 @@ export default function ModalUpdateDescriptionProfil(props) {
 																required
 																value={userDescription ?? ''}
 																onChange={handleUpdateDescription}
-																className="block min-h-[500px] w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
+																className="block min-h-[500px] w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 															/>
 															{errors.description && (
 																<p className={'mt-2 text-xs text-red-500/80'}>

@@ -29,10 +29,10 @@ function Project() {
 		<section className={'relative px-4 py-20 md:px-8 2xl:px-0'}>
 			<div className="mx-auto max-w-7xl">
 				<div className="mx-auto mb-10">
-					<h2 className="text-start text-4xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+					<h2 className="text-start text-4xl font-bold tracking-tight text-gray-900 sm:text-4xl">
 						Gardez votre projet beauté en tête, on s&apos;occupe du reste
 					</h2>
-					<p className="mt-6 text-start text-lg text-slate-700 md:w-1/2">
+					<p className="mt-6 text-start text-lg text-gray-700 md:w-1/2">
 						Trouvez les meilleures maquilleuses, planifiez votre projet, payez
 						et recevez des paiements, le tout dans une solution unifiée. Oui,
 						vous avez bien lu.
@@ -50,13 +50,13 @@ function Project() {
 								<div key={tab.title}>
 									<div
 										className={
-											'rounded-2xl border border-slate-200 bg-slate-50 p-10 shadow-lg transition-all duration-300 ease-in-out hover:bg-slate-50 hover:shadow-lg md:border-none md:bg-none md:shadow-none'
+											'rounded-2xl border border-gray-200 bg-gray-50 p-10 shadow-lg transition-all duration-300 ease-in-out hover:bg-gray-50 hover:shadow-lg md:border-none md:bg-none md:shadow-none'
 										}
 									>
-										<h3 className={'mb-4 text-xl font-bold text-slate-700'}>
+										<h3 className={'mb-4 text-xl font-bold text-gray-700'}>
 											{tab.title}
 										</h3>
-										<p className={'text-sm text-slate-500'}>{tab.content}</p>
+										<p className={'text-sm text-gray-500'}>{tab.content}</p>
 									</div>
 								</div>
 							))}

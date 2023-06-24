@@ -69,7 +69,7 @@ export default function Article({ articleData }) {
 									</h1>
 									<time
 										dateTime={meta.updatedAt.toString()}
-										className="order-first flex items-center text-base text-gray-400"
+										className="order-first flex items-center text-base text-gray-700"
 									>
 										<span className="h-4 w-0.5 rounded-full bg-gray-200" />
 										<span className="ml-3">
@@ -81,10 +81,10 @@ export default function Article({ articleData }) {
 									<div className={'prose my-8 xl:prose-lg'}>
 										<Layout value={meta.content.toString()} />
 									</div>
-									<h3 className={'flex items-center text-base text-gray-400'}>
+									<p className={'flex items-center text-base text-gray-400'}>
 										<span className="h-4 w-0.5 rounded-full bg-gray-200" />
 										<span className="ml-3">Auteur.e : {meta.author}</span>
-									</h3>
+									</p>
 								</div>
 							</article>
 						)}

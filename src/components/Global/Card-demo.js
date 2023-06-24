@@ -35,15 +35,15 @@ function CardDemo(props) {
 			<div
 				className={'mt-4 flex w-full items-center justify-center gap-1 px-4'}
 			>
-				<div className={'h-4 w-full rounded bg-slate-100 px-4'}></div>
+				<div className={'h-4 w-full rounded bg-gray-100 px-4'}></div>
 			</div>
 			<div className={'flex w-full items-center justify-center gap-1 px-4'}>
-				<div className={'h-4 w-full rounded bg-slate-100 px-4'}></div>
-				<div className={'h-4 w-full rounded bg-slate-100 px-4'}></div>
-				<div className={'h-4 w-full rounded bg-slate-100 px-4'}></div>
+				<div className={'h-4 w-full rounded bg-gray-100 px-4'}></div>
+				<div className={'h-4 w-full rounded bg-gray-100 px-4'}></div>
+				<div className={'h-4 w-full rounded bg-gray-100 px-4'}></div>
 			</div>
 			<div className={'flex w-full items-center justify-center gap-1 px-4'}>
-				<div className={'h-4 w-full rounded bg-slate-100 px-4'}></div>
+				<div className={'h-4 w-full rounded bg-gray-100 px-4'}></div>
 				<div className={'flex h-4 w-full items-center justify-end rounded'}>
 					{/* stars in css & html */}
 					<StarIcon className="h-4 w-4 text-yellow-500/90" aria-hidden="true" />

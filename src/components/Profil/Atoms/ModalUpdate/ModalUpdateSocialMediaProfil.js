@@ -129,7 +129,7 @@ export default function ModalUpdateSocialMediaProfil(props) {
 					leaveFrom="opacity-100"
 					leaveTo="opacity-0"
 				>
-					<div className="fixed inset-0 bg-slate-500 bg-opacity-75 transition-opacity" />
+					<div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" />
 				</Transition.Child>
 
 				<div className="fixed inset-0 z-30 overflow-y-auto">
@@ -158,7 +158,7 @@ export default function ModalUpdateSocialMediaProfil(props) {
 									<div className="text-left">
 										<Dialog.Title
 											as="h3"
-											className="text-lg font-semibold text-slate-900"
+											className="text-lg font-semibold text-gray-900"
 										>
 											Réseaux sociaux & contacts
 										</Dialog.Title>
@@ -174,7 +174,7 @@ export default function ModalUpdateSocialMediaProfil(props) {
 													<div>
 														<label
 															htmlFor="email"
-															className="block text-sm text-slate-700"
+															className="block text-sm text-gray-700"
 														>
 															Email
 														</label>
@@ -189,7 +189,7 @@ export default function ModalUpdateSocialMediaProfil(props) {
 																required
 																value={userEmail ?? ''}
 																onChange={handleUpdateEmail}
-																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
+																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 															/>
 															{errors.email && (
 																<p className={'mt-2 text-xs text-red-500/80'}>
@@ -201,7 +201,7 @@ export default function ModalUpdateSocialMediaProfil(props) {
 													<div>
 														<label
 															htmlFor="phone"
-															className="block text-sm text-slate-700"
+															className="block text-sm text-gray-700"
 														>
 															Numéro de téléphone
 														</label>
@@ -216,7 +216,7 @@ export default function ModalUpdateSocialMediaProfil(props) {
 																required
 																value={userPhone ?? ''}
 																onChange={handleUpdatePhone}
-																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
+																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 															/>
 															{errors.phone && (
 																<p className={'mt-2 text-xs text-red-500/80'}>
@@ -228,7 +228,7 @@ export default function ModalUpdateSocialMediaProfil(props) {
 													<div>
 														<label
 															htmlFor="youtube"
-															className="block text-sm text-slate-700"
+															className="block text-sm text-gray-700"
 														>
 															Lien Youtube
 														</label>
@@ -243,7 +243,7 @@ export default function ModalUpdateSocialMediaProfil(props) {
 																required
 																value={userYoutube ?? ''}
 																onChange={handleUpdateYoutube}
-																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
+																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 															/>
 															{errors.youtube && (
 																<p className={'mt-2 text-xs text-red-500/80'}>
@@ -255,7 +255,7 @@ export default function ModalUpdateSocialMediaProfil(props) {
 													<div>
 														<label
 															htmlFor="facebook"
-															className="block text-sm text-slate-700"
+															className="block text-sm text-gray-700"
 														>
 															Lien Facebook
 														</label>
@@ -270,7 +270,7 @@ export default function ModalUpdateSocialMediaProfil(props) {
 																required
 																value={userFacebook ?? ''}
 																onChange={handleUpdateFacebook}
-																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
+																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 															/>
 															{errors.facebook && (
 																<p className={'mt-2 text-xs text-red-500/80'}>
@@ -282,7 +282,7 @@ export default function ModalUpdateSocialMediaProfil(props) {
 													<div>
 														<label
 															htmlFor="instagram"
-															className="block text-sm text-slate-700"
+															className="block text-sm text-gray-700"
 														>
 															Lien Instagram
 														</label>
@@ -297,7 +297,7 @@ export default function ModalUpdateSocialMediaProfil(props) {
 																required
 																value={userInstagram ?? ''}
 																onChange={handleUpdateInstagram}
-																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
+																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 															/>
 															{errors.instagram && (
 																<p className={'mt-2 text-xs text-red-500/80'}>
@@ -309,7 +309,7 @@ export default function ModalUpdateSocialMediaProfil(props) {
 													<div>
 														<label
 															htmlFor="website"
-															className="block text-sm text-slate-700"
+															className="block text-sm text-gray-700"
 														>
 															Lien de votre site internet
 														</label>
@@ -324,7 +324,7 @@ export default function ModalUpdateSocialMediaProfil(props) {
 																required
 																value={userWebsite ?? ''}
 																onChange={handleUpdateWebsite}
-																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
+																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 															/>
 															{errors.website && (
 																<p className={'mt-2 text-xs text-red-500/80'}>
@@ -336,7 +336,7 @@ export default function ModalUpdateSocialMediaProfil(props) {
 													<div>
 														<label
 															htmlFor="linkedin"
-															className="block text-sm text-slate-700"
+															className="block text-sm text-gray-700"
 														>
 															Lien linkedin
 														</label>
@@ -351,7 +351,7 @@ export default function ModalUpdateSocialMediaProfil(props) {
 																required
 																value={userLinkedin ?? ''}
 																onChange={handleUpdateLinkedin}
-																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
+																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 															/>
 															{errors.linkedin && (
 																<p className={'mt-2 text-xs text-red-500/80'}>

@@ -23,7 +23,7 @@ function ViewPortfolioProfil(props) {
 
 	return (
 		<div className={'flex w-full flex-col gap-4'}>
-			<h2 className={'text-xl font-bold text-slate-700'}>Portfolio</h2>
+			<h2 className={'text-xl font-bold text-gray-700'}>Portfolio</h2>
 			<>
 				<Swiper
 					slidesPerView={'auto'}

@@ -19,7 +19,7 @@ export function DescriptionPriceOffer(props) {
 							return (
 								<p
 									key={i}
-									className={'border-l border-slate-300 pl-4 text-slate-700 '}
+									className={'border-l border-gray-300 pl-4 text-gray-700 '}
 								>
 									{item}
 								</p>
@@ -37,7 +37,7 @@ export function DescriptionPriceOffer(props) {
 								<h3
 									key={i}
 									className={
-										'text-md flex justify-end rounded-full bg-slate-50 px-3 py-2 text-right italic text-slate-500'
+										'text-md flex justify-end rounded-full bg-gray-50 px-3 py-2 text-right italic text-gray-500'
 									}
 								>
 									{item}
