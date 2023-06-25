@@ -72,6 +72,15 @@ export default function ModalUpdateResumeProfil(props) {
 					reset()
 					props.handleIsModalOpen()
 					props.handleProfilPicture(imageUrl)
+
+					let userTemp = user
+					userTemp.available = available
+					userTemp.last_name = userLastName
+					userTemp.first_name = userFirstName
+					userTemp.speciality = userSpeciality
+					userTemp.main_picture = data_blob[0]
+					props.handleUpdateUser(userTemp)
+
 					setImageUrl('')
 				})
 				.catch(err =>
@@ -83,14 +92,23 @@ export default function ModalUpdateResumeProfil(props) {
 		} else {
 			patchMeMakeup(session, data)
 			reset()
-			props.handleIsModalOpen()
+
 			props.handleProfilPicture(imageUrl)
+			let userTemp = user
+			userTemp.available = available
+			userTemp.last_name = userLastName
+			userTemp.first_name = userFirstName
+			userTemp.speciality = userSpeciality
+			props.handleUpdateUser(userTemp)
+
+			props.handleIsModalOpen()
 			setImageUrl('')
 		}
 	}
 
 	useEffect(() => {
 		setOpen(props.isModalOpen)
+		setAvailable(props.user.available)
 	}, [props.isModalOpen])
 
 	const cancelButtonRef = useRef(null)
@@ -128,6 +146,10 @@ export default function ModalUpdateResumeProfil(props) {
 		setUserSpeciality(event.target.value)
 	}
 
+	const handleUpdateAvailable = event => {
+		setAvailable(event)
+	}
+
 	useEffect(() => {
 		return () => {
 			if (imageUrl) {
@@ -140,11 +162,12 @@ export default function ModalUpdateResumeProfil(props) {
 	useEffect(() => {
 		if (!open) {
 			setFileObj('')
-			setImageUrl('')
+			setImageUrl(user?.main_picture?.url ?? '')
 			setAvailable(user.available)
 			setUserLastName(user.last_name ?? '')
 			setUserFirstName(user.first_name ?? '')
 			setUserSpeciality(user.speciality ?? '')
+
 			reset()
 		}
 	}, [
@@ -277,33 +300,6 @@ export default function ModalUpdateResumeProfil(props) {
 													<div className={'flex gap-2'}>
 														<div>
 															<label
-																htmlFor="last_name"
-																className="block text-sm text-gray-700"
-															>
-																Nom
-															</label>
-															<div className="mt-2">
-																<input
-																	id="last_name"
-																	name="last_name"
-																	type="text"
-																	{...register('last_name', {
-																		required: true,
-																	})}
-																	required
-																	value={userLastName ?? ''}
-																	onChange={handleUpdateLastName}
-																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
-																/>
-																{errors.name && (
-																	<p className={'mt-2 text-xs text-red-500/80'}>
-																		{errors.last_name.message}
-																	</p>
-																)}
-															</div>
-														</div>
-														<div>
-															<label
 																htmlFor="first_name"
 																className="block text-sm text-gray-700"
 															>
@@ -325,6 +321,33 @@ export default function ModalUpdateResumeProfil(props) {
 																{errors.name && (
 																	<p className={'mt-2 text-xs text-red-500/80'}>
 																		{errors.first_name.message}
+																	</p>
+																)}
+															</div>
+														</div>
+														<div>
+															<label
+																htmlFor="last_name"
+																className="block text-sm text-gray-700"
+															>
+																Nom
+															</label>
+															<div className="mt-2">
+																<input
+																	id="last_name"
+																	name="last_name"
+																	type="text"
+																	{...register('last_name', {
+																		required: true,
+																	})}
+																	required
+																	value={userLastName ?? ''}
+																	onChange={handleUpdateLastName}
+																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
+																/>
+																{errors.name && (
+																	<p className={'mt-2 text-xs text-red-500/80'}>
+																		{errors.last_name.message}
 																	</p>
 																)}
 															</div>
@@ -366,10 +389,9 @@ export default function ModalUpdateResumeProfil(props) {
 														</label>
 														<div className="mt-2 flex items-center gap-4">
 															<Switch
+																value={available}
 																checked={available}
-																onChange={() => {
-																	setAvailable(!available)
-																}}
+																onChange={handleUpdateAvailable}
 																className="group relative inline-flex h-5 w-10 flex-shrink-0 cursor-pointer items-center justify-center rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2"
 															>
 																<span className="sr-only">

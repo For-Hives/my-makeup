@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import Image from 'next/image'
 import { Stars } from '@/components/Profil/Atoms/Stars'
 import { BadgeDispo } from '@/components/Profil/Atoms/BadgeDispo'
@@ -36,6 +36,15 @@ function ResumeProfil(props) {
 		setUser(props.user)
 	}
 
+	const handleUpdateUser = user => {
+		props.handleUpdateUser(user)
+		setAvailability(!!user?.available)
+	}
+
+	useEffect(() => {
+		setAvailability(!!user?.available)
+	}, [user])
+
 	return (
 		<div
 			className={
@@ -68,7 +77,7 @@ function ResumeProfil(props) {
 				isModalOpen={isModalOpen}
 				handleIsModalOpen={handleIsModalOpen}
 				handleProfilPicture={handleProfilPicture}
-				handleUpdateUser={props.handleUpdateUser}
+				handleUpdateUser={handleUpdateUser}
 				user={user}
 			/>
 			<div className="mx-auto max-w-7xl pt-[90px]">
