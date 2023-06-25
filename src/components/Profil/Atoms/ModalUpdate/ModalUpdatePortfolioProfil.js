@@ -29,6 +29,7 @@ export default function ModalUpdatePortfolioProfil(props) {
 	const { data: session } = useSession()
 
 	const onSubmit = data => {
+		console.log(fileObj)
 		// 	upload file if fileObj is not empty
 		if (fileObj !== '' && fileObj !== undefined && fileObj !== null) {
 			const form = new FormData()

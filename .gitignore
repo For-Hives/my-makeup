@@ -33,3 +33,7 @@ yarn.lock
 pnpm-lock.yaml
 
 .env
+
+cypress/reports/junit/
+
+cypress/videos/
