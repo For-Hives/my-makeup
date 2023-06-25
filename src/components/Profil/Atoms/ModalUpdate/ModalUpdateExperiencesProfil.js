@@ -157,6 +157,11 @@ export default function ModalUpdateExperiencesProfil(props) {
 		setUserExperiencesDateStart('')
 		setUserExperiencesDateEnd('')
 		setUserExperiencesDescription('')
+
+		let userTemp = user
+		userTemp.experiences = userExperiencesCleaned
+		props.handleUpdateUser(userTemp)
+
 		// formState.reset()
 		reset()
 		props.handleIsModalOpen()
