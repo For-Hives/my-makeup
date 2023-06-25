@@ -8,6 +8,7 @@ import { getSession, useSession } from 'next-auth/react'
 import _ from 'lodash'
 import InfosProfil from '@/components/Profil/Parents/InfosProfil'
 import FullLoader from '@/components/Global/Loader/FullLoader'
+import DangerZone from '@/components/Profil/Parents/DangerZone'
 
 function Profil({ data }) {
 	const { data: session } = useSession()
@@ -34,12 +35,13 @@ function Profil({ data }) {
 				{/*	seo tag canonical link */}
 				<link rel="canonical" href="https://my-makeup.fr/auth/profil" />
 			</Head>
-			<Nav isSignOutVisible={true} />
+			<Nav />
 			<main className={'relative'}>
 				{session && session.user && !_.isEmpty(session.user) ? (
 					<>
 						<ResumeProfil user={user} handleUpdateUser={handleUpdateUser} />
 						<InfosProfil user={user} handleUpdateUser={handleUpdateUser} />
+						<DangerZone />
 					</>
 				) : (
 					<div className="flex h-screen flex-col items-center justify-center">

@@ -101,10 +101,7 @@ const navigation = [
 	},
 ]
 
-function Nav({
-	isSignOutVisible = false,
-	isFindMakeupArtistBtnVisible = true,
-}) {
+function Nav({ isFindMakeupArtistBtnVisible = true }) {
 	const { data: session } = useSession()
 
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -184,23 +181,6 @@ function Nav({
 										)}
 										{session && session.user && !_.isEmpty(session.user) ? (
 											<>
-												{isSignOutVisible && (
-													<Link
-														onClick={() => {
-															signOut()
-														}}
-														className=""
-														href={'/auth/signin'}
-													>
-														<span
-															className={
-																'btn-primary-simple border-red-500  text-red-600'
-															}
-														>
-															Me déconnecter
-														</span>
-													</Link>
-												)}
 												<Link className="" href={'/auth/profil'}>
 													<span className={'btn-primary'}>Profil</span>
 												</Link>
