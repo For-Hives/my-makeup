@@ -9,7 +9,7 @@ import { patchMeMakeup } from '@/services/PatchMeMakeup'
 const schema = zod
 	.object({
 		city: zod.string({ required_error: 'La ville est requise' }),
-		action_radius: zod.number({
+		action_radius: zod.string({
 			required_error: "Le rayon d'action est requis",
 		}),
 	})
@@ -36,10 +36,16 @@ export default function ModalUpdateLocationProfil(props) {
 	const { data: session } = useSession()
 
 	const onSubmit = data => {
+		console.log(data)
 		data = {
 			...data,
 		}
 		patchMeMakeup(session, data)
+
+		let userTemp = user
+		userTemp.city = userCity
+		userTemp.action_radius = userActionRadius
+		props.handleUpdateUser(userTemp)
 
 		reset()
 		props.handleIsModalOpen()
@@ -63,6 +69,7 @@ export default function ModalUpdateLocationProfil(props) {
 	}
 
 	const handleUpdateActionRadius = event => {
+		// to int
 		setUserActionRadius(event.target.value)
 	}
 
@@ -146,10 +153,7 @@ export default function ModalUpdateLocationProfil(props) {
 																id="city"
 																name="city"
 																type="text"
-																{...register('city', {
-																	required: true,
-																})}
-																required
+																{...register('city')}
 																value={userCity ?? ''}
 																onChange={handleUpdateCity}
 																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
@@ -173,11 +177,8 @@ export default function ModalUpdateLocationProfil(props) {
 																id="action_radius"
 																name="action_radius"
 																type="number"
-																{...register('action_radius', {
-																	required: true,
-																})}
-																required
-																value={userActionRadius ?? ''}
+																{...register('action_radius')}
+																value={userActionRadius}
 																onChange={handleUpdateActionRadius}
 																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 															/>

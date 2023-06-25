@@ -50,6 +50,16 @@ export default function ModalUpdateSocialMediaProfil(props) {
 		}
 		patchMeMakeup(session, data)
 
+		let userTemp = user
+		userTemp.network.youtube = userYoutube
+		userTemp.network.facebook = userFacebook
+		userTemp.network.instagram = userInstagram
+		userTemp.network.website = userWebsite
+		userTemp.network.linkedin = userLinkedin
+		userTemp.network.email = userEmail
+		userTemp.network.phone = userPhone
+		props.handleUpdateUser(userTemp)
+
 		reset()
 		props.handleIsModalOpen()
 	}
