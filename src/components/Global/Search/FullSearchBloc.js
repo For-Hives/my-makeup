@@ -48,6 +48,7 @@ function FullSearchBloc(props) {
 								aria-hidden="true"
 							/>
 							<input
+								data-cy="search-input"
 								className={
 									'flex w-full items-center rounded-lg border-2 border-indigo-900 bg-transparent py-2 pl-12 pr-6 text-sm leading-6 text-indigo-900 lg:w-96'
 								}
@@ -64,6 +65,7 @@ function FullSearchBloc(props) {
 								aria-hidden="true"
 							/>
 							<input
+								data-cy="city-input"
 								className={
 									'flex w-full items-center rounded-lg border-2 border-indigo-900 bg-transparent py-2 pl-12 pr-6 text-sm leading-6 text-indigo-900 lg:w-96'
 								}
@@ -77,6 +79,7 @@ function FullSearchBloc(props) {
 					</div>
 					<div className={'w-full items-center justify-end md:w-auto'}>
 						<button
+							data-cy="search-button"
 							type="submit"
 							onSubmit={handleSubmit}
 							className={'btn-primary w-full'}

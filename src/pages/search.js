@@ -108,6 +108,7 @@ function SearchPage() {
 											<Link
 												key={index}
 												href={`/profil/${result.username}`}
+												data-cy={`search-result`}
 												className={
 													'col-span-1 flex w-full flex-col items-center rounded border border-gray-300 bg-white'
 												}
