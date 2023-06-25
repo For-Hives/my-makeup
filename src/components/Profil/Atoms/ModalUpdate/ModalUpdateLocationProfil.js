@@ -36,7 +36,6 @@ export default function ModalUpdateLocationProfil(props) {
 	const { data: session } = useSession()
 
 	const onSubmit = data => {
-		console.log(data)
 		data = {
 			...data,
 		}

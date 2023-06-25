@@ -87,7 +87,6 @@ export default function ModalUpdateSkillsProfil(props) {
 	}
 
 	const handleDeleteSkillSelected = id => {
-		console.log('Deleting skill with id:', id)
 		setUserSkillsSelected(userSkillsSelected.filter(item => item.id !== id))
 	}
 
