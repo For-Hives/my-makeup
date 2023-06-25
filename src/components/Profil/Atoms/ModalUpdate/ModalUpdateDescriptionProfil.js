@@ -35,6 +35,9 @@ export default function ModalUpdateDescriptionProfil(props) {
 		}
 		patchMeMakeup(session, data)
 
+		let userTemp = user
+		userTemp.description = userDescription
+		props.handleUpdateUser(userTemp)
 		reset()
 		props.handleIsModalOpen()
 	}

@@ -22,6 +22,7 @@ export function ExperiencesProfil(props) {
 		<div className={'relative w-full'}>
 			<ModalUpdateExperiencesProfil
 				isModalOpen={isModalOpen}
+				handleUpdateUser={props.handleUpdateUser}
 				handleIsModalOpen={handleIsModalOpen}
 				user={user}
 			/>

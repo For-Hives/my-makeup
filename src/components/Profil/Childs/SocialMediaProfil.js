@@ -23,6 +23,7 @@ export function SocialMediaProfil(props) {
 		<div className={'w-full'}>
 			<ModalUpdateSocialMediaProfil
 				isModalOpen={isModalOpen}
+				handleUpdateUser={props.handleUpdateUser}
 				handleIsModalOpen={handleIsModalOpen}
 				user={user}
 			/>

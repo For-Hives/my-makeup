@@ -68,6 +68,7 @@ function ResumeProfil(props) {
 				isModalOpen={isModalOpen}
 				handleIsModalOpen={handleIsModalOpen}
 				handleProfilPicture={handleProfilPicture}
+				handleUpdateUser={props.handleUpdateUser}
 				user={user}
 			/>
 			<div className="mx-auto max-w-7xl pt-[90px]">

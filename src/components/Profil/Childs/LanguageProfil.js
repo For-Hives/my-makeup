@@ -22,6 +22,7 @@ export function LanguageProfil(props) {
 		<div className={'relative w-full'}>
 			<ModalUpdateLanguageProfil
 				isModalOpen={isModalOpen}
+				handleUpdateUser={props.handleUpdateUser}
 				handleIsModalOpen={handleIsModalOpen}
 				user={user}
 			/>

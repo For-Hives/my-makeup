@@ -22,6 +22,7 @@ export function LocationProfil(props) {
 		<div className={'w-full'}>
 			<ModalUpdateLocationProfil
 				isModalOpen={isModalOpen}
+				handleUpdateUser={props.handleUpdateUser}
 				handleIsModalOpen={handleIsModalOpen}
 				user={user}
 			/>

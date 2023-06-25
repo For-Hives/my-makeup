@@ -22,6 +22,7 @@ export function SkillsProfil(props) {
 		<div className={'relative w-full'}>
 			<ModalUpdateSkillsProfil
 				isModalOpen={isModalOpen}
+				handleUpdateUser={props.handleUpdateUser}
 				handleIsModalOpen={handleIsModalOpen}
 				user={user}
 			/>

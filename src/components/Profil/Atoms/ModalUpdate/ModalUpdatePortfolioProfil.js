@@ -13,12 +13,11 @@ import { toast } from 'react-toastify'
 
 const schema = zod.object({})
 export default function ModalUpdatePortfolioProfil(props) {
-	const user = props.user
-
 	const { handleSubmit, reset } = useForm({
 		resolver: zodResolver(schema),
 	})
 
+	const [user, setUser] = React.useState(props.user)
 	const [fileObj, setFileObj] = useState('')
 	const [open, setOpen] = useState(props.isModalOpen)
 	const [imageUrl, setImageUrl] = useState('')
@@ -34,7 +33,6 @@ export default function ModalUpdatePortfolioProfil(props) {
 		if (fileObj !== '' && fileObj !== undefined && fileObj !== null) {
 			const form = new FormData()
 			form.append('files', fileObj)
-			console.log(form)
 
 			const res_post = fetch(`${process.env.NEXT_PUBLIC_API_URL}api/upload`, {
 				method: 'POST',
@@ -51,6 +49,14 @@ export default function ModalUpdatePortfolioProfil(props) {
 					// props.handleIsModalOpen()
 					// 	add image to gallery
 					setUserImageGallery([...userImageGallery, data_blob])
+
+					// props.handleUpdateUser([
+					// 	...props.user,
+					// 	{ image_gallery: userImageGallery },
+					// ])
+					let userTemp = props.user
+					userTemp.image_gallery = userImageGallery
+					setUser(userTemp)
 					setImageUrl('')
 					reset()
 				})
@@ -123,6 +129,7 @@ export default function ModalUpdatePortfolioProfil(props) {
 			setFileObj('')
 			setImageUrl('')
 			setUserImageGallery(user.image_gallery ?? [])
+			props.handleUpdateUser(user)
 			reset()
 		}
 	}, [open, reset, user.image_gallery])
