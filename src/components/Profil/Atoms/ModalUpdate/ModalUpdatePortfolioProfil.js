@@ -80,6 +80,11 @@ export default function ModalUpdatePortfolioProfil(props) {
 		}
 		patchMeMakeup(session, data)
 		setImageUrl('')
+		let userTemp = user
+		userTemp.image_gallery = userImageGallery
+		props.handleUpdateUser(userTemp)
+
+		reset()
 		props.handleIsModalOpen()
 	}
 
