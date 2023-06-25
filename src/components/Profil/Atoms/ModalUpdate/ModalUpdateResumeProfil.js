@@ -13,9 +13,15 @@ import { toast } from 'react-toastify'
 
 const schema = zod
 	.object({
-		first_name: zod.string({ required_error: 'Le nom est requis' }),
-		last_name: zod.string({ required_error: 'Le prénom est requis' }),
-		speciality: zod.string({ required_error: 'La spécialité est requise' }),
+		first_name: zod
+			.string({ required_error: 'Le nom est requis.' })
+			.min(1, 'Le nom est requis.'),
+		last_name: zod
+			.string({ required_error: 'Le prénom est requis.' })
+			.min(1, 'Le prénom est requis.'),
+		speciality: zod
+			.string({ required_error: 'La spécialité est requise.' })
+			.min(1, 'La spécialité est requise.'),
 	})
 	.required({ first_name: true, last_name: true, speciality: true })
 
@@ -331,7 +337,7 @@ export default function ModalUpdateResumeProfil(props) {
 																	onChange={handleUpdateFirstName}
 																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																/>
-																{errors.name && (
+																{errors.first_name && (
 																	<p className={'mt-2 text-xs text-red-500/80'}>
 																		{errors.first_name.message}
 																	</p>
@@ -358,7 +364,7 @@ export default function ModalUpdateResumeProfil(props) {
 																	onChange={handleUpdateLastName}
 																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																/>
-																{errors.name && (
+																{errors.last_name && (
 																	<p className={'mt-2 text-xs text-red-500/80'}>
 																		{errors.last_name.message}
 																	</p>
@@ -386,7 +392,7 @@ export default function ModalUpdateResumeProfil(props) {
 																onChange={handleUpdateSpeciality}
 																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 															/>
-															{errors.name && (
+															{errors.speciality && (
 																<p className={'mt-2 text-xs text-red-500/80'}>
 																	{errors.speciality.message}
 																</p>

@@ -9,14 +9,22 @@ import { patchMeMakeup } from '@/services/PatchMeMakeup'
 const schema = zod
 	.object({
 		id: zod.string().optional(),
-		diploma: zod.string({ required_error: 'Le nom du diplôme est requis' }),
-		school: zod.string({ required_error: "Le nom de l'école est requis" }),
-		date_graduation: zod.string({
-			required_error: "La date d'obtention du diplôme est requise",
-		}),
-		course_description: zod.string({
-			required_error: 'La description est requise',
-		}),
+		diploma: zod
+			.string({ required_error: 'Le nom du diplôme est requis.' })
+			.min(1, 'Le nom du diplôme est requis.'),
+		school: zod
+			.string({ required_error: "Le nom de l'école est requis." })
+			.min(1, "Le nom de l'école est requis."),
+		date_graduation: zod
+			.string({
+				required_error: "La date d'obtention du diplôme est requise",
+			})
+			.min(1, "La date d'obtention du diplôme est requise."),
+		course_description: zod
+			.string({
+				required_error: 'La description est requise.',
+			})
+			.min(1, 'La description est requise.'),
 	})
 	.required({
 		diploma: true,

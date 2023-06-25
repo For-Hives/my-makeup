@@ -10,11 +10,17 @@ import { OptionsOffers } from '@/components/Profil/Childs/ServiceOffers/OptionsO
 
 const schema = zod
 	.object({
-		name: zod.string({ required_error: "Le nom de l'entreprise est requise" }),
-		price: zod.string({
-			required_error: 'Le prix de la préstation est requise',
-		}),
-		description: zod.string({ required_error: 'La description est requise' }),
+		name: zod
+			.string({ required_error: "Le nom de l'entreprise est requise." })
+			.min(1, "Le nom de l'entreprise est requise."),
+		price: zod
+			.string({
+				required_error: 'Le prix de la prestation est requise.',
+			})
+			.min(1, 'Le prix de la prestation est requise.'),
+		description: zod
+			.string({ required_error: 'La description est requise.' })
+			.min(1, 'La description est requise.'),
 	})
 	.required({ name: true, price: true, description: true })
 

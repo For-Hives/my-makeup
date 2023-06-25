@@ -8,7 +8,9 @@ import { patchMeMakeup } from '@/services/PatchMeMakeup'
 
 const schema = zod
 	.object({
-		description: zod.string({ required_error: 'La description est requise' }),
+		description: zod
+			.string({ required_error: 'La description est requise.' })
+			.min(1, 'La description est requise.'),
 	})
 	.required({ description: true })
 

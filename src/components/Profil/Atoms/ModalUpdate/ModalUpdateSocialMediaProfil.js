@@ -7,13 +7,13 @@ import { useSession } from 'next-auth/react'
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
 
 const schema = zod.object({
-	youtube: zod.string().url(),
-	facebook: zod.string().url(),
-	instagram: zod.string().url(),
-	website: zod.string().url(),
-	linkedin: zod.string().url(),
-	email: zod.string().email(),
-	phone: zod.string(), // Il est possible de vérifier le numéro de téléphone avec la méthode refine de zod + la librairie validator.js
+	youtube: zod.string().url({ message: 'Veuillez entrer une URL valide' }),
+	facebook: zod.string().url({ message: 'Veuillez entrer une URL valide' }),
+	instagram: zod.string().url({ message: 'Veuillez entrer une URL valide' }),
+	website: zod.string().url({ message: 'Veuillez entrer une URL valide' }),
+	linkedin: zod.string().url({ message: 'Veuillez entrer une URL valide' }),
+	email: zod.string().email({ message: 'Veuillez entrer un email valide' }),
+	phone: zod.string().min(1, 'Le numéro de téléphone est requis.'), // Il est possible de vérifier le numéro de téléphone avec la méthode refine de zod + la librairie validator.js
 })
 
 export default function ModalUpdateSocialMediaProfil(props) {

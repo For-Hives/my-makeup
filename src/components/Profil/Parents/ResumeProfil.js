@@ -148,7 +148,7 @@ function ResumeProfil(props) {
 								</h2>
 							</div>
 							<div>
-								<div className={'flex items-center'}>
+								<div className={'flex items-center gap-2'}>
 									<span className="material-icons-round text-indigo-900">
 										directions_run
 									</span>
