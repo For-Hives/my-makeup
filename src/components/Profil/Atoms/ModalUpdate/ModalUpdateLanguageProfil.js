@@ -45,6 +45,11 @@ export default function ModalUpdateLanguageProfil(props) {
 			language: userLanguageSelectedCleaned,
 		}
 		patchMeMakeup(session, data_clean)
+
+		let userTemp = user
+		userTemp.language = userLanguageSelectedCleaned
+		props.handleUpdateUser(userTemp)
+
 		reset()
 		// close the modal
 		props.handleIsModalOpen()
@@ -93,6 +98,21 @@ export default function ModalUpdateLanguageProfil(props) {
 			reset()
 		}
 	}, [open, reset, user.language])
+
+	useEffect(() => {
+		if (user && user.language) {
+			// Add an id to each skill
+			const languagesWithId = user.language.map((language, index) => {
+				return {
+					id: index, // Use the index as an id
+					name: language.name,
+				}
+			})
+			setUserLanguageSelected(languagesWithId)
+		} else {
+			setUserLanguageSelected([])
+		}
+	}, [open, user])
 
 	return (
 		<Transition.Root show={open} as={Fragment}>
