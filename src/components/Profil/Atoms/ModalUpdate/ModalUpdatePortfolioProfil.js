@@ -107,6 +107,19 @@ export default function ModalUpdatePortfolioProfil(props) {
 			return
 		}
 
+		// Ajouter une vérification de la taille du fichier ici.
+		if (fileObject.size > 1500000) {
+			// Taille du fichier en octets (1.5 Mo)
+			toast(
+				'Le fichier est trop grand, veuillez télécharger un fichier de moins de 1.5 Mo.',
+				{
+					type: 'error',
+					icon: '⛔',
+				}
+			)
+			return
+		}
+
 		const imageUrl = URL.createObjectURL(fileObject)
 		setImageUrl(imageUrl)
 		setFileObj(fileObject)
@@ -247,7 +260,7 @@ export default function ModalUpdatePortfolioProfil(props) {
 																	/>
 																</div>
 																<p className="text-xs leading-5 text-gray-600">
-																	{"PNG, JPG, WEBP jusqu'à 5MB"}
+																	{"PNG, JPG, WEBP jusqu'à 1.5 Mo"}
 																</p>
 															</div>
 														</div>
