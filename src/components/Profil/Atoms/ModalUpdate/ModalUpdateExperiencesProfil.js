@@ -131,19 +131,14 @@ export default function ModalUpdateExperiencesProfil(props) {
 
 	const handleSubmitExperiences = event => {
 		// clean the experiences, remove the id field
-		let userExperiencesCleaned
-		if (userExperiencesId !== '') {
-			userExperiencesCleaned = userExperiences.map(experience => {
-				const { id, ...rest } = experience
-				// replace the date_end field if it's empty by null
-				if (rest.date_end === '') {
-					rest.date_end = null
-				}
-				return rest
-			})
-		} else {
-			userExperiencesCleaned = userExperiences
-		}
+		let userExperiencesCleaned = userExperiences.map(experience => {
+			const { id, ...rest } = experience
+			// replace the date_end field if it's empty by null
+			if (rest.date_end === '') {
+				rest.date_end = null
+			}
+			return rest
+		})
 
 		const data = {
 			experiences: userExperiencesCleaned,
