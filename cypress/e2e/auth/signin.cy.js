@@ -1,13 +1,17 @@
 describe('Login page', () => {
 	before(() => {
-		cy.log(`Visiting https://company.tld`)
-		cy.visit('/')
+		cy.log(`Visiting signin page`)
+		cy.visit('/auth/signin')
 	})
+
 	it('Login with Google', () => {
 		const username = Cypress.env('GOOGLE_USER')
 		const password = Cypress.env('GOOGLE_PW')
 		const loginUrl = Cypress.env('SITE_NAME')
 		const cookieName = Cypress.env('COOKIE_NAME')
+
+		cy.log(`Logging in as ${username}`)
+
 		const socialLoginOptions = {
 			username,
 			password,
