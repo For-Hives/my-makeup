@@ -10,7 +10,8 @@
 		"prettier": "prettier --write .",
 		"precommit": "lint-staged",
 		"prepare": "husky install",
-		"cypress:run": "cypress run"
+		"cypress:run": "cypress run",
+		"cypress:open": "cypress open"
 	},
 	"lint-staged": {
 		"*.js": [
@@ -51,8 +52,10 @@
 	},
 	"devDependencies": {
 		"@tailwindcss/forms": "0.5.3",
+		"@testing-library/cypress": "9.0.0",
 		"autoprefixer": "10.4.14",
-		"cypress": "^12.15.0",
+		"cypress": "12.16.0",
+		"cypress-social-logins": "1.14.1",
 		"eslint-config-prettier": "8.8.0",
 		"husky": "8.0.3",
 		"lint-staged": "13.2.3",
