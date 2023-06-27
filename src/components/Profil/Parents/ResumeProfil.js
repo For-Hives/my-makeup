@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import Image from 'next/image'
 import { Stars } from '@/components/Profil/Atoms/Stars'
 import { BadgeDispo } from '@/components/Profil/Atoms/BadgeDispo'
@@ -11,22 +11,39 @@ function ResumeProfil(props) {
 	const router = useRouter()
 	const { publicView } = router.query
 
-	const user = props.user
+	const [user, setUser] = React.useState(props.user)
 	const isPublic = !!publicView
 
 	const [starsToDisplay, setStarsToDisplay] = React.useState(5)
 	const [availability, setAvailability] = React.useState(!!user?.available)
 	const [isModalOpen, setIsModalOpen] = React.useState(false)
+	const [profilPicture, setProfilePicture] = React.useState(
+		user?.main_picture?.url
+	)
 
 	const handleAvailability = () => {
 		setAvailability(!availability)
+	}
+
+	const handleProfilPicture = pp => {
+		setProfilePicture(pp)
 	}
 
 	const handleIsModalOpen = () => {
 		if (!isPublic) {
 			setIsModalOpen(!isModalOpen)
 		}
+		setUser(props.user)
 	}
+
+	const handleUpdateUser = user => {
+		props.handleUpdateUser(user)
+		setAvailability(!!user?.available)
+	}
+
+	useEffect(() => {
+		setAvailability(!!user?.available)
+	}, [user])
 
 	return (
 		<div
@@ -59,6 +76,8 @@ function ResumeProfil(props) {
 			<ModalUpdateResumeProfil
 				isModalOpen={isModalOpen}
 				handleIsModalOpen={handleIsModalOpen}
+				handleProfilPicture={handleProfilPicture}
+				handleUpdateUser={handleUpdateUser}
 				user={user}
 			/>
 			<div className="mx-auto max-w-7xl pt-[90px]">
@@ -82,7 +101,7 @@ function ResumeProfil(props) {
 
 						{user && user?.main_picture && user?.main_picture?.url ? (
 							<Image
-								src={user?.main_picture?.url}
+								src={profilPicture}
 								alt={'ppmakeup'}
 								width={500}
 								height={500}
@@ -129,7 +148,7 @@ function ResumeProfil(props) {
 								</h2>
 							</div>
 							<div>
-								<div className={'flex items-center'}>
+								<div className={'flex items-center gap-2'}>
 									<span className="material-icons-round text-indigo-900">
 										directions_run
 									</span>
@@ -137,11 +156,12 @@ function ResumeProfil(props) {
 									{user?.action_radius}km
 								</div>
 							</div>
-							<div className={'flex flex-row items-center gap-4'}>
-								<Stars starsToDisplay={user?.score} />{' '}
-								{/* todo connect the score to the number of reviews */}
-								<span className={'text-sm italic'}>( {user?.score} avis )</span>
-							</div>
+							<div></div>
+							{/*<div className={'flex flex-row items-center gap-4'}>*/}
+							{/*	<Stars starsToDisplay={user?.score} />{' '}*/}
+							{/*	/!* todo connect the score to the number of reviews *!/*/}
+							{/*	<span className={'text-sm italic'}>( {user?.score} avis )</span>*/}
+							{/*</div>*/}
 						</div>
 					</div>
 					<div className={'col-span-3 flex items-center'}>

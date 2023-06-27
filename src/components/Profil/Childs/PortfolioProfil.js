@@ -25,6 +25,7 @@ export function PortfolioProfil(props) {
 			<ModalUpdatePortfolioProfil
 				isModalOpen={isModalOpen}
 				handleIsModalOpen={handleIsModalOpen}
+				handleUpdateUser={props.handleUpdateUser}
 				user={user}
 			/>
 			<div

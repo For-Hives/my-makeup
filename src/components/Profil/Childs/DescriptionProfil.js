@@ -22,6 +22,7 @@ export function DescriptionProfil(props) {
 		<div className={'relative w-full'}>
 			<ModalUpdateDescriptionProfil
 				isModalOpen={isModalOpen}
+				handleUpdateUser={props.handleUpdateUser}
 				handleIsModalOpen={handleIsModalOpen}
 				user={user}
 			/>

@@ -8,18 +8,28 @@ import { patchMeMakeup } from '@/services/PatchMeMakeup'
 
 const schema = zod
 	.object({
-		company: zod.string({
-			required_error: "Le nom de l'entreprise est requise",
-		}),
-		job_name: zod.string({
-			required_error: "Le nom de l'expérience est requis",
-		}),
-		city: zod.string({ required_error: 'La ville est requise' }),
-		date_start: zod.string({
-			required_error: "La date de début de l'expérience est requise",
-		}),
-		date_end: zod.string(),
-		description: zod.string({ required_error: 'La description est requise' }),
+		company: zod
+			.string({
+				required_error: "Le nom de l'entreprise est requise.",
+			})
+			.min(1, "Le nom de l'entreprise est requise."),
+		job_name: zod
+			.string({
+				required_error: "Le nom de l'expérience est requis.",
+			})
+			.min(1, "Le nom de l'expérience est requis"),
+		city: zod
+			.string({ required_error: 'La ville est requise.' })
+			.min(1, 'La ville est requise.'),
+		date_start: zod
+			.string({
+				required_error: "La date de début de l'expérience est requise.",
+			})
+			.min(1, "La date de début de l'expérience est requise."),
+		date_end: zod.string().optional(),
+		description: zod
+			.string({ required_error: 'La description est requise.' })
+			.min(1, 'La description est requise.'),
 	})
 	.required({
 		company: true,
@@ -131,19 +141,14 @@ export default function ModalUpdateExperiencesProfil(props) {
 
 	const handleSubmitExperiences = event => {
 		// clean the experiences, remove the id field
-		let userExperiencesCleaned
-		if (userExperiencesId !== '') {
-			userExperiencesCleaned = userExperiences.map(experience => {
-				const { id, ...rest } = experience
-				// replace the date_end field if it's empty by null
-				if (rest.date_end === '') {
-					rest.date_end = null
-				}
-				return rest
-			})
-		} else {
-			userExperiencesCleaned = userExperiences
-		}
+		let userExperiencesCleaned = userExperiences.map(experience => {
+			const { id, ...rest } = experience
+			// replace the date_end field if it's empty by null
+			if (rest.date_end === '') {
+				rest.date_end = null
+			}
+			return rest
+		})
 
 		const data = {
 			experiences: userExperiencesCleaned,
@@ -157,6 +162,11 @@ export default function ModalUpdateExperiencesProfil(props) {
 		setUserExperiencesDateStart('')
 		setUserExperiencesDateEnd('')
 		setUserExperiencesDescription('')
+
+		let userTemp = user
+		userTemp.experiences = userExperiencesCleaned
+		props.handleUpdateUser(userTemp)
+
 		// formState.reset()
 		reset()
 		props.handleIsModalOpen()

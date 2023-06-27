@@ -50,21 +50,48 @@ function InfosProfil(props) {
 							'col-span-12 flex flex-col items-start gap-5 md:col-span-4'
 						}
 					>
-						<LocationProfil user={user} />
-						<SocialMediaProfil user={user} />
-						<SkillsProfil user={user} />
-						<LanguageProfil user={user} />
-						<CoursesProfil user={user} />
+						<LocationProfil
+							user={user}
+							handleUpdateUser={props.handleUpdateUser}
+						/>
+						<SocialMediaProfil
+							user={user}
+							handleUpdateUser={props.handleUpdateUser}
+						/>
+						<SkillsProfil
+							user={user}
+							handleUpdateUser={props.handleUpdateUser}
+						/>
+						<LanguageProfil
+							user={user}
+							handleUpdateUser={props.handleUpdateUser}
+						/>
+						<CoursesProfil
+							user={user}
+							handleUpdateUser={props.handleUpdateUser}
+						/>
 					</div>
 					<div
 						className={
 							'col-span-12 flex flex-col items-start gap-5 md:col-span-8'
 						}
 					>
-						<DescriptionProfil user={user} />
-						<PortfolioProfil user={user} />
-						<ServiceOffersProfil user={user} />
-						<ExperiencesProfil user={user} />
+						<DescriptionProfil
+							user={user}
+							handleUpdateUser={props.handleUpdateUser}
+						/>
+						<PortfolioProfil
+							user={user}
+							handleUpdateUser={props.handleUpdateUser}
+						/>
+						<ServiceOffersProfil
+							user={user}
+							handleUpdateUser={props.handleUpdateUser}
+						/>
+						<ExperiencesProfil
+							user={user}
+							handleUpdateUser={props.handleUpdateUser}
+						/>
 					</div>
 				</div>
 			</div>

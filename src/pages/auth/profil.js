@@ -9,9 +9,15 @@ import _ from 'lodash'
 import InfosProfil from '@/components/Profil/Parents/InfosProfil'
 import FullLoader from '@/components/Global/Loader/FullLoader'
 
-function Profil({ user }) {
+function Profil({ data }) {
 	const { data: session } = useSession()
 	// get current user id
+
+	const [user, setUser] = React.useState(data)
+
+	const handleUpdateUser = newUser => {
+		setUser(newUser)
+	}
 
 	if (!user) {
 		return <FullLoader />
@@ -32,8 +38,8 @@ function Profil({ user }) {
 			<main className={'relative'}>
 				{session && session.user && !_.isEmpty(session.user) ? (
 					<>
-						<ResumeProfil user={user} />
-						<InfosProfil user={user} />
+						<ResumeProfil user={user} handleUpdateUser={handleUpdateUser} />
+						<InfosProfil user={user} handleUpdateUser={handleUpdateUser} />
 					</>
 				) : (
 					<div className="flex h-screen flex-col items-center justify-center">
@@ -85,7 +91,7 @@ export const getServerSideProps = async ({ req, res }) => {
 	return {
 		props: {
 			session,
-			user: user ?? null,
+			data: user ?? null,
 		},
 	}
 }

@@ -44,6 +44,11 @@ export default function ModalUpdateSkillsProfil(props) {
 		const data_clean = {
 			skills: userSkillsSelectedCleaned,
 		}
+
+		let userTemp = user
+		userTemp.skills = userSkillsSelectedCleaned
+		props.handleUpdateUser(userTemp)
+
 		patchMeMakeup(session, data_clean)
 		reset()
 		// close the modal
@@ -92,6 +97,21 @@ export default function ModalUpdateSkillsProfil(props) {
 			reset()
 		}
 	}, [open, reset, user.skills])
+
+	useEffect(() => {
+		if (user && user.skills) {
+			// Add an id to each skill
+			const skillsWithId = user.skills.map((skill, index) => {
+				return {
+					id: index, // Use the index as an id
+					name: skill.name,
+				}
+			})
+			setUserSkillsSelected(skillsWithId)
+		} else {
+			setUserSkillsSelected([])
+		}
+	}, [open, user])
 
 	return (
 		<Transition.Root show={open} as={Fragment}>

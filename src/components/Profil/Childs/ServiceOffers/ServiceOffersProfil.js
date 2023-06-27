@@ -23,6 +23,7 @@ export function ServiceOffersProfil(props) {
 		<div className={'relative w-full'}>
 			<ModalUpdateServiceOffersProfil
 				isModalOpen={isModalOpen}
+				handleUpdateUser={props.handleUpdateUser}
 				handleIsModalOpen={handleIsModalOpen}
 				user={user}
 			/>

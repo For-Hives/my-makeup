@@ -11,14 +11,13 @@ import { Pagination } from 'swiper'
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
 import { toast } from 'react-toastify'
 
-const schema = zod.object()
+const schema = zod.object({})
 export default function ModalUpdatePortfolioProfil(props) {
-	const user = props.user
-
 	const { handleSubmit, reset } = useForm({
 		resolver: zodResolver(schema),
 	})
 
+	const [user, setUser] = React.useState(props.user)
 	const [fileObj, setFileObj] = useState('')
 	const [open, setOpen] = useState(props.isModalOpen)
 	const [imageUrl, setImageUrl] = useState('')
@@ -50,6 +49,14 @@ export default function ModalUpdatePortfolioProfil(props) {
 					// props.handleIsModalOpen()
 					// 	add image to gallery
 					setUserImageGallery([...userImageGallery, data_blob])
+
+					// props.handleUpdateUser([
+					// 	...props.user,
+					// 	{ image_gallery: userImageGallery },
+					// ])
+					let userTemp = props.user
+					userTemp.image_gallery = userImageGallery
+					setUser(userTemp)
 					setImageUrl('')
 					reset()
 				})
@@ -73,6 +80,11 @@ export default function ModalUpdatePortfolioProfil(props) {
 		}
 		patchMeMakeup(session, data)
 		setImageUrl('')
+		let userTemp = user
+		userTemp.image_gallery = userImageGallery
+		props.handleUpdateUser(userTemp)
+
+		reset()
 		props.handleIsModalOpen()
 	}
 
@@ -92,6 +104,19 @@ export default function ModalUpdatePortfolioProfil(props) {
 	const handleFileChange = event => {
 		const fileObject = event.target.files && event.target.files[0]
 		if (!fileObject) {
+			return
+		}
+
+		// Ajouter une vérification de la taille du fichier ici.
+		if (fileObject.size > 1500000) {
+			// Taille du fichier en octets (1.5 Mo)
+			toast(
+				'Le fichier est trop grand, veuillez télécharger un fichier de moins de 1.5 Mo.',
+				{
+					type: 'error',
+					icon: '⛔',
+				}
+			)
 			return
 		}
 
@@ -122,6 +147,7 @@ export default function ModalUpdatePortfolioProfil(props) {
 			setFileObj('')
 			setImageUrl('')
 			setUserImageGallery(user.image_gallery ?? [])
+			props.handleUpdateUser(user)
 			reset()
 		}
 	}, [open, reset, user.image_gallery])
@@ -234,7 +260,7 @@ export default function ModalUpdatePortfolioProfil(props) {
 																	/>
 																</div>
 																<p className="text-xs leading-5 text-gray-600">
-																	{"PNG, JPG, WEBP jusqu'à 5MB"}
+																	{"PNG, JPG, WEBP jusqu'à 1.5 Mo"}
 																</p>
 															</div>
 														</div>

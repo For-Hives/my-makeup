@@ -8,15 +8,23 @@ import { patchMeMakeup } from '@/services/PatchMeMakeup'
 
 const schema = zod
 	.object({
-		id: zod.string(),
-		diploma: zod.string({ required_error: 'Le nom du diplôme est requis' }),
-		school: zod.string({ required_error: "Le nom de l'école est requis" }),
-		date_graduation: zod.string({
-			required_error: "La date d'obtention du diplôme est requise",
-		}),
-		course_description: zod.string({
-			required_error: 'La description est requise',
-		}),
+		id: zod.string().optional(),
+		diploma: zod
+			.string({ required_error: 'Le nom du diplôme est requis.' })
+			.min(1, 'Le nom du diplôme est requis.'),
+		school: zod
+			.string({ required_error: "Le nom de l'école est requis." })
+			.min(1, "Le nom de l'école est requis."),
+		date_graduation: zod
+			.string({
+				required_error: "La date d'obtention du diplôme est requise",
+			})
+			.min(1, "La date d'obtention du diplôme est requise."),
+		course_description: zod
+			.string({
+				required_error: 'La description est requise.',
+			})
+			.min(1, 'La description est requise.'),
 	})
 	.required({
 		diploma: true,
@@ -138,6 +146,11 @@ export default function ModalUpdateCoursesProfil(props) {
 		setUserCoursesSchool('')
 		setUserCoursesDateGraduation('')
 		setUserCoursesDescription('')
+
+		let userTemp = user
+		userTemp.courses = userCoursesCleaned
+		props.handleUpdateUser(userTemp)
+
 		// formState.reset()
 		reset()
 		props.handleIsModalOpen()
@@ -278,10 +291,7 @@ export default function ModalUpdateCoursesProfil(props) {
 																	id="diploma"
 																	name="diploma"
 																	type={'text'}
-																	{...register('diploma', {
-																		required: true,
-																	})}
-																	required
+																	{...register('diploma')}
 																	value={userCoursesDiploma ?? ''}
 																	onChange={handleUpdateCoursesDiploma}
 																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
@@ -305,10 +315,7 @@ export default function ModalUpdateCoursesProfil(props) {
 																	id="school"
 																	name="school"
 																	type={'text'}
-																	{...register('school', {
-																		required: true,
-																	})}
-																	required
+																	{...register('school')}
 																	value={userCoursesSchool ?? ''}
 																	onChange={handleUpdateCoursesSchool}
 																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
@@ -332,10 +339,7 @@ export default function ModalUpdateCoursesProfil(props) {
 																	id="date_graduation"
 																	name="date_graduation"
 																	type={'date'}
-																	{...register('date_graduation', {
-																		required: true,
-																	})}
-																	required
+																	{...register('date_graduation')}
 																	value={userCoursesDateGraduation ?? ''}
 																	onChange={handleUpdateCoursesDateGraduation}
 																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
@@ -358,10 +362,7 @@ export default function ModalUpdateCoursesProfil(props) {
 																<textarea
 																	id="course_description"
 																	name="course_description"
-																	{...register('course_description', {
-																		required: true,
-																	})}
-																	required
+																	{...register('course_description')}
 																	value={userCoursesDescription ?? ''}
 																	onChange={handleUpdateCoursesDescription}
 																	className="block min-h-[200px] w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "

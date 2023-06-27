@@ -10,11 +10,17 @@ import { OptionsOffers } from '@/components/Profil/Childs/ServiceOffers/OptionsO
 
 const schema = zod
 	.object({
-		name: zod.string({ required_error: "Le nom de l'entreprise est requise" }),
-		price: zod.string({
-			required_error: 'Le prix de la préstation est requise',
-		}),
-		description: zod.string({ required_error: 'La description est requise' }),
+		name: zod
+			.string({ required_error: "Le nom de l'entreprise est requise." })
+			.min(1, "Le nom de l'entreprise est requise."),
+		price: zod
+			.string({
+				required_error: 'Le prix de la prestation est requise.',
+			})
+			.min(1, 'Le prix de la prestation est requise.'),
+		description: zod
+			.string({ required_error: 'La description est requise.' })
+			.min(1, 'La description est requise.'),
 	})
 	.required({ name: true, price: true, description: true })
 
@@ -43,6 +49,15 @@ export default function ModalUpdateServiceOffersProfil(props) {
 	const [userServiceOffersOptions, setUserServiceOffersOptions] = useState([])
 
 	const { data: session } = useSession()
+
+	const setResetFormState = () => {
+		setUserServiceOffersId('')
+		setUserServiceOffersName('')
+		setUserServiceOffersPrice('')
+		setUserServiceOffersDescription('')
+		setUserServiceOffersOptions([])
+		reset()
+	}
 
 	/**
 	 * onSubmit function called when the form is submitted
@@ -77,12 +92,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 				})
 
 				setUserServiceOffers(userServiceOffersCopy)
-				setUserServiceOffersId('')
-				setUserServiceOffersName('')
-				setUserServiceOffersPrice('')
-				setUserServiceOffersDescription('')
-				setUserServiceOffersOptions([])
-				reset()
+				setResetFormState()
 			} else {
 				// if the service_offers is not already in the service_offers courses, add it
 				if (data) {
@@ -96,12 +106,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 							options: userServiceOffersOptions,
 						},
 					])
-					setUserServiceOffersId('')
-					setUserServiceOffersName('')
-					setUserServiceOffersPrice('')
-					setUserServiceOffersDescription('')
-					setUserServiceOffersOptions([])
-					reset()
+					setResetFormState()
 				}
 			}
 		}
@@ -113,9 +118,17 @@ export default function ModalUpdateServiceOffersProfil(props) {
 		let userServiceOffersCopy = []
 		if (userServiceOffersId === '') {
 			userServiceOffersCopy = userServiceOffers.map(serviceOffer => {
-				if (serviceOffer.id.toString().startsWith('added')) {
+				if (
+					serviceOffer &&
+					serviceOffer?.id &&
+					serviceOffer.id.toString().startsWith('added')
+				) {
 					const options = serviceOffer.options.map(option => {
-						if (option.id.toString().startsWith('added')) {
+						if (
+							option &&
+							option?.id &&
+							option.id.toString().startsWith('added')
+						) {
 							return {
 								name: option.name,
 								price: option.price,
@@ -133,7 +146,11 @@ export default function ModalUpdateServiceOffersProfil(props) {
 					}
 				} else {
 					const options = serviceOffer.options.map(option => {
-						if (option.id.toString().startsWith('added')) {
+						if (
+							option &&
+							option?.id &&
+							option.id.toString().startsWith('added')
+						) {
 							return {
 								name: option.name,
 								price: option.price,
@@ -155,7 +172,11 @@ export default function ModalUpdateServiceOffersProfil(props) {
 		} else {
 			userServiceOffersCopy = userServiceOffers.map(serviceOffer => {
 				const options = serviceOffer.options.map(option => {
-					if (option.id.toString().startsWith('added')) {
+					if (
+						option &&
+						option?.id &&
+						option.id.toString().startsWith('added')
+					) {
 						return {
 							name: option.name,
 							price: option.price,
@@ -186,6 +207,11 @@ export default function ModalUpdateServiceOffersProfil(props) {
 		setUserServiceOffersPrice('')
 		setUserServiceOffersDescription('')
 		setUserServiceOffersOptions([])
+
+		let userTemp = user
+		userTemp.service_offers = userServiceOffersCopy
+		props.handleUpdateUser(userTemp)
+
 		reset()
 		props.handleIsModalOpen()
 	}
@@ -261,6 +287,25 @@ export default function ModalUpdateServiceOffersProfil(props) {
 		}
 	}, [open, reset, user.service_offers])
 
+	useEffect(() => {
+		if (user && user.service_offers) {
+			const serviceOffersWithId = user.service_offers.map(
+				(serviceOffer, index) => {
+					return {
+						id: index, // Utiliser la fonction uuid pour générer un id unique
+						name: serviceOffer.name,
+						price: serviceOffer.price,
+						description: serviceOffer.description,
+						options: serviceOffer.options,
+					}
+				}
+			)
+			setUserServiceOffers(serviceOffersWithId)
+		} else {
+			setUserServiceOffers([])
+		}
+	}, [open, user])
+
 	return (
 		<Transition.Root show={open} as={Fragment}>
 			<Dialog
@@ -309,7 +354,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 											as="h3"
 											className="text-lg font-semibold text-gray-900"
 										>
-											Les expériences professionnelles que vous avez
+											Les services que vous proposez
 										</Dialog.Title>
 									</div>
 									<div
@@ -361,7 +406,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																htmlFor="description"
 																className="block text-sm text-gray-700"
 															>
-																{"Description de l'expérience"}
+																{'Description de la prestation'}
 															</label>
 															<div className="mt-2">
 																<textarea
@@ -469,7 +514,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																		htmlFor="description"
 																		className="block text-sm text-gray-700"
 																	>
-																		{"Description de l'expérience"}
+																		{'Description de la prestation'}
 																	</label>
 																	<div className="mt-2">
 																		<textarea
