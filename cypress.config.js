@@ -1,4 +1,5 @@
 const { defineConfig } = require('cypress')
+const { GoogleSocialLogin } = require('cypress-social-logins/src/Plugins')
 
 module.exports = defineConfig({
 	e2e: {
@@ -11,6 +12,11 @@ module.exports = defineConfig({
 		reporterOptions: {
 			reporterEnabled: 'mochawesome',
 			mochaFile: 'cypress/reports/junit/test_results[hash].xml',
+		},
+		setupNodeEvents(on, config) {
+			on('task', {
+				GoogleSocialLogin: GoogleSocialLogin,
+			})
 		},
 	},
 })
