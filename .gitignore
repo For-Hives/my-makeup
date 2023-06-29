@@ -39,3 +39,5 @@ cypress/reports/junit/
 cypress/videos/
 
 cypress/screenshots/
+
+.env.local
