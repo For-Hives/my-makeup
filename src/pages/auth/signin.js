@@ -83,6 +83,7 @@ function Signin() {
 										<div className="mt-2 grid grid-cols-2 gap-3">
 											<div>
 												<button
+													data-cy="facebook-signin"
 													onClick={() => {
 														signIn('facebook', {
 															callbackUrl: '/auth/profil',
@@ -110,6 +111,7 @@ function Signin() {
 
 											<div>
 												<button
+													data-cy="google-signin"
 													onClick={() => {
 														signIn('google', {
 															callbackUrl: '/auth/profil',
@@ -165,6 +167,7 @@ function Signin() {
 											</label>
 											<div className="mt-2">
 												<input
+													data-cy="email-input"
 													id="email"
 													name="email"
 													type="text"
@@ -192,6 +195,7 @@ function Signin() {
 											</label>
 											<div className="mt-2">
 												<input
+													data-cy="password-input"
 													id="password"
 													name="password"
 													type="password"
@@ -236,7 +240,11 @@ function Signin() {
 										</div>
 
 										<div>
-											<button type="submit" className="btn-primary-large">
+											<button
+												data-cy="email-signin"
+												type="submit"
+												className="btn-primary-large"
+											>
 												Se connecter
 											</button>
 										</div>
