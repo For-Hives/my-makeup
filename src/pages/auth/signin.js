@@ -291,8 +291,8 @@ function Signin() {
 					<Image
 						alt={'background my-makeup'}
 						fill
-						src="/assets/bg_makeup.webp"
-						className={'z-10 -scale-x-100 transform object-cover'}
+						src="/assets/bg_makeup_alternative.webp"
+						className={'z-10 object-cover'}
 					></Image>
 				</div>
 			</div>
