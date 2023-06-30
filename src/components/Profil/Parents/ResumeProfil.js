@@ -53,6 +53,7 @@ function ResumeProfil(props) {
 		>
 			{!isPublic && (
 				<button
+					data-cy="update-resume-button"
 					onClick={handleIsModalOpen}
 					className={
 						'absolute left-0 top-0 -z-10 flex h-full w-full items-center justify-center opacity-0 ' +

@@ -1,24 +1,39 @@
 describe('profile', () => {
-	it('tests profile', () => {
-		cy.viewport(1895, 1321)
-		cy.visit('http://localhost:3000/')
-		cy.get('div.lg\\:justify-end span').click()
+	before(() => {
+		cy.intercept('POST', '/api/auth/callback/credentials?').as('getCredentials')
+
+		cy.visit('http://localhost:3000/auth/signin')
 		cy.get("[data-cy='email-input']").click()
 		cy.get("[data-cy='email-input']").type('breval2000@live.fr')
 		cy.get("[data-cy='password-input']").type('@linuxAP5')
 		cy.get("[data-cy='email-signin']").click()
-		cy.get('main > div.group > button > div').click()
-		cy.get('#headlessui-portal-root img').click()
-		cy.get("[data-cy='file-main-upload']").type(
-			'C:\\fakepath\\lightin__great_mountain_hiking_adventurer_going_to_adventure_te_425d3e1a-aeff-4590-9458-b18d61f6051a.png'
-		)
-		cy.get('#headlessui-dialog-panel-\\:r3\\:').click()
-		cy.get("[data-cy='first-name-input']").type('')
-		cy.type('{backspace}')
-		cy.get("[data-cy='first-name-input']").type('B')
-		cy.get("[data-cy='first-name-input']").type('Breval')
-		cy.get("[data-cy='last-name-input']").type('LE FLOCH')
-		cy.get("[data-cy='save-resume-button']").click()
+
+		cy.wait('@getCredentials').its('response.statusCode').should('eq', 200)
+	})
+
+	describe('Resume - section', () => {
+		it('tests complet Resume - section', () => {
+			cy.visit('http://localhost:3000/auth/profil')
+
+			cy.get("[data-cy='update-resume-button']").click()
+			cy.get("[data-cy='file-main-upload']").selectFile(
+				'../../fixtures/assets/profile.png',
+				'image/png'
+			)
+
+			cy.get('#headlessui-dialog-panel-\\:r3\\:').click()
+			cy.get("[data-cy='first-name-input']").type('')
+			cy.type('{backspace}')
+			cy.get("[data-cy='first-name-input']").type('B')
+			cy.get("[data-cy='first-name-input']").type('Breval')
+			cy.get("[data-cy='last-name-input']").type('LE FLOCH')
+			cy.get("[data-cy='save-resume-button']").click()
+		})
+	})
+})
+
+describe('profile', () => {
+	it('tests profile', () => {
 		cy.get('div.md\\:col-span-4 > div:nth-of-type(1) button').click()
 		cy.get("[data-cy='city-input']").click()
 		cy.get('#headlessui-dialog-\\:r9\\: > div.z-30 > div').click()

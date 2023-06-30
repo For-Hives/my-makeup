@@ -1,9 +1,9 @@
-describe('Login page', () => {
-	before(() => {
-		cy.log(`Visiting signin page`)
-		cy.visit('/auth/signin')
-	})
+before(() => {
+	cy.log(`Visiting signin page`)
+	cy.visit('/auth/signin')
+})
 
+describe('Login page', () => {
 	it('Login with Google', () => {
 		cy.get("[data-cy='google-signin']").should('exist')
 
