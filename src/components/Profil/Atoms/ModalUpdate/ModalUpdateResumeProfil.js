@@ -15,20 +15,22 @@ const schema = zod
 	.object({
 		first_name: zod
 			.string({ required_error: 'Le prénom est requis.' })
-			.min(1, 'Le prénom est requis.'),
+			.min(1, 'Le prénom est requis.')
+			.or(zod.literal('')),
 		last_name: zod
 			.string({ required_error: 'Le nom est requis.' })
-			.min(1, 'Le nom est requis.'),
-
+			.min(1, 'Le nom est requis.')
+			.or(zod.literal('')),
 		speciality: zod
 			.string({ required_error: 'La spécialité est requise.' })
-			.min(1, 'La spécialité est requise.'),
-
+			.min(1, 'La spécialité est requise.')
+			.or(zod.literal('')),
 		company_artist_name: zod
 			.string({
 				required_error: "Le nom d'entreprise / nom d'artiste est requis.",
 			})
-			.min(1, "Le nom de l'entreprise est requise."),
+			.min(1, "Le nom de l'entreprise est requise.")
+			.or(zod.literal('')),
 	})
 	.required({
 		first_name: true,

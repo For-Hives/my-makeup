@@ -10,7 +10,8 @@ const schema = zod
 	.object({
 		description: zod
 			.string({ required_error: 'La description est requise.' })
-			.min(1, 'La description est requise.'),
+			.min(1, 'La description est requise.')
+			.or(zod.literal('')),
 	})
 	.required({ description: true })
 

@@ -10,12 +10,14 @@ const schema = zod
 	.object({
 		city: zod
 			.string({ required_error: 'La localisation est requise.' })
-			.min(1, 'La localisation est requise.'),
+			.min(1, 'La localisation est requise.')
+			.or(zod.literal('')),
 		action_radius: zod
 			.string({
 				required_error: "Le rayon d'action est requis.",
 			})
-			.min(1, "Le rayon d'action est requis."),
+			.min(1, "Le rayon d'action est requis.")
+			.or(zod.literal('')),
 	})
 	.required({ city: true, action_radius: true })
 
