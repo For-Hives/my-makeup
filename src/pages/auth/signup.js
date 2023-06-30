@@ -42,7 +42,7 @@ function Signup() {
 			email: data.email,
 			password: data.password,
 			name: data.name,
-			callbackUrl: '/auth/verification-wall',
+			callbackUrl: '/auth/profil',
 		})
 	}
 
