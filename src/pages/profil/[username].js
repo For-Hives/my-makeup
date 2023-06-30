@@ -89,6 +89,6 @@ export async function getStaticProps({ params }) {
 		props: {
 			profilData,
 		},
-		revalidate: 600,
+		revalidate: 10,
 	}
 }
