@@ -31,10 +31,11 @@ function DangerZone() {
 										</p>
 									</div>
 									<button
+										data-cy="button-logout"
 										className="flex items-center justify-center gap-2 rounded-md bg-red-500 px-4 py-2 text-white"
 										onClick={() => {
 											signOut()
-											router.push('/')
+											router.push('/auth/signin')
 										}}
 									>
 										<svg
