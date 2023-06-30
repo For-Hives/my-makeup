@@ -9,10 +9,10 @@ function PolitiqueDeConfidentialite() {
 	return (
 		<>
 			<Head>
-				<title>La politique de confidentialité de My Makeup !</title>
+				<title>La politique de confidentialité de My-Makeup !</title>
 				<meta
 					name="description"
-					content="Les conditions générales d'utilisation de My Makeup, votre plateforme de mise en relation entre maquilleuses professionnelles et clients."
+					content="Les conditions générales d'utilisation de My-Makeup, votre plateforme de mise en relation entre maquilleuses professionnelles et clients."
 				/>
 				{/*	seo tag canonical link */}
 				<link rel="canonical" href="https://my-makeup.fr/cgu" />

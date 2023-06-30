@@ -6,7 +6,7 @@ function AdvantagesParticulier(props) {
 		{
 			title: 'Accès à une large sélection de maquilleuses professionnelles',
 			description:
-				'Grâce à My Makeup, les utilisateurs peuvent accéder à une large sélection de maquilleuses professionnelles en un seul endroit. Cela facilite la recherche de la maquilleuse idéale en fonction de leurs besoins spécifiques.',
+				'Grâce à My-Makeup, les utilisateurs peuvent accéder à une large sélection de maquilleuses professionnelles en un seul endroit. Cela facilite la recherche de la maquilleuse idéale en fonction de leurs besoins spécifiques.',
 			icon: <CheckCircleIcon className="h-6 w-6 text-green-500" />,
 		},
 		{
@@ -18,7 +18,7 @@ function AdvantagesParticulier(props) {
 		{
 			title: 'Informations transparentes et évaluations',
 			description:
-				"My Makeup fournit des informations transparentes sur chaque maquilleuse, y compris leurs tarifs, leur expérience et leurs évaluations. Les utilisateurs peuvent lire les retours d'autres clients avant de prendre une décision, assurant ainsi une expérience de qualité.",
+				"My-Makeup fournit des informations transparentes sur chaque maquilleuse, y compris leurs tarifs, leur expérience et leurs évaluations. Les utilisateurs peuvent lire les retours d'autres clients avant de prendre une décision, assurant ainsi une expérience de qualité.",
 			icon: <CheckCircleIcon className="h-6 w-6 text-green-500" />,
 		},
 		{
@@ -30,43 +30,43 @@ function AdvantagesParticulier(props) {
 		{
 			title: 'Apprentissage et inspiration',
 			description:
-				"My Makeup fournit des informations transparentes sur chaque maquilleuse, y compris leurs tarifs, leur expérience et leurs évaluations. Les utilisateurs peuvent lire les retours d'autres clients avant de prendre une décision, assurant ainsi une expérience de qualité.",
+				"My-Makeup fournit des informations transparentes sur chaque maquilleuse, y compris leurs tarifs, leur expérience et leurs évaluations. Les utilisateurs peuvent lire les retours d'autres clients avant de prendre une décision, assurant ainsi une expérience de qualité.",
 			icon: <CheckCircleIcon className="h-6 w-6 text-green-500" />,
 		},
 		{
 			title: 'Sauvegarde de temps',
 			description:
-				'Au lieu de passer des heures à chercher une maquilleuse, à comparer les prix et à lire des critiques sur différents sites, les utilisateurs peuvent trouver toutes ces informations en un seul endroit sur My Makeup. Cela permet un gain de temps considérable.',
+				'Au lieu de passer des heures à chercher une maquilleuse, à comparer les prix et à lire des critiques sur différents sites, les utilisateurs peuvent trouver toutes ces informations en un seul endroit sur My-Makeup. Cela permet un gain de temps considérable.',
 			icon: <CheckCircleIcon className="h-6 w-6 text-green-500" />,
 		},
 		{
 			title: 'Service client de qualité',
 			description:
-				'My Makeup offre un support client de qualité pour aider les utilisateurs dans leur processus de recherche et de réservation. Le service client peut résoudre les problèmes et répondre aux questions rapidement et efficacement.',
+				'My-Makeup offre un support client de qualité pour aider les utilisateurs dans leur processus de recherche et de réservation. Le service client peut résoudre les problèmes et répondre aux questions rapidement et efficacement.',
 			icon: <CheckCircleIcon className="h-6 w-6 text-green-500" />,
 		},
 		{
 			title: 'Communauté',
 			description:
-				"En utilisant My Makeup, les utilisateurs rejoignent une communauté de passionnés de beauté. Ils peuvent partager leurs expériences, donner et recevoir des conseils, et se sentir connectés à d'autres personnes ayant les mêmes intérêts.",
+				"En utilisant My-Makeup, les utilisateurs rejoignent une communauté de passionnés de beauté. Ils peuvent partager leurs expériences, donner et recevoir des conseils, et se sentir connectés à d'autres personnes ayant les mêmes intérêts.",
 			icon: <CheckCircleIcon className="h-6 w-6 text-green-500" />,
 		},
 		{
 			title: 'Des avis authentiques',
 			description:
-				"Sur My Makeup, vous pouvez lire des avis honnêtes et vérifiés de clients précédents, vous permettant de choisir votre maquilleuse avec confiance. C'est un avantage considérable par rapport à d'autres plateformes où les avis peuvent être falsifiés ou non vérifiés.",
+				"Sur My-Makeup, vous pouvez lire des avis honnêtes et vérifiés de clients précédents, vous permettant de choisir votre maquilleuse avec confiance. C'est un avantage considérable par rapport à d'autres plateformes où les avis peuvent être falsifiés ou non vérifiés.",
 			icon: <CheckCircleIcon className="h-6 w-6 text-green-500" />,
 		},
 		{
 			title: 'Engagement envers la qualité',
 			description:
-				'Toutes les maquilleuses sur My Makeup sont vérifiées et doivent respecter nos normes de qualité élevées. Cela vous assure que vous recevrez toujours un service de haut niveau lorsque vous réservez sur notre plateforme.',
+				'Toutes les maquilleuses sur My-Makeup sont vérifiées et doivent respecter nos normes de qualité élevées. Cela vous assure que vous recevrez toujours un service de haut niveau lorsque vous réservez sur notre plateforme.',
 			icon: <CheckCircleIcon className="h-6 w-6 text-green-500" />,
 		},
 		{
 			title: 'Réduction des coûts',
 			description:
-				"En mettant les clients en relation directe avec les maquilleuses, My Makeup élimine le besoin d'intermédiaires, ce qui peut souvent réduire les coûts.",
+				"En mettant les clients en relation directe avec les maquilleuses, My-Makeup élimine le besoin d'intermédiaires, ce qui peut souvent réduire les coûts.",
 			icon: <CheckCircleIcon className="h-6 w-6 text-green-500" />,
 		},
 	]

@@ -16,7 +16,7 @@ function ToutesLesNews({ articles }) {
 	return (
 		<>
 			<Head>
-				<title>My Makeup tous les articles !</title>
+				<title>My-Makeup tous les articles !</title>
 				<meta
 					name="description"
 					content="Toute l'actualité de My-Makeup, c'est ici que vous trouverez toutes les dernières news !
@@ -47,7 +47,7 @@ function ToutesLesNews({ articles }) {
 							</h2>
 							<p className="mt-6 w-1/2 text-start text-lg text-gray-700">
 								{
-									"My Makeup, plus qu'une plateforme de mise en relation, une équipe de passionnés à votre service !"
+									"My-Makeup, plus qu'une plateforme de mise en relation, une équipe de passionnés à votre service !"
 								}
 							</p>
 						</div>

@@ -16,11 +16,11 @@ const navigation = [
 		mode: 'dropdown',
 		children: [
 			{
-				name: 'Pourquoi My Makeup ?',
+				name: 'Pourquoi My-Makeup ?',
 				href: '/pourquoi-utiliser-my-makeup-en-tant-que-particulier',
 				icon: 'handshake',
 				description:
-					'My Makeup est une plateforme de mise en relation entre les particuliers et les professionnels de la beauté.',
+					'My-Makeup est une plateforme de mise en relation entre les particuliers et les professionnels de la beauté.',
 			},
 			{
 				name: 'Trouver une maquilleuse',
@@ -50,11 +50,11 @@ const navigation = [
 		mode: 'dropdown',
 		children: [
 			{
-				name: 'Pourquoi My Makeup ?',
+				name: 'Pourquoi My-Makeup ?',
 				href: '/pourquoi-rejoindre-my-makeup-en-tant-que-maquilleuse',
 				icon: 'brush',
 				description:
-					'Rejoignez la communauté My Makeup pour développer votre activité, trouver de nouveaux clients,' +
+					'Rejoignez la communauté My-Makeup pour développer votre activité, trouver de nouveaux clients,' +
 					' gagner en visibilité. Et facilité votre gestion quotidienne !',
 			},
 			{
@@ -130,9 +130,9 @@ function Nav({
 								aria-label="Global"
 							>
 								<Link href="/" className="-m-1.5 p-1.5">
-									<span className="sr-only">My Makeup</span>
+									<span className="sr-only">My-Makeup</span>
 									<Image
-										alt="Logo My Makeup"
+										alt="Logo My-Makeup"
 										width={50}
 										height={50}
 										src="/assets/logo.webp"
@@ -243,9 +243,9 @@ function Nav({
 						<div className={'flex h-full w-full flex-col gap-8 p-6'}>
 							<div>
 								<Link href="/" className="">
-									<span className="sr-only">My Makeup</span>
+									<span className="sr-only">My-Makeup</span>
 									<Image
-										alt="Logo My Makeup"
+										alt="Logo My-Makeup"
 										width={50}
 										height={50}
 										src="/assets/logo.webp"

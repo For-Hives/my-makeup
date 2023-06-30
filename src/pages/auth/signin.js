@@ -44,7 +44,7 @@ function Signin() {
 	return (
 		<>
 			<Head>
-				<title>Connexion sur My Makeup</title>
+				<title>Connexion sur My-Makeup</title>
 				<meta
 					name="description"
 					content="Connexion sur my-makeup.fr la plateforme qui va révolutionner votre
@@ -58,9 +58,9 @@ function Signin() {
 					<div className="mx-auto w-full max-w-sm lg:w-96">
 						<div>
 							<Link href={'/'}>
-								<span className="sr-only">My Makeup</span>
+								<span className="sr-only">My-Makeup</span>
 								<Image
-									alt="Logo My Makeup"
+									alt="Logo My-Makeup"
 									width={50}
 									height={50}
 									src="/assets/logo.webp"
@@ -78,7 +78,7 @@ function Signin() {
 								<div>
 									<div>
 										<h1 className="text-sm font-medium leading-6 text-gray-900">
-											Se connecter sur My Makeup
+											Se connecter sur My-Makeup
 										</h1>
 										<div className="mt-2 grid grid-cols-2 gap-3">
 											<div>

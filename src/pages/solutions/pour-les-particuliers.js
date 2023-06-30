@@ -13,10 +13,10 @@ function PourLesParticuliers(props) {
 	return (
 		<>
 			<Head>
-				<title>Solutions My Makeup pour les Particuliers !</title>
+				<title>Solutions My-Makeup pour les Particuliers !</title>
 				<meta
 					name="description"
-					content="Découvrez comment My Makeup simplifie la recherche de la maquilleuse professionnelle idéale. Grâce à notre plateforme intuitive, trouver la maquilleuse de vos rêves n'a jamais été aussi simple !"
+					content="Découvrez comment My-Makeup simplifie la recherche de la maquilleuse professionnelle idéale. Grâce à notre plateforme intuitive, trouver la maquilleuse de vos rêves n'a jamais été aussi simple !"
 				/>
 				{/*	seo tag canonical link */}
 				<link
@@ -36,7 +36,7 @@ function PourLesParticuliers(props) {
 					description={
 						<>
 							{
-								'Découvrez comment My Makeup vous donne accès à un large éventail de maquilleuses professionnelles pour trouver celle qui vous correspond le mieux.'
+								'Découvrez comment My-Makeup vous donne accès à un large éventail de maquilleuses professionnelles pour trouver celle qui vous correspond le mieux.'
 							}
 						</>
 					}
@@ -48,13 +48,13 @@ function PourLesParticuliers(props) {
 						<article>
 							<header className="flex flex-col">
 								<h1 className="mt-6 text-3xl font-bold tracking-tight text-gray-800 sm:text-4xl">
-									{`Solutions My Makeup pour les Particuliers : Trouver la
+									{`Solutions My-Makeup pour les Particuliers : Trouver la
 											Maquilleuse de vos Rêves n'a Jamais été Aussi Simple !`}
 								</h1>
 							</header>
 							<div className="prose my-8 xl:prose-lg">
 								<p>
-									{`Nous savons à quel point il peut être difficile de trouver la maquilleuse professionnelle qui répond parfaitement à vos besoins. C'est pourquoi chez My Makeup, nous avons simplifié ce processus pour vous. Voici comment notre plateforme rend la recherche de la maquilleuse de vos rêves plus facile que jamais.`}
+									{`Nous savons à quel point il peut être difficile de trouver la maquilleuse professionnelle qui répond parfaitement à vos besoins. C'est pourquoi chez My-Makeup, nous avons simplifié ce processus pour vous. Voici comment notre plateforme rend la recherche de la maquilleuse de vos rêves plus facile que jamais.`}
 								</p>
 								<ul>
 									<li>
@@ -66,7 +66,7 @@ function PourLesParticuliers(props) {
 									<li>
 										<h2>{'Comparez et choisissez 🔄'}</h2>
 										<p>
-											{`Sur My Makeup, vous pouvez consulter les profils détaillés des maquilleuses, y compris leurs portfolios, leurs spécialités, leurs tarifs et leurs évaluations. Cela vous permet de comparer facilement les différentes options et de choisir celle qui vous convient le mieux.`}
+											{`Sur My-Makeup, vous pouvez consulter les profils détaillés des maquilleuses, y compris leurs portfolios, leurs spécialités, leurs tarifs et leurs évaluations. Cela vous permet de comparer facilement les différentes options et de choisir celle qui vous convient le mieux.`}
 										</p>
 									</li>
 									<li>
@@ -78,15 +78,15 @@ function PourLesParticuliers(props) {
 									<li>
 										<h2>{"Profitez d'un service sécurisé 💼"}</h2>
 										<p>
-											{`Avec My Makeup, la sécurité est notre priorité. Toutes les maquilleuses sur notre plateforme sont vérifiées et vous pouvez lire les commentaires des autres clients pour vous assurer de la qualité de leur service. De plus, notre système de paiement sécurisé vous garantit une transaction sans tracas.`}
+											{`Avec My-Makeup, la sécurité est notre priorité. Toutes les maquilleuses sur notre plateforme sont vérifiées et vous pouvez lire les commentaires des autres clients pour vous assurer de la qualité de leur service. De plus, notre système de paiement sécurisé vous garantit une transaction sans tracas.`}
 										</p>
 									</li>
 									<li>
 										<h2>{'Un service client dédié à votre écoute 📞'}</h2>
 										<p>
-											{`Si vous avez des questions ou rencontrez un problème, notre équipe de service client est là pour vous aider. Nous sommes déterminés à faire de votre expérience avec My Makeup une expérience positive et sans stress.
+											{`Si vous avez des questions ou rencontrez un problème, notre équipe de service client est là pour vous aider. Nous sommes déterminés à faire de votre expérience avec My-Makeup une expérience positive et sans stress.
 												
-												En somme, My Makeup simplifie votre recherche de la maquilleuse parfaite. Avec nous, trouver la maquilleuse de vos rêves n'a jamais été aussi simple !`}
+												En somme, My-Makeup simplifie votre recherche de la maquilleuse parfaite. Avec nous, trouver la maquilleuse de vos rêves n'a jamais été aussi simple !`}
 										</p>
 									</li>
 								</ul>

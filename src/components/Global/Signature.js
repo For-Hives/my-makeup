@@ -11,7 +11,7 @@ export function Signature({ isPaddingActivated = true }) {
 			}
 		>
 			<p className={'mx-auto text-sm text-gray-600'}>
-				© {actualYear} My Makeup - Tous droits réservés - Developed with ❤️ by{' '}
+				© {actualYear} My-Makeup - Tous droits réservés - Developed with ❤️ by{' '}
 				<Link
 					className={'text-sm text-gray-600 underline'}
 					href={'https://andy-cinquin.fr'}

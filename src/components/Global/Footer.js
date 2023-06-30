@@ -15,11 +15,11 @@ function Footer() {
 					<div className={'flex items-center justify-start gap-3'}>
 						<Image
 							src={'/assets/logo.webp'}
-							alt={'Logo My Makeup'}
+							alt={'Logo My-Makeup'}
 							width={'50'}
 							height={'50'}
 						/>
-						<p className={'text-2xl font-bold text-my-makeup-900'}>My Makeup</p>
+						<p className={'text-2xl font-bold text-my-makeup-900'}>My-Makeup</p>
 					</div>
 					<p className={'text-sm text-gray-600'}>
 						72 avenue Camus,
@@ -33,7 +33,7 @@ function Footer() {
 								className={'fill-white'}
 								width={'35'}
 								height={'35'}
-								alt={'Instagram My Makeup'}
+								alt={'Instagram My-Makeup'}
 							/>
 						</Link>
 						<Link href="/" rel={'noopener nofollow noreferrer'}>
@@ -42,7 +42,7 @@ function Footer() {
 								className={'fill-indigo-700'}
 								width={'35'}
 								height={'35'}
-								alt={'Linkedin My Makeup'}
+								alt={'Linkedin My-Makeup'}
 							/>
 						</Link>
 						<Link href="/" rel={'noopener nofollow noreferrer'}>
@@ -51,7 +51,7 @@ function Footer() {
 								className={'fill-indigo-700'}
 								width={'35'}
 								height={'35'}
-								alt={'Mail My Makeup'}
+								alt={'Mail My-Makeup'}
 							/>
 						</Link>
 						<Link href="/" rel={'noopener nofollow noreferrer'}>
@@ -60,7 +60,7 @@ function Footer() {
 								className={'fill-indigo-700'}
 								width={'35'}
 								height={'35'}
-								alt={'Facebook My Makeup'}
+								alt={'Facebook My-Makeup'}
 							/>
 						</Link>
 					</div>
@@ -73,7 +73,7 @@ function Footer() {
 						href={'/pourquoi-utiliser-my-makeup-en-tant-que-particulier'}
 						className={'text-sm text-gray-600'}
 					>
-						Pourquoi My Makeup ?
+						Pourquoi My-Makeup ?
 					</Link>
 					<Link
 						href={'/particulier/trouver-une-maquilleuse'}
@@ -102,7 +102,7 @@ function Footer() {
 						href={'/pourquoi-rejoindre-my-makeup-en-tant-que-maquilleuse'}
 						className={'text-sm text-gray-600'}
 					>
-						Pourquoi My Makeup ?
+						Pourquoi My-Makeup ?
 					</Link>
 					<Link
 						href={'/maquilleuse/partenariats'}
@@ -149,10 +149,10 @@ function Footer() {
 				</div>
 				<div className={'flex flex-col gap-6'}>
 					<div className={'mb-2 flex items-center justify-start gap-3'}>
-						<p className={'text-xl font-bold text-indigo-800'}>My Makeup</p>
+						<p className={'text-xl font-bold text-indigo-800'}>My-Makeup</p>
 					</div>
 					<Link href={'/a-propos'} className={'text-sm text-gray-600'}>
-						À propos de My Makeup
+						À propos de My-Makeup
 					</Link>
 					<Link href={'/contact'} className={'text-sm text-gray-600'}>
 						Contact

@@ -31,12 +31,12 @@ export default function Article({ articleData }) {
 	return (
 		<>
 			<Head>
-				<title>{meta?.seo_title ?? 'My Makeup'}</title>
+				<title>{meta?.seo_title ?? 'My-Makeup'}</title>
 				<meta
 					name="description"
 					content={
 						meta?.seo_description ??
-						'Découvrez cet article passionnant de la part de My Makeup'
+						'Découvrez cet article passionnant de la part de My-Makeup'
 					}
 				/>
 				{/*	seo tag canonical link */}

@@ -80,7 +80,7 @@ function TrouverUneMaquilleuse(props) {
 									<li>
 										<h2>Utilisez des filtres de recherche 🔍</h2>
 										<p>
-											{`Sur la plateforme My Makeup, vous pouvez utiliser des filtres de recherche pour affiner 
+											{`Sur la plateforme My-Makeup, vous pouvez utiliser des filtres de recherche pour affiner 
 												votre sélection en fonction de critères spécifiques. Par exemple, vous pouvez 
 												filtrer les maquilleuses par localisation, spécialités, formation, expérience et 
 												évaluations. Ces filtres vous aideront à réduire le nombre de résultats de 
@@ -90,13 +90,13 @@ function TrouverUneMaquilleuse(props) {
 									<li>
 										<h2>Consultez les profils 👀</h2>
 										<p>
-											{`Chaque maquilleuse sur My Makeup a un profil détaillé où vous pouvez en apprendre plus sur son parcours, ses compétences et ses spécialités. Prenez le temps de lire attentivement ces profils pour comprendre ce que chaque maquilleuse a à offrir. Vous pouvez également consulter les photos de leur travail pour avoir une idée de leur style.`}
+											{`Chaque maquilleuse sur My-Makeup a un profil détaillé où vous pouvez en apprendre plus sur son parcours, ses compétences et ses spécialités. Prenez le temps de lire attentivement ces profils pour comprendre ce que chaque maquilleuse a à offrir. Vous pouvez également consulter les photos de leur travail pour avoir une idée de leur style.`}
 										</p>
 									</li>
 									<li>
 										<h2>Lisez les avis 🌟</h2>
 										<p>
-											{`Les avis des clients précédents peuvent être une ressource précieuse pour choisir la bonne maquilleuse. Ils peuvent vous donner une idée de la qualité du travail de la maquilleuse, de son professionnalisme et de sa relation avec les clients. Sur My Makeup, vous pouvez lire des avis vérifiés pour vous aider à prendre votre décision.`}
+											{`Les avis des clients précédents peuvent être une ressource précieuse pour choisir la bonne maquilleuse. Ils peuvent vous donner une idée de la qualité du travail de la maquilleuse, de son professionnalisme et de sa relation avec les clients. Sur My-Makeup, vous pouvez lire des avis vérifiés pour vous aider à prendre votre décision.`}
 										</p>
 									</li>
 									<li>

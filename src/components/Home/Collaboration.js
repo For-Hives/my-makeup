@@ -27,11 +27,11 @@ function Collaboration() {
 						<div className={'flex flex-col gap-4'}>
 							<p>
 								Vous cherchez à vous épanouir dans votre carrière de maquilleuse
-								professionnelle ? Ne cherchez plus, My Makeup est la solution
+								professionnelle ? Ne cherchez plus, My-Makeup est la solution
 								idéale pour vous !
 							</p>
 							<p>
-								Avec My Makeup, vous pouvez recevoir des offres de missions
+								Avec My-Makeup, vous pouvez recevoir des offres de missions
 								parfaitement adaptées à vos compétences et communiquer
 								directement avec des clients potentiels dans tous les secteurs.
 							</p>
@@ -101,12 +101,12 @@ function Collaboration() {
 								Vous êtes spécialisée en maquillage pour les mariées ou en
 								maquillage artistique ? Vous cherchez à travailler à Lyon,
 								Nantes, Toulouse, Rennes, Lille, Cannes ou Paris ? Pas de
-								problème ! Avec My Makeup, les gens qui en on besoin peuvent
+								problème ! Avec My-Makeup, les gens qui en on besoin peuvent
 								vous trouver facilement.
 							</p>
 							<p>
 								N&apos;attendez plus pour rejoindre la communauté de
-								maquilleuses professionnelles de My Makeup. Avec notre
+								maquilleuses professionnelles de My-Makeup. Avec notre
 								plateforme, vous pouvez trouver des missions passionnantes et
 								des clients fidèles qui vous permettront de développer votre
 								carrière à votre guise. Inscrivez-vous dès maintenant et
@@ -221,7 +221,7 @@ function Collaboration() {
 								maquillage professionnel ou un maquillage de soirée.
 							</p>
 							<p>
-								Avec My Makeup, vous pouvez également trouver des maquilleuses
+								Avec My-Makeup, vous pouvez également trouver des maquilleuses
 								fx pour vos projets cinéma ou des maquilleuses événementielles
 								pour vos soirées spéciales. Besoin d&apos;une maquilleuse à
 								domicile ou pour un anniversaire ? Nous avons également des
@@ -229,7 +229,7 @@ function Collaboration() {
 							</p>
 							<p>
 								Notre solution de gestion est simple et intuitive, même pour les
-								débutants. Avec My Makeup, vous pouvez centraliser toutes vos
+								débutants. Avec My-Makeup, vous pouvez centraliser toutes vos
 								activités avec les maquilleuses professionnelles de votre choix,
 								pour une gestion simplifiée.
 							</p>

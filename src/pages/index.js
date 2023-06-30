@@ -14,7 +14,7 @@ export default function Home({ talents }) {
 		<>
 			<Head>
 				<title>
-					Accueil - My Makeup le moteur de recherche pour les maquilleuses
+					Accueil - My-Makeup le moteur de recherche pour les maquilleuses
 				</title>
 				<meta
 					name="description"

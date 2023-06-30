@@ -10,10 +10,10 @@ function PourquoiMyMakeup() {
 	return (
 		<>
 			<Head>
-				<title>Pourquoi My Makeup ? en tant que maquilleuse</title>
+				<title>Pourquoi My-Makeup ? en tant que maquilleuse</title>
 				<meta
 					name="description"
-					content="Découvrez pourquoi vous devriez rejoindre My Makeup en tant que maquilleuse professionnelle"
+					content="Découvrez pourquoi vous devriez rejoindre My-Makeup en tant que maquilleuse professionnelle"
 				/>
 				{/*	seo tag canonical link */}
 				<link

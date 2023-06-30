@@ -7,7 +7,7 @@ function Custom404(props) {
 	return (
 		<>
 			<Head>
-				<title>My Makeup</title>
+				<title>My-Makeup</title>
 				<meta
 					name="description"
 					content="Vérification de profil, sur My-Makeup, la plateforme pour les maquilleuses !"
@@ -22,9 +22,9 @@ function Custom404(props) {
 				<div className="flex flex-1 flex-col justify-center bg-white px-4 sm:px-6 md:py-12 md:pt-12 lg:flex-none lg:px-20 xl:px-24">
 					<div className="mx-auto w-full max-w-sm lg:w-96">
 						<Link href={'/'}>
-							<span className="sr-only">My Makeup</span>
+							<span className="sr-only">My-Makeup</span>
 							<Image
-								alt="Logo My Makeup"
+								alt="Logo My-Makeup"
 								width={50}
 								height={50}
 								src="/assets/logo.webp"

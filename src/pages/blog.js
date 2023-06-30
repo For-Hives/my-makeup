@@ -19,7 +19,7 @@ function Blog({ articles }) {
 	return (
 		<>
 			<Head>
-				<title>Blog de My Makeup</title>
+				<title>Blog de My-Makeup</title>
 				<meta
 					name="description"
 					content="L'actualité de My-Makeup, ce que nous faisons pour améliorer votre quotidien !
@@ -51,7 +51,7 @@ function Blog({ articles }) {
 							</h2>
 							<p className="mt-6 w-full text-start text-lg text-gray-700 md:w-1/2">
 								{
-									"My Makeup, plus qu'une plateforme de mise en relation, une équipe de passionnés à votre service !"
+									"My-Makeup, plus qu'une plateforme de mise en relation, une équipe de passionnés à votre service !"
 								}
 							</p>
 						</div>
