@@ -272,7 +272,7 @@ export default function ModalUpdateResumeProfil(props) {
 															>
 																<Image
 																	src={imageUrl}
-																	alt={'photo de profil'}
+																	alt={'photo de profil.cy.js'}
 																	fill={true}
 																	className="rounded-full object-cover object-center"
 																/>
@@ -295,6 +295,7 @@ export default function ModalUpdateResumeProfil(props) {
 																	<span>Télécharger une nouvelle photo</span>
 																</label>
 																<input
+																	data-cy="file-main-upload"
 																	id="file-upload"
 																	name="file-upload"
 																	type="file"
@@ -326,6 +327,7 @@ export default function ModalUpdateResumeProfil(props) {
 															</label>
 															<div className="mt-2">
 																<input
+																	data-cy="first-name-input"
 																	id="first_name"
 																	name="first_name"
 																	type="text"
@@ -353,6 +355,7 @@ export default function ModalUpdateResumeProfil(props) {
 															</label>
 															<div className="mt-2">
 																<input
+																	data-cy="last-name-input"
 																	id="last_name"
 																	name="last_name"
 																	type="text"
@@ -381,6 +384,7 @@ export default function ModalUpdateResumeProfil(props) {
 														</label>
 														<div className="mt-2">
 															<input
+																data-cy="speciality-input"
 																id="speciality"
 																name="speciality"
 																type="text"
@@ -408,6 +412,7 @@ export default function ModalUpdateResumeProfil(props) {
 														</label>
 														<div className="mt-2 flex items-center gap-4">
 															<Switch
+																data-cy="available-input"
 																value={available}
 																checked={available}
 																onChange={handleUpdateAvailable}
@@ -449,6 +454,7 @@ export default function ModalUpdateResumeProfil(props) {
 								</div>
 								<div className="mt-4 flex justify-end">
 									<button
+										data-cy="save-resume-button"
 										type="button"
 										className="btn-primary"
 										onClick={handleSubmit(onSubmit)}

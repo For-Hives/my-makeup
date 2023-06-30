@@ -153,6 +153,7 @@ export default function ModalUpdateLocationProfil(props) {
 														</label>
 														<div className="mt-2">
 															<input
+																data-cy="city-input"
 																id="city"
 																name="city"
 																type="text"
@@ -177,6 +178,7 @@ export default function ModalUpdateLocationProfil(props) {
 														</label>
 														<div className="mt-2">
 															<input
+																data-cy="action-radius-input"
 																id="action_radius"
 																name="action_radius"
 																type="number"
@@ -199,6 +201,7 @@ export default function ModalUpdateLocationProfil(props) {
 								</div>
 								<div className="mt-4 flex justify-end">
 									<button
+										data-cy="save-button"
 										type="button"
 										className="btn-primary"
 										onClick={handleSubmit(onSubmit)}

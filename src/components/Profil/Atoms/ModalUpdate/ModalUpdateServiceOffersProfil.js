@@ -383,6 +383,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 															</label>
 															<div className="mt-2">
 																<input
+																	data-cy="name-service-offers-input"
 																	id="name"
 																	name="name"
 																	type={'text'}
@@ -410,6 +411,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 															</label>
 															<div className="mt-2">
 																<textarea
+																	data-cy="description-service-offers-input"
 																	id="description"
 																	name="description"
 																	{...register('description', {
@@ -438,6 +440,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 															</label>
 															<div className="mt-2">
 																<input
+																	data-cy="price-service-offers-input"
 																	id="price"
 																	name="price"
 																	type={'text'}
@@ -482,6 +485,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																	</label>
 																	<div className="relative mt-2">
 																		<input
+																			data-cy={`name-service-offers-option-input-${index}`}
 																			id={`name${index}`}
 																			name={`name${index}`}
 																			type={'text'}
@@ -518,6 +522,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																	</label>
 																	<div className="mt-2">
 																		<textarea
+																			data-cy={`description-service-offers-option-input-${index}`}
 																			id="description"
 																			name="description"
 																			required
@@ -555,6 +560,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																	</label>
 																	<div className="mt-2">
 																		<input
+																			data-cy={`price-service-offers-option-input-${index}`}
 																			id="price"
 																			name="price"
 																			type={'text'}
@@ -589,6 +595,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 														className={'flex w-full items-center justify-start'}
 													>
 														<button
+															data-cy={'add-service-offers-option-button'}
 															className={
 																'flex w-full items-center justify-center gap-2 rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400  focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm'
 															}
@@ -604,6 +611,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 													</div>
 													<div className={'flex items-center justify-end'}>
 														<button
+															data-cy={'add-service-offers-button'}
 															type="button"
 															className="btn-primary"
 															onClick={handleSubmit(onSubmit)}
@@ -676,6 +684,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																				</span>
 																			</button>
 																			<button
+																				data-cy="delete-service-offers-button"
 																				className={
 																					'flex items-center justify-center'
 																				}
@@ -723,6 +732,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 								</div>
 								<div className="mt-4 flex justify-end">
 									<button
+										data-cy="save-service-offers-button"
 										type="button"
 										className="btn-primary"
 										onClick={handleSubmitServiceOffers}

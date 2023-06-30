@@ -312,6 +312,7 @@ export default function ModalUpdateCoursesProfil(props) {
 															</label>
 															<div className="mt-2">
 																<input
+																	data-cy="school-input"
 																	id="school"
 																	name="school"
 																	type={'text'}
@@ -336,6 +337,7 @@ export default function ModalUpdateCoursesProfil(props) {
 															</label>
 															<div className="mt-2">
 																<input
+																	data-cy="date-graduation-input"
 																	id="date_graduation"
 																	name="date_graduation"
 																	type={'date'}
@@ -377,6 +379,7 @@ export default function ModalUpdateCoursesProfil(props) {
 													</form>
 													<div className={'flex items-center justify-end'}>
 														<button
+															data-cy="add-course-button"
 															type="button"
 															className="btn-primary"
 															onClick={handleSubmit(onSubmit)}

@@ -190,6 +190,7 @@ export default function ModalUpdateSocialMediaProfil(props) {
 														</label>
 														<div className="mt-2">
 															<input
+																data-cy="email-input"
 																id="email"
 																name="email"
 																type="text"
@@ -217,6 +218,7 @@ export default function ModalUpdateSocialMediaProfil(props) {
 														</label>
 														<div className="mt-2">
 															<input
+																data-cy="phone-input"
 																id="phone"
 																name="phone"
 																type="text"
@@ -244,6 +246,7 @@ export default function ModalUpdateSocialMediaProfil(props) {
 														</label>
 														<div className="mt-2">
 															<input
+																data-cy="youtube-input"
 																id="youtube"
 																name="youtube"
 																type="text"
@@ -271,6 +274,7 @@ export default function ModalUpdateSocialMediaProfil(props) {
 														</label>
 														<div className="mt-2">
 															<input
+																data-cy="facebook-input"
 																id="facebook"
 																name="facebook"
 																type="text"
@@ -298,6 +302,7 @@ export default function ModalUpdateSocialMediaProfil(props) {
 														</label>
 														<div className="mt-2">
 															<input
+																data-cy="instagram-input"
 																id="instagram"
 																name="instagram"
 																type="text"
@@ -325,6 +330,7 @@ export default function ModalUpdateSocialMediaProfil(props) {
 														</label>
 														<div className="mt-2">
 															<input
+																data-cy="website-input"
 																id="website"
 																name="website"
 																type="text"
@@ -352,6 +358,7 @@ export default function ModalUpdateSocialMediaProfil(props) {
 														</label>
 														<div className="mt-2">
 															<input
+																data-cy="linkedin-input"
 																id="linkedin"
 																name="linkedin"
 																type="text"
