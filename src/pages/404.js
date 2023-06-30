@@ -27,7 +27,7 @@ function Custom404(props) {
 								alt="Logo My Makeup"
 								width={50}
 								height={50}
-								src="/assets/logo_2.webp"
+								src="/assets/logo.webp"
 							/>
 						</Link>
 						<div className={'mt-8'}>
@@ -44,8 +44,6 @@ function Custom404(props) {
 						</div>
 					</div>
 				</div>
-				{/* todo custom illustrator image -> cat unplug a computer ? */}
-				{/* https://dribbble.com/shots/10774525-404-ERROR-PAGE */}
 				<div className="relative hidden w-full flex-1 lg:block lg:object-contain">
 					<div
 						className={
@@ -53,7 +51,7 @@ function Custom404(props) {
 						}
 					></div>
 					<Image
-						alt={'background my-makeup'}
+						alt={'background my-makeup 404'}
 						fill
 						src="/assets/vectorials-used/cat404.svg"
 						className={'z-10 transform object-cover'}
