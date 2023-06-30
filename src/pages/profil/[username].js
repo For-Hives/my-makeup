@@ -13,7 +13,7 @@ export default function Profil({ profilData }) {
 	return (
 		<>
 			<Head>
-				<title>{`${user.attributes.first_name} ${user.attributes.last_name} - My Makeup`}</title>
+				<title>{`${user.attributes.first_name} ${user.attributes.last_name} - My-Makeup`}</title>
 				<meta
 					name="description"
 					content={`Découvrez le profil de la maquilleuse professionnelle de vos rêves ! ${user.attributes.first_name} ${profilData.attributes.last_name}  - ${profilData.attributes.speciality} `}
@@ -89,6 +89,6 @@ export async function getStaticProps({ params }) {
 		props: {
 			profilData,
 		},
-		revalidate: 600,
+		revalidate: 10,
 	}
 }

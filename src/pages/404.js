@@ -7,7 +7,7 @@ function Custom404(props) {
 	return (
 		<>
 			<Head>
-				<title>My Makeup</title>
+				<title>My-Makeup</title>
 				<meta
 					name="description"
 					content="Vérification de profil, sur My-Makeup, la plateforme pour les maquilleuses !"
@@ -22,12 +22,12 @@ function Custom404(props) {
 				<div className="flex flex-1 flex-col justify-center bg-white px-4 sm:px-6 md:py-12 md:pt-12 lg:flex-none lg:px-20 xl:px-24">
 					<div className="mx-auto w-full max-w-sm lg:w-96">
 						<Link href={'/'}>
-							<span className="sr-only">My Makeup</span>
+							<span className="sr-only">My-Makeup</span>
 							<Image
-								alt="Logo My Makeup"
+								alt="Logo My-Makeup"
 								width={50}
 								height={50}
-								src="/assets/logo_2.webp"
+								src="/assets/logo.webp"
 							/>
 						</Link>
 						<div className={'mt-8'}>
@@ -44,8 +44,6 @@ function Custom404(props) {
 						</div>
 					</div>
 				</div>
-				{/* todo custom illustrator image -> cat unplug a computer ? */}
-				{/* https://dribbble.com/shots/10774525-404-ERROR-PAGE */}
 				<div className="relative hidden w-full flex-1 lg:block lg:object-contain">
 					<div
 						className={
@@ -53,7 +51,7 @@ function Custom404(props) {
 						}
 					></div>
 					<Image
-						alt={'background my-makeup'}
+						alt={'background my-makeup 404'}
 						fill
 						src="/assets/vectorials-used/cat404.svg"
 						className={'z-10 transform object-cover'}

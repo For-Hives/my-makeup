@@ -146,6 +146,9 @@ function ResumeProfil(props) {
 								>
 									{user?.speciality}
 								</h2>
+								<h3 className={'text-lg tracking-tight text-gray-800'}>
+									{user?.company_artist_name}
+								</h3>
 							</div>
 							<div>
 								<div className={'flex items-center gap-2'}>

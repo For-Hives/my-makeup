@@ -7,7 +7,7 @@ function Presentation() {
 			<div className="mx-auto max-w-7xl">
 				<div className="mx-auto">
 					<h2 className="text-center text-4xl font-bold tracking-tight text-gray-900 sm:text-4xl">
-						My Makeup c&apos;est avant tout une communauté
+						My-Makeup c&apos;est avant tout une communauté
 					</h2>
 					<p className="mt-6 text-center text-lg leading-8 text-gray-700">
 						Où les maquilleuses et les particuliers se retrouvent pour

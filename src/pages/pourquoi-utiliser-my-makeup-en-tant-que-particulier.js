@@ -14,10 +14,10 @@ function PourquoiUtiliserMyMakeupEnTantQueParticulier(props) {
 	return (
 		<>
 			<Head>
-				<title>Pourquoi My Makeup ? en tant que particulier</title>
+				<title>Pourquoi My-Makeup ? en tant que particulier</title>
 				<meta
 					name="description"
-					content="Découvrez pourquoi vous devriez utiliser My Makeup en tant que particulier & professionnel"
+					content="Découvrez pourquoi vous devriez utiliser My-Makeup en tant que particulier & professionnel"
 				/>
 				{/*	seo tag canonical link */}
 				<link

@@ -28,7 +28,7 @@ function Error() {
 	return (
 		<>
 			<Head>
-				<title>My Makeup</title>
+				<title>My-Makeup</title>
 				<meta
 					name="description"
 					content="Connexion sur my-makeup.fr la plateforme qui va révolutionner votre

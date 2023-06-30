@@ -13,10 +13,10 @@ function APropos(props) {
 	return (
 		<>
 			<Head>
-				<title>My Makeup la plateforme de recherche de maquilleuse !</title>
+				<title>My-Makeup la plateforme de recherche de maquilleuse !</title>
 				<meta
 					name="description"
-					content="Apprenez-en plus sur My Makeup, votre plateforme de mise en relation entre maquilleuses professionnelles et clients. "
+					content="Apprenez-en plus sur My-Makeup, votre plateforme de mise en relation entre maquilleuses professionnelles et clients. "
 				/>
 				{/*	seo tag canonical link */}
 				<link rel="canonical" href="https://my-makeup.fr/a-propos" />
@@ -35,7 +35,7 @@ function APropos(props) {
 					description={
 						<>
 							{
-								'Découvrez comment My Makeup peut aider les personnes à trouver la maquilleuse professionnelle qui leur correspond. Et comment nous pouvons aider les maquilleuses professionnelles à développer leur activité, à trouver de nouveaux clients et à découvrir de nouvelles opportunités.'
+								'Découvrez comment My-Makeup peut aider les personnes à trouver la maquilleuse professionnelle qui leur correspond. Et comment nous pouvons aider les maquilleuses professionnelles à développer leur activité, à trouver de nouveaux clients et à découvrir de nouvelles opportunités.'
 							}
 						</>
 					}
@@ -49,36 +49,36 @@ function APropos(props) {
 						<article>
 							<header className="flex flex-col">
 								<h1 className="mt-6 text-3xl font-bold tracking-tight text-gray-800 sm:text-4xl">
-									À Propos de My Makeup : Votre Partenaire Beauté en ligne
+									À Propos de My-Makeup : Votre Partenaire Beauté en ligne
 								</h1>
 							</header>
 							<div className="prose my-8 xl:prose-lg">
 								<p>
-									{`Bienvenue chez My Makeup, votre partenaire beauté en ligne. Nous sommes une plateforme dédiée à la mise en relation de maquilleuses professionnelles et de clients à la recherche de services de maquillage personnalisés. Notre mission est simple : rendre la beauté accessible à tous.`}
+									{`Bienvenue chez My-Makeup, votre partenaire beauté en ligne. Nous sommes une plateforme dédiée à la mise en relation de maquilleuses professionnelles et de clients à la recherche de services de maquillage personnalisés. Notre mission est simple : rendre la beauté accessible à tous.`}
 								</p>
 								<ul>
 									<li>
 										<h2>{'Notre histoire 📜'}</h2>
 										<p>
-											{`Créée en 2023, My Makeup est née de la volonté de faciliter la recherche et la réservation de services de maquillage professionnels. Nous avons identifié une lacune dans le marché : il était difficile pour les clients de trouver des maquilleuses professionnelles qualifiées et pour ces dernières de promouvoir leurs services. Nous avons donc décidé de combler ce vide en créant une plateforme où les maquilleuses peuvent montrer leur travail et les clients peuvent trouver le professionnel qui correspond à leurs besoins.`}
+											{`Créée en 2023, My-Makeup est née de la volonté de faciliter la recherche et la réservation de services de maquillage professionnels. Nous avons identifié une lacune dans le marché : il était difficile pour les clients de trouver des maquilleuses professionnelles qualifiées et pour ces dernières de promouvoir leurs services. Nous avons donc décidé de combler ce vide en créant une plateforme où les maquilleuses peuvent montrer leur travail et les clients peuvent trouver le professionnel qui correspond à leurs besoins.`}
 										</p>
 									</li>
 									<li>
 										<h2>{'Nos valeurs 💖'}</h2>
 										<p>
-											{`Chez My Makeup, nous croyons que la beauté est un droit et non un luxe. Nous nous engageons à démocratiser l'accès aux services de beauté professionnels en rendant la recherche de maquilleuses facile et accessible à tous. Nous valorisons l'authenticité, la diversité et l'inclusivité, et nous nous efforçons de créer une communauté où chacun se sent valorisé et respecté.`}
+											{`Chez My-Makeup, nous croyons que la beauté est un droit et non un luxe. Nous nous engageons à démocratiser l'accès aux services de beauté professionnels en rendant la recherche de maquilleuses facile et accessible à tous. Nous valorisons l'authenticité, la diversité et l'inclusivité, et nous nous efforçons de créer une communauté où chacun se sent valorisé et respecté.`}
 										</p>
 									</li>
 									<li>
 										<h2>{'Ce que nous faisons 🖌️'}</h2>
 										<p>
-											{`My Makeup permet aux maquilleuses professionnelles de créer un profil détaillé, de présenter leur travail, d'établir leurs propres tarifs et de gérer leurs réservations. Pour les clients, nous offrons une plateforme où ils peuvent rechercher des maquilleuses par ville, par style de maquillage et par tarifs, lire les avis et réserver une prestation.`}
+											{`My-Makeup permet aux maquilleuses professionnelles de créer un profil détaillé, de présenter leur travail, d'établir leurs propres tarifs et de gérer leurs réservations. Pour les clients, nous offrons une plateforme où ils peuvent rechercher des maquilleuses par ville, par style de maquillage et par tarifs, lire les avis et réserver une prestation.`}
 										</p>
 									</li>
 									<li>
 										<h2>{'Rejoignez-nous ! 🤝'}</h2>
 										<p>
-											{`Que vous soyez une maquilleuse professionnelle cherchant à développer votre activité ou un client à la recherche de services de maquillage professionnels, nous vous invitons à rejoindre la communauté My Makeup. Ensemble, nous pouvons rendre la beauté accessible à tous.`}
+											{`Que vous soyez une maquilleuse professionnelle cherchant à développer votre activité ou un client à la recherche de services de maquillage professionnels, nous vous invitons à rejoindre la communauté My-Makeup. Ensemble, nous pouvons rendre la beauté accessible à tous.`}
 										</p>
 									</li>
 								</ul>

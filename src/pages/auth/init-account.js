@@ -208,7 +208,7 @@ function InitAccount() {
 	return (
 		<>
 			<Head>
-				<title>My Makeup</title>
+				<title>My-Makeup</title>
 				<meta
 					name="description"
 					content="Inscription sur my-makeup.fr la plateforme qui va révolutionner votre

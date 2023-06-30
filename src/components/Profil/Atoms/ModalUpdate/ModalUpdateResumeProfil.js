@@ -14,16 +14,30 @@ import { toast } from 'react-toastify'
 const schema = zod
 	.object({
 		first_name: zod
-			.string({ required_error: 'Le nom est requis.' })
-			.min(1, 'Le nom est requis.'),
-		last_name: zod
 			.string({ required_error: 'Le prénom est requis.' })
-			.min(1, 'Le prénom est requis.'),
+			.min(1, 'Le prénom est requis.')
+			.or(zod.literal('')),
+		last_name: zod
+			.string({ required_error: 'Le nom est requis.' })
+			.min(1, 'Le nom est requis.')
+			.or(zod.literal('')),
 		speciality: zod
 			.string({ required_error: 'La spécialité est requise.' })
-			.min(1, 'La spécialité est requise.'),
+			.min(1, 'La spécialité est requise.')
+			.or(zod.literal('')),
+		company_artist_name: zod
+			.string({
+				required_error: "Le nom d'entreprise / nom d'artiste est requis.",
+			})
+			.min(1, "Le nom de l'entreprise est requise.")
+			.or(zod.literal('')),
 	})
-	.required({ first_name: true, last_name: true, speciality: true })
+	.required({
+		first_name: true,
+		last_name: true,
+		speciality: true,
+		company_artist_name: true,
+	})
 
 export default function ModalUpdateResumeProfil(props) {
 	const user = props.user
@@ -44,6 +58,9 @@ export default function ModalUpdateResumeProfil(props) {
 	const [userLastName, setUserLastName] = useState(user.last_name ?? '')
 	const [userFirstName, setUserFirstName] = useState(user.first_name ?? '')
 	const [userSpeciality, setUserSpeciality] = useState(user.speciality ?? '')
+	const [userCompanyOrArtist, setUserCompanyOrArtist] = useState(
+		user.company_artist_name ?? ''
+	)
 
 	const { data: session } = useSession()
 
@@ -84,6 +101,7 @@ export default function ModalUpdateResumeProfil(props) {
 					userTemp.last_name = userLastName
 					userTemp.first_name = userFirstName
 					userTemp.speciality = userSpeciality
+					userTemp.company_artist_name = userCompanyOrArtist
 					userTemp.main_picture = data_blob[0]
 					props.handleUpdateUser(userTemp)
 
@@ -105,6 +123,7 @@ export default function ModalUpdateResumeProfil(props) {
 			userTemp.last_name = userLastName
 			userTemp.first_name = userFirstName
 			userTemp.speciality = userSpeciality
+			userTemp.company_artist_name = userCompanyOrArtist
 			props.handleUpdateUser(userTemp)
 
 			props.handleIsModalOpen()
@@ -165,6 +184,10 @@ export default function ModalUpdateResumeProfil(props) {
 		setUserSpeciality(event.target.value)
 	}
 
+	const handleUpdateCompanyOrArtist = event => {
+		setUserCompanyOrArtist(event.target.value)
+	}
+
 	const handleUpdateAvailable = event => {
 		setAvailable(event)
 	}
@@ -186,6 +209,7 @@ export default function ModalUpdateResumeProfil(props) {
 			setUserLastName(user.last_name ?? '')
 			setUserFirstName(user.first_name ?? '')
 			setUserSpeciality(user.speciality ?? '')
+			setUserCompanyOrArtist(user.company_artist_name ?? '')
 
 			reset()
 		}
@@ -197,6 +221,8 @@ export default function ModalUpdateResumeProfil(props) {
 		user.last_name,
 		user.speciality,
 		user.main_picture,
+		user.company_artist_name,
+		user,
 	])
 
 	return (
@@ -395,6 +421,33 @@ export default function ModalUpdateResumeProfil(props) {
 															{errors.speciality && (
 																<p className={'mt-2 text-xs text-red-500/80'}>
 																	{errors.speciality.message}
+																</p>
+															)}
+														</div>
+													</div>
+													<div>
+														<label
+															htmlFor={'company_artist_name'}
+															className="block text-sm text-gray-700"
+														>
+															{"Nom de l'entreprise ou de l'artiste"}
+														</label>
+														<div className="mt-2">
+															<input
+																id="company_artist_name"
+																name="company_artist_name"
+																type="text"
+																{...register('company_artist_name', {
+																	required: true,
+																})}
+																required
+																value={userCompanyOrArtist ?? ''}
+																onChange={handleUpdateCompanyOrArtist}
+																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
+															/>
+															{errors.company_artist_name && (
+																<p className={'mt-2 text-xs text-red-500/80'}>
+																	{errors.company_artist_name.message}
 																</p>
 															)}
 														</div>

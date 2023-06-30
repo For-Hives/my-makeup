@@ -7,13 +7,41 @@ import { useSession } from 'next-auth/react'
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
 
 const schema = zod.object({
-	youtube: zod.string().url({ message: 'Veuillez entrer une URL valide' }),
-	facebook: zod.string().url({ message: 'Veuillez entrer une URL valide' }),
-	instagram: zod.string().url({ message: 'Veuillez entrer une URL valide' }),
-	website: zod.string().url({ message: 'Veuillez entrer une URL valide' }),
-	linkedin: zod.string().url({ message: 'Veuillez entrer une URL valide' }),
-	email: zod.string().email({ message: 'Veuillez entrer un email valide' }),
-	phone: zod.string().min(1, 'Le numéro de téléphone est requis.'), // Il est possible de vérifier le numéro de téléphone avec la méthode refine de zod + la librairie validator.js
+	youtube: zod
+		.string()
+		.url({ message: 'Veuillez entrer une URL valide' })
+		.optional()
+		.or(zod.literal('')),
+	facebook: zod
+		.string()
+		.url({ message: 'Veuillez entrer une URL valide' })
+		.optional()
+		.or(zod.literal('')),
+	instagram: zod
+		.string()
+		.url({ message: 'Veuillez entrer une URL valide' })
+		.optional()
+		.or(zod.literal('')),
+	website: zod
+		.string()
+		.url({ message: 'Veuillez entrer une URL valide' })
+		.optional()
+		.or(zod.literal('')),
+	linkedin: zod
+		.string()
+		.url({ message: 'Veuillez entrer une URL valide' })
+		.optional()
+		.or(zod.literal('')),
+	email: zod
+		.string()
+		.email({ message: 'Veuillez entrer un email valide' })
+		.optional()
+		.or(zod.literal('')),
+	phone: zod
+		.string()
+		.min(1, 'Le numéro de téléphone est requis.')
+		.optional()
+		.or(zod.literal('')),
 })
 
 export default function ModalUpdateSocialMediaProfil(props) {
@@ -194,9 +222,8 @@ export default function ModalUpdateSocialMediaProfil(props) {
 																name="email"
 																type="text"
 																{...register('email', {
-																	required: true,
+																	required: false,
 																})}
-																required
 																value={userEmail ?? ''}
 																onChange={handleUpdateEmail}
 																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
@@ -221,9 +248,8 @@ export default function ModalUpdateSocialMediaProfil(props) {
 																name="phone"
 																type="text"
 																{...register('phone', {
-																	required: true,
+																	required: false,
 																})}
-																required
 																value={userPhone ?? ''}
 																onChange={handleUpdatePhone}
 																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
@@ -248,9 +274,8 @@ export default function ModalUpdateSocialMediaProfil(props) {
 																name="youtube"
 																type="text"
 																{...register('youtube', {
-																	required: true,
+																	required: false,
 																})}
-																required
 																value={userYoutube ?? ''}
 																onChange={handleUpdateYoutube}
 																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
@@ -275,9 +300,8 @@ export default function ModalUpdateSocialMediaProfil(props) {
 																name="facebook"
 																type="text"
 																{...register('facebook', {
-																	required: true,
+																	required: false,
 																})}
-																required
 																value={userFacebook ?? ''}
 																onChange={handleUpdateFacebook}
 																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
@@ -302,9 +326,8 @@ export default function ModalUpdateSocialMediaProfil(props) {
 																name="instagram"
 																type="text"
 																{...register('instagram', {
-																	required: true,
+																	required: false,
 																})}
-																required
 																value={userInstagram ?? ''}
 																onChange={handleUpdateInstagram}
 																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
@@ -329,9 +352,8 @@ export default function ModalUpdateSocialMediaProfil(props) {
 																name="website"
 																type="text"
 																{...register('website', {
-																	required: true,
+																	required: false,
 																})}
-																required
 																value={userWebsite ?? ''}
 																onChange={handleUpdateWebsite}
 																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
@@ -356,9 +378,8 @@ export default function ModalUpdateSocialMediaProfil(props) {
 																name="linkedin"
 																type="text"
 																{...register('linkedin', {
-																	required: true,
+																	required: false,
 																})}
-																required
 																value={userLinkedin ?? ''}
 																onChange={handleUpdateLinkedin}
 																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "

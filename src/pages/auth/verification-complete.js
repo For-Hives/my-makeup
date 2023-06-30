@@ -18,7 +18,7 @@ function VerificationComplete() {
 	return (
 		<>
 			<Head>
-				<title>My Makeup</title>
+				<title>My-Makeup</title>
 				<meta
 					name="description"
 					content="Vérification de profil, sur My-Makeup, la plateforme pour les maquilleuses !"
@@ -34,9 +34,9 @@ function VerificationComplete() {
 					<div className="mx-auto w-full max-w-sm lg:w-96">
 						<div>
 							<Link href={'/'}>
-								<span className="sr-only">My Makeup</span>
+								<span className="sr-only">My-Makeup</span>
 								<Image
-									alt="Logo My Makeup"
+									alt="Logo My-Makeup"
 									width={50}
 									height={50}
 									src="/assets/logo.webp"
@@ -45,7 +45,7 @@ function VerificationComplete() {
 						</div>
 						<div className={'mt-8'}>
 							<h1 className={'my-8 text-2xl font-semibold text-gray-900'}>
-								Felicitation ! Votre compte My Makeup est maintenant activé !
+								Felicitation ! Votre compte My-Makeup est maintenant activé !
 							</h1>
 							<p className={'text-gray-700'}>
 								Vous pouvez désormais vous connecter

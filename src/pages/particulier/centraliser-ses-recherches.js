@@ -69,7 +69,7 @@ function CentraliserSesRecherches(props) {
 									<li>
 										<h2>Utilisez une plateforme centralisée 🔍</h2>
 										<p>
-											{`Utilisez une plateforme comme My Makeup pour centraliser vos recherches. Grâce à ses filtres de recherche, vous pouvez trouver des maquilleuses en fonction de vos critères : localisation, spécialités, expérience, tarifs et évaluations des clients précédents.`}
+											{`Utilisez une plateforme comme My-Makeup pour centraliser vos recherches. Grâce à ses filtres de recherche, vous pouvez trouver des maquilleuses en fonction de vos critères : localisation, spécialités, expérience, tarifs et évaluations des clients précédents.`}
 										</p>
 									</li>
 									<li>

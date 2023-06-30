@@ -51,6 +51,7 @@ export const getServerSideProps = async ({ res }) => {
 			let newPath = `${parsedPath.dir}/${parsedPath.name}`
 				.replace('src\\pages\\', '')
 				.replace('src\\pages', '')
+				.replace('src/pages', '')
 			return `${process.env.NEXT_PUBLIC_URL}${newPath}`.replace(
 				'https://my-makeup.fr//',
 				'https://my-makeup.fr/'

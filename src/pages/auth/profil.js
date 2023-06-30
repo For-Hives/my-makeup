@@ -26,7 +26,7 @@ function Profil({ data }) {
 	return (
 		<>
 			<Head>
-				<title>My Makeup</title>
+				<title>My-Makeup</title>
 				<meta
 					name="description"
 					content="Page de profil sur my-makeup.fr la plateforme qui va révolutionner votre façon de travailler !"

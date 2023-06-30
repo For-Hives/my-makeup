@@ -62,10 +62,10 @@ function Contact(props) {
 	return (
 		<>
 			<Head>
-				<title>Contact - My Makeup</title>
+				<title>Contact - My-Makeup</title>
 				<meta
 					name="description"
-					content="Contactez-nous pour toute question, suggestion ou collaboration ! L'équipe My Makeup est à votre écoute !"
+					content="Contactez-nous pour toute question, suggestion ou collaboration ! L'équipe My-Makeup est à votre écoute !"
 				/>
 				{/*	seo tag canonical link */}
 				<link rel="canonical" href={'https://my-makeup.fr/contact'} />
@@ -254,7 +254,7 @@ function Contact(props) {
 							</h2>
 							<p className="mt-6 w-full text-start text-lg text-gray-700 md:w-1/2">
 								{
-									"My Makeup, plus qu'une plateforme de mise en relation, une équipe de passionnés à votre service !"
+									"My-Makeup, plus qu'une plateforme de mise en relation, une équipe de passionnés à votre service !"
 								}
 							</p>
 						</div>

@@ -42,14 +42,14 @@ function Signup() {
 			email: data.email,
 			password: data.password,
 			name: data.name,
-			callbackUrl: '/auth/verification-wall',
+			callbackUrl: '/auth/profil',
 		})
 	}
 
 	return (
 		<>
 			<Head>
-				<title>Inscription sur My Makeup</title>
+				<title>Inscription sur My-Makeup</title>
 				<meta
 					name="description"
 					content="Inscription sur my-makeup.fr la plateforme qui va révolutionner votre
@@ -63,9 +63,9 @@ function Signup() {
 					<div className="mx-auto w-full max-w-sm lg:w-96">
 						<div>
 							<Link href={'/'}>
-								<span className="sr-only">My Makeup</span>
+								<span className="sr-only">My-Makeup</span>
 								<Image
-									alt="Logo My Makeup"
+									alt="Logo My-Makeup"
 									width={50}
 									height={50}
 									src="/assets/logo.webp"
@@ -80,7 +80,7 @@ function Signup() {
 								<div>
 									<div>
 										<h1 className="text-sm font-medium leading-6 text-gray-900">
-											{`S'inscrire sur My Makeup`}
+											{`S'inscrire sur My-Makeup`}
 										</h1>
 										<div className="mt-2 grid grid-cols-2 gap-3">
 											<div>

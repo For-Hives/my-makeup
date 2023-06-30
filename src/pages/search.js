@@ -70,10 +70,10 @@ function SearchPage() {
 	return (
 		<>
 			<Head>
-				<title>Recherche de maquilleuse - My Makeup</title>
+				<title>Recherche de maquilleuse - My-Makeup</title>
 				<meta
 					name="description"
-					content="Recherchez et trouvez votre maquilleuse professionnelle en quelques clics sur My Makeup."
+					content="Recherchez et trouvez votre maquilleuse professionnelle en quelques clics sur My-Makeup."
 				/>
 				{/*	seo tag canonical link */}
 				<link rel="canonical" href={'https://my-makeup.fr/search'} />

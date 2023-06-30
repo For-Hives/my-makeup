@@ -14,8 +14,8 @@ function SiteMap({ articles, talents }) {
 	return (
 		<>
 			<Head>
-				<title>Site Map My Makeup !</title>
-				<meta name="description" content="Le plan du site de My Makeup" />
+				<title>Site Map My-Makeup !</title>
+				<meta name="description" content="Le plan du site de My-Makeup" />
 				{/*	seo tag canonical link */}
 				<link rel="canonical" href={'https://my-makeup.fr/site-map'} />
 			</Head>
@@ -48,11 +48,11 @@ function SiteMap({ articles, talents }) {
 						<article>
 							<header className="flex flex-col">
 								<h1 className="mt-6 text-3xl font-bold tracking-tight text-gray-800 sm:text-4xl">
-									{'My Makeup la plateforme pour les maquilleuses !'}
+									{'My-Makeup la plateforme pour les maquilleuses !'}
 								</h1>
 							</header>
 							<div className="prose my-8 xl:prose-lg">
-								<h2>My Makeup</h2>
+								<h2>My-Makeup</h2>
 								<ul>
 									<li>
 										<Link href={'/a-propos'}>À propos</Link>
@@ -69,7 +69,7 @@ function SiteMap({ articles, talents }) {
 												'/pourquoi-utiliser-my-makeup-en-tant-que-particulier'
 											}
 										>
-											Pourquoi My Makeup ?
+											Pourquoi My-Makeup ?
 										</Link>
 									</li>
 									<li>
@@ -96,7 +96,7 @@ function SiteMap({ articles, talents }) {
 												'/pourquoi-rejoindre-my-makeup-en-tant-que-maquilleuse'
 											}
 										>
-											Pourquoi My Makeup ?
+											Pourquoi My-Makeup ?
 										</Link>
 									</li>
 									<li>

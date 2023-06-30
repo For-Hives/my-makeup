@@ -20,12 +20,12 @@ function Talent({ articleData }) {
 	return (
 		<>
 			<Head>
-				<title>{meta?.title ?? 'My Makeup'}</title>
+				<title>{meta?.title ?? 'My-Makeup'}</title>
 				<meta
 					name="description"
 					content={
 						meta?.seo_description ??
-						'Découvrez cet article passionnant de la part de My Makeup'
+						'Découvrez cet article passionnant de la part de My-Makeup'
 					}
 				/>
 				{/*	seo tag canonical link */}
