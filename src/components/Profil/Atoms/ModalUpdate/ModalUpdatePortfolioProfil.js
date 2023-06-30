@@ -238,7 +238,7 @@ export default function ModalUpdatePortfolioProfil(props) {
 																>
 																	<Image
 																		src={imageUrl}
-																		alt={'photo de profil'}
+																		alt={'photo de profil.cy.js'}
 																		fill={true}
 																		sizes="(min-width: 480px ) 50vw, (min-width: 728px) 33vw, (min-width: 976px) 25vw, 100vw"
 																		className="rounded-full object-cover object-center"
@@ -262,6 +262,7 @@ export default function ModalUpdatePortfolioProfil(props) {
 																		<span>Télécharger une nouvelle photo</span>
 																	</label>
 																	<input
+																		data-cy="file-upload"
 																		id="file-upload"
 																		name="file-upload"
 																		type="file"
@@ -287,6 +288,7 @@ export default function ModalUpdatePortfolioProfil(props) {
 													</div>
 													<div className=" flex justify-end">
 														<button
+															data-cy="portfolio-submit"
 															type="button"
 															className="btn-primary"
 															onClick={handleSubmit(onSubmit)}
@@ -416,6 +418,7 @@ export default function ModalUpdatePortfolioProfil(props) {
 								</div>
 								<div className="mt-4 flex justify-end">
 									<button
+										data-cy="portfolio-save"
 										type="button"
 										className="btn-primary"
 										onClick={handleSubmitGallery}

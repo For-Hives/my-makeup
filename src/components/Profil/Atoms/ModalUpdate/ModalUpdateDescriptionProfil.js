@@ -139,6 +139,7 @@ export default function ModalUpdateDescriptionProfil(props) {
 														</label>
 														<div className="mt-2">
 															<textarea
+																data-cy="description"
 																id="description"
 																name="description"
 																{...register('description', {
@@ -163,6 +164,7 @@ export default function ModalUpdateDescriptionProfil(props) {
 								</div>
 								<div className="mt-4 flex justify-end">
 									<button
+										data-cy="save-description"
 										type="button"
 										className="btn-primary"
 										onClick={handleSubmit(onSubmit)}

@@ -203,6 +203,7 @@ export default function ModalUpdateSkillsProfil(props) {
 														</p>
 														<div className="mt-2">
 															<input
+																data-cy="skills-input"
 																id="skills"
 																name="skills"
 																type={'text'}
@@ -251,6 +252,7 @@ export default function ModalUpdateSkillsProfil(props) {
 														>
 															{userSkillsSelected.map((skill, index) => (
 																<button
+																	data-cy="skill-selected"
 																	type={'button'}
 																	onClick={() => {
 																		handleDeleteSkillSelected(skill.id)
@@ -275,6 +277,7 @@ export default function ModalUpdateSkillsProfil(props) {
 								</div>
 								<div className="mt-4 flex justify-end">
 									<button
+										data-cy="save-skills"
 										type="button"
 										className="btn-primary"
 										onClick={handleSubmit(onSubmit)}
