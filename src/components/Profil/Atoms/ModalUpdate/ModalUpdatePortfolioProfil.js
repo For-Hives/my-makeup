@@ -10,7 +10,9 @@ import { Swiper, SwiperSlide } from 'swiper/react'
 import { Pagination } from 'swiper'
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
 import { toast } from 'react-toastify'
+import Info from '@/components/Global/Info'
 
+const MAX_PHOTOS = 10
 const schema = zod.object({})
 export default function ModalUpdatePortfolioProfil(props) {
 	const { handleSubmit, reset } = useForm({
@@ -34,6 +36,13 @@ export default function ModalUpdatePortfolioProfil(props) {
 			const form = new FormData()
 			form.append('files', fileObj)
 
+			if (userImageGallery.length >= MAX_PHOTOS) {
+				toast('La limite du nombre de photos est atteinte.', {
+					type: 'error',
+					icon: '⛔',
+				})
+				return
+			}
 			const res_post = fetch(`${process.env.NEXT_PUBLIC_API_URL}api/upload`, {
 				method: 'POST',
 				headers: {
@@ -265,6 +274,15 @@ export default function ModalUpdatePortfolioProfil(props) {
 															</div>
 														</div>
 													</button>
+													<div
+														className={'flex w-full items-center justify-end'}
+													>
+														<Info
+															description={
+																'Vous ne pouvez upload que 10 images maximum.'
+															}
+														/>
+													</div>
 													<div className=" flex justify-end">
 														<button
 															type="button"
@@ -288,6 +306,7 @@ export default function ModalUpdatePortfolioProfil(props) {
 															pagination={{
 																clickable: true,
 															}}
+															loop={true}
 															modules={[Pagination]}
 															className="h-[500px] w-full"
 															onInit={eve => {
@@ -346,14 +365,7 @@ export default function ModalUpdatePortfolioProfil(props) {
 																	'flex items-center justify-center gap-2'
 																}
 																onClick={() => {
-																	if (mySwiperModal.activeIndex === 0) {
-																		// 	go to the last slide
-																		mySwiperModal.slideTo(
-																			mySwiperModal.slides.length - 1
-																		)
-																	} else {
-																		mySwiperModal.slidePrev()
-																	}
+																	mySwiperModal.slidePrev()
 																}}
 															>
 																<Image
@@ -376,15 +388,7 @@ export default function ModalUpdatePortfolioProfil(props) {
 																	'flex items-center justify-center gap-2'
 																}
 																onClick={() => {
-																	if (
-																		mySwiperModal.activeIndex ===
-																		mySwiperModal.slides.length - 1
-																	) {
-																		// 	go to the first slide
-																		mySwiperModal.slideTo(0)
-																	} else {
-																		mySwiperModal.slideNext()
-																	}
+																	mySwiperModal.slideNext()
 																}}
 															>
 																<span

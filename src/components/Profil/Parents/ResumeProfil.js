@@ -17,7 +17,7 @@ function ResumeProfil(props) {
 	const [starsToDisplay, setStarsToDisplay] = React.useState(5)
 	const [availability, setAvailability] = React.useState(!!user?.available)
 	const [isModalOpen, setIsModalOpen] = React.useState(false)
-	const [profilPicture, setProfilePicture] = React.useState(
+	const [profilPicture, setProfilPicture] = React.useState(
 		user?.main_picture?.url
 	)
 
@@ -26,7 +26,7 @@ function ResumeProfil(props) {
 	}
 
 	const handleProfilPicture = pp => {
-		setProfilePicture(pp)
+		setProfilPicture(pp)
 	}
 
 	const handleIsModalOpen = () => {
