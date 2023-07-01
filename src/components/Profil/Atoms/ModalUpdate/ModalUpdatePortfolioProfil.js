@@ -10,6 +10,7 @@ import { Swiper, SwiperSlide } from 'swiper/react'
 import { Pagination } from 'swiper'
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
 import { toast } from 'react-toastify'
+import Info from '@/components/Global/Info'
 
 const MAX_PHOTOS = 10
 const schema = zod.object({})
@@ -273,6 +274,15 @@ export default function ModalUpdatePortfolioProfil(props) {
 															</div>
 														</div>
 													</button>
+													<div
+														className={'flex w-full items-center justify-end'}
+													>
+														<Info
+															description={
+																'Vous ne pouvez upload que 10 images maximum.'
+															}
+														/>
+													</div>
 													<div className=" flex justify-end">
 														<button
 															type="button"
