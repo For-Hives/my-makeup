@@ -1,4 +1,4 @@
-describe('profile', () => {
+describe('profil', () => {
 	before(() => {
 		cy.intercept('POST', '/api/auth/callback/credentials?').as('getCredentials')
 
@@ -15,25 +15,56 @@ describe('profile', () => {
 		it('tests complet Resume - section', () => {
 			cy.visit('http://localhost:3000/auth/profil')
 
-			cy.get("[data-cy='update-resume-button']").click()
-			cy.get("[data-cy='file-main-upload']").selectFile(
-				'../../fixtures/assets/profile.png',
-				'image/png'
+			// prepare the file to upload
+			cy.fixture('./assets/profil.png', { encoding: null }).as('profilPicture')
+
+			// prepare to intercept the request
+			cy.intercept('POST', 'https://api.my-makeup.fr/api/upload').as('upload')
+			cy.intercept('PATCH', 'https://api.my-makeup.fr/api/me-makeup').as(
+				'updateUser'
 			)
 
-			cy.get('#headlessui-dialog-panel-\\:r3\\:').click()
-			cy.get("[data-cy='first-name-input']").type('')
-			cy.type('{backspace}')
-			cy.get("[data-cy='first-name-input']").type('B')
-			cy.get("[data-cy='first-name-input']").type('Breval')
-			cy.get("[data-cy='last-name-input']").type('LE FLOCH')
-			cy.get("[data-cy='save-resume-button']").click()
+			// 	open the modal
+			cy.get("[data-cy='update-resume-button']")
+				.click({ force: true })
+				.then(() => {
+					//  update profil picture
+					cy.get("[data-cy='file-main-upload']").selectFile('@profilPicture', {
+						force: true,
+					})
+
+					//  update name and last name
+					cy.get("[data-cy='first-name-input']").type('Breval')
+					cy.get("[data-cy='last-name-input']").type('LE FLOCH')
+
+					//  update speciality
+					cy.get("[data-cy='speciality-input']").type(
+						'Maquilleur professionnel et coiffeur professionnel pour le cinéma et la télévision'
+					)
+
+					// switch availability to true
+					// cy.get('[data-cy=\'available-input\']').click();   // todo : check the aivailability switch
+
+					cy.get("[data-cy='save-resume-button']")
+						.click()
+						.then(() => {
+							// wait for the upload to finish
+							cy.wait('@upload').its('response.statusCode').should('eq', 200)
+							cy.wait('@updateUser')
+								.its('response.statusCode')
+								.should('eq', 200)
+						})
+				})
 		})
+	})
+
+	describe('Location - section', () => {
+		it('tests complet Location - section', () => {})
 	})
 })
 
-describe('profile', () => {
-	it('tests profile', () => {
+describe('profil', () => {
+	it('tests profil', () => {
 		cy.get('div.md\\:col-span-4 > div:nth-of-type(1) button').click()
 		cy.get("[data-cy='city-input']").click()
 		cy.get('#headlessui-dialog-\\:r9\\: > div.z-30 > div').click()
