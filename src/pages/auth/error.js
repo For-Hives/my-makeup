@@ -16,7 +16,7 @@ function Error() {
 		}
 
 		if (showed === false) {
-			toast('Veuillez confirmer votre adresse email', {
+			toast('Une erreur est survenue !', {
 				icon: '⚠️',
 				type: 'error',
 			})

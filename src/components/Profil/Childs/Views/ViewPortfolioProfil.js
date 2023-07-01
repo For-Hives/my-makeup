@@ -33,6 +33,7 @@ function ViewPortfolioProfil(props) {
 					}}
 					modules={[Pagination]}
 					className="h-[500px] w-full"
+					loop={true}
 					onInit={ev => {
 						setMySwiper(ev)
 					}}
@@ -69,12 +70,7 @@ function ViewPortfolioProfil(props) {
 					<button
 						className={'flex items-center justify-center gap-2'}
 						onClick={() => {
-							if (mySwiper.activeIndex === 0) {
-								// 	go to the last slide
-								mySwiper.slideTo(mySwiper.slides.length - 1)
-							} else {
-								mySwiper.slidePrev()
-							}
+							mySwiper.slidePrev()
 						}}
 					>
 						<Image
@@ -91,12 +87,7 @@ function ViewPortfolioProfil(props) {
 					<button
 						className={'flex items-center justify-center gap-2'}
 						onClick={() => {
-							if (mySwiper.activeIndex === mySwiper.slides.length - 1) {
-								// 	go to the first slide
-								mySwiper.slideTo(0)
-							} else {
-								mySwiper.slideNext()
-							}
+							mySwiper.slideNext()
 						}}
 					>
 						<span className={'font-semibold text-indigo-950'}>Suivant</span>
