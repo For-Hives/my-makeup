@@ -282,7 +282,7 @@ function Signup() {
 										'radius-2xl my-8 border-2 border-indigo-700 px-4 py-2 text-indigo-700 hover:text-indigo-700 hover:underline'
 									}
 								>
-									Retourner à mon profile
+									Retourner à mon profil
 								</Link>
 
 								<button

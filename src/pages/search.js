@@ -116,7 +116,7 @@ function SearchPage() {
 												<div className={'relative w-full'}>
 													<Image
 														src={result.main_picture.url}
-														alt={'profile picture Maquilleuse professionnelle'}
+														alt={'profil picture Maquilleuse professionnelle'}
 														width={200}
 														height={200}
 														className={

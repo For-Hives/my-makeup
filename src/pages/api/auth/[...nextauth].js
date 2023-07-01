@@ -85,7 +85,7 @@ const options = {
 
 			return session
 		},
-		async jwt({ token, user, account, profile, isNewUser }) {
+		async jwt({ token, user, account, profil, isNewUser }) {
 			const isSignIn = !!user
 
 			if (isSignIn) {
