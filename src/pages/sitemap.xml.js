@@ -62,6 +62,7 @@ export const getServerSideProps = async ({ res }) => {
 	staticPaths = staticPaths.filter(item => {
 		return !(
 			item === `https://my-makeup.fr/api\\auth/[...nextauth]` ||
+			item === `https://my-makeup.fr/api/auth/[...nextauth]` ||
 			item === `https://my-makeup.fr/api/sendMail` ||
 			item === `https://my-makeup.fr/auth/profil` ||
 			item === `https://my-makeup.fr/auth/error` ||
@@ -69,8 +70,8 @@ export const getServerSideProps = async ({ res }) => {
 			item === `https://my-makeup.fr/blog/[id]` ||
 			item === `https://my-makeup.fr/talent/[slug]` ||
 			item === `https://my-makeup.fr/profil/[username]` ||
-			item === `https://my-makeup.fr/api/verification-complete` ||
-			item === `https://my-makeup.fr/api/verification-wall`
+			item === `https://my-makeup.fr/auth/verification-complete` ||
+			item === `https://my-makeup.fr/auth/verification-wall`
 		)
 	})
 
