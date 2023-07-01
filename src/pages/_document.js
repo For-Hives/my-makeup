@@ -8,7 +8,7 @@ export default function Document() {
 				<link rel="icon" href="/favicon.webp" />
 				<Script
 					strategy={'afterInteractive'}
-					src="https://www.googletagmanager.com/gtag/js?id=G-7M05RC6YDH"
+					src="https://www.googletagmanager.com/gtag/js?id=G-6Z5K42B5YH"
 				/>
 				<Script id={'analytics'} strategy="afterInteractive">
 					{`
@@ -16,7 +16,7 @@ export default function Document() {
                         function gtag(){dataLayer.push(arguments);}
                         gtag('js', new Date());
     
-                        gtag('config', 'G-7M05RC6YDH');
+                        gtag('config', 'G-6Z5K42B5YH');
                     `}
 				</Script>
 			</Head>
