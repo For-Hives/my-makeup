@@ -2,40 +2,26 @@ import React, { useEffect } from 'react'
 import Image from 'next/image'
 import { BadgeDispo } from '@/components/Profil/Atoms/BadgeDispo'
 import { BadgeIndispo } from '@/components/Profil/Atoms/BadgeIndispo'
-import { useRouter } from 'next/router'
 
 function ViewResumeProfil(props) {
-	const router = useRouter()
-	const { publicView } = router.query
-
-	const user = props.user?.attributes
-	const isPublic = !!publicView
-
-	// const [starsToDisplay, setStarsToDisplay] = React.useState(5)
+	const [user, setUser] = React.useState(null)
 	const [availability, setAvailability] = React.useState(true)
-	const [isModalOpen, setIsModalOpen] = React.useState(false)
+	const [mainPicture, setMainPicture] = React.useState('')
 
-	const handleAvailability = () => {
-		setAvailability(!availability)
-	}
-
-	const handleIsModalOpen = () => {
-		if (!isPublic) {
-			setIsModalOpen(!isModalOpen)
+	useEffect(() => {
+		if (props.user) {
+			setUser(props.user?.attributes)
+			if (user?.main_picture && user?.main_picture?.data === undefined) {
+				setMainPicture(user?.main_picture?.url)
+			} else {
+				setMainPicture(user?.main_picture?.data?.attributes?.url)
+			}
 		}
-	}
-
-	let mainPicture
-	if (user?.main_picture && user?.main_picture?.data === undefined) {
-		mainPicture = user?.main_picture?.url
-	} else {
-		mainPicture = user?.main_picture?.data?.attributes?.url
-	}
-	const isPublicView = props.isPublicView ?? false
+	}, [props.user, user?.main_picture])
 
 	useEffect(() => {
 		setAvailability(!!user?.available)
-	}, [])
+	}, [user?.available])
 
 	return (
 		<div className={'relative bg-white px-4 pb-24 shadow-xl md:px-8 2xl:px-0'}>
@@ -46,7 +32,7 @@ function ViewResumeProfil(props) {
 							'relative col-span-12 flex items-center justify-center xl:col-span-2 xl:justify-start'
 						}
 					>
-						{mainPicture && (
+						{!!mainPicture && (
 							<Image
 								src={mainPicture || '/assets/pp_makeup.webp'}
 								alt={'ppmakeup'}

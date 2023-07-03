@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { useRouter } from 'next/router'
 import ViewLocationProfil from '@/components/Profil/Childs/Views/ViewLocationProfil'
 import ViewSocialMediaProfil from '@/components/Profil/Childs/Views/ViewSocialMediaProfil'
@@ -12,15 +12,14 @@ import ViewExperiencesProfil from '@/components/Profil/Childs/Views/ViewExperien
 import ViewContainer from '@/components/Profil/Childs/Views/ViewContainer'
 
 function ViewInfosProfil(props) {
-	// import router
-	const router = useRouter()
-	// get query param
-	const { publicView } = router.query
+	const [user, setUser] = React.useState(null)
 
-	const user = props.user.attributes
-	const isPublic = !!publicView
+	useEffect(() => {
+		if (props.user) {
+			setUser(props.user.attributes)
+		}
+	}, [props.user])
 
-	const isPublicView = props.isPublicView ?? false
 	return (
 		<div className={''}>
 			<div className="relative mx-auto max-w-7xl px-4 pt-4 md:px-8 2xl:px-0">
@@ -32,7 +31,7 @@ function ViewInfosProfil(props) {
 									'col-span-12 flex flex-col items-start gap-5 md:col-span-4'
 								}
 							>
-								{user.city && (
+								{user?.city && (
 									<ViewContainer user={user} Component={ViewLocationProfil} />
 								)}
 								{user?.network && (

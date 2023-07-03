@@ -1,9 +1,16 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 
 function ViewSocialMediaProfil(props) {
-	const user = props.user
+	const [user, setUser] = React.useState(null)
+
+	useEffect(() => {
+		if (props.user) {
+			setUser(props.user)
+		}
+	}, [props.user])
+
 	return (
 		<div className={'flex w-full flex-col gap-4'}>
 			<h2 className={'text-xl font-bold text-gray-700'}>

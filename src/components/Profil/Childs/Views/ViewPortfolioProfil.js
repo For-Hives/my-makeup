@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { Swiper, SwiperSlide } from 'swiper/react'
 // import required modules
 import { Pagination } from 'swiper'
@@ -10,16 +10,23 @@ import Image from 'next/image'
 function ViewPortfolioProfil(props) {
 	const [mySwiper, setMySwiper] = React.useState(null)
 
-	const user = props.user
+	const [user, setUser] = React.useState(null)
+	const [imageGallery, setImageGallery] = React.useState([])
 
-	let imageGallery = []
-	// check if user.image_gallery.data property exists
-	if (user?.image_gallery?.data === undefined) {
-		imageGallery = user?.image_gallery
-	} else {
-		// array to object conversion, {id: x, attributes: {...}} to {...} for each element
-		imageGallery = user?.image_gallery?.data?.map(image => image.attributes)
-	}
+	useEffect(() => {
+		if (props.user) {
+			setUser(props.user)
+			// check if user.image_gallery.data property exists
+			if (user?.image_gallery?.data === undefined) {
+				setImageGallery(user?.image_gallery)
+			} else {
+				// array to object conversion, {id: x, attributes: {...}} to {...} for each element
+				setImageGallery(
+					user?.image_gallery?.data?.map(image => image.attributes)
+				)
+			}
+		}
+	}, [props.user, user?.image_gallery])
 
 	return (
 		<div className={'flex w-full flex-col gap-4'}>
