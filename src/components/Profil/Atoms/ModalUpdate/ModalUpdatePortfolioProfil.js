@@ -239,6 +239,7 @@ export default function ModalUpdatePortfolioProfil(props) {
 																		src={imageUrl}
 																		alt={'photo de profil'}
 																		fill={true}
+																		sizes="(min-width: 480px ) 50vw, (min-width: 728px) 33vw, (min-width: 976px) 25vw, 100vw"
 																		className="rounded-full object-cover object-center"
 																	/>
 																</div>
@@ -346,6 +347,7 @@ export default function ModalUpdatePortfolioProfil(props) {
 																				'portefolio image'
 																			}
 																			fill={true}
+																			sizes="(min-width: 480px ) 50vw, (min-width: 728px) 33vw, (min-width: 976px) 25vw, 100vw"
 																			className={'rounded object-cover'}
 																		/>
 																	</SwiperSlide>

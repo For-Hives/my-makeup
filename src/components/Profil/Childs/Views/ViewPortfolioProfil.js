@@ -64,6 +64,7 @@ function ViewPortfolioProfil(props) {
 										src={image?.url}
 										alt={image?.alternativeText ?? image?.name}
 										fill={true}
+										sizes="(min-width: 480px ) 50vw, (min-width: 728px) 33vw, (min-width: 976px) 25vw, 100vw"
 										className={'rounded object-cover'}
 									/>
 								</SwiperSlide>

@@ -13,6 +13,7 @@ function CardDemo(props) {
 				<Image
 					src={props.src}
 					fill={true}
+					sizes="(min-width: 480px ) 50vw, (min-width: 728px) 33vw, (min-width: 976px) 25vw, 100vw"
 					className={'rounded-t-xl object-cover'}
 					alt={'Trouver votre maquilleuse professionnelle'}
 				/>

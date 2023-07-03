@@ -32,14 +32,19 @@ function ViewResumeProfil(props) {
 							'relative col-span-12 flex items-center justify-center xl:col-span-2 xl:justify-start'
 						}
 					>
-						{!!mainPicture && (
-							<Image
-								src={mainPicture || '/assets/pp_makeup.webp'}
-								alt={'ppmakeup'}
-								width={500}
-								height={500}
-								className={'h-[200px] w-[200px] rounded-full object-cover'}
-							></Image>
+						{mainPicture && (
+							<div className={'relative h-[200px] w-[200px]'}>
+								<Image
+									src={mainPicture || '/assets/pp_makeup.webp'}
+									alt={'ppmakeup'}
+									priority={true}
+									fill={true}
+									sizes={
+										'(max-width: 768px) 150px, (max-width: 1200px) 175px, 200px'
+									}
+									className={'rounded-full object-cover'}
+								></Image>
+							</div>
 						)}
 					</div>
 					<div
