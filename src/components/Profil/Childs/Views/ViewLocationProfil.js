@@ -1,7 +1,14 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 
 function ViewLocationProfil(props) {
-	const user = props.user
+	const [user, setUser] = React.useState(null)
+
+	useEffect(() => {
+		if (props.user) {
+			setUser(props.user)
+		}
+	}, [props.user])
+
 	return (
 		<div className={'flex w-full flex-col gap-4'}>
 			<h2 className={'text-xl font-bold text-gray-700'}>

@@ -1,10 +1,17 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { Tab } from '@headlessui/react'
 import { DescriptionPriceOffer } from '@/components/Profil/Childs/ServiceOffers/DescriptionPriceOffer'
 import { OptionsOffers } from '@/components/Profil/Childs/ServiceOffers/OptionsOffers'
 
 function ViewServiceOffersProfil(props) {
-	const user = props.user
+	const [user, setUser] = React.useState(null)
+
+	useEffect(() => {
+		if (props.user) {
+			setUser(props.user)
+		}
+	}, [props.user])
+
 	return (
 		<div className={'flex w-full flex-col gap-4'}>
 			<h2 className={'text-xl font-bold text-gray-700'}>
