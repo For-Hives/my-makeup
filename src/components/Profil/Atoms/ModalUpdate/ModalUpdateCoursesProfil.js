@@ -11,10 +11,12 @@ const schema = zod
 		id: zod.string().optional(),
 		diploma: zod
 			.string({ required_error: 'Le nom du diplôme est requis.' })
-			.min(1, 'Le nom du diplôme est requis.'),
+			.min(1, 'Le nom du diplôme est requis.')
+			.max(70, 'Le nom du diplôme ne doit pas dépasser 70 caractères.'),
 		school: zod
 			.string({ required_error: "Le nom de l'école est requis." })
-			.min(1, "Le nom de l'école est requis."),
+			.min(1, "Le nom de l'école est requis.")
+			.max(70, "Le nom de l'école ne doit pas dépasser 70 caractères."),
 		date_graduation: zod
 			.string({
 				required_error: "La date d'obtention du diplôme est requise",
@@ -24,7 +26,8 @@ const schema = zod
 			.string({
 				required_error: 'La description est requise.',
 			})
-			.min(1, 'La description est requise.'),
+			.min(1, 'La description est requise.')
+			.max(2000, 'La description ne doit pas dépasser 2000 caractères.'),
 	})
 	.required({
 		diploma: true,

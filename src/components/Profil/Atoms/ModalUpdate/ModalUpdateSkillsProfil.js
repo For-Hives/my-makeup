@@ -7,7 +7,9 @@ import * as zod from 'zod'
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
 
 const schema = zod.object({
-	skills: zod.string(),
+	skills: zod
+		.string()
+		.max(70, 'Les compétences ne doivent pas dépasser 70 caractères.'),
 })
 
 export default function ModalUpdateSkillsProfil(props) {

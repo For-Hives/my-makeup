@@ -7,7 +7,9 @@ import * as zod from 'zod'
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
 
 const schema = zod.object({
-	language: zod.string(),
+	language: zod
+		.string()
+		.max(70, 'La langue ne doit pas dépasser 70 caractères.'),
 })
 
 export default function ModalUpdateLanguageProfil(props) {

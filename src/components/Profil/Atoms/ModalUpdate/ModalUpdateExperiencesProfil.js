@@ -8,18 +8,26 @@ import { patchMeMakeup } from '@/services/PatchMeMakeup'
 
 const schema = zod
 	.object({
-		company: zod.string({
-			required_error: "Le nom de l'entreprise est requise.",
-		}),
-		job_name: zod.string({
-			required_error: "Le nom de l'expérience est requis.",
-		}),
-		city: zod.string({ required_error: 'La ville est requise.' }),
+		company: zod
+			.string({
+				required_error: "Le nom de l'entreprise est requise.",
+			})
+			.max(70, "Le nom de l'entreprise ne doit pas dépasser 70 caractères."),
+		job_name: zod
+			.string({
+				required_error: "Le nom de l'expérience est requis.",
+			})
+			.max(70, "Le nom de l'expérience ne doit pas dépasser 70 caractères."),
+		city: zod
+			.string({ required_error: 'La ville est requise.' })
+			.max(70, 'La ville ne doit pas dépasser 70 caractères.'),
 		date_start: zod.string({
 			required_error: "La date de début de l'expérience est requise.",
 		}),
 		date_end: zod.string().optional(),
-		description: zod.string({ required_error: 'La description est requise.' }),
+		description: zod
+			.string({ required_error: 'La description est requise.' })
+			.max(2000, 'La description ne doit pas dépasser 2000 caractères.'),
 	})
 	.required({
 		company: true,

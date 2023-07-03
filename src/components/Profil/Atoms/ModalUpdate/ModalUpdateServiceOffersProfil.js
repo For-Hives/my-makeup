@@ -12,15 +12,18 @@ const schema = zod
 	.object({
 		name: zod
 			.string({ required_error: "Le nom de l'entreprise est requise." })
-			.min(1, "Le nom de l'entreprise est requise."),
+			.min(1, "Le nom de l'entreprise est requise.")
+			.max(70, "Le nom de l'entreprise ne doit pas dépasser 70 caractères."),
 		price: zod
 			.string({
 				required_error: 'Le prix de la prestation est requise.',
 			})
-			.min(1, 'Le prix de la prestation est requise.'),
+			.min(1, 'Le prix de la prestation est requise.')
+			.max(70, 'Le prix de la prestation ne doit pas dépasser 70 caractères.'),
 		description: zod
 			.string({ required_error: 'La description est requise.' })
-			.min(1, 'La description est requise.'),
+			.min(1, 'La description est requise.')
+			.max(2000, 'La description ne doit pas dépasser 2000 caractères.'),
 	})
 	.required({ name: true, price: true, description: true })
 
