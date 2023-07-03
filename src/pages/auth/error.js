@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react'
 import Head from 'next/head'
-import { signIn, signOut, useSession } from 'next-auth/react'
+import { signOut, useSession } from 'next-auth/react'
 import { useRouter } from 'next/router'
 import { toast } from 'react-toastify'
 import FullLoader from '@/components/Global/Loader/FullLoader'

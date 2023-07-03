@@ -1,13 +1,11 @@
 import React, { useEffect } from 'react'
 import Head from 'next/head'
 import Image from 'next/image'
-import { signIn, signOut, useSession } from 'next-auth/react'
-import { useRouter } from 'next/router'
+import { signOut, useSession } from 'next-auth/react'
 import Link from 'next/link'
 
 function VerificationComplete() {
 	const { session } = useSession()
-	const router = useRouter()
 
 	useEffect(() => {
 		if (session) {

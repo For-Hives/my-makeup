@@ -1,11 +1,9 @@
 import React, { useEffect } from 'react'
 import Image from 'next/image'
-import { Stars } from '@/components/Profil/Atoms/Stars'
 import { BadgeDispo } from '@/components/Profil/Atoms/BadgeDispo'
 import { BadgeIndispo } from '@/components/Profil/Atoms/BadgeIndispo'
 import ModalUpdateResumeProfil from '@/components/Profil/Atoms/ModalUpdate/ModalUpdateResumeProfil'
 import { useRouter } from 'next/router'
-import ViewLocationProfil from '@/components/Profil/Childs/Views/ViewLocationProfil'
 
 function ResumeProfil(props) {
 	const router = useRouter()
@@ -15,11 +13,9 @@ function ResumeProfil(props) {
 	const isPublic = !!publicView
 
 	const [starsToDisplay, setStarsToDisplay] = React.useState(5)
-	const [availability, setAvailability] = React.useState(!!user?.available)
+	const [availability, setAvailability] = React.useState(true)
 	const [isModalOpen, setIsModalOpen] = React.useState(false)
-	const [profilPicture, setProfilPicture] = React.useState(
-		user?.main_picture?.url
-	)
+	const [profilPicture, setProfilPicture] = React.useState('')
 
 	const handleAvailability = () => {
 		setAvailability(!availability)
@@ -43,7 +39,16 @@ function ResumeProfil(props) {
 
 	useEffect(() => {
 		setAvailability(!!user?.available)
+		setProfilPicture(user?.main_picture?.url)
 	}, [user])
+
+	/**
+	 * default value at first render
+	 */
+	useEffect(() => {
+		setAvailability(!!user?.available)
+		setProfilPicture(user?.main_picture?.url)
+	}, [])
 
 	return (
 		<div
