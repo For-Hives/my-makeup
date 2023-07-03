@@ -6,7 +6,7 @@ import { BadgeIndispo } from '@/components/Profil/Atoms/BadgeIndispo'
 function ViewResumeProfil(props) {
 	const [user, setUser] = React.useState(null)
 	const [availability, setAvailability] = React.useState(true)
-	const [mainPicture, setMainPicture] = React.useState('')
+	const [mainPicture, setMainPicture] = React.useState(user?.main_picture?.url)
 
 	useEffect(() => {
 		if (props.user) {
