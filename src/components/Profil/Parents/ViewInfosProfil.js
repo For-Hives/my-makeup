@@ -31,51 +31,24 @@ function ViewInfosProfil(props) {
 									'col-span-12 flex flex-col items-start gap-5 md:col-span-4'
 								}
 							>
-								{user?.city && (
-									<ViewContainer user={user} Component={ViewLocationProfil} />
-								)}
-								{user?.network && (
-									<ViewContainer
-										user={user}
-										Component={ViewSocialMediaProfil}
-									/>
-								)}
-								{user?.skills && (
-									<ViewContainer user={user} Component={ViewSkillsProfil} />
-								)}
-								{user?.language && (
-									<ViewContainer user={user} Component={ViewLanguageProfil} />
-								)}
-								{user?.courses && (
-									<ViewContainer user={user} Component={ViewCoursesProfil} />
-								)}
+								<ViewContainer user={user} Component={ViewLocationProfil} />
+								<ViewContainer user={user} Component={ViewSocialMediaProfil} />
+								<ViewContainer user={user} Component={ViewSkillsProfil} />
+								<ViewContainer user={user} Component={ViewLanguageProfil} />
+								<ViewContainer user={user} Component={ViewCoursesProfil} />
 							</div>
 							<div
 								className={
 									'col-span-12 flex flex-col items-start gap-5 md:col-span-8'
 								}
 							>
-								{user?.description && (
-									<ViewContainer
-										user={user}
-										Component={ViewDescriptionProfil}
-									/>
-								)}
-								{user?.image_gallery && (
-									<ViewContainer user={user} Component={ViewPortfolioProfil} />
-								)}
-								{user?.service_offers && (
-									<ViewContainer
-										user={user}
-										Component={ViewServiceOffersProfil}
-									/>
-								)}
-								{user?.experiences && (
-									<ViewContainer
-										user={user}
-										Component={ViewExperiencesProfil}
-									/>
-								)}
+								<ViewContainer user={user} Component={ViewDescriptionProfil} />
+								<ViewContainer user={user} Component={ViewPortfolioProfil} />
+								<ViewContainer
+									user={user}
+									Component={ViewServiceOffersProfil}
+								/>
+								<ViewContainer user={user} Component={ViewExperiencesProfil} />
 							</div>
 						</>
 					)}
