@@ -13,11 +13,9 @@ function ResumeProfil(props) {
 	const isPublic = !!publicView
 
 	const [starsToDisplay, setStarsToDisplay] = React.useState(5)
-	const [availability, setAvailability] = React.useState(!!user?.available)
+	const [availability, setAvailability] = React.useState(true)
 	const [isModalOpen, setIsModalOpen] = React.useState(false)
-	const [profilPicture, setProfilPicture] = React.useState(
-		user?.main_picture?.url
-	)
+	const [profilPicture, setProfilPicture] = React.useState('')
 
 	const handleAvailability = () => {
 		setAvailability(!availability)
@@ -41,7 +39,16 @@ function ResumeProfil(props) {
 
 	useEffect(() => {
 		setAvailability(!!user?.available)
+		setProfilPicture(user?.main_picture?.url)
 	}, [user])
+
+	/**
+	 * default value at first render
+	 */
+	useEffect(() => {
+		setAvailability(!!user?.available)
+		setProfilPicture(user?.main_picture?.url)
+	}, [])
 
 	return (
 		<div
