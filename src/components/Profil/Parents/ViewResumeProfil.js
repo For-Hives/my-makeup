@@ -6,7 +6,9 @@ import { BadgeIndispo } from '@/components/Profil/Atoms/BadgeIndispo'
 function ViewResumeProfil(props) {
 	const [user, setUser] = React.useState(null)
 	const [availability, setAvailability] = React.useState(true)
-	const [mainPicture, setMainPicture] = React.useState(user?.main_picture?.url)
+	const [mainPicture, setMainPicture] = React.useState(
+		user?.main_picture?.url ?? null
+	)
 
 	useEffect(() => {
 		if (props.user) {
@@ -32,20 +34,18 @@ function ViewResumeProfil(props) {
 							'relative col-span-12 flex items-center justify-center xl:col-span-2 xl:justify-start'
 						}
 					>
-						{mainPicture && (
-							<div className={'relative h-[200px] w-[200px]'}>
-								<Image
-									src={mainPicture || '/assets/pp_makeup.webp'}
-									alt={'ppmakeup'}
-									priority={true}
-									fill={true}
-									sizes={
-										'(max-width: 768px) 150px, (max-width: 1200px) 175px, 200px'
-									}
-									className={'rounded-full object-cover'}
-								></Image>
-							</div>
-						)}
+						<div className={'relative h-[200px] w-[200px]'}>
+							<Image
+								src={mainPicture ?? '/assets/pp_makeup.webp'}
+								alt={'ppmakeup'}
+								priority={true}
+								fill={true}
+								sizes={
+									'(max-width: 768px) 150px, (max-width: 1200px) 175px, 200px'
+								}
+								className={'rounded-full object-cover'}
+							></Image>
+						</div>
 					</div>
 					<div
 						className={
