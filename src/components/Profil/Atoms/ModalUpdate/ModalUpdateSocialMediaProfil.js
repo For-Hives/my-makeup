@@ -56,19 +56,29 @@ export default function ModalUpdateSocialMediaProfil(props) {
 		resolver: zodResolver(schema),
 	})
 
-	const [open, setOpen] = useState(props.isModalOpen)
+	const [open, setOpen] = useState(false)
 
-	const [userYoutube, setUserYoutube] = useState(user.network.youtube ?? '')
-	const [userFacebook, setUserFacebook] = useState(user.network.facebook ?? '')
-	const [userInstagram, setUserInstagram] = useState(
-		user.network.instagram ?? ''
-	)
-	const [userWebsite, setUserWebsite] = useState(user.network.website ?? '')
-	const [userLinkedin, setUserLinkedin] = useState(user.network.linkedin ?? '')
-	const [userEmail, setUserEmail] = useState(user.network.email ?? '')
-	const [userPhone, setUserPhone] = useState(user.network.phone ?? '')
+	const [userYoutube, setUserYoutube] = useState('')
+	const [userFacebook, setUserFacebook] = useState('')
+	const [userInstagram, setUserInstagram] = useState('')
+	const [userWebsite, setUserWebsite] = useState('')
+	const [userLinkedin, setUserLinkedin] = useState('')
+	const [userEmail, setUserEmail] = useState('')
+	const [userPhone, setUserPhone] = useState('')
 
 	const { data: session } = useSession()
+
+	useEffect(() => {
+		// set all theses states like this
+		setOpen(props.isModalOpen)
+		setUserYoutube(user?.network?.youtube ?? '')
+		setUserFacebook(user?.network?.facebook ?? '')
+		setUserInstagram(user?.network?.instagram ?? '')
+		setUserWebsite(user?.network?.website ?? '')
+		setUserLinkedin(user?.network?.linkedin ?? '')
+		setUserEmail(user?.network?.email ?? '')
+		setUserPhone(user?.network?.phone ?? '')
+	}, [])
 
 	const onSubmit = data => {
 		data = {
