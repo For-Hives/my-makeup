@@ -1,6 +1,5 @@
 import Head from 'next/head'
 import React from 'react'
-import Image from 'next/image'
 import Nav from '@/components/Global/Nav'
 import Footer from '@/components/Global/Footer'
 import ResumeProfil from '@/components/Profil/Parents/ResumeProfil'

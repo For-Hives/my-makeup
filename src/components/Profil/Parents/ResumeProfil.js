@@ -1,11 +1,9 @@
 import React, { useEffect } from 'react'
 import Image from 'next/image'
-import { Stars } from '@/components/Profil/Atoms/Stars'
 import { BadgeDispo } from '@/components/Profil/Atoms/BadgeDispo'
 import { BadgeIndispo } from '@/components/Profil/Atoms/BadgeIndispo'
 import ModalUpdateResumeProfil from '@/components/Profil/Atoms/ModalUpdate/ModalUpdateResumeProfil'
 import { useRouter } from 'next/router'
-import ViewLocationProfil from '@/components/Profil/Childs/Views/ViewLocationProfil'
 
 function ResumeProfil(props) {
 	const router = useRouter()

@@ -1,6 +1,5 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import Image from 'next/image'
-import { Stars } from '@/components/Profil/Atoms/Stars'
 import { BadgeDispo } from '@/components/Profil/Atoms/BadgeDispo'
 import { BadgeIndispo } from '@/components/Profil/Atoms/BadgeIndispo'
 import { useRouter } from 'next/router'
@@ -13,7 +12,7 @@ function ViewResumeProfil(props) {
 	const isPublic = !!publicView
 
 	// const [starsToDisplay, setStarsToDisplay] = React.useState(5)
-	const [availability, setAvailability] = React.useState(!!user?.available)
+	const [availability, setAvailability] = React.useState(false)
 	const [isModalOpen, setIsModalOpen] = React.useState(false)
 
 	const handleAvailability = () => {
@@ -33,6 +32,11 @@ function ViewResumeProfil(props) {
 		mainPicture = user?.main_picture?.data?.attributes?.url
 	}
 	const isPublicView = props.isPublicView ?? false
+
+	useEffect(() => {
+		setAvailability(!!user?.available)
+	}, [])
+
 	return (
 		<div className={'relative bg-white px-4 pb-24 shadow-xl md:px-8 2xl:px-0'}>
 			<div className="mx-auto max-w-7xl pt-[90px]">

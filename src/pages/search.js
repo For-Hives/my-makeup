@@ -8,7 +8,6 @@ import FullSearchBloc from '@/components/Global/Search/FullSearchBloc'
 import { CatSearch } from '@/components/Global/Search/CatSearch'
 import Loader from '@/components/Global/Loader/Loader'
 import { BadgeSuperMaquilleuse } from '@/components/Global/BadgeSuperMaquilleuse'
-import { Stars } from '@/components/Profil/Atoms/Stars'
 import Link from 'next/link'
 import { CheckCircleIcon } from '@heroicons/react/24/outline'
 

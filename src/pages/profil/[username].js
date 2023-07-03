@@ -1,5 +1,4 @@
 import Head from 'next/head'
-import { useRouter } from 'next/router'
 import React from 'react'
 import Footer from '@/components/Global/Footer'
 import ViewResumeProfil from '@/components/Profil/Parents/ViewResumeProfil'
@@ -7,8 +6,6 @@ import ViewInfosProfil from '@/components/Profil/Parents/ViewInfosProfil'
 import Nav from '@/components/Global/Nav'
 
 export default function Profil({ profilData }) {
-	let router = useRouter()
-
 	const user = profilData
 	return (
 		<>
