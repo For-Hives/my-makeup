@@ -12,7 +12,7 @@ function ViewResumeProfil(props) {
 	const isPublic = !!publicView
 
 	// const [starsToDisplay, setStarsToDisplay] = React.useState(5)
-	const [availability, setAvailability] = React.useState(false)
+	const [availability, setAvailability] = React.useState(true)
 	const [isModalOpen, setIsModalOpen] = React.useState(false)
 
 	const handleAvailability = () => {
