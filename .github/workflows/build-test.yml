@@ -25,9 +25,19 @@ jobs:
           build: npm run build
           start: npm run start
           browser: chrome
-          env: TEST_USER=${{ secrets.TEST_USER }},TEST_PW=${{ secrets.TEST_PW }}
+          env:
+            CYPRESS_TEST_USER=${{ secrets.TEST_USER }}
+            CYPRESS_TEST_PW=${{ secrets.TEST_PW }}
+      - uses: actions/upload-artifact@v3
+          # add the line below to store screenshots only on failures
+        if: failure()
+        with:
+          name: cypress-screenshots
+          path: cypress/screenshots
+          if-no-files-found: ignore # 'warn' or 'error' are also available, defaults to `warn`
   docker:
     runs-on: ubuntu-latest
+    needs: cypress
     steps:
       - uses: actions/checkout@v3
       - name: Set up QEMU
