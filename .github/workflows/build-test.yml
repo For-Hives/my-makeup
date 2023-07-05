@@ -2,13 +2,15 @@ name: Build Docker and Test
 
 env:
   NEXT_PUBLIC_API_URL: ${{secrets.NEXT_PUBLIC_API_URL}}
+  TEST_USER: ${{secrets.TEST_USER}}
+  TEST_PW: ${{secrets.TEST_PW}}
 
 on:
   pull_request:
     branches: ['main']
 
 jobs:
-  docker:
+  cypress:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -23,6 +25,11 @@ jobs:
           build: npm run build
           start: npm run start
           browser: chrome
+          env: TEST_USER=${{ secrets.TEST_USER }},TEST_PW=${{ secrets.TEST_PW }}
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
       - name: Set up Docker Buildx
