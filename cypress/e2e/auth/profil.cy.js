@@ -42,9 +42,11 @@ describe('profil', () => {
 					cy.get("[data-cy='last-name-input']").type('LE FLOCH')
 
 					//  update speciality
-					cy.get("[data-cy='speciality-input']").type(
-						'Maquilleur professionnel et coiffeur professionnel pour le cinéma et la télévision'
-					)
+					cy.get("[data-cy='speciality-input']")
+						.clear()
+						.type(
+							'Maquilleur professionnel et coiffeur professionnel pour le cinéma'
+						)
 
 					// switch availability to true
 					// cy.get('[data-cy=\'available-input\']').click();   // todo : check the aivailability switch
@@ -75,7 +77,7 @@ describe('profil', () => {
 				.then(() => {
 					const description =
 						"Je suis une maquilleuse passionnée avec plus de 10 ans d'expérience..."
-					cy.get("[data-cy='description-input']").type(description)
+					cy.get("[data-cy='description-input']").clear().type(description)
 
 					cy.get("[data-cy='save-description-button']")
 						.click()
