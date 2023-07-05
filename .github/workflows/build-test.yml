@@ -53,8 +53,8 @@ jobs:
             MAILGUN_API_URL=${{ secrets.MAILGUN_API_URL }}
             MAILGUN_PUBLIC_KEY=${{ secrets.MAILGUN_PUBLIC_KEY }}
             MAILGUN_DOMAIN=${{ secrets.MAILGUN_DOMAIN }}
-            CYPRESS_TEST_USER=${{ secrets.TEST_USER }}
-            CYPRESS_TEST_PW=${{ secrets.TEST_PW }}
+            TEST_USER=${{ secrets.TEST_USER }}
+            TEST_PW=${{ secrets.TEST_PW }}
       - uses: actions/upload-artifact@v3
           # add the line below to store screenshots only on failures
         if: failure()
