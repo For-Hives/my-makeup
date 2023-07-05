@@ -7,7 +7,9 @@ import * as zod from 'zod'
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
 
 const schema = zod.object({
-	language: zod.string(),
+	language: zod
+		.string()
+		.max(70, 'La langue ne doit pas dépasser 70 caractères.'),
 })
 
 export default function ModalUpdateLanguageProfil(props) {
@@ -18,6 +20,8 @@ export default function ModalUpdateLanguageProfil(props) {
 		handleSubmit,
 		formState: { errors },
 		reset,
+		setValue,
+		trigger,
 	} = useForm({
 		resolver: zodResolver(schema),
 	})
@@ -71,19 +75,29 @@ export default function ModalUpdateLanguageProfil(props) {
 	const handleUpdateLanguage = event => {
 		// check if the entered value is a ';' and if so, add it to the array
 		if (event.target.value.slice(-1) === ';') {
-			setUserLanguageSelected([
-				...userLanguageSelected,
-				{
-					// id is the name of the skill without the ';' at the end, to be able to delete it later
-					id: event.target.value.slice(0, -1),
-					name: event.target.value.slice(0, -1),
-				},
-			])
-			setUserLanguage('')
+			// Trigger a validation before adding the skill
+			trigger('language').then(isValid => {
+				if (isValid) {
+					const updatedUserLanguagesSelected = userLanguageSelected.concat({
+						id:
+							event.target.value.slice(0, -1) === ';'
+								? event.target.value.slice(0, -1)
+								: event.target.value,
+						name:
+							event.target.value.slice(0, -1) === ';'
+								? event.target.value.slice(0, -1)
+								: event.target.value,
+					})
+					setUserLanguageSelected(updatedUserLanguagesSelected)
+					setUserLanguage('')
+				}
+			})
 			return
 		}
-		// check if the entered value is a 'enter' and if so, add it to the array
+
 		setUserLanguage(event.target.value)
+		setValue('language', event.target.value)
+		trigger('language')
 	}
 
 	const handleDeleteLanguageelected = id => {
@@ -194,19 +208,23 @@ export default function ModalUpdateLanguageProfil(props) {
 																	required: true,
 																})}
 																required
-																onKeyPress={event => {
+																onKeyPress={async event => {
 																	if (event.key === 'Enter') {
 																		event.preventDefault()
-																		// 	add the skill to the array
-																		// 	empty the input
-																		setUserLanguageSelected([
-																			...userLanguageSelected,
-																			{
-																				id: event.target.value,
-																				name: event.target.value,
-																			},
-																		])
-																		setUserLanguage('')
+																		// Trigger a validation before adding the skill
+																		const isValid = await trigger('language')
+																		if (isValid) {
+																			// 	add the skill to the array
+																			// 	empty the input
+																			setUserLanguageSelected([
+																				...userLanguageSelected,
+																				{
+																					id: event.target.value,
+																					name: event.target.value,
+																				},
+																			])
+																			setUserLanguage('')
+																		}
 																	}
 																}}
 																value={userLanguage ?? ''}

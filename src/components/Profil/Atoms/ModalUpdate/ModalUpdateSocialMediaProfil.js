@@ -10,36 +10,43 @@ const schema = zod.object({
 	youtube: zod
 		.string()
 		.url({ message: 'Veuillez entrer une URL valide' })
+		.max(200, "L'URL ne doit pas dépasser 200 caractères.")
 		.optional()
 		.or(zod.literal('')),
 	facebook: zod
 		.string()
 		.url({ message: 'Veuillez entrer une URL valide' })
+		.max(200, "L'URL ne doit pas dépasser 200 caractères.")
 		.optional()
 		.or(zod.literal('')),
 	instagram: zod
 		.string()
 		.url({ message: 'Veuillez entrer une URL valide' })
+		.max(200, "L'URL ne doit pas dépasser 200 caractères.")
 		.optional()
 		.or(zod.literal('')),
 	website: zod
 		.string()
 		.url({ message: 'Veuillez entrer une URL valide' })
+		.max(200, "L'URL ne doit pas dépasser 200 caractères.")
 		.optional()
 		.or(zod.literal('')),
 	linkedin: zod
 		.string()
 		.url({ message: 'Veuillez entrer une URL valide' })
+		.max(200, "L'URL ne doit pas dépasser 200 caractères.")
 		.optional()
 		.or(zod.literal('')),
 	email: zod
 		.string()
 		.email({ message: 'Veuillez entrer un email valide' })
+		.max(200, "L'URL ne doit pas dépasser 200 caractères.")
 		.optional()
 		.or(zod.literal('')),
 	phone: zod
 		.string()
 		.min(1, 'Le numéro de téléphone est requis.')
+		.max(20, 'Le numéro de téléphone ne doit pas dépasser 20 caractères.')
 		.optional()
 		.or(zod.literal('')),
 })

@@ -11,6 +11,7 @@ const schema = zod
 		city: zod
 			.string({ required_error: 'La localisation est requise.' })
 			.min(1, 'La localisation est requise.')
+			.max(70, 'La localisation ne doit pas dépasser 70 caractères.')
 			.or(zod.literal('')),
 		action_radius: zod
 			.string({

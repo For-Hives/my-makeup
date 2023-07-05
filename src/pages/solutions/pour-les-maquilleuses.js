@@ -31,8 +31,9 @@ function PourLesMaquilleuses(props) {
 				<Hero
 					title={
 						<>
-							La solution de vos rêves&nbsp;:&nbsp;
-							<span className={'text-indigo-900'}>My&nbsp;Makeup</span>
+							Développez Votre Carrière de Maquilleuse avec&nbsp;
+							<span className={'text-indigo-900'}>My&nbsp;Makeup&nbsp;</span>
+							La solution de vos rêves&nbsp;!
 						</>
 					}
 					description={

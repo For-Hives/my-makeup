@@ -11,6 +11,7 @@ const schema = zod
 		description: zod
 			.string({ required_error: 'La description est requise.' })
 			.min(1, 'La description est requise.')
+			.max(2000, 'La description ne doit pas dépasser 2000 caractères.')
 			.or(zod.literal('')),
 	})
 	.required({ description: true })

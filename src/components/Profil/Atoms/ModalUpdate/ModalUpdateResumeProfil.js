@@ -16,20 +16,24 @@ const schema = zod
 		first_name: zod
 			.string({ required_error: 'Le prénom est requis.' })
 			.min(1, 'Le prénom est requis.')
+			.max(70, 'Le prénom ne doit pas dépasser 70 caractères.')
 			.or(zod.literal('')),
 		last_name: zod
 			.string({ required_error: 'Le nom est requis.' })
 			.min(1, 'Le nom est requis.')
+			.max(70, 'Le nom ne doit pas dépasser 70 caractères.')
 			.or(zod.literal('')),
 		speciality: zod
 			.string({ required_error: 'La spécialité est requise.' })
 			.min(1, 'La spécialité est requise.')
+			.max(70, 'La spécialité ne doit pas dépasser 70 caractères.')
 			.or(zod.literal('')),
 		company_artist_name: zod
 			.string({
 				required_error: "Le nom d'entreprise / nom d'artiste est requis.",
 			})
 			.min(1, "Le nom de l'entreprise est requise.")
+			.max(70, "Le nom de l'entreprise ne doit pas dépasser 70 caractères.")
 			.or(zod.literal('')),
 	})
 	.required({

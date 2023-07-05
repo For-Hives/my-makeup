@@ -12,14 +12,18 @@ const schema = zod
 	.object({
 		email: zod
 			.string({ required_error: 'Email est requis' })
-			.email('Email invalide'),
+			.email('Email invalide')
+			.max(255, 'Email trop long'),
 		password: zod
 			.string({ required_error: 'Mot de passe est requis' })
 			.regex(
 				/^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[a-zA-Z]).{8,}$/gm,
 				'Le mot de passe doit contenir au moins 8 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial'
-			),
-		name: zod.string({ required_error: 'Le nom de compte est requis' }),
+			)
+			.max(255, 'Mot de passe trop long'),
+		name: zod
+			.string({ required_error: 'Le nom de compte est requis' })
+			.max(255, 'Le nom de compte est trop long'),
 	})
 	.required({ email: true, password: true, name: true })
 

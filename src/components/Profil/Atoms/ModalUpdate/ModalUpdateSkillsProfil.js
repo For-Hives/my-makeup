@@ -1,13 +1,15 @@
 import React, { Fragment, useEffect, useRef, useState } from 'react'
 import { Dialog, Transition } from '@headlessui/react'
-import { useForm } from 'react-hook-form'
+import { useForm, useFormContext } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useSession } from 'next-auth/react'
 import * as zod from 'zod'
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
 
 const schema = zod.object({
-	skills: zod.string(),
+	skills: zod
+		.string()
+		.max(70, 'Les compétences ne doivent pas dépasser 70 caractères.'),
 })
 
 export default function ModalUpdateSkillsProfil(props) {
@@ -18,6 +20,9 @@ export default function ModalUpdateSkillsProfil(props) {
 		handleSubmit,
 		formState: { errors },
 		reset,
+		trigger,
+		watch,
+		setValue,
 	} = useForm({
 		resolver: zodResolver(schema),
 	})
@@ -71,19 +76,29 @@ export default function ModalUpdateSkillsProfil(props) {
 	const handleUpdateSkills = event => {
 		// check if the entered value is a ';' and if so, add it to the array
 		if (event.target.value.slice(-1) === ';') {
-			setUserSkillsSelected([
-				...userSkillsSelected,
-				{
-					// id is the name of the skill without the ';' at the end, to be able to delete it later
-					id: event.target.value.slice(0, -1),
-					name: event.target.value.slice(0, -1),
-				},
-			])
-			setUserSkills('')
+			// Trigger a validation before adding the skill
+			trigger('skills').then(isValid => {
+				if (isValid) {
+					const updatedUserSkillsSelected = userSkillsSelected.concat({
+						id:
+							event.target.value.slice(0, -1) === ';'
+								? event.target.value.slice(0, -1)
+								: event.target.value,
+						name:
+							event.target.value.slice(0, -1) === ';'
+								? event.target.value.slice(0, -1)
+								: event.target.value,
+					})
+					setUserSkillsSelected(updatedUserSkillsSelected)
+					setUserSkills('')
+				}
+			})
 			return
 		}
-		// check if the entered value is a 'enter' and if so, add it to the array
+
 		setUserSkills(event.target.value)
+		setValue('skills', event.target.value)
+		trigger('skills')
 	}
 
 	const handleDeleteSkillSelected = id => {
@@ -177,7 +192,7 @@ export default function ModalUpdateSkillsProfil(props) {
 															htmlFor="skills"
 															className="block text-sm text-gray-700"
 														>
-															Skills
+															Compétences
 														</label>
 														<p className={'text-xs italic text-gray-700/70'}>
 															Vous pouvez ajouter plusieurs compétences en les
@@ -195,19 +210,23 @@ export default function ModalUpdateSkillsProfil(props) {
 																	required: true,
 																})}
 																required
-																onKeyPress={event => {
+																onKeyPress={async event => {
 																	if (event.key === 'Enter') {
 																		event.preventDefault()
-																		// 	add the skill to the array
-																		// 	empty the input
-																		setUserSkillsSelected([
-																			...userSkillsSelected,
-																			{
-																				id: event.target.value,
-																				name: event.target.value,
-																			},
-																		])
-																		setUserSkills('')
+																		// Trigger a validation before adding the skill
+																		const isValid = await trigger('skills')
+																		if (isValid) {
+																			// 	add the skill to the array
+																			// 	empty the input
+																			setUserSkillsSelected([
+																				...userSkillsSelected,
+																				{
+																					id: event.target.value,
+																					name: event.target.value,
+																				},
+																			])
+																			setUserSkills('')
+																		}
 																	}
 																}}
 																value={userSkills ?? ''}
@@ -223,7 +242,7 @@ export default function ModalUpdateSkillsProfil(props) {
 													</div>
 													<div className={'flex flex-col gap-2'}>
 														<h3 className={'text-sm text-gray-700'}>
-															Compétences
+															Compétences sélectionnés
 														</h3>
 														<div
 															className={
