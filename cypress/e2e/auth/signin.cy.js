@@ -31,63 +31,14 @@ describe('Login page', () => {
 	})
 
 	it('Login with Email / Password', () => {
+		cy.intercept('POST', '/api/auth/callback/credentials?').as('getCredentials')
+
+		cy.visit('http://localhost:3000/auth/signin')
 		cy.get("[data-cy='email-input']").click()
 		cy.get("[data-cy='email-input']").type('breval2000@live.fr')
 		cy.get("[data-cy='password-input']").type('@linuxAP5')
-		cy.type('{enter}')
+		cy.get("[data-cy='email-signin']").click()
 
-		// check if facebook login button exists and if it does, if it opens a popup
-		cy.get(`a[href="${Cypress.env('SITE_NAME')}/api/auth/signin/facebook"]`)
-			.should('exist')
-			.and('have.attr', 'target', '_blank')
-			.and('have.attr', 'rel', 'noopener noreferrer')
-
-		const username = Cypress.env('FACEBOOK_USER')
-		const password = Cypress.env('FACEBOOK_PW')
-		const loginUrl = Cypress.env('SITE_NAME')
-		const cookieName = Cypress.env('COOKIE_NAME')
-
-		cy.log(`Logging in as ${username}`)
-
-		const socialLoginOptions = {
-			username,
-			password,
-			loginUrl,
-			headless: true,
-			logs: false,
-			isPopup: true,
-			loginSelector: `a[href="${Cypress.env(
-				'SITE_NAME'
-			)}/api/auth/signin/facebook"]`,
-			postLoginSelector: '.unread-count',
-		}
-
-		return cy
-			.task('FacebookSocialLogin', socialLoginOptions)
-			.then(({ cookies }) => {
-				cy.clearCookies()
-
-				const cookie = cookies
-					.filter(cookie => cookie.name === cookieName)
-					.pop()
-				if (cookie) {
-					cy.setCookie(cookie.name, cookie.value, {
-						domain: cookie.domain,
-						expiry: cookie.expires,
-						httpOnly: cookie.httpOnly,
-						path: cookie.path,
-						secure: cookie.secure,
-					})
-
-					Cypress.Cookies.defaults({
-						preserve: cookieName,
-					})
-
-					// remove the two lines below if you need to stay logged in
-					// for your remaining tests
-					cy.visit('/api/auth/signout')
-					cy.get('form').submit()
-				}
-			})
+		cy.wait('@getCredentials').its('response.statusCode').should('eq', 200)
 	})
 })
