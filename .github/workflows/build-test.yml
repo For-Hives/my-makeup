@@ -1,4 +1,4 @@
-name: Just Build Docker
+name: Build Docker and Test
 
 env:
   NEXT_PUBLIC_API_URL: ${{secrets.NEXT_PUBLIC_API_URL}}
@@ -11,6 +11,12 @@ jobs:
   docker:
     runs-on: ubuntu-latest
     steps:
+      - name: Cypress run
+        uses: cypress-io/github-action@v5
+        with:
+          build: npm run build
+          start: npm run start
+          browser: chrome
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
       - name: Set up Docker Buildx
