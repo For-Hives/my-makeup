@@ -15,7 +15,9 @@ function ResumeProfil(props) {
 	const [starsToDisplay, setStarsToDisplay] = React.useState(5)
 	const [availability, setAvailability] = React.useState(true)
 	const [isModalOpen, setIsModalOpen] = React.useState(false)
-	const [profilPicture, setProfilPicture] = React.useState('')
+	const [profilPicture, setProfilPicture] = React.useState(
+		'/assets/pp_makeup.webp'
+	)
 
 	const handleAvailability = () => {
 		setAvailability(!availability)
@@ -103,24 +105,13 @@ function ResumeProfil(props) {
 								<p className={'text-sm font-semibold'}>modifier votre photo</p>
 							</button>
 						) : null}
-
-						{user && user?.main_picture && user?.main_picture?.url ? (
-							<Image
-								src={profilPicture}
-								alt={'ppmakeup'}
-								width={500}
-								height={500}
-								className={'h-[200px] w-[200px] rounded-full object-cover'}
-							></Image>
-						) : (
-							<Image
-								src={'/assets/pp_makeup.webp'}
-								alt={'ppmakeup'}
-								width={500}
-								height={500}
-								className={'h-[200px] w-[200px] rounded-full object-cover'}
-							></Image>
-						)}
+						<Image
+							src={profilPicture}
+							alt={'ppmakeup'}
+							width={500}
+							height={500}
+							className={'h-[200px] w-[200px] rounded-full object-cover'}
+						></Image>
 					</div>
 					<div
 						className={

@@ -9,7 +9,7 @@ import { patchMeMakeup } from '@/services/PatchMeMakeup'
 const schema = zod.object({
 	skills: zod
 		.string()
-		.max(3, 'Les compétences ne doivent pas dépasser 70 caractères.'),
+		.max(70, 'Les compétences ne doivent pas dépasser 70 caractères.'),
 })
 
 export default function ModalUpdateSkillsProfil(props) {
@@ -21,6 +21,8 @@ export default function ModalUpdateSkillsProfil(props) {
 		formState: { errors },
 		reset,
 		trigger,
+		watch,
+		setValue,
 	} = useForm({
 		resolver: zodResolver(schema),
 	})
@@ -71,23 +73,32 @@ export default function ModalUpdateSkillsProfil(props) {
 		inputRef.current.click()
 	}
 
-	const handleUpdateSkills = async event => {
+	const handleUpdateSkills = event => {
 		// check if the entered value is a ';' and if so, add it to the array
 		if (event.target.value.slice(-1) === ';') {
 			// Trigger a validation before adding the skill
-			const isValid = await trigger('skills')
-			if (isValid) {
-				const updatedUserSkillsSelected = userSkillsSelected.concat({
-					id: event.target.value.slice(0, -1),
-					name: event.target.value.slice(0, -1),
-				})
-				setUserSkillsSelected(updatedUserSkillsSelected)
-				setUserSkills('')
-				return
-			}
+			trigger('skills').then(isValid => {
+				if (isValid) {
+					const updatedUserSkillsSelected = userSkillsSelected.concat({
+						id:
+							event.target.value.slice(0, -1) === ';'
+								? event.target.value.slice(0, -1)
+								: event.target.value,
+						name:
+							event.target.value.slice(0, -1) === ';'
+								? event.target.value.slice(0, -1)
+								: event.target.value,
+					})
+					setUserSkillsSelected(updatedUserSkillsSelected)
+					setUserSkills('')
+				}
+			})
+			return
 		}
 
 		setUserSkills(event.target.value)
+		setValue('skills', event.target.value)
+		trigger('skills')
 	}
 
 	const handleDeleteSkillSelected = id => {
