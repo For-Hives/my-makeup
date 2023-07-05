@@ -24,6 +24,26 @@ const schema = zod
 			.string({ required_error: 'La description est requise.' })
 			.min(1, 'La description est requise.')
 			.max(2000, 'La description ne doit pas dépasser 2000 caractères.'),
+		services: zod
+			.array(
+				zod.object({
+					name: zod
+						.string({ required_error: 'Le nom du service est requis.' })
+						.min(1, 'Le nom du service est requis.')
+						.max(70, 'Le nom du service ne doit pas dépasser 70 caractères.'),
+					price: zod
+						.string({
+							required_error: 'Le prix du service est requis.',
+						})
+						.min(1, 'Le prix du service est requis.')
+						.max(70, 'Le prix du service ne doit pas dépasser 70 caractères.'),
+					description: zod
+						.string({ required_error: 'La description est requise.' })
+						.min(1, 'La description est requise.')
+						.max(2000, 'La description ne doit pas dépasser 2000 caractères.'),
+				})
+			)
+			.optional(),
 	})
 	.required({ name: true, price: true, description: true })
 
@@ -67,6 +87,15 @@ export default function ModalUpdateServiceOffersProfil(props) {
 	 * @param data
 	 */
 	const onSubmit = data => {
+		// replace all ";" with "\n" in userServiceOffersPrice
+		const newPrice = userServiceOffersPrice.replace(/;/g, '\n')
+
+		// replace all ";" with "\n" in each option's price
+		const newOptions = userServiceOffersOptions.map(option => {
+			const newOptionPrice = option.price.replace(/;/g, '\n')
+			return { ...option, price: newOptionPrice }
+		})
+
 		// add a new serviceOffers to the user serviceOffers only if the form is valid
 		// check if the serviceOffers is already in the user serviceOffers
 		const serviceOffersAlreadyInUserServiceOffers = userServiceOffers.filter(
@@ -85,9 +114,9 @@ export default function ModalUpdateServiceOffersProfil(props) {
 						return {
 							id: serviceOffer.id,
 							name: userServiceOffersName,
-							price: userServiceOffersPrice,
+							price: newPrice,
 							description: userServiceOffersDescription,
-							options: userServiceOffersOptions,
+							options: newOptions,
 						}
 					} else {
 						return serviceOffer
@@ -104,9 +133,9 @@ export default function ModalUpdateServiceOffersProfil(props) {
 						{
 							id: 'added' + userServiceOffersName + userServiceOffersPrice,
 							name: userServiceOffersName,
-							price: userServiceOffersPrice,
+							price: newPrice,
 							description: userServiceOffersDescription,
-							options: userServiceOffersOptions,
+							options: newOptions,
 						},
 					])
 					setResetFormState()
@@ -262,12 +291,22 @@ export default function ModalUpdateServiceOffersProfil(props) {
 		const userServiceOffersFiltered = userServiceOffers.filter(
 			service_offers => service_offers.id === id
 		)
+
+		// replace all ";" with "\n" in userServiceOffersPrice
+		const newPrice = userServiceOffersFiltered[0].price.replace(/\n/g, ';')
+
+		// replace all ";" with "\n" in each option's price
+		const newOptions = userServiceOffersFiltered[0].options.map(option => {
+			const newOptionPrice = option.price.replace(/\n/g, ';')
+			return { ...option, price: newOptionPrice }
+		})
+
 		reset()
 		setUserServiceOffersId(userServiceOffersFiltered[0].id)
 		setUserServiceOffersName(userServiceOffersFiltered[0].name)
-		setUserServiceOffersPrice(userServiceOffersFiltered[0].price)
+		setUserServiceOffersPrice(newPrice)
 		setUserServiceOffersDescription(userServiceOffersFiltered[0].description)
-		setUserServiceOffersOptions(userServiceOffersFiltered[0].options)
+		setUserServiceOffersOptions(newOptions)
 	}
 
 	const handleDeleteServiceOffers = id => {
@@ -439,6 +478,10 @@ export default function ModalUpdateServiceOffersProfil(props) {
 															>
 																Prix de la prestation
 															</label>
+															<p className={'text-xs italic text-gray-700/70'}>
+																Vous pouvez ajouter plusieurs formules/prix en
+																les séparant par un point-virgule.
+															</p>
 															<div className="mt-2">
 																<input
 																	id="price"
@@ -485,9 +528,12 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																	</label>
 																	<div className="relative mt-2">
 																		<input
-																			id={`name${index}`}
-																			name={`name${index}`}
+																			id={`services[${index}].name`}
+																			name={`services[${index}].name`}
 																			type={'text'}
+																			{...register(`services[${index}].name`, {
+																				required: true,
+																			})}
 																			required
 																			onChange={event => {
 																				// 	change the name value of the correct option
@@ -510,6 +556,17 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																			}
 																			className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																		/>
+																		{errors.services &&
+																			errors.services[index] &&
+																			errors.services[index].name && (
+																				<p
+																					className={
+																						'mt-2 text-xs text-red-500/80'
+																					}
+																				>
+																					{errors.services[index].name.message}
+																				</p>
+																			)}
 																	</div>
 																</div>
 																<div>
@@ -521,8 +578,14 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																	</label>
 																	<div className="mt-2">
 																		<textarea
-																			id="description"
-																			name="description"
+																			id={`services[${index}].description`}
+																			name={`services[${index}].description`}
+																			{...register(
+																				`services[${index}].description`,
+																				{
+																					required: true,
+																				}
+																			)}
 																			required
 																			onChange={event => {
 																				// 	change the name value of the correct option
@@ -547,6 +610,20 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																			}
 																			className="block min-h-[150px] w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																		/>
+																		{errors.services &&
+																			errors.services[index] &&
+																			errors.services[index].description && (
+																				<p
+																					className={
+																						'mt-2 text-xs text-red-500/80'
+																					}
+																				>
+																					{
+																						errors.services[index].description
+																							.message
+																					}
+																				</p>
+																			)}
 																	</div>
 																</div>
 																<div>
@@ -556,11 +633,22 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																	>
 																		Prix de la prestation
 																	</label>
+																	<p
+																		className={
+																			'text-xs italic text-gray-700/70'
+																		}
+																	>
+																		Vous pouvez ajouter plusieurs formules/prix
+																		en les séparant par un point-virgule.
+																	</p>
 																	<div className="mt-2">
 																		<input
-																			id="price"
-																			name="price"
+																			id={`services[${index}].price`}
+																			name={`services[${index}].price`}
 																			type={'text'}
+																			{...register(`services[${index}].price`, {
+																				required: true,
+																			})}
 																			required
 																			onChange={event => {
 																				// 	change the name value of the correct option
@@ -583,6 +671,17 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																			}
 																			className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																		/>
+																		{errors.services &&
+																			errors.services[index] &&
+																			errors.services[index].price && (
+																				<p
+																					className={
+																						'mt-2 text-xs text-red-500/80'
+																					}
+																				>
+																					{errors.services[index].price.message}
+																				</p>
+																			)}
 																	</div>
 																</div>
 															</div>
