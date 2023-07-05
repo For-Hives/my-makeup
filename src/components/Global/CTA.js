@@ -25,8 +25,7 @@ function Cta() {
 			<div className="relative mx-auto max-w-7xl px-4 py-40 md:px-0 md:py-64">
 				<div className="z-20 mx-auto flex w-full flex-col gap-8 md:w-2/3 md:gap-16 xl:w-1/2">
 					<h2 className="text-center text-2xl font-bold tracking-tight text-white sm:text-4xl sm:leading-snug md:text-4xl">
-						Rejoignez&nbsp;My-Makeup,
-						la&nbsp;communauté&nbsp;qui&nbsp;fait&nbsp;la&nbsp;différence.
+						Rejoignez&nbsp;My-Makeup, la communauté qui fait la différence.
 					</h2>
 					<div
 						className={
@@ -36,7 +35,7 @@ function Cta() {
 						<Link
 							href="/search"
 							className={
-								'btn-secondary-white flex w-2/3 items-center justify-center md:w-auto'
+								'btn-secondary-white flex w-2/3 items-center justify-center text-center md:w-auto'
 							}
 						>
 							Je cherche des maquilleuses
@@ -44,7 +43,7 @@ function Cta() {
 						<Link
 							href="/auth/signup"
 							className={
-								'btn-secondary-white-bordered flex w-2/3 items-center justify-center md:w-auto'
+								'btn-secondary-white-bordered flex w-2/3 items-center justify-center text-center md:w-auto'
 							}
 						>
 							Je cherche des missions
