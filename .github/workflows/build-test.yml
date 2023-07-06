@@ -1,7 +1,7 @@
 name: Build Docker and Test
 
 env:
-  NEXT_PUBLIC_API_URL: ${{env.NEXT_PUBLIC_API_URL}}
+  NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
   NEXTAUTH_SECRET: ${{secrets.NEXTAUTH_SECRET}}
   NEXT_PUBLIC_URL: ${{secrets.NEXT_PUBLIC_URL}}
   NEXT_PUBLIC_DATABASE_URL: ${{secrets.NEXT_PUBLIC_DATABASE_URL}}
@@ -37,7 +37,7 @@ jobs:
         with:
           push: false
           tags: ${{ secrets.APP_IMAGE }}
-          build-args: NEXT_PUBLIC_API_URL=${{env.NEXT_PUBLIC_API_URL}}
+          build-args: NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
   cypress:
     runs-on: ubuntu-latest
     needs: docker
@@ -57,7 +57,7 @@ jobs:
           wait-on: 'http://localhost:3000'
           env:
             ENV=development
-            NEXT_PUBLIC_API_URL=${{ env.NEXT_PUBLIC_API_URL }}
+            NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
             NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}
             NEXT_PUBLIC_URL=${{ secrets.NEXT_PUBLIC_URL }}
             NEXT_PUBLIC_DATABASE_URL=${{ secrets.NEXT_PUBLIC_DATABASE_URL }}
