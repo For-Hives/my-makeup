@@ -40,7 +40,6 @@ jobs:
           start: npm run start
           browser: chrome
           wait-on: 'http://localhost:3000'
-          record: true
           env:
             ENV=development
             NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}

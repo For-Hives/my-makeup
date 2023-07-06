@@ -6,7 +6,7 @@ module.exports = defineConfig({
 		baseUrl: 'http://localhost:3000',
 		defaultCommandTimeout: 30000,
 		numTestsKeptInMemory: 50, // Par défaut 50, mais si un jour les tests crash pour "out of memory" ne pas hésiter à baisser cette valeur.
-		video: false,
+		video: true,
 		chromeWebSecurity: false,
 		reporter: 'junit',
 		reporterOptions: {
