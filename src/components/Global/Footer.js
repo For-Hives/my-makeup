@@ -27,7 +27,10 @@ function Footer() {
 						44000 Nantes
 					</p>
 					<div className={'flex flex-row gap-3 md:flex-col lg:flex-row'}>
-						<Link href="/" rel={'noopener nofollow noreferrer '}>
+						<Link
+							href="https://www.instagram.com/forhives.my_makeup.fr/"
+							rel={'noopener nofollow noreferrer '}
+						>
 							<Image
 								src={'/assets/brand/037-instagram.svg'}
 								className={'fill-white'}
