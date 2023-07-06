@@ -34,6 +34,8 @@ export function DescriptionProfil(props) {
 			>
 				{!isPublic ? (
 					<button
+						type="button"
+						data-cy="update-description-button"
 						onClick={handleIsModalOpen}
 						className={
 							'absolute left-0 top-0 -z-10 flex h-full w-full items-center justify-center px-4 opacity-0 ' +
