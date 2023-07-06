@@ -7,7 +7,7 @@ import { getSession, useSession } from 'next-auth/react'
 import _ from 'lodash'
 import InfosProfil from '@/components/Profil/Parents/InfosProfil'
 import FullLoader from '@/components/Global/Loader/FullLoader'
-import DangerZone from '@/components/Profil/Parents/DangerZone'
+import DangerZone from '@/components/Global/DangerZone'
 
 function Profil({ data }) {
 	const { data: session } = useSession()
