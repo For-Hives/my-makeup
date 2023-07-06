@@ -61,8 +61,7 @@ const navigation = [
 				icon: 'group',
 				description:
 					'Nous sommes là pour vous accompagner dans votre développement !',
-			},
-			// {
+			}, // {
 			// 	name: 'Nos partenaires',
 			// 	href: '/maquilleuse/partenaires',
 			// 	icon: 'leaderboard',
@@ -99,7 +98,10 @@ const navigation = [
 	},
 ]
 
-function Nav({ isFindMakeupArtistBtnVisible = true }) {
+function Nav({
+	isFindMakeupArtistBtnVisible = true,
+	isProfileBtnVisible = true,
+}) {
 	const { data: session } = useSession()
 
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -177,11 +179,14 @@ function Nav({ isFindMakeupArtistBtnVisible = true }) {
 												Trouver une maquilleuse
 											</Link>
 										)}
+
 										{session && session.user && !_.isEmpty(session.user) ? (
 											<>
-												<Link className="" href={'/auth/profil'}>
-													<span className={'btn-primary'}>Profil</span>
-												</Link>
+												{isProfileBtnVisible && (
+													<Link className="" href={'/auth/profil'}>
+														<span className={'btn-primary'}>Profil</span>
+													</Link>
+												)}
 											</>
 										) : (
 											<Link href="/auth/signin" className="">
@@ -310,6 +315,7 @@ function Nav({ isFindMakeupArtistBtnVisible = true }) {
 						</div>
 					</div>
 				</div>
+				; ;
 			</div>
 		</>
 	)

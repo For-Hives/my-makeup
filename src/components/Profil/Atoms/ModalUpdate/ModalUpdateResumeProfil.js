@@ -302,7 +302,7 @@ export default function ModalUpdateResumeProfil(props) {
 															>
 																<Image
 																	src={imageUrl}
-																	alt={'photo de profil.cy.js'}
+																	alt={'photo de profil'}
 																	fill={true}
 																	sizes="(min-width: 480px ) 50vw, (min-width: 728px) 33vw, (min-width: 976px) 25vw, 100vw"
 																	className="rounded-full object-cover object-center"

@@ -461,7 +461,7 @@ function InitAccount() {
 										<Warning
 											title={'Attention !'}
 											description={
-												"Votre profil.cy.js ne sera pas visible tant qu'il ne sera pas totalement rempli !"
+												"Votre profil ne sera pas visible tant qu'il ne sera pas totalement rempli !"
 											}
 										/>
 										<Link

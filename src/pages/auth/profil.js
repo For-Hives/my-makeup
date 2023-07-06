@@ -34,7 +34,7 @@ function Profil({ data }) {
 				{/*	seo tag canonical link */}
 				<link rel="canonical" href="https://my-makeup.fr/auth/profil" />
 			</Head>
-			<Nav />
+			<Nav isProfileBtnVisible={false} />
 			<main className={'relative'}>
 				{session && session.user && !_.isEmpty(session.user) ? (
 					<>
