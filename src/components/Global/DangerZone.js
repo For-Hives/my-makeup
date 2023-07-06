@@ -25,7 +25,6 @@ function DangerZone() {
 							<div className={'flex w-full flex-col gap-4'}>
 								<button
 									data-cy="button-logout"
-									type={'button'}
 									className={'flex items-center justify-start'}
 									onClick={() => {
 										signOut()
