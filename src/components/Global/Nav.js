@@ -61,8 +61,7 @@ const navigation = [
 				icon: 'group',
 				description:
 					'Nous sommes là pour vous accompagner dans votre développement !',
-			},
-			// {
+			}, // {
 			// 	name: 'Nos partenaires',
 			// 	href: '/maquilleuse/partenaires',
 			// 	icon: 'leaderboard',
@@ -100,8 +99,8 @@ const navigation = [
 ]
 
 function Nav({
-	isSignOutVisible = false,
 	isFindMakeupArtistBtnVisible = true,
+	isProfileBtnVisible = true,
 }) {
 	const { data: session } = useSession()
 
@@ -180,28 +179,14 @@ function Nav({
 												Trouver une maquilleuse
 											</Link>
 										)}
+
 										{session && session.user && !_.isEmpty(session.user) ? (
 											<>
-												{isSignOutVisible && (
-													<Link
-														onClick={() => {
-															signOut()
-														}}
-														className=""
-														href={'/auth/signin'}
-													>
-														<span
-															className={
-																'btn-primary-simple border-red-500  text-red-600'
-															}
-														>
-															Me déconnecter
-														</span>
+												{isProfileBtnVisible && (
+													<Link className="" href={'/auth/profil'}>
+														<span className={'btn-primary'}>Profil</span>
 													</Link>
 												)}
-												<Link className="" href={'/auth/profil'}>
-													<span className={'btn-primary'}>Profil</span>
-												</Link>
 											</>
 										) : (
 											<Link href="/auth/signin" className="">
@@ -330,6 +315,7 @@ function Nav({
 						</div>
 					</div>
 				</div>
+				; ;
 			</div>
 		</>
 	)

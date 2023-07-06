@@ -52,9 +52,9 @@ function SearchPage() {
 
 		setIsSearching(true)
 
-		let url = `https://api.my-makeup.fr/api/searching?search=${search}&city=${city}`
+		let url = `${process.env.NEXT_PUBLIC_API_URL}api/searching?search=${search}&city=${city}`
 		if (city === '' || city === undefined) {
-			url = `https://api.my-makeup.fr/api/searching?search=${search}`
+			url = `${process.env.NEXT_PUBLIC_API_URL}api/searching?search=${search}`
 		}
 
 		const response = await fetch(url)
@@ -72,7 +72,7 @@ function SearchPage() {
 				<title>Recherche de maquilleuse - My-Makeup</title>
 				<meta
 					name="description"
-					content="Recherchez et trouvez votre maquilleuse professionnelle en quelques clics sur My-Makeup."
+					content="Recherchez la maquilleuse professionnelle qui vous correspond en quelques clics sur My-Makeup."
 				/>
 				{/*	seo tag canonical link */}
 				<link rel="canonical" href={'https://my-makeup.fr/search'} />
@@ -108,6 +108,7 @@ function SearchPage() {
 											<Link
 												key={index}
 												href={`/profil/${result.username}`}
+												data-cy={`search-result`}
 												className={
 													'col-span-1 flex w-full flex-col items-center rounded border border-gray-300 bg-white'
 												}

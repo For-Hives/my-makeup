@@ -201,6 +201,7 @@ export default function ModalUpdateLanguageProfil(props) {
 														</p>
 														<div className="mt-2">
 															<input
+																data-cy="language-input"
 																id="language"
 																name="language"
 																type={'text'}
@@ -249,6 +250,7 @@ export default function ModalUpdateLanguageProfil(props) {
 														>
 															{userLanguageSelected.map((skill, index) => (
 																<button
+																	data-cy="language-selected"
 																	type={'button'}
 																	onClick={() => {
 																		handleDeleteLanguageelected(skill.id)
@@ -273,6 +275,7 @@ export default function ModalUpdateLanguageProfil(props) {
 								</div>
 								<div className="mt-4 flex justify-end">
 									<button
+										data-cy="save-language"
 										type="button"
 										className="btn-primary"
 										onClick={handleSubmit(onSubmit)}

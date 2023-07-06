@@ -315,6 +315,7 @@ export default function ModalUpdateExperiencesProfil(props) {
 															</label>
 															<div className="mt-2">
 																<input
+																	data-cy="company-input"
 																	id="company"
 																	name="company"
 																	type={'text'}
@@ -342,6 +343,7 @@ export default function ModalUpdateExperiencesProfil(props) {
 															</label>
 															<div className="mt-2">
 																<input
+																	data-cy="job_name-input"
 																	id="job_name"
 																	name="job_name"
 																	type={'text'}
@@ -369,6 +371,7 @@ export default function ModalUpdateExperiencesProfil(props) {
 															</label>
 															<div className="mt-2">
 																<input
+																	data-cy="city-input"
 																	id="city"
 																	name="city"
 																	type={'text'}
@@ -396,6 +399,7 @@ export default function ModalUpdateExperiencesProfil(props) {
 															</label>
 															<div className="mt-2">
 																<input
+																	data-cy="date_start-input"
 																	id="date_start"
 																	name="date_start"
 																	type={'date'}
@@ -423,6 +427,7 @@ export default function ModalUpdateExperiencesProfil(props) {
 															</label>
 															<div className="mt-2">
 																<input
+																	data-cy="date_end-input"
 																	id="date_end"
 																	name="date_end"
 																	type={'date'}
@@ -447,6 +452,7 @@ export default function ModalUpdateExperiencesProfil(props) {
 															</label>
 															<div className="mt-2">
 																<textarea
+																	data-cy="description-experience-input"
 																	id="description"
 																	name="description"
 																	{...register('description', {
@@ -467,6 +473,7 @@ export default function ModalUpdateExperiencesProfil(props) {
 													</form>
 													<div className={'flex items-center justify-end'}>
 														<button
+															data-cy="add-experience-button"
 															type="button"
 															className="btn-primary"
 															onClick={handleSubmit(onSubmit)}
