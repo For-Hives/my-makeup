@@ -2,12 +2,19 @@ import React from 'react'
 
 function CompletionProfilProgressBar(props) {
 	// the account appear in the search when :
-	// - the account is disponible
-	// - Lastname and Firstname are not empty
-	// - Speciality is not empty
-	// - City is not empty
+	// - Nom + prénom*
+	// - Spécialité
+	// - Photo de profil
+	// - Localisation
+	// - Réseaux
+	// - Compétences
+	// - Langues
+	// - Portefolio
 	// - Description
-	// - at least 1 social media
+	// - Formation
+	// - Service
+	// - Experience
+	//  12 infos à compléter au total : calcul à faire
 
 	return (
 		<div className={'w-full md:w-1/2'}>
