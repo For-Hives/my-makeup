@@ -139,14 +139,17 @@ function Blog({ articles }) {
 export default Blog
 
 export async function getServerSideProps() {
-	const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}api/articles`, {
-		method: 'GET',
-		headers: {
-			// 	token
-			'Content-Type': 'application/json',
-			Accept: 'application/json',
-		},
-	})
+	const res = await fetch(
+		`${process.env.NEXT_PUBLIC_API_URL}api/articles?sort[publishedAt]=asc`,
+		{
+			method: 'GET',
+			headers: {
+				// 	token
+				'Content-Type': 'application/json',
+				Accept: 'application/json',
+			},
+		}
+	)
 	const data = await res.json()
 
 	return {
