@@ -9,6 +9,7 @@
 #### _dev_
 ```
 git clone
+-> add .env file
 pnpm install
 pnpm run dev
 pnpm run build
