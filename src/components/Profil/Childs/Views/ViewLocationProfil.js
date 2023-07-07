@@ -22,7 +22,7 @@ function ViewLocationProfil(props) {
 					<h3 className={'text-lg font-semibold text-gray-700'}>
 						Localisation
 					</h3>
-					<p className={'text-gray-800'}>{props.user?.city}</p>
+					<p className={'text-gray-800'}>{user?.city}</p>
 				</div>
 			</div>
 			<div className={'flex gap-2'}>
@@ -34,7 +34,7 @@ function ViewLocationProfil(props) {
 						Peut travailer chez vous à
 					</h3>
 					<p className={'text-gray-800'}>
-						{props.user?.city} & {props.user?.action_radius}km autour
+						{user?.city} & {user?.action_radius}km autour
 					</p>
 				</div>
 			</div>

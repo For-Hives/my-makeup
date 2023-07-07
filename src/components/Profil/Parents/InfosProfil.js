@@ -26,12 +26,6 @@ function InfosProfil(props) {
 
 	const isPublic = !!publicView
 
-	useEffect(() => {
-		return () => {
-			console.log(user)
-		}
-	}, [props.user])
-
 	return (
 		<div className={''}>
 			<div className="relative mx-auto max-w-7xl px-4 pt-8 md:px-8 md:pt-0 2xl:px-0">
