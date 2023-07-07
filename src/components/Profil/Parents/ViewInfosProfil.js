@@ -1,5 +1,4 @@
 import React, { useEffect } from 'react'
-import { useRouter } from 'next/router'
 import ViewLocationProfil from '@/components/Profil/Childs/Views/ViewLocationProfil'
 import ViewSocialMediaProfil from '@/components/Profil/Childs/Views/ViewSocialMediaProfil'
 import ViewSkillsProfil from '@/components/Profil/Childs/Views/ViewSkillsProfil'
