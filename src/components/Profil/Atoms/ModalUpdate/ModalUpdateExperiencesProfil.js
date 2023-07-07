@@ -163,7 +163,9 @@ export default function ModalUpdateExperiencesProfil(props) {
 
 		let userTemp = user
 		userTemp.experiences = userExperiencesCleaned
-		props.handleUpdateUser(userTemp)
+		// to change to object reference
+		const newUser = JSON.parse(JSON.stringify(userTemp))
+		props.handleUpdateUser(newUser)
 
 		// formState.reset()
 		reset()

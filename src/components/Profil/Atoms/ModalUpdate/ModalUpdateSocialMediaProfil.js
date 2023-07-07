@@ -93,7 +93,9 @@ export default function ModalUpdateSocialMediaProfil(props) {
 		userTemp.network.linkedin = userLinkedin
 		userTemp.network.email = userEmail
 		userTemp.network.phone = userPhone
-		props.handleUpdateUser(userTemp)
+		// to change to object reference
+		const newUser = JSON.parse(JSON.stringify(userTemp))
+		props.handleUpdateUser(newUser)
 
 		reset()
 		props.handleIsModalOpen()

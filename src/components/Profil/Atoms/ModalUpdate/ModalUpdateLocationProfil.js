@@ -54,7 +54,9 @@ export default function ModalUpdateLocationProfil(props) {
 		let userTemp = user
 		userTemp.city = userCity
 		userTemp.action_radius = userActionRadius
-		props.handleUpdateUser(userTemp)
+		// to change to object reference
+		const newUser = JSON.parse(JSON.stringify(userTemp))
+		props.handleUpdateUser(newUser)
 
 		reset()
 		props.handleIsModalOpen()

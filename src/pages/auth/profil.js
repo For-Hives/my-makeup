@@ -1,5 +1,5 @@
 import Head from 'next/head'
-import React from 'react'
+import React, { useEffect } from 'react'
 import Nav from '@/components/Global/Nav'
 import Footer from '@/components/Global/Footer'
 import ResumeProfil from '@/components/Profil/Parents/ResumeProfil'
@@ -18,6 +18,10 @@ function Profil({ data }) {
 	const handleUpdateUser = newUser => {
 		setUser(newUser)
 	}
+
+	useEffect(() => {
+		console.log('user profil', user)
+	}, [user])
 
 	if (!user) {
 		return <FullLoader />
