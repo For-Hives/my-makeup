@@ -10,6 +10,7 @@ import { CoursesProfil } from '@/components/Profil/Childs/CoursesProfil'
 import { ExperiencesProfil } from '@/components/Profil/Childs/ExperiencesProfil'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
+import CompletionProfilProgressBar from '@/components/Global/CompletionProfilProgressBar'
 
 function InfosProfil(props) {
 	// import router
@@ -22,18 +23,28 @@ function InfosProfil(props) {
 
 	return (
 		<div className={''}>
-			<div className="relative mx-auto max-w-7xl px-4 pt-4 md:px-8 2xl:px-0">
-				<div className={'absolute right-0 top-0 m-8 mt-16 flex'}>
+			<div className="relative mx-auto max-w-7xl px-4 pt-8 md:px-8 md:pt-0 2xl:px-0">
+				<div
+					className={
+						'absolute left-0 top-0 mx-auto mt-8 flex w-full max-w-7xl flex-col items-start justify-start gap-4' +
+						' px-4 md:mt-16 md:flex-row md:items-end md:justify-between md:gap-0 md:px-8'
+					}
+				>
 					{!isPublic ? (
-						<Link
-							href={{ pathname: '/auth/profil', query: { publicView: true } }}
-							className={'flex gap-2 font-semibold text-indigo-900 '}
-						>
-							<span className="material-icons-round text-indigo-900">
-								visibility
-							</span>
-							<span className={'hover:underline'}>Voir mon profil public</span>
-						</Link>
+						<>
+							<CompletionProfilProgressBar />
+							<Link
+								href={{ pathname: '/auth/profil', query: { publicView: true } }}
+								className={'flex gap-2 font-semibold text-indigo-900 '}
+							>
+								<span className="material-icons-round text-indigo-900">
+									visibility
+								</span>
+								<span className={'hover:underline'}>
+									Voir mon profil public
+								</span>
+							</Link>
+						</>
 					) : (
 						<Link
 							href={{ pathname: '/auth/profil' }}
@@ -44,7 +55,7 @@ function InfosProfil(props) {
 						</Link>
 					)}
 				</div>
-				<div className={'grid grid-cols-12 gap-5 pt-24'}>
+				<div className={'grid grid-cols-12 gap-5 pt-32'}>
 					<div
 						className={
 							'col-span-12 flex flex-col items-start gap-5 md:col-span-4'
