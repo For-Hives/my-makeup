@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { LocationProfil } from '@/components/Profil/Childs/LocationProfil'
 import { DescriptionProfil } from '@/components/Profil/Childs/DescriptionProfil'
 import { SocialMediaProfil } from '@/components/Profil/Childs/SocialMediaProfil'
@@ -18,8 +18,19 @@ function InfosProfil(props) {
 	// get query param
 	const { publicView } = router.query
 
-	const user = props.user
+	const [user, setUser] = React.useState(props.user)
+
+	const handleUpdateUser = user => {
+		props.handleUpdateUser(user)
+	}
+
 	const isPublic = !!publicView
+
+	useEffect(() => {
+		return () => {
+			console.log(user)
+		}
+	}, [props.user])
 
 	return (
 		<div className={''}>
@@ -32,7 +43,10 @@ function InfosProfil(props) {
 				>
 					{!isPublic ? (
 						<>
-							<CompletionProfilProgressBar />
+							<CompletionProfilProgressBar
+								user={user}
+								handleUpdateUser={handleUpdateUser}
+							/>
 							<Link
 								href={{ pathname: '/auth/profil', query: { publicView: true } }}
 								className={'flex gap-2 font-semibold text-indigo-900 '}

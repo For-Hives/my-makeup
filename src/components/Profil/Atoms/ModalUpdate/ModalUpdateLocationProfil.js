@@ -43,6 +43,9 @@ export default function ModalUpdateLocationProfil(props) {
 	const { data: session } = useSession()
 
 	const onSubmit = data => {
+		if (data.action_radius === '') {
+			data.action_radius = null
+		}
 		data = {
 			...data,
 		}
