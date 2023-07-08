@@ -4,26 +4,10 @@ const totalPointToComplete = 13
 
 function CompletionProfilProgressBar(props) {
 	const { user, handleUpdateUser } = props
-	// the account appear in the search when :
-	// - Nom + prénom*
-	// - Spécialité
-	// - Photo de profil
-	// - Nom de la compagnie
-	// - Localisation
-	// - Réseaux
-	// - Compétences
-	// - Langues
-	// - Portefolio
-	// - Description
-	// - Formation
-	// - Service
-	// - Experience
-	//  13 infos à compléter au total : calcul à faire
 	const [completion, setCompletion] = React.useState(0)
 	const [valueToDisplay, setValueToDisplay] = React.useState(100)
 
 	useEffect(() => {
-		console.log('useEffect CompletionProfilProgressBar')
 		let count = 0
 		if (user.last_name && user.first_name) count++
 		if (user.speciality) count++

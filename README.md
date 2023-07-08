@@ -16,7 +16,6 @@ pnpm run build
 ```
 #### _tests_
 ```
-pnpm run cypress:open
 pnpm run cypress:run
 ```
 

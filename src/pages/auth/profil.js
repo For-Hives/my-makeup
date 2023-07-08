@@ -19,10 +19,6 @@ function Profil({ data }) {
 		setUser(newUser)
 	}
 
-	useEffect(() => {
-		console.log('user profil', user)
-	}, [user])
-
 	if (!user) {
 		return <FullLoader />
 	}
