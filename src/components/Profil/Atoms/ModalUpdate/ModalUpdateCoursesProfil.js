@@ -368,6 +368,7 @@ export default function ModalUpdateCoursesProfil(props) {
 															</label>
 															<div className="mt-2">
 																<textarea
+																	data-cy="course-description-input"
 																	id="course_description"
 																	name="course_description"
 																	{...register('course_description')}
@@ -495,7 +496,7 @@ export default function ModalUpdateCoursesProfil(props) {
 								</div>
 								<div className="mt-4 flex justify-end">
 									<button
-										data-cy="save-button"
+										data-cy="save-button-courses"
 										type="button"
 										className="btn-primary"
 										onClick={handleSubmitCourses}

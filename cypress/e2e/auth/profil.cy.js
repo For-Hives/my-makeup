@@ -25,7 +25,7 @@ describe('profil', () => {
 			// prepare to intercept the request
 			cy.intercept('POST', 'https://api.my-makeup.fr/api/upload').as('upload')
 			cy.intercept('PATCH', 'https://api.my-makeup.fr/api/me-makeup').as(
-				'updateUser'
+				'updateUserResume'
 			)
 
 			cy.wait(1000)
@@ -80,8 +80,9 @@ describe('profil', () => {
 		it('tests complet Description - section', () => {
 			cy.visit('http://localhost:3000/auth/profil')
 
+			// prepare to intercept the request
 			cy.intercept('PATCH', 'https://api.my-makeup.fr/api/me-makeup').as(
-				'updateDescription'
+				'updateUserDescription'
 			)
 
 			cy.wait(1000)
@@ -115,6 +116,11 @@ describe('profil', () => {
 		it('tests complet Location - section', () => {
 			cy.visit('http://localhost:3000/auth/profil')
 
+			// prepare to intercept the request
+			cy.intercept('PATCH', 'https://api.my-makeup.fr/api/me-makeup').as(
+				'updateUserLocation'
+			)
+
 			cy.wait(1000)
 
 			// 	open the modal
@@ -146,6 +152,11 @@ describe('profil', () => {
 	describe('Skills - section', () => {
 		it('tests complet Skills - section', () => {
 			cy.visit('http://localhost:3000/auth/profil')
+
+			// prepare to intercept the request
+			cy.intercept('PATCH', 'https://api.my-makeup.fr/api/me-makeup').as(
+				'updateUserSkills'
+			)
 
 			cy.wait(1000)
 
@@ -181,6 +192,11 @@ describe('profil', () => {
 		it('tests complet Diplomas and courses - section', () => {
 			cy.visit('http://localhost:3000/auth/profil')
 
+			// prepare to intercept the request
+			cy.intercept('PATCH', 'https://api.my-makeup.fr/api/me-makeup').as(
+				'updateUserCourses'
+			)
+
 			cy.wait(1000)
 
 			cy.get("[data-cy='update-courses-button']")
@@ -215,6 +231,11 @@ describe('profil', () => {
 		it('tests complet Professional experience - section', () => {
 			cy.visit('http://localhost:3000/auth/profil')
 
+			// prepare to intercept the request
+			cy.intercept('PATCH', 'https://api.my-makeup.fr/api/me-makeup').as(
+				'updateUserExperiences'
+			)
+
 			cy.wait(1000)
 
 			cy.get("[data-cy='update-experience-button']")
@@ -229,19 +250,25 @@ describe('profil', () => {
 						.clear()
 						.type('Développement web')
 
-					cy.get("[data-cy='save-button-experience']")
-						.click()
+					cy.get("[data-cy='add-experience-button']")
+						.click({
+							force: true,
+						})
 						.then(() => {
-							// prepare to intercept the request
-							cy.intercept(
-								'PATCH',
-								'https://api.my-makeup.fr/api/me-makeup'
-							).as('updateUserExperiences')
+							cy.get("[data-cy='save-button-experience']")
+								.click()
+								.then(() => {
+									// prepare to intercept the request
+									cy.intercept(
+										'PATCH',
+										'https://api.my-makeup.fr/api/me-makeup'
+									).as('updateUserExperiences')
 
-							// wait for the update to finish
-							cy.wait('@updateUserExperiences')
-								.its('response.statusCode')
-								.should('eq', 200)
+									// wait for the update to finish
+									cy.wait('@updateUserExperiences')
+										.its('response.statusCode')
+										.should('eq', 200)
+								})
 						})
 				})
 		})

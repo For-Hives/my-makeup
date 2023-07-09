@@ -210,7 +210,7 @@ export default function ModalUpdateLocationProfil(props) {
 								</div>
 								<div className="mt-4 flex justify-end">
 									<button
-										data-cy="save-button"
+										data-cy="save-button-location"
 										type="button"
 										className="btn-primary"
 										onClick={handleSubmit(onSubmit)}
