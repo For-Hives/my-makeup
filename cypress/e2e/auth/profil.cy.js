@@ -11,9 +11,10 @@ describe('profil', () => {
 		cy.wait('@getCredentials').its('response.statusCode').should('eq', 200)
 	})
 
-	afterEach(() => {
-		cy.get("[data-cy='button-logout']").click()
-	})
+	// fixme : reactivate when all tests are done
+	// afterEach(() => {
+	// 	cy.get("[data-cy='button-logout']").click()
+	// })
 
 	// 10 tests ( 10 components )
 	describe('Resume - section', () => {
@@ -308,6 +309,55 @@ describe('profil', () => {
 		})
 	})
 
+	describe.only('Languages - section', () => {
+		it('tests complet Languages - section', () => {
+			cy.visit('http://localhost:3000/auth/profil')
+
+			// prepare to intercept the request
+			cy.intercept('PATCH', 'https://api.my-makeup.fr/api/me-makeup').as(
+				'updateUserLanguages'
+			)
+
+			cy.wait(1000)
+
+			cy.get("[data-cy='update-languages-button']")
+				.click({ force: true })
+				.then(() => {
+					cy.get('body').then($body => {
+						if ($body.find("[data-cy='language-selected']").length > 0) {
+							cy.get("[data-cy='language-selected']").each(
+								($el, index, $list) => {
+									cy.wrap($el).click()
+								}
+							)
+						}
+
+						// update experience
+						cy.get("[data-cy='language-input']")
+							.clear()
+							.type('Anglais')
+							.type('{enter}')
+
+						cy.get("[data-cy='save-button-languages']")
+							.click({
+								force: true,
+							})
+							.then(() => {
+								// prepare to intercept the request
+								cy.intercept(
+									'PATCH',
+									'https://api.my-makeup.fr/api/me-makeup'
+								).as('updateUserLanguages')
+
+								// wait for the update to finish
+								cy.wait('@updateUserLanguages')
+									.its('response.statusCode')
+									.should('eq', 200)
+							})
+					})
+				})
+		})
+	})
 	// 	todo Languages
 	// 	todo Portefolio
 	// 	todo Services offers
