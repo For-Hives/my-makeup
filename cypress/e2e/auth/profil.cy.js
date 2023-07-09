@@ -250,8 +250,7 @@ describe('profil', () => {
 		})
 	})
 
-	// todo delete experiences on the side
-	describe.only('Professional Experiences - section', () => {
+	describe('Professional Experiences - section', () => {
 		it('tests complet Professional experience - section', () => {
 			cy.visit('http://localhost:3000/auth/profil')
 
