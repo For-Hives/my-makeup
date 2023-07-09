@@ -293,6 +293,7 @@ export default function ModalUpdateCoursesProfil(props) {
 															</label>
 															<div className="mt-2">
 																<input
+																	data-cy={'diploma-input'}
 																	id="diploma"
 																	name="diploma"
 																	type={'text'}
