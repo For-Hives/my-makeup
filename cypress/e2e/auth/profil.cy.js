@@ -309,7 +309,7 @@ describe('profil', () => {
 		})
 	})
 
-	describe.only('Languages - section', () => {
+	describe('Languages - section', () => {
 		it('tests complet Languages - section', () => {
 			cy.visit('http://localhost:3000/auth/profil')
 
@@ -358,8 +358,65 @@ describe('profil', () => {
 				})
 		})
 	})
-	// 	todo Languages
+
+	describe('Social Medias - section', () => {
+		it('tests complet Social Medias - section', () => {
+			cy.visit('http://localhost:3000/auth/profil')
+
+			// prepare to intercept the request
+			cy.intercept('PATCH', 'https://api.my-makeup.fr/api/me-makeup').as(
+				'updateUserSocialMedias'
+			)
+
+			cy.wait(1000)
+
+			cy.get("[data-cy='update-social-medias-button']")
+				.click({ force: true })
+				.then(() => {
+					cy.get("[data-cy='email-input']").clear().type('test@test.test')
+
+					cy.get("[data-cy='facebook-input']")
+						.clear()
+						.type('https://facebook.com')
+
+					cy.get("[data-cy='instagram-input']")
+						.clear()
+						.type('https://instagram.com')
+
+					cy.get("[data-cy='linkedin-input']")
+						.clear()
+						.type('https://linkedin.com')
+
+					cy.get("[data-cy='phone-input']").clear().type('0606060606')
+
+					cy.get("[data-cy='website-input']")
+						.clear()
+						.type('https://my-makeup.fr')
+
+					cy.get("[data-cy='youtube-input']")
+						.clear()
+						.type('https://youtube.com')
+
+					cy.get("[data-cy='save-button-social-medias']")
+						.click({
+							force: true,
+						})
+						.then(() => {
+							// prepare to intercept the request
+							cy.intercept(
+								'PATCH',
+								'https://api.my-makeup.fr/api/me-makeup'
+							).as('updateUserSocialMedias')
+
+							// wait for the update to finish
+							cy.wait('@updateUserSocialMedias')
+								.its('response.statusCode')
+								.should('eq', 200)
+						})
+				})
+		})
+	})
+
 	// 	todo Portefolio
 	// 	todo Services offers
-	// 	todo social medias
 })

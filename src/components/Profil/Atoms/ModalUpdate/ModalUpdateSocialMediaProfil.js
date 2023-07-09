@@ -9,31 +9,31 @@ import { patchMeMakeup } from '@/services/PatchMeMakeup'
 const schema = zod.object({
 	youtube: zod
 		.string()
-		.url({ message: 'Veuillez entrer une URL valide' })
+		.url({ message: 'Veuillez entrer une URL valide (https://...)' })
 		.max(200, "L'URL ne doit pas dépasser 200 caractères.")
 		.optional()
 		.or(zod.literal('')),
 	facebook: zod
 		.string()
-		.url({ message: 'Veuillez entrer une URL valide' })
+		.url({ message: 'Veuillez entrer une URL valide (https://...)' })
 		.max(200, "L'URL ne doit pas dépasser 200 caractères.")
 		.optional()
 		.or(zod.literal('')),
 	instagram: zod
 		.string()
-		.url({ message: 'Veuillez entrer une URL valide' })
+		.url({ message: 'Veuillez entrer une URL valide (https://...)' })
 		.max(200, "L'URL ne doit pas dépasser 200 caractères.")
 		.optional()
 		.or(zod.literal('')),
 	website: zod
 		.string()
-		.url({ message: 'Veuillez entrer une URL valide' })
+		.url({ message: 'Veuillez entrer une URL valide (https://...)' })
 		.max(200, "L'URL ne doit pas dépasser 200 caractères.")
 		.optional()
 		.or(zod.literal('')),
 	linkedin: zod
 		.string()
-		.url({ message: 'Veuillez entrer une URL valide' })
+		.url({ message: 'Veuillez entrer une URL valide (https://...)' })
 		.max(200, "L'URL ne doit pas dépasser 200 caractères.")
 		.optional()
 		.or(zod.literal('')),
@@ -414,7 +414,7 @@ export default function ModalUpdateSocialMediaProfil(props) {
 								</div>
 								<div className="mt-4 flex justify-end">
 									<button
-										data-cy="save-button"
+										data-cy="save-button-social-medias"
 										type="button"
 										className="btn-primary"
 										onClick={handleSubmit(onSubmit)}
