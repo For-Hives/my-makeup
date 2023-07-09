@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import ModalUpdatePortfolioProfil from '@/components/Profil/Atoms/ModalUpdate/ModalUpdatePortfolioProfil'
 import { useRouter } from 'next/router'
 import ViewPortfolioProfil from '@/components/Profil/Childs/Views/ViewPortfolioProfil'
@@ -8,17 +8,21 @@ export function PortfolioProfil(props) {
 	const router = useRouter()
 	// get query param
 	const { publicView } = router.query
-	const isPublic = !!publicView
 
 	const user = props.user
 
 	const [isModalOpen, setIsModalOpen] = React.useState(false)
+	const [isPublic, setIsPublic] = React.useState(false)
 
 	const handleIsModalOpen = () => {
 		if (!isPublic) {
 			setIsModalOpen(!isModalOpen)
 		}
 	}
+
+	useEffect(() => {
+		setIsPublic(!!publicView)
+	}, [])
 
 	return (
 		<div className={'w-full'}>

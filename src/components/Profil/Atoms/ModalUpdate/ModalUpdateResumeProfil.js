@@ -448,6 +448,7 @@ export default function ModalUpdateResumeProfil(props) {
 														<div className="mt-2">
 															<input
 																id="company_artist_name"
+																data-cy="company-artist-input"
 																name="company_artist_name"
 																type="text"
 																{...register('company_artist_name', {

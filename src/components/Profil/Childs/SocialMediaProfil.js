@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { useRouter } from 'next/router'
 import ModalUpdateSocialMediaProfil from '@/components/Profil/Atoms/ModalUpdate/ModalUpdateSocialMediaProfil'
 import ViewSocialMediaProfil from '@/components/Profil/Childs/Views/ViewSocialMediaProfil'
@@ -8,7 +8,7 @@ export function SocialMediaProfil(props) {
 	const router = useRouter()
 	// get query param
 	const { publicView } = router.query
-	const isPublic = !!publicView
+	const [isPublic, setIsPublic] = React.useState(false)
 
 	const user = props.user
 
@@ -18,6 +18,10 @@ export function SocialMediaProfil(props) {
 			setIsModalOpen(!isModalOpen)
 		}
 	}
+
+	useEffect(() => {
+		setIsPublic(!!publicView)
+	}, [])
 
 	return (
 		<div className={'w-full'}>
