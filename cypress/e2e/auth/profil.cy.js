@@ -164,26 +164,33 @@ describe('profil', () => {
 			cy.get("[data-cy='update-skills-button']")
 				.click({ force: true })
 				.then(() => {
-					// update skills
-					cy.get("[data-cy='skills-input']")
-						.clear()
-						.type('pieds')
-						.type('{enter}')
+					cy.get('body').then($body => {
+						if ($body.find("[data-cy='skill-selected']").length > 0) {
+							cy.get("[data-cy='skill-selected']").each(($el, index, $list) => {
+								cy.wrap($el).click()
+							})
+						}
+						// update skills
+						cy.get("[data-cy='skills-input']")
+							.clear()
+							.type('pieds')
+							.type('{enter}')
 
-					cy.get("[data-cy='save-button-skills']")
-						.click()
-						.then(() => {
-							// prepare to intercept the request
-							cy.intercept(
-								'PATCH',
-								'https://api.my-makeup.fr/api/me-makeup'
-							).as('updateUserSkills')
+						cy.get("[data-cy='save-button-skills']")
+							.click()
+							.then(() => {
+								// prepare to intercept the request
+								cy.intercept(
+									'PATCH',
+									'https://api.my-makeup.fr/api/me-makeup'
+								).as('updateUserSkills')
 
-							// wait for the update to finish
-							cy.wait('@updateUserSkills')
-								.its('response.statusCode')
-								.should('eq', 200)
-						})
+								// wait for the update to finish
+								cy.wait('@updateUserSkills')
+									.its('response.statusCode')
+									.should('eq', 200)
+							})
+					})
 				})
 		})
 	})
