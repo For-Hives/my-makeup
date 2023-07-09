@@ -1,5 +1,5 @@
 import React from 'react'
-import CardDemo from '@/components/Global/Card-demo'
+import CardDemo from '@/components/Global/CardDemo'
 import { convertStringToKebabCase } from '@/services/utils'
 import Image from 'next/image'
 

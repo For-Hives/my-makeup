@@ -242,7 +242,9 @@ export default function ModalUpdateServiceOffersProfil(props) {
 
 		let userTemp = user
 		userTemp.service_offers = userServiceOffersCopy
-		props.handleUpdateUser(userTemp)
+		// to change to object reference
+		const newUser = JSON.parse(JSON.stringify(userTemp))
+		props.handleUpdateUser(newUser)
 
 		reset()
 		props.handleIsModalOpen()

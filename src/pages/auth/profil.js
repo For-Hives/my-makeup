@@ -1,5 +1,5 @@
 import Head from 'next/head'
-import React from 'react'
+import React, { useEffect } from 'react'
 import Nav from '@/components/Global/Nav'
 import Footer from '@/components/Global/Footer'
 import ResumeProfil from '@/components/Profil/Parents/ResumeProfil'
@@ -7,7 +7,7 @@ import { getSession, useSession } from 'next-auth/react'
 import _ from 'lodash'
 import InfosProfil from '@/components/Profil/Parents/InfosProfil'
 import FullLoader from '@/components/Global/Loader/FullLoader'
-import DangerZone from '@/components/Profil/Parents/DangerZone'
+import DangerZone from '@/components/Global/DangerZone'
 
 function Profil({ data }) {
 	const { data: session } = useSession()

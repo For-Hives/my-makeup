@@ -35,7 +35,8 @@ function ResumeProfil(props) {
 	}
 
 	const handleUpdateUser = user => {
-		props.handleUpdateUser(user)
+		const newUser = JSON.parse(JSON.stringify(user))
+		props.handleUpdateUser(newUser)
 		setAvailability(!!user?.available)
 	}
 

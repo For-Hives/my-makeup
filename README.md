@@ -1,40 +1,97 @@
-~~ My-Makeup Project - [ work in progress ]
+# My-Makeup 💄
+#### _We are a platform dedicated to connecting professional makeup artists with clients looking for personalized makeup services._
+![img.png](img.png)
 
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+> **(api github project : https://github.com/For-Hives/api-my-makeup)**
 
-## Getting Started
-
-First, run the development server:
-
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
+## How to run ??
+> **(use pnpm // npm // yarn but don't push the lock file)**
+#### _dev_
+```
+git clone
+-> add .env file
+pnpm install
+pnpm run dev
+pnpm run build
+```
+#### _tests_
+```
+pnpm run cypress:run
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Tech stack 💻
+That is the list of technologies that My-Makeup use.
+> **Front**
+> > - [NextJs (ReactJS)](https://nextjs.org/)
+> > - [TailwindCSS](https://tailwindcss.com/)
+> > - [TailwindUI](https://tailwindui.com/)
+> > - [HeadlessUI](https://headlessui.com/)
+> > - [NextAuth](https://next-auth.js.org/)
+> > - [MailGun](https://www.mailgun.com/)
+> > - [Prettier](https://prettier.io/)
+> > - [EsLint](https://eslint.org/)
+> > - [Husky](https://typicode.github.io/husky/#/)
+ 
+> **CI**
+> > - [Cypress](https://www.cypress.io/)
+> > - [Percy](https://percy.io/)
+ 
+> **CD**
+> > - GitHub CI
+> > - [Renovate](https://www.mend.io/renovate/)
 
-You can start editing the page by modifying `pages/index.js`. The page auto-updates as you edit the file.
+> **Backend**
+> > - [Strapi](https://strapi.io/)
+> > - [PostgreSQL](https://www.postgresql.org/)
 
-[API routes](https://nextjs.org/docs/api-routes/introduction) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.js`.
+> **Serveur**
+> > - [CapRover](https://caprover.com/)
+> > - VPS Linux (Debian)
+> > - [Docker](https://www.docker.com/)
+> > - [Fail2Ban](https://www.fail2ban.org/wiki/index.php/Main_Page)
+> > - [LetsEncrypt](https://letsencrypt.org/)
+> > - [UFW](https://doc.ubuntu-fr.org/ufw)
+> > - [DNS (OVH / CloudFlare)](https://cloudflare.com/)
 
-The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/api-routes/introduction) instead of React pages.
+> **Monitoring**
+> > - [NetData](https://www.netdata.cloud/)
+> > - [BetterUptime](https://betteruptime.com/)
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+> **Tools**
+> > - [OpenCommit](https://github.com/di-sukharev/opencommit)
+> > - [Git Kraken](https://www.gitkraken.com/)
+> > - [IntelliJ](https://www.jetbrains.com/idea/)
+> > - [Wakatime](https://wakatime.com/)
+> > - [GitHub Copilot](https://copilot.github.com/)
+> > - [ChatGPT](https://chat.openai.com/)
+> > - [Syncthings](https://syncthing.net/)
+> > - [TinyPNG](https://tinypng.com/)
+> > - [cwebp](https://developers.google.com/speed/webp/docs/cwebp)
+> > - [PowerToys](https://learn.microsoft.com/en-us/windows/powertoys/)
+> > - Google suit
+> > - [Insomnia](https://insomnia.rest/)
+> > - [TMUX](https://tmuxcheatsheet.com/)
+> > - [Discord](https://discord.com/)
 
-## Learn More
+> **Design**
+> > - [Adobe Photoshop](https://www.adobe.com/products/photoshop.html)
+> > - [Adobe Illustrator](https://www.adobe.com/products/illustrator.html)
+> > - [Adobe Firefly](https://www.adobe.com/sensei/generative-ai/firefly.html)
+> > - [Figma](https://www.figma.com/)
+> > - [MidJourney](https://midjourney.com/)
 
-To learn more about Next.js, take a look at the following resources:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+## File Structure 🗃️
+> 📁 _.husky_ : Git hooks  
+> 📁 _cypress_ : Cypress configuration (e2e tests)    
+> 📁 _public_ : Images, fonts, icons, ...    
+> 📁 _src/components_ : Reusable components  
+> 📁 _src/pages_ : Pages (use some components to build pages)  
+> > 📁 _src/pages/api_ : API routes (api routes are server-side only routes, on nextJS server)  
+> > 📁 _src/pages/api/sendMail_ : API route to send mail  
+> > 📁 _src/pages/talent/[slug]_ : Talent page generated by nextJS & Strapi  
+> > 📁 _src/pages/blog/[id]_ : Blog page generated by nextJS & Strapi  
+> > 📁 _src/pages/profil/[id]_ : Profil page generated by nextJS & Strapi  
+> > 📁 _src/pages/auth_ : Auth pages (login, register, ...)  
+> 📁 _src/styles_ : Global styles  
+> 📁 _src/services_ : Services (API, Auth, ...)  

@@ -107,7 +107,9 @@ export default function ModalUpdateResumeProfil(props) {
 					userTemp.speciality = userSpeciality
 					userTemp.company_artist_name = userCompanyOrArtist
 					userTemp.main_picture = data_blob[0]
-					props.handleUpdateUser(userTemp)
+					// to change to object reference
+					const newUser = JSON.parse(JSON.stringify(userTemp))
+					props.handleUpdateUser(newUser)
 
 					setImageUrl('')
 				})
@@ -128,7 +130,9 @@ export default function ModalUpdateResumeProfil(props) {
 			userTemp.first_name = userFirstName
 			userTemp.speciality = userSpeciality
 			userTemp.company_artist_name = userCompanyOrArtist
-			props.handleUpdateUser(userTemp)
+			// to change to object reference
+			const newUser = JSON.parse(JSON.stringify(userTemp))
+			props.handleUpdateUser(newUser)
 
 			props.handleIsModalOpen()
 			setImageUrl('')

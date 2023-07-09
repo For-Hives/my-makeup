@@ -10,8 +10,8 @@
 		"prettier": "prettier --write .",
 		"precommit": "lint-staged",
 		"prepare": "husky install",
-		"cypress:run": "cypress run",
-		"cypress:open": "cypress open"
+		"cypress:open": "cypress open",
+		"cypress:run": "cypress run"
 	},
 	"lint-staged": {
 		"*.js": [

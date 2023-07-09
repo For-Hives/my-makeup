@@ -91,7 +91,9 @@ export default function ModalUpdatePortfolioProfil(props) {
 		setImageUrl('')
 		let userTemp = user
 		userTemp.image_gallery = userImageGallery
-		props.handleUpdateUser(userTemp)
+		// to change to object reference
+		const newUser = JSON.parse(JSON.stringify(userTemp))
+		props.handleUpdateUser(newUser)
 
 		reset()
 		props.handleIsModalOpen()

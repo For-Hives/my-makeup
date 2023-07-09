@@ -152,7 +152,9 @@ export default function ModalUpdateCoursesProfil(props) {
 
 		let userTemp = user
 		userTemp.courses = userCoursesCleaned
-		props.handleUpdateUser(userTemp)
+		// to change to object reference
+		const newUser = JSON.parse(JSON.stringify(userTemp))
+		props.handleUpdateUser(newUser)
 
 		// formState.reset()
 		reset()

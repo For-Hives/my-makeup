@@ -52,7 +52,9 @@ export default function ModalUpdateLanguageProfil(props) {
 
 		let userTemp = user
 		userTemp.language = userLanguageSelectedCleaned
-		props.handleUpdateUser(userTemp)
+		// to change to object reference
+		const newUser = JSON.parse(JSON.stringify(userTemp))
+		props.handleUpdateUser(newUser)
 
 		reset()
 		// close the modal

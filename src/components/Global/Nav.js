@@ -281,24 +281,11 @@ function Nav({
 								<div className={'flex'}>
 									{session && session.user && !_.isEmpty(session.user) ? (
 										<div className={'flex flex-row-reverse gap-8'}>
-											<Link
-												onClick={() => {
-													signOut()
-												}}
-												className=""
-												href={'/auth/signin'}
-											>
-												<span
-													className={
-														'btn-primary-simple border-red-500  text-red-600'
-													}
-												>
-													Me déconnecter
-												</span>
-											</Link>
-											<Link className="" href={'/auth/profil'}>
-												<span className={'btn-primary'}>Profil</span>
-											</Link>
+											{isProfileBtnVisible && (
+												<Link className="" href={'/auth/profil'}>
+													<span className={'btn-primary'}>Profil</span>
+												</Link>
+											)}
 										</div>
 									) : (
 										<Link href="/auth/signin" className="">
@@ -315,7 +302,6 @@ function Nav({
 						</div>
 					</div>
 				</div>
-				; ;
 			</div>
 		</>
 	)

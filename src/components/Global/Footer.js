@@ -27,7 +27,10 @@ function Footer() {
 						44000 Nantes
 					</p>
 					<div className={'flex flex-row gap-3 md:flex-col lg:flex-row'}>
-						<Link href="/" rel={'noopener nofollow noreferrer '}>
+						<Link
+							href="https://www.instagram.com/forhives.my_makeup.fr/"
+							rel={'noopener nofollow noreferrer '}
+						>
 							<Image
 								src={'/assets/brand/037-instagram.svg'}
 								className={'fill-white'}
@@ -36,7 +39,10 @@ function Footer() {
 								alt={'Instagram My-Makeup'}
 							/>
 						</Link>
-						<Link href="/" rel={'noopener nofollow noreferrer'}>
+						<Link
+							href="https://www.linkedin.com/company/forhives-my-makeup/"
+							rel={'noopener nofollow noreferrer'}
+						>
 							<Image
 								src={'/assets/brand/030-linkedin.svg'}
 								className={'fill-indigo-700'}
@@ -45,7 +51,10 @@ function Footer() {
 								alt={'Linkedin My-Makeup'}
 							/>
 						</Link>
-						<Link href="/" rel={'noopener nofollow noreferrer'}>
+						<Link
+							href="mailto:contact@my-makeup.fr"
+							rel={'noopener nofollow noreferrer'}
+						>
 							<Image
 								src={'/assets/brand/017-telegram.svg'}
 								className={'fill-indigo-700'}
@@ -54,7 +63,10 @@ function Footer() {
 								alt={'Mail My-Makeup'}
 							/>
 						</Link>
-						<Link href="/" rel={'noopener nofollow noreferrer'}>
+						<Link
+							href="https://facebook.com/forhives.my.makeup"
+							rel={'noopener nofollow noreferrer'}
+						>
 							<Image
 								src={'/assets/brand/006-facebook.svg'}
 								className={'fill-indigo-700'}
