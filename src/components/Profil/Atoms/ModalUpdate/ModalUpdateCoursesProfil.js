@@ -431,6 +431,7 @@ export default function ModalUpdateCoursesProfil(props) {
 																	</span>
 																</button>
 																<button
+																	data-cy={'course-delete-button'}
 																	className={'flex items-center justify-center'}
 																	onClick={() => handleDeleteCourse(course.id)}
 																>

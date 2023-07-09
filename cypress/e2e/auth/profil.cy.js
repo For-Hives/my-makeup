@@ -15,6 +15,7 @@ describe('profil', () => {
 		cy.get("[data-cy='button-logout']").click()
 	})
 
+	// 10 tests ( 10 components )
 	describe('Resume - section', () => {
 		it('tests complet Resume - section', () => {
 			cy.visit('http://localhost:3000/auth/profil')
@@ -209,31 +210,47 @@ describe('profil', () => {
 			cy.get("[data-cy='update-courses-button']")
 				.click({ force: true })
 				.then(() => {
-					cy.get("[data-cy='diploma-input']").clear().type('Epsi')
-					cy.get("[data-cy='school-input']").clear().type('epsi')
-					cy.get("[data-cy='date-graduation-input']").clear().type('2022-12-15')
-					cy.get("[data-cy='course-description-input']")
-						.clear()
-						.type('informatique')
+					cy.get('body').then($body => {
+						if ($body.find("[data-cy='course-delete-button']").length > 0) {
+							cy.get("[data-cy='course-delete-button']").each(
+								($el, index, $list) => {
+									cy.wrap($el).click()
+								}
+							)
+						}
+						cy.get("[data-cy='diploma-input']").clear().type('Epsi')
+						cy.get("[data-cy='school-input']").clear().type('epsi')
+						cy.get("[data-cy='date-graduation-input']")
+							.clear()
+							.type('2022-12-15')
+						cy.get("[data-cy='course-description-input']")
+							.clear()
+							.type('informatique')
 
-					cy.get("[data-cy='save-button-courses']")
-						.click()
-						.then(() => {
-							// prepare to intercept the request
-							cy.intercept(
-								'PATCH',
-								'https://api.my-makeup.fr/api/me-makeup'
-							).as('updateUserCourses')
+						cy.get("[data-cy='add-course-button']")
+							.click()
+							.then(() => {
+								cy.get("[data-cy='save-button-courses']")
+									.click()
+									.then(() => {
+										// prepare to intercept the request
+										cy.intercept(
+											'PATCH',
+											'https://api.my-makeup.fr/api/me-makeup'
+										).as('updateUserCourses')
 
-							// wait for the update to finish
-							cy.wait('@updateUserCourses')
-								.its('response.statusCode')
-								.should('eq', 200)
-						})
+										// wait for the update to finish
+										cy.wait('@updateUserCourses')
+											.its('response.statusCode')
+											.should('eq', 200)
+									})
+							})
+					})
 				})
 		})
 	})
 
+	// todo delete experiences on the side
 	describe('Professional Experiences - section', () => {
 		it('tests complet Professional experience - section', () => {
 			cy.visit('http://localhost:3000/auth/profil')
@@ -280,4 +297,9 @@ describe('profil', () => {
 				})
 		})
 	})
+
+	// 	todo Languages
+	// 	todo Portefolio
+	// 	todo Services offers
+	// 	todo social medias
 })
