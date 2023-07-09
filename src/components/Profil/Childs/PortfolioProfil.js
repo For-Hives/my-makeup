@@ -40,6 +40,7 @@ export function PortfolioProfil(props) {
 			>
 				{!isPublic ? (
 					<button
+						data-cy={'update-portefolio-button'}
 						onClick={handleIsModalOpen}
 						className={
 							'absolute left-0 top-0 -z-10 flex h-full w-full items-center justify-center px-4 opacity-0 ' +

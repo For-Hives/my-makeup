@@ -516,5 +516,52 @@ describe('profil', () => {
 				})
 		})
 	})
-	// 	todo Portefolio
+
+	describe('Portefolio - section', () => {
+		it('tests complet Portefolio - section', () => {
+			// upload image
+			cy.visit('http://localhost:3000/auth/profil')
+
+			// prepare the file to upload
+			cy.fixture('./assets/profil.png', { encoding: null }).as('profilPicture')
+
+			// prepare to intercept the request
+			cy.intercept('POST', 'https://api.my-makeup.fr/api/upload').as('upload')
+			cy.intercept('PATCH', 'https://api.my-makeup.fr/api/me-makeup').as(
+				'updateUserPortefolio'
+			)
+
+			cy.wait(1000)
+
+			cy.get("[data-cy='update-portefolio-button']")
+				.click({ force: true })
+				.then(() => {
+					cy.get("[data-cy='file-upload-portefolio']").selectFile(
+						'@profilPicture',
+						{
+							force: true,
+						}
+					)
+					cy.get("[data-cy='add-button-portefolio")
+						.click({ force: true })
+						.then(() => {
+							cy.wait('@upload').its('response.statusCode').should('eq', 200)
+							cy.get("[data-cy='save-button-portefolio']")
+								.click()
+								.then(() => {
+									// prepare to intercept the request
+									cy.intercept(
+										'PATCH',
+										'https://api.my-makeup.fr/api/me-makeup'
+									).as('updateUserPortefolio')
+
+									// wait for the update to finish
+									cy.wait('@updateUserPortefolio')
+										.its('response.statusCode')
+										.should('eq', 200)
+								})
+						})
+				})
+		})
+	})
 })
