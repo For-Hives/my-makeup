@@ -417,6 +417,104 @@ describe('profil', () => {
 		})
 	})
 
+	describe('Service Offers - section', () => {
+		it('tests complet Service Offers - section', () => {
+			cy.visit('http://localhost:3000/auth/profil')
+
+			// prepare to intercept the request
+			cy.intercept('PATCH', 'https://api.my-makeup.fr/api/me-makeup').as(
+				'updateUserServiceOffers'
+			)
+
+			cy.wait(1000)
+
+			cy.get("[data-cy='update-service-offers-button']")
+				.click({ force: true })
+				.then(() => {
+					cy.get('body').then($body => {
+						if (
+							$body.find("[data-cy='delete-service-offers-button']").length > 0
+						) {
+							cy.get("[data-cy='delete-service-offers-button']").each(
+								($el, index, $list) => {
+									cy.wrap($el).click()
+								}
+							)
+						}
+
+						cy.get("[data-cy='name-service-offers-input")
+							.clear()
+							.type('Maquillage')
+						cy.get("[data-cy='description-service-offers-input")
+							.clear()
+							.type('Maquillage de soirée')
+						cy.get("[data-cy='price-service-offers-input").clear().type('50€')
+						// add first option
+						cy.get("[data-cy='add-service-offers-option-button']")
+							.click({ force: true })
+							.then(() => {
+								cy.get("[data-cy='name-service-offers-option-input-0")
+									.clear()
+									.type('Maquillage 1')
+								cy.get("[data-cy='description-service-offers-option-input-0")
+									.clear()
+									.type('Maquillage de soirée 1')
+								cy.get("[data-cy='price-service-offers-option-input-0")
+									.clear()
+									.type('50€ 1')
+							})
+						// add second option
+						cy.get("[data-cy='add-service-offers-option-button']")
+							.click({ force: true })
+							.then(() => {
+								cy.get("[data-cy='name-service-offers-option-input-1")
+									.clear()
+									.type('Maquillage 2')
+								cy.get("[data-cy='description-service-offers-option-input-1")
+									.clear()
+									.type('Maquillage de soirée 2')
+								cy.get("[data-cy='price-service-offers-option-input-1")
+									.clear()
+									.type('50€ 2')
+							})
+						// add third option
+						cy.get("[data-cy='add-service-offers-option-button']")
+							.click({ force: true })
+							.then(() => {
+								cy.get("[data-cy='name-service-offers-option-input-2")
+									.clear()
+									.type('Maquillage 3')
+								cy.get("[data-cy='description-service-offers-option-input-2")
+									.clear()
+									.type('Maquillage de soirée 3')
+								cy.get("[data-cy='price-service-offers-option-input-2")
+									.clear()
+									.type('50€ 3')
+							})
+
+						cy.get("[data-cy='add-service-offers-button']")
+							.click({ force: true })
+							.then(() => {
+								cy.get("[data-cy='save-button-service-offers']")
+									.click({
+										force: true,
+									})
+									.then(() => {
+										// prepare to intercept the request
+										cy.intercept(
+											'PATCH',
+											'https://api.my-makeup.fr/api/me-makeup'
+										).as('updateUserServiceOffers')
+
+										// wait for the update to finish
+										cy.wait('@updateUserServiceOffers')
+											.its('response.statusCode')
+											.should('eq', 200)
+									})
+							})
+					})
+				})
+		})
+	})
 	// 	todo Portefolio
-	// 	todo Services offers
 })

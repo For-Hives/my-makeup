@@ -836,7 +836,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 								</div>
 								<div className="mt-4 flex justify-end">
 									<button
-										data-cy="save-button"
+										data-cy="save-button-service-offers"
 										type="button"
 										className="btn-primary"
 										onClick={handleSubmitServiceOffers}
