@@ -28,6 +28,8 @@ describe('profil', () => {
 				'updateUser'
 			)
 
+			cy.wait(1000)
+
 			// 	open the modal
 			cy.get("[data-cy='update-resume-button']")
 				.click({ force: true })
@@ -56,7 +58,7 @@ describe('profil', () => {
 					// switch availability to true
 					// cy.get('[data-cy=\'available-input\']').click();   // todo : check the aivailability switch
 
-					cy.get("[data-cy='save-resume-button']")
+					cy.get("[data-cy='save-button']")
 						.click()
 						.then(() => {
 							// wait for the upload to finish
@@ -86,7 +88,7 @@ describe('profil', () => {
 						"Je suis une maquilleuse passionnée avec plus de 10 ans d'expérience..."
 					cy.get("[data-cy='description-input']").clear().type(description)
 
-					cy.get("[data-cy='save-description-button']")
+					cy.get("[data-cy='save-button']")
 						.click()
 						.then(() => {
 							cy.wait('@updateDescription')
@@ -115,8 +117,13 @@ describe('profil', () => {
 					cy.get("[data-cy='save-button']")
 						.click()
 						.then(() => {
-							// wait for the upload to finish
-							cy.wait('@upload').its('response.statusCode').should('eq', 200)
+							// prepare to intercept the request
+							cy.intercept(
+								'PATCH',
+								'https://api.my-makeup.fr/api/me-makeup'
+							).as('updateUser')
+
+							// wait for the update to finish
 							cy.wait('@updateUser')
 								.its('response.statusCode')
 								.should('eq', 200)
@@ -136,11 +143,10 @@ describe('profil', () => {
 				.click({ force: true })
 				.then(() => {
 					// update skills
-					cy.get("[data-cy='skills-input']").type('pieds')
-					cy.type('{enter}')
+					cy.get("[data-cy='skills-input']").type('pieds').type('{enter}')
 
-					// save the skills
-					cy.get("[data-cy='save-skills']")
+					// save the location
+					cy.get("[data-cy='save-button']")
 						.click()
 						.then(() => {
 							// prepare to intercept the request
@@ -172,14 +178,18 @@ describe('profil', () => {
 					cy.get("[data-cy='date-graduation-input']").type('2022-12-15')
 					cy.get("[data-cy='course-description-input']").type('informatique')
 
-					cy.get("[data-cy='add-course-button']")
+					// save the location
+					cy.get("[data-cy='save-button']")
 						.click()
 						.then(() => {
-							cy.intercept('POST', 'https://api.my-makeup.fr/api/me-makeup').as(
-								'addDiploma'
-							)
+							// prepare to intercept the request
+							cy.intercept(
+								'PATCH',
+								'https://api.my-makeup.fr/api/me-makeup'
+							).as('updateUser')
 
-							cy.wait('@addDiploma')
+							// wait for the update to finish
+							cy.wait('@updateUser')
 								.its('response.statusCode')
 								.should('eq', 200)
 						})
@@ -205,14 +215,18 @@ describe('profil', () => {
 						'Développement web'
 					)
 
-					cy.get("[data-cy='add-experience-button']")
+					// save the location
+					cy.get("[data-cy='save-button']")
 						.click()
 						.then(() => {
-							cy.intercept('POST', 'https://api.my-makeup.fr/api/me-makeup').as(
-								'addExperience'
-							)
+							// prepare to intercept the request
+							cy.intercept(
+								'PATCH',
+								'https://api.my-makeup.fr/api/me-makeup'
+							).as('updateUser')
 
-							cy.wait('@addExperience')
+							// wait for the update to finish
+							cy.wait('@updateUser')
 								.its('response.statusCode')
 								.should('eq', 200)
 						})

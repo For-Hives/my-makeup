@@ -494,6 +494,7 @@ export default function ModalUpdateCoursesProfil(props) {
 								</div>
 								<div className="mt-4 flex justify-end">
 									<button
+										data-cy="save-button"
 										type="button"
 										className="btn-primary"
 										onClick={handleSubmitCourses}

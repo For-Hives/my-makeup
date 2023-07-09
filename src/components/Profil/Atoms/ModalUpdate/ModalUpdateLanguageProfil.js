@@ -277,7 +277,7 @@ export default function ModalUpdateLanguageProfil(props) {
 								</div>
 								<div className="mt-4 flex justify-end">
 									<button
-										data-cy="save-language"
+										data-cy="save-button"
 										type="button"
 										className="btn-primary"
 										onClick={handleSubmit(onSubmit)}
