@@ -251,7 +251,7 @@ describe('profil', () => {
 	})
 
 	// todo delete experiences on the side
-	describe('Professional Experiences - section', () => {
+	describe.only('Professional Experiences - section', () => {
 		it('tests complet Professional experience - section', () => {
 			cy.visit('http://localhost:3000/auth/profil')
 
@@ -265,35 +265,46 @@ describe('profil', () => {
 			cy.get("[data-cy='update-experience-button']")
 				.click({ force: true })
 				.then(() => {
-					cy.get("[data-cy='company-input']").clear().type('RCA')
-					cy.get("[data-cy='job-name-input']").clear().type('dev')
-					cy.get("[data-cy='city-input']").clear().type('Nantes')
-					cy.get("[data-cy='date-start-input']").clear().type('2021-05-01')
-					cy.get("[data-cy='date-end-input']").clear().type('2023-05-01')
-					cy.get("[data-cy='description-experience-input']")
-						.clear()
-						.type('Développement web')
+					cy.get('body').then($body => {
+						if ($body.find("[data-cy='experience-selected']").length > 0) {
+							cy.get("[data-cy='experience-selected']").each(
+								($el, index, $list) => {
+									cy.wrap($el).click()
+								}
+							)
+						}
 
-					cy.get("[data-cy='add-experience-button']")
-						.click({
-							force: true,
-						})
-						.then(() => {
-							cy.get("[data-cy='save-button-experience']")
-								.click()
-								.then(() => {
-									// prepare to intercept the request
-									cy.intercept(
-										'PATCH',
-										'https://api.my-makeup.fr/api/me-makeup'
-									).as('updateUserExperiences')
+						// update experience
+						cy.get("[data-cy='company-input']").clear().type('RCA')
+						cy.get("[data-cy='job-name-input']").clear().type('dev')
+						cy.get("[data-cy='city-input']").clear().type('Nantes')
+						cy.get("[data-cy='date-start-input']").clear().type('2021-05-01')
+						cy.get("[data-cy='date-end-input']").clear().type('2023-05-01')
+						cy.get("[data-cy='description-experience-input']")
+							.clear()
+							.type('Développement web')
 
-									// wait for the update to finish
-									cy.wait('@updateUserExperiences')
-										.its('response.statusCode')
-										.should('eq', 200)
-								})
-						})
+						cy.get("[data-cy='add-experience-button']")
+							.click({
+								force: true,
+							})
+							.then(() => {
+								cy.get("[data-cy='save-button-experience']")
+									.click()
+									.then(() => {
+										// prepare to intercept the request
+										cy.intercept(
+											'PATCH',
+											'https://api.my-makeup.fr/api/me-makeup'
+										).as('updateUserExperiences')
+
+										// wait for the update to finish
+										cy.wait('@updateUserExperiences')
+											.its('response.statusCode')
+											.should('eq', 200)
+									})
+							})
+					})
 				})
 		})
 	})

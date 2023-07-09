@@ -524,6 +524,7 @@ export default function ModalUpdateExperiencesProfil(props) {
 																	</span>
 																</button>
 																<button
+																	data-cy={'experience-selected'}
 																	className={'flex items-center justify-center'}
 																	onClick={() =>
 																		handleDeleteExperience(experience.id)
