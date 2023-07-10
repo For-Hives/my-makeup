@@ -2,6 +2,10 @@ const X2JS = require('x2js')
 describe('Test des pages', () => {
 	it('page par defauts - verifie si cypress marche', () => {
 		cy.visit('http://localhost:3000/')
+
+		cy.get('h1').contains('My-Makeup')
+		cy.get('h2').contains('Trouvez la maquilleuse de vos rêves')
+		cy.percySnapshot('Home Page')
 	})
 
 	it('verifie si le sitemap a le bon format', () => {
