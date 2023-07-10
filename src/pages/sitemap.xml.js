@@ -53,25 +53,25 @@ export const getServerSideProps = async ({ res }) => {
 				.replace('src\\pages', '')
 				.replace('src/pages', '')
 			return `${process.env.NEXT_PUBLIC_URL}${newPath}`.replace(
-				'https://my-makeup.fr//',
-				'https://my-makeup.fr/'
+				`${process.env.NEXT_PUBLIC_URL}/`,
+				`${process.env.NEXT_PUBLIC_URL}`
 			)
 		})
 
 	// delete   'https://my-makeup.fr/profil/[username]', from the staticPaths
 	staticPaths = staticPaths.filter(item => {
 		return !(
-			item === `https://my-makeup.fr/api\\auth/[...nextauth]` ||
-			item === `https://my-makeup.fr/api/auth/[...nextauth]` ||
-			item === `https://my-makeup.fr/api/sendMail` ||
-			item === `https://my-makeup.fr/auth/profil` ||
-			item === `https://my-makeup.fr/auth/error` ||
-			item === `https://my-makeup.fr/auth/init-account` ||
-			item === `https://my-makeup.fr/blog/[id]` ||
-			item === `https://my-makeup.fr/talent/[slug]` ||
-			item === `https://my-makeup.fr/profil/[username]` ||
-			item === `https://my-makeup.fr/auth/verification-complete` ||
-			item === `https://my-makeup.fr/auth/verification-wall`
+			item === `${process.env.NEXT_PUBLIC_URL}api\\auth/[...nextauth]` ||
+			item === `${process.env.NEXT_PUBLIC_URL}api/auth/[...nextauth]` ||
+			item === `${process.env.NEXT_PUBLIC_URL}api/sendMail` ||
+			item === `${process.env.NEXT_PUBLIC_URL}auth/profil` ||
+			item === `${process.env.NEXT_PUBLIC_URL}auth/error` ||
+			item === `${process.env.NEXT_PUBLIC_URL}auth/init-account` ||
+			item === `${process.env.NEXT_PUBLIC_URL}blog/[id]` ||
+			item === `${process.env.NEXT_PUBLIC_URL}talent/[slug]` ||
+			item === `${process.env.NEXT_PUBLIC_URL}profil/[username]` ||
+			item === `${process.env.NEXT_PUBLIC_URL}auth/verification-complete` ||
+			item === `${process.env.NEXT_PUBLIC_URL}auth/verification-wall`
 		)
 	})
 
@@ -89,7 +89,7 @@ export const getServerSideProps = async ({ res }) => {
 	).then(result => result.json())
 
 	const pathsUsers = resultUsers?.data?.map(record => {
-		return `https://my-makeup.fr/profil/${record.attributes.username}`
+		return `${process.env.NEXT_PUBLIC_URL}profil/${record.attributes.username}`
 	})
 
 	// get all talents for dynamic paths
@@ -106,7 +106,7 @@ export const getServerSideProps = async ({ res }) => {
 	).then(res => res.json())
 
 	const pathsTalents = resultTalents?.data?.map(record => {
-		return `https://my-makeup.fr/talent/${record.attributes.slug}`
+		return `${process.env.NEXT_PUBLIC_URL}talent/${record.attributes.slug}`
 	})
 
 	// get all article for dynamic paths
@@ -123,7 +123,7 @@ export const getServerSideProps = async ({ res }) => {
 	).then(res => res.json())
 
 	const pathsBlog = resultBlog?.data?.map(record => {
-		return `https://my-makeup.fr/blog/${record.attributes.slug}`
+		return `${process.env.NEXT_PUBLIC_URL}blog/${record.attributes.slug}`
 	})
 
 	const allPaths = [

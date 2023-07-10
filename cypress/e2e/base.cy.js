@@ -13,22 +13,12 @@ describe('Test des pages', () => {
 				// get all URLs from the sitemap
 				expect(json.urlset.url).to.be.an('array').and.have.length.gt(0)
 
-				// get all URLs from the sitemap
-				expect(json.urlset.url).to.be.an('array').and.have.length.gt(0)
-
-				// todo : check if each URL is valid
-
-				// json.urlset.url.forEach((url) => {
-				// 	const parsed = new URL('http://localhost:3000' + url.loc);
-				// 	cy.log(parsed.pathname);
-				//
-				// 	// check if the resource exists
-				// 	cy.request('HEAD', url.loc).its('status').should('eq', 200);
-				// 	// check if the resource exists AND download it
-				// 	cy.request(url.loc).its('status').should('eq', 200);
-				// 	// visit the page to check if it loads in the browser
-				// 	cy.visit(url.loc).wait(1000, { log: false });
-				// });
+				json.urlset.url.forEach(url => {
+					const parsed = new URL(url.loc)
+					cy.log(parsed.pathname)
+					// check if the resource exists AND download it
+					cy.request(url.loc).its('status').should('eq', 200)
+				})
 			})
 	})
 })
