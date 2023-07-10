@@ -468,7 +468,7 @@ describe('profil-edge', () => {
 		})
 	})
 
-	describe.only('Professional Experiences - section - (min, max, required)', () => {
+	describe('Professional Experiences - section - (min, max, required)', () => {
 		it('tests complet Professional experience - section', () => {
 			cy.visit('http://localhost:3000/auth/profil')
 
@@ -487,27 +487,126 @@ describe('profil-edge', () => {
 						}
 
 						// update experience
-						cy.get("[data-cy='company-input']").clear().type('ForHives')
-						cy.get("[data-cy='job-name-input']").clear().type('dev')
-						cy.get("[data-cy='city-input']").clear().type('Nantes')
-						cy.get("[data-cy='date-start-input']").clear().type('2021-05-01')
-						cy.get("[data-cy='date-end-input']").clear().type('2023-05-01')
-						cy.get("[data-cy='description-experience-input']")
-							.clear()
-							.type('Développement web')
+						cy.get("[data-cy='company-input']").clear()
+						cy.get("[data-cy='job-name-input']").clear()
+						cy.get("[data-cy='city-input']").clear()
+						cy.get("[data-cy='date-start-input']").clear()
+						cy.get("[data-cy='date-end-input']").clear()
+						cy.get("[data-cy='description-experience-input']").clear()
 
 						cy.get("[data-cy='add-experience-button']")
 							.click({
 								force: true,
 							})
 							.then(() => {
-								cy.get("[data-cy='save-button-experience']")
-									.click()
+								cy.get("[data-cy='error-company']").should(
+									'contain',
+									"Le nom de l'entreprise est requis."
+								)
+								cy.get("[data-cy='error-job-name']").should(
+									'contain',
+									"Le nom de l'expérience est requis"
+								)
+								cy.get("[data-cy='error-city']").should(
+									'contain',
+									'La ville est requise.'
+								)
+								cy.get("[data-cy='error-description-experience']").should(
+									'contain',
+									'La description est requise.'
+								)
+
+								cy.get("[data-cy='company-input']").clear().type('ForHives')
+								cy.get("[data-cy='job-name-input']").clear().type('dev')
+								cy.get("[data-cy='city-input']").clear().type('Nantes')
+								cy.get("[data-cy='date-start-input']")
+									.clear()
+									.type('2021-05-01')
+								cy.get("[data-cy='date-end-input']").clear().type('2021-05-01')
+								cy.get("[data-cy='description-experience-input']")
+									.clear()
+									.type('informatique')
+
+								cy.get("[data-cy='add-experience-button']")
+									.click({
+										force: true,
+									})
 									.then(() => {
-										// wait for the update to finish
-										cy.wait('@patchMeMakeup')
-											.its('response.statusCode')
-											.should('eq', 200)
+										cy.get("[data-cy='save-button-experience']")
+											.click()
+											.then(() => {
+												// wait for the update to finish
+												cy.wait('@patchMeMakeup')
+													.its('response.statusCode')
+													.should('eq', 200)
+
+												cy.wait(250)
+
+												cy.get("[data-cy='update-experience-button']")
+													.click()
+													.then(() => {
+														cy.get("[data-cy='experience-selected-0']")
+															.click()
+															.then(() => {
+																cy.get("[data-cy='company-input']").should(
+																	'have.value',
+																	'ForHives'
+																)
+																cy.get("[data-cy='job-name-input']").should(
+																	'have.value',
+																	'dev'
+																)
+																cy.get("[data-cy='city-input']").should(
+																	'have.value',
+																	'Nantes'
+																)
+																cy.get("[data-cy='date-start-input']").should(
+																	'have.value',
+																	'2021-05-01'
+																)
+																cy.get("[data-cy='date-end-input']").should(
+																	'have.value',
+																	'2021-05-01'
+																)
+																cy.get(
+																	"[data-cy='description-experience-input']"
+																).should('have.value', 'informatique')
+
+																cy.get("[data-cy='company-input']")
+																	.clear()
+																	.type('ForHivesModified')
+																cy.get("[data-cy='job-name-input']")
+																	.clear()
+																	.type('devModified')
+																cy.get("[data-cy='city-input']")
+																	.clear()
+																	.type('NantesModified')
+																cy.get("[data-cy='date-start-input']")
+																	.clear()
+																	.type('2021-05-02')
+																cy.get("[data-cy='date-end-input']")
+																	.clear()
+																	.type('2021-05-02')
+																cy.get(
+																	"[data-cy='description-experience-input']"
+																)
+																	.clear()
+																	.type('informatiqueModified')
+
+																cy.get("[data-cy='add-experience-button']")
+																	.click()
+																	.then(() => {
+																		cy.get("[data-cy='save-button-experience']")
+																			.click()
+																			.then(() => {
+																				cy.wait('@patchMeMakeup')
+																					.its('response.statusCode')
+																					.should('eq', 200)
+																			})
+																	})
+															})
+													})
+											})
 									})
 							})
 					})
@@ -641,48 +740,53 @@ describe('profil-edge', () => {
 								cy.get("[data-cy='price-service-offers-option-input-0")
 									.clear()
 									.type('50€ 1')
-							})
-						// add second option
-						cy.get("[data-cy='add-service-offers-option-button']")
-							.click({ force: true })
-							.then(() => {
-								cy.get("[data-cy='name-service-offers-option-input-1")
-									.clear()
-									.type('Maquillage 2')
-								cy.get("[data-cy='description-service-offers-option-input-1")
-									.clear()
-									.type('Maquillage de soirée 2')
-								cy.get("[data-cy='price-service-offers-option-input-1")
-									.clear()
-									.type('50€ 2')
-							})
-						// add third option
-						cy.get("[data-cy='add-service-offers-option-button']")
-							.click({ force: true })
-							.then(() => {
-								cy.get("[data-cy='name-service-offers-option-input-2")
-									.clear()
-									.type('Maquillage 3')
-								cy.get("[data-cy='description-service-offers-option-input-2")
-									.clear()
-									.type('Maquillage de soirée 3')
-								cy.get("[data-cy='price-service-offers-option-input-2")
-									.clear()
-									.type('50€ 3')
-							})
 
-						cy.get("[data-cy='add-service-offers-button']")
-							.click({ force: true })
-							.then(() => {
-								cy.get("[data-cy='save-button-service-offers']")
-									.click({
-										force: true,
-									})
+								// add second option
+								cy.get("[data-cy='add-service-offers-option-button']")
+									.click({ force: true })
 									.then(() => {
-										// wait for the update to finish
-										cy.wait('@patchMeMakeup')
-											.its('response.statusCode')
-											.should('eq', 200)
+										cy.get("[data-cy='name-service-offers-option-input-1")
+											.clear()
+											.type('Maquillage 2')
+										cy.get(
+											"[data-cy='description-service-offers-option-input-1"
+										)
+											.clear()
+											.type('Maquillage de soirée 2')
+										cy.get("[data-cy='price-service-offers-option-input-1")
+											.clear()
+											.type('50€ 2')
+									})
+								// add third option
+								cy.get("[data-cy='add-service-offers-option-button']")
+									.click({ force: true })
+									.then(() => {
+										cy.get("[data-cy='name-service-offers-option-input-2")
+											.clear()
+											.type('Maquillage 3')
+										cy.get(
+											"[data-cy='description-service-offers-option-input-2"
+										)
+											.clear()
+											.type('Maquillage de soirée 3')
+										cy.get("[data-cy='price-service-offers-option-input-2")
+											.clear()
+											.type('50€ 3')
+									})
+
+								cy.get("[data-cy='add-service-offers-button']")
+									.click({ force: true })
+									.then(() => {
+										cy.get("[data-cy='save-button-service-offers']")
+											.click({
+												force: true,
+											})
+											.then(() => {
+												// wait for the update to finish
+												cy.wait('@patchMeMakeup')
+													.its('response.statusCode')
+													.should('eq', 200)
+											})
 									})
 							})
 					})
