@@ -275,7 +275,7 @@ describe('profil-edge', () => {
 	 * check if the error is displayed when the user try to set a too long skill
 	 * check if the update is ok
 	 */
-	describe('Skills - section', () => {
+	describe('Skills - section - (min, max, required)', () => {
 		it('tests complet Skills - section', () => {
 			cy.visit('http://localhost:3000/auth/profil')
 
@@ -345,7 +345,13 @@ describe('profil-edge', () => {
 		})
 	})
 
-	describe('Diplomas and Courses - section', () => {
+	/**
+	 * open the modal
+	 * check if the error is displayed when the user try to set an empty diploma
+	 * modify the diploma and update it
+	 * check if the update is ok
+	 */
+	describe('Diplomas and Courses - section - (min, max, required)', () => {
 		it('tests complet Diplomas and courses - section', () => {
 			cy.visit('http://localhost:3000/auth/profil')
 
@@ -462,7 +468,7 @@ describe('profil-edge', () => {
 		})
 	})
 
-	describe('Professional Experiences - section', () => {
+	describe.only('Professional Experiences - section - (min, max, required)', () => {
 		it('tests complet Professional experience - section', () => {
 			cy.visit('http://localhost:3000/auth/profil')
 
@@ -509,7 +515,7 @@ describe('profil-edge', () => {
 		})
 	})
 
-	describe('Languages - section', () => {
+	describe('Languages - section - (min, max, required)', () => {
 		it('tests complet Languages - section', () => {
 			cy.visit('http://localhost:3000/auth/profil')
 
@@ -548,7 +554,7 @@ describe('profil-edge', () => {
 		})
 	})
 
-	describe('Social Medias - section', () => {
+	describe('Social Medias - section - (min, max, required)', () => {
 		it('tests complet Social Medias - section', () => {
 			cy.visit('http://localhost:3000/auth/profil')
 
@@ -595,7 +601,7 @@ describe('profil-edge', () => {
 		})
 	})
 
-	describe('Service Offers - section', () => {
+	describe('Service Offers - section - (min, max, required)', () => {
 		it('tests complet Service Offers - section', () => {
 			cy.visit('http://localhost:3000/auth/profil')
 
@@ -684,7 +690,7 @@ describe('profil-edge', () => {
 		})
 	})
 
-	describe('Portefolio - section', () => {
+	describe('Portefolio - section - (min, max, required)', () => {
 		it('tests complet Portefolio - section', () => {
 			// upload image
 			cy.visit('http://localhost:3000/auth/profil')
@@ -723,7 +729,7 @@ describe('profil-edge', () => {
 		})
 	})
 
-	describe('all tests at once, check pourcentage evolution', () => {
+	describe('all tests at once, check pourcentage evolution - (min, max, required)', () => {
 		// 	copy paste all the tests here to run them all at once
 		it('tests complet Resume - section', () => {
 			cy.request({
