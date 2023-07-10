@@ -921,10 +921,14 @@ describe('profil', () => {
 							force: true,
 						}
 					)
+					cy.wait(1000)
+
 					cy.get("[data-cy='add-button-portefolio")
 						.click({ force: true })
 						.then(() => {
 							cy.wait('@upload').its('response.statusCode').should('eq', 200)
+							cy.wait(1000)
+
 							cy.get("[data-cy='save-button-portefolio']")
 								.click()
 								.then(() => {
@@ -932,15 +936,13 @@ describe('profil', () => {
 									cy.wait('@patchMeMakeup')
 										.its('response.statusCode')
 										.should('eq', 200)
-
-									cy.wait(1000)
-
-									cy.get("[data-cy='completion-pourcentage-profil']").contains(
-										'100%'
-									)
 								})
 						})
 				})
+
+			cy.wait(1000)
+
+			cy.get("[data-cy='completion-pourcentage-profil']").contains('100%')
 		})
 	})
 })
