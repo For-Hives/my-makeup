@@ -6,11 +6,15 @@ import { useSession } from 'next-auth/react'
 import * as zod from 'zod'
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
 
-const schema = zod.object({
-	language: zod
-		.string()
-		.max(70, 'La langue ne doit pas dépasser 70 caractères.'),
-})
+const schema = zod
+	.object({
+		language: zod
+			.string()
+			.min(1, 'La langue est requise.')
+			.max(70, 'La langue ne doit pas dépasser 70 caractères.')
+			.or(zod.literal('')),
+	})
+	.required({ language: true })
 
 export default function ModalUpdateLanguageProfil(props) {
 	const user = props.user
@@ -22,6 +26,7 @@ export default function ModalUpdateLanguageProfil(props) {
 		reset,
 		setValue,
 		trigger,
+		setError,
 	} = useForm({
 		resolver: zodResolver(schema),
 	})
@@ -77,29 +82,46 @@ export default function ModalUpdateLanguageProfil(props) {
 	const handleUpdateLanguage = event => {
 		// check if the entered value is a ';' and if so, add it to the array
 		if (event.target.value.slice(-1) === ';') {
-			// Trigger a validation before adding the skill
-			trigger('language').then(isValid => {
-				if (isValid) {
-					const updatedUserLanguagesSelected = userLanguageSelected.concat({
-						id:
-							event.target.value.slice(0, -1) === ';'
-								? event.target.value.slice(0, -1)
-								: event.target.value,
-						name:
-							event.target.value.slice(0, -1) === ';'
-								? event.target.value.slice(0, -1)
-								: event.target.value,
-					})
-					setUserLanguageSelected(updatedUserLanguagesSelected)
-					setUserLanguage('')
-				}
-			})
+			if (event.target.value.trim() !== ';') {
+				// Trigger a validation before adding the skill
+				trigger('language').then(isValid => {
+					if (isValid) {
+						const updatedUserLanguagesSelected = userLanguageSelected.concat({
+							id:
+								event.target.value.slice(0, -1) === ';'
+									? event.target.value.slice(0, -1)
+									: event.target.value,
+							name:
+								event.target.value.slice(0, -1) === ';'
+									? event.target.value.slice(0, -1)
+									: event.target.value,
+						})
+						setUserLanguageSelected(updatedUserLanguagesSelected)
+						setUserLanguage('')
+					}
+				})
+			} else {
+				setError('language', {
+					type: 'manual',
+					message: 'La langue est requise.',
+				})
+			}
 			return
 		}
 
-		setUserLanguage(event.target.value)
-		setValue('language', event.target.value)
-		trigger('language')
+		if (event.target.value.trim() === '') {
+			// 	trigger the error message if the input is empty
+			setUserLanguage(event.target.value)
+			setValue('language', event.target.value)
+			setError('language', {
+				type: 'manual',
+				message: 'La langue est requise.',
+			})
+		} else {
+			setUserLanguage(event.target.value)
+			setValue('language', event.target.value)
+			trigger('language')
+		}
 	}
 
 	const handleDeleteLanguageelected = id => {
@@ -217,16 +239,23 @@ export default function ModalUpdateLanguageProfil(props) {
 																		// Trigger a validation before adding the skill
 																		const isValid = await trigger('language')
 																		if (isValid) {
-																			// 	add the skill to the array
-																			// 	empty the input
-																			setUserLanguageSelected([
-																				...userLanguageSelected,
-																				{
-																					id: event.target.value,
-																					name: event.target.value,
-																				},
-																			])
-																			setUserLanguage('')
+																			if (event.target.value.trim() !== '') {
+																				// 	add the skill to the array
+																				// 	empty the input
+																				setUserLanguageSelected([
+																					...userLanguageSelected,
+																					{
+																						id: event.target.value,
+																						name: event.target.value,
+																					},
+																				])
+																				setUserLanguage('')
+																			} else {
+																				setError('language', {
+																					type: 'manual',
+																					message: 'La langue est requise.',
+																				})
+																			}
 																		}
 																	}
 																}}
@@ -235,7 +264,10 @@ export default function ModalUpdateLanguageProfil(props) {
 																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 															/>
 															{errors.language && (
-																<p className={'mt-2 text-xs text-red-500/80'}>
+																<p
+																	data-cy={'error-language'}
+																	className={'mt-2 text-xs text-red-500/80'}
+																>
 																	{errors.language.message}
 																</p>
 															)}

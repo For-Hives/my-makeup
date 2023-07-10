@@ -632,6 +632,43 @@ describe('profil-edge', () => {
 							)
 						}
 
+						cy.get("[data-cy='language-input']").clear().type('{enter}')
+
+						cy.get("[data-cy='error-language']").should(
+							'contain',
+							'La langue est requise.'
+						)
+
+						cy.get("[data-cy='language-input']")
+							.clear()
+							.type(' ;')
+							.type('{enter}')
+
+						cy.get("[data-cy='error-language']").should(
+							'contain',
+							'La langue est requise.'
+						)
+
+						cy.get("[data-cy='language-input']")
+							.clear()
+							.type('a'.repeat(71))
+							.type('{enter}')
+
+						cy.get("[data-cy='error-language']").should(
+							'contain',
+							'La langue ne doit pas dépasser 70 caractères.'
+						)
+
+						cy.get("[data-cy='language-input']")
+							.clear()
+							.type('a'.repeat(71))
+							.type(';')
+
+						cy.get("[data-cy='error-language']").should(
+							'contain',
+							'La langue ne doit pas dépasser 70 caractères.'
+						)
+
 						// update experience
 						cy.get("[data-cy='language-input']")
 							.clear()
