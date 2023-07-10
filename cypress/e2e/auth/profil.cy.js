@@ -42,8 +42,8 @@ describe('profil', () => {
 					})
 
 					//  update name and last name
-					cy.get("[data-cy='first-name-input']").clear().type('Breval')
-					cy.get("[data-cy='last-name-input']").clear().type('LE FLOCH')
+					cy.get("[data-cy='first-name-input']").clear().type('Utilisateur')
+					cy.get("[data-cy='last-name-input']").clear().type('DE TEST')
 
 					//  update speciality
 					cy.get("[data-cy='speciality-input']")
@@ -220,7 +220,7 @@ describe('profil', () => {
 						}
 
 						// update experience
-						cy.get("[data-cy='company-input']").clear().type('RCA')
+						cy.get("[data-cy='company-input']").clear().type('ForHives')
 						cy.get("[data-cy='job-name-input']").clear().type('dev')
 						cy.get("[data-cy='city-input']").clear().type('Nantes')
 						cy.get("[data-cy='date-start-input']").clear().type('2021-05-01')
@@ -540,8 +540,8 @@ describe('profil', () => {
 					})
 
 					//  update name and last name
-					cy.get("[data-cy='first-name-input']").clear().type('Breval')
-					cy.get("[data-cy='last-name-input']").clear().type('LE FLOCH')
+					cy.get("[data-cy='first-name-input']").clear().type('Utilisateur')
+					cy.get("[data-cy='last-name-input']").clear().type('DE TEST')
 
 					//  update speciality
 					cy.get("[data-cy='speciality-input']")
@@ -706,7 +706,7 @@ describe('profil', () => {
 						}
 
 						// update experience
-						cy.get("[data-cy='company-input']").clear().type('RCA')
+						cy.get("[data-cy='company-input']").clear().type('ForHives')
 						cy.get("[data-cy='job-name-input']").clear().type('dev')
 						cy.get("[data-cy='city-input']").clear().type('Nantes')
 						cy.get("[data-cy='date-start-input']").clear().type('2021-05-01')
