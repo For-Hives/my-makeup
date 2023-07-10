@@ -16,13 +16,11 @@ const schema = zod
 		first_name: zod
 			.string({ required_error: 'Le prénom est requis.' })
 			.min(1, 'Le prénom est requis.')
-			.max(70, 'Le prénom ne doit pas dépasser 70 caractères.')
-			.or(zod.literal('')),
+			.max(70, 'Le prénom ne doit pas dépasser 70 caractères.'),
 		last_name: zod
 			.string({ required_error: 'Le nom est requis.' })
 			.min(1, 'Le nom est requis.')
-			.max(70, 'Le nom ne doit pas dépasser 70 caractères.')
-			.or(zod.literal('')),
+			.max(70, 'Le nom ne doit pas dépasser 70 caractères.'),
 		speciality: zod
 			.string({ required_error: 'La spécialité est requise.' })
 			.min(1, 'La spécialité est requise.')
@@ -375,7 +373,10 @@ export default function ModalUpdateResumeProfil(props) {
 																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																/>
 																{errors.first_name && (
-																	<p className={'mt-2 text-xs text-red-500/80'}>
+																	<p
+																		data-cy={'error-first-name'}
+																		className={'mt-2 text-xs text-red-500/80'}
+																	>
 																		{errors.first_name.message}
 																	</p>
 																)}
@@ -403,7 +404,10 @@ export default function ModalUpdateResumeProfil(props) {
 																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																/>
 																{errors.last_name && (
-																	<p className={'mt-2 text-xs text-red-500/80'}>
+																	<p
+																		data-cy="error-last-name"
+																		className={'mt-2 text-xs text-red-500/80'}
+																	>
 																		{errors.last_name.message}
 																	</p>
 																)}
@@ -432,7 +436,10 @@ export default function ModalUpdateResumeProfil(props) {
 																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 															/>
 															{errors.speciality && (
-																<p className={'mt-2 text-xs text-red-500/80'}>
+																<p
+																	data-cy="error-speciality"
+																	className={'mt-2 text-xs text-red-500/80'}
+																>
 																	{errors.speciality.message}
 																</p>
 															)}
@@ -460,7 +467,10 @@ export default function ModalUpdateResumeProfil(props) {
 																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 															/>
 															{errors.company_artist_name && (
-																<p className={'mt-2 text-xs text-red-500/80'}>
+																<p
+																	data-cy={'error-company-artist-name'}
+																	className={'mt-2 text-xs text-red-500/80'}
+																>
 																	{errors.company_artist_name.message}
 																</p>
 															)}
