@@ -6,11 +6,15 @@ import { useSession } from 'next-auth/react'
 import * as zod from 'zod'
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
 
-const schema = zod.object({
-	skills: zod
-		.string()
-		.max(70, 'Les compétences ne doivent pas dépasser 70 caractères.'),
-})
+const schema = zod
+	.object({
+		skills: zod
+			.string()
+			.min(1, 'Une compétence est requise.')
+			.max(70, 'Les compétences ne doivent pas dépasser 70 caractères.')
+			.or(zod.literal('')),
+	})
+	.required({ skills: true })
 
 export default function ModalUpdateSkillsProfil(props) {
 	const user = props.user
@@ -23,6 +27,7 @@ export default function ModalUpdateSkillsProfil(props) {
 		trigger,
 		watch,
 		setValue,
+		setError,
 	} = useForm({
 		resolver: zodResolver(schema),
 	})
@@ -78,29 +83,46 @@ export default function ModalUpdateSkillsProfil(props) {
 	const handleUpdateSkills = event => {
 		// check if the entered value is a ';' and if so, add it to the array
 		if (event.target.value.slice(-1) === ';') {
-			// Trigger a validation before adding the skill
-			trigger('skills').then(isValid => {
-				if (isValid) {
-					const updatedUserSkillsSelected = userSkillsSelected.concat({
-						id:
-							event.target.value.slice(0, -1) === ';'
-								? event.target.value.slice(0, -1)
-								: event.target.value,
-						name:
-							event.target.value.slice(0, -1) === ';'
-								? event.target.value.slice(0, -1)
-								: event.target.value,
-					})
-					setUserSkillsSelected(updatedUserSkillsSelected)
-					setUserSkills('')
-				}
-			})
+			if (event.target.value.trim() !== ';') {
+				// Trigger a validation before adding the skill
+				trigger('skills').then(isValid => {
+					if (isValid) {
+						const updatedUserSkillsSelected = userSkillsSelected.concat({
+							id:
+								event.target.value.slice(0, -1) === ';'
+									? event.target.value.slice(0, -1)
+									: event.target.value,
+							name:
+								event.target.value.slice(0, -1) === ';'
+									? event.target.value.slice(0, -1)
+									: event.target.value,
+						})
+						setUserSkillsSelected(updatedUserSkillsSelected)
+						setUserSkills('')
+					}
+				})
+			} else {
+				setError('skills', {
+					type: 'manual',
+					message: 'Une compétence est requise.',
+				})
+			}
 			return
 		}
 
-		setUserSkills(event.target.value)
-		setValue('skills', event.target.value)
-		trigger('skills')
+		if (event.target.value.trim() === '') {
+			// 	trigger the error message if the input is empty
+			setUserSkills(event.target.value)
+			setValue('skills', event.target.value)
+			setError('skills', {
+				type: 'manual',
+				message: 'Une compétence est requise.',
+			})
+		} else {
+			setUserSkills(event.target.value)
+			setValue('skills', event.target.value)
+			trigger('skills')
+		}
 	}
 
 	const handleDeleteSkillSelected = id => {
@@ -219,16 +241,25 @@ export default function ModalUpdateSkillsProfil(props) {
 																		// Trigger a validation before adding the skill
 																		const isValid = await trigger('skills')
 																		if (isValid) {
-																			// 	add the skill to the array
-																			// 	empty the input
-																			setUserSkillsSelected([
-																				...userSkillsSelected,
-																				{
-																					id: event.target.value,
-																					name: event.target.value,
-																				},
-																			])
-																			setUserSkills('')
+																			if (event.target.value.trim() !== '') {
+																				// 	add the skill to the array
+																				// 	empty the input
+																				setUserSkillsSelected([
+																					...userSkillsSelected,
+																					{
+																						id: event.target.value,
+																						name: event.target.value,
+																					},
+																				])
+																				setUserSkills('')
+																			}
+																			// 	Display an error message
+																			else
+																				setError('skills', {
+																					type: 'manual',
+																					message:
+																						'Une compétence est requise.',
+																				})
 																		}
 																	}
 																}}
@@ -237,7 +268,10 @@ export default function ModalUpdateSkillsProfil(props) {
 																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 															/>
 															{errors.skills && (
-																<p className={'mt-2 text-xs text-red-500/80'}>
+																<p
+																	data-cy={'error-skills'}
+																	className={'mt-2 text-xs text-red-500/80'}
+																>
 																	{errors.skills.message}
 																</p>
 															)}

@@ -206,7 +206,7 @@ describe('profil-edge', () => {
 	 * update city & action radius normally
 	 * check if the update is ok
 	 */
-	describe.only('Location - section - (min, max, required)', () => {
+	describe('Location - section - (min, max, required)', () => {
 		it('tests complet Location - section', () => {
 			cy.visit('http://localhost:3000/auth/profil')
 
@@ -268,6 +268,13 @@ describe('profil-edge', () => {
 		})
 	})
 
+	/**
+	 * open the modal
+	 * check if the error is displayed when the user try to set an empty skill
+	 * check if the error is displayed when the user try to set a skill with just a space
+	 * check if the error is displayed when the user try to set a too long skill
+	 * check if the update is ok
+	 */
 	describe('Skills - section', () => {
 		it('tests complet Skills - section', () => {
 			cy.visit('http://localhost:3000/auth/profil')
@@ -284,19 +291,54 @@ describe('profil-edge', () => {
 								cy.wrap($el).click()
 							})
 						}
-						// update skills
-						cy.get("[data-cy='skills-input']")
-							.clear()
-							.type('pieds')
-							.type('{enter}')
+
+						cy.get("[data-cy='skills-input']").clear().type('{enter}')
+
+						cy.get("[data-cy='error-skills']").should(
+							'contain',
+							'Une compétence est requise.'
+						)
+
+						cy.get("[data-cy='skills-input']").clear().type(' ;')
+
+						cy.get("[data-cy='error-skills']").should(
+							'contain',
+							'Une compétence est requise.'
+						)
 
 						cy.get("[data-cy='save-button-skills']")
 							.click()
 							.then(() => {
-								// wait for the update to finish
-								cy.wait('@patchMeMakeup')
-									.its('response.statusCode')
-									.should('eq', 200)
+								cy.get("[data-cy='update-skills-button']")
+									.click({ force: true })
+									.then(() => {
+										cy.get("[data-cy='skills-input']")
+											.clear()
+											.type('a'.repeat(71))
+											.type('{enter}')
+
+										cy.get("[data-cy='error-skills']").should(
+											'contain',
+											'Les compétences ne doivent pas dépasser 70 caractères.'
+										)
+
+										cy.get("[data-cy='save-button-skills']")
+											.click()
+											.then(() => {
+												cy.get("[data-cy='skills-input']")
+													.clear()
+													.type('pieds')
+													.type('{enter}')
+
+												cy.get("[data-cy='save-button-skills']")
+													.click()
+													.then(() => {
+														cy.wait('@patchMeMakeup')
+															.its('response.statusCode')
+															.should('eq', 200)
+													})
+											})
+									})
 							})
 					})
 				})
