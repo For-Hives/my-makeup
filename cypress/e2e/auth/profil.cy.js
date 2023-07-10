@@ -514,6 +514,7 @@ describe('profil', () => {
 				}).then(response => {
 					// vous pouvez faire des assertions ici sur la réponse
 					expect(response.status).to.eq(200)
+					cy.get("[data-cy='completion-pourcentage-profil']").contains('8%')
 				})
 			})
 
@@ -524,10 +525,6 @@ describe('profil', () => {
 
 			// prepare to intercept the request
 			cy.intercept('POST', 'https://api.my-makeup.fr/api/upload').as('upload')
-
-			cy.wait(1000)
-
-			cy.get("[data-cy='completion-pourcentage-profil']").contains('8%')
 
 			// 	open the modal
 			cy.get("[data-cy='update-resume-button']")
@@ -564,11 +561,12 @@ describe('profil', () => {
 							cy.wait('@patchMeMakeup')
 								.its('response.statusCode')
 								.should('eq', 200)
+
+							cy.get("[data-cy='completion-pourcentage-profil']").contains(
+								'31%'
+							)
 						})
 				})
-			cy.wait(1000)
-
-			cy.get("[data-cy='completion-pourcentage-profil']").contains('31%')
 
 			cy.get("[data-cy='update-description-button']")
 				.click({ force: true })
@@ -584,12 +582,12 @@ describe('profil', () => {
 							cy.wait('@patchMeMakeup')
 								.its('response.statusCode')
 								.should('eq', 200)
+
+							cy.get("[data-cy='completion-pourcentage-profil']").contains(
+								'38%'
+							)
 						})
 				})
-
-			cy.wait(1000)
-
-			cy.get("[data-cy='completion-pourcentage-profil']").contains('38%')
 
 			// 	open the modal
 			cy.get("[data-cy='update-location-button']")
@@ -606,12 +604,12 @@ describe('profil', () => {
 							cy.wait('@patchMeMakeup')
 								.its('response.statusCode')
 								.should('eq', 200)
+
+							cy.get("[data-cy='completion-pourcentage-profil']").contains(
+								'46%'
+							)
 						})
 				})
-
-			cy.wait(1000)
-
-			cy.get("[data-cy='completion-pourcentage-profil']").contains('46%')
 
 			// open the modal
 			cy.get("[data-cy='update-skills-button']")
@@ -636,13 +634,13 @@ describe('profil', () => {
 								cy.wait('@patchMeMakeup')
 									.its('response.statusCode')
 									.should('eq', 200)
+
+								cy.get("[data-cy='completion-pourcentage-profil']").contains(
+									'54%'
+								)
 							})
 					})
 				})
-
-			cy.wait(1000)
-
-			cy.get("[data-cy='completion-pourcentage-profil']").contains('54%')
 
 			cy.get("[data-cy='update-courses-button']")
 				.click({ force: true })
@@ -674,14 +672,14 @@ describe('profil', () => {
 										cy.wait('@patchMeMakeup')
 											.its('response.statusCode')
 											.should('eq', 200)
+
+										cy.get(
+											"[data-cy='completion-pourcentage-profil']"
+										).contains('62%')
 									})
 							})
 					})
 				})
-
-			cy.wait(1000)
-
-			cy.get("[data-cy='completion-pourcentage-profil']").contains('62%')
 
 			cy.get("[data-cy='update-experience-button']")
 				.click({ force: true })
@@ -717,14 +715,14 @@ describe('profil', () => {
 										cy.wait('@patchMeMakeup')
 											.its('response.statusCode')
 											.should('eq', 200)
+
+										cy.get(
+											"[data-cy='completion-pourcentage-profil']"
+										).contains('69%')
 									})
 							})
 					})
 				})
-
-			cy.wait(1000)
-
-			cy.get("[data-cy='completion-pourcentage-profil']").contains('69%')
 
 			cy.get("[data-cy='update-languages-button']")
 				.click({ force: true })
@@ -753,13 +751,13 @@ describe('profil', () => {
 								cy.wait('@patchMeMakeup')
 									.its('response.statusCode')
 									.should('eq', 200)
+
+								cy.get("[data-cy='completion-pourcentage-profil']").contains(
+									'77%'
+								)
 							})
 					})
 				})
-
-			cy.wait(1000)
-
-			cy.get("[data-cy='completion-pourcentage-profil']").contains('77%')
 
 			cy.get("[data-cy='update-social-medias-button']")
 				.click({ force: true })
@@ -797,12 +795,12 @@ describe('profil', () => {
 							cy.wait('@patchMeMakeup')
 								.its('response.statusCode')
 								.should('eq', 200)
+
+							cy.get("[data-cy='completion-pourcentage-profil']").contains(
+								'85%'
+							)
 						})
 				})
-
-			cy.wait(1000)
-
-			cy.get("[data-cy='completion-pourcentage-profil']").contains('85%')
 
 			cy.get("[data-cy='update-service-offers-button']")
 				.click({ force: true })
@@ -880,6 +878,10 @@ describe('profil', () => {
 										cy.wait('@patchMeMakeup')
 											.its('response.statusCode')
 											.should('eq', 200)
+
+										cy.get(
+											"[data-cy='completion-pourcentage-profil']"
+										).contains('92%')
 									})
 							})
 					})
@@ -890,10 +892,6 @@ describe('profil', () => {
 
 			// prepare to intercept the request
 			cy.intercept('POST', 'https://api.my-makeup.fr/api/upload').as('upload')
-
-			cy.wait(1000)
-
-			cy.get("[data-cy='completion-pourcentage-profil']").contains('92%')
 
 			cy.get("[data-cy='update-portefolio-button']")
 				.click({ force: true })
@@ -915,13 +913,13 @@ describe('profil', () => {
 									cy.wait('@patchMeMakeup')
 										.its('response.statusCode')
 										.should('eq', 200)
+
+									cy.get("[data-cy='completion-pourcentage-profil']").contains(
+										'100%'
+									)
 								})
 						})
 				})
-
-			cy.wait(1000)
-
-			cy.get("[data-cy='completion-pourcentage-profil']").contains('100%')
 		})
 	})
 })
