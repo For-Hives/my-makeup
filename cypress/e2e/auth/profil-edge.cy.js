@@ -699,29 +699,13 @@ describe('profil-edge', () => {
 			cy.get("[data-cy='update-social-medias-button']")
 				.click({ force: true })
 				.then(() => {
-					cy.get("[data-cy='email-input']").clear().type('test@test.test')
-
-					cy.get("[data-cy='facebook-input']")
-						.clear()
-						.type('https://facebook.com')
-
-					cy.get("[data-cy='instagram-input']")
-						.clear()
-						.type('https://instagram.com')
-
-					cy.get("[data-cy='linkedin-input']")
-						.clear()
-						.type('https://linkedin.com')
-
-					cy.get("[data-cy='phone-input']").clear().type('0606060606')
-
-					cy.get("[data-cy='website-input']")
-						.clear()
-						.type('https://my-makeup.fr')
-
-					cy.get("[data-cy='youtube-input']")
-						.clear()
-						.type('https://youtube.com')
+					cy.get("[data-cy='email-input']").clear()
+					cy.get("[data-cy='facebook-input']").clear()
+					cy.get("[data-cy='instagram-input']").clear()
+					cy.get("[data-cy='linkedin-input']").clear()
+					cy.get("[data-cy='phone-input']").clear()
+					cy.get("[data-cy='website-input']").clear()
+					cy.get("[data-cy='youtube-input']").clear()
 
 					cy.get("[data-cy='save-button-social-medias']")
 						.click({
@@ -732,6 +716,83 @@ describe('profil-edge', () => {
 							cy.wait('@patchMeMakeup')
 								.its('response.statusCode')
 								.should('eq', 200)
+
+							cy.get("[data-cy='update-social-medias-button']")
+								.click({ force: true })
+								.then(() => {
+									cy.get("[data-cy='email-input']").clear().type('0')
+									cy.get("[data-cy='facebook-input']").clear().type('0')
+									cy.get("[data-cy='instagram-input']").clear().type('0')
+									cy.get("[data-cy='linkedin-input']").clear().type('0')
+									cy.get("[data-cy='phone-input']").clear().type('0')
+									cy.get("[data-cy='website-input']").clear().type('0')
+									cy.get("[data-cy='youtube-input']").clear().type('0')
+
+									cy.get("[data-cy='save-button-social-medias']")
+										.click()
+										.then(() => {
+											cy.get("[data-cy='error-email']").should(
+												'contain',
+												'Veuillez entrer un email valide.'
+											)
+											cy.get("[data-cy='error-facebook']").should(
+												'contain',
+												'Veuillez entrer une URL valide (https://...).'
+											)
+											cy.get("[data-cy='error-instagram']").should(
+												'contain',
+												'Veuillez entrer une URL valide (https://...).'
+											)
+											cy.get("[data-cy='error-linkedin']").should(
+												'contain',
+												'Veuillez entrer une URL valide (https://...).'
+											)
+											cy.get("[data-cy='error-phone']").should(
+												'contain',
+												'Le numéro de téléphone est requis.'
+											)
+											cy.get("[data-cy='error-website']").should(
+												'contain',
+												'Veuillez entrer une URL valide (https://...).'
+											)
+											cy.get("[data-cy='error-youtube']").should(
+												'contain',
+												'Veuillez entrer une URL valide (https://...).'
+											)
+
+											cy.get("[data-cy='email-input']")
+												.clear()
+												.type('test@test.test')
+											cy.get("[data-cy='facebook-input']")
+												.clear()
+												.type('https://facebook.com')
+											cy.get("[data-cy='instagram-input']")
+												.clear()
+												.type('https://instagram.com')
+											cy.get("[data-cy='linkedin-input']")
+												.clear()
+												.type('https://linkedin.com')
+											cy.get("[data-cy='phone-input']")
+												.clear()
+												.type('0606060606')
+											cy.get("[data-cy='website-input']")
+												.clear()
+												.type('https://my-makeup.fr')
+											cy.get("[data-cy='youtube-input']")
+												.clear()
+												.type('https://youtube.com')
+											cy.get("[data-cy='save-button-social-medias']")
+												.click({
+													force: true,
+												})
+												.then(() => {
+													// wait for the update to finish
+													cy.wait('@patchMeMakeup')
+														.its('response.statusCode')
+														.should('eq', 200)
+												})
+										})
+								})
 						})
 				})
 		})
