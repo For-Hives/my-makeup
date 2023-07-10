@@ -514,11 +514,15 @@ describe('profil', () => {
 				}).then(response => {
 					// vous pouvez faire des assertions ici sur la réponse
 					expect(response.status).to.eq(200)
+
+					cy.wait(1000)
+					cy.visit('http://localhost:3000/auth/profil')
+
 					cy.get("[data-cy='completion-pourcentage-profil']").contains('8%')
 				})
 			})
 
-			cy.visit('http://localhost:3000/auth/profil')
+			cy.wait(1000)
 
 			// prepare the file to upload
 			cy.fixture('./assets/profil.png', { encoding: null }).as('profilPicture')
@@ -568,6 +572,8 @@ describe('profil', () => {
 						})
 				})
 
+			cy.wait(1000)
+
 			cy.get("[data-cy='update-description-button']")
 				.click({ force: true })
 				.then(() => {
@@ -589,7 +595,8 @@ describe('profil', () => {
 						})
 				})
 
-			// 	open the modal
+			cy.wait(1000)
+
 			cy.get("[data-cy='update-location-button']")
 				.click({ force: true })
 				.then(() => {
@@ -611,7 +618,8 @@ describe('profil', () => {
 						})
 				})
 
-			// open the modal
+			cy.wait(1000)
+
 			cy.get("[data-cy='update-skills-button']")
 				.click({ force: true })
 				.then(() => {
@@ -641,6 +649,8 @@ describe('profil', () => {
 							})
 					})
 				})
+
+			cy.wait(1000)
 
 			cy.get("[data-cy='update-courses-button']")
 				.click({ force: true })
@@ -680,6 +690,8 @@ describe('profil', () => {
 							})
 					})
 				})
+
+			cy.wait(1000)
 
 			cy.get("[data-cy='update-experience-button']")
 				.click({ force: true })
@@ -724,6 +736,8 @@ describe('profil', () => {
 					})
 				})
 
+			cy.wait(1000)
+
 			cy.get("[data-cy='update-languages-button']")
 				.click({ force: true })
 				.then(() => {
@@ -758,6 +772,8 @@ describe('profil', () => {
 							})
 					})
 				})
+
+			cy.wait(1000)
 
 			cy.get("[data-cy='update-social-medias-button']")
 				.click({ force: true })
@@ -801,6 +817,8 @@ describe('profil', () => {
 							)
 						})
 				})
+
+			cy.wait(1000)
 
 			cy.get("[data-cy='update-service-offers-button']")
 				.click({ force: true })
@@ -887,7 +905,8 @@ describe('profil', () => {
 					})
 				})
 
-			// prepare the file to upload
+			cy.wait(1000)
+
 			cy.fixture('./assets/profil.png', { encoding: null }).as('profilPicture')
 
 			// prepare to intercept the request
@@ -913,6 +932,8 @@ describe('profil', () => {
 									cy.wait('@patchMeMakeup')
 										.its('response.statusCode')
 										.should('eq', 200)
+
+									cy.wait(1000)
 
 									cy.get("[data-cy='completion-pourcentage-profil']").contains(
 										'100%'
