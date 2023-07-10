@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { useRouter } from 'next/router'
 import ModalUpdateLocationProfil from '@/components/Profil/Atoms/ModalUpdate/ModalUpdateLocationProfil'
 import ViewLocationProfil from '@/components/Profil/Childs/Views/ViewLocationProfil'
@@ -8,16 +8,21 @@ export function LocationProfil(props) {
 	const router = useRouter()
 	// get query param
 	const { publicView } = router.query
-	const isPublic = !!publicView
-
 	const user = props.user
 
 	const [isModalOpen, setIsModalOpen] = React.useState(false)
+	const [isPublic, setIsPublic] = React.useState(false)
+
 	const handleIsModalOpen = () => {
 		if (!isPublic) {
 			setIsModalOpen(!isModalOpen)
 		}
 	}
+
+	useEffect(() => {
+		setIsPublic(!!publicView)
+	}, [])
+
 	return (
 		<div className={'w-full'}>
 			<ModalUpdateLocationProfil

@@ -10,7 +10,7 @@ function ResumeProfil(props) {
 	const { publicView } = router.query
 
 	const [user, setUser] = React.useState(props.user)
-	const isPublic = !!publicView
+	const [isPublic, setIsPublic] = React.useState(false)
 
 	const [starsToDisplay, setStarsToDisplay] = React.useState(5)
 	const [availability, setAvailability] = React.useState(true)
@@ -51,6 +51,7 @@ function ResumeProfil(props) {
 	useEffect(() => {
 		setAvailability(!!user?.available)
 		setProfilPicture(user?.main_picture?.url)
+		setIsPublic(!!publicView)
 	}, [])
 
 	return (

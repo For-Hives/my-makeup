@@ -19,12 +19,15 @@ function InfosProfil(props) {
 	const { publicView } = router.query
 
 	const [user, setUser] = React.useState(props.user)
+	const [isPublic, setIsPublic] = React.useState(false)
 
 	const handleUpdateUser = user => {
 		props.handleUpdateUser(user)
 	}
 
-	const isPublic = !!publicView
+	useEffect(() => {
+		setIsPublic(!!publicView)
+	}, [])
 
 	return (
 		<div className={''}>

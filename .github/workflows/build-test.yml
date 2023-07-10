@@ -17,11 +17,9 @@ env:
   CYPRESS_TEST_USER: ${{secrets.TEST_USER}}
   CYPRESS_TEST_PW: ${{secrets.TEST_PW}}
 
-
-
 on:
   pull_request:
-    branches: ['main']
+    branches: [ 'main' ]
 
 jobs:
   docker:
@@ -55,8 +53,7 @@ jobs:
           start: npm run start
           browser: chrome
           wait-on: 'http://localhost:3000'
-          env:
-            ENV=development
+          env: ENV=development
             NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
             NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}
             NEXT_PUBLIC_URL=${{ secrets.NEXT_PUBLIC_URL }}
@@ -73,7 +70,7 @@ jobs:
             CYPRESS_TEST_USER=${{ secrets.TEST_USER }}
             CYPRESS_TEST_PW=${{ secrets.TEST_PW }}
       - uses: actions/upload-artifact@v3
-          # add the line below to store screenshots only on failures
+        # add the line below to store screenshots only on failures
         if: failure()
         with:
           name: cypress-screenshots

@@ -448,6 +448,7 @@ export default function ModalUpdateResumeProfil(props) {
 														<div className="mt-2">
 															<input
 																id="company_artist_name"
+																data-cy="company-artist-input"
 																name="company_artist_name"
 																type="text"
 																{...register('company_artist_name', {
@@ -516,7 +517,7 @@ export default function ModalUpdateResumeProfil(props) {
 								</div>
 								<div className="mt-4 flex justify-end">
 									<button
-										data-cy="save-resume-button"
+										data-cy="save-button-resume"
 										type="button"
 										className="btn-primary"
 										onClick={handleSubmit(onSubmit)}

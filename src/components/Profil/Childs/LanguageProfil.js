@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { useRouter } from 'next/router'
 import ModalUpdateLanguageProfil from '@/components/Profil/Atoms/ModalUpdate/ModalUpdateLanguageProfil'
 import ViewLanguageProfil from '@/components/Profil/Childs/Views/ViewLanguageProfil'
@@ -8,16 +8,20 @@ export function LanguageProfil(props) {
 	const router = useRouter()
 	// get query param
 	const { publicView } = router.query
-	const isPublic = !!publicView
-
 	const user = props.user
 
 	const [isModalOpen, setIsModalOpen] = React.useState(false)
+	const [isPublic, setIsPublic] = React.useState(false)
+
 	const handleIsModalOpen = () => {
 		if (!isPublic) {
 			setIsModalOpen(!isModalOpen)
 		}
 	}
+	useEffect(() => {
+		setIsPublic(!!publicView)
+	}, [])
+
 	return (
 		<div className={'relative w-full'}>
 			<ModalUpdateLanguageProfil
@@ -34,6 +38,7 @@ export function LanguageProfil(props) {
 			>
 				{!isPublic ? (
 					<button
+						data-cy={'update-languages-button'}
 						onClick={handleIsModalOpen}
 						className={
 							'absolute left-0 top-0 -z-10 flex h-full w-full items-center justify-center px-4 opacity-0 ' +

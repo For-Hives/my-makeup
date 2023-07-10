@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { useRouter } from 'next/router'
 import ModalUpdateServiceOffersProfil from '@/components/Profil/Atoms/ModalUpdate/ModalUpdateServiceOffersProfil'
 import ViewServiceOffersProfil from '@/components/Profil/Childs/Views/ViewServiceOffersProfil'
@@ -8,16 +8,20 @@ export function ServiceOffersProfil(props) {
 	const router = useRouter()
 	// get query param
 	const { publicView } = router.query
-	const isPublic = !!publicView
 
 	const user = props.user
 
 	const [isModalOpen, setIsModalOpen] = React.useState(false)
+	const [isPublic, setIsPublic] = React.useState(false)
 	const handleIsModalOpen = () => {
 		if (!isPublic) {
 			setIsModalOpen(!isModalOpen)
 		}
 	}
+
+	useEffect(() => {
+		setIsPublic(!!publicView)
+	}, [])
 
 	return (
 		<div className={'relative w-full'}>
@@ -35,6 +39,7 @@ export function ServiceOffersProfil(props) {
 			>
 				{!isPublic ? (
 					<button
+						data-cy={'update-service-offers-button'}
 						onClick={handleIsModalOpen}
 						className={
 							'absolute left-0 top-0 -z-10 flex h-full w-full items-center justify-center opacity-0 ' +

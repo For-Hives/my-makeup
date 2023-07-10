@@ -345,7 +345,7 @@ export default function ModalUpdateExperiencesProfil(props) {
 															</label>
 															<div className="mt-2">
 																<input
-																	data-cy="job_name-input"
+																	data-cy="job-name-input"
 																	id="job_name"
 																	name="job_name"
 																	type={'text'}
@@ -401,7 +401,7 @@ export default function ModalUpdateExperiencesProfil(props) {
 															</label>
 															<div className="mt-2">
 																<input
-																	data-cy="date_start-input"
+																	data-cy="date-start-input"
 																	id="date_start"
 																	name="date_start"
 																	type={'date'}
@@ -429,7 +429,7 @@ export default function ModalUpdateExperiencesProfil(props) {
 															</label>
 															<div className="mt-2">
 																<input
-																	data-cy="date_end-input"
+																	data-cy="date-end-input"
 																	id="date_end"
 																	name="date_end"
 																	type={'date'}
@@ -524,6 +524,7 @@ export default function ModalUpdateExperiencesProfil(props) {
 																	</span>
 																</button>
 																<button
+																	data-cy={'experience-selected'}
 																	className={'flex items-center justify-center'}
 																	onClick={() =>
 																		handleDeleteExperience(experience.id)
@@ -591,6 +592,7 @@ export default function ModalUpdateExperiencesProfil(props) {
 								</div>
 								<div className="mt-4 flex justify-end">
 									<button
+										data-cy="save-button-experience"
 										type="button"
 										className="btn-primary"
 										onClick={handleSubmitExperiences}
