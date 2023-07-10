@@ -30,7 +30,7 @@ describe('profil-edge', () => {
 			// prepare to intercept the request
 			cy.intercept('POST', 'https://api.my-makeup.fr/api/upload').as('upload')
 
-			cy.wait(1000)
+			cy.wait(250)
 
 			// 	open the modal
 			cy.get("[data-cy='update-resume-button']")
@@ -132,36 +132,76 @@ describe('profil-edge', () => {
 		})
 	})
 
-	describe('Description - section', () => {
+	/**
+	 *  open the modal
+	 *  update description with a too long description
+	 *  check if the error max is displayed
+	 *  update description with an empty description
+	 *  check if the update is ok
+	 *  update description normally
+	 *  check if the update is ok
+	 */
+	describe('Description - section - (min, max, required)', () => {
 		it('tests complet Description - section', () => {
 			cy.visit('http://localhost:3000/auth/profil')
 
-			cy.wait(1000)
+			cy.wait(250)
 
 			cy.get("[data-cy='update-description-button']")
 				.click({ force: true })
 				.then(() => {
 					const description =
 						"Je suis une maquilleuse passionnée avec plus de 10 ans d'expérience..."
-					cy.get("[data-cy='description-input']").clear().type(description)
+
+					cy.get("[data-cy='description-input']")
+						.invoke('val', 'a'.repeat(2000))
+						.type('!')
+						.invoke('val')
+						.should('have.length', 2001)
 
 					cy.get("[data-cy='save-button-description']")
 						.click()
 						.then(() => {
-							// wait for the update to finish
-							cy.wait('@patchMeMakeup')
-								.its('response.statusCode')
-								.should('eq', 200)
+							cy.get("[data-cy='error-description']").should(
+								'contain',
+								'La description ne doit pas dépasser 2000 caractères.'
+							)
+
+							cy.get("[data-cy='description-input']").clear()
+
+							cy.get("[data-cy='save-button-description']")
+								.click()
+								.then(() => {
+									cy.wait('@patchMeMakeup')
+										.its('response.statusCode')
+										.should('eq', 200)
+
+									cy.get("[data-cy='update-description-button']")
+										.click({ force: true })
+										.then(() => {
+											cy.get("[data-cy='description-input']")
+												.clear()
+												.type(description)
+
+											cy.get("[data-cy='save-button-description']")
+												.click()
+												.then(() => {
+													cy.wait('@patchMeMakeup')
+														.its('response.statusCode')
+														.should('eq', 200)
+												})
+										})
+								})
 						})
 				})
 		})
 	})
 
-	describe('Location - section', () => {
+	describe.only('Location - section - (min, max, required)', () => {
 		it('tests complet Location - section', () => {
 			cy.visit('http://localhost:3000/auth/profil')
 
-			cy.wait(1000)
+			cy.wait(250)
 
 			// 	open the modal
 			cy.get("[data-cy='update-location-button']")
@@ -187,7 +227,7 @@ describe('profil-edge', () => {
 		it('tests complet Skills - section', () => {
 			cy.visit('http://localhost:3000/auth/profil')
 
-			cy.wait(1000)
+			cy.wait(250)
 
 			// open the modal
 			cy.get("[data-cy='update-skills-button']")
@@ -222,7 +262,7 @@ describe('profil-edge', () => {
 		it('tests complet Diplomas and courses - section', () => {
 			cy.visit('http://localhost:3000/auth/profil')
 
-			cy.wait(1000)
+			cy.wait(250)
 
 			cy.get("[data-cy='update-courses-button']")
 				.click({ force: true })
@@ -265,7 +305,7 @@ describe('profil-edge', () => {
 		it('tests complet Professional experience - section', () => {
 			cy.visit('http://localhost:3000/auth/profil')
 
-			cy.wait(1000)
+			cy.wait(250)
 
 			cy.get("[data-cy='update-experience-button']")
 				.click({ force: true })
@@ -312,7 +352,7 @@ describe('profil-edge', () => {
 		it('tests complet Languages - section', () => {
 			cy.visit('http://localhost:3000/auth/profil')
 
-			cy.wait(1000)
+			cy.wait(250)
 
 			cy.get("[data-cy='update-languages-button']")
 				.click({ force: true })
@@ -351,7 +391,7 @@ describe('profil-edge', () => {
 		it('tests complet Social Medias - section', () => {
 			cy.visit('http://localhost:3000/auth/profil')
 
-			cy.wait(1000)
+			cy.wait(250)
 
 			cy.get("[data-cy='update-social-medias-button']")
 				.click({ force: true })
@@ -398,7 +438,7 @@ describe('profil-edge', () => {
 		it('tests complet Service Offers - section', () => {
 			cy.visit('http://localhost:3000/auth/profil')
 
-			cy.wait(1000)
+			cy.wait(250)
 
 			cy.get("[data-cy='update-service-offers-button']")
 				.click({ force: true })
@@ -494,7 +534,7 @@ describe('profil-edge', () => {
 			// prepare to intercept the request
 			cy.intercept('POST', 'https://api.my-makeup.fr/api/upload').as('upload')
 
-			cy.wait(1000)
+			cy.wait(250)
 
 			cy.get("[data-cy='update-portefolio-button']")
 				.click({ force: true })
@@ -575,14 +615,14 @@ describe('profil-edge', () => {
 					// vous pouvez faire des assertions ici sur la réponse
 					expect(response.status).to.eq(200)
 
-					cy.wait(1000)
+					cy.wait(250)
 					cy.visit('http://localhost:3000/auth/profil')
 
 					cy.get("[data-cy='completion-pourcentage-profil']").contains('8%')
 				})
 			})
 
-			cy.wait(1000)
+			cy.wait(250)
 
 			// prepare the file to upload
 			cy.fixture('./assets/profil.png', { encoding: null }).as('profilPicture')
@@ -632,7 +672,7 @@ describe('profil-edge', () => {
 						})
 				})
 
-			cy.wait(1000)
+			cy.wait(250)
 
 			cy.get("[data-cy='update-description-button']")
 				.click({ force: true })
@@ -655,7 +695,7 @@ describe('profil-edge', () => {
 						})
 				})
 
-			cy.wait(1000)
+			cy.wait(250)
 
 			cy.get("[data-cy='update-location-button']")
 				.click({ force: true })
@@ -678,7 +718,7 @@ describe('profil-edge', () => {
 						})
 				})
 
-			cy.wait(1000)
+			cy.wait(250)
 
 			cy.get("[data-cy='update-skills-button']")
 				.click({ force: true })
@@ -710,7 +750,7 @@ describe('profil-edge', () => {
 					})
 				})
 
-			cy.wait(1000)
+			cy.wait(250)
 
 			cy.get("[data-cy='update-courses-button']")
 				.click({ force: true })
@@ -751,7 +791,7 @@ describe('profil-edge', () => {
 					})
 				})
 
-			cy.wait(1000)
+			cy.wait(250)
 
 			cy.get("[data-cy='update-experience-button']")
 				.click({ force: true })
@@ -796,7 +836,7 @@ describe('profil-edge', () => {
 					})
 				})
 
-			cy.wait(1000)
+			cy.wait(250)
 
 			cy.get("[data-cy='update-languages-button']")
 				.click({ force: true })
@@ -833,7 +873,7 @@ describe('profil-edge', () => {
 					})
 				})
 
-			cy.wait(1000)
+			cy.wait(250)
 
 			cy.get("[data-cy='update-social-medias-button']")
 				.click({ force: true })
@@ -878,7 +918,7 @@ describe('profil-edge', () => {
 						})
 				})
 
-			cy.wait(1000)
+			cy.wait(250)
 
 			cy.get("[data-cy='update-service-offers-button']")
 				.click({ force: true })
@@ -965,7 +1005,7 @@ describe('profil-edge', () => {
 					})
 				})
 
-			cy.wait(1000)
+			cy.wait(250)
 
 			cy.fixture('./assets/profil.png', { encoding: null }).as('profilPicture')
 
@@ -981,13 +1021,13 @@ describe('profil-edge', () => {
 							force: true,
 						}
 					)
-					cy.wait(1000)
+					cy.wait(250)
 
 					cy.get("[data-cy='add-button-portefolio")
 						.click({ force: true })
 						.then(() => {
 							cy.wait('@upload').its('response.statusCode').should('eq', 200)
-							cy.wait(1000)
+							cy.wait(250)
 
 							cy.get("[data-cy='save-button-portefolio']")
 								.click()
@@ -1000,7 +1040,7 @@ describe('profil-edge', () => {
 						})
 				})
 
-			cy.wait(1000)
+			cy.wait(250)
 
 			cy.get("[data-cy='completion-pourcentage-profil']").contains('100%')
 		})

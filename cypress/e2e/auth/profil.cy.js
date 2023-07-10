@@ -30,7 +30,7 @@ describe('profil', () => {
 			// prepare to intercept the request
 			cy.intercept('POST', 'https://api.my-makeup.fr/api/upload').as('upload')
 
-			cy.wait(1000)
+			cy.wait(250)
 
 			// 	open the modal
 			cy.get("[data-cy='update-resume-button']")
@@ -76,7 +76,7 @@ describe('profil', () => {
 		it('tests complet Description - section', () => {
 			cy.visit('http://localhost:3000/auth/profil')
 
-			cy.wait(1000)
+			cy.wait(250)
 
 			cy.get("[data-cy='update-description-button']")
 				.click({ force: true })
@@ -101,7 +101,7 @@ describe('profil', () => {
 		it('tests complet Location - section', () => {
 			cy.visit('http://localhost:3000/auth/profil')
 
-			cy.wait(1000)
+			cy.wait(250)
 
 			// 	open the modal
 			cy.get("[data-cy='update-location-button']")
@@ -127,7 +127,7 @@ describe('profil', () => {
 		it('tests complet Skills - section', () => {
 			cy.visit('http://localhost:3000/auth/profil')
 
-			cy.wait(1000)
+			cy.wait(250)
 
 			// open the modal
 			cy.get("[data-cy='update-skills-button']")
@@ -162,7 +162,7 @@ describe('profil', () => {
 		it('tests complet Diplomas and courses - section', () => {
 			cy.visit('http://localhost:3000/auth/profil')
 
-			cy.wait(1000)
+			cy.wait(250)
 
 			cy.get("[data-cy='update-courses-button']")
 				.click({ force: true })
@@ -205,7 +205,7 @@ describe('profil', () => {
 		it('tests complet Professional experience - section', () => {
 			cy.visit('http://localhost:3000/auth/profil')
 
-			cy.wait(1000)
+			cy.wait(250)
 
 			cy.get("[data-cy='update-experience-button']")
 				.click({ force: true })
@@ -252,7 +252,7 @@ describe('profil', () => {
 		it('tests complet Languages - section', () => {
 			cy.visit('http://localhost:3000/auth/profil')
 
-			cy.wait(1000)
+			cy.wait(250)
 
 			cy.get("[data-cy='update-languages-button']")
 				.click({ force: true })
@@ -291,7 +291,7 @@ describe('profil', () => {
 		it('tests complet Social Medias - section', () => {
 			cy.visit('http://localhost:3000/auth/profil')
 
-			cy.wait(1000)
+			cy.wait(250)
 
 			cy.get("[data-cy='update-social-medias-button']")
 				.click({ force: true })
@@ -338,7 +338,7 @@ describe('profil', () => {
 		it('tests complet Service Offers - section', () => {
 			cy.visit('http://localhost:3000/auth/profil')
 
-			cy.wait(1000)
+			cy.wait(250)
 
 			cy.get("[data-cy='update-service-offers-button']")
 				.click({ force: true })
@@ -434,7 +434,7 @@ describe('profil', () => {
 			// prepare to intercept the request
 			cy.intercept('POST', 'https://api.my-makeup.fr/api/upload').as('upload')
 
-			cy.wait(1000)
+			cy.wait(250)
 
 			cy.get("[data-cy='update-portefolio-button']")
 				.click({ force: true })
@@ -515,14 +515,14 @@ describe('profil', () => {
 					// vous pouvez faire des assertions ici sur la réponse
 					expect(response.status).to.eq(200)
 
-					cy.wait(1000)
+					cy.wait(250)
 					cy.visit('http://localhost:3000/auth/profil')
 
 					cy.get("[data-cy='completion-pourcentage-profil']").contains('8%')
 				})
 			})
 
-			cy.wait(1000)
+			cy.wait(250)
 
 			// prepare the file to upload
 			cy.fixture('./assets/profil.png', { encoding: null }).as('profilPicture')
@@ -572,7 +572,7 @@ describe('profil', () => {
 						})
 				})
 
-			cy.wait(1000)
+			cy.wait(250)
 
 			cy.get("[data-cy='update-description-button']")
 				.click({ force: true })
@@ -595,7 +595,7 @@ describe('profil', () => {
 						})
 				})
 
-			cy.wait(1000)
+			cy.wait(250)
 
 			cy.get("[data-cy='update-location-button']")
 				.click({ force: true })
@@ -618,7 +618,7 @@ describe('profil', () => {
 						})
 				})
 
-			cy.wait(1000)
+			cy.wait(250)
 
 			cy.get("[data-cy='update-skills-button']")
 				.click({ force: true })
@@ -650,7 +650,7 @@ describe('profil', () => {
 					})
 				})
 
-			cy.wait(1000)
+			cy.wait(250)
 
 			cy.get("[data-cy='update-courses-button']")
 				.click({ force: true })
@@ -691,7 +691,7 @@ describe('profil', () => {
 					})
 				})
 
-			cy.wait(1000)
+			cy.wait(250)
 
 			cy.get("[data-cy='update-experience-button']")
 				.click({ force: true })
@@ -736,7 +736,7 @@ describe('profil', () => {
 					})
 				})
 
-			cy.wait(1000)
+			cy.wait(250)
 
 			cy.get("[data-cy='update-languages-button']")
 				.click({ force: true })
@@ -773,7 +773,7 @@ describe('profil', () => {
 					})
 				})
 
-			cy.wait(1000)
+			cy.wait(250)
 
 			cy.get("[data-cy='update-social-medias-button']")
 				.click({ force: true })
@@ -818,7 +818,7 @@ describe('profil', () => {
 						})
 				})
 
-			cy.wait(1000)
+			cy.wait(250)
 
 			cy.get("[data-cy='update-service-offers-button']")
 				.click({ force: true })
@@ -905,7 +905,7 @@ describe('profil', () => {
 					})
 				})
 
-			cy.wait(1000)
+			cy.wait(250)
 
 			cy.fixture('./assets/profil.png', { encoding: null }).as('profilPicture')
 
@@ -921,13 +921,13 @@ describe('profil', () => {
 							force: true,
 						}
 					)
-					cy.wait(1000)
+					cy.wait(250)
 
 					cy.get("[data-cy='add-button-portefolio")
 						.click({ force: true })
 						.then(() => {
 							cy.wait('@upload').its('response.statusCode').should('eq', 200)
-							cy.wait(1000)
+							cy.wait(250)
 
 							cy.get("[data-cy='save-button-portefolio']")
 								.click()
@@ -940,7 +940,7 @@ describe('profil', () => {
 						})
 				})
 
-			cy.wait(1000)
+			cy.wait(250)
 
 			cy.get("[data-cy='completion-pourcentage-profil']").contains('100%')
 		})
