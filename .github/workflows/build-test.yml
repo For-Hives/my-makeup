@@ -19,7 +19,7 @@ env:
 
 on:
   pull_request:
-    branches: ['main']
+    branches: [ 'main' ]
 
 jobs:
   docker:
@@ -69,9 +69,8 @@ jobs:
             MAILGUN_DOMAIN=${{ secrets.MAILGUN_DOMAIN }}
             CYPRESS_TEST_USER=${{ secrets.TEST_USER }}
             CYPRESS_TEST_PW=${{ secrets.TEST_PW }}
-      - uses:
-          actions/upload-artifact@v3
-          # add the line below to store screenshots only on failures
+      - uses: actions/upload-artifact@v3
+        # add the line below to store screenshots only on failures
         if: failure()
         with:
           name: cypress-screenshots
