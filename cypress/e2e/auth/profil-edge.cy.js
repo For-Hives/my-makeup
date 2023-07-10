@@ -197,27 +197,72 @@ describe('profil-edge', () => {
 		})
 	})
 
+	/**
+	 * open the modal
+	 * update city & action radius with a too long city & action radius
+	 * check if the error max is displayed
+	 * update city & action radius with an empty city & action radius
+	 * check if the update is ok
+	 * update city & action radius normally
+	 * check if the update is ok
+	 */
 	describe.only('Location - section - (min, max, required)', () => {
 		it('tests complet Location - section', () => {
 			cy.visit('http://localhost:3000/auth/profil')
 
 			cy.wait(250)
 
-			// 	open the modal
 			cy.get("[data-cy='update-location-button']")
 				.click({ force: true })
 				.then(() => {
 					// update name and last name
-					cy.get("[data-cy='city-input']").clear().type('Nantes')
-					cy.get("[data-cy='action-radius-input']").clear().type('5')
+					cy.get("[data-cy='city-input']").clear().type('a'.repeat(71))
+					cy.get("[data-cy='action-radius-input']").clear().type('1'.repeat(11))
 
 					cy.get("[data-cy='save-button-location']")
 						.click()
 						.then(() => {
-							// wait for the update to finish
-							cy.wait('@patchMeMakeup')
-								.its('response.statusCode')
-								.should('eq', 200)
+							cy.get("[data-cy='error-city']").should(
+								'contain',
+								'La localisation ne doit pas dépasser 70 caractères.'
+							)
+							cy.get("[data-cy='error-action-radius']").should(
+								'contain',
+								"Le rayon d'action ne doit pas dépasser 10 caractères."
+							)
+
+							// update name and last name
+							cy.get("[data-cy='city-input']").clear()
+							cy.get("[data-cy='action-radius-input']").clear()
+
+							cy.get("[data-cy='save-button-location']")
+								.click()
+								.then(() => {
+									// wait for the update to finish
+									cy.wait('@patchMeMakeup')
+										.its('response.statusCode')
+										.should('eq', 200)
+
+									// 	open the modal
+									cy.get("[data-cy='update-location-button']")
+										.click({ force: true })
+										.then(() => {
+											// update name and last name
+											cy.get("[data-cy='city-input']").clear().type('Nantes')
+											cy.get("[data-cy='action-radius-input']")
+												.clear()
+												.type('5')
+
+											cy.get("[data-cy='save-button-location']")
+												.click()
+												.then(() => {
+													// wait for the update to finish
+													cy.wait('@patchMeMakeup')
+														.its('response.statusCode')
+														.should('eq', 200)
+												})
+										})
+								})
 						})
 				})
 		})
