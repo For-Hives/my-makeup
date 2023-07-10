@@ -362,25 +362,99 @@ describe('profil-edge', () => {
 								}
 							)
 						}
-						cy.get("[data-cy='diploma-input']").clear().type('Epsi')
-						cy.get("[data-cy='school-input']").clear().type('epsi')
-						cy.get("[data-cy='date-graduation-input']")
-							.clear()
-							.type('2022-12-15')
-						cy.get("[data-cy='course-description-input']")
-							.clear()
-							.type('informatique')
+
+						cy.get("[data-cy='diploma-input']").clear()
+						cy.get("[data-cy='school-input']").clear()
+						cy.get("[data-cy='date-graduation-input']").clear()
+						cy.get("[data-cy='course-description-input']").clear()
 
 						cy.get("[data-cy='add-course-button']")
 							.click()
 							.then(() => {
-								cy.get("[data-cy='save-button-courses']")
+								cy.get("[data-cy='error-diploma']").should(
+									'contain',
+									'Le nom du diplôme est requis.'
+								)
+								cy.get("[data-cy='error-school']").should(
+									'contain',
+									"Le nom de l'école est requis."
+								)
+								cy.get("[data-cy='error-date-graduation']").should(
+									'contain',
+									"La date d'obtention du diplôme est requise."
+								)
+								cy.get("[data-cy='error-course-description']").should(
+									'contain',
+									'La description est requise.'
+								)
+
+								cy.get("[data-cy='diploma-input']").clear().type('Epsi')
+								cy.get("[data-cy='school-input']").clear().type('epsi')
+								cy.get("[data-cy='date-graduation-input']")
+									.clear()
+									.type('2022-12-15')
+								cy.get("[data-cy='course-description-input']")
+									.clear()
+									.type('informatique')
+
+								cy.get("[data-cy='add-course-button']")
 									.click()
 									.then(() => {
-										// wait for the update to finish
-										cy.wait('@patchMeMakeup')
-											.its('response.statusCode')
-											.should('eq', 200)
+										cy.get("[data-cy='save-button-courses']")
+											.click()
+											.then(() => {
+												// wait for the update to finish
+												cy.wait('@patchMeMakeup')
+													.its('response.statusCode')
+													.should('eq', 200)
+
+												cy.get("[data-cy='update-courses-button']")
+													.click({ force: true })
+													.then(() => {
+														cy.get("[data-cy='course-edit-button-0']").click()
+														cy.get("[data-cy='diploma-input']").should(
+															'have.value',
+															'Epsi'
+														)
+														cy.get("[data-cy='school-input']").should(
+															'have.value',
+															'epsi'
+														)
+														cy.get("[data-cy='date-graduation-input']").should(
+															'have.value',
+															'2022-12-15'
+														)
+														cy.get(
+															"[data-cy='course-description-input']"
+														).should('have.value', 'informatique')
+
+														cy.get("[data-cy='diploma-input']")
+															.clear()
+															.type('EpsiModified')
+														cy.get("[data-cy='school-input']")
+															.clear()
+															.type('epsiModified')
+														cy.get("[data-cy='date-graduation-input']")
+															.clear()
+															.type('2022-12-16')
+														cy.get("[data-cy='course-description-input']")
+															.clear()
+															.type('informatiqueModified')
+
+														cy.get("[data-cy='add-course-button']")
+															.click()
+															.then(() => {
+																cy.get("[data-cy='save-button-courses']")
+																	.click()
+																	.then(() => {
+																		// wait for the update to finish
+																		cy.wait('@patchMeMakeup')
+																			.its('response.statusCode')
+																			.should('eq', 200)
+																	})
+															})
+													})
+											})
 									})
 							})
 					})
