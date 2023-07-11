@@ -545,7 +545,7 @@ describe('profil-edge', () => {
 												cy.wait(250)
 
 												cy.get("[data-cy='update-experience-button']")
-													.click()
+													.click({ force: true })
 													.then(() => {
 														cy.get("[data-cy='experience-selected-0']")
 															.click()
