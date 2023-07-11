@@ -42,3 +42,5 @@ cypress/screenshots/
 .env.local
 
 cypress.env.json
+
+yarn.lock
