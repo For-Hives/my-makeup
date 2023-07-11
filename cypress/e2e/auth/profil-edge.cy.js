@@ -696,10 +696,7 @@ describe('profil-edge', () => {
 								'La langue est requise.'
 							)
 
-							cy.get("[data-cy='language-input']")
-								.clear()
-								.type(' ;')
-								.type('{enter}')
+							cy.get("[data-cy='language-input']").clear().type(' ;')
 
 							cy.get("[data-cy='error-language']").should(
 								'contain',
@@ -712,7 +709,8 @@ describe('profil-edge', () => {
 								.type('!')
 								.invoke('val')
 								.should('have.length', 71)
-								.type('{enter}')
+
+							cy.get("[data-cy='language-input']").type('{enter}')
 
 							cy.get("[data-cy='error-language']").should(
 								'contain',
@@ -725,7 +723,8 @@ describe('profil-edge', () => {
 								.type('!')
 								.invoke('val')
 								.should('have.length', 71)
-								.type(';')
+
+							cy.get("[data-cy='language-input']").type(';')
 
 							cy.get("[data-cy='error-language']").should(
 								'contain',
@@ -754,7 +753,7 @@ describe('profil-edge', () => {
 		})
 	})
 
-	describe('Social Medias - section - (min, max, required)', () => {
+	describe.only('Social Medias - section - (min, max, required)', () => {
 		it('tests complet Social Medias - section', () => {
 			cy.visit('http://localhost:3000/auth/profil').then(() => {
 				cy.wait(1000)
@@ -937,7 +936,7 @@ describe('profil-edge', () => {
 		})
 	})
 
-	describe.only('Service Offers - section - (min, max, required)', () => {
+	describe('Service Offers - section - (min, max, required)', () => {
 		it('tests complet Service Offers - section', () => {
 			cy.visit('http://localhost:3000/auth/profil').then(() => {
 				cy.wait(1000)
