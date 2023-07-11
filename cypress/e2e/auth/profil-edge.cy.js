@@ -57,7 +57,7 @@ describe('profil-edge', () => {
 				// prepare to intercept the request
 				cy.intercept('POST', 'https://api.my-makeup.fr/api/upload').as('upload')
 
-				cy.wait(250)
+				cy.wait(1000)
 				// 	open the modal
 				cy.get("[data-cy='update-resume-button']")
 					.click({ force: true })
@@ -265,9 +265,13 @@ describe('profil-edge', () => {
 					.then(() => {
 						cy.get('body').then($body => {
 							if ($body.find("[data-cy='skill-selected']").length > 0) {
-								cy.get("[data-cy='skill-selected']").each(($el, index, $list) => {
-									cy.wrap($el).click()
-								})
+								cy.get("[data-cy='skill-selected']").then($elems => {
+									const skillsCount = $elems.length;
+
+									for(let i = 0; i < skillsCount; i++) {
+										cy.get("[data-cy='skill-selected']").first().click();
+									}
+								});
 							}
 
 							cy.get("[data-cy='skills-input']").clear().type('{enter}')
@@ -324,9 +328,13 @@ describe('profil-edge', () => {
 					.then(() => {
 						cy.get('body').then($body => {
 							if ($body.find("[data-cy='course-delete-button']").length > 0) {
-								cy.get("[data-cy='course-delete-button']").each(($el, index, $list) => {
-									cy.wrap($el).click()
-								})
+								cy.get("[data-cy='course-delete-button']").then($elems => {
+									const deleteButtonsCount = $elems.length;
+
+									for (let i = 0; i < deleteButtonsCount; i++) {
+										cy.get("[data-cy='course-delete-button']").first().click();
+									}
+								});
 							}
 
 							cy.get("[data-cy='diploma-input']").clear()
@@ -399,9 +407,13 @@ describe('profil-edge', () => {
 					.then(() => {
 						cy.get('body').then($body => {
 							if ($body.find("[data-cy='experience-selected']").length > 0) {
-								cy.get("[data-cy='experience-selected']").each(($el, index, $list) => {
-									cy.wrap($el).click()
-								})
+								cy.get("[data-cy='experience-selected']").then($elems => {
+									const experienceCount = $elems.length;
+
+									for (let i = 0; i < experienceCount; i++) {
+										cy.get("[data-cy='experience-selected']").first().click();
+									}
+								});
 							}
 
 							// update experience
@@ -440,7 +452,7 @@ describe('profil-edge', () => {
 													// wait for the update to finish
 													cy.wait('@patchMeMakeup').its('response.statusCode').should('eq', 200)
 
-													cy.wait(250)
+													cy.wait(1000)
 
 													cy.get("[data-cy='update-experience-button']")
 														.click({ force: true })
@@ -491,9 +503,13 @@ describe('profil-edge', () => {
 					.then(() => {
 						cy.get('body').then($body => {
 							if ($body.find("[data-cy='language-selected']").length > 0) {
-								cy.get("[data-cy='language-selected']").each(($el, index, $list) => {
-									cy.wrap($el).click()
-								})
+								cy.get("[data-cy='language-selected']").then($elems => {
+									const languageCount = $elems.length;
+
+									for (let i = 0; i < languageCount; i++) {
+										cy.get("[data-cy='language-selected']").first().click();
+									}
+								});
 							}
 
 							cy.get("[data-cy='language-input']").clear().type('{enter}')
@@ -655,9 +671,13 @@ describe('profil-edge', () => {
 					.then(() => {
 						cy.get('body').then($body => {
 							if ($body.find("[data-cy='delete-service-offers-button']").length > 0) {
-								cy.get("[data-cy='delete-service-offers-button']").each(($el, index, $list) => {
-									cy.wrap($el).click()
-								})
+								cy.get("[data-cy='delete-service-offers-button']").then($elems => {
+									const deleteButtonsCount = $elems.length;
+
+									for (let i = 0; i < deleteButtonsCount; i++) {
+										cy.get("[data-cy='delete-service-offers-button']").first().click();
+									}
+								});
 							}
 
 							cy.get("[data-cy='name-service-offers-input']").clear()
@@ -785,7 +805,7 @@ describe('profil-edge', () => {
 																	// wait for the update to finish
 																	cy.wait('@patchMeMakeup').its('response.statusCode').should('eq', 200)
 
-																	cy.wait(250)
+																	cy.wait(1000)
 
 																	// 	open the modal, and modify the service
 																	cy.get("[data-cy='update-service-offers-button']")
