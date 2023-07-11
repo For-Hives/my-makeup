@@ -4,12 +4,13 @@ env:
   NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
 
 on:
-  push:
-    branches: [main]
+  pull_request:
+    branches: [ 'main' ]
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    environment: pre-prod
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
