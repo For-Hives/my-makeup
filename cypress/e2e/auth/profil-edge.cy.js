@@ -753,7 +753,7 @@ describe('profil-edge', () => {
 		})
 	})
 
-	describe.only('Social Medias - section - (min, max, required)', () => {
+	describe('Social Medias - section - (min, max, required)', () => {
 		it('tests complet Social Medias - section', () => {
 			cy.visit('http://localhost:3000/auth/profil').then(() => {
 				cy.wait(1000)
@@ -1454,7 +1454,7 @@ describe('profil-edge', () => {
 	})
 
 	//  todo (test thle section & max number upload + max size upload)
-	describe.skip('Portefolio - section - (min, max, required)', () => {
+	describe.only('Portefolio - section - (min, max, required)', () => {
 		it('tests complet Portefolio - section', () => {
 			// upload image
 			cy.visit('http://localhost:3000/auth/profil').then(() => {
