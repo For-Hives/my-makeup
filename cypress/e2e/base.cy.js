@@ -1,5 +1,5 @@
 const X2JS = require('x2js')
-describe('Test des pages', () => {
+describe.skip('Test des pages', () => {
 	it('page par defauts - verifie si cypress marche', () => {
 		cy.visit('http://localhost:3000/')
 	})

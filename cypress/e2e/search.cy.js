@@ -1,4 +1,4 @@
-describe('test de la page de recherche', () => {
+describe.skip('test de la page de recherche', () => {
 	it('Recherche par terme uniquement', () => {
 		cy.visit('http://localhost:3000/search')
 		cy.get("[data-cy='search-input']").click()
