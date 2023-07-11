@@ -15,9 +15,9 @@ describe('profil-edge', () => {
 		cy.wait('@getCredentials').its('response.statusCode').should('eq', 200)
 	})
 
-	// afterEach(() => {
-	// 	cy.get("[data-cy='button-logout']").click()
-	// })
+	afterEach(() => {
+		cy.get("[data-cy='button-logout']").click()
+	})
 
 	// 10 tests ( 10 components )
 	// todo : check the availability switch & test the upload picture
@@ -912,7 +912,7 @@ describe('profil-edge', () => {
 		})
 	})
 
-	describe.only('Service Offers - section - (min, max, required)', () => {
+	describe('Service Offers - section - (min, max, required)', () => {
 		it('tests complet Service Offers - section', () => {
 			cy.visit('http://localhost:3000/auth/profil')
 

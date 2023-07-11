@@ -1,4 +1,4 @@
-it.skip('Login with Email / Password', () => {
+it('Login with Email / Password', () => {
 	cy.intercept('POST', '/api/auth/callback/credentials?').as('getCredentials')
 
 	cy.visit('http://localhost:3000/auth/signin')

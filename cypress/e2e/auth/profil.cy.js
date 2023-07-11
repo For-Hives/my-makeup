@@ -1,4 +1,4 @@
-describe.skip('profil', () => {
+describe('profil', () => {
 	beforeEach(() => {
 		cy.intercept('POST', '/api/auth/callback/credentials?').as('getCredentials')
 		// post me makeup , reset all the fields
