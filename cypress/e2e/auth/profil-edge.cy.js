@@ -36,9 +36,9 @@ describe('profil-edge', () => {
 		}
 	})
 
-	// afterEach(() =>² {
-	// 	cy.get("[data-cy='button-logout']").click()
-	// })
+	afterEach(() => {
+		cy.get("[data-cy='button-logout']").click()
+	})
 
 	// 10 tests ( 10 components )
 	// todo : check the availability switch & test the upload picture
