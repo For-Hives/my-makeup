@@ -42,11 +42,15 @@ describe('profil-edge', () => {
 
 	// 10 tests ( 10 components )
 	// todo : check the availability switch & test the upload picture
-	// todo max upload size : 5Mo
+	// max upload size : 5Mo
 	describe('Resume - section (min, max, required)', () => {
 		it('tests complet Resume - section', () => {
 			cy.visit('http://localhost:3000/auth/profil').then(() => {
 				cy.wait(1000)
+
+				// prepare the file to upload (big image)
+				cy.fixture('./assets/big_image.jpg', { encoding: null }).as('bigImage')
+
 				// prepare the file to upload
 				cy.fixture('./assets/profil.png', { encoding: null }).as('profilPicture')
 
@@ -58,6 +62,15 @@ describe('profil-edge', () => {
 				cy.get("[data-cy='update-resume-button']")
 					.click({ force: true })
 					.then(() => {
+						//  update profil picture ( img too big )
+						cy.get("[data-cy='file-main-upload']").selectFile('@bigImage', {
+							force: true,
+						})
+
+						cy.wait(1001)
+
+						cy.get(`[id=toast-alert]`).should('contain', 'Le fichier est trop grand, veuillez télécharger un fichier de moins de 1.5 Mo.')
+
 						//  update profil picture
 						cy.get("[data-cy='file-main-upload']").selectFile('@profilPicture', {
 							force: true,
@@ -844,7 +857,7 @@ describe('profil-edge', () => {
 	})
 
 	// (test thee section & max number upload + max size upload)
-	describe.only('Portefolio - section - (min, max, required)', () => {
+	describe('Portefolio - section - (min, max, required)', () => {
 		it('tests complet Portefolio - section', () => {
 			// upload image
 			cy.visit('http://localhost:3000/auth/profil').then(() => {
