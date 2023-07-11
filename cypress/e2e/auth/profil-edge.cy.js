@@ -1190,257 +1190,223 @@ describe('profil-edge', () => {
 												cy.get("[data-cy='price-service-offers-input']")
 													.clear()
 													.type('50€')
-												// add first option
-												cy.get("[data-cy='add-service-offers-option-button']")
-													.click({ force: true })
+
+												cy.get("[data-cy='name-service-offers-option-input-0']")
+													.clear()
+													.type('Maquillage 1')
+												cy.get(
+													"[data-cy='description-service-offers-option-input-0']"
+												)
+													.clear()
+													.type('Maquillage de soirée 1')
+												cy.get(
+													"[data-cy='price-service-offers-option-input-0']"
+												)
+													.clear()
+													.type('50€ 1')
+
+												cy.get("[data-cy='name-service-offers-option-input-1']")
+													.clear()
+													.type('Maquillage 2')
+												cy.get(
+													"[data-cy='description-service-offers-option-input-1']"
+												)
+													.clear()
+													.type('Maquillage de soirée 2')
+												cy.get(
+													"[data-cy='price-service-offers-option-input-1']"
+												)
+													.clear()
+													.type('50€ 2')
+
+												cy.get("[data-cy='name-service-offers-option-input-2']")
+													.clear()
+													.type('Maquillage 3')
+												cy.get(
+													"[data-cy='description-service-offers-option-input-2']"
+												)
+													.clear()
+													.type('Maquillage de soirée 3')
+												cy.get(
+													"[data-cy='price-service-offers-option-input-2']"
+												)
+													.clear()
+													.type('50€ 3')
+
+												// save & add the service
+												cy.get("[data-cy='add-service-offers-button']")
+													.click({
+														force: true,
+													})
 													.then(() => {
-														cy.get(
-															"[data-cy='name-service-offers-option-input-0']"
-														)
-															.clear()
-															.type('Maquillage 1')
-														cy.get(
-															"[data-cy='description-service-offers-option-input-0']"
-														)
-															.clear()
-															.type('Maquillage de soirée 1')
-														cy.get(
-															"[data-cy='price-service-offers-option-input-0']"
-														)
-															.clear()
-															.type('50€ 1')
-
-														// add second option
-														cy.get(
-															"[data-cy='add-service-offers-option-button']"
-														)
-															.click({ force: true })
-															.then(() => {
-																cy.get(
-																	"[data-cy='name-service-offers-option-input-1']"
-																)
-																	.clear()
-																	.type('Maquillage 2')
-																cy.get(
-																	"[data-cy='description-service-offers-option-input-1']"
-																)
-																	.clear()
-																	.type('Maquillage de soirée 2')
-																cy.get(
-																	"[data-cy='price-service-offers-option-input-1']"
-																)
-																	.clear()
-																	.type('50€ 2')
-															})
-														// add third option
-														cy.get(
-															"[data-cy='add-service-offers-option-button']"
-														)
-															.click({ force: true })
-															.then(() => {
-																cy.get(
-																	"[data-cy='name-service-offers-option-input-2']"
-																)
-																	.clear()
-																	.type('Maquillage 3')
-																cy.get(
-																	"[data-cy='description-service-offers-option-input-2']"
-																)
-																	.clear()
-																	.type('Maquillage de soirée 3')
-																cy.get(
-																	"[data-cy='price-service-offers-option-input-2']"
-																)
-																	.clear()
-																	.type('50€ 3')
-															})
-
-														// save & add the service
-														cy.get("[data-cy='add-service-offers-button']")
+														cy.get("[data-cy='save-button-service-offers']")
 															.click({
 																force: true,
 															})
 															.then(() => {
-																cy.get("[data-cy='save-button-service-offers']")
-																	.click({
-																		force: true,
-																	})
+																// wait for the update to finish
+																cy.wait('@patchMeMakeup')
+																	.its('response.statusCode')
+																	.should('eq', 200)
+
+																cy.wait(250)
+
+																// 	open the modal, and modify the service
+																cy.get(
+																	"[data-cy='update-service-offers-button']"
+																)
+																	.click({ force: true })
 																	.then(() => {
-																		// wait for the update to finish
-																		cy.wait('@patchMeMakeup')
-																			.its('response.statusCode')
-																			.should('eq', 200)
-
-																		cy.wait(250)
-
-																		// 	open the modal, and modify the service
+																		// click on offers edit button
 																		cy.get(
-																			"[data-cy='update-service-offers-button']"
+																			"[data-cy='edit-service-offers-button-0']"
 																		)
 																			.click({ force: true })
 																			.then(() => {
-																				// click on offers edit button
+																				// 		** check if the inputs are filled **
 																				cy.get(
-																					"[data-cy='edit-service-offers-button-0']"
+																					"[data-cy='name-service-offers-input']"
+																				).should('have.value', 'Maquillage')
+																				cy.get(
+																					"[data-cy='description-service-offers-input']"
+																				).should(
+																					'have.value',
+																					'Maquillage de soirée'
 																				)
-																					.click({ force: true })
+																				cy.get(
+																					"[data-cy='price-service-offers-input']"
+																				).should('have.value', '50€')
+
+																				// 		** check if the options are filled **
+																				cy.get(
+																					"[data-cy='name-service-offers-option-input-0']"
+																				).should('have.value', 'Maquillage 1')
+																				cy.get(
+																					"[data-cy='description-service-offers-option-input-0']"
+																				).should(
+																					'have.value',
+																					'Maquillage de soirée 1'
+																				)
+																				cy.get(
+																					"[data-cy='price-service-offers-option-input-0']"
+																				).should('have.value', '50€ 1')
+																				cy.get(
+																					"[data-cy='name-service-offers-option-input-1']"
+																				).should('have.value', 'Maquillage 2')
+																				cy.get(
+																					"[data-cy='description-service-offers-option-input-1']"
+																				).should(
+																					'have.value',
+																					'Maquillage de soirée 2'
+																				)
+																				cy.get(
+																					"[data-cy='price-service-offers-option-input-1']"
+																				).should('have.value', '50€ 2')
+																				cy.get(
+																					"[data-cy='name-service-offers-option-input-2']"
+																				).should('have.value', 'Maquillage 3')
+																				cy.get(
+																					"[data-cy='description-service-offers-option-input-2']"
+																				).should(
+																					'have.value',
+																					'Maquillage de soirée 3'
+																				)
+																				cy.get(
+																					"[data-cy='price-service-offers-option-input-2']"
+																				).should('have.value', '50€ 3')
+
+																				// 		** modify the service **
+																				cy.get(
+																					"[data-cy='name-service-offers-input']"
+																				)
+																					.clear()
+																					.type('Maquillage 2 Modified')
+																				cy.get(
+																					"[data-cy='description-service-offers-input']"
+																				)
+																					.clear()
+																					.type(
+																						'Maquillage de soirée 2 Modified'
+																					)
+																				cy.get(
+																					"[data-cy='price-service-offers-input']"
+																				)
+																					.clear()
+																					.type('50€ Modified')
+
+																				// 		** modify the options **
+																				cy.get(
+																					"[data-cy='name-service-offers-option-input-0']"
+																				)
+																					.clear()
+																					.type('Maquillage 1 Modified')
+																				cy.get(
+																					"[data-cy='description-service-offers-option-input-0']"
+																				)
+																					.clear()
+																					.type(
+																						'Maquillage de soirée 1 Modified'
+																					)
+																				cy.get(
+																					"[data-cy='price-service-offers-option-input-0']"
+																				)
+																					.clear()
+																					.type('50€ 1 Modified')
+																				cy.get(
+																					"[data-cy='name-service-offers-option-input-1']"
+																				)
+																					.clear()
+																					.type('Maquillage 2 Modified')
+																				cy.get(
+																					"[data-cy='description-service-offers-option-input-1']"
+																				)
+																					.clear()
+																					.type(
+																						'Maquillage de soirée 2 Modified'
+																					)
+																				cy.get(
+																					"[data-cy='price-service-offers-option-input-1']"
+																				)
+																					.clear()
+																					.type('50€ 2 Modified')
+																				cy.get(
+																					"[data-cy='name-service-offers-option-input-2']"
+																				)
+																					.clear()
+																					.type('Maquillage 3 Modified')
+																				cy.get(
+																					"[data-cy='description-service-offers-option-input-2']"
+																				)
+																					.clear()
+																					.type(
+																						'Maquillage de soirée 3 Modified'
+																					)
+																				cy.get(
+																					"[data-cy='price-service-offers-option-input-2']"
+																				)
+																					.clear()
+																					.type('50€ 3 Modified')
+
+																				// 		** submit the form **
+																				// save & add the service
+																				cy.get(
+																					"[data-cy='add-service-offers-button']"
+																				)
+																					.click({
+																						force: true,
+																					})
 																					.then(() => {
-																						// 		** check if the inputs are filled **
 																						cy.get(
-																							"[data-cy='name-service-offers-input']"
-																						).should('have.value', 'Maquillage')
-																						cy.get(
-																							"[data-cy='description-service-offers-input']"
-																						).should(
-																							'have.value',
-																							'Maquillage de soirée'
-																						)
-																						cy.get(
-																							"[data-cy='price-service-offers-input']"
-																						).should('have.value', '50€')
-
-																						// 		** check if the options are filled **
-																						cy.get(
-																							"[data-cy='name-service-offers-option-input-0']"
-																						).should(
-																							'have.value',
-																							'Maquillage 1'
-																						)
-																						cy.get(
-																							"[data-cy='description-service-offers-option-input-0']"
-																						).should(
-																							'have.value',
-																							'Maquillage de soirée 1'
-																						)
-																						cy.get(
-																							"[data-cy='price-service-offers-option-input-0']"
-																						).should('have.value', '50€ 1')
-																						cy.get(
-																							"[data-cy='name-service-offers-option-input-1']"
-																						).should(
-																							'have.value',
-																							'Maquillage 2'
-																						)
-																						cy.get(
-																							"[data-cy='description-service-offers-option-input-1']"
-																						).should(
-																							'have.value',
-																							'Maquillage de soirée 2'
-																						)
-																						cy.get(
-																							"[data-cy='price-service-offers-option-input-1']"
-																						).should('have.value', '50€ 2')
-																						cy.get(
-																							"[data-cy='name-service-offers-option-input-2']"
-																						).should(
-																							'have.value',
-																							'Maquillage 3'
-																						)
-																						cy.get(
-																							"[data-cy='description-service-offers-option-input-2']"
-																						).should(
-																							'have.value',
-																							'Maquillage de soirée 3'
-																						)
-																						cy.get(
-																							"[data-cy='price-service-offers-option-input-2']"
-																						).should('have.value', '50€ 3')
-
-																						// 		** modify the service **
-																						cy.get(
-																							"[data-cy='name-service-offers-input']"
-																						)
-																							.clear()
-																							.type('Maquillage 2 Modified')
-																						cy.get(
-																							"[data-cy='description-service-offers-input']"
-																						)
-																							.clear()
-																							.type(
-																								'Maquillage de soirée 2 Modified'
-																							)
-																						cy.get(
-																							"[data-cy='price-service-offers-input']"
-																						)
-																							.clear()
-																							.type('50€ Modified')
-
-																						// 		** modify the options **
-																						cy.get(
-																							"[data-cy='name-service-offers-option-input-0']"
-																						)
-																							.clear()
-																							.type('Maquillage 1 Modified')
-																						cy.get(
-																							"[data-cy='description-service-offers-option-input-0']"
-																						)
-																							.clear()
-																							.type(
-																								'Maquillage de soirée 1 Modified'
-																							)
-																						cy.get(
-																							"[data-cy='price-service-offers-option-input-0']"
-																						)
-																							.clear()
-																							.type('50€ 1 Modified')
-																						cy.get(
-																							"[data-cy='name-service-offers-option-input-1']"
-																						)
-																							.clear()
-																							.type('Maquillage 2 Modified')
-																						cy.get(
-																							"[data-cy='description-service-offers-option-input-1']"
-																						)
-																							.clear()
-																							.type(
-																								'Maquillage de soirée 2 Modified'
-																							)
-																						cy.get(
-																							"[data-cy='price-service-offers-option-input-1']"
-																						)
-																							.clear()
-																							.type('50€ 2 Modified')
-																						cy.get(
-																							"[data-cy='name-service-offers-option-input-2']"
-																						)
-																							.clear()
-																							.type('Maquillage 3 Modified')
-																						cy.get(
-																							"[data-cy='description-service-offers-option-input-2']"
-																						)
-																							.clear()
-																							.type(
-																								'Maquillage de soirée 3 Modified'
-																							)
-																						cy.get(
-																							"[data-cy='price-service-offers-option-input-2']"
-																						)
-																							.clear()
-																							.type('50€ 3 Modified')
-
-																						// 		** submit the form **
-																						// save & add the service
-																						cy.get(
-																							"[data-cy='add-service-offers-button']"
+																							"[data-cy='save-button-service-offers']"
 																						)
 																							.click({
 																								force: true,
 																							})
 																							.then(() => {
-																								cy.get(
-																									"[data-cy='save-button-service-offers']"
-																								)
-																									.click({
-																										force: true,
-																									})
-																									.then(() => {
-																										// wait for the update to finish
-																										cy.wait('@patchMeMakeup')
-																											.its(
-																												'response.statusCode'
-																											)
-																											.should('eq', 200)
-																									})
+																								// wait for the update to finish
+																								cy.wait('@patchMeMakeup')
+																									.its('response.statusCode')
+																									.should('eq', 200)
 																							})
 																					})
 																			})
