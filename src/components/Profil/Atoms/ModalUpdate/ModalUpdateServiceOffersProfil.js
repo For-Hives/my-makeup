@@ -105,7 +105,8 @@ export default function ModalUpdateServiceOffersProfil(props) {
 				service_offers.name === userServiceOffersName &&
 				service_offers.price === userServiceOffersPrice &&
 				service_offers.description === userServiceOffersDescription &&
-				service_offers.options === userServiceOffersOptions
+				JSON.stringify(service_offers.options) ===
+					JSON.stringify(userServiceOffersOptions)
 		)
 		// if the service_offers is not already in the service_offers courses, add it
 		if (serviceOffersAlreadyInUserServiceOffers.length === 0) {
@@ -195,7 +196,6 @@ export default function ModalUpdateServiceOffersProfil(props) {
 						}
 					})
 					return {
-						id: serviceOffer.id,
 						name: serviceOffer.name,
 						price: serviceOffer.price,
 						description: serviceOffer.description,
@@ -221,7 +221,6 @@ export default function ModalUpdateServiceOffersProfil(props) {
 					}
 				})
 				return {
-					id: serviceOffer.id,
 					name: serviceOffer.name,
 					price: serviceOffer.price,
 					description: serviceOffer.description,
@@ -229,6 +228,9 @@ export default function ModalUpdateServiceOffersProfil(props) {
 				}
 			})
 		}
+
+		const updatedUser = { ...user }
+		updatedUser.service_offers = userServiceOffersCopy
 
 		// set data
 		const data = {
@@ -338,7 +340,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 			const serviceOffersWithId = user.service_offers.map(
 				(serviceOffer, index) => {
 					return {
-						id: index, // Utiliser la fonction uuid pour générer un id unique
+						id: index,
 						name: serviceOffer.name,
 						price: serviceOffer.price,
 						description: serviceOffer.description,

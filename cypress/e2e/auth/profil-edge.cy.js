@@ -937,7 +937,7 @@ describe('profil-edge', () => {
 		})
 	})
 
-	describe('Service Offers - section - (min, max, required)', () => {
+	describe.only('Service Offers - section - (min, max, required)', () => {
 		it('tests complet Service Offers - section', () => {
 			cy.visit('http://localhost:3000/auth/profil').then(() => {
 				cy.wait(1000)
@@ -1352,13 +1352,13 @@ describe('profil-edge', () => {
 																						"[data-cy='name-service-offers-input']"
 																					)
 																						.clear()
-																						.type('Maquillage 2 Modified')
+																						.type('Maquillage Modified')
 																					cy.get(
 																						"[data-cy='description-service-offers-input']"
 																					)
 																						.clear()
 																						.type(
-																							'Maquillage de soirée 2 Modified'
+																							'Maquillage de soirée Modified'
 																						)
 																					cy.get(
 																						"[data-cy='price-service-offers-input']"
