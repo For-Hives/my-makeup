@@ -800,7 +800,7 @@ describe('profil-edge', () => {
 		})
 	})
 
-	describe.skip('Service Offers - section - (min, max, required)', () => {
+	describe.only('Service Offers - section - (min, max, required)', () => {
 		it('tests complet Service Offers - section', () => {
 			cy.visit('http://localhost:3000/auth/profil')
 
