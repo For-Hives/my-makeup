@@ -49,8 +49,24 @@ jobs:
       - name: Cypress run
         uses: cypress-io/github-action@v5
         with:
-          build: npm run build
-          start: npm run start
+          start: docker run --name my-makeup -p 3000:3000 -d  \
+            --env ENV=development \
+            --env NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }} \
+            --env NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL }} \
+            --env NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }} \
+            --env NEXT_PUBLIC_URL=${{ secrets.NEXT_PUBLIC_URL }} \
+            --env NEXT_PUBLIC_DATABASE_URL=${{ secrets.NEXT_PUBLIC_DATABASE_URL }} \
+            --env GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }} \
+            --env GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }} \
+            --env FACEBOOK_CLIENT_ID=${{ secrets.FACEBOOK_CLIENT_ID }} \
+            --env FACEBOOK_CLIENT_SECRET=${{ secrets.FACEBOOK_CLIENT_SECRET }} \
+            --env MAILGUN_API_KEY=${{ secrets.MAILGUN_API_KEY }} \
+            --env MAILGUN_API_URL=${{ secrets.MAILGUN_API_URL }} \
+            --env MAILGUN_PUBLIC_KEY=${{ secrets.MAILGUN_PUBLIC_KEY }} \
+            --env MAILGUN_DOMAIN=${{ secrets.MAILGUN_DOMAIN }} \
+            --env CYPRESS_TEST_USER=${{ secrets.TEST_USER }} \
+            --env CYPRESS_TEST_PW=${{ secrets.TEST_PW }} \
+            ${{ secrets.APP_IMAGE }}
           browser: chrome
           wait-on: 'http://localhost:3000'
           env: ENV=development
