@@ -70,16 +70,34 @@ describe('profil-edge', () => {
 					cy.wait(500)
 
 					// check if the max is ok too
-					cy.get("[data-cy='first-name-input']").clear().type('a'.repeat(71))
-					cy.get("[data-cy='last-name-input']").clear().type('a'.repeat(71))
+					cy.get("[data-cy='first-name-input']")
+						.clear()
+						.invoke('val', 'a'.repeat(70))
+						.type('!')
+						.invoke('val')
+						.should('have.length', 71)
+					cy.get("[data-cy='last-name-input']")
+						.clear()
+						.invoke('val', 'a'.repeat(70))
+						.type('!')
+						.invoke('val')
+						.should('have.length', 71)
 
 					//  update speciality
-					cy.get("[data-cy='speciality-input']").clear().type('a'.repeat(71))
+					cy.get("[data-cy='speciality-input']")
+						.clear()
+						.invoke('val', 'a'.repeat(70))
+						.type('!')
+						.invoke('val')
+						.should('have.length', 71)
 
 					//  update company-artist
 					cy.get("[data-cy='company-artist-input']")
 						.clear()
-						.type('a'.repeat(71))
+						.invoke('val', 'a'.repeat(70))
+						.type('!')
+						.invoke('val')
+						.should('have.length', 71)
 
 					cy.get("[data-cy='save-button-resume']")
 						.click()
@@ -218,7 +236,12 @@ describe('profil-edge', () => {
 				.click({ force: true })
 				.then(() => {
 					// update name and last name
-					cy.get("[data-cy='city-input']").clear().type('a'.repeat(71))
+					cy.get("[data-cy='city-input']")
+						.clear()
+						.invoke('val', 'a'.repeat(70))
+						.type('!')
+						.invoke('val')
+						.should('have.length', 71)
 					cy.get("[data-cy='action-radius-input']").clear().type('1'.repeat(11))
 
 					cy.get("[data-cy='save-button-location']")
@@ -316,7 +339,10 @@ describe('profil-edge', () => {
 									.then(() => {
 										cy.get("[data-cy='skills-input']")
 											.clear()
-											.type('a'.repeat(71))
+											.invoke('val', 'a'.repeat(70))
+											.type('!')
+											.invoke('val')
+											.should('have.length', 71)
 											.type('{enter}')
 
 										cy.get("[data-cy='error-skills']").should(
@@ -653,7 +679,10 @@ describe('profil-edge', () => {
 
 						cy.get("[data-cy='language-input']")
 							.clear()
-							.type('a'.repeat(71))
+							.invoke('val', 'a'.repeat(70))
+							.type('!')
+							.invoke('val')
+							.should('have.length', 71)
 							.type('{enter}')
 
 						cy.get("[data-cy='error-language']").should(
@@ -663,7 +692,10 @@ describe('profil-edge', () => {
 
 						cy.get("[data-cy='language-input']")
 							.clear()
-							.type('a'.repeat(71))
+							.invoke('val', 'a'.repeat(70))
+							.type('!')
+							.invoke('val')
+							.should('have.length', 71)
 							.type(';')
 
 						cy.get("[data-cy='error-language']").should(
@@ -764,34 +796,114 @@ describe('profil-edge', () => {
 
 											cy.get("[data-cy='email-input']")
 												.clear()
-												.type('test@test.test')
+												.invoke('val', 'a'.repeat(200))
+												.type('@a.a')
+												.invoke('val')
+												.should('have.length', 204)
 											cy.get("[data-cy='facebook-input']")
 												.clear()
-												.type('https://facebook.com')
+												.type('https://')
+												.invoke('val', 'a'.repeat(200))
+												.type('.fr')
+												.invoke('val')
+												.should('have.length', 211)
 											cy.get("[data-cy='instagram-input']")
 												.clear()
-												.type('https://instagram.com')
+												.type('https://')
+												.invoke('val', 'a'.repeat(200))
+												.type('.fr')
+												.invoke('val')
+												.should('have.length', 211)
 											cy.get("[data-cy='linkedin-input']")
 												.clear()
-												.type('https://linkedin.com')
+												.type('https://')
+												.invoke('val', 'a'.repeat(200))
+												.type('.fr')
+												.invoke('val')
+												.should('have.length', 211)
 											cy.get("[data-cy='phone-input']")
 												.clear()
-												.type('0606060606')
+												.invoke('val', '06'.repeat(10))
+												.type('0')
+												.invoke('val')
+												.should('have.length', 21)
 											cy.get("[data-cy='website-input']")
 												.clear()
-												.type('https://my-makeup.fr')
+												.type('https://')
+												.invoke('val', 'a'.repeat(200))
+												.type('.fr')
+												.invoke('val')
+												.should('have.length', 211)
 											cy.get("[data-cy='youtube-input']")
-												.clear()
-												.type('https://youtube.com')
+												.type('https://')
+												.invoke('val', 'a'.repeat(200))
+												.type('.fr')
+												.invoke('val')
+												.should('have.length', 211)
+
 											cy.get("[data-cy='save-button-social-medias']")
-												.click({
-													force: true,
-												})
+												.click()
 												.then(() => {
-													// wait for the update to finish
-													cy.wait('@patchMeMakeup')
-														.its('response.statusCode')
-														.should('eq', 200)
+													cy.get("[data-cy='error-email']").should(
+														'contain',
+														"L'email ne doit pas dépasser 200 caractères."
+													)
+													cy.get("[data-cy='error-facebook']").should(
+														'contain',
+														"L'URL ne doit pas dépasser 200 caractères."
+													)
+													cy.get("[data-cy='error-instagram']").should(
+														'contain',
+														"L'URL ne doit pas dépasser 200 caractères."
+													)
+													cy.get("[data-cy='error-linkedin']").should(
+														'contain',
+														"L'URL ne doit pas dépasser 200 caractères."
+													)
+													cy.get("[data-cy='error-phone']").should(
+														'contain',
+														'Le numéro de téléphone ne doit pas dépasser 20 caractères.'
+													)
+													cy.get("[data-cy='error-website']").should(
+														'contain',
+														"L'URL ne doit pas dépasser 200 caractères."
+													)
+													cy.get("[data-cy='error-youtube']").should(
+														'contain',
+														"L'URL ne doit pas dépasser 200 caractères."
+													)
+
+													cy.get("[data-cy='email-input']")
+														.clear()
+														.type('test@test.test')
+													cy.get("[data-cy='facebook-input']")
+														.clear()
+														.type('https://facebook.com')
+													cy.get("[data-cy='instagram-input']")
+														.clear()
+														.type('https://instagram.com')
+													cy.get("[data-cy='linkedin-input']")
+														.clear()
+														.type('https://linkedin.com')
+													cy.get("[data-cy='phone-input']")
+														.clear()
+														.type('0606060606')
+													cy.get("[data-cy='website-input']")
+														.clear()
+														.type('https://my-makeup.fr')
+													cy.get("[data-cy='youtube-input']")
+														.clear()
+														.type('https://youtube.com')
+													cy.get("[data-cy='save-button-social-medias']")
+														.click({
+															force: true,
+														})
+														.then(() => {
+															// wait for the update to finish
+															cy.wait('@patchMeMakeup')
+																.its('response.statusCode')
+																.should('eq', 200)
+														})
 												})
 										})
 								})
@@ -925,7 +1037,10 @@ describe('profil-edge', () => {
 										// ** fill inputs with too longs values **
 										cy.get("[data-cy='name-service-offers-input']")
 											.clear()
-											.type('a'.repeat(71))
+											.invoke('val', 'a'.repeat(70))
+											.type('!')
+											.invoke('val')
+											.should('have.length', 71)
 										cy.get("[data-cy='description-service-offers-input']")
 											.clear()
 											.invoke('val', 'a'.repeat(2000))
@@ -935,11 +1050,18 @@ describe('profil-edge', () => {
 
 										cy.get("[data-cy='price-service-offers-input']")
 											.clear()
-											.type('a'.repeat(71))
+											.invoke('val', 'a'.repeat(70))
+											.type('!')
+											.invoke('val')
+											.should('have.length', 71)
 
 										cy.get("[data-cy='name-service-offers-option-input-0']")
 											.clear()
-											.type('a'.repeat(71))
+											.invoke('val', 'a'.repeat(70))
+											.type('!')
+											.invoke('val')
+											.should('have.length', 71)
+
 										cy.get(
 											"[data-cy='description-service-offers-option-input-0']"
 										)
@@ -950,11 +1072,17 @@ describe('profil-edge', () => {
 											.should('have.length', 2001)
 										cy.get("[data-cy='price-service-offers-option-input-0']")
 											.clear()
-											.type('a'.repeat(71))
+											.invoke('val', 'a'.repeat(70))
+											.type('!')
+											.invoke('val')
+											.should('have.length', 71)
 
 										cy.get("[data-cy='name-service-offers-option-input-1']")
 											.clear()
-											.type('a'.repeat(71))
+											.invoke('val', 'a'.repeat(70))
+											.type('!')
+											.invoke('val')
+											.should('have.length', 71)
 										cy.get(
 											"[data-cy='description-service-offers-option-input-1']"
 										)
@@ -966,11 +1094,17 @@ describe('profil-edge', () => {
 
 										cy.get("[data-cy='price-service-offers-option-input-1']")
 											.clear()
-											.type('a'.repeat(71))
+											.invoke('val', 'a'.repeat(70))
+											.type('!')
+											.invoke('val')
+											.should('have.length', 71)
 
 										cy.get("[data-cy='name-service-offers-option-input-2']")
 											.clear()
-											.type('a'.repeat(71))
+											.invoke('val', 'a'.repeat(70))
+											.type('!')
+											.invoke('val')
+											.should('have.length', 71)
 										cy.get(
 											"[data-cy='description-service-offers-option-input-2']"
 										)
@@ -982,7 +1116,10 @@ describe('profil-edge', () => {
 
 										cy.get("[data-cy='price-service-offers-option-input-2']")
 											.clear()
-											.type('a'.repeat(71))
+											.invoke('val', 'a'.repeat(70))
+											.type('!')
+											.invoke('val')
+											.should('have.length', 71)
 
 										// ** check errors **
 										cy.get("[data-cy='error-name']").should(

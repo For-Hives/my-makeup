@@ -21,8 +21,8 @@ const schema = zod
 			.min(1, 'Le prix du service est requis.')
 			.max(70, 'Le prix du service ne doit pas dépasser 70 caractères.'),
 		description: zod
-			.string({ required_error: 'La description est requise.' })
-			.min(1, 'La description est requise.')
+			.string({ required_error: 'La description du service est requise.' })
+			.min(1, 'La description du service est requise.')
 			.max(2000, 'La description ne doit pas dépasser 2000 caractères.'),
 		services: zod
 			.array(
@@ -38,8 +38,10 @@ const schema = zod
 						.min(1, 'Le prix du service est requis.')
 						.max(70, 'Le prix du service ne doit pas dépasser 70 caractères.'),
 					description: zod
-						.string({ required_error: 'La description est requise.' })
-						.min(1, 'La description est requise.')
+						.string({
+							required_error: 'La description du service est requise.',
+						})
+						.min(1, 'La description du service est requise.')
 						.max(2000, 'La description ne doit pas dépasser 2000 caractères.'),
 				})
 			)
