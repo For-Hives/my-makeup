@@ -31,32 +31,24 @@ jobs:
         uses: docker/setup-qemu-action@v2
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
-      - name: Just Build
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Build and push Docker image
         uses: docker/build-push-action@v4
         with:
-          outputs: type=docker,dest=/tmp/${{ secrets.APP_IMAGE }}.tar
+          context: .
+          push: true
           tags: ${{ secrets.APP_IMAGE }}
           build-args: NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
-      - name: Upload artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: ${{ secrets.APP_IMAGE }}
-          path: /tmp/${{ secrets.APP_IMAGE }}.tar
   cypress:
     runs-on: ubuntu-latest
     needs: docker
     environment: testing
     steps:
       - uses: actions/checkout@v3
-      - name: Download artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: ${{ secrets.APP_IMAGE }}
-          path: /tmp
-      - name: Load image
-        run: |
-              docker load --input /tmp/${{ secrets.APP_IMAGE }}.tar
-              docker image ls -a
       - name: Cypress run
         uses: cypress-io/github-action@v5
         with:
