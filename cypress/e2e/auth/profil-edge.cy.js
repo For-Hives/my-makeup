@@ -48,6 +48,7 @@ describe('profil-edge', () => {
 	describe('Resume - section (min, max, required)', () => {
 		it('tests complet Resume - section', () => {
 			cy.visit('http://localhost:3000/auth/profil').then(() => {
+				cy.wait(1000)
 				// prepare the file to upload
 				cy.fixture('./assets/profil.png', { encoding: null }).as(
 					'profilPicture'
@@ -190,57 +191,56 @@ describe('profil-edge', () => {
 	 */
 	describe('Description - section - (min, max, required)', () => {
 		it('tests complet Description - section', () => {
-			cy.visit('http://localhost:3000/auth/profil')
+			cy.visit('http://localhost:3000/auth/profil').then(() => {
+				cy.wait(1000)
+				cy.get("[data-cy='update-description-button']")
+					.click({ force: true })
+					.then(() => {
+						const description =
+							"Je suis une maquilleuse passionnée avec plus de 10 ans d'expérience..."
 
-			cy.wait(250)
+						cy.get("[data-cy='description-input']")
+							.invoke('val', 'a'.repeat(2000))
+							.type('!')
+							.invoke('val')
+							.should('have.length', 2001)
 
-			cy.get("[data-cy='update-description-button']")
-				.click({ force: true })
-				.then(() => {
-					const description =
-						"Je suis une maquilleuse passionnée avec plus de 10 ans d'expérience..."
+						cy.get("[data-cy='save-button-description']")
+							.click()
+							.then(() => {
+								cy.get("[data-cy='error-description']").should(
+									'contain',
+									'La description ne doit pas dépasser 2000 caractères.'
+								)
 
-					cy.get("[data-cy='description-input']")
-						.invoke('val', 'a'.repeat(2000))
-						.type('!')
-						.invoke('val')
-						.should('have.length', 2001)
+								cy.get("[data-cy='description-input']").clear()
 
-					cy.get("[data-cy='save-button-description']")
-						.click()
-						.then(() => {
-							cy.get("[data-cy='error-description']").should(
-								'contain',
-								'La description ne doit pas dépasser 2000 caractères.'
-							)
+								cy.get("[data-cy='save-button-description']")
+									.click()
+									.then(() => {
+										cy.wait('@patchMeMakeup')
+											.its('response.statusCode')
+											.should('eq', 200)
 
-							cy.get("[data-cy='description-input']").clear()
+										cy.get("[data-cy='update-description-button']")
+											.click({ force: true })
+											.then(() => {
+												cy.get("[data-cy='description-input']")
+													.clear()
+													.type(description)
 
-							cy.get("[data-cy='save-button-description']")
-								.click()
-								.then(() => {
-									cy.wait('@patchMeMakeup')
-										.its('response.statusCode')
-										.should('eq', 200)
-
-									cy.get("[data-cy='update-description-button']")
-										.click({ force: true })
-										.then(() => {
-											cy.get("[data-cy='description-input']")
-												.clear()
-												.type(description)
-
-											cy.get("[data-cy='save-button-description']")
-												.click()
-												.then(() => {
-													cy.wait('@patchMeMakeup')
-														.its('response.statusCode')
-														.should('eq', 200)
-												})
-										})
-								})
-						})
-				})
+												cy.get("[data-cy='save-button-description']")
+													.click()
+													.then(() => {
+														cy.wait('@patchMeMakeup')
+															.its('response.statusCode')
+															.should('eq', 200)
+													})
+											})
+									})
+							})
+					})
+			})
 		})
 	})
 
@@ -255,68 +255,69 @@ describe('profil-edge', () => {
 	 */
 	describe('Location - section - (min, max, required)', () => {
 		it('tests complet Location - section', () => {
-			cy.visit('http://localhost:3000/auth/profil')
+			cy.visit('http://localhost:3000/auth/profil').then(() => {
+				cy.wait(1000)
+				cy.get("[data-cy='update-location-button']")
+					.click({ force: true })
+					.then(() => {
+						// update name and last name
+						cy.get("[data-cy='city-input']")
+							.clear()
+							.invoke('val', 'a'.repeat(70))
+							.type('!')
+							.invoke('val')
+							.should('have.length', 71)
+						cy.get("[data-cy='action-radius-input']")
+							.clear()
+							.type('1'.repeat(11))
 
-			cy.wait(250)
+						cy.get("[data-cy='save-button-location']")
+							.click()
+							.then(() => {
+								cy.get("[data-cy='error-city']").should(
+									'contain',
+									'La localisation ne doit pas dépasser 70 caractères.'
+								)
+								cy.get("[data-cy='error-action-radius']").should(
+									'contain',
+									"Le rayon d'action ne doit pas dépasser 10 caractères."
+								)
 
-			cy.get("[data-cy='update-location-button']")
-				.click({ force: true })
-				.then(() => {
-					// update name and last name
-					cy.get("[data-cy='city-input']")
-						.clear()
-						.invoke('val', 'a'.repeat(70))
-						.type('!')
-						.invoke('val')
-						.should('have.length', 71)
-					cy.get("[data-cy='action-radius-input']").clear().type('1'.repeat(11))
+								// update name and last name
+								cy.get("[data-cy='city-input']").clear()
+								cy.get("[data-cy='action-radius-input']").clear()
 
-					cy.get("[data-cy='save-button-location']")
-						.click()
-						.then(() => {
-							cy.get("[data-cy='error-city']").should(
-								'contain',
-								'La localisation ne doit pas dépasser 70 caractères.'
-							)
-							cy.get("[data-cy='error-action-radius']").should(
-								'contain',
-								"Le rayon d'action ne doit pas dépasser 10 caractères."
-							)
+								cy.get("[data-cy='save-button-location']")
+									.click()
+									.then(() => {
+										// wait for the update to finish
+										cy.wait('@patchMeMakeup')
+											.its('response.statusCode')
+											.should('eq', 200)
 
-							// update name and last name
-							cy.get("[data-cy='city-input']").clear()
-							cy.get("[data-cy='action-radius-input']").clear()
+										// 	open the modal
+										cy.get("[data-cy='update-location-button']")
+											.click({ force: true })
+											.then(() => {
+												// update name and last name
+												cy.get("[data-cy='city-input']").clear().type('Nantes')
+												cy.get("[data-cy='action-radius-input']")
+													.clear()
+													.type('5')
 
-							cy.get("[data-cy='save-button-location']")
-								.click()
-								.then(() => {
-									// wait for the update to finish
-									cy.wait('@patchMeMakeup')
-										.its('response.statusCode')
-										.should('eq', 200)
-
-									// 	open the modal
-									cy.get("[data-cy='update-location-button']")
-										.click({ force: true })
-										.then(() => {
-											// update name and last name
-											cy.get("[data-cy='city-input']").clear().type('Nantes')
-											cy.get("[data-cy='action-radius-input']")
-												.clear()
-												.type('5')
-
-											cy.get("[data-cy='save-button-location']")
-												.click()
-												.then(() => {
-													// wait for the update to finish
-													cy.wait('@patchMeMakeup')
-														.its('response.statusCode')
-														.should('eq', 200)
-												})
-										})
-								})
-						})
-				})
+												cy.get("[data-cy='save-button-location']")
+													.click()
+													.then(() => {
+														// wait for the update to finish
+														cy.wait('@patchMeMakeup')
+															.its('response.statusCode')
+															.should('eq', 200)
+													})
+											})
+									})
+							})
+					})
+			})
 		})
 	})
 
@@ -327,10 +328,10 @@ describe('profil-edge', () => {
 	 * check if the error is displayed when the user try to set a too long skill
 	 * check if the update is ok
 	 */
-	describe.only('Skills - section - (min, max, required)', () => {
+	describe('Skills - section - (min, max, required)', () => {
 		it('tests complet Skills - section', () => {
 			cy.visit('http://localhost:3000/auth/profil').then(() => {
-				cy.wait(250)
+				cy.wait(1000)
 				// open the modal
 				cy.get("[data-cy='update-skills-button']")
 					.click({ force: true })
