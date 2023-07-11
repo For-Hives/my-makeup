@@ -16,7 +16,7 @@ describe('profil', () => {
 		cy.wait('@getCredentials').its('response.statusCode').should('eq', 200)
 
 		// Save cookies after login
-		cy.getCookies().then(cookie => {
+		cy.getAllCookies().then(cookie => {
 			cookies = cookie
 		})
 	})

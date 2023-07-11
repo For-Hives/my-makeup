@@ -1,9 +1,8 @@
+let cookies = null
+
 describe('profil-edge', () => {
 	before(() => {
 		cy.intercept('POST', '/api/auth/callback/credentials?').as('getCredentials')
-		cy.intercept('PATCH', 'https://api.my-makeup.fr/api/me-makeup').as(
-			'patchMeMakeup'
-		)
 
 		cy.visit('http://localhost:3000/auth/signin')
 		cy.get("[data-cy='email-input']").click()
@@ -14,12 +13,16 @@ describe('profil-edge', () => {
 		cy.wait('@getCredentials').its('response.statusCode').should('eq', 200)
 
 		// Save cookies after login
-		cy.getCookies().then(cookie => {
+		cy.getAllCookies().then(cookie => {
 			cookies = cookie
 		})
 	})
 
 	beforeEach(() => {
+		cy.intercept('PATCH', 'https://api.my-makeup.fr/api/me-makeup').as(
+			'patchMeMakeup'
+		)
+
 		// If cookies exist, set them before each test
 		if (cookies) {
 			cookies.forEach(cookie => {
@@ -44,131 +47,135 @@ describe('profil-edge', () => {
 	// todo max upload size : 5Mo
 	describe('Resume - section (min, max, required)', () => {
 		it('tests complet Resume - section', () => {
-			cy.visit('http://localhost:3000/auth/profil')
+			cy.visit('http://localhost:3000/auth/profil').then(() => {
+				// prepare the file to upload
+				cy.fixture('./assets/profil.png', { encoding: null }).as(
+					'profilPicture'
+				)
 
-			// prepare the file to upload
-			cy.fixture('./assets/profil.png', { encoding: null }).as('profilPicture')
+				// prepare to intercept the request
+				cy.intercept('POST', 'https://api.my-makeup.fr/api/upload').as('upload')
 
-			// prepare to intercept the request
-			cy.intercept('POST', 'https://api.my-makeup.fr/api/upload').as('upload')
-
-			cy.wait(250)
-
-			// 	open the modal
-			cy.get("[data-cy='update-resume-button']")
-				.click({ force: true })
-				.then(() => {
-					//  update profil picture
-					cy.get("[data-cy='file-main-upload']").selectFile('@profilPicture', {
-						force: true,
-					})
-
-					// part to clean the inputs
-					//  update name and last name
-					cy.get("[data-cy='first-name-input']").clear()
-					cy.get("[data-cy='last-name-input']").clear()
-
-					//  update speciality
-					cy.get("[data-cy='speciality-input']").clear()
-
-					//  update company-artist
-					cy.get("[data-cy='company-artist-input']").clear()
-
-					cy.get("[data-cy='save-button-resume']")
-						.click()
-						.then(() => {
-							cy.get("[data-cy='error-first-name']").should(
-								'contain',
-								'Le prénom est requis'
-							)
-							cy.get("[data-cy='error-last-name']").should(
-								'contain',
-								'Le nom est requis'
-							)
-						})
-
-					cy.wait(500)
-
-					// check if the max is ok too
-					cy.get("[data-cy='first-name-input']")
-						.clear()
-						.invoke('val', 'a'.repeat(70))
-						.type('!')
-						.invoke('val')
-						.should('have.length', 71)
-					cy.get("[data-cy='last-name-input']")
-						.clear()
-						.invoke('val', 'a'.repeat(70))
-						.type('!')
-						.invoke('val')
-						.should('have.length', 71)
-
-					//  update speciality
-					cy.get("[data-cy='speciality-input']")
-						.clear()
-						.invoke('val', 'a'.repeat(70))
-						.type('!')
-						.invoke('val')
-						.should('have.length', 71)
-
-					//  update company-artist
-					cy.get("[data-cy='company-artist-input']")
-						.clear()
-						.invoke('val', 'a'.repeat(70))
-						.type('!')
-						.invoke('val')
-						.should('have.length', 71)
-
-					cy.get("[data-cy='save-button-resume']")
-						.click()
-						.then(() => {
-							cy.get("[data-cy='error-first-name']").should(
-								'contain',
-								'Le prénom ne doit pas dépasser 70 caractères.'
-							)
-							cy.get("[data-cy='error-last-name']").should(
-								'contain',
-								'Le nom ne doit pas dépasser 70 caractères.'
-							)
-							cy.get("[data-cy='error-speciality']").should(
-								'contain',
-								'La spécialité ne doit pas dépasser 70 caractères.'
-							)
-							cy.get("[data-cy='error-company-artist-name']").should(
-								'contain',
-								"Le nom de l'entreprise ne doit pas dépasser 70 caractères."
-							)
-						})
-
-					// part to set the user
-					//  update name and last name
-					cy.get("[data-cy='first-name-input']").clear().type('Utilisateur')
-					cy.get("[data-cy='last-name-input']").clear().type('DE TEST')
-
-					//  update speciality
-					cy.get("[data-cy='speciality-input']")
-						.clear()
-						.type(
-							'Maquilleur professionnel et coiffeur professionnel pour le cinéma'
+				cy.wait(250)
+				// 	open the modal
+				cy.get("[data-cy='update-resume-button']")
+					.click({ force: true })
+					.then(() => {
+						//  update profil picture
+						cy.get("[data-cy='file-main-upload']").selectFile(
+							'@profilPicture',
+							{
+								force: true,
+							}
 						)
 
-					//  update company-artist
-					cy.get("[data-cy='company-artist-input']")
-						.clear()
-						.type('My Makeup Artist')
+						// part to clean the inputs
+						//  update name and last name
+						cy.get("[data-cy='first-name-input']").clear()
+						cy.get("[data-cy='last-name-input']").clear()
 
-					// switch availability to true
-					// cy.get('[data-cy=\'available-input\']').click();   // todo : check the aivailability switch
+						//  update speciality
+						cy.get("[data-cy='speciality-input']").clear()
 
-					cy.get("[data-cy='save-button-resume']")
-						.click()
-						.then(() => {
-							// wait for the update to finish
-							cy.wait('@patchMeMakeup')
-								.its('response.statusCode')
-								.should('eq', 200)
-						})
-				})
+						//  update company-artist
+						cy.get("[data-cy='company-artist-input']").clear()
+
+						cy.get("[data-cy='save-button-resume']")
+							.click()
+							.then(() => {
+								cy.get("[data-cy='error-first-name']").should(
+									'contain',
+									'Le prénom est requis'
+								)
+								cy.get("[data-cy='error-last-name']").should(
+									'contain',
+									'Le nom est requis'
+								)
+							})
+
+						cy.wait(500)
+
+						// check if the max is ok too
+						cy.get("[data-cy='first-name-input']")
+							.clear()
+							.invoke('val', 'a'.repeat(70))
+							.type('!')
+							.invoke('val')
+							.should('have.length', 71)
+						cy.get("[data-cy='last-name-input']")
+							.clear()
+							.invoke('val', 'a'.repeat(70))
+							.type('!')
+							.invoke('val')
+							.should('have.length', 71)
+
+						//  update speciality
+						cy.get("[data-cy='speciality-input']")
+							.clear()
+							.invoke('val', 'a'.repeat(70))
+							.type('!')
+							.invoke('val')
+							.should('have.length', 71)
+
+						//  update company-artist
+						cy.get("[data-cy='company-artist-input']")
+							.clear()
+							.invoke('val', 'a'.repeat(70))
+							.type('!')
+							.invoke('val')
+							.should('have.length', 71)
+
+						cy.get("[data-cy='save-button-resume']")
+							.click()
+							.then(() => {
+								cy.get("[data-cy='error-first-name']").should(
+									'contain',
+									'Le prénom ne doit pas dépasser 70 caractères.'
+								)
+								cy.get("[data-cy='error-last-name']").should(
+									'contain',
+									'Le nom ne doit pas dépasser 70 caractères.'
+								)
+								cy.get("[data-cy='error-speciality']").should(
+									'contain',
+									'La spécialité ne doit pas dépasser 70 caractères.'
+								)
+								cy.get("[data-cy='error-company-artist-name']").should(
+									'contain',
+									"Le nom de l'entreprise ne doit pas dépasser 70 caractères."
+								)
+							})
+
+						// part to set the user
+						//  update name and last name
+						cy.get("[data-cy='first-name-input']").clear().type('Utilisateur')
+						cy.get("[data-cy='last-name-input']").clear().type('DE TEST')
+
+						//  update speciality
+						cy.get("[data-cy='speciality-input']")
+							.clear()
+							.type(
+								'Maquilleur professionnel et coiffeur professionnel pour le cinéma'
+							)
+
+						//  update company-artist
+						cy.get("[data-cy='company-artist-input']")
+							.clear()
+							.type('My Makeup Artist')
+
+						// switch availability to true
+						// cy.get('[data-cy=\'available-input\']').click();   // todo : check the aivailability switch
+
+						cy.get("[data-cy='save-button-resume']")
+							.click()
+							.then(() => {
+								// wait for the update to finish
+								cy.wait('@patchMeMakeup')
+									.its('response.statusCode')
+									.should('eq', 200)
+							})
+					})
+			})
 		})
 	})
 
@@ -320,76 +327,78 @@ describe('profil-edge', () => {
 	 * check if the error is displayed when the user try to set a too long skill
 	 * check if the update is ok
 	 */
-	describe('Skills - section - (min, max, required)', () => {
+	describe.only('Skills - section - (min, max, required)', () => {
 		it('tests complet Skills - section', () => {
-			cy.visit('http://localhost:3000/auth/profil')
+			cy.visit('http://localhost:3000/auth/profil').then(() => {
+				cy.wait(250)
+				// open the modal
+				cy.get("[data-cy='update-skills-button']")
+					.click({ force: true })
+					.then(() => {
+						cy.get('body').then($body => {
+							if ($body.find("[data-cy='skill-selected']").length > 0) {
+								cy.get("[data-cy='skill-selected']").each(
+									($el, index, $list) => {
+										cy.wrap($el).click()
+									}
+								)
+							}
 
-			cy.wait(250)
+							cy.get("[data-cy='skills-input']").clear().type('{enter}')
 
-			// open the modal
-			cy.get("[data-cy='update-skills-button']")
-				.click({ force: true })
-				.then(() => {
-					cy.get('body').then($body => {
-						if ($body.find("[data-cy='skill-selected']").length > 0) {
-							cy.get("[data-cy='skill-selected']").each(($el, index, $list) => {
-								cy.wrap($el).click()
-							})
-						}
+							cy.get("[data-cy='error-skills']").should(
+								'contain',
+								'Une compétence est requise.'
+							)
 
-						cy.get("[data-cy='skills-input']").clear().type('{enter}')
+							cy.get("[data-cy='skills-input']").clear().type(' ;')
 
-						cy.get("[data-cy='error-skills']").should(
-							'contain',
-							'Une compétence est requise.'
-						)
+							cy.get("[data-cy='error-skills']").should(
+								'contain',
+								'Une compétence est requise.'
+							)
 
-						cy.get("[data-cy='skills-input']").clear().type(' ;')
+							cy.get("[data-cy='save-button-skills']")
+								.click()
+								.then(() => {
+									cy.get("[data-cy='update-skills-button']")
+										.click({ force: true })
+										.then(() => {
+											cy.get("[data-cy='skills-input']")
+												.clear()
+												.invoke('val', 'a'.repeat(70))
+												.type('!')
+												.invoke('val')
+												.should('have.length', 71)
 
-						cy.get("[data-cy='error-skills']").should(
-							'contain',
-							'Une compétence est requise.'
-						)
+											cy.get("[data-cy='skills-input']").type('{enter}')
 
-						cy.get("[data-cy='save-button-skills']")
-							.click()
-							.then(() => {
-								cy.get("[data-cy='update-skills-button']")
-									.click({ force: true })
-									.then(() => {
-										cy.get("[data-cy='skills-input']")
-											.clear()
-											.invoke('val', 'a'.repeat(70))
-											.type('!')
-											.invoke('val')
-											.should('have.length', 71)
-											.type('{enter}')
+											cy.get("[data-cy='error-skills']").should(
+												'contain',
+												'Les compétences ne doivent pas dépasser 70 caractères.'
+											)
 
-										cy.get("[data-cy='error-skills']").should(
-											'contain',
-											'Les compétences ne doivent pas dépasser 70 caractères.'
-										)
+											cy.get("[data-cy='save-button-skills']")
+												.click()
+												.then(() => {
+													cy.get("[data-cy='skills-input']")
+														.clear()
+														.type('pieds')
+														.type('{enter}')
 
-										cy.get("[data-cy='save-button-skills']")
-											.click()
-											.then(() => {
-												cy.get("[data-cy='skills-input']")
-													.clear()
-													.type('pieds')
-													.type('{enter}')
-
-												cy.get("[data-cy='save-button-skills']")
-													.click()
-													.then(() => {
-														cy.wait('@patchMeMakeup')
-															.its('response.statusCode')
-															.should('eq', 200)
-													})
-											})
-									})
-							})
+													cy.get("[data-cy='save-button-skills']")
+														.click()
+														.then(() => {
+															cy.wait('@patchMeMakeup')
+																.its('response.statusCode')
+																.should('eq', 200)
+														})
+												})
+										})
+								})
+						})
 					})
-				})
+			})
 		})
 	})
 
