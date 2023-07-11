@@ -882,13 +882,6 @@ describe('profil-edge', () => {
 										cy.get('[data-cy=\'delete-button-portefolio\']').first().click();
 										cy.wait(100);
 									}
-
-									cy.get('[data-cy=\'save-button-portefolio\']')
-										.click({ force: true })
-										.then(() => {
-											// wait for the update to finish
-											cy.wait('@patchMeMakeup').its('response.statusCode').should('eq', 200);
-										});
 								});
 							}
 						});
@@ -1006,30 +999,44 @@ describe('profil-edge', () => {
 																										});
 																										cy.wait(1001);
 
-																										cy.get('[data-cy=\'update-portefolio-button]\'')
-																											.click({ force: true })
+																										cy.get('[data-cy=\'save-button-portefolio\']')
+																											.click({
+																												force: true,
+																											})
 																											.then(() => {
-																												cy.get('body').then($body => {
-																													if ($body.find('[data-cy=\'delete-button-portefolio\']').length > 0) {
-																														cy.get('[data-cy=\'delete-button-portefolio\']').then($elems => {
-																															const deleteButtons = $elems.length;
+																												// wait for the update to finish
+																												cy.wait('@patchMeMakeup')
+																													.its('response.statusCode')
+																													.should('eq', 200);
 
-																															for (let i = 0; i < deleteButtons; i++) {
-																																cy.get('[data-cy=\'delete-button-portefolio\']').first().click();
-																																cy.wait(100);
+																												cy.wait(1001);
+
+																												cy.get('[data-cy=\'update-portefolio-button\']')
+																													.click({ force: true })
+																													.then(() => {
+																														cy.get('body').then($body => {
+																															if ($body.find('[data-cy=\'delete-button-portefolio\']').length > 0) {
+																																cy.get('[data-cy=\'delete-button-portefolio\']').then($elems => {
+																																	const deleteButtons = $elems.length;
+
+																																	for (let i = 0; i < deleteButtons; i++) {
+																																		cy.get('[data-cy=\'delete-button-portefolio\']').first().click();
+																																		cy.wait(100);
+																																	}
+																																});
 																															}
-
 																															cy.get('[data-cy=\'save-button-portefolio\']')
 																																.click({
 																																	force: true,
 																																})
 																																.then(() => {
 																																	// wait for the update to finish
-																																	cy.wait('@patchMeMakeup').its('response.statusCode').should('eq', 200);
+																																	cy.wait('@patchMeMakeup')
+																																		.its('response.statusCode')
+																																		.should('eq', 200);
 																																});
 																														});
-																													}
-																												});
+																													});
 																											});
 																									});
 																							});
