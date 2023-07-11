@@ -332,6 +332,7 @@ export default function ModalUpdatePortfolioProfil(props) {
 																		className={'relative !h-[500px] !w-auto'}
 																	>
 																		<button
+																			data-cy="delete-button-portefolio"
 																			className={
 																				'absolute left-0 top-0 z-40 m-4 flex h-8 w-8 items-center justify-center rounded-full bg-red-50 shadow md:left-auto md:right-0'
 																			}
