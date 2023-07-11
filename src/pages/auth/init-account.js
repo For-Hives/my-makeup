@@ -100,6 +100,7 @@ function InitAccount() {
 											{
 												type: 'error',
 												icon: '⛔',
+												toastId: 'toast-alert',
 											}
 										)
 									})

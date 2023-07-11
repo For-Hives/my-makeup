@@ -19,7 +19,7 @@ const schema = zod
 			.max(70, "Le nom de l'école ne doit pas dépasser 70 caractères."),
 		date_graduation: zod
 			.string({
-				required_error: "La date d'obtention du diplôme est requise",
+				required_error: "La date d'obtention du diplôme est requise.",
 			})
 			.min(1, "La date d'obtention du diplôme est requise."),
 		course_description: zod
@@ -303,7 +303,10 @@ export default function ModalUpdateCoursesProfil(props) {
 																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																/>
 																{errors.diploma && (
-																	<p className={'mt-2 text-xs text-red-500/80'}>
+																	<p
+																		data-cy={'error-diploma'}
+																		className={'mt-2 text-xs text-red-500/80'}
+																	>
 																		{errors.diploma.message}
 																	</p>
 																)}
@@ -328,7 +331,10 @@ export default function ModalUpdateCoursesProfil(props) {
 																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																/>
 																{errors.school && (
-																	<p className={'mt-2 text-xs text-red-500/80'}>
+																	<p
+																		data-cy={'error-school'}
+																		className={'mt-2 text-xs text-red-500/80'}
+																	>
 																		{errors.school.message}
 																	</p>
 																)}
@@ -353,7 +359,10 @@ export default function ModalUpdateCoursesProfil(props) {
 																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																/>
 																{errors.date_graduation && (
-																	<p className={'mt-2 text-xs text-red-500/80'}>
+																	<p
+																		data-cy={'error-date-graduation'}
+																		className={'mt-2 text-xs text-red-500/80'}
+																	>
 																		{errors.date_graduation.message}
 																	</p>
 																)}
@@ -377,7 +386,10 @@ export default function ModalUpdateCoursesProfil(props) {
 																	className="block min-h-[200px] w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																/>
 																{errors.course_description && (
-																	<p className={'mt-2 text-xs text-red-500/80'}>
+																	<p
+																		data-cy={'error-course-description'}
+																		className={'mt-2 text-xs text-red-500/80'}
+																	>
 																		{errors.course_description.message}
 																	</p>
 																)}
@@ -423,6 +435,7 @@ export default function ModalUpdateCoursesProfil(props) {
 																}
 															>
 																<button
+																	data-cy={`course-edit-button-${index}`}
 																	className={'flex items-center justify-center'}
 																	onClick={() => handleEditCourse(course.id)}
 																>

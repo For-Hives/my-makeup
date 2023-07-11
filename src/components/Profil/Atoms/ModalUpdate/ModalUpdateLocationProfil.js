@@ -18,6 +18,7 @@ const schema = zod
 				required_error: "Le rayon d'action est requis.",
 			})
 			.min(1, "Le rayon d'action est requis.")
+			.max(10, "Le rayon d'action ne doit pas dépasser 10 caractères.")
 			.or(zod.literal('')),
 	})
 	.required({ city: true, action_radius: true })
@@ -172,7 +173,10 @@ export default function ModalUpdateLocationProfil(props) {
 																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 															/>
 															{errors.city && (
-																<p className={'mt-2 text-xs text-red-500/80'}>
+																<p
+																	data-cy={'error-city'}
+																	className={'mt-2 text-xs text-red-500/80'}
+																>
 																	{errors.city.message}
 																</p>
 															)}
@@ -197,7 +201,10 @@ export default function ModalUpdateLocationProfil(props) {
 																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 															/>
 															{errors.action_radius && (
-																<p className={'mt-2 text-xs text-red-500/80'}>
+																<p
+																	data-cy={'error-action-radius'}
+																	className={'mt-2 text-xs text-red-500/80'}
+																>
 																	{errors.action_radius.message}
 																</p>
 															)}

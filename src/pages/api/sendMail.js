@@ -30,6 +30,7 @@ export default function handler(req, res) {
 				toast('Une erreur est survenue, veuillez réessayer plus tard', {
 					type: 'error',
 					icon: '⛔',
+					toastId: 'toast-alert',
 				})
 				res.status(500).json({ success: false })
 			})

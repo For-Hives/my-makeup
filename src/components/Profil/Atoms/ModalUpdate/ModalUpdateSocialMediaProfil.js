@@ -9,43 +9,43 @@ import { patchMeMakeup } from '@/services/PatchMeMakeup'
 const schema = zod.object({
 	youtube: zod
 		.string()
-		.url({ message: 'Veuillez entrer une URL valide (https://...)' })
+		.url({ message: 'Veuillez entrer une URL valide (https://...).' })
 		.max(200, "L'URL ne doit pas dépasser 200 caractères.")
 		.optional()
 		.or(zod.literal('')),
 	facebook: zod
 		.string()
-		.url({ message: 'Veuillez entrer une URL valide (https://...)' })
+		.url({ message: 'Veuillez entrer une URL valide (https://...).' })
 		.max(200, "L'URL ne doit pas dépasser 200 caractères.")
 		.optional()
 		.or(zod.literal('')),
 	instagram: zod
 		.string()
-		.url({ message: 'Veuillez entrer une URL valide (https://...)' })
+		.url({ message: 'Veuillez entrer une URL valide (https://...).' })
 		.max(200, "L'URL ne doit pas dépasser 200 caractères.")
 		.optional()
 		.or(zod.literal('')),
 	website: zod
 		.string()
-		.url({ message: 'Veuillez entrer une URL valide (https://...)' })
+		.url({ message: 'Veuillez entrer une URL valide (https://...).' })
 		.max(200, "L'URL ne doit pas dépasser 200 caractères.")
 		.optional()
 		.or(zod.literal('')),
 	linkedin: zod
 		.string()
-		.url({ message: 'Veuillez entrer une URL valide (https://...)' })
+		.url({ message: 'Veuillez entrer une URL valide (https://...).' })
 		.max(200, "L'URL ne doit pas dépasser 200 caractères.")
 		.optional()
 		.or(zod.literal('')),
 	email: zod
 		.string()
-		.email({ message: 'Veuillez entrer un email valide' })
-		.max(200, "L'URL ne doit pas dépasser 200 caractères.")
+		.email({ message: 'Veuillez entrer un email valide.' })
+		.max(200, "L'email ne doit pas dépasser 200 caractères.")
 		.optional()
 		.or(zod.literal('')),
 	phone: zod
 		.string()
-		.min(1, 'Le numéro de téléphone est requis.')
+		.min(10, 'Le numéro de téléphone est requis.')
 		.max(20, 'Le numéro de téléphone ne doit pas dépasser 20 caractères.')
 		.optional()
 		.or(zod.literal('')),
@@ -239,7 +239,10 @@ export default function ModalUpdateSocialMediaProfil(props) {
 																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 															/>
 															{errors.email && (
-																<p className={'mt-2 text-xs text-red-500/80'}>
+																<p
+																	data-cy={'error-email'}
+																	className={'mt-2 text-xs text-red-500/80'}
+																>
 																	{errors.email.message}
 																</p>
 															)}
@@ -266,7 +269,10 @@ export default function ModalUpdateSocialMediaProfil(props) {
 																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 															/>
 															{errors.phone && (
-																<p className={'mt-2 text-xs text-red-500/80'}>
+																<p
+																	data-cy={'error-phone'}
+																	className={'mt-2 text-xs text-red-500/80'}
+																>
 																	{errors.phone.message}
 																</p>
 															)}
@@ -293,7 +299,10 @@ export default function ModalUpdateSocialMediaProfil(props) {
 																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 															/>
 															{errors.youtube && (
-																<p className={'mt-2 text-xs text-red-500/80'}>
+																<p
+																	data-cy={'error-youtube'}
+																	className={'mt-2 text-xs text-red-500/80'}
+																>
 																	{errors.youtube.message}
 																</p>
 															)}
@@ -320,7 +329,10 @@ export default function ModalUpdateSocialMediaProfil(props) {
 																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 															/>
 															{errors.facebook && (
-																<p className={'mt-2 text-xs text-red-500/80'}>
+																<p
+																	data-cy={'error-facebook'}
+																	className={'mt-2 text-xs text-red-500/80'}
+																>
 																	{errors.facebook.message}
 																</p>
 															)}
@@ -347,7 +359,10 @@ export default function ModalUpdateSocialMediaProfil(props) {
 																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 															/>
 															{errors.instagram && (
-																<p className={'mt-2 text-xs text-red-500/80'}>
+																<p
+																	data-cy={'error-instagram'}
+																	className={'mt-2 text-xs text-red-500/80'}
+																>
 																	{errors.instagram.message}
 																</p>
 															)}
@@ -374,7 +389,10 @@ export default function ModalUpdateSocialMediaProfil(props) {
 																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 															/>
 															{errors.website && (
-																<p className={'mt-2 text-xs text-red-500/80'}>
+																<p
+																	data-cy={'error-website'}
+																	className={'mt-2 text-xs text-red-500/80'}
+																>
 																	{errors.website.message}
 																</p>
 															)}
@@ -401,7 +419,10 @@ export default function ModalUpdateSocialMediaProfil(props) {
 																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 															/>
 															{errors.linkedin && (
-																<p className={'mt-2 text-xs text-red-500/80'}>
+																<p
+																	data-cy={'error-linkedin'}
+																	className={'mt-2 text-xs text-red-500/80'}
+																>
 																	{errors.linkedin.message}
 																</p>
 															)}

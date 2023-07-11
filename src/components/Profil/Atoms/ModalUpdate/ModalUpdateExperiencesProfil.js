@@ -12,14 +12,17 @@ const schema = zod
 			.string({
 				required_error: "Le nom de l'entreprise est requise.",
 			})
+			.min(1, "Le nom de l'entreprise est requis.")
 			.max(70, "Le nom de l'entreprise ne doit pas dépasser 70 caractères."),
 		job_name: zod
 			.string({
 				required_error: "Le nom de l'expérience est requis.",
 			})
+			.min(1, "Le nom de l'expérience est requis.")
 			.max(70, "Le nom de l'expérience ne doit pas dépasser 70 caractères."),
 		city: zod
 			.string({ required_error: 'La ville est requise.' })
+			.min(1, 'La ville est requise.')
 			.max(70, 'La ville ne doit pas dépasser 70 caractères.'),
 		date_start: zod.string({
 			required_error: "La date de début de l'expérience est requise.",
@@ -27,6 +30,7 @@ const schema = zod
 		date_end: zod.string().optional(),
 		description: zod
 			.string({ required_error: 'La description est requise.' })
+			.min(1, 'La description est requise.')
 			.max(2000, 'La description ne doit pas dépasser 2000 caractères.'),
 	})
 	.required({
@@ -330,7 +334,10 @@ export default function ModalUpdateExperiencesProfil(props) {
 																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																/>
 																{errors.company && (
-																	<p className={'mt-2 text-xs text-red-500/80'}>
+																	<p
+																		data-cy={'error-company'}
+																		className={'mt-2 text-xs text-red-500/80'}
+																	>
 																		{errors.company.message}
 																	</p>
 																)}
@@ -358,7 +365,10 @@ export default function ModalUpdateExperiencesProfil(props) {
 																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																/>
 																{errors.job_name && (
-																	<p className={'mt-2 text-xs text-red-500/80'}>
+																	<p
+																		data-cy={'error-job-name'}
+																		className={'mt-2 text-xs text-red-500/80'}
+																	>
 																		{errors.job_name.message}
 																	</p>
 																)}
@@ -386,7 +396,10 @@ export default function ModalUpdateExperiencesProfil(props) {
 																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																/>
 																{errors.city && (
-																	<p className={'mt-2 text-xs text-red-500/80'}>
+																	<p
+																		data-cy={'error-city'}
+																		className={'mt-2 text-xs text-red-500/80'}
+																	>
 																		{errors.city.message}
 																	</p>
 																)}
@@ -414,7 +427,10 @@ export default function ModalUpdateExperiencesProfil(props) {
 																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																/>
 																{errors.date_start && (
-																	<p className={'mt-2 text-xs text-red-500/80'}>
+																	<p
+																		data-cy={'error-date-start'}
+																		className={'mt-2 text-xs text-red-500/80'}
+																	>
 																		{errors.date_start.message}
 																	</p>
 																)}
@@ -439,7 +455,10 @@ export default function ModalUpdateExperiencesProfil(props) {
 																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																/>
 																{errors.date_end && (
-																	<p className={'mt-2 text-xs text-red-500/80'}>
+																	<p
+																		data-cy={'error-date-end'}
+																		className={'mt-2 text-xs text-red-500/80'}
+																	>
 																		{errors.date_end.message}
 																	</p>
 																)}
@@ -466,7 +485,10 @@ export default function ModalUpdateExperiencesProfil(props) {
 																	className="block min-h-[150px] w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																/>
 																{errors.description && (
-																	<p className={'mt-2 text-xs text-red-500/80'}>
+																	<p
+																		data-cy={'error-description-experience'}
+																		className={'mt-2 text-xs text-red-500/80'}
+																	>
 																		{errors.description.message}
 																	</p>
 																)}
@@ -514,6 +536,7 @@ export default function ModalUpdateExperiencesProfil(props) {
 																}
 															>
 																<button
+																	data-cy={`experience-selected-${index}`}
 																	className={'flex items-center justify-center'}
 																	onClick={() =>
 																		handleEditExperience(experience.id)

@@ -11,18 +11,18 @@ import { OptionsOffers } from '@/components/Profil/Childs/ServiceOffers/OptionsO
 const schema = zod
 	.object({
 		name: zod
-			.string({ required_error: "Le nom de l'entreprise est requise." })
-			.min(1, "Le nom de l'entreprise est requise.")
-			.max(70, "Le nom de l'entreprise ne doit pas dépasser 70 caractères."),
+			.string({ required_error: 'Le nom du service est requis.' })
+			.min(1, 'Le nom du service est requis.')
+			.max(70, 'Le nom du service ne doit pas dépasser 70 caractères.'),
 		price: zod
 			.string({
-				required_error: 'Le prix de la prestation est requise.',
+				required_error: 'Le prix du service est requis.',
 			})
-			.min(1, 'Le prix de la prestation est requise.')
-			.max(70, 'Le prix de la prestation ne doit pas dépasser 70 caractères.'),
+			.min(1, 'Le prix du service est requis.')
+			.max(70, 'Le prix du service ne doit pas dépasser 70 caractères.'),
 		description: zod
-			.string({ required_error: 'La description est requise.' })
-			.min(1, 'La description est requise.')
+			.string({ required_error: 'La description du service est requise.' })
+			.min(1, 'La description du service est requise.')
 			.max(2000, 'La description ne doit pas dépasser 2000 caractères.'),
 		services: zod
 			.array(
@@ -38,8 +38,10 @@ const schema = zod
 						.min(1, 'Le prix du service est requis.')
 						.max(70, 'Le prix du service ne doit pas dépasser 70 caractères.'),
 					description: zod
-						.string({ required_error: 'La description est requise.' })
-						.min(1, 'La description est requise.')
+						.string({
+							required_error: 'La description du service est requise.',
+						})
+						.min(1, 'La description du service est requise.')
 						.max(2000, 'La description ne doit pas dépasser 2000 caractères.'),
 				})
 			)
@@ -103,7 +105,8 @@ export default function ModalUpdateServiceOffersProfil(props) {
 				service_offers.name === userServiceOffersName &&
 				service_offers.price === userServiceOffersPrice &&
 				service_offers.description === userServiceOffersDescription &&
-				service_offers.options === userServiceOffersOptions
+				JSON.stringify(service_offers.options) ===
+					JSON.stringify(userServiceOffersOptions)
 		)
 		// if the service_offers is not already in the service_offers courses, add it
 		if (serviceOffersAlreadyInUserServiceOffers.length === 0) {
@@ -193,7 +196,6 @@ export default function ModalUpdateServiceOffersProfil(props) {
 						}
 					})
 					return {
-						id: serviceOffer.id,
 						name: serviceOffer.name,
 						price: serviceOffer.price,
 						description: serviceOffer.description,
@@ -219,7 +221,6 @@ export default function ModalUpdateServiceOffersProfil(props) {
 					}
 				})
 				return {
-					id: serviceOffer.id,
 					name: serviceOffer.name,
 					price: serviceOffer.price,
 					description: serviceOffer.description,
@@ -227,6 +228,9 @@ export default function ModalUpdateServiceOffersProfil(props) {
 				}
 			})
 		}
+
+		const updatedUser = { ...user }
+		updatedUser.service_offers = userServiceOffersCopy
 
 		// set data
 		const data = {
@@ -336,7 +340,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 			const serviceOffersWithId = user.service_offers.map(
 				(serviceOffer, index) => {
 					return {
-						id: index, // Utiliser la fonction uuid pour générer un id unique
+						id: index,
 						name: serviceOffer.name,
 						price: serviceOffer.price,
 						description: serviceOffer.description,
@@ -440,7 +444,10 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																/>
 																{errors.name && (
-																	<p className={'mt-2 text-xs text-red-500/80'}>
+																	<p
+																		data-cy={'error-name'}
+																		className={'mt-2 text-xs text-red-500/80'}
+																	>
 																		{errors.name.message}
 																	</p>
 																)}
@@ -469,7 +476,10 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																	className="block min-h-[150px] w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																/>
 																{errors.description && (
-																	<p className={'mt-2 text-xs text-red-500/80'}>
+																	<p
+																		data-cy={'error-description'}
+																		className={'mt-2 text-xs text-red-500/80'}
+																	>
 																		{errors.description.message}
 																	</p>
 																)}
@@ -501,7 +511,10 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																/>
 																{errors.price && (
-																	<p className={'mt-2 text-xs text-red-500/80'}>
+																	<p
+																		data-cy={'error-price'}
+																		className={'mt-2 text-xs text-red-500/80'}
+																	>
 																		{errors.price.message}
 																	</p>
 																)}
@@ -566,6 +579,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																			errors.services[index] &&
 																			errors.services[index].name && (
 																				<p
+																					data-cy={`error-name-${index}`}
 																					className={
 																						'mt-2 text-xs text-red-500/80'
 																					}
@@ -621,6 +635,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																			errors.services[index] &&
 																			errors.services[index].description && (
 																				<p
+																					data-cy={`error-description-${index}`}
 																					className={
 																						'mt-2 text-xs text-red-500/80'
 																					}
@@ -683,6 +698,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																			errors.services[index] &&
 																			errors.services[index].price && (
 																				<p
+																					data-cy={`error-price-${index}`}
 																					className={
 																						'mt-2 text-xs text-red-500/80'
 																					}
@@ -774,6 +790,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																			}
 																		>
 																			<button
+																				data-cy={`edit-service-offers-button-${index}`}
 																				className={
 																					'flex items-center justify-center'
 																				}
