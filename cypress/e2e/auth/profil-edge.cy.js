@@ -1,7 +1,6 @@
 describe('profil-edge', () => {
-	beforeEach(() => {
+	before(() => {
 		cy.intercept('POST', '/api/auth/callback/credentials?').as('getCredentials')
-		// post me makeup , reset all the fields
 		cy.intercept('PATCH', 'https://api.my-makeup.fr/api/me-makeup').as(
 			'patchMeMakeup'
 		)
@@ -13,11 +12,32 @@ describe('profil-edge', () => {
 		cy.get("[data-cy='email-signin']").click()
 
 		cy.wait('@getCredentials').its('response.statusCode').should('eq', 200)
+
+		// Save cookies after login
+		cy.getCookies().then(cookie => {
+			cookies = cookie
+		})
 	})
 
-	afterEach(() => {
-		cy.get("[data-cy='button-logout']").click()
+	beforeEach(() => {
+		// If cookies exist, set them before each test
+		if (cookies) {
+			cookies.forEach(cookie => {
+				cy.setCookie(cookie.name, cookie.value, {
+					domain: cookie.domain,
+					expiry: cookie.expiry,
+					httpOnly: cookie.httpOnly,
+					path: cookie.path,
+					secure: cookie.secure,
+					sameSite: cookie.sameSite,
+				})
+			})
+		}
 	})
+
+	// afterEach(() => {
+	// 	cy.get("[data-cy='button-logout']").click()
+	// })
 
 	// 10 tests ( 10 components )
 	// todo : check the availability switch & test the upload picture
