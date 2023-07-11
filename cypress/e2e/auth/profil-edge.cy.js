@@ -67,7 +67,7 @@ describe('profil-edge', () => {
 							force: true,
 						})
 
-						cy.wait(1001)
+						cy.wait(1000)
 
 						cy.get(`[id=toast-alert]`).should('contain', 'Le fichier est trop grand, veuillez télécharger un fichier de moins de 1.5 Mo.')
 
@@ -927,18 +927,18 @@ describe('profil-edge', () => {
 							}
 						})
 
-						cy.wait(1001)
+						cy.wait(1000)
 
 						cy.get("[data-cy='file-upload-portefolio']").selectFile('@bigImage', {
 							force: true,
 						})
 
-						cy.wait(1001)
+						cy.wait(1000)
 
 						cy.get("[data-cy='add-button-portefolio']")
 							.click({ force: true })
 							.then(() => {
-								cy.wait(1001)
+								cy.wait(1000)
 
 								cy.get(`[id=toast-alert]`).should('contain', 'Le fichier est trop grand, veuillez télécharger un fichier de moins de 1.5 Mo.')
 
@@ -946,7 +946,7 @@ describe('profil-edge', () => {
 									force: true,
 								})
 
-								cy.wait(1001)
+								cy.wait(1000)
 
 								cy.get("[data-cy='add-button-portefolio']")
 									.click({ force: true })
@@ -957,7 +957,7 @@ describe('profil-edge', () => {
 											force: true,
 										})
 
-										cy.wait(1001)
+										cy.wait(1000)
 
 										cy.get("[data-cy='add-button-portefolio']")
 											.click({ force: true })
@@ -967,7 +967,7 @@ describe('profil-edge', () => {
 													force: true,
 												})
 
-												cy.wait(1001)
+												cy.wait(1000)
 
 												cy.get("[data-cy='add-button-portefolio']")
 													.click({ force: true })
@@ -977,7 +977,7 @@ describe('profil-edge', () => {
 															force: true,
 														})
 
-														cy.wait(1001)
+														cy.wait(1000)
 
 														cy.get("[data-cy='add-button-portefolio']")
 															.click({ force: true })
@@ -987,7 +987,7 @@ describe('profil-edge', () => {
 																	force: true,
 																})
 
-																cy.wait(1001)
+																cy.wait(1000)
 
 																cy.get("[data-cy='add-button-portefolio']")
 																	.click({ force: true })
@@ -997,7 +997,7 @@ describe('profil-edge', () => {
 																			force: true,
 																		})
 
-																		cy.wait(1001)
+																		cy.wait(1000)
 
 																		cy.get("[data-cy='add-button-portefolio']")
 																			.click({ force: true })
@@ -1008,7 +1008,7 @@ describe('profil-edge', () => {
 																					force: true,
 																				})
 
-																				cy.wait(1001)
+																				cy.wait(1000)
 
 																				cy.get("[data-cy='add-button-portefolio']")
 																					.click({ force: true })
@@ -1019,7 +1019,7 @@ describe('profil-edge', () => {
 																							force: true,
 																						})
 
-																						cy.wait(1001)
+																						cy.wait(1000)
 
 																						cy.get("[data-cy='add-button-portefolio']")
 																							.click({ force: true })
@@ -1030,7 +1030,7 @@ describe('profil-edge', () => {
 																									force: true,
 																								})
 
-																								cy.wait(1001)
+																								cy.wait(1000)
 
 																								cy.get("[data-cy='add-button-portefolio']")
 																									.click({ force: true })
@@ -1041,7 +1041,7 @@ describe('profil-edge', () => {
 																											force: true,
 																										})
 
-																										cy.wait(1001)
+																										cy.wait(1000)
 
 																										cy.get("[data-cy='add-button-portefolio']")
 																											.click({ force: true })
@@ -1051,16 +1051,16 @@ describe('profil-edge', () => {
 																												cy.get("[data-cy='file-upload-portefolio']").selectFile('@pictureCat11', {
 																													force: true,
 																												})
-																												cy.wait(1001)
+																												cy.wait(1000)
 
 																												cy.get("[data-cy='add-button-portefolio']")
 																													.click({ force: true })
 																													.then(() => {
-																														cy.wait(1001)
+																														cy.wait(1000)
 
 																														cy.get(`[id=toast-alert]`).should('contain', 'La limite du nombre de photos est atteinte.')
 
-																														cy.wait(1001)
+																														cy.wait(1000)
 
 																														cy.get("[data-cy='save-button-portefolio']")
 																															.click({
@@ -1070,7 +1070,7 @@ describe('profil-edge', () => {
 																																// wait for the update to finish
 																																cy.wait('@patchMeMakeup').its('response.statusCode').should('eq', 200)
 
-																																cy.wait(1001)
+																																cy.wait(1000)
 
 																																cy.get("[data-cy='update-portefolio-button']")
 																																	.click({ force: true })
