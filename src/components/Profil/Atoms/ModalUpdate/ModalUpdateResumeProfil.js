@@ -115,6 +115,7 @@ export default function ModalUpdateResumeProfil(props) {
 					toast('Une erreur est survenue, veuillez réessayer plus tard', {
 						type: 'error',
 						icon: '⛔',
+						toastId: 'toast-alert',
 					})
 				)
 		} else {
@@ -165,6 +166,7 @@ export default function ModalUpdateResumeProfil(props) {
 				{
 					type: 'error',
 					icon: '⛔',
+					toastId: 'toast-alert',
 				}
 			)
 			return

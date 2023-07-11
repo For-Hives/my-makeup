@@ -50,7 +50,9 @@ function Contact(props) {
 			// Le mail a été envoyé avec succès
 			// Vous pouvez ici gérer le retour à donner à l'utilisateur
 			// reset()
-			toast('Le message a bien été envoyé !')
+			toast('Le message a bien été envoyé !', {
+				toastId: 'toast-alert',
+			})
 		} else {
 			// Une erreur s'est produite lors de l'envoi du mail
 			// Vous pouvez ici gérer le retour à donner à l'utilisateur

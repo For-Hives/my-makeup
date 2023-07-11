@@ -40,6 +40,7 @@ export default function ModalUpdatePortfolioProfil(props) {
 				toast('La limite du nombre de photos est atteinte.', {
 					type: 'error',
 					icon: '⛔',
+					toastId: 'toast-alert',
 				})
 				return
 			}
@@ -73,6 +74,7 @@ export default function ModalUpdatePortfolioProfil(props) {
 					toast('Une erreur est survenue, veuillez réessayer plus tard', {
 						type: 'error',
 						icon: '⛔',
+						toastId: 'toast-alert',
 					})
 				)
 		} else {
@@ -126,6 +128,7 @@ export default function ModalUpdatePortfolioProfil(props) {
 				{
 					type: 'error',
 					icon: '⛔',
+					toastId: 'toast-alert',
 				}
 			)
 			return

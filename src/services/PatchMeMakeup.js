@@ -25,6 +25,7 @@ export function patchMeMakeup(session, data) {
 			toast('Une erreur est survenue, veuillez réessayer plus tard', {
 				type: 'error',
 				icon: '⛔',
+				toastId: 'toast-alert',
 			})
 		)
 }

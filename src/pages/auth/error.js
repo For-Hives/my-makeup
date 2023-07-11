@@ -19,6 +19,7 @@ function Error() {
 			toast('Une erreur est survenue !', {
 				icon: '⚠️',
 				type: 'error',
+				toastId: 'toast-alert',
 			})
 			setShowed(true)
 			router.push('/auth/signin')

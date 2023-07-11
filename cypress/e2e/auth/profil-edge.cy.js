@@ -844,7 +844,10 @@ describe('profil-edge', () => {
 			// upload image
 			cy.visit('http://localhost:3000/auth/profil').then(() => {
 				cy.wait(1000);
-				// prepare the file to upload
+				// prepare the file to upload (big image)
+				cy.fixture('./assets/big_image.jpg', { encoding: null }).as('bigImage');
+
+				// 001-bathing.webp
 				cy.fixture('./assets/001-bathing.webp', { encoding: null }).as('pictureCat1');
 				// 002-photograph.webp
 				cy.fixture('./assets/002-photograph.webp', { encoding: null }).as('pictureCat2');
@@ -888,166 +891,174 @@ describe('profil-edge', () => {
 
 						cy.wait(1001);
 
-						cy.get('[data-cy=\'file-upload-portefolio\']').selectFile('@pictureCat1', {
+						cy.get('[data-cy=\'file-upload-portefolio\']').selectFile('@bigImage', {
 							force: true,
 						});
 
 						cy.wait(1001);
 
-						cy.get('[data-cy=\'add-button-portefolio\']')
-							.click({ force: true })
-							.then(() => {
-								cy.wait('@upload').its('response.statusCode').should('eq', 200);
-
-								cy.get('[data-cy=\'file-upload-portefolio\']').selectFile('@pictureCat2', {
-									force: true,
-								});
-
-								cy.wait(1001);
-
-								cy.get('[data-cy=\'add-button-portefolio\']')
-									.click({ force: true })
-									.then(() => {
-										cy.wait('@upload').its('response.statusCode').should('eq', 200);
-										cy.get('[data-cy=\'file-upload-portefolio\']').selectFile('@pictureCat3', {
-											force: true,
-										});
-
-										cy.wait(1001);
-
-										cy.get('[data-cy=\'add-button-portefolio\']')
-											.click({ force: true })
-											.then(() => {
-												cy.wait('@upload').its('response.statusCode').should('eq', 200);
-												cy.get('[data-cy=\'file-upload-portefolio\']').selectFile('@pictureCat4', {
-													force: true,
-												});
-
-												cy.wait(1001);
-
-												cy.get('[data-cy=\'add-button-portefolio\']')
-													.click({ force: true })
-													.then(() => {
-														cy.wait('@upload').its('response.statusCode').should('eq', 200);
-														cy.get('[data-cy=\'file-upload-portefolio\']').selectFile('@pictureCat5', {
-															force: true,
-														});
-
-														cy.wait(1001);
-
-														cy.get('[data-cy=\'add-button-portefolio\']')
-															.click({ force: true })
-															.then(() => {
-																cy.wait('@upload').its('response.statusCode').should('eq', 200);
-																cy.get('[data-cy=\'file-upload-portefolio\']').selectFile('@pictureCat6', {
-																	force: true,
-																});
-
-																cy.wait(1001);
-
-																cy.get('[data-cy=\'add-button-portefolio\']')
-																	.click({ force: true })
-																	.then(() => {
-																		cy.wait('@upload').its('response.statusCode').should('eq', 200);
-
-																		cy.get('[data-cy=\'file-upload-portefolio\']').selectFile('@pictureCat7', {
-																			force: true,
-																		});
-
-																		cy.wait(1001);
-
-																		cy.get('[data-cy=\'add-button-portefolio\']')
-																			.click({ force: true })
-																			.then(() => {
-																				cy.wait('@upload').its('response.statusCode').should('eq', 200);
-
-																				cy.get('[data-cy=\'file-upload-portefolio\']').selectFile('@pictureCat8', {
-																					force: true,
-																				});
-
-																				cy.wait(1001);
-
-																				cy.get('[data-cy=\'add-button-portefolio\']')
-																					.click({ force: true })
-																					.then(() => {
-																						cy.wait('@upload').its('response.statusCode').should('eq', 200);
-
-																						cy.get('[data-cy=\'file-upload-portefolio\']').selectFile('@pictureCat9', {
-																							force: true,
-																						});
-
-																						cy.wait(1001);
-
-																						cy.get('[data-cy=\'add-button-portefolio\']')
-																							.click({ force: true })
-																							.then(() => {
-																								cy.wait('@upload').its('response.statusCode').should('eq', 200);
-
-																								cy.get('[data-cy=\'file-upload-portefolio\']').selectFile('@pictureCat10', {
-																									force: true,
-																								});
-
-																								cy.wait(1001);
-
-																								cy.get('[data-cy=\'add-button-portefolio\']')
-																									.click({ force: true })
-																									.then(() => {
-																										cy.wait('@upload').its('response.statusCode').should('eq', 200);
-
-																										cy.get('[data-cy=\'file-upload-portefolio\']').selectFile('@pictureCat11', {
-																											force: true,
-																										});
-																										cy.wait(1001);
-
-																										cy.get('[data-cy=\'save-button-portefolio\']')
-																											.click({
-																												force: true,
-																											})
-																											.then(() => {
-																												// wait for the update to finish
-																												cy.wait('@patchMeMakeup')
-																													.its('response.statusCode')
-																													.should('eq', 200);
-
-																												cy.wait(1001);
-
-																												cy.get('[data-cy=\'update-portefolio-button\']')
-																													.click({ force: true })
-																													.then(() => {
-																														cy.get('body').then($body => {
-																															if ($body.find('[data-cy=\'delete-button-portefolio\']').length > 0) {
-																																cy.get('[data-cy=\'delete-button-portefolio\']').then($elems => {
-																																	const deleteButtons = $elems.length;
-
-																																	for (let i = 0; i < deleteButtons; i++) {
-																																		cy.get('[data-cy=\'delete-button-portefolio\']').first().click();
-																																		cy.wait(100);
-																																	}
-																																});
-																															}
-																															cy.get('[data-cy=\'save-button-portefolio\']')
-																																.click({
-																																	force: true,
-																																})
-																																.then(() => {
-																																	// wait for the update to finish
-																																	cy.wait('@patchMeMakeup')
-																																		.its('response.statusCode')
-																																		.should('eq', 200);
-																																});
-																														});
-																													});
-																											});
-																									});
-																							});
-																					});
-																			});
-																	});
-															});
-													});
-											});
-									});
+						cy.get('[data-cy=\'add-button-portefolio\']').click({ force: true }).then(() => {
+							cy.get('[data-cy=\'file-upload-portefolio\']').selectFile('@pictureCat1', {
+								force: true,
 							});
+
+							cy.wait(1001);
+
+							cy.get('[data-cy=\'add-button-portefolio\']')
+								.click({ force: true })
+								.then(() => {
+									cy.wait('@upload').its('response.statusCode').should('eq', 200);
+
+									cy.get('[data-cy=\'file-upload-portefolio\']').selectFile('@pictureCat2', {
+										force: true,
+									});
+
+									cy.wait(1001);
+
+									cy.get('[data-cy=\'add-button-portefolio\']')
+										.click({ force: true })
+										.then(() => {
+											cy.wait('@upload').its('response.statusCode').should('eq', 200);
+											cy.get('[data-cy=\'file-upload-portefolio\']').selectFile('@pictureCat3', {
+												force: true,
+											});
+
+											cy.wait(1001);
+
+											cy.get('[data-cy=\'add-button-portefolio\']')
+												.click({ force: true })
+												.then(() => {
+													cy.wait('@upload').its('response.statusCode').should('eq', 200);
+													cy.get('[data-cy=\'file-upload-portefolio\']').selectFile('@pictureCat4', {
+														force: true,
+													});
+
+													cy.wait(1001);
+
+													cy.get('[data-cy=\'add-button-portefolio\']')
+														.click({ force: true })
+														.then(() => {
+															cy.wait('@upload').its('response.statusCode').should('eq', 200);
+															cy.get('[data-cy=\'file-upload-portefolio\']').selectFile('@pictureCat5', {
+																force: true,
+															});
+
+															cy.wait(1001);
+
+															cy.get('[data-cy=\'add-button-portefolio\']')
+																.click({ force: true })
+																.then(() => {
+																	cy.wait('@upload').its('response.statusCode').should('eq', 200);
+																	cy.get('[data-cy=\'file-upload-portefolio\']').selectFile('@pictureCat6', {
+																		force: true,
+																	});
+
+																	cy.wait(1001);
+
+																	cy.get('[data-cy=\'add-button-portefolio\']')
+																		.click({ force: true })
+																		.then(() => {
+																			cy.wait('@upload').its('response.statusCode').should('eq', 200);
+
+																			cy.get('[data-cy=\'file-upload-portefolio\']').selectFile('@pictureCat7', {
+																				force: true,
+																			});
+
+																			cy.wait(1001);
+
+																			cy.get('[data-cy=\'add-button-portefolio\']')
+																				.click({ force: true })
+																				.then(() => {
+																					cy.wait('@upload').its('response.statusCode').should('eq', 200);
+
+																					cy.get('[data-cy=\'file-upload-portefolio\']').selectFile('@pictureCat8', {
+																						force: true,
+																					});
+
+																					cy.wait(1001);
+
+																					cy.get('[data-cy=\'add-button-portefolio\']')
+																						.click({ force: true })
+																						.then(() => {
+																							cy.wait('@upload').its('response.statusCode').should('eq', 200);
+
+																							cy.get('[data-cy=\'file-upload-portefolio\']').selectFile('@pictureCat9', {
+																								force: true,
+																							});
+
+																							cy.wait(1001);
+
+																							cy.get('[data-cy=\'add-button-portefolio\']')
+																								.click({ force: true })
+																								.then(() => {
+																									cy.wait('@upload').its('response.statusCode').should('eq', 200);
+
+																									cy.get('[data-cy=\'file-upload-portefolio\']').selectFile('@pictureCat10', {
+																										force: true,
+																									});
+
+																									cy.wait(1001);
+
+																									cy.get('[data-cy=\'add-button-portefolio\']')
+																										.click({ force: true })
+																										.then(() => {
+																											cy.wait('@upload').its('response.statusCode').should('eq', 200);
+
+																											cy.get('[data-cy=\'file-upload-portefolio\']').selectFile('@pictureCat11', {
+																												force: true,
+																											});
+																											cy.wait(1001);
+
+																											cy.get('[data-cy=\'save-button-portefolio\']')
+																												.click({
+																													force: true,
+																												})
+																												.then(() => {
+																													// wait for the update to finish
+																													cy.wait('@patchMeMakeup')
+																														.its('response.statusCode')
+																														.should('eq', 200);
+
+																													cy.wait(1001);
+
+																													cy.get('[data-cy=\'update-portefolio-button\']')
+																														.click({ force: true })
+																														.then(() => {
+																															cy.get('body').then($body => {
+																																if ($body.find('[data-cy=\'delete-button-portefolio\']').length > 0) {
+																																	cy.get('[data-cy=\'delete-button-portefolio\']').then($elems => {
+																																		const deleteButtons = $elems.length;
+
+																																		for (let i = 0; i < deleteButtons; i++) {
+																																			cy.get('[data-cy=\'delete-button-portefolio\']').first().click();
+																																			cy.wait(100);
+																																		}
+																																	});
+																																}
+																																cy.get('[data-cy=\'save-button-portefolio\']')
+																																	.click({
+																																		force: true,
+																																	})
+																																	.then(() => {
+																																		// wait for the update to finish
+																																		cy.wait('@patchMeMakeup')
+																																			.its('response.statusCode')
+																																			.should('eq', 200);
+																																	});
+																															});
+																														});
+																												});
+																										});
+																								});
+																						});
+																				});
+																		});
+																});
+														});
+												});
+										});
+								});
+						});
 					});
 			});
 		});
