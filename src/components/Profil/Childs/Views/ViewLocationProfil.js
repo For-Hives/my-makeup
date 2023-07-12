@@ -33,7 +33,10 @@ function ViewLocationProfil(props) {
 					<h3 className={'text-lg font-semibold text-gray-700'}>
 						Peut travailer chez vous à
 					</h3>
-					<p className={'text-gray-800'}>
+					<p
+						className={'text-gray-800'}
+						data-cy={'location-city-action-radius'}
+					>
 						{user?.city} & {user?.action_radius}km autour
 					</p>
 				</div>

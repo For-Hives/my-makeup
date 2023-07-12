@@ -45,6 +45,7 @@ function InfosProfil(props) {
 								handleUpdateUser={handleUpdateUser}
 							/>
 							<Link
+								data-cy="profil-public-view"
 								href={{ pathname: '/auth/profil', query: { publicView: true } }}
 								className={'flex gap-2 font-semibold text-indigo-900 '}
 							>
@@ -57,13 +58,17 @@ function InfosProfil(props) {
 							</Link>
 						</>
 					) : (
-						<Link
-							href={{ pathname: '/auth/profil' }}
-							className={'flex gap-2 font-semibold text-indigo-900'}
-						>
-							<span className="material-icons-round text-indigo-900">edit</span>
-							<span className={'hover:underline'}>Modifier mon profil</span>
-						</Link>
+						<div className={'flex w-full justify-end'}>
+							<Link
+								href={{ pathname: '/auth/profil' }}
+								className={'flex gap-2 font-semibold text-indigo-900'}
+							>
+								<span className="material-icons-round text-indigo-900">
+									edit
+								</span>
+								<span className={'hover:underline'}>Modifier mon profil</span>
+							</Link>
+						</div>
 					)}
 				</div>
 				<div className={'grid grid-cols-12 gap-5 pt-32'}>
