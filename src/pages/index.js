@@ -8,8 +8,10 @@ import Collaboration from '@/components/Home/Collaboration'
 import React from 'react'
 import Project from '@/components/Home/Project'
 import CTA from '@/components/Global/CTA'
+import MOTD from '@/services/MOTD'
 
 export default function Home({ talents }) {
+	MOTD()
 	return (
 		<>
 			<Head>
