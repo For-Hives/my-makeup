@@ -27,6 +27,7 @@ export function OptionsOffers(props) {
 												'flex w-full items-center justify-between border-t border-gray-300 pt-6 ' +
 												(open ? 'text-indigo-900' : 'pb-4 text-gray-700')
 											}
+											data-cy={`service-offer-name-${index}`}
 										>
 											{option.name}
 											<ChevronRightIcon
@@ -37,7 +38,10 @@ export function OptionsOffers(props) {
 										</Disclosure.Button>
 										<Disclosure.Panel>
 											<div className={'pb-4'}>
-												<DescriptionPriceOffer serviceOffer={option} />
+												<DescriptionPriceOffer
+													serviceOffer={option}
+													index={index}
+												/>
 											</div>
 										</Disclosure.Panel>
 									</>

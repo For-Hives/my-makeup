@@ -43,6 +43,7 @@ function ViewSocialMediaProfil(props) {
 								alt={`${user?.user?.first_name} ${user?.user?.last_name} Instagram`}
 							/>
 							<p
+								data-cy={'instagram'}
 								className={
 									'overflow-hidden text-sm text-gray-700 group-hover:underline'
 								}
@@ -66,6 +67,7 @@ function ViewSocialMediaProfil(props) {
 								alt={`${user?.user?.first_name} ${user?.user?.last_name} Facebook`}
 							/>
 							<p
+								data-cy={'facebook'}
 								className={
 									'overflow-hidden text-sm text-gray-700 group-hover:underline'
 								}
@@ -89,6 +91,7 @@ function ViewSocialMediaProfil(props) {
 								alt={`${user?.user?.first_name} ${user?.user?.last_name} Linkedin`}
 							/>
 							<p
+								data-cy={'linkedin'}
 								className={
 									'overflow-hidden text-sm text-gray-700 group-hover:underline'
 								}
@@ -112,6 +115,7 @@ function ViewSocialMediaProfil(props) {
 								alt={`${user?.user?.first_name} ${user?.user?.last_name} Youtube`}
 							/>
 							<p
+								data-cy={'youtube'}
 								className={
 									'overflow-hidden text-sm text-gray-700 group-hover:underline'
 								}
@@ -134,6 +138,7 @@ function ViewSocialMediaProfil(props) {
 								alt={`${user?.user?.first_name} ${user?.user?.last_name} Email`}
 							/>
 							<p
+								data-cy={'email'}
 								className={
 									'overflow-hidden text-sm text-gray-700 group-hover:underline'
 								}
@@ -156,6 +161,7 @@ function ViewSocialMediaProfil(props) {
 								alt={`${user?.network?.phone} ${user?.network?.phone} Téléphone`}
 							/>
 							<p
+								data-cy={'phone'}
 								className={
 									'overflow-hidden text-sm text-gray-700 group-hover:underline'
 								}
@@ -179,6 +185,7 @@ function ViewSocialMediaProfil(props) {
 								alt={`${user?.user?.first_name} ${user?.user?.last_name} - site internet`}
 							/>
 							<p
+								data-cy={'website'}
 								className={
 									'overflow-hidden text-sm text-gray-700 group-hover:underline'
 								}

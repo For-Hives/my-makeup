@@ -8,9 +8,17 @@ import React from 'react'
  */
 export function DescriptionPriceOffer(props) {
 	const service_offer = props.serviceOffer
+	const index = props.index
+
 	return (
 		<div className={'flex flex-col gap-4'}>
-			<div>
+			<div
+				data-cy={
+					index === null
+						? `service-offer-description`
+						: `service-offer-description-${props.index}`
+				}
+			>
 				{
 					// display the user description
 					// if \n is present, split the string and display each part in a new line
@@ -27,9 +35,16 @@ export function DescriptionPriceOffer(props) {
 						})
 				}
 			</div>
-			<div className={'flex w-full flex-col items-end justify-center gap-2'}>
+			<div
+				className={'flex w-full flex-col items-end justify-center gap-2'}
+				data-cy={
+					index === null
+						? `service-offer-price`
+						: `service-offer-price-${props.index}`
+				}
+			>
 				{
-					// display the user description
+					// display the price
 					// if \n is present, split the string and display each part in a new line
 					service_offer?.price &&
 						service_offer?.price?.split('\n').map((item, i) => {
