@@ -1,4 +1,4 @@
-name: Build and Deploy on preprod
+name: Build and Deploy on prod
 
 env:
   NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
