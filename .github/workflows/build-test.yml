@@ -1,11 +1,11 @@
-name: Build Docker and Test
+name: Build and Test
 
 on:
   pull_request:
     branches: [ 'main' ]
 
 jobs:
-  docker:
+  Testing:
     runs-on: ubuntu-latest
     environment: testing
     steps:
