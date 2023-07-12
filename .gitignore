@@ -29,7 +29,6 @@ yarn-error.log*
 .vercel
 
 .idea
-yarn.lock
 pnpm-lock.yaml
 
 .env
@@ -43,3 +42,5 @@ cypress/screenshots/
 .env.local
 
 cypress.env.json
+
+yarn.lock
