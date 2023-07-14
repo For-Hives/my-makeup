@@ -31,12 +31,12 @@ function SearchBloc() {
 			<form
 				onSubmit={handleSubmit}
 				className={
-					'flex w-full flex-col items-center justify-between gap-2 md:flex-row md:flex-wrap lg:gap-6'
+					'flex w-full flex-col items-center justify-between gap-6 sm:gap-4 md:flex-row md:flex-wrap lg:gap-6'
 				}
 			>
 				<div
 					className={
-						'flex w-full flex-col gap-2 px-2 md:w-full md:flex-row lg:w-auto lg:gap-6 lg:px-0'
+						'flex w-full flex-col gap-4 px-2 md:w-full md:flex-row lg:w-auto lg:gap-6 lg:px-0'
 					}
 				>
 					<div className={'relative w-full md:w-full lg:w-auto'}>

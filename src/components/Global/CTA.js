@@ -11,7 +11,7 @@ function Cta() {
 			>
 				<div
 					className={
-						'flex h-full w-full scale-125 scale-y-150 transform items-center justify-center overflow-visible md:scale-100'
+						'flex h-full w-full scale-125 scale-y-150 transform items-center justify-center overflow-y-visible md:scale-100'
 					}
 				>
 					<Image
@@ -29,13 +29,13 @@ function Cta() {
 					</h2>
 					<div
 						className={
-							'flex flex-col items-center justify-center gap-4 md:flex-row md:items-start md:gap-8'
+							'flex flex-col items-center justify-center gap-6 px-8 md:flex-row md:items-start md:gap-8'
 						}
 					>
 						<Link
 							href="/search"
 							className={
-								'btn-secondary-white flex w-2/3 items-center justify-center text-center md:w-auto'
+								'btn-secondary-white flex w-full items-center justify-center text-center sm:w-2/3 md:w-auto'
 							}
 						>
 							Je cherche des maquilleuses
@@ -43,7 +43,7 @@ function Cta() {
 						<Link
 							href="/auth/signup"
 							className={
-								'btn-secondary-white-bordered flex w-2/3 items-center justify-center text-center md:w-auto'
+								'btn-secondary-white-bordered flex w-full items-center justify-center text-center sm:w-2/3 md:w-auto'
 							}
 						>
 							Je cherche des missions
