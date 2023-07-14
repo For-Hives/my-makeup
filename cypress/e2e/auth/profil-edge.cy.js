@@ -385,7 +385,7 @@ describe('profil-edge', () => {
 
 									cy.get('[data-cy=\'diploma-input\']').clear().type('Epsi');
 									cy.get('[data-cy=\'school-input\']').clear().type('epsi');
-									cy.get('[data-cy=\'date-graduation-input\']').clear().type('2022-12-15');
+									cy.get('[data-cy=\'date-graduation-input\']').clear().type('2022-10-10');
 									cy.get('[data-cy=\'course-description-input\']').clear().type('informatique');
 
 									cy.get('[data-cy=\'add-course-button\']')
@@ -403,12 +403,12 @@ describe('profil-edge', () => {
 															cy.get('[data-cy=\'course-edit-button-0\']').click();
 															cy.get('[data-cy=\'diploma-input\']').should('have.value', 'Epsi');
 															cy.get('[data-cy=\'school-input\']').should('have.value', 'epsi');
-															cy.get('[data-cy=\'date-graduation-input\']').should('have.value', '2022-12-15');
+															cy.get('[data-cy=\'date-graduation-input\']').should('have.value', '2022-10-10');
 															cy.get('[data-cy=\'course-description-input\']').should('have.value', 'informatique');
 
 															cy.get('[data-cy=\'diploma-input\']').clear().type('EpsiModified');
 															cy.get('[data-cy=\'school-input\']').clear().type('epsiModified');
-															cy.get('[data-cy=\'date-graduation-input\']').clear().type('2022-12-16');
+															cy.get('[data-cy=\'date-graduation-input\']').clear().type('2022-10-10');
 															cy.get('[data-cy=\'course-description-input\']').clear().type('informatiqueModified');
 
 															cy.get('[data-cy=\'add-course-button\']')
@@ -425,7 +425,7 @@ describe('profil-edge', () => {
 																				// courses
 																				cy.get('[data-cy=\'course-diploma\']').should('contain', 'EpsiModified');
 																				cy.get('[data-cy=\'course-school\']').should('contain', 'epsiModified');
-																				cy.get('[data-cy=\'course-date-graduation\']').should('contain', '2022-12-16');
+																				cy.get('[data-cy=\'course-date-graduation\']').should('contain', '2022-10-10');
 																				cy.get('[data-cy=\'course-description\']').should('contain', 'informatiqueModified');
 																			});
 																		});
@@ -479,8 +479,8 @@ describe('profil-edge', () => {
 									cy.get('[data-cy=\'company-input\']').clear().type('ForHives');
 									cy.get('[data-cy=\'job-name-input\']').clear().type('dev');
 									cy.get('[data-cy=\'city-input\']').clear().type('Nantes');
-									cy.get('[data-cy=\'date-start-input\']').clear().type('2021-05-01');
-									cy.get('[data-cy=\'date-end-input\']').clear().type('2021-05-01');
+									cy.get('[data-cy=\'date-start-input\']').clear().type('2021-05-05');
+									cy.get('[data-cy=\'date-end-input\']').clear().type('2021-05-05');
 									cy.get('[data-cy=\'description-experience-input\']').clear().type('informatique');
 
 									cy.get('[data-cy=\'add-experience-button\']')
@@ -505,15 +505,15 @@ describe('profil-edge', () => {
 																	cy.get('[data-cy=\'company-input\']').should('have.value', 'ForHives');
 																	cy.get('[data-cy=\'job-name-input\']').should('have.value', 'dev');
 																	cy.get('[data-cy=\'city-input\']').should('have.value', 'Nantes');
-																	cy.get('[data-cy=\'date-start-input\']').should('have.value', '2021-05-01');
-																	cy.get('[data-cy=\'date-end-input\']').should('have.value', '2021-05-01');
+																	cy.get('[data-cy=\'date-start-input\']').should('have.value', '2021-05-05');
+																	cy.get('[data-cy=\'date-end-input\']').should('have.value', '2021-05-05');
 																	cy.get('[data-cy=\'description-experience-input\']').should('have.value', 'informatique');
 
 																	cy.get('[data-cy=\'company-input\']').clear().type('ForHivesModified');
 																	cy.get('[data-cy=\'job-name-input\']').clear().type('devModified');
 																	cy.get('[data-cy=\'city-input\']').clear().type('NantesModified');
-																	cy.get('[data-cy=\'date-start-input\']').clear().type('2021-05-02');
-																	cy.get('[data-cy=\'date-end-input\']').clear().type('2023-05-02');
+																	cy.get('[data-cy=\'date-start-input\']').clear().type('2021-05-05');
+																	cy.get('[data-cy=\'date-end-input\']').clear().type('2023-05-05');
 																	cy.get('[data-cy=\'description-experience-input\']').clear().type('informatiqueModified');
 
 																	cy.get('[data-cy=\'add-experience-button\']')
