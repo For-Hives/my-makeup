@@ -88,12 +88,13 @@ export default function ModalUpdateResumeProfil(props) {
 					return response.json()
 				})
 				.then(data_blob => {
-					const data = {
+					const newData = {
+						...data,
 						main_picture: data_blob[0],
 					}
 
-					// 	put data in api : with fetch : /api/makeup-artistes/{user.id}
-					patchMeMakeup(session, data)
+					// put data in api : with fetch : /api/makeup-artistes/{user.id}
+					patchMeMakeup(session, newData)
 					reset()
 					props.handleIsModalOpen()
 					props.handleProfilPicture(imageUrl)
