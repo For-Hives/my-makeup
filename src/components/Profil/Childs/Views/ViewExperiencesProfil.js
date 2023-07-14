@@ -52,7 +52,7 @@ function ViewExperiencesProfil(props) {
 													{/* format date to month year ( like july 1998 )  */}
 													{/*{experience.date_start} - {experience.date_end}*/}
 													{new Date(experience?.date_start).toLocaleString(
-														'default',
+														'fr-FR',
 														{
 															year: 'numeric',
 															month: 'long',
@@ -63,7 +63,7 @@ function ViewExperiencesProfil(props) {
 													experience?.date_end === ''
 														? "Aujourd'hui"
 														: new Date(experience?.date_end).toLocaleString(
-																'default',
+																'fr-FR',
 																{
 																	year: 'numeric',
 																	month: 'long',

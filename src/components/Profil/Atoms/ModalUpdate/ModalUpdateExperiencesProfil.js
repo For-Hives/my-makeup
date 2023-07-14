@@ -583,7 +583,7 @@ export default function ModalUpdateExperiencesProfil(props) {
 																			{/*{experience.date_start} - {experience.date_end}*/}
 																			{new Date(
 																				experience.date_start
-																			).toLocaleString('default', {
+																			).toLocaleString('fr-FR', {
 																				year: 'numeric',
 																				month: 'long',
 																			})}
@@ -593,7 +593,7 @@ export default function ModalUpdateExperiencesProfil(props) {
 																				? "Aujourd'hui"
 																				: new Date(
 																						experience.date_end
-																				  ).toLocaleString('default', {
+																				  ).toLocaleString('fr-FR', {
 																						year: 'numeric',
 																						month: 'long',
 																				  })}
