@@ -38,7 +38,7 @@ function ViewExperiencesProfil(props) {
 											>
 												{experience?.company}
 											</p>
-											<div className={'flex justify-between'}>
+											<div className={'flex justify-between gap-2'}>
 												<p
 													className={'text-sm italic text-gray-600'}
 													data-cy={'experience-job-name'}
@@ -71,6 +71,14 @@ function ViewExperiencesProfil(props) {
 														  )}
 												</p>
 											</div>
+										</div>
+										<div>
+											<p
+												className={'text-sm italic text-gray-600'}
+												data-cy={'experience-city'}
+											>
+												à {experience?.city}
+											</p>
 										</div>
 										<div>
 											<p

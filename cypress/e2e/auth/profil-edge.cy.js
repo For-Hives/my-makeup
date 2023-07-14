@@ -219,7 +219,7 @@ describe('profil-edge', () => {
 	 * update city & action radius normally
 	 * check if the update is ok
 	 */
-	describe.only('Location - section - (min, max, required)', () => {
+	describe('Location - section - (min, max, required)', () => {
 		it('tests complet Location - section', () => {
 			cy.visit('http://localhost:3000/auth/profil').then(() => {
 				cy.wait(1000);
@@ -444,7 +444,7 @@ describe('profil-edge', () => {
 		});
 	});
 
-	describe('Professional Experiences - section - (min, max, required)', () => {
+	describe.only('Professional Experiences - section - (min, max, required)', () => {
 		it('tests complet Professional experience - section', () => {
 			cy.visit('http://localhost:3000/auth/profil').then(() => {
 				cy.wait(1000);
