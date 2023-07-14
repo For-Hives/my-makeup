@@ -29,7 +29,7 @@ function Cta() {
 					</h2>
 					<div
 						className={
-							'flex flex-col items-center justify-center gap-4 md:flex-row md:items-start md:gap-8'
+							'flex flex-col items-center justify-center gap-6 md:flex-row md:items-start md:gap-8'
 						}
 					>
 						<Link
