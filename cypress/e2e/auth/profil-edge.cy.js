@@ -43,7 +43,7 @@ describe('profil-edge', () => {
 	// 10 tests ( 10 components )
 	// todo : check the availability switch & test the upload picture
 	// max upload size : 5Mo
-	describe.only('Resume - section (min, max, required)', () => {
+	describe('Resume - section (min, max, required)', () => {
 		it('tests complet Resume - section', () => {
 			cy.visit('http://localhost:3000/auth/profil').then(() => {
 				cy.wait(1000);
@@ -135,7 +135,8 @@ describe('profil-edge', () => {
 								// wait for the update to finish
 								cy.wait('@patchMeMakeup').its('response.statusCode').should('eq', 200).then(() => {
 									cy.wait(1000);
-									cy.visit('http://localhost:3000/auth/profil?publicView=true').then(() => {
+
+									cy.get('[data-cy=\'profil-public-view\']').click().then(() => {
 										cy.wait(1000);
 
 										// first and lastname check
@@ -194,11 +195,11 @@ describe('profil-edge', () => {
 													.then(() => {
 														cy.wait('@patchMeMakeup').its('response.statusCode').should('eq', 200);
 
-														cy.visit('http://localhost:3000/auth/profil?publicView=true').then(() => {
+														cy.get('[data-cy=\'profil-public-view\']').click().then(() => {
 															cy.wait(1000);
 
 															//   description
-															cy.get('[data-cy=[\'description\']').should('contain', 'Je suis une maquilleuse passionnée avec plus de 10 ans d\'expérience...');
+															cy.get('[data-cy=\'description\']').should('contain', 'Je suis une maquilleuse passionnée avec plus de 10 ans d\'expérience...');
 														});
 													});
 											});
@@ -218,7 +219,7 @@ describe('profil-edge', () => {
 	 * update city & action radius normally
 	 * check if the update is ok
 	 */
-	describe('Location - section - (min, max, required)', () => {
+	describe.only('Location - section - (min, max, required)', () => {
 		it('tests complet Location - section', () => {
 			cy.visit('http://localhost:3000/auth/profil').then(() => {
 				cy.wait(1000);
@@ -259,7 +260,7 @@ describe('profil-edge', () => {
 														// wait for the update to finish
 														cy.wait('@patchMeMakeup').its('response.statusCode').should('eq', 200);
 
-														cy.visit('http://localhost:3000/auth/profil?publicView=true').then(() => {
+														cy.get('[data-cy=\'profil-public-view\']').click().then(() => {
 															cy.wait(1000);
 
 															//   resume-city-action-radius
@@ -333,7 +334,7 @@ describe('profil-edge', () => {
 														.then(() => {
 															cy.wait('@patchMeMakeup').its('response.statusCode').should('eq', 200);
 
-															cy.visit('http://localhost:3000/auth/profil?publicView=true').then(() => {
+															cy.get('[data-cy=\'profil-public-view\']').click().then(() => {
 																cy.wait(1000);
 
 																//	skills
@@ -423,7 +424,7 @@ describe('profil-edge', () => {
 																			// wait for the update to finish
 																			cy.wait('@patchMeMakeup').its('response.statusCode').should('eq', 200);
 
-																			cy.visit('http://localhost:3000/auth/profil?publicView=true').then(() => {
+																			cy.get('[data-cy=\'profil-public-view\']').click().then(() => {
 																				cy.wait(1000);
 																				// courses
 																				cy.get('[data-cy=\'course-diploma\']').should('contain', 'EpsiModified');
@@ -527,7 +528,7 @@ describe('profil-edge', () => {
 																				.then(() => {
 																					cy.wait('@patchMeMakeup').its('response.statusCode').should('eq', 200);
 
-																					cy.visit('http://localhost:3000/auth/profil?publicView=true').then(() => {
+																					cy.get('[data-cy=\'profil-public-view\']').click().then(() => {
 																						cy.wait(1000);
 
 																						// experiences
@@ -599,7 +600,7 @@ describe('profil-edge', () => {
 									// wait for the update to finish
 									cy.wait('@patchMeMakeup').its('response.statusCode').should('eq', 200);
 
-									cy.visit('http://localhost:3000/auth/profil?publicView=true').then(() => {
+									cy.get('[data-cy=\'profil-public-view\']').click().then(() => {
 										cy.wait(1000);
 
 										// 	Languages
@@ -716,7 +717,7 @@ describe('profil-edge', () => {
 																// wait for the update to finish
 																cy.wait('@patchMeMakeup').its('response.statusCode').should('eq', 200);
 
-																cy.visit('http://localhost:3000/auth/profil?publicView=true').then(() => {
+																cy.get('[data-cy=\'profil-public-view\']').click().then(() => {
 																	cy.wait(1000);
 
 																	//   social media
@@ -938,7 +939,7 @@ describe('profil-edge', () => {
 																									// wait for the update to finish
 																									cy.wait('@patchMeMakeup').its('response.statusCode').should('eq', 200);
 
-																									cy.visit('http://localhost:3000/auth/profil?publicView=true').then(() => {
+																									cy.get('[data-cy=\'profil-public-view\']').click().then(() => {
 																										cy.wait(1000);
 
 																										// 	service offers

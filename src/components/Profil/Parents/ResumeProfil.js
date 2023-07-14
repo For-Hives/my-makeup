@@ -149,10 +149,14 @@ function ResumeProfil(props) {
 									className={
 										'text-xl font-semibold tracking-tight text-gray-700'
 									}
+									data-cy="resume-speciality"
 								>
 									{user?.speciality}
 								</h2>
-								<h3 className={'text-lg tracking-tight text-gray-800'}>
+								<h3
+									className={'text-lg tracking-tight text-gray-800'}
+									data-cy="resume-company-artist-name"
+								>
 									{user?.company_artist_name}
 								</h3>
 							</div>
@@ -161,7 +165,7 @@ function ResumeProfil(props) {
 									<span className="material-icons-round text-indigo-900">
 										directions_run
 									</span>
-									<span>
+									<span data-cy={'resume-city-action-radius'}>
 										peut se déplacer à {user?.city} & dans un rayon de{' '}
 										{user?.action_radius}km
 									</span>

@@ -60,6 +60,7 @@ function ViewResumeProfil(props) {
 							<div className={'flex w-full cursor-default flex-col gap-2'}>
 								<h3
 									className={'text-3xl font-bold tracking-tight text-gray-800'}
+									data-cy="resume-name"
 								>
 									{user?.first_name} {user?.last_name}
 								</h3>
