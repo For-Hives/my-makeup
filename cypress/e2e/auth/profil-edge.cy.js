@@ -613,7 +613,7 @@ describe('profil-edge', () => {
 		});
 	});
 
-	describe.only('Social Medias - section - (min, max, required)', () => {
+	describe('Social Medias - section - (min, max, required)', () => {
 		it('tests complet Social Medias - section', () => {
 			cy.visit('http://localhost:3000/auth/profil').then(() => {
 				cy.wait(1000);
@@ -702,7 +702,7 @@ describe('profil-edge', () => {
 														cy.get('[data-cy=\'error-website\']').should('contain', 'L\'URL ne doit pas dépasser 200 caractères.');
 														cy.get('[data-cy=\'error-youtube\']').should('contain', 'L\'URL ne doit pas dépasser 200 caractères.');
 
-														cy.get('[data-cy=\'email-input\']').clear().type('test@test.test');
+														cy.get('[data-cy=\'email-input\']').clear().type('test@forhives.fr');
 														cy.get('[data-cy=\'facebook-input\']').clear().type('https://facebook.com');
 														cy.get('[data-cy=\'instagram-input\']').clear().type('https://instagram.com');
 														cy.get('[data-cy=\'linkedin-input\']').clear().type('https://linkedin.com');
@@ -942,19 +942,31 @@ describe('profil-edge', () => {
 																									cy.get('[data-cy=\'profil-public-view\']').click().then(() => {
 																										cy.wait(1000);
 
-																										// 	service offers
-																										cy.get('[data-cy=\'service-offer-name\']').should('contain', 'Maquillage Modified');
-																										cy.get('[data-cy=\'service-offer-description\']').should('contain', 'Maquillage de soirée Modified');
-																										cy.get('[data-cy=\'service-offer-price\']').should('contain', '50€ Modified');
-																										cy.get('[data-cy=\'service-offer-option-name-0\']').should('contain', 'Maquillage 1 Modified');
-																										cy.get('[data-cy=\'service-offer-option-description-0\']').should('contain', 'Maquillage de soirée 1 Modified');
-																										cy.get('[data-cy=\'service-offer-option-price-0\']').should('contain', '50€ 1 Modified');
-																										cy.get('[data-cy=\'service-offer-option-name-1\']').should('contain', 'Maquillage 2 Modified');
-																										cy.get('[data-cy=\'service-offer-option-description-1\']').should('contain', 'Maquillage de soirée 2 Modified');
-																										cy.get('[data-cy=\'service-offer-option-price-1\']').should('contain', '50€ 2 Modified');
-																										cy.get('[data-cy=\'service-offer-option-name-2\']').should('contain', 'Maquillage 3 Modified');
-																										cy.get('[data-cy=\'service-offer-option-description-2\']').should('contain', 'Maquillage de soirée 3 Modified');
-																										cy.get('[data-cy=\'service-offer-option-price-2\']').should('contain', '50€ 3 Modified');
+																										cy.get('[data-cy=\'service-offer-button-0\']').click({ force: true }).then(
+																											() => {
+																												cy.get('[data-cy=\'service-offer-button-1\']').click({ force: true }).then(
+																													() => {
+																														cy.get('[data-cy=\'service-offer-button-2\']').click({ force: true }).then(
+																															() => {
+																																// 	service offers
+																																cy.get('[data-cy=\'service-offer-name\']').should('contain', 'Maquillage Modified');
+																																cy.get('[data-cy=\'service-offer-description\']').should('contain', 'Maquillage de soirée Modified');
+																																cy.get('[data-cy=\'service-offer-price\']').should('contain', '50€ Modified');
+																																cy.get('[data-cy=\'service-offer-name-0\']').should('contain', 'Maquillage 1 Modified');
+																																cy.get('[data-cy=\'service-offer-description-0\']').should('contain', 'Maquillage de soirée 1 Modified');
+																																cy.get('[data-cy=\'service-offer-price-0\']').should('contain', '50€ 1 Modified');
+																																cy.get('[data-cy=\'service-offer-name-1\']').should('contain', 'Maquillage 2 Modified');
+																																cy.get('[data-cy=\'service-offer-description-1\']').should('contain', 'Maquillage de soirée 2 Modified');
+																																cy.get('[data-cy=\'service-offer-price-1\']').should('contain', '50€ 2 Modified');
+																																cy.get('[data-cy=\'service-offer-name-2\']').should('contain', 'Maquillage 3 Modified');
+																																cy.get('[data-cy=\'service-offer-description-2\']').should('contain', 'Maquillage de soirée 3 Modified');
+																																cy.get('[data-cy=\'service-offer-price-2\']').should('contain', '50€ 3 Modified');
+																															},
+																														);
+																													},
+																												);
+																											},
+																										);
 																									});
 																								});
 																						});

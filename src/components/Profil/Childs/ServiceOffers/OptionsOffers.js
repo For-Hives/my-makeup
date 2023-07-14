@@ -31,6 +31,7 @@ export function OptionsOffers(props) {
 										>
 											{option.name}
 											<ChevronRightIcon
+												data-cy={`service-offer-button-${index}`}
 												className={
 													'h-5 w-5 ' + (open ? 'rotate-90 transform' : '')
 												}

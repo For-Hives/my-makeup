@@ -8,13 +8,12 @@ import React from 'react'
  */
 export function DescriptionPriceOffer(props) {
 	const service_offer = props.serviceOffer
-	const index = props.index
 
 	return (
 		<div className={'flex flex-col gap-4'}>
 			<div
 				data-cy={
-					index === null
+					props.index === null
 						? `service-offer-description`
 						: `service-offer-description-${props.index}`
 				}
@@ -38,7 +37,7 @@ export function DescriptionPriceOffer(props) {
 			<div
 				className={'flex w-full flex-col items-end justify-center gap-2'}
 				data-cy={
-					index === null
+					props.index === null
 						? `service-offer-price`
 						: `service-offer-price-${props.index}`
 				}
