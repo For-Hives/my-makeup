@@ -351,7 +351,7 @@ describe('profil-edge', () => {
 	 * modify the diploma and update it
 	 * check if the update is ok
 	 */
-	describe.only('Diplomas and Courses - section - (min, max, required)', () => {
+	describe('Diplomas and Courses - section - (min, max, required)', () => {
 		it('tests complet Diplomas and courses - section', () => {
 			cy.visit('http://localhost:3000/auth/profil').then(() => {
 				cy.wait(1000);
