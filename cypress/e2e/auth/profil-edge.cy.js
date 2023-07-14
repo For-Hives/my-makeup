@@ -444,7 +444,7 @@ describe('profil-edge', () => {
 		});
 	});
 
-	describe.only('Professional Experiences - section - (min, max, required)', () => {
+	describe('Professional Experiences - section - (min, max, required)', () => {
 		it('tests complet Professional experience - section', () => {
 			cy.visit('http://localhost:3000/auth/profil').then(() => {
 				cy.wait(1000);
@@ -613,7 +613,7 @@ describe('profil-edge', () => {
 		});
 	});
 
-	describe('Social Medias - section - (min, max, required)', () => {
+	describe.only('Social Medias - section - (min, max, required)', () => {
 		it('tests complet Social Medias - section', () => {
 			cy.visit('http://localhost:3000/auth/profil').then(() => {
 				cy.wait(1000);
