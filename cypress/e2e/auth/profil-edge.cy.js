@@ -37,7 +37,6 @@ describe('profil-edge', () => {
 	});
 
 	// 10 tests ( 10 components )
-	// todo : check the availability switch & test the upload picture
 	// max upload size : 5Mo
 	describe('Resume - section (min, max, required)', () => {
 		it('tests complet Resume - section', () => {
