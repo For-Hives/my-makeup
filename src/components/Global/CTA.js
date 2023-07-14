@@ -11,7 +11,7 @@ function Cta() {
 			>
 				<div
 					className={
-						'flex h-full w-full scale-125 scale-y-150 transform items-center justify-center overflow-visible md:scale-100'
+						'flex h-full w-full scale-125 scale-y-150 transform items-center justify-center overflow-y-visible md:scale-100'
 					}
 				>
 					<Image

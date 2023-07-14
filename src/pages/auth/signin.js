@@ -50,6 +50,12 @@ function Signin() {
 					content="Connexion sur my-makeup.fr la plateforme qui va révolutionner votre
 	            recherche de maquilleuses professionnelles, ou votre recherche de client !"
 				/>
+				<link rel="preconnect" href="https://fonts.googleapis.com" />
+				<link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin />
+				<link
+					href="https://fonts.googleapis.com/css2?family=Roboto:wght@500&display=swap"
+					rel="stylesheet"
+				/>
 				{/*	seo tag canonical link */}
 				<link rel="canonical" href="https://my-makeup.fr/auth/signin" />
 			</Head>
@@ -80,37 +86,38 @@ function Signin() {
 										<h1 className="text-sm font-medium leading-6 text-gray-900">
 											Se connecter sur My-Makeup
 										</h1>
-										<div className="mt-2 grid grid-cols-2 gap-3">
-											<div>
+										<div className="mt-4 grid grid-cols-1 gap-4">
+											<div className={'flex w-full justify-center'}>
 												<button
-													data-cy="facebook-signin"
+													data-cy="google-signin"
 													onClick={() => {
 														signIn('facebook', {
 															callbackUrl: '/auth/profil',
 														})
 													}}
-													className="inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-gray-500 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:outline-offset-0"
+													className="flex h-[40px] w-[250px] flex-nowrap items-center justify-start gap-[24px] rounded-md bg-white px-3 text-gray-500 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:outline-offset-0"
 												>
-													{/* todo btn to refactor */}
 													<span className="sr-only">
 														Se connecter via Facebook
 													</span>
-													<svg
-														className="h-5 w-5"
-														aria-hidden="true"
-														fill="currentColor"
-														viewBox="0 0 20 20"
+													<Image
+														src={'/assets/signin-assets/facebook_logo.svg'}
+														alt={'google logo'}
+														width={18}
+														height={18}
+														className={'h-[18px] w-[18px]'}
+													/>
+													<p
+														className={
+															'flex flex-nowrap font-[roboto] text-[14px] font-medium text-black/[54%]'
+														}
 													>
-														<path
-															fillRule="evenodd"
-															d="M20 10c0-5.523-4.477-10-10-10S0 4.477 0 10c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V10h2.54V7.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V10h2.773l-.443 2.89h-2.33v6.988C16.343 19.128 20 14.991 20 10z"
-															clipRule="evenodd"
-														/>
-													</svg>
+														Se connecter avec Facebook
+													</p>
 												</button>
 											</div>
 
-											<div>
+											<div className={'flex w-full justify-center'}>
 												<button
 													data-cy="google-signin"
 													onClick={() => {
@@ -118,25 +125,25 @@ function Signin() {
 															callbackUrl: '/auth/profil',
 														})
 													}}
-													className="inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-gray-500 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:outline-offset-0"
+													className="flex h-[40px] w-[250px] flex-nowrap items-center justify-start gap-[24px] rounded-md bg-white px-3 text-gray-500 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:outline-offset-0"
 												>
-													{/*todo btn to refactor*/}
 													<span className="sr-only">
 														Se connecter via Google
 													</span>
-													<svg
-														className="h-5 w-5"
-														aria-hidden="true"
-														fill="currentColor"
-														viewBox="0 0 32 32"
-														xmlns="http://www.w3.org/2000/svg"
+													<Image
+														src={'/assets/signin-assets/google_logo.svg'}
+														alt={'google logo'}
+														width={18}
+														height={18}
+														className={'h-[18px] w-[18px]'}
+													/>
+													<p
+														className={
+															'flex flex-nowrap font-[roboto] text-[14px] font-medium text-black/[54%]'
+														}
 													>
-														<g id="OUTLINE_copy_2">
-															<g>
-																<path d="m16 0c-8.837 0-16 7.164-16 16s7.163 16 16 16c8.836 0 16-7.164 16-16s-7.163-16-16-16zm.173 24.596c-4.749 0-8.596-3.847-8.596-8.596s3.847-8.596 8.596-8.596c2.321 0 4.261.855 5.748 2.24l-2.423 2.423v-.005c-.902-.86-2.047-1.3-3.325-1.3-2.836 0-5.141 2.396-5.141 5.232s2.305 5.238 5.141 5.238c2.573 0 4.325-1.472 4.685-3.492h-4.685v-3.353h8.085c.107.574.166 1.177.166 1.805 0 4.912-3.288 8.404-8.251 8.404z" />
-															</g>
-														</g>
-													</svg>
+														Se connecter avec Google
+													</p>
 												</button>
 											</div>
 										</div>
