@@ -8,7 +8,7 @@ export function SocialMediaProfil(props) {
 	const router = useRouter()
 	// get query param
 	const { publicView } = router.query
-	const [isPublic, setIsPublic] = React.useState(false)
+	const [isPublic, setIsPublic] = React.useState(props.isPublic)
 
 	const user = props.user
 
@@ -22,6 +22,10 @@ export function SocialMediaProfil(props) {
 	useEffect(() => {
 		setIsPublic(!!publicView)
 	}, [])
+
+	useEffect(() => {
+		setIsPublic(props.isPublic)
+	}, [props.isPublic])
 
 	return (
 		<div className={'w-full'}>

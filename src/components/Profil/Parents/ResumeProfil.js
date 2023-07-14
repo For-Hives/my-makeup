@@ -28,7 +28,7 @@ function ResumeProfil(props) {
 	}
 
 	const handleIsModalOpen = () => {
-		if (!isPublic) {
+		if (!props.isPublic) {
 			setIsModalOpen(!isModalOpen)
 		}
 		setUser(props.user)
@@ -53,6 +53,12 @@ function ResumeProfil(props) {
 		setProfilPicture(user?.main_picture?.url)
 		setIsPublic(!!publicView)
 	}, [])
+
+	useEffect(() => {
+		const newUser = JSON.parse(JSON.stringify(user))
+		handleUpdateUser(newUser)
+		setIsPublic(props.isPublic)
+	}, [props.isPublic])
 
 	return (
 		<div

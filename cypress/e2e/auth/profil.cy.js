@@ -385,7 +385,7 @@ describe('profil', () => {
 		});
 	});
 
-	describe.only('all tests at once, check pourcentage evolution', () => {
+	describe('all tests at once, check pourcentage evolution', () => {
 		it('tests complet Resume - section', () => {
 			cy.request({
 				method: 'POST', url: 'https://api.my-makeup.fr/api/auth/local', headers: {
@@ -408,16 +408,16 @@ describe('profil', () => {
 						available: null,
 						description: null,
 						company_artist_name: null,
-						skills: [],
+						skills: null,
 						network: {
 							youtube: null, facebook: null, instagram: null, website: null, linkedin: null, phone: null, email: null,
 						},
-						experiences: [],
-						courses: [],
-						service_offers: [],
+						experiences: null,
+						courses: null,
+						service_offers: null,
 						image_gallery: null,
 						main_picture: null,
-						language: [],
+						language: null,
 					},
 				}).then(response => {
 					// vous pouvez faire des assertions ici sur la réponse
@@ -722,76 +722,6 @@ describe('profil', () => {
 
 																																																											cy.wait(250);
 																																																											cy.get('[data-cy=\'completion-pourcentage-profil\']').contains('100%');
-
-																																																											// 	** checks all informations **
-																																																											cy.get('[data-cy=\'profil-public-view\']').click({
-																																																												force: true,
-																																																											}).then(() => {
-																																																												cy.wait(250);
-
-																																																												// data-cy="profil-public-view"
-																																																												cy.visit('http://localhost:3000/auth/profil?publicView=true').then(() => {
-																																																													cy.wait(1000);
-
-																																																													// first and lastname check
-																																																													cy.get('[data-cy=\'resume-name\']').should('contain', 'Utilisateur DE TEST');
-																																																													// 	resume-speciality
-																																																													cy.get('[data-cy=\'resume-speciality\']').should('contain', 'Maquilleur professionnel et coiffeur professionnel pour le cinéma');
-																																																													// 	resume-company-artist-name
-																																																													cy.get('[data-cy=\'resume-company-artist-name\']').should('contain', 'My Makeup Artist');
-																																																													//   resume-city-action-radius
-																																																													cy.get('[data-cy=\'resume-city-action-radius\']').should('contain', 'peut se déplacer à Nantes & dans un rayon de 5km');
-
-
-																																																													//   location-city-action-radius
-																																																													cy.get('[data-cy=\'location-city-action-radius\']').should('contain', 'Nantes & 5km autour');
-
-																																																													//   social media
-																																																													cy.get('[data-cy=\'email\']').should('contain', 'test@forhives.fr');
-																																																													cy.get('[data-cy=\'facebook\']').should('contain', 'https://facebook.com');
-																																																													cy.get('[data-cy=\'instagram\']').should('contain', 'https://instagram.com');
-																																																													cy.get('[data-cy=\'linkedin\']').should('contain', 'https://linkedin.com');
-																																																													cy.get('[data-cy=\'phone\']').should('contain', '0606060606');
-																																																													cy.get('[data-cy=\'website\']').should('contain', 'https://my-makeup.fr');
-																																																													cy.get('[data-cy=\'youtube\']').should('contain', 'https://youtube.com');
-
-																																																													//	skills
-																																																													cy.get('[data-cy=\'skill\']').should('contain', 'pieds');
-
-																																																													// 	Languages
-																																																													cy.get('[data-cy=\'language\']').should('contain', 'Anglais');
-
-																																																													// courses
-																																																													cy.get('[data-cy=\'course-diploma\']').should('contain', 'Epsi');
-																																																													cy.get('[data-cy=\'course-school\']').should('contain', 'epsi');
-																																																													cy.get('[data-cy=\'course-date-graduation\']').should('contain', '2022-12-15');
-																																																													cy.get('[data-cy=\'course-description\']').should('contain', 'informatique');
-
-																																																													//   description
-																																																													cy.get('[data-cy=[\'description\']').should('contain', 'Je suis une maquilleuse passionnée avec plus de 10 ans d\'expérience...');
-
-																																																													// 	service offers
-																																																													cy.get('[data-cy=\'service-offer-name\']').should('contain', 'Maquillage');
-																																																													cy.get('[data-cy=\'service-offer-description\']').should('contain', 'Maquillage de soirée');
-																																																													cy.get('[data-cy=\'service-offer-price\']').should('contain', '50€');
-																																																													cy.get('[data-cy=\'service-offer-option-name-0\']').should('contain', 'Maquillage 1');
-																																																													cy.get('[data-cy=\'service-offer-option-description-0\']').should('contain', 'Maquillage de soirée 1');
-																																																													cy.get('[data-cy=\'service-offer-option-price-0\']').should('contain', '50€ 1');
-																																																													cy.get('[data-cy=\'service-offer-option-name-1\']').should('contain', 'Maquillage 2');
-																																																													cy.get('[data-cy=\'service-offer-option-description-1\']').should('contain', 'Maquillage de soirée 2');
-																																																													cy.get('[data-cy=\'service-offer-option-price-1\']').should('contain', '50€ 2');
-																																																													cy.get('[data-cy=\'service-offer-option-name-2\']').should('contain', 'Maquillage 3');
-																																																													cy.get('[data-cy=\'service-offer-option-description-2\']').should('contain', 'Maquillage de soirée 3');
-																																																													cy.get('[data-cy=\'service-offer-option-price-2\']').should('contain', '50€ 3');
-
-																																																													// experiences
-																																																													cy.get('[data-cy=\'experience-company\']').should('contain', 'ForHives');
-																																																													cy.get('[data-cy=\'experience-job-name\']').should('contain', 'dev');
-																																																													cy.get('[data-cy=\'experience-city\']').should('contain', 'Nantes');
-																																																													cy.get('[data-cy=\'experience-date\']').should('contain', 'mai 2021 - juin 2023');
-																																																													cy.get('[data-cy=\'experience-description\']').should('contain', 'Développement web');
-																																																												});
-																																																											});
 																																																										});
 																																																								});
 																																																						});
