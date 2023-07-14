@@ -19,7 +19,7 @@ function ViewDescriptionProfil(props) {
 				// if \n is present, split the string and display each part in a new line
 				user?.description?.split('\n').map((item, i) => {
 					return (
-						<p key={i} className={'text-gray-800'}>
+						<p data-cy={'description'} key={i} className={'text-gray-800'}>
 							{item}
 						</p>
 					)

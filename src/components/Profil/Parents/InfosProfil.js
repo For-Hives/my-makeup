@@ -19,7 +19,7 @@ function InfosProfil(props) {
 	const { publicView } = router.query
 
 	const [user, setUser] = React.useState(props.user)
-	const [isPublic, setIsPublic] = React.useState(false)
+	const [isPublic, setIsPublic] = React.useState(props.isPublic)
 
 	const handleUpdateUser = user => {
 		props.handleUpdateUser(user)
@@ -28,6 +28,11 @@ function InfosProfil(props) {
 	useEffect(() => {
 		setIsPublic(!!publicView)
 	}, [])
+
+	useEffect(() => {
+		const newUser = JSON.parse(JSON.stringify(user))
+		handleUpdateUser(newUser)
+	}, [props.isPublic])
 
 	return (
 		<div className={''}>
@@ -45,7 +50,17 @@ function InfosProfil(props) {
 								handleUpdateUser={handleUpdateUser}
 							/>
 							<Link
-								href={{ pathname: '/auth/profil', query: { publicView: true } }}
+								data-cy="profil-public-view"
+								href={'#'}
+								onClick={e => {
+									e.preventDefault() // Pour empêcher le comportement par défaut
+									setIsPublic(true)
+									props.handleIsPublic(true)
+									router.push({
+										pathname: '/auth/profil',
+										query: { publicView: true },
+									})
+								}}
 								className={'flex gap-2 font-semibold text-indigo-900 '}
 							>
 								<span className="material-icons-round text-indigo-900">
@@ -57,13 +72,23 @@ function InfosProfil(props) {
 							</Link>
 						</>
 					) : (
-						<Link
-							href={{ pathname: '/auth/profil' }}
-							className={'flex gap-2 font-semibold text-indigo-900'}
-						>
-							<span className="material-icons-round text-indigo-900">edit</span>
-							<span className={'hover:underline'}>Modifier mon profil</span>
-						</Link>
+						<div className={'flex w-full justify-end'}>
+							<Link
+								href={'#'}
+								onClick={e => {
+									e.preventDefault() // Pour empêcher le comportement par défaut
+									setIsPublic(false)
+									props.handleIsPublic(false)
+									router.push({ pathname: '/auth/profil' })
+								}}
+								className={'flex gap-2 font-semibold text-indigo-900'}
+							>
+								<span className="material-icons-round text-indigo-900">
+									edit
+								</span>
+								<span className={'hover:underline'}>Modifier mon profil</span>
+							</Link>
+						</div>
 					)}
 				</div>
 				<div className={'grid grid-cols-12 gap-5 pt-32'}>
@@ -75,22 +100,27 @@ function InfosProfil(props) {
 						<LocationProfil
 							user={user}
 							handleUpdateUser={props.handleUpdateUser}
+							isPublic={isPublic}
 						/>
 						<SocialMediaProfil
 							user={user}
 							handleUpdateUser={props.handleUpdateUser}
+							isPublic={isPublic}
 						/>
 						<SkillsProfil
 							user={user}
 							handleUpdateUser={props.handleUpdateUser}
+							isPublic={isPublic}
 						/>
 						<LanguageProfil
 							user={user}
 							handleUpdateUser={props.handleUpdateUser}
+							isPublic={isPublic}
 						/>
 						<CoursesProfil
 							user={user}
 							handleUpdateUser={props.handleUpdateUser}
+							isPublic={isPublic}
 						/>
 					</div>
 					<div
@@ -101,18 +131,22 @@ function InfosProfil(props) {
 						<DescriptionProfil
 							user={user}
 							handleUpdateUser={props.handleUpdateUser}
+							isPublic={isPublic}
 						/>
 						<PortfolioProfil
 							user={user}
 							handleUpdateUser={props.handleUpdateUser}
+							isPublic={isPublic}
 						/>
 						<ServiceOffersProfil
 							user={user}
 							handleUpdateUser={props.handleUpdateUser}
+							isPublic={isPublic}
 						/>
 						<ExperiencesProfil
 							user={user}
 							handleUpdateUser={props.handleUpdateUser}
+							isPublic={isPublic}
 						/>
 					</div>
 				</div>

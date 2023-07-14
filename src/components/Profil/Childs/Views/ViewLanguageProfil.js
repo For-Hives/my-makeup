@@ -12,7 +12,7 @@ function ViewLanguageProfil(props) {
 	return (
 		<div className={'flex w-full flex-col gap-4'}>
 			<h2 className={'text-xl font-bold text-gray-700'}>Langues</h2>
-			<ul className={'flex flex-col gap-4'}>
+			<ul className={'flex flex-col gap-4'} data-cy={'language'}>
 				{/* map on language -> name */}
 				{user?.language.length !== 0 ? (
 					user?.language?.map((language, index) => {

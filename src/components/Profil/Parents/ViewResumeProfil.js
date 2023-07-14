@@ -60,6 +60,7 @@ function ViewResumeProfil(props) {
 							<div className={'flex w-full cursor-default flex-col gap-2'}>
 								<h3
 									className={'text-3xl font-bold tracking-tight text-gray-800'}
+									data-cy="resume-name"
 								>
 									{user?.first_name} {user?.last_name}
 								</h3>
@@ -67,10 +68,14 @@ function ViewResumeProfil(props) {
 									className={
 										'text-xl font-semibold tracking-tight text-gray-700'
 									}
+									data-cy="resume-speciality"
 								>
 									{user?.speciality}
 								</h2>
-								<h3 className={'text-lg tracking-tight text-gray-800'}>
+								<h3
+									className={'text-lg tracking-tight text-gray-800'}
+									data-cy="resume-company-artist-name"
+								>
 									{user?.company_artist_name}
 								</h3>
 							</div>
@@ -79,8 +84,10 @@ function ViewResumeProfil(props) {
 									<span className="material-icons-round text-indigo-900">
 										directions_run
 									</span>
-									peut se déplacer à {user?.city} & dans un rayon de{' '}
-									{user?.action_radius}km
+									<span data-cy={'resume-city-action-radius'}>
+										peut se déplacer à {user?.city} & dans un rayon de{' '}
+										{user?.action_radius}km
+									</span>
 								</div>
 							</div>
 							<div></div>

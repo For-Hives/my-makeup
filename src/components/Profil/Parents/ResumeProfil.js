@@ -28,7 +28,7 @@ function ResumeProfil(props) {
 	}
 
 	const handleIsModalOpen = () => {
-		if (!isPublic) {
+		if (!props.isPublic) {
 			setIsModalOpen(!isModalOpen)
 		}
 		setUser(props.user)
@@ -53,6 +53,12 @@ function ResumeProfil(props) {
 		setProfilPicture(user?.main_picture?.url)
 		setIsPublic(!!publicView)
 	}, [])
+
+	useEffect(() => {
+		const newUser = JSON.parse(JSON.stringify(user))
+		handleUpdateUser(newUser)
+		setIsPublic(props.isPublic)
+	}, [props.isPublic])
 
 	return (
 		<div
@@ -135,6 +141,7 @@ function ResumeProfil(props) {
 							>
 								<h3
 									className={'text-3xl font-bold tracking-tight text-gray-800'}
+									data-cy="resume-name"
 								>
 									{user?.first_name} {user?.last_name}
 								</h3>
@@ -142,10 +149,14 @@ function ResumeProfil(props) {
 									className={
 										'text-xl font-semibold tracking-tight text-gray-700'
 									}
+									data-cy="resume-speciality"
 								>
 									{user?.speciality}
 								</h2>
-								<h3 className={'text-lg tracking-tight text-gray-800'}>
+								<h3
+									className={'text-lg tracking-tight text-gray-800'}
+									data-cy="resume-company-artist-name"
+								>
 									{user?.company_artist_name}
 								</h3>
 							</div>
@@ -154,8 +165,10 @@ function ResumeProfil(props) {
 									<span className="material-icons-round text-indigo-900">
 										directions_run
 									</span>
-									peut se déplacer à {user?.city} & dans un rayon de{' '}
-									{user?.action_radius}km
+									<span data-cy={'resume-city-action-radius'}>
+										peut se déplacer à {user?.city} & dans un rayon de{' '}
+										{user?.action_radius}km
+									</span>
 								</div>
 							</div>
 							<div></div>

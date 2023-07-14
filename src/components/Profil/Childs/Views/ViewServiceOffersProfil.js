@@ -46,11 +46,15 @@ function ViewServiceOffersProfil(props) {
 												className={
 													'text-start text-lg font-bold text-indigo-900'
 												}
+												data-cy={'service-offer-name'}
 											>
 												{service_offer?.name}
 											</h2>
 										</div>
-										<DescriptionPriceOffer serviceOffer={service_offer} />
+										<DescriptionPriceOffer
+											serviceOffer={service_offer}
+											index={null}
+										/>
 									</div>
 									<div className={'flex w-full flex-col gap-2 py-2'}>
 										<OptionsOffers serviceOffer={service_offer} />

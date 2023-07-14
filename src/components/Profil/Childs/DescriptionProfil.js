@@ -12,7 +12,7 @@ export function DescriptionProfil(props) {
 	const user = props.user
 
 	const [isModalOpen, setIsModalOpen] = React.useState(false)
-	const [isPublic, setIsPublic] = React.useState(false)
+	const [isPublic, setIsPublic] = React.useState(props.isPublic)
 
 	const handleIsModalOpen = () => {
 		if (!isPublic) {
@@ -23,6 +23,10 @@ export function DescriptionProfil(props) {
 	useEffect(() => {
 		setIsPublic(!!publicView)
 	}, [])
+
+	useEffect(() => {
+		setIsPublic(props.isPublic)
+	}, [props.isPublic])
 
 	return (
 		<div className={'relative w-full'}>

@@ -14,6 +14,11 @@ function Profil({ data }) {
 	// get current user id
 
 	const [user, setUser] = React.useState(data)
+	const [isPublic, setIsPublic] = React.useState(false)
+
+	const handleIsPublic = newIsPublic => {
+		setIsPublic(newIsPublic)
+	}
 
 	const handleUpdateUser = newUser => {
 		setUser(newUser)
@@ -38,8 +43,17 @@ function Profil({ data }) {
 			<main className={'relative'}>
 				{session && session.user && !_.isEmpty(session.user) ? (
 					<>
-						<ResumeProfil user={user} handleUpdateUser={handleUpdateUser} />
-						<InfosProfil user={user} handleUpdateUser={handleUpdateUser} />
+						<ResumeProfil
+							user={user}
+							handleUpdateUser={handleUpdateUser}
+							isPublic={isPublic}
+						/>
+						<InfosProfil
+							user={user}
+							handleUpdateUser={handleUpdateUser}
+							isPublic={isPublic}
+							handleIsPublic={handleIsPublic}
+						/>
 						<DangerZone />
 					</>
 				) : (

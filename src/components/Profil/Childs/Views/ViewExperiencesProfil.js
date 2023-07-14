@@ -32,18 +32,27 @@ function ViewExperiencesProfil(props) {
 									<span className="material-icons-round">apartment</span>
 									<div className={'ml-2 flex w-full flex-col gap-2'}>
 										<div className={'flex w-full flex-col'}>
-											<p className={'font-semibold text-gray-700'}>
+											<p
+												className={'font-semibold text-gray-700'}
+												data-cy={'experience-company'}
+											>
 												{experience?.company}
 											</p>
-											<div className={'flex justify-between'}>
-												<p className={'text-sm italic text-gray-600'}>
+											<div className={'flex justify-between gap-2'}>
+												<p
+													className={'text-sm italic text-gray-600'}
+													data-cy={'experience-job-name'}
+												>
 													{experience?.job_name}
 												</p>
-												<p className={'text-sm italic text-gray-600'}>
+												<p
+													className={'text-sm italic text-gray-600'}
+													data-cy={'experience-date'}
+												>
 													{/* format date to month year ( like july 1998 )  */}
 													{/*{experience.date_start} - {experience.date_end}*/}
 													{new Date(experience?.date_start).toLocaleString(
-														'default',
+														'fr-FR',
 														{
 															year: 'numeric',
 															month: 'long',
@@ -54,7 +63,7 @@ function ViewExperiencesProfil(props) {
 													experience?.date_end === ''
 														? "Aujourd'hui"
 														: new Date(experience?.date_end).toLocaleString(
-																'default',
+																'fr-FR',
 																{
 																	year: 'numeric',
 																	month: 'long',
@@ -64,7 +73,18 @@ function ViewExperiencesProfil(props) {
 											</div>
 										</div>
 										<div>
-											<p className={'text-sm italic text-gray-500'}>
+											<p
+												className={'text-sm italic text-gray-600'}
+												data-cy={'experience-city'}
+											>
+												à {experience?.city}
+											</p>
+										</div>
+										<div>
+											<p
+												className={'text-sm italic text-gray-500'}
+												data-cy={'experience-description'}
+											>
 												{experience?.description}
 											</p>
 										</div>

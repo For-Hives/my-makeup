@@ -24,19 +24,28 @@ function ViewCoursesProfil(props) {
 							</span>
 							<div className={'ml-2 flex w-full flex-col gap-2'}>
 								<div className={'flex flex-col'}>
-									<p className={'font-semibold text-gray-700'}>
+									<p
+										className={'font-semibold text-gray-700'}
+										data-cy={'course-diploma'}
+									>
 										{course?.diploma}
 									</p>
 									<div className={'flex w-full justify-between'}>
-										<p className={'text-sm italic text-gray-600'}>
+										<p
+											className={'text-sm italic text-gray-600'}
+											data-cy={'course-school'}
+										>
 											{course?.school}
 										</p>
-										<p className={'text-sm italic text-gray-600'}>
+										<p
+											className={'text-sm italic text-gray-600'}
+											data-cy={'course-date-graduation'}
+										>
 											{course?.date_graduation}
 										</p>
 									</div>
 								</div>
-								<div>
+								<div data-cy={'course-description'}>
 									{
 										// display the user description
 										// if \n is present, split the string and display each part in a new line
