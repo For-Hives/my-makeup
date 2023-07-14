@@ -351,7 +351,7 @@ describe('profil-edge', () => {
 	 * modify the diploma and update it
 	 * check if the update is ok
 	 */
-	describe('Diplomas and Courses - section - (min, max, required)', () => {
+	describe.only('Diplomas and Courses - section - (min, max, required)', () => {
 		it('tests complet Diplomas and courses - section', () => {
 			cy.visit('http://localhost:3000/auth/profil').then(() => {
 				cy.wait(1000);
@@ -396,9 +396,13 @@ describe('profil-edge', () => {
 													// wait for the update to finish
 													cy.wait('@patchMeMakeup').its('response.statusCode').should('eq', 200);
 
+													cy.wait(1000);
+
 													cy.get('[data-cy=\'update-courses-button\']')
 														.click({ force: true })
 														.then(() => {
+															cy.wait(1000);
+
 															cy.get('[data-cy=\'course-edit-button-0\']').click();
 															cy.get('[data-cy=\'diploma-input\']').should('have.value', 'Epsi');
 															cy.get('[data-cy=\'school-input\']').should('have.value', 'epsi');
@@ -418,6 +422,8 @@ describe('profil-edge', () => {
 																		.then(() => {
 																			// wait for the update to finish
 																			cy.wait('@patchMeMakeup').its('response.statusCode').should('eq', 200);
+
+																			cy.wait(1000);
 
 																			cy.get('[data-cy=\'profil-public-view\']').click().then(() => {
 																				cy.wait(1000);
