@@ -5,9 +5,9 @@ FROM node:20-alpine as production
 WORKDIR /usr/app
 
 # Copie des fichiers nécessaires depuis l'étape de build
-COPY /usr/app/.next ./.next
-COPY /usr/app/public ./public
-COPY /usr/app/package*.json ./
+COPY ./.next /usr/app/.next
+COPY ./public /usr/app/public
+COPY ./package*.json /usr/app/package*.json
 
 RUN npm ci --omit=dev --ignore-scripts
 
