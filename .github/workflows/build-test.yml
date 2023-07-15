@@ -76,7 +76,7 @@ jobs:
       - name: List files
         run: ls -la
       - name: Add container env vars
-        run: echo "THIS_RUNNER=${{ matrix.containers }}" >> $GITHUB_ENV
+        run: THIS_RUNNER=${{ matrix.containers }}
       - name: Cypress run
         uses: cypress-io/github-action@v5
         with:
