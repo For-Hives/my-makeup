@@ -1,5 +1,6 @@
 name: Build and Test
 env:
+  TOTAL_RUNNERS: 4
   NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
   NEXTAUTH_SECRET: ${{secrets.NEXTAUTH_SECRET}}
   NEXT_PUBLIC_URL: ${{secrets.NEXT_PUBLIC_URL}}
