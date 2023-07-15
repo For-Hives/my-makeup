@@ -39,9 +39,9 @@ function getArgs() {
 	return { totalRunners, thisRunner }
 }
 
-async function getTestCount(filePath) {
+async function getLineNumber(filePath) {
 	const content = await fs.readFile(filePath, 'utf8')
-	return content.match(testPattern)?.length || 0
+	return content.toString().split('\n').length
 }
 
 // adapated from:
@@ -81,7 +81,7 @@ async function sortSpecFilesByTestCount(specPathsOriginal) {
 	const testPerSpec = {}
 
 	for (const specPath of specPaths) {
-		testPerSpec[specPath] = await getTestCount(specPath)
+		testPerSpec[specPath] = await getLineNumber(specPath)
 	}
 
 	return (

@@ -10,54 +10,54 @@
  * So, we can either just not use cypress-io/github-action or use a script like
  * this one to run the tests.
  */
-import { exec } from 'child_process';
+import { exec } from 'child_process'
 
 function getEnvNumber(varName, { required = false } = {}) {
 	if (required && process.env[varName] === undefined) {
-		throw Error(`${varName} is not set.`);
+		throw Error(`${varName} is not set.`)
 	}
 
-	const value = Number(process.env[varName]);
+	const value = Number(process.env[varName])
 
 	if (isNaN(value)) {
-		throw Error(`${varName} is not a number.`);
+		throw Error(`${varName} is not a number.`)
 	}
 
-	return value;
+	return value
 }
 
 function getArgs() {
 	return {
 		totalRunners: getEnvNumber('TOTAL_RUNNERS', { required: true }),
 		thisRunner: getEnvNumber('THIS_RUNNER', { required: true }),
-	};
+	}
 }
 
-(async () => {
+;(async () => {
 	try {
-		const { totalRunners, thisRunner } = getArgs();
+		const { totalRunners, thisRunner } = getArgs()
 
-		const command = `yarn cypress run --spec "$(yarn --silent node cypress/cypress-spec-split.js ${totalRunners} ${thisRunner})"`;
+		const command = `yarn cypress run --spec "$(yarn --silent node cypress/cypress-spec-split.js ${totalRunners} ${thisRunner})"`
 
-		console.log(`Running: ${command}`);
+		console.log(`Running: ${command}`)
 
-		const commandProcess = exec(command);
+		const commandProcess = exec(command)
 
 		// pipe output because we want to see the results of the run
 
 		if (commandProcess.stdout) {
-			commandProcess.stdout.pipe(process.stdout);
+			commandProcess.stdout.pipe(process.stdout)
 		}
 
 		if (commandProcess.stderr) {
-			commandProcess.stderr.pipe(process.stderr);
+			commandProcess.stderr.pipe(process.stderr)
 		}
 
-		commandProcess.on('exit', (code) => {
-			process.exit(code || 0);
-		});
+		commandProcess.on('exit', code => {
+			process.exit(code || 0)
+		})
 	} catch (err) {
-		console.error(err);
-		process.exit(1);
+		console.error(err)
+		process.exit(1)
 	}
-})();
+})()

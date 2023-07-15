@@ -409,11 +409,5 @@ describe('profil', () => {
 				});
 			});
 		});
-		it('test factice', () => {
-			cy.visit('https://www.google.com');
-		});
-		it('test factice 2', () => {
-			cy.visit('https://www.google.com');
-		});
 	});
 });
