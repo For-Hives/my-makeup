@@ -6,12 +6,12 @@ function Cta() {
 		<div className={'relative w-full py-10 md:py-20'}>
 			<div
 				className={
-					'absolute left-0 top-0 -z-10 h-full w-full scale-125 transform overflow-visible md:scale-150 xl:scale-125 2xl:scale-100'
+					'absolute left-0 top-0 -z-10 h-full w-full scale-125 transform overflow-x-hidden md:scale-150 xl:scale-125 2xl:scale-100'
 				}
 			>
 				<div
 					className={
-						'flex h-full w-full scale-125 scale-y-150 transform items-center justify-center overflow-y-visible md:scale-100'
+						'flex h-full w-full scale-125 scale-y-150 transform items-center justify-center overflow-x-hidden overflow-y-visible md:scale-100'
 					}
 				>
 					<Image
