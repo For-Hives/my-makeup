@@ -65,6 +65,7 @@ jobs:
     needs: build
     environment: testing
     steps:
+      - uses: actions/checkout@v3
       - name: Download the build
         uses: actions/download-artifact@v2
         with:
