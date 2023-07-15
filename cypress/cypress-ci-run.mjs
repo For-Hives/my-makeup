@@ -37,7 +37,7 @@ function getArgs() {
 	try {
 		const { totalRunners, thisRunner } = getArgs();
 
-		const command = `yarn cypress run --spec "$(yarn --silent ts-node --quiet scripts/cypress-spec-split.ts ${totalRunners} ${thisRunner})"`;
+		const command = `yarn cypress run --spec "$(yarn --silent node --quiet cypress/cypress-spec-split.js ${totalRunners} ${thisRunner})"`;
 
 		console.log(`Running: ${command}`);
 
