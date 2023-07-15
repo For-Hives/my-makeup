@@ -95,7 +95,7 @@ function Signin() {
 															callbackUrl: '/auth/profil',
 														})
 													}}
-													className="flex h-[40px] w-[250px] flex-nowrap items-center justify-start gap-[24px] rounded-md bg-white px-3 text-gray-500 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:outline-offset-0"
+													className="flex h-[40px] w-full flex-nowrap items-center justify-center gap-[12px] rounded-md bg-white px-3 text-gray-500 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:outline-offset-0"
 												>
 													<span className="sr-only">
 														Se connecter via Facebook
@@ -125,7 +125,7 @@ function Signin() {
 															callbackUrl: '/auth/profil',
 														})
 													}}
-													className="flex h-[40px] w-[250px] flex-nowrap items-center justify-start gap-[24px] rounded-md bg-white px-3 text-gray-500 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:outline-offset-0"
+													className="flex h-[40px] w-full flex-nowrap items-center justify-center gap-[24px] rounded-md bg-white px-3 text-gray-500 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:outline-offset-0"
 												>
 													<span className="sr-only">
 														Se connecter via Google
