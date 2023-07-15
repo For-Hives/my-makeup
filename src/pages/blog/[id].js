@@ -98,7 +98,7 @@ export default function Article({ articleData }) {
 }
 
 export async function getStaticPaths() {
-	const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}api/articles`, {
+	const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/articles`, {
 		method: 'GET',
 		headers: {
 			// 	token
@@ -124,7 +124,7 @@ export async function getStaticPaths() {
 
 export async function getStaticProps({ params }) {
 	let articleData = await fetch(
-		`${process.env.NEXT_PUBLIC_API_URL}api/articles?filters[slug][$eq]=${params.id}`,
+		`${process.env.NEXT_PUBLIC_API_URL}/api/articles?filters[slug][$eq]=${params.id}`,
 		{
 			method: 'GET',
 			headers: {

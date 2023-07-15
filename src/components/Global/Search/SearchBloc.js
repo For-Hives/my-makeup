@@ -16,9 +16,11 @@ function SearchBloc() {
 			return
 		}
 		if (city !== '') {
-			router.push(`/search?search=${searchTerm}&city=${city}`)
+			router.push(
+				`/search?search=${encodeURI(searchTerm)}&city=${encodeURI(city)}`
+			)
 		} else {
-			router.push(`/search?search=${searchTerm}`)
+			router.push(`/search?search=${encodeURI(searchTerm)}`)
 		}
 	}
 

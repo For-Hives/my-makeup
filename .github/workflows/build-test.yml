@@ -1,5 +1,6 @@
 name: Build and Test
 env:
+  TOTAL_RUNNERS: 4
   NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
   NEXTAUTH_SECRET: ${{secrets.NEXTAUTH_SECRET}}
   NEXT_PUBLIC_URL: ${{secrets.NEXT_PUBLIC_URL}}
@@ -16,16 +17,33 @@ env:
   CYPRESS_TEST_USER: ${{secrets.TEST_USER}}
   CYPRESS_TEST_PW: ${{secrets.TEST_PW}}
 
+
 on:
   pull_request:
     branches: [ 'main' ]
 
 jobs:
-  docker:
+  build:
     runs-on: ubuntu-latest
-    environment: testing
     steps:
       - uses: actions/checkout@v3
+      - name: Use Node.js 20.x
+        uses: actions/setup-node@v3
+        with:
+          cache: 'npm'
+          node-version: 20.x
+      - name: Install dependencies in production
+        run: npm ci --ignore-scripts
+      - name: Cache next.js build
+        id: cache-npm
+        uses: actions/cache@v3
+        with:
+          path: .next/
+          key: ${{ runner.os }}-next-build-${{ hashFiles('src/','public/','next*','package*','jsconfig.json') }}
+      - if: ${{ steps.cache-npm.outputs.cache-hit != 'true' }}
+        name: Build the app
+        continue-on-error: true
+        run: npm run build
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
       - name: Set up Docker Buildx
@@ -33,28 +51,43 @@ jobs:
       - name: Just Build
         uses: docker/build-push-action@v4
         with:
+          context: .
           push: false
           tags: ${{ secrets.APP_IMAGE }}
           build-args: NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
-  cypress:
+
+  tests:
     runs-on: ubuntu-latest
-    needs: docker
+    strategy:
+      fail-fast: false
+      matrix:
+        # Run copies of the current job in parallel. These need to be a
+        # continuous series of numbers, starting with `0`. If you change the
+        # number of containers, change TOTAL_RUNNERS below.
+        containers: [ 0, 1, 2, 3 ]
+    needs: build
     environment: testing
     steps:
       - uses: actions/checkout@v3
-      - name: Use Node.js 18.x
-        uses: actions/setup-node@v3
+      - name: Cache next.js build
+        id: cache-npm
+        uses: actions/cache@v3
         with:
-          node-version: 18.x
-      - run: npm install
+          path: .next/
+          key: ${{ runner.os }}-next-build-${{ hashFiles('src/','public/','next*','package*','jsconfig.json') }}
+      - name: List files
+        run: ls -la
+      - name: Add container env vars
+        run: echo "THIS_RUNNER=${{ matrix.containers }}" >> $GITHUB_ENV
       - name: Cypress run
         uses: cypress-io/github-action@v5
         with:
-          build: npm run build
           start: npm run start
           browser: chrome
           wait-on: 'http://localhost:3000'
-          env: ENV=development
+          command: yarn node cypress/cypress-ci-run.mjs
+          env:
+            ENV=production
             NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
             NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}
             NEXT_PUBLIC_URL=${{ secrets.NEXT_PUBLIC_URL }}
