@@ -22,6 +22,8 @@ jobs:
         run: npm ci --ignore-scripts
       - name: Build the app
         run: npm run build
+      - name: List files
+        run: ls -la
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
       - name: Set up Docker Buildx
