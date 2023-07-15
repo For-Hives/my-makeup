@@ -24,6 +24,13 @@ jobs:
   test:
     runs-on: ubuntu-latest
     environment: testing
+    strategy:
+      fail-fast: false
+      matrix:
+        # Run copies of the current job in parallel. These need to be a
+        # continuous series of numbers, starting with `0`. If you change the
+        # number of containers, change TOTAL_RUNNERS below.
+        containers: [ 0, 1, 2, 3, 4 ]
     steps:
       - uses: actions/checkout@v3
       - name: Use Node.js 20.x
@@ -53,7 +60,10 @@ jobs:
           start: npm run start
           browser: chrome
           wait-on: 'http://localhost:3000'
+          command: yarn node cypress/cypress-ci-run.mjs
           env:
+            TOTAL_RUNNERS= 5
+            THIS_RUNNER= ${{ matrix.containers }}
             ENV=production
             NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
             NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}
