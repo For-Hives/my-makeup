@@ -1,5 +1,4 @@
 const { defineConfig } = require('cypress')
-const { cloudPlugin } = require('cypress-cloud/plugin')
 
 module.exports = defineConfig({
 	e2e: {
@@ -12,9 +11,6 @@ module.exports = defineConfig({
 		reporterOptions: {
 			reporterEnabled: 'mochawesome',
 			mochaFile: 'cypress/reports/junit/test_results[hash].xml',
-		},
-		setupNodeEvents(on, config) {
-			return cloudPlugin(on, config)
 		},
 	},
 
