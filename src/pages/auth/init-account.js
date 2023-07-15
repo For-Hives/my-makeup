@@ -95,11 +95,14 @@ function InitAccount() {
 										}
 									})
 									.catch(err => {
-										toast('Une erreur est survenue, veuillez réessayer plus tard', {
-											type: 'error',
-											icon: '⛔',
-											toastId: 'toast-alert',
-										})
+										toast(
+											'Une erreur est survenue, veuillez réessayer plus tard',
+											{
+												type: 'error',
+												icon: '⛔',
+												toastId: 'toast-alert',
+											}
+										)
 									})
 								setAccountInit(true)
 							}
@@ -220,36 +223,62 @@ function InitAccount() {
 							{/* Content goes here */}
 							{/* We use less vertical padding on card headers on desktop than on body sections */}
 							<nav aria-label="Progress">
-								<ol role="list" className="divide-y divide-gray-300 rounded-md border border-gray-300 md:flex md:divide-y-0">
+								<ol
+									role="list"
+									className="divide-y divide-gray-300 rounded-md border border-gray-300 md:flex md:divide-y-0"
+								>
 									{stepsList.map((step, stepIdx) => (
 										<li key={step.name} className="relative md:flex md:flex-1">
 											{step.status === 'complete' ? (
-												<Link href={step.href} className="group flex w-full items-center">
+												<Link
+													href={step.href}
+													className="group flex w-full items-center"
+												>
 													<div className="flex items-center gap-4 px-4 py-3 text-sm font-medium md:px-6 md:py-4">
 														<span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-indigo-600 group-hover:bg-indigo-800 md:h-10 md:w-10">
-															<CheckIcon className="h-4 w-4 text-white md:h-6 md:w-6" aria-hidden="true" />
+															<CheckIcon
+																className="h-4 w-4 text-white md:h-6 md:w-6"
+																aria-hidden="true"
+															/>
 														</span>
-														<span className="text-sm font-medium text-gray-900">{step.name}</span>
+														<span className="text-sm font-medium text-gray-900">
+															{step.name}
+														</span>
 													</div>
 												</Link>
 											) : (
 												<>
 													{step.status === 'current' ? (
-														<Link href={step.href} className="group flex w-full items-center" aria-current="step">
+														<Link
+															href={step.href}
+															className="group flex w-full items-center"
+															aria-current="step"
+														>
 															<div className="flex items-center gap-4 px-4 py-3 text-sm font-medium md:px-6 md:py-4">
 																<div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border-2 border-indigo-600 md:h-10 md:w-10">
-																	<span className="text-indigo-600">{step.id}</span>
+																	<span className="text-indigo-600">
+																		{step.id}
+																	</span>
 																</div>
-																<span className="text-sm font-medium text-indigo-600">{step.name}</span>
+																<span className="text-sm font-medium text-indigo-600">
+																	{step.name}
+																</span>
 															</div>
 														</Link>
 													) : (
-														<Link href={step.href} className="group flex items-center">
+														<Link
+															href={step.href}
+															className="group flex items-center"
+														>
 															<div className="flex items-center gap-4 px-4 py-3 text-sm font-medium md:px-6 md:py-4">
 																<span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border-2 border-gray-300 group-hover:border-gray-400 md:h-10 md:w-10">
-																	<span className="text-gray-500 group-hover:text-gray-900">{step.id}</span>
+																	<span className="text-gray-500 group-hover:text-gray-900">
+																		{step.id}
+																	</span>
 																</span>
-																<span className="text-sm font-medium text-gray-500 group-hover:text-gray-900">{step.name}</span>
+																<span className="text-sm font-medium text-gray-500 group-hover:text-gray-900">
+																	{step.name}
+																</span>
 															</div>
 														</Link>
 													)}
@@ -258,9 +287,22 @@ function InitAccount() {
 											{stepIdx !== stepsList.length - 1 ? (
 												<>
 													{/* Arrow separator for lg screens and up */}
-													<div className="absolute right-0 top-0 hidden h-full w-5 md:block" aria-hidden="true">
-														<svg className="h-full w-full text-gray-300" viewBox="0 0 22 80" fill="none" preserveAspectRatio="none">
-															<path d="M0 -2L20 40L0 82" vectorEffect="non-scaling-stroke" stroke="currentcolor" strokeLinejoin="round" />
+													<div
+														className="absolute right-0 top-0 hidden h-full w-5 md:block"
+														aria-hidden="true"
+													>
+														<svg
+															className="h-full w-full text-gray-300"
+															viewBox="0 0 22 80"
+															fill="none"
+															preserveAspectRatio="none"
+														>
+															<path
+																d="M0 -2L20 40L0 82"
+																vectorEffect="non-scaling-stroke"
+																stroke="currentcolor"
+																strokeLinejoin="round"
+															/>
 														</svg>
 													</div>
 												</>
@@ -275,17 +317,37 @@ function InitAccount() {
 							{step === 1 && (
 								<div className="flex h-full w-full flex-col items-center justify-start md:justify-start">
 									<div className="relative flex h-full w-full flex-col items-center justify-start gap-4 overflow-hidden md:justify-start">
-										<div className={'absolute right-0 top-1/2 z-10 -rotate-12 transform opacity-50'}>
-											<div className={'flex w-full items-center justify-center'}>
-												<Image src={'/assets/brand/050-email.svg'} width={500} height={500} alt={'email Vérification'} className={'opacity-5'} />
+										<div
+											className={
+												'absolute right-0 top-1/2 z-10 -rotate-12 transform opacity-50'
+											}
+										>
+											<div
+												className={'flex w-full items-center justify-center'}
+											>
+												<Image
+													src={'/assets/brand/050-email.svg'}
+													width={500}
+													height={500}
+													alt={'email Vérification'}
+													className={'opacity-5'}
+												/>
 											</div>
 										</div>
 										<div>
-											<h1 className="text-center text-3xl font-bold">Vérification de votre adresse email</h1>
+											<h1 className="text-center text-3xl font-bold">
+												Vérification de votre adresse email
+											</h1>
 										</div>
 										<div>
-											<p className="text-center">Vous avez reçu un lien par email pour vérifier votre compte !</p>
-											<p className="text-center">Si vous ne recevez pas de mail, vérifiez dans vos courriers indésirables</p>
+											<p className="text-center">
+												Vous avez reçu un lien par email pour vérifier votre
+												compte !
+											</p>
+											<p className="text-center">
+												Si vous ne recevez pas de mail, vérifiez dans vos
+												courriers indésirables
+											</p>
 										</div>
 									</div>
 								</div>
@@ -302,15 +364,28 @@ function InitAccount() {
 								<div className="flex flex-col items-center justify-center">
 									<div className="flex flex-col items-center justify-center md:my-8 md:gap-4 xl:gap-8">
 										<div>
-											<h1 className="text-center text-3xl font-bold">Votre nom et votre prénom</h1>
-											<p className="text-center text-gray-700">Ces informations seront visibles par les autres utilisateurs</p>
+											<h1 className="text-center text-3xl font-bold">
+												Votre nom et votre prénom
+											</h1>
+											<p className="text-center text-gray-700">
+												Ces informations seront visibles par les autres
+												utilisateurs
+											</p>
 										</div>
 
 										<div className="mx-auto w-full sm:max-w-[480px]">
 											<div className="rounded-lg bg-white px-6 py-12 shadow-xl sm:px-12">
-												<form className="space-y-6" action="#" method="POST" onSubmit={handleSubmit(onSubmit)}>
+												<form
+													className="space-y-6"
+													action="#"
+													method="POST"
+													onSubmit={handleSubmit(onSubmit)}
+												>
 													<div>
-														<label htmlFor="first_name" className="block text-sm font-medium leading-6 text-gray-900">
+														<label
+															htmlFor="first_name"
+															className="block text-sm font-medium leading-6 text-gray-900"
+														>
 															Prénom
 														</label>
 														<div className="mt-2">
@@ -329,7 +404,10 @@ function InitAccount() {
 													</div>
 
 													<div>
-														<label htmlFor="last_name" className="block text-sm font-medium leading-6 text-gray-900">
+														<label
+															htmlFor="last_name"
+															className="block text-sm font-medium leading-6 text-gray-900"
+														>
 															Nom de famille
 														</label>
 														<div className="mt-2">
@@ -366,13 +444,31 @@ function InitAccount() {
 								<div className="flex flex-col items-center justify-center">
 									<div className="flex flex-col items-center justify-center gap-4">
 										<div>
-											<h2 className="text-center text-3xl font-bold">Bienvenue sur My&nbsp;Makeup !</h2>
-											<div className={'flex h-full w-full flex-col items-center justify-center '}>
-												<h2 className={'text-center text-gray-700'}> Rendez-vous sur votre profil pour terminer de le compléter </h2>
+											<h2 className="text-center text-3xl font-bold">
+												Bienvenue sur My&nbsp;Makeup !
+											</h2>
+											<div
+												className={
+													'flex h-full w-full flex-col items-center justify-center '
+												}
+											>
+												<h2 className={'text-center text-gray-700'}>
+													{' '}
+													Rendez-vous sur votre profil pour terminer de le
+													compléter{' '}
+												</h2>
 											</div>
 										</div>
-										<Warning title={'Attention !'} description={"Votre profil ne sera pas visible tant qu'il ne sera pas totalement rempli !"} />
-										<Link href="/auth/profil" className="rounded-md bg-indigo-600 px-3 py-1.5 text-white">
+										<Warning
+											title={'Attention !'}
+											description={
+												"Votre profil ne sera pas visible tant qu'il ne sera pas totalement rempli !"
+											}
+										/>
+										<Link
+											href="/auth/profil"
+											className="rounded-md bg-indigo-600 px-3 py-1.5 text-white"
+										>
 											Mon profil
 										</Link>
 									</div>
@@ -395,15 +491,18 @@ function getUserFromSession(session, user, setUser) {
 
 		if (user != null && user.confirmed) return null
 
-		const userData = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/me`, {
-			method: 'GET',
-			headers: {
-				// 	token
-				'Content-Type': 'application/json',
-				Accept: 'application/json',
-				Authorization: `Bearer ${session.jwt}`,
-			},
-		})
+		const userData = await fetch(
+			`${process.env.NEXT_PUBLIC_API_URL}/api/users/me`,
+			{
+				method: 'GET',
+				headers: {
+					// 	token
+					'Content-Type': 'application/json',
+					Accept: 'application/json',
+					Authorization: `Bearer ${session.jwt}`,
+				},
+			}
+		)
 
 		setUser(await userData.json())
 	}, 4000)

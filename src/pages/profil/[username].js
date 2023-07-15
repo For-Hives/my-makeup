@@ -16,7 +16,10 @@ export default function Profil({ profilData }) {
 					content={`Découvrez le profil de la maquilleuse professionnelle de vos rêves ! ${user.attributes.first_name} ${profilData.attributes.last_name}  - ${profilData.attributes.speciality} `}
 				/>
 				{/*	seo tag canonical link */}
-				<link rel="canonical" href={`https://my-makeup.fr/profil/${user.attributes.username}`} />
+				<link
+					rel="canonical"
+					href={`https://my-makeup.fr/profil/${user.attributes.username}`}
+				/>
 			</Head>
 			<Nav />
 			<main className={'relative'}>
@@ -31,14 +34,17 @@ export default function Profil({ profilData }) {
 }
 
 export async function getStaticPaths() {
-	const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/makeup-artistes`, {
-		method: 'GET',
-		headers: {
-			// 	token
-			'Content-Type': 'application/json',
-			Accept: 'application/json',
-		},
-	}).then(res => res.json())
+	const res = await fetch(
+		`${process.env.NEXT_PUBLIC_API_URL}/api/makeup-artistes`,
+		{
+			method: 'GET',
+			headers: {
+				// 	token
+				'Content-Type': 'application/json',
+				Accept: 'application/json',
+			},
+		}
+	).then(res => res.json())
 
 	/**
 	 * format the data for getStaticPaths

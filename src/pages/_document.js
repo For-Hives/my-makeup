@@ -6,7 +6,10 @@ export default function Document() {
 		<Html lang="fr">
 			<Head>
 				<link rel="icon" href="/favicon.webp" />
-				<Script strategy={'afterInteractive'} src="https://www.googletagmanager.com/gtag/js?id=G-6Z5K42B5YH" />
+				<Script
+					strategy={'afterInteractive'}
+					src="https://www.googletagmanager.com/gtag/js?id=G-6Z5K42B5YH"
+				/>
 				<Script id={'analytics'} strategy="afterInteractive">
 					{`
                         window.dataLayer = window.dataLayer || [];

@@ -222,7 +222,12 @@ export default function ModalUpdateCoursesProfil(props) {
 
 	return (
 		<Transition.Root show={open} as={Fragment}>
-			<Dialog as="div" className="relative z-30" initialFocus={cancelButtonRef} onClose={props.handleIsModalOpen}>
+			<Dialog
+				as="div"
+				className="relative z-30"
+				initialFocus={cancelButtonRef}
+				onClose={props.handleIsModalOpen}
+			>
 				<Transition.Child
 					as={Fragment}
 					enter="ease-out duration-300"
@@ -251,23 +256,39 @@ export default function ModalUpdateCoursesProfil(props) {
 									type="button"
 									onClick={props.handleIsModalOpen}
 									ref={cancelButtonRef}
-									className={'absolute right-0 top-0 m-6 flex items-center justify-center'}
+									className={
+										'absolute right-0 top-0 m-6 flex items-center justify-center'
+									}
 								>
 									<span className="material-icons-round">close</span>
 								</button>
 								<div className="flex flex-col items-start gap-8">
 									<div className="text-left">
-										<Dialog.Title as="h3" className="text-lg font-semibold text-gray-900">
+										<Dialog.Title
+											as="h3"
+											className="text-lg font-semibold text-gray-900"
+										>
 											Les formations & diplômes que vous avez suivis
 										</Dialog.Title>
 									</div>
-									<div className={'flex h-full w-full flex-wrap gap-16 md:flex-nowrap'}>
+									<div
+										className={
+											'flex h-full w-full flex-wrap gap-16 md:flex-nowrap'
+										}
+									>
 										<div className={'w-full md:w-2/5'}>
 											<div className="grid grid-cols-1 gap-4">
 												<div className={'flex flex-col gap-4'}>
-													<form onSubmit={handleSubmit(onSubmit)} method="POST" className="flex flex-col gap-4">
+													<form
+														onSubmit={handleSubmit(onSubmit)}
+														method="POST"
+														className="flex flex-col gap-4"
+													>
 														<div>
-															<label htmlFor="diploma" className="block text-sm text-gray-700">
+															<label
+																htmlFor="diploma"
+																className="block text-sm text-gray-700"
+															>
 																Nom de la formation ou du diplôme
 															</label>
 															<div className="mt-2">
@@ -282,14 +303,20 @@ export default function ModalUpdateCoursesProfil(props) {
 																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																/>
 																{errors.diploma && (
-																	<p data-cy={'error-diploma'} className={'mt-2 text-xs text-red-500/80'}>
+																	<p
+																		data-cy={'error-diploma'}
+																		className={'mt-2 text-xs text-red-500/80'}
+																	>
 																		{errors.diploma.message}
 																	</p>
 																)}
 															</div>
 														</div>
 														<div>
-															<label htmlFor="school" className="block text-sm text-gray-700">
+															<label
+																htmlFor="school"
+																className="block text-sm text-gray-700"
+															>
 																{"Nom de l'école ou de l'organisme"}
 															</label>
 															<div className="mt-2">
@@ -304,14 +331,20 @@ export default function ModalUpdateCoursesProfil(props) {
 																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																/>
 																{errors.school && (
-																	<p data-cy={'error-school'} className={'mt-2 text-xs text-red-500/80'}>
+																	<p
+																		data-cy={'error-school'}
+																		className={'mt-2 text-xs text-red-500/80'}
+																	>
 																		{errors.school.message}
 																	</p>
 																)}
 															</div>
 														</div>
 														<div>
-															<label htmlFor="date_graduation" className="block text-sm text-gray-700">
+															<label
+																htmlFor="date_graduation"
+																className="block text-sm text-gray-700"
+															>
 																{"Date d'obtention du diplôme"}
 															</label>
 															<div className="mt-2">
@@ -326,14 +359,20 @@ export default function ModalUpdateCoursesProfil(props) {
 																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																/>
 																{errors.date_graduation && (
-																	<p data-cy={'error-date-graduation'} className={'mt-2 text-xs text-red-500/80'}>
+																	<p
+																		data-cy={'error-date-graduation'}
+																		className={'mt-2 text-xs text-red-500/80'}
+																	>
 																		{errors.date_graduation.message}
 																	</p>
 																)}
 															</div>
 														</div>
 														<div>
-															<label htmlFor="course_description" className="block text-sm text-gray-700">
+															<label
+																htmlFor="course_description"
+																className="block text-sm text-gray-700"
+															>
 																Description, ce que vous avez appris
 															</label>
 															<div className="mt-2">
@@ -347,7 +386,10 @@ export default function ModalUpdateCoursesProfil(props) {
 																	className="block min-h-[200px] w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																/>
 																{errors.course_description && (
-																	<p data-cy={'error-course-description'} className={'mt-2 text-xs text-red-500/80'}>
+																	<p
+																		data-cy={'error-course-description'}
+																		className={'mt-2 text-xs text-red-500/80'}
+																	>
 																		{errors.course_description.message}
 																	</p>
 																)}
@@ -355,8 +397,15 @@ export default function ModalUpdateCoursesProfil(props) {
 														</div>
 													</form>
 													<div className={'flex items-center justify-end'}>
-														<button data-cy="add-course-button" type="button" className="btn-primary" onClick={handleSubmit(onSubmit)}>
-															{userCoursesId === '' ? 'Ajouter une formation / diplôme' : 'Modifier la formation / diplôme'}
+														<button
+															data-cy="add-course-button"
+															type="button"
+															className="btn-primary"
+															onClick={handleSubmit(onSubmit)}
+														>
+															{userCoursesId === ''
+																? 'Ajouter une formation / diplôme'
+																: 'Modifier la formation / diplôme'}
 														</button>
 													</div>
 												</div>
@@ -364,47 +413,91 @@ export default function ModalUpdateCoursesProfil(props) {
 										</div>
 										<div className={'flex w-full flex-col gap-4 md:w-3/5'}>
 											{/*	display the courses already added */}
-											<h3 className={'text-sm text-gray-900'}>Les formations & diplômes déjà ajoutés</h3>
-											<div className={'flex max-h-[600px] w-full flex-col gap-4 overflow-y-scroll'}>
+											<h3 className={'text-sm text-gray-900'}>
+												Les formations & diplômes déjà ajoutés
+											</h3>
+											<div
+												className={
+													'flex max-h-[600px] w-full flex-col gap-4 overflow-y-scroll'
+												}
+											>
 												{userCourses.map((course, index) => {
 													return (
-														<div key={index} className={'relative flex w-full rounded bg-indigo-50/20 p-4 text-gray-700'}>
-															<div className={'absolute right-0 top-0 m-2 flex items-center justify-center gap-4'}>
+														<div
+															key={index}
+															className={
+																'relative flex w-full rounded bg-indigo-50/20 p-4 text-gray-700'
+															}
+														>
+															<div
+																className={
+																	'absolute right-0 top-0 m-2 flex items-center justify-center gap-4'
+																}
+															>
 																<button
 																	data-cy={`course-edit-button-${index}`}
 																	className={'flex items-center justify-center'}
 																	onClick={() => handleEditCourse(course.id)}
 																>
-																	<span className="material-icons-round text-xl text-orange-600">edit</span>
+																	<span className="material-icons-round text-xl text-orange-600">
+																		edit
+																	</span>
 																</button>
 																<button
 																	data-cy={'course-delete-button'}
 																	className={'flex items-center justify-center'}
 																	onClick={() => handleDeleteCourse(course.id)}
 																>
-																	<span className="material-icons-round text-xl text-red-500">delete</span>
+																	<span className="material-icons-round text-xl text-red-500">
+																		delete
+																	</span>
 																</button>
 															</div>
-															<span className="material-icons-round text-indigo-900">school</span>
-															<div className={'ml-2 flex w-full flex-col gap-2'}>
+															<span className="material-icons-round text-indigo-900">
+																school
+															</span>
+															<div
+																className={'ml-2 flex w-full flex-col gap-2'}
+															>
 																<div className={'flex flex-col'}>
-																	<p className={'w-4/5 font-semibold text-gray-700 md:w-full'}>{course.diploma}</p>
+																	<p
+																		className={
+																			'w-4/5 font-semibold text-gray-700 md:w-full'
+																		}
+																	>
+																		{course.diploma}
+																	</p>
 																	<div className={'flex justify-between'}>
-																		<p className={'text-sm italic text-gray-600'}>{course.school}</p>
-																		<p className={'text-sm italic text-gray-600'}>{course.date_graduation}</p>
+																		<p
+																			className={'text-sm italic text-gray-600'}
+																		>
+																			{course.school}
+																		</p>
+																		<p
+																			className={'text-sm italic text-gray-600'}
+																		>
+																			{course.date_graduation}
+																		</p>
 																	</div>
 																</div>
 																<div>
 																	{
 																		// display the user description
 																		// if \n is present, split the string and display each part in a new line
-																		course.course_description.split('\n').map((item, i) => {
-																			return (
-																				<p key={i} className={'text-sm italic text-gray-500'}>
-																					{item}
-																				</p>
-																			)
-																		})
+																		course.course_description
+																			.split('\n')
+																			.map((item, i) => {
+																				return (
+																					<p
+																						key={i}
+																						className={
+																							'text-sm italic text-gray-500'
+																						}
+																					>
+																						{item}
+																					</p>
+																				)
+																			})
 																	}
 																</div>
 															</div>
@@ -416,7 +509,12 @@ export default function ModalUpdateCoursesProfil(props) {
 									</div>
 								</div>
 								<div className="mt-4 flex justify-end">
-									<button data-cy="save-button-courses" type="button" className="btn-primary" onClick={handleSubmitCourses}>
+									<button
+										data-cy="save-button-courses"
+										type="button"
+										className="btn-primary"
+										onClick={handleSubmitCourses}
+									>
 										Sauvegarder
 									</button>
 								</div>

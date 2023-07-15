@@ -19,7 +19,10 @@ function PourLesParticuliers(props) {
 					content="Découvrez comment My-Makeup simplifie la recherche de la maquilleuse professionnelle idéale. Grâce à notre plateforme intuitive, trouver la maquilleuse de vos rêves n'a jamais été aussi simple !"
 				/>
 				{/*	seo tag canonical link */}
-				<link rel="canonical" href="https://my-makeup.fr/solutions/pour-les-particuliers" />
+				<link
+					rel="canonical"
+					href="https://my-makeup.fr/solutions/pour-les-particuliers"
+				/>
 			</Head>
 			<Nav />
 			<main className={'relative'}>
@@ -40,7 +43,9 @@ function PourLesParticuliers(props) {
 						</>
 					}
 				/>
-				<div className={'relative mx-auto my-24 max-w-7xl px-4 md:my-48 md:px-0'}>
+				<div
+					className={'relative mx-auto my-24 max-w-7xl px-4 md:my-48 md:px-0'}
+				>
 					<div className="mx-auto max-w-2xl">
 						<article>
 							<header className="flex flex-col">

@@ -8,7 +8,11 @@ import { patchMeMakeup } from '@/services/PatchMeMakeup'
 
 const schema = zod
 	.object({
-		language: zod.string().min(1, 'La langue est requise.').max(70, 'La langue ne doit pas dépasser 70 caractères.').or(zod.literal('')),
+		language: zod
+			.string()
+			.min(1, 'La langue est requise.')
+			.max(70, 'La langue ne doit pas dépasser 70 caractères.')
+			.or(zod.literal('')),
 	})
 	.required({ language: true })
 
@@ -29,7 +33,9 @@ export default function ModalUpdateLanguageProfil(props) {
 
 	const [open, setOpen] = useState(props.isModalOpen)
 	const [userLanguage, setUserLanguage] = useState('')
-	const [userLanguageSelected, setUserLanguageSelected] = useState(user.language ?? [])
+	const [userLanguageSelected, setUserLanguageSelected] = useState(
+		user.language ?? []
+	)
 
 	const { data: session } = useSession()
 
@@ -81,8 +87,14 @@ export default function ModalUpdateLanguageProfil(props) {
 				trigger('language').then(isValid => {
 					if (isValid) {
 						const updatedUserLanguagesSelected = userLanguageSelected.concat({
-							id: event.target.value.slice(0, -1) === ';' ? event.target.value.slice(0, -1) : event.target.value,
-							name: event.target.value.slice(0, -1) === ';' ? event.target.value.slice(0, -1) : event.target.value,
+							id:
+								event.target.value.slice(0, -1) === ';'
+									? event.target.value.slice(0, -1)
+									: event.target.value,
+							name:
+								event.target.value.slice(0, -1) === ';'
+									? event.target.value.slice(0, -1)
+									: event.target.value,
 						})
 						setUserLanguageSelected(updatedUserLanguagesSelected)
 						setUserLanguage('')
@@ -142,7 +154,12 @@ export default function ModalUpdateLanguageProfil(props) {
 
 	return (
 		<Transition.Root show={open} as={Fragment}>
-			<Dialog as="div" className="relative z-30" initialFocus={cancelButtonRef} onClose={props.handleIsModalOpen}>
+			<Dialog
+				as="div"
+				className="relative z-30"
+				initialFocus={cancelButtonRef}
+				onClose={props.handleIsModalOpen}
+			>
 				<Transition.Child
 					as={Fragment}
 					enter="ease-out duration-300"
@@ -171,26 +188,40 @@ export default function ModalUpdateLanguageProfil(props) {
 									type="button"
 									onClick={props.handleIsModalOpen}
 									ref={cancelButtonRef}
-									className={'absolute right-0 top-0 m-6 flex items-center justify-center'}
+									className={
+										'absolute right-0 top-0 m-6 flex items-center justify-center'
+									}
 								>
 									<span className="material-icons-round">close</span>
 								</button>
 								<div className="flex flex-col items-start gap-8">
 									<div className="text-left">
-										<Dialog.Title as="h3" className="text-lg font-semibold text-gray-900">
+										<Dialog.Title
+											as="h3"
+											className="text-lg font-semibold text-gray-900"
+										>
 											Les langues que vous pouvez parler
 										</Dialog.Title>
 									</div>
 									<div className={'w-full md:w-3/5'}>
 										<div className="grid grid-cols-1 gap-4">
 											<div className={'flex flex-col gap-4'}>
-												<form onSubmit={handleSubmit(onSubmit)} method="POST" className="flex flex-col gap-4">
+												<form
+													onSubmit={handleSubmit(onSubmit)}
+													method="POST"
+													className="flex flex-col gap-4"
+												>
 													<div>
-														<label htmlFor="language" className="block text-sm text-gray-700">
+														<label
+															htmlFor="language"
+															className="block text-sm text-gray-700"
+														>
 															Langues
 														</label>
 														<p className={'text-xs italic text-gray-700/70'}>
-															Vous pouvez ajouter plusieurs langues en les séparant par un point-virgule, ou en appuyant sur la touche entrée.
+															Vous pouvez ajouter plusieurs langues en les
+															séparant par un point-virgule, ou en appuyant sur
+															la touche entrée.
 														</p>
 														<div className="mt-2">
 															<input
@@ -233,15 +264,24 @@ export default function ModalUpdateLanguageProfil(props) {
 																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 															/>
 															{errors.language && (
-																<p data-cy={'error-language'} className={'mt-2 text-xs text-red-500/80'}>
+																<p
+																	data-cy={'error-language'}
+																	className={'mt-2 text-xs text-red-500/80'}
+																>
 																	{errors.language.message}
 																</p>
 															)}
 														</div>
 													</div>
 													<div className={'flex flex-col gap-2'}>
-														<h3 className={'text-sm text-gray-700'}>Langues ajoutées</h3>
-														<div className={'flex w-full flex-col flex-wrap items-start gap-2 '}>
+														<h3 className={'text-sm text-gray-700'}>
+															Langues ajoutées
+														</h3>
+														<div
+															className={
+																'flex w-full flex-col flex-wrap items-start gap-2 '
+															}
+														>
 															{userLanguageSelected.map((skill, index) => (
 																<button
 																	data-cy="language-selected"
@@ -250,10 +290,14 @@ export default function ModalUpdateLanguageProfil(props) {
 																		handleDeleteLanguageelected(skill.id)
 																	}}
 																	key={index}
-																	className={'flex items-center gap-2 rounded-full bg-indigo-50 px-2 py-1 text-xs text-gray-700'}
+																	className={
+																		'flex items-center gap-2 rounded-full bg-indigo-50 px-2 py-1 text-xs text-gray-700'
+																	}
 																>
 																	<span>→ {skill.name}</span>
-																	<span className="material-icons-round text-sm">close</span>
+																	<span className="material-icons-round text-sm">
+																		close
+																	</span>
 																</button>
 															))}
 														</div>
@@ -264,7 +308,12 @@ export default function ModalUpdateLanguageProfil(props) {
 									</div>
 								</div>
 								<div className="mt-4 flex justify-end">
-									<button data-cy="save-button-languages" type="button" className="btn-primary" onClick={handleSubmit(onSubmit)}>
+									<button
+										data-cy="save-button-languages"
+										type="button"
+										className="btn-primary"
+										onClick={handleSubmit(onSubmit)}
+									>
 										Sauvegarder
 									</button>
 								</div>

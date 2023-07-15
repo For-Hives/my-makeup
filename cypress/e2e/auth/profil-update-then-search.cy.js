@@ -19,7 +19,9 @@ describe('profil', () => {
 	})
 
 	beforeEach(() => {
-		cy.intercept('PATCH', 'https://api.my-makeup.fr/api/me-makeup').as('patchMeMakeup')
+		cy.intercept('PATCH', 'https://api.my-makeup.fr/api/me-makeup').as(
+			'patchMeMakeup'
+		)
 
 		// If cookies exist, set them before each test
 		if (cookies) {
@@ -60,11 +62,13 @@ describe('profil', () => {
 					body: {
 						last_name: 'DE TEST',
 						first_name: 'Utilisateur',
-						speciality: 'Maquilleur professionnel et coiffeur professionnel pour le cinéma',
+						speciality:
+							'Maquilleur professionnel et coiffeur professionnel pour le cinéma',
 						city: 'Nantes',
 						action_radius: '5',
 						available: true,
-						description: "Je suis une maquilleuse passionnée avec plus de 10 ans d'expérience...",
+						description:
+							"Je suis une maquilleuse passionnée avec plus de 10 ans d'expérience...",
 						company_artist_name: 'My Makeup Artist',
 						main_picture: {
 							id: 1188,
@@ -208,11 +212,13 @@ describe('profil', () => {
 					body: {
 						last_name: 'DE TEST',
 						first_name: 'Utilisateur',
-						speciality: 'Maquilleur professionnel et coiffeur professionnel pour le cinéma',
+						speciality:
+							'Maquilleur professionnel et coiffeur professionnel pour le cinéma',
 						city: 'Nantes',
 						action_radius: '5',
 						available: true,
-						description: "Je suis une maquilleuse passionnée avec plus de 10 ans d'expérience...",
+						description:
+							"Je suis une maquilleuse passionnée avec plus de 10 ans d'expérience...",
 						company_artist_name: 'My Makeup Artist',
 						main_picture: {
 							id: 1188,
@@ -348,11 +354,13 @@ describe('profil', () => {
 					body: {
 						last_name: 'DE TEST',
 						first_name: null,
-						speciality: 'Maquilleur professionnel et coiffeur professionnel pour le cinéma',
+						speciality:
+							'Maquilleur professionnel et coiffeur professionnel pour le cinéma',
 						city: 'Nantes',
 						action_radius: '5',
 						available: true,
-						description: "Je suis une maquilleuse passionnée avec plus de 10 ans d'expérience...",
+						description:
+							"Je suis une maquilleuse passionnée avec plus de 10 ans d'expérience...",
 						company_artist_name: 'My Makeup Artist',
 						main_picture: {
 							id: 1188,
@@ -488,11 +496,13 @@ describe('profil', () => {
 					body: {
 						last_name: null,
 						first_name: 'Utilisateur',
-						speciality: 'Maquilleur professionnel et coiffeur professionnel pour le cinéma',
+						speciality:
+							'Maquilleur professionnel et coiffeur professionnel pour le cinéma',
 						city: 'Nantes',
 						action_radius: '5',
 						available: true,
-						description: "Je suis une maquilleuse passionnée avec plus de 10 ans d'expérience...",
+						description:
+							"Je suis une maquilleuse passionnée avec plus de 10 ans d'expérience...",
 						company_artist_name: 'My Makeup Artist',
 						main_picture: {
 							id: 1188,
@@ -632,7 +642,8 @@ describe('profil', () => {
 						city: 'Nantes',
 						action_radius: '5',
 						available: true,
-						description: "Je suis une maquilleuse passionnée avec plus de 10 ans d'expérience...",
+						description:
+							"Je suis une maquilleuse passionnée avec plus de 10 ans d'expérience...",
 						company_artist_name: 'My Makeup Artist',
 						main_picture: {
 							id: 1188,
@@ -768,11 +779,13 @@ describe('profil', () => {
 					body: {
 						last_name: 'DE TEST',
 						first_name: 'Utilisateur',
-						speciality: 'Maquilleur professionnel et coiffeur professionnel pour le cinéma',
+						speciality:
+							'Maquilleur professionnel et coiffeur professionnel pour le cinéma',
 						city: null,
 						action_radius: '5',
 						available: true,
-						description: "Je suis une maquilleuse passionnée avec plus de 10 ans d'expérience...",
+						description:
+							"Je suis une maquilleuse passionnée avec plus de 10 ans d'expérience...",
 						company_artist_name: 'My Makeup Artist',
 						main_picture: {
 							id: 1188,
@@ -908,7 +921,8 @@ describe('profil', () => {
 					body: {
 						last_name: 'DE TEST',
 						first_name: 'Utilisateur',
-						speciality: 'Maquilleur professionnel et coiffeur professionnel pour le cinéma',
+						speciality:
+							'Maquilleur professionnel et coiffeur professionnel pour le cinéma',
 						city: 'Nantes',
 						action_radius: '5',
 						available: true,
@@ -1047,11 +1061,13 @@ describe('profil', () => {
 					body: {
 						last_name: 'DE TEST',
 						first_name: 'Utilisateur',
-						speciality: 'Maquilleur professionnel et coiffeur professionnel pour le cinéma',
+						speciality:
+							'Maquilleur professionnel et coiffeur professionnel pour le cinéma',
 						city: 'Nantes',
 						action_radius: '5',
 						available: false,
-						description: "Je suis une maquilleuse passionnée avec plus de 10 ans d'expérience...",
+						description:
+							"Je suis une maquilleuse passionnée avec plus de 10 ans d'expérience...",
 						company_artist_name: 'My Makeup Artist',
 						main_picture: {
 							id: 1188,

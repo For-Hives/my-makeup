@@ -106,7 +106,9 @@ function splitSpecs(specs, totalRunners, thisRunner) {
 	}
 
 	try {
-		const specFilePaths = await sortSpecFilesByTestCount(await getSpecFilePaths())
+		const specFilePaths = await sortSpecFilesByTestCount(
+			await getSpecFilePaths()
+		)
 
 		if (!specFilePaths.length) {
 			throw Error('No spec files found.')

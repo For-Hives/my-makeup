@@ -15,7 +15,9 @@ function ResumeProfil(props) {
 	const [starsToDisplay, setStarsToDisplay] = React.useState(5)
 	const [availability, setAvailability] = React.useState(true)
 	const [isModalOpen, setIsModalOpen] = React.useState(false)
-	const [profilPicture, setProfilPicture] = React.useState('/assets/pp_makeup.webp')
+	const [profilPicture, setProfilPicture] = React.useState(
+		'/assets/pp_makeup.webp'
+	)
 
 	const handleAvailability = () => {
 		setAvailability(!availability)
@@ -59,7 +61,11 @@ function ResumeProfil(props) {
 	}, [props.isPublic])
 
 	return (
-		<div className={'group relative bg-white px-4 pb-24 shadow-xl md:px-8 2xl:px-0'}>
+		<div
+			className={
+				'group relative bg-white px-4 pb-24 shadow-xl md:px-8 2xl:px-0'
+			}
+		>
 			{!isPublic && (
 				<button
 					data-cy="update-resume-button"
@@ -71,9 +77,15 @@ function ResumeProfil(props) {
 						'user-select-none group-hover:user-select-auto focus:outline-none'
 					}
 				>
-					<div className={'btn-alt-primary mt-[90px] flex items-center gap-3 bg-white text-indigo-900'}>
+					<div
+						className={
+							'btn-alt-primary mt-[90px] flex items-center gap-3 bg-white text-indigo-900'
+						}
+					>
 						<span className="material-icons-round">edit</span>
-						<span className={'font-semibold'}>Modifier vos informations personnelles</span>
+						<span className={'font-semibold'}>
+							Modifier vos informations personnelles
+						</span>
 					</div>
 				</button>
 			)}
@@ -86,7 +98,11 @@ function ResumeProfil(props) {
 			/>
 			<div className="mx-auto max-w-7xl pt-[90px]">
 				<div className={'grid grid-cols-12 gap-5 pt-24'}>
-					<div className={'relative col-span-12 flex items-center justify-center xl:col-span-2 xl:justify-start'}>
+					<div
+						className={
+							'relative col-span-12 flex items-center justify-center xl:col-span-2 xl:justify-start'
+						}
+					>
 						{!isPublic ? (
 							<button
 								className={
@@ -98,26 +114,60 @@ function ResumeProfil(props) {
 								<p className={'text-sm font-semibold'}>modifier votre photo</p>
 							</button>
 						) : null}
-						<Image src={profilPicture} alt={'ppmakeup'} width={500} height={500} className={'h-[200px] w-[200px] rounded-full object-cover'}></Image>
+						<Image
+							src={profilPicture}
+							alt={'ppmakeup'}
+							width={500}
+							height={500}
+							className={'h-[200px] w-[200px] rounded-full object-cover'}
+						></Image>
 					</div>
-					<div className={'col-span-12 flex items-center md:col-span-8 xl:col-span-7'}>
-						<div className={'flex h-full w-full flex-col justify-between py-8 md:py-0 md:pl-20'}>
-							<div className={'flex w-full flex-col gap-2' + (!isPublic ? ' cursor-pointer' : ' cursor-default')} onClick={handleIsModalOpen}>
-								<h3 className={'text-3xl font-bold tracking-tight text-gray-800'} data-cy="resume-name">
+					<div
+						className={
+							'col-span-12 flex items-center md:col-span-8 xl:col-span-7'
+						}
+					>
+						<div
+							className={
+								'flex h-full w-full flex-col justify-between py-8 md:py-0 md:pl-20'
+							}
+						>
+							<div
+								className={
+									'flex w-full flex-col gap-2' +
+									(!isPublic ? ' cursor-pointer' : ' cursor-default')
+								}
+								onClick={handleIsModalOpen}
+							>
+								<h3
+									className={'text-3xl font-bold tracking-tight text-gray-800'}
+									data-cy="resume-name"
+								>
 									{user?.first_name} {user?.last_name}
 								</h3>
-								<h2 className={'text-xl font-semibold tracking-tight text-gray-700'} data-cy="resume-speciality">
+								<h2
+									className={
+										'text-xl font-semibold tracking-tight text-gray-700'
+									}
+									data-cy="resume-speciality"
+								>
 									{user?.speciality}
 								</h2>
-								<h3 className={'text-lg tracking-tight text-gray-800'} data-cy="resume-company-artist-name">
+								<h3
+									className={'text-lg tracking-tight text-gray-800'}
+									data-cy="resume-company-artist-name"
+								>
 									{user?.company_artist_name}
 								</h3>
 							</div>
 							<div>
 								<div className={'flex items-center gap-2'}>
-									<span className="material-icons-round text-indigo-900">directions_run</span>
+									<span className="material-icons-round text-indigo-900">
+										directions_run
+									</span>
 									<span data-cy={'resume-city-action-radius'}>
-										peut se déplacer à {user?.city} & dans un rayon de {user?.action_radius}km
+										peut se déplacer à {user?.city} & dans un rayon de{' '}
+										{user?.action_radius}km
 									</span>
 								</div>
 							</div>
@@ -130,8 +180,18 @@ function ResumeProfil(props) {
 						</div>
 					</div>
 					<div className={'col-span-3 flex items-center'}>
-						<div className={'flex h-full w-full flex-col items-start justify-between'}>
-							<div className={'flex items-center gap-5' + (!isPublic ? ' cursor-pointer' : ' cursor-default')} onClick={handleIsModalOpen}>
+						<div
+							className={
+								'flex h-full w-full flex-col items-start justify-between'
+							}
+						>
+							<div
+								className={
+									'flex items-center gap-5' +
+									(!isPublic ? ' cursor-pointer' : ' cursor-default')
+								}
+								onClick={handleIsModalOpen}
+							>
 								{availability ? (
 									<>
 										<BadgeDispo />

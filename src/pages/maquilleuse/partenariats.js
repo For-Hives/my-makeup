@@ -14,9 +14,15 @@ function Partenariats(props) {
 		<>
 			<Head>
 				<title>Communauté et partenariats !</title>
-				<meta name="description" content="Community et Partenariat chez My-Makeup : Votre développement est notre priorité" />
+				<meta
+					name="description"
+					content="Community et Partenariat chez My-Makeup : Votre développement est notre priorité"
+				/>
 				{/*	seo tag canonical link */}
-				<link rel="canonical" href="https://my-makeup.fr/maquilleuse/partenariats" />
+				<link
+					rel="canonical"
+					href="https://my-makeup.fr/maquilleuse/partenariats"
+				/>
 			</Head>
 			<Nav />
 			<main className={'relative'}>
@@ -40,12 +46,15 @@ function Partenariats(props) {
 					isSearchDisplayed={false}
 					isCTALoginDisplayed={true}
 				/>
-				<div className={'relative mx-auto my-24 max-w-7xl px-4 md:my-48 md:px-0'}>
+				<div
+					className={'relative mx-auto my-24 max-w-7xl px-4 md:my-48 md:px-0'}
+				>
 					<div className="mx-auto max-w-2xl">
 						<article>
 							<header className="flex flex-col">
 								<h1 className="mt-6 text-3xl font-bold tracking-tight text-gray-800 sm:text-4xl">
-									Community et Partenariat chez My-Makeup : Nous sommes là pour accompagner votre développement
+									Community et Partenariat chez My-Makeup : Nous sommes là pour
+									accompagner votre développement
 								</h1>
 							</header>
 							<div className="prose my-8 xl:prose-lg">
@@ -60,13 +69,19 @@ function Partenariats(props) {
 										</p>
 									</li>
 									<li>
-										<h2>Partenariat : Nous travaillons ensemble pour votre succès 🏆</h2>
+										<h2>
+											Partenariat : Nous travaillons ensemble pour votre succès
+											🏆
+										</h2>
 										<p>
 											{`Nous considérons chaque maquilleuse sur notre plateforme comme une partenaire. Nous travaillons main dans la main avec vous pour vous aider à atteindre vos objectifs. Qu'il s'agisse d'accroître votre visibilité, d'élargir votre clientèle, d'augmenter vos revenus ou de vous perfectionner dans votre art, nous mettons à votre disposition les ressources et le soutien nécessaires.`}
 										</p>
 									</li>
 									<li>
-										<h2>Développement professionnel : Nous vous aidons à vous améliorer 🚀</h2>
+										<h2>
+											Développement professionnel : Nous vous aidons à vous
+											améliorer 🚀
+										</h2>
 										<p>
 											{`Chez My-Makeup, nous ne nous contentons pas de vous mettre en relation avec des clients. Nous nous engageons à vous aider à vous développer en tant que professionnelle. Grâce à nos ateliers, nos formations en ligne et nos ressources pédagogiques, vous pouvez améliorer vos compétences, vous tenir au courant des dernières techniques de maquillage et même apprendre à gérer votre activité de manière plus efficace.`}
 										</p>

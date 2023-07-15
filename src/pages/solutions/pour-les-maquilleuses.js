@@ -14,9 +14,15 @@ function PourLesMaquilleuses(props) {
 		<>
 			<Head>
 				<title>Solutions My-Makeup pour les Maquilleuses !</title>
-				<meta name="description" content="Avec notre plateforme, donner un coup de boost à votre carrière n'a jamais été aussi simple !" />
+				<meta
+					name="description"
+					content="Avec notre plateforme, donner un coup de boost à votre carrière n'a jamais été aussi simple !"
+				/>
 				{/*	seo tag canonical link */}
-				<link rel="canonical" href="https://my-makeup.fr/solutions/pour-les-maquilleuses" />
+				<link
+					rel="canonical"
+					href="https://my-makeup.fr/solutions/pour-les-maquilleuses"
+				/>
 			</Head>
 
 			<Nav />
@@ -41,12 +47,16 @@ function PourLesMaquilleuses(props) {
 					isSearchDisplayed={false}
 					isCTALoginDisplayed={true}
 				/>
-				<div className={'relative mx-auto my-24 max-w-7xl px-4 md:my-48 md:px-0'}>
+				<div
+					className={'relative mx-auto my-24 max-w-7xl px-4 md:my-48 md:px-0'}
+				>
 					<div className="mx-auto max-w-2xl">
 						<article>
 							<header className="flex flex-col">
 								<h1 className="mt-6 text-3xl font-bold tracking-tight text-gray-800 sm:text-4xl">
-									Solutions My-Makeup pour les Maquilleuses : Le Seul Endroit pour Trouver des Clients, Développer Votre Activité et Découvrir des Opportunités
+									Solutions My-Makeup pour les Maquilleuses : Le Seul Endroit
+									pour Trouver des Clients, Développer Votre Activité et
+									Découvrir des Opportunités
 								</h1>
 							</header>
 							<div className="prose my-8 xl:prose-lg">

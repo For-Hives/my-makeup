@@ -23,15 +23,26 @@ export function OptionsOffers(props) {
 									/* Use the `open` state to conditionally change the direction of an icon. */
 									<>
 										<Disclosure.Button
-											className={'flex w-full items-center justify-between border-t border-gray-300 pt-6 ' + (open ? 'text-indigo-900' : 'pb-4 text-gray-700')}
+											className={
+												'flex w-full items-center justify-between border-t border-gray-300 pt-6 ' +
+												(open ? 'text-indigo-900' : 'pb-4 text-gray-700')
+											}
 											data-cy={`service-offer-name-${index}`}
 										>
 											{option.name}
-											<ChevronRightIcon data-cy={`service-offer-button-${index}`} className={'h-5 w-5 ' + (open ? 'rotate-90 transform' : '')} />
+											<ChevronRightIcon
+												data-cy={`service-offer-button-${index}`}
+												className={
+													'h-5 w-5 ' + (open ? 'rotate-90 transform' : '')
+												}
+											/>
 										</Disclosure.Button>
 										<Disclosure.Panel>
 											<div className={'pb-4'}>
-												<DescriptionPriceOffer serviceOffer={option} index={index} />
+												<DescriptionPriceOffer
+													serviceOffer={option}
+													index={index}
+												/>
 											</div>
 										</Disclosure.Panel>
 									</>

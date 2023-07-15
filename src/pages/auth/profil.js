@@ -32,7 +32,10 @@ function Profil({ data }) {
 		<>
 			<Head>
 				<title>My-Makeup</title>
-				<meta name="description" content="Page de profil sur my-makeup.fr la plateforme qui va révolutionner votre façon de travailler !" />
+				<meta
+					name="description"
+					content="Page de profil sur my-makeup.fr la plateforme qui va révolutionner votre façon de travailler !"
+				/>
 				{/*	seo tag canonical link */}
 				<link rel="canonical" href="https://my-makeup.fr/auth/profil" />
 			</Head>
@@ -40,13 +43,24 @@ function Profil({ data }) {
 			<main className={'relative'}>
 				{session && session.user && !_.isEmpty(session.user) ? (
 					<>
-						<ResumeProfil user={user} handleUpdateUser={handleUpdateUser} isPublic={isPublic} />
-						<InfosProfil user={user} handleUpdateUser={handleUpdateUser} isPublic={isPublic} handleIsPublic={handleIsPublic} />
+						<ResumeProfil
+							user={user}
+							handleUpdateUser={handleUpdateUser}
+							isPublic={isPublic}
+						/>
+						<InfosProfil
+							user={user}
+							handleUpdateUser={handleUpdateUser}
+							isPublic={isPublic}
+							handleIsPublic={handleIsPublic}
+						/>
 						<DangerZone />
 					</>
 				) : (
 					<div className="flex h-screen flex-col items-center justify-center">
-						<h1 className="text-center text-4xl font-bold text-gray-700">You are not logged in</h1>
+						<h1 className="text-center text-4xl font-bold text-gray-700">
+							You are not logged in
+						</h1>
 					</div>
 				)}
 			</main>
@@ -61,15 +75,18 @@ export const getServerSideProps = async ({ req, res }) => {
 	let user
 
 	if (session) {
-		const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/me-makeup`, {
-			method: 'GET',
-			headers: {
-				// 	token
-				'Content-Type': 'application/json',
-				Accept: 'application/json',
-				Authorization: `Bearer ${session.jwt}`,
-			},
-		})
+		const response = await fetch(
+			`${process.env.NEXT_PUBLIC_API_URL}/api/me-makeup`,
+			{
+				method: 'GET',
+				headers: {
+					// 	token
+					'Content-Type': 'application/json',
+					Accept: 'application/json',
+					Authorization: `Bearer ${session.jwt}`,
+				},
+			}
+		)
 
 		if (!response.ok) {
 			console.log('An error has occurred: ' + response.statusText)
@@ -81,7 +98,10 @@ export const getServerSideProps = async ({ req, res }) => {
 	}
 
 	// Set Cache Control header
-	res.setHeader('Cache-Control', 'public, s-maxage=10, stale-while-revalidate=59')
+	res.setHeader(
+		'Cache-Control',
+		'public, s-maxage=10, stale-while-revalidate=59'
+	)
 
 	return {
 		props: {

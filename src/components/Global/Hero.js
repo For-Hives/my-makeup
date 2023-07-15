@@ -13,7 +13,11 @@ export default function Hero({
 	return (
 		<div className="relative bg-white 2xl:pt-[90px]">
 			{isSimpleVersionDisplayed === false && (
-				<div className={'absolute bottom-0 left-1/2 z-20 flex w-full -translate-x-1/2 transform items-end justify-center px-4'}>
+				<div
+					className={
+						'absolute bottom-0 left-1/2 z-20 flex w-full -translate-x-1/2 transform items-end justify-center px-4'
+					}
+				>
 					{isSearchDisplayed ? (
 						<SearchBloc />
 					) : (
@@ -23,7 +27,9 @@ export default function Hero({
 									'mb-16 flex items-center justify-center rounded-full border-2 border-indigo-900 bg-white p-2 text-center text-lg text-indigo-900 md:mb-8 md:p-4'
 								}
 							>
-								<span className="material-icons-round flex items-center justify-center text-center">expand_more</span>
+								<span className="material-icons-round flex items-center justify-center text-center">
+									expand_more
+								</span>
 							</div>
 						</>
 					)}
@@ -43,7 +49,9 @@ export default function Hero({
 					<div className="relative z-10 px-6 py-32 pb-8 sm:py-40 sm:pb-24 lg:px-8 lg:pb-80 lg:pr-0 lg:pt-52">
 						<div className="mx-auto flex max-w-2xl flex-col gap-8 lg:mx-0 lg:max-w-xl">
 							<div className={'flex flex-col gap-4'}>
-								<h1 className="text-2xl font-bold tracking-tight text-gray-900 sm:text-4xl md:text-5xl">{title}</h1>
+								<h1 className="text-2xl font-bold tracking-tight text-gray-900 sm:text-4xl md:text-5xl">
+									{title}
+								</h1>
 								<p className="text-lg leading-8 text-gray-700">{description}</p>
 							</div>
 							{isCTALoginDisplayed && (

@@ -15,7 +15,9 @@ export default function Home({ talents }) {
 	return (
 		<>
 			<Head>
-				<title>Accueil - My-Makeup le moteur de recherche pour les maquilleuses</title>
+				<title>
+					Accueil - My-Makeup le moteur de recherche pour les maquilleuses
+				</title>
 				<meta
 					name="description"
 					content="Trouvez la meilleure maquilleuse professionnelle à domicile près de chez. Une maquilleuse rien que pour vous,pour un événement, un shooting, ou une soirée,
@@ -28,11 +30,17 @@ export default function Home({ talents }) {
 			<Nav />
 			<main className={'relative'}>
 				<Hero
-					title={<>Trouver la maquilleuse qui vous correspond n&apos;a jamais été aussi simple</>}
+					title={
+						<>
+							Trouver la maquilleuse qui vous correspond n&apos;a jamais été
+							aussi simple
+						</>
+					}
 					description={
 						<>
-							Trouvez la maquilleuse spécialisée dans le domaine que vous recherchez, maquillage pour les mariées, maquillage de soirée, maquillage
-							professionnel...
+							Trouvez la maquilleuse spécialisée dans le domaine que vous
+							recherchez, maquillage pour les mariées, maquillage de soirée,
+							maquillage professionnel...
 						</>
 					}
 				/>
