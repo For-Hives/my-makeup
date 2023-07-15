@@ -17,10 +17,7 @@ const schema = zod
 			.string({ required_error: 'Le prénom est requis.' })
 			.min(1, 'Le prénom est requis.')
 			.max(70, 'Le prénom ne doit pas dépasser 70 caractères.'),
-		last_name: zod
-			.string({ required_error: 'Le nom est requis.' })
-			.min(1, 'Le nom est requis.')
-			.max(70, 'Le nom ne doit pas dépasser 70 caractères.'),
+		last_name: zod.string({ required_error: 'Le nom est requis.' }).min(1, 'Le nom est requis.').max(70, 'Le nom ne doit pas dépasser 70 caractères.'),
 		speciality: zod
 			.string({ required_error: 'La spécialité est requise.' })
 			.min(1, 'La spécialité est requise.')
@@ -60,9 +57,7 @@ export default function ModalUpdateResumeProfil(props) {
 	const [userLastName, setUserLastName] = useState(user.last_name ?? '')
 	const [userFirstName, setUserFirstName] = useState(user.first_name ?? '')
 	const [userSpeciality, setUserSpeciality] = useState(user.speciality ?? '')
-	const [userCompanyOrArtist, setUserCompanyOrArtist] = useState(
-		user.company_artist_name ?? ''
-	)
+	const [userCompanyOrArtist, setUserCompanyOrArtist] = useState(user.company_artist_name ?? '')
 
 	const { data: session } = useSession()
 
@@ -162,14 +157,11 @@ export default function ModalUpdateResumeProfil(props) {
 		// Ajouter une vérification de la taille du fichier ici.
 		if (fileObject.size > 1500000) {
 			// Taille du fichier en octets (1.5MB)
-			toast(
-				'Le fichier est trop grand, veuillez télécharger un fichier de moins de 1.5 Mo.',
-				{
-					type: 'error',
-					icon: '⛔',
-					toastId: 'toast-alert',
-				}
-			)
+			toast('Le fichier est trop grand, veuillez télécharger un fichier de moins de 1.5 Mo.', {
+				type: 'error',
+				icon: '⛔',
+				toastId: 'toast-alert',
+			})
 			return
 		}
 
@@ -222,26 +214,11 @@ export default function ModalUpdateResumeProfil(props) {
 
 			reset()
 		}
-	}, [
-		open,
-		reset,
-		user.available,
-		user.first_name,
-		user.last_name,
-		user.speciality,
-		user.main_picture,
-		user.company_artist_name,
-		user,
-	])
+	}, [open, reset, user.available, user.first_name, user.last_name, user.speciality, user.main_picture, user.company_artist_name, user])
 
 	return (
 		<Transition.Root show={open} as={Fragment}>
-			<Dialog
-				as="div"
-				className="relative z-30"
-				initialFocus={cancelButtonRef}
-				onClose={props.handleIsModalOpen}
-			>
+			<Dialog as="div" className="relative z-30" initialFocus={cancelButtonRef} onClose={props.handleIsModalOpen}>
 				<Transition.Child
 					as={Fragment}
 					enter="ease-out duration-300"
@@ -270,41 +247,26 @@ export default function ModalUpdateResumeProfil(props) {
 									type="button"
 									onClick={props.handleIsModalOpen}
 									ref={cancelButtonRef}
-									className={
-										'absolute right-0 top-0 m-6 flex items-center justify-center'
-									}
+									className={'absolute right-0 top-0 m-6 flex items-center justify-center'}
 								>
 									<span className="material-icons-round">close</span>
 								</button>
 								<div className="flex flex-col items-start gap-8">
 									<div className="text-left">
-										<Dialog.Title
-											as="h3"
-											className="text-lg font-semibold text-gray-900"
-										>
+										<Dialog.Title as="h3" className="text-lg font-semibold text-gray-900">
 											Modifier votre profil
 										</Dialog.Title>
 									</div>
 									<div className={''}>
 										<div className="grid grid-cols-1 gap-4">
 											<div className={'flex flex-col gap-4'}>
-												<label
-													htmlFor="cover-photo"
-													className="text-base font-normal text-gray-700"
-												>
+												<label htmlFor="cover-photo" className="text-base font-normal text-gray-700">
 													Modifier votre photo de profil
 												</label>
-												<button
-													className="mt-2 sm:col-span-2 sm:mt-0"
-													onClick={handleClick}
-												>
+												<button className="mt-2 sm:col-span-2 sm:mt-0" onClick={handleClick}>
 													<div className="relative flex justify-center rounded-lg border border-dashed border-gray-900/25 px-6 py-10">
 														{!!imageUrl && imageUrl !== '' ? (
-															<div
-																className={
-																	'relative flex h-[200px] w-[200px] items-center justify-center overflow-hidden rounded-full'
-																}
-															>
+															<div className={'relative flex h-[200px] w-[200px] items-center justify-center overflow-hidden rounded-full'}>
 																<Image
 																	src={imageUrl}
 																	alt={'photo de profil'}
@@ -314,18 +276,8 @@ export default function ModalUpdateResumeProfil(props) {
 																/>
 															</div>
 														) : null}
-														<div
-															className={
-																'text-center' +
-																(!!imageUrl && imageUrl !== ''
-																	? ' hidden'
-																	: ' block')
-															}
-														>
-															<PhotoIcon
-																className="mx-auto h-12 w-12 text-gray-300"
-																aria-hidden="true"
-															/>
+														<div className={'text-center' + (!!imageUrl && imageUrl !== '' ? ' hidden' : ' block')}>
+															<PhotoIcon className="mx-auto h-12 w-12 text-gray-300" aria-hidden="true" />
 															<div className="mt-4 flex text-sm leading-6 text-gray-600">
 																<label className="relative rounded-md bg-white font-semibold text-indigo-600 focus-within:outline-none focus-within:ring-2 focus-within:ring-indigo-600 focus-within:ring-offset-2 hover:text-indigo-500">
 																	<span>Télécharger une nouvelle photo</span>
@@ -340,25 +292,16 @@ export default function ModalUpdateResumeProfil(props) {
 																	onChange={handleFileChange}
 																/>
 															</div>
-															<p className="text-xs leading-5 text-gray-600">
-																{"PNG, JPG, WEBP jusqu'à 1.5 Mo"}
-															</p>
+															<p className="text-xs leading-5 text-gray-600">{"PNG, JPG, WEBP jusqu'à 1.5 Mo"}</p>
 														</div>
 													</div>
 												</button>
 											</div>
 											<div className={'flex flex-col gap-4'}>
-												<form
-													onSubmit={handleSubmit(onSubmit)}
-													method="POST"
-													className="flex flex-col gap-4"
-												>
+												<form onSubmit={handleSubmit(onSubmit)} method="POST" className="flex flex-col gap-4">
 													<div className={'flex gap-2'}>
 														<div>
-															<label
-																htmlFor="first_name"
-																className="block text-sm text-gray-700"
-															>
+															<label htmlFor="first_name" className="block text-sm text-gray-700">
 																Prénom
 															</label>
 															<div className="mt-2">
@@ -376,20 +319,14 @@ export default function ModalUpdateResumeProfil(props) {
 																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																/>
 																{errors.first_name && (
-																	<p
-																		data-cy={'error-first-name'}
-																		className={'mt-2 text-xs text-red-500/80'}
-																	>
+																	<p data-cy={'error-first-name'} className={'mt-2 text-xs text-red-500/80'}>
 																		{errors.first_name.message}
 																	</p>
 																)}
 															</div>
 														</div>
 														<div>
-															<label
-																htmlFor="last_name"
-																className="block text-sm text-gray-700"
-															>
+															<label htmlFor="last_name" className="block text-sm text-gray-700">
 																Nom
 															</label>
 															<div className="mt-2">
@@ -407,10 +344,7 @@ export default function ModalUpdateResumeProfil(props) {
 																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																/>
 																{errors.last_name && (
-																	<p
-																		data-cy="error-last-name"
-																		className={'mt-2 text-xs text-red-500/80'}
-																	>
+																	<p data-cy="error-last-name" className={'mt-2 text-xs text-red-500/80'}>
 																		{errors.last_name.message}
 																	</p>
 																)}
@@ -418,10 +352,7 @@ export default function ModalUpdateResumeProfil(props) {
 														</div>
 													</div>
 													<div>
-														<label
-															htmlFor="speciality"
-															className="block text-sm text-gray-700"
-														>
+														<label htmlFor="speciality" className="block text-sm text-gray-700">
 															Specialité
 														</label>
 														<div className="mt-2">
@@ -439,20 +370,14 @@ export default function ModalUpdateResumeProfil(props) {
 																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 															/>
 															{errors.speciality && (
-																<p
-																	data-cy="error-speciality"
-																	className={'mt-2 text-xs text-red-500/80'}
-																>
+																<p data-cy="error-speciality" className={'mt-2 text-xs text-red-500/80'}>
 																	{errors.speciality.message}
 																</p>
 															)}
 														</div>
 													</div>
 													<div>
-														<label
-															htmlFor={'company_artist_name'}
-															className="block text-sm text-gray-700"
-														>
+														<label htmlFor={'company_artist_name'} className="block text-sm text-gray-700">
 															{"Nom de l'entreprise ou de l'artiste"}
 														</label>
 														<div className="mt-2">
@@ -470,20 +395,14 @@ export default function ModalUpdateResumeProfil(props) {
 																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 															/>
 															{errors.company_artist_name && (
-																<p
-																	data-cy={'error-company-artist-name'}
-																	className={'mt-2 text-xs text-red-500/80'}
-																>
+																<p data-cy={'error-company-artist-name'} className={'mt-2 text-xs text-red-500/80'}>
 																	{errors.company_artist_name.message}
 																</p>
 															)}
 														</div>
 													</div>
 													<div>
-														<label
-															htmlFor="available"
-															className="block text-sm text-gray-700"
-														>
+														<label htmlFor="available" className="block text-sm text-gray-700">
 															Disponibilité
 														</label>
 														<div className="mt-2 flex items-center gap-4">
@@ -494,28 +413,19 @@ export default function ModalUpdateResumeProfil(props) {
 																onChange={handleUpdateAvailable}
 																className="group relative inline-flex h-5 w-10 flex-shrink-0 cursor-pointer items-center justify-center rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2"
 															>
-																<span className="sr-only">
-																	Toggle disponibility
-																</span>
-																<span
-																	aria-hidden="true"
-																	className="pointer-events-none absolute h-full w-full rounded-md bg-white"
-																/>
+																<span className="sr-only">Toggle disponibility</span>
+																<span aria-hidden="true" className="pointer-events-none absolute h-full w-full rounded-md bg-white" />
 																<span
 																	aria-hidden="true"
 																	className={
-																		(available
-																			? 'bg-indigo-600'
-																			: 'bg-gray-200') +
+																		(available ? 'bg-indigo-600' : 'bg-gray-200') +
 																		' pointer-events-none absolute mx-auto h-4 w-9 rounded-full transition-colors duration-200 ease-in-out'
 																	}
 																/>
 																<span
 																	aria-hidden="true"
 																	className={
-																		(available
-																			? 'translate-x-5'
-																			: 'translate-x-0') +
+																		(available ? 'translate-x-5' : 'translate-x-0') +
 																		' pointer-events-none absolute left-0 inline-block h-5 w-5 transform rounded-full border border-gray-200 bg-white shadow ring-0 transition-transform duration-200 ease-in-out'
 																	}
 																/>
@@ -529,12 +439,7 @@ export default function ModalUpdateResumeProfil(props) {
 									</div>
 								</div>
 								<div className="mt-4 flex justify-end">
-									<button
-										data-cy="save-button-resume"
-										type="button"
-										className="btn-primary"
-										onClick={handleSubmit(onSubmit)}
-									>
+									<button data-cy="save-button-resume" type="button" className="btn-primary" onClick={handleSubmit(onSubmit)}>
 										Sauvegarder
 									</button>
 								</div>

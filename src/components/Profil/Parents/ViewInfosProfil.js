@@ -25,28 +25,17 @@ function ViewInfosProfil(props) {
 				<div className={'grid grid-cols-12 gap-5 pt-24'}>
 					{props.isPublicView && (
 						<>
-							<div
-								className={
-									'col-span-12 flex flex-col items-start gap-5 md:col-span-4'
-								}
-							>
+							<div className={'col-span-12 flex flex-col items-start gap-5 md:col-span-4'}>
 								<ViewContainer user={user} Component={ViewLocationProfil} />
 								<ViewContainer user={user} Component={ViewSocialMediaProfil} />
 								<ViewContainer user={user} Component={ViewSkillsProfil} />
 								<ViewContainer user={user} Component={ViewLanguageProfil} />
 								<ViewContainer user={user} Component={ViewCoursesProfil} />
 							</div>
-							<div
-								className={
-									'col-span-12 flex flex-col items-start gap-5 md:col-span-8'
-								}
-							>
+							<div className={'col-span-12 flex flex-col items-start gap-5 md:col-span-8'}>
 								<ViewContainer user={user} Component={ViewDescriptionProfil} />
 								<ViewContainer user={user} Component={ViewPortfolioProfil} />
-								<ViewContainer
-									user={user}
-									Component={ViewServiceOffersProfil}
-								/>
+								<ViewContainer user={user} Component={ViewServiceOffersProfil} />
 								<ViewContainer user={user} Component={ViewExperiencesProfil} />
 							</div>
 						</>

@@ -89,13 +89,8 @@ const options = {
 			const isSignIn = !!user
 
 			if (isSignIn) {
-				if (
-					typeof account.provider !== 'undefined' &&
-					account.type !== 'credentials'
-				) {
-					const response = await fetch(
-						`${process.env.NEXT_PUBLIC_API_URL}/api/auth/${account.provider}/callback?access_token=${account?.access_token}`
-					)
+				if (typeof account.provider !== 'undefined' && account.type !== 'credentials') {
+					const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/${account.provider}/callback?access_token=${account?.access_token}`)
 					const data = await response.json()
 					token.jwt = data.jwt
 					token.id = data.user.id

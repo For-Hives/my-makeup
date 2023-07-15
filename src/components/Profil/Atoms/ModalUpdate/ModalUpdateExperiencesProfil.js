@@ -20,10 +20,7 @@ const schema = zod
 			})
 			.min(1, "Le nom de l'expérience est requis.")
 			.max(70, "Le nom de l'expérience ne doit pas dépasser 70 caractères."),
-		city: zod
-			.string({ required_error: 'La ville est requise.' })
-			.min(1, 'La ville est requise.')
-			.max(70, 'La ville ne doit pas dépasser 70 caractères.'),
+		city: zod.string({ required_error: 'La ville est requise.' }).min(1, 'La ville est requise.').max(70, 'La ville ne doit pas dépasser 70 caractères.'),
 		date_start: zod.string({
 			required_error: "La date de début de l'expérience est requise.",
 		}),
@@ -65,8 +62,7 @@ export default function ModalUpdateExperiencesProfil(props) {
 	const [userExperiencesCity, setUserExperiencesCity] = useState('')
 	const [userExperiencesDateStart, setUserExperiencesDateStart] = useState('')
 	const [userExperiencesDateEnd, setUserExperiencesDateEnd] = useState('')
-	const [userExperiencesDescription, setUserExperiencesDescription] =
-		useState('')
+	const [userExperiencesDescription, setUserExperiencesDescription] = useState('')
 
 	const { data: session } = useSession()
 
@@ -214,16 +210,12 @@ export default function ModalUpdateExperiencesProfil(props) {
 	}
 
 	const handleDeleteExperience = id => {
-		const userExperiencesFiltered = userExperiences.filter(
-			experience => experience.id !== id
-		)
+		const userExperiencesFiltered = userExperiences.filter(experience => experience.id !== id)
 		setUserExperiences(userExperiencesFiltered)
 	}
 
 	const handleEditExperience = id => {
-		const userExperiencesToUpdate = userExperiences.filter(
-			experience => experience.id === id
-		)
+		const userExperiencesToUpdate = userExperiences.filter(experience => experience.id === id)
 		reset()
 		setUserExperiencesId(userExperiencesToUpdate[0].id)
 		setUserExperiencesCompany(userExperiencesToUpdate[0].company)
@@ -250,12 +242,7 @@ export default function ModalUpdateExperiencesProfil(props) {
 
 	return (
 		<Transition.Root show={open} as={Fragment}>
-			<Dialog
-				as="div"
-				className="relative z-30"
-				initialFocus={cancelButtonRef}
-				onClose={props.handleIsModalOpen}
-			>
+			<Dialog as="div" className="relative z-30" initialFocus={cancelButtonRef} onClose={props.handleIsModalOpen}>
 				<Transition.Child
 					as={Fragment}
 					enter="ease-out duration-300"
@@ -284,39 +271,23 @@ export default function ModalUpdateExperiencesProfil(props) {
 									type="button"
 									onClick={props.handleIsModalOpen}
 									ref={cancelButtonRef}
-									className={
-										'absolute right-0 top-0 m-6 flex items-center justify-center'
-									}
+									className={'absolute right-0 top-0 m-6 flex items-center justify-center'}
 								>
 									<span className="material-icons-round">close</span>
 								</button>
 								<div className="flex flex-col items-start gap-8">
 									<div className="text-left">
-										<Dialog.Title
-											as="h3"
-											className="text-lg font-semibold text-gray-900"
-										>
+										<Dialog.Title as="h3" className="text-lg font-semibold text-gray-900">
 											Les expériences professionnelles que vous avez
 										</Dialog.Title>
 									</div>
-									<div
-										className={
-											'flex h-full w-full flex-wrap gap-16 md:flex-nowrap'
-										}
-									>
+									<div className={'flex h-full w-full flex-wrap gap-16 md:flex-nowrap'}>
 										<div className={'w-full md:w-2/5'}>
 											<div className="grid grid-cols-1 gap-4">
 												<div className={'flex flex-col gap-4'}>
-													<form
-														onSubmit={handleSubmit(onSubmit)}
-														method="POST"
-														className="flex flex-col gap-4"
-													>
+													<form onSubmit={handleSubmit(onSubmit)} method="POST" className="flex flex-col gap-4">
 														<div>
-															<label
-																htmlFor="company"
-																className="block text-sm text-gray-700"
-															>
+															<label htmlFor="company" className="block text-sm text-gray-700">
 																{"Nom de l'entreprise"}
 															</label>
 															<div className="mt-2">
@@ -334,20 +305,14 @@ export default function ModalUpdateExperiencesProfil(props) {
 																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																/>
 																{errors.company && (
-																	<p
-																		data-cy={'error-company'}
-																		className={'mt-2 text-xs text-red-500/80'}
-																	>
+																	<p data-cy={'error-company'} className={'mt-2 text-xs text-red-500/80'}>
 																		{errors.company.message}
 																	</p>
 																)}
 															</div>
 														</div>
 														<div>
-															<label
-																htmlFor="job_name"
-																className="block text-sm text-gray-700"
-															>
+															<label htmlFor="job_name" className="block text-sm text-gray-700">
 																Nom du poste
 															</label>
 															<div className="mt-2">
@@ -365,20 +330,14 @@ export default function ModalUpdateExperiencesProfil(props) {
 																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																/>
 																{errors.job_name && (
-																	<p
-																		data-cy={'error-job-name'}
-																		className={'mt-2 text-xs text-red-500/80'}
-																	>
+																	<p data-cy={'error-job-name'} className={'mt-2 text-xs text-red-500/80'}>
 																		{errors.job_name.message}
 																	</p>
 																)}
 															</div>
 														</div>
 														<div>
-															<label
-																htmlFor="city"
-																className="block text-sm text-gray-700"
-															>
+															<label htmlFor="city" className="block text-sm text-gray-700">
 																Nom de la ville
 															</label>
 															<div className="mt-2">
@@ -396,20 +355,14 @@ export default function ModalUpdateExperiencesProfil(props) {
 																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																/>
 																{errors.city && (
-																	<p
-																		data-cy={'error-city'}
-																		className={'mt-2 text-xs text-red-500/80'}
-																	>
+																	<p data-cy={'error-city'} className={'mt-2 text-xs text-red-500/80'}>
 																		{errors.city.message}
 																	</p>
 																)}
 															</div>
 														</div>
 														<div>
-															<label
-																htmlFor="date_start"
-																className="block text-sm text-gray-700"
-															>
+															<label htmlFor="date_start" className="block text-sm text-gray-700">
 																Date de début
 															</label>
 															<div className="mt-2">
@@ -427,20 +380,14 @@ export default function ModalUpdateExperiencesProfil(props) {
 																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																/>
 																{errors.date_start && (
-																	<p
-																		data-cy={'error-date-start'}
-																		className={'mt-2 text-xs text-red-500/80'}
-																	>
+																	<p data-cy={'error-date-start'} className={'mt-2 text-xs text-red-500/80'}>
 																		{errors.date_start.message}
 																	</p>
 																)}
 															</div>
 														</div>
 														<div>
-															<label
-																htmlFor="date_end"
-																className="block text-sm text-gray-700"
-															>
+															<label htmlFor="date_end" className="block text-sm text-gray-700">
 																Date de fin (laisser vide si toujours en poste)
 															</label>
 															<div className="mt-2">
@@ -455,20 +402,14 @@ export default function ModalUpdateExperiencesProfil(props) {
 																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																/>
 																{errors.date_end && (
-																	<p
-																		data-cy={'error-date-end'}
-																		className={'mt-2 text-xs text-red-500/80'}
-																	>
+																	<p data-cy={'error-date-end'} className={'mt-2 text-xs text-red-500/80'}>
 																		{errors.date_end.message}
 																	</p>
 																)}
 															</div>
 														</div>
 														<div>
-															<label
-																htmlFor="description"
-																className="block text-sm text-gray-700"
-															>
+															<label htmlFor="description" className="block text-sm text-gray-700">
 																{"Description de l'expérience"}
 															</label>
 															<div className="mt-2">
@@ -485,10 +426,7 @@ export default function ModalUpdateExperiencesProfil(props) {
 																	className="block min-h-[150px] w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																/>
 																{errors.description && (
-																	<p
-																		data-cy={'error-description-experience'}
-																		className={'mt-2 text-xs text-red-500/80'}
-																	>
+																	<p data-cy={'error-description-experience'} className={'mt-2 text-xs text-red-500/80'}>
 																		{errors.description.message}
 																	</p>
 																)}
@@ -496,104 +434,53 @@ export default function ModalUpdateExperiencesProfil(props) {
 														</div>
 													</form>
 													<div className={'flex items-center justify-end'}>
-														<button
-															data-cy="add-experience-button"
-															type="button"
-															className="btn-primary"
-															onClick={handleSubmit(onSubmit)}
-														>
-															{userExperiencesId === ''
-																? 'Ajouter une expérience'
-																: 'Modifier une expérience'}
+														<button data-cy="add-experience-button" type="button" className="btn-primary" onClick={handleSubmit(onSubmit)}>
+															{userExperiencesId === '' ? 'Ajouter une expérience' : 'Modifier une expérience'}
 														</button>
 													</div>
 												</div>
 											</div>
 										</div>
-										<div
-											className={'flex w-full flex-col gap-8 md:w-3/5 md:gap-4'}
-										>
+										<div className={'flex w-full flex-col gap-8 md:w-3/5 md:gap-4'}>
 											{/*	display the experiences already added */}
-											<h3 className={'text-sm text-gray-900'}>
-												Les expériences déjà ajoutées
-											</h3>
-											<div
-												className={
-													'flex max-h-[600px] w-full flex-col gap-4 overflow-y-scroll pt-4 md:pt-0'
-												}
-											>
+											<h3 className={'text-sm text-gray-900'}>Les expériences déjà ajoutées</h3>
+											<div className={'flex max-h-[600px] w-full flex-col gap-4 overflow-y-scroll pt-4 md:pt-0'}>
 												{userExperiences.map((experience, index) => {
 													return (
-														<div
-															key={index}
-															className={
-																'relative flex w-full rounded bg-indigo-50/20 p-4 pt-8 text-gray-700 md:pt-4'
-															}
-														>
-															<div
-																className={
-																	'absolute -top-2 right-0 m-2 flex items-center justify-center gap-4 md:top-0'
-																}
-															>
+														<div key={index} className={'relative flex w-full rounded bg-indigo-50/20 p-4 pt-8 text-gray-700 md:pt-4'}>
+															<div className={'absolute -top-2 right-0 m-2 flex items-center justify-center gap-4 md:top-0'}>
 																<button
 																	data-cy={`experience-selected-${index}`}
 																	className={'flex items-center justify-center'}
-																	onClick={() =>
-																		handleEditExperience(experience.id)
-																	}
+																	onClick={() => handleEditExperience(experience.id)}
 																>
-																	<span className="material-icons-round text-xl text-orange-600">
-																		edit
-																	</span>
+																	<span className="material-icons-round text-xl text-orange-600">edit</span>
 																</button>
 																<button
 																	data-cy={'experience-selected'}
 																	className={'flex items-center justify-center'}
-																	onClick={() =>
-																		handleDeleteExperience(experience.id)
-																	}
+																	onClick={() => handleDeleteExperience(experience.id)}
 																>
-																	<span className="material-icons-round text-xl text-red-500">
-																		delete
-																	</span>
+																	<span className="material-icons-round text-xl text-red-500">delete</span>
 																</button>
 															</div>
-															<span className="material-icons-round">
-																apartment
-															</span>
-															<div
-																className={'ml-2 flex w-full flex-col gap-2'}
-															>
+															<span className="material-icons-round">apartment</span>
+															<div className={'ml-2 flex w-full flex-col gap-2'}>
 																<div className={'flex w-full flex-col'}>
-																	<p className={'font-semibold text-gray-700'}>
-																		{experience.company}
-																	</p>
-																	<div
-																		className={'flex w-full justify-between'}
-																	>
-																		<p
-																			className={'text-sm italic text-gray-600'}
-																		>
-																			{experience.job_name}
-																		</p>
-																		<p
-																			className={'text-sm italic text-gray-600'}
-																		>
+																	<p className={'font-semibold text-gray-700'}>{experience.company}</p>
+																	<div className={'flex w-full justify-between'}>
+																		<p className={'text-sm italic text-gray-600'}>{experience.job_name}</p>
+																		<p className={'text-sm italic text-gray-600'}>
 																			{/* format date to month year ( like july 1998 )  */}
 																			{/*{experience.date_start} - {experience.date_end}*/}
-																			{new Date(
-																				experience.date_start
-																			).toLocaleString('fr-FR', {
+																			{new Date(experience.date_start).toLocaleString('fr-FR', {
 																				year: 'numeric',
 																				month: 'long',
 																			})}
 																			{' - '}
-																			{experience.date_end === null ||
-																			experience.date_end === ''
+																			{experience.date_end === null || experience.date_end === ''
 																				? "Aujourd'hui"
-																				: new Date(
-																						experience.date_end
-																				  ).toLocaleString('fr-FR', {
+																				: new Date(experience.date_end).toLocaleString('fr-FR', {
 																						year: 'numeric',
 																						month: 'long',
 																				  })}
@@ -601,9 +488,7 @@ export default function ModalUpdateExperiencesProfil(props) {
 																	</div>
 																</div>
 																<div>
-																	<p className={'text-sm italic text-gray-500'}>
-																		{experience.description}
-																	</p>
+																	<p className={'text-sm italic text-gray-500'}>{experience.description}</p>
 																</div>
 															</div>
 														</div>
@@ -614,12 +499,7 @@ export default function ModalUpdateExperiencesProfil(props) {
 									</div>
 								</div>
 								<div className="mt-4 flex justify-end">
-									<button
-										data-cy="save-button-experience"
-										type="button"
-										className="btn-primary"
-										onClick={handleSubmitExperiences}
-									>
+									<button data-cy="save-button-experience" type="button" className="btn-primary" onClick={handleSubmitExperiences}>
 										Sauvegarder
 									</button>
 								</div>

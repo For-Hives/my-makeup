@@ -21,9 +21,7 @@ function ViewPortfolioProfil(props) {
 				setImageGallery(user?.image_gallery)
 			} else {
 				// array to object conversion, {id: x, attributes: {...}} to {...} for each element
-				setImageGallery(
-					user?.image_gallery?.data?.map(image => image.attributes)
-				)
+				setImageGallery(user?.image_gallery?.data?.map(image => image.attributes))
 			}
 		}
 	}, [props.user, user?.image_gallery])
@@ -81,13 +79,7 @@ function ViewPortfolioProfil(props) {
 							mySwiper.slidePrev()
 						}}
 					>
-						<Image
-							alt={'next'}
-							src={'/assets/down-arrow.svg'}
-							className={'rotate-90'}
-							width={20}
-							height={20}
-						></Image>
+						<Image alt={'next'} src={'/assets/down-arrow.svg'} className={'rotate-90'} width={20} height={20}></Image>
 						<span className={'font-semibold text-indigo-950'}>Précédent</span>
 					</button>
 				</div>
@@ -99,13 +91,7 @@ function ViewPortfolioProfil(props) {
 						}}
 					>
 						<span className={'font-semibold text-indigo-950'}>Suivant</span>
-						<Image
-							alt={'next'}
-							src={'/assets/down-arrow.svg'}
-							className={'-rotate-90'}
-							width={20}
-							height={20}
-						></Image>
+						<Image alt={'next'} src={'/assets/down-arrow.svg'} className={'-rotate-90'} width={20} height={20}></Image>
 					</button>
 				</div>
 			</div>

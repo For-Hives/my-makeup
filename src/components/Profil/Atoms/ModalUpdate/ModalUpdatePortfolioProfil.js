@@ -24,9 +24,7 @@ export default function ModalUpdatePortfolioProfil(props) {
 	const [open, setOpen] = useState(props.isModalOpen)
 	const [imageUrl, setImageUrl] = useState('')
 	const [mySwiperModal, setMySwiperModal] = React.useState(null)
-	const [userImageGallery, setUserImageGallery] = useState(
-		user.image_gallery ?? []
-	)
+	const [userImageGallery, setUserImageGallery] = useState(user.image_gallery ?? [])
 
 	const { data: session } = useSession()
 
@@ -123,14 +121,11 @@ export default function ModalUpdatePortfolioProfil(props) {
 		// Ajouter une vérification de la taille du fichier ici.
 		if (fileObject.size > 1500000) {
 			// Taille du fichier en octets (1.5 Mo)
-			toast(
-				'Le fichier est trop grand, veuillez télécharger un fichier de moins de 1.5 Mo.',
-				{
-					type: 'error',
-					icon: '⛔',
-					toastId: 'toast-alert',
-				}
-			)
+			toast('Le fichier est trop grand, veuillez télécharger un fichier de moins de 1.5 Mo.', {
+				type: 'error',
+				icon: '⛔',
+				toastId: 'toast-alert',
+			})
 			return
 		}
 
@@ -168,12 +163,7 @@ export default function ModalUpdatePortfolioProfil(props) {
 
 	return (
 		<Transition.Root show={open} as={Fragment}>
-			<Dialog
-				as="div"
-				className="relative z-30"
-				initialFocus={cancelButtonRef}
-				onClose={props.handleIsModalOpen}
-			>
+			<Dialog as="div" className="relative z-30" initialFocus={cancelButtonRef} onClose={props.handleIsModalOpen}>
 				<Transition.Child
 					as={Fragment}
 					enter="ease-out duration-300"
@@ -202,44 +192,27 @@ export default function ModalUpdatePortfolioProfil(props) {
 									type="button"
 									onClick={props.handleIsModalOpen}
 									ref={cancelButtonRef}
-									className={
-										'absolute right-0 top-0 m-6 flex items-center justify-center'
-									}
+									className={'absolute right-0 top-0 m-6 flex items-center justify-center'}
 								>
 									<span className="material-icons-round">close</span>
 								</button>
 								<div>
 									<div className="flex flex-col items-start gap-8">
 										<div className="text-left">
-											<Dialog.Title
-												as="h3"
-												className="text-lg font-semibold text-gray-900"
-											>
+											<Dialog.Title as="h3" className="text-lg font-semibold text-gray-900">
 												Modifier votre portfolio
 											</Dialog.Title>
 										</div>
-										<div
-											className={'flex w-full flex-wrap gap-16 md:flex-nowrap'}
-										>
+										<div className={'flex w-full flex-wrap gap-16 md:flex-nowrap'}>
 											<div className="grid w-full grid-cols-1 gap-4 md:w-2/6 ">
 												<div className={'flex flex-col gap-4'}>
-													<label
-														htmlFor="cover-photo"
-														className="text-base font-normal text-gray-700"
-													>
+													<label htmlFor="cover-photo" className="text-base font-normal text-gray-700">
 														Ajouter une photo à votre portfolio
 													</label>
-													<button
-														className="mt-2 sm:col-span-2 sm:mt-0"
-														onClick={handleClick}
-													>
+													<button className="mt-2 sm:col-span-2 sm:mt-0" onClick={handleClick}>
 														<div className="relative flex justify-center rounded-lg border border-dashed border-gray-900/25 px-6 py-10">
 															{!!imageUrl && imageUrl !== '' ? (
-																<div
-																	className={
-																		'relative flex h-[200px] w-[200px] items-center justify-center overflow-hidden rounded-full'
-																	}
-																>
+																<div className={'relative flex h-[200px] w-[200px] items-center justify-center overflow-hidden rounded-full'}>
 																	<Image
 																		src={imageUrl}
 																		alt={'photo de profil'}
@@ -249,18 +222,8 @@ export default function ModalUpdatePortfolioProfil(props) {
 																	/>
 																</div>
 															) : null}
-															<div
-																className={
-																	'text-center' +
-																	(!!imageUrl && imageUrl !== ''
-																		? ' hidden'
-																		: ' block')
-																}
-															>
-																<PhotoIcon
-																	className="mx-auto h-12 w-12 text-gray-300"
-																	aria-hidden="true"
-																/>
+															<div className={'text-center' + (!!imageUrl && imageUrl !== '' ? ' hidden' : ' block')}>
+																<PhotoIcon className="mx-auto h-12 w-12 text-gray-300" aria-hidden="true" />
 																<div className="mt-4 flex text-sm leading-6 text-gray-600">
 																	<label className="relative rounded-md bg-white font-semibold text-indigo-600 focus-within:outline-none focus-within:ring-2 focus-within:ring-indigo-600 focus-within:ring-offset-2 hover:text-indigo-500">
 																		<span>Télécharger une nouvelle photo</span>
@@ -275,28 +238,15 @@ export default function ModalUpdatePortfolioProfil(props) {
 																		onChange={handleFileChange}
 																	/>
 																</div>
-																<p className="text-xs leading-5 text-gray-600">
-																	{"PNG, JPG, WEBP jusqu'à 1.5 Mo"}
-																</p>
+																<p className="text-xs leading-5 text-gray-600">{"PNG, JPG, WEBP jusqu'à 1.5 Mo"}</p>
 															</div>
 														</div>
 													</button>
-													<div
-														className={'flex w-full items-center justify-end'}
-													>
-														<Info
-															description={
-																'Vous ne pouvez upload que 10 images maximum.'
-															}
-														/>
+													<div className={'flex w-full items-center justify-end'}>
+														<Info description={'Vous ne pouvez upload que 10 images maximum.'} />
 													</div>
 													<div className=" flex justify-end">
-														<button
-															data-cy="add-button-portefolio"
-															type="button"
-															className="btn-primary"
-															onClick={handleSubmit(onSubmit)}
-														>
+														<button data-cy="add-button-portefolio" type="button" className="btn-primary" onClick={handleSubmit(onSubmit)}>
 															Ajouter
 														</button>
 													</div>
@@ -304,9 +254,7 @@ export default function ModalUpdatePortfolioProfil(props) {
 											</div>
 											<div className={'flex w-full md:w-4/6'}>
 												<div className={'flex w-full flex-col gap-4 rounded'}>
-													<h2 className={'text-xl font-bold text-gray-700'}>
-														Portfolio
-													</h2>
+													<h2 className={'text-xl font-bold text-gray-700'}>Portfolio</h2>
 													<>
 														<Swiper
 															slidesPerView={'auto'}
@@ -339,21 +287,13 @@ export default function ModalUpdatePortfolioProfil(props) {
 																			className={
 																				'absolute left-0 top-0 z-40 m-4 flex h-8 w-8 items-center justify-center rounded-full bg-red-50 shadow md:left-auto md:right-0'
 																			}
-																			onClick={() =>
-																				handleDeletePortfolio(image.id)
-																			}
+																			onClick={() => handleDeletePortfolio(image.id)}
 																		>
-																			<span className="material-icons-round text-xl text-red-500">
-																				delete
-																			</span>
+																			<span className="material-icons-round text-xl text-red-500">delete</span>
 																		</button>
 																		<Image
 																			src={image.url}
-																			alt={
-																				image.alternativeText ??
-																				image.name ??
-																				'portefolio image'
-																			}
+																			alt={image.alternativeText ?? image.name ?? 'portefolio image'}
 																			fill={true}
 																			sizes="(min-width: 480px ) 50vw, (min-width: 728px) 33vw, (min-width: 976px) 25vw, 100vw"
 																			className={'rounded object-cover'}
@@ -364,55 +304,27 @@ export default function ModalUpdatePortfolioProfil(props) {
 														</Swiper>
 													</>
 													{/* btn to go on next slide */}
-													<div
-														className={
-															'flex w-full items-center justify-between'
-														}
-													>
+													<div className={'flex w-full items-center justify-between'}>
 														<div>
 															<button
-																className={
-																	'flex items-center justify-center gap-2'
-																}
+																className={'flex items-center justify-center gap-2'}
 																onClick={() => {
 																	mySwiperModal.slidePrev()
 																}}
 															>
-																<Image
-																	alt={'next'}
-																	src={'/assets/down-arrow.svg'}
-																	className={'rotate-90'}
-																	width={20}
-																	height={20}
-																></Image>
-																<span
-																	className={'font-semibold text-indigo-950'}
-																>
-																	Précédent
-																</span>
+																<Image alt={'next'} src={'/assets/down-arrow.svg'} className={'rotate-90'} width={20} height={20}></Image>
+																<span className={'font-semibold text-indigo-950'}>Précédent</span>
 															</button>
 														</div>
 														<div>
 															<button
-																className={
-																	'flex items-center justify-center gap-2'
-																}
+																className={'flex items-center justify-center gap-2'}
 																onClick={() => {
 																	mySwiperModal.slideNext()
 																}}
 															>
-																<span
-																	className={'font-semibold text-indigo-950'}
-																>
-																	Suivant
-																</span>
-																<Image
-																	alt={'next'}
-																	src={'/assets/down-arrow.svg'}
-																	className={'-rotate-90'}
-																	width={20}
-																	height={20}
-																></Image>
+																<span className={'font-semibold text-indigo-950'}>Suivant</span>
+																<Image alt={'next'} src={'/assets/down-arrow.svg'} className={'-rotate-90'} width={20} height={20}></Image>
 															</button>
 														</div>
 													</div>
@@ -422,12 +334,7 @@ export default function ModalUpdatePortfolioProfil(props) {
 									</div>
 								</div>
 								<div className="mt-4 flex justify-end">
-									<button
-										data-cy="save-button-portefolio"
-										type="button"
-										className="btn-primary"
-										onClick={handleSubmitGallery}
-									>
+									<button data-cy="save-button-portefolio" type="button" className="btn-primary" onClick={handleSubmitGallery}>
 										Sauvegarder
 									</button>
 								</div>

@@ -45,10 +45,7 @@ function InfosProfil(props) {
 				>
 					{!isPublic ? (
 						<>
-							<CompletionProfilProgressBar
-								user={user}
-								handleUpdateUser={handleUpdateUser}
-							/>
+							<CompletionProfilProgressBar user={user} handleUpdateUser={handleUpdateUser} />
 							<Link
 								data-cy="profil-public-view"
 								href={'#'}
@@ -63,12 +60,8 @@ function InfosProfil(props) {
 								}}
 								className={'flex gap-2 font-semibold text-indigo-900 '}
 							>
-								<span className="material-icons-round text-indigo-900">
-									visibility
-								</span>
-								<span className={'hover:underline'}>
-									Voir mon profil public
-								</span>
+								<span className="material-icons-round text-indigo-900">visibility</span>
+								<span className={'hover:underline'}>Voir mon profil public</span>
 							</Link>
 						</>
 					) : (
@@ -83,71 +76,25 @@ function InfosProfil(props) {
 								}}
 								className={'flex gap-2 font-semibold text-indigo-900'}
 							>
-								<span className="material-icons-round text-indigo-900">
-									edit
-								</span>
+								<span className="material-icons-round text-indigo-900">edit</span>
 								<span className={'hover:underline'}>Modifier mon profil</span>
 							</Link>
 						</div>
 					)}
 				</div>
 				<div className={'grid grid-cols-12 gap-5 pt-32'}>
-					<div
-						className={
-							'col-span-12 flex flex-col items-start gap-5 md:col-span-4'
-						}
-					>
-						<LocationProfil
-							user={user}
-							handleUpdateUser={props.handleUpdateUser}
-							isPublic={isPublic}
-						/>
-						<SocialMediaProfil
-							user={user}
-							handleUpdateUser={props.handleUpdateUser}
-							isPublic={isPublic}
-						/>
-						<SkillsProfil
-							user={user}
-							handleUpdateUser={props.handleUpdateUser}
-							isPublic={isPublic}
-						/>
-						<LanguageProfil
-							user={user}
-							handleUpdateUser={props.handleUpdateUser}
-							isPublic={isPublic}
-						/>
-						<CoursesProfil
-							user={user}
-							handleUpdateUser={props.handleUpdateUser}
-							isPublic={isPublic}
-						/>
+					<div className={'col-span-12 flex flex-col items-start gap-5 md:col-span-4'}>
+						<LocationProfil user={user} handleUpdateUser={props.handleUpdateUser} isPublic={isPublic} />
+						<SocialMediaProfil user={user} handleUpdateUser={props.handleUpdateUser} isPublic={isPublic} />
+						<SkillsProfil user={user} handleUpdateUser={props.handleUpdateUser} isPublic={isPublic} />
+						<LanguageProfil user={user} handleUpdateUser={props.handleUpdateUser} isPublic={isPublic} />
+						<CoursesProfil user={user} handleUpdateUser={props.handleUpdateUser} isPublic={isPublic} />
 					</div>
-					<div
-						className={
-							'col-span-12 flex flex-col items-start gap-5 md:col-span-8'
-						}
-					>
-						<DescriptionProfil
-							user={user}
-							handleUpdateUser={props.handleUpdateUser}
-							isPublic={isPublic}
-						/>
-						<PortfolioProfil
-							user={user}
-							handleUpdateUser={props.handleUpdateUser}
-							isPublic={isPublic}
-						/>
-						<ServiceOffersProfil
-							user={user}
-							handleUpdateUser={props.handleUpdateUser}
-							isPublic={isPublic}
-						/>
-						<ExperiencesProfil
-							user={user}
-							handleUpdateUser={props.handleUpdateUser}
-							isPublic={isPublic}
-						/>
+					<div className={'col-span-12 flex flex-col items-start gap-5 md:col-span-8'}>
+						<DescriptionProfil user={user} handleUpdateUser={props.handleUpdateUser} isPublic={isPublic} />
+						<PortfolioProfil user={user} handleUpdateUser={props.handleUpdateUser} isPublic={isPublic} />
+						<ServiceOffersProfil user={user} handleUpdateUser={props.handleUpdateUser} isPublic={isPublic} />
+						<ExperiencesProfil user={user} handleUpdateUser={props.handleUpdateUser} isPublic={isPublic} />
 					</div>
 				</div>
 			</div>

@@ -6,10 +6,7 @@ function Info({ description }) {
 		<div className="rounded-md bg-indigo-50 p-4">
 			<div className="flex">
 				<div className="flex-shrink-0">
-					<InformationCircleIcon
-						className="h-5 w-5 text-indigo-400"
-						aria-hidden="true"
-					/>
+					<InformationCircleIcon className="h-5 w-5 text-indigo-400" aria-hidden="true" />
 				</div>
 				<div className="ml-3">
 					<div className="text-sm text-indigo-700">

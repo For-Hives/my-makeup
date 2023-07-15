@@ -63,14 +63,11 @@ export default function ModalUpdateServiceOffersProfil(props) {
 
 	const [open, setOpen] = useState(props.isModalOpen)
 
-	const [userServiceOffers, setUserServiceOffers] = useState(
-		user.service_offers ?? []
-	)
+	const [userServiceOffers, setUserServiceOffers] = useState(user.service_offers ?? [])
 	const [userServiceOffersId, setUserServiceOffersId] = useState('')
 	const [userServiceOffersName, setUserServiceOffersName] = useState('')
 	const [userServiceOffersPrice, setUserServiceOffersPrice] = useState('')
-	const [userServiceOffersDescription, setUserServiceOffersDescription] =
-		useState('')
+	const [userServiceOffersDescription, setUserServiceOffersDescription] = useState('')
 	const [userServiceOffersOptions, setUserServiceOffersOptions] = useState([])
 
 	const { data: session } = useSession()
@@ -105,8 +102,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 				service_offers.name === userServiceOffersName &&
 				service_offers.price === userServiceOffersPrice &&
 				service_offers.description === userServiceOffersDescription &&
-				JSON.stringify(service_offers.options) ===
-					JSON.stringify(userServiceOffersOptions)
+				JSON.stringify(service_offers.options) === JSON.stringify(userServiceOffersOptions)
 		)
 		// if the service_offers is not already in the service_offers courses, add it
 		if (serviceOffersAlreadyInUserServiceOffers.length === 0) {
@@ -153,17 +149,9 @@ export default function ModalUpdateServiceOffersProfil(props) {
 		let userServiceOffersCopy = []
 		if (userServiceOffersId === '') {
 			userServiceOffersCopy = userServiceOffers.map(serviceOffer => {
-				if (
-					serviceOffer &&
-					serviceOffer?.id &&
-					serviceOffer.id.toString().startsWith('added')
-				) {
+				if (serviceOffer && serviceOffer?.id && serviceOffer.id.toString().startsWith('added')) {
 					const options = serviceOffer.options.map(option => {
-						if (
-							option &&
-							option?.id &&
-							option.id.toString().startsWith('added')
-						) {
+						if (option && option?.id && option.id.toString().startsWith('added')) {
 							return {
 								name: option.name,
 								price: option.price,
@@ -181,11 +169,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 					}
 				} else {
 					const options = serviceOffer.options.map(option => {
-						if (
-							option &&
-							option?.id &&
-							option.id.toString().startsWith('added')
-						) {
+						if (option && option?.id && option.id.toString().startsWith('added')) {
 							return {
 								name: option.name,
 								price: option.price,
@@ -206,11 +190,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 		} else {
 			userServiceOffersCopy = userServiceOffers.map(serviceOffer => {
 				const options = serviceOffer.options.map(option => {
-					if (
-						option &&
-						option?.id &&
-						option.id.toString().startsWith('added')
-					) {
+					if (option && option?.id && option.id.toString().startsWith('added')) {
 						return {
 							name: option.name,
 							price: option.price,
@@ -294,9 +274,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 	}
 
 	const handleEditServiceOffers = id => {
-		const userServiceOffersFiltered = userServiceOffers.filter(
-			service_offers => service_offers.id === id
-		)
+		const userServiceOffersFiltered = userServiceOffers.filter(service_offers => service_offers.id === id)
 
 		// replace all ";" with "\n" in userServiceOffersPrice
 		const newPrice = userServiceOffersFiltered[0].price.replace(/\n/g, ';')
@@ -316,9 +294,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 	}
 
 	const handleDeleteServiceOffers = id => {
-		const userServiceOffersFiltered = userServiceOffers.filter(
-			service_offers => service_offers.id !== id
-		)
+		const userServiceOffersFiltered = userServiceOffers.filter(service_offers => service_offers.id !== id)
 		setUserServiceOffers(userServiceOffersFiltered)
 	}
 
@@ -337,17 +313,15 @@ export default function ModalUpdateServiceOffersProfil(props) {
 
 	useEffect(() => {
 		if (user && user.service_offers) {
-			const serviceOffersWithId = user.service_offers.map(
-				(serviceOffer, index) => {
-					return {
-						id: index,
-						name: serviceOffer.name,
-						price: serviceOffer.price,
-						description: serviceOffer.description,
-						options: serviceOffer.options,
-					}
+			const serviceOffersWithId = user.service_offers.map((serviceOffer, index) => {
+				return {
+					id: index,
+					name: serviceOffer.name,
+					price: serviceOffer.price,
+					description: serviceOffer.description,
+					options: serviceOffer.options,
 				}
-			)
+			})
 			setUserServiceOffers(serviceOffersWithId)
 		} else {
 			setUserServiceOffers([])
@@ -356,12 +330,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 
 	return (
 		<Transition.Root show={open} as={Fragment}>
-			<Dialog
-				as="div"
-				className="relative z-30"
-				initialFocus={cancelButtonRef}
-				onClose={props.handleIsModalOpen}
-			>
+			<Dialog as="div" className="relative z-30" initialFocus={cancelButtonRef} onClose={props.handleIsModalOpen}>
 				<Transition.Child
 					as={Fragment}
 					enter="ease-out duration-300"
@@ -390,43 +359,23 @@ export default function ModalUpdateServiceOffersProfil(props) {
 									type="button"
 									onClick={props.handleIsModalOpen}
 									ref={cancelButtonRef}
-									className={
-										'absolute right-0 top-0 m-6 flex items-center justify-center'
-									}
+									className={'absolute right-0 top-0 m-6 flex items-center justify-center'}
 								>
 									<span className="material-icons-round">close</span>
 								</button>
 								<div className="flex flex-col items-start gap-8">
 									<div className="text-left">
-										<Dialog.Title
-											as="h3"
-											className="text-lg font-semibold text-gray-900"
-										>
+										<Dialog.Title as="h3" className="text-lg font-semibold text-gray-900">
 											Les services que vous proposez
 										</Dialog.Title>
 									</div>
-									<div
-										className={
-											'flex h-full w-full flex-wrap gap-16 md:flex-nowrap'
-										}
-									>
-										<div
-											className={
-												'max-h-[600px] w-full overflow-y-scroll  pr-4 md:w-2/5'
-											}
-										>
+									<div className={'flex h-full w-full flex-wrap gap-16 md:flex-nowrap'}>
+										<div className={'max-h-[600px] w-full overflow-y-scroll  pr-4 md:w-2/5'}>
 											<div className="grid grid-cols-1 gap-4">
 												<div className={'flex flex-col gap-4'}>
-													<form
-														onSubmit={handleSubmit(onSubmit)}
-														method="POST"
-														className="flex flex-col gap-4"
-													>
+													<form onSubmit={handleSubmit(onSubmit)} method="POST" className="flex flex-col gap-4">
 														<div>
-															<label
-																htmlFor="name"
-																className="block text-sm text-gray-700"
-															>
+															<label htmlFor="name" className="block text-sm text-gray-700">
 																Nom de la prestation
 															</label>
 															<div className="mt-2">
@@ -444,20 +393,14 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																/>
 																{errors.name && (
-																	<p
-																		data-cy={'error-name'}
-																		className={'mt-2 text-xs text-red-500/80'}
-																	>
+																	<p data-cy={'error-name'} className={'mt-2 text-xs text-red-500/80'}>
 																		{errors.name.message}
 																	</p>
 																)}
 															</div>
 														</div>
 														<div>
-															<label
-																htmlFor="description"
-																className="block text-sm text-gray-700"
-															>
+															<label htmlFor="description" className="block text-sm text-gray-700">
 																{'Description de la prestation'}
 															</label>
 															<div className="mt-2">
@@ -470,31 +413,22 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																	})}
 																	required
 																	value={userServiceOffersDescription ?? ''}
-																	onChange={
-																		handleUpdateServiceOffersDescription
-																	}
+																	onChange={handleUpdateServiceOffersDescription}
 																	className="block min-h-[150px] w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																/>
 																{errors.description && (
-																	<p
-																		data-cy={'error-description'}
-																		className={'mt-2 text-xs text-red-500/80'}
-																	>
+																	<p data-cy={'error-description'} className={'mt-2 text-xs text-red-500/80'}>
 																		{errors.description.message}
 																	</p>
 																)}
 															</div>
 														</div>
 														<div>
-															<label
-																htmlFor="price"
-																className="block text-sm text-gray-700"
-															>
+															<label htmlFor="price" className="block text-sm text-gray-700">
 																Prix de la prestation
 															</label>
 															<p className={'text-xs italic text-gray-700/70'}>
-																Vous pouvez ajouter plusieurs formules/prix en
-																les séparant par un point-virgule.
+																Vous pouvez ajouter plusieurs formules/prix en les séparant par un point-virgule.
 															</p>
 															<div className="mt-2">
 																<input
@@ -511,10 +445,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																/>
 																{errors.price && (
-																	<p
-																		data-cy={'error-price'}
-																		className={'mt-2 text-xs text-red-500/80'}
-																	>
+																	<p data-cy={'error-price'} className={'mt-2 text-xs text-red-500/80'}>
 																		{errors.price.message}
 																	</p>
 																)}
@@ -524,24 +455,10 @@ export default function ModalUpdateServiceOffersProfil(props) {
 													{/* loop on table of options */}
 													<div>
 														{userServiceOffersOptions.map((option, index) => (
-															<div
-																key={index}
-																className={
-																	'flex w-full flex-col gap-4 py-4 pl-8'
-																}
-															>
-																<h3
-																	className={
-																		'text-sm font-semibold text-gray-900'
-																	}
-																>
-																	Option {index + 1}
-																</h3>
+															<div key={index} className={'flex w-full flex-col gap-4 py-4 pl-8'}>
+																<h3 className={'text-sm font-semibold text-gray-900'}>Option {index + 1}</h3>
 																<div>
-																	<label
-																		htmlFor="name"
-																		className="block text-sm text-gray-700"
-																	>
+																	<label htmlFor="name" className="block text-sm text-gray-700">
 																		Nom de la prestation
 																	</label>
 																	<div className="relative mt-2">
@@ -557,43 +474,29 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																			onChange={event => {
 																				// 	change the name value of the correct option
 																				setUserServiceOffersOptions(
-																					userServiceOffersOptions.map(
-																						(option, optionIndex) => {
-																							if (optionIndex === index) {
-																								return {
-																									...option,
-																									name: event.target.value,
-																								}
+																					userServiceOffersOptions.map((option, optionIndex) => {
+																						if (optionIndex === index) {
+																							return {
+																								...option,
+																								name: event.target.value,
 																							}
-																							return option
 																						}
-																					)
+																						return option
+																					})
 																				)
 																			}}
-																			value={
-																				userServiceOffersOptions[index].name
-																			}
+																			value={userServiceOffersOptions[index].name}
 																			className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																		/>
-																		{errors.services &&
-																			errors.services[index] &&
-																			errors.services[index].name && (
-																				<p
-																					data-cy={`error-name-${index}`}
-																					className={
-																						'mt-2 text-xs text-red-500/80'
-																					}
-																				>
-																					{errors.services[index].name.message}
-																				</p>
-																			)}
+																		{errors.services && errors.services[index] && errors.services[index].name && (
+																			<p data-cy={`error-name-${index}`} className={'mt-2 text-xs text-red-500/80'}>
+																				{errors.services[index].name.message}
+																			</p>
+																		)}
 																	</div>
 																</div>
 																<div>
-																	<label
-																		htmlFor="description"
-																		className="block text-sm text-gray-700"
-																	>
+																	<label htmlFor="description" className="block text-sm text-gray-700">
 																		{'Description de la prestation'}
 																	</label>
 																	<div className="mt-2">
@@ -601,67 +504,40 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																			data-cy={`description-service-offers-option-input-${index}`}
 																			id={`services[${index}].description`}
 																			name={`services[${index}].description`}
-																			{...register(
-																				`services[${index}].description`,
-																				{
-																					required: true,
-																				}
-																			)}
+																			{...register(`services[${index}].description`, {
+																				required: true,
+																			})}
 																			required
 																			onChange={event => {
 																				// 	change the name value of the correct option
 																				setUserServiceOffersOptions(
-																					userServiceOffersOptions.map(
-																						(option, optionIndex) => {
-																							if (optionIndex === index) {
-																								return {
-																									...option,
-																									description:
-																										event.target.value,
-																								}
+																					userServiceOffersOptions.map((option, optionIndex) => {
+																						if (optionIndex === index) {
+																							return {
+																								...option,
+																								description: event.target.value,
 																							}
-																							return option
 																						}
-																					)
+																						return option
+																					})
 																				)
 																			}}
-																			value={
-																				userServiceOffersOptions[index]
-																					.description
-																			}
+																			value={userServiceOffersOptions[index].description}
 																			className="block min-h-[150px] w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																		/>
-																		{errors.services &&
-																			errors.services[index] &&
-																			errors.services[index].description && (
-																				<p
-																					data-cy={`error-description-${index}`}
-																					className={
-																						'mt-2 text-xs text-red-500/80'
-																					}
-																				>
-																					{
-																						errors.services[index].description
-																							.message
-																					}
-																				</p>
-																			)}
+																		{errors.services && errors.services[index] && errors.services[index].description && (
+																			<p data-cy={`error-description-${index}`} className={'mt-2 text-xs text-red-500/80'}>
+																				{errors.services[index].description.message}
+																			</p>
+																		)}
 																	</div>
 																</div>
 																<div>
-																	<label
-																		htmlFor="price"
-																		className="block text-sm text-gray-700"
-																	>
+																	<label htmlFor="price" className="block text-sm text-gray-700">
 																		Prix de la prestation
 																	</label>
-																	<p
-																		className={
-																			'text-xs italic text-gray-700/70'
-																		}
-																	>
-																		Vous pouvez ajouter plusieurs formules/prix
-																		en les séparant par un point-virgule.
+																	<p className={'text-xs italic text-gray-700/70'}>
+																		Vous pouvez ajouter plusieurs formules/prix en les séparant par un point-virgule.
 																	</p>
 																	<div className="mt-2">
 																		<input
@@ -676,44 +552,31 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																			onChange={event => {
 																				// 	change the name value of the correct option
 																				setUserServiceOffersOptions(
-																					userServiceOffersOptions.map(
-																						(option, optionIndex) => {
-																							if (optionIndex === index) {
-																								return {
-																									...option,
-																									price: event.target.value,
-																								}
+																					userServiceOffersOptions.map((option, optionIndex) => {
+																						if (optionIndex === index) {
+																							return {
+																								...option,
+																								price: event.target.value,
 																							}
-																							return option
 																						}
-																					)
+																						return option
+																					})
 																				)
 																			}}
-																			value={
-																				userServiceOffersOptions[index].price
-																			}
+																			value={userServiceOffersOptions[index].price}
 																			className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																		/>
-																		{errors.services &&
-																			errors.services[index] &&
-																			errors.services[index].price && (
-																				<p
-																					data-cy={`error-price-${index}`}
-																					className={
-																						'mt-2 text-xs text-red-500/80'
-																					}
-																				>
-																					{errors.services[index].price.message}
-																				</p>
-																			)}
+																		{errors.services && errors.services[index] && errors.services[index].price && (
+																			<p data-cy={`error-price-${index}`} className={'mt-2 text-xs text-red-500/80'}>
+																				{errors.services[index].price.message}
+																			</p>
+																		)}
 																	</div>
 																</div>
 															</div>
 														))}
 													</div>
-													<div
-														className={'flex w-full items-center justify-start'}
-													>
+													<div className={'flex w-full items-center justify-start'}>
 														<button
 															data-cy={'add-service-offers-option-button'}
 															className={
@@ -721,24 +584,13 @@ export default function ModalUpdateServiceOffersProfil(props) {
 															}
 															onClick={handleAddServiceOffersOption}
 														>
-															<span className={'text-gray-700'}>
-																Ajouter une option à la prestation
-															</span>
-															<span className="material-icons-round text-base text-gray-900">
-																add
-															</span>
+															<span className={'text-gray-700'}>Ajouter une option à la prestation</span>
+															<span className="material-icons-round text-base text-gray-900">add</span>
 														</button>
 													</div>
 													<div className={'flex items-center justify-end'}>
-														<button
-															data-cy={'add-service-offers-button'}
-															type="button"
-															className="btn-primary"
-															onClick={handleSubmit(onSubmit)}
-														>
-															{userServiceOffersId === ''
-																? 'Ajouter une prestation'
-																: 'Modifier une prestation'}
+														<button data-cy={'add-service-offers-button'} type="button" className="btn-primary" onClick={handleSubmit(onSubmit)}>
+															{userServiceOffersId === '' ? 'Ajouter une prestation' : 'Modifier une prestation'}
 														</button>
 													</div>
 												</div>
@@ -750,16 +602,10 @@ export default function ModalUpdateServiceOffersProfil(props) {
 											}
 										>
 											{/*	display the serviceOffers already added */}
-											<h3 className={'text-sm text-gray-900'}>
-												Les services déjà ajoutés
-											</h3>
+											<h3 className={'text-sm text-gray-900'}>Les services déjà ajoutés</h3>
 											<div className={'flex w-full flex-col gap-4 '}>
 												<Tab.Group>
-													<Tab.List
-														className={
-															'flex w-full flex-col justify-center py-4 md:flex-row'
-														}
-													>
+													<Tab.List className={'flex w-full flex-col justify-center py-4 md:flex-row'}>
 														{userServiceOffers.map((service_offer, index) => {
 															return (
 																<Tab
@@ -779,68 +625,30 @@ export default function ModalUpdateServiceOffersProfil(props) {
 														{userServiceOffers.map((service_offer, index) => {
 															return (
 																<Tab.Panel key={index}>
-																	<div
-																		className={
-																			'relative flex flex-col gap-4 bg-white py-4'
-																		}
-																	>
-																		<div
-																			className={
-																				'absolute -top-6 right-0 m-2 flex items-center justify-center gap-4 md:top-0'
-																			}
-																		>
+																	<div className={'relative flex flex-col gap-4 bg-white py-4'}>
+																		<div className={'absolute -top-6 right-0 m-2 flex items-center justify-center gap-4 md:top-0'}>
 																			<button
 																				data-cy={`edit-service-offers-button-${index}`}
-																				className={
-																					'flex items-center justify-center'
-																				}
-																				onClick={() =>
-																					handleEditServiceOffers(
-																						service_offer.id
-																					)
-																				}
+																				className={'flex items-center justify-center'}
+																				onClick={() => handleEditServiceOffers(service_offer.id)}
 																			>
-																				<span className="material-icons-round text-xl text-orange-600">
-																					edit
-																				</span>
+																				<span className="material-icons-round text-xl text-orange-600">edit</span>
 																			</button>
 																			<button
 																				data-cy="delete-service-offers-button"
-																				className={
-																					'flex items-center justify-center'
-																				}
-																				onClick={() =>
-																					handleDeleteServiceOffers(
-																						service_offer.id
-																					)
-																				}
+																				className={'flex items-center justify-center'}
+																				onClick={() => handleDeleteServiceOffers(service_offer.id)}
 																			>
-																				<span className="material-icons-round text-xl text-red-500">
-																					delete
-																				</span>
+																				<span className="material-icons-round text-xl text-red-500">delete</span>
 																			</button>
 																		</div>
 																		<div className={'flex flex-col'}>
-																			<h2
-																				className={
-																					'text-start text-lg font-bold text-indigo-900'
-																				}
-																			>
-																				{service_offer.name}
-																			</h2>
+																			<h2 className={'text-start text-lg font-bold text-indigo-900'}>{service_offer.name}</h2>
 																		</div>
-																		<DescriptionPriceOffer
-																			serviceOffer={service_offer}
-																		/>
+																		<DescriptionPriceOffer serviceOffer={service_offer} />
 																	</div>
-																	<div
-																		className={
-																			'flex w-full flex-col gap-2 py-2'
-																		}
-																	>
-																		<OptionsOffers
-																			serviceOffer={service_offer}
-																		/>
+																	<div className={'flex w-full flex-col gap-2 py-2'}>
+																		<OptionsOffers serviceOffer={service_offer} />
 																	</div>
 																</Tab.Panel>
 															)
@@ -852,12 +660,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 									</div>
 								</div>
 								<div className="mt-4 flex justify-end">
-									<button
-										data-cy="save-button-service-offers"
-										type="button"
-										className="btn-primary"
-										onClick={handleSubmitServiceOffers}
-									>
+									<button data-cy="save-button-service-offers" type="button" className="btn-primary" onClick={handleSubmitServiceOffers}>
 										Sauvegarder
 									</button>
 								</div>

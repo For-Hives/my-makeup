@@ -13,12 +13,7 @@ import { Layout } from '@/components/Global/Layout'
 function ArrowLeftIcon(props) {
 	return (
 		<svg viewBox="0 0 16 16" fill="none" aria-hidden="true" {...props}>
-			<path
-				d="M7.25 11.25 3.75 8m0 0 3.5-3.25M3.75 8h8.5"
-				strokeWidth="1.5"
-				strokeLinecap="round"
-				strokeLinejoin="round"
-			/>
+			<path d="M7.25 11.25 3.75 8m0 0 3.5-3.25M3.75 8h8.5" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
 		</svg>
 	)
 }
@@ -32,24 +27,13 @@ export default function Article({ articleData }) {
 		<>
 			<Head>
 				<title>{meta?.seo_title ?? 'My-Makeup'}</title>
-				<meta
-					name="description"
-					content={
-						meta?.seo_description ??
-						'Découvrez cet article passionnant de la part de My-Makeup'
-					}
-				/>
+				<meta name="description" content={meta?.seo_description ?? 'Découvrez cet article passionnant de la part de My-Makeup'} />
 				{/*	seo tag canonical link */}
-				<link
-					rel="canonical"
-					href={'https://my-makeup.fr/blog/' + meta?.slug}
-				/>
+				<link rel="canonical" href={'https://my-makeup.fr/blog/' + meta?.slug} />
 			</Head>
 			<Nav />
 			<main className={'relative'}>
-				<div
-					className={'relative mx-auto my-48 max-w-7xl px-4 md:px-8 2xl:px-0'}
-				>
+				<div className={'relative mx-auto my-48 max-w-7xl px-4 md:px-8 2xl:px-0'}>
 					<div className="mx-auto max-w-2xl">
 						{
 							<Link
@@ -64,17 +48,10 @@ export default function Article({ articleData }) {
 						{meta && (
 							<article>
 								<header className="flex flex-col">
-									<h1 className="mt-6 text-3xl font-bold tracking-tight text-gray-800 sm:text-4xl">
-										{meta.title}
-									</h1>
-									<time
-										dateTime={meta.updatedAt.toString()}
-										className="order-first flex items-center text-base text-gray-700"
-									>
+									<h1 className="mt-6 text-3xl font-bold tracking-tight text-gray-800 sm:text-4xl">{meta.title}</h1>
+									<time dateTime={meta.updatedAt.toString()} className="order-first flex items-center text-base text-gray-700">
 										<span className="h-4 w-0.5 rounded-full bg-gray-200" />
-										<span className="ml-3">
-											{convertToStringDate(meta.updatedAt)}
-										</span>
+										<span className="ml-3">{convertToStringDate(meta.updatedAt)}</span>
 									</time>
 								</header>
 								<div className={'flex flex-col'}>
@@ -123,17 +100,14 @@ export async function getStaticPaths() {
 }
 
 export async function getStaticProps({ params }) {
-	let articleData = await fetch(
-		`${process.env.NEXT_PUBLIC_API_URL}/api/articles?filters[slug][$eq]=${params.id}`,
-		{
-			method: 'GET',
-			headers: {
-				// 	token
-				'Content-Type': 'application/json',
-				Accept: 'application/json',
-			},
-		}
-	).then(res => res.json())
+	let articleData = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/articles?filters[slug][$eq]=${params.id}`, {
+		method: 'GET',
+		headers: {
+			// 	token
+			'Content-Type': 'application/json',
+			Accept: 'application/json',
+		},
+	}).then(res => res.json())
 
 	articleData = articleData?.data?.[0]
 
@@ -144,9 +118,7 @@ export async function getStaticProps({ params }) {
 	}
 
 	// Convert Markdown to HTML
-	const processedContent = await remark()
-		.use(html)
-		.process(articleData.attributes.content)
+	const processedContent = await remark().use(html).process(articleData.attributes.content)
 
 	// replace the img by Image from next
 

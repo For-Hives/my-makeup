@@ -24,11 +24,7 @@ function SearchPage() {
 	useEffect(() => {
 		const { search, city } = router.query
 
-		if (
-			!hasSearched ||
-			lastSearch.search !== search ||
-			lastSearch.city !== city
-		) {
+		if (!hasSearched || lastSearch.search !== search || lastSearch.city !== city) {
 			if (search === undefined && city === undefined) {
 				return
 			}
@@ -70,10 +66,7 @@ function SearchPage() {
 		<>
 			<Head>
 				<title>Recherche de maquilleuse - My-Makeup</title>
-				<meta
-					name="description"
-					content="Recherchez la maquilleuse professionnelle qui vous correspond en quelques clics sur My-Makeup."
-				/>
+				<meta name="description" content="Recherchez la maquilleuse professionnelle qui vous correspond en quelques clics sur My-Makeup." />
 				{/*	seo tag canonical link */}
 				<link rel="canonical" href={'https://my-makeup.fr/search'} />
 			</Head>
@@ -82,11 +75,7 @@ function SearchPage() {
 				<main className={'relative'}>
 					<FullSearchBloc performSearch={performSearch} />
 					{!hasSearched && !isSearching && (
-						<div
-							className={
-								'flex w-full items-center justify-center py-8 md:py-16 2xl:py-32'
-							}
-						>
+						<div className={'flex w-full items-center justify-center py-8 md:py-16 2xl:py-32'}>
 							<CatSearch />
 						</div>
 					)}
@@ -97,11 +86,7 @@ function SearchPage() {
 					)}
 					{hasSearched && !isSearching && (
 						<div className={'w-full px-4 md:px-16'}>
-							<article
-								className={
-									'grid w-full grid-cols-1 gap-8 md:grid-cols-3 2xl:grid-cols-6'
-								}
-							>
+							<article className={'grid w-full grid-cols-1 gap-8 md:grid-cols-3 2xl:grid-cols-6'}>
 								{searchResults.length !== 0 && (
 									<>
 										{searchResults.map((result, index) => (
@@ -109,9 +94,7 @@ function SearchPage() {
 												key={index}
 												href={`/profil/${result.username}`}
 												data-cy={`search-result`}
-												className={
-													'col-span-1 flex w-full flex-col items-center rounded border border-gray-300 bg-white'
-												}
+												className={'col-span-1 flex w-full flex-col items-center rounded border border-gray-300 bg-white'}
 											>
 												<div className={'relative w-full'}>
 													<Image
@@ -119,24 +102,14 @@ function SearchPage() {
 														alt={'profil picture Maquilleuse professionnelle'}
 														width={200}
 														height={200}
-														className={
-															'h-[350px] w-full rounded-b-none rounded-t object-cover object-center'
-														}
+														className={'h-[350px] w-full rounded-b-none rounded-t object-cover object-center'}
 													/>
 													{result?.pro === true && (
-														<div
-															className={
-																'absolute left-0 top-0 flex items-center justify-center pt-4'
-															}
-														>
+														<div className={'absolute left-0 top-0 flex items-center justify-center pt-4'}>
 															<BadgeSuperMaquilleuse />
 														</div>
 													)}
-													<div
-														className={
-															'absolute bottom-0 left-0 flex w-full flex-col bg-gradient-to-t from-black to-black/0 p-4'
-														}
-													>
+													<div className={'absolute bottom-0 left-0 flex w-full flex-col bg-gradient-to-t from-black to-black/0 p-4'}>
 														<div className={'flex flex-row items-baseline'}>
 															<div className={'flex'}>
 																<h3 className="text-2xl font-extrabold text-white">
@@ -144,28 +117,16 @@ function SearchPage() {
 																</h3>
 															</div>
 															{result?.pro === true && (
-																<span
-																	className={'ml-2 translate-y-0.5 transform'}
-																>
+																<span className={'ml-2 translate-y-0.5 transform'}>
 																	<CheckCircleIcon className="h-5 w-5 text-white" />
 																</span>
 															)}
 														</div>
 														<div>
-															<div
-																className={
-																	'flex flex-row items-center gap-2 text-sm font-light text-white'
-																}
-															>
-																<span className="material-icons-round text-sm text-white">
-																	directions_run
-																</span>
+															<div className={'flex flex-row items-center gap-2 text-sm font-light text-white'}>
+																<span className="material-icons-round text-sm text-white">directions_run</span>
 																<span>
-																	À{' '}
-																	<span className={'font-bold'}>
-																		{result?.city}
-																	</span>{' '}
-																	&{' '}
+																	À <span className={'font-bold'}>{result?.city}</span> &{' '}
 																	<span className={'font-bold'}>
 																		{result?.action_radius}
 																		km&nbsp;
@@ -180,9 +141,7 @@ function SearchPage() {
 												</div>
 												<div className={'flex w-full flex-col gap-4 p-4 pt-6'}>
 													<div className={'flex w-full flex-col'}>
-														<h2 className="text-lg font-bold text-gray-900">
-															{result.speciality}
-														</h2>
+														<h2 className="text-lg font-bold text-gray-900">{result.speciality}</h2>
 														{/* v2 v3 v4 v5 v6 v7 v8 vjsais pas */}
 														{/*{result?.score &&*/}
 														{/*	(result?.score === 0 ||*/}
@@ -228,11 +187,7 @@ function SearchPage() {
 																})}
 															</>
 														) : (
-															<p
-																className={
-																	'inline-flex flex-nowrap items-center rounded-full bg-gray-100 px-3 py-2 text-xs font-medium text-gray-700'
-																}
-															>
+															<p className={'inline-flex flex-nowrap items-center rounded-full bg-gray-100 px-3 py-2 text-xs font-medium text-gray-700'}>
 																Aucune compétence renseignée
 															</p>
 														)}

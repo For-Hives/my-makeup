@@ -75,12 +75,7 @@ export default function ModalUpdateDescriptionProfil(props) {
 
 	return (
 		<Transition.Root show={open} as={Fragment}>
-			<Dialog
-				as="div"
-				className="relative z-30"
-				initialFocus={cancelButtonRef}
-				onClose={props.handleIsModalOpen}
-			>
+			<Dialog as="div" className="relative z-30" initialFocus={cancelButtonRef} onClose={props.handleIsModalOpen}>
 				<Transition.Child
 					as={Fragment}
 					enter="ease-out duration-300"
@@ -109,34 +104,22 @@ export default function ModalUpdateDescriptionProfil(props) {
 									type="button"
 									onClick={props.handleIsModalOpen}
 									ref={cancelButtonRef}
-									className={
-										'absolute right-0 top-0 m-6 flex items-center justify-center'
-									}
+									className={'absolute right-0 top-0 m-6 flex items-center justify-center'}
 								>
 									<span className="material-icons-round">close</span>
 								</button>
 								<div className="flex flex-col items-start gap-8">
 									<div className="text-left">
-										<Dialog.Title
-											as="h3"
-											className="text-lg font-semibold text-gray-900"
-										>
+										<Dialog.Title as="h3" className="text-lg font-semibold text-gray-900">
 											Vous en quelques mots
 										</Dialog.Title>
 									</div>
 									<div className={'w-full md:w-4/5'}>
 										<div className="grid grid-cols-1 gap-4">
 											<div className={'flex flex-col gap-4'}>
-												<form
-													onSubmit={handleSubmit(onSubmit)}
-													method="POST"
-													className="flex flex-col gap-4"
-												>
+												<form onSubmit={handleSubmit(onSubmit)} method="POST" className="flex flex-col gap-4">
 													<div>
-														<label
-															htmlFor="description"
-															className="block text-sm text-gray-700"
-														>
+														<label htmlFor="description" className="block text-sm text-gray-700">
 															Description
 														</label>
 														<div className="mt-2">
@@ -153,10 +136,7 @@ export default function ModalUpdateDescriptionProfil(props) {
 																className="block min-h-[500px] w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 															/>
 															{errors.description && (
-																<p
-																	data-cy={'error-description'}
-																	className={'mt-2 text-xs text-red-500/80'}
-																>
+																<p data-cy={'error-description'} className={'mt-2 text-xs text-red-500/80'}>
 																	{errors.description.message}
 																</p>
 															)}
@@ -168,12 +148,7 @@ export default function ModalUpdateDescriptionProfil(props) {
 									</div>
 								</div>
 								<div className="mt-4 flex justify-end">
-									<button
-										data-cy="save-button-description"
-										type="button"
-										className="btn-primary"
-										onClick={handleSubmit(onSubmit)}
-									>
+									<button data-cy="save-button-description" type="button" className="btn-primary" onClick={handleSubmit(onSubmit)}>
 										Sauvegarder
 									</button>
 								</div>

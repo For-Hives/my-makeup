@@ -29,18 +29,8 @@ export function SocialMediaProfil(props) {
 
 	return (
 		<div className={'w-full'}>
-			<ModalUpdateSocialMediaProfil
-				isModalOpen={isModalOpen}
-				handleUpdateUser={props.handleUpdateUser}
-				handleIsModalOpen={handleIsModalOpen}
-				user={user}
-			/>
-			<div
-				className={
-					(!isPublic ? 'group relative' : '') +
-					' flex w-full flex-col gap-4 rounded border border-gray-300 bg-white p-8'
-				}
-			>
+			<ModalUpdateSocialMediaProfil isModalOpen={isModalOpen} handleUpdateUser={props.handleUpdateUser} handleIsModalOpen={handleIsModalOpen} user={user} />
+			<div className={(!isPublic ? 'group relative' : '') + ' flex w-full flex-col gap-4 rounded border border-gray-300 bg-white p-8'}>
 				{!isPublic ? (
 					<button
 						data-cy={'update-social-medias-button'}
@@ -52,15 +42,9 @@ export function SocialMediaProfil(props) {
 							'user-select-none group-hover:user-select-auto focus:outline-none'
 						}
 					>
-						<div
-							className={
-								'btn-alt-primary flex items-center gap-3 bg-white text-indigo-900'
-							}
-						>
+						<div className={'btn-alt-primary flex items-center gap-3 bg-white text-indigo-900'}>
 							<span className="material-icons-round">edit</span>
-							<span className={'font-semibold'}>
-								Modifier vos informations de contacts
-							</span>
+							<span className={'font-semibold'}>Modifier vos informations de contacts</span>
 						</div>
 					</button>
 				) : null}

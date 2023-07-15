@@ -14,9 +14,7 @@ function ViewServiceOffersProfil(props) {
 
 	return (
 		<div className={'flex w-full flex-col gap-4'}>
-			<h2 className={'text-xl font-bold text-gray-700'}>
-				Service(s) proposé(s)
-			</h2>
+			<h2 className={'text-xl font-bold text-gray-700'}>Service(s) proposé(s)</h2>
 			{user?.service_offers && (
 				<Tab.Group>
 					<Tab.List className={'flex h-full w-full justify-center py-4'}>
@@ -42,19 +40,11 @@ function ViewServiceOffersProfil(props) {
 								<Tab.Panel key={index}>
 									<div className={'flex flex-col gap-4 bg-white py-4'}>
 										<div className={'flex flex-col'}>
-											<h2
-												className={
-													'text-start text-lg font-bold text-indigo-900'
-												}
-												data-cy={'service-offer-name'}
-											>
+											<h2 className={'text-start text-lg font-bold text-indigo-900'} data-cy={'service-offer-name'}>
 												{service_offer?.name}
 											</h2>
 										</div>
-										<DescriptionPriceOffer
-											serviceOffer={service_offer}
-											index={null}
-										/>
+										<DescriptionPriceOffer serviceOffer={service_offer} index={null} />
 									</div>
 									<div className={'flex w-full flex-col gap-2 py-2'}>
 										<OptionsOffers serviceOffer={service_offer} />
