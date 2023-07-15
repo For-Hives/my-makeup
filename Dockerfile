@@ -1,5 +1,4 @@
-# Etape de production
-FROM node:20-alpine as production
+FROM node:20-alpine
 
 # Définition du répertoire de travail
 WORKDIR /usr/app
