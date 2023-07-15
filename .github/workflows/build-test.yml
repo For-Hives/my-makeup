@@ -24,8 +24,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      THIS_RUNNER:${{ matrix.containers }}
     steps:
       - uses: actions/checkout@v3
       - name: Use Node.js 20.x
@@ -67,6 +65,8 @@ jobs:
         containers: [ 0, 1, 2, 3 ]
     needs: build
     environment: testing
+    env:
+      THIS_RUNNER=${{ matrix.containers }}
     steps:
       - uses: actions/checkout@v3
       - name: Download the build
