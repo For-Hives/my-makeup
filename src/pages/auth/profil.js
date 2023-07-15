@@ -76,7 +76,7 @@ export const getServerSideProps = async ({ req, res }) => {
 
 	if (session) {
 		const response = await fetch(
-			`${process.env.NEXT_PUBLIC_API_URL}api/me-makeup`,
+			`${process.env.NEXT_PUBLIC_API_URL}/api/me-makeup`,
 			{
 				method: 'GET',
 				headers: {

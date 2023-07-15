@@ -25,7 +25,12 @@ describe('profil', () => {
 		if (cookies) {
 			cookies.forEach(cookie => {
 				cy.setCookie(cookie.name, cookie.value, {
-					domain: cookie.domain, expiry: cookie.expiry, httpOnly: cookie.httpOnly, path: cookie.path, secure: cookie.secure, sameSite: cookie.sameSite,
+					domain: cookie.domain,
+					expiry: cookie.expiry,
+					httpOnly: cookie.httpOnly,
+					path: cookie.path,
+					secure: cookie.secure,
+					sameSite: cookie.sameSite,
 				});
 			});
 		}
@@ -45,31 +50,31 @@ describe('profil', () => {
 					method: 'PATCH', url: 'https://api.my-makeup.fr/api/me-makeup', headers: {
 						'Content-Type': 'application/json', Authorization: `Bearer ${jwtToken}`,
 					}, body: {
-						"last_name": "TEST",
-						"first_name": "test",
-						"speciality": "",
-						"city": null,
-						"action_radius": null,
-						"score": null,
-						"available": null,
-						"description": null,
-						"company_artist_name": null,
-						"skills": [],
-						"network": {
-							"youtube": null,
-							"facebook": null,
-							"instagram": null,
-							"website": null,
-							"linkedin": null,
-							"phone": null,
-							"email": null
+						'last_name': 'TEST',
+						'first_name': 'test',
+						'speciality': '',
+						'city': null,
+						'action_radius': null,
+						'score': null,
+						'available': null,
+						'description': null,
+						'company_artist_name': null,
+						'skills': [],
+						'network': {
+							'youtube': null,
+							'facebook': null,
+							'instagram': null,
+							'website': null,
+							'linkedin': null,
+							'phone': null,
+							'email': null,
 						},
-						"experiences": [],
-						"courses": [],
-						"service_offers": [],
-						"image_gallery": null,
-						"main_picture": null,
-						"language": []
+						'experiences': [],
+						'courses': [],
+						'service_offers': [],
+						'image_gallery': null,
+						'main_picture': null,
+						'language': [],
 					},
 				}).then(response => {
 					// vous pouvez faire des assertions ici sur la réponse

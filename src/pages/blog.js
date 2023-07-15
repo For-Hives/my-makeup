@@ -140,7 +140,7 @@ export default Blog
 
 export async function getServerSideProps() {
 	const res = await fetch(
-		`${process.env.NEXT_PUBLIC_API_URL}api/articles?sort[publishedAt]=desc`,
+		`${process.env.NEXT_PUBLIC_API_URL}/api/articles?sort[publishedAt]=desc`,
 		{
 			method: 'GET',
 			headers: {

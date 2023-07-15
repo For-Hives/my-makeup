@@ -56,7 +56,7 @@ export default function Home({ talents }) {
 }
 
 export async function getServerSideProps() {
-	const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}api/talents`, {
+	const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/talents`, {
 		method: 'GET',
 		headers: {
 			// 	token

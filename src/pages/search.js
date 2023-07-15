@@ -52,9 +52,9 @@ function SearchPage() {
 
 		setIsSearching(true)
 
-		let url = `${process.env.NEXT_PUBLIC_API_URL}api/searching?search=${search}&city=${city}`
+		let url = `${process.env.NEXT_PUBLIC_API_URL}/api/searching?search=${search}&city=${city}`
 		if (city === '' || city === undefined) {
-			url = `${process.env.NEXT_PUBLIC_API_URL}api/searching?search=${search}`
+			url = `${process.env.NEXT_PUBLIC_API_URL}/api/searching?search=${search}`
 		}
 
 		const response = await fetch(url)

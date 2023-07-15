@@ -30,13 +30,13 @@ const options = {
 			 * @param name
 			 */
 			authorize: async ({ password, email, name }) => {
-				let callUrl = `${process.env.NEXT_PUBLIC_API_URL}api/auth/local`
+				let callUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/auth/local`
 				let body = JSON.stringify({
 					identifier: email,
 					password: password,
 				})
 				if (name !== undefined && name !== null && name !== '') {
-					callUrl = `${process.env.NEXT_PUBLIC_API_URL}api/auth/local/register`
+					callUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/auth/local/register`
 					body = JSON.stringify({
 						username: name,
 						email: email,
@@ -94,7 +94,7 @@ const options = {
 					account.type !== 'credentials'
 				) {
 					const response = await fetch(
-						`${process.env.NEXT_PUBLIC_API_URL}api/auth/${account.provider}/callback?access_token=${account?.access_token}`
+						`${process.env.NEXT_PUBLIC_API_URL}/api/auth/${account.provider}/callback?access_token=${account?.access_token}`
 					)
 					const data = await response.json()
 					token.jwt = data.jwt

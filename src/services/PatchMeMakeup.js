@@ -6,7 +6,7 @@ import { toast } from 'react-toastify'
  * @param data
  */
 export function patchMeMakeup(session, data) {
-	fetch(`${process.env.NEXT_PUBLIC_API_URL}api/me-makeup`, {
+	fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/me-makeup`, {
 		method: 'PATCH',
 		headers: {
 			// 	token

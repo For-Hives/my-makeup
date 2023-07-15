@@ -1,15 +1,17 @@
-FROM node:20-alpine as builder
+FROM node:20-alpine
 
-ARG NEXT_PUBLIC_API_URL
-ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
-
+# Définition du répertoire de travail
 WORKDIR /usr/app
-COPY ./ ./
-RUN npm install
-RUN npm run build
 
-ENV NODE_ENV production
+# Copie des fichiers nécessaires
+COPY .next .
+COPY ./public .
+COPY ./package*.json .
 
+RUN npm ci --omit=dev --ignore-scripts
+
+# Exposition du port 3000
 EXPOSE 3000
 
+# Execution du serveur
 CMD ["npm", "start"]
