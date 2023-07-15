@@ -8,8 +8,9 @@ WORKDIR /usr/app
 COPY /usr/app/.next ./.next
 COPY /usr/app/public ./public
 COPY /usr/app/next.config.js ./next.config.js
-COPY /usr/app/node_modules ./node_modules
 COPY /usr/app/package*.json ./
+
+RUN npm ci --omit=dev --ignore-scripts
 
 # Exposition du port 3000
 EXPOSE 3000
