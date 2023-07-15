@@ -47,15 +47,14 @@ function Contact(props) {
 		})
 
 		if (response.ok) {
-			// Le mail a été envoyé avec succès
-			// Vous pouvez ici gérer le retour à donner à l'utilisateur
-			// reset()
+			reset()
 			toast('Le message a bien été envoyé !', {
 				toastId: 'toast-alert',
 			})
 		} else {
-			// Une erreur s'est produite lors de l'envoi du mail
-			// Vous pouvez ici gérer le retour à donner à l'utilisateur
+			toast("Une erreur s'est produite !", {
+				toastId: 'toast-alert',
+			})
 		}
 	}
 
