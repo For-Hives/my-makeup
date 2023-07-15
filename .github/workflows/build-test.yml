@@ -35,6 +35,7 @@ jobs:
       - name: Install dependencies in production
         run: npm ci --ignore-scripts
       - name: Cache next.js build
+        id: cache-npm
         uses: actions/cache@v3
         with:
           path: ~/.next
