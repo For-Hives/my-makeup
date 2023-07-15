@@ -109,7 +109,7 @@ function Blog({ articles }) {
 									className={
 										'h-[300px] w-full rounded-2xl object-cover object-top md:h-[500px]'
 									}
-									src={'/assets/maquilleuse_project.webp'}
+									src={'/assets/maquilleuse_blog.webp'}
 									alt={'illustration'}
 									width={'500'}
 									height={'350'}
