@@ -1,8 +1,8 @@
 // cypress-spec-split.ts
 
-import fs from 'fs/promises'
-import globby from 'globby'
-import minimatch from 'minimatch'
+const fs = require('fs/promises')
+const globby = require('globby')
+const minimatch = require('minimatch')
 
 // These are the same properties that are set in cypress.config.
 // In practice, it's better to export these from another file, and
@@ -95,7 +95,7 @@ async function sortSpecFilesByTestCount(specPathsOriginal) {
 	)
 }
 
-export function splitSpecs(specs, totalRunners, thisRunner) {
+function splitSpecs(specs, totalRunners, thisRunner) {
 	return specs.filter((_, index) => index % totalRunners === thisRunner)
 }
 
