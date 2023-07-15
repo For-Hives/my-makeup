@@ -191,6 +191,7 @@ export async function getStaticProps() {
 	const articles = await fetchAPI(
 		`${process.env.NEXT_PUBLIC_API_URL}/api/articles`
 	)
+
 	const talents = await fetchAPI(
 		`${process.env.NEXT_PUBLIC_API_URL}/api/talents`
 	)
