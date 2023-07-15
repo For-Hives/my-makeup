@@ -38,7 +38,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ~/.next
-          key: ${{ runner.os }}-next-build-${{ hashFiles( hashFiles('src') + hashFiles('public') +  hashFiles('next**') +  hashFiles('package**') +  hashFiles('jsconfig.json')) }}
+          key: ${{ runner.os }}-next-build-${{ hashFiles( 'src/' ,'public/' ,  'next**' ,  'package**' ,  'jsconfig.json') }}
       - if: ${{ steps.cache-npm.outputs.cache-hit != 'true' }}
         name: Build the app
         continue-on-error: true
