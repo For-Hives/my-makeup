@@ -3,7 +3,7 @@ import SearchBloc from '@/components/Global/Search/SearchBloc'
 import Link from 'next/link'
 
 export default function Hero({
-	imgBackgroundSrc = '/assets/back.png',
+	imgBackgroundSrc = '/assets/back.webp',
 	title,
 	description,
 	isSearchDisplayed = true,
