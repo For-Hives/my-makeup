@@ -21,31 +21,17 @@ function Talent({ articleData }) {
 		<>
 			<Head>
 				<title>{meta?.title ?? 'My-Makeup'}</title>
-				<meta
-					name="description"
-					content={
-						meta?.seo_description ??
-						'Découvrez cet article passionnant de la part de My-Makeup'
-					}
-				/>
+				<meta name="description" content={meta?.seo_description ?? 'Découvrez cet article passionnant de la part de My-Makeup'} />
 				{/*	seo tag canonical link */}
-				<link
-					rel="canonical"
-					href={'https://my-makeup.fr/talent/' + meta?.slug}
-				/>
+				<link rel="canonical" href={'https://my-makeup.fr/talent/' + meta?.slug} />
 			</Head>
 
 			<Nav />
 
 			<Nav />
 			<main className={'relative'}>
-				<Hero
-					title={<>{meta.seo_title}</>}
-					description={<>{meta.description}</>}
-				/>
-				<div
-					className={'relative mx-auto my-24 max-w-7xl px-4 md:my-48 md:px-0'}
-				>
+				<Hero imgBackgroundSrc={'/assets/back/maquilleuse_europeenne_white.webp'} title={<>{meta.seo_title}</>} description={<>{meta.description}</>} />
+				<div className={'relative mx-auto my-24 max-w-7xl px-4 md:my-48 md:px-0'}>
 					<div className="mx-auto max-w-2xl">
 						<article>
 							<div className={'prose my-8 xl:prose-lg'}>
@@ -94,17 +80,14 @@ export async function getStaticPaths() {
 }
 
 export async function getStaticProps({ params }) {
-	let articleData = await fetch(
-		`${process.env.NEXT_PUBLIC_API_URL}/api/talents?filters[slug][$eq]=${params.slug}`,
-		{
-			method: 'GET',
-			headers: {
-				// 	token
-				'Content-Type': 'application/json',
-				Accept: 'application/json',
-			},
-		}
-	).then(res => res.json())
+	let articleData = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/talents?filters[slug][$eq]=${params.slug}`, {
+		method: 'GET',
+		headers: {
+			// 	token
+			'Content-Type': 'application/json',
+			Accept: 'application/json',
+		},
+	}).then(res => res.json())
 
 	articleData = articleData?.data?.[0]
 
@@ -115,9 +98,7 @@ export async function getStaticProps({ params }) {
 	}
 
 	// Convert Markdown to HTML
-	const processedContent = await remark()
-		.use(html)
-		.process(articleData.attributes.content)
+	const processedContent = await remark().use(html).process(articleData.attributes.content)
 
 	// replace the img by Image from next
 

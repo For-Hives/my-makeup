@@ -26,6 +26,7 @@ function APropos(props) {
 
 			<main className={'relative'}>
 				<Hero
+					imgBackgroundSrc={'/assets/back/maquilleuse_europeenne_white.webp'}
 					title={
 						<>
 							La solution de vos rêves&nbsp;:&nbsp;
@@ -42,15 +43,11 @@ function APropos(props) {
 					isSearchDisplayed={false}
 					isCTALoginDisplayed={true}
 				/>
-				<div
-					className={'relative mx-auto my-24 max-w-7xl px-4 md:my-48 md:px-0'}
-				>
+				<div className={'relative mx-auto my-24 max-w-7xl px-4 md:my-48 md:px-0'}>
 					<div className="mx-auto max-w-2xl">
 						<article>
 							<header className="flex flex-col">
-								<h1 className="mt-6 text-3xl font-bold tracking-tight text-gray-800 sm:text-4xl">
-									À Propos de My-Makeup : Votre Partenaire Beauté en ligne
-								</h1>
+								<h1 className="mt-6 text-3xl font-bold tracking-tight text-gray-800 sm:text-4xl">À Propos de My-Makeup : Votre Partenaire Beauté en ligne</h1>
 							</header>
 							<div className="prose my-8 xl:prose-lg">
 								<p>

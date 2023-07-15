@@ -25,6 +25,7 @@ function Cgu(props) {
 			<Nav />
 			<main className={'relative'}>
 				<Hero
+					imgBackgroundSrc={'/assets/back/maquilleuse_europeenne_white.webp'}
 					title={
 						<>
 							CGU&nbsp;
@@ -36,16 +37,12 @@ function Cgu(props) {
 					isCTALoginDisplayed={false}
 					isSimpleVersionDisplayed={true}
 				/>
-				<div
-					className={'relative mx-auto my-24 max-w-7xl px-4 md:my-48 md:px-0'}
-				>
+				<div className={'relative mx-auto my-24 max-w-7xl px-4 md:my-48 md:px-0'}>
 					<div className="mx-auto max-w-2xl">
 						<article>
 							<header className="flex flex-col">
 								<h1 className="mt-6 text-3xl font-bold tracking-tight text-gray-800 sm:text-4xl">
-									{
-										"La plateforme appartient à l'entreprise Andy Cinquin, micro-entreprise."
-									}
+									{"La plateforme appartient à l'entreprise Andy Cinquin, micro-entreprise."}
 								</h1>
 							</header>
 							<div className="prose my-8 xl:prose-lg">
@@ -95,9 +92,7 @@ function Cgu(props) {
                                             Cependant, nous pouvons parfois vous demander des informations pour traiter une commande, identifier une demande de support, établir une
                                             correspondance, fournir un abonnement, ou postuler à un poste.`}
 								</p>
-								<h3>
-									{`Avis et procédure pour faire des réclamations en cas de violation de droits d'auteur`}
-								</h3>
+								<h3>{`Avis et procédure pour faire des réclamations en cas de violation de droits d'auteur`}</h3>
 								<p>
 									{`Si vous estimez que votre œuvre a été copiée de manière à constituer une violation des droits d'auteur, veuillez fournir à notre agent de
                                             droits

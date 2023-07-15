@@ -19,14 +19,12 @@ function TrouverUneMaquilleuse(props) {
 					content="Découvrez comment vous pouvez trouver une maquilleuse simplement, et qui correspondra parfaitement à tout vos besoins !"
 				/>
 				{/*	seo tag canonical link */}
-				<link
-					rel="canonical"
-					href="https://my-makeup.fr/particulier/trouver-une-maquilleuse"
-				/>
+				<link rel="canonical" href="https://my-makeup.fr/particulier/trouver-une-maquilleuse" />
 			</Head>
 			<Nav />
 			<main className={'relative'}>
 				<Hero
+					imgBackgroundSrc={'/assets/back/maquilleuse_africaine_white.webp'}
 					title={
 						<>
 							Trouver une maquilleuse, avec&nbsp;
@@ -35,33 +33,22 @@ function TrouverUneMaquilleuse(props) {
 						</>
 					}
 					description={
-						<>
-							Découvrez comment naviguer parmi les profils disponibles sur My
-							Makeup et trouver la maquilleuse qui correspond à vos besoins et
-							attentes.
-						</>
+						<>Découvrez comment naviguer parmi les profils disponibles sur My Makeup et trouver la maquilleuse qui correspond à vos besoins et attentes.</>
 					}
 				/>
-				<div
-					className={'relative mx-auto my-24 max-w-7xl px-4 md:my-48 md:px-0'}
-				>
+				<div className={'relative mx-auto my-24 max-w-7xl px-4 md:my-48 md:px-0'}>
 					<div className="mx-auto max-w-2xl">
 						<article>
 							<header className="flex flex-col">
 								<h1 className="mt-6 text-3xl font-bold tracking-tight text-gray-800 sm:text-4xl">
-									Trouver la maquilleuse qui vous correspond parmi les profils
-									disponibles : Un guide complet
+									Trouver la maquilleuse qui vous correspond parmi les profils disponibles : Un guide complet
 								</h1>
 							</header>
 							<div className="prose my-8 xl:prose-lg">
 								<p>
-									Que vous prépariez votre mariage, un événement spécial ou que
-									vous souhaitiez simplement vous offrir une session de
-									maquillage professionnel, le choix de la bonne maquilleuse est
-									essentiel pour obtenir le look que vous désirez. Mais avec un
-									si grand nombre de professionnels disponibles, comment faire
-									le bon choix ? Ce guide vous aidera à naviguer parmi les
-									profils disponibles et à trouver la maquilleuse qui vous
+									Que vous prépariez votre mariage, un événement spécial ou que vous souhaitiez simplement vous offrir une session de maquillage professionnel,
+									le choix de la bonne maquilleuse est essentiel pour obtenir le look que vous désirez. Mais avec un si grand nombre de professionnels
+									disponibles, comment faire le bon choix ? Ce guide vous aidera à naviguer parmi les profils disponibles et à trouver la maquilleuse qui vous
 									correspond le mieux.
 								</p>
 								<ul>

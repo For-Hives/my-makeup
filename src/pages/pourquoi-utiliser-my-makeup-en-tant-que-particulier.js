@@ -15,36 +15,21 @@ function PourquoiUtiliserMyMakeupEnTantQueParticulier(props) {
 		<>
 			<Head>
 				<title>Pourquoi My-Makeup ? en tant que particulier</title>
-				<meta
-					name="description"
-					content="Découvrez pourquoi vous devriez utiliser My-Makeup en tant que particulier & professionnel"
-				/>
+				<meta name="description" content="Découvrez pourquoi vous devriez utiliser My-Makeup en tant que particulier & professionnel" />
 				{/*	seo tag canonical link */}
-				<link
-					rel="canonical"
-					href={
-						'https://my-makeup.fr/pourquoi-utiliser-my-makeup-en-tant-que-particulier'
-					}
-				/>
+				<link rel="canonical" href={'https://my-makeup.fr/pourquoi-utiliser-my-makeup-en-tant-que-particulier'} />
 			</Head>
 			<Nav />
 
 			<main className={'relative'}>
 				<Hero
+					imgBackgroundSrc={'/assets/back/maquilleuse_africaine_white.webp'}
 					title={
 						<>
-							Pourquoi utiliser{' '}
-							<span className={'text-indigo-900'}>My&nbsp;Makeup</span> en tant
-							que particulier ?
+							Pourquoi utiliser <span className={'text-indigo-900'}>My&nbsp;Makeup</span> en tant que particulier ?
 						</>
 					}
-					description={
-						<>
-							Découvrez les avantages à utiliser notre plateforme pour
-							développer votre activité et trouver des passionnées expérimentées
-							!
-						</>
-					}
+					description={<>Découvrez les avantages à utiliser notre plateforme pour développer votre activité et trouver des passionnées expérimentées !</>}
 				/>
 				<AdvantagesParticulier />
 				<CTA />

@@ -20,16 +20,14 @@ function ExplorerLesProfils(props) {
                     pour explorer les profils de maquilleuses et trouver celle qui vous correspond le mieux."
 				/>
 				{/*	seo tag canonical link */}
-				<link
-					rel="canonical"
-					href="https://my-makeup.fr/particulier/explorer-les-profils"
-				/>
+				<link rel="canonical" href="https://my-makeup.fr/particulier/explorer-les-profils" />
 			</Head>
 
 			<Nav />
 
 			<main className={'relative'}>
 				<Hero
+					imgBackgroundSrc={'/assets/back/maquilleuse_africaine_white.webp'}
 					title={
 						<>
 							Explorer les profils avec&nbsp;
@@ -39,21 +37,16 @@ function ExplorerLesProfils(props) {
 					}
 					description={
 						<>
-							{
-								"Apprenez comment My-Makeup peut vous permettre, via l'exploration des profils des maquilleuses, de trouver celle qui vous correspond le mieux."
-							}
+							{"Apprenez comment My-Makeup peut vous permettre, via l'exploration des profils des maquilleuses, de trouver celle qui vous correspond le mieux."}
 						</>
 					}
 				/>
-				<div
-					className={'relative mx-auto my-24 max-w-7xl px-4 md:my-48 md:px-0'}
-				>
+				<div className={'relative mx-auto my-24 max-w-7xl px-4 md:my-48 md:px-0'}>
 					<div className="mx-auto max-w-2xl">
 						<article>
 							<header className="flex flex-col">
 								<h1 className="mt-6 text-3xl font-bold tracking-tight text-gray-800 sm:text-4xl">
-									Explorer les profils de maquilleuses sur My-Makeup : Recherche
-									par critères et par ville
+									Explorer les profils de maquilleuses sur My-Makeup : Recherche par critères et par ville
 								</h1>
 							</header>
 							<div className="prose my-8 xl:prose-lg">

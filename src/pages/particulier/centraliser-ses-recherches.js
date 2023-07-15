@@ -19,14 +19,12 @@ function CentraliserSesRecherches(props) {
 					content="Apprenez comment centraliser et organiser vos recherches pour comparer efficacement les maquilleuses et trouver celle qui vous correspond le mieux."
 				/>
 				{/*	seo tag canonical link */}
-				<link
-					rel="canonical"
-					href="https://my-makeup.fr/particulier/centraliser-ses-recherches"
-				/>
+				<link rel="canonical" href="https://my-makeup.fr/particulier/centraliser-ses-recherches" />
 			</Head>
 			<Nav />
 			<main className={'relative'}>
 				<Hero
+					imgBackgroundSrc={'/assets/back/maquilleuse_africaine_white.webp'}
 					title={
 						<>
 							Centraliser ses recherches avec&nbsp;
@@ -36,21 +34,17 @@ function CentraliserSesRecherches(props) {
 					}
 					description={
 						<>
-							Apprenez comment centraliser et organiser vos recherches pour
-							comparer efficacement les maquilleuses et trouver celle qui vous
-							correspond le mieux.
+							Apprenez comment centraliser et organiser vos recherches pour comparer efficacement les maquilleuses et trouver celle qui vous correspond le
+							mieux.
 						</>
 					}
 				/>
-				<div
-					className={'relative mx-auto my-24 max-w-7xl px-4 md:my-48 md:px-0'}
-				>
+				<div className={'relative mx-auto my-24 max-w-7xl px-4 md:my-48 md:px-0'}>
 					<div className="mx-auto max-w-2xl">
 						<article>
 							<header className="flex flex-col">
 								<h1 className="mt-6 text-3xl font-bold tracking-tight text-gray-800 sm:text-4xl">
-									Centraliser vos recherches pour trouver la maquilleuse qui
-									vous correspond : Un guide complet
+									Centraliser vos recherches pour trouver la maquilleuse qui vous correspond : Un guide complet
 								</h1>
 							</header>
 							<div className="prose my-8 xl:prose-lg">
