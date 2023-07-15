@@ -7,7 +7,6 @@ WORKDIR /usr/app
 # Copie des fichiers nécessaires depuis l'étape de build
 COPY /usr/app/.next ./.next
 COPY /usr/app/public ./public
-COPY /usr/app/next.config.js ./next.config.js
 COPY /usr/app/package*.json ./
 
 RUN npm ci --omit=dev --ignore-scripts
