@@ -1,6 +1,7 @@
 export default function MOTD() {
-	console.log(
-		`
+	if (typeof window !== 'undefined') {
+		console.log(
+			`
 
            ,▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄L
         ▄██████████████████████████████████████████████████████████████████████▄
@@ -45,5 +46,6 @@ export default function MOTD() {
                         You want to work with us ? Send us a mail.
                                     jobs@my-makeup.fr                                                                             
 	`
-	)
+		)
+	}
 }
