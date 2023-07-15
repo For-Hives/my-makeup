@@ -21,16 +21,15 @@ on:
     branches: [ 'main' ]
 
 jobs:
-  test:
+  build:
     runs-on: ubuntu-latest
-    environment: testing
     strategy:
       fail-fast: false
       matrix:
         # Run copies of the current job in parallel. These need to be a
         # continuous series of numbers, starting with `0`. If you change the
         # number of containers, change TOTAL_RUNNERS below.
-        containers: [ 0, 1, 2, 3, 4 ]
+        containers: [ 0, 1, 2, 3 ]
     steps:
       - uses: actions/checkout@v3
       - name: Use Node.js 20.x
@@ -54,6 +53,19 @@ jobs:
           push: false
           tags: ${{ secrets.APP_IMAGE }}
           build-args: NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
+
+  tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Run copies of the current job in parallel. These need to be a
+        # continuous series of numbers, starting with `0`. If you change the
+        # number of containers, change TOTAL_RUNNERS below.
+        containers: [ 0, 1, 2, 3 ]
+    needs: build
+    environment: testing
+    steps:
       - name: Cypress run
         uses: cypress-io/github-action@v5
         with:
@@ -62,8 +74,8 @@ jobs:
           wait-on: 'http://localhost:3000'
           command: yarn node cypress/cypress-ci-run.mjs
           env:
-            TOTAL_RUNNERS= 5
-            THIS_RUNNER= ${{ matrix.containers }}
+            TOTAL_RUNNERS=4
+            THIS_RUNNER=${{ matrix.containers }}
             ENV=production
             NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
             NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}
