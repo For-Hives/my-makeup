@@ -24,7 +24,7 @@ function Presentation() {
 					<div className={'flex flex-col items-center justify-center gap-2'}>
 						<Image
 							alt={'client à la recherche de maquilleuse'}
-							src={'/assets/vectorials-used/004-deal.svg'}
+							src={'/assets/illustrations/illustration.webp'}
 							width={'140'}
 							height={'140'}
 						/>
@@ -42,7 +42,7 @@ function Presentation() {
 					<div className={'flex flex-col items-center justify-center gap-2'}>
 						<Image
 							alt={'des maquilleuses passionnées aux multiples compétences'}
-							src={'/assets/vectorials-used/008-increase.svg'}
+							src={'/assets/illustrations/illustration_2.webp'}
 							width={'140'}
 							height={'140'}
 						/>
@@ -62,7 +62,7 @@ function Presentation() {
 							alt={
 								'une solution dédiée pour collaborer entre particuliers et maquilleuses'
 							}
-							src={'/assets/vectorials-used/013-presentation.svg'}
+							src={'/assets/illustrations/illustration_3.webp'}
 							width={'140'}
 							height={'140'}
 						/>
