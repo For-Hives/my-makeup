@@ -1,18 +1,6 @@
 name: Build and Test
 env:
   NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
-  NEXTAUTH_SECRET: ${{secrets.NEXTAUTH_SECRET}}
-  NEXT_PUBLIC_URL: ${{secrets.NEXT_PUBLIC_URL}}
-  NEXT_PUBLIC_DATABASE_URL: ${{secrets.NEXT_PUBLIC_DATABASE_URL}}
-  NEXTAUTH_URL: ${{secrets.NEXTAUTH_URL}}
-  GOOGLE_CLIENT_ID: ${{secrets.GOOGLE_CLIENT_ID}}
-  GOOGLE_CLIENT_SECRET: ${{secrets.GOOGLE_CLIENT_SECRET}}
-  FACEBOOK_CLIENT_ID: ${{secrets.FACEBOOK_CLIENT_ID}}
-  FACEBOOK_CLIENT_SECRET: ${{secrets.FACEBOOK_CLIENT_SECRET}}
-  MAILGUN_API_KEY: ${{secrets.MAILGUN_API_KEY}}
-  MAILGUN_API_URL: ${{secrets.MAILGUN_API_URL}}
-  MAILGUN_PUBLIC_KEY: ${{secrets.MAILGUN_PUBLIC_KEY}}
-  MAILGUN_DOMAIN: ${{secrets.MAILGUN_DOMAIN}}
   CYPRESS_TEST_USER: ${{secrets.TEST_USER}}
   CYPRESS_TEST_PW: ${{secrets.TEST_PW}}
 
@@ -27,6 +15,14 @@ jobs:
     needs: docker
     steps:
       - uses: actions/checkout@v3
+      - name: Use Node.js 18.x
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20.x
+      - name: Install dependencies in production
+        run: npm ci --omit=dev
+      - name: Build the app
+        run: npm run build
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
       - name: Set up Docker Buildx
@@ -37,20 +33,14 @@ jobs:
           push: false
           tags: ${{ secrets.APP_IMAGE }}
           build-args: NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
-      - uses: actions/checkout@v3
-      - name: Use Node.js 18.x
-        uses: actions/setup-node@v3
-        with:
-          node-version: 18.x
-      - run: npm install
       - name: Cypress run
         uses: cypress-io/github-action@v5
         with:
-          build: npm run build
           start: npm run start
           browser: chrome
           wait-on: 'http://localhost:3000'
-          env: ENV=development
+          env:
+            ENV=production
             NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
             NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}
             NEXT_PUBLIC_URL=${{ secrets.NEXT_PUBLIC_URL }}

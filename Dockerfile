@@ -1,15 +1,18 @@
-FROM node:20-alpine as builder
+# Etape de production
+FROM node:20-alpine as production
 
-ARG NEXT_PUBLIC_API_URL
-ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
-
+# Définition du répertoire de travail
 WORKDIR /usr/app
-COPY ./ ./
-RUN npm install
-RUN npm run build
 
-ENV NODE_ENV production
+# Copie des fichiers nécessaires depuis l'étape de build
+COPY /usr/app/.next ./.next
+COPY /usr/app/public ./public
+COPY /usr/app/next.config.js ./next.config.js
+COPY /usr/app/node_modules ./node_modules
+COPY /usr/app/package*.json ./
 
+# Exposition du port 3000
 EXPOSE 3000
 
+# Execution du serveur
 CMD ["npm", "start"]
