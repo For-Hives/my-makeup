@@ -79,7 +79,7 @@ function InitAccount() {
 							if (!accountInit) {
 								setStep(2)
 								// if yes, 2 stepper : init account
-								fetch(`${process.env.NEXT_PUBLIC_API_URL}api/me-makeup`, {
+								fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/me-makeup`, {
 									method: 'POST',
 									headers: {
 										// 	token
@@ -492,7 +492,7 @@ function getUserFromSession(session, user, setUser) {
 		if (user != null && user.confirmed) return null
 
 		const userData = await fetch(
-			`${process.env.NEXT_PUBLIC_API_URL}api/users/me`,
+			`${process.env.NEXT_PUBLIC_API_URL}/api/users/me`,
 			{
 				method: 'GET',
 				headers: {

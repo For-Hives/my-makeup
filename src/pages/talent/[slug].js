@@ -69,7 +69,7 @@ function Talent({ articleData }) {
 export default Talent
 
 export async function getStaticPaths() {
-	const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}api/talents`, {
+	const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/talents`, {
 		method: 'GET',
 		headers: {
 			// 	token
@@ -95,7 +95,7 @@ export async function getStaticPaths() {
 
 export async function getStaticProps({ params }) {
 	let articleData = await fetch(
-		`${process.env.NEXT_PUBLIC_API_URL}api/talents?filters[slug][$eq]=${params.slug}`,
+		`${process.env.NEXT_PUBLIC_API_URL}/api/talents?filters[slug][$eq]=${params.slug}`,
 		{
 			method: 'GET',
 			headers: {

@@ -44,7 +44,7 @@ export default function ModalUpdatePortfolioProfil(props) {
 				})
 				return
 			}
-			const res_post = fetch(`${process.env.NEXT_PUBLIC_API_URL}api/upload`, {
+			const res_post = fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/upload`, {
 				method: 'POST',
 				headers: {
 					Authorization: `Bearer ${session.jwt}`,
