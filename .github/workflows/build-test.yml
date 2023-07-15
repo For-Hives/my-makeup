@@ -46,14 +46,6 @@ jobs:
           push: false
           tags: ${{ secrets.APP_IMAGE }}
           build-args: NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
-      # Save build for other jobs
-      - name: Save build folder
-        uses: actions/upload-artifact@v2
-        with:
-          name: the-source
-          if-no-files-found: error
-          path: .
-          retention-days: 1
 
   tests:
     runs-on: ubuntu-latest
@@ -67,11 +59,13 @@ jobs:
     needs: build
     environment: testing
     steps:
-      - name: Download the build
-        uses: actions/download-artifact@v2
+      - uses: actions/checkout@v3
+      - name: Use Node.js 20.x
+        uses: actions/setup-node@v3
         with:
-          name: the-source
-          path: .
+          node-version: 20.x
+      - name: Install dependencies in production
+        run: npm ci --ignore-scripts
       - name: Cypress run
         uses: cypress-io/github-action@v5
         with:
