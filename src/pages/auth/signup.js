@@ -267,7 +267,11 @@ function Signup() {
 											</p>
 										</div>
 										<div>
-											<button type="submit" className="btn-primary-large">
+											<button
+												type="submit"
+												className="btn-primary-large"
+												data-cy="submit"
+											>
 												{"S'inscrire"}
 											</button>
 										</div>
