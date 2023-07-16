@@ -29,6 +29,7 @@ function PourLesMaquilleuses(props) {
 
 			<main className={'relative'}>
 				<Hero
+					imgBackgroundSrc={'/assets/back/maquilleuse_asiatique_white.webp'}
 					title={
 						<>
 							Développez Votre Carrière de Maquilleuse avec&nbsp;

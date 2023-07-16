@@ -24,6 +24,7 @@ function SiteMap({ articles, talents }) {
 
 			<main className={'relative'}>
 				<Hero
+					imgBackgroundSrc={'/assets/back/maquilleuse_europeenne_white.webp'}
 					title={
 						<>
 							Le plan du site&nbsp;

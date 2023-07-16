@@ -89,9 +89,7 @@ function Signup() {
 							<div className="mt-8">
 								<div>
 									<div>
-										<h1 className="text-sm font-medium leading-6 text-gray-900">
-											{`S'inscrire sur My-Makeup`}
-										</h1>
+										<h1 className="text-sm font-medium leading-6 text-gray-900">{`S'inscrire sur My-Makeup`}</h1>
 										<div className="mt-4 grid grid-cols-1 gap-4">
 											<div className={'flex w-full justify-center'}>
 												<button

@@ -27,6 +27,7 @@ function PourLesParticuliers(props) {
 			<Nav />
 			<main className={'relative'}>
 				<Hero
+					imgBackgroundSrc={'/assets/back/maquilleuse_asiatique_white.webp'}
 					title={
 						<>
 							Trouvez Votre Maquilleuse Idéale avec My-Makeup

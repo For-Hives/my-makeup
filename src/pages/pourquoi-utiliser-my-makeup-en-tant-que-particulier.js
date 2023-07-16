@@ -31,6 +31,7 @@ function PourquoiUtiliserMyMakeupEnTantQueParticulier(props) {
 
 			<main className={'relative'}>
 				<Hero
+					imgBackgroundSrc={'/assets/back/maquilleuse_africaine_white.webp'}
 					title={
 						<>
 							Pourquoi utiliser{' '}

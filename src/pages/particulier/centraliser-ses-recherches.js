@@ -27,6 +27,7 @@ function CentraliserSesRecherches(props) {
 			<Nav />
 			<main className={'relative'}>
 				<Hero
+					imgBackgroundSrc={'/assets/back/maquilleuse_africaine_white.webp'}
 					title={
 						<>
 							Centraliser ses recherches avec&nbsp;

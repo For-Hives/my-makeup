@@ -30,6 +30,7 @@ function ExplorerLesProfils(props) {
 
 			<main className={'relative'}>
 				<Hero
+					imgBackgroundSrc={'/assets/back/maquilleuse_africaine_white.webp'}
 					title={
 						<>
 							Explorer les profils avec&nbsp;

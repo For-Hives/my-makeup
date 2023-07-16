@@ -27,6 +27,7 @@ function Partenariats(props) {
 			<Nav />
 			<main className={'relative'}>
 				<Hero
+					imgBackgroundSrc={'/assets/back/maquilleuse_italienne_white.webp'}
 					title={
 						<>
 							Communauté et partenariats, avec&nbsp;

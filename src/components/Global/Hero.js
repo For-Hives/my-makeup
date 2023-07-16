@@ -3,7 +3,7 @@ import SearchBloc from '@/components/Global/Search/SearchBloc'
 import Link from 'next/link'
 
 export default function Hero({
-	imgBackgroundSrc = '/assets/back.png',
+	imgBackgroundSrc = '/assets/back.webp',
 	title,
 	description,
 	isSearchDisplayed = true,
@@ -67,7 +67,7 @@ export default function Hero({
 			</div>
 			<div className="bg-white pb-24 md:pb-8 lg:absolute lg:inset-y-0 lg:right-0 lg:w-1/2 lg:pb-0">
 				<Image
-					className="aspect-[3/2] object-cover md:object-center lg:aspect-auto lg:h-full lg:w-full xl:object-top "
+					className="aspect-[3/2] object-contain md:object-center lg:aspect-auto lg:h-full lg:w-full xl:object-top "
 					width={1000}
 					height={1000}
 					src={imgBackgroundSrc}

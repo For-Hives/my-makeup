@@ -27,6 +27,7 @@ function TrouverUneMaquilleuse(props) {
 			<Nav />
 			<main className={'relative'}>
 				<Hero
+					imgBackgroundSrc={'/assets/back/maquilleuse_africaine_white.webp'}
 					title={
 						<>
 							Trouver une maquilleuse, avec&nbsp;

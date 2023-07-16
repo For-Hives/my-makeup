@@ -16,10 +16,12 @@ function FullSearchBloc(props) {
 			return
 		}
 		if (city !== '') {
-			router.push(`/search?search=${searchTerm}&city=${city}`)
+			router.push(
+				`/search?search=${encodeURI(searchTerm)}&city=${encodeURI(city)}`
+			)
 			props.performSearch(searchTerm, city)
 		} else {
-			router.push(`/search?search=${searchTerm}`)
+			router.push(`/search?search=${encodeURI(searchTerm)}`)
 			props.performSearch(searchTerm)
 		}
 	}

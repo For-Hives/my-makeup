@@ -26,6 +26,7 @@ function APropos(props) {
 
 			<main className={'relative'}>
 				<Hero
+					imgBackgroundSrc={'/assets/back/maquilleuse_europeenne_white.webp'}
 					title={
 						<>
 							La solution de vos rêves&nbsp;:&nbsp;

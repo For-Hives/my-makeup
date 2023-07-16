@@ -34,9 +34,9 @@ function Custom404(props) {
 							<h1 className={'my-8 text-2xl font-semibold text-slate-900'}>
 								404 - Page non trouvée
 							</h1>
-							<p className={'text-gray-700'}>
-								{`Oops ! La page que vous cherchez n'existe pas.`}
-							</p>
+							<p
+								className={'text-gray-700'}
+							>{`Oops ! La page que vous cherchez n'existe pas.`}</p>
 
 							<Link href={'/'} className="btn-primary-large mt-8">
 								{`Retourner à l'accueil`}

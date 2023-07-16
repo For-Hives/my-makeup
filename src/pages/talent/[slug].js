@@ -40,6 +40,7 @@ function Talent({ articleData }) {
 			<Nav />
 			<main className={'relative'}>
 				<Hero
+					imgBackgroundSrc={'/assets/back/maquilleuse_europeenne_white.webp'}
 					title={<>{meta.seo_title}</>}
 					description={<>{meta.description}</>}
 				/>

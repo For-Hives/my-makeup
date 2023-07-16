@@ -9,6 +9,7 @@ function PolitiqueDeConfidentialite() {
 	return (
 		<>
 			<Head>
+				imgBackgroundSrc={'/assets/back/maquilleuse_europeenne_white.webp'}
 				<title>La politique de confidentialité de My-Makeup !</title>
 				<meta
 					name="description"
