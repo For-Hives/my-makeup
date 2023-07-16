@@ -89,7 +89,6 @@ export const getServerSideProps = async ({ req, res }) => {
 		)
 
 		if (!response.ok) {
-			console.log('An error has occurred: ' + response.statusText)
 			res.writeHead(301, { location: '/auth/init-account' })
 			res.end()
 		} else {
