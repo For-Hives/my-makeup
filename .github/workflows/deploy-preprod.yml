@@ -4,11 +4,8 @@ env:
   NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
 
 on:
-  pull_request:
-    branches: ['main']
-#on:
-#  push:
-#    branches: [main]
+  push:
+    branches: [main]
 
 jobs:
   build-and-push:
