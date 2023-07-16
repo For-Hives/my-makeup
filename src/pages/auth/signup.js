@@ -181,6 +181,7 @@ function Signup() {
 											</label>
 											<div className="mt-2">
 												<input
+													data-cy="name"
 													id="name"
 													name="name"
 													type="text"
@@ -207,6 +208,7 @@ function Signup() {
 											</label>
 											<div className="mt-2">
 												<input
+													data-cy="email"
 													id="email"
 													name="email"
 													type="text"
@@ -233,6 +235,7 @@ function Signup() {
 											</label>
 											<div className="mt-2">
 												<input
+													data-cy="password"
 													id="password"
 													name="password"
 													type="password"
