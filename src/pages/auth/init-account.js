@@ -390,6 +390,7 @@ function InitAccount() {
 														</label>
 														<div className="mt-2">
 															<input
+																data-cy={'first_name'}
 																type="text"
 																required
 																value={fistName}
@@ -412,6 +413,7 @@ function InitAccount() {
 														</label>
 														<div className="mt-2">
 															<input
+																data-cy={'last_name'}
 																id="last_name"
 																type="text"
 																required
@@ -428,6 +430,7 @@ function InitAccount() {
 
 													<div>
 														<button
+															data-cy={'submit'}
 															type="submit"
 															className="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
 														>
@@ -466,6 +469,7 @@ function InitAccount() {
 											}
 										/>
 										<Link
+											data-cy={'profil'}
 											href="/auth/profil"
 											className="rounded-md bg-indigo-600 px-3 py-1.5 text-white"
 										>

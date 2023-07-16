@@ -64,6 +64,13 @@ export async function getServerSideProps() {
 			Accept: 'application/json',
 		},
 	})
+
+	if (!res) {
+		return {
+			notFound: true,
+		}
+	}
+
 	const data = await res.json()
 
 	return {
