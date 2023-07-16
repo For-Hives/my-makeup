@@ -5,7 +5,7 @@ WORKDIR /usr/app
 
 # Copie des fichiers nécessaires
 COPY ./.next ./.next
-COPY ./public .
+COPY ./public ./public
 COPY ./package*.json .
 
 RUN npm ci --omit=dev --ignore-scripts
