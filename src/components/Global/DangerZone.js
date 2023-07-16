@@ -69,9 +69,6 @@ function DangerZone(props) {
 											</Dialog.Title>
 											<div className="mt-2">
 												<p className="text-sm text-gray-500">
-													{/*Are you sure you want to deactivate your account? All*/}
-													{/*of your data will be permanently removed from our*/}
-													{/*servers forever. This action cannot be undone.*/}
 													Êtes-vous sûr de vouloir supprimer votre compte ?
 													Toutes vos données seront supprimées de nos serveurs
 													pour toujours. Cette action est irréversible.
@@ -81,6 +78,7 @@ function DangerZone(props) {
 									</div>
 									<div className="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
 										<button
+											data-cy={'delete-account'}
 											type="button"
 											className="inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 sm:ml-3 sm:w-auto"
 											onClick={handleDeleteAccount}
@@ -137,7 +135,7 @@ function DangerZone(props) {
 							</div>
 							<div className={'flex w-full flex-col gap-4'}>
 								<button
-									data-cy="button-logout"
+									data-cy="button-delete-account"
 									className={'flex items-center justify-start'}
 									onClick={() => {
 										setOpen(true)

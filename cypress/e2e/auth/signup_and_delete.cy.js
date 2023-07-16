@@ -1,5 +1,6 @@
 it('Login with Email / Password', () => {
 	cy.intercept('POST', '/api/auth/callback/credentials?').as('getCredentials')
+	cy.intercept('DELETE', '/api/me-makeup').as('deleteAccount')
 
 	cy.visit('http://localhost:3000/auth/signup')
 	cy.get("[data-cy='email']")
@@ -13,5 +14,18 @@ it('Login with Email / Password', () => {
 		.type('2' + Cypress.env('TEST_PW'))
 	cy.get("[data-cy='submit']").click()
 
-	cy.wait('@getCredentials').its('response.statusCode').should('eq', 200)
+	cy.wait('@getCredentials')
+		.its('response.statusCode')
+		.should('eq', 200)
+		.then(() => {
+			cy.wait(1000)
+			cy.get("[data-cy='first_name']").clear().type(Cypress.env('TEST_USER'))
+			cy.get("[data-cy='last_name']").clear().type(Cypress.env('TEST_USER'))
+			cy.get("[data-cy='submit']").click()
+			cy.get("[data-cy='profil']").click()
+			cy.wait(1000)
+			cy.get("[data-cy='button-delete-account']").click()
+			cy.get("[data-cy='delete-account']").click()
+			cy.wait('@deleteAccount').its('response.statusCode').should('eq', 200)
+		})
 })
