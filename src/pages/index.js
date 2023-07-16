@@ -56,6 +56,10 @@ export default function Home({ talents }) {
 }
 
 export async function getServerSideProps() {
+	console.log(
+		'${process.env.NEXT_PUBLIC_API_URL}/api/talents',
+		`${process.env.NEXT_PUBLIC_API_URL}/api/talents`
+	)
 	const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/talents`, {
 		method: 'GET',
 		headers: {
@@ -63,7 +67,13 @@ export async function getServerSideProps() {
 			'Content-Type': 'application/json',
 			Accept: 'application/json',
 		},
-	})
+	}).catch(err => console.log(err))
+	console.log('res', res)
+	if (!res) {
+		return {
+			notFound: true,
+		}
+	}
 	const data = await res.json()
 
 	return {

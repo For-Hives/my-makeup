@@ -3,23 +3,23 @@ import { toast } from 'react-toastify'
 /**
  * PATCH /api/makeup-artistes/{id}
  * @param session
- * @param data
  */
-export function patchMeMakeup(session, data) {
+export function DeleteMeMakeup(session) {
 	fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/me-makeup`, {
-		method: 'PATCH',
+		method: 'DELETE',
 		headers: {
 			// 	token
 			'Content-Type': 'application/json',
 			Accept: 'application/json',
 			Authorization: `Bearer ${session.jwt}`,
 		},
-		body: JSON.stringify({
-			...data,
-		}),
 	})
 		.then(response => {
-			return response.json()
+			toast('Votre compte a bien été supprimé', {
+				type: 'success',
+				icon: '⛔',
+				toastId: 'toast-alert',
+			})
 		})
 		.catch(err =>
 			toast('Une erreur est survenue, veuillez réessayer plus tard', {

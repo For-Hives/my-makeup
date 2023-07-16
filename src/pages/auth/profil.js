@@ -54,7 +54,7 @@ function Profil({ data }) {
 							isPublic={isPublic}
 							handleIsPublic={handleIsPublic}
 						/>
-						<DangerZone />
+						<DangerZone session={session} />
 					</>
 				) : (
 					<div className="flex h-screen flex-col items-center justify-center">
