@@ -7,6 +7,7 @@ WORKDIR /usr/app
 COPY ./.next ./.next
 COPY ./public ./public
 COPY ./package*.json .
+COPY ./next* .
 
 RUN npm ci --omit=dev --ignore-scripts
 
