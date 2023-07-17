@@ -30,7 +30,7 @@ function PourLesParticuliers(props) {
 					imgBackgroundSrc={'/assets/back/maquilleuse_asiatique_white.webp'}
 					title={
 						<>
-							Trouvez Votre Maquilleuse Idéale avec
+							Trouvez Votre Maquilleuse Idéale avec&nbsp;
 							<span className={'text-indigo-900'}>My&nbsp;Makeup&nbsp;</span>
 							La solution de vos rêves&nbsp;!
 						</>
