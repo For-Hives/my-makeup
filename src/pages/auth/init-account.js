@@ -47,7 +47,7 @@ function InitAccount() {
 	])
 	const [user, setUser] = useState(null)
 	const [accountInit, setAccountInit] = useState(false)
-	const [userInterval, setUserInterval] = useState(null)
+	// const [userInterval, setUserInterval] = useState(null)
 	const [fistName, setFirstName] = useState('')
 	const [lastName, setLastName] = useState('')
 
@@ -56,24 +56,28 @@ function InitAccount() {
 	// get current user id
 	const { data: session } = useSession()
 
+	useEffect(() => {
+		getUserFromSession(session, user, setUser)
+	}, [])
+
 	useEffect(
 		id => {
 			if (!session) return
 			//  get user data
 
 			if (session.user) {
-				if (user === null) {
-					setUserInterval(getUserFromSession(session, user, setUser))
-				}
+				// if (user === null) {
+				// 	setUserInterval(getUserFromSession(session, user, setUser))
+				// }
 				if (user != null) {
 					// see if user is verified
 					if (!user.confirmed) {
 						// if yes, 1 stepper : verify email
 						setStep(1)
 					} else {
-						if (userInterval != null) {
-							clearInterval(userInterval)
-						}
+						// if (userInterval != null) {
+						// 	clearInterval(userInterval)
+						// }
 
 						if (step <= 3) {
 							if (!accountInit) {
@@ -488,28 +492,26 @@ function InitAccount() {
 
 export default InitAccount
 
-function getUserFromSession(session, user, setUser) {
-	// call api every 3 seconds
-	return setInterval(async () => {
-		if (!session) return null
+async function getUserFromSession(session, user, setUser) {
+	if (!session) return null
 
-		if (user != null && user.confirmed) return null
+	if (user != null && user.confirmed) return null
 
-		const userData = await fetch(
-			`${process.env.NEXT_PUBLIC_API_URL}/api/users/me`,
-			{
-				method: 'GET',
-				headers: {
-					// 	token
-					'Content-Type': 'application/json',
-					Accept: 'application/json',
-					Authorization: `Bearer ${session.jwt}`,
-				},
-			}
-		)
-
-		setUser(await userData.json())
-	}, 4000)
+	const userData = await fetch(
+		`${process.env.NEXT_PUBLIC_API_URL}/api/users/me`,
+		{
+			method: 'GET',
+			headers: {
+				// 	token
+				'Content-Type': 'application/json',
+				Accept: 'application/json',
+				Authorization: `Bearer ${session.jwt}`,
+			},
+		}
+	)
+	const res = await userData.json()
+	setUser(res)
+	return res
 }
 
 export const getServerSideProps = async ({ req }) => {
