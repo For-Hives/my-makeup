@@ -28,7 +28,7 @@ const schema = zod
 		last_name: true,
 	})
 
-function InitAccount({ data }) {
+function InitAccount() {
 	const {
 		register,
 		handleSubmit,
@@ -45,9 +45,9 @@ function InitAccount({ data }) {
 		{ name: 'Nom et Prénom', href: '#', status: 'upcoming' },
 		{ name: 'Finalisation', href: '#', status: 'upcoming' },
 	])
-	const [user, setUser] = useState(data)
+	const [user, setUser] = useState(null)
 	const [accountInit, setAccountInit] = useState(false)
-	// const [userInterval, setUserInterval] = useState(null)
+	const [userInterval, setUserInterval] = useState(null)
 	const [fistName, setFirstName] = useState('')
 	const [lastName, setLastName] = useState('')
 
@@ -62,56 +62,55 @@ function InitAccount({ data }) {
 			//  get user data
 
 			if (session.user) {
-				// if (user === null) {
-				// 	// setUserInterval(getUserFromSession(session, user, setUser))
-				// 	getUserFromSession(session, user, setUser)
-				// }
+				if (user === null) {
+					setUserInterval(getUserFromSession(session, user, setUser))
+				}
 				if (user != null) {
 					// see if user is verified
-					// if (!user.confirmed) {
-					// if yes, 1 stepper : verify email
-					// setStep(1)
-					// } else {
-					// if (userInterval != null) {
-					// 	clearInterval(userInterval)
-					// }
-
-					if (step <= 3) {
-						if (!accountInit) {
-							setStep(2)
-							// if yes, 2 stepper : init account
-							fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/me-makeup`, {
-								method: 'POST',
-								headers: {
-									// 	token
-									'Content-Type': 'application/json',
-									Accept: 'application/json',
-									Authorization: `Bearer ${session.jwt}`,
-								},
-								body: JSON.stringify({}),
-							})
-								.then(response => {
-									if (response.status === 200) {
-										// get 200
-									}
-								})
-								.catch(err => {
-									toast(
-										'Une erreur est survenue, veuillez réessayer plus tard',
-										{
-											type: 'error',
-											icon: '⛔',
-											toastId: 'toast-alert',
-										}
-									)
-								})
-							setAccountInit(true)
+					if (!user.confirmed) {
+						// if yes, 1 stepper : verify email
+						setStep(1)
+					} else {
+						if (userInterval != null) {
+							clearInterval(userInterval)
 						}
-						setStep(3)
+
+						if (step <= 3) {
+							if (!accountInit) {
+								setStep(2)
+								// if yes, 2 stepper : init account
+								fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/me-makeup`, {
+									method: 'POST',
+									headers: {
+										// 	token
+										'Content-Type': 'application/json',
+										Accept: 'application/json',
+										Authorization: `Bearer ${session.jwt}`,
+									},
+									body: JSON.stringify({}),
+								})
+									.then(response => {
+										if (response.status === 200) {
+											// get 200
+										}
+									})
+									.catch(err => {
+										toast(
+											'Une erreur est survenue, veuillez réessayer plus tard',
+											{
+												type: 'error',
+												icon: '⛔',
+												toastId: 'toast-alert',
+											}
+										)
+									})
+								setAccountInit(true)
+							}
+							setStep(3)
+						}
 					}
 				}
 			}
-			// }
 		},
 		[session, user, step]
 	)
@@ -489,14 +488,15 @@ function InitAccount({ data }) {
 
 export default InitAccount
 
-export const getServerSideProps = async ({ req, res }) => {
-	const session = await getSession({ req })
+function getUserFromSession(session, user, setUser) {
+	// call api every 3 seconds
+	return setInterval(async () => {
+		if (!session) return null
 
-	let user
+		if (user != null && user.confirmed) return null
 
-	if (session) {
-		const response = await fetch(
-			`${process.env.NEXT_PUBLIC_API_URL}/api/me-makeup`,
+		const userData = await fetch(
+			`${process.env.NEXT_PUBLIC_API_URL}/api/users/me`,
 			{
 				method: 'GET',
 				headers: {
@@ -508,24 +508,15 @@ export const getServerSideProps = async ({ req, res }) => {
 			}
 		)
 
-		if (!response.ok) {
-			res.writeHead(301, { location: '/auth/init-account' })
-			res.end()
-		} else {
-			user = await response.json()
-		}
-	}
+		setUser(await userData.json())
+	}, 4000)
+}
 
-	// Set Cache Control header
-	res.setHeader(
-		'Cache-Control',
-		'public, s-maxage=10, stale-while-revalidate=59'
-	)
-
+export const getServerSideProps = async ({ req }) => {
+	const session = await getSession({ req })
 	return {
 		props: {
 			session,
-			data: user ?? null,
 		},
 	}
 }
