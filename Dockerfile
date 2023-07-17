@@ -4,9 +4,10 @@ FROM node:20-alpine
 WORKDIR /usr/app
 
 # Copie des fichiers nécessaires
-COPY .next .
-COPY ./public .
+COPY ./.next ./.next
+COPY ./public ./public
 COPY ./package*.json .
+COPY ./next* .
 
 RUN npm ci --omit=dev --ignore-scripts
 
