@@ -31,7 +31,7 @@
 		"html-react-parser": "4.1.0",
 		"lodash": "4.17.21",
 		"mailgun.js": "9.2.0",
-		"material-icons": "1.13.8",
+		"material-icons": "1.13.9",
 		"next": "13.4.10",
 		"next-auth": "4.22.3",
 		"pg": "8.11.1",
