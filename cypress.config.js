@@ -6,6 +6,7 @@ module.exports = defineConfig({
 		defaultCommandTimeout: 30000,
 		numTestsKeptInMemory: 50, // Par défaut 50, mais si un jour les tests crash pour "out of memory" ne pas hésiter à baisser cette valeur.
 		video: true,
+		blockHosts: '*.google-analytics.com',
 		chromeWebSecurity: false,
 		reporter: 'junit',
 		reporterOptions: {
