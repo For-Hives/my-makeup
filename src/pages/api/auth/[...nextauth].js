@@ -77,7 +77,7 @@ const options = {
 	session: {
 		strategy: 'jwt',
 	},
-	debug: true,
+	debug: process.env.NODE_ENV !== 'production',
 	callbacks: {
 		async session({ session, token, user }) {
 			session.jwt = token.jwt
