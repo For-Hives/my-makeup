@@ -50,7 +50,7 @@ function ResumeProfil(props) {
 	 */
 	useEffect(() => {
 		setAvailability(!!user?.available)
-		setProfilPicture(user?.main_picture?.url)
+		setProfilPicture(user?.main_picture?.url || '/assets/pp_makeup.webp')
 		setIsPublic(!!publicView)
 	}, [])
 
