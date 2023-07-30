@@ -8,10 +8,7 @@ function Custom404(props) {
 		<>
 			<Head>
 				<title>My-Makeup</title>
-				<meta
-					name="description"
-					content="Vérification de profil, sur My-Makeup, la plateforme pour les maquilleuses !"
-				/>
+				<meta name="description" content="Oups, cette page n'existe pas !" />
 				{/*	seo tag canonical link */}
 				<link rel="canonical" href="https://my-makeup.fr/404" />
 			</Head>
