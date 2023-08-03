@@ -85,6 +85,7 @@ jobs:
           browser: chrome
           wait-on: 'http://localhost:3000'
           command: yarn node cypress/cypress-ci-run.mjs
+          record: true
           env:
             ENV=production
             NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
@@ -103,6 +104,7 @@ jobs:
             CYPRESS_TEST_USER=${{ secrets.TEST_USER }}
             CYPRESS_TEST_PW=${{ secrets.TEST_PW }}
             CYPRESS_NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
+            CYPRESS_RECORD_KEY=${{ secrets.CYPRESS_RECORD_KEY }}
       - uses: actions/upload-artifact@v3
         # add the line below to store screenshots only on failures
         if: failure()
