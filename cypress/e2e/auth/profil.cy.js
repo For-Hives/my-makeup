@@ -19,9 +19,10 @@ describe('profil', () => {
 	})
 
 	beforeEach(() => {
-		cy.intercept('PATCH', 'https://api.my-makeup.fr/api/me-makeup').as(
-			'patchMeMakeup'
-		)
+		cy.intercept(
+			'PATCH',
+			`${Cypress.env('NEXT_PUBLIC_API_URL')}/api/me-makeup`
+		).as('patchMeMakeup')
 
 		// If cookies exist, set them before each test
 		if (cookies) {
@@ -42,7 +43,7 @@ describe('profil', () => {
 		it('tests complet Resume - section', () => {
 			cy.request({
 				method: 'POST',
-				url: 'https://api.my-makeup.fr/api/auth/local',
+				url: `${Cypress.env('NEXT_PUBLIC_API_URL')}/api/auth/local`,
 				headers: {
 					'Content-Type': 'application/json',
 				},
@@ -54,7 +55,7 @@ describe('profil', () => {
 				const jwtToken = response.body.jwt
 				cy.request({
 					method: 'PATCH',
-					url: 'https://api.my-makeup.fr/api/me-makeup',
+					url: `${Cypress.env('NEXT_PUBLIC_API_URL')}/api/me-makeup`,
 					headers: {
 						'Content-Type': 'application/json',
 						Authorization: `Bearer ${jwtToken}`,
@@ -100,9 +101,10 @@ describe('profil', () => {
 						)
 
 						// prepare to intercept the request
-						cy.intercept('POST', 'https://api.my-makeup.fr/api/upload').as(
-							'upload'
-						)
+						cy.intercept(
+							'POST',
+							`${Cypress.env('NEXT_PUBLIC_API_URL')}/api/upload`
+						).as('upload')
 
 						cy.wait(1000)
 
@@ -786,7 +788,9 @@ describe('profil', () => {
 																																																																	// prepare to intercept the request
 																																																																	cy.intercept(
 																																																																		'POST',
-																																																																		'https://api.my-makeup.fr/api/upload'
+																																																																		`${Cypress.env(
+																																																																			'NEXT_PUBLIC_API_URL'
+																																																																		)}/api/upload`
 																																																																	).as(
 																																																																		'upload'
 																																																																	)

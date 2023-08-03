@@ -19,9 +19,10 @@ describe('profil', () => {
 	})
 
 	beforeEach(() => {
-		cy.intercept('PATCH', 'https://api.my-makeup.fr/api/me-makeup').as(
-			'patchMeMakeup'
-		)
+		cy.intercept(
+			'PATCH',
+			`${Cypress.env('NEXT_PUBLIC_API_URL')}/api/me-makeup`
+		).as('patchMeMakeup')
 
 		// If cookies exist, set them before each test
 		if (cookies) {
@@ -42,7 +43,7 @@ describe('profil', () => {
 		it('tests complet global, and complete', () => {
 			cy.request({
 				method: 'POST',
-				url: 'https://api.my-makeup.fr/api/auth/local',
+				url: `${Cypress.env('NEXT_PUBLIC_API_URL')}/api/auth/local`,
 				headers: {
 					'Content-Type': 'application/json',
 				},
@@ -54,7 +55,7 @@ describe('profil', () => {
 				const jwtToken = response.body.jwt
 				cy.request({
 					method: 'PATCH',
-					url: 'https://api.my-makeup.fr/api/me-makeup',
+					url: `${Cypress.env('NEXT_PUBLIC_API_URL')}/api/me-makeup`,
 					headers: {
 						'Content-Type': 'application/json',
 						Authorization: `Bearer ${jwtToken}`,
@@ -71,23 +72,7 @@ describe('profil', () => {
 							"Je suis une maquilleuse passionnée avec plus de 10 ans d'expérience...",
 						company_artist_name: 'My Makeup Artist',
 						main_picture: {
-							id: 1188,
-							name: 'profil.png',
-							alternativeText: null,
-							caption: null,
-							width: 128,
-							height: 128,
-							formats: null,
-							hash: 'profil_692f22e433',
-							ext: '.png',
-							mime: 'image/png',
-							size: 2.33,
-							url: 'https://minio.beta.andy-cinquin.fr:443/my-makeup/profil_692f22e433.png',
-							previewUrl: null,
-							provider: 'minio-for-strapi-v4',
-							provider_metadata: null,
-							createdAt: '2023-07-14T17:09:07.683Z',
-							updatedAt: '2023-07-14T17:09:07.683Z',
+							id: 56,
 						},
 						skills: [
 							{
@@ -152,23 +137,7 @@ describe('profil', () => {
 						],
 						image_gallery: [
 							{
-								id: 1189,
-								name: '',
-								alternativeText: null,
-								caption: null,
-								width: 128,
-								height: 128,
-								formats: null,
-								hash: '_6d50597932',
-								ext: '.bin',
-								mime: 'application/octet-stream',
-								size: 2.33,
-								url: 'https://minio.beta.andy-cinquin.fr:443/my-makeup/_6d50597932.bin',
-								previewUrl: null,
-								provider: 'minio-for-strapi-v4',
-								provider_metadata: null,
-								createdAt: '2023-07-14T17:09:40.827Z',
-								updatedAt: '2023-07-14T17:09:40.827Z',
+								id: 57,
 							},
 						],
 					},
@@ -192,7 +161,7 @@ describe('profil', () => {
 		it.skip('tests no network  - section', () => {
 			cy.request({
 				method: 'POST',
-				url: 'https://api.my-makeup.fr/api/auth/local',
+				url: `${Cypress.env('NEXT_PUBLIC_API_URL')}/api/auth/local`,
 				headers: {
 					'Content-Type': 'application/json',
 				},
@@ -204,7 +173,7 @@ describe('profil', () => {
 				const jwtToken = response.body.jwt
 				cy.request({
 					method: 'PATCH',
-					url: 'https://api.my-makeup.fr/api/me-makeup',
+					url: `${Cypress.env('NEXT_PUBLIC_API_URL')}/api/me-makeup`,
 					headers: {
 						'Content-Type': 'application/json',
 						Authorization: `Bearer ${jwtToken}`,
@@ -334,7 +303,7 @@ describe('profil', () => {
 		it.skip('tests no first name  - section', () => {
 			cy.request({
 				method: 'POST',
-				url: 'https://api.my-makeup.fr/api/auth/local',
+				url: `${Cypress.env('NEXT_PUBLIC_API_URL')}/api/auth/local`,
 				headers: {
 					'Content-Type': 'application/json',
 				},
@@ -346,7 +315,7 @@ describe('profil', () => {
 				const jwtToken = response.body.jwt
 				cy.request({
 					method: 'PATCH',
-					url: 'https://api.my-makeup.fr/api/me-makeup',
+					url: `${Cypress.env('NEXT_PUBLIC_API_URL')}/api/me-makeup`,
 					headers: {
 						'Content-Type': 'application/json',
 						Authorization: `Bearer ${jwtToken}`,
@@ -476,7 +445,7 @@ describe('profil', () => {
 		it.skip('tests no last name  - section', () => {
 			cy.request({
 				method: 'POST',
-				url: 'https://api.my-makeup.fr/api/auth/local',
+				url: `${Cypress.env('NEXT_PUBLIC_API_URL')}/api/auth/local`,
 				headers: {
 					'Content-Type': 'application/json',
 				},
@@ -488,7 +457,7 @@ describe('profil', () => {
 				const jwtToken = response.body.jwt
 				cy.request({
 					method: 'PATCH',
-					url: 'https://api.my-makeup.fr/api/me-makeup',
+					url: `${Cypress.env('NEXT_PUBLIC_API_URL')}/api/me-makeup`,
 					headers: {
 						'Content-Type': 'application/json',
 						Authorization: `Bearer ${jwtToken}`,
@@ -618,7 +587,7 @@ describe('profil', () => {
 		it.skip('tests no speciality  - section', () => {
 			cy.request({
 				method: 'POST',
-				url: 'https://api.my-makeup.fr/api/auth/local',
+				url: `${Cypress.env('NEXT_PUBLIC_API_URL')}/api/auth/local`,
 				headers: {
 					'Content-Type': 'application/json',
 				},
@@ -630,7 +599,7 @@ describe('profil', () => {
 				const jwtToken = response.body.jwt
 				cy.request({
 					method: 'PATCH',
-					url: 'https://api.my-makeup.fr/api/me-makeup',
+					url: `${Cypress.env('NEXT_PUBLIC_API_URL')}/api/me-makeup`,
 					headers: {
 						'Content-Type': 'application/json',
 						Authorization: `Bearer ${jwtToken}`,
@@ -759,7 +728,7 @@ describe('profil', () => {
 		it.skip('tests no city  - section', () => {
 			cy.request({
 				method: 'POST',
-				url: 'https://api.my-makeup.fr/api/auth/local',
+				url: `${Cypress.env('NEXT_PUBLIC_API_URL')}/api/auth/local`,
 				headers: {
 					'Content-Type': 'application/json',
 				},
@@ -771,7 +740,7 @@ describe('profil', () => {
 				const jwtToken = response.body.jwt
 				cy.request({
 					method: 'PATCH',
-					url: 'https://api.my-makeup.fr/api/me-makeup',
+					url: `${Cypress.env('NEXT_PUBLIC_API_URL')}/api/me-makeup`,
 					headers: {
 						'Content-Type': 'application/json',
 						Authorization: `Bearer ${jwtToken}`,
@@ -901,7 +870,7 @@ describe('profil', () => {
 		it.skip('tests no description  - section', () => {
 			cy.request({
 				method: 'POST',
-				url: 'https://api.my-makeup.fr/api/auth/local',
+				url: `${Cypress.env('NEXT_PUBLIC_API_URL')}/api/auth/local`,
 				headers: {
 					'Content-Type': 'application/json',
 				},
@@ -913,7 +882,7 @@ describe('profil', () => {
 				const jwtToken = response.body.jwt
 				cy.request({
 					method: 'PATCH',
-					url: 'https://api.my-makeup.fr/api/me-makeup',
+					url: `${Cypress.env('NEXT_PUBLIC_API_URL')}/api/me-makeup`,
 					headers: {
 						'Content-Type': 'application/json',
 						Authorization: `Bearer ${jwtToken}`,
@@ -1041,7 +1010,7 @@ describe('profil', () => {
 		it('tests complet global not available, and complete', () => {
 			cy.request({
 				method: 'POST',
-				url: 'https://api.my-makeup.fr/api/auth/local',
+				url: `${Cypress.env('NEXT_PUBLIC_API_URL')}/api/auth/local`,
 				headers: {
 					'Content-Type': 'application/json',
 				},
@@ -1053,7 +1022,7 @@ describe('profil', () => {
 				const jwtToken = response.body.jwt
 				cy.request({
 					method: 'PATCH',
-					url: 'https://api.my-makeup.fr/api/me-makeup',
+					url: `${Cypress.env('NEXT_PUBLIC_API_URL')}/api/me-makeup`,
 					headers: {
 						'Content-Type': 'application/json',
 						Authorization: `Bearer ${jwtToken}`,
@@ -1070,23 +1039,7 @@ describe('profil', () => {
 							"Je suis une maquilleuse passionnée avec plus de 10 ans d'expérience...",
 						company_artist_name: 'My Makeup Artist',
 						main_picture: {
-							id: 1188,
-							name: 'profil.png',
-							alternativeText: null,
-							caption: null,
-							width: 128,
-							height: 128,
-							formats: null,
-							hash: 'profil_692f22e433',
-							ext: '.png',
-							mime: 'image/png',
-							size: 2.33,
-							url: 'https://minio.beta.andy-cinquin.fr:443/my-makeup/profil_692f22e433.png',
-							previewUrl: null,
-							provider: 'minio-for-strapi-v4',
-							provider_metadata: null,
-							createdAt: '2023-07-14T17:09:07.683Z',
-							updatedAt: '2023-07-14T17:09:07.683Z',
+							id: 56,
 						},
 						skills: [
 							{
@@ -1151,23 +1104,7 @@ describe('profil', () => {
 						],
 						image_gallery: [
 							{
-								id: 1189,
-								name: '',
-								alternativeText: null,
-								caption: null,
-								width: 128,
-								height: 128,
-								formats: null,
-								hash: '_6d50597932',
-								ext: '.bin',
-								mime: 'application/octet-stream',
-								size: 2.33,
-								url: 'https://minio.beta.andy-cinquin.fr:443/my-makeup/_6d50597932.bin',
-								previewUrl: null,
-								provider: 'minio-for-strapi-v4',
-								provider_metadata: null,
-								createdAt: '2023-07-14T17:09:40.827Z',
-								updatedAt: '2023-07-14T17:09:40.827Z',
+								id: 57,
 							},
 						],
 					},

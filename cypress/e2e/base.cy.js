@@ -17,7 +17,7 @@ describe('Test des pages', () => {
 					const parsed = new URL(url.loc)
 					cy.log(parsed.pathname)
 					// check if the resource exists AND download it
-					cy.request(url.loc).its('status').should('eq', 200)
+					cy.request(url.loc).wait(100).its('status').should('eq', 200)
 				})
 			})
 	})
