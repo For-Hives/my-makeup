@@ -16,6 +16,7 @@ env:
   MAILGUN_DOMAIN: ${{secrets.MAILGUN_DOMAIN}}
   CYPRESS_TEST_USER: ${{secrets.TEST_USER}}
   CYPRESS_TEST_PW: ${{secrets.TEST_PW}}
+  CYPRESS_NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
 
 on:
   pull_request:
@@ -84,7 +85,8 @@ jobs:
           browser: chrome
           wait-on: 'http://localhost:3000'
           command: yarn node cypress/cypress-ci-run.mjs
-          env: ENV=production
+          env:
+            ENV=production
             NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
             NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}
             NEXT_PUBLIC_URL=${{ secrets.NEXT_PUBLIC_URL }}
@@ -100,6 +102,7 @@ jobs:
             MAILGUN_DOMAIN=${{ secrets.MAILGUN_DOMAIN }}
             CYPRESS_TEST_USER=${{ secrets.TEST_USER }}
             CYPRESS_TEST_PW=${{ secrets.TEST_PW }}
+            CYPRESS_NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
       - uses: actions/upload-artifact@v3
         # add the line below to store screenshots only on failures
         if: failure()
