@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react'
 import { Swiper, SwiperSlide } from 'swiper/react'
 // import required modules
-import { Pagination } from 'swiper'
+import { Pagination } from 'swiper/modules'
 // Import Swiper styles
 import 'swiper/css'
 import 'swiper/css/pagination'
