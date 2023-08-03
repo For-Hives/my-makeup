@@ -114,15 +114,29 @@ function SearchPage() {
 												}
 											>
 												<div className={'relative w-full'}>
-													<Image
-														src={result.main_picture.url}
-														alt={'profil picture Maquilleuse professionnelle'}
-														width={200}
-														height={200}
-														className={
-															'h-[350px] w-full rounded-b-none rounded-t object-cover object-center'
-														}
-													/>
+													{result.main_picture === null && (
+														<Image
+															src={'/assets/pp_makeup.webp'}
+															alt={'profil picture Maquilleuse professionnelle'}
+															width={250}
+															height={250}
+															quality={100}
+															className={
+																'h-[350px] w-full rounded-b-none rounded-t object-cover object-center'
+															}
+														/>
+													)}
+													{result.main_picture != null && (
+														<Image
+															src={result.main_picture.url}
+															alt={'profil picture Maquilleuse professionnelle'}
+															width={250}
+															height={250}
+															className={
+																'h-[350px] w-full rounded-b-none rounded-t object-cover object-center'
+															}
+														/>
+													)}
 													{result?.pro === true && (
 														<div
 															className={
