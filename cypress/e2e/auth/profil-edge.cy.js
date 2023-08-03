@@ -19,9 +19,10 @@ describe('profil-edge', () => {
 	})
 
 	beforeEach(() => {
-		cy.intercept('PATCH', 'https://api.my-makeup.fr/api/me-makeup').as(
-			'patchMeMakeup'
-		)
+		cy.intercept(
+			'PATCH',
+			`${Cypress.env('NEXT_PUBLIC_API_URL')}/api/me-makeup`
+		).as('patchMeMakeup')
 
 		// If cookies exist, set them before each test
 		if (cookies) {
@@ -54,7 +55,10 @@ describe('profil-edge', () => {
 				)
 
 				// prepare to intercept the request
-				cy.intercept('POST', 'https://api.my-makeup.fr/api/upload').as('upload')
+				cy.intercept(
+					'POST',
+					`${Cypress.env('NEXT_PUBLIC_API_URL')}/api/upload`
+				).as('upload')
 
 				cy.wait(1000)
 				// 	open the modal
@@ -1818,7 +1822,10 @@ describe('profil-edge', () => {
 				)
 
 				// prepare to intercept the request
-				cy.intercept('POST', 'https://api.my-makeup.fr/api/upload').as('upload')
+				cy.intercept(
+					'POST',
+					`${Cypress.env('NEXT_PUBLIC_API_URL')}/api/upload`
+				).as('upload')
 
 				cy.get("[data-cy='update-portefolio-button']")
 					.click({ force: true })
