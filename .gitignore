@@ -44,3 +44,5 @@ cypress/screenshots/
 cypress.env.json
 
 yarn.lock
+
+.scannerwork/
