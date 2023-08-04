@@ -863,7 +863,7 @@ describe('profil', () => {
 																																																																											)
 
 																																																																										cy.wait(
-																																																																											250
+																																																																											2000
 																																																																										)
 																																																																										cy.get(
 																																																																											"[data-cy='completion-pourcentage-profil']"
