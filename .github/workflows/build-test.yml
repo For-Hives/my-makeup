@@ -2,8 +2,8 @@ name: Build and Test
 env:
   TOTAL_RUNNERS: 4
   NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
+  NEXT_PUBLIC_URL: ${{vars.NEXT_PUBLIC_URL}}
   NEXTAUTH_SECRET: ${{secrets.NEXTAUTH_SECRET}}
-  NEXT_PUBLIC_URL: ${{secrets.NEXT_PUBLIC_URL}}
   NEXT_PUBLIC_DATABASE_URL: ${{secrets.NEXT_PUBLIC_DATABASE_URL}}
   NEXTAUTH_URL: ${{secrets.NEXTAUTH_URL}}
   GOOGLE_CLIENT_ID: ${{secrets.GOOGLE_CLIENT_ID}}
@@ -54,7 +54,9 @@ jobs:
           context: .
           push: false
           tags: ${{ secrets.APP_IMAGE }}
-          build-args: NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
+          build-args:
+            NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
+            NEXT_PUBLIC_URL=${{ vars.NEXT_PUBLIC_URL }}
 
   tests:
     runs-on: ubuntu-latest
@@ -88,8 +90,8 @@ jobs:
           record: true
           env: ENV=production
             NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
+            NEXT_PUBLIC_URL=${{ vars.NEXT_PUBLIC_URL }}
             NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}
-            NEXT_PUBLIC_URL=${{ secrets.NEXT_PUBLIC_URL }}
             NEXT_PUBLIC_DATABASE_URL=${{ secrets.NEXT_PUBLIC_DATABASE_URL }}
             NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL }}
             GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
