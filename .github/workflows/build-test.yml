@@ -20,7 +20,7 @@ env:
 
 on:
   pull_request:
-    branches: ['main']
+    branches: [ 'main' ]
 
 jobs:
   build:
@@ -64,7 +64,7 @@ jobs:
         # Run copies of the current job in parallel. These need to be a
         # continuous series of numbers, starting with `0`. If you change the
         # number of containers, change TOTAL_RUNNERS below.
-        containers: [0, 1, 2, 3]
+        containers: [ 0, 1, 2, 3 ]
     needs: build
     steps:
       - uses: actions/checkout@v3
@@ -124,5 +124,15 @@ jobs:
     runs-on: ubuntu-latest
     needs: tests
     steps:
+      - uses: sonarsource/sonarqube-scan-action@master
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+      # If you wish to fail your job when the Quality Gate is red use the
+      # following lines. This would typically be used to fail a deployment.
+      - uses: sonarsource/sonarqube-quality-gate-action@master
+        timeout-minutes: 5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
       - name: Victory
         run: echo "Victory!"
