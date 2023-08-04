@@ -125,9 +125,16 @@ jobs:
     needs: tests
     steps:
       - uses: sonarsource/sonarqube-scan-action@master
+        with:
+          projectBaseDir: ./
+          args: >
+            -Dsonar.python.coverage.reportPaths=coverage.xml
+            -Dproject.settings=./sonar-project.properties
+            -Dsonar.verbose=true
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
       # If you wish to fail your job when the Quality Gate is red use the
       # following lines. This would typically be used to fail a deployment.
       - uses: sonarsource/sonarqube-quality-gate-action@master
