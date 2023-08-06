@@ -43,9 +43,9 @@ function Signup() {
 		 * Signin function with name setted : register mode
 		 */
 		const result = signIn('credentials', {
-			email: data.email,
+			email: data.email.trim(),
 			password: data.password,
-			name: data.name,
+			name: data.name.trim().replace(/\s+/g, '-').toLowerCase(),
 			callbackUrl: '/auth/profil',
 		})
 	}
