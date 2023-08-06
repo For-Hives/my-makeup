@@ -60,6 +60,10 @@ function ResumeProfil(props) {
 		setIsPublic(props.isPublic)
 	}, [props.isPublic])
 
+	useEffect(() => {
+		setProfilPicture(user?.main_picture?.url || '/assets/pp_makeup.webp')
+	}, [props.isPublic, profilPicture])
+
 	return (
 		<div
 			className={
