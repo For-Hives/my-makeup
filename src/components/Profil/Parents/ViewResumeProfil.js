@@ -79,17 +79,29 @@ function ViewResumeProfil(props) {
 									{user?.company_artist_name}
 								</h3>
 							</div>
-							<div>
-								<div className={'flex items-center'}>
-									<span className="material-icons-round text-indigo-900">
-										directions_run
-									</span>
-									<span data-cy={'resume-city-action-radius'}>
-										peut se déplacer à {user?.city} & dans un rayon de{' '}
-										{user?.action_radius}km
-									</span>
+							{user?.action_radius !== 0 ? (
+								<div className={'mt-2 xl:m-0'}>
+									<div className={'flex items-center'}>
+										<span className="material-icons-round text-indigo-900">
+											directions_run
+										</span>
+										<span data-cy={'resume-city-action-radius'}>
+											{`peut se déplacer à ${user?.city} dans un rayon de ${user?.action_radius}km`}
+										</span>
+									</div>
 								</div>
-							</div>
+							) : (
+								<div className={'mt-2 xl:m-0'}>
+									<div className={'flex items-center'}>
+										<span className="material-icons-round text-indigo-900">
+											location_on
+										</span>
+										<span data-cy={'resume-city-action-radius'}>
+											{`à ${user?.city}`}
+										</span>
+									</div>
+								</div>
+							)}
 							<div></div>
 							{/*<div className={'flex flex-row items-center gap-4'}>*/}
 							{/*	<Stars starsToDisplay={user?.score} />{' '}*/}

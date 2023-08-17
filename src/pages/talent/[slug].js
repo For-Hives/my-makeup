@@ -52,7 +52,7 @@ function Talent({ articleData }) {
 							<div className={'prose my-8 xl:prose-lg'}>
 								<Layout value={meta.content.toString()} />
 							</div>
-							<h3 className={'flex items-center text-base text-gray-400'}>
+							<h3 className={'flex items-center text-base text-gray-600'}>
 								<span className="h-4 w-0.5 rounded-full bg-gray-200" />
 								<span className="ml-3">{"L'équipe My-Makeup"}</span>
 							</h3>

@@ -756,9 +756,11 @@ export default function ModalUpdateServiceOffersProfil(props) {
 											<div className={'flex w-full flex-col gap-4 '}>
 												<Tab.Group>
 													<Tab.List
-														className={
-															'flex w-full flex-col justify-center py-4 md:flex-row'
-														}
+														className={`${
+															userServiceOffers.length <= 3
+																? 'md:justify-center md:overflow-auto'
+																: 'md:justify-start md:overflow-x-scroll'
+														} flex h-full w-full justify-start overflow-x-scroll py-4`}
 													>
 														{userServiceOffers.map((service_offer, index) => {
 															return (
