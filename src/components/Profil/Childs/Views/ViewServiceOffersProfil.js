@@ -19,7 +19,13 @@ function ViewServiceOffersProfil(props) {
 			</h2>
 			{user?.service_offers && (
 				<Tab.Group>
-					<Tab.List className={'flex h-full w-full justify-center py-4'}>
+					<Tab.List
+						className={`${
+							user?.service_offers?.length <= 3
+								? 'md:justify-center md:overflow-auto'
+								: 'md:justify-start md:overflow-x-scroll'
+						} flex h-full w-full justify-start overflow-x-scroll py-4`}
+					>
 						{user?.service_offers?.length !== 0 &&
 							user?.service_offers?.map((service_offer, index) => {
 								return (
