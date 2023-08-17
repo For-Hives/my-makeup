@@ -757,7 +757,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 												<Tab.Group>
 													<Tab.List
 														className={`${
-															user?.service_offers?.length <= 3
+															userServiceOffers.length <= 3
 																? 'md:justify-center md:overflow-auto'
 																: 'md:justify-start md:overflow-x-scroll'
 														} flex h-full w-full justify-start overflow-x-scroll py-4`}
