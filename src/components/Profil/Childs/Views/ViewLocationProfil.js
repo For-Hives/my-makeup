@@ -25,22 +25,24 @@ function ViewLocationProfil(props) {
 					<p className={'text-gray-800'}>{user?.city}</p>
 				</div>
 			</div>
-			<div className={'flex gap-2'}>
-				<span className="material-icons-round text-lg text-indigo-900">
-					<span className="material-symbols-outlined">directions_run</span>
-				</span>
-				<div className={'flex flex-col gap-2'}>
-					<h3 className={'text-lg font-semibold text-gray-700'}>
-						Peut travailer chez vous à
-					</h3>
-					<p
-						className={'text-gray-800'}
-						data-cy={'location-city-action-radius'}
-					>
-						{user?.city} & {user?.action_radius}km autour
-					</p>
+			{user?.action_radius !== 0 && (
+				<div className={'flex gap-2'}>
+					<span className="material-icons-round text-lg text-indigo-900">
+						<span className="material-symbols-outlined">directions_run</span>
+					</span>
+					<div className={'flex flex-col gap-2'}>
+						<h3 className={'text-lg font-semibold text-gray-700'}>
+							Peut travailer chez vous à
+						</h3>
+						<p
+							className={'text-gray-800'}
+							data-cy={'location-city-action-radius'}
+						>
+							{user?.city} & {user?.action_radius}km autour
+						</p>
+					</div>
 				</div>
-			</div>
+			)}
 		</div>
 	)
 }
