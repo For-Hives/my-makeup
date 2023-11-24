@@ -1,5 +1,13 @@
 FROM node:21-alpine
 
+RUN addgroup -S nonroot \
+        && adduser -S nonroot -G nonroot
+
+USER nonroot
+
+ENTRYPOINT ["id"]
+
+
 # Définition du répertoire de travail
 WORKDIR /usr/app
 
