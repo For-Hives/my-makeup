@@ -1,5 +1,5 @@
 it('Login with Email / Password', () => {
-	cy.intercept('POST', '/api/auth/callback/credentials?').as('getCredentials')
+	cy.intercept('POST', '/api/auth/callback/credentials').as('getCredentials')
 	cy.intercept('DELETE', '/api/me-makeup').as('deleteAccount')
 
 	cy.visit('http://localhost:3000/auth/signup')

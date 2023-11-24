@@ -2,7 +2,7 @@ let cookies = null
 
 describe('profil-edge', () => {
 	before(() => {
-		cy.intercept('POST', '/api/auth/callback/credentials?').as('getCredentials')
+		cy.intercept('POST', '/api/auth/callback/credentials').as('getCredentials')
 
 		cy.visit('http://localhost:3000/auth/signin')
 		cy.get("[data-cy='email-input']").click()

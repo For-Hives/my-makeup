@@ -1,5 +1,5 @@
 it('Login with Email / Password', () => {
-	cy.intercept('POST', '/api/auth/callback/credentials?').as('getCredentials')
+	cy.intercept('POST', '/api/auth/callback/credentials').as('getCredentials')
 
 	cy.visit('http://localhost:3000/auth/signin')
 	cy.get("[data-cy='email-input']").click()
