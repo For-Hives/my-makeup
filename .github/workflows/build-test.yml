@@ -108,14 +108,14 @@ jobs:
             CYPRESS_RECORD_KEY=${{ secrets.CYPRESS_RECORD_KEY }}
             CYPRESS_RETRIES=3
             GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         # add the line below to store screenshots only on failures
         if: failure()
         with:
           name: cypress-screenshots
           path: cypress/screenshots
           if-no-files-found: ignore # 'warn' or 'error' are also available, defaults to `warn`
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         # add the line below to store screenshots only on failures
         if: failure()
         with:
