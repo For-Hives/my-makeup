@@ -22,7 +22,7 @@
 	"dependencies": {
 		"@headlessui/react": "1.7.17",
 		"@heroicons/react": "2.1.1",
-		"@hookform/resolvers": "3.3.3",
+		"@hookform/resolvers": "3.3.4",
 		"@tailwindcss/typography": "0.5.10",
 		"domhandler": "5.0.3",
 		"eslint": "8.56.0",
