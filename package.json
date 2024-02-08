@@ -30,7 +30,7 @@
 		"form-data": "4.0.0",
 		"html-react-parser": "5.1.2",
 		"lodash": "4.17.21",
-		"mailgun.js": "9.4.1",
+		"mailgun.js": "10.1.0",
 		"material-icons": "1.13.12",
 		"next": "14.1.0",
 		"next-auth": "4.24.5",
