@@ -84,7 +84,7 @@ jobs:
         uses: cypress-io/github-action@v5
         with:
           start: npm run start
-          browser: chrome
+          browser: electron
           wait-on: 'http://localhost:3000'
           command: yarn node cypress/cypress-ci-run.mjs
           record: true
