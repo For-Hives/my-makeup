@@ -25,7 +25,7 @@
 		"@hookform/resolvers": "3.3.4",
 		"@tailwindcss/typography": "0.5.10",
 		"domhandler": "5.0.3",
-		"eslint": "8.56.0",
+		"eslint": "8.57.0",
 		"eslint-config-next": "14.1.0",
 		"form-data": "4.0.0",
 		"html-react-parser": "5.1.5",
