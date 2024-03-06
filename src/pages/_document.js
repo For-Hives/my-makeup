@@ -7,6 +7,12 @@ export default function Document() {
 			<Head>
 				<link rel="icon" href="/favicon.webp" />
 				<Script
+					async
+					src="https://umami.wadefade.fr/script.js"
+					strategy={'afterInteractive'}
+					data-website-id="e7010ee5-a940-4add-80bf-5483d2c515db"
+				></Script>
+				<Script
 					strategy={'afterInteractive'}
 					src="https://www.googletagmanager.com/gtag/js?id=G-6Z5K42B5YH"
 				/>
