@@ -10,6 +10,7 @@ export default function Document() {
 					async
 					src="https://umami.wadefade.fr/script.js"
 					strategy={'afterInteractive'}
+					data-domains={'my-makeup.fr'}
 					data-website-id="e7010ee5-a940-4add-80bf-5483d2c515db"
 				></Script>
 				<Script
