@@ -43,7 +43,7 @@
 		"remark": "15.0.1",
 		"remark-html": "16.0.1",
 		"remark-parse": "11.0.0",
-		"sharp": "0.33.2",
+		"sharp": "0.33.3",
 		"swiper": "11.0.7",
 		"to-vfile": "8.0.0",
 		"typescript": "5.4.3",
