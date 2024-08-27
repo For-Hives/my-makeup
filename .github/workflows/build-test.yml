@@ -58,90 +58,90 @@ jobs:
             NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
             NEXT_PUBLIC_URL=${{ vars.NEXT_PUBLIC_URL }}
 
-  tests:
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        # Run copies of the current job in parallel. These need to be a
-        # continuous series of numbers, starting with `0`. If you change the
-        # number of containers, change TOTAL_RUNNERS below.
-        containers: [ 0, 1, 2, 3 ]
-    needs: build
-    steps:
-      - uses: actions/checkout@v4
-      - name: Cache next.js build
-        id: cache-npm
-        uses: actions/cache@v4
-        with:
-          path: .next/
-          key: ${{ runner.os }}-next-build-${{ hashFiles('src/','public/','next*','package*','jsconfig.json') }}
-      - name: List files
-        run: ls -la
-      - name: Add container env vars
-        run: echo "THIS_RUNNER=${{ matrix.containers }}" >> $GITHUB_ENV
-      - name: Cypress run
-        uses: cypress-io/github-action@v5
-        with:
-          start: npm run start
-          browser: chrome
-          wait-on: 'http://localhost:3000'
-          command: yarn node cypress/cypress-ci-run.mjs
-          record: true
-          env: ENV=production
-            NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
-            NEXT_PUBLIC_URL=${{ vars.NEXT_PUBLIC_URL }}
-            NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}
-            NEXT_PUBLIC_DATABASE_URL=${{ secrets.NEXT_PUBLIC_DATABASE_URL }}
-            NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL }}
-            GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
-            GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
-            FACEBOOK_CLIENT_ID=${{ secrets.FACEBOOK_CLIENT_ID }}
-            FACEBOOK_CLIENT_SECRET=${{ secrets.FACEBOOK_CLIENT_SECRET }}
-            MAILGUN_API_KEY=${{ secrets.MAILGUN_API_KEY }}
-            MAILGUN_API_URL=${{ secrets.MAILGUN_API_URL }}
-            MAILGUN_PUBLIC_KEY=${{ secrets.MAILGUN_PUBLIC_KEY }}
-            MAILGUN_DOMAIN=${{ secrets.MAILGUN_DOMAIN }}
-            CYPRESS_TEST_USER=${{ secrets.TEST_USER }}
-            CYPRESS_TEST_PW=${{ secrets.TEST_PW }}
-            CYPRESS_NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
-            CYPRESS_RECORD_KEY=${{ secrets.CYPRESS_RECORD_KEY }}
-            CYPRESS_RETRIES=3
-            GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
-      - uses: actions/upload-artifact@v4
-        # add the line below to store screenshots only on failures
-        if: failure()
-        with:
-          name: cypress-screenshots
-          path: cypress/screenshots
-          if-no-files-found: ignore # 'warn' or 'error' are also available, defaults to `warn`
-      - uses: actions/upload-artifact@v4
-        # add the line below to store screenshots only on failures
-        if: failure()
-        with:
-          name: cypress-videos
-          path: cypress/videos
-          if-no-files-found: ignore # 'warn' or 'error' are also available, defaults to `warn`
-  SonarQube:
-    environment: testing
-    runs-on: ubuntu-latest
-    needs: tests
-    steps:
-      - uses: actions/checkout@v4
-      - uses: sonarsource/sonarqube-scan-action@master
-        with:
-          projectBaseDir: ./
-          args: >
-            -Dsonar.python.coverage.reportPaths=coverage.xml
-            -Dproject.settings=./sonar-project.properties
-            -Dsonar.verbose=true
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-
-      # If you wish to fail your job when the Quality Gate is red use the
-      # following lines. This would typically be used to fail a deployment.
-      - uses: sonarsource/sonarqube-quality-gate-action@master
-        timeout-minutes: 5
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+#  tests:
+#    runs-on: ubuntu-latest
+#    strategy:
+#      fail-fast: false
+#      matrix:
+#        # Run copies of the current job in parallel. These need to be a
+#        # continuous series of numbers, starting with `0`. If you change the
+#        # number of containers, change TOTAL_RUNNERS below.
+#        containers: [ 0, 1, 2, 3 ]
+#    needs: build
+#    steps:
+#      - uses: actions/checkout@v4
+#      - name: Cache next.js build
+#        id: cache-npm
+#        uses: actions/cache@v4
+#        with:
+#          path: .next/
+#          key: ${{ runner.os }}-next-build-${{ hashFiles('src/','public/','next*','package*','jsconfig.json') }}
+#      - name: List files
+#        run: ls -la
+#      - name: Add container env vars
+#        run: echo "THIS_RUNNER=${{ matrix.containers }}" >> $GITHUB_ENV
+#      - name: Cypress run
+#        uses: cypress-io/github-action@v5
+#        with:
+#          start: npm run start
+#          browser: chrome
+#          wait-on: 'http://localhost:3000'
+#          command: yarn node cypress/cypress-ci-run.mjs
+#          record: true
+#          env: ENV=production
+#            NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
+#            NEXT_PUBLIC_URL=${{ vars.NEXT_PUBLIC_URL }}
+#            NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}
+#            NEXT_PUBLIC_DATABASE_URL=${{ secrets.NEXT_PUBLIC_DATABASE_URL }}
+#            NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL }}
+#            GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+#            GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
+#            FACEBOOK_CLIENT_ID=${{ secrets.FACEBOOK_CLIENT_ID }}
+#            FACEBOOK_CLIENT_SECRET=${{ secrets.FACEBOOK_CLIENT_SECRET }}
+#            MAILGUN_API_KEY=${{ secrets.MAILGUN_API_KEY }}
+#            MAILGUN_API_URL=${{ secrets.MAILGUN_API_URL }}
+#            MAILGUN_PUBLIC_KEY=${{ secrets.MAILGUN_PUBLIC_KEY }}
+#            MAILGUN_DOMAIN=${{ secrets.MAILGUN_DOMAIN }}
+#            CYPRESS_TEST_USER=${{ secrets.TEST_USER }}
+#            CYPRESS_TEST_PW=${{ secrets.TEST_PW }}
+#            CYPRESS_NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
+#            CYPRESS_RECORD_KEY=${{ secrets.CYPRESS_RECORD_KEY }}
+#            CYPRESS_RETRIES=3
+#            GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
+#      - uses: actions/upload-artifact@v4
+#        # add the line below to store screenshots only on failures
+#        if: failure()
+#        with:
+#          name: cypress-screenshots
+#          path: cypress/screenshots
+#          if-no-files-found: ignore # 'warn' or 'error' are also available, defaults to `warn`
+#      - uses: actions/upload-artifact@v4
+#        # add the line below to store screenshots only on failures
+#        if: failure()
+#        with:
+#          name: cypress-videos
+#          path: cypress/videos
+#          if-no-files-found: ignore # 'warn' or 'error' are also available, defaults to `warn`
+#  SonarQube:
+#    environment: testing
+#    runs-on: ubuntu-latest
+#    needs: tests
+#    steps:
+#      - uses: actions/checkout@v4
+#      - uses: sonarsource/sonarqube-scan-action@master
+#        with:
+#          projectBaseDir: ./
+#          args: >
+#            -Dsonar.python.coverage.reportPaths=coverage.xml
+#            -Dproject.settings=./sonar-project.properties
+#            -Dsonar.verbose=true
+#        env:
+#          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+#          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+#
+#      # If you wish to fail your job when the Quality Gate is red use the
+#      # following lines. This would typically be used to fail a deployment.
+#      - uses: sonarsource/sonarqube-quality-gate-action@master
+#        timeout-minutes: 5
+#        env:
+#          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

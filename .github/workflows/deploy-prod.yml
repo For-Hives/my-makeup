@@ -1,13 +1,15 @@
 name: Build and Deploy on prod
 
+
 env:
   NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
   NEXT_PUBLIC_URL: ${{ vars.NEXT_PUBLIC_URL }}
 
+
 on:
   push:
     tags:
-      - v*
+      - 'v*.*.*'
 
 jobs:
   build-and-push:
@@ -49,5 +51,6 @@ jobs:
           build-args:
             NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
             NEXT_PUBLIC_URL=${{ vars.NEXT_PUBLIC_URL }}
-      - name: Deploy on cap rover
-        run: docker run caprover/cli-caprover:latest caprover deploy --caproverUrl "${{ secrets.APP_URL }}" --appToken "${{ secrets.APP_TOKEN }}" --caproverApp "${{ secrets.APP_NAME }}" --imageName "${{ secrets.APP_IMAGE }}"
+      - name: Deploy to Coolify
+        run: |
+          curl --request GET '${{ secrets.COOLIFY_WEBHOOK }}' --header 'Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}'
