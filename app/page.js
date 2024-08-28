@@ -1,4 +1,3 @@
-import Head from 'next/head'
 import Hero from '@/components/Global/Hero'
 import Nav from '@/components/Global/Nav'
 import Presentation from '@/components/Home/Presentation'
@@ -10,23 +9,35 @@ import Project from '@/components/Home/Project'
 import CTA from '@/components/Global/CTA'
 import MOTD from '@/services/MOTD'
 
-export default function Home({ talents }) {
+export const metadata = {
+	title: 'Accueil - My-Makeup le moteur de recherche pour les maquilleuses',
+	description: `Trouvez la meilleure maquilleuse professionnelle à domicile près de chez. Une maquilleuse rien que pour vous,pour un événement, un shooting, ou une soirée,
+                    vous trouverez votre bonheur pour vous sublimer dans n'importe quelle situation ! Inscription gratuite.`,
+	//seo tag canonical link
+	robots: { canonical: 'https://my-makeup.fr' },
+}
+
+export default async function Home() {
 	MOTD()
+
+	const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/talents`, {
+		method: 'GET',
+		headers: {
+			// 	token
+			'Content-Type': 'application/json',
+			Accept: 'application/json',
+		},
+	})
+
+	if (!res) {
+		return {
+			notFound: true,
+		}
+	}
+
+	const { data: talents } = await res.json()
 	return (
 		<>
-			<Head>
-				<title>
-					Accueil - My-Makeup le moteur de recherche pour les maquilleuses
-				</title>
-				<meta
-					name="description"
-					content="Trouvez la meilleure maquilleuse professionnelle à domicile près de chez. Une maquilleuse rien que pour vous,pour un événement, un shooting, ou une soirée,
-                    vous trouverez votre bonheur pour vous sublimer dans n'importe quelle situation ! Inscription gratuite."
-				/>
-				{/*	seo tag canonical link */}
-				<link rel="canonical" href="https://my-makeup.fr" />
-			</Head>
-
 			<Nav />
 			<main className={'relative'}>
 				<Hero
@@ -53,29 +64,4 @@ export default function Home({ talents }) {
 			<Footer />
 		</>
 	)
-}
-
-export async function getServerSideProps() {
-	const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/talents`, {
-		method: 'GET',
-		headers: {
-			// 	token
-			'Content-Type': 'application/json',
-			Accept: 'application/json',
-		},
-	})
-
-	if (!res) {
-		return {
-			notFound: true,
-		}
-	}
-
-	const data = await res.json()
-
-	return {
-		props: {
-			talents: data.data,
-		},
-	}
 }
