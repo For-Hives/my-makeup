@@ -1,3 +1,5 @@
+'use client'
+
 import React, { useState } from 'react'
 import { MagnifyingGlassIcon } from '@heroicons/react/20/solid'
 import Image from 'next/image'
