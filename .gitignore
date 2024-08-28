@@ -46,3 +46,9 @@ cypress.env.json
 yarn.lock
 
 .scannerwork/
+
+cypress
+.txt
+
+package-lock.json
+bun.lockb
