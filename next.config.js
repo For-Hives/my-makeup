@@ -1,15 +1,14 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-	reactStrictMode: true,
 	images: {
 		remotePatterns: [
 			{
-				protocol: 'https',
 				hostname: '**.andy-cinquin.fr',
+				protocol: 'https',
 			},
 		],
 	},
-	cacheMaxMemorySize: 0,
+	reactStrictMode: true,
 }
 
 module.exports = nextConfig
