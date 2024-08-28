@@ -1,6 +1,6 @@
 export default function MOTD() {
 	if (typeof window !== 'undefined') {
-		console.log(
+		console.info(
 			`
 
            ,▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄L

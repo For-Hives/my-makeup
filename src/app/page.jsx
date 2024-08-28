@@ -1,74 +1,74 @@
+import React from 'react'
+
 import Head from 'next/head'
-import Hero from '@/components/Global/Hero'
+
+import Collaboration from '@/components/Home/Collaboration'
 import Presentation from '@/components/Home/Presentation'
 import Talents from '@/components/Home/Talents'
-import Collaboration from '@/components/Home/Collaboration'
-import React from 'react'
 import Project from '@/components/Home/Project'
+import Hero from '@/components/Global/Hero'
 import CTA from '@/components/Global/CTA'
+import Nav from '@/components/Global/Nav'
 import MOTD from '@/services/MOTD'
-import Nav from "@/components/Global/Nav";
 
 async function getTalents() {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/talents`, {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-        },
-    })
+	const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/talents`, {
+		headers: {
+			'Content-Type': 'application/json',
+			Accept: 'application/json',
+		},
+		method: 'GET',
+	})
 
-    console.log(res)
+	if (!res.ok) {
+		throw new Error('Failed to fetch talents')
+	}
 
-    if (!res.ok) {
-        throw new Error('Failed to fetch talents')
-    }
-
-    return res.json()
+	return res.json()
 }
 
 export default async function Home() {
-    const talents = await getTalents()
+	const talents = await getTalents()
 
-    MOTD()
+	MOTD()
 
-    return (
-        <>
-            <Head>
-                <title>
-                    Accueil - My-Makeup le moteur de recherche pour les maquilleuses
-                </title>
-                <meta
-                    name="description"
-                    content="Trouvez la meilleure maquilleuse professionnelle à domicile près de. Une maquilleuse rien que pour vous,pour un événement, un shooting, ou une soirée,
+	return (
+		<>
+			<Head>
+				<title>
+					Accueil - My-Makeup le moteur de recherche pour les maquilleuses
+				</title>
+				<meta
+					content="Trouvez la meilleure maquilleuse professionnelle à domicile près de. Une maquilleuse rien que pour vous,pour un événement, un shooting, ou une soirée,
                     vous trouverez votre bonheur pour vous sublimer dans n'importe quelle situation ! Inscription gratuite."
-                />
-                <link rel="canonical" href="https://my-makeup.fr" />
-            </Head>
+					name="description"
+				/>
+				<link href="https://my-makeup.fr" rel="canonical" />
+			</Head>
 
-            <Nav/>
-            <main className={'relative'}>
-                <Hero
-                    title={
-                        <>
-                            Trouver la maquilleuse qui vous correspond n&apos;a jamais été
-                            aussi simple
-                        </>
-                    }
-                    description={
-                        <>
-                            Trouvez la maquilleuse spécialisée dans le domaine que vous
-                            recherchez, maquillage pour les mariées, maquillage de soirée,
-                            maquillage professionnel...
-                        </>
-                    }
-                />
-                <Presentation />
-                <Talents talents={talents.data} />
-                <Collaboration />
-                <Project />
-                <CTA />
-            </main>
-        </>
-    )
+			<Nav />
+			<main className={'relative'}>
+				<Hero
+					description={
+						<>
+							Trouvez la maquilleuse spécialisée dans le domaine que vous
+							recherchez, maquillage pour les mariées, maquillage de soirée,
+							maquillage professionnel...
+						</>
+					}
+					title={
+						<>
+							Trouver la maquilleuse qui vous correspond n&apos;a jamais été
+							aussi simple
+						</>
+					}
+				/>
+				<Presentation />
+				<Talents talents={talents.data} />
+				<Collaboration />
+				<Project />
+				<CTA />
+			</main>
+		</>
+	)
 }
