@@ -1,10 +1,8 @@
 name: Build and Deploy on prod
 
-
 env:
   NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
   NEXT_PUBLIC_URL: ${{ vars.NEXT_PUBLIC_URL }}
-
 
 on:
   push:
@@ -48,8 +46,7 @@ jobs:
           context: .
           push: true
           tags: ${{ secrets.APP_IMAGE }}
-          build-args:
-            NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
+          build-args: NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
             NEXT_PUBLIC_URL=${{ vars.NEXT_PUBLIC_URL }}
 #      - name: Deploy to Coolify
 #        run: |
