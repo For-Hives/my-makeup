@@ -1,4 +1,5 @@
 import React from 'react'
+
 import LoaderAnimation from '@/components/Global/Loader/LoaderAnimation'
 
 function FullLoader(props) {

@@ -1,9 +1,11 @@
 import React, { useEffect } from 'react'
-import Image from 'next/image'
-import { BadgeDispo } from '@/components/Profil/Atoms/BadgeDispo'
-import { BadgeIndispo } from '@/components/Profil/Atoms/BadgeIndispo'
-import ModalUpdateResumeProfil from '@/components/Profil/Atoms/ModalUpdate/ModalUpdateResumeProfil'
+
 import { useRouter } from 'next/router'
+import Image from 'next/image'
+
+import ModalUpdateResumeProfil from '@/components/Profil/Atoms/ModalUpdate/ModalUpdateResumeProfil'
+import { BadgeIndispo } from '@/components/Profil/Atoms/BadgeIndispo'
+import { BadgeDispo } from '@/components/Profil/Atoms/BadgeDispo'
 
 function ResumeProfil(props) {
 	const router = useRouter()
@@ -72,14 +74,14 @@ function ResumeProfil(props) {
 		>
 			{!isPublic && (
 				<button
-					data-cy="update-resume-button"
-					onClick={handleIsModalOpen}
 					className={
 						'absolute left-0 top-0 -z-10 flex h-full w-full items-center justify-center opacity-0 ' +
-						'bg-white/75 backdrop-blur-none group-hover:z-20 group-hover:opacity-100 ' +
-						'pointer-events-none transition duration-300 group-hover:pointer-events-auto group-hover:backdrop-blur-[2px] ' +
+						'bg-white/75 backdrop-blur-none group-hover:z-20 group-hover:opacity-100' +
+						'pointer-events-none transition duration-300 group-hover:pointer-events-auto group-hover:backdrop-blur-[2px]' +
 						'user-select-none group-hover:user-select-auto focus:outline-none'
 					}
+					data-cy="update-resume-button"
+					onClick={handleIsModalOpen}
 				>
 					<div
 						className={
@@ -94,10 +96,10 @@ function ResumeProfil(props) {
 				</button>
 			)}
 			<ModalUpdateResumeProfil
-				isModalOpen={isModalOpen}
 				handleIsModalOpen={handleIsModalOpen}
 				handleProfilPicture={handleProfilPicture}
 				handleUpdateUser={handleUpdateUser}
+				isModalOpen={isModalOpen}
 				user={user}
 			/>
 			<div className="mx-auto max-w-7xl pt-[90px]">
@@ -119,11 +121,11 @@ function ResumeProfil(props) {
 							</button>
 						) : null}
 						<Image
-							src={profilPicture}
 							alt={'ppmakeup'}
-							width={500}
-							height={500}
 							className={'h-[200px] w-[200px] rounded-full object-cover'}
+							height={500}
+							src={profilPicture}
+							width={500}
 						></Image>
 					</div>
 					<div

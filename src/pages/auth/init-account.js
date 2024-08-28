@@ -1,16 +1,18 @@
 import React, { useEffect, useState } from 'react'
-import Head from 'next/head'
+import { useForm } from 'react-hook-form'
+import { toast } from 'react-toastify'
+
 import { getSession, useSession } from 'next-auth/react'
-import { useRouter } from 'next/router'
 import { CheckIcon } from '@heroicons/react/24/outline'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useRouter } from 'next/router'
+import Image from 'next/image'
+import Head from 'next/head'
 import Link from 'next/link'
 import * as zod from 'zod'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { patchMeMakeup } from '@/services/PatchMeMakeup'
-import { toast } from 'react-toastify'
+
 import FullLoader from '@/components/Global/Loader/FullLoader'
-import Image from 'next/image'
+import { patchMeMakeup } from '@/services/PatchMeMakeup'
 import Loader from '@/components/Global/Loader/Loader'
 import Warning from '@/components/Global/Warning'
 
@@ -30,9 +32,9 @@ const schema = zod
 
 function InitAccount() {
 	const {
-		register,
-		handleSubmit,
 		formState: { errors },
+		handleSubmit,
+		register,
 		reset,
 	} = useForm({
 		resolver: zodResolver(schema),
@@ -40,10 +42,10 @@ function InitAccount() {
 
 	const [step, setStep] = useState(0)
 	const [stepsList, setStepsList] = useState([
-		{ name: "Verification de l'email", href: '#', status: 'upcoming' },
-		{ name: 'Initialisation du compte', href: '#', status: 'upcoming' },
-		{ name: 'Nom et Prénom', href: '#', status: 'upcoming' },
-		{ name: 'Finalisation', href: '#', status: 'upcoming' },
+		{ name: "Verification de l'email", status: 'upcoming', href: '#' },
+		{ name: 'Initialisation du compte', status: 'upcoming', href: '#' },
+		{ name: 'Nom et Prénom', status: 'upcoming', href: '#' },
+		{ name: 'Finalisation', status: 'upcoming', href: '#' },
 	])
 	const [user, setUser] = useState(null)
 	const [accountInit, setAccountInit] = useState(false)
@@ -84,14 +86,14 @@ function InitAccount() {
 								setStep(2)
 								// if yes, 2 stepper : init account
 								fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/me-makeup`, {
-									method: 'POST',
 									headers: {
+										Authorization: `Bearer ${session.jwt}`,
 										// 	token
 										'Content-Type': 'application/json',
 										Accept: 'application/json',
-										Authorization: `Bearer ${session.jwt}`,
 									},
 									body: JSON.stringify({}),
+									method: 'POST',
 								})
 									.then(response => {
 										if (response.status === 200) {
@@ -102,9 +104,9 @@ function InitAccount() {
 										toast(
 											'Une erreur est survenue, veuillez réessayer plus tard',
 											{
+												toastId: 'toast-alert',
 												type: 'error',
 												icon: '⛔',
-												toastId: 'toast-alert',
 											}
 										)
 									})
@@ -124,80 +126,80 @@ function InitAccount() {
 			setStepsList([
 				{
 					name: "Vérification de l'email",
-					href: '#',
 					status: 'upcoming',
+					href: '#',
 				},
-				{ name: 'Initialisation du compte', href: '#', status: 'upcoming' },
+				{ name: 'Initialisation du compte', status: 'upcoming', href: '#' },
 				{
 					name: 'Nom et Prénom',
-					href: '#',
 					status: 'upcoming',
+					href: '#',
 				},
-				{ name: 'Finalisation', href: '#', status: 'upcoming' },
+				{ name: 'Finalisation', status: 'upcoming', href: '#' },
 			])
 		}
 		if (step === 1) {
 			setStepsList([
 				{
 					name: "Vérification de l'email",
-					href: '#',
 					status: 'current',
+					href: '#',
 				},
-				{ name: 'Initialisation du compte', href: '#', status: 'upcoming' },
+				{ name: 'Initialisation du compte', status: 'upcoming', href: '#' },
 				{
 					name: 'Nom et Prénom',
-					href: '#',
 					status: 'upcoming',
+					href: '#',
 				},
-				{ name: 'Finalisation', href: '#', status: 'upcoming' },
+				{ name: 'Finalisation', status: 'upcoming', href: '#' },
 			])
 		}
 		if (step === 2) {
 			setStepsList([
 				{
 					name: "Vérification de l'email",
-					href: '#',
 					status: 'complete',
+					href: '#',
 				},
-				{ name: 'Initialisation du compte', href: '#', status: 'current' },
+				{ name: 'Initialisation du compte', status: 'current', href: '#' },
 				{
 					name: 'Nom et Prénom',
-					href: '#',
 					status: 'upcoming',
+					href: '#',
 				},
-				{ name: 'Finalisation', href: '#', status: 'upcoming' },
+				{ name: 'Finalisation', status: 'upcoming', href: '#' },
 			])
 		}
 		if (step === 3) {
 			setStepsList([
 				{
 					name: "Vérification de l'email",
-					href: '#',
 					status: 'complete',
+					href: '#',
 				},
-				{ name: 'Initialisation du compte', href: '#', status: 'complete' },
+				{ name: 'Initialisation du compte', status: 'complete', href: '#' },
 				{
 					name: 'Nom et Prénom',
-					href: '#',
 					status: 'current',
+					href: '#',
 				},
-				{ name: 'Finalisation', href: '#', status: 'upcoming' },
+				{ name: 'Finalisation', status: 'upcoming', href: '#' },
 			])
 		}
 		if (step === 4) {
 			setStepsList([
 				{
 					name: "Vérification de l'email",
-					href: '#',
 					status: 'complete',
+					href: '#',
 				},
-				{ name: 'Initialisation du compte', href: '#', status: 'complete' },
+				{ name: 'Initialisation du compte', status: 'complete', href: '#' },
 				{
 					name: 'Nom et Prénom',
-					href: '#',
 					status: 'complete',
+					href: '#',
 				},
-				{ name: 'Finalisation', href: '#', status: 'current' },
+				{ name: 'Finalisation', status: 'current', href: '#' },
 			])
 		}
 	}, [step])
@@ -215,9 +217,9 @@ function InitAccount() {
 			<Head>
 				<title>My-Makeup</title>
 				<meta
-					name="description"
 					content="Inscription sur my-makeup.fr la plateforme qui va révolutionner votre
 	            recherche de maquilleuses professionnelles, ou votre recherche de client !"
+					name="description"
 				/>
 			</Head>
 			<div className="relative flex min-h-screen bg-white">
@@ -228,21 +230,21 @@ function InitAccount() {
 							{/* We use less vertical padding on card headers on desktop than on body sections */}
 							<nav aria-label="Progress">
 								<ol
-									role="list"
 									className="divide-y divide-gray-300 rounded-md border border-gray-300 md:flex md:divide-y-0"
+									role="list"
 								>
 									{stepsList.map((step, stepIdx) => (
-										<li key={step.name} className="relative md:flex md:flex-1">
+										<li className="relative md:flex md:flex-1" key={step.name}>
 											{step.status === 'complete' ? (
 												<Link
-													href={step.href}
 													className="group flex w-full items-center"
+													href={step.href}
 												>
 													<div className="flex items-center gap-4 px-4 py-3 text-sm font-medium md:px-6 md:py-4">
 														<span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-indigo-600 group-hover:bg-indigo-800 md:h-10 md:w-10">
 															<CheckIcon
-																className="h-4 w-4 text-white md:h-6 md:w-6"
 																aria-hidden="true"
+																className="h-4 w-4 text-white md:h-6 md:w-6"
 															/>
 														</span>
 														<span className="text-sm font-medium text-gray-900">
@@ -254,9 +256,9 @@ function InitAccount() {
 												<>
 													{step.status === 'current' ? (
 														<Link
-															href={step.href}
-															className="group flex w-full items-center"
 															aria-current="step"
+															className="group flex w-full items-center"
+															href={step.href}
 														>
 															<div className="flex items-center gap-4 px-4 py-3 text-sm font-medium md:px-6 md:py-4">
 																<div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border-2 border-indigo-600 md:h-10 md:w-10">
@@ -271,8 +273,8 @@ function InitAccount() {
 														</Link>
 													) : (
 														<Link
-															href={step.href}
 															className="group flex items-center"
+															href={step.href}
 														>
 															<div className="flex items-center gap-4 px-4 py-3 text-sm font-medium md:px-6 md:py-4">
 																<span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border-2 border-gray-300 group-hover:border-gray-400 md:h-10 md:w-10">
@@ -292,20 +294,20 @@ function InitAccount() {
 												<>
 													{/* Arrow separator for lg screens and up */}
 													<div
-														className="absolute right-0 top-0 hidden h-full w-5 md:block"
 														aria-hidden="true"
+														className="absolute right-0 top-0 hidden h-full w-5 md:block"
 													>
 														<svg
 															className="h-full w-full text-gray-300"
-															viewBox="0 0 22 80"
 															fill="none"
 															preserveAspectRatio="none"
+															viewBox="0 0 22 80"
 														>
 															<path
 																d="M0 -2L20 40L0 82"
-																vectorEffect="non-scaling-stroke"
 																stroke="currentcolor"
 																strokeLinejoin="round"
+																vectorEffect="non-scaling-stroke"
 															/>
 														</svg>
 													</div>
@@ -330,11 +332,11 @@ function InitAccount() {
 												className={'flex w-full items-center justify-center'}
 											>
 												<Image
-													src={'/assets/brand/050-email.svg'}
-													width={500}
-													height={500}
 													alt={'email Vérification'}
 													className={'opacity-5'}
+													height={500}
+													src={'/assets/brand/050-email.svg'}
+													width={500}
 												/>
 											</div>
 										</div>
@@ -380,38 +382,38 @@ function InitAccount() {
 										<div className="mx-auto w-full sm:max-w-[480px]">
 											<div className="rounded-lg bg-white px-6 py-12 shadow-xl sm:px-12">
 												<form
-													className="space-y-6"
 													action="#"
+													className="space-y-6"
 													method="POST"
 													onSubmit={handleSubmit(onSubmit)}
 												>
 													<div>
 														<label
-															htmlFor="first_name"
 															className="block text-sm font-medium leading-6 text-gray-900"
+															htmlFor="first_name"
 														>
 															Prénom
 														</label>
 														<div className="mt-2">
 															<input
 																data-cy={'first_name'}
-																type="text"
-																required
-																value={fistName}
 																name="first_name"
+																required
+																type="text"
+																value={fistName}
 																{...register('first_name')}
+																className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
 																onChange={e => {
 																	setFirstName(e.target.value)
 																}}
-																className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
 															/>
 														</div>
 													</div>
 
 													<div>
 														<label
-															htmlFor="last_name"
 															className="block text-sm font-medium leading-6 text-gray-900"
+															htmlFor="last_name"
 														>
 															Nom de famille
 														</label>
@@ -419,24 +421,24 @@ function InitAccount() {
 															<input
 																data-cy={'last_name'}
 																id="last_name"
-																type="text"
-																required
 																name="last_name"
+																required
+																type="text"
 																value={lastName}
 																{...register('last_name')}
+																className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
 																onChange={e => {
 																	setLastName(e.target.value)
 																}}
-																className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
 															/>
 														</div>
 													</div>
 
 													<div>
 														<button
+															className="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
 															data-cy={'submit'}
 															type="submit"
-															className="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
 														>
 															Suivant
 														</button>
@@ -456,7 +458,7 @@ function InitAccount() {
 											</h2>
 											<div
 												className={
-													'flex h-full w-full flex-col items-center justify-center '
+													'flex h-full w-full flex-col items-center justify-center'
 												}
 											>
 												<h2 className={'text-center text-gray-700'}>
@@ -467,15 +469,15 @@ function InitAccount() {
 											</div>
 										</div>
 										<Warning
-											title={'Attention !'}
 											description={
 												"Votre profil ne sera pas visible tant qu'il ne sera pas totalement rempli !"
 											}
+											title={'Attention !'}
 										/>
 										<Link
+											className="rounded-md bg-indigo-600 px-3 py-1.5 text-white"
 											data-cy={'profil'}
 											href="/auth/profil"
-											className="rounded-md bg-indigo-600 px-3 py-1.5 text-white"
 										>
 											Mon profil
 										</Link>
@@ -500,13 +502,13 @@ async function getUserFromSession(session, user, setUser) {
 	const userData = await fetch(
 		`${process.env.NEXT_PUBLIC_API_URL}/api/users/me`,
 		{
-			method: 'GET',
 			headers: {
+				Authorization: `Bearer ${session.jwt}`,
 				// 	token
 				'Content-Type': 'application/json',
 				Accept: 'application/json',
-				Authorization: `Bearer ${session.jwt}`,
 			},
+			method: 'GET',
 		}
 	)
 	const res = await userData.json()

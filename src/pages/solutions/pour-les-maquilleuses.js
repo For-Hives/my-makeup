@@ -1,8 +1,10 @@
 import React from 'react'
-import Nav from '@/components/Global/Nav'
-import Footer from '@/components/Global/Footer'
+
 import Head from 'next/head'
+
+import Footer from '@/components/Global/Footer'
 import Hero from '@/components/Global/Hero'
+import Nav from '@/components/Global/Nav'
 import CTA from '@/components/Global/CTA'
 
 /**
@@ -15,13 +17,13 @@ function PourLesMaquilleuses(props) {
 			<Head>
 				<title>Solutions My-Makeup pour les Maquilleuses !</title>
 				<meta
-					name="description"
 					content="Avec notre plateforme, donner un coup de boost à votre carrière n'a jamais été aussi simple !"
+					name="description"
 				/>
 				{/*	seo tag canonical link */}
 				<link
-					rel="canonical"
 					href="https://my-makeup.fr/solutions/pour-les-maquilleuses"
+					rel="canonical"
 				/>
 			</Head>
 
@@ -29,14 +31,6 @@ function PourLesMaquilleuses(props) {
 
 			<main className={'relative'}>
 				<Hero
-					imgBackgroundSrc={'/assets/back/maquilleuse_asiatique_white.webp'}
-					title={
-						<>
-							Développez Votre Carrière de Maquilleuse avec&nbsp;
-							<span className={'text-indigo-900'}>My&nbsp;Makeup&nbsp;</span>
-							La solution de vos rêves&nbsp;!
-						</>
-					}
 					description={
 						<>
 							{
@@ -44,8 +38,16 @@ function PourLesMaquilleuses(props) {
 							}
 						</>
 					}
-					isSearchDisplayed={false}
+					imgBackgroundSrc={'/assets/back/maquilleuse_asiatique_white.webp'}
 					isCTALoginDisplayed={true}
+					isSearchDisplayed={false}
+					title={
+						<>
+							Développez Votre Carrière de Maquilleuse avec&nbsp;
+							<span className={'text-indigo-900'}>My&nbsp;Makeup&nbsp;</span>
+							La solution de vos rêves&nbsp;!
+						</>
+					}
 				/>
 				<div
 					className={'relative mx-auto my-24 max-w-7xl px-4 md:my-48 md:px-0'}

@@ -1,5 +1,7 @@
 import React, { useEffect } from 'react'
+
 import { Tab } from '@headlessui/react'
+
 import { DescriptionPriceOffer } from '@/components/Profil/Childs/ServiceOffers/DescriptionPriceOffer'
 import { OptionsOffers } from '@/components/Profil/Childs/ServiceOffers/OptionsOffers'
 
@@ -30,12 +32,12 @@ function ViewServiceOffersProfil(props) {
 							user?.service_offers?.map((service_offer, index) => {
 								return (
 									<Tab
-										key={index}
 										className={
 											'h-auto w-full border-b-2 border-gray-300/20 bg-gray-50/30 p-4 text-xs text-gray-600 hover:bg-gray-50/50 focus:outline-none ' +
 											// 	aria selected
-											' aria-selected:border-b-2 aria-selected:border-indigo-800  aria-selected:text-gray-900'
+											' aria-selected:border-b-2 aria-selected:border-indigo-800 aria-selected:text-gray-900'
 										}
+										key={index}
 									>
 										{service_offer?.name}
 									</Tab>
@@ -58,8 +60,8 @@ function ViewServiceOffersProfil(props) {
 											</h2>
 										</div>
 										<DescriptionPriceOffer
-											serviceOffer={service_offer}
 											index={null}
+											serviceOffer={service_offer}
 										/>
 									</div>
 									<div className={'flex w-full flex-col gap-2 py-2'}>

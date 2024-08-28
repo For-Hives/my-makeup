@@ -1,61 +1,63 @@
 import React, { Fragment, useEffect, useRef, useState } from 'react'
-import { Dialog, Tab, Transition } from '@headlessui/react'
 import { useForm } from 'react-hook-form'
-import { useSession } from 'next-auth/react'
+
+import { Dialog, Tab, Transition } from '@headlessui/react'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useSession } from 'next-auth/react'
 import * as zod from 'zod'
-import { patchMeMakeup } from '@/services/PatchMeMakeup'
+
 import { DescriptionPriceOffer } from '@/components/Profil/Childs/ServiceOffers/DescriptionPriceOffer'
 import { OptionsOffers } from '@/components/Profil/Childs/ServiceOffers/OptionsOffers'
+import { patchMeMakeup } from '@/services/PatchMeMakeup'
 
 const schema = zod
 	.object({
-		name: zod
-			.string({ required_error: 'Le nom du service est requis.' })
-			.min(1, 'Le nom du service est requis.')
-			.max(70, 'Le nom du service ne doit pas dépasser 70 caractères.'),
-		price: zod
-			.string({
-				required_error: 'Le prix du service est requis.',
-			})
-			.min(1, 'Le prix du service est requis.')
-			.max(70, 'Le prix du service ne doit pas dépasser 70 caractères.'),
-		description: zod
-			.string({ required_error: 'La description du service est requise.' })
-			.min(1, 'La description du service est requise.')
-			.max(2000, 'La description ne doit pas dépasser 2000 caractères.'),
 		services: zod
 			.array(
 				zod.object({
-					name: zod
-						.string({ required_error: 'Le nom du service est requis.' })
-						.min(1, 'Le nom du service est requis.')
-						.max(70, 'Le nom du service ne doit pas dépasser 70 caractères.'),
-					price: zod
-						.string({
-							required_error: 'Le prix du service est requis.',
-						})
-						.min(1, 'Le prix du service est requis.')
-						.max(70, 'Le prix du service ne doit pas dépasser 70 caractères.'),
 					description: zod
 						.string({
 							required_error: 'La description du service est requise.',
 						})
 						.min(1, 'La description du service est requise.')
 						.max(2000, 'La description ne doit pas dépasser 2000 caractères.'),
+					price: zod
+						.string({
+							required_error: 'Le prix du service est requis.',
+						})
+						.min(1, 'Le prix du service est requis.')
+						.max(70, 'Le prix du service ne doit pas dépasser 70 caractères.'),
+					name: zod
+						.string({ required_error: 'Le nom du service est requis.' })
+						.min(1, 'Le nom du service est requis.')
+						.max(70, 'Le nom du service ne doit pas dépasser 70 caractères.'),
 				})
 			)
 			.optional(),
+		description: zod
+			.string({ required_error: 'La description du service est requise.' })
+			.min(1, 'La description du service est requise.')
+			.max(2000, 'La description ne doit pas dépasser 2000 caractères.'),
+		price: zod
+			.string({
+				required_error: 'Le prix du service est requis.',
+			})
+			.min(1, 'Le prix du service est requis.')
+			.max(70, 'Le prix du service ne doit pas dépasser 70 caractères.'),
+		name: zod
+			.string({ required_error: 'Le nom du service est requis.' })
+			.min(1, 'Le nom du service est requis.')
+			.max(70, 'Le nom du service ne doit pas dépasser 70 caractères.'),
 	})
-	.required({ name: true, price: true, description: true })
+	.required({ description: true, price: true, name: true })
 
 export default function ModalUpdateServiceOffersProfil(props) {
 	const user = props.user
 
 	const {
-		register,
-		handleSubmit,
 		formState: { errors },
+		handleSubmit,
+		register,
 		reset,
 	} = useForm({
 		resolver: zodResolver(schema),
@@ -115,11 +117,11 @@ export default function ModalUpdateServiceOffersProfil(props) {
 				const userServiceOffersCopy = userServiceOffers.map(serviceOffer => {
 					if (serviceOffer.id === userServiceOffersId) {
 						return {
-							id: serviceOffer.id,
-							name: userServiceOffersName,
-							price: newPrice,
 							description: userServiceOffersDescription,
+							name: userServiceOffersName,
+							id: serviceOffer.id,
 							options: newOptions,
+							price: newPrice,
 						}
 					} else {
 						return serviceOffer
@@ -135,10 +137,10 @@ export default function ModalUpdateServiceOffersProfil(props) {
 						...userServiceOffers,
 						{
 							id: 'added' + userServiceOffersName + userServiceOffersPrice,
-							name: userServiceOffersName,
-							price: newPrice,
 							description: userServiceOffersDescription,
+							name: userServiceOffersName,
 							options: newOptions,
+							price: newPrice,
 						},
 					])
 					setResetFormState()
@@ -165,18 +167,18 @@ export default function ModalUpdateServiceOffersProfil(props) {
 							option.id.toString().startsWith('added')
 						) {
 							return {
-								name: option.name,
-								price: option.price,
 								description: option.description,
+								price: option.price,
+								name: option.name,
 							}
 						} else {
 							return option
 						}
 					})
 					return {
-						name: serviceOffer.name,
-						price: serviceOffer.price,
 						description: serviceOffer.description,
+						price: serviceOffer.price,
+						name: serviceOffer.name,
 						options: options,
 					}
 				} else {
@@ -187,18 +189,18 @@ export default function ModalUpdateServiceOffersProfil(props) {
 							option.id.toString().startsWith('added')
 						) {
 							return {
-								name: option.name,
-								price: option.price,
 								description: option.description,
+								price: option.price,
+								name: option.name,
 							}
 						} else {
 							return option
 						}
 					})
 					return {
-						name: serviceOffer.name,
-						price: serviceOffer.price,
 						description: serviceOffer.description,
+						price: serviceOffer.price,
+						name: serviceOffer.name,
 						options: options,
 					}
 				}
@@ -212,18 +214,18 @@ export default function ModalUpdateServiceOffersProfil(props) {
 						option.id.toString().startsWith('added')
 					) {
 						return {
-							name: option.name,
-							price: option.price,
 							description: option.description,
+							price: option.price,
+							name: option.name,
 						}
 					} else {
 						return option
 					}
 				})
 				return {
-					name: serviceOffer.name,
-					price: serviceOffer.price,
 					description: serviceOffer.description,
+					price: serviceOffer.price,
+					name: serviceOffer.name,
 					options: options,
 				}
 			})
@@ -284,9 +286,9 @@ export default function ModalUpdateServiceOffersProfil(props) {
 			...userServiceOffersOptions,
 			{
 				id: 'added' + userServiceOffersOptions.length,
-				name: '',
-				price: '',
 				description: '',
+				price: '',
+				name: '',
 			},
 		]
 
@@ -340,11 +342,11 @@ export default function ModalUpdateServiceOffersProfil(props) {
 			const serviceOffersWithId = user.service_offers.map(
 				(serviceOffer, index) => {
 					return {
-						id: index,
-						name: serviceOffer.name,
-						price: serviceOffer.price,
 						description: serviceOffer.description,
 						options: serviceOffer.options,
+						price: serviceOffer.price,
+						name: serviceOffer.name,
+						id: index,
 					}
 				}
 			)
@@ -355,7 +357,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 	}, [open, user])
 
 	return (
-		<Transition.Root show={open} as={Fragment}>
+		<Transition.Root as={Fragment} show={open}>
 			<Dialog
 				as="div"
 				className="relative z-30"
@@ -387,12 +389,12 @@ export default function ModalUpdateServiceOffersProfil(props) {
 						>
 							<Dialog.Panel className="relative w-full transform rounded-lg bg-white p-8 text-left shadow-2xl transition-all sm:max-w-7xl">
 								<button
-									type="button"
-									onClick={props.handleIsModalOpen}
-									ref={cancelButtonRef}
 									className={
 										'absolute right-0 top-0 m-6 flex items-center justify-center'
 									}
+									onClick={props.handleIsModalOpen}
+									ref={cancelButtonRef}
+									type="button"
 								>
 									<span className="material-icons-round">close</span>
 								</button>
@@ -412,20 +414,20 @@ export default function ModalUpdateServiceOffersProfil(props) {
 									>
 										<div
 											className={
-												'max-h-[600px] w-full overflow-y-scroll  pr-4 md:w-2/5'
+												'max-h-[600px] w-full overflow-y-scroll pr-4 md:w-2/5'
 											}
 										>
 											<div className="grid grid-cols-1 gap-4">
 												<div className={'flex flex-col gap-4'}>
 													<form
-														onSubmit={handleSubmit(onSubmit)}
-														method="POST"
 														className="flex flex-col gap-4"
+														method="POST"
+														onSubmit={handleSubmit(onSubmit)}
 													>
 														<div>
 															<label
-																htmlFor="name"
 																className="block text-sm text-gray-700"
+																htmlFor="name"
 															>
 																Nom de la prestation
 															</label>
@@ -438,15 +440,15 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																	{...register('name', {
 																		required: true,
 																	})}
+																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
+																	onChange={handleUpdateServiceOffersName}
 																	required
 																	value={userServiceOffersName ?? ''}
-																	onChange={handleUpdateServiceOffersName}
-																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																/>
 																{errors.name && (
 																	<p
-																		data-cy={'error-name'}
 																		className={'mt-2 text-xs text-red-500/80'}
+																		data-cy={'error-name'}
 																	>
 																		{errors.name.message}
 																	</p>
@@ -455,8 +457,8 @@ export default function ModalUpdateServiceOffersProfil(props) {
 														</div>
 														<div>
 															<label
-																htmlFor="description"
 																className="block text-sm text-gray-700"
+																htmlFor="description"
 															>
 																{'Description de la prestation'}
 															</label>
@@ -468,17 +470,17 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																	{...register('description', {
 																		required: true,
 																	})}
-																	required
-																	value={userServiceOffersDescription ?? ''}
+																	className="block min-h-[150px] w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
 																	onChange={
 																		handleUpdateServiceOffersDescription
 																	}
-																	className="block min-h-[150px] w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
+																	required
+																	value={userServiceOffersDescription ?? ''}
 																/>
 																{errors.description && (
 																	<p
-																		data-cy={'error-description'}
 																		className={'mt-2 text-xs text-red-500/80'}
+																		data-cy={'error-description'}
 																	>
 																		{errors.description.message}
 																	</p>
@@ -487,8 +489,8 @@ export default function ModalUpdateServiceOffersProfil(props) {
 														</div>
 														<div>
 															<label
-																htmlFor="price"
 																className="block text-sm text-gray-700"
+																htmlFor="price"
 															>
 																Prix de la prestation
 															</label>
@@ -505,15 +507,15 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																	{...register('price', {
 																		required: true,
 																	})}
+																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
+																	onChange={handleUpdateServiceOffersPrice}
 																	required
 																	value={userServiceOffersPrice ?? ''}
-																	onChange={handleUpdateServiceOffersPrice}
-																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																/>
 																{errors.price && (
 																	<p
-																		data-cy={'error-price'}
 																		className={'mt-2 text-xs text-red-500/80'}
+																		data-cy={'error-price'}
 																	>
 																		{errors.price.message}
 																	</p>
@@ -525,10 +527,10 @@ export default function ModalUpdateServiceOffersProfil(props) {
 													<div>
 														{userServiceOffersOptions.map((option, index) => (
 															<div
-																key={index}
 																className={
 																	'flex w-full flex-col gap-4 py-4 pl-8'
 																}
+																key={index}
 															>
 																<h3
 																	className={
@@ -539,8 +541,8 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																</h3>
 																<div>
 																	<label
-																		htmlFor="name"
 																		className="block text-sm text-gray-700"
+																		htmlFor="name"
 																	>
 																		Nom de la prestation
 																	</label>
@@ -553,7 +555,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																			{...register(`services[${index}].name`, {
 																				required: true,
 																			})}
-																			required
+																			className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
 																			onChange={event => {
 																				// 	change the name value of the correct option
 																				setUserServiceOffersOptions(
@@ -570,19 +572,19 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																					)
 																				)
 																			}}
+																			required
 																			value={
 																				userServiceOffersOptions[index].name
 																			}
-																			className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																		/>
 																		{errors.services &&
 																			errors.services[index] &&
 																			errors.services[index].name && (
 																				<p
-																					data-cy={`error-name-${index}`}
 																					className={
 																						'mt-2 text-xs text-red-500/80'
 																					}
+																					data-cy={`error-name-${index}`}
 																				>
 																					{errors.services[index].name.message}
 																				</p>
@@ -591,8 +593,8 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																</div>
 																<div>
 																	<label
-																		htmlFor="description"
 																		className="block text-sm text-gray-700"
+																		htmlFor="description"
 																	>
 																		{'Description de la prestation'}
 																	</label>
@@ -607,7 +609,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																					required: true,
 																				}
 																			)}
-																			required
+																			className="block min-h-[150px] w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
 																			onChange={event => {
 																				// 	change the name value of the correct option
 																				setUserServiceOffersOptions(
@@ -625,20 +627,20 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																					)
 																				)
 																			}}
+																			required
 																			value={
 																				userServiceOffersOptions[index]
 																					.description
 																			}
-																			className="block min-h-[150px] w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																		/>
 																		{errors.services &&
 																			errors.services[index] &&
 																			errors.services[index].description && (
 																				<p
-																					data-cy={`error-description-${index}`}
 																					className={
 																						'mt-2 text-xs text-red-500/80'
 																					}
+																					data-cy={`error-description-${index}`}
 																				>
 																					{
 																						errors.services[index].description
@@ -650,8 +652,8 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																</div>
 																<div>
 																	<label
-																		htmlFor="price"
 																		className="block text-sm text-gray-700"
+																		htmlFor="price"
 																	>
 																		Prix de la prestation
 																	</label>
@@ -672,7 +674,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																			{...register(`services[${index}].price`, {
 																				required: true,
 																			})}
-																			required
+																			className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
 																			onChange={event => {
 																				// 	change the name value of the correct option
 																				setUserServiceOffersOptions(
@@ -689,19 +691,19 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																					)
 																				)
 																			}}
+																			required
 																			value={
 																				userServiceOffersOptions[index].price
 																			}
-																			className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																		/>
 																		{errors.services &&
 																			errors.services[index] &&
 																			errors.services[index].price && (
 																				<p
-																					data-cy={`error-price-${index}`}
 																					className={
 																						'mt-2 text-xs text-red-500/80'
 																					}
+																					data-cy={`error-price-${index}`}
 																				>
 																					{errors.services[index].price.message}
 																				</p>
@@ -715,10 +717,10 @@ export default function ModalUpdateServiceOffersProfil(props) {
 														className={'flex w-full items-center justify-start'}
 													>
 														<button
-															data-cy={'add-service-offers-option-button'}
 															className={
-																'flex w-full items-center justify-center gap-2 rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400  focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm'
+																'flex w-full items-center justify-center gap-2 rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm'
 															}
+															data-cy={'add-service-offers-option-button'}
 															onClick={handleAddServiceOffersOption}
 														>
 															<span className={'text-gray-700'}>
@@ -731,10 +733,10 @@ export default function ModalUpdateServiceOffersProfil(props) {
 													</div>
 													<div className={'flex items-center justify-end'}>
 														<button
-															data-cy={'add-service-offers-button'}
-															type="button"
 															className="btn-primary"
+															data-cy={'add-service-offers-button'}
 															onClick={handleSubmit(onSubmit)}
+															type="button"
 														>
 															{userServiceOffersId === ''
 																? 'Ajouter une prestation'
@@ -753,7 +755,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 											<h3 className={'text-sm text-gray-900'}>
 												Les services déjà ajoutés
 											</h3>
-											<div className={'flex w-full flex-col gap-4 '}>
+											<div className={'flex w-full flex-col gap-4'}>
 												<Tab.Group>
 													<Tab.List
 														className={`${
@@ -765,12 +767,12 @@ export default function ModalUpdateServiceOffersProfil(props) {
 														{userServiceOffers.map((service_offer, index) => {
 															return (
 																<Tab
-																	key={index}
 																	className={
 																		'h-full w-full border-b border-gray-300 bg-gray-50/30 p-4 text-xs text-gray-600 hover:bg-gray-50/50 focus:outline-none ' +
 																		// 	aria selected
 																		' aria-selected:border-b-2 aria-selected:border-indigo-800 aria-selected:font-semibold aria-selected:text-gray-900'
 																	}
+																	key={index}
 																>
 																	{service_offer.name}
 																</Tab>
@@ -792,10 +794,10 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																			}
 																		>
 																			<button
-																				data-cy={`edit-service-offers-button-${index}`}
 																				className={
 																					'flex items-center justify-center'
 																				}
+																				data-cy={`edit-service-offers-button-${index}`}
 																				onClick={() =>
 																					handleEditServiceOffers(
 																						service_offer.id
@@ -807,10 +809,10 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																				</span>
 																			</button>
 																			<button
-																				data-cy="delete-service-offers-button"
 																				className={
 																					'flex items-center justify-center'
 																				}
+																				data-cy="delete-service-offers-button"
 																				onClick={() =>
 																					handleDeleteServiceOffers(
 																						service_offer.id
@@ -855,10 +857,10 @@ export default function ModalUpdateServiceOffersProfil(props) {
 								</div>
 								<div className="mt-4 flex justify-end">
 									<button
-										data-cy="save-button-service-offers"
-										type="button"
 										className="btn-primary"
+										data-cy="save-button-service-offers"
 										onClick={handleSubmitServiceOffers}
+										type="button"
 									>
 										Sauvegarder
 									</button>

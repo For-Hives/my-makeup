@@ -1,5 +1,6 @@
-import { FireIcon } from '@heroicons/react/24/outline'
 import React from 'react'
+
+import { FireIcon } from '@heroicons/react/24/outline'
 
 export function BadgeSuperMaquilleuse() {
 	return (

@@ -1,8 +1,10 @@
 import React from 'react'
-import Nav from '@/components/Global/Nav'
-import Footer from '@/components/Global/Footer'
+
 import Head from 'next/head'
+
+import Footer from '@/components/Global/Footer'
 import Hero from '@/components/Global/Hero'
+import Nav from '@/components/Global/Nav'
 import CTA from '@/components/Global/CTA'
 
 /**
@@ -15,31 +17,31 @@ function CentraliserSesRecherches(props) {
 			<Head>
 				<title>Centraliser ses recherches !</title>
 				<meta
-					name="description"
 					content="Apprenez comment centraliser et organiser vos recherches pour comparer efficacement les maquilleuses et trouver celle qui vous correspond le mieux."
+					name="description"
 				/>
 				{/*	seo tag canonical link */}
 				<link
-					rel="canonical"
 					href="https://my-makeup.fr/particulier/centraliser-ses-recherches"
+					rel="canonical"
 				/>
 			</Head>
 			<Nav />
 			<main className={'relative'}>
 				<Hero
+					description={
+						<>
+							Apprenez comment centraliser et organiser vos recherches pour
+							comparer efficacement les maquilleuses et trouver celle qui vous
+							correspond le mieux.
+						</>
+					}
 					imgBackgroundSrc={'/assets/back/maquilleuse_africaine_white.webp'}
 					title={
 						<>
 							Centraliser ses recherches avec&nbsp;
 							<span className={'text-indigo-900'}>My&nbsp;Makeup</span>
 							&nbsp;{"ça n'a jamais été aussi simple !"}
-						</>
-					}
-					description={
-						<>
-							Apprenez comment centraliser et organiser vos recherches pour
-							comparer efficacement les maquilleuses et trouver celle qui vous
-							correspond le mieux.
 						</>
 					}
 				/>

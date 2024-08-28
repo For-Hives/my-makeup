@@ -1,14 +1,15 @@
 import Image from 'next/image'
-import SearchBloc from '@/components/Global/Search/SearchBloc'
 import Link from 'next/link'
+
+import SearchBloc from '@/components/Global/Search/SearchBloc'
 
 export default function Hero({
 	imgBackgroundSrc = '/assets/back.webp',
-	title,
-	description,
-	isSearchDisplayed = true,
-	isCTALoginDisplayed = false,
 	isSimpleVersionDisplayed = false,
+	isCTALoginDisplayed = false,
+	isSearchDisplayed = true,
+	description,
+	title,
 }) {
 	return (
 		<div className="relative bg-white 2xl:pt-[90px]">
@@ -38,10 +39,10 @@ export default function Hero({
 			<div className="mx-auto max-w-7xl">
 				<div className="relative z-10 lg:w-full lg:max-w-2xl">
 					<svg
-						className="absolute inset-y-0 right-8 hidden h-full w-full translate-x-1/2 transform fill-white lg:block"
-						viewBox="0 0 100 100"
-						preserveAspectRatio="none"
 						aria-hidden="true"
+						className="absolute inset-y-0 right-8 hidden h-full w-full translate-x-1/2 transform fill-white lg:block"
+						preserveAspectRatio="none"
+						viewBox="0 0 100 100"
 					>
 						<polygon points="0,0 90,0 50,100 0,100" />
 					</svg>
@@ -56,7 +57,7 @@ export default function Hero({
 							</div>
 							{isCTALoginDisplayed && (
 								<div>
-									<Link href={'/auth/signin'} className={'btn-primary'}>
+									<Link className={'btn-primary'} href={'/auth/signin'}>
 										{"S'incrire sur My-Makeup"}
 									</Link>
 								</div>
@@ -67,11 +68,11 @@ export default function Hero({
 			</div>
 			<div className="bg-white pb-24 md:pb-8 lg:absolute lg:inset-y-0 lg:right-0 lg:w-1/2 lg:pb-0">
 				<Image
-					className="aspect-[3/2] object-contain md:object-center lg:aspect-auto lg:h-full lg:w-full xl:object-top "
-					width={1000}
+					alt="trouver une maquilleuse professionnelle freelance"
+					className="aspect-[3/2] object-contain md:object-center lg:aspect-auto lg:h-full lg:w-full xl:object-top"
 					height={1000}
 					src={imgBackgroundSrc}
-					alt="trouver une maquilleuse professionnelle freelance"
+					width={1000}
 				/>
 			</div>
 		</div>

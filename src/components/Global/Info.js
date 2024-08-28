@@ -1,4 +1,5 @@
 import React from 'react'
+
 import { InformationCircleIcon } from '@heroicons/react/20/solid'
 
 function Info({ description }) {
@@ -7,8 +8,8 @@ function Info({ description }) {
 			<div className="flex">
 				<div className="flex-shrink-0">
 					<InformationCircleIcon
-						className="h-5 w-5 text-indigo-400"
 						aria-hidden="true"
+						className="h-5 w-5 text-indigo-400"
 					/>
 				</div>
 				<div className="ml-3">

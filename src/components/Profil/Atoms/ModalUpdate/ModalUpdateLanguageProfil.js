@@ -1,9 +1,11 @@
 import React, { Fragment, useEffect, useRef, useState } from 'react'
-import { Dialog, Transition } from '@headlessui/react'
 import { useForm } from 'react-hook-form'
+
+import { Dialog, Transition } from '@headlessui/react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useSession } from 'next-auth/react'
 import * as zod from 'zod'
+
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
 
 const schema = zod
@@ -20,13 +22,13 @@ export default function ModalUpdateLanguageProfil(props) {
 	const user = props.user
 
 	const {
-		register,
-		handleSubmit,
 		formState: { errors },
-		reset,
+		handleSubmit,
+		register,
 		setValue,
-		trigger,
 		setError,
+		trigger,
+		reset,
 	} = useForm({
 		resolver: zodResolver(schema),
 	})
@@ -87,11 +89,11 @@ export default function ModalUpdateLanguageProfil(props) {
 				trigger('language').then(isValid => {
 					if (isValid) {
 						const updatedUserLanguagesSelected = userLanguageSelected.concat({
-							id:
+							name:
 								event.target.value.slice(0, -1) === ';'
 									? event.target.value.slice(0, -1)
 									: event.target.value,
-							name:
+							id:
 								event.target.value.slice(0, -1) === ';'
 									? event.target.value.slice(0, -1)
 									: event.target.value,
@@ -102,8 +104,8 @@ export default function ModalUpdateLanguageProfil(props) {
 				})
 			} else {
 				setError('language', {
-					type: 'manual',
 					message: 'La langue est requise.',
+					type: 'manual',
 				})
 			}
 			return
@@ -114,8 +116,8 @@ export default function ModalUpdateLanguageProfil(props) {
 			setUserLanguage(event.target.value)
 			setValue('language', event.target.value)
 			setError('language', {
-				type: 'manual',
 				message: 'La langue est requise.',
+				type: 'manual',
 			})
 		} else {
 			setUserLanguage(event.target.value)
@@ -142,8 +144,8 @@ export default function ModalUpdateLanguageProfil(props) {
 			// Add an id to each skill
 			const languagesWithId = user.language.map((language, index) => {
 				return {
-					id: index, // Use the index as an id
 					name: language.name,
+					id: index, // Use the index as an id
 				}
 			})
 			setUserLanguageSelected(languagesWithId)
@@ -153,7 +155,7 @@ export default function ModalUpdateLanguageProfil(props) {
 	}, [open, user])
 
 	return (
-		<Transition.Root show={open} as={Fragment}>
+		<Transition.Root as={Fragment} show={open}>
 			<Dialog
 				as="div"
 				className="relative z-30"
@@ -185,12 +187,12 @@ export default function ModalUpdateLanguageProfil(props) {
 						>
 							<Dialog.Panel className="relative w-full transform rounded-lg bg-white p-8 text-left shadow-2xl transition-all sm:max-w-3xl">
 								<button
-									type="button"
-									onClick={props.handleIsModalOpen}
-									ref={cancelButtonRef}
 									className={
 										'absolute right-0 top-0 m-6 flex items-center justify-center'
 									}
+									onClick={props.handleIsModalOpen}
+									ref={cancelButtonRef}
+									type="button"
 								>
 									<span className="material-icons-round">close</span>
 								</button>
@@ -207,14 +209,14 @@ export default function ModalUpdateLanguageProfil(props) {
 										<div className="grid grid-cols-1 gap-4">
 											<div className={'flex flex-col gap-4'}>
 												<form
-													onSubmit={handleSubmit(onSubmit)}
-													method="POST"
 													className="flex flex-col gap-4"
+													method="POST"
+													onSubmit={handleSubmit(onSubmit)}
 												>
 													<div>
 														<label
-															htmlFor="language"
 															className="block text-sm text-gray-700"
+															htmlFor="language"
 														>
 															Langues
 														</label>
@@ -232,7 +234,8 @@ export default function ModalUpdateLanguageProfil(props) {
 																{...register('language', {
 																	required: true,
 																})}
-																required
+																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
+																onChange={handleUpdateLanguage}
 																onKeyPress={async event => {
 																	if (event.key === 'Enter') {
 																		event.preventDefault()
@@ -245,28 +248,27 @@ export default function ModalUpdateLanguageProfil(props) {
 																				setUserLanguageSelected([
 																					...userLanguageSelected,
 																					{
-																						id: event.target.value,
 																						name: event.target.value,
+																						id: event.target.value,
 																					},
 																				])
 																				setUserLanguage('')
 																			} else {
 																				setError('language', {
-																					type: 'manual',
 																					message: 'La langue est requise.',
+																					type: 'manual',
 																				})
 																			}
 																		}
 																	}
 																}}
+																required
 																value={userLanguage ?? ''}
-																onChange={handleUpdateLanguage}
-																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 															/>
 															{errors.language && (
 																<p
-																	data-cy={'error-language'}
 																	className={'mt-2 text-xs text-red-500/80'}
+																	data-cy={'error-language'}
 																>
 																	{errors.language.message}
 																</p>
@@ -279,20 +281,20 @@ export default function ModalUpdateLanguageProfil(props) {
 														</h3>
 														<div
 															className={
-																'flex w-full flex-col flex-wrap items-start gap-2 '
+																'flex w-full flex-col flex-wrap items-start gap-2'
 															}
 														>
 															{userLanguageSelected.map((skill, index) => (
 																<button
-																	data-cy="language-selected"
-																	type={'button'}
-																	onClick={() => {
-																		handleDeleteLanguageelected(skill.id)
-																	}}
-																	key={index}
 																	className={
 																		'flex items-center gap-2 rounded-full bg-indigo-50 px-2 py-1 text-xs text-gray-700'
 																	}
+																	data-cy="language-selected"
+																	key={index}
+																	onClick={() => {
+																		handleDeleteLanguageelected(skill.id)
+																	}}
+																	type={'button'}
 																>
 																	<span>→ {skill.name}</span>
 																	<span className="material-icons-round text-sm">
@@ -309,10 +311,10 @@ export default function ModalUpdateLanguageProfil(props) {
 								</div>
 								<div className="mt-4 flex justify-end">
 									<button
-										data-cy="save-button-languages"
-										type="button"
 										className="btn-primary"
+										data-cy="save-button-languages"
 										onClick={handleSubmit(onSubmit)}
+										type="button"
 									>
 										Sauvegarder
 									</button>

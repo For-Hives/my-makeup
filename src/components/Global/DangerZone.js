@@ -1,12 +1,14 @@
-import { useRouter } from 'next/router'
-import React, { useRef, useState, Fragment } from 'react'
+import React, { Fragment, useRef, useState } from 'react'
+
 import {
-	UserMinusIcon,
 	ArrowRightOnRectangleIcon,
+	UserMinusIcon,
 } from '@heroicons/react/20/solid'
-import { signOut } from 'next-auth/react'
-import { Dialog, Transition } from '@headlessui/react'
 import { ExclamationTriangleIcon } from '@heroicons/react/24/outline'
+import { Dialog, Transition } from '@headlessui/react'
+import { signOut } from 'next-auth/react'
+import { useRouter } from 'next/router'
+
 import { DeleteMeMakeup } from '@/services/DeleteMeMakeup'
 
 function DangerZone(props) {
@@ -22,7 +24,7 @@ function DangerZone(props) {
 
 	return (
 		<>
-			<Transition.Root show={open} as={Fragment}>
+			<Transition.Root as={Fragment} show={open}>
 				<Dialog
 					as="div"
 					className="relative z-30"
@@ -56,8 +58,8 @@ function DangerZone(props) {
 									<div className="sm:flex sm:items-start">
 										<div className="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
 											<ExclamationTriangleIcon
-												className="h-6 w-6 text-red-600"
 												aria-hidden="true"
+												className="h-6 w-6 text-red-600"
 											/>
 										</div>
 										<div className="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left">
@@ -78,18 +80,18 @@ function DangerZone(props) {
 									</div>
 									<div className="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
 										<button
-											data-cy={'delete-account'}
-											type="button"
 											className="inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 sm:ml-3 sm:w-auto"
+											data-cy={'delete-account'}
 											onClick={handleDeleteAccount}
+											type="button"
 										>
 											Supprimer
 										</button>
 										<button
-											type="button"
 											className="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
 											onClick={() => setOpen(false)}
 											ref={cancelButtonRef}
+											type="button"
 										>
 											Annuler
 										</button>
@@ -117,8 +119,8 @@ function DangerZone(props) {
 							</h2>
 							<div className={'flex w-full flex-col gap-4'}>
 								<button
-									data-cy="button-logout"
 									className={'flex items-center justify-start'}
+									data-cy="button-logout"
 									onClick={() => {
 										signOut()
 									}}
@@ -135,8 +137,8 @@ function DangerZone(props) {
 							</div>
 							<div className={'flex w-full flex-col gap-4'}>
 								<button
-									data-cy="button-delete-account"
 									className={'flex items-center justify-start'}
+									data-cy="button-delete-account"
 									onClick={() => {
 										setOpen(true)
 									}}

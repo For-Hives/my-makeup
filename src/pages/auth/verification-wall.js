@@ -1,7 +1,8 @@
 import React, { useEffect } from 'react'
-import Head from 'next/head'
-import Image from 'next/image'
+
 import { signOut, useSession } from 'next-auth/react'
+import Image from 'next/image'
+import Head from 'next/head'
 import Link from 'next/link'
 
 function VerificationWall() {
@@ -18,13 +19,13 @@ function VerificationWall() {
 			<Head>
 				<title>My-Makeup</title>
 				<meta
-					name="description"
 					content="Processus de vérification de profil, sur My-Makeup, la plateforme pour les maquilleuses !"
+					name="description"
 				/>
 				{/*	seo tag canonical link */}
 				<link
-					rel="canonical"
 					href="https://my-makeup.fr/auth/verification-wall"
+					rel="canonical"
 				/>
 			</Head>
 			<div className="relative flex h-[95vh] max-h-screen overflow-hidden md:h-screen md:overflow-auto md:bg-white">
@@ -35,9 +36,9 @@ function VerificationWall() {
 								<span className="sr-only">My-Makeup</span>
 								<Image
 									alt="Logo My-Makeup"
-									width={50}
 									height={50}
 									src="/assets/logo.webp"
+									width={50}
 								/>
 							</Link>
 						</div>
@@ -49,7 +50,7 @@ function VerificationWall() {
 								{`Vérifiez votre boite mail pour valider votre inscription
 									Vous n'avez pas reçu d'email ? Regardez dans vos spams !`}
 							</p>
-							<Link href={'/auth/signin'} className="btn-primary-large mt-8">
+							<Link className="btn-primary-large mt-8" href={'/auth/signin'}>
 								{'Retourner sur la page de connexion'}
 							</Link>
 						</div>
@@ -63,9 +64,9 @@ function VerificationWall() {
 					></div>
 					<Image
 						alt={'background my-makeup'}
+						className={'z-10 -scale-x-100 transform object-cover'}
 						fill
 						src="/assets/bg_makeup.webp"
-						className={'z-10 -scale-x-100 transform object-cover'}
 					></Image>
 				</div>
 			</div>

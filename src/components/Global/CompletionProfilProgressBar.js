@@ -3,7 +3,7 @@ import React, { useEffect } from 'react'
 const totalPointToComplete = 13
 
 function CompletionProfilProgressBar(props) {
-	const { user, handleUpdateUser } = props
+	const { handleUpdateUser, user } = props
 	const [completion, setCompletion] = React.useState(0)
 	const [valueToDisplay, setValueToDisplay] = React.useState(100)
 
@@ -51,7 +51,7 @@ function CompletionProfilProgressBar(props) {
 			>
 				{valueToDisplay}% de complétion
 			</p>
-			<div className="mt-2 w-full" aria-hidden="true">
+			<div aria-hidden="true" className="mt-2 w-full">
 				<div className="overflow-hidden rounded-full bg-gray-200">
 					<div
 						className="h-2 rounded-full bg-indigo-600"

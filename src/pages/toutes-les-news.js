@@ -1,11 +1,13 @@
 import React from 'react'
-import Footer from '@/components/Global/Footer'
-import Nav from '@/components/Global/Nav'
+
 import Head from 'next/head'
-import Hero from '@/components/Global/Hero'
-import CTA from '@/components/Global/CTA'
 import Link from 'next/link'
+
 import { convertToStringDate } from '@/services/utils'
+import Footer from '@/components/Global/Footer'
+import Hero from '@/components/Global/Hero'
+import Nav from '@/components/Global/Nav'
+import CTA from '@/components/Global/CTA'
 
 /**
  * @param props
@@ -17,26 +19,26 @@ function ToutesLesNews({ articles }) {
 			<Head>
 				<title>My-Makeup tous les articles !</title>
 				<meta
-					name="description"
 					content="Toute l'actualité de My-Makeup, c'est ici que vous trouverez toutes les dernières news !
 					Et les nouveautés qui arrivent bientôt !"
+					name="description"
 				/>
 				{/*	seo tag canonical link */}
-				<link rel="canonical" href={'https://my-makeup.fr/toutes-les-news'} />
+				<link href={'https://my-makeup.fr/toutes-les-news'} rel="canonical" />
 			</Head>
 			<Nav />
 			<main className={'relative'}>
 				<Hero
-					title={<>Toutes nos news & articles</>}
 					description={
 						<>
 							Les actualités de My-Makeup, ce que nous faisons pour améliorer
 							votre quotidien ! Et les nouveautés qui arrivent bientôt !
 						</>
 					}
-					isSearchDisplayed={false}
 					isCTALoginDisplayed={false}
+					isSearchDisplayed={false}
 					isSimpleVersionDisplayed={true}
+					title={<>Toutes nos news & articles</>}
 				/>
 				<section className={'relative px-4 py-20 md:px-8 2xl:px-0'}>
 					<div className="mx-auto max-w-7xl">
@@ -116,12 +118,12 @@ export async function getServerSideProps() {
 	const res = await fetch(
 		`${process.env.NEXT_PUBLIC_API_URL}/api/articles?sort[publishedAt]=desc`,
 		{
-			method: 'GET',
 			headers: {
 				// 	token
 				'Content-Type': 'application/json',
 				Accept: 'application/json',
 			},
+			method: 'GET',
 		}
 	)
 	const data = await res.json()

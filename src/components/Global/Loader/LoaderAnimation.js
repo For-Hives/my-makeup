@@ -5,10 +5,10 @@ function LoaderAnimation(props) {
 		<>
 			<svg
 				className="tea"
-				width="37"
+				fill="none"
 				height="48"
 				viewBox="0 0 37 48"
-				fill="none"
+				width="37"
 				xmlns="http://www.w3.org/2000/svg"
 			>
 				<path
@@ -22,27 +22,27 @@ function LoaderAnimation(props) {
 					strokeWidth="2"
 				></path>
 				<path
-					id="teabag"
-					fill="var(--secondary)"
-					fillRule="evenodd"
 					clipRule="evenodd"
 					d="M16 25V17H14V25H12C10.3431 25 9 26.3431 9 28V34C9 35.6569 10.3431 37 12 37H18C19.6569 37 21 35.6569 21 34V28C21 26.3431 19.6569 25 18 25H16ZM11 28C11 27.4477 11.4477 27 12 27H18C18.5523 27 19 27.4477 19 28V34C19 34.5523 18.5523 35 18 35H12C11.4477 35 11 34.5523 11 34V28Z"
+					fill="var(--secondary)"
+					fillRule="evenodd"
+					id="teabag"
 				></path>
 				<path
-					id="steamL"
 					d="M17 1C17 1 17 4.5 14 6.5C11 8.5 11 12 11 12"
-					strokeWidth="2"
+					id="steamL"
+					stroke="var(--secondary)"
 					strokeLinecap="round"
 					strokeLinejoin="round"
-					stroke="var(--secondary)"
+					strokeWidth="2"
 				></path>
 				<path
-					id="steamR"
 					d="M21 6C21 6 21 8.22727 19 9.5C17 10.7727 17 13 17 13"
+					id="steamR"
 					stroke="var(--secondary)"
-					strokeWidth="2"
 					strokeLinecap="round"
 					strokeLinejoin="round"
+					strokeWidth="2"
 				></path>
 			</svg>
 		</>

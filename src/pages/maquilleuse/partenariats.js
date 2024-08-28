@@ -1,8 +1,10 @@
 import React from 'react'
-import Nav from '@/components/Global/Nav'
-import Footer from '@/components/Global/Footer'
+
 import Head from 'next/head'
+
+import Footer from '@/components/Global/Footer'
 import Hero from '@/components/Global/Hero'
+import Nav from '@/components/Global/Nav'
 import CTA from '@/components/Global/CTA'
 
 /**
@@ -15,19 +17,28 @@ function Partenariats(props) {
 			<Head>
 				<title>Communauté et partenariats !</title>
 				<meta
-					name="description"
 					content="Community et Partenariat chez My-Makeup : Votre développement est notre priorité"
+					name="description"
 				/>
 				{/*	seo tag canonical link */}
 				<link
-					rel="canonical"
 					href="https://my-makeup.fr/maquilleuse/partenariats"
+					rel="canonical"
 				/>
 			</Head>
 			<Nav />
 			<main className={'relative'}>
 				<Hero
+					description={
+						<>
+							{
+								'Découvrez comment My-Makeup, avec son approche axée sur la communauté et le partenariat, soutient les maquilleuses professionnelles dans leur développement et leur croissance.'
+							}
+						</>
+					}
 					imgBackgroundSrc={'/assets/back/maquilleuse_italienne_white.webp'}
+					isCTALoginDisplayed={true}
+					isSearchDisplayed={false}
 					title={
 						<>
 							Communauté et partenariats, avec&nbsp;
@@ -36,15 +47,6 @@ function Partenariats(props) {
 							{'vous avez accès à un réseau très largement avantageux !'}
 						</>
 					}
-					description={
-						<>
-							{
-								'Découvrez comment My-Makeup, avec son approche axée sur la communauté et le partenariat, soutient les maquilleuses professionnelles dans leur développement et leur croissance.'
-							}
-						</>
-					}
-					isSearchDisplayed={false}
-					isCTALoginDisplayed={true}
 				/>
 				<div
 					className={'relative mx-auto my-24 max-w-7xl px-4 md:my-48 md:px-0'}

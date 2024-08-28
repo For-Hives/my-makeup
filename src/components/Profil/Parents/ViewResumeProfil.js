@@ -1,7 +1,9 @@
 import React, { useEffect } from 'react'
+
 import Image from 'next/image'
-import { BadgeDispo } from '@/components/Profil/Atoms/BadgeDispo'
+
 import { BadgeIndispo } from '@/components/Profil/Atoms/BadgeIndispo'
+import { BadgeDispo } from '@/components/Profil/Atoms/BadgeDispo'
 
 function ViewResumeProfil(props) {
 	const [user, setUser] = React.useState(null)
@@ -36,14 +38,14 @@ function ViewResumeProfil(props) {
 					>
 						<div className={'relative h-[200px] w-[200px]'}>
 							<Image
-								src={mainPicture ?? '/assets/pp_makeup.webp'}
 								alt={'ppmakeup'}
-								priority={true}
+								className={'rounded-full object-cover'}
 								fill={true}
+								priority={true}
 								sizes={
 									'(max-width: 768px) 150px, (max-width: 1200px) 175px, 200px'
 								}
-								className={'rounded-full object-cover'}
+								src={mainPicture ?? '/assets/pp_makeup.webp'}
 							></Image>
 						</div>
 					</div>

@@ -1,9 +1,11 @@
 import React from 'react'
-import Nav from '@/components/Global/Nav'
-import Footer from '@/components/Global/Footer'
-import CTA from '@/components/Global/CTA'
+
 import Head from 'next/head'
+
+import Footer from '@/components/Global/Footer'
 import Hero from '@/components/Global/Hero'
+import Nav from '@/components/Global/Nav'
+import CTA from '@/components/Global/CTA'
 
 /**
  * @param props
@@ -15,24 +17,17 @@ function APropos(props) {
 			<Head>
 				<title>My-Makeup la plateforme de recherche de maquilleuse !</title>
 				<meta
-					name="description"
 					content="Apprenez-en plus sur My-Makeup, votre plateforme de mise en relation entre maquilleuses professionnelles et clients. "
+					name="description"
 				/>
 				{/*	seo tag canonical link */}
-				<link rel="canonical" href="https://my-makeup.fr/a-propos" />
+				<link href="https://my-makeup.fr/a-propos" rel="canonical" />
 			</Head>
 
 			<Nav />
 
 			<main className={'relative'}>
 				<Hero
-					imgBackgroundSrc={'/assets/back/maquilleuse_europeenne_white.webp'}
-					title={
-						<>
-							La solution de vos rêves&nbsp;:&nbsp;
-							<span className={'text-indigo-900'}>My&nbsp;Makeup</span>
-						</>
-					}
 					description={
 						<>
 							{
@@ -40,8 +35,15 @@ function APropos(props) {
 							}
 						</>
 					}
-					isSearchDisplayed={false}
+					imgBackgroundSrc={'/assets/back/maquilleuse_europeenne_white.webp'}
 					isCTALoginDisplayed={true}
+					isSearchDisplayed={false}
+					title={
+						<>
+							La solution de vos rêves&nbsp;:&nbsp;
+							<span className={'text-indigo-900'}>My&nbsp;Makeup</span>
+						</>
+					}
 				/>
 				<div
 					className={'relative mx-auto my-24 max-w-7xl px-4 md:my-48 md:px-0'}

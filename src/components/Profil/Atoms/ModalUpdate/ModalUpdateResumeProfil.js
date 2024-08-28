@@ -1,18 +1,32 @@
 import React, { Fragment, useEffect, useRef, useState } from 'react'
-import { Dialog, Switch, Transition } from '@headlessui/react'
-import Image from 'next/image'
-import { PhotoIcon } from '@heroicons/react/20/solid'
 import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import * as zod from 'zod'
-import { useSession } from 'next-auth/react'
-import { BadgeDispo } from '@/components/Profil/Atoms/BadgeDispo'
-import { BadgeIndispo } from '@/components/Profil/Atoms/BadgeIndispo'
-import { patchMeMakeup } from '@/services/PatchMeMakeup'
 import { toast } from 'react-toastify'
+
+import { Dialog, Switch, Transition } from '@headlessui/react'
+import { PhotoIcon } from '@heroicons/react/20/solid'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useSession } from 'next-auth/react'
+import Image from 'next/image'
+import * as zod from 'zod'
+
+import { BadgeIndispo } from '@/components/Profil/Atoms/BadgeIndispo'
+import { BadgeDispo } from '@/components/Profil/Atoms/BadgeDispo'
+import { patchMeMakeup } from '@/services/PatchMeMakeup'
 
 const schema = zod
 	.object({
+		company_artist_name: zod
+			.string({
+				required_error: "Le nom d'entreprise / nom d'artiste est requis.",
+			})
+			.min(1, "Le nom de l'entreprise est requise.")
+			.max(70, "Le nom de l'entreprise ne doit pas dépasser 70 caractères.")
+			.or(zod.literal('')),
+		speciality: zod
+			.string({ required_error: 'La spécialité est requise.' })
+			.min(1, 'La spécialité est requise.')
+			.max(70, 'La spécialité ne doit pas dépasser 70 caractères.')
+			.or(zod.literal('')),
 		first_name: zod
 			.string({ required_error: 'Le prénom est requis.' })
 			.min(1, 'Le prénom est requis.')
@@ -21,33 +35,21 @@ const schema = zod
 			.string({ required_error: 'Le nom est requis.' })
 			.min(1, 'Le nom est requis.')
 			.max(70, 'Le nom ne doit pas dépasser 70 caractères.'),
-		speciality: zod
-			.string({ required_error: 'La spécialité est requise.' })
-			.min(1, 'La spécialité est requise.')
-			.max(70, 'La spécialité ne doit pas dépasser 70 caractères.')
-			.or(zod.literal('')),
-		company_artist_name: zod
-			.string({
-				required_error: "Le nom d'entreprise / nom d'artiste est requis.",
-			})
-			.min(1, "Le nom de l'entreprise est requise.")
-			.max(70, "Le nom de l'entreprise ne doit pas dépasser 70 caractères.")
-			.or(zod.literal('')),
 	})
 	.required({
-		first_name: true,
-		last_name: true,
-		speciality: true,
 		company_artist_name: true,
+		first_name: true,
+		speciality: true,
+		last_name: true,
 	})
 
 export default function ModalUpdateResumeProfil(props) {
 	const user = props.user
 
 	const {
-		register,
-		handleSubmit,
 		formState: { errors },
+		handleSubmit,
+		register,
 		reset,
 	} = useForm({
 		resolver: zodResolver(schema),
@@ -78,10 +80,10 @@ export default function ModalUpdateResumeProfil(props) {
 			form.append('files', fileObj)
 
 			const res_post = fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/upload`, {
-				method: 'POST',
 				headers: {
 					Authorization: `Bearer ${session.jwt}`,
 				},
+				method: 'POST',
 				body: form,
 			})
 				.then(response => {
@@ -114,9 +116,9 @@ export default function ModalUpdateResumeProfil(props) {
 				})
 				.catch(err =>
 					toast('Une erreur est survenue, veuillez réessayer plus tard', {
+						toastId: 'toast-alert',
 						type: 'error',
 						icon: '⛔',
-						toastId: 'toast-alert',
 					})
 				)
 		} else {
@@ -165,9 +167,9 @@ export default function ModalUpdateResumeProfil(props) {
 			toast(
 				'Le fichier est trop grand, veuillez télécharger un fichier de moins de 1.5 Mo.',
 				{
+					toastId: 'toast-alert',
 					type: 'error',
 					icon: '⛔',
-					toastId: 'toast-alert',
 				}
 			)
 			return
@@ -235,7 +237,7 @@ export default function ModalUpdateResumeProfil(props) {
 	])
 
 	return (
-		<Transition.Root show={open} as={Fragment}>
+		<Transition.Root as={Fragment} show={open}>
 			<Dialog
 				as="div"
 				className="relative z-30"
@@ -267,12 +269,12 @@ export default function ModalUpdateResumeProfil(props) {
 						>
 							<Dialog.Panel className="relative w-full transform rounded-lg bg-white p-8 text-left shadow-2xl transition-all sm:max-w-3xl">
 								<button
-									type="button"
-									onClick={props.handleIsModalOpen}
-									ref={cancelButtonRef}
 									className={
 										'absolute right-0 top-0 m-6 flex items-center justify-center'
 									}
+									onClick={props.handleIsModalOpen}
+									ref={cancelButtonRef}
+									type="button"
 								>
 									<span className="material-icons-round">close</span>
 								</button>
@@ -289,8 +291,8 @@ export default function ModalUpdateResumeProfil(props) {
 										<div className="grid grid-cols-1 gap-4">
 											<div className={'flex flex-col gap-4'}>
 												<label
-													htmlFor="cover-photo"
 													className="text-base font-normal text-gray-700"
+													htmlFor="cover-photo"
 												>
 													Modifier votre photo de profil
 												</label>
@@ -306,11 +308,11 @@ export default function ModalUpdateResumeProfil(props) {
 																}
 															>
 																<Image
-																	src={imageUrl}
 																	alt={'photo de profil'}
+																	className="rounded-full object-cover object-center"
 																	fill={true}
 																	sizes="(min-width: 480px ) 50vw, (min-width: 728px) 33vw, (min-width: 976px) 25vw, 100vw"
-																	className="rounded-full object-cover object-center"
+																	src={imageUrl}
 																/>
 															</div>
 														) : null}
@@ -323,21 +325,21 @@ export default function ModalUpdateResumeProfil(props) {
 															}
 														>
 															<PhotoIcon
-																className="mx-auto h-12 w-12 text-gray-300"
 																aria-hidden="true"
+																className="mx-auto h-12 w-12 text-gray-300"
 															/>
 															<div className="mt-4 flex text-sm leading-6 text-gray-600">
 																<label className="relative rounded-md bg-white font-semibold text-indigo-600 focus-within:outline-none focus-within:ring-2 focus-within:ring-indigo-600 focus-within:ring-offset-2 hover:text-indigo-500">
 																	<span>Télécharger une nouvelle photo</span>
 																</label>
 																<input
+																	className="sr-only hidden"
 																	data-cy="file-main-upload"
 																	id="file-upload"
 																	name="file-upload"
-																	type="file"
-																	className="sr-only hidden"
-																	ref={inputRef}
 																	onChange={handleFileChange}
+																	ref={inputRef}
+																	type="file"
 																/>
 															</div>
 															<p className="text-xs leading-5 text-gray-600">
@@ -349,15 +351,15 @@ export default function ModalUpdateResumeProfil(props) {
 											</div>
 											<div className={'flex flex-col gap-4'}>
 												<form
-													onSubmit={handleSubmit(onSubmit)}
-													method="POST"
 													className="flex flex-col gap-4"
+													method="POST"
+													onSubmit={handleSubmit(onSubmit)}
 												>
 													<div className={'flex gap-2'}>
 														<div>
 															<label
-																htmlFor="first_name"
 																className="block text-sm text-gray-700"
+																htmlFor="first_name"
 															>
 																Prénom
 															</label>
@@ -370,15 +372,15 @@ export default function ModalUpdateResumeProfil(props) {
 																	{...register('first_name', {
 																		required: true,
 																	})}
+																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
+																	onChange={handleUpdateFirstName}
 																	required
 																	value={userFirstName ?? ''}
-																	onChange={handleUpdateFirstName}
-																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																/>
 																{errors.first_name && (
 																	<p
-																		data-cy={'error-first-name'}
 																		className={'mt-2 text-xs text-red-500/80'}
+																		data-cy={'error-first-name'}
 																	>
 																		{errors.first_name.message}
 																	</p>
@@ -387,8 +389,8 @@ export default function ModalUpdateResumeProfil(props) {
 														</div>
 														<div>
 															<label
-																htmlFor="last_name"
 																className="block text-sm text-gray-700"
+																htmlFor="last_name"
 															>
 																Nom
 															</label>
@@ -401,15 +403,15 @@ export default function ModalUpdateResumeProfil(props) {
 																	{...register('last_name', {
 																		required: true,
 																	})}
+																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
+																	onChange={handleUpdateLastName}
 																	required
 																	value={userLastName ?? ''}
-																	onChange={handleUpdateLastName}
-																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 																/>
 																{errors.last_name && (
 																	<p
-																		data-cy="error-last-name"
 																		className={'mt-2 text-xs text-red-500/80'}
+																		data-cy="error-last-name"
 																	>
 																		{errors.last_name.message}
 																	</p>
@@ -419,8 +421,8 @@ export default function ModalUpdateResumeProfil(props) {
 													</div>
 													<div>
 														<label
-															htmlFor="speciality"
 															className="block text-sm text-gray-700"
+															htmlFor="speciality"
 														>
 															Specialité
 														</label>
@@ -433,15 +435,15 @@ export default function ModalUpdateResumeProfil(props) {
 																{...register('speciality', {
 																	required: true,
 																})}
+																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
+																onChange={handleUpdateSpeciality}
 																required
 																value={userSpeciality ?? ''}
-																onChange={handleUpdateSpeciality}
-																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 															/>
 															{errors.speciality && (
 																<p
-																	data-cy="error-speciality"
 																	className={'mt-2 text-xs text-red-500/80'}
+																	data-cy="error-speciality"
 																>
 																	{errors.speciality.message}
 																</p>
@@ -450,29 +452,29 @@ export default function ModalUpdateResumeProfil(props) {
 													</div>
 													<div>
 														<label
-															htmlFor={'company_artist_name'}
 															className="block text-sm text-gray-700"
+															htmlFor={'company_artist_name'}
 														>
 															{"Nom de l'entreprise ou de l'artiste"}
 														</label>
 														<div className="mt-2">
 															<input
-																id="company_artist_name"
 																data-cy="company-artist-input"
+																id="company_artist_name"
 																name="company_artist_name"
 																type="text"
 																{...register('company_artist_name', {
 																	required: true,
 																})}
+																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
+																onChange={handleUpdateCompanyOrArtist}
 																required
 																value={userCompanyOrArtist ?? ''}
-																onChange={handleUpdateCompanyOrArtist}
-																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 															/>
 															{errors.company_artist_name && (
 																<p
-																	data-cy={'error-company-artist-name'}
 																	className={'mt-2 text-xs text-red-500/80'}
+																	data-cy={'error-company-artist-name'}
 																>
 																	{errors.company_artist_name.message}
 																</p>
@@ -481,18 +483,18 @@ export default function ModalUpdateResumeProfil(props) {
 													</div>
 													<div>
 														<label
-															htmlFor="available"
 															className="block text-sm text-gray-700"
+															htmlFor="available"
 														>
 															Disponibilité
 														</label>
 														<div className="mt-2 flex items-center gap-4">
 															<Switch
-																data-cy="available-input"
-																value={available}
 																checked={available}
-																onChange={handleUpdateAvailable}
 																className="group relative inline-flex h-5 w-10 flex-shrink-0 cursor-pointer items-center justify-center rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2"
+																data-cy="available-input"
+																onChange={handleUpdateAvailable}
+																value={available}
 															>
 																<span className="sr-only">
 																	Toggle disponibility
@@ -530,10 +532,10 @@ export default function ModalUpdateResumeProfil(props) {
 								</div>
 								<div className="mt-4 flex justify-end">
 									<button
-										data-cy="save-button-resume"
-										type="button"
 										className="btn-primary"
+										data-cy="save-button-resume"
 										onClick={handleSubmit(onSubmit)}
+										type="button"
 									>
 										Sauvegarder
 									</button>

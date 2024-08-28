@@ -1,10 +1,5 @@
 import { Fragment } from 'react'
-import { Popover, Transition } from '@headlessui/react'
-import {
-	ChevronDownIcon,
-	PhoneIcon,
-	PlayCircleIcon,
-} from '@heroicons/react/20/solid'
+
 import {
 	ArrowPathIcon,
 	ChartPieIcon,
@@ -12,42 +7,48 @@ import {
 	FingerPrintIcon,
 	SquaresPlusIcon,
 } from '@heroicons/react/24/outline'
+import {
+	ChevronDownIcon,
+	PhoneIcon,
+	PlayCircleIcon,
+} from '@heroicons/react/20/solid'
+import { Popover, Transition } from '@headlessui/react'
 
 const solutions = [
 	{
-		name: 'Analytics',
 		description: 'Get a better understanding of your traffic',
-		href: '#',
 		icon: ChartPieIcon,
+		name: 'Analytics',
+		href: '#',
 	},
 	{
-		name: 'Engagement',
 		description: 'Speak directly to your customers',
-		href: '#',
 		icon: CursorArrowRaysIcon,
+		name: 'Engagement',
+		href: '#',
 	},
 	{
-		name: 'Security',
 		description: "Your customers' data will be safe and secure",
-		href: '#',
 		icon: FingerPrintIcon,
+		name: 'Security',
+		href: '#',
 	},
 	{
-		name: 'Integrations',
 		description: 'Connect with third-party tools',
-		href: '#',
 		icon: SquaresPlusIcon,
+		name: 'Integrations',
+		href: '#',
 	},
 	{
-		name: 'Automations',
 		description: 'Build strategic funnels that will convert',
-		href: '#',
+		name: 'Automations',
 		icon: ArrowPathIcon,
+		href: '#',
 	},
 ]
 const callsToAction = [
-	{ name: 'Watch demo', href: '#', icon: PlayCircleIcon },
-	{ name: 'Contact sales', href: '#', icon: PhoneIcon },
+	{ icon: PlayCircleIcon, name: 'Watch demo', href: '#' },
+	{ name: 'Contact sales', icon: PhoneIcon, href: '#' },
 ]
 
 export default function ItemDrop() {
@@ -55,7 +56,7 @@ export default function ItemDrop() {
 		<Popover className="relative">
 			<Popover.Button className="inline-flex items-center gap-x-1 text-sm font-semibold leading-6 text-gray-900">
 				<span>Solutions</span>
-				<ChevronDownIcon className="h-5 w-5" aria-hidden="true" />
+				<ChevronDownIcon aria-hidden="true" className="h-5 w-5" />
 			</Popover.Button>
 
 			<Transition
@@ -72,17 +73,17 @@ export default function ItemDrop() {
 						<div className="p-4">
 							{solutions.map(item => (
 								<div
-									key={item.name}
 									className="group relative flex gap-x-6 rounded-lg p-4 hover:bg-gray-50"
+									key={item.name}
 								>
 									<div className="mt-1 flex h-11 w-11 flex-none items-center justify-center rounded-lg bg-gray-50 group-hover:bg-white">
 										<item.icon
-											className="h-6 w-6 text-gray-600 group-hover:text-indigo-600"
 											aria-hidden="true"
+											className="h-6 w-6 text-gray-600 group-hover:text-indigo-600"
 										/>
 									</div>
 									<div>
-										<a href={item.href} className="font-semibold text-gray-900">
+										<a className="font-semibold text-gray-900" href={item.href}>
 											{item.name}
 											<span className="absolute inset-0" />
 										</a>
@@ -94,13 +95,13 @@ export default function ItemDrop() {
 						<div className="grid grid-cols-2 divide-x divide-gray-900/5 bg-gray-50">
 							{callsToAction.map(item => (
 								<a
-									key={item.name}
-									href={item.href}
 									className="flex items-center justify-center gap-x-2.5 p-3 font-semibold text-gray-900 hover:bg-gray-100"
+									href={item.href}
+									key={item.name}
 								>
 									<item.icon
-										className="h-5 w-5 flex-none text-gray-400"
 										aria-hidden="true"
+										className="h-5 w-5 flex-none text-gray-400"
 									/>
 									{item.name}
 								</a>

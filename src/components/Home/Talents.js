@@ -1,7 +1,9 @@
 import React from 'react'
-import CardDemo from '@/components/Global/CardDemo'
-import { convertStringToKebabCase } from '@/services/utils'
+
 import Image from 'next/image'
+
+import { convertStringToKebabCase } from '@/services/utils'
+import CardDemo from '@/components/Global/CardDemo'
 
 function Talents({ talents }) {
 	return (
@@ -26,8 +28,8 @@ function Talents({ talents }) {
 							}
 						>
 							<CardDemo
-								src={'/assets/Maquilleuse_Professionnelle.webp'}
 								heart={true}
+								src={'/assets/Maquilleuse_Professionnelle.webp'}
 							/>
 						</div>
 						<div
@@ -35,7 +37,7 @@ function Talents({ talents }) {
 								'md:absolute md:left-1/2 md:top-1/2 md:z-10 md:-translate-x-[90%] md:-translate-y-[90%]'
 							}
 						>
-							<CardDemo src={'/assets/Maquilleuse_cinema.webp'} heart={false} />
+							<CardDemo heart={false} src={'/assets/Maquilleuse_cinema.webp'} />
 						</div>
 					</div>
 					<div
@@ -45,15 +47,15 @@ function Talents({ talents }) {
 					>
 						{talents?.map((talent, index) => (
 							<a
-								key={talent.attributes.title}
+								className={'group relative'}
 								href={
 									'/talent/' + convertStringToKebabCase(talent.attributes.slug)
 								}
-								className={'group relative'}
+								key={talent.attributes.title}
 							>
 								<h2
 									className={
-										'flex h-full min-h-[120px] items-center justify-center rounded-xl border border-indigo-900/10 px-4 py-8 text-center font-semibold text-gray-900/70 transition duration-100 ease-in  group-hover:opacity-0'
+										'flex h-full min-h-[120px] items-center justify-center rounded-xl border border-indigo-900/10 px-4 py-8 text-center font-semibold text-gray-900/70 transition duration-100 ease-in group-hover:opacity-0'
 									}
 								>
 									{talent.attributes.title}
@@ -64,13 +66,13 @@ function Talents({ talents }) {
 									}
 								>
 									<Image
-										src={'/assets/talents/' + talent.attributes.slug + '.svg'}
-										width={50}
-										height={50}
+										alt={'icon ' + talent.attributes.title}
 										className={
 											'absolute -bottom-3 -right-2 -rotate-6 scale-75 transform opacity-50'
 										}
-										alt={'icon ' + talent.attributes.title}
+										height={50}
+										src={'/assets/talents/' + talent.attributes.slug + '.svg'}
+										width={50}
 									/>
 								</div>
 								<h2

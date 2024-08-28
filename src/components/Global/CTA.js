@@ -15,8 +15,8 @@ function Cta() {
 					}
 				>
 					<Image
-						className={'-z-10 scale-150 transform object-cover md:scale-100'}
 						alt={'blob'}
+						className={'-z-10 scale-150 transform object-cover md:scale-100'}
 						fill
 						src={'/assets/blob.svg'}
 					/>
@@ -33,18 +33,18 @@ function Cta() {
 						}
 					>
 						<Link
-							href="/search"
 							className={
 								'btn-secondary-white flex w-full items-center justify-center text-center sm:w-2/3 md:w-auto'
 							}
+							href="/search"
 						>
 							Je cherche des maquilleuses
 						</Link>
 						<Link
-							href="/auth/signup"
 							className={
 								'btn-secondary-white-bordered flex w-full items-center justify-center text-center sm:w-2/3 md:w-auto'
 							}
+							href="/auth/signup"
 						>
 							Je cherche des missions
 						</Link>

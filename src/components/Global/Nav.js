@@ -1,68 +1,66 @@
 'use client'
 import React, { useState } from 'react'
-import { MagnifyingGlassIcon } from '@heroicons/react/20/solid'
-import Image from 'next/image'
-import PopoverComponent from '@/components/Global/Popover'
-import Link from 'next/link'
 
+import { MagnifyingGlassIcon } from '@heroicons/react/20/solid'
+import { useSession } from 'next-auth/react'
+import Image from 'next/image'
+import Link from 'next/link'
 import _ from 'lodash'
+
+import PopoverComponent from '@/components/Global/Popover'
 import { Signature } from '@/components/Global/Signature'
-import {useSession} from "next-auth/react";
 
 const navigation = [
 	{
-		name: 'Particulier',
-		href: '/pourquoi-utiliser-my-makeup-en-tant-que-particulier',
-		mode: 'dropdown',
 		children: [
 			{
-				name: 'Pourquoi My-Makeup ?',
-				href: '/pourquoi-utiliser-my-makeup-en-tant-que-particulier',
-				icon: 'handshake',
 				description:
 					'My-Makeup est une plateforme de mise en relation entre les particuliers et les professionnels de la beauté.',
+				href: '/pourquoi-utiliser-my-makeup-en-tant-que-particulier',
+				name: 'Pourquoi My-Makeup ?',
+				icon: 'handshake',
 			},
 			{
-				name: 'Trouver une maquilleuse',
-				href: '/particulier/trouver-une-maquilleuse',
-				icon: 'diversity_1',
 				description:
 					'Trouvez la maquilleuse qui vous correspond parmi les profils disponibles.',
+				href: '/particulier/trouver-une-maquilleuse',
+				name: 'Trouver une maquilleuse',
+				icon: 'diversity_1',
 			},
 			{
-				name: 'Centraliser ses recherches',
-				href: '/particulier/centraliser-ses-recherches',
-				icon: 'query_stats',
 				description:
 					'Centralisez vos recherches pour comparer et trouver la maquilleuse qui vous correspond.',
+				href: '/particulier/centraliser-ses-recherches',
+				name: 'Centraliser ses recherches',
+				icon: 'query_stats',
 			},
 			{
-				name: 'Explorer les profils',
-				href: '/particulier/explorer-les-profils',
-				icon: 'person_search',
 				description: 'Cherchez par critères et par villes !',
+				href: '/particulier/explorer-les-profils',
+				name: 'Explorer les profils',
+				icon: 'person_search',
 			},
 		],
+		href: '/pourquoi-utiliser-my-makeup-en-tant-que-particulier',
+		name: 'Particulier',
+		mode: 'dropdown',
 	},
 	{
-		name: 'Maquilleuse',
-		href: '/pourquoi-rejoindre-my-makeup-en-tant-que-maquilleuse',
-		mode: 'dropdown',
 		children: [
 			{
-				name: 'Pourquoi My-Makeup ?',
-				href: '/pourquoi-rejoindre-my-makeup-en-tant-que-maquilleuse',
-				icon: 'brush',
 				description:
 					'Rejoignez la communauté My-Makeup pour développer votre activité, trouver de nouveaux clients,' +
 					' gagner en visibilité. Et facilité votre gestion quotidienne !',
+				href: '/pourquoi-rejoindre-my-makeup-en-tant-que-maquilleuse',
+				name: 'Pourquoi My-Makeup ?',
+				icon: 'brush',
 			},
 			{
+				description:
+					'Nous sommes là pour vous accompagner dans votre développement !',
 				name: 'Communauté & Partenariats',
 				href: '/maquilleuse/partenariats',
 				icon: 'group',
-				description:
-					'Nous sommes là pour vous accompagner dans votre développement !',
 			}, // {
 			// 	name: 'Nos partenaires',
 			// 	href: '/maquilleuse/partenaires',
@@ -72,31 +70,34 @@ const navigation = [
 			// 		'Et Facilitez votre vie !',
 			// },
 		],
+		href: '/pourquoi-rejoindre-my-makeup-en-tant-que-maquilleuse',
+		name: 'Maquilleuse',
+		mode: 'dropdown',
 	},
 	{
-		name: 'Solutions',
-		href: '/solutions',
-		mode: 'dropdown',
 		children: [
 			{
-				name: 'Pour les particuliers',
-				href: '/solutions/pour-les-particuliers',
-				icon: 'groups',
 				description:
 					"Trouvez la maquilleuse de vos rêves, n'a jamais été aussi simple !",
+				href: '/solutions/pour-les-particuliers',
+				name: 'Pour les particuliers',
+				icon: 'groups',
 			},
 			{
-				name: 'Pour les maquilleuses',
-				href: '/solutions/pour-les-maquilleuses',
-				icon: 'diversity_2',
 				description:
 					'Le seul endroit pour trouver des clients, développer votre activité et trouver des opportunités !',
+				href: '/solutions/pour-les-maquilleuses',
+				name: 'Pour les maquilleuses',
+				icon: 'diversity_2',
 			},
 		],
+		href: '/solutions',
+		name: 'Solutions',
+		mode: 'dropdown',
 	},
 	{
-		name: 'Blog',
 		href: '/blog',
+		name: 'Blog',
 	},
 ]
 
@@ -124,16 +125,16 @@ function Nav({
 				<div className="relative z-20 lg:w-full">
 					<div className="relative px-6 py-6 lg:border-b lg:border-gray-300 lg:px-16">
 						<nav
-							className="flex justify-between sm:h-10 sm:items-center lg:justify-start"
 							aria-label="Global"
+							className="flex justify-between sm:h-10 sm:items-center lg:justify-start"
 						>
-							<Link href="/" className="-m-1.5 p-1.5">
+							<Link className="-m-1.5 p-1.5" href="/">
 								<span className="sr-only">My-Makeup</span>
 								<Image
 									alt="Logo My-Makeup"
-									width={50}
 									height={50}
 									src="/assets/logo.webp"
+									width={50}
 								/>
 							</Link>
 							<div className="flex flex-col lg:ml-10 lg:w-full lg:flex-row lg:justify-between">
@@ -142,18 +143,18 @@ function Nav({
 										if (item.mode === 'dropdown') {
 											return (
 												<PopoverComponent
+													content={item.children}
 													key={item.name}
 													name={item.name}
 													translate={'30%'}
-													content={item.children}
 												/>
 											)
 										} else {
 											return (
 												<Link
-													key={item.name}
-													href={item.href}
 													className="text-sm font-semibold leading-6 text-gray-900"
+													href={item.href}
+													key={item.name}
 												>
 													{item.name}
 												</Link>
@@ -169,8 +170,8 @@ function Nav({
 									{isFindMakeupArtistBtnVisible && (
 										<Link className={'btn-primary-with-icon'} href={'/search'}>
 											<MagnifyingGlassIcon
-												className="mr-2 h-5 w-5 text-indigo-900"
 												aria-hidden="true"
+												className="mr-2 h-5 w-5 text-indigo-900"
 											/>
 											Trouver une maquilleuse
 										</Link>
@@ -185,7 +186,7 @@ function Nav({
 											)}
 										</>
 									) : (
-										<Link href="/auth/signin" className="">
+										<Link className="" href="/auth/signin">
 											<span className={'btn-primary-simple'}>Me connecter</span>
 										</Link>
 									)}
@@ -206,9 +207,9 @@ function Nav({
 						{/*	btn switch nav */}
 						<div className="menu-icon" onClick={handleClickMenuIcon}>
 							<input
+								aria-label="menu_icon"
 								className="menu-icon__cheeckbox"
 								type="checkbox"
-								aria-label="menu_icon"
 							/>
 							<div>
 								<span></span>
@@ -219,13 +220,13 @@ function Nav({
 					{/* Content mobile view */}
 					<div className={'flex h-full w-full flex-col gap-8 p-6'}>
 						<div>
-							<Link href="/" className="">
+							<Link className="" href="/">
 								<span className="sr-only">My-Makeup</span>
 								<Image
 									alt="Logo My-Makeup"
-									width={50}
 									height={50}
 									src="/assets/logo.webp"
+									width={50}
 								/>
 							</Link>
 						</div>
@@ -233,8 +234,8 @@ function Nav({
 							<div className={'flex w-full flex-col-reverse items-start gap-8'}>
 								<Link className={'btn-primary-with-icon'} href={'/search'}>
 									<MagnifyingGlassIcon
-										className="mr-2 h-5 w-5 text-indigo-900"
 										aria-hidden="true"
+										className="mr-2 h-5 w-5 text-indigo-900"
 									/>
 									Trouver une maquilleuse
 								</Link>
@@ -246,18 +247,18 @@ function Nav({
 									if (item.mode === 'dropdown') {
 										return (
 											<PopoverComponent
+												content={item.children}
 												key={item.name}
 												name={item.name}
 												translate={'30%'}
-												content={item.children}
 											/>
 										)
 									} else {
 										return (
 											<Link
-												key={item.name}
-												href={item.href}
 												className="text-sm font-semibold leading-6 text-gray-900"
+												href={item.href}
+												key={item.name}
 											>
 												{item.name}
 											</Link>
@@ -280,7 +281,7 @@ function Nav({
 										)}
 									</div>
 								) : (
-									<Link href="/auth/signin" className="">
+									<Link className="" href="/auth/signin">
 										<span className={'btn-primary-simple'}>Me connecter</span>
 									</Link>
 								)}

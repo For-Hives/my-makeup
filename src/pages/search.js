@@ -1,15 +1,17 @@
-import Head from 'next/head'
 import React, { useEffect, useState } from 'react'
-import Nav from '@/components/Global/Nav'
-import Footer from '@/components/Global/Footer'
+
+import { CheckCircleIcon } from '@heroicons/react/24/outline'
 import { useRouter } from 'next/router'
 import Image from 'next/image'
+import Head from 'next/head'
+import Link from 'next/link'
+
+import { BadgeSuperMaquilleuse } from '@/components/Global/BadgeSuperMaquilleuse'
 import FullSearchBloc from '@/components/Global/Search/FullSearchBloc'
 import { CatSearch } from '@/components/Global/Search/CatSearch'
 import Loader from '@/components/Global/Loader/Loader'
-import { BadgeSuperMaquilleuse } from '@/components/Global/BadgeSuperMaquilleuse'
-import Link from 'next/link'
-import { CheckCircleIcon } from '@heroicons/react/24/outline'
+import Footer from '@/components/Global/Footer'
+import Nav from '@/components/Global/Nav'
 
 function SearchPage() {
 	const [searchTerm, setSearchTerm] = useState(undefined)
@@ -71,11 +73,11 @@ function SearchPage() {
 			<Head>
 				<title>Recherche de maquilleuse - My-Makeup</title>
 				<meta
-					name="description"
 					content="Recherchez la maquilleuse professionnelle qui vous correspond en quelques clics sur My-Makeup."
+					name="description"
 				/>
 				{/*	seo tag canonical link */}
-				<link rel="canonical" href={'https://my-makeup.fr/search'} />
+				<link href={'https://my-makeup.fr/search'} rel="canonical" />
 			</Head>
 			<div className={'relative'}>
 				<Nav isFindMakeupArtistBtnVisible={false} />
@@ -106,35 +108,35 @@ function SearchPage() {
 									<>
 										{searchResults.map((result, index) => (
 											<Link
-												key={index}
-												href={`/profil/${result.username}`}
-												data-cy={`search-result`}
 												className={
 													'col-span-1 flex w-full flex-col items-center rounded border border-gray-300 bg-white'
 												}
+												data-cy={`search-result`}
+												href={`/profil/${result.username}`}
+												key={index}
 											>
 												<div className={'relative w-full'}>
 													{result.main_picture === null && (
 														<Image
-															src={'/assets/pp_makeup.webp'}
 															alt={'profil picture Maquilleuse professionnelle'}
-															width={250}
-															height={250}
-															quality={100}
 															className={
 																'h-[350px] w-full rounded-b-none rounded-t object-cover object-center'
 															}
+															height={250}
+															quality={100}
+															src={'/assets/pp_makeup.webp'}
+															width={250}
 														/>
 													)}
 													{result.main_picture != null && (
 														<Image
-															src={result.main_picture.url}
 															alt={'profil picture Maquilleuse professionnelle'}
-															width={250}
-															height={250}
 															className={
 																'h-[350px] w-full rounded-b-none rounded-t object-cover object-center'
 															}
+															height={250}
+															src={result.main_picture.url}
+															width={250}
 														/>
 													)}
 													{result?.pro === true && (
@@ -233,8 +235,8 @@ function SearchPage() {
 																{result?.skills.map((skill, index) => {
 																	return index < 7 ? (
 																		<div
-																			key={index}
 																			className="inline-flex flex-nowrap items-center rounded-full bg-indigo-100 px-3 py-2 text-xs font-medium text-indigo-700"
+																			key={index}
 																		>
 																			{skill.name}
 																		</div>

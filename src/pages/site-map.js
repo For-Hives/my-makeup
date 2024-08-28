@@ -1,10 +1,12 @@
 import React from 'react'
-import Nav from '@/components/Global/Nav'
-import Footer from '@/components/Global/Footer'
+
 import Head from 'next/head'
-import Hero from '@/components/Global/Hero'
-import CTA from '@/components/Global/CTA'
 import Link from 'next/link'
+
+import Footer from '@/components/Global/Footer'
+import Hero from '@/components/Global/Hero'
+import Nav from '@/components/Global/Nav'
+import CTA from '@/components/Global/CTA'
 
 /**
  * @param props
@@ -15,22 +17,15 @@ function SiteMap({ articles, talents }) {
 		<>
 			<Head>
 				<title>Site Map My-Makeup !</title>
-				<meta name="description" content="Le plan du site de My-Makeup" />
+				<meta content="Le plan du site de My-Makeup" name="description" />
 				{/*	seo tag canonical link */}
-				<link rel="canonical" href={'https://my-makeup.fr/site-map'} />
+				<link href={'https://my-makeup.fr/site-map'} rel="canonical" />
 			</Head>
 
 			<Nav />
 
 			<main className={'relative'}>
 				<Hero
-					imgBackgroundSrc={'/assets/back/maquilleuse_europeenne_white.webp'}
-					title={
-						<>
-							Le plan du site&nbsp;
-							<span className={'text-indigo-900'}>My&nbsp;Makeup</span>
-						</>
-					}
 					description={
 						<>
 							{
@@ -38,9 +33,16 @@ function SiteMap({ articles, talents }) {
 							}
 						</>
 					}
-					isSearchDisplayed={false}
+					imgBackgroundSrc={'/assets/back/maquilleuse_europeenne_white.webp'}
 					isCTALoginDisplayed={false}
+					isSearchDisplayed={false}
 					isSimpleVersionDisplayed={true}
+					title={
+						<>
+							Le plan du site&nbsp;
+							<span className={'text-indigo-900'}>My&nbsp;Makeup</span>
+						</>
+					}
 				/>
 				<div
 					className={'relative mx-auto my-24 max-w-7xl px-4 md:my-48 md:px-0'}
@@ -147,7 +149,7 @@ function SiteMap({ articles, talents }) {
 														</Link>
 													</li>
 												)
-										  })
+											})
 										: null}
 								</ul>
 								<h3>Talents</h3>
@@ -161,7 +163,7 @@ function SiteMap({ articles, talents }) {
 														</Link>
 													</li>
 												)
-										  })
+											})
 										: null}
 								</ul>
 							</div>
@@ -179,11 +181,11 @@ export default SiteMap
 
 async function fetchAPI(url) {
 	const res = await fetch(url, {
-		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
 			Accept: 'application/json',
 		},
+		method: 'GET',
 	})
 	return res.json()
 }

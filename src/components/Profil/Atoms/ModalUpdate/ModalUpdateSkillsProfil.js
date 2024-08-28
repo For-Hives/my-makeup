@@ -1,9 +1,11 @@
 import React, { Fragment, useEffect, useRef, useState } from 'react'
-import { Dialog, Transition } from '@headlessui/react'
 import { useForm, useFormContext } from 'react-hook-form'
+
+import { Dialog, Transition } from '@headlessui/react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useSession } from 'next-auth/react'
 import * as zod from 'zod'
+
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
 
 const schema = zod
@@ -20,14 +22,14 @@ export default function ModalUpdateSkillsProfil(props) {
 	const user = props.user
 
 	const {
-		register,
-		handleSubmit,
 		formState: { errors },
-		reset,
-		trigger,
-		watch,
+		handleSubmit,
+		register,
 		setValue,
 		setError,
+		trigger,
+		reset,
+		watch,
 	} = useForm({
 		resolver: zodResolver(schema),
 	})
@@ -88,11 +90,11 @@ export default function ModalUpdateSkillsProfil(props) {
 				trigger('skills').then(isValid => {
 					if (isValid) {
 						const updatedUserSkillsSelected = userSkillsSelected.concat({
-							id:
+							name:
 								event.target.value.slice(0, -1) === ';'
 									? event.target.value.slice(0, -1)
 									: event.target.value,
-							name:
+							id:
 								event.target.value.slice(0, -1) === ';'
 									? event.target.value.slice(0, -1)
 									: event.target.value,
@@ -103,8 +105,8 @@ export default function ModalUpdateSkillsProfil(props) {
 				})
 			} else {
 				setError('skills', {
-					type: 'manual',
 					message: 'Une compétence est requise.',
+					type: 'manual',
 				})
 			}
 			return
@@ -115,8 +117,8 @@ export default function ModalUpdateSkillsProfil(props) {
 			setUserSkills(event.target.value)
 			setValue('skills', event.target.value)
 			setError('skills', {
-				type: 'manual',
 				message: 'Une compétence est requise.',
+				type: 'manual',
 			})
 		} else {
 			setUserSkills(event.target.value)
@@ -142,8 +144,8 @@ export default function ModalUpdateSkillsProfil(props) {
 			// Add an id to each skill
 			const skillsWithId = user.skills.map((skill, index) => {
 				return {
-					id: index, // Use the index as an id
 					name: skill.name,
+					id: index, // Use the index as an id
 				}
 			})
 			setUserSkillsSelected(skillsWithId)
@@ -153,7 +155,7 @@ export default function ModalUpdateSkillsProfil(props) {
 	}, [open, user])
 
 	return (
-		<Transition.Root show={open} as={Fragment}>
+		<Transition.Root as={Fragment} show={open}>
 			<Dialog
 				as="div"
 				className="relative z-30"
@@ -185,12 +187,12 @@ export default function ModalUpdateSkillsProfil(props) {
 						>
 							<Dialog.Panel className="relative w-full transform rounded-lg bg-white p-8 text-left shadow-2xl transition-all sm:max-w-3xl">
 								<button
-									type="button"
-									onClick={props.handleIsModalOpen}
-									ref={cancelButtonRef}
 									className={
 										'absolute right-0 top-0 m-6 flex items-center justify-center'
 									}
+									onClick={props.handleIsModalOpen}
+									ref={cancelButtonRef}
+									type="button"
 								>
 									<span className="material-icons-round">close</span>
 								</button>
@@ -207,14 +209,14 @@ export default function ModalUpdateSkillsProfil(props) {
 										<div className="grid grid-cols-1 gap-4">
 											<div className={'flex flex-col gap-4'}>
 												<form
-													onSubmit={handleSubmit(onSubmit)}
-													method="POST"
 													className="flex flex-col gap-4"
+													method="POST"
+													onSubmit={handleSubmit(onSubmit)}
 												>
 													<div>
 														<label
-															htmlFor="skills"
 															className="block text-sm text-gray-700"
+															htmlFor="skills"
 														>
 															Compétences
 														</label>
@@ -234,7 +236,8 @@ export default function ModalUpdateSkillsProfil(props) {
 																{...register('skills', {
 																	required: true,
 																})}
-																required
+																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
+																onChange={handleUpdateSkills}
 																onKeyPress={async event => {
 																	if (event.key === 'Enter') {
 																		event.preventDefault()
@@ -247,8 +250,8 @@ export default function ModalUpdateSkillsProfil(props) {
 																				setUserSkillsSelected([
 																					...userSkillsSelected,
 																					{
-																						id: event.target.value,
 																						name: event.target.value,
+																						id: event.target.value,
 																					},
 																				])
 																				setUserSkills('')
@@ -256,21 +259,20 @@ export default function ModalUpdateSkillsProfil(props) {
 																			// 	Display an error message
 																			else
 																				setError('skills', {
-																					type: 'manual',
 																					message:
 																						'Une compétence est requise.',
+																					type: 'manual',
 																				})
 																		}
 																	}
 																}}
+																required
 																value={userSkills ?? ''}
-																onChange={handleUpdateSkills}
-																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 															/>
 															{errors.skills && (
 																<p
-																	data-cy={'error-skills'}
 																	className={'mt-2 text-xs text-red-500/80'}
+																	data-cy={'error-skills'}
 																>
 																	{errors.skills.message}
 																</p>
@@ -283,20 +285,20 @@ export default function ModalUpdateSkillsProfil(props) {
 														</h3>
 														<div
 															className={
-																'flex w-full flex-wrap items-center gap-2 '
+																'flex w-full flex-wrap items-center gap-2'
 															}
 														>
 															{userSkillsSelected.map((skill, index) => (
 																<button
-																	data-cy="skill-selected"
-																	type={'button'}
-																	onClick={() => {
-																		handleDeleteSkillSelected(skill.id)
-																	}}
-																	key={index}
 																	className={
 																		'flex items-center gap-2 rounded-full bg-gray-100 px-2 py-1 text-xs text-gray-700'
 																	}
+																	data-cy="skill-selected"
+																	key={index}
+																	onClick={() => {
+																		handleDeleteSkillSelected(skill.id)
+																	}}
+																	type={'button'}
 																>
 																	<span>{skill.name}</span>
 																	<span className="material-icons-round text-sm">
@@ -313,10 +315,10 @@ export default function ModalUpdateSkillsProfil(props) {
 								</div>
 								<div className="mt-4 flex justify-end">
 									<button
-										data-cy="save-button-skills"
-										type="button"
 										className="btn-primary"
+										data-cy="save-button-skills"
 										onClick={handleSubmit(onSubmit)}
+										type="button"
 									>
 										Sauvegarder
 									</button>

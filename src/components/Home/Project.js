@@ -1,26 +1,27 @@
 import React from 'react'
+
 import Image from 'next/image'
 
 const tabs = [
 	{
-		title: 'Soyez incroyablement rapide & efficace',
 		content:
 			'Communiquez en temps réel, démarrez de nouvelles prestations en quelques jours, et recevez vos demandes rapidement.',
+		title: 'Soyez incroyablement rapide & efficace',
 	},
 	{
-		title: 'Évoluez dans un espace sûr & un service sécurisé',
 		content:
 			'Concentrez-vous sur la collaboration grâce aux commentaires, évaluations, et aux profils des maquilleuses vérifiés.',
+		title: 'Évoluez dans un espace sûr & un service sécurisé',
 	},
 	{
-		title: 'Gagnez beaucoup de temps',
 		content:
 			'Consacrez 10 fois moins de temps à vos tâches de recherche, et de planification. Grâce à notre plateforme, vous pouvez trouver les meilleures maquilleuses, et planifier vos projets, le tout dans une solution unifiée.',
+		title: 'Gagnez beaucoup de temps',
 	},
 	{
-		title: 'Rejoignez une communauté de talents',
 		content:
 			'Créé pour et par des professionnels de la beauté, notre plateforme attire les meilleures maquilleuses. Nos managers dédiés à la réussite des maquilleuses soutiennent leurs carrières et le développement de leurs compétences.',
+		title: 'Rejoignez une communauté de talents',
 	},
 ]
 
@@ -64,13 +65,13 @@ function Project() {
 					</div>
 					<div className={'flex items-center justify-center md:w-1/2'}>
 						<Image
+							alt={'illustration'}
 							className={
 								'h-[250px] w-full rounded-2xl object-cover object-top md:h-[500px]'
 							}
-							src={'/assets/maquilleuse_project.webp'}
-							alt={'illustration'}
-							width={'500'}
 							height={'350'}
+							src={'/assets/maquilleuse_project.webp'}
+							width={'500'}
 						/>
 					</div>
 				</section>
