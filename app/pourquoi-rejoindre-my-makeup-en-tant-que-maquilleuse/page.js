@@ -5,13 +5,13 @@ import Nav from '@/components/Global/Nav'
 import CTA from '@/components/Global/CTA'
 
 export const metadata = {
+	// seo tag canonical link
 	alternates: {
 		canonical:
 			'https://my-makeup.fr/pourquoi-rejoindre-my-makeup-en-tant-que-maquilleuse',
 	},
 	description:
 		'Découvrez pourquoi vous devriez rejoindre My-Makeup en tant que maquilleuse professionnelle',
-	// seo tag canonical link
 	title: 'Pourquoi My-Makeup ? en tant que maquilleuse',
 }
 
