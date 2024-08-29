@@ -1,18 +1,17 @@
-import React from 'react'
-
 import Image from 'next/image'
-import Head from 'next/head'
 import Link from 'next/link'
 
-function Custom404(props) {
+export const metadata = {
+	alternates: {
+		canonical: 'https://my-makeup.fr/404',
+	},
+	description: "Oups, cette page n'existe pas !",
+	title: 'My-Makeup',
+}
+
+function NotFound() {
 	return (
 		<>
-			<Head>
-				<title>My-Makeup</title>
-				<meta content="Oups, cette page n'existe pas !" name="description" />
-				{/*	seo tag canonical link */}
-				<link href="https://my-makeup.fr/404" rel="canonical" />
-			</Head>
 			<div className="relative flex h-[95vh] max-h-screen overflow-hidden md:h-screen md:overflow-auto md:bg-white">
 				<div className="flex flex-1 flex-col justify-center bg-white px-4 sm:px-6 md:py-12 md:pt-12 lg:flex-none lg:px-20 xl:px-24">
 					<div className="mx-auto w-full max-w-sm lg:w-96">
@@ -57,4 +56,4 @@ function Custom404(props) {
 	)
 }
 
-export default Custom404
+export default NotFound
