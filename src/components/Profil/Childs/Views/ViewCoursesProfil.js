@@ -18,7 +18,7 @@ function ViewCoursesProfil(props) {
 				user?.courses?.length !== 0 &&
 				user?.courses?.map((course, index) => {
 					return (
-						<div key={index} className={'flex text-gray-700'}>
+						<div className={'flex text-gray-700'} key={index}>
 							<span className="material-icons-round text-indigo-900">
 								school
 							</span>
@@ -51,7 +51,7 @@ function ViewCoursesProfil(props) {
 										// if \n is present, split the string and display each part in a new line
 										course?.course_description?.split('\n').map((item, i) => {
 											return (
-												<p key={i} className={'text-sm italic text-gray-500'}>
+												<p className={'text-sm italic text-gray-500'} key={i}>
 													{item}
 												</p>
 											)

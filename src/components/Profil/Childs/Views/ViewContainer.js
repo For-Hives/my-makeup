@@ -1,6 +1,6 @@
 import React from 'react'
 
-function ViewContainer({ user, Component }) {
+function ViewContainer({ Component, user }) {
 	return (
 		<div className={'w-full'}>
 			<div

@@ -1,5 +1,7 @@
 import React, { useEffect } from 'react'
+
 import { useRouter } from 'next/router'
+
 import ModalUpdateSkillsProfil from '@/components/Profil/Atoms/ModalUpdate/ModalUpdateSkillsProfil'
 import ViewSkillsProfil from '@/components/Profil/Childs/Views/ViewSkillsProfil'
 
@@ -31,27 +33,27 @@ export function SkillsProfil(props) {
 	return (
 		<div className={'relative w-full'}>
 			<ModalUpdateSkillsProfil
-				isModalOpen={isModalOpen}
-				handleUpdateUser={props.handleUpdateUser}
 				handleIsModalOpen={handleIsModalOpen}
+				handleUpdateUser={props.handleUpdateUser}
+				isModalOpen={isModalOpen}
 				user={user}
 			/>
 			<div
 				className={
 					(!isPublic ? 'group relative' : '') +
-					' flex w-full flex-col gap-4 rounded border border-gray-300 bg-white p-8 '
+					' flex w-full flex-col gap-4 rounded border border-gray-300 bg-white p-8'
 				}
 			>
 				{!isPublic ? (
 					<button
-						data-cy={'update-skills-button'}
-						onClick={handleIsModalOpen}
 						className={
 							'absolute left-0 top-0 -z-10 flex h-full w-full items-center justify-center opacity-0 ' +
-							'bg-white/75 backdrop-blur-none group-hover:z-20 group-hover:opacity-100 ' +
-							'pointer-events-none transition duration-300 group-hover:pointer-events-auto group-hover:backdrop-blur-[2px] ' +
+							'bg-white/75 backdrop-blur-none group-hover:z-20 group-hover:opacity-100' +
+							'pointer-events-none transition duration-300 group-hover:pointer-events-auto group-hover:backdrop-blur-[2px]' +
 							'user-select-none group-hover:user-select-auto focus:outline-none'
 						}
+						data-cy={'update-skills-button'}
+						onClick={handleIsModalOpen}
 					>
 						<div
 							className={

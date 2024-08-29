@@ -1,6 +1,7 @@
 import React from 'react'
-import Image from 'next/image'
+
 import { HeartIcon, StarIcon } from '@heroicons/react/20/solid'
+import Image from 'next/image'
 
 function CardDemo(props) {
 	return (
@@ -11,11 +12,11 @@ function CardDemo(props) {
 		>
 			<div className={'relative h-[150px]'}>
 				<Image
-					src={props.src}
+					alt={'Trouver votre maquilleuse professionnelle'}
+					className={'rounded-t-xl object-cover'}
 					fill={true}
 					sizes="(min-width: 480px ) 50vw, (min-width: 728px) 33vw, (min-width: 976px) 25vw, 100vw"
-					className={'rounded-t-xl object-cover'}
-					alt={'Trouver votre maquilleuse professionnelle'}
+					src={props.src}
 				/>
 			</div>
 			{/* if heart is true */}
@@ -44,11 +45,11 @@ function CardDemo(props) {
 				<div className={'h-4 w-full rounded bg-gray-100 px-4'}></div>
 				<div className={'flex h-4 w-full items-center justify-end rounded'}>
 					{/* stars in css & html */}
-					<StarIcon className="h-4 w-4 text-yellow-500/90" aria-hidden="true" />
-					<StarIcon className="h-4 w-4 text-yellow-500/90" aria-hidden="true" />
-					<StarIcon className="h-4 w-4 text-yellow-500/90" aria-hidden="true" />
-					<StarIcon className="h-4 w-4 text-yellow-500/90" aria-hidden="true" />
-					<StarIcon className="h-4 w-4 text-yellow-500/90" aria-hidden="true" />
+					<StarIcon aria-hidden="true" className="h-4 w-4 text-yellow-500/90" />
+					<StarIcon aria-hidden="true" className="h-4 w-4 text-yellow-500/90" />
+					<StarIcon aria-hidden="true" className="h-4 w-4 text-yellow-500/90" />
+					<StarIcon aria-hidden="true" className="h-4 w-4 text-yellow-500/90" />
+					<StarIcon aria-hidden="true" className="h-4 w-4 text-yellow-500/90" />
 				</div>
 			</div>
 		</div>

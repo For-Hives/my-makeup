@@ -1,8 +1,10 @@
 import React from 'react'
-import Nav from '@/components/Global/Nav'
-import Footer from '@/components/Global/Footer'
+
 import Head from 'next/head'
+
+import Footer from '@/components/Global/Footer'
 import Hero from '@/components/Global/Hero'
+import Nav from '@/components/Global/Nav'
 import CTA from '@/components/Global/CTA'
 
 /**
@@ -15,31 +17,31 @@ function TrouverUneMaquilleuse(props) {
 			<Head>
 				<title>Trouver une maquilleuse !</title>
 				<meta
-					name="description"
 					content="Découvrez comment vous pouvez trouver une maquilleuse simplement, et qui correspondra parfaitement à tout vos besoins !"
+					name="description"
 				/>
 				{/*	seo tag canonical link */}
 				<link
-					rel="canonical"
 					href="https://my-makeup.fr/particulier/trouver-une-maquilleuse"
+					rel="canonical"
 				/>
 			</Head>
 			<Nav />
 			<main className={'relative'}>
 				<Hero
+					description={
+						<>
+							Découvrez comment naviguer parmi les profils disponibles sur My
+							Makeup et trouver la maquilleuse qui correspond à vos besoins et
+							attentes.
+						</>
+					}
 					imgBackgroundSrc={'/assets/back/maquilleuse_africaine_white.webp'}
 					title={
 						<>
 							Trouver une maquilleuse, avec&nbsp;
 							<span className={'text-indigo-900'}>My&nbsp;Makeup</span>
 							&nbsp;{"ça n'a jamais été aussi simple !"}
-						</>
-					}
-					description={
-						<>
-							Découvrez comment naviguer parmi les profils disponibles sur My
-							Makeup et trouver la maquilleuse qui correspond à vos besoins et
-							attentes.
 						</>
 					}
 				/>

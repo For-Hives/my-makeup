@@ -1,13 +1,15 @@
-import Head from 'next/head'
 import React, { useEffect } from 'react'
-import Nav from '@/components/Global/Nav'
-import Footer from '@/components/Global/Footer'
-import ResumeProfil from '@/components/Profil/Parents/ResumeProfil'
+
 import { getSession, useSession } from 'next-auth/react'
+import Head from 'next/head'
 import _ from 'lodash'
+
+import ResumeProfil from '@/components/Profil/Parents/ResumeProfil'
 import InfosProfil from '@/components/Profil/Parents/InfosProfil'
 import FullLoader from '@/components/Global/Loader/FullLoader'
 import DangerZone from '@/components/Global/DangerZone'
+import Footer from '@/components/Global/Footer'
+import Nav from '@/components/Global/Nav'
 
 function Profil({ data }) {
 	const { data: session } = useSession()
@@ -33,26 +35,26 @@ function Profil({ data }) {
 			<Head>
 				<title>My-Makeup</title>
 				<meta
-					name="description"
 					content="Page de profil sur my-makeup.fr la plateforme qui va révolutionner votre façon de travailler !"
+					name="description"
 				/>
 				{/*	seo tag canonical link */}
-				<link rel="canonical" href="https://my-makeup.fr/auth/profil" />
+				<link href="https://my-makeup.fr/auth/profil" rel="canonical" />
 			</Head>
 			<Nav isProfileBtnVisible={false} />
 			<main className={'relative'}>
 				{session && session.user && !_.isEmpty(session.user) ? (
 					<>
 						<ResumeProfil
-							user={user}
 							handleUpdateUser={handleUpdateUser}
 							isPublic={isPublic}
+							user={user}
 						/>
 						<InfosProfil
-							user={user}
+							handleIsPublic={handleIsPublic}
 							handleUpdateUser={handleUpdateUser}
 							isPublic={isPublic}
-							handleIsPublic={handleIsPublic}
+							user={user}
 						/>
 						<DangerZone session={session} />
 					</>
@@ -78,13 +80,13 @@ export const getServerSideProps = async ({ req, res }) => {
 		const response = await fetch(
 			`${process.env.NEXT_PUBLIC_API_URL}/api/me-makeup`,
 			{
-				method: 'GET',
 				headers: {
+					Authorization: `Bearer ${session.jwt}`,
 					// 	token
 					'Content-Type': 'application/json',
 					Accept: 'application/json',
-					Authorization: `Bearer ${session.jwt}`,
 				},
+				method: 'GET',
 			}
 		)
 
@@ -104,8 +106,8 @@ export const getServerSideProps = async ({ req, res }) => {
 
 	return {
 		props: {
-			session,
 			data: user ?? null,
+			session,
 		},
 	}
 }

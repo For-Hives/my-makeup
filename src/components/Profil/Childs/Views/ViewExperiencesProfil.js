@@ -28,7 +28,7 @@ function ViewExperiencesProfil(props) {
 					<div className={'flex flex-col gap-4'}>
 						{user?.experiences?.map((experience, index) => {
 							return (
-								<div key={index} className={'flex w-full text-indigo-800'}>
+								<div className={'flex w-full text-indigo-800'} key={index}>
 									<span className="material-icons-round">apartment</span>
 									<div className={'ml-2 flex w-full flex-col gap-2'}>
 										<div className={'flex w-full flex-col'}>
@@ -68,7 +68,7 @@ function ViewExperiencesProfil(props) {
 																	year: 'numeric',
 																	month: 'long',
 																}
-														  )}
+															)}
 												</p>
 											</div>
 										</div>

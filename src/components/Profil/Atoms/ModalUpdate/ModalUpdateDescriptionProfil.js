@@ -1,9 +1,11 @@
 import React, { Fragment, useEffect, useRef, useState } from 'react'
-import { Dialog, Transition } from '@headlessui/react'
 import { useForm } from 'react-hook-form'
+
+import { Dialog, Transition } from '@headlessui/react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useSession } from 'next-auth/react'
 import * as zod from 'zod'
+
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
 
 const schema = zod
@@ -20,9 +22,9 @@ export default function ModalUpdateDescriptionProfil(props) {
 	const user = props.user
 
 	const {
-		register,
-		handleSubmit,
 		formState: { errors },
+		handleSubmit,
+		register,
 		reset,
 	} = useForm({
 		resolver: zodResolver(schema),
@@ -74,7 +76,7 @@ export default function ModalUpdateDescriptionProfil(props) {
 	}, [open, reset, user.description])
 
 	return (
-		<Transition.Root show={open} as={Fragment}>
+		<Transition.Root as={Fragment} show={open}>
 			<Dialog
 				as="div"
 				className="relative z-30"
@@ -106,12 +108,12 @@ export default function ModalUpdateDescriptionProfil(props) {
 						>
 							<Dialog.Panel className="relative w-full transform rounded-lg bg-white p-8 text-left shadow-2xl transition-all sm:max-w-3xl">
 								<button
-									type="button"
-									onClick={props.handleIsModalOpen}
-									ref={cancelButtonRef}
 									className={
 										'absolute right-0 top-0 m-6 flex items-center justify-center'
 									}
+									onClick={props.handleIsModalOpen}
+									ref={cancelButtonRef}
+									type="button"
 								>
 									<span className="material-icons-round">close</span>
 								</button>
@@ -128,14 +130,14 @@ export default function ModalUpdateDescriptionProfil(props) {
 										<div className="grid grid-cols-1 gap-4">
 											<div className={'flex flex-col gap-4'}>
 												<form
-													onSubmit={handleSubmit(onSubmit)}
-													method="POST"
 													className="flex flex-col gap-4"
+													method="POST"
+													onSubmit={handleSubmit(onSubmit)}
 												>
 													<div>
 														<label
-															htmlFor="description"
 															className="block text-sm text-gray-700"
+															htmlFor="description"
 														>
 															Description
 														</label>
@@ -147,15 +149,15 @@ export default function ModalUpdateDescriptionProfil(props) {
 																{...register('description', {
 																	required: true,
 																})}
+																className="block min-h-[500px] w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
+																onChange={handleUpdateDescription}
 																required
 																value={userDescription ?? ''}
-																onChange={handleUpdateDescription}
-																className="block min-h-[500px] w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
 															/>
 															{errors.description && (
 																<p
-																	data-cy={'error-description'}
 																	className={'mt-2 text-xs text-red-500/80'}
+																	data-cy={'error-description'}
 																>
 																	{errors.description.message}
 																</p>
@@ -169,10 +171,10 @@ export default function ModalUpdateDescriptionProfil(props) {
 								</div>
 								<div className="mt-4 flex justify-end">
 									<button
-										data-cy="save-button-description"
-										type="button"
 										className="btn-primary"
+										data-cy="save-button-description"
 										onClick={handleSubmit(onSubmit)}
+										type="button"
 									>
 										Sauvegarder
 									</button>

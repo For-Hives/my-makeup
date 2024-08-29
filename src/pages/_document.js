@@ -5,17 +5,17 @@ export default function Document() {
 	return (
 		<Html lang="fr">
 			<Head>
-				<link rel="icon" href="/favicon.webp" />
+				<link href="/favicon.webp" rel="icon" />
 				<Script
 					async
-					src="https://umami.wadefade.fr/script.js"
-					strategy={'afterInteractive'}
 					data-domains={'my-makeup.fr'}
 					data-website-id="e7010ee5-a940-4add-80bf-5483d2c515db"
+					src="https://umami.wadefade.fr/script.js"
+					strategy={'afterInteractive'}
 				></Script>
 				<Script
-					strategy={'afterInteractive'}
 					src="https://www.googletagmanager.com/gtag/js?id=G-6Z5K42B5YH"
+					strategy={'afterInteractive'}
 				/>
 				<Script id={'analytics'} strategy="afterInteractive">
 					{`

@@ -1,5 +1,7 @@
 import React, { useEffect } from 'react'
+
 import { useRouter } from 'next/router'
+
 import ModalUpdateSocialMediaProfil from '@/components/Profil/Atoms/ModalUpdate/ModalUpdateSocialMediaProfil'
 import ViewSocialMediaProfil from '@/components/Profil/Childs/Views/ViewSocialMediaProfil'
 
@@ -30,9 +32,9 @@ export function SocialMediaProfil(props) {
 	return (
 		<div className={'w-full'}>
 			<ModalUpdateSocialMediaProfil
-				isModalOpen={isModalOpen}
-				handleUpdateUser={props.handleUpdateUser}
 				handleIsModalOpen={handleIsModalOpen}
+				handleUpdateUser={props.handleUpdateUser}
+				isModalOpen={isModalOpen}
 				user={user}
 			/>
 			<div
@@ -43,14 +45,14 @@ export function SocialMediaProfil(props) {
 			>
 				{!isPublic ? (
 					<button
-						data-cy={'update-social-medias-button'}
-						onClick={handleIsModalOpen}
 						className={
 							'absolute left-0 top-0 -z-10 flex h-full w-full items-center justify-center px-4 opacity-0 ' +
-							'bg-white/75 backdrop-blur-none group-hover:z-20 group-hover:opacity-100 ' +
-							'pointer-events-none transition duration-300 group-hover:pointer-events-auto group-hover:backdrop-blur-[2px] ' +
+							'bg-white/75 backdrop-blur-none group-hover:z-20 group-hover:opacity-100' +
+							'pointer-events-none transition duration-300 group-hover:pointer-events-auto group-hover:backdrop-blur-[2px]' +
 							'user-select-none group-hover:user-select-auto focus:outline-none'
 						}
+						data-cy={'update-social-medias-button'}
+						onClick={handleIsModalOpen}
 					>
 						<div
 							className={

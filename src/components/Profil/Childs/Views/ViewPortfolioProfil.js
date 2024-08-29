@@ -1,11 +1,13 @@
 import React, { useEffect } from 'react'
+
 import { Swiper, SwiperSlide } from 'swiper/react'
 // import required modules
 import { Pagination } from 'swiper/modules'
+import Image from 'next/image'
+
+import 'swiper/css/pagination'
 // Import Swiper styles
 import 'swiper/css'
-import 'swiper/css/pagination'
-import Image from 'next/image'
 
 function ViewPortfolioProfil(props) {
 	const [mySwiper, setMySwiper] = React.useState(null)
@@ -33,17 +35,17 @@ function ViewPortfolioProfil(props) {
 			<h2 className={'text-xl font-bold text-gray-700'}>Portfolio</h2>
 			<>
 				<Swiper
-					slidesPerView={'auto'}
-					spaceBetween={32}
-					pagination={{
-						clickable: true,
-					}}
-					modules={[Pagination]}
 					className="h-[500px] w-full"
 					loop={true}
+					modules={[Pagination]}
 					onInit={ev => {
 						setMySwiper(ev)
 					}}
+					pagination={{
+						clickable: true,
+					}}
+					slidesPerView={'auto'}
+					spaceBetween={32}
 				>
 					{
 						// 	map on user?.image_gallery and return a SwiperSlide with the image
@@ -53,19 +55,19 @@ function ViewPortfolioProfil(props) {
 						imageGallery.map((image, index) => {
 							return (
 								<SwiperSlide
+									className={'!h-[500px] !w-auto'}
 									key={index}
 									style={{
 										aspectRatio: `${image?.width}/${image?.height}`,
 										height: '100%',
 									}}
-									className={'!h-[500px] !w-auto'}
 								>
 									<Image
-										src={image?.url}
 										alt={image?.alternativeText ?? image?.name}
+										className={'rounded object-cover'}
 										fill={true}
 										sizes="(min-width: 480px ) 50vw, (min-width: 728px) 33vw, (min-width: 976px) 25vw, 100vw"
-										className={'rounded object-cover'}
+										src={image?.url}
 									/>
 								</SwiperSlide>
 							)
@@ -83,10 +85,10 @@ function ViewPortfolioProfil(props) {
 					>
 						<Image
 							alt={'next'}
-							src={'/assets/down-arrow.svg'}
 							className={'rotate-90'}
-							width={20}
 							height={20}
+							src={'/assets/down-arrow.svg'}
+							width={20}
 						></Image>
 						<span className={'font-semibold text-indigo-950'}>Précédent</span>
 					</button>
@@ -101,10 +103,10 @@ function ViewPortfolioProfil(props) {
 						<span className={'font-semibold text-indigo-950'}>Suivant</span>
 						<Image
 							alt={'next'}
-							src={'/assets/down-arrow.svg'}
 							className={'-rotate-90'}
-							width={20}
 							height={20}
+							src={'/assets/down-arrow.svg'}
+							width={20}
 						></Image>
 					</button>
 				</div>

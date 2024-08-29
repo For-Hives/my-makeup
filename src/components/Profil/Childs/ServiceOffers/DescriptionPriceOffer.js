@@ -25,8 +25,8 @@ export function DescriptionPriceOffer(props) {
 						service_offer?.description?.split('\n').map((item, i) => {
 							return (
 								<p
+									className={'border-l border-gray-300 pl-4 text-gray-700'}
 									key={i}
-									className={'border-l border-gray-300 pl-4 text-gray-700 '}
 								>
 									{item}
 								</p>
@@ -49,10 +49,10 @@ export function DescriptionPriceOffer(props) {
 						service_offer?.price?.split('\n').map((item, i) => {
 							return (
 								<h3
-									key={i}
 									className={
 										'text-md flex justify-end rounded-full bg-gray-50 px-3 py-2 text-right italic text-gray-500'
 									}
+									key={i}
 								>
 									{item}
 								</h3>

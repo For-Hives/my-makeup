@@ -1,4 +1,5 @@
 import React from 'react'
+
 import Image from 'next/image'
 
 function Presentation() {
@@ -24,9 +25,9 @@ function Presentation() {
 					<div className={'flex flex-col items-center justify-center gap-2'}>
 						<Image
 							alt={'client à la recherche de maquilleuse'}
+							height={'140'}
 							src={'/assets/illustrations/illustration.webp'}
 							width={'140'}
-							height={'140'}
 						/>
 						<h3
 							className={
@@ -42,9 +43,9 @@ function Presentation() {
 					<div className={'flex flex-col items-center justify-center gap-2'}>
 						<Image
 							alt={'des maquilleuses passionnées aux multiples compétences'}
+							height={'140'}
 							src={'/assets/illustrations/illustration_2.webp'}
 							width={'140'}
-							height={'140'}
 						/>
 						<h3
 							className={
@@ -62,9 +63,9 @@ function Presentation() {
 							alt={
 								'une solution dédiée pour collaborer entre particuliers et maquilleuses'
 							}
+							height={'140'}
 							src={'/assets/illustrations/illustration_3.webp'}
 							width={'140'}
-							height={'140'}
 						/>
 						<h3
 							className={

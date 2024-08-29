@@ -1,15 +1,17 @@
 import React, { Fragment, useEffect, useRef, useState } from 'react'
-import { Dialog, Transition } from '@headlessui/react'
-import Image from 'next/image'
-import { PhotoIcon } from '@heroicons/react/20/solid'
 import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { useSession } from 'next-auth/react'
-import * as zod from 'zod'
-import { Swiper, SwiperSlide } from 'swiper/react'
-import { Pagination } from 'swiper/modules'
-import { patchMeMakeup } from '@/services/PatchMeMakeup'
 import { toast } from 'react-toastify'
+
+import { Dialog, Transition } from '@headlessui/react'
+import { PhotoIcon } from '@heroicons/react/20/solid'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { Swiper, SwiperSlide } from 'swiper/react'
+import { useSession } from 'next-auth/react'
+import { Pagination } from 'swiper/modules'
+import Image from 'next/image'
+import * as zod from 'zod'
+
+import { patchMeMakeup } from '@/services/PatchMeMakeup'
 import Info from '@/components/Global/Info'
 
 const MAX_PHOTOS = 10
@@ -38,17 +40,17 @@ export default function ModalUpdatePortfolioProfil(props) {
 
 			if (userImageGallery.length >= MAX_PHOTOS) {
 				toast('La limite du nombre de photos est atteinte.', {
+					toastId: 'toast-alert',
 					type: 'error',
 					icon: '⛔',
-					toastId: 'toast-alert',
 				})
 				return
 			}
 			const res_post = fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/upload`, {
-				method: 'POST',
 				headers: {
 					Authorization: `Bearer ${session.jwt}`,
 				},
+				method: 'POST',
 				body: form,
 			})
 				.then(response => {
@@ -72,9 +74,9 @@ export default function ModalUpdatePortfolioProfil(props) {
 				})
 				.catch(err =>
 					toast('Une erreur est survenue, veuillez réessayer plus tard', {
+						toastId: 'toast-alert',
 						type: 'error',
 						icon: '⛔',
-						toastId: 'toast-alert',
 					})
 				)
 		} else {
@@ -126,9 +128,9 @@ export default function ModalUpdatePortfolioProfil(props) {
 			toast(
 				'Le fichier est trop grand, veuillez télécharger un fichier de moins de 1.5 Mo.',
 				{
+					toastId: 'toast-alert',
 					type: 'error',
 					icon: '⛔',
-					toastId: 'toast-alert',
 				}
 			)
 			return
@@ -167,7 +169,7 @@ export default function ModalUpdatePortfolioProfil(props) {
 	}, [open, reset, user.image_gallery])
 
 	return (
-		<Transition.Root show={open} as={Fragment}>
+		<Transition.Root as={Fragment} show={open}>
 			<Dialog
 				as="div"
 				className="relative z-30"
@@ -199,12 +201,12 @@ export default function ModalUpdatePortfolioProfil(props) {
 						>
 							<Dialog.Panel className="relative w-full transform rounded-lg bg-white p-8 text-left shadow-2xl transition-all sm:max-w-7xl">
 								<button
-									type="button"
-									onClick={props.handleIsModalOpen}
-									ref={cancelButtonRef}
 									className={
 										'absolute right-0 top-0 m-6 flex items-center justify-center'
 									}
+									onClick={props.handleIsModalOpen}
+									ref={cancelButtonRef}
+									type="button"
 								>
 									<span className="material-icons-round">close</span>
 								</button>
@@ -221,11 +223,11 @@ export default function ModalUpdatePortfolioProfil(props) {
 										<div
 											className={'flex w-full flex-wrap gap-16 md:flex-nowrap'}
 										>
-											<div className="grid w-full grid-cols-1 gap-4 md:w-2/6 ">
+											<div className="grid w-full grid-cols-1 gap-4 md:w-2/6">
 												<div className={'flex flex-col gap-4'}>
 													<label
-														htmlFor="cover-photo"
 														className="text-base font-normal text-gray-700"
+														htmlFor="cover-photo"
 													>
 														Ajouter une photo à votre portfolio
 													</label>
@@ -241,11 +243,11 @@ export default function ModalUpdatePortfolioProfil(props) {
 																	}
 																>
 																	<Image
-																		src={imageUrl}
 																		alt={'photo de profil'}
+																		className="rounded-full object-cover object-center"
 																		fill={true}
 																		sizes="(min-width: 480px ) 50vw, (min-width: 728px) 33vw, (min-width: 976px) 25vw, 100vw"
-																		className="rounded-full object-cover object-center"
+																		src={imageUrl}
 																	/>
 																</div>
 															) : null}
@@ -258,21 +260,21 @@ export default function ModalUpdatePortfolioProfil(props) {
 																}
 															>
 																<PhotoIcon
-																	className="mx-auto h-12 w-12 text-gray-300"
 																	aria-hidden="true"
+																	className="mx-auto h-12 w-12 text-gray-300"
 																/>
 																<div className="mt-4 flex text-sm leading-6 text-gray-600">
 																	<label className="relative rounded-md bg-white font-semibold text-indigo-600 focus-within:outline-none focus-within:ring-2 focus-within:ring-indigo-600 focus-within:ring-offset-2 hover:text-indigo-500">
 																		<span>Télécharger une nouvelle photo</span>
 																	</label>
 																	<input
+																		className="sr-only hidden"
 																		data-cy="file-upload-portefolio"
 																		id="file-upload"
 																		name="file-upload"
-																		type="file"
-																		className="sr-only hidden"
-																		ref={inputRef}
 																		onChange={handleFileChange}
+																		ref={inputRef}
+																		type="file"
 																	/>
 																</div>
 																<p className="text-xs leading-5 text-gray-600">
@@ -290,12 +292,12 @@ export default function ModalUpdatePortfolioProfil(props) {
 															}
 														/>
 													</div>
-													<div className=" flex justify-end">
+													<div className="flex justify-end">
 														<button
-															data-cy="add-button-portefolio"
-															type="button"
 															className="btn-primary"
+															data-cy="add-button-portefolio"
 															onClick={handleSubmit(onSubmit)}
+															type="button"
 														>
 															Ajouter
 														</button>
@@ -309,17 +311,17 @@ export default function ModalUpdatePortfolioProfil(props) {
 													</h2>
 													<>
 														<Swiper
-															slidesPerView={'auto'}
-															spaceBetween={32}
-															pagination={{
-																clickable: true,
-															}}
+															className="h-[500px] w-full"
 															loop={true}
 															modules={[Pagination]}
-															className="h-[500px] w-full"
 															onInit={eve => {
 																setMySwiperModal(eve)
 															}}
+															pagination={{
+																clickable: true,
+															}}
+															slidesPerView={'auto'}
+															spaceBetween={32}
 														>
 															{
 																// 	map on user?.image_gallery and return a SwiperSlide with the image
@@ -327,18 +329,18 @@ export default function ModalUpdatePortfolioProfil(props) {
 															{userImageGallery.map((image, index) => {
 																return (
 																	<SwiperSlide
+																		className={'relative !h-[500px] !w-auto'}
 																		key={index}
 																		style={{
 																			aspectRatio: `${image.width}/${image.height}`,
 																			height: '100%',
 																		}}
-																		className={'relative !h-[500px] !w-auto'}
 																	>
 																		<button
-																			data-cy="delete-button-portefolio"
 																			className={
 																				'absolute left-0 top-0 z-40 m-4 flex h-8 w-8 items-center justify-center rounded-full bg-red-50 shadow md:left-auto md:right-0'
 																			}
+																			data-cy="delete-button-portefolio"
 																			onClick={() =>
 																				handleDeletePortfolio(image.id)
 																			}
@@ -348,15 +350,15 @@ export default function ModalUpdatePortfolioProfil(props) {
 																			</span>
 																		</button>
 																		<Image
-																			src={image.url}
 																			alt={
 																				image.alternativeText ??
 																				image.name ??
 																				'portefolio image'
 																			}
+																			className={'rounded object-cover'}
 																			fill={true}
 																			sizes="(min-width: 480px ) 50vw, (min-width: 728px) 33vw, (min-width: 976px) 25vw, 100vw"
-																			className={'rounded object-cover'}
+																			src={image.url}
 																		/>
 																	</SwiperSlide>
 																)
@@ -380,10 +382,10 @@ export default function ModalUpdatePortfolioProfil(props) {
 															>
 																<Image
 																	alt={'next'}
-																	src={'/assets/down-arrow.svg'}
 																	className={'rotate-90'}
-																	width={20}
 																	height={20}
+																	src={'/assets/down-arrow.svg'}
+																	width={20}
 																></Image>
 																<span
 																	className={'font-semibold text-indigo-950'}
@@ -408,10 +410,10 @@ export default function ModalUpdatePortfolioProfil(props) {
 																</span>
 																<Image
 																	alt={'next'}
-																	src={'/assets/down-arrow.svg'}
 																	className={'-rotate-90'}
-																	width={20}
 																	height={20}
+																	src={'/assets/down-arrow.svg'}
+																	width={20}
 																></Image>
 															</button>
 														</div>
@@ -423,10 +425,10 @@ export default function ModalUpdatePortfolioProfil(props) {
 								</div>
 								<div className="mt-4 flex justify-end">
 									<button
-										data-cy="save-button-portefolio"
-										type="button"
 										className="btn-primary"
+										data-cy="save-button-portefolio"
 										onClick={handleSubmitGallery}
+										type="button"
 									>
 										Sauvegarder
 									</button>

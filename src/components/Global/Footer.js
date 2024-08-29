@@ -1,6 +1,8 @@
 import React from 'react'
+
 import Image from 'next/image'
 import Link from 'next/link'
+
 import { Signature } from '@/components/Global/Signature'
 
 function Footer() {
@@ -14,10 +16,10 @@ function Footer() {
 				<div className={'flex flex-col gap-6'}>
 					<div className={'flex items-center justify-start gap-3'}>
 						<Image
-							src={'/assets/logo.webp'}
 							alt={'Logo My-Makeup'}
-							width={'50'}
 							height={'50'}
+							src={'/assets/logo.webp'}
+							width={'50'}
 						/>
 						<p className={'text-2xl font-bold text-my-makeup-900'}>My-Makeup</p>
 					</div>
@@ -32,11 +34,11 @@ function Footer() {
 							rel={'noopener nofollow noreferrer '}
 						>
 							<Image
-								src={'/assets/brand/037-instagram.svg'}
-								className={'fill-white'}
-								width={'35'}
-								height={'35'}
 								alt={'Instagram My-Makeup'}
+								className={'fill-white'}
+								height={'35'}
+								src={'/assets/brand/037-instagram.svg'}
+								width={'35'}
 							/>
 						</Link>
 						<Link
@@ -44,11 +46,11 @@ function Footer() {
 							rel={'noopener nofollow noreferrer'}
 						>
 							<Image
-								src={'/assets/brand/030-linkedin.svg'}
-								className={'fill-indigo-700'}
-								width={'35'}
-								height={'35'}
 								alt={'Linkedin My-Makeup'}
+								className={'fill-indigo-700'}
+								height={'35'}
+								src={'/assets/brand/030-linkedin.svg'}
+								width={'35'}
 							/>
 						</Link>
 						<Link
@@ -56,11 +58,11 @@ function Footer() {
 							rel={'noopener nofollow noreferrer'}
 						>
 							<Image
-								src={'/assets/brand/017-telegram.svg'}
-								className={'fill-indigo-700'}
-								width={'35'}
-								height={'35'}
 								alt={'Mail My-Makeup'}
+								className={'fill-indigo-700'}
+								height={'35'}
+								src={'/assets/brand/017-telegram.svg'}
+								width={'35'}
 							/>
 						</Link>
 						<Link
@@ -68,11 +70,11 @@ function Footer() {
 							rel={'noopener nofollow noreferrer'}
 						>
 							<Image
-								src={'/assets/brand/006-facebook.svg'}
-								className={'fill-indigo-700'}
-								width={'35'}
-								height={'35'}
 								alt={'Facebook My-Makeup'}
+								className={'fill-indigo-700'}
+								height={'35'}
+								src={'/assets/brand/006-facebook.svg'}
+								width={'35'}
 							/>
 						</Link>
 					</div>
@@ -82,26 +84,26 @@ function Footer() {
 						<p className={'text-xl font-bold text-indigo-800'}>Particuliers</p>
 					</div>
 					<Link
-						href={'/pourquoi-utiliser-my-makeup-en-tant-que-particulier'}
 						className={'text-sm text-gray-600'}
+						href={'/pourquoi-utiliser-my-makeup-en-tant-que-particulier'}
 					>
 						Pourquoi My-Makeup ?
 					</Link>
 					<Link
-						href={'/particulier/trouver-une-maquilleuse'}
 						className={'text-sm text-gray-600'}
+						href={'/particulier/trouver-une-maquilleuse'}
 					>
 						Trouver une maquilleuse
 					</Link>
 					<Link
-						href={'/particulier/centraliser-ses-recherches'}
 						className={'text-sm text-gray-600'}
+						href={'/particulier/centraliser-ses-recherches'}
 					>
 						Centraliser ses recherches
 					</Link>
 					<Link
-						href={'/particulier/explorer-les-profils'}
 						className={'text-sm text-gray-600'}
+						href={'/particulier/explorer-les-profils'}
 					>
 						Explorer les profils
 					</Link>
@@ -111,14 +113,14 @@ function Footer() {
 						<p className={'text-xl font-bold text-indigo-800'}>Maquilleuses</p>
 					</div>
 					<Link
-						href={'/pourquoi-rejoindre-my-makeup-en-tant-que-maquilleuse'}
 						className={'text-sm text-gray-600'}
+						href={'/pourquoi-rejoindre-my-makeup-en-tant-que-maquilleuse'}
 					>
 						Pourquoi My-Makeup ?
 					</Link>
 					<Link
-						href={'/maquilleuse/partenariats'}
 						className={'text-sm text-gray-600'}
+						href={'/maquilleuse/partenariats'}
 					>
 						Communautés & Partenariats
 					</Link>
@@ -141,18 +143,18 @@ function Footer() {
 						<p className={'text-xl font-bold text-indigo-800'}>Ressources</p>
 					</div>
 					<Link
-						href={'/solutions/pour-les-particuliers'}
 						className={'text-sm text-gray-600'}
+						href={'/solutions/pour-les-particuliers'}
 					>
 						Solution pour les particuliers
 					</Link>
 					<Link
-						href={'/solutions/pour-les-maquilleuses'}
 						className={'text-sm text-gray-600'}
+						href={'/solutions/pour-les-maquilleuses'}
 					>
 						Solution pour les maquilleuses
 					</Link>
-					<Link href={'/blog'} className={'text-sm text-gray-600'}>
+					<Link className={'text-sm text-gray-600'} href={'/blog'}>
 						Blog
 					</Link>
 					{/*<Link href={'/help'} className={'text-sm text-gray-600'}>*/}
@@ -163,29 +165,29 @@ function Footer() {
 					<div className={'mb-2 flex items-center justify-start gap-3'}>
 						<p className={'text-xl font-bold text-indigo-800'}>My-Makeup</p>
 					</div>
-					<Link href={'/a-propos'} className={'text-sm text-gray-600'}>
+					<Link className={'text-sm text-gray-600'} href={'/a-propos'}>
 						À propos de My-Makeup
 					</Link>
-					<Link href={'/contact'} className={'text-sm text-gray-600'}>
+					<Link className={'text-sm text-gray-600'} href={'/contact'}>
 						Contact
 					</Link>
-					<Link href={'/cgu'} className={'text-sm text-gray-600'}>
+					<Link className={'text-sm text-gray-600'} href={'/cgu'}>
 						Mentions légales
 					</Link>
 					{/* todo : remplir les cgv plus tard */}
 					{/*<Link href={'/cgv'} className={'text-sm text-gray-600'}>*/}
 					{/*	Conditions générales de vente*/}
 					{/*</Link>*/}
-					<Link href={'/cgu'} className={'text-sm text-gray-600'}>
+					<Link className={'text-sm text-gray-600'} href={'/cgu'}>
 						Conditions générales d&apos;utilisation
 					</Link>
 					<Link
-						href={'/politique-de-confidentialite'}
 						className={'text-sm text-gray-600'}
+						href={'/politique-de-confidentialite'}
 					>
 						Politique de confidentialité
 					</Link>
-					<Link href={'/site-map'} className={'text-sm text-gray-600'}>
+					<Link className={'text-sm text-gray-600'} href={'/site-map'}>
 						Plan du site
 					</Link>
 				</div>

@@ -1,16 +1,18 @@
 import React, { useEffect } from 'react'
-import { LocationProfil } from '@/components/Profil/Childs/LocationProfil'
-import { DescriptionProfil } from '@/components/Profil/Childs/DescriptionProfil'
-import { SocialMediaProfil } from '@/components/Profil/Childs/SocialMediaProfil'
-import { SkillsProfil } from '@/components/Profil/Childs/SkillsProfil'
-import { PortfolioProfil } from '@/components/Profil/Childs/PortfolioProfil'
-import { LanguageProfil } from '@/components/Profil/Childs/LanguageProfil'
-import { ServiceOffersProfil } from '@/components/Profil/Childs/ServiceOffers/ServiceOffersProfil'
-import { CoursesProfil } from '@/components/Profil/Childs/CoursesProfil'
-import { ExperiencesProfil } from '@/components/Profil/Childs/ExperiencesProfil'
+
 import { useRouter } from 'next/router'
 import Link from 'next/link'
+
+import { ServiceOffersProfil } from '@/components/Profil/Childs/ServiceOffers/ServiceOffersProfil'
 import CompletionProfilProgressBar from '@/components/Global/CompletionProfilProgressBar'
+import { DescriptionProfil } from '@/components/Profil/Childs/DescriptionProfil'
+import { SocialMediaProfil } from '@/components/Profil/Childs/SocialMediaProfil'
+import { ExperiencesProfil } from '@/components/Profil/Childs/ExperiencesProfil'
+import { PortfolioProfil } from '@/components/Profil/Childs/PortfolioProfil'
+import { LocationProfil } from '@/components/Profil/Childs/LocationProfil'
+import { LanguageProfil } from '@/components/Profil/Childs/LanguageProfil'
+import { CoursesProfil } from '@/components/Profil/Childs/CoursesProfil'
+import { SkillsProfil } from '@/components/Profil/Childs/SkillsProfil'
 
 function InfosProfil(props) {
 	// import router
@@ -46,10 +48,11 @@ function InfosProfil(props) {
 					{!isPublic ? (
 						<>
 							<CompletionProfilProgressBar
-								user={user}
 								handleUpdateUser={handleUpdateUser}
+								user={user}
 							/>
 							<Link
+								className={'flex gap-2 font-semibold text-indigo-900'}
 								data-cy="profil-public-view"
 								href={'#'}
 								onClick={e => {
@@ -57,11 +60,10 @@ function InfosProfil(props) {
 									setIsPublic(true)
 									props.handleIsPublic(true)
 									router.push({
-										pathname: '/auth/profil',
 										query: { publicView: true },
+										pathname: '/auth/profil',
 									})
 								}}
-								className={'flex gap-2 font-semibold text-indigo-900 '}
 							>
 								<span className="material-icons-round text-indigo-900">
 									visibility
@@ -74,6 +76,7 @@ function InfosProfil(props) {
 					) : (
 						<div className={'flex w-full justify-end'}>
 							<Link
+								className={'flex gap-2 font-semibold text-indigo-900'}
 								href={'#'}
 								onClick={e => {
 									e.preventDefault() // Pour empêcher le comportement par défaut
@@ -81,7 +84,6 @@ function InfosProfil(props) {
 									props.handleIsPublic(false)
 									router.push({ pathname: '/auth/profil' })
 								}}
-								className={'flex gap-2 font-semibold text-indigo-900'}
 							>
 								<span className="material-icons-round text-indigo-900">
 									edit
@@ -98,29 +100,29 @@ function InfosProfil(props) {
 						}
 					>
 						<LocationProfil
-							user={user}
 							handleUpdateUser={props.handleUpdateUser}
 							isPublic={isPublic}
+							user={user}
 						/>
 						<SocialMediaProfil
-							user={user}
 							handleUpdateUser={props.handleUpdateUser}
 							isPublic={isPublic}
+							user={user}
 						/>
 						<SkillsProfil
-							user={user}
 							handleUpdateUser={props.handleUpdateUser}
 							isPublic={isPublic}
+							user={user}
 						/>
 						<LanguageProfil
-							user={user}
 							handleUpdateUser={props.handleUpdateUser}
 							isPublic={isPublic}
+							user={user}
 						/>
 						<CoursesProfil
-							user={user}
 							handleUpdateUser={props.handleUpdateUser}
 							isPublic={isPublic}
+							user={user}
 						/>
 					</div>
 					<div
@@ -129,24 +131,24 @@ function InfosProfil(props) {
 						}
 					>
 						<DescriptionProfil
-							user={user}
 							handleUpdateUser={props.handleUpdateUser}
 							isPublic={isPublic}
+							user={user}
 						/>
 						<PortfolioProfil
-							user={user}
 							handleUpdateUser={props.handleUpdateUser}
 							isPublic={isPublic}
+							user={user}
 						/>
 						<ServiceOffersProfil
-							user={user}
 							handleUpdateUser={props.handleUpdateUser}
 							isPublic={isPublic}
+							user={user}
 						/>
 						<ExperiencesProfil
-							user={user}
 							handleUpdateUser={props.handleUpdateUser}
 							isPublic={isPublic}
+							user={user}
 						/>
 					</div>
 				</div>

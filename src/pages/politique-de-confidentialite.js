@@ -1,9 +1,11 @@
 import React from 'react'
-import Nav from '@/components/Global/Nav'
-import Footer from '@/components/Global/Footer'
+
 import Head from 'next/head'
-import CTA from '@/components/Global/CTA'
+
+import Footer from '@/components/Global/Footer'
 import Hero from '@/components/Global/Hero'
+import Nav from '@/components/Global/Nav'
+import CTA from '@/components/Global/CTA'
 
 function PolitiqueDeConfidentialite() {
 	return (
@@ -12,26 +14,26 @@ function PolitiqueDeConfidentialite() {
 				imgBackgroundSrc={'/assets/back/maquilleuse_europeenne_white.webp'}
 				<title>La politique de confidentialité de My-Makeup !</title>
 				<meta
-					name="description"
 					content="Les conditions générales d'utilisation de My-Makeup, votre plateforme de mise en relation entre maquilleuses professionnelles et clients."
+					name="description"
 				/>
 				{/*	seo tag canonical link */}
-				<link rel="canonical" href="https://my-makeup.fr/cgu" />
+				<link href="https://my-makeup.fr/cgu" rel="canonical" />
 			</Head>
 
 			<Nav />
 			<main className={'relative'}>
 				<Hero
+					description={<>{"Tout l'aspect légal de la plateforme."}</>}
+					isCTALoginDisplayed={false}
+					isSearchDisplayed={false}
+					isSimpleVersionDisplayed={true}
 					title={
 						<>
 							Politique de confidentialité de&nbsp;
 							<span className={'text-indigo-900'}>My&nbsp;Makeup</span>
 						</>
 					}
-					description={<>{"Tout l'aspect légal de la plateforme."}</>}
-					isSearchDisplayed={false}
-					isCTALoginDisplayed={false}
-					isSimpleVersionDisplayed={true}
 				/>
 				<div
 					className={'relative mx-auto my-24 max-w-7xl px-4 md:my-48 md:px-0'}

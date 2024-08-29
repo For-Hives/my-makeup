@@ -1,12 +1,14 @@
 import React from 'react'
-import Footer from '@/components/Global/Footer'
-import Nav from '@/components/Global/Nav'
-import Head from 'next/head'
+
 import Image from 'next/image'
-import Hero from '@/components/Global/Hero'
-import CTA from '@/components/Global/CTA'
+import Head from 'next/head'
 import Link from 'next/link'
+
 import { convertToStringDate } from '@/services/utils'
+import Footer from '@/components/Global/Footer'
+import Hero from '@/components/Global/Hero'
+import Nav from '@/components/Global/Nav'
+import CTA from '@/components/Global/CTA'
 
 /**
  * @param props
@@ -21,28 +23,28 @@ function Blog({ articles }) {
 			<Head>
 				<title>Blog de My-Makeup</title>
 				<meta
-					name="description"
 					content="L'actualité de My-Makeup, ce que nous faisons pour améliorer votre quotidien !
 					Et les nouveautés qui arrivent bientôt !"
+					name="description"
 				/>
 				{/*	seo tag canonical link */}
-				<link rel="canonical" href={'https://my-makeup.fr/blog'} />
+				<link href={'https://my-makeup.fr/blog'} rel="canonical" />
 			</Head>
 
 			<Nav />
 			<main className={'relative'}>
 				<Hero
-					imgBackgroundSrc={'/assets/back/maquilleuse_metisse_white.webp'}
-					title={<>Blog & News</>}
 					description={
 						<>
 							Les actualités de My-Makeup, ce que nous faisons pour améliorer
 							votre quotidien ! Et les nouveautés qui arrivent bientôt !
 						</>
 					}
-					isSearchDisplayed={false}
+					imgBackgroundSrc={'/assets/back/maquilleuse_metisse_white.webp'}
 					isCTALoginDisplayed={false}
+					isSearchDisplayed={false}
 					isSimpleVersionDisplayed={true}
+					title={<>Blog & News</>}
 				/>
 				<section className={'relative px-4 py-20 md:px-8 2xl:px-0'}>
 					<div className="mx-auto max-w-7xl">
@@ -107,18 +109,18 @@ function Blog({ articles }) {
 								}
 							>
 								<Image
+									alt={'illustration'}
 									className={
 										'h-[300px] w-full rounded-2xl object-cover object-top md:h-[500px]'
 									}
-									src={'/assets/maquilleuse_blog.webp'}
-									alt={'illustration'}
-									width={'500'}
 									height={'350'}
+									src={'/assets/maquilleuse_blog.webp'}
+									width={'500'}
 								/>
 								<div className={'mt-8 flex w-full justify-end'}>
 									<Link
-										href={'/toutes-les-news'}
 										className={'btn-primary flex items-center font-medium'}
+										href={'/toutes-les-news'}
 									>
 										Voir toutes les news & articles
 										<span className="material-icons-round text-base">
@@ -143,12 +145,12 @@ export async function getServerSideProps() {
 	const res = await fetch(
 		`${process.env.NEXT_PUBLIC_API_URL}/api/articles?sort[publishedAt]=desc`,
 		{
-			method: 'GET',
 			headers: {
 				// 	token
 				'Content-Type': 'application/json',
 				Accept: 'application/json',
 			},
+			method: 'GET',
 		}
 	)
 	const data = await res.json()

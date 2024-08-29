@@ -1,28 +1,22 @@
-import NextAuth from 'next-auth'
-// import google provider
-import GoogleProvider from 'next-auth/providers/google'
-// import facebook provider
-import FacebookProvider from 'next-auth/providers/facebook'
 // import credential provider
 import CredentialsProvider from 'next-auth/providers/credentials'
+// import facebook provider
+import FacebookProvider from 'next-auth/providers/facebook'
+// import google provider
+import GoogleProvider from 'next-auth/providers/google'
+import NextAuth from 'next-auth'
 
 const options = {
 	providers: [
 		GoogleProvider({
-			clientId: process.env.GOOGLE_CLIENT_ID,
 			clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+			clientId: process.env.GOOGLE_CLIENT_ID,
 		}),
 		FacebookProvider({
-			clientId: process.env.FACEBOOK_CLIENT_ID,
 			clientSecret: process.env.FACEBOOK_CLIENT_SECRET,
+			clientId: process.env.FACEBOOK_CLIENT_ID,
 		}),
 		CredentialsProvider({
-			name: 'Credentials',
-			credentials: {
-				email: { label: 'Email', type: 'email', placeholder: 'Email' },
-				password: { label: 'Password', type: 'password' },
-				name: { label: 'Name', type: 'text' },
-			},
 			/**
 			 * if name is set we are in register mode
 			 * @param password
@@ -32,60 +26,48 @@ const options = {
 			authorize: async ({ password, email, name }) => {
 				let callUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/auth/local`
 				let body = JSON.stringify({
-					identifier: email,
 					password: password,
+					identifier: email,
 				})
 				if (name !== undefined && name !== null && name !== '') {
 					callUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/auth/local/register`
 					body = JSON.stringify({
+						password: password,
 						username: name,
 						email: email,
-						password: password,
 					})
 				}
 				const response = await fetch(callUrl, {
-					method: 'POST',
 					headers: {
-						Accept: 'application/json',
 						'Content-Type': 'application/json',
+						Accept: 'application/json',
 					},
+					method: 'POST',
 					body,
 				})
 				const authenticated = await response.json()
 
 				if (authenticated) {
 					return Promise.resolve({
-						id: authenticated.user.id,
 						name: authenticated.user.username,
 						email: authenticated.user.email,
+						id: authenticated.user.id,
 						jwt: authenticated.jwt,
 					})
 				} else {
 					return Promise.resolve(null)
 				}
 			},
+			credentials: {
+				email: { placeholder: 'Email', label: 'Email', type: 'email' },
+				password: { label: 'Password', type: 'password' },
+				name: { label: 'Name', type: 'text' },
+			},
+			name: 'Credentials',
 		}),
 	],
-	pages: {
-		signIn: '/auth/signin',
-		signOut: '/auth/signout',
-		error: '/auth/error', // Error code passed in query string as ?error=
-		newUser: '/auth/init-account', // New users will be directed here on first sign in (leave the property out if not of interest)
-	},
-	secret: `${process.env.NEXTAUTH_SECRET}`, //PUT YOUR OWN SECRET (command: openssl rand -base64 32)
-	database: `${process.env.NEXT_PUBLIC_DATABASE_URL}`,
-	session: {
-		strategy: 'jwt',
-	},
-	debug: process.env.NODE_ENV !== 'production',
 	callbacks: {
-		async session({ session, token, user }) {
-			session.jwt = token.jwt
-			session.id = token.id
-
-			return session
-		},
-		async jwt({ token, user, account, profil, isNewUser }) {
+		async jwt({ isNewUser, account, profil, token, user }) {
 			const isSignIn = !!user
 
 			if (isSignIn) {
@@ -107,6 +89,24 @@ const options = {
 
 			return token
 		},
+		async session({ session, token, user }) {
+			session.jwt = token.jwt
+			session.id = token.id
+
+			return session
+		},
+	},
+	pages: {
+		newUser: '/auth/init-account', // New users will be directed here on first sign in (leave the property out if not of interest)
+		signOut: '/auth/signout',
+		signIn: '/auth/signin',
+		error: '/auth/error', // Error code passed in query string as ?error=
+	},
+	database: `${process.env.NEXT_PUBLIC_DATABASE_URL}`,
+	debug: process.env.NODE_ENV !== 'production',
+	secret: `${process.env.NEXTAUTH_SECRET}`, //PUT YOUR OWN SECRET (command: openssl rand -base64 32)
+	session: {
+		strategy: 'jwt',
 	},
 }
 

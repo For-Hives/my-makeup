@@ -1,13 +1,15 @@
 import React, { Fragment, useEffect, useRef, useState } from 'react'
-import { Dialog, Transition } from '@headlessui/react'
 import { useForm } from 'react-hook-form'
+
+import { Dialog, Transition } from '@headlessui/react'
 import { zodResolver } from '@hookform/resolvers/zod'
-import * as zod from 'zod'
 import { useSession } from 'next-auth/react'
+import * as zod from 'zod'
+
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
 
 const schema = zod.object({
-	youtube: zod
+	instagram: zod
 		.string()
 		.url({ message: 'Veuillez entrer une URL valide (https://...).' })
 		.max(200, "L'URL ne doit pas dépasser 200 caractères.")
@@ -19,7 +21,13 @@ const schema = zod.object({
 		.max(200, "L'URL ne doit pas dépasser 200 caractères.")
 		.optional()
 		.or(zod.literal('')),
-	instagram: zod
+	linkedin: zod
+		.string()
+		.url({ message: 'Veuillez entrer une URL valide (https://...).' })
+		.max(200, "L'URL ne doit pas dépasser 200 caractères.")
+		.optional()
+		.or(zod.literal('')),
+	youtube: zod
 		.string()
 		.url({ message: 'Veuillez entrer une URL valide (https://...).' })
 		.max(200, "L'URL ne doit pas dépasser 200 caractères.")
@@ -31,10 +39,10 @@ const schema = zod.object({
 		.max(200, "L'URL ne doit pas dépasser 200 caractères.")
 		.optional()
 		.or(zod.literal('')),
-	linkedin: zod
+	phone: zod
 		.string()
-		.url({ message: 'Veuillez entrer une URL valide (https://...).' })
-		.max(200, "L'URL ne doit pas dépasser 200 caractères.")
+		.min(10, 'Le numéro de téléphone est requis.')
+		.max(20, 'Le numéro de téléphone ne doit pas dépasser 20 caractères.')
 		.optional()
 		.or(zod.literal('')),
 	email: zod
@@ -43,21 +51,15 @@ const schema = zod.object({
 		.max(200, "L'email ne doit pas dépasser 200 caractères.")
 		.optional()
 		.or(zod.literal('')),
-	phone: zod
-		.string()
-		.min(10, 'Le numéro de téléphone est requis.')
-		.max(20, 'Le numéro de téléphone ne doit pas dépasser 20 caractères.')
-		.optional()
-		.or(zod.literal('')),
 })
 
 export default function ModalUpdateSocialMediaProfil(props) {
 	const user = props.user
 
 	const {
-		register,
-		handleSubmit,
 		formState: { errors },
+		handleSubmit,
+		register,
 		reset,
 	} = useForm({
 		resolver: zodResolver(schema),
@@ -160,7 +162,7 @@ export default function ModalUpdateSocialMediaProfil(props) {
 	])
 
 	return (
-		<Transition.Root show={open} as={Fragment}>
+		<Transition.Root as={Fragment} show={open}>
 			<Dialog
 				as="div"
 				className="relative z-30"
@@ -192,12 +194,12 @@ export default function ModalUpdateSocialMediaProfil(props) {
 						>
 							<Dialog.Panel className="relative w-full transform rounded-lg bg-white p-8 text-left shadow-2xl transition-all sm:max-w-2xl">
 								<button
-									type="button"
-									onClick={props.handleIsModalOpen}
-									ref={cancelButtonRef}
 									className={
 										'absolute right-0 top-0 m-6 flex items-center justify-center'
 									}
+									onClick={props.handleIsModalOpen}
+									ref={cancelButtonRef}
+									type="button"
 								>
 									<span className="material-icons-round">close</span>
 								</button>
@@ -214,14 +216,14 @@ export default function ModalUpdateSocialMediaProfil(props) {
 										<div className="grid grid-cols-1 gap-4">
 											<div className={'flex flex-col gap-4'}>
 												<form
-													onSubmit={handleSubmit(onSubmit)}
-													method="POST"
 													className="flex flex-col gap-4"
+													method="POST"
+													onSubmit={handleSubmit(onSubmit)}
 												>
 													<div>
 														<label
-															htmlFor="email"
 															className="block text-sm text-gray-700"
+															htmlFor="email"
 														>
 															Email
 														</label>
@@ -234,14 +236,14 @@ export default function ModalUpdateSocialMediaProfil(props) {
 																{...register('email', {
 																	required: false,
 																})}
-																value={userEmail ?? ''}
+																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
 																onChange={handleUpdateEmail}
-																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
+																value={userEmail ?? ''}
 															/>
 															{errors.email && (
 																<p
-																	data-cy={'error-email'}
 																	className={'mt-2 text-xs text-red-500/80'}
+																	data-cy={'error-email'}
 																>
 																	{errors.email.message}
 																</p>
@@ -250,8 +252,8 @@ export default function ModalUpdateSocialMediaProfil(props) {
 													</div>
 													<div>
 														<label
-															htmlFor="phone"
 															className="block text-sm text-gray-700"
+															htmlFor="phone"
 														>
 															Numéro de téléphone
 														</label>
@@ -264,14 +266,14 @@ export default function ModalUpdateSocialMediaProfil(props) {
 																{...register('phone', {
 																	required: false,
 																})}
-																value={userPhone ?? ''}
+																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
 																onChange={handleUpdatePhone}
-																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
+																value={userPhone ?? ''}
 															/>
 															{errors.phone && (
 																<p
-																	data-cy={'error-phone'}
 																	className={'mt-2 text-xs text-red-500/80'}
+																	data-cy={'error-phone'}
 																>
 																	{errors.phone.message}
 																</p>
@@ -280,8 +282,8 @@ export default function ModalUpdateSocialMediaProfil(props) {
 													</div>
 													<div>
 														<label
-															htmlFor="youtube"
 															className="block text-sm text-gray-700"
+															htmlFor="youtube"
 														>
 															Lien Youtube
 														</label>
@@ -294,14 +296,14 @@ export default function ModalUpdateSocialMediaProfil(props) {
 																{...register('youtube', {
 																	required: false,
 																})}
-																value={userYoutube ?? ''}
+																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
 																onChange={handleUpdateYoutube}
-																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
+																value={userYoutube ?? ''}
 															/>
 															{errors.youtube && (
 																<p
-																	data-cy={'error-youtube'}
 																	className={'mt-2 text-xs text-red-500/80'}
+																	data-cy={'error-youtube'}
 																>
 																	{errors.youtube.message}
 																</p>
@@ -310,8 +312,8 @@ export default function ModalUpdateSocialMediaProfil(props) {
 													</div>
 													<div>
 														<label
-															htmlFor="facebook"
 															className="block text-sm text-gray-700"
+															htmlFor="facebook"
 														>
 															Lien Facebook
 														</label>
@@ -324,14 +326,14 @@ export default function ModalUpdateSocialMediaProfil(props) {
 																{...register('facebook', {
 																	required: false,
 																})}
-																value={userFacebook ?? ''}
+																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
 																onChange={handleUpdateFacebook}
-																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
+																value={userFacebook ?? ''}
 															/>
 															{errors.facebook && (
 																<p
-																	data-cy={'error-facebook'}
 																	className={'mt-2 text-xs text-red-500/80'}
+																	data-cy={'error-facebook'}
 																>
 																	{errors.facebook.message}
 																</p>
@@ -340,8 +342,8 @@ export default function ModalUpdateSocialMediaProfil(props) {
 													</div>
 													<div>
 														<label
-															htmlFor="instagram"
 															className="block text-sm text-gray-700"
+															htmlFor="instagram"
 														>
 															Lien Instagram
 														</label>
@@ -354,14 +356,14 @@ export default function ModalUpdateSocialMediaProfil(props) {
 																{...register('instagram', {
 																	required: false,
 																})}
-																value={userInstagram ?? ''}
+																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
 																onChange={handleUpdateInstagram}
-																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
+																value={userInstagram ?? ''}
 															/>
 															{errors.instagram && (
 																<p
-																	data-cy={'error-instagram'}
 																	className={'mt-2 text-xs text-red-500/80'}
+																	data-cy={'error-instagram'}
 																>
 																	{errors.instagram.message}
 																</p>
@@ -370,8 +372,8 @@ export default function ModalUpdateSocialMediaProfil(props) {
 													</div>
 													<div>
 														<label
-															htmlFor="website"
 															className="block text-sm text-gray-700"
+															htmlFor="website"
 														>
 															Lien de votre site internet
 														</label>
@@ -384,14 +386,14 @@ export default function ModalUpdateSocialMediaProfil(props) {
 																{...register('website', {
 																	required: false,
 																})}
-																value={userWebsite ?? ''}
+																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
 																onChange={handleUpdateWebsite}
-																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
+																value={userWebsite ?? ''}
 															/>
 															{errors.website && (
 																<p
-																	data-cy={'error-website'}
 																	className={'mt-2 text-xs text-red-500/80'}
+																	data-cy={'error-website'}
 																>
 																	{errors.website.message}
 																</p>
@@ -400,8 +402,8 @@ export default function ModalUpdateSocialMediaProfil(props) {
 													</div>
 													<div>
 														<label
-															htmlFor="linkedin"
 															className="block text-sm text-gray-700"
+															htmlFor="linkedin"
 														>
 															Lien linkedin
 														</label>
@@ -414,14 +416,14 @@ export default function ModalUpdateSocialMediaProfil(props) {
 																{...register('linkedin', {
 																	required: false,
 																})}
-																value={userLinkedin ?? ''}
+																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
 																onChange={handleUpdateLinkedin}
-																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
+																value={userLinkedin ?? ''}
 															/>
 															{errors.linkedin && (
 																<p
-																	data-cy={'error-linkedin'}
 																	className={'mt-2 text-xs text-red-500/80'}
+																	data-cy={'error-linkedin'}
 																>
 																	{errors.linkedin.message}
 																</p>
@@ -435,10 +437,10 @@ export default function ModalUpdateSocialMediaProfil(props) {
 								</div>
 								<div className="mt-4 flex justify-end">
 									<button
-										data-cy="save-button-social-medias"
-										type="button"
 										className="btn-primary"
+										data-cy="save-button-social-medias"
 										onClick={handleSubmit(onSubmit)}
+										type="button"
 									>
 										Sauvegarder
 									</button>

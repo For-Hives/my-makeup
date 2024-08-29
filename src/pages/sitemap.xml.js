@@ -1,5 +1,6 @@
 import React from 'react'
-import { readdirSync, lstatSync } from 'fs'
+
+import { lstatSync, readdirSync } from 'fs'
 import * as path from 'path'
 
 const Sitemap = () => {
@@ -37,13 +38,13 @@ export const getServerSideProps = async ({ res }) => {
 		.filter(staticPagePath => {
 			let base = path.basename(staticPagePath)
 			return ![
-				'api',
-				'api/sendMail',
 				'_app.js',
 				'_document.js',
 				'404.js',
-				'sitemap.xml.js',
+				'api',
+				'api/sendMail',
 				'index.js',
+				'sitemap.xml.js',
 			].includes(base)
 		})
 		.map(staticPagePath => {
@@ -79,12 +80,12 @@ export const getServerSideProps = async ({ res }) => {
 	const resultUsers = await fetch(
 		`${process.env.NEXT_PUBLIC_API_URL}/api/makeup-artistes`,
 		{
-			method: 'GET',
 			headers: {
 				// 	token
 				'Content-Type': 'application/json',
 				Accept: 'application/json',
 			},
+			method: 'GET',
 		}
 	).then(result => result.json())
 
@@ -96,12 +97,12 @@ export const getServerSideProps = async ({ res }) => {
 	const resultTalents = await fetch(
 		`${process.env.NEXT_PUBLIC_API_URL}/api/talents`,
 		{
-			method: 'GET',
 			headers: {
 				// 	token
 				'Content-Type': 'application/json',
 				Accept: 'application/json',
 			},
+			method: 'GET',
 		}
 	).then(res => res.json())
 
@@ -113,12 +114,12 @@ export const getServerSideProps = async ({ res }) => {
 	const resultBlog = await fetch(
 		`${process.env.NEXT_PUBLIC_API_URL}/api/articles`,
 		{
-			method: 'GET',
 			headers: {
 				// 	token
 				'Content-Type': 'application/json',
 				Accept: 'application/json',
 			},
+			method: 'GET',
 		}
 	).then(res => res.json())
 

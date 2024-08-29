@@ -5,9 +5,9 @@ const options = {
 	replace: domNode => {
 		if (domNode?.type === 'tag' && domNode?.name === 'img') {
 			const { attribs } = domNode
-			const { src, alt, width, height } = attribs
+			const { height, width, src, alt } = attribs
 
-			return <Image src={src} alt={alt} width={500} height={500} />
+			return <Image alt={alt} height={500} src={src} width={500} />
 		}
 
 		return domNode

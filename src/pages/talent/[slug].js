@@ -1,13 +1,15 @@
 import React from 'react'
-import Nav from '@/components/Global/Nav'
-import Footer from '@/components/Global/Footer'
-import CTA from '@/components/Global/CTA'
-import Head from 'next/head'
-import Hero from '@/components/Global/Hero'
+
+import { useRouter } from 'next/router'
 import { remark } from 'remark'
 import html from 'remark-html'
-import { useRouter } from 'next/router'
+import Head from 'next/head'
+
 import { Layout } from '@/components/Global/Layout'
+import Footer from '@/components/Global/Footer'
+import Hero from '@/components/Global/Hero'
+import Nav from '@/components/Global/Nav'
+import CTA from '@/components/Global/CTA'
 
 /**
  * @param props
@@ -22,16 +24,16 @@ function Talent({ articleData }) {
 			<Head>
 				<title>{meta?.title ?? 'My-Makeup'}</title>
 				<meta
-					name="description"
 					content={
 						meta?.seo_description ??
 						'Découvrez cet article passionnant de la part de My-Makeup'
 					}
+					name="description"
 				/>
 				{/*	seo tag canonical link */}
 				<link
-					rel="canonical"
 					href={'https://my-makeup.fr/talent/' + meta?.slug}
+					rel="canonical"
 				/>
 			</Head>
 
@@ -40,9 +42,9 @@ function Talent({ articleData }) {
 			<Nav />
 			<main className={'relative'}>
 				<Hero
+					description={<>{meta.description}</>}
 					imgBackgroundSrc={'/assets/back/maquilleuse_europeenne_white.webp'}
 					title={<>{meta.seo_title}</>}
-					description={<>{meta.description}</>}
 				/>
 				<div
 					className={'relative mx-auto my-24 max-w-7xl px-4 md:my-48 md:px-0'}
@@ -71,12 +73,12 @@ export default Talent
 
 export async function getStaticPaths() {
 	const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/talents`, {
-		method: 'GET',
 		headers: {
 			// 	token
 			'Content-Type': 'application/json',
 			Accept: 'application/json',
 		},
+		method: 'GET',
 	}).then(res => res.json())
 
 	/**
@@ -89,8 +91,8 @@ export async function getStaticPaths() {
 		},
 	}))
 	return {
-		paths,
 		fallback: 'blocking',
+		paths,
 	}
 }
 
@@ -98,12 +100,12 @@ export async function getStaticProps({ params }) {
 	let articleData = await fetch(
 		`${process.env.NEXT_PUBLIC_API_URL}/api/talents?filters[slug][$eq]=${params.slug}`,
 		{
-			method: 'GET',
 			headers: {
 				// 	token
 				'Content-Type': 'application/json',
 				Accept: 'application/json',
 			},
+			method: 'GET',
 		}
 	).then(res => res.json())
 

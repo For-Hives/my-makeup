@@ -1,4 +1,5 @@
 import React from 'react'
+
 import Image from 'next/image'
 import Link from 'next/link'
 
@@ -43,7 +44,7 @@ function Collaboration() {
 							</p>
 						</div>
 						<div className={'flex'}>
-							<Link href="/auth/signup" className={'btn-primary'}>
+							<Link className={'btn-primary'} href="/auth/signup">
 								Rejoindre la communauté
 							</Link>
 						</div>
@@ -59,10 +60,10 @@ function Collaboration() {
 							}
 						>
 							<Image
-								className={'rounded-xl object-cover'}
-								src={'/assets/maquilleuse_mariage.webp'}
-								fill
 								alt={'Maquilleuse pour un mariage'}
+								className={'rounded-xl object-cover'}
+								fill
+								src={'/assets/maquilleuse_mariage.webp'}
 							/>
 						</div>
 					</div>
@@ -81,10 +82,10 @@ function Collaboration() {
 							}
 						>
 							<Image
-								className={'-scale-x-100 transform rounded-xl object-cover'}
-								src={'/assets/maquilleuse_soiree.webp'}
-								fill
 								alt={'Maquilleuse soirées'}
+								className={'-scale-x-100 transform rounded-xl object-cover'}
+								fill
+								src={'/assets/maquilleuse_soiree.webp'}
 							/>
 						</div>
 					</div>
@@ -115,7 +116,7 @@ function Collaboration() {
 							</p>
 						</div>
 						<div className={'flex'}>
-							<Link href="/auth/signup" className={'btn-primary'}>
+							<Link className={'btn-primary'} href="/auth/signup">
 								J&apos;améliore ma visibilité
 							</Link>
 						</div>
@@ -158,7 +159,7 @@ function Collaboration() {
 							</p>
 						</div>
 						<div className={'flex'}>
-							<Link href="/search" className={'btn-primary'}>
+							<Link className={'btn-primary'} href="/search">
 								Trouver la maquilleuse parfaite
 							</Link>
 						</div>
@@ -174,10 +175,10 @@ function Collaboration() {
 							}
 						>
 							<Image
-								className={'rounded-xl object-cover'}
-								src={'/assets/maquilleuse_evenementiel.webp'}
-								fill
 								alt={'Maquilleuse evenementiel'}
+								className={'rounded-xl object-cover'}
+								fill
+								src={'/assets/maquilleuse_evenementiel.webp'}
 							/>
 						</div>
 					</div>
@@ -196,10 +197,10 @@ function Collaboration() {
 							}
 						>
 							<Image
-								className={'transform rounded-xl object-cover'}
-								src={'/assets/maquilleuse_fx.webp'}
-								fill
 								alt={'Maquilleuse fx'}
+								className={'transform rounded-xl object-cover'}
+								fill
+								src={'/assets/maquilleuse_fx.webp'}
 							/>
 						</div>
 					</div>
@@ -240,7 +241,7 @@ function Collaboration() {
 							</p>
 						</div>
 						<div className={'flex'}>
-							<Link href="/search" className={'btn-primary'}>
+							<Link className={'btn-primary'} href="/search">
 								Découvrir notre solution
 							</Link>
 						</div>

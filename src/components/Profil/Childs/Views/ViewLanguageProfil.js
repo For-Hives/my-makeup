@@ -17,7 +17,7 @@ function ViewLanguageProfil(props) {
 				{user?.language.length !== 0 ? (
 					user?.language?.map((language, index) => {
 						return (
-							<li key={index} className={'text-gray-700'}>
+							<li className={'text-gray-700'} key={index}>
 								→&nbsp;
 								<div className="inline-flex flex-nowrap items-center rounded-full px-3 py-2 text-sm font-medium text-gray-700">
 									{language?.name}

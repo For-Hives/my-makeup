@@ -1,8 +1,10 @@
 import React from 'react'
-import Nav from '@/components/Global/Nav'
-import Footer from '@/components/Global/Footer'
+
 import Head from 'next/head'
+
+import Footer from '@/components/Global/Footer'
 import Hero from '@/components/Global/Hero'
+import Nav from '@/components/Global/Nav'
 import CTA from '@/components/Global/CTA'
 
 /**
@@ -15,31 +17,31 @@ function PourLesParticuliers(props) {
 			<Head>
 				<title>Solutions My-Makeup pour les Particuliers !</title>
 				<meta
-					name="description"
 					content="Découvrez comment My-Makeup simplifie la recherche de la maquilleuse professionnelle idéale. Grâce à notre plateforme intuitive, trouver la maquilleuse de vos rêves n'a jamais été aussi simple !"
+					name="description"
 				/>
 				{/*	seo tag canonical link */}
 				<link
-					rel="canonical"
 					href="https://my-makeup.fr/solutions/pour-les-particuliers"
+					rel="canonical"
 				/>
 			</Head>
 			<Nav />
 			<main className={'relative'}>
 				<Hero
+					description={
+						<>
+							{
+								'Découvrez comment My-Makeup vous donne accès à un large éventail de maquilleuses professionnelles pour trouver celle qui vous correspond le mieux.'
+							}
+						</>
+					}
 					imgBackgroundSrc={'/assets/back/maquilleuse_asiatique_white.webp'}
 					title={
 						<>
 							Trouvez Votre Maquilleuse Idéale avec&nbsp;
 							<span className={'text-indigo-900'}>My&nbsp;Makeup&nbsp;</span>
 							La solution de vos rêves&nbsp;!
-						</>
-					}
-					description={
-						<>
-							{
-								'Découvrez comment My-Makeup vous donne accès à un large éventail de maquilleuses professionnelles pour trouver celle qui vous correspond le mieux.'
-							}
 						</>
 					}
 				/>

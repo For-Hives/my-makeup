@@ -1,6 +1,8 @@
-import { Disclosure } from '@headlessui/react'
-import { ChevronRightIcon } from '@heroicons/react/20/solid'
 import React from 'react'
+
+import { ChevronRightIcon } from '@heroicons/react/20/solid'
+import { Disclosure } from '@headlessui/react'
+
 import { DescriptionPriceOffer } from '@/components/Profil/Childs/ServiceOffers/DescriptionPriceOffer'
 
 /**
@@ -31,17 +33,17 @@ export function OptionsOffers(props) {
 										>
 											{option.name}
 											<ChevronRightIcon
-												data-cy={`service-offer-button-${index}`}
 												className={
 													'h-5 w-5 ' + (open ? 'rotate-90 transform' : '')
 												}
+												data-cy={`service-offer-button-${index}`}
 											/>
 										</Disclosure.Button>
 										<Disclosure.Panel>
 											<div className={'pb-4'}>
 												<DescriptionPriceOffer
-													serviceOffer={option}
 													index={index}
+													serviceOffer={option}
 												/>
 											</div>
 										</Disclosure.Panel>
