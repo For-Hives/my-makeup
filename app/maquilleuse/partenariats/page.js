@@ -1,31 +1,21 @@
-import React from 'react'
-
-import Head from 'next/head'
-
 import Footer from '@/components/Global/Footer'
 import Hero from '@/components/Global/Hero'
 import Nav from '@/components/Global/Nav'
 import CTA from '@/components/Global/CTA'
 
-/**
- * @param props
- * @constructor
- */
-function Partenariats(props) {
+export const metadata = {
+	description:
+		'Community et Partenariat chez My-Makeup : Votre développement est notre priorité',
+	// seo tag canonical link
+	alternates: {
+		canonical: 'https://my-makeup.fr/maquilleuse/partenariats',
+	},
+	title: 'Communauté et partenariats !',
+}
+
+function Partenariats() {
 	return (
 		<>
-			<Head>
-				<title>Communauté et partenariats !</title>
-				<meta
-					content="Community et Partenariat chez My-Makeup : Votre développement est notre priorité"
-					name="description"
-				/>
-				{/*	seo tag canonical link */}
-				<link
-					href="https://my-makeup.fr/maquilleuse/partenariats"
-					rel="canonical"
-				/>
-			</Head>
 			<Nav />
 			<main className={'relative'}>
 				<Hero
