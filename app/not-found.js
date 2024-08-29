@@ -2,6 +2,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 
 export const metadata = {
+	// seo tag canonical link
 	alternates: {
 		canonical: 'https://my-makeup.fr/404',
 	},
