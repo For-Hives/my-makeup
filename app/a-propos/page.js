@@ -1,29 +1,19 @@
-import React from 'react'
-
-import Head from 'next/head'
-
 import Footer from '@/components/Global/Footer'
 import Hero from '@/components/Global/Hero'
 import Nav from '@/components/Global/Nav'
 import CTA from '@/components/Global/CTA'
 
-/**
- * @param props
- * @constructor
- */
-function APropos(props) {
+export const metadata = {
+	description:
+		'Apprenez-en plus sur My-Makeup, votre plateforme de mise en relation entre maquilleuses professionnelles et clients.',
+	title: 'My-Makeup la plateforme de recherche de maquilleuse !',
+	// seo tag canonical link
+	alternates: { canonical: 'https://my-makeup.fr/a-propos' },
+}
+
+function APropos() {
 	return (
 		<>
-			<Head>
-				<title>My-Makeup la plateforme de recherche de maquilleuse !</title>
-				<meta
-					content="Apprenez-en plus sur My-Makeup, votre plateforme de mise en relation entre maquilleuses professionnelles et clients. "
-					name="description"
-				/>
-				{/*	seo tag canonical link */}
-				<link href="https://my-makeup.fr/a-propos" rel="canonical" />
-			</Head>
-
 			<Nav />
 
 			<main className={'relative'}>
