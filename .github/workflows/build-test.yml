@@ -20,7 +20,7 @@ env:
 
 on:
   pull_request:
-    branches: [ 'main' ]
+    branches: ['main']
 
 jobs:
   build:
@@ -54,10 +54,8 @@ jobs:
           context: .
           push: false
           tags: ${{ secrets.APP_IMAGE }}
-          build-args:
-            NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
+          build-args: NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
             NEXT_PUBLIC_URL=${{ vars.NEXT_PUBLIC_URL }}
-
 #  tests:
 #    runs-on: ubuntu-latest
 #    strategy:
