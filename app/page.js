@@ -1,5 +1,3 @@
-import React from 'react'
-
 import Collaboration from '@/components/Home/Collaboration'
 import Presentation from '@/components/Home/Presentation'
 import Footer from '@/components/Global/Footer'
