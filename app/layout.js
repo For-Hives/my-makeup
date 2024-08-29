@@ -11,6 +11,12 @@ import 'react-toastify/dist/ReactToastify.css'
 import { ToastContainer } from 'react-toastify'
 import SessionProviderWrapper from 'providers/SessionProviderWrapper'
 
+export const metadata = {
+	title: 'My-Makeup',
+	description:
+		"Trouvez la meilleure maquilleuse professionnelle à domicile près de chez. Une maquilleuse rien que pour vous,pour un événement, un shooting, ou une soirée, vous trouverez votre bonheur pour vous sublimer dans n'importe quelle situation ! Inscription gratuite.",
+}
+
 export default function RootLayout({ children }) {
 	return (
 		<html lang="fr">
