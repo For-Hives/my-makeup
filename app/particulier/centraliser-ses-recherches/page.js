@@ -1,31 +1,21 @@
-import React from 'react'
-
-import Head from 'next/head'
-
 import Footer from '@/components/Global/Footer'
 import Hero from '@/components/Global/Hero'
 import Nav from '@/components/Global/Nav'
 import CTA from '@/components/Global/CTA'
 
-/**
- * @param props
- * @constructor
- */
-function CentraliserSesRecherches(props) {
+export const metadata = {
+	description:
+		'Apprenez comment centraliser et organiser vos recherches pour comparer efficacement les maquilleuses et trouver celle qui vous correspond le mieux.',
+	// seo tag canonical link
+	alternates: {
+		canonical: 'https://my-makeup.fr/particulier/centraliser-ses-recherches',
+	},
+	title: 'Centraliser ses recherches',
+}
+
+function CentraliserSesRecherches() {
 	return (
 		<>
-			<Head>
-				<title>Centraliser ses recherches !</title>
-				<meta
-					content="Apprenez comment centraliser et organiser vos recherches pour comparer efficacement les maquilleuses et trouver celle qui vous correspond le mieux."
-					name="description"
-				/>
-				{/*	seo tag canonical link */}
-				<link
-					href="https://my-makeup.fr/particulier/centraliser-ses-recherches"
-					rel="canonical"
-				/>
-			</Head>
 			<Nav />
 			<main className={'relative'}>
 				<Hero
