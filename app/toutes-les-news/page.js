@@ -1,31 +1,25 @@
-import React from 'react'
-
-import Head from 'next/head'
 import Link from 'next/link'
 
+import getAllArticleOrderedByDesc from '@/services/getAllArticleOrderedByDesc'
 import { convertToStringDate } from '@/services/utils'
 import Footer from '@/components/Global/Footer'
 import Hero from '@/components/Global/Hero'
 import Nav from '@/components/Global/Nav'
 import CTA from '@/components/Global/CTA'
 
-/**
- * @param props
- * @constructor
- */
-function ToutesLesNews({ articles }) {
+export const metadata = {
+	description:
+		"Toute l'actualité de My-Makeup, c'est ici que vous trouverez toutes les dernières news ! Et les nouveautés qui arrivent bientôt !",
+	alternates: {
+		canonical: 'https://my-makeup.fr/toutes-les-news',
+	},
+	title: 'My-Makeup tous les articles !',
+}
+
+async function ToutesLesNews() {
+	const articles = await getAllArticleOrderedByDesc()
 	return (
 		<>
-			<Head>
-				<title>My-Makeup tous les articles !</title>
-				<meta
-					content="Toute l'actualité de My-Makeup, c'est ici que vous trouverez toutes les dernières news !
-					Et les nouveautés qui arrivent bientôt !"
-					name="description"
-				/>
-				{/*	seo tag canonical link */}
-				<link href={'https://my-makeup.fr/toutes-les-news'} rel="canonical" />
-			</Head>
 			<Nav />
 			<main className={'relative'}>
 				<Hero
@@ -113,24 +107,3 @@ function ToutesLesNews({ articles }) {
 }
 
 export default ToutesLesNews
-
-export async function getServerSideProps() {
-	const res = await fetch(
-		`${process.env.NEXT_PUBLIC_API_URL}/api/articles?sort[publishedAt]=desc`,
-		{
-			headers: {
-				// 	token
-				'Content-Type': 'application/json',
-				Accept: 'application/json',
-			},
-			method: 'GET',
-		}
-	)
-	const data = await res.json()
-
-	return {
-		props: {
-			articles: data.data,
-		},
-	}
-}
