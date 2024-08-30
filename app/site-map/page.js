@@ -1,7 +1,7 @@
 import Link from 'next/link'
 
 import getAllArticle from '@/services/getAllArticle'
-import getAllTalents from '@/services/getAllTalent'
+import getAllTalent from '@/services/getAllTalent'
 import Footer from '@/components/Global/Footer'
 import Hero from '@/components/Global/Hero'
 import Nav from '@/components/Global/Nav'
