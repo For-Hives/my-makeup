@@ -1,7 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 
-import { getAllArticles } from '@/services/getAllArticles'
+import getAllArticleOrderedByDesc from '@/services/getAllArticleOrderedByDesc'
 import { convertToStringDate } from '@/services/utils'
 import Footer from '@/components/Global/Footer'
 import Hero from '@/components/Global/Hero'
@@ -19,7 +19,7 @@ export const metadata = {
 }
 
 async function Blog() {
-	const articles = await getAllArticles()
+	const articles = await getAllArticleOrderedByDesc()
 
 	const lastArticles = articles?.slice(0, 3)
 

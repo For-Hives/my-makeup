@@ -1,7 +1,7 @@
 import Link from 'next/link'
 
-import { getAllArticles } from '@/services/getAllArticles'
-import { getAllTalents } from '@/services/getAllTalents'
+import getAllArticle from '@/services/getAllArticle'
+import getAllTalents from '@/services/getAllTalent'
 import Footer from '@/components/Global/Footer'
 import Hero from '@/components/Global/Hero'
 import Nav from '@/components/Global/Nav'
@@ -17,8 +17,8 @@ export const metadata = {
 }
 
 async function SiteMap() {
-	const articles = await getAllArticles()
-	const talents = await getAllTalents()
+	const articles = await getAllArticle()
+	const talents = await getAllTalent()
 
 	return (
 		<>
