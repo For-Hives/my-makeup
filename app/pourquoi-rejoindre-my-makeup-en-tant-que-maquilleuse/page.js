@@ -1,30 +1,23 @@
-import React from 'react'
-
-import Head from 'next/head'
-
 import AdvantagesMaquillleuse from '@/components/Maquilleuse/AdvantagesMaquillleuse'
 import Footer from '@/components/Global/Footer'
 import Hero from '@/components/Global/Hero'
 import Nav from '@/components/Global/Nav'
 import CTA from '@/components/Global/CTA'
 
+export const metadata = {
+	// seo tag canonical link
+	alternates: {
+		canonical:
+			'https://my-makeup.fr/pourquoi-rejoindre-my-makeup-en-tant-que-maquilleuse',
+	},
+	description:
+		'Découvrez pourquoi vous devriez rejoindre My-Makeup en tant que maquilleuse professionnelle',
+	title: 'Pourquoi My-Makeup ? en tant que maquilleuse',
+}
+
 function PourquoiMyMakeup() {
 	return (
 		<>
-			<Head>
-				<title>Pourquoi My-Makeup ? en tant que maquilleuse</title>
-				<meta
-					content="Découvrez pourquoi vous devriez rejoindre My-Makeup en tant que maquilleuse professionnelle"
-					name="description"
-				/>
-				{/*	seo tag canonical link */}
-				<link
-					href={
-						'https://my-makeup.fr/pourquoi-rejoindre-my-makeup-en-tant-que-maquilleuse'
-					}
-					rel="canonical"
-				/>
-			</Head>
 			<Nav />
 			<main className={'relative'}>
 				<Hero

@@ -1,34 +1,23 @@
-import React from 'react'
-
-import Head from 'next/head'
-
 import AdvantagesParticulier from '@/components/Particulier/AdvantagesParticulier'
 import Footer from '@/components/Global/Footer'
 import Hero from '@/components/Global/Hero'
 import Nav from '@/components/Global/Nav'
 import CTA from '@/components/Global/CTA'
 
-/**
- * @param props
- * @constructor
- */
-function PourquoiUtiliserMyMakeupEnTantQueParticulier(props) {
+export const metadata = {
+	// seo tag canonical link
+	alternates: {
+		canonical:
+			'https://my-makeup.fr/pourquoi-utiliser-my-makeup-en-tant-que-particulier',
+	},
+	description:
+		'Découvrez pourquoi vous devriez utiliser My-Makeup en tant que particulier & professionnel',
+	title: 'Pourquoi My-Makeup ? en tant que particulier',
+}
+
+function PourquoiUtiliserMyMakeupEnTantQueParticulier() {
 	return (
 		<>
-			<Head>
-				<title>Pourquoi My-Makeup ? en tant que particulier</title>
-				<meta
-					content="Découvrez pourquoi vous devriez utiliser My-Makeup en tant que particulier & professionnel"
-					name="description"
-				/>
-				{/*	seo tag canonical link */}
-				<link
-					href={
-						'https://my-makeup.fr/pourquoi-utiliser-my-makeup-en-tant-que-particulier'
-					}
-					rel="canonical"
-				/>
-			</Head>
 			<Nav />
 
 			<main className={'relative'}>

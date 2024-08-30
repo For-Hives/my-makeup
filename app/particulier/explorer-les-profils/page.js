@@ -1,33 +1,21 @@
-import React from 'react'
-
-import Head from 'next/head'
-
 import Footer from '@/components/Global/Footer'
 import Hero from '@/components/Global/Hero'
 import Nav from '@/components/Global/Nav'
 import CTA from '@/components/Global/CTA'
 
-/**
- * @param props
- * @constructor
- */
-function ExplorerLesProfils(props) {
+export const metadata = {
+	description:
+		'Découvrez comment utiliser les critères de recherche et la fonction de recherche par ville de My-Makeup pour explorer les profils de maquilleuses et trouver celle qui vous correspond le mieux.',
+	// seo tag canonical link
+	alternates: {
+		canonical: 'https://my-makeup.fr/particulier/explorer-les-profils',
+	},
+	title: 'Explorer les profils !',
+}
+
+function ExplorerLesProfils() {
 	return (
 		<>
-			<Head>
-				<title>Explorer les profils !</title>
-				<meta
-					content="Découvrez comment utiliser les critères de recherche et la fonction de recherche par ville de My-Makeup
-                    pour explorer les profils de maquilleuses et trouver celle qui vous correspond le mieux."
-					name="description"
-				/>
-				{/*	seo tag canonical link */}
-				<link
-					href="https://my-makeup.fr/particulier/explorer-les-profils"
-					rel="canonical"
-				/>
-			</Head>
-
 			<Nav />
 
 			<main className={'relative'}>

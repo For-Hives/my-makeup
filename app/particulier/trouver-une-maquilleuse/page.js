@@ -1,31 +1,20 @@
-import React from 'react'
-
-import Head from 'next/head'
-
 import Footer from '@/components/Global/Footer'
 import Hero from '@/components/Global/Hero'
 import Nav from '@/components/Global/Nav'
 import CTA from '@/components/Global/CTA'
 
-/**
- * @param props
- * @constructor
- */
-function TrouverUneMaquilleuse(props) {
+export const metadata = {
+	description:
+		'Découvrez comment vous pouvez trouver une maquilleuse simplement, et qui correspondra parfaitement à tout vos besoins !',
+	alternates: {
+		canonical: 'https://my-makeup.fr/particulier/trouver-une-maquilleuse',
+	},
+	title: 'Trouvez une maquilleuse !',
+}
+
+function TrouverUneMaquilleuse() {
 	return (
 		<>
-			<Head>
-				<title>Trouver une maquilleuse !</title>
-				<meta
-					content="Découvrez comment vous pouvez trouver une maquilleuse simplement, et qui correspondra parfaitement à tout vos besoins !"
-					name="description"
-				/>
-				{/*	seo tag canonical link */}
-				<link
-					href="https://my-makeup.fr/particulier/trouver-une-maquilleuse"
-					rel="canonical"
-				/>
-			</Head>
 			<Nav />
 			<main className={'relative'}>
 				<Hero

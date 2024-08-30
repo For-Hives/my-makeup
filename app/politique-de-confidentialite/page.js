@@ -1,26 +1,21 @@
-import React from 'react'
-
-import Head from 'next/head'
-
 import Footer from '@/components/Global/Footer'
 import Hero from '@/components/Global/Hero'
 import Nav from '@/components/Global/Nav'
 import CTA from '@/components/Global/CTA'
 
+export const metadata = {
+	description:
+		"Les conditions générales d'utilisation de My-Makeup, votre plateforme de mise en relation entre maquilleuses professionnelles et clients.",
+	// seo tag canonical link
+	alternates: {
+		canonical: 'https://my-makeup.fr/politique-de-confidentialite',
+	},
+	title: 'La politique de confidentialité de My-Makeup !',
+}
+
 function PolitiqueDeConfidentialite() {
 	return (
 		<>
-			<Head>
-				imgBackgroundSrc={'/assets/back/maquilleuse_europeenne_white.webp'}
-				<title>La politique de confidentialité de My-Makeup !</title>
-				<meta
-					content="Les conditions générales d'utilisation de My-Makeup, votre plateforme de mise en relation entre maquilleuses professionnelles et clients."
-					name="description"
-				/>
-				{/*	seo tag canonical link */}
-				<link href="https://my-makeup.fr/cgu" rel="canonical" />
-			</Head>
-
 			<Nav />
 			<main className={'relative'}>
 				<Hero

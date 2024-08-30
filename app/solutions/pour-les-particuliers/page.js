@@ -1,31 +1,21 @@
-import React from 'react'
-
-import Head from 'next/head'
-
 import Footer from '@/components/Global/Footer'
 import Hero from '@/components/Global/Hero'
 import Nav from '@/components/Global/Nav'
 import CTA from '@/components/Global/CTA'
 
-/**
- * @param props
- * @constructor
- */
-function PourLesParticuliers(props) {
+export const metadata = {
+	description:
+		"Découvrez comment My-Makeup simplifie la recherche de la maquilleuse professionnelle idéale. Grâce à notre plateforme intuitive, trouver la maquilleuse de vos rêves n'a jamais été aussi simple !",
+	// seo tag canonical link
+	alternates: {
+		canonical: 'https://my-makeup.fr/solutions/pour-les-particuliers',
+	},
+	title: 'Solutions My-Makeup pour les Particuliers !',
+}
+
+function PourLesParticuliers() {
 	return (
 		<>
-			<Head>
-				<title>Solutions My-Makeup pour les Particuliers !</title>
-				<meta
-					content="Découvrez comment My-Makeup simplifie la recherche de la maquilleuse professionnelle idéale. Grâce à notre plateforme intuitive, trouver la maquilleuse de vos rêves n'a jamais été aussi simple !"
-					name="description"
-				/>
-				{/*	seo tag canonical link */}
-				<link
-					href="https://my-makeup.fr/solutions/pour-les-particuliers"
-					rel="canonical"
-				/>
-			</Head>
 			<Nav />
 			<main className={'relative'}>
 				<Hero

@@ -1,5 +1,3 @@
-import React from 'react'
-
 import Collaboration from '@/components/Home/Collaboration'
 import Presentation from '@/components/Home/Presentation'
 import Footer from '@/components/Global/Footer'
@@ -14,8 +12,8 @@ export const metadata = {
 	description: `Trouvez la meilleure maquilleuse professionnelle à domicile près de chez. Une maquilleuse rien que pour vous,pour un événement, un shooting, ou une soirée,
                     vous trouverez votre bonheur pour vous sublimer dans n'importe quelle situation ! Inscription gratuite.`,
 	title: 'Accueil - My-Makeup le moteur de recherche pour les maquilleuses',
-	//seo tag canonical link
-	robots: { canonical: 'https://my-makeup.fr' },
+	// seo tag canonical link
+	alternates: { canonical: 'https://my-makeup.fr' },
 }
 
 export default async function Home() {

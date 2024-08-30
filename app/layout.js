@@ -1,7 +1,8 @@
 import { ToastContainer } from 'react-toastify'
 
-import SessionProviderWrapper from 'providers/SessionProviderWrapper'
 import Script from 'next/script'
+
+import SessionProvider from '@/components/Providers/SessionProvider'
 
 import 'material-icons/iconfont/material-icons.css'
 import 'react-toastify/dist/ReactToastify.css'
@@ -41,10 +42,10 @@ export default function RootLayout({ children }) {
 			</Script>
 			<body className={'bg-neutral-50'}>
 				<main>
-					<SessionProviderWrapper>
+					<SessionProvider>
 						{children}
 						<ToastContainer />
-					</SessionProviderWrapper>
+					</SessionProvider>
 				</main>
 			</body>
 		</html>
