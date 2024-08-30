@@ -1,27 +1,25 @@
-import React from 'react'
-
-import Head from 'next/head'
 import Link from 'next/link'
 
+import { getAllArticles } from '@/services/getAllArticles'
 import Footer from '@/components/Global/Footer'
 import Hero from '@/components/Global/Hero'
 import Nav from '@/components/Global/Nav'
 import CTA from '@/components/Global/CTA'
 
-/**
- * @param props
- * @constructor
- */
-function SiteMap({ articles, talents }) {
+export const metadata = {
+	// seo tag canonical link
+	alternates: {
+		canonical: 'https://my-makeup.fr/site-map',
+	},
+	description: 'Le plan du site de My-Makeup',
+	title: 'Site Map My-Makeup !',
+}
+
+async function SiteMap() {
+	const { articles, talents } = await getAllArticles()
+
 	return (
 		<>
-			<Head>
-				<title>Site Map My-Makeup !</title>
-				<meta content="Le plan du site de My-Makeup" name="description" />
-				{/*	seo tag canonical link */}
-				<link href={'https://my-makeup.fr/site-map'} rel="canonical" />
-			</Head>
-
 			<Nav />
 
 			<main className={'relative'}>
@@ -178,28 +176,3 @@ function SiteMap({ articles, talents }) {
 }
 
 export default SiteMap
-
-async function fetchAPI(url) {
-	const res = await fetch(url, {
-		headers: {
-			'Content-Type': 'application/json',
-			Accept: 'application/json',
-		},
-		method: 'GET',
-	})
-	return res.json()
-}
-
-export async function getStaticProps() {
-	const articles = await fetchAPI(
-		`${process.env.NEXT_PUBLIC_API_URL}/api/articles`
-	)
-
-	const talents = await fetchAPI(
-		`${process.env.NEXT_PUBLIC_API_URL}/api/talents`
-	)
-
-	return {
-		props: { articles: articles.data, talents: talents.data },
-	}
-}
