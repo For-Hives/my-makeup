@@ -1,7 +1,7 @@
 import Link from 'next/link'
 
+import { convertMarkdownToHtml, convertToStringDate } from '@/services/utils'
 import ArrowLeftIcon from '@/components/Icons/ArrowLeftIcon'
-import { convertToStringDate } from '@/services/utils'
 import getAllArticle from '@/services/getAllArticle'
 import getOneArticle from '@/services/getOneArticle'
 import { Layout } from '@/components/Global/Layout'
@@ -13,13 +13,13 @@ export const dynamicParams = false
 export const revalidate = 10
 
 export const generateStaticParams = async () => {
-	const articles = await getAllArticle()
+	const articleList = await getAllArticle()
 
-	const paths = articles?.map(record => ({
+	const pathList = articleList?.map(record => ({
 		id: record.attributes.slug,
 	}))
 
-	return paths || []
+	return pathList || []
 }
 
 export const generateMetadata = async ({ params }) => {
@@ -41,8 +41,9 @@ export const generateMetadata = async ({ params }) => {
 const BlogArticle = async ({ params }) => {
 	const { id } = params
 	const article = await getOneArticle(id)
+	const articleWithConvertedContent = await convertMarkdownToHtml(article)
+	const articleAttributes = articleWithConvertedContent?.attributes
 
-	const articleAttributes = article?.attributes
 	return (
 		<>
 			<Nav />
