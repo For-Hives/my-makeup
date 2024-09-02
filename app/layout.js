@@ -41,12 +41,10 @@ export default function RootLayout({ children }) {
         `}
 			</Script>
 			<body className={'bg-neutral-50'}>
-				<main>
-					<SessionProvider>
-						{children}
-						<ToastContainer />
-					</SessionProvider>
-				</main>
+				<SessionProvider>
+					{children}
+					<ToastContainer />
+				</SessionProvider>
 			</body>
 		</html>
 	)
