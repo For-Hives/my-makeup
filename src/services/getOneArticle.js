@@ -8,28 +8,7 @@ const getOneArticle = async id => {
 		`${process.env.NEXT_PUBLIC_API_URL}/api/articles?filters[slug][$eq]=${id}`
 	)
 
-	const articleData = article?.data?.[0]
-
-	if (!articleData) {
-		return null
-	}
-
-	// Convert Markdown to HTML
-	const processedContent = await remark()
-		.use(html)
-		.process(articleData.attributes.content)
-
-	// replace the img by Image from next
-
-	const newArticleData = {
-		...articleData,
-		attributes: {
-			...articleData.attributes,
-			content: processedContent.toString(),
-		},
-	}
-
-	return newArticleData
+	return article
 }
 
 export default getOneArticle
