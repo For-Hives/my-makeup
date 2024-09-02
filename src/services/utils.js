@@ -1,3 +1,6 @@
+import { remark } from 'remark'
+import html from 'remark-html'
+
 export function toCapitalize(str) {
 	return str.charAt(0).toUpperCase() + str.slice(1)
 }
@@ -25,4 +28,29 @@ export function convertStringToKebabCase(str) {
 
 	// Replace spaces with '-' and convert to lowercase
 	return withoutAccents.replace(/\s+/g, '-').toLowerCase()
+}
+
+export const convertMarkdownToHtml = async responseData => {
+	responseData = responseData?.data?.[0]
+
+	if (!responseData) {
+		return null
+	}
+
+	// Convert Markdown to HTML
+	const processedContent = await remark()
+		.use(html)
+		.process(responseData.attributes.content)
+
+	// replace the img by Image from next
+
+	const newresponseData = {
+		...responseData,
+		attributes: {
+			...responseData.attributes,
+			content: processedContent.toString(),
+		},
+	}
+
+	return newresponseData
 }
