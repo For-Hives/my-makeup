@@ -1,36 +1,30 @@
-import React from 'react'
-
 import Image from 'next/image'
-import Head from 'next/head'
 import Link from 'next/link'
 
+import getAllArticleOrderedByDesc from '@/services/getAllArticleOrderedByDesc'
 import { convertToStringDate } from '@/services/utils'
 import Footer from '@/components/Global/Footer'
 import Hero from '@/components/Global/Hero'
 import Nav from '@/components/Global/Nav'
 import CTA from '@/components/Global/CTA'
 
-/**
- * @param props
- * @constructor
- */
-function Blog({ articles }) {
-	// take only the first 3 articles
-	const lastArticles = articles.slice(0, 3)
+export const metadata = {
+	description:
+		"L'actualité de My-Makeup, ce que nous faisons pour améliorer votre quotidien ! Et les nouveautés qui arrivent bientôt !",
+	// seo tag canonical link
+	alternates: {
+		canonical: 'https://my-makeup.fr/blog',
+	},
+	title: 'Blog de My-Makeup',
+}
+
+async function Blog() {
+	const articles = await getAllArticleOrderedByDesc()
+
+	const lastArticles = articles?.slice(0, 3)
 
 	return (
 		<>
-			<Head>
-				<title>Blog de My-Makeup</title>
-				<meta
-					content="L'actualité de My-Makeup, ce que nous faisons pour améliorer votre quotidien !
-					Et les nouveautés qui arrivent bientôt !"
-					name="description"
-				/>
-				{/*	seo tag canonical link */}
-				<link href={'https://my-makeup.fr/blog'} rel="canonical" />
-			</Head>
-
 			<Nav />
 			<main className={'relative'}>
 				<Hero
@@ -140,24 +134,3 @@ function Blog({ articles }) {
 }
 
 export default Blog
-
-export async function getServerSideProps() {
-	const res = await fetch(
-		`${process.env.NEXT_PUBLIC_API_URL}/api/articles?sort[publishedAt]=desc`,
-		{
-			headers: {
-				// 	token
-				'Content-Type': 'application/json',
-				Accept: 'application/json',
-			},
-			method: 'GET',
-		}
-	)
-	const data = await res.json()
-
-	return {
-		props: {
-			articles: data.data,
-		},
-	}
-}
