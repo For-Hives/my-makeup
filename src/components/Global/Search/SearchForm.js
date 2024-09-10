@@ -1,30 +1,21 @@
-import React, { useState } from 'react'
+'use client'
 
-import { MagnifyingGlassIcon } from '@heroicons/react/20/solid'
-import { MapPinIcon } from '@heroicons/react/24/outline'
-import { useRouter } from 'next/router'
+import { MagnifyingGlassIcon, MapPinIcon } from '@heroicons/react/24/outline'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 
-function FullSearchBloc(props) {
-	const [searchTerm, setSearchTerm] = useState('')
-	const [city, setCity] = useState('')
+const SearchForm = ({ onSubmit }) => {
+	const searchParams = useSearchParams()
+	const pathname = usePathname()
+	const { replace } = useRouter()
 
-	const router = useRouter()
-
-	function handleSubmit(e) {
-		e.preventDefault()
-
-		if (searchTerm === '') {
-			return
-		}
-		if (city !== '') {
-			router.push(
-				`/search?search=${encodeURI(searchTerm)}&city=${encodeURI(city)}`
-			)
-			props.performSearch(searchTerm, city)
+	function handleSearch(name, term) {
+		const params = new URLSearchParams(searchParams)
+		if (term) {
+			params.set(name, term)
 		} else {
-			router.push(`/search?search=${encodeURI(searchTerm)}`)
-			props.performSearch(searchTerm)
+			params.delete(name)
 		}
+		replace(`${pathname}?${params.toString()}`)
 	}
 
 	return (
@@ -38,7 +29,7 @@ function FullSearchBloc(props) {
 					className={
 						'flex w-full flex-col flex-wrap items-center justify-between gap-6 md:flex-row lg:flex-nowrap'
 					}
-					onSubmit={handleSubmit}
+					onSubmit={onSubmit}
 				>
 					<div
 						className={
@@ -55,11 +46,13 @@ function FullSearchBloc(props) {
 									'flex w-full items-center rounded-lg border-2 border-indigo-900 bg-transparent py-2 pl-12 pr-6 text-sm leading-6 text-indigo-900 lg:w-96'
 								}
 								data-cy="search-input"
-								onChange={e => setSearchTerm(e.target.value)}
+								defaultValue={searchParams.get('search')?.toString()}
+								onChange={e => handleSearch('search', e.target.value)}
 								placeholder={
 									"Essayez 'Maquilleuse mariée', 'Maquilleuse événements'..."
 								}
-								value={searchTerm}
+								required
+								type="text"
 							/>
 						</div>
 						<div className={'relative'}>
@@ -72,11 +65,12 @@ function FullSearchBloc(props) {
 									'flex w-full items-center rounded-lg border-2 border-indigo-900 bg-transparent py-2 pl-12 pr-6 text-sm leading-6 text-indigo-900 lg:w-96'
 								}
 								data-cy="city-input"
-								onChange={e => setCity(e.target.value)}
+								defaultValue={searchParams.get('city')?.toString()}
+								onChange={e => handleSearch('city', e.target.value)}
 								placeholder={
 									'Lieu de la mission (ex: Paris, Lyon, Marseille...)'
 								}
-								value={city}
+								type="text"
 							/>
 						</div>
 					</div>
@@ -84,7 +78,6 @@ function FullSearchBloc(props) {
 						<button
 							className={'btn-primary w-full'}
 							data-cy="search-button"
-							onSubmit={handleSubmit}
 							type="submit"
 						>
 							Trouver une maquilleuse
@@ -96,4 +89,4 @@ function FullSearchBloc(props) {
 	)
 }
 
-export default FullSearchBloc
+export default SearchForm
