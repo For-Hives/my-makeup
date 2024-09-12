@@ -58,7 +58,7 @@
 		"cypress-social-logins": "1.14.2",
 		"eslint-config-prettier": "9.1.0",
 		"eslint-plugin-yaml": "^1.0.0",
-		"husky": "9.1.5",
+		"husky": "9.1.6",
 		"lint-staged": "15.2.10",
 		"postcss": "8.4.45",
 		"prettier": "3.3.3",
