@@ -46,7 +46,7 @@
 		"sharp": "0.33.5",
 		"swiper": "11.1.15",
 		"to-vfile": "8.0.0",
-		"typescript": "5.6.3",
+		"typescript": "5.7.2",
 		"unified": "11.0.5",
 		"zod": "3.23.8"
 	},
