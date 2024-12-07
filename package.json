@@ -33,7 +33,7 @@
 		"mailgun.js": "10.2.4",
 		"material-icons": "1.13.12",
 		"next": "15.0.3",
-		"next-auth": "4.24.10",
+		"next-auth": "4.24.11",
 		"pg": "8.13.1",
 		"prettier-plugin-tailwindcss": "0.6.9",
 		"react": "18.3.1",
