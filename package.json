@@ -34,7 +34,7 @@
 		"material-icons": "1.13.14",
 		"next": "15.2.2",
 		"next-auth": "4.24.11",
-		"pg": "8.14.0",
+		"pg": "8.14.1",
 		"prettier-plugin-tailwindcss": "0.6.10",
 		"react": "19.0.0",
 		"react-dom": "19.0.0",
