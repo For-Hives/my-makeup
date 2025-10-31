@@ -38,7 +38,7 @@
 		"prettier-plugin-tailwindcss": "0.6.10",
 		"react": "19.1.0",
 		"react-dom": "19.1.0",
-		"react-hook-form": "7.55.0",
+		"react-hook-form": "7.65.0",
 		"react-toastify": "11.0.5",
 		"remark": "15.0.1",
 		"remark-html": "16.0.1",
