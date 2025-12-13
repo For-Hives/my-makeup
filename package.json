@@ -35,7 +35,7 @@
 		"next": "15.5.7",
 		"next-auth": "4.24.13",
 		"pg": "8.16.3",
-		"prettier-plugin-tailwindcss": "0.6.10",
+		"prettier-plugin-tailwindcss": "0.7.2",
 		"react": "19.2.1",
 		"react-dom": "19.2.1",
 		"react-hook-form": "7.68.0",
