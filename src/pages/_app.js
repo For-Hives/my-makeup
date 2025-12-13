@@ -19,7 +19,11 @@ export default function App({
 			<Head>
 				<meta name="viewport" content="width=device-width, initial-scale=1" />
 			</Head>
-			<SessionProvider session={session}>
+			<SessionProvider
+				session={session}
+				refetchInterval={5 * 60} // 5 minutes - check session validity
+				refetchOnWindowFocus={true} // Refresh when user returns to tab
+			>
 				<Component {...pageProps} />
 				<ToastContainer />
 			</SessionProvider>

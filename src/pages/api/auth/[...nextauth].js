@@ -76,12 +76,15 @@ const options = {
 	database: `${process.env.NEXT_PUBLIC_DATABASE_URL}`,
 	session: {
 		strategy: 'jwt',
+		maxAge: 30 * 24 * 60 * 60, // 30 days - align with Strapi JWT expiration
+		updateAge: 24 * 60 * 60, // 24 hours - revalidate session daily
 	},
 	debug: process.env.NODE_ENV !== 'production',
 	callbacks: {
 		async session({ session, token, user }) {
 			session.jwt = token.jwt
 			session.id = token.id
+			session.error = token.error // Pass error to client for handling
 
 			return session
 		},
@@ -102,6 +105,27 @@ const options = {
 				} else {
 					token.id = user.id
 					token.jwt = user.jwt
+				}
+			}
+
+			// Validate token on session refresh to detect expired Strapi JWT
+			if (token.jwt && !isSignIn) {
+				try {
+					const response = await fetch(
+						`${process.env.NEXT_PUBLIC_API_URL}/api/users/me`,
+						{
+							headers: {
+								Authorization: `Bearer ${token.jwt}`,
+							},
+						}
+					)
+					if (!response.ok) {
+						// Token is invalid/expired, mark for logout
+						return { ...token, jwt: null, id: null, error: 'TokenExpired' }
+					}
+				} catch (error) {
+					// Network error - keep token, don't block user
+					console.error('Token validation failed:', error)
 				}
 			}
 

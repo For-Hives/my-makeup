@@ -6,7 +6,7 @@ import { toast } from 'react-toastify'
 import FullLoader from '@/components/Global/Loader/FullLoader'
 
 function Error() {
-	const { session } = useSession()
+	const { data: session } = useSession()
 	const router = useRouter()
 	const [showed, setShowed] = React.useState(false)
 

@@ -5,7 +5,7 @@ import { signOut, useSession } from 'next-auth/react'
 import Link from 'next/link'
 
 function VerificationWall() {
-	const { session } = useSession()
+	const { data: session } = useSession()
 
 	useEffect(() => {
 		if (session) {

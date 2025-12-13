@@ -89,8 +89,22 @@ export const getServerSideProps = async ({ req, res }) => {
 		)
 
 		if (!response.ok) {
-			res.writeHead(301, { location: '/auth/init-account' })
-			res.end()
+			if (response.status === 401) {
+				// Token expired, redirect to signin
+				return {
+					redirect: {
+						destination: '/auth/signin',
+						permanent: false,
+					},
+				}
+			}
+			// Other errors (404 = new account that needs initialization)
+			return {
+				redirect: {
+					destination: '/auth/init-account',
+					permanent: false,
+				},
+			}
 		} else {
 			user = await response.json()
 		}
