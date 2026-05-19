@@ -1,4 +1,4 @@
-FROM node:22-alpine
+FROM node:24-alpine
 
 RUN addgroup -S nonroot \
   && adduser -S nonroot -G nonroot
