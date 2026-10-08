@@ -49,6 +49,24 @@ describe('Umami behind /u (MES-10)', () => {
 		)
 	})
 
+	test('a request still carrying a cookie or credentials is never relayed', async () => {
+		delete process.env.UMAMI_ORIGIN
+		for (const rewrite of await nextConfig.rewrites())
+			assert.deepEqual(
+				rewrite.missing,
+				[
+					{ type: 'header', key: 'cookie' },
+					{ type: 'header', key: 'authorization' },
+				],
+				rewrite.source
+			)
+	})
+
+	test('/U/script.js or /u/API/send are not relayed: the case of the path counts', () => {
+		// the middleware matcher, which cleans the headers, is case-sensitive
+		assert.equal(nextConfig.experimental.caseSensitiveRoutes, true)
+	})
+
 	test('an invalid UMAMI_ORIGIN stops the build', async () => {
 		for (const value of [
 			'umami.wadefade.fr',

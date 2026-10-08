@@ -160,6 +160,34 @@ test.describe('MES-10 balise Umami', () => {
 		expect(envoi.corps.payload.website).toBe(WEBSITE_ID)
 	})
 
+	test('proxy : une autre casse (/U/script.js, /u/API/send) ne mène pas à Umami', async ({
+		request,
+	}) => {
+		const secrets = {
+			cookie: 'next-auth.session-token=jeton-prive; mm-test=valeur-privee',
+			authorization: 'Bearer secret-auth',
+		}
+		for (const chemin of ['/U/script.js', '/u/SCRIPT.JS', '/u/Script.js'])
+			expect(
+				(await request.get(chemin, { headers: secrets })).status(),
+				chemin
+			).toBe(404)
+		for (const chemin of ['/U/api/send', '/u/API/send', '/u/api/Send'])
+			expect(
+				(
+					await request.post(chemin, {
+						headers: secrets,
+						data: {
+							type: 'event',
+							payload: { website: WEBSITE_ID, hostname: 'localhost', url: '/' },
+						},
+					})
+				).status(),
+				chemin
+			).toBe(404)
+		expect(await recus()).toEqual([])
+	})
+
 	test('proxy : rien d’autre de l’instance n’est servi sous /u', async ({
 		request,
 	}) => {

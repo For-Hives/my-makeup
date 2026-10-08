@@ -62,13 +62,25 @@ const nextConfig = {
 	// MES-10: Umami served from the site, so the blockers that filter the
 	// domain of the instance stop hiding real visits. Two paths only, never
 	// the dashboard; src/middleware.js cleans the headers on the way (no
-	// cookie, the visitor's IP only).
+	// cookie, the visitor's IP only). A request that still carries a cookie
+	// or credentials, one the middleware did not clean, is never relayed:
+	// the rewrite does not apply and the site answers 404.
 	async rewrites() {
 		const umami = umamiOrigin()
-		return [
-			{ source: '/u/script.js', destination: `${umami}/script.js` },
-			{ source: '/u/api/send', destination: `${umami}/api/send` },
+		const missing = [
+			{ type: 'header', key: 'cookie' },
+			{ type: 'header', key: 'authorization' },
 		]
+		return [
+			{ source: '/u/script.js', destination: `${umami}/script.js`, missing },
+			{ source: '/u/api/send', destination: `${umami}/api/send`, missing },
+		]
+	},
+	experimental: {
+		// Rewrites and headers match the exact case of the path, like the
+		// middleware matcher: /U/script.js or /u/API/send are not relayed to
+		// Umami without going through the middleware, they get a 404.
+		caseSensitiveRoutes: true,
 	},
 	env: {
 		// SOURCE_COMMIT as Coolify gives it to the build, frozen into the bundles:
