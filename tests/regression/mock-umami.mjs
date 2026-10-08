@@ -17,8 +17,8 @@ const TRACKER = readFileSync(
 	)
 )
 
-// headers the tests look at: what must never arrive (cookie, referer) and
-// what Umami needs (IP, user agent)
+// headers the tests look at: what must never arrive (cookie, referer, an IP
+// or a country sent by the browser) and what Umami needs (IP, user agent)
 const ENTETES_SUIVIES = [
 	'cookie',
 	'authorization',
@@ -26,6 +26,7 @@ const ENTETES_SUIVIES = [
 	'true-client-ip',
 	'x-forwarded-for',
 	'x-real-ip',
+	'cf-ipcountry',
 	'user-agent',
 	'content-type',
 ]

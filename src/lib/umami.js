@@ -153,6 +153,8 @@ export function beforeSendScript() {
 // and src/lib/detect.ts), in its order of preference: X-Real-IP comes before
 // X-Forwarded-For, so behind the proxy Umami would see the server of the
 // site, unless True-Client-IP (read first) carries the visitor's address.
+// Umami takes the first one present: True-Client-IP alone is enough, none of
+// the others is sent.
 const IP_HEADERS = [
 	'x-umami-client-ip',
 	'true-client-ip',
@@ -219,9 +221,9 @@ export function visitorIp(headers) {
 
 /**
  * Request headers sent on to Umami for /u/script.js and /u/api/send: no
- * cookie, no credentials, no Referer; the visitor's IP only, in
- * True-Client-IP and X-Forwarded-For, never an address or a location sent by
- * the browser itself. Umami needs the IP to find the country (D1 counts
+ * cookie, no credentials, no Referer; the visitor's IP only, once, in
+ * True-Client-IP, never an address or a location sent by the browser
+ * itself. Umami needs the IP to find the country (D1 counts
  * French visitors) and to tell visitors apart (session hash); it does not
  * store it. This is what Umami received before the proxy, when the browser
  * called it directly.
@@ -233,9 +235,6 @@ export function umamiProxyHeaders(incoming) {
 	const ip = visitorIp(incoming)
 	for (const name of [...DROPPED_HEADERS, ...IP_HEADERS, ...LOCATION_HEADERS])
 		headers.delete(name)
-	if (ip !== null) {
-		headers.set('true-client-ip', ip)
-		headers.set('x-forwarded-for', ip)
-	}
+	if (ip !== null) headers.set('true-client-ip', ip)
 	return headers
 }

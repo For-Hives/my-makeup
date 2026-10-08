@@ -396,7 +396,8 @@ describe('proxy headers (src/middleware.js)', () => {
 	test("the visitor's IP in True-Client-IP, read by Umami before X-Real-IP", () => {
 		const headers = umamiProxyHeaders(fromTraefik())
 		assert.equal(headers.get('true-client-ip'), '203.0.113.7')
-		assert.equal(headers.get('x-forwarded-for'), '203.0.113.7')
+		// Umami does not need it a second time
+		assert.equal(headers.has('x-forwarded-for'), false)
 		assert.equal(headers.has('x-real-ip'), false)
 	})
 
@@ -413,8 +414,8 @@ describe('proxy headers (src/middleware.js)', () => {
 			})
 		)
 		assert.equal(headers.get('true-client-ip'), '203.0.113.7')
-		assert.equal(headers.get('x-forwarded-for'), '203.0.113.7')
 		for (const name of [
+			'x-forwarded-for',
 			'cf-connecting-ip',
 			'x-client-ip',
 			'forwarded',

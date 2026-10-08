@@ -138,9 +138,8 @@ test.describe('MES-10 balise Umami', () => {
 		expect(recue.entetes.cookie).toBeUndefined()
 		expect(recue.entetes.referer).toBeUndefined()
 		expect(recue.entetes['true-client-ip']).toMatch(IP_LOCALE)
-		expect(recue.entetes['x-forwarded-for']).toBe(
-			recue.entetes['true-client-ip']
-		)
+		expect(recue.entetes['x-forwarded-for']).toBeUndefined()
+		expect(recue.entetes['x-real-ip']).toBeUndefined()
 	})
 
 	test('proxy : l’IP et le pays envoyés par le navigateur sont remplacés', async ({
@@ -162,6 +161,8 @@ test.describe('MES-10 balise Umami', () => {
 		const [envoi] = await envoisRecus()
 		// without Traefik in front, the X-Forwarded-For given is the visitor's
 		expect(envoi.entetes['true-client-ip']).toBe('198.51.100.1')
+		expect(envoi.entetes['x-forwarded-for']).toBeUndefined()
+		expect(envoi.entetes['cf-ipcountry']).toBeUndefined()
 		expect(envoi.entetes.cookie).toBeUndefined()
 		expect(envoi.corps.payload.website).toBe(WEBSITE_ID)
 	})
