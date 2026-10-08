@@ -13,6 +13,7 @@ import { CheckCircleIcon } from '@heroicons/react/24/outline'
 import { isRepeat, resultsBucket, track } from '@/lib/analytics'
 import { signalAvecDelai } from '@/lib/delai'
 import { formatZone } from '@/lib/format-zone'
+import { separerParLieu } from '@/lib/lieu'
 import { nomAffiche, photoPrincipale, texte } from '@/lib/profil/vue-publique'
 import {
 	cleRecherche,
@@ -23,6 +24,7 @@ import {
 	paginer,
 	rechercheValide,
 	resultatsRecherche,
+	sectionsDeLaPage,
 	titreResultats,
 	urlApiRecherche,
 	urlPageRecherche,
@@ -34,6 +36,9 @@ import { QUALITE_PHOTO, ratioMedia, sizesGrille } from '@/lib/taille-image'
  * city alone is enough; one API call per search, never for a page change;
  * empty, error (API cut off: message within 8 s) and paged states, each
  * with its h1. Never indexed (noindex from _app.js and next.config.js).
+ * With a city (UI-10), the API still answers for all of France: the
+ * profiles of that city or département come first and are the only ones
+ * counted in the title, the others follow under their own heading.
  */
 function SearchPage() {
 	const router = useRouter()
@@ -107,7 +112,9 @@ function SearchPage() {
 			? etat.statut
 			: 'chargement'
 	const resultats = statut === 'ok' ? etat.resultats : []
-	const pagination = paginer(resultats, page)
+	const { locaux, autres, parLieu } = separerParLieu(resultats, city)
+	const pagination = paginer([...locaux, ...autres], page)
+	const sections = sectionsDeLaPage(pagination, locaux.length)
 
 	return (
 		<>
@@ -203,23 +210,47 @@ function SearchPage() {
 								className={'mb-8 text-2xl font-bold text-gray-800'}
 								data-cy="search-title"
 							>
-								{titreResultats({ search, city }, pagination.total)}
+								{titreResultats(
+									{ search, city },
+									parLieu ? locaux.length : pagination.total
+								)}
 							</h1>
-							<ul
-								className={
-									'grid w-full grid-cols-1 gap-8 md:grid-cols-3 2xl:grid-cols-6'
-								}
-							>
-								{pagination.elements.map((result, index) => (
-									<li key={result.id ?? index} className={'col-span-1'}>
-										<CarteResultat
-											result={result}
-											rang={pagination.premier + index}
-											prioritaire={index === 0}
-										/>
-									</li>
-								))}
-							</ul>
+							{parLieu && locaux.length === 0 && (
+								<p
+									className={'-mt-4 mb-8 text-gray-700'}
+									data-cy="search-aucun-local"
+								>
+									Aucune maquilleuse n’indique « {city} » (ville ou département)
+									dans son profil.
+								</p>
+							)}
+							{sections.locaux.length > 0 && (
+								<ListeResultats
+									resultats={sections.locaux}
+									premier={pagination.premier}
+									premierDeLaPage={pagination.premier}
+									dataCy="search-results-locaux"
+								/>
+							)}
+							{sections.autres.length > 0 && (
+								<section aria-labelledby="search-autres-titre">
+									<h2
+										id="search-autres-titre"
+										className={`mb-8 text-xl font-bold text-gray-800 ${
+											sections.locaux.length > 0 ? 'mt-12' : ''
+										}`}
+										data-cy="search-autres-titre"
+									>
+										Autres maquilleuses qui se déplacent
+									</h2>
+									<ListeResultats
+										resultats={sections.autres}
+										premier={pagination.premier + sections.locaux.length}
+										premierDeLaPage={pagination.premier}
+										dataCy="search-results-autres"
+									/>
+								</section>
+							)}
 							{pagination.pages > 1 && (
 								<nav
 									aria-label="Pages de résultats"
@@ -267,10 +298,29 @@ function SearchPage() {
 }
 
 /**
- * A result card. The first card of the page is the largest picture above
- * the fold on a phone (its LCP): loaded at once and first; the others stay
- * lazy.
+ * One list of result cards, ranked from `premier` (search_result_click).
+ * The first card of the page is the largest picture above the fold on a
+ * phone (its LCP): loaded at once and first; the others stay lazy.
  */
+function ListeResultats({ resultats, premier, premierDeLaPage, dataCy }) {
+	return (
+		<ul
+			className={'grid w-full grid-cols-1 gap-8 md:grid-cols-3 2xl:grid-cols-6'}
+			data-cy={dataCy}
+		>
+			{resultats.map((result, index) => (
+				<li key={result.id ?? premier + index} className={'col-span-1'}>
+					<CarteResultat
+						result={result}
+						rang={premier + index}
+						prioritaire={premier + index === premierDeLaPage}
+					/>
+				</li>
+			))}
+		</ul>
+	)
+}
+
 function CarteResultat({ result, rang, prioritaire }) {
 	const nom = nomAffiche(result)
 	const zone = formatZone({ city: result.city, radius: result.action_radius })
@@ -332,21 +382,23 @@ function CarteResultat({ result, rang, prioritaire }) {
 							</span>
 						)}
 					</div>
-					{zone && (
-						<div
-							className={
-								'flex flex-row items-center gap-2 text-sm font-light text-white'
-							}
+					<div
+						className={
+							'flex flex-row items-center gap-2 text-sm font-light text-white'
+						}
+						data-cy="search-result-zone"
+					>
+						<span
+							className="material-icons-round text-sm text-white"
+							aria-hidden="true"
 						>
-							<span
-								className="material-icons-round text-sm text-white"
-								aria-hidden="true"
-							>
-								directions_run
-							</span>
-							<span className={'font-bold'}>{zone}</span>
-						</div>
-					)}
+							directions_run
+						</span>
+						{/* UI-10: an empty city is said, never left blank */}
+						<span className={zone ? 'font-bold' : 'italic'}>
+							{zone || 'Zone non renseignée'}
+						</span>
+					</div>
 				</div>
 			</div>
 			<div className={'flex w-full flex-col gap-4 p-4 pt-6'}>
