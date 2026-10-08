@@ -79,7 +79,6 @@ function Reinitialiser({ code }) {
 		<>
 			<Head>
 				<title>Nouveau mot de passe - My-Makeup</title>
-				<meta name="robots" content="noindex" />
 				<meta name="referrer" content="no-referrer" />
 			</Head>
 			<main className="flex min-h-screen items-center justify-center bg-white px-4 py-12">

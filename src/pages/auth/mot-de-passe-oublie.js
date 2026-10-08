@@ -69,7 +69,6 @@ function MotDePasseOublie() {
 		<>
 			<Head>
 				<title>Mot de passe oublié - My-Makeup</title>
-				<meta name="robots" content="noindex" />
 			</Head>
 			<main className="flex min-h-screen items-center justify-center bg-white px-4 py-12">
 				<div className="w-full max-w-sm">

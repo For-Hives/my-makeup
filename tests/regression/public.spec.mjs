@@ -318,19 +318,26 @@ test.describe('SEO-10 sitemap, robots, noindex, canonical', () => {
 		expect(txt).not.toMatch(/Host:|Disallow: \/auth/)
 	})
 
-	test('/auth/signin, /auth/signup, /auth/mot-de-passe-oublie et /search : noindex (meta et en-tête), sans canonical', async ({
+	test('/auth/* et /search : noindex (une seule meta et l’en-tête), sans canonical', async ({
 		request,
 	}) => {
 		for (const chemin of [
 			'/auth/signin',
 			'/auth/signup',
 			'/auth/mot-de-passe-oublie',
+			'/auth/reinitialiser',
+			'/auth/error?error=erreur-inconnue',
 			'/search',
 			'/search?city=Annecy',
 		]) {
 			const { reponse, html: page } = await html(request, chemin)
 			expect(reponse.status(), chemin).toBe(200)
-			expect(meta(page, 'robots'), chemin).toBe('noindex,follow')
+			expect(
+				metas(page)
+					.filter(m => m.name === 'robots')
+					.map(m => m.content),
+				chemin
+			).toEqual(['noindex,follow'])
 			expect(reponse.headers()['x-robots-tag'], chemin).toBe('noindex, follow')
 			expect(canonical(page), chemin).toBeNull()
 		}
