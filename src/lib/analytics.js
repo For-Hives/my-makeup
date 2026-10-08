@@ -9,6 +9,8 @@
  * value drops the whole event instead of sending something half-checked.
  */
 
+import { CODES_ERREUR } from './auth-erreurs.js'
+
 export const CONTACT_CHANNELS = [
 	'email',
 	'phone',
@@ -64,6 +66,15 @@ export const EVENTS = {
 	onboarding_step: {
 		step: oneOf(['verification_email', 'compte_cree', 'termine']),
 	},
+	// every sign-in attempt with the form (A3), `code` = 'ok' on success
+	login_result: {
+		method: oneOf(['email', 'google']),
+		ok: flag,
+		code: oneOf(['ok', ...CODES_ERREUR]),
+	},
+	// an auth error shown outside the sign-in form: /auth/error, sign-up form
+	auth_error: { code: oneOf(CODES_ERREUR) },
+	session_expired: { where: oneOf(['api_401', 'jwt_expire', 'middleware']) },
 }
 
 /**

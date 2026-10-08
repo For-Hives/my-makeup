@@ -1,24 +1,32 @@
-import React from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
 import Image from 'next/image'
+import { useRouter } from 'next/router'
 import { signIn, signOut, useSession } from 'next-auth/react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as zod from 'zod'
 import _ from 'lodash'
+import {
+	codeResultatConnexion,
+	messageErreur,
+	normaliserCodeErreur,
+} from '@/lib/auth-erreurs'
+import { callbackUrlSure } from '@/lib/auth-session'
+import { track } from '@/lib/analytics'
 
+// No password rule at sign-in: older accounts have passwords the sign-up
+// rule would refuse (AUTH-11). Strapi decides.
 const schema = zod
 	.object({
 		email: zod
 			.string({ required_error: 'Email est requis' })
+			.trim()
 			.email('Email invalide'),
 		password: zod
 			.string({ required_error: 'Mot de passe est requis' })
-			.regex(
-				/^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[a-zA-Z]).{8,}$/gm,
-				'Le mot de passe doit contenir au moins 8 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial'
-			),
+			.min(1, 'Mot de passe est requis'),
 	})
 	.required({ email: true, password: true })
 
@@ -32,13 +40,49 @@ function Signin() {
 	})
 
 	const { data: session } = useSession()
+	const router = useRouter()
+	// ?error=session-expiree, or a code forwarded by /auth/error
+	const erreurUrl = router.isReady
+		? normaliserCodeErreur(router.query.error)
+		: null
+	const [erreur, setErreur] = useState(null)
+	const [envoi, setEnvoi] = useState(false)
 
-	const onSubmit = data => {
-		const result = signIn('credentials', {
+	// page to come back to after signing in: this site only (A3)
+	const destination = () =>
+		callbackUrlSure(router.query.callbackUrl, window.location.origin)
+
+	const expirationComptee = useRef(false)
+	useEffect(() => {
+		if (erreurUrl !== 'session-expiree' || expirationComptee.current) return
+		expirationComptee.current = true
+		track('session_expired', { where: 'api_401' })
+	}, [erreurUrl])
+
+	const onSubmit = async data => {
+		setEnvoi(true)
+		setErreur(null)
+		const vers = destination()
+		const resultat = await signIn('credentials', {
 			email: data.email,
 			password: data.password,
-			callbackUrl: '/auth/profil',
+			// explicit: the default (this page) may carry ?error=session-expiree
+			callbackUrl: vers,
+			redirect: false,
 		})
+		const code = codeResultatConnexion(resultat)
+		track('login_result', {
+			method: 'email',
+			ok: code === null,
+			code: code ?? 'ok',
+		})
+		if (code !== null) {
+			// message under the form, the URL does not change
+			setErreur(code)
+			setEnvoi(false)
+			return
+		}
+		router.push(vers)
 	}
 
 	return (
@@ -71,9 +115,18 @@ function Signin() {
 							<h2 className="mt-6 text-3xl font-bold tracking-tight text-gray-900">
 								{session && session.user && !_.isEmpty(session.user)
 									? 'Bonjour ' +
-									  (session.user.name ? session.user.name : session.user.email)
+										(session.user.name ? session.user.name : session.user.email)
 									: 'Se connecter'}
 							</h2>
+							{erreurUrl && !erreur && (
+								<p
+									role="alert"
+									data-cy="signin-url-error"
+									className="mt-4 rounded-md bg-amber-50 p-3 text-sm text-amber-900"
+								>
+									{messageErreur(erreurUrl)}
+								</p>
+							)}
 						</div>
 						{!(session && session.user && !_.isEmpty(session.user)) && (
 							<div className="mt-8">
@@ -88,7 +141,7 @@ function Signin() {
 													data-cy="google-signin"
 													onClick={() => {
 														signIn('google', {
-															callbackUrl: '/auth/profil',
+															callbackUrl: destination(),
 														})
 													}}
 													className="flex h-[40px] w-full flex-nowrap items-center justify-center gap-[24px] rounded-md bg-white px-3 text-gray-500 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:outline-offset-0"
@@ -146,6 +199,7 @@ function Signin() {
 													id="email"
 													name="email"
 													type="text"
+													inputMode="email"
 													autoComplete="email"
 													{...register('email', {
 														required: true,
@@ -214,16 +268,27 @@ function Signin() {
 											</div>
 										</div>
 
+										{erreur && (
+											<p
+												role="alert"
+												data-cy="signin-error"
+												className="rounded-md bg-red-50 p-3 text-sm text-red-800"
+											>
+												{messageErreur(erreur)}
+											</p>
+										)}
 										<div>
 											<button
 												data-cy="email-signin"
 												type="submit"
-												className="btn-primary-large"
+												disabled={envoi}
+												aria-busy={envoi}
+												className="btn-primary-large disabled:cursor-wait disabled:opacity-60"
 											>
-												Se connecter
+												{envoi ? 'Connexion…' : 'Se connecter'}
 											</button>
 										</div>
-										<div className={'flex items-center justify-center '}>
+										<div className={'flex items-center justify-center'}>
 											Pas de compte ?&nbsp;
 											<Link
 												className={

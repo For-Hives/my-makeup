@@ -441,3 +441,58 @@ describe('measure opt-out (umami.disabled)', () => {
 		assert.equal(setMeasureDisabled(broken, true), false)
 	})
 })
+
+describe('auth events (A3, A4)', () => {
+	test('login_result: method, ok and a code of the closed list', () => {
+		assert.deepEqual(
+			eventData('login_result', {
+				method: 'email',
+				ok: false,
+				code: 'identifiants-invalides',
+			}),
+			{ method: 'email', ok: false, code: 'identifiants-invalides' }
+		)
+		assert.deepEqual(
+			eventData('login_result', { method: 'email', ok: true, code: 'ok' }),
+			{
+				method: 'email',
+				ok: true,
+				code: 'ok',
+			}
+		)
+		assert.equal(
+			eventData('login_result', {
+				method: 'email',
+				ok: false,
+				code: 'Invalid identifier or password',
+			}),
+			null
+		)
+		assert.equal(
+			eventData('login_result', { method: 'facebook', ok: true, code: 'ok' }),
+			null
+		)
+	})
+
+	test('auth_error: our codes only, never a raw message', () => {
+		assert.deepEqual(
+			eventData('auth_error', { code: 'email-deja-avec-mot-de-passe' }),
+			{
+				code: 'email-deja-avec-mot-de-passe',
+			}
+		)
+		assert.equal(eventData('auth_error', { code: 'ok' }), null)
+		assert.equal(
+			eventData('auth_error', {
+				code: "Cannot read properties of undefined (reading 'id')",
+			}),
+			null
+		)
+	})
+
+	test('session_expired: where it was detected', () => {
+		for (const where of ['api_401', 'jwt_expire', 'middleware'])
+			assert.deepEqual(eventData('session_expired', { where }), { where })
+		assert.equal(eventData('session_expired', { where: 'ailleurs' }), null)
+	})
+})

@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test 'tests/unit/*.test.mjs'",
+    "test:auth": "node tests/auth/run.mjs",
     "prettier": "prettier --write .",
     "precommit": "lint-staged",
     "prepare": "husky install",

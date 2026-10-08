@@ -1,139 +1,182 @@
 import NextAuth from 'next-auth'
-// import google provider
 import GoogleProvider from 'next-auth/providers/google'
-// import facebook provider
-import FacebookProvider from 'next-auth/providers/facebook'
-// import credential provider
 import CredentialsProvider from 'next-auth/providers/credentials'
+import { expirationJwt } from '@/lib/auth-erreurs'
+import {
+	authentifierStrapi,
+	connexionStrapiOAuth,
+	statutCompteStrapi,
+} from '@/lib/auth-strapi'
+import {
+	causeErreur,
+	delaiRevalidation,
+	etatJeton,
+	expirationSession,
+	ligneLogAuth,
+	secretNextAuth,
+	suiteVerification,
+	urlApiServeur,
+} from '@/lib/auth-session'
 
-const options = {
+// Server-side calls go to API_INTERNAL_URL (Docker network) when it is set
+export const API_SERVEUR = urlApiServeur({
+	interne: process.env.API_INTERNAL_URL,
+	publique: process.env.NEXT_PUBLIC_API_URL,
+})
+const REVALIDATION_MS = delaiRevalidation(process.env.AUTH_REVALIDATION_MS)
+
+/** `[auth] evt=… code=… ms=…` on stdout: never an email, a name or a token */
+export const journalAuth = (evt, details) =>
+	console.info(ligneLogAuth(evt, details))
+
+const codeDe = erreur =>
+	erreur?.name === 'ErreurAuth' ? erreur.code : 'erreur-inconnue'
+
+export const authOptions = {
 	providers: [
 		GoogleProvider({
 			clientId: process.env.GOOGLE_CLIENT_ID,
 			clientSecret: process.env.GOOGLE_CLIENT_SECRET,
 		}),
-		FacebookProvider({
-			clientId: process.env.FACEBOOK_CLIENT_ID,
-			clientSecret: process.env.FACEBOOK_CLIENT_SECRET,
-		}),
 		CredentialsProvider({
 			name: 'Credentials',
 			credentials: {
-				email: { label: 'Email', type: 'email', placeholder: 'Email' },
-				password: { label: 'Password', type: 'password' },
-				name: { label: 'Name', type: 'text' },
+				email: { label: 'Email', type: 'email' },
+				password: { label: 'Mot de passe', type: 'password' },
+				name: { label: 'Nom', type: 'text' },
 			},
 			/**
-			 * if name is set we are in register mode
-			 * @param password
-			 * @param email
-			 * @param name
+			 * Sign-in, or sign-up when `name` is set. A failure throws an error
+			 * whose message is a stable code: NextAuth hands it to the form as
+			 * `error` (signIn with redirect: false).
 			 */
-			authorize: async ({ password, email, name }) => {
-				let callUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/auth/local`
-				let body = JSON.stringify({
-					identifier: email,
-					password: password,
-				})
-				if (name !== undefined && name !== null && name !== '') {
-					callUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/auth/local/register`
-					body = JSON.stringify({
-						username: name,
-						email: email,
-						password: password,
+			authorize: async credentials => {
+				const debut = Date.now()
+				const evt = credentials?.name?.trim() ? 'inscription' : 'connexion'
+				try {
+					const user = await authentifierStrapi({
+						api: API_SERVEUR,
+						email: credentials?.email,
+						password: credentials?.password,
+						name: credentials?.name,
 					})
-				}
-				const response = await fetch(callUrl, {
-					method: 'POST',
-					headers: {
-						Accept: 'application/json',
-						'Content-Type': 'application/json',
-					},
-					body,
-				})
-				const authenticated = await response.json()
-
-				if (authenticated) {
-					return Promise.resolve({
-						id: authenticated.user.id,
-						name: authenticated.user.username,
-						email: authenticated.user.email,
-						jwt: authenticated.jwt,
-					})
-				} else {
-					return Promise.resolve(null)
+					journalAuth(evt, { code: 'ok', ms: Date.now() - debut })
+					return user
+				} catch (erreur) {
+					const code = codeDe(erreur)
+					journalAuth(evt, { code, ms: Date.now() - debut })
+					throw new Error(code)
 				}
 			},
 		}),
 	],
+	// No signOut page (it did not exist: 404) nor newUser (only used with a
+	// database adapter): NextAuth serves its own sign-out confirmation.
 	pages: {
 		signIn: '/auth/signin',
-		signOut: '/auth/signout',
-		error: '/auth/error', // Error code passed in query string as ?error=
-		newUser: '/auth/init-account', // New users will be directed here on first sign in (leave the property out if not of interest)
+		error: '/auth/error', // ?error=<code>
 	},
-	secret: `${process.env.NEXTAUTH_SECRET}`, //PUT YOUR OWN SECRET (command: openssl rand -base64 32)
-	database: `${process.env.NEXT_PUBLIC_DATABASE_URL}`,
+	secret: secretNextAuth({
+		secret: process.env.NEXTAUTH_SECRET,
+		nodeEnv: process.env.NODE_ENV,
+		phase: process.env.NEXT_PHASE,
+	}),
 	session: {
 		strategy: 'jwt',
-		maxAge: 30 * 24 * 60 * 60, // 30 days - align with Strapi JWT expiration
-		updateAge: 24 * 60 * 60, // 24 hours - revalidate session daily
+		maxAge: 30 * 24 * 60 * 60, // bounded per session by the Strapi JWT
 	},
-	debug: process.env.NODE_ENV !== 'production',
+	// NextAuth's own messages, reduced to codes: its debug and error metadata
+	// can hold profiles and tokens
+	logger: {
+		error: (code, metadata) =>
+			console.error(
+				ligneLogAuth('nextauth', {
+					code: String(code).toLowerCase(),
+					cause: causeErreur(metadata),
+				})
+			),
+		warn: code =>
+			console.warn(
+				ligneLogAuth('nextauth', { code: String(code).toLowerCase() })
+			),
+		debug: () => {},
+	},
 	callbacks: {
-		async session({ session, token, user }) {
-			session.jwt = token.jwt
-			session.id = token.id
-			session.error = token.error // Pass error to client for handling
-
-			return session
+		/**
+		 * Google: the access token is exchanged for a Strapi JWT here, so a
+		 * refusal (email already used with a password, Strapi down) ends on
+		 * /auth/error with a code instead of a TypeError.
+		 */
+		async signIn({ user, account }) {
+			if (account?.provider !== 'google') return true
+			const debut = Date.now()
+			try {
+				const { id, jwt } = await connexionStrapiOAuth({
+					api: API_SERVEUR,
+					provider: 'google',
+					accessToken: account.access_token,
+				})
+				user.id = id
+				user.jwt = jwt
+				journalAuth('connexion_google', { code: 'ok', ms: Date.now() - debut })
+				return true
+			} catch (erreur) {
+				const code = codeDe(erreur)
+				journalAuth('connexion_google', { code, ms: Date.now() - debut })
+				throw new Error(code) // → /auth/error?error=<code>
+			}
 		},
-		async jwt({ token, user, account, profil, isNewUser }) {
-			const isSignIn = !!user
-
-			if (isSignIn) {
-				if (
-					typeof account.provider !== 'undefined' &&
-					account.type !== 'credentials'
-				) {
-					const response = await fetch(
-						`${process.env.NEXT_PUBLIC_API_URL}/api/auth/${account.provider}/callback?access_token=${account?.access_token}`
-					)
-					const data = await response.json()
-					token.jwt = data.jwt
-					token.id = data.user.id
-				} else {
-					token.id = user.id
-					token.jwt = user.jwt
+		/**
+		 * Throwing here is a JWT_SESSION_ERROR: NextAuth then deletes the
+		 * session cookies (chunks included) and the visitor is signed out
+		 * for real, instead of the old « zombie » session without JWT.
+		 */
+		async jwt({ token, user }) {
+			if (user)
+				return {
+					...token,
+					id: user.id,
+					jwt: user.jwt,
+					strapiExp: expirationJwt(user.jwt),
+					verifieA: Date.now(),
 				}
-			}
 
-			// Validate token on session refresh to detect expired Strapi JWT
-			if (token.jwt && !isSignIn) {
-				try {
-					const response = await fetch(
-						`${process.env.NEXT_PUBLIC_API_URL}/api/users/me`,
-						{
-							headers: {
-								Authorization: `Bearer ${token.jwt}`,
-							},
-						}
-					)
-					if (!response.ok) {
-						// Token is invalid/expired, mark for logout
-						return { ...token, jwt: null, id: null, error: 'TokenExpired' }
-					}
-				} catch (error) {
-					// Network error - keep token, don't block user
-					console.error('Token validation failed:', error)
-				}
+			const etat = etatJeton(token, Date.now(), REVALIDATION_MS)
+			if (etat === 'sans-jwt' || etat === 'expire') {
+				const code = etat === 'expire' ? 'jwt_expire' : 'sans_jwt'
+				journalAuth('session_expiree', { code })
+				throw new Error(code)
 			}
+			if (etat === 'frais') return token
 
-			return token
+			const debut = Date.now()
+			const status = await statutCompteStrapi({
+				api: API_SERVEUR,
+				jwt: token.jwt,
+			})
+			const suite = suiteVerification(status)
+			journalAuth('revalidation', {
+				code: suite === 'inchangee' ? `statut-${status}` : suite,
+				ms: Date.now() - debut,
+			})
+			if (suite === 'refusee') {
+				journalAuth('session_expiree', { code: 'api_401' })
+				throw new Error('api_401')
+			}
+			// 5xx, 429, network: the session stays, checked again next read
+			return suite === 'valide' ? { ...token, verifieA: Date.now() } : token
+		},
+		async session({ session, token }) {
+			session.id = token.id
+			// Read by the profile modals, which call Strapi from the browser:
+			// residual risk accepted until the v3 (plans/01 §2.2).
+			session.jwt = token.jwt
+			session.expires = expirationSession(session.expires, token.strapiExp)
+			return session
 		},
 	},
 }
 
-const Auth = (req, res) => NextAuth(req, res, options)
+const Auth = (req, res) => NextAuth(req, res, authOptions)
 
 export default Auth

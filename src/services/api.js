@@ -1,5 +1,17 @@
-import { signOut } from 'next-auth/react'
+import { getSession, signOut } from 'next-auth/react'
 import { toast } from 'react-toastify'
+
+// The sign-in page shows « Ta session a expiré » and counts `session_expired`
+const PAGE_SESSION_EXPIREE = '/auth/signin?error=session-expiree'
+
+function sessionExpiree() {
+	toast('Ta session a expiré, reconnecte-toi', {
+		type: 'warning',
+		icon: '🔒',
+		toastId: 'session-expired',
+	})
+	signOut({ callbackUrl: PAGE_SESSION_EXPIREE })
+}
 
 /**
  * Makes an authenticated API request with automatic 401 handling.
@@ -11,13 +23,11 @@ import { toast } from 'react-toastify'
  * @returns {Promise<Response|null>} - The fetch response or null if unauthorized
  */
 export async function authenticatedFetch(url, session, options = {}) {
-	if (!session?.jwt) {
-		toast('Votre session a expiré, veuillez vous reconnecter', {
-			type: 'warning',
-			icon: '🔒',
-			toastId: 'session-expired',
-		})
-		signOut({ callbackUrl: '/auth/signin' })
+	// The pages no longer send the session in their props: right after a page
+	// load useSession() may still be loading, so ask for it before giving up.
+	const jwt = session?.jwt ?? (await getSession())?.jwt
+	if (!jwt) {
+		sessionExpiree()
 		return null
 	}
 
@@ -26,18 +36,13 @@ export async function authenticatedFetch(url, session, options = {}) {
 		headers: {
 			'Content-Type': 'application/json',
 			Accept: 'application/json',
-			Authorization: `Bearer ${session.jwt}`,
+			Authorization: `Bearer ${jwt}`,
 			...options.headers,
 		},
 	})
 
 	if (response.status === 401) {
-		toast('Votre session a expiré, veuillez vous reconnecter', {
-			type: 'warning',
-			icon: '🔒',
-			toastId: 'session-expired',
-		})
-		signOut({ callbackUrl: '/auth/signin' })
+		sessionExpiree()
 		return null
 	}
 

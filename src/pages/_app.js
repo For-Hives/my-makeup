@@ -21,8 +21,10 @@ export default function App({
 			</Head>
 			<SessionProvider
 				session={session}
-				refetchInterval={5 * 60} // 5 minutes - check session validity
-				refetchOnWindowFocus={true} // Refresh when user returns to tab
+				// Session read every 15 min and when the tab gets the focus back;
+				// Strapi itself is asked at most once per 15 min (A1, AUTH-06)
+				refetchInterval={15 * 60}
+				refetchOnWindowFocus={true}
 			>
 				<Component {...pageProps} />
 				<ToastContainer />

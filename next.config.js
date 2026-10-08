@@ -16,6 +16,9 @@ const nextConfig = {
 		],
 	},
 	cacheMaxMemorySize: 0,
+	// The auth test suite (npm run test:auth) builds into its own folder, so it
+	// never overwrites the .next of a dev server or of the image build.
+	distDir: process.env.NEXT_DIST_DIR || '.next',
 }
 
 module.exports = nextConfig

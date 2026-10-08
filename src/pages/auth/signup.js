@@ -1,13 +1,15 @@
-import React from 'react'
+import React, { useState } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
 import Image from 'next/image'
+import { useRouter } from 'next/router'
 import { signIn, signOut, useSession } from 'next-auth/react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as zod from 'zod'
 import _ from 'lodash'
 import { track } from '@/lib/analytics'
+import { codeResultatConnexion, messageErreur } from '@/lib/auth-erreurs'
 
 const schema = zod
 	.object({
@@ -18,12 +20,14 @@ const schema = zod
 		password: zod
 			.string({ required_error: 'Mot de passe est requis' })
 			.regex(
-				/^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[a-zA-Z]).{8,}$/gm,
-				'Le mot de passe doit contenir au moins 8 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial'
+				/^(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}$/,
+				'Le mot de passe doit contenir au moins 8 caractères, dont une majuscule, une minuscule et un chiffre'
 			)
 			.max(255, 'Mot de passe trop long'),
 		name: zod
 			.string({ required_error: 'Le nom de compte est requis' })
+			.trim()
+			.min(3, 'Le nom doit contenir au moins 3 caractères')
 			.max(255, 'Le nom de compte est trop long'),
 	})
 	.required({ email: true, password: true, name: true })
@@ -38,18 +42,34 @@ function Signup() {
 	})
 
 	const { data: session } = useSession()
+	const router = useRouter()
+	const [erreur, setErreur] = useState(null)
+	const [envoi, setEnvoi] = useState(false)
 
-	const onSubmit = data => {
+	const onSubmit = async data => {
 		track('signup_start', { method: 'email' })
+		setEnvoi(true)
+		setErreur(null)
 		/**
 		 * Signin function with name setted : register mode
 		 */
-		const result = signIn('credentials', {
+		const resultat = await signIn('credentials', {
 			email: data.email.trim(),
 			password: data.password,
 			name: data.name.trim(),
-			callbackUrl: '/auth/profil',
+			callbackUrl: '/auth/init-account',
+			redirect: false,
 		})
+		const code = codeResultatConnexion(resultat)
+		if (code !== null) {
+			track('auth_error', { code })
+			// message under the form, the URL does not change
+			setErreur(code)
+			setEnvoi(false)
+			return
+		}
+		// new account: no profile yet, the onboarding creates it
+		router.push('/auth/init-account')
 	}
 
 	return (
@@ -154,12 +174,11 @@ function Signup() {
 													id="name"
 													name="name"
 													type="text"
-													autoComplete="current-password"
+													autoComplete="name"
 													{...register('name', {
 														required: true,
 													})}
-													className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300
-													placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+													className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
 												/>
 												{errors.name && (
 													<p className={'mt-2 text-xs text-red-500/80'}>
@@ -181,6 +200,7 @@ function Signup() {
 													id="email"
 													name="email"
 													type="text"
+													inputMode="email"
 													autoComplete="email"
 													{...register('email', {
 														required: true,
@@ -208,7 +228,7 @@ function Signup() {
 													id="password"
 													name="password"
 													type="password"
-													autoComplete="current-password"
+													autoComplete="new-password"
 													{...register('password', {
 														required: true,
 													})}
@@ -235,16 +255,27 @@ function Signup() {
 												</Link>
 											</p>
 										</div>
+										{erreur && (
+											<p
+												role="alert"
+												data-cy="signup-error"
+												className="rounded-md bg-red-50 p-3 text-sm text-red-800"
+											>
+												{messageErreur(erreur)}
+											</p>
+										)}
 										<div>
 											<button
 												type="submit"
-												className="btn-primary-large"
+												className="btn-primary-large disabled:cursor-wait disabled:opacity-60"
 												data-cy="submit"
+												disabled={envoi}
+												aria-busy={envoi}
 											>
-												{"S'inscrire"}
+												{envoi ? 'Inscription…' : "S'inscrire"}
 											</button>
 										</div>
-										<div className={'flex items-center justify-center '}>
+										<div className={'flex items-center justify-center'}>
 											Déjà un compte ?&nbsp;
 											<Link
 												className={
