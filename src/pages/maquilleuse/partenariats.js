@@ -69,17 +69,13 @@ function Partenariats(props) {
 										</p>
 									</li>
 									<li>
-										<h2>
-											Partenariat : vous restez libre 🏆
-										</h2>
+										<h2>Partenariat : vous restez libre 🏆</h2>
 										<p>
 											{`Nous considérons chaque maquilleuse inscrite comme une partenaire. Vous fixez vos tarifs, vous choisissez les coordonnées que vous affichez et vous convenez directement avec vos clientes de vos prestations : My-Makeup ne prélève aucun montant sur vos prestations. De notre côté, nous travaillons à faire connaître la plateforme auprès des particuliers.`}
 										</p>
 									</li>
 									<li>
-										<h2>
-											Mettez en valeur votre parcours 🚀
-										</h2>
+										<h2>Mettez en valeur votre parcours 🚀</h2>
 										<p>
 											{`Votre page présente vos expériences, vos formations, vos compétences, vos langues et les photos de vos réalisations. Vous la mettez à jour quand vous le souhaitez depuis votre espace, et vous pouvez la partager sur vos réseaux sociaux ou dans votre bio Instagram : c'est votre vitrine professionnelle.`}
 										</p>

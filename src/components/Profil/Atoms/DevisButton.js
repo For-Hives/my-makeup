@@ -13,9 +13,7 @@ import { umamiAttributes } from '@/lib/analytics'
  * @param {{formUrl: string|null, slug: string, pid: number}} props
  */
 export function DevisButton({ formUrl, slug, pid }) {
-	const [href, setHref] = useState(() =>
-		buildDevisHref({ formUrl, slug, pid })
-	)
+	const [href, setHref] = useState(() => buildDevisHref({ formUrl, slug, pid }))
 
 	useEffect(() => {
 		setHref(

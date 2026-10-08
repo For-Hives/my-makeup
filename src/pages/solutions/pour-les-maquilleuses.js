@@ -40,7 +40,7 @@ function PourLesMaquilleuses(props) {
 					description={
 						<>
 							{
-								"Découvrez comment My-Makeup peut aider les maquilleuses professionnelles à présenter leur travail et à se faire connaître des particuliers qui cherchent une maquilleuse, gratuitement."
+								'Découvrez comment My-Makeup peut aider les maquilleuses professionnelles à présenter leur travail et à se faire connaître des particuliers qui cherchent une maquilleuse, gratuitement.'
 							}
 						</>
 					}
