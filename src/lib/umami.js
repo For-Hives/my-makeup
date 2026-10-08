@@ -82,6 +82,10 @@ export function umamiScriptAttributes({ tag, domains } = {}) {
  * What leaves is cleaned: the page URL keeps its utm_* parameters only (no
  * search terms, no codes, no hash) and the referrer loses its query string
  * and its hash. Unlike data-exclude-search, campaigns are still counted.
+ * A referrer that is not a web page keeps its scheme and app id only
+ * (android-app://com.google.android.googlequicksearchbox/, the Google app):
+ * Umami takes that id as the referrer domain, and « google. » in it counts
+ * the visit as organic search (D2).
  * Any error: nothing is sent.
  *
  * Self-contained on purpose: _document inlines its source
@@ -110,6 +114,9 @@ export function umamiBeforeSend(type, payload, win) {
 		const clean = (raw, keepCampaign) => {
 			if (typeof raw !== 'string' || raw === '') return raw
 			const url = new URL(raw, base)
+			// url.origin is "null" outside http(s)
+			if (url.protocol !== 'http:' && url.protocol !== 'https:')
+				return url.host ? url.protocol + '//' + url.host + '/' : ''
 			const kept = new URLSearchParams()
 			if (keepCampaign)
 				url.searchParams.forEach((value, key) => {

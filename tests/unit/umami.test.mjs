@@ -166,6 +166,79 @@ describe('umamiBeforeSend: what leaves', () => {
 		)
 	})
 
+	// What Umami 3.2.0 makes of the referrer it receives: its domain
+	// (src/app/api/send/route.ts) and the search channel
+	// (getChannelMetrics.ts, SEARCH_DOMAINS from src/lib/constants.ts).
+	const SEARCH_DOMAINS = [
+		'baidu.com',
+		'bing.com',
+		'duckduckgo.com',
+		'ecosia.org',
+		'google.',
+		'msn.com',
+		'search.brave.com',
+		'yandex.',
+	]
+	const vuParUmami = ({ hostname, referrer }) => {
+		const domain = new URL(referrer, `https://${hostname}`).hostname.replace(
+			/^www\./,
+			''
+		)
+		return { domain, search: SEARCH_DOMAINS.some(d => domain.includes(d)) }
+	}
+
+	test('an Android app referrer keeps its app id: the Google app stays organic search', () => {
+		const google = 'android-app://com.google.android.googlequicksearchbox/'
+		assert.deepEqual(
+			vuParUmami(
+				umamiBeforeSend('event', pageView({ referrer: google }), fenetre())
+			),
+			{ domain: 'com.google.android.googlequicksearchbox', search: true }
+		)
+		for (const [referrer, sentReferrer] of [
+			[google, google],
+			[
+				'android-app://com.google.android.gm/',
+				'android-app://com.google.android.gm/',
+			],
+			[
+				'android-app://com.google.android.googlequicksearchbox/https/www.google.com?q=x#y',
+				google,
+			],
+		]) {
+			const sent = umamiBeforeSend(
+				'event',
+				pageView({ referrer }),
+				fenetre({ href: 'https://my-makeup.fr/maquilleuse/x' })
+			)
+			assert.equal(sent.referrer, sentReferrer, referrer)
+			// Umami classifies the visit as it did before the filter existed
+			assert.deepEqual(
+				vuParUmami(sent),
+				vuParUmami({ hostname: 'my-makeup.fr', referrer }),
+				referrer
+			)
+		}
+	})
+
+	test('a web referrer keeps its domain for Umami, never the site itself', () => {
+		const sent = umamiBeforeSend(
+			'event',
+			pageView({ referrer: 'https://www.google.fr/search?q=maquilleuse' }),
+			fenetre()
+		)
+		assert.deepEqual(vuParUmami(sent), { domain: 'google.fr', search: true })
+	})
+
+	test('a referrer without host (file:) is dropped, with its path', () => {
+		const sent = umamiBeforeSend(
+			'event',
+			pageView({ referrer: 'file:///C:/Users/prenom/Documents/devis.html' }),
+			fenetre()
+		)
+		assert.equal(sent.referrer, '')
+	})
+
 	test('events keep their name, data and tag; the payload given is not modified', () => {
 		const payload = pageView({
 			url: 'https://my-makeup.fr/profil/x?utm_medium=email&id=4',
@@ -201,6 +274,15 @@ describe('beforeSendScript (inlined by _document)', () => {
 		assert.equal(
 			visitor('event', pageView({ url: 'https://my-makeup.fr/?a=1' })).url,
 			'https://my-makeup.fr/'
+		)
+		assert.equal(
+			visitor(
+				'event',
+				pageView({
+					referrer: 'android-app://com.google.android.googlequicksearchbox/',
+				})
+			).referrer,
+			'android-app://com.google.android.googlequicksearchbox/'
 		)
 		assert.equal(run(fenetre({ webdriver: true }))('event', pageView()), false)
 		assert.equal(

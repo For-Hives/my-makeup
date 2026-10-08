@@ -257,6 +257,35 @@ test.describe('MES-10 qui est mesuré', () => {
 			expect([...suivi.hotes].every(h => HOTES_LOCAUX.includes(h))).toBe(true)
 		})
 
+		test('arrivée depuis l’application Google (Android) : le référent garde l’identifiant de l’application', async ({
+			page,
+		}) => {
+			const GOOGLE = 'android-app://com.google.android.googlequicksearchbox/'
+			await visiteurReel(page)
+			// what Chrome on Android gives a page opened from the Google app
+			await page.addInitScript(referent => {
+				Object.defineProperty(Document.prototype, 'referrer', {
+					configurable: true,
+					get: () => referent,
+				})
+			}, GOOGLE)
+			await page.goto('/')
+			expect(await page.evaluate(() => document.referrer)).toBe(GOOGLE)
+
+			const pageVue = async () =>
+				(await envoisRecus()).find(e => !e.corps.payload.name)
+			await expect.poll(pageVue).toBeTruthy()
+			const { payload } = (await pageVue()).corps
+			expect(payload.referrer).toBe(GOOGLE)
+			// the referrer domain Umami 3.2 derives (send route): « google. »
+			// in it puts the visit in the organic search channel
+			const domaine = new URL(
+				payload.referrer,
+				`https://${payload.hostname}`
+			).hostname.replace(/^www\./, '')
+			expect(domaine).toBe('com.google.android.googlequicksearchbox')
+		})
+
 		test('Web Vitals : un événement « web-vitals » par mesure, page sans query', async ({
 			page,
 		}) => {
