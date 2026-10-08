@@ -15,6 +15,13 @@ import {
 } from '@/lib/auth-erreurs'
 import { callbackUrlSure } from '@/lib/auth-session'
 import { track } from '@/lib/analytics'
+import { motDePasseOublieActif } from '@/lib/mot-de-passe'
+
+// « Mot de passe oublié ? » only once Strapi sends emails (A7, Mailgun):
+// build-time variable NEXT_PUBLIC_FORGOT_PASSWORD=on
+const MOT_DE_PASSE_OUBLIE = motDePasseOublieActif(
+	process.env.NEXT_PUBLIC_FORGOT_PASSWORD
+)
 
 // No password rule at sign-in: older accounts have passwords the sign-up
 // rule would refuse (AUTH-11). Strapi decides.
@@ -256,17 +263,19 @@ function Signin() {
 												</Link>
 											</p>
 										</div>
-										<div className="flex items-center justify-end">
-											<div className="text-sm">
-												{/* todo */}
-												<a
-													href="#"
-													className="font-medium text-indigo-700 hover:text-indigo-500"
-												>
-													Mot de passe oublié ?
-												</a>
+										{MOT_DE_PASSE_OUBLIE && (
+											<div className="flex items-center justify-end">
+												<div className="text-sm">
+													<Link
+														href={'/auth/mot-de-passe-oublie'}
+														data-cy="forgot-password-link"
+														className="inline-flex min-h-[44px] items-center font-medium text-indigo-700 hover:text-indigo-500"
+													>
+														Mot de passe oublié ?
+													</Link>
+												</div>
 											</div>
-										</div>
+										)}
 
 										{erreur && (
 											<p
