@@ -474,7 +474,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																</h3>
 																<div>
 																	<label
-																		htmlFor="name"
+																		htmlFor={`services[${index}].name`}
 																		className="block text-sm text-gray-700"
 																	>
 																		Nom de la prestation
@@ -529,7 +529,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																</div>
 																<div>
 																	<label
-																		htmlFor="description"
+																		htmlFor={`services[${index}].description`}
 																		className="block text-sm text-gray-700"
 																	>
 																		{'Description de la prestation'}
@@ -591,7 +591,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																</div>
 																<div>
 																	<label
-																		htmlFor="price"
+																		htmlFor={`services[${index}].price`}
 																		className="block text-sm text-gray-700"
 																	>
 																		Prix de la prestation
@@ -659,9 +659,10 @@ export default function ModalUpdateServiceOffersProfil(props) {
 														className={'flex w-full items-center justify-start'}
 													>
 														<button
+															type="button"
 															data-cy={'add-service-offers-option-button'}
 															className={
-																'flex w-full items-center justify-center gap-2 rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm'
+																'flex min-h-[44px] w-full items-center justify-center gap-2 rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm'
 															}
 															onClick={handleAddServiceOffersOption}
 														>

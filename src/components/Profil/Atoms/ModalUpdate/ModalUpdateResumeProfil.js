@@ -497,39 +497,37 @@ export default function ModalUpdateResumeProfil(props) {
 															Disponibilité
 														</label>
 														<div className="mt-2 flex items-center gap-4">
+															{/* 44 px target around the 20 px track (UI-02); named by
+															    its label « Disponibilité » */}
 															<Switch
 																id="available"
 																data-cy="available-input"
 																value={available}
 																checked={available}
 																onChange={handleUpdateAvailable}
-																className="group relative inline-flex h-5 w-10 flex-shrink-0 cursor-pointer items-center justify-center rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2"
+																className="group relative inline-flex h-11 w-14 flex-shrink-0 cursor-pointer items-center justify-center rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600"
 															>
-																<span className="sr-only">
-																	Toggle disponibility
+																<span
+																	aria-hidden="true"
+																	className="pointer-events-none relative inline-flex h-5 w-10 items-center justify-center"
+																>
+																	<span
+																		className={
+																			(available
+																				? 'bg-indigo-600'
+																				: 'bg-gray-200') +
+																			' absolute h-4 w-9 rounded-full transition-colors duration-200 ease-in-out'
+																		}
+																	/>
+																	<span
+																		className={
+																			(available
+																				? 'translate-x-5'
+																				: 'translate-x-0') +
+																			' absolute left-0 inline-block h-5 w-5 transform rounded-full border border-gray-200 bg-white shadow ring-0 transition-transform duration-200 ease-in-out'
+																		}
+																	/>
 																</span>
-																<span
-																	aria-hidden="true"
-																	className="pointer-events-none absolute h-full w-full rounded-md bg-white"
-																/>
-																<span
-																	aria-hidden="true"
-																	className={
-																		(available
-																			? 'bg-indigo-600'
-																			: 'bg-gray-200') +
-																		' pointer-events-none absolute mx-auto h-4 w-9 rounded-full transition-colors duration-200 ease-in-out'
-																	}
-																/>
-																<span
-																	aria-hidden="true"
-																	className={
-																		(available
-																			? 'translate-x-5'
-																			: 'translate-x-0') +
-																		' pointer-events-none absolute left-0 inline-block h-5 w-5 transform rounded-full border border-gray-200 bg-white shadow ring-0 transition-transform duration-200 ease-in-out'
-																	}
-																/>
 															</Switch>
 															{available ? <BadgeDispo /> : <BadgeIndispo />}
 														</div>

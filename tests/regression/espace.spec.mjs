@@ -497,6 +497,109 @@ test.describe('UI-02 et UI-04 édition au doigt et au clavier', () => {
 		}
 	})
 
+	test('interrupteur de disponibilité : 44 px, nommé par son label, au clavier', async ({
+		page,
+	}) => {
+		await ouvrirProfil(page)
+		await page.getByTestId('update-resume-button').click()
+		const interrupteur = dialogue(page).getByRole('switch', {
+			name: 'Disponibilité',
+		})
+		// measured once the opening (scale 95 % → 100 %) is over
+		const cote = async () => {
+			const { width, height } = await interrupteur.boundingBox()
+			return Math.min(width, height)
+		}
+		await expect.poll(cote).toBeGreaterThanOrEqual(44)
+		await expect(interrupteur).toHaveAttribute('aria-checked', 'true')
+		await interrupteur.focus()
+		await page.keyboard.press('Space')
+		await expect(interrupteur).toHaveAttribute('aria-checked', 'false')
+	})
+
+	test('10 modales : chaque champ a un label relié, aucun id en double, chaque commande fait 44 px', async ({
+		page,
+	}) => {
+		await ouvrirProfil(page)
+		for (const cy of [
+			'update-resume-button',
+			'update-location-button',
+			'update-social-medias-button',
+			'update-skills-button',
+			'update-languages-button',
+			'update-courses-button',
+			'update-description-button',
+			'update-portefolio-button',
+			'update-service-offers-button',
+			'update-experience-button',
+		]) {
+			await page.getByTestId(cy).click()
+			await expect(dialogue(page)).toBeVisible()
+			if (cy === 'update-service-offers-button') {
+				// the fields of an option only exist once one is added
+				await page.getByTestId('add-service-offers-option-button').click()
+				await page.getByTestId('add-service-offers-option-button').click()
+			}
+			// measured once the opening (scale 95 % → 100 %) is over
+			await expect
+				.poll(() => dialogue(page).evaluate(p => getComputedStyle(p).transform))
+				.toMatch(/^(none|matrix\(1, 0, 0, 1, 0, 0\))$/)
+			const bilan = await dialogue(page).evaluate(panneau => {
+				const nom = e =>
+					e.dataset.cy ||
+					e.id ||
+					e.getAttribute('aria-label') ||
+					e.outerHTML.slice(0, 120)
+				const champs = [
+					...panneau.querySelectorAll(
+						'input:not([type=hidden]), textarea, select, [role=switch]'
+					),
+				]
+				const ids = [...panneau.querySelectorAll('[id]')].map(e => e.id)
+				const cibles = [...panneau.querySelectorAll('label[for]')].map(
+					l => l.htmlFor
+				)
+				return {
+					sansLabel: champs
+						.filter(
+							c =>
+								!c.labels?.length &&
+								!c.getAttribute('aria-label') &&
+								!c.getAttribute('aria-labelledby')
+						)
+						.map(nom),
+					idsEnDouble: ids.filter((id, i) => ids.indexOf(id) !== i),
+					labelsSansChamp: cibles.filter(
+						id => !panneau.querySelector(`[id="${CSS.escape(id)}"]`)
+					),
+					labelsPartages: cibles.filter((id, i) => cibles.indexOf(id) !== i),
+					// buttons, switches, tabs and links shown, under 44 px (the
+					// focus guards of Headless UI are aria-hidden, 1 px)
+					ciblesPetites: [
+						...panneau.querySelectorAll(
+							'button, [role=switch], [role=tab], a[href]'
+						),
+					]
+						.filter(e => {
+							if (e.closest('[aria-hidden="true"]')) return false
+							const { width, height } = e.getBoundingClientRect()
+							return width > 0 && (width < 44 || height < 44)
+						})
+						.map(nom),
+				}
+			})
+			expect(bilan, cy).toEqual({
+				sansLabel: [],
+				idsEnDouble: [],
+				labelsSansChamp: [],
+				labelsPartages: [],
+				ciblesPetites: [],
+			})
+			await page.keyboard.press('Escape')
+			await expect(dialogue(page)).toBeHidden()
+		}
+	})
+
 	test.describe('sur un téléphone', () => {
 		// eslint-disable-next-line no-unused-vars
 		const { defaultBrowserType, ...iphone } = devices['iPhone 13']
