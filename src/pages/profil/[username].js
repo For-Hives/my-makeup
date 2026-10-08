@@ -4,6 +4,7 @@ import Footer from '@/components/Global/Footer'
 import ViewResumeProfil from '@/components/Profil/Parents/ViewResumeProfil'
 import ViewInfosProfil from '@/components/Profil/Parents/ViewInfosProfil'
 import Nav from '@/components/Global/Nav'
+import { fetchPublicApi } from '@/services/publicApi'
 
 export default function Profil({ profilData }) {
 	const user = profilData
@@ -62,23 +63,17 @@ export async function getStaticPaths() {
 }
 
 export async function getStaticProps({ params }) {
-	let profilData = await fetch(
-		`${process.env.NEXT_PUBLIC_API_URL}/api/makeup-artistes?filters[username][$eq]=${params.username}&populate=service_offers.options,network,language,image_gallery,courses,experiences,skills,main_picture`,
-		{
-			method: 'GET',
-			headers: {
-				// 	token
-				'Content-Type': 'application/json',
-				Accept: 'application/json',
-			},
-		}
-	).then(res => res.json())
+	// throws if the API is unreachable or answers an error (see fetchPublicApi)
+	let profilData = await fetchPublicApi(
+		`/api/makeup-artistes?filters[username][$eq]=${encodeURIComponent(params.username)}&populate=service_offers.options,network,language,image_gallery,courses,experiences,skills,main_picture`
+	)
 
 	profilData = profilData?.data?.[0]
 
 	if (!profilData) {
 		return {
-			props: { hasError: true },
+			notFound: true,
+			revalidate: 10,
 		}
 	}
 

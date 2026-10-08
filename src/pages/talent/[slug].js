@@ -8,6 +8,7 @@ import { remark } from 'remark'
 import html from 'remark-html'
 import { useRouter } from 'next/router'
 import { Layout } from '@/components/Global/Layout'
+import { fetchPublicApi } from '@/services/publicApi'
 
 /**
  * @param props
@@ -95,23 +96,17 @@ export async function getStaticPaths() {
 }
 
 export async function getStaticProps({ params }) {
-	let articleData = await fetch(
-		`${process.env.NEXT_PUBLIC_API_URL}/api/talents?filters[slug][$eq]=${params.slug}`,
-		{
-			method: 'GET',
-			headers: {
-				// 	token
-				'Content-Type': 'application/json',
-				Accept: 'application/json',
-			},
-		}
-	).then(res => res.json())
+	// throws if the API is unreachable or answers an error (see fetchPublicApi)
+	let articleData = await fetchPublicApi(
+		`/api/talents?filters[slug][$eq]=${encodeURIComponent(params.slug)}`
+	)
 
 	articleData = articleData?.data?.[0]
 
 	if (!articleData) {
 		return {
-			props: { hasError: true },
+			notFound: true,
+			revalidate: 10,
 		}
 	}
 
