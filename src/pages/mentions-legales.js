@@ -5,6 +5,7 @@ import Head from 'next/head'
 import Hero from '@/components/Global/Hero'
 import Link from 'next/link'
 import { EDITEUR, HEBERGEUR, formatSiren, formatSiret } from '@/lib/legal'
+import { urlAbsolue } from '@/lib/seo/url'
 
 function MentionsLegales() {
 	return (
@@ -16,7 +17,7 @@ function MentionsLegales() {
 					content="Mentions légales du site my-makeup.fr : éditeur, directeur de la publication, hébergeur et contact."
 				/>
 				{/*	seo tag canonical link */}
-				<link rel="canonical" href="https://my-makeup.fr/mentions-legales" />
+				<link rel="canonical" href={urlAbsolue('/mentions-legales')} />
 			</Head>
 
 			<Nav />

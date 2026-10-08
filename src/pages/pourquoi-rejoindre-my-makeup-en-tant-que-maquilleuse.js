@@ -5,6 +5,7 @@ import Hero from '@/components/Global/Hero'
 import CTA from '@/components/Global/CTA'
 import React from 'react'
 import AdvantagesMaquillleuse from '@/components/Maquilleuse/AdvantagesMaquillleuse'
+import { urlAbsolue } from '@/lib/seo/url'
 
 function PourquoiMyMakeup() {
 	return (
@@ -18,9 +19,9 @@ function PourquoiMyMakeup() {
 				{/*	seo tag canonical link */}
 				<link
 					rel="canonical"
-					href={
-						'https://my-makeup.fr/pourquoi-rejoindre-my-makeup-en-tant-que-maquilleuse'
-					}
+					href={urlAbsolue(
+						'/pourquoi-rejoindre-my-makeup-en-tant-que-maquilleuse'
+					)}
 				/>
 			</Head>
 			<Nav />

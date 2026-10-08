@@ -83,8 +83,6 @@ function Signup() {
 				/>
 				{/* No web font here: the Google button label uses Roboto when the
 				    device has it, so no visitor IP is sent to Google Fonts. */}
-				{/*	seo tag canonical link */}
-				<link rel="canonical" href="https://my-makeup.fr/auth/signup" />
 			</Head>
 			<div className="relative flex h-[92vh] max-h-screen overflow-hidden md:h-screen md:overflow-auto md:bg-white">
 				<div className="flex flex-1 flex-col justify-center bg-white px-4 sm:px-6 md:py-12 md:pt-12 lg:flex-none lg:px-20 xl:px-24">

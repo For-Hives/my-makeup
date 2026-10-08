@@ -4,6 +4,7 @@ import Footer from '@/components/Global/Footer'
 import Head from 'next/head'
 import Hero from '@/components/Global/Hero'
 import CTA from '@/components/Global/CTA'
+import { urlAbsolue } from '@/lib/seo/url'
 
 /**
  * @param props
@@ -19,10 +20,7 @@ function Partenariats(props) {
 					content="Communauté et partenariat chez My-Makeup : une page professionnelle gratuite pour présenter votre travail, et une équipe à l'écoute des maquilleuses."
 				/>
 				{/*	seo tag canonical link */}
-				<link
-					rel="canonical"
-					href="https://my-makeup.fr/maquilleuse/partenariats"
-				/>
+				<link rel="canonical" href={urlAbsolue('/maquilleuse/partenariats')} />
 			</Head>
 			<Nav />
 			<main className={'relative'}>

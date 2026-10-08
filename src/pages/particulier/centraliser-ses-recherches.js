@@ -4,6 +4,7 @@ import Footer from '@/components/Global/Footer'
 import Head from 'next/head'
 import Hero from '@/components/Global/Hero'
 import CTA from '@/components/Global/CTA'
+import { urlAbsolue } from '@/lib/seo/url'
 
 /**
  * @param props
@@ -21,7 +22,7 @@ function CentraliserSesRecherches(props) {
 				{/*	seo tag canonical link */}
 				<link
 					rel="canonical"
-					href="https://my-makeup.fr/particulier/centraliser-ses-recherches"
+					href={urlAbsolue('/particulier/centraliser-ses-recherches')}
 				/>
 			</Head>
 			<Nav />
