@@ -7,6 +7,7 @@ import {
 	PAR_PAGE,
 	rechercheValide,
 	resultatsRecherche,
+	sectionsDeLaPage,
 	titreResultats,
 	urlApiRecherche,
 	urlPageRecherche,
@@ -138,18 +139,55 @@ describe('search of the URL (UI-07)', () => {
 		)
 	})
 
-	test('titles of the results', () => {
+	test('titles of the results: what was typed, quoted (UI-10)', () => {
 		assert.equal(
 			titreResultats({ search: 'Annecy', city: 'Annecy' }, 3),
-			'3 maquilleuses à Annecy'
+			'3 résultats pour « Annecy »'
+		)
+		assert.equal(
+			titreResultats({ search: '', city: 'Annecy' }, 1),
+			'1 résultat pour « Annecy »'
 		)
 		assert.equal(
 			titreResultats({ search: 'mariage', city: 'Annecy' }, 1),
-			'1 maquilleuse pour « mariage » à Annecy'
+			'1 résultat pour « mariage » à « Annecy »'
 		)
 		assert.equal(
 			titreResultats({ search: 'zzqq', city: '' }, 0),
-			'Aucune maquilleuse pour « zzqq »'
+			'Aucun résultat pour « zzqq »'
 		)
+		assert.equal(
+			titreResultats({ search: 'mariage', city: 'Annecy' }, 0),
+			'Aucun résultat pour « mariage » à « Annecy »'
+		)
+		// never « N maquilleuses à <ville> »: the list is not limited to it
+		for (const total of [0, 1, 19])
+			assert.doesNotMatch(
+				titreResultats({ search: '', city: 'Annecy' }, total),
+				/maquilleuses? à/
+			)
+	})
+
+	test('sections of a page: the profiles of the place, then the others', () => {
+		const liste = Array.from({ length: 45 }, (_, i) => i + 1)
+		// 28 profiles of the place: page 1 all local, page 2 both, page 3 others
+		assert.deepEqual(sectionsDeLaPage(paginer(liste, 1), 28), {
+			locaux: liste.slice(0, 20),
+			autres: [],
+		})
+		assert.deepEqual(sectionsDeLaPage(paginer(liste, 2), 28), {
+			locaux: liste.slice(20, 28),
+			autres: liste.slice(28, 40),
+		})
+		assert.deepEqual(sectionsDeLaPage(paginer(liste, 3), 28), {
+			locaux: [],
+			autres: liste.slice(40),
+		})
+		assert.deepEqual(sectionsDeLaPage(paginer(liste, 1), 0).locaux, [])
+		assert.deepEqual(sectionsDeLaPage(paginer(liste, 3), 45).autres, [])
+		assert.deepEqual(sectionsDeLaPage(paginer([], 1), 0), {
+			locaux: [],
+			autres: [],
+		})
 	})
 })

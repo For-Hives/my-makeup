@@ -3,7 +3,7 @@
  * search (/search?search=…&city=…&page=…), shareable and prefilled; a city
  * alone is a search (the API before PR #370 needs a term: the city is sent
  * as the term too); one API call per search, the pages of 20 results are cut
- * in the browser.
+ * in the browser, the profiles of the city searched first (UI-10).
  */
 
 export const PAR_PAGE = 20
@@ -123,20 +123,48 @@ export function resultatsRecherche(corps) {
 }
 
 /**
- * Title of the results: « 3 maquilleuses pour « mariage » à Annecy ».
+ * Title of the results (UI-10): what was typed, quoted, never a claim on
+ * where the artists are (« 19 maquilleuses à Annecy » listed all of France).
+ * With a city, `total` counts the profiles of that city or département only
+ * (separerParLieu in src/lib/lieu.js).
  * @param {Recherche} recherche
  * @param {number} total
- * @returns {string}
+ * @returns {string} « 3 résultats pour « Annecy » », « 1 résultat pour
+ *   « mariage » à « Annecy » », « Aucun résultat pour « zzqq » »
  */
 export function titreResultats({ search, city }, total) {
 	const nombre =
-		total === 0
-			? 'Aucune maquilleuse'
-			: `${total} maquilleuse${total > 1 ? 's' : ''}`
+		total === 0 ? 'Aucun résultat' : `${total} résultat${total > 1 ? 's' : ''}`
 	const quoi =
-		search && search.toLowerCase() !== city.toLowerCase()
-			? ` pour « ${search} »`
-			: ''
-	const ou = city ? ` à ${city}` : ''
-	return `${nombre}${quoi}${ou}`
+		search && search.toLowerCase() !== city.toLowerCase() ? `« ${search} »` : ''
+	const ou = city ? `« ${city} »` : ''
+	return `${nombre} pour ${[quoi, ou].filter(Boolean).join(' à ')}`
 }
+
+/**
+ * The results of one page in their two sections: the profiles of the place
+ * searched (the `nbLocaux` first of the whole list), then the others.
+ * @template T
+ * @param {{elements: T[], premier: number}} page - from paginer()
+ * @param {number} nbLocaux
+ * @returns {{locaux: T[], autres: T[]}}
+ */
+export function sectionsDeLaPage({ elements, premier }, nbLocaux) {
+	const n = Math.min(elements.length, Math.max(0, nbLocaux - (premier - 1)))
+	return { locaux: elements.slice(0, n), autres: elements.slice(n) }
+}
+
+/** Height of the photo of a result card, in px (h-[350px]) */
+export const HAUTEUR_PHOTO_CARTE = 350
+
+/**
+ * The grid of the results in src/pages/search.js, for the `sizes` of the
+ * photos (src/lib/taille-image.js): px-4 md:px-16, gap-8, 1 column, 3 from
+ * md (768 px), 6 from 2xl (1 536 px). Kept with those classes.
+ * @type {import('./taille-image.js').Colonnes[]}
+ */
+export const GRILLE_RESULTATS = [
+	{ des: 0, colonnes: 1, retrait: 2 * 16 },
+	{ des: 768, colonnes: 3, retrait: 2 * 64 + 2 * 32 },
+	{ des: 1536, colonnes: 6, retrait: 2 * 64 + 5 * 32 },
+]
