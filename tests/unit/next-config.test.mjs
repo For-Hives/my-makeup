@@ -67,6 +67,10 @@ describe('Umami behind /u (MES-10)', () => {
 		assert.equal(nextConfig.experimental.caseSensitiveRoutes, true)
 	})
 
+	test('a silent Umami is cut after 10 s, not after the 30 s of Next', () => {
+		assert.equal(nextConfig.experimental.proxyTimeout, 10_000)
+	})
+
 	test('an invalid UMAMI_ORIGIN stops the build', async () => {
 		for (const value of [
 			'umami.wadefade.fr',

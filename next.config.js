@@ -81,6 +81,11 @@ const nextConfig = {
 		// middleware matcher: /U/script.js or /u/API/send are not relayed to
 		// Umami without going through the middleware, they get a 404.
 		caseSensitiveRoutes: true,
+		// A silent Umami is cut after 10 s instead of 30 (the default of Next):
+		// the page never waits for it (async script, src/pages/_document.js),
+		// but its load event does, and the server holds the request meanwhile.
+		// The script and a send normally take well under a second.
+		proxyTimeout: 10_000,
 	},
 	env: {
 		// SOURCE_COMMIT as Coolify gives it to the build, frozen into the bundles:
