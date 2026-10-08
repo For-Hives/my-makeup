@@ -11,6 +11,7 @@
 
 import { CODES_ERREUR } from './auth-erreurs.js'
 import { SECTIONS_PROFIL } from './sauvegarde-profil.js'
+import { WEB_VITALS_EVENT, webVitalData } from './web-vitals.js'
 
 export const CONTACT_CHANNELS = [
 	'email',
@@ -172,6 +173,16 @@ function defaultRuntime() {
 	}
 }
 
+// The only call to `window.umami.track`: nothing outside production,
+// without Umami, or in an automated browser.
+function handToUmami(name, data, { win, production }) {
+	if (data === null || !production || !win) return false
+	if (win.navigator && win.navigator.webdriver) return false
+	if (!win.umami || typeof win.umami.track !== 'function') return false
+	win.umami.track(name, data)
+	return true
+}
+
 /**
  * Sends an event through `window.umami.track`. Never throws. Does nothing
  * outside production, without Umami, or in an automated browser.
@@ -182,13 +193,26 @@ function defaultRuntime() {
  */
 export function track(name, props = {}, runtime = defaultRuntime()) {
 	try {
-		const data = eventData(name, props)
-		const { win, production } = runtime
-		if (data === null || !production || !win) return false
-		if (win.navigator && win.navigator.webdriver) return false
-		if (!win.umami || typeof win.umami.track !== 'function') return false
-		win.umami.track(name, data)
-		return true
+		return handToUmami(name, eventData(name, props), runtime)
+	} catch {
+		return false
+	}
+}
+
+/**
+ * Sends a Web Vital (next/web-vitals) as a `web-vitals` event: a technical
+ * event outside the catalogue above, with its own closed properties (name,
+ * value, rating, page). Same guards as track(); never throws.
+ * @param {{name?: string, value?: number, rating?: string}} metric
+ * @param {string} page - path of the page that was loaded
+ * @param {{win?: object, production?: boolean}} [runtime] - for the tests
+ * @returns {boolean} true when the event was handed to Umami
+ */
+export function trackWebVital(metric, page, runtime = defaultRuntime()) {
+	try {
+		const data = webVitalData(metric, page)
+		if (data === null || looksPersonal(data.page)) return false
+		return handToUmami(WEB_VITALS_EVENT, data, runtime)
 	} catch {
 		return false
 	}
