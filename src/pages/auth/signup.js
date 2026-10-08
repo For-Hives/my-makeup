@@ -177,8 +177,7 @@ function Signup() {
 													{...register('name', {
 														required: true,
 													})}
-													className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300
-													placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+													className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
 												/>
 												{errors.name && (
 													<p className={'mt-2 text-xs text-red-500/80'}>
@@ -275,7 +274,7 @@ function Signup() {
 												{envoi ? 'Inscription…' : "S'inscrire"}
 											</button>
 										</div>
-										<div className={'flex items-center justify-center '}>
+										<div className={'flex items-center justify-center'}>
 											Déjà un compte ?&nbsp;
 											<Link
 												className={

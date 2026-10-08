@@ -488,7 +488,7 @@ function InitAccount({ compte, erreur }) {
 											</h2>
 											<div
 												className={
-													'flex h-full w-full flex-col items-center justify-center '
+													'flex h-full w-full flex-col items-center justify-center'
 												}
 											>
 												<h2 className={'text-center text-gray-700'}>

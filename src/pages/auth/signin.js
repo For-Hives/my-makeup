@@ -111,7 +111,7 @@ function Signin() {
 							<h2 className="mt-6 text-3xl font-bold tracking-tight text-gray-900">
 								{session && session.user && !_.isEmpty(session.user)
 									? 'Bonjour ' +
-									  (session.user.name ? session.user.name : session.user.email)
+										(session.user.name ? session.user.name : session.user.email)
 									: 'Se connecter'}
 							</h2>
 							{erreurUrl && !erreur && (
@@ -284,7 +284,7 @@ function Signin() {
 												{envoi ? 'Connexion…' : 'Se connecter'}
 											</button>
 										</div>
-										<div className={'flex items-center justify-center '}>
+										<div className={'flex items-center justify-center'}>
 											Pas de compte ?&nbsp;
 											<Link
 												className={
