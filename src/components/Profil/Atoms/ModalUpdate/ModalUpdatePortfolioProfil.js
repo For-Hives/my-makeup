@@ -11,6 +11,10 @@ import { Pagination } from 'swiper/modules'
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
 import { toast } from 'react-toastify'
 import Info from '@/components/Global/Info'
+import {
+	BoutonFermer,
+	FondModale,
+} from '@/components/Profil/Atoms/ModalUpdate/ModalElements'
 
 const MAX_PHOTOS = 10
 const schema = zod.object({})
@@ -174,17 +178,7 @@ export default function ModalUpdatePortfolioProfil(props) {
 				initialFocus={cancelButtonRef}
 				onClose={props.handleIsModalOpen}
 			>
-				<Transition.Child
-					as={Fragment}
-					enter="ease-out duration-300"
-					enterFrom="opacity-0"
-					enterTo="opacity-100"
-					leave="ease-in duration-200"
-					leaveFrom="opacity-100"
-					leaveTo="opacity-0"
-				>
-					<div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" />
-				</Transition.Child>
+				<FondModale />
 
 				<div className="fixed inset-0 z-30 overflow-y-auto">
 					<div className="flex min-h-full items-center justify-center p-4 text-center">
@@ -197,17 +191,14 @@ export default function ModalUpdatePortfolioProfil(props) {
 							leaveFrom="opacity-100 translate-y-0 sm:scale-100"
 							leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
 						>
-							<Dialog.Panel className="relative w-full transform rounded-lg bg-white p-8 text-left shadow-2xl transition-all sm:max-w-7xl">
-								<button
-									type="button"
+							<Dialog.Panel
+								data-cy="modal-panel"
+								className="relative w-full transform rounded-lg bg-white p-8 text-left shadow-2xl transition-all sm:max-w-7xl"
+							>
+								<BoutonFermer
 									onClick={props.handleIsModalOpen}
 									ref={cancelButtonRef}
-									className={
-										'absolute right-0 top-0 m-6 flex items-center justify-center'
-									}
-								>
-									<span className="material-icons-round">close</span>
-								</button>
+								/>
 								<div>
 									<div className="flex flex-col items-start gap-8">
 										<div className="text-left">
@@ -221,7 +212,7 @@ export default function ModalUpdatePortfolioProfil(props) {
 										<div
 											className={'flex w-full flex-wrap gap-16 md:flex-nowrap'}
 										>
-											<div className="grid w-full grid-cols-1 gap-4 md:w-2/6 ">
+											<div className="grid w-full grid-cols-1 gap-4 md:w-2/6">
 												<div className={'flex flex-col gap-4'}>
 													<label
 														htmlFor="cover-photo"
@@ -290,7 +281,7 @@ export default function ModalUpdatePortfolioProfil(props) {
 															}
 														/>
 													</div>
-													<div className=" flex justify-end">
+													<div className="flex justify-end">
 														<button
 															data-cy="add-button-portefolio"
 															type="button"
