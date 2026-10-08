@@ -39,9 +39,9 @@ function MentionsLegales() {
 					<div className="mx-auto max-w-2xl">
 						<article>
 							<header className="flex flex-col">
-								<h1 className="mt-6 text-3xl font-bold tracking-tight text-gray-800 sm:text-4xl">
+								<h2 className="mt-6 text-3xl font-bold tracking-tight text-gray-800 sm:text-4xl">
 									Mentions légales
-								</h1>
+								</h2>
 							</header>
 							<div className="prose my-8 xl:prose-lg">
 								<h2>Éditeur du site</h2>

@@ -44,9 +44,9 @@ function Cgu(props) {
 					<div className="mx-auto max-w-2xl">
 						<article>
 							<header className="flex flex-col">
-								<h1 className="mt-6 text-3xl font-bold tracking-tight text-gray-800 sm:text-4xl">
+								<h2 className="mt-6 text-3xl font-bold tracking-tight text-gray-800 sm:text-4xl">
 									Conditions générales d&apos;utilisation
-								</h1>
+								</h2>
 							</header>
 							<div className="prose my-8 xl:prose-lg">
 								<p>{`Dernière mise à jour : octobre 2026.`}</p>

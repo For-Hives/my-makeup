@@ -57,7 +57,7 @@ export default function Hero({
 							{isCTALoginDisplayed && (
 								<div>
 									<Link href={'/auth/signin'} className={'btn-primary'}>
-										{"S'incrire sur My-Makeup"}
+										{"S'inscrire sur My-Makeup"}
 									</Link>
 								</div>
 							)}
