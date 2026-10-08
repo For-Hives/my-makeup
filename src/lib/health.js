@@ -3,15 +3,7 @@
  * an API outage must not mark the front unhealthy.
  */
 
-const clean = value =>
-	typeof value === 'string' && value.trim() !== '' ? value.trim() : null
-
-const shortCommit = value => {
-	const commit = clean(value)
-	return commit !== null && /^[0-9a-f]{7,40}$/i.test(commit)
-		? commit.slice(0, 7).toLowerCase()
-		: null
-}
+import { deployedVersion } from './version.js'
 
 /**
  * @param {object} versions
@@ -20,13 +12,6 @@ const shortCommit = value => {
  * @param {string} [versions.packageVersion] - version from package.json
  * @returns {{ok: true, version: string}}
  */
-export function healthPayload({ buildVersion, commit, packageVersion } = {}) {
-	return {
-		ok: true,
-		version:
-			clean(buildVersion) ??
-			shortCommit(commit) ??
-			clean(packageVersion) ??
-			'unknown',
-	}
+export function healthPayload(versions = {}) {
+	return { ok: true, version: deployedVersion(versions) }
 }
