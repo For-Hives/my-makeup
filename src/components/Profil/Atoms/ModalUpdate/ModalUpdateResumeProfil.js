@@ -104,7 +104,7 @@ export default function ModalUpdateResumeProfil(props) {
 			const envoiPhoto = await uploadPhoto(session, photo.fichier)
 			if (!envoiPhoto.ok) {
 				setEnvoi(false)
-				setErreurEnvoi(envoiPhoto.message ?? null)
+				setErreurEnvoi(envoiPhoto.error ?? null)
 				return
 			}
 			stockee = envoiPhoto.fichier
@@ -122,7 +122,7 @@ export default function ModalUpdateResumeProfil(props) {
 		const resultat = await patchMeMakeup(session, envoye, 'identite')
 		setEnvoi(false)
 		if (!resultat.ok) {
-			setErreurEnvoi(resultat.message ?? null)
+			setErreurEnvoi(resultat.error ?? null)
 			return
 		}
 

@@ -66,7 +66,7 @@ export default function ModalUpdateLanguageProfil(props) {
 		const resultat = await patchMeMakeup(session, champs, 'langues')
 		setEnvoi(false)
 		if (!resultat.ok) {
-			setErreurEnvoi(resultat.message ?? null)
+			setErreurEnvoi(resultat.error ?? null)
 			return
 		}
 		// shown on the page once the API stored it, then the modal closes

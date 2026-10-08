@@ -215,7 +215,7 @@ function InitAccount({ compte, erreur }) {
 		const resultat = await patchMeMakeup(session, champs, 'onboarding')
 		setEnvoi(false)
 		if (!resultat.ok) {
-			setErreurEnvoi(resultat.message ?? null)
+			setErreurEnvoi(resultat.error ?? null)
 			return
 		}
 		setStep(4)

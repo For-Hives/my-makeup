@@ -69,7 +69,7 @@ export default function ModalUpdateLocationProfil(props) {
 		const resultat = await patchMeMakeup(session, champs, 'localisation')
 		setEnvoi(false)
 		if (!resultat.ok) {
-			setErreurEnvoi(resultat.message ?? null)
+			setErreurEnvoi(resultat.error ?? null)
 			return
 		}
 		props.handleUpdateUser({ ...user, ...champs })

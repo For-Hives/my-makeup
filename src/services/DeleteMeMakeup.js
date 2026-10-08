@@ -7,7 +7,7 @@ const MESSAGE_ECHEC =
  * DELETE /api/me-makeup: deletes the profile and the account (UI-05).
  * Awaited by DangerZone, which signs out only when `ok` is true.
  * @param {object} authSession - NextAuth session, for its JWT
- * @returns {Promise<{ok: boolean, message?: string, sessionExpiree?: boolean}>}
+ * @returns {Promise<{ok: boolean, error?: string, sessionExpiree?: boolean}>}
  */
 export async function DeleteMeMakeup(authSession) {
 	let response
@@ -18,12 +18,12 @@ export async function DeleteMeMakeup(authSession) {
 			{ method: 'DELETE' }
 		)
 	} catch {
-		return { ok: false, message: MESSAGE_ECHEC }
+		return { ok: false, error: MESSAGE_ECHEC }
 	}
 
 	if (response === null) {
 		// session expired: the visitor is already sent to the sign-in page
 		return { ok: false, sessionExpiree: true }
 	}
-	return response.ok ? { ok: true } : { ok: false, message: MESSAGE_ECHEC }
+	return response.ok ? { ok: true } : { ok: false, error: MESSAGE_ECHEC }
 }

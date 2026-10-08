@@ -67,7 +67,7 @@ export default function ModalUpdateSkillsProfil(props) {
 		const resultat = await patchMeMakeup(session, champs, 'competences')
 		setEnvoi(false)
 		if (!resultat.ok) {
-			setErreurEnvoi(resultat.message ?? null)
+			setErreurEnvoi(resultat.error ?? null)
 			return
 		}
 		// shown on the page once the API stored it, then the modal closes

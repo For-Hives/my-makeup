@@ -55,7 +55,7 @@ export default function ModalUpdateDescriptionProfil(props) {
 		const resultat = await patchMeMakeup(session, champs, 'description')
 		setEnvoi(false)
 		if (!resultat.ok) {
-			setErreurEnvoi(resultat.message ?? null)
+			setErreurEnvoi(resultat.error ?? null)
 			return
 		}
 		props.handleUpdateUser({ ...user, ...champs })

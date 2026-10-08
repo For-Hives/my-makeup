@@ -180,7 +180,7 @@ export default function ModalUpdateExperiencesProfil(props) {
 		const resultat = await patchMeMakeup(session, champs, 'experiences')
 		setEnvoi(false)
 		if (!resultat.ok) {
-			setErreurEnvoi(resultat.message ?? null)
+			setErreurEnvoi(resultat.error ?? null)
 			return
 		}
 

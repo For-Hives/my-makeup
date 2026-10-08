@@ -162,7 +162,7 @@ export default function ModalUpdateCoursesProfil(props) {
 		const resultat = await patchMeMakeup(session, champs, 'formations')
 		setEnvoi(false)
 		if (!resultat.ok) {
-			setErreurEnvoi(resultat.message ?? null)
+			setErreurEnvoi(resultat.error ?? null)
 			return
 		}
 

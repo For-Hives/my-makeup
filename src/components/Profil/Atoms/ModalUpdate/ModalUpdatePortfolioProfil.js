@@ -74,7 +74,7 @@ export default function ModalUpdatePortfolioProfil(props) {
 				// the pictures already sent stay sent: a retry does not resend them
 				setUserImageGallery(galerie)
 				setEnvoi(false)
-				setErreurEnvoi(envoiPhoto.message ?? null)
+				setErreurEnvoi(envoiPhoto.error ?? null)
 				return
 			}
 			URL.revokeObjectURL(galerie[i].url)
@@ -86,7 +86,7 @@ export default function ModalUpdatePortfolioProfil(props) {
 		const resultat = await patchMeMakeup(session, champs, 'portfolio')
 		setEnvoi(false)
 		if (!resultat.ok) {
-			setErreurEnvoi(resultat.message ?? null)
+			setErreurEnvoi(resultat.error ?? null)
 			return
 		}
 

@@ -27,7 +27,7 @@ function DangerZone(props) {
 		const resultat = await DeleteMeMakeup(props.session)
 		if (!resultat.ok) {
 			setEnvoi(false)
-			if (resultat.message) setErreur(resultat.message)
+			if (resultat.error) setErreur(resultat.error)
 			return
 		}
 		track('account_delete')

@@ -22,13 +22,14 @@ async function lireJson(response) {
  * PATCH /api/me-makeup: saves fields of the signed-in artist's profile.
  *
  * Always awaited by the modals (UI-01): they change what the page shows and
- * close only when `ok` is true, and show `message` otherwise. The outcome is
+ * close only when `ok` is true, and show `error` otherwise. The outcome is
  * also shown in a toast and counted (`profile_save`).
  *
  * @param {object} authSession - NextAuth session (useSession), for its JWT
  * @param {object} data - fields to save
  * @param {string} section - one of SECTIONS_PROFIL (src/lib/sauvegarde-profil.js)
- * @returns {Promise<{ok: boolean, data?: object, message?: string}>}
+ * @returns {Promise<{ok: boolean, data?: object, error?: string}>}
+ *   `error`: the French message of a failed save (plans/01 UI-01)
  */
 export async function patchMeMakeup(authSession, data, section) {
 	let response
@@ -64,5 +65,5 @@ export async function patchMeMakeup(authSession, data, section) {
 		toast.dismiss(TOAST_OK)
 		toast(message, { type: 'error', icon: '⛔', toastId: TOAST_ECHEC })
 	}
-	return { ok: false, message }
+	return { ok: false, error: message }
 }

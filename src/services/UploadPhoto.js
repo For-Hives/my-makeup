@@ -8,7 +8,7 @@ import { codeRefusEnvoi, MESSAGES_PHOTO } from '@/lib/photo'
  * picks a file, so closing a modal leaves no file on the server (UI-03).
  * @param {object} authSession - NextAuth session, for its JWT
  * @param {File} fichier
- * @returns {Promise<{ok: true, fichier: object} | {ok: false, message?: string, sessionExpiree?: boolean}>}
+ * @returns {Promise<{ok: true, fichier: object} | {ok: false, error?: string, sessionExpiree?: boolean}>}
  *   `fichier`: the Strapi file (id, url, width, height…)
  */
 export async function uploadPhoto(authSession, fichier) {
@@ -39,6 +39,6 @@ export async function uploadPhoto(authSession, fichier) {
 	track('upload_error', { kind: 'server' })
 	return {
 		ok: false,
-		message: MESSAGES_PHOTO[codeRefusEnvoi(response?.status ?? 0)],
+		error: MESSAGES_PHOTO[codeRefusEnvoi(response?.status ?? 0)],
 	}
 }

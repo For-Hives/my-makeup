@@ -100,7 +100,7 @@ export default function ModalUpdateSocialMediaProfil(props) {
 		const resultat = await patchMeMakeup(session, champs, 'reseaux')
 		setEnvoi(false)
 		if (!resultat.ok) {
-			setErreurEnvoi(resultat.message ?? null)
+			setErreurEnvoi(resultat.error ?? null)
 			return
 		}
 		props.handleUpdateUser({

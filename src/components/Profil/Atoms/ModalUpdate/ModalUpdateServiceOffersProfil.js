@@ -178,7 +178,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 		const resultat = await patchMeMakeup(session, champs, 'offres')
 		setEnvoi(false)
 		if (!resultat.ok) {
-			setErreurEnvoi(resultat.message ?? null)
+			setErreurEnvoi(resultat.error ?? null)
 			return
 		}
 
