@@ -102,8 +102,12 @@ function PolitiqueDeConfidentialite() {
 								<p>
 									{`Nous mesurons la fréquentation du site avec Umami, un outil que nous installons et administrons nous-mêmes, sur un serveur loué (voir « Hébergement et prestataires »). Il ne dépose aucun cookie, n'enregistre aucun identifiant sur votre appareil et ne conserve pas votre adresse IP. Il compte les pages vues, le site de provenance, le type d'appareil et de navigateur, le pays, et les clics sur certains boutons (contact d'une maquilleuse, demande de devis, recherche) sans jamais enregistrer ce que vous saisissez, ni votre identité, ni vos coordonnées.`}
 								</p>
+								{/* TODO(Andy): 25 months is the CNIL ceiling for audience
+								    measurement. Self-hosted Umami keeps events until they are
+								    deleted: schedule the purge (see the deploy notes) before
+								    this page ships, or change the duration here. */}
 								<p>
-									{`Pourquoi : savoir ce qui aide vraiment les maquilleuses à être contactées (intérêt légitime). Cette mesure est limitée à des statistiques anonymes et ne nécessite donc pas votre consentement. Nous n'utilisons plus Google Analytics. Vous pouvez vous y opposer sur ce navigateur :`}
+									{`Pourquoi : savoir ce qui aide vraiment les maquilleuses à être contactées (intérêt légitime). Cette mesure est limitée à des statistiques anonymes et ne nécessite donc pas votre consentement. Durée : les statistiques sont conservées 25 mois au plus, puis supprimées. Nous n'utilisons plus Google Analytics. Vous pouvez vous y opposer sur ce navigateur :`}
 								</p>
 								<div>
 									<MeasureOptOut />
