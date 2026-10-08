@@ -53,9 +53,16 @@ describe('messageEchecSauvegarde', () => {
 		assert.equal(
 			messageEchecSauvegarde(
 				400,
-				refusStrapi('first_name must be at least 3 characters')
+				refusStrapi('first_name must be at least 2 characters')
 			),
-			'Le prénom doit contenir au moins 3 caractères.'
+			'Le prénom doit contenir au moins 2 caractères.'
+		)
+		assert.equal(
+			messageEchecSauvegarde(
+				400,
+				refusStrapi('last_name must be at least 2 characters')
+			),
+			'Le nom doit contenir au moins 2 caractères.'
 		)
 		assert.equal(
 			messageEchecSauvegarde(
