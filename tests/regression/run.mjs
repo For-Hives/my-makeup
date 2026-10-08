@@ -36,8 +36,11 @@ const PORT_UMAMI = 4113
 const PORT_APP = 3996
 const API = `http://127.0.0.1:${PORT_API}`
 const UMAMI = `http://127.0.0.1:${PORT_UMAMI}`
-// data-tag expected in the pages (tests/regression/mesure.spec.mjs)
-const VERSION = 'rg-0000000'
+// SOURCE_COMMIT given to the build only, as Coolify does with « Include
+// Source Commit in Build »: the pages (data-tag) and /api/health must show
+// its short sha (tests/regression/mesure.spec.mjs)
+const COMMIT = '0123abcd'.repeat(5)
+const VERSION = COMMIT.slice(0, 7)
 const APP = `http://localhost:${PORT_APP}`
 const NEXT = path.join(RACINE, 'node_modules/next/dist/bin/next')
 const PLAYWRIGHT = path.join(RACINE, 'node_modules/@playwright/test/cli.js')
@@ -82,7 +85,6 @@ function environnement(extra = {}) {
 		UMAMI_ORIGIN: UMAMI,
 		NEXT_PUBLIC_UMAMI_DOMAINS: 'localhost',
 		NEXT_PUBLIC_WEB_VITALS_SAMPLE: '1',
-		NEXT_PUBLIC_APP_VERSION: VERSION,
 		...extra,
 	})
 	for (const nom of [
@@ -144,7 +146,7 @@ try {
 		console.log(`# build de test dans ${DIST}/ (API = faux Strapi)`)
 		const build = lancer(
 			[NEXT, 'build'],
-			environnement(),
+			environnement({ SOURCE_COMMIT: COMMIT }),
 			path.join(JOURNAUX, 'build.log')
 		)
 		if ((await termine(build)) !== 0)

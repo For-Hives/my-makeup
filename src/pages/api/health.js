@@ -15,7 +15,9 @@ export default function handler(req, res) {
 	return res.status(200).json(
 		healthPayload({
 			buildVersion: process.env.NEXT_PUBLIC_APP_VERSION,
-			commit: process.env.SOURCE_COMMIT,
+			// the commit given to the build, like the Umami data-tag
+			// (_document); the runtime one when the build had none
+			commit: process.env.BUILD_SOURCE_COMMIT || process.env.SOURCE_COMMIT,
 			packageVersion: packageJson.version,
 		})
 	)

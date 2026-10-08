@@ -14,7 +14,7 @@ import { parseDocument } from 'htmlparser2'
 
 const APP = process.env.RG_APP ?? 'http://localhost:3996'
 const UMAMI = process.env.RG_UMAMI ?? 'http://127.0.0.1:4113'
-const VERSION = process.env.RG_VERSION ?? 'rg-0000000'
+const VERSION = process.env.RG_VERSION ?? '0123abc'
 const WEBSITE_ID = 'e7010ee5-a940-4add-80bf-5483d2c515db'
 const HOTES_LOCAUX = ['localhost', '127.0.0.1', '[::1]']
 const CHROME =
@@ -114,6 +114,12 @@ test.describe('MES-10 balise Umami', () => {
 			expect(filtre, chemin).toBeGreaterThan(-1)
 			expect(filtre).toBeLessThan(umami)
 		}
+		// the same version as the healthcheck, with SOURCE_COMMIT given to the
+		// build only (tests/regression/run.mjs)
+		expect(await (await request.get('/api/health')).json()).toEqual({
+			ok: true,
+			version: VERSION,
+		})
 	})
 
 	test('proxy : /u/script.js vient du faux Umami, sans cookie, avec l’IP du visiteur', async ({
