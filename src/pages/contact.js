@@ -9,6 +9,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import Link from 'next/link'
 import { toast } from 'react-toastify'
+import { track } from '@/lib/analytics'
 
 const schema = z
 	.object({
@@ -34,16 +35,27 @@ function Contact(props) {
 
 	// Créez une nouvelle fonction pour gérer la soumission du formulaire
 	const onSubmit = async data => {
-		const response = await fetch('/api/sendMail', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({
-				first_name: data.first_name,
-				last_name: data.last_name,
-				email: data.email,
-				phone_number: data.phone_number,
-				message: data.message,
-			}),
+		let response
+		try {
+			response = await fetch('/api/sendMail', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					first_name: data.first_name,
+					last_name: data.last_name,
+					email: data.email,
+					phone_number: data.phone_number,
+					message: data.message,
+				}),
+			})
+		} catch {
+			response = { ok: false, status: 0 }
+		}
+
+		// outcome only, never the content of the message
+		track('platform_contact_submit', {
+			ok: response.ok,
+			status: response.status,
 		})
 
 		if (response.ok) {

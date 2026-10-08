@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { signOut, useSession } from 'next-auth/react'
 import _ from 'lodash'
 import { Signature } from '@/components/Global/Signature'
+import { track } from '@/lib/analytics'
 
 const navigation = [
 	{
@@ -171,6 +172,9 @@ function Nav({
 											<Link
 												className={'btn-primary-with-icon'}
 												href={'/search'}
+												onClick={() =>
+													track('cta_click', { where: 'nav_recherche' })
+												}
 											>
 												<MagnifyingGlassIcon
 													className="mr-2 h-5 w-5 text-indigo-900"
@@ -239,7 +243,13 @@ function Nav({
 								<div
 									className={'flex w-full flex-col-reverse items-start gap-8'}
 								>
-									<Link className={'btn-primary-with-icon'} href={'/search'}>
+									<Link
+										className={'btn-primary-with-icon'}
+										href={'/search'}
+										onClick={() =>
+											track('cta_click', { where: 'nav_recherche_mobile' })
+										}
+									>
 										<MagnifyingGlassIcon
 											className="mr-2 h-5 w-5 text-indigo-900"
 											aria-hidden="true"

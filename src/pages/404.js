@@ -1,9 +1,14 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
 import Image from 'next/image'
+import { notFoundKind, track } from '@/lib/analytics'
 
 function Custom404(props) {
+	useEffect(() => {
+		track('not_found', { kind: notFoundKind(window.location.pathname) })
+	}, [])
+
 	return (
 		<>
 			<Head>

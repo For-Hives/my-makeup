@@ -1,5 +1,5 @@
 import Head from 'next/head'
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import Nav from '@/components/Global/Nav'
 import Footer from '@/components/Global/Footer'
 import { useRouter } from 'next/router'
@@ -10,6 +10,7 @@ import Loader from '@/components/Global/Loader/Loader'
 import { BadgeSuperMaquilleuse } from '@/components/Global/BadgeSuperMaquilleuse'
 import Link from 'next/link'
 import { CheckCircleIcon } from '@heroicons/react/24/outline'
+import { isRepeat, resultsBucket, track } from '@/lib/analytics'
 
 function SearchPage() {
 	const [searchTerm, setSearchTerm] = useState(undefined)
@@ -18,6 +19,9 @@ function SearchPage() {
 	const [isSearching, setIsSearching] = useState(false)
 	const [lastSearch, setLastSearch] = useState(undefined)
 	const [hasSearched, setHasSearched] = useState(false)
+	// last search counted as `search_submit`: a form submit also changes the
+	// URL, which runs the same search a second time
+	const lastCounted = useRef(null)
 
 	const router = useRouter()
 
@@ -45,10 +49,21 @@ function SearchPage() {
 		}
 	}, [hasSearched, performSearch, router.query])
 
-	async function performSearch(search, city) {
+	/**
+	 * @param {string} search
+	 * @param {string} [city]
+	 * @param {'formulaire'|'lien'} [from] - search form of this page, or a
+	 * link / another page that put the search in the URL
+	 */
+	async function performSearch(search, city, from = 'lien') {
 		if (search === undefined || search === '') {
 			return
 		}
+
+		const key = `${search}|${city ?? ''}`
+		const now = Date.now()
+		const counted = !isRepeat(lastCounted.current, key, now)
+		if (counted) lastCounted.current = { key, at: now }
 
 		setIsSearching(true)
 
@@ -59,6 +74,15 @@ function SearchPage() {
 
 		const response = await fetch(url)
 		const results = await response.json()
+
+		if (counted) {
+			// never the typed text: only whether a city was given and a bucket
+			track('search_submit', {
+				has_city: !!city,
+				results: resultsBucket(Array.isArray(results) ? results.length : 0),
+				from,
+			})
+		}
 
 		setSearchResults(results)
 		setLastSearch({ search, city })
@@ -109,6 +133,12 @@ function SearchPage() {
 												key={index}
 												href={`/profil/${result.username}`}
 												data-cy={`search-result`}
+												onClick={() =>
+													track('search_result_click', {
+														rank: index + 1,
+														pid: result.id,
+													})
+												}
 												className={
 													'col-span-1 flex w-full flex-col items-center rounded border border-gray-300 bg-white'
 												}

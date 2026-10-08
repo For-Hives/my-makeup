@@ -1,5 +1,6 @@
 import Image from 'next/image'
 import Link from 'next/link'
+import { track } from '@/lib/analytics'
 
 function Cta() {
 	return (
@@ -34,6 +35,7 @@ function Cta() {
 					>
 						<Link
 							href="/search"
+							onClick={() => track('cta_click', { where: 'cta_recherche' })}
 							className={
 								'btn-secondary-white flex w-full items-center justify-center text-center sm:w-2/3 md:w-auto'
 							}
@@ -42,6 +44,7 @@ function Cta() {
 						</Link>
 						<Link
 							href="/auth/signup"
+							onClick={() => track('cta_click', { where: 'cta_inscription' })}
 							className={
 								'btn-secondary-white-bordered flex w-full items-center justify-center text-center sm:w-2/3 md:w-auto'
 							}
