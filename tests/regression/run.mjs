@@ -1,12 +1,15 @@
 // npm run test:regression : the artist's space scenarios (RG-01 to RG-08,
 // upload, forgotten password) and the public pages (profiles rendered on the
 // server, slugs and 308, sitemap, robots, noindex, Open Graph, JSON-LD,
-// search by city) in a real browser against a fake Strapi.
+// search by city) and the audience measurement (Umami behind /u, MES-10)
+// in a real browser against a fake Strapi and a fake Umami.
 //
-// 1. starts the fake Strapi (127.0.0.1:4112);
-// 2. builds the app into .next-test-regression/ with the API pointing to it
-//    and the forgotten password link on (the real .next is never touched);
-//    REGRESSION_SKIP_BUILD=1 reuses that build;
+// 1. starts the fake Strapi (127.0.0.1:4112) and the fake Umami
+//    (127.0.0.1:4113);
+// 2. builds the app into .next-test-regression/ with the API and Umami
+//    pointing to them, the forgotten password link on, Umami counting
+//    localhost and every page load sampled for its Web Vitals (the real
+//    .next is never touched); REGRESSION_SKIP_BUILD=1 reuses that build;
 // 3. starts `next start` on localhost:3996;
 // 4. runs Playwright (tests/regression/playwright.config.mjs) with the
 //    arguments given after `--`, then stops everything.
@@ -21,6 +24,7 @@ import { mkdirSync, openSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { demarrerFauxStrapi } from './mock-api.mjs'
+import { demarrerFauxUmami } from './mock-umami.mjs'
 
 const RACINE = path.resolve(
 	path.dirname(fileURLToPath(import.meta.url)),
@@ -28,8 +32,12 @@ const RACINE = path.resolve(
 )
 const DIST = '.next-test-regression'
 const PORT_API = 4112
+const PORT_UMAMI = 4113
 const PORT_APP = 3996
 const API = `http://127.0.0.1:${PORT_API}`
+const UMAMI = `http://127.0.0.1:${PORT_UMAMI}`
+// data-tag expected in the pages (tests/regression/mesure.spec.mjs)
+const VERSION = 'rg-0000000'
 const APP = `http://localhost:${PORT_APP}`
 const NEXT = path.join(RACINE, 'node_modules/next/dist/bin/next')
 const PLAYWRIGHT = path.join(RACINE, 'node_modules/@playwright/test/cli.js')
@@ -70,8 +78,11 @@ function environnement(extra = {}) {
 		GOOGLE_CLIENT_ID: 'id-client-factice',
 		GOOGLE_CLIENT_SECRET: 'secret-client-factice',
 		NEXT_PUBLIC_FORGOT_PASSWORD: 'on',
-		// /u/* (Umami) leads nowhere: no request can reach the real instance
-		UMAMI_ORIGIN: 'http://127.0.0.1:9',
+		// /u/* goes to the fake Umami, never to the real instance
+		UMAMI_ORIGIN: UMAMI,
+		NEXT_PUBLIC_UMAMI_DOMAINS: 'localhost',
+		NEXT_PUBLIC_WEB_VITALS_SAMPLE: '1',
+		NEXT_PUBLIC_APP_VERSION: VERSION,
 		...extra,
 	})
 	for (const nom of [
@@ -126,6 +137,7 @@ process.on('SIGINT', () => {
 
 let code = 1
 const fauxStrapi = await demarrerFauxStrapi(PORT_API, { origine: APP })
+const fauxUmami = await demarrerFauxUmami(PORT_UMAMI)
 try {
 	mkdirSync(JOURNAUX, { recursive: true })
 	if (process.env.REGRESSION_SKIP_BUILD !== '1') {
@@ -159,6 +171,8 @@ try {
 			...environnement(),
 			RG_APP: APP,
 			RG_API: API,
+			RG_UMAMI: UMAMI,
+			RG_VERSION: VERSION,
 		}
 	)
 	code = await termine(tests)
@@ -167,7 +181,9 @@ try {
 	code = 1
 } finally {
 	arreter()
-	fauxStrapi.closeAllConnections()
-	fauxStrapi.close()
+	for (const serveur of [fauxStrapi, fauxUmami]) {
+		serveur.closeAllConnections()
+		serveur.close()
+	}
 }
 process.exit(code)

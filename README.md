@@ -29,9 +29,10 @@ npm run test:auth   # AF-01 to AF-10: NextAuth and the private pages against a f
                     #  AUTH_TEST_SKIP_BUILD=1 reuses the last build)
 npm run test:regression
                     # the artist's space (RG-01..RG-08, pictures, forgotten password) and the
-                    # public pages (profiles, slugs, sitemap, robots, SEO tags, search) in
-                    # Chromium against a fake Strapi (builds into .next-test-regression/,
-                    # app on localhost:3996, Strapi on 4112; REGRESSION_SKIP_BUILD=1
+                    # public pages (profiles, slugs, sitemap, robots, SEO tags, search) and
+                    # the Umami measurement behind /u (MES-10) in Chromium against a fake
+                    # Strapi and a fake Umami (builds into .next-test-regression/, app on
+                    # localhost:3996, Strapi on 4112, Umami on 4113; REGRESSION_SKIP_BUILD=1
                     # reuses the last build; once: npx playwright install chromium;
                     # extra Playwright arguments after --, e.g. -- --grep RG-04)
 pnpm run cypress:run
