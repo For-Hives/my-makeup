@@ -2,7 +2,7 @@ import React, { Fragment, forwardRef } from 'react'
 import { Transition } from '@headlessui/react'
 
 /**
- * Pieces shared by the modals of the artist's space (UI-02, UI-04).
+ * Pieces shared by the modals of the artist's space (UI-01, UI-02, UI-04).
  * The Dialog of Headless UI already closes on Escape and on a click outside
  * the panel, locks the page scroll and keeps the focus inside.
  */
@@ -48,3 +48,51 @@ export const BoutonFermer = forwardRef(function BoutonFermer({ onClick }, ref) {
 		</button>
 	)
 })
+
+/** What the API answered when it did not store the change */
+export function ErreurSauvegarde({ message }) {
+	if (!message) return null
+	return (
+		<p
+			role="alert"
+			data-cy="save-error"
+			className="rounded-md bg-red-50 p-3 text-sm text-red-800"
+		>
+			{message}
+		</p>
+	)
+}
+
+/** Save button, disabled while the request runs */
+export function BoutonSauvegarder({
+	envoi,
+	onClick,
+	dataCy,
+	children = 'Sauvegarder',
+}) {
+	return (
+		<button
+			data-cy={dataCy}
+			type="button"
+			className="btn-primary disabled:cursor-wait disabled:opacity-60"
+			onClick={onClick}
+			disabled={envoi}
+			aria-busy={envoi}
+		>
+			{envoi ? 'Enregistrement…' : children}
+		</button>
+	)
+}
+
+/**
+ * onChange of a controlled input that is also registered in react-hook-form:
+ * the input's own onChange replaced the one of register(), so the form only
+ * saw a value on blur (Enter in a field validated and sent the old one).
+ * Both are called now (UI-01).
+ * @param {Function} register - from useForm()
+ * @returns {(nom: string, handler: Function) => Function}
+ */
+export const suivreChamp = register => (nom, handler) => event => {
+	register(nom).onChange(event)
+	handler(event)
+}

@@ -7,6 +7,8 @@ import * as zod from 'zod'
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
 import {
 	BoutonFermer,
+	BoutonSauvegarder,
+	ErreurSauvegarde,
 	FondModale,
 } from '@/components/Profil/Atoms/ModalUpdate/ModalElements'
 
@@ -41,32 +43,30 @@ export default function ModalUpdateLanguageProfil(props) {
 		user.language ?? []
 	)
 
+	const [envoi, setEnvoi] = useState(false)
+	const [erreurEnvoi, setErreurEnvoi] = useState(null)
+
 	const { data: session } = useSession()
 
 	/**
 	 * onSubmit function called when the form is submitted
 	 * @param data
 	 */
-	const onSubmit = data => {
-		// for each skill selected, we only keep the name, the id is not necessary
-		const userLanguageSelectedCleaned = userLanguageSelected.map(item => {
-			return {
-				name: item.name,
-			}
-		})
-		const data_clean = {
-			language: userLanguageSelectedCleaned,
+	const onSubmit = async data => {
+		// for each item selected, we only keep the name, the id is not necessary
+		const champs = {
+			language: userLanguageSelected.map(item => ({ name: item.name })),
 		}
-		patchMeMakeup(session, data_clean)
-
-		let userTemp = user
-		userTemp.language = userLanguageSelectedCleaned
-		// to change to object reference
-		const newUser = JSON.parse(JSON.stringify(userTemp))
-		props.handleUpdateUser(newUser)
-
-		reset()
-		// close the modal
+		setEnvoi(true)
+		setErreurEnvoi(null)
+		const resultat = await patchMeMakeup(session, champs, 'langues')
+		setEnvoi(false)
+		if (!resultat.ok) {
+			setErreurEnvoi(resultat.message ?? null)
+			return
+		}
+		// shown on the page once the API stored it, then the modal closes
+		props.handleUpdateUser({ ...user, ...champs })
 		props.handleIsModalOpen()
 	}
 
@@ -75,13 +75,6 @@ export default function ModalUpdateLanguageProfil(props) {
 	}, [props.isModalOpen])
 
 	const cancelButtonRef = useRef(null)
-	const inputRef = useRef(null)
-
-	const handleClick = event => {
-		// 👇️ open file input box on click of another element
-		// 👇️ trigger click event on input element to open file dialog
-		inputRef.current.click()
-	}
 
 	const handleUpdateLanguage = event => {
 		// check if the entered value is a ';' and if so, add it to the array
@@ -137,6 +130,7 @@ export default function ModalUpdateLanguageProfil(props) {
 		if (!open) {
 			setUserLanguage('')
 			setUserLanguageSelected(user.language ?? [])
+			setErreurEnvoi(null)
 			reset()
 		}
 	}, [open, reset, user.language])
@@ -281,12 +275,16 @@ export default function ModalUpdateLanguageProfil(props) {
 																		handleDeleteLanguageelected(skill.id)
 																	}}
 																	key={index}
+																	aria-label={`Retirer ${skill.name}`}
 																	className={
-																		'flex items-center gap-2 rounded-full bg-indigo-50 px-2 py-1 text-xs text-gray-700'
+																		'flex min-h-[44px] items-center gap-2 rounded-full bg-indigo-50 px-3 text-sm text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600'
 																	}
 																>
 																	<span>→ {skill.name}</span>
-																	<span className="material-icons-round text-sm">
+																	<span
+																		className="material-icons-round text-sm"
+																		aria-hidden="true"
+																	>
 																		close
 																	</span>
 																</button>
@@ -298,15 +296,13 @@ export default function ModalUpdateLanguageProfil(props) {
 										</div>
 									</div>
 								</div>
-								<div className="mt-4 flex justify-end">
-									<button
-										data-cy="save-button-languages"
-										type="button"
-										className="btn-primary"
+								<div className="mt-4 flex flex-col items-end gap-4">
+									<ErreurSauvegarde message={erreurEnvoi} />
+									<BoutonSauvegarder
+										dataCy="save-button-languages"
+										envoi={envoi}
 										onClick={handleSubmit(onSubmit)}
-									>
-										Sauvegarder
-									</button>
+									/>
 								</div>
 							</Dialog.Panel>
 						</Transition.Child>

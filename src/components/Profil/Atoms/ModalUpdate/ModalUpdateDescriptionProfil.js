@@ -7,7 +7,10 @@ import * as zod from 'zod'
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
 import {
 	BoutonFermer,
+	BoutonSauvegarder,
+	ErreurSauvegarde,
 	FondModale,
+	suivreChamp,
 } from '@/components/Profil/Atoms/ModalUpdate/ModalElements'
 
 const schema = zod
@@ -31,35 +34,31 @@ export default function ModalUpdateDescriptionProfil(props) {
 	} = useForm({
 		resolver: zodResolver(schema),
 	})
+	const suivre = suivreChamp(register)
 
 	const [open, setOpen] = useState(props.isModalOpen)
 	const [userDescription, setUserDescription] = useState(user.description ?? '')
+	const [envoi, setEnvoi] = useState(false)
+	const [erreurEnvoi, setErreurEnvoi] = useState(null)
 
 	const { data: session } = useSession()
 
-	const onSubmit = data => {
-		data = {
-			...data,
+	// the page shows the new text, and the modal closes, once the API stored it
+	const onSubmit = async data => {
+		setEnvoi(true)
+		setErreurEnvoi(null)
+		const champs = { description: data.description }
+		const resultat = await patchMeMakeup(session, champs, 'description')
+		setEnvoi(false)
+		if (!resultat.ok) {
+			setErreurEnvoi(resultat.message ?? null)
+			return
 		}
-		patchMeMakeup(session, data)
-
-		let userTemp = user
-		userTemp.description = userDescription
-		// to change to object reference
-		const newUser = JSON.parse(JSON.stringify(userTemp))
-		props.handleUpdateUser(newUser)
-		reset()
+		props.handleUpdateUser({ ...user, ...champs })
 		props.handleIsModalOpen()
 	}
 
 	const cancelButtonRef = useRef(null)
-	const inputRef = useRef(null)
-
-	const handleClick = event => {
-		// 👇️ open file input box on click of another element
-		// 👇️ trigger click event on input element to open file dialog
-		inputRef.current.click()
-	}
 
 	const handleUpdateDescription = event => {
 		setUserDescription(event.target.value)
@@ -73,6 +72,7 @@ export default function ModalUpdateDescriptionProfil(props) {
 	useEffect(() => {
 		if (!open) {
 			setUserDescription(user.description ?? '')
+			setErreurEnvoi(null)
 			reset()
 		}
 	}, [open, reset, user.description])
@@ -140,7 +140,10 @@ export default function ModalUpdateDescriptionProfil(props) {
 																})}
 																required
 																value={userDescription ?? ''}
-																onChange={handleUpdateDescription}
+																onChange={suivre(
+																	'description',
+																	handleUpdateDescription
+																)}
 																className="block min-h-[500px] w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
 															/>
 															{errors.description && (
@@ -158,15 +161,13 @@ export default function ModalUpdateDescriptionProfil(props) {
 										</div>
 									</div>
 								</div>
-								<div className="mt-4 flex justify-end">
-									<button
-										data-cy="save-button-description"
-										type="button"
-										className="btn-primary"
+								<div className="mt-4 flex flex-col items-end gap-4">
+									<ErreurSauvegarde message={erreurEnvoi} />
+									<BoutonSauvegarder
+										dataCy="save-button-description"
+										envoi={envoi}
 										onClick={handleSubmit(onSubmit)}
-									>
-										Sauvegarder
-									</button>
+									/>
 								</div>
 							</Dialog.Panel>
 						</Transition.Child>

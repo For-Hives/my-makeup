@@ -7,7 +7,10 @@ import { useSession } from 'next-auth/react'
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
 import {
 	BoutonFermer,
+	BoutonSauvegarder,
+	ErreurSauvegarde,
 	FondModale,
+	suivreChamp,
 } from '@/components/Profil/Atoms/ModalUpdate/ModalElements'
 
 const schema = zod.object({
@@ -66,42 +69,40 @@ export default function ModalUpdateSocialMediaProfil(props) {
 	} = useForm({
 		resolver: zodResolver(schema),
 	})
+	const suivre = suivreChamp(register)
 
 	const [open, setOpen] = useState(props.isModalOpen)
+	// the network component may be missing on a new profile
+	const reseau = user.network ?? {}
 
-	const [userYoutube, setUserYoutube] = useState(user.network.youtube ?? '')
-	const [userFacebook, setUserFacebook] = useState(user.network.facebook ?? '')
-	const [userInstagram, setUserInstagram] = useState(
-		user.network.instagram ?? ''
-	)
-	const [userWebsite, setUserWebsite] = useState(user.network.website ?? '')
-	const [userLinkedin, setUserLinkedin] = useState(user.network.linkedin ?? '')
-	const [userEmail, setUserEmail] = useState(user.network.email ?? '')
-	const [userPhone, setUserPhone] = useState(user.network.phone ?? '')
+	const [userYoutube, setUserYoutube] = useState(reseau.youtube ?? '')
+	const [userFacebook, setUserFacebook] = useState(reseau.facebook ?? '')
+	const [userInstagram, setUserInstagram] = useState(reseau.instagram ?? '')
+	const [userWebsite, setUserWebsite] = useState(reseau.website ?? '')
+	const [userLinkedin, setUserLinkedin] = useState(reseau.linkedin ?? '')
+	const [userEmail, setUserEmail] = useState(reseau.email ?? '')
+	const [userPhone, setUserPhone] = useState(reseau.phone ?? '')
 
 	const { data: session } = useSession()
 
-	const onSubmit = data => {
-		data = {
-			network: {
-				...data,
-			},
+	const [envoi, setEnvoi] = useState(false)
+	const [erreurEnvoi, setErreurEnvoi] = useState(null)
+
+	// the page shows the new links, and the modal closes, once the API stored them
+	const onSubmit = async data => {
+		const champs = { network: { ...data } }
+		setEnvoi(true)
+		setErreurEnvoi(null)
+		const resultat = await patchMeMakeup(session, champs, 'reseaux')
+		setEnvoi(false)
+		if (!resultat.ok) {
+			setErreurEnvoi(resultat.message ?? null)
+			return
 		}
-		patchMeMakeup(session, data)
-
-		let userTemp = user
-		userTemp.network.youtube = userYoutube
-		userTemp.network.facebook = userFacebook
-		userTemp.network.instagram = userInstagram
-		userTemp.network.website = userWebsite
-		userTemp.network.linkedin = userLinkedin
-		userTemp.network.email = userEmail
-		userTemp.network.phone = userPhone
-		// to change to object reference
-		const newUser = JSON.parse(JSON.stringify(userTemp))
-		props.handleUpdateUser(newUser)
-
-		reset()
+		props.handleUpdateUser({
+			...user,
+			network: { ...reseau, ...champs.network },
+		})
 		props.handleIsModalOpen()
 	}
 
@@ -110,13 +111,6 @@ export default function ModalUpdateSocialMediaProfil(props) {
 	}, [props.isModalOpen])
 
 	const cancelButtonRef = useRef(null)
-	const inputRef = useRef(null)
-
-	const handleClick = event => {
-		// 👇️ open file input box on click of another element
-		// 👇️ trigger click event on input element to open file dialog
-		inputRef.current.click()
-	}
 
 	const handleUpdateYoutube = event => {
 		setUserYoutube(event.target.value)
@@ -142,25 +136,26 @@ export default function ModalUpdateSocialMediaProfil(props) {
 
 	useEffect(() => {
 		if (!open) {
-			setUserYoutube(user.network.youtube ?? '')
-			setUserFacebook(user.network.facebook ?? '')
-			setUserInstagram(user.network.instagram ?? '')
-			setUserWebsite(user.network.website ?? '')
-			setUserLinkedin(user.network.linkedin ?? '')
-			setUserEmail(user.network.email ?? '')
-			setUserPhone(user.network.phone ?? '')
+			setUserYoutube(reseau.youtube ?? '')
+			setUserFacebook(reseau.facebook ?? '')
+			setUserInstagram(reseau.instagram ?? '')
+			setUserWebsite(reseau.website ?? '')
+			setUserLinkedin(reseau.linkedin ?? '')
+			setUserEmail(reseau.email ?? '')
+			setUserPhone(reseau.phone ?? '')
+			setErreurEnvoi(null)
 			reset()
 		}
 	}, [
 		open,
 		reset,
-		user.network.email,
-		user.network.facebook,
-		user.network.instagram,
-		user.network.linkedin,
-		user.network.phone,
-		user.network.website,
-		user.network.youtube,
+		reseau.email,
+		reseau.facebook,
+		reseau.instagram,
+		reseau.linkedin,
+		reseau.phone,
+		reseau.website,
+		reseau.youtube,
 	])
 
 	return (
@@ -226,7 +221,7 @@ export default function ModalUpdateSocialMediaProfil(props) {
 																	required: false,
 																})}
 																value={userEmail ?? ''}
-																onChange={handleUpdateEmail}
+																onChange={suivre('email', handleUpdateEmail)}
 																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
 															/>
 															{errors.email && (
@@ -256,7 +251,7 @@ export default function ModalUpdateSocialMediaProfil(props) {
 																	required: false,
 																})}
 																value={userPhone ?? ''}
-																onChange={handleUpdatePhone}
+																onChange={suivre('phone', handleUpdatePhone)}
 																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
 															/>
 															{errors.phone && (
@@ -286,7 +281,10 @@ export default function ModalUpdateSocialMediaProfil(props) {
 																	required: false,
 																})}
 																value={userYoutube ?? ''}
-																onChange={handleUpdateYoutube}
+																onChange={suivre(
+																	'youtube',
+																	handleUpdateYoutube
+																)}
 																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
 															/>
 															{errors.youtube && (
@@ -316,7 +314,10 @@ export default function ModalUpdateSocialMediaProfil(props) {
 																	required: false,
 																})}
 																value={userFacebook ?? ''}
-																onChange={handleUpdateFacebook}
+																onChange={suivre(
+																	'facebook',
+																	handleUpdateFacebook
+																)}
 																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
 															/>
 															{errors.facebook && (
@@ -346,7 +347,10 @@ export default function ModalUpdateSocialMediaProfil(props) {
 																	required: false,
 																})}
 																value={userInstagram ?? ''}
-																onChange={handleUpdateInstagram}
+																onChange={suivre(
+																	'instagram',
+																	handleUpdateInstagram
+																)}
 																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
 															/>
 															{errors.instagram && (
@@ -376,7 +380,10 @@ export default function ModalUpdateSocialMediaProfil(props) {
 																	required: false,
 																})}
 																value={userWebsite ?? ''}
-																onChange={handleUpdateWebsite}
+																onChange={suivre(
+																	'website',
+																	handleUpdateWebsite
+																)}
 																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
 															/>
 															{errors.website && (
@@ -406,7 +413,10 @@ export default function ModalUpdateSocialMediaProfil(props) {
 																	required: false,
 																})}
 																value={userLinkedin ?? ''}
-																onChange={handleUpdateLinkedin}
+																onChange={suivre(
+																	'linkedin',
+																	handleUpdateLinkedin
+																)}
 																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
 															/>
 															{errors.linkedin && (
@@ -424,15 +434,13 @@ export default function ModalUpdateSocialMediaProfil(props) {
 										</div>
 									</div>
 								</div>
-								<div className="mt-4 flex justify-end">
-									<button
-										data-cy="save-button-social-medias"
-										type="button"
-										className="btn-primary"
+								<div className="mt-4 flex flex-col items-end gap-4">
+									<ErreurSauvegarde message={erreurEnvoi} />
+									<BoutonSauvegarder
+										dataCy="save-button-social-medias"
+										envoi={envoi}
 										onClick={handleSubmit(onSubmit)}
-									>
-										Sauvegarder
-									</button>
+									/>
 								</div>
 							</Dialog.Panel>
 						</Transition.Child>

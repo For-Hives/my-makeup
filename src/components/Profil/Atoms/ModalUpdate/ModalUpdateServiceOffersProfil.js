@@ -5,11 +5,15 @@ import { useSession } from 'next-auth/react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as zod from 'zod'
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
+import { listeApresSauvegarde } from '@/lib/sauvegarde-profil'
 import { DescriptionPriceOffer } from '@/components/Profil/Childs/ServiceOffers/DescriptionPriceOffer'
 import { OptionsOffers } from '@/components/Profil/Childs/ServiceOffers/OptionsOffers'
 import {
 	BoutonFermer,
+	BoutonSauvegarder,
+	ErreurSauvegarde,
 	FondModale,
+	suivreChamp,
 } from '@/components/Profil/Atoms/ModalUpdate/ModalElements'
 
 const schema = zod
@@ -53,6 +57,10 @@ const schema = zod
 	})
 	.required({ name: true, price: true, description: true })
 
+// edit and delete buttons of a listed item: 44 px, focus visible (UI-02)
+const BOUTON_ICONE =
+	'flex h-11 w-11 items-center justify-center rounded-full hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600'
+
 export default function ModalUpdateServiceOffersProfil(props) {
 	const user = props.user
 
@@ -64,6 +72,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 	} = useForm({
 		resolver: zodResolver(schema),
 	})
+	const suivre = suivreChamp(register)
 
 	const [open, setOpen] = useState(props.isModalOpen)
 
@@ -76,6 +85,9 @@ export default function ModalUpdateServiceOffersProfil(props) {
 	const [userServiceOffersDescription, setUserServiceOffersDescription] =
 		useState('')
 	const [userServiceOffersOptions, setUserServiceOffersOptions] = useState([])
+
+	const [envoi, setEnvoi] = useState(false)
+	const [erreurEnvoi, setErreurEnvoi] = useState(null)
 
 	const { data: session } = useSession()
 
@@ -151,110 +163,45 @@ export default function ModalUpdateServiceOffersProfil(props) {
 		}
 	}
 
-	const handleSubmitServiceOffers = event => {
-		// copy userServiceOffers to data, but remove the id field (only if the id start by "added"),
-		// and in the options array, remove the id field on each object too (only if the id start by "added")
-		let userServiceOffersCopy = []
-		if (userServiceOffersId === '') {
-			userServiceOffersCopy = userServiceOffers.map(serviceOffer => {
-				if (
-					serviceOffer &&
-					serviceOffer?.id &&
-					serviceOffer.id.toString().startsWith('added')
-				) {
-					const options = serviceOffer.options.map(option => {
-						if (
-							option &&
-							option?.id &&
-							option.id.toString().startsWith('added')
-						) {
-							return {
-								name: option.name,
-								price: option.price,
-								description: option.description,
-							}
-						} else {
-							return option
-						}
-					})
-					return {
-						name: serviceOffer.name,
-						price: serviceOffer.price,
-						description: serviceOffer.description,
-						options: options,
+	const handleSubmitServiceOffers = async event => {
+		// copy userServiceOffers to data without the ids, and in the options
+		// array, remove the id field when it is a local one (starts by "added")
+		const sansIdLocal = option =>
+			option && option?.id && option.id.toString().startsWith('added')
+				? {
+						name: option.name,
+						price: option.price,
+						description: option.description,
 					}
-				} else {
-					const options = serviceOffer.options.map(option => {
-						if (
-							option &&
-							option?.id &&
-							option.id.toString().startsWith('added')
-						) {
-							return {
-								name: option.name,
-								price: option.price,
-								description: option.description,
-							}
-						} else {
-							return option
-						}
-					})
-					return {
-						name: serviceOffer.name,
-						price: serviceOffer.price,
-						description: serviceOffer.description,
-						options: options,
-					}
-				}
-			})
-		} else {
-			userServiceOffersCopy = userServiceOffers.map(serviceOffer => {
-				const options = serviceOffer.options.map(option => {
-					if (
-						option &&
-						option?.id &&
-						option.id.toString().startsWith('added')
-					) {
-						return {
-							name: option.name,
-							price: option.price,
-							description: option.description,
-						}
-					} else {
-						return option
-					}
-				})
-				return {
-					name: serviceOffer.name,
-					price: serviceOffer.price,
-					description: serviceOffer.description,
-					options: options,
-				}
-			})
-		}
+				: option
+		const userServiceOffersCopy = userServiceOffers.map(serviceOffer => ({
+			name: serviceOffer.name,
+			price: serviceOffer.price,
+			description: serviceOffer.description,
+			options: (serviceOffer.options ?? []).map(sansIdLocal),
+		}))
 
-		const updatedUser = { ...user }
-		updatedUser.service_offers = userServiceOffersCopy
-
-		// set data
-		const data = {
+		const champs = {
 			service_offers: userServiceOffersCopy,
 		}
-		patchMeMakeup(session, data)
-		// close the modal & reset the zod form
-		setUserServiceOffersId('')
-		setUserServiceOffersName('')
-		setUserServiceOffersPrice('')
-		setUserServiceOffersDescription('')
-		setUserServiceOffersOptions([])
+		setEnvoi(true)
+		setErreurEnvoi(null)
+		const resultat = await patchMeMakeup(session, champs, 'offres')
+		setEnvoi(false)
+		if (!resultat.ok) {
+			setErreurEnvoi(resultat.message ?? null)
+			return
+		}
 
-		let userTemp = user
-		userTemp.service_offers = userServiceOffersCopy
-		// to change to object reference
-		const newUser = JSON.parse(JSON.stringify(userTemp))
-		props.handleUpdateUser(newUser)
-
-		reset()
+		// shown on the page once the API stored it, then the modal closes
+		props.handleUpdateUser({
+			...user,
+			service_offers: listeApresSauvegarde(
+				resultat.data,
+				'service_offers',
+				userServiceOffersCopy
+			),
+		})
 		props.handleIsModalOpen()
 	}
 
@@ -263,13 +210,6 @@ export default function ModalUpdateServiceOffersProfil(props) {
 	}, [props.isModalOpen])
 
 	const cancelButtonRef = useRef(null)
-	const inputRef = useRef(null)
-
-	const handleClick = event => {
-		// 👇️ open file input box on click of another element
-		// 👇️ trigger click event on input element to open file dialog
-		inputRef.current.click()
-	}
 
 	const handleUpdateServiceOffersName = event => {
 		setUserServiceOffersName(event.target.value)
@@ -329,7 +269,8 @@ export default function ModalUpdateServiceOffersProfil(props) {
 	// reset the form when the modal is closed
 	useEffect(() => {
 		if (!open) {
-			setUserServiceOffers(user.service_offers)
+			setUserServiceOffers(user.service_offers ?? [])
+			setErreurEnvoi(null)
 			setUserServiceOffersId('')
 			setUserServiceOffersName('')
 			setUserServiceOffersPrice('')
@@ -431,7 +372,10 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																	})}
 																	required
 																	value={userServiceOffersName ?? ''}
-																	onChange={handleUpdateServiceOffersName}
+																	onChange={suivre(
+																		'name',
+																		handleUpdateServiceOffersName
+																	)}
 																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
 																/>
 																{errors.name && (
@@ -461,9 +405,10 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																	})}
 																	required
 																	value={userServiceOffersDescription ?? ''}
-																	onChange={
+																	onChange={suivre(
+																		'description',
 																		handleUpdateServiceOffersDescription
-																	}
+																	)}
 																	className="block min-h-[150px] w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
 																/>
 																{errors.description && (
@@ -498,7 +443,10 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																	})}
 																	required
 																	value={userServiceOffersPrice ?? ''}
-																	onChange={handleUpdateServiceOffersPrice}
+																	onChange={suivre(
+																		'price',
+																		handleUpdateServiceOffersPrice
+																	)}
 																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
 																/>
 																{errors.price && (
@@ -545,22 +493,25 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																				required: true,
 																			})}
 																			required
-																			onChange={event => {
-																				// 	change the name value of the correct option
-																				setUserServiceOffersOptions(
-																					userServiceOffersOptions.map(
-																						(option, optionIndex) => {
-																							if (optionIndex === index) {
-																								return {
-																									...option,
-																									name: event.target.value,
+																			onChange={suivre(
+																				`services[${index}].name`,
+																				event => {
+																					// 	change the name value of the correct option
+																					setUserServiceOffersOptions(
+																						userServiceOffersOptions.map(
+																							(option, optionIndex) => {
+																								if (optionIndex === index) {
+																									return {
+																										...option,
+																										name: event.target.value,
+																									}
 																								}
+																								return option
 																							}
-																							return option
-																						}
+																						)
 																					)
-																				)
-																			}}
+																				}
+																			)}
 																			value={
 																				userServiceOffersOptions[index].name
 																			}
@@ -599,23 +550,26 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																				}
 																			)}
 																			required
-																			onChange={event => {
-																				// 	change the name value of the correct option
-																				setUserServiceOffersOptions(
-																					userServiceOffersOptions.map(
-																						(option, optionIndex) => {
-																							if (optionIndex === index) {
-																								return {
-																									...option,
-																									description:
-																										event.target.value,
+																			onChange={suivre(
+																				`services[${index}].description`,
+																				event => {
+																					// 	change the name value of the correct option
+																					setUserServiceOffersOptions(
+																						userServiceOffersOptions.map(
+																							(option, optionIndex) => {
+																								if (optionIndex === index) {
+																									return {
+																										...option,
+																										description:
+																											event.target.value,
+																									}
 																								}
+																								return option
 																							}
-																							return option
-																						}
+																						)
 																					)
-																				)
-																			}}
+																				}
+																			)}
 																			value={
 																				userServiceOffersOptions[index]
 																					.description
@@ -664,22 +618,25 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																				required: true,
 																			})}
 																			required
-																			onChange={event => {
-																				// 	change the name value of the correct option
-																				setUserServiceOffersOptions(
-																					userServiceOffersOptions.map(
-																						(option, optionIndex) => {
-																							if (optionIndex === index) {
-																								return {
-																									...option,
-																									price: event.target.value,
+																			onChange={suivre(
+																				`services[${index}].price`,
+																				event => {
+																					// 	change the name value of the correct option
+																					setUserServiceOffersOptions(
+																						userServiceOffersOptions.map(
+																							(option, optionIndex) => {
+																								if (optionIndex === index) {
+																									return {
+																										...option,
+																										price: event.target.value,
+																									}
 																								}
+																								return option
 																							}
-																							return option
-																						}
+																						)
 																					)
-																				)
-																			}}
+																				}
+																			)}
 																			value={
 																				userServiceOffersOptions[index].price
 																			}
@@ -783,32 +740,38 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																			}
 																		>
 																			<button
+																				type="button"
 																				data-cy={`edit-service-offers-button-${index}`}
-																				className={
-																					'flex items-center justify-center'
-																				}
+																				aria-label={`Modifier la prestation ${service_offer.name ?? ''}`}
+																				className={BOUTON_ICONE}
 																				onClick={() =>
 																					handleEditServiceOffers(
 																						service_offer.id
 																					)
 																				}
 																			>
-																				<span className="material-icons-round text-xl text-orange-600">
+																				<span
+																					className="material-icons-round text-xl text-orange-600"
+																					aria-hidden="true"
+																				>
 																					edit
 																				</span>
 																			</button>
 																			<button
+																				type="button"
 																				data-cy="delete-service-offers-button"
-																				className={
-																					'flex items-center justify-center'
-																				}
+																				aria-label={`Retirer la prestation ${service_offer.name ?? ''}`}
+																				className={BOUTON_ICONE}
 																				onClick={() =>
 																					handleDeleteServiceOffers(
 																						service_offer.id
 																					)
 																				}
 																			>
-																				<span className="material-icons-round text-xl text-red-500">
+																				<span
+																					className="material-icons-round text-xl text-red-500"
+																					aria-hidden="true"
+																				>
 																					delete
 																				</span>
 																			</button>
@@ -844,15 +807,13 @@ export default function ModalUpdateServiceOffersProfil(props) {
 										</div>
 									</div>
 								</div>
-								<div className="mt-4 flex justify-end">
-									<button
-										data-cy="save-button-service-offers"
-										type="button"
-										className="btn-primary"
+								<div className="mt-4 flex flex-col items-end gap-4">
+									<ErreurSauvegarde message={erreurEnvoi} />
+									<BoutonSauvegarder
+										dataCy="save-button-service-offers"
+										envoi={envoi}
 										onClick={handleSubmitServiceOffers}
-									>
-										Sauvegarder
-									</button>
+									/>
 								</div>
 							</Dialog.Panel>
 						</Transition.Child>

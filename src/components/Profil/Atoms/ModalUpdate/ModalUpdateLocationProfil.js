@@ -7,7 +7,10 @@ import * as zod from 'zod'
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
 import {
 	BoutonFermer,
+	BoutonSauvegarder,
+	ErreurSauvegarde,
 	FondModale,
+	suivreChamp,
 } from '@/components/Profil/Atoms/ModalUpdate/ModalElements'
 
 const schema = zod
@@ -38,6 +41,7 @@ export default function ModalUpdateLocationProfil(props) {
 	} = useForm({
 		resolver: zodResolver(schema),
 	})
+	const suivre = suivreChamp(register)
 
 	const [open, setOpen] = useState(props.isModalOpen)
 	const [userCity, setUserCity] = useState(user.city ?? '')
@@ -45,26 +49,26 @@ export default function ModalUpdateLocationProfil(props) {
 		user.action_radius ?? ''
 	)
 
+	const [envoi, setEnvoi] = useState(false)
+	const [erreurEnvoi, setErreurEnvoi] = useState(null)
+
 	const { data: session } = useSession()
 
-	const onSubmit = data => {
-		if (data.action_radius === '') {
-			data.action_radius = null
+	// the page shows the new place, and the modal closes, once the API stored it
+	const onSubmit = async data => {
+		const champs = {
+			city: data.city,
+			action_radius: data.action_radius === '' ? null : data.action_radius,
 		}
-		data = {
-			...data,
+		setEnvoi(true)
+		setErreurEnvoi(null)
+		const resultat = await patchMeMakeup(session, champs, 'localisation')
+		setEnvoi(false)
+		if (!resultat.ok) {
+			setErreurEnvoi(resultat.message ?? null)
+			return
 		}
-		patchMeMakeup(session, data)
-
-		let userTemp = user
-		userTemp.city = userCity
-		userTemp.action_radius = userActionRadius
-
-		// to change to object reference
-		const newUser = JSON.parse(JSON.stringify(userTemp))
-		props.handleUpdateUser(newUser)
-
-		reset()
+		props.handleUpdateUser({ ...user, ...champs })
 		props.handleIsModalOpen()
 	}
 
@@ -73,13 +77,6 @@ export default function ModalUpdateLocationProfil(props) {
 	}, [props.isModalOpen])
 
 	const cancelButtonRef = useRef(null)
-	const inputRef = useRef(null)
-
-	const handleClick = event => {
-		// 👇️ open file input box on click of another element
-		// 👇️ trigger click event on input element to open file dialog
-		inputRef.current.click()
-	}
 
 	const handleUpdateCity = event => {
 		setUserCity(event.target.value)
@@ -95,6 +92,7 @@ export default function ModalUpdateLocationProfil(props) {
 		if (!open) {
 			setUserActionRadius(user.action_radius ?? '')
 			setUserCity(user.city ?? '')
+			setErreurEnvoi(null)
 			reset()
 		}
 	}, [open, reset, user.action_radius, user.city])
@@ -160,7 +158,7 @@ export default function ModalUpdateLocationProfil(props) {
 																type="text"
 																{...register('city')}
 																value={userCity ?? ''}
-																onChange={handleUpdateCity}
+																onChange={suivre('city', handleUpdateCity)}
 																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
 															/>
 															{errors.city && (
@@ -188,7 +186,10 @@ export default function ModalUpdateLocationProfil(props) {
 																type="number"
 																{...register('action_radius')}
 																value={userActionRadius}
-																onChange={handleUpdateActionRadius}
+																onChange={suivre(
+																	'action_radius',
+																	handleUpdateActionRadius
+																)}
 																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
 															/>
 															{errors.action_radius && (
@@ -206,15 +207,13 @@ export default function ModalUpdateLocationProfil(props) {
 										</div>
 									</div>
 								</div>
-								<div className="mt-4 flex justify-end">
-									<button
-										data-cy="save-button-location"
-										type="button"
-										className="btn-primary"
+								<div className="mt-4 flex flex-col items-end gap-4">
+									<ErreurSauvegarde message={erreurEnvoi} />
+									<BoutonSauvegarder
+										dataCy="save-button-location"
+										envoi={envoi}
 										onClick={handleSubmit(onSubmit)}
-									>
-										Sauvegarder
-									</button>
+									/>
 								</div>
 							</Dialog.Panel>
 						</Transition.Child>
