@@ -350,6 +350,63 @@
 			}
 		},
 		{
+			"nom": "code de département puis texte libre (pas une ville exploitable)",
+			"profil": {
+				"first_name": "Testine",
+				"last_name": "Recette",
+				"speciality": "Mariage",
+				"company_artist_name": "Studio Test",
+				"city": "74 et alentours",
+				"description": "Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. ",
+				"main_picture": {
+					"data": {
+						"id": 1
+					}
+				},
+				"image_gallery": {
+					"data": [
+						{
+							"id": 2
+						}
+					]
+				},
+				"skills": [
+					{
+						"id": 1
+					}
+				],
+				"experiences": [
+					{
+						"id": 1
+					}
+				],
+				"courses": [
+					{
+						"id": 1
+					}
+				],
+				"service_offers": [
+					{
+						"price": "à partir de 120 €"
+					}
+				],
+				"network": {
+					"instagram": "studio.test"
+				},
+				"language": [
+					{
+						"id": 1
+					}
+				]
+			},
+			"attendu": {
+				"score": 13,
+				"actif": false,
+				"publiable": false,
+				"interne": false
+			}
+		},
+		{
 			"nom": "sans spécialité",
 			"profil": {
 				"first_name": "Testine",

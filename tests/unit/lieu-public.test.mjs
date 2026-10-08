@@ -3,11 +3,13 @@ import assert from 'node:assert/strict'
 import {
 	AIDE_VILLE,
 	avecVillePublique,
-	departementDuCodePostal,
 	lieuPublic,
 	villePublique,
 } from '../../src/lib/profil/lieu-public.js'
-import { completude } from '../../src/lib/profil/completude.js'
+import {
+	completude,
+	villeExploitable,
+} from '../../src/lib/profil/completude.js'
 import {
 	sectionsVisibles,
 	zoneProfil,
@@ -54,13 +56,63 @@ const ADRESSES = [
 		'Le Grand-Bornand',
 		['7', 'impasse', 'Essais', 'Fictifs'],
 	],
-	['74 La Roche-sur-Foron', 'La Roche-sur-Foron', ['74 ']],
+	// Paris is a commune and a département
+	['12 rue des Essais, 75011 Paris', 'Paris (75)', ['12', 'rue', 'Essais']],
+	// a département after the postal code: the place before it
+	[
+		'Saint Julien en Genevois 74160 Haute-Savoie',
+		'Saint Julien en Genevois (74)',
+		[],
+	],
+	// no type of street, but words, a postal code and a place
+	['Le Bourg 74300 Cluses', 'Cluses (74)', ['Le', 'Bourg']],
+	['Les Marais Fictifs 74000 Annecy', 'Annecy (74)', ['Marais', 'Fictifs']],
+	['12 Les Marais 74000 Annecy', 'Annecy (74)', ['12', 'Marais']],
+	['ZA des Essais 74000 Annecy', 'Annecy (74)', ['ZA', 'Essais']],
+	['BP 123 74000 Annecy', 'Annecy (74)', ['BP', '123']],
+	['CS 12345 74000 ANNECY CEDEX', 'Annecy (74)', ['CS', '12345', 'CEDEX']],
+	// abroad: the town, without its postal code nor its country
+	['12 rue des Essais, Genève, Suisse', 'Genève', ['12', 'rue', 'Suisse']],
+	[
+		'12 rue des Essais, 1000 Bruxelles, Belgique',
+		'Bruxelles',
+		['12', 'rue', '1000', 'Belgique'],
+	],
+	// a number then a place: the place, never the number (a street number
+	// or a département, it cannot be told)
+	['74 La Roche-sur-Foron', 'La Roche-sur-Foron', ['74']],
+	['74 Annecy', 'Annecy', ['74']],
+	['13 Marseille', 'Marseille', ['13']],
+	['12 Le Bourg', 'Le Bourg', ['12']],
 	// without a commune, nothing: the end of a street is not a commune
 	['3 avenue X', '', ['3', 'avenue', 'X']],
 	['12 rue Victor Hugo', '', ['Victor', 'Hugo']],
 	['9 avenue Paul Vaillant-Couturier', '', ['Paul', 'Vaillant-Couturier']],
 	['12 rue de la Paix', '', ['Paix']],
-	['12', '', ['12']],
+	[
+		'10 avenue du Général Charles-de-Gaulle',
+		'',
+		['10', 'Général', 'Charles-de-Gaulle'],
+	],
+]
+
+// a code of département then the name of that département: both kept
+const DEPARTEMENTS_NOMMES = [
+	['74 Haute-Savoie', 'Haute-Savoie (74)'],
+	['2A Corse-du-Sud', 'Corse-du-Sud (2A)'],
+	['75 Paris', 'Paris (75)'],
+]
+
+// a number then free text is no street number: shown as typed, and not a
+// usable city (as before UI-11)
+const NUMERO_PUIS_TEXTE = [
+	'74 et alentours',
+	'74 partout',
+	'74 Partout',
+	'74 Annecy et alentours',
+	'3 villes : Annecy, Thonon, Evian',
+	'3 villes : Annecy 74000, Thonon 74200',
+	'12',
 ]
 
 // fields that are no address: shown as typed (cleaned)
@@ -91,6 +143,20 @@ describe('villePublique (UI-11)', () => {
 			assert.equal(villePublique(tapee), publique)
 		})
 
+	for (const [tapee, publique] of DEPARTEMENTS_NOMMES)
+		test(`« ${tapee} » → « ${publique} »`, () => {
+			assert.equal(villePublique(tapee), publique)
+			assert.equal(villeExploitable(tapee), true)
+		})
+
+	test('a département code then free text: as typed, not a usable city', () => {
+		for (const tapee of NUMERO_PUIS_TEXTE) {
+			assert.equal(villePublique(tapee), tapee)
+			assert.equal(lieuPublic(tapee).adresse, false, tapee)
+			assert.equal(villeExploitable(tapee), false, tapee)
+		}
+	})
+
 	test('nothing usable: an empty text', () => {
 		for (const v of VIDES) assert.equal(villePublique(v), '', String(v))
 	})
@@ -113,10 +179,15 @@ describe('villePublique (UI-11)', () => {
 	})
 
 	test('the same place when read again (the public page reads its props)', () => {
-		for (const [tapee] of [...ADRESSES, ...LIEUX]) {
-			const une = villePublique(tapee)
-			assert.equal(villePublique(une), une, tapee)
-			assert.deepEqual(lieuPublic(une).texte, une, tapee)
+		for (const tapee of [
+			...[...ADRESSES, ...LIEUX, ...DEPARTEMENTS_NOMMES].map(([t]) => t),
+			...NUMERO_PUIS_TEXTE,
+		]) {
+			const une = lieuPublic(tapee)
+			assert.equal(villePublique(une.texte), une.texte, tapee)
+			assert.equal(lieuPublic(une.texte).departement, une.departement, tapee)
+			// the page (props) and the sitemap (typed value) agree
+			assert.equal(villeExploitable(une.texte), villeExploitable(tapee), tapee)
 		}
 	})
 
@@ -138,16 +209,14 @@ describe('villePublique (UI-11)', () => {
 		assert.equal(lieuPublic('Annecy').adresse, false)
 	})
 
-	test('département of a postal code: Corse, outre-mer, none for Monaco', () => {
-		assert.equal(departementDuCodePostal('74000'), '74')
-		assert.equal(departementDuCodePostal('01000'), '01')
-		assert.equal(departementDuCodePostal('20090'), '2A')
-		assert.equal(departementDuCodePostal('20200'), '2B')
-		assert.equal(departementDuCodePostal('97411'), '974')
-		assert.equal(departementDuCodePostal('98000'), null)
-		assert.equal(departementDuCodePostal('00100'), null)
-		assert.equal(departementDuCodePostal('7400'), null)
-		assert.equal(departementDuCodePostal(74000), null)
+	test('the département of the last postal code (lieu.js)', () => {
+		assert.equal(lieuPublic('CS 12345 74000 Annecy Cedex').departement, '74')
+		assert.equal(
+			lieuPublic('1 cours des Essais 20200 Bastia').departement,
+			'2B'
+		)
+		assert.equal(lieuPublic('12 bd des Essais 98000 Monaco').texte, 'Monaco')
+		assert.equal(lieuPublic('Monaco 98000').texte, 'Monaco')
 	})
 
 	test('the help of the artist’s space', () => {
@@ -235,6 +304,34 @@ describe('the public pages show the public city only (UI-11)', () => {
 			})
 			const tout = `${JSON.stringify(seo)}${serialiserJsonLd(seo.jsonLd)}`
 			assert.doesNotMatch(tout, /Essais|impasse|Fictifs/)
+		}
+	})
+
+	test('a département code then free text: noindex and no nonsense place, as before', () => {
+		const profil = { ...attributs, city: '74 et alentours' }
+		assert.equal(completude(profil).publiable, false)
+		const seo = seoProfil({
+			profil,
+			slug: 'testine-adresse',
+			site: 'https://my-makeup.fr',
+		})
+		assert.equal(seo.indexable, false)
+		assert.match(seo.titre, /à 74 et alentours/)
+		assert.equal(zoneProfil(profil), '74 et alentours et 30 km autour')
+	})
+
+	test('a postal code alone names no City in the JSON-LD', () => {
+		for (const city of ['7 impasse des Essais Fictifs, 74200', '74200']) {
+			const seo = seoProfil({
+				profil: { ...attributs, city },
+				slug: 'testine-adresse',
+				site: 'https://my-makeup.fr',
+			})
+			assert.equal(seo.indexable, true, city)
+			const [personne] = seo.jsonLd
+			assert.equal(personne.workLocation, null, city)
+			assert.equal(personne.makesOffer[0].itemOffered.areaServed, null, city)
+			assert.doesNotMatch(JSON.stringify(seo), /Essais|impasse|Fictifs/)
 		}
 	})
 

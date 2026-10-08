@@ -97,13 +97,15 @@ const PAS_UNE_VILLE = new Set([
  * Usable city: the public place of the field (villePublique: the commune of
  * a postal address, « Annecy (74) », never its street) is a town or a
  * postcode, not a country, not free text. An address without a commune nor
- * a postal code (« 3 avenue X ») is not usable.
+ * a postal code (« 3 avenue X ») is not usable, nor a text that starts with
+ * a number other than a postal code (« 74 et alentours »).
  * @param {unknown} city
  * @returns {boolean}
  */
 export function villeExploitable(city) {
 	const v = normaliser(villePublique(city))
 	if (v === '' || PAS_UNE_VILLE.has(v)) return false
+	if (/^\d+,? /.test(v) && !/^\d{5}\b/.test(v)) return false
 	if (!/[a-z]/.test(v) && !/\b\d{5}\b/.test(v)) return false
 	return v.split(' ').length <= 6
 }

@@ -315,7 +315,8 @@ export function seoProfil({
 	]
 	if (indexable) {
 		const idPersonne = `${url}#personne`
-		const commune = lieu.commune || ville
+		// a postal code alone (an address without its commune) names no City
+		const commune = /\p{L}/u.test(lieu.commune) ? lieu.commune : ''
 		const zone = commune ? { '@type': 'City', name: commune } : null
 		jsonLd.unshift({
 			'@context': 'https://schema.org',

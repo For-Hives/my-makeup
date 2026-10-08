@@ -4,30 +4,47 @@
  * (« Annecy (74) »), never a street number nor a street.
  *
  * The city field is free text: a few artists typed their postal address
- * there (2 to 3 of 100 in production on 08/10). Since #946 such a field was
- * refused by completude.js, so a complete profile left the sitemap and was
- * noindex; and the street was published on the profile, in the search, in
- * the JSON-LD and in the props of the page. Every public place now goes
- * through lieuPublic(); the artist's space keeps what she typed.
+ * there. Since #946 such a field was refused by completude.js, so a complete
+ * profile left the sitemap and was noindex; and the street was published on
+ * the profile, in the search, in the JSON-LD and in the props of the page.
+ * Every public place now goes through lieuPublic(); the artist's space keeps
+ * what she typed.
  *
- * Read as an address: a field with a type of street (rue, avenue, place,
- * lieu-dit…) or that starts with a street number. Then:
- * - with a postal code: the commune after it (« 74000 Annecy »), else the
- *   place before it when it holds no street (« …, Annecy 74000 »), else the
- *   postal code alone (« 74000 »);
+ * Read as an address:
+ * - a field with a type of street or a part of an address (rue, avenue,
+ *   place, lieu-dit, BP, ZA…);
+ * - a number at the start and a postal code further (« 12 Les Marais 74000
+ *   Annecy »);
+ * - two words or more, a postal code and a place (« Le Bourg 74300 Cluses »).
+ * Then:
+ * - with a postal code: the commune after it, else the place before it when
+ *   it holds no street (« …, Annecy 74000 »), else the postal code alone;
  * - without a postal code: the last part after a comma when it holds no
  *   street (« 12 rue X, Annecy »); without a comma the commune cannot be
  *   told from the end of the street (« rue Victor Hugo »), so only a
  *   compound name is taken (« 3 place Z Thonon-les-Bains »), else nothing.
+ *
+ * A number at the start followed by a place alone (« 74 Annecy », « 12 Le
+ * Bourg ») may be a département or a street number: the place is published
+ * without the number, and with it only when the place is the name of that
+ * département (« 74 Haute-Savoie » → « Haute-Savoie (74) »). A number
+ * followed by free text is no street number (« 74 et alentours », « 3
+ * villes : … »): shown as typed.
+ *
  * Any other field is shown as typed (« Paris, Lyon et Annecy », « Toute la
  * France »), except one place with its postal code (« Annecy 74000 »),
- * written « Annecy (74) ». CEDEX and a final « France » are dropped. A
- * commune typed in capitals or in lower case is written as a name.
- * lieuPublic(lieuPublic(x).texte) gives the same place: the public page
- * reads it again from its props.
+ * written « Annecy (74) ». CEDEX and a final « France » are dropped, and
+ * from an address a final foreign country too. A commune typed in capitals
+ * or in lower case is written as a name. lieuPublic(lieuPublic(x).texte)
+ * gives the same place: the public page reads it again from its props.
  */
 
 import { villeAffichee } from '../format-zone.js'
+import {
+	DEPARTEMENTS,
+	departementDuCodePostal,
+	normaliserLieu,
+} from '../lieu.js'
 
 /** Help of the city field in the artist's space */
 export const AIDE_VILLE =
@@ -71,6 +88,16 @@ const VOIES = new Set([
 	'hameau',
 	'lotissement',
 	'residence',
+	'clos',
+	'domaine',
+	'parc',
+	'za',
+	'zac',
+	'zae',
+	'zi',
+	'bp',
+	'cs',
+	'tsa',
 	'batiment',
 	'bat',
 	'appartement',
@@ -101,14 +128,69 @@ const PARTICULES = new Set([
 ])
 const ARTICLES = new Set(['le', 'la', 'les'])
 
-// a street number at the start: « 12 », « 12, », « 12bis », « 3 B »
+/** Titles inside a name of street (« avenue du Général Charles-de-Gaulle ») */
+const TITRES = new Set([
+	'general',
+	'gal',
+	'marechal',
+	'president',
+	'docteur',
+	'dr',
+	'abbe',
+	'colonel',
+	'commandant',
+	'capitaine',
+	'lieutenant',
+	'professeur',
+	'pasteur',
+	'amiral',
+	'cardinal',
+])
+
+/** Words that say how far, not where (« 74 et alentours », « 74 partout ») */
+const PAS_UN_LIEU = new Set([
+	'partout',
+	'alentours',
+	'alentour',
+	'environs',
+	'autour',
+	'toute',
+	'tout',
+	'tous',
+	'toutes',
+	'france',
+	'region',
+	'departement',
+	'departements',
+	'secteur',
+	'secteurs',
+	'ville',
+	'villes',
+	'km',
+	'kms',
+	'deplacement',
+	'deplacements',
+	'domicile',
+	'rayon',
+])
+
+// a street number at the start: « 12 », « 12, », « 12bis », « 3 B »; also
+// a code of département (« 74 », « 2A »)
 const NUMERO_EN_TETE = /^\d{1,4}(?:\s?(?:bis|ter|quater|[a-d]))?(?=[\s,]|$)/i
-const CODE_POSTAL = /(?<!\d)(\d{5})(?!\d)/
+const CODES_POSTAUX = /(?<!\d)\d{5}(?!\d)/g
 // « 74 000 » written with a space
-const CODE_POSTAL_ESPACE = /(?<!\d)(\d{2}) (\d{3})(?![\d])/g
+const CODE_POSTAL_ESPACE = /(?<!\d)(\d{2}) (\d{3})(?!\d)/g
+// a foreign postal code before the town (« 1000 Bruxelles », « L-1234 »)
+const CODE_ETRANGER = /^(?:[a-z]{1,2}-)?\d{4}\s+/i
 const CEDEX = /\bcedex(?:\s*\d{1,2})?\b/gi
 const PAYS_FIN = /(?:[\s,;/–-]*\bfrance\b\.?)+\s*$/i
 const PAYS_APRES_SEPARATEUR = /(?:\s*[,;/–-]\s*france\.?)+\s*$/i
+// at the end of an address only: the town comes before (Luxembourg and
+// Monaco are towns too, they stay)
+const PAYS_ETRANGER_FIN =
+	/(?:[\s,;/–-]*\b(?:suisse|belgique|allemagne|italie|espagne)\b\.?)+\s*$/i
+// several places or a sentence, not one place
+const SEPARATEURS = /[,;:/|+()[\]]|\s[-–—]\s/
 // what a « Commune (74) » already written holds
 const COMMUNE_DEPARTEMENT = /^(.+?) \((\d{2}|2A|2B|97\d)\)$/
 
@@ -129,24 +211,20 @@ const estVoie = mot => VOIES.has(normaliserMot(mot))
 const aUneVoie = texte => mots(texte).some(estVoie)
 const sansBords = texte =>
 	texte.replace(/^[\s,;:./–-]+|[\s,;:/–-]+$/g, '').replace(/\s+/g, ' ')
+const sansNumero = texte => sansBords(texte.trim().replace(NUMERO_EN_TETE, ''))
+const sansPays = texte =>
+	texte.replace(PAYS_ETRANGER_FIN, '').replace(PAYS_FIN, '')
 
-/**
- * Département of a French postal code.
- * @param {string} code - 5 digits
- * @returns {string|null} '74000' → '74', '20090' → '2A', '97411' → '974'
- */
-export function departementDuCodePostal(code) {
-	if (typeof code !== 'string' || !/^\d{5}$/.test(code)) return null
-	if (code.startsWith('20')) return Number(code) < 20200 ? '2A' : '2B'
-	if (code.startsWith('97')) {
-		const outreMer = code.slice(0, 3)
-		return ['971', '972', '973', '974', '976'].includes(outreMer)
-			? outreMer
-			: null
-	}
-	const numero = Number(code.slice(0, 2))
-	return numero >= 1 && numero <= 95 ? code.slice(0, 2) : null
+/** The last postal code of a text, the one before the commune */
+function dernierCodePostal(texte) {
+	const codes = [...texte.matchAll(CODES_POSTAUX)]
+	const cp = codes.at(-1)
+	return cp ? { code: cp[0], index: cp.index } : null
 }
+
+/** Name of the département of a code, as compared */
+const nomDuDepartement = code =>
+	DEPARTEMENTS[code] ? normaliserLieu(DEPARTEMENTS[code]) : null
 
 // « ANNECY-LE-VIEUX » → « Annecy-le-Vieux », « l'isle-d'abeau » →
 // « L'Isle-d'Abeau »: only for a name typed all in capitals or in lower case
@@ -188,11 +266,51 @@ function nomDeLieu(texte) {
 }
 
 /**
+ * One place written alone (« Annecy », « La Roche sur Foron »,
+ * « Haute-Savoie »), not a list, a sentence nor a distance (« et
+ * alentours », « partout », « villes : … »).
+ * @param {string} texte
+ * @returns {boolean}
+ */
+function estUnLieu(texte) {
+	if (!/\p{L}/u.test(texte) || /\d/.test(texte) || SEPARATEURS.test(texte))
+		return false
+	const liste = mots(texte)
+	if (liste.length > 4) return false
+	const premier = normaliserMot(liste[0])
+	if (PARTICULES.has(premier) && !ARTICLES.has(premier)) return false
+	return !liste.some(mot => estVoie(mot) || PAS_UN_LIEU.has(normaliserMot(mot)))
+}
+
+/**
+ * Whether the field is a postal address (see the top of this file).
+ * @param {string} brut
+ * @returns {boolean}
+ */
+function estAdresse(brut) {
+	if (aUneVoie(brut)) return true
+	const t = sansPays(brut.replace(CEDEX, ' '))
+	const cp = dernierCodePostal(t)
+	if (!cp) return false
+	const avant = t.slice(0, cp.index)
+	// « 12 Les Marais 74000 Annecy », not « 3 villes : Annecy 74000, … »
+	if (NUMERO_EN_TETE.test(t)) return !/[:;/|+()[\]]/.test(avant)
+	// « Le Bourg 74300 Cluses », not « Annecy 74000 » nor « Thonon les Bains
+	// 74200 »
+	const apres = t.slice(cp.index + 5).split(/[,;/]/)[0]
+	return (
+		mots(avant.split(/[,;]/).at(-1) ?? '').length >= 2 &&
+		estUnLieu(sansBords(apres))
+	)
+}
+
+/**
  * The commune at the end of a street without a comma nor a postal code
  * (« 3 place Z Thonon-les-Bains »): only a compound name with a small word
  * inside (Thonon-les-Bains, Annecy-le-Vieux), or after Le, La or Les (Le
  * Grand-Bornand), so that the end of a street (rue Victor Hugo, rue
- * Joliot-Curie) is never taken for a commune.
+ * Joliot-Curie, avenue du Général Charles-de-Gaulle) is never taken for a
+ * commune.
  * @param {string} texte
  * @returns {string}
  */
@@ -208,6 +326,7 @@ function communeApresVoie(texte) {
 	const dernier = reste.at(-1)
 	if (/\d/.test(dernier) || !dernier.includes('-')) return ''
 	const avant = normaliserMot(reste.at(-2))
+	if (TITRES.has(avant)) return ''
 	if (
 		ARTICLES.has(avant) &&
 		reste.length >= 3 &&
@@ -226,8 +345,8 @@ function communeApresVoie(texte) {
  * @returns {{commune: string, codePostal: string}}
  */
 function communeDAdresse(adresse) {
-	const t = adresse.replace(CEDEX, ' ').replace(PAYS_FIN, '')
-	const cp = CODE_POSTAL.exec(t)
+	const t = sansPays(adresse.replace(CEDEX, ' '))
+	const cp = dernierCodePostal(t)
 	if (cp) {
 		// after the postal code, up to a separator, a digit or a street
 		const apres = []
@@ -236,29 +355,34 @@ function communeDAdresse(adresse) {
 			apres.push(mot)
 		}
 		let commune = nomDeLieu(apres.join(' '))
+		// « …, 74160 Haute-Savoie »: a département is no commune (Paris is
+		// both)
+		const departement = departementDuCodePostal(cp.code)
+		if (
+			commune &&
+			departement &&
+			departement !== '75' &&
+			normaliserLieu(commune) === nomDuDepartement(departement)
+		)
+			commune = ''
 		if (!commune) {
 			const avant = t.slice(0, cp.index).split(/[,;]/).at(-1) ?? ''
-			commune = nomDeLieu(avant) || communeApresVoie(avant)
+			commune = nomDeLieu(sansNumero(avant)) || communeApresVoie(avant)
 		}
-		return { commune, codePostal: cp[1] }
+		return { commune, codePostal: cp.code }
 	}
 	const parties = t
 		.split(/[,;]/)
 		.map(p => p.trim())
 		.filter(Boolean)
-	const derniere = parties.at(-1) ?? ''
+	// « 1000 Bruxelles »: the town without its foreign postal code
+	const derniere = (parties.at(-1) ?? '').replace(CODE_ETRANGER, '')
 	if (parties.length >= 2)
 		return {
 			commune: nomDeLieu(derniere) || communeApresVoie(derniere),
 			codePostal: '',
 		}
-	if (aUneVoie(derniere))
-		return { commune: communeApresVoie(derniere), codePostal: '' }
-	// a number then a place, no street (« 74 La Roche »): the place
-	return {
-		commune: nomDeLieu(derniere.replace(NUMERO_EN_TETE, '')),
-		codePostal: '',
-	}
+	return { commune: communeApresVoie(derniere), codePostal: '' }
 }
 
 /**
@@ -268,8 +392,11 @@ function communeDAdresse(adresse) {
  * @property {string} commune - the commune alone when it is known (for the
  *   JSON-LD), else the text
  * @property {string|null} departement - '74', '2A', '974' or null
- * @property {boolean} adresse - the field was read as a postal address
+ * @property {boolean} adresse - the field was read as a postal address, or
+ *   a number was dropped before a place
  */
+
+const AUCUN = { texte: '', commune: '', departement: null, adresse: false }
 
 /**
  * @param {unknown} city - as typed in the profile, or already public
@@ -277,10 +404,9 @@ function communeDAdresse(adresse) {
  */
 export function lieuPublic(city) {
 	const brut = villeAffichee(city).replace(CODE_POSTAL_ESPACE, '$1$2')
-	if (!brut)
-		return { texte: '', commune: '', departement: null, adresse: false }
+	if (!brut) return AUCUN
 
-	if (aUneVoie(brut) || NUMERO_EN_TETE.test(brut)) {
+	if (estAdresse(brut)) {
 		const { commune, codePostal } = communeDAdresse(brut)
 		const departement = codePostal ? departementDuCodePostal(codePostal) : null
 		let texte = ''
@@ -292,7 +418,27 @@ export function lieuPublic(city) {
 	const t = sansBords(
 		brut.replace(CEDEX, ' ').replace(PAYS_APRES_SEPARATEUR, '')
 	)
-	if (!t) return { texte: '', commune: '', departement: null, adresse: false }
+	if (!t) return AUCUN
+
+	// a number then one place: « 74 Annecy », « 12 Le Bourg », « 74
+	// Haute-Savoie »; never the number, unless it is the département named
+	const numero = NUMERO_EN_TETE.exec(t)
+	if (numero) {
+		const lieu = sansBords(t.slice(numero[0].length))
+		if (estUnLieu(lieu)) {
+			const nom = nomDeLieu(lieu)
+			const code = numero[0].replace(/\s/g, '').toUpperCase()
+			if (nomDuDepartement(code) === normaliserLieu(lieu))
+				return {
+					texte: `${nom} (${code})`,
+					commune: nom,
+					departement: code,
+					adresse: false,
+				}
+			return { texte: nom, commune: nom, departement: null, adresse: true }
+		}
+	}
+
 	const deja = COMMUNE_DEPARTEMENT.exec(t)
 	if (deja)
 		return { texte: t, commune: deja[1], departement: deja[2], adresse: false }
@@ -315,12 +461,11 @@ export function lieuPublic(city) {
 				adresse: false,
 			}
 	}
+	const cp = dernierCodePostal(t)
 	return {
 		texte: t,
 		commune: t,
-		departement: CODE_POSTAL.test(t)
-			? departementDuCodePostal(CODE_POSTAL.exec(t)[1])
-			: null,
+		departement: cp ? departementDuCodePostal(cp.code) : null,
 		adresse: false,
 	}
 }
