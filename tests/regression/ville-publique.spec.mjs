@@ -4,7 +4,9 @@
 // the profile is publiable by its commune (h1, no noindex, in the sitemap,
 // the commune in the JSON-LD), and the street is published nowhere: not in
 // the HTML, not in __NEXT_DATA__, not on a search card. The artist's space
-// keeps what she typed and says what her page shows.
+// keeps what she typed and says what her page shows. A street glued to the
+// commune (profile ines-virgule) is published nowhere either, and the
+// profile stays noindex and out of the sitemap.
 // Web-first waits only, no fixed timeout.
 import { expect, test } from '@playwright/test'
 import { getElementsByTagName, removeElement } from 'domutils'
@@ -12,6 +14,7 @@ import { parseDocument } from 'htmlparser2'
 import {
 	ADRESSE_FICTIVE,
 	PROFILS_PUBLICS,
+	RUE_COLLEE,
 	RUE_FICTIVE,
 } from './donnees-publiques.mjs'
 import { COMPTE_TEST } from './mock-api.mjs'
@@ -167,6 +170,29 @@ test.describe('UI-11 adresse postale tapée comme ville', () => {
 		)
 		const xml = await (await request.get('/sitemap.xml')).text()
 		expect(xml).not.toContain('lea-alentours')
+	})
+
+	test('une rue collée à la commune par une virgule (« Fictiville,impasse … ») : noindex, hors du sitemap, la rue nulle part', async ({
+		request,
+	}) => {
+		const reponse = await request.get('/profil/ines-virgule', {
+			maxRedirects: 0,
+		})
+		expect(reponse.status()).toBe(200)
+		const html = await reponse.text()
+		expect(elements(html, 'h1').map(e => textes(e).join('').trim())).toEqual([
+			'Inès Fictive',
+		])
+		expect(meta(html, 'robots')).toBe('noindex,follow')
+		expect(canonical(html)).toBeNull()
+		const donnees = nextData(html)
+		expect(donnees.props.pageProps.profilData.attributes.city).toBeNull()
+		sansRue(html, 'HTML')
+		sansRue(JSON.stringify(donnees), '__NEXT_DATA__')
+		expect(html).not.toContain(RUE_COLLEE)
+		expect(html).not.toContain('Fictiville')
+		const xml = await (await request.get('/sitemap.xml')).text()
+		expect(xml).not.toContain('ines-virgule')
 	})
 
 	test('carte de recherche : la commune, jamais la rue', async ({ page }) => {

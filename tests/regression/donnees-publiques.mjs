@@ -45,6 +45,9 @@ export const ADRESSE_FICTIVE =
 	'7 impasse des Essais Fictifs, 74200 Thonon-les-Bains, France'
 // what of it must never be published
 export const RUE_FICTIVE = ['impasse', 'Essais Fictifs', '7 impasse']
+// a street glued to a made-up commune by a comma, no postal code: nothing
+// of it can be published
+export const RUE_COLLEE = 'Fictiville,impasse des Essais Fictifs'
 
 const RESEAUX_COMPLETS = {
 	instagram: '@studio.fictif',
@@ -288,6 +291,20 @@ export const PROFILS_PUBLICS = [
 		city: '74 et alentours',
 		available: false,
 		attendu: { slug: 'lea-alentours', publiable: false },
+	}),
+	// UI-11: complete, a street glued to the commune by a comma, without a
+	// space nor a postal code: no usable city (as before UI-11), so noindex
+	// and out of the sitemap, and the street published nowhere. Not
+	// available, out of the search.
+	complet({
+		id: 116,
+		username: 'ines-virgule',
+		createdAt: '2024-09-03T10:00:00.000Z',
+		first_name: 'Inès',
+		last_name: 'Fictive',
+		city: RUE_COLLEE,
+		available: false,
+		attendu: { slug: 'ines-virgule', publiable: false },
 	}),
 ]
 
