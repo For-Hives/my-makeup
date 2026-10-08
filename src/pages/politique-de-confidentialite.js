@@ -131,7 +131,9 @@ function PolitiqueDeConfidentialite() {
 								{/* TODO(Andy): keep this list true on the day it ships.
 								    - Database (D8): if Strapi's database runs on the old Contabo VPS, add it to the Contabo line until URG-10.
 								    - Umami (MES-10): once Umami runs in Coolify at netcup, drop the Contabo line.
-								    - Mailgun: once MAILGUN_REGION=eu is live, say the emails leave from its EU servers. */}
+								    - Mailgun: once MAILGUN_REGION=eu is live, say the emails leave from its EU servers.
+								    - Contact form: with RESEND_API_KEY set, /api/sendMail sends through Resend (domain in
+								      eu-west-1), not Mailgun: name Resend here and under « Formulaire de contact ». */}
 								<ul>
 									<li>{`netcup GmbH (Allemagne) : hébergement du site.`}</li>
 									<li>
