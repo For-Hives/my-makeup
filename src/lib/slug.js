@@ -168,3 +168,6 @@ export function resoudreProfil(segment, table) {
  * @returns {string}
  */
 export const cheminProfil = slug => `/profil/${encodeURIComponent(slug)}`
+
+// Canari URG-12c : erreur de compilation volontaire, PR à fermer sans fusionner
+export const canari = (
