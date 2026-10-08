@@ -348,6 +348,11 @@ test.describe('SEO-10 sitemap, robots, noindex, canonical', () => {
 			'Le prix d’un maquillage de mariée',
 		])
 		expect(meta(article.html, 'og:type')).toBe('article')
+		// the SEO text of the editorial team, kept even under 70 characters
+		expect(meta(article.html, 'description')).toBe(ARTICLES[0].seo_description)
+		expect(meta(article.html, 'og:description')).toBe(
+			ARTICLES[0].seo_description
+		)
 		expect(jsonLd(article.html)[0].itemListElement).toHaveLength(3)
 
 		const accueil = await html(request, '/')

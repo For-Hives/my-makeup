@@ -62,15 +62,33 @@ export function texteBrut(v) {
 }
 
 /**
- * Meta description of 70 to 155 characters: the text when long enough, else
- * the fallback sentence.
- * @param {unknown} v
+ * Meta description of 155 characters at most: the first text of 70
+ * characters or more, else the fallback sentence (written to reach 70).
+ * @param {unknown|unknown[]} v - a text, or texts in order of preference
  * @param {string} repli
  * @returns {string}
  */
 export function descriptionMeta(v, repli) {
-	const t = texteBrut(v)
-	return tronquer(t.length >= DESCRIPTION_MIN ? t : repli, DESCRIPTION_MAX)
+	const t = (Array.isArray(v) ? v : [v])
+		.map(texteBrut)
+		.find(candidat => candidat.length >= DESCRIPTION_MIN)
+	return tronquer(t ?? repli, DESCRIPTION_MAX)
+}
+
+/**
+ * Meta description of a talent or an article: the SEO text written by the
+ * editorial team is kept as it is, even under 70 characters (cut at 155);
+ * descriptionMeta() of the other texts only when it is empty.
+ * @param {unknown} seoDescription
+ * @param {unknown[]} autres
+ * @param {string} repli
+ * @returns {string}
+ */
+export function descriptionEditoriale(seoDescription, autres, repli) {
+	const redigee = texteBrut(seoDescription)
+	return redigee
+		? tronquer(redigee, DESCRIPTION_MAX)
+		: descriptionMeta(autres, repli)
 }
 
 /**
@@ -344,8 +362,9 @@ export function seoTalent({ talent, site }) {
 	const url = urlAbsolue(chemin('talent', texte(t.slug)), site)
 	return {
 		titre: titrePage(nom),
-		description: descriptionMeta(
-			t.seo_description || t.description,
+		description: descriptionEditoriale(
+			t.seo_description,
+			[t.description],
 			`${nom} : découvrez les maquilleuses professionnelles de cette spécialité sur ${MARQUE}.`
 		),
 		url,
@@ -376,9 +395,10 @@ export function seoArticle({ article, site, apiBase = '' }) {
 	const image = medias0(a.galery, apiBase) || urlAbsolue(IMAGE_PAR_DEFAUT, site)
 	return {
 		titre: titrePage(espaces(a.seo_title) || nom),
-		description: descriptionMeta(
-			a.seo_description || a.excerpt || a.content,
-			`${nom} : un article du blog de ${MARQUE}.`
+		description: descriptionEditoriale(
+			a.seo_description,
+			[a.excerpt, a.content],
+			`${nom} : un article du blog de ${MARQUE} sur le maquillage et les maquilleuses professionnelles.`
 		),
 		url,
 		indexable: true,

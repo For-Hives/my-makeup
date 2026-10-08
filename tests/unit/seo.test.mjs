@@ -127,6 +127,61 @@ describe('titles and descriptions (plans/02 U44-U45)', () => {
 			'Un texte lien assez long pour passer le seuil de soixante-dix caractères.'
 		)
 	})
+
+	test('U45 talents and articles: the editorial SEO text kept even when short, a fallback of 70 characters or more', () => {
+		const redige = 'Combien coûte un maquillage de mariée ? Essai, jour J.'
+		assert.equal(
+			seoArticle({
+				article: { slug: 'a', title: 'A', seo_description: redige },
+				site: SITE,
+			}).description,
+			redige
+		)
+		assert.equal(
+			seoTalent({
+				talent: { slug: 't', title: 'T', seo_description: redige },
+				site: SITE,
+			}).description,
+			redige
+		)
+		const long = seoArticle({
+			article: { slug: 'a', title: 'A', seo_description: 'Texte. '.repeat(40) },
+			site: SITE,
+		})
+		assert.ok(long.description.length <= 155, long.description)
+		for (const s of [
+			seoArticle({ article: { slug: 'a', title: 'A' }, site: SITE }),
+			seoArticle({
+				article: {
+					slug: 'a',
+					title: 'A',
+					seo_description: ' ',
+					excerpt: 'Court.',
+					content: '# Titre\n\nCourt.',
+				},
+				site: SITE,
+			}),
+			seoTalent({ talent: { slug: 't', title: 'T' }, site: SITE }),
+			seoTalent({
+				talent: { slug: 't', title: 'T', description: 'Court.' },
+				site: SITE,
+			}),
+		])
+			assert.ok(
+				s.description.length >= 70 && s.description.length <= 155,
+				s.description
+			)
+		// no SEO text: the excerpt, else the content, when long enough
+		const contenu =
+			'Un article fictif sur le prix du maquillage de mariée, de l’essai au jour J, et ce que comprend le déplacement.'
+		assert.equal(
+			seoArticle({
+				article: { slug: 'a', title: 'A', excerpt: 'Court.', content: contenu },
+				site: SITE,
+			}).description,
+			contenu
+		)
+	})
 })
 
 describe('canonical, robots and Open Graph (plans/02 U46, U51, U52)', () => {
