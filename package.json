@@ -9,6 +9,7 @@
     "lint": "next lint",
     "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test 'tests/unit/*.test.mjs'",
     "test:auth": "node tests/auth/run.mjs",
+    "test:regression": "node tests/regression/run.mjs",
     "prettier": "prettier --write .",
     "precommit": "lint-staged",
     "prepare": "husky install",
@@ -55,6 +56,7 @@
     "zod": "3.25.76"
   },
   "devDependencies": {
+    "@playwright/test": "1.59.1",
     "@tailwindcss/forms": "0.5.11",
     "@testing-library/cypress": "10.1.3",
     "autoprefixer": "10.5.4",

@@ -4,100 +4,43 @@ import { BadgeDispo } from '@/components/Profil/Atoms/BadgeDispo'
 import { BadgeIndispo } from '@/components/Profil/Atoms/BadgeIndispo'
 import ModalUpdateResumeProfil from '@/components/Profil/Atoms/ModalUpdate/ModalUpdateResumeProfil'
 import { useRouter } from 'next/router'
+import BoutonModifier from '@/components/Profil/Atoms/BoutonModifier'
 
 function ResumeProfil(props) {
 	const router = useRouter()
 	const { publicView } = router.query
 
-	const [user, setUser] = React.useState(props.user)
+	// the profile of the page (src/pages/auth/profil.js), never copied here:
+	// the name, the badge and the picture show what the API stored (UI-01)
+	const user = props.user
 	const [isPublic, setIsPublic] = React.useState(false)
-
-	const [starsToDisplay, setStarsToDisplay] = React.useState(5)
-	const [availability, setAvailability] = React.useState(true)
 	const [isModalOpen, setIsModalOpen] = React.useState(false)
-	const [profilPicture, setProfilPicture] = React.useState(
-		'/assets/pp_makeup.webp'
-	)
-
-	const handleAvailability = () => {
-		setAvailability(!availability)
-	}
-
-	const handleProfilPicture = pp => {
-		setProfilPicture(pp)
-	}
+	const availability = !!user?.available
+	const profilPicture = user?.main_picture?.url || '/assets/pp_makeup.webp'
 
 	const handleIsModalOpen = () => {
 		if (!props.isPublic) {
 			setIsModalOpen(!isModalOpen)
 		}
-		setUser(props.user)
 	}
-
-	const handleUpdateUser = user => {
-		const newUser = JSON.parse(JSON.stringify(user))
-		props.handleUpdateUser(newUser)
-		setAvailability(!!user?.available)
-	}
-
-	useEffect(() => {
-		setAvailability(!!user?.available)
-		setProfilPicture(user?.main_picture?.url)
-	}, [user])
 
 	/**
 	 * default value at first render
 	 */
 	useEffect(() => {
-		setAvailability(!!user?.available)
-		setProfilPicture(user?.main_picture?.url || '/assets/pp_makeup.webp')
 		setIsPublic(!!publicView)
 	}, [])
 
 	useEffect(() => {
-		const newUser = JSON.parse(JSON.stringify(user))
-		handleUpdateUser(newUser)
 		setIsPublic(props.isPublic)
 	}, [props.isPublic])
 
-	useEffect(() => {
-		setProfilPicture(user?.main_picture?.url || '/assets/pp_makeup.webp')
-	}, [props.isPublic, profilPicture])
-
 	return (
-		<div
-			className={
-				'group relative bg-white px-4 pb-24 shadow-xl md:px-8 2xl:px-0'
-			}
-		>
-			{!isPublic && (
-				<button
-					data-cy="update-resume-button"
-					onClick={handleIsModalOpen}
-					className={
-						'absolute left-0 top-0 -z-10 flex h-full w-full items-center justify-center opacity-0 ' +
-						'bg-white/75 backdrop-blur-none group-hover:z-20 group-hover:opacity-100 ' +
-						'pointer-events-none transition duration-300 group-hover:pointer-events-auto group-hover:backdrop-blur-[2px] ' +
-						'user-select-none group-hover:user-select-auto focus:outline-none'
-					}
-				>
-					<div
-						className={
-							'btn-alt-primary mt-[90px] flex items-center gap-3 bg-white text-indigo-900'
-						}
-					>
-						<span className="material-icons-round">edit</span>
-						<span className={'font-semibold'}>
-							Modifier vos informations personnelles
-						</span>
-					</div>
-				</button>
-			)}
+		<div className={'relative bg-white px-4 pb-24 shadow-xl md:px-8 2xl:px-0'}>
 			<ModalUpdateResumeProfil
 				isModalOpen={isModalOpen}
 				handleIsModalOpen={handleIsModalOpen}
-				handleProfilPicture={handleProfilPicture}
-				handleUpdateUser={handleUpdateUser}
+				handleUpdateUser={props.handleUpdateUser}
 				user={user}
 			/>
 			<div className="mx-auto max-w-7xl pt-[90px]">
@@ -109,13 +52,21 @@ function ResumeProfil(props) {
 					>
 						{!isPublic ? (
 							<button
+								type="button"
+								data-cy="update-picture-button"
+								aria-label="Modifier votre photo de profil"
 								className={
-									'absolute left-0 top-0 flex h-full w-full flex-col items-center justify-center rounded-full text-white/0 transition hover:text-white xl:bg-indigo-700/0 xl:hover:bg-indigo-700/25'
+									'absolute left-1/2 top-0 z-10 flex h-[200px] w-[200px] -translate-x-1/2 flex-col items-center justify-center rounded-full text-white/0 transition hover:bg-indigo-700/25 hover:text-white xl:left-0 xl:translate-x-0 ' +
+									'focus-visible:bg-indigo-700/40 focus-visible:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-2'
 								}
 								onClick={handleIsModalOpen}
 							>
-								<span className="material-icons-round">add_a_photo</span>
-								<p className={'text-sm font-semibold'}>modifier votre photo</p>
+								<span className="material-icons-round" aria-hidden="true">
+									add_a_photo
+								</span>
+								<span className={'text-sm font-semibold'}>
+									modifier votre photo
+								</span>
 							</button>
 						) : null}
 						<Image
@@ -136,13 +87,7 @@ function ResumeProfil(props) {
 								'flex h-full w-full flex-col justify-between py-8 md:py-0 md:pl-20'
 							}
 						>
-							<div
-								className={
-									'flex w-full flex-col gap-2' +
-									(!isPublic ? ' cursor-pointer' : ' cursor-default')
-								}
-								onClick={handleIsModalOpen}
-							>
+							<div className={'flex w-full flex-col gap-2'}>
 								<h3
 									className={'text-3xl font-bold tracking-tight text-gray-800'}
 									data-cy="resume-name"
@@ -163,6 +108,15 @@ function ResumeProfil(props) {
 								>
 									{user?.company_artist_name}
 								</h3>
+								{!isPublic ? (
+									<div className={'mt-2'}>
+										<BoutonModifier
+											dataCy="update-resume-button"
+											onClick={handleIsModalOpen}
+											libelle="Modifier vos informations personnelles"
+										/>
+									</div>
+								) : null}
 							</div>
 							<div>
 								<div className={'flex items-center gap-2'}>
@@ -189,13 +143,7 @@ function ResumeProfil(props) {
 								'flex h-full w-full flex-col items-start justify-between'
 							}
 						>
-							<div
-								className={
-									'flex items-center gap-5' +
-									(!isPublic ? ' cursor-pointer' : ' cursor-default')
-								}
-								onClick={handleIsModalOpen}
-							>
+							<div className={'flex items-center gap-5'}>
 								{availability ? (
 									<>
 										<BadgeDispo />

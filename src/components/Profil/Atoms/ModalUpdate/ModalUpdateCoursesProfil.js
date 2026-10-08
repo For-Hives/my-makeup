@@ -5,6 +5,15 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useSession } from 'next-auth/react'
 import * as zod from 'zod'
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
+import { listeApresSauvegarde } from '@/lib/sauvegarde-profil'
+import {
+	BoutonFermer,
+	BoutonSauvegarder,
+	ErreurSauvegarde,
+	FondModale,
+	suivreChamp,
+	useEnvoi,
+} from '@/components/Profil/Atoms/ModalUpdate/ModalElements'
 
 const schema = zod
 	.object({
@@ -36,6 +45,10 @@ const schema = zod
 		course_description: true,
 	})
 
+// edit and delete buttons of a listed item: 44 px, focus visible (UI-02)
+const BOUTON_ICONE =
+	'flex h-11 w-11 items-center justify-center rounded-full hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600'
+
 export default function ModalUpdateCoursesProfil(props) {
 	const user = props.user
 
@@ -47,6 +60,7 @@ export default function ModalUpdateCoursesProfil(props) {
 	} = useForm({
 		resolver: zodResolver(schema),
 	})
+	const suivre = suivreChamp(register)
 
 	const [open, setOpen] = useState(props.isModalOpen)
 	// diploma
@@ -59,6 +73,12 @@ export default function ModalUpdateCoursesProfil(props) {
 	const [userCoursesSchool, setUserCoursesSchool] = useState('')
 	const [userCoursesDateGraduation, setUserCoursesDateGraduation] = useState('')
 	const [userCoursesDescription, setUserCoursesDescription] = useState('')
+
+	// Escape, a click outside and « Fermer » wait for the save in progress
+	const { envoi, setEnvoi, erreurEnvoi, setErreurEnvoi, fermer } = useEnvoi(
+		props.isModalOpen,
+		props.handleIsModalOpen
+	)
 
 	const { data: session } = useSession()
 
@@ -128,36 +148,29 @@ export default function ModalUpdateCoursesProfil(props) {
 		}
 	}
 
-	const handleSubmitCourses = event => {
-		// clean the courses, remove the id field from the courses, only if the id is not empty
-		let userCoursesCleaned = []
-		if (userCoursesId === '') {
-			userCoursesCleaned = userCourses.map(course => {
-				const { id, ...rest } = course
-				return rest
-			})
-		} else {
-			userCoursesCleaned = userCourses
-		}
-		const data = {
+	const handleSubmitCourses = async event => {
+		// the ids are Strapi's (or local ones for new items): never sent
+		const userCoursesCleaned = userCourses.map(course => {
+			const { id, ...rest } = course
+			return rest
+		})
+		const champs = {
 			courses: userCoursesCleaned,
 		}
-		patchMeMakeup(session, data)
-		// close the modal & reset the zod form
-		setUserCoursesId('')
-		setUserCoursesDiploma('')
-		setUserCoursesSchool('')
-		setUserCoursesDateGraduation('')
-		setUserCoursesDescription('')
+		setEnvoi(true)
+		setErreurEnvoi(null)
+		const resultat = await patchMeMakeup(session, champs, 'formations')
+		setEnvoi(false)
+		if (!resultat.ok) {
+			setErreurEnvoi(resultat.error ?? null)
+			return
+		}
 
-		let userTemp = user
-		userTemp.courses = userCoursesCleaned
-		// to change to object reference
-		const newUser = JSON.parse(JSON.stringify(userTemp))
-		props.handleUpdateUser(newUser)
-
-		// formState.reset()
-		reset()
+		// shown on the page once the API stored it, then the modal closes
+		props.handleUpdateUser({
+			...user,
+			courses: listeApresSauvegarde(resultat.data, 'courses', userCourses),
+		})
 		props.handleIsModalOpen()
 	}
 
@@ -166,13 +179,6 @@ export default function ModalUpdateCoursesProfil(props) {
 	}, [props.isModalOpen])
 
 	const cancelButtonRef = useRef(null)
-	const inputRef = useRef(null)
-
-	const handleClick = event => {
-		// 👇️ open file input box on click of another element
-		// 👇️ trigger click event on input element to open file dialog
-		inputRef.current.click()
-	}
 
 	const handleUpdateCoursesDiploma = event => {
 		setUserCoursesDiploma(event.target.value)
@@ -208,9 +214,11 @@ export default function ModalUpdateCoursesProfil(props) {
 		setUserCoursesDescription(courseToUpdate[0].course_description)
 	}
 
-	// reset the form when the modal is closed
+	// reset the form when the modal is closed: what was changed without
+	// saving is dropped
 	useEffect(() => {
 		if (!open) {
+			setUserCourses(user.courses ?? [])
 			setUserCoursesId('')
 			setUserCoursesDiploma('')
 			setUserCoursesSchool('')
@@ -218,7 +226,7 @@ export default function ModalUpdateCoursesProfil(props) {
 			setUserCoursesDescription('')
 			reset()
 		}
-	}, [open, reset])
+	}, [open, reset, user.courses])
 
 	return (
 		<Transition.Root show={open} as={Fragment}>
@@ -226,42 +234,30 @@ export default function ModalUpdateCoursesProfil(props) {
 				as="div"
 				className="relative z-30"
 				initialFocus={cancelButtonRef}
-				onClose={props.handleIsModalOpen}
+				onClose={fermer}
 			>
-				<Transition.Child
-					as={Fragment}
-					enter="ease-out duration-300"
-					enterFrom="opacourses-0"
-					enterTo="opacourses-100"
-					leave="ease-in duration-200"
-					leaveFrom="opacourses-100"
-					leaveTo="opacourses-0"
-				>
-					<div className="bg-opacourses-75 transition-opacourses fixed inset-0 bg-gray-500" />
-				</Transition.Child>
+				<FondModale />
 
 				<div className="fixed inset-0 z-30 overflow-y-auto">
 					<div className="flex min-h-full items-center justify-center p-4 text-center">
 						<Transition.Child
 							as={Fragment}
 							enter="ease-out duration-300"
-							enterFrom="opacourses-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-							enterTo="opacourses-100 translate-y-0 sm:scale-100"
+							enterFrom="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+							enterTo="opacity-100 translate-y-0 sm:scale-100"
 							leave="ease-in duration-200"
-							leaveFrom="opacourses-100 translate-y-0 sm:scale-100"
-							leaveTo="opacourses-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+							leaveFrom="opacity-100 translate-y-0 sm:scale-100"
+							leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
 						>
-							<Dialog.Panel className="relative w-full transform rounded-lg bg-white p-8 text-left shadow-2xl transition-all sm:max-w-7xl">
-								<button
-									type="button"
-									onClick={props.handleIsModalOpen}
+							<Dialog.Panel
+								data-cy="modal-panel"
+								className="relative w-full transform rounded-lg bg-white p-8 text-left shadow-2xl transition-all sm:max-w-7xl"
+							>
+								<BoutonFermer
+									onClick={fermer}
+									disabled={envoi}
 									ref={cancelButtonRef}
-									className={
-										'absolute right-0 top-0 m-6 flex items-center justify-center'
-									}
-								>
-									<span className="material-icons-round">close</span>
-								</button>
+								/>
 								<div className="flex flex-col items-start gap-8">
 									<div className="text-left">
 										<Dialog.Title
@@ -299,8 +295,11 @@ export default function ModalUpdateCoursesProfil(props) {
 																	type={'text'}
 																	{...register('diploma')}
 																	value={userCoursesDiploma ?? ''}
-																	onChange={handleUpdateCoursesDiploma}
-																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
+																	onChange={suivre(
+																		'diploma',
+																		handleUpdateCoursesDiploma
+																	)}
+																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
 																/>
 																{errors.diploma && (
 																	<p
@@ -327,8 +326,11 @@ export default function ModalUpdateCoursesProfil(props) {
 																	type={'text'}
 																	{...register('school')}
 																	value={userCoursesSchool ?? ''}
-																	onChange={handleUpdateCoursesSchool}
-																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
+																	onChange={suivre(
+																		'school',
+																		handleUpdateCoursesSchool
+																	)}
+																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
 																/>
 																{errors.school && (
 																	<p
@@ -355,8 +357,11 @@ export default function ModalUpdateCoursesProfil(props) {
 																	type={'date'}
 																	{...register('date_graduation')}
 																	value={userCoursesDateGraduation ?? ''}
-																	onChange={handleUpdateCoursesDateGraduation}
-																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
+																	onChange={suivre(
+																		'date_graduation',
+																		handleUpdateCoursesDateGraduation
+																	)}
+																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
 																/>
 																{errors.date_graduation && (
 																	<p
@@ -382,8 +387,11 @@ export default function ModalUpdateCoursesProfil(props) {
 																	name="course_description"
 																	{...register('course_description')}
 																	value={userCoursesDescription ?? ''}
-																	onChange={handleUpdateCoursesDescription}
-																	className="block min-h-[200px] w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
+																	onChange={suivre(
+																		'course_description',
+																		handleUpdateCoursesDescription
+																	)}
+																	className="block min-h-[200px] w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
 																/>
 																{errors.course_description && (
 																	<p
@@ -435,20 +443,30 @@ export default function ModalUpdateCoursesProfil(props) {
 																}
 															>
 																<button
+																	type="button"
 																	data-cy={`course-edit-button-${index}`}
-																	className={'flex items-center justify-center'}
+																	aria-label={`Modifier la formation ${course.diploma ?? ''}`}
+																	className={BOUTON_ICONE}
 																	onClick={() => handleEditCourse(course.id)}
 																>
-																	<span className="material-icons-round text-xl text-orange-600">
+																	<span
+																		className="material-icons-round text-xl text-orange-600"
+																		aria-hidden="true"
+																	>
 																		edit
 																	</span>
 																</button>
 																<button
+																	type="button"
 																	data-cy={'course-delete-button'}
-																	className={'flex items-center justify-center'}
+																	aria-label={`Retirer la formation ${course.diploma ?? ''}`}
+																	className={BOUTON_ICONE}
 																	onClick={() => handleDeleteCourse(course.id)}
 																>
-																	<span className="material-icons-round text-xl text-red-500">
+																	<span
+																		className="material-icons-round text-xl text-red-500"
+																		aria-hidden="true"
+																	>
 																		delete
 																	</span>
 																</button>
@@ -508,15 +526,13 @@ export default function ModalUpdateCoursesProfil(props) {
 										</div>
 									</div>
 								</div>
-								<div className="mt-4 flex justify-end">
-									<button
-										data-cy="save-button-courses"
-										type="button"
-										className="btn-primary"
+								<div className="mt-4 flex flex-col items-end gap-4">
+									<ErreurSauvegarde message={erreurEnvoi} />
+									<BoutonSauvegarder
+										dataCy="save-button-courses"
+										envoi={envoi}
 										onClick={handleSubmitCourses}
-									>
-										Sauvegarder
-									</button>
+									/>
 								</div>
 							</Dialog.Panel>
 						</Transition.Child>

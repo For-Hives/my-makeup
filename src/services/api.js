@@ -21,6 +21,7 @@ function sessionExpiree() {
  * @param {object} session - The NextAuth session object containing jwt
  * @param {object} options - Fetch options (method, body, etc.)
  * @returns {Promise<Response|null>} - The fetch response or null if unauthorized
+ * @throws {TypeError} when the API cannot be reached (network error)
  */
 export async function authenticatedFetch(url, session, options = {}) {
 	// The pages no longer send the session in their props: right after a page
@@ -31,10 +32,14 @@ export async function authenticatedFetch(url, session, options = {}) {
 		return null
 	}
 
+	// a FormData body (uploads) sets its own multipart Content-Type
+	const formulaire =
+		typeof FormData !== 'undefined' && options.body instanceof FormData
+
 	const response = await fetch(url, {
 		...options,
 		headers: {
-			'Content-Type': 'application/json',
+			...(formulaire ? {} : { 'Content-Type': 'application/json' }),
 			Accept: 'application/json',
 			Authorization: `Bearer ${jwt}`,
 			...options.headers,

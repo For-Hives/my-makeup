@@ -10,6 +10,7 @@
  */
 
 import { CODES_ERREUR } from './auth-erreurs.js'
+import { SECTIONS_PROFIL } from './sauvegarde-profil.js'
 
 export const CONTACT_CHANNELS = [
 	'email',
@@ -75,6 +76,12 @@ export const EVENTS = {
 	// an auth error shown outside the sign-in form: /auth/error, sign-up form
 	auth_error: { code: oneOf(CODES_ERREUR) },
 	session_expired: { where: oneOf(['api_401', 'jwt_expire', 'middleware']) },
+	// every save of the artist's space (UI-01), `ok` = stored by the API
+	profile_save: { section: oneOf(SECTIONS_PROFIL), ok: flag },
+	// a picture refused before (size, type) or by the API (server) (UI-03)
+	upload_error: { kind: oneOf(['size', 'type', 'server']) },
+	// account deleted by its owner, sent once the API confirmed it
+	account_delete: {},
 }
 
 /**

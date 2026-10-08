@@ -3,7 +3,7 @@ import React, { useEffect } from 'react'
 const totalPointToComplete = 13
 
 function CompletionProfilProgressBar(props) {
-	const { user, handleUpdateUser } = props
+	const { user } = props
 	const [completion, setCompletion] = React.useState(0)
 	const [valueToDisplay, setValueToDisplay] = React.useState(100)
 
@@ -35,12 +35,10 @@ function CompletionProfilProgressBar(props) {
 		if (user.image_gallery && user.image_gallery.length > 0) count++
 
 		setCompletion(count)
-		let userTemp = user
-		handleUpdateUser(userTemp)
 
 		let newProgressValue = Math.round((100 / totalPointToComplete) * count)
 		setValueToDisplay(newProgressValue)
-	}, [user, handleUpdateUser])
+	}, [user])
 
 	return (
 		<div className={'w-full md:w-1/2'}>

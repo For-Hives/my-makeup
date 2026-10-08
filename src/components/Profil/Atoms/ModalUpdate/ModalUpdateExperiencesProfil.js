@@ -5,6 +5,15 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useSession } from 'next-auth/react'
 import * as zod from 'zod'
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
+import { listeApresSauvegarde } from '@/lib/sauvegarde-profil'
+import {
+	BoutonFermer,
+	BoutonSauvegarder,
+	ErreurSauvegarde,
+	FondModale,
+	suivreChamp,
+	useEnvoi,
+} from '@/components/Profil/Atoms/ModalUpdate/ModalElements'
 
 const schema = zod
 	.object({
@@ -41,6 +50,10 @@ const schema = zod
 		description: true,
 	})
 
+// edit and delete buttons of a listed item: 44 px, focus visible (UI-02)
+const BOUTON_ICONE =
+	'flex h-11 w-11 items-center justify-center rounded-full hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600'
+
 export default function ModalUpdateExperiencesProfil(props) {
 	const user = props.user
 
@@ -52,6 +65,7 @@ export default function ModalUpdateExperiencesProfil(props) {
 	} = useForm({
 		resolver: zodResolver(schema),
 	})
+	const suivre = suivreChamp(register)
 
 	const [open, setOpen] = useState(props.isModalOpen)
 	// diploma
@@ -67,6 +81,12 @@ export default function ModalUpdateExperiencesProfil(props) {
 	const [userExperiencesDateEnd, setUserExperiencesDateEnd] = useState('')
 	const [userExperiencesDescription, setUserExperiencesDescription] =
 		useState('')
+
+	// Escape, a click outside and « Fermer » wait for the save in progress
+	const { envoi, setEnvoi, erreurEnvoi, setErreurEnvoi, fermer } = useEnvoi(
+		props.isModalOpen,
+		props.handleIsModalOpen
+	)
 
 	const { data: session } = useSession()
 
@@ -91,17 +111,20 @@ export default function ModalUpdateExperiencesProfil(props) {
 			// if the experience has an id, it's an existing experience
 			if (userExperiencesId !== '') {
 				// 	then update the experience
-				const userExperiencesUpdated = userExperiences.map(experience => {
-					if (experience.id === userExperiencesId) {
-						experience.company = userExperiencesCompany
-						experience.job_name = userExperiencesJobName
-						experience.city = userExperiencesCity
-						experience.date_start = userExperiencesDateStart
-						experience.date_end = userExperiencesDateEnd
-						experience.description = userExperiencesDescription
-					}
-					return experience
-				})
+				// a new object: the profile of the page stays untouched until saved
+				const userExperiencesUpdated = userExperiences.map(experience =>
+					experience.id === userExperiencesId
+						? {
+								...experience,
+								company: userExperiencesCompany,
+								job_name: userExperiencesJobName,
+								city: userExperiencesCity,
+								date_start: userExperiencesDateStart,
+								date_end: userExperiencesDateEnd,
+								description: userExperiencesDescription,
+							}
+						: experience
+				)
 				setUserExperiences(userExperiencesUpdated)
 				// reset the form
 				setUserExperiencesId('')
@@ -141,38 +164,35 @@ export default function ModalUpdateExperiencesProfil(props) {
 		}
 	}
 
-	const handleSubmitExperiences = event => {
+	const handleSubmitExperiences = async event => {
 		// clean the experiences, remove the id field
-		let userExperiencesCleaned = userExperiences.map(experience => {
+		const userExperiencesCleaned = userExperiences.map(experience => {
 			const { id, ...rest } = experience
 			// replace the date_end field if it's empty by null
-			if (rest.date_end === '') {
-				rest.date_end = null
-			}
-			return rest
+			return rest.date_end === '' ? { ...rest, date_end: null } : rest
 		})
 
-		const data = {
+		const champs = {
 			experiences: userExperiencesCleaned,
 		}
-		patchMeMakeup(session, data)
-		// close the modal & reset the zod form
-		setUserExperiencesId('')
-		setUserExperiencesCompany('')
-		setUserExperiencesJobName('')
-		setUserExperiencesCity('')
-		setUserExperiencesDateStart('')
-		setUserExperiencesDateEnd('')
-		setUserExperiencesDescription('')
+		setEnvoi(true)
+		setErreurEnvoi(null)
+		const resultat = await patchMeMakeup(session, champs, 'experiences')
+		setEnvoi(false)
+		if (!resultat.ok) {
+			setErreurEnvoi(resultat.error ?? null)
+			return
+		}
 
-		let userTemp = user
-		userTemp.experiences = userExperiencesCleaned
-		// to change to object reference
-		const newUser = JSON.parse(JSON.stringify(userTemp))
-		props.handleUpdateUser(newUser)
-
-		// formState.reset()
-		reset()
+		// shown on the page once the API stored it, then the modal closes
+		props.handleUpdateUser({
+			...user,
+			experiences: listeApresSauvegarde(
+				resultat.data,
+				'experiences',
+				userExperiences
+			),
+		})
 		props.handleIsModalOpen()
 	}
 
@@ -181,13 +201,6 @@ export default function ModalUpdateExperiencesProfil(props) {
 	}, [props.isModalOpen])
 
 	const cancelButtonRef = useRef(null)
-	const inputRef = useRef(null)
-
-	const handleClick = event => {
-		// 👇️ open file input box on click of another element
-		// 👇️ trigger click event on input element to open file dialog
-		inputRef.current.click()
-	}
 
 	const handleUpdateExperiencesCompany = event => {
 		setUserExperiencesCompany(event.target.value)
@@ -234,9 +247,11 @@ export default function ModalUpdateExperiencesProfil(props) {
 		setUserExperiencesDescription(userExperiencesToUpdate[0].description)
 	}
 
-	// reset the form when the modal is closed
+	// reset the form when the modal is closed: what was changed without
+	// saving is dropped (RG-03)
 	useEffect(() => {
 		if (!open) {
+			setUserExperiences(user.experiences ?? [])
 			setUserExperiencesId('')
 			setUserExperiencesCompany('')
 			setUserExperiencesJobName('')
@@ -246,7 +261,7 @@ export default function ModalUpdateExperiencesProfil(props) {
 			setUserExperiencesDescription('')
 			reset()
 		}
-	}, [open, reset])
+	}, [open, reset, user.experiences])
 
 	return (
 		<Transition.Root show={open} as={Fragment}>
@@ -254,42 +269,30 @@ export default function ModalUpdateExperiencesProfil(props) {
 				as="div"
 				className="relative z-30"
 				initialFocus={cancelButtonRef}
-				onClose={props.handleIsModalOpen}
+				onClose={fermer}
 			>
-				<Transition.Child
-					as={Fragment}
-					enter="ease-out duration-300"
-					enterFrom="opaexperiences-0"
-					enterTo="opaexperiences-100"
-					leave="ease-in duration-200"
-					leaveFrom="opaexperiences-100"
-					leaveTo="opaexperiences-0"
-				>
-					<div className="bg-opaexperiences-75 transition-opaexperiences fixed inset-0 bg-gray-500" />
-				</Transition.Child>
+				<FondModale />
 
 				<div className="fixed inset-0 z-30 overflow-y-auto">
 					<div className="flex min-h-full items-center justify-center p-4 text-center">
 						<Transition.Child
 							as={Fragment}
 							enter="ease-out duration-300"
-							enterFrom="opaexperiences-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-							enterTo="opaexperiences-100 translate-y-0 sm:scale-100"
+							enterFrom="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+							enterTo="opacity-100 translate-y-0 sm:scale-100"
 							leave="ease-in duration-200"
-							leaveFrom="opaexperiences-100 translate-y-0 sm:scale-100"
-							leaveTo="opaexperiences-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+							leaveFrom="opacity-100 translate-y-0 sm:scale-100"
+							leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
 						>
-							<Dialog.Panel className="relative w-full transform rounded-lg bg-white p-8 text-left shadow-2xl transition-all sm:max-w-7xl">
-								<button
-									type="button"
-									onClick={props.handleIsModalOpen}
+							<Dialog.Panel
+								data-cy="modal-panel"
+								className="relative w-full transform rounded-lg bg-white p-8 text-left shadow-2xl transition-all sm:max-w-7xl"
+							>
+								<BoutonFermer
+									onClick={fermer}
+									disabled={envoi}
 									ref={cancelButtonRef}
-									className={
-										'absolute right-0 top-0 m-6 flex items-center justify-center'
-									}
-								>
-									<span className="material-icons-round">close</span>
-								</button>
+								/>
 								<div className="flex flex-col items-start gap-8">
 									<div className="text-left">
 										<Dialog.Title
@@ -330,8 +333,11 @@ export default function ModalUpdateExperiencesProfil(props) {
 																	})}
 																	required
 																	value={userExperiencesCompany ?? ''}
-																	onChange={handleUpdateExperiencesCompany}
-																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
+																	onChange={suivre(
+																		'company',
+																		handleUpdateExperiencesCompany
+																	)}
+																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
 																/>
 																{errors.company && (
 																	<p
@@ -361,8 +367,11 @@ export default function ModalUpdateExperiencesProfil(props) {
 																	})}
 																	required
 																	value={userExperiencesJobName ?? ''}
-																	onChange={handleUpdateExperiencesJobName}
-																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
+																	onChange={suivre(
+																		'job_name',
+																		handleUpdateExperiencesJobName
+																	)}
+																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
 																/>
 																{errors.job_name && (
 																	<p
@@ -392,8 +401,11 @@ export default function ModalUpdateExperiencesProfil(props) {
 																	})}
 																	required
 																	value={userExperiencesCity ?? ''}
-																	onChange={handleUpdateExperiencesCity}
-																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
+																	onChange={suivre(
+																		'city',
+																		handleUpdateExperiencesCity
+																	)}
+																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
 																/>
 																{errors.city && (
 																	<p
@@ -423,8 +435,11 @@ export default function ModalUpdateExperiencesProfil(props) {
 																	})}
 																	required
 																	value={userExperiencesDateStart ?? ''}
-																	onChange={handleUpdateExperiencesDateStart}
-																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
+																	onChange={suivre(
+																		'date_start',
+																		handleUpdateExperiencesDateStart
+																	)}
+																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
 																/>
 																{errors.date_start && (
 																	<p
@@ -451,8 +466,11 @@ export default function ModalUpdateExperiencesProfil(props) {
 																	type={'date'}
 																	{...register('date_end')}
 																	value={userExperiencesDateEnd ?? ''}
-																	onChange={handleUpdateExperiencesDateEnd}
-																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
+																	onChange={suivre(
+																		'date_end',
+																		handleUpdateExperiencesDateEnd
+																	)}
+																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
 																/>
 																{errors.date_end && (
 																	<p
@@ -481,8 +499,11 @@ export default function ModalUpdateExperiencesProfil(props) {
 																	})}
 																	required
 																	value={userExperiencesDescription ?? ''}
-																	onChange={handleUpdateExperiencesDescription}
-																	className="block min-h-[150px] w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
+																	onChange={suivre(
+																		'description',
+																		handleUpdateExperiencesDescription
+																	)}
+																	className="block min-h-[150px] w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
 																/>
 																{errors.description && (
 																	<p
@@ -536,24 +557,34 @@ export default function ModalUpdateExperiencesProfil(props) {
 																}
 															>
 																<button
+																	type="button"
 																	data-cy={`experience-selected-${index}`}
-																	className={'flex items-center justify-center'}
+																	aria-label={`Modifier l'expérience ${experience.company ?? ''}`}
+																	className={BOUTON_ICONE}
 																	onClick={() =>
 																		handleEditExperience(experience.id)
 																	}
 																>
-																	<span className="material-icons-round text-xl text-orange-600">
+																	<span
+																		className="material-icons-round text-xl text-orange-600"
+																		aria-hidden="true"
+																	>
 																		edit
 																	</span>
 																</button>
 																<button
+																	type="button"
 																	data-cy={'experience-selected'}
-																	className={'flex items-center justify-center'}
+																	aria-label={`Retirer l'expérience ${experience.company ?? ''}`}
+																	className={BOUTON_ICONE}
 																	onClick={() =>
 																		handleDeleteExperience(experience.id)
 																	}
 																>
-																	<span className="material-icons-round text-xl text-red-500">
+																	<span
+																		className="material-icons-round text-xl text-red-500"
+																		aria-hidden="true"
+																	>
 																		delete
 																	</span>
 																</button>
@@ -593,10 +624,10 @@ export default function ModalUpdateExperiencesProfil(props) {
 																				? "Aujourd'hui"
 																				: new Date(
 																						experience.date_end
-																				  ).toLocaleString('fr-FR', {
+																					).toLocaleString('fr-FR', {
 																						year: 'numeric',
 																						month: 'long',
-																				  })}
+																					})}
 																		</p>
 																	</div>
 																</div>
@@ -613,15 +644,13 @@ export default function ModalUpdateExperiencesProfil(props) {
 										</div>
 									</div>
 								</div>
-								<div className="mt-4 flex justify-end">
-									<button
-										data-cy="save-button-experience"
-										type="button"
-										className="btn-primary"
+								<div className="mt-4 flex flex-col items-end gap-4">
+									<ErreurSauvegarde message={erreurEnvoi} />
+									<BoutonSauvegarder
+										dataCy="save-button-experience"
+										envoi={envoi}
 										onClick={handleSubmitExperiences}
-									>
-										Sauvegarder
-									</button>
+									/>
 								</div>
 							</Dialog.Panel>
 						</Transition.Child>

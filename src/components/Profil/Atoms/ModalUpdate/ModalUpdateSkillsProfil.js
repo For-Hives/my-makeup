@@ -5,6 +5,13 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useSession } from 'next-auth/react'
 import * as zod from 'zod'
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
+import {
+	BoutonFermer,
+	BoutonSauvegarder,
+	ErreurSauvegarde,
+	FondModale,
+	useEnvoi,
+} from '@/components/Profil/Atoms/ModalUpdate/ModalElements'
 
 const schema = zod
 	.object({
@@ -38,32 +45,33 @@ export default function ModalUpdateSkillsProfil(props) {
 		user.skills ?? []
 	)
 
+	// Escape, a click outside and « Fermer » wait for the save in progress
+	const { envoi, setEnvoi, erreurEnvoi, setErreurEnvoi, fermer } = useEnvoi(
+		props.isModalOpen,
+		props.handleIsModalOpen
+	)
+
 	const { data: session } = useSession()
 
 	/**
 	 * onSubmit function called when the form is submitted
 	 * @param data
 	 */
-	const onSubmit = data => {
-		// for each skill selected, we only keep the name, the id is not necessary
-		const userSkillsSelectedCleaned = userSkillsSelected.map(item => {
-			return {
-				name: item.name,
-			}
-		})
-		const data_clean = {
-			skills: userSkillsSelectedCleaned,
+	const onSubmit = async data => {
+		// for each item selected, we only keep the name, the id is not necessary
+		const champs = {
+			skills: userSkillsSelected.map(item => ({ name: item.name })),
 		}
-
-		let userTemp = user
-		userTemp.skills = userSkillsSelectedCleaned
-		// to change to object reference
-		const newUser = JSON.parse(JSON.stringify(userTemp))
-		props.handleUpdateUser(newUser)
-
-		patchMeMakeup(session, data_clean)
-		reset()
-		// close the modal
+		setEnvoi(true)
+		setErreurEnvoi(null)
+		const resultat = await patchMeMakeup(session, champs, 'competences')
+		setEnvoi(false)
+		if (!resultat.ok) {
+			setErreurEnvoi(resultat.error ?? null)
+			return
+		}
+		// shown on the page once the API stored it, then the modal closes
+		props.handleUpdateUser({ ...user, ...champs })
 		props.handleIsModalOpen()
 	}
 
@@ -72,13 +80,6 @@ export default function ModalUpdateSkillsProfil(props) {
 	}, [props.isModalOpen])
 
 	const cancelButtonRef = useRef(null)
-	const inputRef = useRef(null)
-
-	const handleClick = event => {
-		// 👇️ open file input box on click of another element
-		// 👇️ trigger click event on input element to open file dialog
-		inputRef.current.click()
-	}
 
 	const handleUpdateSkills = event => {
 		// check if the entered value is a ';' and if so, add it to the array
@@ -158,42 +159,30 @@ export default function ModalUpdateSkillsProfil(props) {
 				as="div"
 				className="relative z-30"
 				initialFocus={cancelButtonRef}
-				onClose={props.handleIsModalOpen}
+				onClose={fermer}
 			>
-				<Transition.Child
-					as={Fragment}
-					enter="ease-out duration-300"
-					enterFrom="opaskills-0"
-					enterTo="opaskills-100"
-					leave="ease-in duration-200"
-					leaveFrom="opaskills-100"
-					leaveTo="opaskills-0"
-				>
-					<div className="bg-opaskills-75 transition-opaskills fixed inset-0 bg-gray-500" />
-				</Transition.Child>
+				<FondModale />
 
 				<div className="fixed inset-0 z-30 overflow-y-auto">
 					<div className="flex min-h-full items-center justify-center p-4 text-center">
 						<Transition.Child
 							as={Fragment}
 							enter="ease-out duration-300"
-							enterFrom="opaskills-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-							enterTo="opaskills-100 translate-y-0 sm:scale-100"
+							enterFrom="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+							enterTo="opacity-100 translate-y-0 sm:scale-100"
 							leave="ease-in duration-200"
-							leaveFrom="opaskills-100 translate-y-0 sm:scale-100"
-							leaveTo="opaskills-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+							leaveFrom="opacity-100 translate-y-0 sm:scale-100"
+							leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
 						>
-							<Dialog.Panel className="relative w-full transform rounded-lg bg-white p-8 text-left shadow-2xl transition-all sm:max-w-3xl">
-								<button
-									type="button"
-									onClick={props.handleIsModalOpen}
+							<Dialog.Panel
+								data-cy="modal-panel"
+								className="relative w-full transform rounded-lg bg-white p-8 text-left shadow-2xl transition-all sm:max-w-3xl"
+							>
+								<BoutonFermer
+									onClick={fermer}
+									disabled={envoi}
 									ref={cancelButtonRef}
-									className={
-										'absolute right-0 top-0 m-6 flex items-center justify-center'
-									}
-								>
-									<span className="material-icons-round">close</span>
-								</button>
+								/>
 								<div className="flex flex-col items-start gap-8">
 									<div className="text-left">
 										<Dialog.Title
@@ -265,7 +254,7 @@ export default function ModalUpdateSkillsProfil(props) {
 																}}
 																value={userSkills ?? ''}
 																onChange={handleUpdateSkills}
-																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
+																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
 															/>
 															{errors.skills && (
 																<p
@@ -283,7 +272,7 @@ export default function ModalUpdateSkillsProfil(props) {
 														</h3>
 														<div
 															className={
-																'flex w-full flex-wrap items-center gap-2 '
+																'flex w-full flex-wrap items-center gap-2'
 															}
 														>
 															{userSkillsSelected.map((skill, index) => (
@@ -294,12 +283,16 @@ export default function ModalUpdateSkillsProfil(props) {
 																		handleDeleteSkillSelected(skill.id)
 																	}}
 																	key={index}
+																	aria-label={`Retirer ${skill.name}`}
 																	className={
-																		'flex items-center gap-2 rounded-full bg-gray-100 px-2 py-1 text-xs text-gray-700'
+																		'flex min-h-[44px] items-center gap-2 rounded-full bg-gray-100 px-3 text-sm text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600'
 																	}
 																>
 																	<span>{skill.name}</span>
-																	<span className="material-icons-round text-sm">
+																	<span
+																		className="material-icons-round text-sm"
+																		aria-hidden="true"
+																	>
 																		close
 																	</span>
 																</button>
@@ -311,15 +304,13 @@ export default function ModalUpdateSkillsProfil(props) {
 										</div>
 									</div>
 								</div>
-								<div className="mt-4 flex justify-end">
-									<button
-										data-cy="save-button-skills"
-										type="button"
-										className="btn-primary"
+								<div className="mt-4 flex flex-col items-end gap-4">
+									<ErreurSauvegarde message={erreurEnvoi} />
+									<BoutonSauvegarder
+										dataCy="save-button-skills"
+										envoi={envoi}
 										onClick={handleSubmit(onSubmit)}
-									>
-										Sauvegarder
-									</button>
+									/>
 								</div>
 							</Dialog.Panel>
 						</Transition.Child>

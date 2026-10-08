@@ -7,17 +7,41 @@ import {
 import { signOut } from 'next-auth/react'
 import { Dialog, Transition } from '@headlessui/react'
 import { ExclamationTriangleIcon } from '@heroicons/react/24/outline'
+import { toast } from 'react-toastify'
 import { DeleteMeMakeup } from '@/services/DeleteMeMakeup'
+import { track } from '@/lib/analytics'
 
 function DangerZone(props) {
 	const [open, setOpen] = useState(false)
+	const [envoi, setEnvoi] = useState(false)
+	const [erreur, setErreur] = useState(null)
 
 	const cancelButtonRef = useRef(null)
 	const router = useRouter()
 
-	const handleDeleteAccount = () => {
-		DeleteMeMakeup(props.session)
-		signOut()
+	// signed out only once the API deleted the account (UI-05): it used to
+	// sign out at once, and the DELETE could be cut by the redirection
+	const handleDeleteAccount = async () => {
+		setEnvoi(true)
+		setErreur(null)
+		const resultat = await DeleteMeMakeup(props.session)
+		if (!resultat.ok) {
+			setEnvoi(false)
+			if (resultat.error) setErreur(resultat.error)
+			return
+		}
+		track('account_delete')
+		toast('Ton compte a bien été supprimé', {
+			type: 'success',
+			toastId: 'account-delete',
+		})
+		await signOut({ callbackUrl: '/' })
+	}
+
+	const fermer = () => {
+		if (envoi) return
+		setOpen(false)
+		setErreur(null)
 	}
 
 	return (
@@ -27,7 +51,7 @@ function DangerZone(props) {
 					as="div"
 					className="relative z-30"
 					initialFocus={cancelButtonRef}
-					onClose={setOpen}
+					onClose={fermer}
 				>
 					<Transition.Child
 						as={Fragment}
@@ -38,7 +62,7 @@ function DangerZone(props) {
 						leaveFrom="opacity-100"
 						leaveTo="opacity-0"
 					>
-						<div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" />
+						<div className="fixed inset-0 bg-gray-500/75 transition-opacity" />
 					</Transition.Child>
 
 					<div className="fixed inset-0 z-10 overflow-y-auto">
@@ -76,19 +100,31 @@ function DangerZone(props) {
 											</div>
 										</div>
 									</div>
+									{erreur && (
+										<p
+											role="alert"
+											data-cy="delete-account-error"
+											className="mt-4 rounded-md bg-red-50 p-3 text-sm text-red-800"
+										>
+											{erreur}
+										</p>
+									)}
 									<div className="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
 										<button
 											data-cy={'delete-account'}
 											type="button"
-											className="inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 sm:ml-3 sm:w-auto"
+											className="inline-flex min-h-[44px] w-full items-center justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 disabled:cursor-wait disabled:opacity-60 sm:ml-3 sm:w-auto"
 											onClick={handleDeleteAccount}
+											disabled={envoi}
+											aria-busy={envoi}
 										>
-											Supprimer
+											{envoi ? 'Suppression…' : 'Supprimer'}
 										</button>
 										<button
 											type="button"
-											className="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
-											onClick={() => setOpen(false)}
+											className="mt-3 inline-flex min-h-[44px] w-full items-center justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 sm:mt-0 sm:w-auto"
+											onClick={fermer}
+											disabled={envoi}
 											ref={cancelButtonRef}
 										>
 											Annuler

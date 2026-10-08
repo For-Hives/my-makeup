@@ -2,27 +2,47 @@ import React, { Fragment, useEffect, useRef, useState } from 'react'
 import { Dialog, Transition } from '@headlessui/react'
 import Image from 'next/image'
 import { PhotoIcon } from '@heroicons/react/20/solid'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
 import { useSession } from 'next-auth/react'
-import * as zod from 'zod'
 import { Swiper, SwiperSlide } from 'swiper/react'
 import { Pagination } from 'swiper/modules'
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
-import { toast } from 'react-toastify'
+import { uploadPhoto } from '@/services/UploadPhoto'
 import Info from '@/components/Global/Info'
+import { ACCEPT, MAX_PHOTOS_GALERIE, MESSAGES_PHOTO } from '@/lib/photo'
+import {
+	BoutonFermer,
+	BoutonSauvegarder,
+	ErreurSauvegarde,
+	FondModale,
+	useEnvoi,
+} from '@/components/Profil/Atoms/ModalUpdate/ModalElements'
+import { choisirPhoto } from '@/components/Profil/Atoms/ModalUpdate/choisirPhoto'
 
-const MAX_PHOTOS = 10
-const schema = zod.object({})
+// A picture added in the modal stays in the browser until « Sauvegarder »:
+// { cle, fichier, url (blob preview), width, height, enAttente: true }.
+// Closing the modal without saving sends nothing, so no file is left on the
+// server (UI-03). The stored pictures are Strapi files ({ id, url, … }).
+let compteurLocal = 0
+
+const revoquer = photos => {
+	for (const photo of photos)
+		if (photo.enAttente) URL.revokeObjectURL(photo.url)
+}
+
 export default function ModalUpdatePortfolioProfil(props) {
-	const { handleSubmit, reset } = useForm({
-		resolver: zodResolver(schema),
-	})
+	const user = props.user
 
-	const [user, setUser] = React.useState(props.user)
-	const [fileObj, setFileObj] = useState('')
 	const [open, setOpen] = useState(props.isModalOpen)
-	const [imageUrl, setImageUrl] = useState('')
+	// picked and compressed, shown in the dashed area until « Ajouter »
+	const [photoChoisie, setPhotoChoisie] = useState(null)
+	const [erreurPhoto, setErreurPhoto] = useState(null)
+	const [preparation, setPreparation] = useState(false)
+	// Escape, a click outside and « Fermer » wait for the save in progress
+	const { envoi, setEnvoi, erreurEnvoi, setErreurEnvoi, fermer } = useEnvoi(
+		props.isModalOpen,
+		props.handleIsModalOpen,
+		preparation
+	)
 	const [mySwiperModal, setMySwiperModal] = React.useState(null)
 	const [userImageGallery, setUserImageGallery] = useState(
 		user.image_gallery ?? []
@@ -30,74 +50,47 @@ export default function ModalUpdatePortfolioProfil(props) {
 
 	const { data: session } = useSession()
 
-	const onSubmit = data => {
-		// 	upload file if fileObj is not empty
-		if (fileObj !== '' && fileObj !== undefined && fileObj !== null) {
-			const form = new FormData()
-			form.append('files', fileObj)
-
-			if (userImageGallery.length >= MAX_PHOTOS) {
-				toast('La limite du nombre de photos est atteinte.', {
-					type: 'error',
-					icon: '⛔',
-					toastId: 'toast-alert',
-				})
-				return
-			}
-			const res_post = fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/upload`, {
-				method: 'POST',
-				headers: {
-					Authorization: `Bearer ${session.jwt}`,
-				},
-				body: form,
-			})
-				.then(response => {
-					return response.json()
-				})
-				.then(data_blob => {
-					data_blob = data_blob[0]
-					// props.handleIsModalOpen()
-					// 	add image to gallery
-					setUserImageGallery([...userImageGallery, data_blob])
-
-					// props.handleUpdateUser([
-					// 	...props.user,
-					// 	{ image_gallery: userImageGallery },
-					// ])
-					let userTemp = props.user
-					userTemp.image_gallery = userImageGallery
-					setUser(userTemp)
-					setImageUrl('')
-					reset()
-				})
-				.catch(err =>
-					toast('Une erreur est survenue, veuillez réessayer plus tard', {
-						type: 'error',
-						icon: '⛔',
-						toastId: 'toast-alert',
-					})
-				)
-		} else {
-			// putMakeupArtisteViaId(queryClient, user, session, data)
-			reset()
-			// props.handleIsModalOpen()
-			setImageUrl('')
+	const handleAddPhoto = () => {
+		if (!photoChoisie) return
+		if (userImageGallery.length >= MAX_PHOTOS_GALERIE) {
+			setErreurPhoto(MESSAGES_PHOTO['limite-galerie'])
+			return
 		}
+		setUserImageGallery([...userImageGallery, photoChoisie])
+		setPhotoChoisie(null)
 	}
 
-	const handleSubmitGallery = () => {
-		const data = {
-			image_gallery: userImageGallery,
-		}
-		patchMeMakeup(session, data)
-		setImageUrl('')
-		let userTemp = user
-		userTemp.image_gallery = userImageGallery
-		// to change to object reference
-		const newUser = JSON.parse(JSON.stringify(userTemp))
-		props.handleUpdateUser(newUser)
+	// uploads the pictures added in the modal, then saves the gallery; the page
+	// changes, and the modal closes, only once the API stored the gallery
+	const handleSubmitGallery = async () => {
+		setEnvoi(true)
+		setErreurEnvoi(null)
 
-		reset()
+		const galerie = [...userImageGallery]
+		for (let i = 0; i < galerie.length; i++) {
+			if (!galerie[i].enAttente) continue
+			const envoiPhoto = await uploadPhoto(session, galerie[i].fichier)
+			if (!envoiPhoto.ok) {
+				// the pictures already sent stay sent: a retry does not resend them
+				setUserImageGallery(galerie)
+				setEnvoi(false)
+				setErreurEnvoi(envoiPhoto.error ?? null)
+				return
+			}
+			URL.revokeObjectURL(galerie[i].url)
+			galerie[i] = envoiPhoto.fichier
+		}
+		setUserImageGallery(galerie)
+
+		const champs = { image_gallery: galerie.map(photo => photo.id) }
+		const resultat = await patchMeMakeup(session, champs, 'portfolio')
+		setEnvoi(false)
+		if (!resultat.ok) {
+			setErreurEnvoi(resultat.error ?? null)
+			return
+		}
+
+		props.handleUpdateUser({ ...user, image_gallery: galerie })
 		props.handleIsModalOpen()
 	}
 
@@ -114,57 +107,62 @@ export default function ModalUpdatePortfolioProfil(props) {
 		inputRef.current.click()
 	}
 
-	const handleFileChange = event => {
+	const handleFileChange = async event => {
 		const fileObject = event.target.files && event.target.files[0]
+		// reset file input, the same file can be picked again
+		event.target.value = null
 		if (!fileObject) {
 			return
 		}
 
-		// Ajouter une vérification de la taille du fichier ici.
-		if (fileObject.size > 1500000) {
-			// Taille du fichier en octets (1.5 Mo)
-			toast(
-				'Le fichier est trop grand, veuillez télécharger un fichier de moins de 1.5 Mo.',
-				{
-					type: 'error',
-					icon: '⛔',
-					toastId: 'toast-alert',
-				}
-			)
+		setErreurPhoto(null)
+		setPreparation(true)
+		const resultat = await choisirPhoto(fileObject)
+		setPreparation(false)
+		if (!resultat.ok) {
+			setErreurPhoto(resultat.message)
 			return
 		}
-
-		const imageUrl = URL.createObjectURL(fileObject)
-		setImageUrl(imageUrl)
-		setFileObj(fileObject)
-
-		// reset file input
-		event.target.value = null
+		if (photoChoisie) URL.revokeObjectURL(photoChoisie.url)
+		setPhotoChoisie({
+			cle: `local-${++compteurLocal}`,
+			enAttente: true,
+			fichier: resultat.fichier,
+			url: URL.createObjectURL(resultat.fichier),
+			width: resultat.largeur,
+			height: resultat.hauteur,
+			name: resultat.fichier.name,
+		})
 	}
 
-	const handleDeletePortfolio = index => {
-		const newGallery = userImageGallery.filter(item => item.id !== index)
-		setUserImageGallery(newGallery)
+	const handleDeletePortfolio = photo => {
+		if (photo.enAttente) URL.revokeObjectURL(photo.url)
+		setUserImageGallery(
+			userImageGallery.filter(item =>
+				photo.enAttente ? item.cle !== photo.cle : item.id !== photo.id
+			)
+		)
 	}
 
-	useEffect(() => {
-		return () => {
-			if (imageUrl) {
-				URL.revokeObjectURL(imageUrl)
-			}
-		}
-	}, [imageUrl])
-
-	// reset the form when the modal is closed
+	// reset the modal when it is closed: the pictures that were not saved are
+	// dropped (nothing was sent for them)
 	useEffect(() => {
 		if (!open) {
-			setFileObj('')
-			setImageUrl('')
-			setUserImageGallery(user.image_gallery ?? [])
-			props.handleUpdateUser(user)
-			reset()
+			setUserImageGallery(galerie => {
+				revoquer(galerie)
+				return user.image_gallery ?? []
+			})
+			setPhotoChoisie(choisie => {
+				if (choisie) URL.revokeObjectURL(choisie.url)
+				return null
+			})
+			setErreurPhoto(null)
 		}
-	}, [open, reset, user.image_gallery])
+	}, [open, user.image_gallery])
+
+	const nombreEnAttente = userImageGallery.filter(
+		photo => photo.enAttente
+	).length
 
 	return (
 		<Transition.Root show={open} as={Fragment}>
@@ -172,19 +170,9 @@ export default function ModalUpdatePortfolioProfil(props) {
 				as="div"
 				className="relative z-30"
 				initialFocus={cancelButtonRef}
-				onClose={props.handleIsModalOpen}
+				onClose={fermer}
 			>
-				<Transition.Child
-					as={Fragment}
-					enter="ease-out duration-300"
-					enterFrom="opacity-0"
-					enterTo="opacity-100"
-					leave="ease-in duration-200"
-					leaveFrom="opacity-100"
-					leaveTo="opacity-0"
-				>
-					<div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" />
-				</Transition.Child>
+				<FondModale />
 
 				<div className="fixed inset-0 z-30 overflow-y-auto">
 					<div className="flex min-h-full items-center justify-center p-4 text-center">
@@ -197,17 +185,15 @@ export default function ModalUpdatePortfolioProfil(props) {
 							leaveFrom="opacity-100 translate-y-0 sm:scale-100"
 							leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
 						>
-							<Dialog.Panel className="relative w-full transform rounded-lg bg-white p-8 text-left shadow-2xl transition-all sm:max-w-7xl">
-								<button
-									type="button"
-									onClick={props.handleIsModalOpen}
+							<Dialog.Panel
+								data-cy="modal-panel"
+								className="relative w-full transform rounded-lg bg-white p-8 text-left shadow-2xl transition-all sm:max-w-7xl"
+							>
+								<BoutonFermer
+									onClick={fermer}
+									disabled={envoi || preparation}
 									ref={cancelButtonRef}
-									className={
-										'absolute right-0 top-0 m-6 flex items-center justify-center'
-									}
-								>
-									<span className="material-icons-round">close</span>
-								</button>
+								/>
 								<div>
 									<div className="flex flex-col items-start gap-8">
 										<div className="text-left">
@@ -221,30 +207,36 @@ export default function ModalUpdatePortfolioProfil(props) {
 										<div
 											className={'flex w-full flex-wrap gap-16 md:flex-nowrap'}
 										>
-											<div className="grid w-full grid-cols-1 gap-4 md:w-2/6 ">
+											<div className="grid w-full grid-cols-1 gap-4 md:w-2/6">
 												<div className={'flex flex-col gap-4'}>
 													<label
-														htmlFor="cover-photo"
+														htmlFor="photo-portfolio-upload"
 														className="text-base font-normal text-gray-700"
 													>
 														Ajouter une photo à votre portfolio
 													</label>
 													<button
-														className="mt-2 sm:col-span-2 sm:mt-0"
+														type="button"
+														data-cy="pick-portfolio-picture"
+														aria-label="Choisir une photo à ajouter"
+														aria-describedby="photo-portfolio-aide"
+														className="mt-2 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 sm:col-span-2 sm:mt-0"
 														onClick={handleClick}
+														disabled={preparation || envoi}
 													>
 														<div className="relative flex justify-center rounded-lg border border-dashed border-gray-900/25 px-6 py-10">
-															{!!imageUrl && imageUrl !== '' ? (
+															{photoChoisie ? (
 																<div
 																	className={
 																		'relative flex h-[200px] w-[200px] items-center justify-center overflow-hidden rounded-full'
 																	}
 																>
 																	<Image
-																		src={imageUrl}
-																		alt={'photo de profil'}
+																		data-cy="portfolio-preview"
+																		src={photoChoisie.url}
+																		alt={'photo à ajouter'}
 																		fill={true}
-																		sizes="(min-width: 480px ) 50vw, (min-width: 728px) 33vw, (min-width: 976px) 25vw, 100vw"
+																		sizes="200px"
 																		className="rounded-full object-cover object-center"
 																	/>
 																</div>
@@ -252,9 +244,7 @@ export default function ModalUpdatePortfolioProfil(props) {
 															<div
 																className={
 																	'text-center' +
-																	(!!imageUrl && imageUrl !== ''
-																		? ' hidden'
-																		: ' block')
+																	(photoChoisie ? ' hidden' : ' block')
 																}
 															>
 																<PhotoIcon
@@ -262,25 +252,41 @@ export default function ModalUpdatePortfolioProfil(props) {
 																	aria-hidden="true"
 																/>
 																<div className="mt-4 flex text-sm leading-6 text-gray-600">
-																	<label className="relative rounded-md bg-white font-semibold text-indigo-600 focus-within:outline-none focus-within:ring-2 focus-within:ring-indigo-600 focus-within:ring-offset-2 hover:text-indigo-500">
-																		<span>Télécharger une nouvelle photo</span>
-																	</label>
-																	<input
-																		data-cy="file-upload-portefolio"
-																		id="file-upload"
-																		name="file-upload"
-																		type="file"
-																		className="sr-only hidden"
-																		ref={inputRef}
-																		onChange={handleFileChange}
-																	/>
+																	<span className="relative rounded-md bg-white font-semibold text-indigo-600 hover:text-indigo-500">
+																		{preparation
+																			? 'Préparation de la photo…'
+																			: 'Télécharger une nouvelle photo'}
+																	</span>
 																</div>
-																<p className="text-xs leading-5 text-gray-600">
-																	{"PNG, JPG, WEBP jusqu'à 1.5 Mo"}
+																<p
+																	id="photo-portfolio-aide"
+																	className="text-xs leading-5 text-gray-600"
+																>
+																	JPEG, PNG ou WebP, réduite avant l&apos;envoi
 																</p>
 															</div>
 														</div>
 													</button>
+													<input
+														data-cy="file-upload-portefolio"
+														id="photo-portfolio-upload"
+														name="photo-portfolio-upload"
+														type="file"
+														accept={ACCEPT}
+														className="sr-only"
+														tabIndex={-1}
+														ref={inputRef}
+														onChange={handleFileChange}
+													/>
+													{erreurPhoto && (
+														<p
+															role="alert"
+															data-cy="photo-error"
+															className="rounded-md bg-red-50 p-3 text-sm text-red-800"
+														>
+															{erreurPhoto}
+														</p>
+													)}
 													<div
 														className={'flex w-full items-center justify-end'}
 													>
@@ -290,12 +296,13 @@ export default function ModalUpdatePortfolioProfil(props) {
 															}
 														/>
 													</div>
-													<div className=" flex justify-end">
+													<div className="flex justify-end">
 														<button
 															data-cy="add-button-portefolio"
 															type="button"
-															className="btn-primary"
-															onClick={handleSubmit(onSubmit)}
+															className="btn-primary disabled:cursor-not-allowed disabled:opacity-60"
+															onClick={handleAddPhoto}
+															disabled={!photoChoisie || preparation || envoi}
 														>
 															Ajouter
 														</button>
@@ -307,6 +314,16 @@ export default function ModalUpdatePortfolioProfil(props) {
 													<h2 className={'text-xl font-bold text-gray-700'}>
 														Portfolio
 													</h2>
+													{nombreEnAttente > 0 && (
+														<p
+															data-cy="portfolio-pending"
+															className="text-sm text-gray-700"
+														>
+															{nombreEnAttente === 1
+																? '1 photo sera envoyée quand vous sauvegarderez.'
+																: `${nombreEnAttente} photos seront envoyées quand vous sauvegarderez.`}
+														</p>
+													)}
 													<>
 														<Swiper
 															slidesPerView={'auto'}
@@ -327,7 +344,8 @@ export default function ModalUpdatePortfolioProfil(props) {
 															{userImageGallery.map((image, index) => {
 																return (
 																	<SwiperSlide
-																		key={index}
+																		key={image.cle ?? image.id}
+																		data-cy="portfolio-slide"
 																		style={{
 																			aspectRatio: `${image.width}/${image.height}`,
 																			height: '100%',
@@ -335,18 +353,28 @@ export default function ModalUpdatePortfolioProfil(props) {
 																		className={'relative !h-[500px] !w-auto'}
 																	>
 																		<button
+																			type="button"
 																			data-cy="delete-button-portefolio"
+																			aria-label={`Retirer la photo ${index + 1}`}
 																			className={
-																				'absolute left-0 top-0 z-40 m-4 flex h-8 w-8 items-center justify-center rounded-full bg-red-50 shadow md:left-auto md:right-0'
+																				'absolute left-0 top-0 z-40 m-4 flex h-11 w-11 items-center justify-center rounded-full bg-red-50 shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 md:left-auto md:right-0'
 																			}
 																			onClick={() =>
-																				handleDeletePortfolio(image.id)
+																				handleDeletePortfolio(image)
 																			}
 																		>
-																			<span className="material-icons-round text-xl text-red-500">
+																			<span
+																				className="material-icons-round text-xl text-red-500"
+																				aria-hidden="true"
+																			>
 																				delete
 																			</span>
 																		</button>
+																		{image.enAttente && (
+																			<span className="absolute bottom-0 left-0 z-40 m-4 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-indigo-900">
+																				À enregistrer
+																			</span>
+																		)}
 																		<Image
 																			src={image.url}
 																			alt={
@@ -371,15 +399,16 @@ export default function ModalUpdatePortfolioProfil(props) {
 													>
 														<div>
 															<button
+																type="button"
 																className={
-																	'flex items-center justify-center gap-2'
+																	'flex min-h-[44px] items-center justify-center gap-2'
 																}
 																onClick={() => {
-																	mySwiperModal.slidePrev()
+																	mySwiperModal?.slidePrev()
 																}}
 															>
 																<Image
-																	alt={'next'}
+																	alt={''}
 																	src={'/assets/down-arrow.svg'}
 																	className={'rotate-90'}
 																	width={20}
@@ -394,11 +423,12 @@ export default function ModalUpdatePortfolioProfil(props) {
 														</div>
 														<div>
 															<button
+																type="button"
 																className={
-																	'flex items-center justify-center gap-2'
+																	'flex min-h-[44px] items-center justify-center gap-2'
 																}
 																onClick={() => {
-																	mySwiperModal.slideNext()
+																	mySwiperModal?.slideNext()
 																}}
 															>
 																<span
@@ -407,7 +437,7 @@ export default function ModalUpdatePortfolioProfil(props) {
 																	Suivant
 																</span>
 																<Image
-																	alt={'next'}
+																	alt={''}
 																	src={'/assets/down-arrow.svg'}
 																	className={'-rotate-90'}
 																	width={20}
@@ -421,15 +451,13 @@ export default function ModalUpdatePortfolioProfil(props) {
 										</div>
 									</div>
 								</div>
-								<div className="mt-4 flex justify-end">
-									<button
-										data-cy="save-button-portefolio"
-										type="button"
-										className="btn-primary"
+								<div className="mt-4 flex flex-col items-end gap-4">
+									<ErreurSauvegarde message={erreurEnvoi} />
+									<BoutonSauvegarder
+										dataCy="save-button-portefolio"
+										envoi={envoi || preparation}
 										onClick={handleSubmitGallery}
-									>
-										Sauvegarder
-									</button>
+									/>
 								</div>
 							</Dialog.Panel>
 						</Transition.Child>

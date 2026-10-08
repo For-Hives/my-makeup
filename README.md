@@ -27,6 +27,12 @@ npm test            # unit tests of src/lib (node --test)
 npm run test:auth   # AF-01 to AF-10: NextAuth and the private pages against a fake Strapi
                     # (builds into .next-test-auth/, servers on localhost:3997-3998, Strapi on 4111;
                     #  AUTH_TEST_SKIP_BUILD=1 reuses the last build)
+npm run test:regression
+                    # the artist's space (RG-01..RG-07, pictures, forgotten password) in
+                    # Chromium against a fake Strapi (builds into .next-test-regression/,
+                    # app on localhost:3996, Strapi on 4112; REGRESSION_SKIP_BUILD=1
+                    # reuses the last build; once: npx playwright install chromium;
+                    # extra Playwright arguments after --, e.g. -- --grep RG-04)
 pnpm run cypress:run
 ```
 

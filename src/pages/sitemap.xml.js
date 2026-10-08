@@ -73,7 +73,9 @@ export const getServerSideProps = async ({ res }) => {
 			item === `${process.env.NEXT_PUBLIC_URL}/talent/[slug]` ||
 			item === `${process.env.NEXT_PUBLIC_URL}/profil/[username]` ||
 			item === `${process.env.NEXT_PUBLIC_URL}/auth/verification-complete` ||
-			item === `${process.env.NEXT_PUBLIC_URL}/auth/verification-wall`
+			item === `${process.env.NEXT_PUBLIC_URL}/auth/verification-wall` ||
+			item === `${process.env.NEXT_PUBLIC_URL}/auth/mot-de-passe-oublie` ||
+			item === `${process.env.NEXT_PUBLIC_URL}/auth/reinitialiser`
 		)
 	})
 

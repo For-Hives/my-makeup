@@ -5,6 +5,14 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useSession } from 'next-auth/react'
 import * as zod from 'zod'
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
+import {
+	BoutonFermer,
+	BoutonSauvegarder,
+	ErreurSauvegarde,
+	FondModale,
+	suivreChamp,
+	useEnvoi,
+} from '@/components/Profil/Atoms/ModalUpdate/ModalElements'
 
 const schema = zod
 	.object({
@@ -34,6 +42,7 @@ export default function ModalUpdateLocationProfil(props) {
 	} = useForm({
 		resolver: zodResolver(schema),
 	})
+	const suivre = suivreChamp(register)
 
 	const [open, setOpen] = useState(props.isModalOpen)
 	const [userCity, setUserCity] = useState(user.city ?? '')
@@ -41,26 +50,29 @@ export default function ModalUpdateLocationProfil(props) {
 		user.action_radius ?? ''
 	)
 
+	// Escape, a click outside and « Fermer » wait for the save in progress
+	const { envoi, setEnvoi, erreurEnvoi, setErreurEnvoi, fermer } = useEnvoi(
+		props.isModalOpen,
+		props.handleIsModalOpen
+	)
+
 	const { data: session } = useSession()
 
-	const onSubmit = data => {
-		if (data.action_radius === '') {
-			data.action_radius = null
+	// the page shows the new place, and the modal closes, once the API stored it
+	const onSubmit = async data => {
+		const champs = {
+			city: data.city,
+			action_radius: data.action_radius === '' ? null : data.action_radius,
 		}
-		data = {
-			...data,
+		setEnvoi(true)
+		setErreurEnvoi(null)
+		const resultat = await patchMeMakeup(session, champs, 'localisation')
+		setEnvoi(false)
+		if (!resultat.ok) {
+			setErreurEnvoi(resultat.error ?? null)
+			return
 		}
-		patchMeMakeup(session, data)
-
-		let userTemp = user
-		userTemp.city = userCity
-		userTemp.action_radius = userActionRadius
-
-		// to change to object reference
-		const newUser = JSON.parse(JSON.stringify(userTemp))
-		props.handleUpdateUser(newUser)
-
-		reset()
+		props.handleUpdateUser({ ...user, ...champs })
 		props.handleIsModalOpen()
 	}
 
@@ -69,13 +81,6 @@ export default function ModalUpdateLocationProfil(props) {
 	}, [props.isModalOpen])
 
 	const cancelButtonRef = useRef(null)
-	const inputRef = useRef(null)
-
-	const handleClick = event => {
-		// 👇️ open file input box on click of another element
-		// 👇️ trigger click event on input element to open file dialog
-		inputRef.current.click()
-	}
 
 	const handleUpdateCity = event => {
 		setUserCity(event.target.value)
@@ -101,19 +106,9 @@ export default function ModalUpdateLocationProfil(props) {
 				as="div"
 				className="relative z-30"
 				initialFocus={cancelButtonRef}
-				onClose={props.handleIsModalOpen}
+				onClose={fermer}
 			>
-				<Transition.Child
-					as={Fragment}
-					enter="ease-out duration-300"
-					enterFrom="opacity-0"
-					enterTo="opacity-100"
-					leave="ease-in duration-200"
-					leaveFrom="opacity-100"
-					leaveTo="opacity-0"
-				>
-					<div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" />
-				</Transition.Child>
+				<FondModale />
 
 				<div className="fixed inset-0 z-30 overflow-y-auto">
 					<div className="flex min-h-full items-center justify-center p-4 text-center">
@@ -126,17 +121,15 @@ export default function ModalUpdateLocationProfil(props) {
 							leaveFrom="opacity-100 translate-y-0 sm:scale-100"
 							leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
 						>
-							<Dialog.Panel className="relative w-full transform rounded-lg bg-white p-8 text-left shadow-2xl transition-all sm:max-w-xl">
-								<button
-									type="button"
-									onClick={props.handleIsModalOpen}
+							<Dialog.Panel
+								data-cy="modal-panel"
+								className="relative w-full transform rounded-lg bg-white p-8 text-left shadow-2xl transition-all sm:max-w-xl"
+							>
+								<BoutonFermer
+									onClick={fermer}
+									disabled={envoi}
 									ref={cancelButtonRef}
-									className={
-										'absolute right-0 top-0 m-3 flex items-center justify-center md:m-6'
-									}
-								>
-									<span className="material-icons-round">close</span>
-								</button>
+								/>
 								<div className="flex flex-col items-start gap-8">
 									<div className="text-left">
 										<Dialog.Title
@@ -169,8 +162,8 @@ export default function ModalUpdateLocationProfil(props) {
 																type="text"
 																{...register('city')}
 																value={userCity ?? ''}
-																onChange={handleUpdateCity}
-																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
+																onChange={suivre('city', handleUpdateCity)}
+																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
 															/>
 															{errors.city && (
 																<p
@@ -197,8 +190,11 @@ export default function ModalUpdateLocationProfil(props) {
 																type="number"
 																{...register('action_radius')}
 																value={userActionRadius}
-																onChange={handleUpdateActionRadius}
-																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm "
+																onChange={suivre(
+																	'action_radius',
+																	handleUpdateActionRadius
+																)}
+																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
 															/>
 															{errors.action_radius && (
 																<p
@@ -215,15 +211,13 @@ export default function ModalUpdateLocationProfil(props) {
 										</div>
 									</div>
 								</div>
-								<div className="mt-4 flex justify-end">
-									<button
-										data-cy="save-button-location"
-										type="button"
-										className="btn-primary"
+								<div className="mt-4 flex flex-col items-end gap-4">
+									<ErreurSauvegarde message={erreurEnvoi} />
+									<BoutonSauvegarder
+										dataCy="save-button-location"
+										envoi={envoi}
 										onClick={handleSubmit(onSubmit)}
-									>
-										Sauvegarder
-									</button>
+									/>
 								</div>
 							</Dialog.Panel>
 						</Transition.Child>

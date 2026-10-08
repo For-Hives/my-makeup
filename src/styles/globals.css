@@ -13,9 +13,10 @@
     border-color: #fff;
 }
 
+/* No overflow override here: the modals (Headless UI) lock the page scroll
+   with an inline overflow: hidden on <html> while they are open (UI-04). */
 html {
     padding-right: 0 !important;
-    overflow-y: visible !important;
 }
 
 html,
@@ -49,7 +50,7 @@ a {
 @layer components {
     /*	Custom Button */
     .btn-primary {
-        @apply rounded-lg border-2 border-indigo-900 bg-indigo-900 px-4 py-2 text-sm font-bold leading-6 text-white;
+        @apply rounded-lg border-2 border-indigo-900 bg-indigo-900 px-4 py-2 text-sm font-bold leading-6 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600;
     }
 
     .btn-primary-large {
@@ -57,7 +58,7 @@ a {
     }
 
     .btn-alt-primary {
-        @apply rounded-lg border-2 border-indigo-900 bg-transparent px-4 py-2 text-sm font-bold leading-6 text-indigo-900;
+        @apply rounded-lg border-2 border-indigo-900 bg-transparent px-4 py-2 text-sm font-bold leading-6 text-indigo-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600;
     }
 
     .btn-primary-simple {

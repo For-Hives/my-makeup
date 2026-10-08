@@ -9,7 +9,9 @@ import * as zod from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
-import { toast } from 'react-toastify'
+import { postMeMakeup } from '@/services/PostMeMakeup'
+import { NOM_MAX, NOM_MIN } from '@/lib/sauvegarde-profil'
+import { suivreChamp } from '@/components/Profil/Atoms/ModalUpdate/ModalElements'
 import FullLoader from '@/components/Global/Loader/FullLoader'
 import Image from 'next/image'
 import Loader from '@/components/Global/Loader/Loader'
@@ -28,12 +30,20 @@ import {
 
 const schema = zod
 	.object({
-		first_name: zod.string({
-			required_error: "Ce sera plus facile de t'appeler avec un prénom !",
-		}),
-		last_name: zod.string({
-			required_error: 'Je suis sur que tu as un nom de famille !',
-		}),
+		first_name: zod
+			.string({
+				required_error: "Ce sera plus facile de t'appeler avec un prénom !",
+			})
+			.trim()
+			.min(NOM_MIN, `Ton prénom doit contenir au moins ${NOM_MIN} caractères.`)
+			.max(NOM_MAX, `Ton prénom ne doit pas dépasser ${NOM_MAX} caractères.`),
+		last_name: zod
+			.string({
+				required_error: 'Je suis sur que tu as un nom de famille !',
+			})
+			.trim()
+			.min(NOM_MIN, `Ton nom doit contenir au moins ${NOM_MIN} caractères.`)
+			.max(NOM_MAX, `Ton nom ne doit pas dépasser ${NOM_MAX} caractères.`),
 	})
 	.required({
 		first_name: true,
@@ -49,6 +59,7 @@ function InitAccount({ compte, erreur }) {
 	} = useForm({
 		resolver: zodResolver(schema),
 	})
+	const suivre = suivreChamp(register)
 
 	const [step, setStep] = useState(0)
 	const [stepsList, setStepsList] = useState([
@@ -60,74 +71,49 @@ function InitAccount({ compte, erreur }) {
 	// { confirmed } read on the server: the page no longer waits for a
 	// session in its props (removed) to know the account (AUTH-08)
 	const [user] = useState(compte)
-	const [accountInit, setAccountInit] = useState(false)
-	// const [userInterval, setUserInterval] = useState(null)
+	// profile creation (POST /api/me-makeup): 'attente' | 'en-cours' | 'ok' | 'erreur'
+	const [creation, setCreation] = useState('attente')
+	const creationLancee = useRef(false)
 	const [fistName, setFirstName] = useState('')
 	const [lastName, setLastName] = useState('')
+	const [envoi, setEnvoi] = useState(false)
+	const [erreurEnvoi, setErreurEnvoi] = useState(null)
 
 	const router = useRouter()
 
 	// get current user id
 	const { data: session } = useSession()
 
-	useEffect(
-		id => {
-			if (!session) return
-			//  get user data
+	// The profile is created once (the session object changes on every
+	// refetch, and React runs effects twice in development), and the name
+	// step only shows up once the API answered (UI-05): the PATCH of the name
+	// can no longer reach the API before the profile exists.
+	const creerProfil = async sessionCourante => {
+		setCreation('en-cours')
+		setStep(2)
+		const resultat = await postMeMakeup(sessionCourante)
+		if (resultat.ok) {
+			setCreation('ok')
+			setStep(3)
+			return
+		}
+		if (resultat.sessionExpiree) return // sent to the sign-in page
+		creationLancee.current = false
+		setCreation('erreur')
+	}
 
-			if (session.user) {
-				// if (user === null) {
-				// 	setUserInterval(getUserFromSession(session, user, setUser))
-				// }
-				if (user != null) {
-					// see if user is verified
-					if (!user.confirmed) {
-						// if yes, 1 stepper : verify email
-						setStep(1)
-					} else {
-						// if (userInterval != null) {
-						// 	clearInterval(userInterval)
-						// }
-
-						if (step <= 3) {
-							if (!accountInit) {
-								setStep(2)
-								// if yes, 2 stepper : init account
-								fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/me-makeup`, {
-									method: 'POST',
-									headers: {
-										// 	token
-										'Content-Type': 'application/json',
-										Accept: 'application/json',
-										Authorization: `Bearer ${session.jwt}`,
-									},
-									body: JSON.stringify({}),
-								})
-									.then(response => {
-										if (response.status === 200) {
-											// get 200
-										}
-									})
-									.catch(err => {
-										toast(
-											'Une erreur est survenue, veuillez réessayer plus tard',
-											{
-												type: 'error',
-												icon: '⛔',
-												toastId: 'toast-alert',
-											}
-										)
-									})
-								setAccountInit(true)
-							}
-							setStep(3)
-						}
-					}
-				}
-			}
-		},
-		[session, user, step]
-	)
+	useEffect(() => {
+		if (!session?.user || user == null) return
+		// see if user is verified
+		if (!user.confirmed) {
+			// if yes, 1 stepper : verify email
+			setStep(1)
+			return
+		}
+		if (creationLancee.current) return
+		creationLancee.current = true
+		creerProfil(session)
+	}, [session, user])
 
 	// onboarding funnel: each step counted once per visit, `termine` = sign-up done
 	const countedSteps = useRef(new Set())
@@ -221,9 +207,17 @@ function InitAccount({ compte, erreur }) {
 		}
 	}, [step])
 
-	function onSubmit(data) {
-		patchMeMakeup(session, data)
-
+	// « Bienvenue » only once the API stored the name
+	async function onSubmit(data) {
+		setEnvoi(true)
+		setErreurEnvoi(null)
+		const champs = { first_name: data.first_name, last_name: data.last_name }
+		const resultat = await patchMeMakeup(session, champs, 'onboarding')
+		setEnvoi(false)
+		if (!resultat.ok) {
+			setErreurEnvoi(resultat.error ?? null)
+			return
+		}
 		setStep(4)
 	}
 
@@ -388,12 +382,35 @@ function InitAccount({ compte, erreur }) {
 									</div>
 								</div>
 							)}
-							{step === 2 && (
+							{step === 2 && creation !== 'erreur' && (
 								<div className="mt-20 flex h-full w-full flex-col items-center justify-start md:m-0 md:justify-center">
-									<div className={'flex flex-col gap-4'}>
+									<div className={'flex flex-col gap-4'} role="status">
 										<Loader />
 										<p>Initialisation du compte en cours...</p>
 									</div>
+								</div>
+							)}
+							{step === 2 && creation === 'erreur' && (
+								<div className="flex flex-col items-center justify-center gap-6">
+									<p
+										role="alert"
+										data-cy="init-account-error"
+										className="rounded-md bg-red-50 p-3 text-center text-sm text-red-800"
+									>
+										Ton profil n&apos;a pas pu être créé : le service est
+										momentanément indisponible. Réessaie dans quelques minutes.
+									</p>
+									<button
+										type="button"
+										data-cy="init-account-retry"
+										className="btn-primary"
+										onClick={() => {
+											creationLancee.current = true
+											creerProfil(session)
+										}}
+									>
+										Réessayer
+									</button>
 								</div>
 							)}
 							{step === 3 && (
@@ -427,16 +444,25 @@ function InitAccount({ compte, erreur }) {
 														<div className="mt-2">
 															<input
 																data-cy={'first_name'}
+																id="first_name"
 																type="text"
 																required
 																value={fistName}
 																name="first_name"
 																{...register('first_name')}
-																onChange={e => {
+																onChange={suivre('first_name', e => {
 																	setFirstName(e.target.value)
-																}}
+																})}
 																className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
 															/>
+															{errors.first_name && (
+																<p
+																	data-cy="error-first-name"
+																	className={'mt-2 text-xs text-red-500/80'}
+																>
+																	{errors.first_name.message}
+																</p>
+															)}
 														</div>
 													</div>
 
@@ -456,21 +482,40 @@ function InitAccount({ compte, erreur }) {
 																name="last_name"
 																value={lastName}
 																{...register('last_name')}
-																onChange={e => {
+																onChange={suivre('last_name', e => {
 																	setLastName(e.target.value)
-																}}
+																})}
 																className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
 															/>
+															{errors.last_name && (
+																<p
+																	data-cy="error-last-name"
+																	className={'mt-2 text-xs text-red-500/80'}
+																>
+																	{errors.last_name.message}
+																</p>
+															)}
 														</div>
 													</div>
 
+													{erreurEnvoi && (
+														<p
+															role="alert"
+															data-cy="save-error"
+															className="rounded-md bg-red-50 p-3 text-sm text-red-800"
+														>
+															{erreurEnvoi}
+														</p>
+													)}
 													<div>
 														<button
 															data-cy={'submit'}
 															type="submit"
-															className="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+															disabled={envoi}
+															aria-busy={envoi}
+															className="flex min-h-[44px] w-full items-center justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:cursor-wait disabled:opacity-60"
 														>
-															Suivant
+															{envoi ? 'Enregistrement…' : 'Suivant'}
 														</button>
 													</div>
 												</form>
