@@ -11,7 +11,7 @@ import {
 	texte,
 	zoneProfil,
 } from '@/lib/profil/vue-publique'
-import { QUALITE_PHOTO, ratioMedia, sizesBoite } from '@/lib/taille-image'
+import { ratioMedia, sizesBoite } from '@/lib/taille-image'
 
 /** Box of the main photo, in px (h-[200px] w-[200px] at every width) */
 const COTE_PHOTO = 200
@@ -41,7 +41,9 @@ function ViewResumeProfil(props) {
 					>
 						<div className={'relative h-[200px] w-[200px]'}>
 							{/* UI-09: the box is 200 px at every width (it said 150 px on
-							    a phone), and a landscape photo is drawn wider than it */}
+							    a phone), and a landscape photo is drawn wider than it. Default
+							    quality (75): this photo is the LCP of a profile on a phone, and
+							    the right width is enough (q85 weighs 1.6 times as much) */}
 							<Image
 								src={photo?.url ?? '/assets/pp_makeup.webp'}
 								alt={photo ? `Photo de ${nom}` : ''}
@@ -52,7 +54,6 @@ function ViewResumeProfil(props) {
 									hauteur: COTE_PHOTO,
 									ratio: photo ? ratioMedia(photo) : 1,
 								})}
-								quality={QUALITE_PHOTO}
 								className={'rounded-full object-cover'}
 							></Image>
 						</div>

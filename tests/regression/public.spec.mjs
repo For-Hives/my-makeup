@@ -560,9 +560,12 @@ test.describe('UI-07 recherche', () => {
 // The photos of the fake Strapi announce 2000 × 1500 (mock-api.mjs); the
 // image optimizer cannot fetch them here (127.0.0.1 is not one of its
 // hosts), but the browser still picks a width in the srcset, which is what
-// is checked: the width asked covers the width the photo is drawn at.
+// is checked: the width asked covers the width the photo is drawn at, or
+// 3/4 of it from 2.5 dppx (src/lib/taille-image.js: 2.25x on a 3x phone).
 const RATIO_FIXTURE = 2000 / 1500
 const PHOTO_CARTE = '[data-cy="search-result"] img'
+const ECRAN_TRES_DENSE = '(min-resolution: 2.5dppx)'
+const part = dpr => (dpr >= 2.5 ? 0.75 : 1)
 
 function candidats(srcset) {
 	return srcset.split(', ').map(candidat => {
@@ -572,8 +575,8 @@ function candidats(srcset) {
 	})
 }
 
-// the width picked by the browser and the one the photo is drawn at, in
-// device px (object-fit: cover)
+// the width picked by the browser, the one the photo is drawn at and the
+// one asked at that density, in device px (object-fit: cover)
 async function largeurs(photo, dpr) {
 	await photo.scrollIntoViewIfNeeded()
 	await expect
@@ -587,9 +590,11 @@ async function largeurs(photo, dpr) {
 			hauteur: boite.height,
 		}
 	})
+	const dessinee = Math.max(largeur, hauteur * RATIO_FIXTURE) * dpr
 	return {
 		choisie: Number(new URL(currentSrc).searchParams.get('w')),
-		besoin: Math.ceil(Math.max(largeur, hauteur * RATIO_FIXTURE) * dpr - 0.5),
+		dessinee,
+		besoin: Math.ceil(dessinee * part(dpr) - 0.5),
 	}
 }
 
@@ -605,13 +610,56 @@ test.describe('UI-09 photos nettes', () => {
 		expect(Math.max(...liste.map(c => c.largeur))).toBeGreaterThanOrEqual(1920)
 		for (const c of liste)
 			expect(c.q, `${c.largeur}w`).toBeGreaterThanOrEqual(85)
-		expect(await photo.getAttribute('sizes')).toMatch(/px/)
+		const sizes = await photo.getAttribute('sizes')
+		expect(sizes).toMatch(/px/)
+		expect(sizes.startsWith(`${ECRAN_TRES_DENSE} and `)).toBe(true)
 		// the LCP of a phone: loaded at once and first; the others lazily
 		await expect(photo).toHaveAttribute('loading', 'eager')
 		await expect(photo).toHaveAttribute('fetchpriority', 'high')
 		const deuxieme = page.locator(PHOTO_CARTE).nth(1)
 		await expect(deuxieme).toHaveAttribute('loading', 'lazy')
 		expect(await deuxieme.getAttribute('fetchpriority')).not.toBe('high')
+	})
+
+	test('/search : rien ne télécharge en même temps que la première photo, ni les profils préchargés ni la police d’icônes', async ({
+		page,
+	}) => {
+		// the photos answer 1.5 s late: long enough for an early prefetch to show
+		await page.route('**/_next/image?**', async route => {
+			await new Promise(resolve => setTimeout(resolve, 1500))
+			await route.continue()
+		})
+		const requetes = new Map()
+		page.on('request', r =>
+			requetes.set(r, { url: r.url(), debut: Date.now() })
+		)
+		for (const fin of ['requestfinished', 'requestfailed'])
+			page.on(fin, r => {
+				if (requetes.has(r)) requetes.get(r).fin = Date.now()
+			})
+		await page.goto('/search?city=Annecy')
+		const photo = page.locator(PHOTO_CARTE).first()
+		await expect
+			.poll(() => photo.evaluate(img => img.currentSrc))
+			.toContain('/_next/image')
+		const source = await photo.evaluate(img => img.currentSrc)
+		// the profiles are still prefetched, once the photo is there
+		await expect
+			.poll(() =>
+				[...requetes.values()].some(r =>
+					/\/_next\/data\/.*\/profil\//.test(r.url)
+				)
+			)
+			.toBe(true)
+		const liste = [...requetes.values()]
+		const finPhoto = liste.find(r => r.url === source)?.fin
+		expect(finPhoto).toBeDefined()
+		for (const r of liste.filter(r =>
+			/\/_next\/data\/.*\/profil\//.test(r.url)
+		))
+			expect(r.debut, r.url).toBeGreaterThanOrEqual(finPhoto)
+		// the icon of the cards is drawn inline: no icon font on this page
+		expect(liste.filter(r => /material-icons/.test(r.url))).toEqual([])
 	})
 
 	for (const ecran of [
@@ -632,33 +680,46 @@ test.describe('UI-09 photos nettes', () => {
 				page,
 			}) => {
 				await page.goto('/search?city=Annecy')
-				const { choisie, besoin } = await largeurs(
+				const { choisie, dessinee, besoin } = await largeurs(
 					page.locator(PHOTO_CARTE).first(),
 					ecran.dpr
 				)
 				expect(choisie).toBeGreaterThanOrEqual(Math.min(besoin, 3840))
+				// the LCP of a 3x phone: not the full density
+				if (part(ecran.dpr) < 1) expect(choisie).toBeLessThan(dessinee)
 			})
 
-			test(`profil (${ecran.nom}) : photo principale et portfolio demandés à leur taille, qualité 85`, async ({
+			test(`profil (${ecran.nom}) : photo principale (qualité 75) et portfolio (qualité 85) demandés à leur taille`, async ({
 				page,
 			}) => {
 				await page.goto('/profil/zoe-lefevre')
 				const principale = page.getByRole('img', { name: /^Photo de / })
-				await expect(principale).toHaveAttribute('sizes', '267px')
+				await expect(principale).toHaveAttribute(
+					'sizes',
+					`${ECRAN_TRES_DENSE} 201px, 267px`
+				)
 				const premiere = await largeurs(principale, ecran.dpr)
 				expect(premiere.choisie).toBeGreaterThanOrEqual(premiere.besoin)
+				// the LCP of a profile on a 3x phone: the 640 of before UI-09
+				if (part(ecran.dpr) < 1) expect(premiere.choisie).toBe(640)
 				// the first photo, the active slide (lazy, but in view)
 				const realisation = page
 					.getByRole('img', { name: /^Réalisation de .* \(1\/6\)$/ })
 					.first()
-				await expect(realisation).toHaveAttribute('sizes', '667px')
+				await expect(realisation).toHaveAttribute(
+					'sizes',
+					`${ECRAN_TRES_DENSE} 501px, 667px`
+				)
 				const portfolio = await largeurs(realisation, ecran.dpr)
 				expect(portfolio.choisie).toBeGreaterThanOrEqual(
 					Math.min(portfolio.besoin, 3840)
 				)
-				for (const photo of [principale, realisation])
+				for (const [photo, q] of [
+					[principale, 75],
+					[realisation, 85],
+				])
 					for (const c of candidats(await photo.getAttribute('srcset')))
-						expect(c.q).toBe(85)
+						expect(c.q).toBe(q)
 			})
 		})
 })
@@ -708,7 +769,7 @@ test.describe('UI-10 recherche par ville : titre honnête', () => {
 			cartes(page, 'autres')
 				.filter({ hasText: 'Coquille' })
 				.getByTestId('search-result-zone')
-		).toHaveText('directions_runZone non renseignée')
+		).toHaveText('Zone non renseignée')
 	})
 
 	test('la ville d’abord, puis le département (code postal, code entre parenthèses, nom)', async ({

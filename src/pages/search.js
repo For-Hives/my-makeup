@@ -52,6 +52,8 @@ function SearchPage() {
 	const origine = useRef('lien')
 	// last search counted as `search_submit`
 	const lastCounted = useRef(null)
+	// search whose first photo (the LCP of a phone) has loaded or failed
+	const [photoChargee, setPhotoChargee] = useState(null)
 
 	useEffect(() => {
 		if (!pret) return
@@ -112,6 +114,13 @@ function SearchPage() {
 			? etat.statut
 			: 'chargement'
 	const resultats = statut === 'ok' ? etat.resultats : []
+	// UI-09: the cards prefetch their profile pages (≈ 80 KB of JavaScript and
+	// data) once the first photo is there, not while it downloads
+	const cleAffichee = statut === 'ok' ? etat.cle : null
+	const cartes = {
+		prefetch: cleAffichee !== null && photoChargee === cleAffichee,
+		surPremierePhoto: () => setPhotoChargee(cleAffichee),
+	}
 	const { locaux, autres, parLieu } = separerParLieu(resultats, city)
 	const pagination = paginer([...locaux, ...autres], page)
 	const sections = sectionsDeLaPage(pagination, locaux.length)
@@ -229,6 +238,7 @@ function SearchPage() {
 									resultats={sections.locaux}
 									premier={pagination.premier}
 									premierDeLaPage={pagination.premier}
+									cartes={cartes}
 									dataCy="search-results-locaux"
 								/>
 							)}
@@ -247,6 +257,7 @@ function SearchPage() {
 										resultats={sections.autres}
 										premier={pagination.premier + sections.locaux.length}
 										premierDeLaPage={pagination.premier}
+										cartes={cartes}
 										dataCy="search-results-autres"
 									/>
 								</section>
@@ -300,9 +311,16 @@ function SearchPage() {
 /**
  * One list of result cards, ranked from `premier` (search_result_click).
  * The first card of the page is the largest picture above the fold on a
- * phone (its LCP): loaded at once and first; the others stay lazy.
+ * phone (its LCP): loaded at once and first; the others stay lazy, and the
+ * links prefetch only once it is there (`cartes`).
  */
-function ListeResultats({ resultats, premier, premierDeLaPage, dataCy }) {
+function ListeResultats({
+	resultats,
+	premier,
+	premierDeLaPage,
+	cartes,
+	dataCy,
+}) {
 	return (
 		<ul
 			className={'grid w-full grid-cols-1 gap-8 md:grid-cols-3 2xl:grid-cols-6'}
@@ -314,6 +332,7 @@ function ListeResultats({ resultats, premier, premierDeLaPage, dataCy }) {
 						result={result}
 						rang={premier + index}
 						prioritaire={premier + index === premierDeLaPage}
+						cartes={cartes}
 					/>
 				</li>
 			))}
@@ -321,7 +340,7 @@ function ListeResultats({ resultats, premier, premierDeLaPage, dataCy }) {
 	)
 }
 
-function CarteResultat({ result, rang, prioritaire }) {
+function CarteResultat({ result, rang, prioritaire, cartes }) {
 	const nom = nomAffiche(result)
 	const zone = formatZone({ city: result.city, radius: result.action_radius })
 	const competences = (Array.isArray(result.skills) ? result.skills : [])
@@ -335,6 +354,7 @@ function CarteResultat({ result, rang, prioritaire }) {
 		<Link
 			// the old URL of the profile answers a 308 to its slug
 			href={`/profil/${encodeURIComponent(username)}`}
+			prefetch={cartes.prefetch ? undefined : false}
 			data-cy={`search-result`}
 			onClick={() =>
 				track('search_result_click', { rank: rang, pid: result.id })
@@ -345,7 +365,8 @@ function CarteResultat({ result, rang, prioritaire }) {
 		>
 			<div className={'relative h-[350px] w-full'}>
 				{/* UI-09: asked at the width it is drawn at (cover in a cell of
-				    GRILLE_RESULTATS), sharp on a 3x phone as on a 2x screen */}
+				    GRILLE_RESULTATS), sharp on a 2x screen; 2.25x on a 3x phone,
+				    where it is the LCP (src/lib/taille-image.js) */}
 				<Image
 					src={photo?.url || '/assets/pp_makeup.webp'}
 					alt={photo ? `Photo de ${nom}` : ''}
@@ -358,6 +379,8 @@ function CarteResultat({ result, rang, prioritaire }) {
 					quality={QUALITE_PHOTO}
 					loading={prioritaire ? 'eager' : 'lazy'}
 					fetchPriority={prioritaire ? 'high' : 'auto'}
+					onLoad={prioritaire ? cartes.surPremierePhoto : undefined}
+					onError={prioritaire ? cartes.surPremierePhoto : undefined}
 					className={'rounded-b-none rounded-t object-cover object-center'}
 				/>
 				{result.pro === true && (
@@ -388,12 +411,7 @@ function CarteResultat({ result, rang, prioritaire }) {
 						}
 						data-cy="search-result-zone"
 					>
-						<span
-							className="material-icons-round text-sm text-white"
-							aria-hidden="true"
-						>
-							directions_run
-						</span>
+						<IconeDeplacement />
 						{/* UI-10: an empty city is said, never left blank */}
 						<span className={zone ? 'font-bold' : 'italic'}>
 							{zone || 'Zone non renseignée'}
@@ -429,6 +447,25 @@ function CarteResultat({ result, rang, prioritaire }) {
 				</div>
 			</div>
 		</Link>
+	)
+}
+
+/**
+ * « directions_run » of Material Icons Round (Apache 2.0), drawn inline
+ * (UI-09): on /search the icon font, 170 KB, was only loaded for it, and
+ * downloaded at the same time as the photo of the first card, the LCP of
+ * a phone. Same glyph, 1em of a text-sm line.
+ */
+function IconeDeplacement() {
+	return (
+		<svg
+			viewBox="0 0 512 512"
+			fill="currentColor"
+			aria-hidden="true"
+			className="h-3.5 w-3.5 shrink-0 text-white"
+		>
+			<path d="M288 117C311 117 330 98 330 74C330 51 311 32 288 32C264 32 245 51 245 74C245 98 264 117 288 117ZM220 373L232 320L277 362L277 469C277 481 287 490 298 490C310 490 320 481 320 469L320 349C320 337 315 326 307 318L275 288L288 224C311 250 344 269 381 275C394 277 405 267 405 254C405 243 397 234 387 233C355 227 328 208 313 183L292 149C284 136 271 128 256 128C249 128 245 130 239 130L154 166C138 172 128 188 128 205L128 256C128 267 137 277 149 277C161 277 170 267 170 256L170 204L209 189L175 362L91 345C80 343 68 350 66 362L66 363C64 374 71 385 83 388L170 405C193 410 215 396 220 373Z" />
+		</svg>
 	)
 }
 

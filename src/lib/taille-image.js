@@ -11,10 +11,22 @@
  * Plain px and calc() only in `sizes` (CSS max() is not read there by every
  * browser): the ranges of viewport widths where the height decides are
  * written as media conditions.
+ *
+ * Screens of 2.5 dppx and more (3x phones) get 3/4 of that width: 2.25
+ * device px per CSS px instead of 3, hardly visible at arm's length, for a
+ * third fewer bytes on the LCP of a phone (a 4:3 search card: 1080w at q85,
+ * 41 KB, instead of 1440w, 61 KB). A browser that does not read
+ * min-resolution in `sizes` skips those entries and takes the full width.
  */
 
 /** Quality of the artists' photos (one of images.qualities in next.config.js) */
 export const QUALITE_PHOTO = 85
+
+/** Screens whose photos are asked below their density (3x phones) */
+export const ECRAN_TRES_DENSE = '(min-resolution: 2.5dppx)'
+
+/** Part of the drawn width asked on those screens: 2.25x on a 3x screen */
+export const FACTEUR_TRES_DENSE = 0.75
 
 /**
  * Ratio assumed for a photo without dimensions (every main picture has them
@@ -39,13 +51,44 @@ const largeurDessinee = (hauteur, ratio) =>
 	Math.ceil(hauteur * (positif(ratio) ?? RATIO_PAR_DEFAUT))
 
 /**
+ * A width of `sizes`, times `facteur`: fixed ({px}) or a cell of a grid
+ * ({colonnes, retrait}, see Colonnes).
+ */
+function longueur(largeur, facteur = 1) {
+	if ('px' in largeur) return `${Math.ceil(largeur.px * facteur)}px`
+	const { colonnes, retrait } = largeur
+	if (facteur !== 1)
+		return `calc((100vw - ${retrait}px) * ${facteur / colonnes})`
+	return colonnes === 1
+		? `calc(100vw - ${retrait}px)`
+		: `calc((100vw - ${retrait}px) / ${colonnes})`
+}
+
+/**
+ * `sizes` from its entries, in order (`condition` null for the last): those
+ * of the very dense screens first, at FACTEUR_TRES_DENSE, then the others.
+ * @param {{condition: string|null, largeur: object}[]} entrees
+ */
+function ecrireSizes(entrees) {
+	const denses = entrees.map(
+		({ condition, largeur }) =>
+			`${[ECRAN_TRES_DENSE, condition].filter(Boolean).join(' and ')} ${longueur(largeur, FACTEUR_TRES_DENSE)}`
+	)
+	const autres = entrees.map(({ condition, largeur }) =>
+		[condition, longueur(largeur)].filter(Boolean).join(' ')
+	)
+	return [...denses, ...autres].join(', ')
+}
+
+/**
  * `sizes` of a photo drawn with object-fit: cover in a box of fixed size,
  * or in a box of its own ratio (`largeur` 0: only the height counts).
  * @param {{largeur?: number, hauteur: number, ratio?: number|null}} boite
- * @returns {string} e.g. '267px'
+ * @returns {string} e.g. '(min-resolution: 2.5dppx) 201px, 267px'
  */
 export function sizesBoite({ largeur = 0, hauteur, ratio }) {
-	return `${Math.max(Math.ceil(largeur), largeurDessinee(hauteur, ratio))}px`
+	const px = Math.max(Math.ceil(largeur), largeurDessinee(hauteur, ratio))
+	return ecrireSizes([{ condition: null, largeur: { px } }])
 }
 
 /**
@@ -56,11 +99,6 @@ export function sizesBoite({ largeur = 0, hauteur, ratio }) {
  * @property {number} retrait - paddings and gaps of a row, in px
  */
 
-const largeurCellule = ({ colonnes, retrait }) =>
-	colonnes === 1
-		? `calc(100vw - ${retrait}px)`
-		: `calc((100vw - ${retrait}px) / ${colonnes})`
-
 /**
  * `sizes` of a photo drawn with object-fit: cover in a cell of a grid, at a
  * fixed height: the width of the cell, or the width of the photo drawn at
@@ -70,23 +108,25 @@ const largeurCellule = ({ colonnes, retrait }) =>
  * @returns {string}
  */
 export function sizesGrille(grille, { hauteur, ratio }) {
-	const dessinee = largeurDessinee(hauteur, ratio)
+	const dessinee = { px: largeurDessinee(hauteur, ratio) }
 	const segments = []
-	const ajouter = (jusqua, valeur) => {
+	const ajouter = (jusqua, largeur) => {
 		const dernier = segments.at(-1)
-		if (dernier?.valeur === valeur) dernier.jusqua = jusqua
-		else segments.push({ jusqua, valeur })
+		if (dernier && longueur(dernier.largeur) === longueur(largeur))
+			dernier.jusqua = jusqua
+		else segments.push({ jusqua, largeur })
 	}
 	grille.forEach((colonnes, i) => {
 		const fin = grille[i + 1]?.des ?? Infinity
 		// below this viewport width, the cell is narrower than the photo
-		const bascule = colonnes.colonnes * dessinee + colonnes.retrait
-		if (bascule > colonnes.des) ajouter(Math.min(bascule, fin), `${dessinee}px`)
-		if (bascule < fin) ajouter(fin, largeurCellule(colonnes))
+		const bascule = colonnes.colonnes * dessinee.px + colonnes.retrait
+		if (bascule > colonnes.des) ajouter(Math.min(bascule, fin), dessinee)
+		if (bascule < fin) ajouter(fin, colonnes)
 	})
-	return segments
-		.map(({ jusqua, valeur }) =>
-			jusqua === Infinity ? valeur : `(max-width: ${jusqua - 1}px) ${valeur}`
-		)
-		.join(', ')
+	return ecrireSizes(
+		segments.map(({ jusqua, largeur }) => ({
+			condition: jusqua === Infinity ? null : `(max-width: ${jusqua - 1}px)`,
+			largeur,
+		}))
+	)
 }
