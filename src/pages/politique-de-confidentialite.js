@@ -82,7 +82,7 @@ function PolitiqueDeConfidentialite() {
 
 								<h2>Formulaire de contact</h2>
 								<p>
-									{`Données : nom, prénom, email, téléphone et message. Ils nous sont envoyés par email via le service Mailgun pour vous répondre (intérêt légitime). Durée : 12 mois après notre dernier échange.`}
+									{`Données : nom, prénom, email, téléphone et message. Ils nous sont envoyés par email via le service Resend pour vous répondre (intérêt légitime). Durée : 12 mois après notre dernier échange.`}
 								</p>
 
 								<h2>Demandes de devis</h2>
@@ -128,10 +128,10 @@ function PolitiqueDeConfidentialite() {
 								</p>
 
 								<h2>Hébergement et prestataires</h2>
-								{/* TODO(Andy): keep this list true on the day it ships.
-								    - Database (D8): if Strapi's database runs on the old Contabo VPS, add it to the Contabo line until URG-10.
-								    - Umami (MES-10): once Umami runs in Coolify at netcup, drop the Contabo line.
-								    - Mailgun: once MAILGUN_REGION=eu is live, say the emails leave from its EU servers. */}
+								{/* Keep this list true: the database runs in Coolify at netcup since
+								    08/10/2026 (URG-10), Umami stays on the Contabo VPS, and every email
+								    of the site (contact form, password reset) leaves through Resend from
+								    send.my-makeup.fr, region eu-west-1 (Ireland), since 09/10/2026. */}
 								<ul>
 									<li>{`netcup GmbH (Allemagne) : hébergement du site.`}</li>
 									<li>
@@ -141,7 +141,7 @@ function PolitiqueDeConfidentialite() {
 										{`Cloudflare (service R2) : stockage des photos des profils.`}
 									</li>
 									<li>
-										{`Mailgun Technologies, Inc. (États-Unis) : envoi des emails du site. Le passage à ses serveurs situés dans l'Union européenne est en cours ; d'ici là, le transfert est encadré comme indiqué ci-dessous.`}
+										{`Resend, Inc. (États-Unis) : envoi des emails du site (formulaire de contact, réinitialisation du mot de passe), depuis ses serveurs situés dans l'Union européenne (Irlande) ; le transfert vers la société est encadré comme indiqué ci-dessous.`}
 									</li>
 									<li>
 										{`Lorsque le bouton « Demander un devis » est proposé : outil de formulaire de devis, hébergé dans l'Union européenne (sous-traitant).`}
