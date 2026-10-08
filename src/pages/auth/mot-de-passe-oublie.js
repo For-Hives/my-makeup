@@ -10,6 +10,7 @@ import {
 	MESSAGES_MOT_DE_PASSE,
 	motDePasseOublieActif,
 } from '@/lib/mot-de-passe'
+import { signalAvecDelai } from '@/lib/delai'
 
 // Off until Strapi really sends emails (Mailgun): build-time variable
 const ACTIF = motDePasseOublieActif(process.env.NEXT_PUBLIC_FORGOT_PASSWORD)
@@ -53,7 +54,7 @@ function MotDePasseOublie() {
 						'Content-Type': 'application/json',
 					},
 					body: JSON.stringify({ email }),
-					signal: AbortSignal.timeout(15_000),
+					signal: signalAvecDelai(15_000),
 				}
 			)
 			status = reponse.status

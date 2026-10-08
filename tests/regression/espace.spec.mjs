@@ -883,6 +883,31 @@ test.describe('A7 mot de passe oublié', () => {
 		expect(appels(journal, 'POST', '/api/auth/forgot-password')).toHaveLength(3)
 	})
 
+	test('navigateur sans AbortSignal.timeout (iOS 15) : la demande de lien et la réinitialisation aboutissent', async ({
+		page,
+	}) => {
+		await page.addInitScript(() => {
+			delete AbortSignal.timeout
+		})
+		expect(await demander(page, COMPTE_TEST.email)).toMatch(
+			/^Si un compte existe avec cette adresse/
+		)
+		expect(await page.evaluate(() => typeof AbortSignal.timeout)).toBe(
+			'undefined'
+		)
+		const [{ code }] = (await etat()).emails
+		await aller(page, `/auth/reinitialiser?code=${code}`)
+		await page.getByTestId('reset-password-input').fill('Nouveau-mdp-5')
+		await page.getByTestId('reset-confirmation-input').fill('Nouveau-mdp-5')
+		await page.getByTestId('reset-submit').click()
+		await expect(page.getByTestId('reset-result')).toBeVisible()
+		expect(
+			(await etat()).journal.filter(
+				e => e.m === 'POST' && e.p === '/api/auth/reset-password'
+			)
+		).toHaveLength(1)
+	})
+
 	test('adresse mal formée : refusée par le formulaire, rien n’est envoyé', async ({
 		page,
 	}) => {

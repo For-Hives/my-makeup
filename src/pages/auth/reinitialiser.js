@@ -11,6 +11,7 @@ import {
 	MESSAGES_MOT_DE_PASSE,
 	MOT_DE_PASSE_MIN,
 } from '@/lib/mot-de-passe'
+import { signalAvecDelai } from '@/lib/delai'
 
 /**
  * Forgotten password, second step (A7): the link of the email
@@ -51,7 +52,7 @@ function Reinitialiser({ code }) {
 						password: motDePasse,
 						passwordConfirmation: confirmation,
 					}),
-					signal: AbortSignal.timeout(15_000),
+					signal: signalAvecDelai(15_000),
 				}
 			)
 			status = reponse.status
