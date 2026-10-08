@@ -7,6 +7,10 @@ import 'swiper/css'
 import 'swiper/css/pagination'
 import Image from 'next/image'
 import { altRealisation, galerie, nomAffiche } from '@/lib/profil/vue-publique'
+import { QUALITE_PHOTO, ratioMedia, sizesBoite } from '@/lib/taille-image'
+
+/** Height of a slide, in px (!h-[500px]); its width follows the photo */
+const HAUTEUR_DIAPO = 500
 
 // read from the props only, so the pictures are in the server HTML
 function ViewPortfolioProfil({ user }) {
@@ -42,11 +46,17 @@ function ViewPortfolioProfil({ user }) {
 							}}
 							className={'!h-[500px] !w-auto'}
 						>
+							{/* UI-09: a slide has the ratio of its photo at 500 px high,
+							    whatever the screen (it asked 100vw or 50vw) */}
 							<Image
 								src={image.url}
 								alt={altRealisation(nom, index + 1, photos.length)}
 								fill={true}
-								sizes="(min-width: 480px ) 50vw, (min-width: 728px) 33vw, (min-width: 976px) 25vw, 100vw"
+								sizes={sizesBoite({
+									hauteur: HAUTEUR_DIAPO,
+									ratio: ratioMedia(image),
+								})}
+								quality={QUALITE_PHOTO}
 								className={'rounded object-cover'}
 							/>
 						</SwiperSlide>

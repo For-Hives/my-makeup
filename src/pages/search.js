@@ -13,10 +13,12 @@ import { CheckCircleIcon } from '@heroicons/react/24/outline'
 import { isRepeat, resultsBucket, track } from '@/lib/analytics'
 import { signalAvecDelai } from '@/lib/delai'
 import { formatZone } from '@/lib/format-zone'
-import { nomAffiche, texte } from '@/lib/profil/vue-publique'
+import { nomAffiche, photoPrincipale, texte } from '@/lib/profil/vue-publique'
 import {
 	cleRecherche,
 	DELAI_RECHERCHE_MS,
+	GRILLE_RESULTATS,
+	HAUTEUR_PHOTO_CARTE,
 	lireRecherche,
 	paginer,
 	rechercheValide,
@@ -25,6 +27,7 @@ import {
 	urlApiRecherche,
 	urlPageRecherche,
 } from '@/lib/recherche'
+import { QUALITE_PHOTO, ratioMedia, sizesGrille } from '@/lib/taille-image'
 
 /**
  * Search (UI-07): the URL is the search (/search?search=…&city=…&page=…). A
@@ -212,6 +215,7 @@ function SearchPage() {
 										<CarteResultat
 											result={result}
 											rang={pagination.premier + index}
+											prioritaire={index === 0}
 										/>
 									</li>
 								))}
@@ -262,14 +266,19 @@ function SearchPage() {
 	)
 }
 
-function CarteResultat({ result, rang }) {
+/**
+ * A result card. The first card of the page is the largest picture above
+ * the fold on a phone (its LCP): loaded at once and first; the others stay
+ * lazy.
+ */
+function CarteResultat({ result, rang, prioritaire }) {
 	const nom = nomAffiche(result)
 	const zone = formatZone({ city: result.city, radius: result.action_radius })
 	const competences = (Array.isArray(result.skills) ? result.skills : [])
 		.map(skill => texte(skill?.name))
 		.filter(Boolean)
 		.slice(0, 7)
-	const photo = texte(result.main_picture?.url)
+	const photo = photoPrincipale(result)
 	const username = texte(result.username)
 
 	return (
@@ -284,15 +293,22 @@ function CarteResultat({ result, rang }) {
 				'flex w-full flex-col items-center rounded border border-gray-300 bg-white'
 			}
 		>
-			<div className={'relative w-full'}>
+			<div className={'relative h-[350px] w-full'}>
+				{/* UI-09: asked at the width it is drawn at (cover in a cell of
+				    GRILLE_RESULTATS), sharp on a 3x phone as on a 2x screen */}
 				<Image
-					src={photo || '/assets/pp_makeup.webp'}
+					src={photo?.url || '/assets/pp_makeup.webp'}
 					alt={photo ? `Photo de ${nom}` : ''}
-					width={250}
-					height={250}
-					className={
-						'h-[350px] w-full rounded-b-none rounded-t object-cover object-center'
-					}
+					fill={true}
+					sizes={sizesGrille(GRILLE_RESULTATS, {
+						hauteur: HAUTEUR_PHOTO_CARTE,
+						// the default picture is square
+						ratio: photo ? ratioMedia(photo) : 1,
+					})}
+					quality={QUALITE_PHOTO}
+					loading={prioritaire ? 'eager' : 'lazy'}
+					fetchPriority={prioritaire ? 'high' : 'auto'}
+					className={'rounded-b-none rounded-t object-cover object-center'}
 				/>
 				{result.pro === true && (
 					<div

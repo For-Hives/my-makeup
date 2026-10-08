@@ -140,3 +140,18 @@ export function titreResultats({ search, city }, total) {
 	const ou = city ? ` à ${city}` : ''
 	return `${nombre}${quoi}${ou}`
 }
+
+/** Height of the photo of a result card, in px (h-[350px]) */
+export const HAUTEUR_PHOTO_CARTE = 350
+
+/**
+ * The grid of the results in src/pages/search.js, for the `sizes` of the
+ * photos (src/lib/taille-image.js): px-4 md:px-16, gap-8, 1 column, 3 from
+ * md (768 px), 6 from 2xl (1 536 px). Kept with those classes.
+ * @type {import('./taille-image.js').Colonnes[]}
+ */
+export const GRILLE_RESULTATS = [
+	{ des: 0, colonnes: 1, retrait: 2 * 16 },
+	{ des: 768, colonnes: 3, retrait: 2 * 64 + 2 * 32 },
+	{ des: 1536, colonnes: 6, retrait: 2 * 64 + 5 * 32 },
+]

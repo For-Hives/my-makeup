@@ -2,7 +2,8 @@
 // its data, donnees-publiques.mjs), launched by tests/regression/run.mjs:
 // profiles rendered on the server (UI-06), slugs, sitemap, robots, noindex
 // and canonical (SEO-10), Open Graph and JSON-LD (SEO-12), the search by
-// city (UI-07). The raw HTML is read without JavaScript, as a crawler does.
+// city (UI-07), the width and quality of the artists' photos (UI-09). The
+// raw HTML is read without JavaScript, as a crawler does.
 // Web-first waits only, no fixed timeout.
 import { expect, test } from '@playwright/test'
 import { getElementsByTagName, removeElement } from 'domutils'
@@ -549,4 +550,110 @@ test.describe('UI-07 recherche', () => {
 		)
 		expect(await recherches()).toHaveLength(2)
 	})
+})
+
+// The photos of the fake Strapi announce 2000 × 1500 (mock-api.mjs); the
+// image optimizer cannot fetch them here (127.0.0.1 is not one of its
+// hosts), but the browser still picks a width in the srcset, which is what
+// is checked: the width asked covers the width the photo is drawn at.
+const RATIO_FIXTURE = 2000 / 1500
+const PHOTO_CARTE = '[data-cy="search-result"] img'
+
+function candidats(srcset) {
+	return srcset.split(', ').map(candidat => {
+		const [url, largeur] = candidat.split(' ')
+		const q = new URL(url, APP).searchParams.get('q')
+		return { largeur: Number.parseInt(largeur, 10), q: Number(q) }
+	})
+}
+
+// the width picked by the browser and the one the photo is drawn at, in
+// device px (object-fit: cover)
+async function largeurs(photo, dpr) {
+	await photo.scrollIntoViewIfNeeded()
+	await expect
+		.poll(() => photo.evaluate(img => img.currentSrc))
+		.toContain('/_next/image')
+	const { currentSrc, largeur, hauteur } = await photo.evaluate(img => {
+		const boite = img.getBoundingClientRect()
+		return {
+			currentSrc: img.currentSrc,
+			largeur: boite.width,
+			hauteur: boite.height,
+		}
+	})
+	return {
+		choisie: Number(new URL(currentSrc).searchParams.get('w')),
+		besoin: Math.ceil(Math.max(largeur, hauteur * RATIO_FIXTURE) * dpr - 0.5),
+	}
+}
+
+test.describe('UI-09 photos nettes', () => {
+	test('carte de recherche : srcset jusqu’à 828 px et plus, qualité 85 ; la première chargée tout de suite, les autres plus tard', async ({
+		page,
+	}) => {
+		await page.goto('/search?city=Annecy')
+		const photo = page.locator(PHOTO_CARTE).first()
+		await expect(photo).toHaveAttribute('srcset', /\s828w/)
+		const liste = candidats(await photo.getAttribute('srcset'))
+		expect(liste.some(c => c.largeur >= 828)).toBe(true)
+		expect(Math.max(...liste.map(c => c.largeur))).toBeGreaterThanOrEqual(1920)
+		for (const c of liste)
+			expect(c.q, `${c.largeur}w`).toBeGreaterThanOrEqual(85)
+		expect(await photo.getAttribute('sizes')).toMatch(/px/)
+		// the LCP of a phone: loaded at once and first; the others lazily
+		await expect(photo).toHaveAttribute('loading', 'eager')
+		await expect(photo).toHaveAttribute('fetchpriority', 'high')
+		const deuxieme = page.locator(PHOTO_CARTE).nth(1)
+		await expect(deuxieme).toHaveAttribute('loading', 'lazy')
+		expect(await deuxieme.getAttribute('fetchpriority')).not.toBe('high')
+	})
+
+	for (const ecran of [
+		{ nom: 'téléphone 3x', width: 390, height: 844, dpr: 3, mobile: true },
+		{ nom: 'tablette 2x', width: 768, height: 1024, dpr: 2, mobile: true },
+		{ nom: 'ordinateur 2x', width: 1440, height: 900, dpr: 2, mobile: false },
+		{ nom: 'grand écran 1x', width: 1920, height: 1080, dpr: 1, mobile: false },
+	])
+		test.describe(ecran.nom, () => {
+			test.use({
+				viewport: { width: ecran.width, height: ecran.height },
+				deviceScaleFactor: ecran.dpr,
+				isMobile: ecran.mobile,
+				hasTouch: ecran.mobile,
+			})
+
+			test(`carte de recherche (${ecran.nom}) : la largeur choisie couvre la photo dessinée`, async ({
+				page,
+			}) => {
+				await page.goto('/search?city=Annecy')
+				const { choisie, besoin } = await largeurs(
+					page.locator(PHOTO_CARTE).first(),
+					ecran.dpr
+				)
+				expect(choisie).toBeGreaterThanOrEqual(Math.min(besoin, 3840))
+			})
+
+			test(`profil (${ecran.nom}) : photo principale et portfolio demandés à leur taille, qualité 85`, async ({
+				page,
+			}) => {
+				await page.goto('/profil/zoe-lefevre')
+				const principale = page.getByRole('img', { name: /^Photo de / })
+				await expect(principale).toHaveAttribute('sizes', '267px')
+				const premiere = await largeurs(principale, ecran.dpr)
+				expect(premiere.choisie).toBeGreaterThanOrEqual(premiere.besoin)
+				// the first photo, the active slide (lazy, but in view)
+				const realisation = page
+					.getByRole('img', { name: /^Réalisation de .* \(1\/6\)$/ })
+					.first()
+				await expect(realisation).toHaveAttribute('sizes', '667px')
+				const portfolio = await largeurs(realisation, ecran.dpr)
+				expect(portfolio.choisie).toBeGreaterThanOrEqual(
+					Math.min(portfolio.besoin, 3840)
+				)
+				for (const photo of [principale, realisation])
+					for (const c of candidats(await photo.getAttribute('srcset')))
+						expect(c.q).toBe(85)
+			})
+		})
 })
