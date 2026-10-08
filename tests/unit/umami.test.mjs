@@ -6,11 +6,15 @@ import {
 	DEFAULT_UMAMI_DOMAINS,
 	UMAMI_PROXY_PATHS,
 	UMAMI_WEBSITE_ID,
+	WAITING_ROOM_MAX,
+	WAITING_ROOM_NAME,
 	beforeSendScript,
 	umamiBeforeSend,
 	umamiDomains,
 	umamiProxyHeaders,
 	umamiScriptAttributes,
+	umamiLoader,
+	umamiLoaderScript,
 	umamiTag,
 	visitorIp,
 } from '../../src/lib/umami.js'
@@ -275,7 +279,7 @@ describe('umamiBeforeSend: what leaves', () => {
 	})
 })
 
-describe('beforeSendScript (inlined by _document)', () => {
+describe('beforeSendScript (inlined by _document, umamiLoaderScript)', () => {
 	const run = win => {
 		const context = { window: win, URL, URLSearchParams }
 		vm.runInNewContext(beforeSendScript(), context)
@@ -310,6 +314,157 @@ describe('beforeSendScript (inlined by _document)', () => {
 
 	test('cannot close the inline <script> it lives in', () => {
 		assert.doesNotMatch(beforeSendScript(), /<\/script/i)
+	})
+})
+
+// a document where the loader adds the Umami script: the tag keeps its
+// attributes and its listeners, to play its load or its error
+function documentFactice() {
+	const ajoutes = []
+	const balise = () => {
+		const ecouteurs = {}
+		return {
+			attributs: {},
+			async: false,
+			setAttribute(nom, valeur) {
+				this.attributs[nom] = String(valeur)
+			},
+			addEventListener: (type, ecouteur) =>
+				(ecouteurs[type] ??= []).push(ecouteur),
+			emettre: type => (ecouteurs[type] ?? []).forEach(e => e({ type })),
+		}
+	}
+	return {
+		ajoutes,
+		createElement: tag => (tag === 'script' ? balise() : null),
+		head: { appendChild: el => ajoutes.push(el) },
+	}
+}
+
+// a window whose Umami script has not run yet
+function fenetreEnAttente() {
+	const envois = []
+	const win = { document: documentFactice() }
+	const script = () => win.document.ajoutes[0]
+	const arrivee = () => {
+		win.umami = { track: (name, data) => envois.push([name, data]) }
+		script().emettre('load')
+	}
+	return { win, envois, arrivee, script }
+}
+
+const ATTRIBUTS = umamiScriptAttributes({ tag: 'abc1234' })
+
+describe('umamiLoader: the Umami script, async, and the events tracked before it ran', () => {
+	test('adds one async script to the <head>, with the attributes given', () => {
+		const { win, script } = fenetreEnAttente()
+		umamiLoader(win, ATTRIBUTS, 20)
+		assert.equal(win.document.ajoutes.length, 1)
+		assert.equal(script().async, true)
+		assert.deepEqual(script().attributs, ATTRIBUTS)
+	})
+
+	test('the events wait, then go to window.umami.track in order once it has run', () => {
+		const { win, envois, arrivee } = fenetreEnAttente()
+		const attendre = umamiLoader(win, ATTRIBUTS, 20)
+		assert.equal(attendre('not_found', { kind: 'autre' }), true)
+		assert.equal(attendre('web-vitals', { name: 'FCP', value: 320 }), true)
+		assert.deepEqual(envois, [])
+		arrivee()
+		assert.deepEqual(envois, [
+			['not_found', { kind: 'autre' }],
+			['web-vitals', { name: 'FCP', value: 320 }],
+		])
+	})
+
+	test('once the script has run, nothing waits: track() calls Umami itself', () => {
+		const { win, envois, arrivee } = fenetreEnAttente()
+		const attendre = umamiLoader(win, ATTRIBUTS, 20)
+		arrivee()
+		assert.equal(attendre('not_found', { kind: 'autre' }), false)
+		assert.deepEqual(envois, [])
+	})
+
+	test('a script that fails to load (blocker, Umami down): the events are dropped, no more are kept', () => {
+		const { win, envois, script } = fenetreEnAttente()
+		const attendre = umamiLoader(win, ATTRIBUTS, 20)
+		attendre('not_found', { kind: 'autre' })
+		script().emettre('error')
+		assert.equal(attendre('not_found', { kind: 'blog' }), false)
+		win.umami = { track: (name, data) => envois.push([name, data]) }
+		script().emettre('load')
+		assert.deepEqual(envois, [])
+	})
+
+	test(`at most ${WAITING_ROOM_MAX} events wait`, () => {
+		const { win, envois, arrivee } = fenetreEnAttente()
+		const attendre = umamiLoader(win, ATTRIBUTS, WAITING_ROOM_MAX)
+		const gardes = Array.from({ length: WAITING_ROOM_MAX + 5 }, (_, i) =>
+			attendre('search_result_click', { rank: i + 1 })
+		)
+		assert.equal(gardes.filter(Boolean).length, WAITING_ROOM_MAX)
+		assert.equal(gardes[WAITING_ROOM_MAX], false)
+		arrivee()
+		assert.equal(envois.length, WAITING_ROOM_MAX)
+		assert.deepEqual(envois[0], ['search_result_click', { rank: 1 }])
+	})
+
+	test('a failing event never stops the others, a script without umami throws nothing', () => {
+		const { win, script } = fenetreEnAttente()
+		const attendre = umamiLoader(win, ATTRIBUTS, 20)
+		attendre('a', {})
+		attendre('b', {})
+		const envois = []
+		win.umami = {
+			track: name => {
+				envois.push(name)
+				if (name === 'a') throw new Error('boom')
+			},
+		}
+		script().emettre('load')
+		assert.deepEqual(envois, ['a', 'b'])
+
+		const sansUmami = fenetreEnAttente()
+		umamiLoader(sansUmami.win, ATTRIBUTS, 20)('a', {})
+		assert.doesNotThrow(() => sansUmami.script().emettre('load'))
+	})
+})
+
+describe('umamiLoaderScript (inlined by _document)', () => {
+	const run = (attributs = ATTRIBUTS) => {
+		const attente = fenetreEnAttente()
+		vm.runInNewContext(umamiLoaderScript(attributs), { window: attente.win })
+		return attente
+	}
+
+	test('defines the filter and the waiting room, then adds the Umami script', () => {
+		const { win, envois, arrivee, script } = run()
+		assert.equal(typeof win[BEFORE_SEND_NAME], 'function')
+		assert.equal(WAITING_ROOM_NAME, 'mmAttenteUmami')
+		assert.deepEqual(script().attributs, ATTRIBUTS)
+		assert.equal(script().async, true)
+		assert.equal(win[WAITING_ROOM_NAME]('not_found', { kind: 'autre' }), true)
+		arrivee()
+		assert.deepEqual(envois, [['not_found', { kind: 'autre' }]])
+		assert.equal(win[WAITING_ROOM_NAME]('not_found', { kind: 'autre' }), false)
+	})
+
+	test(`keeps ${WAITING_ROOM_MAX} events at most`, () => {
+		const { win } = run()
+		const gardes = Array.from({ length: 30 }, () =>
+			win[WAITING_ROOM_NAME]('a', {})
+		)
+		assert.equal(gardes.filter(Boolean).length, WAITING_ROOM_MAX)
+	})
+
+	test('no value can close the inline <script> it lives in', () => {
+		const tag = '</script><script>alert(1)//'
+		const source = umamiLoaderScript({ ...ATTRIBUTS, 'data-tag': tag })
+		assert.doesNotMatch(source, /<\/script/i)
+		assert.equal(
+			run({ ...ATTRIBUTS, 'data-tag': tag }).script().attributs['data-tag'],
+			tag
+		)
 	})
 })
 

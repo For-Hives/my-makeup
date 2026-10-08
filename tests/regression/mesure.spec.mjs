@@ -90,29 +90,59 @@ const attendreUmami = page =>
 	)
 
 test.describe('MES-10 balise Umami', () => {
-	test('HTML : script chargé depuis /u, version dans data-tag, filtre défini avant', async ({
+	test('HTML : un script en ligne définit le filtre et l’attente, puis ajoute /u/script.js en async avec la version', async ({
 		request,
+		page,
 	}) => {
 		// / is rendered on each request, /a-propos at build time: same tag
 		for (const chemin of ['/', '/a-propos']) {
 			const html = await (await request.get(chemin)).text()
 			expect(html).not.toContain('wadefade')
 			const scripts = getElementsByTagName('script', parseDocument(html))
-			const umami = scripts.findIndex(s => s.attribs.src === '/u/script.js')
-			expect(umami, chemin).toBeGreaterThan(-1)
-			expect(scripts[umami].attribs).toMatchObject({
-				defer: '',
-				'data-website-id': WEBSITE_ID,
-				'data-host-url': '/u',
-				'data-domains': 'localhost',
-				'data-tag': VERSION,
-				'data-before-send': 'mmAvantEnvoi',
-			})
-			const filtre = scripts.findIndex(s =>
+			// no <script src="/u/script.js"> tag in the HTML: the inline
+			// script adds it, after the filter and the waiting room
+			expect(
+				scripts.filter(s => s.attribs.src === '/u/script.js'),
+				chemin
+			).toEqual([])
+			const chargeur = scripts.findIndex(s =>
 				(s.children[0]?.data ?? '').startsWith('window.mmAvantEnvoi=')
 			)
-			expect(filtre, chemin).toBeGreaterThan(-1)
-			expect(filtre).toBeLessThan(umami)
+			expect(chargeur, chemin).toBeGreaterThan(-1)
+			const source = scripts[chargeur].children[0].data
+			expect(source).toContain('window.mmAttenteUmami=')
+			expect(source).toContain(`"data-tag":"${VERSION}"`)
+			// before the scripts of Next
+			expect(chargeur).toBeLessThan(
+				scripts.findIndex(s => s.attribs.src?.startsWith('/_next/'))
+			)
+
+			await page.goto(chemin)
+			const ajoutes = await page.evaluate(() =>
+				[...document.querySelectorAll('script[src="/u/script.js"]')].map(s => ({
+					async: s.async,
+					defer: s.defer,
+					dansLeHead: s.parentNode === document.head,
+					attributs: Object.fromEntries(
+						[...s.attributes].map(a => [a.name, a.value])
+					),
+				}))
+			)
+			expect(ajoutes, chemin).toHaveLength(1)
+			// async: the deferred scripts of Next never wait for Umami
+			expect(ajoutes[0]).toMatchObject({
+				async: true,
+				defer: false,
+				dansLeHead: true,
+				attributs: {
+					src: '/u/script.js',
+					'data-website-id': WEBSITE_ID,
+					'data-host-url': '/u',
+					'data-domains': 'localhost',
+					'data-tag': VERSION,
+					'data-before-send': 'mmAvantEnvoi',
+				},
+			})
 		}
 		// the same version as the healthcheck, with SOURCE_COMMIT given to the
 		// build only (tests/regression/run.mjs)

@@ -52,8 +52,9 @@ export function umamiTag(version) {
 }
 
 /**
- * Attributes of the Umami <script> tag (Umami 3.2: data-website-id,
- * data-host-url, data-domains, data-tag, data-before-send).
+ * Attributes of the Umami script (Umami 3.2: data-website-id,
+ * data-host-url, data-domains, data-tag, data-before-send), set by
+ * umamiLoader.
  * @param {object} [options]
  * @param {string} [options.tag] - deployedVersion()
  * @param {string} [options.domains] - NEXT_PUBLIC_UMAMI_DOMAINS
@@ -141,12 +142,80 @@ export function umamiBeforeSend(type, payload, win) {
 }
 
 /**
- * Inline script that defines window.mmAvantEnvoi before the Umami script
- * runs (_document).
+ * Inline script that defines window.mmAvantEnvoi (umamiLoaderScript).
  * @returns {string}
  */
 export function beforeSendScript() {
 	return `window.${BEFORE_SEND_NAME}=function(type,payload){return(${umamiBeforeSend.toString()})(type,payload,window)};`
+}
+
+export const WAITING_ROOM_NAME = 'mmAttenteUmami'
+export const WAITING_ROOM_MAX = 20
+
+/**
+ * Adds the Umami script to the page, async, and keeps the events tracked
+ * before it ran (MES-10). Run by the inline script of the <head>
+ * (umamiLoaderScript), so the filter and the waiting room exist before the
+ * Umami script does.
+ * - Async and added from here, never a <script> tag of _document: the
+ *   scripts of Next are deferred, and a deferred Umami would keep every page
+ *   from hydrating while Umami is slow or silent; React 19 would move an
+ *   async <script src> tag to the top of the <head>, before the filter.
+ * - An event tracked before the script ran (not_found or demande_envoyee as
+ *   soon as their page mounts, an early Web Vital) waits here and goes to
+ *   window.umami.track, in order, once it has run. At most `max` events
+ *   wait. If the script fails to load (a blocker, Umami down, the proxy
+ *   timeout), they are dropped and no more are kept.
+ *
+ * Self-contained on purpose: _document inlines its source, so it uses
+ * nothing outside its own body.
+ * @param {Window} win
+ * @param {Object<string, string>} attributes - umamiScriptAttributes()
+ * @param {number} max
+ * @returns {(name: string, data: object) => boolean} keeps an event until
+ *   the script has run: false once it has run or failed, or when full
+ */
+export function umamiLoader(win, attributes, max) {
+	const waiting = []
+	let state = 'loading'
+	const script = win.document.createElement('script')
+	Object.keys(attributes).forEach(name => {
+		script.setAttribute(name, attributes[name])
+	})
+	script.async = true
+	script.addEventListener('load', () => {
+		state = 'loaded'
+		const umami = win.umami
+		waiting.splice(0).forEach(item => {
+			try {
+				umami.track(item.name, item.data)
+			} catch {
+				// one failing event never stops the others
+			}
+		})
+	})
+	script.addEventListener('error', () => {
+		state = 'failed'
+		waiting.length = 0
+	})
+	;(win.document.head || win.document.documentElement).appendChild(script)
+	return (name, data) => {
+		if (state !== 'loading' || waiting.length >= max) return false
+		waiting.push({ name: name, data: data })
+		return true
+	}
+}
+
+/**
+ * Inline script of the <head> (_document): defines window.mmAvantEnvoi and
+ * window.mmAttenteUmami, then adds the Umami script.
+ * @param {Object<string, string>} attributes - umamiScriptAttributes()
+ * @returns {string}
+ */
+export function umamiLoaderScript(attributes) {
+	// \u003c: no value can close the inline <script>
+	const json = JSON.stringify(attributes).replace(/</g, '\\u003c')
+	return `${beforeSendScript()}window.${WAITING_ROOM_NAME}=(${umamiLoader.toString()})(window,${json},${WAITING_ROOM_MAX});`
 }
 
 // Headers Umami 3.2 reads the visitor's IP and location from (src/lib/ip.ts

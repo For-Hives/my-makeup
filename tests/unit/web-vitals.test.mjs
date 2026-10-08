@@ -156,6 +156,24 @@ describe('trackWebVital', () => {
 		])
 	})
 
+	test('an early metric (FCP, TTFB) waits for the Umami script', () => {
+		const attente = []
+		const win = {
+			navigator: { webdriver: false },
+			mmAttenteUmami: (name, data) => attente.push([name, data]) > 0,
+		}
+		assert.equal(
+			trackWebVital({ name: 'FCP', value: 812.6, rating: 'good' }, '/', {
+				win,
+				production: true,
+			}),
+			true
+		)
+		assert.deepEqual(attente, [
+			['web-vitals', { name: 'FCP', value: 813, rating: 'good', page: '/' }],
+		])
+	})
+
 	test('same guards as track: production, Umami, no automated browser', () => {
 		const { calls, win } = fakeUmami()
 		const metric = { name: 'LCP', value: 1000, rating: 'good' }

@@ -1,5 +1,5 @@
 import { Head, Html, Main, NextScript } from 'next/document'
-import { beforeSendScript, umamiScriptAttributes } from '@/lib/umami'
+import { umamiLoaderScript, umamiScriptAttributes } from '@/lib/umami'
 import { deployedVersion } from '@/lib/version'
 import packageJson from '../../package.json'
 
@@ -18,18 +18,20 @@ const UMAMI =
 				domains: process.env.NEXT_PUBLIC_UMAMI_DOMAINS,
 			})
 		: null
-const AVANT_ENVOI = UMAMI ? beforeSendScript() : null
+// The filter (window.mmAvantEnvoi), the events waiting for Umami
+// (window.mmAttenteUmami), then the Umami script itself, added async: never
+// a deferred <script> tag, which the scripts of Next would wait for, so a
+// slow or silent Umami would keep every page from hydrating.
+const CHARGEUR_UMAMI = UMAMI ? umamiLoaderScript(UMAMI) : null
 
 export default function Document() {
 	return (
 		<Html lang="fr">
 			<Head>
 				<link rel="icon" href="/favicon.webp" />
-				{/* defines window.mmAvantEnvoi before the Umami script can send */}
-				{AVANT_ENVOI && (
-					<script dangerouslySetInnerHTML={{ __html: AVANT_ENVOI }} />
+				{CHARGEUR_UMAMI && (
+					<script dangerouslySetInnerHTML={{ __html: CHARGEUR_UMAMI }} />
 				)}
-				{UMAMI && <script defer {...UMAMI} />}
 			</Head>
 			<body className={'bg-neutral-50'}>
 				<Main />
