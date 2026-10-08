@@ -239,6 +239,52 @@ describe('track', () => {
 		assert.deepEqual(calls, [])
 	})
 
+	test('before the Umami script ran, the event waits for it (mmAttenteUmami)', () => {
+		const attente = []
+		const win = {
+			navigator: { webdriver: false },
+			mmAttenteUmami: (name, data) => attente.push([name, data]) > 0,
+		}
+		assert.equal(
+			track('not_found', { kind: 'autre' }, { win, production: true }),
+			true
+		)
+		assert.deepEqual(attente, [['not_found', { kind: 'autre' }]])
+		// once Umami is there, it gets the event itself
+		const { calls, win: avecUmami } = fakeUmami()
+		avecUmami.mmAttenteUmami = (name, data) => attente.push([name, data]) > 0
+		track('not_found', { kind: 'blog' }, { win: avecUmami, production: true })
+		assert.deepEqual(calls, [['not_found', { kind: 'blog' }]])
+		assert.equal(attente.length, 1)
+	})
+
+	test('a full or closed waiting room, an automated browser: nothing waits', () => {
+		const attente = []
+		const refuse = { navigator: {}, mmAttenteUmami: () => false }
+		assert.equal(
+			track('not_found', { kind: 'autre' }, { win: refuse, production: true }),
+			false
+		)
+		const win = {
+			navigator: { webdriver: true },
+			mmAttenteUmami: (name, data) => attente.push([name, data]) > 0,
+		}
+		assert.equal(
+			track('not_found', { kind: 'autre' }, { win, production: true }),
+			false
+		)
+		win.navigator.webdriver = false
+		assert.equal(
+			track('not_found', { kind: 'autre' }, { win, production: false }),
+			false
+		)
+		assert.equal(
+			track('not_found', { kind: 'x@y.fr' }, { win, production: true }),
+			false
+		)
+		assert.deepEqual(attente, [])
+	})
+
 	test('never sends an invalid event and never throws', () => {
 		const { calls, win } = fakeUmami()
 		assert.equal(

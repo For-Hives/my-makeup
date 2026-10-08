@@ -1,3 +1,36 @@
+const UMAMI_ORIGIN_DEFAULT = 'https://umami.wadefade.fr'
+
+/**
+ * Umami instance behind /u (MES-10): UMAMI_ORIGIN, e.g.
+ * https://umami.example.org (a path is allowed, never a query string);
+ * empty: the current instance. Read at build time (Coolify « Build
+ * Variable », then redeploy): the rewrites are written into the build. An
+ * invalid value stops the build instead of sending the visits nowhere.
+ * @param {unknown} [raw]
+ * @returns {string} origin and path, without trailing slash
+ */
+function umamiOrigin(raw = process.env.UMAMI_ORIGIN) {
+	if (typeof raw !== 'string' || raw.trim() === '') return UMAMI_ORIGIN_DEFAULT
+	let url = null
+	try {
+		url = new URL(raw.trim())
+	} catch {
+		url = null
+	}
+	if (
+		url === null ||
+		!['http:', 'https:'].includes(url.protocol) ||
+		url.search !== '' ||
+		url.hash !== '' ||
+		url.username !== '' ||
+		url.password !== ''
+	)
+		throw new Error(
+			`UMAMI_ORIGIN doit être une origine http(s) comme https://umami.example.org (reçu : ${raw})`
+		)
+	return `${url.origin}${url.pathname.replace(/\/+$/, '')}`
+}
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
 	reactStrictMode: true,
@@ -38,6 +71,40 @@ const nextConfig = {
 			source,
 			headers: [{ key: 'X-Robots-Tag', value: 'noindex, follow' }],
 		}))
+	},
+	// MES-10: Umami served from the site, so the blockers that filter the
+	// domain of the instance stop hiding real visits. Two paths only, never
+	// the dashboard; src/middleware.js cleans the headers on the way (no
+	// cookie, the visitor's IP only). A request that still carries a cookie
+	// or credentials, one the middleware did not clean, is never relayed:
+	// the rewrite does not apply and the site answers 404.
+	async rewrites() {
+		const umami = umamiOrigin()
+		const missing = [
+			{ type: 'header', key: 'cookie' },
+			{ type: 'header', key: 'authorization' },
+		]
+		return [
+			{ source: '/u/script.js', destination: `${umami}/script.js`, missing },
+			{ source: '/u/api/send', destination: `${umami}/api/send`, missing },
+		]
+	},
+	experimental: {
+		// Rewrites and headers match the exact case of the path, like the
+		// middleware matcher: /U/script.js or /u/API/send are not relayed to
+		// Umami without going through the middleware, they get a 404.
+		caseSensitiveRoutes: true,
+		// A silent Umami is cut after 10 s instead of 30 (the default of Next):
+		// the page never waits for it (async script, src/pages/_document.js),
+		// but its load event does, and the server holds the request meanwhile.
+		// The script and a send normally take well under a second.
+		proxyTimeout: 10_000,
+	},
+	env: {
+		// SOURCE_COMMIT as Coolify gives it to the build, frozen into the bundles:
+		// pages prerendered at build time and pages rendered later carry the same
+		// data-tag (src/lib/version.js).
+		BUILD_SOURCE_COMMIT: process.env.SOURCE_COMMIT || '',
 	},
 	// The auth test suite (npm run test:auth) builds into its own folder, so it
 	// never overwrites the .next of a dev server or of the image build.
