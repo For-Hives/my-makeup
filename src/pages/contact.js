@@ -3,25 +3,13 @@ import Nav from '@/components/Global/Nav'
 import Footer from '@/components/Global/Footer'
 import Head from 'next/head'
 import Hero from '@/components/Global/Hero'
-import { z } from 'zod'
 import CTA from '@/components/Global/CTA'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import Link from 'next/link'
 import { toast } from 'react-toastify'
 import { track } from '@/lib/analytics'
-
-const schema = z
-	.object({
-		first_name: z.string().nonempty({ message: 'Le prénom est requis' }),
-		last_name: z.string().nonempty({ message: 'Le nom est requis' }),
-		email: z.string().email({ message: "L'e-mail est invalide" }),
-		phone_number: z
-			.string()
-			.nonempty({ message: 'Le numéro de téléphone est requis' }),
-		message: z.string().nonempty({ message: 'Le message est requis' }),
-	})
-	.required()
+import { contactFormSchema } from '@/lib/contactForm'
 
 function Contact(props) {
 	const {
@@ -30,7 +18,7 @@ function Contact(props) {
 		formState: { errors },
 		reset, // pour réinitialiser le formulaire
 	} = useForm({
-		resolver: zodResolver(schema),
+		resolver: zodResolver(contactFormSchema),
 	})
 
 	// Créez une nouvelle fonction pour gérer la soumission du formulaire

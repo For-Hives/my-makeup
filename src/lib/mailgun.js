@@ -20,13 +20,18 @@ export function mailgunClientOptions({ key, region } = {}) {
 	return options
 }
 
-const LIMITS = {
+/**
+ * Maximum length of each contact form field, counted after trimming. The form
+ * schema (src/lib/contactForm.js) uses the same values, so the visitor sees a
+ * field error before the server would refuse the message.
+ */
+export const CONTACT_LIMITS = Object.freeze({
 	first_name: 100,
 	last_name: 100,
 	email: 254,
 	phone_number: 30,
 	message: 5000,
-}
+})
 
 /**
  * Checks the contact form body: every field is a non-empty string within its
@@ -37,7 +42,7 @@ const LIMITS = {
 export function contactMessage(body) {
 	const source = body !== null && typeof body === 'object' ? body : {}
 	const fields = {}
-	for (const [name, max] of Object.entries(LIMITS)) {
+	for (const [name, max] of Object.entries(CONTACT_LIMITS)) {
 		const value = typeof source[name] === 'string' ? source[name].trim() : ''
 		if (value === '' || value.length > max) return { ok: false, field: name }
 		fields[name] = value
