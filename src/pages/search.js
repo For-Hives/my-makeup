@@ -12,6 +12,7 @@ import Link from 'next/link'
 import { CheckCircleIcon } from '@heroicons/react/24/outline'
 import { isRepeat, resultsBucket, track } from '@/lib/analytics'
 import { signalAvecDelai } from '@/lib/delai'
+import { villePublique } from '@/lib/profil/lieu-public'
 import { formatZone } from '@/lib/format-zone'
 import { separerParLieu } from '@/lib/lieu'
 import { nomAffiche, photoPrincipale, texte } from '@/lib/profil/vue-publique'
@@ -342,7 +343,11 @@ function ListeResultats({
 
 function CarteResultat({ result, rang, prioritaire, cartes }) {
 	const nom = nomAffiche(result)
-	const zone = formatZone({ city: result.city, radius: result.action_radius })
+	const zone = formatZone({
+		// the commune of an address typed as the city, never its street (UI-11)
+		city: villePublique(result.city),
+		radius: result.action_radius,
+	})
 	const competences = (Array.isArray(result.skills) ? result.skills : [])
 		.map(skill => texte(skill?.name))
 		.filter(Boolean)

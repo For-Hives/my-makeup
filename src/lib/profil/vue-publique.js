@@ -6,12 +6,15 @@
  * - no « undefined », « null », « Invalid Date » nor « & km » whatever
  *   Strapi holds;
  * - empty sections hidden on the public page;
- * - pictures named « Réalisation de <nom> (n/N) ».
+ * - pictures named « Réalisation de <nom> (n/N) »;
+ * - the city as it may be published (villePublique): the commune of a
+ *   postal address, never its street (UI-11).
  * Works on the content API shape (`{ data: { attributes } }` media) and on
  * the flat shape of /api/me-makeup (the artist's space shows the same views).
  */
 
-import { formatZone, villeAffichee } from '../format-zone.js'
+import { formatZone } from '../format-zone.js'
+import { villePublique } from './lieu-public.js'
 
 const VIDES = new Set(['null', 'undefined'])
 
@@ -154,13 +157,13 @@ export const altRealisation = (nom, n, total) =>
 	`Réalisation de ${nom} (${n}/${total})`
 
 /**
- * Zone of a profile as text (formatZone of its city and radius).
+ * Zone of a profile as text (formatZone of its public city and radius).
  * @param {unknown} profil
  * @returns {string}
  */
 export function zoneProfil(profil) {
 	const p = attributs(profil)
-	return formatZone({ city: p.city, radius: p.action_radius })
+	return formatZone({ city: villePublique(p.city), radius: p.action_radius })
 }
 
 /**
@@ -317,7 +320,7 @@ export function offres(profil) {
 export function sectionsVisibles(profil) {
 	const p = attributs(profil)
 	return {
-		localisation: villeAffichee(p.city) !== '',
+		localisation: villePublique(p.city) !== '',
 		reseaux: contacts(p.network).length > 0,
 		competences: liste(p.skills).some(s => texte(s.name)),
 		langues: liste(p.language).some(l => texte(l.name)),

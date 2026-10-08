@@ -40,6 +40,15 @@ const OFFRES = [
 	},
 ]
 
+// a postal address typed as the city (UI-11): street and number made up
+export const ADRESSE_FICTIVE =
+	'7 impasse des Essais Fictifs, 74200 Thonon-les-Bains, France'
+// what of it must never be published
+export const RUE_FICTIVE = ['impasse', 'Essais Fictifs', '7 impasse']
+// a street glued to a made-up commune by a comma, no postal code: nothing
+// of it can be published
+export const RUE_COLLEE = 'Fictiville,impasse des Essais Fictifs'
+
 const RESEAUX_COMPLETS = {
 	instagram: '@studio.fictif',
 	facebook: '',
@@ -251,6 +260,51 @@ export const PROFILS_PUBLICS = [
 		first_name: 'Nina',
 		description: DESCRIPTION_199,
 		attendu: { slug: 'nina-199', publiable: false },
+	}),
+	// UI-11: complete, a postal address typed as the city (made up):
+	// publiable by its commune, the street published nowhere. Not available,
+	// so it stays out of the search and its counts.
+	complet({
+		id: 114,
+		username: 'adele-adresse',
+		createdAt: '2024-09-01T10:00:00.000Z',
+		first_name: 'Adèle',
+		last_name: 'Fictive',
+		city: ADRESSE_FICTIVE,
+		available: false,
+		attendu: {
+			slug: 'adele-adresse',
+			publiable: true,
+			ville: 'Thonon-les-Bains (74)',
+			commune: 'Thonon-les-Bains',
+		},
+	}),
+	// UI-11: complete, a code of département then free text as the city: no
+	// street number, shown as typed, and no usable city (as before UI-11), so
+	// noindex and out of the sitemap. Not available, out of the search.
+	complet({
+		id: 115,
+		username: 'lea-alentours',
+		createdAt: '2024-09-02T10:00:00.000Z',
+		first_name: 'Léa',
+		last_name: 'Fictive',
+		city: '74 et alentours',
+		available: false,
+		attendu: { slug: 'lea-alentours', publiable: false },
+	}),
+	// UI-11: complete, a street glued to the commune by a comma, without a
+	// space nor a postal code: no usable city (as before UI-11), so noindex
+	// and out of the sitemap, and the street published nowhere. Not
+	// available, out of the search.
+	complet({
+		id: 116,
+		username: 'ines-virgule',
+		createdAt: '2024-09-03T10:00:00.000Z',
+		first_name: 'Inès',
+		last_name: 'Fictive',
+		city: RUE_COLLEE,
+		available: false,
+		attendu: { slug: 'ines-virgule', publiable: false },
 	}),
 ]
 

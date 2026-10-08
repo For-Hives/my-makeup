@@ -236,13 +236,184 @@
 			}
 		},
 		{
-			"nom": "adresse postale",
+			"nom": "adresse postale avec code postal et commune (comptée par sa commune)",
 			"profil": {
 				"first_name": "Testine",
 				"last_name": "Recette",
 				"speciality": "Mariage",
 				"company_artist_name": "Studio Test",
 				"city": "12 rue des Lilas 74000 Annecy",
+				"description": "Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. ",
+				"main_picture": {
+					"data": {
+						"id": 1
+					}
+				},
+				"image_gallery": {
+					"data": [
+						{
+							"id": 2
+						}
+					]
+				},
+				"skills": [
+					{
+						"id": 1
+					}
+				],
+				"experiences": [
+					{
+						"id": 1
+					}
+				],
+				"courses": [
+					{
+						"id": 1
+					}
+				],
+				"service_offers": [
+					{
+						"price": "à partir de 120 €"
+					}
+				],
+				"network": {
+					"instagram": "studio.test"
+				},
+				"language": [
+					{
+						"id": 1
+					}
+				]
+			},
+			"attendu": {
+				"score": 13,
+				"actif": true,
+				"publiable": true,
+				"interne": false
+			}
+		},
+		{
+			"nom": "adresse postale sans commune ni code postal",
+			"profil": {
+				"first_name": "Testine",
+				"last_name": "Recette",
+				"speciality": "Mariage",
+				"company_artist_name": "Studio Test",
+				"city": "3 avenue des Essais",
+				"description": "Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. ",
+				"main_picture": {
+					"data": {
+						"id": 1
+					}
+				},
+				"image_gallery": {
+					"data": [
+						{
+							"id": 2
+						}
+					]
+				},
+				"skills": [
+					{
+						"id": 1
+					}
+				],
+				"experiences": [
+					{
+						"id": 1
+					}
+				],
+				"courses": [
+					{
+						"id": 1
+					}
+				],
+				"service_offers": [
+					{
+						"price": "à partir de 120 €"
+					}
+				],
+				"network": {
+					"instagram": "studio.test"
+				},
+				"language": [
+					{
+						"id": 1
+					}
+				]
+			},
+			"attendu": {
+				"score": 13,
+				"actif": false,
+				"publiable": false,
+				"interne": false
+			}
+		},
+		{
+			"nom": "rue collée à la commune par une virgule, sans code postal (pas une ville exploitable)",
+			"profil": {
+				"first_name": "Testine",
+				"last_name": "Recette",
+				"speciality": "Mariage",
+				"company_artist_name": "Studio Test",
+				"city": "Annecy,rue des Essais",
+				"description": "Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. ",
+				"main_picture": {
+					"data": {
+						"id": 1
+					}
+				},
+				"image_gallery": {
+					"data": [
+						{
+							"id": 2
+						}
+					]
+				},
+				"skills": [
+					{
+						"id": 1
+					}
+				],
+				"experiences": [
+					{
+						"id": 1
+					}
+				],
+				"courses": [
+					{
+						"id": 1
+					}
+				],
+				"service_offers": [
+					{
+						"price": "à partir de 120 €"
+					}
+				],
+				"network": {
+					"instagram": "studio.test"
+				},
+				"language": [
+					{
+						"id": 1
+					}
+				]
+			},
+			"attendu": {
+				"score": 13,
+				"actif": false,
+				"publiable": false,
+				"interne": false
+			}
+		},
+		{
+			"nom": "code de département puis texte libre (pas une ville exploitable)",
+			"profil": {
+				"first_name": "Testine",
+				"last_name": "Recette",
+				"speciality": "Mariage",
+				"company_artist_name": "Studio Test",
+				"city": "74 et alentours",
 				"description": "Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. Maquilleuse professionnelle. ",
 				"main_picture": {
 					"data": {

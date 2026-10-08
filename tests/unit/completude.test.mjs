@@ -124,13 +124,19 @@ describe('completude (plans/02 U01-U07)', () => {
 })
 
 describe('elementary rules', () => {
-	test('usable city: a town or a postcode, never an address nor a country', () => {
+	test('usable city: a town or a postcode, an address by its commune, never a country', () => {
 		for (const v of [
 			'Annecy',
 			'74000',
 			'74000 Annecy',
+			'Annecy (74)',
 			'Saint-Julien-en-Genevois',
 			'Paris, Lyon et Annecy',
+			// UI-11: a postal address counts by its commune or its postal code
+			'12 rue des Lilas 74000 Annecy',
+			'12, avenue des Essais, 75011 Paris',
+			'3 Place des Essais Thonon-les-Bains',
+			'12 rue des Essais 74000',
 		])
 			assert.equal(villeExploitable(v), true, v)
 		for (const v of [
@@ -139,12 +145,35 @@ describe('elementary rules', () => {
 			'France',
 			'FRANCE',
 			'null',
-			'12 rue des Lilas 74000 Annecy',
+			// an address without a commune nor a postal code
 			'3 avenue X',
+			'12 rue Victor Hugo',
+			// a street glued to the commune: the commune cannot be told apart
+			'Annecy,rue des Essais',
+			'Annecy.rue des Essais',
+			'Annecy-rue des Essais',
 			null,
 			42,
 		])
 			assert.equal(villeExploitable(v), false, String(v))
+	})
+
+	test('UI-11 a complete profile whose city is a postal address is publiable', () => {
+		for (const city of [
+			'12 rue des Essais Fictifs 74000 Annecy',
+			'7 IMPASSE DES ESSAIS, 74200 THONON-LES-BAINS, FRANCE',
+			'Annecy 74000',
+		]) {
+			const c = completude({ ...complet, city })
+			assert.equal(c.actif, true, city)
+			assert.equal(c.publiable, true, city)
+			assert.equal(c.score, 13, city)
+		}
+		for (const city of ['3 avenue des Essais', 'Annecy,rue des Essais']) {
+			const c = completude({ ...complet, city })
+			assert.equal(c.actif, false, city)
+			assert.equal(c.publiable, false, city)
+		}
 	})
 
 	test('numeric price read in the text', () => {

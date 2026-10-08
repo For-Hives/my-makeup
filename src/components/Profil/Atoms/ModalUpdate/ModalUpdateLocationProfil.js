@@ -13,6 +13,7 @@ import {
 	suivreChamp,
 	useEnvoi,
 } from '@/components/Profil/Atoms/ModalUpdate/ModalElements'
+import { AIDE_VILLE } from '@/lib/profil/lieu-public'
 
 const schema = zod
 	.object({
@@ -160,11 +161,19 @@ export default function ModalUpdateLocationProfil(props) {
 																id="city"
 																name="city"
 																type="text"
+																aria-describedby="city-aide"
 																{...register('city')}
 																value={userCity ?? ''}
 																onChange={suivre('city', handleUpdateCity)}
 																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
 															/>
+															<p
+																id="city-aide"
+																data-cy={'city-help'}
+																className={'mt-2 text-xs text-gray-600'}
+															>
+																{AIDE_VILLE}
+															</p>
 															{errors.city && (
 																<p
 																	data-cy={'error-city'}
