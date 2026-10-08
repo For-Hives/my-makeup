@@ -43,8 +43,27 @@ describe('URLs of the site', () => {
 		])
 			assert.equal(urlDuSite(brut), 'https://my-makeup.fr')
 		assert.equal(urlDuSite('http://localhost:3996/'), 'http://localhost:3996')
-		for (const brut of ['', undefined, 'my-makeup.fr', 'ftp://x.test', 42])
-			assert.equal(urlDuSite(brut), 'https://my-makeup.fr')
+		// undefined falls back to NEXT_PUBLIC_URL, which the CI sets: run
+		// these cases without it
+		const avant = process.env.NEXT_PUBLIC_URL
+		delete process.env.NEXT_PUBLIC_URL
+		try {
+			for (const brut of ['', undefined, 'my-makeup.fr', 'ftp://x.test', 42])
+				assert.equal(urlDuSite(brut), 'https://my-makeup.fr')
+		} finally {
+			if (avant !== undefined) process.env.NEXT_PUBLIC_URL = avant
+		}
+	})
+
+	test('undefined reads NEXT_PUBLIC_URL', () => {
+		const avant = process.env.NEXT_PUBLIC_URL
+		process.env.NEXT_PUBLIC_URL = 'http://localhost:3000/'
+		try {
+			assert.equal(urlDuSite(undefined), 'http://localhost:3000')
+		} finally {
+			if (avant === undefined) delete process.env.NEXT_PUBLIC_URL
+			else process.env.NEXT_PUBLIC_URL = avant
+		}
 	})
 
 	test('U46 absolute URL: one slash, no trailing slash, the home page is the origin', () => {
