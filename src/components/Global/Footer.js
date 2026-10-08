@@ -22,9 +22,9 @@ function Footer() {
 						<p className={'text-2xl font-bold text-my-makeup-900'}>My-Makeup</p>
 					</div>
 					<p className={'text-sm text-gray-600'}>
-						72 avenue Camus,
+						Sciez,
 						<br />
-						44000 Nantes
+						Haute-Savoie
 					</p>
 					<div className={'flex flex-row gap-3 md:flex-col lg:flex-row'}>
 						<Link
@@ -169,7 +169,7 @@ function Footer() {
 					<Link href={'/contact'} className={'text-sm text-gray-600'}>
 						Contact
 					</Link>
-					<Link href={'/cgu'} className={'text-sm text-gray-600'}>
+					<Link href={'/mentions-legales'} className={'text-sm text-gray-600'}>
 						Mentions légales
 					</Link>
 					{/* todo : remplir les cgv plus tard */}
