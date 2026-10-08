@@ -139,6 +139,25 @@ describe('resoudreProfil (plans/02 U13, U61)', () => {
 		)
 	})
 
+	test('known limit: a username equal to the slug of another profile serves that profile (the slug wins)', () => {
+		const avecHomonyme = tableDesSlugs([
+			{ id: 1, username: 'Zoé Lefèvre', createdAt: '2023-01-01T00:00:00.000Z' },
+			{ id: 2, username: 'ZOE LEFEVRE', createdAt: '2024-01-01T00:00:00.000Z' },
+			{
+				id: 5,
+				username: 'zoe-lefevre-2',
+				createdAt: '2025-01-01T00:00:00.000Z',
+			},
+		])
+		// the older slug keeps its profile, the newer one gets its own slug
+		assert.equal(avecHomonyme.slugParId.get('2'), 'zoe-lefevre-2')
+		assert.equal(avecHomonyme.slugParId.get('5'), 'zoe-lefevre-2-2')
+		const r = resoudreProfil('zoe-lefevre-2', avecHomonyme)
+		assert.equal(r.profil.id, 2)
+		assert.equal(r.redirection, false)
+		assert.equal(resoudreProfil('zoe-lefevre-2-2', avecHomonyme).profil.id, 5)
+	})
+
 	test('unknown → null (404)', () => {
 		for (const s of ['inconnue', '', null, undefined, 'zoe-lefevre-9'])
 			assert.equal(resoudreProfil(s, table), null)

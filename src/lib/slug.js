@@ -13,8 +13,14 @@
  *
  * Nothing is stored in Strapi: the table is computed from the list of the
  * profiles (username, createdAt) each time a page or the sitemap needs it.
- * Deleting a profile can move the -2 of a later one; there was no collision in
- * production on 2026-10-08 (100 profiles, 72 usernames to normalise).
+ * Limits until the v3 stores the slug (and the search returns it):
+ * - deleting a profile can move the -2 of a later one;
+ * - a username equal to the slug of another profile (« zoe-lefevre-2 »
+ *   created after « ZOE LEFEVRE ») serves that other profile: the slug
+ *   wins, so an indexed URL never changes hands, but the search card of the
+ *   newer profile, which links to its username, opens the other one.
+ * Neither case existed in production on 2026-10-08 (100 profiles, 72
+ * usernames to normalise, no collision).
  */
 
 export const SLUG_MAX = 70
@@ -137,7 +143,8 @@ export function tableDesSlugs(profils) {
 
 /**
  * What /profil/<segment> serves.
- * - the slug of a profile → that profile;
+ * - the slug of a profile → that profile, even when the segment is also the
+ *   username of another one (see the limits above);
  * - the exact username of a profile (old URL) → 308 to its slug;
  * - a variant of a slug (capitals, accents, spaces) → 308 to that slug;
  * - anything else → null (404).
