@@ -289,7 +289,7 @@ test.describe('SEO-10 sitemap, robots, noindex, canonical', () => {
 		expect(xml).not.toMatch(/changefreq|priority/)
 	})
 
-	test('chaque URL du sitemap : 200, indexable, canonical vers elle-même (dont la politique de confidentialité)', async ({
+	test('chaque URL du sitemap : 200, indexable, canonical vers elle-même (dont la politique de confidentialité), titre de 60 et description de 155 caractères au plus', async ({
 		request,
 	}) => {
 		const xml = await (await request.get('/sitemap.xml')).text()
@@ -304,6 +304,17 @@ test.describe('SEO-10 sitemap, robots, noindex, canonical', () => {
 			expect(reponse.headers()['x-robots-tag'], loc).toBeUndefined()
 			expect(canonical(page), loc).toBe(loc)
 			expect(motsInterdits(page), loc).toEqual([])
+			// 60 characters of title, 155 of description at most
+			const titre = decoder(
+				/<title[^>]*>([^<]*)<\/title>/.exec(page)?.[1] ?? ''
+			)
+			expect(titre.length, loc).toBeGreaterThan(0)
+			expect(titre.length, `${loc} ${titre}`).toBeLessThanOrEqual(60)
+			const description = meta(page, 'description') ?? ''
+			expect(description.length, loc).toBeGreaterThan(0)
+			expect(description.length, `${loc} ${description}`).toBeLessThanOrEqual(
+				155
+			)
 		}
 	})
 

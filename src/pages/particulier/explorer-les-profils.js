@@ -17,7 +17,7 @@ function ExplorerLesProfils(props) {
 				<title>Explorer les profils !</title>
 				<meta
 					name="description"
-					content="Découvrez comment utiliser la recherche par mot-clé et par ville de My-Makeup pour explorer les profils de maquilleuses et trouver celle qui vous correspond le mieux."
+					content="Utilisez la recherche par mot-clé et par ville de My-Makeup pour explorer les profils de maquilleuses et trouver celle qui vous correspond."
 				/>
 				{/*	seo tag canonical link */}
 				<link

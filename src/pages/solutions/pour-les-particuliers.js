@@ -17,7 +17,7 @@ function PourLesParticuliers(props) {
 				<title>Solutions My-Makeup pour les Particuliers !</title>
 				<meta
 					name="description"
-					content="Découvrez comment My-Makeup simplifie la recherche de la maquilleuse professionnelle idéale. Grâce à notre plateforme intuitive, trouver la maquilleuse de vos rêves n'a jamais été aussi simple !"
+					content="Découvrez comment My-Makeup simplifie la recherche de la maquilleuse professionnelle idéale, grâce à une plateforme simple et intuitive."
 				/>
 				{/*	seo tag canonical link */}
 				<link
