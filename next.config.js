@@ -16,6 +16,16 @@ const nextConfig = {
 		],
 	},
 	cacheMaxMemorySize: 0,
+	// SEO-10: the account pages and the search are never indexed. Same paths
+	// as CHEMINS_NOINDEX in src/lib/seo/robots.js (checked by
+	// tests/unit/seo.test.mjs); robots.txt does not block them, or this
+	// header would never be read.
+	async headers() {
+		return ['/auth', '/auth/:path*', '/search'].map(source => ({
+			source,
+			headers: [{ key: 'X-Robots-Tag', value: 'noindex, follow' }],
+		}))
+	},
 	// The auth test suite (npm run test:auth) builds into its own folder, so it
 	// never overwrites the .next of a dev server or of the image build.
 	distDir: process.env.NEXT_DIST_DIR || '.next',

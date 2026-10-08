@@ -9,15 +9,20 @@ import 'react-toastify/dist/ReactToastify.css'
 import Head from 'next/head'
 import { SessionProvider } from 'next-auth/react'
 import { ToastContainer } from 'react-toastify'
+import { robotsPourChemin } from '@/lib/seo/robots'
 
 export default function App({
 	Component,
 	pageProps: { session, ...pageProps },
+	router,
 }) {
+	// /auth/*, /search and the error pages are never indexed (SEO-10)
+	const robots = robotsPourChemin(router?.pathname)
 	return (
 		<>
 			<Head>
 				<meta name="viewport" content="width=device-width, initial-scale=1" />
+				{robots && <meta key="robots" name="robots" content={robots} />}
 			</Head>
 			<SessionProvider
 				session={session}

@@ -1,29 +1,24 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { MagnifyingGlassIcon } from '@heroicons/react/20/solid'
 import { MapPinIcon } from '@heroicons/react/24/outline'
-import { useRouter } from 'next/router'
 
-function FullSearchBloc(props) {
-	const [searchTerm, setSearchTerm] = useState('')
-	const [city, setCity] = useState('')
+/**
+ * Search form of the search page (UI-07): prefilled with the search of the
+ * URL, a city alone is enough; `onSearch` puts the search in the URL.
+ * @param {{search?: string, city?: string, onSearch: (r: {search: string, city: string}) => void}} props
+ */
+function FullSearchBloc({ search = '', city = '', onSearch }) {
+	const [searchTerm, setSearchTerm] = useState(search)
+	const [ville, setVille] = useState(city)
 
-	const router = useRouter()
+	// the URL changed (back button, link): the fields follow it
+	useEffect(() => setSearchTerm(search), [search])
+	useEffect(() => setVille(city), [city])
 
 	function handleSubmit(e) {
 		e.preventDefault()
-
-		if (searchTerm === '') {
-			return
-		}
-		if (city !== '') {
-			router.push(
-				`/search?search=${encodeURI(searchTerm)}&city=${encodeURI(city)}`
-			)
-			props.performSearch(searchTerm, city, 'formulaire')
-		} else {
-			router.push(`/search?search=${encodeURI(searchTerm)}`)
-			props.performSearch(searchTerm, undefined, 'formulaire')
-		}
+		if (searchTerm.trim() === '' && ville.trim() === '') return
+		onSearch({ search: searchTerm, city: ville })
 	}
 
 	return (
@@ -35,6 +30,7 @@ function FullSearchBloc(props) {
 			<div className={'flex max-w-5xl justify-between'}>
 				<form
 					onSubmit={handleSubmit}
+					role="search"
 					className={
 						'flex w-full flex-col flex-wrap items-center justify-between gap-6 md:flex-row lg:flex-nowrap'
 					}
@@ -45,11 +41,16 @@ function FullSearchBloc(props) {
 						}
 					>
 						<div className={'relative'}>
+							<label htmlFor="recherche-prestation" className="sr-only">
+								Prestation recherchée
+							</label>
 							<MagnifyingGlassIcon
 								className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 transform text-indigo-900"
 								aria-hidden="true"
 							/>
 							<input
+								id="recherche-prestation"
+								type="search"
 								data-cy="search-input"
 								className={
 									'flex w-full items-center rounded-lg border-2 border-indigo-900 bg-transparent py-2 pl-12 pr-6 text-sm leading-6 text-indigo-900 lg:w-96'
@@ -62,20 +63,25 @@ function FullSearchBloc(props) {
 							/>
 						</div>
 						<div className={'relative'}>
+							<label htmlFor="recherche-ville" className="sr-only">
+								Ville de la prestation
+							</label>
 							<MapPinIcon
 								className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 transform text-indigo-900"
 								aria-hidden="true"
 							/>
 							<input
+								id="recherche-ville"
 								data-cy="city-input"
+								autoComplete="address-level2"
 								className={
 									'flex w-full items-center rounded-lg border-2 border-indigo-900 bg-transparent py-2 pl-12 pr-6 text-sm leading-6 text-indigo-900 lg:w-96'
 								}
 								placeholder={
 									'Lieu de la mission (ex: Paris, Lyon, Marseille...)'
 								}
-								value={city}
-								onChange={e => setCity(e.target.value)}
+								value={ville}
+								onChange={e => setVille(e.target.value)}
 							/>
 						</div>
 					</div>
@@ -83,7 +89,6 @@ function FullSearchBloc(props) {
 						<button
 							data-cy="search-button"
 							type="submit"
-							onSubmit={handleSubmit}
 							className={'btn-primary w-full'}
 						>
 							Trouver une maquilleuse

@@ -1,8 +1,27 @@
 import React, { useEffect } from 'react'
-import Link from 'next/link'
 import Image from 'next/image'
 import { useSession } from 'next-auth/react'
 import { shouldTrackContact, umamiAttributes } from '@/lib/analytics'
+import { contacts, libelleCanal } from '@/lib/profil/vue-publique'
+
+const ICONES = {
+	instagram: '/assets/brand/037-instagram.svg',
+	facebook: '/assets/brand/006-facebook.svg',
+	linkedin: '/assets/brand/030-linkedin.svg',
+	youtube: '/assets/brand/033-youtube.svg',
+	email: '/assets/brand/050-email.svg',
+	phone: '/assets/brand/051-phone.svg',
+	website: '/assets/brand/052-website.svg',
+}
+
+// networks and websites open in a new tab, mailto: and tel: do not
+const NOUVEL_ONGLET = new Set([
+	'instagram',
+	'facebook',
+	'linkedin',
+	'youtube',
+	'website',
+])
 
 /**
  * @param props.user - profile attributes
@@ -11,21 +30,16 @@ import { shouldTrackContact, umamiAttributes } from '@/lib/analytics'
  * channel, never the email or the phone number)
  */
 function ViewSocialMediaProfil(props) {
-	const [user, setUser] = React.useState(props.user ?? null)
 	const [trackContacts, setTrackContacts] = React.useState(true)
 	const { data: session } = useSession()
 
+	// read from the props only, so the public profile is in the server HTML
+	const liens = contacts(props.user?.network)
 	const pid = props.tracking?.pid
 	const username = props.tracking?.username
-	const profileEmail = user?.network?.email
+	const profileEmail = props.user?.network?.email
 	const viewerName = session?.user?.name
 	const viewerEmail = session?.user?.email
-
-	useEffect(() => {
-		if (props.user) {
-			setUser(props.user)
-		}
-	}, [props.user])
 
 	useEffect(() => {
 		if (pid === undefined) return
@@ -50,191 +64,45 @@ function ViewSocialMediaProfil(props) {
 			<h2 className={'text-xl font-bold text-gray-700'}>
 				Réseaux sociaux & contacts
 			</h2>
-			{user?.network && (
+			{liens.length > 0 && (
 				<div className={'flex flex-col gap-3'}>
-					{
-						// display :
-						// 	- instagram if user?.network.instagram is not null
-						// 	- facebook if user?.network.facebook is not null
-						// 	- linkedin if user?.network.linkedin is not null
-						// 	- youtube if user?.network.youtube is not null
-						// 	- email if user?.network?.email is not null
-						// 	- phone if user?.network?.phone is not null
-						// 	- website if user?.network.website is not null
-					}
-					{user?.network?.instagram && (
-						<Link
-							href={user?.network?.instagram}
-							{...contactAttributes('instagram')}
-							target={'_blank'}
-							rel={'noopener nofollow noreferrer'}
-							className={'group flex items-center gap-3'}
-						>
-							<Image
-								src={'/assets/brand/037-instagram.svg'}
-								className={'fill-indigo-700'}
-								width={'35'}
-								height={'35'}
-								alt={`${user?.user?.first_name} ${user?.user?.last_name} Instagram`}
-							/>
-							<p
-								data-cy={'instagram'}
-								className={
-									'overflow-hidden text-sm text-gray-700 group-hover:underline'
-								}
+					{liens.map(({ canal, libelle, href }) => {
+						const contenu = (
+							<>
+								<Image
+									src={ICONES[canal]}
+									className={'fill-indigo-700'}
+									width={'35'}
+									height={'35'}
+									alt={libelleCanal(canal)}
+								/>
+								<p
+									data-cy={canal}
+									className={
+										'overflow-hidden text-sm text-gray-700 group-hover:underline'
+									}
+								>
+									{libelle}
+								</p>
+							</>
+						)
+						return href ? (
+							<a
+								key={canal}
+								href={href}
+								{...contactAttributes(canal)}
+								{...(NOUVEL_ONGLET.has(canal) ? { target: '_blank' } : {})}
+								rel={'noopener nofollow noreferrer'}
+								className={'group flex items-center gap-3'}
 							>
-								{user?.network?.instagram}
-							</p>
-						</Link>
-					)}
-					{user?.network?.facebook && (
-						<Link
-							href={user?.network?.facebook}
-							{...contactAttributes('facebook')}
-							target={'_blank'}
-							rel={'noopener nofollow noreferrer'}
-							className={'group flex items-center gap-3'}
-						>
-							<Image
-								src={'/assets/brand/006-facebook.svg'}
-								className={'fill-indigo-700'}
-								width={'35'}
-								height={'35'}
-								alt={`${user?.user?.first_name} ${user?.user?.last_name} Facebook`}
-							/>
-							<p
-								data-cy={'facebook'}
-								className={
-									'overflow-hidden text-sm text-gray-700 group-hover:underline'
-								}
-							>
-								{user?.network?.facebook}
-							</p>
-						</Link>
-					)}
-					{user?.network?.linkedin && (
-						<Link
-							href={user?.network?.linkedin}
-							{...contactAttributes('linkedin')}
-							target={'_blank'}
-							rel={'noopener nofollow noreferrer'}
-							className={'group flex items-center gap-3'}
-						>
-							<Image
-								src={'/assets/brand/030-linkedin.svg'}
-								className={'fill-indigo-700'}
-								width={'35'}
-								height={'35'}
-								alt={`${user?.user?.first_name} ${user?.user?.last_name} Linkedin`}
-							/>
-							<p
-								data-cy={'linkedin'}
-								className={
-									'overflow-hidden text-sm text-gray-700 group-hover:underline'
-								}
-							>
-								{user?.network?.linkedin}
-							</p>
-						</Link>
-					)}
-					{user?.network?.youtube && (
-						<Link
-							href={user?.network?.youtube}
-							{...contactAttributes('youtube')}
-							target={'_blank'}
-							rel={'noopener nofollow noreferrer'}
-							className={'group flex items-center gap-3'}
-						>
-							<Image
-								src={'/assets/brand/033-youtube.svg'}
-								className={'fill-indigo-700'}
-								width={'35'}
-								height={'35'}
-								alt={`${user?.user?.first_name} ${user?.user?.last_name} Youtube`}
-							/>
-							<p
-								data-cy={'youtube'}
-								className={
-									'overflow-hidden text-sm text-gray-700 group-hover:underline'
-								}
-							>
-								{user?.network?.youtube}
-							</p>
-						</Link>
-					)}
-					{user?.network?.email && (
-						<Link
-							href={`mailto:${user?.network?.email}`}
-							{...contactAttributes('email')}
-							rel={'noopener nofollow noreferrer'}
-							className={'group flex items-center gap-3'}
-						>
-							<Image
-								src={'/assets/brand/050-email.svg'}
-								className={'fill-indigo-700'}
-								width={'35'}
-								height={'35'}
-								alt={`${user?.user?.first_name} ${user?.user?.last_name} Email`}
-							/>
-							<p
-								data-cy={'email'}
-								className={
-									'overflow-hidden text-sm text-gray-700 group-hover:underline'
-								}
-							>
-								{user?.network?.email}
-							</p>
-						</Link>
-					)}
-					{user?.network?.phone && (
-						<Link
-							href={`tel:${user?.network?.phone}`}
-							{...contactAttributes('phone')}
-							rel={'noopener nofollow noreferrer'}
-							className={'group flex items-center gap-3'}
-						>
-							<Image
-								src={'/assets/brand/051-phone.svg'}
-								className={'fill-indigo-700'}
-								width={'35'}
-								height={'35'}
-								alt={`${user?.network?.phone} ${user?.network?.phone} Téléphone`}
-							/>
-							<p
-								data-cy={'phone'}
-								className={
-									'overflow-hidden text-sm text-gray-700 group-hover:underline'
-								}
-							>
-								{user?.network?.phone}
-							</p>
-						</Link>
-					)}
-					{user?.network?.website && (
-						<Link
-							href={user?.network?.website}
-							{...contactAttributes('website')}
-							target={'_blank'}
-							rel={'noopener nofollow noreferrer'}
-							className={'group flex items-center gap-3'}
-						>
-							<Image
-								src={'/assets/brand/052-website.svg'}
-								className={'fill-indigo-700'}
-								width={'35'}
-								height={'35'}
-								alt={`${user?.user?.first_name} ${user?.user?.last_name} - site internet`}
-							/>
-							<p
-								data-cy={'website'}
-								className={
-									'overflow-hidden text-sm text-gray-700 group-hover:underline'
-								}
-							>
-								{user?.network?.website}
-							</p>
-						</Link>
-					)}
+								{contenu}
+							</a>
+						) : (
+							<div key={canal} className={'flex items-center gap-3'}>
+								{contenu}
+							</div>
+						)
+					})}
 				</div>
 			)}
 		</div>

@@ -10,6 +10,7 @@ import Link from 'next/link'
 import { toast } from 'react-toastify'
 import { track } from '@/lib/analytics'
 import { contactFormSchema } from '@/lib/contactForm'
+import { urlAbsolue } from '@/lib/seo/url'
 
 function Contact(props) {
 	const {
@@ -67,7 +68,7 @@ function Contact(props) {
 					content="Contactez-nous pour toute question, suggestion ou collaboration ! L'équipe My-Makeup est à votre écoute !"
 				/>
 				{/*	seo tag canonical link */}
-				<link rel="canonical" href={'https://my-makeup.fr/contact'} />
+				<link rel="canonical" href={urlAbsolue('/contact')} />
 			</Head>
 			<Nav />
 			<main className={'relative'}>

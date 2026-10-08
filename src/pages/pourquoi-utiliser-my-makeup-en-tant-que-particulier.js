@@ -5,6 +5,7 @@ import Head from 'next/head'
 import Hero from '@/components/Global/Hero'
 import CTA from '@/components/Global/CTA'
 import AdvantagesParticulier from '@/components/Particulier/AdvantagesParticulier'
+import { urlAbsolue } from '@/lib/seo/url'
 
 /**
  * @param props
@@ -22,9 +23,9 @@ function PourquoiUtiliserMyMakeupEnTantQueParticulier(props) {
 				{/*	seo tag canonical link */}
 				<link
 					rel="canonical"
-					href={
-						'https://my-makeup.fr/pourquoi-utiliser-my-makeup-en-tant-que-particulier'
-					}
+					href={urlAbsolue(
+						'/pourquoi-utiliser-my-makeup-en-tant-que-particulier'
+					)}
 				/>
 			</Head>
 			<Nav />

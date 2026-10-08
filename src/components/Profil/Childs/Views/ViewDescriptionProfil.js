@@ -1,29 +1,20 @@
-import React, { useEffect } from 'react'
+import React from 'react'
+import { lignes } from '@/lib/profil/vue-publique'
 
-function ViewDescriptionProfil(props) {
-	const [user, setUser] = React.useState(null)
-
-	useEffect(() => {
-		if (props.user) {
-			setUser(props.user)
-		}
-	}, [props.user])
-
+// read from the props only, so the public profile is in the server HTML
+function ViewDescriptionProfil({ user }) {
 	return (
 		<div className={'flex w-full flex-col gap-4'}>
 			<h2 className={'text-xl font-bold text-gray-700'}>
 				Vous en quelques mots
 			</h2>
 			{
-				// display the user description
-				// if \n is present, split the string and display each part in a new line
-				user?.description?.split('\n').map((item, i) => {
-					return (
-						<p data-cy={'description'} key={i} className={'text-gray-800'}>
-							{item}
-						</p>
-					)
-				})
+				// one paragraph per line typed
+				lignes(user?.description).map((ligne, i) => (
+					<p data-cy={'description'} key={i} className={'text-gray-800'}>
+						{ligne}
+					</p>
+				))
 			}
 		</div>
 	)

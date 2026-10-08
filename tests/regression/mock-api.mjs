@@ -14,14 +14,23 @@
 // - POST /api/upload: JPEG, PNG or WebP read from the first bytes, 10 MB at
 //   most (413 above), like the upload guard of the API (PR #370);
 // - forgot-password answers { ok: true } for any address, reset-password
-//   refuses an unknown code or two different passwords.
-// `/__…` routes drive it from the tests (forced failures, delays, state,
-// profile of the test account).
+//   refuses an unknown code or two different passwords;
+// - public collections (makeup-artistes, talents, articles) like the content
+//   API of Strapi 4: 25 entries by default and 100 at most per page, `fields`,
+//   `populate` (components and media only when asked), `filters[x][$eq]`;
+//   lists without the email and phone of the profiles, except the query of
+//   one profile by its username (API PR #370);
+// - /api/searching: the city alone is a term, unavailable profiles left
+//   out, public fields only.
+// `/__…` routes drive it from the tests (forced failures, delays, revoked
+// sessions, state, profile of the test account). Public data:
+// tests/regression/donnees-publiques.mjs.
 // Test data only: @test.local accounts, made-up names. Ported from
 // plans/outils/interfaces/mock-api.mjs.
 import http from 'node:http'
 import { randomBytes } from 'node:crypto'
 import { pathToFileURL } from 'node:url'
+import { ARTICLES, PROFILS_PUBLICS, TALENTS } from './donnees-publiques.mjs'
 
 export const COMPTE_TEST = {
 	id: 1,
@@ -120,6 +129,92 @@ async function dimensions(octets) {
 	}
 }
 
+// --- content API (public collections) ---
+// a 1 × 1 PNG for the pictures of the public profiles
+const PNG = Buffer.from(
+	'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+	'base64'
+)
+const SCALAIRES_PROFIL = [
+	'username',
+	'first_name',
+	'last_name',
+	'company_artist_name',
+	'speciality',
+	'city',
+	'action_radius',
+	'available',
+	'pro',
+	'description',
+	'createdAt',
+	'updatedAt',
+]
+const COMPOSANTS_PROFIL = [
+	'skills',
+	'language',
+	'courses',
+	'experiences',
+	'service_offers',
+	'network',
+]
+const MEDIAS_PROFIL = ['main_picture', 'image_gallery']
+
+// query string of the content API: fields, populate, filters, pagination
+function lireRequete(url) {
+	const p = url.searchParams
+	const champs = []
+	const populate = new Set()
+	let tout = false
+	const filtres = {}
+	for (const [cle, valeur] of p.entries()) {
+		if (/^fields(\[\d+\])?$/.test(cle))
+			champs.push(...valeur.split(',').map(v => v.trim()))
+		else if (cle === 'populate') {
+			if (valeur === '*') tout = true
+			else valeur.split(',').forEach(v => populate.add(v.trim()))
+		} else if (/^populate\[\d+\]$/.test(cle)) populate.add(valeur)
+		else if (/^populate\[([^\]]+)\]/.test(cle))
+			populate.add(/^populate\[([^\]]+)\]/.exec(cle)[1])
+		const filtre = /^filters\[(\w+)\](\[\$eq\])?$/.exec(cle)
+		if (filtre) filtres[filtre[1]] = valeur
+	}
+	const entier = (v, defaut) => {
+		const n = Number.parseInt(v ?? '', 10)
+		return Number.isFinite(n) && n > 0 ? n : defaut
+	}
+	return {
+		champs,
+		veut: nom =>
+			tout || [...populate].some(x => x === nom || x.startsWith(`${nom}.`)),
+		veutImbrique: chemin => populate.has(chemin),
+		filtres,
+		page: entier(p.get('pagination[page]'), 1),
+		taille: Math.min(100, entier(p.get('pagination[pageSize]'), 25)),
+	}
+}
+
+// one page of a list, with the meta of Strapi
+function paginerListe(entrees, { page, taille }) {
+	const total = entrees.length
+	return {
+		data: entrees.slice((page - 1) * taille, page * taille),
+		meta: {
+			pagination: {
+				page,
+				pageSize: taille,
+				pageCount: Math.ceil(total / taille),
+				total,
+			},
+		},
+	}
+}
+
+const normaliser = texte =>
+	String(texte ?? '')
+		.normalize('NFKD')
+		.replace(/[\u0300-\u036f]/g, '')
+		.toLowerCase()
+
 /**
  * @param {number} port
  * @param {{origine?: string}} [options] - origin of the app, for CORS
@@ -145,7 +240,12 @@ export function demarrerFauxStrapi(port = 4112, { origine = '*' } = {}) {
 				fournisseurEmail: false, // forgot-password: 500 for a known address
 				delaiPostMs: 0,
 				delaiPatchMs: 0,
+				meMakeup401: false, // /api/me-makeup refuses the JWT, /users/me does not
+				recherche: null, // status forced on /api/searching
+				delaiRechercheMs: 0,
 			},
+			revoques: new Set(), // JWT refused everywhere (/__revoquer)
+			supplementaires: [], // made-up profiles added by /__multiplier
 		})
 	}
 	reinitialiser()
@@ -162,6 +262,7 @@ export function demarrerFauxStrapi(port = 4112, { origine = '*' } = {}) {
 	}
 	const authentifie = req => {
 		const jwt = (req.headers.authorization ?? '').split(' ')[1]
+		if (etat.revoques.has(jwt)) return null
 		const id = jetons.get(jwt)
 		return etat.comptes.find(c => c.id === id) ?? null
 	}
@@ -226,6 +327,136 @@ export function demarrerFauxStrapi(port = 4112, { origine = '*' } = {}) {
 	})
 	const fichier = id =>
 		etat.fichiers.find(f => f.id === Number(id?.id ?? id)) ?? null
+	// pictures of the public profiles, files 1 to 7: a heavy original and
+	// the copies Strapi makes of it (formats, size in KB)
+	const copie = (i, nom, largeur, taille) => ({
+		name: `${nom}_photo-${i}.png`,
+		mime: 'image/png',
+		width: largeur,
+		height: Math.round((largeur * 3) / 4),
+		size: taille,
+		url: `http://127.0.0.1:${port}/media/${i}/${nom}`,
+	})
+	const fichiersPublics = Array.from({ length: 7 }, (_, i) => ({
+		id: i + 1,
+		name: `photo-${i + 1}.png`,
+		mime: 'image/png',
+		width: 2000,
+		height: 1500,
+		size: 1400.5,
+		url: `http://127.0.0.1:${port}/media/${i + 1}`,
+		formats: {
+			thumbnail: copie(i + 1, 'thumbnail', 208, 9.1),
+			large: copie(i + 1, 'large', 1000, 180.4),
+			medium: copie(i + 1, 'medium', 750, 110.2),
+			small: copie(i + 1, 'small', 500, 52.7),
+		},
+		alternativeText: null,
+		octets: PNG,
+	}))
+	const fichierPublic = id =>
+		fichiersPublics.find(f => f.id === Number(id?.id ?? id)) ??
+		fichier(id) ??
+		null
+	// eslint-disable-next-line no-unused-vars
+	const sansOctets = ({ octets, proprietaire, ...f }) => f
+	const mediaStrapi = f => (f ? { id: f.id, attributes: sansOctets(f) } : null)
+
+	// every profile of the public API: the fixtures and the accounts' ones
+	const tousLesProfils = () => [
+		...PROFILS_PUBLICS,
+		...etat.supplementaires,
+		...Object.values(etat.profils).map(profil => ({
+			createdAt: '2025-01-01T10:00:00.000Z',
+			updatedAt: '2025-01-01T10:00:00.000Z',
+			...profil,
+		})),
+	]
+
+	// a profile as /api/makeup-artistes answers it
+	const entreeProfil = (profil, requete, garderContacts) => {
+		const attributes = {}
+		const scalaires = requete.champs.length
+			? SCALAIRES_PROFIL.filter(c => requete.champs.includes(c))
+			: SCALAIRES_PROFIL
+		for (const c of scalaires) attributes[c] = profil[c] ?? null
+		let n = 0
+		const composant = ({ id, ...champs }) => ({ id: id ?? ++n, ...champs })
+		for (const c of COMPOSANTS_PROFIL) {
+			if (!requete.veut(c)) continue
+			if (c === 'network') {
+				attributes.network = profil.network ? composant(profil.network) : null
+				if (attributes.network && !garderContacts) {
+					delete attributes.network.email
+					delete attributes.network.phone
+				}
+			} else
+				attributes[c] = (profil[c] ?? []).map(({ options, ...element }) =>
+					c === 'service_offers' &&
+					requete.veutImbrique('service_offers.options')
+						? { ...composant(element), options: (options ?? []).map(composant) }
+						: composant(element)
+				)
+		}
+		if (requete.veut('main_picture'))
+			attributes.main_picture = {
+				data: mediaStrapi(fichierPublic(profil.main_picture)),
+			}
+		if (requete.veut('image_gallery')) {
+			const images = (profil.image_gallery ?? [])
+				.map(fichierPublic)
+				.filter(Boolean)
+				.map(mediaStrapi)
+			attributes.image_gallery = { data: images.length ? images : null }
+		}
+		return { id: profil.id, attributes }
+	}
+
+	// a talent or an article: scalar fields (the article gallery is empty)
+	const entreeContenu = (contenu, requete) => {
+		// eslint-disable-next-line no-unused-vars
+		const { id, galery, ...scalaires } = contenu
+		const attributes = {}
+		for (const [c, v] of Object.entries({
+			...scalaires,
+			createdAt: scalaires.updatedAt,
+			publishedAt: scalaires.updatedAt,
+		}))
+			if (!requete.champs.length || requete.champs.includes(c))
+				attributes[c] = v
+		if (requete.veut('galery')) attributes.galery = { data: null }
+		return { id, attributes }
+	}
+
+	// public result of /api/searching (the fields of searching.js)
+	const resultatRecherche = profil => ({
+		id: profil.id,
+		username: profil.username,
+		first_name: profil.first_name ?? null,
+		last_name: profil.last_name ?? null,
+		company_artist_name: profil.company_artist_name ?? null,
+		speciality: profil.speciality ?? null,
+		city: profil.city ?? null,
+		action_radius: profil.action_radius ?? null,
+		available: profil.available ?? null,
+		pro: profil.pro ?? false,
+		description: profil.description ?? null,
+		skills: profil.skills ?? [],
+		experiences: profil.experiences ?? [],
+		courses: profil.courses ?? [],
+		service_offers: profil.service_offers ?? [],
+		language: profil.language ?? [],
+		main_picture: fichierPublic(profil.main_picture)
+			? sansOctets(fichierPublic(profil.main_picture))
+			: null,
+		image_gallery: (profil.image_gallery ?? [])
+			.map(fichierPublic)
+			.filter(Boolean)
+			.map(sansOctets),
+		network: profil.network
+			? (({ email, phone, ...reste }) => reste)(profil.network)
+			: null,
+	})
 
 	const serveur = http.createServer(async (req, res) => {
 		const url = new URL(req.url, 'http://faux-strapi')
@@ -240,6 +471,33 @@ export function demarrerFauxStrapi(port = 4112, { origine = '*' } = {}) {
 		if (url.pathname === '/__reset') {
 			reinitialiser()
 			return json(res, 200, { ok: true })
+		}
+		if (url.pathname === '/__revoquer') {
+			// every JWT issued so far is refused, as after a JWT_SECRET rotation
+			for (const jwt of jetons.keys()) etat.revoques.add(jwt)
+			return json(res, 200, { ok: true })
+		}
+		if (url.pathname === '/__multiplier') {
+			// { n, city }: n more incomplete profiles in that city (search pages)
+			const { n = 0, city = 'Annecy' } = await lireJson(req)
+			for (let i = 0; i < n; i++)
+				etat.supplementaires.push({
+					id: 1000 + etat.supplementaires.length,
+					username: `fictive-${etat.supplementaires.length + 1}`,
+					createdAt: '2025-06-01T10:00:00.000Z',
+					updatedAt: '2025-06-01T10:00:00.000Z',
+					first_name: 'Fictive',
+					last_name: `Numéro ${etat.supplementaires.length + 1}`,
+					speciality: 'Maquillage soirée',
+					city,
+					action_radius: 10,
+					available: true,
+					skills: [],
+					network: null,
+					main_picture: null,
+					image_gallery: [],
+				})
+			return json(res, 200, { total: etat.supplementaires.length })
 		}
 		if (url.pathname === '/__panne') {
 			Object.assign(etat.panne, await lireJson(req))
@@ -264,23 +522,74 @@ export function demarrerFauxStrapi(port = 4112, { origine = '*' } = {}) {
 				emails: etat.emails,
 			})
 		if (url.pathname.startsWith('/media/')) {
-			const f = fichier(url.pathname.split('/')[2])
+			const f = fichierPublic(url.pathname.split('/')[2])
 			if (!f) return json(res, 404, {})
 			res.writeHead(200, { 'content-type': f.mime, ...entetesCors })
 			return res.end(f.octets)
 		}
 
-		// --- public collections read by `next build` ---
+		// --- public collections (content API) ---
+		if (req.method === 'GET' && url.pathname === '/api/makeup-artistes') {
+			const requete = lireRequete(url)
+			const { username, ...autres } = requete.filtres
+			// one profile by its username: the profile page, contacts kept
+			const garderContacts =
+				username !== undefined && Object.keys(autres).length === 0
+			const profils = tousLesProfils()
+				.filter(p => username === undefined || p.username === username)
+				.sort((a, b) => a.id - b.id)
+				.map(p => entreeProfil(p, requete, garderContacts))
+			return json(res, 200, paginerListe(profils, requete))
+		}
 		if (
 			req.method === 'GET' &&
-			['/api/articles', '/api/talents', '/api/makeup-artistes'].includes(
-				url.pathname
-			)
-		)
-			return json(res, 200, {
-				data: [],
-				meta: { pagination: { page: 1, pageSize: 25, pageCount: 0, total: 0 } },
-			})
+			['/api/talents', '/api/articles'].includes(url.pathname)
+		) {
+			const requete = lireRequete(url)
+			const contenus = (url.pathname === '/api/talents' ? TALENTS : ARTICLES)
+				.filter(
+					c =>
+						requete.filtres.slug === undefined ||
+						c.slug === requete.filtres.slug
+				)
+				.map(c => entreeContenu(c, requete))
+			return json(res, 200, paginerListe(contenus, requete))
+		}
+		if (req.method === 'GET' && url.pathname === '/api/searching') {
+			if (etat.panne.delaiRechercheMs)
+				await attendre(etat.panne.delaiRechercheMs)
+			if (etat.panne.recherche)
+				return json(
+					res,
+					etat.panne.recherche,
+					erreur(etat.panne.recherche, 'Error', 'forced failure')
+				)
+			const ville = normaliser(url.searchParams.get('city')).trim()
+			const mots = normaliser(url.searchParams.get('search') || ville)
+				.split(/\s+/)
+				.filter(Boolean)
+			const trouves = tousLesProfils()
+				.filter(p => p.available !== false)
+				.filter(p => {
+					const texte = normaliser(
+						[
+							p.city,
+							p.speciality,
+							p.description,
+							p.first_name,
+							p.last_name,
+							...(p.skills ?? []).map(s => s.name),
+						].join(' ')
+					)
+					return (
+						mots.every(mot => texte.includes(mot)) &&
+						(!ville || normaliser(p.city).includes(ville))
+					)
+				})
+				.slice(0, 50)
+				.map(resultatRecherche)
+			return json(res, 200, trouves)
+		}
 
 		// --- users-permissions ---
 		if (req.method === 'POST' && url.pathname === '/api/auth/local') {
@@ -405,7 +714,7 @@ export function demarrerFauxStrapi(port = 4112, { origine = '*' } = {}) {
 
 		// --- artist space ---
 		if (url.pathname === '/api/me-makeup') {
-			const compte = authentifie(req)
+			const compte = etat.panne.meMakeup401 ? null : authentifie(req)
 			if (!compte)
 				return json(
 					res,

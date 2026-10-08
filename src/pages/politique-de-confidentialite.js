@@ -6,6 +6,7 @@ import Link from 'next/link'
 import Hero from '@/components/Global/Hero'
 import MeasureOptOut from '@/components/Global/MeasureOptOut'
 import { EDITEUR, formatSiret } from '@/lib/legal'
+import { urlAbsolue } from '@/lib/seo/url'
 
 function PolitiqueDeConfidentialite() {
 	return (
@@ -19,7 +20,7 @@ function PolitiqueDeConfidentialite() {
 				{/*	seo tag canonical link */}
 				<link
 					rel="canonical"
-					href="https://my-makeup.fr/politique-de-confidentialite"
+					href={urlAbsolue('/politique-de-confidentialite')}
 				/>
 			</Head>
 

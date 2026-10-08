@@ -7,6 +7,7 @@ import Hero from '@/components/Global/Hero'
 import CTA from '@/components/Global/CTA'
 import Link from 'next/link'
 import { convertToStringDate } from '@/services/utils'
+import { urlAbsolue } from '@/lib/seo/url'
 
 /**
  * @param props
@@ -26,7 +27,7 @@ function Blog({ articles }) {
 					Et les nouveautés qui arrivent bientôt !"
 				/>
 				{/*	seo tag canonical link */}
-				<link rel="canonical" href={'https://my-makeup.fr/blog'} />
+				<link rel="canonical" href={urlAbsolue('/blog')} />
 			</Head>
 
 			<Nav />

@@ -4,6 +4,7 @@ import Footer from '@/components/Global/Footer'
 import Head from 'next/head'
 import Hero from '@/components/Global/Hero'
 import CTA from '@/components/Global/CTA'
+import { urlAbsolue } from '@/lib/seo/url'
 
 /**
  * @param props
@@ -16,12 +17,12 @@ function PourLesParticuliers(props) {
 				<title>Solutions My-Makeup pour les Particuliers !</title>
 				<meta
 					name="description"
-					content="Découvrez comment My-Makeup simplifie la recherche de la maquilleuse professionnelle idéale. Grâce à notre plateforme intuitive, trouver la maquilleuse de vos rêves n'a jamais été aussi simple !"
+					content="Découvrez comment My-Makeup simplifie la recherche de la maquilleuse professionnelle idéale, grâce à une plateforme simple et intuitive."
 				/>
 				{/*	seo tag canonical link */}
 				<link
 					rel="canonical"
-					href="https://my-makeup.fr/solutions/pour-les-particuliers"
+					href={urlAbsolue('/solutions/pour-les-particuliers')}
 				/>
 			</Head>
 			<Nav />

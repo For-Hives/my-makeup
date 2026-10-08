@@ -40,8 +40,6 @@ function Profil({ data, erreur }) {
 					name="description"
 					content="Page de profil sur my-makeup.fr la plateforme qui va révolutionner votre façon de travailler !"
 				/>
-				{/*	seo tag canonical link */}
-				<link rel="canonical" href="https://my-makeup.fr/auth/profil" />
 			</Head>
 			<Nav isProfileBtnVisible={false} />
 			<main className={'relative'}>

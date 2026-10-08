@@ -1,6 +1,4 @@
-import Head from 'next/head'
 import Nav from '@/components/Global/Nav'
-import { useRouter } from 'next/router'
 import React from 'react'
 import Footer from '@/components/Global/Footer'
 import CTA from '@/components/Global/CTA'
@@ -10,6 +8,10 @@ import { remark } from 'remark'
 import html from 'remark-html'
 import { Layout } from '@/components/Global/Layout'
 import { fetchPublicApi } from '@/services/publicApi'
+import Seo from '@/components/Global/Seo'
+import { retrograderTitres } from '@/lib/contenu'
+import { seoArticle } from '@/lib/seo/meta'
+import { urlDuSite } from '@/lib/seo/url'
 
 function ArrowLeftIcon(props) {
 	return (
@@ -25,27 +27,17 @@ function ArrowLeftIcon(props) {
 }
 
 export default function Article({ articleData }) {
-	let router = useRouter()
-
 	const meta = articleData.attributes
 
 	return (
 		<>
-			<Head>
-				<title>{meta?.seo_title ?? 'My-Makeup'}</title>
-				<meta
-					name="description"
-					content={
-						meta?.seo_description ??
-						'Découvrez cet article passionnant de la part de My-Makeup'
-					}
-				/>
-				{/*	seo tag canonical link */}
-				<link
-					rel="canonical"
-					href={'https://my-makeup.fr/blog/' + meta?.slug}
-				/>
-			</Head>
+			<Seo
+				seo={seoArticle({
+					article: meta,
+					site: urlDuSite(),
+					apiBase: process.env.NEXT_PUBLIC_API_URL,
+				})}
+			/>
 			<Nav />
 			<main className={'relative'}>
 				<div
@@ -149,7 +141,8 @@ export async function getStaticProps({ params }) {
 		...articleData,
 		attributes: {
 			...articleData.attributes,
-			content: processedContent.toString(),
+			// « # titre » of the content as h2: the article title is the only h1
+			content: retrograderTitres(processedContent.toString()),
 		},
 	}
 

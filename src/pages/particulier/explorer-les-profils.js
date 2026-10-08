@@ -4,6 +4,7 @@ import Footer from '@/components/Global/Footer'
 import Head from 'next/head'
 import Hero from '@/components/Global/Hero'
 import CTA from '@/components/Global/CTA'
+import { urlAbsolue } from '@/lib/seo/url'
 
 /**
  * @param props
@@ -16,12 +17,12 @@ function ExplorerLesProfils(props) {
 				<title>Explorer les profils !</title>
 				<meta
 					name="description"
-					content="Découvrez comment utiliser la recherche par mot-clé et par ville de My-Makeup pour explorer les profils de maquilleuses et trouver celle qui vous correspond le mieux."
+					content="Utilisez la recherche par mot-clé et par ville de My-Makeup pour explorer les profils de maquilleuses et trouver celle qui vous correspond."
 				/>
 				{/*	seo tag canonical link */}
 				<link
 					rel="canonical"
-					href="https://my-makeup.fr/particulier/explorer-les-profils"
+					href={urlAbsolue('/particulier/explorer-les-profils')}
 				/>
 			</Head>
 

@@ -5,6 +5,7 @@ import Head from 'next/head'
 import Link from 'next/link'
 import Hero from '@/components/Global/Hero'
 import { EDITEUR } from '@/lib/legal'
+import { urlAbsolue } from '@/lib/seo/url'
 
 /**
  * @param props
@@ -20,7 +21,7 @@ function Cgu(props) {
 					content="Les conditions générales d'utilisation de My-Makeup, l'annuaire gratuit de maquilleuses professionnelles."
 				/>
 				{/*	seo tag canonical link */}
-				<link rel="canonical" href="https://my-makeup.fr/cgu" />
+				<link rel="canonical" href={urlAbsolue('/cgu')} />
 			</Head>
 
 			<Nav />

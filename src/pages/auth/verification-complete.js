@@ -21,11 +21,6 @@ function VerificationComplete() {
 					name="description"
 					content="Vérification de profil, sur My-Makeup, la plateforme pour les maquilleuses !"
 				/>
-				{/*	seo tag canonical link */}
-				<link
-					rel="canonical"
-					href="https://my-makeup.fr/auth/verification-complete"
-				/>
 			</Head>
 			<div className="relative flex h-[95vh] max-h-screen overflow-hidden md:h-screen md:overflow-auto md:bg-white">
 				<div className="flex flex-1 flex-col justify-center bg-white px-4 sm:px-6 md:py-12 md:pt-12 lg:flex-none lg:px-20 xl:px-24">

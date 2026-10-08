@@ -22,7 +22,6 @@ function Error({ code }) {
 		<>
 			<Head>
 				<title>Connexion impossible - My-Makeup</title>
-				<meta name="robots" content="noindex" />
 			</Head>
 			<main className="flex min-h-screen items-center justify-center bg-white px-4">
 				<div className="w-full max-w-sm">

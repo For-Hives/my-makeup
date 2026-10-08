@@ -5,6 +5,7 @@ import Head from 'next/head'
 import Hero from '@/components/Global/Hero'
 import CTA from '@/components/Global/CTA'
 import Link from 'next/link'
+import { urlAbsolue } from '@/lib/seo/url'
 
 /**
  * @param props
@@ -17,7 +18,7 @@ function SiteMap({ articles, talents }) {
 				<title>Site Map My-Makeup !</title>
 				<meta name="description" content="Le plan du site de My-Makeup" />
 				{/*	seo tag canonical link */}
-				<link rel="canonical" href={'https://my-makeup.fr/site-map'} />
+				<link rel="canonical" href={urlAbsolue('/site-map')} />
 			</Head>
 
 			<Nav />
@@ -147,7 +148,7 @@ function SiteMap({ articles, talents }) {
 														</Link>
 													</li>
 												)
-										  })
+											})
 										: null}
 								</ul>
 								<h3>Talents</h3>
@@ -161,7 +162,7 @@ function SiteMap({ articles, talents }) {
 														</Link>
 													</li>
 												)
-										  })
+											})
 										: null}
 								</ul>
 							</div>

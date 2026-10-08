@@ -4,6 +4,7 @@ import Footer from '@/components/Global/Footer'
 import CTA from '@/components/Global/CTA'
 import Head from 'next/head'
 import Hero from '@/components/Global/Hero'
+import { urlAbsolue } from '@/lib/seo/url'
 
 /**
  * @param props
@@ -19,7 +20,7 @@ function APropos(props) {
 					content="Apprenez-en plus sur My-Makeup, votre plateforme de mise en relation entre maquilleuses professionnelles et clients. "
 				/>
 				{/*	seo tag canonical link */}
-				<link rel="canonical" href="https://my-makeup.fr/a-propos" />
+				<link rel="canonical" href={urlAbsolue('/a-propos')} />
 			</Head>
 
 			<Nav />
