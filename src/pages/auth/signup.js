@@ -7,6 +7,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as zod from 'zod'
 import _ from 'lodash'
+import { track } from '@/lib/analytics'
 
 const schema = zod
 	.object({
@@ -39,6 +40,7 @@ function Signup() {
 	const { data: session } = useSession()
 
 	const onSubmit = data => {
+		track('signup_start', { method: 'email' })
 		/**
 		 * Signin function with name setted : register mode
 		 */
@@ -95,6 +97,7 @@ function Signup() {
 												<button
 													data-cy="google-signin"
 													onClick={() => {
+														track('signup_start', { method: 'google' })
 														signIn('google', {
 															callbackUrl: '/auth/profil',
 														})

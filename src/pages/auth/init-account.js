@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import Head from 'next/head'
 import { getSession, useSession } from 'next-auth/react'
 import { useRouter } from 'next/router'
@@ -13,6 +13,7 @@ import FullLoader from '@/components/Global/Loader/FullLoader'
 import Image from 'next/image'
 import Loader from '@/components/Global/Loader/Loader'
 import Warning from '@/components/Global/Warning'
+import { onboardingStepName, track } from '@/lib/analytics'
 
 const schema = zod
 	.object({
@@ -118,6 +119,15 @@ function InitAccount() {
 		},
 		[session, user, step]
 	)
+
+	// onboarding funnel: each step counted once per visit, `termine` = sign-up done
+	const countedSteps = useRef(new Set())
+	useEffect(() => {
+		const name = onboardingStepName(step)
+		if (name === null || countedSteps.current.has(name)) return
+		countedSteps.current.add(name)
+		track('onboarding_step', { step: name })
+	}, [step])
 
 	useEffect(() => {
 		if (step === 0) {
