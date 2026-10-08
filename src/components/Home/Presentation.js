@@ -11,7 +11,7 @@ function Presentation() {
 					</h2>
 					<p className="mt-6 text-center text-lg leading-8 text-gray-700">
 						Où les maquilleuses et les particuliers se retrouvent pour
-						collaborer en tout simplicité.
+						collaborer en toute simplicité.
 					</p>
 				</div>
 			</div>
@@ -33,10 +33,10 @@ function Presentation() {
 								'text-center text-4xl font-bold tracking-tight text-gray-700 sm:text-xl'
 							}
 						>
-							Des milliers de particuliers
+							Des particuliers
 						</h3>
 						<p className={'text-center text-sm leading-8 text-gray-600'}>
-							À la recherche de maquilleuses expérimentées
+							À la recherche d&apos;une maquilleuse près de chez eux
 						</p>
 					</div>
 					<div className={'flex flex-col items-center justify-center gap-2'}>
@@ -51,7 +51,7 @@ function Presentation() {
 								'text-center text-4xl font-bold tracking-tight text-gray-700 sm:text-xl'
 							}
 						>
-							Des milliers de maquilleuses
+							Des maquilleuses professionnelles
 						</h3>
 						<p className={'text-center text-sm leading-8 text-gray-600'}>
 							Aux multiples spécialités et personnalités

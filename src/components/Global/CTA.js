@@ -46,7 +46,7 @@ function Cta() {
 								'btn-secondary-white-bordered flex w-full items-center justify-center text-center sm:w-2/3 md:w-auto'
 							}
 						>
-							Je cherche des missions
+							Je suis maquilleuse
 						</Link>
 					</div>
 				</div>

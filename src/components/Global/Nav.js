@@ -52,8 +52,8 @@ const navigation = [
 				href: '/pourquoi-rejoindre-my-makeup-en-tant-que-maquilleuse',
 				icon: 'brush',
 				description:
-					'Rejoignez la communauté My-Makeup pour développer votre activité, trouver de nouveaux clients,' +
-					' gagner en visibilité. Et facilité votre gestion quotidienne !',
+					'Rejoignez la communauté My-Makeup pour développer votre activité, trouver de nouveaux clients' +
+					' et gagner en visibilité, gratuitement !',
 			},
 			{
 				name: 'Communauté & Partenariats',

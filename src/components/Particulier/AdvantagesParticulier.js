@@ -4,69 +4,45 @@ import { CheckCircleIcon } from '@heroicons/react/24/outline'
 function AdvantagesParticulier(props) {
 	const advantages = [
 		{
-			title: 'Accès à une large sélection de maquilleuses professionnelles',
+			title: 'Des maquilleuses professionnelles en un seul endroit',
 			description:
-				'Grâce à My-Makeup, les utilisateurs peuvent accéder à une large sélection de maquilleuses professionnelles en un seul endroit. Cela facilite la recherche de la maquilleuse idéale en fonction de leurs besoins spécifiques.',
+				'Grâce à My-Makeup, vous trouvez des maquilleuses professionnelles réunies en un seul endroit, avec leur portfolio et leurs spécialités.',
 			icon: <CheckCircleIcon className="h-6 w-6 text-green-500" />,
 		},
 		{
 			title: 'Recherche facile et rapide',
 			description:
-				"La plateforme offre un système de recherche avancé qui permet aux utilisateurs de trouver rapidement des maquilleuses basées sur leur spécialité, leur expérience, leur formation et leur localisation. Cela rend la recherche d'une maquilleuse professionnelle à la fois facile et efficace.",
+				'Recherchez par mot-clé (mariage, soirée, artistique...) et par ville pour trouver rapidement les maquilleuses qui vous correspondent.',
 			icon: <CheckCircleIcon className="h-6 w-6 text-green-500" />,
 		},
 		{
-			title: 'Informations transparentes et évaluations',
+			title: 'Des informations claires',
 			description:
-				"My-Makeup fournit des informations transparentes sur chaque maquilleuse, y compris leurs tarifs, leur expérience et leurs évaluations. Les utilisateurs peuvent lire les retours d'autres clients avant de prendre une décision, assurant ainsi une expérience de qualité.",
+				'Chaque profil présente les tarifs indicatifs, les expériences, les formations et les photos des réalisations de la maquilleuse.',
 			icon: <CheckCircleIcon className="h-6 w-6 text-green-500" />,
 		},
 		{
-			title: 'Flexibilité',
+			title: 'Inspiration',
 			description:
-				"En plus de fournir des services de maquillage, la plateforme peut également servir de source d'inspiration pour les utilisateurs. Ils peuvent découvrir les dernières tendances en matière de maquillage, apprendre de nouvelles techniques et recevoir des conseils de professionnels.",
+				'Nos articles et nos pages par spécialité vous donnent des idées et des repères pour préparer votre projet beauté.',
 			icon: <CheckCircleIcon className="h-6 w-6 text-green-500" />,
 		},
 		{
-			title: 'Apprentissage et inspiration',
+			title: 'Gain de temps',
 			description:
-				"My-Makeup fournit des informations transparentes sur chaque maquilleuse, y compris leurs tarifs, leur expérience et leurs évaluations. Les utilisateurs peuvent lire les retours d'autres clients avant de prendre une décision, assurant ainsi une expérience de qualité.",
+				'Au lieu de chercher sur plusieurs sites et réseaux, vous comparez les profils, les prix indicatifs et les portfolios au même endroit.',
 			icon: <CheckCircleIcon className="h-6 w-6 text-green-500" />,
 		},
 		{
-			title: 'Sauvegarde de temps',
+			title: 'Une équipe à votre écoute',
 			description:
-				'Au lieu de passer des heures à chercher une maquilleuse, à comparer les prix et à lire des critiques sur différents sites, les utilisateurs peuvent trouver toutes ces informations en un seul endroit sur My-Makeup. Cela permet un gain de temps considérable.',
+				'Une question ou un problème ? Écrivez-nous depuis la page Contact.',
 			icon: <CheckCircleIcon className="h-6 w-6 text-green-500" />,
 		},
 		{
-			title: 'Service client de qualité',
+			title: 'Contact direct',
 			description:
-				'My-Makeup offre un support client de qualité pour aider les utilisateurs dans leur processus de recherche et de réservation. Le service client peut résoudre les problèmes et répondre aux questions rapidement et efficacement.',
-			icon: <CheckCircleIcon className="h-6 w-6 text-green-500" />,
-		},
-		{
-			title: 'Communauté',
-			description:
-				"En utilisant My-Makeup, les utilisateurs rejoignent une communauté de passionnés de beauté. Ils peuvent partager leurs expériences, donner et recevoir des conseils, et se sentir connectés à d'autres personnes ayant les mêmes intérêts.",
-			icon: <CheckCircleIcon className="h-6 w-6 text-green-500" />,
-		},
-		{
-			title: 'Des avis authentiques',
-			description:
-				"Sur My-Makeup, vous pouvez lire des avis honnêtes et vérifiés de clients précédents, vous permettant de choisir votre maquilleuse avec confiance. C'est un avantage considérable par rapport à d'autres plateformes où les avis peuvent être falsifiés ou non vérifiés.",
-			icon: <CheckCircleIcon className="h-6 w-6 text-green-500" />,
-		},
-		{
-			title: 'Engagement envers la qualité',
-			description:
-				'Toutes les maquilleuses sur My-Makeup sont vérifiées et doivent respecter nos normes de qualité élevées. Cela vous assure que vous recevrez toujours un service de haut niveau lorsque vous réservez sur notre plateforme.',
-			icon: <CheckCircleIcon className="h-6 w-6 text-green-500" />,
-		},
-		{
-			title: 'Réduction des coûts',
-			description:
-				"En mettant les clients en relation directe avec les maquilleuses, My-Makeup élimine le besoin d'intermédiaires, ce qui peut souvent réduire les coûts.",
+				'Vous contactez directement la maquilleuse, sans intermédiaire ni frais de mise en relation.',
 			icon: <CheckCircleIcon className="h-6 w-6 text-green-500" />,
 		},
 	]

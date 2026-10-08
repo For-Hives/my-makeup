@@ -79,13 +79,9 @@ function TrouverUneMaquilleuse(props) {
 										</p>
 									</li>
 									<li>
-										<h2>Utilisez des filtres de recherche 🔍</h2>
+										<h2>Utilisez la recherche 🔍</h2>
 										<p>
-											{`Sur la plateforme My-Makeup, vous pouvez utiliser des filtres de recherche pour affiner 
-												votre sélection en fonction de critères spécifiques. Par exemple, vous pouvez 
-												filtrer les maquilleuses par localisation, spécialités, formation, expérience et 
-												évaluations. Ces filtres vous aideront à réduire le nombre de résultats de 
-												recherche et à trouver plus facilement la maquilleuse qui vous correspond.`}
+											{`Sur la plateforme My-Makeup, vous pouvez rechercher par mot-clé (mariage, soirée, artistique...) et par ville pour affiner votre sélection. Cela vous aidera à réduire le nombre de résultats et à trouver plus facilement la maquilleuse qui vous correspond.`}
 										</p>
 									</li>
 									<li>
@@ -95,9 +91,9 @@ function TrouverUneMaquilleuse(props) {
 										</p>
 									</li>
 									<li>
-										<h2>Lisez les avis 🌟</h2>
+										<h2>Regardez ses réalisations 🌟</h2>
 										<p>
-											{`Les avis des clients précédents peuvent être une ressource précieuse pour choisir la bonne maquilleuse. Ils peuvent vous donner une idée de la qualité du travail de la maquilleuse, de son professionnalisme et de sa relation avec les clients. Sur My-Makeup, vous pouvez lire des avis vérifiés pour vous aider à prendre votre décision.`}
+											{`Les photos du portfolio sont le meilleur moyen de juger le style d'une maquilleuse. Consultez aussi ses réseaux sociaux lorsqu'elle les indique sur son profil, ainsi que les avis qu'elle a pu recevoir ailleurs : My-Makeup n'affiche pas d'avis clients pour le moment.`}
 										</p>
 									</li>
 									<li>

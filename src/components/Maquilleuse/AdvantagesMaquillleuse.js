@@ -6,19 +6,13 @@ function AdvantagesMaquillleuse(props) {
 		{
 			title: 'Développez votre activité',
 			description:
-				'Trouvez de nouveaux clients, améliorez votre visibilité et développez votre activité avec My-Makeup. Nous vous aidons à atteindre votre plein potentiel.',
-			icon: <CheckCircleIcon className="h-6 w-6 text-green-500" />,
-		},
-		{
-			title: 'Évaluez votre travail',
-			description:
-				"Notre système de notation vous donne l'opportunité de recevoir des retours constructifs de vos clients. Utilisez ces évaluations pour améliorer constamment la qualité de vos services et gagner encore plus la confiance de vos futurs clients.",
+				'Présentez votre travail aux particuliers qui cherchent une maquilleuse et gagnez en visibilité avec My-Makeup.',
 			icon: <CheckCircleIcon className="h-6 w-6 text-green-500" />,
 		},
 		{
 			title: 'Mettez en avant vos compétences et votre parcours',
 			description:
-				'My-Makeup met en lumière votre unique parcours et compétences. Notre système de recherche avancé permet aux clients de vous trouver en fonction de vos spécialités, de votre expérience et de votre formation. Montrez au monde ce qui fait de vous une maquilleuse exceptionnelle.',
+				'Spécialités, expériences, formations, langues et portfolio : votre page professionnelle met en lumière votre parcours. Les particuliers vous trouvent par mot-clé et par ville.',
 			icon: <CheckCircleIcon className="h-6 w-6 text-green-500" />,
 		},
 		{
@@ -30,7 +24,7 @@ function AdvantagesMaquillleuse(props) {
 		{
 			title: "Profitez d'un service totalement gratuit",
 			description:
-				'My-Makeup est un service totalement gratuit pour les maquilleuses. Notre objectif est de vous aider à développer votre activité sans frais supplémentaires. Nous croyons au potentiel des maquilleuses professionnelles et nous sommes là pour soutenir votre croissance.',
+				'My-Makeup est gratuit pour les maquilleuses : page professionnelle, portfolio, tarifs et coordonnées, sans frais. Notre objectif est de vous aider à développer votre activité.',
 			icon: <CheckCircleIcon className="h-6 w-6 text-green-500" />,
 		},
 		{
@@ -40,33 +34,21 @@ function AdvantagesMaquillleuse(props) {
 			icon: <CheckCircleIcon className="h-6 w-6 text-green-500" />,
 		},
 		{
-			title: 'Choix varié',
+			title: 'Une communauté variée',
 			description:
-				"Rejoignez une communauté diversifiée de maquilleuses professionnelles. Profitez de l'occasion pour échanger des idées et des techniques.",
+				'Rejoignez des maquilleuses professionnelles de toutes les spécialités : mariage, soirée, artistique, cinéma, événementiel...',
 			icon: <CheckCircleIcon className="h-6 w-6 text-green-500" />,
 		},
 		{
-			title: 'Paiement sécurisé',
+			title: 'Visibilité gratuite',
 			description:
-				'Recevez des paiements en toute sécurité via notre système de paiement sécurisé. Nous nous occupons des transactions pour que vous puissiez vous concentrer sur vos clients.',
+				'Votre page professionnelle est publique et gratuite : partagez-la sur vos réseaux sociaux ou dans votre bio Instagram.',
 			icon: <CheckCircleIcon className="h-6 w-6 text-green-500" />,
 		},
 		{
-			title: 'Publicité gratuite',
+			title: 'Vous restez libre',
 			description:
-				"En rejoignant notre plateforme, vous bénéficiez d'une publicité gratuite pour votre travail. Profitez de l'exposition à une base de clients plus large.",
-			icon: <CheckCircleIcon className="h-6 w-6 text-green-500" />,
-		},
-		{
-			title: 'Flexibilité',
-			description:
-				'Travaillez à votre rythme et selon vos propres horaires. Avec My-Makeup, vous pouvez gérer vos rendez-vous en fonction de vos disponibilités.',
-			icon: <CheckCircleIcon className="h-6 w-6 text-green-500" />,
-		},
-		{
-			title: 'Cote de popularité',
-			description:
-				"Profitez de notre système de notation et d'évaluation pour mettre en valeur la qualité de votre travail et attirer plus de clients.",
+				'Vous choisissez vos prestations, vos prix, votre zone de déplacement et indiquez si vous êtes disponible.',
 			icon: <CheckCircleIcon className="h-6 w-6 text-green-500" />,
 		},
 	]

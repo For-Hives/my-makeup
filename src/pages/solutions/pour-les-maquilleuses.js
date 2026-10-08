@@ -67,7 +67,7 @@ function PourLesMaquilleuses(props) {
 									<li>
 										<h2>{'Accédez à une base de clients plus large 👥'}</h2>
 										<p>
-											{`Grâce à My-Makeup, vous pouvez atteindre une vaste base de clients à la recherche de services de maquillage professionnels. Que vous soyez spécialisée en maquillage de mariage, en maquillage bio ou en maquillage artistique pour des événements spéciaux, notre plateforme vous permet de vous connecter facilement avec des clients à la recherche de vos compétences.`}
+											{`Grâce à My-Makeup, les particuliers à la recherche d'une maquilleuse professionnelle peuvent découvrir votre travail. Que vous soyez spécialisée en maquillage de mariage, en maquillage bio ou en maquillage artistique pour des événements spéciaux, notre plateforme vous permet de vous connecter facilement avec des clients à la recherche de vos compétences.`}
 										</p>
 									</li>
 									<li>
@@ -77,15 +77,15 @@ function PourLesMaquilleuses(props) {
 										</p>
 									</li>
 									<li>
-										<h2>{'Gérez vos rendez-vous facilement 📅'}</h2>
+										<h2>{'Restez maîtresse de votre activité 📅'}</h2>
 										<p>
-											{`Notre plateforme simplifie la gestion de vos rendez-vous. Vous pouvez définir vos disponibilités, accepter de nouvelles réservations et gérer vos rendez-vous existants, le tout à partir d'un seul endroit.`}
+											{`Les particuliers vous contactent directement avec les coordonnées que vous choisissez d'afficher. Vous indiquez si vous êtes disponible, vous fixez vos tarifs et vous convenez vous-même des rendez-vous avec vos clientes.`}
 										</p>
 									</li>
 									<li>
-										<h2>{'Un service client dédié à votre écoute 📞'}</h2>
+										<h2>{'Une question ? 📞'}</h2>
 										<p>
-											{`Si vous avez des questions ou rencontrez un problème, notre équipe de service client est là pour vous aider. Nous sommes déterminés à faire de votre expérience avec My-Makeup une expérience positive et productive. 
+											{`Si vous avez des questions ou rencontrez un problème, écrivez-nous depuis la page Contact. Nous sommes déterminés à faire de votre expérience avec My-Makeup une expérience positive et productive. 
 												En résumé, My-Makeup est l'endroit idéal pour les maquilleuses qui cherchent à développer leur activité, à trouver de nouveaux clients et à découvrir de nouvelles opportunités. Rejoignez-nous aujourd'hui et commencez à transformer votre carrière de maquilleuse !`}
 										</p>
 									</li>
