@@ -62,6 +62,29 @@ describe('contactMessage', () => {
 		assert.equal(contactMessage(null).ok, false)
 		assert.equal(contactMessage('text').ok, false)
 	})
+
+	test('the email is one bare address (it becomes the Reply-To)', () => {
+		for (const email of [
+			'Testine <testine@example.test>',
+			'testine@example.test, autre@example.test',
+			'a;b@example.test',
+			'"testine"@example.test',
+			'testine@[127.0.0.1]',
+			'testine(x)@example.test',
+			'a@b@example.test',
+		])
+			assert.deepEqual(
+				contactMessage({ ...valid, email }),
+				{ ok: false, field: 'email' },
+				email
+			)
+		for (const email of [
+			'testine@example.test',
+			'prenom.nom+tag_1-x@sous.example.test',
+			"o'neil@example.test",
+		])
+			assert.equal(contactMessage({ ...valid, email }).ok, true, email)
+	})
 })
 
 describe('mailgunErrorSummary', () => {

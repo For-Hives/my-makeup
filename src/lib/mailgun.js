@@ -33,9 +33,14 @@ export const CONTACT_LIMITS = Object.freeze({
 	message: 5000,
 })
 
+// one bare address: no space, no second @, none of the characters that make
+// a header value a name, a list or a group (the email is the Reply-To of the
+// Resend message)
+const BARE_ADDRESS = /^[^@\s<>()[\]\\,;:"]+@[^@\s<>()[\]\\,;:"]+$/
+
 /**
  * Checks the contact form body: every field is a non-empty string within its
- * limit, the email has an @. Unknown fields are ignored.
+ * limit, the email is one bare address. Unknown fields are ignored.
  * @param {unknown} body
  * @returns {{ok: true, fields: Object<string, string>}|{ok: false, field: string}}
  */
@@ -47,8 +52,7 @@ export function contactMessage(body) {
 		if (value === '' || value.length > max) return { ok: false, field: name }
 		fields[name] = value
 	}
-	if (!/^[^@\s]+@[^@\s]+$/.test(fields.email))
-		return { ok: false, field: 'email' }
+	if (!BARE_ADDRESS.test(fields.email)) return { ok: false, field: 'email' }
 	return { ok: true, fields }
 }
 
