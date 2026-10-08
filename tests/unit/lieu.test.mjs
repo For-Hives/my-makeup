@@ -59,26 +59,26 @@ describe('place of a search by city (UI-10)', () => {
 
 	test('what a city field says: places and départements', () => {
 		assert.deepEqual(lireLieu('Annecy (74)'), {
-			segments: [{ mots: 'annecy', departement: false }],
+			segments: [{ mots: 'annecy', departement: false, large: false }],
 			departements: ['74'],
 		})
 		assert.deepEqual(lireLieu('Lyon 69003'), {
-			segments: [{ mots: 'lyon', departement: false }],
+			segments: [{ mots: 'lyon', departement: false, large: false }],
 			departements: ['69'],
 		})
 		assert.deepEqual(lireLieu('HAUTE-SAVOIE'), {
-			segments: [{ mots: 'haute savoie', departement: true }],
+			segments: [{ mots: 'haute savoie', departement: true, large: false }],
 			departements: ['74'],
 		})
 		assert.deepEqual(lireLieu('Paris 15e'), {
-			segments: [{ mots: 'paris', departement: true }],
+			segments: [{ mots: 'paris', departement: true, large: false }],
 			departements: ['75'],
 		})
 		assert.deepEqual(lireLieu('Annecy / Genève - Lyon'), {
 			segments: [
-				{ mots: 'annecy', departement: false },
-				{ mots: 'geneve', departement: false },
-				{ mots: 'lyon', departement: false },
+				{ mots: 'annecy', departement: false, large: false },
+				{ mots: 'geneve', departement: false, large: false },
+				{ mots: 'lyon', departement: false, large: false },
 			],
 			departements: [],
 		})
@@ -91,7 +91,28 @@ describe('place of a search by city (UI-10)', () => {
 		assert.deepEqual(lireLieu('Paris 15').departements, ['75'])
 		assert.deepEqual(lireLieu('Annecy 74').departements, [])
 		assert.deepEqual(lireLieu('Indre-et-Loire').departements, ['37'])
-		for (const v of ['', '   ', '-', null, undefined, 12])
+		// « France » is no place; a country or a region is a wide one
+		assert.deepEqual(lireLieu('Paris, France'), {
+			segments: [{ mots: 'paris', departement: true, large: false }],
+			departements: ['75'],
+		})
+		assert.deepEqual(lireLieu('Genève (Suisse)').segments, [
+			{ mots: 'geneve', departement: false, large: false },
+			{ mots: 'suisse', departement: false, large: true },
+		])
+		assert.deepEqual(lireLieu('Auvergne-Rhône-Alpes').segments, [
+			{ mots: 'auvergne rhone alpes', departement: false, large: true },
+		])
+		for (const v of [
+			'',
+			'   ',
+			'-',
+			null,
+			undefined,
+			12,
+			'France',
+			'Toute la France',
+		])
 			assert.deepEqual(
 				lireLieu(v),
 				{ segments: [], departements: [] },
@@ -140,6 +161,82 @@ describe('place of a search by city (UI-10)', () => {
 		assert.equal(correspond('75011', 'Paris'), 'departement')
 		assert.equal(correspond('Ajaccio 20000', 'Corse'), 'departement')
 		assert.equal(correspond('Lyon', '74'), null)
+	})
+
+	test('a name of département is not the longer one that begins the same', () => {
+		for (const [nom, plusLong] of [
+			['Loire', 'Loire-Atlantique'],
+			['Charente', 'Charente-Maritime'],
+			['Eure', 'Eure-et-Loir'],
+			['Indre', 'Indre-et-Loire'],
+			['Lot', 'Lot-et-Garonne'],
+			['Tarn', 'Tarn-et-Garonne'],
+			['Savoie', 'Haute-Savoie'],
+		]) {
+			assert.equal(correspond(plusLong, nom), null, `${plusLong} / ${nom}`)
+			assert.equal(correspond(nom, plusLong), null, `${nom} / ${plusLong}`)
+			assert.equal(correspond(nom, nom), 'ville', nom)
+			assert.equal(correspond(plusLong, plusLong), 'ville', plusLong)
+		}
+		assert.equal(correspond('Loire-Atlantique Nantes', 'Loire'), null)
+		assert.equal(correspond('Loire Saint-Étienne', 'Loire'), 'ville')
+		assert.equal(correspond('LOT (46)', 'Lot'), 'ville')
+		// by its code, Corse-du-Sud is still in Corse
+		assert.equal(correspond('Corse-du-Sud', 'Corse'), 'departement')
+		// the Loire (42) by its postal code comes before the Loire-Atlantique
+		const { locaux, autres } = separerParLieu(
+			[
+				profil(1, 'Loire-Atlantique'),
+				profil(2, 'Saint-Étienne 42000'),
+				profil(3, 'Nantes 44000'),
+				profil(4, 'Roanne, Loire'),
+			],
+			'Loire'
+		)
+		assert.deepEqual(
+			locaux.map(r => r.id),
+			[4, 2]
+		)
+		assert.deepEqual(
+			autres.map(r => r.id),
+			[1, 3]
+		)
+	})
+
+	test('« France », a country or a region: never next to a city', () => {
+		const resultats = [
+			profil(1, 'Paris, France'),
+			profil(2, 'Lyon (France)'),
+			profil(3, 'Annecy'),
+			profil(4, 'Genève, Suisse'),
+			profil(5, 'Toute la France'),
+			profil(6, 'Chambéry, Auvergne-Rhône-Alpes'),
+		]
+		const ids = liste => liste.map(r => r.id)
+		assert.deepEqual(
+			ids(separerParLieu(resultats, 'Annecy, France').locaux),
+			[3]
+		)
+		assert.deepEqual(
+			ids(separerParLieu(resultats, 'Annecy (Suisse)').locaux),
+			[3]
+		)
+		assert.deepEqual(
+			ids(separerParLieu(resultats, 'Annecy, Auvergne-Rhône-Alpes').locaux),
+			[3]
+		)
+		// alone, a country or a region is what was typed
+		assert.deepEqual(ids(separerParLieu(resultats, 'Suisse').locaux), [4])
+		assert.deepEqual(
+			ids(separerParLieu(resultats, 'Auvergne-Rhône-Alpes').locaux),
+			[6]
+		)
+		// « France » alone: the whole country, nothing set apart
+		assert.deepEqual(separerParLieu(resultats, 'France'), {
+			locaux: resultats,
+			autres: [],
+			parLieu: false,
+		})
 	})
 
 	test('the profiles of the city, then of the département, then the others, each in the order of the API', () => {

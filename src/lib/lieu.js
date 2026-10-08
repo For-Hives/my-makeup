@@ -10,7 +10,8 @@
  * (« 74 », « (74) », 2A, 974) or a name (Haute-Savoie), never from the name
  * of a city. The city field of a profile is free text (44 empty of 100 in
  * production on 08/10, some in capitals, with « St », hyphens, postal codes
- * or several places).
+ * or several places). « France » says nothing of where; a country or a
+ * region only counts when nothing more precise was typed.
  */
 
 import { villeAffichee } from './format-zone.js'
@@ -157,6 +158,75 @@ const PAR_NOM = new Map([
 	['reunion', ['974']],
 ])
 
+const commencePar = (texte, mots) => `${texte} `.startsWith(`${mots} `)
+
+// a name of département → the longer names that begin with it: « loire » →
+// « loire atlantique », « lot » → « lot et garonne », « corse » → …
+const NOMS_PLUS_LONGS = new Map(
+	[...PAR_NOM.keys()].map(nom => [
+		nom,
+		[...PAR_NOM.keys()].filter(
+			autre => autre !== nom && commencePar(autre, nom)
+		),
+	])
+)
+
+// the whole country: not a place to rank by
+const PARTOUT = new Set([
+	'france',
+	'toute la france',
+	'france entiere',
+	'partout en france',
+	'france metropolitaine',
+])
+
+// countries and regions (those of 2016, the former ones still written):
+// wider than a city or a département
+const LARGES = new Set([
+	'suisse',
+	'belgique',
+	'luxembourg',
+	'monaco',
+	'allemagne',
+	'italie',
+	'espagne',
+	'andorre',
+	'europe',
+	'auvergne rhone alpes',
+	'bourgogne franche comte',
+	'bretagne',
+	'centre val de loire',
+	'grand est',
+	'hauts de france',
+	'ile de france',
+	'idf',
+	'normandie',
+	'nouvelle aquitaine',
+	'occitanie',
+	'pays de la loire',
+	'provence alpes cote d azur',
+	'paca',
+	'cote d azur',
+	'provence',
+	'rhone alpes',
+	'auvergne',
+	'alsace',
+	'lorraine',
+	'champagne ardenne',
+	'picardie',
+	'nord pas de calais',
+	'aquitaine',
+	'limousin',
+	'poitou charentes',
+	'midi pyrenees',
+	'languedoc roussillon',
+	'bourgogne',
+	'franche comte',
+	'haute normandie',
+	'basse normandie',
+	'centre',
+])
+
 /**
  * Département of a French postal code.
  * @param {unknown} code
@@ -187,9 +257,10 @@ const SEPARATEURS = /[,;/|+()[\]]|\s[-–—]\s/
 
 /**
  * @typedef {object} Lieu
- * @property {{mots: string, departement: boolean}[]} segments - the places
- *   written, normalized, without their numbers; `departement` when the
- *   place is the name of a département
+ * @property {{mots: string, departement: boolean, large: boolean}[]} segments
+ *   - the places written, normalized, without their numbers nor « France »;
+ *   `departement` when the place is the name of a département, `large` when
+ *   it is a country or a region
  * @property {string[]} departements - codes found in the text
  */
 
@@ -215,10 +286,10 @@ export function lireLieu(v) {
 					.split(' ')
 					.filter(mot => mot && !NUMERO.test(mot))
 					.join(' ')
-		if (!mots) continue
+		if (!mots || PARTOUT.has(mots)) continue
 		const parNom = PAR_NOM.get(mots)
 		parNom?.forEach(code => departements.add(code))
-		segments.push({ mots, departement: !!parNom })
+		segments.push({ mots, departement: !!parNom, large: LARGES.has(mots) })
 	}
 	return { segments, departements: [...departements] }
 }
@@ -227,14 +298,22 @@ export function lireLieu(v) {
 const lieuVide = lieu => !lieu.segments.length && !lieu.departements.length
 
 const contient = (texte, mots) => ` ${texte} `.includes(` ${mots} `)
-const commencePar = (texte, mots) => `${texte} `.startsWith(`${mots} `)
+
+// a place that starts with this name of département, and not with a longer
+// one that begins the same (« Loire » is not « Loire-Atlantique »)
+const commenceParDepartement = (texte, nom) =>
+	commencePar(texte, nom) &&
+	!NOMS_PLUS_LONGS.get(nom).some(long => commencePar(texte, long))
 
 /**
  * How the place of a profile matches the place searched:
  * - 'ville': the words typed, whole and in order, are in the place of the
  *   profile (« annecy » in « Annecy-le-Vieux » or « Grand Annecy », not in
- *   « Annemasse »); a name of département only at the start of a place, so
- *   that « Savoie » is not found in « Haute-Savoie »;
+ *   « Annemasse »); a name of département only at the start of a place and
+ *   never inside a longer name of département, so that « Savoie » is not
+ *   found in « Haute-Savoie » nor « Loire » in « Loire-Atlantique »; a
+ *   country or a region of the search only when it holds nothing else
+ *   (« Annecy, Suisse » is Annecy);
  * - 'departement': a département in common (postal code, code or name);
  * - null otherwise, and always for a profile without a usable city.
  * @param {Lieu} profil
@@ -242,10 +321,15 @@ const commencePar = (texte, mots) => `${texte} `.startsWith(`${mots} `)
  * @returns {'ville'|'departement'|null}
  */
 export function correspondanceLieu(profil, cherche) {
-	for (const { mots, departement } of cherche.segments)
+	const precis = cherche.segments.filter(s => !s.large)
+	const segments =
+		precis.length || cherche.departements.length ? precis : cherche.segments
+	for (const { mots, departement } of segments)
 		if (
 			profil.segments.some(p =>
-				departement ? commencePar(p.mots, mots) : contient(p.mots, mots)
+				departement
+					? commenceParDepartement(p.mots, mots)
+					: contient(p.mots, mots)
 			)
 		)
 			return 'ville'
