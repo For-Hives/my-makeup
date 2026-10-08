@@ -47,12 +47,28 @@ export function contactMessage(body) {
 	return { ok: true, fields }
 }
 
+// system and axios codes of a request that never got an HTTP response
+const NETWORK_CODE =
+	/\b(ENOTFOUND|EAI_AGAIN|ECONNREFUSED|ECONNRESET|ECONNABORTED|ETIMEDOUT|EHOSTUNREACH|ENETUNREACH|EPIPE|ERR_NETWORK)\b/
+
 /**
- * What may be logged about a Mailgun failure: the HTTP status only.
+ * What may be logged about a Mailgun failure: a kind and the HTTP status,
+ * never the message itself (it can quote the recipient or the API key).
+ *
+ * mailgun.js reports a request without any HTTP response (DNS, refused or
+ * reset connection, timeout) as status 400 with the system code in
+ * `message` and `details`: that case is `kind: 'network'` with status 0, so
+ * it cannot be read as a request Mailgun rejected.
  * @param {unknown} error
- * @returns {{status: number}}
+ * @returns {{kind: 'network'|'http'|'unknown', status: number}}
  */
 export function mailgunErrorSummary(error) {
-	const status = Number(error && typeof error === 'object' ? error.status : NaN)
-	return { status: Number.isInteger(status) ? status : 0 }
+	const source = error !== null && typeof error === 'object' ? error : {}
+	const texts = [source.code, source.message, source.details, source.statusText]
+	if (texts.some(text => typeof text === 'string' && NETWORK_CODE.test(text)))
+		return { kind: 'network', status: 0 }
+	const status = Number(source.status)
+	if (Number.isInteger(status) && status >= 100 && status <= 599)
+		return { kind: 'http', status }
+	return { kind: 'unknown', status: 0 }
 }

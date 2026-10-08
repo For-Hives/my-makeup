@@ -65,14 +65,66 @@ describe('contactMessage', () => {
 })
 
 describe('mailgunErrorSummary', () => {
-	test('keeps the status only', () => {
+	test('keeps the kind and the status of an HTTP answer, never the text', () => {
 		const error = {
 			status: 401,
 			details: 'Forbidden for a@b.fr',
 			message: 'Unauthorized',
 		}
-		assert.deepEqual(mailgunErrorSummary(error), { status: 401 })
-		assert.deepEqual(mailgunErrorSummary(new Error('network')), { status: 0 })
-		assert.deepEqual(mailgunErrorSummary(undefined), { status: 0 })
+		assert.deepEqual(mailgunErrorSummary(error), { kind: 'http', status: 401 })
+		// a real 400 from Mailgun: its body message, no system code
+		assert.deepEqual(
+			mailgunErrorSummary({
+				status: 400,
+				statusText: 'Bad Request',
+				message: 'Bad Request',
+				details: "'to' parameter is not a valid address",
+				type: 'MailgunAPIError',
+			}),
+			{ kind: 'http', status: 400 }
+		)
+	})
+
+	test('tells a request without HTTP response from a Mailgun 400', () => {
+		// what mailgun.js 11 throws when the network is down: status 400,
+		// the axios code as message, the system error as details
+		for (const [code, details] of [
+			['EAI_AGAIN', 'getaddrinfo EAI_AGAIN api.mailgun.net'],
+			['ENOTFOUND', 'getaddrinfo ENOTFOUND api.eu.mailgun.net'],
+			['ECONNREFUSED', 'connect ECONNREFUSED 127.0.0.1:443'],
+			['ECONNABORTED', 'timeout of 60000ms exceeded'],
+			['ERR_NETWORK', 'Network Error'],
+		]) {
+			assert.deepEqual(
+				mailgunErrorSummary({
+					status: 400,
+					statusText: code,
+					message: code,
+					details,
+					type: 'MailgunAPIError',
+				}),
+				{ kind: 'network', status: 0 },
+				code
+			)
+		}
+		assert.deepEqual(
+			mailgunErrorSummary(Object.assign(new Error('x'), { code: 'ETIMEDOUT' })),
+			{ kind: 'network', status: 0 }
+		)
+	})
+
+	test('never returns more than the kind and the status', () => {
+		assert.deepEqual(mailgunErrorSummary(new Error('boom a@b.fr')), {
+			kind: 'unknown',
+			status: 0,
+		})
+		assert.deepEqual(mailgunErrorSummary(undefined), {
+			kind: 'unknown',
+			status: 0,
+		})
+		assert.deepEqual(mailgunErrorSummary({ status: 'x' }), {
+			kind: 'unknown',
+			status: 0,
+		})
 	})
 })

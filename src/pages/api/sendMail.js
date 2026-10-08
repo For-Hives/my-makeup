@@ -18,8 +18,9 @@ function mailgunClient() {
 	)
 }
 
-// `[sendMail]` logs carry the outcome and the HTTP status only, never what
-// the visitor typed (MES-11).
+// `[sendMail]` logs carry the outcome, the failure kind (network: no HTTP
+// response; http: Mailgun answered) and the HTTP status only, never what the
+// visitor typed (MES-11).
 export default async function handler(req, res) {
 	if (req.method !== 'POST') {
 		return res.status(405).json({ message: 'Method not allowed' })
