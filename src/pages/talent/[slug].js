@@ -2,42 +2,25 @@ import React from 'react'
 import Nav from '@/components/Global/Nav'
 import Footer from '@/components/Global/Footer'
 import CTA from '@/components/Global/CTA'
-import Head from 'next/head'
 import Hero from '@/components/Global/Hero'
 import { remark } from 'remark'
 import html from 'remark-html'
-import { useRouter } from 'next/router'
 import { Layout } from '@/components/Global/Layout'
 import { fetchPublicApi } from '@/services/publicApi'
+import Seo from '@/components/Global/Seo'
+import { retrograderTitres } from '@/lib/contenu'
+import { seoTalent } from '@/lib/seo/meta'
+import { urlDuSite } from '@/lib/seo/url'
 
 /**
  * @param props
  * @constructor
  */
 function Talent({ articleData }) {
-	let router = useRouter()
-
 	const meta = articleData.attributes
 	return (
 		<>
-			<Head>
-				<title>{meta?.title ?? 'My-Makeup'}</title>
-				<meta
-					name="description"
-					content={
-						meta?.seo_description ??
-						'Découvrez cet article passionnant de la part de My-Makeup'
-					}
-				/>
-				{/*	seo tag canonical link */}
-				<link
-					rel="canonical"
-					href={'https://my-makeup.fr/talent/' + meta?.slug}
-				/>
-			</Head>
-
-			<Nav />
-
+			<Seo seo={seoTalent({ talent: meta, site: urlDuSite() })} />
 			<Nav />
 			<main className={'relative'}>
 				<Hero
@@ -121,7 +104,8 @@ export async function getStaticProps({ params }) {
 		...articleData,
 		attributes: {
 			...articleData.attributes,
-			content: processedContent.toString(),
+			// « # titre » of the content as h2: the hero title is the only h1
+			content: retrograderTitres(processedContent.toString()),
 		},
 	}
 

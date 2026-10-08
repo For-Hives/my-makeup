@@ -1,4 +1,3 @@
-import Head from 'next/head'
 import Hero from '@/components/Global/Hero'
 import Nav from '@/components/Global/Nav'
 import Presentation from '@/components/Home/Presentation'
@@ -9,22 +8,24 @@ import React from 'react'
 import Project from '@/components/Home/Project'
 import CTA from '@/components/Global/CTA'
 import MOTD from '@/services/MOTD'
+import Seo from '@/components/Global/Seo'
+import { seoPage } from '@/lib/seo/meta'
+import { urlDuSite } from '@/lib/seo/url'
 
 export default function Home({ talents }) {
 	MOTD()
 	return (
 		<>
-			<Head>
-				<title>
-					Accueil - My-Makeup le moteur de recherche pour les maquilleuses
-				</title>
-				<meta
-					name="description"
-					content="Trouvez la meilleure maquilleuse professionnelle à domicile près de chez vous. Une maquilleuse rien que pour vous, pour un événement, un shooting ou une soirée : vous trouverez votre bonheur pour vous sublimer dans n'importe quelle situation ! Inscription gratuite."
-				/>
-				{/*	seo tag canonical link */}
-				<link rel="canonical" href="https://my-makeup.fr" />
-			</Head>
+			<Seo
+				seo={seoPage({
+					titre:
+						'Accueil - My-Makeup le moteur de recherche pour les maquilleuses',
+					description:
+						"Trouvez la meilleure maquilleuse professionnelle à domicile près de chez vous. Une maquilleuse rien que pour vous, pour un événement, un shooting ou une soirée : vous trouverez votre bonheur pour vous sublimer dans n'importe quelle situation ! Inscription gratuite.",
+					chemin: '/',
+					site: urlDuSite(),
+				})}
+			/>
 
 			<Nav />
 			<main className={'relative'}>
