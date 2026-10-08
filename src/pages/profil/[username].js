@@ -5,8 +5,9 @@ import ViewResumeProfil from '@/components/Profil/Parents/ViewResumeProfil'
 import ViewInfosProfil from '@/components/Profil/Parents/ViewInfosProfil'
 import Nav from '@/components/Global/Nav'
 import { fetchPublicApi } from '@/services/publicApi'
+import { devisFormUrl } from '@/lib/devis'
 
-export default function Profil({ profilData }) {
+export default function Profil({ profilData, devisUrl = null }) {
 	const user = profilData
 	return (
 		<>
@@ -25,7 +26,11 @@ export default function Profil({ profilData }) {
 			<Nav />
 			<main className={'relative'}>
 				<>
-					<ViewResumeProfil user={user} isPublicView={true} />
+					<ViewResumeProfil
+						user={user}
+						isPublicView={true}
+						devisUrl={devisUrl}
+					/>
 					<ViewInfosProfil user={user} isPublicView={true} />
 				</>
 			</main>
@@ -80,6 +85,10 @@ export async function getStaticProps({ params }) {
 	return {
 		props: {
 			profilData,
+			// quote form (F3a): read here, on the server, and passed as a prop so
+			// the server HTML and the browser agree. Inlined when set at build
+			// time, read at runtime otherwise (picked up as profiles regenerate).
+			devisUrl: devisFormUrl(process.env.NEXT_PUBLIC_DEVIS_FORM_URL),
 		},
 		revalidate: 10,
 	}

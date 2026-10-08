@@ -130,6 +130,7 @@ function ViewResumeProfil(props) {
 							</div>
 							{/* from the page props, so the button is in the server HTML */}
 							<DevisButton
+								formUrl={props.devisUrl ?? null}
 								slug={props.user?.attributes?.username}
 								pid={props.user?.id}
 							/>

@@ -2,31 +2,32 @@ import React, { useEffect, useState } from 'react'
 import { buildDevisHref } from '@/lib/devis'
 import { umamiAttributes } from '@/lib/analytics'
 
-// inlined at build time; the button only exists when it is a valid https URL
-const DEVIS_FORM_URL = process.env.NEXT_PUBLIC_DEVIS_FORM_URL
-
 /**
  * « Demander un devis » (F3a): opens the external quote form in a new tab with
  * the profile, the source, the utm parameters of the page and the referrer
  * domain as hidden fields.
- * @param {{slug: string, pid: number}} props
+ *
+ * `formUrl` comes from the page props (getStaticProps), never from a
+ * NEXT_PUBLIC_ value inlined in the client bundle: the server HTML and the
+ * browser always agree, even when the variable is only set at runtime.
+ * @param {{formUrl: string|null, slug: string, pid: number}} props
  */
-export function DevisButton({ slug, pid }) {
+export function DevisButton({ formUrl, slug, pid }) {
 	const [href, setHref] = useState(() =>
-		buildDevisHref({ formUrl: DEVIS_FORM_URL, slug, pid })
+		buildDevisHref({ formUrl, slug, pid })
 	)
 
 	useEffect(() => {
 		setHref(
 			buildDevisHref({
-				formUrl: DEVIS_FORM_URL,
+				formUrl,
 				slug,
 				pid,
 				search: window.location.search,
 				referrer: document.referrer,
 			})
 		)
-	}, [slug, pid])
+	}, [formUrl, slug, pid])
 
 	if (href === null) return null
 
