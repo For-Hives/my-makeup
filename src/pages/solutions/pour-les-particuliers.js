@@ -62,31 +62,31 @@ function PourLesParticuliers(props) {
 									<li>
 										<h2>{'Une recherche simplifiée 🕵️‍♀️'}</h2>
 										<p>
-											{`Avec notre moteur de recherche avancé, vous pouvez trouver la maquilleuse professionnelle qui correspond à vos critères en un clin d'œil. Que vous cherchiez une experte en maquillage de mariage, une spécialiste du maquillage bio ou une artiste maquilleuse pour un événement spécial, notre plateforme vous donne accès à un large éventail de profils pour trouver votre perle rare.`}
+											{`Avec notre recherche par mot-clé et par ville, vous pouvez trouver la maquilleuse professionnelle qui correspond à vos besoins en un clin d'œil. Que vous cherchiez une experte en maquillage de mariage, une spécialiste du maquillage bio ou une artiste maquilleuse pour un événement spécial, notre plateforme vous donne accès à un large éventail de profils pour trouver votre perle rare.`}
 										</p>
 									</li>
 									<li>
 										<h2>{'Comparez et choisissez 🔄'}</h2>
 										<p>
-											{`Sur My-Makeup, vous pouvez consulter les profils détaillés des maquilleuses, y compris leurs portfolios, leurs spécialités, leurs tarifs et leurs évaluations. Cela vous permet de comparer facilement les différentes options et de choisir celle qui vous convient le mieux.`}
+											{`Sur My-Makeup, vous pouvez consulter les profils détaillés des maquilleuses, y compris leurs portfolios, leurs spécialités et leurs tarifs. Cela vous permet de comparer facilement les différentes options et de choisir celle qui vous convient le mieux.`}
 										</p>
 									</li>
 									<li>
-										<h2>{'Prenez rendez-vous en toute simplicité 📅'}</h2>
+										<h2>{'Contactez directement la maquilleuse 📅'}</h2>
 										<p>
-											{`Une fois que vous avez trouvé la maquilleuse qui vous convient, vous pouvez prendre rendez-vous directement sur notre plateforme. Pas besoin d'échanger des dizaines de mails ou d'appels, tout se fait en quelques clics !`}
+											{`Une fois que vous avez trouvé la maquilleuse qui vous convient, contactez-la directement avec les coordonnées indiquées sur son profil pour convenir ensemble de la prestation, de la date et du tarif.`}
 										</p>
 									</li>
 									<li>
-										<h2>{"Profitez d'un service sécurisé 💼"}</h2>
+										<h2>{'Des profils présentés par les maquilleuses 💼'}</h2>
 										<p>
-											{`Avec My-Makeup, la sécurité est notre priorité. Toutes les maquilleuses sur notre plateforme sont vérifiées et vous pouvez lire les commentaires des autres clients pour vous assurer de la qualité de leur service. De plus, notre système de paiement sécurisé vous garantit une transaction sans tracas.`}
+											{`Chaque maquilleuse présente elle-même son parcours, ses formations et ses réalisations. My-Makeup ne gère ni les rendez-vous ni les règlements : vous convenez directement avec elle du devis et des modalités.`}
 										</p>
 									</li>
 									<li>
-										<h2>{'Un service client dédié à votre écoute 📞'}</h2>
+										<h2>{'Une question ? 📞'}</h2>
 										<p>
-											{`Si vous avez des questions ou rencontrez un problème, notre équipe de service client est là pour vous aider. Nous sommes déterminés à faire de votre expérience avec My-Makeup une expérience positive et sans stress.
+											{`Si vous avez des questions ou rencontrez un problème, écrivez-nous depuis la page Contact. Nous sommes déterminés à faire de votre expérience avec My-Makeup une expérience positive et sans stress.
 												
 												En somme, My-Makeup simplifie votre recherche de la maquilleuse parfaite. Avec nous, trouver la maquilleuse de vos rêves n'a jamais été aussi simple !`}
 										</p>

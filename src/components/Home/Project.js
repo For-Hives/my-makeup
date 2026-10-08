@@ -3,24 +3,24 @@ import Image from 'next/image'
 
 const tabs = [
 	{
-		title: 'Soyez incroyablement rapide & efficace',
+		title: 'Contactez directement la maquilleuse',
 		content:
-			'Communiquez en temps réel, démarrez de nouvelles prestations en quelques jours, et recevez vos demandes rapidement.',
+			'Chaque profil présente le portfolio, les spécialités, les tarifs indicatifs et les moyens de contact choisis par la maquilleuse. Vous échangez directement avec elle, sans intermédiaire.',
 	},
 	{
-		title: 'Évoluez dans un espace sûr & un service sécurisé',
+		title: 'Comparez avant de choisir',
 		content:
-			'Concentrez-vous sur la collaboration grâce aux commentaires, évaluations, et aux profils des maquilleuses vérifiés.',
+			'Portfolio, expériences, formations et zone de déplacement : tout est réuni sur une seule page pour comparer les profils sereinement.',
 	},
 	{
-		title: 'Gagnez beaucoup de temps',
+		title: 'Gratuit',
 		content:
-			'Consacrez 10 fois moins de temps à vos tâches de recherche, et de planification. Grâce à notre plateforme, vous pouvez trouver les meilleures maquilleuses, et planifier vos projets, le tout dans une solution unifiée.',
+			'La recherche est gratuite pour les particuliers et la page professionnelle est gratuite pour les maquilleuses : profil, portfolio, tarifs et coordonnées.',
 	},
 	{
-		title: 'Rejoignez une communauté de talents',
+		title: 'Pensée pour les maquilleuses indépendantes',
 		content:
-			'Créé pour et par des professionnels de la beauté, notre plateforme attire les meilleures maquilleuses. Nos managers dédiés à la réussite des maquilleuses soutiennent leurs carrières et le développement de leurs compétences.',
+			'Chaque maquilleuse crée et complète elle-même sa page professionnelle pour présenter son travail aux particuliers qui cherchent une maquilleuse.',
 	},
 ]
 
@@ -30,12 +30,12 @@ function Project() {
 			<div className="mx-auto max-w-7xl">
 				<div className="mx-auto mb-10">
 					<h2 className="text-start text-4xl font-bold tracking-tight text-gray-900 sm:text-4xl">
-						Gardez votre projet beauté en tête, on s&apos;occupe du reste
+						Gardez votre projet beauté en tête, on vous aide à trouver la bonne
+						maquilleuse
 					</h2>
 					<p className="mt-6 text-start text-lg text-gray-700 md:w-1/2">
-						Trouvez les meilleures maquilleuses, planifiez votre projet, payez
-						et recevez des paiements, le tout dans une solution unifiée. Oui,
-						vous avez bien lu.
+						Trouvez une maquilleuse près de chez vous, comparez les profils et
+						contactez-la directement, gratuitement.
 					</p>
 				</div>
 

@@ -128,7 +128,7 @@ function SiteMap({ articles, talents }) {
 										<Link href={'/cgu'}>CGU</Link>
 									</li>
 									<li>
-										<Link href={'/cgu'}>Mentions légales</Link>
+										<Link href={'/mentions-legales'}>Mentions légales</Link>
 									</li>
 									<li>
 										<Link href={'/politique-de-confidentialite'}>

@@ -11,7 +11,8 @@ import ViewExperiencesProfil from '@/components/Profil/Childs/Views/ViewExperien
 import ViewContainer from '@/components/Profil/Childs/Views/ViewContainer'
 
 function ViewInfosProfil(props) {
-	const [user, setUser] = React.useState(null)
+	// initialised from the props so the public profile is rendered on the server
+	const [user, setUser] = React.useState(props.user?.attributes ?? null)
 
 	useEffect(() => {
 		if (props.user) {
@@ -31,7 +32,14 @@ function ViewInfosProfil(props) {
 								}
 							>
 								<ViewContainer user={user} Component={ViewLocationProfil} />
-								<ViewContainer user={user} Component={ViewSocialMediaProfil} />
+								<ViewContainer
+									user={user}
+									Component={ViewSocialMediaProfil}
+									tracking={{
+										pid: props.user?.id,
+										username: props.user?.attributes?.username,
+									}}
+								/>
 								<ViewContainer user={user} Component={ViewSkillsProfil} />
 								<ViewContainer user={user} Component={ViewLanguageProfil} />
 								<ViewContainer user={user} Component={ViewCoursesProfil} />

@@ -32,7 +32,7 @@ function ViewLocationProfil(props) {
 					</span>
 					<div className={'flex flex-col gap-2'}>
 						<h3 className={'text-lg font-semibold text-gray-700'}>
-							Peut travailer chez vous à
+							Peut travailler chez vous à
 						</h3>
 						<p
 							className={'text-gray-800'}

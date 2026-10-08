@@ -70,19 +70,19 @@ function CentraliserSesRecherches(props) {
 									<li>
 										<h2>Utilisez une plateforme centralisée 🔍</h2>
 										<p>
-											{`Utilisez une plateforme comme My-Makeup pour centraliser vos recherches. Grâce à ses filtres de recherche, vous pouvez trouver des maquilleuses en fonction de vos critères : localisation, spécialités, expérience, tarifs et évaluations des clients précédents.`}
+											{`Utilisez une plateforme comme My-Makeup pour centraliser vos recherches. Grâce à sa recherche, vous pouvez trouver des maquilleuses en fonction de deux critères : un mot-clé (spécialité, type d'événement...) et une ville.`}
 										</p>
 									</li>
 									<li>
 										<h2>Créez une shortlist 📝</h2>
 										<p>
-											{`Après avoir utilisé les filtres de recherche, créez une shortlist des maquilleuses qui correspondent le mieux à vos critères. Consultez attentivement leurs profils pour en savoir plus sur leur parcours, leurs compétences et leurs styles. Prenez en compte leurs photos de travail, leurs évaluations et leurs commentaires pour évaluer la qualité de leur travail.`}
+											{`Après votre recherche, créez une shortlist des maquilleuses qui correspondent le mieux à vos critères. Consultez attentivement leurs profils pour en savoir plus sur leur parcours, leurs compétences et leurs styles. Prenez en compte leurs photos de travail pour évaluer la qualité de leur travail.`}
 										</p>
 									</li>
 									<li>
 										<h2>Comparez les profils 🔄</h2>
 										<p>
-											{`Une fois votre shortlist établie, comparez les profils pour trouver la maquilleuse qui vous correspond le mieux. Prenez en compte tous les aspects : compétences, style, expérience, tarifs, avis des clients, etc. Cette comparaison vous aidera à prendre une décision éclairée.`}
+											{`Une fois votre shortlist établie, comparez les profils pour trouver la maquilleuse qui vous correspond le mieux. Prenez en compte tous les aspects : compétences, style, expérience, tarifs, etc. Cette comparaison vous aidera à prendre une décision éclairée.`}
 										</p>
 									</li>
 									<li>

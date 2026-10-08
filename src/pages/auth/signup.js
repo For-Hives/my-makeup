@@ -7,6 +7,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as zod from 'zod'
 import _ from 'lodash'
+import { track } from '@/lib/analytics'
 
 const schema = zod
 	.object({
@@ -39,6 +40,7 @@ function Signup() {
 	const { data: session } = useSession()
 
 	const onSubmit = data => {
+		track('signup_start', { method: 'email' })
 		/**
 		 * Signin function with name setted : register mode
 		 */
@@ -59,12 +61,8 @@ function Signup() {
 					content="Inscription sur my-makeup.fr la plateforme qui va révolutionner votre
 	            recherche de maquilleuses professionnelles, ou votre recherche de client !"
 				/>
-				<link rel="preconnect" href="https://fonts.googleapis.com" />
-				<link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin />
-				<link
-					href="https://fonts.googleapis.com/css2?family=Roboto:wght@500&display=swap"
-					rel="stylesheet"
-				/>
+				{/* No web font here: the Google button label uses Roboto when the
+				    device has it, so no visitor IP is sent to Google Fonts. */}
 				{/*	seo tag canonical link */}
 				<link rel="canonical" href="https://my-makeup.fr/auth/signup" />
 			</Head>
@@ -95,36 +93,7 @@ function Signup() {
 												<button
 													data-cy="google-signin"
 													onClick={() => {
-														signIn('facebook', {
-															callbackUrl: '/auth/profil',
-														})
-													}}
-													className="flex h-[40px] w-full flex-nowrap items-center justify-center gap-[12px] rounded-md bg-white px-3 text-gray-500 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:outline-offset-0"
-												>
-													<span className="sr-only">
-														{"S'inscrire avec Facebook"}
-													</span>
-													<Image
-														src={'/assets/signin-assets/facebook_logo.svg'}
-														alt={'google logo'}
-														width={18}
-														height={18}
-														className={'h-[18px] w-[18px]'}
-													/>
-													<p
-														className={
-															'flex flex-nowrap font-[roboto] text-[14px] font-medium text-black/[54%]'
-														}
-													>
-														{"S'inscrire avec Facebook"}
-													</p>
-												</button>
-											</div>
-
-											<div className={'flex w-full justify-center'}>
-												<button
-													data-cy="google-signin"
-													onClick={() => {
+														track('signup_start', { method: 'google' })
 														signIn('google', {
 															callbackUrl: '/auth/profil',
 														})
@@ -143,7 +112,7 @@ function Signup() {
 													/>
 													<p
 														className={
-															'flex flex-nowrap font-[roboto] text-[14px] font-medium text-black/[54%]'
+															'flex flex-nowrap font-[family-name:Roboto,ui-sans-serif,system-ui,sans-serif] text-[14px] font-medium text-black/[54%]'
 														}
 													>
 														{"S'inscrire avec Google"}

@@ -36,7 +36,7 @@ function APropos(props) {
 					description={
 						<>
 							{
-								'Découvrez comment My-Makeup peut aider les personnes à trouver la maquilleuse professionnelle qui leur correspond. Et comment nous pouvons aider les maquilleuses professionnelles à développer leur activité, à trouver de nouveaux clients et à découvrir de nouvelles opportunités.'
+								'Découvrez comment My-Makeup peut aider les personnes à trouver la maquilleuse professionnelle qui leur correspond. Et comment nous pouvons aider les maquilleuses professionnelles à présenter leur travail et à se faire connaître de nouveaux clients.'
 							}
 						</>
 					}
@@ -61,7 +61,7 @@ function APropos(props) {
 									<li>
 										<h2>{'Notre histoire 📜'}</h2>
 										<p>
-											{`Créée en 2023, My-Makeup est née de la volonté de faciliter la recherche et la réservation de services de maquillage professionnels. Nous avons identifié une lacune dans le marché : il était difficile pour les clients de trouver des maquilleuses professionnelles qualifiées et pour ces dernières de promouvoir leurs services. Nous avons donc décidé de combler ce vide en créant une plateforme où les maquilleuses peuvent montrer leur travail et les clients peuvent trouver le professionnel qui correspond à leurs besoins.`}
+											{`Créée en 2023, My-Makeup est née de la volonté de faciliter la recherche de maquilleuses professionnelles. Nous avons identifié une lacune dans le marché : il était difficile pour les clients de trouver des maquilleuses professionnelles qualifiées et pour ces dernières de promouvoir leurs services. Nous avons donc décidé de combler ce vide en créant une plateforme où les maquilleuses peuvent montrer leur travail et les clients peuvent trouver le professionnel qui correspond à leurs besoins.`}
 										</p>
 									</li>
 									<li>
@@ -73,7 +73,7 @@ function APropos(props) {
 									<li>
 										<h2>{'Ce que nous faisons 🖌️'}</h2>
 										<p>
-											{`My-Makeup permet aux maquilleuses professionnelles de créer un profil détaillé, de présenter leur travail, d'établir leurs propres tarifs et de gérer leurs réservations. Pour les clients, nous offrons une plateforme où ils peuvent rechercher des maquilleuses par ville, par style de maquillage et par tarifs, lire les avis et réserver une prestation.`}
+											{`My-Makeup permet aux maquilleuses professionnelles de créer gratuitement un profil détaillé, de présenter leur travail et d'afficher leurs propres tarifs. Les particuliers peuvent rechercher des maquilleuses par ville et par spécialité, comparer les profils et contacter directement la maquilleuse de leur choix.`}
 										</p>
 									</li>
 									<li>

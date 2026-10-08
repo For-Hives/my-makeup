@@ -31,15 +31,10 @@ function Collaboration() {
 								idéale pour vous !
 							</p>
 							<p>
-								Avec My-Makeup, vous pouvez recevoir des offres de missions
-								parfaitement adaptées à vos compétences et communiquer
-								directement avec des clients potentiels dans tous les secteurs.
-							</p>
-							<p>
-								Cerise sur le gâteau, notre équipe dédiée aux maquilleuses vous
-								accompagne avec des ressources spécialisées, des partenariats,
-								et des événements pour vous aider à développer votre carrière de
-								manière optimale.
+								Avec My-Makeup, vous créez gratuitement votre page
+								professionnelle : portfolio, spécialités, tarifs et coordonnées.
+								Les particuliers qui cherchent une maquilleuse vous contactent
+								directement.
 							</p>
 						</div>
 						<div className={'flex'}>
@@ -101,17 +96,16 @@ function Collaboration() {
 								Vous êtes spécialisée en maquillage pour les mariées ou en
 								maquillage artistique ? Vous cherchez à travailler à Lyon,
 								Nantes, Toulouse, Rennes, Lille, Cannes ou Paris ? Pas de
-								problème ! Avec My-Makeup, les gens qui en on besoin peuvent
+								problème ! Avec My-Makeup, les gens qui en ont besoin peuvent
 								vous trouver facilement.
 							</p>
 							<p>
 								N&apos;attendez plus pour rejoindre la communauté de
 								maquilleuses professionnelles de My-Makeup. Avec notre
-								plateforme, vous pouvez trouver des missions passionnantes et
-								des clients fidèles qui vous permettront de développer votre
-								carrière à votre guise. Inscrivez-vous dès maintenant et
-								commencez à construire votre avenir professionnel dès
-								aujourd&apos;hui !
+								plateforme, vous présentez votre travail à de nouvelles clientes
+								et développez votre activité à votre rythme. Inscrivez-vous dès
+								maintenant et commencez à construire votre avenir professionnel
+								dès aujourd&apos;hui !
 							</p>
 						</div>
 						<div className={'flex'}>
@@ -138,8 +132,8 @@ function Collaboration() {
 								disponibles sur notre plateforme, trouvez rapidement la
 								maquilleuse professionnelle qui répond à tous vos besoins.
 								Recherchez parmi les meilleurs profils disponibles pour votre
-								projet, consultez leurs avis et expériences, et discutez
-								directement avec eux pour les recruter en quelques clics.
+								projet, consultez leurs expériences et leurs réalisations, et
+								contactez-les directement.
 							</p>
 							<p>
 								Trouvez votre experte en maquillage pour les mariées, une
@@ -151,10 +145,10 @@ function Collaboration() {
 							</p>
 							<p>
 								Nous sommes là pour faciliter votre recherche de maquilleuse
-								freelance. Une fois que vous avez trouvé la bonne personne, nous
-								nous occupons du reste. Alors n&apos;attendez plus, rejoignez My
-								Makeup dès maintenant et trouvez votre maquilleuse de rêve en
-								quelques clics !
+								freelance. Une fois que vous avez trouvé la bonne personne, il
+								ne vous reste plus qu&apos;à la contacter. Alors n&apos;attendez
+								plus, lancez votre recherche dès maintenant et trouvez votre
+								maquilleuse de rêve en quelques clics !
 							</p>
 						</div>
 						<div className={'flex'}>
@@ -228,15 +222,10 @@ function Collaboration() {
 								profils adaptés à vos besoins.
 							</p>
 							<p>
-								Notre solution de gestion est simple et intuitive, même pour les
-								débutants. Avec My-Makeup, vous pouvez centraliser toutes vos
-								activités avec les maquilleuses professionnelles de votre choix,
-								pour une gestion simplifiée.
-							</p>
-							<p>
-								Alors n&apos;hésitez plus, inscrivez-vous dès maintenant sur My
-								Makeup et simplifiez la gestion de vos activités avec vos
-								maquilleuses professionnelles préférées !
+								Profils, portfolios et tarifs indicatifs sont réunis au même
+								endroit : comparez les maquilleuses, puis contactez directement
+								celle qui vous plaît. La recherche est gratuite et ne demande
+								aucune inscription.
 							</p>
 						</div>
 						<div className={'flex'}>

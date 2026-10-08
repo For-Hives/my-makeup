@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { signOut, useSession } from 'next-auth/react'
 import _ from 'lodash'
 import { Signature } from '@/components/Global/Signature'
+import { track } from '@/lib/analytics'
 
 const navigation = [
 	{
@@ -38,7 +39,7 @@ const navigation = [
 				name: 'Explorer les profils',
 				href: '/particulier/explorer-les-profils',
 				icon: 'person_search',
-				description: 'Cherchez par critères et par villes !',
+				description: 'Cherchez par mot-clé et par ville !',
 			},
 		],
 	},
@@ -52,15 +53,15 @@ const navigation = [
 				href: '/pourquoi-rejoindre-my-makeup-en-tant-que-maquilleuse',
 				icon: 'brush',
 				description:
-					'Rejoignez la communauté My-Makeup pour développer votre activité, trouver de nouveaux clients,' +
-					' gagner en visibilité. Et facilité votre gestion quotidienne !',
+					'Rejoignez la communauté My-Makeup pour développer votre activité, trouver de nouveaux clients' +
+					' et gagner en visibilité, gratuitement !',
 			},
 			{
 				name: 'Communauté & Partenariats',
 				href: '/maquilleuse/partenariats',
 				icon: 'group',
 				description:
-					'Nous sommes là pour vous accompagner dans votre développement !',
+					'Une page gratuite pour présenter votre travail, et une équipe à votre écoute.',
 			}, // {
 			// 	name: 'Nos partenaires',
 			// 	href: '/maquilleuse/partenaires',
@@ -88,7 +89,7 @@ const navigation = [
 				href: '/solutions/pour-les-maquilleuses',
 				icon: 'diversity_2',
 				description:
-					'Le seul endroit pour trouver des clients, développer votre activité et trouver des opportunités !',
+					'Présentez votre travail et faites-vous connaître des particuliers, gratuitement.',
 			},
 		],
 	},
@@ -171,6 +172,9 @@ function Nav({
 											<Link
 												className={'btn-primary-with-icon'}
 												href={'/search'}
+												onClick={() =>
+													track('cta_click', { where: 'nav_recherche' })
+												}
 											>
 												<MagnifyingGlassIcon
 													className="mr-2 h-5 w-5 text-indigo-900"
@@ -239,7 +243,13 @@ function Nav({
 								<div
 									className={'flex w-full flex-col-reverse items-start gap-8'}
 								>
-									<Link className={'btn-primary-with-icon'} href={'/search'}>
+									<Link
+										className={'btn-primary-with-icon'}
+										href={'/search'}
+										onClick={() =>
+											track('cta_click', { where: 'nav_recherche_mobile' })
+										}
+									>
 										<MagnifyingGlassIcon
 											className="mr-2 h-5 w-5 text-indigo-900"
 											aria-hidden="true"

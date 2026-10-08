@@ -2,6 +2,7 @@ import React, { useEffect } from 'react'
 import Image from 'next/image'
 import { BadgeDispo } from '@/components/Profil/Atoms/BadgeDispo'
 import { BadgeIndispo } from '@/components/Profil/Atoms/BadgeIndispo'
+import { DevisButton } from '@/components/Profil/Atoms/DevisButton'
 
 function ViewResumeProfil(props) {
 	const [user, setUser] = React.useState(null)
@@ -110,10 +111,10 @@ function ViewResumeProfil(props) {
 							{/*</div>*/}
 						</div>
 					</div>
-					<div className={'col-span-3 flex items-center'}>
+					<div className={'col-span-12 flex items-center md:col-span-3'}>
 						<div
 							className={
-								'flex h-full w-full flex-col items-start justify-between'
+								'flex h-full w-full flex-col items-start justify-between gap-4'
 							}
 						>
 							<div className={'flex cursor-default items-center gap-5'}>
@@ -127,6 +128,12 @@ function ViewResumeProfil(props) {
 									</>
 								)}
 							</div>
+							{/* from the page props, so the button is in the server HTML */}
+							<DevisButton
+								formUrl={props.devisUrl ?? null}
+								slug={props.user?.attributes?.username}
+								pid={props.user?.id}
+							/>
 						</div>
 					</div>
 				</div>
