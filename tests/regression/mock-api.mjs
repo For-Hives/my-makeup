@@ -21,7 +21,9 @@
 //   lists without the email and phone of the profiles, except the query of
 //   one profile by its username (API PR #370);
 // - /api/searching: the city alone is a term, unavailable profiles left
-//   out, public fields only.
+//   out, public fields only; the city ranks the profiles of that city
+//   first but filters nothing, so a search by city also returns the other
+//   cities (UI-10), as the real one does.
 // `/__…` routes drive it from the tests (forced failures, delays, revoked
 // sessions, state, profile of the test account). Public data:
 // tests/regression/donnees-publiques.mjs.
@@ -565,9 +567,12 @@ export function demarrerFauxStrapi(port = 4112, { origine = '*' } = {}) {
 					erreur(etat.panne.recherche, 'Error', 'forced failure')
 				)
 			const ville = normaliser(url.searchParams.get('city')).trim()
+			const motsVille = new Set(ville.split(/\s+/).filter(Boolean))
+			// the words of the city only rank, like the Fuse.js score of the
+			// API: never a geographic filter (UI-10)
 			const mots = normaliser(url.searchParams.get('search') || ville)
 				.split(/\s+/)
-				.filter(Boolean)
+				.filter(mot => mot && !motsVille.has(mot))
 			const trouves = tousLesProfils()
 				.filter(p => p.available !== false)
 				.filter(p => {
@@ -581,13 +586,16 @@ export function demarrerFauxStrapi(port = 4112, { origine = '*' } = {}) {
 							...(p.skills ?? []).map(s => s.name),
 						].join(' ')
 					)
-					return (
-						mots.every(mot => texte.includes(mot)) &&
-						(!ville || normaliser(p.city).includes(ville))
-					)
+					return mots.every(mot => texte.includes(mot))
 				})
+				.map((p, i) => ({
+					p,
+					i,
+					rang: ville && normaliser(p.city).includes(ville) ? 0 : 1,
+				}))
+				.sort((a, b) => a.rang - b.rang || a.i - b.i)
 				.slice(0, 50)
-				.map(resultatRecherche)
+				.map(({ p }) => resultatRecherche(p))
 			return json(res, 200, trouves)
 		}
 

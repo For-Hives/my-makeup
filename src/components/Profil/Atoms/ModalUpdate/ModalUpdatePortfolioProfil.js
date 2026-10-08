@@ -9,6 +9,7 @@ import { patchMeMakeup } from '@/services/PatchMeMakeup'
 import { uploadPhoto } from '@/services/UploadPhoto'
 import Info from '@/components/Global/Info'
 import { ACCEPT, MAX_PHOTOS_GALERIE, MESSAGES_PHOTO } from '@/lib/photo'
+import { ratioMedia, sizesBoite } from '@/lib/taille-image'
 import {
 	BoutonFermer,
 	BoutonSauvegarder,
@@ -383,7 +384,12 @@ export default function ModalUpdatePortfolioProfil(props) {
 																				'portefolio image'
 																			}
 																			fill={true}
-																			sizes="(min-width: 480px ) 50vw, (min-width: 728px) 33vw, (min-width: 976px) 25vw, 100vw"
+																			// UI-09: a slide is 500 px high with the ratio of
+																			// its photo, on a phone as on a computer
+																			sizes={sizesBoite({
+																				hauteur: 500,
+																				ratio: ratioMedia(image),
+																			})}
 																			className={'rounded object-cover'}
 																		/>
 																	</SwiperSlide>

@@ -13,24 +13,32 @@ import { CheckCircleIcon } from '@heroicons/react/24/outline'
 import { isRepeat, resultsBucket, track } from '@/lib/analytics'
 import { signalAvecDelai } from '@/lib/delai'
 import { formatZone } from '@/lib/format-zone'
-import { nomAffiche, texte } from '@/lib/profil/vue-publique'
+import { separerParLieu } from '@/lib/lieu'
+import { nomAffiche, photoPrincipale, texte } from '@/lib/profil/vue-publique'
 import {
 	cleRecherche,
 	DELAI_RECHERCHE_MS,
+	GRILLE_RESULTATS,
+	HAUTEUR_PHOTO_CARTE,
 	lireRecherche,
 	paginer,
 	rechercheValide,
 	resultatsRecherche,
+	sectionsDeLaPage,
 	titreResultats,
 	urlApiRecherche,
 	urlPageRecherche,
 } from '@/lib/recherche'
+import { QUALITE_PHOTO, ratioMedia, sizesGrille } from '@/lib/taille-image'
 
 /**
  * Search (UI-07): the URL is the search (/search?search=…&city=…&page=…). A
  * city alone is enough; one API call per search, never for a page change;
  * empty, error (API cut off: message within 8 s) and paged states, each
  * with its h1. Never indexed (noindex from _app.js and next.config.js).
+ * With a city (UI-10), the API still answers for all of France: the
+ * profiles of that city or département come first and are the only ones
+ * counted in the title, the others follow under their own heading.
  */
 function SearchPage() {
 	const router = useRouter()
@@ -44,6 +52,8 @@ function SearchPage() {
 	const origine = useRef('lien')
 	// last search counted as `search_submit`
 	const lastCounted = useRef(null)
+	// search whose first photo (the LCP of a phone) has loaded or failed
+	const [photoChargee, setPhotoChargee] = useState(null)
 
 	useEffect(() => {
 		if (!pret) return
@@ -104,7 +114,16 @@ function SearchPage() {
 			? etat.statut
 			: 'chargement'
 	const resultats = statut === 'ok' ? etat.resultats : []
-	const pagination = paginer(resultats, page)
+	// UI-09: the cards prefetch their profile pages (≈ 80 KB of JavaScript and
+	// data) once the first photo is there, not while it downloads
+	const cleAffichee = statut === 'ok' ? etat.cle : null
+	const cartes = {
+		prefetch: cleAffichee !== null && photoChargee === cleAffichee,
+		surPremierePhoto: () => setPhotoChargee(cleAffichee),
+	}
+	const { locaux, autres, parLieu } = separerParLieu(resultats, city)
+	const pagination = paginer([...locaux, ...autres], page)
+	const sections = sectionsDeLaPage(pagination, locaux.length)
 
 	return (
 		<>
@@ -200,22 +219,49 @@ function SearchPage() {
 								className={'mb-8 text-2xl font-bold text-gray-800'}
 								data-cy="search-title"
 							>
-								{titreResultats({ search, city }, pagination.total)}
+								{titreResultats(
+									{ search, city },
+									parLieu ? locaux.length : pagination.total
+								)}
 							</h1>
-							<ul
-								className={
-									'grid w-full grid-cols-1 gap-8 md:grid-cols-3 2xl:grid-cols-6'
-								}
-							>
-								{pagination.elements.map((result, index) => (
-									<li key={result.id ?? index} className={'col-span-1'}>
-										<CarteResultat
-											result={result}
-											rang={pagination.premier + index}
-										/>
-									</li>
-								))}
-							</ul>
+							{parLieu && locaux.length === 0 && (
+								<p
+									className={'-mt-4 mb-8 text-gray-700'}
+									data-cy="search-aucun-local"
+								>
+									Aucune maquilleuse n’indique « {city} » (ville ou département)
+									dans son profil.
+								</p>
+							)}
+							{sections.locaux.length > 0 && (
+								<ListeResultats
+									resultats={sections.locaux}
+									premier={pagination.premier}
+									premierDeLaPage={pagination.premier}
+									cartes={cartes}
+									dataCy="search-results-locaux"
+								/>
+							)}
+							{sections.autres.length > 0 && (
+								<section aria-labelledby="search-autres-titre">
+									<h2
+										id="search-autres-titre"
+										className={`mb-8 text-xl font-bold text-gray-800 ${
+											sections.locaux.length > 0 ? 'mt-12' : ''
+										}`}
+										data-cy="search-autres-titre"
+									>
+										Autres maquilleuses qui se déplacent
+									</h2>
+									<ListeResultats
+										resultats={sections.autres}
+										premier={pagination.premier + sections.locaux.length}
+										premierDeLaPage={pagination.premier}
+										cartes={cartes}
+										dataCy="search-results-autres"
+									/>
+								</section>
+							)}
 							{pagination.pages > 1 && (
 								<nav
 									aria-label="Pages de résultats"
@@ -262,20 +308,53 @@ function SearchPage() {
 	)
 }
 
-function CarteResultat({ result, rang }) {
+/**
+ * One list of result cards, ranked from `premier` (search_result_click).
+ * The first card of the page is the largest picture above the fold on a
+ * phone (its LCP): loaded at once and first; the others stay lazy, and the
+ * links prefetch only once it is there (`cartes`).
+ */
+function ListeResultats({
+	resultats,
+	premier,
+	premierDeLaPage,
+	cartes,
+	dataCy,
+}) {
+	return (
+		<ul
+			className={'grid w-full grid-cols-1 gap-8 md:grid-cols-3 2xl:grid-cols-6'}
+			data-cy={dataCy}
+		>
+			{resultats.map((result, index) => (
+				<li key={result.id ?? premier + index} className={'col-span-1'}>
+					<CarteResultat
+						result={result}
+						rang={premier + index}
+						prioritaire={premier + index === premierDeLaPage}
+						cartes={cartes}
+					/>
+				</li>
+			))}
+		</ul>
+	)
+}
+
+function CarteResultat({ result, rang, prioritaire, cartes }) {
 	const nom = nomAffiche(result)
 	const zone = formatZone({ city: result.city, radius: result.action_radius })
 	const competences = (Array.isArray(result.skills) ? result.skills : [])
 		.map(skill => texte(skill?.name))
 		.filter(Boolean)
 		.slice(0, 7)
-	const photo = texte(result.main_picture?.url)
+	const photo = photoPrincipale(result)
 	const username = texte(result.username)
 
 	return (
 		<Link
 			// the old URL of the profile answers a 308 to its slug
 			href={`/profil/${encodeURIComponent(username)}`}
+			prefetch={cartes.prefetch ? undefined : false}
 			data-cy={`search-result`}
 			onClick={() =>
 				track('search_result_click', { rank: rang, pid: result.id })
@@ -284,15 +363,25 @@ function CarteResultat({ result, rang }) {
 				'flex w-full flex-col items-center rounded border border-gray-300 bg-white'
 			}
 		>
-			<div className={'relative w-full'}>
+			<div className={'relative h-[350px] w-full'}>
+				{/* UI-09: asked at the width it is drawn at (cover in a cell of
+				    GRILLE_RESULTATS), sharp on a 2x screen; 2.25x on a 3x phone,
+				    where it is the LCP (src/lib/taille-image.js) */}
 				<Image
-					src={photo || '/assets/pp_makeup.webp'}
+					src={photo?.url || '/assets/pp_makeup.webp'}
 					alt={photo ? `Photo de ${nom}` : ''}
-					width={250}
-					height={250}
-					className={
-						'h-[350px] w-full rounded-b-none rounded-t object-cover object-center'
-					}
+					fill={true}
+					sizes={sizesGrille(GRILLE_RESULTATS, {
+						hauteur: HAUTEUR_PHOTO_CARTE,
+						// the default picture is square
+						ratio: photo ? ratioMedia(photo) : 1,
+					})}
+					quality={QUALITE_PHOTO}
+					loading={prioritaire ? 'eager' : 'lazy'}
+					fetchPriority={prioritaire ? 'high' : 'auto'}
+					onLoad={prioritaire ? cartes.surPremierePhoto : undefined}
+					onError={prioritaire ? cartes.surPremierePhoto : undefined}
+					className={'rounded-b-none rounded-t object-cover object-center'}
 				/>
 				{result.pro === true && (
 					<div
@@ -316,21 +405,18 @@ function CarteResultat({ result, rang }) {
 							</span>
 						)}
 					</div>
-					{zone && (
-						<div
-							className={
-								'flex flex-row items-center gap-2 text-sm font-light text-white'
-							}
-						>
-							<span
-								className="material-icons-round text-sm text-white"
-								aria-hidden="true"
-							>
-								directions_run
-							</span>
-							<span className={'font-bold'}>{zone}</span>
-						</div>
-					)}
+					<div
+						className={
+							'flex flex-row items-center gap-2 text-sm font-light text-white'
+						}
+						data-cy="search-result-zone"
+					>
+						<IconeDeplacement />
+						{/* UI-10: an empty city is said, never left blank */}
+						<span className={zone ? 'font-bold' : 'italic'}>
+							{zone || 'Zone non renseignée'}
+						</span>
+					</div>
 				</div>
 			</div>
 			<div className={'flex w-full flex-col gap-4 p-4 pt-6'}>
@@ -361,6 +447,25 @@ function CarteResultat({ result, rang }) {
 				</div>
 			</div>
 		</Link>
+	)
+}
+
+/**
+ * « directions_run » of Material Icons Round (Apache 2.0), drawn inline
+ * (UI-09): on /search the icon font, 170 KB, was only loaded for it, and
+ * downloaded at the same time as the photo of the first card, the LCP of
+ * a phone. Same glyph, 1em of a text-sm line.
+ */
+function IconeDeplacement() {
+	return (
+		<svg
+			viewBox="0 0 512 512"
+			fill="currentColor"
+			aria-hidden="true"
+			className="h-3.5 w-3.5 shrink-0 text-white"
+		>
+			<path d="M288 117C311 117 330 98 330 74C330 51 311 32 288 32C264 32 245 51 245 74C245 98 264 117 288 117ZM220 373L232 320L277 362L277 469C277 481 287 490 298 490C310 490 320 481 320 469L320 349C320 337 315 326 307 318L275 288L288 224C311 250 344 269 381 275C394 277 405 267 405 254C405 243 397 234 387 233C355 227 328 208 313 183L292 149C284 136 271 128 256 128C249 128 245 130 239 130L154 166C138 172 128 188 128 205L128 256C128 267 137 277 149 277C161 277 170 267 170 256L170 204L209 189L175 362L91 345C80 343 68 350 66 362L66 363C64 374 71 385 83 388L170 405C193 410 215 396 220 373Z" />
+		</svg>
 	)
 }
 

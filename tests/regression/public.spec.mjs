@@ -2,7 +2,9 @@
 // its data, donnees-publiques.mjs), launched by tests/regression/run.mjs:
 // profiles rendered on the server (UI-06), slugs, sitemap, robots, noindex
 // and canonical (SEO-10), Open Graph and JSON-LD (SEO-12), the search by
-// city (UI-07). The raw HTML is read without JavaScript, as a crawler does.
+// city (UI-07) and its honest title (UI-10), the width and quality of the
+// artists' photos (UI-09). The raw HTML is read without JavaScript, as a
+// crawler does.
 // Web-first waits only, no fixed timeout.
 import { expect, test } from '@playwright/test'
 import { getElementsByTagName, removeElement } from 'domutils'
@@ -439,7 +441,7 @@ test.describe('UI-07 recherche', () => {
 		const erreurs = erreursDeLaPage(page)
 		await page.goto('/search?city=Annecy')
 		await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-			/^\d+ maquilleuses à Annecy$/
+			/^\d+ résultats pour « Annecy »$/
 		)
 		await expect(page.getByLabel('Ville de la prestation')).toHaveValue(
 			'Annecy'
@@ -468,7 +470,7 @@ test.describe('UI-07 recherche', () => {
 	test('aucun résultat : un h1 et un message utile', async ({ page }) => {
 		await page.goto('/search?search=zzqq')
 		await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-			'Aucune maquilleuse pour « zzqq »'
+			'Aucun résultat pour « zzqq »'
 		)
 		await expect(page.getByTestId('search-empty')).toContainText(
 			'Essayez un autre mot'
@@ -513,7 +515,7 @@ test.describe('UI-07 recherche', () => {
 			.click()
 		await expect(page).toHaveURL(/\/search\?city=Lyon$/)
 		await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-			'1 maquilleuse à Lyon'
+			'1 résultat pour « Lyon »'
 		)
 		expect(await recherches()).toHaveLength(1)
 		expect(erreurs).toEqual([])
@@ -522,8 +524,12 @@ test.describe('UI-07 recherche', () => {
 	test('pages de 20 : la page 2 sans nouvel appel, une nouvelle recherche en un appel', async ({
 		page,
 	}) => {
-		await piloter('/__multiplier', { n: 30, city: 'Annecy' })
+		// 20 more in Annecy: 33 results, the 28 of Annecy first (UI-10)
+		await piloter('/__multiplier', { n: 20, city: 'Annecy' })
 		await page.goto('/search?city=Annecy')
+		await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+			'28 résultats pour « Annecy »'
+		)
 		const cartes = page.getByTestId('search-result')
 		await expect(cartes).toHaveCount(20)
 		await expect(page.getByTestId('search-pagination')).toContainText(
@@ -545,8 +551,284 @@ test.describe('UI-07 recherche', () => {
 			.click()
 		await expect(page).toHaveURL(/search=mariage&city=Annecy$/)
 		await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-			/pour « mariage » à Annecy$/
+			/pour « mariage » à « Annecy »$/
 		)
 		expect(await recherches()).toHaveLength(2)
+	})
+})
+
+// The photos of the fake Strapi announce 2000 × 1500 (mock-api.mjs); the
+// image optimizer cannot fetch them here (127.0.0.1 is not one of its
+// hosts), but the browser still picks a width in the srcset, which is what
+// is checked: the width asked covers the width the photo is drawn at, or
+// 3/4 of it from 2.5 dppx (src/lib/taille-image.js: 2.25x on a 3x phone).
+const RATIO_FIXTURE = 2000 / 1500
+const PHOTO_CARTE = '[data-cy="search-result"] img'
+const ECRAN_TRES_DENSE = '(min-resolution: 2.5dppx)'
+const part = dpr => (dpr >= 2.5 ? 0.75 : 1)
+
+function candidats(srcset) {
+	return srcset.split(', ').map(candidat => {
+		const [url, largeur] = candidat.split(' ')
+		const q = new URL(url, APP).searchParams.get('q')
+		return { largeur: Number.parseInt(largeur, 10), q: Number(q) }
+	})
+}
+
+// the width picked by the browser, the one the photo is drawn at and the
+// one asked at that density, in device px (object-fit: cover)
+async function largeurs(photo, dpr) {
+	await photo.scrollIntoViewIfNeeded()
+	await expect
+		.poll(() => photo.evaluate(img => img.currentSrc))
+		.toContain('/_next/image')
+	const { currentSrc, largeur, hauteur } = await photo.evaluate(img => {
+		const boite = img.getBoundingClientRect()
+		return {
+			currentSrc: img.currentSrc,
+			largeur: boite.width,
+			hauteur: boite.height,
+		}
+	})
+	const dessinee = Math.max(largeur, hauteur * RATIO_FIXTURE) * dpr
+	return {
+		choisie: Number(new URL(currentSrc).searchParams.get('w')),
+		dessinee,
+		besoin: Math.ceil(dessinee * part(dpr) - 0.5),
+	}
+}
+
+test.describe('UI-09 photos nettes', () => {
+	test('carte de recherche : srcset jusqu’à 828 px et plus, qualité 85 ; la première chargée tout de suite, les autres plus tard', async ({
+		page,
+	}) => {
+		await page.goto('/search?city=Annecy')
+		const photo = page.locator(PHOTO_CARTE).first()
+		await expect(photo).toHaveAttribute('srcset', /\s828w/)
+		const liste = candidats(await photo.getAttribute('srcset'))
+		expect(liste.some(c => c.largeur >= 828)).toBe(true)
+		expect(Math.max(...liste.map(c => c.largeur))).toBeGreaterThanOrEqual(1920)
+		for (const c of liste)
+			expect(c.q, `${c.largeur}w`).toBeGreaterThanOrEqual(85)
+		const sizes = await photo.getAttribute('sizes')
+		expect(sizes).toMatch(/px/)
+		expect(sizes.startsWith(`${ECRAN_TRES_DENSE} and `)).toBe(true)
+		// the LCP of a phone: loaded at once and first; the others lazily
+		await expect(photo).toHaveAttribute('loading', 'eager')
+		await expect(photo).toHaveAttribute('fetchpriority', 'high')
+		const deuxieme = page.locator(PHOTO_CARTE).nth(1)
+		await expect(deuxieme).toHaveAttribute('loading', 'lazy')
+		expect(await deuxieme.getAttribute('fetchpriority')).not.toBe('high')
+	})
+
+	test('/search : rien ne télécharge en même temps que la première photo, ni les profils préchargés ni la police d’icônes', async ({
+		page,
+	}) => {
+		// the photos answer 1.5 s late: long enough for an early prefetch to show
+		await page.route('**/_next/image?**', async route => {
+			await new Promise(resolve => setTimeout(resolve, 1500))
+			await route.continue()
+		})
+		const requetes = new Map()
+		page.on('request', r =>
+			requetes.set(r, { url: r.url(), debut: Date.now() })
+		)
+		for (const fin of ['requestfinished', 'requestfailed'])
+			page.on(fin, r => {
+				if (requetes.has(r)) requetes.get(r).fin = Date.now()
+			})
+		await page.goto('/search?city=Annecy')
+		const photo = page.locator(PHOTO_CARTE).first()
+		await expect
+			.poll(() => photo.evaluate(img => img.currentSrc))
+			.toContain('/_next/image')
+		const source = await photo.evaluate(img => img.currentSrc)
+		// the profiles are still prefetched, once the photo is there
+		await expect
+			.poll(() =>
+				[...requetes.values()].some(r =>
+					/\/_next\/data\/.*\/profil\//.test(r.url)
+				)
+			)
+			.toBe(true)
+		const liste = [...requetes.values()]
+		const finPhoto = liste.find(r => r.url === source)?.fin
+		expect(finPhoto).toBeDefined()
+		for (const r of liste.filter(r =>
+			/\/_next\/data\/.*\/profil\//.test(r.url)
+		))
+			expect(r.debut, r.url).toBeGreaterThanOrEqual(finPhoto)
+		// the icon of the cards is drawn inline: no icon font on this page
+		expect(liste.filter(r => /material-icons/.test(r.url))).toEqual([])
+	})
+
+	for (const ecran of [
+		{ nom: 'téléphone 3x', width: 390, height: 844, dpr: 3, mobile: true },
+		{ nom: 'tablette 2x', width: 768, height: 1024, dpr: 2, mobile: true },
+		{ nom: 'ordinateur 2x', width: 1440, height: 900, dpr: 2, mobile: false },
+		{ nom: 'grand écran 1x', width: 1920, height: 1080, dpr: 1, mobile: false },
+	])
+		test.describe(ecran.nom, () => {
+			test.use({
+				viewport: { width: ecran.width, height: ecran.height },
+				deviceScaleFactor: ecran.dpr,
+				isMobile: ecran.mobile,
+				hasTouch: ecran.mobile,
+			})
+
+			test(`carte de recherche (${ecran.nom}) : la largeur choisie couvre la photo dessinée`, async ({
+				page,
+			}) => {
+				await page.goto('/search?city=Annecy')
+				const { choisie, dessinee, besoin } = await largeurs(
+					page.locator(PHOTO_CARTE).first(),
+					ecran.dpr
+				)
+				expect(choisie).toBeGreaterThanOrEqual(Math.min(besoin, 3840))
+				// the LCP of a 3x phone: not the full density
+				if (part(ecran.dpr) < 1) expect(choisie).toBeLessThan(dessinee)
+			})
+
+			test(`profil (${ecran.nom}) : photo principale (qualité 75) et portfolio (qualité 85) demandés à leur taille`, async ({
+				page,
+			}) => {
+				await page.goto('/profil/zoe-lefevre')
+				const principale = page.getByRole('img', { name: /^Photo de / })
+				await expect(principale).toHaveAttribute(
+					'sizes',
+					`${ECRAN_TRES_DENSE} 201px, 267px`
+				)
+				const premiere = await largeurs(principale, ecran.dpr)
+				expect(premiere.choisie).toBeGreaterThanOrEqual(premiere.besoin)
+				// the LCP of a profile on a 3x phone: the 640 of before UI-09
+				if (part(ecran.dpr) < 1) expect(premiere.choisie).toBe(640)
+				// the first photo, the active slide (lazy, but in view)
+				const realisation = page
+					.getByRole('img', { name: /^Réalisation de .* \(1\/6\)$/ })
+					.first()
+				await expect(realisation).toHaveAttribute(
+					'sizes',
+					`${ECRAN_TRES_DENSE} 501px, 667px`
+				)
+				const portfolio = await largeurs(realisation, ecran.dpr)
+				expect(portfolio.choisie).toBeGreaterThanOrEqual(
+					Math.min(portfolio.besoin, 3840)
+				)
+				for (const [photo, q] of [
+					[principale, 75],
+					[realisation, 85],
+				])
+					for (const c of candidats(await photo.getAttribute('srcset')))
+						expect(c.q).toBe(q)
+			})
+		})
+})
+
+test.describe('UI-10 recherche par ville : titre honnête', () => {
+	const cartes = (page, section) =>
+		page.getByTestId(`search-results-${section}`).getByTestId('search-result')
+	const zones = async (page, section) =>
+		cartes(page, section).getByTestId('search-result-zone').allTextContents()
+
+	test('/search?city=Annecy : le titre ne compte que les profils d’Annecy, les autres villes à part, sous leur titre', async ({
+		page,
+	}) => {
+		await page.goto('/search?city=Annecy')
+		// 7 profiles of the fixture in Annecy (not the unavailable one) and the
+		// test account; 5 elsewhere or without a city
+		await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+			'8 résultats pour « Annecy »'
+		)
+		await expect(cartes(page, 'locaux')).toHaveCount(8)
+		await expect(cartes(page, 'autres')).toHaveCount(5)
+		for (const zone of await zones(page, 'locaux'))
+			expect(zone).toMatch(/Annecy/)
+		const ailleurs = await zones(page, 'autres')
+		for (const zone of ailleurs) expect(zone).not.toMatch(/Annecy/)
+		expect(ailleurs.join(' | ')).toMatch(/Nantes/)
+		// the others come after their heading
+		const titre = page.getByRole('heading', {
+			level: 2,
+			name: 'Autres maquilleuses qui se déplacent',
+		})
+		await expect(titre).toBeVisible()
+		const ordre = await page.evaluate(() => {
+			const h2 = document.querySelector('[data-cy="search-autres-titre"]')
+			const locaux = document.querySelector('[data-cy="search-results-locaux"]')
+			const autres = document.querySelector('[data-cy="search-results-autres"]')
+			const avant = (a, b) =>
+				!!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING)
+			return {
+				locauxPuisTitre: avant(locaux, h2),
+				titrePuisAutres: avant(h2, autres),
+			}
+		})
+		expect(ordre).toEqual({ locauxPuisTitre: true, titrePuisAutres: true })
+		// an empty city is said
+		await expect(
+			cartes(page, 'autres')
+				.filter({ hasText: 'Coquille' })
+				.getByTestId('search-result-zone')
+		).toHaveText('Zone non renseignée')
+	})
+
+	test('la ville d’abord, puis le département (code postal, code entre parenthèses, nom)', async ({
+		page,
+	}) => {
+		await piloter('/__multiplier', { n: 1, city: 'Thonon-les-Bains 74200' })
+		await piloter('/__multiplier', { n: 1, city: 'Annecy-le-Vieux (74)' })
+		await page.goto(`/search?city=${encodeURIComponent('Annecy (74)')}`)
+		await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+			'10 résultats pour « Annecy (74) »'
+		)
+		const locaux = await zones(page, 'locaux')
+		expect(locaux).toHaveLength(10)
+		// 9 by the city (Annecy-le-Vieux included), then Thonon by its postal code
+		expect(locaux.slice(0, 9).every(z => /Annecy/.test(z))).toBe(true)
+		expect(locaux[9]).toMatch(/Thonon-les-Bains 74200/)
+
+		await page.goto('/search?city=Haute-Savoie')
+		await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+			'2 résultats pour « Haute-Savoie »'
+		)
+		// Annecy is in Haute-Savoie, but without geocoding nothing says so
+		expect((await zones(page, 'locaux')).sort()).toEqual([
+			expect.stringMatching(/Annecy-le-Vieux \(74\)/),
+			expect.stringMatching(/Thonon-les-Bains 74200/),
+		])
+	})
+
+	test('aucune maquilleuse de la ville : un titre à zéro, une phrase, les autres sous leur titre', async ({
+		page,
+	}) => {
+		await page.goto('/search?city=Grenoble')
+		await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+			'Aucun résultat pour « Grenoble »'
+		)
+		await expect(page.getByTestId('search-aucun-local')).toContainText(
+			'« Grenoble »'
+		)
+		await expect(page.getByTestId('search-results-locaux')).toHaveCount(0)
+		await expect(cartes(page, 'autres')).toHaveCount(13)
+		await expect(
+			page.getByRole('heading', {
+				level: 2,
+				name: 'Autres maquilleuses qui se déplacent',
+			})
+		).toBeVisible()
+	})
+
+	test('sans ville : une seule liste, comptée en entier', async ({ page }) => {
+		await page.goto('/search?search=Soir%C3%A9e')
+		await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+			/^\d+ résultats pour « Soirée »$/
+		)
+		await expect(page.getByTestId('search-autres-titre')).toHaveCount(0)
+		const total = Number(
+			(await page.getByRole('heading', { level: 1 }).textContent()).split(
+				' '
+			)[0]
+		)
+		await expect(cartes(page, 'locaux')).toHaveCount(total)
 	})
 })
