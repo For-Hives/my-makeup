@@ -5,6 +5,7 @@ import { readFileSync } from 'node:fs'
 import {
 	balisesMeta,
 	descriptionMeta,
+	HOTES_OPTIMISEUR,
 	IMAGE_PAR_DEFAUT,
 	jsonLdFilAriane,
 	sansVides,
@@ -15,6 +16,7 @@ import {
 	serialiserJsonLd,
 	titrePage,
 	tronquer,
+	urlImagePartage,
 } from '../../src/lib/seo/meta.js'
 import {
 	CHEMINS_NOINDEX,
@@ -328,6 +330,88 @@ describe('canonical, robots and Open Graph (plans/02 U46, U51, U52)', () => {
 			undefined,
 		])
 			assert.equal(robotsPourChemin(p), null, String(p))
+	})
+
+	test('U51 shared picture: a light Strapi copy, else the 1200 px optimizer on the allowed host, else the original', () => {
+		const R2 = 'https://r2-my-makeup.andy-cinquin.fr'
+		const copie = (url, taille) => ({ url, taille })
+		// a copy of 300 KB at most, the largest first
+		assert.equal(
+			urlImagePartage({
+				url: `${R2}/p.jpg`,
+				formats: {
+					large: copie(`${R2}/l_p.jpg`, 420),
+					medium: copie(`${R2}/m_p.jpg`, 160),
+					small: copie(`${R2}/s_p.jpg`, 60),
+				},
+			}),
+			`${R2}/m_p.jpg`
+		)
+		assert.equal(
+			urlImagePartage(
+				{
+					url: '/uploads/p.jpg',
+					formats: { large: copie('/uploads/l_p.jpg', 90) },
+				},
+				{ apiBase: 'https://api.example.test/' }
+			),
+			'https://api.example.test/uploads/l_p.jpg'
+		)
+		// no light copy, allowed host: the optimizer of the site, 1200 px
+		for (const site of ['https://my-makeup.fr', 'https://my-makeup.fr/']) {
+			const url = urlImagePartage(
+				{
+					url: `${R2}/photo de zoé.jpg`,
+					formats: { large: copie(`${R2}/l.jpg`, 900) },
+				},
+				{ site }
+			)
+			assert.equal(
+				url,
+				`https://my-makeup.fr/_next/image?url=${encodeURIComponent(`${R2}/photo de zoé.jpg`)}&w=1200&q=75`
+			)
+			assert.equal(
+				new URL(url).searchParams.get('url'),
+				`${R2}/photo de zoé.jpg`
+			)
+			assert.doesNotMatch(url.replace(/^https:\/\//, ''), /\/\//)
+		}
+		// another host, not allowed by next/image: the original
+		assert.equal(
+			urlImagePartage({ url: 'https://r2.example.test/p.webp', formats: {} }),
+			'https://r2.example.test/p.webp'
+		)
+		assert.equal(
+			urlImagePartage({ url: '/uploads/p.jpg', formats: {} }),
+			'/uploads/p.jpg'
+		)
+		assert.equal(urlImagePartage(null), '')
+
+		// the profile: the light picture in og:image, the original in the JSON-LD
+		const s = seoProfil({
+			profil: {
+				attributes: {
+					...profil.attributes,
+					main_picture: {
+						data: { id: 1, attributes: { url: `${R2}/zoe.jpg` } },
+					},
+				},
+			},
+			slug: 'zoe-lefevre',
+			site: SITE,
+		})
+		assert.match(s.image, /^https:\/\/my-makeup\.fr\/_next\/image\?url=/)
+		assert.equal(s.jsonLd[0].image, `${R2}/zoe.jpg`)
+	})
+
+	test('the optimizer hosts are the images.remotePatterns of next.config.js', () => {
+		const config = require('../../next.config.js')
+		assert.deepEqual(
+			config.images.remotePatterns
+				.filter(m => m.protocol === 'https' && m.pathname === '/**')
+				.map(m => m.hostname),
+			HOTES_OPTIMISEUR
+		)
 	})
 
 	test('next.config.js sends X-Robots-Tag on the same paths', async () => {

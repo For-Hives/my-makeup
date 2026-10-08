@@ -114,9 +114,33 @@ describe('public profile view (UI-06)', () => {
 				url: 'u',
 				width: null,
 				height: null,
+				formats: {},
 			}
 		)
 		assert.deepEqual(galerie(null), [])
+	})
+
+	test('media: the copies resized by Strapi, with their weight, not the thumbnail', () => {
+		const [media] = medias({
+			data: {
+				id: 8,
+				attributes: {
+					url: 'https://r2.example.test/8.jpg',
+					size: 1400.5,
+					formats: {
+						thumbnail: { url: 'https://r2.example.test/t_8.jpg', size: 8 },
+						large: { url: 'https://r2.example.test/l_8.jpg', size: 180.2 },
+						medium: { url: 'https://r2.example.test/m_8.jpg' },
+						small: { url: null, size: 30 },
+					},
+				},
+			},
+		})
+		assert.deepEqual(media.formats, {
+			large: { url: 'https://r2.example.test/l_8.jpg', taille: 180.2 },
+			medium: { url: 'https://r2.example.test/m_8.jpg', taille: null },
+		})
+		assert.deepEqual(medias({ url: 'u', formats: null })[0].formats, {})
 	})
 
 	test('absolute picture URLs', () => {

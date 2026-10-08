@@ -327,14 +327,30 @@ export function demarrerFauxStrapi(port = 4112, { origine = '*' } = {}) {
 	})
 	const fichier = id =>
 		etat.fichiers.find(f => f.id === Number(id?.id ?? id)) ?? null
-	// pictures of the public profiles, files 1 to 7
+	// pictures of the public profiles, files 1 to 7: a heavy original and
+	// the copies Strapi makes of it (formats, size in KB)
+	const copie = (i, nom, largeur, taille) => ({
+		name: `${nom}_photo-${i}.png`,
+		mime: 'image/png',
+		width: largeur,
+		height: Math.round((largeur * 3) / 4),
+		size: taille,
+		url: `http://127.0.0.1:${port}/media/${i}/${nom}`,
+	})
 	const fichiersPublics = Array.from({ length: 7 }, (_, i) => ({
 		id: i + 1,
 		name: `photo-${i + 1}.png`,
 		mime: 'image/png',
-		width: 800,
-		height: 600,
+		width: 2000,
+		height: 1500,
+		size: 1400.5,
 		url: `http://127.0.0.1:${port}/media/${i + 1}`,
+		formats: {
+			thumbnail: copie(i + 1, 'thumbnail', 208, 9.1),
+			large: copie(i + 1, 'large', 1000, 180.4),
+			medium: copie(i + 1, 'medium', 750, 110.2),
+			small: copie(i + 1, 'small', 500, 52.7),
+		},
 		alternativeText: null,
 		octets: PNG,
 	}))

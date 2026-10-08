@@ -126,7 +126,9 @@ test.describe('UI-06 profils rendus côté serveur', () => {
 			'Zoé Lefèvre – Maquillage mariée à Annecy | My-Makeup'
 		)
 		expect(meta(page, 'og:description')?.length).toBeGreaterThanOrEqual(70)
-		expect(meta(page, 'og:image')).toBe(`${API}/media/1`)
+		// a copy resized by Strapi, never the original of 1.4 MB
+		expect(meta(page, 'og:image')).toBe(`${API}/media/1/large`)
+		expect(meta(page, 'twitter:image')).toBe(`${API}/media/1/large`)
 		expect(meta(page, 'og:url')).toBe(`${APP}/profil/zoe-lefevre`)
 		expect(meta(page, 'og:type')).toBe('profile')
 		expect(meta(page, 'twitter:card')).toBe('summary_large_image')
@@ -136,6 +138,7 @@ test.describe('UI-06 profils rendus côté serveur', () => {
 		expect(personne['@type']).toBe('Person')
 		expect(personne.name).toBe('Zoé Lefèvre')
 		expect(personne.url).toBe(`${APP}/profil/zoe-lefevre`)
+		expect(personne.image).toBe(`${API}/media/1`)
 		expect(personne.makesOffer.map(o => o.itemOffered['@type'])).toEqual([
 			'Service',
 			'Service',

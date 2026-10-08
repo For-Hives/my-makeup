@@ -40,13 +40,38 @@ export function attributs(entree) {
 }
 
 /**
+ * @typedef {object} Copie - a copy resized by Strapi
+ * @property {string} url
+ * @property {number|null} taille - weight in KB, as Strapi gives it (size)
+ */
+
+/**
  * @typedef {object} Media
  * @property {string} url
  * @property {number|null} width
  * @property {number|null} height
+ * @property {{large?: Copie, medium?: Copie, small?: Copie}} formats - the
+ *   copies Strapi made (1000, 750 and 500 px), none when it made none
  */
 
 const dimension = v => (Number.isFinite(v) && v > 0 ? v : null)
+
+/** Copies of a Strapi file that can stand for the picture (not thumbnail) */
+const COPIES = ['large', 'medium', 'small']
+
+function copies(formats) {
+	const resultat = {}
+	if (!formats || typeof formats !== 'object') return resultat
+	for (const nom of COPIES) {
+		const url = texte(formats[nom]?.url)
+		if (url)
+			resultat[nom] = {
+				url,
+				taille: Number.isFinite(formats[nom].size) ? formats[nom].size : null,
+			}
+	}
+	return resultat
+}
 
 /**
  * Pictures of a media field, flat: `{ data: [...] }`, `{ data: {...} }`, an
@@ -67,6 +92,7 @@ export function medias(v) {
 			url,
 			width: dimension(fichier.width),
 			height: dimension(fichier.height),
+			formats: copies(fichier.formats),
 		},
 	]
 }

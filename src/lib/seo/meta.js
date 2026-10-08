@@ -30,6 +30,12 @@ export const DESCRIPTION_MIN = 70
 export const DESCRIPTION_MAX = 155
 /** Shared picture when a page has none of its own (1200 × 630) */
 export const IMAGE_PAR_DEFAUT = '/assets/og-my-makeup.jpg'
+/** Hosts of images.remotePatterns in next.config.js (checked by the tests) */
+export const HOTES_OPTIMISEUR = ['r2-my-makeup.andy-cinquin.fr']
+/** Weight above which WhatsApp may leave a picture out of a link preview */
+export const POIDS_PARTAGE_MAX_KO = 300
+/** Width of a shared picture (1200 is one of the widths next/image allows) */
+export const LARGEUR_PARTAGE = 1200
 
 const espaces = v => texte(v).replace(/\s+/g, ' ')
 
@@ -101,6 +107,39 @@ export function titrePage(v) {
 	if (t.includes(MARQUE)) return tronquer(t, TITRE_MAX)
 	const complet = `${t} | ${MARQUE}`
 	return complet.length <= TITRE_MAX ? complet : tronquer(t, TITRE_MAX)
+}
+
+/**
+ * og:image of a Strapi picture (SEO-12), never the uploaded original when a
+ * lighter one exists: the originals weigh up to 1.4 MB (production on
+ * 2026-10-08: 28 main pictures of 49 over 300 KB, and no resized copy), more
+ * than WhatsApp shows in a preview. In order:
+ * - a copy resized by Strapi (large, medium, small) of 300 KB at most;
+ * - the original through the image optimizer of Next.js (/_next/image, the
+ *   one next/image uses), 1200 px wide, when its host is allowed there: a
+ *   JPEG of 1.4 MB comes out at about 150 KB, a PNG stays a PNG;
+ * - the original.
+ * @param {import('../profil/vue-publique.js').Media|null} media
+ * @param {{apiBase?: string, site?: string}} [options]
+ * @returns {string} absolute URL, '' without a picture
+ */
+export function urlImagePartage(media, { apiBase = '', site } = {}) {
+	if (!media) return ''
+	const copie = ['large', 'medium', 'small']
+		.map(nom => media.formats?.[nom])
+		.find(c => c && !(c.taille > POIDS_PARTAGE_MAX_KO))
+	if (copie) return urlMedia(copie.url, apiBase)
+	const original = urlMedia(media.url, apiBase)
+	let hote = ''
+	try {
+		const url = new URL(original)
+		if (url.protocol === 'https:') hote = url.hostname
+	} catch {
+		return original
+	}
+	if (!HOTES_OPTIMISEUR.includes(hote)) return original
+	const requete = `url=${encodeURIComponent(original)}&w=${LARGEUR_PARTAGE}&q=75`
+	return `${urlAbsolue('/_next/image', site)}?${requete}`
 }
 
 /**
@@ -245,8 +284,12 @@ export function seoProfil({
 			: 'maquilleuse professionnelle'
 	const url = urlAbsolue(cheminProfil(slug), site)
 	const indexable = completude(p, { formulaireDevis }).publiable
-	const photo = urlMedia(photoPrincipale(p)?.url, apiBase)
-	const image = photo || urlAbsolue(IMAGE_PAR_DEFAUT, site)
+	const principale = photoPrincipale(p)
+	// the JSON-LD names the original, the previews a lighter copy
+	const photo = urlMedia(principale?.url, apiBase)
+	const image =
+		urlImagePartage(principale, { apiBase, site }) ||
+		urlAbsolue(IMAGE_PAR_DEFAUT, site)
 
 	const candidats = [
 		`${nom} – ${detail} | ${MARQUE}`,
@@ -394,7 +437,8 @@ export function seoArticle({ article, site, apiBase = '' }) {
 	const a = attributs(article)
 	const nom = espaces(a.title) || espaces(a.seo_title) || 'Article'
 	const url = urlAbsolue(chemin('blog', texte(a.slug)), site)
-	const image = medias0(a.galery, apiBase) || urlAbsolue(IMAGE_PAR_DEFAUT, site)
+	const image =
+		medias0(a.galery, { apiBase, site }) || urlAbsolue(IMAGE_PAR_DEFAUT, site)
 	return {
 		titre: titrePage(espaces(a.seo_title) || nom),
 		description: descriptionEditoriale(
@@ -417,8 +461,8 @@ export function seoArticle({ article, site, apiBase = '' }) {
 }
 
 // first picture of a media field (articles: `galery`, which may hold files)
-function medias0(champ, apiBase) {
+function medias0(champ, options) {
 	const fichiers = galerie({ image_gallery: champ })
 	const image = fichiers.find(m => /\.(jpe?g|png|webp)(\?|$)/i.test(m.url))
-	return image ? urlMedia(image.url, apiBase) : ''
+	return image ? urlImagePartage(image, options) : ''
 }
