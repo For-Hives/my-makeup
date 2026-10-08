@@ -225,31 +225,41 @@ test.describe('UI-01 sauvegardes honnêtes', () => {
 		expect((await profilServeur()).city).toBe('Annecy')
 	})
 
-	test('RG-02 prénom : 1 lettre refusée par le formulaire sans appel ; 2 lettres envoyées, la règle actuelle de l’API (3) affichée', async ({
+	test('RG-02 prénom et nom : 1 lettre refusée dans la modale sans appel ; 2 lettres enregistrées, affichées et gardées au rechargement', async ({
 		page,
 	}) => {
 		await ouvrirProfil(page)
 		await page.getByTestId('update-resume-button').click()
 		const prenom = page.getByTestId('first-name-input')
+		const nom = page.getByTestId('last-name-input')
 
+		// spaces do not count: « A » and « B » are one letter each
 		await prenom.fill('A')
+		await nom.fill(' B ')
 		await page.getByTestId('save-button-resume').click()
-		await expect(page.getByTestId('error-first-name')).toHaveText(
+		await expect(dialogue(page).getByTestId('error-first-name')).toHaveText(
 			'Le prénom doit contenir au moins 2 caractères.'
+		)
+		await expect(dialogue(page).getByTestId('error-last-name')).toHaveText(
+			'Le nom doit contenir au moins 2 caractères.'
 		)
 		expect(
 			appels((await etat()).journal, 'PATCH', '/api/me-makeup')
 		).toHaveLength(0)
-
-		// accepted by the form (2 characters); the API of today still asks for
-		// 3 (schema.json, minLength 3): its refusal is shown, nothing changes
-		await prenom.fill('Al')
-		await page.getByTestId('save-button-resume').click()
-		await expect(dialogue(page).getByTestId('save-error')).toHaveText(
-			'Le prénom doit contenir au moins 3 caractères.'
-		)
 		await expect(page.getByTestId('resume-name')).toHaveText('Testine Recette')
-		expect((await profilServeur()).first_name).toBe('Testine')
+
+		// 2 letters: the rule of the API too (schema.json, minLength 2)
+		await prenom.fill('Al')
+		await nom.fill('Bo')
+		await page.getByTestId('save-button-resume').click()
+		await expect(dialogue(page)).toBeHidden()
+		await expect(page.getByTestId('resume-name')).toHaveText('Al Bo')
+		const profil = await profilServeur()
+		expect(profil.first_name).toBe('Al')
+		expect(profil.last_name).toBe('Bo')
+
+		await aller(page, '/auth/profil')
+		await expect(page.getByTestId('resume-name')).toHaveText('Al Bo')
 	})
 
 	test('RG-03 expérience modifiée puis modale fermée sans sauvegarder : valeur d’origine partout', async ({
@@ -792,24 +802,35 @@ test.describe('UI-05 inscription et suppression', () => {
 		const [creation] = appels(avant.journal, 'POST', '/api/me-makeup')
 		expect(creation.fin).toBeDefined() // answered before the name step
 
-		await prenom.fill('Al')
+		// 1 letter: refused by the form, nothing sent
+		await prenom.fill('A')
 		await page.getByTestId('last_name').fill('Bo')
 		await page.getByTestId('submit').click()
-		// 2 letters pass the form, the API of today asks for 3: no « Bienvenue »
+		await expect(page.getByTestId('error-first-name')).toHaveText(
+			'Ton prénom doit contenir au moins 2 caractères.'
+		)
+		expect(
+			appels((await etat()).journal, 'PATCH', '/api/me-makeup')
+		).toHaveLength(0)
+
+		// the save fails: its message, no « Bienvenue »
+		await panne({ patch: 500 })
+		await prenom.fill('Al')
+		await page.getByTestId('submit').click()
 		await expect(page.getByTestId('save-error')).toHaveText(
-			'Le prénom doit contenir au moins 3 caractères.'
+			"Le service est momentanément indisponible : tes modifications n'ont pas été enregistrées. Réessaie dans quelques minutes."
 		)
 		await expect(page.getByText(/Bienvenue sur My.Makeup/)).toHaveCount(0)
 
-		await prenom.fill('Prénomtest')
-		await page.getByTestId('last_name').fill('Nomtest')
+		// 2 letters stored, then « Bienvenue »
+		await panne({ patch: null })
 		await page.getByTestId('submit').click()
 		await expect(page.getByText(/Bienvenue sur My.Makeup/)).toBeVisible()
 
 		const apres = await etat()
 		const compte = apres.comptes.find(c => c.email === 'nouvelle@test.local')
-		expect(apres.profils[compte.id].first_name).toBe('Prénomtest')
-		expect(apres.profils[compte.id].last_name).toBe('Nomtest')
+		expect(apres.profils[compte.id].first_name).toBe('Al')
+		expect(apres.profils[compte.id].last_name).toBe('Bo')
 		expect(appels(apres.journal, 'POST', '/api/me-makeup')).toHaveLength(1)
 		for (const patch of appels(apres.journal, 'PATCH', '/api/me-makeup'))
 			expect(patch.t).toBeGreaterThanOrEqual(creation.fin)
