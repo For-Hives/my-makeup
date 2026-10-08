@@ -5,6 +5,8 @@
 // city (UI-07). The raw HTML is read without JavaScript, as a crawler does.
 // Web-first waits only, no fixed timeout.
 import { expect, test } from '@playwright/test'
+import { getElementsByTagName, removeElement } from 'domutils'
+import { parseDocument } from 'htmlparser2'
 import { ARTICLES, PROFILS_PUBLICS, TALENTS } from './donnees-publiques.mjs'
 
 const API = process.env.RG_API ?? 'http://127.0.0.1:4112'
@@ -42,20 +44,32 @@ const ENTITES = {
 }
 const decoder = texte =>
 	texte.replace(/&(amp|quot|#x27|#39|lt|gt);/g, (_, e) => ENTITES[e])
-const sansScripts = html =>
-	html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
+// The raw HTML is read with a real parser (entities decoded, scripts
+// dropped), never with regular expressions over the markup.
+function documentSansScripts(html) {
+	const document = parseDocument(html)
+	for (const script of getElementsByTagName('script', document))
+		removeElement(script)
+	return document
+}
+function textes(noeud, acc = []) {
+	if (noeud.type === 'text') acc.push(noeud.data)
+	for (const enfant of noeud.children ?? []) textes(enfant, acc)
+	return acc
+}
+function attributs(noeud, acc = []) {
+	if (noeud.attribs) acc.push(...Object.values(noeud.attribs))
+	for (const enfant of noeud.children ?? []) attributs(enfant, acc)
+	return acc
+}
+// text a visitor sees, one space between text nodes
+const texteVisible = html => textes(documentSansScripts(html)).join(' ')
 const textesDes = (html, balise) =>
-	[
-		...sansScripts(html).matchAll(
-			new RegExp(`<${balise}[\\s>][\\s\\S]*?</${balise}>`, 'g')
-		),
-	].map(m => decoder(m[0].replace(/<[^>]*>/g, '').trim()))
-const metas = html =>
-	[...html.matchAll(/<meta\s([^>]*?)\/?>/g)].map(m =>
-		Object.fromEntries(
-			[...m[1].matchAll(/([\w:-]+)="([^"]*)"/g)].map(a => [a[1], decoder(a[2])])
-		)
+	getElementsByTagName(balise, documentSansScripts(html)).map(e =>
+		textes(e).join('').trim()
 	)
+const metas = html =>
+	getElementsByTagName('meta', parseDocument(html)).map(e => ({ ...e.attribs }))
 const meta = (html, cle) =>
 	metas(html).find(m => m.name === cle || m.property === cle)?.content
 const canonical = html =>
@@ -68,9 +82,10 @@ const jsonLd = html =>
 	].map(m => JSON.parse(m[1]))
 // words a broken template prints: in the text, the attributes and the JSON-LD
 const MOTS_INTERDITS =
-	/\b(undefined|null|NaN|Invalid Date)\b|&amp; ?km|\bnullkm\b/i
+	/\b(undefined|null|NaN|Invalid Date)\b|& ?km\b|\bnullkm\b/i
 function motsInterdits(html) {
-	const visible = sansScripts(html)
+	const document = documentSansScripts(html)
+	const visible = [...textes(document), ...attributs(document)].join('\n')
 	const ld = jsonLd(html)
 		.map(d => JSON.stringify(d))
 		.join('\n')
@@ -94,7 +109,7 @@ test.describe('UI-06 profils rendus côté serveur', () => {
 		expect(reponse.status()).toBe(200)
 
 		expect(textesDes(page, 'h1')).toEqual(['Zoé Lefèvre'])
-		const texte = decoder(sansScripts(page).replace(/<[^>]*>/g, ' '))
+		const texte = texteVisible(page)
 		for (const attendu of [
 			'Maquillage mariée',
 			'Annecy et 30 km autour',

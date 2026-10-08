@@ -166,9 +166,9 @@ describe('sitemap (plans/02 U38-U43)', () => {
 					articles: [{ attributes: { slug: 'prix-mariee-2027' } }],
 				})
 			)
-			const locs = verifierUrls(xml)
-			assert.ok(locs.includes('https://my-makeup.fr'))
-			assert.ok(locs.includes('https://my-makeup.fr/profil/zoe-lefevre'))
+			const locs = new Set(verifierUrls(xml))
+			assert.ok(locs.has('https://my-makeup.fr'))
+			assert.ok(locs.has('https://my-makeup.fr/profil/zoe-lefevre'))
 		}
 	})
 
