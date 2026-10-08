@@ -3,8 +3,10 @@
 // proxied here, never to the real instance.
 // - GET /script.js: the real Umami 3.2.0 tracker (umami-tracker-3.2.0.js);
 // - POST /api/send: answers like Umami ({ cache }) and keeps the request;
-// - /__umami/etat (the requests received, with the headers that matter) and
-//   /__umami/reset drive it from the tests.
+// - /__umami/etat (the requests received, with the headers that matter),
+//   /__umami/reset, /__umami/retenir (a slow or silent Umami: /script.js is
+//   received but not answered) and /__umami/liberer (answers the held
+//   requests) drive it from the tests.
 import http from 'node:http'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
@@ -33,6 +35,22 @@ const ENTETES_SUIVIES = [
 
 export function demarrerFauxUmami(port = 4113) {
 	const journal = []
+	let retenir = false
+	const retenues = []
+
+	const servirScript = res => {
+		res.writeHead(200, {
+			'content-type': 'application/javascript; charset=UTF-8',
+			'cache-control': 'no-store',
+		})
+		res.end(TRACKER)
+	}
+	// the held requests the site did not give up on (proxy timeout) are
+	// answered now
+	const liberer = () => {
+		retenir = false
+		for (const res of retenues.splice(0)) if (!res.destroyed) servirScript(res)
+	}
 
 	const serveur = http.createServer(async (req, res) => {
 		const url = new URL(req.url, `http://127.0.0.1:${port}`)
@@ -42,7 +60,16 @@ export function demarrerFauxUmami(port = 4113) {
 		}
 
 		if (url.pathname === '/__umami/reset') {
+			liberer()
 			journal.length = 0
+			return json(200, { ok: true })
+		}
+		if (url.pathname === '/__umami/retenir') {
+			retenir = true
+			return json(200, { ok: true })
+		}
+		if (url.pathname === '/__umami/liberer') {
+			liberer()
 			return json(200, { ok: true })
 		}
 		if (url.pathname === '/__umami/etat') return json(200, { journal })
@@ -54,11 +81,8 @@ export function demarrerFauxUmami(port = 4113) {
 
 		if (req.method === 'GET' && url.pathname === '/script.js') {
 			journal.push(requete)
-			res.writeHead(200, {
-				'content-type': 'application/javascript; charset=UTF-8',
-				'cache-control': 'no-store',
-			})
-			return res.end(TRACKER)
+			if (retenir) return retenues.push(res)
+			return servirScript(res)
 		}
 
 		if (req.method === 'POST' && url.pathname === '/api/send') {

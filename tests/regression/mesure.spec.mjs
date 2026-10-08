@@ -396,3 +396,101 @@ test.describe('MES-10 qui est mesuré', () => {
 		})
 	})
 })
+
+// the client code of Next has run: window.next set, the React root hydrated
+const hydratee = () => {
+	const racine = document.getElementById('__next')
+	return (
+		!!window.next &&
+		!!racine &&
+		Object.keys(racine).some(cle => cle.startsWith('__reactContainer'))
+	)
+}
+
+// records each event handed to window.mmAttenteUmami (before the Umami
+// script ran) and whether it was kept
+async function espionnerAttente(page) {
+	await page.addInitScript(() => {
+		window.__enAttente = []
+		let attente
+		Object.defineProperty(window, 'mmAttenteUmami', {
+			configurable: true,
+			set(fonction) {
+				attente = fonction
+			},
+			get() {
+				return (
+					attente &&
+					((name, data) => {
+						const garde = attente(name, data)
+						window.__enAttente.push({ name, garde })
+						return garde
+					})
+				)
+			},
+		})
+	})
+}
+
+test.describe('MES-10 un Umami lent ou muet ne retient pas le site', () => {
+	test('la page est hydratée pendant que /u/script.js attend encore', async ({
+		page,
+	}) => {
+		// /script.js reaches the fake Umami, which does not answer
+		await piloter('/__umami/retenir')
+		const finies = new Set()
+		page.on('requestfinished', requete => finies.add(requete))
+		page.on('requestfailed', requete => finies.add(requete))
+		for (const chemin of ['/', '/a-propos']) {
+			const script = page.waitForRequest(
+				r => new URL(r.url()).pathname === '/u/script.js'
+			)
+			await page.goto(chemin, { waitUntil: 'domcontentloaded' })
+			await page.waitForFunction(hydratee)
+			// only the load event waits for Umami
+			expect(await page.evaluate(() => document.readyState), chemin).toBe(
+				'interactive'
+			)
+			expect(finies.has(await script), chemin).toBe(false)
+		}
+		expect((await recus()).filter(r => r.chemin === '/script.js')).toHaveLength(
+			2
+		)
+	})
+
+	test.describe('visiteur réel', () => {
+		test.use({ userAgent: CHROME })
+
+		test('un événement suivi avant l’arrivée du script part quand il arrive', async ({
+			page,
+		}) => {
+			await visiteurReel(page)
+			await espionnerAttente(page)
+			await piloter('/__umami/retenir')
+			await page.goto('/regression-page-absente', {
+				waitUntil: 'domcontentloaded',
+			})
+			// the 404 page tracks not_found as soon as it mounts
+			await expect
+				.poll(() => page.evaluate(() => window.__enAttente))
+				.toContainEqual({ name: 'not_found', garde: true })
+			expect(await envoisRecus()).toEqual([])
+
+			await piloter('/__umami/liberer')
+			const evenement = async () =>
+				(await envoisRecus()).find(e => e.corps.payload.name === 'not_found')
+			await expect.poll(evenement).toBeTruthy()
+			expect((await evenement()).corps.payload).toMatchObject({
+				website: WEBSITE_ID,
+				tag: VERSION,
+				data: { kind: 'autre' },
+			})
+			// and the page view, once the page has loaded
+			await expect
+				.poll(async () =>
+					(await envoisRecus()).some(e => !e.corps.payload.name)
+				)
+				.toBe(true)
+		})
+	})
+})
