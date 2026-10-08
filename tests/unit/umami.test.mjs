@@ -4,12 +4,15 @@ import vm from 'node:vm'
 import {
 	BEFORE_SEND_NAME,
 	DEFAULT_UMAMI_DOMAINS,
+	UMAMI_PROXY_PATHS,
 	UMAMI_WEBSITE_ID,
 	beforeSendScript,
 	umamiBeforeSend,
 	umamiDomains,
+	umamiProxyHeaders,
 	umamiScriptAttributes,
 	umamiTag,
+	visitorIp,
 } from '../../src/lib/umami.js'
 
 const CHROME =
@@ -252,5 +255,98 @@ describe('script attributes', () => {
 		assert.equal(umamiTag('a'.repeat(60)), 'a'.repeat(50))
 		assert.equal(umamiTag(''), 'unknown')
 		assert.equal(umamiTag(undefined), 'unknown')
+	})
+})
+
+describe('proxy headers (src/middleware.js)', () => {
+	const fromTraefik = (extra = {}) =>
+		new Headers({
+			host: 'my-makeup.fr',
+			'user-agent': CHROME,
+			'content-type': 'application/json',
+			'x-umami-cache': 'jeton-cache',
+			'x-forwarded-for': '203.0.113.7',
+			'x-real-ip': '203.0.113.7',
+			cookie: '__Secure-next-auth.session-token=jeton-de-session',
+			referer: 'https://my-makeup.fr/search?search=mariage',
+			...extra,
+		})
+
+	test('the two proxied paths, never the rest of the instance', () => {
+		assert.deepEqual(UMAMI_PROXY_PATHS, ['/u/script.js', '/u/api/send'])
+	})
+
+	test('no cookie, no credentials, no Referer go to Umami', () => {
+		const headers = umamiProxyHeaders(
+			fromTraefik({ authorization: 'Bearer x', 'proxy-authorization': 'y' })
+		)
+		for (const name of [
+			'cookie',
+			'authorization',
+			'proxy-authorization',
+			'referer',
+		])
+			assert.equal(headers.has(name), false, name)
+	})
+
+	test('what Umami needs goes along: user agent, body type, cache token', () => {
+		const headers = umamiProxyHeaders(fromTraefik())
+		assert.equal(headers.get('user-agent'), CHROME)
+		assert.equal(headers.get('content-type'), 'application/json')
+		assert.equal(headers.get('x-umami-cache'), 'jeton-cache')
+		assert.equal(headers.get('host'), 'my-makeup.fr')
+	})
+
+	test("the visitor's IP in True-Client-IP, read by Umami before X-Real-IP", () => {
+		const headers = umamiProxyHeaders(fromTraefik())
+		assert.equal(headers.get('true-client-ip'), '203.0.113.7')
+		assert.equal(headers.get('x-forwarded-for'), '203.0.113.7')
+		assert.equal(headers.has('x-real-ip'), false)
+	})
+
+	test('addresses and countries sent by the browser itself are dropped', () => {
+		const headers = umamiProxyHeaders(
+			fromTraefik({
+				'x-forwarded-for': '198.51.100.1, 203.0.113.7',
+				'true-client-ip': '198.51.100.1',
+				'cf-connecting-ip': '198.51.100.1',
+				'x-client-ip': '198.51.100.1',
+				forwarded: 'for=198.51.100.1',
+				'cf-ipcountry': 'US',
+				'x-vercel-ip-country': 'US',
+			})
+		)
+		assert.equal(headers.get('true-client-ip'), '203.0.113.7')
+		assert.equal(headers.get('x-forwarded-for'), '203.0.113.7')
+		for (const name of [
+			'cf-connecting-ip',
+			'x-client-ip',
+			'forwarded',
+			'cf-ipcountry',
+			'x-vercel-ip-country',
+		])
+			assert.equal(headers.has(name), false, name)
+	})
+
+	test('without a usable address, no IP header at all', () => {
+		const headers = umamiProxyHeaders(
+			new Headers({ 'x-forwarded-for': 'unknown', 'x-real-ip': '<script>' })
+		)
+		assert.equal(headers.has('true-client-ip'), false)
+		assert.equal(headers.has('x-forwarded-for'), false)
+	})
+
+	test('visitorIp: last X-Forwarded-For entry, else X-Real-IP', () => {
+		assert.equal(
+			visitorIp(
+				new Headers({ 'x-forwarded-for': '198.51.100.1, 2001:db8::1' })
+			),
+			'2001:db8::1'
+		)
+		assert.equal(
+			visitorIp(new Headers({ 'x-real-ip': '::ffff:127.0.0.1' })),
+			'::ffff:127.0.0.1'
+		)
+		assert.equal(visitorIp(new Headers()), null)
 	})
 })

@@ -70,6 +70,8 @@ function environnement(extra = {}) {
 		GOOGLE_CLIENT_ID: 'id-client-factice',
 		GOOGLE_CLIENT_SECRET: 'secret-client-factice',
 		NEXT_PUBLIC_FORGOT_PASSWORD: 'on',
+		// /u/* (Umami) leads nowhere: no request can reach the real instance
+		UMAMI_ORIGIN: 'http://127.0.0.1:9',
 		...extra,
 	})
 	for (const nom of [
@@ -77,6 +79,7 @@ function environnement(extra = {}) {
 		'API_INTERNAL_URL',
 		'NEXTAUTH_URL',
 		'NEXT_PUBLIC_URL',
+		'UMAMI_ORIGIN',
 	]) {
 		if (env[nom] && !HOTES_LOCAUX.has(new URL(env[nom]).hostname))
 			throw new Error(`${nom} doit viser une adresse locale (${env[nom]})`)

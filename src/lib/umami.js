@@ -136,3 +136,94 @@ export function umamiBeforeSend(type, payload, win) {
 export function beforeSendScript() {
 	return `window.${BEFORE_SEND_NAME}=function(type,payload){return(${umamiBeforeSend.toString()})(type,payload,window)};`
 }
+
+// Headers Umami 3.2 reads the visitor's IP and location from (src/lib/ip.ts
+// and src/lib/detect.ts), in its order of preference: X-Real-IP comes before
+// X-Forwarded-For, so behind the proxy Umami would see the server of the
+// site, unless True-Client-IP (read first) carries the visitor's address.
+const IP_HEADERS = [
+	'x-umami-client-ip',
+	'true-client-ip',
+	'cf-connecting-ip',
+	'fastly-client-ip',
+	'x-nf-client-connection-ip',
+	'do-connecting-ip',
+	'x-real-ip',
+	'x-appengine-user-ip',
+	'x-forwarded-for',
+	'forwarded',
+	'x-client-ip',
+	'x-cluster-client-ip',
+	'x-forwarded',
+]
+const LOCATION_HEADERS = [
+	'x-umami-client-country',
+	'x-umami-client-region',
+	'x-umami-client-city',
+	'cf-ipcountry',
+	'cf-region-code',
+	'cf-ipcity',
+	'x-vercel-ip-country',
+	'x-vercel-ip-country-region',
+	'x-vercel-ip-city',
+	'cloudfront-viewer-country',
+	'cloudfront-viewer-country-region',
+	'cloudfront-viewer-city',
+	'eo-ipcountry',
+	'eo-region-code',
+	'eo-ipcity',
+]
+// Never forwarded: the session cookie of the artist's space, credentials,
+// and the full address of the page (Referer), which Umami does not need.
+const DROPPED_HEADERS = [
+	'cookie',
+	'authorization',
+	'proxy-authorization',
+	'referer',
+]
+
+const looksLikeIp = value =>
+	typeof value === 'string' &&
+	/^[0-9a-f:.]{2,45}$/i.test(value) &&
+	/[.:]/.test(value)
+
+/**
+ * Address of the visitor as the reverse proxy in front of Next (Traefik)
+ * saw it: the last X-Forwarded-For entry (the one the closest proxy added),
+ * else X-Real-IP, else null.
+ * @param {Headers} headers
+ * @returns {string|null}
+ */
+export function visitorIp(headers) {
+	const forwarded = String(headers.get('x-forwarded-for') ?? '')
+		.split(',')
+		.map(entry => entry.trim())
+		.filter(Boolean)
+	const last = forwarded[forwarded.length - 1]
+	if (looksLikeIp(last)) return last
+	const real = String(headers.get('x-real-ip') ?? '').trim()
+	return looksLikeIp(real) ? real : null
+}
+
+/**
+ * Request headers sent on to Umami for /u/script.js and /u/api/send: no
+ * cookie, no credentials, no Referer; the visitor's IP only, in
+ * True-Client-IP and X-Forwarded-For, never an address or a location sent by
+ * the browser itself. Umami needs the IP to find the country (D1 counts
+ * French visitors) and to tell visitors apart (session hash); it does not
+ * store it. This is what Umami received before the proxy, when the browser
+ * called it directly.
+ * @param {Headers} incoming
+ * @returns {Headers}
+ */
+export function umamiProxyHeaders(incoming) {
+	const headers = new Headers(incoming)
+	const ip = visitorIp(incoming)
+	for (const name of [...DROPPED_HEADERS, ...IP_HEADERS, ...LOCATION_HEADERS])
+		headers.delete(name)
+	if (ip !== null) {
+		headers.set('true-client-ip', ip)
+		headers.set('x-forwarded-for', ip)
+	}
+	return headers
+}
