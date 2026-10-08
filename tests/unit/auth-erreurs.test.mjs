@@ -4,6 +4,7 @@ import {
 	CODES_ERREUR,
 	codeErreurOAuth,
 	codeErreurStrapi,
+	codeResultatConnexion,
 	expirationJwt,
 	messageErreur,
 	normaliserCodeErreur,
@@ -144,6 +145,34 @@ describe('normaliserCodeErreur and messageErreur', () => {
 			messageErreur('erreur-inconnue')
 		)
 		assert.equal(messageErreur(undefined), messageErreur('erreur-inconnue'))
+	})
+})
+
+describe('codeResultatConnexion (signIn with redirect: false)', () => {
+	test('success is read from ok, even when the page URL carried ?error=', () => {
+		// next-auth parses `error` from the callback URL, here our own page
+		assert.equal(codeResultatConnexion({ ok: true, error: null }), null)
+		assert.equal(
+			codeResultatConnexion({ ok: true, error: 'session-expiree' }),
+			null
+		)
+	})
+
+	test('failure: the code sent by the server, normalized', () => {
+		assert.equal(
+			codeResultatConnexion({
+				ok: false,
+				status: 401,
+				error: 'identifiants-invalides',
+			}),
+			'identifiants-invalides'
+		)
+		assert.equal(
+			codeResultatConnexion({ ok: false, error: 'CredentialsSignin' }),
+			'identifiants-invalides'
+		)
+		assert.equal(codeResultatConnexion({ ok: false }), 'erreur-inconnue')
+		assert.equal(codeResultatConnexion(undefined), 'erreur-inconnue')
 	})
 })
 

@@ -8,7 +8,11 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as zod from 'zod'
 import _ from 'lodash'
-import { messageErreur, normaliserCodeErreur } from '@/lib/auth-erreurs'
+import {
+	codeResultatConnexion,
+	messageErreur,
+	normaliserCodeErreur,
+} from '@/lib/auth-erreurs'
 import { callbackUrlSure } from '@/lib/auth-session'
 import { track } from '@/lib/analytics'
 
@@ -58,15 +62,15 @@ function Signin() {
 	const onSubmit = async data => {
 		setEnvoi(true)
 		setErreur(null)
+		const vers = destination()
 		const resultat = await signIn('credentials', {
 			email: data.email,
 			password: data.password,
+			// explicit: the default (this page) may carry ?error=session-expiree
+			callbackUrl: vers,
 			redirect: false,
 		})
-		const code =
-			resultat?.ok && !resultat.error
-				? null
-				: (normaliserCodeErreur(resultat?.error) ?? 'erreur-inconnue')
+		const code = codeResultatConnexion(resultat)
 		track('login_result', {
 			method: 'email',
 			ok: code === null,
@@ -78,7 +82,7 @@ function Signin() {
 			setEnvoi(false)
 			return
 		}
-		router.push(destination())
+		router.push(vers)
 	}
 
 	return (

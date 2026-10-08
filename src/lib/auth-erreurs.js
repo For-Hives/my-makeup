@@ -98,6 +98,19 @@ export function normaliserCodeErreur(brut) {
 }
 
 /**
+ * Outcome of `signIn('credentials', { redirect: false })`: null on success,
+ * the error code otherwise. Success is read from `ok` only: next-auth also
+ * fills `error` from the `?error=` of the callback URL, which may be ours
+ * (/auth/signin?error=session-expiree) on a successful sign-in.
+ * @param {{ok?: boolean, error?: string|null}|undefined} resultat
+ * @returns {string|null}
+ */
+export function codeResultatConnexion(resultat) {
+	if (resultat?.ok === true) return null
+	return normaliserCodeErreur(resultat?.error) ?? 'erreur-inconnue'
+}
+
+/**
  * French message for a code (or any `?error=` value).
  * @param {unknown} code
  * @returns {string}

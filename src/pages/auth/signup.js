@@ -9,7 +9,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import * as zod from 'zod'
 import _ from 'lodash'
 import { track } from '@/lib/analytics'
-import { messageErreur, normaliserCodeErreur } from '@/lib/auth-erreurs'
+import { codeResultatConnexion, messageErreur } from '@/lib/auth-erreurs'
 
 const schema = zod
 	.object({
@@ -57,10 +57,11 @@ function Signup() {
 			email: data.email.trim(),
 			password: data.password,
 			name: data.name.trim(),
+			callbackUrl: '/auth/init-account',
 			redirect: false,
 		})
-		if (!resultat?.ok || resultat.error) {
-			const code = normaliserCodeErreur(resultat?.error) ?? 'erreur-inconnue'
+		const code = codeResultatConnexion(resultat)
+		if (code !== null) {
 			track('auth_error', { code })
 			// message under the form, the URL does not change
 			setErreur(code)
