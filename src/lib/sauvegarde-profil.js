@@ -124,18 +124,49 @@ export function erreurNom(valeur, champ = 'first_name') {
 
 /**
  * A list of the profile (experiences, courses, offers…) as the page keeps it
- * after a save: the one the API answered, with the ids Strapi gave to the
- * new items, or else the list of the modal, whose local ids still let her
- * edit or remove an item without reloading.
+ * after a save: each item the modal sent, completed with what the API
+ * answered for it (the id Strapi gave it, the stored values). A field the
+ * answer leaves out stays as it was sent: the PATCH answer of the API is
+ * populated one level only, so its offers come without their options, and
+ * taking it as it is erased them from the page, then from the database at
+ * the next save. Without a list of the same length in the answer, the page
+ * keeps the list sent, which the API accepted.
  * @param {unknown} reponse - JSON answer of the PATCH
  * @param {string} champ
- * @param {Array} locale
+ * @param {Array} envoyee - the list of the modal, as sent
  * @returns {Array}
  */
-export function listeApresSauvegarde(reponse, champ, locale) {
+export function listeApresSauvegarde(reponse, champ, envoyee) {
 	const liste =
 		reponse && typeof reponse === 'object' && !Array.isArray(reponse)
 			? reponse[champ]
 			: undefined
-	return Array.isArray(liste) ? liste : locale
+	if (!Array.isArray(liste) || liste.length !== envoyee.length) return envoyee
+	return envoyee.map((element, index) => {
+		const stocke = liste[index]
+		return stocke && typeof stocke === 'object'
+			? { ...element, ...stocke }
+			: element
+	})
+}
+
+/**
+ * The offers as the PATCH sends them: name, price, description and every
+ * option, without any id. Strapi creates the components of the list again
+ * at each save and drops the ids sent inside them; an offer sent without
+ * its options is stored without any, so they are always sent ([] when
+ * there is none).
+ * @param {Array} offres - offers of the modal
+ * @returns {Array<{name: string, price: string, description: string, options: Array}>}
+ */
+export function offresAEnvoyer(offres) {
+	const champs = ({ name, price, description }) => ({
+		name,
+		price,
+		description,
+	})
+	return (offres ?? []).map(offre => ({
+		...champs(offre),
+		options: (offre.options ?? []).map(champs),
+	}))
 }

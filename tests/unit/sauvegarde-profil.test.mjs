@@ -6,6 +6,7 @@ import {
 	messageEchecSauvegarde,
 	NOM_MAX,
 	NOM_MIN,
+	offresAEnvoyer,
 	profilCree,
 	SECTIONS_PROFIL,
 } from '../../src/lib/sauvegarde-profil.js'
@@ -151,6 +152,119 @@ describe('listeApresSauvegarde', () => {
 		const locale = [{ id: 'addedStudio' }]
 		for (const reponse of [null, undefined, {}, [], { experiences: null }])
 			assert.equal(listeApresSauvegarde(reponse, 'experiences', locale), locale)
+	})
+
+	// what updateMakeupArtist answers: populate one level, no options
+	const envoyees = [
+		{
+			name: 'Offre A',
+			price: '100',
+			description: 'A',
+			options: [{ name: 'Option 1', price: '10', description: 'o' }],
+		},
+		{ name: 'Offre B', price: '50', description: 'B', options: [] },
+	]
+	const reponseStrapi = {
+		service_offers: [
+			{ id: 7, name: 'Offre A', price: '100', description: 'A' },
+			{ id: 8, name: 'Offre B', price: '50', description: 'B' },
+		],
+	}
+
+	test('the options of an offer stay when the answer leaves them out', () => {
+		const liste = listeApresSauvegarde(
+			reponseStrapi,
+			'service_offers',
+			envoyees
+		)
+		assert.deepEqual(
+			liste.map(offre => offre.id),
+			[7, 8]
+		)
+		assert.deepEqual(liste[0].options, envoyees[0].options)
+		assert.deepEqual(liste[1].options, [])
+	})
+
+	test('what the API stored wins over what was sent', () => {
+		const liste = listeApresSauvegarde(
+			{
+				experiences: [{ id: 3, company: 'Studio', date_end: null }],
+			},
+			'experiences',
+			[{ id: 'addedStudio', company: 'Studio', date_end: '' }]
+		)
+		assert.deepEqual(liste, [{ id: 3, company: 'Studio', date_end: null }])
+
+		const avecOptions = listeApresSauvegarde(
+			{
+				service_offers: [
+					{ id: 7, options: [{ id: 70, name: 'Option 1' }] },
+					{ id: 8, options: [] },
+				],
+			},
+			'service_offers',
+			envoyees
+		)
+		assert.deepEqual(avecOptions[0].options, [{ id: 70, name: 'Option 1' }])
+	})
+
+	test('the list sent when the answer has another length or odd items', () => {
+		assert.equal(
+			listeApresSauvegarde(
+				{ service_offers: reponseStrapi.service_offers.slice(1) },
+				'service_offers',
+				envoyees
+			),
+			envoyees
+		)
+		assert.deepEqual(
+			listeApresSauvegarde(
+				{ service_offers: [null, 'x'] },
+				'service_offers',
+				envoyees
+			),
+			envoyees
+		)
+	})
+})
+
+describe('offresAEnvoyer', () => {
+	test('every offer with all its options, without any id', () => {
+		assert.deepEqual(
+			offresAEnvoyer([
+				{
+					id: 0,
+					name: 'Offre A',
+					price: '100',
+					description: 'A',
+					options: [
+						{ id: 12, name: 'Option 1', price: '10', description: 'o' },
+						{ id: 'added1', name: 'Option 2', price: '20', description: 'p' },
+					],
+				},
+			]),
+			[
+				{
+					name: 'Offre A',
+					price: '100',
+					description: 'A',
+					options: [
+						{ name: 'Option 1', price: '10', description: 'o' },
+						{ name: 'Option 2', price: '20', description: 'p' },
+					],
+				},
+			]
+		)
+	})
+
+	test('an offer without options is sent with an empty list', () => {
+		assert.deepEqual(
+			offresAEnvoyer([
+				{ id: 'addedB', name: 'B', price: '5', description: 'b' },
+			]),
+			[{ name: 'B', price: '5', description: 'b', options: [] }]
+		)
+		assert.deepEqual(offresAEnvoyer(undefined), [])
 	})
 })
 

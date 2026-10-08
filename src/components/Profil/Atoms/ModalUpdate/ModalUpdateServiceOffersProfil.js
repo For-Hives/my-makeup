@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as zod from 'zod'
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
-import { listeApresSauvegarde } from '@/lib/sauvegarde-profil'
+import { listeApresSauvegarde, offresAEnvoyer } from '@/lib/sauvegarde-profil'
 import { DescriptionPriceOffer } from '@/components/Profil/Childs/ServiceOffers/DescriptionPriceOffer'
 import { OptionsOffers } from '@/components/Profil/Childs/ServiceOffers/OptionsOffers'
 import {
@@ -164,25 +164,10 @@ export default function ModalUpdateServiceOffersProfil(props) {
 	}
 
 	const handleSubmitServiceOffers = async event => {
-		// copy userServiceOffers to data without the ids, and in the options
-		// array, remove the id field when it is a local one (starts by "added")
-		const sansIdLocal = option =>
-			option && option?.id && option.id.toString().startsWith('added')
-				? {
-						name: option.name,
-						price: option.price,
-						description: option.description,
-					}
-				: option
-		const userServiceOffersCopy = userServiceOffers.map(serviceOffer => ({
-			name: serviceOffer.name,
-			price: serviceOffer.price,
-			description: serviceOffer.description,
-			options: (serviceOffer.options ?? []).map(sansIdLocal),
-		}))
-
+		// every offer with all its options, without ids
+		const envoyees = offresAEnvoyer(userServiceOffers)
 		const champs = {
-			service_offers: userServiceOffersCopy,
+			service_offers: envoyees,
 		}
 		setEnvoi(true)
 		setErreurEnvoi(null)
@@ -193,13 +178,14 @@ export default function ModalUpdateServiceOffersProfil(props) {
 			return
 		}
 
-		// shown on the page once the API stored it, then the modal closes
+		// shown on the page once the API stored it, then the modal closes;
+		// the answer has no options (populate one level): the ones sent stay
 		props.handleUpdateUser({
 			...user,
 			service_offers: listeApresSauvegarde(
 				resultat.data,
 				'service_offers',
-				userServiceOffersCopy
+				envoyees
 			),
 		})
 		props.handleIsModalOpen()
@@ -242,14 +228,20 @@ export default function ModalUpdateServiceOffersProfil(props) {
 			service_offers => service_offers.id === id
 		)
 
-		// replace all ";" with "\n" in userServiceOffersPrice
-		const newPrice = userServiceOffersFiltered[0].price.replace(/\n/g, ';')
+		// replace all "\n" with ";" in userServiceOffersPrice
+		const newPrice = (userServiceOffersFiltered[0].price ?? '').replace(
+			/\n/g,
+			';'
+		)
 
-		// replace all ";" with "\n" in each option's price
-		const newOptions = userServiceOffersFiltered[0].options.map(option => {
-			const newOptionPrice = option.price.replace(/\n/g, ';')
-			return { ...option, price: newOptionPrice }
-		})
+		// replace all "\n" with ";" in each option's price; an offer without
+		// its options list is edited as one without options
+		const newOptions = (userServiceOffersFiltered[0].options ?? []).map(
+			option => {
+				const newOptionPrice = (option.price ?? '').replace(/\n/g, ';')
+				return { ...option, price: newOptionPrice }
+			}
+		)
 
 		reset()
 		setUserServiceOffersId(userServiceOffersFiltered[0].id)
