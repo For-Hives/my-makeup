@@ -40,6 +40,12 @@ const OFFRES = [
 	},
 ]
 
+// a postal address typed as the city (UI-11): street and number made up
+export const ADRESSE_FICTIVE =
+	'7 impasse des Essais Fictifs, 74200 Thonon-les-Bains, France'
+// what of it must never be published
+export const RUE_FICTIVE = ['impasse', 'Essais Fictifs', '7 impasse']
+
 const RESEAUX_COMPLETS = {
 	instagram: '@studio.fictif',
 	facebook: '',
@@ -251,6 +257,24 @@ export const PROFILS_PUBLICS = [
 		first_name: 'Nina',
 		description: DESCRIPTION_199,
 		attendu: { slug: 'nina-199', publiable: false },
+	}),
+	// UI-11: complete, a postal address typed as the city (made up):
+	// publiable by its commune, the street published nowhere. Not available,
+	// so it stays out of the search and its counts.
+	complet({
+		id: 114,
+		username: 'adele-adresse',
+		createdAt: '2024-09-01T10:00:00.000Z',
+		first_name: 'Adèle',
+		last_name: 'Fictive',
+		city: ADRESSE_FICTIVE,
+		available: false,
+		attendu: {
+			slug: 'adele-adresse',
+			publiable: true,
+			ville: 'Thonon-les-Bains (74)',
+			commune: 'Thonon-les-Bains',
+		},
 	}),
 ]
 
