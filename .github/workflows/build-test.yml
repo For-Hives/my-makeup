@@ -76,9 +76,10 @@ jobs:
         if: failure()
         run: tail -n 100 .next-test-auth-journaux/*.log
 
-  # RG-01 to RG-07, pictures and forgotten password (plans/02): the artist's
-  # space in Chromium against a fake Strapi started by the script, with the
-  # same isolated environment as the auth job.
+  # RG-01 to RG-08, pictures and forgotten password (plans/02), and the
+  # public pages (UI-06, UI-07, SEO-10, SEO-12): Chromium against a fake
+  # Strapi started by the script, with the same isolated environment as the
+  # auth job. Screenshots and traces of the failed tests are kept.
   regression:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -93,7 +94,7 @@ jobs:
         run: npm ci --ignore-scripts
       - name: Install Chromium for Playwright
         run: npx playwright install --with-deps chromium
-      - name: Artist space scenarios (fake Strapi)
+      - name: Regression scenarios (fake Strapi)
         run: npm run test:regression
       - name: Show the server logs
         if: failure()

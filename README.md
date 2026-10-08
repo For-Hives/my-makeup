@@ -28,7 +28,8 @@ npm run test:auth   # AF-01 to AF-10: NextAuth and the private pages against a f
                     # (builds into .next-test-auth/, servers on localhost:3997-3998, Strapi on 4111;
                     #  AUTH_TEST_SKIP_BUILD=1 reuses the last build)
 npm run test:regression
-                    # the artist's space (RG-01..RG-07, pictures, forgotten password) in
+                    # the artist's space (RG-01..RG-08, pictures, forgotten password) and the
+                    # public pages (profiles, slugs, sitemap, robots, SEO tags, search) in
                     # Chromium against a fake Strapi (builds into .next-test-regression/,
                     # app on localhost:3996, Strapi on 4112; REGRESSION_SKIP_BUILD=1
                     # reuses the last build; once: npx playwright install chromium;

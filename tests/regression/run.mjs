@@ -1,5 +1,7 @@
-// npm run test:regression : the artist's space scenarios (RG-01 to RG-07,
-// upload, forgotten password) in a real browser against a fake Strapi.
+// npm run test:regression : the artist's space scenarios (RG-01 to RG-08,
+// upload, forgotten password) and the public pages (profiles rendered on the
+// server, slugs and 308, sitemap, robots, noindex, Open Graph, JSON-LD,
+// search by city) in a real browser against a fake Strapi.
 //
 // 1. starts the fake Strapi (127.0.0.1:4112);
 // 2. builds the app into .next-test-regression/ with the API pointing to it

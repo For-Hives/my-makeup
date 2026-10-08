@@ -1,4 +1,4 @@
-// Playwright for the artist's space scenarios, launched by
+// Playwright for the artist's space and public pages scenarios, launched by
 // tests/regression/run.mjs (npm run test:regression), which builds the app
 // and starts it with the fake Strapi. One worker: the tests share the fake
 // Strapi and reset it before each test.
