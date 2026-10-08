@@ -10,6 +10,7 @@ import {
 	BoutonSauvegarder,
 	ErreurSauvegarde,
 	FondModale,
+	useEnvoi,
 } from '@/components/Profil/Atoms/ModalUpdate/ModalElements'
 
 const schema = zod
@@ -43,8 +44,11 @@ export default function ModalUpdateLanguageProfil(props) {
 		user.language ?? []
 	)
 
-	const [envoi, setEnvoi] = useState(false)
-	const [erreurEnvoi, setErreurEnvoi] = useState(null)
+	// Escape, a click outside and « Fermer » wait for the save in progress
+	const { envoi, setEnvoi, erreurEnvoi, setErreurEnvoi, fermer } = useEnvoi(
+		props.isModalOpen,
+		props.handleIsModalOpen
+	)
 
 	const { data: session } = useSession()
 
@@ -130,7 +134,6 @@ export default function ModalUpdateLanguageProfil(props) {
 		if (!open) {
 			setUserLanguage('')
 			setUserLanguageSelected(user.language ?? [])
-			setErreurEnvoi(null)
 			reset()
 		}
 	}, [open, reset, user.language])
@@ -156,7 +159,7 @@ export default function ModalUpdateLanguageProfil(props) {
 				as="div"
 				className="relative z-30"
 				initialFocus={cancelButtonRef}
-				onClose={props.handleIsModalOpen}
+				onClose={fermer}
 			>
 				<FondModale />
 
@@ -176,7 +179,8 @@ export default function ModalUpdateLanguageProfil(props) {
 								className="relative w-full transform rounded-lg bg-white p-8 text-left shadow-2xl transition-all sm:max-w-3xl"
 							>
 								<BoutonFermer
-									onClick={props.handleIsModalOpen}
+									onClick={fermer}
+									disabled={envoi}
 									ref={cancelButtonRef}
 								/>
 								<div className="flex flex-col items-start gap-8">

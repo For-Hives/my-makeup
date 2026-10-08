@@ -11,6 +11,7 @@ import {
 	ErreurSauvegarde,
 	FondModale,
 	suivreChamp,
+	useEnvoi,
 } from '@/components/Profil/Atoms/ModalUpdate/ModalElements'
 
 const schema = zod.object({
@@ -85,8 +86,11 @@ export default function ModalUpdateSocialMediaProfil(props) {
 
 	const { data: session } = useSession()
 
-	const [envoi, setEnvoi] = useState(false)
-	const [erreurEnvoi, setErreurEnvoi] = useState(null)
+	// Escape, a click outside and « Fermer » wait for the save in progress
+	const { envoi, setEnvoi, erreurEnvoi, setErreurEnvoi, fermer } = useEnvoi(
+		props.isModalOpen,
+		props.handleIsModalOpen
+	)
 
 	// the page shows the new links, and the modal closes, once the API stored them
 	const onSubmit = async data => {
@@ -143,7 +147,6 @@ export default function ModalUpdateSocialMediaProfil(props) {
 			setUserLinkedin(reseau.linkedin ?? '')
 			setUserEmail(reseau.email ?? '')
 			setUserPhone(reseau.phone ?? '')
-			setErreurEnvoi(null)
 			reset()
 		}
 	}, [
@@ -164,7 +167,7 @@ export default function ModalUpdateSocialMediaProfil(props) {
 				as="div"
 				className="relative z-30"
 				initialFocus={cancelButtonRef}
-				onClose={props.handleIsModalOpen}
+				onClose={fermer}
 			>
 				<FondModale />
 
@@ -184,7 +187,8 @@ export default function ModalUpdateSocialMediaProfil(props) {
 								className="relative w-full transform rounded-lg bg-white p-8 text-left shadow-2xl transition-all sm:max-w-2xl"
 							>
 								<BoutonFermer
-									onClick={props.handleIsModalOpen}
+									onClick={fermer}
+									disabled={envoi}
 									ref={cancelButtonRef}
 								/>
 								<div className="flex flex-col items-start gap-8">

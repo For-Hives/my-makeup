@@ -2,6 +2,7 @@ import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
 	erreurNom,
+	fermerSiLibre,
 	listeApresSauvegarde,
 	messageEchecSauvegarde,
 	NOM_MAX,
@@ -225,6 +226,17 @@ describe('listeApresSauvegarde', () => {
 			),
 			envoyees
 		)
+	})
+})
+
+describe('fermerSiLibre', () => {
+	test('closes when nothing runs, waits while a save runs', () => {
+		let fermetures = 0
+		const fermer = () => fermetures++
+		fermerSiLibre(true, fermer)()
+		assert.equal(fermetures, 0)
+		fermerSiLibre(false, fermer)()
+		assert.equal(fermetures, 1)
 	})
 })
 

@@ -12,6 +12,7 @@ import {
 	ErreurSauvegarde,
 	FondModale,
 	suivreChamp,
+	useEnvoi,
 } from '@/components/Profil/Atoms/ModalUpdate/ModalElements'
 
 const schema = zod
@@ -73,8 +74,11 @@ export default function ModalUpdateCoursesProfil(props) {
 	const [userCoursesDateGraduation, setUserCoursesDateGraduation] = useState('')
 	const [userCoursesDescription, setUserCoursesDescription] = useState('')
 
-	const [envoi, setEnvoi] = useState(false)
-	const [erreurEnvoi, setErreurEnvoi] = useState(null)
+	// Escape, a click outside and « Fermer » wait for the save in progress
+	const { envoi, setEnvoi, erreurEnvoi, setErreurEnvoi, fermer } = useEnvoi(
+		props.isModalOpen,
+		props.handleIsModalOpen
+	)
 
 	const { data: session } = useSession()
 
@@ -215,7 +219,6 @@ export default function ModalUpdateCoursesProfil(props) {
 	useEffect(() => {
 		if (!open) {
 			setUserCourses(user.courses ?? [])
-			setErreurEnvoi(null)
 			setUserCoursesId('')
 			setUserCoursesDiploma('')
 			setUserCoursesSchool('')
@@ -231,7 +234,7 @@ export default function ModalUpdateCoursesProfil(props) {
 				as="div"
 				className="relative z-30"
 				initialFocus={cancelButtonRef}
-				onClose={props.handleIsModalOpen}
+				onClose={fermer}
 			>
 				<FondModale />
 
@@ -251,7 +254,8 @@ export default function ModalUpdateCoursesProfil(props) {
 								className="relative w-full transform rounded-lg bg-white p-8 text-left shadow-2xl transition-all sm:max-w-7xl"
 							>
 								<BoutonFermer
-									onClick={props.handleIsModalOpen}
+									onClick={fermer}
+									disabled={envoi}
 									ref={cancelButtonRef}
 								/>
 								<div className="flex flex-col items-start gap-8">

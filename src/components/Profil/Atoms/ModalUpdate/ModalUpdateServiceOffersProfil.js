@@ -14,6 +14,7 @@ import {
 	ErreurSauvegarde,
 	FondModale,
 	suivreChamp,
+	useEnvoi,
 } from '@/components/Profil/Atoms/ModalUpdate/ModalElements'
 
 const schema = zod
@@ -86,8 +87,11 @@ export default function ModalUpdateServiceOffersProfil(props) {
 		useState('')
 	const [userServiceOffersOptions, setUserServiceOffersOptions] = useState([])
 
-	const [envoi, setEnvoi] = useState(false)
-	const [erreurEnvoi, setErreurEnvoi] = useState(null)
+	// Escape, a click outside and « Fermer » wait for the save in progress
+	const { envoi, setEnvoi, erreurEnvoi, setErreurEnvoi, fermer } = useEnvoi(
+		props.isModalOpen,
+		props.handleIsModalOpen
+	)
 
 	const { data: session } = useSession()
 
@@ -262,7 +266,6 @@ export default function ModalUpdateServiceOffersProfil(props) {
 	useEffect(() => {
 		if (!open) {
 			setUserServiceOffers(user.service_offers ?? [])
-			setErreurEnvoi(null)
 			setUserServiceOffersId('')
 			setUserServiceOffersName('')
 			setUserServiceOffersPrice('')
@@ -297,7 +300,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 				as="div"
 				className="relative z-30"
 				initialFocus={cancelButtonRef}
-				onClose={props.handleIsModalOpen}
+				onClose={fermer}
 			>
 				<FondModale />
 
@@ -317,7 +320,8 @@ export default function ModalUpdateServiceOffersProfil(props) {
 								className="relative w-full transform rounded-lg bg-white p-8 text-left shadow-2xl transition-all sm:max-w-7xl"
 							>
 								<BoutonFermer
-									onClick={props.handleIsModalOpen}
+									onClick={fermer}
+									disabled={envoi}
 									ref={cancelButtonRef}
 								/>
 								<div className="flex flex-col items-start gap-8">

@@ -93,6 +93,20 @@ export function messageEchecSauvegarde(status, corps) {
 }
 
 /**
+ * Close handler of a modal (Escape, click outside, « Fermer ») that does
+ * nothing while a save or a picture runs: the answer must land in an open
+ * modal, where its message can be read. Closing then dropped the request
+ * from view, and its failure showed up at the next opening, over the saved
+ * values.
+ * @param {boolean} occupe - a save (or a picture compression) is running
+ * @param {() => void} fermer
+ * @returns {() => void}
+ */
+export const fermerSiLibre = (occupe, fermer) => () => {
+	if (!occupe) fermer()
+}
+
+/**
  * Outcome of the profile creation of the onboarding (POST /api/me-makeup).
  * A profile that already exists (page reloaded, second tab) is not an error:
  * the onboarding goes on with it.

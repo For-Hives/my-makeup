@@ -383,6 +383,34 @@ test.describe('UI-01 sauvegardes honnêtes', () => {
 		await expect(optionDeLaPage).toHaveText('Option 1')
 		expect(erreurs).toEqual([])
 	})
+
+	test('sauvegarde en cours : Échap, clic dehors et Fermer attendent la réponse ; l’échec s’affiche dans la modale, rouverte ensuite sans ce message', async ({
+		page,
+	}) => {
+		await ouvrirProfil(page)
+		await panne({ patch: 500, delaiPatchMs: 1500 })
+		await page.getByTestId('update-location-button').click()
+		await page.getByTestId('city-input').fill('Chambéry')
+		await page.getByTestId('save-button-location').click()
+		await expect(page.getByTestId('save-button-location')).toBeDisabled()
+
+		await page.keyboard.press('Escape')
+		await page.mouse.click(5, 5)
+		await expect(dialogue(page).getByTestId('close-modal')).toBeDisabled()
+		await expect(dialogue(page).getByTestId('save-error')).toHaveText(
+			"Le service est momentanément indisponible : tes modifications n'ont pas été enregistrées. Réessaie dans quelques minutes."
+		)
+		await expect(page.getByTestId('city-input')).toHaveValue('Chambéry')
+
+		// closed once the answer is in, then opened again: no old message
+		await page.keyboard.press('Escape')
+		await expect(dialogue(page)).toBeHidden()
+		await panne({ patch: null, delaiPatchMs: 0 })
+		await page.getByTestId('update-location-button').click()
+		await expect(page.getByTestId('city-input')).toHaveValue('Annecy')
+		await expect(dialogue(page).getByTestId('save-error')).toHaveCount(0)
+		expect((await profilServeur()).city).toBe('Annecy')
+	})
 })
 
 test.describe('UI-02 et UI-04 édition au doigt et au clavier', () => {
