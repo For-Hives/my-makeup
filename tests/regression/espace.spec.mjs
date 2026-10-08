@@ -28,6 +28,8 @@ async function piloter(chemin, corps) {
 }
 const etat = () => piloter('/__etat')
 const panne = corps => piloter('/__panne', corps)
+// fields of the test account's profile, stored as the API would
+const profilDeDepart = champs => piloter('/__profil', champs)
 const profilServeur = async (id = COMPTE_TEST.id) => (await etat()).profils[id]
 const appels = (journal, methode, chemin) =>
 	journal.filter(entree => entree.m === methode && entree.p === chemin)
@@ -68,6 +70,29 @@ async function ouvrirProfil(page) {
 
 // the open modal (its Dialog element has no size of its own)
 const dialogue = page => page.getByTestId('modal-panel')
+
+// errors thrown in the page (a TypeError in a click handler…)
+function erreursDeLaPage(page) {
+	const erreurs = []
+	page.on('pageerror', erreur => erreurs.push(erreur.message))
+	return erreurs
+}
+
+// an offer with one option, as GET /api/me-makeup returns it
+const OFFRE_AVEC_OPTION = {
+	name: 'Offre A',
+	price: '100',
+	description: 'Description de l’offre A',
+	options: [{ name: 'Option 1', price: '10', description: 'Option de test' }],
+}
+const EXPERIENCE = (company, date_start) => ({
+	company,
+	job_name: 'Maquilleuse',
+	city: 'Annecy',
+	date_start,
+	date_end: null,
+	description: 'Expérience de test',
+})
 
 // --- pictures ---
 // A phone-like JPEG of 4000×3000 px and about 8 MB: gradients, a pattern
@@ -269,6 +294,94 @@ test.describe('UI-01 sauvegardes honnêtes', () => {
 		await page.getByTestId('update-experience-button').click()
 		await page.getByTestId('experience-selected-0').click()
 		await expect(page.getByTestId('company-input')).toHaveValue('Studio B')
+	})
+
+	test('deux expériences : la 2e puis la 1re modifiées et sauvegardées sans recharger, chacune à sa place', async ({
+		page,
+	}) => {
+		await profilDeDepart({
+			experiences: [
+				EXPERIENCE('Studio A', '2020-01-01'),
+				EXPERIENCE('Studio B', '2022-01-01'),
+			],
+		})
+		await ouvrirProfil(page)
+		const modifier = async (index, avant, apres) => {
+			await page.getByTestId('update-experience-button').click()
+			await page.getByTestId(`experience-selected-${index}`).click()
+			await expect(page.getByTestId('company-input')).toHaveValue(avant)
+			await page.getByTestId('company-input').fill(apres)
+			await page.getByTestId('add-experience-button').click()
+			await page.getByTestId('save-button-experience').click()
+			await expect(dialogue(page)).toBeHidden()
+		}
+		await modifier(1, 'Studio B', 'Studio B2')
+		await modifier(0, 'Studio A', 'Studio A2')
+
+		await expect(page.getByTestId('experience-company')).toHaveText([
+			'Studio A2',
+			'Studio B2',
+		])
+		const { experiences } = await profilServeur()
+		expect(experiences.map(e => e.company)).toEqual(['Studio A2', 'Studio B2'])
+		expect(experiences.map(e => e.date_start)).toEqual([
+			'2020-01-01',
+			'2022-01-01',
+		])
+	})
+
+	test('offre avec options sauvegardée deux fois : options affichées, encore modifiables et conservées', async ({
+		page,
+	}) => {
+		const erreurs = erreursDeLaPage(page)
+		await profilDeDepart({ service_offers: [OFFRE_AVEC_OPTION] })
+		await ouvrirProfil(page)
+		const optionDeLaPage = page.getByTestId('service-offer-name-0').first()
+		await expect(optionDeLaPage).toHaveText('Option 1')
+
+		// 1st save: one more offer, without options
+		await page.getByTestId('update-service-offers-button').click()
+		await page.getByTestId('name-service-offers-input').fill('Offre B')
+		await page
+			.getByTestId('description-service-offers-input')
+			.fill('Description de l’offre B')
+		await page.getByTestId('price-service-offers-input').fill('50')
+		await page.getByTestId('add-service-offers-button').click()
+		await page.getByTestId('save-button-service-offers').click()
+		await expect(dialogue(page)).toBeHidden()
+		// the PATCH answer has no options (populate one level): the page
+		// keeps the ones it sent
+		await expect(optionDeLaPage).toHaveText('Option 1')
+		let { service_offers } = await profilServeur()
+		expect(service_offers.map(o => o.name)).toEqual(['Offre A', 'Offre B'])
+		expect(service_offers[0].options.map(o => o.name)).toEqual(['Option 1'])
+
+		// 2nd save in the same session: the offer is edited again
+		await page.getByTestId('update-service-offers-button').click()
+		await page.getByTestId('edit-service-offers-button-0').click()
+		await expect(
+			page.getByTestId('name-service-offers-option-input-0')
+		).toHaveValue('Option 1')
+		await page.getByTestId('price-service-offers-input').fill('120')
+		await page.getByTestId('add-service-offers-button').click()
+		await page.getByTestId('save-button-service-offers').click()
+		await expect(dialogue(page)).toBeHidden()
+
+		await expect(optionDeLaPage).toHaveText('Option 1')
+		;({ service_offers } = await profilServeur())
+		expect(service_offers[0].price).toBe('120')
+		expect(
+			service_offers[0].options.map(({ name, price, description }) => ({
+				name,
+				price,
+				description,
+			}))
+		).toEqual(OFFRE_AVEC_OPTION.options)
+		expect(service_offers[1].options).toEqual([])
+
+		await aller(page, '/auth/profil')
+		await expect(optionDeLaPage).toHaveText('Option 1')
+		expect(erreurs).toEqual([])
 	})
 })
 

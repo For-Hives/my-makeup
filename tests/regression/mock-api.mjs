@@ -5,12 +5,18 @@
 // - first_name and last_name: 3 characters at least (makeup-artiste
 //   schema.json of the API, today), 70 at most;
 // - PATCH keeps the editable fields only, main_picture and image_gallery
-//   are file ids;
+//   are file ids; the components sent are created again, each with a new
+//   id, nested options included (the front sends no id, and Strapi drops
+//   the ids sent inside a new component);
+// - the PATCH answer is populated one level only, like updateMakeupArtist
+//   (populate service_offers: true): the offers come without their
+//   options, which GET still returns;
 // - POST /api/upload: JPEG, PNG or WebP read from the first bytes, 10 MB at
 //   most (413 above), like the upload guard of the API (PR #370);
 // - forgot-password answers { ok: true } for any address, reset-password
 //   refuses an unknown code or two different passwords.
-// `/__…` routes drive it from the tests (forced failures, delays, state).
+// `/__…` routes drive it from the tests (forced failures, delays, state,
+// profile of the test account).
 // Test data only: @test.local accounts, made-up names. Ported from
 // plans/outils/interfaces/mock-api.mjs.
 import http from 'node:http'
@@ -43,6 +49,15 @@ const CHAMPS_MODIFIABLES = [
 	'service_offers',
 	'main_picture',
 	'image_gallery',
+]
+
+// repeatable components of the profile (service_offers also holds options)
+const COMPOSANTS_REPETABLES = [
+	'skills',
+	'experiences',
+	'courses',
+	'language',
+	'service_offers',
 ]
 
 const profilInitial = (id, username) => ({
@@ -121,6 +136,7 @@ export function demarrerFauxStrapi(port = 4112, { origine = '*' } = {}) {
 			fichiers: [],
 			emails: [],
 			prochainId: 100,
+			prochainComposant: 1000,
 			panne: {
 				patch: null, // status forced on PATCH /api/me-makeup
 				post: null, // status forced on POST /api/me-makeup
@@ -175,6 +191,39 @@ export function demarrerFauxStrapi(port = 4112, { origine = '*' } = {}) {
 		}
 	}
 	const attendre = ms => new Promise(resolve => setTimeout(resolve, ms))
+	// Components as Strapi stores them: created again at each save with a new
+	// id (the id sent with one is dropped), the options of an offer too; an
+	// offer sent without its options is stored without any.
+	// eslint-disable-next-line no-unused-vars
+	const nouveau = ({ id, ...champs }) => ({
+		id: etat.prochainComposant++,
+		...champs,
+	})
+	const stockerComposants = donnees => {
+		for (const champ of COMPOSANTS_REPETABLES)
+			if (Array.isArray(donnees[champ]))
+				donnees[champ] = donnees[champ].map(element =>
+					champ === 'service_offers'
+						? {
+								...nouveau(element),
+								options: (element.options ?? []).map(nouveau),
+							}
+						: nouveau(element)
+				)
+		if (donnees.network && typeof donnees.network === 'object')
+			donnees.network = nouveau(donnees.network)
+		return donnees
+	}
+	// PATCH answer of updateMakeupArtist: populate one level, so an offer
+	// comes without its options; the account with id, username, email only
+	const reponsePatch = (profil, compte) => ({
+		...profil,
+		service_offers: (profil.service_offers ?? []).map(
+			// eslint-disable-next-line no-unused-vars
+			({ options, ...offre }) => offre
+		),
+		user: { id: compte.id, username: compte.username, email: compte.email },
+	})
 	const fichier = id =>
 		etat.fichiers.find(f => f.id === Number(id?.id ?? id)) ?? null
 
@@ -195,6 +244,12 @@ export function demarrerFauxStrapi(port = 4112, { origine = '*' } = {}) {
 		if (url.pathname === '/__panne') {
 			Object.assign(etat.panne, await lireJson(req))
 			return json(res, 200, etat.panne)
+		}
+		if (url.pathname === '/__profil') {
+			// fields of the test account's profile, stored like a PATCH would
+			const profil = etat.profils[COMPTE_TEST.id]
+			Object.assign(profil, stockerComposants(await lireJson(req)))
+			return json(res, 200, profil)
 		}
 		if (url.pathname === '/__etat')
 			return json(res, 200, {
@@ -448,8 +503,8 @@ export function demarrerFauxStrapi(port = 4112, { origine = '*' } = {}) {
 					donnees.image_gallery = (donnees.image_gallery ?? [])
 						.map(fichier)
 						.filter(Boolean)
-				Object.assign(profil, donnees)
-				return json(res, 200, profil)
+				Object.assign(profil, stockerComposants(donnees))
+				return json(res, 200, reponsePatch(profil, compte))
 			}
 			if (req.method === 'DELETE') {
 				if (etat.panne.suppression)
