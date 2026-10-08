@@ -40,7 +40,7 @@ function PourLesMaquilleuses(props) {
 					description={
 						<>
 							{
-								"Découvrez comment My-Makeup peut aider les maquilleuses professionnelles à développer leur activité, à trouver de nouveaux clients et à découvrir de nouvelles opportunités. Avec notre plateforme, donner un coup de boost à votre carrière n'a jamais été aussi simple !"
+								"Découvrez comment My-Makeup peut aider les maquilleuses professionnelles à présenter leur travail et à se faire connaître des particuliers qui cherchent une maquilleuse, gratuitement."
 							}
 						</>
 					}
@@ -54,14 +54,13 @@ function PourLesMaquilleuses(props) {
 						<article>
 							<header className="flex flex-col">
 								<h1 className="mt-6 text-3xl font-bold tracking-tight text-gray-800 sm:text-4xl">
-									Solutions My-Makeup pour les Maquilleuses : Le Seul Endroit
-									pour Trouver des Clients, Développer Votre Activité et
-									Découvrir des Opportunités
+									Solutions My-Makeup pour les Maquilleuses : Présentez Votre
+									Travail et Faites-vous Connaître des Particuliers
 								</h1>
 							</header>
 							<div className="prose my-8 xl:prose-lg">
 								<p>
-									{`Vous êtes une maquilleuse professionnelle et vous cherchez à développer votre activité ? Avec My-Makeup, vous disposez d'une plateforme conçue pour faciliter la connexion avec des clients potentiels, vous offrir de nouvelles opportunités et soutenir la croissance de votre activité. Voici comment.`}
+									{`Vous êtes une maquilleuse professionnelle et vous cherchez à développer votre activité ? Avec My-Makeup, vous disposez d'une plateforme gratuite conçue pour faciliter la connexion avec des clients potentiels et soutenir la croissance de votre activité. Voici comment.`}
 								</p>
 								<ul>
 									<li>
@@ -86,7 +85,7 @@ function PourLesMaquilleuses(props) {
 										<h2>{'Une question ? 📞'}</h2>
 										<p>
 											{`Si vous avez des questions ou rencontrez un problème, écrivez-nous depuis la page Contact. Nous sommes déterminés à faire de votre expérience avec My-Makeup une expérience positive et productive. 
-												En résumé, My-Makeup est l'endroit idéal pour les maquilleuses qui cherchent à développer leur activité, à trouver de nouveaux clients et à découvrir de nouvelles opportunités. Rejoignez-nous aujourd'hui et commencez à transformer votre carrière de maquilleuse !`}
+												En résumé, My-Makeup aide les maquilleuses à présenter leur travail et à être trouvées par les particuliers qui cherchent une maquilleuse. Rejoignez-nous gratuitement dès aujourd'hui !`}
 										</p>
 									</li>
 								</ul>

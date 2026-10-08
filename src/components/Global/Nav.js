@@ -89,7 +89,7 @@ const navigation = [
 				href: '/solutions/pour-les-maquilleuses',
 				icon: 'diversity_2',
 				description:
-					'Le seul endroit pour trouver des clients, développer votre activité et trouver des opportunités !',
+					'Présentez votre travail et faites-vous connaître des particuliers, gratuitement.',
 			},
 		],
 	},

@@ -62,7 +62,7 @@ function PourLesParticuliers(props) {
 									<li>
 										<h2>{'Une recherche simplifiée 🕵️‍♀️'}</h2>
 										<p>
-											{`Avec notre moteur de recherche avancé, vous pouvez trouver la maquilleuse professionnelle qui correspond à vos critères en un clin d'œil. Que vous cherchiez une experte en maquillage de mariage, une spécialiste du maquillage bio ou une artiste maquilleuse pour un événement spécial, notre plateforme vous donne accès à un large éventail de profils pour trouver votre perle rare.`}
+											{`Avec notre recherche par mot-clé et par ville, vous pouvez trouver la maquilleuse professionnelle qui correspond à vos besoins en un clin d'œil. Que vous cherchiez une experte en maquillage de mariage, une spécialiste du maquillage bio ou une artiste maquilleuse pour un événement spécial, notre plateforme vous donne accès à un large éventail de profils pour trouver votre perle rare.`}
 										</p>
 									</li>
 									<li>

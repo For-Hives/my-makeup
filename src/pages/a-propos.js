@@ -36,7 +36,7 @@ function APropos(props) {
 					description={
 						<>
 							{
-								'Découvrez comment My-Makeup peut aider les personnes à trouver la maquilleuse professionnelle qui leur correspond. Et comment nous pouvons aider les maquilleuses professionnelles à développer leur activité, à trouver de nouveaux clients et à découvrir de nouvelles opportunités.'
+								'Découvrez comment My-Makeup peut aider les personnes à trouver la maquilleuse professionnelle qui leur correspond. Et comment nous pouvons aider les maquilleuses professionnelles à présenter leur travail et à se faire connaître de nouveaux clients.'
 							}
 						</>
 					}

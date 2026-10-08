@@ -147,7 +147,7 @@ function Collaboration() {
 								Nous sommes là pour faciliter votre recherche de maquilleuse
 								freelance. Une fois que vous avez trouvé la bonne personne, il
 								ne vous reste plus qu&apos;à la contacter. Alors n&apos;attendez
-								plus, rejoignez My Makeup dès maintenant et trouvez votre
+								plus, lancez votre recherche dès maintenant et trouvez votre
 								maquilleuse de rêve en quelques clics !
 							</p>
 						</div>
@@ -222,15 +222,10 @@ function Collaboration() {
 								profils adaptés à vos besoins.
 							</p>
 							<p>
-								Notre solution de gestion est simple et intuitive, même pour les
-								débutants. Avec My-Makeup, vous pouvez centraliser toutes vos
-								activités avec les maquilleuses professionnelles de votre choix,
-								pour une gestion simplifiée.
-							</p>
-							<p>
-								Alors n&apos;hésitez plus, inscrivez-vous dès maintenant sur My
-								Makeup et simplifiez la gestion de vos activités avec vos
-								maquilleuses professionnelles préférées !
+								Profils, portfolios et tarifs indicatifs sont réunis au même
+								endroit : comparez les maquilleuses, puis contactez directement
+								celle qui vous plaît. La recherche est gratuite et ne demande
+								aucune inscription.
 							</p>
 						</div>
 						<div className={'flex'}>
