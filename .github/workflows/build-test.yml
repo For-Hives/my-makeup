@@ -33,12 +33,15 @@ jobs:
         run: npm ci --ignore-scripts
       - name: Unit tests (src/lib)
         run: npm test
-      - name: Cache next.js build
-        id: cache-npm
+      # Only Next's own compilation cache, never the build output: the build
+      # always runs and starts from a clean .next
+      - name: Cache Next.js compilation
         uses: actions/cache@v4
         with:
-          path: .next/
-          key: ${{ runner.os }}-next-build-${{ hashFiles('src/','public/','next*','package*','jsconfig.json') }}
+          path: .next/cache
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('package-lock.json') }}-${{ hashFiles('src/**', 'public/**', 'next.config.js', 'jsconfig.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-${{ hashFiles('package-lock.json') }}-
       - name: Build the app
         run: npm run build
       - name: Set up QEMU
