@@ -32,9 +32,9 @@ function Collaboration() {
 							</p>
 							<p>
 								Avec My-Makeup, vous créez gratuitement votre page
-								professionnelle : portfolio, spécialités, tarifs et
-								coordonnées. Les particuliers qui cherchent une maquilleuse vous
-								contactent directement.
+								professionnelle : portfolio, spécialités, tarifs et coordonnées.
+								Les particuliers qui cherchent une maquilleuse vous contactent
+								directement.
 							</p>
 						</div>
 						<div className={'flex'}>
@@ -102,11 +102,10 @@ function Collaboration() {
 							<p>
 								N&apos;attendez plus pour rejoindre la communauté de
 								maquilleuses professionnelles de My-Makeup. Avec notre
-								plateforme, vous présentez votre travail à de nouvelles
-								clientes et développez votre activité à votre rythme.
-								Inscrivez-vous dès maintenant et
-								commencez à construire votre avenir professionnel dès
-								aujourd&apos;hui !
+								plateforme, vous présentez votre travail à de nouvelles clientes
+								et développez votre activité à votre rythme. Inscrivez-vous dès
+								maintenant et commencez à construire votre avenir professionnel
+								dès aujourd&apos;hui !
 							</p>
 						</div>
 						<div className={'flex'}>
@@ -148,9 +147,8 @@ function Collaboration() {
 								Nous sommes là pour faciliter votre recherche de maquilleuse
 								freelance. Une fois que vous avez trouvé la bonne personne, il
 								ne vous reste plus qu&apos;à la contacter. Alors n&apos;attendez
-								plus, rejoignez My
-								Makeup dès maintenant et trouvez votre maquilleuse de rêve en
-								quelques clics !
+								plus, rejoignez My Makeup dès maintenant et trouvez votre
+								maquilleuse de rêve en quelques clics !
 							</p>
 						</div>
 						<div className={'flex'}>

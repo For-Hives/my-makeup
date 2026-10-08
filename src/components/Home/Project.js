@@ -30,8 +30,8 @@ function Project() {
 			<div className="mx-auto max-w-7xl">
 				<div className="mx-auto mb-10">
 					<h2 className="text-start text-4xl font-bold tracking-tight text-gray-900 sm:text-4xl">
-						Gardez votre projet beauté en tête, on vous aide à trouver la
-						bonne maquilleuse
+						Gardez votre projet beauté en tête, on vous aide à trouver la bonne
+						maquilleuse
 					</h2>
 					<p className="mt-6 text-start text-lg text-gray-700 md:w-1/2">
 						Trouvez une maquilleuse près de chez vous, comparez les profils et

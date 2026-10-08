@@ -32,7 +32,11 @@ function DemandeEnvoyee() {
 				<Hero
 					title={<>Votre demande est transmise</>}
 					description={
-						<>{'Vous recevrez une réponse sous 48 h. Merci de votre confiance !'}</>
+						<>
+							{
+								'Vous recevrez une réponse sous 48 h. Merci de votre confiance !'
+							}
+						</>
 					}
 					isSearchDisplayed={false}
 					isCTALoginDisplayed={false}

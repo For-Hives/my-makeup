@@ -122,9 +122,7 @@ function PolitiqueDeConfidentialite() {
 								<h2>Hébergement et prestataires</h2>
 								{/* TODO(Andy): confirm where the Strapi database runs (decision D8) and name it here if it is not at netcup. */}
 								<ul>
-									<li>
-										{`netcup GmbH (Allemagne) : hébergement du site.`}
-									</li>
+									<li>{`netcup GmbH (Allemagne) : hébergement du site.`}</li>
 									<li>
 										{`Cloudflare (service R2) : stockage des photos des profils.`}
 									</li>

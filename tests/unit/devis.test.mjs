@@ -13,7 +13,10 @@ describe('devisFormUrl', () => {
 
 	test('only plain https URLs are accepted', () => {
 		assert.equal(devisFormUrl(FORM), FORM)
-		assert.equal(devisFormUrl(' https://form.example.test/r/abc?lang=fr '), 'https://form.example.test/r/abc?lang=fr')
+		assert.equal(
+			devisFormUrl(' https://form.example.test/r/abc?lang=fr '),
+			'https://form.example.test/r/abc?lang=fr'
+		)
 		assert.equal(devisFormUrl('http://form.example.test/devis'), null)
 		assert.equal(devisFormUrl('javascript:alert(1)'), null)
 		assert.equal(devisFormUrl('https://user:pass@form.example.test/'), null)
@@ -23,12 +26,17 @@ describe('devisFormUrl', () => {
 
 describe('buildDevisHref', () => {
 	test('null when the form is not configured', () => {
-		assert.equal(buildDevisHref({ formUrl: undefined, slug: 'test-maq', pid: 3 }), null)
+		assert.equal(
+			buildDevisHref({ formUrl: undefined, slug: 'test-maq', pid: 3 }),
+			null
+		)
 		assert.equal(buildDevisHref({ formUrl: FORM, slug: '', pid: 3 }), null)
 	})
 
 	test('carries profile, id and source', () => {
-		const url = new URL(buildDevisHref({ formUrl: FORM, slug: 'Test Maq', pid: 3 }))
+		const url = new URL(
+			buildDevisHref({ formUrl: FORM, slug: 'Test Maq', pid: 3 })
+		)
 		assert.equal(url.origin + url.pathname, FORM)
 		assert.equal(url.searchParams.get('profil'), 'Test Maq')
 		assert.equal(url.searchParams.get('pid'), '3')
@@ -42,7 +50,8 @@ describe('buildDevisHref', () => {
 				formUrl: FORM,
 				slug: 'test-maq',
 				pid: 3,
-				search: '?utm_source=instagram&utm_medium=bio&utm_campaign=bio-3&utm_term=&utm_content=story&fbclid=XYZ&search=mariage',
+				search:
+					'?utm_source=instagram&utm_medium=bio&utm_campaign=bio-3&utm_term=&utm_content=story&fbclid=XYZ&search=mariage',
 			})
 		)
 		assert.equal(url.searchParams.get('utm_source'), 'instagram')
@@ -82,7 +91,9 @@ describe('buildDevisHref', () => {
 	})
 
 	test('keeps the parameters already in the form URL and drops an invalid pid', () => {
-		const url = new URL(buildDevisHref({ formUrl: `${FORM}?lang=fr`, slug: 'test-maq', pid: 'x' }))
+		const url = new URL(
+			buildDevisHref({ formUrl: `${FORM}?lang=fr`, slug: 'test-maq', pid: 'x' })
+		)
 		assert.equal(url.searchParams.get('lang'), 'fr')
 		assert.equal(url.searchParams.has('pid'), false)
 		assert.equal(url.searchParams.get('profil'), 'test-maq')

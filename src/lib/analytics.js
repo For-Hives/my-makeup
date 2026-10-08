@@ -273,7 +273,11 @@ export function shouldTrackContact({
 	return true
 }
 
-const ONBOARDING_STEPS = { 1: 'verification_email', 3: 'compte_cree', 4: 'termine' }
+const ONBOARDING_STEPS = {
+	1: 'verification_email',
+	3: 'compte_cree',
+	4: 'termine',
+}
 
 /**
  * `onboarding_step` value for a step of /auth/init-account, or null.
