@@ -18,10 +18,10 @@ export default function Home({ talents }) {
 		<>
 			<Seo
 				seo={seoPage({
-					titre:
-						'Accueil - My-Makeup le moteur de recherche pour les maquilleuses',
+					// E9 (plans/03): 60 characters of title, 155 of description at most
+					titre: 'Maquilleuse professionnelle près de chez vous | My-Makeup',
 					description:
-						"Trouvez la meilleure maquilleuse professionnelle à domicile près de chez vous. Une maquilleuse rien que pour vous, pour un événement, un shooting ou une soirée : vous trouverez votre bonheur pour vous sublimer dans n'importe quelle situation ! Inscription gratuite.",
+						'Trouvez une maquilleuse professionnelle à domicile près de chez vous, pour un mariage, une soirée ou un shooting. Comparez les profils et les tarifs.',
 					chemin: '/',
 					site: urlDuSite(),
 				})}

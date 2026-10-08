@@ -357,6 +357,14 @@ test.describe('SEO-10 sitemap, robots, noindex, canonical', () => {
 
 		const accueil = await html(request, '/')
 		expect(canonical(accueil.html)).toBe(APP)
+		// E9: 60 characters of title, 70 to 155 of description, same in og:
+		const titre = decoder(/<title[^>]*>([^<]*)<\/title>/.exec(accueil.html)[1])
+		expect(titre.length).toBeLessThanOrEqual(60)
+		const description = meta(accueil.html, 'description')
+		expect(description.length).toBeGreaterThanOrEqual(70)
+		expect(description.length).toBeLessThanOrEqual(155)
+		expect(meta(accueil.html, 'og:description')).toBe(description)
+		expect(meta(accueil.html, 'og:title')).toBe(titre)
 		for (const page of [talent.html, article.html, accueil.html])
 			for (const cle of [
 				'og:title',

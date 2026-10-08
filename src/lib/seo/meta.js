@@ -329,7 +329,9 @@ export function seoProfil({
 }
 
 /**
- * SEO of a fixed page whose title and description are written in the page.
+ * SEO of a fixed page whose title and description are written in the page:
+ * titrePage() (60 characters at most) and 155 characters of description at
+ * most, so the og: and twitter: copies stay within bounds too.
  * @param {object} options
  * @param {string} options.titre
  * @param {string} options.description
@@ -339,8 +341,8 @@ export function seoProfil({
  */
 export function seoPage({ titre, description, chemin: cheminPage, site }) {
 	return {
-		titre: espaces(titre) || MARQUE,
-		description: espaces(description),
+		titre: titrePage(titre),
+		description: tronquer(texteBrut(description), DESCRIPTION_MAX),
 		url: urlAbsolue(cheminPage, site),
 		indexable: true,
 		image: urlAbsolue(IMAGE_PAR_DEFAUT, site),

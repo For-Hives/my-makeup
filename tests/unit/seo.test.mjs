@@ -1,6 +1,7 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createRequire } from 'node:module'
+import { readFileSync } from 'node:fs'
 import {
 	balisesMeta,
 	descriptionMeta,
@@ -180,6 +181,37 @@ describe('titles and descriptions (plans/02 U44-U45)', () => {
 				site: SITE,
 			}).description,
 			contenu
+		)
+	})
+	test('U44-U45 fixed pages: title of 60 and description of 155 characters at most, the home page within bounds (E9)', () => {
+		const long = seoPage({
+			titre: 'Accueil - My-Makeup le moteur de recherche pour les maquilleuses',
+			description: `${'Une phrase de description de la page. '.repeat(8)}`,
+			chemin: '/',
+			site: SITE,
+		})
+		assert.ok(long.titre.length <= 60, long.titre)
+		assert.ok(long.description.length <= 155, long.description)
+		assert.equal(
+			seoPage({ titre: 'Contact', description: 'd', chemin: '/c', site: SITE })
+				.titre,
+			'Contact | My-Makeup'
+		)
+
+		const accueil = readFileSync(
+			new URL('../../src/pages/index.js', import.meta.url),
+			'utf8'
+		)
+		const titre = /titre: '([^']*)'/.exec(accueil)?.[1]
+		const description = /description:\s*'([^']*)'/.exec(accueil)?.[1]
+		assert.ok(titre && titre.length <= 60, titre)
+		assert.ok(
+			description && description.length >= 70 && description.length <= 155,
+			description
+		)
+		assert.equal(
+			seoPage({ titre, description, chemin: '/', site: SITE }).titre,
+			titre
 		)
 	})
 })
