@@ -148,6 +148,10 @@ describe('elementary rules', () => {
 			// an address without a commune nor a postal code
 			'3 avenue X',
 			'12 rue Victor Hugo',
+			// a street glued to the commune: the commune cannot be told apart
+			'Annecy,rue des Essais',
+			'Annecy.rue des Essais',
+			'Annecy-rue des Essais',
 			null,
 			42,
 		])
@@ -165,10 +169,11 @@ describe('elementary rules', () => {
 			assert.equal(c.publiable, true, city)
 			assert.equal(c.score, 13, city)
 		}
-		assert.equal(
-			completude({ ...complet, city: '3 avenue des Essais' }).actif,
-			false
-		)
+		for (const city of ['3 avenue des Essais', 'Annecy,rue des Essais']) {
+			const c = completude({ ...complet, city })
+			assert.equal(c.actif, false, city)
+			assert.equal(c.publiable, false, city)
+		}
 	})
 
 	test('numeric price read in the text', () => {

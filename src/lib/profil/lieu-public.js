@@ -12,13 +12,17 @@
  *
  * Read as an address:
  * - a field with a type of street or a part of an address (rue, avenue,
- *   place, lieu-dit, BP, ZA…);
+ *   place, lieu-dit, BP, ZA…), even glued to a separator or a number
+ *   (« Annecy,rue X », « Annecy.rue X », « 12rue X », « Annecy-rue X »);
  * - a number at the start and a postal code further (« 12 Les Marais 74000
- *   Annecy »);
- * - two words or more, a postal code and a place (« Le Bourg 74300 Cluses »).
+ *   Annecy »), or a place after a comma (« 12 Les Marais, Annecy »);
+ * - two words or more, a postal code and a place (« Le Bourg 74300 Cluses »,
+ *   « Les Vignes, 74200 Thonon »), unless they say how far (« Toute la
+ *   Haute-Savoie, 74000 Annecy »).
  * Then:
  * - with a postal code: the commune after it, else the place before it when
- *   it holds no street (« …, Annecy 74000 »), else the postal code alone;
+ *   it holds no street nor number (« …, Annecy 74000 », « …, Annecy,
+ *   74000 »), else the postal code alone (« 12 Les Marais 74000 »);
  * - without a postal code: the last part after a comma when it holds no
  *   street (« 12 rue X, Annecy »); without a comma the commune cannot be
  *   told from the end of the street (« rue Victor Hugo »), so only a
@@ -102,7 +106,6 @@ const VOIES = new Set([
 	'bat',
 	'appartement',
 	'appt',
-	'apt',
 	'etage',
 	'escalier',
 ])
@@ -127,6 +130,7 @@ const PARTICULES = new Set([
 	'a',
 ])
 const ARTICLES = new Set(['le', 'la', 'les'])
+const SAINTS = new Set(['saint', 'sainte', 'st', 'ste'])
 
 /** Titles inside a name of street (« avenue du Général Charles-de-Gaulle ») */
 const TITRES = new Set([
@@ -178,8 +182,15 @@ const PAS_UN_LIEU = new Set([
 // a code of département (« 74 », « 2A »)
 const NUMERO_EN_TETE = /^\d{1,4}(?:\s?(?:bis|ter|quater|[a-d]))?(?=[\s,]|$)/i
 const CODES_POSTAUX = /(?<!\d)\d{5}(?!\d)/g
-// « 74 000 » written with a space
-const CODE_POSTAL_ESPACE = /(?<!\d)(\d{2}) (\d{3})(?!\d)/g
+// « 74 000 » written with a space, before a place or at the end, not before
+// a unit (« 74 100 km »)
+const CODE_POSTAL_ESPACE =
+	/(?<!\d)(\d{2}) (\d{3})(?!\d)(?!\s*(?:(?:kms?|kilom\w*|km\/h|m|min|minutes?|h|heures?|euros?|ans?|personnes?|clientes?)\b|[€%]))/giu
+// what parts a text into pieces (« Annecy, rue X »), glued or not
+// (« Annecy,rue X », « Annecy.rue X »); not the hyphen of a name
+// (Cours-la-Ville) nor the apostrophe (L'Isle-d'Abeau)
+const SEPARATEURS_SEGMENTS = /[,;:/|+()[\]]/
+const SEPARATEURS_MOTS = /[\s.]+/
 // a foreign postal code before the town (« 1000 Bruxelles », « L-1234 »)
 const CODE_ETRANGER = /^(?:[a-z]{1,2}-)?\d{4}\s+/i
 const CEDEX = /\bcedex(?:\s*\d{1,2})?\b/gi
@@ -189,7 +200,7 @@ const PAYS_APRES_SEPARATEUR = /(?:\s*[,;/–-]\s*france\.?)+\s*$/i
 // Monaco are towns too, they stay)
 const PAYS_ETRANGER_FIN =
 	/(?:[\s,;/–-]*\b(?:suisse|belgique|allemagne|italie|espagne)\b\.?)+\s*$/i
-// several places or a sentence, not one place
+// several places or a sentence, not one place; the parts of an address
 const SEPARATEURS = /[,;:/|+()[\]]|\s[-–—]\s/
 // what a « Commune (74) » already written holds
 const COMMUNE_DEPARTEMENT = /^(.+?) \((\d{2}|2A|2B|97\d)\)$/
@@ -208,10 +219,50 @@ const normaliserMot = mot =>
 
 const mots = texte => texte.split(/\s+/).filter(Boolean)
 const estVoie = mot => VOIES.has(normaliserMot(mot))
-const aUneVoie = texte => mots(texte).some(estVoie)
+
+/**
+ * The words of each piece of a text, whatever glues them: a separator
+ * (« Annecy,rue », « Annecy.rue », « Annecy;rue »), a digit (« 12rue »).
+ * @param {string} texte
+ * @returns {string[][]}
+ */
+const motsParSegment = texte =>
+	texte
+		.replace(/(\d)(?=\p{L})/gu, '$1 ')
+		.split(SEPARATEURS_SEGMENTS)
+		.map(segment => segment.split(SEPARATEURS_MOTS).filter(Boolean))
+		.filter(liste => liste.length > 0)
+
+/**
+ * Whether a word of a piece is the type of a street: it comes before the
+ * name or the number of the street, so not alone nor before a postal code
+ * (Rue, Cours, Le Passage, « La Chaussée 76590 » are communes). Alone, after
+ * the elision of « la » (« l'avenue »), or glued by a hyphen at the end of
+ * a word (« Annecy-rue des X », « 9-lieu-dit X »), unlike the name of a
+ * commune (Cours-la-Ville, Cosne-Cours-sur-Loire, Fontaine-la-Chaussée).
+ * @param {string[]} liste - the words of one piece
+ * @param {number} i
+ * @returns {boolean}
+ */
+function motDeVoie(liste, i) {
+	const suivant = liste[i + 1]
+	if (suivant === undefined || /^\d{5}$/.test(suivant)) return false
+	const voie = mot => estVoie(mot.replace(/^l['’]/i, ''))
+	const mot = liste[i]
+	if (voie(mot)) return true
+	if (!/\p{L}/u.test(suivant)) return false
+	const parties = mot.split('-')
+	const fin = parties.length - 1
+	return (
+		(fin > 0 && voie(parties[fin])) ||
+		(fin > 1 && voie(`${parties[fin - 1]}-${parties[fin]}`))
+	)
+}
+
+const aUneVoie = texte =>
+	motsParSegment(texte).some(liste => liste.some((_, i) => motDeVoie(liste, i)))
 const sansBords = texte =>
 	texte.replace(/^[\s,;:./–-]+|[\s,;:/–-]+$/g, '').replace(/\s+/g, ' ')
-const sansNumero = texte => sansBords(texte.trim().replace(NUMERO_EN_TETE, ''))
 const sansPays = texte =>
 	texte.replace(PAYS_ETRANGER_FIN, '').replace(PAYS_FIN, '')
 
@@ -265,6 +316,10 @@ function nomDeLieu(texte) {
 	return nomPropre(t)
 }
 
+/** A word that says how far, not where (« et alentours », « toute ») */
+const aUnMotDeDistance = liste =>
+	liste.some(mot => PAS_UN_LIEU.has(normaliserMot(mot)))
+
 /**
  * One place written alone (« Annecy », « La Roche sur Foron »,
  * « Haute-Savoie »), not a list, a sentence nor a distance (« et
@@ -279,7 +334,27 @@ function estUnLieu(texte) {
 	if (liste.length > 4) return false
 	const premier = normaliserMot(liste[0])
 	if (PARTICULES.has(premier) && !ARTICLES.has(premier)) return false
-	return !liste.some(mot => estVoie(mot) || PAS_UN_LIEU.has(normaliserMot(mot)))
+	return !aUneVoie(texte) && !aUnMotDeDistance(liste)
+}
+
+/**
+ * « 12 Les Marais, Annecy », « 12 bis, Les Marais, Annecy »: a number, words,
+ * then a place after a comma; not « 74, Haute-Savoie » (a département and
+ * its name), « 74 et alentours, Annecy » nor « 3 villes : Annecy, Thonon ».
+ * @param {string} t - without CEDEX nor country
+ * @returns {boolean}
+ */
+function numeroPuisLieu(t) {
+	const numero = NUMERO_EN_TETE.exec(t)
+	if (!numero || /[:/|+()[\]]/.test(t) || aUnMotDeDistance(mots(t)))
+		return false
+	const parties = t.slice(numero[0].length).split(/[,;]/).map(sansBords)
+	const remplies = parties.filter(Boolean)
+	return (
+		parties.length >= 2 &&
+		(parties[0] !== '' || remplies.length >= 2) &&
+		estUnLieu(remplies.at(-1) ?? '')
+	)
 }
 
 /**
@@ -291,15 +366,18 @@ function estAdresse(brut) {
 	if (aUneVoie(brut)) return true
 	const t = sansPays(brut.replace(CEDEX, ' '))
 	const cp = dernierCodePostal(t)
-	if (!cp) return false
+	if (!cp) return numeroPuisLieu(t)
 	const avant = t.slice(0, cp.index)
 	// « 12 Les Marais 74000 Annecy », not « 3 villes : Annecy 74000, … »
 	if (NUMERO_EN_TETE.test(t)) return !/[:;/|+()[\]]/.test(avant)
-	// « Le Bourg 74300 Cluses », not « Annecy 74000 » nor « Thonon les Bains
-	// 74200 »
+	// « Le Bourg 74300 Cluses », « Les Vignes, 74200 Thonon », not « Annecy
+	// 74000 », « Thonon les Bains 74200 » nor « Toute la Haute-Savoie, 74000
+	// Annecy »
 	const apres = t.slice(cp.index + 5).split(/[,;/]/)[0]
+	const lieuAvant = mots(sansBords(avant).split(/[,;]/).at(-1) ?? '')
 	return (
-		mots(avant.split(/[,;]/).at(-1) ?? '').length >= 2 &&
+		lieuAvant.length >= 2 &&
+		!aUnMotDeDistance(lieuAvant) &&
 		estUnLieu(sansBords(apres))
 	)
 }
@@ -307,24 +385,26 @@ function estAdresse(brut) {
 /**
  * The commune at the end of a street without a comma nor a postal code
  * (« 3 place Z Thonon-les-Bains »): only a compound name with a small word
- * inside (Thonon-les-Bains, Annecy-le-Vieux), or after Le, La or Les (Le
- * Grand-Bornand), so that the end of a street (rue Victor Hugo, rue
- * Joliot-Curie, avenue du Général Charles-de-Gaulle) is never taken for a
- * commune.
+ * inside (Thonon-les-Bains, Annecy-le-Vieux, Saint-Julien-en-Genevois), or
+ * after Le, La or Les (Le Grand-Bornand), so that the end of a street (rue
+ * Victor Hugo, rue Joliot-Curie, avenue du Général Charles-de-Gaulle, avenue
+ * des Essais d'Annecy-le-Vieux) is never taken for a commune.
  * @param {string} texte
  * @returns {string}
  */
 function communeApresVoie(texte) {
-	const liste = mots(texte)
+	const liste = motsParSegment(texte).flat()
 	let derniereVoie = -1
-	liste.forEach((mot, i) => {
-		if (estVoie(mot)) derniereVoie = i
+	liste.forEach((_, i) => {
+		if (motDeVoie(liste, i)) derniereVoie = i
 	})
 	if (derniereVoie < 0) return ''
 	const reste = liste.slice(derniereVoie + 1)
 	if (reste.length < 2) return ''
 	const dernier = reste.at(-1)
 	if (/\d/.test(dernier) || !dernier.includes('-')) return ''
+	// « avenue des Îles d'Annecy-le-Vieux »: the end of the street
+	if (/^d['’]/i.test(dernier)) return ''
 	const avant = normaliserMot(reste.at(-2))
 	if (TITRES.has(avant)) return ''
 	if (
@@ -334,8 +414,14 @@ function communeApresVoie(texte) {
 	)
 		return nomDeLieu(`${reste.at(-2)} ${dernier}`)
 	if (PARTICULES.has(avant)) return ''
+	// the small word second (Thonon-les-Bains), or third after Saint
+	// (Saint-Julien-en-Genevois): « rue X Hugo-Thonon-les-Bains » is no
+	// commune
 	const parties = dernier.split('-').map(normaliserMot)
-	const compose = parties.slice(1, -1).some(p => PARTICULES.has(p))
+	const petit = parties.findIndex(
+		(p, k) => k > 0 && k < parties.length - 1 && PARTICULES.has(p)
+	)
+	const compose = petit === 1 || (petit === 2 && SAINTS.has(parties[0]))
 	return compose ? nomDeLieu(dernier) : ''
 }
 
@@ -348,10 +434,18 @@ function communeDAdresse(adresse) {
 	const t = sansPays(adresse.replace(CEDEX, ' '))
 	const cp = dernierCodePostal(t)
 	if (cp) {
-		// after the postal code, up to a separator, a digit or a street
+		// after the postal code, in the first piece that is not empty
+		// (« …, 74000, Annecy »), up to a digit or a street, glued or not
+		// (« 74000 Annecy.rue X »)
 		const apres = []
-		for (const mot of mots(t.slice(cp.index + 5).split(/[,;/]/)[0])) {
-			if (/\d/.test(mot) || estVoie(mot)) break
+		const [liste = []] = motsParSegment(
+			t
+				.slice(cp.index + 5)
+				.split(/[,;/]/)
+				.find(morceau => morceau.trim()) ?? ''
+		)
+		for (const [i, mot] of liste.entries()) {
+			if (/\d/.test(mot) || motDeVoie(liste, i)) break
 			apres.push(mot)
 		}
 		let commune = nomDeLieu(apres.join(' '))
@@ -366,13 +460,22 @@ function communeDAdresse(adresse) {
 		)
 			commune = ''
 		if (!commune) {
-			const avant = t.slice(0, cp.index).split(/[,;]/).at(-1) ?? ''
-			commune = nomDeLieu(sansNumero(avant)) || communeApresVoie(avant)
+			const morceaux = t.slice(0, cp.index).split(/[,;]/)
+			const avant = morceaux.at(-1) ?? ''
+			// « 12 rue X, Annecy, 74000 »: the piece before when the last one is
+			// empty; « 12 Les Marais 74000 »: a number then words are a street
+			const morceau = avant.trim()
+				? avant
+				: (morceaux.slice(0, -1).findLast(m => m.trim()) ?? '')
+			commune =
+				(/\d/.test(morceau) ? '' : nomDeLieu(morceau)) ||
+				communeApresVoie(morceau)
 		}
 		return { commune, codePostal: cp.code }
 	}
+	// « 12 rue X, Annecy », « 12 rue X / Annecy », « 12 rue X (Annecy) »
 	const parties = t
-		.split(/[,;]/)
+		.split(SEPARATEURS)
 		.map(p => p.trim())
 		.filter(Boolean)
 	// « 1000 Bruxelles »: the town without its foreign postal code
