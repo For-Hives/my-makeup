@@ -91,36 +91,6 @@ function Signin() {
 												<button
 													data-cy="google-signin"
 													onClick={() => {
-														signIn('facebook', {
-															callbackUrl: '/auth/profil',
-														})
-													}}
-													className="flex h-[40px] w-full flex-nowrap items-center justify-center gap-[12px] rounded-md bg-white px-3 text-gray-500 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:outline-offset-0"
-												>
-													<span className="sr-only">
-														Se connecter via Facebook
-													</span>
-													<Image
-														src={'/assets/signin-assets/facebook_logo.svg'}
-														alt={'google logo'}
-														width={18}
-														height={18}
-														className={'h-[18px] w-[18px]'}
-													/>
-													<p
-														className={
-															'flex flex-nowrap font-[roboto] text-[14px] font-medium text-black/[54%]'
-														}
-													>
-														Se connecter avec Facebook
-													</p>
-												</button>
-											</div>
-
-											<div className={'flex w-full justify-center'}>
-												<button
-													data-cy="google-signin"
-													onClick={() => {
 														signIn('google', {
 															callbackUrl: '/auth/profil',
 														})
