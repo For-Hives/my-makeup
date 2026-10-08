@@ -39,7 +39,7 @@ const navigation = [
 				name: 'Explorer les profils',
 				href: '/particulier/explorer-les-profils',
 				icon: 'person_search',
-				description: 'Cherchez par critères et par villes !',
+				description: 'Cherchez par mot-clé et par ville !',
 			},
 		],
 	},
@@ -61,7 +61,7 @@ const navigation = [
 				href: '/maquilleuse/partenariats',
 				icon: 'group',
 				description:
-					'Nous sommes là pour vous accompagner dans votre développement !',
+					'Une page gratuite pour présenter votre travail, et une équipe à votre écoute.',
 			}, // {
 			// 	name: 'Nos partenaires',
 			// 	href: '/maquilleuse/partenaires',
