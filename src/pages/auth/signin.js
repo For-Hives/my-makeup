@@ -50,12 +50,8 @@ function Signin() {
 					content="Connexion sur my-makeup.fr la plateforme qui va révolutionner votre
 	            recherche de maquilleuses professionnelles, ou votre recherche de client !"
 				/>
-				<link rel="preconnect" href="https://fonts.googleapis.com" />
-				<link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin />
-				<link
-					href="https://fonts.googleapis.com/css2?family=Roboto:wght@500&display=swap"
-					rel="stylesheet"
-				/>
+				{/* No web font here: the Google button label uses Roboto when the
+				    device has it, so no visitor IP is sent to Google Fonts. */}
 				{/*	seo tag canonical link */}
 				<link rel="canonical" href="https://my-makeup.fr/auth/signin" />
 			</Head>
@@ -109,7 +105,7 @@ function Signin() {
 													/>
 													<p
 														className={
-															'flex flex-nowrap font-[roboto] text-[14px] font-medium text-black/[54%]'
+															'flex flex-nowrap font-[family-name:Roboto,ui-sans-serif,system-ui,sans-serif] text-[14px] font-medium text-black/[54%]'
 														}
 													>
 														Se connecter avec Google
