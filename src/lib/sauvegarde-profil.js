@@ -1,8 +1,8 @@
 /**
- * Honest saves of the artist's space (UI-01, UI-05, plans/01 §3.2): the
- * sections a save belongs to (`profile_save` event), the name rule of the
- * forms and the French message shown when the API refuses or cannot be
- * reached. The page only shows a value once the API has stored it.
+ * Honest saves of the artist's space (UI-01, UI-05, plans/01 §3.2): the save
+ * itself, the sections a save belongs to (`profile_save` event), the name
+ * rule of the forms and the French message shown when the API refuses or
+ * cannot be reached. The page only shows a value once the API has stored it.
  */
 
 /** `section` of the `profile_save` event, one per modal plus the onboarding */
@@ -90,6 +90,57 @@ export function messageEchecSauvegarde(status, corps) {
 	}
 	if (/does not exist/i.test(texte)) return MESSAGES['profil-absent']
 	return MESSAGES.refus
+}
+
+async function lireJson(response) {
+	try {
+		return await response.json()
+	} catch {
+		return null
+	}
+}
+
+/**
+ * A save of the artist's space (PATCH /api/me-makeup): patchMeMakeup
+ * without its toasts, its HTTP and its counter passed in. Counts
+ * `profile_save` once with the section and the outcome only, never what
+ * was typed.
+ * @param {object} data - fields to save
+ * @param {string} section - one of SECTIONS_PROFIL
+ * @param {object} ports
+ * @param {(corps: string) => Promise<Response|null>} ports.envoyer - sends
+ *   the PATCH with this JSON body: null when the session expired
+ *   (authenticatedFetch), throws when the API cannot be reached
+ * @param {(nom: string, props: object) => unknown} ports.compter - track()
+ * @returns {Promise<{ok: true, data: object|null} | {ok: false, error: string, sessionExpiree?: true}>}
+ *   `data`: the profile the API stored; `error`: the French message to show
+ */
+export async function sauvegarderProfil(data, section, { envoyer, compter }) {
+	let response
+	try {
+		response = await envoyer(JSON.stringify({ ...data }))
+	} catch {
+		response = undefined // network error: status 0
+	}
+
+	const ok = !!response?.ok
+	compter('profile_save', { section, ok })
+	if (ok) return { ok: true, data: await lireJson(response) }
+
+	// null: the session expired, the visitor is sent to the sign-in page
+	if (response === null)
+		return {
+			ok: false,
+			error: messageEchecSauvegarde(401),
+			sessionExpiree: true,
+		}
+	return {
+		ok: false,
+		error: messageEchecSauvegarde(
+			response?.status ?? 0,
+			response ? await lireJson(response) : null
+		),
+	}
 }
 
 /**
