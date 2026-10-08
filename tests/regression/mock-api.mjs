@@ -2,8 +2,8 @@
 // users-permissions answers NextAuth needs, /api/me-makeup, /api/upload and
 // the forgotten password routes, with the rules of the real API that the
 // front must live with:
-// - first_name and last_name: 3 characters at least (makeup-artiste
-//   schema.json of the API, today), 70 at most;
+// - first_name and last_name: 2 characters at least (makeup-artiste
+//   schema.json of the API, UI-01), 70 at most;
 // - PATCH keeps the editable fields only, main_picture and image_gallery
 //   are file ids; the components sent are created again, each with a new
 //   id, nested options included (the front sends no id, and Strapi drops
@@ -41,7 +41,7 @@ export const COMPTE_TEST = {
 	password: 'Ancien-mdp-1',
 }
 
-const NOM_MIN_API = 3
+const NOM_MIN_API = 2
 const TAILLE_MAX_UPLOAD = 10 * 1024 * 1024
 const CHAMPS_MODIFIABLES = [
 	'first_name',

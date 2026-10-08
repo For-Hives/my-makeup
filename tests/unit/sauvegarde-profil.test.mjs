@@ -9,8 +9,10 @@ import {
 	NOM_MIN,
 	offresAEnvoyer,
 	profilCree,
+	sauvegarderProfil,
 	SECTIONS_PROFIL,
 } from '../../src/lib/sauvegarde-profil.js'
+import { eventData } from '../../src/lib/analytics.js'
 
 // what the me-makeup controller of the API answers on a refused PATCH
 const refusStrapi = moreDetails => ({
@@ -51,9 +53,16 @@ describe('messageEchecSauvegarde', () => {
 		assert.equal(
 			messageEchecSauvegarde(
 				400,
-				refusStrapi('first_name must be at least 3 characters')
+				refusStrapi('first_name must be at least 2 characters')
 			),
-			'Le prénom doit contenir au moins 3 caractères.'
+			'Le prénom doit contenir au moins 2 caractères.'
+		)
+		assert.equal(
+			messageEchecSauvegarde(
+				400,
+				refusStrapi('last_name must be at least 2 characters')
+			),
+			'Le nom doit contenir au moins 2 caractères.'
 		)
 		assert.equal(
 			messageEchecSauvegarde(
@@ -89,6 +98,116 @@ describe('messageEchecSauvegarde', () => {
 		)
 		for (const corps of [null, 'texte', [], { error: 'x' }, { error: null }])
 			assert.equal(typeof messageEchecSauvegarde(400, corps), 'string')
+	})
+})
+
+describe('sauvegarderProfil (patchMeMakeup)', () => {
+	// the ports of patchMeMakeup: the PATCH answers `reponse` (a function
+	// for a network error), the counter keeps its events
+	const ports = reponse => {
+		const envois = []
+		const evenements = []
+		return {
+			envois,
+			evenements,
+			envoyer: async corps => {
+				envois.push(corps)
+				return typeof reponse === 'function' ? reponse() : reponse
+			},
+			compter: (nom, props) => evenements.push([nom, props]),
+		}
+	}
+	const json = (status, corps) =>
+		new Response(JSON.stringify(corps), {
+			status,
+			headers: { 'content-type': 'application/json' },
+		})
+	const nom = { first_name: 'Al', last_name: 'Bo' }
+
+	test('saved: ok with the stored profile, the fields sent as JSON, one event', async () => {
+		const p = ports(json(200, { id: 11, ...nom }))
+		const resultat = await sauvegarderProfil(nom, 'identite', p)
+
+		assert.deepEqual(resultat, { ok: true, data: { id: 11, ...nom } })
+		assert.deepEqual(p.envois.map(JSON.parse), [nom])
+		assert.deepEqual(p.evenements, [
+			['profile_save', { section: 'identite', ok: true }],
+		])
+	})
+
+	test('the event is in the catalogue and carries nothing typed', async () => {
+		for (const [reponse, ok] of [
+			[json(200, nom), true],
+			[json(500, {}), false],
+		]) {
+			const p = ports(reponse)
+			await sauvegarderProfil(
+				{ first_name: 'Alice', network: { email: 'alice@test.local' } },
+				'reseaux',
+				p
+			)
+			const [[evenement, props]] = p.evenements
+			assert.deepEqual(eventData(evenement, props), { section: 'reseaux', ok })
+			assert.doesNotMatch(JSON.stringify(props), /Alice|@/)
+		}
+	})
+
+	test('500: not ok, the outage message, counted as a failure', async () => {
+		const p = ports(json(500, refusStrapi('forced failure')))
+		const resultat = await sauvegarderProfil(nom, 'description', p)
+
+		assert.deepEqual(resultat, {
+			ok: false,
+			error:
+				"Le service est momentanément indisponible : tes modifications n'ont pas été enregistrées. Réessaie dans quelques minutes.",
+		})
+		assert.deepEqual(p.evenements, [
+			['profile_save', { section: 'description', ok: false }],
+		])
+	})
+
+	test('400 of the API: its rule in French', async () => {
+		const p = ports(
+			json(400, refusStrapi('first_name must be at least 2 characters'))
+		)
+		const resultat = await sauvegarderProfil({ first_name: 'A' }, 'identite', p)
+		assert.deepEqual(resultat, {
+			ok: false,
+			error: 'Le prénom doit contenir au moins 2 caractères.',
+		})
+	})
+
+	test('API out of reach: not ok, the connection message, counted', async () => {
+		const p = ports(() => {
+			throw new TypeError('Failed to fetch')
+		})
+		const resultat = await sauvegarderProfil(nom, 'localisation', p)
+
+		assert.equal(resultat.ok, false)
+		assert.match(resultat.error, /Connexion impossible/)
+		assert.deepEqual(p.evenements, [
+			['profile_save', { section: 'localisation', ok: false }],
+		])
+	})
+
+	test('expired session (null): not ok, flagged, counted', async () => {
+		const p = ports(null)
+		const resultat = await sauvegarderProfil(nom, 'offres', p)
+
+		assert.equal(resultat.ok, false)
+		assert.equal(resultat.sessionExpiree, true)
+		assert.match(resultat.error, /session a expiré/)
+		assert.deepEqual(p.evenements, [
+			['profile_save', { section: 'offres', ok: false }],
+		])
+	})
+
+	test('saved with an unreadable answer: still ok, no data', async () => {
+		const p = ports(new Response('pas du JSON', { status: 200 }))
+		assert.deepEqual(await sauvegarderProfil(nom, 'portfolio', p), {
+			ok: true,
+			data: null,
+		})
 	})
 })
 
