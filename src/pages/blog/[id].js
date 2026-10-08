@@ -9,6 +9,7 @@ import Link from 'next/link'
 import { remark } from 'remark'
 import html from 'remark-html'
 import { Layout } from '@/components/Global/Layout'
+import { fetchPublicApi } from '@/services/publicApi'
 
 function ArrowLeftIcon(props) {
 	return (
@@ -123,23 +124,17 @@ export async function getStaticPaths() {
 }
 
 export async function getStaticProps({ params }) {
-	let articleData = await fetch(
-		`${process.env.NEXT_PUBLIC_API_URL}/api/articles?filters[slug][$eq]=${params.id}`,
-		{
-			method: 'GET',
-			headers: {
-				// 	token
-				'Content-Type': 'application/json',
-				Accept: 'application/json',
-			},
-		}
-	).then(res => res.json())
+	// throws if the API is unreachable or answers an error (see fetchPublicApi)
+	let articleData = await fetchPublicApi(
+		`/api/articles?filters[slug][$eq]=${encodeURIComponent(params.id)}`
+	)
 
 	articleData = articleData?.data?.[0]
 
 	if (!articleData) {
 		return {
-			props: { hasError: true },
+			notFound: true,
+			revalidate: 10,
 		}
 	}
 
