@@ -1,100 +1,67 @@
-import React, { useEffect } from 'react'
+import React from 'react'
+import { lignes, periode, texte } from '@/lib/profil/vue-publique'
 
-function ViewExperiencesProfil(props) {
-	const [user, setUser] = React.useState(null)
-
-	useEffect(() => {
-		if (props.user) {
-			setUser(props.user)
-		}
-	}, [props.user])
+// read from the props only, so the public profile is in the server HTML
+function ViewExperiencesProfil({ user }) {
+	const experiences = Array.isArray(user?.experiences)
+		? user.experiences.filter(Boolean)
+		: []
 
 	return (
 		<div className={'flex w-full flex-col gap-4'}>
 			<h2 className={'text-xl font-bold text-gray-700'}>
 				Expériences professionnelles
 			</h2>
-			<div className={'flex flex-wrap gap-4'}>
-				{/* map on experiences */}
-				{
-					// company
-					// job_name
-					// city
-					// date_start
-					// date_end
-					// description
-				}
-				{user?.experiences && (
-					<div className={'flex flex-col gap-4'}>
-						{user?.experiences?.map((experience, index) => {
-							return (
-								<div key={index} className={'flex w-full text-indigo-800'}>
-									<span className="material-icons-round">apartment</span>
-									<div className={'ml-2 flex w-full flex-col gap-2'}>
-										<div className={'flex w-full flex-col'}>
-											<p
-												className={'font-semibold text-gray-700'}
-												data-cy={'experience-company'}
-											>
-												{experience?.company}
-											</p>
-											<div className={'flex justify-between gap-2'}>
-												<p
-													className={'text-sm italic text-gray-600'}
-													data-cy={'experience-job-name'}
-												>
-													{experience?.job_name}
-												</p>
-												<p
-													className={'text-sm italic text-gray-600'}
-													data-cy={'experience-date'}
-												>
-													{/* format date to month year ( like july 1998 )  */}
-													{/*{experience.date_start} - {experience.date_end}*/}
-													{new Date(experience?.date_start).toLocaleString(
-														'fr-FR',
-														{
-															year: 'numeric',
-															month: 'long',
-														}
-													)}
-													{' - '}
-													{experience?.date_end === null ||
-													experience?.date_end === ''
-														? "Aujourd'hui"
-														: new Date(experience?.date_end).toLocaleString(
-																'fr-FR',
-																{
-																	year: 'numeric',
-																	month: 'long',
-																}
-														  )}
-												</p>
-											</div>
-										</div>
-										<div>
-											<p
-												className={'text-sm italic text-gray-600'}
-												data-cy={'experience-city'}
-											>
-												à {experience?.city}
-											</p>
-										</div>
-										<div>
-											<p
-												className={'text-sm italic text-gray-500'}
-												data-cy={'experience-description'}
-											>
-												{experience?.description}
-											</p>
-										</div>
+			{experiences.length > 0 && (
+				<div className={'flex flex-col gap-4'}>
+					{experiences.map((experience, index) => (
+						<div key={index} className={'flex w-full text-indigo-800'}>
+							<span className="material-icons-round" aria-hidden="true">
+								apartment
+							</span>
+							<div className={'ml-2 flex w-full flex-col gap-2'}>
+								<div className={'flex w-full flex-col'}>
+									<p
+										className={'font-semibold text-gray-700'}
+										data-cy={'experience-company'}
+									>
+										{texte(experience.company)}
+									</p>
+									<div className={'flex justify-between gap-2'}>
+										<p
+											className={'text-sm italic text-gray-600'}
+											data-cy={'experience-job-name'}
+										>
+											{texte(experience.job_name)}
+										</p>
+										<p
+											className={'text-sm italic text-gray-600'}
+											data-cy={'experience-date'}
+										>
+											{periode(experience)}
+										</p>
 									</div>
 								</div>
-							)
-						})}
-					</div>
-				)}
-			</div>
+								{texte(experience.city) && (
+									<p
+										className={'text-sm italic text-gray-600'}
+										data-cy={'experience-city'}
+									>
+										à {texte(experience.city)}
+									</p>
+								)}
+								<div data-cy={'experience-description'}>
+									{lignes(experience.description).map((ligne, i) => (
+										<p key={i} className={'text-sm italic text-gray-500'}>
+											{ligne}
+										</p>
+									))}
+								</div>
+							</div>
+						</div>
+					))}
+				</div>
+			)}
 		</div>
 	)
 }

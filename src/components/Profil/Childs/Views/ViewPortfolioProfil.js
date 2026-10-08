@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React from 'react'
 import { Swiper, SwiperSlide } from 'swiper/react'
 // import required modules
 import { Pagination } from 'swiper/modules'
@@ -6,32 +6,18 @@ import { Pagination } from 'swiper/modules'
 import 'swiper/css'
 import 'swiper/css/pagination'
 import Image from 'next/image'
+import { altRealisation, galerie, nomAffiche } from '@/lib/profil/vue-publique'
 
-function ViewPortfolioProfil(props) {
+// read from the props only, so the pictures are in the server HTML
+function ViewPortfolioProfil({ user }) {
 	const [mySwiper, setMySwiper] = React.useState(null)
-
-	const [user, setUser] = React.useState(null)
-	const [imageGallery, setImageGallery] = React.useState([])
-
-	useEffect(() => {
-		if (props.user) {
-			setUser(props.user)
-			// check if user.image_gallery.data property exists
-			if (user?.image_gallery?.data === undefined) {
-				setImageGallery(user?.image_gallery)
-			} else {
-				// array to object conversion, {id: x, attributes: {...}} to {...} for each element
-				setImageGallery(
-					user?.image_gallery?.data?.map(image => image.attributes)
-				)
-			}
-		}
-	}, [props.user, user?.image_gallery])
+	const photos = galerie(user)
+	const nom = nomAffiche(user)
 
 	return (
 		<div className={'flex w-full flex-col gap-4'}>
 			<h2 className={'text-xl font-bold text-gray-700'}>Portfolio</h2>
-			<>
+			{photos.length > 0 && (
 				<Swiper
 					slidesPerView={'auto'}
 					spaceBetween={32}
@@ -40,49 +26,43 @@ function ViewPortfolioProfil(props) {
 					}}
 					modules={[Pagination]}
 					className="h-[500px] w-full"
-					loop={true}
+					loop={photos.length > 2}
 					onInit={ev => {
 						setMySwiper(ev)
 					}}
 				>
-					{
-						// 	map on user?.image_gallery and return a SwiperSlide with the image
-					}
-					{imageGallery &&
-						imageGallery?.length !== 0 &&
-						imageGallery.map((image, index) => {
-							return (
-								<SwiperSlide
-									key={index}
-									style={{
-										aspectRatio: `${image?.width}/${image?.height}`,
-										height: '100%',
-									}}
-									className={'!h-[500px] !w-auto'}
-								>
-									<Image
-										src={image?.url}
-										alt={image?.alternativeText ?? image?.name}
-										fill={true}
-										sizes="(min-width: 480px ) 50vw, (min-width: 728px) 33vw, (min-width: 976px) 25vw, 100vw"
-										className={'rounded object-cover'}
-									/>
-								</SwiperSlide>
-							)
-						})}
+					{photos.map((image, index) => (
+						<SwiperSlide
+							key={index}
+							style={{
+								...(image.width && image.height
+									? { aspectRatio: `${image.width}/${image.height}` }
+									: {}),
+								height: '100%',
+							}}
+							className={'!h-[500px] !w-auto'}
+						>
+							<Image
+								src={image.url}
+								alt={altRealisation(nom, index + 1, photos.length)}
+								fill={true}
+								sizes="(min-width: 480px ) 50vw, (min-width: 728px) 33vw, (min-width: 976px) 25vw, 100vw"
+								className={'rounded object-cover'}
+							/>
+						</SwiperSlide>
+					))}
 				</Swiper>
-			</>
-			{/* btn to go on next slide */}
-			<div className={'flex w-full items-center justify-between'}>
-				<div>
+			)}
+			{photos.length > 1 && (
+				<div className={'flex w-full items-center justify-between'}>
 					<button
-						className={'flex items-center justify-center gap-2'}
-						onClick={() => {
-							mySwiper.slidePrev()
-						}}
+						type="button"
+						aria-label="Photo précédente"
+						className={'flex min-h-[44px] items-center justify-center gap-2'}
+						onClick={() => mySwiper?.slidePrev()}
 					>
 						<Image
-							alt={'next'}
+							alt={''}
 							src={'/assets/down-arrow.svg'}
 							className={'rotate-90'}
 							width={20}
@@ -90,17 +70,15 @@ function ViewPortfolioProfil(props) {
 						></Image>
 						<span className={'font-semibold text-indigo-950'}>Précédent</span>
 					</button>
-				</div>
-				<div>
 					<button
-						className={'flex items-center justify-center gap-2'}
-						onClick={() => {
-							mySwiper.slideNext()
-						}}
+						type="button"
+						aria-label="Photo suivante"
+						className={'flex min-h-[44px] items-center justify-center gap-2'}
+						onClick={() => mySwiper?.slideNext()}
 					>
 						<span className={'font-semibold text-indigo-950'}>Suivant</span>
 						<Image
-							alt={'next'}
+							alt={''}
 							src={'/assets/down-arrow.svg'}
 							className={'-rotate-90'}
 							width={20}
@@ -108,7 +86,7 @@ function ViewPortfolioProfil(props) {
 						></Image>
 					</button>
 				</div>
-			</div>
+			)}
 		</div>
 	)
 }

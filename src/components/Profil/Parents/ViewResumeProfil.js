@@ -1,30 +1,30 @@
-import React, { useEffect } from 'react'
+import React from 'react'
 import Image from 'next/image'
 import { BadgeDispo } from '@/components/Profil/Atoms/BadgeDispo'
 import { BadgeIndispo } from '@/components/Profil/Atoms/BadgeIndispo'
 import { DevisButton } from '@/components/Profil/Atoms/DevisButton'
+import {
+	attributs,
+	nomAffiche,
+	nomComplet,
+	photoPrincipale,
+	texte,
+	zoneProfil,
+} from '@/lib/profil/vue-publique'
 
+/**
+ * Header of a public profile, read from the props only (UI-06): the server
+ * HTML holds the name in the only h1 of the page, the speciality and the
+ * zone; nothing is shown for an empty field.
+ */
 function ViewResumeProfil(props) {
-	const [user, setUser] = React.useState(null)
-	const [availability, setAvailability] = React.useState(true)
-	const [mainPicture, setMainPicture] = React.useState(
-		user?.main_picture?.url ?? null
-	)
-
-	useEffect(() => {
-		if (props.user) {
-			setUser(props.user?.attributes)
-			if (user?.main_picture && user?.main_picture?.data === undefined) {
-				setMainPicture(user?.main_picture?.url)
-			} else {
-				setMainPicture(user?.main_picture?.data?.attributes?.url)
-			}
-		}
-	}, [props.user, user?.main_picture])
-
-	useEffect(() => {
-		setAvailability(!!user?.available)
-	}, [user?.available])
+	const user = attributs(props.user)
+	const nom = nomAffiche(user)
+	const photo = photoPrincipale(user)
+	const specialite = texte(user.speciality)
+	const nomArtiste = texte(user.company_artist_name)
+	const zone = zoneProfil(user)
+	const seDeplace = zone.includes(' km autour')
 
 	return (
 		<div className={'relative bg-white px-4 pb-24 shadow-xl md:px-8 2xl:px-0'}>
@@ -37,8 +37,8 @@ function ViewResumeProfil(props) {
 					>
 						<div className={'relative h-[200px] w-[200px]'}>
 							<Image
-								src={mainPicture ?? '/assets/pp_makeup.webp'}
-								alt={'ppmakeup'}
+								src={photo?.url ?? '/assets/pp_makeup.webp'}
+								alt={photo ? `Photo de ${nom}` : ''}
 								priority={true}
 								fill={true}
 								sizes={
@@ -59,56 +59,44 @@ function ViewResumeProfil(props) {
 							}
 						>
 							<div className={'flex w-full cursor-default flex-col gap-2'}>
-								<h3
+								<h1
 									className={'text-3xl font-bold tracking-tight text-gray-800'}
 									data-cy="resume-name"
 								>
-									{user?.first_name} {user?.last_name}
-								</h3>
-								<h2
-									className={
-										'text-xl font-semibold tracking-tight text-gray-700'
-									}
-									data-cy="resume-speciality"
-								>
-									{user?.speciality}
-								</h2>
-								<h3
-									className={'text-lg tracking-tight text-gray-800'}
-									data-cy="resume-company-artist-name"
-								>
-									{user?.company_artist_name}
-								</h3>
+									{nom}
+								</h1>
+								{specialite && (
+									<p
+										className={
+											'text-xl font-semibold tracking-tight text-gray-700'
+										}
+										data-cy="resume-speciality"
+									>
+										{specialite}
+									</p>
+								)}
+								{nomArtiste && nomArtiste !== nom && nomComplet(user) && (
+									<p
+										className={'text-lg tracking-tight text-gray-800'}
+										data-cy="resume-company-artist-name"
+									>
+										{nomArtiste}
+									</p>
+								)}
 							</div>
-							{user?.action_radius !== 0 ? (
+							{zone && (
 								<div className={'mt-2 xl:m-0'}>
-									<div className={'flex items-center'}>
-										<span className="material-icons-round text-indigo-900">
-											directions_run
+									<div className={'flex items-center gap-1'}>
+										<span
+											className="material-icons-round text-indigo-900"
+											aria-hidden="true"
+										>
+											{seDeplace ? 'directions_run' : 'location_on'}
 										</span>
-										<span data-cy={'resume-city-action-radius'}>
-											{`peut se déplacer à ${user?.city} dans un rayon de ${user?.action_radius}km`}
-										</span>
-									</div>
-								</div>
-							) : (
-								<div className={'mt-2 xl:m-0'}>
-									<div className={'flex items-center'}>
-										<span className="material-icons-round text-indigo-900">
-											location_on
-										</span>
-										<span data-cy={'resume-city-action-radius'}>
-											{`à ${user?.city}`}
-										</span>
+										<span data-cy={'resume-city-action-radius'}>{zone}</span>
 									</div>
 								</div>
 							)}
-							<div></div>
-							{/*<div className={'flex flex-row items-center gap-4'}>*/}
-							{/*	<Stars starsToDisplay={user?.score} />{' '}*/}
-							{/*	/!* todo connect the score to the number of reviews *!/*/}
-							{/*	<span className={'text-sm italic'}>( {user?.score} avis )</span>*/}
-							{/*</div>*/}
 						</div>
 					</div>
 					<div className={'col-span-12 flex items-center md:col-span-3'}>
@@ -118,20 +106,12 @@ function ViewResumeProfil(props) {
 							}
 						>
 							<div className={'flex cursor-default items-center gap-5'}>
-								{availability ? (
-									<>
-										<BadgeDispo />
-									</>
-								) : (
-									<>
-										<BadgeIndispo />
-									</>
-								)}
+								{user.available === false ? <BadgeIndispo /> : <BadgeDispo />}
 							</div>
 							{/* from the page props, so the button is in the server HTML */}
 							<DevisButton
 								formUrl={props.devisUrl ?? null}
-								slug={props.user?.attributes?.username}
+								slug={props.slug ?? user.username}
 								pid={props.user?.id}
 							/>
 						</div>
