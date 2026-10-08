@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { MagnifyingGlassIcon } from '@heroicons/react/20/solid'
 import { MapPinIcon } from '@heroicons/react/24/outline'
 import { useRouter } from 'next/router'
+import { urlPageRecherche } from '@/lib/recherche'
 
 function SearchBloc() {
 	const [searchTerm, setSearchTerm] = useState('')
@@ -9,19 +10,11 @@ function SearchBloc() {
 
 	const router = useRouter()
 
+	// a city alone is enough (UI-07); the search page reads the URL
 	function handleSubmit(e) {
 		e.preventDefault()
-
-		if (searchTerm === '') {
-			return
-		}
-		if (city !== '') {
-			router.push(
-				`/search?search=${encodeURI(searchTerm)}&city=${encodeURI(city)}`
-			)
-		} else {
-			router.push(`/search?search=${encodeURI(searchTerm)}`)
-		}
+		if (searchTerm.trim() === '' && city.trim() === '') return
+		router.push(urlPageRecherche({ search: searchTerm, city }))
 	}
 
 	return (
@@ -32,6 +25,7 @@ function SearchBloc() {
 		>
 			<form
 				onSubmit={handleSubmit}
+				role="search"
 				className={
 					'flex w-full flex-col items-center justify-between gap-6 sm:gap-4 md:flex-row md:flex-wrap lg:gap-6'
 				}
@@ -42,11 +36,16 @@ function SearchBloc() {
 					}
 				>
 					<div className={'relative w-full md:w-full lg:w-auto'}>
+						<label htmlFor="bloc-prestation" className="sr-only">
+							Prestation recherchée
+						</label>
 						<MagnifyingGlassIcon
 							className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 transform text-indigo-900"
 							aria-hidden="true"
 						/>
 						<input
+							id="bloc-prestation"
+							type="search"
 							className={
 								'flex w-full items-center rounded-lg border-2 border-indigo-900 bg-transparent py-2 pl-12 pr-6 text-sm leading-6 text-indigo-900 md:w-full lg:w-80'
 							}
@@ -58,11 +57,16 @@ function SearchBloc() {
 						/>
 					</div>
 					<div className={'relative w-full md:w-full lg:w-auto'}>
+						<label htmlFor="bloc-ville" className="sr-only">
+							Ville de la prestation
+						</label>
 						<MapPinIcon
 							className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 transform text-indigo-900"
 							aria-hidden="true"
 						/>
 						<input
+							id="bloc-ville"
+							autoComplete="address-level2"
 							className={
 								'flex w-full items-center rounded-lg border-2 border-indigo-900 bg-transparent py-2 pl-12 pr-6 text-sm leading-6 text-indigo-900 md:w-full lg:w-80'
 							}
@@ -77,11 +81,7 @@ function SearchBloc() {
 						'flex h-full w-full items-center justify-center px-2 md:h-auto md:w-full md:items-center lg:w-auto'
 					}
 				>
-					<button
-						type="submit"
-						onSubmit={handleSubmit}
-						className={'btn-primary w-full'}
-					>
+					<button type="submit" className={'btn-primary w-full'}>
 						Trouver une maquilleuse
 					</button>
 				</div>
