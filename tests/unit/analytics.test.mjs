@@ -496,3 +496,37 @@ describe('auth events (A3, A4)', () => {
 		assert.equal(eventData('session_expired', { where: 'ailleurs' }), null)
 	})
 })
+
+describe('artist space events (UI-01, UI-03, UI-05)', () => {
+	test('profile_save: a section of the closed list and the outcome', () => {
+		assert.deepEqual(
+			eventData('profile_save', { section: 'description', ok: true }),
+			{ section: 'description', ok: true }
+		)
+		assert.deepEqual(
+			eventData('profile_save', { section: 'onboarding', ok: false }),
+			{ section: 'onboarding', ok: false }
+		)
+		assert.equal(eventData('profile_save', { section: 'bio', ok: true }), null)
+		assert.equal(eventData('profile_save', { section: 'description' }), null)
+		assert.equal(
+			eventData('profile_save', {
+				section: 'description',
+				ok: true,
+				texte: 'Marie',
+			}),
+			null
+		)
+	})
+
+	test('upload_error: size, type or server', () => {
+		for (const kind of ['size', 'type', 'server'])
+			assert.deepEqual(eventData('upload_error', { kind }), { kind })
+		assert.equal(eventData('upload_error', { kind: 'IMG_0001.HEIC' }), null)
+	})
+
+	test('account_delete: no property at all', () => {
+		assert.deepEqual(eventData('account_delete'), {})
+		assert.equal(eventData('account_delete', { email: 'a@b.fr' }), null)
+	})
+})
