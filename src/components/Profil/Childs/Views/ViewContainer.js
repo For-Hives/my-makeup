@@ -1,6 +1,6 @@
 import React from 'react'
 
-function ViewContainer({ user, Component }) {
+function ViewContainer({ user, Component, ...componentProps }) {
 	return (
 		<div className={'w-full'}>
 			<div
@@ -9,7 +9,7 @@ function ViewContainer({ user, Component }) {
 				}
 			>
 				<div className={'flex w-full flex-col gap-4'}>
-					<Component user={user} />
+					<Component user={user} {...componentProps} />
 				</div>
 			</div>
 		</div>

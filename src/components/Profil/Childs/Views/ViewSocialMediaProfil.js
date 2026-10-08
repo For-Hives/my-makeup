@@ -1,15 +1,49 @@
 import React, { useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
+import { useSession } from 'next-auth/react'
+import { shouldTrackContact, umamiAttributes } from '@/lib/analytics'
 
+/**
+ * @param props.user - profile attributes
+ * @param [props.tracking] - `{pid, username}`, only on the public profile page:
+ * contact links then carry `contact_click` Umami attributes (Strapi id and
+ * channel, never the email or the phone number)
+ */
 function ViewSocialMediaProfil(props) {
-	const [user, setUser] = React.useState(null)
+	const [user, setUser] = React.useState(props.user ?? null)
+	const [trackContacts, setTrackContacts] = React.useState(true)
+	const { data: session } = useSession()
+
+	const pid = props.tracking?.pid
+	const username = props.tracking?.username
+	const profileEmail = user?.network?.email
+	const viewerName = session?.user?.name
+	const viewerEmail = session?.user?.email
 
 	useEffect(() => {
 		if (props.user) {
 			setUser(props.user)
 		}
 	}, [props.user])
+
+	useEffect(() => {
+		if (pid === undefined) return
+		setTrackContacts(
+			shouldTrackContact({
+				profile: { username, email: profileEmail },
+				viewer: { name: viewerName, email: viewerEmail },
+				search: window.location.search,
+				referrer: document.referrer,
+				origin: window.location.origin,
+			})
+		)
+	}, [pid, username, profileEmail, viewerName, viewerEmail])
+
+	const contactAttributes = channel =>
+		pid !== undefined && trackContacts
+			? umamiAttributes('contact_click', { pid, channel })
+			: {}
 
 	return (
 		<div className={'flex w-full flex-col gap-4'}>
@@ -31,6 +65,7 @@ function ViewSocialMediaProfil(props) {
 					{user?.network?.instagram && (
 						<Link
 							href={user?.network?.instagram}
+							{...contactAttributes('instagram')}
 							target={'_blank'}
 							rel={'noopener nofollow noreferrer'}
 							className={'group flex items-center gap-3'}
@@ -55,6 +90,7 @@ function ViewSocialMediaProfil(props) {
 					{user?.network?.facebook && (
 						<Link
 							href={user?.network?.facebook}
+							{...contactAttributes('facebook')}
 							target={'_blank'}
 							rel={'noopener nofollow noreferrer'}
 							className={'group flex items-center gap-3'}
@@ -79,6 +115,7 @@ function ViewSocialMediaProfil(props) {
 					{user?.network?.linkedin && (
 						<Link
 							href={user?.network?.linkedin}
+							{...contactAttributes('linkedin')}
 							target={'_blank'}
 							rel={'noopener nofollow noreferrer'}
 							className={'group flex items-center gap-3'}
@@ -103,6 +140,7 @@ function ViewSocialMediaProfil(props) {
 					{user?.network?.youtube && (
 						<Link
 							href={user?.network?.youtube}
+							{...contactAttributes('youtube')}
 							target={'_blank'}
 							rel={'noopener nofollow noreferrer'}
 							className={'group flex items-center gap-3'}
@@ -127,6 +165,7 @@ function ViewSocialMediaProfil(props) {
 					{user?.network?.email && (
 						<Link
 							href={`mailto:${user?.network?.email}`}
+							{...contactAttributes('email')}
 							rel={'noopener nofollow noreferrer'}
 							className={'group flex items-center gap-3'}
 						>
@@ -150,6 +189,7 @@ function ViewSocialMediaProfil(props) {
 					{user?.network?.phone && (
 						<Link
 							href={`tel:${user?.network?.phone}`}
+							{...contactAttributes('phone')}
 							rel={'noopener nofollow noreferrer'}
 							className={'group flex items-center gap-3'}
 						>
@@ -173,6 +213,7 @@ function ViewSocialMediaProfil(props) {
 					{user?.network?.website && (
 						<Link
 							href={user?.network?.website}
+							{...contactAttributes('website')}
 							target={'_blank'}
 							rel={'noopener nofollow noreferrer'}
 							className={'group flex items-center gap-3'}
