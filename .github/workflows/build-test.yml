@@ -4,12 +4,9 @@ env:
   NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
   NEXT_PUBLIC_URL: ${{vars.NEXT_PUBLIC_URL}}
   NEXTAUTH_SECRET: ${{secrets.NEXTAUTH_SECRET}}
-  NEXT_PUBLIC_DATABASE_URL: ${{secrets.NEXT_PUBLIC_DATABASE_URL}}
   NEXTAUTH_URL: ${{secrets.NEXTAUTH_URL}}
   GOOGLE_CLIENT_ID: ${{secrets.GOOGLE_CLIENT_ID}}
   GOOGLE_CLIENT_SECRET: ${{secrets.GOOGLE_CLIENT_SECRET}}
-  FACEBOOK_CLIENT_ID: ${{secrets.FACEBOOK_CLIENT_ID}}
-  FACEBOOK_CLIENT_SECRET: ${{secrets.FACEBOOK_CLIENT_SECRET}}
   MAILGUN_API_KEY: ${{secrets.MAILGUN_API_KEY}}
   MAILGUN_API_URL: ${{secrets.MAILGUN_API_URL}}
   MAILGUN_PUBLIC_KEY: ${{secrets.MAILGUN_PUBLIC_KEY}}
@@ -57,6 +54,27 @@ jobs:
           build-args:
             NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
             NEXT_PUBLIC_URL=${{ vars.NEXT_PUBLIC_URL }}
+
+  # AF-01 to AF-10 (plans/02): NextAuth and the private pages against a fake
+  # Strapi started by the script. The servers under test get their own
+  # environment (local API, generated secret), never the variables above.
+  auth:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js 22.x
+        uses: actions/setup-node@v4
+        with:
+          cache: 'npm'
+          node-version: 22.x
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+      - name: Auth tests (fake Strapi)
+        run: npm run test:auth
+      - name: Show the server logs
+        if: failure()
+        run: tail -n 100 .next-test-auth-journaux/*.log
 
 #  tests:
 #    runs-on: ubuntu-latest
