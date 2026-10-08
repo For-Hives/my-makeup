@@ -12,7 +12,7 @@ function ViewCoursesProfil(props) {
 	return (
 		<div className={'flex w-full flex-col gap-4'}>
 			<h2 className={'text-xl font-bold text-gray-700'}>
-				Formations & diplomes
+				Formations & diplômes
 			</h2>
 			{user?.courses &&
 				user?.courses?.length !== 0 &&

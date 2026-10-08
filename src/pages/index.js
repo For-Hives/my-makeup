@@ -20,8 +20,7 @@ export default function Home({ talents }) {
 				</title>
 				<meta
 					name="description"
-					content="Trouvez la meilleure maquilleuse professionnelle à domicile près de chez. Une maquilleuse rien que pour vous,pour un événement, un shooting, ou une soirée,
-                    vous trouverez votre bonheur pour vous sublimer dans n'importe quelle situation ! Inscription gratuite."
+					content="Trouvez la meilleure maquilleuse professionnelle à domicile près de chez vous. Une maquilleuse rien que pour vous, pour un événement, un shooting ou une soirée : vous trouverez votre bonheur pour vous sublimer dans n'importe quelle situation ! Inscription gratuite."
 				/>
 				{/*	seo tag canonical link */}
 				<link rel="canonical" href="https://my-makeup.fr" />

@@ -59,7 +59,7 @@ function Profil({ data }) {
 				) : (
 					<div className="flex h-screen flex-col items-center justify-center">
 						<h1 className="text-center text-4xl font-bold text-gray-700">
-							You are not logged in
+							Vous n&apos;êtes pas connecté
 						</h1>
 					</div>
 				)}

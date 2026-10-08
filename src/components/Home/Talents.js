@@ -79,7 +79,7 @@ function Talents({ talents }) {
 										'-z-10 flex items-center justify-center rounded-xl text-center font-semibold text-gray-50 opacity-0 group-hover:z-10 group-hover:opacity-100'
 									}
 								>
-									Voir cette spécialitée
+									Voir cette spécialité
 								</h2>
 							</a>
 						))}
