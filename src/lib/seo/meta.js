@@ -3,7 +3,8 @@
  * canonical, robots, minimal Open Graph and Twitter tags, and JSON-LD.
  * - profile: Person (speciality, city, skills, languages, networks) offering
  *   its services (Offer → Service, prices in EUR), on publiable profiles
- *   only; never an email, a phone, a postal address nor a rating;
+ *   only; never an email, a phone, a postal address nor a rating: the city
+ *   is the public place (lieu-public.js), the commune of an address;
  * - BreadcrumbList on profiles, talents and articles;
  * - a page that is not indexed has no canonical (no mixed signal).
  */
@@ -19,7 +20,7 @@ import {
 	texte,
 	urlMedia,
 } from '../profil/vue-publique.js'
-import { villeAffichee } from '../format-zone.js'
+import { lieuPublic } from '../profil/lieu-public.js'
 import { cheminProfil } from '../slug.js'
 import { NOINDEX } from './robots.js'
 import { chemin, urlAbsolue } from './url.js'
@@ -274,7 +275,10 @@ export function seoProfil({
 	const p = attributs(profil)
 	const nom = nomAffiche(p)
 	const specialite = espaces(p.speciality)
-	const ville = villeAffichee(p.city)
+	// « Annecy (74) » in the texts, the commune alone as the City of the
+	// JSON-LD; never the street of an address typed as the city
+	const lieu = lieuPublic(p.city)
+	const ville = lieu.texte
 	const detail = specialite
 		? ville
 			? `${specialite} à ${ville}`
@@ -311,7 +315,8 @@ export function seoProfil({
 	]
 	if (indexable) {
 		const idPersonne = `${url}#personne`
-		const zone = ville ? { '@type': 'City', name: ville } : null
+		const commune = lieu.commune || ville
+		const zone = commune ? { '@type': 'City', name: commune } : null
 		jsonLd.unshift({
 			'@context': 'https://schema.org',
 			'@type': 'Person',
@@ -321,7 +326,7 @@ export function seoProfil({
 			image: photo || null,
 			jobTitle: specialite || 'Maquilleuse professionnelle',
 			description: tronquer(texteBrut(p.description), 300),
-			workLocation: zone ? { '@type': 'Place', name: ville } : null,
+			workLocation: zone ? { '@type': 'Place', name: commune } : null,
 			knowsAbout: unique(
 				(Array.isArray(p.skills) ? p.skills : []).map(s => espaces(s?.name))
 			).slice(0, 10),

@@ -5,6 +5,7 @@ import ViewInfosProfil from '@/components/Profil/Parents/ViewInfosProfil'
 import Nav from '@/components/Global/Nav'
 import Seo from '@/components/Global/Seo'
 import { devisFormUrl } from '@/lib/devis'
+import { avecVillePublique } from '@/lib/profil/lieu-public'
 import { cheminProfil, resoudreProfil } from '@/lib/slug'
 import { seoProfil } from '@/lib/seo/meta'
 import { urlDuSite } from '@/lib/seo/url'
@@ -13,7 +14,9 @@ import { chargerProfil, chargerTableDesSlugs } from '@/services/profilsPublics'
 /**
  * Public profile, /profil/<slug> (UI-06, SEO-10): rendered on the server
  * (ISR), noindex unless publiable (src/lib/profil/completude.js), 308 from
- * the old URL (raw username, with spaces or capitals) to the slug.
+ * the old URL (raw username, with spaces or capitals) to the slug. The
+ * props hold the public city only (UI-11): a postal address typed as the
+ * city never reaches the HTML nor __NEXT_DATA__, only its commune.
  */
 export default function Profil({ profilData, slug, devisUrl = null }) {
 	const seo = seoProfil({
@@ -73,7 +76,7 @@ export async function getStaticProps({ params }) {
 
 	return {
 		props: {
-			profilData,
+			profilData: avecVillePublique(profilData),
 			slug: trouve.slug,
 			// quote form (F3a): read here, on the server, and passed as a prop so
 			// the server HTML and the browser agree. Inlined when set at build

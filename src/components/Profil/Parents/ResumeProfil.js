@@ -5,6 +5,7 @@ import { BadgeIndispo } from '@/components/Profil/Atoms/BadgeIndispo'
 import ModalUpdateResumeProfil from '@/components/Profil/Atoms/ModalUpdate/ModalUpdateResumeProfil'
 import { useRouter } from 'next/router'
 import BoutonModifier from '@/components/Profil/Atoms/BoutonModifier'
+import { villePublique } from '@/lib/profil/lieu-public'
 
 function ResumeProfil(props) {
 	const router = useRouter()
@@ -124,8 +125,9 @@ function ResumeProfil(props) {
 										directions_run
 									</span>
 									<span data-cy={'resume-city-action-radius'}>
-										peut se déplacer à {user?.city} & dans un rayon de{' '}
-										{user?.action_radius}km
+										peut se déplacer à{' '}
+										{isPublic ? villePublique(user?.city) : user?.city} & dans
+										un rayon de {user?.action_radius}km
 									</span>
 								</div>
 							</div>

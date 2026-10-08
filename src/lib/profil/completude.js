@@ -4,7 +4,8 @@
  * robots), the sitemap and the measure:
  *
  * - score out of 13: the 13 criteria of the progress bar, for display only;
- * - `actif` = main picture + usable city + speciality;
+ * - `actif` = main picture + usable city (of the public place: a postal
+ *   address counts by its commune, lieu-public.js) + speciality;
  * - `publiable` = `actif` + at least one offer with a numeric price + a
  *   description of 200 characters at least + at least one contact channel
  *   (the quote form counts once it is online); an internal account is never
@@ -14,6 +15,8 @@
  * later, `src/lib/profil/completude.ts` of the v3: the cases of
  * tests/unit/fixtures/completude-cas.json describe all of them.
  */
+
+import { villePublique } from './lieu-public.js'
 
 /** The 13 criteria, in display order */
 export const CRITERES = [
@@ -90,22 +93,18 @@ const PAS_UNE_VILLE = new Set([
 	'.',
 ])
 
-const VOIE =
-	/\b(rue|avenue|av|chemin|allee|bd|boulevard|impasse|route|place|lieu-dit|residence|bis|quai|cours)\b/
-
 /**
- * Usable city: a town or a postcode, not a country, not a postal address
- * (never shown: plans/01 §6.2), not free text.
+ * Usable city: the public place of the field (villePublique: the commune of
+ * a postal address, « Annecy (74) », never its street) is a town or a
+ * postcode, not a country, not free text. An address without a commune nor
+ * a postal code (« 3 avenue X ») is not usable.
  * @param {unknown} city
  * @returns {boolean}
  */
 export function villeExploitable(city) {
-	const v = normaliser(city)
+	const v = normaliser(villePublique(city))
 	if (v === '' || PAS_UNE_VILLE.has(v)) return false
-	if (VOIE.test(v)) return false
-	const codePostal = /\b\d{5}\b/.test(v)
-	if (/^\d+,? /.test(v) && !/^\d{5}\b/.test(v)) return false
-	if (!/[a-z]/.test(v) && !codePostal) return false
+	if (!/[a-z]/.test(v) && !/\b\d{5}\b/.test(v)) return false
 	return v.split(' ').length <= 6
 }
 

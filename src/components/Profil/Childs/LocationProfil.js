@@ -51,7 +51,8 @@ export function LocationProfil(props) {
 					</div>
 				) : null}
 				<div className={'flex w-full flex-col gap-4'}>
-					<ViewLocationProfil user={user} />
+					{/* her own space: what she typed, and the help (UI-11) */}
+					<ViewLocationProfil user={user} prive={!isPublic} />
 				</div>
 			</div>
 		</div>
