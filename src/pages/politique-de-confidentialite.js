@@ -81,7 +81,7 @@ function PolitiqueDeConfidentialite() {
 
 								<h2>Formulaire de contact</h2>
 								<p>
-									{`Données : nom, prénom, email, téléphone et message. Ils nous sont envoyés par email via le service Mailgun, depuis ses serveurs situés dans l'Union européenne, pour vous répondre (intérêt légitime). Durée : 12 mois après notre dernier échange.`}
+									{`Données : nom, prénom, email, téléphone et message. Ils nous sont envoyés par email via le service Mailgun pour vous répondre (intérêt légitime). Durée : 12 mois après notre dernier échange.`}
 								</p>
 
 								<h2>Demandes de devis</h2>
@@ -100,7 +100,7 @@ function PolitiqueDeConfidentialite() {
 
 								<h2>Mesure d&apos;audience</h2>
 								<p>
-									{`Nous mesurons la fréquentation du site avec Umami, un outil installé sur nos propres serveurs. Il ne dépose aucun cookie, n'enregistre aucun identifiant sur votre appareil et ne conserve pas votre adresse IP. Il compte les pages vues, le site de provenance, le type d'appareil et de navigateur, le pays, et les clics sur certains boutons (contact d'une maquilleuse, demande de devis, recherche) sans jamais enregistrer ce que vous saisissez, ni votre identité, ni vos coordonnées.`}
+									{`Nous mesurons la fréquentation du site avec Umami, un outil que nous installons et administrons nous-mêmes, sur un serveur loué (voir « Hébergement et prestataires »). Il ne dépose aucun cookie, n'enregistre aucun identifiant sur votre appareil et ne conserve pas votre adresse IP. Il compte les pages vues, le site de provenance, le type d'appareil et de navigateur, le pays, et les clics sur certains boutons (contact d'une maquilleuse, demande de devis, recherche) sans jamais enregistrer ce que vous saisissez, ni votre identité, ni vos coordonnées.`}
 								</p>
 								<p>
 									{`Pourquoi : savoir ce qui aide vraiment les maquilleuses à être contactées (intérêt légitime). Cette mesure est limitée à des statistiques anonymes et ne nécessite donc pas votre consentement. Nous n'utilisons plus Google Analytics. Vous pouvez vous y opposer sur ce navigateur :`}
@@ -120,15 +120,23 @@ function PolitiqueDeConfidentialite() {
 								</p>
 
 								<h2>Hébergement et prestataires</h2>
-								{/* TODO(Andy): confirm where the Strapi database runs (decision D8) and name it here if it is not at netcup. */}
+								{/* TODO(Andy): keep this list true on the day it ships.
+								    - Database (D8): if Strapi's database runs on the old Contabo VPS, add it to the Contabo line until URG-10.
+								    - Umami (MES-10): once Umami runs in Coolify at netcup, drop the Contabo line.
+								    - Mailgun: once MAILGUN_REGION=eu is live, say the emails leave from its EU servers. */}
 								<ul>
 									<li>{`netcup GmbH (Allemagne) : hébergement du site.`}</li>
 									<li>
+										{`Contabo GmbH (Allemagne) : hébergement de notre outil de mesure d'audience (Umami).`}
+									</li>
+									<li>
 										{`Cloudflare (service R2) : stockage des photos des profils.`}
 									</li>
-									<li>{`Mailgun : envoi des emails du site.`}</li>
 									<li>
-										{`Outil de formulaire de devis, hébergé dans l'Union européenne (sous-traitant).`}
+										{`Mailgun Technologies, Inc. (États-Unis) : envoi des emails du site. Le passage à ses serveurs situés dans l'Union européenne est en cours ; d'ici là, le transfert est encadré comme indiqué ci-dessous.`}
+									</li>
+									<li>
+										{`Lorsque le bouton « Demander un devis » est proposé : outil de formulaire de devis, hébergé dans l'Union européenne (sous-traitant).`}
 									</li>
 									<li>
 										{`Google : uniquement si vous choisissez de vous connecter avec Google.`}
