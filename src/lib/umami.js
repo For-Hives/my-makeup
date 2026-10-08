@@ -82,6 +82,11 @@ export function umamiScriptAttributes({ tag, domains } = {}) {
  * What leaves is cleaned: the page URL keeps its utm_* parameters only (no
  * search terms, no codes, no hash) and the referrer loses its query string
  * and its hash. Unlike data-exclude-search, campaigns are still counted.
+ * Ad click ids (gclid, fbclid, msclkid…) are dropped on purpose: they are
+ * identifiers of the ad network, campaigns are attributed with utm_*
+ * (Umami counts utm_medium=cpc, paid or paid_social as paid ads), and
+ * Facebook adds fbclid to every outbound link, which would move organic
+ * social visits into the paid ads channel.
  * A referrer that is not a web page keeps its scheme and app id only
  * (android-app://com.google.android.googlequicksearchbox/, the Google app):
  * Umami takes that id as the referrer domain, and « google. » in it counts

@@ -142,6 +142,20 @@ describe('umamiBeforeSend: what leaves', () => {
 		)
 	})
 
+	test('ad click ids are dropped on purpose, the utm_medium of a paid campaign stays', () => {
+		const sent = umamiBeforeSend(
+			'event',
+			pageView({
+				url: 'https://my-makeup.fr/?gclid=a&fbclid=b&msclkid=c&ttclid=d&li_fat_id=e&twclid=f&utm_source=google&utm_medium=cpc&utm_campaign=exp-010',
+			}),
+			fenetre()
+		)
+		assert.equal(
+			sent.url,
+			'https://my-makeup.fr/?utm_source=google&utm_medium=cpc&utm_campaign=exp-010'
+		)
+	})
+
 	test('a page without campaign loses its whole query string', () => {
 		const sent = umamiBeforeSend(
 			'event',
