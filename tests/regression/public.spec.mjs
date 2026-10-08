@@ -783,9 +783,10 @@ test.describe('UI-10 recherche par ville : titre honnête', () => {
 		)
 		const locaux = await zones(page, 'locaux')
 		expect(locaux).toHaveLength(10)
-		// 9 by the city (Annecy-le-Vieux included), then Thonon by its postal code
+		// 9 by the city (Annecy-le-Vieux included), then Thonon by its postal
+		// code; the card shows the public place (UI-11)
 		expect(locaux.slice(0, 9).every(z => /Annecy/.test(z))).toBe(true)
-		expect(locaux[9]).toMatch(/Thonon-les-Bains 74200/)
+		expect(locaux[9]).toMatch(/Thonon-les-Bains \(74\)/)
 
 		await page.goto('/search?city=Haute-Savoie')
 		await expect(page.getByRole('heading', { level: 1 })).toHaveText(
@@ -794,7 +795,7 @@ test.describe('UI-10 recherche par ville : titre honnête', () => {
 		// Annecy is in Haute-Savoie, but without geocoding nothing says so
 		expect((await zones(page, 'locaux')).sort()).toEqual([
 			expect.stringMatching(/Annecy-le-Vieux \(74\)/),
-			expect.stringMatching(/Thonon-les-Bains 74200/),
+			expect.stringMatching(/Thonon-les-Bains \(74\)/),
 		])
 	})
 

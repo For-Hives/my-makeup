@@ -276,6 +276,19 @@ export const PROFILS_PUBLICS = [
 			commune: 'Thonon-les-Bains',
 		},
 	}),
+	// UI-11: complete, a code of département then free text as the city: no
+	// street number, shown as typed, and no usable city (as before UI-11), so
+	// noindex and out of the sitemap. Not available, out of the search.
+	complet({
+		id: 115,
+		username: 'lea-alentours',
+		createdAt: '2024-09-02T10:00:00.000Z',
+		first_name: 'Léa',
+		last_name: 'Fictive',
+		city: '74 et alentours',
+		available: false,
+		attendu: { slug: 'lea-alentours', publiable: false },
+	}),
 ]
 
 export const TALENTS = [

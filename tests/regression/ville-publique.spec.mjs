@@ -150,6 +150,25 @@ test.describe('UI-11 adresse postale tapée comme ville', () => {
 		expect(erreurs).toEqual([])
 	})
 
+	test('un code de département puis du texte (« 74 et alentours ») : affiché tel quel, noindex, hors du sitemap', async ({
+		request,
+	}) => {
+		const reponse = await request.get('/profil/lea-alentours', {
+			maxRedirects: 0,
+		})
+		expect(reponse.status()).toBe(200)
+		const html = await reponse.text()
+		expect(meta(html, 'robots')).toBe('noindex,follow')
+		expect(texteVisible(html)).toContain('74 et alentours et 30 km autour')
+		expect(meta(html, 'og:title')).toContain('à 74 et alentours')
+		expect(html).not.toMatch(/Et Alentours/)
+		expect(nextData(html).props.pageProps.profilData.attributes.city).toBe(
+			'74 et alentours'
+		)
+		const xml = await (await request.get('/sitemap.xml')).text()
+		expect(xml).not.toContain('lea-alentours')
+	})
+
 	test('carte de recherche : la commune, jamais la rue', async ({ page }) => {
 		// one more profile whose city is an address (made up)
 		await piloter('/__multiplier', {
