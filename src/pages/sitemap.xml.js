@@ -64,6 +64,8 @@ export const getServerSideProps = async ({ res }) => {
 			item === `${process.env.NEXT_PUBLIC_URL}/api\\auth/[...nextauth]` ||
 			item === `${process.env.NEXT_PUBLIC_URL}/api/auth/[...nextauth]` ||
 			item === `${process.env.NEXT_PUBLIC_URL}/api/sendMail` ||
+			item === `${process.env.NEXT_PUBLIC_URL}/api/health` ||
+			item === `${process.env.NEXT_PUBLIC_URL}/demande-envoyee` ||
 			item === `${process.env.NEXT_PUBLIC_URL}/auth/profil` ||
 			item === `${process.env.NEXT_PUBLIC_URL}/auth/error` ||
 			item === `${process.env.NEXT_PUBLIC_URL}/auth/init-account` ||
