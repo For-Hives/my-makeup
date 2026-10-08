@@ -427,6 +427,18 @@ test.describe('UI-07 recherche', () => {
 		expect(erreurs).toEqual([])
 	})
 
+	test('profil vérifié (type 10 du plan 02 §6) : le badge « Pro » sur sa carte seulement', async ({
+		page,
+	}) => {
+		await page.goto('/search?city=Annecy')
+		const cartes = page.getByTestId('search-result')
+		await expect(cartes.first()).toBeVisible()
+		const verifiee = cartes.filter({ hasText: 'Rose Fictif' })
+		await expect(verifiee).toHaveCount(1)
+		await expect(verifiee.getByText('Pro', { exact: true })).toBeVisible()
+		await expect(cartes.getByText('Pro', { exact: true })).toHaveCount(1)
+	})
+
 	test('aucun résultat : un h1 et un message utile', async ({ page }) => {
 		await page.goto('/search?search=zzqq')
 		await expect(page.getByRole('heading', { level: 1 })).toHaveText(

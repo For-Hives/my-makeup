@@ -1,6 +1,8 @@
 // Public data of the fake Strapi (tests/regression/mock-api.mjs): the profile
 // types of plans/02 §6 that the public pages and the sitemap must tell
-// apart, 3 talents and 2 articles. Made up from start to end: invented
+// apart (1 to 10 and 12; 11 cannot exist in Strapi 4), plus a slug
+// collision, an internal account and a description one character short;
+// 3 talents and 2 articles. Made up from start to end: invented
 // names, @example.test addresses, phone numbers of the range kept for
 // fiction (06 39 98). `attendu` is not served: it says what the tests
 // expect, written by hand (not computed by src/lib).
@@ -196,6 +198,18 @@ export const PROFILS_PUBLICS = [
 		first_name: 'Lucie',
 		network: RESEAUX_VIDES,
 		attendu: { slug: 'lucie-sans-contact', publiable: false },
+	}),
+	// 10: verified. Strapi 4 only has `pro` (locked since S42), shown as the
+	// « Pro » badge of the search. Type 11 (hidden by the admin) has no
+	// field in Strapi 4 (draftAndPublish false, no status): it comes with
+	// the v3 (statut, verifie).
+	complet({
+		id: 113,
+		username: 'rose-verifiee',
+		createdAt: '2024-08-01T10:00:00.000Z',
+		first_name: 'Rose',
+		pro: true,
+		attendu: { slug: 'rose-verifiee', publiable: true },
 	}),
 	// collision with 1, created later → -2
 	complet({
