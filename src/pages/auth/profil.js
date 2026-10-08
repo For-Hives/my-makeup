@@ -1,17 +1,25 @@
 import Head from 'next/head'
-import React, { useEffect } from 'react'
+import React from 'react'
+import Link from 'next/link'
 import Nav from '@/components/Global/Nav'
 import Footer from '@/components/Global/Footer'
 import ResumeProfil from '@/components/Profil/Parents/ResumeProfil'
-import { getSession, useSession } from 'next-auth/react'
-import _ from 'lodash'
+import { useSession } from 'next-auth/react'
+import { getServerSession } from 'next-auth/next'
 import InfosProfil from '@/components/Profil/Parents/InfosProfil'
-import FullLoader from '@/components/Global/Loader/FullLoader'
 import DangerZone from '@/components/Global/DangerZone'
+import {
+	API_SERVEUR,
+	authOptions,
+	journalAuth,
+} from '@/pages/api/auth/[...nextauth]'
+import { messageErreur } from '@/lib/auth-erreurs'
+import { cookiesSessionAEffacer, DELAI_STRAPI_MS } from '@/lib/auth-session'
+import { filtrerProfilPrive } from '@/lib/profil-prive'
 
-function Profil({ data }) {
+function Profil({ data, erreur }) {
+	// the modals read the Strapi JWT from here (loaded after the page)
 	const { data: session } = useSession()
-	// get current user id
 
 	const [user, setUser] = React.useState(data)
 	const [isPublic, setIsPublic] = React.useState(false)
@@ -22,10 +30,6 @@ function Profil({ data }) {
 
 	const handleUpdateUser = newUser => {
 		setUser(newUser)
-	}
-
-	if (!user) {
-		return <FullLoader />
 	}
 
 	return (
@@ -41,7 +45,7 @@ function Profil({ data }) {
 			</Head>
 			<Nav isProfileBtnVisible={false} />
 			<main className={'relative'}>
-				{session && session.user && !_.isEmpty(session.user) ? (
+				{user ? (
 					<>
 						<ResumeProfil
 							user={user}
@@ -57,10 +61,13 @@ function Profil({ data }) {
 						<DangerZone session={session} />
 					</>
 				) : (
-					<div className="flex h-screen flex-col items-center justify-center">
-						<h1 className="text-center text-4xl font-bold text-gray-700">
-							Vous n&apos;êtes pas connecté
+					<div className="flex h-screen flex-col items-center justify-center gap-6 px-4">
+						<h1 className="text-center text-2xl font-bold text-gray-700">
+							{messageErreur(erreur)}
 						</h1>
+						<Link href={'/auth/profil'} className="btn-primary-large w-auto">
+							Réessayer
+						</Link>
 					</div>
 				)}
 			</main>
@@ -70,58 +77,64 @@ function Profil({ data }) {
 }
 
 export const getServerSideProps = async ({ req, res }) => {
-	const session = await getSession({ req })
+	// private page: never in a shared cache (it used to be public, s-maxage=10)
+	res.setHeader('Cache-Control', 'private, no-store')
 
-	let user
-
-	if (session) {
-		const response = await fetch(
-			`${process.env.NEXT_PUBLIC_API_URL}/api/me-makeup`,
-			{
-				method: 'GET',
-				headers: {
-					// 	token
-					'Content-Type': 'application/json',
-					Accept: 'application/json',
-					Authorization: `Bearer ${session.jwt}`,
-				},
-			}
-		)
-
-		if (!response.ok) {
-			if (response.status === 401) {
-				// Token expired, redirect to signin
-				return {
-					redirect: {
-						destination: '/auth/signin',
-						permanent: false,
-					},
-				}
-			}
-			// Other errors (404 = new account that needs initialization)
-			return {
-				redirect: {
-					destination: '/auth/init-account',
-					permanent: false,
-				},
-			}
-		} else {
-			user = await response.json()
+	// read in process, the refreshed session cookie goes back with the page
+	const session = await getServerSession(req, res, authOptions)
+	if (!session?.jwt) {
+		return {
+			redirect: {
+				destination: '/auth/signin?callbackUrl=%2Fauth%2Fprofil',
+				permanent: false,
+			},
 		}
 	}
 
-	// Set Cache Control header
-	res.setHeader(
-		'Cache-Control',
-		'public, s-maxage=10, stale-while-revalidate=59'
-	)
-
-	return {
-		props: {
-			session,
-			data: user ?? null,
-		},
+	let response
+	try {
+		response = await fetch(`${API_SERVEUR}/api/me-makeup`, {
+			headers: {
+				Accept: 'application/json',
+				Authorization: `Bearer ${session.jwt}`,
+			},
+			signal: AbortSignal.timeout(DELAI_STRAPI_MS),
+		})
+	} catch {
+		return { props: { data: null, erreur: 'service-indisponible' } }
 	}
+
+	if (response.status === 401) {
+		// Strapi refuses the JWT: delete the session (and its chunks) instead
+		// of sending her to the sign-in page with a dead cookie (AUTH-01)
+		journalAuth('session_expiree', { code: 'api_401' })
+		res.setHeader(
+			'Set-Cookie',
+			cookiesSessionAEffacer(Object.keys(req.cookies ?? {}))
+		)
+		return {
+			redirect: {
+				destination: '/auth/signin?error=session-expiree',
+				permanent: false,
+			},
+		}
+	}
+
+	// 400: no profile yet for this account, the onboarding creates it
+	if (response.status === 400 || response.status === 404) {
+		return { redirect: { destination: '/auth/init-account', permanent: false } }
+	}
+
+	if (!response.ok) {
+		return { props: { data: null, erreur: 'service-indisponible' } }
+	}
+
+	// allow list: never the password hash, tokens or admin relations, and
+	// no session (nor JWT) in __NEXT_DATA__
+	const data = filtrerProfilPrive(await response.json().catch(() => null))
+	return data
+		? { props: { data } }
+		: { props: { data: null, erreur: 'service-indisponible' } }
 }
 
 export default Profil

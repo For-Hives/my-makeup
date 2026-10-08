@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import Head from 'next/head'
-import { getSession, useSession } from 'next-auth/react'
+import { useSession } from 'next-auth/react'
+import { getServerSession } from 'next-auth/next'
 import { useRouter } from 'next/router'
 import { CheckIcon } from '@heroicons/react/24/outline'
 import Link from 'next/link'
@@ -14,6 +15,16 @@ import Image from 'next/image'
 import Loader from '@/components/Global/Loader/Loader'
 import Warning from '@/components/Global/Warning'
 import { onboardingStepName, track } from '@/lib/analytics'
+import {
+	API_SERVEUR,
+	authOptions,
+	journalAuth,
+} from '@/pages/api/auth/[...nextauth]'
+import { messageErreur } from '@/lib/auth-erreurs'
+import {
+	cookiesSessionAEffacer,
+	DELAI_REVALIDATION_MS,
+} from '@/lib/auth-session'
 
 const schema = zod
 	.object({
@@ -29,7 +40,7 @@ const schema = zod
 		last_name: true,
 	})
 
-function InitAccount() {
+function InitAccount({ compte, erreur }) {
 	const {
 		register,
 		handleSubmit,
@@ -46,7 +57,9 @@ function InitAccount() {
 		{ name: 'Nom et Prénom', href: '#', status: 'upcoming' },
 		{ name: 'Finalisation', href: '#', status: 'upcoming' },
 	])
-	const [user, setUser] = useState(null)
+	// { confirmed } read on the server: the page no longer waits for a
+	// session in its props (removed) to know the account (AUTH-08)
+	const [user] = useState(compte)
 	const [accountInit, setAccountInit] = useState(false)
 	// const [userInterval, setUserInterval] = useState(null)
 	const [fistName, setFirstName] = useState('')
@@ -56,10 +69,6 @@ function InitAccount() {
 
 	// get current user id
 	const { data: session } = useSession()
-
-	useEffect(() => {
-		getUserFromSession(session, user, setUser)
-	}, [])
 
 	useEffect(
 		id => {
@@ -216,6 +225,19 @@ function InitAccount() {
 		patchMeMakeup(session, data)
 
 		setStep(4)
+	}
+
+	if (erreur) {
+		return (
+			<div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-white px-4">
+				<h1 className="text-center text-2xl font-bold text-gray-700">
+					{messageErreur(erreur)}
+				</h1>
+				<Link href={'/auth/init-account'} className="btn-primary-large w-auto">
+					Réessayer
+				</Link>
+			</div>
+		)
 	}
 
 	if (step === 0) return <FullLoader />
@@ -502,33 +524,52 @@ function InitAccount() {
 
 export default InitAccount
 
-async function getUserFromSession(session, user, setUser) {
-	if (!session) return null
+export const getServerSideProps = async ({ req, res }) => {
+	res.setHeader('Cache-Control', 'private, no-store')
 
-	if (user != null && user.confirmed) return null
+	const session = await getServerSession(req, res, authOptions)
+	if (!session?.jwt) {
+		return {
+			redirect: {
+				destination: '/auth/signin?callbackUrl=%2Fauth%2Finit-account',
+				permanent: false,
+			},
+		}
+	}
 
-	const userData = await fetch(
-		`${process.env.NEXT_PUBLIC_API_URL}/api/users/me`,
-		{
-			method: 'GET',
+	let response
+	try {
+		response = await fetch(`${API_SERVEUR}/api/users/me`, {
 			headers: {
-				// 	token
-				'Content-Type': 'application/json',
 				Accept: 'application/json',
 				Authorization: `Bearer ${session.jwt}`,
 			},
-		}
-	)
-	const res = await userData.json()
-	setUser(res)
-	return res
-}
-
-export const getServerSideProps = async ({ req }) => {
-	const session = await getSession({ req })
-	return {
-		props: {
-			session,
-		},
+			signal: AbortSignal.timeout(DELAI_REVALIDATION_MS),
+		})
+	} catch {
+		return { props: { compte: null, erreur: 'service-indisponible' } }
 	}
+
+	if (response.status === 401) {
+		// no « check your email » screen on a dead session: sign-in again
+		journalAuth('session_expiree', { code: 'api_401' })
+		res.setHeader(
+			'Set-Cookie',
+			cookiesSessionAEffacer(Object.keys(req.cookies ?? {}))
+		)
+		return {
+			redirect: {
+				destination: '/auth/signin?error=session-expiree',
+				permanent: false,
+			},
+		}
+	}
+
+	const compte = response.ok ? await response.json().catch(() => null) : null
+	if (!compte) {
+		return { props: { compte: null, erreur: 'service-indisponible' } }
+	}
+
+	// only what the onboarding needs, and no session (nor JWT) in the props
+	return { props: { compte: { confirmed: compte.confirmed === true } } }
 }
