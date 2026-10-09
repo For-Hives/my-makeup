@@ -440,11 +440,10 @@ function InitAccount({ compte, erreur }) {
 									<div className="flex flex-col items-center justify-center md:my-8 md:gap-4 xl:gap-8">
 										<div>
 											<h1 className="text-center text-3xl font-bold">
-												Votre nom et votre prénom
+												Ton nom et ton prénom
 											</h1>
 											<p className="text-center text-gray-700">
-												Ces informations seront visibles par les autres
-												utilisateurs
+												Ton prénom et ton nom seront visibles sur ta page.
 											</p>
 										</div>
 
@@ -532,8 +531,9 @@ function InitAccount({ compte, erreur }) {
 																id="onboarding-source-aide"
 																className="mt-1 text-xs text-gray-500"
 															>
-																Ta réponse est comptée de façon anonyme : elle
-																n&apos;est pas liée à ton compte.
+																Ta réponse sert seulement à nos statistiques :
+																elle n&apos;est enregistrée ni dans ton compte
+																ni dans ton profil.
 															</p>
 															<div className="mt-2 space-y-1">
 																{SOURCES_ORIGINE.map((valeur, rang) => (

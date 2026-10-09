@@ -547,6 +547,20 @@ test.describe('MES-10 qui est mesuré', () => {
 			expect(await evenements('onboarding_source')).toEqual([])
 		})
 
+		test('onboarding_source : la politique de confidentialité décrit la question', async ({
+			page,
+		}) => {
+			await page.goto('/politique-de-confidentialite')
+			const phrase = page.getByText(/Comment as-tu connu My Makeup \?/)
+			await expect(phrase).toHaveCount(1)
+			await expect(phrase).toContainText(
+				'est envoyée à Umami de la même façon, sans cookie'
+			)
+			await expect(phrase).toContainText(
+				"Elle n'est enregistrée ni dans le compte ni dans le profil"
+			)
+		})
+
 		test('« Ne plus mesurer mes visites » : aucun envoi', async ({ page }) => {
 			const suivi = suivreRequetes(page)
 			await visiteurReel(page)
