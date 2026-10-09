@@ -10,6 +10,7 @@
  */
 
 import { completude, prixNumerique } from '../profil/completude.js'
+import { lieuPublic } from '../profil/lieu-public.js'
 import {
 	attributs,
 	contacts,
@@ -20,10 +21,14 @@ import {
 	texte,
 	urlMedia,
 } from '../profil/vue-publique.js'
-import { lieuPublic } from '../profil/lieu-public.js'
 import { cheminProfil } from '../slug.js'
 import { NOINDEX } from './robots.js'
 import { chemin, urlAbsolue } from './url.js'
+
+const tronquerPattern1 = /[\s,;:.–-]+$/
+const seoProfilPattern2 = /\p{L}/u
+const textPattern3 = /\.(jpe?g|png|webp)(\?|$)/i
+const tronquerPattern4 = /\s+\S*$/
 
 export const MARQUE = 'My-Makeup'
 export const TITRE_MAX = 60
@@ -50,8 +55,8 @@ export function tronquer(v, max) {
 	const t = espaces(v)
 	if (t.length <= max) return t
 	const coupe = t.slice(0, max - 1)
-	const mot = coupe.replace(/\s+\S*$/, '')
-	return `${(mot.length >= max / 2 ? mot : coupe).replace(/[\s,;:.–-]+$/, '')}…`
+	const mot = coupe.replace(tronquerPattern4, '')
+	return `${(mot.length >= max / 2 ? mot : coupe).replace(tronquerPattern1, '')}…`
 }
 
 /**
@@ -76,9 +81,7 @@ export function texteBrut(v) {
  * @returns {string}
  */
 export function descriptionMeta(v, repli) {
-	const t = (Array.isArray(v) ? v : [v])
-		.map(texteBrut)
-		.find(candidat => candidat.length >= DESCRIPTION_MIN)
+	const t = (Array.isArray(v) ? v : [v]).map(texteBrut).find(candidat => candidat.length >= DESCRIPTION_MIN)
 	return tronquer(t ?? repli, DESCRIPTION_MAX)
 }
 
@@ -93,9 +96,7 @@ export function descriptionMeta(v, repli) {
  */
 export function descriptionEditoriale(seoDescription, autres, repli) {
 	const redigee = texteBrut(seoDescription)
-	return redigee
-		? tronquer(redigee, DESCRIPTION_MAX)
-		: descriptionMeta(autres, repli)
+	return redigee ? tronquer(redigee, DESCRIPTION_MAX) : descriptionMeta(autres, repli)
 }
 
 /**
@@ -159,14 +160,7 @@ export function urlImagePartage(media, { apiBase = '', site } = {}) {
  * @param {Seo} seo
  * @returns {Array<{cle: string, nom?: string, propriete?: string, contenu: string}>}
  */
-export function balisesMeta({
-	titre,
-	description,
-	url,
-	indexable,
-	image,
-	type,
-}) {
+export function balisesMeta({ titre, description, url, indexable, image, type }) {
 	const balises = [
 		{ cle: 'description', nom: 'description', contenu: description },
 		...(indexable ? [] : [{ cle: 'robots', nom: 'robots', contenu: NOINDEX }]),
@@ -254,6 +248,7 @@ export function jsonLdFilAriane(etapes) {
 }
 
 const unique = l => [...new Set(l.filter(Boolean))]
+const noms = valeurs => unique((Array.isArray(valeurs) ? valeurs : []).map(v => espaces(v?.name)))
 
 /**
  * SEO of a public profile.
@@ -265,13 +260,7 @@ const unique = l => [...new Set(l.filter(Boolean))]
  * @param {boolean} [options.formulaireDevis] - the quote form is online
  * @returns {Seo}
  */
-export function seoProfil({
-	profil,
-	slug,
-	site,
-	apiBase = '',
-	formulaireDevis = false,
-}) {
+export function seoProfil({ profil, slug, site, apiBase = '', formulaireDevis = false }) {
 	const p = attributs(profil)
 	const nom = nomAffiche(p)
 	const specialite = espaces(p.speciality)
@@ -279,29 +268,16 @@ export function seoProfil({
 	// JSON-LD; never the street of an address typed as the city
 	const lieu = lieuPublic(p.city)
 	const ville = lieu.texte
-	const detail = specialite
-		? ville
-			? `${specialite} à ${ville}`
-			: specialite
-		: ville
-			? `maquilleuse à ${ville}`
-			: 'maquilleuse professionnelle'
+	const detail = renderMetaState1({ specialite, ville })
 	const url = urlAbsolue(cheminProfil(slug), site)
 	const indexable = completude(p, { formulaireDevis }).publiable
 	const principale = photoPrincipale(p)
 	// the JSON-LD names the original, the previews a lighter copy
 	const photo = urlMedia(principale?.url, apiBase)
-	const image =
-		urlImagePartage(principale, { apiBase, site }) ||
-		urlAbsolue(IMAGE_PAR_DEFAUT, site)
+	const image = urlImagePartage(principale, { apiBase, site }) || urlAbsolue(IMAGE_PAR_DEFAUT, site)
 
-	const candidats = [
-		`${nom} – ${detail} | ${MARQUE}`,
-		`${nom} – ${detail}`,
-		`${nom} | ${MARQUE}`,
-	]
-	const titre =
-		candidats.find(t => t.length <= TITRE_MAX) ?? tronquer(nom, TITRE_MAX)
+	const candidats = [`${nom} – ${detail} | ${MARQUE}`, `${nom} – ${detail}`, `${nom} | ${MARQUE}`]
+	const titre = candidats.find(t => t.length <= TITRE_MAX) ?? tronquer(nom, TITRE_MAX)
 	const description = descriptionMeta(
 		p.description,
 		`Découvrez ${nom}, ${detail}, sur ${MARQUE} : prestations, tarifs et moyens de contact.`
@@ -316,7 +292,7 @@ export function seoProfil({
 	if (indexable) {
 		const idPersonne = `${url}#personne`
 		// a postal code alone (an address without its commune) names no City
-		const commune = /\p{L}/u.test(lieu.commune) ? lieu.commune : ''
+		const commune = seoProfilPattern2.test(lieu.commune) ? lieu.commune : ''
 		const zone = commune ? { '@type': 'City', name: commune } : null
 		jsonLd.unshift({
 			'@context': 'https://schema.org',
@@ -328,12 +304,8 @@ export function seoProfil({
 			jobTitle: specialite || 'Maquilleuse professionnelle',
 			description: tronquer(texteBrut(p.description), 300),
 			workLocation: zone ? { '@type': 'Place', name: commune } : null,
-			knowsAbout: unique(
-				(Array.isArray(p.skills) ? p.skills : []).map(s => espaces(s?.name))
-			).slice(0, 10),
-			knowsLanguage: unique(
-				(Array.isArray(p.language) ? p.language : []).map(l => espaces(l?.name))
-			),
+			knowsAbout: noms(p.skills).slice(0, 10),
+			knowsLanguage: noms(p.language),
 			// networks and website only: never the email nor the phone
 			sameAs: unique(
 				contacts(p.network)
@@ -443,8 +415,7 @@ export function seoArticle({ article, site, apiBase = '' }) {
 	const a = attributs(article)
 	const nom = espaces(a.title) || espaces(a.seo_title) || 'Article'
 	const url = urlAbsolue(chemin('blog', texte(a.slug)), site)
-	const image =
-		medias0(a.galery, { apiBase, site }) || urlAbsolue(IMAGE_PAR_DEFAUT, site)
+	const image = medias0(a.galery, { apiBase, site }) || urlAbsolue(IMAGE_PAR_DEFAUT, site)
 	return {
 		titre: titrePage(espaces(a.seo_title) || nom),
 		description: descriptionEditoriale(
@@ -469,6 +440,19 @@ export function seoArticle({ article, site, apiBase = '' }) {
 // first picture of a media field (articles: `galery`, which may hold files)
 function medias0(champ, options) {
 	const fichiers = galerie({ image_gallery: champ })
-	const image = fichiers.find(m => /\.(jpe?g|png|webp)(\?|$)/i.test(m.url))
+	const image = fichiers.find(m => textPattern3.test(m.url))
 	return image ? urlImagePartage(image, options) : ''
+}
+
+function renderMetaState1({ specialite, ville }) {
+	if (specialite) {
+		if (ville) {
+			return `${specialite} à ${ville}`
+		}
+		return specialite
+	}
+	if (ville) {
+		return `maquilleuse à ${ville}`
+	}
+	return 'maquilleuse professionnelle'
 }

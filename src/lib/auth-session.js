@@ -1,3 +1,4 @@
+const urlApiServeurPattern1 = /\/+$/
 /**
  * NextAuth session rules (A1, A2, A4, plans/01 §2.2), as pure functions so
  * they are tested without a server: when to ask Strapi again, what a Strapi
@@ -22,12 +23,9 @@ export const DELAI_STRAPI_MS = 8000
  * @returns {number}
  */
 export function delaiRevalidation(brut) {
-	if (typeof brut !== 'string' || brut.trim() === '')
-		return REVALIDATION_PAR_DEFAUT_MS
+	if (typeof brut !== 'string' || brut.trim() === '') return REVALIDATION_PAR_DEFAUT_MS
 	const valeur = Number(brut)
-	return Number.isFinite(valeur) && valeur >= 0
-		? Math.floor(valeur)
-		: REVALIDATION_PAR_DEFAUT_MS
+	return Number.isFinite(valeur) && valeur >= 0 ? Math.floor(valeur) : REVALIDATION_PAR_DEFAUT_MS
 }
 
 /**
@@ -42,9 +40,8 @@ export function delaiRevalidation(brut) {
  * @returns {'sans-jwt'|'expire'|'frais'|'a-verifier'}
  */
 export function etatJeton(token, maintenant, revalidationMs) {
-	if (!token || !token.jwt) return 'sans-jwt'
-	if (token.strapiExp && maintenant > token.strapiExp - MARGE_EXPIRATION_MS)
-		return 'expire'
+	if (!token?.jwt) return 'sans-jwt'
+	if (token.strapiExp && maintenant > token.strapiExp - MARGE_EXPIRATION_MS) return 'expire'
 	if (maintenant - (token.verifieA ?? 0) < revalidationMs) return 'frais'
 	return 'a-verifier'
 }
@@ -71,9 +68,7 @@ export function suiteVerification(status) {
  */
 export function expirationSession(expires, strapiExp) {
 	const session = Date.parse(expires)
-	const bornes = [session, strapiExp].filter(
-		valeur => typeof valeur === 'number' && Number.isFinite(valeur)
-	)
+	const bornes = [session, strapiExp].filter(valeur => typeof valeur === 'number' && Number.isFinite(valeur))
 	return bornes.length ? new Date(Math.min(...bornes)).toISOString() : expires
 }
 
@@ -106,9 +101,7 @@ export function secretNextAuth({ secret, nodeEnv, phase } = {}) {
 	const valeur = typeof secret === 'string' ? secret.trim() : ''
 	if (!SECRETS_VIDES.includes(valeur)) return valeur
 	if (nodeEnv === 'production' && phase !== 'phase-production-build')
-		throw new Error(
-			'NEXTAUTH_SECRET manquant : définir la variable au runtime (openssl rand -base64 32)'
-		)
+		throw new Error('NEXTAUTH_SECRET manquant : définir la variable au runtime (openssl rand -base64 32)')
 	return undefined
 }
 
@@ -119,10 +112,8 @@ export function secretNextAuth({ secret, nodeEnv, phase } = {}) {
  * @returns {string} without trailing slash
  */
 export function urlApiServeur({ interne, publique } = {}) {
-	const choisie = [interne, publique].find(
-		url => typeof url === 'string' && url.trim() !== ''
-	)
-	return choisie ? choisie.trim().replace(/\/+$/, '') : ''
+	const choisie = [interne, publique].find(url => typeof url === 'string' && url.trim() !== '')
+	return choisie ? choisie.trim().replace(urlApiServeurPattern1, '') : ''
 }
 
 const COOKIE_SESSION = /^(__Secure-)?next-auth\.session-token(\.\d+)?$/
@@ -155,8 +146,7 @@ export const OU_SESSION_EXPIREE = ['api_401', 'jwt_expire', 'middleware']
  * @returns {string}
  */
 export function urlSessionExpiree(chemin, ou) {
-	if (!OU_SESSION_EXPIREE.includes(ou))
-		throw new Error(`ou inconnu : ${String(ou)}`)
+	if (!OU_SESSION_EXPIREE.includes(ou)) throw new Error(`ou inconnu : ${String(ou)}`)
 	return `/auth/signin?error=session-expiree&ou=${ou}&callbackUrl=${encodeURIComponent(chemin)}`
 }
 
@@ -188,12 +178,7 @@ export function cookiesSessionAEffacer(noms = []) {
 		)
 }
 
-const PAGES_SANS_RETOUR = [
-	'/auth/signin',
-	'/auth/signup',
-	'/auth/error',
-	'/api/',
-]
+const PAGES_SANS_RETOUR = ['/auth/signin', '/auth/signup', '/auth/error', '/api/']
 
 /**
  * Where to go after signing in: the requested page when it is on this site,
@@ -213,8 +198,7 @@ export function callbackUrlSure(brut, origine, defaut = '/auth/profil') {
 		// `javascript:` all end up with another origin
 		const url = new URL(valeur.trim(), base)
 		if (url.origin !== base.origin) return defaut
-		if (PAGES_SANS_RETOUR.some(page => url.pathname.startsWith(page)))
-			return defaut
+		if (PAGES_SANS_RETOUR.some(page => url.pathname.startsWith(page))) return defaut
 		return `${url.pathname}${url.search}${url.hash}`
 	} catch {
 		return defaut
@@ -232,8 +216,7 @@ const MOT = /^[a-z0-9_-]{1,40}$/
  * @returns {string}
  */
 export function ligneLogAuth(evt, { code = 'ok', ms, cause } = {}) {
-	const mot = valeur =>
-		typeof valeur === 'string' && MOT.test(valeur) ? valeur : 'autre'
+	const mot = valeur => (typeof valeur === 'string' && MOT.test(valeur) ? valeur : 'autre')
 	let ligne = `[auth] evt=${mot(evt)} code=${mot(code)}`
 	if (Number.isFinite(ms) && ms >= 0) ligne += ` ms=${Math.round(ms)}`
 	if (cause !== undefined) ligne += ` cause=${mot(cause)}`

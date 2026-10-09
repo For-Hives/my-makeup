@@ -1,5 +1,5 @@
-import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
+import { describe, test } from 'node:test'
 import {
 	codeDepartementEcrit,
 	correspondanceLieu,
@@ -16,26 +16,20 @@ import {
 
 // made-up profiles, only their city matters here
 const profil = (id, city) => ({ id, username: `profil-${id}`, city })
-const correspond = (villeProfil, villeCherchee) =>
-	correspondanceLieu(lireLieu(villeProfil), lireLieu(villeCherchee))
+const correspond = (villeProfil, villeCherchee) => correspondanceLieu(lireLieu(villeProfil), lireLieu(villeCherchee))
 
 describe('place of a search by city (UI-10)', () => {
 	test('places compared without case, accents, hyphens nor « St »', () => {
-		assert.equal(
-			normaliserLieu('Saint-Julien-en-Genevois'),
-			'saint julien en genevois'
-		)
+		assert.equal(normaliserLieu('Saint-Julien-en-Genevois'), 'saint julien en genevois')
 		assert.equal(normaliserLieu('  ANNECY  '), 'annecy')
 		assert.equal(normaliserLieu('St-Étienne'), 'saint etienne')
 		assert.equal(normaliserLieu('Ste Foy-lès-Lyon'), 'sainte foy les lyon')
 		assert.equal(normaliserLieu('L’Haÿ-les-Roses'), 'l hay les roses')
-		assert.equal(
-			normaliserLieu('Saint-Brieuc, Côtes-d’Armor'),
-			'saint brieuc cotes d armor'
-		)
+		assert.equal(normaliserLieu('Saint-Brieuc, Côtes-d’Armor'), 'saint brieuc cotes d armor')
 		assert.equal(normaliserLieu('Œuilly'), 'oeuilly')
-		for (const v of [null, undefined, 74, {}])
+		for (const v of [null, undefined, 74, {}]) {
 			assert.equal(normaliserLieu(v), '')
+		}
 	})
 
 	test('101 départements; the département of a postal code', () => {
@@ -50,16 +44,9 @@ describe('place of a search by city (UI-10)', () => {
 		assert.equal(departementDuCodePostal('97411'), '974')
 		assert.equal(departementDuCodePostal('97600'), '976')
 		// not a département: Saint-Pierre-et-Miquelon, Monaco, nothing
-		for (const code of [
-			'97500',
-			'98000',
-			'96000',
-			'00100',
-			'7400',
-			74000,
-			null,
-		])
+		for (const code of ['97500', '98000', '96000', '00100', '7400', 74000, null]) {
 			assert.equal(departementDuCodePostal(code), null, String(code))
+		}
 	})
 
 	test('what a city field says: places and départements', () => {
@@ -108,21 +95,9 @@ describe('place of a search by city (UI-10)', () => {
 		assert.deepEqual(lireLieu('Auvergne-Rhône-Alpes').segments, [
 			{ mots: 'auvergne rhone alpes', departement: false, large: true },
 		])
-		for (const v of [
-			'',
-			'   ',
-			'-',
-			null,
-			undefined,
-			12,
-			'France',
-			'Toute la France',
-		])
-			assert.deepEqual(
-				lireLieu(v),
-				{ segments: [], departements: [] },
-				String(v)
-			)
+		for (const v of ['', '   ', '-', null, undefined, 12, 'France', 'Toute la France']) {
+			assert.deepEqual(lireLieu(v), { segments: [], departements: [] }, String(v))
+		}
 	})
 
 	test('a city: the words typed, whole, in the city of the profile', () => {
@@ -132,10 +107,7 @@ describe('place of a search by city (UI-10)', () => {
 		assert.equal(correspond('Grand Annecy', 'Annecy'), 'ville')
 		assert.equal(correspond('Annecy 74000', 'Annecy'), 'ville')
 		assert.equal(correspond('Annecy / Chambéry', 'Chambery'), 'ville')
-		assert.equal(
-			correspond('Saint-Julien-en-Genevois', 'St Julien en Genevois'),
-			'ville'
-		)
+		assert.equal(correspond('Saint-Julien-en-Genevois', 'St Julien en Genevois'), 'ville')
 		assert.equal(correspond('Lyon 3e', 'Lyon 7e'), 'ville')
 		// another city that starts the same, or no city at all
 		assert.equal(correspond('Annemasse', 'Annecy'), null)
@@ -147,15 +119,9 @@ describe('place of a search by city (UI-10)', () => {
 	})
 
 	test('a département: by code, postal code or name, never inside another name', () => {
-		assert.equal(
-			correspond('Thonon-les-Bains 74200', 'Haute-Savoie'),
-			'departement'
-		)
+		assert.equal(correspond('Thonon-les-Bains 74200', 'Haute-Savoie'), 'departement')
 		assert.equal(correspond('Annecy (74)', '74'), 'departement')
-		assert.equal(
-			correspond('Thonon-les-Bains 74200', 'Annecy 74000'),
-			'departement'
-		)
+		assert.equal(correspond('Thonon-les-Bains 74200', 'Annecy 74000'), 'departement')
 		assert.equal(correspond('Annecy', 'Annecy 74000'), 'ville')
 		assert.equal(correspond('Chambéry (73)', 'Savoie'), 'departement')
 		assert.equal(correspond('Savoie', 'Savoie'), 'ville')
@@ -218,24 +184,12 @@ describe('place of a search by city (UI-10)', () => {
 			profil(6, 'Chambéry, Auvergne-Rhône-Alpes'),
 		]
 		const ids = liste => liste.map(r => r.id)
-		assert.deepEqual(
-			ids(separerParLieu(resultats, 'Annecy, France').locaux),
-			[3]
-		)
-		assert.deepEqual(
-			ids(separerParLieu(resultats, 'Annecy (Suisse)').locaux),
-			[3]
-		)
-		assert.deepEqual(
-			ids(separerParLieu(resultats, 'Annecy, Auvergne-Rhône-Alpes').locaux),
-			[3]
-		)
+		assert.deepEqual(ids(separerParLieu(resultats, 'Annecy, France').locaux), [3])
+		assert.deepEqual(ids(separerParLieu(resultats, 'Annecy (Suisse)').locaux), [3])
+		assert.deepEqual(ids(separerParLieu(resultats, 'Annecy, Auvergne-Rhône-Alpes').locaux), [3])
 		// alone, a country or a region is what was typed
 		assert.deepEqual(ids(separerParLieu(resultats, 'Suisse').locaux), [4])
-		assert.deepEqual(
-			ids(separerParLieu(resultats, 'Auvergne-Rhône-Alpes').locaux),
-			[6]
-		)
+		assert.deepEqual(ids(separerParLieu(resultats, 'Auvergne-Rhône-Alpes').locaux), [6])
 		// « France » alone: the whole country, nothing set apart
 		assert.deepEqual(separerParLieu(resultats, 'France'), {
 			locaux: resultats,
@@ -273,12 +227,13 @@ describe('place of a search by city (UI-10)', () => {
 
 	test('without a usable place, nothing is set apart', () => {
 		const resultats = [profil(1, 'Lyon'), profil(2, 'Annecy')]
-		for (const city of ['', '  ', '-'])
+		for (const city of ['', '  ', '-']) {
 			assert.deepEqual(separerParLieu(resultats, city), {
 				locaux: resultats,
 				autres: [],
 				parLieu: false,
 			})
+		}
 		assert.deepEqual(separerParLieu(null, 'Annecy'), {
 			locaux: [],
 			autres: [],
@@ -300,11 +255,7 @@ describe('the others of a search by city in a sparse directory (UI-10)', () => {
 		locaux: ids(locaux),
 		parLieu,
 		departements,
-		sections: sections.map(({ cle, titre, profils }) => [
-			cle,
-			titre,
-			ids(profils),
-		]),
+		sections: sections.map(({ cle, titre, profils }) => [cle, titre, ids(profils)]),
 	})
 
 	test('a département written as a code by a profile: postal code or « (74) », never a name', () => {
@@ -328,8 +279,9 @@ describe('the others of a search by city in a sparse directory (UI-10)', () => {
 		assert.equal(codeDepartementEcrit('Corse (20)'), null)
 		assert.equal(codeDepartementEcrit('Annecy 74'), null)
 		assert.equal(codeDepartementEcrit('74 et alentours'), null)
-		for (const v of ['', 'Annecy', null, undefined, 74000])
+		for (const v of ['', 'Annecy', null, undefined, 74000]) {
 			assert.equal(codeDepartementEcrit(v), null, String(v))
+		}
 	})
 
 	test('the département of the search: typed, else the most frequent code of the profiles of the city', () => {
@@ -348,26 +300,14 @@ describe('the others of a search by city in a sparse directory (UI-10)', () => {
 		assert.deepEqual(departementsDeLaRecherche([], 'Corse'), ['2A', '2B'])
 		// a tie: the first profile, in the order of the API
 		assert.deepEqual(
-			departementsDeLaRecherche(
-				[carte(1, 'Saint-Denis (93)'), carte(2, 'Saint-Denis (974)')],
-				'Saint-Denis'
-			),
+			departementsDeLaRecherche([carte(1, 'Saint-Denis (93)'), carte(2, 'Saint-Denis (974)')], 'Saint-Denis'),
 			['93']
 		)
 		// no code written: no département (« Paris » is another place here)
-		assert.deepEqual(
-			departementsDeLaRecherche(
-				[carte(1, 'Annecy'), carte(2, 'Paris, Lyon et Annecy')],
-				'Annecy'
-			),
-			[]
-		)
+		assert.deepEqual(departementsDeLaRecherche([carte(1, 'Annecy'), carte(2, 'Paris, Lyon et Annecy')], 'Annecy'), [])
 		assert.deepEqual(departementsDeLaRecherche(null, 'Annecy'), [])
 		assert.equal(duDepartement(['74']), 'du 74 (Haute-Savoie)')
-		assert.equal(
-			duDepartement(['2A', '2B']),
-			'du 2A (Corse-du-Sud) et du 2B (Haute-Corse)'
-		)
+		assert.equal(duDepartement(['2A', '2B']), 'du 2A (Corse-du-Sud) et du 2B (Haute-Corse)')
 	})
 
 	test('/search?city=Annecy: the city, then its département, those that travel, then the rest, each profile once', () => {
@@ -399,10 +339,7 @@ describe('the others of a search by city in a sparse directory (UI-10)', () => {
 				['autres', 'Autres maquilleuses', [6, 7, 9, 10]],
 			],
 		})
-		const montres = [
-			...sections.locaux,
-			...sections.sections.flatMap(s => s.profils),
-		]
+		const montres = [...sections.locaux, ...sections.sections.flatMap(s => s.profils)]
 		assert.deepEqual(
 			ids(montres).sort((a, b) => a - b),
 			ids(annuaire).sort((a, b) => a - b)
@@ -442,13 +379,7 @@ describe('the others of a search by city in a sparse directory (UI-10)', () => {
 	})
 
 	test('no département known: the same sections without the département, nobody left out', () => {
-		const annuaire = [
-			carte(1, 'Annecy'),
-			carte(3, 'Nantes'),
-			carte(4, '', 30),
-			carte(5, 'Paris', 20),
-			carte(2, 'Lyon'),
-		]
+		const annuaire = [carte(1, 'Annecy'), carte(3, 'Nantes'), carte(4, '', 30), carte(5, 'Paris', 20), carte(2, 'Lyon')]
 		assert.deepEqual(resume(sectionsParLieu(annuaire, 'Annecy')), {
 			locaux: [1],
 			parLieu: true,
@@ -486,22 +417,15 @@ describe('the others of a search by city in a sparse directory (UI-10)', () => {
 		}
 		assert.deepEqual(montres('Toulouse (31)'), [1, 2, 3, 4, 5])
 		assert.deepEqual(montres('Toulouse'), [1, 2, 3, 4, 5])
-		assert.deepEqual(
-			resume(sectionsParLieu(annuaire('Toulouse (31)'), 'Toulouse')).sections,
-			[
-				['departement', 'Autres maquilleuses du 31 (Haute-Garonne)', [5]],
-				['deplacent', 'Autres maquilleuses qui se déplacent', [4]],
-				['autres', 'Autres maquilleuses', [2, 3]],
-			]
-		)
+		assert.deepEqual(resume(sectionsParLieu(annuaire('Toulouse (31)'), 'Toulouse')).sections, [
+			['departement', 'Autres maquilleuses du 31 (Haute-Garonne)', [5]],
+			['deplacent', 'Autres maquilleuses qui se déplacent', [4]],
+			['autres', 'Autres maquilleuses', [2, 3]],
+		])
 	})
 
 	test('a search by term with a city: the API answer only, split the same way', () => {
-		const resultats = [
-			carte(1, 'Lyon'),
-			carte(2, 'Annecy (74)'),
-			carte(3, 'Cluses (74)'),
-		]
+		const resultats = [carte(1, 'Lyon'), carte(2, 'Annecy (74)'), carte(3, 'Cluses (74)')]
 		assert.deepEqual(resume(sectionsParLieu(resultats, 'Annecy')), {
 			locaux: [2],
 			parLieu: true,
@@ -514,19 +438,24 @@ describe('the others of a search by city in a sparse directory (UI-10)', () => {
 	})
 
 	test('a place the page can rank by', () => {
-		for (const city of ['Annecy', '74000', 'Haute-Savoie', 'Corse', 'Suisse'])
+		for (const city of ['Annecy', '74000', 'Haute-Savoie', 'Corse', 'Suisse']) {
 			assert.equal(lieuUtilisable(city), true, city)
-		for (const city of ['', '-', 'France', 'Toute la France', null])
+		}
+		for (const city of ['', '-', 'France', 'Toute la France', null]) {
 			assert.equal(lieuUtilisable(city), false, String(city))
+		}
 	})
 
 	test('without a usable place, one list: the directory is not added', () => {
 		const resultats = [carte(1, 'Lyon'), carte(2, 'Annecy')]
-		for (const city of ['', '-', 'France'])
-			assert.deepEqual(
-				sectionsParLieu(resultats, city, [carte(3, 'Paris', 10)]),
-				{ locaux: resultats, parLieu: false, departements: [], sections: [] }
-			)
+		for (const city of ['', '-', 'France']) {
+			assert.deepEqual(sectionsParLieu(resultats, city, [carte(3, 'Paris', 10)]), {
+				locaux: resultats,
+				parLieu: false,
+				departements: [],
+				sections: [],
+			})
+		}
 		assert.deepEqual(resume(sectionsParLieu(null, 'Annecy', null)), {
 			locaux: [],
 			parLieu: true,

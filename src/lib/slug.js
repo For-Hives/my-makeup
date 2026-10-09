@@ -1,3 +1,4 @@
+const couperPattern1 = /-+$/
 /**
  * Profile URLs (SEO-10, plans/03 §5): /profil/<slug>, where the slug is
  * computed from the username, the same way here and in the v3 import, so the
@@ -43,8 +44,7 @@ const LETTRES_SANS_DECOMPOSITION = {
 	Þ: 'th',
 }
 
-const couper = (slug, max) =>
-	slug.length > max ? slug.slice(0, max).replace(/-+$/, '') : slug
+const couper = (slug, max) => (slug.length > max ? slug.slice(0, max).replace(couperPattern1, '') : slug)
 
 /**
  * @param {unknown} texte - a username, a title
@@ -134,8 +134,7 @@ export function tableDesSlugs(profils) {
 	}
 	for (const profil of attribuerSlugs(profils)) {
 		table.parSlug.set(profil.slug, profil)
-		if (profil.username && !table.parUsername.has(profil.username))
-			table.parUsername.set(profil.username, profil)
+		if (profil.username && !table.parUsername.has(profil.username)) table.parUsername.set(profil.username, profil)
 		table.slugParId.set(String(profil.id), profil.slug)
 	}
 	return table
@@ -156,8 +155,7 @@ export function resoudreProfil(segment, table) {
 	if (typeof segment !== 'string' || segment === '') return null
 	const direct = table.parSlug.get(segment)
 	if (direct) return { profil: direct, slug: direct.slug, redirection: false }
-	const ancien =
-		table.parUsername.get(segment) ?? table.parSlug.get(slugifier(segment))
+	const ancien = table.parUsername.get(segment) ?? table.parSlug.get(slugifier(segment))
 	if (ancien) return { profil: ancien, slug: ancien.slug, redirection: true }
 	return null
 }

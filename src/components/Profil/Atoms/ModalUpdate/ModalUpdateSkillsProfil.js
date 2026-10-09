@@ -1,10 +1,9 @@
-import React, { Fragment, useEffect, useRef, useState } from 'react'
 import { Dialog, Transition } from '@headlessui/react'
-import { useForm, useFormContext } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useSession } from 'next-auth/react'
+import { Fragment, useEffect, useRef, useState } from 'react'
+import { useForm } from 'react-hook-form'
 import * as zod from 'zod'
-import { patchMeMakeup } from '@/services/PatchMeMakeup'
 import {
 	BoutonFermer,
 	BoutonSauvegarder,
@@ -12,6 +11,8 @@ import {
 	FondModale,
 	useEnvoi,
 } from '@/components/Profil/Atoms/ModalUpdate/ModalElements'
+import { avecCles } from '@/lib/cles'
+import { patchMeMakeup } from '@/services/PatchMeMakeup'
 
 const schema = zod
 	.object({
@@ -32,7 +33,6 @@ export default function ModalUpdateSkillsProfil(props) {
 		formState: { errors },
 		reset,
 		trigger,
-		watch,
 		setValue,
 		setError,
 	} = useForm({
@@ -41,15 +41,10 @@ export default function ModalUpdateSkillsProfil(props) {
 
 	const [open, setOpen] = useState(props.isModalOpen)
 	const [userSkills, setUserSkills] = useState('')
-	const [userSkillsSelected, setUserSkillsSelected] = useState(
-		user.skills ?? []
-	)
+	const [userSkillsSelected, setUserSkillsSelected] = useState(user.skills ?? [])
 
 	// Escape, a click outside and « Fermer » wait for the save in progress
-	const { envoi, setEnvoi, erreurEnvoi, setErreurEnvoi, fermer } = useEnvoi(
-		props.isModalOpen,
-		props.handleIsModalOpen
-	)
+	const { envoi, setEnvoi, erreurEnvoi, setErreurEnvoi, fermer } = useEnvoi(props.isModalOpen, props.handleIsModalOpen)
 
 	const { data: session } = useSession()
 
@@ -57,7 +52,7 @@ export default function ModalUpdateSkillsProfil(props) {
 	 * onSubmit function called when the form is submitted
 	 * @param data
 	 */
-	const onSubmit = async data => {
+	const onSubmit = async _data => {
 		// for each item selected, we only keep the name, the id is not necessary
 		const champs = {
 			skills: userSkillsSelected.map(item => ({ name: item.name })),
@@ -92,9 +87,7 @@ export default function ModalUpdateSkillsProfil(props) {
 				setValue('skills', nom)
 				trigger('skills').then(isValid => {
 					if (isValid) {
-						setUserSkillsSelected(
-							userSkillsSelected.concat({ id: nom, name: nom })
-						)
+						setUserSkillsSelected(userSkillsSelected.concat({ id: nom, name: nom }))
 						setUserSkills('')
 					} else setUserSkills(nom)
 				})
@@ -135,7 +128,7 @@ export default function ModalUpdateSkillsProfil(props) {
 	}, [open, reset, user.skills])
 
 	useEffect(() => {
-		if (user && user.skills) {
+		if (user?.skills) {
 			// Add an id to each skill
 			const skillsWithId = user.skills.map((skill, index) => {
 				return {
@@ -151,12 +144,7 @@ export default function ModalUpdateSkillsProfil(props) {
 
 	return (
 		<Transition.Root show={open} as={Fragment}>
-			<Dialog
-				as="div"
-				className="relative z-30"
-				initialFocus={cancelButtonRef}
-				onClose={fermer}
-			>
+			<Dialog as="div" className="relative z-30" initialFocus={cancelButtonRef} onClose={fermer}>
 				<FondModale />
 
 				<div className="fixed inset-0 z-30 overflow-y-auto">
@@ -174,41 +162,25 @@ export default function ModalUpdateSkillsProfil(props) {
 								data-cy="modal-panel"
 								className="relative w-full transform rounded-lg bg-white p-8 text-left shadow-2xl transition-all sm:max-w-3xl"
 							>
-								<BoutonFermer
-									onClick={fermer}
-									disabled={envoi}
-									ref={cancelButtonRef}
-								/>
+								<BoutonFermer onClick={fermer} disabled={envoi} ref={cancelButtonRef} />
 								<div className="flex flex-col items-start gap-8">
 									<div className="text-left">
-										<Dialog.Title
-											as="h3"
-											className="text-lg font-semibold text-gray-900"
-										>
+										<Dialog.Title as="h3" className="text-lg font-semibold text-gray-900">
 											Vos compétences
 										</Dialog.Title>
 									</div>
 									<div className={'w-full md:w-3/5'}>
 										<div className="grid grid-cols-1 gap-4">
 											<div className={'flex flex-col gap-4'}>
-												<form
-													onSubmit={handleSubmit(onSubmit)}
-													method="POST"
-													className="flex flex-col gap-4"
-												>
+												<form onSubmit={handleSubmit(onSubmit)} method="POST" className="flex flex-col gap-4">
 													<div>
-														<label
-															htmlFor="skills"
-															className="block text-sm text-gray-700"
-														>
+														<label htmlFor="skills" className="block text-sm text-gray-700">
 															Compétences
 														</label>
 														<p className={'text-xs italic text-gray-700/70'}>
-															Vous pouvez ajouter plusieurs compétences en les
-															séparant par un point-virgule, ou en appuyant sur
-															la touche entrée. Attention, les 7 premières
-															compétences seront celles affichées en priorité
-															sur votre profil.
+															Vous pouvez ajouter plusieurs compétences en les séparant par un point-virgule, ou en
+															appuyant sur la touche entrée. Attention, les 7 premières compétences seront celles
+															affichées en priorité sur votre profil.
 														</p>
 														<div className="mt-2">
 															<input
@@ -242,8 +214,7 @@ export default function ModalUpdateSkillsProfil(props) {
 																			else
 																				setError('skills', {
 																					type: 'manual',
-																					message:
-																						'Une compétence est requise.',
+																					message: 'Une compétence est requise.',
 																				})
 																		}
 																	}
@@ -253,42 +224,30 @@ export default function ModalUpdateSkillsProfil(props) {
 																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
 															/>
 															{errors.skills && (
-																<p
-																	data-cy={'error-skills'}
-																	className={'mt-2 text-xs text-red-500/80'}
-																>
+																<p data-cy={'error-skills'} className={'mt-2 text-xs text-red-500/80'}>
 																	{errors.skills.message}
 																</p>
 															)}
 														</div>
 													</div>
 													<div className={'flex flex-col gap-2'}>
-														<h3 className={'text-sm text-gray-700'}>
-															Compétences sélectionnés
-														</h3>
-														<div
-															className={
-																'flex w-full flex-wrap items-center gap-2'
-															}
-														>
-															{userSkillsSelected.map((skill, index) => (
+														<h3 className={'text-sm text-gray-700'}>Compétences sélectionnés</h3>
+														<div className={'flex w-full flex-wrap items-center gap-2'}>
+															{avecCles(userSkillsSelected).map(({ valeur: skill, cle }, _index) => (
 																<button
 																	data-cy="skill-selected"
 																	type={'button'}
 																	onClick={() => {
 																		handleDeleteSkillSelected(skill.id)
 																	}}
-																	key={index}
+																	key={cle}
 																	aria-label={`Retirer ${skill.name}`}
 																	className={
 																		'flex min-h-[44px] items-center gap-2 rounded-full bg-gray-100 px-3 text-sm text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600'
 																	}
 																>
 																	<span>{skill.name}</span>
-																	<span
-																		className="material-icons-round text-sm"
-																		aria-hidden="true"
-																	>
+																	<span className="material-icons-round text-sm" aria-hidden="true">
 																		close
 																	</span>
 																</button>
@@ -302,11 +261,7 @@ export default function ModalUpdateSkillsProfil(props) {
 								</div>
 								<div className="mt-4 flex flex-col items-end gap-4">
 									<ErreurSauvegarde message={erreurEnvoi} />
-									<BoutonSauvegarder
-										dataCy="save-button-skills"
-										envoi={envoi}
-										onClick={handleSubmit(onSubmit)}
-									/>
+									<BoutonSauvegarder dataCy="save-button-skills" envoi={envoi} onClick={handleSubmit(onSubmit)} />
 								</div>
 							</Dialog.Panel>
 						</Transition.Child>

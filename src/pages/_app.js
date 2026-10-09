@@ -10,28 +10,22 @@ import Head from 'next/head'
 import { useReportWebVitals } from 'next/web-vitals'
 import { SessionProvider } from 'next-auth/react'
 import { ToastContainer } from 'react-toastify'
-import { robotsPourChemin } from '@/lib/seo/robots'
 import { trackWebVital } from '@/lib/analytics'
+import { robotsPourChemin } from '@/lib/seo/robots'
 import { webVitalsSampled } from '@/lib/web-vitals'
 
 // Field Web Vitals (MES-10): drawn once per page load (10 % by default,
 // NEXT_PUBLIC_WEB_VITALS_SAMPLE), and attributed to the page that was
 // loaded, even when LCP, CLS or INP arrive after a client-side navigation.
-const PAGE_CHARGEE =
-	typeof window === 'undefined' ? null : window.location.pathname
+const PAGE_CHARGEE = typeof window === 'undefined' ? null : window.location.pathname
 const VITALS_ECHANTILLONNEES =
-	PAGE_CHARGEE !== null &&
-	webVitalsSampled(process.env.NEXT_PUBLIC_WEB_VITALS_SAMPLE, Math.random())
+	PAGE_CHARGEE !== null && webVitalsSampled(process.env.NEXT_PUBLIC_WEB_VITALS_SAMPLE, Math.random())
 
 function reportWebVital(metric) {
 	if (VITALS_ECHANTILLONNEES) trackWebVital(metric, PAGE_CHARGEE)
 }
 
-export default function App({
-	Component,
-	pageProps: { session, ...pageProps },
-	router,
-}) {
+export default function App({ Component, pageProps: { session, ...pageProps }, router }) {
 	// next/web-vitals: in Next 15 the reportWebVitals export of _app only
 	// receives the Next.js marks, this hook gets LCP, CLS, INP, FCP and TTFB
 	useReportWebVitals(reportWebVital)

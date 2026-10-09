@@ -1,10 +1,11 @@
-import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
+import { describe, test } from 'node:test'
+import { eventData } from '../../src/lib/analytics.js'
 import {
 	ACCEPT,
+	COTE_MAX,
 	codeRefusEnvoi,
 	compresserPhoto,
-	COTE_MAX,
 	dimensionsCibles,
 	kindRefusEnvoi,
 	MESSAGES_PHOTO,
@@ -17,7 +18,6 @@ import {
 	typeImageDepuisOctets,
 	verifierPhoto,
 } from '../../src/lib/photo.js'
-import { eventData } from '../../src/lib/analytics.js'
 
 const MO = 1024 * 1024
 const ascii = texte => [...texte].map(c => c.charCodeAt(0))
@@ -46,8 +46,9 @@ describe('accepted types (same list as the API upload guard)', () => {
 		assert.equal(typeImageDepuisOctets(TETES.heic), 'image/heic')
 		assert.equal(typeImageDepuisOctets(TETES.heicMif1), 'image/heic')
 		assert.equal(typeImageDepuisOctets(TETES.avif), 'image/avif')
-		for (const autre of [TETES.svg, TETES.gif, TETES.pdf, [], [0xff]])
+		for (const autre of [TETES.svg, TETES.gif, TETES.pdf, [], [0xff]]) {
 			assert.equal(typeImageDepuisOctets(autre), null)
+		}
 		assert.equal(typeImageDepuisOctets(undefined), null)
 		assert.equal(typeImageDepuisOctets(new Uint8Array(TETES.png)), 'image/png')
 	})
@@ -120,20 +121,12 @@ describe('verifierPhoto', () => {
 	})
 
 	test('refuses a picture above 25 MB before decoding it, and empty files', () => {
-		const lourde = verifierPhoto(
-			ok('image/jpeg', TETES.jpeg, TAILLE_MAX_CHOIX + 1)
-		)
+		const lourde = verifierPhoto(ok('image/jpeg', TETES.jpeg, TAILLE_MAX_CHOIX + 1))
 		assert.equal(lourde.ok, false)
 		assert.equal(lourde.raison, 'taille')
 		assert.match(lourde.message, /25 Mo/)
-		assert.equal(
-			verifierPhoto(ok('image/jpeg', TETES.jpeg, TAILLE_MAX_CHOIX)).ok,
-			true
-		)
-		assert.equal(
-			verifierPhoto(ok('image/jpeg', TETES.jpeg, 0)).code,
-			'illisible'
-		)
+		assert.equal(verifierPhoto(ok('image/jpeg', TETES.jpeg, TAILLE_MAX_CHOIX)).ok, true)
+		assert.equal(verifierPhoto(ok('image/jpeg', TETES.jpeg, 0)).code, 'illisible')
 	})
 
 	test('an 8 MB phone photo is accepted: it is compressed, not refused', () => {
@@ -186,8 +179,9 @@ describe('dimensionsCibles', () => {
 			[100, -1],
 			[NaN, 10],
 			[Infinity, 10],
-		])
+		]) {
 			assert.equal(dimensionsCibles(l, h), null)
+		}
 		assert.equal(dimensionsCibles(100, 100, 0), null)
 	})
 })
@@ -198,9 +192,7 @@ const encodeurFactice = ({ octetsParPixel = 0.5, webp = true } = {}) => {
 	const encoder = async cible => {
 		appels.push(cible)
 		const type = !webp && cible.type === 'image/webp' ? 'image/png' : cible.type
-		const size = Math.round(
-			cible.largeur * cible.hauteur * octetsParPixel * cible.qualite
-		)
+		const size = Math.round(cible.largeur * cible.hauteur * octetsParPixel * cible.qualite)
 		return { type, size }
 	}
 	return { appels, encoder }
@@ -233,15 +225,13 @@ describe('compresserPhoto', () => {
 		assert.equal(resultat.ok, true)
 		assert.ok(resultat.blob.size <= TAILLE_MAX_ENVOI)
 		// every step before the last one was too heavy
-		for (const appel of appels.slice(0, -1))
-			assert.ok(
-				appel.largeur * appel.hauteur * 1.2 * appel.qualite > TAILLE_MAX_ENVOI
-			)
+		for (const appel of appels.slice(0, -1)) {
+			assert.ok(appel.largeur * appel.hauteur * 1.2 * appel.qualite > TAILLE_MAX_ENVOI)
+		}
 		// qualities go down within a size, sizes never go up
 		for (let i = 1; i < appels.length; i++) {
 			assert.ok(appels[i].largeur <= appels[i - 1].largeur)
-			if (appels[i].largeur === appels[i - 1].largeur)
-				assert.ok(appels[i].qualite < appels[i - 1].qualite)
+			if (appels[i].largeur === appels[i - 1].largeur) assert.ok(appels[i].qualite < appels[i - 1].qualite)
 		}
 		assert.ok(resultat.largeur < 2000)
 		assert.ok(resultat.largeur >= 1000)
@@ -272,10 +262,7 @@ describe('compresserPhoto', () => {
 			hauteur: 3000,
 			encoder,
 		})
-		assert.deepEqual(
-			{ ok: resultat.ok, code: resultat.code },
-			{ ok: false, code: 'trop-lourde' }
-		)
+		assert.deepEqual({ ok: resultat.ok, code: resultat.code }, { ok: false, code: 'trop-lourde' })
 		assert.equal(appels.length, PALIERS.length)
 	})
 
@@ -285,10 +272,7 @@ describe('compresserPhoto', () => {
 			hauteur: 100,
 			encoder: async () => ({ type: 'image/png', size: 10 }),
 		})
-		assert.deepEqual(
-			{ ok: resultat.ok, code: resultat.code },
-			{ ok: false, code: 'illisible' }
-		)
+		assert.deepEqual({ ok: resultat.ok, code: resultat.code }, { ok: false, code: 'illisible' })
 	})
 
 	test('a picture without size: « illisible », nothing encoded', async () => {
@@ -302,23 +286,16 @@ describe('compresserPhoto', () => {
 describe('nomPhoto', () => {
 	test('a safe name with the extension of the sent type', () => {
 		assert.equal(nomPhoto('IMG_0001.HEIC', 'image/webp'), 'img-0001.webp')
-		assert.equal(
-			nomPhoto('Mariée à Annecy.png', 'image/jpeg'),
-			'mariee-a-annecy.jpg'
-		)
+		assert.equal(nomPhoto('Mariée à Annecy.png', 'image/jpeg'), 'mariee-a-annecy.jpg')
 		assert.equal(nomPhoto('../../etc/passwd', 'image/webp'), 'etc-passwd.webp')
 		assert.equal(nomPhoto('', 'image/webp'), 'photo.webp')
 		assert.equal(nomPhoto(undefined, 'image/jpeg'), 'photo.jpg')
-		assert.ok(nomPhoto('x'.repeat(300) + '.jpg', 'image/webp').length <= 65)
+		assert.ok(nomPhoto(`${'x'.repeat(300)}.jpg`, 'image/webp').length <= 65)
 	})
 })
 
 describe('preparerPhoto (ports)', () => {
-	const ports = ({
-		tete = TETES.jpeg,
-		largeur = 4000,
-		hauteur = 3000,
-	} = {}) => {
+	const ports = ({ tete = TETES.jpeg, largeur = 4000, hauteur = 3000 } = {}) => {
 		const journal = { decode: 0, libere: 0 }
 		return {
 			journal,
@@ -338,10 +315,7 @@ describe('preparerPhoto (ports)', () => {
 
 	test('8 MB JPEG from a phone: a WebP under 1 MB, 2000 px wide', async () => {
 		const p = ports()
-		const resultat = await preparerPhoto(
-			{ name: 'IMG_2040.JPG', type: 'image/jpeg', size: 8 * MO },
-			p
-		)
+		const resultat = await preparerPhoto({ name: 'IMG_2040.JPG', type: 'image/jpeg', size: 8 * MO }, p)
 		assert.equal(resultat.ok, true)
 		assert.equal(resultat.fichier.nom, 'img-2040.webp')
 		assert.equal(resultat.fichier.type, 'image/webp')
@@ -352,10 +326,7 @@ describe('preparerPhoto (ports)', () => {
 
 	test('HEIC: refused before decoding', async () => {
 		const p = ports({ tete: TETES.heic })
-		const resultat = await preparerPhoto(
-			{ name: 'IMG_0001.HEIC', type: 'image/heic', size: 3 * MO },
-			p
-		)
+		const resultat = await preparerPhoto({ name: 'IMG_0001.HEIC', type: 'image/heic', size: 3 * MO }, p)
 		assert.equal(resultat.ok, false)
 		assert.equal(resultat.code, 'heic')
 		assert.equal(p.journal.decode, 0)
@@ -366,21 +337,14 @@ describe('preparerPhoto (ports)', () => {
 		p.decoder = async () => {
 			throw new Error('decode')
 		}
-		const resultat = await preparerPhoto(
-			{ name: 'a.jpg', type: 'image/jpeg', size: MO },
-			p
-		)
+		const resultat = await preparerPhoto({ name: 'a.jpg', type: 'image/jpeg', size: MO }, p)
 		assert.equal(resultat.code, 'illisible')
 		assert.equal(resultat.message, MESSAGES_PHOTO.illisible)
 
 		p.lireTete = async () => {
 			throw new Error('read')
 		}
-		assert.equal(
-			(await preparerPhoto({ name: 'a.jpg', type: 'image/jpeg', size: 1 }, p))
-				.code,
-			'illisible'
-		)
+		assert.equal((await preparerPhoto({ name: 'a.jpg', type: 'image/jpeg', size: 1 }, p)).code, 'illisible')
 	})
 })
 
@@ -388,10 +352,12 @@ describe('codeRefusEnvoi (answer of POST /api/upload)', () => {
 	test('413 → too large, 400 → refused type, anything else → retry later', () => {
 		assert.equal(codeRefusEnvoi(413), 'refus-taille')
 		assert.equal(codeRefusEnvoi(400), 'refus-type')
-		for (const status of [0, 401, 403, 500, 502, 200])
+		for (const status of [0, 401, 403, 500, 502, 200]) {
 			assert.equal(codeRefusEnvoi(status), 'envoi-impossible')
-		for (const code of ['refus-taille', 'refus-type', 'envoi-impossible'])
+		}
+		for (const code of ['refus-taille', 'refus-type', 'envoi-impossible']) {
 			assert.ok(MESSAGES_PHOTO[code])
+		}
 	})
 })
 
@@ -401,17 +367,16 @@ describe('kindRefusEnvoi (upload_error of a refused POST /api/upload)', () => {
 		assert.equal(kindRefusEnvoi(400), 'type')
 		assert.equal(kindRefusEnvoi(415), 'type')
 		// 0: API out of reach; 200: stored, but its answer could not be read
-		for (const status of [0, 200, 401, 403, 429, 500, 502, 503])
+		for (const status of [0, 200, 401, 403, 429, 500, 502, 503]) {
 			assert.equal(kindRefusEnvoi(status), 'server')
+		}
 	})
 
 	test('every kind is in the catalogue and carries the status only', () => {
-		for (const status of [413, 400, 415, 500, 0])
-			assert.deepEqual(
-				eventData('upload_error', { kind: kindRefusEnvoi(status) }),
-				{
-					kind: kindRefusEnvoi(status),
-				}
-			)
+		for (const status of [413, 400, 415, 500, 0]) {
+			assert.deepEqual(eventData('upload_error', { kind: kindRefusEnvoi(status) }), {
+				kind: kindRefusEnvoi(status),
+			})
+		}
 	})
 })

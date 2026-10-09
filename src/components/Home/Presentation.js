@@ -1,4 +1,3 @@
-import React from 'react'
 import Image from 'next/image'
 
 function Presentation() {
@@ -10,17 +9,12 @@ function Presentation() {
 						My-Makeup c&apos;est avant tout une communauté
 					</h2>
 					<p className="mt-6 text-center text-lg leading-8 text-gray-700">
-						Où les maquilleuses et les particuliers se retrouvent pour
-						collaborer en toute simplicité.
+						Où les maquilleuses et les particuliers se retrouvent pour collaborer en toute simplicité.
 					</p>
 				</div>
 			</div>
 			<div className={'mx-auto mt-10 max-w-7xl'}>
-				<div
-					className={
-						'mx-auto flex flex-col items-center justify-center gap-16 md:flex-row lg:gap-32'
-					}
-				>
+				<div className={'mx-auto flex flex-col items-center justify-center gap-16 md:flex-row lg:gap-32'}>
 					<div className={'flex flex-col items-center justify-center gap-2'}>
 						<Image
 							alt={'client à la recherche de maquilleuse'}
@@ -28,11 +22,7 @@ function Presentation() {
 							width={'140'}
 							height={'140'}
 						/>
-						<h3
-							className={
-								'text-center text-4xl font-bold tracking-tight text-gray-700 sm:text-xl'
-							}
-						>
+						<h3 className={'text-center text-4xl font-bold tracking-tight text-gray-700 sm:text-xl'}>
 							Des particuliers
 						</h3>
 						<p className={'text-center text-sm leading-8 text-gray-600'}>
@@ -46,36 +36,22 @@ function Presentation() {
 							width={'140'}
 							height={'140'}
 						/>
-						<h3
-							className={
-								'text-center text-4xl font-bold tracking-tight text-gray-700 sm:text-xl'
-							}
-						>
+						<h3 className={'text-center text-4xl font-bold tracking-tight text-gray-700 sm:text-xl'}>
 							Des maquilleuses professionnelles
 						</h3>
-						<p className={'text-center text-sm leading-8 text-gray-600'}>
-							Aux multiples spécialités et personnalités
-						</p>
+						<p className={'text-center text-sm leading-8 text-gray-600'}>Aux multiples spécialités et personnalités</p>
 					</div>
 					<div className={'flex flex-col items-center justify-center gap-2'}>
 						<Image
-							alt={
-								'une solution dédiée pour collaborer entre particuliers et maquilleuses'
-							}
+							alt={'une solution dédiée pour collaborer entre particuliers et maquilleuses'}
 							src={'/assets/illustrations/illustration_3.webp'}
 							width={'140'}
 							height={'140'}
 						/>
-						<h3
-							className={
-								'text-center text-4xl font-bold tracking-tight text-gray-700 sm:text-xl'
-							}
-						>
+						<h3 className={'text-center text-4xl font-bold tracking-tight text-gray-700 sm:text-xl'}>
 							Une solution dédiée
 						</h3>
-						<p className={'text-center text-sm leading-8 text-gray-600'}>
-							Pensée et conçue pour collaborer
-						</p>
+						<p className={'text-center text-sm leading-8 text-gray-600'}>Pensée et conçue pour collaborer</p>
 					</div>
 				</div>
 			</div>

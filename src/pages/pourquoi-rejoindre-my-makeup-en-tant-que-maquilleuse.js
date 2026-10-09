@@ -1,9 +1,8 @@
 import Head from 'next/head'
-import Nav from '@/components/Global/Nav'
+import CTA from '@/components/Global/CTA'
 import Footer from '@/components/Global/Footer'
 import Hero from '@/components/Global/Hero'
-import CTA from '@/components/Global/CTA'
-import React from 'react'
+import Nav from '@/components/Global/Nav'
 import AdvantagesMaquillleuse from '@/components/Maquilleuse/AdvantagesMaquillleuse'
 import { urlAbsolue } from '@/lib/seo/url'
 
@@ -17,12 +16,7 @@ function PourquoiMyMakeup() {
 					content="Découvrez pourquoi vous devriez rejoindre My-Makeup en tant que maquilleuse professionnelle"
 				/>
 				{/*	seo tag canonical link */}
-				<link
-					rel="canonical"
-					href={urlAbsolue(
-						'/pourquoi-rejoindre-my-makeup-en-tant-que-maquilleuse'
-					)}
-				/>
+				<link rel="canonical" href={urlAbsolue('/pourquoi-rejoindre-my-makeup-en-tant-que-maquilleuse')} />
 			</Head>
 			<Nav />
 			<main className={'relative'}>
@@ -30,15 +24,14 @@ function PourquoiMyMakeup() {
 					imgBackgroundSrc={'/assets/back/maquilleuse_italienne_white.webp'}
 					title={
 						<>
-							Pourquoi rejoindre{' '}
-							<span className={'text-indigo-900'}>My&nbsp;Makeup</span> en tant
-							que maquilleuse professionnelle ?
+							Pourquoi rejoindre <span className={'text-indigo-900'}>My&nbsp;Makeup</span> en tant que maquilleuse
+							professionnelle ?
 						</>
 					}
 					description={
 						<>
-							Découvrez les avantages à rejoindre notre communauté pour
-							développer votre activité et atteindre une nouvelle clientèle.
+							Découvrez les avantages à rejoindre notre communauté pour développer votre activité et atteindre une
+							nouvelle clientèle.
 						</>
 					}
 					isSearchDisplayed={false}

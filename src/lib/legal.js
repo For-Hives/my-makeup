@@ -1,3 +1,4 @@
+const luhnValidPattern1 = /^\d+$/
 /**
  * Legal identity of the publisher and of the host, shared by /mentions-legales,
  * /cgu and /politique-de-confidentialite.
@@ -34,17 +35,17 @@ export const HEBERGEUR = {
  * @returns {boolean}
  */
 export function luhnValid(digits) {
-	if (!/^\d+$/.test(String(digits))) return false
+	if (!luhnValidPattern1.test(String(digits))) return false
 	let sum = 0
 	const reversed = String(digits).split('').reverse()
-	reversed.forEach((char, index) => {
+	for (const [index, char] of reversed.entries()) {
 		let value = Number(char)
 		if (index % 2 === 1) {
 			value *= 2
 			if (value > 9) value -= 9
 		}
 		sum += value
-	})
+	}
 	return sum % 10 === 0
 }
 

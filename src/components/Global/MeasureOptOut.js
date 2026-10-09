@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { isMeasureDisabled, setMeasureDisabled } from '@/lib/analytics'
 
 function browserStorage() {
@@ -34,13 +34,9 @@ function MeasureOptOut() {
 			<button
 				type={'button'}
 				className={'btn-alt-primary'}
-				onClick={() =>
-					setDisabled(setMeasureDisabled(browserStorage(), !disabled))
-				}
+				onClick={() => setDisabled(setMeasureDisabled(browserStorage(), !disabled))}
 			>
-				{disabled
-					? "Réactiver la mesure d'audience"
-					: 'Ne plus mesurer mes visites'}
+				{disabled ? "Réactiver la mesure d'audience" : 'Ne plus mesurer mes visites'}
 			</button>
 		</span>
 	)

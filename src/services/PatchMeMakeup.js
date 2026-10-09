@@ -1,10 +1,7 @@
 import { toast } from 'react-toastify'
-import { authenticatedFetch } from './api'
 import { track } from '@/lib/analytics'
-import {
-	MESSAGE_SAUVEGARDE_OK,
-	sauvegarderProfil,
-} from '@/lib/sauvegarde-profil'
+import { MESSAGE_SAUVEGARDE_OK, sauvegarderProfil } from '@/lib/sauvegarde-profil'
+import { authenticatedFetch } from './api'
 
 // one toast of each kind at a time; a success replaces the failure before it
 const TOAST_OK = 'profile-save-ok'
@@ -31,11 +28,10 @@ const TOAST_ECHEC = 'profile-save-echec'
 export async function patchMeMakeup(authSession, data, section, options) {
 	const ports = {
 		envoyer: corps =>
-			authenticatedFetch(
-				`${process.env.NEXT_PUBLIC_API_URL}/api/me-makeup`,
-				authSession,
-				{ method: 'PATCH', body: corps }
-			),
+			authenticatedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/me-makeup`, authSession, {
+				method: 'PATCH',
+				body: corps,
+			}),
 		compter: track,
 	}
 	const resultat = await sauvegarderProfil(data, section, ports, options)

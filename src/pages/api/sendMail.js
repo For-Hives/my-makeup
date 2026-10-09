@@ -18,6 +18,5 @@ function mailgunClient() {
 // Resend (RESEND_API_KEY) or else Mailgun: see src/lib/contactMail.js
 export default sendMailHandler({
 	env: process.env,
-	sendWithMailgun: (domain, message) =>
-		mailgunClient().messages.create(domain, message),
+	sendWithMailgun: (domain, message) => mailgunClient().messages.create(domain, message),
 })

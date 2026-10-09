@@ -12,6 +12,9 @@
 
 import { lieuUtilisable } from './lieu.js'
 
+const urlApiRecherchePattern1 = /\/+$/
+const urlApiAnnuairePattern2 = /\/+$/
+
 export const PAR_PAGE = 20
 export const LONGUEUR_MAX = 100
 /** Beyond, the page says the search failed (the API is cut off) */
@@ -21,9 +24,7 @@ const premier = v => (Array.isArray(v) ? v[0] : v)
 
 const champ = v => {
 	const t = premier(v)
-	return typeof t === 'string'
-		? t.trim().replace(/\s+/g, ' ').slice(0, LONGUEUR_MAX)
-		: ''
+	return typeof t === 'string' ? t.trim().replace(/\s+/g, ' ').slice(0, LONGUEUR_MAX) : ''
 }
 
 /**
@@ -58,8 +59,7 @@ export const rechercheValide = ({ search, city }) => !!(search || city)
  * @param {Recherche} recherche
  * @returns {string}
  */
-export const cleRecherche = ({ search, city }) =>
-	`${search.toLowerCase()}|${city.toLowerCase()}`
+export const cleRecherche = ({ search, city }) => `${search.toLowerCase()}|${city.toLowerCase()}`
 
 /**
  * URL of the public search of the API, or null without term nor city.
@@ -68,10 +68,10 @@ export const cleRecherche = ({ search, city }) =>
  * @returns {string|null}
  */
 export function urlApiRecherche(apiBase, { search, city }) {
-	if (!search && !city) return null
+	if (!(search || city)) return null
 	const parametres = new URLSearchParams({ search: search || city })
 	if (city) parametres.set('city', city)
-	return `${String(apiBase ?? '').replace(/\/+$/, '')}/api/searching?${parametres}`
+	return `${String(apiBase ?? '').replace(urlApiRecherchePattern1, '')}/api/searching?${parametres}`
 }
 
 /**
@@ -82,9 +82,7 @@ export function urlApiRecherche(apiBase, { search, city }) {
  * @returns {boolean}
  */
 export const rechercheParVille = ({ search, city }) =>
-	!!city &&
-	(!search || search.toLowerCase() === city.toLowerCase()) &&
-	lieuUtilisable(city)
+	!!city && (!search || search.toLowerCase() === city.toLowerCase()) && lieuUtilisable(city)
 
 /**
  * URL of every searchable profile (the public search without any term),
@@ -92,8 +90,7 @@ export const rechercheParVille = ({ search, city }) =>
  * @param {string} apiBase - NEXT_PUBLIC_API_URL
  * @returns {string}
  */
-export const urlApiAnnuaire = apiBase =>
-	`${String(apiBase ?? '').replace(/\/+$/, '')}/api/searching`
+export const urlApiAnnuaire = apiBase => `${String(apiBase ?? '').replace(urlApiAnnuairePattern2, '')}/api/searching`
 
 /** Result cards of the API at most (MAX_PUBLIC_RESULTS, API #384) */
 export const MAX_RESULTATS_API = 200
@@ -151,13 +148,7 @@ export function paginer(resultats, page, parPage = PAR_PAGE) {
  */
 export function resultatsRecherche(corps) {
 	return Array.isArray(corps)
-		? corps.filter(
-				r =>
-					r &&
-					typeof r === 'object' &&
-					typeof r.username === 'string' &&
-					r.username.trim() !== ''
-			)
+		? corps.filter(r => r && typeof r === 'object' && typeof r.username === 'string' && r.username.trim() !== '')
 		: null
 }
 
@@ -172,10 +163,8 @@ export function resultatsRecherche(corps) {
  *   « mariage » à « Annecy » », « Aucun résultat pour « zzqq » »
  */
 export function titreResultats({ search, city }, total) {
-	const nombre =
-		total === 0 ? 'Aucun résultat' : `${total} résultat${total > 1 ? 's' : ''}`
-	const quoi =
-		search && search.toLowerCase() !== city.toLowerCase() ? `« ${search} »` : ''
+	const nombre = total === 0 ? 'Aucun résultat' : `${total} résultat${total > 1 ? 's' : ''}`
+	const quoi = search && search.toLowerCase() !== city.toLowerCase() ? `« ${search} »` : ''
 	const ou = city ? `« ${city} »` : ''
 	return `${nombre} pour ${[quoi, ou].filter(Boolean).join(' à ')}`
 }
@@ -193,10 +182,7 @@ export function sectionsDeLaPage({ elements, premier }, longueurs) {
 	let debut = 0
 	return longueurs.map(longueur => {
 		const fin = debut + Math.max(0, longueur)
-		const part = elements.slice(
-			Math.max(0, debut - (premier - 1)),
-			Math.max(0, fin - (premier - 1))
-		)
+		const part = elements.slice(Math.max(0, debut - (premier - 1)), Math.max(0, fin - (premier - 1)))
 		debut = fin
 		return part
 	})

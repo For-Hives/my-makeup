@@ -1,7 +1,6 @@
 import { authenticatedFetch } from './api'
 
-const MESSAGE_ECHEC =
-	"Ton compte n'a pas été supprimé : une erreur est survenue, réessaie dans quelques minutes."
+const MESSAGE_ECHEC = "Ton compte n'a pas été supprimé : une erreur est survenue, réessaie dans quelques minutes."
 
 /**
  * DELETE /api/me-makeup: deletes the profile and the account (UI-05).
@@ -12,11 +11,9 @@ const MESSAGE_ECHEC =
 export async function DeleteMeMakeup(authSession) {
 	let response
 	try {
-		response = await authenticatedFetch(
-			`${process.env.NEXT_PUBLIC_API_URL}/api/me-makeup`,
-			authSession,
-			{ method: 'DELETE' }
-		)
+		response = await authenticatedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/me-makeup`, authSession, {
+			method: 'DELETE',
+		})
 	} catch {
 		return { ok: false, error: MESSAGE_ECHEC }
 	}

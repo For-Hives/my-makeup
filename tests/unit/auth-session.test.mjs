@@ -1,9 +1,7 @@
-import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
+import { describe, test } from 'node:test'
+import { EVENTS } from '../../src/lib/analytics.js'
 import {
-	MARGE_EXPIRATION_MS,
-	OU_SESSION_EXPIREE,
-	REVALIDATION_PAR_DEFAUT_MS,
 	aCookieDeSession,
 	callbackUrlSure,
 	causeErreur,
@@ -12,14 +10,16 @@ import {
 	etatJeton,
 	expirationSession,
 	ligneLogAuth,
+	MARGE_EXPIRATION_MS,
+	OU_SESSION_EXPIREE,
 	ouSessionExpiree,
+	REVALIDATION_PAR_DEFAUT_MS,
 	secretNextAuth,
 	sessionValide,
 	suiteVerification,
 	urlApiServeur,
 	urlSessionExpiree,
 } from '../../src/lib/auth-session.js'
-import { EVENTS } from '../../src/lib/analytics.js'
 
 const MAINTENANT = 1_800_000_000_000
 const HEURE = 3600 * 1000
@@ -27,8 +27,9 @@ const HEURE = 3600 * 1000
 describe('delaiRevalidation (AUTH_REVALIDATION_MS)', () => {
 	test('15 min by default, when empty or invalid', () => {
 		assert.equal(REVALIDATION_PAR_DEFAUT_MS, 15 * 60 * 1000)
-		for (const brut of [undefined, '', '  ', 'abc', '-5'])
+		for (const brut of [undefined, '', '  ', 'abc', '-5']) {
 			assert.equal(delaiRevalidation(brut), REVALIDATION_PAR_DEFAUT_MS)
+		}
 	})
 
 	test('a number of ms, 0 included', () => {
@@ -47,18 +48,8 @@ describe('etatJeton (what a session read does)', () => {
 
 	test('Strapi JWT expired, or expiring within the margin', () => {
 		const base = { jwt: 'j', verifieA: MAINTENANT }
-		assert.equal(
-			etatJeton({ ...base, strapiExp: MAINTENANT - 1 }, MAINTENANT, fenetre),
-			'expire'
-		)
-		assert.equal(
-			etatJeton(
-				{ ...base, strapiExp: MAINTENANT + MARGE_EXPIRATION_MS - 1 },
-				MAINTENANT,
-				fenetre
-			),
-			'expire'
-		)
+		assert.equal(etatJeton({ ...base, strapiExp: MAINTENANT - 1 }, MAINTENANT, fenetre), 'expire')
+		assert.equal(etatJeton({ ...base, strapiExp: MAINTENANT + MARGE_EXPIRATION_MS - 1 }, MAINTENANT, fenetre), 'expire')
 	})
 
 	test('checked less than a window ago: no call to Strapi', () => {
@@ -84,10 +75,7 @@ describe('etatJeton (what a session read does)', () => {
 			'a-verifier'
 		)
 		assert.equal(etatJeton({ jwt: 'j' }, MAINTENANT, fenetre), 'a-verifier')
-		assert.equal(
-			etatJeton({ jwt: 'j', verifieA: MAINTENANT }, MAINTENANT, 0),
-			'a-verifier'
-		)
+		assert.equal(etatJeton({ jwt: 'j', verifieA: MAINTENANT }, MAINTENANT, 0), 'a-verifier')
 	})
 })
 
@@ -101,8 +89,9 @@ describe('suiteVerification (/api/users/me status)', () => {
 	})
 
 	test('5xx, 429, 403 and network errors keep it unchanged', () => {
-		for (const status of [0, 403, 429, 500, 502, 503, 504])
+		for (const status of [0, 403, 429, 500, 502, 503, 504]) {
 			assert.equal(suiteVerification(status), 'inchangee')
+		}
 	})
 })
 
@@ -110,17 +99,11 @@ describe('expirationSession', () => {
 	const expires = new Date(MAINTENANT + 30 * 24 * HEURE).toISOString()
 
 	test('bounded by the Strapi JWT', () => {
-		assert.equal(
-			expirationSession(expires, MAINTENANT + 2 * HEURE),
-			new Date(MAINTENANT + 2 * HEURE).toISOString()
-		)
+		assert.equal(expirationSession(expires, MAINTENANT + 2 * HEURE), new Date(MAINTENANT + 2 * HEURE).toISOString())
 	})
 
 	test('NextAuth date kept when it comes first or without Strapi expiry', () => {
-		assert.equal(
-			expirationSession(expires, MAINTENANT + 40 * 24 * HEURE),
-			expires
-		)
+		assert.equal(expirationSession(expires, MAINTENANT + 40 * 24 * HEURE), expires)
 		assert.equal(expirationSession(expires, null), expires)
 		assert.equal(expirationSession(expires, undefined), expires)
 	})
@@ -128,51 +111,31 @@ describe('expirationSession', () => {
 
 describe('sessionValide (middleware)', () => {
 	test('valid Strapi JWT', () => {
-		assert.equal(
-			sessionValide({ jwt: 'j', strapiExp: MAINTENANT + HEURE }, MAINTENANT),
-			true
-		)
+		assert.equal(sessionValide({ jwt: 'j', strapiExp: MAINTENANT + HEURE }, MAINTENANT), true)
 		assert.equal(sessionValide({ jwt: 'j' }, MAINTENANT), true)
 	})
 
 	test('no token, no JWT or expired JWT (margin included)', () => {
 		assert.equal(sessionValide(null, MAINTENANT), false)
 		assert.equal(sessionValide({ name: 'x' }, MAINTENANT), false)
-		assert.equal(
-			sessionValide({ jwt: 'j', strapiExp: MAINTENANT - 1 }, MAINTENANT),
-			false
-		)
-		assert.equal(
-			sessionValide({ jwt: 'j', strapiExp: MAINTENANT + 30_000 }, MAINTENANT),
-			false
-		)
+		assert.equal(sessionValide({ jwt: 'j', strapiExp: MAINTENANT - 1 }, MAINTENANT), false)
+		assert.equal(sessionValide({ jwt: 'j', strapiExp: MAINTENANT + 30_000 }, MAINTENANT), false)
 	})
 
 	test('the revalidation window does not matter to the middleware', () => {
-		assert.equal(
-			sessionValide(
-				{ jwt: 'j', strapiExp: MAINTENANT + HEURE, verifieA: 0 },
-				MAINTENANT
-			),
-			true
-		)
+		assert.equal(sessionValide({ jwt: 'j', strapiExp: MAINTENANT + HEURE, verifieA: 0 }, MAINTENANT), true)
 	})
 })
 
 describe('secretNextAuth (AUTH-14)', () => {
 	test('returns the secret', () => {
-		assert.equal(
-			secretNextAuth({ secret: ' abc ', nodeEnv: 'production' }),
-			'abc'
-		)
+		assert.equal(secretNextAuth({ secret: ' abc ', nodeEnv: 'production' }), 'abc')
 	})
 
 	test('missing, empty or « undefined » at runtime in production: error', () => {
-		for (const secret of [undefined, '', '   ', 'undefined', 'null'])
-			assert.throws(
-				() => secretNextAuth({ secret, nodeEnv: 'production' }),
-				/NEXTAUTH_SECRET manquant/
-			)
+		for (const secret of [undefined, '', '   ', 'undefined', 'null']) {
+			assert.throws(() => secretNextAuth({ secret, nodeEnv: 'production' }), /NEXTAUTH_SECRET manquant/)
+		}
 	})
 
 	test('tolerated during next build and outside production', () => {
@@ -201,14 +164,8 @@ describe('urlApiServeur (API_INTERNAL_URL)', () => {
 	})
 
 	test('public URL when the internal one is empty', () => {
-		assert.equal(
-			urlApiServeur({ interne: '', publique: 'https://api.example.test' }),
-			'https://api.example.test'
-		)
-		assert.equal(
-			urlApiServeur({ publique: 'https://api.example.test//' }),
-			'https://api.example.test'
-		)
+		assert.equal(urlApiServeur({ interne: '', publique: 'https://api.example.test' }), 'https://api.example.test')
+		assert.equal(urlApiServeur({ publique: 'https://api.example.test//' }), 'https://api.example.test')
 		assert.equal(urlApiServeur({}), '')
 	})
 })
@@ -235,9 +192,7 @@ describe('cookiesSessionAEffacer', () => {
 	})
 
 	test('__Secure- cookies (https) are deleted with Secure', () => {
-		const [cookie] = cookiesSessionAEffacer([
-			'__Secure-next-auth.session-token',
-		])
+		const [cookie] = cookiesSessionAEffacer(['__Secure-next-auth.session-token'])
 		assert.match(cookie, /^__Secure-next-auth\.session-token=;/)
 		assert.match(cookie, /; Secure$/)
 	})
@@ -256,8 +211,9 @@ describe('aCookieDeSession (a session was sent)', () => {
 			['next-auth.session-token.0', 'next-auth.session-token.1'],
 			['__Secure-next-auth.session-token.1'],
 			['next-auth.csrf-token', 'next-auth.session-token'],
-		])
+		]) {
 			assert.equal(aCookieDeSession(noms), true, noms.join(', '))
+		}
 	})
 
 	test('none: never signed in', () => {
@@ -290,24 +246,19 @@ describe('urlSessionExpiree (RG-08)', () => {
 
 	test('the 3 places of the catalogue, read back by the sign-in page', () => {
 		for (const ou of ['api_401', 'jwt_expire', 'middleware']) {
-			const url = new URL(
-				urlSessionExpiree('/auth/init-account', ou),
-				'https://my-makeup.example.test'
-			)
+			const url = new URL(urlSessionExpiree('/auth/init-account', ou), 'https://my-makeup.example.test')
 			assert.equal(url.pathname, '/auth/signin')
 			assert.equal(url.searchParams.get('error'), 'session-expiree')
 			assert.equal(url.searchParams.get('ou'), ou)
 			assert.equal(url.searchParams.get('callbackUrl'), '/auth/init-account')
-			assert.equal(
-				callbackUrlSure(url.searchParams.get('callbackUrl'), url.origin),
-				'/auth/init-account'
-			)
+			assert.equal(callbackUrlSure(url.searchParams.get('callbackUrl'), url.origin), '/auth/init-account')
 		}
 	})
 
 	test('any other place is refused', () => {
-		for (const ou of [undefined, '', 'ailleurs', 'API_401', 'middleware&x=1'])
+		for (const ou of [undefined, '', 'ailleurs', 'API_401', 'middleware&x=1']) {
 			assert.throws(() => urlSessionExpiree('/auth/profil', ou), /ou inconnu/)
+		}
 	})
 })
 
@@ -317,10 +268,13 @@ describe('ouSessionExpiree (where of session_expired)', () => {
 	})
 
 	test('a place of the catalogue is kept, anything else counts as api_401', () => {
-		for (const ou of OU_SESSION_EXPIREE) assert.equal(ouSessionExpiree(ou), ou)
+		for (const ou of OU_SESSION_EXPIREE) {
+			assert.equal(ouSessionExpiree(ou), ou)
+		}
 		assert.equal(ouSessionExpiree(['middleware', 'api_401']), 'middleware')
-		for (const brut of [undefined, '', 'ailleurs', ['x'], 'marie@test.local'])
+		for (const brut of [undefined, '', 'ailleurs', ['x'], 'marie@test.local']) {
 			assert.equal(ouSessionExpiree(brut), 'api_401')
+		}
 	})
 })
 
@@ -329,14 +283,8 @@ describe('callbackUrlSure (page after sign-in)', () => {
 
 	test('a page of the site is kept, with its query', () => {
 		assert.equal(callbackUrlSure('/auth/profil', ORIGINE), '/auth/profil')
-		assert.equal(
-			callbackUrlSure('/auth/profil?publicView=true', ORIGINE),
-			'/auth/profil?publicView=true'
-		)
-		assert.equal(
-			callbackUrlSure(`${ORIGINE}/auth/init-account`, ORIGINE),
-			'/auth/init-account'
-		)
+		assert.equal(callbackUrlSure('/auth/profil?publicView=true', ORIGINE), '/auth/profil?publicView=true')
+		assert.equal(callbackUrlSure(`${ORIGINE}/auth/init-account`, ORIGINE), '/auth/init-account')
 	})
 
 	test('another site is refused (no open redirect)', () => {
@@ -347,15 +295,13 @@ describe('callbackUrlSure (page after sign-in)', () => {
 			'/\t/evil.example.test',
 			'javascript:alert(1)',
 			'http://my-makeup.example.test/auth/profil',
-		])
+		]) {
 			assert.equal(callbackUrlSure(brut, ORIGINE), '/auth/profil', brut)
+		}
 	})
 
 	test('auth pages and API routes would loop: default page', () => {
-		assert.equal(
-			callbackUrlSure('/auth/signin?callbackUrl=%2F', ORIGINE),
-			'/auth/profil'
-		)
+		assert.equal(callbackUrlSure('/auth/signin?callbackUrl=%2F', ORIGINE), '/auth/profil')
 		assert.equal(callbackUrlSure('/auth/error', ORIGINE), '/auth/profil')
 		assert.equal(callbackUrlSure('/api/auth/signout', ORIGINE), '/auth/profil')
 	})
@@ -374,10 +320,7 @@ describe('ligneLogAuth', () => {
 			ligneLogAuth('connexion', { code: 'identifiants-invalides', ms: 123.6 }),
 			'[auth] evt=connexion code=identifiants-invalides ms=124'
 		)
-		assert.equal(
-			ligneLogAuth('revalidation', { code: 'statut-0' }),
-			'[auth] evt=revalidation code=statut-0'
-		)
+		assert.equal(ligneLogAuth('revalidation', { code: 'statut-0' }), '[auth] evt=revalidation code=statut-0')
 		assert.equal(ligneLogAuth('connexion'), '[auth] evt=connexion code=ok')
 	})
 

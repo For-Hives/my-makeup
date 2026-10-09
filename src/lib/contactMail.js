@@ -8,11 +8,7 @@
  */
 
 import { contactMessage, mailgunErrorSummary } from './mailgun.js'
-import {
-	DEFAULT_CONTACT_TO,
-	DEFAULT_EMAIL_FROM,
-	sendWithResend,
-} from './resend.js'
+import { DEFAULT_CONTACT_TO, DEFAULT_EMAIL_FROM, sendWithResend } from './resend.js'
 
 export const CONTACT_SUBJECT = 'Nouveau message de contact'
 
@@ -56,12 +52,7 @@ export function contactProvider(env = {}) {
  * @param {number} [deps.timeoutMs] - Resend; default: RESEND_TIMEOUT_MS
  * @returns {(req: object, res: object) => Promise<unknown>}
  */
-export function sendMailHandler({
-	env,
-	fetchImpl,
-	sendWithMailgun,
-	timeoutMs,
-}) {
+export function sendMailHandler({ env, fetchImpl, sendWithMailgun, timeoutMs }) {
 	return async function sendMail(req, res) {
 		if (req.method !== 'POST') {
 			return res.status(405).json({ message: 'Method not allowed' })
@@ -93,6 +84,7 @@ export function sendMailHandler({
 				{ fetchImpl, timeoutMs }
 			)
 			if (outcome.ok) {
+				// biome-ignore lint/suspicious/noConsole: Preserve the existing operational audit log without changing its severity.
 				console.info('[sendMail] provider=resend sent', {
 					status: outcome.status,
 				})
@@ -113,6 +105,7 @@ export function sendMailHandler({
 				subject: CONTACT_SUBJECT,
 				text: contactText(fields),
 			})
+			// biome-ignore lint/suspicious/noConsole: Preserve the existing operational audit log without changing its severity.
 			console.info('[sendMail] sent')
 			return res.status(200).json({ success: true })
 		} catch (error) {

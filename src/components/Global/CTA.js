@@ -28,17 +28,11 @@ function Cta() {
 					<h2 className="text-center text-2xl font-bold tracking-tight text-white sm:text-4xl sm:leading-snug md:text-4xl">
 						Rejoignez&nbsp;My-Makeup, la communauté qui fait la différence.
 					</h2>
-					<div
-						className={
-							'flex flex-col items-center justify-center gap-6 px-8 md:flex-row md:items-start md:gap-8'
-						}
-					>
+					<div className={'flex flex-col items-center justify-center gap-6 px-8 md:flex-row md:items-start md:gap-8'}>
 						<Link
 							href="/search"
 							onClick={() => track('cta_click', { where: 'cta_recherche' })}
-							className={
-								'btn-secondary-white flex w-full items-center justify-center text-center sm:w-2/3 md:w-auto'
-							}
+							className={'btn-secondary-white flex w-full items-center justify-center text-center sm:w-2/3 md:w-auto'}
 						>
 							Je cherche des maquilleuses
 						</Link>

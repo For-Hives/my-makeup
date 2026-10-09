@@ -13,8 +13,7 @@ const nomsCookies = req => req.cookies.getAll().map(cookie => cookie.name)
 
 // Data request of the client router (a click on a link) or a link prefetch:
 // it follows a redirect by loading the page itself, which comes back here.
-const requeteDuRouteur = req =>
-	req.headers.has('x-nextjs-data') || req.headers.has('x-middleware-prefetch')
+const requeteDuRouteur = req => req.headers.has('x-nextjs-data') || req.headers.has('x-middleware-prefetch')
 
 // A session cookie was sent: withAuth read its token (same secret as the
 // session read). A valid Strapi JWT goes through (A2). An unreadable token
@@ -27,14 +26,15 @@ function sessionEnvoyee(req) {
 	const { token } = req.nextauth
 	if (sessionValide(token, Date.now())) return NextResponse.next()
 	const { pathname, search, origin } = req.nextUrl
-	const reponse = NextResponse.redirect(
-		new URL(urlSessionExpiree(`${pathname}${search}`, 'middleware'), origin)
-	)
+	const reponse = NextResponse.redirect(new URL(urlSessionExpiree(`${pathname}${search}`, 'middleware'), origin))
 	if (requeteDuRouteur(req)) return reponse
-	const cause = !token ? 'illisible' : token.jwt ? 'jwt_expire' : 'sans_jwt'
+	let cause = 'illisible'
+	if (token) cause = token.jwt ? 'jwt_expire' : 'sans_jwt'
+	// biome-ignore lint/suspicious/noConsole: Preserve the existing operational audit log without changing its severity.
 	console.info(ligneLogAuth('session_expiree', { code: 'middleware', cause }))
-	for (const cookie of cookiesSessionAEffacer(nomsCookies(req)))
+	for (const cookie of cookiesSessionAEffacer(nomsCookies(req))) {
 		reponse.headers.append('Set-Cookie', cookie)
+	}
 	return reponse
 }
 
@@ -61,10 +61,5 @@ export default function middleware(req, event) {
 }
 
 export const config = {
-	matcher: [
-		'/auth/profil',
-		'/auth/init-account',
-		'/u/script.js',
-		'/u/api/send',
-	],
+	matcher: ['/auth/profil', '/auth/init-account', '/u/script.js', '/u/api/send'],
 }

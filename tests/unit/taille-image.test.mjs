@@ -1,6 +1,8 @@
-import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createRequire } from 'node:module'
+import { describe, test } from 'node:test'
+import { GRILLE_RESULTATS, HAUTEUR_PHOTO_CARTE } from '../../src/lib/recherche.js'
+import { LARGEUR_PARTAGE } from '../../src/lib/seo/meta.js'
 import {
 	ECRAN_TRES_DENSE,
 	FACTEUR_TRES_DENSE,
@@ -10,11 +12,6 @@ import {
 	sizesBoite,
 	sizesGrille,
 } from '../../src/lib/taille-image.js'
-import {
-	GRILLE_RESULTATS,
-	HAUTEUR_PHOTO_CARTE,
-} from '../../src/lib/recherche.js'
-import { LARGEUR_PARTAGE } from '../../src/lib/seo/meta.js'
 
 const require = createRequire(import.meta.url)
 
@@ -26,12 +23,9 @@ function largeurChoisie(sizes, vw, dpr = 1) {
 	for (const entree of entrees) {
 		const conditions = []
 		let valeur = entree
-		for (
-			let c;
-			(c = /^\((min-resolution|max-width): ([\d.]+)(dppx|px)\)(?: and)? /.exec(
-				valeur
-			));
-		) {
+		while (true) {
+			const c = /^\((min-resolution|max-width): ([\d.]+)(dppx|px)\)(?: and)? /.exec(valeur)
+			if (!c) break
 			conditions.push({ nom: c[1], v: Number(c[2]) })
 			valeur = valeur.slice(c[0].length)
 		}
@@ -39,14 +33,8 @@ function largeurChoisie(sizes, vw, dpr = 1) {
 		if (!conditions.every(vraie)) continue
 		const px = /^(\d+)px$/.exec(valeur)
 		if (px) return Number(px[1])
-		const calc =
-			/^calc\(\(?100vw - (\d+)px\)?(?: \/ (\d+))?(?: \* ([\d.]+))?\)$/.exec(
-				valeur
-			)
-		if (calc)
-			return (
-				((vw - Number(calc[1])) / Number(calc[2] ?? 1)) * Number(calc[3] ?? 1)
-			)
+		const calc = /^calc\(\(?100vw - (\d+)px\)?(?: \/ (\d+))?(?: \* ([\d.]+))?\)$/.exec(valeur)
+		if (calc) return ((vw - Number(calc[1])) / Number(calc[2] ?? 1)) * Number(calc[3] ?? 1)
 		throw new Error(`valeur inattendue : ${valeur}`)
 	}
 	throw new Error(`aucune valeur pour ${vw}px : ${sizes}`)
@@ -73,8 +61,9 @@ describe('size of the artists’ photos (UI-09)', () => {
 			{ width: 0, height: 10 },
 			{ width: '2000', height: '1500' },
 			{ width: Number.NaN, height: 1 },
-		])
+		]) {
 			assert.equal(ratioMedia(media), null, JSON.stringify(media))
+		}
 	})
 
 	test('box of fixed size: its width, or the photo drawn at its height when wider', () => {
@@ -83,18 +72,9 @@ describe('size of the artists’ photos (UI-09)', () => {
 		assert.equal(ECRAN_TRES_DENSE, '(min-resolution: 2.5dppx)')
 		assert.equal(FACTEUR_TRES_DENSE, 0.75)
 		// main photo of a profile, 200 × 200
-		assert.equal(
-			sizesBoite({ largeur: 200, hauteur: 200, ratio: 1 }),
-			'(min-resolution: 2.5dppx) 150px, 200px'
-		)
-		assert.equal(
-			sizesBoite({ largeur: 200, hauteur: 200, ratio: 0.5 }),
-			sizes(200)
-		)
-		assert.equal(
-			sizesBoite({ largeur: 200, hauteur: 200, ratio: 4 / 3 }),
-			'(min-resolution: 2.5dppx) 201px, 267px'
-		)
+		assert.equal(sizesBoite({ largeur: 200, hauteur: 200, ratio: 1 }), '(min-resolution: 2.5dppx) 150px, 200px')
+		assert.equal(sizesBoite({ largeur: 200, hauteur: 200, ratio: 0.5 }), sizes(200))
+		assert.equal(sizesBoite({ largeur: 200, hauteur: 200, ratio: 4 / 3 }), '(min-resolution: 2.5dppx) 201px, 267px')
 		// slide of the portfolio: 500 px high, as wide as its photo
 		assert.equal(sizesBoite({ hauteur: 500, ratio: 0.75 }), sizes(375))
 		assert.equal(sizesBoite({ hauteur: 500, ratio: 16 / 9 }), sizes(889))
@@ -137,12 +117,9 @@ describe('size of the artists’ photos (UI-09)', () => {
 				hauteur: HAUTEUR_PHOTO_CARTE,
 				ratio,
 			})
-			for (const dpr of [1, 2, 2.25, 2.5, 2.625, 3, 3.5])
+			for (const dpr of [1, 2, 2.25, 2.5, 2.625, 3, 3.5]) {
 				for (let vw = 320; vw <= 3840; vw += 1) {
-					const dessinee = Math.max(
-						largeurCellule(vw),
-						Math.ceil(HAUTEUR_PHOTO_CARTE * ratio)
-					)
+					const dessinee = Math.max(largeurCellule(vw), Math.ceil(HAUTEUR_PHOTO_CARTE * ratio))
 					const attendue = dessinee * part(dpr)
 					const choisie = largeurChoisie(sizes, vw, dpr)
 					assert.ok(
@@ -150,14 +127,14 @@ describe('size of the artists’ photos (UI-09)', () => {
 						`ratio ${ratio}, ${vw}px @${dpr}x : ${choisie} au lieu de ${attendue}`
 					)
 				}
+			}
 		}
 	})
 
 	test('a 3x phone takes 2.25 device px per CSS px; a 2x screen, all of them', () => {
 		const { deviceSizes } = require('../../next.config.js').images
 		// the srcset of a card: the widths of the optimizer from 640
-		const candidat = (sizes, vw, dpr) =>
-			deviceSizes.find(l => l >= largeurChoisie(sizes, vw, dpr) * dpr)
+		const candidat = (sizes, vw, dpr) => deviceSizes.find(l => l >= largeurChoisie(sizes, vw, dpr) * dpr)
 		const paysage = sizesGrille(GRILLE_RESULTATS, {
 			hauteur: 350,
 			ratio: 4 / 3,
@@ -228,10 +205,7 @@ describe('size of the artists’ photos (UI-09)', () => {
 		const { deviceSizes } = require('../../next.config.js').images
 		// Next.js: 640, 750, 828, 1080, 1200, 1920, 2048, 3840; 828 for the
 		// regression test of the card, 1200 for the shared pictures
-		assert.deepEqual(
-			deviceSizes,
-			[640, 750, 828, 1080, 1200, 1440, 1920, 2048, 3840]
-		)
+		assert.deepEqual(deviceSizes, [640, 750, 828, 1080, 1200, 1440, 1920, 2048, 3840])
 		assert.ok(deviceSizes.includes(LARGEUR_PARTAGE))
 		// a landscape portfolio slide on a 2x screen (1 334 px) no longer
 		// takes 1920

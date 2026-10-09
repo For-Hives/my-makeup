@@ -1,7 +1,6 @@
-import React from 'react'
 import { CheckCircleIcon } from '@heroicons/react/24/outline'
 
-function AdvantagesMaquillleuse(props) {
+function AdvantagesMaquillleuse(_props) {
 	const advantages = [
 		{
 			title: 'Développez votre activité',
@@ -58,12 +57,9 @@ function AdvantagesMaquillleuse(props) {
 			<div className="overflow-hidden bg-neutral-50 px-4 py-16 sm:px-6 lg:px-8 lg:py-24">
 				<div className="relative mx-auto max-w-screen-2xl">
 					<div className="text-center">
-						<h2 className="text-3xl font-extrabold tracking-tight text-gray-900 sm:text-4xl">
-							Nos Avantages
-						</h2>
+						<h2 className="text-3xl font-extrabold tracking-tight text-gray-900 sm:text-4xl">Nos Avantages</h2>
 						<p className="mt-4 text-lg leading-6 text-gray-500">
-							Pourquoi choisir My&nbsp;Makeup ? Voici quelques-uns de nos
-							avantages.
+							Pourquoi choisir My&nbsp;Makeup ? Voici quelques-uns de nos avantages.
 						</p>
 					</div>
 					<div className="mt-12">
@@ -74,18 +70,12 @@ function AdvantagesMaquillleuse(props) {
 										<div className="flex flex-col gap-4">
 											<div className={'flex items-center align-middle'}>
 												<div className={'flex h-full items-center'}>
-													<span className="inline-block rounded-md pr-3 ">
-														{advantage.icon}
-													</span>
+													<span className="inline-block rounded-md pr-3 ">{advantage.icon}</span>
 												</div>
 
-												<h3 className="text-lg font-medium tracking-tight text-gray-900">
-													{advantage.title}
-												</h3>
+												<h3 className="text-lg font-medium tracking-tight text-gray-900">{advantage.title}</h3>
 											</div>
-											<p className="text-base text-gray-500">
-												{advantage.description}
-											</p>
+											<p className="text-base text-gray-500">{advantage.description}</p>
 										</div>
 									</div>
 								</div>

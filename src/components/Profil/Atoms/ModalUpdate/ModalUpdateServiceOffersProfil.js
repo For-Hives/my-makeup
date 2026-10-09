@@ -1,13 +1,9 @@
-import React, { Fragment, useEffect, useRef, useState } from 'react'
 import { Dialog, Tab, Transition } from '@headlessui/react'
-import { useForm } from 'react-hook-form'
-import { useSession } from 'next-auth/react'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useSession } from 'next-auth/react'
+import { Fragment, useEffect, useRef, useState } from 'react'
+import { useForm } from 'react-hook-form'
 import * as zod from 'zod'
-import { patchMeMakeup } from '@/services/PatchMeMakeup'
-import { listeApresSauvegarde, offresAEnvoyer } from '@/lib/sauvegarde-profil'
-import { DescriptionPriceOffer } from '@/components/Profil/Childs/ServiceOffers/DescriptionPriceOffer'
-import { OptionsOffers } from '@/components/Profil/Childs/ServiceOffers/OptionsOffers'
 import {
 	BoutonFermer,
 	BoutonSauvegarder,
@@ -16,6 +12,11 @@ import {
 	suivreChamp,
 	useEnvoi,
 } from '@/components/Profil/Atoms/ModalUpdate/ModalElements'
+import { DescriptionPriceOffer } from '@/components/Profil/Childs/ServiceOffers/DescriptionPriceOffer'
+import { OptionsOffers } from '@/components/Profil/Childs/ServiceOffers/OptionsOffers'
+import { avecCles } from '@/lib/cles'
+import { listeApresSauvegarde, offresAEnvoyer } from '@/lib/sauvegarde-profil'
+import { patchMeMakeup } from '@/services/PatchMeMakeup'
 
 const schema = zod
 	.object({
@@ -77,21 +78,15 @@ export default function ModalUpdateServiceOffersProfil(props) {
 
 	const [open, setOpen] = useState(props.isModalOpen)
 
-	const [userServiceOffers, setUserServiceOffers] = useState(
-		user.service_offers ?? []
-	)
+	const [userServiceOffers, setUserServiceOffers] = useState(user.service_offers ?? [])
 	const [userServiceOffersId, setUserServiceOffersId] = useState('')
 	const [userServiceOffersName, setUserServiceOffersName] = useState('')
 	const [userServiceOffersPrice, setUserServiceOffersPrice] = useState('')
-	const [userServiceOffersDescription, setUserServiceOffersDescription] =
-		useState('')
+	const [userServiceOffersDescription, setUserServiceOffersDescription] = useState('')
 	const [userServiceOffersOptions, setUserServiceOffersOptions] = useState([])
 
 	// Escape, a click outside and « Fermer » wait for the save in progress
-	const { envoi, setEnvoi, erreurEnvoi, setErreurEnvoi, fermer } = useEnvoi(
-		props.isModalOpen,
-		props.handleIsModalOpen
-	)
+	const { envoi, setEnvoi, erreurEnvoi, setErreurEnvoi, fermer } = useEnvoi(props.isModalOpen, props.handleIsModalOpen)
 
 	const { data: session } = useSession()
 
@@ -125,8 +120,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 				service_offers.name === userServiceOffersName &&
 				service_offers.price === userServiceOffersPrice &&
 				service_offers.description === userServiceOffersDescription &&
-				JSON.stringify(service_offers.options) ===
-					JSON.stringify(userServiceOffersOptions)
+				JSON.stringify(service_offers.options) === JSON.stringify(userServiceOffersOptions)
 		)
 		// if the service_offers is not already in the service_offers courses, add it
 		if (serviceOffersAlreadyInUserServiceOffers.length === 0) {
@@ -154,7 +148,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 					setUserServiceOffers([
 						...userServiceOffers,
 						{
-							id: 'added' + userServiceOffersName + userServiceOffersPrice,
+							id: `added${userServiceOffersName}${userServiceOffersPrice}`,
 							name: userServiceOffersName,
 							price: newPrice,
 							description: userServiceOffersDescription,
@@ -167,7 +161,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 		}
 	}
 
-	const handleSubmitServiceOffers = async event => {
+	const handleSubmitServiceOffers = async _event => {
 		// every offer with all its options, without ids
 		const envoyees = offresAEnvoyer(userServiceOffers)
 		const champs = {
@@ -186,11 +180,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 		// the answer has no options (populate one level): the ones sent stay
 		props.handleUpdateUser({
 			...user,
-			service_offers: listeApresSauvegarde(
-				resultat.data,
-				'service_offers',
-				envoyees
-			),
+			service_offers: listeApresSauvegarde(resultat.data, 'service_offers', envoyees),
 		})
 		props.handleIsModalOpen()
 	}
@@ -217,7 +207,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 		const userServiceOffersOptionsUpdated = [
 			...userServiceOffersOptions,
 			{
-				id: 'added' + userServiceOffersOptions.length,
+				id: `added${userServiceOffersOptions.length}`,
 				name: '',
 				price: '',
 				description: '',
@@ -228,24 +218,17 @@ export default function ModalUpdateServiceOffersProfil(props) {
 	}
 
 	const handleEditServiceOffers = id => {
-		const userServiceOffersFiltered = userServiceOffers.filter(
-			service_offers => service_offers.id === id
-		)
+		const userServiceOffersFiltered = userServiceOffers.filter(service_offers => service_offers.id === id)
 
 		// replace all "\n" with ";" in userServiceOffersPrice
-		const newPrice = (userServiceOffersFiltered[0].price ?? '').replace(
-			/\n/g,
-			';'
-		)
+		const newPrice = (userServiceOffersFiltered[0].price ?? '').replace(/\n/g, ';')
 
 		// replace all "\n" with ";" in each option's price; an offer without
 		// its options list is edited as one without options
-		const newOptions = (userServiceOffersFiltered[0].options ?? []).map(
-			option => {
-				const newOptionPrice = (option.price ?? '').replace(/\n/g, ';')
-				return { ...option, price: newOptionPrice }
-			}
-		)
+		const newOptions = (userServiceOffersFiltered[0].options ?? []).map(option => {
+			const newOptionPrice = (option.price ?? '').replace(/\n/g, ';')
+			return { ...option, price: newOptionPrice }
+		})
 
 		reset()
 		setUserServiceOffersId(userServiceOffersFiltered[0].id)
@@ -256,9 +239,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 	}
 
 	const handleDeleteServiceOffers = id => {
-		const userServiceOffersFiltered = userServiceOffers.filter(
-			service_offers => service_offers.id !== id
-		)
+		const userServiceOffersFiltered = userServiceOffers.filter(service_offers => service_offers.id !== id)
 		setUserServiceOffers(userServiceOffersFiltered)
 	}
 
@@ -276,18 +257,16 @@ export default function ModalUpdateServiceOffersProfil(props) {
 	}, [open, reset, user.service_offers])
 
 	useEffect(() => {
-		if (user && user.service_offers) {
-			const serviceOffersWithId = user.service_offers.map(
-				(serviceOffer, index) => {
-					return {
-						id: index,
-						name: serviceOffer.name,
-						price: serviceOffer.price,
-						description: serviceOffer.description,
-						options: serviceOffer.options,
-					}
+		if (user?.service_offers) {
+			const serviceOffersWithId = user.service_offers.map((serviceOffer, index) => {
+				return {
+					id: index,
+					name: serviceOffer.name,
+					price: serviceOffer.price,
+					description: serviceOffer.description,
+					options: serviceOffer.options,
 				}
-			)
+			})
 			setUserServiceOffers(serviceOffersWithId)
 		} else {
 			setUserServiceOffers([])
@@ -295,13 +274,329 @@ export default function ModalUpdateServiceOffersProfil(props) {
 	}, [open, user])
 
 	return (
+		<DialogueServices
+			open={open}
+			cancelButtonRef={cancelButtonRef}
+			fermer={fermer}
+			envoi={envoi}
+			handleSubmit={handleSubmit}
+			onSubmit={onSubmit}
+			register={register}
+			userServiceOffersName={userServiceOffersName}
+			suivre={suivre}
+			handleUpdateServiceOffersName={handleUpdateServiceOffersName}
+			errors={errors}
+			userServiceOffersDescription={userServiceOffersDescription}
+			handleUpdateServiceOffersDescription={handleUpdateServiceOffersDescription}
+			userServiceOffersPrice={userServiceOffersPrice}
+			handleUpdateServiceOffersPrice={handleUpdateServiceOffersPrice}
+			userServiceOffersOptions={userServiceOffersOptions}
+			setUserServiceOffersOptions={setUserServiceOffersOptions}
+			handleAddServiceOffersOption={handleAddServiceOffersOption}
+			userServiceOffersId={userServiceOffersId}
+			userServiceOffers={userServiceOffers}
+			handleEditServiceOffers={handleEditServiceOffers}
+			handleDeleteServiceOffers={handleDeleteServiceOffers}
+			erreurEnvoi={erreurEnvoi}
+			handleSubmitServiceOffers={handleSubmitServiceOffers}
+		/>
+	)
+}
+
+function ChampsOptionsService({ userServiceOffersOptions, register, suivre, setUserServiceOffersOptions, errors }) {
+	return (
+		<div>
+			{avecCles(userServiceOffersOptions).map(({ valeur: _option, cle }, index) => (
+				<div key={cle} className={'flex w-full flex-col gap-4 py-4 pl-8'}>
+					<h3 className={'text-sm font-semibold text-gray-900'}>Option {index + 1}</h3>
+					<div>
+						<label htmlFor={`services[${index}].name`} className="block text-sm text-gray-700">
+							Nom de la prestation
+						</label>
+						<div className="relative mt-2">
+							<input
+								data-cy={`name-service-offers-option-input-${index}`}
+								id={`services[${index}].name`}
+								name={`services[${index}].name`}
+								type={'text'}
+								{...register(`services[${index}].name`, {
+									required: true,
+								})}
+								required
+								onChange={suivre(`services[${index}].name`, event => {
+									// 	change the name value of the correct option
+									setUserServiceOffersOptions(
+										userServiceOffersOptions.map((option, optionIndex) => {
+											if (optionIndex === index) {
+												return {
+													...option,
+													name: event.target.value,
+												}
+											}
+											return option
+										})
+									)
+								})}
+								value={userServiceOffersOptions[index].name}
+								className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
+							/>
+							{errors.services?.[index]?.name && (
+								<p data-cy={`error-name-${index}`} className={'mt-2 text-xs text-red-500/80'}>
+									{errors.services[index].name.message}
+								</p>
+							)}
+						</div>
+					</div>
+					<div>
+						<label htmlFor={`services[${index}].description`} className="block text-sm text-gray-700">
+							{'Description de la prestation'}
+						</label>
+						<div className="mt-2">
+							<textarea
+								data-cy={`description-service-offers-option-input-${index}`}
+								id={`services[${index}].description`}
+								name={`services[${index}].description`}
+								{...register(`services[${index}].description`, {
+									required: true,
+								})}
+								required
+								onChange={suivre(`services[${index}].description`, event => {
+									// 	change the name value of the correct option
+									setUserServiceOffersOptions(
+										userServiceOffersOptions.map((option, optionIndex) => {
+											if (optionIndex === index) {
+												return {
+													...option,
+													description: event.target.value,
+												}
+											}
+											return option
+										})
+									)
+								})}
+								value={userServiceOffersOptions[index].description}
+								className="block min-h-[150px] w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
+							/>
+							{errors.services?.[index]?.description && (
+								<p data-cy={`error-description-${index}`} className={'mt-2 text-xs text-red-500/80'}>
+									{errors.services[index].description.message}
+								</p>
+							)}
+						</div>
+					</div>
+					<div>
+						<label htmlFor={`services[${index}].price`} className="block text-sm text-gray-700">
+							Prix de la prestation
+						</label>
+						<p className={'text-xs italic text-gray-700/70'}>
+							Vous pouvez ajouter plusieurs formules/prix en les séparant par un point-virgule.
+						</p>
+						<div className="mt-2">
+							<input
+								data-cy={`price-service-offers-option-input-${index}`}
+								id={`services[${index}].price`}
+								name={`services[${index}].price`}
+								type={'text'}
+								{...register(`services[${index}].price`, {
+									required: true,
+								})}
+								required
+								onChange={suivre(`services[${index}].price`, event => {
+									// 	change the name value of the correct option
+									setUserServiceOffersOptions(
+										userServiceOffersOptions.map((option, optionIndex) => {
+											if (optionIndex === index) {
+												return {
+													...option,
+													price: event.target.value,
+												}
+											}
+											return option
+										})
+									)
+								})}
+								value={userServiceOffersOptions[index].price}
+								className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
+							/>
+							{errors.services?.[index]?.price && (
+								<p data-cy={`error-price-${index}`} className={'mt-2 text-xs text-red-500/80'}>
+									{errors.services[index].price.message}
+								</p>
+							)}
+						</div>
+					</div>
+				</div>
+			))}
+		</div>
+	)
+}
+
+function FormulaireService({
+	handleSubmit,
+	onSubmit,
+	register,
+	userServiceOffersName,
+	suivre,
+	handleUpdateServiceOffersName,
+	errors,
+	userServiceOffersDescription,
+	handleUpdateServiceOffersDescription,
+	userServiceOffersPrice,
+	handleUpdateServiceOffersPrice,
+	userServiceOffersOptions,
+	setUserServiceOffersOptions,
+	handleAddServiceOffersOption,
+	userServiceOffersId,
+}) {
+	return (
+		<div className={'max-h-[600px] w-full overflow-y-scroll pr-4 md:w-2/5'}>
+			<div className="grid grid-cols-1 gap-4">
+				<div className={'flex flex-col gap-4'}>
+					<form onSubmit={handleSubmit(onSubmit)} method="POST" className="flex flex-col gap-4">
+						<div>
+							<label htmlFor="name" className="block text-sm text-gray-700">
+								Nom de la prestation
+							</label>
+							<div className="mt-2">
+								<input
+									data-cy="name-service-offers-input"
+									id="name"
+									name="name"
+									type={'text'}
+									{...register('name', {
+										required: true,
+									})}
+									required
+									value={userServiceOffersName ?? ''}
+									onChange={suivre('name', handleUpdateServiceOffersName)}
+									className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
+								/>
+								{errors.name && (
+									<p data-cy={'error-name'} className={'mt-2 text-xs text-red-500/80'}>
+										{errors.name.message}
+									</p>
+								)}
+							</div>
+						</div>
+						<div>
+							<label htmlFor="description" className="block text-sm text-gray-700">
+								{'Description de la prestation'}
+							</label>
+							<div className="mt-2">
+								<textarea
+									data-cy="description-service-offers-input"
+									id="description"
+									name="description"
+									{...register('description', {
+										required: true,
+									})}
+									required
+									value={userServiceOffersDescription ?? ''}
+									onChange={suivre('description', handleUpdateServiceOffersDescription)}
+									className="block min-h-[150px] w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
+								/>
+								{errors.description && (
+									<p data-cy={'error-description'} className={'mt-2 text-xs text-red-500/80'}>
+										{errors.description.message}
+									</p>
+								)}
+							</div>
+						</div>
+						<div>
+							<label htmlFor="price" className="block text-sm text-gray-700">
+								Prix de la prestation
+							</label>
+							<p className={'text-xs italic text-gray-700/70'}>
+								Vous pouvez ajouter plusieurs formules/prix en les séparant par un point-virgule.
+							</p>
+							<div className="mt-2">
+								<input
+									data-cy="price-service-offers-input"
+									id="price"
+									name="price"
+									type={'text'}
+									{...register('price', {
+										required: true,
+									})}
+									required
+									value={userServiceOffersPrice ?? ''}
+									onChange={suivre('price', handleUpdateServiceOffersPrice)}
+									className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
+								/>
+								{errors.price && (
+									<p data-cy={'error-price'} className={'mt-2 text-xs text-red-500/80'}>
+										{errors.price.message}
+									</p>
+								)}
+							</div>
+						</div>
+					</form>
+					{/* loop on table of options */}
+					<ChampsOptionsService
+						userServiceOffersOptions={userServiceOffersOptions}
+						register={register}
+						suivre={suivre}
+						setUserServiceOffersOptions={setUserServiceOffersOptions}
+						errors={errors}
+					/>
+					<div className={'flex w-full items-center justify-start'}>
+						<button
+							type="button"
+							data-cy={'add-service-offers-option-button'}
+							className={
+								'flex min-h-[44px] w-full items-center justify-center gap-2 rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm'
+							}
+							onClick={handleAddServiceOffersOption}
+						>
+							<span className={'text-gray-700'}>Ajouter une option à la prestation</span>
+							<span className="material-icons-round text-base text-gray-900">add</span>
+						</button>
+					</div>
+					<div className={'flex items-center justify-end'}>
+						<button
+							data-cy={'add-service-offers-button'}
+							type="button"
+							className="btn-primary"
+							onClick={handleSubmit(onSubmit)}
+						>
+							{userServiceOffersId === '' ? 'Ajouter une prestation' : 'Modifier une prestation'}
+						</button>
+					</div>
+				</div>
+			</div>
+		</div>
+	)
+}
+
+function DialogueServices({
+	open,
+	cancelButtonRef,
+	fermer,
+	envoi,
+	handleSubmit,
+	onSubmit,
+	register,
+	userServiceOffersName,
+	suivre,
+	handleUpdateServiceOffersName,
+	errors,
+	userServiceOffersDescription,
+	handleUpdateServiceOffersDescription,
+	userServiceOffersPrice,
+	handleUpdateServiceOffersPrice,
+	userServiceOffersOptions,
+	setUserServiceOffersOptions,
+	handleAddServiceOffersOption,
+	userServiceOffersId,
+	userServiceOffers,
+	handleEditServiceOffers,
+	handleDeleteServiceOffers,
+	erreurEnvoi,
+	handleSubmitServiceOffers,
+}) {
+	return (
 		<Transition.Root show={open} as={Fragment}>
-			<Dialog
-				as="div"
-				className="relative z-30"
-				initialFocus={cancelButtonRef}
-				onClose={fermer}
-			>
+			<Dialog as="div" className="relative z-30" initialFocus={cancelButtonRef} onClose={fermer}>
 				<FondModale />
 
 				<div className="fixed inset-0 z-30 overflow-y-auto">
@@ -319,385 +614,38 @@ export default function ModalUpdateServiceOffersProfil(props) {
 								data-cy="modal-panel"
 								className="relative w-full transform rounded-lg bg-white p-8 text-left shadow-2xl transition-all sm:max-w-7xl"
 							>
-								<BoutonFermer
-									onClick={fermer}
-									disabled={envoi}
-									ref={cancelButtonRef}
-								/>
+								<BoutonFermer onClick={fermer} disabled={envoi} ref={cancelButtonRef} />
 								<div className="flex flex-col items-start gap-8">
 									<div className="text-left">
-										<Dialog.Title
-											as="h3"
-											className="text-lg font-semibold text-gray-900"
-										>
+										<Dialog.Title as="h3" className="text-lg font-semibold text-gray-900">
 											Les services que vous proposez
 										</Dialog.Title>
 									</div>
-									<div
-										className={
-											'flex h-full w-full flex-wrap gap-16 md:flex-nowrap'
-										}
-									>
-										<div
-											className={
-												'max-h-[600px] w-full overflow-y-scroll pr-4 md:w-2/5'
-											}
-										>
-											<div className="grid grid-cols-1 gap-4">
-												<div className={'flex flex-col gap-4'}>
-													<form
-														onSubmit={handleSubmit(onSubmit)}
-														method="POST"
-														className="flex flex-col gap-4"
-													>
-														<div>
-															<label
-																htmlFor="name"
-																className="block text-sm text-gray-700"
-															>
-																Nom de la prestation
-															</label>
-															<div className="mt-2">
-																<input
-																	data-cy="name-service-offers-input"
-																	id="name"
-																	name="name"
-																	type={'text'}
-																	{...register('name', {
-																		required: true,
-																	})}
-																	required
-																	value={userServiceOffersName ?? ''}
-																	onChange={suivre(
-																		'name',
-																		handleUpdateServiceOffersName
-																	)}
-																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
-																/>
-																{errors.name && (
-																	<p
-																		data-cy={'error-name'}
-																		className={'mt-2 text-xs text-red-500/80'}
-																	>
-																		{errors.name.message}
-																	</p>
-																)}
-															</div>
-														</div>
-														<div>
-															<label
-																htmlFor="description"
-																className="block text-sm text-gray-700"
-															>
-																{'Description de la prestation'}
-															</label>
-															<div className="mt-2">
-																<textarea
-																	data-cy="description-service-offers-input"
-																	id="description"
-																	name="description"
-																	{...register('description', {
-																		required: true,
-																	})}
-																	required
-																	value={userServiceOffersDescription ?? ''}
-																	onChange={suivre(
-																		'description',
-																		handleUpdateServiceOffersDescription
-																	)}
-																	className="block min-h-[150px] w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
-																/>
-																{errors.description && (
-																	<p
-																		data-cy={'error-description'}
-																		className={'mt-2 text-xs text-red-500/80'}
-																	>
-																		{errors.description.message}
-																	</p>
-																)}
-															</div>
-														</div>
-														<div>
-															<label
-																htmlFor="price"
-																className="block text-sm text-gray-700"
-															>
-																Prix de la prestation
-															</label>
-															<p className={'text-xs italic text-gray-700/70'}>
-																Vous pouvez ajouter plusieurs formules/prix en
-																les séparant par un point-virgule.
-															</p>
-															<div className="mt-2">
-																<input
-																	data-cy="price-service-offers-input"
-																	id="price"
-																	name="price"
-																	type={'text'}
-																	{...register('price', {
-																		required: true,
-																	})}
-																	required
-																	value={userServiceOffersPrice ?? ''}
-																	onChange={suivre(
-																		'price',
-																		handleUpdateServiceOffersPrice
-																	)}
-																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
-																/>
-																{errors.price && (
-																	<p
-																		data-cy={'error-price'}
-																		className={'mt-2 text-xs text-red-500/80'}
-																	>
-																		{errors.price.message}
-																	</p>
-																)}
-															</div>
-														</div>
-													</form>
-													{/* loop on table of options */}
-													<div>
-														{userServiceOffersOptions.map((option, index) => (
-															<div
-																key={index}
-																className={
-																	'flex w-full flex-col gap-4 py-4 pl-8'
-																}
-															>
-																<h3
-																	className={
-																		'text-sm font-semibold text-gray-900'
-																	}
-																>
-																	Option {index + 1}
-																</h3>
-																<div>
-																	<label
-																		htmlFor={`services[${index}].name`}
-																		className="block text-sm text-gray-700"
-																	>
-																		Nom de la prestation
-																	</label>
-																	<div className="relative mt-2">
-																		<input
-																			data-cy={`name-service-offers-option-input-${index}`}
-																			id={`services[${index}].name`}
-																			name={`services[${index}].name`}
-																			type={'text'}
-																			{...register(`services[${index}].name`, {
-																				required: true,
-																			})}
-																			required
-																			onChange={suivre(
-																				`services[${index}].name`,
-																				event => {
-																					// 	change the name value of the correct option
-																					setUserServiceOffersOptions(
-																						userServiceOffersOptions.map(
-																							(option, optionIndex) => {
-																								if (optionIndex === index) {
-																									return {
-																										...option,
-																										name: event.target.value,
-																									}
-																								}
-																								return option
-																							}
-																						)
-																					)
-																				}
-																			)}
-																			value={
-																				userServiceOffersOptions[index].name
-																			}
-																			className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
-																		/>
-																		{errors.services &&
-																			errors.services[index] &&
-																			errors.services[index].name && (
-																				<p
-																					data-cy={`error-name-${index}`}
-																					className={
-																						'mt-2 text-xs text-red-500/80'
-																					}
-																				>
-																					{errors.services[index].name.message}
-																				</p>
-																			)}
-																	</div>
-																</div>
-																<div>
-																	<label
-																		htmlFor={`services[${index}].description`}
-																		className="block text-sm text-gray-700"
-																	>
-																		{'Description de la prestation'}
-																	</label>
-																	<div className="mt-2">
-																		<textarea
-																			data-cy={`description-service-offers-option-input-${index}`}
-																			id={`services[${index}].description`}
-																			name={`services[${index}].description`}
-																			{...register(
-																				`services[${index}].description`,
-																				{
-																					required: true,
-																				}
-																			)}
-																			required
-																			onChange={suivre(
-																				`services[${index}].description`,
-																				event => {
-																					// 	change the name value of the correct option
-																					setUserServiceOffersOptions(
-																						userServiceOffersOptions.map(
-																							(option, optionIndex) => {
-																								if (optionIndex === index) {
-																									return {
-																										...option,
-																										description:
-																											event.target.value,
-																									}
-																								}
-																								return option
-																							}
-																						)
-																					)
-																				}
-																			)}
-																			value={
-																				userServiceOffersOptions[index]
-																					.description
-																			}
-																			className="block min-h-[150px] w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
-																		/>
-																		{errors.services &&
-																			errors.services[index] &&
-																			errors.services[index].description && (
-																				<p
-																					data-cy={`error-description-${index}`}
-																					className={
-																						'mt-2 text-xs text-red-500/80'
-																					}
-																				>
-																					{
-																						errors.services[index].description
-																							.message
-																					}
-																				</p>
-																			)}
-																	</div>
-																</div>
-																<div>
-																	<label
-																		htmlFor={`services[${index}].price`}
-																		className="block text-sm text-gray-700"
-																	>
-																		Prix de la prestation
-																	</label>
-																	<p
-																		className={
-																			'text-xs italic text-gray-700/70'
-																		}
-																	>
-																		Vous pouvez ajouter plusieurs formules/prix
-																		en les séparant par un point-virgule.
-																	</p>
-																	<div className="mt-2">
-																		<input
-																			data-cy={`price-service-offers-option-input-${index}`}
-																			id={`services[${index}].price`}
-																			name={`services[${index}].price`}
-																			type={'text'}
-																			{...register(`services[${index}].price`, {
-																				required: true,
-																			})}
-																			required
-																			onChange={suivre(
-																				`services[${index}].price`,
-																				event => {
-																					// 	change the name value of the correct option
-																					setUserServiceOffersOptions(
-																						userServiceOffersOptions.map(
-																							(option, optionIndex) => {
-																								if (optionIndex === index) {
-																									return {
-																										...option,
-																										price: event.target.value,
-																									}
-																								}
-																								return option
-																							}
-																						)
-																					)
-																				}
-																			)}
-																			value={
-																				userServiceOffersOptions[index].price
-																			}
-																			className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
-																		/>
-																		{errors.services &&
-																			errors.services[index] &&
-																			errors.services[index].price && (
-																				<p
-																					data-cy={`error-price-${index}`}
-																					className={
-																						'mt-2 text-xs text-red-500/80'
-																					}
-																				>
-																					{errors.services[index].price.message}
-																				</p>
-																			)}
-																	</div>
-																</div>
-															</div>
-														))}
-													</div>
-													<div
-														className={'flex w-full items-center justify-start'}
-													>
-														<button
-															type="button"
-															data-cy={'add-service-offers-option-button'}
-															className={
-																'flex min-h-[44px] w-full items-center justify-center gap-2 rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm'
-															}
-															onClick={handleAddServiceOffersOption}
-														>
-															<span className={'text-gray-700'}>
-																Ajouter une option à la prestation
-															</span>
-															<span className="material-icons-round text-base text-gray-900">
-																add
-															</span>
-														</button>
-													</div>
-													<div className={'flex items-center justify-end'}>
-														<button
-															data-cy={'add-service-offers-button'}
-															type="button"
-															className="btn-primary"
-															onClick={handleSubmit(onSubmit)}
-														>
-															{userServiceOffersId === ''
-																? 'Ajouter une prestation'
-																: 'Modifier une prestation'}
-														</button>
-													</div>
-												</div>
-											</div>
-										</div>
+									<div className={'flex h-full w-full flex-wrap gap-16 md:flex-nowrap'}>
+										<FormulaireService
+											handleSubmit={handleSubmit}
+											onSubmit={onSubmit}
+											register={register}
+											userServiceOffersName={userServiceOffersName}
+											suivre={suivre}
+											handleUpdateServiceOffersName={handleUpdateServiceOffersName}
+											errors={errors}
+											userServiceOffersDescription={userServiceOffersDescription}
+											handleUpdateServiceOffersDescription={handleUpdateServiceOffersDescription}
+											userServiceOffersPrice={userServiceOffersPrice}
+											handleUpdateServiceOffersPrice={handleUpdateServiceOffersPrice}
+											userServiceOffersOptions={userServiceOffersOptions}
+											setUserServiceOffersOptions={setUserServiceOffersOptions}
+											handleAddServiceOffersOption={handleAddServiceOffersOption}
+											userServiceOffersId={userServiceOffersId}
+										/>
 										<div
 											className={
 												'flex max-h-[600px] w-full flex-col gap-4 overflow-y-scroll rounded-2xl border border-gray-300 p-4 pr-4 pt-6 md:w-3/5 md:rounded-none md:border-none md:p-0'
 											}
 										>
 											{/*	display the serviceOffers already added */}
-											<h3 className={'text-sm text-gray-900'}>
-												Les services déjà ajoutés
-											</h3>
+											<h3 className={'text-sm text-gray-900'}>Les services déjà ajoutés</h3>
 											<div className={'flex w-full flex-col gap-4'}>
 												<Tab.Group>
 													<Tab.List
@@ -707,10 +655,10 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																: 'md:justify-start md:overflow-x-scroll'
 														} flex h-full w-full justify-start overflow-x-scroll py-4`}
 													>
-														{userServiceOffers.map((service_offer, index) => {
+														{avecCles(userServiceOffers).map(({ valeur: service_offer, cle }, _index) => {
 															return (
 																<Tab
-																	key={index}
+																	key={cle}
 																	className={
 																		'h-full w-full border-b border-gray-300 bg-gray-50/30 p-4 text-xs text-gray-600 hover:bg-gray-50/50 focus:outline-none ' +
 																		// 	aria selected
@@ -723,14 +671,10 @@ export default function ModalUpdateServiceOffersProfil(props) {
 														})}
 													</Tab.List>
 													<Tab.Panels>
-														{userServiceOffers.map((service_offer, index) => {
+														{avecCles(userServiceOffers).map(({ valeur: service_offer, cle }, index) => {
 															return (
-																<Tab.Panel key={index}>
-																	<div
-																		className={
-																			'relative flex flex-col gap-4 bg-white py-4'
-																		}
-																	>
+																<Tab.Panel key={cle}>
+																	<div className={'relative flex flex-col gap-4 bg-white py-4'}>
 																		<div
 																			className={
 																				'absolute -top-6 right-0 m-2 flex items-center justify-center gap-4 md:top-0'
@@ -741,11 +685,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																				data-cy={`edit-service-offers-button-${index}`}
 																				aria-label={`Modifier la prestation ${service_offer.name ?? ''}`}
 																				className={BOUTON_ICONE}
-																				onClick={() =>
-																					handleEditServiceOffers(
-																						service_offer.id
-																					)
-																				}
+																				onClick={() => handleEditServiceOffers(service_offer.id)}
 																			>
 																				<span
 																					className="material-icons-round text-xl text-orange-600"
@@ -759,41 +699,22 @@ export default function ModalUpdateServiceOffersProfil(props) {
 																				data-cy="delete-service-offers-button"
 																				aria-label={`Retirer la prestation ${service_offer.name ?? ''}`}
 																				className={BOUTON_ICONE}
-																				onClick={() =>
-																					handleDeleteServiceOffers(
-																						service_offer.id
-																					)
-																				}
+																				onClick={() => handleDeleteServiceOffers(service_offer.id)}
 																			>
-																				<span
-																					className="material-icons-round text-xl text-red-500"
-																					aria-hidden="true"
-																				>
+																				<span className="material-icons-round text-xl text-red-500" aria-hidden="true">
 																					delete
 																				</span>
 																			</button>
 																		</div>
 																		<div className={'flex flex-col'}>
-																			<h2
-																				className={
-																					'text-start text-lg font-bold text-indigo-900'
-																				}
-																			>
+																			<h2 className={'text-start text-lg font-bold text-indigo-900'}>
 																				{service_offer.name}
 																			</h2>
 																		</div>
-																		<DescriptionPriceOffer
-																			serviceOffer={service_offer}
-																		/>
+																		<DescriptionPriceOffer serviceOffer={service_offer} />
 																	</div>
-																	<div
-																		className={
-																			'flex w-full flex-col gap-2 py-2'
-																		}
-																	>
-																		<OptionsOffers
-																			serviceOffer={service_offer}
-																		/>
+																	<div className={'flex w-full flex-col gap-2 py-2'}>
+																		<OptionsOffers serviceOffer={service_offer} />
 																	</div>
 																</Tab.Panel>
 															)

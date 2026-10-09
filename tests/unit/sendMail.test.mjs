@@ -1,13 +1,9 @@
 // /api/sendMail (src/pages/api/sendMail.js) end to end with a fake Resend
 // (fetch) and a fake Mailgun: no request leaves the test.
-import { describe, test } from 'node:test'
+
 import assert from 'node:assert/strict'
-import {
-	CONTACT_SUBJECT,
-	contactProvider,
-	contactText,
-	sendMailHandler,
-} from '../../src/lib/contactMail.js'
+import { describe, test } from 'node:test'
+import { CONTACT_SUBJECT, contactProvider, contactText, sendMailHandler } from '../../src/lib/contactMail.js'
 import { RESEND_EMAILS_URL } from '../../src/lib/resend.js'
 
 const CLE_RESEND = 're_cle_resend_factice'
@@ -47,11 +43,7 @@ function fauxResend(status = 200) {
 	const fetchImpl = async (url, init) => {
 		appels.push({ url, init })
 		return new Response(
-			JSON.stringify(
-				status < 300
-					? { id: 'id-factice' }
-					: { statusCode: status, name: 'error', message: CLE_RESEND }
-			),
+			JSON.stringify(status < 300 ? { id: 'id-factice' } : { statusCode: status, name: 'error', message: CLE_RESEND }),
 			{ status, headers: { 'content-type': 'application/json' } }
 		)
 	}
@@ -72,8 +64,9 @@ function fauxMailgun(erreur) {
 // every console line of the test, restored afterwards
 function journaux(t) {
 	const lignes = []
-	for (const niveau of ['log', 'info', 'warn', 'error'])
+	for (const niveau of ['log', 'info', 'warn', 'error']) {
 		t.mock.method(console, niveau, (...args) => lignes.push([niveau, ...args]))
+	}
 	return lignes
 }
 
@@ -98,8 +91,9 @@ function monter({ env, status, erreurMailgun, fetchImpl, timeoutMs } = {}) {
 // what a log line must never contain: a key or anything the visitor typed
 function verifierJournaux(lignes) {
 	const texte = JSON.stringify(lignes)
-	for (const secret of [CLE_RESEND, CLE_MAILGUN, ...Object.values(message)])
+	for (const secret of [CLE_RESEND, CLE_MAILGUN, ...Object.values(message)]) {
 		assert.equal(texte.includes(secret), false, `${secret} dans les journaux`)
+	}
 }
 
 describe('contactProvider', () => {
@@ -143,9 +137,7 @@ describe('/api/sendMail through Resend', () => {
 			text: contactText(message),
 		})
 
-		assert.deepEqual(lignes, [
-			['info', '[sendMail] provider=resend sent', { status: 200 }],
-		])
+		assert.deepEqual(lignes, [['info', '[sendMail] provider=resend sent', { status: 200 }]])
 		verifierJournaux(lignes)
 	})
 
@@ -200,39 +192,26 @@ describe('/api/sendMail through Resend', () => {
 				env: { ...MAILGUN, ...RESEND },
 				status,
 			})
+			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 			const res = await envoyer(handler)
 			assert.equal(res.statusCode, 502, String(status))
 			assert.deepEqual(res.body, { success: false })
 			assert.equal(resend.length, 1)
 			assert.equal(mailgun.length, 0)
-			assert.deepEqual(lignes.slice(debut), [
-				[
-					'error',
-					'[sendMail] provider=resend failed',
-					{ kind: 'http', status },
-				],
-			])
+			assert.deepEqual(lignes.slice(debut), [['error', '[sendMail] provider=resend failed', { kind: 'http', status }]])
 		}
 		verifierJournaux(lignes)
 	})
 
 	test('no answer within the delay: a clean 502, kind timeout', async t => {
 		const lignes = journaux(t)
-		const muet = (url, init) =>
-			new Promise((resolve, reject) =>
-				init.signal.addEventListener('abort', () => reject(init.signal.reason))
-			)
+		const muet = (_url, init) =>
+			new Promise((_resolve, reject) => init.signal.addEventListener('abort', () => reject(init.signal.reason)))
 		const { handler } = monter({ env: RESEND, fetchImpl: muet, timeoutMs: 50 })
 		const res = await envoyer(handler)
 		assert.equal(res.statusCode, 502)
 		assert.deepEqual(res.body, { success: false })
-		assert.deepEqual(lignes, [
-			[
-				'error',
-				'[sendMail] provider=resend failed',
-				{ kind: 'timeout', status: 0 },
-			],
-		])
+		assert.deepEqual(lignes, [['error', '[sendMail] provider=resend failed', { kind: 'timeout', status: 0 }]])
 	})
 
 	test('network down: a clean 502, kind network', async t => {
@@ -243,13 +222,7 @@ describe('/api/sendMail through Resend', () => {
 		const { handler } = monter({ env: RESEND, fetchImpl: enPanne })
 		const res = await envoyer(handler)
 		assert.equal(res.statusCode, 502)
-		assert.deepEqual(lignes, [
-			[
-				'error',
-				'[sendMail] provider=resend failed',
-				{ kind: 'network', status: 0 },
-			],
-		])
+		assert.deepEqual(lignes, [['error', '[sendMail] provider=resend failed', { kind: 'network', status: 0 }]])
 		verifierJournaux(lignes)
 	})
 
@@ -270,21 +243,15 @@ describe('/api/sendMail through Resend', () => {
 			[{ ...message, email: 'a,b@example.test' }, 'email'],
 			[{ ...message, email: '"eve"@example.test' }, 'email'],
 			[{ ...message, email: 'eve@example.test;x' }, 'email'],
-			[
-				{ ...message, email: 'eve@example.test\r\nBcc: x@example.test' },
-				'email',
-			],
+			[{ ...message, email: 'eve@example.test\r\nBcc: x@example.test' }, 'email'],
 			[null, 'first_name'],
 		]
 		for (const [body, field] of refuses) {
+			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 			const res = await envoyer(handler, body)
 			assert.equal(res.statusCode, 400, JSON.stringify(body))
 			assert.deepEqual(res.body, { success: false })
-			assert.deepEqual(lignes.at(-1), [
-				'warn',
-				'[sendMail] rejected',
-				{ field },
-			])
+			assert.deepEqual(lignes.at(-1), ['warn', '[sendMail] rejected', { field }])
 		}
 		assert.equal(resend.length, 0)
 		assert.equal(mailgun.length, 0)
@@ -299,10 +266,7 @@ describe('/api/sendMail through Resend', () => {
 			email: 'prenom.nom+contact_1-x@sous.example.test',
 		})
 		assert.equal(res.statusCode, 200)
-		assert.equal(
-			JSON.parse(resend[0].init.body).reply_to,
-			'prenom.nom+contact_1-x@sous.example.test'
-		)
+		assert.equal(JSON.parse(resend[0].init.body).reply_to, 'prenom.nom+contact_1-x@sous.example.test')
 	})
 })
 
@@ -351,9 +315,7 @@ describe('/api/sendMail through Mailgun (no RESEND_API_KEY, unchanged)', () => {
 		})
 		const res = await envoyer(handler)
 		assert.equal(res.statusCode, 502)
-		assert.deepEqual(lignes, [
-			['error', '[sendMail] failed', { kind: 'http', status: 401 }],
-		])
+		assert.deepEqual(lignes, [['error', '[sendMail] failed', { kind: 'http', status: 401 }]])
 		verifierJournaux(lignes)
 	})
 })
@@ -368,15 +330,13 @@ describe('/api/sendMail without a provider or with another method', () => {
 			{ MAILGUN_DOMAIN: 'mg.example.test' },
 		]) {
 			const { handler, resend, mailgun } = monter({ env })
+			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 			const res = await envoyer(handler)
 			assert.equal(res.statusCode, 503, JSON.stringify(env))
 			assert.deepEqual(res.body, { success: false })
 			assert.equal(resend.length + mailgun.length, 0)
 		}
-		assert.deepEqual(
-			lignes,
-			Array(4).fill(['error', '[sendMail] not configured'])
-		)
+		assert.deepEqual(lignes, Array(4).fill(['error', '[sendMail] not configured']))
 	})
 
 	test('GET: 405, nothing sent', async t => {

@@ -1,16 +1,12 @@
-import React, { Fragment, useEffect, useRef, useState } from 'react'
 import { Dialog, Transition } from '@headlessui/react'
-import Image from 'next/image'
 import { PhotoIcon } from '@heroicons/react/20/solid'
+import Image from 'next/image'
 import { useSession } from 'next-auth/react'
-import { Swiper, SwiperSlide } from 'swiper/react'
+import React, { Fragment, useEffect, useRef, useState } from 'react'
 import { Pagination } from 'swiper/modules'
-import { patchMeMakeup } from '@/services/PatchMeMakeup'
-import { uploadPhoto } from '@/services/UploadPhoto'
+import { Swiper, SwiperSlide } from 'swiper/react'
 import Info from '@/components/Global/Info'
-import { ACCEPT, MAX_PHOTOS_GALERIE, MESSAGES_PHOTO } from '@/lib/photo'
-import { galerieApresRefus } from '@/lib/sauvegarde-profil'
-import { ratioMedia, sizesBoite } from '@/lib/taille-image'
+import { choisirPhoto } from '@/components/Profil/Atoms/ModalUpdate/choisirPhoto'
 import {
 	BoutonFermer,
 	BoutonSauvegarder,
@@ -18,7 +14,11 @@ import {
 	FondModale,
 	useEnvoi,
 } from '@/components/Profil/Atoms/ModalUpdate/ModalElements'
-import { choisirPhoto } from '@/components/Profil/Atoms/ModalUpdate/choisirPhoto'
+import { ACCEPT, MAX_PHOTOS_GALERIE, MESSAGES_PHOTO } from '@/lib/photo'
+import { galerieApresRefus } from '@/lib/sauvegarde-profil'
+import { ratioMedia, sizesBoite } from '@/lib/taille-image'
+import { patchMeMakeup } from '@/services/PatchMeMakeup'
+import { uploadPhoto } from '@/services/UploadPhoto'
 
 // A picture added in the modal stays in the browser until « Sauvegarder »:
 // { cle, fichier, url (blob preview), width, height, enAttente: true }.
@@ -27,8 +27,22 @@ import { choisirPhoto } from '@/components/Profil/Atoms/ModalUpdate/choisirPhoto
 let compteurLocal = 0
 
 const revoquer = photos => {
-	for (const photo of photos)
+	for (const photo of photos) {
 		if (photo.enAttente) URL.revokeObjectURL(photo.url)
+	}
+}
+
+async function envoyerGalerie(session, photos) {
+	const galerie = [...photos]
+	for (let i = 0; i < galerie.length; i++) {
+		if (!galerie[i].enAttente) continue
+		// biome-ignore lint/performance/noAwaitInLoops: Keep uploads ordered so a retry reuses files already sent before a failure.
+		const resultat = await uploadPhoto(session, galerie[i].fichier)
+		if (!resultat.ok) return { galerie, resultat }
+		URL.revokeObjectURL(galerie[i].url)
+		galerie[i] = resultat.fichier
+	}
+	return { galerie, resultat: { ok: true } }
 }
 
 export default function ModalUpdatePortfolioProfil(props) {
@@ -46,9 +60,7 @@ export default function ModalUpdatePortfolioProfil(props) {
 		preparation
 	)
 	const [mySwiperModal, setMySwiperModal] = React.useState(null)
-	const [userImageGallery, setUserImageGallery] = useState(
-		user.image_gallery ?? []
-	)
+	const [userImageGallery, setUserImageGallery] = useState(user.image_gallery ?? [])
 
 	const { data: session } = useSession()
 
@@ -68,21 +80,13 @@ export default function ModalUpdatePortfolioProfil(props) {
 		setEnvoi(true)
 		setErreurEnvoi(null)
 
-		const galerie = [...userImageGallery]
-		for (let i = 0; i < galerie.length; i++) {
-			if (!galerie[i].enAttente) continue
-			const envoiPhoto = await uploadPhoto(session, galerie[i].fichier)
-			if (!envoiPhoto.ok) {
-				// the pictures already sent stay sent: a retry does not resend them
-				setUserImageGallery(galerie)
-				setEnvoi(false)
-				setErreurEnvoi(envoiPhoto.error ?? null)
-				return
-			}
-			URL.revokeObjectURL(galerie[i].url)
-			galerie[i] = envoiPhoto.fichier
-		}
+		const { galerie, resultat: envoiPhotos } = await envoyerGalerie(session, userImageGallery)
 		setUserImageGallery(galerie)
+		if (!envoiPhotos.ok) {
+			setEnvoi(false)
+			setErreurEnvoi(envoiPhotos.error ?? null)
+			return
+		}
 
 		const champs = { image_gallery: galerie.map(photo => photo.id) }
 		const enregistrees = (user.image_gallery ?? []).map(photo => photo.id)
@@ -95,10 +99,7 @@ export default function ModalUpdatePortfolioProfil(props) {
 			// pictures refused by the API (400 « File not allowed »): they leave
 			// the gallery, their ids are never sent again; she adds a refused
 			// new one again and the next save uploads it anew
-			if (resultat.photoRefusee)
-				setUserImageGallery(
-					galerieApresRefus(galerie, resultat.fichiersRefuses, enregistrees)
-				)
+			if (resultat.photoRefusee) setUserImageGallery(galerieApresRefus(galerie, resultat.fichiersRefuses, enregistrees))
 			return
 		}
 
@@ -113,14 +114,14 @@ export default function ModalUpdatePortfolioProfil(props) {
 	const cancelButtonRef = useRef(null)
 	const inputRef = useRef(null)
 
-	const handleClick = event => {
+	const handleClick = _event => {
 		// 👇️ open file input box on click of another element
 		// 👇️ trigger click event on input element to open file dialog
 		inputRef.current.click()
 	}
 
 	const handleFileChange = async event => {
-		const fileObject = event.target.files && event.target.files[0]
+		const fileObject = event.target.files?.[0]
 		// reset file input, the same file can be picked again
 		event.target.value = null
 		if (!fileObject) {
@@ -150,9 +151,7 @@ export default function ModalUpdatePortfolioProfil(props) {
 	const handleDeletePortfolio = photo => {
 		if (photo.enAttente) URL.revokeObjectURL(photo.url)
 		setUserImageGallery(
-			userImageGallery.filter(item =>
-				photo.enAttente ? item.cle !== photo.cle : item.id !== photo.id
-			)
+			userImageGallery.filter(item => (photo.enAttente ? item.cle !== photo.cle : item.id !== photo.id))
 		)
 	}
 
@@ -172,18 +171,166 @@ export default function ModalUpdatePortfolioProfil(props) {
 		}
 	}, [open, user.image_gallery])
 
-	const nombreEnAttente = userImageGallery.filter(
-		photo => photo.enAttente
-	).length
+	const nombreEnAttente = userImageGallery.filter(photo => photo.enAttente).length
 
 	return (
+		<DialoguePortfolio
+			open={open}
+			cancelButtonRef={cancelButtonRef}
+			fermer={fermer}
+			envoi={envoi}
+			preparation={preparation}
+			handleClick={handleClick}
+			photoChoisie={photoChoisie}
+			inputRef={inputRef}
+			handleFileChange={handleFileChange}
+			erreurPhoto={erreurPhoto}
+			handleAddPhoto={handleAddPhoto}
+			nombreEnAttente={nombreEnAttente}
+			setMySwiperModal={setMySwiperModal}
+			userImageGallery={userImageGallery}
+			handleDeletePortfolio={handleDeletePortfolio}
+			mySwiperModal={mySwiperModal}
+			erreurEnvoi={erreurEnvoi}
+			handleSubmitGallery={handleSubmitGallery}
+		/>
+	)
+}
+
+function ListePhotosPortfolio({
+	nombreEnAttente,
+	setMySwiperModal,
+	userImageGallery,
+	handleDeletePortfolio,
+	mySwiperModal,
+}) {
+	return (
+		<div className={'flex w-full md:w-4/6'}>
+			<div className={'flex w-full flex-col gap-4 rounded'}>
+				<h2 className={'text-xl font-bold text-gray-700'}>Portfolio</h2>
+				{nombreEnAttente > 0 && (
+					<p data-cy="portfolio-pending" className="text-sm text-gray-700">
+						{nombreEnAttente === 1
+							? '1 photo sera envoyée quand vous sauvegarderez.'
+							: `${nombreEnAttente} photos seront envoyées quand vous sauvegarderez.`}
+					</p>
+				)}
+				<Swiper
+					slidesPerView={'auto'}
+					spaceBetween={32}
+					pagination={{
+						clickable: true,
+					}}
+					loop={true}
+					modules={[Pagination]}
+					className="h-[500px] w-full"
+					onInit={eve => {
+						setMySwiperModal(eve)
+					}}
+				>
+					{
+						// 	map on user?.image_gallery and return a SwiperSlide with the image
+					}
+					{userImageGallery.map((image, index) => {
+						return (
+							<SwiperSlide
+								key={image.cle ?? image.id}
+								data-cy="portfolio-slide"
+								style={{
+									aspectRatio: `${image.width}/${image.height}`,
+									height: '100%',
+								}}
+								className={'relative !h-[500px] !w-auto'}
+							>
+								<button
+									type="button"
+									data-cy="delete-button-portefolio"
+									aria-label={`Retirer la photo ${index + 1}`}
+									className={
+										'absolute left-0 top-0 z-40 m-4 flex h-11 w-11 items-center justify-center rounded-full bg-red-50 shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 md:left-auto md:right-0'
+									}
+									onClick={() => handleDeletePortfolio(image)}
+								>
+									<span className="material-icons-round text-xl text-red-500" aria-hidden="true">
+										delete
+									</span>
+								</button>
+								{image.enAttente && (
+									<span className="absolute bottom-0 left-0 z-40 m-4 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-indigo-900">
+										À enregistrer
+									</span>
+								)}
+								<Image
+									src={image.url}
+									alt={image.alternativeText ?? image.name ?? 'portefolio image'}
+									fill={true}
+									// UI-09: a slide is 500 px high with the ratio of
+									// its photo, on a phone as on a computer
+									sizes={sizesBoite({
+										hauteur: 500,
+										ratio: ratioMedia(image),
+									})}
+									className={'rounded object-cover'}
+								/>
+							</SwiperSlide>
+						)
+					})}
+				</Swiper>
+				{/* btn to go on next slide */}
+				<div className={'flex w-full items-center justify-between'}>
+					<div>
+						<button
+							type="button"
+							className={'flex min-h-[44px] items-center justify-center gap-2'}
+							onClick={() => {
+								mySwiperModal?.slidePrev()
+							}}
+						>
+							<Image alt={''} src={'/assets/down-arrow.svg'} className={'rotate-90'} width={20} height={20}></Image>
+							<span className={'font-semibold text-indigo-950'}>Précédent</span>
+						</button>
+					</div>
+					<div>
+						<button
+							type="button"
+							className={'flex min-h-[44px] items-center justify-center gap-2'}
+							onClick={() => {
+								mySwiperModal?.slideNext()
+							}}
+						>
+							<span className={'font-semibold text-indigo-950'}>Suivant</span>
+							<Image alt={''} src={'/assets/down-arrow.svg'} className={'-rotate-90'} width={20} height={20}></Image>
+						</button>
+					</div>
+				</div>
+			</div>
+		</div>
+	)
+}
+
+function DialoguePortfolio({
+	open,
+	cancelButtonRef,
+	fermer,
+	envoi,
+	preparation,
+	handleClick,
+	photoChoisie,
+	inputRef,
+	handleFileChange,
+	erreurPhoto,
+	handleAddPhoto,
+	nombreEnAttente,
+	setMySwiperModal,
+	userImageGallery,
+	handleDeletePortfolio,
+	mySwiperModal,
+	erreurEnvoi,
+	handleSubmitGallery,
+}) {
+	return (
 		<Transition.Root show={open} as={Fragment}>
-			<Dialog
-				as="div"
-				className="relative z-30"
-				initialFocus={cancelButtonRef}
-				onClose={fermer}
-			>
+			<Dialog as="div" className="relative z-30" initialFocus={cancelButtonRef} onClose={fermer}>
 				<FondModale />
 
 				<div className="fixed inset-0 z-30 overflow-y-auto">
@@ -201,30 +348,18 @@ export default function ModalUpdatePortfolioProfil(props) {
 								data-cy="modal-panel"
 								className="relative w-full transform rounded-lg bg-white p-8 text-left shadow-2xl transition-all sm:max-w-7xl"
 							>
-								<BoutonFermer
-									onClick={fermer}
-									disabled={envoi || preparation}
-									ref={cancelButtonRef}
-								/>
+								<BoutonFermer onClick={fermer} disabled={envoi || preparation} ref={cancelButtonRef} />
 								<div>
 									<div className="flex flex-col items-start gap-8">
 										<div className="text-left">
-											<Dialog.Title
-												as="h3"
-												className="text-lg font-semibold text-gray-900"
-											>
+											<Dialog.Title as="h3" className="text-lg font-semibold text-gray-900">
 												Modifier votre portfolio
 											</Dialog.Title>
 										</div>
-										<div
-											className={'flex w-full flex-wrap gap-16 md:flex-nowrap'}
-										>
+										<div className={'flex w-full flex-wrap gap-16 md:flex-nowrap'}>
 											<div className="grid w-full grid-cols-1 gap-4 md:w-2/6">
 												<div className={'flex flex-col gap-4'}>
-													<label
-														htmlFor="photo-portfolio-upload"
-														className="text-base font-normal text-gray-700"
-													>
+													<label htmlFor="photo-portfolio-upload" className="text-base font-normal text-gray-700">
 														Ajouter une photo à votre portfolio
 													</label>
 													<button
@@ -253,27 +388,14 @@ export default function ModalUpdatePortfolioProfil(props) {
 																	/>
 																</div>
 															) : null}
-															<div
-																className={
-																	'text-center' +
-																	(photoChoisie ? ' hidden' : ' block')
-																}
-															>
-																<PhotoIcon
-																	className="mx-auto h-12 w-12 text-gray-300"
-																	aria-hidden="true"
-																/>
+															<div className={`text-center${photoChoisie ? ' hidden' : ' block'}`}>
+																<PhotoIcon className="mx-auto h-12 w-12 text-gray-300" aria-hidden="true" />
 																<div className="mt-4 flex text-sm leading-6 text-gray-600">
 																	<span className="relative rounded-md bg-white font-semibold text-indigo-600 hover:text-indigo-500">
-																		{preparation
-																			? 'Préparation de la photo…'
-																			: 'Télécharger une nouvelle photo'}
+																		{preparation ? 'Préparation de la photo…' : 'Télécharger une nouvelle photo'}
 																	</span>
 																</div>
-																<p
-																	id="photo-portfolio-aide"
-																	className="text-xs leading-5 text-gray-600"
-																>
+																<p id="photo-portfolio-aide" className="text-xs leading-5 text-gray-600">
 																	JPEG, PNG ou WebP, réduite avant l&apos;envoi
 																</p>
 															</div>
@@ -299,14 +421,8 @@ export default function ModalUpdatePortfolioProfil(props) {
 															{erreurPhoto}
 														</p>
 													)}
-													<div
-														className={'flex w-full items-center justify-end'}
-													>
-														<Info
-															description={
-																'Vous ne pouvez upload que 10 images maximum.'
-															}
-														/>
+													<div className={'flex w-full items-center justify-end'}>
+														<Info description={'Vous ne pouvez upload que 10 images maximum.'} />
 													</div>
 													<div className="flex justify-end">
 														<button
@@ -321,150 +437,13 @@ export default function ModalUpdatePortfolioProfil(props) {
 													</div>
 												</div>
 											</div>
-											<div className={'flex w-full md:w-4/6'}>
-												<div className={'flex w-full flex-col gap-4 rounded'}>
-													<h2 className={'text-xl font-bold text-gray-700'}>
-														Portfolio
-													</h2>
-													{nombreEnAttente > 0 && (
-														<p
-															data-cy="portfolio-pending"
-															className="text-sm text-gray-700"
-														>
-															{nombreEnAttente === 1
-																? '1 photo sera envoyée quand vous sauvegarderez.'
-																: `${nombreEnAttente} photos seront envoyées quand vous sauvegarderez.`}
-														</p>
-													)}
-													<>
-														<Swiper
-															slidesPerView={'auto'}
-															spaceBetween={32}
-															pagination={{
-																clickable: true,
-															}}
-															loop={true}
-															modules={[Pagination]}
-															className="h-[500px] w-full"
-															onInit={eve => {
-																setMySwiperModal(eve)
-															}}
-														>
-															{
-																// 	map on user?.image_gallery and return a SwiperSlide with the image
-															}
-															{userImageGallery.map((image, index) => {
-																return (
-																	<SwiperSlide
-																		key={image.cle ?? image.id}
-																		data-cy="portfolio-slide"
-																		style={{
-																			aspectRatio: `${image.width}/${image.height}`,
-																			height: '100%',
-																		}}
-																		className={'relative !h-[500px] !w-auto'}
-																	>
-																		<button
-																			type="button"
-																			data-cy="delete-button-portefolio"
-																			aria-label={`Retirer la photo ${index + 1}`}
-																			className={
-																				'absolute left-0 top-0 z-40 m-4 flex h-11 w-11 items-center justify-center rounded-full bg-red-50 shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 md:left-auto md:right-0'
-																			}
-																			onClick={() =>
-																				handleDeletePortfolio(image)
-																			}
-																		>
-																			<span
-																				className="material-icons-round text-xl text-red-500"
-																				aria-hidden="true"
-																			>
-																				delete
-																			</span>
-																		</button>
-																		{image.enAttente && (
-																			<span className="absolute bottom-0 left-0 z-40 m-4 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-indigo-900">
-																				À enregistrer
-																			</span>
-																		)}
-																		<Image
-																			src={image.url}
-																			alt={
-																				image.alternativeText ??
-																				image.name ??
-																				'portefolio image'
-																			}
-																			fill={true}
-																			// UI-09: a slide is 500 px high with the ratio of
-																			// its photo, on a phone as on a computer
-																			sizes={sizesBoite({
-																				hauteur: 500,
-																				ratio: ratioMedia(image),
-																			})}
-																			className={'rounded object-cover'}
-																		/>
-																	</SwiperSlide>
-																)
-															})}
-														</Swiper>
-													</>
-													{/* btn to go on next slide */}
-													<div
-														className={
-															'flex w-full items-center justify-between'
-														}
-													>
-														<div>
-															<button
-																type="button"
-																className={
-																	'flex min-h-[44px] items-center justify-center gap-2'
-																}
-																onClick={() => {
-																	mySwiperModal?.slidePrev()
-																}}
-															>
-																<Image
-																	alt={''}
-																	src={'/assets/down-arrow.svg'}
-																	className={'rotate-90'}
-																	width={20}
-																	height={20}
-																></Image>
-																<span
-																	className={'font-semibold text-indigo-950'}
-																>
-																	Précédent
-																</span>
-															</button>
-														</div>
-														<div>
-															<button
-																type="button"
-																className={
-																	'flex min-h-[44px] items-center justify-center gap-2'
-																}
-																onClick={() => {
-																	mySwiperModal?.slideNext()
-																}}
-															>
-																<span
-																	className={'font-semibold text-indigo-950'}
-																>
-																	Suivant
-																</span>
-																<Image
-																	alt={''}
-																	src={'/assets/down-arrow.svg'}
-																	className={'-rotate-90'}
-																	width={20}
-																	height={20}
-																></Image>
-															</button>
-														</div>
-													</div>
-												</div>
-											</div>
+											<ListePhotosPortfolio
+												nombreEnAttente={nombreEnAttente}
+												setMySwiperModal={setMySwiperModal}
+												userImageGallery={userImageGallery}
+												handleDeletePortfolio={handleDeletePortfolio}
+												mySwiperModal={mySwiperModal}
+											/>
 										</div>
 									</div>
 								</div>

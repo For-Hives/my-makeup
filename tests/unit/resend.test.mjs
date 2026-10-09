@@ -1,11 +1,6 @@
-import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
-import {
-	RESEND_EMAILS_URL,
-	RESEND_TIMEOUT_MS,
-	resendRequest,
-	sendWithResend,
-} from '../../src/lib/resend.js'
+import { describe, test } from 'node:test'
+import { RESEND_EMAILS_URL, RESEND_TIMEOUT_MS, resendRequest, sendWithResend } from '../../src/lib/resend.js'
 
 const email = {
 	key: 're_cle_factice',
@@ -30,8 +25,8 @@ function faux(status, corps = { id: 'id-factice' }) {
 }
 
 // never answers: rejects only when the request is aborted
-const muet = (url, init) =>
-	new Promise((resolve, reject) => {
+const muet = (_url, init) =>
+	new Promise((_resolve, reject) => {
 		init.signal.addEventListener('abort', () => reject(init.signal.reason))
 	})
 
@@ -81,17 +76,14 @@ describe('sendWithResend', () => {
 				name: 'validation_error',
 				message: 'Invalid `to` field: testine@example.test',
 			})
-			assert.deepEqual(
-				await sendWithResend(email, { fetchImpl }),
-				{ ok: false, kind: 'http', status },
-				String(status)
-			)
+			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
+			assert.deepEqual(await sendWithResend(email, { fetchImpl }), { ok: false, kind: 'http', status }, String(status))
 		}
 	})
 
 	test('a redirect is not followed: kind http with its status', async () => {
 		const appels = []
-		const fetchImpl = async (url, init) => {
+		const fetchImpl = async (_url, init) => {
 			appels.push(init.redirect)
 			return new Response(null, {
 				status: 308,
@@ -108,10 +100,11 @@ describe('sendWithResend', () => {
 
 	test('no answer within the delay: aborted, kind timeout', async () => {
 		const debut = Date.now()
-		assert.deepEqual(
-			await sendWithResend(email, { fetchImpl: muet, timeoutMs: 50 }),
-			{ ok: false, kind: 'timeout', status: 0 }
-		)
+		assert.deepEqual(await sendWithResend(email, { fetchImpl: muet, timeoutMs: 50 }), {
+			ok: false,
+			kind: 'timeout',
+			status: 0,
+		})
 		const duree = Date.now() - debut
 		assert.ok(duree >= 45 && duree < 2000, `${duree} ms`)
 	})

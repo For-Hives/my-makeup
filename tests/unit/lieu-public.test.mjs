@@ -1,21 +1,10 @@
-import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
-import {
-	AIDE_VILLE,
-	avecVillePublique,
-	lieuPublic,
-	villePublique,
-} from '../../src/lib/profil/lieu-public.js'
-import {
-	completude,
-	villeExploitable,
-} from '../../src/lib/profil/completude.js'
-import {
-	sectionsVisibles,
-	zoneProfil,
-} from '../../src/lib/profil/vue-publique.js'
-import { seoProfil, serialiserJsonLd } from '../../src/lib/seo/meta.js'
+import { describe, test } from 'node:test'
+import { completude, villeExploitable } from '../../src/lib/profil/completude.js'
+import { AIDE_VILLE, avecVillePublique, lieuPublic, villePublique } from '../../src/lib/profil/lieu-public.js'
 import { trierProfilsPublics } from '../../src/lib/profil/publiables.js'
+import { sectionsVisibles, zoneProfil } from '../../src/lib/profil/vue-publique.js'
+import { seoProfil, serialiserJsonLd } from '../../src/lib/seo/meta.js'
 
 // Made-up addresses only (« des Essais », « Fictifs »): never a real one.
 // [typed, public, words of the street that must never come out]
@@ -24,16 +13,8 @@ const ADRESSES = [
 	['12, avenue Y, 75011 Paris', 'Paris (75)', ['12', 'avenue', 'Y']],
 	['3 Place Z Thonon-les-Bains', 'Thonon-les-Bains', ['3', 'Place', 'Z']],
 	['12 RUE DES ESSAIS 74000 ANNECY', 'Annecy (74)', ['12', 'RUE', 'ESSAIS']],
-	[
-		'8 allée des Érables Fictifs 74940 Annecy-le-Vieux',
-		'Annecy-le-Vieux (74)',
-		['8', 'allée', 'Érables', 'Fictifs'],
-	],
-	[
-		'5 chemin des Essais, 74100 Annemasse CEDEX',
-		'Annemasse (74)',
-		['5', 'chemin', 'Essais', 'CEDEX'],
-	],
+	['8 allée des Érables Fictifs 74940 Annecy-le-Vieux', 'Annecy-le-Vieux (74)', ['8', 'allée', 'Érables', 'Fictifs']],
+	['5 chemin des Essais, 74100 Annemasse CEDEX', 'Annemasse (74)', ['5', 'chemin', 'Essais', 'CEDEX']],
 	[
 		'7 IMPASSE DES ESSAIS, 74200 THONON-LES-BAINS, FRANCE',
 		'Thonon-les-Bains (74)',
@@ -43,27 +24,15 @@ const ADRESSES = [
 	['1 cours des Essais 20090 Ajaccio', 'Ajaccio (2A)', ['1', 'cours']],
 	['4 rue des Essais 97400 Saint-Denis', 'Saint-Denis (974)', ['4', 'rue']],
 	['12 rue des Essais, 74 000 Annecy', 'Annecy (74)', ['rue', 'Essais']],
-	[
-		'lieu-dit Les Essais 74230 Thônes',
-		'Thônes (74)',
-		['lieu-dit', 'Les Essais'],
-	],
+	['lieu-dit Les Essais 74230 Thônes', 'Thônes (74)', ['lieu-dit', 'Les Essais']],
 	['12 rue des Essais, Annecy', 'Annecy', ['12', 'rue', 'Essais']],
 	['12 rue des Essais Annecy 74000', '74000', ['12', 'rue', 'Essais']],
 	['12 rue des Essais 74000', '74000', ['12', 'rue', 'Essais']],
-	[
-		'7 impasse des Essais Fictifs Le Grand-Bornand',
-		'Le Grand-Bornand',
-		['7', 'impasse', 'Essais', 'Fictifs'],
-	],
+	['7 impasse des Essais Fictifs Le Grand-Bornand', 'Le Grand-Bornand', ['7', 'impasse', 'Essais', 'Fictifs']],
 	// Paris is a commune and a département
 	['12 rue des Essais, 75011 Paris', 'Paris (75)', ['12', 'rue', 'Essais']],
 	// a département after the postal code: the place before it
-	[
-		'Saint Julien en Genevois 74160 Haute-Savoie',
-		'Saint Julien en Genevois (74)',
-		[],
-	],
+	['Saint Julien en Genevois 74160 Haute-Savoie', 'Saint Julien en Genevois (74)', []],
 	// no type of street, but words, a postal code and a place
 	['Le Bourg 74300 Cluses', 'Cluses (74)', ['Le', 'Bourg']],
 	['Les Marais Fictifs 74000 Annecy', 'Annecy (74)', ['Marais', 'Fictifs']],
@@ -73,11 +42,7 @@ const ADRESSES = [
 	['CS 12345 74000 ANNECY CEDEX', 'Annecy (74)', ['CS', '12345', 'CEDEX']],
 	// abroad: the town, without its postal code nor its country
 	['12 rue des Essais, Genève, Suisse', 'Genève', ['12', 'rue', 'Suisse']],
-	[
-		'12 rue des Essais, 1000 Bruxelles, Belgique',
-		'Bruxelles',
-		['12', 'rue', '1000', 'Belgique'],
-	],
+	['12 rue des Essais, 1000 Bruxelles, Belgique', 'Bruxelles', ['12', 'rue', '1000', 'Belgique']],
 	// a number then a place: the place, never the number (a street number
 	// or a département, it cannot be told)
 	['74 La Roche-sur-Foron', 'La Roche-sur-Foron', ['74']],
@@ -87,11 +52,7 @@ const ADRESSES = [
 	// a comma between the commune and the postal code
 	['12 rue des Essais, Annecy, 74000', 'Annecy (74)', ['12', 'rue', 'Essais']],
 	['12 rue des Essais, 74000, Annecy', 'Annecy (74)', ['12', 'rue', 'Essais']],
-	[
-		'3 place des Essais Thonon-les-Bains, 74200',
-		'Thonon-les-Bains (74)',
-		['3', 'place', 'Essais'],
-	],
+	['3 place des Essais Thonon-les-Bains, 74200', 'Thonon-les-Bains (74)', ['3', 'place', 'Essais']],
 	// a lieu-dit, a comma, then the postal code and the commune
 	['Les Essais, 74200 Thonon', 'Thonon (74)', ['Les Essais']],
 	// a number then words: a street, even without its type
@@ -99,20 +60,12 @@ const ADRESSES = [
 	['12 Les Essais, Annecy', 'Annecy', ['12', 'Essais']],
 	['12 bis, Les Essais, Annecy', 'Annecy', ['12', 'bis', 'Essais']],
 	// a street glued to its commune or to its number
-	[
-		'74200 Thonon-les-Bains,chemin des Essais',
-		'Thonon-les-Bains (74)',
-		['chemin', 'Essais'],
-	],
+	['74200 Thonon-les-Bains,chemin des Essais', 'Thonon-les-Bains (74)', ['chemin', 'Essais']],
 	['74000 Annecy.rue des Essais', 'Annecy (74)', ['rue', 'Essais']],
 	['74000 ANNECY;RUE DES ESSAIS', 'Annecy (74)', ['RUE', 'ESSAIS']],
 	['12rue des Essais 74000 Annecy', 'Annecy (74)', ['12rue', 'rue', 'Essais']],
 	["12 l'avenue des Essais, Annecy", 'Annecy', ["l'avenue", 'Essais']],
-	[
-		'3 place des Essais.Thonon-les-Bains',
-		'Thonon-les-Bains',
-		['place', 'Essais'],
-	],
+	['3 place des Essais.Thonon-les-Bains', 'Thonon-les-Bains', ['place', 'Essais']],
 	// a commune named like a type of street, after the postal code
 	['12 rue des Essais, 38490 Le Passage', 'Le Passage (38)', ['12', 'rue']],
 	// without a commune, nothing: the end of a street is not a commune
@@ -122,11 +75,7 @@ const ADRESSES = [
 	['12 rue Victor Hugo', '', ['Victor', 'Hugo']],
 	['9 avenue Paul Vaillant-Couturier', '', ['Paul', 'Vaillant-Couturier']],
 	['12 rue de la Paix', '', ['Paix']],
-	[
-		'10 avenue du Général Charles-de-Gaulle',
-		'',
-		['10', 'Général', 'Charles-de-Gaulle'],
-	],
+	['10 avenue du Général Charles-de-Gaulle', '', ['10', 'Général', 'Charles-de-Gaulle']],
 ]
 
 // a code of département then the name of that département: both kept
@@ -188,10 +137,7 @@ const LIEUX = [
 	['Annecy, 74000', 'Annecy (74)'],
 	['74 000 Annecy', 'Annecy (74)'],
 	// words that say how far before the postal code: no address
-	[
-		'Toute la Haute-Savoie, 74000 Annecy',
-		'Toute la Haute-Savoie, 74000 Annecy',
-	],
+	['Toute la Haute-Savoie, 74000 Annecy', 'Toute la Haute-Savoie, 74000 Annecy'],
 	// « 74 100 » before a unit is no postal code
 	['Haute-Savoie 74 100 km', 'Haute-Savoie 74 100 km'],
 ]
@@ -214,23 +160,26 @@ const COMMUNES_COMME_UNE_VOIE = [
 const VIDES = [null, undefined, 42, {}, '', '   ', 'null', 'undefined', '-']
 
 describe('villePublique (UI-11)', () => {
-	for (const [tapee, publique] of [...ADRESSES, ...LIEUX])
+	for (const [tapee, publique] of [...ADRESSES, ...LIEUX]) {
 		test(`« ${tapee} » → « ${publique} »`, () => {
 			assert.equal(villePublique(tapee), publique)
 		})
+	}
 
-	for (const [tapee, publique] of DEPARTEMENTS_NOMMES)
+	for (const [tapee, publique] of DEPARTEMENTS_NOMMES) {
 		test(`« ${tapee} » → « ${publique} »`, () => {
 			assert.equal(villePublique(tapee), publique)
 			assert.equal(villeExploitable(tapee), true)
 		})
+	}
 
-	for (const [tapee, publique] of COMMUNES_COMME_UNE_VOIE)
+	for (const [tapee, publique] of COMMUNES_COMME_UNE_VOIE) {
 		test(`« ${tapee} » → « ${publique} », a usable city`, () => {
 			assert.equal(villePublique(tapee), publique)
 			assert.equal(lieuPublic(tapee).adresse, false)
 			assert.equal(villeExploitable(tapee), true)
 		})
+	}
 
 	test('a street glued to the commune, no postal code: nothing, not a usable city', () => {
 		for (const tapee of RUES_COLLEES) {
@@ -249,34 +198,27 @@ describe('villePublique (UI-11)', () => {
 	})
 
 	test('nothing usable: an empty text', () => {
-		for (const v of VIDES) assert.equal(villePublique(v), '', String(v))
+		for (const v of VIDES) {
+			assert.equal(villePublique(v), '', String(v))
+		}
 	})
 
 	test('never the street number nor the street of an address', () => {
 		for (const [tapee, publique, rue] of ADRESSES) {
-			for (const mot of rue)
+			for (const mot of rue) {
 				assert.ok(
-					!` ${publique} `.includes(` ${mot.trim()} `) &&
-						!publique.includes(`${mot.trim()} `),
+					!(` ${publique} `.includes(` ${mot.trim()} `) || publique.includes(`${mot.trim()} `)),
 					`« ${tapee} » → « ${publique} » holds « ${mot} »`
 				)
+			}
 			// digits: only the postal code alone or the département
-			assert.match(
-				publique,
-				/^(\d{5}|[^\d]*( \((\d{2}|2A|2B|97\d)\))?)$/,
-				tapee
-			)
+			assert.match(publique, /^(\d{5}|[^\d]*( \((\d{2}|2A|2B|97\d)\))?)$/, tapee)
 		}
 	})
 
 	test('the same place when read again (the public page reads its props)', () => {
 		for (const tapee of [
-			...[
-				...ADRESSES,
-				...LIEUX,
-				...DEPARTEMENTS_NOMMES,
-				...COMMUNES_COMME_UNE_VOIE,
-			].map(([t]) => t),
+			...[...ADRESSES, ...LIEUX, ...DEPARTEMENTS_NOMMES, ...COMMUNES_COMME_UNE_VOIE].map(([t]) => t),
 			...NUMERO_PUIS_TEXTE,
 			...RUES_COLLEES,
 		]) {
@@ -291,8 +233,10 @@ describe('villePublique (UI-11)', () => {
 	test('property: a generated address never gives its street, whatever glues it', () => {
 		// made-up streets: each name holds a word that must never come out
 		let graine = 7
-		const hasard = () =>
-			(graine = (graine * 1103515245 + 12345) % 2 ** 31) / 2 ** 31
+		const hasard = () => {
+			graine = (graine * 1103515245 + 12345) % 2 ** 31
+			return graine / 2 ** 31
+		}
 		const un = liste => liste[Math.floor(hasard() * liste.length)]
 		const NUMEROS = ['', '12 ', '3 bis ', '7ter ', '45, ', '12', '9-']
 		const VOIES = [
@@ -327,8 +271,7 @@ describe('villePublique (UI-11)', () => {
 			'du 8 Mai Zorgle',
 			'Qwertz Zorgmann',
 		]
-		const MARQUES =
-			/zorglub|xyzzy|qwertz|plugh|zorgmann|wibble|frobnitz|frobs|gloups|zorgle/i
+		const MARQUES = /zorglub|xyzzy|qwertz|plugh|zorgmann|wibble|frobnitz|frobs|gloups|zorgle/i
 		const COMMUNES = [
 			'Annecy',
 			'Thonon-les-Bains',
@@ -341,29 +284,13 @@ describe('villePublique (UI-11)', () => {
 		]
 		const CODES = ['74000', '74200', '73000', '75011', '74 000', '20000']
 		// with or without a space
-		const SEPARATEURS = [
-			' ',
-			', ',
-			',',
-			' , ',
-			'; ',
-			';',
-			'/',
-			' / ',
-			'.',
-			'. ',
-			':',
-			'|',
-			' - ',
-			'-',
-			' – ',
-		]
+		const SEPARATEURS = [' ', ', ', ',', ' , ', '; ', ';', '/', ' / ', '.', '. ', ':', '|', ' - ', '-', ' – ']
 		const FINS = ['', ', France', ' CEDEX', ' (France)', '.']
 		const FORMES = [
 			(rue, c, cp) => `${rue}${un(SEPARATEURS)}${cp} ${c}`,
 			(rue, c, cp) => `${rue}${un(SEPARATEURS)}${c}${un(SEPARATEURS)}${cp}`,
 			(rue, c) => `${rue}${un(SEPARATEURS)}${c}`,
-			(rue, c, cp) => `${rue}${un(SEPARATEURS)}${cp}`,
+			(rue, _c, cp) => `${rue}${un(SEPARATEURS)}${cp}`,
 			(rue, c) => `${rue} ${c}`,
 			(rue, c, cp) => `${cp} ${c}${un(SEPARATEURS)}${rue}`,
 			(rue, c) => `${c}${un(SEPARATEURS)}${rue}`,
@@ -376,13 +303,10 @@ describe('villePublique (UI-11)', () => {
 			else if (casse < 0.45) tapee = tapee.toLowerCase()
 			const lieu = lieuPublic(tapee)
 			const props = avecVillePublique({ attributes: { city: tapee } })
-			for (const sortie of [lieu.texte, lieu.commune, JSON.stringify(props)])
+			for (const sortie of [lieu.texte, lieu.commune, JSON.stringify(props)]) {
 				assert.doesNotMatch(sortie, MARQUES, `« ${tapee} » → « ${sortie} »`)
-			assert.match(
-				lieu.texte,
-				/^(\d{5}|[^\d]*( \((\d{2}|2A|2B|97\d)\))?)$/,
-				tapee
-			)
+			}
+			assert.match(lieu.texte, /^(\d{5}|[^\d]*( \((\d{2}|2A|2B|97\d)\))?)$/, tapee)
 			assert.equal(villePublique(lieu.texte), lieu.texte, tapee)
 			assert.equal(villeExploitable(lieu.texte), villeExploitable(tapee), tapee)
 		}
@@ -408,19 +332,13 @@ describe('villePublique (UI-11)', () => {
 
 	test('the département of the last postal code (lieu.js)', () => {
 		assert.equal(lieuPublic('CS 12345 74000 Annecy Cedex').departement, '74')
-		assert.equal(
-			lieuPublic('1 cours des Essais 20200 Bastia').departement,
-			'2B'
-		)
+		assert.equal(lieuPublic('1 cours des Essais 20200 Bastia').departement, '2B')
 		assert.equal(lieuPublic('12 bd des Essais 98000 Monaco').texte, 'Monaco')
 		assert.equal(lieuPublic('Monaco 98000').texte, 'Monaco')
 	})
 
 	test('the help of the artist’s space', () => {
-		assert.equal(
-			AIDE_VILLE,
-			'Indique ta ville (et ton code postal), pas ton adresse : elle est publique.'
-		)
+		assert.equal(AIDE_VILLE, 'Indique ta ville (et ton code postal), pas ton adresse : elle est publique.')
 	})
 })
 
@@ -438,9 +356,7 @@ describe('the public pages show the public city only (UI-11)', () => {
 		main_picture: {
 			data: { id: 1, attributes: { url: 'https://r2.example.test/t.webp' } },
 		},
-		service_offers: [
-			{ name: 'Mariée', description: '', price: '180 €', options: [] },
-		],
+		service_offers: [{ name: 'Mariée', description: '', price: '180 €', options: [] }],
 		network: { instagram: '@studio.fictif', email: '', phone: '' },
 	}
 	const entree = { id: 9, attributes: attributs }
@@ -449,32 +365,20 @@ describe('the public pages show the public city only (UI-11)', () => {
 		const publique = avecVillePublique(entree)
 		assert.equal(publique.attributes.city, 'Thonon-les-Bains (74)')
 		assert.equal(publique.id, 9)
-		assert.deepEqual(
-			{ ...publique.attributes, city: ADRESSE },
-			entree.attributes
-		)
+		assert.deepEqual({ ...publique.attributes, city: ADRESSE }, entree.attributes)
 		// not changed in place
 		assert.equal(entree.attributes.city, ADRESSE)
 		assert.doesNotMatch(JSON.stringify(publique), /Essais|impasse|\b7\b/)
 		// flat shape (search), empty city, no city
-		assert.equal(
-			avecVillePublique({ city: '12 rue X 74000 Annecy' }).city,
-			'Annecy (74)'
-		)
-		assert.equal(
-			avecVillePublique({ attributes: { city: '3 avenue X' } }).attributes.city,
-			null
-		)
+		assert.equal(avecVillePublique({ city: '12 rue X 74000 Annecy' }).city, 'Annecy (74)')
+		assert.equal(avecVillePublique({ attributes: { city: '3 avenue X' } }).attributes.city, null)
 		assert.deepEqual(avecVillePublique({ id: 1 }), { id: 1 })
 		assert.equal(avecVillePublique(null), null)
 	})
 
 	test('zone and sections of the page', () => {
 		assert.equal(zoneProfil(entree), 'Thonon-les-Bains (74) et 30 km autour')
-		assert.equal(
-			zoneProfil(avecVillePublique(entree)),
-			'Thonon-les-Bains (74) et 30 km autour'
-		)
+		assert.equal(zoneProfil(avecVillePublique(entree)), 'Thonon-les-Bains (74) et 30 km autour')
 		assert.equal(sectionsVisibles(entree).localisation, true)
 		assert.equal(sectionsVisibles({ city: '3 avenue X' }).localisation, false)
 	})
@@ -537,11 +441,7 @@ describe('the public pages show the public city only (UI-11)', () => {
 				const tout = `${JSON.stringify(seo)}${serialiserJsonLd(seo.jsonLd)}`
 				assert.doesNotMatch(tout, /rue des|Essais|Fictifs/, city)
 			}
-			assert.deepEqual(
-				trierProfilsPublics([{ id: 9, attributes: profil }]).publiables,
-				[],
-				city
-			)
+			assert.deepEqual(trierProfilsPublics([{ id: 9, attributes: profil }]).publiables, [], city)
 		}
 	})
 

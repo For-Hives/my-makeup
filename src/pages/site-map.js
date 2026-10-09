@@ -1,10 +1,9 @@
-import React from 'react'
-import Nav from '@/components/Global/Nav'
-import Footer from '@/components/Global/Footer'
 import Head from 'next/head'
-import Hero from '@/components/Global/Hero'
-import CTA from '@/components/Global/CTA'
 import Link from 'next/link'
+import CTA from '@/components/Global/CTA'
+import Footer from '@/components/Global/Footer'
+import Hero from '@/components/Global/Hero'
+import Nav from '@/components/Global/Nav'
 import { urlAbsolue } from '@/lib/seo/url'
 
 /**
@@ -32,20 +31,12 @@ function SiteMap({ articles, talents }) {
 							<span className={'text-indigo-900'}>My&nbsp;Makeup</span>
 						</>
 					}
-					description={
-						<>
-							{
-								"La globalité de toutes les pages qui sont présentes dans l'arborescence du site !"
-							}
-						</>
-					}
+					description={"La globalité de toutes les pages qui sont présentes dans l'arborescence du site !"}
 					isSearchDisplayed={false}
 					isCTALoginDisplayed={false}
 					isSimpleVersionDisplayed={true}
 				/>
-				<div
-					className={'relative mx-auto my-24 max-w-7xl px-4 md:my-48 md:px-0'}
-				>
+				<div className={'relative mx-auto my-24 max-w-7xl px-4 md:my-48 md:px-0'}>
 					<div className="mx-auto max-w-2xl">
 						<article>
 							<header className="flex flex-col">
@@ -66,58 +57,34 @@ function SiteMap({ articles, talents }) {
 								<h2>Pour les particulier</h2>
 								<ul>
 									<li>
-										<Link
-											href={
-												'/pourquoi-utiliser-my-makeup-en-tant-que-particulier'
-											}
-										>
-											Pourquoi My-Makeup ?
-										</Link>
+										<Link href={'/pourquoi-utiliser-my-makeup-en-tant-que-particulier'}>Pourquoi My-Makeup ?</Link>
 									</li>
 									<li>
-										<Link href={'/particulier/trouver-une-maquilleuse'}>
-											Trouver une maquilleuse
-										</Link>
+										<Link href={'/particulier/trouver-une-maquilleuse'}>Trouver une maquilleuse</Link>
 									</li>
 									<li>
-										<Link href={'/particulier/centraliser-ses-recherches'}>
-											Centraliser ses recherches
-										</Link>
+										<Link href={'/particulier/centraliser-ses-recherches'}>Centraliser ses recherches</Link>
 									</li>
 									<li>
-										<Link href={'/particulier/explorer-les-profils'}>
-											Explorer les profils
-										</Link>
+										<Link href={'/particulier/explorer-les-profils'}>Explorer les profils</Link>
 									</li>
 								</ul>
 								<h3>Pour les maquilleuses</h3>
 								<ul>
 									<li>
-										<Link
-											href={
-												'/pourquoi-rejoindre-my-makeup-en-tant-que-maquilleuse'
-											}
-										>
-											Pourquoi My-Makeup ?
-										</Link>
+										<Link href={'/pourquoi-rejoindre-my-makeup-en-tant-que-maquilleuse'}>Pourquoi My-Makeup ?</Link>
 									</li>
 									<li>
-										<Link href={'/maquilleuse/partenariats'}>
-											Communautés & Partenariats
-										</Link>
+										<Link href={'/maquilleuse/partenariats'}>Communautés & Partenariats</Link>
 									</li>
 								</ul>
 								<h3>Par rapport à la solution</h3>
 								<ul>
 									<li>
-										<Link href={'/solutions/pour-les-particuliers'}>
-											Solution pour les particuliers
-										</Link>
+										<Link href={'/solutions/pour-les-particuliers'}>Solution pour les particuliers</Link>
 									</li>
 									<li>
-										<Link href={'/solutions/pour-les-maquilleuses'}>
-											Solution pour les maquilleuses
-										</Link>
+										<Link href={'/solutions/pour-les-maquilleuses'}>Solution pour les maquilleuses</Link>
 									</li>
 									<li>
 										<Link href={'/blog'}>Blog</Link>
@@ -132,9 +99,7 @@ function SiteMap({ articles, talents }) {
 										<Link href={'/mentions-legales'}>Mentions légales</Link>
 									</li>
 									<li>
-										<Link href={'/politique-de-confidentialite'}>
-											Politique de confidentialité
-										</Link>
+										<Link href={'/politique-de-confidentialite'}>Politique de confidentialité</Link>
 									</li>
 								</ul>
 								<h3>Blog</h3>
@@ -143,9 +108,7 @@ function SiteMap({ articles, talents }) {
 										? articles.map(element => {
 												return (
 													<li key={element.id}>
-														<Link href={`/blog/${element?.attributes?.slug}`}>
-															{element?.attributes?.title}
-														</Link>
+														<Link href={`/blog/${element?.attributes?.slug}`}>{element?.attributes?.title}</Link>
 													</li>
 												)
 											})
@@ -157,9 +120,7 @@ function SiteMap({ articles, talents }) {
 										? talents.map(element => {
 												return (
 													<li key={element.id}>
-														<Link href={`/talent/${element?.attributes?.slug}`}>
-															{element?.attributes?.title}
-														</Link>
+														<Link href={`/talent/${element?.attributes?.slug}`}>{element?.attributes?.title}</Link>
 													</li>
 												)
 											})
@@ -190,13 +151,9 @@ async function fetchAPI(url) {
 }
 
 export async function getStaticProps() {
-	const articles = await fetchAPI(
-		`${process.env.NEXT_PUBLIC_API_URL}/api/articles`
-	)
+	const articles = await fetchAPI(`${process.env.NEXT_PUBLIC_API_URL}/api/articles`)
 
-	const talents = await fetchAPI(
-		`${process.env.NEXT_PUBLIC_API_URL}/api/talents`
-	)
+	const talents = await fetchAPI(`${process.env.NEXT_PUBLIC_API_URL}/api/talents`)
 
 	return {
 		props: { articles: articles.data, talents: talents.data },

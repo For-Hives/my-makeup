@@ -1,8 +1,8 @@
-import React, { useEffect } from 'react'
 import Head from 'next/head'
 import Image from 'next/image'
-import { signOut, useSession } from 'next-auth/react'
 import Link from 'next/link'
+import { signOut, useSession } from 'next-auth/react'
+import { useEffect } from 'react'
 
 function VerificationComplete() {
 	const { data: session } = useSession()
@@ -28,21 +28,14 @@ function VerificationComplete() {
 						<div>
 							<Link href={'/'}>
 								<span className="sr-only">My-Makeup</span>
-								<Image
-									alt="Logo My-Makeup"
-									width={50}
-									height={50}
-									src="/assets/logo.webp"
-								/>
+								<Image alt="Logo My-Makeup" width={50} height={50} src="/assets/logo.webp" />
 							</Link>
 						</div>
 						<div className={'mt-8'}>
 							<h1 className={'my-8 text-2xl font-semibold text-gray-900'}>
 								Felicitation ! Votre compte My-Makeup est maintenant activé !
 							</h1>
-							<p className={'text-gray-700'}>
-								Vous pouvez désormais vous connecter
-							</p>
+							<p className={'text-gray-700'}>Vous pouvez désormais vous connecter</p>
 
 							<Link href={'/auth/signin'} className="btn-primary-large mt-8">
 								Se connecter

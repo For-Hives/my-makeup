@@ -42,10 +42,7 @@ export function resendRequest({ key, from, to, replyTo, subject, text }) {
  * @param {{fetchImpl?: typeof fetch, timeoutMs?: number}} [options]
  * @returns {Promise<{ok: true, status: number}|{ok: false, kind: 'http'|'timeout'|'network', status: number}>}
  */
-export async function sendWithResend(
-	email,
-	{ fetchImpl = fetch, timeoutMs = RESEND_TIMEOUT_MS } = {}
-) {
+export async function sendWithResend(email, { fetchImpl = fetch, timeoutMs = RESEND_TIMEOUT_MS } = {}) {
 	const { url, init } = resendRequest(email)
 	// a timer of our own (not AbortSignal.timeout, which does not keep the
 	// process alive), cleared once the answer is read
@@ -58,9 +55,7 @@ export async function sendWithResend(
 		})
 		// read and dropped: frees the connection, never logged
 		await response.text().catch(() => '')
-		return response.ok
-			? { ok: true, status: response.status }
-			: { ok: false, kind: 'http', status: response.status }
+		return response.ok ? { ok: true, status: response.status } : { ok: false, kind: 'http', status: response.status }
 	} catch {
 		return {
 			ok: false,

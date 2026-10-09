@@ -1,18 +1,17 @@
-import React from 'react'
-import Nav from '@/components/Global/Nav'
-import Footer from '@/components/Global/Footer'
-import Head from 'next/head'
-import Hero from '@/components/Global/Hero'
-import CTA from '@/components/Global/CTA'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useForm } from 'react-hook-form'
+import Head from 'next/head'
 import Link from 'next/link'
+import { useForm } from 'react-hook-form'
 import { toast } from 'react-toastify'
+import CTA from '@/components/Global/CTA'
+import Footer from '@/components/Global/Footer'
+import Hero from '@/components/Global/Hero'
+import Nav from '@/components/Global/Nav'
 import { track } from '@/lib/analytics'
 import { contactFormSchema } from '@/lib/contactForm'
 import { urlAbsolue } from '@/lib/seo/url'
 
-function Contact(props) {
+function Contact(_props) {
 	const {
 		register,
 		handleSubmit,
@@ -75,37 +74,23 @@ function Contact(props) {
 				<Hero
 					imgBackgroundSrc={'/assets/back/maquilleuse_europeenne_white.webp'}
 					title={<>Contact</>}
-					description={
-						<>
-							{
-								"Une idée, une envie de collaborer, une question ? N'hésitez pas à nous contacter !"
-							}
-						</>
-					}
+					description={"Une idée, une envie de collaborer, une question ? N'hésitez pas à nous contacter !"}
 					isSearchDisplayed={false}
 					isCTALoginDisplayed={false}
 					isSimpleVersionDisplayed={true}
 				/>
 				<div className="mx-auto mt-32 max-w-2xl px-4 text-center md:px-0">
-					<h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
-						Un message en particulier ?
-					</h2>
+					<h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">Un message en particulier ?</h2>
 					<p className="mt-2 text-lg leading-8 text-gray-600">
 						{
 							"Une demande particulière, un bug, une idée ? N'hésitez pas à nous contacter via le formulaire ci-dessous !"
 						}
 					</p>
 				</div>
-				<form
-					onSubmit={handleSubmit(onSubmit)}
-					className="mx-auto my-32 max-w-xl px-4 sm:mt-20 md:px-0"
-				>
+				<form onSubmit={handleSubmit(onSubmit)} className="mx-auto my-32 max-w-xl px-4 sm:mt-20 md:px-0">
 					<div className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-2">
 						<div>
-							<label
-								htmlFor="first_name"
-								className="block text-sm font-semibold leading-6 text-gray-900"
-							>
+							<label htmlFor="first_name" className="block text-sm font-semibold leading-6 text-gray-900">
 								Prénom
 							</label>
 							<div className="mt-2.5">
@@ -119,18 +104,11 @@ function Contact(props) {
 									autoComplete="given-name"
 									className="block w-full rounded-md border-0 px-3.5 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
 								/>
-								{errors.first_name && (
-									<p className={'mt-2 text-xs text-red-500/80'}>
-										{errors.first_name.message}
-									</p>
-								)}
+								{errors.first_name && <p className={'mt-2 text-xs text-red-500/80'}>{errors.first_name.message}</p>}
 							</div>
 						</div>
 						<div>
-							<label
-								htmlFor="last_name"
-								className="block text-sm font-semibold leading-6 text-gray-900"
-							>
+							<label htmlFor="last_name" className="block text-sm font-semibold leading-6 text-gray-900">
 								Nom
 							</label>
 							<div className="mt-2.5">
@@ -145,17 +123,10 @@ function Contact(props) {
 									className="block w-full rounded-md border-0 px-3.5 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
 								/>
 							</div>
-							{errors.last_name && (
-								<p className={'mt-2 text-xs text-red-500/80'}>
-									{errors.last_name.message}
-								</p>
-							)}
+							{errors.last_name && <p className={'mt-2 text-xs text-red-500/80'}>{errors.last_name.message}</p>}
 						</div>
 						<div className="sm:col-span-2">
-							<label
-								htmlFor="email"
-								className="block text-sm font-semibold leading-6 text-gray-900"
-							>
+							<label htmlFor="email" className="block text-sm font-semibold leading-6 text-gray-900">
 								Email
 							</label>
 							<div className="mt-2.5">
@@ -170,17 +141,10 @@ function Contact(props) {
 									className="block w-full rounded-md border-0 px-3.5 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
 								/>
 							</div>
-							{errors.email && (
-								<p className={'mt-2 text-xs text-red-500/80'}>
-									{errors.email.message}
-								</p>
-							)}
+							{errors.email && <p className={'mt-2 text-xs text-red-500/80'}>{errors.email.message}</p>}
 						</div>
 						<div className="sm:col-span-2">
-							<label
-								htmlFor="phone_number"
-								className="block text-sm font-semibold leading-6 text-gray-900"
-							>
+							<label htmlFor="phone_number" className="block text-sm font-semibold leading-6 text-gray-900">
 								Numéro de téléphone
 							</label>
 							<div className="relative mt-2.5">
@@ -195,17 +159,10 @@ function Contact(props) {
 									className="block w-full rounded-md border-0 px-3.5 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
 								/>
 							</div>
-							{errors.phone_number && (
-								<p className={'mt-2 text-xs text-red-500/80'}>
-									{errors.phone_number.message}
-								</p>
-							)}
+							{errors.phone_number && <p className={'mt-2 text-xs text-red-500/80'}>{errors.phone_number.message}</p>}
 						</div>
 						<div className="sm:col-span-2">
-							<label
-								htmlFor="message"
-								className="block text-sm font-semibold leading-6 text-gray-900"
-							>
+							<label htmlFor="message" className="block text-sm font-semibold leading-6 text-gray-900">
 								Message
 							</label>
 							<div className="mt-2.5">
@@ -220,19 +177,12 @@ function Contact(props) {
 									defaultValue={''}
 								/>
 							</div>
-							{errors.message && (
-								<p className={'mt-2 text-xs text-red-500/80'}>
-									{errors.message.message}
-								</p>
-							)}
+							{errors.message && <p className={'mt-2 text-xs text-red-500/80'}>{errors.message.message}</p>}
 						</div>
 						<div className={'sm:col-span-2'}>
 							<p className="text-sm leading-6 text-gray-600">
 								En envoyant votre message, vous acceptez notre{' '}
-								<Link
-									href="/politique-de-confidentialite"
-									className="font-semibold"
-								>
+								<Link href="/politique-de-confidentialite" className="font-semibold">
 									politique&nbsp;de&nbsp;confidentialité.
 								</Link>
 							</p>
@@ -254,24 +204,17 @@ function Contact(props) {
 								Contactez-nous
 							</h2>
 							<p className="mt-6 w-full text-start text-lg text-gray-700 md:w-1/2">
-								{
-									"My-Makeup, plus qu'une plateforme de mise en relation, une équipe de passionnés à votre service !"
-								}
+								{"My-Makeup, plus qu'une plateforme de mise en relation, une équipe de passionnés à votre service !"}
 							</p>
 						</div>
 						<div className="grid w-full grid-cols-1 gap-6 sm:grid-cols-2 md:w-1/2 lg:col-span-2 lg:gap-8">
 							<div className="rounded-2xl bg-gray-50 p-10">
-								<h3 className="text-base font-semibold leading-7 text-gray-900">
-									Contact général
-								</h3>
+								<h3 className="text-base font-semibold leading-7 text-gray-900">Contact général</h3>
 								<dl className="mt-3 space-y-1 text-sm leading-6 text-gray-600">
 									<div>
 										<dt className="sr-only">Email</dt>
 										<dd>
-											<a
-												className="font-semibold text-indigo-600"
-												href="mailto:contact@my-makeup.fr"
-											>
+											<a className="font-semibold text-indigo-600" href="mailto:contact@my-makeup.fr">
 												contact@my-makeup.fr
 											</a>
 										</dd>
@@ -283,17 +226,12 @@ function Contact(props) {
 								</dl>
 							</div>
 							<div className="rounded-2xl bg-gray-50 p-10">
-								<h3 className="text-base font-semibold leading-7 text-gray-900">
-									Travailler avec nous
-								</h3>
+								<h3 className="text-base font-semibold leading-7 text-gray-900">Travailler avec nous</h3>
 								<dl className="mt-3 space-y-1 text-sm leading-6 text-gray-600">
 									<div>
 										<dt className="sr-only">Email</dt>
 										<dd>
-											<a
-												className="font-semibold text-indigo-600"
-												href="mailto:jobs@my-makeup.fr"
-											>
+											<a className="font-semibold text-indigo-600" href="mailto:jobs@my-makeup.fr">
 												jobs@my-makeup.fr
 											</a>
 										</dd>
@@ -301,17 +239,12 @@ function Contact(props) {
 								</dl>
 							</div>
 							<div className="rounded-2xl bg-gray-50 p-10">
-								<h3 className="text-base font-semibold leading-7 text-gray-900">
-									Relation entreprise
-								</h3>
+								<h3 className="text-base font-semibold leading-7 text-gray-900">Relation entreprise</h3>
 								<dl className="mt-3 space-y-1 text-sm leading-6 text-gray-600">
 									<div>
 										<dt className="sr-only">Email</dt>
 										<dd>
-											<a
-												className="font-semibold text-indigo-600"
-												href="mailto:pro@my-makeup.fr"
-											>
+											<a className="font-semibold text-indigo-600" href="mailto:pro@my-makeup.fr">
 												pro@my-makeup.fr
 											</a>
 										</dd>
@@ -323,17 +256,12 @@ function Contact(props) {
 								</dl>
 							</div>
 							<div className="rounded-2xl bg-gray-50 p-10">
-								<h3 className="text-base font-semibold leading-7 text-gray-900">
-									Aide et questions
-								</h3>
+								<h3 className="text-base font-semibold leading-7 text-gray-900">Aide et questions</h3>
 								<dl className="mt-3 space-y-1 text-sm leading-6 text-gray-600">
 									<div>
 										<dt className="sr-only">Email</dt>
 										<dd>
-											<a
-												className="font-semibold text-indigo-600"
-												href="mailto:help@my-makeup.fr"
-											>
+											<a className="font-semibold text-indigo-600" href="mailto:help@my-makeup.fr">
 												help@my-makeup.fr
 											</a>
 										</dd>

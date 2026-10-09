@@ -8,7 +8,7 @@ import { urlDuSite } from '@/lib/seo/url'
  */
 const Robots = () => null
 
-export const getServerSideProps = async ({ res }) => {
+export const getServerSideProps = ({ res }) => {
 	res.setHeader('Content-Type', 'text/plain; charset=utf-8')
 	res.write(robotsTxt(urlDuSite()))
 	res.end()

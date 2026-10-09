@@ -1,8 +1,8 @@
-import React, { useEffect } from 'react'
 import Head from 'next/head'
 import Image from 'next/image'
-import { signOut, useSession } from 'next-auth/react'
 import Link from 'next/link'
+import { signOut, useSession } from 'next-auth/react'
+import { useEffect } from 'react'
 
 function VerificationWall() {
 	const { data: session } = useSession()
@@ -28,12 +28,7 @@ function VerificationWall() {
 						<div>
 							<Link href={'/'}>
 								<span className="sr-only">My-Makeup</span>
-								<Image
-									alt="Logo My-Makeup"
-									width={50}
-									height={50}
-									src="/assets/logo.webp"
-								/>
+								<Image alt="Logo My-Makeup" width={50} height={50} src="/assets/logo.webp" />
 							</Link>
 						</div>
 						<div className={'mt-8'}>

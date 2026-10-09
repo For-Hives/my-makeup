@@ -12,8 +12,7 @@ async function lireTete(fichier) {
 }
 
 function toile(largeur, hauteur) {
-	if (typeof OffscreenCanvas === 'function')
-		return new OffscreenCanvas(largeur, hauteur)
+	if (typeof OffscreenCanvas === 'function') return new OffscreenCanvas(largeur, hauteur)
 	const canvas = document.createElement('canvas')
 	canvas.width = largeur
 	canvas.height = hauteur
@@ -21,14 +20,9 @@ function toile(largeur, hauteur) {
 }
 
 function encoderToile(canvas, type, qualite) {
-	if (typeof canvas.convertToBlob === 'function')
-		return canvas.convertToBlob({ type, quality: qualite })
+	if (typeof canvas.convertToBlob === 'function') return canvas.convertToBlob({ type, quality: qualite })
 	return new Promise((resolve, reject) =>
-		canvas.toBlob(
-			blob => (blob ? resolve(blob) : reject(new Error('encodage'))),
-			type,
-			qualite
-		)
+		canvas.toBlob(blob => (blob ? resolve(blob) : reject(new Error('encodage'))), type, qualite)
 	)
 }
 
@@ -81,7 +75,7 @@ async function decoder(fichier) {
 			}
 			contexte.imageSmoothingQuality = 'high'
 			contexte.drawImage(image, 0, 0, largeur, hauteur)
-			return encoderToile(canvas, type, qualite)
+			return await encoderToile(canvas, type, qualite)
 		},
 	}
 }

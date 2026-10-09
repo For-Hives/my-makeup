@@ -1,4 +1,3 @@
-import React from 'react'
 import Image from 'next/image'
 
 const tabs = [
@@ -30,20 +29,14 @@ function Project() {
 			<div className="mx-auto max-w-7xl">
 				<div className="mx-auto mb-10">
 					<h2 className="text-start text-4xl font-bold tracking-tight text-gray-900 sm:text-4xl">
-						Gardez votre projet beauté en tête, on vous aide à trouver la bonne
-						maquilleuse
+						Gardez votre projet beauté en tête, on vous aide à trouver la bonne maquilleuse
 					</h2>
 					<p className="mt-6 text-start text-lg text-gray-700 md:w-1/2">
-						Trouvez une maquilleuse près de chez vous, comparez les profils et
-						contactez-la directement, gratuitement.
+						Trouvez une maquilleuse près de chez vous, comparez les profils et contactez-la directement, gratuitement.
 					</p>
 				</div>
 
-				<section
-					className={
-						'mx-auto flex max-w-7xl flex-col-reverse gap-16 md:flex-row md:gap-32'
-					}
-				>
+				<section className={'mx-auto flex max-w-7xl flex-col-reverse gap-16 md:flex-row md:gap-32'}>
 					<div className={'w-full md:w-1/2'}>
 						<div className={'flex flex-col gap-2'}>
 							{tabs.map(tab => (
@@ -53,9 +46,7 @@ function Project() {
 											'rounded-2xl border border-gray-200 bg-gray-50 p-10 shadow-lg transition-all duration-300 ease-in-out hover:bg-gray-50 hover:shadow-lg md:border-none md:bg-none md:shadow-none'
 										}
 									>
-										<h3 className={'mb-4 text-xl font-bold text-gray-700'}>
-											{tab.title}
-										</h3>
+										<h3 className={'mb-4 text-xl font-bold text-gray-700'}>{tab.title}</h3>
 										<p className={'text-sm text-gray-500'}>{tab.content}</p>
 									</div>
 								</div>
@@ -64,9 +55,7 @@ function Project() {
 					</div>
 					<div className={'flex items-center justify-center md:w-1/2'}>
 						<Image
-							className={
-								'h-[250px] w-full rounded-2xl object-cover object-top md:h-[500px]'
-							}
+							className={'h-[250px] w-full rounded-2xl object-cover object-top md:h-[500px]'}
 							src={'/assets/maquilleuse_project.webp'}
 							alt={'illustration'}
 							width={'500'}

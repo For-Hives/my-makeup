@@ -44,15 +44,37 @@
  */
 
 import { villeAffichee } from '../format-zone.js'
-import {
-	DEPARTEMENTS,
-	departementDuCodePostal,
-	normaliserLieu,
-} from '../lieu.js'
+import { DEPARTEMENTS, departementDuCodePostal, normaliserLieu } from '../lieu.js'
+
+const numeroPuisLieuPattern1 = /[:/|+()[\]]/
+const textPattern2 = /^['’]$/
+const nomDeLieuPattern3 = /\p{L}/u
+const nomDeLieuPattern4 = /\d/
+const estUnLieuPattern5 = /\p{L}/u
+const estUnLieuPattern6 = /\d/
+const motsPattern7 = /\s+/
+const numeroPuisLieuPattern8 = /[,;]/
+const estAdressePattern9 = /[:;/|+()[\]]/
+const estAdressePattern10 = /[,;/]/
+const estAdressePattern11 = /[,;]/
+const communeApresVoiePattern12 = /\d/
+const communeApresVoiePattern13 = /^d['’]/i
+const communeDAdressePattern14 = /[,;/]/
+const communeDAdressePattern15 = /\d/
+const communeDAdressePattern16 = /[,;]/
+const communeDAdressePattern17 = /\d/
+const lieuPublicPattern18 = /^(\d{5})[\s,–-]+([^\d,;/()]+)$/
+const lieuPublicPattern19 = /^([^\d,;/()]+?)[\s,–-]+\(?(\d{5})\)?$/
+const lieuPublicPattern20 = /^\d/
+const motDeVoiePattern21 = /^\d{5}$/
+const voiePattern22 = /^l['’]/i
+const motDeVoiePattern23 = /\p{L}/u
+const nomProprePattern24 = /([\s-]+)/
+const textPattern25 = /^[\s-]+$/
+const textPattern26 = /(['’])/
 
 /** Help of the city field in the artist's space */
-export const AIDE_VILLE =
-	'Indique ta ville (et ton code postal), pas ton adresse : elle est publique.'
+export const AIDE_VILLE = 'Indique ta ville (et ton code postal), pas ton adresse : elle est publique.'
 
 /** Types of street and parts of an address (lower case, no accents) */
 const VOIES = new Set([
@@ -198,8 +220,7 @@ const PAYS_FIN = /(?:[\s,;/–-]*\bfrance\b\.?)+\s*$/i
 const PAYS_APRES_SEPARATEUR = /(?:\s*[,;/–-]\s*france\.?)+\s*$/i
 // at the end of an address only: the town comes before (Luxembourg and
 // Monaco are towns too, they stay)
-const PAYS_ETRANGER_FIN =
-	/(?:[\s,;/–-]*\b(?:suisse|belgique|allemagne|italie|espagne)\b\.?)+\s*$/i
+const PAYS_ETRANGER_FIN = /(?:[\s,;/–-]*\b(?:suisse|belgique|allemagne|italie|espagne)\b\.?)+\s*$/i
 // several places or a sentence, not one place; the parts of an address
 const SEPARATEURS = /[,;:/|+()[\]]|\s[-–—]\s/
 // what a « Commune (74) » already written holds
@@ -217,7 +238,7 @@ const normaliserMot = mot =>
 		.toLowerCase()
 		.replace(/^[(]+|[.,;:)]+$/g, '')
 
-const mots = texte => texte.split(/\s+/).filter(Boolean)
+const mots = texte => texte.split(motsPattern7).filter(Boolean)
 const estVoie = mot => VOIES.has(normaliserMot(mot))
 
 /**
@@ -246,25 +267,19 @@ const motsParSegment = texte =>
  */
 function motDeVoie(liste, i) {
 	const suivant = liste[i + 1]
-	if (suivant === undefined || /^\d{5}$/.test(suivant)) return false
-	const voie = mot => estVoie(mot.replace(/^l['’]/i, ''))
+	if (suivant === undefined || motDeVoiePattern21.test(suivant)) return false
+	const voie = mot => estVoie(mot.replace(voiePattern22, ''))
 	const mot = liste[i]
 	if (voie(mot)) return true
-	if (!/\p{L}/u.test(suivant)) return false
+	if (!motDeVoiePattern23.test(suivant)) return false
 	const parties = mot.split('-')
 	const fin = parties.length - 1
-	return (
-		(fin > 0 && voie(parties[fin])) ||
-		(fin > 1 && voie(`${parties[fin - 1]}-${parties[fin]}`))
-	)
+	return (fin > 0 && voie(parties[fin])) || (fin > 1 && voie(`${parties[fin - 1]}-${parties[fin]}`))
 }
 
-const aUneVoie = texte =>
-	motsParSegment(texte).some(liste => liste.some((_, i) => motDeVoie(liste, i)))
-const sansBords = texte =>
-	texte.replace(/^[\s,;:./–-]+|[\s,;:/–-]+$/g, '').replace(/\s+/g, ' ')
-const sansPays = texte =>
-	texte.replace(PAYS_ETRANGER_FIN, '').replace(PAYS_FIN, '')
+const aUneVoie = texte => motsParSegment(texte).some(liste => liste.some((_, i) => motDeVoie(liste, i)))
+const sansBords = texte => texte.replace(/^[\s,;:./–-]+|[\s,;:/–-]+$/g, '').replace(/\s+/g, ' ')
+const sansPays = texte => texte.replace(PAYS_ETRANGER_FIN, '').replace(PAYS_FIN, '')
 
 /** The last postal code of a text, the one before the commune */
 function dernierCodePostal(texte) {
@@ -274,8 +289,7 @@ function dernierCodePostal(texte) {
 }
 
 /** Name of the département of a code, as compared */
-const nomDuDepartement = code =>
-	DEPARTEMENTS[code] ? normaliserLieu(DEPARTEMENTS[code]) : null
+const nomDuDepartement = code => (DEPARTEMENTS[code] ? normaliserLieu(DEPARTEMENTS[code]) : null)
 
 // « ANNECY-LE-VIEUX » → « Annecy-le-Vieux », « l'isle-d'abeau » →
 // « L'Isle-d'Abeau »: only for a name typed all in capitals or in lower case
@@ -284,18 +298,17 @@ function nomPropre(nom) {
 	let premier = true
 	return nom
 		.toLowerCase()
-		.split(/([\s-]+)/)
+		.split(nomProprePattern24)
 		.map(partie => {
-			if (/^[\s-]+$/.test(partie)) return partie
+			if (textPattern25.test(partie)) return partie
 			const resultat = partie
-				.split(/(['’])/)
+				.split(textPattern26)
 				.map((morceau, i, morceaux) => {
-					if (morceau === '' || /^['’]$/.test(morceau)) return morceau
+					if (morceau === '' || textPattern2.test(morceau)) return morceau
 					const elision = morceaux[i + 1] !== undefined
 					const debut = premier
 					premier = false
-					if (!debut && (elision || PARTICULES.has(normaliserMot(morceau))))
-						return morceau
+					if (!debut && (elision || PARTICULES.has(normaliserMot(morceau)))) return morceau
 					return morceau.charAt(0).toUpperCase() + morceau.slice(1)
 				})
 				.join('')
@@ -311,14 +324,13 @@ function nomPropre(nom) {
  */
 function nomDeLieu(texte) {
 	const t = sansBords(texte.replace(CEDEX, ' '))
-	if (!/\p{L}/u.test(t) || /\d/.test(t) || aUneVoie(t)) return ''
+	if (!nomDeLieuPattern3.test(t) || nomDeLieuPattern4.test(t) || aUneVoie(t)) return ''
 	if (normaliserMot(t) === 'france') return ''
 	return nomPropre(t)
 }
 
 /** A word that says how far, not where (« et alentours », « toute ») */
-const aUnMotDeDistance = liste =>
-	liste.some(mot => PAS_UN_LIEU.has(normaliserMot(mot)))
+const aUnMotDeDistance = liste => liste.some(mot => PAS_UN_LIEU.has(normaliserMot(mot)))
 
 /**
  * One place written alone (« Annecy », « La Roche sur Foron »,
@@ -328,13 +340,12 @@ const aUnMotDeDistance = liste =>
  * @returns {boolean}
  */
 function estUnLieu(texte) {
-	if (!/\p{L}/u.test(texte) || /\d/.test(texte) || SEPARATEURS.test(texte))
-		return false
+	if (!estUnLieuPattern5.test(texte) || estUnLieuPattern6.test(texte) || SEPARATEURS.test(texte)) return false
 	const liste = mots(texte)
 	if (liste.length > 4) return false
 	const premier = normaliserMot(liste[0])
 	if (PARTICULES.has(premier) && !ARTICLES.has(premier)) return false
-	return !aUneVoie(texte) && !aUnMotDeDistance(liste)
+	return !(aUneVoie(texte) || aUnMotDeDistance(liste))
 }
 
 /**
@@ -346,15 +357,10 @@ function estUnLieu(texte) {
  */
 function numeroPuisLieu(t) {
 	const numero = NUMERO_EN_TETE.exec(t)
-	if (!numero || /[:/|+()[\]]/.test(t) || aUnMotDeDistance(mots(t)))
-		return false
-	const parties = t.slice(numero[0].length).split(/[,;]/).map(sansBords)
+	if (!numero || numeroPuisLieuPattern1.test(t) || aUnMotDeDistance(mots(t))) return false
+	const parties = t.slice(numero[0].length).split(numeroPuisLieuPattern8).map(sansBords)
 	const remplies = parties.filter(Boolean)
-	return (
-		parties.length >= 2 &&
-		(parties[0] !== '' || remplies.length >= 2) &&
-		estUnLieu(remplies.at(-1) ?? '')
-	)
+	return parties.length >= 2 && (parties[0] !== '' || remplies.length >= 2) && estUnLieu(remplies.at(-1) ?? '')
 }
 
 /**
@@ -369,17 +375,13 @@ function estAdresse(brut) {
 	if (!cp) return numeroPuisLieu(t)
 	const avant = t.slice(0, cp.index)
 	// « 12 Les Marais 74000 Annecy », not « 3 villes : Annecy 74000, … »
-	if (NUMERO_EN_TETE.test(t)) return !/[:;/|+()[\]]/.test(avant)
+	if (NUMERO_EN_TETE.test(t)) return !estAdressePattern9.test(avant)
 	// « Le Bourg 74300 Cluses », « Les Vignes, 74200 Thonon », not « Annecy
 	// 74000 », « Thonon les Bains 74200 » nor « Toute la Haute-Savoie, 74000
 	// Annecy »
-	const apres = t.slice(cp.index + 5).split(/[,;/]/)[0]
-	const lieuAvant = mots(sansBords(avant).split(/[,;]/).at(-1) ?? '')
-	return (
-		lieuAvant.length >= 2 &&
-		!aUnMotDeDistance(lieuAvant) &&
-		estUnLieu(sansBords(apres))
-	)
+	const apres = t.slice(cp.index + 5).split(estAdressePattern10)[0]
+	const lieuAvant = mots(sansBords(avant).split(estAdressePattern11).at(-1) ?? '')
+	return lieuAvant.length >= 2 && !aUnMotDeDistance(lieuAvant) && estUnLieu(sansBords(apres))
 }
 
 /**
@@ -395,32 +397,26 @@ function estAdresse(brut) {
 function communeApresVoie(texte) {
 	const liste = motsParSegment(texte).flat()
 	let derniereVoie = -1
-	liste.forEach((_, i) => {
+	for (const [i, _] of liste.entries()) {
 		if (motDeVoie(liste, i)) derniereVoie = i
-	})
+	}
 	if (derniereVoie < 0) return ''
 	const reste = liste.slice(derniereVoie + 1)
 	if (reste.length < 2) return ''
 	const dernier = reste.at(-1)
-	if (/\d/.test(dernier) || !dernier.includes('-')) return ''
+	if (communeApresVoiePattern12.test(dernier) || !dernier.includes('-')) return ''
 	// « avenue des Îles d'Annecy-le-Vieux »: the end of the street
-	if (/^d['’]/i.test(dernier)) return ''
+	if (communeApresVoiePattern13.test(dernier)) return ''
 	const avant = normaliserMot(reste.at(-2))
 	if (TITRES.has(avant)) return ''
-	if (
-		ARTICLES.has(avant) &&
-		reste.length >= 3 &&
-		!PARTICULES.has(normaliserMot(reste.at(-3)))
-	)
+	if (ARTICLES.has(avant) && reste.length >= 3 && !PARTICULES.has(normaliserMot(reste.at(-3))))
 		return nomDeLieu(`${reste.at(-2)} ${dernier}`)
 	if (PARTICULES.has(avant)) return ''
 	// the small word second (Thonon-les-Bains), or third after Saint
 	// (Saint-Julien-en-Genevois): « rue X Hugo-Thonon-les-Bains » is no
 	// commune
 	const parties = dernier.split('-').map(normaliserMot)
-	const petit = parties.findIndex(
-		(p, k) => k > 0 && k < parties.length - 1 && PARTICULES.has(p)
-	)
+	const petit = parties.findIndex((p, k) => k > 0 && k < parties.length - 1 && PARTICULES.has(p))
 	const compose = petit === 1 || (petit === 2 && SAINTS.has(parties[0]))
 	return compose ? nomDeLieu(dernier) : ''
 }
@@ -433,46 +429,7 @@ function communeApresVoie(texte) {
 function communeDAdresse(adresse) {
 	const t = sansPays(adresse.replace(CEDEX, ' '))
 	const cp = dernierCodePostal(t)
-	if (cp) {
-		// after the postal code, in the first piece that is not empty
-		// (« …, 74000, Annecy »), up to a digit or a street, glued or not
-		// (« 74000 Annecy.rue X »)
-		const apres = []
-		const [liste = []] = motsParSegment(
-			t
-				.slice(cp.index + 5)
-				.split(/[,;/]/)
-				.find(morceau => morceau.trim()) ?? ''
-		)
-		for (const [i, mot] of liste.entries()) {
-			if (/\d/.test(mot) || motDeVoie(liste, i)) break
-			apres.push(mot)
-		}
-		let commune = nomDeLieu(apres.join(' '))
-		// « …, 74160 Haute-Savoie »: a département is no commune (Paris is
-		// both)
-		const departement = departementDuCodePostal(cp.code)
-		if (
-			commune &&
-			departement &&
-			departement !== '75' &&
-			normaliserLieu(commune) === nomDuDepartement(departement)
-		)
-			commune = ''
-		if (!commune) {
-			const morceaux = t.slice(0, cp.index).split(/[,;]/)
-			const avant = morceaux.at(-1) ?? ''
-			// « 12 rue X, Annecy, 74000 »: the piece before when the last one is
-			// empty; « 12 Les Marais 74000 »: a number then words are a street
-			const morceau = avant.trim()
-				? avant
-				: (morceaux.slice(0, -1).findLast(m => m.trim()) ?? '')
-			commune =
-				(/\d/.test(morceau) ? '' : nomDeLieu(morceau)) ||
-				communeApresVoie(morceau)
-		}
-		return { commune, codePostal: cp.code }
-	}
+	if (cp) return communeAvecCodePostal(t, cp)
 	// « 12 rue X, Annecy », « 12 rue X / Annecy », « 12 rue X (Annecy) »
 	const parties = t
 		.split(SEPARATEURS)
@@ -509,61 +466,22 @@ export function lieuPublic(city) {
 	const brut = villeAffichee(city).replace(CODE_POSTAL_ESPACE, '$1$2')
 	if (!brut) return AUCUN
 
-	if (estAdresse(brut)) {
-		const { commune, codePostal } = communeDAdresse(brut)
-		const departement = codePostal ? departementDuCodePostal(codePostal) : null
-		let texte = ''
-		if (commune) texte = departement ? `${commune} (${departement})` : commune
-		else if (departement) texte = codePostal
-		return { texte, commune: commune || texte, departement, adresse: true }
-	}
+	if (estAdresse(brut)) return lieuDAdresse(brut)
 
-	const t = sansBords(
-		brut.replace(CEDEX, ' ').replace(PAYS_APRES_SEPARATEUR, '')
-	)
+	const t = sansBords(brut.replace(CEDEX, ' ').replace(PAYS_APRES_SEPARATEUR, ''))
 	if (!t) return AUCUN
 
 	// a number then one place: « 74 Annecy », « 12 Le Bourg », « 74
 	// Haute-Savoie »; never the number, unless it is the département named
-	const numero = NUMERO_EN_TETE.exec(t)
-	if (numero) {
-		const lieu = sansBords(t.slice(numero[0].length))
-		if (estUnLieu(lieu)) {
-			const nom = nomDeLieu(lieu)
-			const code = numero[0].replace(/\s/g, '').toUpperCase()
-			if (nomDuDepartement(code) === normaliserLieu(lieu))
-				return {
-					texte: `${nom} (${code})`,
-					commune: nom,
-					departement: code,
-					adresse: false,
-				}
-			return { texte: nom, commune: nom, departement: null, adresse: true }
-		}
-	}
+	const avecNumero = lieuAvecNumero(t)
+	if (avecNumero) return avecNumero
 
 	const deja = COMMUNE_DEPARTEMENT.exec(t)
-	if (deja)
-		return { texte: t, commune: deja[1], departement: deja[2], adresse: false }
+	if (deja) return { texte: t, commune: deja[1], departement: deja[2], adresse: false }
 	// one place and its postal code: « 74000 Annecy », « Annecy 74000 »,
 	// « Annecy (74000) »
-	const avecCode =
-		/^(\d{5})[\s,–-]+([^\d,;/()]+)$/.exec(t) ??
-		/^([^\d,;/()]+?)[\s,–-]+\(?(\d{5})\)?$/.exec(t)
-	if (avecCode) {
-		const [codePostal, nom] = /^\d/.test(avecCode[1])
-			? [avecCode[1], avecCode[2]]
-			: [avecCode[2], avecCode[1]]
-		const commune = nomDeLieu(nom)
-		const departement = departementDuCodePostal(codePostal)
-		if (commune)
-			return {
-				texte: departement ? `${commune} (${departement})` : commune,
-				commune,
-				departement,
-				adresse: false,
-			}
-	}
+	const extrait = lieuAvecCodePostal(t)
+	if (extrait) return extrait
 	const cp = dernierCodePostal(t)
 	return {
 		texte: t,
@@ -592,10 +510,88 @@ export const villePublique = city => lieuPublic(city).texte
 export function avecVillePublique(profil) {
 	if (!profil || typeof profil !== 'object') return profil
 	const remplacer = attributs =>
-		'city' in attributs
-			? { ...attributs, city: villePublique(attributs.city) || null }
-			: attributs
+		'city' in attributs ? { ...attributs, city: villePublique(attributs.city) || null } : attributs
 	if (profil.attributes && typeof profil.attributes === 'object')
 		return { ...profil, attributes: remplacer(profil.attributes) }
 	return remplacer(profil)
+}
+
+function communeAvecCodePostal(t, cp) {
+	// after the postal code, in the first piece that is not empty
+	// (« …, 74000, Annecy »), up to a digit or a street, glued or not
+	// (« 74000 Annecy.rue X »)
+	const apres = []
+	const [liste = []] = motsParSegment(
+		t
+			.slice(cp.index + 5)
+			.split(communeDAdressePattern14)
+			.find(morceau => morceau.trim()) ?? ''
+	)
+	for (const [i, mot] of liste.entries()) {
+		if (communeDAdressePattern15.test(mot) || motDeVoie(liste, i)) break
+		apres.push(mot)
+	}
+	let commune = nomDeLieu(apres.join(' '))
+	// « …, 74160 Haute-Savoie »: a département is no commune (Paris is
+	// both)
+	const departement = departementDuCodePostal(cp.code)
+	if (commune && departement && departement !== '75' && normaliserLieu(commune) === nomDuDepartement(departement))
+		commune = ''
+	if (!commune) {
+		const morceaux = t.slice(0, cp.index).split(communeDAdressePattern16)
+		const avant = morceaux.at(-1) ?? ''
+		// « 12 rue X, Annecy, 74000 »: the piece before when the last one is
+		// empty; « 12 Les Marais 74000 »: a number then words are a street
+		const morceau = avant.trim() ? avant : (morceaux.slice(0, -1).findLast(m => m.trim()) ?? '')
+		commune = (communeDAdressePattern17.test(morceau) ? '' : nomDeLieu(morceau)) || communeApresVoie(morceau)
+	}
+	return { commune, codePostal: cp.code }
+}
+
+function lieuDAdresse(brut) {
+	const { commune, codePostal } = communeDAdresse(brut)
+	const departement = codePostal ? departementDuCodePostal(codePostal) : null
+	let texte = ''
+	if (commune) texte = departement ? `${commune} (${departement})` : commune
+	else if (departement) texte = codePostal
+	return { texte, commune: commune || texte, departement, adresse: true }
+}
+
+function lieuAvecNumero(t) {
+	const numero = NUMERO_EN_TETE.exec(t)
+	if (numero) {
+		const lieu = sansBords(t.slice(numero[0].length))
+		if (estUnLieu(lieu)) {
+			const nom = nomDeLieu(lieu)
+			const code = numero[0].replace(/\s/g, '').toUpperCase()
+			if (nomDuDepartement(code) === normaliserLieu(lieu))
+				return {
+					texte: `${nom} (${code})`,
+					commune: nom,
+					departement: code,
+					adresse: false,
+				}
+			return { texte: nom, commune: nom, departement: null, adresse: true }
+		}
+	}
+	return null
+}
+
+function lieuAvecCodePostal(t) {
+	const avecCode = lieuPublicPattern18.exec(t) ?? lieuPublicPattern19.exec(t)
+	if (avecCode) {
+		const [codePostal, nom] = lieuPublicPattern20.test(avecCode[1])
+			? [avecCode[1], avecCode[2]]
+			: [avecCode[2], avecCode[1]]
+		const commune = nomDeLieu(nom)
+		const departement = departementDuCodePostal(codePostal)
+		if (commune)
+			return {
+				texte: departement ? `${commune} (${departement})` : commune,
+				commune,
+				departement,
+				adresse: false,
+			}
+	}
+	return null
 }

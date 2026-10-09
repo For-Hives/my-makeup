@@ -33,21 +33,13 @@ export const PAGES_STATIQUES = [
  * Pages of src/pages left out on purpose (tests/unit/sitemap.test.mjs fails
  * when a new page is in neither list).
  */
-export const PAGES_EXCLUES = [
-	'/404',
-	'/search',
-	'/site-map',
-	'/demande-envoyee',
-	'/sitemap.xml',
-	'/robots.txt',
-]
+export const PAGES_EXCLUES = ['/404', '/search', '/site-map', '/demande-envoyee', '/sitemap.xml', '/robots.txt']
 
 /** Prefixes never in the sitemap */
 export const PREFIXES_EXCLUS = ['/auth', '/api', '/admin']
 
 const estExclu = cheminPage =>
-	PAGES_EXCLUES.includes(cheminPage) ||
-	PREFIXES_EXCLUS.some(p => cheminPage === p || cheminPage.startsWith(`${p}/`))
+	PAGES_EXCLUES.includes(cheminPage) || PREFIXES_EXCLUS.some(p => cheminPage === p || cheminPage.startsWith(`${p}/`))
 
 /**
  * Date of an entry as W3C datetime, or null when invalid.
@@ -95,22 +87,19 @@ const misAJour = entree => entree?.attributes?.updatedAt ?? entree?.updatedAt
  * @param {object[]} [donnees.articles] - content API entries
  * @returns {EntreeSitemap[]} without duplicates
  */
-export function entreesSitemap({
-	site,
-	pages = PAGES_STATIQUES,
-	profils = [],
-	talents = [],
-	articles = [],
-}) {
+export function entreesSitemap({ site, pages = PAGES_STATIQUES, profils = [], talents = [], articles = [] }) {
 	const entrees = new Map()
 	const ajouter = (cheminPage, date) => {
 		if (estExclu(cheminPage)) return
 		const loc = urlAbsolue(cheminPage, site)
 		if (!entrees.has(loc)) entrees.set(loc, { loc, lastmod: lastmod(date) })
 	}
-	for (const page of pages) ajouter(page, null)
-	for (const profil of profils)
+	for (const page of pages) {
+		ajouter(page, null)
+	}
+	for (const profil of profils) {
 		if (profil?.slug) ajouter(cheminProfil(profil.slug), profil.updatedAt)
+	}
 	for (const talent of talents) {
 		const slug = slugDe(talent)
 		if (slug) ajouter(chemin('talent', slug), misAJour(talent))

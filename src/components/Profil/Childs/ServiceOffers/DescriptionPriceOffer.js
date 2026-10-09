@@ -1,4 +1,4 @@
-import React from 'react'
+import { avecCles } from '@/lib/cles'
 import { lignes } from '@/lib/profil/vue-publique'
 
 /**
@@ -16,33 +16,21 @@ export function DescriptionPriceOffer(props) {
 
 	return (
 		<div className={'flex flex-col gap-4'}>
-			<div
-				data-cy={
-					props.index === null
-						? `service-offer-description`
-						: `service-offer-description-${props.index}`
-				}
-			>
-				{description.map((ligne, i) => (
-					<p key={i} className={'border-l border-gray-300 pl-4 text-gray-700'}>
+			<div data-cy={props.index === null ? `service-offer-description` : `service-offer-description-${props.index}`}>
+				{avecCles(description).map(({ valeur: ligne, cle }, _i) => (
+					<p key={cle} className={'border-l border-gray-300 pl-4 text-gray-700'}>
 						{ligne}
 					</p>
 				))}
 			</div>
 			<div
 				className={'flex w-full flex-col items-end justify-center gap-2'}
-				data-cy={
-					props.index === null
-						? `service-offer-price`
-						: `service-offer-price-${props.index}`
-				}
+				data-cy={props.index === null ? `service-offer-price` : `service-offer-price-${props.index}`}
 			>
-				{prix.map((ligne, i) => (
+				{avecCles(prix).map(({ valeur: ligne, cle }, _i) => (
 					<h3
-						key={i}
-						className={
-							'text-md flex justify-end rounded-full bg-gray-50 px-3 py-2 text-right italic text-gray-500'
-						}
+						key={cle}
+						className={'text-md flex justify-end rounded-full bg-gray-50 px-3 py-2 text-right italic text-gray-500'}
 					>
 						{ligne}
 					</h3>

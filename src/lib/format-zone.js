@@ -26,8 +26,7 @@ export function villeAffichee(city) {
  * @returns {number|null}
  */
 export function rayonKm(radius) {
-	const n =
-		typeof radius === 'string' && radius.trim() !== '' ? Number(radius) : radius
+	const n = typeof radius === 'string' && radius.trim() !== '' ? Number(radius) : radius
 	if (typeof n !== 'number' || !Number.isFinite(n)) return null
 	const km = Math.round(n)
 	return km > 0 && km <= RAYON_MAX_KM ? km : null

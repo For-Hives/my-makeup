@@ -13,10 +13,7 @@ if (!['localhost', '127.0.0.1', '[::1]'].includes(new URL(API).hostname))
 
 // --- the fake Strapi ---
 export async function piloter(chemin, corps) {
-	const reponse = await fetch(
-		API + chemin,
-		corps === undefined ? {} : { method: 'POST', body: JSON.stringify(corps) }
-	)
+	const reponse = await fetch(API + chemin, corps === undefined ? {} : { method: 'POST', body: JSON.stringify(corps) })
 	return reponse.json()
 }
 export const reinitialiserStrapi = () => piloter('/__reset', {})
@@ -24,16 +21,12 @@ export const etat = () => piloter('/__etat')
 export const panne = corps => piloter('/__panne', corps)
 // fields of the test account's profile, stored as the API would
 export const profilDeDepart = champs => piloter('/__profil', champs)
-export const profilServeur = async (id = COMPTE_TEST.id) =>
-	(await etat()).profils[id]
+export const profilServeur = async (id = COMPTE_TEST.id) => (await etat()).profils[id]
 export const appels = (journal, methode, chemin) =>
 	journal.filter(entree => entree.m === methode && entree.p === chemin)
 
 // --- sessions and pages ---
-export async function connecter(
-	page,
-	{ email = COMPTE_TEST.email, password = COMPTE_TEST.password } = {}
-) {
+export async function connecter(page, { email = COMPTE_TEST.email, password = COMPTE_TEST.password } = {}) {
 	const requete = page.context().request
 	const { csrfToken } = await (await requete.get('/api/auth/csrf')).json()
 	await requete.post('/api/auth/callback/credentials', {
@@ -46,9 +39,7 @@ export async function connecter(
 // Loads a page and waits for its hydration (SessionProvider asks for the
 // session once React runs): a click before that would do nothing.
 export async function aller(page, chemin) {
-	const session = page.waitForResponse(r =>
-		r.url().endsWith('/api/auth/session')
-	)
+	const session = page.waitForResponse(r => r.url().endsWith('/api/auth/session'))
 	await page.goto(chemin)
 	await session
 }

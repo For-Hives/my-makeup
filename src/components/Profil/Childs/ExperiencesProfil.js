@@ -1,7 +1,7 @@
 import React from 'react'
+import BoutonModifier from '@/components/Profil/Atoms/BoutonModifier'
 import ModalUpdateExperiencesProfil from '@/components/Profil/Atoms/ModalUpdate/ModalUpdateExperiencesProfil'
 import ViewExperiencesProfil from '@/components/Profil/Childs/Views/ViewExperiencesProfil'
-import BoutonModifier from '@/components/Profil/Atoms/BoutonModifier'
 
 export function ExperiencesProfil(props) {
 	const user = props.user
@@ -22,11 +22,7 @@ export function ExperiencesProfil(props) {
 				handleIsModalOpen={handleIsModalOpen}
 				user={user}
 			/>
-			<div
-				className={
-					'relative flex w-full flex-col gap-4 rounded border border-gray-300 bg-white p-8'
-				}
-			>
+			<div className={'relative flex w-full flex-col gap-4 rounded border border-gray-300 bg-white p-8'}>
 				{!isPublic ? (
 					<div className={'-mr-4 -mt-4 flex justify-end'}>
 						<BoutonModifier

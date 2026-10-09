@@ -15,8 +15,7 @@ export const MAILGUN_EU_URL = 'https://api.eu.mailgun.net'
  */
 export function mailgunClientOptions({ key, region } = {}) {
 	const options = { username: 'api', key }
-	if (typeof region === 'string' && region.trim().toLowerCase() === 'eu')
-		options.url = MAILGUN_EU_URL
+	if (typeof region === 'string' && region.trim().toLowerCase() === 'eu') options.url = MAILGUN_EU_URL
 	return options
 }
 
@@ -74,10 +73,8 @@ const NETWORK_CODE =
 export function mailgunErrorSummary(error) {
 	const source = error !== null && typeof error === 'object' ? error : {}
 	const texts = [source.code, source.message, source.details, source.statusText]
-	if (texts.some(text => typeof text === 'string' && NETWORK_CODE.test(text)))
-		return { kind: 'network', status: 0 }
+	if (texts.some(text => typeof text === 'string' && NETWORK_CODE.test(text))) return { kind: 'network', status: 0 }
 	const status = Number(source.status)
-	if (Number.isInteger(status) && status >= 100 && status <= 599)
-		return { kind: 'http', status }
+	if (Number.isInteger(status) && status >= 100 && status <= 599) return { kind: 'http', status }
 	return { kind: 'unknown', status: 0 }
 }

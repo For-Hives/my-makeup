@@ -33,8 +33,7 @@ export async function authenticatedFetch(url, session, options = {}) {
 	}
 
 	// a FormData body (uploads) sets its own multipart Content-Type
-	const formulaire =
-		typeof FormData !== 'undefined' && options.body instanceof FormData
+	const formulaire = typeof FormData !== 'undefined' && options.body instanceof FormData
 
 	const response = await fetch(url, {
 		...options,
@@ -64,7 +63,7 @@ export async function authenticatedFetch(url, session, options = {}) {
  * @returns {Promise<Response>} - The fetch response
  */
 export async function serverAuthenticatedFetch(url, jwt, options = {}) {
-	return fetch(url, {
+	return await fetch(url, {
 		...options,
 		headers: {
 			'Content-Type': 'application/json',

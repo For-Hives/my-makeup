@@ -1,12 +1,7 @@
 import NextAuth from 'next-auth'
-import GoogleProvider from 'next-auth/providers/google'
 import CredentialsProvider from 'next-auth/providers/credentials'
+import GoogleProvider from 'next-auth/providers/google'
 import { expirationJwt } from '@/lib/auth-erreurs'
-import {
-	authentifierStrapi,
-	connexionStrapiOAuth,
-	statutCompteStrapi,
-} from '@/lib/auth-strapi'
 import {
 	causeErreur,
 	delaiRevalidation,
@@ -17,6 +12,7 @@ import {
 	suiteVerification,
 	urlApiServeur,
 } from '@/lib/auth-session'
+import { authentifierStrapi, connexionStrapiOAuth, statutCompteStrapi } from '@/lib/auth-strapi'
 
 // Server-side calls go to API_INTERNAL_URL (Docker network) when it is set
 export const API_SERVEUR = urlApiServeur({
@@ -26,11 +22,12 @@ export const API_SERVEUR = urlApiServeur({
 const REVALIDATION_MS = delaiRevalidation(process.env.AUTH_REVALIDATION_MS)
 
 /** `[auth] evt=… code=… ms=…` on stdout: never an email, a name or a token */
-export const journalAuth = (evt, details) =>
+export const journalAuth = (evt, details) => {
+	// biome-ignore lint/suspicious/noConsole: Preserve the existing operational audit log without changing its severity.
 	console.info(ligneLogAuth(evt, details))
+}
 
-const codeDe = erreur =>
-	erreur?.name === 'ErreurAuth' ? erreur.code : 'erreur-inconnue'
+const codeDe = erreur => (erreur?.name === 'ErreurAuth' ? erreur.code : 'erreur-inconnue')
 
 export const authOptions = {
 	providers: [
@@ -95,11 +92,10 @@ export const authOptions = {
 					cause: causeErreur(metadata),
 				})
 			),
-		warn: code =>
-			console.warn(
-				ligneLogAuth('nextauth', { code: String(code).toLowerCase() })
-			),
-		debug: () => {},
+		warn: code => console.warn(ligneLogAuth('nextauth', { code: String(code).toLowerCase() })),
+		debug: () => {
+			// NextAuth debug output is intentionally disabled to keep secrets out of logs.
+		},
 	},
 	callbacks: {
 		/**
@@ -166,7 +162,7 @@ export const authOptions = {
 			// 5xx, 429, network: the session stays, checked again next read
 			return suite === 'valide' ? { ...token, verifieA: Date.now() } : token
 		},
-		async session({ session, token }) {
+		session({ session, token }) {
 			session.id = token.id
 			// Read by the profile modals, which call Strapi from the browser:
 			// residual risk accepted until the v3 (plans/01 §2.2).

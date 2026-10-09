@@ -26,10 +26,7 @@ import { fileURLToPath } from 'node:url'
 import { demarrerFauxStrapi } from './mock-api.mjs'
 import { demarrerFauxUmami } from './mock-umami.mjs'
 
-const RACINE = path.resolve(
-	path.dirname(fileURLToPath(import.meta.url)),
-	'../..'
-)
+const RACINE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const DIST = '.next-test-regression'
 const PORT_API = 4112
 const PORT_UMAMI = 4113
@@ -48,27 +45,19 @@ const PLAYWRIGHT = path.join(RACINE, 'node_modules/@playwright/test/cli.js')
 const JOURNAUX = path.join(RACINE, `${DIST}-journaux`)
 const HOTES_LOCAUX = new Set(['localhost', '127.0.0.1', '[::1]'])
 
-const variablesDocumentees = readFileSync(
-	path.join(RACINE, '.env.exemple'),
-	'utf8'
-)
+const variablesDocumentees = readFileSync(path.join(RACINE, '.env.exemple'), 'utf8')
 	.split('\n')
 	.map(ligne => /^([A-Z][A-Z0-9_]*)=/.exec(ligne)?.[1])
 	.filter(Boolean)
 
 function environnement(extra = {}) {
 	const env = {}
-	for (const nom of [
-		'PATH',
-		'HOME',
-		'TMPDIR',
-		'LANG',
-		'CI',
-		'PLAYWRIGHT_BROWSERS_PATH',
-	]) {
+	for (const nom of ['PATH', 'HOME', 'TMPDIR', 'LANG', 'CI', 'PLAYWRIGHT_BROWSERS_PATH']) {
 		if (process.env[nom] !== undefined) env[nom] = process.env[nom]
 	}
-	for (const nom of variablesDocumentees) env[nom] = ''
+	for (const nom of variablesDocumentees) {
+		env[nom] = ''
+	}
 	Object.assign(env, {
 		NEXT_TELEMETRY_DISABLED: '1',
 		NEXT_DIST_DIR: DIST,
@@ -87,13 +76,7 @@ function environnement(extra = {}) {
 		NEXT_PUBLIC_WEB_VITALS_SAMPLE: '1',
 		...extra,
 	})
-	for (const nom of [
-		'NEXT_PUBLIC_API_URL',
-		'API_INTERNAL_URL',
-		'NEXTAUTH_URL',
-		'NEXT_PUBLIC_URL',
-		'UMAMI_ORIGIN',
-	]) {
+	for (const nom of ['NEXT_PUBLIC_API_URL', 'API_INTERNAL_URL', 'NEXTAUTH_URL', 'NEXT_PUBLIC_URL', 'UMAMI_ORIGIN']) {
 		if (env[nom] && !HOTES_LOCAUX.has(new URL(env[nom]).hostname))
 			throw new Error(`${nom} doit viser une adresse locale (${env[nom]})`)
 	}
@@ -111,14 +94,14 @@ function lancer(args, env, journal) {
 	enfants.push(enfant)
 	return enfant
 }
-const termine = enfant =>
-	new Promise(resolve => enfant.on('exit', code => resolve(code ?? 1)))
+const termine = enfant => new Promise(resolve => enfant.on('exit', code => resolve(code ?? 1)))
 
 async function attendrePret(url, enfant, delaiMs = 60_000) {
 	const limite = Date.now() + delaiMs
 	while (Date.now() < limite) {
 		if (enfant.exitCode !== null) throw new Error(`serveur arrêté (${url})`)
 		try {
+			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 			if ((await fetch(`${url}/api/auth/csrf`)).ok) return
 		} catch {
 			// not listening yet
@@ -129,8 +112,9 @@ async function attendrePret(url, enfant, delaiMs = 60_000) {
 }
 
 function arreter() {
-	for (const enfant of enfants)
+	for (const enfant of enfants) {
 		if (enfant.exitCode === null) enfant.kill('SIGTERM')
+	}
 }
 process.on('SIGINT', () => {
 	arreter()
@@ -143,14 +127,10 @@ const fauxUmami = await demarrerFauxUmami(PORT_UMAMI)
 try {
 	mkdirSync(JOURNAUX, { recursive: true })
 	if (process.env.REGRESSION_SKIP_BUILD !== '1') {
+		// biome-ignore lint/suspicious/noConsole: The standalone test runner reports its server address and build progress.
 		console.log(`# build de test dans ${DIST}/ (API = faux Strapi)`)
-		const build = lancer(
-			[NEXT, 'build'],
-			environnement({ SOURCE_COMMIT: COMMIT }),
-			path.join(JOURNAUX, 'build.log')
-		)
-		if ((await termine(build)) !== 0)
-			throw new Error(`build en échec, voir ${DIST}-journaux/build.log`)
+		const build = lancer([NEXT, 'build'], environnement({ SOURCE_COMMIT: COMMIT }), path.join(JOURNAUX, 'build.log'))
+		if ((await termine(build)) !== 0) throw new Error(`build en échec, voir ${DIST}-journaux/build.log`)
 	}
 
 	const serveur = lancer(

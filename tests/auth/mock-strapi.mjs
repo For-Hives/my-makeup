@@ -72,41 +72,14 @@ const erreur = (status, name, message) => ({
 export function demarrerFauxStrapi(port = 4111) {
 	const etat = {}
 	const jetons = new Map()
-	const reinitialiser = () => {
-		Object.assign(etat, {
-			appels: {},
-			usersMe: 'auto', // auto | <status> | lent
-			meMakeup: 'auto', // auto | <status>
-			connexion: 'auto', // auto | <status> | 429-une-fois
-			google: 'deja-pris', // deja-pris | ok | 502
-			ttl: 30 * 86400,
-			grosJwt: false,
-			revoques: new Set(),
-			comptes: [{ ...COMPTE_TEST }],
-		})
-	}
+	const reinitialiser = () => reinitialiserWithState({ etat })
 	reinitialiser()
 
-	const emettre = compte => {
-		const maintenant = Math.floor(Date.now() / 1000)
-		const charge = {
-			id: compte.id,
-			iat: maintenant,
-			exp: maintenant + etat.ttl,
-			n: Math.random(),
-		}
-		// > 4 KB once encrypted by NextAuth: the session cookie is chunked
-		if (etat.grosJwt) charge.bourrage = 'x'.repeat(5000)
-		const jwt = `${b64({ alg: 'HS256', typ: 'JWT' })}.${b64(charge)}.signature-factice`
-		jetons.set(jwt, compte)
-		return jwt
-	}
+	const emettre = compte => emettreWithState({ etat, jetons }, compte)
 	const authentifie = req => {
 		const jwt = (req.headers.authorization ?? '').split(' ')[1]
 		if (!jetons.has(jwt) || etat.revoques.has(jwt)) return null
-		const { exp } = JSON.parse(
-			Buffer.from(jwt.split('.')[1], 'base64url').toString()
-		)
+		const { exp } = JSON.parse(Buffer.from(jwt.split('.')[1], 'base64url').toString())
 		return exp * 1000 > Date.now() ? jetons.get(jwt) : null
 	}
 	const json = (res, status, corps) => {
@@ -137,173 +110,270 @@ export function demarrerFauxStrapi(port = 4111) {
 		const p = url.searchParams
 
 		// --- test controls ---
-		if (url.pathname === '/__etat') return json(res, 200, etat.appels)
-		if (url.pathname === '/__reset') {
-			reinitialiser()
-			return json(res, 200, { ok: true })
-		}
-		if (url.pathname === '/__mode') {
-			for (const nom of ['usersMe', 'meMakeup', 'connexion', 'google'])
-				if (p.has(nom)) etat[nom] = p.get(nom)
-			if (p.has('ttl')) etat.ttl = Number(p.get('ttl'))
-			if (p.has('grosJwt')) etat.grosJwt = p.get('grosJwt') === '1'
-			return json(res, 200, { ok: true })
-		}
-		if (url.pathname === '/__revoquer') {
-			for (const jwt of jetons.keys()) etat.revoques.add(jwt)
-			return json(res, 200, { ok: true })
-		}
-
-		// --- public collections read by `next build` (getStaticPaths/Props) ---
 		if (
-			req.method === 'GET' &&
-			['/api/articles', '/api/talents', '/api/makeup-artistes'].includes(
-				url.pathname
-			)
-		)
-			return json(res, 200, {
-				data: [],
-				meta: { pagination: { page: 1, pageSize: 25, pageCount: 0, total: 0 } },
-			})
-
-		// --- users-permissions ---
-		if (req.method === 'POST' && url.pathname === '/api/auth/local') {
-			if (etat.connexion === '429-une-fois') {
-				etat.connexion = 'auto'
-				return json(
-					res,
-					429,
-					erreur(
-						429,
-						'RateLimitError',
-						'Too many requests, please try again later.'
-					)
-				)
-			}
-			if (etat.connexion === '502') return html502(res)
-			const corps = await corpsDe(req)
-			const compte = etat.comptes.find(
-				c =>
-					(c.email === String(corps.identifier).toLowerCase() ||
-						c.username === corps.identifier) &&
-					c.password === corps.password
-			)
-			if (!compte)
-				return json(
-					res,
-					400,
-					erreur(400, 'ValidationError', 'Invalid identifier or password')
-				)
-			return json(res, 200, {
-				jwt: emettre(compte),
-				user: { id: compte.id, username: compte.username, email: compte.email },
-			})
-		}
-		if (req.method === 'POST' && url.pathname === '/api/auth/local/register') {
-			const corps = await corpsDe(req)
-			if (String(corps.username ?? '').length < 3)
-				return json(
-					res,
-					400,
-					erreur(
-						400,
-						'ValidationError',
-						'username must be at least 3 characters'
-					)
-				)
-			const email = String(corps.email ?? '').toLowerCase()
-			if (
-				etat.comptes.some(
-					c => c.email === email || c.username === corps.username
-				)
-			)
-				return json(
-					res,
-					400,
-					erreur(400, 'ApplicationError', 'Email or Username are already taken')
-				)
-			const compte = {
-				id: etat.comptes.length + 1,
-				username: corps.username,
-				email,
-				password: corps.password,
-			}
-			etat.comptes.push(compte)
-			return json(res, 200, {
-				jwt: emettre(compte),
-				user: { id: compte.id, username: compte.username, email: compte.email },
-			})
-		}
-		if (url.pathname === '/api/auth/google/callback') {
-			if (etat.google === '502') return html502(res)
-			if (etat.google === 'ok') {
-				const compte = etat.comptes[0]
-				return json(res, 200, {
-					jwt: emettre(compte),
-					user: {
-						id: compte.id,
-						username: compte.username,
-						email: compte.email,
-					},
-				})
-			}
-			// what Strapi answers when the email has a local account
-			return json(
+			await dispatchRoutes1({
+				url,
+				json,
 				res,
-				400,
-				erreur(400, 'ApplicationError', 'Email is already taken.')
-			)
-		}
-		if (url.pathname === '/api/users/me') {
-			if (etat.usersMe === 'lent') return // never answers (timeout test)
-			if (etat.usersMe !== 'auto') {
-				const status = Number(etat.usersMe)
-				return json(res, status, erreur(status, 'Error', 'mock'))
-			}
-			const compte = authentifie(req)
-			return compte
-				? json(res, 200, {
-						id: compte.id,
-						username: compte.username,
-						email: compte.email,
-						confirmed: true,
-					})
-				: json(
-						res,
-						401,
-						erreur(401, 'UnauthorizedError', 'Missing or invalid credentials')
-					)
-		}
-		if (url.pathname === '/api/me-makeup') {
-			const compte = authentifie(req)
-			if (!compte)
-				return json(
-					res,
-					401,
-					erreur(401, 'UnauthorizedError', 'Missing or invalid credentials')
-				)
-			if (etat.meMakeup !== 'auto') {
-				const status = Number(etat.meMakeup)
-				return json(
-					res,
-					status,
-					erreur(status, 'BadRequestError', 'updating Makeup Artist error')
-				)
-			}
-			return json(res, 200, profilAvecFuites(compte))
-		}
+				etat,
+				reinitialiser,
+				p,
+				jetons,
+				req,
+				html502,
+				corpsDe,
+				emettre,
+				authentifie,
+			})
+		)
+			return
 
 		json(res, 404, erreur(404, 'NotFoundError', 'Not Found'))
 	})
 
-	return new Promise(resolve =>
-		serveur.listen(port, '127.0.0.1', () => resolve(serveur))
-	)
+	return new Promise(resolve => serveur.listen(port, '127.0.0.1', () => resolve(serveur)))
 }
 
 // `node tests/auth/mock-strapi.mjs [port]`: the fake Strapi alone
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
 	const port = Number(process.argv[2] ?? 4111)
-	await demarrerFauxStrapi(port)
+	// biome-ignore lint/suspicious/noConsole: The standalone test runner reports its server address and build progress.
 	console.log(`faux Strapi sur http://127.0.0.1:${port}`)
+	await demarrerFauxStrapi(port)
+}
+
+function handleEtat1({ json, res, etat }) {
+	return { handled: true, value: json(res, 200, etat.appels) }
+}
+
+function matchesEtat1({ url }) {
+	return url.pathname === '/__etat'
+}
+
+function handleReset2({ reinitialiser, json, res }) {
+	reinitialiser()
+	return { handled: true, value: json(res, 200, { ok: true }) }
+}
+
+function matchesReset2({ url }) {
+	return url.pathname === '/__reset'
+}
+
+function handleMode3({ p, etat, json, res }) {
+	for (const nom of ['usersMe', 'meMakeup', 'connexion', 'google']) {
+		if (p.has(nom)) etat[nom] = p.get(nom)
+	}
+	if (p.has('ttl')) etat.ttl = Number(p.get('ttl'))
+	if (p.has('grosJwt')) etat.grosJwt = p.get('grosJwt') === '1'
+	return { handled: true, value: json(res, 200, { ok: true }) }
+}
+
+function matchesMode3({ url }) {
+	return url.pathname === '/__mode'
+}
+
+function handleRevoquer4({ jetons, etat, json, res }) {
+	for (const jwt of jetons.keys()) {
+		etat.revoques.add(jwt)
+	}
+	return { handled: true, value: json(res, 200, { ok: true }) }
+}
+
+function matchesRevoquer4({ url }) {
+	return url.pathname === '/__revoquer'
+}
+
+function handleGET5({ json, res }) {
+	return {
+		handled: true,
+		value: json(res, 200, {
+			data: [],
+			meta: { pagination: { page: 1, pageSize: 25, pageCount: 0, total: 0 } },
+		}),
+	}
+}
+
+function matchesGET5({ req, url }) {
+	return req.method === 'GET' && ['/api/articles', '/api/talents', '/api/makeup-artistes'].includes(url.pathname)
+}
+
+async function handlePOST6({ etat, json, res, html502, corpsDe, req, emettre }) {
+	if (etat.connexion === '429-une-fois') {
+		etat.connexion = 'auto'
+		return {
+			handled: true,
+			value: json(res, 429, erreur(429, 'RateLimitError', 'Too many requests, please try again later.')),
+		}
+	}
+	if (etat.connexion === '502') return { handled: true, value: html502(res) }
+	const corps = await corpsDe(req)
+	const compte = etat.comptes.find(
+		c =>
+			(c.email === String(corps.identifier).toLowerCase() || c.username === corps.identifier) &&
+			c.password === corps.password
+	)
+	if (!compte)
+		return { handled: true, value: json(res, 400, erreur(400, 'ValidationError', 'Invalid identifier or password')) }
+	return {
+		handled: true,
+		value: json(res, 200, {
+			jwt: emettre(compte),
+			user: { id: compte.id, username: compte.username, email: compte.email },
+		}),
+	}
+}
+
+function matchesPOST6({ req, url }) {
+	return req.method === 'POST' && url.pathname === '/api/auth/local'
+}
+
+async function handlePOST7({ corpsDe, req, json, res, etat, emettre }) {
+	const corps = await corpsDe(req)
+	if (String(corps.username ?? '').length < 3)
+		return {
+			handled: true,
+			value: json(res, 400, erreur(400, 'ValidationError', 'username must be at least 3 characters')),
+		}
+	const email = String(corps.email ?? '').toLowerCase()
+	if (etat.comptes.some(c => c.email === email || c.username === corps.username))
+		return {
+			handled: true,
+			value: json(res, 400, erreur(400, 'ApplicationError', 'Email or Username are already taken')),
+		}
+	const compte = {
+		id: etat.comptes.length + 1,
+		username: corps.username,
+		email,
+		password: corps.password,
+	}
+	etat.comptes.push(compte)
+	return {
+		handled: true,
+		value: json(res, 200, {
+			jwt: emettre(compte),
+			user: { id: compte.id, username: compte.username, email: compte.email },
+		}),
+	}
+}
+
+function matchesPOST7({ req, url }) {
+	return req.method === 'POST' && url.pathname === '/api/auth/local/register'
+}
+
+function handleApiAuthGoogleCallback8({ etat, html502, res, json, emettre }) {
+	if (etat.google === '502') return { handled: true, value: html502(res) }
+	if (etat.google === 'ok') {
+		const compte = etat.comptes[0]
+		return {
+			handled: true,
+			value: json(res, 200, {
+				jwt: emettre(compte),
+				user: {
+					id: compte.id,
+					username: compte.username,
+					email: compte.email,
+				},
+			}),
+		}
+	}
+	// what Strapi answers when the email has a local account
+	return { handled: true, value: json(res, 400, erreur(400, 'ApplicationError', 'Email is already taken.')) }
+}
+
+function matchesApiAuthGoogleCallback8({ url }) {
+	return url.pathname === '/api/auth/google/callback'
+}
+
+function handleApiUsersMe9({ etat, json, res, authentifie, req }) {
+	if (etat.usersMe === 'lent') return { handled: true, value: undefined } // never answers (timeout test)
+	if (etat.usersMe !== 'auto') {
+		const status = Number(etat.usersMe)
+		return { handled: true, value: json(res, status, erreur(status, 'Error', 'mock')) }
+	}
+	const compte = authentifie(req)
+	return {
+		handled: true,
+		value: compte
+			? json(res, 200, {
+					id: compte.id,
+					username: compte.username,
+					email: compte.email,
+					confirmed: true,
+				})
+			: json(res, 401, erreur(401, 'UnauthorizedError', 'Missing or invalid credentials')),
+	}
+}
+
+function matchesApiUsersMe9({ url }) {
+	return url.pathname === '/api/users/me'
+}
+
+function handleApiMeMakeup10({ authentifie, req, json, res, etat }) {
+	const compte = authentifie(req)
+	if (!compte)
+		return { handled: true, value: json(res, 401, erreur(401, 'UnauthorizedError', 'Missing or invalid credentials')) }
+	if (etat.meMakeup !== 'auto') {
+		const status = Number(etat.meMakeup)
+		return {
+			handled: true,
+			value: json(res, status, erreur(status, 'BadRequestError', 'updating Makeup Artist error')),
+		}
+	}
+	return { handled: true, value: json(res, 200, profilAvecFuites(compte)) }
+}
+
+function matchesApiMeMakeup10({ url }) {
+	return url.pathname === '/api/me-makeup'
+}
+
+const ROUTES_1 = [
+	[matchesEtat1, handleEtat1],
+	[matchesReset2, handleReset2],
+	[matchesMode3, handleMode3],
+	[matchesRevoquer4, handleRevoquer4],
+	[matchesGET5, handleGET5],
+	[matchesPOST6, handlePOST6],
+	[matchesPOST7, handlePOST7],
+	[matchesApiAuthGoogleCallback8, handleApiAuthGoogleCallback8],
+	[matchesApiUsersMe9, handleApiUsersMe9],
+	[matchesApiMeMakeup10, handleApiMeMakeup10],
+]
+
+async function dispatchRoutes1(context) {
+	for (const [matches, handle] of ROUTES_1) {
+		if (!matches(context)) continue
+		// biome-ignore lint/performance/noAwaitInLoops: Dispatch in route order and stop after the first handled request.
+		const result = await handle(context)
+		if (result.handled) return true
+	}
+	return false
+}
+
+function reinitialiserWithState({ etat }) {
+	Object.assign(etat, {
+		appels: {},
+		usersMe: 'auto', // auto | <status> | lent
+		meMakeup: 'auto', // auto | <status>
+		connexion: 'auto', // auto | <status> | 429-une-fois
+		google: 'deja-pris', // deja-pris | ok | 502
+		ttl: 30 * 86400,
+		grosJwt: false,
+		revoques: new Set(),
+		comptes: [{ ...COMPTE_TEST }],
+	})
+}
+
+function emettreWithState({ etat, jetons }, compte) {
+	const maintenant = Math.floor(Date.now() / 1000)
+	const charge = {
+		id: compte.id,
+		iat: maintenant,
+		exp: maintenant + etat.ttl,
+		n: Math.random(),
+	}
+	// > 4 KB once encrypted by NextAuth: the session cookie is chunked
+	if (etat.grosJwt) charge.bourrage = 'x'.repeat(5000)
+	const jwt = `${b64({ alg: 'HS256', typ: 'JWT' })}.${b64(charge)}.signature-factice`
+	jetons.set(jwt, compte)
+	return jwt
 }

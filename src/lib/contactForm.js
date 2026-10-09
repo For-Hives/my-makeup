@@ -15,11 +15,7 @@ const field = (required, tooLong, max) =>
 		.max(max, { message: `${tooLong} ne doit pas dépasser ${max} caractères` })
 
 export const contactFormSchema = z.object({
-	first_name: field(
-		'Le prénom est requis',
-		'Le prénom',
-		CONTACT_LIMITS.first_name
-	),
+	first_name: field('Le prénom est requis', 'Le prénom', CONTACT_LIMITS.first_name),
 	last_name: field('Le nom est requis', 'Le nom', CONTACT_LIMITS.last_name),
 	email: z
 		.string({ required_error: "L'e-mail est invalide" })
@@ -28,10 +24,6 @@ export const contactFormSchema = z.object({
 			message: `L'e-mail ne doit pas dépasser ${CONTACT_LIMITS.email} caractères`,
 		})
 		.email({ message: "L'e-mail est invalide" }),
-	phone_number: field(
-		'Le numéro de téléphone est requis',
-		'Le numéro de téléphone',
-		CONTACT_LIMITS.phone_number
-	),
+	phone_number: field('Le numéro de téléphone est requis', 'Le numéro de téléphone', CONTACT_LIMITS.phone_number),
 	message: field('Le message est requis', 'Le message', CONTACT_LIMITS.message),
 })

@@ -47,8 +47,7 @@ export function ratioMedia(media) {
 }
 
 /** Width of a photo of that ratio drawn at that height, in whole px */
-const largeurDessinee = (hauteur, ratio) =>
-	Math.ceil(hauteur * (positif(ratio) ?? RATIO_PAR_DEFAUT))
+const largeurDessinee = (hauteur, ratio) => Math.ceil(hauteur * (positif(ratio) ?? RATIO_PAR_DEFAUT))
 
 /**
  * A width of `sizes`, times `facteur`: fixed ({px}) or a cell of a grid
@@ -57,11 +56,8 @@ const largeurDessinee = (hauteur, ratio) =>
 function longueur(largeur, facteur = 1) {
 	if ('px' in largeur) return `${Math.ceil(largeur.px * facteur)}px`
 	const { colonnes, retrait } = largeur
-	if (facteur !== 1)
-		return `calc((100vw - ${retrait}px) * ${facteur / colonnes})`
-	return colonnes === 1
-		? `calc(100vw - ${retrait}px)`
-		: `calc((100vw - ${retrait}px) / ${colonnes})`
+	if (facteur !== 1) return `calc((100vw - ${retrait}px) * ${facteur / colonnes})`
+	return colonnes === 1 ? `calc(100vw - ${retrait}px)` : `calc((100vw - ${retrait}px) / ${colonnes})`
 }
 
 /**
@@ -74,9 +70,7 @@ function ecrireSizes(entrees) {
 		({ condition, largeur }) =>
 			`${[ECRAN_TRES_DENSE, condition].filter(Boolean).join(' and ')} ${longueur(largeur, FACTEUR_TRES_DENSE)}`
 	)
-	const autres = entrees.map(({ condition, largeur }) =>
-		[condition, longueur(largeur)].filter(Boolean).join(' ')
-	)
+	const autres = entrees.map(({ condition, largeur }) => [condition, longueur(largeur)].filter(Boolean).join(' '))
 	return [...denses, ...autres].join(', ')
 }
 
@@ -112,17 +106,16 @@ export function sizesGrille(grille, { hauteur, ratio }) {
 	const segments = []
 	const ajouter = (jusqua, largeur) => {
 		const dernier = segments.at(-1)
-		if (dernier && longueur(dernier.largeur) === longueur(largeur))
-			dernier.jusqua = jusqua
+		if (dernier && longueur(dernier.largeur) === longueur(largeur)) dernier.jusqua = jusqua
 		else segments.push({ jusqua, largeur })
 	}
-	grille.forEach((colonnes, i) => {
+	for (const [i, colonnes] of grille.entries()) {
 		const fin = grille[i + 1]?.des ?? Infinity
 		// below this viewport width, the cell is narrower than the photo
 		const bascule = colonnes.colonnes * dessinee.px + colonnes.retrait
 		if (bascule > colonnes.des) ajouter(Math.min(bascule, fin), dessinee)
 		if (bascule < fin) ajouter(fin, colonnes)
-	})
+	}
 	return ecrireSizes(
 		segments.map(({ jusqua, largeur }) => ({
 			condition: jusqua === Infinity ? null : `(max-width: ${jusqua - 1}px)`,

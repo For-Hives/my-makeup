@@ -1,7 +1,7 @@
 import { Disclosure } from '@headlessui/react'
 import { ChevronRightIcon } from '@heroicons/react/20/solid'
-import React from 'react'
 import { DescriptionPriceOffer } from '@/components/Profil/Childs/ServiceOffers/DescriptionPriceOffer'
+import { avecCles } from '@/lib/cles'
 
 /**
  * Display the options of a service offer -> pass the service offer as props
@@ -9,17 +9,15 @@ import { DescriptionPriceOffer } from '@/components/Profil/Childs/ServiceOffers/
  * @constructor
  */
 export function OptionsOffers(props) {
-	const options = Array.isArray(props.serviceOffer?.options)
-		? props.serviceOffer.options.filter(Boolean)
-		: []
+	const options = Array.isArray(props.serviceOffer?.options) ? props.serviceOffer.options.filter(Boolean) : []
 	return (
 		<div className={'flex w-full flex-col gap-2 py-2'}>
 			{
 				// display the user description
 				// if \n is present, split the string and display each part in a new line
-				options.map((option, index) => {
+				avecCles(options).map(({ valeur: option, cle }, index) => {
 					return (
-						<Disclosure key={index}>
+						<Disclosure key={cle}>
 							{({ open }) => (
 								/* Use the `open` state to conditionally change the direction of an icon. */
 								<>
@@ -33,18 +31,13 @@ export function OptionsOffers(props) {
 										{option.name}
 										<ChevronRightIcon
 											data-cy={`service-offer-button-${index}`}
-											className={
-												'h-5 w-5 ' + (open ? 'rotate-90 transform' : '')
-											}
+											className={`h-5 w-5 ${open ? 'rotate-90 transform' : ''}`}
 										/>
 									</Disclosure.Button>
 									{/* rendered closed too: the prices are in the server HTML */}
 									<Disclosure.Panel unmount={false}>
 										<div className={'pb-4'}>
-											<DescriptionPriceOffer
-												serviceOffer={option}
-												index={index}
-											/>
+											<DescriptionPriceOffer serviceOffer={option} index={index} />
 										</div>
 									</Disclosure.Panel>
 								</>

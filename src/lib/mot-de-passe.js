@@ -1,3 +1,8 @@
+const codeEchecReinitialisationPattern1 = /password/i
+const codeEchecReinitialisationPattern2 = /(at least|short|min)/i
+const codeReinitialisationPattern3 = /^[A-Za-z0-9_-]{16,512}$/
+const codeEchecReinitialisationPattern4 = /incorrect code/i
+const codeEchecReinitialisationPattern5 = /passwords do not match/i
 /**
  * Forgotten password (A7, plans/01 §2.2): /auth/mot-de-passe-oublie asks
  * Strapi for an email (POST /api/auth/forgot-password), the link of that
@@ -34,17 +39,13 @@ export const MESSAGES_MOT_DE_PASSE = {
 	envoyee:
 		'Si un compte existe avec cette adresse, tu vas recevoir un email avec un lien pour choisir un nouveau mot de passe. Pense à regarder dans tes courriers indésirables.',
 	'trop-de-tentatives': "Trop d'essais, réessaie dans quelques minutes.",
-	'service-indisponible':
-		'Le service est momentanément indisponible, réessaie dans quelques minutes.',
-	'code-invalide':
-		"Ce lien n'est plus valable : il a déjà servi ou il est incomplet. Demande un nouveau lien.",
-	'code-absent':
-		'Ce lien est incomplet : ouvre le lien reçu par email, ou demandes-en un nouveau.',
+	'service-indisponible': 'Le service est momentanément indisponible, réessaie dans quelques minutes.',
+	'code-invalide': "Ce lien n'est plus valable : il a déjà servi ou il est incomplet. Demande un nouveau lien.",
+	'code-absent': 'Ce lien est incomplet : ouvre le lien reçu par email, ou demandes-en un nouveau.',
 	'mot-de-passe-trop-court': `Le mot de passe doit contenir au moins ${MOT_DE_PASSE_MIN} caractères.`,
 	'mots-de-passe-differents': 'Les deux mots de passe ne sont pas identiques.',
 	'erreur-inconnue': 'Une erreur est survenue, réessaie dans quelques minutes.',
-	modifie:
-		'Ton mot de passe est modifié. Tu peux te connecter avec ton email et ce nouveau mot de passe.',
+	modifie: 'Ton mot de passe est modifié. Tu peux te connecter avec ton email et ce nouveau mot de passe.',
 }
 
 /**
@@ -56,8 +57,7 @@ export function issueDemandeReinitialisation(status) {
 	if (status === 429) return 'trop-de-tentatives'
 	// answers that may depend on the account all read the same: 2xx (sent or
 	// unknown address), 400 and 500 (the email provider failed, known address)
-	if ((status >= 200 && status < 300) || status === 400 || status === 500)
-		return 'envoyee'
+	if ((status >= 200 && status < 300) || status === 400 || status === 500) return 'envoyee'
 	return 'service-indisponible'
 }
 
@@ -71,9 +71,9 @@ export function codeEchecReinitialisation(status, message = '') {
 	const texte = typeof message === 'string' ? message : ''
 	if (status === 429) return 'trop-de-tentatives'
 	if (!status || status >= 500) return 'service-indisponible'
-	if (/incorrect code/i.test(texte)) return 'code-invalide'
-	if (/passwords do not match/i.test(texte)) return 'mots-de-passe-differents'
-	if (/password/i.test(texte) && /(at least|short|min)/i.test(texte))
+	if (codeEchecReinitialisationPattern4.test(texte)) return 'code-invalide'
+	if (codeEchecReinitialisationPattern5.test(texte)) return 'mots-de-passe-differents'
+	if (codeEchecReinitialisationPattern1.test(texte) && codeEchecReinitialisationPattern2.test(texte))
 		return 'mot-de-passe-trop-court'
 	return 'erreur-inconnue'
 }
@@ -86,8 +86,7 @@ export function codeEchecReinitialisation(status, message = '') {
  * @returns {string|null} a key of MESSAGES_MOT_DE_PASSE, null when fine
  */
 export function erreurNouveauMotDePasse(motDePasse, confirmation) {
-	if (typeof motDePasse !== 'string' || motDePasse.length < MOT_DE_PASSE_MIN)
-		return 'mot-de-passe-trop-court'
+	if (typeof motDePasse !== 'string' || motDePasse.length < MOT_DE_PASSE_MIN) return 'mot-de-passe-trop-court'
 	if (motDePasse !== confirmation) return 'mots-de-passe-differents'
 	return null
 }
@@ -103,7 +102,7 @@ export function codeReinitialisation(brut) {
 	const valeur = Array.isArray(brut) ? brut[0] : brut
 	if (typeof valeur !== 'string') return null
 	const code = valeur.trim()
-	return /^[A-Za-z0-9_-]{16,512}$/.test(code) ? code : null
+	return codeReinitialisationPattern3.test(code) ? code : null
 }
 
 /**
