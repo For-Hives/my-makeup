@@ -83,23 +83,19 @@ export default function ModalUpdateLanguageProfil(props) {
 	const handleUpdateLanguage = event => {
 		// check if the entered value is a ';' and if so, add it to the array
 		if (event.target.value.slice(-1) === ';') {
-			if (event.target.value.trim() !== ';') {
-				// Trigger a validation before adding the skill
+			// the language typed before the separator, without it
+			const nom = event.target.value.slice(0, -1).trim()
+			if (nom !== '') {
+				// the name itself is checked (70 characters at most), even when
+				// pasted with its ';' in one go, then added
+				setValue('language', nom)
 				trigger('language').then(isValid => {
 					if (isValid) {
-						const updatedUserLanguagesSelected = userLanguageSelected.concat({
-							id:
-								event.target.value.slice(0, -1) === ';'
-									? event.target.value.slice(0, -1)
-									: event.target.value,
-							name:
-								event.target.value.slice(0, -1) === ';'
-									? event.target.value.slice(0, -1)
-									: event.target.value,
-						})
-						setUserLanguageSelected(updatedUserLanguagesSelected)
+						setUserLanguageSelected(
+							userLanguageSelected.concat({ id: nom, name: nom })
+						)
 						setUserLanguage('')
-					}
+					} else setUserLanguage(nom)
 				})
 			} else {
 				setError('language', {

@@ -84,23 +84,19 @@ export default function ModalUpdateSkillsProfil(props) {
 	const handleUpdateSkills = event => {
 		// check if the entered value is a ';' and if so, add it to the array
 		if (event.target.value.slice(-1) === ';') {
-			if (event.target.value.trim() !== ';') {
-				// Trigger a validation before adding the skill
+			// the skill typed before the separator, without it
+			const nom = event.target.value.slice(0, -1).trim()
+			if (nom !== '') {
+				// the name itself is checked (70 characters at most), even when
+				// pasted with its ';' in one go, then added
+				setValue('skills', nom)
 				trigger('skills').then(isValid => {
 					if (isValid) {
-						const updatedUserSkillsSelected = userSkillsSelected.concat({
-							id:
-								event.target.value.slice(0, -1) === ';'
-									? event.target.value.slice(0, -1)
-									: event.target.value,
-							name:
-								event.target.value.slice(0, -1) === ';'
-									? event.target.value.slice(0, -1)
-									: event.target.value,
-						})
-						setUserSkillsSelected(updatedUserSkillsSelected)
+						setUserSkillsSelected(
+							userSkillsSelected.concat({ id: nom, name: nom })
+						)
 						setUserSkills('')
-					}
+					} else setUserSkills(nom)
 				})
 			} else {
 				setError('skills', {
