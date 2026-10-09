@@ -494,8 +494,19 @@ describe('URG-11 ménage', () => {
 		assert.equal(config.automerge, false)
 	})
 
+	// the origin of each link, parsed: a substring would also accept
+	// https://my-makeup.fr.example.com
 	test('le README renvoie vers le site', () => {
-		assert.ok(lireSiPresent('README.md').includes('https://my-makeup.fr'))
+		const origines = [
+			...lireSiPresent('README.md').matchAll(/https?:\/\/[^\s)\]>"']+/g),
+		].map(([lien]) => {
+			try {
+				return new URL(lien).origin
+			} catch {
+				return null
+			}
+		})
+		assert.ok(origines.includes('https://my-makeup.fr'))
 	})
 })
 
