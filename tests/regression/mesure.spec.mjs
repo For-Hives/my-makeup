@@ -12,7 +12,13 @@
 import { expect, test } from '@playwright/test'
 import { getElementsByTagName } from 'domutils'
 import { parseDocument } from 'htmlparser2'
-import { inscrire, panne, reinitialiserStrapi } from './outils-strapi.mjs'
+import {
+	aller,
+	connecter,
+	inscrire,
+	panne,
+	reinitialiserStrapi,
+} from './outils-strapi.mjs'
 
 const APP = process.env.RG_APP ?? 'http://localhost:3996'
 const UMAMI = process.env.RG_UMAMI ?? 'http://127.0.0.1:4113'
@@ -432,33 +438,59 @@ test.describe('MES-10 qui est mesuré', () => {
 			await page.getByTestId('first_name').fill('Al')
 			await page.getByTestId('last_name').fill('Bo')
 		}
-		// « Bienvenue » shown and the end of the onboarding received: every
-		// event of the name step has had time to arrive
-		async function finDeLInscription(page) {
-			await expect(page.getByText(/Bienvenue sur My.Makeup/)).toBeVisible()
-			await expect
-				.poll(() => evenements('onboarding_step'))
-				.toContainEqual({ step: 'termine' })
-			await page.waitForLoadState('networkidle')
+		// The page's sends to /u/api/send. `apres(nom, data)` waits until the
+		// page has sent that event and every send so far has its answer (the
+		// proxy answers once Umami has): the fake Umami then holds all the
+		// events sent before it.
+		function suivreEnvois(page) {
+			const vus = []
+			const finis = new Set()
+			page.on('request', requete => {
+				if (new URL(requete.url()).pathname === '/u/api/send') vus.push(requete)
+			})
+			page.on('requestfinished', requete => finis.add(requete))
+			page.on('requestfailed', requete => finis.add(requete))
+			const envoye = (nom, data) =>
+				vus.some(requete => {
+					const payload = requete.postDataJSON()?.payload
+					return (
+						payload?.name === nom &&
+						Object.entries(data).every(([cle, v]) => payload.data?.[cle] === v)
+					)
+				})
+			return async (nom, data = {}) => {
+				await expect.poll(() => envoye(nom, data)).toBe(true)
+				await expect.poll(() => vus.every(r => finis.has(r))).toBe(true)
+			}
 		}
+		// « Bienvenue » shown and the end of the onboarding received: it is
+		// sent last, after any onboarding_source
+		async function finDeLInscription(page, apres) {
+			await expect(page.getByText(/Bienvenue sur My.Makeup/)).toBeVisible()
+			await apres('onboarding_step', { step: 'termine' })
+		}
+		const question = page =>
+			page.getByRole('group', { name: /Comment as-tu connu My.Makeup/ })
 
 		test('onboarding_source : la réponse part une fois, seulement quand le nom est enregistré', async ({
 			page,
 		}) => {
+			const apres = suivreEnvois(page)
 			await visiteurReel(page)
 			await etapeDuNom(page, 'origine@test.local')
 			await page.getByTestId('onboarding-source-instagram').check()
 
-			// the save fails: nothing is counted
+			// the save fails: nothing is counted. profile_save is sent as soon
+			// as the PATCH answers, before the line that counts the answer.
 			await panne({ patch: 500 })
 			await page.getByTestId('submit').click()
 			await expect(page.getByTestId('save-error')).toBeVisible()
-			await page.waitForLoadState('networkidle')
+			await apres('profile_save', { section: 'onboarding', ok: false })
 			expect(await evenements('onboarding_source')).toEqual([])
 
 			await panne({ patch: null })
 			await page.getByTestId('submit').click()
-			await finDeLInscription(page)
+			await finDeLInscription(page, apres)
 			const envois = (await envoisRecus()).filter(
 				e => e.corps.payload.name === 'onboarding_source'
 			)
@@ -473,13 +505,45 @@ test.describe('MES-10 qui est mesuré', () => {
 			expect(JSON.stringify(envois[0].corps)).not.toContain('origine@test')
 		})
 
-		test('onboarding_source : sans réponse, l’inscription se termine et rien ne part', async ({
+		test('onboarding_source : réponse effacée, l’inscription se termine et rien ne part', async ({
 			page,
 		}) => {
+			const apres = suivreEnvois(page)
 			await visiteurReel(page)
 			await etapeDuNom(page, 'sans-origine@test.local')
+			const effacer = page.getByTestId('onboarding-source-effacer')
+			await expect(effacer).toHaveCount(0)
+			await page.getByTestId('onboarding-source-ecole').check()
+			await effacer.click()
+			await expect(
+				question(page).getByRole('radio', { checked: true })
+			).toHaveCount(0)
+			await expect(effacer).toHaveCount(0)
+			await expect(
+				page.getByTestId('onboarding-source-instagram')
+			).toBeFocused()
+
 			await page.getByTestId('submit').click()
-			await finDeLInscription(page)
+			await finDeLInscription(page, apres)
+			expect(await evenements('onboarding_source')).toEqual([])
+		})
+
+		test('onboarding_source : profil déjà créé (retour sur la page), pas de question et rien ne part', async ({
+			page,
+		}) => {
+			const apres = suivreEnvois(page)
+			await visiteurReel(page)
+			// the test account already has its profile: the POST answers 400
+			expect(await connecter(page)).toBe(true)
+			await aller(page, '/auth/init-account')
+			await expect(page.getByTestId('first_name')).toBeVisible({
+				timeout: 15_000,
+			})
+			await expect(question(page)).toHaveCount(0)
+			await page.getByTestId('first_name').fill('Al')
+			await page.getByTestId('last_name').fill('Bo')
+			await page.getByTestId('submit').click()
+			await finDeLInscription(page, apres)
 			expect(await evenements('onboarding_source')).toEqual([])
 		})
 

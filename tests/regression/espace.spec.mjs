@@ -807,9 +807,12 @@ test.describe('UI-05 inscription et suppression', () => {
 			appels((await etat()).journal, 'PATCH', '/api/me-makeup')
 		).toHaveLength(0)
 
-		// an answer to the question, on its label
+		// an answer to the question, on its label; it can be taken back
 		await appuyer(question.getByText('Instagram', { exact: true }))
 		await expect(page.getByTestId('onboarding-source-instagram')).toBeChecked()
+		const effacer = page.getByTestId('onboarding-source-effacer')
+		await expect(effacer).toHaveText('Effacer ma réponse')
+		expect((await effacer.boundingBox()).height).toBeGreaterThanOrEqual(44)
 
 		// the save fails: its message, no « Bienvenue »
 		await panne({ patch: 500 })
