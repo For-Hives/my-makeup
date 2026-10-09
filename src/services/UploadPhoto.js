@@ -1,6 +1,6 @@
 import { authenticatedFetch } from './api'
 import { track } from '@/lib/analytics'
-import { codeRefusEnvoi, MESSAGES_PHOTO } from '@/lib/photo'
+import { codeRefusEnvoi, kindRefusEnvoi, MESSAGES_PHOTO } from '@/lib/photo'
 
 /**
  * POST /api/upload: sends one picture, already checked and compressed
@@ -36,9 +36,7 @@ export async function uploadPhoto(authSession, fichier) {
 		}
 	}
 
-	track('upload_error', { kind: 'server' })
-	return {
-		ok: false,
-		error: MESSAGES_PHOTO[codeRefusEnvoi(response?.status ?? 0)],
-	}
+	const status = response?.status ?? 0
+	track('upload_error', { kind: kindRefusEnvoi(status) })
+	return { ok: false, error: MESSAGES_PHOTO[codeRefusEnvoi(status)] }
 }
