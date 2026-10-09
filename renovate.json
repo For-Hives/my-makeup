@@ -27,12 +27,12 @@
 			"enabled": false
 		},
 		{
-			"description": "Next 16 is a migration that comes with the v3: no next or eslint-config-next above 15, security alerts included (allowedVersions filters the versions those alerts can pick)",
+			"description": "Next 16 is a migration that comes with the v3: no next or eslint-config-next above 15. Only GitHub alerts keep this cap: an OSV alert sets its own allowedVersions after these rules and can still open a 16.x PR, to close until the v3",
 			"matchPackageNames": ["next", "eslint-config-next"],
 			"allowedVersions": "<16"
 		},
 		{
-			"description": "Tailwind CSS 4 needs a migration (postcss plugin, config, CSS entry): stay on v3, security alerts included",
+			"description": "Tailwind CSS 4 needs a migration (postcss plugin, config, CSS entry): stay on v3. Same limit as next: an OSV alert can still open a 4.x PR, to close until the v3",
 			"matchPackageNames": ["tailwindcss"],
 			"allowedVersions": "<4"
 		}
