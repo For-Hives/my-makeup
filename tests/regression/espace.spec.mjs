@@ -541,13 +541,14 @@ test.describe('UI-02 et UI-04 édition au doigt et au clavier', () => {
 			expect(await bouton.evaluate(b => getComputedStyle(b).opacity), cy).toBe(
 				'1'
 			)
+			const ombre = () => bouton.evaluate(b => getComputedStyle(b).boxShadow)
+			// no ring before the focus, an indigo-600 one with it
+			expect(await ombre(), cy).toBe('none')
 			await bouton.focus()
-			const focus = await bouton.evaluate(b => ({
-				visible: b.matches(':focus-visible'),
-				anneau: getComputedStyle(b).boxShadow,
-			}))
-			expect(focus.visible, cy).toBe(true)
-			expect(focus.anneau, cy).not.toBe('none')
+			expect(await bouton.evaluate(b => b.matches(':focus-visible')), cy).toBe(
+				true
+			)
+			expect(await ombre(), cy).toContain('rgb(79, 70, 229)')
 		}
 	})
 
