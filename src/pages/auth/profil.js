@@ -1,35 +1,25 @@
 import Head from 'next/head'
-import React from 'react'
 import Link from 'next/link'
-import Nav from '@/components/Global/Nav'
-import Footer from '@/components/Global/Footer'
-import ResumeProfil from '@/components/Profil/Parents/ResumeProfil'
-import { useSession } from 'next-auth/react'
-import { getServerSession } from 'next-auth/next'
-import InfosProfil from '@/components/Profil/Parents/InfosProfil'
-import DangerZone from '@/components/Global/DangerZone'
-import {
-	API_SERVEUR,
-	authOptions,
-	journalAuth,
-} from '@/pages/api/auth/[...nextauth]'
-import { messageErreur } from '@/lib/auth-erreurs'
-import {
-	aCookieDeSession,
-	cookiesSessionAEffacer,
-	DELAI_STRAPI_MS,
-	urlSessionExpiree,
-} from '@/lib/auth-session'
-import { filtrerProfilPrive } from '@/lib/profil-prive'
 import { useRouter } from 'next/router'
+import { getServerSession } from 'next-auth/next'
+import { useSession } from 'next-auth/react'
+import React from 'react'
+import DangerZone from '@/components/Global/DangerZone'
+import Footer from '@/components/Global/Footer'
+import Nav from '@/components/Global/Nav'
+import InfosProfil from '@/components/Profil/Parents/InfosProfil'
+import ResumeProfil from '@/components/Profil/Parents/ResumeProfil'
 import { track } from '@/lib/analytics'
+import { messageErreur } from '@/lib/auth-erreurs'
+import { aCookieDeSession, cookiesSessionAEffacer, DELAI_STRAPI_MS, urlSessionExpiree } from '@/lib/auth-session'
 import { devisFormUrl } from '@/lib/devis'
 import { devientPubliable } from '@/lib/profil/completude'
+import { filtrerProfilPrive } from '@/lib/profil-prive'
+import { API_SERVEUR, authOptions, journalAuth } from '@/pages/api/auth/[...nextauth]'
 
 // the quote form counts as a contact channel once it is online: the same
 // flag as the public profile page and the sitemap
-const FORMULAIRE_DEVIS =
-	devisFormUrl(process.env.NEXT_PUBLIC_DEVIS_FORM_URL) !== null
+const FORMULAIRE_DEVIS = devisFormUrl(process.env.NEXT_PUBLIC_DEVIS_FORM_URL) !== null
 
 function Profil({ data, erreur }) {
 	// the modals read the Strapi JWT from here (loaded after the page)
@@ -64,7 +54,9 @@ function Profil({ data, erreur }) {
 				undefined,
 				{ shallow: true }
 			)
-			.catch(() => {})
+			.catch(() => {
+				// A cancelled route change leaves the current profile view active.
+			})
 	}
 
 	// the modals call it once the API stored the save (UI-01)
@@ -89,11 +81,7 @@ function Profil({ data, erreur }) {
 			<main className={'relative'}>
 				{user ? (
 					<>
-						<ResumeProfil
-							user={user}
-							handleUpdateUser={handleUpdateUser}
-							isPublic={isPublic}
-						/>
+						<ResumeProfil user={user} handleUpdateUser={handleUpdateUser} isPublic={isPublic} />
 						<InfosProfil
 							user={user}
 							handleUpdateUser={handleUpdateUser}
@@ -104,9 +92,7 @@ function Profil({ data, erreur }) {
 					</>
 				) : (
 					<div className="flex h-screen flex-col items-center justify-center gap-6 px-4">
-						<h1 className="text-center text-2xl font-bold text-gray-700">
-							{messageErreur(erreur)}
-						</h1>
+						<h1 className="text-center text-2xl font-bold text-gray-700">{messageErreur(erreur)}</h1>
 						<Link href={'/auth/profil'} className="btn-primary-large w-auto">
 							Réessayer
 						</Link>
@@ -133,10 +119,7 @@ export const getServerSideProps = async ({ req, res, resolvedUrl }) => {
 			res.setHeader('Set-Cookie', cookiesSessionAEffacer(cookies))
 			return {
 				redirect: {
-					destination: urlSessionExpiree(
-						resolvedUrl ?? '/auth/profil',
-						'jwt_expire'
-					),
+					destination: urlSessionExpiree(resolvedUrl ?? '/auth/profil', 'jwt_expire'),
 					permanent: false,
 				},
 			}
@@ -166,10 +149,7 @@ export const getServerSideProps = async ({ req, res, resolvedUrl }) => {
 		// Strapi refuses the JWT: delete the session (and its chunks) instead
 		// of sending her to the sign-in page with a dead cookie (AUTH-01)
 		journalAuth('session_expiree', { code: 'api_401' })
-		res.setHeader(
-			'Set-Cookie',
-			cookiesSessionAEffacer(Object.keys(req.cookies ?? {}))
-		)
+		res.setHeader('Set-Cookie', cookiesSessionAEffacer(Object.keys(req.cookies ?? {})))
 		return {
 			redirect: {
 				destination: '/auth/signin?error=session-expiree',
@@ -190,9 +170,7 @@ export const getServerSideProps = async ({ req, res, resolvedUrl }) => {
 	// allow list: never the password hash, tokens or admin relations, and
 	// no session (nor JWT) in __NEXT_DATA__
 	const data = filtrerProfilPrive(await response.json().catch(() => null))
-	return data
-		? { props: { data } }
-		: { props: { data: null, erreur: 'service-indisponible' } }
+	return data ? { props: { data } } : { props: { data: null, erreur: 'service-indisponible' } }
 }
 
 export default Profil

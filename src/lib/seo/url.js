@@ -17,9 +17,7 @@ export function urlDuSite(brut = process.env.NEXT_PUBLIC_URL) {
 	if (typeof brut !== 'string' || brut.trim() === '') return SITE_PAR_DEFAUT
 	try {
 		const url = new URL(brut.trim())
-		return ['http:', 'https:'].includes(url.protocol)
-			? url.origin
-			: SITE_PAR_DEFAUT
+		return ['http:', 'https:'].includes(url.protocol) ? url.origin : SITE_PAR_DEFAUT
 	} catch {
 		return SITE_PAR_DEFAUT
 	}

@@ -1,15 +1,12 @@
-import { useRouter } from 'next/router'
-import React, { useRef, useState, Fragment } from 'react'
-import {
-	UserMinusIcon,
-	ArrowRightOnRectangleIcon,
-} from '@heroicons/react/20/solid'
-import { signOut } from 'next-auth/react'
 import { Dialog, Transition } from '@headlessui/react'
+import { ArrowRightStartOnRectangleIcon, UserMinusIcon } from '@heroicons/react/20/solid'
 import { ExclamationTriangleIcon } from '@heroicons/react/24/outline'
+import { useRouter } from 'next/router'
+import { signOut } from 'next-auth/react'
+import { Fragment, useRef, useState } from 'react'
 import { toast } from 'react-toastify'
-import { DeleteMeMakeup } from '@/services/DeleteMeMakeup'
 import { track } from '@/lib/analytics'
+import { DeleteMeMakeup } from '@/services/DeleteMeMakeup'
 
 function DangerZone(props) {
 	const [open, setOpen] = useState(false)
@@ -17,7 +14,7 @@ function DangerZone(props) {
 	const [erreur, setErreur] = useState(null)
 
 	const cancelButtonRef = useRef(null)
-	const router = useRouter()
+	const _router = useRouter()
 
 	// signed out only once the API deleted the account (UI-05): it used to
 	// sign out at once, and the DELETE could be cut by the redirection
@@ -47,12 +44,7 @@ function DangerZone(props) {
 	return (
 		<>
 			<Transition.Root show={open} as={Fragment}>
-				<Dialog
-					as="div"
-					className="relative z-30"
-					initialFocus={cancelButtonRef}
-					onClose={fermer}
-				>
+				<Dialog as="div" className="relative z-30" initialFocus={cancelButtonRef} onClose={fermer}>
 					<Transition.Child
 						as={Fragment}
 						enter="ease-out duration-300"
@@ -79,23 +71,16 @@ function DangerZone(props) {
 								<Dialog.Panel className="relative transform overflow-hidden rounded-lg bg-white px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6">
 									<div className="sm:flex sm:items-start">
 										<div className="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
-											<ExclamationTriangleIcon
-												className="h-6 w-6 text-red-600"
-												aria-hidden="true"
-											/>
+											<ExclamationTriangleIcon className="h-6 w-6 text-red-600" aria-hidden="true" />
 										</div>
 										<div className="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left">
-											<Dialog.Title
-												as="h3"
-												className="text-base font-semibold leading-6 text-gray-900"
-											>
+											<Dialog.Title as="h3" className="text-base font-semibold leading-6 text-gray-900">
 												Supprimer mon compte
 											</Dialog.Title>
 											<div className="mt-2">
 												<p className="text-sm text-gray-500">
-													Êtes-vous sûr de vouloir supprimer votre compte ?
-													Toutes vos données seront supprimées de nos serveurs
-													pour toujours. Cette action est irréversible.
+													Êtes-vous sûr de vouloir supprimer votre compte ? Toutes vos données seront supprimées de nos
+													serveurs pour toujours. Cette action est irréversible.
 												</p>
 											</div>
 										</div>
@@ -141,47 +126,35 @@ function DangerZone(props) {
 			</div>
 
 			<div className="relative mx-auto flex max-w-7xl justify-center px-4 pt-4 md:px-8 2xl:px-0">
-				<div
-					className={
-						'flex w-full flex-col gap-4 rounded border border-gray-300 bg-white p-8 sm:w-2/3 lg:w-1/2'
-					}
-				>
+				<div className={'flex w-full flex-col gap-4 rounded border border-gray-300 bg-white p-8 sm:w-2/3 lg:w-1/2'}>
 					<div className={'flex w-full flex-col'}>
 						<div className={'flex w-full flex-col gap-6'}>
-							<h2 className={'text-xl font-bold text-gray-700'}>
-								{"Plus d'options"}
-							</h2>
+							<h2 className={'text-xl font-bold text-gray-700'}>{"Plus d'options"}</h2>
 							<div className={'flex w-full flex-col gap-4'}>
 								<button
+									type="button"
 									data-cy="button-logout"
 									className={'flex items-center justify-start'}
 									onClick={() => {
 										signOut()
 									}}
 								>
-									<div
-										className={
-											'flex items-center justify-start gap-3 rounded-lg p-4 hover:bg-gray-100'
-										}
-									>
-										<ArrowRightOnRectangleIcon className={'h-4 w-4'} />
+									<div className={'flex items-center justify-start gap-3 rounded-lg p-4 hover:bg-gray-100'}>
+										<ArrowRightStartOnRectangleIcon className={'h-4 w-4'} />
 										<span>Me déconnecter</span>
 									</div>
 								</button>
 							</div>
 							<div className={'flex w-full flex-col gap-4'}>
 								<button
+									type="button"
 									data-cy="button-delete-account"
 									className={'flex items-center justify-start'}
 									onClick={() => {
 										setOpen(true)
 									}}
 								>
-									<div
-										className={
-											'flex items-center justify-start gap-3 rounded-lg p-4 hover:bg-gray-100'
-										}
-									>
+									<div className={'flex items-center justify-start gap-3 rounded-lg p-4 hover:bg-gray-100'}>
 										<UserMinusIcon className={'h-4 w-4'} />
 										<span>Supprimer mon compte</span>
 									</div>

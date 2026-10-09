@@ -1,22 +1,19 @@
-import React, { useState } from 'react'
+import { zodResolver } from '@hookform/resolvers/zod'
+import _ from 'lodash'
 import Head from 'next/head'
-import Link from 'next/link'
 import Image from 'next/image'
+import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { signIn, signOut, useSession } from 'next-auth/react'
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
 import * as zod from 'zod'
-import _ from 'lodash'
 import { track } from '@/lib/analytics'
 import { codeResultatConnexion, messageErreur } from '@/lib/auth-erreurs'
 
 const schema = zod
 	.object({
-		email: zod
-			.string({ required_error: 'Email est requis' })
-			.email('Email invalide')
-			.max(255, 'Email trop long'),
+		email: zod.string({ required_error: 'Email est requis' }).email('Email invalide').max(255, 'Email trop long'),
 		password: zod
 			.string({ required_error: 'Mot de passe est requis' })
 			.regex(
@@ -90,18 +87,11 @@ function Signup() {
 						<div>
 							<Link href={'/'}>
 								<span className="sr-only">My-Makeup</span>
-								<Image
-									alt="Logo My-Makeup"
-									width={50}
-									height={50}
-									src="/assets/logo.webp"
-								/>
+								<Image alt="Logo My-Makeup" width={50} height={50} src="/assets/logo.webp" />
 							</Link>
-							<h2 className="mt-6 text-3xl font-bold tracking-tight text-gray-900">
-								{"S'inscrire"}
-							</h2>
+							<h2 className="mt-6 text-3xl font-bold tracking-tight text-gray-900">{"S'inscrire"}</h2>
 						</div>
-						{!(session && session.user && !_.isEmpty(session.user)) && (
+						{!(session?.user && !_.isEmpty(session.user)) && (
 							<div className="mt-8">
 								<div>
 									<div>
@@ -109,6 +99,7 @@ function Signup() {
 										<div className="mt-4 grid grid-cols-1 gap-4">
 											<div className={'flex w-full justify-center'}>
 												<button
+													type="button"
 													data-cy="google-signin"
 													onClick={() => {
 														track('signup_start', { method: 'google' })
@@ -118,9 +109,7 @@ function Signup() {
 													}}
 													className="flex h-[40px] w-full flex-nowrap items-center justify-center gap-[24px] rounded-md bg-white px-3 text-gray-500 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:outline-offset-0"
 												>
-													<span className="sr-only">
-														{"S'inscrire avec Google"}
-													</span>
+													<span className="sr-only">{"S'inscrire avec Google"}</span>
 													<Image
 														src={'/assets/signin-assets/google_logo.svg'}
 														alt={'google logo'}
@@ -141,10 +130,7 @@ function Signup() {
 									</div>
 
 									<div className="relative mt-6">
-										<div
-											className="absolute inset-0 flex items-center"
-											aria-hidden="true"
-										>
+										<div className="absolute inset-0 flex items-center" aria-hidden="true">
 											<div className="w-full border-t border-gray-300" />
 										</div>
 										<div className="relative flex justify-center text-sm">
@@ -154,16 +140,9 @@ function Signup() {
 								</div>
 
 								<div className="mt-6">
-									<form
-										onSubmit={handleSubmit(onSubmit)}
-										method="POST"
-										className="space-y-6"
-									>
+									<form onSubmit={handleSubmit(onSubmit)} method="POST" className="space-y-6">
 										<div className="space-y-1">
-											<label
-												htmlFor="name"
-												className="block text-sm font-medium leading-6 text-gray-900"
-											>
+											<label htmlFor="name" className="block text-sm font-medium leading-6 text-gray-900">
 												Nom
 											</label>
 											<div className="mt-2">
@@ -178,18 +157,11 @@ function Signup() {
 													})}
 													className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
 												/>
-												{errors.name && (
-													<p className={'mt-2 text-xs text-red-500/80'}>
-														{errors.name.message}
-													</p>
-												)}
+												{errors.name && <p className={'mt-2 text-xs text-red-500/80'}>{errors.name.message}</p>}
 											</div>
 										</div>
 										<div>
-											<label
-												htmlFor="email"
-												className="block text-sm font-medium leading-6 text-gray-900"
-											>
+											<label htmlFor="email" className="block text-sm font-medium leading-6 text-gray-900">
 												Adresse email
 											</label>
 											<div className="mt-2">
@@ -205,19 +177,12 @@ function Signup() {
 													})}
 													className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
 												/>
-												{errors.email && (
-													<p className={'mt-2 text-xs text-red-500/80'}>
-														{errors.email.message}
-													</p>
-												)}
+												{errors.email && <p className={'mt-2 text-xs text-red-500/80'}>{errors.email.message}</p>}
 											</div>
 										</div>
 
 										<div className="space-y-1">
-											<label
-												htmlFor="password"
-												className="block text-sm font-medium leading-6 text-gray-900"
-											>
+											<label htmlFor="password" className="block text-sm font-medium leading-6 text-gray-900">
 												Mot de passe
 											</label>
 											<div className="mt-2">
@@ -232,33 +197,20 @@ function Signup() {
 													})}
 													className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
 												/>
-												{errors.password && (
-													<p className={'mt-2 text-xs text-red-500/80'}>
-														{errors.password.message}
-													</p>
-												)}
+												{errors.password && <p className={'mt-2 text-xs text-red-500/80'}>{errors.password.message}</p>}
 											</div>
 										</div>
 
 										<div className="flex items-center justify-end">
 											<p className={'text-xs'}>
-												En vous inscrivant sur My-Makeup vous confirmez que vous
-												acceptez les{' '}
-												<Link
-													href={'/cgu'}
-													className={'text-indigo-700 underline'}
-													target={'_blank'}
-												>
+												En vous inscrivant sur My-Makeup vous confirmez que vous acceptez les{' '}
+												<Link href={'/cgu'} className={'text-indigo-700 underline'} target={'_blank'}>
 													conditions générales.
 												</Link>
 											</p>
 										</div>
 										{erreur && (
-											<p
-												role="alert"
-												data-cy="signup-error"
-												className="rounded-md bg-red-50 p-3 text-sm text-red-800"
-											>
+											<p role="alert" data-cy="signup-error" className="rounded-md bg-red-50 p-3 text-sm text-red-800">
 												{messageErreur(erreur)}
 											</p>
 										)}
@@ -276,9 +228,7 @@ function Signup() {
 										<div className={'flex items-center justify-center'}>
 											Déjà un compte ?&nbsp;
 											<Link
-												className={
-													'font-semibold text-indigo-700 hover:text-indigo-700 hover:underline'
-												}
+												className={'font-semibold text-indigo-700 hover:text-indigo-700 hover:underline'}
 												href={'/auth/signin'}
 											>
 												Connecte toi
@@ -288,11 +238,9 @@ function Signup() {
 								</div>
 							</div>
 						)}
-						{!!(session && session.user && !_.isEmpty(session.user)) && (
+						{!!(session?.user && !_.isEmpty(session.user)) && (
 							<div className={'mt-8'}>
-								<h2 className={'my-8 text-2xl font-semibold text-gray-900'}>
-									Vous êtes déjà connecté
-								</h2>
+								<h2 className={'my-8 text-2xl font-semibold text-gray-900'}>Vous êtes déjà connecté</h2>
 
 								<Link
 									href={'/auth/profil'}

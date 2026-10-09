@@ -56,8 +56,7 @@ function nettoyer(valeur) {
  * @returns {object|null}
  */
 export function filtrerProfilPrive(profil) {
-	if (profil === null || typeof profil !== 'object' || Array.isArray(profil))
-		return null
+	if (profil === null || typeof profil !== 'object' || Array.isArray(profil)) return null
 	const filtre = {}
 	for (const champ of CHAMPS_PROFIL) {
 		if (profil[champ] !== undefined) filtre[champ] = nettoyer(profil[champ])
@@ -65,8 +64,7 @@ export function filtrerProfilPrive(profil) {
 	if (profil.user && typeof profil.user === 'object') {
 		filtre.user = {}
 		for (const champ of CHAMPS_COMPTE) {
-			if (profil.user[champ] !== undefined)
-				filtre.user[champ] = profil.user[champ]
+			if (profil.user[champ] !== undefined) filtre.user[champ] = profil.user[champ]
 		}
 	}
 	return filtre

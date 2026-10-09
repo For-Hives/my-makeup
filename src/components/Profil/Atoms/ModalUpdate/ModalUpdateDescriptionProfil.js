@@ -1,10 +1,9 @@
-import React, { Fragment, useEffect, useRef, useState } from 'react'
 import { Dialog, Transition } from '@headlessui/react'
-import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useSession } from 'next-auth/react'
+import { Fragment, useEffect, useRef, useState } from 'react'
+import { useForm } from 'react-hook-form'
 import * as zod from 'zod'
-import { patchMeMakeup } from '@/services/PatchMeMakeup'
 import {
 	BoutonFermer,
 	BoutonSauvegarder,
@@ -13,6 +12,7 @@ import {
 	suivreChamp,
 	useEnvoi,
 } from '@/components/Profil/Atoms/ModalUpdate/ModalElements'
+import { patchMeMakeup } from '@/services/PatchMeMakeup'
 
 const schema = zod
 	.object({
@@ -40,10 +40,7 @@ export default function ModalUpdateDescriptionProfil(props) {
 	const [open, setOpen] = useState(props.isModalOpen)
 	const [userDescription, setUserDescription] = useState(user.description ?? '')
 	// Escape, a click outside and « Fermer » wait for the save in progress
-	const { envoi, setEnvoi, erreurEnvoi, setErreurEnvoi, fermer } = useEnvoi(
-		props.isModalOpen,
-		props.handleIsModalOpen
-	)
+	const { envoi, setEnvoi, erreurEnvoi, setErreurEnvoi, fermer } = useEnvoi(props.isModalOpen, props.handleIsModalOpen)
 
 	const { data: session } = useSession()
 
@@ -82,12 +79,7 @@ export default function ModalUpdateDescriptionProfil(props) {
 
 	return (
 		<Transition.Root show={open} as={Fragment}>
-			<Dialog
-				as="div"
-				className="relative z-30"
-				initialFocus={cancelButtonRef}
-				onClose={fermer}
-			>
+			<Dialog as="div" className="relative z-30" initialFocus={cancelButtonRef} onClose={fermer}>
 				<FondModale />
 
 				<div className="fixed inset-0 z-30 overflow-y-auto">
@@ -105,33 +97,19 @@ export default function ModalUpdateDescriptionProfil(props) {
 								data-cy="modal-panel"
 								className="relative w-full transform rounded-lg bg-white p-8 text-left shadow-2xl transition-all sm:max-w-3xl"
 							>
-								<BoutonFermer
-									onClick={fermer}
-									disabled={envoi}
-									ref={cancelButtonRef}
-								/>
+								<BoutonFermer onClick={fermer} disabled={envoi} ref={cancelButtonRef} />
 								<div className="flex flex-col items-start gap-8">
 									<div className="text-left">
-										<Dialog.Title
-											as="h3"
-											className="text-lg font-semibold text-gray-900"
-										>
+										<Dialog.Title as="h3" className="text-lg font-semibold text-gray-900">
 											Vous en quelques mots
 										</Dialog.Title>
 									</div>
 									<div className={'w-full md:w-4/5'}>
 										<div className="grid grid-cols-1 gap-4">
 											<div className={'flex flex-col gap-4'}>
-												<form
-													onSubmit={handleSubmit(onSubmit)}
-													method="POST"
-													className="flex flex-col gap-4"
-												>
+												<form onSubmit={handleSubmit(onSubmit)} method="POST" className="flex flex-col gap-4">
 													<div>
-														<label
-															htmlFor="description"
-															className="block text-sm text-gray-700"
-														>
+														<label htmlFor="description" className="block text-sm text-gray-700">
 															Description
 														</label>
 														<div className="mt-2">
@@ -144,17 +122,11 @@ export default function ModalUpdateDescriptionProfil(props) {
 																})}
 																required
 																value={userDescription ?? ''}
-																onChange={suivre(
-																	'description',
-																	handleUpdateDescription
-																)}
+																onChange={suivre('description', handleUpdateDescription)}
 																className="block min-h-[500px] w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
 															/>
 															{errors.description && (
-																<p
-																	data-cy={'error-description'}
-																	className={'mt-2 text-xs text-red-500/80'}
-																>
+																<p data-cy={'error-description'} className={'mt-2 text-xs text-red-500/80'}>
 																	{errors.description.message}
 																</p>
 															)}
@@ -167,11 +139,7 @@ export default function ModalUpdateDescriptionProfil(props) {
 								</div>
 								<div className="mt-4 flex flex-col items-end gap-4">
 									<ErreurSauvegarde message={erreurEnvoi} />
-									<BoutonSauvegarder
-										dataCy="save-button-description"
-										envoi={envoi}
-										onClick={handleSubmit(onSubmit)}
-									/>
+									<BoutonSauvegarder dataCy="save-button-description" envoi={envoi} onClick={handleSubmit(onSubmit)} />
 								</div>
 							</Dialog.Panel>
 						</Transition.Child>

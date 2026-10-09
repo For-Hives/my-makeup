@@ -1,12 +1,6 @@
-import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import {
-	EDITEUR,
-	HEBERGEUR,
-	formatSiren,
-	formatSiret,
-	luhnValid,
-} from '../../src/lib/legal.js'
+import { test } from 'node:test'
+import { EDITEUR, formatSiren, formatSiret, HEBERGEUR, luhnValid } from '../../src/lib/legal.js'
 
 test('SIREN and SIRET of the publisher are consistent and pass the Luhn check', () => {
 	assert.match(EDITEUR.siren, /^\d{9}$/)

@@ -1,6 +1,6 @@
-import React, { useEffect } from 'react'
 import Image from 'next/image'
 import { useSession } from 'next-auth/react'
+import React, { useEffect } from 'react'
 import { shouldTrackContact, umamiAttributes } from '@/lib/analytics'
 import { contacts, libelleCanal } from '@/lib/profil/vue-publique'
 
@@ -15,13 +15,7 @@ const ICONES = {
 }
 
 // networks and websites open in a new tab, mailto: and tel: do not
-const NOUVEL_ONGLET = new Set([
-	'instagram',
-	'facebook',
-	'linkedin',
-	'youtube',
-	'website',
-])
+const NOUVEL_ONGLET = new Set(['instagram', 'facebook', 'linkedin', 'youtube', 'website'])
 
 /**
  * @param props.user - profile attributes
@@ -55,15 +49,11 @@ function ViewSocialMediaProfil(props) {
 	}, [pid, username, profileEmail, viewerName, viewerEmail])
 
 	const contactAttributes = channel =>
-		pid !== undefined && trackContacts
-			? umamiAttributes('contact_click', { pid, channel })
-			: {}
+		pid !== undefined && trackContacts ? umamiAttributes('contact_click', { pid, channel }) : {}
 
 	return (
 		<div className={'flex w-full flex-col gap-4'}>
-			<h2 className={'text-xl font-bold text-gray-700'}>
-				Réseaux sociaux & contacts
-			</h2>
+			<h2 className={'text-xl font-bold text-gray-700'}>Réseaux sociaux & contacts</h2>
 			{liens.length > 0 && (
 				<div className={'flex flex-col gap-3'}>
 					{liens.map(({ canal, libelle, href }) => {
@@ -76,12 +66,7 @@ function ViewSocialMediaProfil(props) {
 									height={'35'}
 									alt={libelleCanal(canal)}
 								/>
-								<p
-									data-cy={canal}
-									className={
-										'overflow-hidden text-sm text-gray-700 group-hover:underline'
-									}
-								>
+								<p data-cy={canal} className={'overflow-hidden text-sm text-gray-700 group-hover:underline'}>
 									{libelle}
 								</p>
 							</>

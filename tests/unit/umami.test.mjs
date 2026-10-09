@@ -1,22 +1,22 @@
-import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
+import { describe, test } from 'node:test'
 import vm from 'node:vm'
 import {
 	BEFORE_SEND_NAME,
+	beforeSendScript,
 	DEFAULT_UMAMI_DOMAINS,
 	UMAMI_PROXY_PATHS,
 	UMAMI_WEBSITE_ID,
-	WAITING_ROOM_MAX,
-	WAITING_ROOM_NAME,
-	beforeSendScript,
 	umamiBeforeSend,
 	umamiDomains,
-	umamiProxyHeaders,
-	umamiScriptAttributes,
 	umamiLoader,
 	umamiLoaderScript,
+	umamiProxyHeaders,
+	umamiScriptAttributes,
 	umamiTag,
 	visitorIp,
+	WAITING_ROOM_MAX,
+	WAITING_ROOM_NAME,
 } from '../../src/lib/umami.js'
 
 const CHROME =
@@ -61,31 +61,19 @@ const pageView = (extra = {}) => ({
 
 describe('umamiBeforeSend: who is measured (plans/04 §3.1, §3.4)', () => {
 	test('a real visitor is sent, unchanged when there is nothing to clean', () => {
-		assert.deepEqual(
-			umamiBeforeSend('event', pageView(), fenetre()),
-			pageView()
-		)
+		assert.deepEqual(umamiBeforeSend('event', pageView(), fenetre()), pageView())
 	})
 
 	test('nothing leaves an automated browser (navigator.webdriver)', () => {
-		assert.equal(
-			umamiBeforeSend('event', pageView(), fenetre({ webdriver: true })),
-			false
-		)
+		assert.equal(umamiBeforeSend('event', pageView(), fenetre({ webdriver: true })), false)
 	})
 
 	test('nothing leaves a HeadlessChrome user agent', () => {
-		assert.equal(
-			umamiBeforeSend('event', pageView(), fenetre({ userAgent: HEADLESS })),
-			false
-		)
+		assert.equal(umamiBeforeSend('event', pageView(), fenetre({ userAgent: HEADLESS })), false)
 	})
 
 	test('nothing leaves a page shown inside a frame', () => {
-		assert.equal(
-			umamiBeforeSend('event', pageView(), fenetre({ framed: true })),
-			false
-		)
+		assert.equal(umamiBeforeSend('event', pageView(), fenetre({ framed: true })), false)
 	})
 
 	test('nothing leaves a browser that chose « Ne plus mesurer mes visites »', () => {
@@ -93,10 +81,7 @@ describe('umamiBeforeSend: who is measured (plans/04 §3.1, §3.4)', () => {
 			localStorage: storage({ 'umami.disabled': '1' }),
 		})
 		assert.equal(umamiBeforeSend('event', pageView(), optedOut), false)
-		assert.equal(
-			umamiBeforeSend('performance', pageView({ lcp: 1200 }), optedOut),
-			false
-		)
+		assert.equal(umamiBeforeSend('performance', pageView({ lcp: 1200 }), optedOut), false)
 	})
 
 	test('a storage that cannot be read does not block a real visitor', () => {
@@ -110,24 +95,15 @@ describe('umamiBeforeSend: who is measured (plans/04 §3.1, §3.4)', () => {
 	})
 
 	test('every kind of send goes through the same filter', () => {
-		for (const type of ['event', 'identify', 'performance'])
-			assert.equal(
-				umamiBeforeSend(type, pageView(), fenetre({ webdriver: true })),
-				false
-			)
+		for (const type of ['event', 'identify', 'performance']) {
+			assert.equal(umamiBeforeSend(type, pageView(), fenetre({ webdriver: true })), false)
+		}
 	})
 
 	test('no payload, or any error, sends nothing', () => {
 		assert.equal(umamiBeforeSend('event', null, fenetre()), false)
 		assert.equal(umamiBeforeSend('event', pageView(), undefined), false)
-		assert.equal(
-			umamiBeforeSend(
-				'event',
-				pageView({ url: 'http://[bad' }),
-				fenetre({ href: 'not a url' })
-			),
-			false
-		)
+		assert.equal(umamiBeforeSend('event', pageView({ url: 'http://[bad' }), fenetre({ href: 'not a url' })), false)
 	})
 })
 
@@ -140,10 +116,7 @@ describe('umamiBeforeSend: what leaves', () => {
 			}),
 			fenetre()
 		)
-		assert.equal(
-			sent.url,
-			'https://my-makeup.fr/search?utm_source=instagram&utm_campaign=bio-12'
-		)
+		assert.equal(sent.url, 'https://my-makeup.fr/search?utm_source=instagram&utm_campaign=bio-12')
 	})
 
 	test('ad click ids are dropped on purpose, the utm_medium of a paid campaign stays', () => {
@@ -154,10 +127,7 @@ describe('umamiBeforeSend: what leaves', () => {
 			}),
 			fenetre()
 		)
-		assert.equal(
-			sent.url,
-			'https://my-makeup.fr/?utm_source=google&utm_medium=cpc&utm_campaign=exp-010'
-		)
+		assert.equal(sent.url, 'https://my-makeup.fr/?utm_source=google&utm_medium=cpc&utm_campaign=exp-010')
 	})
 
 	test('a page without campaign loses its whole query string', () => {
@@ -178,10 +148,7 @@ describe('umamiBeforeSend: what leaves', () => {
 			fenetre()
 		)
 		assert.equal(sent.referrer, 'https://www.google.com/search')
-		assert.equal(
-			umamiBeforeSend('event', pageView({ referrer: '' }), fenetre()).referrer,
-			''
-		)
+		assert.equal(umamiBeforeSend('event', pageView({ referrer: '' }), fenetre()).referrer, '')
 	})
 
 	// What Umami 3.2.0 makes of the referrer it receives: its domain
@@ -198,31 +165,20 @@ describe('umamiBeforeSend: what leaves', () => {
 		'yandex.',
 	]
 	const vuParUmami = ({ hostname, referrer }) => {
-		const domain = new URL(referrer, `https://${hostname}`).hostname.replace(
-			/^www\./,
-			''
-		)
+		const domain = new URL(referrer, `https://${hostname}`).hostname.replace(/^www\./, '')
 		return { domain, search: SEARCH_DOMAINS.some(d => domain.includes(d)) }
 	}
 
 	test('an Android app referrer keeps its app id: the Google app stays organic search', () => {
 		const google = 'android-app://com.google.android.googlequicksearchbox/'
-		assert.deepEqual(
-			vuParUmami(
-				umamiBeforeSend('event', pageView({ referrer: google }), fenetre())
-			),
-			{ domain: 'com.google.android.googlequicksearchbox', search: true }
-		)
+		assert.deepEqual(vuParUmami(umamiBeforeSend('event', pageView({ referrer: google }), fenetre())), {
+			domain: 'com.google.android.googlequicksearchbox',
+			search: true,
+		})
 		for (const [referrer, sentReferrer] of [
 			[google, google],
-			[
-				'android-app://com.google.android.gm/',
-				'android-app://com.google.android.gm/',
-			],
-			[
-				'android-app://com.google.android.googlequicksearchbox/https/www.google.com?q=x#y',
-				google,
-			],
+			['android-app://com.google.android.gm/', 'android-app://com.google.android.gm/'],
+			['android-app://com.google.android.googlequicksearchbox/https/www.google.com?q=x#y', google],
 		]) {
 			const sent = umamiBeforeSend(
 				'event',
@@ -231,11 +187,7 @@ describe('umamiBeforeSend: what leaves', () => {
 			)
 			assert.equal(sent.referrer, sentReferrer, referrer)
 			// Umami classifies the visit as it did before the filter existed
-			assert.deepEqual(
-				vuParUmami(sent),
-				vuParUmami({ hostname: 'my-makeup.fr', referrer }),
-				referrer
-			)
+			assert.deepEqual(vuParUmami(sent), vuParUmami({ hostname: 'my-makeup.fr', referrer }), referrer)
 		}
 	})
 
@@ -289,10 +241,7 @@ describe('beforeSendScript (inlined by _document, umamiLoaderScript)', () => {
 	test('defines window.mmAvantEnvoi with the same rules', () => {
 		const visitor = run(fenetre())
 		assert.equal(typeof visitor, 'function')
-		assert.equal(
-			visitor('event', pageView({ url: 'https://my-makeup.fr/?a=1' })).url,
-			'https://my-makeup.fr/'
-		)
+		assert.equal(visitor('event', pageView({ url: 'https://my-makeup.fr/?a=1' })).url, 'https://my-makeup.fr/')
 		assert.equal(
 			visitor(
 				'event',
@@ -303,13 +252,7 @@ describe('beforeSendScript (inlined by _document, umamiLoaderScript)', () => {
 			'android-app://com.google.android.googlequicksearchbox/'
 		)
 		assert.equal(run(fenetre({ webdriver: true }))('event', pageView()), false)
-		assert.equal(
-			run(fenetre({ localStorage: storage({ 'umami.disabled': '1' }) }))(
-				'event',
-				pageView()
-			),
-			false
-		)
+		assert.equal(run(fenetre({ localStorage: storage({ 'umami.disabled': '1' }) }))('event', pageView()), false)
 	})
 
 	test('cannot close the inline <script> it lives in', () => {
@@ -329,9 +272,13 @@ function documentFactice() {
 			setAttribute(nom, valeur) {
 				this.attributs[nom] = String(valeur)
 			},
-			addEventListener: (type, ecouteur) =>
-				(ecouteurs[type] ??= []).push(ecouteur),
-			emettre: type => (ecouteurs[type] ?? []).forEach(e => e({ type })),
+			addEventListener: (type, ecouteur) => {
+				ecouteurs[type] ??= []
+				ecouteurs[type].push(ecouteur)
+			},
+			emettre: type => {
+				for (const ecouteur of ecouteurs[type] ?? []) ecouteur({ type })
+			},
 		}
 	}
 	return {
@@ -451,9 +398,7 @@ describe('umamiLoaderScript (inlined by _document)', () => {
 
 	test(`keeps ${WAITING_ROOM_MAX} events at most`, () => {
 		const { win } = run()
-		const gardes = Array.from({ length: 30 }, () =>
-			win[WAITING_ROOM_NAME]('a', {})
-		)
+		const gardes = Array.from({ length: 30 }, () => win[WAITING_ROOM_NAME]('a', {}))
 		assert.equal(gardes.filter(Boolean).length, WAITING_ROOM_MAX)
 	})
 
@@ -461,10 +406,7 @@ describe('umamiLoaderScript (inlined by _document)', () => {
 		const tag = '</script><script>alert(1)//'
 		const source = umamiLoaderScript({ ...ATTRIBUTS, 'data-tag': tag })
 		assert.doesNotMatch(source, /<\/script/i)
-		assert.equal(
-			run({ ...ATTRIBUTS, 'data-tag': tag }).script().attributs['data-tag'],
-			tag
-		)
+		assert.equal(run({ ...ATTRIBUTS, 'data-tag': tag }).script().attributs['data-tag'], tag)
 	})
 })
 
@@ -481,22 +423,20 @@ describe('script attributes', () => {
 	})
 
 	test('never points to the Umami instance itself', () => {
-		for (const value of Object.values(umamiScriptAttributes()))
+		for (const value of Object.values(umamiScriptAttributes())) {
 			assert.doesNotMatch(value, /wadefade|https?:/)
+		}
 	})
 
 	test('umamiDomains: the list given, else the production site', () => {
 		assert.deepEqual(umamiDomains('localhost'), ['localhost'])
-		assert.deepEqual(
-			umamiDomains(' My-Makeup.fr , www.my-makeup.fr,my-makeup.fr'),
-			['my-makeup.fr', 'www.my-makeup.fr']
-		)
+		assert.deepEqual(umamiDomains(' My-Makeup.fr , www.my-makeup.fr,my-makeup.fr'), [
+			'my-makeup.fr',
+			'www.my-makeup.fr',
+		])
 		assert.deepEqual(umamiDomains(''), DEFAULT_UMAMI_DOMAINS)
 		assert.deepEqual(umamiDomains(undefined), DEFAULT_UMAMI_DOMAINS)
-		assert.deepEqual(
-			umamiDomains('https://my-makeup.fr/, "x"'),
-			DEFAULT_UMAMI_DOMAINS
-		)
+		assert.deepEqual(umamiDomains('https://my-makeup.fr/, "x"'), DEFAULT_UMAMI_DOMAINS)
 	})
 
 	test('umamiTag: 50 characters, nothing Umami would refuse', () => {
@@ -528,16 +468,10 @@ describe('proxy headers (src/middleware.js)', () => {
 	})
 
 	test('no cookie, no credentials, no Referer go to Umami', () => {
-		const headers = umamiProxyHeaders(
-			fromTraefik({ authorization: 'Bearer x', 'proxy-authorization': 'y' })
-		)
-		for (const name of [
-			'cookie',
-			'authorization',
-			'proxy-authorization',
-			'referer',
-		])
+		const headers = umamiProxyHeaders(fromTraefik({ authorization: 'Bearer x', 'proxy-authorization': 'y' }))
+		for (const name of ['cookie', 'authorization', 'proxy-authorization', 'referer']) {
 			assert.equal(headers.has(name), false, name)
+		}
 	})
 
 	test('what Umami needs goes along: user agent, body type, cache token', () => {
@@ -576,29 +510,20 @@ describe('proxy headers (src/middleware.js)', () => {
 			'forwarded',
 			'cf-ipcountry',
 			'x-vercel-ip-country',
-		])
+		]) {
 			assert.equal(headers.has(name), false, name)
+		}
 	})
 
 	test('without a usable address, no IP header at all', () => {
-		const headers = umamiProxyHeaders(
-			new Headers({ 'x-forwarded-for': 'unknown', 'x-real-ip': '<script>' })
-		)
+		const headers = umamiProxyHeaders(new Headers({ 'x-forwarded-for': 'unknown', 'x-real-ip': '<script>' }))
 		assert.equal(headers.has('true-client-ip'), false)
 		assert.equal(headers.has('x-forwarded-for'), false)
 	})
 
 	test('visitorIp: last X-Forwarded-For entry, else X-Real-IP', () => {
-		assert.equal(
-			visitorIp(
-				new Headers({ 'x-forwarded-for': '198.51.100.1, 2001:db8::1' })
-			),
-			'2001:db8::1'
-		)
-		assert.equal(
-			visitorIp(new Headers({ 'x-real-ip': '::ffff:127.0.0.1' })),
-			'::ffff:127.0.0.1'
-		)
+		assert.equal(visitorIp(new Headers({ 'x-forwarded-for': '198.51.100.1, 2001:db8::1' })), '2001:db8::1')
+		assert.equal(visitorIp(new Headers({ 'x-real-ip': '::ffff:127.0.0.1' })), '::ffff:127.0.0.1')
 		assert.equal(visitorIp(new Headers()), null)
 	})
 })

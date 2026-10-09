@@ -2,10 +2,11 @@
 // fake Strapi. Launched by tests/auth/run.mjs (npm run test:auth), which
 // builds the app and starts the servers. Ported from
 // plans/outils/auth/front-fixed/auth-fixed.test.mjs.
-import { describe, test } from 'node:test'
+
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
 import { readFileSync } from 'node:fs'
+import { describe, test } from 'node:test'
 import { connexionStrapiOAuth } from '../../src/lib/auth-strapi.js'
 
 const APP = process.env.AF_APP // revalidation on every session read
@@ -17,10 +18,7 @@ const JOURNAL = process.env.AF_JOURNAL
 // Never against the production: local hosts only
 for (const url of [APP, APP_FENETRE, API]) {
 	assert.ok(url, 'lancer avec npm run test:auth')
-	assert.ok(
-		['localhost', '127.0.0.1', '[::1]'].includes(new URL(url).hostname),
-		`cible non locale refusée : ${url}`
-	)
+	assert.ok(['localhost', '127.0.0.1', '[::1]'].includes(new URL(url).hostname), `cible non locale refusée : ${url}`)
 }
 
 const COOKIE_SESSION = /^next-auth\.session-token(\.\d+)?$/
@@ -33,9 +31,7 @@ class Jar {
 			const i = kv.indexOf('=')
 			const name = kv.slice(0, i).trim()
 			const value = kv.slice(i + 1)
-			const expired = attrs.some(
-				a => /max-age=0/i.test(a) || /expires=Thu, 01 Jan 1970/i.test(a)
-			)
+			const expired = attrs.some(a => /max-age=0/i.test(a) || /expires=Thu, 01 Jan 1970/i.test(a))
 			if (expired || value === '') this.c.delete(name)
 			else this.c.set(name, value)
 		}
@@ -63,6 +59,7 @@ async function suivre(jar, chemin, base = APP) {
 	const etapes = []
 	let url = chemin
 	for (let i = 0; i < 5; i++) {
+		// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 		const res = await req(jar, url, {}, base)
 		const location = res.headers.get('location')
 		etapes.push({ status: res.status, location })
@@ -73,14 +70,8 @@ async function suivre(jar, chemin, base = APP) {
 	return etapes
 }
 
-async function login(
-	jar,
-	{ email = 'marie@test.local', password = 'Secret123', name } = {},
-	base = APP
-) {
-	const { csrfToken } = await (
-		await req(jar, '/api/auth/csrf', {}, base)
-	).json()
+async function login(jar, { email = 'marie@test.local', password = 'Secret123', name } = {}, base = APP) {
+	const { csrfToken } = await (await req(jar, '/api/auth/csrf', {}, base)).json()
 	const body = new URLSearchParams({ csrfToken, email, password, json: 'true' })
 	if (name) body.set('name', name)
 	return req(
@@ -102,11 +93,9 @@ async function codeConnexion(identifiants) {
 	return new URL(url).searchParams.get('error')
 }
 
-const session = async (jar, base = APP) =>
-	(await req(jar, '/api/auth/session', {}, base)).json()
+const session = async (jar, base = APP) => (await req(jar, '/api/auth/session', {}, base)).json()
 const reset = () => fetch(`${API}/__reset`)
-const mode = parametres =>
-	fetch(`${API}/__mode?${new URLSearchParams(parametres)}`)
+const mode = parametres => fetch(`${API}/__mode?${new URLSearchParams(parametres)}`)
 const appels = async () => (await fetch(`${API}/__etat`)).json()
 const appelsUsersMe = async () => (await appels())['GET /api/users/me'] ?? 0
 const journal = () => readFileSync(JOURNAL, 'utf8')
@@ -116,17 +105,14 @@ const lignesMiddleware = () =>
 		.split('\n')
 		.filter(ligne => ligne.includes('evt=session_expiree code=middleware'))
 const donneesPage = html =>
-	JSON.parse(
-		/<script id="__NEXT_DATA__" type="application\/json">(.*?)<\/script>/s.exec(
-			html
-		)[1]
-	)
+	JSON.parse(/<script id="__NEXT_DATA__" type="application\/json">(.*?)<\/script>/s.exec(html)[1])
 
 test('AF-01 - a transient 502, 429 or network failure on /users/me keeps the session, which works again once Strapi is back', async () => {
 	await reset()
 	const jar = new Jar()
 	await login(jar)
 	for (const panne of ['502', '429', '503']) {
+		// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 		await mode({ usersMe: panne })
 		const s = await session(jar)
 		assert.ok(s.jwt, `session gardée après ${panne}`)
@@ -140,12 +126,12 @@ test('AF-01 - a transient 502, 429 or network failure on /users/me keeps the ses
 
 test('AF-02 - a 401 from Strapi deletes the session cookies, chunks included', async () => {
 	for (const grosJwt of ['0', '1']) {
+		// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 		await reset()
 		await mode({ grosJwt })
 		const jar = new Jar()
 		await login(jar)
-		if (grosJwt === '1')
-			assert.ok(jar.session().length >= 2, 'cookie découpé en morceaux .0/.1')
+		if (grosJwt === '1') assert.ok(jar.session().length >= 2, 'cookie découpé en morceaux .0/.1')
 		await fetch(`${API}/__revoquer`)
 		assert.deepEqual(await session(jar), {})
 		assert.deepEqual(jar.session(), [], 'plus aucun cookie de session')
@@ -161,10 +147,7 @@ describe('AF-03 - private pages without a valid session: one redirection, no loo
 			[307, 200]
 		)
 		// relative, as in production (curl -I https://my-makeup.fr/auth/profil)
-		assert.equal(
-			etapes[0].location,
-			'/auth/signin?callbackUrl=%2Fauth%2Fprofil'
-		)
+		assert.equal(etapes[0].location, '/auth/signin?callbackUrl=%2Fauth%2Fprofil')
 	})
 
 	test('no session: /auth/init-account is protected too', async () => {
@@ -173,10 +156,7 @@ describe('AF-03 - private pages without a valid session: one redirection, no loo
 			etapes.map(e => e.status),
 			[307, 200]
 		)
-		assert.equal(
-			etapes[0].location,
-			'/auth/signin?callbackUrl=%2Fauth%2Finit-account'
-		)
+		assert.equal(etapes[0].location, '/auth/signin?callbackUrl=%2Fauth%2Finit-account')
 	})
 
 	test('Strapi JWT expired: the middleware redirects once with the « session expirée » message and deletes the cookie', async () => {
@@ -191,15 +171,10 @@ describe('AF-03 - private pages without a valid session: one redirection, no loo
 			etapes.map(e => e.status),
 			[307, 200]
 		)
-		assert.equal(
-			etapes[0].location,
-			'/auth/signin?error=session-expiree&ou=middleware&callbackUrl=%2Fauth%2Fprofil'
-		)
+		assert.equal(etapes[0].location, '/auth/signin?error=session-expiree&ou=middleware&callbackUrl=%2Fauth%2Fprofil')
 		assert.deepEqual(jar.session(), [], 'cookie effacé par le middleware')
 		assert.deepEqual(await session(jar), {})
-		assert.deepEqual(lignesMiddleware().slice(avant), [
-			'[auth] evt=session_expiree code=middleware cause=jwt_expire',
-		])
+		assert.deepEqual(lignesMiddleware().slice(avant), ['[auth] evt=session_expiree code=middleware cause=jwt_expire'])
 	})
 
 	test('Strapi JWT expired, on a click or a prefetch of the client router: the redirect only, the cookie stays for the page load that follows, which gets the message', async () => {
@@ -207,10 +182,7 @@ describe('AF-03 - private pages without a valid session: one redirection, no loo
 		await mode({ ttl: '30' })
 		const jar = new Jar()
 		await login(jar)
-		const buildId = readFileSync(
-			`${process.env.AF_DIST}/BUILD_ID`,
-			'utf8'
-		).trim()
+		const buildId = readFileSync(`${process.env.AF_DIST}/BUILD_ID`, 'utf8').trim()
 		const avant = lignesMiddleware().length
 		for (const entetes of [
 			{ 'x-nextjs-data': '1' },
@@ -220,6 +192,7 @@ describe('AF-03 - private pages without a valid session: one redirection, no loo
 				purpose: 'prefetch',
 			},
 		]) {
+			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 			const res = await req(jar, `/_next/data/${buildId}/auth/profil.json`, {
 				headers: entetes,
 			})
@@ -235,10 +208,7 @@ describe('AF-03 - private pages without a valid session: one redirection, no loo
 
 		// the router then loads the page itself: message, cookie deleted
 		const etapes = await suivre(jar, '/auth/profil')
-		assert.equal(
-			etapes[0].location,
-			'/auth/signin?error=session-expiree&ou=middleware&callbackUrl=%2Fauth%2Fprofil'
-		)
+		assert.equal(etapes[0].location, '/auth/signin?error=session-expiree&ou=middleware&callbackUrl=%2Fauth%2Fprofil')
 		assert.deepEqual(jar.session(), [])
 		assert.equal(lignesMiddleware().length, avant + 1)
 	})
@@ -264,9 +234,7 @@ describe('AF-03 - private pages without a valid session: one redirection, no loo
 		)
 		assert.deepEqual(jar.session(), [])
 		assert.equal(await appelsUsersMe(), 0, 'Strapi jamais appelé')
-		assert.deepEqual(lignesMiddleware().slice(avant), [
-			'[auth] evt=session_expiree code=middleware cause=illisible',
-		])
+		assert.deepEqual(lignesMiddleware().slice(avant), ['[auth] evt=session_expiree code=middleware cause=illisible'])
 	})
 
 	test('Strapi refuses the JWT on /me-makeup (while /users/me still says 200): cookie deleted, « session expirée » message, no loop', async () => {
@@ -277,10 +245,7 @@ describe('AF-03 - private pages without a valid session: one redirection, no loo
 		await mode({ usersMe: '200' })
 		const premiere = await req(jar, '/auth/profil')
 		assert.equal(premiere.status, 307)
-		assert.equal(
-			premiere.headers.get('location'),
-			'/auth/signin?error=session-expiree'
-		)
+		assert.equal(premiere.headers.get('location'), '/auth/signin?error=session-expiree')
 		assert.equal(premiere.headers.get('cache-control'), 'private, no-store')
 		assert.deepEqual(jar.session(), [], 'cookie effacé par la page')
 		const etapes = await suivre(jar, '/auth/signin?error=session-expiree')
@@ -300,6 +265,7 @@ describe('AF-03 - private pages without a valid session: one redirection, no loo
 		const etapes = []
 		let url = '/auth/init-account'
 		for (let i = 0; i < 5; i++) {
+			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 			const res = await req(jar, url)
 			const location = res.headers.get('location')
 			etapes.push({ status: res.status, location })
@@ -316,8 +282,9 @@ describe('AF-03 - private pages without a valid session: one redirection, no loo
 			'/auth/signin?error=session-expiree&ou=jwt_expire&callbackUrl=%2Fauth%2Finit-account'
 		)
 		assert.deepEqual(jar.session(), [], 'cookie effacé')
-		for (const html of pages)
+		for (const html of pages) {
 			assert.doesNotMatch(html, /Vérification de votre adresse email/)
+		}
 	})
 
 	test('/users/me refuses the JWT at the session read of /auth/profil?publicView=true: the page to come back to keeps its query, as the middleware does', async () => {
@@ -344,10 +311,7 @@ describe('AF-03 - private pages without a valid session: one redirection, no loo
 		await mode({ usersMe: '401' })
 		const res = await req(jar, '/auth/init-account', {}, APP_FENETRE)
 		assert.equal(res.status, 307)
-		assert.equal(
-			res.headers.get('location'),
-			'/auth/signin?error=session-expiree'
-		)
+		assert.equal(res.headers.get('location'), '/auth/signin?error=session-expiree')
 		assert.doesNotMatch(await res.text(), /Vérification de votre adresse email/)
 		assert.deepEqual(jar.session(), [], 'cookie effacé par la page')
 		assert.equal(await appelsUsersMe(), 1, 'un seul appel, celui de la page')
@@ -356,6 +320,7 @@ describe('AF-03 - private pages without a valid session: one redirection, no loo
 
 test('AF-04 - session.expires never goes past the expiry of the Strapi JWT', async () => {
 	for (const ttl of [7200, 30 * 86400]) {
+		// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 		await reset()
 		await mode({ ttl: String(ttl) })
 		const jar = new Jar()
@@ -375,26 +340,25 @@ describe('AF-05 - Strapi is asked at most once per window, with a 3 s timeout', 
 		await reset()
 		const jar = new Jar()
 		await login(jar, {}, APP_FENETRE)
-		for (let i = 0; i < 5; i++) assert.ok((await session(jar, APP_FENETRE)).jwt)
+		for (let i = 0; i < 5; i++) {
+			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
+			assert.ok((await session(jar, APP_FENETRE)).jwt)
+		}
 		assert.equal((await req(jar, '/auth/profil', {}, APP_FENETRE)).status, 200)
 		assert.equal(await appelsUsersMe(), 0, 'aucun appel dans la fenêtre')
 
 		const limite = Date.now() + FENETRE_MS + 5000
+		// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 		while ((await appelsUsersMe()) === 0 && Date.now() < limite) {
 			await session(jar, APP_FENETRE)
 			await new Promise(resolve => setTimeout(resolve, 200))
 		}
-		assert.equal(
-			await appelsUsersMe(),
-			1,
-			'un appel une fois la fenêtre passée'
-		)
-		for (let i = 0; i < 3; i++) await session(jar, APP_FENETRE)
-		assert.equal(
-			await appelsUsersMe(),
-			1,
-			'puis plus rien jusqu’à la fenêtre suivante'
-		)
+		assert.equal(await appelsUsersMe(), 1, 'un appel une fois la fenêtre passée')
+		for (let i = 0; i < 3; i++) {
+			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
+			await session(jar, APP_FENETRE)
+		}
+		assert.equal(await appelsUsersMe(), 1, 'puis plus rien jusqu’à la fenêtre suivante')
 	})
 
 	test('Strapi not answering: the session read gives up after about 3 s and keeps the session', async () => {
@@ -413,37 +377,19 @@ describe('AF-05 - Strapi is asked at most once per window, with a 3 s timeout', 
 
 test('AF-06 - wrong password: code identifiants-invalides, no exception, logged without personal data', async () => {
 	await reset()
-	assert.equal(
-		await codeConnexion({ password: 'Mauvais123' }),
-		'identifiants-invalides'
-	)
-	assert.equal(
-		await codeConnexion({ email: 'inconnue@test.local' }),
-		'identifiants-invalides'
-	)
+	assert.equal(await codeConnexion({ password: 'Mauvais123' }), 'identifiants-invalides')
+	assert.equal(await codeConnexion({ email: 'inconnue@test.local' }), 'identifiants-invalides')
 	const lignes = journal()
-	assert.match(
-		lignes,
-		/\[auth\] evt=connexion code=identifiants-invalides ms=\d+/
-	)
+	assert.match(lignes, /\[auth\] evt=connexion code=identifiants-invalides ms=\d+/)
 	assert.match(lignes, /\[auth\] evt=connexion code=ok ms=\d+/)
 	assert.doesNotMatch(lignes, /TypeError|Cannot read properties/)
 })
 
 test('AF-07 - sign-up: name or email taken → email-ou-nom-deja-pris, short name → nom-trop-court, new account signed in', async () => {
 	await reset()
-	assert.equal(
-		await codeConnexion({ email: 'autre@test.local', name: 'marie' }),
-		'email-ou-nom-deja-pris'
-	)
-	assert.equal(
-		await codeConnexion({ email: 'marie@test.local', name: 'Marie2' }),
-		'email-ou-nom-deja-pris'
-	)
-	assert.equal(
-		await codeConnexion({ email: 'autre@test.local', name: 'ab' }),
-		'nom-trop-court'
-	)
+	assert.equal(await codeConnexion({ email: 'autre@test.local', name: 'marie' }), 'email-ou-nom-deja-pris')
+	assert.equal(await codeConnexion({ email: 'marie@test.local', name: 'Marie2' }), 'email-ou-nom-deja-pris')
+	assert.equal(await codeConnexion({ email: 'autre@test.local', name: 'ab' }), 'nom-trop-court')
 	const jar = new Jar()
 	const res = await login(jar, {
 		email: 'nouvelle@test.local',
@@ -486,15 +432,9 @@ describe('AF-08 - rate limit, Strapi down and Google refused give readable codes
 	})
 
 	test('the error page shows the French message of the code, never the raw query', async () => {
-		const page = await req(
-			new Jar(),
-			'/auth/error?error=email-deja-avec-mot-de-passe'
-		)
+		const page = await req(new Jar(), '/auth/error?error=email-deja-avec-mot-de-passe')
 		assert.equal(page.status, 200)
-		assert.match(
-			await page.text(),
-			/Cet email a déjà un compte avec un mot de passe/
-		)
+		assert.match(await page.text(), /Cet email a déjà un compte avec un mot de passe/)
 		// anything else is first reduced to a code of the list, in the URL too
 		const etapes = await suivre(
 			new Jar(),
@@ -504,9 +444,7 @@ describe('AF-08 - rate limit, Strapi down and Google refused give readable codes
 			{ status: 307, location: '/auth/error?error=erreur-inconnue' },
 			{ status: 200, location: null },
 		])
-		const html = await (
-			await req(new Jar(), '/auth/error?error=erreur-inconnue')
-		).text()
+		const html = await (await req(new Jar(), '/auth/error?error=erreur-inconnue')).text()
 		assert.match(html, /Une erreur est survenue/)
 		assert.deepEqual(
 			(await suivre(new Jar(), '/auth/error?error=OAuthCallback'))[0].location,
@@ -515,13 +453,8 @@ describe('AF-08 - rate limit, Strapi down and Google refused give readable codes
 	})
 
 	test('providers: Google and email/password only, Facebook removed', async () => {
-		const fournisseurs = await (
-			await req(new Jar(), '/api/auth/providers')
-		).json()
-		assert.deepEqual(Object.keys(fournisseurs).sort(), [
-			'credentials',
-			'google',
-		])
+		const fournisseurs = await (await req(new Jar(), '/api/auth/providers')).json()
+		assert.deepEqual(Object.keys(fournisseurs).sort(), ['credentials', 'google'])
 	})
 })
 
@@ -561,18 +494,11 @@ describe('AF-10 - private pages: no JWT, no hash, no token in the HTML, never ca
 		assert.equal(page.status, 200)
 		assert.equal(page.headers.get('cache-control'), 'private, no-store')
 		const html = await page.text()
-		assert.doesNotMatch(
-			html,
-			/"jwt"|\$2[aby]\$|resetPasswordToken|confirmationToken|faux-jeton|admin@test\.local/
-		)
+		assert.doesNotMatch(html, /"jwt"|\$2[aby]\$|resetPasswordToken|confirmationToken|faux-jeton|admin@test\.local/)
 		const { props } = donneesPage(html)
 		assert.deepEqual(Object.keys(props.pageProps), ['data'])
 		assert.equal(props.pageProps.data.city, 'Annecy')
-		assert.deepEqual(Object.keys(props.pageProps.data.user).sort(), [
-			'email',
-			'id',
-			'username',
-		])
+		assert.deepEqual(Object.keys(props.pageProps.data.user).sort(), ['email', 'id', 'username'])
 		assert.equal(props.pageProps.data.main_picture.createdBy, undefined)
 	})
 
@@ -627,11 +553,10 @@ test('production server without NEXTAUTH_SECRET: refuses to start', async () => 
 		NEXTAUTH_SECRET: '',
 		NEXTAUTH_URL: 'http://127.0.0.1:3996',
 	}
-	const serveur = spawn(
-		process.execPath,
-		[process.env.AF_NEXT, 'start', '-p', '3996', '-H', '127.0.0.1'],
-		{ env, stdio: ['ignore', 'pipe', 'pipe'] }
-	)
+	const serveur = spawn(process.execPath, [process.env.AF_NEXT, 'start', '-p', '3996', '-H', '127.0.0.1'], {
+		env,
+		stdio: ['ignore', 'pipe', 'pipe'],
+	})
 	let sortie = ''
 	serveur.stdout.on('data', morceau => (sortie += morceau))
 	serveur.stderr.on('data', morceau => (sortie += morceau))

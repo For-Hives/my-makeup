@@ -1,3 +1,4 @@
+const webVitalPagePattern1 = /[?#]/
 /**
  * Field Web Vitals sent to Umami as a `web-vitals` event (MES-10, plans/04
  * §3.1, monthly review): one event per metric of a sampled page load, with
@@ -27,12 +28,9 @@ const PAGE_MAX = 99
  * @returns {number}
  */
 export function webVitalsSampleRate(raw) {
-	if (raw === undefined || raw === null || String(raw).trim() === '')
-		return DEFAULT_WEB_VITALS_SAMPLE
+	if (raw === undefined || raw === null || String(raw).trim() === '') return DEFAULT_WEB_VITALS_SAMPLE
 	const rate = Number(raw)
-	return Number.isFinite(rate) && rate >= 0 && rate <= 1
-		? rate
-		: DEFAULT_WEB_VITALS_SAMPLE
+	return Number.isFinite(rate) && rate >= 0 && rate <= 1 ? rate : DEFAULT_WEB_VITALS_SAMPLE
 }
 
 /**
@@ -64,7 +62,7 @@ export function webVitalRating(name, value) {
  */
 export function webVitalPage(page) {
 	if (typeof page !== 'string' || !page.startsWith('/')) return null
-	return page.split(/[?#]/)[0].slice(0, PAGE_MAX)
+	return page.split(webVitalPagePattern1)[0].slice(0, PAGE_MAX)
 }
 
 /**
@@ -79,10 +77,8 @@ export function webVitalPage(page) {
 export function webVitalData(metric, page) {
 	if (!metric || typeof metric !== 'object') return null
 	const { name, value, rating } = metric
-	if (!Object.prototype.hasOwnProperty.call(WEB_VITALS_THRESHOLDS, name))
-		return null
-	if (typeof value !== 'number' || !Number.isFinite(value) || value < 0)
-		return null
+	if (!Object.hasOwn(WEB_VITALS_THRESHOLDS, name)) return null
+	if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) return null
 	const path = webVitalPage(page)
 	if (path === null) return null
 	return {

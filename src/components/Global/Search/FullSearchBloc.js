@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react'
 import { MagnifyingGlassIcon } from '@heroicons/react/20/solid'
 import { MapPinIcon } from '@heroicons/react/24/outline'
+import { useEffect, useState } from 'react'
 
 /**
  * Search form of the search page (UI-07): prefilled with the search of the
@@ -28,73 +28,60 @@ function FullSearchBloc({ search = '', city = '', onSearch }) {
 			}
 		>
 			<div className={'flex max-w-5xl justify-between'}>
-				<form
-					onSubmit={handleSubmit}
-					role="search"
-					className={
-						'flex w-full flex-col flex-wrap items-center justify-between gap-6 md:flex-row lg:flex-nowrap'
-					}
-				>
-					<div
-						className={
-							'flex w-full flex-col flex-wrap gap-6 md:w-auto md:flex-row lg:flex-nowrap'
-						}
+				<search className="contents">
+					<form
+						onSubmit={handleSubmit}
+						className={'flex w-full flex-col flex-wrap items-center justify-between gap-6 md:flex-row lg:flex-nowrap'}
 					>
-						<div className={'relative'}>
-							<label htmlFor="recherche-prestation" className="sr-only">
-								Prestation recherchée
-							</label>
-							<MagnifyingGlassIcon
-								className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 transform text-indigo-900"
-								aria-hidden="true"
-							/>
-							<input
-								id="recherche-prestation"
-								type="search"
-								data-cy="search-input"
-								className={
-									'flex w-full items-center rounded-lg border-2 border-indigo-900 bg-transparent py-2 pl-12 pr-6 text-sm leading-6 text-indigo-900 lg:w-96'
-								}
-								placeholder={
-									"Essayez 'Maquilleuse mariée', 'Maquilleuse événements'..."
-								}
-								value={searchTerm}
-								onChange={e => setSearchTerm(e.target.value)}
-							/>
+						<div className={'flex w-full flex-col flex-wrap gap-6 md:w-auto md:flex-row lg:flex-nowrap'}>
+							<div className={'relative'}>
+								<label htmlFor="recherche-prestation" className="sr-only">
+									Prestation recherchée
+								</label>
+								<MagnifyingGlassIcon
+									className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 transform text-indigo-900"
+									aria-hidden="true"
+								/>
+								<input
+									id="recherche-prestation"
+									type="search"
+									data-cy="search-input"
+									className={
+										'flex w-full items-center rounded-lg border-2 border-indigo-900 bg-transparent py-2 pl-12 pr-6 text-sm leading-6 text-indigo-900 lg:w-96'
+									}
+									placeholder={"Essayez 'Maquilleuse mariée', 'Maquilleuse événements'..."}
+									value={searchTerm}
+									onChange={e => setSearchTerm(e.target.value)}
+								/>
+							</div>
+							<div className={'relative'}>
+								<label htmlFor="recherche-ville" className="sr-only">
+									Ville de la prestation
+								</label>
+								<MapPinIcon
+									className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 transform text-indigo-900"
+									aria-hidden="true"
+								/>
+								<input
+									id="recherche-ville"
+									data-cy="city-input"
+									autoComplete="address-level2"
+									className={
+										'flex w-full items-center rounded-lg border-2 border-indigo-900 bg-transparent py-2 pl-12 pr-6 text-sm leading-6 text-indigo-900 lg:w-96'
+									}
+									placeholder={'Lieu de la mission (ex: Paris, Lyon, Marseille...)'}
+									value={ville}
+									onChange={e => setVille(e.target.value)}
+								/>
+							</div>
 						</div>
-						<div className={'relative'}>
-							<label htmlFor="recherche-ville" className="sr-only">
-								Ville de la prestation
-							</label>
-							<MapPinIcon
-								className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 transform text-indigo-900"
-								aria-hidden="true"
-							/>
-							<input
-								id="recherche-ville"
-								data-cy="city-input"
-								autoComplete="address-level2"
-								className={
-									'flex w-full items-center rounded-lg border-2 border-indigo-900 bg-transparent py-2 pl-12 pr-6 text-sm leading-6 text-indigo-900 lg:w-96'
-								}
-								placeholder={
-									'Lieu de la mission (ex: Paris, Lyon, Marseille...)'
-								}
-								value={ville}
-								onChange={e => setVille(e.target.value)}
-							/>
+						<div className={'w-full items-center justify-end md:w-auto'}>
+							<button data-cy="search-button" type="submit" className={'btn-primary w-full'}>
+								Trouver une maquilleuse
+							</button>
 						</div>
-					</div>
-					<div className={'w-full items-center justify-end md:w-auto'}>
-						<button
-							data-cy="search-button"
-							type="submit"
-							className={'btn-primary w-full'}
-						>
-							Trouver une maquilleuse
-						</button>
-					</div>
-				</form>
+					</form>
+				</search>
 			</div>
 		</div>
 	)

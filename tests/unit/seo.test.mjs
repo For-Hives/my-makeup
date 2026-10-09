@@ -1,7 +1,8 @@
-import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
-import { createRequire } from 'node:module'
 import { readFileSync } from 'node:fs'
+import { createRequire } from 'node:module'
+import { describe, test } from 'node:test'
+import { retrograderTitres } from '../../src/lib/contenu.js'
 import {
 	balisesMeta,
 	descriptionMeta,
@@ -18,12 +19,7 @@ import {
 	tronquer,
 	urlImagePartage,
 } from '../../src/lib/seo/meta.js'
-import {
-	CHEMINS_NOINDEX,
-	NOINDEX,
-	robotsPourChemin,
-} from '../../src/lib/seo/robots.js'
-import { retrograderTitres } from '../../src/lib/contenu.js'
+import { CHEMINS_NOINDEX, NOINDEX, robotsPourChemin } from '../../src/lib/seo/robots.js'
 
 const require = createRequire(import.meta.url)
 const SITE = 'https://my-makeup.fr'
@@ -79,10 +75,7 @@ describe('titles and descriptions (plans/02 U44-U45)', () => {
 		assert.doesNotMatch(vides.titre, /null|undefined/)
 		assert.ok(vides.titre.length <= 60, vides.titre)
 		const s = seoProfil({ profil, slug: 'zoe-lefevre', site: SITE })
-		assert.equal(
-			s.titre,
-			'Zoé Lefèvre – Maquillage mariée à Annecy | My-Makeup'
-		)
+		assert.equal(s.titre, 'Zoé Lefèvre – Maquillage mariée à Annecy | My-Makeup')
 		const long = seoProfil({
 			profil: {
 				attributes: {
@@ -95,33 +88,21 @@ describe('titles and descriptions (plans/02 U44-U45)', () => {
 			site: SITE,
 		})
 		assert.ok(long.titre.length <= 60, long.titre)
-		assert.equal(
-			titrePage('Maquillage mariée'),
-			'Maquillage mariée | My-Makeup'
-		)
+		assert.equal(titrePage('Maquillage mariée'), 'Maquillage mariée | My-Makeup')
 		assert.ok(titrePage('x'.repeat(80)).length <= 60)
 		assert.equal(tronquer('un deux trois quatre', 12), 'un deux…')
 	})
 
 	test('U45 meta description of 70 to 155 characters, without HTML', () => {
 		const s = seoProfil({ profil, slug: 'zoe-lefevre', site: SITE })
-		assert.ok(
-			s.description.length >= 70 && s.description.length <= 155,
-			s.description
-		)
+		assert.ok(s.description.length >= 70 && s.description.length <= 155, s.description)
 		const court = seoProfil({
 			profil: { attributes: { ...profil.attributes, description: 'Court.' } },
 			slug: 'x',
 			site: SITE,
 		})
-		assert.ok(
-			court.description.length >= 70 && court.description.length <= 155,
-			court.description
-		)
-		assert.match(
-			court.description,
-			/^Découvrez Zoé Lefèvre, Maquillage mariée à Annecy/
-		)
+		assert.ok(court.description.length >= 70 && court.description.length <= 155, court.description)
+		assert.match(court.description, /^Découvrez Zoé Lefèvre, Maquillage mariée à Annecy/)
 		assert.equal(
 			descriptionMeta(
 				'<p>Un **texte** [lien](https://x.test) assez long pour passer le seuil de soixante-dix caractères.</p>',
@@ -169,11 +150,9 @@ describe('titles and descriptions (plans/02 U44-U45)', () => {
 				talent: { slug: 't', title: 'T', description: 'Court.' },
 				site: SITE,
 			}),
-		])
-			assert.ok(
-				s.description.length >= 70 && s.description.length <= 155,
-				s.description
-			)
+		]) {
+			assert.ok(s.description.length >= 70 && s.description.length <= 155, s.description)
+		}
 		// no SEO text: the excerpt, else the content, when long enough
 		const contenu =
 			'Un article fictif sur le prix du maquillage de mariée, de l’essai au jour J, et ce que comprend le déplacement.'
@@ -194,27 +173,14 @@ describe('titles and descriptions (plans/02 U44-U45)', () => {
 		})
 		assert.ok(long.titre.length <= 60, long.titre)
 		assert.ok(long.description.length <= 155, long.description)
-		assert.equal(
-			seoPage({ titre: 'Contact', description: 'd', chemin: '/c', site: SITE })
-				.titre,
-			'Contact | My-Makeup'
-		)
+		assert.equal(seoPage({ titre: 'Contact', description: 'd', chemin: '/c', site: SITE }).titre, 'Contact | My-Makeup')
 
-		const accueil = readFileSync(
-			new URL('../../src/pages/index.js', import.meta.url),
-			'utf8'
-		)
+		const accueil = readFileSync(new URL('../../src/pages/index.js', import.meta.url), 'utf8')
 		const titre = /titre: '([^']*)'/.exec(accueil)?.[1]
 		const description = /description:\s*'([^']*)'/.exec(accueil)?.[1]
 		assert.ok(titre && titre.length <= 60, titre)
-		assert.ok(
-			description && description.length >= 70 && description.length <= 155,
-			description
-		)
-		assert.equal(
-			seoPage({ titre, description, chemin: '/', site: SITE }).titre,
-			titre
-		)
+		assert.ok(description && description.length >= 70 && description.length <= 155, description)
+		assert.equal(seoPage({ titre, description, chemin: '/', site: SITE }).titre, titre)
 	})
 })
 
@@ -226,11 +192,7 @@ describe('canonical, robots and Open Graph (plans/02 U46, U51, U52)', () => {
 			site: 'https://my-makeup.fr/',
 		})
 		assert.equal(s.url, 'https://my-makeup.fr/profil/zoe-lefevre')
-		assert.equal(
-			seoPage({ titre: 'Accueil', description: 'd', chemin: '/', site: SITE })
-				.url,
-			'https://my-makeup.fr'
-		)
+		assert.equal(seoPage({ titre: 'Accueil', description: 'd', chemin: '/', site: SITE }).url, 'https://my-makeup.fr')
 		assert.equal(
 			seoTalent({
 				talent: { slug: 'maquillage-mariee', title: 'Mariée' },
@@ -251,14 +213,12 @@ describe('canonical, robots and Open Graph (plans/02 U46, U51, U52)', () => {
 		assert.equal(meta(balises, 'og:title'), s.titre)
 		assert.equal(meta(balises, 'og:description'), s.description)
 		assert.equal(meta(balises, 'og:image'), 'https://r2.example.test/zoe.webp')
-		assert.equal(
-			meta(balises, 'og:url'),
-			'https://my-makeup.fr/profil/zoe-lefevre'
-		)
+		assert.equal(meta(balises, 'og:url'), 'https://my-makeup.fr/profil/zoe-lefevre')
 		assert.equal(meta(balises, 'twitter:card'), 'summary_large_image')
 		assert.equal(meta(balises, 'robots'), undefined)
-		for (const b of balises)
+		for (const b of balises) {
 			assert.doesNotMatch(b.contenu, /\b(null|undefined)\b/, b.cle)
+		}
 		const sansPhoto = seoProfil({
 			profil: {
 				attributes: { ...profil.attributes, main_picture: { data: null } },
@@ -278,14 +238,9 @@ describe('canonical, robots and Open Graph (plans/02 U46, U51, U52)', () => {
 			seoArticle({ article: { slug: 'a', title: 'A' }, site: SITE }),
 		]) {
 			const b = balisesMeta(page)
-			for (const cle of [
-				'og:title',
-				'og:description',
-				'og:image',
-				'og:url',
-				'twitter:card',
-			])
+			for (const cle of ['og:title', 'og:description', 'og:image', 'og:url', 'twitter:card']) {
 				assert.ok(meta(b, cle), `${page.url} ${cle}`)
+			}
 			assert.match(meta(b, 'og:image'), /^https:\/\//)
 		}
 	})
@@ -300,10 +255,7 @@ describe('canonical, robots and Open Graph (plans/02 U46, U51, U52)', () => {
 		assert.equal(meta(balisesMeta(coquille), 'robots'), NOINDEX)
 		// without a published channel, the quote form makes her publiable
 		const sansCanal = { attributes: { ...profil.attributes, network: {} } }
-		assert.equal(
-			seoProfil({ profil: sansCanal, slug: 'x', site: SITE }).indexable,
-			false
-		)
+		assert.equal(seoProfil({ profil: sansCanal, slug: 'x', site: SITE }).indexable, false)
 		assert.equal(
 			seoProfil({
 				profil: sansCanal,
@@ -313,23 +265,12 @@ describe('canonical, robots and Open Graph (plans/02 U46, U51, U52)', () => {
 			}).indexable,
 			true
 		)
-		for (const p of [
-			'/auth',
-			'/auth/signin',
-			'/auth/profil',
-			'/search',
-			'/404',
-		])
+		for (const p of ['/auth', '/auth/signin', '/auth/profil', '/search', '/404']) {
 			assert.equal(robotsPourChemin(p), NOINDEX, p)
-		for (const p of [
-			'/',
-			'/profil/[username]',
-			'/authentique',
-			'/searching',
-			'/blog',
-			undefined,
-		])
+		}
+		for (const p of ['/', '/profil/[username]', '/authentique', '/searching', '/blog', undefined]) {
 			assert.equal(robotsPourChemin(p), null, String(p))
+		}
 	})
 
 	test('U51 shared picture: a light Strapi copy, else the 1200 px optimizer on the allowed host, else the original', () => {
@@ -370,10 +311,7 @@ describe('canonical, robots and Open Graph (plans/02 U46, U51, U52)', () => {
 				url,
 				`https://my-makeup.fr/_next/image?url=${encodeURIComponent(`${R2}/photo de zoé.jpg`)}&w=1200&q=75`
 			)
-			assert.equal(
-				new URL(url).searchParams.get('url'),
-				`${R2}/photo de zoé.jpg`
-			)
+			assert.equal(new URL(url).searchParams.get('url'), `${R2}/photo de zoé.jpg`)
 			assert.doesNotMatch(url.replace(/^https:\/\//, ''), /\/\//)
 		}
 		// another host, not allowed by next/image: the original
@@ -381,10 +319,7 @@ describe('canonical, robots and Open Graph (plans/02 U46, U51, U52)', () => {
 			urlImagePartage({ url: 'https://r2.example.test/p.webp', formats: {} }),
 			'https://r2.example.test/p.webp'
 		)
-		assert.equal(
-			urlImagePartage({ url: '/uploads/p.jpg', formats: {} }),
-			'/uploads/p.jpg'
-		)
+		assert.equal(urlImagePartage({ url: '/uploads/p.jpg', formats: {} }), '/uploads/p.jpg')
 		assert.equal(urlImagePartage(null), '')
 
 		// the profile: the light picture in og:image, the original in the JSON-LD
@@ -407,9 +342,7 @@ describe('canonical, robots and Open Graph (plans/02 U46, U51, U52)', () => {
 	test('the optimizer hosts are the images.remotePatterns of next.config.js', () => {
 		const config = require('../../next.config.js')
 		assert.deepEqual(
-			config.images.remotePatterns
-				.filter(m => m.protocol === 'https' && m.pathname === '/**')
-				.map(m => m.hostname),
+			config.images.remotePatterns.filter(m => m.protocol === 'https' && m.pathname === '/**').map(m => m.hostname),
 			HOTES_OPTIMISEUR
 		)
 	})
@@ -420,10 +353,9 @@ describe('canonical, robots and Open Graph (plans/02 U46, U51, U52)', () => {
 		const sources = regles.map(r => r.source)
 		for (const prefixe of CHEMINS_NOINDEX) {
 			assert.ok(sources.includes(prefixe), prefixe)
-			for (const r of regles)
-				assert.deepEqual(r.headers, [
-					{ key: 'X-Robots-Tag', value: 'noindex, follow' },
-				])
+			for (const r of regles) {
+				assert.deepEqual(r.headers, [{ key: 'X-Robots-Tag', value: 'noindex, follow' }])
+			}
 		}
 		assert.ok(sources.includes('/auth/:path*'))
 	})
@@ -461,21 +393,14 @@ describe('JSON-LD (plans/02 U47-U50)', () => {
 			priceCurrency: 'EUR',
 		})
 		assert.equal(invitee.priceSpecification, null)
-		assert.deepEqual(personne.subjectOf.image, [
-			'https://api.example.test/uploads/g1.webp',
-		])
+		assert.deepEqual(personne.subjectOf.image, ['https://api.example.test/uploads/g1.webp'])
 		assert.equal(ariane['@type'], 'BreadcrumbList')
 	})
 
 	test('U48 no email, phone, postal address nor rating; nothing null once serialised', () => {
-		const json = seoProfil({ profil, slug: 'zoe-lefevre', site: SITE })
-			.jsonLd.map(serialiserJsonLd)
-			.join('\n')
+		const json = seoProfil({ profil, slug: 'zoe-lefevre', site: SITE }).jsonLd.map(serialiserJsonLd).join('\n')
 		assert.doesNotMatch(json, /zoe@example\.test|39 98|0639980001|mailto|tel:/)
-		assert.doesNotMatch(
-			json,
-			/PostalAddress|streetAddress|AggregateRating|Review/
-		)
+		assert.doesNotMatch(json, /PostalAddress|streetAddress|AggregateRating|Review/)
 		assert.doesNotMatch(json, /null|undefined/)
 	})
 
@@ -493,8 +418,7 @@ describe('JSON-LD (plans/02 U47-U50)', () => {
 
 	test('U49 BreadcrumbList from the home page', () => {
 		assert.deepEqual(
-			seoArticle({ article: { slug: 'prix', title: 'Prix 2027' }, site: SITE })
-				.jsonLd[0].itemListElement,
+			seoArticle({ article: { slug: 'prix', title: 'Prix 2027' }, site: SITE }).jsonLd[0].itemListElement,
 			[
 				{
 					'@type': 'ListItem',
@@ -524,14 +448,8 @@ describe('JSON-LD (plans/02 U47-U50)', () => {
 			name: '</script><script>alert(1)</script> & co',
 		})
 		assert.doesNotMatch(json, /[<>&]/)
-		assert.equal(
-			JSON.parse(json).name,
-			'</script><script>alert(1)</script> & co'
-		)
-		assert.deepEqual(
-			sansVides({ a: null, b: [], c: { d: '' }, e: 0, f: [null, 'x'] }),
-			{ e: 0, f: ['x'] }
-		)
+		assert.equal(JSON.parse(json).name, '</script><script>alert(1)</script> & co')
+		assert.deepEqual(sansVides({ a: null, b: [], c: { d: '' }, e: 0, f: [null, 'x'] }), { e: 0, f: ['x'] })
 	})
 })
 

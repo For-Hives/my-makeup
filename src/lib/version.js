@@ -1,17 +1,15 @@
+const shortCommitPattern1 = /^[0-9a-f]{7,40}$/i
 /**
  * Version of the running build, shown by /api/health (URG-09) and sent with
  * every Umami event as its `tag` (MES-10, plans/04 §3.1), so that each event
  * can be tied to a deployment.
  */
 
-const clean = value =>
-	typeof value === 'string' && value.trim() !== '' ? value.trim() : null
+const clean = value => (typeof value === 'string' && value.trim() !== '' ? value.trim() : null)
 
 const shortCommit = value => {
 	const commit = clean(value)
-	return commit !== null && /^[0-9a-f]{7,40}$/i.test(commit)
-		? commit.slice(0, 7).toLowerCase()
-		: null
+	return commit !== null && shortCommitPattern1.test(commit) ? commit.slice(0, 7).toLowerCase() : null
 }
 
 /**
@@ -24,10 +22,5 @@ const shortCommit = value => {
  * @returns {string}
  */
 export function deployedVersion({ buildVersion, commit, packageVersion } = {}) {
-	return (
-		clean(buildVersion) ??
-		shortCommit(commit) ??
-		clean(packageVersion) ??
-		'unknown'
-	)
+	return clean(buildVersion) ?? shortCommit(commit) ?? clean(packageVersion) ?? 'unknown'
 }

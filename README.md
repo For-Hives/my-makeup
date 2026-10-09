@@ -51,9 +51,19 @@ That is the list of technologies that My-Makeup use.
 > > - [HeadlessUI](https://headlessui.com/)
 > > - [NextAuth](https://next-auth.js.org/)
 > > - [Resend](https://resend.com/) (contact form; [MailGun](https://www.mailgun.com/) while RESEND_API_KEY is unset)
-> > - [Prettier](https://prettier.io/)
-> > - [EsLint](https://eslint.org/)
+> > - [Biome](https://biomejs.dev/)
 > > - [Husky](https://typicode.github.io/husky/#/)
+
+Linting, formatting and import organization use Biome 2.5.13 (`biome.json`).
+
+- `npm run check`: validate everything, failing on errors and warnings (also run in CI).
+- `npm run check:write`: apply formatting, safe lint fixes and import organization.
+- `npm run lint`: validate lint rules without warnings.
+- `npm run format`: write formatting; `npm run format:check`: verify formatting.
+- `npm test`, `npm run test:auth`, `npm run test:regression`: unit, authentication and browser tests.
+- `npm run build`: production build (requires the API URL documented in `.env.exemple`).
+
+The commit hook checks staged supported files with Biome and rejects warnings.
 
 > **CI**
 >

@@ -1,3 +1,7 @@
+const profilCreePattern1 = /already exists/i
+const photoRefuseePattern2 = /\bFile not allowed\b/
+const messageEchecSauvegardePattern3 = /\b([a-z_]+) must be at (least|most) (\d+) characters/
+const messageEchecSauvegardePattern4 = /does not exist/i
 /**
  * Honest saves of the artist's space (UI-01, UI-05, plans/01 §3.2): the save
  * itself, the sections a save belongs to (`profile_save` event), the name
@@ -36,18 +40,13 @@ const LIBELLES_CHAMPS = {
 }
 
 const MESSAGES = {
-	reseau:
-		"Connexion impossible : tes modifications n'ont pas été enregistrées. Vérifie ta connexion puis réessaie.",
-	session:
-		"Ta session a expiré : tes modifications n'ont pas été enregistrées, reconnecte-toi.",
-	'trop-de-tentatives':
-		"Trop d'essais : tes modifications n'ont pas été enregistrées, réessaie dans quelques minutes.",
+	reseau: "Connexion impossible : tes modifications n'ont pas été enregistrées. Vérifie ta connexion puis réessaie.",
+	session: "Ta session a expiré : tes modifications n'ont pas été enregistrées, reconnecte-toi.",
+	'trop-de-tentatives': "Trop d'essais : tes modifications n'ont pas été enregistrées, réessaie dans quelques minutes.",
 	indisponible:
 		"Le service est momentanément indisponible : tes modifications n'ont pas été enregistrées. Réessaie dans quelques minutes.",
-	'profil-absent':
-		"Ton profil n'a pas été trouvé : recharge la page puis réessaie.",
-	refus:
-		"Tes modifications n'ont pas été enregistrées : vérifie les champs puis réessaie.",
+	'profil-absent': "Ton profil n'a pas été trouvé : recharge la page puis réessaie.",
+	refus: "Tes modifications n'ont pas été enregistrées : vérifie les champs puis réessaie.",
 	'photo-refusee':
 		"Choisis à nouveau ta photo : elle n'a pas été acceptée, et tes modifications n'ont pas été enregistrées.",
 	'photo-retiree':
@@ -64,9 +63,7 @@ function texteErreur(corps) {
 	const erreur = corps && typeof corps === 'object' ? corps.error : null
 	if (!erreur || typeof erreur !== 'object') return ''
 	const details = erreur.details?.moreDetails
-	return [details, erreur.message]
-		.filter(texte => typeof texte === 'string')
-		.join(' ')
+	return [details, erreur.message].filter(texte => typeof texte === 'string').join(' ')
 }
 
 /**
@@ -81,7 +78,7 @@ function texteErreur(corps) {
  * @returns {boolean}
  */
 export function photoRefusee(status, corps) {
-	return status === 400 && /\bFile not allowed\b/.test(texteErreur(corps))
+	return status === 400 && photoRefuseePattern2.test(texteErreur(corps))
 }
 
 /**
@@ -91,11 +88,8 @@ export function photoRefusee(status, corps) {
  * @returns {number[]}
  */
 export function fichiersRefuses(corps) {
-	const ids =
-		corps && typeof corps === 'object' ? corps.error?.details?.files : null
-	return Array.isArray(ids)
-		? ids.map(Number).filter(id => Number.isInteger(id) && id > 0)
-		: []
+	const ids = corps && typeof corps === 'object' ? corps.error?.details?.files : null
+	return Array.isArray(ids) ? ids.map(Number).filter(id => Number.isInteger(id) && id > 0) : []
 }
 
 /**
@@ -134,16 +128,12 @@ export function messageEchecSauvegarde(status, corps, photosEnregistrees = []) {
 			: MESSAGES['photo-refusee']
 
 	const texte = texteErreur(corps)
-	const longueur = /\b([a-z_]+) must be at (least|most) (\d+) characters/.exec(
-		texte
-	)
+	const longueur = messageEchecSauvegardePattern3.exec(texte)
 	if (longueur && LIBELLES_CHAMPS[longueur[1]]) {
 		const [, champ, sens, nombre] = longueur
-		return `${LIBELLES_CHAMPS[champ]} doit contenir ${
-			sens === 'least' ? 'au moins' : 'au plus'
-		} ${nombre} caractères.`
+		return `${LIBELLES_CHAMPS[champ]} doit contenir ${sens === 'least' ? 'au moins' : 'au plus'} ${nombre} caractères.`
 	}
-	if (/does not exist/i.test(texte)) return MESSAGES['profil-absent']
+	if (messageEchecSauvegardePattern4.test(texte)) return MESSAGES['profil-absent']
 	return MESSAGES.refus
 }
 
@@ -174,12 +164,7 @@ async function lireJson(response) {
  *   `photoRefusee`: a picture sent was refused (see photoRefusee), the ids
  *   the API named in `fichiersRefuses`
  */
-export async function sauvegarderProfil(
-	data,
-	section,
-	{ envoyer, compter },
-	{ photosEnregistrees = [] } = {}
-) {
+export async function sauvegarderProfil(data, section, { envoyer, compter }, { photosEnregistrees = [] } = {}) {
 	let response
 	try {
 		response = await envoyer(JSON.stringify({ ...data }))
@@ -204,9 +189,7 @@ export async function sauvegarderProfil(
 		ok: false,
 		error: messageEchecSauvegarde(status, corps, photosEnregistrees),
 	}
-	return photoRefusee(status, corps)
-		? { ...echec, photoRefusee: true, fichiersRefuses: fichiersRefuses(corps) }
-		: echec
+	return photoRefusee(status, corps) ? { ...echec, photoRefusee: true, fichiersRefuses: fichiersRefuses(corps) } : echec
 }
 
 /**
@@ -233,7 +216,7 @@ export const fermerSiLibre = (occupe, fermer) => () => {
  */
 export function profilCree(status, corps) {
 	if (status >= 200 && status < 300) return true
-	return status === 400 && /already exists/i.test(texteErreur(corps))
+	return status === 400 && profilCreePattern1.test(texteErreur(corps))
 }
 
 /**
@@ -246,10 +229,8 @@ export function profilCree(status, corps) {
 export function erreurNom(valeur, champ = 'first_name') {
 	const libelle = LIBELLES_CHAMPS[champ] ?? 'Le nom'
 	const nom = typeof valeur === 'string' ? valeur.trim() : ''
-	if (nom.length < NOM_MIN)
-		return `${libelle} doit contenir au moins ${NOM_MIN} caractères.`
-	if (nom.length > NOM_MAX)
-		return `${libelle} doit contenir au plus ${NOM_MAX} caractères.`
+	if (nom.length < NOM_MIN) return `${libelle} doit contenir au moins ${NOM_MIN} caractères.`
+	if (nom.length > NOM_MAX) return `${libelle} doit contenir au plus ${NOM_MAX} caractères.`
 	return null
 }
 
@@ -268,16 +249,11 @@ export function erreurNom(valeur, champ = 'first_name') {
  * @returns {Array}
  */
 export function listeApresSauvegarde(reponse, champ, envoyee) {
-	const liste =
-		reponse && typeof reponse === 'object' && !Array.isArray(reponse)
-			? reponse[champ]
-			: undefined
+	const liste = reponse && typeof reponse === 'object' && !Array.isArray(reponse) ? reponse[champ] : undefined
 	if (!Array.isArray(liste) || liste.length !== envoyee.length) return envoyee
 	return envoyee.map((element, index) => {
 		const stocke = liste[index]
-		return stocke && typeof stocke === 'object'
-			? { ...element, ...stocke }
-			: element
+		return stocke && typeof stocke === 'object' ? { ...element, ...stocke } : element
 	})
 }
 

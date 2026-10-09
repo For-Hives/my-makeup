@@ -10,8 +10,7 @@
  * @returns {AbortSignal|undefined}
  */
 export function signalAvecDelai(ms, env = globalThis) {
-	if (typeof env.AbortSignal?.timeout === 'function')
-		return env.AbortSignal.timeout(ms)
+	if (typeof env.AbortSignal?.timeout === 'function') return env.AbortSignal.timeout(ms)
 	if (typeof env.AbortController !== 'function') return undefined
 	const controleur = new env.AbortController()
 	env.setTimeout(() => controleur.abort(), ms)

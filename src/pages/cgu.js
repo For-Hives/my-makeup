@@ -1,9 +1,8 @@
-import React from 'react'
-import Nav from '@/components/Global/Nav'
-import Footer from '@/components/Global/Footer'
 import Head from 'next/head'
 import Link from 'next/link'
+import Footer from '@/components/Global/Footer'
 import Hero from '@/components/Global/Hero'
+import Nav from '@/components/Global/Nav'
 import { EDITEUR } from '@/lib/legal'
 import { urlAbsolue } from '@/lib/seo/url'
 
@@ -11,7 +10,7 @@ import { urlAbsolue } from '@/lib/seo/url'
  * @param props
  * @constructor
  */
-function Cgu(props) {
+function Cgu(_props) {
 	return (
 		<>
 			<Head>
@@ -34,14 +33,12 @@ function Cgu(props) {
 							<span className={'text-indigo-900'}>My&nbsp;Makeup</span>
 						</>
 					}
-					description={<>{"Les règles d'utilisation de la plateforme."}</>}
+					description={"Les règles d'utilisation de la plateforme."}
 					isSearchDisplayed={false}
 					isCTALoginDisplayed={false}
 					isSimpleVersionDisplayed={true}
 				/>
-				<div
-					className={'relative mx-auto my-24 max-w-7xl px-4 md:my-48 md:px-0'}
-				>
+				<div className={'relative mx-auto my-24 max-w-7xl px-4 md:my-48 md:px-0'}>
 					<div className="mx-auto max-w-2xl">
 						<article>
 							<header className="flex flex-col">
@@ -111,9 +108,7 @@ function Cgu(props) {
 								<h2>7. Demandes de devis</h2>
 								<p>
 									{`La demande envoyée par le formulaire est transmise à la maquilleuse concernée avec l'accord de la personne qui l'envoie. My-Makeup en assure le suivi mais ne garantit ni la disponibilité de la maquilleuse, ni sa réponse, ni la conclusion d'une prestation. Les données des demandes sont conservées 12 mois (voir la `}
-									<Link href={'/politique-de-confidentialite'}>
-										politique de confidentialité
-									</Link>
+									<Link href={'/politique-de-confidentialite'}>politique de confidentialité</Link>
 									{`).`}
 								</p>
 

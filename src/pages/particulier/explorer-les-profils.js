@@ -1,16 +1,15 @@
-import React from 'react'
-import Nav from '@/components/Global/Nav'
-import Footer from '@/components/Global/Footer'
 import Head from 'next/head'
-import Hero from '@/components/Global/Hero'
 import CTA from '@/components/Global/CTA'
+import Footer from '@/components/Global/Footer'
+import Hero from '@/components/Global/Hero'
+import Nav from '@/components/Global/Nav'
 import { urlAbsolue } from '@/lib/seo/url'
 
 /**
  * @param props
  * @constructor
  */
-function ExplorerLesProfils(props) {
+function ExplorerLesProfils(_props) {
 	return (
 		<>
 			<Head>
@@ -20,10 +19,7 @@ function ExplorerLesProfils(props) {
 					content="Utilisez la recherche par mot-clé et par ville de My-Makeup pour explorer les profils de maquilleuses et trouver celle qui vous correspond."
 				/>
 				{/*	seo tag canonical link */}
-				<link
-					rel="canonical"
-					href={urlAbsolue('/particulier/explorer-les-profils')}
-				/>
+				<link rel="canonical" href={urlAbsolue('/particulier/explorer-les-profils')} />
 			</Head>
 
 			<Nav />
@@ -39,22 +35,15 @@ function ExplorerLesProfils(props) {
 						</>
 					}
 					description={
-						<>
-							{
-								"Apprenez comment My-Makeup peut vous permettre, via l'exploration des profils des maquilleuses, de trouver celle qui vous correspond le mieux."
-							}
-						</>
+						"Apprenez comment My-Makeup peut vous permettre, via l'exploration des profils des maquilleuses, de trouver celle qui vous correspond le mieux."
 					}
 				/>
-				<div
-					className={'relative mx-auto my-24 max-w-7xl px-4 md:my-48 md:px-0'}
-				>
+				<div className={'relative mx-auto my-24 max-w-7xl px-4 md:my-48 md:px-0'}>
 					<div className="mx-auto max-w-2xl">
 						<article>
 							<header className="flex flex-col">
 								<h1 className="mt-6 text-3xl font-bold tracking-tight text-gray-800 sm:text-4xl">
-									Explorer les profils de maquilleuses sur My-Makeup : Recherche
-									par mot-clé et par ville
+									Explorer les profils de maquilleuses sur My-Makeup : Recherche par mot-clé et par ville
 								</h1>
 							</header>
 							<div className="prose my-8 xl:prose-lg">

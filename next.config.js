@@ -1,4 +1,9 @@
+const umamiOriginPattern1 = /\/+$/
 const UMAMI_ORIGIN_DEFAULT = 'https://umami.wadefade.fr'
+// Windows treats ISR cache filenames as case-insensitive. The browser suite
+// exercises /profil/LeaNantes and /profil/leanantes as distinct URLs, so keep
+// its cache in memory to reproduce the production Linux filesystem behavior.
+const WINDOWS_REGRESSION_CACHE = process.platform === 'win32' && process.env.NEXT_DIST_DIR === '.next-test-regression'
 
 /**
  * Umami instance behind /u (MES-10): UMAMI_ORIGIN, e.g.
@@ -25,10 +30,8 @@ function umamiOrigin(raw = process.env.UMAMI_ORIGIN) {
 		url.username !== '' ||
 		url.password !== ''
 	)
-		throw new Error(
-			`UMAMI_ORIGIN doit être une origine http(s) comme https://umami.example.org (reçu : ${raw})`
-		)
-	return `${url.origin}${url.pathname.replace(/\/+$/, '')}`
+		throw new Error(`UMAMI_ORIGIN doit être une origine http(s) comme https://umami.example.org (reçu : ${raw})`)
+	return `${url.origin}${url.pathname.replace(umamiOriginPattern1, '')}`
 }
 
 /** @type {import('next').NextConfig} */
@@ -61,11 +64,12 @@ const nextConfig = {
 		// src/lib/seo/meta.js).
 		deviceSizes: [640, 750, 828, 1080, 1200, 1440, 1920, 2048, 3840],
 	},
-	cacheMaxMemorySize: 0,
+	cacheMaxMemorySize: WINDOWS_REGRESSION_CACHE ? 50 * 1024 * 1024 : 0,
 	// SEO-10: the account pages and the search are never indexed. Same paths
 	// as CHEMINS_NOINDEX in src/lib/seo/robots.js (checked by
 	// tests/unit/seo.test.mjs); robots.txt does not block them, or this
 	// header would never be read.
+	// biome-ignore lint/suspicious/useAwait: Next.js requires a promise-returning configuration hook.
 	async headers() {
 		return ['/auth', '/auth/:path*', '/search'].map(source => ({
 			source,
@@ -78,6 +82,7 @@ const nextConfig = {
 	// cookie, the visitor's IP only). A request that still carries a cookie
 	// or credentials, one the middleware did not clean, is never relayed:
 	// the rewrite does not apply and the site answers 404.
+	// biome-ignore lint/suspicious/useAwait: Next.js requires a promise-returning configuration hook.
 	async rewrites() {
 		const umami = umamiOrigin()
 		const missing = [
@@ -90,6 +95,7 @@ const nextConfig = {
 		]
 	},
 	experimental: {
+		isrFlushToDisk: !WINDOWS_REGRESSION_CACHE,
 		// Rewrites and headers match the exact case of the path, like the
 		// middleware matcher: /U/script.js or /u/API/send are not relayed to
 		// Umami without going through the middleware, they get a 404.

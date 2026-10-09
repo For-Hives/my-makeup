@@ -14,15 +14,10 @@ import { SECTIONS_PROFIL } from './sauvegarde-profil.js'
 import { WAITING_ROOM_NAME } from './umami.js'
 import { WEB_VITALS_EVENT, webVitalData } from './web-vitals.js'
 
-export const CONTACT_CHANNELS = [
-	'email',
-	'phone',
-	'instagram',
-	'facebook',
-	'linkedin',
-	'youtube',
-	'website',
-]
+const looksPersonalPattern1 = /(\d[\s.\-()]*){9,}/
+const normalizePattern2 = /^[1-9]\d{0,7}$/
+
+export const CONTACT_CHANNELS = ['email', 'phone', 'instagram', 'facebook', 'linkedin', 'youtube', 'website']
 
 export const DEMANDE_SOURCES = [
 	'profil',
@@ -43,13 +38,7 @@ export const RESULT_BUCKETS = ['0', '1-5', '6-20', '21+']
 // in the order they are shown; never stored by the API. The list of plans/04
 // §3.3 row 17 without 'maeva' (decisions.md, 09/10). Umami keeps each value
 // as sent: renaming one later splits its series.
-export const SOURCES_ORIGINE = [
-	'instagram',
-	'google',
-	'bouche-a-oreille',
-	'ecole',
-	'autre',
-]
+export const SOURCES_ORIGINE = ['instagram', 'google', 'bouche-a-oreille', 'ecole', 'autre']
 
 const id = { type: 'id', required: true }
 const optionalId = { type: 'id', required: false }
@@ -68,12 +57,7 @@ export const EVENTS = {
 	},
 	search_result_click: { rank: int(1, 999), pid: id },
 	cta_click: {
-		where: oneOf([
-			'cta_recherche',
-			'cta_inscription',
-			'nav_recherche',
-			'nav_recherche_mobile',
-		]),
+		where: oneOf(['cta_recherche', 'cta_inscription', 'nav_recherche', 'nav_recherche_mobile']),
 	},
 	platform_contact_submit: { ok: flag, status: int(0, 599) },
 	not_found: { kind: oneOf(['profil', 'talent', 'blog', 'autre']) },
@@ -115,21 +99,17 @@ export const EVENTS = {
  */
 export function looksPersonal(value) {
 	const text = String(value)
-	return text.includes('@') || /(\d[\s.\-()]*){9,}/.test(text)
+	return text.includes('@') || looksPersonalPattern1.test(text)
 }
 
 function normalize(spec, value) {
 	switch (spec.type) {
 		case 'id': {
 			const text = typeof value === 'number' ? String(value) : value
-			return typeof text === 'string' && /^[1-9]\d{0,7}$/.test(text)
-				? text
-				: undefined
+			return typeof text === 'string' && normalizePattern2.test(text) ? text : undefined
 		}
 		case 'int':
-			return Number.isInteger(value) && value >= spec.min && value <= spec.max
-				? value
-				: undefined
+			return Number.isInteger(value) && value >= spec.min && value <= spec.max ? value : undefined
 		case 'boolean':
 			return typeof value === 'boolean' ? value : undefined
 		case 'enum':
@@ -147,14 +127,12 @@ function normalize(spec, value) {
  * @returns {object|null}
  */
 export function eventData(name, props = {}) {
-	if (!Object.prototype.hasOwnProperty.call(EVENTS, name)) return null
+	if (!Object.hasOwn(EVENTS, name)) return null
 	if (props === null || typeof props !== 'object') return null
 	const catalogue = EVENTS[name]
 	const data = {}
 
-	for (const key of Object.keys(props)) {
-		if (!Object.prototype.hasOwnProperty.call(catalogue, key)) return null
-	}
+	if (Object.keys(props).some(key => !Object.hasOwn(catalogue, key))) return null
 
 	for (const [key, spec] of Object.entries(catalogue)) {
 		const raw = props[key]
@@ -201,7 +179,7 @@ function defaultRuntime() {
 // (umamiLoader in src/lib/umami.js).
 function handToUmami(name, data, { win, production }) {
 	if (data === null || !production || !win) return false
-	if (win.navigator && win.navigator.webdriver) return false
+	if (win.navigator?.webdriver) return false
 	if (win.umami && typeof win.umami.track === 'function') {
 		win.umami.track(name, data)
 		return true
@@ -295,19 +273,14 @@ export function isRepeat(previous, key, now, windowMs = 3000) {
 export function referrerDomain(referrer) {
 	try {
 		const url = new URL(referrer)
-		return url.protocol === 'http:' || url.protocol === 'https:'
-			? url.hostname.toLowerCase()
-			: ''
+		return url.protocol === 'http:' || url.protocol === 'https:' ? url.hostname.toLowerCase() : ''
 	} catch {
 		return ''
 	}
 }
 
 const same = (a, b) =>
-	typeof a === 'string' &&
-	typeof b === 'string' &&
-	a.trim() !== '' &&
-	a.trim().toLowerCase() === b.trim().toLowerCase()
+	typeof a === 'string' && typeof b === 'string' && a.trim() !== '' && a.trim().toLowerCase() === b.trim().toLowerCase()
 
 /**
  * Whether a click on a contact link of a public profile should count as a
@@ -321,23 +294,14 @@ const same = (a, b) =>
  * @param {string} [context.origin] - location.origin
  * @returns {boolean}
  */
-export function shouldTrackContact({
-	profile = {},
-	viewer = {},
-	search = '',
-	referrer = '',
-	origin = '',
-} = {}) {
-	if (same(profile.username, viewer.name) || same(profile.email, viewer.email))
-		return false
+export function shouldTrackContact({ profile = {}, viewer = {}, search = '', referrer = '', origin = '' } = {}) {
+	if (same(profile.username, viewer.name) || same(profile.email, viewer.email)) return false
 
-	if (new URLSearchParams(search).get('utm_campaign') === 'relance')
-		return false
+	if (new URLSearchParams(search).get('utm_campaign') === 'relance') return false
 
 	try {
 		const from = new URL(referrer)
-		if (from.origin === origin && from.pathname.startsWith('/auth/profil'))
-			return false
+		if (from.origin === origin && from.pathname.startsWith('/auth/profil')) return false
 	} catch {
 		// no referrer, or not a URL: nothing to exclude
 	}

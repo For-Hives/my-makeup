@@ -1,20 +1,21 @@
-import Head from 'next/head'
-import React, { useEffect, useRef, useState } from 'react'
-import Nav from '@/components/Global/Nav'
-import Footer from '@/components/Global/Footer'
-import { useRouter } from 'next/router'
-import Image from 'next/image'
-import FullSearchBloc from '@/components/Global/Search/FullSearchBloc'
-import { CatSearch } from '@/components/Global/Search/CatSearch'
-import Loader from '@/components/Global/Loader/Loader'
-import { BadgeSuperMaquilleuse } from '@/components/Global/BadgeSuperMaquilleuse'
-import Link from 'next/link'
 import { CheckCircleIcon } from '@heroicons/react/24/outline'
+import Head from 'next/head'
+import Image from 'next/image'
+import Link from 'next/link'
+import { useRouter } from 'next/router'
+import { useEffect, useRef, useState } from 'react'
+import { BadgeSuperMaquilleuse } from '@/components/Global/BadgeSuperMaquilleuse'
+import Footer from '@/components/Global/Footer'
+import Loader from '@/components/Global/Loader/Loader'
+import Nav from '@/components/Global/Nav'
+import { CatSearch } from '@/components/Global/Search/CatSearch'
+import FullSearchBloc from '@/components/Global/Search/FullSearchBloc'
 import { isRepeat, resultsBucket, track } from '@/lib/analytics'
+import { avecCles } from '@/lib/cles'
 import { signalAvecDelai } from '@/lib/delai'
-import { villePublique } from '@/lib/profil/lieu-public'
 import { formatZone } from '@/lib/format-zone'
 import { sectionsParLieu } from '@/lib/lieu'
+import { villePublique } from '@/lib/profil/lieu-public'
 import { nomAffiche, photoPrincipale, texte } from '@/lib/profil/vue-publique'
 import {
 	annuaireComplet,
@@ -49,8 +50,7 @@ function lireCartes(url) {
 		})
 }
 
-const chercher = recherche =>
-	lireCartes(urlApiRecherche(process.env.NEXT_PUBLIC_API_URL, recherche))
+const chercher = recherche => lireCartes(urlApiRecherche(process.env.NEXT_PUBLIC_API_URL, recherche))
 
 const DUREE_ANNUAIRE_MS = 10 * 60 * 1000
 // { promesse, lu }: every searchable profile, read once for the searches by
@@ -59,8 +59,7 @@ let annuaire = null
 
 function lireAnnuaire() {
 	const maintenant = Date.now()
-	if (annuaire && maintenant - annuaire.lu < DUREE_ANNUAIRE_MS)
-		return annuaire.promesse
+	if (annuaire && maintenant - annuaire.lu < DUREE_ANNUAIRE_MS) return annuaire.promesse
 	const promesse = lireCartes(urlApiAnnuaire(process.env.NEXT_PUBLIC_API_URL))
 	const entree = { promesse, lu: maintenant }
 	annuaire = entree
@@ -131,17 +130,14 @@ function SearchPage() {
 					// bucket of the number the h1 counts
 					track('search_submit', {
 						has_city: !!city,
-						results: resultsBucket(
-							sectionsParLieu(resultats, city, autres).locaux.length
-						),
+						results: resultsBucket(sectionsParLieu(resultats, city, autres).locaux.length),
 						from,
 					})
 				}
 				setEtat({ cle, statut: 'ok', resultats, annuaire: autres })
 			})
 			.catch(() => {
-				if (!abandonnee)
-					setEtat({ cle, statut: 'erreur', resultats: [], annuaire: [] })
+				if (!abandonnee) setEtat({ cle, statut: 'erreur', resultats: [], annuaire: [] })
 			})
 
 		return () => {
@@ -152,20 +148,14 @@ function SearchPage() {
 	// the form of this page: a new search goes to its URL; the same one is
 	// asked again (same URL, nothing else would run it)
 	function rechercher(nouvelle) {
-		const meme =
-			pret &&
-			cleRecherche(lireRecherche(nouvelle)) === cleRecherche({ search, city })
+		const meme = pret && cleRecherche(lireRecherche(nouvelle)) === cleRecherche({ search, city })
 		if (meme && page > 1) return router.push(urlPageRecherche(nouvelle))
 		origine.current = 'formulaire'
 		if (meme) setEssai(n => n + 1)
 		else router.push(urlPageRecherche(nouvelle))
 	}
 
-	const statut = !pret
-		? 'repos'
-		: etat?.cle === cleRecherche({ search, city })
-			? etat.statut
-			: 'chargement'
+	const statut = renderSearchState1({ pret, etat, search, city })
 	const resultats = statut === 'ok' ? etat.resultats : []
 	// UI-09: the cards prefetch their profile pages (≈ 80 KB of JavaScript and
 	// data) once the first photo is there, not while it downloads
@@ -174,27 +164,184 @@ function SearchPage() {
 		prefetch: cleAffichee !== null && photoChargee === cleAffichee,
 		surPremierePhoto: () => setPhotoChargee(cleAffichee),
 	}
-	const { locaux, sections, parLieu } = sectionsParLieu(
-		resultats,
-		city,
-		statut === 'ok' ? etat.annuaire : []
-	)
-	const pagination = paginer(
-		[...locaux, ...sections.flatMap(section => section.profils)],
-		page
-	)
-	const [locauxDeLaPage, ...sectionsDeCettePage] = sectionsDeLaPage(
-		pagination,
-		[locaux.length, ...sections.map(section => section.profils.length)]
-	)
+	const { locaux, sections, parLieu } = sectionsParLieu(resultats, city, statut === 'ok' ? etat.annuaire : [])
+	const pagination = paginer([...locaux, ...sections.flatMap(section => section.profils)], page)
+	const [locauxDeLaPage, ...sectionsDeCettePage] = sectionsDeLaPage(pagination, [
+		locaux.length,
+		...sections.map(section => section.profils.length),
+	])
 	// rank of the first card of each section on this page, from 0
 	const debuts = sectionsDeCettePage.map((_, i) =>
-		[locauxDeLaPage, ...sectionsDeCettePage.slice(0, i)].reduce(
-			(n, liste) => n + liste.length,
-			0
-		)
+		[locauxDeLaPage, ...sectionsDeCettePage.slice(0, i)].reduce((n, liste) => n + liste.length, 0)
 	)
 
+	return (
+		<VueRecherche
+			search={search}
+			city={city}
+			rechercher={rechercher}
+			statut={statut}
+			setEssai={setEssai}
+			pagination={pagination}
+			parLieu={parLieu}
+			locaux={locaux}
+			locauxDeLaPage={locauxDeLaPage}
+			cartes={cartes}
+			sections={sections}
+			sectionsDeCettePage={sectionsDeCettePage}
+			debuts={debuts}
+		/>
+	)
+}
+
+/**
+ * One list of result cards, ranked from `premier` (search_result_click).
+ * The first card of the page is the largest picture above the fold on a
+ * phone (its LCP): loaded at once and first; the others stay lazy, and the
+ * links prefetch only once it is there (`cartes`).
+ */
+function ListeResultats({ resultats, premier, premierDeLaPage, cartes, dataCy }) {
+	return (
+		<ul className={'grid w-full grid-cols-1 gap-8 md:grid-cols-3 2xl:grid-cols-6'} data-cy={dataCy}>
+			{resultats.map((result, index) => (
+				<li key={result.id ?? premier + index} className={'col-span-1'}>
+					<CarteResultat
+						result={result}
+						rang={premier + index}
+						prioritaire={premier + index === premierDeLaPage}
+						cartes={cartes}
+					/>
+				</li>
+			))}
+		</ul>
+	)
+}
+
+function CarteResultat({ result, rang, prioritaire, cartes }) {
+	const nom = nomAffiche(result)
+	const zone = formatZone({
+		// the commune of an address typed as the city, never its street (UI-11)
+		city: villePublique(result.city),
+		radius: result.action_radius,
+	})
+	const competences = (Array.isArray(result.skills) ? result.skills : [])
+		.map(skill => texte(skill?.name))
+		.filter(Boolean)
+		.slice(0, 7)
+	const photo = photoPrincipale(result)
+	const username = texte(result.username)
+
+	return (
+		<Link
+			// the old URL of the profile answers a 308 to its slug
+			href={`/profil/${encodeURIComponent(username)}`}
+			prefetch={cartes.prefetch ? undefined : false}
+			data-cy={`search-result`}
+			onClick={() => track('search_result_click', { rank: rang, pid: result.id })}
+			className={'flex w-full flex-col items-center rounded border border-gray-300 bg-white'}
+		>
+			<div className={'relative h-[350px] w-full'}>
+				{/* UI-09: asked at the width it is drawn at (cover in a cell of
+				    GRILLE_RESULTATS), sharp on a 2x screen; 2.25x on a 3x phone,
+				    where it is the LCP (src/lib/taille-image.js) */}
+				<Image
+					src={photo?.url || '/assets/pp_makeup.webp'}
+					alt={photo ? `Photo de ${nom}` : ''}
+					fill={true}
+					sizes={sizesGrille(GRILLE_RESULTATS, {
+						hauteur: HAUTEUR_PHOTO_CARTE,
+						// the default picture is square
+						ratio: photo ? ratioMedia(photo) : 1,
+					})}
+					quality={QUALITE_PHOTO}
+					loading={prioritaire ? 'eager' : 'lazy'}
+					fetchPriority={prioritaire ? 'high' : 'auto'}
+					onLoad={prioritaire ? cartes.surPremierePhoto : undefined}
+					onError={prioritaire ? cartes.surPremierePhoto : undefined}
+					className={'rounded-b-none rounded-t object-cover object-center'}
+				/>
+				{result.pro === true && (
+					<div className={'absolute left-0 top-0 flex items-center justify-center pt-4'}>
+						<BadgeSuperMaquilleuse />
+					</div>
+				)}
+				<div className={'absolute bottom-0 left-0 flex w-full flex-col bg-gradient-to-t from-black to-black/0 p-4'}>
+					<div className={'flex flex-row items-baseline'}>
+						<h2 className="text-2xl font-extrabold text-white">{nom}</h2>
+						{result.pro === true && (
+							<span className={'ml-2 translate-y-0.5 transform'}>
+								<CheckCircleIcon className="h-5 w-5 text-white" />
+							</span>
+						)}
+					</div>
+					<div
+						className={'flex flex-row items-center gap-2 text-sm font-light text-white'}
+						data-cy="search-result-zone"
+					>
+						<IconeDeplacement />
+						{/* UI-10: an empty city is said, never left blank */}
+						<span className={zone ? 'font-bold' : 'italic'}>{zone || 'Zone non renseignée'}</span>
+					</div>
+				</div>
+			</div>
+			<div className={'flex w-full flex-col gap-4 p-4 pt-6'}>
+				{texte(result.speciality) && <p className="text-lg font-bold text-gray-900">{texte(result.speciality)}</p>}
+				<div className={'flex flex-wrap items-center gap-1'}>
+					{competences.length > 0 ? (
+						avecCles(competences).map(({ valeur: competence, cle }, _index) => (
+							<span
+								key={cle}
+								className="inline-flex flex-nowrap items-center rounded-full bg-indigo-100 px-3 py-2 text-xs font-medium text-indigo-700"
+							>
+								{competence}
+							</span>
+						))
+					) : (
+						<span
+							className={
+								'inline-flex flex-nowrap items-center rounded-full bg-gray-100 px-3 py-2 text-xs font-medium text-gray-700'
+							}
+						>
+							Aucune compétence renseignée
+						</span>
+					)}
+				</div>
+			</div>
+		</Link>
+	)
+}
+
+/**
+ * « directions_run » of Material Icons Round (Apache 2.0), drawn inline
+ * (UI-09): on /search the icon font, 170 KB, was only loaded for it, and
+ * downloaded at the same time as the photo of the first card, the LCP of
+ * a phone. Same glyph, 1em of a text-sm line.
+ */
+function IconeDeplacement() {
+	return (
+		<svg viewBox="0 0 512 512" fill="currentColor" aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-white">
+			<path d="M288 117C311 117 330 98 330 74C330 51 311 32 288 32C264 32 245 51 245 74C245 98 264 117 288 117ZM220 373L232 320L277 362L277 469C277 481 287 490 298 490C310 490 320 481 320 469L320 349C320 337 315 326 307 318L275 288L288 224C311 250 344 269 381 275C394 277 405 267 405 254C405 243 397 234 387 233C355 227 328 208 313 183L292 149C284 136 271 128 256 128C249 128 245 130 239 130L154 166C138 172 128 188 128 205L128 256C128 267 137 277 149 277C161 277 170 267 170 256L170 204L209 189L175 362L91 345C80 343 68 350 66 362L66 363C64 374 71 385 83 388L170 405C193 410 215 396 220 373Z" />
+		</svg>
+	)
+}
+
+export default SearchPage
+
+function VueRecherche({
+	search,
+	city,
+	rechercher,
+	statut,
+	setEssai,
+	pagination,
+	parLieu,
+	locaux,
+	locauxDeLaPage,
+	cartes,
+	sections,
+	sectionsDeCettePage,
+	debuts,
+}) {
 	return (
 		<>
 			<Head>
@@ -209,43 +356,25 @@ function SearchPage() {
 				<main className={'relative'}>
 					<FullSearchBloc search={search} city={city} onSearch={rechercher} />
 					{statut === 'repos' && (
-						<div
-							className={
-								'flex w-full flex-col items-center justify-center gap-4 py-8 md:py-16 2xl:py-32'
-							}
-						>
-							<h1 className={'text-2xl font-bold text-gray-800'}>
-								Rechercher une maquilleuse
-							</h1>
+						<div className={'flex w-full flex-col items-center justify-center gap-4 py-8 md:py-16 2xl:py-32'}>
+							<h1 className={'text-2xl font-bold text-gray-800'}>Rechercher une maquilleuse</h1>
 							<CatSearch />
 						</div>
 					)}
 					{statut === 'chargement' && (
-						<div
-							className={
-								'flex w-full flex-col items-center justify-center gap-8 py-32'
-							}
-							role="status"
-						>
-							<h1 className={'text-2xl font-bold text-gray-800'}>
-								Recherche en cours…
-							</h1>
+						<div className={'flex w-full flex-col items-center justify-center gap-8 py-32'} role="status">
+							<h1 className={'text-2xl font-bold text-gray-800'}>Recherche en cours…</h1>
 							<Loader />
 						</div>
 					)}
 					{statut === 'erreur' && (
 						<div
-							className={
-								'mx-auto flex w-full max-w-2xl flex-col items-center gap-4 px-4 py-24 text-center'
-							}
+							className={'mx-auto flex w-full max-w-2xl flex-col items-center gap-4 px-4 py-24 text-center'}
 							data-cy="search-error"
 						>
-							<h1 className={'text-2xl font-bold text-gray-800'}>
-								La recherche n’a pas abouti
-							</h1>
+							<h1 className={'text-2xl font-bold text-gray-800'}>La recherche n’a pas abouti</h1>
 							<p role="alert" className={'text-gray-700'}>
-								Le service de recherche ne répond pas pour le moment. Réessayez
-								dans quelques instants.
+								Le service de recherche ne répond pas pour le moment. Réessayez dans quelques instants.
 							</p>
 							<button
 								type="button"
@@ -259,48 +388,29 @@ function SearchPage() {
 					)}
 					{statut === 'ok' && pagination.total === 0 && (
 						<div
-							className={
-								'mx-auto flex w-full max-w-2xl flex-col items-center gap-4 px-4 py-24 text-center'
-							}
+							className={'mx-auto flex w-full max-w-2xl flex-col items-center gap-4 px-4 py-24 text-center'}
 							data-cy="search-empty"
 						>
-							<h1 className={'text-2xl font-bold text-gray-800'}>
-								{titreResultats({ search, city }, 0)}
-							</h1>
+							<h1 className={'text-2xl font-bold text-gray-800'}>{titreResultats({ search, city }, 0)}</h1>
 							<p className={'text-gray-700'}>
 								Essayez un autre mot (mariage, soirée, effets spéciaux…)
 								{city ? ', une ville voisine ou la recherche sans ville' : ''}.
 							</p>
-							{city &&
-								search &&
-								search.toLowerCase() !== city.toLowerCase() && (
-									<Link
-										href={urlPageRecherche({ search })}
-										className={'font-semibold text-indigo-900 underline'}
-									>
-										Chercher « {search} » partout
-									</Link>
-								)}
+							{city && search && search.toLowerCase() !== city.toLowerCase() && (
+								<Link href={urlPageRecherche({ search })} className={'font-semibold text-indigo-900 underline'}>
+									Chercher « {search} » partout
+								</Link>
+							)}
 						</div>
 					)}
 					{statut === 'ok' && pagination.total > 0 && (
 						<div className={'w-full px-4 md:px-16'}>
-							<h1
-								className={'mb-8 text-2xl font-bold text-gray-800'}
-								data-cy="search-title"
-							>
-								{titreResultats(
-									{ search, city },
-									parLieu ? locaux.length : pagination.total
-								)}
+							<h1 className={'mb-8 text-2xl font-bold text-gray-800'} data-cy="search-title">
+								{titreResultats({ search, city }, parLieu ? locaux.length : pagination.total)}
 							</h1>
 							{parLieu && locaux.length === 0 && (
-								<p
-									className={'-mt-4 mb-8 text-gray-700'}
-									data-cy="search-aucun-local"
-								>
-									Aucune maquilleuse n’indique « {city} » (ville ou département)
-									dans son profil.
+								<p className={'-mt-4 mb-8 text-gray-700'} data-cy="search-aucun-local">
+									Aucune maquilleuse n’indique « {city} » (ville ou département) dans son profil.
 								</p>
 							)}
 							{locauxDeLaPage.length > 0 && (
@@ -315,15 +425,10 @@ function SearchPage() {
 							{sections.map(
 								(section, i) =>
 									sectionsDeCettePage[i].length > 0 && (
-										<section
-											key={section.cle}
-											aria-labelledby={`search-titre-${section.cle}`}
-										>
+										<section key={section.cle} aria-labelledby={`search-titre-${section.cle}`}>
 											<h2
 												id={`search-titre-${section.cle}`}
-												className={`mb-8 text-xl font-bold text-gray-800 ${
-													debuts[i] > 0 ? 'mt-12' : ''
-												}`}
+												className={`mb-8 text-xl font-bold text-gray-800 ${debuts[i] > 0 ? 'mt-12' : ''}`}
 												data-cy={`search-titre-${section.cle}`}
 											>
 												{section.titre}
@@ -341,9 +446,7 @@ function SearchPage() {
 							{pagination.pages > 1 && (
 								<nav
 									aria-label="Pages de résultats"
-									className={
-										'mt-12 flex items-center justify-center gap-6 text-indigo-900'
-									}
+									className={'mt-12 flex items-center justify-center gap-6 text-indigo-900'}
 									data-cy="search-pagination"
 								>
 									{pagination.page > 1 && (
@@ -384,169 +487,12 @@ function SearchPage() {
 	)
 }
 
-/**
- * One list of result cards, ranked from `premier` (search_result_click).
- * The first card of the page is the largest picture above the fold on a
- * phone (its LCP): loaded at once and first; the others stay lazy, and the
- * links prefetch only once it is there (`cartes`).
- */
-function ListeResultats({
-	resultats,
-	premier,
-	premierDeLaPage,
-	cartes,
-	dataCy,
-}) {
-	return (
-		<ul
-			className={'grid w-full grid-cols-1 gap-8 md:grid-cols-3 2xl:grid-cols-6'}
-			data-cy={dataCy}
-		>
-			{resultats.map((result, index) => (
-				<li key={result.id ?? premier + index} className={'col-span-1'}>
-					<CarteResultat
-						result={result}
-						rang={premier + index}
-						prioritaire={premier + index === premierDeLaPage}
-						cartes={cartes}
-					/>
-				</li>
-			))}
-		</ul>
-	)
+function renderSearchState1({ pret, etat, search, city }) {
+	if (!pret) {
+		return 'repos'
+	}
+	if (etat?.cle === cleRecherche({ search, city })) {
+		return etat.statut
+	}
+	return 'chargement'
 }
-
-function CarteResultat({ result, rang, prioritaire, cartes }) {
-	const nom = nomAffiche(result)
-	const zone = formatZone({
-		// the commune of an address typed as the city, never its street (UI-11)
-		city: villePublique(result.city),
-		radius: result.action_radius,
-	})
-	const competences = (Array.isArray(result.skills) ? result.skills : [])
-		.map(skill => texte(skill?.name))
-		.filter(Boolean)
-		.slice(0, 7)
-	const photo = photoPrincipale(result)
-	const username = texte(result.username)
-
-	return (
-		<Link
-			// the old URL of the profile answers a 308 to its slug
-			href={`/profil/${encodeURIComponent(username)}`}
-			prefetch={cartes.prefetch ? undefined : false}
-			data-cy={`search-result`}
-			onClick={() =>
-				track('search_result_click', { rank: rang, pid: result.id })
-			}
-			className={
-				'flex w-full flex-col items-center rounded border border-gray-300 bg-white'
-			}
-		>
-			<div className={'relative h-[350px] w-full'}>
-				{/* UI-09: asked at the width it is drawn at (cover in a cell of
-				    GRILLE_RESULTATS), sharp on a 2x screen; 2.25x on a 3x phone,
-				    where it is the LCP (src/lib/taille-image.js) */}
-				<Image
-					src={photo?.url || '/assets/pp_makeup.webp'}
-					alt={photo ? `Photo de ${nom}` : ''}
-					fill={true}
-					sizes={sizesGrille(GRILLE_RESULTATS, {
-						hauteur: HAUTEUR_PHOTO_CARTE,
-						// the default picture is square
-						ratio: photo ? ratioMedia(photo) : 1,
-					})}
-					quality={QUALITE_PHOTO}
-					loading={prioritaire ? 'eager' : 'lazy'}
-					fetchPriority={prioritaire ? 'high' : 'auto'}
-					onLoad={prioritaire ? cartes.surPremierePhoto : undefined}
-					onError={prioritaire ? cartes.surPremierePhoto : undefined}
-					className={'rounded-b-none rounded-t object-cover object-center'}
-				/>
-				{result.pro === true && (
-					<div
-						className={
-							'absolute left-0 top-0 flex items-center justify-center pt-4'
-						}
-					>
-						<BadgeSuperMaquilleuse />
-					</div>
-				)}
-				<div
-					className={
-						'absolute bottom-0 left-0 flex w-full flex-col bg-gradient-to-t from-black to-black/0 p-4'
-					}
-				>
-					<div className={'flex flex-row items-baseline'}>
-						<h2 className="text-2xl font-extrabold text-white">{nom}</h2>
-						{result.pro === true && (
-							<span className={'ml-2 translate-y-0.5 transform'}>
-								<CheckCircleIcon className="h-5 w-5 text-white" />
-							</span>
-						)}
-					</div>
-					<div
-						className={
-							'flex flex-row items-center gap-2 text-sm font-light text-white'
-						}
-						data-cy="search-result-zone"
-					>
-						<IconeDeplacement />
-						{/* UI-10: an empty city is said, never left blank */}
-						<span className={zone ? 'font-bold' : 'italic'}>
-							{zone || 'Zone non renseignée'}
-						</span>
-					</div>
-				</div>
-			</div>
-			<div className={'flex w-full flex-col gap-4 p-4 pt-6'}>
-				{texte(result.speciality) && (
-					<p className="text-lg font-bold text-gray-900">
-						{texte(result.speciality)}
-					</p>
-				)}
-				<div className={'flex flex-wrap items-center gap-1'}>
-					{competences.length > 0 ? (
-						competences.map((competence, index) => (
-							<span
-								key={index}
-								className="inline-flex flex-nowrap items-center rounded-full bg-indigo-100 px-3 py-2 text-xs font-medium text-indigo-700"
-							>
-								{competence}
-							</span>
-						))
-					) : (
-						<span
-							className={
-								'inline-flex flex-nowrap items-center rounded-full bg-gray-100 px-3 py-2 text-xs font-medium text-gray-700'
-							}
-						>
-							Aucune compétence renseignée
-						</span>
-					)}
-				</div>
-			</div>
-		</Link>
-	)
-}
-
-/**
- * « directions_run » of Material Icons Round (Apache 2.0), drawn inline
- * (UI-09): on /search the icon font, 170 KB, was only loaded for it, and
- * downloaded at the same time as the photo of the first card, the LCP of
- * a phone. Same glyph, 1em of a text-sm line.
- */
-function IconeDeplacement() {
-	return (
-		<svg
-			viewBox="0 0 512 512"
-			fill="currentColor"
-			aria-hidden="true"
-			className="h-3.5 w-3.5 shrink-0 text-white"
-		>
-			<path d="M288 117C311 117 330 98 330 74C330 51 311 32 288 32C264 32 245 51 245 74C245 98 264 117 288 117ZM220 373L232 320L277 362L277 469C277 481 287 490 298 490C310 490 320 481 320 469L320 349C320 337 315 326 307 318L275 288L288 224C311 250 344 269 381 275C394 277 405 267 405 254C405 243 397 234 387 233C355 227 328 208 313 183L292 149C284 136 271 128 256 128C249 128 245 130 239 130L154 166C138 172 128 188 128 205L128 256C128 267 137 277 149 277C161 277 170 267 170 256L170 204L209 189L175 362L91 345C80 343 68 350 66 362L66 363C64 374 71 385 83 388L170 405C193 410 215 396 220 373Z" />
-		</svg>
-	)
-}
-
-export default SearchPage

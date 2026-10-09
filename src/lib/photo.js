@@ -1,3 +1,8 @@
+const typeDepuisNomPattern1 = /\.([a-z0-9]+)$/i
+const typeImageDepuisOctetsPattern2 = /^(avif|avis)$/
+const typeImageDepuisOctetsPattern3 = /^(heic|heix|hevc|hevx|heim|heis|mif1|msf1)$/
+const nomPhotoPattern4 = /\.[a-z0-9]{1,5}$/i
+const nomPhotoPattern5 = /-+$/
 /**
  * Pictures an artist sends from her space (UI-03, plans/01 §3.2): the
  * profile picture and the portfolio.
@@ -45,17 +50,12 @@ export const MESSAGES_PHOTO = {
 	heic: 'Les photos HEIC (format des iPhone) ne sont pas acceptées. Choisis une photo JPEG, PNG ou WebP. Sur iPhone : Réglages › Appareil photo › Formats › « Le plus compatible ».',
 	type: "Ce fichier n'est pas accepté : choisis une photo JPEG, PNG ou WebP.",
 	taille: 'Cette photo pèse plus de 25 Mo : choisis-en une plus légère.',
-	illisible:
-		'Impossible de lire cette photo : choisis une autre photo JPEG, PNG ou WebP.',
-	'trop-lourde':
-		'Cette photo reste trop lourde même réduite : choisis-en une autre.',
+	illisible: 'Impossible de lire cette photo : choisis une autre photo JPEG, PNG ou WebP.',
+	'trop-lourde': 'Cette photo reste trop lourde même réduite : choisis-en une autre.',
 	'refus-taille': 'La photo dépasse 10 Mo : choisis-en une plus légère.',
-	'refus-type':
-		"La photo n'a pas été acceptée : choisis une photo JPEG, PNG ou WebP.",
-	'envoi-impossible':
-		"L'envoi de la photo a échoué, rien n'a été enregistré : réessaie dans quelques minutes.",
-	'limite-galerie':
-		'Ton portfolio contient déjà 10 photos : retires-en une pour en ajouter une autre.',
+	'refus-type': "La photo n'a pas été acceptée : choisis une photo JPEG, PNG ou WebP.",
+	'envoi-impossible': "L'envoi de la photo a échoué, rien n'a été enregistré : réessaie dans quelques minutes.",
+	'limite-galerie': 'Ton portfolio contient déjà 10 photos : retires-en une pour en ajouter une autre.',
 }
 
 const EXTENSIONS = {
@@ -81,13 +81,12 @@ const TYPES_HEIC = new Set(['image/heic', 'image/heif'])
  * @returns {string} '' when unknown
  */
 export function typeDepuisNom(nom) {
-	const extension = /\.([a-z0-9]+)$/i.exec(String(nom ?? ''))?.[1]
+	const extension = typeDepuisNomPattern1.exec(String(nom ?? ''))?.[1]
 	return EXTENSIONS[extension?.toLowerCase()] ?? ''
 }
 
 const commencePar = (tete, octets, decalage = 0) =>
-	tete.length >= decalage + octets.length &&
-	octets.every((octet, i) => tete[decalage + i] === octet)
+	tete.length >= decalage + octets.length && octets.every((octet, i) => tete[decalage + i] === octet)
 
 const ascii = texte => [...texte].map(c => c.charCodeAt(0))
 
@@ -101,16 +100,13 @@ const ascii = texte => [...texte].map(c => c.charCodeAt(0))
 export function typeImageDepuisOctets(tete) {
 	if (!tete || typeof tete.length !== 'number') return null
 	if (commencePar(tete, [0xff, 0xd8, 0xff])) return 'image/jpeg'
-	if (commencePar(tete, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))
-		return 'image/png'
-	if (commencePar(tete, ascii('RIFF')) && commencePar(tete, ascii('WEBP'), 8))
-		return 'image/webp'
+	if (commencePar(tete, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) return 'image/png'
+	if (commencePar(tete, ascii('RIFF')) && commencePar(tete, ascii('WEBP'), 8)) return 'image/webp'
 	// ISO BMFF: size (4 bytes), « ftyp », then the major brand
 	if (commencePar(tete, ascii('ftyp'), 4)) {
 		const marque = String.fromCharCode(...Array.from(tete).slice(8, 12))
-		if (/^(avif|avis)$/.test(marque)) return 'image/avif'
-		if (/^(heic|heix|hevc|hevx|heim|heis|mif1|msf1)$/.test(marque))
-			return 'image/heic'
+		if (typeImageDepuisOctetsPattern2.test(marque)) return 'image/avif'
+		if (typeImageDepuisOctetsPattern3.test(marque)) return 'image/heic'
 	}
 	return null
 }
@@ -132,8 +128,7 @@ export function verifierPhoto({ name, type, size, tete } = {}) {
 	// the bytes, when read, win over the declared type and the name
 	const reel = tete === undefined ? declare : typeImageDepuisOctets(tete)
 
-	if (TYPES_HEIC.has(reel) || (reel === null && TYPES_HEIC.has(declare)))
-		return refus('type', 'heic')
+	if (TYPES_HEIC.has(reel) || (reel === null && TYPES_HEIC.has(declare))) return refus('type', 'heic')
 	if (!TYPES_ACCEPTES.includes(reel)) return refus('type', 'type')
 	if (!Number.isFinite(size) || size <= 0) return refus('type', 'illisible')
 	if (size > TAILLE_MAX_CHOIX) return refus('taille', 'taille')
@@ -149,13 +144,7 @@ export function verifierPhoto({ name, type, size, tete } = {}) {
  * @returns {{largeur: number, hauteur: number}|null} null for invalid sizes
  */
 export function dimensionsCibles(largeur, hauteur, coteMax = COTE_MAX) {
-	if (
-		!Number.isFinite(largeur) ||
-		!Number.isFinite(hauteur) ||
-		largeur <= 0 ||
-		hauteur <= 0 ||
-		!(coteMax > 0)
-	)
+	if (!(Number.isFinite(largeur) && Number.isFinite(hauteur)) || largeur <= 0 || hauteur <= 0 || !(coteMax > 0))
 		return null
 	const echelle = Math.min(1, coteMax / Math.max(largeur, hauteur))
 	return {
@@ -177,13 +166,7 @@ export function dimensionsCibles(largeur, hauteur, coteMax = COTE_MAX) {
  * @param {number} [options.coteMax]
  * @returns {Promise<{ok: true, blob: object, largeur: number, hauteur: number, type: string, qualite: number, essais: number} | {ok: false, code: string, essais: number}>}
  */
-export async function compresserPhoto({
-	largeur,
-	hauteur,
-	encoder,
-	tailleMax = TAILLE_MAX_ENVOI,
-	coteMax = COTE_MAX,
-}) {
+export async function compresserPhoto({ largeur, hauteur, encoder, tailleMax = TAILLE_MAX_ENVOI, coteMax = COTE_MAX }) {
 	const base = dimensionsCibles(largeur, hauteur, coteMax)
 	if (!base) return { ok: false, code: 'illisible', essais: 0 }
 
@@ -196,16 +179,15 @@ export async function compresserPhoto({
 			qualite,
 		}
 		essais++
+		// biome-ignore lint/performance/noAwaitInLoops: Each iteration depends on the preceding result; concurrency would change behavior.
 		let blob = await encoder({ ...cible, type })
 		if (blob && blob.type !== type && type === 'image/webp') {
 			type = 'image/jpeg'
 			essais++
 			blob = await encoder({ ...cible, type })
 		}
-		if (!blob || blob.type !== type)
-			return { ok: false, code: 'illisible', essais }
-		if (blob.size <= tailleMax)
-			return { ok: true, blob, ...cible, type, essais }
+		if (!blob || blob.type !== type) return { ok: false, code: 'illisible', essais }
+		if (blob.size <= tailleMax) return { ok: true, blob, ...cible, type, essais }
 	}
 	return { ok: false, code: 'trop-lourde', essais }
 }
@@ -219,14 +201,14 @@ export async function compresserPhoto({
  */
 export function nomPhoto(nom, type) {
 	const base = String(nom ?? '')
-		.replace(/\.[a-z0-9]{1,5}$/i, '')
+		.replace(nomPhotoPattern4, '')
 		.normalize('NFD')
 		.replace(/[\u0300-\u036f]/g, '')
 		.toLowerCase()
 		.replace(/[^a-z0-9]+/g, '-')
 		.replace(/^-+|-+$/g, '')
 		.slice(0, 60)
-		.replace(/-+$/, '')
+		.replace(nomPhotoPattern5, '')
 	const extension = type === 'image/webp' ? 'webp' : 'jpg'
 	return `${base || 'photo'}.${extension}`
 }
@@ -242,10 +224,7 @@ export function nomPhoto(nom, type) {
  * @param {(blob: object, nom: string, type: string) => object} ports.fabriquerFichier
  * @returns {Promise<{ok: true, fichier: object, largeur: number, hauteur: number, taille: number} | {ok: false, raison: string, code: string, message: string}>}
  */
-export async function preparerPhoto(
-	fichier,
-	{ lireTete, decoder, fabriquerFichier }
-) {
+export async function preparerPhoto(fichier, { lireTete, decoder, fabriquerFichier }) {
 	const refus = (raison, code) => ({
 		ok: false,
 		raison,
@@ -274,18 +253,10 @@ export async function preparerPhoto(
 			hauteur: image.hauteur,
 			encoder: image.encoder,
 		})
-		if (!resultat.ok)
-			return refus(
-				resultat.code === 'trop-lourde' ? 'taille' : 'type',
-				resultat.code
-			)
+		if (!resultat.ok) return refus(resultat.code === 'trop-lourde' ? 'taille' : 'type', resultat.code)
 		return {
 			ok: true,
-			fichier: fabriquerFichier(
-				resultat.blob,
-				nomPhoto(fichier.name, resultat.type),
-				resultat.type
-			),
+			fichier: fabriquerFichier(resultat.blob, nomPhoto(fichier.name, resultat.type), resultat.type),
 			largeur: resultat.largeur,
 			hauteur: resultat.hauteur,
 			taille: resultat.blob.size,

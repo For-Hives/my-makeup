@@ -1,14 +1,13 @@
-import React from 'react'
 import Footer from '@/components/Global/Footer'
-import ViewResumeProfil from '@/components/Profil/Parents/ViewResumeProfil'
-import ViewInfosProfil from '@/components/Profil/Parents/ViewInfosProfil'
 import Nav from '@/components/Global/Nav'
 import Seo from '@/components/Global/Seo'
+import ViewInfosProfil from '@/components/Profil/Parents/ViewInfosProfil'
+import ViewResumeProfil from '@/components/Profil/Parents/ViewResumeProfil'
 import { devisFormUrl } from '@/lib/devis'
 import { avecVillePublique } from '@/lib/profil/lieu-public'
-import { cheminProfil, resoudreProfil } from '@/lib/slug'
 import { seoProfil } from '@/lib/seo/meta'
 import { urlDuSite } from '@/lib/seo/url'
+import { cheminProfil, resoudreProfil } from '@/lib/slug'
 import { chargerProfil, chargerTableDesSlugs } from '@/services/profilsPublics'
 
 /**
@@ -31,12 +30,7 @@ export default function Profil({ profilData, slug, devisUrl = null }) {
 			<Seo seo={seo} />
 			<Nav />
 			<main className={'relative'}>
-				<ViewResumeProfil
-					user={profilData}
-					isPublicView={true}
-					devisUrl={devisUrl}
-					slug={slug}
-				/>
+				<ViewResumeProfil user={profilData} isPublicView={true} devisUrl={devisUrl} slug={slug} />
 				<ViewInfosProfil user={profilData} isPublicView={true} />
 			</main>
 			<Footer />
@@ -47,7 +41,7 @@ export default function Profil({ profilData, slug, devisUrl = null }) {
 // Nothing generated at build time: each profile is rendered on its first
 // visit then kept and regenerated every 10 s (ISR). The build does not
 // depend on the API, and the slugs are computed on the current list.
-export async function getStaticPaths() {
+export function getStaticPaths() {
 	return { paths: [], fallback: 'blocking' }
 }
 

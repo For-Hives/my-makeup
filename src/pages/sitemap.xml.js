@@ -1,11 +1,7 @@
 import { devisFormUrl } from '@/lib/devis'
 import { entreesSitemap, PAGES_STATIQUES, sitemapXml } from '@/lib/seo/sitemap'
 import { urlDuSite } from '@/lib/seo/url'
-import {
-	chargerProfilsDuSitemap,
-	listerArticles,
-	listerTalents,
-} from '@/services/profilsPublics'
+import { chargerProfilsDuSitemap, listerArticles, listerTalents } from '@/services/profilsPublics'
 
 /**
  * /sitemap.xml (SEO-10): the fixed pages, every publiable profile by its
@@ -16,8 +12,7 @@ import {
 const Sitemap = () => null
 
 export const getServerSideProps = async ({ res }) => {
-	const formulaireDevis =
-		devisFormUrl(process.env.NEXT_PUBLIC_DEVIS_FORM_URL) !== null
+	const formulaireDevis = devisFormUrl(process.env.NEXT_PUBLIC_DEVIS_FORM_URL) !== null
 	const [profils, talents, articles] = await Promise.all([
 		chargerProfilsDuSitemap({ formulaireDevis }),
 		listerTalents(),

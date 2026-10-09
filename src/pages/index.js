@@ -1,16 +1,15 @@
+import CTA from '@/components/Global/CTA'
+import Footer from '@/components/Global/Footer'
 import Hero from '@/components/Global/Hero'
 import Nav from '@/components/Global/Nav'
-import Presentation from '@/components/Home/Presentation'
-import Footer from '@/components/Global/Footer'
-import Talents from '@/components/Home/Talents'
-import Collaboration from '@/components/Home/Collaboration'
-import React from 'react'
-import Project from '@/components/Home/Project'
-import CTA from '@/components/Global/CTA'
-import MOTD from '@/services/MOTD'
 import Seo from '@/components/Global/Seo'
+import Collaboration from '@/components/Home/Collaboration'
+import Presentation from '@/components/Home/Presentation'
+import Project from '@/components/Home/Project'
+import Talents from '@/components/Home/Talents'
 import { seoPage } from '@/lib/seo/meta'
 import { urlDuSite } from '@/lib/seo/url'
+import MOTD from '@/services/MOTD'
 
 export default function Home({ talents }) {
 	MOTD()
@@ -30,17 +29,11 @@ export default function Home({ talents }) {
 			<Nav />
 			<main className={'relative'}>
 				<Hero
-					title={
-						<>
-							Trouver la maquilleuse qui vous correspond n&apos;a jamais été
-							aussi simple
-						</>
-					}
+					title={<>Trouver la maquilleuse qui vous correspond n&apos;a jamais été aussi simple</>}
 					description={
 						<>
-							Trouvez la maquilleuse spécialisée dans le domaine que vous
-							recherchez, maquillage pour les mariées, maquillage de soirée,
-							maquillage professionnel...
+							Trouvez la maquilleuse spécialisée dans le domaine que vous recherchez, maquillage pour les mariées,
+							maquillage de soirée, maquillage professionnel...
 						</>
 					}
 				/>

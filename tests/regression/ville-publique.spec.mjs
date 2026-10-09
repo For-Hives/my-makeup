@@ -11,29 +11,22 @@
 import { expect, test } from '@playwright/test'
 import { getElementsByTagName, removeElement } from 'domutils'
 import { parseDocument } from 'htmlparser2'
-import {
-	ADRESSE_FICTIVE,
-	PROFILS_PUBLICS,
-	RUE_COLLEE,
-	RUE_FICTIVE,
-} from './donnees-publiques.mjs'
+import { ADRESSE_FICTIVE, PROFILS_PUBLICS, RUE_COLLEE, RUE_FICTIVE } from './donnees-publiques.mjs'
 import { COMPTE_TEST } from './mock-api.mjs'
 
 const API = process.env.RG_API ?? 'http://127.0.0.1:4112'
 const APP = process.env.RG_APP ?? 'http://localhost:3996'
 
 // Never against the production: local hosts only
-for (const cible of [API, APP])
+for (const cible of [API, APP]) {
 	if (!['localhost', '127.0.0.1', '[::1]'].includes(new URL(cible).hostname))
 		throw new Error(`cible non locale refusée : ${cible}`)
+}
 
 test.use({ testIdAttribute: 'data-cy' })
 
 async function piloter(chemin, corps) {
-	const reponse = await fetch(
-		API + chemin,
-		corps === undefined ? {} : { method: 'POST', body: JSON.stringify(corps) }
-	)
+	const reponse = await fetch(API + chemin, corps === undefined ? {} : { method: 'POST', body: JSON.stringify(corps) })
 	return reponse.json()
 }
 
@@ -47,38 +40,34 @@ const { slug: SLUG, ville: VILLE, commune: COMMUNE } = PROFIL.attendu
 // --- raw HTML, read with a parser ---
 function textes(noeud, acc = []) {
 	if (noeud.type === 'text') acc.push(noeud.data)
-	for (const enfant of noeud.children ?? []) textes(enfant, acc)
+	for (const enfant of noeud.children ?? []) {
+		textes(enfant, acc)
+	}
 	return acc
 }
 function texteVisible(html) {
 	const document = parseDocument(html)
-	for (const script of getElementsByTagName('script', document))
+	for (const script of getElementsByTagName('script', document)) {
 		removeElement(script)
+	}
 	return textes(document).join(' ')
 }
-const elements = (html, balise) =>
-	getElementsByTagName(balise, parseDocument(html))
+const elements = (html, balise) => getElementsByTagName(balise, parseDocument(html))
 const meta = (html, cle) =>
-	elements(html, 'meta').find(
-		e => e.attribs.name === cle || e.attribs.property === cle
-	)?.attribs.content
-const canonical = html =>
-	elements(html, 'link').find(e => e.attribs.rel === 'canonical')?.attribs
-		.href ?? null
+	elements(html, 'meta').find(e => e.attribs.name === cle || e.attribs.property === cle)?.attribs.content
+const canonical = html => elements(html, 'link').find(e => e.attribs.rel === 'canonical')?.attribs.href ?? null
 const scripts = (html, filtre) =>
 	elements(html, 'script')
 		.filter(filtre)
 		.map(e => JSON.parse(textes(e).join('')))
-const jsonLd = html =>
-	scripts(html, e => e.attribs.type === 'application/ld+json')
+const jsonLd = html => scripts(html, e => e.attribs.type === 'application/ld+json')
 const nextData = html => scripts(html, e => e.attribs.id === '__NEXT_DATA__')[0]
 
 // the street nowhere in a text, case ignored
 function sansRue(texte, ou) {
-	for (const morceau of RUE_FICTIVE)
-		expect(texte.toLowerCase(), `${ou} : « ${morceau} »`).not.toContain(
-			morceau.toLowerCase()
-		)
+	for (const morceau of RUE_FICTIVE) {
+		expect(texte.toLowerCase(), `${ou} : « ${morceau} »`).not.toContain(morceau.toLowerCase())
+	}
 }
 
 test.describe('UI-11 adresse postale tapée comme ville', () => {
@@ -89,9 +78,7 @@ test.describe('UI-11 adresse postale tapée comme ville', () => {
 		expect(reponse.status()).toBe(200)
 		const html = await reponse.text()
 
-		expect(elements(html, 'h1').map(e => textes(e).join('').trim())).toEqual([
-			'Adèle Fictive',
-		])
+		expect(elements(html, 'h1').map(e => textes(e).join('').trim())).toEqual(['Adèle Fictive'])
 		// publiable: indexed, canonical on the slug
 		expect(meta(html, 'robots')).toBeUndefined()
 		expect(reponse.headers()['x-robots-tag']).toBeUndefined()
@@ -106,11 +93,12 @@ test.describe('UI-11 adresse postale tapée comme ville', () => {
 		const [personne] = jsonLd(html)
 		expect(personne['@type']).toBe('Person')
 		expect(personne.workLocation).toEqual({ '@type': 'Place', name: COMMUNE })
-		for (const offre of personne.makesOffer)
+		for (const offre of personne.makesOffer) {
 			expect(offre.itemOffered.areaServed).toEqual({
 				'@type': 'City',
 				name: COMMUNE,
 			})
+		}
 
 		// the props of the page carry the public city only
 		const donnees = nextData(html)
@@ -131,24 +119,17 @@ test.describe('UI-11 adresse postale tapée comme ville', () => {
 		sansRue(xml, 'sitemap')
 	})
 
-	test('dans un navigateur : même rendu une fois hydraté, aucune erreur, la rue nulle part', async ({
-		page,
-	}) => {
+	test('dans un navigateur : même rendu une fois hydraté, aucune erreur, la rue nulle part', async ({ page }) => {
 		const erreurs = []
 		page.on('pageerror', e => erreurs.push(e.message))
 		page.on('console', m => {
 			// the pictures of the fake Strapi are not on an allowed host of
 			// next/image: their 400 is expected here
-			if (m.type() === 'error' && !/Failed to load resource/.test(m.text()))
-				erreurs.push(m.text())
+			if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) erreurs.push(m.text())
 		})
 		await page.goto(`/profil/${SLUG}`)
-		await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-			'Adèle Fictive'
-		)
-		await expect(page.getByTestId('resume-city-action-radius')).toHaveText(
-			`${VILLE} et 30 km autour`
-		)
+		await expect(page.getByRole('heading', { level: 1 })).toHaveText('Adèle Fictive')
+		await expect(page.getByTestId('resume-city-action-radius')).toHaveText(`${VILLE} et 30 km autour`)
 		sansRue(await page.content(), 'DOM hydraté')
 		expect(erreurs).toEqual([])
 	})
@@ -165,9 +146,7 @@ test.describe('UI-11 adresse postale tapée comme ville', () => {
 		expect(texteVisible(html)).toContain('74 et alentours et 30 km autour')
 		expect(meta(html, 'og:title')).toContain('à 74 et alentours')
 		expect(html).not.toMatch(/Et Alentours/)
-		expect(nextData(html).props.pageProps.profilData.attributes.city).toBe(
-			'74 et alentours'
-		)
+		expect(nextData(html).props.pageProps.profilData.attributes.city).toBe('74 et alentours')
 		const xml = await (await request.get('/sitemap.xml')).text()
 		expect(xml).not.toContain('lea-alentours')
 	})
@@ -180,9 +159,7 @@ test.describe('UI-11 adresse postale tapée comme ville', () => {
 		})
 		expect(reponse.status()).toBe(200)
 		const html = await reponse.text()
-		expect(elements(html, 'h1').map(e => textes(e).join('').trim())).toEqual([
-			'Inès Fictive',
-		])
+		expect(elements(html, 'h1').map(e => textes(e).join('').trim())).toEqual(['Inès Fictive'])
 		expect(meta(html, 'robots')).toBe('noindex,follow')
 		expect(canonical(html)).toBeNull()
 		const donnees = nextData(html)
@@ -213,9 +190,7 @@ test.describe('UI-11 adresse postale tapée comme ville', () => {
 		sansRue(await page.content(), 'page de recherche')
 	})
 
-	test('espace de la maquilleuse : ce qu’elle a tapé, ce que montre sa page et l’aide', async ({
-		page,
-	}) => {
+	test('espace de la maquilleuse : ce qu’elle a tapé, ce que montre sa page et l’aide', async ({ page }) => {
 		await piloter('/__profil', { city: ADRESSE_FICTIVE, action_radius: 30 })
 		const requete = page.context().request
 		const { csrfToken } = await (await requete.get('/api/auth/csrf')).json()
@@ -227,29 +202,21 @@ test.describe('UI-11 adresse postale tapée comme ville', () => {
 				json: 'true',
 			},
 		})
-		const session = page.waitForResponse(r =>
-			r.url().endsWith('/api/auth/session')
-		)
+		const session = page.waitForResponse(r => r.url().endsWith('/api/auth/session'))
 		await page.goto('/auth/profil')
 		await session
 		await expect(page.getByTestId('resume-name')).toHaveText('Testine Recette')
 
 		// her own space keeps the value she typed
 		await expect(page.getByText(ADRESSE_FICTIVE).first()).toBeVisible()
-		await expect(page.getByTestId('location-city-public')).toHaveText(
-			`Sur ta page publique : ${VILLE}`
-		)
-		const aide =
-			'Indique ta ville (et ton code postal), pas ton adresse : elle est publique.'
+		await expect(page.getByTestId('location-city-public')).toHaveText(`Sur ta page publique : ${VILLE}`)
+		const aide = 'Indique ta ville (et ton code postal), pas ton adresse : elle est publique.'
 		await expect(page.getByTestId('location-city-help')).toHaveText(aide)
 
 		// the field of the modal, with the same help
 		await page.getByTestId('update-location-button').click()
 		await expect(page.getByTestId('city-input')).toHaveValue(ADRESSE_FICTIVE)
 		await expect(page.getByTestId('city-help')).toHaveText(aide)
-		await expect(page.getByTestId('city-input')).toHaveAttribute(
-			'aria-describedby',
-			'city-aide'
-		)
+		await expect(page.getByTestId('city-input')).toHaveAttribute('aria-describedby', 'city-aide')
 	})
 })

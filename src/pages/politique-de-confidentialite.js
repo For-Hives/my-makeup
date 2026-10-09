@@ -1,10 +1,9 @@
-import React from 'react'
-import Nav from '@/components/Global/Nav'
-import Footer from '@/components/Global/Footer'
 import Head from 'next/head'
 import Link from 'next/link'
+import Footer from '@/components/Global/Footer'
 import Hero from '@/components/Global/Hero'
 import MeasureOptOut from '@/components/Global/MeasureOptOut'
+import Nav from '@/components/Global/Nav'
 import { EDITEUR, formatSiret } from '@/lib/legal'
 import { urlAbsolue } from '@/lib/seo/url'
 
@@ -18,10 +17,7 @@ function PolitiqueDeConfidentialite() {
 					content="Quelles données My-Makeup traite, pourquoi, combien de temps, avec quels prestataires, et comment exercer vos droits."
 				/>
 				{/*	seo tag canonical link */}
-				<link
-					rel="canonical"
-					href={urlAbsolue('/politique-de-confidentialite')}
-				/>
+				<link rel="canonical" href={urlAbsolue('/politique-de-confidentialite')} />
 			</Head>
 
 			<Nav />
@@ -33,14 +29,12 @@ function PolitiqueDeConfidentialite() {
 							<span className={'text-indigo-900'}>My&nbsp;Makeup</span>
 						</>
 					}
-					description={<>{'Vos données, en clair.'}</>}
+					description={'Vos données, en clair.'}
 					isSearchDisplayed={false}
 					isCTALoginDisplayed={false}
 					isSimpleVersionDisplayed={true}
 				/>
-				<div
-					className={'relative mx-auto my-24 max-w-7xl px-4 md:my-48 md:px-0'}
-				>
+				<div className={'relative mx-auto my-24 max-w-7xl px-4 md:my-48 md:px-0'}>
 					<div className="mx-auto max-w-2xl">
 						<article>
 							<header className="flex flex-col">
@@ -137,21 +131,15 @@ function PolitiqueDeConfidentialite() {
 								    send.my-makeup.fr, region eu-west-1 (Ireland), since 09/10/2026. */}
 								<ul>
 									<li>{`netcup GmbH (Allemagne) : hébergement du site.`}</li>
-									<li>
-										{`Contabo GmbH (Allemagne) : hébergement de notre outil de mesure d'audience (Umami).`}
-									</li>
-									<li>
-										{`Cloudflare (service R2) : stockage des photos des profils.`}
-									</li>
+									<li>{`Contabo GmbH (Allemagne) : hébergement de notre outil de mesure d'audience (Umami).`}</li>
+									<li>{`Cloudflare (service R2) : stockage des photos des profils.`}</li>
 									<li>
 										{`Resend, Inc. (États-Unis) : envoi des emails du site (formulaire de contact, réinitialisation du mot de passe), depuis ses serveurs situés dans l'Union européenne (Irlande) ; le transfert vers la société est encadré comme indiqué ci-dessous.`}
 									</li>
 									<li>
 										{`Lorsque le bouton « Demander un devis » est proposé : outil de formulaire de devis, hébergé dans l'Union européenne (sous-traitant).`}
 									</li>
-									<li>
-										{`Google : uniquement si vous choisissez de vous connecter avec Google.`}
-									</li>
+									<li>{`Google : uniquement si vous choisissez de vous connecter avec Google.`}</li>
 								</ul>
 								<p>
 									{`Lorsque l'un de ces prestataires est établi hors de l'Union européenne, le transfert est encadré par le cadre de protection des données UE–États-Unis (Data Privacy Framework) ou par des clauses contractuelles types de la Commission européenne. Nous ne vendons ni ne louons aucune donnée personnelle.`}
@@ -162,11 +150,7 @@ function PolitiqueDeConfidentialite() {
 									{`Vous pouvez accéder à vos données, les rectifier, les faire effacer, en recevoir une copie, vous opposer à un traitement, en demander la limitation ou retirer votre consentement à tout moment. Écrivez-nous à `}
 									<a href={`mailto:${EDITEUR.email}`}>{EDITEUR.email}</a>
 									{` : nous répondons dans un délai d'un mois. Vous pouvez aussi adresser une réclamation à la CNIL (`}
-									<a
-										href={'https://www.cnil.fr'}
-										rel={'noopener nofollow noreferrer'}
-										target={'_blank'}
-									>
+									<a href={'https://www.cnil.fr'} rel={'noopener nofollow noreferrer'} target={'_blank'}>
 										www.cnil.fr
 									</a>
 									{').'}

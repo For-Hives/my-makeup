@@ -1,11 +1,11 @@
-import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
+import { describe, test } from 'node:test'
 import {
 	aMedia,
+	CRITERES,
 	completude,
 	contactsMasques,
-	CRITERES,
 	devientPubliable,
 	longueurDescription,
 	prixNumerique,
@@ -60,8 +60,9 @@ describe('completude (plans/02 U01-U07)', () => {
 			{ city: '  ' },
 			{ speciality: '' },
 			{ speciality: null },
-		])
+		]) {
 			assert.equal(completude({ ...complet, ...manque }).actif, false)
+		}
 	})
 
 	test('U04 publiable needs an offer with a numeric price', () => {
@@ -69,10 +70,7 @@ describe('completude (plans/02 U01-U07)', () => {
 		assert.equal(avec([{ price: 'Sur devis' }]).publiable, false)
 		assert.equal(avec([]).publiable, false)
 		assert.equal(avec(null).publiable, false)
-		assert.equal(
-			avec([{ price: 'Sur devis' }, { price: '80€' }]).publiable,
-			true
-		)
+		assert.equal(avec([{ price: 'Sur devis' }, { price: '80€' }]).publiable, true)
 	})
 
 	test('U05 description of 200 characters at least, edge spaces ignored', () => {
@@ -87,10 +85,7 @@ describe('completude (plans/02 U01-U07)', () => {
 		const sansCanal = { ...complet, network: { instagram: '', email: null } }
 		assert.equal(completude(sansCanal).publiable, false)
 		assert.ok(completude(sansCanal).manquants.includes('reseaux'))
-		assert.equal(
-			completude(sansCanal, { formulaireDevis: true }).publiable,
-			true
-		)
+		assert.equal(completude(sansCanal, { formulaireDevis: true }).publiable, true)
 		assert.equal(completude({ ...complet, network: null }).publiable, false)
 	})
 
@@ -99,10 +94,7 @@ describe('completude (plans/02 U01-U07)', () => {
 		assert.equal(c.interne, true)
 		assert.equal(c.actif, true)
 		assert.equal(c.publiable, false)
-		assert.equal(
-			completude({ ...complet, speciality: 'Maquillage mariée' }).interne,
-			false
-		)
+		assert.equal(completude({ ...complet, speciality: 'Maquillage mariée' }).interne, false)
 	})
 
 	// the steps of the removed Cypress profile spec (8 %, 38 %, 92 %): the bar
@@ -132,20 +124,11 @@ describe('completude (plans/02 U01-U07)', () => {
 	})
 
 	test('U08 shared JSON cases (weekly report, v3): same results', () => {
-		const { cas } = JSON.parse(
-			readFileSync(
-				new URL('./fixtures/completude-cas.json', import.meta.url),
-				'utf8'
-			)
-		)
+		const { cas } = JSON.parse(readFileSync(new URL('./fixtures/completude-cas.json', import.meta.url), 'utf8'))
 		assert.ok(cas.length >= 10)
 		for (const { nom, profil, options, attendu } of cas) {
 			const { score, actif, publiable, interne } = completude(profil, options)
-			assert.deepEqual(
-				{ score, actif, publiable, interne },
-				attendu,
-				`cas « ${nom} »`
-			)
+			assert.deepEqual({ score, actif, publiable, interne }, attendu, `cas « ${nom} »`)
 		}
 	})
 })
@@ -164,8 +147,9 @@ describe('elementary rules', () => {
 			'12, avenue des Essais, 75011 Paris',
 			'3 Place des Essais Thonon-les-Bains',
 			'12 rue des Essais 74000',
-		])
+		]) {
 			assert.equal(villeExploitable(v), true, v)
+		}
 		for (const v of [
 			'',
 			'   ',
@@ -181,8 +165,9 @@ describe('elementary rules', () => {
 			'Annecy-rue des Essais',
 			null,
 			42,
-		])
+		]) {
 			assert.equal(villeExploitable(v), false, String(v))
+		}
 	})
 
 	test('UI-11 a complete profile whose city is a postal address is publiable', () => {
@@ -225,10 +210,7 @@ describe('elementary rules', () => {
 
 	test('contacts hidden by a list of the API (PR #370): unknown, not missing', () => {
 		assert.equal(contactsMasques({ id: 1, instagram: '' }), true)
-		assert.equal(
-			contactsMasques({ instagram: '', email: '', phone: '' }),
-			false
-		)
+		assert.equal(contactsMasques({ instagram: '', email: '', phone: '' }), false)
 		assert.equal(contactsMasques({ email: null }), false)
 		assert.equal(contactsMasques(null), false)
 		assert.equal(contactsMasques(undefined), false)
@@ -253,37 +235,22 @@ describe('devientPubliable (profile_publiable, MES-12)', () => {
 
 	test('complete to complete, incomplete to incomplete, complete to incomplete: false', () => {
 		assert.equal(devientPubliable(complet, { ...complet, city: 'Lyon' }), false)
-		assert.equal(
-			devientPubliable(incomplet, { ...incomplet, description: 'Bonjour' }),
-			false
-		)
+		assert.equal(devientPubliable(incomplet, { ...incomplet, description: 'Bonjour' }), false)
 		assert.equal(devientPubliable(presque, presque), false)
 		// a loss is never counted as a profile that became publiable
 		assert.equal(devientPubliable(complet, presque), false)
-		assert.equal(
-			devientPubliable(complet, { ...complet, service_offers: [] }),
-			false
-		)
+		assert.equal(devientPubliable(complet, { ...complet, service_offers: [] }), false)
 		assert.equal(devientPubliable(null, undefined), false)
 		// an internal account never becomes publiable
 		const interne = { ...presque, speciality: 'CEO/CTO My Makeup' }
-		assert.equal(
-			devientPubliable(interne, { ...interne, description: DESCRIPTION }),
-			false
-		)
+		assert.equal(devientPubliable(interne, { ...interne, description: DESCRIPTION }), false)
 	})
 
 	test('the quote form counts as the contact channel she lacks', () => {
 		const sansCanal = { ...presque, network: { instagram: '' } }
 		const apres = { ...sansCanal, description: 'a'.repeat(200) }
 		assert.equal(devientPubliable(sansCanal, apres), false)
-		assert.equal(
-			devientPubliable(sansCanal, apres, { formulaireDevis: false }),
-			false
-		)
-		assert.equal(
-			devientPubliable(sansCanal, apres, { formulaireDevis: true }),
-			true
-		)
+		assert.equal(devientPubliable(sansCanal, apres, { formulaireDevis: false }), false)
+		assert.equal(devientPubliable(sansCanal, apres, { formulaireDevis: true }), true)
 	})
 })

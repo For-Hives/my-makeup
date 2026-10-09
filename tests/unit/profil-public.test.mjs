@@ -1,10 +1,7 @@
-import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
-import {
-	formatZone,
-	rayonKm,
-	villeAffichee,
-} from '../../src/lib/format-zone.js'
+import { describe, test } from 'node:test'
+import { formatZone, rayonKm, villeAffichee } from '../../src/lib/format-zone.js'
+import { trierProfilsPublics } from '../../src/lib/profil/publiables.js'
 import {
 	altRealisation,
 	attributs,
@@ -21,55 +18,25 @@ import {
 	urlMedia,
 	urlReseau,
 } from '../../src/lib/profil/vue-publique.js'
-import { trierProfilsPublics } from '../../src/lib/profil/publiables.js'
 
 const INTERDIT = /\b(null|undefined|NaN|Invalid Date)\b|&\s*km|\bnullkm\b/
 
 describe('formatZone (plans/02 U14)', () => {
 	test('U14 no city / radius combination gives « null », « undefined » or « & km »', () => {
-		const villes = [
-			'Annecy',
-			'  Annecy  ',
-			'',
-			'   ',
-			null,
-			undefined,
-			'null',
-			'undefined',
-			42,
-			{},
-		]
-		const rayons = [
-			30,
-			'30',
-			0,
-			'0',
-			null,
-			undefined,
-			'',
-			'abc',
-			-5,
-			1e6,
-			12.6,
-			Number.NaN,
-		]
-		for (const city of villes)
+		const villes = ['Annecy', '  Annecy  ', '', '   ', null, undefined, 'null', 'undefined', 42, {}]
+		const rayons = [30, '30', 0, '0', null, undefined, '', 'abc', -5, 1e6, 12.6, Number.NaN]
+		for (const city of villes) {
 			for (const radius of rayons) {
 				const zone = formatZone({ city, radius })
 				assert.doesNotMatch(zone, INTERDIT, `${city} / ${radius} → ${zone}`)
 			}
+		}
 		assert.equal(formatZone(), '')
 	})
 
 	test('city and radius', () => {
-		assert.equal(
-			formatZone({ city: 'Annecy', radius: 30 }),
-			'Annecy et 30 km autour'
-		)
-		assert.equal(
-			formatZone({ city: ' Annecy ', radius: '12.6' }),
-			'Annecy et 13 km autour'
-		)
+		assert.equal(formatZone({ city: 'Annecy', radius: 30 }), 'Annecy et 30 km autour')
+		assert.equal(formatZone({ city: ' Annecy ', radius: '12.6' }), 'Annecy et 13 km autour')
 		assert.equal(formatZone({ city: 'Annecy', radius: 0 }), 'Annecy')
 		assert.equal(formatZone({ city: 'Annecy', radius: null }), 'Annecy')
 		assert.equal(formatZone({ city: '', radius: 30 }), '')
@@ -93,30 +60,21 @@ describe('public profile view (UI-06)', () => {
 			medias({ data: [fichier(1), fichier(2)] }).map(m => m.url),
 			['https://r2.example.test/1.webp', 'https://r2.example.test/2.webp']
 		)
-		assert.equal(
-			photoPrincipale({ main_picture: { data: fichier(3) } }).url,
-			'https://r2.example.test/3.webp'
-		)
+		assert.equal(photoPrincipale({ main_picture: { data: fichier(3) } }).url, 'https://r2.example.test/3.webp')
 		assert.equal(photoPrincipale({ main_picture: { data: null } }), null)
-		assert.equal(
-			photoPrincipale({ main_picture: { id: 4, url: '/uploads/4.webp' } }).url,
-			'/uploads/4.webp'
-		)
+		assert.equal(photoPrincipale({ main_picture: { id: 4, url: '/uploads/4.webp' } }).url, '/uploads/4.webp')
 		assert.deepEqual(
 			galerie({
 				image_gallery: [{ id: 5, url: 'https://x.test/5.png' }, { id: 6 }],
 			}).length,
 			1
 		)
-		assert.deepEqual(
-			medias({ data: [{ id: 7, attributes: { url: 'u', width: null } }] })[0],
-			{
-				url: 'u',
-				width: null,
-				height: null,
-				formats: {},
-			}
-		)
+		assert.deepEqual(medias({ data: [{ id: 7, attributes: { url: 'u', width: null } }] })[0], {
+			url: 'u',
+			width: null,
+			height: null,
+			formats: {},
+		})
 		assert.deepEqual(galerie(null), [])
 	})
 
@@ -144,23 +102,14 @@ describe('public profile view (UI-06)', () => {
 	})
 
 	test('absolute picture URLs', () => {
-		assert.equal(
-			urlMedia('https://r2.example.test/a.webp', 'http://api'),
-			'https://r2.example.test/a.webp'
-		)
-		assert.equal(
-			urlMedia('/uploads/a.webp', 'https://api.example.test/'),
-			'https://api.example.test/uploads/a.webp'
-		)
+		assert.equal(urlMedia('https://r2.example.test/a.webp', 'http://api'), 'https://r2.example.test/a.webp')
+		assert.equal(urlMedia('/uploads/a.webp', 'https://api.example.test/'), 'https://api.example.test/uploads/a.webp')
 		assert.equal(urlMedia('//evil.test/a.webp', 'https://api'), '')
 		assert.equal(urlMedia(null), '')
 	})
 
 	test('the name of the h1: first and last name, else the artist name, never « null »', () => {
-		assert.equal(
-			nomAffiche({ attributes: { first_name: 'Zoé', last_name: 'Lefèvre' } }),
-			'Zoé Lefèvre'
-		)
+		assert.equal(nomAffiche({ attributes: { first_name: 'Zoé', last_name: 'Lefèvre' } }), 'Zoé Lefèvre')
 		assert.equal(
 			nomAffiche({
 				first_name: null,
@@ -174,25 +123,17 @@ describe('public profile view (UI-06)', () => {
 	})
 
 	test('pictures named « Réalisation de <nom> (n/N) »', () => {
-		assert.equal(
-			altRealisation('Zoé Lefèvre', 2, 6),
-			'Réalisation de Zoé Lefèvre (2/6)'
-		)
+		assert.equal(altRealisation('Zoé Lefèvre', 2, 6), 'Réalisation de Zoé Lefèvre (2/6)')
 	})
 
 	test('dates in UTC, never « Invalid Date » nor 1970', () => {
 		assert.equal(moisAnnee('2020-01-01'), 'janvier 2020')
 		assert.equal(moisAnnee('2020-01-01T00:00:00.000Z'), 'janvier 2020')
-		for (const v of [null, undefined, '', 'pas une date', 0])
+		for (const v of [null, undefined, '', 'pas une date', 0]) {
 			assert.equal(moisAnnee(v), '')
-		assert.equal(
-			periode({ date_start: '2019-03-01', date_end: null }),
-			'mars 2019 - aujourd’hui'
-		)
-		assert.equal(
-			periode({ date_start: '2019-03-01', date_end: '2021-07-15' }),
-			'mars 2019 - juillet 2021'
-		)
+		}
+		assert.equal(periode({ date_start: '2019-03-01', date_end: null }), 'mars 2019 - aujourd’hui')
+		assert.equal(periode({ date_start: '2019-03-01', date_end: '2021-07-15' }), 'mars 2019 - juillet 2021')
 		assert.equal(periode({ date_start: null, date_end: '2021-07-15' }), '')
 	})
 
@@ -200,35 +141,17 @@ describe('public profile view (UI-06)', () => {
 		assert.deepEqual(lignes('a\n\n b \n'), ['a', 'b'])
 		assert.deepEqual(lignes(null), [])
 		// a line « null » inside a text is as empty as a whole field « null »
-		assert.deepEqual(lignes('Ligne 1\r\nnull\n undefined \nLigne 2'), [
-			'Ligne 1',
-			'Ligne 2',
-		])
+		assert.deepEqual(lignes('Ligne 1\r\nnull\n undefined \nLigne 2'), ['Ligne 1', 'Ligne 2'])
 		assert.deepEqual(lignes('null'), [])
 		assert.deepEqual(lignes('180 €\n\n'), ['180 €'])
 	})
 
 	test('network links: http(s) only, @pseudo on its network, never javascript:', () => {
-		assert.equal(
-			urlReseau('instagram', 'https://instagram.com/zoe'),
-			'https://instagram.com/zoe'
-		)
-		assert.equal(
-			urlReseau('instagram', '@zoe.makeup'),
-			'https://www.instagram.com/zoe.makeup'
-		)
-		assert.equal(
-			urlReseau('instagram', 'zoe.makeup'),
-			'https://www.instagram.com/zoe.makeup'
-		)
-		assert.equal(
-			urlReseau('instagram', 'instagram.com/zoe'),
-			'https://instagram.com/zoe'
-		)
-		assert.equal(
-			urlReseau('website', 'studio.example.test'),
-			'https://studio.example.test/'
-		)
+		assert.equal(urlReseau('instagram', 'https://instagram.com/zoe'), 'https://instagram.com/zoe')
+		assert.equal(urlReseau('instagram', '@zoe.makeup'), 'https://www.instagram.com/zoe.makeup')
+		assert.equal(urlReseau('instagram', 'zoe.makeup'), 'https://www.instagram.com/zoe.makeup')
+		assert.equal(urlReseau('instagram', 'instagram.com/zoe'), 'https://instagram.com/zoe')
+		assert.equal(urlReseau('website', 'studio.example.test'), 'https://studio.example.test/')
 		assert.equal(urlReseau('website', 'mon site'), null)
 		assert.equal(urlReseau('website', 'javascript:alert(1)'), null)
 		assert.equal(urlReseau('facebook', ''), null)
@@ -274,26 +197,18 @@ describe('public profile view (UI-06)', () => {
 			courses: [{ diploma: 'CAP' }],
 			description: 'Texte',
 			image_gallery: { data: [fichier(1)] },
-			service_offers: [
-				{ name: 'Mariée', options: [{ name: '' }, { name: 'Essai' }] },
-			],
+			service_offers: [{ name: 'Mariée', options: [{ name: '' }, { name: 'Essai' }] }],
 			experiences: [{ company: null, job_name: null }],
 		})
 		assert.equal(v.langues, false)
 		assert.equal(v.experiences, false)
 		assert.equal(v.description, true)
 		// a description of empty lines only: no empty card
-		assert.equal(
-			sectionsVisibles({ description: 'null\n\n undefined ' }).description,
-			false
-		)
+		assert.equal(sectionsVisibles({ description: 'null\n\n undefined ' }).description, false)
 		assert.equal(v.offres, true)
 		assert.deepEqual(
 			offres({
-				service_offers: [
-					{ name: 'Mariée', options: [{ name: '' }, { name: 'Essai' }] },
-					{ name: '' },
-				],
+				service_offers: [{ name: 'Mariée', options: [{ name: '' }, { name: 'Essai' }] }, { name: '' }],
 			}).map(o => o.options.length),
 			[1]
 		)
@@ -342,10 +257,8 @@ describe('publiable profiles of a list (SEO-10)', () => {
 			['camille']
 		)
 		assert.equal(
-			trierProfilsPublics(
-				[complet(3, 'camille', { network: { instagram: '' } })],
-				{ formulaireDevis: true }
-			).publiables.length,
+			trierProfilsPublics([complet(3, 'camille', { network: { instagram: '' } })], { formulaireDevis: true }).publiables
+				.length,
 			1
 		)
 	})

@@ -21,11 +21,7 @@ export const CHEMINS_NOINDEX = ['/auth', '/search']
 export function robotsPourChemin(pathname) {
 	if (typeof pathname !== 'string') return null
 	if (['/404', '/500', '/_error'].includes(pathname)) return NOINDEX
-	return CHEMINS_NOINDEX.some(
-		prefixe => pathname === prefixe || pathname.startsWith(`${prefixe}/`)
-	)
-		? NOINDEX
-		: null
+	return CHEMINS_NOINDEX.some(prefixe => pathname === prefixe || pathname.startsWith(`${prefixe}/`)) ? NOINDEX : null
 }
 
 /**
@@ -34,12 +30,7 @@ export function robotsPourChemin(pathname) {
  * @returns {string}
  */
 export function robotsTxt(site) {
-	return [
-		'User-agent: *',
-		'Allow: /',
-		'Disallow: /api/',
-		'',
-		`Sitemap: ${urlAbsolue('/sitemap.xml', site)}`,
-		'',
-	].join('\n')
+	return ['User-agent: *', 'Allow: /', 'Disallow: /api/', '', `Sitemap: ${urlAbsolue('/sitemap.xml', site)}`, ''].join(
+		'\n'
+	)
 }

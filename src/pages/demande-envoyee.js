@@ -1,10 +1,10 @@
-import React, { useEffect, useRef } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
-import Nav from '@/components/Global/Nav'
+import { useEffect, useRef } from 'react'
 import Footer from '@/components/Global/Footer'
 import Hero from '@/components/Global/Hero'
+import Nav from '@/components/Global/Nav'
 import { demandeEnvoyeeProps, track } from '@/lib/analytics'
 
 /**
@@ -31,13 +31,7 @@ function DemandeEnvoyee() {
 			<main className={'relative'}>
 				<Hero
 					title={<>Votre demande est transmise</>}
-					description={
-						<>
-							{
-								'Vous recevrez une réponse sous 48 h. Merci de votre confiance !'
-							}
-						</>
-					}
+					description={'Vous recevrez une réponse sous 48 h. Merci de votre confiance !'}
 					isSearchDisplayed={false}
 					isCTALoginDisplayed={false}
 					isSimpleVersionDisplayed={true}

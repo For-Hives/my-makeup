@@ -7,7 +7,5 @@
  */
 export function retrograderTitres(html) {
 	if (typeof html !== 'string') return ''
-	return html
-		.replace(/<h1(\s[^>]*)?>/gi, (_, attributs = '') => `<h2${attributs}>`)
-		.replace(/<\/h1\s*>/gi, '</h2>')
+	return html.replace(/<h1(\s[^>]*)?>/gi, (_, attributs = '') => `<h2${attributs}>`).replace(/<\/h1\s*>/gi, '</h2>')
 }

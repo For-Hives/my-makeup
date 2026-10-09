@@ -43,47 +43,31 @@ async function lireJson(reponse) {
  * @returns {Promise<{id: number, name: string, email: string, jwt: string}>}
  * @throws {ErreurAuth}
  */
-export async function authentifierStrapi({
-	api,
-	email,
-	password,
-	name,
-	fetchImpl = fetch,
-	delaiMs = DELAI_STRAPI_MS,
-}) {
+export async function authentifierStrapi({ api, email, password, name, fetchImpl = fetch, delaiMs = DELAI_STRAPI_MS }) {
 	const identifiant = typeof email === 'string' ? email.trim() : ''
 	const nom = typeof name === 'string' ? name.trim() : ''
-	if (!identifiant || typeof password !== 'string' || password === '')
-		throw new ErreurAuth('identifiants-invalides')
+	if (!identifiant || typeof password !== 'string' || password === '') throw new ErreurAuth('identifiants-invalides')
 
 	const inscription = nom !== ''
-	const corps = inscription
-		? { username: nom, email: identifiant, password }
-		: { identifier: identifiant, password }
+	const corps = inscription ? { username: nom, email: identifiant, password } : { identifier: identifiant, password }
 
 	let reponse
 	try {
-		reponse = await fetchImpl(
-			`${api}/api/auth/local${inscription ? '/register' : ''}`,
-			{
-				method: 'POST',
-				headers: ENTETES,
-				body: JSON.stringify(corps),
-				signal: AbortSignal.timeout(delaiMs),
-			}
-		)
+		reponse = await fetchImpl(`${api}/api/auth/local${inscription ? '/register' : ''}`, {
+			method: 'POST',
+			headers: ENTETES,
+			body: JSON.stringify(corps),
+			signal: AbortSignal.timeout(delaiMs),
+		})
 	} catch {
 		throw new ErreurAuth('service-indisponible')
 	}
 
 	const donnees = await lireJson(reponse)
 	// sign-up with email confirmation on: Strapi answers the user, no JWT
-	if (reponse.ok && donnees?.user && !donnees.jwt)
-		throw new ErreurAuth('email-non-confirme')
-	if (!reponse.ok || !donnees?.jwt || !donnees?.user?.id)
-		throw new ErreurAuth(
-			codeErreurStrapi(reponse.status, donnees?.error?.message)
-		)
+	if (reponse.ok && donnees?.user && !donnees.jwt) throw new ErreurAuth('email-non-confirme')
+	if (!(reponse.ok && donnees?.jwt && donnees?.user?.id))
+		throw new ErreurAuth(codeErreurStrapi(reponse.status, donnees?.error?.message))
 
 	return {
 		id: donnees.user.id,
@@ -111,8 +95,7 @@ export async function connexionStrapiOAuth({
 	fetchImpl = fetch,
 	delaiMs = DELAI_STRAPI_MS,
 }) {
-	if (typeof accessToken !== 'string' || accessToken === '')
-		throw new ErreurAuth('service-indisponible')
+	if (typeof accessToken !== 'string' || accessToken === '') throw new ErreurAuth('service-indisponible')
 
 	let reponse
 	try {
@@ -125,10 +108,8 @@ export async function connexionStrapiOAuth({
 	}
 
 	const donnees = await lireJson(reponse)
-	if (!reponse.ok || !donnees?.jwt || !donnees?.user?.id)
-		throw new ErreurAuth(
-			codeErreurOAuth(reponse.status, donnees?.error?.message)
-		)
+	if (!(reponse.ok && donnees?.jwt && donnees?.user?.id))
+		throw new ErreurAuth(codeErreurOAuth(reponse.status, donnees?.error?.message))
 
 	return { id: donnees.user.id, jwt: donnees.jwt }
 }
@@ -143,19 +124,16 @@ export async function connexionStrapiOAuth({
  * @param {number} [options.delaiMs]
  * @returns {Promise<number>}
  */
-export async function statutCompteStrapi({
-	api,
-	jwt,
-	fetchImpl = fetch,
-	delaiMs = DELAI_REVALIDATION_MS,
-}) {
+export async function statutCompteStrapi({ api, jwt, fetchImpl = fetch, delaiMs = DELAI_REVALIDATION_MS }) {
 	try {
 		const reponse = await fetchImpl(`${api}/api/users/me`, {
 			headers: { ...ENTETES, Authorization: `Bearer ${jwt}` },
 			signal: AbortSignal.timeout(delaiMs),
 		})
 		// the body is not needed: release the connection
-		reponse.body?.cancel().catch(() => {})
+		reponse.body?.cancel().catch(() => {
+			// Cancellation is best-effort; the HTTP status remains authoritative.
+		})
 		return reponse.status
 	} catch {
 		return 0

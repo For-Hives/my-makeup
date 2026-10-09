@@ -18,6 +18,14 @@
 
 import { villePublique } from './lieu-public.js'
 
+const villeExploitablePattern1 = /^\d+,? /
+const villeExploitablePattern2 = /^\d{5}\b/
+const villeExploitablePattern3 = /[a-z]/
+const villeExploitablePattern4 = /\b\d{5}\b/
+const prixNumeriquePattern5 = /(\d+(?:\.\d+)?)/
+const estInternePattern6 = /\b(ceo|cto)\b/
+const estInternePattern7 = /\bmy ?-?make ?-?up\b/
+
 /** The 13 criteria, in display order */
 export const CRITERES = [
 	'nom',
@@ -36,15 +44,7 @@ export const CRITERES = [
 ]
 
 /** Contact channels of the `network` component */
-export const CANAUX = [
-	'youtube',
-	'instagram',
-	'facebook',
-	'website',
-	'linkedin',
-	'phone',
-	'email',
-]
+export const CANAUX = ['youtube', 'instagram', 'facebook', 'website', 'linkedin', 'phone', 'email']
 
 export const DESCRIPTION_MIN = 200
 
@@ -71,11 +71,7 @@ export function aMedia(v) {
  * @returns {string}
  */
 export function normaliser(v) {
-	return texte(v)
-		.normalize('NFKD')
-		.replace(/[̀-ͯ]/g, '')
-		.toLowerCase()
-		.replace(/\s+/g, ' ')
+	return texte(v).normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ')
 }
 
 const PAS_UNE_VILLE = new Set([
@@ -105,8 +101,8 @@ const PAS_UNE_VILLE = new Set([
 export function villeExploitable(city) {
 	const v = normaliser(villePublique(city))
 	if (v === '' || PAS_UNE_VILLE.has(v)) return false
-	if (/^\d+,? /.test(v) && !/^\d{5}\b/.test(v)) return false
-	if (!/[a-z]/.test(v) && !/\b\d{5}\b/.test(v)) return false
+	if (villeExploitablePattern1.test(v) && !villeExploitablePattern2.test(v)) return false
+	if (!(villeExploitablePattern3.test(v) || villeExploitablePattern4.test(v))) return false
 	return v.split(' ').length <= 6
 }
 
@@ -120,7 +116,7 @@ export function prixNumerique(price) {
 	const v = texte(price)
 		.replace(/(\d)[\s  ](?=\d{3}\b)/g, '$1')
 		.replace(',', '.')
-	const m = /(\d+(?:\.\d+)?)/.exec(v)
+	const m = prixNumeriquePattern5.exec(v)
 	if (m === null) return null
 	const montant = Number(m[1])
 	return montant >= 5 && montant <= 10_000 ? montant : null
@@ -144,7 +140,7 @@ export function longueurDescription(description) {
  */
 export function estInterne(profil) {
 	const s = normaliser(profil?.speciality)
-	return /\b(ceo|cto)\b/.test(s) || /\bmy ?-?make ?-?up\b/.test(s)
+	return estInternePattern6.test(s) || estInternePattern7.test(s)
 }
 
 /**
@@ -164,12 +160,7 @@ export function aCanalDeContact(network) {
  * @returns {boolean}
  */
 export function contactsMasques(network) {
-	return (
-		network !== null &&
-		typeof network === 'object' &&
-		!('email' in network) &&
-		!('phone' in network)
-	)
+	return network !== null && typeof network === 'object' && !('email' in network) && !('phone' in network)
 }
 
 /**
@@ -208,18 +199,13 @@ export function completude(profil, options = {}) {
 	}
 	const manquants = CRITERES.filter(c => !presents[c])
 	const interne = estInterne(p)
-	const actif =
-		presents.photo && villeExploitable(p.city) && presents.specialite
-	const offreChiffree = (
-		Array.isArray(p.service_offers) ? p.service_offers : []
-	).some(o => prixNumerique(o?.price) !== null)
+	const actif = presents.photo && villeExploitable(p.city) && presents.specialite
+	const offreChiffree = (Array.isArray(p.service_offers) ? p.service_offers : []).some(
+		o => prixNumerique(o?.price) !== null
+	)
 	const contact = presents.reseaux || options.formulaireDevis === true
 	const publiable =
-		actif &&
-		offreChiffree &&
-		longueurDescription(p.description) >= DESCRIPTION_MIN &&
-		contact &&
-		!interne
+		actif && offreChiffree && longueurDescription(p.description) >= DESCRIPTION_MIN && contact && !interne
 	return {
 		score: CRITERES.length - manquants.length,
 		sur: 13,
@@ -239,8 +225,5 @@ export function completude(profil, options = {}) {
  * @returns {boolean}
  */
 export function devientPubliable(avant, apres, options = {}) {
-	return (
-		!completude(avant, options).publiable &&
-		completude(apres, options).publiable
-	)
+	return !completude(avant, options).publiable && completude(apres, options).publiable
 }

@@ -1,11 +1,16 @@
-import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { test } from 'node:test'
 import { signalAvecDelai } from '../../src/lib/delai.js'
 
 test('AbortSignal.timeout when the browser has it', () => {
 	const appels = []
 	const env = {
-		AbortSignal: { timeout: ms => (appels.push(ms), 'signal natif') },
+		AbortSignal: {
+			timeout: ms => {
+				appels.push(ms)
+				return 'signal natif'
+			},
+		},
 		AbortController,
 		setTimeout: () => assert.fail('no timer needed'),
 	}

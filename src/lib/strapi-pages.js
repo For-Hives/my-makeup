@@ -26,18 +26,15 @@ export function avecPage(requete, page, taille = TAILLE_PAGE) {
  * @param {{pagesMax?: number}} [options]
  * @returns {Promise<unknown[]>} the entries of every page, in order
  */
-export async function toutesLesPages(
-	chargerPage,
-	{ pagesMax = PAGES_MAX } = {}
-) {
+export async function toutesLesPages(chargerPage, { pagesMax = PAGES_MAX } = {}) {
 	const entrees = []
 	for (let page = 1; page <= pagesMax; page++) {
+		// biome-ignore lint/performance/noAwaitInLoops: Each iteration depends on the preceding result; concurrency would change behavior.
 		const reponse = await chargerPage(page)
 		const data = Array.isArray(reponse?.data) ? reponse.data : []
 		entrees.push(...data)
 		const pages = Number(reponse?.meta?.pagination?.pageCount)
-		if (!Number.isFinite(pages) || page >= pages || data.length === 0)
-			return entrees
+		if (!Number.isFinite(pages) || page >= pages || data.length === 0) return entrees
 	}
 	throw new Error(`liste Strapi de plus de ${pagesMax} pages`)
 }

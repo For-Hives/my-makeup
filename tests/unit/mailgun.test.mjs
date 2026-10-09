@@ -1,11 +1,6 @@
-import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
-import {
-	MAILGUN_EU_URL,
-	contactMessage,
-	mailgunClientOptions,
-	mailgunErrorSummary,
-} from '../../src/lib/mailgun.js'
+import { describe, test } from 'node:test'
+import { contactMessage, MAILGUN_EU_URL, mailgunClientOptions, mailgunErrorSummary } from '../../src/lib/mailgun.js'
 
 describe('mailgunClientOptions', () => {
 	test('keeps the library default (US) without MAILGUN_REGION', () => {
@@ -40,10 +35,7 @@ describe('contactMessage', () => {
 	test('accepts a complete message and ignores unknown fields', () => {
 		const result = contactMessage({ ...valid, extra: 'x' })
 		assert.equal(result.ok, true)
-		assert.deepEqual(
-			Object.keys(result.fields).sort(),
-			Object.keys(valid).sort()
-		)
+		assert.deepEqual(Object.keys(result.fields).sort(), Object.keys(valid).sort())
 	})
 
 	test('rejects missing, empty, oversized or malformed fields', () => {
@@ -72,18 +64,12 @@ describe('contactMessage', () => {
 			'testine@[127.0.0.1]',
 			'testine(x)@example.test',
 			'a@b@example.test',
-		])
-			assert.deepEqual(
-				contactMessage({ ...valid, email }),
-				{ ok: false, field: 'email' },
-				email
-			)
-		for (const email of [
-			'testine@example.test',
-			'prenom.nom+tag_1-x@sous.example.test',
-			"o'neil@example.test",
-		])
+		]) {
+			assert.deepEqual(contactMessage({ ...valid, email }), { ok: false, field: 'email' }, email)
+		}
+		for (const email of ['testine@example.test', 'prenom.nom+tag_1-x@sous.example.test', "o'neil@example.test"]) {
 			assert.equal(contactMessage({ ...valid, email }).ok, true, email)
+		}
 	})
 })
 
@@ -130,10 +116,10 @@ describe('mailgunErrorSummary', () => {
 				code
 			)
 		}
-		assert.deepEqual(
-			mailgunErrorSummary(Object.assign(new Error('x'), { code: 'ETIMEDOUT' })),
-			{ kind: 'network', status: 0 }
-		)
+		assert.deepEqual(mailgunErrorSummary(Object.assign(new Error('x'), { code: 'ETIMEDOUT' })), {
+			kind: 'network',
+			status: 0,
+		})
 	})
 
 	test('never returns more than the kind and the status', () => {

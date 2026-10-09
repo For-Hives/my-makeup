@@ -16,6 +16,15 @@
 import { formatZone } from '../format-zone.js'
 import { villePublique } from './lieu-public.js'
 
+const urlMediaPattern1 = /^https?:\/\//i
+const urlMediaPattern2 = /\/+$/
+const urlReseauPattern3 = /\s/
+const urlReseauPattern4 = /^https?:\/\//i
+const urlReseauPattern5 = /^@?[\w.]{1,30}$/
+const urlReseauPattern6 = /^@/
+const urlReseauPattern7 = /^[\w-]+(\.[\w-]+)+(\/\S*)?$/i
+const contactsPattern8 = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
+
 const VIDES = new Set(['null', 'undefined'])
 
 /**
@@ -37,9 +46,7 @@ export function texte(v) {
  */
 export function attributs(entree) {
 	if (!entree || typeof entree !== 'object') return {}
-	return entree.attributes && typeof entree.attributes === 'object'
-		? entree.attributes
-		: entree
+	return entree.attributes && typeof entree.attributes === 'object' ? entree.attributes : entree
 }
 
 /**
@@ -101,8 +108,7 @@ export function medias(v) {
 }
 
 /** @returns {Media|null} */
-export const photoPrincipale = profil =>
-	medias(attributs(profil).main_picture)[0] ?? null
+export const photoPrincipale = profil => medias(attributs(profil).main_picture)[0] ?? null
 
 /** @returns {Media[]} */
 export const galerie = profil => medias(attributs(profil).image_gallery)
@@ -117,9 +123,8 @@ export const galerie = profil => medias(attributs(profil).image_gallery)
 export function urlMedia(url, apiBase = '') {
 	const u = texte(url)
 	if (!u) return ''
-	if (/^https?:\/\//i.test(u)) return u
-	if (u.startsWith('/') && !u.startsWith('//'))
-		return `${texte(apiBase).replace(/\/+$/, '')}${u}`
+	if (urlMediaPattern1.test(u)) return u
+	if (u.startsWith('/') && !u.startsWith('//')) return `${texte(apiBase).replace(urlMediaPattern2, '')}${u}`
 	return ''
 }
 
@@ -140,11 +145,7 @@ export function nomComplet(profil) {
  * @returns {string}
  */
 export function nomAffiche(profil) {
-	return (
-		nomComplet(profil) ||
-		texte(attributs(profil).company_artist_name) ||
-		'Maquilleuse professionnelle'
-	)
+	return nomComplet(profil) || texte(attributs(profil).company_artist_name) || 'Maquilleuse professionnelle'
 }
 
 /**
@@ -153,8 +154,7 @@ export function nomAffiche(profil) {
  * @param {number} total
  * @returns {string}
  */
-export const altRealisation = (nom, n, total) =>
-	`Réalisation de ${nom} (${n}/${total})`
+export const altRealisation = (nom, n, total) => `Réalisation de ${nom} (${n}/${total})`
 
 /**
  * Zone of a profile as text (formatZone of its public city and radius).
@@ -214,8 +214,7 @@ const RESEAUX = {
 	website: null,
 }
 
-const DOMAINE_SEUL =
-	/^(www\.)?(instagram|facebook|fb|linkedin|youtube)\.com$|^youtu\.be$/i
+const DOMAINE_SEUL = /^(www\.)?(instagram|facebook|fb|linkedin|youtube)\.com$|^youtu\.be$/i
 
 /**
  * Link of a social network or website as typed by the artist: an http(s)
@@ -227,19 +226,17 @@ const DOMAINE_SEUL =
  */
 export function urlReseau(canal, valeur) {
 	const v = texte(valeur)
-	if (!v || /\s/.test(v)) return null
+	if (!v || urlReseauPattern3.test(v)) return null
 	let url = null
-	if (/^https?:\/\//i.test(v)) url = v
+	if (urlReseauPattern4.test(v)) url = v
 	// « studio.fictif » is an Instagram account, « instagram.com/x » a link
-	else if (RESEAUX[canal] && /^@?[\w.]{1,30}$/.test(v) && !DOMAINE_SEUL.test(v))
-		url = RESEAUX[canal] + v.replace(/^@/, '')
-	else if (/^[\w-]+(\.[\w-]+)+(\/\S*)?$/i.test(v)) url = `https://${v}`
+	else if (RESEAUX[canal] && urlReseauPattern5.test(v) && !DOMAINE_SEUL.test(v))
+		url = RESEAUX[canal] + v.replace(urlReseauPattern6, '')
+	else if (urlReseauPattern7.test(v)) url = `https://${v}`
 	if (url === null) return null
 	try {
 		const parse = new URL(url)
-		return ['http:', 'https:'].includes(parse.protocol)
-			? parse.toString()
-			: null
+		return ['http:', 'https:'].includes(parse.protocol) ? parse.toString() : null
 	} catch {
 		return null
 	}
@@ -273,29 +270,23 @@ export const libelleCanal = canal => LIBELLES_CANAUX[canal] ?? ''
 export function contacts(network) {
 	if (!network || typeof network !== 'object') return []
 	const resultat = []
-	for (const canal of [
-		'instagram',
-		'facebook',
-		'linkedin',
-		'youtube',
-		'email',
-		'phone',
-		'website',
-	]) {
+	for (const canal of ['instagram', 'facebook', 'linkedin', 'youtube', 'email', 'phone', 'website']) {
 		const valeur = texte(network[canal])
 		if (!valeur) continue
-		let href
-		if (canal === 'email')
-			href = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(valeur)
-				? `mailto:${valeur}`
-				: null
-		else if (canal === 'phone') {
-			const numero = valeur.replace(/[^\d+]/g, '')
-			href = numero.length >= 6 ? `tel:${numero}` : null
-		} else href = urlReseau(canal, valeur)
+		const href = lienContact(canal, valeur)
 		resultat.push({ canal, libelle: valeur, href })
 	}
 	return resultat
+}
+
+const CHIFFRES_TELEPHONE = /[^\d+]/g
+function lienContact(canal, valeur) {
+	if (canal === 'email') return contactsPattern8.test(valeur) ? `mailto:${valeur}` : null
+	if (canal === 'phone') {
+		const numero = valeur.replace(CHIFFRES_TELEPHONE, '')
+		return numero.length >= 6 ? `tel:${numero}` : null
+	}
+	return urlReseau(canal, valeur)
 }
 
 const liste = v => (Array.isArray(v) ? v.filter(Boolean) : [])
@@ -326,8 +317,6 @@ export function sectionsVisibles(profil) {
 		description: lignes(p.description).length > 0,
 		portfolio: galerie(p).length > 0,
 		offres: offres(p).length > 0,
-		experiences: liste(p.experiences).some(
-			e => texte(e.company) || texte(e.job_name)
-		),
+		experiences: liste(p.experiences).some(e => texte(e.company) || texte(e.job_name)),
 	}
 }

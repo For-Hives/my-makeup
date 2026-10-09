@@ -16,6 +16,10 @@
 
 import { rayonKm, villeAffichee } from './format-zone.js'
 
+const normaliserLieuPattern1 = /[^a-z0-9]+/
+const departementDuCodePostalPattern2 = /^\d{5}$/
+const codesDuSegmentPattern3 = /^(\d{2}|2A|2B|97\d)$/
+
 /** Départements: code → name */
 export const DEPARTEMENTS = {
 	'01': 'Ain',
@@ -142,7 +146,7 @@ export function normaliserLieu(v) {
 		.toLowerCase()
 		.replace(/œ/g, 'oe')
 		.replace(/æ/g, 'ae')
-		.split(/[^a-z0-9]+/)
+		.split(normaliserLieuPattern1)
 		.filter(Boolean)
 		.map(mot => ABREVIATIONS[mot] ?? mot)
 		.join(' ')
@@ -150,10 +154,7 @@ export function normaliserLieu(v) {
 
 // normalized name → codes; « Corse » and « Réunion » as people write them
 const PAR_NOM = new Map([
-	...Object.entries(DEPARTEMENTS).map(([code, nom]) => [
-		normaliserLieu(nom),
-		[code],
-	]),
+	...Object.entries(DEPARTEMENTS).map(([code, nom]) => [normaliserLieu(nom), [code]]),
 	['corse', ['2A', '2B']],
 	['reunion', ['974']],
 ])
@@ -163,22 +164,11 @@ const commencePar = (texte, mots) => `${texte} `.startsWith(`${mots} `)
 // a name of département → the longer names that begin with it: « loire » →
 // « loire atlantique », « lot » → « lot et garonne », « corse » → …
 const NOMS_PLUS_LONGS = new Map(
-	[...PAR_NOM.keys()].map(nom => [
-		nom,
-		[...PAR_NOM.keys()].filter(
-			autre => autre !== nom && commencePar(autre, nom)
-		),
-	])
+	[...PAR_NOM.keys()].map(nom => [nom, [...PAR_NOM.keys()].filter(autre => autre !== nom && commencePar(autre, nom))])
 )
 
 // the whole country: not a place to rank by
-const PARTOUT = new Set([
-	'france',
-	'toute la france',
-	'france entiere',
-	'partout en france',
-	'france metropolitaine',
-])
+const PARTOUT = new Set(['france', 'toute la france', 'france entiere', 'partout en france', 'france metropolitaine'])
 
 // countries and regions (those of 2016, the former ones still written):
 // wider than a city or a département
@@ -233,7 +223,7 @@ const LARGES = new Set([
  * @returns {string|null} '74000' → '74', '20090' → '2A', '97411' → '974'
  */
 export function departementDuCodePostal(code) {
-	if (typeof code !== 'string' || !/^\d{5}$/.test(code)) return null
+	if (typeof code !== 'string' || !departementDuCodePostalPattern2.test(code)) return null
 	if (code.startsWith('20')) return Number(code) < 20200 ? '2A' : '2B'
 	const outreMer = code.slice(0, 3)
 	if (code.startsWith('97')) return DEPARTEMENTS[outreMer] ? outreMer : null
@@ -245,7 +235,7 @@ export function departementDuCodePostal(code) {
 function codesDuSegment(segment) {
 	if (segment === '20') return ['2A', '2B']
 	const code = segment.toUpperCase()
-	return /^(\d{2}|2A|2B|97\d)$/.test(code) && DEPARTEMENTS[code] ? [code] : []
+	return codesDuSegmentPattern3.test(code) && DEPARTEMENTS[code] ? [code] : []
 }
 
 // numbers in a place (postal code, arrondissement) are not part of its
@@ -279,7 +269,9 @@ export function lireLieu(v) {
 	for (const morceau of brut.split(SEPARATEURS)) {
 		const segment = normaliserLieu(morceau)
 		const codes = codesDuSegment(segment)
-		codes.forEach(code => departements.add(code))
+		for (const code of codes) {
+			departements.add(code)
+		}
 		const mots = codes.length
 			? ''
 			: segment
@@ -288,22 +280,23 @@ export function lireLieu(v) {
 					.join(' ')
 		if (!mots || PARTOUT.has(mots)) continue
 		const parNom = PAR_NOM.get(mots)
-		parNom?.forEach(code => departements.add(code))
+		for (const code of parNom ?? []) {
+			departements.add(code)
+		}
 		segments.push({ mots, departement: !!parNom, large: LARGES.has(mots) })
 	}
 	return { segments, departements: [...departements] }
 }
 
 /** @param {Lieu} lieu */
-const lieuVide = lieu => !lieu.segments.length && !lieu.departements.length
+const lieuVide = lieu => !(lieu.segments.length || lieu.departements.length)
 
 const contient = (texte, mots) => ` ${texte} `.includes(` ${mots} `)
 
 // a place that starts with this name of département, and not with a longer
 // one that begins the same (« Loire » is not « Loire-Atlantique »)
 const commenceParDepartement = (texte, nom) =>
-	commencePar(texte, nom) &&
-	!NOMS_PLUS_LONGS.get(nom).some(long => commencePar(texte, long))
+	commencePar(texte, nom) && !NOMS_PLUS_LONGS.get(nom).some(long => commencePar(texte, long))
 
 /**
  * How the place of a profile matches the place searched:
@@ -322,19 +315,12 @@ const commenceParDepartement = (texte, nom) =>
  */
 export function correspondanceLieu(profil, cherche) {
 	const precis = cherche.segments.filter(s => !s.large)
-	const segments =
-		precis.length || cherche.departements.length ? precis : cherche.segments
-	for (const { mots, departement } of segments)
-		if (
-			profil.segments.some(p =>
-				departement
-					? commenceParDepartement(p.mots, mots)
-					: contient(p.mots, mots)
-			)
-		)
+	const segments = precis.length || cherche.departements.length ? precis : cherche.segments
+	for (const { mots, departement } of segments) {
+		if (profil.segments.some(p => (departement ? commenceParDepartement(p.mots, mots) : contient(p.mots, mots))))
 			return 'ville'
-	if (cherche.departements.some(code => profil.departements.includes(code)))
-		return 'departement'
+	}
+	if (cherche.departements.some(code => profil.departements.includes(code))) return 'departement'
 	return null
 }
 
@@ -355,10 +341,7 @@ export function separerParLieu(resultats, city) {
 	const departement = []
 	const autres = []
 	for (const resultat of liste) {
-		const correspondance = correspondanceLieu(
-			lireLieu(villeAffichee(resultat?.city)),
-			cherche
-		)
+		const correspondance = correspondanceLieu(lireLieu(villeAffichee(resultat?.city)), cherche)
 		if (correspondance === 'ville') ville.push(resultat)
 		else if (correspondance === 'departement') departement.push(resultat)
 		else autres.push(resultat)
@@ -395,8 +378,11 @@ export function codeDepartementEcrit(v) {
 		const departement = departementDuCodePostal(code)
 		if (departement) codes.add(departement)
 	}
-	for (const morceau of brut.split(SEPARATEURS))
-		codesDuSegment(normaliserLieu(morceau)).forEach(code => codes.add(code))
+	for (const morceau of brut.split(SEPARATEURS)) {
+		for (const code of codesDuSegment(normaliserLieu(morceau))) {
+			codes.add(code)
+		}
+	}
 	return codes.size === 1 ? [...codes][0] : null
 }
 
@@ -418,8 +404,9 @@ export function departementsDeLaRecherche(locaux, city) {
 		if (code) compte.set(code, (compte.get(code) ?? 0) + 1)
 	}
 	let meilleur = null
-	for (const [code, n] of compte)
+	for (const [code, n] of compte) {
 		if (meilleur === null || n > compte.get(meilleur)) meilleur = code
+	}
 	return meilleur === null ? [] : [meilleur]
 }
 
@@ -428,13 +415,11 @@ export function departementsDeLaRecherche(locaux, city) {
  * @returns {string} « du 74 (Haute-Savoie) », « du 2A (Corse-du-Sud) et du
  *   2B (Haute-Corse) »
  */
-export const duDepartement = codes =>
-	codes.map(code => `du ${code} (${DEPARTEMENTS[code]})`).join(' et ')
+export const duDepartement = codes => codes.map(code => `du ${code} (${DEPARTEMENTS[code]})`).join(' et ')
 
 // the card says where she works and how far she goes (« Annecy et 30 km
 // autour »): a radius without a city says nothing
-const seDeplace = profil =>
-	villeAffichee(profil?.city) !== '' && rayonKm(profil?.action_radius) !== null
+const seDeplace = profil => villeAffichee(profil?.city) !== '' && rayonKm(profil?.action_radius) !== null
 
 /**
  * @template T
@@ -471,10 +456,7 @@ export function sectionsParLieu(resultats, city, annuaire = []) {
 	if (!parLieu) return { locaux: tous, parLieu, departements: [], sections: [] }
 
 	const vus = new Set()
-	const uniques = [
-		...reponse,
-		...(Array.isArray(annuaire) ? annuaire : []),
-	].filter(profil => {
+	const uniques = [...reponse, ...(Array.isArray(annuaire) ? annuaire : [])].filter(profil => {
 		const cle = cleProfil(profil)
 		if (cle === null) return true
 		if (vus.has(cle)) return false
@@ -484,30 +466,17 @@ export function sectionsParLieu(resultats, city, annuaire = []) {
 	const { locaux, autres } = separerParLieu(uniques, city)
 	const departements = departementsDeLaRecherche(locaux, city)
 	const duDepartementCherche = autres.filter(profil =>
-		lireLieu(villeAffichee(profil?.city)).departements.some(code =>
-			departements.includes(code)
-		)
+		lireLieu(villeAffichee(profil?.city)).departements.some(code => departements.includes(code))
 	)
-	const ailleurs = autres.filter(
-		profil => !duDepartementCherche.includes(profil)
-	)
-	const section = (cle, titre, profils) =>
-		profils.length ? [{ cle, titre, profils }] : []
+	const ailleurs = autres.filter(profil => !duDepartementCherche.includes(profil))
+	const section = (cle, titre, profils) => (profils.length ? [{ cle, titre, profils }] : [])
 	return {
 		locaux,
 		parLieu,
 		departements,
 		sections: [
-			...section(
-				'departement',
-				`Autres maquilleuses ${duDepartement(departements)}`,
-				duDepartementCherche
-			),
-			...section(
-				'deplacent',
-				'Autres maquilleuses qui se déplacent',
-				ailleurs.filter(seDeplace)
-			),
+			...section('departement', `Autres maquilleuses ${duDepartement(departements)}`, duDepartementCherche),
+			...section('deplacent', 'Autres maquilleuses qui se déplacent', ailleurs.filter(seDeplace)),
 			...section(
 				'autres',
 				'Autres maquilleuses',

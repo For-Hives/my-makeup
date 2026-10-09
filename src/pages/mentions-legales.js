@@ -1,10 +1,9 @@
-import React from 'react'
-import Nav from '@/components/Global/Nav'
-import Footer from '@/components/Global/Footer'
 import Head from 'next/head'
-import Hero from '@/components/Global/Hero'
 import Link from 'next/link'
-import { EDITEUR, HEBERGEUR, formatSiren, formatSiret } from '@/lib/legal'
+import Footer from '@/components/Global/Footer'
+import Hero from '@/components/Global/Hero'
+import Nav from '@/components/Global/Nav'
+import { EDITEUR, formatSiren, formatSiret, HEBERGEUR } from '@/lib/legal'
 import { urlAbsolue } from '@/lib/seo/url'
 
 function MentionsLegales() {
@@ -29,20 +28,16 @@ function MentionsLegales() {
 							<span className={'text-indigo-900'}>My&nbsp;Makeup</span>
 						</>
 					}
-					description={<>{'Qui édite et qui héberge le site.'}</>}
+					description={'Qui édite et qui héberge le site.'}
 					isSearchDisplayed={false}
 					isCTALoginDisplayed={false}
 					isSimpleVersionDisplayed={true}
 				/>
-				<div
-					className={'relative mx-auto my-24 max-w-7xl px-4 md:my-48 md:px-0'}
-				>
+				<div className={'relative mx-auto my-24 max-w-7xl px-4 md:my-48 md:px-0'}>
 					<div className="mx-auto max-w-2xl">
 						<article>
 							<header className="flex flex-col">
-								<h2 className="mt-6 text-3xl font-bold tracking-tight text-gray-800 sm:text-4xl">
-									Mentions légales
-								</h2>
+								<h2 className="mt-6 text-3xl font-bold tracking-tight text-gray-800 sm:text-4xl">Mentions légales</h2>
 							</header>
 							<div className="prose my-8 xl:prose-lg">
 								<h2>Éditeur du site</h2>
@@ -70,11 +65,7 @@ function MentionsLegales() {
 									<br />
 									{`Téléphone : ${HEBERGEUR.telephone}`}
 									<br />
-									<a
-										href={HEBERGEUR.site}
-										rel={'noopener nofollow noreferrer'}
-										target={'_blank'}
-									>
+									<a href={HEBERGEUR.site} rel={'noopener nofollow noreferrer'} target={'_blank'}>
 										{HEBERGEUR.site.replace('https://', '')}
 									</a>
 								</p>
@@ -95,13 +86,9 @@ function MentionsLegales() {
 								<h2>Données personnelles et conditions d&apos;utilisation</h2>
 								<p>
 									{'Voir la '}
-									<Link href={'/politique-de-confidentialite'}>
-										politique de confidentialité
-									</Link>
+									<Link href={'/politique-de-confidentialite'}>politique de confidentialité</Link>
 									{' et les '}
-									<Link href={'/cgu'}>
-										conditions générales d&apos;utilisation
-									</Link>
+									<Link href={'/cgu'}>conditions générales d&apos;utilisation</Link>
 									{'.'}
 								</p>
 							</div>

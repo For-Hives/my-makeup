@@ -16,15 +16,7 @@ import { expect, test } from '@playwright/test'
 import { getElementsByTagName } from 'domutils'
 import { parseDocument } from 'htmlparser2'
 import sharp from 'sharp'
-import {
-	API,
-	aller,
-	connecter,
-	inscrire,
-	panne,
-	profilDeDepart,
-	reinitialiserStrapi,
-} from './outils-strapi.mjs'
+import { API, aller, connecter, inscrire, panne, profilDeDepart, reinitialiserStrapi } from './outils-strapi.mjs'
 
 const APP = process.env.RG_APP ?? 'http://localhost:3996'
 const UMAMI = process.env.RG_UMAMI ?? 'http://127.0.0.1:4113'
@@ -36,21 +28,18 @@ const CHROME =
 const IP_LOCALE = /^(::1|::ffff:127\.0\.0\.1|127\.0\.0\.1)$/
 
 // Never against the production: local hosts only
-for (const cible of [APP, UMAMI])
-	if (!HOTES_LOCAUX.includes(new URL(cible).hostname))
-		throw new Error(`cible non locale refusée : ${cible}`)
+for (const cible of [APP, UMAMI]) {
+	if (!HOTES_LOCAUX.includes(new URL(cible).hostname)) throw new Error(`cible non locale refusée : ${cible}`)
+}
 
 async function piloter(chemin) {
 	return (await fetch(UMAMI + chemin)).json()
 }
 const recus = async () => (await piloter('/__umami/etat')).journal
-const envoisRecus = async () =>
-	(await recus()).filter(r => r.methode === 'POST' && r.chemin === '/api/send')
+const envoisRecus = async () => (await recus()).filter(r => r.methode === 'POST' && r.chemin === '/api/send')
 // data of the events of that name received by the fake Umami
 const evenements = async nom =>
-	(await envoisRecus())
-		.filter(e => e.corps.payload.name === nom)
-		.map(e => e.corps.payload.data)
+	(await envoisRecus()).filter(e => e.corps.payload.name === nom).map(e => e.corps.payload.data)
 
 test.use({ testIdAttribute: 'data-cy' })
 
@@ -106,11 +95,7 @@ async function visiteurReel(page) {
 }
 
 const attendreUmami = page =>
-	page.waitForFunction(
-		() =>
-			document.readyState === 'complete' &&
-			typeof window.umami?.track === 'function'
-	)
+	page.waitForFunction(() => document.readyState === 'complete' && typeof window.umami?.track === 'function')
 
 test.describe('MES-10 balise Umami', () => {
 	test('HTML : un script en ligne définit le filtre et l’attente, puis ajoute /u/script.js en async avec la version', async ({
@@ -119,6 +104,7 @@ test.describe('MES-10 balise Umami', () => {
 	}) => {
 		// / is rendered on each request, /a-propos at build time: same tag
 		for (const chemin of ['/', '/a-propos']) {
+			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 			const html = await (await request.get(chemin)).text()
 			expect(html).not.toContain('wadefade')
 			const scripts = getElementsByTagName('script', parseDocument(html))
@@ -128,17 +114,13 @@ test.describe('MES-10 balise Umami', () => {
 				scripts.filter(s => s.attribs.src === '/u/script.js'),
 				chemin
 			).toEqual([])
-			const chargeur = scripts.findIndex(s =>
-				(s.children[0]?.data ?? '').startsWith('window.mmAvantEnvoi=')
-			)
+			const chargeur = scripts.findIndex(s => (s.children[0]?.data ?? '').startsWith('window.mmAvantEnvoi='))
 			expect(chargeur, chemin).toBeGreaterThan(-1)
 			const source = scripts[chargeur].children[0].data
 			expect(source).toContain('window.mmAttenteUmami=')
 			expect(source).toContain(`"data-tag":"${VERSION}"`)
 			// before the scripts of Next
-			expect(chargeur).toBeLessThan(
-				scripts.findIndex(s => s.attribs.src?.startsWith('/_next/'))
-			)
+			expect(chargeur).toBeLessThan(scripts.findIndex(s => s.attribs.src?.startsWith('/_next/')))
 
 			await page.goto(chemin)
 			const ajoutes = await page.evaluate(() =>
@@ -146,9 +128,7 @@ test.describe('MES-10 balise Umami', () => {
 					async: s.async,
 					defer: s.defer,
 					dansLeHead: s.parentNode === document.head,
-					attributs: Object.fromEntries(
-						[...s.attributes].map(a => [a.name, a.value])
-					),
+					attributs: Object.fromEntries([...s.attributes].map(a => [a.name, a.value])),
 				}))
 			)
 			expect(ajoutes, chemin).toHaveLength(1)
@@ -175,9 +155,7 @@ test.describe('MES-10 balise Umami', () => {
 		})
 	})
 
-	test('proxy : /u/script.js vient du faux Umami, sans cookie, avec l’IP du visiteur', async ({
-		request,
-	}) => {
+	test('proxy : /u/script.js vient du faux Umami, sans cookie, avec l’IP du visiteur', async ({ request }) => {
 		const reponse = await request.get('/u/script.js', {
 			headers: {
 				cookie: 'mm-test=valeur-privee',
@@ -195,9 +173,7 @@ test.describe('MES-10 balise Umami', () => {
 		expect(recue.entetes['x-real-ip']).toBeUndefined()
 	})
 
-	test('proxy : l’IP et le pays envoyés par le navigateur sont remplacés', async ({
-		request,
-	}) => {
+	test('proxy : l’IP et le pays envoyés par le navigateur sont remplacés', async ({ request }) => {
 		const reponse = await request.post('/u/api/send', {
 			headers: {
 				'x-forwarded-for': '198.51.100.1',
@@ -220,39 +196,31 @@ test.describe('MES-10 balise Umami', () => {
 		expect(envoi.corps.payload.website).toBe(WEBSITE_ID)
 	})
 
-	test('proxy : une autre casse (/U/script.js, /u/API/send) ne mène pas à Umami', async ({
-		request,
-	}) => {
+	test('proxy : une autre casse (/U/script.js, /u/API/send) ne mène pas à Umami', async ({ request }) => {
 		const secrets = {
 			cookie: 'next-auth.session-token=jeton-prive; mm-test=valeur-privee',
 			authorization: 'Bearer secret-auth',
 		}
-		for (const chemin of ['/U/script.js', '/u/SCRIPT.JS', '/u/Script.js'])
-			expect(
-				(await request.get(chemin, { headers: secrets })).status(),
-				chemin
-			).toBe(404)
-		for (const chemin of ['/U/api/send', '/u/API/send', '/u/api/Send'])
-			expect(
-				(
-					await request.post(chemin, {
-						headers: secrets,
-						data: {
-							type: 'event',
-							payload: { website: WEBSITE_ID, hostname: 'localhost', url: '/' },
-						},
-					})
-				).status(),
-				chemin
-			).toBe(404)
+		for (const chemin of ['/U/script.js', '/u/SCRIPT.JS', '/u/Script.js']) {
+			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
+			expect((await request.get(chemin, { headers: secrets })).status(), chemin).toBe(404)
+		}
+		for (const chemin of ['/U/api/send', '/u/API/send', '/u/api/Send']) {
+			// biome-ignore lint/performance/noAwaitInLoops: Verify each path separately against the shared mock server.
+			const reponse = await request.post(chemin, {
+				headers: secrets,
+				data: { type: 'event', payload: { website: WEBSITE_ID, hostname: 'localhost', url: '/' } },
+			})
+			expect(reponse.status(), chemin).toBe(404)
+		}
 		expect(await recus()).toEqual([])
 	})
 
-	test('proxy : rien d’autre de l’instance n’est servi sous /u', async ({
-		request,
-	}) => {
-		for (const chemin of ['/u/login', '/u/api/websites', '/u/api/auth/login'])
+	test('proxy : rien d’autre de l’instance n’est servi sous /u', async ({ request }) => {
+		for (const chemin of ['/u/login', '/u/api/websites', '/u/api/auth/login']) {
+			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 			expect((await request.get(chemin)).status(), chemin).toBe(404)
+		}
 		expect(await recus()).toEqual([])
 	})
 })
@@ -266,13 +234,9 @@ test.describe('MES-10 qui est mesuré', () => {
 		expect((await script).status()).toBe(200)
 		await attendreUmami(page)
 		// the page view was attempted, and refused by the filter
-		await expect
-			.poll(() => page.evaluate(() => window.__avantEnvoi.length))
-			.toBeGreaterThan(0)
+		await expect.poll(() => page.evaluate(() => window.__avantEnvoi.length)).toBeGreaterThan(0)
 		await page.evaluate(() => window.umami.track('sonde'))
-		expect(
-			(await page.evaluate(() => window.__avantEnvoi)).every(a => !a.envoye)
-		).toBe(true)
+		expect((await page.evaluate(() => window.__avantEnvoi)).every(a => !a.envoye)).toBe(true)
 		expect(suivi.envois).toEqual([])
 		expect(await envoisRecus()).toEqual([])
 		expect([...suivi.hotes].every(h => HOTES_LOCAUX.includes(h))).toBe(true)
@@ -281,9 +245,7 @@ test.describe('MES-10 qui est mesuré', () => {
 	test.describe('navigateur automatisé avec un user agent ordinaire', () => {
 		test.use({ userAgent: CHROME })
 
-		test('webdriver = true (défaut de Playwright) : aucun envoi', async ({
-			page,
-		}) => {
+		test('webdriver = true (défaut de Playwright) : aucun envoi', async ({ page }) => {
 			await aucunEnvoi(page)
 			expect(await page.evaluate(() => navigator.webdriver)).toBe(true)
 			expect(await page.evaluate(() => navigator.userAgent)).toBe(CHROME)
@@ -296,144 +258,19 @@ test.describe('MES-10 qui est mesuré', () => {
 		await visiteurReel(page)
 		await aucunEnvoi(page)
 		expect(await page.evaluate(() => navigator.webdriver)).toBe(false)
-		expect(await page.evaluate(() => navigator.userAgent)).toContain(
-			'HeadlessChrome'
-		)
+		expect(await page.evaluate(() => navigator.userAgent)).toContain('HeadlessChrome')
 	})
 
 	test.describe('visiteur réel (webdriver = false, Chrome ordinaire)', () => {
 		test.use({ userAgent: CHROME })
 
-		test('la page vue passe par /u/api/send et arrive au faux Umami, nettoyée', async ({
-			page,
-			context,
-		}) => {
-			const suivi = suivreRequetes(page)
-			await visiteurReel(page)
-			await context.addCookies([
-				{ name: 'mm-test', value: 'valeur-privee', url: APP },
-			])
-			const envoi = page.waitForResponse(
-				r => r.url() === `${APP}/u/api/send` && r.request().method() === 'POST'
-			)
-			await page.goto(
-				'/?utm_source=regression&utm_campaign=mes-10&code=secret-123#ancre'
-			)
-			expect(await page.evaluate(() => navigator.webdriver)).toBe(false)
-			expect((await envoi).status()).toBe(200)
+		registermesure1Scenario1()
 
-			// the page view: the only send without an event name
-			const pageVue = async () =>
-				(await envoisRecus()).find(e => !e.corps.payload.name)
-			await expect.poll(pageVue).toBeTruthy()
-			const vue = await pageVue()
-			expect(vue.corps.type).toBe('event')
-			expect(vue.corps.payload).toMatchObject({
-				website: WEBSITE_ID,
-				hostname: 'localhost',
-				tag: VERSION,
-				url: `${APP}/?utm_source=regression&utm_campaign=mes-10`,
-			})
-			expect(JSON.stringify(vue.corps)).not.toContain('secret-123')
-			expect(vue.entetes.cookie).toBeUndefined()
-			expect(vue.entetes.referer).toBeUndefined()
-			expect(vue.entetes['user-agent']).toBe(CHROME)
-			expect(vue.entetes['true-client-ip']).toMatch(IP_LOCALE)
+		registermesure1Scenario2({})
 
-			const script = (await recus()).find(r => r.chemin === '/script.js')
-			expect(script.entetes.cookie).toBeUndefined()
-			expect([...suivi.hotes].every(h => HOTES_LOCAUX.includes(h))).toBe(true)
-		})
+		registermesure1Scenario3({})
 
-		test('arrivée depuis l’application Google (Android) : le référent garde l’identifiant de l’application', async ({
-			page,
-		}) => {
-			const GOOGLE = 'android-app://com.google.android.googlequicksearchbox/'
-			await visiteurReel(page)
-			// what Chrome on Android gives a page opened from the Google app
-			await page.addInitScript(referent => {
-				Object.defineProperty(Document.prototype, 'referrer', {
-					configurable: true,
-					get: () => referent,
-				})
-			}, GOOGLE)
-			await page.goto('/')
-			expect(await page.evaluate(() => document.referrer)).toBe(GOOGLE)
-
-			const pageVue = async () =>
-				(await envoisRecus()).find(e => !e.corps.payload.name)
-			await expect.poll(pageVue).toBeTruthy()
-			const { payload } = (await pageVue()).corps
-			expect(payload.referrer).toBe(GOOGLE)
-			// the referrer domain Umami 3.2 derives (send route): « google. »
-			// in it puts the visit in the organic search channel
-			const domaine = new URL(
-				payload.referrer,
-				`https://${payload.hostname}`
-			).hostname.replace(/^www\./, '')
-			expect(domaine).toBe('com.google.android.googlequicksearchbox')
-		})
-
-		test('Web Vitals : un événement « web-vitals » par mesure, page sans query', async ({
-			page,
-		}) => {
-			await visiteurReel(page)
-			await page.goto('/blog?utm_source=regression')
-			await expect
-				.poll(async () =>
-					(await envoisRecus())
-						.filter(e => e.corps.payload.name === 'web-vitals')
-						.map(e => e.corps.payload.data.name)
-				)
-				.toContain('TTFB')
-			const vitals = (await envoisRecus()).filter(
-				e => e.corps.payload.name === 'web-vitals'
-			)
-			for (const { corps } of vitals) {
-				expect(Object.keys(corps.payload.data).sort()).toEqual([
-					'name',
-					'page',
-					'rating',
-					'value',
-				])
-				expect(corps.payload.data.page).toBe('/blog')
-				expect(['good', 'needs-improvement', 'poor']).toContain(
-					corps.payload.data.rating
-				)
-				expect(typeof corps.payload.data.value).toBe('number')
-				expect(corps.payload.tag).toBe(VERSION)
-			}
-		})
-
-		test('session expirée (RG-08) : session_expired part une fois, avec l’endroit lu dans ?ou= (api_401 sans ?ou= ou hors catalogue)', async ({
-			page,
-		}) => {
-			await visiteurReel(page)
-			const expirations = async () =>
-				(await envoisRecus())
-					.filter(e => e.corps.payload.name === 'session_expired')
-					.map(e => e.corps.payload.data)
-			for (const [ou, where] of [
-				['middleware', 'middleware'],
-				['jwt_expire', 'jwt_expire'],
-				['api_401', 'api_401'],
-				[null, 'api_401'],
-				['ailleurs', 'api_401'],
-			]) {
-				await piloter('/__umami/reset')
-				await page.goto(
-					`/auth/signin?error=session-expiree${
-						ou ? `&ou=${ou}` : ''
-					}&callbackUrl=%2Fauth%2Fprofil`
-				)
-				await expect(page.locator('[data-cy="signin-url-error"]')).toHaveText(
-					'Ta session a expiré, reconnecte-toi.'
-				)
-				await expect.poll(expirations).toEqual([{ where }])
-				await page.waitForLoadState('networkidle')
-				expect(await expirations()).toEqual([{ where }])
-			}
-		})
+		registermesure1Scenario4({})
 
 		// sign-up up to the name step of /auth/init-account
 		async function etapeDuNom(page, email) {
@@ -459,10 +296,7 @@ test.describe('MES-10 qui est mesuré', () => {
 			const envoye = (nom, data) =>
 				vus.some(requete => {
 					const payload = requete.postDataJSON()?.payload
-					return (
-						payload?.name === nom &&
-						Object.entries(data).every(([cle, v]) => payload.data?.[cle] === v)
-					)
+					return payload?.name === nom && Object.entries(data).every(([cle, v]) => payload.data?.[cle] === v)
 				})
 			return async (nom, data = {}) => {
 				await expect.poll(() => envoye(nom, data)).toBe(true)
@@ -475,96 +309,20 @@ test.describe('MES-10 qui est mesuré', () => {
 			await expect(page.getByText(/Bienvenue sur My.Makeup/)).toBeVisible()
 			await apres('onboarding_step', { step: 'termine' })
 		}
-		const question = page =>
-			page.getByRole('group', { name: /Comment as-tu connu My.Makeup/ })
+		const question = page => page.getByRole('group', { name: /Comment as-tu connu My.Makeup/ })
 
-		test('onboarding_source : la réponse part une fois, seulement quand le nom est enregistré', async ({
-			page,
-		}) => {
-			const apres = suivreEnvois(page)
-			await visiteurReel(page)
-			await etapeDuNom(page, 'origine@test.local')
-			await page.getByTestId('onboarding-source-instagram').check()
+		registermesure1Scenario5({ suivreEnvois, etapeDuNom, finDeLInscription })
 
-			// the save fails: nothing is counted. profile_save is sent as soon
-			// as the PATCH answers, before the line that counts the answer.
-			await panne({ patch: 500 })
-			await page.getByTestId('submit').click()
-			await expect(page.getByTestId('save-error')).toBeVisible()
-			await apres('profile_save', { section: 'onboarding', ok: false })
-			expect(await evenements('onboarding_source')).toEqual([])
+		registermesure1Scenario6({ suivreEnvois, etapeDuNom, question, finDeLInscription })
 
-			await panne({ patch: null })
-			await page.getByTestId('submit').click()
-			await finDeLInscription(page, apres)
-			const envois = (await envoisRecus()).filter(
-				e => e.corps.payload.name === 'onboarding_source'
-			)
-			expect(envois).toHaveLength(1)
-			expect(envois[0].corps.payload).toMatchObject({
-				website: WEBSITE_ID,
-				tag: VERSION,
-				name: 'onboarding_source',
-				data: { source: 'instagram' },
-			})
-			expect(envois[0].corps.payload.url).toContain('/auth/init-account')
-			expect(JSON.stringify(envois[0].corps)).not.toContain('origine@test')
-		})
+		registermesure1Scenario7({ suivreEnvois, question, finDeLInscription })
 
-		test('onboarding_source : réponse effacée, l’inscription se termine et rien ne part', async ({
-			page,
-		}) => {
-			const apres = suivreEnvois(page)
-			await visiteurReel(page)
-			await etapeDuNom(page, 'sans-origine@test.local')
-			const effacer = page.getByTestId('onboarding-source-effacer')
-			await expect(effacer).toHaveCount(0)
-			await page.getByTestId('onboarding-source-ecole').check()
-			await effacer.click()
-			await expect(
-				question(page).getByRole('radio', { checked: true })
-			).toHaveCount(0)
-			await expect(effacer).toHaveCount(0)
-			await expect(
-				page.getByTestId('onboarding-source-instagram')
-			).toBeFocused()
-
-			await page.getByTestId('submit').click()
-			await finDeLInscription(page, apres)
-			expect(await evenements('onboarding_source')).toEqual([])
-		})
-
-		test('onboarding_source : profil déjà créé (retour sur la page), pas de question et rien ne part', async ({
-			page,
-		}) => {
-			const apres = suivreEnvois(page)
-			await visiteurReel(page)
-			// the test account already has its profile: the POST answers 400
-			expect(await connecter(page)).toBe(true)
-			await aller(page, '/auth/init-account')
-			await expect(page.getByTestId('first_name')).toBeVisible({
-				timeout: 15_000,
-			})
-			await expect(question(page)).toHaveCount(0)
-			await page.getByTestId('first_name').fill('Al')
-			await page.getByTestId('last_name').fill('Bo')
-			await page.getByTestId('submit').click()
-			await finDeLInscription(page, apres)
-			expect(await evenements('onboarding_source')).toEqual([])
-		})
-
-		test('onboarding_source : la politique de confidentialité décrit la question', async ({
-			page,
-		}) => {
+		test('onboarding_source : la politique de confidentialité décrit la question', async ({ page }) => {
 			await page.goto('/politique-de-confidentialite')
 			const phrase = page.getByText(/Comment as-tu connu My Makeup \?/)
 			await expect(phrase).toHaveCount(1)
-			await expect(phrase).toContainText(
-				'est envoyée à Umami de la même façon, sans cookie'
-			)
-			await expect(phrase).toContainText(
-				"Elle n'est enregistrée ni dans le compte ni dans le profil"
-			)
+			await expect(phrase).toContainText('est envoyée à Umami de la même façon, sans cookie')
+			await expect(phrase).toContainText("Elle n'est enregistrée ni dans le compte ni dans le profil")
 		})
 
 		// --- the artist's space (MES-12) ---
@@ -573,85 +331,31 @@ test.describe('MES-10 qui est mesuré', () => {
 		async function espaceCompte(page, chemin) {
 			const vues = async () =>
 				(await envoisRecus()).filter(
-					e =>
-						!e.corps.payload.name &&
-						new URL(e.corps.payload.url).pathname === '/auth/profil'
+					e => !e.corps.payload.name && new URL(e.corps.payload.url).pathname === '/auth/profil'
 				).length
 			const avant = await vues()
 			await aller(page, chemin)
-			await expect(page.getByTestId('resume-name')).toHaveText(
-				'Testine Recette'
-			)
+			await expect(page.getByTestId('resume-name')).toHaveText('Testine Recette')
 			await expect.poll(vues).toBeGreaterThan(avant)
 			await page.waitForLoadState('networkidle')
 		}
 		// nothing that names her, in any send of the page
 		async function rienDePersonnel() {
 			const tout = JSON.stringify(await envoisRecus())
-			for (const mot of ['testine', 'Testine', 'Recette', 'Annecy', 'Studio'])
+			for (const mot of ['testine', 'Testine', 'Recette', 'Annecy', 'Studio']) {
 				expect(tout, mot).not.toContain(mot)
+			}
 		}
 
-		test('profile_visibility : un envoi par bascule de vue, double clic compris ; aucun au chargement, au rechargement ni au retour du navigateur', async ({
-			page,
-		}) => {
-			const apres = suivreEnvois(page)
-			const visibilite = () => evenements('profile_visibility')
-			await visiteurReel(page)
-			expect(await connecter(page)).toBe(true)
-			// a page before her space, for the Back button
-			await page.goto('/')
-			await espaceCompte(page, '/auth/profil')
-			expect(await visibilite()).toEqual([])
-
-			await page.getByTestId('profil-public-view').click()
-			await expect(page).toHaveURL(/publicView=true/)
-			await apres('profile_visibility', { public: true })
-			await page.getByTestId('profil-edit-view').click()
-			await expect(page).not.toHaveURL(/publicView/)
-			await apres('profile_visibility', { public: false })
-			expect(await visibilite()).toEqual([{ public: true }, { public: false }])
-
-			// a double click: two clicks before the view has switched, one send
-			await page.getByTestId('profil-public-view').evaluate(lien => {
-				lien.click()
-				lien.click()
-			})
-			await expect(page).toHaveURL(/publicView=true/)
-			await expect(page.getByTestId('profil-edit-view')).toBeVisible()
-			await expect.poll(async () => (await visibilite()).length).toBe(3)
-			await page.waitForLoadState('networkidle')
-			await apres('profile_visibility', { public: true })
-			expect(await visibilite()).toEqual([
-				{ public: true },
-				{ public: false },
-				{ public: true },
-			])
-
-			// Back leaves her space (no history entry per switch), Forward and
-			// a reload load the public view again: nothing more is sent
-			await page.goBack()
-			await expect(page).toHaveURL(url => url.pathname === '/')
-			await page.goForward()
-			await expect(page).toHaveURL(/\/auth\/profil\?publicView=true/)
-			await expect(page.getByTestId('profil-edit-view')).toBeVisible()
-			await espaceCompte(page, '/auth/profil?publicView=true')
-			await expect(page.getByTestId('profil-edit-view')).toBeVisible()
-			await page.waitForLoadState('networkidle')
-			expect(await visibilite()).toHaveLength(3)
-			await rienDePersonnel()
-		})
+		registermesure1Scenario8({ suivreEnvois, espaceCompte, rienDePersonnel })
 
 		// a description of exactly n characters (no edge space)
-		const texte = n =>
-			'Maquillage de mariée, essai compris. '.repeat(6).slice(0, n - 1) + '.'
+		const texte = n => `${'Maquillage de mariée, essai compris. '.repeat(6).slice(0, n - 1)}.`
 		// one criterion short: a description of 199 characters
 		const presquePubliable = champs =>
 			profilDeDepart({
 				main_picture: { id: 1, name: 'photo-1.png', url: `${API}/media/1` },
-				service_offers: [
-					{ name: 'Mariée', price: '120 €', description: 'Essai et jour J' },
-				],
+				service_offers: [{ name: 'Mariée', price: '120 €', description: 'Essai et jour J' }],
 				network: { instagram: 'studio.test', email: '', phone: '' },
 				description: texte(199),
 				...champs,
@@ -677,125 +381,35 @@ test.describe('MES-10 qui est mesuré', () => {
 				section: DESCRIPTION,
 			})
 		// the event carries no property at all
-		const publiables = async () =>
-			(await evenements('profile_publiable')).map(d => d ?? {})
+		const publiables = async () => (await evenements('profile_publiable')).map(d => d ?? {})
 
-		test('profile_publiable : seulement au passage à publiable, un seul envoi sans propriété ; ni échec, ni rechargement, ni perte d’un critère', async ({
-			page,
-		}) => {
-			await presquePubliable()
-			const apres = suivreEnvois(page)
-			await visiteurReel(page)
-			expect(await connecter(page)).toBe(true)
-			await espaceCompte(page, '/auth/profil')
-
-			// the save fails: still one criterion short, nothing is sent
-			await panne({ patch: 500 })
-			await page.getByTestId('update-description-button').click()
-			await page.getByTestId('description-input').fill(texte(200))
-			await page.getByTestId('save-button-description').click()
-			await expect(page.getByTestId('save-error')).toBeVisible()
-			await apres('profile_save', { section: 'description', ok: false })
-			await page.keyboard.press('Escape')
-			await expect(page.getByTestId('description-input')).toBeHidden()
-			await panne({ patch: null })
-			expect(await publiables()).toEqual([])
-
-			await decrire(page, apres, texte(200))
-			await apres('profile_publiable')
-			expect(await publiables()).toEqual([{}])
-
-			// still publiable after another save, or after a reload: nothing
-			await decrire(page, apres, texte(210))
-			await espaceCompte(page, '/auth/profil')
-			expect(await publiables()).toEqual([{}])
-
-			// a save that breaks a criterion: a loss is never counted
-			await decrire(page, apres, 'Maquilleuse à Annecy.')
-			expect(await publiables()).toEqual([{}])
-			await rienDePersonnel()
+		registermesure1Scenario9({
+			presquePubliable,
+			suivreEnvois,
+			espaceCompte,
+			texte,
+			publiables,
+			decrire,
+			rienDePersonnel,
 		})
 
-		test('profile_publiable : sans canal de contact ni formulaire de devis en ligne, la description complète ne suffit pas ; Instagram ajouté, un envoi', async ({
-			page,
-		}) => {
-			// the test build has NEXT_PUBLIC_DEVIS_FORM_URL empty: the quote
-			// form does not count as a contact channel, as on her public page
-			await presquePubliable({
-				network: { instagram: '', email: '', phone: '' },
-			})
-			const apres = suivreEnvois(page)
-			await visiteurReel(page)
-			expect(await connecter(page)).toBe(true)
-			await espaceCompte(page, '/auth/profil')
-
-			await decrire(page, apres, texte(200))
-			expect(await publiables()).toEqual([])
-
-			await sauver(page, apres, {
-				bouton: 'update-social-medias-button',
-				champ: 'instagram-input',
-				valeur: 'https://www.instagram.com/studio.test',
-				section: { cy: 'social-medias', nom: 'reseaux' },
-			})
-			await apres('profile_publiable')
-			expect(await publiables()).toEqual([{}])
-			await rienDePersonnel()
+		registermesure1Scenario10({
+			presquePubliable,
+			suivreEnvois,
+			espaceCompte,
+			decrire,
+			texte,
+			publiables,
+			sauver,
+			rienDePersonnel,
 		})
 
-		test('upload_error : un envoi de photo refusé par l’API part avec son genre, 413 → size, 400 → type, 503 → server', async ({
-			page,
-		}) => {
-			const apres = suivreEnvois(page)
-			await visiteurReel(page)
-			expect(await connecter(page)).toBe(true)
-			await espaceCompte(page, '/auth/profil')
-			await page.getByTestId('update-resume-button').click()
-			const portrait = await sharp({
-				create: {
-					width: 600,
-					height: 600,
-					channels: 3,
-					background: { r: 200, g: 120, b: 160 },
-				},
-			})
-				.png()
-				.toBuffer()
-			await page.getByTestId('file-main-upload').setInputFiles({
-				name: 'portrait.png',
-				mimeType: 'image/png',
-				buffer: portrait,
-			})
-			// compressed and shown: a save now sends it
-			await expect(
-				page.getByTestId('modal-panel').getByAltText('photo de profil')
-			).toHaveAttribute('src', /^blob:/)
-
-			// each save sends the picture again, refused with that status
-			for (const [status, kind, message] of [
-				[413, 'size', /dépasse 10 Mo/],
-				[400, 'type', /n'a pas été acceptée/],
-				[503, 'server', /L'envoi de la photo a échoué/],
-			]) {
-				await panne({ upload: status })
-				await page.getByTestId('save-button-resume').click()
-				await expect(page.getByTestId('save-error')).toHaveText(message)
-				await apres('upload_error', { kind })
-			}
-			expect(await evenements('upload_error')).toEqual([
-				{ kind: 'size' },
-				{ kind: 'type' },
-				{ kind: 'server' },
-			])
-			await rienDePersonnel()
-		})
+		registermesure1Scenario11({ suivreEnvois, espaceCompte, rienDePersonnel })
 
 		test('« Ne plus mesurer mes visites » : aucun envoi', async ({ page }) => {
 			const suivi = suivreRequetes(page)
 			await visiteurReel(page)
-			await page.addInitScript(() =>
-				window.localStorage.setItem('umami.disabled', '1')
-			)
+			await page.addInitScript(() => window.localStorage.setItem('umami.disabled', '1'))
 			await page.goto('/')
 			await attendreUmami(page)
 			await page.evaluate(() => window.umami.track('sonde'))
@@ -808,11 +422,7 @@ test.describe('MES-10 qui est mesuré', () => {
 // the client code of Next has run: window.next set, the React root hydrated
 const hydratee = () => {
 	const racine = document.getElementById('__next')
-	return (
-		!!window.next &&
-		!!racine &&
-		Object.keys(racine).some(cle => cle.startsWith('__reactContainer'))
-	)
+	return !!window.next && !!racine && Object.keys(racine).some(cle => cle.startsWith('__reactContainer'))
 }
 
 // records each event handed to window.mmAttenteUmami (before the Umami
@@ -841,37 +451,28 @@ async function espionnerAttente(page) {
 }
 
 test.describe('MES-10 un Umami lent ou muet ne retient pas le site', () => {
-	test('la page est hydratée pendant que /u/script.js attend encore', async ({
-		page,
-	}) => {
+	test('la page est hydratée pendant que /u/script.js attend encore', async ({ page }) => {
 		// /script.js reaches the fake Umami, which does not answer
 		await piloter('/__umami/retenir')
 		const finies = new Set()
 		page.on('requestfinished', requete => finies.add(requete))
 		page.on('requestfailed', requete => finies.add(requete))
 		for (const chemin of ['/', '/a-propos']) {
-			const script = page.waitForRequest(
-				r => new URL(r.url()).pathname === '/u/script.js'
-			)
+			const script = page.waitForRequest(r => new URL(r.url()).pathname === '/u/script.js')
+			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 			await page.goto(chemin, { waitUntil: 'domcontentloaded' })
 			await page.waitForFunction(hydratee)
 			// only the load event waits for Umami
-			expect(await page.evaluate(() => document.readyState), chemin).toBe(
-				'interactive'
-			)
+			expect(await page.evaluate(() => document.readyState), chemin).toBe('interactive')
 			expect(finies.has(await script), chemin).toBe(false)
 		}
-		expect((await recus()).filter(r => r.chemin === '/script.js')).toHaveLength(
-			2
-		)
+		expect((await recus()).filter(r => r.chemin === '/script.js')).toHaveLength(2)
 	})
 
 	test.describe('visiteur réel', () => {
 		test.use({ userAgent: CHROME })
 
-		test('un événement suivi avant l’arrivée du script part quand il arrive', async ({
-			page,
-		}) => {
+		test('un événement suivi avant l’arrivée du script part quand il arrive', async ({ page }) => {
 			await visiteurReel(page)
 			await espionnerAttente(page)
 			await piloter('/__umami/retenir')
@@ -885,8 +486,7 @@ test.describe('MES-10 un Umami lent ou muet ne retient pas le site', () => {
 			expect(await envoisRecus()).toEqual([])
 
 			await piloter('/__umami/liberer')
-			const evenement = async () =>
-				(await envoisRecus()).find(e => e.corps.payload.name === 'not_found')
+			const evenement = async () => (await envoisRecus()).find(e => e.corps.payload.name === 'not_found')
 			await expect.poll(evenement).toBeTruthy()
 			expect((await evenement()).corps.payload).toMatchObject({
 				website: WEBSITE_ID,
@@ -894,11 +494,359 @@ test.describe('MES-10 un Umami lent ou muet ne retient pas le site', () => {
 				data: { kind: 'autre' },
 			})
 			// and the page view, once the page has loaded
-			await expect
-				.poll(async () =>
-					(await envoisRecus()).some(e => !e.corps.payload.name)
-				)
-				.toBe(true)
+			await expect.poll(async () => (await envoisRecus()).some(e => !e.corps.payload.name)).toBe(true)
 		})
 	})
 })
+
+function registermesure1Scenario1() {
+	test('la page vue passe par /u/api/send et arrive au faux Umami, nettoyée', async ({ page, context }) => {
+		const suivi = suivreRequetes(page)
+		await visiteurReel(page)
+		await context.addCookies([{ name: 'mm-test', value: 'valeur-privee', url: APP }])
+		const envoi = page.waitForResponse(r => r.url() === `${APP}/u/api/send` && r.request().method() === 'POST')
+		await page.goto('/?utm_source=regression&utm_campaign=mes-10&code=secret-123#ancre')
+		expect(await page.evaluate(() => navigator.webdriver)).toBe(false)
+		expect((await envoi).status()).toBe(200)
+
+		// the page view: the only send without an event name
+		const pageVue = async () => (await envoisRecus()).find(e => !e.corps.payload.name)
+		await expect.poll(pageVue).toBeTruthy()
+		const vue = await pageVue()
+		expect(vue.corps.type).toBe('event')
+		expect(vue.corps.payload).toMatchObject({
+			website: WEBSITE_ID,
+			hostname: 'localhost',
+			tag: VERSION,
+			url: `${APP}/?utm_source=regression&utm_campaign=mes-10`,
+		})
+		expect(JSON.stringify(vue.corps)).not.toContain('secret-123')
+		expect(vue.entetes.cookie).toBeUndefined()
+		expect(vue.entetes.referer).toBeUndefined()
+		expect(vue.entetes['user-agent']).toBe(CHROME)
+		expect(vue.entetes['true-client-ip']).toMatch(IP_LOCALE)
+
+		const script = (await recus()).find(r => r.chemin === '/script.js')
+		expect(script.entetes.cookie).toBeUndefined()
+		expect([...suivi.hotes].every(h => HOTES_LOCAUX.includes(h))).toBe(true)
+	})
+}
+
+function registermesure1Scenario2() {
+	test('arrivée depuis l’application Google (Android) : le référent garde l’identifiant de l’application', async ({
+		page,
+	}) => {
+		const GOOGLE = 'android-app://com.google.android.googlequicksearchbox/'
+		await visiteurReel(page)
+		// what Chrome on Android gives a page opened from the Google app
+		await page.addInitScript(referent => {
+			Object.defineProperty(Document.prototype, 'referrer', {
+				configurable: true,
+				get: () => referent,
+			})
+		}, GOOGLE)
+		await page.goto('/')
+		expect(await page.evaluate(() => document.referrer)).toBe(GOOGLE)
+
+		const pageVue = async () => (await envoisRecus()).find(e => !e.corps.payload.name)
+		await expect.poll(pageVue).toBeTruthy()
+		const { payload } = (await pageVue()).corps
+		expect(payload.referrer).toBe(GOOGLE)
+		// the referrer domain Umami 3.2 derives (send route): « google. »
+		// in it puts the visit in the organic search channel
+		const domaine = new URL(payload.referrer, `https://${payload.hostname}`).hostname.replace(/^www\./, '')
+		expect(domaine).toBe('com.google.android.googlequicksearchbox')
+	})
+}
+
+function registermesure1Scenario3() {
+	test('Web Vitals : un événement « web-vitals » par mesure, page sans query', async ({ page }) => {
+		await visiteurReel(page)
+		await page.goto('/blog?utm_source=regression')
+		await expect
+			.poll(async () =>
+				(await envoisRecus()).filter(e => e.corps.payload.name === 'web-vitals').map(e => e.corps.payload.data.name)
+			)
+			.toContain('TTFB')
+		const vitals = (await envoisRecus()).filter(e => e.corps.payload.name === 'web-vitals')
+		for (const { corps } of vitals) {
+			expect(Object.keys(corps.payload.data).sort()).toEqual(['name', 'page', 'rating', 'value'])
+			expect(corps.payload.data.page).toBe('/blog')
+			expect(['good', 'needs-improvement', 'poor']).toContain(corps.payload.data.rating)
+			expect(typeof corps.payload.data.value).toBe('number')
+			expect(corps.payload.tag).toBe(VERSION)
+		}
+	})
+}
+
+function registermesure1Scenario4() {
+	test('session expirée (RG-08) : session_expired part une fois, avec l’endroit lu dans ?ou= (api_401 sans ?ou= ou hors catalogue)', async ({
+		page,
+	}) => {
+		await visiteurReel(page)
+		const expirations = async () =>
+			(await envoisRecus()).filter(e => e.corps.payload.name === 'session_expired').map(e => e.corps.payload.data)
+		for (const [ou, where] of [
+			['middleware', 'middleware'],
+			['jwt_expire', 'jwt_expire'],
+			['api_401', 'api_401'],
+			[null, 'api_401'],
+			['ailleurs', 'api_401'],
+		]) {
+			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
+			await piloter('/__umami/reset')
+			await page.goto(`/auth/signin?error=session-expiree${ou ? `&ou=${ou}` : ''}&callbackUrl=%2Fauth%2Fprofil`)
+			await expect(page.locator('[data-cy="signin-url-error"]')).toHaveText('Ta session a expiré, reconnecte-toi.')
+			await expect.poll(expirations).toEqual([{ where }])
+			await page.waitForLoadState('networkidle')
+			expect(await expirations()).toEqual([{ where }])
+		}
+	})
+}
+
+function registermesure1Scenario5({ suivreEnvois, etapeDuNom, finDeLInscription }) {
+	test('onboarding_source : la réponse part une fois, seulement quand le nom est enregistré', async ({ page }) => {
+		const apres = suivreEnvois(page)
+		await visiteurReel(page)
+		await etapeDuNom(page, 'origine@test.local')
+		await page.getByTestId('onboarding-source-instagram').check()
+
+		// the save fails: nothing is counted. profile_save is sent as soon
+		// as the PATCH answers, before the line that counts the answer.
+		await panne({ patch: 500 })
+		await page.getByTestId('submit').click()
+		await expect(page.getByTestId('save-error')).toBeVisible()
+		await apres('profile_save', { section: 'onboarding', ok: false })
+		expect(await evenements('onboarding_source')).toEqual([])
+
+		await panne({ patch: null })
+		await page.getByTestId('submit').click()
+		await finDeLInscription(page, apres)
+		const envois = (await envoisRecus()).filter(e => e.corps.payload.name === 'onboarding_source')
+		expect(envois).toHaveLength(1)
+		expect(envois[0].corps.payload).toMatchObject({
+			website: WEBSITE_ID,
+			tag: VERSION,
+			name: 'onboarding_source',
+			data: { source: 'instagram' },
+		})
+		expect(envois[0].corps.payload.url).toContain('/auth/init-account')
+		expect(JSON.stringify(envois[0].corps)).not.toContain('origine@test')
+	})
+}
+
+function registermesure1Scenario6({ suivreEnvois, etapeDuNom, question, finDeLInscription }) {
+	test('onboarding_source : réponse effacée, l’inscription se termine et rien ne part', async ({ page }) => {
+		const apres = suivreEnvois(page)
+		await visiteurReel(page)
+		await etapeDuNom(page, 'sans-origine@test.local')
+		const effacer = page.getByTestId('onboarding-source-effacer')
+		await expect(effacer).toHaveCount(0)
+		await page.getByTestId('onboarding-source-ecole').check()
+		await effacer.click()
+		await expect(question(page).getByRole('radio', { checked: true })).toHaveCount(0)
+		await expect(effacer).toHaveCount(0)
+		await expect(page.getByTestId('onboarding-source-instagram')).toBeFocused()
+
+		await page.getByTestId('submit').click()
+		await finDeLInscription(page, apres)
+		expect(await evenements('onboarding_source')).toEqual([])
+	})
+}
+
+function registermesure1Scenario7({ suivreEnvois, question, finDeLInscription }) {
+	test('onboarding_source : profil déjà créé (retour sur la page), pas de question et rien ne part', async ({
+		page,
+	}) => {
+		const apres = suivreEnvois(page)
+		await visiteurReel(page)
+		// the test account already has its profile: the POST answers 400
+		expect(await connecter(page)).toBe(true)
+		await aller(page, '/auth/init-account')
+		await expect(page.getByTestId('first_name')).toBeVisible({
+			timeout: 15_000,
+		})
+		await expect(question(page)).toHaveCount(0)
+		await page.getByTestId('first_name').fill('Al')
+		await page.getByTestId('last_name').fill('Bo')
+		await page.getByTestId('submit').click()
+		await finDeLInscription(page, apres)
+		expect(await evenements('onboarding_source')).toEqual([])
+	})
+}
+
+function registermesure1Scenario8({ suivreEnvois, espaceCompte, rienDePersonnel }) {
+	test('profile_visibility : un envoi par bascule de vue, double clic compris ; aucun au chargement, au rechargement ni au retour du navigateur', async ({
+		page,
+	}) => {
+		const apres = suivreEnvois(page)
+		const visibilite = () => evenements('profile_visibility')
+		await visiteurReel(page)
+		expect(await connecter(page)).toBe(true)
+		// a page before her space, for the Back button
+		await page.goto('/')
+		await espaceCompte(page, '/auth/profil')
+		expect(await visibilite()).toEqual([])
+
+		await page.getByTestId('profil-public-view').click()
+		await expect(page).toHaveURL(/publicView=true/)
+		await apres('profile_visibility', { public: true })
+		await page.getByTestId('profil-edit-view').click()
+		await expect(page).not.toHaveURL(/publicView/)
+		await apres('profile_visibility', { public: false })
+		expect(await visibilite()).toEqual([{ public: true }, { public: false }])
+
+		// a double click: two clicks before the view has switched, one send
+		await page.getByTestId('profil-public-view').evaluate(lien => {
+			lien.click()
+			lien.click()
+		})
+		await expect(page).toHaveURL(/publicView=true/)
+		await expect(page.getByTestId('profil-edit-view')).toBeVisible()
+		await expect.poll(async () => (await visibilite()).length).toBe(3)
+		await page.waitForLoadState('networkidle')
+		await apres('profile_visibility', { public: true })
+		expect(await visibilite()).toEqual([{ public: true }, { public: false }, { public: true }])
+
+		// Back leaves her space (no history entry per switch), Forward and
+		// a reload load the public view again: nothing more is sent
+		await page.goBack()
+		await expect(page).toHaveURL(url => url.pathname === '/')
+		await page.goForward()
+		await expect(page).toHaveURL(/\/auth\/profil\?publicView=true/)
+		await expect(page.getByTestId('profil-edit-view')).toBeVisible()
+		await espaceCompte(page, '/auth/profil?publicView=true')
+		await expect(page.getByTestId('profil-edit-view')).toBeVisible()
+		await page.waitForLoadState('networkidle')
+		expect(await visibilite()).toHaveLength(3)
+		await rienDePersonnel()
+	})
+}
+
+function registermesure1Scenario9({
+	presquePubliable,
+	suivreEnvois,
+	espaceCompte,
+	texte,
+	publiables,
+	decrire,
+	rienDePersonnel,
+}) {
+	test('profile_publiable : seulement au passage à publiable, un seul envoi sans propriété ; ni échec, ni rechargement, ni perte d’un critère', async ({
+		page,
+	}) => {
+		await presquePubliable()
+		const apres = suivreEnvois(page)
+		await visiteurReel(page)
+		expect(await connecter(page)).toBe(true)
+		await espaceCompte(page, '/auth/profil')
+
+		// the save fails: still one criterion short, nothing is sent
+		await panne({ patch: 500 })
+		await page.getByTestId('update-description-button').click()
+		await page.getByTestId('description-input').fill(texte(200))
+		await page.getByTestId('save-button-description').click()
+		await expect(page.getByTestId('save-error')).toBeVisible()
+		await apres('profile_save', { section: 'description', ok: false })
+		await page.keyboard.press('Escape')
+		await expect(page.getByTestId('description-input')).toBeHidden()
+		await panne({ patch: null })
+		expect(await publiables()).toEqual([])
+
+		await decrire(page, apres, texte(200))
+		await apres('profile_publiable')
+		expect(await publiables()).toEqual([{}])
+
+		// still publiable after another save, or after a reload: nothing
+		await decrire(page, apres, texte(210))
+		await espaceCompte(page, '/auth/profil')
+		expect(await publiables()).toEqual([{}])
+
+		// a save that breaks a criterion: a loss is never counted
+		await decrire(page, apres, 'Maquilleuse à Annecy.')
+		expect(await publiables()).toEqual([{}])
+		await rienDePersonnel()
+	})
+}
+
+function registermesure1Scenario10({
+	presquePubliable,
+	suivreEnvois,
+	espaceCompte,
+	decrire,
+	texte,
+	publiables,
+	sauver,
+	rienDePersonnel,
+}) {
+	test('profile_publiable : sans canal de contact ni formulaire de devis en ligne, la description complète ne suffit pas ; Instagram ajouté, un envoi', async ({
+		page,
+	}) => {
+		// the test build has NEXT_PUBLIC_DEVIS_FORM_URL empty: the quote
+		// form does not count as a contact channel, as on her public page
+		await presquePubliable({
+			network: { instagram: '', email: '', phone: '' },
+		})
+		const apres = suivreEnvois(page)
+		await visiteurReel(page)
+		expect(await connecter(page)).toBe(true)
+		await espaceCompte(page, '/auth/profil')
+
+		await decrire(page, apres, texte(200))
+		expect(await publiables()).toEqual([])
+
+		await sauver(page, apres, {
+			bouton: 'update-social-medias-button',
+			champ: 'instagram-input',
+			valeur: 'https://www.instagram.com/studio.test',
+			section: { cy: 'social-medias', nom: 'reseaux' },
+		})
+		await apres('profile_publiable')
+		expect(await publiables()).toEqual([{}])
+		await rienDePersonnel()
+	})
+}
+
+function registermesure1Scenario11({ suivreEnvois, espaceCompte, rienDePersonnel }) {
+	test('upload_error : un envoi de photo refusé par l’API part avec son genre, 413 → size, 400 → type, 503 → server', async ({
+		page,
+	}) => {
+		const apres = suivreEnvois(page)
+		await visiteurReel(page)
+		expect(await connecter(page)).toBe(true)
+		await espaceCompte(page, '/auth/profil')
+		await page.getByTestId('update-resume-button').click()
+		const portrait = await sharp({
+			create: {
+				width: 600,
+				height: 600,
+				channels: 3,
+				background: { r: 200, g: 120, b: 160 },
+			},
+		})
+			.png()
+			.toBuffer()
+		await page.getByTestId('file-main-upload').setInputFiles({
+			name: 'portrait.png',
+			mimeType: 'image/png',
+			buffer: portrait,
+		})
+		// compressed and shown: a save now sends it
+		await expect(page.getByTestId('modal-panel').getByAltText('photo de profil')).toHaveAttribute('src', /^blob:/)
+
+		// each save sends the picture again, refused with that status
+		for (const [status, kind, message] of [
+			[413, 'size', /dépasse 10 Mo/],
+			[400, 'type', /n'a pas été acceptée/],
+			[503, 'server', /L'envoi de la photo a échoué/],
+		]) {
+			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
+			await panne({ upload: status })
+			await page.getByTestId('save-button-resume').click()
+			await expect(page.getByTestId('save-error')).toHaveText(message)
+			await apres('upload_error', { kind })
+		}
+		expect(await evenements('upload_error')).toEqual([{ kind: 'size' }, { kind: 'type' }, { kind: 'server' }])
+		await rienDePersonnel()
+	})
+}

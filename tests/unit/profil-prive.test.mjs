@@ -1,9 +1,6 @@
-import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import {
-	CHAMPS_PROFIL,
-	filtrerProfilPrive,
-} from '../../src/lib/profil-prive.js'
+import { test } from 'node:test'
+import { CHAMPS_PROFIL, filtrerProfilPrive } from '../../src/lib/profil-prive.js'
 
 // shape of GET /api/me-makeup before URG-06 (populate user: '*'), fake values
 const brut = {
@@ -22,9 +19,7 @@ const brut = {
 		createdBy: { id: 1, password: '$2a$10$faux', resetPasswordToken: 'x' },
 		updatedBy: { id: 1 },
 	},
-	image_gallery: [
-		{ id: 4, url: 'https://r2.example.test/b.webp', createdBy: { id: 1 } },
-	],
+	image_gallery: [{ id: 4, url: 'https://r2.example.test/b.webp', createdBy: { id: 1 } }],
 	user: {
 		id: 7,
 		username: 'marie',
@@ -44,8 +39,9 @@ test('keeps the profile fields the page and its modals use', () => {
 	assert.equal(profil.available, null)
 	assert.deepEqual(profil.skills, [{ id: 1, name: 'Mariée' }])
 	assert.equal(profil.main_picture.url, 'https://r2.example.test/a.webp')
-	for (const champ of Object.keys(profil))
+	for (const champ of Object.keys(profil)) {
 		assert.ok(CHAMPS_PROFIL.includes(champ) || champ === 'user', champ)
+	}
 })
 
 test('the account keeps its id, username and email only', () => {

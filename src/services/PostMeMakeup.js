@@ -1,5 +1,5 @@
-import { authenticatedFetch } from './api'
 import { profilCree } from '@/lib/sauvegarde-profil'
+import { authenticatedFetch } from './api'
 
 /**
  * POST /api/me-makeup: creates the profile of the signed-in account, once,
@@ -12,11 +12,10 @@ import { profilCree } from '@/lib/sauvegarde-profil'
 export async function postMeMakeup(authSession) {
 	let response
 	try {
-		response = await authenticatedFetch(
-			`${process.env.NEXT_PUBLIC_API_URL}/api/me-makeup`,
-			authSession,
-			{ method: 'POST', body: JSON.stringify({}) }
-		)
+		response = await authenticatedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/me-makeup`, authSession, {
+			method: 'POST',
+			body: JSON.stringify({}),
+		})
 	} catch {
 		return { ok: false }
 	}

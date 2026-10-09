@@ -1,7 +1,8 @@
 import React from 'react'
-import { Swiper, SwiperSlide } from 'swiper/react'
 // import required modules
 import { Pagination } from 'swiper/modules'
+import { Swiper, SwiperSlide } from 'swiper/react'
+import { avecCles } from '@/lib/cles'
 // Import Swiper styles
 import 'swiper/css'
 import 'swiper/css/pagination'
@@ -35,13 +36,11 @@ function ViewPortfolioProfil({ user }) {
 						setMySwiper(ev)
 					}}
 				>
-					{photos.map((image, index) => (
+					{avecCles(photos).map(({ valeur: image, cle }, index) => (
 						<SwiperSlide
-							key={index}
+							key={cle}
 							style={{
-								...(image.width && image.height
-									? { aspectRatio: `${image.width}/${image.height}` }
-									: {}),
+								...(image.width && image.height ? { aspectRatio: `${image.width}/${image.height}` } : {}),
 								height: '100%',
 							}}
 							className={'!h-[500px] !w-auto'}
@@ -71,13 +70,7 @@ function ViewPortfolioProfil({ user }) {
 						className={'flex min-h-[44px] items-center justify-center gap-2'}
 						onClick={() => mySwiper?.slidePrev()}
 					>
-						<Image
-							alt={''}
-							src={'/assets/down-arrow.svg'}
-							className={'rotate-90'}
-							width={20}
-							height={20}
-						></Image>
+						<Image alt={''} src={'/assets/down-arrow.svg'} className={'rotate-90'} width={20} height={20}></Image>
 						<span className={'font-semibold text-indigo-950'}>Précédent</span>
 					</button>
 					<button
@@ -87,13 +80,7 @@ function ViewPortfolioProfil({ user }) {
 						onClick={() => mySwiper?.slideNext()}
 					>
 						<span className={'font-semibold text-indigo-950'}>Suivant</span>
-						<Image
-							alt={''}
-							src={'/assets/down-arrow.svg'}
-							className={'-rotate-90'}
-							width={20}
-							height={20}
-						></Image>
+						<Image alt={''} src={'/assets/down-arrow.svg'} className={'-rotate-90'} width={20} height={20}></Image>
 					</button>
 				</div>
 			)}

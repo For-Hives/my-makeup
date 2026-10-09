@@ -1,13 +1,6 @@
-import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
-import {
-	attribuerSlugs,
-	cheminProfil,
-	resoudreProfil,
-	SLUG_MAX,
-	slugifier,
-	tableDesSlugs,
-} from '../../src/lib/slug.js'
+import { describe, test } from 'node:test'
+import { attribuerSlugs, cheminProfil, resoudreProfil, SLUG_MAX, slugifier, tableDesSlugs } from '../../src/lib/slug.js'
 
 describe('slugifier (plans/02 U09-U10)', () => {
 	test('U09 « Zoé Lefèvre » → zoe-lefevre', () => {
@@ -30,8 +23,9 @@ describe('slugifier (plans/02 U09-U10)', () => {
 	})
 
 	test('nothing usable: empty string', () => {
-		for (const v of ['', '   ', '✨✨', '---', null, undefined, {}])
+		for (const v of ['', '   ', '✨✨', '---', null, undefined, {}]) {
 			assert.equal(slugifier(v), '')
+		}
 		assert.equal(slugifier(42), '42')
 	})
 })
@@ -53,9 +47,7 @@ describe('attribuerSlugs (plans/02 U11-U12)', () => {
 			12: 'zoe-lefevre-3',
 		}
 		for (const ordre of [profils, [...profils].reverse()]) {
-			const slugs = Object.fromEntries(
-				attribuerSlugs(ordre).map(p => [p.id, p.slug])
-			)
+			const slugs = Object.fromEntries(attribuerSlugs(ordre).map(p => [p.id, p.slug]))
 			assert.deepEqual(slugs, attendu)
 		}
 	})
@@ -65,13 +57,9 @@ describe('attribuerSlugs (plans/02 U11-U12)', () => {
 			{ id: 5, username: 'Ana', createdAt: '2024-01-01T00:00:00.000Z' },
 			{ id: 4, username: 'ana', createdAt: '2024-01-01T00:00:00.000Z' },
 		]
-		const slugs = l =>
-			Object.fromEntries(attribuerSlugs(l).map(p => [p.id, p.slug]))
+		const slugs = l => Object.fromEntries(attribuerSlugs(l).map(p => [p.id, p.slug]))
 		assert.deepEqual(slugs(avant), { 4: 'ana', 5: 'ana-2' })
-		const apres = [
-			...avant,
-			{ id: 30, username: 'ana-2', createdAt: '2026-10-01T00:00:00.000Z' },
-		]
+		const apres = [...avant, { id: 30, username: 'ana-2', createdAt: '2026-10-01T00:00:00.000Z' }]
 		assert.deepEqual(slugs(apres), { 4: 'ana', 5: 'ana-2', 30: 'ana-2-2' })
 	})
 
@@ -122,21 +110,16 @@ describe('resoudreProfil (plans/02 U13, U61)', () => {
 	})
 
 	test('U13 old username (spaces, capitals) → 308 target of the table, in one hop', () => {
-		assert.deepEqual(
-			(({ slug, redirection }) => ({ slug, redirection }))(
-				resoudreProfil('Zoé Lefèvre', table)
-			),
-			{ slug: 'zoe-lefevre', redirection: true }
-		)
+		assert.deepEqual((({ slug, redirection }) => ({ slug, redirection }))(resoudreProfil('Zoé Lefèvre', table)), {
+			slug: 'zoe-lefevre',
+			redirection: true,
+		})
 		// the username of the second one, not the slug of the first one
 		assert.equal(resoudreProfil('ZOE LEFEVRE', table).slug, 'zoe-lefevre-2')
 		assert.equal(resoudreProfil('LeaNantes', table).slug, 'leanantes')
 		assert.equal(resoudreProfil('LeaNantes', table).redirection, true)
 		// variant of a slug
-		assert.equal(
-			resoudreProfil('Camille-Annemasse', table).slug,
-			'camille-annemasse'
-		)
+		assert.equal(resoudreProfil('Camille-Annemasse', table).slug, 'camille-annemasse')
 	})
 
 	test('known limit: a username equal to the slug of another profile serves that profile (the slug wins)', () => {
@@ -159,8 +142,9 @@ describe('resoudreProfil (plans/02 U13, U61)', () => {
 	})
 
 	test('unknown → null (404)', () => {
-		for (const s of ['inconnue', '', null, undefined, 'zoe-lefevre-9'])
+		for (const s of ['inconnue', '', null, undefined, 'zoe-lefevre-9']) {
 			assert.equal(resoudreProfil(s, table), null)
+		}
 	})
 
 	test('path of a profile', () => {

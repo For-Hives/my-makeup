@@ -1,3 +1,9 @@
+const codeErreurStrapiPattern1 = /already taken/i
+const codeErreurStrapiPattern2 = /username.*(at least|short)|minLength/i
+const codeErreurStrapiPattern3 = /not confirmed/i
+const codeErreurStrapiPattern4 = /blocked/i
+const codeErreurStrapiPattern5 = /invalid identifier or password/i
+const codeErreurOAuthPattern6 = /email is already taken/i
 /**
  * Authentication errors (A3, plans/01 §2.2): stable codes for the sign-in and
  * sign-up forms and the error page, with their French messages.
@@ -26,14 +32,12 @@ const MESSAGES = {
 	'email-ou-nom-deja-pris': 'Cet email ou ce nom est déjà utilisé.',
 	'nom-trop-court': 'Le nom doit contenir au moins 3 caractères.',
 	'trop-de-tentatives': "Trop d'essais, réessaie dans quelques minutes.",
-	'service-indisponible':
-		'Le service est momentanément indisponible, réessaie dans quelques minutes.',
+	'service-indisponible': 'Le service est momentanément indisponible, réessaie dans quelques minutes.',
 	'session-expiree': 'Ta session a expiré, reconnecte-toi.',
 	'email-deja-avec-mot-de-passe':
 		'Cet email a déjà un compte avec un mot de passe : connecte-toi avec ton email et ton mot de passe.',
 	'email-non-confirme': "Ton adresse email n'est pas encore confirmée.",
-	'compte-bloque':
-		'Ce compte est bloqué. Écris-nous depuis la page contact pour en savoir plus.',
+	'compte-bloque': 'Ce compte est bloqué. Écris-nous depuis la page contact pour en savoir plus.',
 	'erreur-inconnue': 'Une erreur est survenue, réessaie dans quelques minutes.',
 }
 
@@ -59,13 +63,11 @@ export function codeErreurStrapi(status, message = '') {
 	const texte = typeof message === 'string' ? message : ''
 	if (status === 429) return 'trop-de-tentatives'
 	if (!status || status >= 500) return 'service-indisponible'
-	if (/already taken/i.test(texte)) return 'email-ou-nom-deja-pris'
-	if (/username.*(at least|short)|minLength/i.test(texte))
-		return 'nom-trop-court'
-	if (/not confirmed/i.test(texte)) return 'email-non-confirme'
-	if (/blocked/i.test(texte)) return 'compte-bloque'
-	if (/invalid identifier or password/i.test(texte))
-		return 'identifiants-invalides'
+	if (codeErreurStrapiPattern1.test(texte)) return 'email-ou-nom-deja-pris'
+	if (codeErreurStrapiPattern2.test(texte)) return 'nom-trop-court'
+	if (codeErreurStrapiPattern3.test(texte)) return 'email-non-confirme'
+	if (codeErreurStrapiPattern4.test(texte)) return 'compte-bloque'
+	if (codeErreurStrapiPattern5.test(texte)) return 'identifiants-invalides'
 	return 'erreur-inconnue'
 }
 
@@ -78,8 +80,7 @@ export function codeErreurStrapi(status, message = '') {
  * @returns {string} one of CODES_ERREUR
  */
 export function codeErreurOAuth(status, message = '') {
-	if (status === 400 && /email is already taken/i.test(String(message)))
-		return 'email-deja-avec-mot-de-passe'
+	if (status === 400 && codeErreurOAuthPattern6.test(String(message))) return 'email-deja-avec-mot-de-passe'
 	return codeErreurStrapi(status, message)
 }
 

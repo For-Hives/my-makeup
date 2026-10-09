@@ -3,19 +3,17 @@
 // the build skipped when the cache existed): this test reads every workflow
 // and fails as soon as one of these patterns comes back, or when the Node
 // versions of the CI, the Docker image, .nvmrc and engines drift apart.
-import { describe, test } from 'node:test'
+
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import path from 'node:path'
+import { describe, test } from 'node:test'
 import { fileURLToPath } from 'node:url'
 import { parse } from 'yaml'
 
-const RACINE = path.resolve(
-	path.dirname(fileURLToPath(import.meta.url)),
-	'../..'
-)
+const RACINE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const DOSSIER = path.join(RACINE, '.github/workflows')
 
 // the checks to make required on main (plans/01 URG-12, plans/02 §8.1)
@@ -40,24 +38,18 @@ const nomEtape = (etape, i) => etape.name ?? etape.uses ?? `étape ${i + 1}`
 function continueOnError(workflow) {
 	const erreurs = []
 	for (const [id, job] of jobs(workflow)) {
-		if (job && 'continue-on-error' in job)
-			erreurs.push(`${workflow.fichier} : job ${id} a continue-on-error`)
-		etapes(job).forEach((etape, i) => {
+		if (job && 'continue-on-error' in job) erreurs.push(`${workflow.fichier} : job ${id} a continue-on-error`)
+		for (const [i, etape] of etapes(job).entries()) {
 			if (etape && 'continue-on-error' in etape)
-				erreurs.push(
-					`${workflow.fichier} : ${id} › ${nomEtape(etape, i)} a continue-on-error`
-				)
-		})
+				erreurs.push(`${workflow.fichier} : ${id} › ${nomEtape(etape, i)} a continue-on-error`)
+		}
 	}
 	// anywhere else (matrix, expression…): the line, outside comments
-	if (erreurs.length === 0)
-		workflow.texte.split('\n').forEach((ligne, i) => {
-			if (
-				!ligne.trimStart().startsWith('#') &&
-				ligne.includes('continue-on-error')
-			)
-				erreurs.push(`${workflow.fichier}:${i + 1} : continue-on-error`)
-		})
+	if (erreurs.length) return erreurs
+	for (const [i, ligne] of workflow.texte.split('\n').entries()) {
+		if (!ligne.trimStart().startsWith('#') && ligne.includes('continue-on-error'))
+			erreurs.push(`${workflow.fichier}:${i + 1} : continue-on-error`)
+	}
 	return erreurs
 }
 
@@ -65,14 +57,12 @@ function continueOnError(workflow) {
 function buildSurCacheHit(workflow) {
 	const erreurs = []
 	for (const [id, job] of jobs(workflow)) {
-		etapes(job).forEach((etape, i) => {
+		for (const [i, etape] of etapes(job).entries()) {
 			const condition = String(etape?.if ?? '')
 			const quoi = [etape?.name, etape?.run, etape?.uses].join(' ')
 			if (/cache-hit/.test(condition) && /build|test/i.test(quoi))
-				erreurs.push(
-					`${workflow.fichier} : ${id} › ${nomEtape(etape, i)} dépend de cache-hit (${condition})`
-				)
-		})
+				erreurs.push(`${workflow.fichier} : ${id} › ${nomEtape(etape, i)} dépend de cache-hit (${condition})`)
+		}
 	}
 	return erreurs
 }
@@ -96,29 +86,15 @@ const majeure = valeur => {
  * here).
  */
 function versionsNode(workflows, fichiers) {
-	const versions = []
-	for (const workflow of workflows)
-		for (const [id, job] of jobs(workflow))
-			etapes(job).forEach((etape, i) => {
-				if (!String(etape?.uses ?? '').startsWith('actions/setup-node')) return
-				versions.push({
-					source: `${workflow.fichier} › ${id} › ${nomEtape(etape, i)}`,
-					valeur: etape.with?.['node-version'],
-					ci: true,
-				})
-			})
+	const versions = workflows.flatMap(versionsNodeWorkflow)
 	const { dockerfile, nvmrc, packageJson, nixpacks } = fichiers
 	if (dockerfile)
-		for (const [, image] of dockerfile.matchAll(
-			/^FROM\s+(?:--\S+\s+)*(\S+)/gim
-		))
-			if (/^node:/.test(image))
-				versions.push({ source: `Dockerfile ${image}`, valeur: image.slice(5) })
-	if (nvmrc !== undefined)
-		versions.push({ source: '.nvmrc', valeur: nvmrc.trim() })
+		for (const [, image] of dockerfile.matchAll(/^FROM\s+(?:--\S+\s+)*(\S+)/gim)) {
+			if (/^node:/.test(image)) versions.push({ source: `Dockerfile ${image}`, valeur: image.slice(5) })
+		}
+	if (nvmrc !== undefined) versions.push({ source: '.nvmrc', valeur: nvmrc.trim() })
 	const engines = packageJson?.engines?.node
-	if (engines !== undefined)
-		versions.push({ source: 'engines.node', valeur: engines })
+	if (engines !== undefined) versions.push({ source: 'engines.node', valeur: engines })
 	if (nixpacks) {
 		const m = /NIXPACKS_NODE_VERSION\s*=\s*["']?([^"'\s]+)/.exec(nixpacks)
 		if (m) versions.push({ source: 'nixpacks.toml', valeur: m[1] })
@@ -126,25 +102,34 @@ function versionsNode(workflows, fichiers) {
 	return versions
 }
 
+function versionsNodeWorkflow(workflow) {
+	return jobs(workflow).flatMap(([id, job]) =>
+		etapes(job).flatMap((etape, i) => {
+			if (!String(etape?.uses ?? '').startsWith('actions/setup-node')) return []
+			return [
+				{
+					source: `${workflow.fichier} › ${id} › ${nomEtape(etape, i)}`,
+					valeur: etape.with?.['node-version'],
+					ci: true,
+				},
+			]
+		})
+	)
+}
+
 /** Versions without a major, or majors that differ. */
 function versionsIncoherentes(versions) {
 	const erreurs = versions
 		.filter(v => majeure(v.valeur) === null)
 		.map(v => `${v.source} : version Node absente ou illisible (${v.valeur})`)
-	const majeures = new Set(
-		versions.map(v => majeure(v.valeur)).filter(m => m !== null)
-	)
+	const majeures = new Set(versions.map(v => majeure(v.valeur)).filter(m => m !== null))
 	if (majeures.size > 1)
-		erreurs.push(
-			`versions Node différentes : ${versions.map(v => `${v.source} = ${v.valeur}`).join(' ; ')}`
-		)
+		erreurs.push(`versions Node différentes : ${versions.map(v => `${v.source} = ${v.valeur}`).join(' ; ')}`)
 	return erreurs
 }
 
 const lireSiPresent = fichier =>
-	existsSync(path.join(RACINE, fichier))
-		? readFileSync(path.join(RACINE, fichier), 'utf8')
-		: undefined
+	existsSync(path.join(RACINE, fichier)) ? readFileSync(path.join(RACINE, fichier), 'utf8') : undefined
 
 describe('URG-12 : workflows du dépôt', () => {
 	const workflows = workflowsDuDepot()
@@ -164,7 +149,9 @@ describe('URG-12 : workflows du dépôt', () => {
 	test('les jobs requis existent, sur les pull requests, sans if:', () => {
 		const surPr = workflows.filter(w => w.doc.on?.pull_request !== undefined)
 		const presents = surPr.flatMap(w => jobs(w).map(([id]) => id))
-		for (const id of JOBS_REQUIS) assert.ok(presents.includes(id), id)
+		for (const id of JOBS_REQUIS) {
+			assert.ok(presents.includes(id), id)
+		}
 		assert.deepEqual(
 			workflows.flatMap(w => jobsRequisConditionnes(w)),
 			[]
@@ -226,15 +213,10 @@ jobs:
 
 	test('continue-on-error, au niveau du job comme de l’étape', () => {
 		assert.equal(continueOnError(fautif).length, 2)
-		const texteSeul = lireWorkflow(
-			'expression.yml',
-			'jobs:\n  a:\n    continue-on-error: ${{ matrix.experimental }}\n'
-		)
+		// biome-ignore lint/suspicious/noTemplateCurlyInString: This fixture contains literal GitHub Actions expressions, not JavaScript interpolation.
+		const texteSeul = lireWorkflow('expression.yml', 'jobs:\n  a:\n    continue-on-error: ${{ matrix.experimental }}\n')
 		assert.equal(continueOnError(texteSeul).length, 1)
-		const commentaire = lireWorkflow(
-			'commentaire.yml',
-			'jobs:\n  a:\n    # continue-on-error: true\n    runs-on: x\n'
-		)
+		const commentaire = lireWorkflow('commentaire.yml', 'jobs:\n  a:\n    # continue-on-error: true\n    runs-on: x\n')
 		assert.deepEqual(continueOnError(commentaire), [])
 	})
 
@@ -245,9 +227,7 @@ jobs:
 	})
 
 	test('job requis conditionné', () => {
-		assert.deepEqual(jobsRequisConditionnes(fautif), [
-			"fautif.yml : job build a if: github.actor != 'renovate[bot]'",
-		])
+		assert.deepEqual(jobsRequisConditionnes(fautif), ["fautif.yml : job build a if: github.actor != 'renovate[bot]'"])
 	})
 
 	test('versions de Node différentes ou absentes', () => {
@@ -270,10 +250,9 @@ jobs:
 			]
 		)
 		assert.equal(versionsIncoherentes(versions).length, 1)
-		assert.deepEqual(
-			versionsIncoherentes([{ source: 'setup-node', valeur: undefined }]),
-			['setup-node : version Node absente ou illisible (undefined)']
-		)
+		assert.deepEqual(versionsIncoherentes([{ source: 'setup-node', valeur: undefined }]), [
+			'setup-node : version Node absente ou illisible (undefined)',
+		])
 		assert.deepEqual(
 			versionsIncoherentes([
 				{ source: 'setup-node', valeur: '22.x' },
@@ -288,14 +267,7 @@ jobs:
 // URG-11 (plans/01, INVENTAIRE NOUVEAU-05): Cypress, bun.lockb, pg and the
 // SonarQube job are gone, the build tools sit in devDependencies, Renovate
 // opens security fixes only and the README links the site.
-const OUTILS_DE_BUILD = [
-	'eslint',
-	'eslint-config-next',
-	'typescript',
-	'prettier-plugin-tailwindcss',
-	'node-gyp',
-	'node-addon-api',
-]
+const OUTILS_DE_BUILD = ['@biomejs/biome', 'typescript', 'node-gyp', 'node-addon-api']
 
 /**
  * Root entries of the tracked files (git ls-files, as the done_when of
@@ -324,32 +296,19 @@ function entreesSuivies() {
 
 /** Root entries that must not come back. */
 const entreesInterdites = entrees =>
-	entrees.filter(
-		e =>
-			/^cypress/i.test(e) ||
-			e === 'bun.lockb' ||
-			e === 'sonar-project.properties'
-	)
+	entrees.filter(e => /^cypress/i.test(e) || e === 'bun.lockb' || e === 'sonar-project.properties')
 
 /** Workflow lines naming Cypress or Sonar, comments included. */
 const lignesCypressOuSonar = workflows =>
 	workflows.flatMap(({ fichier, texte }) =>
 		texte
 			.split('\n')
-			.flatMap((ligne, i) =>
-				/cypress|sonar/i.test(ligne)
-					? [`${fichier}:${i + 1} : ${ligne.trim()}`]
-					: []
-			)
+			.flatMap((ligne, i) => (/cypress|sonar/i.test(ligne) ? [`${fichier}:${i + 1} : ${ligne.trim()}`] : []))
 	)
 
 /** package-lock.json: Cypress (any scope or plugin), puppeteer or pg installed. */
 const verrouillesInterdits = texte =>
-	[
-		...texte.matchAll(
-			/"node_modules\/(@cypress\/[^"]+|(@[^/"]+\/)?(cypress[^/"]*|pg|puppeteer))"/g
-		),
-	].map(m => m[1])
+	[...texte.matchAll(/"node_modules\/(@cypress\/[^"]+|(@[^/"]+\/)?(cypress[^/"]*|pg|puppeteer))"/g)].map(m => m[1])
 
 // libvips advisories in the Next image optimizer (decisions 2026-10-09)
 const SHARP_MINIMUM = '0.35.5'
@@ -358,7 +317,9 @@ const SHARP_MINIMUM = '0.35.5'
 function auMoins(version, minimum) {
 	const a = String(version).split(/[.+-]/).slice(0, 3).map(Number)
 	const b = minimum.split('.').map(Number)
-	for (let i = 0; i < 3; i++) if (a[i] !== b[i]) return a[i] > b[i]
+	for (let i = 0; i < 3; i++) {
+		if (a[i] !== b[i]) return a[i] > b[i]
+	}
 	return true
 }
 
@@ -370,17 +331,14 @@ function sharpsVulnerables(lock) {
 	for (const [cle, { version }] of Object.entries(paquets)) {
 		if (!/(^|\/)node_modules\/sharp$/.test(cle)) continue
 		if (cle !== 'node_modules/sharp') erreurs.push(`sharp imbriqué : ${cle}`)
-		else if (!auMoins(version, SHARP_MINIMUM))
-			erreurs.push(`sharp ${version} < ${SHARP_MINIMUM}`)
+		else if (!auMoins(version, SHARP_MINIMUM)) erreurs.push(`sharp ${version} < ${SHARP_MINIMUM}`)
 	}
 	return erreurs
 }
 
 /** Version of the sharp that next/image loads, resolved from next as it does. */
 function versionSharpDeNext() {
-	const depuisNext = createRequire(
-		createRequire(import.meta.url).resolve('next/package.json')
-	)
+	const depuisNext = createRequire(createRequire(import.meta.url).resolve('next/package.json'))
 	// sharp exports no package.json: walk up from its entry point
 	let dossier = path.dirname(depuisNext.resolve('sharp'))
 	while (dossier !== path.dirname(dossier)) {
@@ -399,11 +357,10 @@ function paquetsInterdits(texte) {
 	const pkg = JSON.parse(texte)
 	const erreurs = []
 	if (/cypress/i.test(texte)) erreurs.push('package.json mentionne cypress')
-	if ('pg' in { ...pkg.dependencies, ...pkg.devDependencies })
-		erreurs.push('pg est encore installé')
-	for (const nom of OUTILS_DE_BUILD)
-		if (nom in (pkg.dependencies ?? {}))
-			erreurs.push(`${nom} est dans dependencies`)
+	if ('pg' in { ...pkg.dependencies, ...pkg.devDependencies }) erreurs.push('pg est encore installé')
+	for (const nom of OUTILS_DE_BUILD) {
+		if (nom in (pkg.dependencies ?? {})) erreurs.push(`${nom} est dans dependencies`)
+	}
 	return erreurs
 }
 
@@ -416,65 +373,45 @@ const GARDE_FOUS = [
 function renovateHorsSecurite(config) {
 	const erreurs = []
 	const alertes = config.vulnerabilityAlerts ?? {}
-	if (alertes.enabled !== true)
-		erreurs.push('vulnerabilityAlerts.enabled n’est pas true')
-	if (alertes.automerge !== false)
-		erreurs.push('vulnerabilityAlerts.automerge n’est pas false')
+	if (alertes.enabled !== true) erreurs.push('vulnerabilityAlerts.enabled n’est pas true')
+	if (alertes.automerge !== false) erreurs.push('vulnerabilityAlerts.automerge n’est pas false')
 	if (config.automerge !== false) erreurs.push('automerge n’est pas false')
-	if (config.osvVulnerabilityAlerts !== true)
-		erreurs.push('osvVulnerabilityAlerts n’est pas true')
-	for (const preset of config.extends ?? [])
-		if (/automerge/i.test(preset))
-			erreurs.push(`preset qui fusionne seul : ${preset}`)
+	if (config.osvVulnerabilityAlerts !== true) erreurs.push('osvVulnerabilityAlerts n’est pas true')
+	for (const preset of config.extends ?? []) {
+		if (/automerge/i.test(preset)) erreurs.push(`preset qui fusionne seul : ${preset}`)
+	}
 	const regles = config.packageRules ?? []
 	// one rule for every package: no match* key besides the update types
 	const coupeTout = regles.some(
 		r =>
 			r.enabled === false &&
-			Object.keys(r).every(
-				k => !k.startsWith('match') || k === 'matchUpdateTypes'
-			) &&
+			Object.keys(r).every(k => !k.startsWith('match') || k === 'matchUpdateTypes') &&
 			['major', 'minor', 'patch'].every(t => r.matchUpdateTypes?.includes(t))
 	)
-	if (!coupeTout)
-		erreurs.push(
-			'aucune règle ne coupe les mises à jour majeures, mineures et de patch'
-		)
-	regles
-		.filter(r => r.enabled === true || r.automerge === true)
-		.forEach(r =>
-			erreurs.push(
-				`règle qui rallume des mises à jour : ${r.description ?? '?'}`
-			)
-		)
-	for (const [paquet, borne] of GARDE_FOUS)
-		if (
-			!regles.some(
-				r =>
-					r.matchPackageNames?.includes(paquet) && r.allowedVersions === borne
-			)
-		)
+	if (!coupeTout) erreurs.push('aucune règle ne coupe les mises à jour majeures, mineures et de patch')
+	erreurs.push(
+		...regles
+			.filter(r => r.enabled === true || r.automerge === true)
+			.map(r => `règle qui rallume des mises à jour : ${r.description ?? '?'}`)
+	)
+	for (const [paquet, borne] of GARDE_FOUS) {
+		if (!regles.some(r => r.matchPackageNames?.includes(paquet) && r.allowedVersions === borne))
 			erreurs.push(`${paquet} sans garde-fou ${borne}`)
+	}
 	return erreurs
 }
 
 describe('URG-11 ménage', () => {
 	test('package.json : ni Cypress, ni pg, ni outil de build en dependencies', () => {
 		assert.deepEqual(paquetsInterdits(lireSiPresent('package.json')), [])
-		assert.deepEqual(
-			verrouillesInterdits(lireSiPresent('package-lock.json')),
-			[]
-		)
+		assert.deepEqual(verrouillesInterdits(lireSiPresent('package-lock.json')), [])
 	})
 
 	test(`sharp ${SHARP_MINIMUM} au moins, celui que charge next/image`, () => {
 		const lock = JSON.parse(lireSiPresent('package-lock.json'))
 		assert.deepEqual(sharpsVulnerables(lock), [])
 		const version = versionSharpDeNext()
-		assert.ok(
-			version !== null && auMoins(version, SHARP_MINIMUM),
-			`next charge sharp ${version}`
-		)
+		assert.ok(version !== null && auMoins(version, SHARP_MINIMUM), `next charge sharp ${version}`)
 	})
 
 	test('aucun fichier suivi cypress*, bun.lockb ni sonar-project.properties à la racine', () => {
@@ -497,9 +434,7 @@ describe('URG-11 ménage', () => {
 	// the origin of each link, parsed: a substring would also accept
 	// https://my-makeup.fr.example.com
 	test('le README renvoie vers le site', () => {
-		const origines = [
-			...lireSiPresent('README.md').matchAll(/https?:\/\/[^\s)\]>"']+/g),
-		].map(([lien]) => {
+		const origines = [...lireSiPresent('README.md').matchAll(/https?:\/\/[^\s)\]>"']+/g)].map(([lien]) => {
 			try {
 				return new URL(lien).origin
 			} catch {
@@ -524,13 +459,7 @@ describe('URG-11 ménage : les gardes refusent l’ancien état', () => {
 				'src',
 				'package.json',
 			]),
-			[
-				'cypress',
-				'cypress.config.js',
-				'cypress.env.json.exemple',
-				'bun.lockb',
-				'sonar-project.properties',
-			]
+			['cypress', 'cypress.config.js', 'cypress.env.json.exemple', 'bun.lockb', 'sonar-project.properties']
 		)
 	})
 
@@ -571,18 +500,13 @@ describe('URG-11 ménage : les gardes refusent l’ancien état', () => {
 			}),
 			['sharp imbriqué : node_modules/next/node_modules/sharp']
 		)
-		assert.deepEqual(sharpsVulnerables({ packages: {} }), [
-			'sharp absent du lock',
-		])
+		assert.deepEqual(sharpsVulnerables({ packages: {} }), ['sharp absent du lock'])
 		assert.ok(auMoins('0.36.0', '0.35.5') && auMoins('1.0.0', '0.35.5'))
 		assert.ok(!auMoins('0.35.4', '0.35.5'))
 	})
 
 	test('workflow : variable CYPRESS_ et job commenté', () => {
-		const ancien = lireWorkflow(
-			'ancien.yml',
-			'env:\n  CYPRESS_TEST_USER: x\njobs:\n#  SonarQube:\n#    needs: tests\n'
-		)
+		const ancien = lireWorkflow('ancien.yml', 'env:\n  CYPRESS_TEST_USER: x\njobs:\n#  SonarQube:\n#    needs: tests\n')
 		assert.equal(lignesCypressOuSonar([ancien]).length, 2)
 	})
 
@@ -608,9 +532,7 @@ describe('URG-11 ménage : les gardes refusent l’ancien état', () => {
 		const configBase = {
 			extends: ['config:base'],
 			automerge: false,
-			packageRules: [
-				{ matchPackageNames: ['tailwindcss'], allowedVersions: '<4' },
-			],
+			packageRules: [{ matchPackageNames: ['tailwindcss'], allowedVersions: '<4' }],
 		}
 		assert.deepEqual(renovateHorsSecurite(configBase), [
 			'vulnerabilityAlerts.enabled n’est pas true',
@@ -679,16 +601,10 @@ const SECRETS_AUTORISES = [
 // SonarQube job (URG-11), to be deleted from GitHub (Settings › Secrets ›
 // Actions): no workflow may read them again, before their deletion (the old
 // values) or after it (empty values)
-const SECRETS_SUPPRIMES = [
-	'TEST_USER',
-	'TEST_PW',
-	'SONAR_TOKEN',
-	'SONAR_HOST_URL',
-]
+const SECRETS_SUPPRIMES = ['TEST_USER', 'TEST_PW', 'SONAR_TOKEN', 'SONAR_HOST_URL']
 
 // one secret by its name: `secrets.NAME` or `secrets['NAME']`
-const SECRET_NOMME =
-	/\bsecrets\s*(?:\.\s*([A-Za-z_][\w-]*)|\[\s*['"]([^'"]+)['"]\s*\])/gi
+const SECRET_NOMME = /\bsecrets\s*(?:\.\s*([A-Za-z_][\w-]*)|\[\s*['"]([^'"]+)['"]\s*\])/gi
 
 /**
  * The expressions of a line: each `${{ … }}`, and an `if:`, an expression
@@ -711,19 +627,18 @@ function expressions(ligne) {
  */
 function secretsLus({ fichier, texte }) {
 	const lus = []
-	texte.split('\n').forEach((ligne, i) => {
+	for (const [i, ligne] of texte.split('\n').entries()) {
 		const ou = `${fichier}:${i + 1}`
-		if (ligne.trimStart().startsWith('#') && !ligne.includes('${{')) return
+		if (ligne.trimStart().startsWith('#') && !ligne.includes('${{')) continue
 		for (const m of ligne.matchAll(SECRET_NOMME)) {
 			const nom = (m[1] ?? m[2]).toUpperCase()
 			lus.push({ nom, lu: `secrets.${nom}`, ou })
 		}
-		for (const expression of expressions(ligne))
-			if (/\bsecrets\b/i.test(expression.replace(SECRET_NOMME, '')))
-				lus.push({ nom: '*', lu: expression, ou })
-		if (/^\s*secrets\s*:\s*inherit\b/.test(ligne))
-			lus.push({ nom: '*', lu: 'secrets: inherit', ou })
-	})
+		for (const expression of expressions(ligne)) {
+			if (/\bsecrets\b/i.test(expression.replace(SECRET_NOMME, ''))) lus.push({ nom: '*', lu: expression, ou })
+		}
+		if (/^\s*secrets\s*:\s*inherit\b/.test(ligne)) lus.push({ nom: '*', lu: 'secrets: inherit', ou })
+	}
 	return lus
 }
 
@@ -739,8 +654,9 @@ describe('secrets GitHub des workflows', () => {
 		const workflows = workflowsDuDepot()
 		assert.ok(workflows.flatMap(secretsLus).length > 0)
 		assert.deepEqual(secretsHorsListe(workflows), [])
-		for (const nom of SECRETS_SUPPRIMES)
+		for (const nom of SECRETS_SUPPRIMES) {
 			assert.ok(!SECRETS_AUTORISES.includes(nom), nom)
+		}
 	})
 
 	// the guard must see what it guards: the old workflow of the Cypress and
@@ -750,20 +666,28 @@ describe('secrets GitHub des workflows', () => {
 			'ancien.yml',
 			[
 				'env:',
+				// biome-ignore lint/suspicious/noTemplateCurlyInString: This fixture contains literal GitHub Actions expressions, not JavaScript interpolation.
 				'  NEXTAUTH_SECRET: ${{secrets.NEXTAUTH_SECRET}}',
+				// biome-ignore lint/suspicious/noTemplateCurlyInString: This fixture contains literal GitHub Actions expressions, not JavaScript interpolation.
 				'  CYPRESS_TEST_USER: ${{ secrets.TEST_USER }}',
+				// biome-ignore lint/suspicious/noTemplateCurlyInString: This fixture contains literal GitHub Actions expressions, not JavaScript interpolation.
 				'  CYPRESS_TEST_PW: ${{secrets.TEST_PW}}',
 				'jobs:',
 				'  analyse:',
 				'    env:',
+				// biome-ignore lint/suspicious/noTemplateCurlyInString: This fixture contains literal GitHub Actions expressions, not JavaScript interpolation.
 				'      SONAR_TOKEN: ${{ secrets.sonar_token }}',
+				// biome-ignore lint/suspicious/noTemplateCurlyInString: This fixture contains literal GitHub Actions expressions, not JavaScript interpolation.
 				"      SONAR_HOST_URL: ${{ secrets['SONAR_HOST_URL'] }}",
 				'    # was: secrets.OLD_ONE',
 				'    steps:',
 				'      - name: vérifie les secrets',
+				// biome-ignore lint/suspicious/noTemplateCurlyInString: This fixture contains literal GitHub Actions expressions, not JavaScript interpolation.
 				'        run: echo "${{ secrets.GITHUB_TOKEN }}" > /dev/null',
 				'      - run: |',
+				// biome-ignore lint/suspicious/noTemplateCurlyInString: This fixture contains literal GitHub Actions expressions, not JavaScript interpolation.
 				'          # login ${{ secrets.TEST_PW }}',
+				// biome-ignore lint/suspicious/noTemplateCurlyInString: This fixture contains literal GitHub Actions expressions, not JavaScript interpolation.
 				"          echo '${{ toJSON(secrets) }}' > /dev/null",
 				"      - if: secrets[matrix.nom] != ''",
 				'        run: echo ok',

@@ -1,10 +1,9 @@
-import React, { Fragment, useEffect, useRef, useState } from 'react'
 import { Dialog, Transition } from '@headlessui/react'
-import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useSession } from 'next-auth/react'
+import { Fragment, useEffect, useRef, useState } from 'react'
+import { useForm } from 'react-hook-form'
 import * as zod from 'zod'
-import { patchMeMakeup } from '@/services/PatchMeMakeup'
 import {
 	BoutonFermer,
 	BoutonSauvegarder,
@@ -13,8 +12,9 @@ import {
 	suivreChamp,
 	useEnvoi,
 } from '@/components/Profil/Atoms/ModalUpdate/ModalElements'
-import { AIDE_VILLE } from '@/lib/profil/lieu-public'
 import { RAYON_MAX_KM } from '@/lib/format-zone'
+import { AIDE_VILLE } from '@/lib/profil/lieu-public'
+import { patchMeMakeup } from '@/services/PatchMeMakeup'
 
 const schema = zod
 	.object({
@@ -30,10 +30,7 @@ const schema = zod
 				required_error: "Le rayon d'action est requis.",
 			})
 			.regex(/^\d+$/, "Le rayon d'action est un nombre entier de kilomètres.")
-			.refine(
-				rayon => Number(rayon) <= RAYON_MAX_KM,
-				`Le rayon d'action ne doit pas dépasser ${RAYON_MAX_KM} km.`
-			)
+			.refine(rayon => Number(rayon) <= RAYON_MAX_KM, `Le rayon d'action ne doit pas dépasser ${RAYON_MAX_KM} km.`)
 			.or(zod.literal('')),
 	})
 	.required({ city: true, action_radius: true })
@@ -53,15 +50,10 @@ export default function ModalUpdateLocationProfil(props) {
 
 	const [open, setOpen] = useState(props.isModalOpen)
 	const [userCity, setUserCity] = useState(user.city ?? '')
-	const [userActionRadius, setUserActionRadius] = useState(
-		user.action_radius ?? ''
-	)
+	const [userActionRadius, setUserActionRadius] = useState(user.action_radius ?? '')
 
 	// Escape, a click outside and « Fermer » wait for the save in progress
-	const { envoi, setEnvoi, erreurEnvoi, setErreurEnvoi, fermer } = useEnvoi(
-		props.isModalOpen,
-		props.handleIsModalOpen
-	)
+	const { envoi, setEnvoi, erreurEnvoi, setErreurEnvoi, fermer } = useEnvoi(props.isModalOpen, props.handleIsModalOpen)
 
 	const { data: session } = useSession()
 
@@ -109,12 +101,7 @@ export default function ModalUpdateLocationProfil(props) {
 
 	return (
 		<Transition.Root show={open} as={Fragment}>
-			<Dialog
-				as="div"
-				className="relative z-30"
-				initialFocus={cancelButtonRef}
-				onClose={fermer}
-			>
+			<Dialog as="div" className="relative z-30" initialFocus={cancelButtonRef} onClose={fermer}>
 				<FondModale />
 
 				<div className="fixed inset-0 z-30 overflow-y-auto">
@@ -132,33 +119,19 @@ export default function ModalUpdateLocationProfil(props) {
 								data-cy="modal-panel"
 								className="relative w-full transform rounded-lg bg-white p-8 text-left shadow-2xl transition-all sm:max-w-xl"
 							>
-								<BoutonFermer
-									onClick={fermer}
-									disabled={envoi}
-									ref={cancelButtonRef}
-								/>
+								<BoutonFermer onClick={fermer} disabled={envoi} ref={cancelButtonRef} />
 								<div className="flex flex-col items-start gap-8">
 									<div className="text-left">
-										<Dialog.Title
-											as="h3"
-											className="text-lg font-semibold text-gray-900"
-										>
+										<Dialog.Title as="h3" className="text-lg font-semibold text-gray-900">
 											{"Modifier votre localisation et votre rayon d'action"}
 										</Dialog.Title>
 									</div>
 									<div className={'w-full md:w-3/5'}>
 										<div className="grid grid-cols-1 gap-4">
 											<div className={'flex flex-col gap-4'}>
-												<form
-													onSubmit={handleSubmit(onSubmit)}
-													method="POST"
-													className="flex flex-col gap-4"
-												>
+												<form onSubmit={handleSubmit(onSubmit)} method="POST" className="flex flex-col gap-4">
 													<div>
-														<label
-															htmlFor="city"
-															className="block text-sm text-gray-700"
-														>
+														<label htmlFor="city" className="block text-sm text-gray-700">
 															Localisation
 														</label>
 														<div className="mt-2">
@@ -173,28 +146,18 @@ export default function ModalUpdateLocationProfil(props) {
 																onChange={suivre('city', handleUpdateCity)}
 																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
 															/>
-															<p
-																id="city-aide"
-																data-cy={'city-help'}
-																className={'mt-2 text-xs text-gray-600'}
-															>
+															<p id="city-aide" data-cy={'city-help'} className={'mt-2 text-xs text-gray-600'}>
 																{AIDE_VILLE}
 															</p>
 															{errors.city && (
-																<p
-																	data-cy={'error-city'}
-																	className={'mt-2 text-xs text-red-500/80'}
-																>
+																<p data-cy={'error-city'} className={'mt-2 text-xs text-red-500/80'}>
 																	{errors.city.message}
 																</p>
 															)}
 														</div>
 													</div>
 													<div>
-														<label
-															htmlFor="action_radius"
-															className="block text-sm text-gray-700"
-														>
+														<label htmlFor="action_radius" className="block text-sm text-gray-700">
 															{"Rayon d'action"}
 														</label>
 														<div className="mt-2">
@@ -205,17 +168,11 @@ export default function ModalUpdateLocationProfil(props) {
 																type="number"
 																{...register('action_radius')}
 																value={userActionRadius}
-																onChange={suivre(
-																	'action_radius',
-																	handleUpdateActionRadius
-																)}
+																onChange={suivre('action_radius', handleUpdateActionRadius)}
 																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
 															/>
 															{errors.action_radius && (
-																<p
-																	data-cy={'error-action-radius'}
-																	className={'mt-2 text-xs text-red-500/80'}
-																>
+																<p data-cy={'error-action-radius'} className={'mt-2 text-xs text-red-500/80'}>
 																	{errors.action_radius.message}
 																</p>
 															)}
@@ -228,11 +185,7 @@ export default function ModalUpdateLocationProfil(props) {
 								</div>
 								<div className="mt-4 flex flex-col items-end gap-4">
 									<ErreurSauvegarde message={erreurEnvoi} />
-									<BoutonSauvegarder
-										dataCy="save-button-location"
-										envoi={envoi}
-										onClick={handleSubmit(onSubmit)}
-									/>
+									<BoutonSauvegarder dataCy="save-button-location" envoi={envoi} onClick={handleSubmit(onSubmit)} />
 								</div>
 							</Dialog.Panel>
 						</Transition.Child>

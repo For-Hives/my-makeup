@@ -1,3 +1,6 @@
+const looksLikeIpPattern2 = /[.:]/
+const umamiTagPattern3 = /^[=+\-@\s]+/
+const looksLikeIpPattern5 = /^[0-9a-f:.]{2,45}$/i
 /**
  * Umami served from the site itself (MES-10, plans/04 §3.1): the browser
  * loads /u/script.js and posts to /u/api/send, next.config.js rewrites both
@@ -17,8 +20,7 @@ export const UMAMI_PROXY_PATHS = ['/u/script.js', '/u/api/send']
 export const BEFORE_SEND_NAME = 'mmAvantEnvoi'
 export const DEFAULT_UMAMI_DOMAINS = ['my-makeup.fr', 'www.my-makeup.fr']
 
-const HOSTNAME =
-	/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*$/
+const HOSTNAME = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*$/
 
 /**
  * Hostnames Umami counts visits on (data-domains), from
@@ -46,7 +48,7 @@ export function umamiDomains(raw) {
 export function umamiTag(version) {
 	const tag = String(version ?? '')
 		.trim()
-		.replace(/^[=+\-@\s]+/, '')
+		.replace(umamiTagPattern3, '')
 		.slice(0, 50)
 	return tag === '' ? 'unknown' : tag
 }
@@ -101,11 +103,15 @@ export function umamiScriptAttributes({ tag, domains } = {}) {
  * @param {Window} win
  * @returns {object|false} the payload to send, or false
  */
-export function umamiBeforeSend(type, payload, win) {
+export function umamiBeforeSend(_type, payload, win) {
+	// biome-ignore lint/performance/useTopLevelRegex: This function is serialized into an inline script and must be self-contained.
+	const campaignParameter = /^utm_[a-z]+$/
+	// biome-ignore lint/performance/useTopLevelRegex: This function is serialized into an inline script and must be self-contained.
+	const automatedBrowser = /HeadlessChrome/
 	try {
 		const nav = win.navigator || {}
 		if (nav.webdriver) return false
-		if (/HeadlessChrome/.test(String(nav.userAgent || ''))) return false
+		if (automatedBrowser.test(String(nav.userAgent || ''))) return false
 		if (win.top !== win.self) return false
 		let storage = null
 		try {
@@ -116,20 +122,21 @@ export function umamiBeforeSend(type, payload, win) {
 		if (storage && storage.getItem('umami.disabled') !== null) return false
 		if (!payload || typeof payload !== 'object') return false
 
-		const base = String(win.location && win.location.href)
+		const base = String(win.location?.href)
+		const campaignQuery = url => {
+			const kept = new URLSearchParams()
+			for (const [key, value] of url.searchParams.entries()) {
+				if (campaignParameter.test(key)) kept.append(key, value)
+			}
+			return kept.toString()
+		}
 		const clean = (raw, keepCampaign) => {
 			if (typeof raw !== 'string' || raw === '') return raw
 			const url = new URL(raw, base)
 			// url.origin is "null" outside http(s)
-			if (url.protocol !== 'http:' && url.protocol !== 'https:')
-				return url.host ? url.protocol + '//' + url.host + '/' : ''
-			const kept = new URLSearchParams()
-			if (keepCampaign)
-				url.searchParams.forEach((value, key) => {
-					if (/^utm_[a-z]+$/.test(key)) kept.append(key, value)
-				})
-			const query = kept.toString()
-			return url.origin + url.pathname + (query ? '?' + query : '')
+			if (url.protocol !== 'http:' && url.protocol !== 'https:') return url.host ? `${url.protocol}//${url.host}/` : ''
+			const query = keepCampaign ? campaignQuery(url) : ''
+			return url.origin + url.pathname + (query ? `?${query}` : '')
 		}
 
 		const copy = Object.assign({}, payload)
@@ -179,20 +186,20 @@ export function umamiLoader(win, attributes, max) {
 	const waiting = []
 	let state = 'loading'
 	const script = win.document.createElement('script')
-	Object.keys(attributes).forEach(name => {
+	for (const name of Object.keys(attributes)) {
 		script.setAttribute(name, attributes[name])
-	})
+	}
 	script.async = true
 	script.addEventListener('load', () => {
 		state = 'loaded'
 		const umami = win.umami
-		waiting.splice(0).forEach(item => {
+		for (const item of waiting.splice(0)) {
 			try {
 				umami.track(item.name, item.data)
 			} catch {
 				// one failing event never stops the others
 			}
-		})
+		}
 	})
 	script.addEventListener('error', () => {
 		state = 'failed'
@@ -258,17 +265,10 @@ const LOCATION_HEADERS = [
 ]
 // Never forwarded: the session cookie of the artist's space, credentials,
 // and the full address of the page (Referer), which Umami does not need.
-const DROPPED_HEADERS = [
-	'cookie',
-	'authorization',
-	'proxy-authorization',
-	'referer',
-]
+const DROPPED_HEADERS = ['cookie', 'authorization', 'proxy-authorization', 'referer']
 
 const looksLikeIp = value =>
-	typeof value === 'string' &&
-	/^[0-9a-f:.]{2,45}$/i.test(value) &&
-	/[.:]/.test(value)
+	typeof value === 'string' && looksLikeIpPattern5.test(value) && looksLikeIpPattern2.test(value)
 
 /**
  * Address of the visitor as the reverse proxy in front of Next (Traefik)
@@ -302,8 +302,9 @@ export function visitorIp(headers) {
 export function umamiProxyHeaders(incoming) {
 	const headers = new Headers(incoming)
 	const ip = visitorIp(incoming)
-	for (const name of [...DROPPED_HEADERS, ...IP_HEADERS, ...LOCATION_HEADERS])
+	for (const name of [...DROPPED_HEADERS, ...IP_HEADERS, ...LOCATION_HEADERS]) {
 		headers.delete(name)
+	}
 	if (ip !== null) headers.set('true-client-ip', ip)
 	return headers
 }

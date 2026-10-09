@@ -25,9 +25,7 @@ import { completude, contactsMasques } from './completude.js'
  * @returns {{table: import('../slug.js').TableDesSlugs, publiables: ProfilPublic[], aVerifier: ProfilPublic[]}}
  */
 export function trierProfilsPublics(entrees, options = {}) {
-	const liste = (Array.isArray(entrees) ? entrees : []).filter(
-		e => e && e.id !== undefined && e.id !== null
-	)
+	const liste = (Array.isArray(entrees) ? entrees : []).filter(e => e && e.id !== undefined && e.id !== null)
 	const table = tableDesSlugs(
 		liste.map(e => ({
 			id: e.id,
@@ -41,8 +39,7 @@ export function trierProfilsPublics(entrees, options = {}) {
 		const attributs = entree.attributes ?? {}
 		const profil = {
 			id: entree.id,
-			username:
-				typeof attributs.username === 'string' ? attributs.username : '',
+			username: typeof attributs.username === 'string' ? attributs.username : '',
 			slug: table.slugParId.get(String(entree.id)),
 			updatedAt: attributs.updatedAt ?? null,
 		}

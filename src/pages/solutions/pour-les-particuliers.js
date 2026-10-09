@@ -1,16 +1,15 @@
-import React from 'react'
-import Nav from '@/components/Global/Nav'
-import Footer from '@/components/Global/Footer'
 import Head from 'next/head'
-import Hero from '@/components/Global/Hero'
 import CTA from '@/components/Global/CTA'
+import Footer from '@/components/Global/Footer'
+import Hero from '@/components/Global/Hero'
+import Nav from '@/components/Global/Nav'
 import { urlAbsolue } from '@/lib/seo/url'
 
 /**
  * @param props
  * @constructor
  */
-function PourLesParticuliers(props) {
+function PourLesParticuliers(_props) {
 	return (
 		<>
 			<Head>
@@ -20,10 +19,7 @@ function PourLesParticuliers(props) {
 					content="Découvrez comment My-Makeup simplifie la recherche de la maquilleuse professionnelle idéale, grâce à une plateforme simple et intuitive."
 				/>
 				{/*	seo tag canonical link */}
-				<link
-					rel="canonical"
-					href={urlAbsolue('/solutions/pour-les-particuliers')}
-				/>
+				<link rel="canonical" href={urlAbsolue('/solutions/pour-les-particuliers')} />
 			</Head>
 			<Nav />
 			<main className={'relative'}>
@@ -37,16 +33,10 @@ function PourLesParticuliers(props) {
 						</>
 					}
 					description={
-						<>
-							{
-								'Découvrez comment My-Makeup vous donne accès à un large éventail de maquilleuses professionnelles pour trouver celle qui vous correspond le mieux.'
-							}
-						</>
+						'Découvrez comment My-Makeup vous donne accès à un large éventail de maquilleuses professionnelles pour trouver celle qui vous correspond le mieux.'
 					}
 				/>
-				<div
-					className={'relative mx-auto my-24 max-w-7xl px-4 md:my-48 md:px-0'}
-				>
+				<div className={'relative mx-auto my-24 max-w-7xl px-4 md:my-48 md:px-0'}>
 					<div className="mx-auto max-w-2xl">
 						<article>
 							<header className="flex flex-col">

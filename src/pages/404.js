@@ -1,10 +1,10 @@
-import React, { useEffect } from 'react'
 import Head from 'next/head'
-import Link from 'next/link'
 import Image from 'next/image'
+import Link from 'next/link'
+import { useEffect } from 'react'
 import { notFoundKind, track } from '@/lib/analytics'
 
-function Custom404(props) {
+function Custom404(_props) {
 	useEffect(() => {
 		track('not_found', { kind: notFoundKind(window.location.pathname) })
 	}, [])
@@ -20,20 +20,11 @@ function Custom404(props) {
 					<div className="mx-auto w-full max-w-sm lg:w-96">
 						<Link href={'/'}>
 							<span className="sr-only">My-Makeup</span>
-							<Image
-								alt="Logo My-Makeup"
-								width={50}
-								height={50}
-								src="/assets/logo.webp"
-							/>
+							<Image alt="Logo My-Makeup" width={50} height={50} src="/assets/logo.webp" />
 						</Link>
 						<div className={'mt-8'}>
-							<h1 className={'my-8 text-2xl font-semibold text-slate-900'}>
-								404 - Page non trouvée
-							</h1>
-							<p
-								className={'text-gray-700'}
-							>{`Oops ! La page que vous cherchez n'existe pas.`}</p>
+							<h1 className={'my-8 text-2xl font-semibold text-slate-900'}>404 - Page non trouvée</h1>
+							<p className={'text-gray-700'}>{`Oops ! La page que vous cherchez n'existe pas.`}</p>
 
 							<Link href={'/'} className="btn-primary-large mt-8">
 								{`Retourner à l'accueil`}

@@ -1,5 +1,6 @@
 export default function MOTD() {
 	if (typeof window !== 'undefined') {
+		// biome-ignore lint/suspicious/noConsole: This intentional console greeting advertises the project contact.
 		console.log(
 			`
 

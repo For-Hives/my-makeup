@@ -17,10 +17,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { demarrerFauxStrapi } from './mock-strapi.mjs'
 
-const RACINE = path.resolve(
-	path.dirname(fileURLToPath(import.meta.url)),
-	'../..'
-)
+const RACINE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const DIST = '.next-test-auth'
 const PORT_API = 4111
 const PORT_APP = 3998
@@ -33,10 +30,7 @@ const JOURNAUX = path.join(RACINE, `${DIST}-journaux`)
 const HOTES_LOCAUX = new Set(['localhost', '127.0.0.1', '[::1]'])
 
 // Variables documented in .env.exemple, all overridden for the children
-const variablesDocumentees = readFileSync(
-	path.join(RACINE, '.env.exemple'),
-	'utf8'
-)
+const variablesDocumentees = readFileSync(path.join(RACINE, '.env.exemple'), 'utf8')
 	.split('\n')
 	.map(ligne => /^([A-Z][A-Z0-9_]*)=/.exec(ligne)?.[1])
 	.filter(Boolean)
@@ -46,7 +40,9 @@ function environnement(extra = {}) {
 	for (const nom of ['PATH', 'HOME', 'TMPDIR', 'LANG', 'CI']) {
 		if (process.env[nom] !== undefined) env[nom] = process.env[nom]
 	}
-	for (const nom of variablesDocumentees) env[nom] = ''
+	for (const nom of variablesDocumentees) {
+		env[nom] = ''
+	}
 	Object.assign(env, {
 		NEXT_TELEMETRY_DISABLED: '1',
 		NEXT_DIST_DIR: DIST,
@@ -60,13 +56,7 @@ function environnement(extra = {}) {
 		UMAMI_ORIGIN: 'http://127.0.0.1:9',
 		...extra,
 	})
-	for (const nom of [
-		'NEXT_PUBLIC_API_URL',
-		'API_INTERNAL_URL',
-		'NEXTAUTH_URL',
-		'NEXT_PUBLIC_URL',
-		'UMAMI_ORIGIN',
-	]) {
+	for (const nom of ['NEXT_PUBLIC_API_URL', 'API_INTERNAL_URL', 'NEXTAUTH_URL', 'NEXT_PUBLIC_URL', 'UMAMI_ORIGIN']) {
 		if (env[nom] && !HOTES_LOCAUX.has(new URL(env[nom]).hostname))
 			throw new Error(`${nom} doit viser une adresse locale (${env[nom]})`)
 	}
@@ -84,14 +74,14 @@ function lancer(args, env, journal) {
 	enfants.push(enfant)
 	return enfant
 }
-const termine = enfant =>
-	new Promise(resolve => enfant.on('exit', code => resolve(code ?? 1)))
+const termine = enfant => new Promise(resolve => enfant.on('exit', code => resolve(code ?? 1)))
 
 async function attendrePret(url, enfant, delaiMs = 60_000) {
 	const limite = Date.now() + delaiMs
 	while (Date.now() < limite) {
 		if (enfant.exitCode !== null) throw new Error(`serveur arrêté (${url})`)
 		try {
+			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 			if ((await fetch(`${url}/api/auth/csrf`)).ok) return
 		} catch {
 			// not listening yet
@@ -102,8 +92,9 @@ async function attendrePret(url, enfant, delaiMs = 60_000) {
 }
 
 function arreter() {
-	for (const enfant of enfants)
+	for (const enfant of enfants) {
 		if (enfant.exitCode === null) enfant.kill('SIGTERM')
+	}
 }
 process.on('SIGINT', () => {
 	arreter()
@@ -115,14 +106,14 @@ const fauxStrapi = await demarrerFauxStrapi(PORT_API)
 try {
 	mkdirSync(JOURNAUX, { recursive: true })
 	if (process.env.AUTH_TEST_SKIP_BUILD !== '1') {
+		// biome-ignore lint/suspicious/noConsole: The standalone test runner reports its server address and build progress.
 		console.log(`# build de test dans ${DIST}/ (API = faux Strapi)`)
 		const build = lancer(
 			[NEXT, 'build'],
 			environnement({ NEXTAUTH_URL: `http://localhost:${PORT_APP}` }),
 			path.join(JOURNAUX, 'build.log')
 		)
-		if ((await termine(build)) !== 0)
-			throw new Error(`build en échec, voir ${DIST}-journaux/build.log`)
+		if ((await termine(build)) !== 0) throw new Error(`build en échec, voir ${DIST}-journaux/build.log`)
 	}
 
 	const serveurs = [
@@ -139,15 +130,13 @@ try {
 			path.join(JOURNAUX, journal)
 		),
 	}))
-	for (const { url, enfant } of serveurs) await attendrePret(url, enfant)
+	for (const { url, enfant } of serveurs) {
+		// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
+		await attendrePret(url, enfant)
+	}
 
 	const tests = lancer(
-		[
-			'--disable-warning=MODULE_TYPELESS_PACKAGE_JSON',
-			'--test',
-			'--test-concurrency=1',
-			'tests/auth/auth.test.mjs',
-		],
+		['--disable-warning=MODULE_TYPELESS_PACKAGE_JSON', '--test', '--test-concurrency=1', 'tests/auth/auth.test.mjs'],
 		{
 			...environnement(),
 			AF_APP: `http://localhost:${PORT_APP}`,

@@ -27,8 +27,8 @@
 			"enabled": false
 		},
 		{
-			"description": "Next 16 is a migration that comes with the v3: no next or eslint-config-next above 15. Only GitHub alerts keep this cap: an OSV alert sets its own allowedVersions after these rules and can still open a 16.x PR, to close until the v3",
-			"matchPackageNames": ["next", "eslint-config-next"],
+			"description": "Next 16 is a migration that comes with the v3: no next above 15. Only GitHub alerts keep this cap: an OSV alert sets its own allowedVersions after these rules and can still open a 16.x PR, to close until the v3",
+			"matchPackageNames": ["next"],
 			"allowedVersions": "<16"
 		},
 		{

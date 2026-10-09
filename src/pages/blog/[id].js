@@ -1,17 +1,16 @@
-import Nav from '@/components/Global/Nav'
-import React from 'react'
-import Footer from '@/components/Global/Footer'
-import CTA from '@/components/Global/CTA'
-import { convertToStringDate } from '@/services/utils'
 import Link from 'next/link'
 import { remark } from 'remark'
 import html from 'remark-html'
+import CTA from '@/components/Global/CTA'
+import Footer from '@/components/Global/Footer'
 import { Layout } from '@/components/Global/Layout'
-import { fetchPublicApi } from '@/services/publicApi'
+import Nav from '@/components/Global/Nav'
 import Seo from '@/components/Global/Seo'
 import { retrograderTitres } from '@/lib/contenu'
 import { seoArticle } from '@/lib/seo/meta'
 import { urlDuSite } from '@/lib/seo/url'
+import { fetchPublicApi } from '@/services/publicApi'
+import { convertToStringDate } from '@/services/utils'
 
 function ArrowLeftIcon(props) {
 	return (
@@ -40,9 +39,7 @@ export default function Article({ articleData }) {
 			/>
 			<Nav />
 			<main className={'relative'}>
-				<div
-					className={'relative mx-auto my-48 max-w-7xl px-4 md:px-8 2xl:px-0'}
-				>
+				<div className={'relative mx-auto my-48 max-w-7xl px-4 md:px-8 2xl:px-0'}>
 					<div className="mx-auto max-w-2xl">
 						{
 							<Link
@@ -57,17 +54,13 @@ export default function Article({ articleData }) {
 						{meta && (
 							<article>
 								<header className="flex flex-col">
-									<h1 className="mt-6 text-3xl font-bold tracking-tight text-gray-800 sm:text-4xl">
-										{meta.title}
-									</h1>
+									<h1 className="mt-6 text-3xl font-bold tracking-tight text-gray-800 sm:text-4xl">{meta.title}</h1>
 									<time
 										dateTime={meta.updatedAt.toString()}
 										className="order-first flex items-center text-base text-gray-700"
 									>
 										<span className="h-4 w-0.5 rounded-full bg-gray-200" />
-										<span className="ml-3">
-											{convertToStringDate(meta.updatedAt)}
-										</span>
+										<span className="ml-3">{convertToStringDate(meta.updatedAt)}</span>
 									</time>
 								</header>
 								<div className={'flex flex-col'}>
@@ -117,9 +110,7 @@ export async function getStaticPaths() {
 
 export async function getStaticProps({ params }) {
 	// throws if the API is unreachable or answers an error (see fetchPublicApi)
-	let articleData = await fetchPublicApi(
-		`/api/articles?filters[slug][$eq]=${encodeURIComponent(params.id)}`
-	)
+	let articleData = await fetchPublicApi(`/api/articles?filters[slug][$eq]=${encodeURIComponent(params.id)}`)
 
 	articleData = articleData?.data?.[0]
 
@@ -131,9 +122,7 @@ export async function getStaticProps({ params }) {
 	}
 
 	// Convert Markdown to HTML
-	const processedContent = await remark()
-		.use(html)
-		.process(articleData.attributes.content)
+	const processedContent = await remark().use(html).process(articleData.attributes.content)
 
 	// replace the img by Image from next
 

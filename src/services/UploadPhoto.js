@@ -1,6 +1,6 @@
-import { authenticatedFetch } from './api'
 import { track } from '@/lib/analytics'
 import { codeRefusEnvoi, kindRefusEnvoi, MESSAGES_PHOTO } from '@/lib/photo'
+import { authenticatedFetch } from './api'
 
 /**
  * POST /api/upload: sends one picture, already checked and compressed
@@ -17,11 +17,10 @@ export async function uploadPhoto(authSession, fichier) {
 
 	let response
 	try {
-		response = await authenticatedFetch(
-			`${process.env.NEXT_PUBLIC_API_URL}/api/upload`,
-			authSession,
-			{ method: 'POST', body: formulaire }
-		)
+		response = await authenticatedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/upload`, authSession, {
+			method: 'POST',
+			body: formulaire,
+		})
 	} catch {
 		response = undefined
 	}
@@ -30,7 +29,7 @@ export async function uploadPhoto(authSession, fichier) {
 	if (response?.ok) {
 		try {
 			const [stocke] = await response.json()
-			if (stocke && stocke.id) return { ok: true, fichier: stocke }
+			if (stocke?.id) return { ok: true, fichier: stocke }
 		} catch {
 			// unreadable answer: reported as a failure below
 		}

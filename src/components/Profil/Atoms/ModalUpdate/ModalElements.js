@@ -1,5 +1,5 @@
-import React, { Fragment, forwardRef, useEffect, useState } from 'react'
 import { Transition } from '@headlessui/react'
+import { Fragment, forwardRef, useEffect, useState } from 'react'
 import { fermerSiLibre } from '@/lib/sauvegarde-profil'
 
 /**
@@ -20,20 +20,13 @@ export function FondModale() {
 			leaveFrom="opacity-100"
 			leaveTo="opacity-0"
 		>
-			<div
-				data-cy="modal-backdrop"
-				className="fixed inset-0 bg-gray-500/75 transition-opacity"
-				aria-hidden="true"
-			/>
+			<div data-cy="modal-backdrop" className="fixed inset-0 bg-gray-500/75 transition-opacity" aria-hidden="true" />
 		</Transition.Child>
 	)
 }
 
 /** Close button (44 px), first focused element of the modal */
-export const BoutonFermer = forwardRef(function BoutonFermer(
-	{ onClick, disabled = false },
-	ref
-) {
+export const BoutonFermer = forwardRef(function BoutonFermer({ onClick, disabled = false }, ref) {
 	return (
 		<button
 			type="button"
@@ -78,23 +71,14 @@ export function useEnvoi(ouverte, fermerModale, autreTache = false) {
 export function ErreurSauvegarde({ message }) {
 	if (!message) return null
 	return (
-		<p
-			role="alert"
-			data-cy="save-error"
-			className="rounded-md bg-red-50 p-3 text-sm text-red-800"
-		>
+		<p role="alert" data-cy="save-error" className="rounded-md bg-red-50 p-3 text-sm text-red-800">
 			{message}
 		</p>
 	)
 }
 
 /** Save button, disabled while the request runs */
-export function BoutonSauvegarder({
-	envoi,
-	onClick,
-	dataCy,
-	children = 'Sauvegarder',
-}) {
+export function BoutonSauvegarder({ envoi, onClick, dataCy, children = 'Sauvegarder' }) {
 	return (
 		<button
 			data-cy={dataCy}

@@ -1,5 +1,5 @@
-import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
+import { describe, test } from 'node:test'
 import { contactFormSchema } from '../../src/lib/contactForm.js'
 import { CONTACT_LIMITS, contactMessage } from '../../src/lib/mailgun.js'
 
@@ -28,17 +28,12 @@ describe('contactFormSchema', () => {
 	test('stops a message over 5000 characters with a field error', () => {
 		const errors = errorsOf({ ...valid, message: 'a'.repeat(5001) })
 		assert.deepEqual(Object.keys(errors), ['message'])
-		assert.deepEqual(errors.message, [
-			'Le message ne doit pas dépasser 5000 caractères',
-		])
+		assert.deepEqual(errors.message, ['Le message ne doit pas dépasser 5000 caractères'])
 	})
 
 	test('every limit matches the server: max passes both, max + 1 fails in the form', () => {
 		for (const [name, max] of Object.entries(CONTACT_LIMITS)) {
-			const fill = n =>
-				name === 'email'
-					? 'a'.repeat(n - '@example.test'.length) + '@example.test'
-					: 'a'.repeat(n)
+			const fill = n => (name === 'email' ? `${'a'.repeat(n - '@example.test'.length)}@example.test` : 'a'.repeat(n))
 
 			const atMax = contactFormSchema.safeParse({ ...valid, [name]: fill(max) })
 			assert.equal(atMax.success, true, `${name} at ${max}`)
@@ -64,8 +59,6 @@ describe('contactFormSchema', () => {
 			assert.equal(contactMessage(blank).ok, false, name)
 			assert.ok(errorsOf(blank)[name], name)
 		}
-		assert.deepEqual(errorsOf({ ...valid, message: '' }).message, [
-			'Le message est requis',
-		])
+		assert.deepEqual(errorsOf({ ...valid, message: '' }).message, ['Le message est requis'])
 	})
 })

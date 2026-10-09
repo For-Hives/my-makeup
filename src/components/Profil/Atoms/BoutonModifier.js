@@ -1,5 +1,3 @@
-import React from 'react'
-
 /**
  * « Modifier » button of a card of the artist's space (UI-02): always
  * visible, 44 px at least, reachable with the keyboard with a visible focus

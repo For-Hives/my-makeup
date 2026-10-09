@@ -39,22 +39,6 @@
 .menu-icon span:last-of-type {
 	bottom: 0;
 }
-.menu-icon.active span:first-of-type,
-.menu-icon .menu-icon__cheeckbox:checked + div span:first-of-type {
-	transform: rotate(45deg);
-	top: 5px;
-}
-.menu-icon.active span:last-of-type,
-.menu-icon .menu-icon__cheeckbox:checked + div span:last-of-type {
-	transform: rotate(-45deg);
-	bottom: 5px;
-}
-.menu-icon.active:hover span:first-of-type,
-.menu-icon.active:hover span:last-of-type,
-.menu-icon:hover .menu-icon__cheeckbox:checked + div span:first-of-type,
-.menu-icon:hover .menu-icon__cheeckbox:checked + div span:last-of-type {
-	width: 22px;
-}
 @media (min-width: 1024px) {
 	.menu-icon:hover span:first-of-type {
 		width: 26px;
@@ -62,4 +46,28 @@
 	.menu-icon:hover span:last-of-type {
 		width: 12px;
 	}
+}
+.menu-icon.active span:first-of-type {
+	transform: rotate(45deg);
+	top: 5px;
+}
+.menu-icon.active span:last-of-type {
+	transform: rotate(-45deg);
+	bottom: 5px;
+}
+.menu-icon.active:hover span:first-of-type,
+.menu-icon.active:hover span:last-of-type {
+	width: 22px;
+}
+.menu-icon .menu-icon__cheeckbox:checked + div span:first-of-type {
+	transform: rotate(45deg);
+	top: 5px;
+}
+.menu-icon .menu-icon__cheeckbox:checked + div span:last-of-type {
+	transform: rotate(-45deg);
+	bottom: 5px;
+}
+.menu-icon:hover .menu-icon__cheeckbox:checked + div span:first-of-type,
+.menu-icon:hover .menu-icon__cheeckbox:checked + div span:last-of-type {
+	width: 22px;
 }

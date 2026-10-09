@@ -1,11 +1,9 @@
-import React, { Fragment, useEffect, useRef, useState } from 'react'
 import { Dialog, Transition } from '@headlessui/react'
-import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useSession } from 'next-auth/react'
+import { Fragment, useEffect, useRef, useState } from 'react'
+import { useForm } from 'react-hook-form'
 import * as zod from 'zod'
-import { patchMeMakeup } from '@/services/PatchMeMakeup'
-import { listeApresSauvegarde } from '@/lib/sauvegarde-profil'
 import {
 	BoutonFermer,
 	BoutonSauvegarder,
@@ -14,6 +12,9 @@ import {
 	suivreChamp,
 	useEnvoi,
 } from '@/components/Profil/Atoms/ModalUpdate/ModalElements'
+import { avecCles } from '@/lib/cles'
+import { listeApresSauvegarde } from '@/lib/sauvegarde-profil'
+import { patchMeMakeup } from '@/services/PatchMeMakeup'
 
 const schema = zod
 	.object({
@@ -75,10 +76,7 @@ export default function ModalUpdateCoursesProfil(props) {
 	const [userCoursesDescription, setUserCoursesDescription] = useState('')
 
 	// Escape, a click outside and « Fermer » wait for the save in progress
-	const { envoi, setEnvoi, erreurEnvoi, setErreurEnvoi, fermer } = useEnvoi(
-		props.isModalOpen,
-		props.handleIsModalOpen
-	)
+	const { envoi, setEnvoi, erreurEnvoi, setErreurEnvoi, fermer } = useEnvoi(props.isModalOpen, props.handleIsModalOpen)
 
 	const { data: session } = useSession()
 
@@ -128,7 +126,7 @@ export default function ModalUpdateCoursesProfil(props) {
 					const userCoursesUpdated = [
 						...userCourses,
 						{
-							id: 'added' + userCoursesDiploma + userCoursesSchool,
+							id: `added${userCoursesDiploma}${userCoursesSchool}`,
 							diploma: userCoursesDiploma,
 							school: userCoursesSchool,
 							date_graduation: userCoursesDateGraduation,
@@ -148,7 +146,7 @@ export default function ModalUpdateCoursesProfil(props) {
 		}
 	}
 
-	const handleSubmitCourses = async event => {
+	const handleSubmitCourses = async _event => {
 		// the ids are Strapi's (or local ones for new items): never sent
 		const userCoursesCleaned = userCourses.map(course => {
 			const { id, ...rest } = course
@@ -229,13 +227,182 @@ export default function ModalUpdateCoursesProfil(props) {
 	}, [open, reset, user.courses])
 
 	return (
+		<DialogueFormations
+			open={open}
+			cancelButtonRef={cancelButtonRef}
+			fermer={fermer}
+			envoi={envoi}
+			handleSubmit={handleSubmit}
+			onSubmit={onSubmit}
+			register={register}
+			userCoursesDiploma={userCoursesDiploma}
+			suivre={suivre}
+			handleUpdateCoursesDiploma={handleUpdateCoursesDiploma}
+			errors={errors}
+			userCoursesSchool={userCoursesSchool}
+			handleUpdateCoursesSchool={handleUpdateCoursesSchool}
+			userCoursesDateGraduation={userCoursesDateGraduation}
+			handleUpdateCoursesDateGraduation={handleUpdateCoursesDateGraduation}
+			userCoursesDescription={userCoursesDescription}
+			handleUpdateCoursesDescription={handleUpdateCoursesDescription}
+			userCoursesId={userCoursesId}
+			userCourses={userCourses}
+			handleEditCourse={handleEditCourse}
+			handleDeleteCourse={handleDeleteCourse}
+			erreurEnvoi={erreurEnvoi}
+			handleSubmitCourses={handleSubmitCourses}
+		/>
+	)
+}
+
+function FormulaireFormation({
+	handleSubmit,
+	onSubmit,
+	register,
+	userCoursesDiploma,
+	suivre,
+	handleUpdateCoursesDiploma,
+	errors,
+	userCoursesSchool,
+	handleUpdateCoursesSchool,
+	userCoursesDateGraduation,
+	handleUpdateCoursesDateGraduation,
+	userCoursesDescription,
+	handleUpdateCoursesDescription,
+	userCoursesId,
+}) {
+	return (
+		<div className={'w-full md:w-2/5'}>
+			<div className="grid grid-cols-1 gap-4">
+				<div className={'flex flex-col gap-4'}>
+					<form onSubmit={handleSubmit(onSubmit)} method="POST" className="flex flex-col gap-4">
+						<div>
+							<label htmlFor="diploma" className="block text-sm text-gray-700">
+								Nom de la formation ou du diplôme
+							</label>
+							<div className="mt-2">
+								<input
+									data-cy={'diploma-input'}
+									id="diploma"
+									name="diploma"
+									type={'text'}
+									{...register('diploma')}
+									value={userCoursesDiploma ?? ''}
+									onChange={suivre('diploma', handleUpdateCoursesDiploma)}
+									className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
+								/>
+								{errors.diploma && (
+									<p data-cy={'error-diploma'} className={'mt-2 text-xs text-red-500/80'}>
+										{errors.diploma.message}
+									</p>
+								)}
+							</div>
+						</div>
+						<div>
+							<label htmlFor="school" className="block text-sm text-gray-700">
+								{"Nom de l'école ou de l'organisme"}
+							</label>
+							<div className="mt-2">
+								<input
+									data-cy="school-input"
+									id="school"
+									name="school"
+									type={'text'}
+									{...register('school')}
+									value={userCoursesSchool ?? ''}
+									onChange={suivre('school', handleUpdateCoursesSchool)}
+									className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
+								/>
+								{errors.school && (
+									<p data-cy={'error-school'} className={'mt-2 text-xs text-red-500/80'}>
+										{errors.school.message}
+									</p>
+								)}
+							</div>
+						</div>
+						<div>
+							<label htmlFor="date_graduation" className="block text-sm text-gray-700">
+								{"Date d'obtention du diplôme"}
+							</label>
+							<div className="mt-2">
+								<input
+									data-cy="date-graduation-input"
+									id="date_graduation"
+									name="date_graduation"
+									type={'date'}
+									{...register('date_graduation')}
+									value={userCoursesDateGraduation ?? ''}
+									onChange={suivre('date_graduation', handleUpdateCoursesDateGraduation)}
+									className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
+								/>
+								{errors.date_graduation && (
+									<p data-cy={'error-date-graduation'} className={'mt-2 text-xs text-red-500/80'}>
+										{errors.date_graduation.message}
+									</p>
+								)}
+							</div>
+						</div>
+						<div>
+							<label htmlFor="course_description" className="block text-sm text-gray-700">
+								Description, ce que vous avez appris
+							</label>
+							<div className="mt-2">
+								<textarea
+									data-cy="course-description-input"
+									id="course_description"
+									name="course_description"
+									{...register('course_description')}
+									value={userCoursesDescription ?? ''}
+									onChange={suivre('course_description', handleUpdateCoursesDescription)}
+									className="block min-h-[200px] w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
+								/>
+								{errors.course_description && (
+									<p data-cy={'error-course-description'} className={'mt-2 text-xs text-red-500/80'}>
+										{errors.course_description.message}
+									</p>
+								)}
+							</div>
+						</div>
+					</form>
+					<div className={'flex items-center justify-end'}>
+						<button data-cy="add-course-button" type="button" className="btn-primary" onClick={handleSubmit(onSubmit)}>
+							{userCoursesId === '' ? 'Ajouter une formation / diplôme' : 'Modifier la formation / diplôme'}
+						</button>
+					</div>
+				</div>
+			</div>
+		</div>
+	)
+}
+
+function DialogueFormations({
+	open,
+	cancelButtonRef,
+	fermer,
+	envoi,
+	handleSubmit,
+	onSubmit,
+	register,
+	userCoursesDiploma,
+	suivre,
+	handleUpdateCoursesDiploma,
+	errors,
+	userCoursesSchool,
+	handleUpdateCoursesSchool,
+	userCoursesDateGraduation,
+	handleUpdateCoursesDateGraduation,
+	userCoursesDescription,
+	handleUpdateCoursesDescription,
+	userCoursesId,
+	userCourses,
+	handleEditCourse,
+	handleDeleteCourse,
+	erreurEnvoi,
+	handleSubmitCourses,
+}) {
+	return (
 		<Transition.Root show={open} as={Fragment}>
-			<Dialog
-				as="div"
-				className="relative z-30"
-				initialFocus={cancelButtonRef}
-				onClose={fermer}
-			>
+			<Dialog as="div" className="relative z-30" initialFocus={cancelButtonRef} onClose={fermer}>
 				<FondModale />
 
 				<div className="fixed inset-0 z-30 overflow-y-auto">
@@ -253,195 +420,38 @@ export default function ModalUpdateCoursesProfil(props) {
 								data-cy="modal-panel"
 								className="relative w-full transform rounded-lg bg-white p-8 text-left shadow-2xl transition-all sm:max-w-7xl"
 							>
-								<BoutonFermer
-									onClick={fermer}
-									disabled={envoi}
-									ref={cancelButtonRef}
-								/>
+								<BoutonFermer onClick={fermer} disabled={envoi} ref={cancelButtonRef} />
 								<div className="flex flex-col items-start gap-8">
 									<div className="text-left">
-										<Dialog.Title
-											as="h3"
-											className="text-lg font-semibold text-gray-900"
-										>
+										<Dialog.Title as="h3" className="text-lg font-semibold text-gray-900">
 											Les formations & diplômes que vous avez suivis
 										</Dialog.Title>
 									</div>
-									<div
-										className={
-											'flex h-full w-full flex-wrap gap-16 md:flex-nowrap'
-										}
-									>
-										<div className={'w-full md:w-2/5'}>
-											<div className="grid grid-cols-1 gap-4">
-												<div className={'flex flex-col gap-4'}>
-													<form
-														onSubmit={handleSubmit(onSubmit)}
-														method="POST"
-														className="flex flex-col gap-4"
-													>
-														<div>
-															<label
-																htmlFor="diploma"
-																className="block text-sm text-gray-700"
-															>
-																Nom de la formation ou du diplôme
-															</label>
-															<div className="mt-2">
-																<input
-																	data-cy={'diploma-input'}
-																	id="diploma"
-																	name="diploma"
-																	type={'text'}
-																	{...register('diploma')}
-																	value={userCoursesDiploma ?? ''}
-																	onChange={suivre(
-																		'diploma',
-																		handleUpdateCoursesDiploma
-																	)}
-																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
-																/>
-																{errors.diploma && (
-																	<p
-																		data-cy={'error-diploma'}
-																		className={'mt-2 text-xs text-red-500/80'}
-																	>
-																		{errors.diploma.message}
-																	</p>
-																)}
-															</div>
-														</div>
-														<div>
-															<label
-																htmlFor="school"
-																className="block text-sm text-gray-700"
-															>
-																{"Nom de l'école ou de l'organisme"}
-															</label>
-															<div className="mt-2">
-																<input
-																	data-cy="school-input"
-																	id="school"
-																	name="school"
-																	type={'text'}
-																	{...register('school')}
-																	value={userCoursesSchool ?? ''}
-																	onChange={suivre(
-																		'school',
-																		handleUpdateCoursesSchool
-																	)}
-																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
-																/>
-																{errors.school && (
-																	<p
-																		data-cy={'error-school'}
-																		className={'mt-2 text-xs text-red-500/80'}
-																	>
-																		{errors.school.message}
-																	</p>
-																)}
-															</div>
-														</div>
-														<div>
-															<label
-																htmlFor="date_graduation"
-																className="block text-sm text-gray-700"
-															>
-																{"Date d'obtention du diplôme"}
-															</label>
-															<div className="mt-2">
-																<input
-																	data-cy="date-graduation-input"
-																	id="date_graduation"
-																	name="date_graduation"
-																	type={'date'}
-																	{...register('date_graduation')}
-																	value={userCoursesDateGraduation ?? ''}
-																	onChange={suivre(
-																		'date_graduation',
-																		handleUpdateCoursesDateGraduation
-																	)}
-																	className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
-																/>
-																{errors.date_graduation && (
-																	<p
-																		data-cy={'error-date-graduation'}
-																		className={'mt-2 text-xs text-red-500/80'}
-																	>
-																		{errors.date_graduation.message}
-																	</p>
-																)}
-															</div>
-														</div>
-														<div>
-															<label
-																htmlFor="course_description"
-																className="block text-sm text-gray-700"
-															>
-																Description, ce que vous avez appris
-															</label>
-															<div className="mt-2">
-																<textarea
-																	data-cy="course-description-input"
-																	id="course_description"
-																	name="course_description"
-																	{...register('course_description')}
-																	value={userCoursesDescription ?? ''}
-																	onChange={suivre(
-																		'course_description',
-																		handleUpdateCoursesDescription
-																	)}
-																	className="block min-h-[200px] w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
-																/>
-																{errors.course_description && (
-																	<p
-																		data-cy={'error-course-description'}
-																		className={'mt-2 text-xs text-red-500/80'}
-																	>
-																		{errors.course_description.message}
-																	</p>
-																)}
-															</div>
-														</div>
-													</form>
-													<div className={'flex items-center justify-end'}>
-														<button
-															data-cy="add-course-button"
-															type="button"
-															className="btn-primary"
-															onClick={handleSubmit(onSubmit)}
-														>
-															{userCoursesId === ''
-																? 'Ajouter une formation / diplôme'
-																: 'Modifier la formation / diplôme'}
-														</button>
-													</div>
-												</div>
-											</div>
-										</div>
+									<div className={'flex h-full w-full flex-wrap gap-16 md:flex-nowrap'}>
+										<FormulaireFormation
+											handleSubmit={handleSubmit}
+											onSubmit={onSubmit}
+											register={register}
+											userCoursesDiploma={userCoursesDiploma}
+											suivre={suivre}
+											handleUpdateCoursesDiploma={handleUpdateCoursesDiploma}
+											errors={errors}
+											userCoursesSchool={userCoursesSchool}
+											handleUpdateCoursesSchool={handleUpdateCoursesSchool}
+											userCoursesDateGraduation={userCoursesDateGraduation}
+											handleUpdateCoursesDateGraduation={handleUpdateCoursesDateGraduation}
+											userCoursesDescription={userCoursesDescription}
+											handleUpdateCoursesDescription={handleUpdateCoursesDescription}
+											userCoursesId={userCoursesId}
+										/>
 										<div className={'flex w-full flex-col gap-4 md:w-3/5'}>
 											{/*	display the courses already added */}
-											<h3 className={'text-sm text-gray-900'}>
-												Les formations & diplômes déjà ajoutés
-											</h3>
-											<div
-												className={
-													'flex max-h-[600px] w-full flex-col gap-4 overflow-y-scroll'
-												}
-											>
-												{userCourses.map((course, index) => {
+											<h3 className={'text-sm text-gray-900'}>Les formations & diplômes déjà ajoutés</h3>
+											<div className={'flex max-h-[600px] w-full flex-col gap-4 overflow-y-scroll'}>
+												{avecCles(userCourses).map(({ valeur: course, cle }, index) => {
 													return (
-														<div
-															key={index}
-															className={
-																'relative flex w-full rounded bg-indigo-50/20 p-4 text-gray-700'
-															}
-														>
-															<div
-																className={
-																	'absolute right-0 top-0 m-2 flex items-center justify-center gap-4'
-																}
-															>
+														<div key={cle} className={'relative flex w-full rounded bg-indigo-50/20 p-4 text-gray-700'}>
+															<div className={'absolute right-0 top-0 m-2 flex items-center justify-center gap-4'}>
 																<button
 																	type="button"
 																	data-cy={`course-edit-button-${index}`}
@@ -449,10 +459,7 @@ export default function ModalUpdateCoursesProfil(props) {
 																	className={BOUTON_ICONE}
 																	onClick={() => handleEditCourse(course.id)}
 																>
-																	<span
-																		className="material-icons-round text-xl text-orange-600"
-																		aria-hidden="true"
-																	>
+																	<span className="material-icons-round text-xl text-orange-600" aria-hidden="true">
 																		edit
 																	</span>
 																</button>
@@ -463,59 +470,31 @@ export default function ModalUpdateCoursesProfil(props) {
 																	className={BOUTON_ICONE}
 																	onClick={() => handleDeleteCourse(course.id)}
 																>
-																	<span
-																		className="material-icons-round text-xl text-red-500"
-																		aria-hidden="true"
-																	>
+																	<span className="material-icons-round text-xl text-red-500" aria-hidden="true">
 																		delete
 																	</span>
 																</button>
 															</div>
-															<span className="material-icons-round text-indigo-900">
-																school
-															</span>
-															<div
-																className={'ml-2 flex w-full flex-col gap-2'}
-															>
+															<span className="material-icons-round text-indigo-900">school</span>
+															<div className={'ml-2 flex w-full flex-col gap-2'}>
 																<div className={'flex flex-col'}>
-																	<p
-																		className={
-																			'w-4/5 font-semibold text-gray-700 md:w-full'
-																		}
-																	>
-																		{course.diploma}
-																	</p>
+																	<p className={'w-4/5 font-semibold text-gray-700 md:w-full'}>{course.diploma}</p>
 																	<div className={'flex justify-between'}>
-																		<p
-																			className={'text-sm italic text-gray-600'}
-																		>
-																			{course.school}
-																		</p>
-																		<p
-																			className={'text-sm italic text-gray-600'}
-																		>
-																			{course.date_graduation}
-																		</p>
+																		<p className={'text-sm italic text-gray-600'}>{course.school}</p>
+																		<p className={'text-sm italic text-gray-600'}>{course.date_graduation}</p>
 																	</div>
 																</div>
 																<div>
 																	{
 																		// display the user description
 																		// if \n is present, split the string and display each part in a new line
-																		course.course_description
-																			.split('\n')
-																			.map((item, i) => {
-																				return (
-																					<p
-																						key={i}
-																						className={
-																							'text-sm italic text-gray-500'
-																						}
-																					>
-																						{item}
-																					</p>
-																				)
-																			})
+																		avecCles(course.course_description.split('\n')).map(({ valeur: item, cle }, _i) => {
+																			return (
+																				<p key={cle} className={'text-sm italic text-gray-500'}>
+																					{item}
+																				</p>
+																			)
+																		})
 																	}
 																</div>
 															</div>
@@ -528,11 +507,7 @@ export default function ModalUpdateCoursesProfil(props) {
 								</div>
 								<div className="mt-4 flex flex-col items-end gap-4">
 									<ErreurSauvegarde message={erreurEnvoi} />
-									<BoutonSauvegarder
-										dataCy="save-button-courses"
-										envoi={envoi}
-										onClick={handleSubmitCourses}
-									/>
+									<BoutonSauvegarder dataCy="save-button-courses" envoi={envoi} onClick={handleSubmitCourses} />
 								</div>
 							</Dialog.Panel>
 						</Transition.Child>

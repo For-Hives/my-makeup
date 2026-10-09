@@ -1,16 +1,15 @@
-import React from 'react'
-import Nav from '@/components/Global/Nav'
-import Footer from '@/components/Global/Footer'
 import Head from 'next/head'
-import Hero from '@/components/Global/Hero'
 import CTA from '@/components/Global/CTA'
+import Footer from '@/components/Global/Footer'
+import Hero from '@/components/Global/Hero'
+import Nav from '@/components/Global/Nav'
 import { urlAbsolue } from '@/lib/seo/url'
 
 /**
  * @param props
  * @constructor
  */
-function Partenariats(props) {
+function Partenariats(_props) {
 	return (
 		<>
 			<Head>
@@ -35,24 +34,17 @@ function Partenariats(props) {
 						</>
 					}
 					description={
-						<>
-							{
-								'Découvrez comment My-Makeup aide les maquilleuses professionnelles à présenter leur travail et à se faire connaître des particuliers.'
-							}
-						</>
+						'Découvrez comment My-Makeup aide les maquilleuses professionnelles à présenter leur travail et à se faire connaître des particuliers.'
 					}
 					isSearchDisplayed={false}
 					isCTALoginDisplayed={true}
 				/>
-				<div
-					className={'relative mx-auto my-24 max-w-7xl px-4 md:my-48 md:px-0'}
-				>
+				<div className={'relative mx-auto my-24 max-w-7xl px-4 md:my-48 md:px-0'}>
 					<div className="mx-auto max-w-2xl">
 						<article>
 							<header className="flex flex-col">
 								<h1 className="mt-6 text-3xl font-bold tracking-tight text-gray-800 sm:text-4xl">
-									Communauté et partenariat chez My-Makeup : une plateforme
-									construite avec les maquilleuses
+									Communauté et partenariat chez My-Makeup : une plateforme construite avec les maquilleuses
 								</h1>
 							</header>
 							<div className="prose my-8 xl:prose-lg">

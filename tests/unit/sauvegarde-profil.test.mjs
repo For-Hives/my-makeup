@@ -1,5 +1,6 @@
-import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
+import { describe, test } from 'node:test'
+import { eventData } from '../../src/lib/analytics.js'
 import {
 	erreurNom,
 	fermerSiLibre,
@@ -12,10 +13,9 @@ import {
 	offresAEnvoyer,
 	photoRefusee,
 	profilCree,
-	sauvegarderProfil,
 	SECTIONS_PROFIL,
+	sauvegarderProfil,
 } from '../../src/lib/sauvegarde-profil.js'
-import { eventData } from '../../src/lib/analytics.js'
 
 // what the me-makeup controller of the API answers on a refused PATCH
 const refusStrapi = moreDetails => ({
@@ -50,8 +50,9 @@ describe('messageEchecSauvegarde', () => {
 		assert.match(messageEchecSauvegarde(undefined), /Connexion impossible/)
 		assert.match(messageEchecSauvegarde(401), /session a expiré/)
 		assert.match(messageEchecSauvegarde(429), /Trop d'essais/)
-		for (const status of [500, 502, 503, 504])
+		for (const status of [500, 502, 503, 504]) {
 			assert.match(messageEchecSauvegarde(status), /indisponible/)
+		}
 	})
 
 	test('every failure says that nothing was saved', () => {
@@ -63,100 +64,63 @@ describe('messageEchecSauvegarde', () => {
 			[400, refusStrapi('anything')],
 			[400, fichierRefuse()],
 			[400, fichierRefuse([7]), [7]],
-		])
-			assert.match(
-				messageEchecSauvegarde(status, corps, enregistrees),
-				/n'ont pas été enregistrées/
-			)
+		]) {
+			assert.match(messageEchecSauvegarde(status, corps, enregistrees), /n'ont pas été enregistrées/)
+		}
 	})
 
 	test('a length rule of the API becomes a French sentence', () => {
 		assert.equal(
-			messageEchecSauvegarde(
-				400,
-				refusStrapi('first_name must be at least 2 characters')
-			),
+			messageEchecSauvegarde(400, refusStrapi('first_name must be at least 2 characters')),
 			'Le prénom doit contenir au moins 2 caractères.'
 		)
 		assert.equal(
-			messageEchecSauvegarde(
-				400,
-				refusStrapi('last_name must be at least 2 characters')
-			),
+			messageEchecSauvegarde(400, refusStrapi('last_name must be at least 2 characters')),
 			'Le nom doit contenir au moins 2 caractères.'
 		)
 		assert.equal(
-			messageEchecSauvegarde(
-				400,
-				refusStrapi('last_name must be at most 70 characters')
-			),
+			messageEchecSauvegarde(400, refusStrapi('last_name must be at most 70 characters')),
 			'Le nom doit contenir au plus 70 caractères.'
 		)
 	})
 
 	test('never echoes the API text', () => {
-		const message = messageEchecSauvegarde(
-			400,
-			refusStrapi('<script>alert(1)</script> 2 errors occurred')
-		)
+		const message = messageEchecSauvegarde(400, refusStrapi('<script>alert(1)</script> 2 errors occurred'))
 		assert.doesNotMatch(message, /script|errors occurred|Makeup Artist/)
 		assert.doesNotMatch(
-			messageEchecSauvegarde(
-				400,
-				refusStrapi('secret_field must be at least 3 characters')
-			),
+			messageEchecSauvegarde(400, refusStrapi('secret_field must be at least 3 characters')),
 			/secret_field/
 		)
 	})
 
 	test('400 « File not allowed »: she is asked to pick her photo again', () => {
-		assert.equal(
-			messageEchecSauvegarde(400, fichierRefuse()),
-			MESSAGE_PHOTO_REFUSEE
-		)
+		assert.equal(messageEchecSauvegarde(400, fichierRefuse()), MESSAGE_PHOTO_REFUSEE)
 		// connect/set objects: refused without any file id
-		assert.equal(
-			messageEchecSauvegarde(400, fichierRefuse([])),
-			MESSAGE_PHOTO_REFUSEE
-		)
+		assert.equal(messageEchecSauvegarde(400, fichierRefuse([])), MESSAGE_PHOTO_REFUSEE)
 		// a picture sent by this save, the saved ones being fine
-		assert.equal(
-			messageEchecSauvegarde(400, fichierRefuse([131]), [7, 8]),
-			MESSAGE_PHOTO_REFUSEE
-		)
+		assert.equal(messageEchecSauvegarde(400, fichierRefuse([131]), [7, 8]), MESSAGE_PHOTO_REFUSEE)
 	})
 
 	test('400 « File not allowed » for a picture the page shows as saved: removed elsewhere, she reloads', () => {
-		for (const refuses of [[7], [131, 8]])
-			assert.equal(
-				messageEchecSauvegarde(400, fichierRefuse(refuses), [7, 8]),
-				MESSAGE_PHOTO_RETIREE
-			)
+		for (const refuses of [[7], [131, 8]]) {
+			assert.equal(messageEchecSauvegarde(400, fichierRefuse(refuses), [7, 8]), MESSAGE_PHOTO_RETIREE)
+		}
 		// the saved ids only count for that refusal
 		assert.equal(
-			messageEchecSauvegarde(
-				400,
-				refusStrapi('first_name must be at least 2 characters'),
-				[7]
-			),
+			messageEchecSauvegarde(400, refusStrapi('first_name must be at least 2 characters'), [7]),
 			'Le prénom doit contenir au moins 2 caractères.'
 		)
-		assert.match(
-			messageEchecSauvegarde(500, fichierRefuse([7]), [7]),
-			/indisponible/
-		)
+		assert.match(messageEchecSauvegarde(500, fichierRefuse([7]), [7]), /indisponible/)
 	})
 
 	test('a missing profile asks for a reload; odd bodies do not throw', () => {
 		assert.match(
-			messageEchecSauvegarde(
-				400,
-				refusStrapi('Makeup artist does not exist for this user')
-			),
+			messageEchecSauvegarde(400, refusStrapi('Makeup artist does not exist for this user')),
 			/recharge la page/
 		)
-		for (const corps of [null, 'texte', [], { error: 'x' }, { error: null }])
+		for (const corps of [null, 'texte', [], { error: 'x' }, { error: null }]) {
 			assert.equal(typeof messageEchecSauvegarde(400, corps), 'string')
+		}
 	})
 })
 
@@ -165,24 +129,14 @@ describe('photoRefusee (PATCH /api/me-makeup)', () => {
 		assert.equal(photoRefusee(400, fichierRefuse()), true)
 		assert.equal(photoRefusee(400, fichierRefuse([])), true)
 		// the same text with another status, or another refusal
-		for (const status of [0, 401, 403, 413, 500])
+		for (const status of [0, 401, 403, 413, 500]) {
 			assert.equal(photoRefusee(status, fichierRefuse()), false)
-		assert.equal(
-			photoRefusee(
-				400,
-				refusStrapi('first_name must be at least 2 characters')
-			),
-			false
-		)
+		}
+		assert.equal(photoRefusee(400, refusStrapi('first_name must be at least 2 characters')), false)
 		assert.equal(photoRefusee(400, refusStrapi('Files not allowedly')), false)
-		for (const corps of [
-			undefined,
-			null,
-			'File not allowed',
-			[],
-			{ error: 'File not allowed' },
-		])
+		for (const corps of [undefined, null, 'File not allowed', [], { error: 'File not allowed' }]) {
 			assert.equal(photoRefusee(400, corps), false)
+		}
 	})
 })
 
@@ -191,10 +145,7 @@ describe('fichiersRefuses (400 « File not allowed »)', () => {
 		assert.deepEqual(fichiersRefuses(fichierRefuse([131, 7])), [131, 7])
 		assert.deepEqual(fichiersRefuses(fichierRefuse(['131'])), [131])
 		assert.deepEqual(fichiersRefuses(fichierRefuse([])), [])
-		assert.deepEqual(
-			fichiersRefuses(fichierRefuse([0, -1, 1.5, 'x', null, {}])),
-			[]
-		)
+		assert.deepEqual(fichiersRefuses(fichierRefuse([0, -1, 1.5, 'x', null, {}])), [])
 	})
 
 	test('odd bodies give no id and do not throw', () => {
@@ -207,8 +158,9 @@ describe('fichiersRefuses (400 « File not allowed »)', () => {
 			{ error: { details: null } },
 			{ error: { details: { files: 131 } } },
 			refusStrapi('anything'),
-		])
+		]) {
 			assert.deepEqual(fichiersRefuses(corps), [])
+		}
 	})
 })
 
@@ -217,26 +169,13 @@ describe('galerieApresRefus (portfolio after a 400 « File not allowed »)', () 
 
 	test('the refused files leave the gallery, the others stay in order', () => {
 		// a new picture refused
-		assert.deepEqual(
-			galerieApresRefus([photo(7), photo(8), photo(131)], [131], [7, 8]),
-			[photo(7), photo(8)]
-		)
+		assert.deepEqual(galerieApresRefus([photo(7), photo(8), photo(131)], [131], [7, 8]), [photo(7), photo(8)])
 		// a saved picture removed elsewhere: the new one stays
-		assert.deepEqual(
-			galerieApresRefus([photo(7), photo(8), photo(131)], [7], [7, 8]),
-			[photo(8), photo(131)]
-		)
+		assert.deepEqual(galerieApresRefus([photo(7), photo(8), photo(131)], [7], [7, 8]), [photo(8), photo(131)])
 	})
 
 	test('no id named: only the saved pictures stay', () => {
-		assert.deepEqual(
-			galerieApresRefus(
-				[photo(7), photo(131), photo(8), photo(132)],
-				[],
-				[7, 8]
-			),
-			[photo(7), photo(8)]
-		)
+		assert.deepEqual(galerieApresRefus([photo(7), photo(131), photo(8), photo(132)], [], [7, 8]), [photo(7), photo(8)])
 		assert.deepEqual(galerieApresRefus([photo(131)], [], []), [])
 	})
 })
@@ -270,9 +209,7 @@ describe('sauvegarderProfil (patchMeMakeup)', () => {
 
 		assert.deepEqual(resultat, { ok: true, data: { id: 11, ...nom } })
 		assert.deepEqual(p.envois.map(JSON.parse), [nom])
-		assert.deepEqual(p.evenements, [
-			['profile_save', { section: 'identite', ok: true }],
-		])
+		assert.deepEqual(p.evenements, [['profile_save', { section: 'identite', ok: true }]])
 	})
 
 	test('the event is in the catalogue and carries nothing typed', async () => {
@@ -281,11 +218,8 @@ describe('sauvegarderProfil (patchMeMakeup)', () => {
 			[json(500, {}), false],
 		]) {
 			const p = ports(reponse)
-			await sauvegarderProfil(
-				{ first_name: 'Alice', network: { email: 'alice@test.local' } },
-				'reseaux',
-				p
-			)
+			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
+			await sauvegarderProfil({ first_name: 'Alice', network: { email: 'alice@test.local' } }, 'reseaux', p)
 			const [[evenement, props]] = p.evenements
 			assert.deepEqual(eventData(evenement, props), { section: 'reseaux', ok })
 			assert.doesNotMatch(JSON.stringify(props), /Alice|@/)
@@ -301,15 +235,11 @@ describe('sauvegarderProfil (patchMeMakeup)', () => {
 			error:
 				"Le service est momentanément indisponible : tes modifications n'ont pas été enregistrées. Réessaie dans quelques minutes.",
 		})
-		assert.deepEqual(p.evenements, [
-			['profile_save', { section: 'description', ok: false }],
-		])
+		assert.deepEqual(p.evenements, [['profile_save', { section: 'description', ok: false }]])
 	})
 
 	test('400 of the API: its rule in French', async () => {
-		const p = ports(
-			json(400, refusStrapi('first_name must be at least 2 characters'))
-		)
+		const p = ports(json(400, refusStrapi('first_name must be at least 2 characters')))
 		const resultat = await sauvegarderProfil({ first_name: 'A' }, 'identite', p)
 		assert.deepEqual(resultat, {
 			ok: false,
@@ -319,40 +249,29 @@ describe('sauvegarderProfil (patchMeMakeup)', () => {
 
 	test('400 « File not allowed »: flagged, so the modal drops the sent picture', async () => {
 		const p = ports(json(400, fichierRefuse([131])))
-		const resultat = await sauvegarderProfil(
-			{ first_name: 'Al', main_picture: 131 },
-			'identite',
-			p
-		)
+		const resultat = await sauvegarderProfil({ first_name: 'Al', main_picture: 131 }, 'identite', p)
 		assert.deepEqual(resultat, {
 			ok: false,
 			error: MESSAGE_PHOTO_REFUSEE,
 			photoRefusee: true,
 			fichiersRefuses: [131],
 		})
-		assert.deepEqual(p.evenements, [
-			['profile_save', { section: 'identite', ok: false }],
-		])
+		assert.deepEqual(p.evenements, [['profile_save', { section: 'identite', ok: false }]])
 		// any other failure is not flagged
 		for (const reponse of [
 			json(400, refusStrapi('first_name must be at least 2 characters')),
 			json(500, fichierRefuse()),
-		])
-			assert.equal(
-				'photoRefusee' in
-					(await sauvegarderProfil(nom, 'portfolio', ports(reponse))),
-				false
-			)
+		]) {
+			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
+			assert.equal('photoRefusee' in (await sauvegarderProfil(nom, 'portfolio', ports(reponse))), false)
+		}
 	})
 
 	test('400 « File not allowed » for a saved picture: the reload message, the refused ids', async () => {
 		const p = ports(json(400, fichierRefuse([7])))
-		const resultat = await sauvegarderProfil(
-			{ image_gallery: [7, 8, 131] },
-			'portfolio',
-			p,
-			{ photosEnregistrees: [7, 8] }
-		)
+		const resultat = await sauvegarderProfil({ image_gallery: [7, 8, 131] }, 'portfolio', p, {
+			photosEnregistrees: [7, 8],
+		})
 		assert.deepEqual(resultat, {
 			ok: false,
 			error: MESSAGE_PHOTO_RETIREE,
@@ -370,9 +289,7 @@ describe('sauvegarderProfil (patchMeMakeup)', () => {
 
 		assert.equal(resultat.ok, false)
 		assert.match(resultat.error, /Connexion impossible/)
-		assert.deepEqual(p.evenements, [
-			['profile_save', { section: 'localisation', ok: false }],
-		])
+		assert.deepEqual(p.evenements, [['profile_save', { section: 'localisation', ok: false }]])
 	})
 
 	test('expired session (null): not ok, flagged, counted', async () => {
@@ -382,9 +299,7 @@ describe('sauvegarderProfil (patchMeMakeup)', () => {
 		assert.equal(resultat.ok, false)
 		assert.equal(resultat.sessionExpiree, true)
 		assert.match(resultat.error, /session a expiré/)
-		assert.deepEqual(p.evenements, [
-			['profile_save', { section: 'offres', ok: false }],
-		])
+		assert.deepEqual(p.evenements, [['profile_save', { section: 'offres', ok: false }]])
 	})
 
 	test('saved with an unreadable answer: still ok, no data', async () => {
@@ -426,14 +341,8 @@ describe('erreurNom (onboarding and identity forms)', () => {
 		assert.equal(NOM_MIN, 2)
 		assert.equal(erreurNom('Al', 'first_name'), null)
 		assert.equal(erreurNom('  Bo  ', 'last_name'), null)
-		assert.equal(
-			erreurNom('A', 'first_name'),
-			'Le prénom doit contenir au moins 2 caractères.'
-		)
-		assert.equal(
-			erreurNom('   ', 'last_name'),
-			'Le nom doit contenir au moins 2 caractères.'
-		)
+		assert.equal(erreurNom('A', 'first_name'), 'Le prénom doit contenir au moins 2 caractères.')
+		assert.equal(erreurNom('   ', 'last_name'), 'Le nom doit contenir au moins 2 caractères.')
 		assert.match(erreurNom(undefined), /au moins 2/)
 	})
 
@@ -447,16 +356,14 @@ describe('listeApresSauvegarde', () => {
 	test('the list answered by the API, with its ids', () => {
 		const locale = [{ id: 'addedStudio', company: 'Studio' }]
 		const reponse = { experiences: [{ id: 12, company: 'Studio' }] }
-		assert.deepEqual(
-			listeApresSauvegarde(reponse, 'experiences', locale),
-			reponse.experiences
-		)
+		assert.deepEqual(listeApresSauvegarde(reponse, 'experiences', locale), reponse.experiences)
 	})
 
 	test('the local list when the answer has none', () => {
 		const locale = [{ id: 'addedStudio' }]
-		for (const reponse of [null, undefined, {}, [], { experiences: null }])
+		for (const reponse of [null, undefined, {}, [], { experiences: null }]) {
 			assert.equal(listeApresSauvegarde(reponse, 'experiences', locale), locale)
+		}
 	})
 
 	// what updateMakeupArtist answers: populate one level, no options
@@ -477,11 +384,7 @@ describe('listeApresSauvegarde', () => {
 	}
 
 	test('the options of an offer stay when the answer leaves them out', () => {
-		const liste = listeApresSauvegarde(
-			reponseStrapi,
-			'service_offers',
-			envoyees
-		)
+		const liste = listeApresSauvegarde(reponseStrapi, 'service_offers', envoyees)
 		assert.deepEqual(
 			liste.map(offre => offre.id),
 			[7, 8]
@@ -515,21 +418,10 @@ describe('listeApresSauvegarde', () => {
 
 	test('the list sent when the answer has another length or odd items', () => {
 		assert.equal(
-			listeApresSauvegarde(
-				{ service_offers: reponseStrapi.service_offers.slice(1) },
-				'service_offers',
-				envoyees
-			),
+			listeApresSauvegarde({ service_offers: reponseStrapi.service_offers.slice(1) }, 'service_offers', envoyees),
 			envoyees
 		)
-		assert.deepEqual(
-			listeApresSauvegarde(
-				{ service_offers: [null, 'x'] },
-				'service_offers',
-				envoyees
-			),
-			envoyees
-		)
+		assert.deepEqual(listeApresSauvegarde({ service_offers: [null, 'x'] }, 'service_offers', envoyees), envoyees)
 	})
 })
 
@@ -574,12 +466,9 @@ describe('offresAEnvoyer', () => {
 	})
 
 	test('an offer without options is sent with an empty list', () => {
-		assert.deepEqual(
-			offresAEnvoyer([
-				{ id: 'addedB', name: 'B', price: '5', description: 'b' },
-			]),
-			[{ name: 'B', price: '5', description: 'b', options: [] }]
-		)
+		assert.deepEqual(offresAEnvoyer([{ id: 'addedB', name: 'B', price: '5', description: 'b' }]), [
+			{ name: 'B', price: '5', description: 'b', options: [] },
+		])
 		assert.deepEqual(offresAEnvoyer(undefined), [])
 	})
 })
@@ -598,6 +487,7 @@ test('one section per modal and the onboarding, all distinct', () => {
 		'offres',
 		'portfolio',
 		'onboarding',
-	])
+	]) {
 		assert.ok(SECTIONS_PROFIL.includes(section), section)
+	}
 })

@@ -1,11 +1,11 @@
-import React from 'react'
 import Image from 'next/image'
+import React from 'react'
 import { BadgeDispo } from '@/components/Profil/Atoms/BadgeDispo'
 import { BadgeIndispo } from '@/components/Profil/Atoms/BadgeIndispo'
-import ModalUpdateResumeProfil from '@/components/Profil/Atoms/ModalUpdate/ModalUpdateResumeProfil'
 import BoutonModifier from '@/components/Profil/Atoms/BoutonModifier'
-import { villePublique } from '@/lib/profil/lieu-public'
+import ModalUpdateResumeProfil from '@/components/Profil/Atoms/ModalUpdate/ModalUpdateResumeProfil'
 import { rayonKm, villeAffichee } from '@/lib/format-zone'
+import { villePublique } from '@/lib/profil/lieu-public'
 
 function ResumeProfil(props) {
 	// the profile and the view of the page (src/pages/auth/profil.js), never
@@ -36,11 +36,7 @@ function ResumeProfil(props) {
 			/>
 			<div className="mx-auto max-w-7xl pt-[90px]">
 				<div className={'grid grid-cols-12 gap-5 pt-24'}>
-					<div
-						className={
-							'relative col-span-12 flex items-center justify-center xl:col-span-2 xl:justify-start'
-						}
-					>
+					<div className={'relative col-span-12 flex items-center justify-center xl:col-span-2 xl:justify-start'}>
 						{!isPublic ? (
 							<button
 								type="button"
@@ -55,9 +51,7 @@ function ResumeProfil(props) {
 								<span className="material-icons-round" aria-hidden="true">
 									add_a_photo
 								</span>
-								<span className={'text-sm font-semibold'}>
-									modifier votre photo
-								</span>
+								<span className={'text-sm font-semibold'}>modifier votre photo</span>
 							</button>
 						) : null}
 						<Image
@@ -68,35 +62,16 @@ function ResumeProfil(props) {
 							className={'h-[200px] w-[200px] rounded-full object-cover'}
 						></Image>
 					</div>
-					<div
-						className={
-							'col-span-12 flex items-center md:col-span-8 xl:col-span-7'
-						}
-					>
-						<div
-							className={
-								'flex h-full w-full flex-col justify-between py-8 md:py-0 md:pl-20'
-							}
-						>
+					<div className={'col-span-12 flex items-center md:col-span-8 xl:col-span-7'}>
+						<div className={'flex h-full w-full flex-col justify-between py-8 md:py-0 md:pl-20'}>
 							<div className={'flex w-full flex-col gap-2'}>
-								<h3
-									className={'text-3xl font-bold tracking-tight text-gray-800'}
-									data-cy="resume-name"
-								>
+								<h3 className={'text-3xl font-bold tracking-tight text-gray-800'} data-cy="resume-name">
 									{user?.first_name} {user?.last_name}
 								</h3>
-								<h2
-									className={
-										'text-xl font-semibold tracking-tight text-gray-700'
-									}
-									data-cy="resume-speciality"
-								>
+								<h2 className={'text-xl font-semibold tracking-tight text-gray-700'} data-cy="resume-speciality">
 									{user?.speciality}
 								</h2>
-								<h3
-									className={'text-lg tracking-tight text-gray-800'}
-									data-cy="resume-company-artist-name"
-								>
+								<h3 className={'text-lg tracking-tight text-gray-800'} data-cy="resume-company-artist-name">
 									{user?.company_artist_name}
 								</h3>
 								{!isPublic ? (
@@ -112,9 +87,7 @@ function ResumeProfil(props) {
 							<div>
 								{ville && (
 									<div className={'flex items-center gap-2'}>
-										<span className="material-icons-round text-indigo-900">
-											directions_run
-										</span>
+										<span className="material-icons-round text-indigo-900">directions_run</span>
 										<span data-cy={'resume-city-action-radius'}>
 											peut se déplacer à {ville}
 											{rayon ? ` & dans un rayon de ${rayon}km` : ''}
@@ -131,22 +104,8 @@ function ResumeProfil(props) {
 						</div>
 					</div>
 					<div className={'col-span-3 flex items-center'}>
-						<div
-							className={
-								'flex h-full w-full flex-col items-start justify-between'
-							}
-						>
-							<div className={'flex items-center gap-5'}>
-								{availability ? (
-									<>
-										<BadgeDispo />
-									</>
-								) : (
-									<>
-										<BadgeIndispo />
-									</>
-								)}
-							</div>
+						<div className={'flex h-full w-full flex-col items-start justify-between'}>
+							<div className={'flex items-center gap-5'}>{availability ? <BadgeDispo /> : <BadgeIndispo />}</div>
 						</div>
 					</div>
 				</div>

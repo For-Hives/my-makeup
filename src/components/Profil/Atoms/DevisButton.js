@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react'
-import { buildDevisHref } from '@/lib/devis'
+import { useEffect, useState } from 'react'
 import { umamiAttributes } from '@/lib/analytics'
+import { buildDevisHref } from '@/lib/devis'
 
 /**
  * « Demander un devis » (F3a): opens the external quote form in a new tab with

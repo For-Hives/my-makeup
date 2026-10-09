@@ -11,20 +11,14 @@ const DESCRIPTION_LONGUE =
 	'Maquilleuse professionnelle diplômée, je prépare les mariées et leurs proches à domicile ou dans les lieux de réception. ' +
 	'Essai en amont, produits adaptés aux peaux sensibles, retouches pendant la séance photo et conseils pour tenir toute la journée.'
 
-const DESCRIPTION_199 =
-	`${'Description fictive de cent quatre-vingt-dix-neuf caractères. '.repeat(4)}`.slice(
-		0,
-		199
-	)
+const DESCRIPTION_199 = `${'Description fictive de cent quatre-vingt-dix-neuf caractères. '.repeat(4)}`.slice(0, 199)
 
 const OFFRES = [
 	{
 		name: 'Mariée',
 		description: 'Essai, jour J et retouches',
 		price: 'à partir de 180 €',
-		options: [
-			{ name: 'Essai supplémentaire', description: 'Une heure', price: '60 €' },
-		],
+		options: [{ name: 'Essai supplémentaire', description: 'Une heure', price: '60 €' }],
 	},
 	{
 		name: 'Invitée',
@@ -50,8 +44,7 @@ const OFFRE_LIGNES_VIDES = {
 }
 
 // a postal address typed as the city (UI-11): street and number made up
-export const ADRESSE_FICTIVE =
-	'7 impasse des Essais Fictifs, 74200 Thonon-les-Bains, France'
+export const ADRESSE_FICTIVE = '7 impasse des Essais Fictifs, 74200 Thonon-les-Bains, France'
 // what of it must never be published
 export const RUE_FICTIVE = ['impasse', 'Essais Fictifs', '7 impasse']
 // a street glued to a made-up commune by a comma, no postal code: nothing
@@ -204,9 +197,7 @@ export const PROFILS_PUBLICS = [
 		username: 'manon-sur-devis',
 		createdAt: '2023-08-01T10:00:00.000Z',
 		first_name: 'Manon',
-		service_offers: [
-			{ name: 'Mariée', description: '', price: 'Sur devis', options: [] },
-		],
+		service_offers: [{ name: 'Mariée', description: '', price: 'Sur devis', options: [] }],
 		attendu: { slug: 'manon-sur-devis', publiable: false },
 	}),
 	// 8: no public channel (the quote form is off in the tests)
@@ -363,8 +354,7 @@ export const TALENTS = [
 		description: 'Les maquilleuses qui préparent les mariées.',
 		seo_description:
 			'Trouvez une maquilleuse professionnelle pour votre mariage : essai, jour J, retouches et maquillage des invitées.',
-		content:
-			'# Le jour J\n\nUn texte fictif sur le maquillage des mariées.\n\n## L’essai\n\nToujours avant.',
+		content: '# Le jour J\n\nUn texte fictif sur le maquillage des mariées.\n\n## L’essai\n\nToujours avant.',
 		updatedAt: '2026-08-01T09:00:00.000Z',
 	},
 	{
@@ -397,8 +387,7 @@ export const ARTICLES = [
 		slug: 'prix-maquillage-mariee',
 		title: 'Le prix d’un maquillage de mariée',
 		seo_title: 'Prix d’un maquillage de mariée',
-		seo_description:
-			'Combien coûte un maquillage de mariée ? Essai, jour J, déplacement.',
+		seo_description: 'Combien coûte un maquillage de mariée ? Essai, jour J, déplacement.',
 		excerpt: 'Ce que comprend le prix.',
 		content: '# Ce que comprend le prix\n\nUn article fictif.',
 		author: 'Équipe fictive',

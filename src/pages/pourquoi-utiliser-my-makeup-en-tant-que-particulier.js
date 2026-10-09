@@ -1,9 +1,8 @@
-import React from 'react'
-import Footer from '@/components/Global/Footer'
-import Nav from '@/components/Global/Nav'
 import Head from 'next/head'
-import Hero from '@/components/Global/Hero'
 import CTA from '@/components/Global/CTA'
+import Footer from '@/components/Global/Footer'
+import Hero from '@/components/Global/Hero'
+import Nav from '@/components/Global/Nav'
 import AdvantagesParticulier from '@/components/Particulier/AdvantagesParticulier'
 import { urlAbsolue } from '@/lib/seo/url'
 
@@ -11,7 +10,7 @@ import { urlAbsolue } from '@/lib/seo/url'
  * @param props
  * @constructor
  */
-function PourquoiUtiliserMyMakeupEnTantQueParticulier(props) {
+function PourquoiUtiliserMyMakeupEnTantQueParticulier(_props) {
 	return (
 		<>
 			<Head>
@@ -21,12 +20,7 @@ function PourquoiUtiliserMyMakeupEnTantQueParticulier(props) {
 					content="Découvrez pourquoi vous devriez utiliser My-Makeup en tant que particulier & professionnel"
 				/>
 				{/*	seo tag canonical link */}
-				<link
-					rel="canonical"
-					href={urlAbsolue(
-						'/pourquoi-utiliser-my-makeup-en-tant-que-particulier'
-					)}
-				/>
+				<link rel="canonical" href={urlAbsolue('/pourquoi-utiliser-my-makeup-en-tant-que-particulier')} />
 			</Head>
 			<Nav />
 
@@ -35,16 +29,13 @@ function PourquoiUtiliserMyMakeupEnTantQueParticulier(props) {
 					imgBackgroundSrc={'/assets/back/maquilleuse_africaine_white.webp'}
 					title={
 						<>
-							Pourquoi utiliser{' '}
-							<span className={'text-indigo-900'}>My&nbsp;Makeup</span> en tant
-							que particulier ?
+							Pourquoi utiliser <span className={'text-indigo-900'}>My&nbsp;Makeup</span> en tant que particulier ?
 						</>
 					}
 					description={
 						<>
-							Découvrez les avantages à utiliser notre plateforme pour
-							développer votre activité et trouver des passionnées expérimentées
-							!
+							Découvrez les avantages à utiliser notre plateforme pour développer votre activité et trouver des
+							passionnées expérimentées !
 						</>
 					}
 				/>

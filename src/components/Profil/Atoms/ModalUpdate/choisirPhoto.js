@@ -1,6 +1,6 @@
 import { toast } from 'react-toastify'
-import { preparerPhotoNavigateur } from '@/lib/photo-navigateur'
 import { track } from '@/lib/analytics'
+import { preparerPhotoNavigateur } from '@/lib/photo-navigateur'
 
 /**
  * A picture picked in a modal (UI-03): checked and compressed in the

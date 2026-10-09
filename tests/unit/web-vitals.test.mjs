@@ -1,15 +1,15 @@
-import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
+import { describe, test } from 'node:test'
+import { looksPersonal, trackWebVital } from '../../src/lib/analytics.js'
 import {
 	DEFAULT_WEB_VITALS_SAMPLE,
 	WEB_VITALS_EVENT,
 	webVitalData,
 	webVitalPage,
 	webVitalRating,
-	webVitalsSampleRate,
 	webVitalsSampled,
+	webVitalsSampleRate,
 } from '../../src/lib/web-vitals.js'
-import { looksPersonal, trackWebVital } from '../../src/lib/analytics.js'
 
 const fakeUmami = () => {
 	const calls = []
@@ -25,16 +25,18 @@ const fakeUmami = () => {
 describe('sampling (NEXT_PUBLIC_WEB_VITALS_SAMPLE)', () => {
 	test('10 % by default', () => {
 		assert.equal(DEFAULT_WEB_VITALS_SAMPLE, 0.1)
-		for (const raw of [undefined, null, '', '  '])
+		for (const raw of [undefined, null, '', '  ']) {
 			assert.equal(webVitalsSampleRate(raw), 0.1, String(raw))
+		}
 	})
 
 	test('a share from 0 to 1, anything else falls back to 10 %', () => {
 		assert.equal(webVitalsSampleRate('0.25'), 0.25)
 		assert.equal(webVitalsSampleRate('1'), 1)
 		assert.equal(webVitalsSampleRate('0'), 0)
-		for (const raw of ['10', '-0.1', 'abc', 'Infinity', '10 %'])
+		for (const raw of ['10', '-0.1', 'abc', 'Infinity', '10 %']) {
 			assert.equal(webVitalsSampleRate(raw), 0.1, raw)
+		}
 	})
 
 	test('one draw decides for the whole page load', () => {
@@ -47,23 +49,23 @@ describe('sampling (NEXT_PUBLIC_WEB_VITALS_SAMPLE)', () => {
 
 	test('about 10 % of page loads over many draws', () => {
 		let sampled = 0
-		for (let i = 0; i < 10_000; i++)
+		for (let i = 0; i < 10_000; i++) {
 			if (webVitalsSampled(undefined, i / 10_000)) sampled++
+		}
 		assert.equal(sampled, 1000)
 	})
 })
 
 describe('webVitalData', () => {
 	test('name, rounded value, rating and page of a metric', () => {
+		assert.deepEqual(webVitalData({ name: 'LCP', value: 2481.6, rating: 'good' }, '/'), {
+			name: 'LCP',
+			value: 2482,
+			rating: 'good',
+			page: '/',
+		})
 		assert.deepEqual(
-			webVitalData({ name: 'LCP', value: 2481.6, rating: 'good' }, '/'),
-			{ name: 'LCP', value: 2482, rating: 'good', page: '/' }
-		)
-		assert.deepEqual(
-			webVitalData(
-				{ name: 'CLS', value: 0.123456, rating: 'needs-improvement' },
-				'/profil/testine-recette'
-			),
+			webVitalData({ name: 'CLS', value: 0.123456, rating: 'needs-improvement' }, '/profil/testine-recette'),
 			{
 				name: 'CLS',
 				value: 0.123,
@@ -75,10 +77,7 @@ describe('webVitalData', () => {
 
 	test('the rating comes from the thresholds when the metric has none', () => {
 		assert.equal(webVitalData({ name: 'INP', value: 180 }, '/').rating, 'good')
-		assert.equal(
-			webVitalData({ name: 'TTFB', value: 1200, rating: 'meh' }, '/').rating,
-			'needs-improvement'
-		)
+		assert.equal(webVitalData({ name: 'TTFB', value: 1200, rating: 'meh' }, '/').rating, 'needs-improvement')
 		assert.equal(webVitalData({ name: 'FCP', value: 3001 }, '/').rating, 'poor')
 	})
 
@@ -96,16 +95,14 @@ describe('webVitalData', () => {
 			['TTFB', 800, 'good'],
 			['TTFB', 1801, 'poor'],
 		]
-		for (const [name, value, rating] of cases)
+		for (const [name, value, rating] of cases) {
 			assert.equal(webVitalRating(name, value), rating, `${name} ${value}`)
+		}
 	})
 
 	test('the page is a path, without query string nor hash, 99 characters at most', () => {
-		assert.equal(
-			webVitalPage('/search?search=mariage&city=Annecy#x'),
-			'/search'
-		)
-		assert.equal(webVitalPage('/' + 'a'.repeat(200)).length, 99)
+		assert.equal(webVitalPage('/search?search=mariage&city=Annecy#x'), '/search')
+		assert.equal(webVitalPage(`/${'a'.repeat(200)}`).length, 99)
 		assert.equal(webVitalPage('https://my-makeup.fr/'), null)
 		assert.equal(webVitalPage(undefined), null)
 	})
@@ -120,19 +117,16 @@ describe('webVitalData', () => {
 			{ name: 'LCP' },
 			null,
 			'LCP',
-		])
+		]) {
 			assert.equal(webVitalData(metric, '/'), null, JSON.stringify(metric))
+		}
 		assert.equal(webVitalData({ name: 'LCP', value: 1 }, ''), null)
 	})
 
 	test('no value can carry an email or a phone number', () => {
-		const data = webVitalData(
-			{ name: 'LCP', value: 123456789.4, rating: 'poor' },
-			'/'
-		)
+		const data = webVitalData({ name: 'LCP', value: 123456789.4, rating: 'poor' }, '/')
 		for (const value of Object.values(data)) {
-			if (typeof value === 'string')
-				assert.equal(looksPersonal(value), false, value)
+			if (typeof value === 'string') assert.equal(looksPersonal(value), false, value)
 		}
 	})
 })
@@ -148,12 +142,7 @@ describe('trackWebVital', () => {
 			}),
 			true
 		)
-		assert.deepEqual(calls, [
-			[
-				'web-vitals',
-				{ name: 'TTFB', value: 312, rating: 'good', page: '/blog' },
-			],
-		])
+		assert.deepEqual(calls, [['web-vitals', { name: 'TTFB', value: 312, rating: 'good', page: '/blog' }]])
 	})
 
 	test('an early metric (FCP, TTFB) waits for the Umami script', () => {
@@ -169,19 +158,14 @@ describe('trackWebVital', () => {
 			}),
 			true
 		)
-		assert.deepEqual(attente, [
-			['web-vitals', { name: 'FCP', value: 813, rating: 'good', page: '/' }],
-		])
+		assert.deepEqual(attente, [['web-vitals', { name: 'FCP', value: 813, rating: 'good', page: '/' }]])
 	})
 
 	test('same guards as track: production, Umami, no automated browser', () => {
 		const { calls, win } = fakeUmami()
 		const metric = { name: 'LCP', value: 1000, rating: 'good' }
 		assert.equal(trackWebVital(metric, '/', { win, production: false }), false)
-		assert.equal(
-			trackWebVital(metric, '/', { win: {}, production: true }),
-			false
-		)
+		assert.equal(trackWebVital(metric, '/', { win: {}, production: true }), false)
 		win.navigator.webdriver = true
 		assert.equal(trackWebVital(metric, '/', { win, production: true }), false)
 		assert.deepEqual(calls, [])
@@ -190,10 +174,7 @@ describe('trackWebVital', () => {
 	test('a page that looks personal, or a throwing Umami, sends nothing', () => {
 		const { calls, win } = fakeUmami()
 		const metric = { name: 'LCP', value: 1000, rating: 'good' }
-		assert.equal(
-			trackWebVital(metric, '/profil/a@b.fr', { win, production: true }),
-			false
-		)
+		assert.equal(trackWebVital(metric, '/profil/a@b.fr', { win, production: true }), false)
 		assert.equal(
 			trackWebVital(metric, '/', {
 				win: {

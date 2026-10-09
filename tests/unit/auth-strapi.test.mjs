@@ -1,11 +1,6 @@
-import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
-import {
-	ErreurAuth,
-	authentifierStrapi,
-	connexionStrapiOAuth,
-	statutCompteStrapi,
-} from '../../src/lib/auth-strapi.js'
+import { describe, test } from 'node:test'
+import { authentifierStrapi, connexionStrapiOAuth, ErreurAuth, statutCompteStrapi } from '../../src/lib/auth-strapi.js'
 
 const API = 'http://strapi.test'
 
@@ -76,37 +71,13 @@ describe('authentifierStrapi', () => {
 	})
 
 	const echecs = [
-		[
-			'wrong password (400)',
-			faux(400, strapiErreur(400, 'Invalid identifier or password')),
-			'identifiants-invalides',
-		],
-		[
-			'name taken (400)',
-			faux(400, strapiErreur(400, 'Email or Username are already taken')),
-			'email-ou-nom-deja-pris',
-		],
-		[
-			'rate limit (429)',
-			faux(429, strapiErreur(429, 'Too many requests')),
-			'trop-de-tentatives',
-		],
-		[
-			'Traefik 502 in HTML',
-			faux(502, '<html>Bad Gateway</html>', { brut: true }),
-			'service-indisponible',
-		],
-		[
-			'200 without JWT (email confirmation on)',
-			faux(200, { user: { id: 7 } }),
-			'email-non-confirme',
-		],
+		['wrong password (400)', faux(400, strapiErreur(400, 'Invalid identifier or password')), 'identifiants-invalides'],
+		['name taken (400)', faux(400, strapiErreur(400, 'Email or Username are already taken')), 'email-ou-nom-deja-pris'],
+		['rate limit (429)', faux(429, strapiErreur(429, 'Too many requests')), 'trop-de-tentatives'],
+		['Traefik 502 in HTML', faux(502, '<html>Bad Gateway</html>', { brut: true }), 'service-indisponible'],
+		['200 without JWT (email confirmation on)', faux(200, { user: { id: 7 } }), 'email-non-confirme'],
 		['200 with an unexpected body', faux(200, { ok: true }), 'erreur-inconnue'],
-		[
-			'network failure or timeout',
-			{ fetchImpl: enPanne },
-			'service-indisponible',
-		],
+		['network failure or timeout', { fetchImpl: enPanne }, 'service-indisponible'],
 	]
 	for (const [nom, { fetchImpl }, code] of echecs) {
 		test(`${nom} → ErreurAuth ${code}, never a TypeError`, async () => {
@@ -117,25 +88,19 @@ describe('authentifierStrapi', () => {
 					password: 'x',
 					fetchImpl,
 				}),
-				erreur =>
-					erreur instanceof ErreurAuth &&
-					erreur.message === code &&
-					erreur.code === code
+				erreur => erreur instanceof ErreurAuth && erreur.message === code && erreur.code === code
 			)
 		})
 	}
 
 	test('empty email or password: refused without calling Strapi', async () => {
 		const { appels, fetchImpl } = faux(200, reponseConnexion)
-		for (const identifiants of [
-			{ email: '', password: 'x' },
-			{ email: 'm@test.local', password: '' },
-			{},
-		])
-			await assert.rejects(
-				authentifierStrapi({ api: API, ...identifiants, fetchImpl }),
-				{ message: 'identifiants-invalides' }
-			)
+		for (const identifiants of [{ email: '', password: 'x' }, { email: 'm@test.local', password: '' }, {}]) {
+			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
+			await assert.rejects(authentifierStrapi({ api: API, ...identifiants, fetchImpl }), {
+				message: 'identifiants-invalides',
+			})
+		}
 		assert.equal(appels.length, 0)
 	})
 })
@@ -150,17 +115,11 @@ describe('connexionStrapiOAuth (Google)', () => {
 			fetchImpl,
 		})
 		assert.deepEqual(resultat, { id: 7, jwt: 'jwt-factice' })
-		assert.equal(
-			appels[0].url,
-			`${API}/api/auth/google/callback?access_token=a%26b%3Dc`
-		)
+		assert.equal(appels[0].url, `${API}/api/auth/google/callback?access_token=a%26b%3Dc`)
 	})
 
 	test('email with a password account → email-deja-avec-mot-de-passe', async () => {
-		const { fetchImpl } = faux(
-			400,
-			strapiErreur(400, 'Email is already taken.')
-		)
+		const { fetchImpl } = faux(400, strapiErreur(400, 'Email is already taken.'))
 		await assert.rejects(
 			connexionStrapiOAuth({
 				api: API,
@@ -183,34 +142,22 @@ describe('connexionStrapiOAuth (Google)', () => {
 			{ message: 'service-indisponible' }
 		)
 		const { appels, fetchImpl } = faux(200, reponseConnexion)
-		await assert.rejects(
-			connexionStrapiOAuth({ api: API, provider: 'google', fetchImpl }),
-			{
-				message: 'service-indisponible',
-			}
-		)
+		await assert.rejects(connexionStrapiOAuth({ api: API, provider: 'google', fetchImpl }), {
+			message: 'service-indisponible',
+		})
 		assert.equal(appels.length, 0)
 	})
 })
 
 describe('statutCompteStrapi (/api/users/me)', () => {
 	test('status of the answer, with the JWT in the header', async () => {
-		const { appels, fetchImpl } = faux(
-			401,
-			strapiErreur(401, 'Missing or invalid credentials')
-		)
-		assert.equal(
-			await statutCompteStrapi({ api: API, jwt: 'jwt-factice', fetchImpl }),
-			401
-		)
+		const { appels, fetchImpl } = faux(401, strapiErreur(401, 'Missing or invalid credentials'))
+		assert.equal(await statutCompteStrapi({ api: API, jwt: 'jwt-factice', fetchImpl }), 401)
 		assert.equal(appels[0].url, `${API}/api/users/me`)
 		assert.equal(appels[0].init.headers.Authorization, 'Bearer jwt-factice')
 	})
 
 	test('0 when Strapi cannot be reached in time', async () => {
-		assert.equal(
-			await statutCompteStrapi({ api: API, jwt: 'j', fetchImpl: enPanne }),
-			0
-		)
+		assert.equal(await statutCompteStrapi({ api: API, jwt: 'j', fetchImpl: enPanne }), 0)
 	})
 })

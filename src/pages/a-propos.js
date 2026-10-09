@@ -1,16 +1,15 @@
-import React from 'react'
-import Nav from '@/components/Global/Nav'
-import Footer from '@/components/Global/Footer'
-import CTA from '@/components/Global/CTA'
 import Head from 'next/head'
+import CTA from '@/components/Global/CTA'
+import Footer from '@/components/Global/Footer'
 import Hero from '@/components/Global/Hero'
+import Nav from '@/components/Global/Nav'
 import { urlAbsolue } from '@/lib/seo/url'
 
 /**
  * @param props
  * @constructor
  */
-function APropos(props) {
+function APropos(_props) {
 	return (
 		<>
 			<Head>
@@ -35,18 +34,12 @@ function APropos(props) {
 						</>
 					}
 					description={
-						<>
-							{
-								'Découvrez comment My-Makeup peut aider les personnes à trouver la maquilleuse professionnelle qui leur correspond. Et comment nous pouvons aider les maquilleuses professionnelles à présenter leur travail et à se faire connaître de nouveaux clients.'
-							}
-						</>
+						'Découvrez comment My-Makeup peut aider les personnes à trouver la maquilleuse professionnelle qui leur correspond. Et comment nous pouvons aider les maquilleuses professionnelles à présenter leur travail et à se faire connaître de nouveaux clients.'
 					}
 					isSearchDisplayed={false}
 					isCTALoginDisplayed={true}
 				/>
-				<div
-					className={'relative mx-auto my-24 max-w-7xl px-4 md:my-48 md:px-0'}
-				>
+				<div className={'relative mx-auto my-24 max-w-7xl px-4 md:my-48 md:px-0'}>
 					<div className="mx-auto max-w-2xl">
 						<article>
 							<header className="flex flex-col">

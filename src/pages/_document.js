@@ -29,9 +29,7 @@ export default function Document() {
 		<Html lang="fr">
 			<Head>
 				<link rel="icon" href="/favicon.webp" />
-				{CHARGEUR_UMAMI && (
-					<script dangerouslySetInnerHTML={{ __html: CHARGEUR_UMAMI }} />
-				)}
+				{CHARGEUR_UMAMI && <script dangerouslySetInnerHTML={{ __html: CHARGEUR_UMAMI }} />}
 			</Head>
 			<body className={'bg-neutral-50'}>
 				<Main />
