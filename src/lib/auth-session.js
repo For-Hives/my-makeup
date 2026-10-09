@@ -128,6 +128,50 @@ export function urlApiServeur({ interne, publique } = {}) {
 const COOKIE_SESSION = /^(__Secure-)?next-auth\.session-token(\.\d+)?$/
 
 /**
+ * Whether the browser sent a NextAuth session cookie (plain, `__Secure-` or
+ * one of its chunks): a visitor who never signed in sends none.
+ * @param {string[]} noms - cookie names of the request
+ * @returns {boolean}
+ */
+export function aCookieDeSession(noms = []) {
+	return noms.some(nom => COOKIE_SESSION.test(nom))
+}
+
+/**
+ * Where a session that ended was caught, as `session_expired` counts it
+ * (`where` of the analytics catalogue):
+ * - `api_401`: Strapi refused the JWT on a page or API call
+ * - `jwt_expire`: the session read refused it (Strapi JWT expired, or
+ *   `/api/users/me` in 401 at revalidation)
+ * - `middleware`: the middleware saw an expired JWT or an unreadable token
+ */
+export const OU_SESSION_EXPIREE = ['api_401', 'jwt_expire', 'middleware']
+
+/**
+ * Sign-in page with the « session expirée » message, where it was caught and
+ * the page to come back to (RG-08).
+ * @param {string} chemin - path (and query) of the private page
+ * @param {'api_401'|'jwt_expire'|'middleware'} ou
+ * @returns {string}
+ */
+export function urlSessionExpiree(chemin, ou) {
+	if (!OU_SESSION_EXPIREE.includes(ou))
+		throw new Error(`ou inconnu : ${String(ou)}`)
+	return `/auth/signin?error=session-expiree&ou=${ou}&callbackUrl=${encodeURIComponent(chemin)}`
+}
+
+/**
+ * `where` of `session_expired` from the `?ou=` of the sign-in page: a value
+ * of the catalogue, `api_401` otherwise (the older links carry no `ou`).
+ * @param {unknown} brut
+ * @returns {'api_401'|'jwt_expire'|'middleware'}
+ */
+export function ouSessionExpiree(brut) {
+	const valeur = Array.isArray(brut) ? brut[0] : brut
+	return OU_SESSION_EXPIREE.includes(valeur) ? valeur : 'api_401'
+}
+
+/**
  * `Set-Cookie` values that delete the NextAuth session cookie and its chunks
  * (`.0`, `.1`…) among the cookie names sent by the browser.
  * @param {string[]} noms

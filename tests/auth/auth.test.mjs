@@ -174,11 +174,12 @@ describe('AF-03 - private pages without a valid session: one redirection, no loo
 		)
 	})
 
-	test('Strapi JWT expired: the middleware redirects once, the next session read deletes the cookie', async () => {
+	test('Strapi JWT expired: the middleware redirects once with the « session expirée » message and deletes the cookie', async () => {
 		await reset()
 		await mode({ ttl: '30' }) // inside the 60 s margin: treated as expired
 		const jar = new Jar()
 		await login(jar)
+		assert.equal(jar.session().length, 1)
 		const etapes = await suivre(jar, '/auth/profil')
 		assert.deepEqual(
 			etapes.map(e => e.status),
@@ -186,10 +187,33 @@ describe('AF-03 - private pages without a valid session: one redirection, no loo
 		)
 		assert.equal(
 			etapes[0].location,
-			'/auth/signin?callbackUrl=%2Fauth%2Fprofil'
+			'/auth/signin?error=session-expiree&ou=middleware&callbackUrl=%2Fauth%2Fprofil'
 		)
+		assert.deepEqual(jar.session(), [], 'cookie effacé par le middleware')
 		assert.deepEqual(await session(jar), {})
+		assert.match(journal(), /\[auth\] evt=session_expiree code=middleware/)
+	})
+
+	test('unreadable session cookie (secret rotated), chunks included: the same redirection, every chunk deleted', async () => {
+		await reset()
+		const jar = new Jar()
+		jar.c.set('next-auth.session-token.0', 'illisible')
+		jar.c.set('next-auth.session-token.1', 'illisible')
+		const res = await req(jar, '/auth/init-account')
+		assert.equal(res.status, 307)
+		assert.equal(
+			res.headers.get('location'),
+			'/auth/signin?error=session-expiree&ou=middleware&callbackUrl=%2Fauth%2Finit-account'
+		)
+		assert.deepEqual(
+			res.headers
+				.getSetCookie()
+				.map(cookie => cookie.split('=')[0])
+				.sort(),
+			['next-auth.session-token.0', 'next-auth.session-token.1']
+		)
 		assert.deepEqual(jar.session(), [])
+		assert.equal(await appelsUsersMe(), 0, 'Strapi jamais appelé')
 	})
 
 	test('Strapi refuses the JWT on /me-makeup (while /users/me still says 200): cookie deleted, « session expirée » message, no loop', async () => {
@@ -212,6 +236,51 @@ describe('AF-03 - private pages without a valid session: one redirection, no loo
 			[200]
 		)
 		assert.match(journal(), /\[auth\] evt=session_expiree code=api_401/)
+	})
+
+	test('/users/me refuses the JWT at the session read: one 307 from /auth/init-account to the sign-in page with the message, never the « check your email » screen', async () => {
+		await reset()
+		const jar = new Jar()
+		await login(jar)
+		await mode({ usersMe: '401' })
+		const pages = []
+		const etapes = []
+		let url = '/auth/init-account'
+		for (let i = 0; i < 5; i++) {
+			const res = await req(jar, url)
+			const location = res.headers.get('location')
+			etapes.push({ status: res.status, location })
+			pages.push(await res.text())
+			if (res.status < 300 || res.status >= 400) break
+			url = location
+		}
+		assert.deepEqual(
+			etapes.map(e => e.status),
+			[307, 200]
+		)
+		assert.equal(
+			etapes[0].location,
+			'/auth/signin?error=session-expiree&ou=jwt_expire&callbackUrl=%2Fauth%2Finit-account'
+		)
+		assert.deepEqual(jar.session(), [], 'cookie effacé')
+		for (const html of pages)
+			assert.doesNotMatch(html, /Vérification de votre adresse email/)
+	})
+
+	test('/users/me in 401 inside the revalidation window: the page itself sends her to the sign-in page, never the « check your email » screen', async () => {
+		await reset()
+		const jar = new Jar()
+		await login(jar, {}, APP_FENETRE)
+		await mode({ usersMe: '401' })
+		const res = await req(jar, '/auth/init-account', {}, APP_FENETRE)
+		assert.equal(res.status, 307)
+		assert.equal(
+			res.headers.get('location'),
+			'/auth/signin?error=session-expiree'
+		)
+		assert.doesNotMatch(await res.text(), /Vérification de votre adresse email/)
+		assert.deepEqual(jar.session(), [], 'cookie effacé par la page')
+		assert.equal(await appelsUsersMe(), 1, 'un seul appel, celui de la page')
 	})
 })
 

@@ -24,8 +24,10 @@ import {
 } from '@/pages/api/auth/[...nextauth]'
 import { messageErreur } from '@/lib/auth-erreurs'
 import {
+	aCookieDeSession,
 	cookiesSessionAEffacer,
 	DELAI_REVALIDATION_MS,
+	urlSessionExpiree,
 } from '@/lib/auth-session'
 
 const schema = zod
@@ -574,6 +576,18 @@ export const getServerSideProps = async ({ req, res }) => {
 
 	const session = await getServerSession(req, res, authOptions)
 	if (!session?.jwt) {
+		const cookies = Object.keys(req.cookies ?? {})
+		if (aCookieDeSession(cookies)) {
+			// the session read refused the cookie (Strapi JWT expired, or
+			// /users/me in 401): sign-in again, never « check your email »
+			res.setHeader('Set-Cookie', cookiesSessionAEffacer(cookies))
+			return {
+				redirect: {
+					destination: urlSessionExpiree('/auth/init-account', 'jwt_expire'),
+					permanent: false,
+				},
+			}
+		}
 		return {
 			redirect: {
 				destination: '/auth/signin?callbackUrl=%2Fauth%2Finit-account',
