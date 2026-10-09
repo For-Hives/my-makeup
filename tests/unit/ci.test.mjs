@@ -659,3 +659,143 @@ describe('URG-11 ménage : les gardes refusent l’ancien état', () => {
 		)
 	})
 })
+
+// GitHub secrets the workflows may read (Settings › Secrets › Actions).
+// GITHUB_TOKEN is the one GitHub gives every run. A new secret is added
+// here on purpose, in the same pull request as the workflow that reads it.
+const SECRETS_AUTORISES = [
+	'NEXTAUTH_SECRET',
+	'NEXTAUTH_URL',
+	'GOOGLE_CLIENT_ID',
+	'GOOGLE_CLIENT_SECRET',
+	'MAILGUN_API_KEY',
+	'MAILGUN_API_URL',
+	'MAILGUN_PUBLIC_KEY',
+	'MAILGUN_DOMAIN',
+	'APP_IMAGE',
+	'GITHUB_TOKEN',
+]
+// secrets of the removed Cypress job (its production test account) and
+// SonarQube job (URG-11), to be deleted from GitHub (Settings › Secrets ›
+// Actions): no workflow may read them again, before their deletion (the old
+// values) or after it (empty values)
+const SECRETS_SUPPRIMES = [
+	'TEST_USER',
+	'TEST_PW',
+	'SONAR_TOKEN',
+	'SONAR_HOST_URL',
+]
+
+// one secret by its name: `secrets.NAME` or `secrets['NAME']`
+const SECRET_NOMME =
+	/\bsecrets\s*(?:\.\s*([A-Za-z_][\w-]*)|\[\s*['"]([^'"]+)['"]\s*\])/gi
+
+/**
+ * The expressions of a line: each `${{ … }}`, and an `if:`, an expression
+ * even without them.
+ */
+function expressions(ligne) {
+	const dedans = [...ligne.matchAll(/\$\{\{([\s\S]*?)\}\}/g)].map(m => m[1])
+	const si = /^\s*(?:-\s+)?if\s*:\s*(.*)$/.exec(ligne)
+	if (si && !si[1].includes('${{')) dedans.push(si[1])
+	return dedans.map(e => e.trim())
+}
+
+/**
+ * Every secret a workflow reads, `secrets.NAME` or `secrets['NAME']`, the
+ * name in capitals as GitHub matches it; `*` when it reads them all: any
+ * other `secrets` in an expression (`toJSON(secrets)`, `secrets[matrix.x]`,
+ * `secrets` alone) or `secrets: inherit` handed to a reusable workflow. A
+ * `#` line is skipped only without `${{`: in a `run: |` block GitHub fills
+ * the expression in before the shell reads the comment.
+ */
+function secretsLus({ fichier, texte }) {
+	const lus = []
+	texte.split('\n').forEach((ligne, i) => {
+		const ou = `${fichier}:${i + 1}`
+		if (ligne.trimStart().startsWith('#') && !ligne.includes('${{')) return
+		for (const m of ligne.matchAll(SECRET_NOMME)) {
+			const nom = (m[1] ?? m[2]).toUpperCase()
+			lus.push({ nom, lu: `secrets.${nom}`, ou })
+		}
+		for (const expression of expressions(ligne))
+			if (/\bsecrets\b/i.test(expression.replace(SECRET_NOMME, '')))
+				lus.push({ nom: '*', lu: expression, ou })
+		if (/^\s*secrets\s*:\s*inherit\b/.test(ligne))
+			lus.push({ nom: '*', lu: 'secrets: inherit', ou })
+	})
+	return lus
+}
+
+/** The secrets read that are not in the allowlist. */
+const secretsHorsListe = workflows =>
+	workflows
+		.flatMap(secretsLus)
+		.filter(({ nom }) => !SECRETS_AUTORISES.includes(nom))
+		.map(({ lu, ou }) => `${ou} : ${lu}`)
+
+describe('secrets GitHub des workflows', () => {
+	test('les workflows ne lisent que les secrets de la liste, aucun secret supprimé', () => {
+		const workflows = workflowsDuDepot()
+		assert.ok(workflows.flatMap(secretsLus).length > 0)
+		assert.deepEqual(secretsHorsListe(workflows), [])
+		for (const nom of SECRETS_SUPPRIMES)
+			assert.ok(!SECRETS_AUTORISES.includes(nom), nom)
+	})
+
+	// the guard must see what it guards: the old workflow of the Cypress and
+	// SonarQube jobs, in every spelling GitHub accepts
+	test('un workflow qui lit TEST_USER, TEST_PW ou SONAR_* est refusé', () => {
+		const ancien = lireWorkflow(
+			'ancien.yml',
+			[
+				'env:',
+				'  NEXTAUTH_SECRET: ${{secrets.NEXTAUTH_SECRET}}',
+				'  CYPRESS_TEST_USER: ${{ secrets.TEST_USER }}',
+				'  CYPRESS_TEST_PW: ${{secrets.TEST_PW}}',
+				'jobs:',
+				'  analyse:',
+				'    env:',
+				'      SONAR_TOKEN: ${{ secrets.sonar_token }}',
+				"      SONAR_HOST_URL: ${{ secrets['SONAR_HOST_URL'] }}",
+				'    # was: secrets.OLD_ONE',
+				'    steps:',
+				'      - name: vérifie les secrets',
+				'        run: echo "${{ secrets.GITHUB_TOKEN }}" > /dev/null',
+				'      - run: |',
+				'          # login ${{ secrets.TEST_PW }}',
+				"          echo '${{ toJSON(secrets) }}' > /dev/null",
+				"      - if: secrets[matrix.nom] != ''",
+				'        run: echo ok',
+				'  appel:',
+				'    uses: ./.github/workflows/reutilisable.yml',
+				'    secrets: inherit',
+			].join('\n')
+		)
+		assert.deepEqual(secretsHorsListe([ancien]), [
+			'ancien.yml:3 : secrets.TEST_USER',
+			'ancien.yml:4 : secrets.TEST_PW',
+			'ancien.yml:8 : secrets.SONAR_TOKEN',
+			'ancien.yml:9 : secrets.SONAR_HOST_URL',
+			'ancien.yml:15 : secrets.TEST_PW',
+			'ancien.yml:16 : toJSON(secrets)',
+			"ancien.yml:17 : secrets[matrix.nom] != ''",
+			'ancien.yml:21 : secrets: inherit',
+		])
+		assert.deepEqual(
+			secretsLus(ancien).map(s => s.nom),
+			[
+				'NEXTAUTH_SECRET',
+				'TEST_USER',
+				'TEST_PW',
+				'SONAR_TOKEN',
+				'SONAR_HOST_URL',
+				'GITHUB_TOKEN',
+				'TEST_PW',
+				'*',
+				'*',
+				'*',
+			]
+		)
+	})
+})
