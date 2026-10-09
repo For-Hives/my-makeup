@@ -571,7 +571,7 @@ function InitAccount({ compte, erreur }) {
 
 export default InitAccount
 
-export const getServerSideProps = async ({ req, res }) => {
+export const getServerSideProps = async ({ req, res, resolvedUrl }) => {
 	res.setHeader('Cache-Control', 'private, no-store')
 
 	const session = await getServerSession(req, res, authOptions)
@@ -583,7 +583,10 @@ export const getServerSideProps = async ({ req, res }) => {
 			res.setHeader('Set-Cookie', cookiesSessionAEffacer(cookies))
 			return {
 				redirect: {
-					destination: urlSessionExpiree('/auth/init-account', 'jwt_expire'),
+					destination: urlSessionExpiree(
+						resolvedUrl ?? '/auth/init-account',
+						'jwt_expire'
+					),
 					permanent: false,
 				},
 			}

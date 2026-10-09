@@ -79,7 +79,7 @@ function Profil({ data, erreur }) {
 	)
 }
 
-export const getServerSideProps = async ({ req, res }) => {
+export const getServerSideProps = async ({ req, res, resolvedUrl }) => {
 	// private page: never in a shared cache (it used to be public, s-maxage=10)
 	res.setHeader('Cache-Control', 'private, no-store')
 
@@ -89,11 +89,15 @@ export const getServerSideProps = async ({ req, res }) => {
 		const cookies = Object.keys(req.cookies ?? {})
 		if (aCookieDeSession(cookies)) {
 			// the session read refused the cookie (Strapi JWT expired, or
-			// /users/me in 401): one redirection, with the message (RG-08)
+			// /users/me in 401): one redirection, with the message (RG-08),
+			// back to the same page and query as the middleware's
 			res.setHeader('Set-Cookie', cookiesSessionAEffacer(cookies))
 			return {
 				redirect: {
-					destination: urlSessionExpiree('/auth/profil', 'jwt_expire'),
+					destination: urlSessionExpiree(
+						resolvedUrl ?? '/auth/profil',
+						'jwt_expire'
+					),
 					permanent: false,
 				},
 			}

@@ -320,6 +320,23 @@ describe('AF-03 - private pages without a valid session: one redirection, no loo
 			assert.doesNotMatch(html, /Vérification de votre adresse email/)
 	})
 
+	test('/users/me refuses the JWT at the session read of /auth/profil?publicView=true: the page to come back to keeps its query, as the middleware does', async () => {
+		await reset()
+		const jar = new Jar()
+		await login(jar)
+		await mode({ usersMe: '401' })
+		const etapes = await suivre(jar, '/auth/profil?publicView=true')
+		assert.deepEqual(
+			etapes.map(e => e.status),
+			[307, 200]
+		)
+		assert.equal(
+			etapes[0].location,
+			'/auth/signin?error=session-expiree&ou=jwt_expire&callbackUrl=%2Fauth%2Fprofil%3FpublicView%3Dtrue'
+		)
+		assert.deepEqual(jar.session(), [])
+	})
+
 	test('/users/me in 401 inside the revalidation window: the page itself sends her to the sign-in page, never the « check your email » screen', async () => {
 		await reset()
 		const jar = new Jar()
