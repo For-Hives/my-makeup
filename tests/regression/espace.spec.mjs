@@ -950,6 +950,96 @@ test.describe('RG-08 session expirée', () => {
 			[200, '/auth/signin'],
 		])
 	})
+
+	test('RG-08 JWT Strapi expiré à l’ouverture de l’espace : une seule redirection (307) par le middleware, message « session expirée », page gardée, pas de boucle', async ({
+		page,
+	}) => {
+		// 30 s: inside the 60 s margin, the JWT counts as expired
+		await panne({ dureeJwtS: 30 })
+		expect(await connecter(page)).toBe(true)
+		const vues = navigations(page)
+		const redirection = page.waitForResponse(
+			r => new URL(r.url()).pathname === '/auth/profil'
+		)
+
+		await page.goto('/auth/profil')
+		await expect(page).toHaveURL(
+			/\/auth\/signin\?error=session-expiree&ou=middleware&callbackUrl=%2Fauth%2Fprofil$/
+		)
+		// the middleware deletes the cookie on the 307 itself, before the
+		// sign-in page reads the session
+		expect((await redirection).status()).toBe(307)
+		expect(await (await redirection).headerValues('set-cookie')).toEqual([
+			expect.stringMatching(/^next-auth\.session-token=; .*Max-Age=0/),
+		])
+		await expect(page.getByTestId('signin-url-error')).toHaveText(
+			'Ta session a expiré, reconnecte-toi.'
+		)
+		await page.waitForLoadState('networkidle')
+		expect(vues).toEqual([
+			[307, '/auth/profil'],
+			[200, '/auth/signin'],
+		])
+		expect(await sessionPresente(page)).toBe(false)
+		expect(appels((await etat()).journal, 'GET', '/api/me-makeup')).toEqual([])
+	})
+
+	test('RG-08 JWT révoqué, refusé par /users/me à la lecture de la session : une seule redirection (307), message « session expirée », retour à l’espace après connexion', async ({
+		page,
+	}) => {
+		expect(await connecter(page)).toBe(true)
+		// every JWT issued so far is refused, /users/me included; run.mjs sets
+		// AUTH_REVALIDATION_MS=0, so the session read asks Strapi every time
+		await piloter('/__revoquer', {})
+		const vues = navigations(page)
+
+		await page.goto('/auth/profil')
+		await expect(page).toHaveURL(
+			/\/auth\/signin\?error=session-expiree&ou=jwt_expire&callbackUrl=%2Fauth%2Fprofil$/
+		)
+		await expect(page.getByTestId('signin-url-error')).toHaveText(
+			'Ta session a expiré, reconnecte-toi.'
+		)
+		await page.waitForLoadState('networkidle')
+		expect(vues).toEqual([
+			[307, '/auth/profil'],
+			[200, '/auth/signin'],
+		])
+		expect(await sessionPresente(page)).toBe(false)
+
+		// signing in again goes back to the page she asked for
+		await page.getByTestId('email-input').fill(COMPTE_TEST.email)
+		await page.getByTestId('password-input').fill(COMPTE_TEST.password)
+		await page.getByTestId('email-signin').click()
+		await expect(page).toHaveURL(/\/auth\/profil$/)
+		await expect(page.getByTestId('resume-name')).toHaveText('Testine Recette')
+	})
+
+	test('RG-08 JWT Strapi expiré, clic sur « Profil » dans le menu (navigation côté client) : message « session expirée », page gardée, pas de boucle', async ({
+		page,
+	}) => {
+		expect(await connecter(page)).toBe(true)
+		await aller(page, '/')
+		const lien = page.getByRole('link', { name: 'Profil', exact: true })
+		await expect(lien).toBeVisible()
+		// a new session whose JWT is already inside the 60 s margin, that the
+		// open page has not read: as if it expired while she was reading
+		await panne({ dureeJwtS: 30 })
+		expect(await connecter(page)).toBe(true)
+		const vues = navigations(page)
+
+		await lien.click()
+		await expect(page).toHaveURL(
+			/\/auth\/signin\?error=session-expiree&ou=middleware&callbackUrl=%2Fauth%2Fprofil$/
+		)
+		await expect(page.getByTestId('signin-url-error')).toHaveText(
+			'Ta session a expiré, reconnecte-toi.'
+		)
+		await page.waitForLoadState('networkidle')
+		expect(versLaConnexion(vues).length).toBeLessThanOrEqual(1)
+		expect(await sessionPresente(page)).toBe(false)
+		expect(appels((await etat()).journal, 'GET', '/api/me-makeup')).toEqual([])
+	})
 })
 
 test.describe('A7 mot de passe oublié', () => {
