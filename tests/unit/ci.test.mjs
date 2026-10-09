@@ -506,7 +506,8 @@ describe('URG-11 ménage', () => {
 				return null
 			}
 		})
-		assert.ok(origines.includes('https://my-makeup.fr'))
+		const site = new URL('https://my-makeup.fr').origin
+		assert.ok(origines.some(origine => origine === site))
 	})
 })
 
