@@ -105,6 +105,32 @@ describe('completude (plans/02 U01-U07)', () => {
 		)
 	})
 
+	// the steps of the removed Cypress profile spec (8 %, 38 %, 92 %): the bar
+	// shows Math.round(100 / 13 * score)
+	test('names alone: 1/13 (both needed), a short description counts for the bar', () => {
+		const noms = { first_name: 'Al', last_name: 'Bo' }
+		assert.equal(completude(noms).score, 1)
+		assert.deepEqual(completude(noms).manquants, CRITERES.slice(1))
+		assert.equal(completude({ first_name: 'Al' }).score, 0)
+		assert.equal(completude({ last_name: 'Bo' }).score, 0)
+		assert.equal(completude({ first_name: 'Al', last_name: '  ' }).score, 0)
+		// under the 200 characters of `publiable`, still one criterion
+		const courte = completude({ ...noms, description: 'x' })
+		assert.equal(courte.score, 2)
+		assert.equal(courte.publiable, false)
+		assert.equal(completude({ ...noms, description: '   ' }).score, 1)
+	})
+
+	test('everything but the gallery: 12/13, only « galerie » missing', () => {
+		for (const image_gallery of [{ data: [] }, { data: null }, [], null]) {
+			const c = completude({ ...complet, image_gallery })
+			assert.equal(c.score, 12)
+			assert.deepEqual(c.manquants, ['galerie'])
+			// the gallery is not a rule of `publiable`
+			assert.equal(c.publiable, true)
+		}
+	})
+
 	test('U08 shared JSON cases (weekly report, v3): same results', () => {
 		const { cas } = JSON.parse(
 			readFileSync(

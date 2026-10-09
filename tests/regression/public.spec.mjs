@@ -537,6 +537,93 @@ test.describe('UI-07 recherche', () => {
 		expect(erreurs).toEqual([])
 	})
 
+	// the form of a bare /search, as a visitor uses it (the removed Cypress
+	// search.cy.js and profil-update-then-search.cy.js): nothing is read
+	// before the submit, one search after it
+	async function chercherDepuisLeFormulaire(page, { terme, ville }) {
+		await page.goto('/search')
+		await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+			'Rechercher une maquilleuse'
+		)
+		expect(await appelsRecherche()).toHaveLength(0)
+		await page.getByTestId('search-input').fill(terme)
+		if (ville !== undefined) await page.getByTestId('city-input').fill(ville)
+		await page.getByTestId('search-button').click()
+	}
+
+	test('formulaire de /search, un terme seul : /search?search=…, des cartes, une seule recherche, sans erreur', async ({
+		page,
+	}) => {
+		const erreurs = erreursDeLaPage(page)
+		await chercherDepuisLeFormulaire(page, { terme: 'Soirée' })
+		await expect(page).toHaveURL(/\/search\?search=Soir%C3%A9e$/)
+		await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+			/^\d+ résultats pour « Soirée »$/
+		)
+		await expect(page.getByTestId('search-result').first()).toBeVisible()
+		const appels = await recherches()
+		expect(appels).toHaveLength(1)
+		// the term reaches the API, and no city
+		const parametres = new URLSearchParams(appels[0].q)
+		expect(parametres.get('search')).toBe('Soirée')
+		expect(parametres.has('city')).toBe(false)
+		expect(await annuaires()).toHaveLength(0)
+		expect(erreurs).toEqual([])
+	})
+
+	test('formulaire de /search, un nom et une ville tapés : /search?search=…&city=…, la carte de la maquilleuse de cette ville, sans erreur', async ({
+		page,
+	}) => {
+		const erreurs = erreursDeLaPage(page)
+		await chercherDepuisLeFormulaire(page, {
+			terme: 'Nantaise',
+			ville: 'Nantes',
+		})
+		await expect(page).toHaveURL(/\/search\?search=Nantaise&city=Nantes$/)
+		await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+			'1 résultat pour « Nantaise » à « Nantes »'
+		)
+		const cartes = page.getByTestId('search-result')
+		await expect(cartes).toHaveCount(1)
+		await expect(cartes).toContainText('Léa Nantaise')
+		const appels = await recherches()
+		expect(appels).toHaveLength(1)
+		// the term and the city both reach the API, not only the page URL
+		const parametres = new URLSearchParams(appels[0].q)
+		expect(parametres.get('search')).toBe('Nantaise')
+		expect(parametres.get('city')).toBe('Nantes')
+		expect(await annuaires()).toHaveLength(0)
+		expect(erreurs).toEqual([])
+	})
+
+	test('formulaire de /search, prénom et nom : la carte de cette maquilleuse ; ceux d’une maquilleuse indisponible : aucune carte, le message', async ({
+		page,
+	}) => {
+		const erreurs = erreursDeLaPage(page)
+		await chercherDepuisLeFormulaire(page, { terme: 'Camille Fictive' })
+		await expect(page).toHaveURL(/\/search\?search=Camille(\+|%20)Fictive$/)
+		await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+			'1 résultat pour « Camille Fictive »'
+		)
+		await expect(page.getByTestId('search-result')).toHaveCount(1)
+		await expect(page.getByTestId('search-result')).toContainText(
+			'Camille Fictive'
+		)
+
+		// available: false (Inès Fictif, ines-indispo): never a card
+		await page.getByTestId('search-input').fill('Inès Fictif')
+		await page.getByTestId('search-button').click()
+		await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+			'Aucun résultat pour « Inès Fictif »'
+		)
+		await expect(page.getByTestId('search-result')).toHaveCount(0)
+		await expect(page.getByTestId('search-empty')).toContainText(
+			'Essayez un autre mot'
+		)
+		expect(await recherches()).toHaveLength(2)
+		expect(erreurs).toEqual([])
+	})
+
 	test('profil vérifié (type 10 du plan 02 §6) : le badge « Pro » sur sa carte seulement', async ({
 		page,
 	}) => {
@@ -660,8 +747,9 @@ test.describe('UI-07 recherche', () => {
 			.click()
 		await expect(page).toHaveURL(/search=mariage&city=Annecy$/)
 		await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-			/pour « mariage » à « Annecy »$/
+			/^\d+ résultats? pour « mariage » à « Annecy »$/
 		)
+		await expect(page.getByTestId('search-result').first()).toBeVisible()
 		// a term: the search, never the directory
 		expect(await recherches()).toHaveLength(1)
 		expect(await annuaires()).toHaveLength(1)

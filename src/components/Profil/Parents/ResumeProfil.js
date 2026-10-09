@@ -5,6 +5,7 @@ import { BadgeIndispo } from '@/components/Profil/Atoms/BadgeIndispo'
 import ModalUpdateResumeProfil from '@/components/Profil/Atoms/ModalUpdate/ModalUpdateResumeProfil'
 import BoutonModifier from '@/components/Profil/Atoms/BoutonModifier'
 import { villePublique } from '@/lib/profil/lieu-public'
+import { rayonKm, villeAffichee } from '@/lib/format-zone'
 
 function ResumeProfil(props) {
 	// the profile and the view of the page (src/pages/auth/profil.js), never
@@ -15,6 +16,10 @@ function ResumeProfil(props) {
 	const [isModalOpen, setIsModalOpen] = React.useState(false)
 	const availability = !!user?.available
 	const profilPicture = user?.main_picture?.url || '/assets/pp_makeup.webp'
+	// never « à & dans un rayon de km » (plans/02 U14): no sentence without a
+	// city, no radius clause without a radius
+	const ville = villeAffichee(isPublic ? villePublique(user?.city) : user?.city)
+	const rayon = rayonKm(user?.action_radius)
 
 	// opens in the edit view only, an open modal always closes
 	const handleIsModalOpen = () => {
@@ -105,16 +110,17 @@ function ResumeProfil(props) {
 								) : null}
 							</div>
 							<div>
-								<div className={'flex items-center gap-2'}>
-									<span className="material-icons-round text-indigo-900">
-										directions_run
-									</span>
-									<span data-cy={'resume-city-action-radius'}>
-										peut se déplacer à{' '}
-										{isPublic ? villePublique(user?.city) : user?.city} & dans
-										un rayon de {user?.action_radius}km
-									</span>
-								</div>
+								{ville && (
+									<div className={'flex items-center gap-2'}>
+										<span className="material-icons-round text-indigo-900">
+											directions_run
+										</span>
+										<span data-cy={'resume-city-action-radius'}>
+											peut se déplacer à {ville}
+											{rayon ? ` & dans un rayon de ${rayon}km` : ''}
+										</span>
+									</div>
+								)}
 							</div>
 							<div></div>
 							{/*<div className={'flex flex-row items-center gap-4'}>*/}
