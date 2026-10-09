@@ -825,7 +825,7 @@ test.describe('UI-01 modales : limites, messages et valeurs enregistrées', () =
 		expect(erreurs).toEqual([])
 	})
 
-	test('localisation : ville de 71 caractères et rayon de 11 chiffres refusés, puis vidés et enregistrés dans la même modale ; ni carte, ni « à & dans un rayon de km » en tête', async ({
+	test('localisation : ville de 71 caractères et rayon de plus de 1000 km refusés, puis vidés et enregistrés dans la même modale ; ni carte, ni « à & dans un rayon de km » en tête', async ({
 		page,
 	}) => {
 		const erreurs = erreursDeLaPage(page)
@@ -841,8 +841,26 @@ test.describe('UI-01 modales : limites, messages et valeurs enregistrées', () =
 			'La localisation ne doit pas dépasser 70 caractères.'
 		)
 		await expect(dialogue(page).getByTestId('error-action-radius')).toHaveText(
-			"Le rayon d'action ne doit pas dépasser 10 caractères."
+			"Le rayon d'action ne doit pas dépasser 1000 km."
 		)
+		expect(patchs).toEqual([])
+
+		// whole kilometres only: the API refuses a negative or a decimal value
+		await remplir(page, {
+			'city-input': 'Annecy',
+			'action-radius-input': '1001',
+		})
+		await page.getByTestId('save-button-location').click()
+		await expect(dialogue(page).getByTestId('error-action-radius')).toHaveText(
+			"Le rayon d'action ne doit pas dépasser 1000 km."
+		)
+		for (const rayon of ['-5', '2.5']) {
+			await remplir(page, { 'action-radius-input': rayon })
+			await page.getByTestId('save-button-location').click()
+			await expect(
+				dialogue(page).getByTestId('error-action-radius')
+			).toHaveText("Le rayon d'action est un nombre entier de kilomètres.")
+		}
 		expect(patchs).toEqual([])
 		expect(await profilServeur()).toMatchObject({
 			city: 'Annecy',
@@ -1241,7 +1259,7 @@ test.describe('UI-01 modales : limites, messages et valeurs enregistrées', () =
 		expect(erreurs).toEqual([])
 	})
 
-	test('expériences : les deux retirées et enregistrées ; 4 messages sur le formulaire vide ; une ajoutée, rouverte avec ses 6 champs, modifiée sur place, lue en vue publique', async ({
+	test('expériences : les deux retirées et enregistrées ; 5 messages sur le formulaire vide ; une ajoutée, rouverte avec ses 6 champs, modifiée sur place, lue en vue publique', async ({
 		page,
 	}) => {
 		const erreurs = erreursDeLaPage(page)
@@ -1267,13 +1285,15 @@ test.describe('UI-01 modales : limites, messages et valeurs enregistrées', () =
 		expect((await profilServeur()).experiences).toEqual([])
 		await expect(page.getByTestId('experience-company')).toHaveCount(0)
 
-		// the empty form: 4 required messages, nothing listed
+		// the empty form: 5 required messages, the start date included (the API
+		// refuses an empty date), nothing listed
 		await page.getByTestId('update-experience-button').click()
 		await page.getByTestId('add-experience-button').click()
 		const messages = {
 			'error-company': "Le nom de l'entreprise est requis.",
 			'error-job-name': "Le nom de l'expérience est requis.",
 			'error-city': 'La ville est requise.',
+			'error-date-start': "La date de début de l'expérience est requise.",
 			'error-description-experience': 'La description est requise.',
 		}
 		for (const [cy, message] of Object.entries(messages))

@@ -14,6 +14,7 @@ import {
 	useEnvoi,
 } from '@/components/Profil/Atoms/ModalUpdate/ModalElements'
 import { AIDE_VILLE } from '@/lib/profil/lieu-public'
+import { RAYON_MAX_KM } from '@/lib/format-zone'
 
 const schema = zod
 	.object({
@@ -22,12 +23,17 @@ const schema = zod
 			.min(1, 'La localisation est requise.')
 			.max(70, 'La localisation ne doit pas dépasser 70 caractères.')
 			.or(zod.literal('')),
+		// whole kilometres, as shown (« et 30 km autour ») and as the API
+		// stores them (an integer between 0 and 2147483647)
 		action_radius: zod
 			.string({
 				required_error: "Le rayon d'action est requis.",
 			})
-			.min(1, "Le rayon d'action est requis.")
-			.max(10, "Le rayon d'action ne doit pas dépasser 10 caractères.")
+			.regex(/^\d+$/, "Le rayon d'action est un nombre entier de kilomètres.")
+			.refine(
+				rayon => Number(rayon) <= RAYON_MAX_KM,
+				`Le rayon d'action ne doit pas dépasser ${RAYON_MAX_KM} km.`
+			)
 			.or(zod.literal('')),
 	})
 	.required({ city: true, action_radius: true })

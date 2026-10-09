@@ -33,9 +33,12 @@ const schema = zod
 			.string({ required_error: 'La ville est requise.' })
 			.min(1, 'La ville est requise.')
 			.max(70, 'La ville ne doit pas dépasser 70 caractères.'),
-		date_start: zod.string({
-			required_error: "La date de début de l'expérience est requise.",
-		}),
+		// an empty date: the API refuses it (date column), so the modal does
+		date_start: zod
+			.string({
+				required_error: "La date de début de l'expérience est requise.",
+			})
+			.min(1, "La date de début de l'expérience est requise."),
 		date_end: zod.string().optional(),
 		description: zod
 			.string({ required_error: 'La description est requise.' })
