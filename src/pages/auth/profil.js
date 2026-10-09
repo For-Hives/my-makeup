@@ -42,10 +42,12 @@ function Profil({ data, erreur }) {
 	const isPublic = router.query.publicView === 'true'
 
 	// called by « Voir mon profil public » and « Modifier mon profil » only,
-	// so a page load sends nothing; counted once the view has switched
+	// so a page load sends nothing; counted once the view has switched. A
+	// replace, not a push: no history entry, so Back leaves the page and
+	// never switches the view under an open modal
 	const handleIsPublic = visible => {
 		router
-			.push(
+			.replace(
 				{
 					pathname: '/auth/profil',
 					query: visible ? { publicView: 'true' } : {},
@@ -56,6 +58,7 @@ function Profil({ data, erreur }) {
 			.then(change => {
 				if (change) track('profile_visibility', { visible })
 			})
+			.catch(() => {})
 	}
 
 	// the modals call it once the API stored the save (UI-01)

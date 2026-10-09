@@ -1,31 +1,18 @@
-import React, { useEffect } from 'react'
-import { useRouter } from 'next/router'
+import React from 'react'
 import ModalUpdateLanguageProfil from '@/components/Profil/Atoms/ModalUpdate/ModalUpdateLanguageProfil'
 import ViewLanguageProfil from '@/components/Profil/Childs/Views/ViewLanguageProfil'
 import BoutonModifier from '@/components/Profil/Atoms/BoutonModifier'
 
 export function LanguageProfil(props) {
-	// import router
-	const router = useRouter()
-	// get query param
-	const { publicView } = router.query
 	const user = props.user
 
 	const [isModalOpen, setIsModalOpen] = React.useState(false)
-	const [isPublic, setIsPublic] = React.useState(props.isPublic)
-
+	// the view of the page (src/pages/auth/profil.js), never copied (UI-02)
+	const isPublic = props.isPublic
+	// opens in the edit view only, an open modal always closes
 	const handleIsModalOpen = () => {
-		if (!isPublic) {
-			setIsModalOpen(!isModalOpen)
-		}
+		if (isModalOpen || !isPublic) setIsModalOpen(!isModalOpen)
 	}
-	useEffect(() => {
-		setIsPublic(!!publicView)
-	}, [])
-
-	useEffect(() => {
-		setIsPublic(props.isPublic)
-	}, [props.isPublic])
 
 	return (
 		<div className={'relative w-full'}>

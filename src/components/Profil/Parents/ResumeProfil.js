@@ -16,10 +16,9 @@ function ResumeProfil(props) {
 	const availability = !!user?.available
 	const profilPicture = user?.main_picture?.url || '/assets/pp_makeup.webp'
 
+	// opens in the edit view only, an open modal always closes
 	const handleIsModalOpen = () => {
-		if (!isPublic) {
-			setIsModalOpen(!isModalOpen)
-		}
+		if (isModalOpen || !isPublic) setIsModalOpen(!isModalOpen)
 	}
 
 	return (
