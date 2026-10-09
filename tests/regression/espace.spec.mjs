@@ -743,11 +743,10 @@ test.describe('UI-03 photos', () => {
 test.describe('UI-05 inscription et suppression', () => {
 	// « Comment as-tu connu My Makeup ? », in the order shown
 	const ORIGINES = [
+		['instagram', 'Instagram'],
 		['google', 'Recherche Google'],
-		['instagram', 'Instagram ou autre réseau'],
 		['bouche-a-oreille', 'Bouche-à-oreille'],
-		['maquilleuse', "Une maquilleuse m'en a parlé"],
-		['article-salon', 'Un article ou un salon'],
+		['ecole', 'École de maquillage'],
 		['autre', 'Autre'],
 	]
 
@@ -774,7 +773,7 @@ test.describe('UI-05 inscription et suppression', () => {
 		const [creation] = appels(avant.journal, 'POST', '/api/me-makeup')
 		expect(creation.fin).toBeDefined() // answered before the name step
 
-		// the optional question: 6 answers, none chosen, 44 px targets
+		// the optional question: 5 answers, none chosen, 44 px targets
 		const question = page.getByRole('group', {
 			name: /Comment as-tu connu My.Makeup/,
 		})
@@ -809,7 +808,7 @@ test.describe('UI-05 inscription et suppression', () => {
 		).toHaveLength(0)
 
 		// an answer to the question, on its label
-		await appuyer(question.getByText('Instagram ou autre réseau'))
+		await appuyer(question.getByText('Instagram', { exact: true }))
 		await expect(page.getByTestId('onboarding-source-instagram')).toBeChecked()
 
 		// the save fails: its message, no « Bienvenue »

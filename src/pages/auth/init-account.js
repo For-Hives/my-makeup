@@ -55,11 +55,10 @@ const schema = zod
 // « Comment as-tu connu My Makeup ? » (UI-05): one optional answer, kept out
 // of the form schema and of the PATCH, only counted by Umami
 const LIBELLES_ORIGINE = {
+	instagram: 'Instagram',
 	google: 'Recherche Google',
-	instagram: 'Instagram ou autre réseau',
 	'bouche-a-oreille': 'Bouche-à-oreille',
-	maquilleuse: "Une maquilleuse m'en a parlé",
-	'article-salon': 'Un article ou un salon',
+	ecole: 'École de maquillage',
 	autre: 'Autre',
 }
 

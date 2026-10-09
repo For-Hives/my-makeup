@@ -40,13 +40,14 @@ export const DEMANDE_SOURCES = [
 export const RESULT_BUCKETS = ['0', '1-5', '6-20', '21+']
 
 // answers to « Comment as-tu connu My Makeup ? » (/auth/init-account, UI-05),
-// in the order they are shown; never stored by the API
+// in the order they are shown; never stored by the API. The list of plans/04
+// §3.3 row 17 without 'maeva' (decisions.md, 09/10). Umami keeps each value
+// as sent: renaming one later splits its series.
 export const SOURCES_ORIGINE = [
-	'google',
 	'instagram',
+	'google',
 	'bouche-a-oreille',
-	'maquilleuse',
-	'article-salon',
+	'ecole',
 	'autre',
 ]
 
