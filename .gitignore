@@ -35,14 +35,9 @@ pnpm-lock.yaml
 
 .env
 
-cypress/reports/junit/
-
-cypress/videos/
-
-cypress/screenshots/
-
 .env.local
 
+# local Cypress secrets, kept ignored until old local copies are gone
 cypress.env.json
 
 yarn.lock
