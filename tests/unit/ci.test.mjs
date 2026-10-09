@@ -282,3 +282,221 @@ jobs:
 		)
 	})
 })
+
+// URG-11 (plans/01, INVENTAIRE NOUVEAU-05): Cypress, bun.lockb, pg and the
+// SonarQube job are gone, the build tools sit in devDependencies, Renovate
+// opens security fixes only and the README links the site.
+const OUTILS_DE_BUILD = [
+	'eslint',
+	'eslint-config-next',
+	'typescript',
+	'prettier-plugin-tailwindcss',
+	'node-gyp',
+	'node-addon-api',
+]
+
+/** Root entries that must not come back. */
+const entreesInterdites = entrees =>
+	entrees.filter(
+		e =>
+			/^cypress/i.test(e) ||
+			e === 'bun.lockb' ||
+			e === 'sonar-project.properties'
+	)
+
+/** Workflow lines naming Cypress or Sonar, comments included. */
+const lignesCypressOuSonar = workflows =>
+	workflows.flatMap(({ fichier, texte }) =>
+		texte
+			.split('\n')
+			.flatMap((ligne, i) =>
+				/cypress|sonar/i.test(ligne)
+					? [`${fichier}:${i + 1} : ${ligne.trim()}`]
+					: []
+			)
+	)
+
+/** package.json: Cypress anywhere, pg installed, a build tool in dependencies. */
+function paquetsInterdits(texte) {
+	const pkg = JSON.parse(texte)
+	const erreurs = []
+	if (/cypress/i.test(texte)) erreurs.push('package.json mentionne cypress')
+	if ('pg' in { ...pkg.dependencies, ...pkg.devDependencies })
+		erreurs.push('pg est encore installé')
+	for (const nom of OUTILS_DE_BUILD)
+		if (nom in (pkg.dependencies ?? {}))
+			erreurs.push(`${nom} est dans dependencies`)
+	return erreurs
+}
+
+const GARDE_FOUS = [
+	['next', '<16'],
+	['tailwindcss', '<4'],
+]
+
+/** renovate.json: anything that would open a non-security pull request. */
+function renovateHorsSecurite(config) {
+	const erreurs = []
+	const alertes = config.vulnerabilityAlerts ?? {}
+	if (alertes.enabled !== true)
+		erreurs.push('vulnerabilityAlerts.enabled n’est pas true')
+	if (alertes.automerge !== false)
+		erreurs.push('vulnerabilityAlerts.automerge n’est pas false')
+	if (config.automerge !== false) erreurs.push('automerge n’est pas false')
+	if (config.osvVulnerabilityAlerts !== true)
+		erreurs.push('osvVulnerabilityAlerts n’est pas true')
+	const regles = config.packageRules ?? []
+	// one rule for every package: no match* key besides the update types
+	const coupeTout = regles.some(
+		r =>
+			r.enabled === false &&
+			Object.keys(r).every(
+				k => !k.startsWith('match') || k === 'matchUpdateTypes'
+			) &&
+			['major', 'minor', 'patch'].every(t => r.matchUpdateTypes?.includes(t))
+	)
+	if (!coupeTout)
+		erreurs.push(
+			'aucune règle ne coupe les mises à jour majeures, mineures et de patch'
+		)
+	regles
+		.filter(r => r.enabled === true || r.automerge === true)
+		.forEach(r =>
+			erreurs.push(
+				`règle qui rallume des mises à jour : ${r.description ?? '?'}`
+			)
+		)
+	for (const [paquet, borne] of GARDE_FOUS)
+		if (
+			!regles.some(
+				r =>
+					r.matchPackageNames?.includes(paquet) && r.allowedVersions === borne
+			)
+		)
+			erreurs.push(`${paquet} sans garde-fou ${borne}`)
+	return erreurs
+}
+
+describe('URG-11 ménage', () => {
+	test('package.json : ni Cypress, ni pg, ni outil de build en dependencies', () => {
+		assert.deepEqual(paquetsInterdits(lireSiPresent('package.json')), [])
+		const lock = lireSiPresent('package-lock.json')
+		assert.doesNotMatch(lock, /"node_modules\/(cypress|pg)"/)
+	})
+
+	test('aucune entrée cypress*, bun.lockb ni sonar-project.properties à la racine', () => {
+		assert.deepEqual(entreesInterdites(readdirSync(RACINE)), [])
+	})
+
+	test('aucun workflow ne nomme Cypress ni Sonar, commentaires compris', () => {
+		assert.deepEqual(lignesCypressOuSonar(workflowsDuDepot()), [])
+	})
+
+	test('Renovate : correctifs de sécurité seulement, next <16 et tailwindcss <4', () => {
+		const config = JSON.parse(lireSiPresent('renovate.json'))
+		assert.deepEqual(renovateHorsSecurite(config), [])
+		assert.equal(config.vulnerabilityAlerts.enabled, true)
+		assert.equal(config.automerge, false)
+	})
+
+	test('le README renvoie vers le site', () => {
+		assert.ok(lireSiPresent('README.md').includes('https://my-makeup.fr'))
+	})
+})
+
+// The guards must see what they guard: each one on what main had before.
+describe('URG-11 ménage : les gardes refusent l’ancien état', () => {
+	test('racine', () => {
+		assert.deepEqual(
+			entreesInterdites([
+				'cypress',
+				'cypress.config.js',
+				'cypress.env.json.exemple',
+				'bun.lockb',
+				'sonar-project.properties',
+				'src',
+				'package.json',
+			]),
+			[
+				'cypress',
+				'cypress.config.js',
+				'cypress.env.json.exemple',
+				'bun.lockb',
+				'sonar-project.properties',
+			]
+		)
+	})
+
+	test('workflow : variable CYPRESS_ et job commenté', () => {
+		const ancien = lireWorkflow(
+			'ancien.yml',
+			'env:\n  CYPRESS_TEST_USER: x\njobs:\n#  SonarQube:\n#    needs: tests\n'
+		)
+		assert.equal(lignesCypressOuSonar([ancien]).length, 2)
+	})
+
+	test('package.json', () => {
+		const ancien = JSON.stringify({
+			scripts: { 'cypress:run': 'cypress run' },
+			dependencies: {
+				pg: '8.22.0',
+				typescript: '5.9.3',
+				'node-gyp': '^12.3.0',
+			},
+			devDependencies: { cypress: '^13.6.0' },
+		})
+		assert.deepEqual(paquetsInterdits(ancien), [
+			'package.json mentionne cypress',
+			'pg est encore installé',
+			'typescript est dans dependencies',
+			'node-gyp est dans dependencies',
+		])
+	})
+
+	test('renovate.json : config:base, puis un groupe de patchs comme sur l’API', () => {
+		const configBase = {
+			extends: ['config:base'],
+			automerge: false,
+			packageRules: [
+				{ matchPackageNames: ['tailwindcss'], allowedVersions: '<4' },
+			],
+		}
+		assert.deepEqual(renovateHorsSecurite(configBase), [
+			'vulnerabilityAlerts.enabled n’est pas true',
+			'vulnerabilityAlerts.automerge n’est pas false',
+			'osvVulnerabilityAlerts n’est pas true',
+			'aucune règle ne coupe les mises à jour majeures, mineures et de patch',
+			'next sans garde-fou <16',
+		])
+		const groupeDePatchs = {
+			automerge: false,
+			osvVulnerabilityAlerts: true,
+			vulnerabilityAlerts: { enabled: true, automerge: false },
+			packageRules: [
+				{ matchUpdateTypes: ['major', 'minor'], enabled: false },
+				{ matchUpdateTypes: ['patch'], groupName: 'patch updates' },
+				{ matchPackageNames: ['next'], allowedVersions: '<16' },
+				{ matchPackageNames: ['tailwindcss'], allowedVersions: '<4' },
+			],
+		}
+		assert.deepEqual(renovateHorsSecurite(groupeDePatchs), [
+			'aucune règle ne coupe les mises à jour majeures, mineures et de patch',
+		])
+		const seulementPourNext = {
+			...groupeDePatchs,
+			packageRules: [
+				{
+					matchPackageNames: ['next'],
+					matchUpdateTypes: ['major', 'minor', 'patch'],
+					enabled: false,
+				},
+				{ matchPackageNames: ['swiper'], enabled: true },
+				...groupeDePatchs.packageRules.slice(2),
+			],
+		}
+		assert.deepEqual(renovateHorsSecurite(seulementPourNext), [
+			'aucune règle ne coupe les mises à jour majeures, mineures et de patch',
+			'règle qui rallume des mises à jour : ?',
+		])
+	})
+})
