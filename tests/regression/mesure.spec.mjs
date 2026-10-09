@@ -6,7 +6,8 @@
 // IP, sampled Web Vitals arrive as « web-vitals » events, the answer to
 // « Comment as-tu connu My Makeup ? » arrives as « onboarding_source » (UI-05),
 // and the artist's space sends « profile_visibility » and
-// « profile_publiable » (MES-12).
+// « profile_publiable » (MES-12), and « upload_error » with the kind of the
+// API refusal (UI-03).
 // Playwright gives navigator.webdriver = true and a HeadlessChrome user
 // agent: each rule is checked alone, and a real visitor is played by forcing
 // webdriver to false with an ordinary Chrome user agent.
@@ -14,6 +15,7 @@
 import { expect, test } from '@playwright/test'
 import { getElementsByTagName } from 'domutils'
 import { parseDocument } from 'htmlparser2'
+import sharp from 'sharp'
 import {
 	API,
 	aller,
@@ -738,6 +740,53 @@ test.describe('MES-10 qui est mesuré', () => {
 			})
 			await apres('profile_publiable')
 			expect(await publiables()).toEqual([{}])
+			await rienDePersonnel()
+		})
+
+		test('upload_error : un envoi de photo refusé par l’API part avec son genre, 413 → size, 400 → type, 503 → server', async ({
+			page,
+		}) => {
+			const apres = suivreEnvois(page)
+			await visiteurReel(page)
+			expect(await connecter(page)).toBe(true)
+			await espaceCompte(page, '/auth/profil')
+			await page.getByTestId('update-resume-button').click()
+			const portrait = await sharp({
+				create: {
+					width: 600,
+					height: 600,
+					channels: 3,
+					background: { r: 200, g: 120, b: 160 },
+				},
+			})
+				.png()
+				.toBuffer()
+			await page.getByTestId('file-main-upload').setInputFiles({
+				name: 'portrait.png',
+				mimeType: 'image/png',
+				buffer: portrait,
+			})
+			// compressed and shown: a save now sends it
+			await expect(
+				page.getByTestId('modal-panel').getByAltText('photo de profil')
+			).toHaveAttribute('src', /^blob:/)
+
+			// each save sends the picture again, refused with that status
+			for (const [status, kind, message] of [
+				[413, 'size', /dépasse 10 Mo/],
+				[400, 'type', /n'a pas été acceptée/],
+				[503, 'server', /L'envoi de la photo a échoué/],
+			]) {
+				await panne({ upload: status })
+				await page.getByTestId('save-button-resume').click()
+				await expect(page.getByTestId('save-error')).toHaveText(message)
+				await apres('upload_error', { kind })
+			}
+			expect(await evenements('upload_error')).toEqual([
+				{ kind: 'size' },
+				{ kind: 'type' },
+				{ kind: 'server' },
+			])
 			await rienDePersonnel()
 		})
 
