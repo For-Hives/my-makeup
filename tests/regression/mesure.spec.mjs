@@ -382,6 +382,36 @@ test.describe('MES-10 qui est mesuré', () => {
 			}
 		})
 
+		test('session expirée (RG-08) : session_expired part une fois, avec l’endroit lu dans ?ou= (api_401 sans ?ou= ou hors catalogue)', async ({
+			page,
+		}) => {
+			await visiteurReel(page)
+			const expirations = async () =>
+				(await envoisRecus())
+					.filter(e => e.corps.payload.name === 'session_expired')
+					.map(e => e.corps.payload.data)
+			for (const [ou, where] of [
+				['middleware', 'middleware'],
+				['jwt_expire', 'jwt_expire'],
+				['api_401', 'api_401'],
+				[null, 'api_401'],
+				['ailleurs', 'api_401'],
+			]) {
+				await piloter('/__umami/reset')
+				await page.goto(
+					`/auth/signin?error=session-expiree${
+						ou ? `&ou=${ou}` : ''
+					}&callbackUrl=%2Fauth%2Fprofil`
+				)
+				await expect(page.locator('[data-cy="signin-url-error"]')).toHaveText(
+					'Ta session a expiré, reconnecte-toi.'
+				)
+				await expect.poll(expirations).toEqual([{ where }])
+				await page.waitForLoadState('networkidle')
+				expect(await expirations()).toEqual([{ where }])
+			}
+		})
+
 		test('« Ne plus mesurer mes visites » : aucun envoi', async ({ page }) => {
 			const suivi = suivreRequetes(page)
 			await visiteurReel(page)

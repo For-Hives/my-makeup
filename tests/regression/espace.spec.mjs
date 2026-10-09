@@ -958,11 +958,20 @@ test.describe('RG-08 session expirée', () => {
 		await panne({ dureeJwtS: 30 })
 		expect(await connecter(page)).toBe(true)
 		const vues = navigations(page)
+		const redirection = page.waitForResponse(
+			r => new URL(r.url()).pathname === '/auth/profil'
+		)
 
 		await page.goto('/auth/profil')
 		await expect(page).toHaveURL(
 			/\/auth\/signin\?error=session-expiree&ou=middleware&callbackUrl=%2Fauth%2Fprofil$/
 		)
+		// the middleware deletes the cookie on the 307 itself, before the
+		// sign-in page reads the session
+		expect((await redirection).status()).toBe(307)
+		expect(await (await redirection).headerValues('set-cookie')).toEqual([
+			expect.stringMatching(/^next-auth\.session-token=; .*Max-Age=0/),
+		])
 		await expect(page.getByTestId('signin-url-error')).toHaveText(
 			'Ta session a expiré, reconnecte-toi.'
 		)
