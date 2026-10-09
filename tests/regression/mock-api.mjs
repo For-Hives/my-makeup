@@ -25,7 +25,8 @@
 //   first but filters nothing, so a search by city also returns the other
 //   cities (UI-10), as the real one does.
 // `/__…` routes drive it from the tests (forced failures, delays, revoked
-// sessions, state, profile of the test account). Public data:
+// sessions, JWT lifetime, state, profile of the test account); a revoked
+// or expired JWT is refused with a 401, as Strapi does. Public data:
 // tests/regression/donnees-publiques.mjs.
 // Test data only: @test.local accounts, made-up names. Ported from
 // plans/outils/interfaces/mock-api.mjs.
@@ -243,6 +244,7 @@ export function demarrerFauxStrapi(port = 4112, { origine = '*' } = {}) {
 				delaiPostMs: 0,
 				delaiPatchMs: 0,
 				meMakeup401: false, // /api/me-makeup refuses the JWT, /users/me does not
+				dureeJwtS: 86400, // lifetime of the JWTs issued from now on
 				recherche: null, // status forced on /api/searching
 				delaiRechercheMs: 0,
 			},
@@ -254,19 +256,25 @@ export function demarrerFauxStrapi(port = 4112, { origine = '*' } = {}) {
 
 	const emettre = compte => {
 		const maintenant = Math.floor(Date.now() / 1000)
-		const charge = { id: compte.id, iat: maintenant, exp: maintenant + 86400 }
+		const charge = {
+			id: compte.id,
+			iat: maintenant,
+			exp: maintenant + etat.panne.dureeJwtS,
+		}
 		const jwt = `${b64({ alg: 'HS256', typ: 'JWT' })}.${b64({
 			...charge,
 			n: randomBytes(4).toString('hex'),
 		})}.signature-factice`
-		jetons.set(jwt, compte.id)
+		jetons.set(jwt, { id: compte.id, exp: charge.exp })
 		return jwt
 	}
+	// like Strapi: a revoked or expired JWT is refused (401)
 	const authentifie = req => {
 		const jwt = (req.headers.authorization ?? '').split(' ')[1]
-		if (etat.revoques.has(jwt)) return null
-		const id = jetons.get(jwt)
-		return etat.comptes.find(c => c.id === id) ?? null
+		const jeton = jetons.get(jwt)
+		if (!jeton || etat.revoques.has(jwt)) return null
+		if (Date.now() / 1000 >= jeton.exp) return null
+		return etat.comptes.find(c => c.id === jeton.id) ?? null
 	}
 	const entetesCors = {
 		'access-control-allow-origin': origine,
