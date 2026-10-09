@@ -48,6 +48,8 @@ const MESSAGES = {
 		"Ton profil n'a pas été trouvé : recharge la page puis réessaie.",
 	refus:
 		"Tes modifications n'ont pas été enregistrées : vérifie les champs puis réessaie.",
+	'photo-refusee':
+		"Choisis à nouveau ta photo : elle n'a pas été acceptée, et tes modifications n'ont pas été enregistrées.",
 }
 
 /**
@@ -66,6 +68,21 @@ function texteErreur(corps) {
 }
 
 /**
+ * Whether the API refused a picture of the PATCH: 400 « File not allowed »
+ * (api-my-makeup #385), for a file that is neither on her profile nor sent
+ * by her and unused. A file sent to the API being replaced during a deploy
+ * has no uploader and gets it too. Nothing was saved, and the same file id
+ * would be refused again: the modal drops it, she picks her photo again and
+ * the next save uploads it anew.
+ * @param {number} status
+ * @param {unknown} [corps] - parsed JSON body of the answer
+ * @returns {boolean}
+ */
+export function photoRefusee(status, corps) {
+	return status === 400 && /\bFile not allowed\b/.test(texteErreur(corps))
+}
+
+/**
  * French message for a failed save (PATCH /api/me-makeup). Never repeats the
  * API text: a known rule becomes a sentence, anything else a generic one.
  * @param {number} status - HTTP status, 0 when the API could not be reached
@@ -77,6 +94,7 @@ export function messageEchecSauvegarde(status, corps) {
 	if (status === 401) return MESSAGES.session
 	if (status === 429) return MESSAGES['trop-de-tentatives']
 	if (status >= 500) return MESSAGES.indisponible
+	if (photoRefusee(status, corps)) return MESSAGES['photo-refusee']
 
 	const texte = texteErreur(corps)
 	const longueur = /\b([a-z_]+) must be at (least|most) (\d+) characters/.exec(
@@ -112,8 +130,9 @@ async function lireJson(response) {
  *   the PATCH with this JSON body: null when the session expired
  *   (authenticatedFetch), throws when the API cannot be reached
  * @param {(nom: string, props: object) => unknown} ports.compter - track()
- * @returns {Promise<{ok: true, data: object|null} | {ok: false, error: string, sessionExpiree?: true}>}
- *   `data`: the profile the API stored; `error`: the French message to show
+ * @returns {Promise<{ok: true, data: object|null} | {ok: false, error: string, sessionExpiree?: true, photoRefusee?: true}>}
+ *   `data`: the profile the API stored; `error`: the French message to show;
+ *   `photoRefusee`: a picture sent was refused (see photoRefusee)
  */
 export async function sauvegarderProfil(data, section, { envoyer, compter }) {
 	let response
@@ -134,13 +153,10 @@ export async function sauvegarderProfil(data, section, { envoyer, compter }) {
 			error: messageEchecSauvegarde(401),
 			sessionExpiree: true,
 		}
-	return {
-		ok: false,
-		error: messageEchecSauvegarde(
-			response?.status ?? 0,
-			response ? await lireJson(response) : null
-		),
-	}
+	const status = response?.status ?? 0
+	const corps = response ? await lireJson(response) : null
+	const echec = { ok: false, error: messageEchecSauvegarde(status, corps) }
+	return photoRefusee(status, corps) ? { ...echec, photoRefusee: true } : echec
 }
 
 /**

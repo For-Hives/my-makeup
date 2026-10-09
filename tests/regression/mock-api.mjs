@@ -318,6 +318,9 @@ export async function demarrerFauxStrapi(port = 4112, { origine = '*' } = {}) {
 				post: null, // status forced on POST /api/me-makeup
 				suppression: null, // status forced on DELETE /api/me-makeup
 				upload: null, // status forced on POST /api/upload
+				// POST /api/upload records no uploader, like the API before #385
+				// still answering during a deploy
+				uploadSansProprietaire: false,
 				fournisseurEmail: false, // forgot-password: 500 for a known address
 				delaiPostMs: 0,
 				delaiPatchMs: 0,
@@ -1128,7 +1131,7 @@ export async function demarrerFauxStrapi(port = 4112, { origine = '*' } = {}) {
 				url: `http://127.0.0.1:${port}/media/${id}`,
 				alternativeText: null,
 				// uploaded_by: the account that sent it
-				proprietaire: compte.id,
+				proprietaire: etat.panne.uploadSansProprietaire ? null : compte.id,
 				octets,
 			}
 			etat.fichiers.push(f)

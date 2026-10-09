@@ -123,6 +123,13 @@ export default function ModalUpdateResumeProfil(props) {
 		setEnvoi(false)
 		if (!resultat.ok) {
 			setErreurEnvoi(resultat.error ?? null)
+			// picture refused by the API (400 « File not allowed »): its id is
+			// never sent again, she picks her photo again and the next save
+			// uploads it anew
+			if (resultat.photoRefusee) {
+				setPhotoStockee(null)
+				setPhoto(null)
+			}
 			return
 		}
 

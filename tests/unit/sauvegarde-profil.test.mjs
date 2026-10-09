@@ -8,6 +8,7 @@ import {
 	NOM_MAX,
 	NOM_MIN,
 	offresAEnvoyer,
+	photoRefusee,
 	profilCree,
 	sauvegarderProfil,
 	SECTIONS_PROFIL,
@@ -24,6 +25,20 @@ const refusStrapi = moreDetails => ({
 		details: { moreDetails },
 	},
 })
+
+// what the me-makeup controller of the API answers for a picture that is not
+// hers (api-my-makeup #385): nothing was saved
+const fichierRefuse = (files = [123]) => ({
+	data: null,
+	error: {
+		status: 400,
+		name: 'BadRequestError',
+		message: 'File not allowed',
+		details: { moreDetails: 'File not allowed', files },
+	},
+})
+const MESSAGE_PHOTO_REFUSEE =
+	"Choisis à nouveau ta photo : elle n'a pas été acceptée, et tes modifications n'ont pas été enregistrées."
 
 describe('messageEchecSauvegarde', () => {
 	test('network error, expired session, brake and outage', () => {
@@ -42,6 +57,7 @@ describe('messageEchecSauvegarde', () => {
 			[429],
 			[500],
 			[400, refusStrapi('anything')],
+			[400, fichierRefuse()],
 		])
 			assert.match(
 				messageEchecSauvegarde(status, corps),
@@ -88,6 +104,18 @@ describe('messageEchecSauvegarde', () => {
 		)
 	})
 
+	test('400 « File not allowed »: she is asked to pick her photo again', () => {
+		assert.equal(
+			messageEchecSauvegarde(400, fichierRefuse()),
+			MESSAGE_PHOTO_REFUSEE
+		)
+		// connect/set objects: refused without any file id
+		assert.equal(
+			messageEchecSauvegarde(400, fichierRefuse([])),
+			MESSAGE_PHOTO_REFUSEE
+		)
+	})
+
 	test('a missing profile asks for a reload; odd bodies do not throw', () => {
 		assert.match(
 			messageEchecSauvegarde(
@@ -98,6 +126,32 @@ describe('messageEchecSauvegarde', () => {
 		)
 		for (const corps of [null, 'texte', [], { error: 'x' }, { error: null }])
 			assert.equal(typeof messageEchecSauvegarde(400, corps), 'string')
+	})
+})
+
+describe('photoRefusee (PATCH /api/me-makeup)', () => {
+	test('400 « File not allowed » of the API, nothing else', () => {
+		assert.equal(photoRefusee(400, fichierRefuse()), true)
+		assert.equal(photoRefusee(400, fichierRefuse([])), true)
+		// the same text with another status, or another refusal
+		for (const status of [0, 401, 403, 413, 500])
+			assert.equal(photoRefusee(status, fichierRefuse()), false)
+		assert.equal(
+			photoRefusee(
+				400,
+				refusStrapi('first_name must be at least 2 characters')
+			),
+			false
+		)
+		assert.equal(photoRefusee(400, refusStrapi('Files not allowedly')), false)
+		for (const corps of [
+			undefined,
+			null,
+			'File not allowed',
+			[],
+			{ error: 'File not allowed' },
+		])
+			assert.equal(photoRefusee(400, corps), false)
 	})
 })
 
@@ -175,6 +229,33 @@ describe('sauvegarderProfil (patchMeMakeup)', () => {
 			ok: false,
 			error: 'Le prénom doit contenir au moins 2 caractères.',
 		})
+	})
+
+	test('400 « File not allowed »: flagged, so the modal drops the sent picture', async () => {
+		const p = ports(json(400, fichierRefuse([131])))
+		const resultat = await sauvegarderProfil(
+			{ first_name: 'Al', main_picture: 131 },
+			'identite',
+			p
+		)
+		assert.deepEqual(resultat, {
+			ok: false,
+			error: MESSAGE_PHOTO_REFUSEE,
+			photoRefusee: true,
+		})
+		assert.deepEqual(p.evenements, [
+			['profile_save', { section: 'identite', ok: false }],
+		])
+		// any other failure is not flagged
+		for (const reponse of [
+			json(400, refusStrapi('first_name must be at least 2 characters')),
+			json(500, fichierRefuse()),
+		])
+			assert.equal(
+				'photoRefusee' in
+					(await sauvegarderProfil(nom, 'portfolio', ports(reponse))),
+				false
+			)
 	})
 
 	test('API out of reach: not ok, the connection message, counted', async () => {

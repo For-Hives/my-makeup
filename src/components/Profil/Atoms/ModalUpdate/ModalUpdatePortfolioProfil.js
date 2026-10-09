@@ -88,6 +88,15 @@ export default function ModalUpdatePortfolioProfil(props) {
 		setEnvoi(false)
 		if (!resultat.ok) {
 			setErreurEnvoi(resultat.error ?? null)
+			// pictures refused by the API (400 « File not allowed »): the ones
+			// sent by this modal leave the gallery, their ids are never sent
+			// again; she adds them again and the next save uploads them anew
+			if (resultat.photoRefusee) {
+				const enregistrees = new Set(
+					(user.image_gallery ?? []).map(photo => photo.id)
+				)
+				setUserImageGallery(galerie.filter(photo => enregistrees.has(photo.id)))
+			}
 			return
 		}
 
