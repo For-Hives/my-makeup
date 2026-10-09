@@ -10,6 +10,7 @@ import { randomBytes } from 'node:crypto'
 import sharp from 'sharp'
 import { COMPTE_TEST } from './mock-api.mjs'
 import {
+	API,
 	aller,
 	appels,
 	connecter,
@@ -754,12 +755,21 @@ test.describe('UI-05 inscription et suppression', () => {
 	async function rg07(page, { appuyer = cible => cible.click() } = {}) {
 		// bodies the browser sends to the API for the profile
 		const corps = []
+		// every request of the page to the fake Strapi or to an /api route of
+		// the app, any method (the Umami sends go to /u/api/send)
+		const versLApi = []
 		page.on('request', requete => {
+			const url = new URL(requete.url())
 			if (
-				new URL(requete.url()).pathname === '/api/me-makeup' &&
+				url.pathname === '/api/me-makeup' &&
 				['POST', 'PATCH'].includes(requete.method())
 			)
 				corps.push([requete.method(), requete.postDataJSON()])
+			if (
+				url.origin === new URL(API).origin ||
+				url.pathname.startsWith('/api/')
+			)
+				versLApi.push([requete.url(), requete.postData() ?? ''])
 		})
 
 		await panne({ delaiPostMs: 2500 })
@@ -851,6 +861,12 @@ test.describe('UI-05 inscription et suppression', () => {
 			expect(JSON.stringify(envoye), methode).not.toContain('instagram')
 		}
 		expect(JSON.stringify(apres.profils[compte.id])).not.toContain('instagram')
+		// nor any other request to an API: no URL, no body holds it
+		expect(versLApi.length).toBeGreaterThan(corps.length)
+		for (const [url, donnees] of versLApi) {
+			expect(url).not.toContain('instagram')
+			expect(donnees, url).not.toContain('instagram')
+		}
 	}
 
 	test('RG-07 API lente (2,5 s) : un seul profil créé, le nom attend sa création, « Bienvenue » après l’enregistrement, l’origine jamais enregistrée', async ({
