@@ -50,6 +50,8 @@ const MESSAGES = {
 		"Tes modifications n'ont pas été enregistrées : vérifie les champs puis réessaie.",
 	'photo-refusee':
 		"Choisis à nouveau ta photo : elle n'a pas été acceptée, et tes modifications n'ont pas été enregistrées.",
+	'photo-retiree':
+		"Une de tes photos a été retirée depuis un autre onglet ou appareil : tes modifications n'ont pas été enregistrées. Recharge la page puis réessaie.",
 }
 
 /**
@@ -69,11 +71,11 @@ function texteErreur(corps) {
 
 /**
  * Whether the API refused a picture of the PATCH: 400 « File not allowed »
- * (api-my-makeup #385), for a file that is neither on her profile nor sent
- * by her and unused. A file sent to the API being replaced during a deploy
- * has no uploader and gets it too. Nothing was saved, and the same file id
- * would be refused again: the modal drops it, she picks her photo again and
- * the next save uploads it anew.
+ * (api-my-makeup #385), for a file the API no longer counts as hers: swept
+ * after 24 h, removed from another tab, or uploaded by an API without
+ * uploaded_by (a rollback, the #385 deploy). Nothing was saved, and the
+ * same file id would be refused again: the modal drops it (see
+ * fichiersRefuses and galerieApresRefus).
  * @param {number} status
  * @param {unknown} [corps] - parsed JSON body of the answer
  * @returns {boolean}
@@ -83,18 +85,53 @@ export function photoRefusee(status, corps) {
 }
 
 /**
+ * Ids of the files a 400 « File not allowed » names (`error.details.files`
+ * of the API); empty when it names none, for a value that is not a file id.
+ * @param {unknown} [corps] - parsed JSON body of the answer
+ * @returns {number[]}
+ */
+export function fichiersRefuses(corps) {
+	const ids =
+		corps && typeof corps === 'object' ? corps.error?.details?.files : null
+	return Array.isArray(ids)
+		? ids.map(Number).filter(id => Number.isInteger(id) && id > 0)
+		: []
+}
+
+/**
+ * The gallery of the portfolio modal after a 400 « File not allowed »: the
+ * refused files leave it, so their ids are never sent again. When the
+ * answer names none, only the saved pictures stay.
+ * @param {Array<{id?: number}>} galerie - the pictures as sent
+ * @param {number[]} refuses - fichiersRefuses of the answer
+ * @param {number[]} enregistrees - ids of the saved pictures
+ * @returns {Array<{id?: number}>}
+ */
+export function galerieApresRefus(galerie, refuses, enregistrees) {
+	return refuses.length
+		? galerie.filter(photo => !refuses.includes(photo.id))
+		: galerie.filter(photo => enregistrees.includes(photo.id))
+}
+
+/**
  * French message for a failed save (PATCH /api/me-makeup). Never repeats the
  * API text: a known rule becomes a sentence, anything else a generic one.
  * @param {number} status - HTTP status, 0 when the API could not be reached
  * @param {unknown} [corps] - parsed JSON body of the answer
+ * @param {number[]} [photosEnregistrees] - ids of the pictures the page
+ *   shows as saved: a refused one was removed elsewhere, the page is out
+ *   of date
  * @returns {string}
  */
-export function messageEchecSauvegarde(status, corps) {
+export function messageEchecSauvegarde(status, corps, photosEnregistrees = []) {
 	if (!status) return MESSAGES.reseau
 	if (status === 401) return MESSAGES.session
 	if (status === 429) return MESSAGES['trop-de-tentatives']
 	if (status >= 500) return MESSAGES.indisponible
-	if (photoRefusee(status, corps)) return MESSAGES['photo-refusee']
+	if (photoRefusee(status, corps))
+		return fichiersRefuses(corps).some(id => photosEnregistrees.includes(id))
+			? MESSAGES['photo-retiree']
+			: MESSAGES['photo-refusee']
 
 	const texte = texteErreur(corps)
 	const longueur = /\b([a-z_]+) must be at (least|most) (\d+) characters/.exec(
@@ -130,11 +167,19 @@ async function lireJson(response) {
  *   the PATCH with this JSON body: null when the session expired
  *   (authenticatedFetch), throws when the API cannot be reached
  * @param {(nom: string, props: object) => unknown} ports.compter - track()
- * @returns {Promise<{ok: true, data: object|null} | {ok: false, error: string, sessionExpiree?: true, photoRefusee?: true}>}
+ * @param {object} [options]
+ * @param {number[]} [options.photosEnregistrees] - see messageEchecSauvegarde
+ * @returns {Promise<{ok: true, data: object|null} | {ok: false, error: string, sessionExpiree?: true, photoRefusee?: true, fichiersRefuses?: number[]}>}
  *   `data`: the profile the API stored; `error`: the French message to show;
- *   `photoRefusee`: a picture sent was refused (see photoRefusee)
+ *   `photoRefusee`: a picture sent was refused (see photoRefusee), the ids
+ *   the API named in `fichiersRefuses`
  */
-export async function sauvegarderProfil(data, section, { envoyer, compter }) {
+export async function sauvegarderProfil(
+	data,
+	section,
+	{ envoyer, compter },
+	{ photosEnregistrees = [] } = {}
+) {
 	let response
 	try {
 		response = await envoyer(JSON.stringify({ ...data }))
@@ -155,8 +200,13 @@ export async function sauvegarderProfil(data, section, { envoyer, compter }) {
 		}
 	const status = response?.status ?? 0
 	const corps = response ? await lireJson(response) : null
-	const echec = { ok: false, error: messageEchecSauvegarde(status, corps) }
-	return photoRefusee(status, corps) ? { ...echec, photoRefusee: true } : echec
+	const echec = {
+		ok: false,
+		error: messageEchecSauvegarde(status, corps, photosEnregistrees),
+	}
+	return photoRefusee(status, corps)
+		? { ...echec, photoRefusee: true, fichiersRefuses: fichiersRefuses(corps) }
+		: echec
 }
 
 /**

@@ -146,8 +146,30 @@ const idsFichiers = async () => (await etat()).fichiers.map(f => f.id)
 // the media sweep of the API, without its 24 h
 const balayer = () => piloter('/__balayer', {})
 
+// a save of her profile from another tab or device: straight to the fake
+// Strapi, signed in on its own
+async function sauverAilleurs(champs) {
+	const { jwt } = await (
+		await fetch(`${API}/api/auth/local`, {
+			method: 'POST',
+			body: JSON.stringify({
+				identifier: COMPTE_TEST.email,
+				password: COMPTE_TEST.password,
+			}),
+		})
+	).json()
+	const reponse = await fetch(`${API}/api/me-makeup`, {
+		method: 'PATCH',
+		headers: { authorization: `Bearer ${jwt}` },
+		body: JSON.stringify(champs),
+	})
+	expect(reponse.status).toBe(200)
+}
+
 const MESSAGE_PHOTO_REFUSEE =
 	"Choisis à nouveau ta photo : elle n'a pas été acceptée, et tes modifications n'ont pas été enregistrées."
+const MESSAGE_PHOTO_RETIREE =
+	"Une de tes photos a été retirée depuis un autre onglet ou appareil : tes modifications n'ont pas été enregistrées. Recharge la page puis réessaie."
 
 // first bytes of an iPhone HEIC (ISO BMFF, brand heic), then anything
 const HEIC = {
@@ -924,8 +946,8 @@ test.describe('UI-03 photos', () => {
 	}) => {
 		const patchs = corpsDesPatchs(page)
 		await ouvrirProfil(page)
-		// the upload lands on the API being replaced (deploy of API #385): no
-		// uploader recorded, so the PATCH refuses the file
+		// the upload lands on an API without uploaded_by (a rollback, or the
+		// #385 deploy): no uploader recorded, so the PATCH refuses the file
 		await panne({ uploadSansProprietaire: true })
 		await page.getByTestId('update-resume-button').click()
 		await choisirPhotoProfil(page, await petitePng())
@@ -1005,6 +1027,46 @@ test.describe('UI-03 photos', () => {
 			[enregistree.id, refusee.id],
 			[enregistree.id, nouvelle.id],
 		])
+	})
+
+	test('portfolio périmé : une photo enregistrée, retirée depuis un autre onglet, est refusée (400 « File not allowed ») ; « Recharge la page », elle seule quitte la galerie, la sauvegarde suivante passe', async ({
+		page,
+	}) => {
+		const [x, y] = await fichiersStockes(2)
+		await profilDeDepart({ image_gallery: [x.id, y.id] })
+		const patchs = corpsDesPatchs(page)
+		await ouvrirProfil(page)
+		await page.getByTestId('update-portefolio-button').click()
+		await expect(dialogue(page).getByTestId('portfolio-slide')).toHaveCount(2)
+
+		// another tab removes X: the API saves [Y] and deletes X
+		await sauverAilleurs({ image_gallery: [y.id] })
+		expect(await idsFichiers()).toEqual([y.id])
+
+		await ajouterAuPortfolio(page, await petitePng())
+		await page.getByTestId('save-button-portefolio').click()
+		await expect(dialogue(page).getByTestId('save-error')).toHaveText(
+			MESSAGE_PHOTO_RETIREE
+		)
+		const [, nouvelle] = (await etat()).fichiers
+		expect(patchs).toEqual([{ image_gallery: [x.id, y.id, nouvelle.id] }])
+		// X leaves the gallery; Y and the picture sent, accepted, stay
+		await expect(dialogue(page).getByTestId('portfolio-slide')).toHaveCount(2)
+		await expect(page.getByTestId('portfolio-pending')).toHaveCount(0)
+		expect(
+			(await profilServeur()).image_gallery.map(photo => photo.id)
+		).toEqual([y.id])
+
+		// saved again without a reload: X is never sent again, the picture
+		// is not uploaded again
+		await page.getByTestId('save-button-portefolio').click()
+		await expect(dialogue(page)).toBeHidden()
+		expect(patchs[1]).toEqual({ image_gallery: [y.id, nouvelle.id] })
+		const { journal, profils } = await etat()
+		expect(appels(journal, 'POST', '/api/upload')).toHaveLength(1)
+		expect(
+			profils[COMPTE_TEST.id].image_gallery.map(photo => photo.id)
+		).toEqual([y.id, nouvelle.id])
 	})
 
 	test('photo retirée du portfolio et sauvegardée : son fichier est supprimé, les autres restent', async ({

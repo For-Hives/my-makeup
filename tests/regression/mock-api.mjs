@@ -318,8 +318,8 @@ export async function demarrerFauxStrapi(port = 4112, { origine = '*' } = {}) {
 				post: null, // status forced on POST /api/me-makeup
 				suppression: null, // status forced on DELETE /api/me-makeup
 				upload: null, // status forced on POST /api/upload
-				// POST /api/upload records no uploader, like the API before #385
-				// still answering during a deploy
+				// POST /api/upload records no uploader, like an API without
+				// uploaded_by (a rollback, or the #385 deploy)
 				uploadSansProprietaire: false,
 				fournisseurEmail: false, // forgot-password: 500 for a known address
 				delaiPostMs: 0,
