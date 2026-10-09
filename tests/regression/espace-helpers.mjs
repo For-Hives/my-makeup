@@ -1,4 +1,4 @@
-import { randomBytes } from 'node:crypto'
+import { randomBytes, randomInt } from 'node:crypto'
 import { expect } from '@playwright/test'
 import sharp from 'sharp'
 import { COMPTE_TEST } from './mock-api.mjs'
@@ -56,12 +56,11 @@ async function photoDeTelephone() {
 	const largeur = 4000
 	const hauteur = 3000
 	const amplitude = 20
-	const bruit = randomBytes(largeur * hauteur)
 	const brut = Buffer.alloc(largeur * hauteur * 3)
 	for (let y = 0; y < hauteur; y++) {
 		for (let x = 0; x < largeur; x++) {
 			const i = y * largeur + x
-			const n = (bruit[i] % (2 * amplitude + 1)) - amplitude
+			const n = randomInt(-amplitude, amplitude + 1)
 			const borne = v => Math.min(255, Math.max(0, v | 0))
 			brut[i * 3] = borne((x * 255) / largeur + n)
 			brut[i * 3 + 1] = borne((y * 255) / hauteur + n)
