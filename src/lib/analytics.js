@@ -94,6 +94,13 @@ export const EVENTS = {
 	session_expired: { where: oneOf(['api_401', 'jwt_expire', 'middleware']) },
 	// every save of the artist's space (UI-01), `ok` = stored by the API
 	profile_save: { section: oneOf(SECTIONS_PROFIL), ok: flag },
+	// her space switched to the public view (`visible` true) or back to the
+	// edit view, by « Voir mon profil public » or « Modifier mon profil »;
+	// never on a page load (MES-12)
+	profile_visibility: { visible: flag },
+	// a save made her profile publiable (`publiable` true) or made it stop
+	// being (src/lib/profil/completude.js); sent on a change only (MES-12)
+	profile_publiable: { publiable: flag },
 	// a picture refused before (size, type) or by the API (server) (UI-03)
 	upload_error: { kind: oneOf(['size', 'type', 'server']) },
 	// account deleted by its owner, sent once the API confirmed it

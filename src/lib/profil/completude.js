@@ -229,3 +229,16 @@ export function completude(profil, options = {}) {
 		interne,
 	}
 }
+
+/**
+ * `publiable` of the profile after a save when the save changed it, or null
+ * when it stayed the same (the `profile_publiable` event).
+ * @param {object} avant - the profile before the save
+ * @param {object} apres - the profile the API stored
+ * @param {{formulaireDevis?: boolean}} [options] - see completude()
+ * @returns {boolean|null}
+ */
+export function changementPubliable(avant, apres, options = {}) {
+	const publiable = completude(apres, options).publiable
+	return completude(avant, options).publiable === publiable ? null : publiable
+}

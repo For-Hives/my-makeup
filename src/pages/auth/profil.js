@@ -22,6 +22,14 @@ import {
 } from '@/lib/auth-session'
 import { filtrerProfilPrive } from '@/lib/profil-prive'
 import { useRouter } from 'next/router'
+import { track } from '@/lib/analytics'
+import { devisFormUrl } from '@/lib/devis'
+import { changementPubliable } from '@/lib/profil/completude'
+
+// the quote form counts as a contact channel once it is online: the same
+// flag as the public profile page and the sitemap
+const FORMULAIRE_DEVIS =
+	devisFormUrl(process.env.NEXT_PUBLIC_DEVIS_FORM_URL) !== null
 
 function Profil({ data, erreur }) {
 	// the modals read the Strapi JWT from here (loaded after the page)
@@ -33,21 +41,30 @@ function Profil({ data, erreur }) {
 	// load of ?publicView=true shows the public view only (UI-02)
 	const isPublic = router.query.publicView === 'true'
 
-	// « Voir mon profil public » and « Modifier mon profil »: the same page,
-	// without reading the profile again
+	// called by « Voir mon profil public » and « Modifier mon profil » only,
+	// so a page load sends nothing; counted once the view has switched
 	const handleIsPublic = visible => {
-		router.push(
-			{
-				pathname: '/auth/profil',
-				query: visible ? { publicView: 'true' } : {},
-			},
-			undefined,
-			{ shallow: true }
-		)
+		router
+			.push(
+				{
+					pathname: '/auth/profil',
+					query: visible ? { publicView: 'true' } : {},
+				},
+				undefined,
+				{ shallow: true }
+			)
+			.then(change => {
+				if (change) track('profile_visibility', { visible })
+			})
 	}
 
+	// the modals call it once the API stored the save (UI-01)
 	const handleUpdateUser = newUser => {
+		const publiable = changementPubliable(user, newUser, {
+			formulaireDevis: FORMULAIRE_DEVIS,
+		})
 		setUser(newUser)
+		if (publiable !== null) track('profile_publiable', { publiable })
 	}
 
 	return (

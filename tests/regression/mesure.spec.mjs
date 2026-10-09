@@ -3,8 +3,10 @@
 // the Umami script and its sends go through /u on the site, the version is
 // in data-tag, nothing leaves an automated browser or a browser that opted
 // out, the proxy strips the cookies and the Referer and passes the visitor's
-// IP, sampled Web Vitals arrive as « web-vitals » events, and the answer to
-// « Comment as-tu connu My Makeup ? » arrives as « onboarding_source » (UI-05).
+// IP, sampled Web Vitals arrive as « web-vitals » events, the answer to
+// « Comment as-tu connu My Makeup ? » arrives as « onboarding_source » (UI-05),
+// and the artist's space sends « profile_visibility » and
+// « profile_publiable » (MES-12).
 // Playwright gives navigator.webdriver = true and a HeadlessChrome user
 // agent: each rule is checked alone, and a real visitor is played by forcing
 // webdriver to false with an ordinary Chrome user agent.
@@ -13,10 +15,12 @@ import { expect, test } from '@playwright/test'
 import { getElementsByTagName } from 'domutils'
 import { parseDocument } from 'htmlparser2'
 import {
+	API,
 	aller,
 	connecter,
 	inscrire,
 	panne,
+	profilDeDepart,
 	reinitialiserStrapi,
 } from './outils-strapi.mjs'
 
@@ -559,6 +563,130 @@ test.describe('MES-10 qui est mesuré', () => {
 			await expect(phrase).toContainText(
 				"Elle n'est enregistrée ni dans le compte ni dans le profil"
 			)
+		})
+
+		// --- the artist's space (MES-12) ---
+		// her space loaded and counted: its page view reached the fake Umami
+		// and nothing is on its way any more
+		async function espaceCompte(page, chemin) {
+			const vues = async () =>
+				(await envoisRecus()).filter(
+					e =>
+						!e.corps.payload.name &&
+						new URL(e.corps.payload.url).pathname === '/auth/profil'
+				).length
+			const avant = await vues()
+			await aller(page, chemin)
+			await expect(page.getByTestId('resume-name')).toHaveText(
+				'Testine Recette'
+			)
+			await expect.poll(vues).toBeGreaterThan(avant)
+			await page.waitForLoadState('networkidle')
+		}
+		// nothing that names her, in any send of the page
+		async function rienDePersonnel() {
+			const tout = JSON.stringify(await envoisRecus())
+			for (const mot of ['testine', 'Testine', 'Recette', 'Annecy', 'Studio'])
+				expect(tout, mot).not.toContain(mot)
+		}
+
+		test('profile_visibility : un envoi par bouton, aucun au chargement ni au rechargement de ?publicView=true', async ({
+			page,
+		}) => {
+			const apres = suivreEnvois(page)
+			await visiteurReel(page)
+			expect(await connecter(page)).toBe(true)
+			await espaceCompte(page, '/auth/profil')
+			expect(await evenements('profile_visibility')).toEqual([])
+
+			await page.getByTestId('profil-public-view').click()
+			await expect(page).toHaveURL(/publicView=true/)
+			await apres('profile_visibility', { visible: true })
+			await page.getByTestId('profil-edit-view').click()
+			await expect(page).not.toHaveURL(/publicView/)
+			await apres('profile_visibility', { visible: false })
+			expect(await evenements('profile_visibility')).toEqual([
+				{ visible: true },
+				{ visible: false },
+			])
+
+			// a direct load, then a reload, of the public view: nothing more
+			await espaceCompte(page, '/auth/profil?publicView=true')
+			await expect(page.getByTestId('profil-edit-view')).toBeVisible()
+			await espaceCompte(page, '/auth/profil?publicView=true')
+			expect(await evenements('profile_visibility')).toEqual([
+				{ visible: true },
+				{ visible: false },
+			])
+			await rienDePersonnel()
+		})
+
+		test('profile_publiable : la sauvegarde qui rend le profil publiable envoie un seul événement, le rechargement aucun', async ({
+			page,
+		}) => {
+			// a description of exactly n characters (no edge space)
+			const texte = n =>
+				'Maquillage de mariée, essai compris. '.repeat(6).slice(0, n - 1) + '.'
+			// one criterion short: a description of 199 characters
+			await profilDeDepart({
+				main_picture: { id: 1, name: 'photo-1.png', url: `${API}/media/1` },
+				service_offers: [
+					{ name: 'Mariée', price: '120 €', description: 'Essai et jour J' },
+				],
+				network: { instagram: 'studio.test', email: '', phone: '' },
+				description: texte(199),
+			})
+			const apres = suivreEnvois(page)
+			await visiteurReel(page)
+			expect(await connecter(page)).toBe(true)
+			await espaceCompte(page, '/auth/profil')
+
+			// a successful save, its profile_save received and every send of
+			// the page answered
+			const sauvegardes = async () => (await evenements('profile_save')).length
+			const sauver = async description => {
+				const avant = await sauvegardes()
+				await page.getByTestId('update-description-button').click()
+				await page.getByTestId('description-input').fill(description)
+				await page.getByTestId('save-button-description').click()
+				await expect(page.getByTestId('description-input')).toBeHidden()
+				await expect.poll(sauvegardes).toBe(avant + 1)
+				await apres('profile_save', { section: 'description', ok: true })
+			}
+
+			// the save fails: still one criterion short, nothing is sent
+			await panne({ patch: 500 })
+			await page.getByTestId('update-description-button').click()
+			await page.getByTestId('description-input').fill(texte(200))
+			await page.getByTestId('save-button-description').click()
+			await expect(page.getByTestId('save-error')).toBeVisible()
+			await apres('profile_save', { section: 'description', ok: false })
+			await page.keyboard.press('Escape')
+			await expect(page.getByTestId('description-input')).toBeHidden()
+			await panne({ patch: null })
+			expect(await evenements('profile_publiable')).toEqual([])
+
+			await sauver(texte(200))
+			await apres('profile_publiable', { publiable: true })
+			expect(await evenements('profile_publiable')).toEqual([
+				{ publiable: true },
+			])
+
+			// still publiable after another save, or after a reload: nothing
+			await sauver(texte(210))
+			await espaceCompte(page, '/auth/profil')
+			expect(await evenements('profile_publiable')).toEqual([
+				{ publiable: true },
+			])
+
+			// a save that breaks a criterion: it stops being publiable
+			await sauver('Maquilleuse à Annecy.')
+			await apres('profile_publiable', { publiable: false })
+			expect(await evenements('profile_publiable')).toEqual([
+				{ publiable: true },
+				{ publiable: false },
+			])
+			await rienDePersonnel()
 		})
 
 		test('« Ne plus mesurer mes visites » : aucun envoi', async ({ page }) => {

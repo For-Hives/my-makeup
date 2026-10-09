@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import {
 	aMedia,
+	changementPubliable,
 	completude,
 	contactsMasques,
 	CRITERES,
@@ -205,5 +206,64 @@ describe('elementary rules', () => {
 		assert.equal(contactsMasques({ email: null }), false)
 		assert.equal(contactsMasques(null), false)
 		assert.equal(contactsMasques(undefined), false)
+	})
+})
+
+describe('changementPubliable (profile_publiable, MES-12)', () => {
+	// one criterion short: a description of 199 characters
+	const presque = { ...complet, description: 'a'.repeat(199) }
+	const incomplet = { ...complet, description: '', main_picture: null }
+
+	test('the save that completes the last criterion: true', () => {
+		assert.equal(
+			changementPubliable(presque, {
+				...presque,
+				description: 'a'.repeat(200),
+			}),
+			true
+		)
+		assert.equal(changementPubliable(presque, complet), true)
+	})
+
+	test('the save that breaks a criterion: false', () => {
+		assert.equal(changementPubliable(complet, presque), false)
+		assert.equal(
+			changementPubliable(complet, { ...complet, service_offers: [] }),
+			false
+		)
+	})
+
+	test('no change of state: null', () => {
+		// complete to complete, incomplete to incomplete, the same profile
+		assert.equal(
+			changementPubliable(complet, { ...complet, city: 'Lyon' }),
+			null
+		)
+		assert.equal(
+			changementPubliable(incomplet, { ...incomplet, description: 'Bonjour' }),
+			null
+		)
+		assert.equal(changementPubliable(presque, presque), null)
+		assert.equal(changementPubliable(null, undefined), null)
+		// an internal account never becomes publiable
+		const interne = { ...presque, speciality: 'CEO/CTO My Makeup' }
+		assert.equal(
+			changementPubliable(interne, { ...interne, description: DESCRIPTION }),
+			null
+		)
+	})
+
+	test('the quote form counts as the contact channel she lacks', () => {
+		const sansCanal = { ...presque, network: { instagram: '' } }
+		const apres = { ...sansCanal, description: 'a'.repeat(200) }
+		assert.equal(changementPubliable(sansCanal, apres), null)
+		assert.equal(
+			changementPubliable(sansCanal, apres, { formulaireDevis: false }),
+			null
+		)
+		assert.equal(
+			changementPubliable(sansCanal, apres, { formulaireDevis: true }),
+			true
+		)
 	})
 })
