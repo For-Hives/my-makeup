@@ -41,5 +41,3 @@ pnpm-lock.yaml
 cypress.env.json
 
 yarn.lock
-
-.scannerwork/
