@@ -5,7 +5,9 @@
 // versions of the CI, the Docker image, .nvmrc and engines drift apart.
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
+import { execFileSync } from 'node:child_process'
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
+import { createRequire } from 'node:module'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parse } from 'yaml'
@@ -295,6 +297,31 @@ const OUTILS_DE_BUILD = [
 	'node-addon-api',
 ]
 
+/**
+ * Root entries of the tracked files (git ls-files, as the done_when of
+ * URG-11): ignored local leftovers (cypress.env.json, old cypress/videos)
+ * do not count. Without git (an archive), the folder itself.
+ */
+function entreesSuivies() {
+	try {
+		const fichiers = execFileSync('git', ['ls-files', '-z'], {
+			cwd: RACINE,
+			encoding: 'utf8',
+			stdio: ['ignore', 'pipe', 'ignore'],
+		})
+		return [
+			...new Set(
+				fichiers
+					.split('\0')
+					.filter(Boolean)
+					.map(f => f.split('/')[0])
+			),
+		]
+	} catch {
+		return readdirSync(RACINE)
+	}
+}
+
 /** Root entries that must not come back. */
 const entreesInterdites = entrees =>
 	entrees.filter(
@@ -315,6 +342,57 @@ const lignesCypressOuSonar = workflows =>
 					: []
 			)
 	)
+
+/** package-lock.json: Cypress (any scope or plugin), puppeteer or pg installed. */
+const verrouillesInterdits = texte =>
+	[
+		...texte.matchAll(
+			/"node_modules\/(@cypress\/[^"]+|(@[^/"]+\/)?(cypress[^/"]*|pg|puppeteer))"/g
+		),
+	].map(m => m[1])
+
+// libvips advisories in the Next image optimizer (decisions 2026-10-09)
+const SHARP_MINIMUM = '0.35.5'
+
+/** True when the x.y.z version is at least the minimum. */
+function auMoins(version, minimum) {
+	const a = String(version).split(/[.+-]/).slice(0, 3).map(Number)
+	const b = minimum.split('.').map(Number)
+	for (let i = 0; i < 3; i++) if (a[i] !== b[i]) return a[i] > b[i]
+	return true
+}
+
+/** package-lock.json: sharp below the minimum, or a copy nested in a package. */
+function sharpsVulnerables(lock) {
+	const erreurs = []
+	const paquets = lock.packages ?? {}
+	if (!paquets['node_modules/sharp']) erreurs.push('sharp absent du lock')
+	for (const [cle, { version }] of Object.entries(paquets)) {
+		if (!/(^|\/)node_modules\/sharp$/.test(cle)) continue
+		if (cle !== 'node_modules/sharp') erreurs.push(`sharp imbriqué : ${cle}`)
+		else if (!auMoins(version, SHARP_MINIMUM))
+			erreurs.push(`sharp ${version} < ${SHARP_MINIMUM}`)
+	}
+	return erreurs
+}
+
+/** Version of the sharp that next/image loads, resolved from next as it does. */
+function versionSharpDeNext() {
+	const depuisNext = createRequire(
+		createRequire(import.meta.url).resolve('next/package.json')
+	)
+	// sharp exports no package.json: walk up from its entry point
+	let dossier = path.dirname(depuisNext.resolve('sharp'))
+	while (dossier !== path.dirname(dossier)) {
+		const fichier = path.join(dossier, 'package.json')
+		if (existsSync(fichier)) {
+			const pkg = JSON.parse(readFileSync(fichier, 'utf8'))
+			if (pkg.name === 'sharp') return pkg.version
+		}
+		dossier = path.dirname(dossier)
+	}
+	return null
+}
 
 /** package.json: Cypress anywhere, pg installed, a build tool in dependencies. */
 function paquetsInterdits(texte) {
@@ -345,6 +423,9 @@ function renovateHorsSecurite(config) {
 	if (config.automerge !== false) erreurs.push('automerge n’est pas false')
 	if (config.osvVulnerabilityAlerts !== true)
 		erreurs.push('osvVulnerabilityAlerts n’est pas true')
+	for (const preset of config.extends ?? [])
+		if (/automerge/i.test(preset))
+			erreurs.push(`preset qui fusionne seul : ${preset}`)
 	const regles = config.packageRules ?? []
 	// one rule for every package: no match* key besides the update types
 	const coupeTout = regles.some(
@@ -380,19 +461,33 @@ function renovateHorsSecurite(config) {
 describe('URG-11 ménage', () => {
 	test('package.json : ni Cypress, ni pg, ni outil de build en dependencies', () => {
 		assert.deepEqual(paquetsInterdits(lireSiPresent('package.json')), [])
-		const lock = lireSiPresent('package-lock.json')
-		assert.doesNotMatch(lock, /"node_modules\/(cypress|pg)"/)
+		assert.deepEqual(
+			verrouillesInterdits(lireSiPresent('package-lock.json')),
+			[]
+		)
 	})
 
-	test('aucune entrée cypress*, bun.lockb ni sonar-project.properties à la racine', () => {
-		assert.deepEqual(entreesInterdites(readdirSync(RACINE)), [])
+	test(`sharp ${SHARP_MINIMUM} au moins, celui que charge next/image`, () => {
+		const lock = JSON.parse(lireSiPresent('package-lock.json'))
+		assert.deepEqual(sharpsVulnerables(lock), [])
+		const version = versionSharpDeNext()
+		assert.ok(
+			version !== null && auMoins(version, SHARP_MINIMUM),
+			`next charge sharp ${version}`
+		)
+	})
+
+	test('aucun fichier suivi cypress*, bun.lockb ni sonar-project.properties à la racine', () => {
+		assert.deepEqual(entreesInterdites(entreesSuivies()), [])
 	})
 
 	test('aucun workflow ne nomme Cypress ni Sonar, commentaires compris', () => {
 		assert.deepEqual(lignesCypressOuSonar(workflowsDuDepot()), [])
 	})
 
-	test('Renovate : correctifs de sécurité seulement, next <16 et tailwindcss <4', () => {
+	// The guards cap GitHub alerts only: an OSV alert sets its own
+	// allowedVersions after them (see renovate.json)
+	test('Renovate : correctifs de sécurité seulement, garde-fous next <16 et tailwindcss <4', () => {
 		const config = JSON.parse(lireSiPresent('renovate.json'))
 		assert.deepEqual(renovateHorsSecurite(config), [])
 		assert.equal(config.vulnerabilityAlerts.enabled, true)
@@ -425,6 +520,50 @@ describe('URG-11 ménage : les gardes refusent l’ancien état', () => {
 				'sonar-project.properties',
 			]
 		)
+	})
+
+	test('lock : Cypress, ses plugins, puppeteer et pg', () => {
+		const ancien = [
+			'"node_modules/cypress"',
+			'"node_modules/cypress-social-logins"',
+			'"node_modules/@cypress/request"',
+			'"node_modules/@testing-library/cypress"',
+			'"node_modules/puppeteer"',
+			'"node_modules/pg"',
+			'"node_modules/pg-connection-string"',
+			'"node_modules/sharp"',
+		].join('\n')
+		assert.deepEqual(verrouillesInterdits(ancien), [
+			'cypress',
+			'cypress-social-logins',
+			'@cypress/request',
+			'@testing-library/cypress',
+			'puppeteer',
+			'pg',
+		])
+	})
+
+	test('sharp : 0.34.5 de main, et une copie imbriquée sous next', () => {
+		assert.deepEqual(
+			sharpsVulnerables({
+				packages: { 'node_modules/sharp': { version: '0.34.5' } },
+			}),
+			['sharp 0.34.5 < 0.35.5']
+		)
+		assert.deepEqual(
+			sharpsVulnerables({
+				packages: {
+					'node_modules/sharp': { version: '0.35.5' },
+					'node_modules/next/node_modules/sharp': { version: '0.34.5' },
+				},
+			}),
+			['sharp imbriqué : node_modules/next/node_modules/sharp']
+		)
+		assert.deepEqual(sharpsVulnerables({ packages: {} }), [
+			'sharp absent du lock',
+		])
+		assert.ok(auMoins('0.36.0', '0.35.5') && auMoins('1.0.0', '0.35.5'))
+		assert.ok(!auMoins('0.35.4', '0.35.5'))
 	})
 
 	test('workflow : variable CYPRESS_ et job commenté', () => {
@@ -498,5 +637,13 @@ describe('URG-11 ménage : les gardes refusent l’ancien état', () => {
 			'aucune règle ne coupe les mises à jour majeures, mineures et de patch',
 			'règle qui rallume des mises à jour : ?',
 		])
+		const config = JSON.parse(lireSiPresent('renovate.json'))
+		assert.deepEqual(
+			renovateHorsSecurite({
+				...config,
+				extends: [...config.extends, ':automergeMinor'],
+			}),
+			['preset qui fusionne seul : :automergeMinor']
+		)
 	})
 })
