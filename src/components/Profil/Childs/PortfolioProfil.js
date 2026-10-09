@@ -1,33 +1,18 @@
-import React, { useEffect } from 'react'
+import React from 'react'
 import ModalUpdatePortfolioProfil from '@/components/Profil/Atoms/ModalUpdate/ModalUpdatePortfolioProfil'
-import { useRouter } from 'next/router'
 import ViewPortfolioProfil from '@/components/Profil/Childs/Views/ViewPortfolioProfil'
 import BoutonModifier from '@/components/Profil/Atoms/BoutonModifier'
 
 export function PortfolioProfil(props) {
-	// import router
-	const router = useRouter()
-	// get query param
-	const { publicView } = router.query
-
 	const user = props.user
 
 	const [isModalOpen, setIsModalOpen] = React.useState(false)
-	const [isPublic, setIsPublic] = React.useState(props.isPublic)
-
+	// the view of the page (src/pages/auth/profil.js), never copied (UI-02)
+	const isPublic = props.isPublic
+	// opens in the edit view only, an open modal always closes
 	const handleIsModalOpen = () => {
-		if (!isPublic) {
-			setIsModalOpen(!isModalOpen)
-		}
+		if (isModalOpen || !isPublic) setIsModalOpen(!isModalOpen)
 	}
-
-	useEffect(() => {
-		setIsPublic(!!publicView)
-	}, [])
-
-	useEffect(() => {
-		setIsPublic(props.isPublic)
-	}, [props.isPublic])
 
 	return (
 		<div className={'w-full'}>

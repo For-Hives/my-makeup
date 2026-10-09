@@ -229,3 +229,18 @@ export function completude(profil, options = {}) {
 		interne,
 	}
 }
+
+/**
+ * True when a save made the profile publiable: it was not before the save,
+ * and it is with what the API stored (the `profile_publiable` event).
+ * @param {object} avant - the profile before the save
+ * @param {object} apres - the profile the API stored
+ * @param {{formulaireDevis?: boolean}} [options] - see completude()
+ * @returns {boolean}
+ */
+export function devientPubliable(avant, apres, options = {}) {
+	return (
+		!completude(avant, options).publiable &&
+		completude(apres, options).publiable
+	)
+}

@@ -21,20 +21,59 @@ import {
 	urlSessionExpiree,
 } from '@/lib/auth-session'
 import { filtrerProfilPrive } from '@/lib/profil-prive'
+import { useRouter } from 'next/router'
+import { track } from '@/lib/analytics'
+import { devisFormUrl } from '@/lib/devis'
+import { devientPubliable } from '@/lib/profil/completude'
+
+// the quote form counts as a contact channel once it is online: the same
+// flag as the public profile page and the sitemap
+const FORMULAIRE_DEVIS =
+	devisFormUrl(process.env.NEXT_PUBLIC_DEVIS_FORM_URL) !== null
 
 function Profil({ data, erreur }) {
 	// the modals read the Strapi JWT from here (loaded after the page)
 	const { data: session } = useSession()
+	const router = useRouter()
 
 	const [user, setUser] = React.useState(data)
-	const [isPublic, setIsPublic] = React.useState(false)
+	// the URL holds the view, for every card at once: a reload or a direct
+	// load of ?publicView=true shows the public view only (UI-02)
+	const isPublic = router.query.publicView === 'true'
 
-	const handleIsPublic = newIsPublic => {
-		setIsPublic(newIsPublic)
+	// the view asked by « Voir mon profil public » or « Modifier mon profil »,
+	// counted once the URL shows it: once per switch (a double click too),
+	// never on a page load
+	const vueDemandee = React.useRef(null)
+	React.useEffect(() => {
+		if (vueDemandee.current !== isPublic) return
+		vueDemandee.current = null
+		track('profile_visibility', { public: isPublic })
+	}, [isPublic])
+
+	// a replace, not a push: no history entry, so Back leaves the page and
+	// never switches the view under an open modal
+	const handleIsPublic = visible => {
+		vueDemandee.current = visible
+		router
+			.replace(
+				{
+					pathname: '/auth/profil',
+					query: visible ? { publicView: 'true' } : {},
+				},
+				undefined,
+				{ shallow: true }
+			)
+			.catch(() => {})
 	}
 
+	// the modals call it once the API stored the save (UI-01)
 	const handleUpdateUser = newUser => {
+		const publiable = devientPubliable(user, newUser, {
+			formulaireDevis: FORMULAIRE_DEVIS,
+		})
 		setUser(newUser)
+		if (publiable) track('profile_publiable')
 	}
 
 	return (

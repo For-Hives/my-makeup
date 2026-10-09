@@ -3,8 +3,10 @@
 // the Umami script and its sends go through /u on the site, the version is
 // in data-tag, nothing leaves an automated browser or a browser that opted
 // out, the proxy strips the cookies and the Referer and passes the visitor's
-// IP, sampled Web Vitals arrive as « web-vitals » events, and the answer to
-// « Comment as-tu connu My Makeup ? » arrives as « onboarding_source » (UI-05).
+// IP, sampled Web Vitals arrive as « web-vitals » events, the answer to
+// « Comment as-tu connu My Makeup ? » arrives as « onboarding_source » (UI-05),
+// and the artist's space sends « profile_visibility » and
+// « profile_publiable » (MES-12).
 // Playwright gives navigator.webdriver = true and a HeadlessChrome user
 // agent: each rule is checked alone, and a real visitor is played by forcing
 // webdriver to false with an ordinary Chrome user agent.
@@ -13,10 +15,12 @@ import { expect, test } from '@playwright/test'
 import { getElementsByTagName } from 'domutils'
 import { parseDocument } from 'htmlparser2'
 import {
+	API,
 	aller,
 	connecter,
 	inscrire,
 	panne,
+	profilDeDepart,
 	reinitialiserStrapi,
 } from './outils-strapi.mjs'
 
@@ -559,6 +563,182 @@ test.describe('MES-10 qui est mesuré', () => {
 			await expect(phrase).toContainText(
 				"Elle n'est enregistrée ni dans le compte ni dans le profil"
 			)
+		})
+
+		// --- the artist's space (MES-12) ---
+		// her space loaded and counted: its page view reached the fake Umami
+		// and nothing is on its way any more
+		async function espaceCompte(page, chemin) {
+			const vues = async () =>
+				(await envoisRecus()).filter(
+					e =>
+						!e.corps.payload.name &&
+						new URL(e.corps.payload.url).pathname === '/auth/profil'
+				).length
+			const avant = await vues()
+			await aller(page, chemin)
+			await expect(page.getByTestId('resume-name')).toHaveText(
+				'Testine Recette'
+			)
+			await expect.poll(vues).toBeGreaterThan(avant)
+			await page.waitForLoadState('networkidle')
+		}
+		// nothing that names her, in any send of the page
+		async function rienDePersonnel() {
+			const tout = JSON.stringify(await envoisRecus())
+			for (const mot of ['testine', 'Testine', 'Recette', 'Annecy', 'Studio'])
+				expect(tout, mot).not.toContain(mot)
+		}
+
+		test('profile_visibility : un envoi par bascule de vue, double clic compris ; aucun au chargement, au rechargement ni au retour du navigateur', async ({
+			page,
+		}) => {
+			const apres = suivreEnvois(page)
+			const visibilite = () => evenements('profile_visibility')
+			await visiteurReel(page)
+			expect(await connecter(page)).toBe(true)
+			// a page before her space, for the Back button
+			await page.goto('/')
+			await espaceCompte(page, '/auth/profil')
+			expect(await visibilite()).toEqual([])
+
+			await page.getByTestId('profil-public-view').click()
+			await expect(page).toHaveURL(/publicView=true/)
+			await apres('profile_visibility', { public: true })
+			await page.getByTestId('profil-edit-view').click()
+			await expect(page).not.toHaveURL(/publicView/)
+			await apres('profile_visibility', { public: false })
+			expect(await visibilite()).toEqual([{ public: true }, { public: false }])
+
+			// a double click: two clicks before the view has switched, one send
+			await page.getByTestId('profil-public-view').evaluate(lien => {
+				lien.click()
+				lien.click()
+			})
+			await expect(page).toHaveURL(/publicView=true/)
+			await expect(page.getByTestId('profil-edit-view')).toBeVisible()
+			await expect.poll(async () => (await visibilite()).length).toBe(3)
+			await page.waitForLoadState('networkidle')
+			await apres('profile_visibility', { public: true })
+			expect(await visibilite()).toEqual([
+				{ public: true },
+				{ public: false },
+				{ public: true },
+			])
+
+			// Back leaves her space (no history entry per switch), Forward and
+			// a reload load the public view again: nothing more is sent
+			await page.goBack()
+			await expect(page).toHaveURL(url => url.pathname === '/')
+			await page.goForward()
+			await expect(page).toHaveURL(/\/auth\/profil\?publicView=true/)
+			await expect(page.getByTestId('profil-edit-view')).toBeVisible()
+			await espaceCompte(page, '/auth/profil?publicView=true')
+			await expect(page.getByTestId('profil-edit-view')).toBeVisible()
+			await page.waitForLoadState('networkidle')
+			expect(await visibilite()).toHaveLength(3)
+			await rienDePersonnel()
+		})
+
+		// a description of exactly n characters (no edge space)
+		const texte = n =>
+			'Maquillage de mariée, essai compris. '.repeat(6).slice(0, n - 1) + '.'
+		// one criterion short: a description of 199 characters
+		const presquePubliable = champs =>
+			profilDeDepart({
+				main_picture: { id: 1, name: 'photo-1.png', url: `${API}/media/1` },
+				service_offers: [
+					{ name: 'Mariée', price: '120 €', description: 'Essai et jour J' },
+				],
+				network: { instagram: 'studio.test', email: '', phone: '' },
+				description: texte(199),
+				...champs,
+			})
+		// a successful save through a card's modal, its profile_save received
+		// and every send of the page answered
+		async function sauver(page, apres, { bouton, champ, valeur, section }) {
+			const sauvegardes = async () => (await evenements('profile_save')).length
+			const avant = await sauvegardes()
+			await page.getByTestId(bouton).click()
+			await page.getByTestId(champ).fill(valeur)
+			await page.getByTestId(`save-button-${section.cy}`).click()
+			await expect(page.getByTestId(champ)).toBeHidden()
+			await expect.poll(sauvegardes).toBe(avant + 1)
+			await apres('profile_save', { section: section.nom, ok: true })
+		}
+		const DESCRIPTION = { cy: 'description', nom: 'description' }
+		const decrire = (page, apres, valeur) =>
+			sauver(page, apres, {
+				bouton: 'update-description-button',
+				champ: 'description-input',
+				valeur,
+				section: DESCRIPTION,
+			})
+		// the event carries no property at all
+		const publiables = async () =>
+			(await evenements('profile_publiable')).map(d => d ?? {})
+
+		test('profile_publiable : seulement au passage à publiable, un seul envoi sans propriété ; ni échec, ni rechargement, ni perte d’un critère', async ({
+			page,
+		}) => {
+			await presquePubliable()
+			const apres = suivreEnvois(page)
+			await visiteurReel(page)
+			expect(await connecter(page)).toBe(true)
+			await espaceCompte(page, '/auth/profil')
+
+			// the save fails: still one criterion short, nothing is sent
+			await panne({ patch: 500 })
+			await page.getByTestId('update-description-button').click()
+			await page.getByTestId('description-input').fill(texte(200))
+			await page.getByTestId('save-button-description').click()
+			await expect(page.getByTestId('save-error')).toBeVisible()
+			await apres('profile_save', { section: 'description', ok: false })
+			await page.keyboard.press('Escape')
+			await expect(page.getByTestId('description-input')).toBeHidden()
+			await panne({ patch: null })
+			expect(await publiables()).toEqual([])
+
+			await decrire(page, apres, texte(200))
+			await apres('profile_publiable')
+			expect(await publiables()).toEqual([{}])
+
+			// still publiable after another save, or after a reload: nothing
+			await decrire(page, apres, texte(210))
+			await espaceCompte(page, '/auth/profil')
+			expect(await publiables()).toEqual([{}])
+
+			// a save that breaks a criterion: a loss is never counted
+			await decrire(page, apres, 'Maquilleuse à Annecy.')
+			expect(await publiables()).toEqual([{}])
+			await rienDePersonnel()
+		})
+
+		test('profile_publiable : sans canal de contact ni formulaire de devis en ligne, la description complète ne suffit pas ; Instagram ajouté, un envoi', async ({
+			page,
+		}) => {
+			// the test build has NEXT_PUBLIC_DEVIS_FORM_URL empty: the quote
+			// form does not count as a contact channel, as on her public page
+			await presquePubliable({
+				network: { instagram: '', email: '', phone: '' },
+			})
+			const apres = suivreEnvois(page)
+			await visiteurReel(page)
+			expect(await connecter(page)).toBe(true)
+			await espaceCompte(page, '/auth/profil')
+
+			await decrire(page, apres, texte(200))
+			expect(await publiables()).toEqual([])
+
+			await sauver(page, apres, {
+				bouton: 'update-social-medias-button',
+				champ: 'instagram-input',
+				valeur: 'https://www.instagram.com/studio.test',
+				section: { cy: 'social-medias', nom: 'reseaux' },
+			})
+			await apres('profile_publiable')
+			expect(await publiables()).toEqual([{}])
+			await rienDePersonnel()
 		})
 
 		test('« Ne plus mesurer mes visites » : aucun envoi', async ({ page }) => {

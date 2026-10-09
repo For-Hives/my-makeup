@@ -544,7 +544,7 @@ describe('auth events (A3, A4)', () => {
 	})
 })
 
-describe('artist space events (UI-01, UI-03, UI-05)', () => {
+describe('artist space events (UI-01, UI-03, UI-05, MES-12)', () => {
 	test('profile_save: a section of the closed list and the outcome', () => {
 		assert.deepEqual(
 			eventData('profile_save', { section: 'description', ok: true }),
@@ -570,6 +570,72 @@ describe('artist space events (UI-01, UI-03, UI-05)', () => {
 		for (const kind of ['size', 'type', 'server'])
 			assert.deepEqual(eventData('upload_error', { kind }), { kind })
 		assert.equal(eventData('upload_error', { kind: 'IMG_0001.HEIC' }), null)
+	})
+
+	test('profile_visibility: the view she switched to, a boolean only (MES-12)', () => {
+		assert.deepEqual(eventData('profile_visibility', { public: true }), {
+			public: true,
+		})
+		assert.deepEqual(eventData('profile_visibility', { public: false }), {
+			public: false,
+		})
+		for (const value of ['true', 1, 0, null, 'public'])
+			assert.equal(
+				eventData('profile_visibility', { public: value }),
+				null,
+				String(value)
+			)
+		assert.equal(eventData('profile_visibility'), null)
+		// the old name of the property is refused
+		assert.equal(eventData('profile_visibility', { visible: true }), null)
+		// nothing about her: no id, no name, no city
+		for (const extra of [
+			{ pid: '12' },
+			{ username: 'testine-recette' },
+			{ city: 'Annecy' },
+		])
+			assert.equal(
+				eventData('profile_visibility', { public: true, ...extra }),
+				null
+			)
+	})
+
+	test('profile_publiable: no property at all (MES-12)', () => {
+		assert.deepEqual(eventData('profile_publiable'), {})
+		assert.deepEqual(eventData('profile_publiable', {}), {})
+		for (const props of [
+			{ publiable: true },
+			{ publiable: false },
+			{ pid: '12' },
+			{ username: 'testine-recette' },
+			{ city: 'Annecy' },
+			{ score: 13 },
+		])
+			assert.equal(
+				eventData('profile_publiable', props),
+				null,
+				JSON.stringify(props)
+			)
+	})
+
+	test('MES-12 events go through track() with their data only', () => {
+		const { calls, win } = fakeUmami()
+		assert.equal(
+			track('profile_visibility', { public: true }, { win, production: true }),
+			true
+		)
+		assert.equal(
+			track('profile_publiable', undefined, { win, production: true }),
+			true
+		)
+		assert.equal(
+			track('profile_publiable', { pid: '12' }, { win, production: true }),
+			false
+		)
+		assert.deepEqual(calls, [
+			['profile_visibility', { public: true }],
+			['profile_publiable', {}],
+		])
 	})
 
 	test('account_delete: no property at all', () => {

@@ -621,6 +621,98 @@ test.describe('UI-02 et UI-04 édition au doigt et au clavier', () => {
 			await expect(page.getByTestId('update-description-button')).toHaveCount(0)
 		})
 	}
+
+	// no edit control anywhere: the top of the page and the cards
+	async function vuePubliqueSeule(page) {
+		await expect(page.getByTestId('resume-name')).toHaveText('Testine Recette')
+		await expect(page.getByTestId('profil-edit-view')).toBeVisible()
+		for (const cy of [
+			'update-resume-button',
+			'update-picture-button',
+			'update-description-button',
+			'profil-public-view',
+		])
+			await expect(page.getByTestId(cy), cy).toHaveCount(0)
+	}
+
+	test('UI-02 ?publicView=true chargé directement, puis rechargé : vue publique seule ; « Modifier mon profil » rend la vue d’édition', async ({
+		page,
+	}) => {
+		const erreurs = erreursDeLaPage(page)
+		page.on('console', m => {
+			if (m.type() === 'error' && !/Failed to load resource/.test(m.text()))
+				erreurs.push(m.text())
+		})
+		expect(await connecter(page)).toBe(true)
+		// the server already renders the public view: same page once hydrated
+		const html = await (
+			await page.context().request.get('/auth/profil?publicView=true')
+		).text()
+		expect(html).toContain('data-cy="profil-edit-view"')
+		expect(html).not.toContain('data-cy="update-resume-button"')
+		expect(html).not.toContain('data-cy="update-picture-button"')
+		// aller() waits for the hydration: the old effects had run by then
+		await aller(page, '/auth/profil?publicView=true')
+		await vuePubliqueSeule(page)
+		const session = page.waitForResponse(r =>
+			r.url().endsWith('/api/auth/session')
+		)
+		await page.reload()
+		await session
+		await vuePubliqueSeule(page)
+
+		// « Modifier mon profil »: every edit control is back
+		await page.getByTestId('profil-edit-view').click()
+		await expect(page).not.toHaveURL(/publicView/)
+		await expect(page.getByTestId('update-resume-button')).toBeVisible()
+		await expect(page.getByTestId('update-picture-button')).toHaveCount(1)
+		await expect(page.getByTestId('profil-edit-view')).toHaveCount(0)
+		await expect(page.getByTestId('update-description-button')).toBeVisible()
+		await expect(page.getByTestId('profil-public-view')).toBeVisible()
+		expect(erreurs).toEqual([])
+	})
+
+	test('UI-02 la bascule de vue n’ajoute aucune entrée d’historique : modale ouverte puis retour du navigateur, on quitte l’espace sans modale bloquée', async ({
+		page,
+	}) => {
+		const erreurs = erreursDeLaPage(page)
+		expect(await connecter(page)).toBe(true)
+		await aller(page, '/')
+		// to her space from the menu (navigation côté client)
+		await page.getByRole('link', { name: 'Profil', exact: true }).click()
+		await expect(page.getByTestId('resume-name')).toHaveText('Testine Recette')
+		const entrees = await page.evaluate(() => history.length)
+		await page.getByTestId('profil-public-view').click()
+		await expect(page).toHaveURL(/publicView=true/)
+		await vuePubliqueSeule(page)
+		await page.getByTestId('profil-edit-view').click()
+		await expect(page).not.toHaveURL(/publicView/)
+		expect(await page.evaluate(() => history.length)).toBe(entrees)
+
+		// Back (the usual way to dismiss a modal on Android) leaves her space
+		await page.getByTestId('update-description-button').click()
+		await expect(page.getByTestId('description-input')).toBeVisible()
+		await page.goBack()
+		await expect(page).toHaveURL(url => url.pathname === '/')
+		await expect(dialogue(page)).toHaveCount(0)
+		await expect(page.getByTestId('description-input')).toHaveCount(0)
+
+		// Forward: her space in the edit view, each modal opens and closes
+		await page.goForward()
+		await expect(page).toHaveURL(
+			url => url.pathname === '/auth/profil' && url.search === ''
+		)
+		await expect(dialogue(page)).toBeHidden()
+		await page.getByTestId('update-description-button').click()
+		await expect(page.getByTestId('description-input')).toBeVisible()
+		await page.keyboard.press('Escape')
+		await expect(page.getByTestId('description-input')).toBeHidden()
+		await page.getByTestId('update-resume-button').click()
+		await expect(dialogue(page)).toBeVisible()
+		await dialogue(page).getByTestId('close-modal').click()
+		await expect(dialogue(page)).toBeHidden()
+		expect(erreurs).toEqual([])
+	})
 })
 
 test.describe('UI-03 photos', () => {

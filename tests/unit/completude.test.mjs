@@ -6,6 +6,7 @@ import {
 	completude,
 	contactsMasques,
 	CRITERES,
+	devientPubliable,
 	longueurDescription,
 	prixNumerique,
 	villeExploitable,
@@ -205,5 +206,58 @@ describe('elementary rules', () => {
 		assert.equal(contactsMasques({ email: null }), false)
 		assert.equal(contactsMasques(null), false)
 		assert.equal(contactsMasques(undefined), false)
+	})
+})
+
+describe('devientPubliable (profile_publiable, MES-12)', () => {
+	// one criterion short: a description of 199 characters
+	const presque = { ...complet, description: 'a'.repeat(199) }
+	const incomplet = { ...complet, description: '', main_picture: null }
+
+	test('the save that completes the last criterion: true', () => {
+		assert.equal(
+			devientPubliable(presque, {
+				...presque,
+				description: 'a'.repeat(200),
+			}),
+			true
+		)
+		assert.equal(devientPubliable(presque, complet), true)
+	})
+
+	test('complete to complete, incomplete to incomplete, complete to incomplete: false', () => {
+		assert.equal(devientPubliable(complet, { ...complet, city: 'Lyon' }), false)
+		assert.equal(
+			devientPubliable(incomplet, { ...incomplet, description: 'Bonjour' }),
+			false
+		)
+		assert.equal(devientPubliable(presque, presque), false)
+		// a loss is never counted as a profile that became publiable
+		assert.equal(devientPubliable(complet, presque), false)
+		assert.equal(
+			devientPubliable(complet, { ...complet, service_offers: [] }),
+			false
+		)
+		assert.equal(devientPubliable(null, undefined), false)
+		// an internal account never becomes publiable
+		const interne = { ...presque, speciality: 'CEO/CTO My Makeup' }
+		assert.equal(
+			devientPubliable(interne, { ...interne, description: DESCRIPTION }),
+			false
+		)
+	})
+
+	test('the quote form counts as the contact channel she lacks', () => {
+		const sansCanal = { ...presque, network: { instagram: '' } }
+		const apres = { ...sansCanal, description: 'a'.repeat(200) }
+		assert.equal(devientPubliable(sansCanal, apres), false)
+		assert.equal(
+			devientPubliable(sansCanal, apres, { formulaireDevis: false }),
+			false
+		)
+		assert.equal(
+			devientPubliable(sansCanal, apres, { formulaireDevis: true }),
+			true
+		)
 	})
 })

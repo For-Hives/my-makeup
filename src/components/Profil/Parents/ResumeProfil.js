@@ -1,40 +1,25 @@
-import React, { useEffect } from 'react'
+import React from 'react'
 import Image from 'next/image'
 import { BadgeDispo } from '@/components/Profil/Atoms/BadgeDispo'
 import { BadgeIndispo } from '@/components/Profil/Atoms/BadgeIndispo'
 import ModalUpdateResumeProfil from '@/components/Profil/Atoms/ModalUpdate/ModalUpdateResumeProfil'
-import { useRouter } from 'next/router'
 import BoutonModifier from '@/components/Profil/Atoms/BoutonModifier'
 import { villePublique } from '@/lib/profil/lieu-public'
 
 function ResumeProfil(props) {
-	const router = useRouter()
-	const { publicView } = router.query
-
-	// the profile of the page (src/pages/auth/profil.js), never copied here:
-	// the name, the badge and the picture show what the API stored (UI-01)
+	// the profile and the view of the page (src/pages/auth/profil.js), never
+	// copied here: the name, the badge and the picture show what the API
+	// stored (UI-01), in the same view as the cards (UI-02)
 	const user = props.user
-	const [isPublic, setIsPublic] = React.useState(false)
+	const isPublic = props.isPublic
 	const [isModalOpen, setIsModalOpen] = React.useState(false)
 	const availability = !!user?.available
 	const profilPicture = user?.main_picture?.url || '/assets/pp_makeup.webp'
 
+	// opens in the edit view only, an open modal always closes
 	const handleIsModalOpen = () => {
-		if (!props.isPublic) {
-			setIsModalOpen(!isModalOpen)
-		}
+		if (isModalOpen || !isPublic) setIsModalOpen(!isModalOpen)
 	}
-
-	/**
-	 * default value at first render
-	 */
-	useEffect(() => {
-		setIsPublic(!!publicView)
-	}, [])
-
-	useEffect(() => {
-		setIsPublic(props.isPublic)
-	}, [props.isPublic])
 
 	return (
 		<div className={'relative bg-white px-4 pb-24 shadow-xl md:px-8 2xl:px-0'}>
