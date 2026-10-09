@@ -197,15 +197,13 @@ export function periode(experience) {
 }
 
 /**
- * Non-empty lines of a text typed with line breaks.
+ * Non-empty lines of a text typed with line breaks, each as texte(): a line
+ * « null » or « undefined » is empty too.
  * @param {unknown} v
  * @returns {string[]}
  */
 export function lignes(v) {
-	return texte(v)
-		.split('\n')
-		.map(ligne => ligne.trim())
-		.filter(Boolean)
+	return typeof v === 'string' ? v.split('\n').map(texte).filter(Boolean) : []
 }
 
 const RESEAUX = {
@@ -325,7 +323,7 @@ export function sectionsVisibles(profil) {
 		competences: liste(p.skills).some(s => texte(s.name)),
 		langues: liste(p.language).some(l => texte(l.name)),
 		formations: liste(p.courses).some(c => texte(c.diploma) || texte(c.school)),
-		description: texte(p.description) !== '',
+		description: lignes(p.description).length > 0,
 		portfolio: galerie(p).length > 0,
 		offres: offres(p).length > 0,
 		experiences: liste(p.experiences).some(
