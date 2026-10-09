@@ -3,7 +3,8 @@
 // the Umami script and its sends go through /u on the site, the version is
 // in data-tag, nothing leaves an automated browser or a browser that opted
 // out, the proxy strips the cookies and the Referer and passes the visitor's
-// IP, and sampled Web Vitals arrive as « web-vitals » events.
+// IP, sampled Web Vitals arrive as « web-vitals » events, and the answer to
+// « Comment as-tu connu My Makeup ? » arrives as « onboarding_source » (UI-05).
 // Playwright gives navigator.webdriver = true and a HeadlessChrome user
 // agent: each rule is checked alone, and a real visitor is played by forcing
 // webdriver to false with an ordinary Chrome user agent.
@@ -11,6 +12,13 @@
 import { expect, test } from '@playwright/test'
 import { getElementsByTagName } from 'domutils'
 import { parseDocument } from 'htmlparser2'
+import {
+	aller,
+	connecter,
+	inscrire,
+	panne,
+	reinitialiserStrapi,
+} from './outils-strapi.mjs'
 
 const APP = process.env.RG_APP ?? 'http://localhost:3996'
 const UMAMI = process.env.RG_UMAMI ?? 'http://127.0.0.1:4113'
@@ -32,9 +40,18 @@ async function piloter(chemin) {
 const recus = async () => (await piloter('/__umami/etat')).journal
 const envoisRecus = async () =>
 	(await recus()).filter(r => r.methode === 'POST' && r.chemin === '/api/send')
+// data of the events of that name received by the fake Umami
+const evenements = async nom =>
+	(await envoisRecus())
+		.filter(e => e.corps.payload.name === nom)
+		.map(e => e.corps.payload.data)
+
+test.use({ testIdAttribute: 'data-cy' })
 
 test.beforeEach(async () => {
 	await piloter('/__umami/reset')
+	// the fake Strapi is shared with espace.spec.mjs
+	await reinitialiserStrapi()
 })
 
 // every request of the page: hosts reached and sends to /u/api/send
@@ -410,6 +427,138 @@ test.describe('MES-10 qui est mesuré', () => {
 				await page.waitForLoadState('networkidle')
 				expect(await expirations()).toEqual([{ where }])
 			}
+		})
+
+		// sign-up up to the name step of /auth/init-account
+		async function etapeDuNom(page, email) {
+			await inscrire(page, email)
+			await expect(page.getByTestId('first_name')).toBeVisible({
+				timeout: 15_000,
+			})
+			await page.getByTestId('first_name').fill('Al')
+			await page.getByTestId('last_name').fill('Bo')
+		}
+		// The page's sends to /u/api/send. `apres(nom, data)` waits until the
+		// page has sent that event and every send so far has its answer (the
+		// proxy answers once Umami has): the fake Umami then holds all the
+		// events sent before it.
+		function suivreEnvois(page) {
+			const vus = []
+			const finis = new Set()
+			page.on('request', requete => {
+				if (new URL(requete.url()).pathname === '/u/api/send') vus.push(requete)
+			})
+			page.on('requestfinished', requete => finis.add(requete))
+			page.on('requestfailed', requete => finis.add(requete))
+			const envoye = (nom, data) =>
+				vus.some(requete => {
+					const payload = requete.postDataJSON()?.payload
+					return (
+						payload?.name === nom &&
+						Object.entries(data).every(([cle, v]) => payload.data?.[cle] === v)
+					)
+				})
+			return async (nom, data = {}) => {
+				await expect.poll(() => envoye(nom, data)).toBe(true)
+				await expect.poll(() => vus.every(r => finis.has(r))).toBe(true)
+			}
+		}
+		// « Bienvenue » shown and the end of the onboarding received: it is
+		// sent last, after any onboarding_source
+		async function finDeLInscription(page, apres) {
+			await expect(page.getByText(/Bienvenue sur My.Makeup/)).toBeVisible()
+			await apres('onboarding_step', { step: 'termine' })
+		}
+		const question = page =>
+			page.getByRole('group', { name: /Comment as-tu connu My.Makeup/ })
+
+		test('onboarding_source : la réponse part une fois, seulement quand le nom est enregistré', async ({
+			page,
+		}) => {
+			const apres = suivreEnvois(page)
+			await visiteurReel(page)
+			await etapeDuNom(page, 'origine@test.local')
+			await page.getByTestId('onboarding-source-instagram').check()
+
+			// the save fails: nothing is counted. profile_save is sent as soon
+			// as the PATCH answers, before the line that counts the answer.
+			await panne({ patch: 500 })
+			await page.getByTestId('submit').click()
+			await expect(page.getByTestId('save-error')).toBeVisible()
+			await apres('profile_save', { section: 'onboarding', ok: false })
+			expect(await evenements('onboarding_source')).toEqual([])
+
+			await panne({ patch: null })
+			await page.getByTestId('submit').click()
+			await finDeLInscription(page, apres)
+			const envois = (await envoisRecus()).filter(
+				e => e.corps.payload.name === 'onboarding_source'
+			)
+			expect(envois).toHaveLength(1)
+			expect(envois[0].corps.payload).toMatchObject({
+				website: WEBSITE_ID,
+				tag: VERSION,
+				name: 'onboarding_source',
+				data: { source: 'instagram' },
+			})
+			expect(envois[0].corps.payload.url).toContain('/auth/init-account')
+			expect(JSON.stringify(envois[0].corps)).not.toContain('origine@test')
+		})
+
+		test('onboarding_source : réponse effacée, l’inscription se termine et rien ne part', async ({
+			page,
+		}) => {
+			const apres = suivreEnvois(page)
+			await visiteurReel(page)
+			await etapeDuNom(page, 'sans-origine@test.local')
+			const effacer = page.getByTestId('onboarding-source-effacer')
+			await expect(effacer).toHaveCount(0)
+			await page.getByTestId('onboarding-source-ecole').check()
+			await effacer.click()
+			await expect(
+				question(page).getByRole('radio', { checked: true })
+			).toHaveCount(0)
+			await expect(effacer).toHaveCount(0)
+			await expect(
+				page.getByTestId('onboarding-source-instagram')
+			).toBeFocused()
+
+			await page.getByTestId('submit').click()
+			await finDeLInscription(page, apres)
+			expect(await evenements('onboarding_source')).toEqual([])
+		})
+
+		test('onboarding_source : profil déjà créé (retour sur la page), pas de question et rien ne part', async ({
+			page,
+		}) => {
+			const apres = suivreEnvois(page)
+			await visiteurReel(page)
+			// the test account already has its profile: the POST answers 400
+			expect(await connecter(page)).toBe(true)
+			await aller(page, '/auth/init-account')
+			await expect(page.getByTestId('first_name')).toBeVisible({
+				timeout: 15_000,
+			})
+			await expect(question(page)).toHaveCount(0)
+			await page.getByTestId('first_name').fill('Al')
+			await page.getByTestId('last_name').fill('Bo')
+			await page.getByTestId('submit').click()
+			await finDeLInscription(page, apres)
+			expect(await evenements('onboarding_source')).toEqual([])
+		})
+
+		test('onboarding_source : la politique de confidentialité décrit la question', async ({
+			page,
+		}) => {
+			await page.goto('/politique-de-confidentialite')
+			const phrase = page.getByText(/Comment as-tu connu My Makeup \?/)
+			await expect(phrase).toHaveCount(1)
+			await expect(phrase).toContainText(
+				'est envoyée à Umami de la même façon, sans cookie'
+			)
+			await expect(phrase).toContainText(
+				"Elle n'est enregistrée ni dans le compte ni dans le profil"
+			)
 		})
 
 		test('« Ne plus mesurer mes visites » : aucun envoi', async ({ page }) => {

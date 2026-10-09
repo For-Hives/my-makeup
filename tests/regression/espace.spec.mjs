@@ -9,65 +9,28 @@ import { expect, test, devices } from '@playwright/test'
 import { randomBytes } from 'node:crypto'
 import sharp from 'sharp'
 import { COMPTE_TEST } from './mock-api.mjs'
+import {
+	API,
+	aller,
+	appels,
+	connecter,
+	etat,
+	inscrire,
+	ouvrirProfil,
+	panne,
+	piloter,
+	profilDeDepart,
+	profilServeur,
+	reinitialiserStrapi,
+} from './outils-strapi.mjs'
 
-const API = process.env.RG_API ?? 'http://127.0.0.1:4112'
 const MO = 1024 * 1024
-
-// Never against the production: local hosts only
-if (!['localhost', '127.0.0.1', '[::1]'].includes(new URL(API).hostname))
-	throw new Error(`API non locale refusée : ${API}`)
 
 test.use({ testIdAttribute: 'data-cy' })
 
-// --- the fake Strapi ---
-async function piloter(chemin, corps) {
-	const reponse = await fetch(
-		API + chemin,
-		corps === undefined ? {} : { method: 'POST', body: JSON.stringify(corps) }
-	)
-	return reponse.json()
-}
-const etat = () => piloter('/__etat')
-const panne = corps => piloter('/__panne', corps)
-// fields of the test account's profile, stored as the API would
-const profilDeDepart = champs => piloter('/__profil', champs)
-const profilServeur = async (id = COMPTE_TEST.id) => (await etat()).profils[id]
-const appels = (journal, methode, chemin) =>
-	journal.filter(entree => entree.m === methode && entree.p === chemin)
-
 test.beforeEach(async () => {
-	await piloter('/__reset', {})
+	await reinitialiserStrapi()
 })
-
-// --- sessions and pages ---
-async function connecter(
-	page,
-	{ email = COMPTE_TEST.email, password = COMPTE_TEST.password } = {}
-) {
-	const requete = page.context().request
-	const { csrfToken } = await (await requete.get('/api/auth/csrf')).json()
-	await requete.post('/api/auth/callback/credentials', {
-		form: { csrfToken, email, password, json: 'true' },
-	})
-	const cookies = await page.context().cookies()
-	return cookies.some(c => c.name.startsWith('next-auth.session-token'))
-}
-
-// Loads a page and waits for its hydration (SessionProvider asks for the
-// session once React runs): a click before that would do nothing.
-async function aller(page, chemin) {
-	const session = page.waitForResponse(r =>
-		r.url().endsWith('/api/auth/session')
-	)
-	await page.goto(chemin)
-	await session
-}
-
-async function ouvrirProfil(page) {
-	expect(await connecter(page)).toBe(true)
-	await aller(page, '/auth/profil')
-	await expect(page.getByTestId('resume-name')).toHaveText('Testine Recette')
-}
 
 // the open modal (its Dialog element has no size of its own)
 const dialogue = page => page.getByTestId('modal-panel')
@@ -779,18 +742,36 @@ test.describe('UI-03 photos', () => {
 })
 
 test.describe('UI-05 inscription et suppression', () => {
-	async function inscrire(page, email = 'nouvelle@test.local') {
-		await aller(page, '/auth/signup')
-		await page.getByTestId('name').fill('nouvelle-compte')
-		await page.getByTestId('email').fill(email)
-		await page.getByTestId('password').fill('Test-1234')
-		await page.getByTestId('submit').click()
-		await expect(page).toHaveURL(/\/auth\/init-account/)
-	}
+	// « Comment as-tu connu My Makeup ? », in the order shown
+	const ORIGINES = [
+		['instagram', 'Instagram'],
+		['google', 'Recherche Google'],
+		['bouche-a-oreille', 'Bouche-à-oreille'],
+		['ecole', 'École de maquillage'],
+		['autre', 'Autre'],
+	]
 
-	test('RG-07 API lente (2,5 s) : un seul profil créé, le nom attend sa création, « Bienvenue » après l’enregistrement', async ({
-		page,
-	}) => {
+	// RG-07, at 1440 px and on a phone. `appuyer` clicks, or taps on a phone.
+	async function rg07(page, { appuyer = cible => cible.click() } = {}) {
+		// bodies the browser sends to the API for the profile
+		const corps = []
+		// every request of the page to the fake Strapi or to an /api route of
+		// the app, any method (the Umami sends go to /u/api/send)
+		const versLApi = []
+		page.on('request', requete => {
+			const url = new URL(requete.url())
+			if (
+				url.pathname === '/api/me-makeup' &&
+				['POST', 'PATCH'].includes(requete.method())
+			)
+				corps.push([requete.method(), requete.postDataJSON()])
+			if (
+				url.origin === new URL(API).origin ||
+				url.pathname.startsWith('/api/')
+			)
+				versLApi.push([requete.url(), requete.postData() ?? ''])
+		})
+
 		await panne({ delaiPostMs: 2500 })
 		await inscrire(page)
 		await expect(
@@ -802,10 +783,33 @@ test.describe('UI-05 inscription et suppression', () => {
 		const [creation] = appels(avant.journal, 'POST', '/api/me-makeup')
 		expect(creation.fin).toBeDefined() // answered before the name step
 
+		// the optional question: 5 answers, none chosen, 44 px targets
+		const question = page.getByRole('group', {
+			name: /Comment as-tu connu My.Makeup/,
+		})
+		await expect(question).toBeVisible()
+		for (const [valeur, libelle] of ORIGINES) {
+			const choix = question.getByLabel(libelle, { exact: true })
+			await expect(choix).toHaveAttribute(
+				'data-cy',
+				`onboarding-source-${valeur}`
+			)
+			await expect(choix).not.toBeChecked()
+		}
+		expect(await question.getByRole('radio').count()).toBe(ORIGINES.length)
+		for (const libelle of await question.locator('label').all())
+			expect((await libelle.boundingBox()).height).toBeGreaterThanOrEqual(44)
+		// nothing wider than the screen
+		expect(
+			await page.evaluate(
+				() => document.documentElement.scrollWidth <= window.innerWidth + 1
+			)
+		).toBe(true)
+
 		// 1 letter: refused by the form, nothing sent
 		await prenom.fill('A')
 		await page.getByTestId('last_name').fill('Bo')
-		await page.getByTestId('submit').click()
+		await appuyer(page.getByTestId('submit'))
 		await expect(page.getByTestId('error-first-name')).toHaveText(
 			'Ton prénom doit contenir au moins 2 caractères.'
 		)
@@ -813,10 +817,17 @@ test.describe('UI-05 inscription et suppression', () => {
 			appels((await etat()).journal, 'PATCH', '/api/me-makeup')
 		).toHaveLength(0)
 
+		// an answer to the question, on its label; it can be taken back
+		await appuyer(question.getByText('Instagram', { exact: true }))
+		await expect(page.getByTestId('onboarding-source-instagram')).toBeChecked()
+		const effacer = page.getByTestId('onboarding-source-effacer')
+		await expect(effacer).toHaveText('Effacer ma réponse')
+		expect((await effacer.boundingBox()).height).toBeGreaterThanOrEqual(44)
+
 		// the save fails: its message, no « Bienvenue »
 		await panne({ patch: 500 })
 		await prenom.fill('Al')
-		await page.getByTestId('submit').click()
+		await appuyer(page.getByTestId('submit'))
 		await expect(page.getByTestId('save-error')).toHaveText(
 			"Le service est momentanément indisponible : tes modifications n'ont pas été enregistrées. Réessaie dans quelques minutes."
 		)
@@ -824,7 +835,7 @@ test.describe('UI-05 inscription et suppression', () => {
 
 		// 2 letters stored, then « Bienvenue »
 		await panne({ patch: null })
-		await page.getByTestId('submit').click()
+		await appuyer(page.getByTestId('submit'))
 		await expect(page.getByText(/Bienvenue sur My.Makeup/)).toBeVisible()
 
 		const apres = await etat()
@@ -832,8 +843,48 @@ test.describe('UI-05 inscription et suppression', () => {
 		expect(apres.profils[compte.id].first_name).toBe('Al')
 		expect(apres.profils[compte.id].last_name).toBe('Bo')
 		expect(appels(apres.journal, 'POST', '/api/me-makeup')).toHaveLength(1)
-		for (const patch of appels(apres.journal, 'PATCH', '/api/me-makeup'))
+		const patchs = appels(apres.journal, 'PATCH', '/api/me-makeup')
+		expect(patchs).toHaveLength(2)
+		for (const patch of patchs) {
 			expect(patch.t).toBeGreaterThanOrEqual(creation.fin)
+			// the answer is never stored (UI-05)
+			expect(patch.cles).not.toContain('source')
+			expect(patch.cles).not.toContain('onboarding_source')
+		}
+		expect(corps.map(([methode]) => methode)).toEqual([
+			'POST',
+			'PATCH',
+			'PATCH',
+		])
+		for (const [methode, envoye] of corps) {
+			expect(Object.keys(envoye ?? {}), methode).not.toContain('source')
+			expect(JSON.stringify(envoye), methode).not.toContain('instagram')
+		}
+		expect(JSON.stringify(apres.profils[compte.id])).not.toContain('instagram')
+		// nor any other request to an API: no URL, no body holds it
+		expect(versLApi.length).toBeGreaterThan(corps.length)
+		for (const [url, donnees] of versLApi) {
+			expect(url).not.toContain('instagram')
+			expect(donnees, url).not.toContain('instagram')
+		}
+	}
+
+	test('RG-07 API lente (2,5 s) : un seul profil créé, le nom attend sa création, « Bienvenue » après l’enregistrement, l’origine jamais enregistrée', async ({
+		page,
+	}) => {
+		await rg07(page)
+	})
+
+	test.describe('sur un téléphone', () => {
+		// eslint-disable-next-line no-unused-vars
+		const { defaultBrowserType, ...iphone } = devices['iPhone 13']
+		test.use(iphone)
+
+		test('RG-07 à la taille d’un iPhone 13 : même scénario, au doigt, sans débordement', async ({
+			page,
+		}) => {
+			await rg07(page, { appuyer: cible => cible.tap() })
+		})
 	})
 
 	test('création du profil en échec : message et « Réessayer », jamais l’étape du nom', async ({

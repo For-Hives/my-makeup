@@ -16,7 +16,7 @@ import FullLoader from '@/components/Global/Loader/FullLoader'
 import Image from 'next/image'
 import Loader from '@/components/Global/Loader/Loader'
 import Warning from '@/components/Global/Warning'
-import { onboardingStepName, track } from '@/lib/analytics'
+import { onboardingStepName, SOURCES_ORIGINE, track } from '@/lib/analytics'
 import {
 	API_SERVEUR,
 	authOptions,
@@ -52,6 +52,16 @@ const schema = zod
 		last_name: true,
 	})
 
+// « Comment as-tu connu My Makeup ? » (UI-05): one optional answer, kept out
+// of the form schema and of the PATCH, only counted by Umami
+const LIBELLES_ORIGINE = {
+	instagram: 'Instagram',
+	google: 'Recherche Google',
+	'bouche-a-oreille': 'Bouche-à-oreille',
+	ecole: 'École de maquillage',
+	autre: 'Autre',
+}
+
 function InitAccount({ compte, erreur }) {
 	const {
 		register,
@@ -80,6 +90,11 @@ function InitAccount({ compte, erreur }) {
 	const [lastName, setLastName] = useState('')
 	const [envoi, setEnvoi] = useState(false)
 	const [erreurEnvoi, setErreurEnvoi] = useState(null)
+	const [origine, setOrigine] = useState(null)
+	// the profile existed before this visit (reload, back button, Google
+	// sign-in of an artist who has one): not a new sign-up, so no question
+	const [profilExistant, setProfilExistant] = useState(false)
+	const premiereOrigine = useRef(null)
 
 	const router = useRouter()
 
@@ -95,6 +110,7 @@ function InitAccount({ compte, erreur }) {
 		setStep(2)
 		const resultat = await postMeMakeup(sessionCourante)
 		if (resultat.ok) {
+			setProfilExistant(resultat.existant === true)
 			setCreation('ok')
 			setStep(3)
 			return
@@ -220,6 +236,10 @@ function InitAccount({ compte, erreur }) {
 			setErreurEnvoi(resultat.error ?? null)
 			return
 		}
+		// the answer goes to Umami only, never to the API, and only for a
+		// profile created by this visit (one answer per sign-up)
+		if (origine && !profilExistant)
+			track('onboarding_source', { source: origine })
 		setStep(4)
 	}
 
@@ -420,11 +440,10 @@ function InitAccount({ compte, erreur }) {
 									<div className="flex flex-col items-center justify-center md:my-8 md:gap-4 xl:gap-8">
 										<div>
 											<h1 className="text-center text-3xl font-bold">
-												Votre nom et votre prénom
+												Ton nom et ton prénom
 											</h1>
 											<p className="text-center text-gray-700">
-												Ces informations seront visibles par les autres
-												utilisateurs
+												Ton prénom et ton nom seront visibles sur ta page.
 											</p>
 										</div>
 
@@ -499,6 +518,63 @@ function InitAccount({ compte, erreur }) {
 															)}
 														</div>
 													</div>
+
+													{!profilExistant && (
+														<fieldset aria-describedby="onboarding-source-aide">
+															<legend className="block text-sm font-medium leading-6 text-gray-900">
+																Comment as-tu connu My&nbsp;Makeup&nbsp;?{' '}
+																<span className="font-normal text-gray-500">
+																	(facultatif)
+																</span>
+															</legend>
+															<p
+																id="onboarding-source-aide"
+																className="mt-1 text-xs text-gray-500"
+															>
+																Ta réponse sert seulement à nos statistiques :
+																elle n&apos;est enregistrée ni dans ton compte
+																ni dans ton profil.
+															</p>
+															<div className="mt-2 space-y-1">
+																{SOURCES_ORIGINE.map((valeur, rang) => (
+																	<label
+																		key={valeur}
+																		htmlFor={`onboarding-source-${valeur}`}
+																		className="flex min-h-[44px] cursor-pointer items-center gap-3 rounded-md px-2 text-sm text-gray-900 hover:bg-gray-50"
+																	>
+																		<input
+																			ref={
+																				rang === 0 ? premiereOrigine : undefined
+																			}
+																			id={`onboarding-source-${valeur}`}
+																			data-cy={`onboarding-source-${valeur}`}
+																			type="radio"
+																			name="onboarding_source"
+																			value={valeur}
+																			checked={origine === valeur}
+																			onChange={() => setOrigine(valeur)}
+																			className="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600"
+																		/>
+																		{LIBELLES_ORIGINE[valeur]}
+																	</label>
+																))}
+															</div>
+															{/* a tap by mistake goes back to « no answer », not to « Autre » */}
+															{origine !== null && (
+																<button
+																	type="button"
+																	data-cy="onboarding-source-effacer"
+																	onClick={() => {
+																		setOrigine(null)
+																		premiereOrigine.current?.focus()
+																	}}
+																	className="mt-1 min-h-[44px] px-2 text-sm text-indigo-600 underline hover:text-indigo-500"
+																>
+																	Effacer ma réponse
+																</button>
+															)}
+														</fieldset>
+													)}
 
 													{erreurEnvoi && (
 														<p

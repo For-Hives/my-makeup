@@ -39,6 +39,18 @@ export const DEMANDE_SOURCES = [
 
 export const RESULT_BUCKETS = ['0', '1-5', '6-20', '21+']
 
+// answers to « Comment as-tu connu My Makeup ? » (/auth/init-account, UI-05),
+// in the order they are shown; never stored by the API. The list of plans/04
+// §3.3 row 17 without 'maeva' (decisions.md, 09/10). Umami keeps each value
+// as sent: renaming one later splits its series.
+export const SOURCES_ORIGINE = [
+	'instagram',
+	'google',
+	'bouche-a-oreille',
+	'ecole',
+	'autre',
+]
+
 const id = { type: 'id', required: true }
 const optionalId = { type: 'id', required: false }
 const flag = { type: 'boolean', required: true }
@@ -69,6 +81,8 @@ export const EVENTS = {
 	onboarding_step: {
 		step: oneOf(['verification_email', 'compte_cree', 'termine']),
 	},
+	// optional answer of the onboarding, sent once the name is stored
+	onboarding_source: { source: oneOf(SOURCES_ORIGINE) },
 	// every sign-in attempt with the form (A3), `code` = 'ok' on success
 	login_result: {
 		method: oneOf(['email', 'google']),
