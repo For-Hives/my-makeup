@@ -2,9 +2,15 @@
  * The search page (UI-07, plans/01 §3.2): its URL is the only source of the
  * search (/search?search=…&city=…&page=…), shareable and prefilled; a city
  * alone is a search (the API before PR #370 needs a term: the city is sent
- * as the term too); one API call per search, the pages of 20 results are cut
- * in the browser, the profiles of the city searched first (UI-10).
+ * as the term too); one API call per search at most, the pages of 20
+ * results are cut in the browser, the profiles of the city searched first
+ * (UI-10). A search by city alone reads the directory (every searchable
+ * profile, kept 10 min by the page) instead of the search: the profiles of
+ * the city, then the others of the département, those that travel and the
+ * rest (sectionsParLieu in lieu.js).
  */
+
+import { lieuUtilisable } from './lieu.js'
 
 export const PAR_PAGE = 20
 export const LONGUEUR_MAX = 100
@@ -67,6 +73,39 @@ export function urlApiRecherche(apiBase, { search, city }) {
 	if (city) parametres.set('city', city)
 	return `${String(apiBase ?? '').replace(/\/+$/, '')}/api/searching?${parametres}`
 }
+
+/**
+ * A search by city alone (the term, when there is one, is the city) of a
+ * place the page can rank by (not « France »): the page reads the
+ * directory for it, never the search (sectionsParLieu in lieu.js).
+ * @param {Recherche} recherche
+ * @returns {boolean}
+ */
+export const rechercheParVille = ({ search, city }) =>
+	!!city &&
+	(!search || search.toLowerCase() === city.toLowerCase()) &&
+	lieuUtilisable(city)
+
+/**
+ * URL of every searchable profile (the public search without any term),
+ * the last updated first, as result cards.
+ * @param {string} apiBase - NEXT_PUBLIC_API_URL
+ * @returns {string}
+ */
+export const urlApiAnnuaire = apiBase =>
+	`${String(apiBase ?? '').replace(/\/+$/, '')}/api/searching`
+
+/** Result cards of the API at most (MAX_PUBLIC_RESULTS, API #384) */
+export const MAX_RESULTATS_API = 200
+
+/**
+ * The directory holds every searchable profile, unless the API cut it:
+ * then a search by city reads the search too, for the profiles of the city
+ * the directory left out.
+ * @param {unknown[]} annuaire
+ * @returns {boolean}
+ */
+export const annuaireComplet = annuaire => annuaire.length < MAX_RESULTATS_API
 
 /**
  * Path of the search page for a search (empty fields and page 1 left out).
@@ -142,16 +181,25 @@ export function titreResultats({ search, city }, total) {
 }
 
 /**
- * The results of one page in their two sections: the profiles of the place
- * searched (the `nbLocaux` first of the whole list), then the others.
+ * The results of one page cut in their sections: the whole list is the
+ * sections one after the other (the profiles of the place searched, then
+ * the others, sectionsParLieu in src/lib/lieu.js), `longueurs` their sizes.
  * @template T
  * @param {{elements: T[], premier: number}} page - from paginer()
- * @param {number} nbLocaux
- * @returns {{locaux: T[], autres: T[]}}
+ * @param {number[]} longueurs - size of each section in the whole list
+ * @returns {T[][]} the part of each section on this page, maybe empty
  */
-export function sectionsDeLaPage({ elements, premier }, nbLocaux) {
-	const n = Math.min(elements.length, Math.max(0, nbLocaux - (premier - 1)))
-	return { locaux: elements.slice(0, n), autres: elements.slice(n) }
+export function sectionsDeLaPage({ elements, premier }, longueurs) {
+	let debut = 0
+	return longueurs.map(longueur => {
+		const fin = debut + Math.max(0, longueur)
+		const part = elements.slice(
+			Math.max(0, debut - (premier - 1)),
+			Math.max(0, fin - (premier - 1))
+		)
+		debut = fin
+		return part
+	})
 }
 
 /** Height of the photo of a result card, in px (h-[350px]) */

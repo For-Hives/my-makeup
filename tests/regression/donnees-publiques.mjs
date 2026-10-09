@@ -40,6 +40,15 @@ const OFFRES = [
 	},
 ]
 
+// an offer typed with blank lines, as 9 profiles in production (UI-06):
+// none of them may render an empty <p> or <h3>
+const OFFRE_LIGNES_VIDES = {
+	name: 'Shooting',
+	description: 'Ligne 1\n\nLigne 2',
+	price: '180 €\n\n',
+	options: [],
+}
+
 // a postal address typed as the city (UI-11): street and number made up
 export const ADRESSE_FICTIVE =
 	'7 impasse des Essais Fictifs, 74200 Thonon-les-Bains, France'
@@ -113,7 +122,7 @@ const complet = ({ id, username, createdAt, ...champs }) => ({
 
 export const PROFILS_PUBLICS = [
 	// 1 + 9: complete, reference (SEO, JSON-LD), old username with accent and
-	// space → 308 to zoe-lefevre
+	// space → 308 to zoe-lefevre; its third offer has blank lines
 	complet({
 		id: 101,
 		username: 'Zoé Lefèvre',
@@ -121,6 +130,7 @@ export const PROFILS_PUBLICS = [
 		first_name: 'Zoé',
 		last_name: 'Lefèvre',
 		company_artist_name: 'Zoé Make-up',
+		service_offers: [...OFFRES.slice(0, 2), OFFRE_LIGNES_VIDES],
 		attendu: { slug: 'zoe-lefevre', publiable: true },
 	}),
 	// 2: complete, email as only channel (hidden by the lists of the API)
@@ -305,6 +315,42 @@ export const PROFILS_PUBLICS = [
 		city: RUE_COLLEE,
 		available: false,
 		attendu: { slug: 'ines-virgule', publiable: false },
+	}),
+	// UI-06: partly filled, its empty cards left out: no language, an
+	// experience with neither company nor job, no network (so noindex),
+	// no skill and no gallery. Not available, out of the search.
+	complet({
+		id: 117,
+		username: 'margot-partielle',
+		createdAt: '2024-09-04T10:00:00.000Z',
+		first_name: 'Margot',
+		last_name: 'Partielle',
+		city: 'Lyon',
+		available: false,
+		skills: [],
+		language: [],
+		experiences: [
+			{
+				company: '',
+				job_name: '',
+				city: 'Lyon',
+				date_start: '2019-01-01',
+				date_end: null,
+				description: 'Sans entreprise ni poste',
+			},
+		],
+		network: null,
+		image_gallery: [],
+		attendu: {
+			slug: 'margot-partielle',
+			publiable: false,
+			sections: [
+				'Localisation & département',
+				'Formations & diplômes',
+				'Vous en quelques mots',
+				'Service(s) proposé(s)',
+			],
+		},
 	}),
 ]
 

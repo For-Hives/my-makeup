@@ -14,7 +14,7 @@
  * region only counts when nothing more precise was typed.
  */
 
-import { villeAffichee } from './format-zone.js'
+import { rayonKm, villeAffichee } from './format-zone.js'
 
 /** Départements: code → name */
 export const DEPARTEMENTS = {
@@ -364,4 +364,155 @@ export function separerParLieu(resultats, city) {
 		else autres.push(resultat)
 	}
 	return { locaux: [...ville, ...departement], autres, parLieu: true }
+}
+
+// one profile once: by id, else by username
+const cleProfil = profil => profil?.id ?? profil?.username ?? null
+
+/**
+ * A place the search page can rank by: neither empty nor « France » nor
+ * « - » (separerParLieu then gives one list).
+ * @param {unknown} city - as typed in the search
+ * @returns {boolean}
+ */
+export const lieuUtilisable = city => !lieuVide(lireLieu(city))
+
+/**
+ * The département a city field writes as a code: a postal code (« 74000
+ * Annecy ») or a code alone (« Annecy (74) », as the public API writes a
+ * city typed with its postal code), in a field of one place only; never a
+ * name, which may be another place of the field (« Paris, Lyon et
+ * Annecy »).
+ * @param {unknown} v
+ * @returns {string|null} null without a code, with two, or when the field
+ *   names two places (« Paris (75), Lyon »: which one is in the 75?)
+ */
+export function codeDepartementEcrit(v) {
+	const brut = typeof v === 'string' ? v : ''
+	if (lireLieu(brut).segments.filter(s => !s.large).length > 1) return null
+	const codes = new Set()
+	for (const [code] of brut.matchAll(/(?<!\d)\d{5}(?!\d)/g)) {
+		const departement = departementDuCodePostal(code)
+		if (departement) codes.add(departement)
+	}
+	for (const morceau of brut.split(SEPARATEURS))
+		codesDuSegment(normaliserLieu(morceau)).forEach(code => codes.add(code))
+	return codes.size === 1 ? [...codes][0] : null
+}
+
+/**
+ * The département of a search by city: the one typed (postal code, code or
+ * name), else the one the profiles of that city write as a code
+ * (codeDepartementEcrit), the most frequent, the first in their order on a
+ * tie; none without either (no geocoding: « Annecy » alone says nothing).
+ * @param {{city?: unknown}[]} locaux - the profiles of the city searched
+ * @param {string} city - as typed in the search
+ * @returns {string[]} codes: ['74'], ['2A', '2B'] for « Corse », []
+ */
+export function departementsDeLaRecherche(locaux, city) {
+	const tapes = lireLieu(city).departements
+	if (tapes.length) return tapes
+	const compte = new Map()
+	for (const profil of Array.isArray(locaux) ? locaux : []) {
+		const code = codeDepartementEcrit(villeAffichee(profil?.city))
+		if (code) compte.set(code, (compte.get(code) ?? 0) + 1)
+	}
+	let meilleur = null
+	for (const [code, n] of compte)
+		if (meilleur === null || n > compte.get(meilleur)) meilleur = code
+	return meilleur === null ? [] : [meilleur]
+}
+
+/**
+ * @param {string[]} codes - from departementsDeLaRecherche
+ * @returns {string} « du 74 (Haute-Savoie) », « du 2A (Corse-du-Sud) et du
+ *   2B (Haute-Corse) »
+ */
+export const duDepartement = codes =>
+	codes.map(code => `du ${code} (${DEPARTEMENTS[code]})`).join(' et ')
+
+// the card says where she works and how far she goes (« Annecy et 30 km
+// autour »): a radius without a city says nothing
+const seDeplace = profil =>
+	villeAffichee(profil?.city) !== '' && rayonKm(profil?.action_radius) !== null
+
+/**
+ * @template T
+ * @typedef {object} SectionAutres
+ * @property {'departement'|'deplacent'|'autres'} cle
+ * @property {string} titre - its h2
+ * @property {T[]} profils
+ */
+
+/**
+ * A search by city in sections (UI-10; decisions.md, 09/10: the same
+ * département first, then the rest), every profile once: first those of
+ * the place typed, city then département (separerParLieu), the only ones
+ * counted in the title; then all the others, in three sections:
+ * - the other profiles of the département of the search
+ *   (departementsDeLaRecherche), when one is known;
+ * - those of elsewhere that go to the client (a city and an action radius);
+ * - the rest, « Zone non renseignée » included.
+ * Each list keeps the order given, `resultats` first. Since API #384 a
+ * search only returns the profiles that name what was typed: the search
+ * page places the whole directory (GET /api/searching without term) for a
+ * search by city alone, and the API answer only next to a term, which the
+ * other profiles do not match.
+ * Without a usable place (no city, « France »), one list (separerParLieu).
+ * @template {{id?: unknown, username?: unknown, city?: unknown, action_radius?: unknown}} T
+ * @param {T[]} resultats - the profiles to place, in their order
+ * @param {string} city - as typed in the search
+ * @param {T[]} [annuaire] - more profiles, after them (each once)
+ * @returns {{locaux: T[], parLieu: boolean, departements: string[], sections: SectionAutres<T>[]}}
+ */
+export function sectionsParLieu(resultats, city, annuaire = []) {
+	const reponse = Array.isArray(resultats) ? resultats : []
+	const { locaux: tous, parLieu } = separerParLieu(reponse, city)
+	if (!parLieu) return { locaux: tous, parLieu, departements: [], sections: [] }
+
+	const vus = new Set()
+	const uniques = [
+		...reponse,
+		...(Array.isArray(annuaire) ? annuaire : []),
+	].filter(profil => {
+		const cle = cleProfil(profil)
+		if (cle === null) return true
+		if (vus.has(cle)) return false
+		vus.add(cle)
+		return true
+	})
+	const { locaux, autres } = separerParLieu(uniques, city)
+	const departements = departementsDeLaRecherche(locaux, city)
+	const duDepartementCherche = autres.filter(profil =>
+		lireLieu(villeAffichee(profil?.city)).departements.some(code =>
+			departements.includes(code)
+		)
+	)
+	const ailleurs = autres.filter(
+		profil => !duDepartementCherche.includes(profil)
+	)
+	const section = (cle, titre, profils) =>
+		profils.length ? [{ cle, titre, profils }] : []
+	return {
+		locaux,
+		parLieu,
+		departements,
+		sections: [
+			...section(
+				'departement',
+				`Autres maquilleuses ${duDepartement(departements)}`,
+				duDepartementCherche
+			),
+			...section(
+				'deplacent',
+				'Autres maquilleuses qui se déplacent',
+				ailleurs.filter(seDeplace)
+			),
+			...section(
+				'autres',
+				'Autres maquilleuses',
+				ailleurs.filter(profil => !seDeplace(profil))
+			),
+		],
+	}
 }

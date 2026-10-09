@@ -14,39 +14,81 @@ import { isRepeat, resultsBucket, track } from '@/lib/analytics'
 import { signalAvecDelai } from '@/lib/delai'
 import { villePublique } from '@/lib/profil/lieu-public'
 import { formatZone } from '@/lib/format-zone'
-import { separerParLieu } from '@/lib/lieu'
+import { sectionsParLieu } from '@/lib/lieu'
 import { nomAffiche, photoPrincipale, texte } from '@/lib/profil/vue-publique'
 import {
+	annuaireComplet,
 	cleRecherche,
 	DELAI_RECHERCHE_MS,
 	GRILLE_RESULTATS,
 	HAUTEUR_PHOTO_CARTE,
 	lireRecherche,
 	paginer,
+	rechercheParVille,
 	rechercheValide,
 	resultatsRecherche,
 	sectionsDeLaPage,
 	titreResultats,
+	urlApiAnnuaire,
 	urlApiRecherche,
 	urlPageRecherche,
 } from '@/lib/recherche'
 import { QUALITE_PHOTO, ratioMedia, sizesGrille } from '@/lib/taille-image'
 
+// result cards of the API at `url`
+function lireCartes(url) {
+	return fetch(url, { signal: signalAvecDelai(DELAI_RECHERCHE_MS) })
+		.then(reponse => {
+			if (!reponse.ok) throw new Error(`HTTP ${reponse.status}`)
+			return reponse.json()
+		})
+		.then(corps => {
+			const cartes = resultatsRecherche(corps)
+			if (cartes === null) throw new Error('réponse inattendue')
+			return cartes
+		})
+}
+
+const chercher = recherche =>
+	lireCartes(urlApiRecherche(process.env.NEXT_PUBLIC_API_URL, recherche))
+
+const DUREE_ANNUAIRE_MS = 10 * 60 * 1000
+// { promesse, lu }: every searchable profile, read once for the searches by
+// city of a visit (the API sends no cache header)
+let annuaire = null
+
+function lireAnnuaire() {
+	const maintenant = Date.now()
+	if (annuaire && maintenant - annuaire.lu < DUREE_ANNUAIRE_MS)
+		return annuaire.promesse
+	const promesse = lireCartes(urlApiAnnuaire(process.env.NEXT_PUBLIC_API_URL))
+	const entree = { promesse, lu: maintenant }
+	annuaire = entree
+	// read again by the next search after a failure
+	promesse.catch(() => {
+		if (annuaire === entree) annuaire = null
+	})
+	return promesse
+}
+
 /**
  * Search (UI-07): the URL is the search (/search?search=…&city=…&page=…). A
- * city alone is enough; one API call per search, never for a page change;
- * empty, error (API cut off: message within 8 s) and paged states, each
- * with its h1. Never indexed (noindex from _app.js and next.config.js).
- * With a city (UI-10), the API still answers for all of France: the
- * profiles of that city or département come first and are the only ones
- * counted in the title, the others follow under their own heading.
+ * city alone is enough; one API call per search at most, never for a page
+ * change; empty, error (API cut off: message within 8 s) and paged states,
+ * each with its h1. Never indexed (noindex from _app.js and next.config.js).
+ * With a city (UI-10), the profiles of that city or département come first
+ * and are the only ones counted in the title, the others follow under their
+ * own headings (sectionsParLieu in src/lib/lieu.js). Since API #384 the
+ * search only returns the profiles that name the city: a search by city
+ * alone reads the directory instead, every searchable profile, once per
+ * visit (10 min), so a city searched again costs no call.
  */
 function SearchPage() {
 	const router = useRouter()
 	const { search, city, page } = lireRecherche(router.query)
 	const pret = router.isReady && rechercheValide({ search, city })
 
-	// { cle, statut: 'chargement' | 'ok' | 'erreur', resultats }
+	// { cle, statut: 'chargement' | 'ok' | 'erreur', resultats, annuaire }
 	const [etat, setEtat] = useState(null)
 	const [essai, setEssai] = useState(0)
 	// the form of this page changed the URL (`search_submit` from)
@@ -63,33 +105,43 @@ function SearchPage() {
 		const from = origine.current
 		origine.current = 'lien'
 		let abandonnee = false
-		setEtat({ cle, statut: 'chargement', resultats: [] })
+		setEtat({ cle, statut: 'chargement', resultats: [], annuaire: [] })
 
-		fetch(urlApiRecherche(process.env.NEXT_PUBLIC_API_URL, recherche), {
-			signal: signalAvecDelai(DELAI_RECHERCHE_MS),
-		})
-			.then(reponse => {
-				if (!reponse.ok) throw new Error(`HTTP ${reponse.status}`)
-				return reponse.json()
-			})
-			.then(corps => {
-				const resultats = resultatsRecherche(corps)
-				if (resultats === null) throw new Error('réponse inattendue')
+		// a search by city alone places the whole directory, which holds what
+		// the search would find; past the API cap it may leave out some
+		// profiles of the city, then the search is read too
+		const lecture = rechercheParVille(recherche)
+			? lireAnnuaire().then(profils =>
+					annuaireComplet(profils)
+						? { resultats: profils, annuaire: [] }
+						: chercher(recherche).then(resultats => ({
+								resultats,
+								annuaire: profils,
+							}))
+				)
+			: chercher(recherche).then(resultats => ({ resultats, annuaire: [] }))
+
+		lecture
+			.then(({ resultats, annuaire: autres }) => {
 				if (abandonnee) return
 				const now = Date.now()
 				if (!isRepeat(lastCounted.current, cle, now)) {
 					lastCounted.current = { key: cle, at: now }
-					// never the typed text: only whether a city was given and a bucket
+					// never the typed text: only whether a city was given and a
+					// bucket of the number the h1 counts
 					track('search_submit', {
 						has_city: !!city,
-						results: resultsBucket(resultats.length),
+						results: resultsBucket(
+							sectionsParLieu(resultats, city, autres).locaux.length
+						),
 						from,
 					})
 				}
-				setEtat({ cle, statut: 'ok', resultats })
+				setEtat({ cle, statut: 'ok', resultats, annuaire: autres })
 			})
 			.catch(() => {
-				if (!abandonnee) setEtat({ cle, statut: 'erreur', resultats: [] })
+				if (!abandonnee)
+					setEtat({ cle, statut: 'erreur', resultats: [], annuaire: [] })
 			})
 
 		return () => {
@@ -122,9 +174,26 @@ function SearchPage() {
 		prefetch: cleAffichee !== null && photoChargee === cleAffichee,
 		surPremierePhoto: () => setPhotoChargee(cleAffichee),
 	}
-	const { locaux, autres, parLieu } = separerParLieu(resultats, city)
-	const pagination = paginer([...locaux, ...autres], page)
-	const sections = sectionsDeLaPage(pagination, locaux.length)
+	const { locaux, sections, parLieu } = sectionsParLieu(
+		resultats,
+		city,
+		statut === 'ok' ? etat.annuaire : []
+	)
+	const pagination = paginer(
+		[...locaux, ...sections.flatMap(section => section.profils)],
+		page
+	)
+	const [locauxDeLaPage, ...sectionsDeCettePage] = sectionsDeLaPage(
+		pagination,
+		[locaux.length, ...sections.map(section => section.profils.length)]
+	)
+	// rank of the first card of each section on this page, from 0
+	const debuts = sectionsDeCettePage.map((_, i) =>
+		[locauxDeLaPage, ...sectionsDeCettePage.slice(0, i)].reduce(
+			(n, liste) => n + liste.length,
+			0
+		)
+	)
 
 	return (
 		<>
@@ -234,34 +303,40 @@ function SearchPage() {
 									dans son profil.
 								</p>
 							)}
-							{sections.locaux.length > 0 && (
+							{locauxDeLaPage.length > 0 && (
 								<ListeResultats
-									resultats={sections.locaux}
+									resultats={locauxDeLaPage}
 									premier={pagination.premier}
 									premierDeLaPage={pagination.premier}
 									cartes={cartes}
 									dataCy="search-results-locaux"
 								/>
 							)}
-							{sections.autres.length > 0 && (
-								<section aria-labelledby="search-autres-titre">
-									<h2
-										id="search-autres-titre"
-										className={`mb-8 text-xl font-bold text-gray-800 ${
-											sections.locaux.length > 0 ? 'mt-12' : ''
-										}`}
-										data-cy="search-autres-titre"
-									>
-										Autres maquilleuses qui se déplacent
-									</h2>
-									<ListeResultats
-										resultats={sections.autres}
-										premier={pagination.premier + sections.locaux.length}
-										premierDeLaPage={pagination.premier}
-										cartes={cartes}
-										dataCy="search-results-autres"
-									/>
-								</section>
+							{sections.map(
+								(section, i) =>
+									sectionsDeCettePage[i].length > 0 && (
+										<section
+											key={section.cle}
+											aria-labelledby={`search-titre-${section.cle}`}
+										>
+											<h2
+												id={`search-titre-${section.cle}`}
+												className={`mb-8 text-xl font-bold text-gray-800 ${
+													debuts[i] > 0 ? 'mt-12' : ''
+												}`}
+												data-cy={`search-titre-${section.cle}`}
+											>
+												{section.titre}
+											</h2>
+											<ListeResultats
+												resultats={sectionsDeCettePage[i]}
+												premier={pagination.premier + debuts[i]}
+												premierDeLaPage={pagination.premier}
+												cartes={cartes}
+												dataCy={`search-results-${section.cle}`}
+											/>
+										</section>
+									)
 							)}
 							{pagination.pages > 1 && (
 								<nav
