@@ -9,65 +9,27 @@ import { expect, test, devices } from '@playwright/test'
 import { randomBytes } from 'node:crypto'
 import sharp from 'sharp'
 import { COMPTE_TEST } from './mock-api.mjs'
+import {
+	aller,
+	appels,
+	connecter,
+	etat,
+	inscrire,
+	ouvrirProfil,
+	panne,
+	piloter,
+	profilDeDepart,
+	profilServeur,
+	reinitialiserStrapi,
+} from './outils-strapi.mjs'
 
-const API = process.env.RG_API ?? 'http://127.0.0.1:4112'
 const MO = 1024 * 1024
-
-// Never against the production: local hosts only
-if (!['localhost', '127.0.0.1', '[::1]'].includes(new URL(API).hostname))
-	throw new Error(`API non locale refusée : ${API}`)
 
 test.use({ testIdAttribute: 'data-cy' })
 
-// --- the fake Strapi ---
-async function piloter(chemin, corps) {
-	const reponse = await fetch(
-		API + chemin,
-		corps === undefined ? {} : { method: 'POST', body: JSON.stringify(corps) }
-	)
-	return reponse.json()
-}
-const etat = () => piloter('/__etat')
-const panne = corps => piloter('/__panne', corps)
-// fields of the test account's profile, stored as the API would
-const profilDeDepart = champs => piloter('/__profil', champs)
-const profilServeur = async (id = COMPTE_TEST.id) => (await etat()).profils[id]
-const appels = (journal, methode, chemin) =>
-	journal.filter(entree => entree.m === methode && entree.p === chemin)
-
 test.beforeEach(async () => {
-	await piloter('/__reset', {})
+	await reinitialiserStrapi()
 })
-
-// --- sessions and pages ---
-async function connecter(
-	page,
-	{ email = COMPTE_TEST.email, password = COMPTE_TEST.password } = {}
-) {
-	const requete = page.context().request
-	const { csrfToken } = await (await requete.get('/api/auth/csrf')).json()
-	await requete.post('/api/auth/callback/credentials', {
-		form: { csrfToken, email, password, json: 'true' },
-	})
-	const cookies = await page.context().cookies()
-	return cookies.some(c => c.name.startsWith('next-auth.session-token'))
-}
-
-// Loads a page and waits for its hydration (SessionProvider asks for the
-// session once React runs): a click before that would do nothing.
-async function aller(page, chemin) {
-	const session = page.waitForResponse(r =>
-		r.url().endsWith('/api/auth/session')
-	)
-	await page.goto(chemin)
-	await session
-}
-
-async function ouvrirProfil(page) {
-	expect(await connecter(page)).toBe(true)
-	await aller(page, '/auth/profil')
-	await expect(page.getByTestId('resume-name')).toHaveText('Testine Recette')
-}
 
 // the open modal (its Dialog element has no size of its own)
 const dialogue = page => page.getByTestId('modal-panel')
@@ -779,15 +741,6 @@ test.describe('UI-03 photos', () => {
 })
 
 test.describe('UI-05 inscription et suppression', () => {
-	async function inscrire(page, email = 'nouvelle@test.local') {
-		await aller(page, '/auth/signup')
-		await page.getByTestId('name').fill('nouvelle-compte')
-		await page.getByTestId('email').fill(email)
-		await page.getByTestId('password').fill('Test-1234')
-		await page.getByTestId('submit').click()
-		await expect(page).toHaveURL(/\/auth\/init-account/)
-	}
-
 	test('RG-07 API lente (2,5 s) : un seul profil créé, le nom attend sa création, « Bienvenue » après l’enregistrement', async ({
 		page,
 	}) => {

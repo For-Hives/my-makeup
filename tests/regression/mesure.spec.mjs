@@ -11,6 +11,7 @@
 import { expect, test } from '@playwright/test'
 import { getElementsByTagName } from 'domutils'
 import { parseDocument } from 'htmlparser2'
+import { reinitialiserStrapi } from './outils-strapi.mjs'
 
 const APP = process.env.RG_APP ?? 'http://localhost:3996'
 const UMAMI = process.env.RG_UMAMI ?? 'http://127.0.0.1:4113'
@@ -35,6 +36,8 @@ const envoisRecus = async () =>
 
 test.beforeEach(async () => {
 	await piloter('/__umami/reset')
+	// the fake Strapi is shared with espace.spec.mjs
+	await reinitialiserStrapi()
 })
 
 // every request of the page: hosts reached and sends to /u/api/send
