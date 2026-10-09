@@ -7,7 +7,12 @@
 // crawler does.
 // Web-first waits only, no fixed timeout.
 import { expect, test } from '@playwright/test'
-import { getElementsByTagName, removeElement } from 'domutils'
+import {
+	filter,
+	getElementsByTagName,
+	removeElement,
+	textContent,
+} from 'domutils'
 import { parseDocument } from 'htmlparser2'
 import { ARTICLES, PROFILS_PUBLICS, TALENTS } from './donnees-publiques.mjs'
 
@@ -103,6 +108,19 @@ async function html(request, chemin) {
 
 const publiables = PROFILS_PUBLICS.filter(p => p.attendu.publiable)
 
+// the h2 of the 9 cards of a public profile (ViewInfosProfil), in order
+const TITRES_SECTIONS = [
+	'Localisation & département',
+	'Réseaux sociaux & contacts',
+	'Compétences',
+	'Langues',
+	'Formations & diplômes',
+	'Vous en quelques mots',
+	'Portfolio',
+	'Service(s) proposé(s)',
+	'Expériences professionnelles',
+]
+
 test.describe('UI-06 profils rendus côté serveur', () => {
 	test('profil complet, HTML brut sans JavaScript : nom en seul h1, ville, spécialité, description, offres et photos ; 0 « undefined » ou « null » ; OG et JSON-LD', async ({
 		request,
@@ -121,7 +139,8 @@ test.describe('UI-06 profils rendus côté serveur', () => {
 			'Invitée',
 			'45 €',
 			'Shooting',
-			'90 €',
+			'Ligne 1',
+			'Ligne 2',
 			'Essai supplémentaire',
 			'60 €',
 			'CAP esthétique',
@@ -201,18 +220,69 @@ test.describe('UI-06 profils rendus côté serveur', () => {
 		}
 	})
 
-	test('coquille vide : le h1 porte le prénom, aucune section vide affichée', async ({
+	test('coquille vide : le h1 porte le prénom, aucune des 9 sections affichée', async ({
 		request,
 	}) => {
 		const { html: page } = await html(request, '/profil/coquille-vide')
 		expect(textesDes(page, 'h1')).toEqual(['Coquille'])
-		for (const titre of [
-			'Compétences',
-			'Portfolio',
-			'Service(s) proposé(s)',
-			'Langues',
+		const h2 = textesDes(page, 'h2')
+		for (const titre of TITRES_SECTIONS) expect(h2).not.toContain(titre)
+	})
+
+	test('profil en partie rempli : ses h2 sont exactement ses sections remplies (ni langue, ni réseau, ni expérience sans entreprise ni poste)', async ({
+		request,
+	}) => {
+		const profil = PROFILS_PUBLICS.find(
+			p => p.attendu.slug === 'margot-partielle'
+		)
+		const { reponse, html: page } = await html(
+			request,
+			`/profil/${profil.attendu.slug}`
+		)
+		expect(reponse.status()).toBe(200)
+		expect(textesDes(page, 'h1')).toEqual(['Margot Partielle'])
+		expect(textesDes(page, 'h2')).toEqual(profil.attendu.sections)
+		expect(motsInterdits(page)).toEqual([])
+	})
+
+	test('offre tapée avec des lignes vides : aucun <p> ni <h3> vide dans la description et le prix, une ligne par ligne tapée', async ({
+		request,
+	}) => {
+		const { html: page } = await html(request, '/profil/zoe-lefevre')
+		const document = documentSansScripts(page)
+		const blocs = filter(
+			e =>
+				/^service-offer-(description|price)/.test(e.attribs?.['data-cy'] ?? ''),
+			document
+		)
+		// 3 offers and 1 option, each with its description and its price
+		expect(blocs).toHaveLength(8)
+		const lignes = blocs.flatMap(bloc =>
+			filter(e => e.name === 'p' || e.name === 'h3', bloc.children).map(e => ({
+				balise: e.name,
+				texte: textContent(e).trim(),
+			}))
+		)
+		expect(lignes.filter(l => l.texte === '')).toEqual([])
+		const descriptions = lignes.filter(l => l.balise === 'p').map(l => l.texte)
+		expect(descriptions).toEqual(expect.arrayContaining(['Ligne 1', 'Ligne 2']))
+		expect(lignes.filter(l => l.balise === 'h3').map(l => l.texte)).toEqual([
+			'à partir de 180 €',
+			'60 €',
+			'45 €',
+			'180 €',
 		])
-			expect(textesDes(page, 'h2')).not.toContain(titre)
+	})
+
+	test('portfolio de plusieurs photos : flèches « Photo précédente » et « Photo suivante » dans le HTML brut', async ({
+		request,
+	}) => {
+		const { html: page } = await html(request, '/profil/zoe-lefevre')
+		const etiquettes = getElementsByTagName('button', parseDocument(page)).map(
+			b => b.attribs['aria-label']
+		)
+		expect(etiquettes).toContain('Photo précédente')
+		expect(etiquettes).toContain('Photo suivante')
 	})
 
 	test('dans un navigateur : même rendu une fois hydraté, aucune erreur', async ({
