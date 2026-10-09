@@ -12,7 +12,16 @@
 //   (populate service_offers: true): the offers come without their
 //   options, which GET still returns;
 // - POST /api/upload: JPEG, PNG or WebP read from the first bytes, 10 MB at
-//   most (413 above), like the upload guard of the API (PR #370);
+//   most (413 above), like the upload guard of the API (PR #370); the file
+//   records the account that sent it (uploaded_by, API #385);
+// - pictures of a profile like API #385 (services/me-makeup.js): a PATCH
+//   takes in main_picture and image_gallery only files already on her
+//   profile, or sent by her and used by no profile; any other file, or a
+//   value that is not a file id (connect/set objects), answers 400 « File
+//   not allowed » and nothing is saved. A replaced or removed picture is
+//   deleted after the save, and DELETE deletes her pictures and her
+//   uploads, unless another profile uses them. /__balayer deletes the
+//   uploads that no profile uses, like the daily sweep without its 24 h;
 // - forgot-password answers { ok: true } for any address, reset-password
 //   refuses an unknown code or two different passwords;
 // - public collections (makeup-artistes, talents, articles) like the content
@@ -30,9 +39,9 @@
 //   only ranks; without any term, every searchable profile, the last
 //   updated first; 200 result cards at most, with the public city (UI-11).
 // `/__…` routes drive it from the tests (forced failures, delays, revoked
-// sessions, JWT lifetime, state, profile of the test account); a revoked
-// or expired JWT is refused with a 401, as Strapi does. Public data:
-// tests/regression/donnees-publiques.mjs.
+// sessions, JWT lifetime, state, profile of the test account, stored files,
+// media sweep); a revoked or expired JWT is refused with a 401, as Strapi
+// does. Public data: tests/regression/donnees-publiques.mjs.
 // Test data only: @test.local accounts, made-up names. Ported from
 // plans/outils/interfaces/mock-api.mjs.
 import http from 'node:http'
@@ -445,6 +454,61 @@ export async function demarrerFauxStrapi(port = 4112, { origine = '*' } = {}) {
 	const sansOctets = ({ octets, proprietaire, ...f }) => f
 	const mediaStrapi = f => (f ? { id: f.id, attributes: sansOctets(f) } : null)
 
+	// --- pictures of the artist's space (API #385) ---
+	// a file as a profile holds it and the API answers it: without its bytes
+	// nor its uploader (hideUploader)
+	const vueFichier = f => (f ? sansOctets(f) : null)
+	const idDe = valeur => Number(valeur?.id ?? valeur)
+	// ids of the pictures of a profile, main picture and gallery
+	const idsMedias = profil =>
+		[profil?.main_picture, ...(profil?.image_gallery ?? [])]
+			.map(idDe)
+			.filter(id => Number.isInteger(id) && id > 0)
+	// files used by the profile of an account
+	const fichiersUtilises = () =>
+		new Set(Object.values(etat.profils).flatMap(idsMedias))
+	// requestedFileIds: the ids asked for in the media fields of a PATCH (an
+	// id, { id } or a list of them; null or [] empties the field), or null
+	// when a value is not a file id (connect/set objects…)
+	const idsDemandes = donnees => {
+		const ids = MEDIAS_PROFIL.filter(champ => champ in donnees)
+			.flatMap(champ => [].concat(donnees[champ] ?? []))
+			.map(valeur =>
+				valeur &&
+				typeof valeur === 'object' &&
+				!Array.isArray(valeur) &&
+				Object.keys(valeur).length === 1
+					? valeur.id
+					: valeur
+			)
+		const valides = ids.every(
+			id =>
+				(Number.isInteger(id) && id > 0) ||
+				(typeof id === 'string' && /^[1-9][0-9]*$/.test(id))
+		)
+		return valides ? [...new Set(ids.map(Number))] : null
+	}
+	// refusedFileIds: a file is allowed when it is on her profile already, or
+	// when she sent it and no profile uses it
+	const idsRefuses = (compte, profil, ids) => {
+		const actuels = new Set(idsMedias(profil))
+		const utilises = fichiersUtilises()
+		return ids.filter(id => {
+			if (actuels.has(id)) return false
+			const f = fichier(id)
+			return !(f && f.proprietaire === compte.id && !utilises.has(id))
+		})
+	}
+	// removeUnusedFiles: deletes the files of `ids` that no profile uses
+	const supprimerInutilises = ids => {
+		const utilises = fichiersUtilises()
+		const supprimes = etat.fichiers
+			.filter(f => ids.includes(f.id) && !utilises.has(f.id))
+			.map(f => f.id)
+		etat.fichiers = etat.fichiers.filter(f => !supprimes.includes(f.id))
+		return supprimes
+	}
+
 	// every profile of the public API: the fixtures and the accounts' ones
 	const tousLesProfils = () => [
 		...PROFILS_PUBLICS,
@@ -587,10 +651,52 @@ export async function demarrerFauxStrapi(port = 4112, { origine = '*' } = {}) {
 			return json(res, 200, etat.panne)
 		}
 		if (url.pathname === '/__profil') {
-			// fields of the test account's profile, stored like a PATCH would
+			// fields of the test account's profile, stored like a PATCH would;
+			// a number in main_picture or image_gallery is a stored file
+			// (/__fichiers), an object is kept as given
 			const profil = etat.profils[COMPTE_TEST.id]
-			Object.assign(profil, stockerComposants(await lireJson(req)))
+			const champs = await lireJson(req)
+			const stocke = v => (typeof v === 'number' ? vueFichier(fichier(v)) : v)
+			if ('main_picture' in champs)
+				champs.main_picture = stocke(champs.main_picture)
+			if (Array.isArray(champs.image_gallery))
+				champs.image_gallery = champs.image_gallery.map(stocke)
+			Object.assign(profil, stockerComposants(champs))
 			return json(res, 200, profil)
+		}
+		if (url.pathname === '/__fichiers') {
+			// { n, proprietaire }: n stored pictures (1 × 1 PNG) sent by that
+			// account, or by nobody known (null: sent before API #385, like
+			// the pictures in production)
+			const { n = 1, proprietaire = null } = await lireJson(req)
+			const crees = Array.from({ length: n }, () => {
+				const id = etat.prochainId++
+				const f = {
+					id,
+					name: `photo-${id}.png`,
+					mime: 'image/png',
+					size: PNG.length,
+					width: 1,
+					height: 1,
+					url: `http://127.0.0.1:${port}/media/${id}`,
+					alternativeText: null,
+					proprietaire,
+					octets: PNG,
+				}
+				etat.fichiers.push(f)
+				// eslint-disable-next-line no-unused-vars
+				const { octets, ...cree } = f
+				return cree
+			})
+			return json(res, 200, crees)
+		}
+		if (url.pathname === '/__balayer') {
+			// the daily media sweep of API #385 without its 24 h: the files
+			// with a known uploader that no profile uses
+			const supprimes = supprimerInutilises(
+				etat.fichiers.filter(f => f.proprietaire != null).map(f => f.id)
+			)
+			return json(res, 200, { supprimes })
 		}
 		if (url.pathname === '/__etat')
 			return json(res, 200, {
@@ -891,6 +997,22 @@ export async function demarrerFauxStrapi(port = 4112, { origine = '*' } = {}) {
 							moreDetails: 'Makeup artist does not exist for this user',
 						})
 					)
+				const donnees = {}
+				for (const champ of CHAMPS_MODIFIABLES)
+					if (champ in corps) donnees[champ] = corps[champ]
+				// her own pictures only, checked before anything is written
+				const demandes = idsDemandes(donnees)
+				const refuses =
+					demandes === null ? [] : idsRefuses(compte, profil, demandes)
+				if (demandes === null || refuses.length)
+					return json(
+						res,
+						400,
+						erreur(400, 'BadRequestError', 'File not allowed', {
+							moreDetails: 'File not allowed',
+							files: refuses,
+						})
+					)
 				for (const champ of ['first_name', 'last_name']) {
 					const valeur = corps[champ]
 					if (valeur != null && String(valeur).length < NOM_MIN_API)
@@ -902,16 +1024,25 @@ export async function demarrerFauxStrapi(port = 4112, { origine = '*' } = {}) {
 							})
 						)
 				}
-				const donnees = {}
-				for (const champ of CHAMPS_MODIFIABLES)
-					if (champ in corps) donnees[champ] = corps[champ]
+				// a picture of her profile may be a file of the public data
+				const avant = idsMedias(profil)
+				const actuel = id =>
+					[profil.main_picture, ...(profil.image_gallery ?? [])].find(
+						f => f && idDe(f) === id
+					)
+				const stocke = valeur =>
+					vueFichier(fichier(idDe(valeur))) ?? actuel(idDe(valeur)) ?? null
 				if ('main_picture' in donnees)
-					donnees.main_picture = fichier(donnees.main_picture)
+					donnees.main_picture =
+						donnees.main_picture == null ? null : stocke(donnees.main_picture)
 				if ('image_gallery' in donnees)
-					donnees.image_gallery = (donnees.image_gallery ?? [])
-						.map(fichier)
-						.filter(Boolean)
+					donnees.image_gallery = []
+						.concat(donnees.image_gallery ?? [])
+						.map(stocke)
 				Object.assign(profil, stockerComposants(donnees))
+				// a replaced or removed picture is deleted once the profile is saved
+				const gardes = new Set(idsMedias(profil))
+				supprimerInutilises(avant.filter(id => !gardes.has(id)))
 				return json(res, 200, reponsePatch(profil, compte))
 			}
 			if (req.method === 'DELETE') {
@@ -925,8 +1056,16 @@ export async function demarrerFauxStrapi(port = 4112, { origine = '*' } = {}) {
 							'updating Makeup Artist error'
 						)
 					)
+				// her pictures and her uploads, deleted once the account is
+				const ids = [
+					...idsMedias(profil),
+					...etat.fichiers
+						.filter(f => f.proprietaire === compte.id)
+						.map(f => f.id),
+				]
 				delete etat.profils[compte.id]
 				etat.comptes = etat.comptes.filter(c => c.id !== compte.id)
+				supprimerInutilises(ids)
 				return json(res, 200, { message: 'User deleted' })
 			}
 		}
@@ -988,12 +1127,12 @@ export async function demarrerFauxStrapi(port = 4112, { origine = '*' } = {}) {
 				...(await dimensions(octets)),
 				url: `http://127.0.0.1:${port}/media/${id}`,
 				alternativeText: null,
+				// uploaded_by: the account that sent it
 				proprietaire: compte.id,
 				octets,
 			}
 			etat.fichiers.push(f)
-			const { octets: _, proprietaire, ...publie } = f
-			return json(res, 200, [publie])
+			return json(res, 200, [vueFichier(f)])
 		}
 
 		json(res, 404, erreur(404, 'NotFoundError', 'Not Found'))
