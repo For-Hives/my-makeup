@@ -110,6 +110,11 @@ const mode = parametres =>
 const appels = async () => (await fetch(`${API}/__etat`)).json()
 const appelsUsersMe = async () => (await appels())['GET /api/users/me'] ?? 0
 const journal = () => readFileSync(JOURNAL, 'utf8')
+// `[auth]` lines of the middleware's « session expirée » redirections
+const lignesMiddleware = () =>
+	journal()
+		.split('\n')
+		.filter(ligne => ligne.includes('evt=session_expiree code=middleware'))
 const donneesPage = html =>
 	JSON.parse(
 		/<script id="__NEXT_DATA__" type="application\/json">(.*?)<\/script>/s.exec(
@@ -180,6 +185,7 @@ describe('AF-03 - private pages without a valid session: one redirection, no loo
 		const jar = new Jar()
 		await login(jar)
 		assert.equal(jar.session().length, 1)
+		const avant = lignesMiddleware().length
 		const etapes = await suivre(jar, '/auth/profil')
 		assert.deepEqual(
 			etapes.map(e => e.status),
@@ -191,7 +197,50 @@ describe('AF-03 - private pages without a valid session: one redirection, no loo
 		)
 		assert.deepEqual(jar.session(), [], 'cookie effacé par le middleware')
 		assert.deepEqual(await session(jar), {})
-		assert.match(journal(), /\[auth\] evt=session_expiree code=middleware/)
+		assert.deepEqual(lignesMiddleware().slice(avant), [
+			'[auth] evt=session_expiree code=middleware cause=jwt_expire',
+		])
+	})
+
+	test('Strapi JWT expired, on a click or a prefetch of the client router: the redirect only, the cookie stays for the page load that follows, which gets the message', async () => {
+		await reset()
+		await mode({ ttl: '30' })
+		const jar = new Jar()
+		await login(jar)
+		const buildId = readFileSync(
+			`${process.env.AF_DIST}/BUILD_ID`,
+			'utf8'
+		).trim()
+		const avant = lignesMiddleware().length
+		for (const entetes of [
+			{ 'x-nextjs-data': '1' },
+			{
+				'x-nextjs-data': '1',
+				'x-middleware-prefetch': '1',
+				purpose: 'prefetch',
+			},
+		]) {
+			const res = await req(jar, `/_next/data/${buildId}/auth/profil.json`, {
+				headers: entetes,
+			})
+			await res.arrayBuffer()
+			assert.equal(
+				res.headers.get('x-nextjs-redirect'),
+				'/auth/signin?error=session-expiree&ou=middleware&callbackUrl=%2Fauth%2Fprofil'
+			)
+			assert.deepEqual(res.headers.getSetCookie(), [])
+			assert.equal(jar.session().length, 1, 'cookie gardé')
+		}
+		assert.equal(lignesMiddleware().length, avant, 'rien de compté')
+
+		// the router then loads the page itself: message, cookie deleted
+		const etapes = await suivre(jar, '/auth/profil')
+		assert.equal(
+			etapes[0].location,
+			'/auth/signin?error=session-expiree&ou=middleware&callbackUrl=%2Fauth%2Fprofil'
+		)
+		assert.deepEqual(jar.session(), [])
+		assert.equal(lignesMiddleware().length, avant + 1)
 	})
 
 	test('unreadable session cookie (secret rotated), chunks included: the same redirection, every chunk deleted', async () => {
@@ -199,6 +248,7 @@ describe('AF-03 - private pages without a valid session: one redirection, no loo
 		const jar = new Jar()
 		jar.c.set('next-auth.session-token.0', 'illisible')
 		jar.c.set('next-auth.session-token.1', 'illisible')
+		const avant = lignesMiddleware().length
 		const res = await req(jar, '/auth/init-account')
 		assert.equal(res.status, 307)
 		assert.equal(
@@ -214,6 +264,9 @@ describe('AF-03 - private pages without a valid session: one redirection, no loo
 		)
 		assert.deepEqual(jar.session(), [])
 		assert.equal(await appelsUsersMe(), 0, 'Strapi jamais appelé')
+		assert.deepEqual(lignesMiddleware().slice(avant), [
+			'[auth] evt=session_expiree code=middleware cause=illisible',
+		])
 	})
 
 	test('Strapi refuses the JWT on /me-makeup (while /users/me still says 200): cookie deleted, « session expirée » message, no loop', async () => {

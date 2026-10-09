@@ -1005,6 +1005,32 @@ test.describe('RG-08 session expirée', () => {
 		await expect(page).toHaveURL(/\/auth\/profil$/)
 		await expect(page.getByTestId('resume-name')).toHaveText('Testine Recette')
 	})
+
+	test('RG-08 JWT Strapi expiré, clic sur « Profil » dans le menu (navigation côté client) : message « session expirée », page gardée, pas de boucle', async ({
+		page,
+	}) => {
+		expect(await connecter(page)).toBe(true)
+		await aller(page, '/')
+		const lien = page.getByRole('link', { name: 'Profil', exact: true })
+		await expect(lien).toBeVisible()
+		// a new session whose JWT is already inside the 60 s margin, that the
+		// open page has not read: as if it expired while she was reading
+		await panne({ dureeJwtS: 30 })
+		expect(await connecter(page)).toBe(true)
+		const vues = navigations(page)
+
+		await lien.click()
+		await expect(page).toHaveURL(
+			/\/auth\/signin\?error=session-expiree&ou=middleware&callbackUrl=%2Fauth%2Fprofil$/
+		)
+		await expect(page.getByTestId('signin-url-error')).toHaveText(
+			'Ta session a expiré, reconnecte-toi.'
+		)
+		await page.waitForLoadState('networkidle')
+		expect(versLaConnexion(vues).length).toBeLessThanOrEqual(1)
+		expect(await sessionPresente(page)).toBe(false)
+		expect(appels((await etat()).journal, 'GET', '/api/me-makeup')).toEqual([])
+	})
 })
 
 test.describe('A7 mot de passe oublié', () => {

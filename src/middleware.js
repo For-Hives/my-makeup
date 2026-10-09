@@ -11,18 +11,28 @@ import { UMAMI_PROXY_PATHS, umamiProxyHeaders } from '@/lib/umami'
 
 const nomsCookies = req => req.cookies.getAll().map(cookie => cookie.name)
 
+// Data request of the client router (a click on a link) or a link prefetch:
+// it follows a redirect by loading the page itself, which comes back here.
+const requeteDuRouteur = req =>
+	req.headers.has('x-nextjs-data') || req.headers.has('x-middleware-prefetch')
+
 // A session cookie was sent: withAuth read its token (same secret as the
 // session read). A valid Strapi JWT goes through (A2). An unreadable token
 // (secret rotated) or an expired Strapi JWT gets one redirection to the
 // sign-in page with the « session expirée » message, and the cookie and its
 // chunks are deleted, so the next visit is not caught again (RG-08).
+// For the client router, the redirect only: deleting the cookie there would
+// leave the page load that follows without it, and without the message.
 function sessionEnvoyee(req) {
-	if (sessionValide(req.nextauth.token, Date.now())) return NextResponse.next()
+	const { token } = req.nextauth
+	if (sessionValide(token, Date.now())) return NextResponse.next()
 	const { pathname, search, origin } = req.nextUrl
-	console.info(ligneLogAuth('session_expiree', { code: 'middleware' }))
 	const reponse = NextResponse.redirect(
 		new URL(urlSessionExpiree(`${pathname}${search}`, 'middleware'), origin)
 	)
+	if (requeteDuRouteur(req)) return reponse
+	const cause = !token ? 'illisible' : token.jwt ? 'jwt_expire' : 'sans_jwt'
+	console.info(ligneLogAuth('session_expiree', { code: 'middleware', cause }))
 	for (const cookie of cookiesSessionAEffacer(nomsCookies(req)))
 		reponse.headers.append('Set-Cookie', cookie)
 	return reponse
@@ -30,8 +40,10 @@ function sessionEnvoyee(req) {
 
 // No session cookie at all: NextAuth's own redirection to the sign-in page,
 // with the page to come back to and no message (she never signed in).
+// Same secret as the session read (trimmed); empty, NextAuth's NO_SECRET.
 const auth = withAuth(sessionEnvoyee, {
 	pages: { signIn: '/auth/signin' },
+	secret: process.env.NEXTAUTH_SECRET?.trim(),
 	callbacks: {
 		authorized: ({ req }) => aCookieDeSession(nomsCookies(req)),
 	},
