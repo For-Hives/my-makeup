@@ -494,10 +494,12 @@ test.describe('UI-02 et UI-04 édition au doigt et au clavier', () => {
 		await expect(champ).toBeHidden()
 	})
 
-	test('toutes les cartes ont un bouton « Modifier » visible de 44 px', async ({
+	test('toutes les cartes ont un bouton « Modifier » visible de 44 px, avec un anneau au focus clavier', async ({
 		page,
 	}) => {
 		await ouvrirProfil(page)
+		// a key pressed first: a focus() then counts as a keyboard focus
+		await page.keyboard.press('Shift')
 		for (const cy of [
 			'update-resume-button',
 			'update-location-button',
@@ -517,6 +519,13 @@ test.describe('UI-02 et UI-04 édition au doigt et au clavier', () => {
 			expect(await bouton.evaluate(b => getComputedStyle(b).opacity), cy).toBe(
 				'1'
 			)
+			await bouton.focus()
+			const focus = await bouton.evaluate(b => ({
+				visible: b.matches(':focus-visible'),
+				anneau: getComputedStyle(b).boxShadow,
+			}))
+			expect(focus.visible, cy).toBe(true)
+			expect(focus.anneau, cy).not.toBe('none')
 		}
 	})
 
@@ -558,6 +567,11 @@ test.describe('UI-02 et UI-04 édition au doigt et au clavier', () => {
 		]) {
 			await page.getByTestId(cy).click()
 			await expect(dialogue(page)).toBeVisible()
+			// translucent backdrop behind every modal (UI-04)
+			await expect(page.getByTestId('modal-backdrop'), cy).toHaveCSS(
+				'background-color',
+				'rgba(107, 114, 128, 0.75)'
+			)
 			if (cy === 'update-service-offers-button') {
 				// the fields of an option only exist once one is added
 				await page.getByTestId('add-service-offers-option-button').click()
