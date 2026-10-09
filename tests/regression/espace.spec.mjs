@@ -638,7 +638,19 @@ test.describe('UI-02 et UI-04 édition au doigt et au clavier', () => {
 	test('UI-02 ?publicView=true chargé directement, puis rechargé : vue publique seule ; le retour du navigateur rend la vue d’édition', async ({
 		page,
 	}) => {
+		const erreurs = erreursDeLaPage(page)
+		page.on('console', m => {
+			if (m.type() === 'error' && !/Failed to load resource/.test(m.text()))
+				erreurs.push(m.text())
+		})
 		expect(await connecter(page)).toBe(true)
+		// the server already renders the public view: same page once hydrated
+		const html = await (
+			await page.context().request.get('/auth/profil?publicView=true')
+		).text()
+		expect(html).toContain('data-cy="profil-edit-view"')
+		expect(html).not.toContain('data-cy="update-resume-button"')
+		expect(html).not.toContain('data-cy="update-picture-button"')
 		// aller() waits for the hydration: the old effects had run by then
 		await aller(page, '/auth/profil?publicView=true')
 		await vuePubliqueSeule(page)
@@ -664,6 +676,7 @@ test.describe('UI-02 et UI-04 édition au doigt et au clavier', () => {
 		await expect(page).not.toHaveURL(/publicView/)
 		await expect(page.getByTestId('update-description-button')).toBeVisible()
 		await expect(page.getByTestId('profil-public-view')).toBeVisible()
+		expect(erreurs).toEqual([])
 	})
 })
 
