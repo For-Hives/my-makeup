@@ -86,19 +86,90 @@ async function photoDeTelephone() {
 	return { name: 'IMG_2040.JPG', mimeType: 'image/jpeg', buffer }
 }
 
-async function petitePng() {
+async function petitePng(background = { r: 200, g: 120, b: 160 }) {
 	const buffer = await sharp({
-		create: {
-			width: 1200,
-			height: 1200,
-			channels: 3,
-			background: { r: 200, g: 120, b: 160 },
-		},
+		create: { width: 1200, height: 1200, channels: 3, background },
 	})
 		.png()
 		.toBuffer()
 	return { name: 'portrait.png', mimeType: 'image/png', buffer }
 }
+const AUTRE_COULEUR = { r: 90, g: 160, b: 210 }
+
+// the profile picture shown in the resume modal: a blob once the picked
+// picture is compressed (next/image leaves a blob unoptimized)
+const apercuProfil = page => dialogue(page).getByAltText('photo de profil')
+
+// picks a profile picture in the open resume modal and waits for its new
+// preview: a save before that would leave it out
+async function choisirPhotoProfil(page, photo) {
+	const source = () =>
+		apercuProfil(page).evaluateAll(
+			images => images[0]?.getAttribute('src') ?? ''
+		)
+	const avant = await source()
+	await page.getByTestId('file-main-upload').setInputFiles(photo)
+	await expect
+		.poll(async () => {
+			const apres = await source()
+			return apres.startsWith('blob:') && apres !== avant
+		})
+		.toBe(true)
+	await expect(page.getByTestId('photo-error')).toHaveCount(0)
+}
+
+// picks a picture in the open portfolio modal and adds it to the gallery
+async function ajouterAuPortfolio(page, photo) {
+	await page.getByTestId('file-upload-portefolio').setInputFiles(photo)
+	await expect(page.getByTestId('portfolio-preview')).toBeVisible()
+	await page.getByTestId('add-button-portefolio').click()
+}
+
+// bodies of the PATCH /api/me-makeup sent by the page
+function corpsDesPatchs(page) {
+	const corps = []
+	page.on('request', requete => {
+		if (
+			requete.method() === 'PATCH' &&
+			new URL(requete.url()).pathname === '/api/me-makeup'
+		)
+			corps.push(requete.postDataJSON())
+	})
+	return corps
+}
+
+// stored pictures of the fake Strapi: n files sent before the API recorded
+// the uploader (proprietaire null), or by that account
+const fichiersStockes = (n, proprietaire = null) =>
+	piloter('/__fichiers', { n, proprietaire })
+const idsFichiers = async () => (await etat()).fichiers.map(f => f.id)
+// the media sweep of the API, without its 24 h
+const balayer = () => piloter('/__balayer', {})
+
+// a save of her profile from another tab or device: straight to the fake
+// Strapi, signed in on its own
+async function sauverAilleurs(champs) {
+	const { jwt } = await (
+		await fetch(`${API}/api/auth/local`, {
+			method: 'POST',
+			body: JSON.stringify({
+				identifier: COMPTE_TEST.email,
+				password: COMPTE_TEST.password,
+			}),
+		})
+	).json()
+	const reponse = await fetch(`${API}/api/me-makeup`, {
+		method: 'PATCH',
+		headers: { authorization: `Bearer ${jwt}` },
+		body: JSON.stringify(champs),
+	})
+	expect(reponse.status).toBe(200)
+}
+
+const MESSAGE_PHOTO_REFUSEE =
+	"Choisis à nouveau ta photo : elle n'a pas été acceptée, et tes modifications n'ont pas été enregistrées."
+const MESSAGE_PHOTO_RETIREE =
+	"Une de tes photos a été retirée depuis un autre onglet ou appareil : tes modifications n'ont pas été enregistrées. Recharge la page puis réessaie."
 
 // first bytes of an iPhone HEIC (ISO BMFF, brand heic), then anything
 const HEIC = {
@@ -445,10 +516,12 @@ test.describe('UI-02 et UI-04 édition au doigt et au clavier', () => {
 		await expect(champ).toBeHidden()
 	})
 
-	test('toutes les cartes ont un bouton « Modifier » visible de 44 px', async ({
+	test('toutes les cartes ont un bouton « Modifier » visible de 44 px, avec un anneau au focus clavier', async ({
 		page,
 	}) => {
 		await ouvrirProfil(page)
+		// a key pressed first: a focus() then counts as a keyboard focus
+		await page.keyboard.press('Shift')
 		for (const cy of [
 			'update-resume-button',
 			'update-location-button',
@@ -468,6 +541,14 @@ test.describe('UI-02 et UI-04 édition au doigt et au clavier', () => {
 			expect(await bouton.evaluate(b => getComputedStyle(b).opacity), cy).toBe(
 				'1'
 			)
+			const ombre = () => bouton.evaluate(b => getComputedStyle(b).boxShadow)
+			// no ring before the focus, an indigo-600 one with it
+			expect(await ombre(), cy).toBe('none')
+			await bouton.focus()
+			expect(await bouton.evaluate(b => b.matches(':focus-visible')), cy).toBe(
+				true
+			)
+			expect(await ombre(), cy).toContain('rgb(79, 70, 229)')
 		}
 	})
 
@@ -509,6 +590,11 @@ test.describe('UI-02 et UI-04 édition au doigt et au clavier', () => {
 		]) {
 			await page.getByTestId(cy).click()
 			await expect(dialogue(page)).toBeVisible()
+			// translucent backdrop behind every modal (UI-04)
+			await expect(page.getByTestId('modal-backdrop'), cy).toHaveCSS(
+				'background-color',
+				'rgba(107, 114, 128, 0.75)'
+			)
 			if (cy === 'update-service-offers-button') {
 				// the fields of an option only exist once one is added
 				await page.getByTestId('add-service-offers-option-button').click()
@@ -797,20 +883,221 @@ test.describe('UI-03 photos', () => {
 		)
 	})
 
-	test('photo de profil remplacée : envoyée puis rattachée à la sauvegarde', async ({
+	test('photo de profil remplacée : la nouvelle est envoyée et rattachée à la sauvegarde, l’ancienne est supprimée', async ({
+		page,
+	}) => {
+		// her current picture, sent before the API recorded the uploader
+		const [ancienne] = await fichiersStockes(1)
+		await profilDeDepart({ main_picture: ancienne.id })
+		await ouvrirProfil(page)
+		await page.getByTestId('update-resume-button').click()
+		await expect(page.getByTestId('file-main-upload')).toHaveAttribute(
+			'accept',
+			'image/jpeg,image/png,image/webp'
+		)
+		await choisirPhotoProfil(page, await petitePng())
+		// nothing is sent before the save
+		expect(await idsFichiers()).toEqual([ancienne.id])
+
+		await page.getByTestId('save-button-resume').click()
+		await expect(dialogue(page)).toBeHidden()
+		const { fichiers, profils, journal } = await etat()
+		expect(appels(journal, 'POST', '/api/upload')).toHaveLength(1)
+		expect(fichiers).toHaveLength(1)
+		const [nouvelle] = fichiers
+		expect(nouvelle.id).not.toBe(ancienne.id)
+		expect(nouvelle.mime).toBe('image/webp')
+		expect(nouvelle.proprietaire).toBe(COMPTE_TEST.id)
+		expect(profils[COMPTE_TEST.id].main_picture.id).toBe(nouvelle.id)
+		// the old file is gone from the storage too
+		expect((await fetch(ancienne.url)).status).toBe(404)
+	})
+
+	test('PATCH en échec puis une autre photo choisie : la 1re reste hors du profil jusqu’au balayage, seule la 2e est rattachée', async ({
 		page,
 	}) => {
 		await ouvrirProfil(page)
+		await panne({ patch: 500 })
 		await page.getByTestId('update-resume-button').click()
-		await page.getByTestId('file-main-upload').setInputFiles(await petitePng())
-		await expect(page.getByTestId('photo-error')).toHaveCount(0)
-		expect((await etat()).fichiers).toHaveLength(0)
+		await choisirPhotoProfil(page, await petitePng())
+		await page.getByTestId('save-button-resume').click()
+		await expect(dialogue(page).getByTestId('save-error')).toHaveText(
+			"Le service est momentanément indisponible : tes modifications n'ont pas été enregistrées. Réessaie dans quelques minutes."
+		)
+		const [a] = (await etat()).fichiers
+
+		// the API is back, another picture is picked and saved
+		await panne({ patch: null })
+		await choisirPhotoProfil(page, await petitePng(AUTRE_COULEUR))
 		await page.getByTestId('save-button-resume').click()
 		await expect(dialogue(page)).toBeHidden()
 		const { fichiers, profils } = await etat()
-		expect(fichiers).toHaveLength(1)
-		expect(fichiers[0].mime).toBe('image/webp')
-		expect(profils[COMPTE_TEST.id].main_picture.id).toBe(fichiers[0].id)
+		const b = fichiers.find(f => f.id !== a.id)
+		expect(fichiers.map(f => f.id)).toEqual([a.id, b.id])
+		expect(profils[COMPTE_TEST.id].main_picture.id).toBe(b.id)
+
+		// A, hers and on no profile, goes at the next sweep; B stays
+		expect((await balayer()).supprimes).toEqual([a.id])
+		expect(await idsFichiers()).toEqual([b.id])
+		expect((await profilServeur()).main_picture.id).toBe(b.id)
+	})
+
+	test('photo de profil refusée par l’API (400 « File not allowed ») : « Choisis à nouveau ta photo », son id n’est jamais renvoyé, la photo choisie ensuite est envoyée et rattachée', async ({
+		page,
+	}) => {
+		const patchs = corpsDesPatchs(page)
+		await ouvrirProfil(page)
+		// the upload lands on an API without uploaded_by (a rollback, or the
+		// #385 deploy): no uploader recorded, so the PATCH refuses the file
+		await panne({ uploadSansProprietaire: true })
+		await page.getByTestId('update-resume-button').click()
+		await choisirPhotoProfil(page, await petitePng())
+		await page.getByTestId('save-button-resume').click()
+		await expect(dialogue(page).getByTestId('save-error')).toHaveText(
+			MESSAGE_PHOTO_REFUSEE
+		)
+		// the picked picture is dropped: back to her saved one (none)
+		await expect(apercuProfil(page)).toHaveCount(0)
+		const avant = await etat()
+		const [refusee] = avant.fichiers
+		expect(refusee.proprietaire).toBeNull()
+		expect(avant.profils[COMPTE_TEST.id].main_picture).toBeNull()
+		expect(avant.profils[COMPTE_TEST.id].first_name).toBe('Testine')
+
+		// saved again without picking: the other fields, never the refused id
+		await page.getByTestId('first-name-input').fill('Al')
+		await page.getByTestId('save-button-resume').click()
+		await expect(dialogue(page)).toBeHidden()
+		expect(patchs[1]).not.toHaveProperty('main_picture')
+		expect((await profilServeur()).first_name).toBe('Al')
+
+		// picked again: uploaded again, saved
+		await panne({ uploadSansProprietaire: false })
+		await page.getByTestId('update-resume-button').click()
+		await choisirPhotoProfil(page, await petitePng())
+		await page.getByTestId('save-button-resume').click()
+		await expect(dialogue(page)).toBeHidden()
+		const apres = await etat()
+		expect(appels(apres.journal, 'POST', '/api/upload')).toHaveLength(2)
+		const nouvelle = apres.fichiers.find(f => f.id !== refusee.id)
+		expect(apres.profils[COMPTE_TEST.id].main_picture.id).toBe(nouvelle.id)
+		expect(patchs.map(corps => corps.main_picture)).toEqual([
+			refusee.id,
+			undefined,
+			nouvelle.id,
+		])
+		// a file without uploader is never swept (API #385)
+		await balayer()
+		expect(await idsFichiers()).toEqual([refusee.id, nouvelle.id])
+	})
+
+	test('photo du portfolio refusée par l’API (400 « File not allowed ») : « Choisis à nouveau ta photo », elle quitte la galerie, les photos enregistrées restent', async ({
+		page,
+	}) => {
+		const [enregistree] = await fichiersStockes(1)
+		await profilDeDepart({ image_gallery: [enregistree.id] })
+		const patchs = corpsDesPatchs(page)
+		await ouvrirProfil(page)
+		await panne({ uploadSansProprietaire: true })
+		await page.getByTestId('update-portefolio-button').click()
+		await ajouterAuPortfolio(page, await petitePng())
+		await page.getByTestId('save-button-portefolio').click()
+		await expect(dialogue(page).getByTestId('save-error')).toHaveText(
+			MESSAGE_PHOTO_REFUSEE
+		)
+		await expect(dialogue(page).getByTestId('portfolio-slide')).toHaveCount(1)
+		await expect(page.getByTestId('portfolio-pending')).toHaveCount(0)
+		const [, refusee] = (await etat()).fichiers
+		expect(
+			(await profilServeur()).image_gallery.map(photo => photo.id)
+		).toEqual([enregistree.id])
+
+		// added again: uploaded again, saved after the stored picture
+		await panne({ uploadSansProprietaire: false })
+		await ajouterAuPortfolio(page, await petitePng())
+		await page.getByTestId('save-button-portefolio').click()
+		await expect(dialogue(page)).toBeHidden()
+		const { fichiers, profils } = await etat()
+		const nouvelle = fichiers.find(
+			f => ![enregistree.id, refusee.id].includes(f.id)
+		)
+		expect(
+			profils[COMPTE_TEST.id].image_gallery.map(photo => photo.id)
+		).toEqual([enregistree.id, nouvelle.id])
+		expect(patchs.map(corps => corps.image_gallery)).toEqual([
+			[enregistree.id, refusee.id],
+			[enregistree.id, nouvelle.id],
+		])
+	})
+
+	test('portfolio périmé : une photo enregistrée, retirée depuis un autre onglet, est refusée (400 « File not allowed ») ; « Recharge la page », elle seule quitte la galerie, la sauvegarde suivante passe', async ({
+		page,
+	}) => {
+		const [x, y] = await fichiersStockes(2)
+		await profilDeDepart({ image_gallery: [x.id, y.id] })
+		const patchs = corpsDesPatchs(page)
+		await ouvrirProfil(page)
+		await page.getByTestId('update-portefolio-button').click()
+		await expect(dialogue(page).getByTestId('portfolio-slide')).toHaveCount(2)
+
+		// another tab removes X: the API saves [Y] and deletes X
+		await sauverAilleurs({ image_gallery: [y.id] })
+		expect(await idsFichiers()).toEqual([y.id])
+
+		await ajouterAuPortfolio(page, await petitePng())
+		await page.getByTestId('save-button-portefolio').click()
+		await expect(dialogue(page).getByTestId('save-error')).toHaveText(
+			MESSAGE_PHOTO_RETIREE
+		)
+		const [, nouvelle] = (await etat()).fichiers
+		expect(patchs).toEqual([{ image_gallery: [x.id, y.id, nouvelle.id] }])
+		// X leaves the gallery; Y and the picture sent, accepted, stay
+		await expect(dialogue(page).getByTestId('portfolio-slide')).toHaveCount(2)
+		await expect(page.getByTestId('portfolio-pending')).toHaveCount(0)
+		expect(
+			(await profilServeur()).image_gallery.map(photo => photo.id)
+		).toEqual([y.id])
+
+		// saved again without a reload: X is never sent again, the picture
+		// is not uploaded again
+		await page.getByTestId('save-button-portefolio').click()
+		await expect(dialogue(page)).toBeHidden()
+		expect(patchs[1]).toEqual({ image_gallery: [y.id, nouvelle.id] })
+		const { journal, profils } = await etat()
+		expect(appels(journal, 'POST', '/api/upload')).toHaveLength(1)
+		expect(
+			profils[COMPTE_TEST.id].image_gallery.map(photo => photo.id)
+		).toEqual([y.id, nouvelle.id])
+	})
+
+	test('photo retirée du portfolio et sauvegardée : son fichier est supprimé, les autres restent', async ({
+		page,
+	}) => {
+		const [premiere, seconde] = await fichiersStockes(2)
+		await profilDeDepart({ image_gallery: [premiere.id, seconde.id] })
+		await ouvrirProfil(page)
+		await page.getByTestId('update-portefolio-button').click()
+		await expect(dialogue(page).getByTestId('portfolio-slide')).toHaveCount(2)
+		// closed without saving: nothing is deleted
+		await dialogue(page)
+			.getByRole('button', { name: 'Retirer la photo 1' })
+			.click()
+		await expect(dialogue(page).getByTestId('portfolio-slide')).toHaveCount(1)
+		await page.keyboard.press('Escape')
+		await expect(dialogue(page)).toBeHidden()
+		expect(await idsFichiers()).toEqual([premiere.id, seconde.id])
+
+		await page.getByTestId('update-portefolio-button').click()
+		await dialogue(page)
+			.getByRole('button', { name: 'Retirer la photo 1' })
+			.click()
+		await page.getByTestId('save-button-portefolio').click()
+		await expect(dialogue(page)).toBeHidden()
+		expect(
+			(await profilServeur()).image_gallery.map(photo => photo.id)
+		).toEqual([seconde.id])
+		expect(await idsFichiers()).toEqual([seconde.id])
+		expect((await fetch(premiere.url)).status).toBe(404)
 	})
 
 	test('envoi refusé par l’API (413) : message, rien n’est rattaché', async ({
@@ -991,9 +1278,20 @@ test.describe('UI-05 inscription et suppression', () => {
 		await expect(page.getByTestId('first_name')).toBeVisible()
 	})
 
-	test('suppression du compte : refusée → message et toujours connectée ; acceptée → déconnectée', async ({
+	test('suppression du compte : refusée → message, toujours connectée, photos gardées ; acceptée → déconnectée, ses photos et ses envois supprimés', async ({
 		page,
 	}) => {
+		// her main picture and 2 gallery pictures, one of her uploads on no
+		// profile yet, and a file of another account
+		const [principale, galerie1, galerie2] = await fichiersStockes(3)
+		await profilDeDepart({
+			main_picture: principale.id,
+			image_gallery: [galerie1.id, galerie2.id],
+		})
+		const [envoi] = await fichiersStockes(1, COMPTE_TEST.id)
+		const [autre] = await fichiersStockes(1, COMPTE_TEST.id + 1)
+		const tous = [principale, galerie1, galerie2, envoi, autre].map(f => f.id)
+
 		await ouvrirProfil(page)
 		await panne({ suppression: 500 })
 		await page.getByTestId('button-delete-account').click()
@@ -1001,14 +1299,16 @@ test.describe('UI-05 inscription et suppression', () => {
 		await expect(page.getByTestId('delete-account-error')).toBeVisible()
 		await expect(page).toHaveURL(/\/auth\/profil/)
 		expect((await etat()).comptes).toHaveLength(1)
+		expect(await idsFichiers()).toEqual(tous)
 
 		await panne({ suppression: null })
 		await page.getByTestId('delete-account').click()
 		await expect(page).toHaveURL(/\/$/)
-		const { comptes, profils, journal } = await etat()
+		const { comptes, profils, journal, fichiers } = await etat()
 		expect(comptes).toHaveLength(0)
 		expect(profils[COMPTE_TEST.id]).toBeUndefined()
 		expect(appels(journal, 'DELETE', '/api/me-makeup')).toHaveLength(2)
+		expect(fichiers.map(f => f.id)).toEqual([autre.id])
 		const cookies = await page.context().cookies()
 		expect(
 			cookies.some(c => c.name.startsWith('next-auth.session-token'))

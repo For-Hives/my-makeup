@@ -6,6 +6,7 @@ import {
 	compresserPhoto,
 	COTE_MAX,
 	dimensionsCibles,
+	kindRefusEnvoi,
 	MESSAGES_PHOTO,
 	nomPhoto,
 	PALIERS,
@@ -16,6 +17,7 @@ import {
 	typeImageDepuisOctets,
 	verifierPhoto,
 } from '../../src/lib/photo.js'
+import { eventData } from '../../src/lib/analytics.js'
 
 const MO = 1024 * 1024
 const ascii = texte => [...texte].map(c => c.charCodeAt(0))
@@ -390,5 +392,26 @@ describe('codeRefusEnvoi (answer of POST /api/upload)', () => {
 			assert.equal(codeRefusEnvoi(status), 'envoi-impossible')
 		for (const code of ['refus-taille', 'refus-type', 'envoi-impossible'])
 			assert.ok(MESSAGES_PHOTO[code])
+	})
+})
+
+describe('kindRefusEnvoi (upload_error of a refused POST /api/upload)', () => {
+	test('413 → size, 400 and 415 → type, anything else → server', () => {
+		assert.equal(kindRefusEnvoi(413), 'size')
+		assert.equal(kindRefusEnvoi(400), 'type')
+		assert.equal(kindRefusEnvoi(415), 'type')
+		// 0: API out of reach; 200: stored, but its answer could not be read
+		for (const status of [0, 200, 401, 403, 429, 500, 502, 503])
+			assert.equal(kindRefusEnvoi(status), 'server')
+	})
+
+	test('every kind is in the catalogue and carries the status only', () => {
+		for (const status of [413, 400, 415, 500, 0])
+			assert.deepEqual(
+				eventData('upload_error', { kind: kindRefusEnvoi(status) }),
+				{
+					kind: kindRefusEnvoi(status),
+				}
+			)
 	})
 })

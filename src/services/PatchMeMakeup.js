@@ -20,11 +20,16 @@ const TOAST_ECHEC = 'profile-save-echec'
  * @param {object} authSession - NextAuth session (useSession), for its JWT
  * @param {object} data - fields to save
  * @param {string} section - one of SECTIONS_PROFIL (src/lib/sauvegarde-profil.js)
- * @returns {Promise<{ok: boolean, data?: object, error?: string, sessionExpiree?: true}>}
- *   `error`: the French message of a failed save (plans/01 UI-01)
+ * @param {{photosEnregistrees?: number[]}} [options] - ids of the pictures
+ *   the page shows as saved (see messageEchecSauvegarde)
+ * @returns {Promise<{ok: boolean, data?: object, error?: string, sessionExpiree?: true, photoRefusee?: true, fichiersRefuses?: number[]}>}
+ *   `error`: the French message of a failed save (plans/01 UI-01);
+ *   `photoRefusee`: a 400 « File not allowed » (see photoRefusee in
+ *   src/lib/sauvegarde-profil.js), the picture modals then drop the refused
+ *   pictures, whose ids are in `fichiersRefuses`
  */
-export async function patchMeMakeup(authSession, data, section) {
-	const resultat = await sauvegarderProfil(data, section, {
+export async function patchMeMakeup(authSession, data, section, options) {
+	const ports = {
 		envoyer: corps =>
 			authenticatedFetch(
 				`${process.env.NEXT_PUBLIC_API_URL}/api/me-makeup`,
@@ -32,7 +37,8 @@ export async function patchMeMakeup(authSession, data, section) {
 				{ method: 'PATCH', body: corps }
 			),
 		compter: track,
-	})
+	}
+	const resultat = await sauvegarderProfil(data, section, ports, options)
 
 	if (resultat.ok) {
 		toast.dismiss(TOAST_ECHEC)

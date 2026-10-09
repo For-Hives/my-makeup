@@ -9,6 +9,7 @@ import { patchMeMakeup } from '@/services/PatchMeMakeup'
 import { uploadPhoto } from '@/services/UploadPhoto'
 import Info from '@/components/Global/Info'
 import { ACCEPT, MAX_PHOTOS_GALERIE, MESSAGES_PHOTO } from '@/lib/photo'
+import { galerieApresRefus } from '@/lib/sauvegarde-profil'
 import { ratioMedia, sizesBoite } from '@/lib/taille-image'
 import {
 	BoutonFermer,
@@ -84,10 +85,20 @@ export default function ModalUpdatePortfolioProfil(props) {
 		setUserImageGallery(galerie)
 
 		const champs = { image_gallery: galerie.map(photo => photo.id) }
-		const resultat = await patchMeMakeup(session, champs, 'portfolio')
+		const enregistrees = (user.image_gallery ?? []).map(photo => photo.id)
+		const resultat = await patchMeMakeup(session, champs, 'portfolio', {
+			photosEnregistrees: enregistrees,
+		})
 		setEnvoi(false)
 		if (!resultat.ok) {
 			setErreurEnvoi(resultat.error ?? null)
+			// pictures refused by the API (400 « File not allowed »): they leave
+			// the gallery, their ids are never sent again; she adds a refused
+			// new one again and the next save uploads it anew
+			if (resultat.photoRefusee)
+				setUserImageGallery(
+					galerieApresRefus(galerie, resultat.fichiersRefuses, enregistrees)
+				)
 			return
 		}
 
