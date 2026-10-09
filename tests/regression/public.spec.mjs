@@ -159,6 +159,11 @@ test.describe('UI-06 profils rendus côté serveur', () => {
 		for (let n = 1; n <= 6; n++)
 			expect(page).toContain(`alt="Réalisation de Zoé Lefèvre (${n}/6)"`)
 		expect(motsInterdits(page)).toEqual([])
+		// every card filled: its 9 titles, in order (what 'coquille vide'
+		// checks the absence of)
+		expect(
+			textesDes(page, 'h2').filter(titre => TITRES_SECTIONS.includes(titre))
+		).toEqual(TITRES_SECTIONS)
 
 		// indexable, canonical on the slug
 		expect(meta(page, 'robots')).toBeUndefined()
