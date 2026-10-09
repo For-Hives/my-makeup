@@ -4,9 +4,10 @@
 // hero of the public pages and the shared picture, both in /public, go
 // through /_next/image. The image cache of the test build is emptied first,
 // so each answer is made now (x-nextjs-cache MISS). Without a working sharp,
-// Next sends the original back: 1024 px, or the JPEG itself.
+// Next sends the original back: 1024 px, the JPEG itself, or the very bytes
+// of the file.
 import { expect, test } from '@playwright/test'
-import { rmSync } from 'node:fs'
+import { readFileSync, rmSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -16,11 +17,12 @@ const APP = process.env.RG_APP ?? 'http://localhost:3996'
 if (!['localhost', '127.0.0.1', '[::1]'].includes(new URL(APP).hostname))
 	throw new Error(`cible non locale refusée : ${APP}`)
 
-// DIST of tests/regression/run.mjs; next build keeps its cache folder
-const CACHE_IMAGES = path.resolve(
+const RACINE = path.resolve(
 	path.dirname(fileURLToPath(import.meta.url)),
-	'../../.next-test-regression/cache/images'
+	'../..'
 )
+// DIST of tests/regression/run.mjs; next build keeps its cache folder
+const CACHE_IMAGES = path.join(RACINE, '.next-test-regression/cache/images')
 const LARGEUR = 640
 
 /** Width of a WebP read from its header (VP8, VP8L or VP8X), null if not WebP. */
@@ -56,10 +58,23 @@ for (const source of ['/assets/back.webp', '/assets/og-my-makeup.jpg'])
 		expect(largeurWebp(await reponse.body())).toBe(LARGEUR)
 	})
 
-test('accueil : l’image du hero passe par l’optimiseur et s’affiche', async ({
+// The hero asks for 1080 px (2048 on a 2x screen) of a 1024 px WebP: sharp
+// does not enlarge it, so only the bytes tell its WebP from the original
+test('accueil : l’image du hero est réencodée par sharp et s’affiche', async ({
 	page,
 }) => {
+	const original = readFileSync(path.join(RACINE, 'public/assets/back.webp'))
+	const reponseHero = page.waitForResponse(
+		r => r.url().includes('/_next/image?') && r.url().includes('back.webp')
+	)
 	await page.goto('/')
+	const reponse = await reponseHero
+	const demandee = Number(new URL(reponse.url()).searchParams.get('w'))
+	expect(reponse.status()).toBe(200)
+	expect(reponse.headers()['content-type']).toBe('image/webp')
+	const corps = await reponse.body()
+	expect(corps.equals(original), 'le fichier d’origine, sans sharp').toBe(false)
+	expect(largeurWebp(corps)).toBe(Math.min(demandee, largeurWebp(original)))
 	const hero = page.locator('img[src*="back.webp"]').first()
 	await expect(hero).toHaveAttribute('src', /\/_next\/image\?/)
 	await expect
