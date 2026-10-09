@@ -310,16 +310,17 @@ export function codeRefusEnvoi(status) {
 	return 'envoi-impossible'
 }
 
+const KIND_REFUS = { 'refus-taille': 'size', 'refus-type': 'type' }
+
 /**
  * `kind` of the `upload_error` event for a refused POST /api/upload (plans/04
  * event 15): the status only, never the file, its name or the API text.
+ * Read from codeRefusEnvoi, so the event and the message always agree.
  * @param {number} status - 0 when the API could not be reached
  * @returns {'size'|'type'|'server'}
  */
 export function kindRefusEnvoi(status) {
-	if (status === 413) return 'size'
-	if (status === 400 || status === 415) return 'type'
-	return 'server'
+	return KIND_REFUS[codeRefusEnvoi(status)] ?? 'server'
 }
 
 /** Most pictures of a portfolio (the API takes more, the page shows 10) */
