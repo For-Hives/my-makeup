@@ -13,7 +13,7 @@ import {
 	messageErreur,
 	normaliserCodeErreur,
 } from '@/lib/auth-erreurs'
-import { callbackUrlSure } from '@/lib/auth-session'
+import { callbackUrlSure, ouSessionExpiree } from '@/lib/auth-session'
 import { track } from '@/lib/analytics'
 import { motDePasseOublieActif } from '@/lib/mot-de-passe'
 
@@ -59,12 +59,14 @@ function Signin() {
 	const destination = () =>
 		callbackUrlSure(router.query.callbackUrl, window.location.origin)
 
+	// where the session ended (?ou=): middleware, jwt_expire or api_401
+	const ou = router.isReady ? ouSessionExpiree(router.query.ou) : null
 	const expirationComptee = useRef(false)
 	useEffect(() => {
 		if (erreurUrl !== 'session-expiree' || expirationComptee.current) return
 		expirationComptee.current = true
-		track('session_expired', { where: 'api_401' })
-	}, [erreurUrl])
+		track('session_expired', { where: ou })
+	}, [erreurUrl, ou])
 
 	const onSubmit = async data => {
 		setEnvoi(true)

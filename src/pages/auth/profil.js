@@ -14,7 +14,12 @@ import {
 	journalAuth,
 } from '@/pages/api/auth/[...nextauth]'
 import { messageErreur } from '@/lib/auth-erreurs'
-import { cookiesSessionAEffacer, DELAI_STRAPI_MS } from '@/lib/auth-session'
+import {
+	aCookieDeSession,
+	cookiesSessionAEffacer,
+	DELAI_STRAPI_MS,
+	urlSessionExpiree,
+} from '@/lib/auth-session'
 import { filtrerProfilPrive } from '@/lib/profil-prive'
 
 function Profil({ data, erreur }) {
@@ -74,13 +79,29 @@ function Profil({ data, erreur }) {
 	)
 }
 
-export const getServerSideProps = async ({ req, res }) => {
+export const getServerSideProps = async ({ req, res, resolvedUrl }) => {
 	// private page: never in a shared cache (it used to be public, s-maxage=10)
 	res.setHeader('Cache-Control', 'private, no-store')
 
 	// read in process, the refreshed session cookie goes back with the page
 	const session = await getServerSession(req, res, authOptions)
 	if (!session?.jwt) {
+		const cookies = Object.keys(req.cookies ?? {})
+		if (aCookieDeSession(cookies)) {
+			// the session read refused the cookie (Strapi JWT expired, or
+			// /users/me in 401): one redirection, with the message (RG-08),
+			// back to the same page and query as the middleware's
+			res.setHeader('Set-Cookie', cookiesSessionAEffacer(cookies))
+			return {
+				redirect: {
+					destination: urlSessionExpiree(
+						resolvedUrl ?? '/auth/profil',
+						'jwt_expire'
+					),
+					permanent: false,
+				},
+			}
+		}
 		return {
 			redirect: {
 				destination: '/auth/signin?callbackUrl=%2Fauth%2Fprofil',

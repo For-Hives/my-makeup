@@ -2,7 +2,9 @@ import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
 	MARGE_EXPIRATION_MS,
+	OU_SESSION_EXPIREE,
 	REVALIDATION_PAR_DEFAUT_MS,
+	aCookieDeSession,
 	callbackUrlSure,
 	causeErreur,
 	cookiesSessionAEffacer,
@@ -10,11 +12,14 @@ import {
 	etatJeton,
 	expirationSession,
 	ligneLogAuth,
+	ouSessionExpiree,
 	secretNextAuth,
 	sessionValide,
 	suiteVerification,
 	urlApiServeur,
+	urlSessionExpiree,
 } from '../../src/lib/auth-session.js'
+import { EVENTS } from '../../src/lib/analytics.js'
 
 const MAINTENANT = 1_800_000_000_000
 const HEURE = 3600 * 1000
@@ -240,6 +245,82 @@ describe('cookiesSessionAEffacer', () => {
 	test('no cookie: nothing to delete', () => {
 		assert.deepEqual(cookiesSessionAEffacer([]), [])
 		assert.deepEqual(cookiesSessionAEffacer(), [])
+	})
+})
+
+describe('aCookieDeSession (a session was sent)', () => {
+	test('plain, __Secure- and chunked session cookies', () => {
+		for (const noms of [
+			['next-auth.session-token'],
+			['__Secure-next-auth.session-token'],
+			['next-auth.session-token.0', 'next-auth.session-token.1'],
+			['__Secure-next-auth.session-token.1'],
+			['next-auth.csrf-token', 'next-auth.session-token'],
+		])
+			assert.equal(aCookieDeSession(noms), true, noms.join(', '))
+	})
+
+	test('none: never signed in', () => {
+		assert.equal(aCookieDeSession([]), false)
+		assert.equal(aCookieDeSession(), false)
+		assert.equal(
+			aCookieDeSession([
+				'next-auth.csrf-token',
+				'__Host-next-auth.csrf-token',
+				'next-auth.callback-url',
+				'umami.disabled',
+				'next-auth.session-token-x',
+			]),
+			false
+		)
+	})
+})
+
+describe('urlSessionExpiree (RG-08)', () => {
+	test('sign-in page with the message, where and the encoded page', () => {
+		assert.equal(
+			urlSessionExpiree('/auth/profil', 'middleware'),
+			'/auth/signin?error=session-expiree&ou=middleware&callbackUrl=%2Fauth%2Fprofil'
+		)
+		assert.equal(
+			urlSessionExpiree('/auth/profil?publicView=true&x=a b', 'jwt_expire'),
+			'/auth/signin?error=session-expiree&ou=jwt_expire&callbackUrl=%2Fauth%2Fprofil%3FpublicView%3Dtrue%26x%3Da%20b'
+		)
+	})
+
+	test('the 3 places of the catalogue, read back by the sign-in page', () => {
+		for (const ou of ['api_401', 'jwt_expire', 'middleware']) {
+			const url = new URL(
+				urlSessionExpiree('/auth/init-account', ou),
+				'https://my-makeup.example.test'
+			)
+			assert.equal(url.pathname, '/auth/signin')
+			assert.equal(url.searchParams.get('error'), 'session-expiree')
+			assert.equal(url.searchParams.get('ou'), ou)
+			assert.equal(url.searchParams.get('callbackUrl'), '/auth/init-account')
+			assert.equal(
+				callbackUrlSure(url.searchParams.get('callbackUrl'), url.origin),
+				'/auth/init-account'
+			)
+		}
+	})
+
+	test('any other place is refused', () => {
+		for (const ou of [undefined, '', 'ailleurs', 'API_401', 'middleware&x=1'])
+			assert.throws(() => urlSessionExpiree('/auth/profil', ou), /ou inconnu/)
+	})
+})
+
+describe('ouSessionExpiree (where of session_expired)', () => {
+	test('the same 3 places as the analytics catalogue', () => {
+		assert.deepEqual(OU_SESSION_EXPIREE, EVENTS.session_expired.where.values)
+	})
+
+	test('a place of the catalogue is kept, anything else counts as api_401', () => {
+		for (const ou of OU_SESSION_EXPIREE) assert.equal(ouSessionExpiree(ou), ou)
+		assert.equal(ouSessionExpiree(['middleware', 'api_401']), 'middleware')
+		for (const brut of [undefined, '', 'ailleurs', ['x'], 'marie@test.local'])
+			assert.equal(ouSessionExpiree(brut), 'api_401')
 	})
 })
 
