@@ -5,7 +5,9 @@
 // versions of the CI, the Docker image, .nvmrc and engines drift apart.
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
+import { execFileSync } from 'node:child_process'
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
+import { createRequire } from 'node:module'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parse } from 'yaml'
@@ -279,6 +281,381 @@ jobs:
 				{ source: '.nvmrc', valeur: 'v22.11.0' },
 			]),
 			[]
+		)
+	})
+})
+
+// URG-11 (plans/01, INVENTAIRE NOUVEAU-05): Cypress, bun.lockb, pg and the
+// SonarQube job are gone, the build tools sit in devDependencies, Renovate
+// opens security fixes only and the README links the site.
+const OUTILS_DE_BUILD = [
+	'eslint',
+	'eslint-config-next',
+	'typescript',
+	'prettier-plugin-tailwindcss',
+	'node-gyp',
+	'node-addon-api',
+]
+
+/**
+ * Root entries of the tracked files (git ls-files, as the done_when of
+ * URG-11): ignored local leftovers (cypress.env.json, old cypress/videos)
+ * do not count. Without git (an archive), the folder itself.
+ */
+function entreesSuivies() {
+	try {
+		const fichiers = execFileSync('git', ['ls-files', '-z'], {
+			cwd: RACINE,
+			encoding: 'utf8',
+			stdio: ['ignore', 'pipe', 'ignore'],
+		})
+		return [
+			...new Set(
+				fichiers
+					.split('\0')
+					.filter(Boolean)
+					.map(f => f.split('/')[0])
+			),
+		]
+	} catch {
+		return readdirSync(RACINE)
+	}
+}
+
+/** Root entries that must not come back. */
+const entreesInterdites = entrees =>
+	entrees.filter(
+		e =>
+			/^cypress/i.test(e) ||
+			e === 'bun.lockb' ||
+			e === 'sonar-project.properties'
+	)
+
+/** Workflow lines naming Cypress or Sonar, comments included. */
+const lignesCypressOuSonar = workflows =>
+	workflows.flatMap(({ fichier, texte }) =>
+		texte
+			.split('\n')
+			.flatMap((ligne, i) =>
+				/cypress|sonar/i.test(ligne)
+					? [`${fichier}:${i + 1} : ${ligne.trim()}`]
+					: []
+			)
+	)
+
+/** package-lock.json: Cypress (any scope or plugin), puppeteer or pg installed. */
+const verrouillesInterdits = texte =>
+	[
+		...texte.matchAll(
+			/"node_modules\/(@cypress\/[^"]+|(@[^/"]+\/)?(cypress[^/"]*|pg|puppeteer))"/g
+		),
+	].map(m => m[1])
+
+// libvips advisories in the Next image optimizer (decisions 2026-10-09)
+const SHARP_MINIMUM = '0.35.5'
+
+/** True when the x.y.z version is at least the minimum. */
+function auMoins(version, minimum) {
+	const a = String(version).split(/[.+-]/).slice(0, 3).map(Number)
+	const b = minimum.split('.').map(Number)
+	for (let i = 0; i < 3; i++) if (a[i] !== b[i]) return a[i] > b[i]
+	return true
+}
+
+/** package-lock.json: sharp below the minimum, or a copy nested in a package. */
+function sharpsVulnerables(lock) {
+	const erreurs = []
+	const paquets = lock.packages ?? {}
+	if (!paquets['node_modules/sharp']) erreurs.push('sharp absent du lock')
+	for (const [cle, { version }] of Object.entries(paquets)) {
+		if (!/(^|\/)node_modules\/sharp$/.test(cle)) continue
+		if (cle !== 'node_modules/sharp') erreurs.push(`sharp imbriqué : ${cle}`)
+		else if (!auMoins(version, SHARP_MINIMUM))
+			erreurs.push(`sharp ${version} < ${SHARP_MINIMUM}`)
+	}
+	return erreurs
+}
+
+/** Version of the sharp that next/image loads, resolved from next as it does. */
+function versionSharpDeNext() {
+	const depuisNext = createRequire(
+		createRequire(import.meta.url).resolve('next/package.json')
+	)
+	// sharp exports no package.json: walk up from its entry point
+	let dossier = path.dirname(depuisNext.resolve('sharp'))
+	while (dossier !== path.dirname(dossier)) {
+		const fichier = path.join(dossier, 'package.json')
+		if (existsSync(fichier)) {
+			const pkg = JSON.parse(readFileSync(fichier, 'utf8'))
+			if (pkg.name === 'sharp') return pkg.version
+		}
+		dossier = path.dirname(dossier)
+	}
+	return null
+}
+
+/** package.json: Cypress anywhere, pg installed, a build tool in dependencies. */
+function paquetsInterdits(texte) {
+	const pkg = JSON.parse(texte)
+	const erreurs = []
+	if (/cypress/i.test(texte)) erreurs.push('package.json mentionne cypress')
+	if ('pg' in { ...pkg.dependencies, ...pkg.devDependencies })
+		erreurs.push('pg est encore installé')
+	for (const nom of OUTILS_DE_BUILD)
+		if (nom in (pkg.dependencies ?? {}))
+			erreurs.push(`${nom} est dans dependencies`)
+	return erreurs
+}
+
+const GARDE_FOUS = [
+	['next', '<16'],
+	['tailwindcss', '<4'],
+]
+
+/** renovate.json: anything that would open a non-security pull request. */
+function renovateHorsSecurite(config) {
+	const erreurs = []
+	const alertes = config.vulnerabilityAlerts ?? {}
+	if (alertes.enabled !== true)
+		erreurs.push('vulnerabilityAlerts.enabled n’est pas true')
+	if (alertes.automerge !== false)
+		erreurs.push('vulnerabilityAlerts.automerge n’est pas false')
+	if (config.automerge !== false) erreurs.push('automerge n’est pas false')
+	if (config.osvVulnerabilityAlerts !== true)
+		erreurs.push('osvVulnerabilityAlerts n’est pas true')
+	for (const preset of config.extends ?? [])
+		if (/automerge/i.test(preset))
+			erreurs.push(`preset qui fusionne seul : ${preset}`)
+	const regles = config.packageRules ?? []
+	// one rule for every package: no match* key besides the update types
+	const coupeTout = regles.some(
+		r =>
+			r.enabled === false &&
+			Object.keys(r).every(
+				k => !k.startsWith('match') || k === 'matchUpdateTypes'
+			) &&
+			['major', 'minor', 'patch'].every(t => r.matchUpdateTypes?.includes(t))
+	)
+	if (!coupeTout)
+		erreurs.push(
+			'aucune règle ne coupe les mises à jour majeures, mineures et de patch'
+		)
+	regles
+		.filter(r => r.enabled === true || r.automerge === true)
+		.forEach(r =>
+			erreurs.push(
+				`règle qui rallume des mises à jour : ${r.description ?? '?'}`
+			)
+		)
+	for (const [paquet, borne] of GARDE_FOUS)
+		if (
+			!regles.some(
+				r =>
+					r.matchPackageNames?.includes(paquet) && r.allowedVersions === borne
+			)
+		)
+			erreurs.push(`${paquet} sans garde-fou ${borne}`)
+	return erreurs
+}
+
+describe('URG-11 ménage', () => {
+	test('package.json : ni Cypress, ni pg, ni outil de build en dependencies', () => {
+		assert.deepEqual(paquetsInterdits(lireSiPresent('package.json')), [])
+		assert.deepEqual(
+			verrouillesInterdits(lireSiPresent('package-lock.json')),
+			[]
+		)
+	})
+
+	test(`sharp ${SHARP_MINIMUM} au moins, celui que charge next/image`, () => {
+		const lock = JSON.parse(lireSiPresent('package-lock.json'))
+		assert.deepEqual(sharpsVulnerables(lock), [])
+		const version = versionSharpDeNext()
+		assert.ok(
+			version !== null && auMoins(version, SHARP_MINIMUM),
+			`next charge sharp ${version}`
+		)
+	})
+
+	test('aucun fichier suivi cypress*, bun.lockb ni sonar-project.properties à la racine', () => {
+		assert.deepEqual(entreesInterdites(entreesSuivies()), [])
+	})
+
+	test('aucun workflow ne nomme Cypress ni Sonar, commentaires compris', () => {
+		assert.deepEqual(lignesCypressOuSonar(workflowsDuDepot()), [])
+	})
+
+	// The guards cap GitHub alerts only: an OSV alert sets its own
+	// allowedVersions after them (see renovate.json)
+	test('Renovate : correctifs de sécurité seulement, garde-fous next <16 et tailwindcss <4', () => {
+		const config = JSON.parse(lireSiPresent('renovate.json'))
+		assert.deepEqual(renovateHorsSecurite(config), [])
+		assert.equal(config.vulnerabilityAlerts.enabled, true)
+		assert.equal(config.automerge, false)
+	})
+
+	// the origin of each link, parsed: a substring would also accept
+	// https://my-makeup.fr.example.com
+	test('le README renvoie vers le site', () => {
+		const origines = [
+			...lireSiPresent('README.md').matchAll(/https?:\/\/[^\s)\]>"']+/g),
+		].map(([lien]) => {
+			try {
+				return new URL(lien).origin
+			} catch {
+				return null
+			}
+		})
+		const site = new URL('https://my-makeup.fr').origin
+		assert.ok(origines.some(origine => origine === site))
+	})
+})
+
+// The guards must see what they guard: each one on what main had before.
+describe('URG-11 ménage : les gardes refusent l’ancien état', () => {
+	test('racine', () => {
+		assert.deepEqual(
+			entreesInterdites([
+				'cypress',
+				'cypress.config.js',
+				'cypress.env.json.exemple',
+				'bun.lockb',
+				'sonar-project.properties',
+				'src',
+				'package.json',
+			]),
+			[
+				'cypress',
+				'cypress.config.js',
+				'cypress.env.json.exemple',
+				'bun.lockb',
+				'sonar-project.properties',
+			]
+		)
+	})
+
+	test('lock : Cypress, ses plugins, puppeteer et pg', () => {
+		const ancien = [
+			'"node_modules/cypress"',
+			'"node_modules/cypress-social-logins"',
+			'"node_modules/@cypress/request"',
+			'"node_modules/@testing-library/cypress"',
+			'"node_modules/puppeteer"',
+			'"node_modules/pg"',
+			'"node_modules/pg-connection-string"',
+			'"node_modules/sharp"',
+		].join('\n')
+		assert.deepEqual(verrouillesInterdits(ancien), [
+			'cypress',
+			'cypress-social-logins',
+			'@cypress/request',
+			'@testing-library/cypress',
+			'puppeteer',
+			'pg',
+		])
+	})
+
+	test('sharp : 0.34.5 de main, et une copie imbriquée sous next', () => {
+		assert.deepEqual(
+			sharpsVulnerables({
+				packages: { 'node_modules/sharp': { version: '0.34.5' } },
+			}),
+			['sharp 0.34.5 < 0.35.5']
+		)
+		assert.deepEqual(
+			sharpsVulnerables({
+				packages: {
+					'node_modules/sharp': { version: '0.35.5' },
+					'node_modules/next/node_modules/sharp': { version: '0.34.5' },
+				},
+			}),
+			['sharp imbriqué : node_modules/next/node_modules/sharp']
+		)
+		assert.deepEqual(sharpsVulnerables({ packages: {} }), [
+			'sharp absent du lock',
+		])
+		assert.ok(auMoins('0.36.0', '0.35.5') && auMoins('1.0.0', '0.35.5'))
+		assert.ok(!auMoins('0.35.4', '0.35.5'))
+	})
+
+	test('workflow : variable CYPRESS_ et job commenté', () => {
+		const ancien = lireWorkflow(
+			'ancien.yml',
+			'env:\n  CYPRESS_TEST_USER: x\njobs:\n#  SonarQube:\n#    needs: tests\n'
+		)
+		assert.equal(lignesCypressOuSonar([ancien]).length, 2)
+	})
+
+	test('package.json', () => {
+		const ancien = JSON.stringify({
+			scripts: { 'cypress:run': 'cypress run' },
+			dependencies: {
+				pg: '8.22.0',
+				typescript: '5.9.3',
+				'node-gyp': '^12.3.0',
+			},
+			devDependencies: { cypress: '^13.6.0' },
+		})
+		assert.deepEqual(paquetsInterdits(ancien), [
+			'package.json mentionne cypress',
+			'pg est encore installé',
+			'typescript est dans dependencies',
+			'node-gyp est dans dependencies',
+		])
+	})
+
+	test('renovate.json : config:base, puis un groupe de patchs comme sur l’API', () => {
+		const configBase = {
+			extends: ['config:base'],
+			automerge: false,
+			packageRules: [
+				{ matchPackageNames: ['tailwindcss'], allowedVersions: '<4' },
+			],
+		}
+		assert.deepEqual(renovateHorsSecurite(configBase), [
+			'vulnerabilityAlerts.enabled n’est pas true',
+			'vulnerabilityAlerts.automerge n’est pas false',
+			'osvVulnerabilityAlerts n’est pas true',
+			'aucune règle ne coupe les mises à jour majeures, mineures et de patch',
+			'next sans garde-fou <16',
+		])
+		const groupeDePatchs = {
+			automerge: false,
+			osvVulnerabilityAlerts: true,
+			vulnerabilityAlerts: { enabled: true, automerge: false },
+			packageRules: [
+				{ matchUpdateTypes: ['major', 'minor'], enabled: false },
+				{ matchUpdateTypes: ['patch'], groupName: 'patch updates' },
+				{ matchPackageNames: ['next'], allowedVersions: '<16' },
+				{ matchPackageNames: ['tailwindcss'], allowedVersions: '<4' },
+			],
+		}
+		assert.deepEqual(renovateHorsSecurite(groupeDePatchs), [
+			'aucune règle ne coupe les mises à jour majeures, mineures et de patch',
+		])
+		const seulementPourNext = {
+			...groupeDePatchs,
+			packageRules: [
+				{
+					matchPackageNames: ['next'],
+					matchUpdateTypes: ['major', 'minor', 'patch'],
+					enabled: false,
+				},
+				{ matchPackageNames: ['swiper'], enabled: true },
+				...groupeDePatchs.packageRules.slice(2),
+			],
+		}
+		assert.deepEqual(renovateHorsSecurite(seulementPourNext), [
+			'aucune règle ne coupe les mises à jour majeures, mineures et de patch',
+			'règle qui rallume des mises à jour : ?',
+		])
+		const config = JSON.parse(lireSiPresent('renovate.json'))
+		assert.deepEqual(
+			renovateHorsSecurite({
+				...config,
+				extends: [...config.extends, ':automergeMinor'],
+			}),
+			['preset qui fusionne seul : :automergeMinor']
 		)
 	})
 })

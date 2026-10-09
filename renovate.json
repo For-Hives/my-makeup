@@ -1,10 +1,38 @@
 {
 	"$schema": "https://docs.renovatebot.com/renovate-schema.json",
-	"extends": ["config:base"],
+	"extends": ["config:recommended"],
+	"timezone": "Europe/Paris",
 	"automerge": false,
+	"osvVulnerabilityAlerts": true,
+	"vulnerabilityAlerts": {
+		"enabled": true,
+		"automerge": false,
+		"labels": ["security"]
+	},
 	"packageRules": [
 		{
-			"description": "Tailwind CSS 4 needs a migration (postcss plugin, config, CSS entry): stay on v3",
+			"description": "Security fixes only: every other update is off, npm packages, GitHub Actions and Docker images alike (vulnerabilityAlerts overrides this rule)",
+			"matchUpdateTypes": [
+				"major",
+				"minor",
+				"patch",
+				"pin",
+				"pinDigest",
+				"digest",
+				"lockFileMaintenance",
+				"replacement",
+				"rollback",
+				"bump"
+			],
+			"enabled": false
+		},
+		{
+			"description": "Next 16 is a migration that comes with the v3: no next or eslint-config-next above 15. Only GitHub alerts keep this cap: an OSV alert sets its own allowedVersions after these rules and can still open a 16.x PR, to close until the v3",
+			"matchPackageNames": ["next", "eslint-config-next"],
+			"allowedVersions": "<16"
+		},
+		{
+			"description": "Tailwind CSS 4 needs a migration (postcss plugin, config, CSS entry): stay on v3. Same limit as next: an OSV alert can still open a 4.x PR, to close until the v3",
 			"matchPackageNames": ["tailwindcss"],
 			"allowedVersions": "<4"
 		}

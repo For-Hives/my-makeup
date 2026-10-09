@@ -2,22 +2,24 @@
 
 #### _We are a platform dedicated to connecting professional makeup artists with clients looking for personalized makeup services._
 
+> **Live: [https://my-makeup.fr](https://my-makeup.fr)**
+
 ![img.png](img.png)
 
 > **(api github project : https://github.com/For-Hives/api-my-makeup)**
 
 ## How to run ??
 
-> **(use pnpm // npm // yarn but don't push the lock file)**
+> **(npm only: package-lock.json is the only lockfile, the CI and Coolify run `npm ci`)**
 
 #### _dev_
 
 ```
 git clone
 -> add .env file
-pnpm install
-pnpm run dev
-pnpm run build
+npm ci
+npm run dev
+npm run build
 ```
 
 #### _tests_
@@ -35,7 +37,6 @@ npm run test:regression
                     # localhost:3996, Strapi on 4112, Umami on 4113; REGRESSION_SKIP_BUILD=1
                     # reuses the last build; once: npx playwright install chromium;
                     # extra Playwright arguments after --, e.g. -- --grep RG-04)
-pnpm run cypress:run
 ```
 
 ## Tech stack 💻
@@ -56,7 +57,7 @@ That is the list of technologies that My-Makeup use.
 
 > **CI**
 >
-> > - [Cypress](https://www.cypress.io/)
+> > - [Playwright](https://playwright.dev/)
 > > - [Percy](https://percy.io/)
 
 > **CD**
@@ -112,8 +113,8 @@ That is the list of technologies that My-Makeup use.
 ## File Structure 🗃️
 
 > 📁 _.husky_ : Git hooks  
-> 📁 _cypress_ : Cypress configuration (e2e tests)  
 > 📁 _public_ : Images, fonts, icons, ...  
+> 📁 _tests_ : Unit, auth and regression tests (see _tests_ above)  
 > 📁 _src/components_ : Reusable components  
 > 📁 _src/pages_ : Pages (use some components to build pages)
 >
