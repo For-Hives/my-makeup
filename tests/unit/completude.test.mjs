@@ -3,10 +3,10 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import {
 	aMedia,
-	changementPubliable,
 	completude,
 	contactsMasques,
 	CRITERES,
+	devientPubliable,
 	longueurDescription,
 	prixNumerique,
 	villeExploitable,
@@ -209,60 +209,54 @@ describe('elementary rules', () => {
 	})
 })
 
-describe('changementPubliable (profile_publiable, MES-12)', () => {
+describe('devientPubliable (profile_publiable, MES-12)', () => {
 	// one criterion short: a description of 199 characters
 	const presque = { ...complet, description: 'a'.repeat(199) }
 	const incomplet = { ...complet, description: '', main_picture: null }
 
 	test('the save that completes the last criterion: true', () => {
 		assert.equal(
-			changementPubliable(presque, {
+			devientPubliable(presque, {
 				...presque,
 				description: 'a'.repeat(200),
 			}),
 			true
 		)
-		assert.equal(changementPubliable(presque, complet), true)
+		assert.equal(devientPubliable(presque, complet), true)
 	})
 
-	test('the save that breaks a criterion: false', () => {
-		assert.equal(changementPubliable(complet, presque), false)
+	test('complete to complete, incomplete to incomplete, complete to incomplete: false', () => {
+		assert.equal(devientPubliable(complet, { ...complet, city: 'Lyon' }), false)
 		assert.equal(
-			changementPubliable(complet, { ...complet, service_offers: [] }),
+			devientPubliable(incomplet, { ...incomplet, description: 'Bonjour' }),
 			false
 		)
-	})
-
-	test('no change of state: null', () => {
-		// complete to complete, incomplete to incomplete, the same profile
+		assert.equal(devientPubliable(presque, presque), false)
+		// a loss is never counted as a profile that became publiable
+		assert.equal(devientPubliable(complet, presque), false)
 		assert.equal(
-			changementPubliable(complet, { ...complet, city: 'Lyon' }),
-			null
+			devientPubliable(complet, { ...complet, service_offers: [] }),
+			false
 		)
-		assert.equal(
-			changementPubliable(incomplet, { ...incomplet, description: 'Bonjour' }),
-			null
-		)
-		assert.equal(changementPubliable(presque, presque), null)
-		assert.equal(changementPubliable(null, undefined), null)
+		assert.equal(devientPubliable(null, undefined), false)
 		// an internal account never becomes publiable
 		const interne = { ...presque, speciality: 'CEO/CTO My Makeup' }
 		assert.equal(
-			changementPubliable(interne, { ...interne, description: DESCRIPTION }),
-			null
+			devientPubliable(interne, { ...interne, description: DESCRIPTION }),
+			false
 		)
 	})
 
 	test('the quote form counts as the contact channel she lacks', () => {
 		const sansCanal = { ...presque, network: { instagram: '' } }
 		const apres = { ...sansCanal, description: 'a'.repeat(200) }
-		assert.equal(changementPubliable(sansCanal, apres), null)
+		assert.equal(devientPubliable(sansCanal, apres), false)
 		assert.equal(
-			changementPubliable(sansCanal, apres, { formulaireDevis: false }),
-			null
+			devientPubliable(sansCanal, apres, { formulaireDevis: false }),
+			false
 		)
 		assert.equal(
-			changementPubliable(sansCanal, apres, { formulaireDevis: true }),
+			devientPubliable(sansCanal, apres, { formulaireDevis: true }),
 			true
 		)
 	})

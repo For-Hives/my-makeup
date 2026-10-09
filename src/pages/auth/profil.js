@@ -24,7 +24,7 @@ import { filtrerProfilPrive } from '@/lib/profil-prive'
 import { useRouter } from 'next/router'
 import { track } from '@/lib/analytics'
 import { devisFormUrl } from '@/lib/devis'
-import { changementPubliable } from '@/lib/profil/completude'
+import { devientPubliable } from '@/lib/profil/completude'
 
 // the quote form counts as a contact channel once it is online: the same
 // flag as the public profile page and the sitemap
@@ -41,11 +41,20 @@ function Profil({ data, erreur }) {
 	// load of ?publicView=true shows the public view only (UI-02)
 	const isPublic = router.query.publicView === 'true'
 
-	// called by « Voir mon profil public » and « Modifier mon profil » only,
-	// so a page load sends nothing; counted once the view has switched. A
-	// replace, not a push: no history entry, so Back leaves the page and
+	// the view asked by « Voir mon profil public » or « Modifier mon profil »,
+	// counted once the URL shows it: once per switch (a double click too),
+	// never on a page load
+	const vueDemandee = React.useRef(null)
+	React.useEffect(() => {
+		if (vueDemandee.current !== isPublic) return
+		vueDemandee.current = null
+		track('profile_visibility', { public: isPublic })
+	}, [isPublic])
+
+	// a replace, not a push: no history entry, so Back leaves the page and
 	// never switches the view under an open modal
 	const handleIsPublic = visible => {
+		vueDemandee.current = visible
 		router
 			.replace(
 				{
@@ -55,19 +64,16 @@ function Profil({ data, erreur }) {
 				undefined,
 				{ shallow: true }
 			)
-			.then(change => {
-				if (change) track('profile_visibility', { visible })
-			})
 			.catch(() => {})
 	}
 
 	// the modals call it once the API stored the save (UI-01)
 	const handleUpdateUser = newUser => {
-		const publiable = changementPubliable(user, newUser, {
+		const publiable = devientPubliable(user, newUser, {
 			formulaireDevis: FORMULAIRE_DEVIS,
 		})
 		setUser(newUser)
-		if (publiable !== null) track('profile_publiable', { publiable })
+		if (publiable) track('profile_publiable')
 	}
 
 	return (

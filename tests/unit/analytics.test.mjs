@@ -573,19 +573,21 @@ describe('artist space events (UI-01, UI-03, UI-05, MES-12)', () => {
 	})
 
 	test('profile_visibility: the view she switched to, a boolean only (MES-12)', () => {
-		assert.deepEqual(eventData('profile_visibility', { visible: true }), {
-			visible: true,
+		assert.deepEqual(eventData('profile_visibility', { public: true }), {
+			public: true,
 		})
-		assert.deepEqual(eventData('profile_visibility', { visible: false }), {
-			visible: false,
+		assert.deepEqual(eventData('profile_visibility', { public: false }), {
+			public: false,
 		})
-		for (const visible of ['true', 1, 0, null, 'public'])
+		for (const value of ['true', 1, 0, null, 'public'])
 			assert.equal(
-				eventData('profile_visibility', { visible }),
+				eventData('profile_visibility', { public: value }),
 				null,
-				String(visible)
+				String(value)
 			)
 		assert.equal(eventData('profile_visibility'), null)
+		// the old name of the property is refused
+		assert.equal(eventData('profile_visibility', { visible: true }), null)
 		// nothing about her: no id, no name, no city
 		for (const extra of [
 			{ pid: '12' },
@@ -593,62 +595,46 @@ describe('artist space events (UI-01, UI-03, UI-05, MES-12)', () => {
 			{ city: 'Annecy' },
 		])
 			assert.equal(
-				eventData('profile_visibility', { visible: true, ...extra }),
+				eventData('profile_visibility', { public: true, ...extra }),
 				null
 			)
 	})
 
-	test('profile_publiable: the new state, a boolean only (MES-12)', () => {
-		assert.deepEqual(eventData('profile_publiable', { publiable: true }), {
-			publiable: true,
-		})
-		assert.deepEqual(eventData('profile_publiable', { publiable: false }), {
-			publiable: false,
-		})
-		for (const publiable of ['true', 1, null, 'oui'])
-			assert.equal(
-				eventData('profile_publiable', { publiable }),
-				null,
-				String(publiable)
-			)
-		assert.equal(eventData('profile_publiable'), null)
-		for (const extra of [
+	test('profile_publiable: no property at all (MES-12)', () => {
+		assert.deepEqual(eventData('profile_publiable'), {})
+		assert.deepEqual(eventData('profile_publiable', {}), {})
+		for (const props of [
+			{ publiable: true },
+			{ publiable: false },
 			{ pid: '12' },
 			{ username: 'testine-recette' },
 			{ city: 'Annecy' },
 			{ score: 13 },
 		])
 			assert.equal(
-				eventData('profile_publiable', { publiable: true, ...extra }),
-				null
+				eventData('profile_publiable', props),
+				null,
+				JSON.stringify(props)
 			)
 	})
 
 	test('MES-12 events go through track() with their data only', () => {
 		const { calls, win } = fakeUmami()
 		assert.equal(
-			track('profile_visibility', { visible: true }, { win, production: true }),
+			track('profile_visibility', { public: true }, { win, production: true }),
 			true
 		)
 		assert.equal(
-			track(
-				'profile_publiable',
-				{ publiable: false },
-				{ win, production: true }
-			),
+			track('profile_publiable', undefined, { win, production: true }),
 			true
 		)
 		assert.equal(
-			track(
-				'profile_publiable',
-				{ publiable: true, pid: '12' },
-				{ win, production: true }
-			),
+			track('profile_publiable', { pid: '12' }, { win, production: true }),
 			false
 		)
 		assert.deepEqual(calls, [
-			['profile_visibility', { visible: true }],
-			['profile_publiable', { publiable: false }],
+			['profile_visibility', { public: true }],
+			['profile_publiable', {}],
 		])
 	})
 
