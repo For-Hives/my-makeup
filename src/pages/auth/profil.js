@@ -21,16 +21,29 @@ import {
 	urlSessionExpiree,
 } from '@/lib/auth-session'
 import { filtrerProfilPrive } from '@/lib/profil-prive'
+import { useRouter } from 'next/router'
 
 function Profil({ data, erreur }) {
 	// the modals read the Strapi JWT from here (loaded after the page)
 	const { data: session } = useSession()
+	const router = useRouter()
 
 	const [user, setUser] = React.useState(data)
-	const [isPublic, setIsPublic] = React.useState(false)
+	// the URL holds the view, for every card at once: a reload or a direct
+	// load of ?publicView=true shows the public view only (UI-02)
+	const isPublic = router.query.publicView === 'true'
 
-	const handleIsPublic = newIsPublic => {
-		setIsPublic(newIsPublic)
+	// « Voir mon profil public » and « Modifier mon profil »: the same page,
+	// without reading the profile again
+	const handleIsPublic = visible => {
+		router.push(
+			{
+				pathname: '/auth/profil',
+				query: visible ? { publicView: 'true' } : {},
+			},
+			undefined,
+			{ shallow: true }
+		)
 	}
 
 	const handleUpdateUser = newUser => {

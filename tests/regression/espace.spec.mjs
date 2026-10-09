@@ -621,6 +621,50 @@ test.describe('UI-02 et UI-04 édition au doigt et au clavier', () => {
 			await expect(page.getByTestId('update-description-button')).toHaveCount(0)
 		})
 	}
+
+	// no edit control anywhere: the top of the page and the cards
+	async function vuePubliqueSeule(page) {
+		await expect(page.getByTestId('resume-name')).toHaveText('Testine Recette')
+		await expect(page.getByTestId('profil-edit-view')).toBeVisible()
+		for (const cy of [
+			'update-resume-button',
+			'update-picture-button',
+			'update-description-button',
+			'profil-public-view',
+		])
+			await expect(page.getByTestId(cy), cy).toHaveCount(0)
+	}
+
+	test('UI-02 ?publicView=true chargé directement, puis rechargé : vue publique seule ; le retour du navigateur rend la vue d’édition', async ({
+		page,
+	}) => {
+		expect(await connecter(page)).toBe(true)
+		// aller() waits for the hydration: the old effects had run by then
+		await aller(page, '/auth/profil?publicView=true')
+		await vuePubliqueSeule(page)
+		const session = page.waitForResponse(r =>
+			r.url().endsWith('/api/auth/session')
+		)
+		await page.reload()
+		await session
+		await vuePubliqueSeule(page)
+
+		// « Modifier mon profil »: every edit control is back
+		await page.getByTestId('profil-edit-view').click()
+		await expect(page).not.toHaveURL(/publicView/)
+		await expect(page.getByTestId('update-resume-button')).toBeVisible()
+		await expect(page.getByTestId('update-picture-button')).toHaveCount(1)
+		await expect(page.getByTestId('profil-edit-view')).toHaveCount(0)
+
+		// back and forward follow the URL, never a mixed view
+		await page.goBack()
+		await expect(page).toHaveURL(/publicView=true/)
+		await vuePubliqueSeule(page)
+		await page.goForward()
+		await expect(page).not.toHaveURL(/publicView/)
+		await expect(page.getByTestId('update-description-button')).toBeVisible()
+		await expect(page.getByTestId('profil-public-view')).toBeVisible()
+	})
 })
 
 test.describe('UI-03 photos', () => {

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React from 'react'
 import { LocationProfil } from '@/components/Profil/Childs/LocationProfil'
 import { DescriptionProfil } from '@/components/Profil/Childs/DescriptionProfil'
 import { SocialMediaProfil } from '@/components/Profil/Childs/SocialMediaProfil'
@@ -8,24 +8,15 @@ import { LanguageProfil } from '@/components/Profil/Childs/LanguageProfil'
 import { ServiceOffersProfil } from '@/components/Profil/Childs/ServiceOffers/ServiceOffersProfil'
 import { CoursesProfil } from '@/components/Profil/Childs/CoursesProfil'
 import { ExperiencesProfil } from '@/components/Profil/Childs/ExperiencesProfil'
-import { useRouter } from 'next/router'
 import Link from 'next/link'
 import CompletionProfilProgressBar from '@/components/Global/CompletionProfilProgressBar'
 
 function InfosProfil(props) {
-	// import router
-	const router = useRouter()
-	// get query param
-	const { publicView } = router.query
-
-	// the profile of the page (src/pages/auth/profil.js): never copied here,
-	// so every card shows what the API stored (UI-01)
+	// the profile and the view of the page (src/pages/auth/profil.js): never
+	// copied here, so every card shows what the API stored (UI-01) and the
+	// same view as the top of the page (UI-02)
 	const user = props.user
-	const [isPublic, setIsPublic] = React.useState(props.isPublic)
-
-	useEffect(() => {
-		setIsPublic(!!publicView)
-	}, [])
+	const isPublic = props.isPublic
 
 	return (
 		<div className={''}>
@@ -42,13 +33,8 @@ function InfosProfil(props) {
 								data-cy="profil-public-view"
 								href={'/auth/profil?publicView=true'}
 								onClick={e => {
-									e.preventDefault() // Pour empêcher le comportement par défaut
-									setIsPublic(true)
+									e.preventDefault() // the page switches the view
 									props.handleIsPublic(true)
-									router.push({
-										pathname: '/auth/profil',
-										query: { publicView: true },
-									})
 								}}
 								className={
 									'flex min-h-[44px] items-center gap-2 rounded-lg px-2 font-semibold text-indigo-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600'
@@ -71,10 +57,8 @@ function InfosProfil(props) {
 								data-cy="profil-edit-view"
 								href={'/auth/profil'}
 								onClick={e => {
-									e.preventDefault() // Pour empêcher le comportement par défaut
-									setIsPublic(false)
+									e.preventDefault() // the page switches the view
 									props.handleIsPublic(false)
-									router.push({ pathname: '/auth/profil' })
 								}}
 								className={
 									'flex min-h-[44px] items-center gap-2 rounded-lg px-2 font-semibold text-indigo-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600'
