@@ -20,10 +20,15 @@
 //   `populate` (components and media only when asked), `filters[x][$eq]`;
 //   lists without the email and phone of the profiles, except the query of
 //   one profile by its username (API PR #370);
-// - /api/searching: the city alone is a term, unavailable profiles left
-//   out, public fields only; the city ranks the profiles of that city
-//   first but filters nothing, so a search by city also returns the other
-//   cities (UI-10), as the real one does.
+// - /api/searching like API #384 (src/api/searching/services/searching.js):
+//   the city alone is the term; unavailable profiles left out; a profile
+//   must match every word of the term, each in one of the keys of the API
+//   (public city, speciality, descriptions, skill names, names; a
+//   substring here, Fuse.js at 0.2 there), except in a term of several
+//   words the short ones, the stop words and those of the request or the
+//   trade (cherche, maquilleuse, maquillage…); a city other than the term
+//   only ranks; without any term, every searchable profile, the last
+//   updated first; 200 result cards at most, with the public city (UI-11).
 // `/__…` routes drive it from the tests (forced failures, delays, revoked
 // sessions, JWT lifetime, state, profile of the test account); a revoked
 // or expired JWT is refused with a 401, as Strapi does. Public data:
@@ -218,12 +223,76 @@ const normaliser = texte =>
 		.replace(/[\u0300-\u036f]/g, '')
 		.toLowerCase()
 
+// the public city of the API (UI-11, src/lib/profil/lieu-public.js), loaded
+// when the server starts: the specs import COMPTE_TEST from this file, and
+// Playwright reads src/ as CommonJS
+let villePublique = null
+
+// /api/searching (searching.js of API #384): at most 200 cards of
+// these fields, a term of 100 characters at most
+const RECHERCHE_MAX = 200
+const TERME_MAX = 100
+const CHAMPS_PHOTO_RECHERCHE = [
+	'id',
+	'url',
+	'width',
+	'height',
+	'alternativeText',
+]
+// STOP_WORDS and QUERY_WORDS of searching.js
+const MOTS_VIDES = new Set(
+	'aux avec chez dans des est les mes mon par pour que qui ses son sur une'.split(
+		' '
+	)
+)
+const MOTS_DE_LA_DEMANDE = new Set([
+	'artist',
+	'artiste',
+	'besoin',
+	'cherche',
+	'recherche',
+	'maquillage',
+	'maquillages',
+	'maquilleur',
+	'maquilleurs',
+	'maquilleuse',
+	'maquilleuses',
+	'makeup',
+	'souhaite',
+	'trouver',
+	'veux',
+	'voudrais',
+])
+// the words a profile must all match (searchWords of searching.js): split
+// on spaces only; a term of one word, or of ignored words only, as typed
+function motsCherches(terme) {
+	const mots = [...new Set(terme.split(/\s+/).filter(Boolean))]
+	const significatifs = mots.filter(
+		mot =>
+			mot.length >= 3 && !MOTS_VIDES.has(mot) && !MOTS_DE_LA_DEMANDE.has(mot)
+	)
+	return mots.length > 1 && significatifs.length ? significatifs : [terme]
+}
+// what the search reads of a profile (balancedKeys of searching.js)
+const clesRecherche = p =>
+	[
+		villePublique(p.city),
+		p.speciality,
+		p.description,
+		...(p.skills ?? []).map(s => s.description),
+		...(p.service_offers ?? []).map(o => o.description),
+		...(p.skills ?? []).map(s => s.name),
+		p.last_name,
+		p.first_name,
+	].map(normaliser)
+
 /**
  * @param {number} port
  * @param {{origine?: string}} [options] - origin of the app, for CORS
  * @returns {Promise<http.Server>}
  */
-export function demarrerFauxStrapi(port = 4112, { origine = '*' } = {}) {
+export async function demarrerFauxStrapi(port = 4112, { origine = '*' } = {}) {
+	;({ villePublique } = await import('../../src/lib/profil/lieu-public.js'))
 	const etat = {}
 	const jetons = new Map()
 	const reinitialiser = () => {
@@ -246,7 +315,11 @@ export function demarrerFauxStrapi(port = 4112, { origine = '*' } = {}) {
 				meMakeup401: false, // /api/me-makeup refuses the JWT, /users/me does not
 				dureeJwtS: 86400, // lifetime of the JWTs issued from now on
 				recherche: null, // status forced on /api/searching
+				annuaire: null, // status forced on /api/searching without any term
 				delaiRechercheMs: 0,
+				// the cards of /api/searching carry the city as typed, as before
+				// API #380: the front's own villePublique is then the only guard
+				villeBrute: false,
 			},
 			revoques: new Set(), // JWT refused everywhere (/__revoquer)
 			supplementaires: [], // made-up profiles added by /__multiplier
@@ -438,39 +511,38 @@ export function demarrerFauxStrapi(port = 4112, { origine = '*' } = {}) {
 		return { id, attributes }
 	}
 
-	// public result of /api/searching (the fields of searching.js)
-	const resultatRecherche = profil => ({
-		id: profil.id,
-		username: profil.username,
-		first_name: profil.first_name ?? null,
-		last_name: profil.last_name ?? null,
-		company_artist_name: profil.company_artist_name ?? null,
-		speciality: profil.speciality ?? null,
-		city: profil.city ?? null,
-		action_radius: profil.action_radius ?? null,
-		available: profil.available ?? null,
-		pro: profil.pro ?? false,
-		description: profil.description ?? null,
-		skills: profil.skills ?? [],
-		experiences: profil.experiences ?? [],
-		courses: profil.courses ?? [],
-		service_offers: profil.service_offers ?? [],
-		language: profil.language ?? [],
-		main_picture: fichierPublic(profil.main_picture)
-			? sansOctets(fichierPublic(profil.main_picture))
-			: null,
-		image_gallery: (profil.image_gallery ?? [])
-			.map(fichierPublic)
-			.filter(Boolean)
-			.map(sansOctets),
-		network: profil.network
-			? (({ email, phone, ...reste }) => reste)(profil.network)
-			: null,
-	})
+	// a result card of /api/searching (toPublicResult of searching.js)
+	const resultatRecherche = profil => {
+		const photo = fichierPublic(profil.main_picture)
+		return {
+			id: profil.id,
+			username: profil.username,
+			first_name: profil.first_name ?? null,
+			last_name: profil.last_name ?? null,
+			company_artist_name: profil.company_artist_name ?? null,
+			speciality: profil.speciality ?? null,
+			city:
+				(etat.panne.villeBrute ? profil.city : villePublique(profil.city)) ||
+				null,
+			action_radius: profil.action_radius ?? null,
+			pro: profil.pro ?? null,
+			skills: (profil.skills ?? []).map(skill => ({ name: skill.name })),
+			main_picture: photo
+				? Object.fromEntries(
+						CHAMPS_PHOTO_RECHERCHE.map(champ => [champ, photo[champ] ?? null])
+					)
+				: null,
+		}
+	}
 
 	const serveur = http.createServer(async (req, res) => {
 		const url = new URL(req.url, 'http://faux-strapi')
-		const entree = { m: req.method, p: url.pathname, t: Date.now() }
+		const entree = {
+			m: req.method,
+			p: url.pathname,
+			q: url.search,
+			t: Date.now(),
+		}
 		if (!url.pathname.startsWith('/__')) etat.journal.push(entree)
 		if (req.method === 'OPTIONS') {
 			res.writeHead(204, entetesCors)
@@ -488,8 +560,9 @@ export function demarrerFauxStrapi(port = 4112, { origine = '*' } = {}) {
 			return json(res, 200, { ok: true })
 		}
 		if (url.pathname === '/__multiplier') {
-			// { n, city }: n more incomplete profiles in that city (search pages)
-			const { n = 0, city = 'Annecy' } = await lireJson(req)
+			// { n, city, action_radius }: n more incomplete profiles in that
+			// city (search pages)
+			const { n = 0, city = 'Annecy', action_radius = 10 } = await lireJson(req)
 			for (let i = 0; i < n; i++)
 				etat.supplementaires.push({
 					id: 1000 + etat.supplementaires.length,
@@ -500,7 +573,7 @@ export function demarrerFauxStrapi(port = 4112, { origine = '*' } = {}) {
 					last_name: `Numéro ${etat.supplementaires.length + 1}`,
 					speciality: 'Maquillage soirée',
 					city,
-					action_radius: 10,
+					action_radius,
 					available: true,
 					skills: [],
 					network: null,
@@ -574,35 +647,45 @@ export function demarrerFauxStrapi(port = 4112, { origine = '*' } = {}) {
 					etat.panne.recherche,
 					erreur(etat.panne.recherche, 'Error', 'forced failure')
 				)
-			const ville = normaliser(url.searchParams.get('city')).trim()
-			const motsVille = new Set(ville.split(/\s+/).filter(Boolean))
-			// the words of the city only rank, like the Fuse.js score of the
-			// API: never a geographic filter (UI-10)
-			const mots = normaliser(url.searchParams.get('search') || ville)
-				.split(/\s+/)
-				.filter(mot => mot && !motsVille.has(mot))
-			const trouves = tousLesProfils()
-				.filter(p => p.available !== false)
+			const champ = cle =>
+				(url.searchParams.get(cle) ?? '').trim().slice(0, TERME_MAX)
+			const ville = normaliser(champ('city')).trim()
+			const terme = normaliser(champ('search') || champ('city')).trim()
+			const cherchables = tousLesProfils().filter(p => p.available !== false)
+			if (!terme && etat.panne.annuaire)
+				return json(
+					res,
+					etat.panne.annuaire,
+					erreur(etat.panne.annuaire, 'Error', 'forced failure')
+				)
+			if (!terme)
+				return json(
+					res,
+					200,
+					cherchables
+						.sort(
+							(a, b) =>
+								String(b.updatedAt).localeCompare(String(a.updatedAt)) ||
+								a.id - b.id
+						)
+						.slice(0, RECHERCHE_MAX)
+						.map(resultatRecherche)
+				)
+			const mots = motsCherches(terme)
+			const trouves = cherchables
 				.filter(p => {
-					const texte = normaliser(
-						[
-							p.city,
-							p.speciality,
-							p.description,
-							p.first_name,
-							p.last_name,
-							...(p.skills ?? []).map(s => s.name),
-						].join(' ')
-					)
-					return mots.every(mot => texte.includes(mot))
+					const cles = clesRecherche(p)
+					return mots.every(mot => cles.some(cle => cle.includes(mot)))
 				})
 				.map((p, i) => ({
 					p,
 					i,
-					rang: ville && normaliser(p.city).includes(ville) ? 0 : 1,
+					// the city ranks, like its Fuse.js score: never a filter (UI-10)
+					rang:
+						ville && normaliser(villePublique(p.city)).includes(ville) ? 0 : 1,
 				}))
 				.sort((a, b) => a.rang - b.rang || a.i - b.i)
-				.slice(0, 50)
+				.slice(0, RECHERCHE_MAX)
 				.map(({ p }) => resultatRecherche(p))
 			return json(res, 200, trouves)
 		}

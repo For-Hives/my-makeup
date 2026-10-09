@@ -199,6 +199,13 @@ describe('public profile view (UI-06)', () => {
 	test('lines of a text', () => {
 		assert.deepEqual(lignes('a\n\n b \n'), ['a', 'b'])
 		assert.deepEqual(lignes(null), [])
+		// a line « null » inside a text is as empty as a whole field « null »
+		assert.deepEqual(lignes('Ligne 1\r\nnull\n undefined \nLigne 2'), [
+			'Ligne 1',
+			'Ligne 2',
+		])
+		assert.deepEqual(lignes('null'), [])
+		assert.deepEqual(lignes('180 €\n\n'), ['180 €'])
 	})
 
 	test('network links: http(s) only, @pseudo on its network, never javascript:', () => {
@@ -274,6 +281,12 @@ describe('public profile view (UI-06)', () => {
 		})
 		assert.equal(v.langues, false)
 		assert.equal(v.experiences, false)
+		assert.equal(v.description, true)
+		// a description of empty lines only: no empty card
+		assert.equal(
+			sectionsVisibles({ description: 'null\n\n undefined ' }).description,
+			false
+		)
 		assert.equal(v.offres, true)
 		assert.deepEqual(
 			offres({

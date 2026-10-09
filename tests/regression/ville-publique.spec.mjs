@@ -201,6 +201,9 @@ test.describe('UI-11 adresse postale tapée comme ville', () => {
 			n: 1,
 			city: '9 rue des Essais Fictifs 74000 Annecy',
 		})
+		// the API sends the public city since #380: here it sends the street,
+		// so the card's own villePublique is what is tested
+		await piloter('/__panne', { villeBrute: true })
 		await page.goto('/search?search=Numéro')
 		const carte = page.getByTestId('search-result').filter({
 			hasText: 'Fictive Numéro 1',
