@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import {
 	CONTACT_CHANNELS,
 	EVENTS,
+	SOURCES_ORIGINE,
 	demandeEnvoyeeProps,
 	eventData,
 	isMeasureDisabled,
@@ -574,5 +575,37 @@ describe('artist space events (UI-01, UI-03, UI-05)', () => {
 	test('account_delete: no property at all', () => {
 		assert.deepEqual(eventData('account_delete'), {})
 		assert.equal(eventData('account_delete', { email: 'a@b.fr' }), null)
+	})
+
+	test('onboarding_source: one answer of the closed list, nothing else', () => {
+		assert.deepEqual(SOURCES_ORIGINE, [
+			'google',
+			'instagram',
+			'bouche-a-oreille',
+			'maquilleuse',
+			'article-salon',
+			'autre',
+		])
+		assert.deepEqual(eventData('onboarding_source', { source: 'instagram' }), {
+			source: 'instagram',
+		})
+		for (const source of SOURCES_ORIGINE)
+			assert.deepEqual(eventData('onboarding_source', { source }), { source })
+		assert.equal(eventData('onboarding_source', { source: 'tiktok' }), null)
+		assert.equal(eventData('onboarding_source', { source: 'maeva' }), null)
+		assert.equal(eventData('onboarding_source', { source: 'a@b.fr' }), null)
+		assert.equal(eventData('onboarding_source', { source: '@maeva' }), null)
+		assert.equal(eventData('onboarding_source'), null)
+		assert.equal(
+			eventData('onboarding_source', { source: 'instagram', pid: '12' }),
+			null
+		)
+		assert.equal(
+			eventData('onboarding_source', {
+				source: 'autre',
+				texte: 'une amie',
+			}),
+			null
+		)
 	})
 })

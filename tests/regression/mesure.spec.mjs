@@ -3,7 +3,8 @@
 // the Umami script and its sends go through /u on the site, the version is
 // in data-tag, nothing leaves an automated browser or a browser that opted
 // out, the proxy strips the cookies and the Referer and passes the visitor's
-// IP, and sampled Web Vitals arrive as « web-vitals » events.
+// IP, sampled Web Vitals arrive as « web-vitals » events, and the answer to
+// « Comment as-tu connu My Makeup ? » arrives as « onboarding_source » (UI-05).
 // Playwright gives navigator.webdriver = true and a HeadlessChrome user
 // agent: each rule is checked alone, and a real visitor is played by forcing
 // webdriver to false with an ordinary Chrome user agent.
@@ -11,7 +12,7 @@
 import { expect, test } from '@playwright/test'
 import { getElementsByTagName } from 'domutils'
 import { parseDocument } from 'htmlparser2'
-import { reinitialiserStrapi } from './outils-strapi.mjs'
+import { inscrire, panne, reinitialiserStrapi } from './outils-strapi.mjs'
 
 const APP = process.env.RG_APP ?? 'http://localhost:3996'
 const UMAMI = process.env.RG_UMAMI ?? 'http://127.0.0.1:4113'
@@ -33,6 +34,13 @@ async function piloter(chemin) {
 const recus = async () => (await piloter('/__umami/etat')).journal
 const envoisRecus = async () =>
 	(await recus()).filter(r => r.methode === 'POST' && r.chemin === '/api/send')
+// data of the events of that name received by the fake Umami
+const evenements = async nom =>
+	(await envoisRecus())
+		.filter(e => e.corps.payload.name === nom)
+		.map(e => e.corps.payload.data)
+
+test.use({ testIdAttribute: 'data-cy' })
 
 test.beforeEach(async () => {
 	await piloter('/__umami/reset')
@@ -413,6 +421,66 @@ test.describe('MES-10 qui est mesuré', () => {
 				await page.waitForLoadState('networkidle')
 				expect(await expirations()).toEqual([{ where }])
 			}
+		})
+
+		// sign-up up to the name step of /auth/init-account
+		async function etapeDuNom(page, email) {
+			await inscrire(page, email)
+			await expect(page.getByTestId('first_name')).toBeVisible({
+				timeout: 15_000,
+			})
+			await page.getByTestId('first_name').fill('Al')
+			await page.getByTestId('last_name').fill('Bo')
+		}
+		// « Bienvenue » shown and the end of the onboarding received: every
+		// event of the name step has had time to arrive
+		async function finDeLInscription(page) {
+			await expect(page.getByText(/Bienvenue sur My.Makeup/)).toBeVisible()
+			await expect
+				.poll(() => evenements('onboarding_step'))
+				.toContainEqual({ step: 'termine' })
+			await page.waitForLoadState('networkidle')
+		}
+
+		test('onboarding_source : la réponse part une fois, seulement quand le nom est enregistré', async ({
+			page,
+		}) => {
+			await visiteurReel(page)
+			await etapeDuNom(page, 'origine@test.local')
+			await page.getByTestId('onboarding-source-instagram').check()
+
+			// the save fails: nothing is counted
+			await panne({ patch: 500 })
+			await page.getByTestId('submit').click()
+			await expect(page.getByTestId('save-error')).toBeVisible()
+			await page.waitForLoadState('networkidle')
+			expect(await evenements('onboarding_source')).toEqual([])
+
+			await panne({ patch: null })
+			await page.getByTestId('submit').click()
+			await finDeLInscription(page)
+			const envois = (await envoisRecus()).filter(
+				e => e.corps.payload.name === 'onboarding_source'
+			)
+			expect(envois).toHaveLength(1)
+			expect(envois[0].corps.payload).toMatchObject({
+				website: WEBSITE_ID,
+				tag: VERSION,
+				name: 'onboarding_source',
+				data: { source: 'instagram' },
+			})
+			expect(envois[0].corps.payload.url).toContain('/auth/init-account')
+			expect(JSON.stringify(envois[0].corps)).not.toContain('origine@test')
+		})
+
+		test('onboarding_source : sans réponse, l’inscription se termine et rien ne part', async ({
+			page,
+		}) => {
+			await visiteurReel(page)
+			await etapeDuNom(page, 'sans-origine@test.local')
+			await page.getByTestId('submit').click()
+			await finDeLInscription(page)
+			expect(await evenements('onboarding_source')).toEqual([])
 		})
 
 		test('« Ne plus mesurer mes visites » : aucun envoi', async ({ page }) => {

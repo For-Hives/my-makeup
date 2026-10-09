@@ -741,9 +741,28 @@ test.describe('UI-03 photos', () => {
 })
 
 test.describe('UI-05 inscription et suppression', () => {
-	test('RG-07 API lente (2,5 s) : un seul profil créé, le nom attend sa création, « Bienvenue » après l’enregistrement', async ({
-		page,
-	}) => {
+	// « Comment as-tu connu My Makeup ? », in the order shown
+	const ORIGINES = [
+		['google', 'Recherche Google'],
+		['instagram', 'Instagram ou autre réseau'],
+		['bouche-a-oreille', 'Bouche-à-oreille'],
+		['maquilleuse', "Une maquilleuse m'en a parlé"],
+		['article-salon', 'Un article ou un salon'],
+		['autre', 'Autre'],
+	]
+
+	// RG-07, at 1440 px and on a phone. `appuyer` clicks, or taps on a phone.
+	async function rg07(page, { appuyer = cible => cible.click() } = {}) {
+		// bodies the browser sends to the API for the profile
+		const corps = []
+		page.on('request', requete => {
+			if (
+				new URL(requete.url()).pathname === '/api/me-makeup' &&
+				['POST', 'PATCH'].includes(requete.method())
+			)
+				corps.push([requete.method(), requete.postDataJSON()])
+		})
+
 		await panne({ delaiPostMs: 2500 })
 		await inscrire(page)
 		await expect(
@@ -755,10 +774,33 @@ test.describe('UI-05 inscription et suppression', () => {
 		const [creation] = appels(avant.journal, 'POST', '/api/me-makeup')
 		expect(creation.fin).toBeDefined() // answered before the name step
 
+		// the optional question: 6 answers, none chosen, 44 px targets
+		const question = page.getByRole('group', {
+			name: /Comment as-tu connu My.Makeup/,
+		})
+		await expect(question).toBeVisible()
+		for (const [valeur, libelle] of ORIGINES) {
+			const choix = question.getByLabel(libelle, { exact: true })
+			await expect(choix).toHaveAttribute(
+				'data-cy',
+				`onboarding-source-${valeur}`
+			)
+			await expect(choix).not.toBeChecked()
+		}
+		expect(await question.getByRole('radio').count()).toBe(ORIGINES.length)
+		for (const libelle of await question.locator('label').all())
+			expect((await libelle.boundingBox()).height).toBeGreaterThanOrEqual(44)
+		// nothing wider than the screen
+		expect(
+			await page.evaluate(
+				() => document.documentElement.scrollWidth <= window.innerWidth + 1
+			)
+		).toBe(true)
+
 		// 1 letter: refused by the form, nothing sent
 		await prenom.fill('A')
 		await page.getByTestId('last_name').fill('Bo')
-		await page.getByTestId('submit').click()
+		await appuyer(page.getByTestId('submit'))
 		await expect(page.getByTestId('error-first-name')).toHaveText(
 			'Ton prénom doit contenir au moins 2 caractères.'
 		)
@@ -766,10 +808,14 @@ test.describe('UI-05 inscription et suppression', () => {
 			appels((await etat()).journal, 'PATCH', '/api/me-makeup')
 		).toHaveLength(0)
 
+		// an answer to the question, on its label
+		await appuyer(question.getByText('Instagram ou autre réseau'))
+		await expect(page.getByTestId('onboarding-source-instagram')).toBeChecked()
+
 		// the save fails: its message, no « Bienvenue »
 		await panne({ patch: 500 })
 		await prenom.fill('Al')
-		await page.getByTestId('submit').click()
+		await appuyer(page.getByTestId('submit'))
 		await expect(page.getByTestId('save-error')).toHaveText(
 			"Le service est momentanément indisponible : tes modifications n'ont pas été enregistrées. Réessaie dans quelques minutes."
 		)
@@ -777,7 +823,7 @@ test.describe('UI-05 inscription et suppression', () => {
 
 		// 2 letters stored, then « Bienvenue »
 		await panne({ patch: null })
-		await page.getByTestId('submit').click()
+		await appuyer(page.getByTestId('submit'))
 		await expect(page.getByText(/Bienvenue sur My.Makeup/)).toBeVisible()
 
 		const apres = await etat()
@@ -785,8 +831,30 @@ test.describe('UI-05 inscription et suppression', () => {
 		expect(apres.profils[compte.id].first_name).toBe('Al')
 		expect(apres.profils[compte.id].last_name).toBe('Bo')
 		expect(appels(apres.journal, 'POST', '/api/me-makeup')).toHaveLength(1)
-		for (const patch of appels(apres.journal, 'PATCH', '/api/me-makeup'))
+		const patchs = appels(apres.journal, 'PATCH', '/api/me-makeup')
+		expect(patchs).toHaveLength(2)
+		for (const patch of patchs) {
 			expect(patch.t).toBeGreaterThanOrEqual(creation.fin)
+			// the answer is never stored (UI-05)
+			expect(patch.cles).not.toContain('source')
+			expect(patch.cles).not.toContain('onboarding_source')
+		}
+		expect(corps.map(([methode]) => methode)).toEqual([
+			'POST',
+			'PATCH',
+			'PATCH',
+		])
+		for (const [methode, envoye] of corps) {
+			expect(Object.keys(envoye ?? {}), methode).not.toContain('source')
+			expect(JSON.stringify(envoye), methode).not.toContain('instagram')
+		}
+		expect(JSON.stringify(apres.profils[compte.id])).not.toContain('instagram')
+	}
+
+	test('RG-07 API lente (2,5 s) : un seul profil créé, le nom attend sa création, « Bienvenue » après l’enregistrement, l’origine jamais enregistrée', async ({
+		page,
+	}) => {
+		await rg07(page)
 	})
 
 	test('création du profil en échec : message et « Réessayer », jamais l’étape du nom', async ({

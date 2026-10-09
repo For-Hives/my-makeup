@@ -39,6 +39,17 @@ export const DEMANDE_SOURCES = [
 
 export const RESULT_BUCKETS = ['0', '1-5', '6-20', '21+']
 
+// answers to « Comment as-tu connu My Makeup ? » (/auth/init-account, UI-05),
+// in the order they are shown; never stored by the API
+export const SOURCES_ORIGINE = [
+	'google',
+	'instagram',
+	'bouche-a-oreille',
+	'maquilleuse',
+	'article-salon',
+	'autre',
+]
+
 const id = { type: 'id', required: true }
 const optionalId = { type: 'id', required: false }
 const flag = { type: 'boolean', required: true }
@@ -69,6 +80,8 @@ export const EVENTS = {
 	onboarding_step: {
 		step: oneOf(['verification_email', 'compte_cree', 'termine']),
 	},
+	// optional answer of the onboarding, sent once the name is stored
+	onboarding_source: { source: oneOf(SOURCES_ORIGINE) },
 	// every sign-in attempt with the form (A3), `code` = 'ok' on success
 	login_result: {
 		method: oneOf(['email', 'google']),

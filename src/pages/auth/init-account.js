@@ -16,7 +16,7 @@ import FullLoader from '@/components/Global/Loader/FullLoader'
 import Image from 'next/image'
 import Loader from '@/components/Global/Loader/Loader'
 import Warning from '@/components/Global/Warning'
-import { onboardingStepName, track } from '@/lib/analytics'
+import { onboardingStepName, SOURCES_ORIGINE, track } from '@/lib/analytics'
 import {
 	API_SERVEUR,
 	authOptions,
@@ -52,6 +52,17 @@ const schema = zod
 		last_name: true,
 	})
 
+// « Comment as-tu connu My Makeup ? » (UI-05): one optional answer, kept out
+// of the form schema and of the PATCH, only counted by Umami
+const LIBELLES_ORIGINE = {
+	google: 'Recherche Google',
+	instagram: 'Instagram ou autre réseau',
+	'bouche-a-oreille': 'Bouche-à-oreille',
+	maquilleuse: "Une maquilleuse m'en a parlé",
+	'article-salon': 'Un article ou un salon',
+	autre: 'Autre',
+}
+
 function InitAccount({ compte, erreur }) {
 	const {
 		register,
@@ -80,6 +91,7 @@ function InitAccount({ compte, erreur }) {
 	const [lastName, setLastName] = useState('')
 	const [envoi, setEnvoi] = useState(false)
 	const [erreurEnvoi, setErreurEnvoi] = useState(null)
+	const [origine, setOrigine] = useState(null)
 
 	const router = useRouter()
 
@@ -220,6 +232,8 @@ function InitAccount({ compte, erreur }) {
 			setErreurEnvoi(resultat.error ?? null)
 			return
 		}
+		// the answer goes to Umami only, never to the API
+		if (origine) track('onboarding_source', { source: origine })
 		setStep(4)
 	}
 
@@ -499,6 +513,43 @@ function InitAccount({ compte, erreur }) {
 															)}
 														</div>
 													</div>
+
+													<fieldset aria-describedby="onboarding-source-aide">
+														<legend className="block text-sm font-medium leading-6 text-gray-900">
+															Comment as-tu connu My&nbsp;Makeup&nbsp;?{' '}
+															<span className="font-normal text-gray-500">
+																(facultatif)
+															</span>
+														</legend>
+														<p
+															id="onboarding-source-aide"
+															className="mt-1 text-xs text-gray-500"
+														>
+															Ta réponse est comptée de façon anonyme : elle
+															n&apos;est pas liée à ton compte.
+														</p>
+														<div className="mt-2 space-y-1">
+															{SOURCES_ORIGINE.map(valeur => (
+																<label
+																	key={valeur}
+																	htmlFor={`onboarding-source-${valeur}`}
+																	className="flex min-h-[44px] cursor-pointer items-center gap-3 rounded-md px-2 text-sm text-gray-900 hover:bg-gray-50"
+																>
+																	<input
+																		id={`onboarding-source-${valeur}`}
+																		data-cy={`onboarding-source-${valeur}`}
+																		type="radio"
+																		name="onboarding_source"
+																		value={valeur}
+																		checked={origine === valeur}
+																		onChange={() => setOrigine(valeur)}
+																		className="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600"
+																	/>
+																	{LIBELLES_ORIGINE[valeur]}
+																</label>
+															))}
+														</div>
+													</fieldset>
 
 													{erreurEnvoi && (
 														<p
