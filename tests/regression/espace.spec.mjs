@@ -857,6 +857,18 @@ test.describe('UI-05 inscription et suppression', () => {
 		await rg07(page)
 	})
 
+	test.describe('sur un téléphone', () => {
+		// eslint-disable-next-line no-unused-vars
+		const { defaultBrowserType, ...iphone } = devices['iPhone 13']
+		test.use(iphone)
+
+		test('RG-07 à la taille d’un iPhone 13 : même scénario, au doigt, sans débordement', async ({
+			page,
+		}) => {
+			await rg07(page, { appuyer: cible => cible.tap() })
+		})
+	})
+
 	test('création du profil en échec : message et « Réessayer », jamais l’étape du nom', async ({
 		page,
 	}) => {
