@@ -561,7 +561,12 @@ test.describe('UI-07 recherche', () => {
 			/^\d+ résultats pour « Soirée »$/
 		)
 		await expect(page.getByTestId('search-result').first()).toBeVisible()
-		expect(await recherches()).toHaveLength(1)
+		const appels = await recherches()
+		expect(appels).toHaveLength(1)
+		// the term reaches the API, and no city
+		const parametres = new URLSearchParams(appels[0].q)
+		expect(parametres.get('search')).toBe('Soirée')
+		expect(parametres.has('city')).toBe(false)
 		expect(await annuaires()).toHaveLength(0)
 		expect(erreurs).toEqual([])
 	})
@@ -581,7 +586,12 @@ test.describe('UI-07 recherche', () => {
 		const cartes = page.getByTestId('search-result')
 		await expect(cartes).toHaveCount(1)
 		await expect(cartes).toContainText('Léa Nantaise')
-		expect(await recherches()).toHaveLength(1)
+		const appels = await recherches()
+		expect(appels).toHaveLength(1)
+		// the term and the city both reach the API, not only the page URL
+		const parametres = new URLSearchParams(appels[0].q)
+		expect(parametres.get('search')).toBe('Nantaise')
+		expect(parametres.get('city')).toBe('Nantes')
 		expect(await annuaires()).toHaveLength(0)
 		expect(erreurs).toEqual([])
 	})

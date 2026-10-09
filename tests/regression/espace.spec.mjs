@@ -8,6 +8,7 @@
 import { expect, test, devices } from '@playwright/test'
 import { randomBytes } from 'node:crypto'
 import sharp from 'sharp'
+import { ADRESSE_FICTIVE, RUE_FICTIVE } from './donnees-publiques.mjs'
 import { COMPTE_TEST } from './mock-api.mjs'
 import {
 	API,
@@ -219,6 +220,18 @@ const HEIC = {
 		randomBytes(3 * MO),
 	]),
 }
+
+// 25 MB and 1 byte, read as a JPEG: refused on its size, not its type
+const photoTropLourde = () => ({
+	name: 'enorme.jpg',
+	mimeType: 'image/jpeg',
+	buffer: Buffer.concat([
+		Buffer.from([0xff, 0xd8, 0xff, 0xe0]),
+		Buffer.alloc(25 * MO - 3),
+	]),
+})
+const MESSAGE_PHOTO_TROP_LOURDE =
+	'Cette photo pèse plus de 25 Mo : choisis-en une plus légère.'
 
 test.describe('UI-01 sauvegardes honnêtes', () => {
 	test('RG-01 sauvegarde réussie : la page, puis le rechargement, montrent ce que l’API a enregistré', async ({
@@ -662,6 +675,7 @@ test.describe('UI-01 modales : limites, messages et valeurs enregistrées', () =
 	test('résumé : prénom et nom vides, puis 71 caractères dans les 4 champs, refusés dans la modale sans appel ; 70 caractères enregistrés', async ({
 		page,
 	}) => {
+		const erreurs = erreursDeLaPage(page)
 		const patchs = corpsDesPatchs(page)
 		await ouvrirProfil(page)
 		await page.getByTestId('update-resume-button').click()
@@ -724,9 +738,10 @@ test.describe('UI-01 modales : limites, messages et valeurs enregistrées', () =
 			speciality: a70,
 			company_artist_name: a70,
 		})
+		expect(erreurs).toEqual([])
 	})
 
-	test('résumé : spécialité de 65 caractères et nom d’entreprise enregistrés, affichés en tête de l’espace puis dans sa vue publique', async ({
+	test('résumé : prénom, nom, spécialité de 65 caractères et nom d’entreprise enregistrés, affichés en tête de l’espace puis dans sa vue publique', async ({
 		page,
 	}) => {
 		expect(SPECIALITE_65).toHaveLength(65)
@@ -734,11 +749,15 @@ test.describe('UI-01 modales : limites, messages et valeurs enregistrées', () =
 		await ouvrirProfil(page)
 		await page.getByTestId('update-resume-button').click()
 		await remplir(page, {
+			'first-name-input': 'Alix',
+			'last-name-input': 'Nantaise',
 			'speciality-input': SPECIALITE_65,
 			'company-artist-input': 'Studio Nantes',
 		})
 		await sauver(page, 'save-button-resume')
 		expect(await profilServeur()).toMatchObject({
+			first_name: 'Alix',
+			last_name: 'Nantaise',
 			speciality: SPECIALITE_65,
 			company_artist_name: 'Studio Nantes',
 		})
@@ -748,6 +767,9 @@ test.describe('UI-01 modales : limites, messages et valeurs enregistrées', () =
 				await expect(page).toHaveURL(/publicView=true/)
 				await expect(page.getByTestId('update-resume-button')).toHaveCount(0)
 			}
+			await expect(page.getByTestId('resume-name'), vue).toHaveText(
+				'Alix Nantaise'
+			)
 			await expect(page.getByTestId('resume-speciality'), vue).toHaveText(
 				SPECIALITE_65
 			)
@@ -759,9 +781,10 @@ test.describe('UI-01 modales : limites, messages et valeurs enregistrées', () =
 		expect(erreurs).toEqual([])
 	})
 
-	test('description : 2001 caractères refusés, puis vidée et enregistrée dans la même modale ; 2000 caractères enregistrés', async ({
+	test('description : 2001 caractères refusés, puis vidée et enregistrée dans la même modale ; 2000 caractères enregistrés, affichés aussi en vue publique', async ({
 		page,
 	}) => {
+		const erreurs = erreursDeLaPage(page)
 		const patchs = corpsDesPatchs(page)
 		await ouvrirProfil(page)
 		await page.getByTestId('update-description-button').click()
@@ -787,12 +810,25 @@ test.describe('UI-01 modales : limites, messages et valeurs enregistrées', () =
 		await remplir(page, { 'description-input': 'b'.repeat(2000) })
 		await sauver(page, 'save-button-description')
 		expect((await profilServeur()).description).toBe('b'.repeat(2000))
-		await expect(page.getByTestId('description')).toHaveText('b'.repeat(2000))
+		for (const vue of ['édition', 'publique']) {
+			if (vue === 'publique') {
+				await page.getByTestId('profil-public-view').click()
+				await expect(page).toHaveURL(/publicView=true/)
+				await expect(page.getByTestId('update-description-button')).toHaveCount(
+					0
+				)
+			}
+			await expect(page.getByTestId('description'), vue).toHaveText(
+				'b'.repeat(2000)
+			)
+		}
+		expect(erreurs).toEqual([])
 	})
 
 	test('localisation : ville de 71 caractères et rayon de 11 chiffres refusés, puis vidés et enregistrés dans la même modale ; ni carte, ni « à & dans un rayon de km » en tête', async ({
 		page,
 	}) => {
+		const erreurs = erreursDeLaPage(page)
 		const patchs = corpsDesPatchs(page)
 		await ouvrirProfil(page)
 		await page.getByTestId('update-location-button').click()
@@ -836,18 +872,24 @@ test.describe('UI-01 modales : limites, messages et valeurs enregistrées', () =
 			).toHaveCount(0)
 			await expect(page.locator('main'), vue).not.toContainText('rayon de km')
 		}
+		expect(erreurs).toEqual([])
 	})
 
 	test('localisation : Nantes et 5 km enregistrés, dans la phrase de la tête et la carte, aussi en vue publique', async ({
 		page,
 	}) => {
+		const erreurs = erreursDeLaPage(page)
 		const patchs = corpsDesPatchs(page)
 		await ouvrirProfil(page)
 		await page.getByTestId('update-location-button').click()
 		await remplir(page, { 'city-input': 'Nantes', 'action-radius-input': '5' })
 		await sauver(page, 'save-button-location')
-		// the radius as typed: the API turns it into an integer
-		expect(patchs).toEqual([{ city: 'Nantes', action_radius: '5' }])
+		// one call, the radius 5 whether sent as typed or as a number (the
+		// API stores an integer)
+		expect(patchs).toHaveLength(1)
+		expect(Object.keys(patchs[0]).sort()).toEqual(['action_radius', 'city'])
+		expect(patchs[0].city).toBe('Nantes')
+		expect(Number(patchs[0].action_radius)).toBe(5)
 		expect((await profilServeur()).city).toBe('Nantes')
 		for (const vue of ['édition', 'publique']) {
 			if (vue === 'publique') {
@@ -863,6 +905,80 @@ test.describe('UI-01 modales : limites, messages et valeurs enregistrées', () =
 				vue
 			).toHaveText('Nantes et 5 km autour')
 		}
+		expect(erreurs).toEqual([])
+	})
+
+	test('localisation : une ville sans rayon (0 enregistré, puis rayon vidé dans la modale) : « peut se déplacer à … » sans rayon ni « km », en tête et en vue publique, sans carte de zone', async ({
+		page,
+	}) => {
+		const erreurs = erreursDeLaPage(page)
+		const patchs = corpsDesPatchs(page)
+		// a radius of 0, as some profiles hold it (format-zone.js)
+		await profilDeDepart({ city: 'Annecy', action_radius: 0 })
+		await ouvrirProfil(page)
+		const tete = page.getByTestId('resume-city-action-radius')
+		const zone = page.getByTestId('location-city-action-radius')
+		await expect(tete).toHaveText('peut se déplacer à Annecy')
+		await expect(tete).not.toContainText('rayon')
+		await expect(zone).toHaveCount(0)
+
+		await page.getByTestId('update-location-button').click()
+		await valeursDeLaModale(page, {
+			'city-input': 'Annecy',
+			'action-radius-input': '0',
+		})
+		await remplir(page, { 'city-input': 'Nantes', 'action-radius-input': '' })
+		await sauver(page, 'save-button-location')
+		expect(patchs).toEqual([{ city: 'Nantes', action_radius: null }])
+		expect(await profilServeur()).toMatchObject({
+			city: 'Nantes',
+			action_radius: null,
+		})
+		for (const vue of ['édition', 'publique', 'rechargement']) {
+			if (vue === 'publique') {
+				await page.getByTestId('profil-public-view').click()
+				await expect(page).toHaveURL(/publicView=true/)
+			} else if (vue === 'rechargement')
+				await aller(page, '/auth/profil?publicView=true')
+			await expect(tete, vue).toHaveText('peut se déplacer à Nantes')
+			await expect(tete, vue).not.toContainText('rayon')
+			await expect(tete, vue).not.toContainText('km')
+			await expect(zone, vue).toHaveCount(0)
+			// the city alone in the location card
+			await expect(page.getByText('Nantes', { exact: true }), vue).toBeVisible()
+		}
+		expect(erreurs).toEqual([])
+	})
+
+	test('localisation : une adresse postale tapée comme ville, en entier dans l’espace ; la commune seule en tête de la vue publique, rechargée aussi, la rue nulle part', async ({
+		page,
+	}) => {
+		const erreurs = erreursDeLaPage(page)
+		await profilDeDepart({ city: ADRESSE_FICTIVE, action_radius: 30 })
+		await ouvrirProfil(page)
+		const tete = page.getByTestId('resume-city-action-radius')
+		await expect(tete).toHaveText(
+			`peut se déplacer à ${ADRESSE_FICTIVE} & dans un rayon de 30km`
+		)
+		for (const vue of ['bascule', 'rechargement']) {
+			if (vue === 'bascule') {
+				await page.getByTestId('profil-public-view').click()
+				await expect(page).toHaveURL(/publicView=true/)
+			} else await aller(page, '/auth/profil?publicView=true')
+			await expect(tete, vue).toHaveText(
+				'peut se déplacer à Thonon-les-Bains (74) & dans un rayon de 30km'
+			)
+			await expect(
+				page.getByTestId('location-city-action-radius').first(),
+				vue
+			).toHaveText('Thonon-les-Bains (74) et 30 km autour')
+			for (const morceau of RUE_FICTIVE)
+				await expect(
+					page.locator('main'),
+					`${vue} ${morceau}`
+				).not.toContainText(morceau)
+		}
+		expect(erreurs).toEqual([])
 	})
 
 	test('compétences : puce retirée, Entrée vide et « ; » seul refusés, la liste vide enregistrée ; 71 caractères refusés puis « pieds » et « yeux; » ajoutés, enregistrés et affichés', async ({
@@ -918,9 +1034,11 @@ test.describe('UI-01 modales : limites, messages et valeurs enregistrées', () =
 		await champ.pressSequentially('yeux;')
 		await expect(puce('yeux')).toBeVisible()
 		await expect(champ).toHaveValue('')
-		// pasted with its separator, 71 characters are refused too
+		// pasted with its separator, 71 characters are refused too, and stay
+		// in the field without the « ; » to be corrected
 		await champ.fill(`${'a'.repeat(71)};`)
 		await expect(erreur).toHaveText(tropLongue)
+		await expect(champ).toHaveValue('a'.repeat(71))
 		await expect(puces).toHaveCount(2)
 		await champ.fill('')
 		await sauver(page, 'save-button-skills')
@@ -967,13 +1085,15 @@ test.describe('UI-01 modales : limites, messages et valeurs enregistrées', () =
 		await remplir(page, { 'language-input': 'a'.repeat(71) })
 		await champ.press('Enter')
 		await expect(erreur).toHaveText(tropLongue)
-		// the separator typed after it
+		// the separator typed after it: the name stays, without the « ; »
 		await champ.press(';')
 		await expect(erreur).toHaveText(tropLongue)
+		await expect(champ).toHaveValue('a'.repeat(71))
 		// pasted with its separator in one go, on a fresh field
 		await champ.fill('')
 		await champ.fill(`${'a'.repeat(71)};`)
 		await expect(erreur).toHaveText(tropLongue)
+		await expect(champ).toHaveValue('a'.repeat(71))
 		await expect(puces).toHaveCount(1)
 
 		// 70 characters and the separator: added without it
@@ -1341,6 +1461,7 @@ test.describe('UI-01 modales : limites, messages et valeurs enregistrées', () =
 	test('prestations : retirée puis modale fermée, rien n’est enregistré ; retirée et sauvegardée, elle quitte le profil et la page', async ({
 		page,
 	}) => {
+		const erreurs = erreursDeLaPage(page)
 		const patchs = corpsDesPatchs(page)
 		const OFFRE_B = {
 			name: 'Offre B',
@@ -1374,11 +1495,13 @@ test.describe('UI-01 modales : limites, messages et valeurs enregistrées', () =
 		])
 		await expect(page.getByTestId('service-offer-name')).toHaveText(['Offre B'])
 		await expect(page.getByText('Offre A', { exact: true })).toHaveCount(0)
+		expect(erreurs).toEqual([])
 	})
 
 	test('prestation : nom, prix et description requis pour l’offre et ses 3 options ; 71 / 71 / 2001 caractères refusés ; 70 / 70 / 2000 acceptés et enregistrés tels quels', async ({
 		page,
 	}) => {
+		const erreurs = erreursDeLaPage(page)
 		const patchs = corpsDesPatchs(page)
 		await ouvrirProfil(page)
 		const erreur = cy => dialogue(page).getByTestId(cy)
@@ -1462,6 +1585,7 @@ test.describe('UI-01 modales : limites, messages et valeurs enregistrées', () =
 		expect(patchs).toEqual([{ service_offers: [attendue] }])
 		const [stockee] = (await profilServeur()).service_offers
 		expect(stockee).toMatchObject(attendue)
+		expect(erreurs).toEqual([])
 	})
 
 	test('prestation de 3 options saisie, enregistrée, rouverte avec ses 12 champs, modifiée sur place, puis lue en vue publique, chaque option ouverte d’un clic', async ({
@@ -1555,6 +1679,124 @@ test.describe('UI-01 modales : limites, messages et valeurs enregistrées', () =
 				await expect(prix, chargement).toBeVisible()
 				await expect(prix).toHaveText(option.price)
 			}
+		}
+		expect(erreurs).toEqual([])
+	})
+
+	test('formations, expériences et prestations : celles enregistrées retirées et une nouvelle ajoutée dans la même modale, une seule sauvegarde chacune ; le PATCH, le profil et la page n’ont que la nouvelle', async ({
+		page,
+	}) => {
+		const erreurs = erreursDeLaPage(page)
+		const patchs = corpsDesPatchs(page)
+		await profilDeDepart({
+			courses: [
+				{
+					diploma: 'CAP',
+					school: 'École A',
+					date_graduation: '2015-06-30',
+					course_description: 'Initiale',
+				},
+			],
+			experiences: [
+				EXPERIENCE('Studio A', '2020-01-01'),
+				EXPERIENCE('Studio B', '2022-01-01'),
+			],
+			service_offers: [OFFRE_AVEC_OPTION],
+		})
+		await ouvrirProfil(page)
+		const retirer = name => dialogue(page).getByRole('button', { name }).click()
+
+		const formation = {
+			diploma: 'BTS Maquillage',
+			school: 'École B',
+			date_graduation: '2021-06-30',
+			course_description: 'Alternance',
+		}
+		await page.getByTestId('update-courses-button').click()
+		await retirer('Retirer la formation CAP')
+		await remplir(page, {
+			'diploma-input': formation.diploma,
+			'school-input': formation.school,
+			'date-graduation-input': formation.date_graduation,
+			'course-description-input': formation.course_description,
+		})
+		await page.getByTestId('add-course-button').click()
+		await expect(
+			dialogue(page).getByTestId('course-delete-button')
+		).toHaveCount(1)
+		await sauver(page, 'save-button-courses')
+		expect(patchs).toEqual([{ courses: [formation] }])
+		expect((await profilServeur()).courses).toMatchObject([formation])
+
+		const experience = {
+			company: 'Studio C',
+			job_name: 'Maquilleuse plateau',
+			city: 'Lyon',
+			date_start: '2023-01-01',
+			date_end: '2024-06-30',
+			description: 'Tournage',
+		}
+		await page.getByTestId('update-experience-button').click()
+		await retirer("Retirer l'expérience Studio A")
+		await retirer("Retirer l'expérience Studio B")
+		await remplir(page, {
+			'company-input': experience.company,
+			'job-name-input': experience.job_name,
+			'city-input': experience.city,
+			'date-start-input': experience.date_start,
+			'date-end-input': experience.date_end,
+			'description-experience-input': experience.description,
+		})
+		await page.getByTestId('add-experience-button').click()
+		await expect(dialogue(page).getByTestId('experience-selected')).toHaveCount(
+			1
+		)
+		await sauver(page, 'save-button-experience')
+		expect(patchs[1]).toEqual({ experiences: [experience] })
+		expect((await profilServeur()).experiences).toMatchObject([experience])
+
+		const offre = {
+			name: 'Offre C',
+			price: '80',
+			description: 'Description de l’offre C',
+			options: [
+				{ name: 'Option C', price: '15', description: 'Option de l’offre C' },
+			],
+		}
+		await page.getByTestId('update-service-offers-button').click()
+		await retirer('Retirer la prestation Offre A')
+		await page.getByTestId('add-service-offers-option-button').click()
+		await remplir(page, {
+			'name-service-offers-input': offre.name,
+			'price-service-offers-input': offre.price,
+			'description-service-offers-input': offre.description,
+			'name-service-offers-option-input-0': offre.options[0].name,
+			'price-service-offers-option-input-0': offre.options[0].price,
+			'description-service-offers-option-input-0': offre.options[0].description,
+		})
+		await page.getByTestId('add-service-offers-button').click()
+		await expect(
+			dialogue(page).getByTestId('delete-service-offers-button')
+		).toHaveCount(1)
+		await sauver(page, 'save-button-service-offers')
+		expect(patchs[2]).toEqual({ service_offers: [offre] })
+		expect(patchs).toHaveLength(3)
+		expect((await profilServeur()).service_offers).toMatchObject([offre])
+
+		// on the page without a reload, then read again from the fake Strapi
+		for (const chargement of ['sans rechargement', 'rechargement']) {
+			if (chargement === 'rechargement') await aller(page, '/auth/profil')
+			await expect(page.getByTestId('course-diploma'), chargement).toHaveText([
+				formation.diploma,
+			])
+			await expect(
+				page.getByTestId('experience-company'),
+				chargement
+			).toHaveText([experience.company])
+			await expect(
+				page.getByTestId('service-offer-name'),
+				chargement
+			).toHaveText([offre.name])
 		}
 		expect(erreurs).toEqual([])
 	})
@@ -2202,38 +2444,97 @@ test.describe('UI-03 photos', () => {
 		expect((await fetch(premiere.url)).status).toBe(404)
 	})
 
-	test('photo de profil de plus de 25 Mo : refusée dans la modale, son message et son toast ; la sauvegarde n’envoie aucun fichier', async ({
+	test('photo de profil de plus de 25 Mo : refusée dans la modale, son message et son toast, la sauvegarde n’envoie aucun fichier ; refusée puis une photo valide choisie dans la même modale : le message part, celle-ci est envoyée et rattachée', async ({
 		page,
 	}) => {
+		const erreurs = erreursDeLaPage(page)
 		const patchs = corpsDesPatchs(page)
 		await ouvrirProfil(page)
 		await page.getByTestId('update-resume-button').click()
-		// 25 MB and 1 byte, read as a JPEG: refused on its size, not its type
-		await page.getByTestId('file-main-upload').setInputFiles({
-			name: 'enorme.jpg',
-			mimeType: 'image/jpeg',
-			buffer: Buffer.concat([
-				Buffer.from([0xff, 0xd8, 0xff, 0xe0]),
-				Buffer.alloc(25 * MO - 3),
-			]),
-		})
-		const message =
-			'Cette photo pèse plus de 25 Mo : choisis-en une plus légère.'
-		await expect(page.getByTestId('photo-error')).toHaveText(message)
-		await expect(page.locator('#photo-refusee')).toContainText(message)
+		await page.getByTestId('file-main-upload').setInputFiles(photoTropLourde())
+		await expect(page.getByTestId('photo-error')).toHaveText(
+			MESSAGE_PHOTO_TROP_LOURDE
+		)
+		await expect(page.locator('#photo-refusee')).toContainText(
+			MESSAGE_PHOTO_TROP_LOURDE
+		)
 
 		await sauver(page, 'save-button-resume')
-		const { journal, fichiers, profils } = await etat()
-		expect(appels(journal, 'POST', '/api/upload')).toHaveLength(0)
-		expect(fichiers).toEqual([])
+		let serveur = await etat()
+		expect(appels(serveur.journal, 'POST', '/api/upload')).toHaveLength(0)
+		expect(serveur.fichiers).toEqual([])
 		expect(patchs).toHaveLength(1)
 		expect(patchs[0]).not.toHaveProperty('main_picture')
-		expect(profils[COMPTE_TEST.id].main_picture).toBeNull()
+		expect(serveur.profils[COMPTE_TEST.id].main_picture).toBeNull()
+
+		// refused again, then a valid picture picked in the same modal: its
+		// preview replaces the message, and the save sends it and attaches it
+		await page.getByTestId('update-resume-button').click()
+		await page.getByTestId('file-main-upload').setInputFiles(photoTropLourde())
+		await expect(page.getByTestId('photo-error')).toHaveText(
+			MESSAGE_PHOTO_TROP_LOURDE
+		)
+		await choisirPhotoProfil(page, await petitePng())
+		await sauver(page, 'save-button-resume')
+		serveur = await etat()
+		expect(appels(serveur.journal, 'POST', '/api/upload')).toHaveLength(1)
+		expect(serveur.fichiers).toHaveLength(1)
+		const [photo] = serveur.fichiers
+		expect(patchs).toHaveLength(2)
+		expect(patchs[1].main_picture).toBe(photo.id)
+		expect(serveur.profils[COMPTE_TEST.id].main_picture.id).toBe(photo.id)
+		expect(erreurs).toEqual([])
+	})
+
+	test('portfolio : une photo de plus de 25 Mo refusée, son message et son toast, rien à ajouter ; une photo valide choisie ensuite dans la même modale efface le message, s’ajoute et est envoyée à la sauvegarde', async ({
+		page,
+	}) => {
+		const erreurs = erreursDeLaPage(page)
+		const patchs = corpsDesPatchs(page)
+		await ouvrirProfil(page)
+		await page.getByTestId('update-portefolio-button').click()
+		const vignettes = dialogue(page).getByTestId('portfolio-slide')
+		const choix = page.getByTestId('file-upload-portefolio')
+		await choix.setInputFiles(photoTropLourde())
+		await expect(page.getByTestId('photo-error')).toHaveText(
+			MESSAGE_PHOTO_TROP_LOURDE
+		)
+		await expect(page.locator('#photo-refusee')).toContainText(
+			MESSAGE_PHOTO_TROP_LOURDE
+		)
+		await expect(page.getByTestId('portfolio-preview')).toHaveCount(0)
+		await expect(page.getByTestId('add-button-portefolio')).toBeDisabled()
+		await expect(vignettes).toHaveCount(0)
+
+		const photo = await petiteWebp(0)
+		await choix.setInputFiles(photo)
+		await expect(page.getByTestId('portfolio-preview')).toBeVisible()
+		await expect(page.getByTestId('photo-error')).toHaveCount(0)
+		await page.getByTestId('add-button-portefolio').click()
+		await expect(vignettes).toHaveCount(1)
+		await expect(page.getByTestId('portfolio-pending')).toHaveText(
+			'1 photo sera envoyée quand vous sauvegarderez.'
+		)
+		expect(appels((await etat()).journal, 'POST', '/api/upload')).toHaveLength(
+			0
+		)
+
+		await sauver(page, 'save-button-portefolio')
+		const { journal, fichiers, profils } = await etat()
+		expect(appels(journal, 'POST', '/api/upload')).toHaveLength(1)
+		expect(fichiers.map(f => f.name)).toEqual([photo.name])
+		const [envoyee] = fichiers
+		expect(patchs).toEqual([{ image_gallery: [envoyee.id] }])
+		expect(profils[COMPTE_TEST.id].image_gallery.map(f => f.id)).toEqual([
+			envoyee.id,
+		])
+		expect(erreurs).toEqual([])
 	})
 
 	test('portfolio : 10 photos WebP ajoutées, la 11e refusée ; les 10 envoyées à la sauvegarde, dans l’ordre ; toutes retirées ensuite, la galerie vide enregistrée et leurs fichiers supprimés', async ({
 		page,
 	}) => {
+		const erreurs = erreursDeLaPage(page)
 		test.slow()
 		const patchs = corpsDesPatchs(page)
 		await ouvrirProfil(page)
@@ -2294,11 +2595,13 @@ test.describe('UI-03 photos', () => {
 		await page.getByTestId('update-portefolio-button').click()
 		await expect(dialogue(page)).toBeVisible()
 		await expect(vignettes).toHaveCount(0)
+		expect(erreurs).toEqual([])
 	})
 
 	test('portfolio de 10 photos enregistrées : la 11e refusée, rien n’est envoyé ; une photo retirée, celle choisie s’ajoute sans la choisir à nouveau et remplace l’autre à la sauvegarde', async ({
 		page,
 	}) => {
+		const erreurs = erreursDeLaPage(page)
 		const stockees = await fichiersStockes(10)
 		await profilDeDepart({ image_gallery: stockees.map(f => f.id) })
 		await ouvrirProfil(page)
@@ -2342,6 +2645,7 @@ test.describe('UI-03 photos', () => {
 			nouvelle.id,
 		])
 		expect((await fetch(stockees[0].url)).status).toBe(404)
+		expect(erreurs).toEqual([])
 	})
 
 	test('envoi refusé par l’API (413) : message, rien n’est rattaché', async ({
