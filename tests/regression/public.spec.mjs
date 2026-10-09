@@ -35,6 +35,14 @@ async function piloter(chemin, corps) {
 }
 const panne = corps => piloter('/__panne', corps)
 const journal = async () => (await piloter('/__etat')).journal
+// GET /api/searching with a term (the search), and without any (the whole
+// directory, read once per visit instead of the search for a city alone)
+const appelsRecherche = async () =>
+	(await journal()).filter(e => e.m === 'GET' && e.p === '/api/searching')
+const recherches = async () =>
+	(await appelsRecherche()).filter(e => new URLSearchParams(e.q).has('search'))
+const annuaires = async () =>
+	(await appelsRecherche()).filter(e => !new URLSearchParams(e.q).has('search'))
 
 test.beforeEach(async () => {
 	await piloter('/__reset', {})
@@ -502,10 +510,8 @@ test.describe('UI-07 recherche', () => {
 		})
 		return erreurs
 	}
-	const recherches = async () =>
-		(await journal()).filter(e => e.m === 'GET' && e.p === '/api/searching')
 
-	test('/search?city=Annecy : sans erreur, un h1, la ville préremplie, un seul appel à l’API', async ({
+	test('/search?city=Annecy : sans erreur, un h1, la ville préremplie, un seul appel à l’API (l’annuaire)', async ({
 		page,
 	}) => {
 		const erreurs = erreursDeLaPage(page)
@@ -521,7 +527,8 @@ test.describe('UI-07 recherche', () => {
 		// the unavailable profile is not in the results
 		await expect(page.getByText('Inès Fictif')).toHaveCount(0)
 		await expect(cartes.first()).toHaveAttribute('href', /^\/profil\//)
-		expect(await recherches()).toHaveLength(1)
+		expect(await appelsRecherche()).toHaveLength(1)
+		expect(await annuaires()).toHaveLength(1)
 		expect(erreurs).toEqual([])
 	})
 
@@ -561,19 +568,26 @@ test.describe('UI-07 recherche', () => {
 		await expect(page.getByTestId('search-result').first()).toBeVisible()
 	})
 
-	test('API coupée (aucune réponse) : message en moins de 10 s', async ({
+	test('API coupée (aucune réponse) : message en moins de 10 s, pour la recherche comme pour l’annuaire', async ({
 		page,
 	}) => {
 		await panne({ delaiRechercheMs: 30_000 })
-		const debut = Date.now()
-		await page.goto('/search?search=mariage&city=Annecy')
-		await expect(page.getByTestId('search-error')).toBeVisible({
-			timeout: 10_000,
-		})
-		expect(Date.now() - debut).toBeLessThan(10_000)
+		for (const chemin of [
+			'/search?search=mariage&city=Annecy',
+			'/search?city=Annecy',
+		]) {
+			const debut = Date.now()
+			await page.goto(chemin)
+			await expect(page.getByTestId('search-error')).toBeVisible({
+				timeout: 10_000,
+			})
+			expect(Date.now() - debut, chemin).toBeLessThan(10_000)
+		}
+		expect(await recherches()).toHaveLength(1)
+		expect(await annuaires()).toHaveLength(1)
 	})
 
-	test('ville seule depuis le formulaire de l’accueil : /search?city=…, un seul appel', async ({
+	test('ville seule depuis le formulaire de l’accueil : /search?city=…, un seul appel (l’annuaire)', async ({
 		page,
 	}) => {
 		const erreurs = erreursDeLaPage(page)
@@ -587,32 +601,52 @@ test.describe('UI-07 recherche', () => {
 		await expect(page.getByRole('heading', { level: 1 })).toHaveText(
 			'1 résultat pour « Lyon »'
 		)
-		expect(await recherches()).toHaveLength(1)
+		expect(await appelsRecherche()).toHaveLength(1)
+		expect(await annuaires()).toHaveLength(1)
 		expect(erreurs).toEqual([])
 	})
 
-	test('pages de 20 : la page 2 sans nouvel appel, une nouvelle recherche en un appel', async ({
+	test('pages de 20 : plus de 50 résultats, toutes les pages atteintes sans nouvel appel, une nouvelle recherche en un appel', async ({
 		page,
 	}) => {
-		// 20 more in Annecy: 33 results, the 28 of Annecy first (UI-10)
-		await piloter('/__multiplier', { n: 20, city: 'Annecy' })
+		// 60 more in Annecy (API #384: 200 cards at most, no more cut at 50):
+		// the 68 of Annecy counted (UI-10), then the 5 others of the directory,
+		// one call in all
+		await piloter('/__multiplier', { n: 60, city: 'Annecy' })
 		await page.goto('/search?city=Annecy')
 		await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-			'28 résultats pour « Annecy »'
+			'68 résultats pour « Annecy »'
 		)
 		const cartes = page.getByTestId('search-result')
 		await expect(cartes).toHaveCount(20)
-		await expect(page.getByTestId('search-pagination')).toContainText(
-			'Page 1 sur 2'
-		)
+		const pagination = page.getByTestId('search-pagination')
+		await expect(pagination).toContainText('Page 1 sur 4')
 		await page.getByRole('link', { name: 'Page suivante' }).click()
 		await expect(page).toHaveURL(/page=2/)
-		await expect(page.getByTestId('search-pagination')).toContainText(
-			'Page 2 sur 2'
+		await expect(pagination).toContainText('Page 2 sur 4')
+		await expect(cartes).toHaveCount(20)
+		await page.getByRole('link', { name: 'Page suivante' }).click()
+		await page.getByRole('link', { name: 'Page suivante' }).click()
+		await expect(page).toHaveURL(/page=4/)
+		await expect(pagination).toContainText('Page 4 sur 4')
+		await expect(page.getByRole('link', { name: 'Page suivante' })).toHaveCount(
+			0
 		)
-		expect(await cartes.count()).toBeGreaterThan(0)
-		expect(await cartes.count()).toBeLessThanOrEqual(20)
-		expect(await recherches()).toHaveLength(1)
+		// 73 = 60 + 13: the last 8 of Annecy, then the 4 that travel and
+		// Coquille, without a city
+		await expect(cartes).toHaveCount(13)
+		for (const [section, n] of [
+			['locaux', 8],
+			['deplacent', 4],
+			['autres', 1],
+		])
+			await expect(
+				page
+					.getByTestId(`search-results-${section}`)
+					.getByTestId('search-result')
+			).toHaveCount(n)
+		expect(await recherches()).toHaveLength(0)
+		expect(await annuaires()).toHaveLength(1)
 
 		const formulaire = page.getByRole('search')
 		await formulaire.getByLabel('Prestation recherchée').fill('mariage')
@@ -623,7 +657,47 @@ test.describe('UI-07 recherche', () => {
 		await expect(page.getByRole('heading', { level: 1 })).toHaveText(
 			/pour « mariage » à « Annecy »$/
 		)
-		expect(await recherches()).toHaveLength(2)
+		// a term: the search, never the directory
+		expect(await recherches()).toHaveLength(1)
+		expect(await annuaires()).toHaveLength(1)
+	})
+
+	test('pages de 20 sans ville : au-delà de 50, la dernière page « Page 4 sur 4 »', async ({
+		page,
+	}) => {
+		// the 60 made-up profiles, Camille Fictive and the description of
+		// Nina: the searchable profiles that hold « fictive »
+		await piloter('/__multiplier', { n: 60, city: 'Annecy' })
+		await page.goto('/search?search=Fictive&page=4')
+		await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+			'62 résultats pour « Fictive »'
+		)
+		await expect(page.getByTestId('search-pagination')).toContainText(
+			'Page 4 sur 4'
+		)
+		await expect(page.getByTestId('search-result')).toHaveCount(2)
+		expect(await recherches()).toHaveLength(1)
+		expect(await annuaires()).toHaveLength(0)
+	})
+
+	test('annuaire coupé à 200 cartes par l’API : la recherche par ville lit aussi la recherche, pour les profils de la ville laissés de côté', async ({
+		page,
+	}) => {
+		// 200 more in Annecy, then one in Grenoble: same date, a larger id,
+		// so the directory (the last updated first, 200 at most) leaves it out
+		await piloter('/__multiplier', { n: 200, city: 'Annecy' })
+		await piloter('/__multiplier', { n: 1, city: 'Grenoble' })
+		await page.goto('/search?city=Grenoble')
+		await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+			'1 résultat pour « Grenoble »'
+		)
+		await expect(
+			page
+				.getByTestId('search-results-locaux')
+				.getByTestId('search-result-zone')
+		).toHaveText(['Grenoble et 10 km autour'])
+		expect(await annuaires()).toHaveLength(1)
+		expect(await recherches()).toHaveLength(1)
 	})
 })
 
@@ -810,30 +884,44 @@ test.describe('UI-10 recherche par ville : titre honnête', () => {
 			'8 résultats pour « Annecy »'
 		)
 		await expect(cartes(page, 'locaux')).toHaveCount(8)
-		await expect(cartes(page, 'autres')).toHaveCount(5)
+		// no département written by the profiles of Annecy: those that
+		// travel, then the rest, each under its heading
+		await expect(page.locator('[data-cy^="search-titre-"]')).toHaveText([
+			'Autres maquilleuses qui se déplacent',
+			'Autres maquilleuses',
+		])
+		await expect(cartes(page, 'deplacent')).toHaveCount(4)
+		await expect(cartes(page, 'autres')).toHaveCount(1)
 		for (const zone of await zones(page, 'locaux'))
 			expect(zone).toMatch(/Annecy/)
-		const ailleurs = await zones(page, 'autres')
+		const ailleurs = [
+			...(await zones(page, 'deplacent')),
+			...(await zones(page, 'autres')),
+		]
 		for (const zone of ailleurs) expect(zone).not.toMatch(/Annecy/)
 		expect(ailleurs.join(' | ')).toMatch(/Nantes/)
-		// the others come after their heading
-		const titre = page.getByRole('heading', {
-			level: 2,
-			name: 'Autres maquilleuses qui se déplacent',
-		})
-		await expect(titre).toBeVisible()
 		const ordre = await page.evaluate(() => {
-			const h2 = document.querySelector('[data-cy="search-autres-titre"]')
-			const locaux = document.querySelector('[data-cy="search-results-locaux"]')
-			const autres = document.querySelector('[data-cy="search-results-autres"]')
-			const avant = (a, b) =>
-				!!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING)
-			return {
-				locauxPuisTitre: avant(locaux, h2),
-				titrePuisAutres: avant(h2, autres),
-			}
+			const dataCy = [
+				'search-results-locaux',
+				'search-titre-deplacent',
+				'search-results-deplacent',
+				'search-titre-autres',
+				'search-results-autres',
+			]
+			const [premier, ...suivants] = dataCy.map(cle =>
+				document.querySelector(`[data-cy="${cle}"]`)
+			)
+			let avant = premier
+			return suivants.map(element => {
+				const dansLOrdre = !!(
+					avant.compareDocumentPosition(element) &
+					Node.DOCUMENT_POSITION_FOLLOWING
+				)
+				avant = element
+				return dansLOrdre
+			})
 		})
-		expect(ordre).toEqual({ locauxPuisTitre: true, titrePuisAutres: true })
+		expect(ordre).toEqual([true, true, true, true])
 		// an empty city is said
 		await expect(
 			cartes(page, 'autres')
@@ -880,13 +968,14 @@ test.describe('UI-10 recherche par ville : titre honnête', () => {
 			'« Grenoble »'
 		)
 		await expect(page.getByTestId('search-results-locaux')).toHaveCount(0)
-		await expect(cartes(page, 'autres')).toHaveCount(13)
-		await expect(
-			page.getByRole('heading', {
-				level: 2,
-				name: 'Autres maquilleuses qui se déplacent',
-			})
-		).toBeVisible()
+		// nobody in Grenoble: every searchable profile of the directory is
+		// shown under the headings, the 11 that travel first
+		await expect(page.getByTestId('search-result')).toHaveCount(13)
+		await expect(page.locator('[data-cy^="search-titre-"]')).toHaveText([
+			'Autres maquilleuses qui se déplacent',
+			'Autres maquilleuses',
+		])
+		await expect(cartes(page, 'deplacent')).toHaveCount(11)
 	})
 
 	test('sans ville : une seule liste, comptée en entier', async ({ page }) => {
@@ -894,12 +983,115 @@ test.describe('UI-10 recherche par ville : titre honnête', () => {
 		await expect(page.getByRole('heading', { level: 1 })).toHaveText(
 			/^\d+ résultats pour « Soirée »$/
 		)
-		await expect(page.getByTestId('search-autres-titre')).toHaveCount(0)
+		await expect(page.locator('[data-cy^="search-titre-"]')).toHaveCount(0)
 		const total = Number(
 			(await page.getByRole('heading', { level: 1 }).textContent()).split(
 				' '
 			)[0]
 		)
 		await expect(cartes(page, 'locaux')).toHaveCount(total)
+	})
+
+	test('annuaire clairsemé : après Annecy, les autres du 74, celles qui se déplacent, puis le reste, aucune deux fois ; l’annuaire lu une fois par visite', async ({
+		page,
+	}) => {
+		// made up: Annecy with its postal code (the API writes « Annecy (74) »)
+		// tells the département; Thonon is in it; Chambéry travels; Grenoble
+		// without a radius comes last, with Coquille without a city
+		for (const [city, action_radius] of [
+			['Annecy 74000', 10],
+			['Thonon-les-Bains 74200', null],
+			['Chambéry (73)', 15],
+			['Grenoble', null],
+		])
+			await piloter('/__multiplier', { n: 1, city, action_radius })
+		await page.goto('/search?city=Annecy')
+		// the title still counts Annecy only: the 8 and Annecy (74)
+		await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+			'9 résultats pour « Annecy »'
+		)
+		const titres = page.locator('[data-cy^="search-titre-"]')
+		await expect(titres).toHaveText([
+			'Autres maquilleuses du 74 (Haute-Savoie)',
+			'Autres maquilleuses qui se déplacent',
+			'Autres maquilleuses',
+		])
+		expect(await zones(page, 'departement')).toEqual(['Thonon-les-Bains (74)'])
+		// the last updated first: Saint-Julien, Lyon, Nantes, Annemasse (the
+		// fixture, 30 km), then Chambéry
+		expect(await zones(page, 'deplacent')).toEqual([
+			'Saint-Julien-en-Genevois et 30 km autour',
+			'Lyon et 30 km autour',
+			'Nantes et 30 km autour',
+			'Annemasse et 30 km autour',
+			'Chambéry (73) et 15 km autour',
+		])
+		expect(await zones(page, 'autres')).toEqual([
+			'Grenoble',
+			'Zone non renseignée',
+		])
+		// every searchable profile, once
+		const liens = await page
+			.getByTestId('search-result')
+			.evaluateAll(cartes => cartes.map(a => a.getAttribute('href')))
+		expect(liens).toHaveLength(17)
+		expect(new Set(liens).size).toBe(liens.length)
+		expect(await recherches()).toHaveLength(0)
+		expect(await annuaires()).toHaveLength(1)
+
+		// another city in the same visit: no call at all
+		const formulaire = page.getByRole('search')
+		await formulaire.getByLabel('Ville de la prestation').fill('Lyon')
+		await formulaire
+			.getByRole('button', { name: 'Trouver une maquilleuse' })
+			.click()
+		await expect(page).toHaveURL(/\/search\?city=Lyon$/)
+		await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+			'1 résultat pour « Lyon »'
+		)
+		await expect(cartes(page, 'autres').first()).toBeVisible()
+		expect(await appelsRecherche()).toHaveLength(1)
+	})
+
+	test('un code postal tapé : son département est le lieu cherché, compté dans le titre', async ({
+		page,
+	}) => {
+		await piloter('/__multiplier', { n: 1, city: 'Thonon-les-Bains 74200' })
+		await piloter('/__multiplier', { n: 1, city: 'Annecy 74000' })
+		await page.goto('/search?city=74000')
+		// API #384 finds no « 74000 » (the public city is « Annecy (74) »):
+		// the directory gives the two of the 74, Annecy alone is not known
+		// to be in it (no geocoding)
+		await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+			'2 résultats pour « 74000 »'
+		)
+		expect((await zones(page, 'locaux')).sort()).toEqual([
+			'Annecy (74) et 10 km autour',
+			'Thonon-les-Bains (74) et 10 km autour',
+		])
+		await expect(page.getByTestId('search-titre-deplacent')).toHaveText(
+			'Autres maquilleuses qui se déplacent'
+		)
+		await expect(page.getByTestId('search-titre-departement')).toHaveCount(0)
+	})
+
+	test('annuaire en panne : la recherche par ville dit son échec, « Réessayer » le relit', async ({
+		page,
+	}) => {
+		await panne({ annuaire: 500 })
+		await page.goto('/search?city=Annecy')
+		await expect(page.getByTestId('search-error')).toBeVisible()
+		await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+			'La recherche n’a pas abouti'
+		)
+		await panne({ annuaire: null })
+		await page.getByTestId('search-retry').click()
+		await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+			'8 résultats pour « Annecy »'
+		)
+		await expect(cartes(page, 'locaux')).toHaveCount(8)
+		// the failed read is not kept: read again, never the search instead
+		expect(await annuaires()).toHaveLength(2)
+		expect(await recherches()).toHaveLength(0)
 	})
 })

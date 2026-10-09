@@ -1,11 +1,16 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
+	codeDepartementEcrit,
 	correspondanceLieu,
 	DEPARTEMENTS,
 	departementDuCodePostal,
+	departementsDeLaRecherche,
+	duDepartement,
+	lieuUtilisable,
 	lireLieu,
 	normaliserLieu,
+	sectionsParLieu,
 	separerParLieu,
 } from '../../src/lib/lieu.js'
 
@@ -278,6 +283,255 @@ describe('place of a search by city (UI-10)', () => {
 			locaux: [],
 			autres: [],
 			parLieu: true,
+		})
+	})
+})
+
+describe('the others of a search by city in a sparse directory (UI-10)', () => {
+	// made-up result cards: their city and action radius matter here
+	const carte = (id, city, action_radius = null) => ({
+		id,
+		username: `profil-${id}`,
+		city,
+		action_radius,
+	})
+	const ids = liste => liste.map(r => r.id)
+	const resume = ({ locaux, departements, sections, parLieu }) => ({
+		locaux: ids(locaux),
+		parLieu,
+		departements,
+		sections: sections.map(({ cle, titre, profils }) => [
+			cle,
+			titre,
+			ids(profils),
+		]),
+	})
+
+	test('a département written as a code by a profile: postal code or « (74) », never a name', () => {
+		assert.equal(codeDepartementEcrit('Annecy (74)'), '74')
+		assert.equal(codeDepartementEcrit('Annecy 74000'), '74')
+		assert.equal(codeDepartementEcrit('Thonon-les-Bains 74200'), '74')
+		assert.equal(codeDepartementEcrit('Ajaccio (2A)'), '2A')
+		assert.equal(codeDepartementEcrit('Saint-Denis (974)'), '974')
+		assert.equal(codeDepartementEcrit('Annecy (74), 74000'), '74')
+		// a name may be another place of the field
+		assert.equal(codeDepartementEcrit('Paris, Lyon et Annecy'), null)
+		assert.equal(codeDepartementEcrit('Annecy, Haute-Savoie'), null)
+		// a code in a field of two places: of which one?
+		assert.equal(codeDepartementEcrit('Paris (75), Lyon'), null)
+		assert.equal(codeDepartementEcrit('Lyon, Annecy 74000'), null)
+		// a country is no other place
+		assert.equal(codeDepartementEcrit('Annecy (74), Suisse'), '74')
+		assert.equal(codeDepartementEcrit('Annecy (74), France'), '74')
+		// two départements, or a number that is no code
+		assert.equal(codeDepartementEcrit('Lyon 69003, Paris 75011'), null)
+		assert.equal(codeDepartementEcrit('Corse (20)'), null)
+		assert.equal(codeDepartementEcrit('Annecy 74'), null)
+		assert.equal(codeDepartementEcrit('74 et alentours'), null)
+		for (const v of ['', 'Annecy', null, undefined, 74000])
+			assert.equal(codeDepartementEcrit(v), null, String(v))
+	})
+
+	test('the département of the search: typed, else the most frequent code of the profiles of the city', () => {
+		const annecy = [
+			carte(1, 'Annecy (74)'),
+			carte(2, 'Annecy'),
+			carte(3, 'Annecy 74000'),
+			carte(4, 'Annecy, Savoie (73)'),
+		]
+		assert.deepEqual(departementsDeLaRecherche(annecy, 'Annecy'), ['74'])
+		// what was typed wins: a postal code, a code, a name
+		assert.deepEqual(departementsDeLaRecherche(annecy, 'Annecy 73000'), ['73'])
+		assert.deepEqual(departementsDeLaRecherche([], '74000'), ['74'])
+		assert.deepEqual(departementsDeLaRecherche([], 'Annecy (74)'), ['74'])
+		assert.deepEqual(departementsDeLaRecherche([], 'Haute-Savoie'), ['74'])
+		assert.deepEqual(departementsDeLaRecherche([], 'Corse'), ['2A', '2B'])
+		// a tie: the first profile, in the order of the API
+		assert.deepEqual(
+			departementsDeLaRecherche(
+				[carte(1, 'Saint-Denis (93)'), carte(2, 'Saint-Denis (974)')],
+				'Saint-Denis'
+			),
+			['93']
+		)
+		// no code written: no département (« Paris » is another place here)
+		assert.deepEqual(
+			departementsDeLaRecherche(
+				[carte(1, 'Annecy'), carte(2, 'Paris, Lyon et Annecy')],
+				'Annecy'
+			),
+			[]
+		)
+		assert.deepEqual(departementsDeLaRecherche(null, 'Annecy'), [])
+		assert.equal(duDepartement(['74']), 'du 74 (Haute-Savoie)')
+		assert.equal(
+			duDepartement(['2A', '2B']),
+			'du 2A (Corse-du-Sud) et du 2B (Haute-Corse)'
+		)
+	})
+
+	test('/search?city=Annecy: the city, then its département, those that travel, then the rest, each profile once', () => {
+		// the directory, as the search page places it for a city alone: every
+		// searchable profile, the last updated first
+		const annuaire = [
+			carte(2, 'Annecy'),
+			carte(4, 'Thonon-les-Bains (74)'),
+			carte(5, 'Chambéry (73)', 15),
+			carte(6, '', 30),
+			carte(7, 'Grenoble'),
+			carte(1, 'Annecy (74)', 20),
+			carte(3, 'Lyon', 30),
+			carte(8, 'Annecy-le-Vieux', 10),
+			carte(9, 'Nantes', 0),
+			carte(10, 'Marseille'),
+			carte(11, 'Cluses 74300', 5),
+		]
+		const sections = sectionsParLieu(annuaire, 'Annecy')
+		assert.deepEqual(resume(sections), {
+			// the title counts these only
+			locaux: [2, 1, 8],
+			parLieu: true,
+			departements: ['74'],
+			sections: [
+				['departement', 'Autres maquilleuses du 74 (Haute-Savoie)', [4, 11]],
+				['deplacent', 'Autres maquilleuses qui se déplacent', [5, 3]],
+				// no city (6), no radius (7, 10), a radius of 0 (9)
+				['autres', 'Autres maquilleuses', [6, 7, 9, 10]],
+			],
+		})
+		const montres = [
+			...sections.locaux,
+			...sections.sections.flatMap(s => s.profils),
+		]
+		assert.deepEqual(
+			ids(montres).sort((a, b) => a - b),
+			ids(annuaire).sort((a, b) => a - b)
+		)
+	})
+
+	test('a directory cut by the API: the search answer first, then the directory, each profile once', () => {
+		const resultats = [carte(1, 'Annecy (74)', 20), carte(12, 'Annecy')]
+		const annuaire = [carte(3, 'Lyon', 30), carte(1, 'Annecy (74)', 20)]
+		const sections = sectionsParLieu(resultats, 'Annecy', annuaire)
+		assert.deepEqual(resume(sections), {
+			locaux: [1, 12],
+			parLieu: true,
+			departements: ['74'],
+			sections: [['deplacent', 'Autres maquilleuses qui se déplacent', [3]]],
+		})
+	})
+
+	test('a postal code typed: its département is the place searched, counted in the title', () => {
+		const annuaire = [
+			carte(1, 'Annecy (74)'),
+			carte(2, 'Lyon', 30),
+			carte(3, 'Thonon-les-Bains 74200'),
+			carte(4, 'Annecy', 10),
+			carte(5, ''),
+		]
+		assert.deepEqual(resume(sectionsParLieu(annuaire, '74000')), {
+			locaux: [1, 3],
+			parLieu: true,
+			departements: ['74'],
+			// no geocoding: « Annecy » alone is not known to be in the 74
+			sections: [
+				['deplacent', 'Autres maquilleuses qui se déplacent', [2, 4]],
+				['autres', 'Autres maquilleuses', [5]],
+			],
+		})
+	})
+
+	test('no département known: the same sections without the département, nobody left out', () => {
+		const annuaire = [
+			carte(1, 'Annecy'),
+			carte(3, 'Nantes'),
+			carte(4, '', 30),
+			carte(5, 'Paris', 20),
+			carte(2, 'Lyon'),
+		]
+		assert.deepEqual(resume(sectionsParLieu(annuaire, 'Annecy')), {
+			locaux: [1],
+			parLieu: true,
+			departements: [],
+			sections: [
+				['deplacent', 'Autres maquilleuses qui se déplacent', [5]],
+				['autres', 'Autres maquilleuses', [3, 4, 2]],
+			],
+		})
+		// a city nobody names: the title at zero, the others all there
+		assert.deepEqual(resume(sectionsParLieu(annuaire, 'Grenoble')), {
+			locaux: [],
+			parLieu: true,
+			departements: [],
+			sections: [
+				['deplacent', 'Autres maquilleuses qui se déplacent', [5]],
+				['autres', 'Autres maquilleuses', [1, 3, 4, 2]],
+			],
+		})
+	})
+
+	test('a département inferred or not, the same profiles shown', () => {
+		// « Toulouse (31) » tells the 31, « Toulouse » nothing: only the
+		// sections change, never who is shown
+		const annuaire = ville => [
+			carte(1, ville),
+			carte(2, 'Grenoble'),
+			carte(3, ''),
+			carte(4, 'Lyon', 30),
+			carte(5, 'Muret (31)'),
+		]
+		const montres = city => {
+			const { locaux, sections } = sectionsParLieu(annuaire(city), 'Toulouse')
+			return ids([...locaux, ...sections.flatMap(s => s.profils)]).sort()
+		}
+		assert.deepEqual(montres('Toulouse (31)'), [1, 2, 3, 4, 5])
+		assert.deepEqual(montres('Toulouse'), [1, 2, 3, 4, 5])
+		assert.deepEqual(
+			resume(sectionsParLieu(annuaire('Toulouse (31)'), 'Toulouse')).sections,
+			[
+				['departement', 'Autres maquilleuses du 31 (Haute-Garonne)', [5]],
+				['deplacent', 'Autres maquilleuses qui se déplacent', [4]],
+				['autres', 'Autres maquilleuses', [2, 3]],
+			]
+		)
+	})
+
+	test('a search by term with a city: the API answer only, split the same way', () => {
+		const resultats = [
+			carte(1, 'Lyon'),
+			carte(2, 'Annecy (74)'),
+			carte(3, 'Cluses (74)'),
+		]
+		assert.deepEqual(resume(sectionsParLieu(resultats, 'Annecy')), {
+			locaux: [2],
+			parLieu: true,
+			departements: ['74'],
+			sections: [
+				['departement', 'Autres maquilleuses du 74 (Haute-Savoie)', [3]],
+				['autres', 'Autres maquilleuses', [1]],
+			],
+		})
+	})
+
+	test('a place the page can rank by', () => {
+		for (const city of ['Annecy', '74000', 'Haute-Savoie', 'Corse', 'Suisse'])
+			assert.equal(lieuUtilisable(city), true, city)
+		for (const city of ['', '-', 'France', 'Toute la France', null])
+			assert.equal(lieuUtilisable(city), false, String(city))
+	})
+
+	test('without a usable place, one list: the directory is not added', () => {
+		const resultats = [carte(1, 'Lyon'), carte(2, 'Annecy')]
+		for (const city of ['', '-', 'France'])
+			assert.deepEqual(
+				sectionsParLieu(resultats, city, [carte(3, 'Paris', 10)]),
+				{ locaux: resultats, parLieu: false, departements: [], sections: [] }
+			)
+		assert.deepEqual(resume(sectionsParLieu(null, 'Annecy', null)), {
+			locaux: [],
+			parLieu: true,
+			departements: [],
+			sections: [],
 		})
 	})
 })
