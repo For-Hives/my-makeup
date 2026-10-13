@@ -9,7 +9,8 @@
 // modal took its name as id: two chips with the same name left together.
 // Left empty, the list of offers kept a Tab stop that showed nothing.
 // From the review of #968: with the focus kept in the modal, Enter held on a
-// button clicked it again each time the key repeated.
+// button clicked it again each time the key repeated; a language or a skill
+// already in its list was added a second time.
 import { expect, test } from '@playwright/test'
 import { corpsDesPatchs, dialogue, erreursDeLaPage, sauver, valeursDeLaModale } from './espace-helpers.mjs'
 import { ouvrirProfil, profilDeDepart, profilServeur, reinitialiserStrapi } from './outils-strapi.mjs'
@@ -690,8 +691,8 @@ test.describe('lignes de la modale prestations', () => {
 })
 
 // One entry per list of chips: a chip is its own « Retirer », found by its
-// id. Its field and the message under it, its three names stored by the API
-// and one typed in the modal.
+// id. Its field and the message under it, its three names stored by the API,
+// one typed in the modal and the message of a name already in the list.
 const PUCES = [
 	{
 		nom: 'langues',
@@ -703,6 +704,7 @@ const PUCES = [
 		sauver: 'save-button-languages',
 		noms: ['Français', 'Anglais', 'Italien'],
 		nouvelle: 'Espagnol',
+		doublon: 'Cette langue est déjà dans la liste.',
 	},
 	{
 		nom: 'compétences',
@@ -714,6 +716,7 @@ const PUCES = [
 		sauver: 'save-button-skills',
 		noms: ['Mariée', 'Cinéma', 'Effets spéciaux'],
 		nouvelle: 'Théâtre',
+		doublon: 'Cette compétence est déjà dans la liste.',
 	},
 ]
 
@@ -748,40 +751,99 @@ test.describe('puces des modales langues et compétences', () => {
 			expect(erreurs).toEqual([])
 		})
 
-		// the name of a chip was its id: the first one left with the second,
-		// and the focus with them
-		test(`${liste.nom} : quatre puces du même nom ajoutées, deux par Entrée puis deux par « ; », les trois dernières retirées une à une au clavier : la puce du dessus prend le focus, la 1re reste seule dans le PATCH`, async ({
+		// Old data: a name stored several times, when the modal still added it
+		// twice. Each chip has its index as id: they stay shown, are saved as
+		// they are and leave one at a time, the focus going to the chip above.
+		test(`${liste.nom} : un nom stocké quatre fois (anciennes données), enregistré tel quel, puis les trois dernières puces retirées une à une au clavier : la puce du dessus prend le focus, la 1re reste seule dans le PATCH`, async ({
 			page,
 		}) => {
 			const erreurs = erreursDeLaPage(page)
 			const patchs = corpsDesPatchs(page)
-			await profilDeDepart({ [liste.champ]: [] })
+			const quatre = Array.from({ length: 4 }, () => ({ name: liste.nouvelle }))
+			await profilDeDepart({ [liste.champ]: quatre })
 			await ouvrirProfil(page)
 			await page.getByTestId(liste.ouvrir).click()
 			const puces = dialogue(page).getByTestId(liste.puce)
-			const champ = dialogue(page).getByTestId(liste.saisie)
-			await expect(puces).toHaveCount(0)
+			await expect(puce(page, liste.nouvelle)).toHaveCount(4)
 
-			// a pair by each way of adding: neither may share an id
-			const touches = ['Enter', 'Enter', ';', ';']
-			for (const [index, touche] of touches.entries()) {
-				await champ.pressSequentially(liste.nouvelle)
-				await expect(champ).toBeFocused()
-				await expect(champ).toHaveValue(liste.nouvelle)
-				await champ.press(touche)
-				await expect(puces).toHaveCount(index + 1)
-				await expect(champ).toHaveValue('')
-			}
+			// saved untouched: nothing is merged when the modal opens nor when it saves
+			await sauver(page, liste.sauver)
+			expect(patchs).toEqual([{ [liste.champ]: quatre }])
+			expect((await profilServeur())[liste.champ].map(element => element.name)).toEqual(
+				quatre.map(element => element.name)
+			)
 
+			await page.getByTestId(liste.ouvrir).click()
+			await expect(puce(page, liste.nouvelle)).toHaveCount(4)
 			await puces.last().focus()
-			for (let reste = touches.length - 1; reste >= 1; reste--) {
+			for (let reste = quatre.length - 1; reste >= 1; reste--) {
 				await page.keyboard.press('Enter')
 				await expect(puces).toHaveCount(reste)
 				await expect(puces.last()).toBeFocused()
 			}
 			await sauver(page, liste.sauver)
-			expect(patchs).toEqual([{ [liste.champ]: [{ name: liste.nouvelle }] }])
+			expect(patchs[1]).toEqual({ [liste.champ]: [{ name: liste.nouvelle }] })
+			expect(patchs).toHaveLength(2)
 			expect((await profilServeur())[liste.champ].map(element => element.name)).toEqual([liste.nouvelle])
+			expect(erreurs).toEqual([])
+		})
+
+		// Compared without the spaces around it nor the case: « anglais » and
+		// « Anglais » are one language. Each way of adding a chip refuses it and
+		// says why, where the name stays to be corrected.
+		test(`${liste.nom} : un nom déjà dans la liste, tapé avec une autre casse et des espaces, refusé par Entrée, par « ; » tapé puis par « ; » collé : le message est sous le champ et lu avec lui, la saisie reste ; complétée, elle s’ajoute`, async ({
+			page,
+		}) => {
+			const erreurs = erreursDeLaPage(page)
+			const patchs = corpsDesPatchs(page)
+			await profilDeDepart({ [liste.champ]: [premiere, deuxieme].map(name => ({ name })) })
+			await ouvrirProfil(page)
+			await page.getByTestId(liste.ouvrir).click()
+			const puces = dialogue(page).getByTestId(liste.puce)
+			const champ = dialogue(page).getByTestId(liste.saisie)
+			const erreur = dialogue(page).getByTestId(liste.erreur)
+			await expect(puces).toHaveCount(2)
+
+			// refused: no chip more, the message under the field and read with it
+			const refuse = async valeur => {
+				await expect(erreur).toHaveText(liste.doublon)
+				await expect(champ).toHaveAttribute('aria-invalid', 'true')
+				await expect(champ).toHaveAccessibleDescription(liste.doublon)
+				await expect(champ).toBeFocused()
+				await expect(champ).toHaveValue(valeur)
+				await expect(puces).toHaveCount(2)
+			}
+
+			// Enter, the name in capitals with spaces around it
+			const majuscules = ` ${premiere.toUpperCase()} `
+			await champ.pressSequentially(majuscules)
+			await expect(champ).toBeFocused()
+			await expect(champ).toHaveValue(majuscules)
+			await champ.press('Enter')
+			await refuse(majuscules)
+
+			// « ; » typed after it: the name stays, without its separator
+			await champ.press(';')
+			await refuse(majuscules.trim())
+
+			// pasted with its separator in one go, on a fresh field
+			const minuscules = deuxieme.toLowerCase()
+			await champ.fill('')
+			await champ.fill(`${minuscules};`)
+			await refuse(minuscules)
+
+			// completed: the message goes, Enter adds the name
+			await champ.press('End')
+			await champ.pressSequentially(' bis')
+			await expect(champ).toBeFocused()
+			await expect(champ).toHaveValue(`${minuscules} bis`)
+			await expect(erreur).toHaveCount(0)
+			await expect(champ).toHaveAttribute('aria-invalid', 'false')
+			await champ.press('Enter')
+			await expect(puce(page, `${minuscules} bis`)).toBeVisible()
+			await expect(champ).toHaveValue('')
+			await sauver(page, liste.sauver)
+			expect(patchs).toEqual([{ [liste.champ]: [premiere, deuxieme, `${minuscules} bis`].map(name => ({ name })) }])
 			expect(erreurs).toEqual([])
 		})
 
@@ -880,27 +942,20 @@ test.describe('puces des modales langues et compétences', () => {
 			expect(erreurs).toEqual([])
 		})
 
-		// A stored chip has its index as id, an added one a local id: the same
-		// name does not tie them. And the field takes the focus for the keyboard
-		// only: on a phone, a tap on the only chip would open the virtual keyboard.
-		test(`${liste.nom} : une puce stockée et une puce ajoutée du même nom, retirées l’une après l’autre à la souris : une seule part à chaque clic, puis le champ de saisie ne prend pas le focus`, async ({
+		// Stored chips have their index as id: the same name does not tie two of
+		// them. And the field takes the focus for the keyboard only: on a phone,
+		// a tap on the only chip would open the virtual keyboard.
+		test(`${liste.nom} : deux puces stockées du même nom (anciennes données), retirées l’une après l’autre à la souris : une seule part à chaque clic, puis le champ de saisie ne prend pas le focus`, async ({
 			page,
 		}) => {
 			const erreurs = erreursDeLaPage(page)
 			const patchs = corpsDesPatchs(page)
-			await profilDeDepart({ [liste.champ]: [{ name: premiere }] })
+			await profilDeDepart({ [liste.champ]: [{ name: premiere }, { name: premiere }] })
 			await ouvrirProfil(page)
 			await page.getByTestId(liste.ouvrir).click()
 			const puces = dialogue(page).getByTestId(liste.puce)
 			const champ = dialogue(page).getByTestId(liste.saisie)
-			await expect(puces).toHaveCount(1)
-
-			await champ.pressSequentially(premiere)
-			await expect(champ).toBeFocused()
-			await expect(champ).toHaveValue(premiere)
-			await champ.press('Enter')
 			await expect(puce(page, premiere)).toHaveCount(2)
-			await expect(champ).toHaveValue('')
 
 			await puces.first().click()
 			await expect(puce(page, premiere)).toHaveCount(1)

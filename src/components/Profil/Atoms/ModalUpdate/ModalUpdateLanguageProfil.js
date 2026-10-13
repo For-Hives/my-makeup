@@ -13,6 +13,7 @@ import {
 	ignorerEntreeMaintenue,
 	useEnvoi,
 } from '@/components/Profil/Atoms/ModalUpdate/ModalElements'
+import { dejaDansLaListe } from '@/lib/sauvegarde-profil'
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
 
 const schema = zod
@@ -30,6 +31,11 @@ const schema = zod
 // its id, so two chips with the same name were removed together. Never
 // sent: the PATCH holds the names only (onSubmit).
 let compteurLocal = 0
+
+// A name already in the list (dejaDansLaListe) is not added a second time:
+// said under the field, where the name stays. The chips stored twice before
+// that stay as they are, each removed on its own.
+const DEJA_DANS_LA_LISTE = 'Cette langue est déjà dans la liste.'
 
 export default function ModalUpdateLanguageProfil(props) {
 	const user = props.user
@@ -98,10 +104,12 @@ export default function ModalUpdateLanguageProfil(props) {
 				// pasted with its ';' in one go, then added
 				setValue('language', nom)
 				trigger('language').then(isValid => {
-					if (isValid) {
+					const doublon = isValid && dejaDansLaListe(userLanguageSelected, nom)
+					if (isValid && !doublon) {
 						setUserLanguageSelected(userLanguageSelected.concat({ id: `local-${++compteurLocal}`, name: nom }))
 						setUserLanguage('')
 					} else setUserLanguage(nom)
+					if (doublon) setError('language', { type: 'manual', message: DEJA_DANS_LA_LISTE })
 				})
 			} else {
 				setError('language', {
@@ -207,6 +215,9 @@ export default function ModalUpdateLanguageProfil(props) {
 																	champLangue.current = noeud
 																}}
 																required
+																// its message is read with the field
+																aria-invalid={!!errors.language}
+																aria-describedby={errors.language ? 'language-erreur' : undefined}
 																onKeyPress={async event => {
 																	if (event.key === 'Enter') {
 																		event.preventDefault()
@@ -216,7 +227,12 @@ export default function ModalUpdateLanguageProfil(props) {
 																		// Trigger a validation before adding the skill
 																		const isValid = await trigger('language')
 																		if (isValid) {
-																			if (event.target.value.trim() !== '') {
+																			if (dejaDansLaListe(userLanguageSelected, event.target.value)) {
+																				setError('language', {
+																					type: 'manual',
+																					message: DEJA_DANS_LA_LISTE,
+																				})
+																			} else if (event.target.value.trim() !== '') {
 																				// 	add the skill to the array
 																				// 	empty the input
 																				setUserLanguageSelected([
@@ -241,7 +257,11 @@ export default function ModalUpdateLanguageProfil(props) {
 																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
 															/>
 															{errors.language && (
-																<p data-cy={'error-language'} className={'mt-2 text-xs text-red-500/80'}>
+																<p
+																	id="language-erreur"
+																	data-cy={'error-language'}
+																	className={'mt-2 text-xs text-red-500/80'}
+																>
 																	{errors.language.message}
 																</p>
 															)}

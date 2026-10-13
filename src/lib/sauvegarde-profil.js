@@ -5,8 +5,9 @@ const messageEchecSauvegardePattern4 = /does not exist/i
 /**
  * Honest saves of the artist's space (UI-01, UI-05, plans/01 §3.2): the save
  * itself, the sections a save belongs to (`profile_save` event), the name
- * rule of the forms and the French message shown when the API refuses or
- * cannot be reached. The page only shows a value once the API has stored it.
+ * rule of the forms, the one of a chip already in its list and the French
+ * message shown when the API refuses or cannot be reached. The page only
+ * shows a value once the API has stored it.
  */
 
 /** `section` of the `profile_save` event, one per modal plus the onboarding */
@@ -232,6 +233,20 @@ export function erreurNom(valeur, champ = 'first_name') {
 	if (nom.length < NOM_MIN) return `${libelle} doit contenir au moins ${NOM_MIN} caractères.`
 	if (nom.length > NOM_MAX) return `${libelle} doit contenir au plus ${NOM_MAX} caractères.`
 	return null
+}
+
+/**
+ * Whether a skill or a language typed in its modal is already one of the
+ * chips of the list: the same name once the spaces around it and the case
+ * are left out (« anglais » and « Anglais » are one language).
+ * @param {Array<{name?: string}>} puces - the chips of the list
+ * @param {unknown} nom - the name typed
+ * @returns {boolean}
+ */
+export function dejaDansLaListe(puces, nom) {
+	const sansCasse = texte => (typeof texte === 'string' ? texte.trim().toLowerCase() : '')
+	const cherche = sansCasse(nom)
+	return cherche !== '' && (puces ?? []).some(puce => sansCasse(puce?.name) === cherche)
 }
 
 /**

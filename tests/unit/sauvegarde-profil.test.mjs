@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
 import { eventData } from '../../src/lib/analytics.js'
 import {
+	dejaDansLaListe,
 	erreurNom,
 	fermerSiLibre,
 	fichiersRefuses,
@@ -347,6 +348,31 @@ describe('erreurNom (onboarding and identity forms)', () => {
 	test('70 characters at most', () => {
 		assert.equal(erreurNom('a'.repeat(NOM_MAX)), null)
 		assert.match(erreurNom('a'.repeat(NOM_MAX + 1)), /au plus 70/)
+	})
+})
+
+describe('dejaDansLaListe (skills and languages modals)', () => {
+	const puces = [{ id: 0, name: 'Français' }, { id: 'local-1', name: ' Langue des signes ' }, { id: 2 }]
+
+	test('the same name, whatever the case and the spaces around it', () => {
+		for (const nom of ['Français', 'français', 'FRANÇAIS', '  Français ', 'langue des signes']) {
+			assert.equal(dejaDansLaListe(puces, nom), true, nom)
+		}
+	})
+
+	test('another name is not: an accent or a space inside it counts', () => {
+		for (const nom of ['Francais', 'Fran çais', 'Français (courant)', 'Anglais']) {
+			assert.equal(dejaDansLaListe(puces, nom), false, nom)
+		}
+	})
+
+	test('nothing typed, an empty list or an odd one: not in it, and no throw', () => {
+		for (const nom of ['', '   ', undefined, null, 12]) {
+			assert.equal(dejaDansLaListe(puces, nom), false)
+		}
+		assert.equal(dejaDansLaListe([], 'Français'), false)
+		assert.equal(dejaDansLaListe(undefined, 'Français'), false)
+		assert.equal(dejaDansLaListe([null, {}, { name: 7 }], 'Français'), false)
 	})
 })
 
