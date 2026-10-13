@@ -369,15 +369,35 @@ test.describe('SEO-10 sitemap, robots, noindex, canonical', () => {
 				.map(m => new URL(decoder(m[1])).pathname)
 				.filter(chemin => chemin.startsWith('/profil/'))
 		}
-		// [href, text] of the links of the page to a profile
-		const liensProfils = page =>
+		// [href, text] of the links of the page under a path, then to a profile
+		const liensVers = (page, prefixe) =>
 			getElementsByTagName('a', documentSansScripts(page))
-				.filter(a => a.attribs.href?.startsWith('/profil/'))
+				.filter(a => a.attribs.href?.startsWith(prefixe))
 				.map(a => [a.attribs.href, textes(a).join('').trim()])
+		const liensProfils = page => liensVers(page, '/profil/')
 
 		const sitemap = await profilsDuSitemap()
+		const lusAvant = (await journal()).length
 		const { reponse, html: page } = await html(request, '/site-map')
 		expect(reponse.status()).toBe(200)
+		// The articles and the talents, by their title: the page reads their
+		// slug and their title only, not the whole text of every article on
+		// each request.
+		expect(liensVers(page, '/blog/')).toEqual(ARTICLES.map(a => [`/blog/${a.slug}`, a.title]))
+		expect(liensVers(page, '/talent/')).toEqual(TALENTS.map(t => [`/talent/${t.slug}`, t.title]))
+		const lectures = (await journal())
+			.slice(lusAvant)
+			.filter(e => e.m === 'GET' && ['/api/articles', '/api/talents'].includes(e.p))
+		expect(lectures.map(e => e.p).sort()).toEqual(['/api/articles', '/api/talents'])
+		for (const lecture of lectures) {
+			expect([...new URLSearchParams(lecture.q)], lecture.p).toEqual([
+				['fields[0]', 'slug'],
+				['fields[1]', 'title'],
+			])
+		}
+		for (const article of ARTICLES) {
+			expect(page, article.slug).not.toContain(article.excerpt)
+		}
 		const liens = liensProfils(page)
 		expect(liens).toHaveLength(publiables.length)
 		expect(liens.map(([href]) => href).sort()).toEqual([...sitemap].sort())

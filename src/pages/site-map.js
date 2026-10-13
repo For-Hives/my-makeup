@@ -180,6 +180,12 @@ const ouVide = promesse =>
 		() => []
 	)
 
+// The two fields a link of the page needs for an article or a talent. The
+// page is rendered on each request: without this selection, each request
+// downloads the whole text of every article and sends it on to the browser
+// in the data of the page.
+const CHAMPS_DU_LIEN = 'fields[0]=slug&fields[1]=title'
+
 // Rendered on each request, like /sitemap.xml and from the same reading of
 // the profiles (chargerProfilsDuSitemap): the two never list different
 // addresses. Unlike the sitemap, which answers a 500 rather than a list with
@@ -188,8 +194,8 @@ const ouVide = promesse =>
 export async function getServerSideProps() {
 	const formulaireDevis = devisFormUrl(process.env.NEXT_PUBLIC_DEVIS_FORM_URL) !== null
 	const [articles, talents, profils] = await Promise.all([
-		ouVide(fetchAPI(`${process.env.NEXT_PUBLIC_API_URL}/api/articles`).then(reponse => reponse.data)),
-		ouVide(fetchAPI(`${process.env.NEXT_PUBLIC_API_URL}/api/talents`).then(reponse => reponse.data)),
+		ouVide(fetchAPI(`${process.env.NEXT_PUBLIC_API_URL}/api/articles?${CHAMPS_DU_LIEN}`).then(reponse => reponse.data)),
+		ouVide(fetchAPI(`${process.env.NEXT_PUBLIC_API_URL}/api/talents?${CHAMPS_DU_LIEN}`).then(reponse => reponse.data)),
 		ouVide(chargerProfilsDuSitemap({ formulaireDevis })),
 	])
 
