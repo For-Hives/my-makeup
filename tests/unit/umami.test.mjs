@@ -258,6 +258,15 @@ describe('beforeSendScript (inlined by _document, umamiLoaderScript)', () => {
 	test('cannot close the inline <script> it lives in', () => {
 		assert.doesNotMatch(beforeSendScript(), /<\/script/i)
 	})
+
+	// inlined with Function.prototype.toString(), never transpiled: an
+	// optional chaining or a ?? is a syntax error before Safari 13.4, and
+	// the whole script, the Umami loader included, would be dropped
+	test('keeps to the syntax of the oldest browsers the site serves (no ?. nor ??)', () => {
+		for (const source of [beforeSendScript(), umamiLoaderScript(ATTRIBUTS)]) {
+			assert.doesNotMatch(source, /\?\.(?!\d)|\?\?/)
+		}
+	})
 })
 
 // a document where the loader adds the Umami script: the tag keeps its
