@@ -546,6 +546,51 @@ test.describe('MES-10 qui est mesuré', () => {
 			)
 		})
 
+		test('auth_error : la page de connexion reçue avec une erreur de NextAuth l’envoie une fois par chargement, avec un code connu ; une valeur inconnue devient « erreur-inconnue » ; la session expirée garde son seul événement', async ({
+			page,
+		}) => {
+			await visiteurReel(page)
+			const erreursAuth = () => evenements('auth_error')
+			const INDISPONIBLE = 'Le service est momentanément indisponible, réessaie dans quelques minutes.'
+			const INCONNUE = 'Une erreur est survenue, réessaie dans quelques minutes.'
+			for (const [valeur, code, message] of [
+				// the names NextAuth sends a failed Google sign-in back with
+				['OAuthCallback', 'service-indisponible', INDISPONIBLE],
+				['Callback', 'service-indisponible', INDISPONIBLE],
+				['OAuthSignin', 'service-indisponible', INDISPONIBLE],
+				// a name without a code of ours, then anything typed in the URL
+				['OAuthAccountNotLinked', 'erreur-inconnue', INCONNUE],
+				['jeanne%40example.test', 'erreur-inconnue', INCONNUE],
+			]) {
+				await piloter('/__umami/reset')
+				await page.goto(`/auth/signin?callbackUrl=%2Fauth%2Fprofil&error=${valeur}`)
+				await expect(page.getByTestId('signin-url-error')).toHaveText(message)
+				await expect.poll(erreursAuth, valeur).toEqual([{ code }])
+				await pageCalme(page)
+				expect(await erreursAuth(), valeur).toEqual([{ code }])
+				// no Google sign-in was started in this tab: no login_result
+				expect(await connexions(), valeur).toEqual([])
+			}
+			// what was typed in the URL never leaves
+			expect(JSON.stringify(await envoisRecus())).not.toContain('jeanne')
+
+			// a reload is another page load: counted once more
+			await aller(page, page.url())
+			await expect.poll(erreursAuth).toEqual([{ code: 'erreur-inconnue' }, { code: 'erreur-inconnue' }])
+
+			// the session that ended is counted by session_expired alone
+			await piloter('/__umami/reset')
+			await page.goto('/auth/signin?error=session-expiree&ou=middleware&callbackUrl=%2Fauth%2Fprofil')
+			await expect.poll(() => evenements('session_expired')).toEqual([{ where: 'middleware' }])
+			await pageCalme(page)
+			expect(await erreursAuth()).toEqual([])
+
+			// without an error: nothing
+			await aller(page, '/auth/signin')
+			await pageCalme(page)
+			expect(await erreursAuth()).toEqual([])
+		})
+
 		test('« Ne plus mesurer mes visites » : aucun envoi', async ({ page }) => {
 			const suivi = suivreRequetes(page)
 			await visiteurReel(page)

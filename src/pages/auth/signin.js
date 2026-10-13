@@ -54,6 +54,17 @@ function Signin() {
 		track('session_expired', { where: ou })
 	}, [erreurUrl, ou])
 
+	// any other error the page was sent back with (NextAuth after a Google
+	// sign-in that failed: OAuthSignin, OAuthCallback, Callback…), by our code
+	// for it, once per page load. The session that ended has its own event
+	// above.
+	const erreurComptee = useRef(false)
+	useEffect(() => {
+		if (erreurUrl === null || erreurUrl === 'session-expiree' || erreurComptee.current) return
+		erreurComptee.current = true
+		track('auth_error', { code: erreurUrl })
+	}, [erreurUrl])
+
 	const onSubmit = async data => {
 		setEnvoi(true)
 		setErreur(null)

@@ -74,7 +74,8 @@ export const EVENTS = {
 		ok: flag,
 		code: oneOf(['ok', ...CODES_ERREUR]),
 	},
-	// an auth error shown outside the sign-in form: /auth/error, sign-up form
+	// an auth error shown outside the sign-in form: /auth/error, the `?error=`
+	// NextAuth sends the sign-in page back with, sign-up form
 	auth_error: { code: oneOf(CODES_ERREUR) },
 	session_expired: { where: oneOf(['api_401', 'jwt_expire', 'middleware']) },
 	// every save of the artist's space (UI-01), `ok` = stored by the API
