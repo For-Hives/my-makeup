@@ -286,7 +286,7 @@ export default function ModalUpdateSkillsProfil(props) {
 														</div>
 													</div>
 													<div className={'flex flex-col gap-2'}>
-														<h3 className={'text-sm text-gray-700'}>Compétences sélectionnés</h3>
+														<h3 className={'text-sm text-gray-700'}>Compétences sélectionnées</h3>
 														<div className={'flex w-full flex-wrap items-center gap-2'}>
 															{userSkillsSelected.map((skill, index) => (
 																<button
