@@ -1088,6 +1088,57 @@ test.describe('puces des modales langues et compétences', () => {
 			expect(erreurs).toEqual([])
 		})
 
+		// The message is true as long as the name is in the list. It stayed
+		// under the field, still marked invalid, once the chip that held the
+		// name was removed to make room for it. The name is stored twice here
+		// (old data): it is free when the second chip is gone, not before.
+		test(`${liste.nom} : un nom refusé comme déjà dans la liste, stocké deux fois, puis ses deux puces retirées, à la souris puis au clavier : le message reste tant qu’il en reste une, part avec la dernière, et Entrée ajoute le nom`, async ({
+			page,
+		}) => {
+			const erreurs = erreursDeLaPage(page)
+			const patchs = corpsDesPatchs(page)
+			await profilDeDepart({ [liste.champ]: [premiere, deuxieme, deuxieme].map(name => ({ name })) })
+			await ouvrirProfil(page)
+			await page.getByTestId(liste.ouvrir).click()
+			const puces = dialogue(page).getByTestId(liste.puce)
+			const champ = dialogue(page).getByTestId(liste.saisie)
+			const erreur = dialogue(page).getByTestId(liste.erreur)
+			await expect(puces).toHaveCount(3)
+
+			const minuscules = deuxieme.toLowerCase()
+			await champ.pressSequentially(minuscules)
+			await expect(champ).toBeFocused()
+			await expect(champ).toHaveValue(minuscules)
+			await champ.press('Enter')
+			await expect(erreur).toHaveText(liste.doublon)
+			await expect(champ).toHaveAttribute('aria-invalid', 'true')
+
+			// one of the two chips of that name: the other still holds it
+			await puce(page, deuxieme).first().click()
+			await expect(puces).toHaveCount(2)
+			await expect(erreur).toHaveText(liste.doublon)
+			await expect(champ).toHaveAttribute('aria-invalid', 'true')
+			await expect(champ).toHaveAccessibleDescription(liste.doublon)
+
+			// the last one: the name is free, nothing says otherwise any more
+			await puce(page, deuxieme).focus()
+			await page.keyboard.press('Enter')
+			await expect(puces).toHaveCount(1)
+			await expect(erreur).toHaveCount(0)
+			await expect(champ).toHaveAttribute('aria-invalid', 'false')
+			await expect(champ).toHaveAccessibleDescription('')
+			await expect(champ).toHaveValue(minuscules)
+
+			await champ.focus()
+			await champ.press('Enter')
+			await expect(puce(page, minuscules)).toBeVisible()
+			await expect(champ).toHaveValue('')
+			await expect(erreur).toHaveCount(0)
+			await sauver(page, liste.sauver)
+			expect(patchs).toEqual([{ [liste.champ]: [premiere, minuscules].map(name => ({ name })) }])
+			expect(erreurs).toEqual([])
+		})
+
 		// the field is where the next one is typed: Enter there adds it, when
 		// on « Sauvegarder » it would have saved the empty list
 		test(`${liste.nom} : la seule puce retirée au clavier : le focus passe au champ de saisie, ce qui y est tapé ensuite y arrive en entier et s’ajoute`, async ({

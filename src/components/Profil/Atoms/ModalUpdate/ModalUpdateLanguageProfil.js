@@ -169,6 +169,14 @@ export default function ModalUpdateLanguageProfil(props) {
 		}
 	}, [open, user])
 
+	// The message of a name refused as already in the list is true as long as
+	// the name is there. Once the last chip that held it is removed, it is not
+	// shown any more: the name is free, and Enter adds it.
+	const erreurLangue =
+		errors.language?.message === DEJA_DANS_LA_LISTE && !dejaDansLaListe(userLanguageSelected, userLanguage)
+			? undefined
+			: errors.language
+
 	return (
 		<Transition.Root show={open} as={Fragment}>
 			<Dialog as="div" className="relative z-30" initialFocus={cancelButtonRef} onClose={fermer}>
@@ -222,8 +230,8 @@ export default function ModalUpdateLanguageProfil(props) {
 																}}
 																required
 																// its message is read with the field
-																aria-invalid={!!errors.language}
-																aria-describedby={errors.language ? 'language-erreur' : undefined}
+																aria-invalid={!!erreurLangue}
+																aria-describedby={erreurLangue ? 'language-erreur' : undefined}
 																onKeyPress={async event => {
 																	if (event.key === 'Enter') {
 																		event.preventDefault()
@@ -262,13 +270,13 @@ export default function ModalUpdateLanguageProfil(props) {
 																onChange={handleUpdateLanguage}
 																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
 															/>
-															{errors.language && (
+															{erreurLangue && (
 																<p
 																	id="language-erreur"
 																	data-cy={'error-language'}
 																	className={'mt-2 text-xs text-red-500/80'}
 																>
-																	{errors.language.message}
+																	{erreurLangue.message}
 																</p>
 															)}
 														</div>

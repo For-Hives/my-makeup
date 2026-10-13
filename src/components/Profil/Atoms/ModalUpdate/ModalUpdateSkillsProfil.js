@@ -168,6 +168,14 @@ export default function ModalUpdateSkillsProfil(props) {
 		}
 	}, [open, user])
 
+	// The message of a name refused as already in the list is true as long as
+	// the name is there. Once the last chip that held it is removed, it is not
+	// shown any more: the name is free, and Enter adds it.
+	const erreurCompetence =
+		errors.skills?.message === DEJA_DANS_LA_LISTE && !dejaDansLaListe(userSkillsSelected, userSkills)
+			? undefined
+			: errors.skills
+
 	return (
 		<Transition.Root show={open} as={Fragment}>
 			<Dialog as="div" className="relative z-30" initialFocus={cancelButtonRef} onClose={fermer}>
@@ -222,8 +230,8 @@ export default function ModalUpdateSkillsProfil(props) {
 																}}
 																required
 																// its message is read with the field
-																aria-invalid={!!errors.skills}
-																aria-describedby={errors.skills ? 'skills-erreur' : undefined}
+																aria-invalid={!!erreurCompetence}
+																aria-describedby={erreurCompetence ? 'skills-erreur' : undefined}
 																onKeyPress={async event => {
 																	if (event.key === 'Enter') {
 																		event.preventDefault()
@@ -263,13 +271,13 @@ export default function ModalUpdateSkillsProfil(props) {
 																onChange={handleUpdateSkills}
 																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
 															/>
-															{errors.skills && (
+															{erreurCompetence && (
 																<p
 																	id="skills-erreur"
 																	data-cy={'error-skills'}
 																	className={'mt-2 text-xs text-red-500/80'}
 																>
-																	{errors.skills.message}
+																	{erreurCompetence.message}
 																</p>
 															)}
 														</div>
