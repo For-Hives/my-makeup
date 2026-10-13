@@ -17,6 +17,14 @@ import { motDePasseOublieActif } from '@/lib/mot-de-passe'
 // build-time variable NEXT_PUBLIC_FORGOT_PASSWORD=on
 const MOT_DE_PASSE_OUBLIE = motDePasseOublieActif(process.env.NEXT_PUBLIC_FORGOT_PASSWORD)
 
+// `auth_error` already sent by this document. Outside the component on
+// purpose: a link of the page then the Back button show the page again, with
+// the same `?error=` and without loading anything, and a ref would start
+// again at false. An error only ever arrives with a page load (NextAuth sends
+// the browser back), so none is lost. Only written in an effect: never on
+// the server, where the module is shared by every request.
+let erreurComptee = false
+
 // No password rule at sign-in: older accounts have passwords the sign-up
 // rule would refuse (AUTH-11). Strapi decides.
 const schema = zod
@@ -56,12 +64,11 @@ function Signin() {
 
 	// any other error the page was sent back with (NextAuth after a Google
 	// sign-in that failed: OAuthSignin, OAuthCallback, Callback…), by our code
-	// for it, once per page load. The session that ended has its own event
-	// above.
-	const erreurComptee = useRef(false)
+	// for it, once per page load (erreurComptee, above). The session that
+	// ended has its own event above.
 	useEffect(() => {
-		if (erreurUrl === null || erreurUrl === 'session-expiree' || erreurComptee.current) return
-		erreurComptee.current = true
+		if (erreurUrl === null || erreurUrl === 'session-expiree' || erreurComptee) return
+		erreurComptee = true
 		track('auth_error', { code: erreurUrl })
 	}, [erreurUrl])
 

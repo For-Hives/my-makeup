@@ -626,6 +626,66 @@ test.describe('MES-10 qui est mesuré', () => {
 			expect(await erreursAuth()).toEqual([])
 		})
 
+		// A link of the page then the Back button show the page again without
+		// loading it: the same document, the same `?error=` in the address, and
+		// no new error. An in-app navigation never waits on the network
+		// (pageCalme returns at once): the barrier is the page view Umami sends
+		// 300 ms after each change of address, later than anything the page
+		// sends when it is shown.
+		test('auth_error : un lien de la page puis « Retour » la réaffichent sans la recharger : toujours un seul événement, sur la page de connexion comme sur /auth/error', async ({
+			page,
+		}) => {
+			const apres = suivreEnvois(page)
+			await visiteurReel(page)
+			const erreursAuth = () => evenements('auth_error')
+			// page views of that path received by the fake Umami
+			const vuesDe = async chemin =>
+				(await envoisRecus()).filter(e => !e.corps.payload.name && new URL(e.corps.payload.url).pathname === chemin)
+					.length
+			for (const { depart, chemin, message, lien, autre, code } of [
+				{
+					depart: '/auth/signin?error=OAuthCallback',
+					chemin: '/auth/signin',
+					message: page.getByTestId('signin-url-error'),
+					lien: page.getByRole('link', { name: 'Inscris-toi' }),
+					autre: '/auth/signup',
+					code: 'service-indisponible',
+				},
+				{
+					depart: '/auth/error?error=email-deja-avec-mot-de-passe',
+					chemin: '/auth/error',
+					message: page.getByTestId('auth-error-message'),
+					lien: page.getByRole('link', { name: 'Revenir à la connexion' }),
+					autre: '/auth/signin',
+					code: 'email-deja-avec-mot-de-passe',
+				},
+			]) {
+				await piloter('/__umami/reset')
+				await page.goto(depart)
+				await expect(message).toBeVisible()
+				await expect.poll(erreursAuth, chemin).toEqual([{ code }])
+				await expect.poll(() => vuesDe(chemin), chemin).toBe(1)
+				await page.evaluate(() => {
+					window.__documentDeDepart = true
+				})
+
+				// the other page is shown and counted, then Back
+				await lien.click()
+				await expect(page).toHaveURL(APP + autre)
+				await expect(message).toBeHidden()
+				await expect.poll(() => vuesDe(autre), chemin).toBe(1)
+				await page.goBack()
+				await expect(page).toHaveURL(APP + depart)
+				await expect(message).toBeVisible()
+				await expect.poll(() => vuesDe(chemin), chemin).toBe(2)
+				await apres('auth_error', { code })
+
+				// no page load in between, and the error is still counted once
+				expect(await page.evaluate(() => window.__documentDeDepart), chemin).toBe(true)
+				expect(await erreursAuth(), chemin).toEqual([{ code }])
+			}
+		})
+
 		test('« Ne plus mesurer mes visites » : aucun envoi', async ({ page }) => {
 			const suivi = suivreRequetes(page)
 			await visiteurReel(page)
