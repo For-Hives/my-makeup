@@ -50,6 +50,13 @@ const schema = zod
 const BOUTON_ICONE =
 	'flex h-11 w-11 items-center justify-center rounded-full hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600'
 
+// A row added in the modal has no Strapi id yet. « Modifier » and « Retirer »
+// find a row by its id, so it gets a local one that no other row can share:
+// built from the diploma and the school, two rows with the same names were
+// removed and overwritten together. Never sent: the ids are stripped before
+// the PATCH (handleSubmitCourses).
+let compteurLocal = 0
+
 export default function ModalUpdateCoursesProfil(props) {
 	const user = props.user
 
@@ -126,7 +133,7 @@ export default function ModalUpdateCoursesProfil(props) {
 					const userCoursesUpdated = [
 						...userCourses,
 						{
-							id: `added${userCoursesDiploma}${userCoursesSchool}`,
+							id: `local-${++compteurLocal}`,
 							diploma: userCoursesDiploma,
 							school: userCoursesSchool,
 							date_graduation: userCoursesDateGraduation,
@@ -197,6 +204,10 @@ export default function ModalUpdateCoursesProfil(props) {
 	const handleDeleteCourse = id => {
 		const userCoursesFiltered = userCourses.filter(course => course.id !== id)
 		setUserCourses(userCoursesFiltered)
+		// the row loaded in the form is gone: back to « Ajouter », what was typed
+		// stays. Left in edit mode, the button found no row to update and
+		// emptied the form.
+		if (id === userCoursesId) setUserCoursesId('')
 	}
 
 	const handleEditCourse = id => {

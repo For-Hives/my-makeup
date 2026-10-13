@@ -57,6 +57,13 @@ const schema = zod
 const BOUTON_ICONE =
 	'flex h-11 w-11 items-center justify-center rounded-full hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600'
 
+// A row added in the modal has no Strapi id yet. « Modifier » and « Retirer »
+// find a row by its id, so it gets a local one that no other row can share:
+// built from the company and the job name, two rows with the same names were
+// removed and overwritten together. Never sent: the ids are stripped before
+// the PATCH (handleSubmitExperiences).
+let compteurLocal = 0
+
 export default function ModalUpdateExperiencesProfil(props) {
 	const user = props.user
 
@@ -143,7 +150,7 @@ export default function ModalUpdateExperiencesProfil(props) {
 					const userExperiencesUpdated = [
 						...userExperiences,
 						{
-							id: `added${userExperiencesCompany}${userExperiencesJobName}`,
+							id: `local-${++compteurLocal}`,
 							company: userExperiencesCompany,
 							job_name: userExperiencesJobName,
 							city: userExperiencesCity,
@@ -221,6 +228,10 @@ export default function ModalUpdateExperiencesProfil(props) {
 	const handleDeleteExperience = id => {
 		const userExperiencesFiltered = userExperiences.filter(experience => experience.id !== id)
 		setUserExperiences(userExperiencesFiltered)
+		// the row loaded in the form is gone: back to « Ajouter », what was typed
+		// stays. Left in edit mode, the button found no row to update and
+		// emptied the form.
+		if (id === userExperiencesId) setUserExperiencesId('')
 	}
 
 	const handleEditExperience = id => {
