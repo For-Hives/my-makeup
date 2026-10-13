@@ -274,6 +274,9 @@ export default function ModalUpdateLanguageProfil(props) {
 																<p
 																	id="language-erreur"
 																	data-cy={'error-language'}
+																	// a refusal is said at once; the other messages come while
+																	// typing and are read with the field
+																	role={erreurLangue.message === DEJA_DANS_LA_LISTE ? 'alert' : undefined}
 																	className={'mt-2 text-xs text-red-500/80'}
 																>
 																	{erreurLangue.message}

@@ -275,6 +275,9 @@ export default function ModalUpdateSkillsProfil(props) {
 																<p
 																	id="skills-erreur"
 																	data-cy={'error-skills'}
+																	// a refusal is said at once; the other messages come while
+																	// typing and are read with the field
+																	role={erreurCompetence.message === DEJA_DANS_LA_LISTE ? 'alert' : undefined}
 																	className={'mt-2 text-xs text-red-500/80'}
 																>
 																	{erreurCompetence.message}

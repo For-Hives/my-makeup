@@ -939,6 +939,8 @@ const PUCES = [
 		ouvrir: 'update-languages-button',
 		saisie: 'language-input',
 		erreur: 'error-language',
+		// the message of the field left empty
+		requise: 'La langue est requise.',
 		puce: 'language-selected',
 		sauver: 'save-button-languages',
 		noms: ['Français', 'Anglais', 'Italien'],
@@ -952,6 +954,8 @@ const PUCES = [
 		ouvrir: 'update-skills-button',
 		saisie: 'skills-input',
 		erreur: 'error-skills',
+		// the message of the field left empty
+		requise: 'Une compétence est requise.',
 		puce: 'skill-selected',
 		sauver: 'save-button-skills',
 		noms: ['Mariée', 'Cinéma', 'Effets spéciaux'],
@@ -1032,7 +1036,7 @@ test.describe('puces des modales langues et compétences', () => {
 		// Compared without the spaces around it nor the case: « anglais » and
 		// « Anglais » are one language. Each way of adding a chip refuses it and
 		// says why, where the name stays to be corrected.
-		test(`${liste.nom} : un nom déjà dans la liste, tapé avec une autre casse et des espaces, refusé par Entrée, par « ; » tapé puis par « ; » collé : le message est sous le champ et lu avec lui, la saisie reste ; complétée, elle s’ajoute`, async ({
+		test(`${liste.nom} : un nom déjà dans la liste, tapé avec une autre casse et des espaces, refusé par Entrée, par « ; » tapé puis par « ; » collé : le message est sous le champ, dit aussitôt et lu avec lui, la saisie reste ; complétée, elle s’ajoute`, async ({
 			page,
 		}) => {
 			const erreurs = erreursDeLaPage(page)
@@ -1045,9 +1049,11 @@ test.describe('puces des modales langues et compétences', () => {
 			const erreur = dialogue(page).getByTestId(liste.erreur)
 			await expect(puces).toHaveCount(2)
 
-			// refused: no chip more, the message under the field and read with it
+			// refused: no chip more, the message under the field, said at once
+			// (an alert) and read with the field
 			const refuse = async valeur => {
 				await expect(erreur).toHaveText(liste.doublon)
+				await expect(erreur).toHaveRole('alert')
 				await expect(champ).toHaveAttribute('aria-invalid', 'true')
 				await expect(champ).toHaveAccessibleDescription(liste.doublon)
 				await expect(champ).toBeFocused()
@@ -1067,9 +1073,13 @@ test.describe('puces des modales langues et compétences', () => {
 			await champ.press(';')
 			await refuse(majuscules.trim())
 
-			// pasted with its separator in one go, on a fresh field
+			// pasted with its separator in one go, on a fresh field. Emptied, the
+			// field says so under it without an alert: that message comes while
+			// typing, and is read with the field.
 			const minuscules = deuxieme.toLowerCase()
 			await champ.fill('')
+			await expect(erreur).toHaveText(liste.requise)
+			await expect(erreur).not.toHaveRole('alert')
 			await champ.fill(`${minuscules};`)
 			await refuse(minuscules)
 
