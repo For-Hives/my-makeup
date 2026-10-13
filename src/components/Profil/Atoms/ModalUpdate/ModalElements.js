@@ -123,7 +123,8 @@ export function focusApresRetrait(bouton, repli) {
  * that the ones that act on keydown by themselves (tabs and options of
  * Headless UI) do not see the repeated key either. Space is left alone: it
  * clicks on keyup, once. So are the fields: Enter held in a description adds
- * lines.
+ * lines. Also the onKeyDown of the button of the page that opens the modal
+ * (BoutonModifier), which has the focus again once the modal is closed.
  * @param {KeyboardEvent} event
  */
 export function ignorerEntreeMaintenue(event) {

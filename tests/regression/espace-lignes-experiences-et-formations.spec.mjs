@@ -378,6 +378,40 @@ test.describe('lignes des modales expériences et formations', () => {
 			expect(erreurs).toEqual([])
 		})
 
+		// « Fermer » closes the modal and the focus goes back to the button of
+		// the page that opened it: the key repeated there, and the modal opened
+		// again
+		test(`${modale.nom} : Entrée maintenue sur « Fermer » : la modale se ferme et reste fermée, le bouton qui l’ouvre a le focus ; relâchée puis pressée de nouveau, elle s’ouvre`, async ({
+			page,
+		}) => {
+			const erreurs = erreursDeLaPage(page)
+			const patchs = corpsDesPatchs(page)
+			await profilDeDepart({ [modale.champ]: [premiere, seconde] })
+			await ouvrirProfil(page)
+			const ouvrir = page.getByTestId(modale.ouvrir)
+			await ouvrir.click()
+			const listees = dialogue(page).getByTestId(modale.retirer)
+			await expect(listees).toHaveCount(2)
+
+			await page.getByTestId('close-modal').focus()
+			await page.keyboard.down('Enter')
+			await expect(ouvrir).toBeFocused()
+			// repeated once: a second repeat could find the button of the page
+			// again, and close what the first one opened
+			await page.keyboard.down('Enter')
+			await page.keyboard.up('Enter')
+			await expect(dialogue(page)).toBeHidden()
+			await expect(ouvrir).toBeFocused()
+
+			// a first Enter on the button of the page opens as before: a row is
+			// removed, which a modal on its way out does not allow
+			await page.keyboard.press('Enter')
+			await listees.first().click()
+			await expect(listees).toHaveCount(1)
+			expect(patchs).toEqual([])
+			expect(erreurs).toEqual([])
+		})
+
 		// after the only row the focus is on the button of the form: the
 		// repeated key clicked it, and what the form held was added
 		test(`${modale.nom} : Entrée maintenue sur « Retirer » de la seule ligne, en cours de modification : le bouton du formulaire prend le focus sans rien ajouter, la saisie continue dans le formulaire`, async ({

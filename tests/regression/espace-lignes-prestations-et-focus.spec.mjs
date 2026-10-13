@@ -643,6 +643,45 @@ test.describe('lignes de la modale prestations', () => {
 		expect(erreurs).toEqual([])
 	})
 
+	// « Fermer » and « Sauvegarder » close the modal, and the focus goes back
+	// to the button of the page that opened it: the key repeated there, and
+	// the modal opened again
+	for (const { libelle, cy, envoyes } of [
+		{ libelle: 'Fermer', cy: MODALE.fermer, envoyes: [] },
+		{ libelle: 'Sauvegarder', cy: MODALE.sauver, envoyes: [{ service_offers: TROIS }] },
+	]) {
+		test(`prestations : Entrée maintenue sur « ${libelle} » : la modale se ferme et reste fermée, le bouton qui l’ouvre a le focus ; relâchée puis pressée de nouveau, elle s’ouvre`, async ({
+			page,
+		}) => {
+			const erreurs = erreursDeLaPage(page)
+			const patchs = corpsDesPatchs(page)
+			await profilDeDepart({ service_offers: TROIS })
+			await ouvrirProfil(page)
+			const ouvrir = page.getByTestId(MODALE.ouvrir)
+			await ouvrir.click()
+			await expect(onglets(page)).toHaveText(TROIS.map(offre => offre.name))
+
+			await page.getByTestId(cy).focus()
+			await page.keyboard.down('Enter')
+			await expect(ouvrir).toBeFocused()
+			// repeated once: a second repeat could find the button of the page
+			// again, and close what the first one opened
+			await page.keyboard.down('Enter')
+			await page.keyboard.up('Enter')
+			await expect(dialogue(page)).toBeHidden()
+			await expect(ouvrir).toBeFocused()
+			expect(patchs).toEqual(envoyes)
+
+			// a first Enter on the button of the page opens as before: another
+			// offer is shown, which a modal on its way out does not allow
+			await page.keyboard.press('Enter')
+			await onglets(page).nth(1).click()
+			await expect(affichee(page)).toContainText(offreB.description)
+			expect(patchs).toEqual(envoyes)
+			expect(erreurs).toEqual([])
+		})
+	}
+
 	// Identical: the same name, prices and description, and the same options
 	// in the same order (name, prices and description of each); never the ids.
 	// The price was compared as stored, one per line, with the price as typed,
@@ -1107,6 +1146,42 @@ test.describe('puces des modales langues et compétences', () => {
 			await expect(puce(page, troisieme)).toBeFocused()
 			await sauver(page, liste.sauver)
 			expect(patchs).toEqual([{ [liste.champ]: [{ name: troisieme }] }])
+			expect(erreurs).toEqual([])
+		})
+
+		// « Sauvegarder » closes the modal and the focus goes back to the button
+		// of the page that opened it: the key repeated there, and the modal
+		// opened again
+		test(`${liste.nom} : Entrée maintenue sur « Sauvegarder » : un seul PATCH part, la modale se ferme et reste fermée, le bouton qui l’ouvre a le focus ; relâchée puis pressée de nouveau, elle s’ouvre`, async ({
+			page,
+		}) => {
+			const erreurs = erreursDeLaPage(page)
+			const patchs = corpsDesPatchs(page)
+			const stockees = liste.noms.map(name => ({ name }))
+			await profilDeDepart({ [liste.champ]: stockees })
+			await ouvrirProfil(page)
+			const ouvrir = page.getByTestId(liste.ouvrir)
+			await ouvrir.click()
+			const puces = dialogue(page).getByTestId(liste.puce)
+			await expect(puces).toHaveCount(3)
+
+			await page.getByTestId(liste.sauver).focus()
+			await page.keyboard.down('Enter')
+			await expect(ouvrir).toBeFocused()
+			// repeated once: a second repeat could find the button of the page
+			// again, and close what the first one opened
+			await page.keyboard.down('Enter')
+			await page.keyboard.up('Enter')
+			await expect(dialogue(page)).toBeHidden()
+			await expect(ouvrir).toBeFocused()
+			expect(patchs).toEqual([{ [liste.champ]: stockees }])
+
+			// a first Enter on the button of the page opens as before: a chip is
+			// removed, which a modal on its way out does not allow
+			await page.keyboard.press('Enter')
+			await puces.first().click()
+			await expect(puces).toHaveCount(2)
+			expect(patchs).toHaveLength(1)
 			expect(erreurs).toEqual([])
 		})
 
