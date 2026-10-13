@@ -634,10 +634,14 @@ test.describe('lignes de la modale prestations', () => {
 		await expect(fermer).toBeFocused()
 		await page.keyboard.down('Enter')
 		await page.keyboard.up('Enter')
-		await expect(dialogue(page)).toBeVisible()
 		await expect(fermer).toBeFocused()
+		// a modal on its way out is still visible, « Fermer » still focused:
+		// only an open one lets another offer be shown
+		await onglets(page).nth(1).click()
+		await expect(affichee(page)).toContainText(offreB.description)
 
 		// a first Enter on « Fermer » closes as before
+		await fermer.focus()
 		await page.keyboard.press('Enter')
 		await expect(dialogue(page)).toBeHidden()
 		expect(erreurs).toEqual([])
