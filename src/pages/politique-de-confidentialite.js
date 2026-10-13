@@ -95,10 +95,15 @@ function PolitiqueDeConfidentialite() {
 
 								<h2>Mesure d&apos;audience</h2>
 								<p>
-									{`Nous mesurons la fréquentation du site avec Umami, un outil que nous installons et administrons nous-mêmes, sur un serveur loué (voir « Hébergement et prestataires »). Il ne dépose aucun cookie, n'enregistre aucun identifiant sur votre appareil et ne conserve pas votre adresse IP. Il compte les pages vues, le site de provenance, le type d'appareil et de navigateur, le pays, la rapidité d'affichage d'une partie des pages, et les clics sur certains boutons (contact d'une maquilleuse, demande de devis, recherche) sans jamais enregistrer ce que vous saisissez, ni votre identité, ni vos coordonnées.`}
+									{`Nous mesurons la fréquentation du site avec Umami, un outil que nous installons et administrons nous-mêmes, sur un serveur loué (voir « Hébergement et prestataires »). Il ne dépose aucun cookie, n'enregistre aucun identifiant sur votre appareil et ne conserve pas votre adresse IP. Il compte les pages vues, le site de provenance, le type d'appareil et de navigateur, le pays, la rapidité d'affichage des pages, et les clics sur certains boutons (contact d'une maquilleuse, demande de devis, recherche) sans jamais enregistrer ce que vous saisissez, ni votre identité, ni vos coordonnées.`}
 								</p>
 								<p>
 									{`À l'inscription d'une maquilleuse, la réponse choisie à la question facultative « Comment as-tu connu My Makeup ? » est envoyée à Umami de la même façon, sans cookie, et sert seulement à compter d'où viennent les inscriptions. Elle n'est enregistrée ni dans le compte ni dans le profil de la maquilleuse.`}
+								</p>
+								{/* the mark of markGoogleSignIn (src/lib/analytics.js): sessionStorage,
+								    the value « 1 », taken by the next page load */}
+								<p>
+									{`Lors d'une connexion avec Google, un simple repère « connexion en cours », sans identifiant ni donnée sur vous, est gardé dans l'onglet de votre navigateur le temps de l'aller-retour, pour compter si la connexion a abouti. Ce n'est pas un cookie : il est effacé à votre retour sur le site, et au plus tard à la fermeture de l'onglet.`}
 								</p>
 								<p>
 									{`La mesure passe par notre propre site, qui transmet à Umami votre adresse IP, sans vos cookies, pour en déduire le pays et distinguer les visiteurs ; Umami ne la conserve pas.`}

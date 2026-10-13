@@ -50,6 +50,7 @@ const LIBELLES_ORIGINE = {
 	google: 'Recherche Google',
 	'bouche-a-oreille': 'Bouche-à-oreille',
 	ecole: 'École de maquillage',
+	ia: 'Une IA (ChatGPT, Gemini…)',
 	autre: 'Autre',
 }
 

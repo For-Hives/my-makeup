@@ -94,6 +94,12 @@ export default function ModalUpdateSkillsProfil(props) {
 	const cancelButtonRef = useRef(null)
 	// where the keyboard focus goes when the list is left empty (focusApresRetrait)
 	const champCompetence = useRef(null)
+	// and where it goes when a click or a tap leaves it empty: the title of
+	// the modal, focusable by script only (tabindex -1). The focus stays in
+	// the modal instead of falling on <body> with the chip, and no field takes
+	// it, so the virtual keyboard of a phone stays closed. From there Tab
+	// leads to the field, Shift+Tab to « Fermer ».
+	const titre = useRef(null)
 	const { ref: enregistrerChamp, ...champEnregistre } = register('skills', {
 		required: true,
 	})
@@ -200,7 +206,12 @@ export default function ModalUpdateSkillsProfil(props) {
 								<BoutonFermer onClick={fermer} disabled={envoi} ref={cancelButtonRef} />
 								<div className="flex flex-col items-start gap-8">
 									<div className="text-left">
-										<Dialog.Title as="h3" className="text-lg font-semibold text-gray-900">
+										<Dialog.Title
+											as="h3"
+											ref={titre}
+											tabIndex={-1}
+											className="text-lg font-semibold text-gray-900 focus:outline-none"
+										>
 											Vos compétences
 										</Dialog.Title>
 									</div>
@@ -296,9 +307,10 @@ export default function ModalUpdateSkillsProfil(props) {
 																	data-ligne
 																	data-retirer
 																	onClick={event => {
-																		// detail 0: Enter or Space. A tap must not focus the
-																		// field: the virtual keyboard of a phone would open.
-																		const repli = event.detail === 0 ? champCompetence.current : null
+																		// detail 0: Enter or Space, the field takes the focus.
+																		// A click or a tap must not focus it (the virtual
+																		// keyboard of a phone would open): the title does.
+																		const repli = event.detail === 0 ? champCompetence.current : titre.current
 																		focusApresRetrait(event.currentTarget, repli)
 																		handleDeleteSkillSelected(skill.id)
 																	}}

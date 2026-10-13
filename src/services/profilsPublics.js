@@ -50,13 +50,15 @@ export async function chargerProfil(username, populate = POPULATE_PROFIL) {
 }
 
 /**
- * The publiable profiles, with their slug and their real updatedAt.
+ * The publiable profiles, with their slug, their real updatedAt and the name
+ * their page shows: the profiles of the sitemap and of the plan of the site
+ * (/site-map), which links to the same addresses.
  * @param {{formulaireDevis?: boolean}} options - see completude()
- * @returns {Promise<Array<{id: number, username: string, slug: string, updatedAt: string|null}>>}
+ * @returns {Promise<import('@/lib/profil/publiables').ProfilPublic[]>}
  */
 export async function chargerProfilsDuSitemap(options = {}) {
 	const entrees = await lister(
-		`/api/makeup-artistes?fields[0]=username&fields[1]=createdAt&fields[2]=updatedAt&fields[3]=city&fields[4]=speciality&fields[5]=description&${POPULATE_COMPLETUDE}&sort[0]=id:asc`
+		`/api/makeup-artistes?fields[0]=username&fields[1]=createdAt&fields[2]=updatedAt&fields[3]=city&fields[4]=speciality&fields[5]=description&fields[6]=first_name&fields[7]=last_name&fields[8]=company_artist_name&${POPULATE_COMPLETUDE}&sort[0]=id:asc`
 	)
 	const { publiables, aVerifier } = trierProfilsPublics(entrees, options)
 	// contacts hidden in the list: read the profile alone, one at a time

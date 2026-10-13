@@ -4,13 +4,20 @@ import CTA from '@/components/Global/CTA'
 import Footer from '@/components/Global/Footer'
 import Hero from '@/components/Global/Hero'
 import Nav from '@/components/Global/Nav'
+import { devisFormUrl } from '@/lib/devis'
 import { urlAbsolue } from '@/lib/seo/url'
+import { cheminProfil } from '@/lib/slug'
+import { chargerProfilsDuSitemap } from '@/services/profilsPublics'
 
 /**
+ * Plan of the site: the fixed pages, the articles, the talents and the
+ * publiable profiles, each by the address the sitemap lists for it (her
+ * slug, no redirection): the only links of the site to the profiles a
+ * crawler reads without running JavaScript.
  * @param props
  * @constructor
  */
-function SiteMap({ articles, talents }) {
+function SiteMap({ articles, talents, profils }) {
 	return (
 		<>
 			<Head>
@@ -126,6 +133,22 @@ function SiteMap({ articles, talents }) {
 											})
 										: null}
 								</ul>
+								{profils?.length > 0 && (
+									<>
+										<h3>Maquilleuses</h3>
+										<ul data-cy="site-map-profils">
+											{profils.map(profil => (
+												<li key={profil.slug}>
+													{/* no prefetch: a visit of this page must not render
+													    every profile (API calls, counted in its logs) */}
+													<Link href={cheminProfil(profil.slug)} prefetch={false}>
+														{profil.nom}
+													</Link>
+												</li>
+											))}
+										</ul>
+									</>
+								)}
 							</div>
 						</article>
 					</div>
@@ -150,12 +173,41 @@ async function fetchAPI(url) {
 	return res.json()
 }
 
-export async function getStaticProps() {
-	const articles = await fetchAPI(`${process.env.NEXT_PUBLIC_API_URL}/api/articles`)
+// a list the API did not give (down, error answer) is left out of the page
+const ouVide = promesse =>
+	promesse.then(
+		liste => (Array.isArray(liste) ? liste : []),
+		() => []
+	)
 
-	const talents = await fetchAPI(`${process.env.NEXT_PUBLIC_API_URL}/api/talents`)
+// The two fields a link of the page needs for an article or a talent. The
+// page is rendered on each request: without this selection, each request
+// downloads the whole text of every article and sends it on to the browser
+// in the data of the page.
+const CHAMPS_DU_LIEN = 'fields[0]=slug&fields[1]=title'
+
+// Rendered on each request, like /sitemap.xml and from the same reading of
+// the profiles (chargerProfilsDuSitemap): the two never list different
+// addresses. Unlike the sitemap, which answers a 500 rather than a list with
+// missing URLs, the page is still served when the API is down, with its fixed
+// links and the lists that answered.
+export async function getServerSideProps() {
+	const formulaireDevis = devisFormUrl(process.env.NEXT_PUBLIC_DEVIS_FORM_URL) !== null
+	const [articles, talents, profils] = await Promise.all([
+		ouVide(fetchAPI(`${process.env.NEXT_PUBLIC_API_URL}/api/articles?${CHAMPS_DU_LIEN}`).then(reponse => reponse.data)),
+		ouVide(fetchAPI(`${process.env.NEXT_PUBLIC_API_URL}/api/talents?${CHAMPS_DU_LIEN}`).then(reponse => reponse.data)),
+		ouVide(chargerProfilsDuSitemap({ formulaireDevis })),
+	])
 
 	return {
-		props: { articles: articles.data, talents: talents.data },
+		props: {
+			articles,
+			talents,
+			// what the page shows only, by name
+			profils: profils
+				.filter(profil => profil.slug)
+				.map(({ slug, nom }) => ({ slug, nom }))
+				.sort((a, b) => a.nom.localeCompare(b.nom, 'fr') || a.slug.localeCompare(b.slug)),
+		},
 	}
 }

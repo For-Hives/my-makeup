@@ -5,9 +5,12 @@ import {
 	demandeEnvoyeeProps,
 	EVENTS,
 	eventData,
+	GOOGLE_SIGN_IN_KEY,
+	googleLoginResult,
 	isMeasureDisabled,
 	isRepeat,
 	looksPersonal,
+	markGoogleSignIn,
 	notFoundKind,
 	onboardingStepName,
 	referrerDomain,
@@ -15,6 +18,7 @@ import {
 	SOURCES_ORIGINE,
 	setMeasureDisabled,
 	shouldTrackContact,
+	takeGoogleSignIn,
 	track,
 	umamiAttributes,
 } from '../../src/lib/analytics.js'
@@ -378,6 +382,105 @@ describe('auth events (A3, A4)', () => {
 		assert.equal(eventData('login_result', { method: 'facebook', ok: true, code: 'ok' }), null)
 	})
 
+	test('Google sign-in: the mark of the button is taken once, by the page load that follows', () => {
+		const storage = fakeStorage()
+		assert.equal(takeGoogleSignIn(storage), false)
+		markGoogleSignIn(storage)
+		markGoogleSignIn(storage)
+		// nothing about her: a fixed key, a fixed value
+		assert.equal(GOOGLE_SIGN_IN_KEY, 'mm.connexion-google')
+		assert.equal(storage.getItem(GOOGLE_SIGN_IN_KEY), '1')
+		assert.equal(takeGoogleSignIn(storage), true)
+		assert.equal(storage.getItem(GOOGLE_SIGN_IN_KEY), null)
+		// a reload, or the next page: nothing left to count
+		assert.equal(takeGoogleSignIn(storage), false)
+	})
+
+	test('Google sign-in: no mark in a browser that opted out of the measurement', () => {
+		const tab = fakeStorage()
+		const browser = fakeStorage()
+		setMeasureDisabled(browser, true)
+		markGoogleSignIn(tab, browser)
+		assert.equal(tab.getItem(GOOGLE_SIGN_IN_KEY), null)
+		assert.equal(takeGoogleSignIn(tab), false)
+		// back in: the next attempt is marked again
+		setMeasureDisabled(browser, false)
+		markGoogleSignIn(tab, browser)
+		assert.equal(tab.getItem(GOOGLE_SIGN_IN_KEY), '1')
+		// an opt-out that cannot be read is not an opt-out
+		const unreadable = {
+			getItem: () => {
+				throw new Error('denied')
+			},
+		}
+		for (const optOut of [undefined, null, unreadable]) {
+			const storage = fakeStorage()
+			markGoogleSignIn(storage, optOut)
+			assert.equal(storage.getItem(GOOGLE_SIGN_IN_KEY), '1')
+		}
+	})
+
+	test('Google sign-in: a missing or throwing storage counts nothing and never throws', () => {
+		const broken = {
+			getItem: () => {
+				throw new Error('denied')
+			},
+			setItem: () => {
+				throw new Error('denied')
+			},
+			removeItem: () => {},
+		}
+		for (const storage of [undefined, null, broken]) {
+			assert.doesNotThrow(() => markGoogleSignIn(storage))
+			assert.equal(takeGoogleSignIn(storage), false)
+		}
+		// on the server (no window): the default storage is missing too
+		assert.doesNotThrow(() => markGoogleSignIn())
+		assert.equal(takeGoogleSignIn(), false)
+	})
+
+	test('googleLoginResult: signed in on the page Google sends back to', () => {
+		const ok = { method: 'google', ok: true, code: 'ok' }
+		for (const pathname of ['/auth/profil', '/auth/init-account', '/', '/auth/signin']) {
+			assert.deepEqual(googleLoginResult({ pathname, status: 'authenticated' }), ok, pathname)
+		}
+		// an `error` of another page is not an outcome of the sign-in
+		assert.deepEqual(googleLoginResult({ pathname: '/search', error: 'OAuthCallback', status: 'authenticated' }), ok)
+		assert.deepEqual(eventData('login_result', ok), ok)
+	})
+
+	test('googleLoginResult: failed, with our code for the error of the sign-in page or of /auth/error', () => {
+		for (const [pathname, error, code] of [
+			['/auth/signin', 'OAuthCallback', 'service-indisponible'],
+			['/auth/signin', 'OAuthSignin', 'service-indisponible'],
+			['/auth/signin', 'Callback', 'service-indisponible'],
+			['/auth/signin', 'OAuthAccountNotLinked', 'erreur-inconnue'],
+			['/auth/signin', ['OAuthCallback', 'autre'], 'service-indisponible'],
+			['/auth/error', 'email-deja-avec-mot-de-passe', 'email-deja-avec-mot-de-passe'],
+			['/auth/error', 'trop-de-tentatives', 'trop-de-tentatives'],
+			// never the raw value: what was typed in the URL becomes one code
+			['/auth/error', 'jeanne@example.test', 'erreur-inconnue'],
+			['/auth/signin', "Cannot read properties of undefined (reading 'id')", 'erreur-inconnue'],
+		]) {
+			for (const status of ['unauthenticated', 'authenticated']) {
+				const resultat = googleLoginResult({ pathname, error, status })
+				assert.deepEqual(resultat, { method: 'google', ok: false, code }, `${pathname} ${error} ${status}`)
+				assert.deepEqual(eventData('login_result', resultat), resultat)
+			}
+		}
+	})
+
+	test('googleLoginResult: back without a session nor an error, or with our « session expirée »: nothing', () => {
+		assert.equal(googleLoginResult({ pathname: '/auth/signin', status: 'unauthenticated' }), null)
+		assert.equal(googleLoginResult({ pathname: '/auth/signin', error: '', status: 'unauthenticated' }), null)
+		assert.equal(googleLoginResult({ pathname: '/', status: 'unauthenticated' }), null)
+		assert.equal(
+			googleLoginResult({ pathname: '/auth/signin', error: 'session-expiree', status: 'unauthenticated' }),
+			null
+		)
+		assert.equal(googleLoginResult(), null)
+	})
+
 	test('auth_error: our codes only, never a raw message', () => {
 		assert.deepEqual(eventData('auth_error', { code: 'email-deja-avec-mot-de-passe' }), {
 			code: 'email-deja-avec-mot-de-passe',
@@ -479,8 +582,12 @@ describe('artist space events (UI-01, UI-03, UI-05, MES-12)', () => {
 	})
 
 	test('onboarding_source: one answer of the closed list, nothing else', () => {
-		// plans/04 §3.3 row 17 without 'maeva' (decisions.md, 09/10)
-		assert.deepEqual(SOURCES_ORIGINE, ['instagram', 'google', 'bouche-a-oreille', 'ecole', 'autre'])
+		// plans/04 §3.3 row 17 without 'maeva' (decisions.md, 09/10), plus 'ia'
+		// (lot of 13/10), « Autre » last
+		assert.deepEqual(SOURCES_ORIGINE, ['instagram', 'google', 'bouche-a-oreille', 'ecole', 'ia', 'autre'])
+		assert.deepEqual(eventData('onboarding_source', { source: 'ia' }), { source: 'ia' })
+		assert.equal(eventData('onboarding_source', { source: 'chatgpt' }), null)
+		assert.equal(eventData('onboarding_source', { source: 'IA' }), null)
 		assert.deepEqual(eventData('onboarding_source', { source: 'instagram' }), {
 			source: 'instagram',
 		})

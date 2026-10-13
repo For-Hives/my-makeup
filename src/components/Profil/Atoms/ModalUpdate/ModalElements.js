@@ -103,8 +103,9 @@ export function BoutonSauvegarder({ envoi, onClick, dataCy, children = 'Sauvegar
  * again: both targets keep their node.
  * @param {HTMLElement} bouton - the « Retirer » clicked, inside a [data-ligne]
  *   row, or the row itself (a chip of the skills and languages modals)
- * @param {HTMLElement|null} repli - the button or the field of the form;
- *   null when nothing should take the focus
+ * @param {HTMLElement|null} repli - the button or the field of the form, or
+ *   the title of the modal for a chip removed with a click or a tap (no
+ *   virtual keyboard); null when nothing should take the focus
  */
 export function focusApresRetrait(bouton, repli) {
 	const ligne = bouton.closest('[data-ligne]')

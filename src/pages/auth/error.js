@@ -1,9 +1,15 @@
 import Head from 'next/head'
 import Image from 'next/image'
 import Link from 'next/link'
-import { useEffect, useRef } from 'react'
+import { useEffect } from 'react'
 import { track } from '@/lib/analytics'
 import { messageErreur, normaliserCodeErreur } from '@/lib/auth-erreurs'
+
+// `auth_error` already sent by this document: once per page load, as on the
+// sign-in page (erreurComptee in signin.js). « Revenir à la connexion » then
+// the Back button show this page again without loading it. Only written in
+// an effect: never on the server, where the module is shared.
+let comptee = false
 
 /**
  * NextAuth error page (?error=<code>): Google refused by Strapi, NextAuth
@@ -11,10 +17,9 @@ import { messageErreur, normaliserCodeErreur } from '@/lib/auth-erreurs'
  * list, so the page never shows what was typed in the URL.
  */
 function AuthErrorPage({ code }) {
-	const comptee = useRef(false)
 	useEffect(() => {
-		if (comptee.current) return
-		comptee.current = true
+		if (comptee) return
+		comptee = true
 		track('auth_error', { code })
 	}, [code])
 

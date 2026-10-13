@@ -2,11 +2,13 @@ const webVitalPagePattern1 = /[?#]/
 /**
  * Field Web Vitals sent to Umami as a `web-vitals` event (MES-10, plans/04
  * §3.1, monthly review): one event per metric of a sampled page load, with
- * its name, its rounded value, its rating and the page (path only).
+ * its name, its rounded value, its rating and the page (path only). Every
+ * page load is sampled by default: at 10 %, the few visits of a week gave
+ * too few measures to read (analysis of 13/10 §5.6).
  */
 
 export const WEB_VITALS_EVENT = 'web-vitals'
-export const DEFAULT_WEB_VITALS_SAMPLE = 0.1
+export const DEFAULT_WEB_VITALS_SAMPLE = 1
 
 // web.dev thresholds: good up to the first value, poor above the second
 export const WEB_VITALS_THRESHOLDS = {
@@ -23,7 +25,7 @@ const PAGE_MAX = 99
 /**
  * Share of page loads that send their Web Vitals, from
  * NEXT_PUBLIC_WEB_VITALS_SAMPLE: a number from 0 to 1 (0.1 = 10 %); empty or
- * invalid: 0.1.
+ * invalid: 1, every page load.
  * @param {unknown} raw
  * @returns {number}
  */
