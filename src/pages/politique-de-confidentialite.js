@@ -95,7 +95,7 @@ function PolitiqueDeConfidentialite() {
 
 								<h2>Mesure d&apos;audience</h2>
 								<p>
-									{`Nous mesurons la fréquentation du site avec Umami, un outil que nous installons et administrons nous-mêmes, sur un serveur loué (voir « Hébergement et prestataires »). Il ne dépose aucun cookie, n'enregistre aucun identifiant sur votre appareil et ne conserve pas votre adresse IP. Il compte les pages vues, le site de provenance, le type d'appareil et de navigateur, le pays, la rapidité d'affichage d'une partie des pages, et les clics sur certains boutons (contact d'une maquilleuse, demande de devis, recherche) sans jamais enregistrer ce que vous saisissez, ni votre identité, ni vos coordonnées.`}
+									{`Nous mesurons la fréquentation du site avec Umami, un outil que nous installons et administrons nous-mêmes, sur un serveur loué (voir « Hébergement et prestataires »). Il ne dépose aucun cookie, n'enregistre aucun identifiant sur votre appareil et ne conserve pas votre adresse IP. Il compte les pages vues, le site de provenance, le type d'appareil et de navigateur, le pays, la rapidité d'affichage des pages, et les clics sur certains boutons (contact d'une maquilleuse, demande de devis, recherche) sans jamais enregistrer ce que vous saisissez, ni votre identité, ni vos coordonnées.`}
 								</p>
 								<p>
 									{`À l'inscription d'une maquilleuse, la réponse choisie à la question facultative « Comment as-tu connu My Makeup ? » est envoyée à Umami de la même façon, sans cookie, et sert seulement à compter d'où viennent les inscriptions. Elle n'est enregistrée ni dans le compte ni dans le profil de la maquilleuse.`}

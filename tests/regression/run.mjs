@@ -8,8 +8,9 @@
 //    (127.0.0.1:4113);
 // 2. builds the app into .next-test-regression/ with the API and Umami
 //    pointing to them, the forgotten password link on, Umami counting
-//    localhost and every page load sampled for its Web Vitals (the real
-//    .next is never touched); REGRESSION_SKIP_BUILD=1 reuses that build;
+//    localhost and the Web Vitals sample left empty, as in production:
+//    every page load sends them (the real .next is never touched);
+//    REGRESSION_SKIP_BUILD=1 reuses that build;
 // 3. starts `next start` on localhost:3996;
 // 4. runs Playwright (tests/regression/playwright.config.mjs) with the
 //    arguments given after `--`, then stops everything.
@@ -73,7 +74,6 @@ function environnement(extra = {}) {
 		// /u/* goes to the fake Umami, never to the real instance
 		UMAMI_ORIGIN: UMAMI,
 		NEXT_PUBLIC_UMAMI_DOMAINS: 'localhost',
-		NEXT_PUBLIC_WEB_VITALS_SAMPLE: '1',
 		...extra,
 	})
 	for (const nom of ['NEXT_PUBLIC_API_URL', 'API_INTERNAL_URL', 'NEXTAUTH_URL', 'NEXT_PUBLIC_URL', 'UMAMI_ORIGIN']) {

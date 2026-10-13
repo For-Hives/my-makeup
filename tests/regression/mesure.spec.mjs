@@ -268,6 +268,27 @@ test.describe('MES-10 qui est mesuré', () => {
 
 		registermesure1Scenario3({})
 
+		// The build of the test leaves NEXT_PUBLIC_WEB_VITALS_SAMPLE empty, as
+		// the production does: the default decides (lot of 13/10, 100 %).
+		test('Web Vitals : toute visite est mesurée, même au tirage le plus haut ; la politique de confidentialité ne parle plus d’une partie des pages', async ({
+			page,
+		}) => {
+			await visiteurReel(page)
+			// the draw of the page load (_app.js) at its highest: any sample
+			// under 100 % leaves this visit out
+			await page.addInitScript(() => {
+				Math.random = () => 0.999_999
+			})
+			await page.goto('/blog')
+			await expect.poll(async () => (await evenements('web-vitals')).map(mesure => mesure.name)).toContain('TTFB')
+
+			await page.goto('/politique-de-confidentialite')
+			const phrase = page.getByText(/Nous mesurons la fréquentation du site avec Umami/)
+			await expect(phrase).toHaveCount(1)
+			await expect(phrase).toContainText("la rapidité d'affichage des pages, et les clics")
+			await expect(phrase).not.toContainText('une partie des pages')
+		})
+
 		registermesure1Scenario4({})
 
 		// sign-up up to the name step of /auth/init-account

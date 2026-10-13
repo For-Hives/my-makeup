@@ -16,9 +16,10 @@ import { googleLoginResult, takeGoogleSignIn, track, trackWebVital } from '@/lib
 import { robotsPourChemin } from '@/lib/seo/robots'
 import { webVitalsSampled } from '@/lib/web-vitals'
 
-// Field Web Vitals (MES-10): drawn once per page load (10 % by default,
-// NEXT_PUBLIC_WEB_VITALS_SAMPLE), and attributed to the page that was
-// loaded, even when LCP, CLS or INP arrive after a client-side navigation.
+// Field Web Vitals (MES-10): drawn once per page load (every page load by
+// default, a share of them with NEXT_PUBLIC_WEB_VITALS_SAMPLE), and
+// attributed to the page that was loaded, even when LCP, CLS or INP arrive
+// after a client-side navigation.
 const PAGE_CHARGEE = typeof window === 'undefined' ? null : window.location.pathname
 const VITALS_ECHANTILLONNEES =
 	PAGE_CHARGEE !== null && webVitalsSampled(process.env.NEXT_PUBLIC_WEB_VITALS_SAMPLE, Math.random())

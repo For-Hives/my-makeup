@@ -23,36 +23,44 @@ const fakeUmami = () => {
 }
 
 describe('sampling (NEXT_PUBLIC_WEB_VITALS_SAMPLE)', () => {
-	test('10 % by default', () => {
-		assert.equal(DEFAULT_WEB_VITALS_SAMPLE, 0.1)
+	test('every page load by default', () => {
+		assert.equal(DEFAULT_WEB_VITALS_SAMPLE, 1)
 		for (const raw of [undefined, null, '', '  ']) {
-			assert.equal(webVitalsSampleRate(raw), 0.1, String(raw))
+			assert.equal(webVitalsSampleRate(raw), 1, String(raw))
 		}
 	})
 
-	test('a share from 0 to 1, anything else falls back to 10 %', () => {
+	test('a share from 0 to 1, anything else falls back to every page load', () => {
 		assert.equal(webVitalsSampleRate('0.25'), 0.25)
 		assert.equal(webVitalsSampleRate('1'), 1)
 		assert.equal(webVitalsSampleRate('0'), 0)
 		for (const raw of ['10', '-0.1', 'abc', 'Infinity', '10 %']) {
-			assert.equal(webVitalsSampleRate(raw), 0.1, raw)
+			assert.equal(webVitalsSampleRate(raw), 1, raw)
 		}
 	})
 
 	test('one draw decides for the whole page load', () => {
-		assert.equal(webVitalsSampled(undefined, 0.05), true)
-		assert.equal(webVitalsSampled(undefined, 0.1), false)
-		assert.equal(webVitalsSampled(undefined, 0.99), false)
+		// Math.random() is never 1: by default no page load is left out
+		for (const tirage of [0, 0.05, 0.1, 0.99, 0.999_999]) {
+			assert.equal(webVitalsSampled(undefined, tirage), true, String(tirage))
+		}
+		assert.equal(webVitalsSampled('0.1', 0.05), true)
+		assert.equal(webVitalsSampled('0.1', 0.1), false)
+		assert.equal(webVitalsSampled('0.1', 0.99), false)
 		assert.equal(webVitalsSampled('1', 0.999), true)
 		assert.equal(webVitalsSampled('0', 0), false)
 	})
 
-	test('about 10 % of page loads over many draws', () => {
-		let sampled = 0
-		for (let i = 0; i < 10_000; i++) {
-			if (webVitalsSampled(undefined, i / 10_000)) sampled++
+	test('every page load over many draws by default, about 10 % at 0.1', () => {
+		const tires = raw => {
+			let sampled = 0
+			for (let i = 0; i < 10_000; i++) {
+				if (webVitalsSampled(raw, i / 10_000)) sampled++
+			}
+			return sampled
 		}
-		assert.equal(sampled, 1000)
+		assert.equal(tires(undefined), 10_000)
+		assert.equal(tires('0.1'), 1000)
 	})
 })
 
