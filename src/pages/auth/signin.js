@@ -8,7 +8,7 @@ import { signIn, signOut, useSession } from 'next-auth/react'
 import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import * as zod from 'zod'
-import { track } from '@/lib/analytics'
+import { markGoogleSignIn, takeGoogleSignIn, track } from '@/lib/analytics'
 import { codeResultatConnexion, messageErreur, normaliserCodeErreur } from '@/lib/auth-erreurs'
 import { callbackUrlSure, ouSessionExpiree } from '@/lib/auth-session'
 import { motDePasseOublieActif } from '@/lib/mot-de-passe'
@@ -58,6 +58,8 @@ function Signin() {
 		setEnvoi(true)
 		setErreur(null)
 		const vers = destination()
+		// a Google sign-in given up before this one is not counted
+		takeGoogleSignIn()
 		const resultat = await signIn('credentials', {
 			email: data.email,
 			password: data.password,
@@ -109,6 +111,9 @@ function FormulaireConnexion({ destination, handleSubmit, onSubmit, register, er
 								type="button"
 								data-cy="google-signin"
 								onClick={() => {
+									// its login_result is counted on the page Google sends
+									// back to (RetourGoogle in _app.js)
+									markGoogleSignIn()
 									signIn('google', {
 										callbackUrl: destination(),
 									})

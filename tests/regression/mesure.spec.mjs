@@ -7,7 +7,8 @@
 // « Comment as-tu connu My Makeup ? » arrives as « onboarding_source » (UI-05),
 // and the artist's space sends « profile_visibility » and
 // « profile_publiable » (MES-12), and « upload_error » with the kind of the
-// API refusal (UI-03).
+// API refusal (UI-03). A sign-in with Google sends its « login_result » on
+// the page it comes back to (lot of 13/10).
 // Playwright gives navigator.webdriver = true and a HeadlessChrome user
 // agent: each rule is checked alone, and a real visitor is played by forcing
 // webdriver to false with an ordinary Chrome user agent.
@@ -16,6 +17,7 @@ import { expect, test } from '@playwright/test'
 import { getElementsByTagName } from 'domutils'
 import { parseDocument } from 'htmlparser2'
 import sharp from 'sharp'
+import { COMPTE_TEST } from './mock-api.mjs'
 import { API, aller, connecter, inscrire, panne, profilDeDepart, reinitialiserStrapi } from './outils-strapi.mjs'
 
 const APP = process.env.RG_APP ?? 'http://localhost:3996'
@@ -401,6 +403,148 @@ test.describe('MES-10 qui est mesuré', () => {
 		})
 
 		registermesure1Scenario11({ suivreEnvois, espaceCompte, rienDePersonnel })
+
+		// --- sign-in with Google (lot of 13/10) ---
+		// Google is never reached. The button asks NextAuth where to go (POST
+		// /api/auth/signin/google, which would contact Google to build the
+		// address): the request is answered here, with the address Google
+		// would send the browser back to. From there the real pages and the
+		// real NextAuth routes run.
+		const SIGNIN_GOOGLE = '**/api/auth/signin/google'
+		const retourDeGoogle = (page, adresse) =>
+			page.route(SIGNIN_GOOGLE, async route => {
+				await route.fulfill({ json: { url: await adresse() } })
+			})
+		const connexions = () => evenements('login_result')
+		const GOOGLE_OK = { method: 'google', ok: true, code: 'ok' }
+		// every send of the page so far has reached the fake Umami
+		async function pageCalme(page) {
+			await page.waitForLoadState('networkidle')
+		}
+
+		test('login_result : une connexion Google réussie part une fois, sur la page de retour, pas au rechargement', async ({
+			page,
+		}) => {
+			const suivi = suivreRequetes(page)
+			const apres = suivreEnvois(page)
+			await visiteurReel(page)
+			// Back from Google signed in. The callback of NextAuth cannot run
+			// without Google (it exchanges a code there): the session cookie it
+			// would set comes from the credentials route here, then the browser
+			// goes to the page asked for, as NextAuth sends it.
+			await retourDeGoogle(page, async () => {
+				expect(await connecter(page)).toBe(true)
+				return `${APP}/auth/profil`
+			})
+			await aller(page, '/auth/signin?callbackUrl=%2Fauth%2Fprofil')
+			await page.getByTestId('google-signin').click()
+			await expect(page.getByTestId('resume-name')).toHaveText('Testine Recette')
+			await apres('login_result', GOOGLE_OK)
+			const envois = (await envoisRecus()).filter(e => e.corps.payload.name === 'login_result')
+			expect(envois).toHaveLength(1)
+			expect(envois[0].corps.payload).toMatchObject({
+				website: WEBSITE_ID,
+				tag: VERSION,
+				name: 'login_result',
+				data: GOOGLE_OK,
+			})
+			expect(new URL(envois[0].corps.payload.url).pathname).toBe('/auth/profil')
+
+			// a reload, then another page: the attempt is not counted again
+			await espaceCompte(page, '/auth/profil')
+			await aller(page, '/')
+			await pageCalme(page)
+			expect(await connexions()).toEqual([GOOGLE_OK])
+			await rienDePersonnel()
+			expect([...suivi.hotes].every(h => HOTES_LOCAUX.includes(h))).toBe(true)
+		})
+
+		test('login_result : un retour de Google en échec part une fois avec son code, sur la page de connexion (NextAuth) comme sur /auth/error (refus de Strapi)', async ({
+			page,
+		}) => {
+			await visiteurReel(page)
+			for (const { retour, arrivee, message, code } of [
+				{
+					// refused at Google: the real callback of NextAuth sends
+					// back to the sign-in page with ?error=Callback
+					retour: '/api/auth/callback/google?error=access_denied',
+					arrivee: /\/auth\/signin\?.*error=Callback/,
+					message: page.getByTestId('signin-url-error'),
+					code: 'service-indisponible',
+				},
+				{
+					// Strapi refused the Google account: NextAuth sends its
+					// code to /auth/error
+					retour: '/api/auth/error?error=email-deja-avec-mot-de-passe',
+					arrivee: /\/auth\/error\?error=email-deja-avec-mot-de-passe$/,
+					message: page.getByTestId('auth-error-message'),
+					code: 'email-deja-avec-mot-de-passe',
+				},
+			]) {
+				await piloter('/__umami/reset')
+				await page.unroute(SIGNIN_GOOGLE)
+				await retourDeGoogle(page, () => `${APP}${retour}`)
+				await aller(page, '/auth/signin')
+				await page.getByTestId('google-signin').click()
+				await expect(page).toHaveURL(arrivee)
+				await expect(message).toBeVisible()
+				const echec = { method: 'google', ok: false, code }
+				await expect.poll(connexions).toEqual([echec])
+				await pageCalme(page)
+
+				// a reload shows the error again, the attempt is counted once
+				await aller(page, page.url())
+				await expect(message).toBeVisible()
+				await pageCalme(page)
+				expect(await connexions(), code).toEqual([echec])
+			}
+			await rienDePersonnel()
+		})
+
+		test('login_result : Google abandonné (retour sans session ni erreur) : rien ; Google qui ne part pas puis le formulaire : la seule connexion par email, même après rechargement', async ({
+			page,
+		}) => {
+			const apres = suivreEnvois(page)
+			await visiteurReel(page)
+			// she gave up at Google: NextAuth sends back to the sign-in page
+			await retourDeGoogle(page, () => `${APP}/api/auth/signin`)
+			await aller(page, '/auth/signin')
+			await page.getByTestId('google-signin').click()
+			await expect(page).toHaveURL(/\/auth\/signin\?callbackUrl=/)
+			await expect(page.getByTestId('google-signin')).toBeVisible()
+			await pageCalme(page)
+			expect(await connexions()).toEqual([])
+
+			// the request of the button fails: the page stays, the mark too
+			await page.unroute(SIGNIN_GOOGLE)
+			await page.route(SIGNIN_GOOGLE, route => route.abort())
+			const echec = page.waitForEvent('requestfailed', r => new URL(r.url()).pathname === '/api/auth/signin/google')
+			await page.getByTestId('google-signin').click()
+			await echec
+			// then the form, on the same page: one sign-in, by email
+			await page.getByTestId('email-input').fill(COMPTE_TEST.email)
+			await page.getByTestId('password-input').fill(COMPTE_TEST.password)
+			await page.getByTestId('email-signin').click()
+			const parEmail = { method: 'email', ok: true, code: 'ok' }
+			await apres('login_result', parEmail)
+			// the next page load, signed in: the Google mark is gone with it
+			await espaceCompte(page, '/auth/profil')
+			await pageCalme(page)
+			expect(await connexions()).toEqual([parEmail])
+			await rienDePersonnel()
+		})
+
+		test('login_result : la politique de confidentialité décrit le repère gardé pendant la connexion avec Google', async ({
+			page,
+		}) => {
+			await page.goto('/politique-de-confidentialite')
+			const phrase = page.getByText(/Lors d'une connexion avec Google/)
+			await expect(phrase).toHaveCount(1)
+			await expect(phrase).toContainText('sans identifiant ni donnée sur vous')
+			await expect(phrase).toContainText(
+				"il est effacé à votre retour sur le site, et au plus tard à la fermeture de l'onglet"
+			)
+		})
 
 		test('« Ne plus mesurer mes visites » : aucun envoi', async ({ page }) => {
 			const suivi = suivreRequetes(page)

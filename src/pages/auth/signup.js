@@ -8,7 +8,7 @@ import { signIn, signOut, useSession } from 'next-auth/react'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import * as zod from 'zod'
-import { track } from '@/lib/analytics'
+import { markGoogleSignIn, takeGoogleSignIn, track } from '@/lib/analytics'
 import { codeResultatConnexion, messageErreur } from '@/lib/auth-erreurs'
 
 const schema = zod
@@ -47,6 +47,8 @@ function Signup() {
 		track('signup_start', { method: 'email' })
 		setEnvoi(true)
 		setErreur(null)
+		// a Google sign-in given up before this one is not counted
+		takeGoogleSignIn()
 		/**
 		 * Signin function with name setted : register mode
 		 */
@@ -103,6 +105,9 @@ function Signup() {
 													data-cy="google-signin"
 													onClick={() => {
 														track('signup_start', { method: 'google' })
+														// its login_result is counted on the page Google
+														// sends back to (RetourGoogle in _app.js)
+														markGoogleSignIn()
 														signIn('google', {
 															callbackUrl: '/auth/profil',
 														})

@@ -7,10 +7,12 @@ import '@/styles/burger_menu.css'
 import 'react-toastify/dist/ReactToastify.css'
 
 import Head from 'next/head'
+import { useRouter } from 'next/router'
 import { useReportWebVitals } from 'next/web-vitals'
-import { SessionProvider } from 'next-auth/react'
+import { SessionProvider, useSession } from 'next-auth/react'
+import { useEffect, useRef } from 'react'
 import { ToastContainer } from 'react-toastify'
-import { trackWebVital } from '@/lib/analytics'
+import { googleLoginResult, takeGoogleSignIn, track, trackWebVital } from '@/lib/analytics'
 import { robotsPourChemin } from '@/lib/seo/robots'
 import { webVitalsSampled } from '@/lib/web-vitals'
 
@@ -23,6 +25,34 @@ const VITALS_ECHANTILLONNEES =
 
 function reportWebVital(metric) {
 	if (VITALS_ECHANTILLONNEES) trackWebVital(metric, PAGE_CHARGEE)
+}
+
+/**
+ * `login_result` of a Google sign-in. Google sends the browser back to a new
+ * page load, on any page of the site: the page asked for once signed in, the
+ * sign-in page or /auth/error when it failed. The mark the Google button left
+ * (markGoogleSignIn) is taken by the first page load that follows, whatever
+ * its outcome, so one attempt is counted once and a reload counts nothing.
+ * Renders nothing.
+ */
+function RetourGoogle() {
+	const { status } = useSession()
+	const router = useRouter()
+	// null until the mark is read, then whether an outcome is still to count
+	const aCompter = useRef(null)
+	useEffect(() => {
+		if (aCompter.current === null) aCompter.current = takeGoogleSignIn()
+		// the outcome is read once the URL and the session are known
+		if (!aCompter.current || !router.isReady || status === 'loading') return
+		aCompter.current = false
+		const resultat = googleLoginResult({
+			pathname: router.pathname,
+			error: router.query.error,
+			status,
+		})
+		if (resultat) track('login_result', resultat)
+	}, [router.isReady, router.pathname, router.query.error, status])
+	return null
 }
 
 export default function App({ Component, pageProps: { session, ...pageProps }, router }) {
@@ -44,6 +74,7 @@ export default function App({ Component, pageProps: { session, ...pageProps }, r
 				refetchInterval={15 * 60}
 				refetchOnWindowFocus={true}
 			>
+				<RetourGoogle />
 				<Component {...pageProps} />
 				<ToastContainer />
 			</SessionProvider>

@@ -9,7 +9,7 @@
  * value drops the whole event instead of sending something half-checked.
  */
 
-import { CODES_ERREUR } from './auth-erreurs.js'
+import { CODES_ERREUR, normaliserCodeErreur } from './auth-erreurs.js'
 import { SECTIONS_PROFIL } from './sauvegarde-profil.js'
 import { WAITING_ROOM_NAME } from './umami.js'
 import { WEB_VITALS_EVENT, webVitalData } from './web-vitals.js'
@@ -67,7 +67,8 @@ export const EVENTS = {
 	},
 	// optional answer of the onboarding, sent once the name is stored
 	onboarding_source: { source: oneOf(SOURCES_ORIGINE) },
-	// every sign-in attempt with the form (A3), `code` = 'ok' on success
+	// every sign-in attempt, `code` = 'ok' on success: with the form (A3), and
+	// with Google, counted on the page Google sends back to (googleLoginResult)
 	login_result: {
 		method: oneOf(['email', 'google']),
 		ok: flag,
@@ -339,6 +340,74 @@ export function demandeEnvoyeeProps(query = {}) {
 	}
 	if (pid !== undefined) props.pid = pid
 	return props
+}
+
+// A Google sign-in leaves the site and comes back on a new page load, with
+// nothing in the URL that tells it from any other visit: the button leaves a
+// mark in the tab (sessionStorage, no value but '1'), and the page load that
+// follows takes it and counts the outcome (`login_result`). Taken once: a
+// reload counts nothing more.
+export const GOOGLE_SIGN_IN_KEY = 'mm.connexion-google'
+
+const PAGES_ERREUR_CONNEXION = ['/auth/signin', '/auth/error']
+
+function tabStorage() {
+	try {
+		return window.sessionStorage
+	} catch {
+		return undefined
+	}
+}
+
+/**
+ * Marks the Google sign-in the button is about to start in this tab.
+ * @param {Storage} [storage] - sessionStorage
+ */
+export function markGoogleSignIn(storage = tabStorage()) {
+	try {
+		storage.setItem(GOOGLE_SIGN_IN_KEY, '1')
+	} catch {
+		// storage unavailable (private mode, blocked): the sign-in is not counted
+	}
+}
+
+/**
+ * Reads and removes the mark of a Google sign-in. Also called when she signs
+ * in with the form instead: a Google attempt given up before (the Back
+ * button of the browser restores the page without loading it) must not be
+ * counted as a success on the next page load.
+ * @param {Storage} [storage] - sessionStorage
+ * @returns {boolean} true when a Google sign-in was started in this tab
+ */
+export function takeGoogleSignIn(storage = tabStorage()) {
+	try {
+		const started = storage.getItem(GOOGLE_SIGN_IN_KEY) !== null
+		if (started) storage.removeItem(GOOGLE_SIGN_IN_KEY)
+		return started
+	} catch {
+		return false
+	}
+}
+
+/**
+ * `login_result` of a Google sign-in, read on the page load that follows it,
+ * or null when it has no outcome to count:
+ * - the sign-in page or /auth/error with an `?error=` (NextAuth: OAuthSignin,
+ *   OAuthCallback, Callback… or the code of a Strapi refusal): failed, with
+ *   our code for it (normaliserCodeErreur, never the raw value);
+ * - a session on any other page: signed in;
+ * - no session and no error: she came back without finishing, nothing.
+ * `session-expiree` is our own redirection, never the outcome of a sign-in.
+ * @param {object} page
+ * @param {string} [page.pathname] - router.pathname
+ * @param {unknown} [page.error] - router.query.error
+ * @param {string} [page.status] - status of useSession(), once it is known
+ * @returns {{method: 'google', ok: boolean, code: string}|null}
+ */
+export function googleLoginResult({ pathname, error, status } = {}) {
+	const code = PAGES_ERREUR_CONNEXION.includes(pathname) ? normaliserCodeErreur(error) : null
+	if (code !== null && code !== 'session-expiree') return { method: 'google', ok: false, code }
+	return status === 'authenticated' ? { method: 'google', ok: true, code: 'ok' } : null
 }
 
 export const MEASURE_OPT_OUT_KEY = 'umami.disabled'
