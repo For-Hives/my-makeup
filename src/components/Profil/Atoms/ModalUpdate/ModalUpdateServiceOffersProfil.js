@@ -14,7 +14,6 @@ import {
 } from '@/components/Profil/Atoms/ModalUpdate/ModalElements'
 import { DescriptionPriceOffer } from '@/components/Profil/Childs/ServiceOffers/DescriptionPriceOffer'
 import { OptionsOffers } from '@/components/Profil/Childs/ServiceOffers/OptionsOffers'
-import { avecCles } from '@/lib/cles'
 import { listeApresSauvegarde, offresAEnvoyer } from '@/lib/sauvegarde-profil'
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
 
@@ -306,8 +305,12 @@ export default function ModalUpdateServiceOffersProfil(props) {
 function ChampsOptionsService({ userServiceOffersOptions, register, suivre, setUserServiceOffersOptions, errors }) {
 	return (
 		<div>
-			{avecCles(userServiceOffersOptions).map(({ valeur: _option, cle }, index) => (
-				<div key={cle} className={'flex w-full flex-col gap-4 py-4 pl-8'}>
+			{userServiceOffersOptions.map((_option, index) => (
+				<div
+					// biome-ignore lint/suspicious/noArrayIndexKey: options are appended and edited in place, so the position is their identity; a key built from the content remounts the fields at each keystroke
+					key={index}
+					className={'flex w-full flex-col gap-4 py-4 pl-8'}
+				>
 					<h3 className={'text-sm font-semibold text-gray-900'}>Option {index + 1}</h3>
 					<div>
 						<label htmlFor={`services[${index}].name`} className="block text-sm text-gray-700">
@@ -655,10 +658,11 @@ function DialogueServices({
 																: 'md:justify-start md:overflow-x-scroll'
 														} flex h-full w-full justify-start overflow-x-scroll py-4`}
 													>
-														{avecCles(userServiceOffers).map(({ valeur: service_offer, cle }, _index) => {
+														{userServiceOffers.map((service_offer, index) => {
 															return (
 																<Tab
-																	key={cle}
+																	// biome-ignore lint/suspicious/noArrayIndexKey: the tab keeps its node when an offer is removed, so the focus stays in the list
+																	key={index}
 																	className={
 																		'h-full w-full border-b border-gray-300 bg-gray-50/30 p-4 text-xs text-gray-600 hover:bg-gray-50/50 focus:outline-none ' +
 																		// 	aria selected
@@ -671,9 +675,12 @@ function DialogueServices({
 														})}
 													</Tab.List>
 													<Tab.Panels>
-														{avecCles(userServiceOffers).map(({ valeur: service_offer, cle }, index) => {
+														{userServiceOffers.map((service_offer, index) => {
 															return (
-																<Tab.Panel key={cle}>
+																<Tab.Panel
+																	// biome-ignore lint/suspicious/noArrayIndexKey: same key as its tab: the panel keeps its node when an offer is removed
+																	key={index}
+																>
 																	<div className={'relative flex flex-col gap-4 bg-white py-4'}>
 																		<div
 																			className={
