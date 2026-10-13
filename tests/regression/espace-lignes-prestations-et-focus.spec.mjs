@@ -10,7 +10,9 @@
 // Left empty, the list of offers kept a Tab stop that showed nothing.
 // From the review of #968: with the focus kept in the modal, Enter held on a
 // button clicked it again each time the key repeated; a language or a skill
-// already in its list was added a second time.
+// already in its list was added a second time; an offer with several prices
+// or an option too, and the offers the modal did refuse were refused without
+// a word, the one validated unchanged among them.
 import { expect, test } from '@playwright/test'
 import { corpsDesPatchs, dialogue, erreursDeLaPage, sauver, valeursDeLaModale } from './espace-helpers.mjs'
 import { ouvrirProfil, profilDeDepart, profilServeur, reinitialiserStrapi } from './outils-strapi.mjs'
@@ -21,7 +23,8 @@ test.beforeEach(async () => {
 	await reinitialiserStrapi()
 })
 
-// The services modal: its buttons, the message of its first field left empty.
+// The services modal: its buttons, the message of its first field left empty
+// and the one of a form refused as a copy of a listed offer.
 const MODALE = {
 	ouvrir: 'update-service-offers-button',
 	option: 'add-service-offers-option-button',
@@ -33,6 +36,8 @@ const MODALE = {
 	sauver: 'save-button-service-offers',
 	fermer: 'close-modal',
 	erreur: 'error-name',
+	doublon: 'error-duplicate',
+	identique: 'Une prestation identique est déjà dans la liste.',
 }
 
 // the same service at the same price, a formula each: the description and
@@ -626,6 +631,116 @@ test.describe('lignes de la modale prestations', () => {
 		// a first Enter on « Fermer » closes as before
 		await page.keyboard.press('Enter')
 		await expect(dialogue(page)).toBeHidden()
+		expect(erreurs).toEqual([])
+	})
+
+	// Identical: the same name, prices and description, and the same options
+	// in the same order (name, prices and description of each); never the ids.
+	// The price was compared as stored, one per line, with the price as typed,
+	// « ; » between them, and an option typed by hand has no stored id: this
+	// offer was added a second time. And a refusal showed nothing.
+	test('prestations : une offre à deux prix et une option saisie une 2e fois à l’identique : refusée avec un message, la saisie reste ; un prix de l’option complété, le message part et elle s’ajoute', async ({
+		page,
+	}) => {
+		const erreurs = erreursDeLaPage(page)
+		const patchs = corpsDesPatchs(page)
+		await profilDeDepart({ service_offers: [DEUX_PRIX] })
+		await ouvrirProfil(page)
+		await page.getByTestId(MODALE.ouvrir).click()
+		const bouton = page.getByTestId(MODALE.bouton)
+		const doublon = dialogue(page).getByTestId(MODALE.doublon)
+		await expect(onglets(page)).toHaveCount(1)
+
+		await ajouter(page, DEUX_PRIX)
+		await expect(doublon).toHaveText(MODALE.identique)
+		await expect(doublon).toHaveRole('alert')
+		await expect(onglets(page)).toHaveCount(1)
+		await expect(bouton).toHaveText(MODALE.ajout)
+		await formulaire(page, DEUX_PRIX)
+
+		// a third price for the option: no longer a copy
+		const [option] = DEUX_PRIX.options
+		await taper(page, 'price-service-offers-option-input-0', enSaisie(option.price), ';20 € en volume russe')
+		const autre = { ...DEUX_PRIX, options: [{ ...option, price: `${option.price}\n20 € en volume russe` }] }
+		await expect(doublon).toHaveCount(0)
+		await bouton.click()
+		await expect(onglets(page)).toHaveCount(2)
+		await formulaire(page, SANS_OFFRE)
+		await enregistrees(page, patchs, [DEUX_PRIX, autre])
+		expect(erreurs).toEqual([])
+	})
+
+	test('prestations : une offre modifiée jusqu’à être la copie d’une autre : refusée avec un message, elle reste en cours de modification ; son nom complété, elle est modifiée', async ({
+		page,
+	}) => {
+		const erreurs = erreursDeLaPage(page)
+		const patchs = corpsDesPatchs(page)
+		await profilDeDepart({ service_offers: TROIS })
+		await ouvrirProfil(page)
+		await page.getByTestId(MODALE.ouvrir).click()
+		const bouton = page.getByTestId(MODALE.bouton)
+		const doublon = dialogue(page).getByTestId(MODALE.doublon)
+
+		await onglets(page).nth(1).click()
+		await expect(affichee(page)).toContainText(offreB.description)
+		await page.getByTestId(MODALE.modifier(1)).click()
+		await expect(bouton).toHaveText(MODALE.edition)
+		await formulaire(page, offreB)
+		// the last letter of its name and of its description: those of offer A
+		for (const cy of ['name-service-offers-input', 'description-service-offers-input']) {
+			const champ = dialogue(page).getByTestId(cy)
+			await champ.focus()
+			await champ.press('End')
+			await champ.press('Backspace')
+			await champ.pressSequentially('A')
+			await expect(champ, cy).toBeFocused()
+			await expect(champ, cy).toHaveValue(champs(offreA)[cy])
+		}
+
+		await bouton.click()
+		await expect(doublon).toHaveText(MODALE.identique)
+		await expect(bouton).toHaveText(MODALE.edition)
+		await expect(onglets(page)).toHaveText(TROIS.map(offre => offre.name))
+		await formulaire(page, offreA)
+
+		const modifiee = { ...offreA, name: await taper(page, 'name-service-offers-input', offreA.name, ' bis') }
+		await expect(doublon).toHaveCount(0)
+		await bouton.click()
+		await expect(bouton).toHaveText(MODALE.ajout)
+		await expect(onglets(page)).toHaveText([offreA.name, modifiee.name, offreC.name])
+		await formulaire(page, SANS_OFFRE)
+		await enregistrees(page, patchs, [offreA, modifiee, offreC])
+		expect(erreurs).toEqual([])
+	})
+
+	// Loaded by « Modifier » and left as it is, an offer is not a copy of
+	// itself. With one price and no option it was taken for one: the button
+	// did nothing and the form stayed in edit mode. The twin of an offer
+	// stored twice (old data) is not refused either: nothing changes.
+	test('prestations : chaque offre chargée par « Modifier » puis validée sans rien changer, deux d’entre elles stockées à l’identique : aucun message, le formulaire repasse en ajout, la liste et le PATCH restent les mêmes', async ({
+		page,
+	}) => {
+		const erreurs = erreursDeLaPage(page)
+		const patchs = corpsDesPatchs(page)
+		const offres = [DEUX_PRIX, offreA, offreA]
+		await profilDeDepart({ service_offers: offres })
+		await ouvrirProfil(page)
+		await page.getByTestId(MODALE.ouvrir).click()
+		const bouton = page.getByTestId(MODALE.bouton)
+
+		for (const [index, offre] of offres.entries()) {
+			await onglets(page).nth(index).click()
+			await expect(onglets(page).nth(index)).toHaveAttribute('aria-selected', 'true')
+			await page.getByTestId(MODALE.modifier(index)).click()
+			await expect(bouton).toHaveText(MODALE.edition)
+			await formulaire(page, offre)
+			await bouton.click()
+			await expect(bouton, `offre ${index + 1}`).toHaveText(MODALE.ajout)
+			await formulaire(page, SANS_OFFRE)
+			await expect(dialogue(page).getByTestId(MODALE.doublon)).toHaveCount(0)
+			await expect(onglets(page)).toHaveText(offres.map(o => o.name))
+		}
+		await enregistrees(page, patchs, offres)
 		expect(erreurs).toEqual([])
 	})
 

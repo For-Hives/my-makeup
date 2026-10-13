@@ -82,6 +82,13 @@ const optionsEnSaisie = offre =>
 		price: prixEnSaisie(option.price),
 	}))
 
+// what an option says, without its id: typed again by hand, the same option
+// has another one
+const sansId = ({ name, price, description }) => ({ name, price, description })
+
+// the form was refused as a copy of a listed offer (onSubmit)
+const OFFRE_IDENTIQUE = 'Une prestation identique est déjà dans la liste.'
+
 export default function ModalUpdateServiceOffersProfil(props) {
 	const user = props.user
 
@@ -90,6 +97,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 		handleSubmit,
 		formState: { errors },
 		reset,
+		setError,
 	} = useForm({
 		resolver: zodResolver(schema),
 	})
@@ -118,12 +126,21 @@ export default function ModalUpdateServiceOffersProfil(props) {
 		reset()
 	}
 
-	// the form holds this offer as « Modifier » loads it, field for field
+	// The form holds this offer, field for field: the same name, prices (as
+	// typed, « ; » between them) and description, and the same options in the
+	// same order, each with the same name, prices and description. Nothing is
+	// trimmed and the case counts; the ids do not.
 	const formulaireEgal = offre =>
 		offre.name === userServiceOffersName &&
 		prixEnSaisie(offre.price) === userServiceOffersPrice &&
 		offre.description === userServiceOffersDescription &&
-		JSON.stringify(optionsEnSaisie(offre)) === JSON.stringify(userServiceOffersOptions)
+		JSON.stringify(optionsEnSaisie(offre).map(sansId)) === JSON.stringify(userServiceOffersOptions.map(sansId))
+
+	// The form is a copy of a listed offer: its button refuses it. The offer
+	// loaded by « Modifier » and left as it is is not one, even stored twice:
+	// validated again, nothing changes in the list.
+	const identiques = userServiceOffers.filter(formulaireEgal)
+	const doublon = identiques.length > 0 && !identiques.some(offre => offre.id === userServiceOffersId)
 
 	/**
 	 * onSubmit function called when the form is submitted
@@ -140,16 +157,9 @@ export default function ModalUpdateServiceOffersProfil(props) {
 		})
 
 		// add a new serviceOffers to the user serviceOffers only if the form is valid
-		// check if the serviceOffers is already in the user serviceOffers
-		const serviceOffersAlreadyInUserServiceOffers = userServiceOffers.filter(
-			service_offers =>
-				service_offers.name === userServiceOffersName &&
-				service_offers.price === userServiceOffersPrice &&
-				service_offers.description === userServiceOffersDescription &&
-				JSON.stringify(service_offers.options) === JSON.stringify(userServiceOffersOptions)
-		)
+		// check if the serviceOffers is already in the user serviceOffers (doublon)
 		// if the service_offers is not already in the service_offers courses, add it
-		if (serviceOffersAlreadyInUserServiceOffers.length === 0) {
+		if (!doublon) {
 			if (userServiceOffersId !== '') {
 				// if the service_offers is already in the service_offers courses, update it
 				const userServiceOffersCopy = userServiceOffers.map(serviceOffer => {
@@ -184,6 +194,10 @@ export default function ModalUpdateServiceOffersProfil(props) {
 					setResetFormState()
 				}
 			}
+		} else {
+			// said above the button, until the form changes or is emptied: the
+			// button did nothing, without a word
+			setError('root.doublon', { type: 'manual', message: OFFRE_IDENTIQUE })
 		}
 	}
 
@@ -320,6 +334,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 			setUserServiceOffersOptions={setUserServiceOffersOptions}
 			handleAddServiceOffersOption={handleAddServiceOffersOption}
 			userServiceOffersId={userServiceOffersId}
+			erreurDoublon={doublon ? errors.root?.doublon?.message : undefined}
 			userServiceOffers={userServiceOffers}
 			handleEditServiceOffers={handleEditServiceOffers}
 			handleDeleteServiceOffers={handleDeleteServiceOffers}
@@ -477,6 +492,7 @@ function FormulaireService({
 	setUserServiceOffersOptions,
 	handleAddServiceOffersOption,
 	userServiceOffersId,
+	erreurDoublon,
 	boutonAjout,
 }) {
 	return (
@@ -583,6 +599,11 @@ function FormulaireService({
 							<span className="material-icons-round text-base text-gray-900">add</span>
 						</button>
 					</div>
+					{erreurDoublon && (
+						<p role="alert" data-cy={'error-duplicate'} className={'text-right text-xs text-red-500/80'}>
+							{erreurDoublon}
+						</p>
+					)}
 					<div className={'flex items-center justify-end'}>
 						<button
 							data-cy={'add-service-offers-button'}
@@ -738,6 +759,7 @@ function DialogueServices({
 	setUserServiceOffersOptions,
 	handleAddServiceOffersOption,
 	userServiceOffersId,
+	erreurDoublon,
 	userServiceOffers,
 	handleEditServiceOffers,
 	handleDeleteServiceOffers,
@@ -792,6 +814,7 @@ function DialogueServices({
 											setUserServiceOffersOptions={setUserServiceOffersOptions}
 											handleAddServiceOffersOption={handleAddServiceOffersOption}
 											userServiceOffersId={userServiceOffersId}
+											erreurDoublon={erreurDoublon}
 											boutonAjout={boutonAjout}
 										/>
 										<ListeServices
