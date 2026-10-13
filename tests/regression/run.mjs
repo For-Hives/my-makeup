@@ -101,7 +101,6 @@ async function attendrePret(url, enfant, delaiMs = 60_000) {
 	while (Date.now() < limite) {
 		if (enfant.exitCode !== null) throw new Error(`serveur arrêté (${url})`)
 		try {
-			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 			if ((await fetch(`${url}/api/auth/csrf`)).ok) return
 		} catch {
 			// not listening yet

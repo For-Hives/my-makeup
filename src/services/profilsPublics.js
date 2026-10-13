@@ -61,7 +61,6 @@ export async function chargerProfilsDuSitemap(options = {}) {
 	const { publiables, aVerifier } = trierProfilsPublics(entrees, options)
 	// contacts hidden in the list: read the profile alone, one at a time
 	for (const profil of aVerifier) {
-		// biome-ignore lint/performance/noAwaitInLoops: Each iteration depends on the preceding result; concurrency would change behavior.
 		const entree = await chargerProfil(profil.username, POPULATE_COMPLETUDE)
 		if (entree && completude(entree.attributes, options).publiable) publiables.push(profil)
 	}

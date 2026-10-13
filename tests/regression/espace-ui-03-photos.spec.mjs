@@ -415,7 +415,6 @@ function registerUi03Photos36() {
 		const vignettes = dialogue(page).getByTestId('portfolio-slide')
 		const photos = await Promise.all(Array.from({ length: 11 }, (_, n) => petiteWebp(n)))
 		for (const [n, photo] of photos.slice(0, 10).entries()) {
-			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 			await ajouterAuPortfolio(page, photo)
 			await expect(vignettes).toHaveCount(n + 1)
 		}
@@ -448,7 +447,6 @@ function registerUi03Photos36() {
 		await page.getByTestId('update-portefolio-button').click()
 		await expect(vignettes).toHaveCount(10)
 		for (let n = 10; n > 0; n--) {
-			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 			await dialogue(page).getByRole('button', { name: 'Retirer la photo 1', exact: true }).click()
 			await expect(vignettes).toHaveCount(n - 1)
 		}
@@ -457,7 +455,6 @@ function registerUi03Photos36() {
 		expect((await profilServeur()).image_gallery).toEqual([])
 		expect(await idsFichiers()).toEqual([])
 		for (const f of fichiers) {
-			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 			expect((await fetch(f.url)).status).toBe(404)
 		}
 

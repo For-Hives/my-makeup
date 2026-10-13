@@ -104,9 +104,7 @@ export function umamiScriptAttributes({ tag, domains } = {}) {
  * @returns {object|false} the payload to send, or false
  */
 export function umamiBeforeSend(_type, payload, win) {
-	// biome-ignore lint/performance/useTopLevelRegex: This function is serialized into an inline script and must be self-contained.
 	const campaignParameter = /^utm_[a-z]+$/
-	// biome-ignore lint/performance/useTopLevelRegex: This function is serialized into an inline script and must be self-contained.
 	const automatedBrowser = /HeadlessChrome/
 	try {
 		const nav = win.navigator || {}

@@ -104,7 +104,6 @@ test.describe('MES-10 balise Umami', () => {
 	}) => {
 		// / is rendered on each request, /a-propos at build time: same tag
 		for (const chemin of ['/', '/a-propos']) {
-			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 			const html = await (await request.get(chemin)).text()
 			expect(html).not.toContain('wadefade')
 			const scripts = getElementsByTagName('script', parseDocument(html))
@@ -202,11 +201,9 @@ test.describe('MES-10 balise Umami', () => {
 			authorization: 'Bearer secret-auth',
 		}
 		for (const chemin of ['/U/script.js', '/u/SCRIPT.JS', '/u/Script.js']) {
-			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 			expect((await request.get(chemin, { headers: secrets })).status(), chemin).toBe(404)
 		}
 		for (const chemin of ['/U/api/send', '/u/API/send', '/u/api/Send']) {
-			// biome-ignore lint/performance/noAwaitInLoops: Verify each path separately against the shared mock server.
 			const reponse = await request.post(chemin, {
 				headers: secrets,
 				data: { type: 'event', payload: { website: WEBSITE_ID, hostname: 'localhost', url: '/' } },
@@ -218,7 +215,6 @@ test.describe('MES-10 balise Umami', () => {
 
 	test('proxy : rien d’autre de l’instance n’est servi sous /u', async ({ request }) => {
 		for (const chemin of ['/u/login', '/u/api/websites', '/u/api/auth/login']) {
-			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 			expect((await request.get(chemin)).status(), chemin).toBe(404)
 		}
 		expect(await recus()).toEqual([])
@@ -459,7 +455,6 @@ test.describe('MES-10 un Umami lent ou muet ne retient pas le site', () => {
 		page.on('requestfailed', requete => finies.add(requete))
 		for (const chemin of ['/', '/a-propos']) {
 			const script = page.waitForRequest(r => new URL(r.url()).pathname === '/u/script.js')
-			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 			await page.goto(chemin, { waitUntil: 'domcontentloaded' })
 			await page.waitForFunction(hydratee)
 			// only the load event waits for Umami
@@ -593,7 +588,6 @@ function registermesure1Scenario4() {
 			[null, 'api_401'],
 			['ailleurs', 'api_401'],
 		]) {
-			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 			await piloter('/__umami/reset')
 			await page.goto(`/auth/signin?error=session-expiree${ou ? `&ou=${ou}` : ''}&callbackUrl=%2Fauth%2Fprofil`)
 			await expect(page.locator('[data-cy="signin-url-error"]')).toHaveText('Ta session a expiré, reconnecte-toi.')
@@ -840,7 +834,6 @@ function registermesure1Scenario11({ suivreEnvois, espaceCompte, rienDePersonnel
 			[400, 'type', /n'a pas été acceptée/],
 			[503, 'server', /L'envoi de la photo a échoué/],
 		]) {
-			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 			await panne({ upload: status })
 			await page.getByTestId('save-button-resume').click()
 			await expect(page.getByTestId('save-error')).toHaveText(message)

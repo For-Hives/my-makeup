@@ -36,7 +36,6 @@ async function envoyerGalerie(session, photos) {
 	const galerie = [...photos]
 	for (let i = 0; i < galerie.length; i++) {
 		if (!galerie[i].enAttente) continue
-		// biome-ignore lint/performance/noAwaitInLoops: Keep uploads ordered so a retry reuses files already sent before a failure.
 		const resultat = await uploadPhoto(session, galerie[i].fichier)
 		if (!resultat.ok) return { galerie, resultat }
 		URL.revokeObjectURL(galerie[i].url)

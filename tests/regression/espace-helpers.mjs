@@ -10,7 +10,6 @@ const dialogue = page => page.getByTestId('modal-panel')
 
 async function remplir(page, valeurs) {
 	for (const [cy, valeur] of Object.entries(valeurs)) {
-		// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 		await dialogue(page).getByTestId(cy).fill(valeur)
 	}
 	await valeursDeLaModale(page, valeurs)
@@ -18,7 +17,6 @@ async function remplir(page, valeurs) {
 
 async function valeursDeLaModale(page, valeurs) {
 	for (const [cy, valeur] of Object.entries(valeurs)) {
-		// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 		await expect(dialogue(page).getByTestId(cy), cy).toHaveValue(valeur)
 	}
 }

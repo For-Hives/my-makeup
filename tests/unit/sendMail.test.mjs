@@ -192,7 +192,6 @@ describe('/api/sendMail through Resend', () => {
 				env: { ...MAILGUN, ...RESEND },
 				status,
 			})
-			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 			const res = await envoyer(handler)
 			assert.equal(res.statusCode, 502, String(status))
 			assert.deepEqual(res.body, { success: false })
@@ -247,7 +246,6 @@ describe('/api/sendMail through Resend', () => {
 			[null, 'first_name'],
 		]
 		for (const [body, field] of refuses) {
-			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 			const res = await envoyer(handler, body)
 			assert.equal(res.statusCode, 400, JSON.stringify(body))
 			assert.deepEqual(res.body, { success: false })
@@ -330,7 +328,6 @@ describe('/api/sendMail without a provider or with another method', () => {
 			{ MAILGUN_DOMAIN: 'mg.example.test' },
 		]) {
 			const { handler, resend, mailgun } = monter({ env })
-			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 			const res = await envoyer(handler)
 			assert.equal(res.statusCode, 503, JSON.stringify(env))
 			assert.deepEqual(res.body, { success: false })

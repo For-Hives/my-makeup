@@ -122,7 +122,6 @@ function registerUi01ModalesLimitesMessages11() {
 		})
 		for (const vue of ['édition', 'publique']) {
 			if (vue === 'publique') {
-				// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 				await page.getByTestId('profil-public-view').click()
 				await expect(page).toHaveURL(/publicView=true/)
 				await expect(page.getByTestId('update-resume-button')).toHaveCount(0)
@@ -165,7 +164,6 @@ function registerUi01ModalesLimitesMessages12() {
 		expect((await profilServeur()).description).toBe('b'.repeat(2000))
 		for (const vue of ['édition', 'publique']) {
 			if (vue === 'publique') {
-				// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 				await page.getByTestId('profil-public-view').click()
 				await expect(page).toHaveURL(/publicView=true/)
 				await expect(page.getByTestId('update-description-button')).toHaveCount(0)
@@ -207,7 +205,6 @@ function registerUi01ModalesLimitesMessages13() {
 			"Le rayon d'action ne doit pas dépasser 1000 km."
 		)
 		for (const rayon of ['-5', '2.5']) {
-			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 			await remplir(page, { 'action-radius-input': rayon })
 			await page.getByTestId('save-button-location').click()
 			await expect(dialogue(page).getByTestId('error-action-radius')).toHaveText(
@@ -230,7 +227,6 @@ function registerUi01ModalesLimitesMessages13() {
 		})
 		for (const vue of ['édition', 'publique']) {
 			if (vue === 'publique') {
-				// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 				await page.getByTestId('profil-public-view').click()
 				await expect(page).toHaveURL(/publicView=true/)
 			}
@@ -261,7 +257,6 @@ function registerUi01ModalesLimitesMessages14() {
 		expect((await profilServeur()).city).toBe('Nantes')
 		for (const vue of ['édition', 'publique']) {
 			if (vue === 'publique') {
-				// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 				await page.getByTestId('profil-public-view').click()
 				await expect(page).toHaveURL(/publicView=true/)
 			}
@@ -303,7 +298,6 @@ function registerUi01ModalesLimitesMessages15() {
 		})
 		for (const vue of ['édition', 'publique', 'rechargement']) {
 			if (vue === 'publique') {
-				// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 				await page.getByTestId('profil-public-view').click()
 				await expect(page).toHaveURL(/publicView=true/)
 			} else if (vue === 'rechargement') await aller(page, '/auth/profil?publicView=true')
@@ -329,7 +323,6 @@ function registerUi01ModalesLimitesMessages16() {
 		await expect(tete).toHaveText(`peut se déplacer à ${ADRESSE_FICTIVE} & dans un rayon de 30km`)
 		for (const vue of ['bascule', 'rechargement']) {
 			if (vue === 'bascule') {
-				// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 				await page.getByTestId('profil-public-view').click()
 				await expect(page).toHaveURL(/publicView=true/)
 			} else await aller(page, '/auth/profil?publicView=true')
@@ -338,7 +331,6 @@ function registerUi01ModalesLimitesMessages16() {
 				'Thonon-les-Bains (74) et 30 km autour'
 			)
 			for (const morceau of RUE_FICTIVE) {
-				// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 				await expect(page.locator('main'), `${vue} ${morceau}`).not.toContainText(morceau)
 			}
 		}
@@ -536,7 +528,6 @@ function registerUi01ModalesLimitesMessages19() {
 			'error-course-description': 'La description est requise.',
 		}
 		for (const [cy, message] of Object.entries(messages)) {
-			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 			await expect(dialogue(page).getByTestId(cy), cy).toHaveText(message)
 		}
 		await expect(formations).toHaveCount(0)
@@ -558,7 +549,6 @@ function registerUi01ModalesLimitesMessages19() {
 		await remplir(page, champs(formation))
 		await page.getByTestId('add-course-button').click()
 		for (const cy of Object.keys(messages)) {
-			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 			await expect(dialogue(page).getByTestId(cy), cy).toHaveCount(0)
 		}
 		await expect(formations).toHaveCount(1)
@@ -589,7 +579,6 @@ function registerUi01ModalesLimitesMessages19() {
 
 		for (const vue of ['édition', 'publique']) {
 			if (vue === 'publique') {
-				// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 				await page.getByTestId('profil-public-view').click()
 				await expect(page).toHaveURL(/publicView=true/)
 			}
@@ -617,7 +606,6 @@ function registerUi01ModalesLimitesMessages20() {
 		await page.getByTestId('update-experience-button').click()
 		await expect(listees).toHaveCount(2)
 		for (const studio of ['Studio A', 'Studio B']) {
-			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 			await dialogue(page)
 				.getByRole('button', { name: `Retirer l'expérience ${studio}` })
 				.click()
@@ -640,7 +628,6 @@ function registerUi01ModalesLimitesMessages20() {
 			'error-description-experience': 'La description est requise.',
 		}
 		for (const [cy, message] of Object.entries(messages)) {
-			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 			await expect(dialogue(page).getByTestId(cy), cy).toHaveText(message)
 		}
 		await expect(listees).toHaveCount(0)
@@ -665,7 +652,6 @@ function registerUi01ModalesLimitesMessages20() {
 		await remplir(page, champs(experience))
 		await page.getByTestId('add-experience-button').click()
 		for (const cy of Object.keys(messages)) {
-			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 			await expect(dialogue(page).getByTestId(cy), cy).toHaveCount(0)
 		}
 		await expect(listees).toHaveCount(1)
@@ -730,7 +716,6 @@ function registerUi01ModalesLimitesMessages21() {
 		await page.getByTestId('save-button-social-medias').click()
 		await expect(erreur('email')).toHaveText('Veuillez entrer un email valide.')
 		for (const canal of URLS) {
-			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 			await expect(erreur(canal), canal).toHaveText('Veuillez entrer une URL valide (https://...).')
 		}
 		await expect(erreur('phone')).toHaveText('Le numéro de téléphone est requis.')
@@ -744,7 +729,6 @@ function registerUi01ModalesLimitesMessages21() {
 		await page.getByTestId('save-button-social-medias').click()
 		await expect(erreur('email')).toHaveText("L'email ne doit pas dépasser 200 caractères.")
 		for (const canal of URLS) {
-			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 			await expect(erreur(canal), canal).toHaveText("L'URL ne doit pas dépasser 200 caractères.")
 		}
 		await expect(erreur('phone')).toHaveText('Le numéro de téléphone ne doit pas dépasser 20 caractères.')
@@ -770,12 +754,10 @@ function registerUi01ModalesLimitesMessages21() {
 
 		for (const vue of ['édition', 'publique']) {
 			if (vue === 'publique') {
-				// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 				await page.getByTestId('profil-public-view').click()
 				await expect(page).toHaveURL(/publicView=true/)
 			}
 			for (const canal of CANAUX) {
-				// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 				await expect(page.getByTestId(canal), `${vue} ${canal}`).toHaveText(reseau[canal])
 			}
 			// data-cy is on the text, inside the link
@@ -798,7 +780,6 @@ function registerUi01ModalesLimitesMessages21() {
 		expect(patchs[1]).toEqual({ network: vide })
 		expect((await profilServeur()).network).toMatchObject(vide)
 		for (const canal of CANAUX) {
-			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 			await expect(page.getByTestId(canal), canal).toHaveCount(0)
 		}
 		expect(erreurs).toEqual([])
@@ -867,7 +848,6 @@ function registerUi01ModalesLimitesMessages23() {
 			)
 		const messages = async (nom, prix, description) => {
 			for (const [, suffixe] of PARTIES) {
-				// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 				await expect(erreur(`error-name${suffixe}`)).toHaveText(nom)
 				await expect(erreur(`error-price${suffixe}`)).toHaveText(prix)
 				await expect(erreur(`error-description${suffixe}`)).toHaveText(description)
@@ -876,7 +856,6 @@ function registerUi01ModalesLimitesMessages23() {
 
 		await page.getByTestId('update-service-offers-button').click()
 		for (let i = 0; i < 3; i++) {
-			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 			await page.getByTestId('add-service-offers-option-button').click()
 		}
 		await page.getByTestId('add-service-offers-button').click()
@@ -913,7 +892,6 @@ function registerUi01ModalesLimitesMessages23() {
 		await expect(listees).toHaveCount(1)
 		for (const [, suffixe] of PARTIES) {
 			for (const champ of ['name', 'price', 'description']) {
-				// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 				await expect(erreur(`error-${champ}${suffixe}`)).toHaveCount(0)
 			}
 		}
@@ -977,7 +955,6 @@ function registerUi01ModalesLimitesMessages24() {
 
 		await page.getByTestId('update-service-offers-button').click()
 		for (let i = 0; i < 3; i++) {
-			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 			await page.getByTestId('add-service-offers-option-button').click()
 		}
 		await remplir(page, champs(offre('')))
@@ -1001,7 +978,6 @@ function registerUi01ModalesLimitesMessages24() {
 		const attendue = offre(' Modified')
 		for (const chargement of ['bascule', 'rechargement']) {
 			if (chargement === 'bascule') {
-				// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 				await page.getByTestId('profil-public-view').click()
 				await expect(page).toHaveURL(/publicView=true/)
 			} else await aller(page, '/auth/profil?publicView=true')
@@ -1011,7 +987,6 @@ function registerUi01ModalesLimitesMessages24() {
 			for (const [i, option] of attendue.options.entries()) {
 				const description = page.getByTestId(`service-offer-description-${i}`)
 				const prix = page.getByTestId(`service-offer-price-${i}`)
-				// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 				await expect(page.getByTestId(`service-offer-name-${i}`)).toHaveText(option.name)
 				await expect(description, chargement).toBeHidden()
 				await expect(prix, chargement).toBeHidden()
@@ -1118,9 +1093,7 @@ function registerUi01ModalesLimitesMessages25() {
 
 		// on the page without a reload, then read again from the fake Strapi
 		for (const chargement of ['sans rechargement', 'rechargement']) {
-			if (chargement === 'rechargement')
-				// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
-				await aller(page, '/auth/profil')
+			if (chargement === 'rechargement') await aller(page, '/auth/profil')
 			await expect(page.getByTestId('course-diploma'), chargement).toHaveText([formation.diploma])
 			await expect(page.getByTestId('experience-company'), chargement).toHaveText([experience.company])
 			await expect(page.getByTestId('service-offer-name'), chargement).toHaveText([offre.name])

@@ -276,7 +276,6 @@ function registerUi01SauvegardesHonnetes8() {
 			['price-service-offers-option-input-0', option.price, '55'],
 		]) {
 			const champ = page.getByTestId(cy)
-			// biome-ignore lint/performance/noAwaitInLoops: the three fields are typed in one after the other, as a visitor does
 			await expect(champ).toHaveValue(depart)
 			await champ.focus()
 			await champ.press('End')

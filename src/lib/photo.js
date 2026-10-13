@@ -179,7 +179,6 @@ export async function compresserPhoto({ largeur, hauteur, encoder, tailleMax = T
 			qualite,
 		}
 		essais++
-		// biome-ignore lint/performance/noAwaitInLoops: Each iteration depends on the preceding result; concurrency would change behavior.
 		let blob = await encoder({ ...cible, type })
 		if (blob && blob.type !== type && type === 'image/webp') {
 			type = 'image/jpeg'
