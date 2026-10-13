@@ -5,13 +5,17 @@ import { Fragment, useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import * as zod from 'zod'
 import {
+	AnnonceRetrait,
 	BoutonFermer,
 	BoutonSauvegarder,
 	ErreurSauvegarde,
 	FondModale,
 	focusApresRetrait,
+	ignorerEntreeMaintenue,
+	useAnnonceRetrait,
 	useEnvoi,
 } from '@/components/Profil/Atoms/ModalUpdate/ModalElements'
+import { dejaDansLaListe } from '@/lib/sauvegarde-profil'
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
 
 const schema = zod
@@ -29,6 +33,11 @@ const schema = zod
 // its id, so two chips with the same name were removed together. Never
 // sent: the PATCH holds the names only (onSubmit).
 let compteurLocal = 0
+
+// A name already in the list (dejaDansLaListe) is not added a second time:
+// said under the field, where the name stays. The chips stored twice before
+// that stay as they are, each removed on its own.
+const DEJA_DANS_LA_LISTE = 'Cette langue est déjà dans la liste.'
 
 export default function ModalUpdateLanguageProfil(props) {
 	const user = props.user
@@ -51,6 +60,8 @@ export default function ModalUpdateLanguageProfil(props) {
 
 	// Escape, a click outside and « Fermer » wait for the save in progress
 	const { envoi, setEnvoi, erreurEnvoi, setErreurEnvoi, fermer } = useEnvoi(props.isModalOpen, props.handleIsModalOpen)
+	// each removal is said to screen readers (AnnonceRetrait)
+	const { annonce, annoncer } = useAnnonceRetrait(props.isModalOpen)
 
 	const { data: session } = useSession()
 
@@ -97,10 +108,12 @@ export default function ModalUpdateLanguageProfil(props) {
 				// pasted with its ';' in one go, then added
 				setValue('language', nom)
 				trigger('language').then(isValid => {
-					if (isValid) {
+					const doublon = isValid && dejaDansLaListe(userLanguageSelected, nom)
+					if (isValid && !doublon) {
 						setUserLanguageSelected(userLanguageSelected.concat({ id: `local-${++compteurLocal}`, name: nom }))
 						setUserLanguage('')
 					} else setUserLanguage(nom)
+					if (doublon) setError('language', { type: 'manual', message: DEJA_DANS_LA_LISTE })
 				})
 			} else {
 				setError('language', {
@@ -127,6 +140,8 @@ export default function ModalUpdateLanguageProfil(props) {
 	}
 
 	const handleDeleteLanguageelected = id => {
+		const retiree = userLanguageSelected.find(item => item.id === id)
+		if (retiree) annoncer(`Langue ${retiree.name ?? ''} retirée`)
 		setUserLanguageSelected(userLanguageSelected.filter(item => item.id !== id))
 	}
 
@@ -154,6 +169,14 @@ export default function ModalUpdateLanguageProfil(props) {
 		}
 	}, [open, user])
 
+	// The message of a name refused as already in the list is true as long as
+	// the name is there. Once the last chip that held it is removed, it is not
+	// shown any more: the name is free, and Enter adds it.
+	const erreurLangue =
+		errors.language?.message === DEJA_DANS_LA_LISTE && !dejaDansLaListe(userLanguageSelected, userLanguage)
+			? undefined
+			: errors.language
+
 	return (
 		<Transition.Root show={open} as={Fragment}>
 			<Dialog as="div" className="relative z-30" initialFocus={cancelButtonRef} onClose={fermer}>
@@ -172,6 +195,7 @@ export default function ModalUpdateLanguageProfil(props) {
 						>
 							<Dialog.Panel
 								data-cy="modal-panel"
+								onKeyDownCapture={ignorerEntreeMaintenue}
 								className="relative w-full transform rounded-lg bg-white p-8 text-left shadow-2xl transition-all sm:max-w-3xl"
 							>
 								<BoutonFermer onClick={fermer} disabled={envoi} ref={cancelButtonRef} />
@@ -205,6 +229,9 @@ export default function ModalUpdateLanguageProfil(props) {
 																	champLangue.current = noeud
 																}}
 																required
+																// its message is read with the field
+																aria-invalid={!!erreurLangue}
+																aria-describedby={erreurLangue ? 'language-erreur' : undefined}
 																onKeyPress={async event => {
 																	if (event.key === 'Enter') {
 																		event.preventDefault()
@@ -214,7 +241,12 @@ export default function ModalUpdateLanguageProfil(props) {
 																		// Trigger a validation before adding the skill
 																		const isValid = await trigger('language')
 																		if (isValid) {
-																			if (event.target.value.trim() !== '') {
+																			if (dejaDansLaListe(userLanguageSelected, event.target.value)) {
+																				setError('language', {
+																					type: 'manual',
+																					message: DEJA_DANS_LA_LISTE,
+																				})
+																			} else if (event.target.value.trim() !== '') {
 																				// 	add the skill to the array
 																				// 	empty the input
 																				setUserLanguageSelected([
@@ -238,9 +270,16 @@ export default function ModalUpdateLanguageProfil(props) {
 																onChange={handleUpdateLanguage}
 																className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
 															/>
-															{errors.language && (
-																<p data-cy={'error-language'} className={'mt-2 text-xs text-red-500/80'}>
-																	{errors.language.message}
+															{erreurLangue && (
+																<p
+																	id="language-erreur"
+																	data-cy={'error-language'}
+																	// a refusal is said at once; the other messages come while
+																	// typing and are read with the field
+																	role={erreurLangue.message === DEJA_DANS_LA_LISTE ? 'alert' : undefined}
+																	className={'mt-2 text-xs text-red-500/80'}
+																>
+																	{erreurLangue.message}
 																</p>
 															)}
 														</div>
@@ -286,6 +325,7 @@ export default function ModalUpdateLanguageProfil(props) {
 									<ErreurSauvegarde message={erreurEnvoi} />
 									<BoutonSauvegarder dataCy="save-button-languages" envoi={envoi} onClick={handleSubmit(onSubmit)} />
 								</div>
+								<AnnonceRetrait annonce={annonce} />
 							</Dialog.Panel>
 						</Transition.Child>
 					</div>

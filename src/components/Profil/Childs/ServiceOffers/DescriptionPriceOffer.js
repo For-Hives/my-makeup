@@ -5,6 +5,9 @@ import { lignes } from '@/lib/profil/vue-publique'
  * Display the description and the price of a service offer -> pass the service offer as props
  * One line per line typed; blank lines, « null » and an empty price render
  * nothing (UI-06: no empty <p> nor <h3> on a public page)
+ * `index` ends the two data-cy: null for an offer of the page (no suffix),
+ * its rank for an option (OptionsOffers), `modal-` and its rank for the
+ * offer shown in the services modal
  * @param props
  * @returns {JSX.Element}
  * @constructor

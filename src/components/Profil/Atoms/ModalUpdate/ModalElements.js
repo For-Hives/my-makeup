@@ -115,6 +115,64 @@ export function focusApresRetrait(bouton, repli) {
 }
 
 /**
+ * onKeyDownCapture of the panel of a modal: Enter held on a button acts
+ * once. The browser clicks the button again each time the key repeats, and a
+ * removal keeps the focus in the modal (focusApresRetrait): the items left
+ * one after the other, then the key reached the button of the form, which
+ * added or validated what the form held. On the way down to the button, so
+ * that the ones that act on keydown by themselves (tabs and options of
+ * Headless UI) do not see the repeated key either. Space is left alone: it
+ * clicks on keyup, once. So are the fields: Enter held in a description adds
+ * lines. Also the onKeyDown of the button of the page that opens the modal
+ * (BoutonModifier), which has the focus again once the modal is closed.
+ * @param {KeyboardEvent} event
+ */
+export function ignorerEntreeMaintenue(event) {
+	if (event.key !== 'Enter' || !event.repeat || !event.target.closest('button')) return
+	event.preventDefault()
+	event.stopPropagation()
+}
+
+/**
+ * What a modal tells screen readers when an item leaves its list. The
+ * « Retirer » that keeps the focus takes the name of the item below
+ * (focusApresRetrait), and some screen readers do not read a name that
+ * changes under the focus: the removal went unsaid. `annoncer` says a
+ * sentence in <AnnonceRetrait>, which takes `annonce`. Emptied each time the
+ * modal opens or closes: the region comes back with the panel, and must
+ * come back empty.
+ * @param {boolean} ouverte - props.isModalOpen
+ * @returns {{annonce: {phrase: string, rang: number}, annoncer: (phrase: string) => void}}
+ */
+export function useAnnonceRetrait(ouverte) {
+	const [annonce, setAnnonce] = useState({ phrase: '', rang: 0 })
+	useEffect(() => {
+		setAnnonce(dite => (dite.phrase ? { phrase: '', rang: dite.rang } : dite))
+	}, [ouverte])
+	// an item without a name would leave two spaces in a row
+	const annoncer = phrase =>
+		setAnnonce(({ rang }) => ({
+			phrase: phrase.replace(/\s+/g, ' ').trim(),
+			rang: rang + 1,
+		}))
+	return { annonce, annoncer }
+}
+
+/**
+ * Polite live region of a modal, out of sight. Rendered empty with the
+ * panel: a region that comes with its text is not read, so it is there
+ * before anything is said. Each sentence is a new node (key): said twice in
+ * a row, for two items with the same name, it is read twice.
+ */
+export function AnnonceRetrait({ annonce }) {
+	return (
+		<div role="status" aria-live="polite" data-cy="removal-announcement" className="sr-only">
+			<span key={annonce.rang}>{annonce.phrase}</span>
+		</div>
+	)
+}
+
+/**
  * onChange of a controlled input that is also registered in react-hook-form:
  * the input's own onChange replaced the one of register(), so the form only
  * saw a value on blur (Enter in a field validated and sent the old one).

@@ -1,7 +1,12 @@
+import { ignorerEntreeMaintenue } from '@/components/Profil/Atoms/ModalUpdate/ModalElements'
+
 /**
  * « Modifier » button of a card of the artist's space (UI-02): always
  * visible, 44 px at least, reachable with the keyboard with a visible focus
  * ring, opened by the first tap. Its accessible name says what it edits.
+ * Enter held on it acts once: « Fermer » and « Sauvegarder » hand the focus
+ * back to it when they close the modal, and the key repeated on it opened
+ * the modal again.
  */
 export default function BoutonModifier({ onClick, libelle, dataCy }) {
 	return (
@@ -9,6 +14,7 @@ export default function BoutonModifier({ onClick, libelle, dataCy }) {
 			type="button"
 			data-cy={dataCy}
 			onClick={onClick}
+			onKeyDown={ignorerEntreeMaintenue}
 			aria-label={libelle}
 			title={libelle}
 			className={

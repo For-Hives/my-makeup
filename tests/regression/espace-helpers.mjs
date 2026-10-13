@@ -129,6 +129,18 @@ function corpsDesPatchs(page) {
 	return corps
 }
 
+const zoneAnnonce = page => dialogue(page).getByTestId('removal-announcement')
+
+async function annoncesDites(page) {
+	await zoneAnnonce(page).evaluate(zone => {
+		window.annoncesDites = []
+		new MutationObserver(() => {
+			if (zone.textContent) window.annoncesDites.push(zone.textContent)
+		}).observe(zone, { childList: true, subtree: true, characterData: true })
+	})
+	return () => page.evaluate(() => window.annoncesDites)
+}
+
 const fichiersStockes = (n, proprietaire = null) => piloter('/__fichiers', { n, proprietaire })
 
 const idsFichiers = async () => (await etat()).fichiers.map(f => f.id)
@@ -178,6 +190,7 @@ const SPECIALITE_65 = 'Maquilleur professionnel et coiffeur professionnel pour l
 export {
 	AUTRE_COULEUR,
 	ajouterAuPortfolio,
+	annoncesDites,
 	apercuProfil,
 	balayer,
 	barreDeCompletion,
@@ -203,4 +216,5 @@ export {
 	sauver,
 	sauverAilleurs,
 	valeursDeLaModale,
+	zoneAnnonce,
 }

@@ -6,11 +6,14 @@ import { flushSync } from 'react-dom'
 import { useForm } from 'react-hook-form'
 import * as zod from 'zod'
 import {
+	AnnonceRetrait,
 	BoutonFermer,
 	BoutonSauvegarder,
 	ErreurSauvegarde,
 	FondModale,
+	ignorerEntreeMaintenue,
 	suivreChamp,
+	useAnnonceRetrait,
 	useEnvoi,
 } from '@/components/Profil/Atoms/ModalUpdate/ModalElements'
 import { DescriptionPriceOffer } from '@/components/Profil/Childs/ServiceOffers/DescriptionPriceOffer'
@@ -81,6 +84,13 @@ const optionsEnSaisie = offre =>
 		price: prixEnSaisie(option.price),
 	}))
 
+// what an option says, without its id: typed again by hand, the same option
+// has another one
+const sansId = ({ name, price, description }) => ({ name, price, description })
+
+// the form was refused as a copy of a listed offer (onSubmit)
+const OFFRE_IDENTIQUE = 'Une prestation identique est déjà dans la liste.'
+
 export default function ModalUpdateServiceOffersProfil(props) {
 	const user = props.user
 
@@ -89,6 +99,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 		handleSubmit,
 		formState: { errors },
 		reset,
+		setError,
 	} = useForm({
 		resolver: zodResolver(schema),
 	})
@@ -105,6 +116,8 @@ export default function ModalUpdateServiceOffersProfil(props) {
 
 	// Escape, a click outside and « Fermer » wait for the save in progress
 	const { envoi, setEnvoi, erreurEnvoi, setErreurEnvoi, fermer } = useEnvoi(props.isModalOpen, props.handleIsModalOpen)
+	// each removal is said to screen readers (AnnonceRetrait)
+	const { annonce, annoncer } = useAnnonceRetrait(props.isModalOpen)
 
 	const { data: session } = useSession()
 
@@ -117,12 +130,21 @@ export default function ModalUpdateServiceOffersProfil(props) {
 		reset()
 	}
 
-	// the form holds this offer as « Modifier » loads it, field for field
+	// The form holds this offer, field for field: the same name, prices (as
+	// typed, « ; » between them) and description, and the same options in the
+	// same order, each with the same name, prices and description. Nothing is
+	// trimmed and the case counts; the ids do not.
 	const formulaireEgal = offre =>
 		offre.name === userServiceOffersName &&
 		prixEnSaisie(offre.price) === userServiceOffersPrice &&
 		offre.description === userServiceOffersDescription &&
-		JSON.stringify(optionsEnSaisie(offre)) === JSON.stringify(userServiceOffersOptions)
+		JSON.stringify(optionsEnSaisie(offre).map(sansId)) === JSON.stringify(userServiceOffersOptions.map(sansId))
+
+	// The form is a copy of a listed offer: its button refuses it. The offer
+	// loaded by « Modifier » and left as it is is not one, even stored twice:
+	// validated again, nothing changes in the list.
+	const identiques = userServiceOffers.filter(formulaireEgal)
+	const doublon = identiques.length > 0 && !identiques.some(offre => offre.id === userServiceOffersId)
 
 	/**
 	 * onSubmit function called when the form is submitted
@@ -139,16 +161,9 @@ export default function ModalUpdateServiceOffersProfil(props) {
 		})
 
 		// add a new serviceOffers to the user serviceOffers only if the form is valid
-		// check if the serviceOffers is already in the user serviceOffers
-		const serviceOffersAlreadyInUserServiceOffers = userServiceOffers.filter(
-			service_offers =>
-				service_offers.name === userServiceOffersName &&
-				service_offers.price === userServiceOffersPrice &&
-				service_offers.description === userServiceOffersDescription &&
-				JSON.stringify(service_offers.options) === JSON.stringify(userServiceOffersOptions)
-		)
+		// check if the serviceOffers is already in the user serviceOffers (doublon)
 		// if the service_offers is not already in the service_offers courses, add it
-		if (serviceOffersAlreadyInUserServiceOffers.length === 0) {
+		if (!doublon) {
 			if (userServiceOffersId !== '') {
 				// if the service_offers is already in the service_offers courses, update it
 				const userServiceOffersCopy = userServiceOffers.map(serviceOffer => {
@@ -183,6 +198,10 @@ export default function ModalUpdateServiceOffersProfil(props) {
 					setResetFormState()
 				}
 			}
+		} else {
+			// said above the button, until the form changes or is emptied: the
+			// button did nothing, without a word
+			setError('root.doublon', { type: 'manual', message: OFFRE_IDENTIQUE })
 		}
 	}
 
@@ -256,6 +275,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 
 	const handleDeleteServiceOffers = id => {
 		const retiree = userServiceOffers.find(service_offers => service_offers.id === id)
+		if (retiree) annoncer(`Prestation ${retiree.name ?? ''} retirée`)
 		const userServiceOffersFiltered = userServiceOffers.filter(service_offers => service_offers.id !== id)
 		setUserServiceOffers(userServiceOffersFiltered)
 		if (id !== userServiceOffersId) return
@@ -319,11 +339,13 @@ export default function ModalUpdateServiceOffersProfil(props) {
 			setUserServiceOffersOptions={setUserServiceOffersOptions}
 			handleAddServiceOffersOption={handleAddServiceOffersOption}
 			userServiceOffersId={userServiceOffersId}
+			erreurDoublon={doublon ? errors.root?.doublon?.message : undefined}
 			userServiceOffers={userServiceOffers}
 			handleEditServiceOffers={handleEditServiceOffers}
 			handleDeleteServiceOffers={handleDeleteServiceOffers}
 			erreurEnvoi={erreurEnvoi}
 			handleSubmitServiceOffers={handleSubmitServiceOffers}
+			annonce={annonce}
 		/>
 	)
 }
@@ -476,6 +498,7 @@ function FormulaireService({
 	setUserServiceOffersOptions,
 	handleAddServiceOffersOption,
 	userServiceOffersId,
+	erreurDoublon,
 	boutonAjout,
 }) {
 	return (
@@ -582,6 +605,11 @@ function FormulaireService({
 							<span className="material-icons-round text-base text-gray-900">add</span>
 						</button>
 					</div>
+					{erreurDoublon && (
+						<p role="alert" data-cy={'error-duplicate'} className={'text-right text-xs text-red-500/80'}>
+							{erreurDoublon}
+						</p>
+					)}
 					<div className={'flex items-center justify-end'}>
 						<button
 							data-cy={'add-service-offers-button'}
@@ -701,7 +729,10 @@ function ListeServices({ userServiceOffers, handleEditServiceOffers, handleDelet
 											<div className={'flex flex-col'}>
 												<h2 className={'text-start text-lg font-bold text-indigo-900'}>{service_offer.name}</h2>
 											</div>
-											<DescriptionPriceOffer serviceOffer={service_offer} />
+											{/* data-cy named after the modal and the rank of the offer: the
+											    rank alone names its options (OptionsOffers), here and on
+											    the page behind */}
+											<DescriptionPriceOffer serviceOffer={service_offer} index={`modal-${index}`} />
 										</div>
 										<div className={'flex w-full flex-col gap-2 py-2'}>
 											<OptionsOffers serviceOffer={service_offer} />
@@ -737,11 +768,13 @@ function DialogueServices({
 	setUserServiceOffersOptions,
 	handleAddServiceOffersOption,
 	userServiceOffersId,
+	erreurDoublon,
 	userServiceOffers,
 	handleEditServiceOffers,
 	handleDeleteServiceOffers,
 	erreurEnvoi,
 	handleSubmitServiceOffers,
+	annonce,
 }) {
 	// where the focus goes when the list is left empty (ListeServices)
 	const boutonAjout = useRef(null)
@@ -764,6 +797,7 @@ function DialogueServices({
 						>
 							<Dialog.Panel
 								data-cy="modal-panel"
+								onKeyDownCapture={ignorerEntreeMaintenue}
 								className="relative w-full transform rounded-lg bg-white p-8 text-left shadow-2xl transition-all sm:max-w-7xl"
 							>
 								<BoutonFermer onClick={fermer} disabled={envoi} ref={cancelButtonRef} />
@@ -790,6 +824,7 @@ function DialogueServices({
 											setUserServiceOffersOptions={setUserServiceOffersOptions}
 											handleAddServiceOffersOption={handleAddServiceOffersOption}
 											userServiceOffersId={userServiceOffersId}
+											erreurDoublon={erreurDoublon}
 											boutonAjout={boutonAjout}
 										/>
 										<ListeServices
@@ -808,6 +843,7 @@ function DialogueServices({
 										onClick={handleSubmitServiceOffers}
 									/>
 								</div>
+								<AnnonceRetrait annonce={annonce} />
 							</Dialog.Panel>
 						</Transition.Child>
 					</div>

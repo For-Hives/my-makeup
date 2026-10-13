@@ -5,12 +5,15 @@ import { Fragment, useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import * as zod from 'zod'
 import {
+	AnnonceRetrait,
 	BoutonFermer,
 	BoutonSauvegarder,
 	ErreurSauvegarde,
 	FondModale,
 	focusApresRetrait,
+	ignorerEntreeMaintenue,
 	suivreChamp,
+	useAnnonceRetrait,
 	useEnvoi,
 } from '@/components/Profil/Atoms/ModalUpdate/ModalElements'
 import { avecCles } from '@/lib/cles'
@@ -85,6 +88,8 @@ export default function ModalUpdateCoursesProfil(props) {
 
 	// Escape, a click outside and « Fermer » wait for the save in progress
 	const { envoi, setEnvoi, erreurEnvoi, setErreurEnvoi, fermer } = useEnvoi(props.isModalOpen, props.handleIsModalOpen)
+	// each removal is said to screen readers (AnnonceRetrait)
+	const { annonce, annoncer } = useAnnonceRetrait(props.isModalOpen)
 
 	const { data: session } = useSession()
 
@@ -204,6 +209,7 @@ export default function ModalUpdateCoursesProfil(props) {
 
 	const handleDeleteCourse = id => {
 		const retiree = userCourses.find(course => course.id === id)
+		if (retiree) annoncer(`Formation ${retiree.diploma ?? ''} retirée`)
 		const userCoursesFiltered = userCourses.filter(course => course.id !== id)
 		setUserCourses(userCoursesFiltered)
 		if (id !== userCoursesId) return
@@ -263,6 +269,7 @@ export default function ModalUpdateCoursesProfil(props) {
 			handleDeleteCourse={handleDeleteCourse}
 			erreurEnvoi={erreurEnvoi}
 			handleSubmitCourses={handleSubmitCourses}
+			annonce={annonce}
 		/>
 	)
 }
@@ -418,6 +425,7 @@ function DialogueFormations({
 	handleDeleteCourse,
 	erreurEnvoi,
 	handleSubmitCourses,
+	annonce,
 }) {
 	// where the focus goes when the list is left empty (focusApresRetrait)
 	const boutonAjout = useRef(null)
@@ -440,6 +448,7 @@ function DialogueFormations({
 						>
 							<Dialog.Panel
 								data-cy="modal-panel"
+								onKeyDownCapture={ignorerEntreeMaintenue}
 								className="relative w-full transform rounded-lg bg-white p-8 text-left shadow-2xl transition-all sm:max-w-7xl"
 							>
 								<BoutonFermer onClick={fermer} disabled={envoi} ref={cancelButtonRef} />
@@ -541,6 +550,7 @@ function DialogueFormations({
 									<ErreurSauvegarde message={erreurEnvoi} />
 									<BoutonSauvegarder dataCy="save-button-courses" envoi={envoi} onClick={handleSubmitCourses} />
 								</div>
+								<AnnonceRetrait annonce={annonce} />
 							</Dialog.Panel>
 						</Transition.Child>
 					</div>

@@ -4,9 +4,21 @@
 // overwritten together; and removing the row loaded in the form left the
 // form in edit mode, where its button updated nothing and emptied the fields.
 // Removed with the keyboard, the last row of the list took the focus out of
-// the modal with it.
+// the modal with it. With the focus kept in the modal, Enter held on a button
+// clicked it again each time the key repeated, and the « Retirer » focused
+// took the name of the row below without a word for screen readers (review
+// of #968).
 import { expect, test } from '@playwright/test'
-import { corpsDesPatchs, dialogue, erreursDeLaPage, remplir, sauver, valeursDeLaModale } from './espace-helpers.mjs'
+import {
+	annoncesDites,
+	corpsDesPatchs,
+	dialogue,
+	erreursDeLaPage,
+	remplir,
+	sauver,
+	valeursDeLaModale,
+	zoneAnnonce,
+} from './espace-helpers.mjs'
 import { ouvrirProfil, profilDeDepart, profilServeur, reinitialiserStrapi } from './outils-strapi.mjs'
 
 test.use({ testIdAttribute: 'data-cy' })
@@ -37,7 +49,8 @@ const MODULE = (annee, sujet) => ({
 // One entry per modal: its buttons, its fields, the message of its first
 // field left empty, two rows with the same two names, the fields typed in
 // (data-cy, field of the row, text added: `renommage` changes one of the two
-// names) and what the page shows of a row once saved.
+// names), what the page shows of a row once saved and what the modal tells
+// screen readers once it is removed.
 const MODALES = [
 	{
 		nom: 'expériences',
@@ -70,6 +83,7 @@ const MODALES = [
 			['experience-city', e => `à ${e.city}`],
 			['experience-description', e => e.description],
 		],
+		annonce: e => `Expérience ${e.company} retirée`,
 	},
 	{
 		nom: 'formations',
@@ -100,6 +114,7 @@ const MODALES = [
 			['course-school', c => c.school],
 			['course-description', c => c.course_description],
 		],
+		annonce: c => `Formation ${c.diploma} retirée`,
 	},
 ]
 
@@ -331,6 +346,142 @@ test.describe('lignes des modales expériences et formations', () => {
 			await expect(listees).toHaveCount(1)
 			await expect(dialogue(page)).toContainText(saisie[modale.repere])
 			await valeursDeLaModale(page, vide(modale))
+			expect(erreurs).toEqual([])
+		})
+
+		// the row below takes the node of a removed one, « Retirer » and focus
+		// included: Enter held, the key repeats and the browser clicks again
+		// each time, so the rows left one after the other
+		test(`${modale.nom} : Entrée maintenue sur « Retirer » de la 1re de deux lignes : une seule part, la 2e reste avec le focus sur son « Retirer »`, async ({
+			page,
+		}) => {
+			const erreurs = erreursDeLaPage(page)
+			const patchs = corpsDesPatchs(page)
+			await profilDeDepart({ [modale.champ]: [premiere, seconde] })
+			await ouvrirProfil(page)
+			await page.getByTestId(modale.ouvrir).click()
+			const listees = dialogue(page).getByTestId(modale.retirer)
+			await expect(listees).toHaveCount(2)
+
+			await listees.first().focus()
+			await page.keyboard.down('Enter')
+			await expect(listees).toHaveCount(1)
+			await expect(listees).toBeFocused()
+			// pressed again without being released: the browser marks it repeated
+			await page.keyboard.down('Enter')
+			await page.keyboard.down('Enter')
+			await page.keyboard.up('Enter')
+			await expect(listees).toHaveCount(1)
+			await expect(listees).toBeFocused()
+			await expect(dialogue(page)).toContainText(seconde[modale.repere])
+			await enregistrees(page, modale, patchs, [seconde])
+			expect(erreurs).toEqual([])
+		})
+
+		// « Fermer » closes the modal and the focus goes back to the button of
+		// the page that opened it: the key repeated there, and the modal opened
+		// again
+		test(`${modale.nom} : Entrée maintenue sur « Fermer » : la modale se ferme et reste fermée, le bouton qui l’ouvre a le focus ; relâchée puis pressée de nouveau, elle s’ouvre`, async ({
+			page,
+		}) => {
+			const erreurs = erreursDeLaPage(page)
+			const patchs = corpsDesPatchs(page)
+			await profilDeDepart({ [modale.champ]: [premiere, seconde] })
+			await ouvrirProfil(page)
+			const ouvrir = page.getByTestId(modale.ouvrir)
+			await ouvrir.click()
+			const listees = dialogue(page).getByTestId(modale.retirer)
+			await expect(listees).toHaveCount(2)
+
+			await page.getByTestId('close-modal').focus()
+			await page.keyboard.down('Enter')
+			await expect(ouvrir).toBeFocused()
+			// repeated once: a second repeat could find the button of the page
+			// again, and close what the first one opened
+			await page.keyboard.down('Enter')
+			await page.keyboard.up('Enter')
+			await expect(dialogue(page)).toBeHidden()
+			await expect(ouvrir).toBeFocused()
+
+			// a first Enter on the button of the page opens as before: a row is
+			// removed, which a modal on its way out does not allow
+			await page.keyboard.press('Enter')
+			await listees.first().click()
+			await expect(listees).toHaveCount(1)
+			expect(patchs).toEqual([])
+			expect(erreurs).toEqual([])
+		})
+
+		// after the only row the focus is on the button of the form: the
+		// repeated key clicked it, and what the form held was added
+		test(`${modale.nom} : Entrée maintenue sur « Retirer » de la seule ligne, en cours de modification : le bouton du formulaire prend le focus sans rien ajouter, la saisie continue dans le formulaire`, async ({
+			page,
+		}) => {
+			const erreurs = erreursDeLaPage(page)
+			const patchs = corpsDesPatchs(page)
+			await profilDeDepart({ [modale.champ]: [premiere] })
+			await ouvrirProfil(page)
+			await page.getByTestId(modale.ouvrir).click()
+			const bouton = page.getByTestId(modale.bouton)
+			const listees = dialogue(page).getByTestId(modale.retirer)
+
+			await page.getByTestId(modale.modifier(0)).click()
+			await expect(bouton).toHaveText(modale.edition)
+			let saisie = await taper(page, premiere, modale.saisies[0])
+			await listees.focus()
+			await page.keyboard.down('Enter')
+			await expect(listees).toHaveCount(0)
+			await expect(bouton).toBeFocused()
+			await expect(bouton).toHaveText(modale.ajout)
+			await page.keyboard.down('Enter')
+			await page.keyboard.up('Enter')
+
+			// typed after the key is released: the form still holds every field
+			saisie = await taper(page, saisie, modale.saisies[1])
+			await expect(listees).toHaveCount(0)
+			await valeursDeLaModale(page, modale.champs(saisie))
+			await expect(dialogue(page).getByTestId(modale.erreur)).toBeHidden()
+
+			// a first Enter on the button adds as before
+			await bouton.focus()
+			await page.keyboard.press('Enter')
+			await expect(listees).toHaveCount(1)
+			await valeursDeLaModale(page, vide(modale))
+			await enregistrees(page, modale, patchs, [saisie])
+			expect(erreurs).toEqual([])
+		})
+
+		// The « Retirer » of a removed row goes to the row below with the focus,
+		// under a new name that some screen readers do not read again: each
+		// removal is said in the polite region of the modal. The two rows have
+		// the same name, so the same sentence is said twice in a row.
+		test(`${modale.nom} : deux lignes du même nom retirées, l’une à la souris, l’autre au clavier : la zone d’annonce, présente et vide à l’ouverture, dit chaque retrait`, async ({
+			page,
+		}) => {
+			const erreurs = erreursDeLaPage(page)
+			await profilDeDepart({ [modale.champ]: [premiere, seconde] })
+			await ouvrirProfil(page)
+			await page.getByTestId(modale.ouvrir).click()
+			const listees = dialogue(page).getByTestId(modale.retirer)
+			await expect(listees).toHaveCount(2)
+			// there before anything is said (a region that comes with its text is
+			// not read), polite, and out of sight
+			const zone = zoneAnnonce(page)
+			await expect(zone).toHaveText('')
+			await expect(zone).toHaveAttribute('aria-live', 'polite')
+			await expect(zone).toHaveClass(/(^| )sr-only( |$)/)
+			const dites = await annoncesDites(page)
+
+			await listees.first().click()
+			await expect(listees).toHaveCount(1)
+			await expect(zone).toHaveText(modale.annonce(premiere))
+			await listees.focus()
+			await page.keyboard.press('Enter')
+			await expect(listees).toHaveCount(0)
+			await expect(zone).toHaveText(modale.annonce(seconde))
+			// the same words twice: put in the region again, or nothing is read
+			expect(modale.annonce(seconde)).toBe(modale.annonce(premiere))
+			expect(await dites()).toEqual([modale.annonce(premiere), modale.annonce(seconde)])
 			expect(erreurs).toEqual([])
 		})
 	}

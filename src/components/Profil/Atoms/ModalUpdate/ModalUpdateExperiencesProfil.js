@@ -5,12 +5,15 @@ import { Fragment, useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import * as zod from 'zod'
 import {
+	AnnonceRetrait,
 	BoutonFermer,
 	BoutonSauvegarder,
 	ErreurSauvegarde,
 	FondModale,
 	focusApresRetrait,
+	ignorerEntreeMaintenue,
 	suivreChamp,
+	useAnnonceRetrait,
 	useEnvoi,
 } from '@/components/Profil/Atoms/ModalUpdate/ModalElements'
 import { listeApresSauvegarde } from '@/lib/sauvegarde-profil'
@@ -94,6 +97,8 @@ export default function ModalUpdateExperiencesProfil(props) {
 
 	// Escape, a click outside and « Fermer » wait for the save in progress
 	const { envoi, setEnvoi, erreurEnvoi, setErreurEnvoi, fermer } = useEnvoi(props.isModalOpen, props.handleIsModalOpen)
+	// each removal is said to screen readers (AnnonceRetrait)
+	const { annonce, annoncer } = useAnnonceRetrait(props.isModalOpen)
 
 	const { data: session } = useSession()
 
@@ -229,6 +234,7 @@ export default function ModalUpdateExperiencesProfil(props) {
 
 	const handleDeleteExperience = id => {
 		const retiree = userExperiences.find(experience => experience.id === id)
+		if (retiree) annoncer(`Expérience ${retiree.company ?? ''} retirée`)
 		const userExperiencesFiltered = userExperiences.filter(experience => experience.id !== id)
 		setUserExperiences(userExperiencesFiltered)
 		if (id !== userExperiencesId) return
@@ -280,6 +286,7 @@ export default function ModalUpdateExperiencesProfil(props) {
 						>
 							<Dialog.Panel
 								data-cy="modal-panel"
+								onKeyDownCapture={ignorerEntreeMaintenue}
 								className="relative w-full transform rounded-lg bg-white p-8 text-left shadow-2xl transition-all sm:max-w-7xl"
 							>
 								<BoutonFermer onClick={fermer} disabled={envoi} ref={cancelButtonRef} />
@@ -317,6 +324,7 @@ export default function ModalUpdateExperiencesProfil(props) {
 									<ErreurSauvegarde message={erreurEnvoi} />
 									<BoutonSauvegarder dataCy="save-button-experience" envoi={envoi} onClick={handleSubmitExperiences} />
 								</div>
+								<AnnonceRetrait annonce={annonce} />
 							</Dialog.Panel>
 						</Transition.Child>
 					</div>
