@@ -3,6 +3,8 @@
 // built from its two names, so two rows with the same names were removed and
 // overwritten together; and removing the row loaded in the form left the
 // form in edit mode, where its button updated nothing and emptied the fields.
+// Removed with the keyboard, the last row of the list took the focus out of
+// the modal with it.
 import { expect, test } from '@playwright/test'
 import { corpsDesPatchs, dialogue, erreursDeLaPage, remplir, sauver, valeursDeLaModale } from './espace-helpers.mjs'
 import { ouvrirProfil, profilDeDepart, profilServeur, reinitialiserStrapi } from './outils-strapi.mjs'
@@ -32,9 +34,10 @@ const MODULE = (annee, sujet) => ({
 	course_description: `Module ${sujet}`,
 })
 
-// One entry per modal: its buttons, its fields, two rows with the same two
-// names, the two fields typed in (data-cy, field of the row, text added) and
-// what the page shows of a row once saved.
+// One entry per modal: its buttons, its fields, the message of its first
+// field left empty, two rows with the same two names, the fields typed in
+// (data-cy, field of the row, text added: `renommage` changes one of the two
+// names) and what the page shows of a row once saved.
 const MODALES = [
 	{
 		nom: 'expériences',
@@ -47,6 +50,7 @@ const MODALES = [
 		modifier: index => `experience-selected-${index}`,
 		retirer: 'experience-selected',
 		sauver: 'save-button-experience',
+		erreur: 'error-company',
 		champs: e => ({
 			'company-input': e.company,
 			'job-name-input': e.job_name,
@@ -61,6 +65,7 @@ const MODALES = [
 			['description-experience-input', 'description', ' et tournages'],
 			['city-input', 'city', '-le-Vieux'],
 		],
+		renommage: ['company-input', 'company', ' Bis'],
 		vue: [
 			['experience-city', e => `à ${e.city}`],
 			['experience-description', e => e.description],
@@ -77,6 +82,7 @@ const MODALES = [
 		modifier: index => `course-edit-button-${index}`,
 		retirer: 'course-delete-button',
 		sauver: 'save-button-courses',
+		erreur: 'error-diploma',
 		champs: c => ({
 			'diploma-input': c.diploma,
 			'school-input': c.school,
@@ -89,12 +95,16 @@ const MODALES = [
 			['course-description-input', 'course_description', ' en alternance'],
 			['school-input', 'school', ' de Lyon'],
 		],
+		renommage: ['diploma-input', 'diploma', ' bis'],
 		vue: [
 			['course-school', c => c.school],
 			['course-description', c => c.course_description],
 		],
 	},
 ]
+
+// every field of the form, empty
+const vide = modale => Object.fromEntries(Object.keys(modale.champs(modale.lignes[0])).map(cy => [cy, '']))
 
 // the two rows, added one after the other in the modal: no Strapi id yet
 async function ajouterLesDeux(page, modale) {
@@ -209,9 +219,118 @@ test.describe('lignes des modales expériences et formations', () => {
 			await expect(listees).toHaveCount(1)
 			await expect(dialogue(page)).toContainText(saisie[modale.repere])
 			await expect(bouton).toHaveText(modale.ajout)
-			const vide = Object.fromEntries(Object.keys(modale.champs(saisie)).map(cy => [cy, '']))
-			await valeursDeLaModale(page, vide)
+			await valeursDeLaModale(page, vide(modale))
 			await enregistrees(page, modale, patchs, [saisie])
+			expect(erreurs).toEqual([])
+		})
+
+		test(`${modale.nom} : la ligne en cours de modification retirée sans rien y avoir saisi : le formulaire est vidé et repasse en ajout, son bouton ne la remet pas`, async ({
+			page,
+		}) => {
+			const erreurs = erreursDeLaPage(page)
+			const patchs = corpsDesPatchs(page)
+			await profilDeDepart({ [modale.champ]: [premiere] })
+			await ouvrirProfil(page)
+			await page.getByTestId(modale.ouvrir).click()
+			const bouton = page.getByTestId(modale.bouton)
+			const listees = dialogue(page).getByTestId(modale.retirer)
+
+			await page.getByTestId(modale.modifier(0)).click()
+			await expect(bouton).toHaveText(modale.edition)
+			await valeursDeLaModale(page, modale.champs(premiere))
+
+			// nothing typed over the row: no copy of it is left in the form
+			await listees.click()
+			await expect(listees).toHaveCount(0)
+			await expect(bouton).toHaveText(modale.ajout)
+			await valeursDeLaModale(page, vide(modale))
+
+			// a reflex click on the button: a message, the row does not come back
+			await bouton.click()
+			await expect(dialogue(page).getByTestId(modale.erreur)).toBeVisible()
+			await expect(listees).toHaveCount(0)
+			await enregistrees(page, modale, patchs, [])
+			expect(erreurs).toEqual([])
+		})
+
+		// an id built from the two names stayed on the row once renamed: a row
+		// added later with the old names took the same one
+		test(`${modale.nom} : une ligne ajoutée puis renommée, une autre ajoutée avec ses anciens noms, la 2e retirée : la 1re reste, seule dans la liste et dans le PATCH`, async ({
+			page,
+		}) => {
+			const erreurs = erreursDeLaPage(page)
+			const patchs = corpsDesPatchs(page)
+			await profilDeDepart({ [modale.champ]: [] })
+			await ouvrirProfil(page)
+			await page.getByTestId(modale.ouvrir).click()
+			const bouton = page.getByTestId(modale.bouton)
+			const listees = dialogue(page).getByTestId(modale.retirer)
+
+			await remplir(page, modale.champs(premiere))
+			await bouton.click()
+			await expect(listees).toHaveCount(1)
+			await page.getByTestId(modale.modifier(0)).click()
+			await expect(bouton).toHaveText(modale.edition)
+			const renommee = await taper(page, premiere, modale.renommage)
+			await bouton.click()
+			await expect(bouton).toHaveText(modale.ajout)
+
+			// a new row with the names the first one had when it was added
+			await remplir(page, modale.champs(seconde))
+			await bouton.click()
+			await expect(listees).toHaveCount(2)
+			await listees.nth(1).click()
+			await expect(listees).toHaveCount(1)
+			await expect(dialogue(page)).toContainText(renommee[modale.repere])
+			await enregistrees(page, modale, patchs, [renommee])
+			expect(erreurs).toEqual([])
+		})
+
+		// the last row leaves with its node: the focus fell on <body>
+		test(`${modale.nom} : la dernière de deux lignes retirée au clavier : le focus passe au « Retirer » de la ligne du dessus`, async ({
+			page,
+		}) => {
+			const erreurs = erreursDeLaPage(page)
+			await profilDeDepart({ [modale.champ]: [premiere, seconde] })
+			await ouvrirProfil(page)
+			await page.getByTestId(modale.ouvrir).click()
+			const listees = dialogue(page).getByTestId(modale.retirer)
+			await expect(listees).toHaveCount(2)
+
+			await listees.nth(1).focus()
+			await page.keyboard.press('Enter')
+			await expect(listees).toHaveCount(1)
+			await expect(listees).toBeFocused()
+			await expect(dialogue(page)).toContainText(premiere[modale.repere])
+			expect(erreurs).toEqual([])
+		})
+
+		// from <body> the next Tab reached « Sauvegarder », past the text kept
+		// in the form
+		test(`${modale.nom} : la seule ligne, en cours de modification, retirée au clavier : le focus passe au bouton du formulaire, Entrée ajoute la saisie`, async ({
+			page,
+		}) => {
+			const erreurs = erreursDeLaPage(page)
+			await profilDeDepart({ [modale.champ]: [premiere] })
+			await ouvrirProfil(page)
+			await page.getByTestId(modale.ouvrir).click()
+			const bouton = page.getByTestId(modale.bouton)
+			const listees = dialogue(page).getByTestId(modale.retirer)
+
+			await page.getByTestId(modale.modifier(0)).click()
+			await expect(bouton).toHaveText(modale.edition)
+			const saisie = await taper(page, premiere, modale.saisies[0])
+			await listees.focus()
+			await page.keyboard.press('Enter')
+			await expect(listees).toHaveCount(0)
+			await expect(bouton).toBeFocused()
+			await expect(bouton).toHaveText(modale.ajout)
+			await valeursDeLaModale(page, modale.champs(saisie))
+
+			await page.keyboard.press('Enter')
+			await expect(listees).toHaveCount(1)
+			await expect(dialogue(page)).toContainText(saisie[modale.repere])
+			await valeursDeLaModale(page, vide(modale))
 			expect(erreurs).toEqual([])
 		})
 	}

@@ -9,6 +9,7 @@ import {
 	BoutonSauvegarder,
 	ErreurSauvegarde,
 	FondModale,
+	focusApresRetrait,
 	suivreChamp,
 	useEnvoi,
 } from '@/components/Profil/Atoms/ModalUpdate/ModalElements'
@@ -111,18 +112,19 @@ export default function ModalUpdateExperiencesProfil(props) {
 		reset()
 	}
 
+	// the form holds this row, field for field
+	const formulaireEgal = experience =>
+		experience.company === userExperiencesCompany &&
+		experience.job_name === userExperiencesJobName &&
+		experience.city === userExperiencesCity &&
+		experience.date_start === userExperiencesDateStart &&
+		experience.date_end === userExperiencesDateEnd &&
+		experience.description === userExperiencesDescription
+
 	const onSubmit = data => {
 		// add a new experience to the user courses only if the form is valid
 		// check if the experience is already in the user courses
-		const experienceAlreadyInUserExperiences = userExperiences.filter(
-			experience =>
-				experience.company === userExperiencesCompany &&
-				experience.job_name === userExperiencesJobName &&
-				experience.city === userExperiencesCity &&
-				experience.date_start === userExperiencesDateStart &&
-				experience.date_end === userExperiencesDateEnd &&
-				experience.description === userExperiencesDescription
-		)
+		const experienceAlreadyInUserExperiences = userExperiences.filter(formulaireEgal)
 		// if the experience is not already in the user courses, add it
 		if (experienceAlreadyInUserExperiences.length === 0) {
 			// if the experience has an id, it's an existing experience
@@ -226,12 +228,17 @@ export default function ModalUpdateExperiencesProfil(props) {
 	}
 
 	const handleDeleteExperience = id => {
+		const retiree = userExperiences.find(experience => experience.id === id)
 		const userExperiencesFiltered = userExperiences.filter(experience => experience.id !== id)
 		setUserExperiences(userExperiencesFiltered)
-		// the row loaded in the form is gone: back to « Ajouter », what was typed
-		// stays. Left in edit mode, the button found no row to update and
-		// emptied the form.
-		if (id === userExperiencesId) setUserExperiencesId('')
+		if (id !== userExperiencesId) return
+		// The row loaded in the form is gone: back to « Ajouter ». Left in edit
+		// mode, the button found no row to update and emptied the form. What
+		// was typed over the row stays, to be added as a new one; a form left
+		// untouched is emptied, or a reflex click on « Ajouter » would put the
+		// removed row back.
+		if (retiree && formulaireEgal(retiree)) reinitialiserFormulaire()
+		else setUserExperiencesId('')
 	}
 
 	const handleEditExperience = id => {
@@ -319,7 +326,7 @@ export default function ModalUpdateExperiencesProfil(props) {
 	)
 }
 
-function ListeExperiences({ userExperiences, handleEditExperience, handleDeleteExperience }) {
+function ListeExperiences({ userExperiences, handleEditExperience, handleDeleteExperience, boutonAjout }) {
 	return (
 		<div className={'flex w-full flex-col gap-8 md:w-3/5 md:gap-4'}>
 			{/*	display the experiences already added */}
@@ -330,6 +337,7 @@ function ListeExperiences({ userExperiences, handleEditExperience, handleDeleteE
 						<div
 							// biome-ignore lint/suspicious/noArrayIndexKey: the row keeps its node when another is removed, so the keyboard focus stays in the list
 							key={index}
+							data-ligne
 							className={'relative flex w-full rounded bg-indigo-50/20 p-4 pt-8 text-gray-700 md:pt-4'}
 						>
 							<div className={'absolute -top-2 right-0 m-2 flex items-center justify-center gap-4 md:top-0'}>
@@ -347,9 +355,13 @@ function ListeExperiences({ userExperiences, handleEditExperience, handleDeleteE
 								<button
 									type="button"
 									data-cy={'experience-selected'}
+									data-retirer
 									aria-label={`Retirer l'expérience ${experience.company ?? ''}`}
 									className={BOUTON_ICONE}
-									onClick={() => handleDeleteExperience(experience.id)}
+									onClick={event => {
+										focusApresRetrait(event.currentTarget, boutonAjout.current)
+										handleDeleteExperience(experience.id)
+									}}
 								>
 									<span className="material-icons-round text-xl text-red-500" aria-hidden="true">
 										delete
@@ -449,6 +461,9 @@ function EditeurExperiences({
 	handleEditExperience,
 	handleDeleteExperience,
 }) {
+	// where the focus goes when the list is left empty (focusApresRetrait)
+	const boutonAjout = useRef(null)
+
 	return (
 		<div className={'flex h-full w-full flex-wrap gap-16 md:flex-nowrap'}>
 			<div className={'w-full md:w-2/5'}>
@@ -591,6 +606,7 @@ function EditeurExperiences({
 								type="button"
 								className="btn-primary"
 								onClick={handleSubmit(onSubmit)}
+								ref={boutonAjout}
 							>
 								{userExperiencesId === '' ? 'Ajouter une expérience' : 'Modifier une expérience'}
 							</button>
@@ -602,6 +618,7 @@ function EditeurExperiences({
 				userExperiences={userExperiences}
 				handleEditExperience={handleEditExperience}
 				handleDeleteExperience={handleDeleteExperience}
+				boutonAjout={boutonAjout}
 			/>
 		</div>
 	)

@@ -9,6 +9,7 @@ import {
 	BoutonSauvegarder,
 	ErreurSauvegarde,
 	FondModale,
+	focusApresRetrait,
 	suivreChamp,
 	useEnvoi,
 } from '@/components/Profil/Atoms/ModalUpdate/ModalElements'
@@ -87,6 +88,22 @@ export default function ModalUpdateCoursesProfil(props) {
 
 	const { data: session } = useSession()
 
+	const reinitialiserFormulaire = () => {
+		setUserCoursesId('')
+		setUserCoursesDiploma('')
+		setUserCoursesSchool('')
+		setUserCoursesDateGraduation('')
+		setUserCoursesDescription('')
+		reset()
+	}
+
+	// the form holds this row, field for field
+	const formulaireEgal = course =>
+		course.diploma === userCoursesDiploma &&
+		course.school === userCoursesSchool &&
+		course.date_graduation === userCoursesDateGraduation &&
+		course.course_description === userCoursesDescription
+
 	/**
 	 * onSubmit function called when the form is submitted
 	 * @param data
@@ -94,13 +111,7 @@ export default function ModalUpdateCoursesProfil(props) {
 	const onSubmit = data => {
 		// add a new course to the user courses only if the form is valid
 		// check if the course is already in the user courses
-		const courseAlreadyInUserCourses = userCourses.filter(
-			course =>
-				course.diploma === userCoursesDiploma &&
-				course.school === userCoursesSchool &&
-				course.date_graduation === userCoursesDateGraduation &&
-				course.course_description === userCoursesDescription
-		)
+		const courseAlreadyInUserCourses = userCourses.filter(formulaireEgal)
 		// if the course is not already in the user courses, add it
 		if (courseAlreadyInUserCourses.length === 0) {
 			// if the course id is not empty, it means that we are updating a course
@@ -122,12 +133,7 @@ export default function ModalUpdateCoursesProfil(props) {
 				setUserCourses(userCoursesUpdated)
 
 				// reset the form
-				reset()
-				setUserCoursesId('')
-				setUserCoursesDiploma('')
-				setUserCoursesSchool('')
-				setUserCoursesDateGraduation('')
-				setUserCoursesDescription('')
+				reinitialiserFormulaire()
 			} else {
 				if (data) {
 					const userCoursesUpdated = [
@@ -142,12 +148,7 @@ export default function ModalUpdateCoursesProfil(props) {
 					]
 					setUserCourses(userCoursesUpdated)
 					// reset the form
-					setUserCoursesId('')
-					setUserCoursesDiploma('')
-					setUserCoursesSchool('')
-					setUserCoursesDateGraduation('')
-					setUserCoursesDescription('')
-					reset()
+					reinitialiserFormulaire()
 				}
 			}
 		}
@@ -202,12 +203,17 @@ export default function ModalUpdateCoursesProfil(props) {
 	}
 
 	const handleDeleteCourse = id => {
+		const retiree = userCourses.find(course => course.id === id)
 		const userCoursesFiltered = userCourses.filter(course => course.id !== id)
 		setUserCourses(userCoursesFiltered)
-		// the row loaded in the form is gone: back to « Ajouter », what was typed
-		// stays. Left in edit mode, the button found no row to update and
-		// emptied the form.
-		if (id === userCoursesId) setUserCoursesId('')
+		if (id !== userCoursesId) return
+		// The row loaded in the form is gone: back to « Ajouter ». Left in edit
+		// mode, the button found no row to update and emptied the form. What
+		// was typed over the row stays, to be added as a new one; a form left
+		// untouched is emptied, or a reflex click on « Ajouter » would put the
+		// removed row back.
+		if (retiree && formulaireEgal(retiree)) reinitialiserFormulaire()
+		else setUserCoursesId('')
 	}
 
 	const handleEditCourse = id => {
@@ -228,12 +234,7 @@ export default function ModalUpdateCoursesProfil(props) {
 	useEffect(() => {
 		if (!open) {
 			setUserCourses(user.courses ?? [])
-			setUserCoursesId('')
-			setUserCoursesDiploma('')
-			setUserCoursesSchool('')
-			setUserCoursesDateGraduation('')
-			setUserCoursesDescription('')
-			reset()
+			reinitialiserFormulaire()
 		}
 	}, [open, reset, user.courses])
 
@@ -281,6 +282,7 @@ function FormulaireFormation({
 	userCoursesDescription,
 	handleUpdateCoursesDescription,
 	userCoursesId,
+	boutonAjout,
 }) {
 	return (
 		<div className={'w-full md:w-2/5'}>
@@ -376,7 +378,13 @@ function FormulaireFormation({
 						</div>
 					</form>
 					<div className={'flex items-center justify-end'}>
-						<button data-cy="add-course-button" type="button" className="btn-primary" onClick={handleSubmit(onSubmit)}>
+						<button
+							data-cy="add-course-button"
+							type="button"
+							className="btn-primary"
+							onClick={handleSubmit(onSubmit)}
+							ref={boutonAjout}
+						>
 							{userCoursesId === '' ? 'Ajouter une formation / diplôme' : 'Modifier la formation / diplôme'}
 						</button>
 					</div>
@@ -411,6 +419,9 @@ function DialogueFormations({
 	erreurEnvoi,
 	handleSubmitCourses,
 }) {
+	// where the focus goes when the list is left empty (focusApresRetrait)
+	const boutonAjout = useRef(null)
+
 	return (
 		<Transition.Root show={open} as={Fragment}>
 			<Dialog as="div" className="relative z-30" initialFocus={cancelButtonRef} onClose={fermer}>
@@ -454,6 +465,7 @@ function DialogueFormations({
 											userCoursesDescription={userCoursesDescription}
 											handleUpdateCoursesDescription={handleUpdateCoursesDescription}
 											userCoursesId={userCoursesId}
+											boutonAjout={boutonAjout}
 										/>
 										<div className={'flex w-full flex-col gap-4 md:w-3/5'}>
 											{/*	display the courses already added */}
@@ -464,6 +476,7 @@ function DialogueFormations({
 														<div
 															// biome-ignore lint/suspicious/noArrayIndexKey: the row keeps its node when another is removed, so the keyboard focus stays in the list
 															key={index}
+															data-ligne
 															className={'relative flex w-full rounded bg-indigo-50/20 p-4 text-gray-700'}
 														>
 															<div className={'absolute right-0 top-0 m-2 flex items-center justify-center gap-4'}>
@@ -481,9 +494,13 @@ function DialogueFormations({
 																<button
 																	type="button"
 																	data-cy={'course-delete-button'}
+																	data-retirer
 																	aria-label={`Retirer la formation ${course.diploma ?? ''}`}
 																	className={BOUTON_ICONE}
-																	onClick={() => handleDeleteCourse(course.id)}
+																	onClick={event => {
+																		focusApresRetrait(event.currentTarget, boutonAjout.current)
+																		handleDeleteCourse(course.id)
+																	}}
 																>
 																	<span className="material-icons-round text-xl text-red-500" aria-hidden="true">
 																		delete
