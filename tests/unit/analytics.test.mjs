@@ -396,6 +396,30 @@ describe('auth events (A3, A4)', () => {
 		assert.equal(takeGoogleSignIn(storage), false)
 	})
 
+	test('Google sign-in: no mark in a browser that opted out of the measurement', () => {
+		const tab = fakeStorage()
+		const browser = fakeStorage()
+		setMeasureDisabled(browser, true)
+		markGoogleSignIn(tab, browser)
+		assert.equal(tab.getItem(GOOGLE_SIGN_IN_KEY), null)
+		assert.equal(takeGoogleSignIn(tab), false)
+		// back in: the next attempt is marked again
+		setMeasureDisabled(browser, false)
+		markGoogleSignIn(tab, browser)
+		assert.equal(tab.getItem(GOOGLE_SIGN_IN_KEY), '1')
+		// an opt-out that cannot be read is not an opt-out
+		const unreadable = {
+			getItem: () => {
+				throw new Error('denied')
+			},
+		}
+		for (const optOut of [undefined, null, unreadable]) {
+			const storage = fakeStorage()
+			markGoogleSignIn(storage, optOut)
+			assert.equal(storage.getItem(GOOGLE_SIGN_IN_KEY), '1')
+		}
+	})
+
 	test('Google sign-in: a missing or throwing storage counts nothing and never throws', () => {
 		const broken = {
 			getItem: () => {

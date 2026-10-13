@@ -446,6 +446,8 @@ test.describe('MES-10 qui est mesuré', () => {
 		// would send the browser back to. From there the real pages and the
 		// real NextAuth routes run.
 		const SIGNIN_GOOGLE = '**/api/auth/signin/google'
+		// the mark the Google button leaves in the tab (GOOGLE_SIGN_IN_KEY)
+		const REPERE_GOOGLE = 'mm.connexion-google'
 		const retourDeGoogle = (page, adresse) =>
 			page.route(SIGNIN_GOOGLE, async route => {
 				await route.fulfill({ json: { url: await adresse() } })
@@ -556,6 +558,7 @@ test.describe('MES-10 qui est mesuré', () => {
 			const echec = page.waitForEvent('requestfailed', r => new URL(r.url()).pathname === '/api/auth/signin/google')
 			await page.getByTestId('google-signin').click()
 			await echec
+			expect(await page.evaluate(cle => window.sessionStorage.getItem(cle), REPERE_GOOGLE)).toBe('1')
 			// then the form, on the same page: one sign-in, by email
 			await page.getByTestId('email-input').fill(COMPTE_TEST.email)
 			await page.getByTestId('password-input').fill(COMPTE_TEST.password)
@@ -693,6 +696,18 @@ test.describe('MES-10 qui est mesuré', () => {
 			await page.goto('/')
 			await attendreUmami(page)
 			await page.evaluate(() => window.umami.track('sonde'))
+			expect(suivi.envois).toEqual([])
+			expect(await envoisRecus()).toEqual([])
+
+			// nor the mark of a Google sign-in, which only serves the measurement:
+			// the button writes nothing in the tab (it does for any other
+			// visitor: « Google qui ne part pas » above)
+			await page.route(SIGNIN_GOOGLE, route => route.abort())
+			await aller(page, '/auth/signin')
+			const echec = page.waitForEvent('requestfailed', r => new URL(r.url()).pathname === '/api/auth/signin/google')
+			await page.getByTestId('google-signin').click()
+			await echec
+			expect(await page.evaluate(cle => window.sessionStorage.getItem(cle), REPERE_GOOGLE)).toBeNull()
 			expect(suivi.envois).toEqual([])
 			expect(await envoisRecus()).toEqual([])
 		})

@@ -362,12 +362,24 @@ function tabStorage() {
 	}
 }
 
-/**
- * Marks the Google sign-in the button is about to start in this tab.
- * @param {Storage} [storage] - sessionStorage
- */
-export function markGoogleSignIn(storage = tabStorage()) {
+function browserStorage() {
 	try {
+		return window.localStorage
+	} catch {
+		return undefined
+	}
+}
+
+/**
+ * Marks the Google sign-in the button is about to start in this tab. Nothing
+ * is written in a browser that opted out of the measurement (« Ne plus
+ * mesurer mes visites »): the mark has no other use.
+ * @param {Storage} [storage] - sessionStorage
+ * @param {Storage} [optOut] - localStorage, where the opt-out is kept
+ */
+export function markGoogleSignIn(storage = tabStorage(), optOut = browserStorage()) {
+	try {
+		if (isMeasureDisabled(optOut)) return
 		storage.setItem(GOOGLE_SIGN_IN_KEY, '1')
 	} catch {
 		// storage unavailable (private mode, blocked): the sign-in is not counted
