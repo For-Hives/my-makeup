@@ -99,6 +99,9 @@ test.describe('UI-05 inscription et suppression', () => {
 		await panne({ patch: null })
 		await appuyer(page.getByTestId('submit'))
 		await expect(page.getByText(/Bienvenue sur My.Makeup/)).toBeVisible()
+		// list-style none: Safari and VoiceOver only announce the steps as a
+		// list when the <ol> carries the role
+		await expect(page.locator('nav[aria-label="Progress"] ol')).toHaveAttribute('role', 'list')
 
 		const apres = await etat()
 		const compte = apres.comptes.find(c => c.email === 'nouvelle@test.local')
