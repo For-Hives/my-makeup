@@ -639,7 +639,12 @@ function matchesMedia11({ url }) {
 	return url.pathname.startsWith('/media/')
 }
 
-function handleGET12({ url, tousLesProfils, entreeProfil, json, res }) {
+function handleGET12({ etat, url, tousLesProfils, entreeProfil, json, res }) {
+	if (etat.panne.collections)
+		return {
+			handled: true,
+			value: json(res, etat.panne.collections, erreur(etat.panne.collections, 'Error', 'forced failure')),
+		}
 	const requete = lireRequete(url)
 	const { username, ...autres } = requete.filtres
 	// one profile by its username: the profile page, contacts kept
@@ -655,7 +660,12 @@ function matchesGET12({ req, url }) {
 	return req.method === 'GET' && url.pathname === '/api/makeup-artistes'
 }
 
-function handleGET13({ url, entreeContenu, json, res }) {
+function handleGET13({ etat, url, entreeContenu, json, res }) {
+	if (etat.panne.collections)
+		return {
+			handled: true,
+			value: json(res, etat.panne.collections, erreur(etat.panne.collections, 'Error', 'forced failure')),
+		}
 	const requete = lireRequete(url)
 	const contenus = (url.pathname === '/api/talents' ? TALENTS : ARTICLES)
 		.filter(c => requete.filtres.slug === undefined || c.slug === requete.filtres.slug)
@@ -996,6 +1006,10 @@ function reinitialiserWithState({ etat }) {
 			dureeJwtS: 86400, // lifetime of the JWTs issued from now on
 			recherche: null, // status forced on /api/searching
 			annuaire: null, // status forced on /api/searching without any term
+			// status forced on the public collections (makeup-artistes,
+			// talents, articles): the API down for the pages rendered on the
+			// server
+			collections: null,
 			delaiRechercheMs: 0,
 			// the cards of /api/searching carry the city as typed, as before
 			// API #380: the front's own villePublique is then the only guard

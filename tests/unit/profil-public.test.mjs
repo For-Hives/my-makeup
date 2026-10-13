@@ -262,4 +262,26 @@ describe('publiable profiles of a list (SEO-10)', () => {
 			1
 		)
 	})
+
+	test('each profile with the name its page shows, for its link in the plan of the site', () => {
+		const { publiables, aVerifier } = trierProfilsPublics([
+			complet(1, 'Zoé Lefèvre', { first_name: ' Zoé ', last_name: 'Lefèvre', company_artist_name: 'Zoé Make-up' }),
+			complet(2, 'studio', { first_name: null, last_name: 'null', company_artist_name: 'Studio Fictif' }),
+			// no name at all: the neutral label, never the username nor « undefined »
+			complet(3, 'sans-nom'),
+			complet(4, 'camille', { first_name: 'Camille', network: { id: 4, instagram: '' } }),
+		])
+		assert.deepEqual(
+			publiables.map(p => [p.slug, p.nom]),
+			[
+				['zoe-lefevre', 'Zoé Lefèvre'],
+				['studio', 'Studio Fictif'],
+				['sans-nom', 'Maquilleuse professionnelle'],
+			]
+		)
+		assert.deepEqual(
+			aVerifier.map(p => [p.slug, p.nom]),
+			[['camille', 'Camille']]
+		)
+	})
 })

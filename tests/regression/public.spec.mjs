@@ -357,6 +357,71 @@ test.describe('SEO-10 sitemap, robots, noindex, canonical', () => {
 		}
 	})
 
+	// Lot of 13/10: no page linked to the profiles in its raw HTML (the cards
+	// of the search come with JavaScript, to the old addresses). The plan of
+	// the site lists the profiles of the sitemap, read the same way.
+	test('plan du site : un lien par profil publiable dans le HTML brut, à l’adresse du sitemap (200, sans redirection) et sous le nom de sa page ; lu à chaque requête comme le sitemap ; API en panne : la page s’affiche sans eux', async ({
+		request,
+	}) => {
+		const profilsDuSitemap = async () => {
+			const xml = await (await request.get('/sitemap.xml')).text()
+			return [...xml.matchAll(/<loc>([^<]*)<\/loc>/g)]
+				.map(m => new URL(decoder(m[1])).pathname)
+				.filter(chemin => chemin.startsWith('/profil/'))
+		}
+		// [href, text] of the links of the page to a profile
+		const liensProfils = page =>
+			getElementsByTagName('a', documentSansScripts(page))
+				.filter(a => a.attribs.href?.startsWith('/profil/'))
+				.map(a => [a.attribs.href, textes(a).join('').trim()])
+
+		const sitemap = await profilsDuSitemap()
+		const { reponse, html: page } = await html(request, '/site-map')
+		expect(reponse.status()).toBe(200)
+		const liens = liensProfils(page)
+		expect(liens).toHaveLength(publiables.length)
+		expect(liens.map(([href]) => href).sort()).toEqual([...sitemap].sort())
+		for (const [href] of liens) {
+			expect((await request.get(href, { maxRedirects: 0 })).status(), href).toBe(200)
+		}
+		// two usernames that give the same slug: each her own address
+		expect(liens).toContainEqual(['/profil/zoe-lefevre', 'Zoé Lefèvre'])
+		expect(liens).toContainEqual(['/profil/zoe-lefevre-2', 'Zoe Lefevre'])
+		expect(textesDes(page, 'h3')).toContain('Maquilleuses')
+		expect(motsInterdits(page)).toEqual([])
+		// built on each request, as the sitemap, and never kept in a cache
+		expect(reponse.headers()['cache-control']).toContain('no-store')
+
+		// the profile of the test account becomes publiable: in both at the
+		// next request
+		expect(sitemap).not.toContain('/profil/testine-recette')
+		await piloter('/__profil', {
+			main_picture: { id: 1, name: 'photo-1.png', url: `${API}/media/1` },
+			service_offers: [{ name: 'Mariée', price: '120 €', description: 'Essai et jour J' }],
+			network: { instagram: 'studio.test', email: '', phone: '' },
+			description: 'Maquillage de mariée, essai compris. '.repeat(6),
+		})
+		expect(await profilsDuSitemap()).toContain('/profil/testine-recette')
+		expect(liensProfils((await html(request, '/site-map')).html)).toContainEqual([
+			'/profil/testine-recette',
+			'Testine Recette',
+		])
+
+		// the API down: no sitemap (a 500 rather than missing URLs), but the
+		// page, with its fixed links and no empty list of profiles
+		await panne({ collections: 503 })
+		expect((await request.get('/sitemap.xml')).status()).toBe(500)
+		const enPanne = await html(request, '/site-map')
+		expect(enPanne.reponse.status()).toBe(200)
+		expect(liensProfils(enPanne.html)).toEqual([])
+		expect(textesDes(enPanne.html, 'h3')).not.toContain('Maquilleuses')
+		const fixes = getElementsByTagName('a', documentSansScripts(enPanne.html)).map(a => a.attribs.href)
+		for (const fixe of ['/a-propos', '/contact', '/cgu', '/politique-de-confidentialite']) {
+			expect(fixes, fixe).toContain(fixe)
+		}
+		expect(motsInterdits(enPanne.html)).toEqual([])
+	})
+
 	test('robots.txt : le sitemap, /api fermé, ni Host ni /auth bloqué', async ({ request }) => {
 		const reponse = await request.get('/robots.txt')
 		expect(reponse.status()).toBe(200)
