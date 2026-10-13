@@ -101,13 +101,15 @@ export function BoutonSauvegarder({ envoi, onClick, dataCy, children = 'Sauvegar
  * It goes to the « Retirer » of the row above or, when the list is left
  * empty, to `repli`. Called from the click, before the list is rendered
  * again: both targets keep their node.
- * @param {HTMLElement} bouton - the « Retirer » clicked, inside a [data-ligne] row
- * @param {HTMLElement|null} repli - the button of the form
+ * @param {HTMLElement} bouton - the « Retirer » clicked, inside a [data-ligne]
+ *   row, or the row itself (a chip of the skills and languages modals)
+ * @param {HTMLElement|null} repli - the button or the field of the form
  */
 export function focusApresRetrait(bouton, repli) {
 	const ligne = bouton.closest('[data-ligne]')
 	if (!ligne || ligne.nextElementSibling) return
-	const cible = ligne.previousElementSibling?.querySelector('[data-retirer]') ?? repli
+	const dessus = ligne.previousElementSibling
+	const cible = (dessus?.matches('[data-retirer]') ? dessus : dessus?.querySelector('[data-retirer]')) ?? repli
 	cible?.focus()
 }
 

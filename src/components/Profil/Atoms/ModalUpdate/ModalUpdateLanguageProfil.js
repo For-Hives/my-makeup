@@ -9,6 +9,7 @@ import {
 	BoutonSauvegarder,
 	ErreurSauvegarde,
 	FondModale,
+	focusApresRetrait,
 	useEnvoi,
 } from '@/components/Profil/Atoms/ModalUpdate/ModalElements'
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
@@ -74,6 +75,11 @@ export default function ModalUpdateLanguageProfil(props) {
 	}, [props.isModalOpen])
 
 	const cancelButtonRef = useRef(null)
+	// where the focus goes when the list is left empty (focusApresRetrait)
+	const champLangue = useRef(null)
+	const { ref: enregistrerChamp, ...champEnregistre } = register('language', {
+		required: true,
+	})
 
 	const handleUpdateLanguage = event => {
 		// check if the entered value is a ';' and if so, add it to the array
@@ -187,9 +193,11 @@ export default function ModalUpdateLanguageProfil(props) {
 																id="language"
 																name="language"
 																type={'text'}
-																{...register('language', {
-																	required: true,
-																})}
+																{...champEnregistre}
+																ref={noeud => {
+																	enregistrerChamp(noeud)
+																	champLangue.current = noeud
+																}}
 																required
 																onKeyPress={async event => {
 																	if (event.key === 'Enter') {
@@ -235,7 +243,11 @@ export default function ModalUpdateLanguageProfil(props) {
 																<button
 																	data-cy="language-selected"
 																	type={'button'}
-																	onClick={() => {
+																	// the chip is the row and its « Retirer »
+																	data-ligne
+																	data-retirer
+																	onClick={event => {
+																		focusApresRetrait(event.currentTarget, champLangue.current)
 																		handleDeleteLanguageelected(skill.id)
 																	}}
 																	// biome-ignore lint/suspicious/noArrayIndexKey: the row keeps its node when another is removed, so the keyboard focus stays in the list

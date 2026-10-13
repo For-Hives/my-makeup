@@ -2,6 +2,7 @@ import { Dialog, Tab, Transition } from '@headlessui/react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useSession } from 'next-auth/react'
 import { Fragment, useEffect, useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
 import { useForm } from 'react-hook-form'
 import * as zod from 'zod'
 import {
@@ -62,6 +63,24 @@ const schema = zod
 const BOUTON_ICONE =
 	'flex h-11 w-11 items-center justify-center rounded-full hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600'
 
+// An offer added in the modal has no Strapi id yet. « Modifier » and
+// « Retirer » find an offer by its id, so it gets a local one that no other
+// offer can share: built from the name and the price, two offers with the
+// same ones were removed and overwritten together. Never sent: the ids are
+// stripped before the PATCH (offresAEnvoyer).
+let compteurLocal = 0
+
+// prices as the form shows them: stored one per line, typed with « ; »
+const prixEnSaisie = prix => (prix ?? '').replace(/\n/g, ';')
+
+// the options of an offer as the form edits them; an offer without its
+// options list is edited as one without options
+const optionsEnSaisie = offre =>
+	(offre.options ?? []).map(option => ({
+		...option,
+		price: prixEnSaisie(option.price),
+	}))
+
 export default function ModalUpdateServiceOffersProfil(props) {
 	const user = props.user
 
@@ -97,6 +116,13 @@ export default function ModalUpdateServiceOffersProfil(props) {
 		setUserServiceOffersOptions([])
 		reset()
 	}
+
+	// the form holds this offer as « Modifier » loads it, field for field
+	const formulaireEgal = offre =>
+		offre.name === userServiceOffersName &&
+		prixEnSaisie(offre.price) === userServiceOffersPrice &&
+		offre.description === userServiceOffersDescription &&
+		JSON.stringify(optionsEnSaisie(offre)) === JSON.stringify(userServiceOffersOptions)
 
 	/**
 	 * onSubmit function called when the form is submitted
@@ -147,7 +173,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 					setUserServiceOffers([
 						...userServiceOffers,
 						{
-							id: `added${userServiceOffersName}${userServiceOffersPrice}`,
+							id: `local-${++compteurLocal}`,
 							name: userServiceOffersName,
 							price: newPrice,
 							description: userServiceOffersDescription,
@@ -219,27 +245,27 @@ export default function ModalUpdateServiceOffersProfil(props) {
 	const handleEditServiceOffers = id => {
 		const userServiceOffersFiltered = userServiceOffers.filter(service_offers => service_offers.id === id)
 
-		// replace all "\n" with ";" in userServiceOffersPrice
-		const newPrice = (userServiceOffersFiltered[0].price ?? '').replace(/\n/g, ';')
-
-		// replace all "\n" with ";" in each option's price; an offer without
-		// its options list is edited as one without options
-		const newOptions = (userServiceOffersFiltered[0].options ?? []).map(option => {
-			const newOptionPrice = (option.price ?? '').replace(/\n/g, ';')
-			return { ...option, price: newOptionPrice }
-		})
-
 		reset()
 		setUserServiceOffersId(userServiceOffersFiltered[0].id)
 		setUserServiceOffersName(userServiceOffersFiltered[0].name)
-		setUserServiceOffersPrice(newPrice)
+		// "\n" replaced with ";" in the price of the offer and of each option
+		setUserServiceOffersPrice(prixEnSaisie(userServiceOffersFiltered[0].price))
 		setUserServiceOffersDescription(userServiceOffersFiltered[0].description)
-		setUserServiceOffersOptions(newOptions)
+		setUserServiceOffersOptions(optionsEnSaisie(userServiceOffersFiltered[0]))
 	}
 
 	const handleDeleteServiceOffers = id => {
+		const retiree = userServiceOffers.find(service_offers => service_offers.id === id)
 		const userServiceOffersFiltered = userServiceOffers.filter(service_offers => service_offers.id !== id)
 		setUserServiceOffers(userServiceOffersFiltered)
+		if (id !== userServiceOffersId) return
+		// The offer loaded in the form is gone: back to « Ajouter ». Left in edit
+		// mode, the button found no offer to update and emptied the form. What
+		// was typed over the offer stays, to be added as a new one; a form left
+		// untouched is emptied, or a reflex click on « Ajouter » would put the
+		// removed offer back.
+		if (retiree && formulaireEgal(retiree)) setResetFormState()
+		else setUserServiceOffersId('')
 	}
 
 	// reset the form when the modal is closed
@@ -450,6 +476,7 @@ function FormulaireService({
 	setUserServiceOffersOptions,
 	handleAddServiceOffersOption,
 	userServiceOffersId,
+	boutonAjout,
 }) {
 	return (
 		<div className={'max-h-[600px] w-full overflow-y-scroll pr-4 md:w-2/5'}>
@@ -561,11 +588,126 @@ function FormulaireService({
 							type="button"
 							className="btn-primary"
 							onClick={handleSubmit(onSubmit)}
+							ref={boutonAjout}
 						>
 							{userServiceOffersId === '' ? 'Ajouter une prestation' : 'Modifier une prestation'}
 						</button>
 					</div>
 				</div>
+			</div>
+		</div>
+	)
+}
+
+function ListeServices({ userServiceOffers, handleEditServiceOffers, handleDeleteServiceOffers, boutonAjout }) {
+	// The offer shown. Held here: left to the tabs, the index stayed on the
+	// last offer once it was removed, and no offer was shown.
+	const [ongletActif, setOngletActif] = useState(0)
+	// « Retirer » of the offer shown: its panel is the only one rendered
+	const boutonRetirer = useRef(null)
+
+	// Tabs and panels are keyed by their index: a removed offer hands its
+	// panel, « Retirer » included, to the offer below, and the focus stays.
+	// The last offer leaves with its panel: the focus fell on <body>, out of
+	// the modal. The offer above is shown and its « Retirer » takes the focus,
+	// or the button of the form when the list is left empty, as in the
+	// experiences and courses modals (focusApresRetrait).
+	const retirer = (index, id) => {
+		const derniere = index === userServiceOffers.length - 1
+		if (!derniere || index === 0) {
+			// the button of the form keeps its node: focused before the render
+			if (derniere) boutonAjout.current?.focus()
+			handleDeleteServiceOffers(id)
+			return
+		}
+		// rendered at once: the « Retirer » of the offer above only exists once
+		// its panel is shown
+		flushSync(() => {
+			setOngletActif(index - 1)
+			handleDeleteServiceOffers(id)
+		})
+		boutonRetirer.current?.focus()
+	}
+
+	return (
+		<div
+			className={
+				'flex max-h-[600px] w-full flex-col gap-4 overflow-y-scroll rounded-2xl border border-gray-300 p-4 pr-4 pt-6 md:w-3/5 md:rounded-none md:border-none md:p-0'
+			}
+		>
+			{/*	display the serviceOffers already added */}
+			<h3 className={'text-sm text-gray-900'}>Les services déjà ajoutés</h3>
+			<div className={'flex w-full flex-col gap-4'}>
+				<Tab.Group selectedIndex={ongletActif} onChange={setOngletActif}>
+					<Tab.List
+						className={`${
+							userServiceOffers.length <= 3
+								? 'md:justify-center md:overflow-auto'
+								: 'md:justify-start md:overflow-x-scroll'
+						} flex h-full w-full justify-start overflow-x-scroll py-4`}
+					>
+						{userServiceOffers.map((service_offer, index) => {
+							return (
+								<Tab
+									// biome-ignore lint/suspicious/noArrayIndexKey: the tab keeps its node when an offer is removed, so the focus stays in the list
+									key={index}
+									className={
+										'h-full w-full border-b border-gray-300 bg-gray-50/30 p-4 text-xs text-gray-600 hover:bg-gray-50/50 focus:outline-none ' +
+										// 	aria selected
+										' aria-selected:border-b-2 aria-selected:border-indigo-800 aria-selected:font-semibold aria-selected:text-gray-900'
+									}
+								>
+									{service_offer.name}
+								</Tab>
+							)
+						})}
+					</Tab.List>
+					<Tab.Panels>
+						{userServiceOffers.map((service_offer, index) => {
+							return (
+								<Tab.Panel
+									// biome-ignore lint/suspicious/noArrayIndexKey: same key as its tab: the panel keeps its node when an offer is removed
+									key={index}
+								>
+									<div className={'relative flex flex-col gap-4 bg-white py-4'}>
+										<div className={'absolute -top-6 right-0 m-2 flex items-center justify-center gap-4 md:top-0'}>
+											<button
+												type="button"
+												data-cy={`edit-service-offers-button-${index}`}
+												aria-label={`Modifier la prestation ${service_offer.name ?? ''}`}
+												className={BOUTON_ICONE}
+												onClick={() => handleEditServiceOffers(service_offer.id)}
+											>
+												<span className="material-icons-round text-xl text-orange-600" aria-hidden="true">
+													edit
+												</span>
+											</button>
+											<button
+												type="button"
+												data-cy="delete-service-offers-button"
+												aria-label={`Retirer la prestation ${service_offer.name ?? ''}`}
+												className={BOUTON_ICONE}
+												onClick={() => retirer(index, service_offer.id)}
+												ref={boutonRetirer}
+											>
+												<span className="material-icons-round text-xl text-red-500" aria-hidden="true">
+													delete
+												</span>
+											</button>
+										</div>
+										<div className={'flex flex-col'}>
+											<h2 className={'text-start text-lg font-bold text-indigo-900'}>{service_offer.name}</h2>
+										</div>
+										<DescriptionPriceOffer serviceOffer={service_offer} />
+									</div>
+									<div className={'flex w-full flex-col gap-2 py-2'}>
+										<OptionsOffers serviceOffer={service_offer} />
+									</div>
+								</Tab.Panel>
+							)
+						})}
+					</Tab.Panels>
+				</Tab.Group>
 			</div>
 		</div>
 	)
@@ -597,6 +739,9 @@ function DialogueServices({
 	erreurEnvoi,
 	handleSubmitServiceOffers,
 }) {
+	// where the focus goes when the list is left empty (ListeServices)
+	const boutonAjout = useRef(null)
+
 	return (
 		<Transition.Root show={open} as={Fragment}>
 			<Dialog as="div" className="relative z-30" initialFocus={cancelButtonRef} onClose={fermer}>
@@ -641,95 +786,14 @@ function DialogueServices({
 											setUserServiceOffersOptions={setUserServiceOffersOptions}
 											handleAddServiceOffersOption={handleAddServiceOffersOption}
 											userServiceOffersId={userServiceOffersId}
+											boutonAjout={boutonAjout}
 										/>
-										<div
-											className={
-												'flex max-h-[600px] w-full flex-col gap-4 overflow-y-scroll rounded-2xl border border-gray-300 p-4 pr-4 pt-6 md:w-3/5 md:rounded-none md:border-none md:p-0'
-											}
-										>
-											{/*	display the serviceOffers already added */}
-											<h3 className={'text-sm text-gray-900'}>Les services déjà ajoutés</h3>
-											<div className={'flex w-full flex-col gap-4'}>
-												<Tab.Group>
-													<Tab.List
-														className={`${
-															userServiceOffers.length <= 3
-																? 'md:justify-center md:overflow-auto'
-																: 'md:justify-start md:overflow-x-scroll'
-														} flex h-full w-full justify-start overflow-x-scroll py-4`}
-													>
-														{userServiceOffers.map((service_offer, index) => {
-															return (
-																<Tab
-																	// biome-ignore lint/suspicious/noArrayIndexKey: the tab keeps its node when an offer is removed, so the focus stays in the list
-																	key={index}
-																	className={
-																		'h-full w-full border-b border-gray-300 bg-gray-50/30 p-4 text-xs text-gray-600 hover:bg-gray-50/50 focus:outline-none ' +
-																		// 	aria selected
-																		' aria-selected:border-b-2 aria-selected:border-indigo-800 aria-selected:font-semibold aria-selected:text-gray-900'
-																	}
-																>
-																	{service_offer.name}
-																</Tab>
-															)
-														})}
-													</Tab.List>
-													<Tab.Panels>
-														{userServiceOffers.map((service_offer, index) => {
-															return (
-																<Tab.Panel
-																	// biome-ignore lint/suspicious/noArrayIndexKey: same key as its tab: the panel keeps its node when an offer is removed
-																	key={index}
-																>
-																	<div className={'relative flex flex-col gap-4 bg-white py-4'}>
-																		<div
-																			className={
-																				'absolute -top-6 right-0 m-2 flex items-center justify-center gap-4 md:top-0'
-																			}
-																		>
-																			<button
-																				type="button"
-																				data-cy={`edit-service-offers-button-${index}`}
-																				aria-label={`Modifier la prestation ${service_offer.name ?? ''}`}
-																				className={BOUTON_ICONE}
-																				onClick={() => handleEditServiceOffers(service_offer.id)}
-																			>
-																				<span
-																					className="material-icons-round text-xl text-orange-600"
-																					aria-hidden="true"
-																				>
-																					edit
-																				</span>
-																			</button>
-																			<button
-																				type="button"
-																				data-cy="delete-service-offers-button"
-																				aria-label={`Retirer la prestation ${service_offer.name ?? ''}`}
-																				className={BOUTON_ICONE}
-																				onClick={() => handleDeleteServiceOffers(service_offer.id)}
-																			>
-																				<span className="material-icons-round text-xl text-red-500" aria-hidden="true">
-																					delete
-																				</span>
-																			</button>
-																		</div>
-																		<div className={'flex flex-col'}>
-																			<h2 className={'text-start text-lg font-bold text-indigo-900'}>
-																				{service_offer.name}
-																			</h2>
-																		</div>
-																		<DescriptionPriceOffer serviceOffer={service_offer} />
-																	</div>
-																	<div className={'flex w-full flex-col gap-2 py-2'}>
-																		<OptionsOffers serviceOffer={service_offer} />
-																	</div>
-																</Tab.Panel>
-															)
-														})}
-													</Tab.Panels>
-												</Tab.Group>
-											</div>
-										</div>
+										<ListeServices
+											userServiceOffers={userServiceOffers}
+											handleEditServiceOffers={handleEditServiceOffers}
+											handleDeleteServiceOffers={handleDeleteServiceOffers}
+											boutonAjout={boutonAjout}
+										/>
 									</div>
 								</div>
 								<div className="mt-4 flex flex-col items-end gap-4">

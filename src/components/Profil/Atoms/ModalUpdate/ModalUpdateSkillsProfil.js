@@ -9,6 +9,7 @@ import {
 	BoutonSauvegarder,
 	ErreurSauvegarde,
 	FondModale,
+	focusApresRetrait,
 	useEnvoi,
 } from '@/components/Profil/Atoms/ModalUpdate/ModalElements'
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
@@ -74,6 +75,11 @@ export default function ModalUpdateSkillsProfil(props) {
 	}, [props.isModalOpen])
 
 	const cancelButtonRef = useRef(null)
+	// where the focus goes when the list is left empty (focusApresRetrait)
+	const champCompetence = useRef(null)
+	const { ref: enregistrerChamp, ...champEnregistre } = register('skills', {
+		required: true,
+	})
 
 	const handleUpdateSkills = event => {
 		// check if the entered value is a ';' and if so, add it to the array
@@ -187,9 +193,11 @@ export default function ModalUpdateSkillsProfil(props) {
 																id="skills"
 																name="skills"
 																type={'text'}
-																{...register('skills', {
-																	required: true,
-																})}
+																{...champEnregistre}
+																ref={noeud => {
+																	enregistrerChamp(noeud)
+																	champCompetence.current = noeud
+																}}
 																required
 																onKeyPress={async event => {
 																	if (event.key === 'Enter') {
@@ -236,7 +244,11 @@ export default function ModalUpdateSkillsProfil(props) {
 																<button
 																	data-cy="skill-selected"
 																	type={'button'}
-																	onClick={() => {
+																	// the chip is the row and its « Retirer »
+																	data-ligne
+																	data-retirer
+																	onClick={event => {
+																		focusApresRetrait(event.currentTarget, champCompetence.current)
 																		handleDeleteSkillSelected(skill.id)
 																	}}
 																	// biome-ignore lint/suspicious/noArrayIndexKey: the row keeps its node when another is removed, so the keyboard focus stays in the list
