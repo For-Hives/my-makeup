@@ -315,6 +315,20 @@ test.describe('MES-10 qui est mesuré', () => {
 
 		registermesure1Scenario7({ suivreEnvois, question, finDeLInscription })
 
+		test('onboarding_source : la réponse « Une IA (ChatGPT, Gemini…) » part avec la valeur « ia »', async ({
+			page,
+		}) => {
+			const apres = suivreEnvois(page)
+			await visiteurReel(page)
+			await etapeDuNom(page, 'origine-ia@test.local')
+			await question(page).getByLabel('Une IA (ChatGPT, Gemini…)', { exact: true }).check()
+			await expect(page.getByTestId('onboarding-source-ia')).toBeChecked()
+			await page.getByTestId('submit').click()
+			await finDeLInscription(page, apres)
+			expect(await evenements('onboarding_source')).toEqual([{ source: 'ia' }])
+			expect(JSON.stringify(await envoisRecus())).not.toContain('origine-ia@test')
+		})
+
 		test('onboarding_source : la politique de confidentialité décrit la question', async ({ page }) => {
 			await page.goto('/politique-de-confidentialite')
 			const phrase = page.getByText(/Comment as-tu connu My Makeup \?/)

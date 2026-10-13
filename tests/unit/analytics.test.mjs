@@ -558,8 +558,12 @@ describe('artist space events (UI-01, UI-03, UI-05, MES-12)', () => {
 	})
 
 	test('onboarding_source: one answer of the closed list, nothing else', () => {
-		// plans/04 §3.3 row 17 without 'maeva' (decisions.md, 09/10)
-		assert.deepEqual(SOURCES_ORIGINE, ['instagram', 'google', 'bouche-a-oreille', 'ecole', 'autre'])
+		// plans/04 §3.3 row 17 without 'maeva' (decisions.md, 09/10), plus 'ia'
+		// (lot of 13/10), « Autre » last
+		assert.deepEqual(SOURCES_ORIGINE, ['instagram', 'google', 'bouche-a-oreille', 'ecole', 'ia', 'autre'])
+		assert.deepEqual(eventData('onboarding_source', { source: 'ia' }), { source: 'ia' })
+		assert.equal(eventData('onboarding_source', { source: 'chatgpt' }), null)
+		assert.equal(eventData('onboarding_source', { source: 'IA' }), null)
 		assert.deepEqual(eventData('onboarding_source', { source: 'instagram' }), {
 			source: 'instagram',
 		})

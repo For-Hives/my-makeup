@@ -36,9 +36,11 @@ export const RESULT_BUCKETS = ['0', '1-5', '6-20', '21+']
 
 // answers to « Comment as-tu connu My Makeup ? » (/auth/init-account, UI-05),
 // in the order they are shown; never stored by the API. The list of plans/04
-// §3.3 row 17 without 'maeva' (decisions.md, 09/10). Umami keeps each value
-// as sent: renaming one later splits its series.
-export const SOURCES_ORIGINE = ['instagram', 'google', 'bouche-a-oreille', 'ecole', 'autre']
+// §3.3 row 17 without 'maeva' (decisions.md, 09/10), plus 'ia' (an AI
+// assistant: ChatGPT sends no referrer any more, those sign-ups fell into
+// « direct », analysis of 13/10 §3.3). Umami keeps each value as sent:
+// renaming one later splits its series.
+export const SOURCES_ORIGINE = ['instagram', 'google', 'bouche-a-oreille', 'ecole', 'ia', 'autre']
 
 const id = { type: 'id', required: true }
 const optionalId = { type: 'id', required: false }

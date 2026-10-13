@@ -25,6 +25,7 @@ test.describe('UI-05 inscription et suppression', () => {
 		['google', 'Recherche Google'],
 		['bouche-a-oreille', 'Bouche-à-oreille'],
 		['ecole', 'École de maquillage'],
+		['ia', 'Une IA (ChatGPT, Gemini…)'],
 		['autre', 'Autre'],
 	]
 
@@ -53,7 +54,7 @@ test.describe('UI-05 inscription et suppression', () => {
 		const [creation] = appels(avant.journal, 'POST', '/api/me-makeup')
 		expect(creation.fin).toBeDefined() // answered before the name step
 
-		// the optional question: 5 answers, none chosen, 44 px targets
+		// the optional question: 6 answers, none chosen, 44 px targets
 		const question = page.getByRole('group', {
 			name: /Comment as-tu connu My.Makeup/,
 		})
