@@ -1,0 +1,3 @@
+# Versions are pinned exactly: `bun add` writes "1.2.3", never "^1.2.3".
+[install]
+exact = true

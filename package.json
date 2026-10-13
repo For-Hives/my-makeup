@@ -1,0 +1,57 @@
+{
+	"name": "my-makeup",
+	"version": "3.0.0",
+	"private": true,
+	"type": "module",
+	"packageManager": "bun@1.3.14",
+	"engines": {
+		"node": "24.x"
+	},
+	"scripts": {
+		"dev": "next dev",
+		"build": "next build",
+		"start": "next start",
+		"payload": "bun node_modules/payload/bin.js --disable-transpile",
+		"payload:types": "bun node_modules/payload/bin.js generate:types --disable-transpile",
+		"payload:importmap": "bun node_modules/payload/bin.js generate:importmap --disable-transpile",
+		"lint": "biome lint . --max-diagnostics=200",
+		"check": "biome check --write .",
+		"ci:biome": "biome ci . --reporter=github",
+		"typecheck": "next typegen && tsc --noEmit"
+	},
+	"dependencies": {
+		"@hookform/resolvers": "5.9.1",
+		"@payloadcms/db-postgres": "3.90.2",
+		"@payloadcms/email-nodemailer": "3.90.2",
+		"@payloadcms/next": "3.90.2",
+		"@payloadcms/storage-s3": "3.90.2",
+		"@payloadcms/ui": "3.90.2",
+		"fuse.js": "7.5.0",
+		"graphql": "16.14.2",
+		"next": "16.3.8",
+		"payload": "3.90.2",
+		"react": "19.2.8",
+		"react-dom": "19.2.8",
+		"react-hook-form": "7.89.0",
+		"sharp": "0.35.5",
+		"zod": "4.6.5"
+	},
+	"devDependencies": {
+		"@axe-core/playwright": "4.13.0",
+		"@biomejs/biome": "2.4.11",
+		"@playwright/test": "1.59.1",
+		"@tailwindcss/postcss": "4.3.3",
+		"@types/bun": "1.3.14",
+		"@types/node": "24.19.1",
+		"@types/react": "19.2.18",
+		"@types/react-dom": "19.2.7",
+		"msw": "2.15.0",
+		"tailwindcss": "4.3.3",
+		"typescript": "6.0.3"
+	},
+	"overrides": {
+		"dompurify": "3.4.17",
+		"nodemailer": "10.0.15",
+		"undici": "7.29.1"
+	}
+}

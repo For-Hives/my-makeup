@@ -1,0 +1,115 @@
+{
+	"$schema": "https://biomejs.dev/schemas/2.4.11/schema.json",
+	"vcs": {
+		"enabled": true,
+		"clientKind": "git",
+		"useIgnoreFile": true,
+		"defaultBranch": "main"
+	},
+	"files": {
+		"ignoreUnknown": true,
+		"includes": [
+			"src/**/*",
+			"tests/**/*",
+			"scripts/**/*",
+			"!!**/.claude",
+			"*.ts",
+			"*.tsx",
+			"*.js",
+			"*.jsx",
+			"!src/payload-types.ts",
+			"!src/app/(payload)/admin/importMap.js",
+			"!src/content/changelog.json",
+			"!src/migrations/*.json",
+			"!next-env.d.ts"
+		],
+		"maxSize": 10485760
+	},
+	"html": {
+		"formatter": {
+			"indentScriptAndStyle": true
+		}
+	},
+	"formatter": {
+		"enabled": true,
+		"formatWithErrors": false,
+		"indentStyle": "tab",
+		"indentWidth": 2,
+		"lineEnding": "lf",
+		"lineWidth": 120,
+		"attributePosition": "auto",
+		"bracketSameLine": false,
+		"bracketSpacing": true
+	},
+	"css": {
+		"parser": {
+			"tailwindDirectives": true
+		}
+	},
+	"linter": {
+		"enabled": true,
+		"domains": {
+			"next": "recommended"
+		},
+		"rules": {
+			"recommended": true,
+			"correctness": {
+				"useExhaustiveDependencies": "off",
+				"noUnusedVariables": "error",
+				"useUniqueElementIds": "off"
+			},
+			"complexity": {
+				"noImportantStyles": "off"
+			},
+			"style": {
+				"useConst": "error",
+				"useTemplate": "error",
+				"noNonNullAssertion": "off"
+			},
+			"suspicious": {
+				"noArrayIndexKey": "warn",
+				"noUnknownAtRules": "off"
+			},
+			"security": {
+				"noDangerouslySetInnerHtml": "off"
+			},
+			"a11y": {
+				"noSvgWithoutTitle": "off"
+			}
+		}
+	},
+	"overrides": [
+		{
+			"includes": ["tests/**/*"],
+			"linter": {
+				"rules": {
+					"suspicious": {
+						"noFocusedTests": "error",
+						"noSkippedTests": "error"
+					}
+				}
+			}
+		}
+	],
+	"javascript": {
+		"formatter": {
+			"jsxQuoteStyle": "double",
+			"quoteProperties": "asNeeded",
+			"trailingCommas": "es5",
+			"semicolons": "asNeeded",
+			"arrowParentheses": "asNeeded",
+			"bracketSameLine": false,
+			"quoteStyle": "single",
+			"attributePosition": "auto",
+			"bracketSpacing": true
+		}
+	},
+	"assist": {
+		"enabled": true,
+		"actions": {
+			"source": {
+				"organizeImports": "on"
+			}
+		}
+	}
+}
