@@ -8,6 +8,8 @@
 // offer left the tabs with no offer shown. A language or a skill added in its
 // modal took its name as id: two chips with the same name left together.
 // Left empty, the list of offers kept a Tab stop that showed nothing.
+// From the review of #968: with the focus kept in the modal, Enter held on a
+// button clicked it again each time the key repeated.
 import { expect, test } from '@playwright/test'
 import { corpsDesPatchs, dialogue, erreursDeLaPage, sauver, valeursDeLaModale } from './espace-helpers.mjs'
 import { ouvrirProfil, profilDeDepart, profilServeur, reinitialiserStrapi } from './outils-strapi.mjs'
@@ -476,6 +478,156 @@ test.describe('lignes de la modale prestations', () => {
 		expect(erreurs).toEqual([])
 	})
 
+	// A removal keeps the focus in the modal, on the « Retirer » of the offer
+	// that took the panel: Enter held, the key repeats and the browser clicks
+	// again each time, so the offers left one after the other
+	test('prestations : Entrée maintenue sur « Retirer » de la 1re de trois offres : une seule part ; relâchée puis pressée de nouveau, la suivante part', async ({
+		page,
+	}) => {
+		const erreurs = erreursDeLaPage(page)
+		const patchs = corpsDesPatchs(page)
+		await profilDeDepart({ service_offers: TROIS })
+		await ouvrirProfil(page)
+		await page.getByTestId(MODALE.ouvrir).click()
+		const retirer = page.getByTestId(MODALE.retirer)
+		await expect(onglets(page)).toHaveText(TROIS.map(offre => offre.name))
+
+		await retirer.focus()
+		await page.keyboard.down('Enter')
+		await expect(onglets(page)).toHaveText([offreB.name, offreC.name])
+		await expect(retirer).toBeFocused()
+		// pressed again without being released: the browser marks it repeated
+		await page.keyboard.down('Enter')
+		await page.keyboard.down('Enter')
+		await page.keyboard.up('Enter')
+		await expect(onglets(page)).toHaveText([offreB.name, offreC.name])
+		await expect(retirer).toBeFocused()
+		await expect(retirer).toHaveAccessibleName(`Retirer la prestation ${offreB.name}`)
+
+		// released then pressed: a first Enter removes as before
+		await page.keyboard.press('Enter')
+		await expect(onglets(page)).toHaveText([offreC.name])
+		await expect(retirer).toBeFocused()
+		await enregistrees(page, patchs, [offreC])
+		expect(erreurs).toEqual([])
+	})
+
+	// after the only offer the focus is on the button of the form: the
+	// repeated key clicked it, and what the form held was added
+	test('prestations : Entrée maintenue sur « Retirer » de la seule offre, en cours de modification : le bouton du formulaire prend le focus sans rien ajouter, la saisie continue dans le formulaire', async ({
+		page,
+	}) => {
+		const erreurs = erreursDeLaPage(page)
+		const patchs = corpsDesPatchs(page)
+		await profilDeDepart({ service_offers: [DEUX_PRIX] })
+		await ouvrirProfil(page)
+		await page.getByTestId(MODALE.ouvrir).click()
+		const bouton = page.getByTestId(MODALE.bouton)
+		const retirer = page.getByTestId(MODALE.retirer)
+
+		await page.getByTestId(MODALE.modifier(0)).click()
+		await expect(bouton).toHaveText(MODALE.edition)
+		let saisie = {
+			...DEUX_PRIX,
+			description: await taper(page, 'description-service-offers-input', DEUX_PRIX.description, ' ou au studio'),
+		}
+		await retirer.focus()
+		await page.keyboard.down('Enter')
+		await expect(onglets(page)).toHaveCount(0)
+		await expect(bouton).toBeFocused()
+		await expect(bouton).toHaveText(MODALE.ajout)
+		await page.keyboard.down('Enter')
+		await page.keyboard.up('Enter')
+
+		// typed after the key is released: the form still holds every field
+		saisie = { ...saisie, name: await taper(page, 'name-service-offers-input', saisie.name, ' bis') }
+		await expect(onglets(page)).toHaveCount(0)
+		await formulaire(page, saisie)
+		await expect(dialogue(page).getByTestId(MODALE.erreur)).toBeHidden()
+
+		// a first Enter on the button adds as before
+		await bouton.focus()
+		await page.keyboard.press('Enter')
+		await expect(onglets(page)).toHaveText([saisie.name])
+		await formulaire(page, SANS_OFFRE)
+		await enregistrees(page, patchs, [saisie])
+		expect(erreurs).toEqual([])
+	})
+
+	// every button of the modal, not « Retirer » alone: the form has no way to
+	// take an option back
+	test('prestations : Entrée maintenue sur « Ajouter une option à la prestation » : une seule option s’ajoute ; relâchée puis pressée de nouveau, une 2e', async ({
+		page,
+	}) => {
+		const erreurs = erreursDeLaPage(page)
+		await profilDeDepart({ service_offers: [] })
+		await ouvrirProfil(page)
+		await page.getByTestId(MODALE.ouvrir).click()
+		const options = dialogue(page).getByTestId(/^name-service-offers-option-input-/)
+
+		await page.getByTestId(MODALE.option).focus()
+		await page.keyboard.down('Enter')
+		await expect(options).toHaveCount(1)
+		await page.keyboard.down('Enter')
+		await page.keyboard.down('Enter')
+		await page.keyboard.up('Enter')
+		await expect(options).toHaveCount(1)
+		await page.keyboard.press('Enter')
+		await expect(options).toHaveCount(2)
+		expect(erreurs).toEqual([])
+	})
+
+	// The options of the offer shown (and its tabs) act on keydown by
+	// themselves, without a click of the browser: an option opened, then
+	// closed and opened again each time the key repeated
+	test('prestations : Entrée maintenue sur une option de l’offre affichée : elle s’ouvre et reste ouverte ; relâchée puis pressée de nouveau, elle se referme', async ({
+		page,
+	}) => {
+		const erreurs = erreursDeLaPage(page)
+		await profilDeDepart({ service_offers: [DEUX_PRIX] })
+		await ouvrirProfil(page)
+		await page.getByTestId(MODALE.ouvrir).click()
+		const option = dialogue(page).getByTestId('service-offer-name-0')
+		await expect(option).toHaveAttribute('aria-expanded', 'false')
+
+		await option.focus()
+		await page.keyboard.down('Enter')
+		await expect(option).toHaveAttribute('aria-expanded', 'true')
+		// repeated once: a second repeat would open it again
+		await page.keyboard.down('Enter')
+		await page.keyboard.up('Enter')
+		await expect(option).toHaveAttribute('aria-expanded', 'true')
+		await expect(dialogue(page).getByTestId('service-offer-description-0')).toBeVisible()
+		await page.keyboard.press('Enter')
+		await expect(option).toHaveAttribute('aria-expanded', 'false')
+		expect(erreurs).toEqual([])
+	})
+
+	// Enter held on the button of the page that opens the modal: « Fermer »
+	// has the focus by the time the key repeats, and closed it at once
+	test('prestations : Entrée maintenue sur le bouton qui ouvre la modale : « Fermer » prend le focus et la modale reste ouverte ; relâchée puis pressée de nouveau, elle se ferme', async ({
+		page,
+	}) => {
+		const erreurs = erreursDeLaPage(page)
+		await profilDeDepart({ service_offers: TROIS })
+		await ouvrirProfil(page)
+		const fermer = page.getByTestId(MODALE.fermer)
+
+		await page.getByTestId(MODALE.ouvrir).focus()
+		await page.keyboard.down('Enter')
+		await expect(onglets(page)).toHaveText(TROIS.map(offre => offre.name))
+		await expect(fermer).toBeFocused()
+		await page.keyboard.down('Enter')
+		await page.keyboard.up('Enter')
+		await expect(dialogue(page)).toBeVisible()
+		await expect(fermer).toBeFocused()
+
+		// a first Enter on « Fermer » closes as before
+		await page.keyboard.press('Enter')
+		await expect(dialogue(page)).toBeHidden()
+		expect(erreurs).toEqual([])
+	})
+
 	// the list holds the offer shown, and leaves with the dialog
 	test('prestations : la modale fermée sur la 3e offre puis rouverte : la 1re offre est affichée', async ({ page }) => {
 		const erreurs = erreursDeLaPage(page)
@@ -567,7 +719,7 @@ const PUCES = [
 
 test.describe('puces des modales langues et compétences', () => {
 	for (const liste of PUCES) {
-		const [premiere, , troisieme] = liste.noms
+		const [premiere, deuxieme, troisieme] = liste.noms
 		const puce = (page, nom) => dialogue(page).getByRole('button', { name: `Retirer ${nom}`, exact: true })
 
 		// the chip below takes the node of a removed one; the last chip left
@@ -662,6 +814,39 @@ test.describe('puces des modales langues et compétences', () => {
 			await sauver(page, liste.sauver)
 			expect(patchs).toEqual([{ [liste.champ]: [{ name: liste.nouvelle }] }])
 			expect((await profilServeur())[liste.champ].map(element => element.name)).toEqual([liste.nouvelle])
+			expect(erreurs).toEqual([])
+		})
+
+		// the chip below takes the node and the focus of a removed one: Enter
+		// held, the key repeats on it and the chips left one after the other
+		test(`${liste.nom} : Entrée maintenue sur la 1re de trois puces : une seule part ; relâchée puis pressée de nouveau, la suivante part`, async ({
+			page,
+		}) => {
+			const erreurs = erreursDeLaPage(page)
+			const patchs = corpsDesPatchs(page)
+			await profilDeDepart({ [liste.champ]: liste.noms.map(name => ({ name })) })
+			await ouvrirProfil(page)
+			await page.getByTestId(liste.ouvrir).click()
+			const puces = dialogue(page).getByTestId(liste.puce)
+			await expect(puces).toHaveCount(3)
+
+			await puces.first().focus()
+			await page.keyboard.down('Enter')
+			await expect(puces).toHaveCount(2)
+			await expect(puce(page, deuxieme)).toBeFocused()
+			// pressed again without being released: the browser marks it repeated
+			await page.keyboard.down('Enter')
+			await page.keyboard.down('Enter')
+			await page.keyboard.up('Enter')
+			await expect(puces).toHaveCount(2)
+			await expect(puce(page, deuxieme)).toBeFocused()
+
+			// released then pressed: a first Enter removes as before
+			await page.keyboard.press('Enter')
+			await expect(puces).toHaveCount(1)
+			await expect(puce(page, troisieme)).toBeFocused()
+			await sauver(page, liste.sauver)
+			expect(patchs).toEqual([{ [liste.champ]: [{ name: troisieme }] }])
 			expect(erreurs).toEqual([])
 		})
 

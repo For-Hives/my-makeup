@@ -10,6 +10,7 @@ import {
 	ErreurSauvegarde,
 	FondModale,
 	focusApresRetrait,
+	ignorerEntreeMaintenue,
 	suivreChamp,
 	useEnvoi,
 } from '@/components/Profil/Atoms/ModalUpdate/ModalElements'
@@ -440,6 +441,7 @@ function DialogueFormations({
 						>
 							<Dialog.Panel
 								data-cy="modal-panel"
+								onKeyDownCapture={ignorerEntreeMaintenue}
 								className="relative w-full transform rounded-lg bg-white p-8 text-left shadow-2xl transition-all sm:max-w-7xl"
 							>
 								<BoutonFermer onClick={fermer} disabled={envoi} ref={cancelButtonRef} />

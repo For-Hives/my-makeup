@@ -4,7 +4,8 @@
 // overwritten together; and removing the row loaded in the form left the
 // form in edit mode, where its button updated nothing and emptied the fields.
 // Removed with the keyboard, the last row of the list took the focus out of
-// the modal with it.
+// the modal with it. With the focus kept in the modal, Enter held on a button
+// clicked it again each time the key repeated (review of #968).
 import { expect, test } from '@playwright/test'
 import { corpsDesPatchs, dialogue, erreursDeLaPage, remplir, sauver, valeursDeLaModale } from './espace-helpers.mjs'
 import { ouvrirProfil, profilDeDepart, profilServeur, reinitialiserStrapi } from './outils-strapi.mjs'
@@ -331,6 +332,74 @@ test.describe('lignes des modales expériences et formations', () => {
 			await expect(listees).toHaveCount(1)
 			await expect(dialogue(page)).toContainText(saisie[modale.repere])
 			await valeursDeLaModale(page, vide(modale))
+			expect(erreurs).toEqual([])
+		})
+
+		// the row below takes the node of a removed one, « Retirer » and focus
+		// included: Enter held, the key repeats and the browser clicks again
+		// each time, so the rows left one after the other
+		test(`${modale.nom} : Entrée maintenue sur « Retirer » de la 1re de deux lignes : une seule part, la 2e reste avec le focus sur son « Retirer »`, async ({
+			page,
+		}) => {
+			const erreurs = erreursDeLaPage(page)
+			const patchs = corpsDesPatchs(page)
+			await profilDeDepart({ [modale.champ]: [premiere, seconde] })
+			await ouvrirProfil(page)
+			await page.getByTestId(modale.ouvrir).click()
+			const listees = dialogue(page).getByTestId(modale.retirer)
+			await expect(listees).toHaveCount(2)
+
+			await listees.first().focus()
+			await page.keyboard.down('Enter')
+			await expect(listees).toHaveCount(1)
+			await expect(listees).toBeFocused()
+			// pressed again without being released: the browser marks it repeated
+			await page.keyboard.down('Enter')
+			await page.keyboard.down('Enter')
+			await page.keyboard.up('Enter')
+			await expect(listees).toHaveCount(1)
+			await expect(listees).toBeFocused()
+			await expect(dialogue(page)).toContainText(seconde[modale.repere])
+			await enregistrees(page, modale, patchs, [seconde])
+			expect(erreurs).toEqual([])
+		})
+
+		// after the only row the focus is on the button of the form: the
+		// repeated key clicked it, and what the form held was added
+		test(`${modale.nom} : Entrée maintenue sur « Retirer » de la seule ligne, en cours de modification : le bouton du formulaire prend le focus sans rien ajouter, la saisie continue dans le formulaire`, async ({
+			page,
+		}) => {
+			const erreurs = erreursDeLaPage(page)
+			const patchs = corpsDesPatchs(page)
+			await profilDeDepart({ [modale.champ]: [premiere] })
+			await ouvrirProfil(page)
+			await page.getByTestId(modale.ouvrir).click()
+			const bouton = page.getByTestId(modale.bouton)
+			const listees = dialogue(page).getByTestId(modale.retirer)
+
+			await page.getByTestId(modale.modifier(0)).click()
+			await expect(bouton).toHaveText(modale.edition)
+			let saisie = await taper(page, premiere, modale.saisies[0])
+			await listees.focus()
+			await page.keyboard.down('Enter')
+			await expect(listees).toHaveCount(0)
+			await expect(bouton).toBeFocused()
+			await expect(bouton).toHaveText(modale.ajout)
+			await page.keyboard.down('Enter')
+			await page.keyboard.up('Enter')
+
+			// typed after the key is released: the form still holds every field
+			saisie = await taper(page, saisie, modale.saisies[1])
+			await expect(listees).toHaveCount(0)
+			await valeursDeLaModale(page, modale.champs(saisie))
+			await expect(dialogue(page).getByTestId(modale.erreur)).toBeHidden()
+
+			// a first Enter on the button adds as before
+			await bouton.focus()
+			await page.keyboard.press('Enter')
+			await expect(listees).toHaveCount(1)
+			await valeursDeLaModale(page, vide(modale))
+			await enregistrees(page, modale, patchs, [saisie])
 			expect(erreurs).toEqual([])
 		})
 	}

@@ -115,6 +115,24 @@ export function focusApresRetrait(bouton, repli) {
 }
 
 /**
+ * onKeyDownCapture of the panel of a modal: Enter held on a button acts
+ * once. The browser clicks the button again each time the key repeats, and a
+ * removal keeps the focus in the modal (focusApresRetrait): the items left
+ * one after the other, then the key reached the button of the form, which
+ * added or validated what the form held. On the way down to the button, so
+ * that the ones that act on keydown by themselves (tabs and options of
+ * Headless UI) do not see the repeated key either. Space is left alone: it
+ * clicks on keyup, once. So are the fields: Enter held in a description adds
+ * lines.
+ * @param {KeyboardEvent} event
+ */
+export function ignorerEntreeMaintenue(event) {
+	if (event.key !== 'Enter' || !event.repeat || !event.target.closest('button')) return
+	event.preventDefault()
+	event.stopPropagation()
+}
+
+/**
  * onChange of a controlled input that is also registered in react-hook-form:
  * the input's own onChange replaced the one of register(), so the form only
  * saw a value on blur (Enter in a field validated and sent the old one).

@@ -10,6 +10,7 @@ import {
 	ErreurSauvegarde,
 	FondModale,
 	focusApresRetrait,
+	ignorerEntreeMaintenue,
 	useEnvoi,
 } from '@/components/Profil/Atoms/ModalUpdate/ModalElements'
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
@@ -172,6 +173,7 @@ export default function ModalUpdateLanguageProfil(props) {
 						>
 							<Dialog.Panel
 								data-cy="modal-panel"
+								onKeyDownCapture={ignorerEntreeMaintenue}
 								className="relative w-full transform rounded-lg bg-white p-8 text-left shadow-2xl transition-all sm:max-w-3xl"
 							>
 								<BoutonFermer onClick={fermer} disabled={envoi} ref={cancelButtonRef} />
