@@ -5,7 +5,8 @@
 // form left the form in edit mode, where its button updated nothing and
 // emptied the fields. Removed with the keyboard, the last language, skill or
 // offer of its list took the focus out of the modal with it, and the last
-// offer left the tabs with no offer shown.
+// offer left the tabs with no offer shown. A language or a skill added in its
+// modal took its name as id: two chips with the same name left together.
 import { expect, test } from '@playwright/test'
 import { corpsDesPatchs, dialogue, erreursDeLaPage, sauver, valeursDeLaModale } from './espace-helpers.mjs'
 import { ouvrirProfil, profilDeDepart, profilServeur, reinitialiserStrapi } from './outils-strapi.mjs'
@@ -362,8 +363,8 @@ test.describe('lignes de la modale prestations', () => {
 	})
 })
 
-// One entry per list of chips: a chip is its own « Retirer ». Its field, its
-// three names stored by the API and one typed in the modal.
+// One entry per list of chips: a chip is its own « Retirer », found by its
+// id. Its field, its three names stored by the API and one typed in the modal.
 const PUCES = [
 	{
 		nom: 'langues',
@@ -415,6 +416,39 @@ test.describe('puces des modales langues et compétences', () => {
 			await expect(puce(page, premiere)).toBeFocused()
 			await sauver(page, liste.sauver)
 			expect(patchs).toEqual([{ [liste.champ]: [{ name: premiere }] }])
+			expect(erreurs).toEqual([])
+		})
+
+		// the name of a chip was its id: the first one left with the second,
+		// and the focus with them
+		test(`${liste.nom} : deux puces du même nom ajoutées, par Entrée puis par « ; », la 2e retirée au clavier : la 1re reste et prend le focus, seule dans le PATCH`, async ({
+			page,
+		}) => {
+			const erreurs = erreursDeLaPage(page)
+			const patchs = corpsDesPatchs(page)
+			await profilDeDepart({ [liste.champ]: [] })
+			await ouvrirProfil(page)
+			await page.getByTestId(liste.ouvrir).click()
+			const puces = dialogue(page).getByTestId(liste.puce)
+			const champ = dialogue(page).getByTestId(liste.saisie)
+			await expect(puces).toHaveCount(0)
+
+			for (const [index, touche] of ['Enter', ';'].entries()) {
+				await champ.pressSequentially(liste.nouvelle)
+				await expect(champ).toBeFocused()
+				await expect(champ).toHaveValue(liste.nouvelle)
+				await champ.press(touche)
+				await expect(puces).toHaveCount(index + 1)
+				await expect(champ).toHaveValue('')
+			}
+
+			await puces.nth(1).focus()
+			await page.keyboard.press('Enter')
+			await expect(puces).toHaveCount(1)
+			await expect(puces).toBeFocused()
+			await sauver(page, liste.sauver)
+			expect(patchs).toEqual([{ [liste.champ]: [{ name: liste.nouvelle }] }])
+			expect((await profilServeur())[liste.champ].map(element => element.name)).toEqual([liste.nouvelle])
 			expect(erreurs).toEqual([])
 		})
 

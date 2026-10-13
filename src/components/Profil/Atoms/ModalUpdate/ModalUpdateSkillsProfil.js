@@ -24,6 +24,12 @@ const schema = zod
 	})
 	.required({ skills: true })
 
+// A skill added in the modal has no id yet, and « Retirer » finds a chip by
+// its id: it gets a local one that no other chip can share. Its name was its
+// id, so two chips with the same name were removed together. Never sent: the
+// PATCH holds the names only (onSubmit).
+let compteurLocal = 0
+
 export default function ModalUpdateSkillsProfil(props) {
 	const user = props.user
 
@@ -92,7 +98,7 @@ export default function ModalUpdateSkillsProfil(props) {
 				setValue('skills', nom)
 				trigger('skills').then(isValid => {
 					if (isValid) {
-						setUserSkillsSelected(userSkillsSelected.concat({ id: nom, name: nom }))
+						setUserSkillsSelected(userSkillsSelected.concat({ id: `local-${++compteurLocal}`, name: nom }))
 						setUserSkills('')
 					} else setUserSkills(nom)
 				})
@@ -211,7 +217,7 @@ export default function ModalUpdateSkillsProfil(props) {
 																				setUserSkillsSelected([
 																					...userSkillsSelected,
 																					{
-																						id: event.target.value,
+																						id: `local-${++compteurLocal}`,
 																						name: event.target.value,
 																					},
 																				])

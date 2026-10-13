@@ -24,6 +24,12 @@ const schema = zod
 	})
 	.required({ language: true })
 
+// A language added in the modal has no id yet, and « Retirer » finds a chip
+// by its id: it gets a local one that no other chip can share. Its name was
+// its id, so two chips with the same name were removed together. Never
+// sent: the PATCH holds the names only (onSubmit).
+let compteurLocal = 0
+
 export default function ModalUpdateLanguageProfil(props) {
 	const user = props.user
 
@@ -92,7 +98,7 @@ export default function ModalUpdateLanguageProfil(props) {
 				setValue('language', nom)
 				trigger('language').then(isValid => {
 					if (isValid) {
-						setUserLanguageSelected(userLanguageSelected.concat({ id: nom, name: nom }))
+						setUserLanguageSelected(userLanguageSelected.concat({ id: `local-${++compteurLocal}`, name: nom }))
 						setUserLanguage('')
 					} else setUserLanguage(nom)
 				})
@@ -211,7 +217,7 @@ export default function ModalUpdateLanguageProfil(props) {
 																				setUserLanguageSelected([
 																					...userLanguageSelected,
 																					{
-																						id: event.target.value,
+																						id: `local-${++compteurLocal}`,
 																						name: event.target.value,
 																					},
 																				])
