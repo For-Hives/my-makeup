@@ -17,9 +17,13 @@ Une application, trois zones, toutes sous `src/app/` :
 
 | Zone | Dossier | Adresse | État |
 |---|---|---|---|
-| Pages publiques | `(site)/` | `/` | Page d'accueil provisoire |
-| Espace maquilleuse | `(espace)/auth/` | `/auth` | Page d'attente |
+| Pages publiques | `(front)/(site)/` | `/` | Page d'accueil provisoire |
+| Espace maquilleuse | `(front)/(espace)/auth/` | `/auth` | Page d'attente |
 | Administration | `(payload)/` | `/admin` et `/api` | Générée par Payload, une collection de comptes `admins` |
+
+Les noms entre parenthèses rangent les fichiers et n'apparaissent pas dans les adresses.
+
+Les pages publiques et l'espace maquilleuse partagent une seule coquille HTML, `(front)/layout.tsx` : passer de l'une à l'autre se fait sans recharger la page, comme sur le site actuel. L'administration a la sienne, générée par Payload, et ne charge pas la feuille de style du site.
 
 Le reste :
 

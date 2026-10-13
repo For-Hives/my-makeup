@@ -1,3 +1,9 @@
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+	description: 'Annuaire de maquilleuses professionnelles indépendantes.',
+}
+
 export default function HomePage() {
 	return (
 		<main className="flex min-h-dvh flex-col items-center justify-center gap-4 p-6 text-center">

@@ -1,4 +1,9 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
+
+export const metadata: Metadata = {
+	title: 'Espace maquilleuse',
+}
 
 // Placeholder of the makeup artist's space: sign-in, sign-up and the profile editor come later.
 export default function AuthPage() {
