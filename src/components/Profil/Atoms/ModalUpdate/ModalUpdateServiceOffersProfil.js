@@ -638,76 +638,80 @@ function ListeServices({ userServiceOffers, handleEditServiceOffers, handleDelet
 			{/*	display the serviceOffers already added */}
 			<h3 className={'text-sm text-gray-900'}>Les services déjà ajoutés</h3>
 			<div className={'flex w-full flex-col gap-4'}>
-				<Tab.Group selectedIndex={ongletActif} onChange={setOngletActif}>
-					<Tab.List
-						className={`${
-							userServiceOffers.length <= 3
-								? 'md:justify-center md:overflow-auto'
-								: 'md:justify-start md:overflow-x-scroll'
-						} flex h-full w-full justify-start overflow-x-scroll py-4`}
-					>
-						{userServiceOffers.map((service_offer, index) => {
-							return (
-								<Tab
-									// biome-ignore lint/suspicious/noArrayIndexKey: the tab keeps its node when an offer is removed, so the focus stays in the list
-									key={index}
-									className={
-										'h-full w-full border-b border-gray-300 bg-gray-50/30 p-4 text-xs text-gray-600 hover:bg-gray-50/50 focus:outline-none ' +
-										// 	aria selected
-										' aria-selected:border-b-2 aria-selected:border-indigo-800 aria-selected:font-semibold aria-selected:text-gray-900'
-									}
-								>
-									{service_offer.name}
-								</Tab>
-							)
-						})}
-					</Tab.List>
-					<Tab.Panels>
-						{userServiceOffers.map((service_offer, index) => {
-							return (
-								<Tab.Panel
-									// biome-ignore lint/suspicious/noArrayIndexKey: same key as its tab: the panel keeps its node when an offer is removed
-									key={index}
-								>
-									<div className={'relative flex flex-col gap-4 bg-white py-4'}>
-										<div className={'absolute -top-6 right-0 m-2 flex items-center justify-center gap-4 md:top-0'}>
-											<button
-												type="button"
-												data-cy={`edit-service-offers-button-${index}`}
-												aria-label={`Modifier la prestation ${service_offer.name ?? ''}`}
-												className={BOUTON_ICONE}
-												onClick={() => handleEditServiceOffers(service_offer.id)}
-											>
-												<span className="material-icons-round text-xl text-orange-600" aria-hidden="true">
-													edit
-												</span>
-											</button>
-											<button
-												type="button"
-												data-cy="delete-service-offers-button"
-												aria-label={`Retirer la prestation ${service_offer.name ?? ''}`}
-												className={BOUTON_ICONE}
-												onClick={() => retirer(index, service_offer.id)}
-												ref={boutonRetirer}
-											>
-												<span className="material-icons-round text-xl text-red-500" aria-hidden="true">
-													delete
-												</span>
-											</button>
+				{/* no tabs without an offer: Headless UI then renders a hidden
+				    focusable button, an invisible Tab stop before « Sauvegarder » */}
+				{userServiceOffers.length > 0 && (
+					<Tab.Group selectedIndex={ongletActif} onChange={setOngletActif}>
+						<Tab.List
+							className={`${
+								userServiceOffers.length <= 3
+									? 'md:justify-center md:overflow-auto'
+									: 'md:justify-start md:overflow-x-scroll'
+							} flex h-full w-full justify-start overflow-x-scroll py-4`}
+						>
+							{userServiceOffers.map((service_offer, index) => {
+								return (
+									<Tab
+										// biome-ignore lint/suspicious/noArrayIndexKey: the tab keeps its node when an offer is removed, so the focus stays in the list
+										key={index}
+										className={
+											'h-full w-full border-b border-gray-300 bg-gray-50/30 p-4 text-xs text-gray-600 hover:bg-gray-50/50 focus:outline-none ' +
+											// 	aria selected
+											' aria-selected:border-b-2 aria-selected:border-indigo-800 aria-selected:font-semibold aria-selected:text-gray-900'
+										}
+									>
+										{service_offer.name}
+									</Tab>
+								)
+							})}
+						</Tab.List>
+						<Tab.Panels>
+							{userServiceOffers.map((service_offer, index) => {
+								return (
+									<Tab.Panel
+										// biome-ignore lint/suspicious/noArrayIndexKey: same key as its tab: the panel keeps its node when an offer is removed
+										key={index}
+									>
+										<div className={'relative flex flex-col gap-4 bg-white py-4'}>
+											<div className={'absolute -top-6 right-0 m-2 flex items-center justify-center gap-4 md:top-0'}>
+												<button
+													type="button"
+													data-cy={`edit-service-offers-button-${index}`}
+													aria-label={`Modifier la prestation ${service_offer.name ?? ''}`}
+													className={BOUTON_ICONE}
+													onClick={() => handleEditServiceOffers(service_offer.id)}
+												>
+													<span className="material-icons-round text-xl text-orange-600" aria-hidden="true">
+														edit
+													</span>
+												</button>
+												<button
+													type="button"
+													data-cy="delete-service-offers-button"
+													aria-label={`Retirer la prestation ${service_offer.name ?? ''}`}
+													className={BOUTON_ICONE}
+													onClick={() => retirer(index, service_offer.id)}
+													ref={boutonRetirer}
+												>
+													<span className="material-icons-round text-xl text-red-500" aria-hidden="true">
+														delete
+													</span>
+												</button>
+											</div>
+											<div className={'flex flex-col'}>
+												<h2 className={'text-start text-lg font-bold text-indigo-900'}>{service_offer.name}</h2>
+											</div>
+											<DescriptionPriceOffer serviceOffer={service_offer} />
 										</div>
-										<div className={'flex flex-col'}>
-											<h2 className={'text-start text-lg font-bold text-indigo-900'}>{service_offer.name}</h2>
+										<div className={'flex w-full flex-col gap-2 py-2'}>
+											<OptionsOffers serviceOffer={service_offer} />
 										</div>
-										<DescriptionPriceOffer serviceOffer={service_offer} />
-									</div>
-									<div className={'flex w-full flex-col gap-2 py-2'}>
-										<OptionsOffers serviceOffer={service_offer} />
-									</div>
-								</Tab.Panel>
-							)
-						})}
-					</Tab.Panels>
-				</Tab.Group>
+									</Tab.Panel>
+								)
+							})}
+						</Tab.Panels>
+					</Tab.Group>
+				)}
 			</div>
 		</div>
 	)

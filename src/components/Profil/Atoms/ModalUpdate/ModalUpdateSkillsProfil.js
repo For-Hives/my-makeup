@@ -81,7 +81,7 @@ export default function ModalUpdateSkillsProfil(props) {
 	}, [props.isModalOpen])
 
 	const cancelButtonRef = useRef(null)
-	// where the focus goes when the list is left empty (focusApresRetrait)
+	// where the keyboard focus goes when the list is left empty (focusApresRetrait)
 	const champCompetence = useRef(null)
 	const { ref: enregistrerChamp, ...champEnregistre } = register('skills', {
 		required: true,
@@ -208,6 +208,9 @@ export default function ModalUpdateSkillsProfil(props) {
 																onKeyPress={async event => {
 																	if (event.key === 'Enter') {
 																		event.preventDefault()
+																		// Enter held on the only chip repeats here once the field
+																		// has the focus: nothing was typed, no message to show
+																		if (event.repeat) return
 																		// Trigger a validation before adding the skill
 																		const isValid = await trigger('skills')
 																		if (isValid) {
@@ -254,7 +257,10 @@ export default function ModalUpdateSkillsProfil(props) {
 																	data-ligne
 																	data-retirer
 																	onClick={event => {
-																		focusApresRetrait(event.currentTarget, champCompetence.current)
+																		// detail 0: Enter or Space. A tap must not focus the
+																		// field: the virtual keyboard of a phone would open.
+																		const repli = event.detail === 0 ? champCompetence.current : null
+																		focusApresRetrait(event.currentTarget, repli)
 																		handleDeleteSkillSelected(skill.id)
 																	}}
 																	// biome-ignore lint/suspicious/noArrayIndexKey: the row keeps its node when another is removed, so the keyboard focus stays in the list

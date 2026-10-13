@@ -7,6 +7,7 @@
 // offer of its list took the focus out of the modal with it, and the last
 // offer left the tabs with no offer shown. A language or a skill added in its
 // modal took its name as id: two chips with the same name left together.
+// Left empty, the list of offers kept a Tab stop that showed nothing.
 import { expect, test } from '@playwright/test'
 import { corpsDesPatchs, dialogue, erreursDeLaPage, sauver, valeursDeLaModale } from './espace-helpers.mjs'
 import { ouvrirProfil, profilDeDepart, profilServeur, reinitialiserStrapi } from './outils-strapi.mjs'
@@ -340,7 +341,7 @@ test.describe('lignes de la modale prestations', () => {
 	})
 
 	// from <body> the next Tab went past the text kept in the form
-	test('prestations : la seule offre, en cours de modification, retirée au clavier : le focus passe au bouton du formulaire, Entrée ajoute la saisie', async ({
+	test('prestations : la seule offre, en cours de modification, retirée au clavier : le focus passe au bouton du formulaire, Tab mène à « Sauvegarder », Entrée ajoute la saisie', async ({
 		page,
 	}) => {
 		const erreurs = erreursDeLaPage(page)
@@ -362,6 +363,13 @@ test.describe('lignes de la modale prestations', () => {
 		await expect(bouton).toBeFocused()
 		await expect(bouton).toHaveText(MODALE.ajout)
 		await formulaire(page, saisie)
+
+		// the empty list holds no Tab stop: without a tab, Headless UI rendered
+		// a focusable button that shows nothing, before « Sauvegarder »
+		await page.keyboard.press('Tab')
+		await expect(page.getByTestId(MODALE.sauver)).toBeFocused()
+		await page.keyboard.press('Shift+Tab')
+		await expect(bouton).toBeFocused()
 
 		await page.keyboard.press('Enter')
 		await expect(onglets(page)).toHaveText([saisie.name])
@@ -530,13 +538,15 @@ test.describe('lignes de la modale prestations', () => {
 })
 
 // One entry per list of chips: a chip is its own « Retirer », found by its
-// id. Its field, its three names stored by the API and one typed in the modal.
+// id. Its field and the message under it, its three names stored by the API
+// and one typed in the modal.
 const PUCES = [
 	{
 		nom: 'langues',
 		champ: 'language',
 		ouvrir: 'update-languages-button',
 		saisie: 'language-input',
+		erreur: 'error-language',
 		puce: 'language-selected',
 		sauver: 'save-button-languages',
 		noms: ['Français', 'Anglais', 'Italien'],
@@ -547,6 +557,7 @@ const PUCES = [
 		champ: 'skills',
 		ouvrir: 'update-skills-button',
 		saisie: 'skills-input',
+		erreur: 'error-skills',
 		puce: 'skill-selected',
 		sauver: 'save-button-skills',
 		noms: ['Mariée', 'Cinéma', 'Effets spéciaux'],
@@ -651,6 +662,69 @@ test.describe('puces des modales langues et compétences', () => {
 			await sauver(page, liste.sauver)
 			expect(patchs).toEqual([{ [liste.champ]: [{ name: liste.nouvelle }] }])
 			expect((await profilServeur())[liste.champ].map(element => element.name)).toEqual([liste.nouvelle])
+			expect(erreurs).toEqual([])
+		})
+
+		// Enter held on the chip: the key repeats in the field, which has the
+		// focus by then. Nothing was typed there: no message, and the only PATCH
+		// is the one of « Sauvegarder ».
+		test(`${liste.nom} : Entrée maintenue sur la seule puce : la touche se répète dans le champ de saisie sans y afficher d’erreur`, async ({
+			page,
+		}) => {
+			const erreurs = erreursDeLaPage(page)
+			const patchs = corpsDesPatchs(page)
+			await profilDeDepart({ [liste.champ]: [{ name: premiere }] })
+			await ouvrirProfil(page)
+			await page.getByTestId(liste.ouvrir).click()
+			const puces = dialogue(page).getByTestId(liste.puce)
+			const champ = dialogue(page).getByTestId(liste.saisie)
+			await expect(puces).toHaveCount(1)
+
+			await puces.focus()
+			await page.keyboard.down('Enter')
+			await expect(puces).toHaveCount(0)
+			await expect(champ).toBeFocused()
+			// pressed again without being released: the browser marks it repeated
+			await page.keyboard.down('Enter')
+			await page.keyboard.up('Enter')
+			await expect(champ).toBeFocused()
+			await expect(champ).toHaveValue('')
+			await expect(dialogue(page).getByTestId(liste.erreur)).toBeHidden()
+			await sauver(page, liste.sauver)
+			expect(patchs).toEqual([{ [liste.champ]: [] }])
+			expect(erreurs).toEqual([])
+		})
+
+		// A stored chip has its index as id, an added one a local id: the same
+		// name does not tie them. And the field takes the focus for the keyboard
+		// only: on a phone, a tap on the only chip would open the virtual keyboard.
+		test(`${liste.nom} : une puce stockée et une puce ajoutée du même nom, retirées l’une après l’autre à la souris : une seule part à chaque clic, puis le champ de saisie ne prend pas le focus`, async ({
+			page,
+		}) => {
+			const erreurs = erreursDeLaPage(page)
+			const patchs = corpsDesPatchs(page)
+			await profilDeDepart({ [liste.champ]: [{ name: premiere }] })
+			await ouvrirProfil(page)
+			await page.getByTestId(liste.ouvrir).click()
+			const puces = dialogue(page).getByTestId(liste.puce)
+			const champ = dialogue(page).getByTestId(liste.saisie)
+			await expect(puces).toHaveCount(1)
+
+			await champ.pressSequentially(premiere)
+			await expect(champ).toBeFocused()
+			await expect(champ).toHaveValue(premiere)
+			await champ.press('Enter')
+			await expect(puce(page, premiere)).toHaveCount(2)
+			await expect(champ).toHaveValue('')
+
+			await puces.first().click()
+			await expect(puce(page, premiere)).toHaveCount(1)
+			await puces.click()
+			await expect(puces).toHaveCount(0)
+			await expect(champ).not.toBeFocused()
+			await sauver(page, liste.sauver)
+			expect(patchs).toEqual([{ [liste.champ]: [] }])
+			expect((await profilServeur())[liste.champ]).toEqual([])
 			expect(erreurs).toEqual([])
 		})
 	}
