@@ -12,9 +12,18 @@
 // button clicked it again each time the key repeated; a language or a skill
 // already in its list was added a second time; an offer with several prices
 // or an option too, and the offers the modal did refuse were refused without
-// a word, the one validated unchanged among them.
+// a word, the one validated unchanged among them; the « Retirer » focused
+// took the name of the next item without a word for screen readers.
 import { expect, test } from '@playwright/test'
-import { corpsDesPatchs, dialogue, erreursDeLaPage, sauver, valeursDeLaModale } from './espace-helpers.mjs'
+import {
+	annoncesDites,
+	corpsDesPatchs,
+	dialogue,
+	erreursDeLaPage,
+	sauver,
+	valeursDeLaModale,
+	zoneAnnonce,
+} from './espace-helpers.mjs'
 import { ouvrirProfil, profilDeDepart, profilServeur, reinitialiserStrapi } from './outils-strapi.mjs'
 
 test.use({ testIdAttribute: 'data-cy' })
@@ -776,6 +785,45 @@ test.describe('lignes de la modale prestations', () => {
 		expect(erreurs).toEqual([])
 	})
 
+	// The « Retirer » of a removed offer goes to the offer below with the
+	// focus, under a new name that some screen readers do not read again:
+	// each removal is said in the polite region of the modal.
+	test('prestations : une offre retirée à la souris, la suivante au clavier, puis la modale fermée et rouverte : la zone d’annonce, présente et vide à l’ouverture, dit chaque retrait et revient vide', async ({
+		page,
+	}) => {
+		const erreurs = erreursDeLaPage(page)
+		await profilDeDepart({ service_offers: TROIS })
+		await ouvrirProfil(page)
+		await page.getByTestId(MODALE.ouvrir).click()
+		const retirer = page.getByTestId(MODALE.retirer)
+		await expect(onglets(page)).toHaveText(TROIS.map(offre => offre.name))
+		// there before anything is said (a region that comes with its text is
+		// not read), polite, and out of sight
+		const zone = zoneAnnonce(page)
+		await expect(zone).toHaveText('')
+		await expect(zone).toHaveAttribute('aria-live', 'polite')
+		await expect(zone).toHaveClass(/(^| )sr-only( |$)/)
+		const dites = await annoncesDites(page)
+
+		await retirer.click()
+		await expect(onglets(page)).toHaveText([offreB.name, offreC.name])
+		await expect(zone).toHaveText(`Prestation ${offreA.name} retirée`)
+		await retirer.focus()
+		await page.keyboard.press('Enter')
+		await expect(onglets(page)).toHaveText([offreC.name])
+		await expect(retirer).toHaveAccessibleName(`Retirer la prestation ${offreC.name}`)
+		await expect(zone).toHaveText(`Prestation ${offreB.name} retirée`)
+		expect(await dites()).toEqual([`Prestation ${offreA.name} retirée`, `Prestation ${offreB.name} retirée`])
+
+		// closed without saving, opened again: nothing left to read in the region
+		await page.keyboard.press('Escape')
+		await expect(dialogue(page)).toBeHidden()
+		await page.getByTestId(MODALE.ouvrir).click()
+		await expect(onglets(page)).toHaveText(TROIS.map(offre => offre.name))
+		await expect(zone).toHaveText('')
+		expect(erreurs).toEqual([])
+	})
+
 	// the list holds the offer shown, and leaves with the dialog
 	test('prestations : la modale fermée sur la 3e offre puis rouverte : la 1re offre est affichée', async ({ page }) => {
 		const erreurs = erreursDeLaPage(page)
@@ -839,7 +887,8 @@ test.describe('lignes de la modale prestations', () => {
 
 // One entry per list of chips: a chip is its own « Retirer », found by its
 // id. Its field and the message under it, its three names stored by the API,
-// one typed in the modal and the message of a name already in the list.
+// one typed in the modal, the message of a name already in the list and
+// what the modal tells screen readers once a chip is removed.
 const PUCES = [
 	{
 		nom: 'langues',
@@ -852,6 +901,7 @@ const PUCES = [
 		noms: ['Français', 'Anglais', 'Italien'],
 		nouvelle: 'Espagnol',
 		doublon: 'Cette langue est déjà dans la liste.',
+		annonce: nom => `Langue ${nom} retirée`,
 	},
 	{
 		nom: 'compétences',
@@ -864,6 +914,7 @@ const PUCES = [
 		noms: ['Mariée', 'Cinéma', 'Effets spéciaux'],
 		nouvelle: 'Théâtre',
 		doublon: 'Cette compétence est déjà dans la liste.',
+		annonce: nom => `Compétence ${nom} retirée`,
 	},
 ]
 
@@ -1086,6 +1137,43 @@ test.describe('puces des modales langues et compétences', () => {
 			await expect(dialogue(page).getByTestId(liste.erreur)).toBeHidden()
 			await sauver(page, liste.sauver)
 			expect(patchs).toEqual([{ [liste.champ]: [] }])
+			expect(erreurs).toEqual([])
+		})
+
+		// The chip below takes the node and the focus of a removed one, under a
+		// new name that some screen readers do not read again: each removal is
+		// said in the polite region of the modal. Two chips have the same name:
+		// the same sentence is said twice in a row.
+		test(`${liste.nom} : deux puces du même nom puis une autre retirées, la 1re à la souris, les suivantes au clavier : la zone d’annonce, présente et vide à l’ouverture, dit chaque retrait`, async ({
+			page,
+		}) => {
+			const erreurs = erreursDeLaPage(page)
+			await profilDeDepart({ [liste.champ]: [premiere, premiere, deuxieme].map(name => ({ name })) })
+			await ouvrirProfil(page)
+			await page.getByTestId(liste.ouvrir).click()
+			const puces = dialogue(page).getByTestId(liste.puce)
+			await expect(puces).toHaveCount(3)
+			// there before anything is said (a region that comes with its text is
+			// not read), polite, and out of sight
+			const zone = zoneAnnonce(page)
+			await expect(zone).toHaveText('')
+			await expect(zone).toHaveAttribute('aria-live', 'polite')
+			await expect(zone).toHaveClass(/(^| )sr-only( |$)/)
+			const dites = await annoncesDites(page)
+
+			await puces.first().click()
+			await expect(puces).toHaveCount(2)
+			await expect(zone).toHaveText(liste.annonce(premiere))
+			await puces.first().focus()
+			await page.keyboard.press('Enter')
+			await expect(puces).toHaveCount(1)
+			await expect(puce(page, deuxieme)).toBeFocused()
+			await expect(zone).toHaveText(liste.annonce(premiere))
+			await page.keyboard.press('Enter')
+			await expect(puces).toHaveCount(0)
+			await expect(zone).toHaveText(liste.annonce(deuxieme))
+			// the same words twice: put in the region again, or nothing is read
+			expect(await dites()).toEqual([liste.annonce(premiere), liste.annonce(premiere), liste.annonce(deuxieme)])
 			expect(erreurs).toEqual([])
 		})
 

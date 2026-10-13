@@ -5,12 +5,14 @@ import { Fragment, useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import * as zod from 'zod'
 import {
+	AnnonceRetrait,
 	BoutonFermer,
 	BoutonSauvegarder,
 	ErreurSauvegarde,
 	FondModale,
 	focusApresRetrait,
 	ignorerEntreeMaintenue,
+	useAnnonceRetrait,
 	useEnvoi,
 } from '@/components/Profil/Atoms/ModalUpdate/ModalElements'
 import { dejaDansLaListe } from '@/lib/sauvegarde-profil'
@@ -58,6 +60,8 @@ export default function ModalUpdateSkillsProfil(props) {
 
 	// Escape, a click outside and « Fermer » wait for the save in progress
 	const { envoi, setEnvoi, erreurEnvoi, setErreurEnvoi, fermer } = useEnvoi(props.isModalOpen, props.handleIsModalOpen)
+	// each removal is said to screen readers (AnnonceRetrait)
+	const { annonce, annoncer } = useAnnonceRetrait(props.isModalOpen)
 
 	const { data: session } = useSession()
 
@@ -136,6 +140,8 @@ export default function ModalUpdateSkillsProfil(props) {
 	}
 
 	const handleDeleteSkillSelected = id => {
+		const retiree = userSkillsSelected.find(item => item.id === id)
+		if (retiree) annoncer(`Compétence ${retiree.name ?? ''} retirée`)
 		setUserSkillsSelected(userSkillsSelected.filter(item => item.id !== id))
 	}
 
@@ -309,6 +315,7 @@ export default function ModalUpdateSkillsProfil(props) {
 									<ErreurSauvegarde message={erreurEnvoi} />
 									<BoutonSauvegarder dataCy="save-button-skills" envoi={envoi} onClick={handleSubmit(onSubmit)} />
 								</div>
+								<AnnonceRetrait annonce={annonce} />
 							</Dialog.Panel>
 						</Transition.Child>
 					</div>

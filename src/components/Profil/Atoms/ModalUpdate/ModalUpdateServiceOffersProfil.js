@@ -6,12 +6,14 @@ import { flushSync } from 'react-dom'
 import { useForm } from 'react-hook-form'
 import * as zod from 'zod'
 import {
+	AnnonceRetrait,
 	BoutonFermer,
 	BoutonSauvegarder,
 	ErreurSauvegarde,
 	FondModale,
 	ignorerEntreeMaintenue,
 	suivreChamp,
+	useAnnonceRetrait,
 	useEnvoi,
 } from '@/components/Profil/Atoms/ModalUpdate/ModalElements'
 import { DescriptionPriceOffer } from '@/components/Profil/Childs/ServiceOffers/DescriptionPriceOffer'
@@ -114,6 +116,8 @@ export default function ModalUpdateServiceOffersProfil(props) {
 
 	// Escape, a click outside and « Fermer » wait for the save in progress
 	const { envoi, setEnvoi, erreurEnvoi, setErreurEnvoi, fermer } = useEnvoi(props.isModalOpen, props.handleIsModalOpen)
+	// each removal is said to screen readers (AnnonceRetrait)
+	const { annonce, annoncer } = useAnnonceRetrait(props.isModalOpen)
 
 	const { data: session } = useSession()
 
@@ -271,6 +275,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 
 	const handleDeleteServiceOffers = id => {
 		const retiree = userServiceOffers.find(service_offers => service_offers.id === id)
+		if (retiree) annoncer(`Prestation ${retiree.name ?? ''} retirée`)
 		const userServiceOffersFiltered = userServiceOffers.filter(service_offers => service_offers.id !== id)
 		setUserServiceOffers(userServiceOffersFiltered)
 		if (id !== userServiceOffersId) return
@@ -340,6 +345,7 @@ export default function ModalUpdateServiceOffersProfil(props) {
 			handleDeleteServiceOffers={handleDeleteServiceOffers}
 			erreurEnvoi={erreurEnvoi}
 			handleSubmitServiceOffers={handleSubmitServiceOffers}
+			annonce={annonce}
 		/>
 	)
 }
@@ -768,6 +774,7 @@ function DialogueServices({
 	handleDeleteServiceOffers,
 	erreurEnvoi,
 	handleSubmitServiceOffers,
+	annonce,
 }) {
 	// where the focus goes when the list is left empty (ListeServices)
 	const boutonAjout = useRef(null)
@@ -836,6 +843,7 @@ function DialogueServices({
 										onClick={handleSubmitServiceOffers}
 									/>
 								</div>
+								<AnnonceRetrait annonce={annonce} />
 							</Dialog.Panel>
 						</Transition.Child>
 					</div>

@@ -5,9 +5,20 @@
 // form in edit mode, where its button updated nothing and emptied the fields.
 // Removed with the keyboard, the last row of the list took the focus out of
 // the modal with it. With the focus kept in the modal, Enter held on a button
-// clicked it again each time the key repeated (review of #968).
+// clicked it again each time the key repeated, and the « Retirer » focused
+// took the name of the row below without a word for screen readers (review
+// of #968).
 import { expect, test } from '@playwright/test'
-import { corpsDesPatchs, dialogue, erreursDeLaPage, remplir, sauver, valeursDeLaModale } from './espace-helpers.mjs'
+import {
+	annoncesDites,
+	corpsDesPatchs,
+	dialogue,
+	erreursDeLaPage,
+	remplir,
+	sauver,
+	valeursDeLaModale,
+	zoneAnnonce,
+} from './espace-helpers.mjs'
 import { ouvrirProfil, profilDeDepart, profilServeur, reinitialiserStrapi } from './outils-strapi.mjs'
 
 test.use({ testIdAttribute: 'data-cy' })
@@ -38,7 +49,8 @@ const MODULE = (annee, sujet) => ({
 // One entry per modal: its buttons, its fields, the message of its first
 // field left empty, two rows with the same two names, the fields typed in
 // (data-cy, field of the row, text added: `renommage` changes one of the two
-// names) and what the page shows of a row once saved.
+// names), what the page shows of a row once saved and what the modal tells
+// screen readers once it is removed.
 const MODALES = [
 	{
 		nom: 'expériences',
@@ -71,6 +83,7 @@ const MODALES = [
 			['experience-city', e => `à ${e.city}`],
 			['experience-description', e => e.description],
 		],
+		annonce: e => `Expérience ${e.company} retirée`,
 	},
 	{
 		nom: 'formations',
@@ -101,6 +114,7 @@ const MODALES = [
 			['course-school', c => c.school],
 			['course-description', c => c.course_description],
 		],
+		annonce: c => `Formation ${c.diploma} retirée`,
 	},
 ]
 
@@ -400,6 +414,40 @@ test.describe('lignes des modales expériences et formations', () => {
 			await expect(listees).toHaveCount(1)
 			await valeursDeLaModale(page, vide(modale))
 			await enregistrees(page, modale, patchs, [saisie])
+			expect(erreurs).toEqual([])
+		})
+
+		// The « Retirer » of a removed row goes to the row below with the focus,
+		// under a new name that some screen readers do not read again: each
+		// removal is said in the polite region of the modal. The two rows have
+		// the same name, so the same sentence is said twice in a row.
+		test(`${modale.nom} : deux lignes du même nom retirées, l’une à la souris, l’autre au clavier : la zone d’annonce, présente et vide à l’ouverture, dit chaque retrait`, async ({
+			page,
+		}) => {
+			const erreurs = erreursDeLaPage(page)
+			await profilDeDepart({ [modale.champ]: [premiere, seconde] })
+			await ouvrirProfil(page)
+			await page.getByTestId(modale.ouvrir).click()
+			const listees = dialogue(page).getByTestId(modale.retirer)
+			await expect(listees).toHaveCount(2)
+			// there before anything is said (a region that comes with its text is
+			// not read), polite, and out of sight
+			const zone = zoneAnnonce(page)
+			await expect(zone).toHaveText('')
+			await expect(zone).toHaveAttribute('aria-live', 'polite')
+			await expect(zone).toHaveClass(/(^| )sr-only( |$)/)
+			const dites = await annoncesDites(page)
+
+			await listees.first().click()
+			await expect(listees).toHaveCount(1)
+			await expect(zone).toHaveText(modale.annonce(premiere))
+			await listees.focus()
+			await page.keyboard.press('Enter')
+			await expect(listees).toHaveCount(0)
+			await expect(zone).toHaveText(modale.annonce(seconde))
+			// the same words twice: put in the region again, or nothing is read
+			expect(modale.annonce(seconde)).toBe(modale.annonce(premiere))
+			expect(await dites()).toEqual([modale.annonce(premiere), modale.annonce(seconde)])
 			expect(erreurs).toEqual([])
 		})
 	}
