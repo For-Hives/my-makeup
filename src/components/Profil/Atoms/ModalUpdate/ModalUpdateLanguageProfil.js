@@ -9,6 +9,7 @@ import {
 	BoutonSauvegarder,
 	ErreurSauvegarde,
 	FondModale,
+	focusApresRetrait,
 	useEnvoi,
 } from '@/components/Profil/Atoms/ModalUpdate/ModalElements'
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
@@ -22,6 +23,12 @@ const schema = zod
 			.or(zod.literal('')),
 	})
 	.required({ language: true })
+
+// A language added in the modal has no id yet, and « Retirer » finds a chip
+// by its id: it gets a local one that no other chip can share. Its name was
+// its id, so two chips with the same name were removed together. Never
+// sent: the PATCH holds the names only (onSubmit).
+let compteurLocal = 0
 
 export default function ModalUpdateLanguageProfil(props) {
 	const user = props.user
@@ -74,6 +81,11 @@ export default function ModalUpdateLanguageProfil(props) {
 	}, [props.isModalOpen])
 
 	const cancelButtonRef = useRef(null)
+	// where the keyboard focus goes when the list is left empty (focusApresRetrait)
+	const champLangue = useRef(null)
+	const { ref: enregistrerChamp, ...champEnregistre } = register('language', {
+		required: true,
+	})
 
 	const handleUpdateLanguage = event => {
 		// check if the entered value is a ';' and if so, add it to the array
@@ -86,7 +98,7 @@ export default function ModalUpdateLanguageProfil(props) {
 				setValue('language', nom)
 				trigger('language').then(isValid => {
 					if (isValid) {
-						setUserLanguageSelected(userLanguageSelected.concat({ id: nom, name: nom }))
+						setUserLanguageSelected(userLanguageSelected.concat({ id: `local-${++compteurLocal}`, name: nom }))
 						setUserLanguage('')
 					} else setUserLanguage(nom)
 				})
@@ -187,13 +199,18 @@ export default function ModalUpdateLanguageProfil(props) {
 																id="language"
 																name="language"
 																type={'text'}
-																{...register('language', {
-																	required: true,
-																})}
+																{...champEnregistre}
+																ref={noeud => {
+																	enregistrerChamp(noeud)
+																	champLangue.current = noeud
+																}}
 																required
 																onKeyPress={async event => {
 																	if (event.key === 'Enter') {
 																		event.preventDefault()
+																		// Enter held on the only chip repeats here once the field
+																		// has the focus: nothing was typed, no message to show
+																		if (event.repeat) return
 																		// Trigger a validation before adding the skill
 																		const isValid = await trigger('language')
 																		if (isValid) {
@@ -203,7 +220,7 @@ export default function ModalUpdateLanguageProfil(props) {
 																				setUserLanguageSelected([
 																					...userLanguageSelected,
 																					{
-																						id: event.target.value,
+																						id: `local-${++compteurLocal}`,
 																						name: event.target.value,
 																					},
 																				])
@@ -235,7 +252,14 @@ export default function ModalUpdateLanguageProfil(props) {
 																<button
 																	data-cy="language-selected"
 																	type={'button'}
-																	onClick={() => {
+																	// the chip is the row and its « Retirer »
+																	data-ligne
+																	data-retirer
+																	onClick={event => {
+																		// detail 0: Enter or Space. A tap must not focus the
+																		// field: the virtual keyboard of a phone would open.
+																		const repli = event.detail === 0 ? champLangue.current : null
+																		focusApresRetrait(event.currentTarget, repli)
 																		handleDeleteLanguageelected(skill.id)
 																	}}
 																	// biome-ignore lint/suspicious/noArrayIndexKey: the row keeps its node when another is removed, so the keyboard focus stays in the list

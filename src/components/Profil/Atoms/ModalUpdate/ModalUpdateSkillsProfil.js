@@ -9,6 +9,7 @@ import {
 	BoutonSauvegarder,
 	ErreurSauvegarde,
 	FondModale,
+	focusApresRetrait,
 	useEnvoi,
 } from '@/components/Profil/Atoms/ModalUpdate/ModalElements'
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
@@ -22,6 +23,12 @@ const schema = zod
 			.or(zod.literal('')),
 	})
 	.required({ skills: true })
+
+// A skill added in the modal has no id yet, and « Retirer » finds a chip by
+// its id: it gets a local one that no other chip can share. Its name was its
+// id, so two chips with the same name were removed together. Never sent: the
+// PATCH holds the names only (onSubmit).
+let compteurLocal = 0
 
 export default function ModalUpdateSkillsProfil(props) {
 	const user = props.user
@@ -74,6 +81,11 @@ export default function ModalUpdateSkillsProfil(props) {
 	}, [props.isModalOpen])
 
 	const cancelButtonRef = useRef(null)
+	// where the keyboard focus goes when the list is left empty (focusApresRetrait)
+	const champCompetence = useRef(null)
+	const { ref: enregistrerChamp, ...champEnregistre } = register('skills', {
+		required: true,
+	})
 
 	const handleUpdateSkills = event => {
 		// check if the entered value is a ';' and if so, add it to the array
@@ -86,7 +98,7 @@ export default function ModalUpdateSkillsProfil(props) {
 				setValue('skills', nom)
 				trigger('skills').then(isValid => {
 					if (isValid) {
-						setUserSkillsSelected(userSkillsSelected.concat({ id: nom, name: nom }))
+						setUserSkillsSelected(userSkillsSelected.concat({ id: `local-${++compteurLocal}`, name: nom }))
 						setUserSkills('')
 					} else setUserSkills(nom)
 				})
@@ -187,13 +199,18 @@ export default function ModalUpdateSkillsProfil(props) {
 																id="skills"
 																name="skills"
 																type={'text'}
-																{...register('skills', {
-																	required: true,
-																})}
+																{...champEnregistre}
+																ref={noeud => {
+																	enregistrerChamp(noeud)
+																	champCompetence.current = noeud
+																}}
 																required
 																onKeyPress={async event => {
 																	if (event.key === 'Enter') {
 																		event.preventDefault()
+																		// Enter held on the only chip repeats here once the field
+																		// has the focus: nothing was typed, no message to show
+																		if (event.repeat) return
 																		// Trigger a validation before adding the skill
 																		const isValid = await trigger('skills')
 																		if (isValid) {
@@ -203,7 +220,7 @@ export default function ModalUpdateSkillsProfil(props) {
 																				setUserSkillsSelected([
 																					...userSkillsSelected,
 																					{
-																						id: event.target.value,
+																						id: `local-${++compteurLocal}`,
 																						name: event.target.value,
 																					},
 																				])
@@ -236,7 +253,14 @@ export default function ModalUpdateSkillsProfil(props) {
 																<button
 																	data-cy="skill-selected"
 																	type={'button'}
-																	onClick={() => {
+																	// the chip is the row and its « Retirer »
+																	data-ligne
+																	data-retirer
+																	onClick={event => {
+																		// detail 0: Enter or Space. A tap must not focus the
+																		// field: the virtual keyboard of a phone would open.
+																		const repli = event.detail === 0 ? champCompetence.current : null
+																		focusApresRetrait(event.currentTarget, repli)
 																		handleDeleteSkillSelected(skill.id)
 																	}}
 																	// biome-ignore lint/suspicious/noArrayIndexKey: the row keeps its node when another is removed, so the keyboard focus stays in the list
