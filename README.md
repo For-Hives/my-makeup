@@ -1,138 +1,16 @@
-# My-Makeup 💄
+# My Makeup
 
-#### _We are a platform dedicated to connecting professional makeup artists with clients looking for personalized makeup services._
+Annuaire de maquilleuses professionnelles indépendantes : [my-makeup.fr](https://my-makeup.fr).
 
-> **Live: [https://my-makeup.fr](https://my-makeup.fr)**
+## Branche `v3`
 
-![img.png](img.png)
+Cette branche porte la réécriture du site : une seule application Next.js et Payload, en TypeScript strict.
 
-> **(api github project : https://github.com/For-Hives/api-my-makeup)**
+- Le site en ligne reste celui de la branche `main` tant que la bascule n'a pas eu lieu.
+- L'ancien code (Next.js 15 en JavaScript, branché sur l'API Strapi) a été retiré de cette branche. Il reste lisible sur `main` et dans l'historique.
+- `public/` est conservé : il contient les fichiers de vérification des moteurs de recherche, qui doivent continuer à répondre à la racine du site.
+- `dev-assets/` est conservé : ce sont les sources de design.
 
-## How to run ??
+## Licence
 
-> **(npm only: package-lock.json is the only lockfile, the CI and Coolify run `npm ci`)**
-
-#### _dev_
-
-```
-git clone
--> add .env file
-npm ci
-npm run dev
-npm run build
-```
-
-#### _tests_
-
-```
-npm test            # unit tests of src/lib (node --test)
-npm run test:auth   # AF-01 to AF-10: NextAuth and the private pages against a fake Strapi
-                    # (builds into .next-test-auth/, servers on localhost:3997-3998, Strapi on 4111;
-                    #  AUTH_TEST_SKIP_BUILD=1 reuses the last build)
-npm run test:regression
-                    # the artist's space (RG-01..RG-08, pictures, forgotten password) and the
-                    # public pages (profiles, slugs, sitemap, robots, SEO tags, search) and
-                    # the Umami measurement behind /u (MES-10) in Chromium against a fake
-                    # Strapi and a fake Umami (builds into .next-test-regression/, app on
-                    # localhost:3996, Strapi on 4112, Umami on 4113; REGRESSION_SKIP_BUILD=1
-                    # reuses the last build; once: npx playwright install chromium;
-                    # extra Playwright arguments after --, e.g. -- --grep RG-04)
-```
-
-## Tech stack 💻
-
-That is the list of technologies that My-Makeup use.
-
-> **Front**
->
-> > - [NextJs (ReactJS)](https://nextjs.org/)
-> > - [TailwindCSS](https://tailwindcss.com/)
-> > - [TailwindUI](https://tailwindui.com/)
-> > - [HeadlessUI](https://headlessui.com/)
-> > - [NextAuth](https://next-auth.js.org/)
-> > - [Resend](https://resend.com/) (contact form; [MailGun](https://www.mailgun.com/) while RESEND_API_KEY is unset)
-> > - [Biome](https://biomejs.dev/)
-> > - [Husky](https://typicode.github.io/husky/#/)
-
-Linting, formatting and import organization use Biome 2.5.13 (`biome.json`).
-
-- `npm run check`: validate everything, failing on errors and warnings (also run in CI).
-- `npm run check:write`: apply formatting, safe lint fixes and import organization.
-- `npm run lint`: validate lint rules without warnings.
-- `npm run format`: write formatting; `npm run format:check`: verify formatting.
-- `npm test`, `npm run test:auth`, `npm run test:regression`: unit, authentication and browser tests.
-- `npm run build`: production build (requires the API URL documented in `.env.exemple`).
-
-The commit hook checks staged supported files with Biome and rejects warnings.
-
-> **CI**
->
-> > - [Playwright](https://playwright.dev/)
-> > - [Percy](https://percy.io/)
-
-> **CD**
->
-> > - GitHub CI
-> > - [Renovate](https://www.mend.io/renovate/)
-
-> **Backend**
->
-> > - [Strapi](https://strapi.io/)
-> > - [PostgreSQL](https://www.postgresql.org/)
-
-> **Serveur**
->
-> > - [Coolify](https://coolify.io/)
-> > - VPS Linux (Debian)
-> > - [Docker](https://www.docker.com/)
-> > - [Fail2Ban](https://www.fail2ban.org/wiki/index.php/Main_Page)
-> > - [LetsEncrypt](https://letsencrypt.org/)
-> > - [UFW](https://doc.ubuntu-fr.org/ufw)
-> > - [DNS (OVH / CloudFlare)](https://cloudflare.com/)
-
-> **Monitoring**
->
-> > - [NetData](https://www.netdata.cloud/)
-> > - [BetterUptime](https://betteruptime.com/)
-
-> **Tools**
->
-> > - [OpenCommit](https://github.com/di-sukharev/opencommit)
-> > - [Git Kraken](https://www.gitkraken.com/)
-> > - [IntelliJ](https://www.jetbrains.com/idea/)
-> > - [Wakatime](https://wakatime.com/)
-> > - [GitHub Copilot](https://copilot.github.com/)
-> > - [ChatGPT](https://chat.openai.com/)
-> > - [Syncthings](https://syncthing.net/)
-> > - [TinyPNG](https://tinypng.com/)
-> > - [cwebp](https://developers.google.com/speed/webp/docs/cwebp)
-> > - [PowerToys](https://learn.microsoft.com/en-us/windows/powertoys/)
-> > - Google suit
-> > - [Insomnia](https://insomnia.rest/)
-> > - [TMUX](https://tmuxcheatsheet.com/)
-> > - [Discord](https://discord.com/)
-
-> **Design**
->
-> > - [Adobe Photoshop](https://www.adobe.com/products/photoshop.html)
-> > - [Adobe Illustrator](https://www.adobe.com/products/illustrator.html)
-> > - [Adobe Firefly](https://www.adobe.com/sensei/generative-ai/firefly.html)
-> > - [Figma](https://www.figma.com/)
-> > - [MidJourney](https://midjourney.com/)
-
-## File Structure 🗃️
-
-> 📁 _.husky_ : Git hooks  
-> 📁 _public_ : Images, fonts, icons, ...  
-> 📁 _tests_ : Unit, auth and regression tests (see _tests_ above)  
-> 📁 _src/components_ : Reusable components  
-> 📁 _src/pages_ : Pages (use some components to build pages)
->
-> > 📁 _src/pages/api_ : API routes (api routes are server-side only routes, on nextJS server)  
-> > 📁 _src/pages/api/sendMail_ : API route to send mail (contact form, Resend or Mailgun: see .env.exemple)  
-> > 📁 _src/pages/talent/[slug]_ : Talent page generated by nextJS & Strapi  
-> > 📁 _src/pages/blog/[id]_ : Blog page generated by nextJS & Strapi  
-> > 📁 _src/pages/profil/[id]_ : Profil page generated by nextJS & Strapi  
-> > 📁 _src/pages/auth_ : Auth pages (login, register, ...)  
-> > 📁 _src/styles_ : Global styles  
-> > 📁 _src/services_ : Services (API, Auth, ...)
+Aucune licence n'est accordée pour l'instant : tous droits réservés.
