@@ -68,6 +68,9 @@ const BOUTON_ICONE =
 // the PATCH (handleSubmitExperiences).
 let compteurLocal = 0
 
+// the form was refused as a copy of a listed row (onSubmit)
+const EXPERIENCE_IDENTIQUE = 'Une expérience identique est déjà dans la liste.'
+
 export default function ModalUpdateExperiencesProfil(props) {
 	const user = props.user
 
@@ -76,6 +79,7 @@ export default function ModalUpdateExperiencesProfil(props) {
 		handleSubmit,
 		formState: { errors },
 		reset,
+		setError,
 	} = useForm({
 		resolver: zodResolver(schema),
 	})
@@ -117,21 +121,27 @@ export default function ModalUpdateExperiencesProfil(props) {
 		reset()
 	}
 
-	// the form holds this row, field for field
+	// The form holds this row, field for field. Without an end date, a stored
+	// row holds null and the form an empty field: the same.
 	const formulaireEgal = experience =>
 		experience.company === userExperiencesCompany &&
 		experience.job_name === userExperiencesJobName &&
 		experience.city === userExperiencesCity &&
 		experience.date_start === userExperiencesDateStart &&
-		experience.date_end === userExperiencesDateEnd &&
+		(experience.date_end ?? '') === (userExperiencesDateEnd ?? '') &&
 		experience.description === userExperiencesDescription
+
+	// The form is a copy of a listed row: its button refuses it. The row
+	// loaded by « Modifier » and left as it is is not one, even stored twice:
+	// validated again, nothing changes in the list.
+	const identiques = userExperiences.filter(formulaireEgal)
+	const doublon = identiques.length > 0 && !identiques.some(experience => experience.id === userExperiencesId)
 
 	const onSubmit = data => {
 		// add a new experience to the user courses only if the form is valid
-		// check if the experience is already in the user courses
-		const experienceAlreadyInUserExperiences = userExperiences.filter(formulaireEgal)
+		// check if the experience is already in the user courses (doublon)
 		// if the experience is not already in the user courses, add it
-		if (experienceAlreadyInUserExperiences.length === 0) {
+		if (!doublon) {
 			// if the experience has an id, it's an existing experience
 			if (userExperiencesId !== '') {
 				// 	then update the experience
@@ -171,6 +181,10 @@ export default function ModalUpdateExperiencesProfil(props) {
 					reinitialiserFormulaire()
 				}
 			}
+		} else {
+			// said above the button, until the form changes or is emptied: the
+			// button did nothing, without a word
+			setError('root.doublon', { type: 'manual', message: EXPERIENCE_IDENTIQUE })
 		}
 	}
 
@@ -315,6 +329,7 @@ export default function ModalUpdateExperiencesProfil(props) {
 										userExperiencesDescription={userExperiencesDescription}
 										handleUpdateExperiencesDescription={handleUpdateExperiencesDescription}
 										userExperiencesId={userExperiencesId}
+										erreurDoublon={doublon ? errors.root?.doublon?.message : undefined}
 										userExperiences={userExperiences}
 										handleEditExperience={handleEditExperience}
 										handleDeleteExperience={handleDeleteExperience}
@@ -465,6 +480,7 @@ function EditeurExperiences({
 	userExperiencesDescription,
 	handleUpdateExperiencesDescription,
 	userExperiencesId,
+	erreurDoublon,
 	userExperiences,
 	handleEditExperience,
 	handleDeleteExperience,
@@ -608,6 +624,11 @@ function EditeurExperiences({
 								errors={errors}
 							/>
 						</form>
+						{erreurDoublon && (
+							<p role="alert" data-cy={'error-duplicate'} className={'text-right text-xs text-red-500/80'}>
+								{erreurDoublon}
+							</p>
+						)}
 						<div className={'flex items-center justify-end'}>
 							<button
 								data-cy="add-experience-button"

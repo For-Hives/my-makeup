@@ -7,7 +7,9 @@
 // the modal with it. With the focus kept in the modal, Enter held on a button
 // clicked it again each time the key repeated, and the « Retirer » focused
 // took the name of the row below without a word for screen readers (review
-// of #968).
+// of #968). And the button of the form did nothing, without a word, when the
+// form held a row of the list: a copy typed by hand, or the row loaded by
+// « Modifier » and left as it is, which then stayed in edit mode.
 import { expect, test } from '@playwright/test'
 import {
 	annoncesDites,
@@ -47,7 +49,8 @@ const MODULE = (annee, sujet) => ({
 })
 
 // One entry per modal: its buttons, its fields, the message of its first
-// field left empty, two rows with the same two names, the fields typed in
+// field left empty, the message of a refused copy (the same data-cy in both
+// modals), two rows with the same two names, the fields typed in
 // (data-cy, field of the row, text added: `renommage` changes one of the two
 // names), what the page shows of a row once saved and what the modal tells
 // screen readers once it is removed.
@@ -64,6 +67,7 @@ const MODALES = [
 		retirer: 'experience-selected',
 		sauver: 'save-button-experience',
 		erreur: 'error-company',
+		identique: 'Une expérience identique est déjà dans la liste.',
 		champs: e => ({
 			'company-input': e.company,
 			'job-name-input': e.job_name,
@@ -97,6 +101,7 @@ const MODALES = [
 		retirer: 'course-delete-button',
 		sauver: 'save-button-courses',
 		erreur: 'error-diploma',
+		identique: 'Une formation identique est déjà dans la liste.',
 		champs: c => ({
 			'diploma-input': c.diploma,
 			'school-input': c.school,
@@ -117,6 +122,9 @@ const MODALES = [
 		annonce: c => `Formation ${c.diploma} retirée`,
 	},
 ]
+
+// the message of a refused copy, above the button of the form
+const doublonDe = page => dialogue(page).getByTestId('error-duplicate')
 
 // every field of the form, empty
 const vide = modale => Object.fromEntries(Object.keys(modale.champs(modale.lignes[0])).map(cy => [cy, '']))
@@ -482,6 +490,112 @@ test.describe('lignes des modales expériences et formations', () => {
 			// the same words twice: put in the region again, or nothing is read
 			expect(modale.annonce(seconde)).toBe(modale.annonce(premiere))
 			expect(await dites()).toEqual([modale.annonce(premiere), modale.annonce(seconde)])
+			expect(erreurs).toEqual([])
+		})
+
+		// The button did nothing, without a word. And a stored experience
+		// without an end date holds null, the form an empty field: typed again,
+		// that one was not seen as a copy and was added a second time.
+		test(`${modale.nom} : une ligne enregistrée saisie une 2e fois à l’identique : refusée avec un message, la saisie reste ; un champ complété, le message part et elle s’ajoute`, async ({
+			page,
+		}) => {
+			const erreurs = erreursDeLaPage(page)
+			const patchs = corpsDesPatchs(page)
+			await profilDeDepart({ [modale.champ]: [premiere] })
+			await ouvrirProfil(page)
+			await page.getByTestId(modale.ouvrir).click()
+			const bouton = page.getByTestId(modale.bouton)
+			const listees = dialogue(page).getByTestId(modale.retirer)
+			const doublon = doublonDe(page)
+			await expect(listees).toHaveCount(1)
+
+			await remplir(page, modale.champs(premiere))
+			await bouton.click()
+			await expect(doublon).toHaveText(modale.identique)
+			await expect(doublon).toHaveRole('alert')
+			await expect(listees).toHaveCount(1)
+			await expect(bouton).toHaveText(modale.ajout)
+			await valeursDeLaModale(page, modale.champs(premiere))
+
+			// a few words more in one field: no longer a copy
+			const autre = await taper(page, premiere, modale.saisies[0])
+			await expect(doublon).toHaveCount(0)
+			await bouton.click()
+			await expect(listees).toHaveCount(2)
+			await valeursDeLaModale(page, vide(modale))
+			await enregistrees(page, modale, patchs, [premiere, autre])
+			expect(erreurs).toEqual([])
+		})
+
+		// Loaded by « Modifier » and left as it is, a row is not a copy of
+		// itself: the button did nothing and the form stayed in edit mode. The
+		// twin of a row stored twice (old data) is not refused either: nothing
+		// changes.
+		test(`${modale.nom} : chaque ligne chargée par « Modifier » puis validée sans rien changer, deux d’entre elles stockées à l’identique : aucun message, le formulaire repasse en ajout, la liste et le PATCH restent les mêmes`, async ({
+			page,
+		}) => {
+			const erreurs = erreursDeLaPage(page)
+			const patchs = corpsDesPatchs(page)
+			const lignes = [premiere, seconde, seconde]
+			await profilDeDepart({ [modale.champ]: lignes })
+			await ouvrirProfil(page)
+			await page.getByTestId(modale.ouvrir).click()
+			const bouton = page.getByTestId(modale.bouton)
+			const listees = dialogue(page).getByTestId(modale.retirer)
+			await expect(listees).toHaveCount(lignes.length)
+
+			for (const [index, ligne] of lignes.entries()) {
+				await page.getByTestId(modale.modifier(index)).click()
+				await expect(bouton).toHaveText(modale.edition)
+				await valeursDeLaModale(page, modale.champs(ligne))
+				await bouton.click()
+				await expect(bouton, `ligne ${index + 1}`).toHaveText(modale.ajout)
+				await valeursDeLaModale(page, vide(modale))
+				await expect(doublonDe(page)).toHaveCount(0)
+				await expect(listees).toHaveCount(lignes.length)
+			}
+			await enregistrees(page, modale, patchs, lignes)
+			expect(erreurs).toEqual([])
+		})
+
+		test(`${modale.nom} : une ligne modifiée jusqu’à être la copie d’une autre : refusée avec un message, elle reste en cours de modification et la liste telle quelle ; un autre champ complété, le message part et elle est modifiée`, async ({
+			page,
+		}) => {
+			const erreurs = erreursDeLaPage(page)
+			const patchs = corpsDesPatchs(page)
+			// the second row: the first one with the text typed below
+			const [, cle, texte] = modale.saisies[0]
+			const autre = { ...premiere, [cle]: premiere[cle] + texte }
+			await profilDeDepart({ [modale.champ]: [premiere, autre] })
+			await ouvrirProfil(page)
+			await page.getByTestId(modale.ouvrir).click()
+			const bouton = page.getByTestId(modale.bouton)
+			const listees = dialogue(page).getByTestId(modale.retirer)
+			const doublon = doublonDe(page)
+			// the rows of the list showing the text of the second one
+			const commeLAutre = dialogue(page).locator('[data-ligne]').filter({ hasText: autre[cle] })
+			await expect(commeLAutre).toHaveCount(1)
+
+			await page.getByTestId(modale.modifier(0)).click()
+			await expect(bouton).toHaveText(modale.edition)
+			await valeursDeLaModale(page, modale.champs(premiere))
+			expect(await taper(page, premiere, modale.saisies[0])).toEqual(autre)
+
+			await bouton.click()
+			await expect(doublon).toHaveText(modale.identique)
+			await expect(doublon).toHaveRole('alert')
+			await expect(bouton).toHaveText(modale.edition)
+			await expect(listees).toHaveCount(2)
+			await expect(commeLAutre).toHaveCount(1)
+			await valeursDeLaModale(page, modale.champs(autre))
+
+			const modifiee = await taper(page, autre, modale.saisies[1])
+			await expect(doublon).toHaveCount(0)
+			await bouton.click()
+			await expect(bouton).toHaveText(modale.ajout)
+			await expect(listees).toHaveCount(2)
+			await valeursDeLaModale(page, vide(modale))
+			await enregistrees(page, modale, patchs, [modifiee, autre])
 			expect(erreurs).toEqual([])
 		})
 	}

@@ -61,6 +61,9 @@ const BOUTON_ICONE =
 // the PATCH (handleSubmitCourses).
 let compteurLocal = 0
 
+// the form was refused as a copy of a listed row (onSubmit)
+const FORMATION_IDENTIQUE = 'Une formation identique est déjà dans la liste.'
+
 export default function ModalUpdateCoursesProfil(props) {
 	const user = props.user
 
@@ -69,6 +72,7 @@ export default function ModalUpdateCoursesProfil(props) {
 		handleSubmit,
 		formState: { errors },
 		reset,
+		setError,
 	} = useForm({
 		resolver: zodResolver(schema),
 	})
@@ -109,16 +113,21 @@ export default function ModalUpdateCoursesProfil(props) {
 		course.date_graduation === userCoursesDateGraduation &&
 		course.course_description === userCoursesDescription
 
+	// The form is a copy of a listed row: its button refuses it. The row
+	// loaded by « Modifier » and left as it is is not one, even stored twice:
+	// validated again, nothing changes in the list.
+	const identiques = userCourses.filter(formulaireEgal)
+	const doublon = identiques.length > 0 && !identiques.some(course => course.id === userCoursesId)
+
 	/**
 	 * onSubmit function called when the form is submitted
 	 * @param data
 	 */
 	const onSubmit = data => {
 		// add a new course to the user courses only if the form is valid
-		// check if the course is already in the user courses
-		const courseAlreadyInUserCourses = userCourses.filter(formulaireEgal)
+		// check if the course is already in the user courses (doublon)
 		// if the course is not already in the user courses, add it
-		if (courseAlreadyInUserCourses.length === 0) {
+		if (!doublon) {
 			// if the course id is not empty, it means that we are updating a course
 			if (userCoursesId !== '') {
 				// 	then update the course, replace the course with the same id by the new course
@@ -156,6 +165,10 @@ export default function ModalUpdateCoursesProfil(props) {
 					reinitialiserFormulaire()
 				}
 			}
+		} else {
+			// said above the button, until the form changes or is emptied: the
+			// button did nothing, without a word
+			setError('root.doublon', { type: 'manual', message: FORMATION_IDENTIQUE })
 		}
 	}
 
@@ -264,6 +277,7 @@ export default function ModalUpdateCoursesProfil(props) {
 			userCoursesDescription={userCoursesDescription}
 			handleUpdateCoursesDescription={handleUpdateCoursesDescription}
 			userCoursesId={userCoursesId}
+			erreurDoublon={doublon ? errors.root?.doublon?.message : undefined}
 			userCourses={userCourses}
 			handleEditCourse={handleEditCourse}
 			handleDeleteCourse={handleDeleteCourse}
@@ -289,6 +303,7 @@ function FormulaireFormation({
 	userCoursesDescription,
 	handleUpdateCoursesDescription,
 	userCoursesId,
+	erreurDoublon,
 	boutonAjout,
 }) {
 	return (
@@ -384,6 +399,11 @@ function FormulaireFormation({
 							</div>
 						</div>
 					</form>
+					{erreurDoublon && (
+						<p role="alert" data-cy={'error-duplicate'} className={'text-right text-xs text-red-500/80'}>
+							{erreurDoublon}
+						</p>
+					)}
 					<div className={'flex items-center justify-end'}>
 						<button
 							data-cy="add-course-button"
@@ -420,6 +440,7 @@ function DialogueFormations({
 	userCoursesDescription,
 	handleUpdateCoursesDescription,
 	userCoursesId,
+	erreurDoublon,
 	userCourses,
 	handleEditCourse,
 	handleDeleteCourse,
@@ -474,6 +495,7 @@ function DialogueFormations({
 											userCoursesDescription={userCoursesDescription}
 											handleUpdateCoursesDescription={handleUpdateCoursesDescription}
 											userCoursesId={userCoursesId}
+											erreurDoublon={erreurDoublon}
 											boutonAjout={boutonAjout}
 										/>
 										<div className={'flex w-full flex-col gap-4 md:w-3/5'}>
