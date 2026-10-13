@@ -94,6 +94,24 @@ export function BoutonSauvegarder({ envoi, onClick, dataCy, children = 'Sauvegar
 }
 
 /**
+ * Keyboard focus when « Retirer » takes the last row of a list. The rows are
+ * keyed by their index: a removed row hands its node to the row below, so
+ * the focus stays in the list, but the last row leaves with its node and the
+ * focus fell on <body>, out of the modal, one Tab away from « Sauvegarder ».
+ * It goes to the « Retirer » of the row above or, when the list is left
+ * empty, to `repli`. Called from the click, before the list is rendered
+ * again: both targets keep their node.
+ * @param {HTMLElement} bouton - the « Retirer » clicked, inside a [data-ligne] row
+ * @param {HTMLElement|null} repli - the button of the form
+ */
+export function focusApresRetrait(bouton, repli) {
+	const ligne = bouton.closest('[data-ligne]')
+	if (!ligne || ligne.nextElementSibling) return
+	const cible = ligne.previousElementSibling?.querySelector('[data-retirer]') ?? repli
+	cible?.focus()
+}
+
+/**
  * onChange of a controlled input that is also registered in react-hook-form:
  * the input's own onChange replaced the one of register(), so the form only
  * saw a value on blur (Enter in a field validated and sent the old one).
