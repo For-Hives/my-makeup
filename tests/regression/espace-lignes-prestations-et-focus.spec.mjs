@@ -744,6 +744,38 @@ test.describe('lignes de la modale prestations', () => {
 		expect(erreurs).toEqual([])
 	})
 
+	// The description and the prices of the offer shown in the modal had no
+	// rank to be named after: their data-cy ended with « undefined ». The rank
+	// alone would not do: it already names the options of the offer
+	// (service-offer-description-0), in the modal and on the page behind it.
+	test('prestations : la description et les prix de l’offre affichée dans la modale portent son rang dans leur data-cy, un seul élément chacun dans toute la page, ses options gardent le leur', async ({
+		page,
+	}) => {
+		const erreurs = erreursDeLaPage(page)
+		const offres = [DEUX_PRIX, offreA]
+		await profilDeDepart({ service_offers: offres })
+		await ouvrirProfil(page)
+		await page.getByTestId(MODALE.ouvrir).click()
+		await expect(onglets(page)).toHaveText(offres.map(offre => offre.name))
+
+		for (const [index, offre] of offres.entries()) {
+			await onglets(page).nth(index).click()
+			await expect(onglets(page).nth(index)).toHaveAttribute('aria-selected', 'true')
+			// looked for in the whole page: a second element with the same data-cy,
+			// in the modal or behind it, fails the assertion (strict mode)
+			await expect(page.getByTestId(`service-offer-description-modal-${index}`)).toHaveText(offre.description)
+			await expect(page.getByTestId(`service-offer-price-modal-${index}`).getByRole('heading')).toHaveText(
+				offre.price.split('\n')
+			)
+			// each of its options, named after its own rank as on the page
+			await expect(dialogue(page).getByTestId(/^service-offer-description-\d+$/)).toHaveText(
+				offre.options.map(option => option.description)
+			)
+		}
+		await expect(page.locator('[data-cy$="undefined"]')).toHaveCount(0)
+		expect(erreurs).toEqual([])
+	})
+
 	// the list holds the offer shown, and leaves with the dialog
 	test('prestations : la modale fermée sur la 3e offre puis rouverte : la 1re offre est affichée', async ({ page }) => {
 		const erreurs = erreursDeLaPage(page)

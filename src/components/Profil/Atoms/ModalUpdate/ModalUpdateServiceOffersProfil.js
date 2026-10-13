@@ -723,7 +723,10 @@ function ListeServices({ userServiceOffers, handleEditServiceOffers, handleDelet
 											<div className={'flex flex-col'}>
 												<h2 className={'text-start text-lg font-bold text-indigo-900'}>{service_offer.name}</h2>
 											</div>
-											<DescriptionPriceOffer serviceOffer={service_offer} />
+											{/* data-cy named after the modal and the rank of the offer: the
+											    rank alone names its options (OptionsOffers), here and on
+											    the page behind */}
+											<DescriptionPriceOffer serviceOffer={service_offer} index={`modal-${index}`} />
 										</div>
 										<div className={'flex w-full flex-col gap-2 py-2'}>
 											<OptionsOffers serviceOffer={service_offer} />
