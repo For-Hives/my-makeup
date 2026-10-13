@@ -36,7 +36,7 @@ Les versions sont figées dans `package.json`, et `bun.lock` est le seul fichier
 
 ## Démarrer en local
 
-Il faut [bun](https://bun.sh) 1.3.14, Node 24 (`.nvmrc`) et Docker avec Compose.
+Il faut [bun](https://bun.sh) 1.3.14, Node 24 (`.nvmrc`), Docker avec Compose et `openssl`.
 
 ### 1. Installer
 
@@ -47,13 +47,15 @@ bun install --frozen-lockfile
 ### 2. Créer le fichier `.env` (une seule fois)
 
 ```sh
-cp .env.exemple .env
+test -e .env || printf 'DATABASE_URI=postgres://mymakeup:local-dev-only@127.0.0.1:5442/mymakeup_dev\nPAYLOAD_SECRET=%s\n' "$(openssl rand -hex 32)" > .env
 ```
 
-Puis renseigner les deux variables dans `.env` :
+Cette commande écrit les deux variables listées dans `.env.exemple` :
 
-- `DATABASE_URI=postgres://mymakeup:local-dev-only@127.0.0.1:5442/mymakeup_dev` : la base locale de `docker-compose.yml`. Ces identifiants sont jetables et ne servent qu'à cette base.
-- `PAYLOAD_SECRET` : une valeur produite par `openssl rand -hex 32`.
+- `DATABASE_URI` : l'adresse de la base locale de `docker-compose.yml`. Ces identifiants sont jetables et ne servent qu'à cette base.
+- `PAYLOAD_SECRET` : un secret tiré au hasard par `openssl`, propre à ce poste.
+
+Elle ne touche pas à un fichier `.env` déjà présent. Sans ce fichier, l'accueil répond mais l'administration ne s'affiche pas : Payload refuse de démarrer sans secret.
 
 Le fichier `.env` n'est jamais versionné. Il ne doit jamais contenir l'adresse d'une base distante : en développement, Payload pousse son schéma dans la base qu'on lui donne.
 
