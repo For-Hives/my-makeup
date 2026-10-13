@@ -27,6 +27,7 @@ const MODALE = {
 	modifier: index => `edit-service-offers-button-${index}`,
 	retirer: 'delete-service-offers-button',
 	sauver: 'save-button-service-offers',
+	fermer: 'close-modal',
 	erreur: 'error-name',
 }
 
@@ -59,6 +60,7 @@ const TROIS = ['A', 'B', 'C'].map(lettre => ({
 	description: `Description ${lettre}`,
 	options: [],
 }))
+const [offreA, offreB, offreC] = TROIS
 
 // the form left empty, without any option
 const SANS_OFFRE = { name: '', price: '', description: '', options: [] }
@@ -205,9 +207,11 @@ test.describe('lignes de la modale prestations', () => {
 		await page.getByTestId(MODALE.modifier(0)).click()
 		await expect(bouton).toHaveText(MODALE.edition)
 		await formulaire(page, DEUX_PRIX)
+		// typed in an option only: the options count as typed text too
+		const [option] = DEUX_PRIX.options
 		let saisie = {
 			...DEUX_PRIX,
-			description: await taper(page, 'description-service-offers-input', DEUX_PRIX.description, ' ou au studio'),
+			options: [{ ...option, name: await taper(page, 'name-service-offers-option-input-0', option.name, ' naturels') }],
 		}
 
 		// removed while it is edited: the list is empty, nothing typed is lost
@@ -215,11 +219,15 @@ test.describe('lignes de la modale prestations', () => {
 		await expect(onglets(page)).toHaveCount(0)
 		await expect(bouton).toHaveText(MODALE.ajout)
 		await formulaire(page, saisie)
-		// an option is edited in place: its field keeps the focus too
-		const [option] = saisie.options
+		// the option is edited in place again: its field keeps the focus too
 		saisie = {
 			...saisie,
-			options: [{ ...option, name: await taper(page, 'name-service-offers-option-input-0', option.name, ' naturels') }],
+			options: [
+				{
+					...saisie.options[0],
+					description: await taper(page, 'description-service-offers-option-input-0', option.description, ' et dépose'),
+				},
+			],
 		}
 
 		// the button adds what the form holds, then the form is empty again
@@ -361,6 +369,164 @@ test.describe('lignes de la modale prestations', () => {
 		await formulaire(page, SANS_OFFRE)
 		expect(erreurs).toEqual([])
 	})
+
+	// The only path where the list is rendered at once (flushSync) while the
+	// form leaves edit mode. One field typed, the others as loaded: each one
+	// alone is typed text to keep.
+	for (const { quoi, cy, ajout, saisi } of [
+		{ quoi: 'nom', cy: 'name-service-offers-input', ajout: ' bis', saisi: { name: 'Offre C bis' } },
+		{ quoi: 'prix', cy: 'price-service-offers-input', ajout: ';80 € en duo', saisi: { price: '50 €\n80 € en duo' } },
+	]) {
+		test(`prestations : la dernière offre, son ${quoi} modifié dans le formulaire, retirée au clavier : l’offre du dessus est affichée et son « Retirer » prend le focus, le formulaire garde la saisie et repasse en ajout`, async ({
+			page,
+		}) => {
+			const erreurs = erreursDeLaPage(page)
+			const patchs = corpsDesPatchs(page)
+			await profilDeDepart({ service_offers: TROIS })
+			await ouvrirProfil(page)
+			await page.getByTestId(MODALE.ouvrir).click()
+			const bouton = page.getByTestId(MODALE.bouton)
+			const retirer = page.getByTestId(MODALE.retirer)
+
+			await onglets(page).nth(2).click()
+			await expect(affichee(page)).toContainText(offreC.description)
+			await page.getByTestId(MODALE.modifier(2)).click()
+			await expect(bouton).toHaveText(MODALE.edition)
+			await formulaire(page, offreC)
+			await taper(page, cy, champs(offreC)[cy], ajout)
+			const saisie = { ...offreC, ...saisi }
+			await formulaire(page, saisie)
+
+			await retirer.focus()
+			await page.keyboard.press('Enter')
+			await expect(onglets(page)).toHaveText([offreA.name, offreB.name])
+			await expect(onglets(page).nth(1)).toHaveAttribute('aria-selected', 'true')
+			await expect(affichee(page)).toContainText(offreB.description)
+			await expect(retirer).toBeFocused()
+			await expect(retirer).toHaveAccessibleName(`Retirer la prestation ${offreB.name}`)
+			await expect(bouton).toHaveText(MODALE.ajout)
+			await formulaire(page, saisie)
+
+			// the button adds what the form holds, after the two offers left
+			await bouton.click()
+			await expect(onglets(page)).toHaveText([offreA.name, offreB.name, saisie.name])
+			await formulaire(page, SANS_OFFRE)
+			await enregistrees(page, patchs, [offreA, offreB, saisie])
+			expect(erreurs).toEqual([])
+		})
+	}
+
+	test('prestations : la dernière offre, en cours de modification sans rien y avoir saisi, retirée avec Espace : l’offre du dessus est affichée et son « Retirer » prend le focus, le formulaire est vidé', async ({
+		page,
+	}) => {
+		const erreurs = erreursDeLaPage(page)
+		const patchs = corpsDesPatchs(page)
+		await profilDeDepart({ service_offers: TROIS })
+		await ouvrirProfil(page)
+		await page.getByTestId(MODALE.ouvrir).click()
+		const bouton = page.getByTestId(MODALE.bouton)
+		const retirer = page.getByTestId(MODALE.retirer)
+
+		await onglets(page).nth(2).click()
+		await expect(affichee(page)).toContainText(offreC.description)
+		await page.getByTestId(MODALE.modifier(2)).click()
+		await expect(bouton).toHaveText(MODALE.edition)
+		await formulaire(page, offreC)
+
+		await retirer.focus()
+		await page.keyboard.press('Space')
+		await expect(onglets(page)).toHaveText([offreA.name, offreB.name])
+		await expect(onglets(page).nth(1)).toHaveAttribute('aria-selected', 'true')
+		await expect(affichee(page)).toContainText(offreB.description)
+		await expect(retirer).toBeFocused()
+		await expect(retirer).toHaveAccessibleName(`Retirer la prestation ${offreB.name}`)
+		await expect(bouton).toHaveText(MODALE.ajout)
+		await formulaire(page, SANS_OFFRE)
+		await enregistrees(page, patchs, [offreA, offreB])
+		expect(erreurs).toEqual([])
+	})
+
+	test('prestations : la première de trois offres retirée au clavier : l’offre suivante est affichée à sa place, le focus reste sur « Retirer »', async ({
+		page,
+	}) => {
+		const erreurs = erreursDeLaPage(page)
+		const patchs = corpsDesPatchs(page)
+		await profilDeDepart({ service_offers: TROIS })
+		await ouvrirProfil(page)
+		await page.getByTestId(MODALE.ouvrir).click()
+		const retirer = page.getByTestId(MODALE.retirer)
+		await expect(onglets(page)).toHaveText(TROIS.map(offre => offre.name))
+
+		await retirer.focus()
+		await page.keyboard.press('Enter')
+		await expect(onglets(page)).toHaveText([offreB.name, offreC.name])
+		await expect(onglets(page).first()).toHaveAttribute('aria-selected', 'true')
+		await expect(affichee(page)).toContainText(offreB.description)
+		await expect(retirer).toBeFocused()
+		await expect(retirer).toHaveAccessibleName(`Retirer la prestation ${offreB.name}`)
+		await enregistrees(page, patchs, [offreB, offreC])
+		expect(erreurs).toEqual([])
+	})
+
+	// the list holds the offer shown, and leaves with the dialog
+	test('prestations : la modale fermée sur la 3e offre puis rouverte : la 1re offre est affichée', async ({ page }) => {
+		const erreurs = erreursDeLaPage(page)
+		await profilDeDepart({ service_offers: TROIS })
+		await ouvrirProfil(page)
+		await page.getByTestId(MODALE.ouvrir).click()
+		await onglets(page).nth(2).click()
+		await expect(affichee(page)).toContainText(offreC.description)
+
+		await page.getByTestId(MODALE.fermer).click()
+		await expect(dialogue(page)).toBeHidden()
+		await page.getByTestId(MODALE.ouvrir).click()
+		await expect(onglets(page)).toHaveText(TROIS.map(offre => offre.name))
+		await expect(onglets(page).first()).toHaveAttribute('aria-selected', 'true')
+		await expect(affichee(page)).toContainText(offreA.description)
+		expect(erreurs).toEqual([])
+	})
+
+	// the ids do not follow the positions: the form still points at its offer
+	test('prestations : une offre en cours de modification, celle d’avant puis celle d’après retirées : « Modifier » met à jour la bonne offre, seule dans la liste et dans le PATCH', async ({
+		page,
+	}) => {
+		const erreurs = erreursDeLaPage(page)
+		const patchs = corpsDesPatchs(page)
+		await profilDeDepart({ service_offers: TROIS })
+		await ouvrirProfil(page)
+		await page.getByTestId(MODALE.ouvrir).click()
+		const bouton = page.getByTestId(MODALE.bouton)
+		const retirer = page.getByTestId(MODALE.retirer)
+
+		await onglets(page).nth(1).click()
+		await expect(affichee(page)).toContainText(offreB.description)
+		await page.getByTestId(MODALE.modifier(1)).click()
+		await expect(bouton).toHaveText(MODALE.edition)
+		await formulaire(page, offreB)
+
+		// the offer before it, then the one after it
+		await onglets(page).first().click()
+		await expect(affichee(page)).toContainText(offreA.description)
+		await retirer.click()
+		await expect(onglets(page)).toHaveText([offreB.name, offreC.name])
+		await onglets(page).nth(1).click()
+		await expect(affichee(page)).toContainText(offreC.description)
+		await retirer.click()
+		await expect(onglets(page)).toHaveText([offreB.name])
+		await expect(affichee(page)).toContainText(offreB.description)
+		await expect(bouton).toHaveText(MODALE.edition)
+		await formulaire(page, offreB)
+
+		const modifiee = {
+			...offreB,
+			name: await taper(page, 'name-service-offers-input', offreB.name, ' bis'),
+		}
+		await bouton.click()
+		await expect(bouton).toHaveText(MODALE.ajout)
+		await expect(onglets(page)).toHaveText([modifiee.name])
+		await enregistrees(page, patchs, [modifiee])
+		expect(erreurs).toEqual([])
+	})
 })
 
 // One entry per list of chips: a chip is its own « Retirer », found by its
@@ -421,7 +587,7 @@ test.describe('puces des modales langues et compétences', () => {
 
 		// the name of a chip was its id: the first one left with the second,
 		// and the focus with them
-		test(`${liste.nom} : deux puces du même nom ajoutées, par Entrée puis par « ; », la 2e retirée au clavier : la 1re reste et prend le focus, seule dans le PATCH`, async ({
+		test(`${liste.nom} : quatre puces du même nom ajoutées, deux par Entrée puis deux par « ; », les trois dernières retirées une à une au clavier : la puce du dessus prend le focus, la 1re reste seule dans le PATCH`, async ({
 			page,
 		}) => {
 			const erreurs = erreursDeLaPage(page)
@@ -433,7 +599,9 @@ test.describe('puces des modales langues et compétences', () => {
 			const champ = dialogue(page).getByTestId(liste.saisie)
 			await expect(puces).toHaveCount(0)
 
-			for (const [index, touche] of ['Enter', ';'].entries()) {
+			// a pair by each way of adding: neither may share an id
+			const touches = ['Enter', 'Enter', ';', ';']
+			for (const [index, touche] of touches.entries()) {
 				await champ.pressSequentially(liste.nouvelle)
 				await expect(champ).toBeFocused()
 				await expect(champ).toHaveValue(liste.nouvelle)
@@ -442,10 +610,12 @@ test.describe('puces des modales langues et compétences', () => {
 				await expect(champ).toHaveValue('')
 			}
 
-			await puces.nth(1).focus()
-			await page.keyboard.press('Enter')
-			await expect(puces).toHaveCount(1)
-			await expect(puces).toBeFocused()
+			await puces.last().focus()
+			for (let reste = touches.length - 1; reste >= 1; reste--) {
+				await page.keyboard.press('Enter')
+				await expect(puces).toHaveCount(reste)
+				await expect(puces.last()).toBeFocused()
+			}
 			await sauver(page, liste.sauver)
 			expect(patchs).toEqual([{ [liste.champ]: [{ name: liste.nouvelle }] }])
 			expect((await profilServeur())[liste.champ].map(element => element.name)).toEqual([liste.nouvelle])
