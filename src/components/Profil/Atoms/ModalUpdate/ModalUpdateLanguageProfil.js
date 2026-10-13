@@ -11,7 +11,6 @@ import {
 	FondModale,
 	useEnvoi,
 } from '@/components/Profil/Atoms/ModalUpdate/ModalElements'
-import { avecCles } from '@/lib/cles'
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
 
 const schema = zod
@@ -232,14 +231,15 @@ export default function ModalUpdateLanguageProfil(props) {
 													<div className={'flex flex-col gap-2'}>
 														<h3 className={'text-sm text-gray-700'}>Langues ajoutées</h3>
 														<div className={'flex w-full flex-col flex-wrap items-start gap-2'}>
-															{avecCles(userLanguageSelected).map(({ valeur: skill, cle }, _index) => (
+															{userLanguageSelected.map((skill, index) => (
 																<button
 																	data-cy="language-selected"
 																	type={'button'}
 																	onClick={() => {
 																		handleDeleteLanguageelected(skill.id)
 																	}}
-																	key={cle}
+																	// biome-ignore lint/suspicious/noArrayIndexKey: the row keeps its node when another is removed, so the keyboard focus stays in the list
+																	key={index}
 																	aria-label={`Retirer ${skill.name}`}
 																	className={
 																		'flex min-h-[44px] items-center gap-2 rounded-full bg-indigo-50 px-3 text-sm text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600'

@@ -791,6 +791,10 @@ test.describe('UI-10 recherche par ville : titre honnête', () => {
 
 		// another city in the same visit: no call at all
 		const formulaire = page.getByRole('search')
+		// the landmark is the form itself: a <search> wrapper is no landmark
+		// before Safari 17 and Chrome 118
+		await expect(formulaire).toHaveJSProperty('tagName', 'FORM')
+		await expect(formulaire).toHaveAttribute('role', 'search')
 		await formulaire.getByLabel('Ville de la prestation').fill('Lyon')
 		await formulaire.getByRole('button', { name: 'Trouver une maquilleuse' }).click()
 		await expect(page).toHaveURL(/\/search\?city=Lyon$/)

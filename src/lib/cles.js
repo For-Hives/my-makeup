@@ -2,6 +2,10 @@
  * Stable React keys for API items and text lines, including repeated values.
  * Prefer a persisted/local id; otherwise use the content and its occurrence.
  * Reordering distinct items keeps their identity rather than their position.
+ *
+ * Not for rows edited in place: an item without id is keyed by its content,
+ * so each keystroke changes the key, React remounts the row and the field
+ * loses the focus. Those lists keep the index as key.
  */
 export function avecCles(valeurs) {
 	const occurrences = new Map()

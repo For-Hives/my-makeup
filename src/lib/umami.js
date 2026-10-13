@@ -122,7 +122,10 @@ export function umamiBeforeSend(_type, payload, win) {
 		if (storage && storage.getItem('umami.disabled') !== null) return false
 		if (!payload || typeof payload !== 'object') return false
 
-		const base = String(win.location?.href)
+		// this function is inlined untranspiled into every page: no syntax
+		// after ES2019, or Safari before 13.4 drops the whole script
+		// biome-ignore lint/complexity/useOptionalChain: see above
+		const base = String(win.location && win.location.href)
 		const campaignQuery = url => {
 			const kept = new URLSearchParams()
 			for (const [key, value] of url.searchParams.entries()) {

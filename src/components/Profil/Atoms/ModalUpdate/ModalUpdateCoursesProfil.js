@@ -448,9 +448,13 @@ function DialogueFormations({
 											{/*	display the courses already added */}
 											<h3 className={'text-sm text-gray-900'}>Les formations & diplômes déjà ajoutés</h3>
 											<div className={'flex max-h-[600px] w-full flex-col gap-4 overflow-y-scroll'}>
-												{avecCles(userCourses).map(({ valeur: course, cle }, index) => {
+												{userCourses.map((course, index) => {
 													return (
-														<div key={cle} className={'relative flex w-full rounded bg-indigo-50/20 p-4 text-gray-700'}>
+														<div
+															// biome-ignore lint/suspicious/noArrayIndexKey: the row keeps its node when another is removed, so the keyboard focus stays in the list
+															key={index}
+															className={'relative flex w-full rounded bg-indigo-50/20 p-4 text-gray-700'}
+														>
 															<div className={'absolute right-0 top-0 m-2 flex items-center justify-center gap-4'}>
 																<button
 																	type="button"

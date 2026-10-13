@@ -651,7 +651,11 @@ function VueInitialisationCompte({
 							{/* Content goes here */}
 							{/* We use less vertical padding on card headers on desktop than on body sections */}
 							<nav aria-label="Progress">
-								<ol className="divide-y divide-gray-300 rounded-md border border-gray-300 md:flex md:divide-y-0">
+								<ol
+									// biome-ignore lint/a11y/noRedundantRoles: without list-style, Safari and VoiceOver only announce a list that carries the role
+									role="list"
+									className="divide-y divide-gray-300 rounded-md border border-gray-300 md:flex md:divide-y-0"
+								>
 									{stepsList.map((step, stepIdx) => (
 										<li key={step.name} className="relative md:flex md:flex-1">
 											{renderInitaccountState1({ step })}

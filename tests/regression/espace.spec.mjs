@@ -251,6 +251,53 @@ function registerUi01SauvegardesHonnetes8() {
 		await expect(optionDeLaPage).toHaveText('Option 1')
 		expect(erreurs).toEqual([])
 	})
+
+	// after a save the page keeps the options it sent, without id: a key
+	// built from their content remounted the row at each character typed
+	test('option d’une offre déjà sauvegardée : saisie caractère par caractère, le champ garde le focus et tout le texte', async ({
+		page,
+	}) => {
+		const erreurs = erreursDeLaPage(page)
+		await profilDeDepart({ service_offers: [OFFRE_AVEC_OPTION] })
+		await ouvrirProfil(page)
+		await page.getByTestId('update-service-offers-button').click()
+		await page.getByTestId('edit-service-offers-button-0').click()
+		await page.getByTestId('price-service-offers-input').fill('110')
+		await page.getByTestId('add-service-offers-button').click()
+		await page.getByTestId('save-button-service-offers').click()
+		await expect(dialogue(page)).toBeHidden()
+
+		await page.getByTestId('update-service-offers-button').click()
+		await page.getByTestId('edit-service-offers-button-0').click()
+		const [option] = OFFRE_AVEC_OPTION.options
+		for (const [cy, depart, ajout] of [
+			['name-service-offers-option-input-0', option.name, ' bis'],
+			['description-service-offers-option-input-0', option.description, ' en plus'],
+			['price-service-offers-option-input-0', option.price, '55'],
+		]) {
+			const champ = page.getByTestId(cy)
+			// biome-ignore lint/performance/noAwaitInLoops: the three fields are typed in one after the other, as a visitor does
+			await expect(champ).toHaveValue(depart)
+			await champ.focus()
+			await champ.press('End')
+			await champ.pressSequentially(ajout)
+			await expect(champ, cy).toBeFocused()
+			await expect(champ, cy).toHaveValue(depart + ajout)
+		}
+		expect(erreurs).toEqual([])
+	})
+
+	test('expérience retirée au clavier : le focus reste dans la liste, sur la ligne suivante', async ({ page }) => {
+		await profilDeDepart({
+			experiences: [EXPERIENCE('Studio A', '2020-01-01'), EXPERIENCE('Studio B', '2022-01-01')],
+		})
+		await ouvrirProfil(page)
+		await page.getByTestId('update-experience-button').click()
+		await dialogue(page).getByRole('button', { name: "Retirer l'expérience Studio A" }).focus()
+		await page.keyboard.press('Enter')
+		await expect(dialogue(page).getByTestId('experience-selected')).toHaveCount(1)
+		await expect(dialogue(page).getByRole('button', { name: "Retirer l'expérience Studio B" })).toBeFocused()
+	})
 }
 
 function registerUi01SauvegardesHonnetes9() {

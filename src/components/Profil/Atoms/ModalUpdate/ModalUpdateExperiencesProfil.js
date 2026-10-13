@@ -12,7 +12,6 @@ import {
 	suivreChamp,
 	useEnvoi,
 } from '@/components/Profil/Atoms/ModalUpdate/ModalElements'
-import { avecCles } from '@/lib/cles'
 import { listeApresSauvegarde } from '@/lib/sauvegarde-profil'
 import { patchMeMakeup } from '@/services/PatchMeMakeup'
 
@@ -315,9 +314,13 @@ function ListeExperiences({ userExperiences, handleEditExperience, handleDeleteE
 			{/*	display the experiences already added */}
 			<h3 className={'text-sm text-gray-900'}>Les expériences déjà ajoutées</h3>
 			<div className={'flex max-h-[600px] w-full flex-col gap-4 overflow-y-scroll pt-4 md:pt-0'}>
-				{avecCles(userExperiences).map(({ valeur: experience, cle }, index) => {
+				{userExperiences.map((experience, index) => {
 					return (
-						<div key={cle} className={'relative flex w-full rounded bg-indigo-50/20 p-4 pt-8 text-gray-700 md:pt-4'}>
+						<div
+							// biome-ignore lint/suspicious/noArrayIndexKey: the row keeps its node when another is removed, so the keyboard focus stays in the list
+							key={index}
+							className={'relative flex w-full rounded bg-indigo-50/20 p-4 pt-8 text-gray-700 md:pt-4'}
+						>
 							<div className={'absolute -top-2 right-0 m-2 flex items-center justify-center gap-4 md:top-0'}>
 								<button
 									type="button"
