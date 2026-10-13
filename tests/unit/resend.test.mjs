@@ -76,7 +76,6 @@ describe('sendWithResend', () => {
 				name: 'validation_error',
 				message: 'Invalid `to` field: testine@example.test',
 			})
-			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 			assert.deepEqual(await sendWithResend(email, { fetchImpl }), { ok: false, kind: 'http', status }, String(status))
 		}
 	})

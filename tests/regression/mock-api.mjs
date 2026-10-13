@@ -966,7 +966,6 @@ const ROUTES_1 = [
 async function dispatchRoutes1(state) {
 	for (const [matches, handle] of ROUTES_1) {
 		if (!matches(state)) continue
-		// biome-ignore lint/performance/noAwaitInLoops: Preserve route precedence and stop at the first handled request.
 		const result = await handle(state)
 		if (result.handled) return true
 	}

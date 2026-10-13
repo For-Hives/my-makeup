@@ -23,7 +23,6 @@ describe('Umami behind /u (MES-10)', () => {
 		for (const value of [undefined, '', '  ']) {
 			if (value === undefined) delete process.env.UMAMI_ORIGIN
 			else process.env.UMAMI_ORIGIN = value
-			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 			assert.deepEqual(await destinations(), {
 				'/u/script.js': 'https://umami.wadefade.fr/script.js',
 				'/u/api/send': 'https://umami.wadefade.fr/api/send',
@@ -72,7 +71,6 @@ describe('Umami behind /u (MES-10)', () => {
 			'https://user:pass@umami.example.org',
 		]) {
 			process.env.UMAMI_ORIGIN = value
-			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 			await assert.rejects(nextConfig.rewrites(), /UMAMI_ORIGIN/, value)
 		}
 	})

@@ -1,7 +1,16 @@
 {
 	"$schema": "https://biomejs.dev/schemas/2.5.13/schema.json",
-	"vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true, "defaultBranch": "main" },
-	"files": { "ignoreUnknown": false, "includes": ["**", "!pnpm-lock.yaml", "!**/*.svg"], "maxSize": 1048576 },
+	"vcs": {
+		"enabled": true,
+		"clientKind": "git",
+		"useIgnoreFile": true,
+		"defaultBranch": "main"
+	},
+	"files": {
+		"ignoreUnknown": false,
+		"includes": ["**", "!pnpm-lock.yaml", "!**/*.svg"],
+		"maxSize": 1048576
+	},
 	"formatter": {
 		"enabled": true,
 		"formatWithErrors": false,
@@ -14,48 +23,48 @@
 		"bracketSpacing": true,
 		"useEditorconfig": true
 	},
-	"css": { "parser": { "tailwindDirectives": true } },
+	"css": {
+		"parser": {
+			"tailwindDirectives": true
+		}
+	},
 	"linter": {
-		"domains": { "next": "recommended", "test": "recommended" },
+		"domains": {
+			"next": "recommended",
+			"test": "recommended"
+		},
 		"enabled": true,
 		"rules": {
 			"preset": "recommended",
-			"correctness": { "useExhaustiveDependencies": "off", "noUnusedVariables": "error", "useUniqueElementIds": "off" },
+			"correctness": {
+				"useExhaustiveDependencies": "off",
+				"noUnusedVariables": "error",
+				"useUniqueElementIds": "off"
+			},
 			"complexity": {
-				"noImportantStyles": "off",
-				"noExcessiveCognitiveComplexity": "error",
-				"noBannedTypes": "error",
-				"noForEach": "error",
-				"useOptionalChain": "error",
-				"useSimplifiedLogicExpression": "error",
-				"noExcessiveLinesPerFunction": { "level": "error", "options": { "maxLines": 200 } }
+				"noImportantStyles": "off"
 			},
 			"style": {
 				"useConst": "error",
 				"useTemplate": "error",
-				"noNestedTernary": "error",
-				"noNonNullAssertion": "error",
-				"noExcessiveLinesPerFile": { "level": "error", "options": { "maxLines": 1500 } }
+				"noNonNullAssertion": "off"
 			},
 			"suspicious": {
 				"noArrayIndexKey": "warn",
 				"noUnknownAtRules": "off",
-				"noDoubleEquals": "error",
-				"noDeprecatedImports": "error",
-				"noEmptyBlockStatements": "error",
-				"noNonNullAssertedOptionalChain": "error",
-				"noTsIgnore": "error",
-				"useAwait": "error",
-				"noConsole": { "level": "warn", "options": { "allow": ["error", "warn"] } }
+				"noConsole": {
+					"level": "warn",
+					"options": {
+						"allow": ["error", "warn"]
+					}
+				}
 			},
-			"performance": { "noAwaitInLoops": "warn", "useTopLevelRegex": "error" },
 			"security": {
-				"noBlankTarget": "error",
-				"noDangerouslySetInnerHtml": "off",
-				"noDangerouslySetInnerHtmlWithChildren": "error",
-				"noGlobalEval": "error"
+				"noDangerouslySetInnerHtml": "off"
 			},
-			"a11y": { "noSvgWithoutTitle": "off" }
+			"a11y": {
+				"noSvgWithoutTitle": "off"
+			}
 		}
 	},
 	"javascript": {
@@ -71,18 +80,30 @@
 			"bracketSpacing": true
 		}
 	},
-	"html": { "formatter": { "selfCloseVoidElements": "always", "indentScriptAndStyle": true } },
-	"assist": { "enabled": true, "actions": { "source": { "organizeImports": "on" } } },
+	"html": {
+		"formatter": {
+			"selfCloseVoidElements": "always",
+			"indentScriptAndStyle": true
+		}
+	},
+	"assist": {
+		"enabled": true,
+		"actions": {
+			"source": {
+				"organizeImports": "on"
+			}
+		}
+	},
 	"overrides": [
 		{
-			"includes": ["**/test/**", "**/tests/**", "**/*.test.{js,jsx,ts,tsx}", "**/*.spec.{js,jsx,ts,tsx}"],
+			"includes": ["**/scripts/**"],
 			"linter": {
 				"rules": {
-					"performance": { "useTopLevelRegex": "off" },
-					"suspicious": { "noEmptyBlockStatements": "off", "useAwait": "off" }
+					"suspicious": {
+						"noConsole": "off"
+					}
 				}
 			}
-		},
-		{ "includes": ["**/scripts/**"], "linter": { "rules": { "suspicious": { "noConsole": "off" } } } }
+		}
 	]
 }

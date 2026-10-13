@@ -31,7 +31,6 @@ test.describe('UI-02 et UI-04 édition au doigt et au clavier', () => {
 			'update-description-button',
 			'profil-public-view',
 		]) {
-			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 			await expect(page.getByTestId(cy), cy).toHaveCount(0)
 		}
 	}
@@ -51,7 +50,6 @@ function registerespaceuietuieditionaudoigtetauclavier1Scenario1() {
 		// reached with Tab only
 		let atteint = false
 		for (let i = 0; i < 80 && !atteint; i++) {
-			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 			await page.keyboard.press('Tab')
 			atteint = await bouton.evaluate(b => document.activeElement === b)
 		}
@@ -117,7 +115,6 @@ function registerespaceuietuieditionaudoigtetauclavier1Scenario2() {
 			'update-experience-button',
 		]) {
 			const bouton = page.getByTestId(cy)
-			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 			await expect(bouton, cy).toBeVisible()
 			const boite = await bouton.boundingBox()
 			expect(boite.height, cy).toBeGreaterThanOrEqual(44)
@@ -169,7 +166,6 @@ function registerespaceuietuieditionaudoigtetauclavier1Scenario4() {
 			'update-service-offers-button',
 			'update-experience-button',
 		]) {
-			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 			await page.getByTestId(cy).click()
 			await expect(dialogue(page)).toBeVisible()
 			// translucent backdrop behind every modal (UI-04)

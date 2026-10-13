@@ -69,7 +69,6 @@ const nextConfig = {
 	// as CHEMINS_NOINDEX in src/lib/seo/robots.js (checked by
 	// tests/unit/seo.test.mjs); robots.txt does not block them, or this
 	// header would never be read.
-	// biome-ignore lint/suspicious/useAwait: Next.js requires a promise-returning configuration hook.
 	async headers() {
 		return ['/auth', '/auth/:path*', '/search'].map(source => ({
 			source,
@@ -82,7 +81,6 @@ const nextConfig = {
 	// cookie, the visitor's IP only). A request that still carries a cookie
 	// or credentials, one the middleware did not clean, is never relayed:
 	// the rewrite does not apply and the site answers 404.
-	// biome-ignore lint/suspicious/useAwait: Next.js requires a promise-returning configuration hook.
 	async rewrites() {
 		const umami = umamiOrigin()
 		const missing = [

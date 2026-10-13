@@ -218,7 +218,6 @@ describe('sauvegarderProfil (patchMeMakeup)', () => {
 			[json(500, {}), false],
 		]) {
 			const p = ports(reponse)
-			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 			await sauvegarderProfil({ first_name: 'Alice', network: { email: 'alice@test.local' } }, 'reseaux', p)
 			const [[evenement, props]] = p.evenements
 			assert.deepEqual(eventData(evenement, props), { section: 'reseaux', ok })
@@ -262,7 +261,6 @@ describe('sauvegarderProfil (patchMeMakeup)', () => {
 			json(400, refusStrapi('first_name must be at least 2 characters')),
 			json(500, fichierRefuse()),
 		]) {
-			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 			assert.equal('photoRefusee' in (await sauvegarderProfil(nom, 'portfolio', ports(reponse))), false)
 		}
 	})

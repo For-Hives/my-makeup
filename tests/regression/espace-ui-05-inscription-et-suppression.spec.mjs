@@ -60,13 +60,11 @@ test.describe('UI-05 inscription et suppression', () => {
 		await expect(question).toBeVisible()
 		for (const [valeur, libelle] of ORIGINES) {
 			const choix = question.getByLabel(libelle, { exact: true })
-			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 			await expect(choix).toHaveAttribute('data-cy', `onboarding-source-${valeur}`)
 			await expect(choix).not.toBeChecked()
 		}
 		expect(await question.getByRole('radio').count()).toBe(ORIGINES.length)
 		for (const libelle of await question.locator('label').all()) {
-			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 			expect((await libelle.boundingBox()).height).toBeGreaterThanOrEqual(44)
 		}
 		// nothing wider than the screen

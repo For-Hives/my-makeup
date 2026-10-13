@@ -96,7 +96,6 @@ describe('authentifierStrapi', () => {
 	test('empty email or password: refused without calling Strapi', async () => {
 		const { appels, fetchImpl } = faux(200, reponseConnexion)
 		for (const identifiants of [{ email: '', password: 'x' }, { email: 'm@test.local', password: '' }, {}]) {
-			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 			await assert.rejects(authentifierStrapi({ api: API, ...identifiants, fetchImpl }), {
 				message: 'identifiants-invalides',
 			})

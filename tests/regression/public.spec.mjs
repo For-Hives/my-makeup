@@ -185,7 +185,6 @@ test.describe('UI-06 profils rendus côté serveur', () => {
 	}) => {
 		for (const profil of PROFILS_PUBLICS) {
 			const { slug, publiable } = profil.attendu
-			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 			const { reponse, html: page } = await html(request, `/profil/${slug}`)
 			expect(reponse.status(), slug).toBe(200)
 			expect(textesDes(page, 'h1'), slug).toHaveLength(1)
@@ -279,7 +278,6 @@ test.describe('UI-06 profils rendus côté serveur', () => {
 			['/profil/LeaNantes', 'leanantes'],
 			['/profil/Textes%20Max', 'textes-max'],
 		]) {
-			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 			const reponse = await request.get(ancienne, { maxRedirects: 0 })
 			expect(reponse.status(), ancienne).toBe(308)
 			expect(reponse.headers().location, ancienne).toBe(`/profil/${slug}`)
@@ -343,7 +341,6 @@ test.describe('SEO-10 sitemap, robots, noindex, canonical', () => {
 		const locs = [...xml.matchAll(/<loc>([^<]*)<\/loc>/g)].map(m => decoder(m[1]))
 		expect(locs.length).toBeGreaterThan(20)
 		for (const loc of locs) {
-			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 			const { reponse, html: page } = await html(request, loc)
 			expect(reponse.status(), loc).toBe(200)
 			expect(meta(page, 'robots') ?? null, loc).toBeNull()
@@ -379,7 +376,6 @@ test.describe('SEO-10 sitemap, robots, noindex, canonical', () => {
 			'/search',
 			'/search?city=Annecy',
 		]) {
-			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 			const { reponse, html: page } = await html(request, chemin)
 			expect(reponse.status(), chemin).toBe(200)
 			expect(
@@ -642,7 +638,6 @@ test.describe('UI-09 photos nettes', () => {
 					[principale, 75],
 					[realisation, 85],
 				]) {
-					// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 					for (const c of candidats(await photo.getAttribute('srcset'))) {
 						expect(c.q).toBe(q)
 					}
@@ -759,7 +754,6 @@ test.describe('UI-10 recherche par ville : titre honnête', () => {
 			['Chambéry (73)', 15],
 			['Grenoble', null],
 		]) {
-			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 			await piloter('/__multiplier', { n: 1, city, action_radius })
 		}
 		await page.goto('/search?city=Annecy')
@@ -927,7 +921,6 @@ function registerpublic1Scenario5() {
 		await panne({ delaiRechercheMs: 30_000 })
 		for (const chemin of ['/search?search=mariage&city=Annecy', '/search?city=Annecy']) {
 			const debut = Date.now()
-			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 			await page.goto(chemin)
 			await expect(page.getByTestId('search-error')).toBeVisible({
 				timeout: 10_000,
@@ -987,7 +980,6 @@ function registerpublic1Scenario7() {
 			['deplacent', 4],
 			['autres', 1],
 		]) {
-			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 			await expect(page.getByTestId(`search-results-${section}`).getByTestId('search-result')).toHaveCount(n)
 		}
 		expect(await recherches()).toHaveLength(0)

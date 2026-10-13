@@ -59,7 +59,6 @@ async function suivre(jar, chemin, base = APP) {
 	const etapes = []
 	let url = chemin
 	for (let i = 0; i < 5; i++) {
-		// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 		const res = await req(jar, url, {}, base)
 		const location = res.headers.get('location')
 		etapes.push({ status: res.status, location })
@@ -112,7 +111,6 @@ test('AF-01 - a transient 502, 429 or network failure on /users/me keeps the ses
 	const jar = new Jar()
 	await login(jar)
 	for (const panne of ['502', '429', '503']) {
-		// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 		await mode({ usersMe: panne })
 		const s = await session(jar)
 		assert.ok(s.jwt, `session gardée après ${panne}`)
@@ -126,7 +124,6 @@ test('AF-01 - a transient 502, 429 or network failure on /users/me keeps the ses
 
 test('AF-02 - a 401 from Strapi deletes the session cookies, chunks included', async () => {
 	for (const grosJwt of ['0', '1']) {
-		// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 		await reset()
 		await mode({ grosJwt })
 		const jar = new Jar()
@@ -192,7 +189,6 @@ describe('AF-03 - private pages without a valid session: one redirection, no loo
 				purpose: 'prefetch',
 			},
 		]) {
-			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 			const res = await req(jar, `/_next/data/${buildId}/auth/profil.json`, {
 				headers: entetes,
 			})
@@ -265,7 +261,6 @@ describe('AF-03 - private pages without a valid session: one redirection, no loo
 		const etapes = []
 		let url = '/auth/init-account'
 		for (let i = 0; i < 5; i++) {
-			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 			const res = await req(jar, url)
 			const location = res.headers.get('location')
 			etapes.push({ status: res.status, location })
@@ -320,7 +315,6 @@ describe('AF-03 - private pages without a valid session: one redirection, no loo
 
 test('AF-04 - session.expires never goes past the expiry of the Strapi JWT', async () => {
 	for (const ttl of [7200, 30 * 86400]) {
-		// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 		await reset()
 		await mode({ ttl: String(ttl) })
 		const jar = new Jar()
@@ -341,21 +335,18 @@ describe('AF-05 - Strapi is asked at most once per window, with a 3 s timeout', 
 		const jar = new Jar()
 		await login(jar, {}, APP_FENETRE)
 		for (let i = 0; i < 5; i++) {
-			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 			assert.ok((await session(jar, APP_FENETRE)).jwt)
 		}
 		assert.equal((await req(jar, '/auth/profil', {}, APP_FENETRE)).status, 200)
 		assert.equal(await appelsUsersMe(), 0, 'aucun appel dans la fenêtre')
 
 		const limite = Date.now() + FENETRE_MS + 5000
-		// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 		while ((await appelsUsersMe()) === 0 && Date.now() < limite) {
 			await session(jar, APP_FENETRE)
 			await new Promise(resolve => setTimeout(resolve, 200))
 		}
 		assert.equal(await appelsUsersMe(), 1, 'un appel une fois la fenêtre passée')
 		for (let i = 0; i < 3; i++) {
-			// biome-ignore lint/performance/noAwaitInLoops: These steps intentionally run in order against shared server or browser state.
 			await session(jar, APP_FENETRE)
 		}
 		assert.equal(await appelsUsersMe(), 1, 'puis plus rien jusqu’à la fenêtre suivante')
