@@ -14,7 +14,10 @@
 // or an option too, and the offers the modal did refuse were refused without
 // a word, the one validated unchanged among them; the « Retirer » focused
 // took the name of the next item without a word for screen readers.
-import { expect, test } from '@playwright/test'
+// Ticket 09: removed with a click or a tap, the only chip still took the
+// focus out of the modal (the field must not take it, or the virtual keyboard
+// of a phone opens): the title of the modal takes it.
+import { devices, expect, test } from '@playwright/test'
 import {
 	annoncesDites,
 	corpsDesPatchs,
@@ -965,6 +968,27 @@ const PUCES = [
 	},
 ]
 
+// The focus is in the modal, on its title: a heading, not a field (no
+// virtual keyboard on a phone), that only a script can focus (tabindex -1,
+// never a Tab stop).
+async function focusSurLeTitre(page) {
+	const titre = dialogue(page).getByRole('heading', { level: 3 }).first()
+	await expect(titre).toBeFocused()
+	await expect(titre).toHaveAttribute('tabindex', '-1')
+	const actif = await page.evaluate(() => {
+		const element = document.activeElement
+		return {
+			dansLaModale: !!element?.closest('[data-cy="modal-panel"]'),
+			balise: element?.tagName,
+			saisie:
+				element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || !!element?.isContentEditable,
+			// the title the dialog is named by
+			nomme: element?.id !== '' && element?.closest('[role="dialog"]')?.getAttribute('aria-labelledby') === element?.id,
+		}
+	})
+	expect(actif).toEqual({ dansLaModale: true, balise: 'H3', saisie: false, nomme: true })
+}
+
 test.describe('puces des modales langues et compétences', () => {
 	for (const liste of PUCES) {
 		const [premiere, deuxieme, troisieme] = liste.noms
@@ -1319,8 +1343,9 @@ test.describe('puces des modales langues et compétences', () => {
 
 		// Stored chips have their index as id: the same name does not tie two of
 		// them. And the field takes the focus for the keyboard only: on a phone,
-		// a tap on the only chip would open the virtual keyboard.
-		test(`${liste.nom} : deux puces stockées du même nom (anciennes données), retirées l’une après l’autre à la souris : une seule part à chaque clic, puis le champ de saisie ne prend pas le focus`, async ({
+		// a tap on the only chip would open the virtual keyboard. The title of
+		// the modal takes it (ticket 09): the focus fell on <body> with the chip.
+		test(`${liste.nom} : deux puces stockées du même nom (anciennes données), retirées l’une après l’autre à la souris : une seule part à chaque clic, puis le champ de saisie ne prend pas le focus, le titre de la fenêtre le prend ; Tab mène au champ, Maj+Tab à « Fermer »`, async ({
 			page,
 		}) => {
 			const erreurs = erreursDeLaPage(page)
@@ -1330,6 +1355,7 @@ test.describe('puces des modales langues et compétences', () => {
 			await page.getByTestId(liste.ouvrir).click()
 			const puces = dialogue(page).getByTestId(liste.puce)
 			const champ = dialogue(page).getByTestId(liste.saisie)
+			const zone = zoneAnnonce(page)
 			await expect(puce(page, premiere)).toHaveCount(2)
 
 			await puces.first().click()
@@ -1337,10 +1363,61 @@ test.describe('puces des modales langues et compétences', () => {
 			await puces.click()
 			await expect(puces).toHaveCount(0)
 			await expect(champ).not.toBeFocused()
+			await focusSurLeTitre(page)
+			// the removal is still said
+			await expect(zone).toHaveText(liste.annonce(premiere))
+
+			// from the title, Tab leads to the field: the next one is typed there
+			await page.keyboard.press('Tab')
+			await expect(champ).toBeFocused()
+			await champ.pressSequentially(liste.nouvelle)
+			await page.keyboard.press('Enter')
+			await expect(puce(page, liste.nouvelle)).toBeVisible()
+			// removed with the mouse in turn; from the title, Shift+Tab leads
+			// to « Fermer »
+			await puces.click()
+			await expect(puces).toHaveCount(0)
+			await focusSurLeTitre(page)
+			await expect(zone).toHaveText(liste.annonce(liste.nouvelle))
+			await page.keyboard.press('Shift+Tab')
+			await expect(dialogue(page).getByTestId(MODALE.fermer)).toBeFocused()
+
 			await sauver(page, liste.sauver)
 			expect(patchs).toEqual([{ [liste.champ]: [] }])
 			expect((await profilServeur())[liste.champ]).toEqual([])
 			expect(erreurs).toEqual([])
 		})
 	}
+
+	test.describe('sur un téléphone', () => {
+		const { defaultBrowserType, ...iphone } = devices['iPhone 13']
+		test.use(iphone)
+
+		for (const liste of PUCES) {
+			const [premiere] = liste.noms
+
+			test(`${liste.nom} : la seule puce retirée au doigt : le focus reste dans la fenêtre, sur son titre et sur aucun champ de saisie, le retrait est dit`, async ({
+				page,
+			}) => {
+				const erreurs = erreursDeLaPage(page)
+				const patchs = corpsDesPatchs(page)
+				await profilDeDepart({ [liste.champ]: [{ name: premiere }] })
+				await ouvrirProfil(page)
+				await page.getByTestId(liste.ouvrir).tap()
+				const puces = dialogue(page).getByTestId(liste.puce)
+				await expect(puces).toHaveCount(1)
+
+				await puces.tap()
+				await expect(puces).toHaveCount(0)
+				await expect(dialogue(page).getByTestId(liste.saisie)).not.toBeFocused()
+				await focusSurLeTitre(page)
+				await expect(zoneAnnonce(page)).toHaveText(liste.annonce(premiere))
+
+				await page.getByTestId(liste.sauver).tap()
+				await expect(dialogue(page)).toBeHidden()
+				expect(patchs).toEqual([{ [liste.champ]: [] }])
+				expect(erreurs).toEqual([])
+			})
+		}
+	})
 })
