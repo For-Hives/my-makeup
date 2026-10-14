@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useActionState, useEffect, useRef } from 'react'
 import { type CodeErreur, messageErreur } from '@/lib/auth/erreurs'
 
@@ -51,6 +52,11 @@ export function FormulaireDeConnexion({ action, retour }: { action: ActionDeConn
 					className="rounded-md border border-neutral-300 bg-white px-3 py-2 font-normal text-base"
 				/>
 			</label>
+			<p className="text-right text-sm">
+				<Link className="inline-flex min-h-11 items-center font-medium underline" href="/auth/mot-de-passe-oublie">
+					Mot de passe oublié ?
+				</Link>
+			</p>
 			<div role="alert" data-testid="erreur-connexion">
 				{etat ? <p className="rounded-md bg-red-50 p-3 text-red-800 text-sm">{messageErreur(etat.code)}</p> : null}
 			</div>

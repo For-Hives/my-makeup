@@ -10,6 +10,8 @@ const LIBELLES_DES_TYPES: Record<(typeof TYPES_EVENEMENT)[number], string> = {
 	inscription: 'Inscription',
 	confirmation: 'Confirmation de l’email',
 	renvoi: 'Renvoi de l’email de confirmation',
+	'mot-de-passe-oublie': 'Demande de lien de mot de passe oublié',
+	reinitialisation: 'Nouveau mot de passe',
 }
 
 const LIBELLES_DES_CODES: Record<(typeof CODES_EVENEMENT)[number], string> = {

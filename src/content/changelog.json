@@ -40,6 +40,11 @@
 			"id": "s-inscrire-avec-l-adresse-de-quelqu-un-d-autre-ne-cree-pl",
 			"type": "correction",
 			"text": "S’inscrire avec l’adresse de quelqu’un d’autre ne crée plus de second compte, et les faux comptes jamais confirmés disparaissent au bout de 7 jours."
+		},
+		{
+			"id": "tu-peux-retrouver-l-acces-a-ton-compte-mot-de-passe-oubli",
+			"type": "amelioration",
+			"text": "Tu peux retrouver l’accès à ton compte : « Mot de passe oublié ? » t’envoie par email un lien, valable une heure, pour choisir un nouveau mot de passe, et tes autres appareils sont alors déconnectés."
 		}
 	],
 	"releases": []

@@ -532,7 +532,14 @@ export interface Article {
  */
 export interface AuthEvenement {
   id: number;
-  type: 'connexion' | 'deconnexion' | 'deconnexion-partout' | 'inscription' | 'confirmation' | 'renvoi';
+  type:
+    | 'connexion'
+    | 'deconnexion'
+    | 'deconnexion-partout'
+    | 'inscription'
+    | 'confirmation'
+    | 'mot-de-passe-oublie'
+    | 'reinitialisation';
   code:
     | 'ok'
     | 'identifiants-invalides'

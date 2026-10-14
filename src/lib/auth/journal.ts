@@ -23,6 +23,8 @@ export const TYPES_EVENEMENT = [
 	'inscription',
 	'confirmation',
 	'renvoi',
+	'mot-de-passe-oublie',
+	'reinitialisation',
 ] as const
 export type TypeEvenement = (typeof TYPES_EVENEMENT)[number]
 
