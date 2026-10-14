@@ -610,6 +610,20 @@ Le fournisseur se teste aussi sans le banc, appelé comme une fonction : `bun --
 
 Le code est dans `tests/outils/faux-google/` : `fournisseur.ts` (le fournisseur), `identite.ts` (scénarios et identités), `serveur.ts` (ce que lance le conteneur). L'outil des tests est `tests/outils/faux-google.ts`.
 
+## Le rapprochement du stockage et de la base
+
+`bun run banc:rapprocher` (ticket 137, plan 02 I27 et §10.1 point 5) compare les objets du stockage du banc aux médias de sa base. Il ne supprime rien et n'écrit rien : il liste le stockage, lit la base, et n'a aucune option qui supprime. La même règle (`src/lib/rapprochement.ts`) servira au contrôle complet d'avant purge, sur d'autres données.
+
+Il nomme trois sortes d'orphelins, par clé d'objet ou par identifiant, sans aucune donnée personnelle :
+
+- **un objet sans média** : une clé du stockage qu'aucun média ne nomme (hors corbeille) ;
+- **un média sans objet** : un média dont l'objet d'origine ou une taille dérivée manque ;
+- **un média sans profil** : un média qu'aucune photo principale, aucune galerie de profil, aucun article (versions comprises) ne désigne.
+
+La corbeille (`deleted/`) est comptée à part, comme les vignettes de l'ancien site décrites dans `media.strapiFormats` : ce ne sont pas des orphelins. Code de sortie 0 sans orphelin (« 0 orphelin »), 1 avec, 2 si le banc ne répond pas. Avec `--json`, la sortie est le rapport en JSON. Avec `--hors-import`, les médias que l'import a repris de l'ancien site (`strapiId`) restent listés mais ne comptent pas pour le code de sortie : c'est l'option de la CI, parce que l'essai de bout en bout de l'import efface sa fausse source à la fin, et que les médias repris perdent alors leurs objets exprès. Le contrôle complet d'avant purge se lance sans l'option.
+
+En CI, l'étape « Reconcile the storage and the database » du job `e2e` le lance (avec `--hors-import`) après les essais de bout en bout : à ce moment, les objets hors corbeille doivent être exactement ceux des photos des profils et des articles. Un orphelin fait passer l'étape au rouge, donc `ci-ok` au rouge. `tests/integration/rapprochement.test.ts` prouve les trois sortes d'orphelins, l'absence de toute écriture et le code de sortie ; `tests/ci/garde-fous-ci.test.ts` garde l'étape dans le workflow.
+
 ## La fausse base Strapi
 
 L'import lit l'ancienne base Strapi. Sur le banc, il lit une fausse base qui porte chaque cas connu de la vraie, avec ses photos dans le stockage d'objets, et qu'un rôle en lecture seule ouvre. Une commande la crée, à l'identique à chaque fois :

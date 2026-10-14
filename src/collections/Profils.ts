@@ -24,7 +24,7 @@ import {
 	validerLienDeReseau,
 	validerTelephone,
 } from '../lib/profil/coordonnees'
-import { photosDeLaProprietaire, validerPhotosDuProfil } from '../lib/profil/photos'
+import { photosDeLaProprietaire, validerGalerie, validerPhotoPrincipale } from '../lib/profil/photos'
 import { validerSiret } from '../lib/profil/siret'
 import {
 	CHOIX_DU_STATUT,
@@ -244,7 +244,7 @@ export const Profils: CollectionConfig<'profils'> = {
 			type: 'upload',
 			relationTo: 'media',
 			filterOptions: photosDeLaProprietaire,
-			validate: validerPhotosDuProfil,
+			validate: validerPhotoPrincipale,
 		},
 		{
 			name: 'galerie',
@@ -254,7 +254,7 @@ export const Profils: CollectionConfig<'profils'> = {
 			hasMany: true,
 			maxRows: GALERIE_MAX,
 			filterOptions: photosDeLaProprietaire,
-			validate: validerPhotosDuProfil,
+			validate: validerGalerie,
 			admin: { description: 'Dans l’ordre d’affichage, 10 photos au plus.' },
 		},
 		// The networks are public; the contact details are not (ticket 042).
