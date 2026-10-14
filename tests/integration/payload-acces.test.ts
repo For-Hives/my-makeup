@@ -120,6 +120,103 @@ const MATRICE: Ligne[] = [
 			attendu,
 		})
 	),
+	{ role: 'sansProfil', collection: 'pros', operation: 'lister', attendu: 'soi' },
+
+	// profils (ticket 020): a makeup artist reads and changes her own profile only (U54, I02),
+	// never its account, its slug or what the import wrote; an account without a profile gets an
+	// empty list and a refusal on any write; `admin` reaches every profile; nobody else, any yet.
+	{ role: 'anonyme', collection: 'profils', operation: 'lister', attendu: 'refuse' },
+	{ role: 'anonyme', collection: 'profils', operation: 'lire', document: 'maquilleuse', attendu: 'refuse' },
+	{ role: 'anonyme', collection: 'profils', operation: 'creer', attendu: 'refuse' },
+	{ role: 'anonyme', collection: 'profils', operation: 'modifier', document: 'maquilleuse', attendu: 'refuse' },
+	{ role: 'anonyme', collection: 'profils', operation: 'supprimer', document: 'maquilleuse', attendu: 'refuse' },
+	{ role: 'maquilleuse', collection: 'profils', operation: 'lister', attendu: 'soi' },
+	{ role: 'maquilleuse', collection: 'profils', operation: 'lire', document: 'maquilleuse', attendu: 'autorise' },
+	{ role: 'maquilleuse', collection: 'profils', operation: 'lire', document: 'autreMaquilleuse', attendu: 'refuse' },
+	{ role: 'maquilleuse', collection: 'profils', operation: 'creer', attendu: 'refuse' },
+	{ role: 'maquilleuse', collection: 'profils', operation: 'modifier', document: 'maquilleuse', attendu: 'autorise' },
+	{
+		role: 'maquilleuse',
+		collection: 'profils',
+		operation: 'modifier',
+		document: 'autreMaquilleuse',
+		attendu: 'refuse',
+	},
+	{ role: 'maquilleuse', collection: 'profils', operation: 'supprimer', document: 'maquilleuse', attendu: 'refuse' },
+	{
+		role: 'maquilleuse',
+		collection: 'profils',
+		operation: 'supprimer',
+		document: 'autreMaquilleuse',
+		attendu: 'refuse',
+	},
+	...(
+		[
+			['slug', 'une-autre-adresse'],
+			['strapiId', 999],
+			['legacyUsername', 'Ancien Pseudo'],
+			['pro', { compteDe: 'sansProfil' }],
+		] as const
+	).map(
+		([champ, valeur]): Ligne => ({
+			role: 'maquilleuse',
+			collection: 'profils',
+			operation: 'modifier',
+			document: 'maquilleuse',
+			champ,
+			valeur,
+			attendu: 'ignore',
+		})
+	),
+	{ role: 'autreMaquilleuse', collection: 'profils', operation: 'lister', attendu: 'soi' },
+	{ role: 'autreMaquilleuse', collection: 'profils', operation: 'lire', document: 'maquilleuse', attendu: 'refuse' },
+	{
+		role: 'autreMaquilleuse',
+		collection: 'profils',
+		operation: 'modifier',
+		document: 'maquilleuse',
+		attendu: 'refuse',
+	},
+	{
+		role: 'autreMaquilleuse',
+		collection: 'profils',
+		operation: 'supprimer',
+		document: 'maquilleuse',
+		attendu: 'refuse',
+	},
+	{ role: 'sansProfil', collection: 'profils', operation: 'lister', attendu: 'aucun' },
+	{ role: 'sansProfil', collection: 'profils', operation: 'lire', document: 'maquilleuse', attendu: 'refuse' },
+	{ role: 'sansProfil', collection: 'profils', operation: 'creer', attendu: 'refuse' },
+	{ role: 'sansProfil', collection: 'profils', operation: 'modifier', document: 'maquilleuse', attendu: 'refuse' },
+	{ role: 'sansProfil', collection: 'profils', operation: 'supprimer', document: 'maquilleuse', attendu: 'refuse' },
+	{ role: 'redaction', collection: 'profils', operation: 'lister', attendu: 'refuse' },
+	{ role: 'redaction', collection: 'profils', operation: 'lire', document: 'maquilleuse', attendu: 'refuse' },
+	{ role: 'redaction', collection: 'profils', operation: 'creer', attendu: 'refuse' },
+	{ role: 'redaction', collection: 'profils', operation: 'modifier', document: 'maquilleuse', attendu: 'refuse' },
+	{ role: 'redaction', collection: 'profils', operation: 'supprimer', document: 'maquilleuse', attendu: 'refuse' },
+	{ role: 'admin', collection: 'profils', operation: 'lister', attendu: 'tous' },
+	{ role: 'admin', collection: 'profils', operation: 'lire', document: 'maquilleuse', attendu: 'autorise' },
+	{ role: 'admin', collection: 'profils', operation: 'creer', attendu: 'autorise' },
+	{ role: 'admin', collection: 'profils', operation: 'modifier', document: 'maquilleuse', attendu: 'autorise' },
+	{ role: 'admin', collection: 'profils', operation: 'supprimer', document: 'maquilleuse', attendu: 'autorise' },
+	...(
+		[
+			['slug', 'une-autre-adresse', 'ignore'],
+			['strapiId', 999, 'ignore'],
+			['legacyUsername', 'Ancien Pseudo', 'ignore'],
+			['pro', { compteDe: 'sansProfil' }, 'autorise'],
+		] as const
+	).map(
+		([champ, valeur, attendu]): Ligne => ({
+			role: 'admin',
+			collection: 'profils',
+			operation: 'modifier',
+			document: 'maquilleuse',
+			champ,
+			valeur,
+			attendu,
+		})
+	),
 ]
 
 let distribution: Distribution

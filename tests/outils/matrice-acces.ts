@@ -25,7 +25,8 @@
  */
 
 import { randomUUID } from 'node:crypto'
-import type { Payload } from 'payload'
+import type { Payload, RequiredDataFromCollectionSlug } from 'payload'
+import { CONTEXTE_SANS_PROFIL } from '@/collections/Profils'
 import { creerCompte, DOMAINE_DES_COMPTES, motDePasseAleatoire, type TypeAvecSession } from './fabrique-comptes'
 import { payloadDeTest } from './payload-test'
 import { appelerRest } from './rest'
@@ -35,7 +36,7 @@ export const VOIES = ['rest', 'locale'] as const
 export type Voie = (typeof VOIES)[number]
 
 /** Who sends the request. Each role but `anonyme` is an account of the cast. */
-export const ROLES = ['anonyme', 'admin', 'redaction', 'maquilleuse', 'autreMaquilleuse'] as const
+export const ROLES = ['anonyme', 'admin', 'redaction', 'maquilleuse', 'autreMaquilleuse', 'sansProfil'] as const
 export type Role = (typeof ROLES)[number]
 type RoleAvecCompte = Exclude<Role, 'anonyme'>
 
@@ -47,10 +48,12 @@ const TYPE_DU_ROLE: Record<RoleAvecCompte, TypeAvecSession> = {
 	maquilleuse: 'maquilleuse',
 	/** « B »: another makeup artist, who owns nothing of A's. */
 	autreMaquilleuse: 'maquilleuse',
+	/** A makeup artist whose account has no profile. */
+	sansProfil: 'maquilleuse-sans-profil',
 }
 
 /** The collections the matrix covers. */
-export const COLLECTIONS = ['admins', 'pros'] as const
+export const COLLECTIONS = ['admins', 'pros', 'profils'] as const
 export type CollectionDeLaMatrice = (typeof COLLECTIONS)[number]
 
 export type Operation = 'lister' | 'lire' | 'creer' | 'modifier' | 'supprimer'
@@ -62,7 +65,10 @@ export interface Ligne {
 	operation: Operation
 	/** The document the operation targets, named by the role that owns it (`lire`, `modifier`, `supprimer`). */
 	document?: RoleAvecCompte
-	/** `modifier` only: the field to change and the value sent. Without them, the usual field of the collection. */
+	/**
+	 * `modifier` only: the field to change and the value sent. Without them, the usual field of the
+	 * collection. `{ compteDe: role }` stands for the account of that role, known once the cast is made.
+	 */
 	champ?: string
 	valeur?: unknown
 	attendu: Issue
@@ -96,6 +102,21 @@ const compteDeMaquilleuse = (prefixe: string) => ({
 	_verified: true,
 })
 
+/** An account of a makeup artist made for one line, without a profile: what a profile is made for. */
+const compteSansProfil = async (payload: Payload, prefixe: string): Promise<number> =>
+	(
+		await payload.create({
+			collection: 'pros',
+			data: compteDeMaquilleuse(prefixe),
+			context: CONTEXTE_SANS_PROFIL,
+			disableVerificationEmail: true,
+		})
+	).id
+
+/** The profile of an account, if it has one. */
+const profilDe = async (payload: Payload, compte: number): Promise<number | undefined> =>
+	(await payload.find({ collection: 'profils', depth: 0, limit: 1, where: { pro: { equals: compte } } })).docs[0]?.id
+
 /** What the matrix needs to know of a collection to play its lines. */
 interface Portrait {
 	/** The field a line changes when it names none, and a new value for it. */
@@ -125,12 +146,25 @@ const PORTRAITS: Record<CollectionDeLaMatrice, Portrait> = {
 		champ: 'nom',
 		nouvelleValeur: () => nom('Renommée'),
 		donneesDeCreation: () => Promise.resolve(compteDeMaquilleuse('cree')),
+		// Without a profile: an account that still has one is not deleted (its profile goes first).
+		jetable: payload => compteSansProfil(payload, 'jetable'),
+	},
+	profils: {
+		champ: 'prenom',
+		nouvelleValeur: () => nom('Prénom'),
+		// A profile for the actor's own account when it has none, else for a new account without one.
+		donneesDeCreation: async (acteur, payload) => ({
+			pro:
+				acteur.utilisateur?.collection === 'pros' && acteur.documents.profils === undefined
+					? acteur.utilisateur.id
+					: await compteSansProfil(payload, 'cree'),
+		}),
 		jetable: async payload =>
 			(
 				await payload.create({
-					collection: 'pros',
-					data: compteDeMaquilleuse('jetable'),
-					disableVerificationEmail: true,
+					collection: 'profils',
+					// The slug is not given: the collection computes it.
+					data: { pro: await compteSansProfil(payload, 'jetable') } as RequiredDataFromCollectionSlug<'profils'>,
 				})
 			).id,
 	},
@@ -148,7 +182,9 @@ export async function distribuer(): Promise<Distribution> {
 				...((await payload.findByID({ collection: compte.collection, id, depth: 0 })) as unknown as Document),
 				collection: compte.collection,
 			}
-			return { role, enTetes: compte.session.enTetes, utilisateur, documents: { [compte.collection]: id } }
+			const profil = compte.collection === 'pros' ? await profilDe(payload, id) : undefined
+			const documents = { [compte.collection]: id, ...(profil === undefined ? {} : { profils: profil }) }
+			return { role, enTetes: compte.session.enTetes, utilisateur, documents }
 		})
 	)
 	const anonyme: Acteur = { role: 'anonyme', enTetes: {}, documents: {} }
@@ -190,11 +226,15 @@ async function parApiLocale(acteur: Acteur, { collection, operation, id, donnees
 	const payload = await payloadDeTest()
 	const regles = { collection, depth: 0, overrideAccess: false, user: acteur.utilisateur } as const
 	const cible = id ?? -1
+	// A line sends what it wants: the collection checks the data, not the compiler.
+	const creer = payload.create.bind(payload) as unknown as (
+		options: typeof regles & { data: Record<string, unknown>; disableVerificationEmail: boolean }
+	) => Promise<unknown>
 	try {
 		const corps = await {
 			lister: () => payload.find({ ...regles, limit: 100 }),
 			lire: () => payload.findByID({ ...regles, id: cible }),
-			creer: () => payload.create({ ...regles, data: donnees ?? {}, disableVerificationEmail: true } as never),
+			creer: () => creer({ ...regles, data: donnees ?? {}, disableVerificationEmail: true }),
 			modifier: () => payload.update({ ...regles, id: cible, data: donnees ?? {} }),
 			supprimer: () => payload.delete({ ...regles, id: cible }),
 		}[operation]()
@@ -258,11 +298,17 @@ async function creer(voie: Voie, acteur: Acteur, ligne: Ligne): Promise<Issue> {
 	return apres === avant ? 'refuse' : 'incoherent'
 }
 
+/** A value of a line, with `{ compteDe: role }` replaced by the account of that role. */
+function valeurDe(valeur: unknown, distribution: Distribution): unknown {
+	if (typeof valeur !== 'object' || valeur === null || !('compteDe' in valeur)) return valeur
+	return distribution[(valeur as { compteDe: RoleAvecCompte }).compteDe].documents.pros
+}
+
 async function modifier(voie: Voie, acteur: Acteur, ligne: Ligne, distribution: Distribution): Promise<Issue> {
 	const portrait = PORTRAITS[ligne.collection]
 	const id = documentDe(distribution, ligne)
 	const champ = ligne.champ ?? portrait.champ
-	const valeur = ligne.champ ? ligne.valeur : portrait.nouvelleValeur()
+	const valeur = ligne.champ ? valeurDe(ligne.valeur, distribution) : portrait.nouvelleValeur()
 	const avant = (await stocke(ligne.collection, id))?.[champ]
 	const reponse = await demander(voie, acteur, { ...ligne, id, donnees: { [champ]: valeur } })
 	const apres = (await stocke(ligne.collection, id))?.[champ]

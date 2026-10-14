@@ -73,6 +73,32 @@ export function slugAvecSuffixe(base: string, n: number): string {
 	return couper(base, SLUG_MAX - suffixe.length) + suffixe
 }
 
+/** How many candidates `premierSlugLibre` asks about at once. */
+const CANDIDATS_PAR_DEMANDE = 20
+
+/**
+ * The slug a new profile takes when the slugs are stored: `base` if it is free, else the first
+ * free of « -2 », « -3 »… The new profile is always the newest one, so this is the rule of
+ * `attribuerSlugs` (the oldest keeps the base, the next ones get the next suffix), applied to the
+ * slugs already given instead of the whole list.
+ *
+ * @param base - a non-empty slug (`slugifier` of the name, or `slugDeRepli`)
+ * @param lesquelsSontPris - which of these candidates are already taken (one query for several)
+ */
+export async function premierSlugLibre(
+	base: string,
+	lesquelsSontPris: (candidats: string[]) => Promise<ReadonlySet<string>>
+): Promise<string> {
+	for (let premier = 1; ; premier += CANDIDATS_PAR_DEMANDE) {
+		const candidats = Array.from({ length: CANDIDATS_PAR_DEMANDE }, (_, i) =>
+			premier + i === 1 ? base : slugAvecSuffixe(base, premier + i)
+		)
+		const pris = await lesquelsSontPris(candidats)
+		const libre = candidats.find(candidat => !pris.has(candidat))
+		if (libre) return libre
+	}
+}
+
 /** What a slug is computed from. An entry without id is ignored. */
 export interface ProfilSansSlug {
 	id?: IdProfil | null

@@ -4,7 +4,7 @@
  * - `admins` opens the admin panel. Its role is `admin` (everything) or `redaction` (articles
  *   and talents only: it reads and changes its own account, nothing else of the accounts).
  * - `pros` holds the accounts of the makeup artists. A makeup artist never enters the admin
- *   panel; she reads and changes her own account.
+ *   panel; she reads and changes her own account, and her own profile.
  *
  * One rule per subject: the collections call these functions and never test a role themselves.
  * Every rule here has its lines in the access matrix (tests/integration/payload-acces.test.ts),
@@ -64,3 +64,14 @@ export const adminOuSoiMeme =
 	(collection: typeof COLLECTION_ADMINS | typeof COLLECTION_PROS): Access =>
 	({ req: { user } }) =>
 		estAdmin(user) || soiMeme(collection, user)
+
+/**
+ * The role `admin` reaches every profile; a makeup artist reaches the profile she owns (its
+ * `pro` is her account); everyone else, nothing. An account without a profile matches no
+ * document: an empty list, and a refusal on any write.
+ */
+export const adminOuProprietaire: Access = ({ req: { user } }) => {
+	if (estAdmin(user)) return true
+	if (user && estMaquilleuse(user)) return { pro: { equals: user.id } }
+	return false
+}

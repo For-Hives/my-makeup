@@ -38,7 +38,7 @@ Une application, trois zones, toutes sous `src/app/` :
 |---|---|---|---|
 | Pages publiques | `(front)/(site)/` | `/` | Page d'accueil provisoire |
 | Espace maquilleuse | `(front)/(espace)/auth/` | `/auth` | Page d'attente |
-| Administration | `(payload)/` | `/admin` et `/api` | Générée par Payload : les comptes `admins`, aux rôles `admin` et `redaction`, et les comptes des maquilleuses, `pros` |
+| Administration | `(payload)/` | `/admin` et `/api` | Générée par Payload : les comptes `admins`, aux rôles `admin` et `redaction`, les comptes des maquilleuses, `pros`, et leurs profils, `profils` |
 
 Les noms entre parenthèses rangent les fichiers et n'apparaissent pas dans les adresses.
 
@@ -46,7 +46,7 @@ Les pages publiques et l'espace maquilleuse partagent une seule coquille HTML, `
 
 Le reste :
 
-- `src/payload.config.ts` : la configuration de Payload (base PostgreSQL, collection `admins`).
+- `src/payload.config.ts` : la configuration de Payload (base PostgreSQL, collections `admins`, `pros` et `profils`).
 - `src/collections/` : les collections de Payload. `src/lib/acces.ts` : qui peut lire, créer, modifier ou supprimer quoi (voir « Accès »).
 - `src/lib/env.ts` : les variables d'environnement, vérifiées au démarrage par `src/instrumentation.ts`.
 - `src/migrations/` : les migrations versionnées de la base.
@@ -186,7 +186,8 @@ L'application vérifie ses variables à chaque démarrage (`bun run dev`, `bun r
 - Aucun autre site ne peut lire l'API depuis un navigateur : aucune origine n'est ouverte en CORS.
 - `/api/og`, l'image de partage de l'administration, est fermée.
 - Deux rôles ouvrent l'administration : `admin` peut tout ; `redaction` ne lit et ne modifie que son propre compte, sans pouvoir changer son rôle. Une session de l'administration dure 8 heures. Le premier compte d'une base vide est toujours un `admin`, quel que soit le rôle choisi sur l'écran du premier compte.
-- Une maquilleuse (collection `pros`) n'entre jamais dans l'administration. Elle ne lit et ne modifie que son propre compte, sans pouvoir changer ses champs réservés (bloqué, vérifié, fournisseur d'origine, identifiant de l'ancien site). Aucun anonyme ne crée de compte par l'API REST, même sur une base vide. Le mot de passe, le hash hérité de l'ancien site et les sessions ne sortent jamais, pas même pour un admin. L'email d'un compte est rangé en minuscules : deux adresses qui ne diffèrent que par la casse sont le même compte.
+- Une maquilleuse (collection `pros`) n'entre jamais dans l'administration. Elle ne lit et ne modifie que son propre compte, sans pouvoir changer ses champs réservés (bloqué, vérifié, fournisseur d'origine, identifiant de l'ancien site). Aucun anonyme ne crée de compte par l'API REST, même sur une base vide. Le mot de passe, le hash hérité de l'ancien site et les sessions ne sortent jamais, pas même pour un admin : Payload rend la liste des sessions toujours vide. L'email d'un compte est rangé en minuscules : deux adresses qui ne diffèrent que par la casse sont le même compte.
+- Créer le compte d'une maquilleuse crée son profil vide (collection `profils`), avec un slug unique calculé par le serveur à partir du nom du compte (`src/lib/slug.ts`) : `-2`, `-3` pour les homonymes, `maquilleuse-<identifiant>` pour un nom qui ne donne rien. Le slug ne change plus ensuite, et aucune API ne l'écrit. Une création qui porte `CONTEXTE_SANS_PROFIL` (`src/collections/Profils.ts`) laisse le compte sans profil : c'est ce que fera l'import pour les comptes qui n'en ont pas. Une maquilleuse ne lit et ne modifie que son propre profil ; un compte sans profil reçoit une liste vide. Un compte qui a encore un profil n'est pas supprimé : le profil part d'abord.
 - Les règles sont dans `src/lib/acces.ts`. Chacune a ses lignes dans la matrice d'accès, jouée par l'API REST et par l'API locale (`tests/integration/payload-acces.test.ts`, voir [`docs/tests/banc.md`](docs/tests/banc.md), « La matrice d'accès »).
 
 ### En-têtes de sécurité
@@ -431,7 +432,7 @@ bun run banc:down                                              # arrête tout et
 - Sans le banc, `bun run test:integration` s'arrête avant le premier test et dit quoi démarrer.
 - Lancer les tests d'intégration vide la base du banc.
 - Plusieurs bancs tournent côte à côte sur un même poste, chacun sous son nom et sur ses ports : `BANC_INSTANCE=mon-banc BANC_DECALAGE=20 bun run banc:up`.
-- Un test obtient un compte fictif et sa session en un appel, sans mot de passe à saisir : `await creerCompte('admin')`, `'redaction'`, `'maquilleuse'`, ou `'maquilleuse-non-verifiee'` (sans session).
+- Un test obtient un compte fictif et sa session en un appel, sans mot de passe à saisir : `await creerCompte('admin')`, `'redaction'`, `'maquilleuse'` (avec son profil vide), `'maquilleuse-sans-profil'`, ou `'maquilleuse-non-verifiee'` (sans session).
 - Toute règle d'accès a ses lignes dans la matrice d'accès, jouées par l'API REST et par l'API locale avec les règles actives : `tests/integration/payload-acces.test.ts`.
 - Sur le banc, l'application envoie tous ses mails au capteur. Un test lit le sien, avec son destinataire, son sujet et ses liens : `await attendreLeMail({ pour: adresse })`.
 - Un test dépose un objet dans le stockage et le relit : `await deposerUnObjet(cle, contenu)`, `await lireUnObjet(cle)`.

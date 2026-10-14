@@ -248,8 +248,9 @@ Les types de compte sont déclarés dans `TYPES_DE_COMPTE` (`tests/outils/fabriq
 |---|---|---|
 | `admin` | `admins` | Un compte de l'administration avec le rôle `admin` : il peut tout |
 | `redaction` | `admins` | Un compte de l'administration avec le rôle `redaction` : articles et talents, et son propre compte |
-| `maquilleuse` | `pros` | Le compte d'une maquilleuse, adresse confirmée. Deux appels donnent « A » et « B » |
+| `maquilleuse` | `pros` | Le compte d'une maquilleuse, adresse confirmée, avec son profil vide, comme à l'inscription. Deux appels donnent « A » et « B » |
 | `maquilleuse-non-verifiee` | `pros` | Le compte d'une maquilleuse qui n'a pas confirmé son adresse. Il ne peut pas se connecter : `session` vaut `null` |
+| `maquilleuse-sans-profil` | `pros` | Le compte d'une maquilleuse sans profil, comme certains comptes de l'ancien site. Sa création porte `CONTEXTE_SANS_PROFIL` (`src/collections/Profils.ts`) |
 
 Aucun mail ne part : la fabrique coupe le mail de confirmation que Payload enverrait à une nouvelle maquilleuse. Chaque maquilleuse reçoit un nom d'affichage fictif qui lui est propre.
 
@@ -279,11 +280,11 @@ Chaque ligne est jouée deux fois : par l'API REST, avec la session de la fabriq
 
 | Champ de la ligne | Valeurs |
 |---|---|
-| `role` | Qui agit : `anonyme`, ou un compte de la distribution (`admin`, `redaction`, `maquilleuse` pour « A », `autreMaquilleuse` pour « B ») |
+| `role` | Qui agit : `anonyme`, ou un compte de la distribution (`admin`, `redaction`, `maquilleuse` pour « A », `autreMaquilleuse` pour « B », `sansProfil` pour un compte sans profil) |
 | `collection` | La collection visée |
 | `operation` | `lister`, `lire`, `creer`, `modifier`, `supprimer` |
 | `document` | Le document visé, désigné par le rôle à qui il appartient (`lire`, `modifier`, `supprimer`) |
-| `champ`, `valeur` | Pour `modifier` : le champ envoyé et sa valeur. Sans eux, la matrice change un champ ordinaire de la collection |
+| `champ`, `valeur` | Pour `modifier` : le champ envoyé et sa valeur. Sans eux, la matrice change un champ ordinaire de la collection. `{ compteDe: 'sansProfil' }` vaut le compte de ce rôle |
 | `attendu` | Ce qui doit arriver, ci-dessous |
 
 | Attendu | Ce que la matrice a constaté |

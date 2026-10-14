@@ -13,6 +13,7 @@
 
 import { randomBytes, randomUUID } from 'node:crypto'
 import type { AuthCollectionSlug, Payload, RequestContext, RequiredDataFromCollectionSlug } from 'payload'
+import { CONTEXTE_SANS_PROFIL } from '../../src/collections/Profils'
 import type { Variables } from './banc'
 import { exigerBanc, exigerConnexionDuBanc, payloadDeTest } from './payload-test'
 import { ouvrirSession, type Session } from './session'
@@ -51,12 +52,18 @@ export const TYPES_DE_COMPTE = {
 	admin: declarer({ collection: 'admins', donnees: () => ({ role: 'admin' as const }) }),
 	/** An account of the admin panel with the role `redaction`: articles and talents, and its own account. */
 	redaction: declarer({ collection: 'admins', donnees: () => ({ role: 'redaction' as const }) }),
-	/** The account of a makeup artist, address confirmed. Call it twice for « A » and « B ». */
+	/** The account of a makeup artist, address confirmed, with its empty profile. Call it twice for « A » and « B ». */
 	maquilleuse: declarer({ collection: 'pros', donnees: () => ({ nom: nomFictif('Maquilleuse'), _verified: true }) }),
 	/** The account of a makeup artist who has not confirmed her address: it cannot log in. */
 	'maquilleuse-non-verifiee': declarerSansSession({
 		collection: 'pros',
 		donnees: () => ({ nom: nomFictif('Non vérifiée'), _verified: false }),
+	}),
+	/** The account of a makeup artist without a profile, as some accounts of the old site come. */
+	'maquilleuse-sans-profil': declarer({
+		collection: 'pros',
+		donnees: () => ({ nom: nomFictif('Sans profil'), _verified: true }),
+		contexte: CONTEXTE_SANS_PROFIL,
 	}),
 }
 

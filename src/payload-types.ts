@@ -70,6 +70,7 @@ export interface Config {
   collections: {
     admins: Admin;
     pros: Pro;
+    profils: Profil;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -79,6 +80,7 @@ export interface Config {
   collectionsSelect: {
     admins: AdminsSelect<false> | AdminsSelect<true>;
     pros: ProsSelect<false> | ProsSelect<true>;
+    profils: ProfilsSelect<false> | ProfilsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -204,6 +206,31 @@ export interface Pro {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "profils".
+ */
+export interface Profil {
+  id: number;
+  pro: number | Pro;
+  /**
+   * Calculée à la création du profil, elle ne change plus : /profil/<slug>.
+   */
+  slug: string;
+  prenom?: string | null;
+  nom?: string | null;
+  nomArtiste?: string | null;
+  specialite?: string | null;
+  description?: string | null;
+  disponible?: boolean | null;
+  /**
+   * Sert à rediriger l’ancienne adresse du profil vers la nouvelle.
+   */
+  legacyUsername?: string | null;
+  strapiId?: number | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
@@ -233,6 +260,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'pros';
         value: number | Pro;
+      } | null)
+    | ({
+        relationTo: 'profils';
+        value: number | Profil;
       } | null);
   globalSlug?: string | null;
   user:
@@ -339,6 +370,24 @@ export interface ProsSelect<T extends boolean = true> {
         createdAt?: T;
         expiresAt?: T;
       };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "profils_select".
+ */
+export interface ProfilsSelect<T extends boolean = true> {
+  pro?: T;
+  slug?: T;
+  prenom?: T;
+  nom?: T;
+  nomArtiste?: T;
+  specialite?: T;
+  description?: T;
+  disponible?: T;
+  legacyUsername?: T;
+  strapiId?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

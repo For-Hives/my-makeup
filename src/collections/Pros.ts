@@ -1,7 +1,8 @@
-import { type CollectionConfig, type Endpoint, Forbidden } from 'payload'
+import { APIError, type CollectionBeforeDeleteHook, type CollectionConfig, type Endpoint, Forbidden } from 'payload'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import { adminOuSoiMeme, adminSeulement, champAdminSeulement, jamais } from '../lib/acces'
 import { sessionsFermees } from './Admins'
+import { profilALaCreationDuCompte } from './Profils'
 
 /**
  * Payload gives every account collection a « first account » route, which creates an account
@@ -18,6 +19,22 @@ export const premierCompteFerme: Endpoint = {
 }
 
 /**
+ * An account that still has a profile is not deleted: the profile goes first, then the account.
+ * The profile cannot exist without its account (`profils.pro` is required), and the whole
+ * deletion of an account (profile, photos, requests) is the work of its own tickets (I36, I37).
+ */
+export const compteSansProfilAvantSuppression: CollectionBeforeDeleteHook = async ({ id, req }) => {
+	const { totalDocs } = await req.payload.count({
+		collection: 'profils',
+		overrideAccess: true,
+		req,
+		where: { pro: { equals: id } },
+	})
+	if (totalDocs > 0)
+		throw new APIError('Ce compte a encore un profil : supprimer d’abord le profil, puis le compte.', 409, null, true)
+}
+
+/**
  * The accounts of the makeup artists (plan 01 §2.3; docs/migration/SCHEMA.md, §5.1).
  *
  * - She reads and changes her own account only, and never opens the admin panel.
@@ -29,6 +46,8 @@ export const premierCompteFerme: Endpoint = {
  *   admin: no API reads or writes it, and Payload strips it from every read.
  * - Nobody creates an account through REST without being an admin: the sign-up of the site goes
  *   through the server (P5 tickets).
+ * - Creating an account creates its empty profile (collection `profils`), unless the creation
+ *   says otherwise (`CONTEXTE_SANS_PROFIL`).
  *
  * `auth.verify` is on for good: `_verified` exists only while it is (SCHEMA.md, §5.1). How the
  * confirmation email reads, and when the site asks for it, belong to ticket 082.
@@ -47,6 +66,7 @@ export const Pros: CollectionConfig<'pros'> = {
 		unlock: adminSeulement,
 	},
 	endpoints: [premierCompteFerme],
+	hooks: { afterChange: [profilALaCreationDuCompte], beforeDelete: [compteSansProfilAvantSuppression] },
 	fields: [
 		{
 			name: 'nom',

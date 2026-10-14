@@ -95,11 +95,24 @@ describe('Hors du banc, la fabrique s’arrête avant toute écriture', () => {
 
 describe('Ce que la fabrique tire au sort', () => {
 	test('chaque type de compte vit dans une collection de comptes', () => {
-		expect(Object.keys(TYPES_DE_COMPTE)).toEqual(['admin', 'redaction', 'maquilleuse', 'maquilleuse-non-verifiee'])
+		expect(Object.keys(TYPES_DE_COMPTE)).toEqual([
+			'admin',
+			'redaction',
+			'maquilleuse',
+			'maquilleuse-non-verifiee',
+			'maquilleuse-sans-profil',
+		])
 		expect(TYPES_DE_COMPTE.admin.collection).toBe('admins')
 		expect(TYPES_DE_COMPTE.redaction.collection).toBe('admins')
 		expect(TYPES_DE_COMPTE.maquilleuse.collection).toBe('pros')
 		expect(TYPES_DE_COMPTE['maquilleuse-non-verifiee'].collection).toBe('pros')
+		expect(TYPES_DE_COMPTE['maquilleuse-sans-profil'].collection).toBe('pros')
+	})
+
+	test('une maquilleuse sans profil : sa création le dit à Payload, et elle se connecte', () => {
+		expect(TYPES_DE_COMPTE['maquilleuse-sans-profil'].contexte).toEqual({ profilAutomatique: false })
+		expect(TYPES_DE_COMPTE['maquilleuse-sans-profil'].donnees()).toMatchObject({ _verified: true })
+		expect('connexion' in TYPES_DE_COMPTE['maquilleuse-sans-profil']).toBe(false)
 	})
 
 	test('une maquilleuse confirmée, et une autre qui ne l’est pas et n’a donc pas de session', () => {

@@ -1,8 +1,10 @@
 import { describe, expect, test } from 'bun:test'
 import type { PayloadRequest } from 'payload'
 import { Admins, DUREE_SESSION_ADMIN_S, premierCompteAdmin, sessionsFermees } from '@/collections/Admins'
-import { Pros, premierCompteFerme } from '@/collections/Pros'
+import { CONTEXTE_SANS_PROFIL, Profils } from '@/collections/Profils'
+import { compteSansProfilAvantSuppression, Pros, premierCompteFerme } from '@/collections/Pros'
 import {
+	adminOuProprietaire,
 	adminOuSoiMeme,
 	adminSeulement,
 	champAdminSeulement,
@@ -166,6 +168,45 @@ describe('La collection pros (ticket 019)', () => {
 		expect(premierCompteFerme).toMatchObject({ path: '/first-register', method: 'post' })
 		expect(() => premierCompteFerme.handler({ t: (cle: string) => cle } as never)).toThrow()
 		expect(Pros.endpoints).toContain(premierCompteFerme)
+	})
+})
+
+describe('La collection profils (ticket 020)', () => {
+	const regles = Profils.access ?? {}
+
+	test('lire et modifier : son seul profil pour une maquilleuse, tout pour admin, rien pour les autres (U54)', () => {
+		for (const regle of [regles.read, regles.update]) {
+			expect(regle).toBe(adminOuProprietaire)
+			expect(regle?.(appel(maquilleuse) as never)).toEqual({ pro: { equals: 7 } })
+			expect(regle?.(appel(admin) as never)).toBe(true)
+			expect(regle?.(appel(redaction) as never)).toBe(false)
+			expect(regle?.(appel(null) as never)).toBe(false)
+		}
+	})
+
+	test('créer et supprimer un profil : admin seulement ; le serveur le crée avec le compte', () => {
+		expect(regles.create).toBe(adminSeulement)
+		expect(regles.delete).toBe(adminSeulement)
+		expect(Pros.hooks?.afterChange?.length).toBe(1)
+		expect(CONTEXTE_SANS_PROFIL).toEqual({ profilAutomatique: false })
+	})
+
+	test('un seul compte par profil, un seul profil par compte, un slug unique', () => {
+		expect(champ(Profils.fields, 'pro')).toMatchObject({ type: 'relationship', required: true, unique: true })
+		expect(champ(Profils.fields, 'slug')).toMatchObject({ type: 'text', required: true, unique: true })
+	})
+
+	test('le compte : admin seulement ; slug, strapiId et ancien nom d’utilisateur : jamais par une API', () => {
+		expect(champ(Profils.fields, 'pro')?.access).toMatchObject({
+			create: champAdminSeulement,
+			update: champAdminSeulement,
+		})
+		for (const nom of ['slug', 'strapiId', 'legacyUsername'])
+			expect(champ(Profils.fields, nom)?.access).toMatchObject({ create: jamais, update: jamais })
+	})
+
+	test('un compte qui a encore un profil n’est pas supprimé', () => {
+		expect(Pros.hooks?.beforeDelete).toContain(compteSansProfilAvantSuppression)
 	})
 })
 
