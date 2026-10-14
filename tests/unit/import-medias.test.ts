@@ -372,6 +372,16 @@ describe('le rapport des fichiers et des photos', () => {
 					envoyesParUnAutreCompte: [109],
 				},
 			},
+			profils: {
+				source: 27,
+				crees: 13,
+				modifies: 0,
+				inchanges: 0,
+				refuses: [],
+				enTrop: [],
+				photosNonReprises: [{ entree: 24, fichier: 108 }],
+				liensSansLigne: [22],
+			},
 		},
 		ecarts: { 'SCHEMA.md §8 (size)': 8, 'fichiers-non-images-non-repris': 1 },
 		parite: null,
@@ -388,6 +398,8 @@ describe('le rapport des fichiers et des photos', () => {
 				'  - 404 connus, adoptés sans objet dans le stockage : 107',
 				'  - objet nommé autrement que hash suivi de ext : 104',
 				'  - envoyés par un autre compte que celui du profil : 109',
+				'  - photos non reprises, leur fichier n’étant pas adopté : 24 (fichier 108)',
+				'  - liens de liste qui ne nomment aucune ligne, signalés : 22',
 				'Écarts voulus, à lire contre le registre ou le schéma : fichiers-non-images-non-repris 1 ; SCHEMA.md §8 (size) 8.',
 			])
 		)

@@ -1,6 +1,6 @@
 /**
  * The profiles, `makeup_artistes` → `profils` (docs/migration/SCHEMA.md, §5.2): their identity
- * (tickets 026 and 059). Their lists and their photos come with their own tickets (060, 058…).
+ * (tickets 026 and 059), their lists, networks and photos (ticket 060, ./sections.ts).
  *
  * - Taken: the profiles linked to an account the import takes. The link (`pro`), the slug, the
  *   username of the old site (`legacyUsername`, as it is), the names, the speciality, the
@@ -26,8 +26,12 @@
  * - A profile whose account the table of decisions sets aside stops the import too, until the
  *   table leaves it aside with its account (SCHEMA.md §11).
  *
- * The networks hold the contact details of the profile: they are read into memory to tell whether
- * a contact channel exists at the source, and nothing else of them is kept here.
+ * - Its lists, its networks and its photos are those of the old site, in their order
+ *   (./sections.ts, ticket 060): a photo whose file is not adopted (./medias.ts) is reported, never
+ *   invented.
+ *
+ * The network row of Strapi also holds the contact details of the profile: they are read into
+ * memory to tell whether a contact channel exists at the source, and are not written here.
  */
 
 import { type ChampsDuProfil, estEntierementVide, type ReseauxDuProfil } from '../../../src/lib/profil/completude'
@@ -36,7 +40,9 @@ import { CHOIX_INITIAL, type StatutDuProfil } from '../../../src/lib/profil/stat
 import { attribuerSlugs } from '../../../src/lib/slug'
 import type { CommuneAttendue } from './communes'
 import { REFERENCES } from './ecarts'
+import { type PhotoNonReprise, photosDeLEntree } from './medias'
 import type { Adaptateur, Attendu, Ecart } from './moteur'
+import { lireLesSections, SECTIONS_VIDES, type SectionsLues, valeursDesListes } from './sections'
 import { iso, type Requete } from './source'
 
 /**
@@ -65,17 +71,16 @@ export interface LigneProfil {
 	updated_at: string
 }
 
-/** What a profile of the source holds besides its row: its account, and what tells whether it is empty. */
+/** What a profile of the source holds besides its row: its account, its sections, and what tells whether it is empty. */
 export interface ProfilLu extends LigneProfil {
 	/** The account it is linked to (`makeup_artistes_user_links`), or none. */
 	compte: number | null
 	aPhotoPrincipale: boolean
 	prix: (string | null)[]
 	reseaux: ReseauxDuProfil | null
+	/** Its lists, its networks and its photos, in their order (./sections.ts). */
+	sections: SectionsLues
 }
-
-/** The type Strapi gives a profile in the links of its files. */
-const TYPE_PROFIL = 'api::makeup-artiste.makeup-artiste'
 
 const LECTURE_DES_PROFILS = `SELECT id, first_name, last_name, company_artist_name, speciality, description, city, username,
 	score, available, pro, ${iso('created_at')} AS created_at, ${iso('updated_at')} AS updated_at
@@ -84,35 +89,26 @@ const LECTURE_DES_PROFILS = `SELECT id, first_name, last_name, company_artist_na
 const LECTURE_DES_LIENS =
 	'SELECT makeup_artiste_id AS profil, user_id AS compte FROM makeup_artistes_user_links ORDER BY id'
 
-const LECTURE_DES_RESEAUX = `SELECT l.entity_id AS profil, n.youtube, n.facebook, n.instagram, n.website, n.linkedin, n.phone, n.email
-	FROM makeup_artistes_components l JOIN components_makeupartists_networks n ON n.id = l.component_id
-	WHERE l.component_type = 'makeupartists.network' AND l.field = 'network' ORDER BY l."order", l.id`
-
-const LECTURE_DES_PRIX = `SELECT l.entity_id AS profil, o.price
-	FROM makeup_artistes_components l JOIN components_makeupartists_service_offers o ON o.id = l.component_id
-	WHERE l.component_type = 'makeupartists.service-offers' AND l.field = 'service_offers' ORDER BY l."order", l.id`
-
-const LECTURE_DES_PHOTOS_PRINCIPALES = `SELECT DISTINCT related_id AS profil FROM files_related_morphs
-	WHERE related_type = '${TYPE_PROFIL}' AND field = 'main_picture'`
-
-/** The profiles of the source, each one with its account and what tells whether it is empty. */
+/**
+ * The profiles of the source, each one with its account, its sections, and what tells whether it is
+ * empty: the main picture, the prices and the networks are read in its sections.
+ */
 export async function lireLesProfils(requete: Requete): Promise<ProfilLu[]> {
 	const lignes = await requete<LigneProfil>(LECTURE_DES_PROFILS)
 	const liens = await requete<{ profil: number; compte: number }>(LECTURE_DES_LIENS)
-	const reseaux = await requete<ReseauxDuProfil & { profil: number }>(LECTURE_DES_RESEAUX)
-	const prix = await requete<{ profil: number; price: string | null }>(LECTURE_DES_PRIX)
-	const photos = new Set(
-		(await requete<{ profil: number }>(LECTURE_DES_PHOTOS_PRINCIPALES)).map(({ profil }) => Number(profil))
-	)
+	const sections = await lireLesSections(requete)
 	const compteDe = new Map(liens.map(({ profil, compte }) => [Number(profil), Number(compte)]))
-	const reseauxDe = new Map(reseaux.map(({ profil, ...reseau }) => [Number(profil), reseau]))
-	return lignes.map(ligne => ({
-		...ligne,
-		compte: compteDe.get(ligne.id) ?? null,
-		aPhotoPrincipale: photos.has(ligne.id),
-		prix: prix.filter(({ profil }) => Number(profil) === ligne.id).map(({ price }) => price),
-		reseaux: reseauxDe.get(ligne.id) ?? null,
-	}))
+	return lignes.map(ligne => {
+		const lues = sections.get(ligne.id) ?? SECTIONS_VIDES
+		return {
+			...ligne,
+			compte: compteDe.get(ligne.id) ?? null,
+			aPhotoPrincipale: lues.photoPrincipale.length > 0,
+			prix: lues.prestations.map(({ price }) => price),
+			reseaux: lues.reseau,
+			sections: lues,
+		}
+	})
 }
 
 /**
@@ -162,6 +158,14 @@ export const ADAPTATEUR_PROFILS: Adaptateur = {
 		disponible: 'booleen',
 		score: 'nombre',
 		superMaquilleuse: 'booleen',
+		photoPrincipale: 'relation',
+		galerie: 'relations',
+		reseaux: 'objet',
+		competences: 'liste',
+		langues: 'liste',
+		formations: 'liste',
+		experiences: 'liste',
+		prestations: 'liste',
 		statutChoisi: 'texte',
 		statut: 'texte',
 		createdAt: 'date',
@@ -235,6 +239,10 @@ export interface ProfilsAttendus {
 	 * the import does not take yet, or a city that gives no commune.
 	 */
 	statutsDifferentsDeLaSource: number[]
+	/** Photos of the profiles taken whose file is not adopted. */
+	photosNonReprises: PhotoNonReprise[]
+	/** Profiles taken with a link of a list that names no row. */
+	liensSansLigne: number[]
 }
 
 /**
@@ -242,13 +250,16 @@ export interface ProfilsAttendus {
  * identifier in Payload, or `null` while it is still to be created (a dry run). `laisses` names
  * the profiles the import does not take (`profilsLaisses`): a profile out of both is linked to an
  * account the import takes, or the import stopped before. `communes` gives the commune of each
- * profile taken (./communes.ts); a profile it does not name has none.
+ * profile taken (./communes.ts); a profile it does not name has none. `medias` gives, for each
+ * file adopted (./medias.ts), its identifier in Payload, or `null` while it is still to be
+ * created; a file it does not name is not adopted.
  */
 export function profilsAttendus(
 	profils: readonly ProfilLu[],
 	comptes: ReadonlyMap<number, number | null>,
 	laisses: Pick<ProfilsLaisses, 'ecartes' | 'spam'> = { ecartes: [], spam: [] },
-	communes: ReadonlyMap<number, CommuneAttendue | null> = new Map()
+	communes: ReadonlyMap<number, CommuneAttendue | null> = new Map(),
+	medias: ReadonlyMap<number, number | null> = new Map()
 ): ProfilsAttendus {
 	const nonPris = new Set([...laisses.ecartes, ...laisses.spam])
 	// The slugs of the old site, computed on every profile of the source, as the old site did.
@@ -260,11 +271,20 @@ export function profilsAttendus(
 	const attendus: Attendu[] = []
 	const statuts: Record<string, number> = {}
 	const statutsDifferentsDeLaSource: number[] = []
+	const photosNonReprises: PhotoNonReprise[] = []
+	const liensSansLigne: number[] = []
 	for (const profil of profils) {
 		if (nonPris.has(profil.id)) continue
 		if (profil.compte === null || !comptes.has(profil.compte))
 			throw new Error(`Le profil ${profil.id} n’a pas de compte repris : l’import aurait dû s’arrêter avant.`)
 		const slug = slugs.get(profil.id) ?? null
+		const { sections } = profil
+		// The main picture is the first file of its field; Strapi holds one.
+		const principale = photosDeLEntree(sections.photoPrincipale.slice(0, 1), medias)
+		const galerie = photosDeLEntree(sections.galerie, medias)
+		for (const fichier of [...principale.nonReprises, ...galerie.nonReprises])
+			photosNonReprises.push({ entree: profil.id, fichier })
+		if (sections.liensSansLigne > 0) liensSansLigne.push(profil.id)
 		const valeurs: Record<string, unknown> = {
 			strapiId: profil.id,
 			pro: comptes.get(profil.compte) ?? null,
@@ -279,11 +299,15 @@ export function profilsAttendus(
 			disponible: profil.available ?? true,
 			score: nombre(profil.score),
 			superMaquilleuse: profil.pro,
+			photoPrincipale: principale.ids[0] ?? null,
+			galerie: galerie.ids,
+			...valeursDesListes(sections),
 			statutChoisi: CHOIX_INITIAL,
 			createdAt: profil.created_at,
 			updatedAt: profil.updated_at,
 		}
-		const statut = statutCalcule(valeurs)
+		// The status reads whether the main picture is adopted, even before its media exists (a dry run).
+		const statut = statutCalcule({ ...valeurs, photoPrincipale: principale.adoptees > 0 ? true : null })
 		valeurs.statut = statut
 		statuts[statut] = (statuts[statut] ?? 0) + 1
 		if ((statut === 'brouillon') !== videALaSource(profil)) statutsDifferentsDeLaSource.push(profil.id)
@@ -294,5 +318,5 @@ export function profilsAttendus(
 		if (statut === 'brouillon') ecarts.push({ champ: 'statut', reference: REFERENCES.profilVideEnBrouillon })
 		attendus.push({ strapiId: profil.id, valeurs, ecarts })
 	}
-	return { attendus, statuts, statutsDifferentsDeLaSource }
+	return { attendus, statuts, statutsDifferentsDeLaSource, photosNonReprises, liensSansLigne }
 }

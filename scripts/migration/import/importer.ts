@@ -13,9 +13,9 @@
  *   storage that does not answer stops the run there. Nothing is ever written in the storage.
  * - A dry run (the default) reads the target and says what it would write; it writes nothing.
  * - A real run writes collection by collection, in the order of plan 01 §5 (P4): the accounts
- *   first, then the media they own, the profiles, the talents, and reads every collection again:
- *   its parity is complete when the target holds exactly what the source gives, with the same
- *   values.
+ *   first, then the media they own, the profiles with their sections and their photos, the
+ *   talents, and reads every collection again: its parity is complete when the target holds
+ *   exactly what the source gives, with the same values.
  */
 
 import type { Payload } from 'payload'
@@ -249,7 +249,9 @@ export async function importer(options: OptionsDImport): Promise<Rapport> {
 			fichiers: bilanDesFichiers(classement, presences, medias === undefined),
 		}
 
-		const profils = profilsAttendus(lu.profils, idsDesComptes, laisses, communes.communes)
+		// Each photo points at its media in Payload, read once the media are written.
+		const idsDesMedias = await idsDansLaCible(payload, ADAPTATEUR_MEDIAS, lesMedias, rapport.collections.media.refuses)
+		const profils = profilsAttendus(lu.profils, idsDesComptes, laisses, communes.communes, idsDesMedias)
 		compterLesEcarts(rapport.ecarts, profils.attendus)
 		if (laisses.spam.length > 0) rapport.ecarts[REFERENCES.profilsDuSpam] = laisses.spam.length
 		rapport.collections.profils = {
@@ -259,6 +261,8 @@ export async function importer(options: OptionsDImport): Promise<Rapport> {
 			statuts: profils.statuts,
 			statutsDifferentsDeLaSource: profils.statutsDifferentsDeLaSource,
 			communes: communes.bilan,
+			photosNonReprises: profils.photosNonReprises,
+			liensSansLigne: profils.liensSansLigne,
 		}
 
 		rapport.collections.talents = await importerLaCollection(

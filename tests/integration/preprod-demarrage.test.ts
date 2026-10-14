@@ -378,7 +378,7 @@ describe('Le lecteur de la source sous Node', () => {
 			const parPg = await lire(ouvrirLaSourcePg(sourceDuBanc().lecture, pg))
 
 			expect(parPg).toEqual(parBun)
-			expect(Object.keys(parPg.source.avant)).toHaveLength(9)
+			expect(Object.keys(parPg.source.avant)).toHaveLength(15)
 			expect(parPg.collections.media).toMatchObject({ crees: 8 })
 		} finally {
 			await effacerLaSourceStrapi()

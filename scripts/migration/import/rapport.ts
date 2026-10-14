@@ -10,7 +10,7 @@
 
 import type { GenreDeCible } from './cible'
 import type { BilanDesCommunes } from './communes'
-import type { BilanDesFichiers } from './medias'
+import type { BilanDesFichiers, PhotoNonReprise } from './medias'
 import type { Bilan, CollectionImportee, Parite } from './moteur'
 import { pariteComplete, sansEcartInexplique } from './moteur'
 import type { EmpreinteDesTables } from './source'
@@ -45,6 +45,10 @@ export interface BilanDeCollection extends Bilan {
 	communes?: BilanDesCommunes
 	/** The files of the source, adopted or not (ticket 058): in numbers and identifiers, never an address. */
 	fichiers?: BilanDesFichiers
+	/** Photos of the entries taken whose file is not adopted: reported, never invented (ticket 060). */
+	photosNonReprises?: PhotoNonReprise[]
+	/** Profiles with a link of a list that names no row (SCHEMA.md §7). */
+	liensSansLigne?: number[]
 }
 
 /** The parity of a collection, and how the target splits, read again. */
@@ -137,6 +141,14 @@ function ligneDeBilan(nom: string, bilan: BilanDeCollection, mode: Mode): string
 		lignes.push(
 			`  - statut autre que celui que donne la source (section pas encore reprise, ou ville sans commune) : ${ids(bilan.statutsDifferentsDeLaSource)}`
 		)
+	if (bilan.photosNonReprises?.length)
+		lignes.push(
+			`  - photos non reprises, leur fichier n’étant pas adopté : ${bilan.photosNonReprises
+				.map(({ entree, fichier }) => `${entree} (fichier ${fichier})`)
+				.join(', ')}`
+		)
+	if (bilan.liensSansLigne?.length)
+		lignes.push(`  - liens de liste qui ne nomment aucune ligne, signalés : ${ids(bilan.liensSansLigne)}`)
 	return lignes
 }
 
