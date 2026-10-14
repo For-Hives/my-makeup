@@ -230,6 +230,30 @@ espion.arreter()
 - **Il voit tout ce que fait Payload**, parce que Payload tourne dans le processus des tests, et les appels REST aussi. Il ne voit pas le client de test ci-dessus, qui passe par `fetch` : un test vide son espace librement.
 - `tests/integration/media-corbeille.test.ts` s'en sert après chaque test.
 
+## Écouter le cache de Next : l'espion
+
+Un enregistrement d'un profil, d'un article ou d'un talent dit à Next quelles pages publiques rafraîchir (README, « Rafraîchissement des pages publiques »). Sur le banc, aucune requête de Next n'est en cours : l'espion prend la place de `revalidatePath` et `revalidateTag` le temps d'une action, et rend ce qu'elle a demandé.
+
+```ts
+import { espionnerLeCache } from '../outils/espion-cache'
+
+const { chemins, etiquettes, appels } = await espionnerLeCache(() =>
+	appelerRest('PATCH', `/api/profils/${profil.id}`, { enTetes: compte.session.enTetes, corps: { description } })
+)
+
+expect(chemins).toEqual([`/profil/${profil.slug}`, '/search', '/site-map', '/sitemap.xml'])
+```
+
+| Outil (`tests/outils/espion-cache.ts`) | Effet |
+|---|---|
+| `await espionnerLeCache(action)` | Lance l'action et rend ce qu'elle a demandé au cache de Next : `chemins` et `etiquettes`, triés, un doublon compté deux fois, et `appels`, chaque appel dans son ordre avec son second argument |
+
+À savoir :
+
+- **`next/cache` est remplacé dès le chargement du fichier, pour tout le lancement.** Hors d'un `espionnerLeCache`, ses fonctions sont celles de Next, qui refusent de rafraîchir hors d'une de ses requêtes : l'enregistrement passe sans rien rafraîchir, comme dans un script.
+- **Un espion à la fois** : `espionnerLeCache` ne s'imbrique pas.
+- **Il dit ce que Next reçoit, pas ce que Next fait de son cache.** Qu'une page rafraîchie montre la modification se prouve de bout en bout (ticket 117).
+
 ## Préparer la base du banc
 
 ```sh
