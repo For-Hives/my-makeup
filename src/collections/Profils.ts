@@ -38,6 +38,10 @@ import { premierSlugLibre, slugDeRepli, slugifier } from '../lib/slug'
 import { CHAMPS_DE_L_ETAT, etatAvantEcriture } from './profils/etat'
 import { champsDeLaZone } from './profils/zone'
 import { CHAMPS_LISTES, identitesDesLignesAvantEcriture } from './profils-listes'
+import { rafraichissement } from './revalidation'
+
+/** The refresh of the page of a profile, the search and the sitemap (ticket 047). */
+const RAFRAICHISSEMENT = rafraichissement('profils')
 
 /**
  * What a creation of an account hands to Payload (`context`) when the account must stay without a
@@ -175,6 +179,8 @@ const INTERNE = { read: champAdminSeulement, create: champAdminSeulement, update
  *   publishable or entirely empty, and since when (src/collections/profils/etat.ts, ticket 044).
  *   Its status follows: an entirely empty profile is a draft, any other is published, unless an
  *   admin chose another status (`statutChoisi`); a hidden profile stays hidden whatever the save.
+ * - A save or a deletion of a profile that is or was published refreshes its page, the search and
+ *   the sitemap; the import refreshes nothing (src/collections/revalidation.ts, ticket 047).
  */
 export const Profils: CollectionConfig<'profils'> = {
 	slug: 'profils',
@@ -187,9 +193,19 @@ export const Profils: CollectionConfig<'profils'> = {
 		delete: adminSeulement,
 	},
 	hooks: {
-		// The state comes last: it reads the save as the other hooks leave it (ticket 044).
-		beforeChange: [identitesDesLignesAvantEcriture, slugALaCreation, consentementTrace, etatAvantEcriture],
-		afterChange: [slugDeRepliApresCreation],
+		// The state comes last: it reads the save as the other hooks leave it (ticket 044). The refresh
+		// reads the stored row, which no hook changes before the write.
+		beforeChange: [
+			RAFRAICHISSEMENT.avantEcriture,
+			identitesDesLignesAvantEcriture,
+			slugALaCreation,
+			consentementTrace,
+			etatAvantEcriture,
+		],
+		// The refresh comes after the fallback slug: a profile created public gets its final address.
+		afterChange: [slugDeRepliApresCreation, RAFRAICHISSEMENT.apresEcriture],
+		beforeDelete: [RAFRAICHISSEMENT.avantSuppression],
+		afterDelete: [RAFRAICHISSEMENT.apresSuppression],
 	},
 	fields: [
 		{

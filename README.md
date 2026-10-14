@@ -129,6 +129,25 @@ Seul un choix différent de celui qui est enregistré change le choix. Le formul
 
 Tests : `tests/unit/etat-profil.test.ts`, et sur le banc `tests/integration/profils-completude.test.ts`, qui écrit chaque cas partagé de la complétude comme l'import l'écrira (`tests/outils/cas-completude.ts`) et compare l'état enregistré à la règle et aux réponses de l'ancien site.
 
+### Rafraîchissement des pages publiques
+
+Quand un profil, un article ou un talent est créé, modifié ou supprimé, le serveur dit à Next quelles pages publiques ne sont plus à jour : il les nomme par leur adresse (`revalidatePath`) et par leurs étiquettes (`revalidateTag`). La règle est dans `src/lib/revalidation.ts`, les crochets de Payload dans `src/collections/revalidation.ts` :
+
+| Document | Pages rafraîchies | Étiquettes |
+|---|---|---|
+| Profil | `/profil/<slug>`, `/search`, `/site-map`, `/sitemap.xml` | `profil:<slug>`, `profils` |
+| Article | `/blog/<slug>`, `/blog`, `/site-map`, `/sitemap.xml` | `article:<slug>`, `articles` |
+| Talent | `/talent/<slug>`, `/` (l'accueil liste les talents), `/site-map`, `/sitemap.xml` | `talent:<slug>`, `talents` |
+
+- **Seul compte ce que voit le public.** Un document est rafraîchi s'il est public avant ou après l'enregistrement : un profil `publie`, un article ou un talent publié. Un brouillon qui reste brouillon, un profil masqué qui le reste ne rafraîchissent rien. Quand l'adresse d'un document publié change, l'ancienne page et la nouvelle le sont toutes les deux.
+- **L'état public se lit dans la ligne enregistrée**, avant et après l'écriture, quels que soient les champs que la requête choisit ou peut lire. Pour un article ou un talent, c'est le document publié, jamais la version en brouillon enregistrée par-dessus : un article retiré alors qu'un brouillon plus récent l'attend est bien rafraîchi. Un brouillon enregistré sur un article publié le rafraîchit aussi, pour rien : rien ne le distingue d'une modification de la version publiée.
+- **Une étiquette expire tout de suite** (`{ expire: 0 }`), sans être servie périmée une dernière fois : un profil masqué ou des coordonnées retirées ne sont plus servis dès la visite suivante.
+- **Une lecture mise en cache porte les étiquettes de ce qu'elle lit** (`ETIQUETTES`) : celle de la liste pour plusieurs documents (la recherche, le sitemap, le plan du site, l'accueil), celle du document pour un seul. Les pages publiques passent par le cache avec le ticket 117 ; jusque-là, elles sont lues à chaque requête.
+- **L'import ne rafraîchit rien**, et ne lit rien pour cela : il porte le contexte d'import ([`docs/migration/IMPORT.md`](docs/migration/IMPORT.md)).
+- **Next ne prend un rafraîchissement que pendant une de ses requêtes** : l'API REST, l'administration, une Server Action. Hors de là (un script, l'API locale dans un test, une tâche de fond), l'enregistrement passe, et les pages gardent leur cache jusqu'à ce qu'il expire. Un rafraîchissement qui échoue n'annule jamais l'enregistrement : l'erreur est journalisée.
+
+Tests : `tests/unit/revalidation.test.ts`, et sur le banc `tests/integration/revalidation.test.ts` (I21), qui écoute Next par l'espion du cache (`tests/outils/espion-cache.ts`, voir [`docs/tests/banc.md`](docs/tests/banc.md)).
+
 ## Démarrer en local
 
 Il faut [bun](https://bun.sh) 1.3.14, Node 24 (`.nvmrc`), Docker avec Compose et `openssl`.

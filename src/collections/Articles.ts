@@ -9,6 +9,10 @@ import {
 	datePremierePublication,
 	VERSIONS_REDACTION,
 } from './redaction'
+import { rafraichissement } from './revalidation'
+
+/** The refresh of its page, of the pages that list the articles and of the sitemap (ticket 047). */
+const RAFRAICHISSEMENT = rafraichissement('articles')
 
 /**
  * The articles of the blog, `/blog/<slug>` (plan 01 §6.1; docs/migration/SCHEMA.md, §5.3).
@@ -24,6 +28,8 @@ import {
  *   (`galerieDImages`), drafts and the import included. Its photos belong to nobody: the newsroom
  *   sends them, and the public reads one when it is in the gallery of a published article
  *   (`lectureDesMedias`, src/lib/acces.ts).
+ * - A save or a deletion of an article that is or was published refreshes its page, the blog and
+ *   the sitemap; the import refreshes nothing (src/collections/revalidation.ts, ticket 047).
  */
 export const Articles: CollectionConfig<'articles'> = {
 	slug: 'articles',
@@ -31,7 +37,12 @@ export const Articles: CollectionConfig<'articles'> = {
 	admin: { useAsTitle: 'title', defaultColumns: ['title', 'slug', '_status', 'updatedAt'] },
 	access: ACCES_REDACTION,
 	versions: VERSIONS_REDACTION,
-	hooks: { beforeChange: [datePremierePublication] },
+	hooks: {
+		beforeChange: [RAFRAICHISSEMENT.avantEcriture, datePremierePublication],
+		afterChange: [RAFRAICHISSEMENT.apresEcriture],
+		beforeDelete: [RAFRAICHISSEMENT.avantSuppression],
+		afterDelete: [RAFRAICHISSEMENT.apresSuppression],
+	},
 	fields: [
 		{ name: 'title', label: 'Titre', type: 'text', required: true },
 		champSlug('/blog'),

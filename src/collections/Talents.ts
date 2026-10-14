@@ -8,6 +8,10 @@ import {
 	datePremierePublication,
 	VERSIONS_REDACTION,
 } from './redaction'
+import { rafraichissement } from './revalidation'
+
+/** The refresh of its page, of the pages that list the talents and of the sitemap (ticket 047). */
+const RAFRAICHISSEMENT = rafraichissement('talents')
 
 /**
  * The pages of a speciality, `/talent/<slug>` (plan 01 §6.1; docs/migration/SCHEMA.md, §5.4).
@@ -18,6 +22,8 @@ import {
  *   it as it is, so the 14 addresses of today stay the same, and two talents never share one.
  * - `content` is markdown, in a `code` field: Payload limits `text` and `textarea` to 40 000
  *   characters.
+ * - A save or a deletion of a talent that is or was published refreshes its page, the home page
+ *   and the sitemap; the import refreshes nothing (src/collections/revalidation.ts, ticket 047).
  */
 export const Talents: CollectionConfig<'talents'> = {
 	slug: 'talents',
@@ -25,7 +31,12 @@ export const Talents: CollectionConfig<'talents'> = {
 	admin: { useAsTitle: 'title', defaultColumns: ['title', 'slug', '_status', 'updatedAt'] },
 	access: ACCES_REDACTION,
 	versions: VERSIONS_REDACTION,
-	hooks: { beforeChange: [datePremierePublication] },
+	hooks: {
+		beforeChange: [RAFRAICHISSEMENT.avantEcriture, datePremierePublication],
+		afterChange: [RAFRAICHISSEMENT.apresEcriture],
+		beforeDelete: [RAFRAICHISSEMENT.avantSuppression],
+		afterDelete: [RAFRAICHISSEMENT.apresSuppression],
+	},
 	fields: [
 		{ name: 'title', label: 'Titre', type: 'text', required: true },
 		champSlug('/talent'),
