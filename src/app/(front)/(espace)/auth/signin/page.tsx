@@ -1,7 +1,10 @@
 import type { Metadata } from 'next'
+import { headers } from 'next/headers'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { FormulaireDeConnexion } from '@/components/auth/FormulaireDeConnexion'
+import { MessageReconnexion } from '@/components/auth/MessageReconnexion'
+import { ENTETE_DE_MESSAGE } from '@/lib/auth/cookies-herites'
 import { retourSur } from '@/lib/auth/retour'
 import { maquilleuseConnectee } from '@/lib/auth/session'
 import { seConnecter } from './actions'
@@ -25,9 +28,13 @@ export default async function PageDeConnexion({
 	// Already signed in: the space, not a form (same predicate as the guard of the private pages).
 	if (await maquilleuseConnectee()) redirect(retour)
 
+	// Set by the proxy alone, on the first visit after the old cookies were expired (ticket 081).
+	const reconnexion = (await headers()).get(ENTETE_DE_MESSAGE) === '1'
+
 	return (
 		<main className="flex min-h-dvh flex-col items-center justify-center gap-6 p-6 text-center">
 			<h1 className="font-semibold text-3xl">Se connecter</h1>
+			{reconnexion ? <MessageReconnexion /> : null}
 			<FormulaireDeConnexion action={seConnecter} retour={retour} />
 			<p>
 				<Link className="underline" href="/">

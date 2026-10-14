@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { finDuNettoyage } from './auth/cookies-herites'
 import type { VersionSources } from './version'
 
 /**
@@ -27,6 +28,7 @@ import type { VersionSources } from './version'
 export type RawEnv = Partial<
 	Record<
 		| 'APP_ENV'
+		| 'BASCULE_LE'
 		| 'DATABASE_URI'
 		| 'EMAIL_FROM'
 		| 'GOOGLE_OIDC_ISSUER'
@@ -189,6 +191,7 @@ const DEFAULT_SENDER_NAME = 'My Makeup'
 const EXPECTED = {
 	APP_ENV:
 		'« test » sur le banc de test, « preprod » sur la préprod, « prod » sur le site en ligne, ou absente sur un poste',
+	BASCULE_LE: 'une date au format AAAA-MM-JJ, comme « 2027-02-01 », qui existe',
 	DATABASE_URI: 'postgres://UTILISATEUR:MOT_DE_PASSE@HÔTE:PORT/BASE',
 	EMAIL_FROM: '« Nom <adresse@domaine> », ou une adresse seule',
 	GOOGLE_OIDC_ISSUER: `${GOOGLE_ISSUER}, ou sur ce poste l’adresse du faux Google du banc de test, comme http://127.0.0.1:7080, sans « / » final`,
@@ -516,6 +519,10 @@ function preprodEnv(raw: RawEnv, problems: { variable: string; problem: string }
 const required = z.string({ error: ABSENT })
 
 const schema = z.object({
+	BASCULE_LE: z
+		.string()
+		.refine(value => finDuNettoyage(value) !== undefined, { error: 'illisible' })
+		.optional(),
 	DATABASE_URI: required.refine(value => postgresUrl(value) !== undefined, { error: 'illisible' }),
 	GOOGLE_OIDC_ISSUER: z
 		.string()
@@ -606,6 +613,7 @@ export function parseServerEnv(source: RawEnv): ServerEnv {
 function processEnv(): RawEnv {
 	return {
 		APP_ENV: process.env.APP_ENV,
+		BASCULE_LE: process.env.BASCULE_LE,
 		DATABASE_URI: process.env.DATABASE_URI,
 		EMAIL_FROM: process.env.EMAIL_FROM,
 		GOOGLE_OIDC_ISSUER: process.env.GOOGLE_OIDC_ISSUER,
