@@ -126,7 +126,7 @@ La seconde commande doit montrer une ligne `ci-ok` de `github-actions` et une li
 
 ### Ce qui reste à constater sur GitHub
 
-Au 14/10/2026, tout ce document a été vérifié sur un poste de développement : les garde-fous, le script de `ci-ok`, la construction et le contrôle de l'image. La CI a tourné une première fois sur GitHub le même jour, à la poussée de `v3` qui apportait `ci.yml` : les deux premières lignes ci-dessous sont constatées. `v3` n'est pas protégée : les deux suivantes restent à constater, puis à dater ici. Les trois dernières viennent avec les jobs `integration` et `e2e` (ticket 014), joués sur un poste seulement : elles se constatent à la première poussée qui les porte.
+Au 14/10/2026, tout ce document a été vérifié sur un poste de développement : les garde-fous, le script de `ci-ok`, la construction et le contrôle de l'image. La CI a tourné une première fois sur GitHub le même jour, à la poussée de `v3` qui apportait `ci.yml` : les deux premières lignes ci-dessous sont constatées. `v3` n'est pas protégée : les deux suivantes restent à constater, puis à dater ici. Les trois dernières viennent avec les jobs `integration` et `e2e` (ticket 014) : les deux premières sont constatées à la première poussée de `v3` qui les portait, la dernière attend une pull request qui porte la faute.
 
 | À constater | Quand | Comment | Constaté le |
 |---|---|---|---|
@@ -134,8 +134,8 @@ Au 14/10/2026, tout ce document a été vérifié sur un poste de développement
 | Une CI verte dure moins de 15 minutes | Au même passage | La commande de « Durée de la CI » | 14/10/2026 : 1 min 35 s |
 | CodeQL analyse chaque pull request vers `v3`, sous le nom `CodeQL` | Dès que `v3` est protégée | Les deux commandes ci-dessus | Pas encore |
 | `ci-ok` rouge sur une pull request cassée, fusion bloquée pour un administrateur aussi | Dès que `v3` est protégée | « Canari », plus bas | Pas encore |
-| La CI à cinq jobs tourne : `integration` et les deux lots `e2e` verts, puis `ci-ok` vert | À la première poussée de `v3` qui contient ces deux jobs | `gh run view NUMERO`, puis la seconde commande de « Durée de la CI » | Pas encore |
-| Une CI verte dure moins de 15 minutes, et chaque lot `e2e` moins de 10 | Au même passage | Les deux commandes de « Durée de la CI » | Pas encore |
+| La CI à cinq jobs tourne : `integration` et les deux lots `e2e` verts, puis `ci-ok` vert | À la première poussée de `v3` qui contient ces deux jobs | `gh run view NUMERO`, puis la seconde commande de « Durée de la CI » | 14/10/2026 : CI 38512540493, sur le commit `1016d81`, les sept jobs verts (46 tests d'intégration, 4 essais par lot `e2e`) |
+| Une CI verte dure moins de 15 minutes, et chaque lot `e2e` moins de 10 | Au même passage | Les deux commandes de « Durée de la CI » | 14/10/2026 : 1 min 52 s ; chaque lot `e2e` 1 min 44 s |
 | Un essai de bout en bout faux exprès rend `e2e`, puis `ci-ok`, rouges | Au canari, ou sur toute pull request qui porte la faute `tests/e2e/canari.spec.ts` | « Canari », plus bas : la ligne `e2e` | Pas encore : répété sur un poste le 14/10/2026, voir « Répétition locale » |
 
 Au premier passage, le job `build` a été vert sur le Docker de GitHub. Avant lui, ces trois points n'avaient tourné que derrière Podman : s'il passe au rouge sans que l'image ait changé, les regarder d'abord.
@@ -197,6 +197,7 @@ gh run view NUMERO --repo For-Hives/my-makeup --json jobs \
 | 14/10/2026 | Poste de développement, Podman : ce n'est pas une CI | Image construite sans cache en 1 min 26 s ; contrôle de l'image en 2 min 11 s, au rythme de Podman ; tests unitaires, garde-fous, types et Biome en moins de 10 secondes à eux quatre |
 | 14/10/2026 | GitHub, CI 38501556779, commit `2fe3629` | 1 min 35 s en tout : `qualite` 21 s, `unit` 19 s, `build` 1 min 28 s, `ci-ok` 2 s |
 | 14/10/2026 | Poste de développement, Podman, les commandes des jobs `integration` et `e2e` jouées une à une : ce n'est pas une CI | Banc prêt en 4,2 s, images déjà téléchargées ; tests d'intégration : 37 verts en 7,2 s ; chaque lot `e2e` avec `CI=true` : 4 essais verts, build compris, en 13 s environ (build déjà en cache) |
+| 14/10/2026 | GitHub, CI 38512540493, commit `1016d81`, la première à cinq jobs | 1 min 52 s en tout : `qualite` 31 s, `unit` 19 s, `build` 1 min 27 s, `integration` 55 s, `e2e (1/2)` 1 min 44 s, `e2e (2/2)` 1 min 44 s, `ci-ok` 3 s |
 
 ### Pourquoi `ci-ok`
 

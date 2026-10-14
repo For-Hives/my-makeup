@@ -170,3 +170,8 @@ Ce que la v3 change par rapport au site actuel est dans [`CHANGEMENTS-VOULUS.md`
   - Vérifié : installation figée sans changement ; Biome et contrôle de types verts ; 1 046 tests unitaires verts et 1 sauté ; 434 garde-fous de la CI verts ; build de production vert. Sur un banc à part, 46 tests d'intégration et 8 essais de bout en bout verts. `bun run schema:derive` : aucune dérive.
   - Les sondes n'ont pas été relancées à l'intégration : elles lisent le site en ligne.
   - La branche `main` n'a reçu aucun commit.
+- **Première CI de `v3` à cinq jobs sur GitHub : verte.**
+  - CI 38512540493, sur le commit `1016d81` : `qualite` 31 s, `unit` 19 s, `build` 1 min 27 s, `integration` 55 s, `e2e (1/2)` et `e2e (2/2)` 1 min 44 s chacun, `ci-ok` 3 s. 1 min 52 s en tout, pour une limite de 15 minutes ; chaque lot `e2e` sous ses 10 minutes.
+  - Dans le journal de la CI : 46 tests d'intégration verts, 4 essais verts par lot `e2e`, 1 046 tests unitaires et 434 garde-fous verts.
+  - C'est le premier passage du banc avec le Docker de GitHub (montage en lecture seule du faux Google compris), de l'installation du Chromium de Playwright sur ubuntu-24.04, et des essais sous le Node 24.21.0 de la CI. Avant lui, ils n'avaient tourné que derrière Podman, sur un poste.
+  - Ticket 014 : deux critères sur trois sont constatés sur GitHub. Reste l'essai faux qui rend `ci-ok` rouge, sur une pull request (canari, ticket 029).
