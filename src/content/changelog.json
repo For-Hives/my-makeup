@@ -30,6 +30,11 @@
 			"id": "tu-restes-connectee-tant-que-tu-passes-dans-ton-espace-pe",
 			"type": "amelioration",
 			"text": "Tu restes connectée tant que tu passes dans ton espace, pendant 90 jours au plus."
+		},
+		{
+			"id": "sur-le-profil-d-une-maquilleuse-les-competences-langues-f",
+			"type": "amelioration",
+			"text": "Sur le profil d’une maquilleuse, les compétences, langues, formations, expériences, prestations avec leurs prix et réseaux sont lisibles dès l’ouverture de la page, même sans JavaScript."
 		}
 	],
 	"releases": []

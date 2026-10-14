@@ -22,10 +22,21 @@
  */
 
 import type { Payload } from 'payload'
-import { formatZone, rayonKm } from '@/lib/format-zone'
+import { formatZone, rayonKm, villeAffichee } from '@/lib/format-zone'
 import { nomAffiche, texte } from '@/lib/profil/nom-affiche'
 import { estIndexable, estVisible, FILTRE_LISTE } from '@/lib/profil/visibilite'
-import { nomDArtisteAffiche } from '@/lib/profil/vue-publique'
+import {
+	contacts,
+	type ExperiencePublique,
+	experiences,
+	type FormationPublique,
+	formations,
+	type LienDeContact,
+	nomDArtisteAffiche,
+	noms,
+	type PrestationPublique,
+	prestations,
+} from '@/lib/profil/vue-publique'
 import type { PlaceDuProfil } from '@/lib/recherche/lieu'
 import { estUnSlug } from '@/lib/slug'
 import type { Profil } from '@/payload-types'
@@ -72,6 +83,12 @@ export const CHAMPS_DE_LA_PAGE_DU_PROFIL = {
 	rayonKm: true,
 	disponible: true,
 	photoPrincipale: true,
+	reseaux: true,
+	prestations: true,
+	competences: true,
+	langues: true,
+	formations: true,
+	experiences: true,
 } as const
 
 /** The most profiles one read of a list gives, and the size of a page when none is asked. */
@@ -98,6 +115,18 @@ export interface ProfilPublic {
 	disponible: boolean
 	/** Her main photo, or `null`: the page then shows the picture of the site. */
 	photo: PhotoDeCarte | null
+	/** Her commune, or `null`. */
+	lieu: string | null
+	/** True when she gave a radius around her commune. */
+	seDeplace: boolean
+	/** The sections below hold only rows that say something, in the order she gave them. */
+	prestations: PrestationPublique[]
+	competences: string[]
+	langues: string[]
+	formations: FormationPublique[]
+	experiences: ExperiencePublique[]
+	/** Her networks, and her telephone and email only when she published them. */
+	liens: LienDeContact[]
 	description: string | null
 	/** Publishable: the page may be indexed. Otherwise it is shown in noindex. */
 	indexable: boolean
@@ -276,6 +305,12 @@ export type ProfilDeLaPage = Pick<
 	| 'rayonKm'
 	| 'disponible'
 	| 'photoPrincipale'
+	| 'reseaux'
+	| 'prestations'
+	| 'competences'
+	| 'langues'
+	| 'formations'
+	| 'experiences'
 	| 'statut'
 	| 'publiable'
 >
@@ -298,6 +333,18 @@ export function profilPublicDe(
 		zone: formatZone({ city: profil.commune?.nom, radius: profil.rayonKm }) || null,
 		disponible: profil.disponible !== false,
 		photo: lu.photo,
+		lieu: villeAffichee(profil.commune?.nom) || null,
+		seDeplace: villeAffichee(profil.commune?.nom) !== '' && rayonKm(profil.rayonKm) !== null,
+		prestations: prestations(profil.prestations),
+		competences: noms(profil.competences),
+		langues: noms(profil.langues),
+		formations: formations(profil.formations),
+		experiences: experiences(profil.experiences),
+		liens: contacts({
+			reseaux: profil.reseaux,
+			telephone: lu.coordonnees?.telephone,
+			email: lu.coordonnees?.email,
+		}),
 		description: texte(profil.description) || null,
 		indexable: estIndexable(profil),
 		coordonnees: lu.coordonnees,

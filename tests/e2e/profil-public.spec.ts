@@ -102,3 +102,66 @@ test.describe('E43 : le profil public, rendu par le serveur', { tag: '@mobile' }
 		})
 	})
 })
+
+test.describe('E44 : les offres, les prix et les coordonnées publiées', { tag: '@mobile' }, () => {
+	test('les offres et leurs prix formatés, les options dans l’ordre, sont dans le HTML du serveur', async ({
+		request,
+	}) => {
+		const html = await (await request.get(`/profil/${profil('reference').slug}`)).text()
+
+		expect(html).toContain('Service(s) proposé(s)')
+		expect(html).toContain('À partir de 180\u00a0€')
+		expect(html).toContain('À partir de 45\u00a0€')
+		expect(html.indexOf('Maquillage de la mariée')).toBeLessThan(html.indexOf('Retouches jusqu’au dîner'))
+		expect(html.indexOf('Retouches jusqu’au dîner')).toBeLessThan(html.indexOf('Essai maquillage'))
+		expect(texteVisible(html)).not.toMatch(MOTS_INTERDITS)
+	})
+
+	test('un profil qui publie ses coordonnées les montre, un profil qui ne les publie pas n’en laisse rien', async ({
+		request,
+	}) => {
+		const publie = await (await request.get(`/profil/${profil('reference').slug}`)).text()
+		expect(publie).toContain('href="tel:0639981001"')
+		expect(publie).toContain('href="mailto:contact@ines-morel.example.test"')
+		expect(publie).not.toMatch(CLES_PRIVEES)
+
+		const ferme = await (await request.get(`/profil/${profil('sans-contact-public').slug}`)).text()
+		expect(ferme).not.toContain('tel:')
+		expect(ferme).not.toContain('mailto:')
+		expect(ferme).not.toContain('06 39 98 10 08')
+		expect(ferme).not.toContain('louise-girard.example.test')
+	})
+
+	test('le profil aux textes maximaux : toutes les sections, pas de débordement à 390 px', async ({
+		page,
+	}, testInfo) => {
+		await page.goto(`/profil/${profil('textes-maximaux').slug}`)
+		for (const titre of ['Compétences', 'Langues', 'Service(s) proposé(s)', 'Expériences professionnelles'])
+			await expect(page.getByRole('heading', { level: 2, name: titre })).toBeVisible()
+		await page.setViewportSize(ECRANS.mobile)
+		expect(await sansDebordement(page)).toBe(true)
+		await testInfo.attach('profil-sections-390px', {
+			body: await page.screenshot({ fullPage: true }),
+			contentType: 'image/png',
+		})
+	})
+})
+
+test.describe('Les douze profils types du banc', () => {
+	test('aucun « undefined » ni « null », un seul h1 ; le profil masqué répond 404', async ({ request }) => {
+		test.setTimeout(120_000)
+		expect(profils.size).toBe(12)
+		for (const [cle, { slug, type }] of profils) {
+			const reponse = await request.get(`/profil/${slug}`)
+			if (type.attendu.statut === 'masque') {
+				expect(reponse.status(), cle).toBe(404)
+				continue
+			}
+			expect(reponse.status(), cle).toBe(200)
+			const html = await reponse.text()
+			expect(html.match(/<h1[\s>]/g), cle).toHaveLength(1)
+			expect(texteVisible(html), cle).not.toMatch(MOTS_INTERDITS)
+			expect(html, cle).not.toMatch(CLES_PRIVEES)
+		}
+	})
+})

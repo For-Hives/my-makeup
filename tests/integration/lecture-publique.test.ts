@@ -98,3 +98,56 @@ describe('La lecture par slug', () => {
 		expect(await lireLeProfilPublic(payload, slugDe('masquee'))).toBeNull()
 	})
 })
+
+describe('La lecture du profil pour sa page (tickets 101 et 102)', () => {
+	test('le profil de référence : zone, photo, listes dans l’ordre et canaux publiés', async () => {
+		const payload = await payloadDeTest()
+
+		const profil = await lireLeProfilPublic(payload, slugDe('reference'))
+
+		expect(profil).toMatchObject({
+			nom: 'Inès Morel',
+			nomArtiste: 'Inès Morel Maquillage',
+			zone: 'Annecy et 30 km autour',
+			lieu: 'Annecy',
+			seDeplace: true,
+			disponible: true,
+		})
+		expect(profil?.photo?.url).toMatch(/^https?:\/\//)
+		expect(profil?.prestations.map(({ nom }) => nom)).toEqual([
+			'Maquillage de la mariée',
+			'Essai maquillage',
+			'Maquillage des invitées',
+		])
+		expect(profil?.prestations[0]?.options.map(({ nom }) => nom)).toEqual(['Retouches jusqu’au dîner'])
+		expect(profil?.prestations[0]?.prix).toEqual(['À partir de 180 €'])
+		expect(profil?.competences).toEqual(['Maquillage longue tenue', 'Peaux sensibles', 'Coiffure de mariée'])
+		expect(profil?.langues).toEqual(['Français', 'Anglais', 'Italien'])
+		expect(profil?.formations.map(({ obtenu }) => obtenu)).toEqual(['juin 2014', 'novembre 2015'])
+		expect(profil?.experiences.map(({ periode }) => periode)).toEqual([
+			'septembre 2015 - août 2018',
+			'septembre 2018 - aujourd’hui',
+		])
+		expect(profil?.liens.map(({ canal }) => canal)).toEqual(['instagram', 'email', 'phone', 'website'])
+	})
+
+	test('sans contact public : les réseaux seuls, jamais le téléphone ni l’email', async () => {
+		const payload = await payloadDeTest()
+
+		const profil = await lireLeProfilPublic(payload, slugDe('sans-contact-public'))
+
+		expect(profil?.liens).toEqual([])
+		expect(JSON.stringify(profil)).not.toMatch(/06 39 98|example\.test/)
+	})
+
+	test('un profil vide : rien d’inventé, une disponibilité jamais posée compte comme disponible', async () => {
+		const payload = await payloadDeTest()
+
+		const vide = await lireLeProfilPublic(payload, slugDe('vide'))
+		const inconnue = await lireLeProfilPublic(payload, slugDe('disponibilite-inconnue'))
+
+		expect(vide).toMatchObject({ zone: null, lieu: null, photo: null, nomArtiste: null, liens: [], prestations: [] })
+		expect(inconnue?.disponible).toBe(true)
+		expect((await lireLeProfilPublic(payload, slugDe('indisponible')))?.disponible).toBe(false)
+	})
+})

@@ -89,9 +89,13 @@ test('un profil repris de la fausse base Strapi s’affiche sur sa page publique
 	expect(html).toMatch(/<h1[^>]*>Zoé Lefèvre<\/h1>/)
 	expect(html.match(/<h1[\s>]/g)).toHaveLength(1)
 	expect(html).toContain('Mariage')
-	// Profile 21 shows a phone and an email on the old site, and its account has an email: none here.
-	expect(html).not.toContain('06 39 98')
-	expect(html).not.toContain('@example.test')
+	// Profile 21 shows a phone and an email on the old site, and the import carries that consent
+	// over (ticket 064): the page of ticket 102 shows exactly those two, and the email of her
+	// account, which she never published, nowhere. Nothing private goes into the page as data.
+	expect(html).toContain('06 39 98 12 34')
+	expect(html).toContain('contact.zoe@example.test')
+	expect(html).toContain('Français')
+	expect(html).not.toContain('zoe.lefevre@example.test')
 	expect(html).not.toMatch(CLES_PRIVEES)
 
 	// In a browser, at both widths.

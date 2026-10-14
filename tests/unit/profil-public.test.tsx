@@ -25,7 +25,10 @@ function lireLeType(type: ProfilDuJeu, surcharge: Partial<ProfilDeLaPage> = {}):
 	const photo = type.photos.principale
 		? { url: `${ADRESSE_DE_PHOTO}/${type.photos.principale}`, width: 400, height: 400 }
 		: null
-	return profilPublicDe(doc, { photo, coordonnees: null })
+	// What the public reading does: the contact details leave only when she published them.
+	const { telephone = null, email = null } = type.profil.coordonnees ?? {}
+	const coordonnees = type.profil.contactPublic === true && (telephone || email) ? { telephone, email } : null
+	return profilPublicDe(doc, { photo, coordonnees })
 }
 
 const rendre = (profil: ProfilPublic): string => renderToStaticMarkup(<VueDuProfil profil={profil} />)
@@ -86,7 +89,8 @@ describe('E43 : l’en-tête du profil, dans le HTML du serveur', () => {
 	test('la description s’affiche une ligne par paragraphe, sans ligne vide', () => {
 		const html = rendre(lireLeType(type('reference'), { description: 'Première ligne.\n\n  \nDeuxième ligne.\nnull' }))
 
-		expect(html.match(/<p class="break-words text-gray-800">/g)).toHaveLength(2)
+		const section = html.slice(html.indexOf('Vous en quelques mots'))
+		expect(section.slice(0, section.indexOf('</section>')).match(/<p /g)).toHaveLength(2)
 		expect(html).toContain('Première ligne.')
 		expect(html).toContain('Deuxième ligne.')
 		expect(html).not.toMatch(MOTS_INTERDITS)
@@ -114,5 +118,126 @@ describe('E43 : l’en-tête du profil, dans le HTML du serveur', () => {
 		expect(html.match(/<h1[\s>]/g)).toHaveLength(1)
 		expect(html).toContain('break-words')
 		expect(html).toContain('Saint-Remy-en-Bouzemont-Saint-Genest-et-Isson et 200 km autour')
+	})
+})
+
+describe('E44 : les sections du profil', () => {
+	test('les prestations : prix formatés par la règle unique, options dans l’ordre', () => {
+		const html = rendre(lireLeType(type('reference')))
+
+		expect(html).toContain('Service(s) proposé(s)')
+		expect(html).toContain('Maquillage de la mariée')
+		expect(html).toContain('À partir de 180\u00a0€')
+		expect(html).toContain('60\u00a0€')
+		expect(html).toContain('À partir de 45\u00a0€')
+		// The offers keep the order she gave, and an option sits under its offer.
+		const place = (texte: string) => html.indexOf(texte)
+		expect(place('Maquillage de la mariée')).toBeLessThan(place('Retouches jusqu’au dîner'))
+		expect(place('Retouches jusqu’au dîner')).toBeLessThan(place('Essai maquillage'))
+		expect(place('Essai maquillage')).toBeLessThan(place('Maquillage des invitées'))
+		// An option holds its price in the HTML even closed.
+		expect(html).toMatch(/<details[^>]*>[\s\S]*Retouches jusqu’au dîner[\s\S]*60\u00a0€[\s\S]*<\/details>/)
+	})
+
+	test('un prix « sur devis » ou en texte libre reste tel qu’il a été écrit, avec une majuscule', () => {
+		const html = rendre(lireLeType(type('actif-non-publiable')))
+
+		expect(html).toContain('Sur devis')
+		expect(html).toContain('Selon le nombre de personnes')
+		expect(html).not.toMatch(MOTS_INTERDITS)
+	})
+
+	test('les compétences, les langues, les formations et les expériences', () => {
+		const html = rendre(lireLeType(type('reference')))
+
+		expect(html).toContain('Compétences')
+		expect(html).toContain('Maquillage longue tenue')
+		expect(html).toContain('Langues')
+		expect(html).toContain('Italien')
+		expect(html).toContain('Formations &amp; diplômes')
+		expect(html).toContain('CAP Esthétique, cosmétique, parfumerie')
+		expect(html).toContain('juin 2014')
+		expect(html).toContain('Expériences professionnelles')
+		expect(html).toContain('septembre 2015 - août 2018')
+		expect(html).toContain('septembre 2018 - aujourd’hui')
+		expect(html).toContain('à Annecy')
+	})
+
+	test('une section vide n’est pas affichée, titre compris', () => {
+		const html = rendre(
+			lireLeType(type('sans-contact-public'), {
+				competences: [{ nom: '  ' }, { nom: 'null' }],
+				langues: [],
+				formations: [{ diplome: null, ecole: '', obtenuLe: '2014-06-30' }],
+				experiences: null,
+				prestations: [{ nom: 'undefined', prixTexte: '50 €' }],
+				reseaux: {},
+			})
+		)
+
+		for (const titre of ['Compétences', 'Langues', 'Formations', 'Expériences', 'Service(s)', 'Réseaux sociaux'])
+			expect(html, titre).not.toContain(titre)
+		expect(html).not.toMatch(MOTS_INTERDITS)
+	})
+
+	test('les coordonnées publiées s’affichent, les autres jamais', () => {
+		const publiees = rendre(lireLeType(type('reference')))
+		expect(publiees).toContain('Réseaux sociaux &amp; contacts')
+		expect(publiees).toContain('href="tel:0639981001"')
+		expect(publiees).toContain('href="mailto:contact@ines-morel.example.test"')
+		expect(publiees).toContain('href="https://instagram.example.test/ines.morel"')
+		expect(publiees).toContain('href="https://ines-morel.example.test/"')
+
+		const fermees = rendre(lireLeType(type('sans-contact-public')))
+		expect(fermees).not.toContain('Réseaux sociaux')
+		expect(fermees).not.toContain('06 39 98 10 08')
+		expect(fermees).not.toContain('louise-girard.example.test')
+		expect(fermees).not.toContain('tel:')
+		expect(fermees).not.toContain('mailto:')
+	})
+
+	test('les liens sont ceux que la maquilleuse a saisis, jamais un schéma dangereux', () => {
+		const html = rendre(
+			lireLeType(type('reference'), {
+				reseaux: {
+					instagram: 'ines.morel',
+					facebook: 'javascript:alert(1)',
+					linkedin: 'instagram.com',
+					youtube: '@ines',
+					siteWeb: 'ines-morel.example.test/portfolio',
+				},
+			})
+		)
+
+		expect(html).toContain('href="https://www.instagram.com/ines.morel"')
+		expect(html).not.toContain('href="javascript:')
+		expect(html).toContain('href="https://www.youtube.com/@ines"')
+		expect(html).toContain('href="https://ines-morel.example.test/portfolio"')
+		// A value that leads nowhere is still shown as text, not as a link.
+		expect(html).toContain('instagram.com')
+	})
+
+	test('les liens externes s’ouvrent dans un autre onglet, pas l’email ni le téléphone', () => {
+		const html = rendre(lireLeType(type('reference')))
+
+		expect(html).toMatch(
+			/href="https:\/\/instagram\.example\.test[^"]*"[^>]*target="_blank"[^>]*rel="noopener nofollow noreferrer"/
+		)
+		expect(html).not.toMatch(/href="mailto:[^"]*"[^>]*target=/)
+		expect(html).not.toMatch(/href="tel:[^"]*"[^>]*target=/)
+	})
+
+	test('les douze profils types : ni « undefined » ni « null », un seul h1, aucun titre sans contenu', () => {
+		expect(PROFILS_DU_JEU).toHaveLength(12)
+		for (const profilType of PROFILS_DU_JEU) {
+			const html = rendre(lireLeType(profilType))
+			const texte = html.replace(/<[^>]+>/g, ' ')
+
+			expect(texte, profilType.cle).not.toMatch(MOTS_INTERDITS)
+			expect(html.match(/<h1[\s>]/g), profilType.cle).toHaveLength(1)
+			// A title is followed by something: never by the end of its card.
+			expect(html, profilType.cle).not.toMatch(/<\/h[23]>\s*<\/(?:div|li|section)>/)
+			expect(html, profilType.cle).not.toMatch(/<(?:p|li|h[1-6])[^>]*>\s*<\/(?:p|li|h[1-6])>/)
+		}
 	})
 })
