@@ -394,8 +394,10 @@ bun run banc:down                                              # arrête tout et
 - Lancer les tests d'intégration vide la base du banc.
 - Plusieurs bancs tournent côte à côte sur un même poste, chacun sous son nom et sur ses ports : `BANC_INSTANCE=mon-banc BANC_DECALAGE=20 bun run banc:up`.
 - Un test obtient un compte fictif et sa session en un appel, sans mot de passe à saisir : `await creerCompte('admin')`.
+- Sur le banc, l'application envoie tous ses mails au capteur. Un test lit le sien, avec son destinataire, son sujet et ses liens : `await attendreLeMail({ pour: adresse })`.
+- Un test dépose un objet dans le stockage et le relit : `await deposerUnObjet(cle, contenu)`, `await lireUnObjet(cle)`.
 
-Le détail est dans [`docs/tests/banc.md`](docs/tests/banc.md) : les services et leurs adresses, les deux variables d'instance, l'écriture d'un test d'intégration, la remise à zéro, la fabrique de comptes, les images épinglées.
+Le détail est dans [`docs/tests/banc.md`](docs/tests/banc.md) : les services et leurs adresses, les deux variables d'instance, l'écriture d'un test d'intégration, la remise à zéro, le capteur de mails, le stockage d'objets, la fabrique de comptes, les images épinglées.
 
 ## Licence
 

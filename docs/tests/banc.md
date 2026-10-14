@@ -39,8 +39,9 @@ Il faut Docker avec Compose. Sans démon Docker, les commandes du banc passent d
 | `DATABASE_URI` | La base du banc. Son nom finit par `_test` |
 | `PAYLOAD_SECRET` | Un secret factice, qui ne signe que les sessions du banc |
 | `NEXT_PUBLIC_SITE_URL` | L'adresse de l'application lancée contre le banc : `http://localhost:3100` |
-| `SMTP_HOST`, `SMTP_PORT` | Le capteur de mails |
+| `SMTP_HOST`, `SMTP_PORT` | Le capteur de mails. L'application envoie tous ses mails par ce relais |
 | `MAILPIT_URL` | L'API du capteur, par laquelle un test lit les mails reçus |
+| `EMAIL_FROM` | L'expéditeur des mails du banc, sur le domaine réservé `example.test` |
 | `S3_ENDPOINT`, `S3_BUCKET` | Le stockage d'objets et son espace. Le nom de l'espace finit par `-test` |
 
 Règles du fichier :
@@ -131,10 +132,73 @@ Règles :
 
 - **Chaque fichier remet la base à zéro** après ses tests (`afterEach(viderLaBase)` ou `afterAll(viderLaBase)`) : le fichier suivant part d'une base vide.
 - **Aucune donnée réelle.** Les adresses sont en `@example.test`.
-- **La remise à zéro ne vide que la base.** Le capteur de mails et le stockage d'objets ont leurs propres outils, qui arrivent avec leur ticket.
+- **La remise à zéro ne vide que la base.** Le capteur de mails et le stockage d'objets ont chacun la leur : `viderLeCapteur()` et `viderLeStockage()`, plus bas. Un fichier qui envoie des mails ou dépose des objets les vide après ses tests.
 - **Hors du banc, rien n'est écrit.** `payloadDeTest()` et `viderLaBase()` s'arrêtent si la base réglée n'est pas exactement celle du banc de l'instance : un test lancé à la main avec un `.env` de travail ne touche pas la base de développement.
 
-`tests/integration/banc-base.test.ts` est le test coquille : il crée un document, le relit, vide la base. Lancé seul, banc démarré, il passe en 2 à 3 secondes (mesuré le 14/10/2026 : 2,2 s, commande comprise).
+`tests/integration/banc-base.test.ts` est le test coquille de la base : il crée un document, le relit, vide la base. Lancé seul, banc démarré, il passe en 2 à 3 secondes (mesuré le 14/10/2026 : 2,2 s, commande comprise).
+
+`tests/integration/banc-stockage-mails.test.ts` est le test coquille des trois services : il écrit un document, un objet et un mail, puis relit les trois. Lancé seul, banc démarré, le fichier entier passe en 2 à 3 secondes (mesuré le 14/10/2026 : 2,3 s, commande comprise).
+
+## Lire les mails : le capteur
+
+Sur le banc, l'application envoie ses mails par l'adaptateur de Payload, réglé par `SMTP_HOST`, `SMTP_PORT` et `EMAIL_FROM` : tout arrive dans le capteur, et rien ne sort du poste. Un test lit ce que l'application a envoyé.
+
+```ts
+import { attendreLeMail, lienDuMail } from '../outils/mailpit'
+
+const mail = await attendreLeMail({ pour: compte.email })
+
+expect(mail.sujet).toBe('Vérifie ton adresse email')
+const lien = lienDuMail(mail, '/auth/verification')
+```
+
+| Outil (`tests/outils/mailpit.ts`) | Effet |
+|---|---|
+| `await attendreLeMail({ pour, sujet? })` | Le mail reçu par cette adresse, dès qu'il est là ; le plus récent s'il y en a plusieurs. `sujet` choisit parmi eux : le sujet exact, ou un motif |
+| `await mailsRecus(pour)` | Tous les mails reçus par cette adresse, le plus récent d'abord. Une liste vide si elle n'a rien reçu : rien n'est attendu |
+| `lienDuMail(mail, vers)` | Le lien du mail qui mène à une page : son chemin exact (`'/auth/verification'`), ou un motif |
+| `await compterLesMails()` | Le nombre de mails que tient le capteur, tous destinataires confondus |
+| `await viderLeCapteur()` | Remise à zéro : supprime tous les mails du capteur |
+
+Un mail lu porte `de`, `destinataires` (À, Cc et Cci), `repondreA`, `sujet`, `texte`, `html`, `liens` et `date`.
+
+À savoir :
+
+- **Un mail se cherche par son destinataire, entier.** Chaque test écrit à une adresse qui lui est propre, en `@example.test` : deux tests qui tournent en même temps ne lisent jamais le mail l'un de l'autre.
+- **`liens` ne garde que les liens web**, chacun une fois : ceux de la partie HTML, lus comme un navigateur les lit (`&amp;` vaut `&`), puis les adresses que seule la partie texte contient. Un `mailto:` n'en fait pas partie.
+- **`attendreLeMail` attend un état, pas une durée.** Il regarde la boîte jusqu'à trouver le mail, 2,5 secondes au plus (`delaiMs` pour en changer). Passé ce délai, son erreur dit ce que l'adresse a reçu.
+- **`texte` est rendu sans le retour à la ligne final** que le transport ajoute toujours.
+- **Capteur arrêté : l'erreur est dite en une phrase, tout de suite.** Chaque outil s'arrête avec le service qui ne répond pas, son adresse et la commande qui démarre le banc. Un capteur qui accepte la connexion sans répondre est abandonné au bout de 2 secondes. Dans tous les cas, moins de 5 secondes.
+- **L'application, elle, ne sait pas que le capteur est arrêté** : l'envoi échoue aussitôt avec l'erreur du transport, qui nomme l'adresse du relais (`connect ECONNREFUSED 127.0.0.1:1025`).
+- **Hors du banc, rien n'est lu ni vidé.** Le client s'arrête si `MAILPIT_URL`, `SMTP_HOST` ou `SMTP_PORT` ne sont pas exactement ceux du banc de l'instance.
+
+## Déposer et relire un objet : le stockage
+
+```ts
+import { deposerUnObjet, lireUnObjet, listerLesObjets } from '../outils/s3'
+
+await deposerUnObjet('photos/une.webp', octets, { type: 'image/webp' })
+
+const objet = await lireUnObjet('photos/une.webp')
+expect(objet?.type).toBe('image/webp')
+expect(await listerLesObjets('photos/')).toEqual([{ cle: 'photos/une.webp', taille: octets.length }])
+```
+
+| Outil (`tests/outils/s3.ts`) | Effet |
+|---|---|
+| `await deposerUnObjet(cle, contenu, { type? })` | Dépose un objet dans l'espace du banc, à la place de celui qui avait cette clé. `contenu` est un texte ou des octets |
+| `await lireUnObjet(cle)` | L'objet : sa clé, ses octets, son type. `undefined` si la clé n'existe pas |
+| `await listerLesObjets(prefixe?)` | La clé et la taille de chaque objet dont la clé commence par `prefixe`, dans l'ordre des clés. Tous : les pages du stockage sont suivies jusqu'à la dernière |
+| `await supprimerUnObjet(cle)` | Supprime un objet. Une clé absente n'est pas une erreur |
+| `await viderLeStockage()` | Remise à zéro : supprime tous les objets de l'espace. L'espace reste |
+
+À savoir :
+
+- **Range les objets d'un test sous un préfixe qui lui est propre** : deux tests ne se marchent pas dessus, et une liste ne rend que les siens.
+- **Une clé garde ses espaces, ses accents et ses signes.** Une clé vide, qui commence par `/`, ou qui contient un segment `.` ou `..` est refusée : elle sortirait de l'espace.
+- **Ce client est un outil de test, pas la façon dont l'application écrit ses photos.** Ses requêtes ne sont pas signées, ce que S3Mock accepte : il ne lit donc aucun identifiant, et ne pourrait pas atteindre un vrai stockage.
+- **Hors du banc, rien n'est lu ni vidé.** Le client s'arrête si `S3_ENDPOINT` ou `S3_BUCKET` ne sont pas exactement ceux du banc de l'instance, et il refuse toute adresse qui n'est pas sur ce poste et tout espace dont le nom ne finit pas par `-test`.
+- **Stockage arrêté** : la même erreur en une phrase que pour le capteur.
 
 ## Préparer la base du banc
 
@@ -205,5 +269,6 @@ Une montée de version change l'étiquette et l'empreinte ensemble. `tests/integ
 ## Limites
 
 - **S3Mock n'est pas un vrai stockage.** Il accepte n'importe quels identifiants et ne vérifie ni les signatures ni les droits : une règle d'accès aux objets ne se prouve pas sur le banc. Il ne connaît que les adresses de la forme `http://hôte:port/espace/clé`.
+- **Le capteur n'est pas un vrai relais.** Il ne demande ni identifiant ni chiffrement, et l'application n'en règle aucun pour l'instant : un envoi par un vrai fournisseur ne se prouve pas sur le banc.
 - **Le banc n'écoute que sur ce poste** (`127.0.0.1`). Il n'a ni mot de passe sérieux ni chiffrement : il ne doit jamais être exposé.
 - **`bun --env-file=.env.test test`** ne vaut que pour l'instance par défaut, et saute la reconstruction du schéma. Passer par `bun run test:integration`.
