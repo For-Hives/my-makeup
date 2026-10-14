@@ -22,6 +22,12 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 export const RACINE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
+
+/**
+ * The date of the switch the import is given on the bench (`--consentement-le`, ticket 064): the
+ * consent date of the fictional profiles of the fake source that show a phone or an email. Made up.
+ */
+export const DATE_DE_BASCULE_DU_BANC = '2026-11-02T08:00:00.000Z'
 export const FICHIER_ENV = path.join(RACINE, '.env.test')
 export const FICHIER_COMPOSE = path.join(RACINE, 'compose.test.yml')
 

@@ -21,7 +21,7 @@ import { importer, type OptionsDImport } from '../../scripts/migration/import/im
 import type { Mode, Rapport } from '../../scripts/migration/import/rapport'
 import { lireLesReponses, type ReferentielGarde, referentielGarde } from '../../scripts/migration/import/referentiel'
 import { ouvrirLaSourceBun } from '../../scripts/migration/import/source-bun'
-import { RACINE } from './banc'
+import { DATE_DE_BASCULE_DU_BANC, RACINE } from './banc'
 import { payloadDeTest } from './payload-test'
 import { sourceDuBanc } from './source-strapi'
 
@@ -64,6 +64,7 @@ export async function importerSurLeBanc(
 			decisions: DECISIONS_DU_BANC,
 			referentiel: referentielDuBanc(),
 			medias: { base: sourceDuBanc().medias },
+			consentiLe: DATE_DE_BASCULE_DU_BANC,
 			...options,
 		})
 	} finally {
@@ -81,7 +82,8 @@ export async function commandeDImport(
 	environnement: Readonly<Record<string, string | undefined>> = process.env
 ): Promise<{ code: number; sortie: string }> {
 	const communes = options.includes('--communes') ? [] : ['--communes', FICHIER_DU_REFERENTIEL_DU_BANC, '--hors-ligne']
-	const ligne = [process.execPath, '--no-env-file', 'scripts/migration/import.ts', ...options, ...communes]
+	const bascule = options.includes('--consentement-le') ? [] : ['--consentement-le', DATE_DE_BASCULE_DU_BANC]
+	const ligne = [process.execPath, '--no-env-file', 'scripts/migration/import.ts', ...options, ...communes, ...bascule]
 	const enfant = Bun.spawn(ligne, {
 		cwd: RACINE,
 		env: { ...environnement },

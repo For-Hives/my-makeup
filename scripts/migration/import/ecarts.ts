@@ -31,6 +31,8 @@ export const REFERENCES = {
 	tailleEnOctets: 'SCHEMA.md §8 (size)',
 	/** A designated file that is not an image is not adopted: its profile or its article loses it. */
 	fichiersNonImages: 'fichiers-non-images-non-repris',
+	/** A phone or an email shown on the old site stays public, with a consent dated from the switch. */
+	coordonneesConsenties: 'coordonnees-consentement',
 } as const
 
 export type Reference = (typeof REFERENCES)[keyof typeof REFERENCES]

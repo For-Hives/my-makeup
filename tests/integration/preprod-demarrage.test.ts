@@ -11,6 +11,7 @@ import { migrations } from '../../src/migrations'
 import { BASE_DE_LA_PREPROD, MARQUE_DE_REMISE } from '../../src/preprod/remise'
 import { demarrerLaPreprod, type IssueDuDemarrage, PreprodRefusee } from '../../src/preprod/tranche'
 import { lireLeProfilPublic } from '../../src/services/public/profils'
+import { DATE_DE_BASCULE_DU_BANC } from '../outils/banc'
 import { DECISIONS_DU_BANC, referentielDuBanc } from '../outils/import'
 import { compterLesDocuments, exigerBanc, payloadDeTest, viderLaBase } from '../outils/payload-test'
 import { creerLaSourceStrapi, effacerLaSourceStrapi, sourceDuBanc } from '../outils/source-strapi'
@@ -370,6 +371,7 @@ describe('Le lecteur de la source sous Node', () => {
 					decisions: DECISIONS_DU_BANC,
 					referentiel: referentielDuBanc(),
 					medias: { base: sourceDuBanc().medias },
+					consentiLe: DATE_DE_BASCULE_DU_BANC,
 				})
 			} finally {
 				await source.fermer()

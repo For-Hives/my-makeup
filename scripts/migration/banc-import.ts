@@ -9,7 +9,7 @@
  * the bench. Started with `--no-env-file`: a working `.env` never reaches the bench.
  */
 
-import { BancRefuse } from '../../tests/outils/banc'
+import { BancRefuse, DATE_DE_BASCULE_DU_BANC } from '../../tests/outils/banc'
 import { bancCourant, exigerBancDebout } from '../banc'
 
 try {
@@ -30,5 +30,8 @@ if (!process.argv.includes('--decisions')) process.argv.push('--decisions', DECI
 /** The answers of the referential of the communes for the cities of the fake source, read offline. */
 const REFERENTIEL_DU_BANC = 'tests/fixtures/import/referentiel-du-banc.json'
 if (!process.argv.includes('--communes')) process.argv.push('--communes', REFERENTIEL_DU_BANC, '--hors-ligne')
+
+/** The date of the switch of the bench: the consent date of the fictional profiles that show contact details. */
+if (!process.argv.includes('--consentement-le')) process.argv.push('--consentement-le', DATE_DE_BASCULE_DU_BANC)
 
 await import('./import')

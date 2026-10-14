@@ -52,6 +52,8 @@ export interface BilanDeCollection extends Bilan {
 	liensSansLigne?: number[]
 	/** The prices read (ticket 062): in numbers and identifiers, never a text. */
 	prix?: BilanDesPrix
+	/** Contact details left out because the server would refuse them: profile and field, never the value (ticket 064). */
+	coordonneesARevoir?: { profil: number; champ: string }[]
 }
 
 /** The parity of a collection, and how the target splits, read again. */
@@ -154,6 +156,12 @@ function ligneDeBilan(nom: string, bilan: BilanDeCollection, mode: Mode): string
 	if (bilan.liensSansLigne?.length)
 		lignes.push(`  - liens de liste qui ne nomment aucune ligne, signalés : ${ids(bilan.liensSansLigne)}`)
 	if (bilan.prix) lignes.push(...lignesDesPrix(bilan.prix))
+	if (bilan.coordonneesARevoir?.length)
+		lignes.push(
+			`  - coordonnées laissées de côté, que le serveur refuserait (à revoir à la main) : ${bilan.coordonneesARevoir
+				.map(({ profil, champ }) => `${profil} (${champ})`)
+				.join(', ')}`
+		)
 	return lignes
 }
 

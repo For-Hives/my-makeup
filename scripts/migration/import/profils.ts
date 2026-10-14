@@ -34,12 +34,17 @@
  *   ticket 062): `bilanDesPrix` counts them, and lists the profiles that would lose their priced
  *   offer or hold digits the rule does not read.
  *
- * The network row of Strapi also holds the contact details of the profile: they are read into
- * memory to tell whether a contact channel exists at the source, and are not written here.
+ * - The network row of Strapi also holds the phone and the email of contact (ticket 064). They go
+ *   into the closed group `coordonnees`, trimmed; a value that is only blanks, `null` or `undefined` is no value (as on the old site), and one the server would refuse is left out and listed for review. A
+ *   profile with one of them shows it on the old site: it gets `contactPublic` true, `consentiLe`
+ *   the date of the switch (a parameter of the run, never the clock) and the source `import`
+ *   (« publié par la maquilleuse », register `coordonnees-consentement`). Without either: false,
+ *   no date, no source. The report counts them, never shows them.
  */
 
 import { estMontantDePrix, parsePrice, prixMinimal } from '../../../src/lib/prix'
 import { type ChampsDuProfil, estEntierementVide, type ReseauxDuProfil } from '../../../src/lib/profil/completude'
+import { validerEmailDeContact, validerTelephone } from '../../../src/lib/profil/coordonnees'
 import { type DocumentDuProfil, etatDuProfil, statutApres } from '../../../src/lib/profil/etat'
 import { CHOIX_INITIAL, type StatutDuProfil } from '../../../src/lib/profil/statut'
 import { attribuerSlugs } from '../../../src/lib/slug'
@@ -148,6 +153,65 @@ export function statutCalcule(valeurs: Readonly<Record<string, unknown>>): Statu
 /** A `decimal` of Strapi as a number, or `null`. */
 const nombre = (valeur: string | number | null): number | null => (valeur === null ? null : Number(valeur))
 
+/** The words the old site reads as no value (`texte()`, src/lib/profil/vue-publique.js). */
+const MOTS_VIDES = new Set(['null', 'undefined'])
+
+/**
+ * A contact detail as the old site reads it: trimmed, and nothing when it is blank or only the word
+ * `null` or `undefined`, in any case. Such a value shows nothing on the old site, so it is no value.
+ */
+const coordonnee = (valeur: string | null | undefined): string | null => {
+	const texte = valeur?.trim() ?? ''
+	return texte === '' || MOTS_VIDES.has(texte.toLowerCase()) ? null : texte
+}
+
+/** A contact detail the old site showed and the server would refuse (padding aside): which one, never its value. */
+export type CoordonneeARevoir = { profil: number; champ: 'telephone' | 'email' }
+
+/**
+ * The phone and the email of contact of a profile of the source, under the names of Payload. A value
+ * the validators of the profile refuse (a free text in the email field, a phone longer than 20
+ * characters) is left out, so that the whole profile is not refused for it: it is listed by
+ * `coordonneesARevoir`, and it does not open the contact details.
+ */
+export function coordonneesDeLaSource(profil: ProfilLu): { telephone: string | null; email: string | null } {
+	const telephone = coordonnee(profil.reseaux?.phone)
+	const email = coordonnee(profil.reseaux?.email)
+	return {
+		telephone: validerTelephone(telephone) === true ? telephone : null,
+		email: validerEmailDeContact(email) === true ? email : null,
+	}
+}
+
+/** The contact details of a profile that are left out because the server would refuse them. */
+export function coordonneesARevoir(profil: ProfilLu): CoordonneeARevoir[] {
+	const lues = { telephone: coordonnee(profil.reseaux?.phone), email: coordonnee(profil.reseaux?.email) }
+	const gardees = coordonneesDeLaSource(profil)
+	return (['telephone', 'email'] as const)
+		.filter(champ => lues[champ] !== null && gardees[champ] === null)
+		.map(champ => ({ profil: profil.id, champ }))
+}
+
+/** Whether the old site shows a phone or an email for this profile. */
+export const affichesALaSource = (profil: ProfilLu): boolean => {
+	const { telephone, email } = coordonneesDeLaSource(profil)
+	return telephone !== null || email !== null
+}
+
+/**
+ * The date of the switch, as the parameter of the run gives it: a day (`2026-11-02`, midnight UTC)
+ * or an instant with its zone (`2026-11-02T08:00:00Z`), as an ISO string. `null` when it is
+ * neither, or not a real date.
+ */
+export function dateDeBascule(texte: string): string | null {
+	if (!/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?(Z|[+-]\d{2}:\d{2}))?$/.test(texte)) return null
+	// `Date` lets 30 February through (it reads 2 March): the day must exist in its month.
+	const [annee = 0, mois = 0, jour = 0] = texte.slice(0, 10).split('-').map(Number)
+	if (new Date(Date.UTC(annee, mois - 1, jour)).getUTCDate() !== jour) return null
+	const date = new Date(texte)
+	return Number.isNaN(date.getTime()) ? null : date.toISOString()
+}
+
 export const ADAPTATEUR_PROFILS: Adaptateur = {
 	collection: 'profils',
 	champs: {
@@ -166,6 +230,10 @@ export const ADAPTATEUR_PROFILS: Adaptateur = {
 		photoPrincipale: 'relation',
 		galerie: 'relations',
 		reseaux: 'objet',
+		coordonnees: 'objet',
+		contactPublic: 'booleen',
+		consentiLe: 'date',
+		sourceConsentement: 'texte',
 		competences: 'liste',
 		langues: 'liste',
 		formations: 'liste',
@@ -278,6 +346,8 @@ export interface ProfilsAttendus {
 	liensSansLigne: number[]
 	/** The prices, in numbers and identifiers. */
 	prix: BilanDesPrix
+	/** Contact details left out because the server would refuse them: by profile and field, never the value. */
+	coordonneesARevoir: CoordonneeARevoir[]
 }
 
 /**
@@ -287,14 +357,16 @@ export interface ProfilsAttendus {
  * account the import takes, or the import stopped before. `communes` gives the commune of each
  * profile taken (./communes.ts); a profile it does not name has none. `medias` gives, for each
  * file adopted (./medias.ts), its identifier in Payload, or `null` while it is still to be
- * created; a file it does not name is not adopted.
+ * created; a file it does not name is not adopted. `consentiLe` is the date of the switch, an ISO
+ * string (`dateDeBascule`): given whenever a profile shows contact details at the source.
  */
 export function profilsAttendus(
 	profils: readonly ProfilLu[],
 	comptes: ReadonlyMap<number, number | null>,
 	laisses: Pick<ProfilsLaisses, 'ecartes' | 'spam'> = { ecartes: [], spam: [] },
 	communes: ReadonlyMap<number, CommuneAttendue | null> = new Map(),
-	medias: ReadonlyMap<number, number | null> = new Map()
+	medias: ReadonlyMap<number, number | null> = new Map(),
+	consentiLe: string | null = null
 ): ProfilsAttendus {
 	const nonPris = new Set([...laisses.ecartes, ...laisses.spam])
 	// The slugs of the old site, computed on every profile of the source, as the old site did.
@@ -317,6 +389,7 @@ export function profilsAttendus(
 		offresChiffreesPerdues: [],
 		chiffresNonLus: [],
 	}
+	const aRevoir: CoordonneeARevoir[] = []
 	for (const profil of profils) {
 		if (nonPris.has(profil.id)) continue
 		if (profil.compte === null || !comptes.has(profil.compte))
@@ -329,6 +402,12 @@ export function profilsAttendus(
 		for (const fichier of [...principale.nonReprises, ...galerie.nonReprises])
 			photosNonReprises.push({ entree: profil.id, fichier })
 		if (sections.liensSansLigne > 0) liensSansLigne.push(profil.id)
+		aRevoir.push(...coordonneesARevoir(profil))
+		const affiche = affichesALaSource(profil)
+		if (affiche && consentiLe === null)
+			throw new Error(
+				`Le profil ${profil.id} affiche des coordonnées : la date de bascule manquait, l’import aurait dû s’arrêter avant.`
+			)
 		const valeurs: Record<string, unknown> = {
 			strapiId: profil.id,
 			pro: comptes.get(profil.compte) ?? null,
@@ -346,6 +425,10 @@ export function profilsAttendus(
 			photoPrincipale: principale.ids[0] ?? null,
 			galerie: galerie.ids,
 			...valeursDesListes(sections),
+			coordonnees: coordonneesDeLaSource(profil),
+			contactPublic: affiche,
+			consentiLe: affiche ? consentiLe : null,
+			sourceConsentement: affiche ? 'import' : null,
 			statutChoisi: CHOIX_INITIAL,
 			createdAt: profil.created_at,
 			updatedAt: profil.updated_at,
@@ -374,7 +457,16 @@ export function profilsAttendus(
 		if ((profil.city?.trim() ?? '') !== '') ecarts.push({ champ: 'commune', reference: REFERENCES.villeEnCommune })
 		if (profil.available === null) ecarts.push({ champ: 'disponible', reference: REFERENCES.disponibiliteParDefaut })
 		if (statut === 'brouillon') ecarts.push({ champ: 'statut', reference: REFERENCES.profilVideEnBrouillon })
+		if (affiche) ecarts.push({ champ: 'contactPublic', reference: REFERENCES.coordonneesConsenties })
 		attendus.push({ strapiId: profil.id, valeurs, ecarts })
 	}
 	return { attendus, statuts, statutsDifferentsDeLaSource, photosNonReprises, liensSansLigne, prix }
+	return {
+		attendus,
+		statuts,
+		statutsDifferentsDeLaSource,
+		photosNonReprises,
+		liensSansLigne,
+		coordonneesARevoir: aRevoir,
+	}
 }

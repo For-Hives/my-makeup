@@ -13,7 +13,7 @@ import { definitionDeLaSource, type Ligne } from '../outils/source-strapi/donnee
  * Ticket 060: the import takes the sections of each profile, in their order, with their photos:
  * skills, languages, courses, experiences, offers with their options, networks, main picture and
  * gallery (docs/migration/SCHEMA.md §5.2 and §6; plan 02 §7.3, I40). The price typed is kept as it
- * is; its amount is ticket 062, the contact details ticket 064.
+ * is; its amount is ticket 062. The contact details are ticket 064 (import-contact.test.ts).
  *
  * The expected rows are read here from the definition of the fake source itself, by its link
  * tables, never by the code of the import. One import for the whole file.
@@ -274,7 +274,7 @@ describe('Les sections de chaque profil sont reprises dans leur ordre (ticket 06
 		expect(JSON.stringify(premier)).not.toContain('Sur devis')
 	})
 
-	test('les réseaux sont les liens de l’ancien site ; téléphone et email attendent le ticket 064', async () => {
+	test('les réseaux sont les liens de l’ancien site ; téléphone et email sont au ticket 064', async () => {
 		for (const profil of await profilsDeLaCible()) {
 			const [reseau] = deProfil(
 				Number(profil.strapiId),
@@ -289,7 +289,6 @@ describe('Les sections de chaque profil sont reprises dans leur ordre (ticket 06
 				siteWeb: reseau?.website ?? null,
 				linkedin: reseau?.linkedin ?? null,
 			})
-			expect(profil.coordonnees ?? {}, String(profil.strapiId)).toEqual({ telephone: null, email: null })
 		}
 	})
 })
