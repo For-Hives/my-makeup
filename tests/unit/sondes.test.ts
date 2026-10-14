@@ -6,7 +6,7 @@
  */
 
 import { describe, expect, test } from 'bun:test'
-import { readdirSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { FROZEN_URL_FAMILIES, familiesFor } from '../../src/lib/urls-gelees'
 import { configurationDesEssais } from '../outils/e2e'
@@ -531,5 +531,23 @@ describe('U86 : la garde des essais de bout en bout refuse toujours la prod', ()
 
 		expect(fichiers).toContain('sondes.ts')
 		expect(fichiers.filter(fichier => /\.(spec|test)\.tsx?$/.test(fichier))).toEqual([])
+	})
+})
+
+describe('R01 : aucune sonde ne contourne la garde', () => {
+	/** Ways out of this machine other than the transport of the guard. */
+	const SORTIES = [/\bfetch\s*\(/, /\bBun\.fetch\b/, /['"](?:node:)?https?['"]/, /['"]undici['"]/, /\bXMLHttpRequest\b/]
+
+	test('seule la garde appelle fetch ; aucun autre fichier des sondes n’ouvre de connexion', () => {
+		const dossier = path.join(RACINE, 'tests/sondes')
+		const fautifs = readdirSync(dossier)
+			.filter(fichier => fichier !== 'garde.ts')
+			.flatMap(fichier => {
+				const texte = readFileSync(path.join(dossier, fichier), 'utf8')
+				return SORTIES.filter(sortie => sortie.test(texte)).map(sortie => `${fichier} : ${sortie}`)
+			})
+
+		expect(fautifs).toEqual([])
+		expect(readFileSync(path.join(dossier, 'garde.ts'), 'utf8').match(/\bfetch\s*\(/g)).toHaveLength(1)
 	})
 })
