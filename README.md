@@ -63,7 +63,7 @@ Le reste :
 - `.env.exemple` : la liste des variables d'environnement, sans aucune valeur.
 - `tests/` : les tests. Un composant React s'y teste seul, sans navigateur : voir `docs/tests/composants.md`. Un service extérieur s'y simule, et aucun test n'appelle Internet : voir `docs/tests/http-sortant.md`.
 - `compose.test.yml` et `.env.test` : le banc de test local et son environnement factice, voir « Le banc de test ».
-- `src/jeu-fictif/` : le jeu fictif du banc de test, que la préprod chargera aussi : les 12 profils types, leurs maquilleuses fictives et leurs photos, voir « Le banc de test ».
+- `src/jeu-fictif/` : le jeu fictif du banc de test, que la préprod chargera aussi : les 12 profils types, leurs maquilleuses fictives et leurs photos, trois talents et trois articles dont un brouillon, voir « Le banc de test ».
 - `playwright.config.ts` : les essais de bout en bout, voir « Les essais de bout en bout ». Il ne règle rien lui-même : tout vient de `tests/outils/e2e.ts`.
 - `src/content/changelog.json` : les notes de version, en attente puis publiées ; `.github/workflows/release.yml` : la publication d'une version, qui écrit `.release/version.json` (voir « Notes de version et publication »).
 
@@ -458,6 +458,9 @@ Rien ne se publie avant la fusion de `v3` dans `main`. Le détail, et ce qu'il r
 | `bun run test:ci-garde` | Les garde-fous de `tests/ci/`, lancés à part de `bun run test` |
 | `bun run banc:up` | Démarre le banc de test : base, capteur de mails, stockage d'objets et faux Google, en conteneurs |
 | `bun run banc:down` | Arrête le banc de test et efface tout ce qu'il contenait |
+| `bun run banc:complet` | Le banc complet en une commande : démarre la pile, la remet à son état de départ (base reconstruite par les migrations, comptes types, 12 profils types avec photos, 3 talents, 3 articles dont un brouillon), construit l'application et la lance sur le port du banc. `--sans-application` s'arrête avant l'application (voir « Le banc de test ») |
+| `bun run banc:reinitialiser` | Remet le banc à son état de départ, application ou non : base, stockage, capteur de mails, jeu. Environ 10 secondes |
+| `bun run banc:session <compte>` | Ouvre la session d'un compte du banc (`admin`, `redaction`, `maquilleuse`, `profil-reference`… ou une adresse) et l'écrit dans `.banc/sessions/`, sans jamais afficher le jeton |
 | `bun run banc:prepare` | Reconstruit la base du banc par les migrations versionnées, vide, puis vérifie qu'elle décrit les collections du code |
 | `bun run banc:source` | Crée la fausse base Strapi que lit l'import, banc démarré : base, rôle en lecture seule, photos dans le stockage. Relancée, elle la recrée à l'identique et donne la même empreinte. `--empreinte` la lit sans la toucher, `--effacer` la supprime (voir `docs/tests/source-strapi.md`) |
 | `bun run banc:import` | L'import des données de l'ancien site sur le banc : il lit la fausse base Strapi et écrit dans la base du banc. À blanc par défaut, `--reel` pour écrire (voir `docs/migration/IMPORT.md`) |
@@ -522,6 +525,17 @@ Une nouvelle variable qui désigne un service extérieur s'ajoute à la garde, a
 ### Le banc de test
 
 Les tests d'intégration tournent contre quatre conteneurs jetables : PostgreSQL en mémoire, un capteur de mails, un stockage d'objets avec l'API S3 et un faux Google. Rien n'y est réel, et rien n'est gardé à l'arrêt.
+
+Pour travailler dans le site local, sans écrire de test, **quatre gestes** (l'agent n'a plus besoin d'un compte en ligne) :
+
+```sh
+bun run banc:complet        # 1. monter : pile, base, jeu fictif, application sur http://localhost:3100 (premier plan)
+bun run banc:session admin  # 2. une session : fichiers dans .banc/sessions/<banc>/, le jeton n'est pas affiché
+bun run banc:reinitialiser  # 3. remettre à l'état de départ, en une dizaine de secondes (reprendre une session ensuite)
+bun run banc:down           # 4. tout arrêter et tout effacer
+```
+
+Le jeu : 12 profils types (comptes `jeu-profil-*@example.test`), 3 talents, 3 articles dont un brouillon, et un compte de chaque type du site (`jeu-admin@example.test`…). L'administration en compte 19 profils : les 12 types et les 7 profils vides que le serveur crée avec les comptes types. Détail : [`docs/tests/banc.md`](docs/tests/banc.md), « Le banc complet ».
 
 ```sh
 bun run banc:up                                                # démarre le banc, rend la main quand les quatre services répondent

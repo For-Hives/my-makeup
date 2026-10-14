@@ -4,6 +4,9 @@
  *   bun run banc:up                     starts the four containers, returns once all four answer
  *   bun run banc:down                   stops them, removes containers and volumes
  *   bun run banc:prepare                rebuilds the bench database by the migrations, empty
+ *   bun run banc:complet                starts the stack, loads the whole set, builds and starts the application
+ *   bun run banc:reinitialiser          puts the bench back to its starting state: database, storage, mails, set
+ *   bun run banc:session <compte>       opens the session of an account and writes it to files (never printed)
  *   bun run test:integration [file…]    rebuilds the database, then runs the integration tests
  *
  * The instance (name and ports) comes from BANC_INSTANCE and BANC_DECALAGE: tests/outils/banc.ts.
@@ -31,6 +34,16 @@ import {
 	variablesDeCompose,
 } from '../tests/outils/banc'
 import { servicesMuets, sondesDuBanc } from '../tests/outils/banc-sondes'
+import {
+	adresseDuBanc,
+	cibleDesEssais,
+	environnementDeLApplication,
+	environnementDuBuild,
+	exigerCibleDuBanc,
+	messagePortPris,
+	portDeLApplication,
+} from '../tests/outils/e2e'
+import { lireLaSante } from '../tests/outils/serveur-e2e'
 
 /** Longest wait for the four services, from the first line of `banc:up` to the last. */
 const DELAI_DE_DEMARRAGE_MS = 60_000
@@ -246,7 +259,160 @@ async function tester(banc: Banc, demandes: string[]): Promise<number> {
 	}).exited
 }
 
-const USAGE = 'Usage : bun run banc:up | banc:down | banc:prepare | test:integration [fichier…]'
+/** The longest wait for the application to answer once it is started: the first call starts Payload. */
+const DELAI_DE_L_APPLICATION_MS = 60_000
+
+/** What `banc:reinitialiser` and `banc:complet` leave in the bench. */
+interface Contenu {
+	profils: number
+	profilsTypes: number
+	talents: number
+	articles: number
+	comptes: number
+	admins: number
+	objets: number
+}
+
+/**
+ * Puts the bench back to its starting state, whatever it held: the database dropped and rebuilt by
+ * the versioned migrations, the object storage and the mail catcher emptied, then the whole set
+ * loaded (tests/fixtures/jeu-du-banc.ts). The same content every time, the same identifiers.
+ *
+ * A running application keeps serving: it reads the same database. The sessions it had opened are
+ * gone with the accounts, `banc:session` gives new ones.
+ */
+async function remettreLeBancAZero(banc: Banc): Promise<Contenu> {
+	await reconstruireLaBase(banc)
+	const [{ viderLeStockage, listerLesObjets }, { viderLeCapteur }, { poserLeJeuDuBanc }, { payloadDeTest }] =
+		await Promise.all([
+			import('../tests/outils/s3'),
+			import('../tests/outils/mailpit'),
+			import('../tests/fixtures/jeu-du-banc'),
+			import('../tests/outils/payload-test'),
+		])
+	await Promise.all([viderLeStockage(), viderLeCapteur()])
+	await poserLeJeuDuBanc()
+	const payload = await payloadDeTest()
+	const compter = async (collection: 'profils' | 'talents' | 'articles' | 'pros' | 'admins') =>
+		(await payload.count({ collection, overrideAccess: true })).totalDocs
+	const types = await payload.count({
+		collection: 'profils',
+		overrideAccess: true,
+		where: { 'pro.email': { like: 'jeu-profil-' } },
+	})
+	return {
+		profils: await compter('profils'),
+		profilsTypes: types.totalDocs,
+		talents: await compter('talents'),
+		articles: await compter('articles'),
+		comptes: await compter('pros'),
+		admins: await compter('admins'),
+		objets: (await listerLesObjets()).length,
+	}
+}
+
+const resumeDuContenu = (c: Contenu): string =>
+	`${c.profilsTypes} profils types (${c.profils} profils en tout), ${c.talents} talents, ${c.articles} articles dont un brouillon, ${c.admins} comptes d’administration, ${c.comptes} comptes de maquilleuses, ${c.objets} objets au stockage`
+
+async function reinitialiser(banc: Banc): Promise<void> {
+	const debut = performance.now()
+	await exigerBancDebout(banc)
+	const contenu = await remettreLeBancAZero(banc)
+	console.log(
+		`Banc « ${banc.instance.nom} » remis à son état de départ en ${secondes(debut)} s : ${resumeDuContenu(contenu)}.`
+	)
+}
+
+/** Builds the application for production, against no database and no secret, then starts it on the port of the bench. */
+async function lancerLApplication(banc: Banc): Promise<number> {
+	const adresse = exigerCibleDuBanc(process.env, banc.environnement)
+	// The guard of the tests, asked here before anything is built.
+	cibleDesEssais({ ...process.env, BASE_URL: adresse })
+	const port = portDeLApplication(adresse)
+	if (await portOuvert(port)) throw new BancRefuse(messagePortPris(port))
+
+	const debut = performance.now()
+	console.log(`Build de l’application pour ${adresse}…`)
+	const build = await Bun.spawn([process.execPath, '--no-env-file', 'run', 'build'], {
+		cwd: RACINE,
+		env: environnementDuBuild(process.env, banc.environnement),
+		stdio: ['ignore', 'inherit', 'inherit'],
+	}).exited
+	if (build !== 0) throw new BancRefuse('Le build de l’application a échoué : le message de Next est ci-dessus.')
+
+	const application = Bun.spawn(
+		[process.execPath, '--no-env-file', 'run', 'start', '-p', String(port), '-H', '127.0.0.1'],
+		{
+			cwd: RACINE,
+			env: { ...process.env, ...environnementDeLApplication(banc.environnement) },
+			stdio: ['ignore', 'inherit', 'inherit'],
+		}
+	)
+	const arreter = () => application.kill('SIGTERM')
+	for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP'] as const) process.on(signal, arreter)
+
+	const limite = performance.now() + DELAI_DE_L_APPLICATION_MS
+	let sante = await lireLaSante(adresse)
+	while (!sante.saine && application.exitCode === null && performance.now() < limite) {
+		await Bun.sleep(500)
+		sante = await lireLaSante(adresse)
+	}
+	if (!sante.saine) {
+		application.kill('SIGTERM')
+		await application.exited
+		throw new BancRefuse(`L’application ne répond pas à ${adresse} (${sante.constat}) : son journal est ci-dessus.`)
+	}
+	console.log(
+		[
+			`Application prête sur ${adresse} (${secondes(debut)} s de build et de démarrage). Ctrl+C l’arrête ; le banc reste.`,
+			`Administration : ${adresse}/admin. Une session : ${prefixeDeCommande(banc.instance)}bun run banc:session admin`,
+		].join('\n')
+	)
+	const code = await application.exited
+	return code === 143 || code === 130 ? 0 : code
+}
+
+async function complet(banc: Banc, options: string[]): Promise<number> {
+	const debut = performance.now()
+	await demarrer(banc)
+	const contenu = await remettreLeBancAZero(banc)
+	console.log(`Jeu chargé en ${secondes(debut)} s depuis le départ : ${resumeDuContenu(contenu)}.`)
+	if (options.includes('--sans-application')) {
+		console.log(
+			`Pas d’application lancée. Les adresses ci-dessus servent aux tests ; pour l’application : ${prefixeDeCommande(banc.instance)}bun run banc:complet`
+		)
+		return 0
+	}
+	return lancerLApplication(banc)
+}
+
+async function session(banc: Banc, [demande, ...reste]: string[]): Promise<number> {
+	if (!demande || reste.length > 0) {
+		console.error('Usage : bun run banc:session <compte>')
+		const { messageCompteInconnu } = await import('../tests/outils/banc-session')
+		console.error(messageCompteInconnu(demande ?? ''))
+		return 2
+	}
+	await exigerBancDebout(banc)
+	Object.assign(process.env, banc.environnement)
+	const [{ payloadDeTest }, { ecrireLaSession }] = await Promise.all([
+		import('../tests/outils/payload-test'),
+		import('../tests/outils/banc-session'),
+	])
+	const ecrite = await ecrireLaSession(await payloadDeTest(), demande, { instance: banc.instance.nom })
+	const adresse = adresseDuBanc(banc.environnement)
+	console.log(
+		[
+			`Session de ${ecrite.compte} (${ecrite.collection}), ouverte jusqu’à ${ecrite.expire.toLocaleTimeString('fr-FR')}. Le jeton n’est pas affiché.`,
+			`- navigateur (Playwright) : browser.newContext({ storageState: '${ecrite.etatDeNavigateur}' }), puis ${adresse}/admin`,
+			`- curl : curl -H @${ecrite.entetes} ${adresse}/api/${ecrite.collection}/me`,
+		].join('\n')
+	)
+	return 0
+}
+
+const USAGE =
+	'Usage : bun run banc:up | banc:down | banc:prepare | banc:complet | banc:reinitialiser | banc:session <compte> | test:integration [fichier…]'
 
 /** The bench this process works on: the instance named by BANC_INSTANCE and BANC_DECALAGE. */
 export function bancCourant(): Banc {
@@ -267,6 +433,13 @@ async function principal([commande, ...suite]: string[]): Promise<number> {
 		case 'prepare':
 			await preparer(banc)
 			return 0
+		case 'complet':
+			return complet(banc, suite)
+		case 'reinitialiser':
+			await reinitialiser(banc)
+			return 0
+		case 'session':
+			return session(banc, suite)
 		case 'test':
 			return tester(banc, suite)
 		default:

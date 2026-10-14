@@ -416,12 +416,73 @@ const { profils, crees, presents } = await poserLesProfilsDuJeu(await payloadDeT
 - **Chaque type s'écrit dans une transaction.** Interrompu, il ne laisse ni compte, ni profil, ni média. Les photos déjà envoyées restent dans le stockage jusqu'au chargement suivant, qui réécrit les mêmes clés : il ne reste alors aucun objet orphelin.
 - **Aucun mail ne part** : la confirmation d'un compte neuf n'est pas envoyée.
 - **Hors du banc et de la préprod, rien n'est lu ni écrit** (`src/jeu-fictif/garde.ts`). Le jeu accepte `APP_ENV=test` avec une base de ce poste en `_test`, le stockage de ce poste dans un espace en `-test` et aucune adresse déployée ; ou `APP_ENV=preprod` avec l'adresse `https://preprod.my-makeup.fr`. Il refuse `APP_ENV=prod`, l'adresse du site en ligne, un `APP_ENV` absent (comme dans un `.env` de développement) ou inconnu, l'absence de stockage d'objets, et un Payload branché sur une autre base que `DATABASE_URI`. Le refus (`JeuFictifRefuse`) nomme la variable, jamais sa valeur.
-- **Avec les comptes du jeu, la base tient 19 profils** : les 12 types, et les profils vides des sept comptes de maquilleuse du jeu qui en ont un.
+- **Avec les comptes du jeu, la base tient 19 profils** : les 12 types, et les profils vides des sept comptes de maquilleuse du jeu qui en ont un (voir « Le banc complet »).
 - Un chargement sur une base vide prend environ 4 secondes, et 20 à 40 millisecondes sur une base déjà remplie (mesuré le 14/10/2026, deux passages : 3,9 s et 4,0 s, puis 36 ms et 23 ms).
 
 Les données sont dans `src/jeu-fictif/profils.ts` (`PROFILS_DU_JEU`), avec, pour chaque type, ce que le serveur doit calculer (`attendu`). Le jeu vit sous `src/` et non sous `tests/`, parce que la préprod le chargera aussi (ticket 053), et que l'image Docker ne contient pas `tests/`.
 
 `tests/unit/jeu-fictif.test.ts` vérifie le jeu sans le banc : les douze types, l'état que leur donne la règle unique, les longueurs du profil aux textes maximaux, les six photos et la garde. `tests/integration/banc-profils-types.test.ts` le charge sur le banc : chaque profil relié à sa maquilleuse, l'état enregistré, les photos et leurs objets, le rechargement.
+
+## Le banc complet : une commande, la session dont on a besoin
+
+Pour travailler dans le site local sans écrire de test (voir une page connectée, l'administration, un parcours de maquilleuse), quatre gestes. Aucun compte en ligne n'est nécessaire, rien n'est réel.
+
+```sh
+bun run banc:complet         # 1. monter : la pile, la base, le jeu, l'application
+bun run banc:session admin   # 2. obtenir la session dont on a besoin
+bun run banc:reinitialiser   # 3. remettre à l'état de départ
+bun run banc:down            # 4. tout arrêter et tout effacer
+```
+
+**1. `bun run banc:complet`**, dans cet ordre :
+
+1. démarre les quatre conteneurs, ou constate qu'ils tournent déjà (`banc:up`) ;
+2. remet le banc à son état de départ (voir 3) ;
+3. construit l'application pour la production, sans base ni secret, comme `test:e2e` ;
+4. la démarre sur le port du banc, `http://localhost:3100` par défaut, `127.0.0.1` seulement, et dit « Application prête » quand `/api/health` répond.
+
+Elle reste au premier plan jusqu'à Ctrl+C, qui l'arrête sans arrêter le banc. Un agent la lance en arrière-plan et attend la ligne « Application prête ». `--sans-application` s'arrête après le jeu (la pile et les données, sans application). Mesuré le 14/10/2026, images déjà téléchargées : environ 10 secondes pour la pile, 10 pour le jeu, 35 pour le build et le démarrage de l'application. Sur un poste neuf, il y a en plus le téléchargement des quatre images (voir « Images »).
+
+L'application porte le nom et le port de l'instance (`BANC_INSTANCE`, `BANC_DECALAGE`, voir « Plusieurs bancs sur le même poste »). Si le port est déjà pris, la commande le dit et s'arrête : `bun run test:e2e` démarre sa propre application sur le même port, et refuse de son côté quand celle-ci tourne.
+
+**2. `bun run banc:session <compte>`** ouvre une session et l'écrit dans deux fichiers de `.banc/sessions/<instance>/`, que git ignore et que la CI ne publie pas :
+
+| Compte | Qui |
+|---|---|
+| `admin`, `redaction`, `maquilleuse`, `maquilleuse-non-verifiee`, `maquilleuse-sans-profil`, `maquilleuse-bloquee`, `reprise-avec-hash`, `reprise-google`, `reprise-google-avec-hash`, `reprise-facebook` | Le compte de ce type dans le jeu fixe (`jeu-<type>@example.test`) |
+| `profil-reference`, `profil-ville-voisine`… | La maquilleuse d'un des 12 profils types (`jeu-profil-<cle>@example.test`) |
+| Une adresse | N'importe quel compte du banc, administration ou maquilleuse |
+
+- `<compte>.etat.json` : l'état d'un contexte de navigateur de Playwright, `browser.newContext({ storageState: '…' })`, puis `/admin` ou la page voulue.
+- `<compte>.entetes` : les en-têtes `Cookie` et `Origin` d'un client qui n'est pas un navigateur, `curl -H @fichier http://localhost:3100/api/admins/me`.
+
+La commande dit le compte, la fin de la session et les deux chemins. **Le jeton n'est jamais affiché**, ni sur la sortie standard, ni dans une erreur : il n'est que dans les deux fichiers (lisibles par leur propriétaire seul). Aucun mot de passe n'existe : la session est ouverte comme le fait une connexion, sans en connaître (voir « Une session sans mot de passe »). Un compte inconnu est refusé avec la liste des noms.
+
+**3. `bun run banc:reinitialiser`** remet le banc dans l'état où `banc:complet` le laisse, application lancée ou non, en environ 10 secondes (mesuré : 9,6 s à 10 s, deux fois de suite) :
+
+- la base est effacée, puis reconstruite par les migrations versionnées, comme la préprod (voir « Préparer la base du banc ») ;
+- le stockage d'objets et le capteur de mails sont vidés ;
+- le jeu est chargé : un compte de chaque type du jeu fixe, les 12 profils types avec leurs photos, 3 talents, 3 articles dont un brouillon.
+
+Les identifiants sont les mêmes à chaque fois. Les sessions ouvertes avant ne valent plus (les comptes sont recréés) : redemande-les par `banc:session`. Une application qui tourne continue de servir la même base. Les tests d'intégration et les essais de bout en bout vident aussi le banc, sans recharger le jeu : ce qu'on y avait chargé à la main est perdu.
+
+**4. `bun run banc:down`** efface tout, comme toujours.
+
+### Ce que contient le jeu
+
+| Quoi | Combien | Détail |
+|---|---|---|
+| Comptes d'administration | 2 | `jeu-admin@example.test` (rôle `admin`), `jeu-redaction@example.test` (rôle `redaction`) |
+| Comptes de maquilleuses | 20 | 8 du jeu fixe (voir « Le jeu du banc : un compte fixe de chaque type ») et 12 des profils types |
+| Profils types | 12 | Les douze du tableau « Le jeu du banc : les 12 profils types », avec leurs photos |
+| Talents | 3 | `maquillage-mariee`, `maquillage-soiree`, `maquillage-photo`, tous publiés |
+| Articles | 3 | `preparer-sa-peau-avant-un-maquillage` et `choisir-sa-maquilleuse-pour-un-mariage` (publiés), `tendances-maquillage-de-la-saison` (brouillon, jamais lu par le public) |
+
+Le critère « l'administration compte 12 profils » compte les **12 profils types**, ceux dont le compte est `jeu-profil-*`. La liste des profils en montre 19 : les 12 types, plus les profils vides que le serveur crée avec les 7 comptes de maquilleuse du jeu fixe qui en ont un (le compte « sans profil » n'en a pas). Le jeu fixe n'a pas été changé pour tomber sur 12 : ses comptes servent à essayer chaque type de session, et un compte de maquilleuse avec profil a son profil vide. Les talents et les articles du jeu sont écrits dans `src/jeu-fictif/redaction.ts`, sous `src/` comme les profils, parce que la préprod les charge aussi (ticket 053, `docs/preprod.md`). Les comptes d'administration, eux, ne sont que sur le banc : sur la préprod, le premier admin est celui qu'Andy crée.
+
+Rejouer le chargement ne crée rien : un talent ou un article se retrouve par son adresse, brouillon compris, et reste tel qu'il est.
+
+Les tests : `tests/integration/banc-jeu-complet.test.ts` (le jeu complet, rejoué sans doublon, les commandes `banc:reinitialiser` et `banc:session` lancées comme une personne les lance, la préprod sans stockage), `tests/e2e/jeu-du-banc.spec.ts` (l'administration, ouverte avec l'admin du jeu, compte les 12 profils types, les 3 talents et les 3 articles dont le brouillon), `tests/unit/jeu-redaction.test.ts` et `tests/unit/banc-complet.test.ts` (sans le banc).
 
 ## La matrice d'accès
 
