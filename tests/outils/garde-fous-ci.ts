@@ -149,6 +149,7 @@ interface Step {
 	name?: string
 	uses?: string
 	run?: string
+	shell?: unknown
 	if?: unknown
 	with?: Record<string, unknown>
 	env?: Record<string, unknown>
@@ -161,6 +162,7 @@ interface Job {
 	steps?: Step[]
 	uses?: string
 	permissions?: unknown
+	defaults?: unknown
 	strategy?: unknown
 	'timeout-minutes'?: unknown
 }
@@ -169,8 +171,11 @@ interface Job {
 export interface Workflow {
 	file: string
 	text: string
+	/** The whole file as YAML reads it: comments are gone, the lines of a `run: |` block are not. */
+	document: unknown
 	on: unknown
 	permissions: unknown
+	defaults: unknown
 	jobs: Record<string, Job>
 }
 
@@ -183,14 +188,45 @@ export interface RequiredCheck {
 	job?: string
 }
 
-/** The statuses a step may wait for. Any other condition can skip a step without anyone noticing. */
-const STATUS_CONDITIONS = ['always()', '!cancelled()', 'failure()']
+/** The conditions that make a step run more often, never less. Any other one can skip it without anyone noticing. */
+const RUNS_ANYWAY = ['always()', '!cancelled()']
+/**
+ * Runs only when an earlier step failed: for an action that sends a report (a trace, a
+ * screenshot), never for a command. A command under this condition is skipped on a green job.
+ */
+const AFTER_A_FAILURE = 'failure()'
+/** With `shell: bash`, GitHub runs `bash --noprofile --norc -eo pipefail`; without it, `bash -e`, and a pipe hides a failure. */
+const RUN_SHELL = 'bash'
 /** The only folder a workflow may cache: the compilation cache of Next, never a build output. */
 const CACHED_FOLDER = '.next/cache'
 const PINNED_ACTION = /^[\w.-]+\/[\w./-]+@[0-9a-f]{40}$/
 const PINNED_ACTION_LINE = /uses:\s*\S+@[0-9a-f]{40}\s+#\s*v\d+(\.\d+){0,2}\s*$/
-/** What makes a failed command pass in a shell. */
-const SWALLOWED_FAILURE = /\|\|\s*(true|:|exit\s+0)(?![\w-])|\bset\s+\+e\b/
+/** Where a shell command starts: a new line, after `;`, `&&`, `||`, `|`, `(`, `{`, or after `then`, `do`, `else`. */
+const COMMAND_START = String.raw`(?:^|[;&|({]|\b(?:then|do|else)\b)[ \t]*`
+/**
+ * What makes a failed command pass in a shell, as far as a text can tell. The list is not
+ * complete and cannot be: a shell has too many ways (docs/qualite.md says which ones are left).
+ */
+const SWALLOWED_FAILURES: readonly { trick: string; pattern: RegExp }[] = [
+	// `cmd || anything` replaces the failure by whatever follows. Only a non-zero exit keeps it.
+	{ trick: '« || » suivi d’autre chose que « exit 1 »', pattern: /\|\|(?!\s*exit\s+[1-9])/ },
+	// `set`, as a command and not as a word of another one, with `+e` among its options.
+	{
+		trick: '« set +e »',
+		pattern: new RegExp(String.raw`${COMMAND_START}set(?:[ \t]+[^\s;&|]+)*?[ \t]+\+[a-zA-Z]*e[a-zA-Z]*(?![\w-])`, 'm'),
+	},
+	{
+		trick: '« set +o errexit » ou « set +o pipefail »',
+		pattern: new RegExp(String.raw`${COMMAND_START}set(?:[ \t]+[^\s;&|]+)*?[ \t]+\+o[ \t]+(?:errexit|pipefail)\b`, 'm'),
+	},
+	// A command that is nothing but a success: `cmd; true`, a last line `exit 0`, a lone `:`.
+	{
+		trick: 'une commande « true », « : » ou « exit 0 » seule',
+		pattern: new RegExp(String.raw`${COMMAND_START}(?:true|:|exit\s+0)[ \t]*(?:$|[;&|)}#])`, 'm'),
+	},
+]
+/** `${{ … }}` in a command is replaced by GitHub before the shell reads it: its `||` is not a shell one. */
+const EXPRESSION = /\$\{\{([\s\S]*?)\}\}/g
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
 	typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -202,8 +238,10 @@ export function readWorkflow(file: string, text: string): Workflow {
 	return {
 		file,
 		text,
+		document: yaml,
 		on: root.on,
 		permissions: root.permissions,
+		defaults: root.defaults,
 		jobs: isRecord(root.jobs) ? (root.jobs as Record<string, Job>) : {},
 	}
 }
@@ -235,16 +273,35 @@ function* keysNamed(value: unknown, key: string, trail: string[] = []): Generato
 	}
 }
 
-/** C01: no step and no job is allowed to fail, by `continue-on-error` or by a shell trick. */
+/**
+ * C01: no step and no job is allowed to fail, by `continue-on-error`, by a shell that does not
+ * stop on a failure, or by one of the shell tricks this guard knows.
+ */
 export function toleratedFailures(workflows: readonly Workflow[]): string[] {
 	const problems: string[] = []
 	for (const workflow of workflows) {
 		for (const found of keysNamed(workflow.jobs, 'continue-on-error'))
 			if (found.value !== false)
 				problems.push(`${workflow.file}, ${found.trail} : « continue-on-error » rend un échec invisible.`)
-		for (const { step, where } of allSteps(workflow))
-			if (SWALLOWED_FAILURE.test(step.run ?? ''))
-				problems.push(`${where} : la commande avale son échec (« || true », « set +e »…).`)
+
+		const commands = [...allSteps(workflow)].filter(({ step }) => step.run !== undefined)
+		const shell =
+			isRecord(workflow.defaults) && isRecord(workflow.defaults.run) ? workflow.defaults.run.shell : undefined
+		if (commands.length > 0 && shell !== RUN_SHELL)
+			problems.push(
+				`${workflow.file} doit déclarer « defaults: run: shell: ${RUN_SHELL} » : sans lui, GitHub lance bash sans « pipefail », et une commande qui échoue dans un tube passe.`
+			)
+		for (const [id, job] of Object.entries(workflow.jobs))
+			if (job.defaults !== undefined)
+				problems.push(`${workflow.file}, job ${id} : « defaults » ne se règle qu’une fois, en tête du fichier.`)
+
+		for (const { step, where } of commands) {
+			if (step.shell !== undefined)
+				problems.push(`${where} : un « shell » propre à l’étape peut retirer l’arrêt sur échec (« -e », « pipefail »).`)
+			const command = String(step.run).replace(EXPRESSION, '')
+			for (const { trick, pattern } of SWALLOWED_FAILURES)
+				if (pattern.test(command)) problems.push(`${where} : la commande avale son échec (${trick}).`)
+		}
 	}
 	return problems
 }
@@ -267,17 +324,26 @@ export function cacheDependentSteps(workflows: readonly Workflow[]): string[] {
 }
 
 /**
- * C03: every required check exists under its exact name. A check GitHub creates by itself
- * (CodeQL, default setup) must not be imitated by a job: the homonym would satisfy the
- * protection without any analysis.
+ * C03: every required check exists under its exact name, once. GitHub knows a required check
+ * by its name alone, so a homonym satisfies the protection in its place: no other job may be
+ * shown under the name of a check of a workflow, and no job at all under the name of a check
+ * GitHub creates by itself (CodeQL, default setup).
  */
 export function requiredCheckProblems(required: readonly RequiredCheck[], workflows: readonly Workflow[]): string[] {
 	const problems: string[] = []
 	const jobNames = workflows.flatMap(workflow =>
-		Object.entries(workflow.jobs).map(([id, job]) => ({ file: workflow.file, name: job.name ?? id }))
+		Object.entries(workflow.jobs).map(([id, job]) => ({ file: workflow.file, id, name: String(job.name ?? id) }))
 	)
+	const sameName = (name: string, check: RequiredCheck) => name.toLowerCase() === check.nom.toLowerCase()
 	for (const check of required) {
 		if (check.source === 'workflow') {
+			// GitHub knows a required check by its name alone: any other job shown under it would do.
+			for (const homonym of jobNames.filter(
+				job => sameName(job.name, check) && !(job.file === check.fichier && job.id === check.job)
+			))
+				problems.push(
+					`${homonym.file}, job ${homonym.id} : il s’affiche lui aussi sous le nom « ${homonym.name} », et passerait pour le check requis « ${check.nom} ».`
+				)
 			const workflow = workflows.find(candidate => candidate.file === check.fichier)
 			const job = workflow?.jobs[check.job ?? '']
 			if (!workflow) problems.push(`Check requis « ${check.nom} » : le fichier ${check.fichier} n’existe pas.`)
@@ -287,7 +353,7 @@ export function requiredCheckProblems(required: readonly RequiredCheck[], workfl
 			else if (job.strategy !== undefined)
 				problems.push(`Check requis « ${check.nom} » : une matrice change le nom du check.`)
 		} else if (check.source === 'github') {
-			for (const homonym of jobNames.filter(job => job.name.toLowerCase() === check.nom.toLowerCase()))
+			for (const homonym of jobNames.filter(job => sameName(job.name, check)))
 				problems.push(
 					`${homonym.file} : un job nommé « ${homonym.name} » passerait pour le check « ${check.nom} » de GitHub.`
 				)
@@ -343,20 +409,84 @@ export function unpinnedActions(workflows: readonly Workflow[]): string[] {
 	return [...new Set(problems)]
 }
 
-/** The secrets a workflow reads, comments left out. Anything outside `allowed` is refused. */
+/** Every text of a YAML document, with the key it is the value of. */
+function* textsOf(value: unknown, key = ''): Generator<{ key: string; text: string }> {
+	if (typeof value === 'string') yield { key, text: value }
+	else if (Array.isArray(value)) for (const item of value) yield* textsOf(item, key)
+	else if (isRecord(value)) for (const [name, child] of Object.entries(value)) yield* textsOf(child, name)
+}
+
+/**
+ * The expressions GitHub evaluates in a workflow: every `${{ … }}`, wherever it is written
+ * (GitHub replaces it even on a commented line of a `run: |` block), and every `if`, which
+ * needs no braces.
+ */
+function expressionsOf(workflow: Workflow): string[] {
+	const found: string[] = []
+	for (const { key, text } of textsOf(workflow.document)) {
+		found.push(...[...text.matchAll(EXPRESSION)].map(match => match[1] ?? ''))
+		if (key === 'if') found.push(text)
+	}
+	return found
+}
+
+/**
+ * How an expression reads a context such as `secrets`: by a name written in full
+ * (`secrets.NAME`, `secrets['NAME']`), or `whole`, any other way: the context itself
+ * (`toJSON(secrets)`, `secrets.*`) or a name computed when the workflow runs
+ * (`secrets[format(…)]`). Nobody can tell from the file what a `whole` read gives.
+ */
+function contextReads(expression: string, context: string): { names: string[]; whole: boolean } {
+	// A text between quotes is not code: `'secrets'` reads nothing. Its length is kept.
+	const code = expression.replace(/'(?:[^']|'')*'/g, quoted => `'${'_'.repeat(quoted.length - 2)}'`)
+	const names: string[] = []
+	let whole = false
+	// Names of GitHub expressions are not case-sensitive. `needs.secrets` is a property, not the context.
+	for (const match of code.matchAll(new RegExp(String.raw`(?<![\w.-])${context}(?![\w-])`, 'gi'))) {
+		const after = expression.slice(match.index + context.length)
+		const name = /^\s*\.\s*([A-Za-z_][\w-]*)/.exec(after)?.[1] ?? /^\s*\[\s*'([^']+)'\s*\]/.exec(after)?.[1]
+		if (name === undefined) whole = true
+		else names.push(name)
+	}
+	return { names, whole }
+}
+
+/** The name the token of the run has among the secrets: `github.token` is the same value. */
+const RUN_TOKEN = 'GITHUB_TOKEN'
+
+/**
+ * The secrets a workflow reads. Anything outside `allowed` is refused, and so is every read
+ * that does not name its secret in full: the whole `secrets` context, a computed name,
+ * `secrets: inherit`. The token of the run counts as a secret under both its names,
+ * `secrets.GITHUB_TOKEN` and `github.token`.
+ */
 export function unexpectedSecrets(workflows: readonly Workflow[], allowed: readonly string[] = []): string[] {
 	const problems: string[] = []
+	const isAllowed = (name: string) => allowed.some(known => known.toUpperCase() === name.toUpperCase())
 	for (const workflow of workflows) {
+		// The text itself, comment lines left out: a name is refused even outside an expression.
 		const written = workflow.text
 			.split('\n')
 			.filter(line => !line.trim().startsWith('#'))
 			.join('\n')
-		const names = [...written.matchAll(/\bsecrets\s*(?:\.\s*([A-Za-z_]\w*)|\[\s*['"]([^'"]+)['"]\s*\])/g)].map(
+		const names = [...written.matchAll(/\bsecrets\s*(?:\.\s*([A-Za-z_]\w*)|\[\s*['"]([^'"]+)['"]\s*\])/gi)].map(
 			match => match[1] ?? match[2] ?? ''
 		)
+		let whole = false
+		for (const expression of expressionsOf(workflow)) {
+			const secrets = contextReads(expression, 'secrets')
+			names.push(...secrets.names)
+			whole ||= secrets.whole
+			const github = contextReads(expression, 'github')
+			if (github.whole || github.names.some(name => name.toLowerCase() === 'token')) names.push(RUN_TOKEN)
+		}
 		for (const name of new Set(names))
-			if (!allowed.includes(name))
+			if (!isAllowed(name))
 				problems.push(`${workflow.file} lit le secret « ${name} », qui n’est pas dans la liste admise.`)
+		if (whole)
+			problems.push(
+				`${workflow.file} lit les secrets sans nommer lequel (« toJSON(secrets) », « secrets[…] » calculé) : chaque secret se lit par son nom, écrit en toutes lettres.`
+			)
 		if (/\bsecrets\s*:\s*inherit\b/.test(written))
 			problems.push(`${workflow.file} transmet tous les secrets (« secrets: inherit »).`)
 	}
@@ -403,8 +533,10 @@ export function permissionProblems(workflow: Workflow): string[] {
 }
 
 /**
- * The aggregator is what the protection requires. It always runs, waits for every other job,
- * and no other job or step can be skipped by a condition.
+ * The aggregator is what the protection requires. It always runs and waits for every other
+ * job; no other job is under a condition, and no command can be skipped by one: a `run` step
+ * may only carry a condition that makes it run more often. `failure()` is left to the actions
+ * that send a report, where being skipped on a green job is the point.
  */
 export function aggregatorProblems(workflow: Workflow, aggregator: string): string[] {
 	const problems: string[] = []
@@ -431,17 +563,29 @@ export function aggregatorProblems(workflow: Workflow, aggregator: string): stri
 	for (const id of others)
 		if (workflow.jobs[id]?.if !== undefined)
 			problems.push(`${workflow.file}, job ${id} : un job sous condition peut être sauté.`)
-	for (const { step, where } of allSteps(workflow))
-		if (step.if !== undefined && !STATUS_CONDITIONS.includes(condition(step.if)))
+	for (const { step, where } of allSteps(workflow)) {
+		if (step.if === undefined || RUNS_ANYWAY.includes(condition(step.if))) continue
+		const reports = step.uses !== undefined && step.run === undefined
+		if (condition(step.if) !== AFTER_A_FAILURE)
 			problems.push(
-				`${where} : seules les conditions ${STATUS_CONDITIONS.join(', ')} sont admises, pas « ${condition(step.if)} ».`
+				`${where} : seules les conditions ${RUNS_ANYWAY.join(' et ')} sont admises (et ${AFTER_A_FAILURE} sur une action qui envoie un rapport), pas « ${condition(step.if)} ».`
 			)
+		else if (!reports)
+			problems.push(
+				`${where} : sous « ${AFTER_A_FAILURE} », la commande est sautée quand tout va bien, et le job reste vert sans elle. Cette condition est réservée aux actions (« uses ») qui envoient un rapport.`
+			)
+	}
 	return problems
 }
 
 /**
- * Every job has a time limit, and the longest chain of jobs ends under `limit` minutes: a
- * green run cannot take longer.
+ * Every job has a time limit, and the limits of the longest chain of jobs add up to less than
+ * `limit` minutes: a run cannot take longer, green or not.
+ *
+ * A limit is a circuit breaker, not the usual duration of a job. The sum only stays under a
+ * tight `limit` while the jobs run side by side: the day a job is chained after another one
+ * (end-to-end tests after the build), `limit` becomes the bound of the circuit breakers, and
+ * the duration of a green run is read on GitHub instead (docs/qualite.md, « Durée de la CI »).
  */
 export function durationProblems(workflow: Workflow, limit: number): string[] {
 	const problems: string[] = []
@@ -462,7 +606,7 @@ export function durationProblems(workflow: Workflow, limit: number): string[] {
 	const total = Math.max(0, ...Object.keys(workflow.jobs).map(id => longest(id)))
 	if (total >= limit)
 		problems.push(
-			`${workflow.file} : la plus longue chaîne de jobs peut durer ${total} minutes, il en faut moins de ${limit}.`
+			`${workflow.file} : la plus longue chaîne de jobs peut durer ${total} minutes, il en faut moins de ${limit} (docs/qualite.md, « Durée de la CI », dit quoi faire quand un job s’enchaîne après un autre).`
 		)
 	return problems
 }
@@ -471,27 +615,56 @@ export function durationProblems(workflow: Workflow, limit: number): string[] {
  * Test files and tracked files
  * ---------------------------------------------------------------------------------------- */
 
-const TEST_CALL = String.raw`\b(?:describe|test|it)(?:\.\w+)*`
-const FOCUSED = new RegExp(String.raw`${TEST_CALL}\.only\b|\b(?:fdescribe|fit)\s*\(`)
-const SKIPPED = new RegExp(String.raw`${TEST_CALL}\.(?:skip|fixme)\b|\b(?:xdescribe|xtest|xit)\s*\(`)
+/**
+ * A call of the test runner up to the dot of its last modifier. A line break may come before
+ * a dot (a chained call written on several lines), never a space after it (a sentence).
+ */
+const TEST_CALL = String.raw`\b(?:describe|test|it)(?:\s*\.\w+)*?\s*\.`
+const LITERAL = (value: string) => String.raw`\s*\(\s*${value}\s*\)`
+const FOCUSED = new RegExp(String.raw`${TEST_CALL}only\b|\b(?:fdescribe|fit)\s*\(`, 'g')
+/**
+ * Skipped for good: the plain modifiers, a test left to write, and a condition that is
+ * written as a constant. A condition that reads something (a variable, a function) is a
+ * real condition and is left alone.
+ */
+const SKIPPED = new RegExp(
+	[
+		String.raw`${TEST_CALL}(?:skip|fixme|todo)\b`,
+		`${TEST_CALL}(?:skipIf|todoIf)${LITERAL('true')}`,
+		`${TEST_CALL}if${LITERAL('false')}`,
+		String.raw`\b(?:xdescribe|xtest|xit)\s*\(`,
+	].join('|'),
+	'g'
+)
 const ISSUE = /\/\/\s*issue #\d+/
 
 /**
  * C05: no focused test, and no skipped test without the issue that explains it, written
- * `// issue #N` on the same line or on the line above.
+ * `// issue #N` on a line of the call or on the line above.
  */
 export function focusedOrSkippedTests(files: readonly { file: string; text: string }[]): string[] {
-	const problems: string[] = []
+	const problems: { file: string; line: number; message: string }[] = []
 	for (const { file, text } of files) {
 		const lines = text.split('\n')
-		for (const [index, line] of lines.entries()) {
-			const where = `${file}:${index + 1}`
-			if (FOCUSED.test(line)) problems.push(`${where} : un test en « .only » fait sauter tous les autres.`)
-			else if (SKIPPED.test(line) && !ISSUE.test(line) && !ISSUE.test(lines[index - 1] ?? ''))
-				problems.push(`${where} : un test sauté doit citer son ticket, « // issue #N ».`)
+		/** The line of a position in the text, counted from 1. */
+		const lineAt = (index: number): number => text.slice(0, index).split('\n').length
+		const focused: number[] = []
+		for (const match of text.matchAll(FOCUSED)) {
+			focused.push(lineAt(match.index))
+			problems.push({ file, line: lineAt(match.index), message: 'un test en « .only » fait sauter tous les autres.' })
+		}
+		for (const match of text.matchAll(SKIPPED)) {
+			const first = lineAt(match.index)
+			const last = lineAt(match.index + match[0].length)
+			// From the line above the call to its last line.
+			const explained = lines.slice(Math.max(0, first - 2), last).some(line => ISSUE.test(line))
+			if (!explained && !focused.includes(first))
+				problems.push({ file, line: first, message: 'un test sauté doit citer son ticket, « // issue #N ».' })
 		}
 	}
 	return problems
+		.sort((a, b) => a.file.localeCompare(b.file) || a.line - b.line)
+		.map(({ file, line, message }) => `${file}:${line} : ${message}`)
 }
 
 const JAVASCRIPT = /\.(?:js|jsx|cjs|mjs)$/

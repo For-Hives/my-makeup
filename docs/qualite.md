@@ -30,6 +30,23 @@ gh api repos/For-Hives/my-makeup/commits/COMMIT/check-runs --jq '.check_runs[] |
 
 La seconde commande doit montrer une ligne `ci-ok` de `github-actions` et une ligne `CodeQL` de `github-advanced-security`.
 
+### Ce qui reste à constater sur GitHub
+
+Au 14/10/2026, tout ce document a été vérifié sur un poste de développement : les garde-fous, le script de `ci-ok`, la construction et le contrôle de l'image. Rien n'a encore tourné sur GitHub : `ci.yml` n'y a jamais été poussé, et `v3` n'est pas protégée. Les lignes ci-dessous restent donc à constater, puis à dater ici.
+
+| À constater | Quand | Comment | Constaté le |
+|---|---|---|---|
+| La CI tourne : `qualite`, `unit`, `build` verts, puis `ci-ok` vert | À la première poussée de `v3` qui contient `ci.yml` | `gh run list --repo For-Hives/my-makeup --branch v3 --limit 5`, puis `gh run view NUMERO` | Pas encore |
+| Une CI verte dure moins de 15 minutes | Au même passage | La commande de « Durée de la CI » | Pas encore |
+| CodeQL analyse chaque pull request vers `v3`, sous le nom `CodeQL` | Dès que `v3` est protégée | Les deux commandes ci-dessus | Pas encore |
+| `ci-ok` rouge sur une pull request cassée, fusion bloquée pour un administrateur aussi | Dès que `v3` est protégée | « Canari », plus bas | Pas encore |
+
+Si le job `build` est rouge au premier passage, regarder d'abord ces trois points. Ils n'ont tourné que derrière Podman, jamais sur le Docker de GitHub :
+
+- `scripts/image/controle.ts`, `startApplication` : le contrôle lance le conteneur avec `--health-interval=2s` en gardant la commande de santé de l'image. Docker l'accepte, Podman le refuse : seul le repli (le rythme de l'image, 30 secondes) a été joué.
+- Le même fichier, `UNHEALTHY_ANSWER_MAX_MS` : base arrêtée, le premier 503 doit arriver en moins de 3 secondes. La route abandonne la base au bout de 2 secondes ; le relevé local est de 1,7 à 1,8 seconde.
+- `bun run image:build` : `docker build` avec BuildKit, sur la machine de GitHub.
+
 ## Ce que lance la CI
 
 La CI se lance à chaque pull request et à chaque poussée sur `v3`. Trois jobs tournent en parallèle, puis `ci-ok` rend le verdict.
@@ -42,8 +59,39 @@ La CI se lance à chaque pull request et à chaque poussée sur `v3`. Trois jobs
 | `ci-ok` | Rouge si l'un des trois a échoué, a été annulé ou a été sauté | 2 min |
 
 - Dans `qualite`, les quatre contrôles sont tous joués, même quand l'un échoue : une seule poussée montre toutes les fautes.
-- La plus longue chaîne, `build` puis `ci-ok`, est limitée à 14 minutes. Une CI verte dure donc moins de 15 minutes, hors attente d'une machine.
+- La plus longue chaîne, `build` puis `ci-ok`, est limitée à 14 minutes : voir « Durée de la CI ».
+- Chaque commande tourne sous `bash -eo pipefail` (`defaults: run: shell: bash`) : une commande qui échoue arrête son étape, même au milieu d'un tube.
 - La CI ne lit aucun secret. Les deux variables que réclame le CLI de Payload reçoivent des valeurs de remplissage, écrites en clair dans le fichier.
+
+### Durée de la CI
+
+Deux choses à ne pas confondre :
+
+- **La limite d'un job** (`timeout-minutes`) est un coupe-circuit : elle arrête un job bloqué. Ce n'est pas sa durée normale.
+- **Les 15 minutes** sont la durée qu'une CI verte ne doit pas atteindre.
+
+Aujourd'hui les trois jobs tournent côte à côte. La plus longue chaîne est `build` (12 minutes) puis `ci-ok` (2 minutes) : 14 minutes de limites. La garde vérifie que cette somme reste sous 15 : aucune CI ne peut durer 15 minutes, hors attente d'une machine.
+
+Cette somme ne tiendra plus sous 15 le jour où un job s'enchaîne après un autre, comme les essais de bout en bout après `build` (`needs: [build]`). Il faudrait des limites au ras des durées normales, et une machine lente rendrait la CI rouge sans raison. Ce jour-là :
+
+1. Donner au nouveau job une limite de coupe-circuit : deux à trois fois sa durée normale.
+2. Relever `CI_LIMIT_MINUTES`, dans `tests/ci/garde-fous-ci.test.ts`, à la somme des limites de la nouvelle chaîne. La garde borne alors les coupe-circuits, et non plus les 15 minutes.
+3. Lire les 15 minutes sur la durée mesurée d'une CI verte, avec la première commande ci-dessous, et dater le relevé dans le tableau.
+
+La durée de la dernière CI verte de `v3`, puis celle de chaque job d'une CI :
+
+```sh
+gh run list --repo For-Hives/my-makeup --branch v3 --status success --limit 20 \
+  --json databaseId,workflowName,startedAt,updatedAt \
+  --jq 'map(select(.workflowName == "CI"))[0] | "CI \(.databaseId) : \(((.updatedAt | fromdate) - (.startedAt | fromdate)) / 60 | floor) min \(((.updatedAt | fromdate) - (.startedAt | fromdate)) % 60) s"'
+gh run view NUMERO --repo For-Hives/my-makeup --json jobs \
+  --jq '.jobs[] | "\(.name) : \(.conclusion), \(((.completedAt | fromdate) - (.startedAt | fromdate)) / 60 | floor) min \(((.completedAt | fromdate) - (.startedAt | fromdate)) % 60) s"'
+```
+
+| Date | Où | Durée |
+|---|---|---|
+| 14/10/2026 | Poste de développement, Podman : ce n'est pas une CI | Image construite sans cache en 1 min 26 s ; contrôle de l'image en 2 min 11 s, au rythme de Podman ; tests unitaires, garde-fous, types et Biome en moins de 10 secondes à eux quatre |
+| À relever au premier passage sur GitHub | | |
 
 ### Pourquoi `ci-ok`
 
@@ -57,11 +105,11 @@ Chaque garde-fou est joué deux fois : sur les fichiers du dépôt, où il ne do
 
 | Garde | Ce qu'elle refuse | État |
 |---|---|---|
-| C01 | `continue-on-error`, et toute commande qui avale son échec (`\|\| true`, `set +e`) | En place |
+| C01 | `continue-on-error` ; un workflow sans `defaults: run: shell: bash`, donc sans `pipefail` ; un `shell` propre à une étape ou à un job ; les façons connues d'avaler un échec : `\|\|` suivi d'autre chose que `exit 1`, `set +e`, `set +o pipefail`, une commande `true`, `:` ou `exit 0` seule | En place |
 | C02 | Une étape qui dépend de `cache-hit` ; un cache d'autre chose que `.next/cache` | En place |
-| C03 | Un check de `ci/checks-requis.json` absent ou renommé ; un job nommé `CodeQL` ; une analyse CodeQL écrite dans un workflow | En place |
+| C03 | Un check de `ci/checks-requis.json` absent ou renommé ; un second job affiché sous le nom `ci-ok`, dans n'importe quel workflow ; un job nommé `CodeQL` ; une analyse CodeQL écrite dans un workflow | En place |
 | C04 | Des versions de Node ou de bun qui diffèrent entre `.nvmrc`, `engines`, `packageManager`, le `Dockerfile` et les workflows ; une image sans digest | En place |
-| C05 | Un test en `.only` ; un test sauté sans son ticket (`// issue #N` sur la ligne ou la ligne du dessus) | En place |
+| C05 | Un test en `.only` ; un test sauté sans son ticket : `.skip`, `.fixme`, `.todo`, `.skipIf(true)`, `.if(false)`. Le ticket s'écrit `// issue #N`, sur une ligne de l'appel ou sur la ligne du dessus | En place |
 | C06 | Une attente fixe dans les essais de bout en bout | Arrive avec les essais de bout en bout |
 | C07 | Une configuration Playwright qui peut viser la prod | Arrive avec les essais de bout en bout |
 | C08 | Un fichier JavaScript écrit à la main (seul `importMap.js`, généré par Payload, est admis) | En place |
@@ -70,15 +118,27 @@ Le même fichier garde aussi :
 
 - les déclencheurs de la CI : aucun filtre de chemins, aucun filtre sur les pull requests, `v3` dans les poussées, jamais `pull_request_target` ;
 - les actions : chacune figée par un commit complet, avec sa version en commentaire ;
-- les secrets : aucun n'est lu ;
+- les secrets : `ci.yml` n'en lit aucun, ni par son nom, ni en bloc (`toJSON(secrets)`, un nom calculé, `secrets: inherit`). Le jeton de la CI compte comme un secret, sous ses deux noms : `secrets.GITHUB_TOKEN` et `github.token` ;
 - les permissions : lecture du dépôt, rien de plus ;
-- `ci-ok` : il tourne toujours, attend tous les jobs, et aucun job ni aucune étape ne peut être sauté par une condition ;
-- les durées : chaque job a sa limite, et la plus longue chaîne reste sous 15 minutes ;
-- l'image Docker : variables publiques seulement, utilisateur sans droits, contrôle de santé, contexte de build en liste blanche (voir le README, « Image Docker »).
+- `ci-ok` : il tourne toujours et attend tous les jobs. Aucun job n'est sous condition. Une commande (`run`) ne porte que `always()` ou `!cancelled()`, qui la font tourner plus souvent, jamais moins. `failure()` est réservé aux actions (`uses`) qui envoient un rapport : sous cette condition, une commande serait sautée quand tout va bien, et le job resterait vert sans elle ;
+- les durées : chaque job a sa limite, et la somme des limites de la plus longue chaîne reste sous 15 minutes (voir « Durée de la CI ») ;
+- l'image Docker : variables publiques seulement, quelle que soit la casse de leur nom, utilisateur sans droits, contrôle de santé, contexte de build en liste blanche (voir le README, « Image Docker »).
+
+### Ce que les garde-fous ne voient pas
+
+Un garde-fou lit un texte. Il arrête les fautes connues, pas toutes les ruses. Ce qui reste à la relecture :
+
+- **Un script qui gère lui-même ses erreurs.** `if ! commande; then echo "tant pis"; fi`, ou `commande && autre` au milieu d'un script : le shell continue, et aucune garde ne peut le voir. La règle de `ci.yml` : une étape lance une commande, ou des commandes reliées par `&&` sur une seule ligne. Le seul script est celui de `ci-ok`, et il est testé tel quel.
+- **Une action sous `failure()`.** La garde admet toute action sous cette condition, sans savoir ce qu'elle fait. Elle doit envoyer un rapport, jamais lancer un contrôle.
+- **Le jeton que reçoivent les actions.** `actions/checkout`, `actions/setup-node` et `oven-sh/setup-bun` reçoivent le jeton de la CI par défaut, sans qu'il soit écrit dans `ci.yml`. Ce jeton ne peut que lire le dépôt (`permissions: contents: read`), et le checkout ne le garde pas (`persist-credentials: false`).
+- **Les réglages de GitHub.** Les gardes lisent les fichiers du dépôt. La protection de la branche, les checks réellement exigés et la durée réelle d'une CI se lisent sur GitHub : voir « Ce qui reste à constater sur GitHub ».
 
 ## Modifier la CI
 
-- **Ajouter un job** : lui donner un `name`, un `timeout-minutes`, et l'ajouter au `needs` de `ci-ok`. La garde échoue si `ci-ok` ne l'attend pas.
+- **Ajouter un job** : lui donner un `name`, un `timeout-minutes`, et l'ajouter au `needs` de `ci-ok`. La garde échoue si `ci-ok` ne l'attend pas. Si ce job en attend un autre (`needs`), lire d'abord « Durée de la CI ».
+- **Écrire une commande** : une seule ligne par étape, sans `||` ni `exit 0`. Le script de `ci-ok` est la seule exception. Pour qu'une étape tourne même après un échec, lui donner `if: ${{ !cancelled() }}`.
+- **Envoyer un rapport après un échec** (une trace, des captures) : une action (`uses`) sous `if: failure()`, jamais une commande.
+- **Ajouter un workflow** : il déclare `defaults: run: shell: bash`, et aucun de ses jobs ne s'affiche sous le nom `ci-ok` ou `CodeQL`.
 - **Ajouter une action** : la figer par son commit complet, avec sa version en commentaire sur la même ligne (`# v1.2.3`). Choisir une version d'au moins 7 jours, sans avis de sécurité ouvert.
 - **Lire un secret** : jamais dans `ci.yml`. Dans un autre workflow, ajouter son nom à la liste admise du test, dans le même commit.
 - **Mettre en cache** : seulement `.next/cache`. Aucune étape ne dépend du cache.

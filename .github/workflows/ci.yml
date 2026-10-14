@@ -3,7 +3,8 @@
 # Rules, each of them enforced by tests/ci/garde-fous-ci.test.ts (docs/qualite.md):
 # - no path filter: a required check that does not run stays « pending », and a pending
 #   check ends up merged around;
-# - no step allowed to fail, no step that depends on a cache;
+# - no step allowed to fail, no command under a condition that could skip it, no step that
+#   depends on a cache;
 # - every action pinned by its commit, with its version in a comment;
 # - no secret: every value below is a public placeholder.
 name: CI
@@ -15,6 +16,12 @@ on:
 
 permissions:
   contents: read
+
+# With `shell: bash`, GitHub runs every command under `bash -eo pipefail`: a command that
+# fails in a pipe fails its step. Without this line it would be `bash -e`, and it would pass.
+defaults:
+  run:
+    shell: bash
 
 concurrency:
   group: ci-${{ github.ref }}

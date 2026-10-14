@@ -168,9 +168,24 @@ describe('the image is built with public variables only, runs without root and s
 			'ARG NEXT_PUBLIC_AUTRE : seules les variables publiques',
 		],
 		[
+			'a build argument written in lower case',
+			`${dockerfile}\nARG npm_token\n`,
+			'ARG npm_token : seules les variables publiques',
+		],
+		[
+			'a secret as a build argument, in mixed case',
+			`${dockerfile}\nARG Payload_Secret=exemple\n`,
+			'ARG Payload_Secret : seules les variables publiques',
+		],
+		[
 			'a setting of the running image outside the list',
 			broken(dockerfile, 'ENV NODE_ENV=production', 'ENV APP_ENV=prod NODE_ENV=production'),
 			'ENV APP_ENV dans la dernière étape',
+		],
+		[
+			'a setting of the running image outside the list, in lower case',
+			broken(dockerfile, 'ENV NODE_ENV=production', 'ENV app_env=prod NODE_ENV=production'),
+			'ENV app_env dans la dernière étape',
 		],
 		['no USER line', broken(dockerfile, /^USER node$/m, ''), 'utilisateur sans droits'],
 		['root as the user', broken(dockerfile, /^USER node$/m, 'USER root'), 'utilisateur sans droits'],
@@ -247,7 +262,10 @@ const WORKFLOWS = '.github/workflows'
 const CI = `${WORKFLOWS}/ci.yml`
 /** The job the protection of the branch requires. */
 const AGGREGATOR = 'ci-ok'
-/** A green run of the CI ends under this many minutes. */
+/**
+ * The time limits of the longest chain of jobs add up to less than this many minutes. While
+ * the jobs run side by side, it is also the 15 minutes a green run must not reach.
+ */
 const CI_LIMIT_MINUTES = 15
 
 const workflows: Workflow[] = readdirSync(path.join(ROOT, WORKFLOWS))
@@ -294,15 +312,72 @@ describe('C01: no step and no job is allowed to fail', () => {
 		['|| true', 'run: bun run ci:biome || true'],
 		['|| :', 'run: "bun run ci:biome || :"'],
 		['|| exit 0', 'run: bun run ci:biome || exit 0'],
+		['|| and a message', 'run: bun run ci:biome || echo "ignoré"'],
+		['|| and a group that ends well', 'run: bun run ci:biome || { echo "ignoré"; }'],
 		['set +e', 'run: set +e; bun run ci:biome'],
+		['set +e among other options', 'run: set -u +e; bun run ci:biome'],
+		['set +o errexit', 'run: set +o errexit; bun run ci:biome'],
+		['set +o pipefail', 'run: set +o pipefail; bun run ci:biome | cat'],
+		['; true', 'run: bun run ci:biome; true'],
+		['a last line that is a success', 'run: |\n          bun run ci:biome\n          exit 0'],
+		['a lone colon', 'run: |\n          bun run ci:biome\n          :'],
+		['an early exit in a branch', 'run: if [ -n "$CI" ]; then exit 0; fi; bun run ci:biome'],
 	])('red on a command that swallows its failure with %s', (_trick, run) => {
 		expect(toleratedFailures([brokenCi('run: bun run ci:biome', run)]).join('\n')).toContain(
 			'job qualite, « Biome » : la commande avale son échec'
 		)
 	})
 
-	test('a command that fails on purpose is not a swallowed failure', () => {
-		expect(toleratedFailures([brokenCi('run: bun run ci:biome', 'run: bun run ci:biome || exit 1')])).toEqual([])
+	test.each([
+		['a command that fails on purpose', 'run: bun run ci:biome || exit 1'],
+		['an « or » inside an expression of GitHub', `run: echo "${expression('github.head_ref || github.ref_name')}"`],
+		['a loop that waits', 'run: while true; do bun run ci:biome && break; done'],
+		['a file emptied with a colon', 'run: |\n          : > rapport.txt\n          bun run ci:biome'],
+		['tracing switched off', 'run: set +x; bun run ci:biome'],
+		['the word « set » inside another command', 'run: gh variable set LOT --body "a+be"'],
+	])('%s is not a swallowed failure', (_case, run) => {
+		expect(toleratedFailures([brokenCi('run: bun run ci:biome', run)])).toEqual([])
+	})
+
+	describe('a failure in a pipe', () => {
+		const DEFAULT_SHELL = 'defaults:\n  run:\n    shell: bash\n'
+		/** `false | cat`, run by bash with the given options: the exit code GitHub would read. */
+		const piped = (...options: string[]): number =>
+			Bun.spawnSync(['bash', '--noprofile', '--norc', ...options, '-c', 'false | cat'], {
+				env: { PATH: process.env.PATH ?? '' },
+			}).exitCode
+
+		test('the trap: without pipefail a failed command in a pipe passes, with it the step fails', () => {
+			// What GitHub runs when no shell is named, then what it runs under « shell: bash ».
+			expect(piped('-e')).toBe(0)
+			expect(piped('-eo', 'pipefail')).toBe(1)
+		})
+
+		test('red on a workflow that does not ask for bash, so for pipefail', () => {
+			expect(toleratedFailures([brokenCi(DEFAULT_SHELL, '')]).join('\n')).toContain(
+				'doit déclarer « defaults: run: shell: bash »'
+			)
+			expect(toleratedFailures([brokenCi(DEFAULT_SHELL, 'defaults:\n  run:\n    shell: sh\n')]).join('\n')).toContain(
+				'doit déclarer « defaults: run: shell: bash »'
+			)
+		})
+
+		test.each([
+			[
+				'a step with its own shell',
+				'        run: bun run ci:biome\n',
+				'        shell: bash {0}\n        run: bun run ci:biome\n',
+				'job qualite, « Biome » : un « shell » propre à l’étape',
+			],
+			[
+				'a job with its own defaults',
+				'  unit:\n',
+				'  unit:\n    defaults:\n      run:\n        shell: bash {0}\n',
+				'job unit : « defaults » ne se règle qu’une fois',
+			],
+		])('red on %s', (_fault, from, to, expected) => {
+			expect(toleratedFailures([brokenCi(from, to)]).join('\n')).toContain(expected)
+		})
 	})
 })
 
@@ -381,6 +456,35 @@ describe('C03: the required checks exist under their exact names', () => {
 		],
 	])('red on %s', (_fault, faulty, expected) => {
 		expect(requiredCheckProblems(required, faulty).join('\n')).toContain(expected)
+	})
+
+	test.each([
+		[
+			'a job of another workflow shown under the name of the required check',
+			readWorkflow(
+				`${WORKFLOWS}/autre.yml`,
+				'on:\n  pull_request:\njobs:\n  ci-ok:\n    runs-on: ubuntu-24.04\n    steps:\n      - run: echo vert\n'
+			),
+			'.github/workflows/autre.yml, job ci-ok : il s’affiche lui aussi sous le nom « ci-ok »',
+		],
+		[
+			'a job of another workflow named like it, whatever its identifier',
+			readWorkflow(
+				`${WORKFLOWS}/autre.yml`,
+				'on:\n  pull_request:\njobs:\n  verdict:\n    name: CI-OK\n    runs-on: ubuntu-24.04\n    steps:\n      - run: echo vert\n'
+			),
+			'.github/workflows/autre.yml, job verdict : il s’affiche lui aussi sous le nom « CI-OK »',
+		],
+	])('red on %s', (_fault, homonym, expected) => {
+		expect(requiredCheckProblems(required, [ci, homonym]).join('\n')).toContain(expected)
+	})
+
+	test('red on a second job of the CI itself shown under the name of the required check', () => {
+		const faulty = brokenCi('  unit:\n    name: unit\n', '  unit:\n    name: ci-ok\n')
+
+		expect(requiredCheckProblems(required, [faulty])).toEqual([
+			'.github/workflows/ci.yml, job unit : il s’affiche lui aussi sous le nom « ci-ok », et passerait pour le check requis « ci-ok ».',
+		])
 	})
 
 	test('red on a required check of an unknown kind', () => {
@@ -473,6 +577,30 @@ describe('the CI reads no secret', () => {
 			'lit le secret « GITHUB_TOKEN »',
 		],
 		[
+			'the token of the run, under its other name',
+			'run: bun run test:unit',
+			`run: echo ${expression('github.token')}`,
+			'lit le secret « GITHUB_TOKEN »',
+		],
+		[
+			'the token of the run, taken with the whole github context',
+			'run: bun run test:unit',
+			`run: bun run test:unit\n        env:\n          CONTEXTE: ${expression('toJSON(github)')}`,
+			'lit le secret « GITHUB_TOKEN »',
+		],
+		[
+			'a secret named in a condition, which needs no braces',
+			'      - name: Unit tests\n',
+			"      - name: Unit tests\n        if: always() && secrets.JETON_EXEMPLE != ''\n",
+			'lit le secret « JETON_EXEMPLE »',
+		],
+		[
+			'a secret on a commented line of a command, which GitHub replaces all the same',
+			'run: bun run test:unit',
+			`run: |\n          # ${expression('secrets.JETON_EXEMPLE')}\n          bun run test:unit`,
+			'lit le secret « JETON_EXEMPLE »',
+		],
+		[
 			'every secret handed to a called workflow',
 			'    timeout-minutes: 12\n',
 			'    timeout-minutes: 12\n    secrets: inherit\n',
@@ -482,6 +610,30 @@ describe('the CI reads no secret', () => {
 		expect(unexpectedSecrets([brokenCi(from, to)]).join('\n')).toContain(expected)
 	})
 
+	test.each([
+		['every secret at once', 'toJSON(secrets)'],
+		['every secret at once, in upper case', 'toJSON(SECRETS)'],
+		['every secret, as a list of values', 'join(secrets.*, 0)'],
+		['a secret whose name is computed', "secrets[format('JETON_{0}', matrix.cible)]"],
+		['a secret whose name comes from another context', 'secrets[inputs.nom]'],
+	])('red on %s, even when a list of names is allowed', (_fault, read) => {
+		const faulty = brokenCi(
+			'run: bun run test:unit',
+			`run: bun run test:unit\n        env:\n          TOUT: ${expression(read)}`
+		)
+
+		expect(unexpectedSecrets([faulty], ['JETON_EXEMPLE']).join('\n')).toContain('lit les secrets sans nommer lequel')
+	})
+
+	test.each([
+		['the word between quotes', "contains(github.event_name, 'secrets')"],
+		['a property of another context that bears the name', 'needs.build.outputs.secrets'],
+		['a property of the github context that is not the token', 'github.ref_name'],
+		['a text that only mentions the token', "format('{0}', 'github.token')"],
+	])('%s reads no secret', (_case, read) => {
+		expect(unexpectedSecrets([brokenCi('run: bun run test:unit', `run: echo ${expression(read)}`)])).toEqual([])
+	})
+
 	test('a secret of the allowed list passes, a comment about secrets too', () => {
 		const faulty = brokenCi(
 			'run: bun run test:unit',
@@ -489,6 +641,13 @@ describe('the CI reads no secret', () => {
 		)
 
 		expect(unexpectedSecrets([faulty], ['JETON_EXEMPLE'])).toEqual([])
+	})
+
+	test('the name of a secret is not case-sensitive, for GitHub and for the allowed list', () => {
+		const faulty = brokenCi('run: bun run test:unit', `run: echo ${expression('secrets.jeton_exemple')}`)
+
+		expect(unexpectedSecrets([faulty], ['JETON_EXEMPLE'])).toEqual([])
+		expect(unexpectedSecrets([faulty], ['AUTRE']).join('\n')).toContain('lit le secret « jeton_exemple »')
 	})
 })
 
@@ -570,7 +729,8 @@ describe('ci-ok is red when a job failed, was cancelled or was skipped', () => {
 	function verdict(results: string): { code: number; output: string } {
 		const script = ci.jobs[AGGREGATOR]?.steps?.[0]?.run
 		if (script === undefined) throw new Error('the ci-ok job has no script')
-		const ran = Bun.spawnSync(['bash', '-e', '-c', script], {
+		// The command line of « shell: bash », the default of the workflow.
+		const ran = Bun.spawnSync(['bash', '--noprofile', '--norc', '-eo', 'pipefail', '-c', script], {
 			env: { PATH: process.env.PATH ?? '', RESULTS: results, DETAIL: '{}' },
 		})
 		return { code: ran.exitCode, output: ran.stdout.toString() }
@@ -641,22 +801,67 @@ describe('ci-ok is red when a job failed, was cancelled or was skipped', () => {
 			'a step under a condition',
 			'      - name: Unit tests\n',
 			"      - name: Unit tests\n        if: github.ref == 'refs/heads/v3'\n",
-			'seules les conditions always(), !cancelled(), failure() sont admises',
+			'seules les conditions always() et !cancelled() sont admises',
 		],
 		[
 			'a step that runs on success of a cache',
 			'      - name: Unit tests\n',
 			'      - name: Unit tests\n        if: success()\n',
-			'seules les conditions always(), !cancelled(), failure() sont admises',
+			'seules les conditions always() et !cancelled() sont admises',
+		],
+		[
+			'the unit tests run only when an earlier step failed',
+			'      - name: Unit tests\n',
+			'      - name: Unit tests\n        if: failure()\n',
+			'job unit, « Unit tests » : sous « failure() », la commande est sautée quand tout va bien',
+		],
+		[
+			'the image built only when an earlier step failed',
+			'      - name: Build the image\n',
+			`      - name: Build the image\n        if: ${expression('failure()')}\n`,
+			'job build, « Build the image » : sous « failure() », la commande est sautée quand tout va bien',
+		],
+		[
+			'a condition that looks like an allowed one',
+			'      - name: Unit tests\n',
+			'      - name: Unit tests\n        if: always() && false\n',
+			'pas « always() && false »',
 		],
 	])('red on %s', (_fault, from, to, expected) => {
 		expect(aggregatorProblems(brokenCi(from, to), AGGREGATOR).join('\n')).toContain(expected)
 	})
+
+	test('an action that sends a report may wait for a failure: it has nothing to send on a green job', () => {
+		const report = `      - name: Unit tests\n        run: bun run test:unit\n      - uses: actions/upload-artifact@${A_COMMIT} # v7.0.0\n        if: failure()\n`
+
+		expect(
+			aggregatorProblems(brokenCi('      - name: Unit tests\n        run: bun run test:unit\n', report), AGGREGATOR)
+		).toEqual([])
+	})
 })
 
-describe('a green run of the CI ends in less than 15 minutes', () => {
-	test('every job has a time limit, and the longest chain stays under the limit', () => {
+describe('the time limits of the CI: no run lasts 15 minutes', () => {
+	test('every job has a time limit, and the limits of the longest chain add up to less than 15 minutes', () => {
 		expect(durationProblems(ci, CI_LIMIT_MINUTES)).toEqual([])
+	})
+
+	test('a job chained after the build does not fit: the message says where to read what to do', () => {
+		// What the end-to-end job will meet (docs/qualite.md, « Durée de la CI »): build, then it, then ci-ok.
+		const chained = brokenCi(
+			'  # THE required check.',
+			'  e2e:\n    name: e2e\n    needs: [build]\n    runs-on: ubuntu-24.04\n    timeout-minutes: 10\n    steps: []\n\n  # THE required check.'
+		)
+		const withIt = readWorkflow(
+			CI,
+			chained.text.replace('needs: [qualite, unit, build]', 'needs: [qualite, unit, build, e2e]')
+		)
+
+		expect(durationProblems(withIt, CI_LIMIT_MINUTES)).toEqual([
+			'.github/workflows/ci.yml : la plus longue chaîne de jobs peut durer 24 minutes, il en faut moins de 15 (docs/qualite.md, « Durée de la CI », dit quoi faire quand un job s’enchaîne après un autre).',
+		])
+		expect(durationProblems(withIt, 30)).toEqual([])
+		// The section the message sends to exists (the whole document is not printed on a failure).
+		expect(read('docs/qualite.md').includes('\n### Durée de la CI\n')).toBe(true)
 	})
 
 	test.each([
@@ -703,6 +908,8 @@ function tracked(...patterns: string[]): string[] {
 describe('C05: no focused test, no skipped test without its issue', () => {
 	// Written in pieces, so that this file does not contain what it looks for.
 	const call = (name: string, modifier: string) => `${name}.${modifier}('un cas', () => {})`
+	/** A condition written as a constant: `name.modifier(true)(…)`. */
+	const always = (name: string, modifier: string, value: boolean) => `${name}.${modifier}(${value})('un cas', () => {})`
 
 	test('no test file of the repository focuses or skips a test', () => {
 		const files = tracked('tests/**/*.ts', 'tests/**/*.tsx')
@@ -725,6 +932,12 @@ describe('C05: no focused test, no skipped test without its issue', () => {
 			`${call('test', 'skip')} // plus tard`,
 			'un test sauté doit citer son ticket',
 		],
+		['a test left to write', `${['test', 'todo'].join('.')}('un cas')`, 'un test sauté doit citer son ticket'],
+		['a group skipped by a condition that is always true', always('describe', 'skipIf', true), 'un test sauté'],
+		['a test left to write by a condition that is always true', always('test', 'todoIf', true), 'un test sauté'],
+		['a test run by a condition that is always false', always('test', 'if', false), 'un test sauté'],
+		['a focused test written on two lines', `test\n\t.${'only'}('un cas', () => {})`, 'un test en « .only »'],
+		['a skipped test written on two lines', `it\n\t.${'skip'}('un cas', () => {})`, 'un test sauté'],
 	])('red on %s', (_fault, line, expected) => {
 		const problems = focusedOrSkippedTests([
 			{ file: 'tests/unit/exemple.test.ts', text: `import 'bun:test'\n${line}\n` },
@@ -740,10 +953,35 @@ describe('C05: no focused test, no skipped test without its issue', () => {
 		expect(focusedOrSkippedTests([{ file: 'tests/unit/exemple.test.ts', text }])).toEqual([])
 	})
 
-	test('a condition on a test is not a skip, and ordinary words are left alone', () => {
-		const text = "test.skipIf(sansBase)('un cas', () => {})\nconst only = attempts.only\nexit('x')\n"
+	test('a skipped test written on several lines may name its issue above the call or on any of its lines', () => {
+		const text = `// issue #7\nit\n\t.${'skip'}('un cas', () => {})\nit\n\t.${'skip'}('un cas', () => {}) // issue #8\n`
 
 		expect(focusedOrSkippedTests([{ file: 'tests/unit/exemple.test.ts', text }])).toEqual([])
+	})
+
+	test('a condition that reads something is not a skip, and ordinary words are left alone', () => {
+		const text = [
+			"test.skipIf(sansBase)('un cas', () => {})",
+			"test.if(avecBase)('un cas', () => {})",
+			"describe.skipIf(!process.env.CI)('un groupe', () => {})",
+			'const only = attempts.only',
+			'const todo = liste.todo',
+			'// The guard is not a test. only the faulty examples are, and we never skip it. todo: nothing.',
+			"exit('x')",
+			'',
+		].join('\n')
+
+		expect(focusedOrSkippedTests([{ file: 'tests/unit/exemple.test.ts', text }])).toEqual([])
+	})
+
+	test('several faults of one file come out in the order of its lines', () => {
+		const text = `${call('test', 'skip')}\n${call('test', 'only')}\n${call('it', 'fixme')}\n`
+
+		expect(focusedOrSkippedTests([{ file: 'a.test.ts', text }]).map(problem => problem.slice(0, 11))).toEqual([
+			'a.test.ts:1',
+			'a.test.ts:2',
+			'a.test.ts:3',
+		])
 	})
 })
 
