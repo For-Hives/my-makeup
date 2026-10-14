@@ -3,9 +3,9 @@ import { cookies, headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { getPayload } from 'payload'
 import { COLLECTION_PROS } from '../acces'
+import { expirationDuJeton } from './duree-session'
 import { COOKIE_DE_SESSION } from './espace-ferme'
 import { urlDeConnexion } from './retour'
-import { expirationDuJeton } from './session-glissante'
 
 /** What a page of the space may know about the makeup artist: never the account document. */
 export interface Maquilleuse {

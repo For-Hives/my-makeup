@@ -1,4 +1,6 @@
 import { describe, expect, test } from 'bun:test'
+import { readFileSync } from 'node:fs'
+import path from 'node:path'
 import { RafraichirSession } from '@/components/espace/RafraichirSession'
 import { creerProlongement, ROUTE_DE_PROLONGEMENT } from '@/lib/auth/prolonger'
 import {
@@ -130,4 +132,16 @@ describe('le composant du navigateur', () => {
 			globalThis.fetch = original
 		}
 	})
+})
+
+describe('browser bundle boundary (079 review)', () => {
+	// The client component reaches these files: none may import server code, 'payload' above all.
+	for (const file of ['src/lib/auth/prolonger.ts', 'src/lib/auth/duree-session.ts']) {
+		test(`${file} imports nothing from payload`, () => {
+			const code = readFileSync(path.join(process.cwd(), file), 'utf8')
+			const imports = [...code.matchAll(/^\s*(?:import|export)[^'"]*from\s+['"]([^'"]+)['"]/gm)].map(m => m[1] ?? '')
+			expect(imports.filter(i => !i.startsWith('./'))).toEqual([])
+			expect(imports.filter(i => i.startsWith('./') && !i.endsWith('duree-session'))).toEqual([])
+		})
+	}
 })

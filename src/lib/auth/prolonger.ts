@@ -1,4 +1,4 @@
-import { doitProlonger } from './session-glissante'
+import { doitProlonger } from './duree-session'
 
 /** The one door that renews a session: Payload's own route, called with the cookie of the visit. */
 export const ROUTE_DE_PROLONGEMENT = '/api/pros/refresh-token'

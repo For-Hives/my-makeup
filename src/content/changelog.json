@@ -5,6 +5,11 @@
 			"id": "les-pages-introuvables-et-les-pages-d-erreur-s-affichent",
 			"type": "amelioration",
 			"text": "Les pages introuvables et les pages d'erreur s'affichent en français, dans le même cadre que le reste du site."
+		},
+		{
+			"id": "tu-restes-connectee-tant-que-tu-passes-dans-ton-espace-pe",
+			"type": "amelioration",
+			"text": "Tu restes connectée tant que tu passes dans ton espace, pendant 90 jours au plus."
 		}
 	],
 	"releases": []
