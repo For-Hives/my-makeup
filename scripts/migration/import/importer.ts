@@ -281,10 +281,15 @@ export async function importer(options: OptionsDImport): Promise<Rapport> {
 		// Each photo points at its media in Payload, read once the media are written.
 		const idsDesMedias = await idsDansLaCible(payload, ADAPTATEUR_MEDIAS, lesMedias, rapport.collections.media.refuses)
 		const profils = profilsAttendus(lu.profils, idsDesComptes, laisses, communes.communes, idsDesMedias, consentiLe)
-		compterLesEcarts(rapport.ecarts, profils.attendus)
 		if (laisses.spam.length > 0) rapport.ecarts[REFERENCES.profilsDuSpam] = laisses.spam.length
+		const bilanDesProfils = await importerLaCollection(options, ADAPTATEUR_PROFILS, lu.profils.length, profils.attendus)
+		// Only the profiles the target holds are counted: a refused one carries no difference.
+		compterLesEcarts(
+			rapport.ecarts,
+			profils.attendus.filter(({ strapiId }) => !bilanDesProfils.refuses.some(refus => refus.strapiId === strapiId))
+		)
 		rapport.collections.profils = {
-			...(await importerLaCollection(options, ADAPTATEUR_PROFILS, lu.profils.length, profils.attendus)),
+			...bilanDesProfils,
 			ecartes: laisses.ecartes,
 			spam: laisses.spam,
 			statuts: profils.statuts,
@@ -292,6 +297,7 @@ export async function importer(options: OptionsDImport): Promise<Rapport> {
 			communes: communes.bilan,
 			photosNonReprises: profils.photosNonReprises,
 			liensSansLigne: profils.liensSansLigne,
+			coordonneesARevoir: profils.coordonneesARevoir,
 		}
 
 		const lesArticles = articlesAttendus(articles.pris, lu.fichiers.liens, idsDesMedias)

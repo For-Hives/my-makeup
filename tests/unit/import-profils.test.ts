@@ -5,6 +5,9 @@ import { REFERENCES } from '../../scripts/migration/import/ecarts'
 import { normaliser } from '../../scripts/migration/import/moteur'
 import {
 	ADAPTATEUR_PROFILS,
+	affichesALaSource,
+	coordonneesARevoir,
+	coordonneesDeLaSource,
 	PROFILS_DU_SPAM,
 	type ProfilLu,
 	profilsAttendus,
@@ -279,5 +282,35 @@ describe('la lecture publique choisit ses champs un par un', () => {
 			'slug',
 			'specialite',
 		])
+	})
+})
+
+describe('les coordonnées de contact sont lues comme l’ancien site les lit (ticket 064)', () => {
+	const reseaux = (phone: string | null, email: string | null) =>
+		profil(1, { reseaux: { phone, email } as ProfilLu['reseaux'] })
+
+	test('rognées, et sans valeur quand elles sont vides ou les mots null et undefined', () => {
+		expect(coordonneesDeLaSource(reseaux(' 06 12 ', '  a@example.test '))).toEqual({
+			telephone: '06 12',
+			email: 'a@example.test',
+		})
+		for (const vide of ['', '   ', 'null', 'undefined', ' Undefined ', 'NULL']) {
+			expect(coordonneesDeLaSource(reseaux(vide, vide)), vide).toEqual({ telephone: null, email: null })
+			expect(affichesALaSource(reseaux(vide, vide)), vide).toBe(false)
+		}
+	})
+
+	test('une valeur que le serveur refuserait est laissée de côté et listée, sans sa valeur', () => {
+		const lu = reseaux('0'.repeat(21), 'Insta: @hugo')
+
+		expect(coordonneesDeLaSource(lu)).toEqual({ telephone: null, email: null })
+		expect(coordonneesARevoir(lu)).toEqual([
+			{ profil: 1, champ: 'telephone' },
+			{ profil: 1, champ: 'email' },
+		])
+		expect(affichesALaSource(lu)).toBe(false)
+		// The other channel still opens the contact details.
+		expect(affichesALaSource(reseaux('0'.repeat(21), 'a@example.test'))).toBe(true)
+		expect(coordonneesARevoir(reseaux('06', 'a@example.test'))).toEqual([])
 	})
 })

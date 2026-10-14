@@ -31,7 +31,7 @@
  *   invented.
  *
  * - The network row of Strapi also holds the phone and the email of contact (ticket 064). They go
- *   into the closed group `coordonnees`, as they are; a value that is only blanks is no value. A
+ *   into the closed group `coordonnees`, trimmed; a value that is only blanks, `null` or `undefined` is no value (as on the old site), and one the server would refuse is left out and listed for review. A
  *   profile with one of them shows it on the old site: it gets `contactPublic` true, `consentiLe`
  *   the date of the switch (a parameter of the run, never the clock) and the source `import`
  *   (« publié par la maquilleuse », register `coordonnees-consentement`). Without either: false,
@@ -39,6 +39,7 @@
  */
 
 import { type ChampsDuProfil, estEntierementVide, type ReseauxDuProfil } from '../../../src/lib/profil/completude'
+import { validerEmailDeContact, validerTelephone } from '../../../src/lib/profil/coordonnees'
 import { type DocumentDuProfil, etatDuProfil, statutApres } from '../../../src/lib/profil/etat'
 import { CHOIX_INITIAL, type StatutDuProfil } from '../../../src/lib/profil/statut'
 import { attribuerSlugs } from '../../../src/lib/slug'
@@ -147,13 +148,43 @@ export function statutCalcule(valeurs: Readonly<Record<string, unknown>>): Statu
 /** A `decimal` of Strapi as a number, or `null`. */
 const nombre = (valeur: string | number | null): number | null => (valeur === null ? null : Number(valeur))
 
-/** A contact detail as the old site holds it: a value that is only blanks shows nothing, so it is no value. */
-const coordonnee = (valeur: string | null | undefined): string | null =>
-	valeur === null || valeur === undefined || valeur.trim() === '' ? null : valeur
+/** The words the old site reads as no value (`texte()`, src/lib/profil/vue-publique.js). */
+const MOTS_VIDES = new Set(['null', 'undefined'])
 
-/** The phone and the email of contact of a profile of the source, under the names of Payload. */
+/**
+ * A contact detail as the old site reads it: trimmed, and nothing when it is blank or only the word
+ * `null` or `undefined`, in any case. Such a value shows nothing on the old site, so it is no value.
+ */
+const coordonnee = (valeur: string | null | undefined): string | null => {
+	const texte = valeur?.trim() ?? ''
+	return texte === '' || MOTS_VIDES.has(texte.toLowerCase()) ? null : texte
+}
+
+/** A contact detail the old site showed and the server would refuse (padding aside): which one, never its value. */
+export type CoordonneeARevoir = { profil: number; champ: 'telephone' | 'email' }
+
+/**
+ * The phone and the email of contact of a profile of the source, under the names of Payload. A value
+ * the validators of the profile refuse (a free text in the email field, a phone longer than 20
+ * characters) is left out, so that the whole profile is not refused for it: it is listed by
+ * `coordonneesARevoir`, and it does not open the contact details.
+ */
 export function coordonneesDeLaSource(profil: ProfilLu): { telephone: string | null; email: string | null } {
-	return { telephone: coordonnee(profil.reseaux?.phone), email: coordonnee(profil.reseaux?.email) }
+	const telephone = coordonnee(profil.reseaux?.phone)
+	const email = coordonnee(profil.reseaux?.email)
+	return {
+		telephone: validerTelephone(telephone) === true ? telephone : null,
+		email: validerEmailDeContact(email) === true ? email : null,
+	}
+}
+
+/** The contact details of a profile that are left out because the server would refuse them. */
+export function coordonneesARevoir(profil: ProfilLu): CoordonneeARevoir[] {
+	const lues = { telephone: coordonnee(profil.reseaux?.phone), email: coordonnee(profil.reseaux?.email) }
+	const gardees = coordonneesDeLaSource(profil)
+	return (['telephone', 'email'] as const)
+		.filter(champ => lues[champ] !== null && gardees[champ] === null)
+		.map(champ => ({ profil: profil.id, champ }))
 }
 
 /** Whether the old site shows a phone or an email for this profile. */
@@ -280,6 +311,8 @@ export interface ProfilsAttendus {
 	photosNonReprises: PhotoNonReprise[]
 	/** Profiles taken with a link of a list that names no row. */
 	liensSansLigne: number[]
+	/** Contact details left out because the server would refuse them: by profile and field, never the value. */
+	coordonneesARevoir: CoordonneeARevoir[]
 }
 
 /**
@@ -312,6 +345,7 @@ export function profilsAttendus(
 	const statutsDifferentsDeLaSource: number[] = []
 	const photosNonReprises: PhotoNonReprise[] = []
 	const liensSansLigne: number[] = []
+	const aRevoir: CoordonneeARevoir[] = []
 	for (const profil of profils) {
 		if (nonPris.has(profil.id)) continue
 		if (profil.compte === null || !comptes.has(profil.compte))
@@ -324,6 +358,7 @@ export function profilsAttendus(
 		for (const fichier of [...principale.nonReprises, ...galerie.nonReprises])
 			photosNonReprises.push({ entree: profil.id, fichier })
 		if (sections.liensSansLigne > 0) liensSansLigne.push(profil.id)
+		aRevoir.push(...coordonneesARevoir(profil))
 		const affiche = affichesALaSource(profil)
 		if (affiche && consentiLe === null)
 			throw new Error(
@@ -367,5 +402,12 @@ export function profilsAttendus(
 		if (affiche) ecarts.push({ champ: 'contactPublic', reference: REFERENCES.coordonneesConsenties })
 		attendus.push({ strapiId: profil.id, valeurs, ecarts })
 	}
-	return { attendus, statuts, statutsDifferentsDeLaSource, photosNonReprises, liensSansLigne }
+	return {
+		attendus,
+		statuts,
+		statutsDifferentsDeLaSource,
+		photosNonReprises,
+		liensSansLigne,
+		coordonneesARevoir: aRevoir,
+	}
 }

@@ -200,3 +200,78 @@ describe('Une source qui change après le premier passage (ticket 064)', () => {
 		expect(hugo?.coordonnees?.telephone ?? null).toBeNull()
 	})
 })
+
+describe('Une coordonnée que le serveur refuserait ne fait pas perdre le profil (ticket 064)', () => {
+	/** The network row of a profile of the fake source. */
+	const reseauDe = (profil: number) =>
+		Number(
+			lignes.makeup_artistes_components.find(
+				l => Number(l.entity_id) === profil && l.component_type === 'makeupartists.network'
+			)?.component_id
+		)
+
+	const ecrire = (profil: number, colonne: 'phone' | 'email', valeur: string) =>
+		avecLeProprietaire(sql =>
+			sql.unsafe(`UPDATE components_makeupartists_networks SET ${colonne} = '${valeur}' WHERE id = ${reseauDe(profil)}`)
+		)
+
+	const profilCible = async (strapiId: number) => (await profilsDeLaCible()).find(p => p.strapiId === strapiId)
+
+	test('les mots undefined et null, quelle que soit la casse, ne sont pas des coordonnées (comme à l’ancien site)', async () => {
+		await ecrire(22, 'phone', 'undefined')
+		await ecrire(22, 'email', ' NULL ')
+
+		const rapport = await importerSurLeBanc()
+
+		expect(rapport.collections.profils?.refuses).toEqual([])
+		const profil = await profilCible(22)
+		expect(profil?.coordonnees?.telephone ?? null).toBeNull()
+		expect(profil?.coordonnees?.email ?? null).toBeNull()
+		expect(profil?.contactPublic).toBe(false)
+		expect(profil?.consentiLe ?? null).toBeNull()
+		expect(profil?.sourceConsentement ?? null).toBeNull()
+	})
+
+	test('un email avec des espaces autour est repris sans eux, et le profil s’ouvre', async () => {
+		await ecrire(30, 'email', '  emma@example.test ')
+
+		const rapport = await importerSurLeBanc()
+
+		expect(rapport.collections.profils?.refuses).toEqual([])
+		const profil = await profilCible(30)
+		expect(profil?.coordonnees?.email).toBe('emma@example.test')
+		expect(profil).toMatchObject({
+			contactPublic: true,
+			consentiLe: DATE_DE_BASCULE_DU_BANC,
+			sourceConsentement: 'import',
+		})
+	})
+
+	test('un email qui est un texte libre est laissé de côté et signalé, sans perdre le profil ni ses sections', async () => {
+		await ecrire(33, 'email', 'Insta: @hugo')
+		await ecrire(33, 'phone', '01 23 45 67 89 01 23 45 67 89 01')
+
+		const rapport = await importerSurLeBanc()
+
+		expect(rapport.collections.profils?.refuses).toEqual([])
+		expect(rapport.parite?.profils).toMatchObject({ differents: [], manquants: [], refuses: [] })
+		expect(rapport.collections.profils?.coordonneesARevoir).toEqual([
+			{ profil: 33, champ: 'telephone' },
+			{ profil: 33, champ: 'email' },
+		])
+		// Never the value, in the report.
+		expect(JSON.stringify(rapport)).not.toContain('Insta')
+		const profil = await profilCible(33)
+		expect(profil).toBeDefined()
+		expect(profil?.coordonnees?.email ?? null).toBeNull()
+		expect(profil?.coordonnees?.telephone ?? null).toBeNull()
+		expect(profil?.contactPublic).toBe(false)
+	})
+
+	test('le décompte du registre ne compte que les profils écrits, et vaut le nombre de profils ouverts', async () => {
+		const rapport = await importerSurLeBanc()
+
+		const ouverts = (await profilsDeLaCible()).filter(({ contactPublic }) => contactPublic).length
+		expect(rapport.ecarts['coordonnees-consentement']).toBe(ouverts)
+	})
+})

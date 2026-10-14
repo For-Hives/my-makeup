@@ -49,6 +49,8 @@ export interface BilanDeCollection extends Bilan {
 	photosNonReprises?: PhotoNonReprise[]
 	/** Profiles with a link of a list that names no row (SCHEMA.md §7). */
 	liensSansLigne?: number[]
+	/** Contact details left out because the server would refuse them: profile and field, never the value (ticket 064). */
+	coordonneesARevoir?: { profil: number; champ: string }[]
 }
 
 /** The parity of a collection, and how the target splits, read again. */
@@ -150,6 +152,12 @@ function ligneDeBilan(nom: string, bilan: BilanDeCollection, mode: Mode): string
 		)
 	if (bilan.liensSansLigne?.length)
 		lignes.push(`  - liens de liste qui ne nomment aucune ligne, signalés : ${ids(bilan.liensSansLigne)}`)
+	if (bilan.coordonneesARevoir?.length)
+		lignes.push(
+			`  - coordonnées laissées de côté, que le serveur refuserait (à revoir à la main) : ${bilan.coordonneesARevoir
+				.map(({ profil, champ }) => `${profil} (${champ})`)
+				.join(', ')}`
+		)
 	return lignes
 }
 
