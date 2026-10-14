@@ -255,7 +255,7 @@ describe('Contenu de 60 000 caractères relu à l’identique ; PDF refusé dans
 			expect(texte).toContain('La galerie d’un article ne prend que des images')
 			// The envelope is in French too (ticket 221), with a no-break space before the colon.
 			expect((corps as { errors: { message: string }[] }).errors[0]?.message).toBe(
-				'Le champ suivant n’est pas valide : Galerie'
+				'Le champ suivant n’est pas valide\u00a0: Galerie'
 			)
 		}
 		const creation = await appelerRest('POST', '/api/articles?draft=true', {

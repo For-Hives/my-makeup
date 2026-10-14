@@ -86,7 +86,7 @@ Règles :
 - **Un essai attend un état, jamais une durée** : `await expect(…)`, `expect.poll`, `page.waitForURL`. Ni `waitForTimeout`, ni `setTimeout` (garde-fou C06).
 - **Une session sans mot de passe** : `creerCompte` crée un compte fictif dans la base du banc et rend son cookie de session, que `context.addCookies` pose dans le navigateur. Chaque appel donne un compte distinct ; chaque essai part d'un navigateur neuf, sans cookie.
 - **`@mobile`** fait tourner l'essai aussi à 390 px. Un parcours qu'on fait au téléphone le porte.
-- **L'administration est écrite par Payload**, en anglais pour l'instant : on y trouve un élément par son adresse (`a[href="/admin/account"]`) ou par une donnée du compte, pas par un libellé.
+- **L'administration est écrite par Payload**, en français (ticket 221) : on y trouve un élément par son adresse (`a[href="/admin/account"]`) ou par une donnée du compte, pas par un libellé.
 - **Aucune donnée réelle** : les comptes sont en `@example.test`, comme partout dans les tests.
 
 Les deux fichiers du ticket 013 servent d'exemples : `coquille.spec.ts` (l'accueil, puis l'administration avec une session de la fabrique, et sans session) et `a11y.spec.ts`.
