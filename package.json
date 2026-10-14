@@ -8,7 +8,7 @@
 		"node": "24.x"
 	},
 	"scripts": {
-		"dev": "next dev",
+		"dev": "next dev --hostname 127.0.0.1",
 		"build": "next build",
 		"start": "next start",
 		"payload": "bun node_modules/payload/bin.js --disable-transpile",
