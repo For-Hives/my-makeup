@@ -1,5 +1,6 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from 'bun:test'
 import { createHash } from 'node:crypto'
+import sharp from 'sharp'
 import { type BilanDesProfils, lirePhotoDuJeu, nomDuFichier, poserLesProfilsDuJeu } from '@/jeu-fictif/chargement'
 import { type PhotoDuJeu, POIDS_MAX_D_UNE_PHOTO, PROFILS_DU_JEU, type ProfilDuJeu } from '@/jeu-fictif/profils'
 import { cleDuMedia, PREFIXE_DES_ENVOIS } from '@/lib/medias'
@@ -221,7 +222,13 @@ describe('Le jeu du banc : les 12 profils types', () => {
 		// Every object has its media, every media its object: the same keys, the same sizes.
 		expect(
 			medias
-				.map(media => ({ cle: cleDuMedia(media.prefix, media.filename ?? ''), taille: media.filesize }))
+				.flatMap(media => [
+					{ cle: cleDuMedia(media.prefix, media.filename ?? ''), taille: media.filesize },
+					// The derived sizes (ticket 133), next to the original.
+					...Object.values(media.sizes ?? {}).flatMap(taille =>
+						taille?.filename ? [{ cle: cleDuMedia(media.prefix, taille.filename), taille: taille.filesize }] : []
+					),
+				])
 				// The order of the storage: byte by byte.
 				.sort((a, b) => (a.cle < b.cle ? -1 : a.cle > b.cle ? 1 : 0))
 		).toEqual(objets)
@@ -229,8 +236,10 @@ describe('Le jeu du banc : les 12 profils types', () => {
 		expect(servies.map(({ media }) => media).sort((a, b) => Number(a) - Number(b))).toEqual(medias.map(({ id }) => id))
 		for (const media of medias)
 			expect(servies.find(servie => servie.media === media.id)?.pro).toBe(idDe(media.owner) as number)
+		// The photos of the set weigh less than 30 KB; Payload re-encodes a WebP it stores (it reads
+		// the type as possibly animated), so the stored object may weigh a little more, never twice as much.
 		for (const { cle, taille } of objets) {
-			expect(taille).toBeLessThan(POIDS_MAX_D_UNE_PHOTO)
+			expect([cle, taille < 2 * POIDS_MAX_D_UNE_PHOTO]).toEqual([cle, true])
 			expect(cle).toStartWith(`${PREFIXE_DES_ENVOIS}/jeu-`)
 		}
 		// Each object is the photo of the set, byte for byte, under the name the set gives it.
@@ -250,7 +259,18 @@ describe('Le jeu du banc : les 12 profils types', () => {
 				const media = medias.find(({ id }) => id === idDe(montrees[rang]))
 				expect({ nom: media?.filename, type: media?.mimeType }).toEqual({ nom, type: 'image/webp' })
 				const objet = await lireUnObjet(cleDuMedia(media?.prefix, nom))
-				expect(objet && empreinte(objet.octets)).toBe(empreinte(await lirePhotoDuJeu(photo)))
+				const source = await lirePhotoDuJeu(photo)
+				expect(source.length).toBeLessThan(POIDS_MAX_D_UNE_PHOTO)
+				// The same picture: Payload re-encodes a WebP, so the bytes are not the same, the dimensions are.
+				const [stocke, deLOrigine] = [
+					await sharp(objet?.octets ?? new Uint8Array()).metadata(),
+					await sharp(source).metadata(),
+				]
+				expect([stocke.format, stocke.width, stocke.height]).toEqual([
+					deLOrigine.format,
+					deLOrigine.width,
+					deLOrigine.height,
+				])
 			}
 		}
 		// Each photo says whose it is, in French.
@@ -310,14 +330,14 @@ describe('Rejouer le jeu', () => {
 			expect(await compterLesDocuments()).toMatchObject({ pros: 0, profils: 0, media: 0 })
 			// …but the objects already sent are still in the storage.
 			const envoyes = await listerLesObjets()
-			expect(envoyes.map(({ cle }) => cle)).toEqual([
-				`${PREFIXE_DES_ENVOIS}/${nomDuFichier('reference', 1)}`,
-				`${PREFIXE_DES_ENVOIS}/${nomDuFichier('reference', 2)}`,
-				`${PREFIXE_DES_ENVOIS}/${nomDuFichier('reference', 3)}`,
-				`${PREFIXE_DES_ENVOIS}/${nomDuFichier('reference', 4)}`,
-				`${PREFIXE_DES_ENVOIS}/${nomDuFichier('reference', 5)}`,
-				`${PREFIXE_DES_ENVOIS}/${nomDuFichier('reference', 'principale')}`,
-			])
+			// Each photo with its derived size (ticket 133).
+			const nomsEnvoyes = ([1, 2, 3, 4, 5, 'principale'] as const).map(place => nomDuFichier('reference', place))
+			expect(envoyes.map(({ cle }) => cle)).toEqual(
+				nomsEnvoyes
+					.flatMap(nom => [nom, nom.replace(/\.webp$/, '-245x245.webp')])
+					.map(nom => `${PREFIXE_DES_ENVOIS}/${nom}`)
+					.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))
+			)
 
 			const bilan = await poserLesProfilsDuJeu(payload)
 
@@ -326,7 +346,14 @@ describe('Rejouer le jeu', () => {
 			const medias = await lesMedias()
 			expect(medias).toHaveLength(PHOTOS_ENVOYEES)
 			expect((await listerLesObjets()).map(({ cle }) => cle)).toEqual(
-				medias.map(media => cleDuMedia(media.prefix, media.filename ?? '')).sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))
+				medias
+					.flatMap(media => [
+						cleDuMedia(media.prefix, media.filename ?? ''),
+						...Object.values(media.sizes ?? {}).flatMap(taille =>
+							taille?.filename ? [cleDuMedia(media.prefix, taille.filename)] : []
+						),
+					])
+					.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))
 			)
 		},
 		3 * CHARGEMENT_MS

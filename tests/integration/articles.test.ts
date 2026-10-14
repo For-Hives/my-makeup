@@ -51,10 +51,15 @@ const slugsDe = (corps: Liste) => corps.docs.map(({ slug }) => slug).sort()
 /** A media written by the server, as the newsroom or the import would hold it: a file of this type. */
 async function mediaDuType(type: 'image/png' | 'application/pdf'): Promise<Media> {
 	const payload = await payloadDeTest()
-	const file =
-		type === 'image/png'
-			? fichierPourPayload(nomDePhoto('article'))
-			: { data: Buffer.from('%PDF-1.4\n% fictif\n'), mimetype: 'application/pdf', name: 'fiche-fictive.pdf', size: 18 }
+	const file = type === 'image/png' ? fichierPourPayload(nomDePhoto('article')) : undefined
+	// A PDF is no longer taken as a file (ticket 133): it exists only as the import adopts one,
+	// a document that names its object, without any file.
+	if (!file)
+		return payload.create({
+			collection: 'media',
+			data: { alt: 'Fichier fictif', filename: 'fiche-fictive.pdf', mimeType: 'application/pdf', prefix: '' },
+			context: { skipCloudStorage: true },
+		})
 	return payload.create({ collection: 'media', data: { alt: 'Fichier fictif' }, file })
 }
 

@@ -20,7 +20,7 @@ import {
 	jamais,
 	lectureDesMedias,
 } from '../lib/acces'
-import { juger, nomImprevisible, TYPES_DE_PHOTO } from '../lib/envoi-photo'
+import { CONTEXTE_FICHIER_NOMME, juger, nomImprevisible } from '../lib/envoi-photo'
 import { adresseDuMedia } from '../lib/medias'
 
 /**
@@ -69,6 +69,9 @@ export const aucunEnvoiSansStockage: CollectionBeforeOperationHook = ({ args, op
 	return args
 }
 
+const fichierNommeParLeServeur = (req: { context?: Record<string, unknown> }): boolean =>
+	req.context?.[CONTEXTE_FICHIER_NOMME] === true || req.context?.skipCloudStorage === true
+
 /**
  * A file sent to the site is a JPEG, a PNG or a WebP of 10 MiB at most, read in its content
  * (ticket 133, `src/lib/envoi-photo.ts`), whoever sends it. Anything else is refused (400) before
@@ -80,6 +83,12 @@ export const aucunEnvoiSansStockage: CollectionBeforeOperationHook = ({ args, op
 export const photoValideEtRenommee: CollectionBeforeOperationHook = ({ args, operation, req }) => {
 	const fichier = req.file
 	if ((operation !== 'create' && operation !== 'update') || !fichier) return args
+	if (fichierNommeParLeServeur(req)) {
+		// Trusted server code names its file: the type is still read in the content.
+		const verdict = juger(fichier.data, Math.max(fichier.size ?? 0, fichier.data.length))
+		if (!verdict.accepte) throw new APIError(verdict.message, 400)
+		return args
+	}
 	const octets = fichier.data
 	const verdict = juger(octets, Math.max(fichier.size ?? 0, octets.length))
 	if (!verdict.accepte) throw new APIError(verdict.message, 400)
@@ -137,8 +146,9 @@ export const unFichierALaCreation: CollectionBeforeChangeHook = ({ data, operati
 export const UPLOAD_DES_MEDIAS: UploadConfig = {
 	disableLocalStorage: true,
 	filesRequiredOnCreate: false,
-	// Second lock, behind `photoValideEtRenommee`: Payload reads the type in the content as well.
-	mimeTypes: Object.keys(TYPES_DE_PHOTO),
+	// No `mimeTypes` here: Payload would also refuse the GIF or AVIF media the import adopts for the
+	// galleries of articles (their `mimeType` is validated against it). The file check is
+	// `photoValideEtRenommee`.
 	// Derived sizes, stored next to the original (same folder, same unpredictable base name).
 	// Payload makes only the sizes the photo is large enough for; the bin moves them with it.
 	imageSizes: [

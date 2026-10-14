@@ -49,3 +49,10 @@ export function juger(octets: Uint8Array, taille = octets.length): VerdictDEnvoi
 /** The name a stored photo gets: a random UUID and the extension of its real type. Nothing of the original name. */
 export const nomImprevisible = (type: TypeDePhoto, uuid: string = crypto.randomUUID()): string =>
 	`${uuid}.${TYPES_DE_PHOTO[type]}`
+
+/**
+ * The context key by which server code, never a request, keeps the name of the file it gives: the
+ * set of the test bench, whose photos have fixed names. `skipCloudStorage` (the import adopting a
+ * photo where it is) keeps it as well. A request cannot set a context.
+ */
+export const CONTEXTE_FICHIER_NOMME = 'fichierNomme'
