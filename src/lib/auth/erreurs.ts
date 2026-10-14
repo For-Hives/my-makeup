@@ -4,6 +4,8 @@
  * error, or anything typed in the URL, is never displayed.
  */
 
+import { ERREUR_SESSION_EXPIREE } from './retour'
+
 export const CODES_ERREUR = [
 	'identifiants-invalides',
 	'email-non-confirme',
@@ -21,3 +23,20 @@ const MESSAGES: Record<CodeErreur, string> = {
 }
 
 export const messageErreur = (code: CodeErreur): string => MESSAGES[code]
+
+/** What the sign-in page says when the session ended (the words of the current site). */
+export const MESSAGE_SESSION_EXPIREE = 'Ta session a expiré, reconnecte-toi.'
+
+/** What the pages of the space say when the session cannot be checked for now. */
+export const MESSAGE_VERIFICATION_IMPOSSIBLE =
+	'Le service est momentanément indisponible, réessaie dans quelques minutes. Tu restes connectée.'
+
+/**
+ * The message the `?error=` of the sign-in page asks for, or nothing. A closed list: the value of
+ * the address is compared with it and never copied to the screen, so a code nobody knows (or a
+ * line of text in the link) shows nothing.
+ */
+export function messageDeLUrl(brut: unknown): string | null {
+	const valeur = Array.isArray(brut) ? brut[0] : brut
+	return valeur === ERREUR_SESSION_EXPIREE ? MESSAGE_SESSION_EXPIREE : null
+}

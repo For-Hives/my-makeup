@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server'
-import { COOKIE_DE_SESSION, redirectionDeLEspace } from '@/lib/auth/espace-ferme'
+import { COOKIE_DE_SESSION, decisionDeLEspace } from '@/lib/auth/espace-ferme'
 import { robotsPourChemin } from '@/lib/seo/robots'
 import { redirectionDeForme } from '@/lib/urls/forme'
 
@@ -8,7 +8,8 @@ import { redirectionDeForme } from '@/lib/urls/forme'
  * - A repeated slash or a final slash answers one redirect to the final address (ticket 072): Next's own
  *   redirect of the final slash is off (next.config.ts), so that no address makes two hops.
  * - The private pages of the space answer one redirection to the sign-in page when no session cookie
- *   comes with the request (ticket 075). The authoritative check is the page's own (`exigerMaquilleuse`).
+ *   comes with the request (ticket 075), or when its end date has passed (ticket 080: with the
+ *   « session expirée » message). The authoritative check is the page's own (`exigerMaquilleuse`).
  * - Every other response gets the robots directive (ticket 070). It reads APP_ENV at run time: the
  *   pre-production gets its variables after the build. The paths of the account and of the search
  *   answer noindex everywhere.
@@ -27,7 +28,12 @@ export function proxy(requete: NextRequest) {
 		if (consigneDeForme) redirectionDeForme.headers.set('X-Robots-Tag', consigneDeForme)
 		return redirectionDeForme
 	}
-	const vers = redirectionDeLEspace(pathname, search, requete.cookies.has(COOKIE_DE_SESSION))
+	const vers = decisionDeLEspace(
+		pathname,
+		search,
+		requete.cookies.get(COOKIE_DE_SESSION)?.value,
+		Math.floor(Date.now() / 1000)
+	)
 	if (vers) {
 		// Built from the URL of the request, so the host is the one the visitor used (the Host header the proxy forwards).
 		const cible = requete.nextUrl.clone()

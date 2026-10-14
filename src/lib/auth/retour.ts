@@ -45,3 +45,9 @@ export const PAGE_DU_MUR = '/auth/verification-wall'
 
 /** The onboarding: where a new, confirmed and signed-in account lands (ticket 082). */
 export const PAGE_D_ACCUEIL_DU_COMPTE = '/auth/init-account'
+
+/** The `error` of the sign-in page that says the session ended. The only code of the address that is ever shown. */
+export const ERREUR_SESSION_EXPIREE = 'session-expiree'
+
+/** The sign-in page that says the session ended, and brings the visitor back to `chemin` (one redirection). */
+export const urlSessionExpiree = (chemin: string): string => `${urlDeConnexion(chemin)}&error=${ERREUR_SESSION_EXPIREE}`

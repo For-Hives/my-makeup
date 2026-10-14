@@ -86,6 +86,7 @@ Règles :
 - **Un essai attend un état, jamais une durée** : `await expect(…)`, `expect.poll`, `page.waitForURL`. Ni `waitForTimeout`, ni `setTimeout` (garde-fou C06).
 - **Une session sans mot de passe** : `creerCompte` crée un compte fictif dans la base du banc et rend son cookie de session, que `context.addCookies` pose dans le navigateur. Chaque appel donne un compte distinct ; chaque essai part d'un navigateur neuf, sans cookie.
 - **`@mobile`** fait tourner l'essai aussi à 390 px. Un parcours qu'on fait au téléphone le porte.
+- **`@lent`** marque un essai qui attend une vraie durée (une session de 8 s qui finit d'elle-même, E13). Aucune configuration ne le filtre encore : il tourne avec les autres, et le ticket de la CI nocturne décidera de le séparer.
 - **L'administration est écrite par Payload**, en français (ticket 221) : on y trouve un élément par son adresse (`a[href="/admin/account"]`) ou par une donnée du compte, pas par un libellé.
 - **Aucune donnée réelle** : les comptes sont en `@example.test`, comme partout dans les tests.
 
