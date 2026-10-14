@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { BoutonsDeDeconnexion } from '@/components/auth/BoutonsDeDeconnexion'
+import { RafraichirSession } from '@/components/espace/RafraichirSession'
 import { exigerMaquilleuse } from '@/lib/auth/session'
 
 // Read per request: it depends on the session, and the build has no database.
@@ -13,6 +14,7 @@ export default async function PageProfil() {
 	return (
 		<main className="flex min-h-dvh flex-col items-center justify-center gap-4 p-6 text-center">
 			<h1 className="font-semibold text-3xl">Mon espace</h1>
+			<RafraichirSession expire={maquilleuse.expire} />
 			<p>Bonjour {maquilleuse.nom || 'toi'}, tu es connectée.</p>
 			<BoutonsDeDeconnexion />
 		</main>

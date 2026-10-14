@@ -10,11 +10,12 @@ import {
 } from '../lib/auth/journal-payload'
 import { contenuEmailConfirmation, SUJET_DE_CONFIRMATION } from '../lib/emails/confirmation'
 import { composerEmail } from '../lib/emails/gabarit'
+import { DUREE_SESSION_S, prolongerSousPlafond, refuserApresLePlafond } from '../lib/auth/session-glissante'
 import { sessionsFermees } from './Admins'
 import { profilALaCreationDuCompte } from './Profils'
 
 /** How long a session of a makeup artist lasts: 14 days (plan 01 §2.3). */
-export const DUREE_SESSION_PRO_S = 14 * 24 * 60 * 60
+export const DUREE_SESSION_PRO_S = DUREE_SESSION_S
 
 /**
  * The attributes of the session cookie (I09): HttpOnly always (Payload sets it), SameSite=Lax, and
@@ -89,7 +90,8 @@ export const Pros: CollectionConfig<'pros'> = {
 		// No lock of the account: the brake is by client address (`freinerLaConnexion`), so that
 		// ten wrong passwords typed by anyone never lock the account they aimed at (AUTH-05).
 		maxLoginAttempts: 0,
-		// 14 days (plan 01 §2.3). Sliding renewal and the 90-day ceiling are ticket 079.
+		// 14 days (plan 01 §2.3), renewed by a visit to the space (`RafraichirSession`) and never past 90 days
+		// from the opening of the session (ticket 079: the `refresh` hook and the `beforeOperation` one below).
 		tokenExpiration: DUREE_SESSION_PRO_S,
 		// The token lives in the cookie only: no response of the API carries it (ticket 075).
 		removeTokenFromResponses: true,
@@ -109,7 +111,8 @@ export const Pros: CollectionConfig<'pros'> = {
 		afterLogin: [rendreLaPlaceDeLaConnexion(), retenirLaDerniereConnexion, noterLaConnexionRest],
 		afterError: [noterLEchecDeConnexionRest],
 		beforeDelete: [compteSansProfilAvantSuppression],
-		beforeOperation: [noterLeDebutDeLaConnexion, freinerLaConnexion()],
+		beforeOperation: [noterLeDebutDeLaConnexion, freinerLaConnexion(), refuserApresLePlafond],
+		refresh: [prolongerSousPlafond],
 	},
 	fields: [
 		{

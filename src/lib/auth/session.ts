@@ -1,8 +1,10 @@
 import config from '@payload-config'
-import { headers } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { getPayload } from 'payload'
 import { COLLECTION_PROS } from '../acces'
+import { expirationDuJeton } from './duree-session'
+import { COOKIE_DE_SESSION } from './espace-ferme'
 import { urlDeConnexion } from './retour'
 
 /** What a page of the space may know about the makeup artist: never the account document. */
@@ -10,6 +12,8 @@ export interface Maquilleuse {
 	id: number | string
 	nom: string
 	email: string
+	/** When her session ends (Unix seconds), read from the cookie; nothing if the token did not come by the cookie. */
+	expire: number | null
 }
 
 /**
@@ -25,7 +29,8 @@ export async function maquilleuseConnectee(): Promise<Maquilleuse | null> {
 	const payload = await getPayload({ config })
 	const { user } = await payload.auth({ headers: entetes })
 	if (!user || user.collection !== COLLECTION_PROS) return null
-	return { id: user.id, nom: user.nom ?? '', email: String(user.email) }
+	const expire = expirationDuJeton((await cookies()).get(COOKIE_DE_SESSION)?.value)
+	return { id: user.id, nom: user.nom ?? '', email: String(user.email), expire }
 }
 
 /**

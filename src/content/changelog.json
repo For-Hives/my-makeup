@@ -25,6 +25,11 @@
 			"id": "a-l-inscription-ton-nom-est-libre-et-ton-mot-de-passe-n-a",
 			"type": "amelioration",
 			"text": "À l’inscription, ton nom est libre et ton mot de passe n’a plus besoin de majuscule ni de chiffre : huit caractères suffisent."
+		},
+		{
+			"id": "tu-restes-connectee-tant-que-tu-passes-dans-ton-espace-pe",
+			"type": "amelioration",
+			"text": "Tu restes connectée tant que tu passes dans ton espace, pendant 90 jours au plus."
 		}
 	],
 	"releases": []
