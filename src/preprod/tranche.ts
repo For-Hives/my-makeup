@@ -29,8 +29,10 @@ import { COLLECTIONS_ECRITES, verifierLaCible, verifierLeSchemaDeLaCible } from 
 import { lireLesDecisions } from '../../scripts/migration/import/decisions'
 import { importer } from '../../scripts/migration/import/importer'
 import { codeDeSortie, type Rapport, rapportEnTexte } from '../../scripts/migration/import/rapport'
+import { lireLesReponses, referentielGarde } from '../../scripts/migration/import/referentiel'
 import { type ClientPg, ouvrirLaSourcePg } from '../../scripts/migration/import/source-pg'
 import decisionsDuBanc from '../../tests/fixtures/import/decisions-du-banc.json'
+import referentielDuBanc from '../../tests/fixtures/import/referentiel-du-banc.json'
 import {
 	type BaseDeLaSource,
 	lignesDeLaDefinition,
@@ -191,9 +193,12 @@ export async function demarrerLaPreprod(payload: Payload, options: OptionsDeDema
 	const lecture = await poserLaSource(payload, databaseUri, source, journal)
 	const cible = verifierLaCible(databaseUri, { cibleDistante: true })
 	const decisions = lireLesDecisions(JSON.stringify(decisionsDuBanc))
+	// The communes of the fake source's cities, from the bench's kept answers, offline: the
+	// pre-production never asks geo.api.gouv.fr, and the source is the bench's own.
+	const referentiel = referentielGarde(lireLesReponses(JSON.stringify(referentielDuBanc)), null)
 	const sourceOuverte = ouvrirLaSourcePg(lecture, clientPg(payload))
 	try {
-		const rapport = await importer({ payload, source: sourceOuverte, mode: 'reel', cible, decisions })
+		const rapport = await importer({ payload, source: sourceOuverte, mode: 'reel', cible, decisions, referentiel })
 		for (const ligne of rapportEnTexte(rapport).split('\n')) if (ligne.trim() !== '') journal(ligne)
 		const code = codeDeSortie(rapport)
 		journal(`Import de démarrage fini, code ${code} : ${SENS_DU_CODE[code] ?? 'voir le rapport'}.`)

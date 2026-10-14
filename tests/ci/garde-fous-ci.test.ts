@@ -247,6 +247,7 @@ describe('.dockerignore refuses everything but what the build needs', () => {
 		'tests/outils/source-strapi/images.ts',
 		'tests/outils/source-strapi/schema.ts',
 		'tests/fixtures/import/decisions-du-banc.json',
+		'tests/fixtures/import/referentiel-du-banc.json',
 	]
 	const dockerignore = read('.dockerignore')
 

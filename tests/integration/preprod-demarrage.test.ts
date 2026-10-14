@@ -11,7 +11,7 @@ import { migrations } from '../../src/migrations'
 import { BASE_DE_LA_PREPROD, MARQUE_DE_REMISE } from '../../src/preprod/remise'
 import { demarrerLaPreprod, type IssueDuDemarrage, PreprodRefusee } from '../../src/preprod/tranche'
 import { lireLeProfilPublic } from '../../src/services/public/profils'
-import { DECISIONS_DU_BANC } from '../outils/import'
+import { DECISIONS_DU_BANC, referentielDuBanc } from '../outils/import'
 import { compterLesDocuments, exigerBanc, payloadDeTest, viderLaBase } from '../outils/payload-test'
 import { creerLaSourceStrapi, effacerLaSourceStrapi, sourceDuBanc } from '../outils/source-strapi'
 
@@ -350,7 +350,14 @@ describe('Le lecteur de la source sous Node', () => {
 		if (!pg) throw new Error('L’adaptateur de Payload ne donne pas son client PostgreSQL.')
 		const lire = async (source: ReturnType<typeof ouvrirLaSourceBun>): Promise<Rapport> => {
 			try {
-				return await importer({ payload, source, mode: 'a-blanc', cible: 'locale', decisions: DECISIONS_DU_BANC })
+				return await importer({
+					payload,
+					source,
+					mode: 'a-blanc',
+					cible: 'locale',
+					decisions: DECISIONS_DU_BANC,
+					referentiel: referentielDuBanc(),
+				})
 			} finally {
 				await source.fermer()
 			}
