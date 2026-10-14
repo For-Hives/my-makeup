@@ -297,16 +297,18 @@ DOCKER_HOST=unix://$XDG_RUNTIME_DIR/podman/podman.sock bun run image:controle
 
 ## Intégration continue
 
-Chaque pull request et chaque poussée sur `v3` lancent `.github/workflows/ci.yml` : trois jobs en parallèle, puis `ci-ok`, le seul check à exiger pour fusionner.
+Chaque pull request et chaque poussée sur `v3` lancent `.github/workflows/ci.yml` : cinq jobs en parallèle, puis `ci-ok`, le seul check à exiger pour fusionner.
 
 | Job | Ce qu'il lance |
 |---|---|
 | `qualite` | Fichiers générés par Payload à jour, `bun run typecheck`, `bun run ci:biome`, `bun run test:ci-garde` |
 | `unit` | `bun run test:unit` |
 | `build` | `bun run image:build` sans secret ni base, puis `bun run image:controle` |
-| `ci-ok` | Rouge si l'un des trois a échoué, a été annulé ou a été sauté |
+| `integration` | `bun run banc:up`, puis `bun run test:integration` : le banc de test, en CI comme sur un poste |
+| `e2e` | En deux lots côte à côte : le Chromium de Playwright, `bun run banc:up`, puis `bun run test:e2e` sur la moitié des essais |
+| `ci-ok` | Rouge si l'un des cinq a échoué, a été annulé ou a été sauté |
 
-Avant de pousser, les mêmes commandes se lancent en local : `bun run check`, `bun run typecheck`, `bun run test`, `bun run test:ci-garde`.
+Avant de pousser, les mêmes commandes se lancent en local : `bun run check`, `bun run typecheck`, `bun run test`, `bun run test:ci-garde`, et, banc démarré, `bun run test:integration` et `bun run test:e2e`.
 
 La CI ne lit aucun secret, n'a aucun filtre de chemins et ne tolère aucun échec. Ces règles sont tenues par les garde-fous de `tests/ci/` : voir [`docs/qualite.md`](docs/qualite.md), qui dit aussi comment ajouter un job ou une action.
 
@@ -329,13 +331,14 @@ Le détail est dans [`docs/qualite.md`](docs/qualite.md), « Renovate » : ce qu
 | `bun run check` | Biome : format, lint et tri des imports, avec écriture des corrections sûres |
 | `bun run lint` | Biome : lint seul, sans écriture |
 | `bun run ci:biome` | Biome en lecture seule, pour la CI |
-| `bun run ci:canari` | Écrit les trois fautes du canari de la CI, sur une branche `canari-…` seulement (voir `docs/qualite.md`) |
+| `bun run ci:canari` | Écrit les quatre fautes du canari de la CI, sur une branche `canari-…` seulement (voir `docs/qualite.md`) |
 | `bun run renovate:valide` | Fait valider `renovate.json` par Renovate, en mode strict. Il lui faut `docker` (voir `docs/qualite.md`, « Renovate ») |
 | `bun run typecheck` | Génère les types de routes de Next, puis contrôle les types (`tsc --noEmit`) |
 | `bun run payload:types` | Régénère `src/payload-types.ts` après un changement de collection |
 | `bun run payload:importmap` | Régénère `importMap.js` après l'ajout d'un composant d'administration |
 | `bun run payload:migrate` | Joue les migrations de `src/migrations/` qui ne l'ont pas encore été |
 | `bun run payload:migrate:create` | Écrit une migration à partir des collections, à relire avant de la versionner |
+| `bun run schema:derive` | Dit si les collections du code et la dernière migration décrivent le même schéma, sans base ni secret (voir `docs/qualite.md`, « La dérive de schéma ») |
 | `bun run payload` | Le CLI de Payload |
 | `bun run test` | Les tests qui tournent sans le banc de test : les tests unitaires |
 | `bun run test:unit` | Les tests unitaires de `tests/unit/`, sans lire le fichier `.env` |

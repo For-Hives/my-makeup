@@ -48,6 +48,7 @@ Tout se lance depuis la racine du dépôt. La table complète est dans le README
 | `bun run payload:types` | Après un changement de collection : régénère `src/payload-types.ts`. |
 | `bun run payload:importmap` | Après l'ajout d'un composant d'administration. |
 | `bun run payload:migrate:create` | Écrit une migration depuis les collections (voir « Schéma »). |
+| `bun run schema:derive` | Dit s'il manque une migration aux collections du code, sans base ni secret. Pas encore bloquant en CI : il le devient avec la migration `init` (ticket 049). |
 | `bun scripts/migration/urls-doc.ts` | Après un changement de la table des URL (voir « URL »). Avec `--check`, il dit seulement si le document suit la table. |
 
 ## Architecture

@@ -1,15 +1,15 @@
 /**
- * The canary of the CI: three faults planted on purpose, one per tool, to prove on a real
+ * The canary of the CI: four faults planted on purpose, one per tool, to prove on a real
  * pull request that the required check can fail (docs/qualite.md, « Canari »).
  *
- *   bun run ci:canari             writes the three faulty files
+ *   bun run ci:canari             writes the four faulty files
  *   bun run ci:canari --retirer   removes them
  *
  * It only writes on a branch whose name starts with `canari-`: the faults never land on a
- * working branch by accident. The three files live under tests/, outside the Docker image:
+ * working branch by accident. The four files live under tests/, outside the Docker image:
  * the `build` job stays green, and each red step names one tool.
  *
- * It only writes these three files: it never commits, pushes or opens a pull request.
+ * It only writes these four files: it never commits, pushes or opens a pull request.
  */
 
 import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
@@ -51,6 +51,13 @@ export const CANARY_FAULTS: readonly CanaryFault[] = [
 		red: 'qualite › Biome',
 		content: `${HEADER}const neverRead = 'canary'\n\nexport const canaryOfBiome = 1\n`,
 	},
+	// No page is opened: the fault is the same in every shard, and it is replayed without a browser.
+	{
+		file: 'tests/e2e/canari.spec.ts',
+		command: 'bun run test:e2e',
+		red: 'e2e, one of the two shards › End-to-end tests',
+		content: `${HEADER}import { expect, test } from '@playwright/test'\n\ntest('canary: a false end-to-end test', () => {\n\texpect(1 + 1).toBe(3)\n})\n`,
+	},
 ]
 
 /** Why the faults are not written on this branch, in French, or nothing when they may be. */
@@ -71,7 +78,7 @@ function main(): void {
 	const remove = process.argv.includes('--retirer')
 	if (remove) {
 		for (const { file } of CANARY_FAULTS) rmSync(path.join(ROOT, file), { force: true })
-		console.log('Canari retiré : les trois fichiers fautifs sont supprimés.')
+		console.log('Canari retiré : les quatre fichiers fautifs sont supprimés.')
 		return
 	}
 
@@ -86,7 +93,7 @@ function main(): void {
 		mkdirSync(path.dirname(target), { recursive: true })
 		writeFileSync(target, content)
 	}
-	console.log('Canari écrit. Trois fautes, une par outil :')
+	console.log('Canari écrit. Quatre fautes, une par outil :')
 	for (const { file, command, red } of CANARY_FAULTS) console.log(`  ${file} : « ${command} » échoue (CI : ${red})`)
 	console.log('La suite est dans docs/qualite.md, « Canari ».')
 }

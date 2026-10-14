@@ -1,11 +1,13 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { CANARY_FAULTS, refusal } from '../../scripts/ci/canari'
+import { MOTIF_DES_ESSAIS } from '../outils/e2e'
+import { absoluteNavigations, fixedWaits, focusedOrSkippedTests } from '../outils/garde-fous-ci'
 
 /**
- * The canary kit (docs/qualite.md, « Canari »). The three faulty files are written in a
+ * The canary kit (docs/qualite.md, « Canari »). The four faulty files are written in a
  * temporary folder, never in the repository, and each tool is run on them: a canary whose
  * faults are no longer faults would prove nothing on the day it is pushed.
  */
@@ -19,12 +21,13 @@ const fault = (file: string) => {
 const FALSE_TEST = fault('tests/unit/canari.test.ts')
 const TYPE_ERROR = fault('tests/ci/canari-types.ts')
 const BIOME_ERROR = fault('tests/ci/canari-biome.ts')
+const FALSE_E2E = fault('tests/e2e/canari.spec.ts')
 
 let folder = ''
 
-/** Runs a script of node_modules, or bun itself, in the temporary folder. */
-function run(args: string[]): { code: number; output: string } {
-	const ran = Bun.spawnSync([process.execPath, ...args], { cwd: folder, env: { PATH: process.env.PATH ?? '' } })
+/** Runs a script of node_modules, or bun itself, in the temporary folder. Playwright needs Node instead. */
+function run(args: string[], runtime = process.execPath): { code: number; output: string } {
+	const ran = Bun.spawnSync([runtime, ...args], { cwd: folder, env: { PATH: process.env.PATH ?? '' } })
 	return { code: ran.exitCode, output: ran.stdout.toString() + ran.stderr.toString() }
 }
 
@@ -40,18 +43,21 @@ beforeAll(() => {
 		path.join(folder, 'biome.json'),
 		JSON.stringify({ ...biome, vcs: { enabled: false }, files: { includes: ['**/*.ts'] } })
 	)
+	// The false end-to-end test imports Playwright: it is found where the repository has it.
+	symlinkSync(path.join(ROOT, 'node_modules'), path.join(folder, 'node_modules'))
 })
 
 afterAll(() => {
 	rmSync(folder, { recursive: true, force: true })
 })
 
-describe('the canary plants three faults, one per tool', () => {
-	test('three files, under tests/ only: nothing of the canary enters the Docker image', () => {
+describe('the canary plants four faults, one per tool', () => {
+	test('four files, under tests/ only: nothing of the canary enters the Docker image', () => {
 		expect(CANARY_FAULTS.map(({ file, command, red }) => [file, command, red])).toEqual([
 			['tests/unit/canari.test.ts', 'bun run test:unit', 'unit › Unit tests'],
 			['tests/ci/canari-types.ts', 'bun run typecheck', 'qualite › Types'],
 			['tests/ci/canari-biome.ts', 'bun run ci:biome', 'qualite › Biome'],
+			['tests/e2e/canari.spec.ts', 'bun run test:e2e', 'e2e, one of the two shards › End-to-end tests'],
 		])
 	})
 
@@ -83,6 +89,27 @@ describe('the canary plants three faults, one per tool', () => {
 		expect(output).toContain('Found 1 error.')
 		expect(code).toBe(1)
 	})
+
+	test('the false end-to-end test is a test Playwright runs: no guard of tests/ci refuses it', () => {
+		const files = [{ file: FALSE_E2E.file, text: FALSE_E2E.content }]
+
+		// In tests/e2e, under the pattern of the configuration: the e2e job runs it.
+		expect(FALSE_E2E.file.startsWith('tests/e2e/')).toBe(true)
+		expect(new Bun.Glob(MOTIF_DES_ESSAIS).match(FALSE_E2E.file)).toBe(true)
+		// Planted, it leaves the other jobs green: C05, C06 and C07 find nothing in it.
+		expect(focusedOrSkippedTests(files)).toEqual([])
+		expect(fixedWaits(files)).toEqual([])
+		expect(absoluteNavigations(files)).toEqual([])
+	})
+
+	test('the false end-to-end test fails under Playwright', () => {
+		const playwright = path.join(ROOT, 'node_modules/@playwright/test/cli.js')
+		const { code, output } = run([playwright, 'test', FALSE_E2E.file, '--reporter=line'], 'node')
+
+		expect(output).toContain('canary: a false end-to-end test')
+		expect(output).toContain('1 failed')
+		expect(code).toBe(1)
+	}, 30_000)
 })
 
 describe('the canary is only written on a canary branch', () => {
