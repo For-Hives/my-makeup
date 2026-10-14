@@ -18,9 +18,28 @@ const MOTS_INTERDITS = /\b(?:undefined|null|NaN|Invalid Date)\b|&\s*km|\bnullkm\
 
 let profils: ReadonlyMap<string, ProfilDePage>
 
+// One worker for the whole file, so that one set-up and one clean-up serve all its tests.
+test.describe.configure({ mode: 'serial' })
+
 test.beforeAll(async () => {
 	test.setTimeout(180_000)
 	profils = await poserLesProfilsDePage()
+})
+
+// The profiles of the page are taken away at the end: left in the bench, they would crowd the lists of the
+// search specs (pages of 20) and the slugs of the import spec.
+test.afterAll(async () => {
+	test.setTimeout(180_000)
+	const payload = await payloadDeTest()
+	for (const { id } of profils.values()) {
+		const profil = await payload
+			.findByID({ collection: 'profils', id, depth: 0, select: { pro: true } })
+			.catch(() => null)
+		if (!profil) continue
+		await payload.delete({ collection: 'profils', id })
+		const pro = typeof profil.pro === 'object' ? profil.pro.id : profil.pro
+		if (pro !== undefined && pro !== null) await payload.delete({ collection: 'pros', id: pro }).catch(() => undefined)
+	}
 })
 
 const profil = (cle: string): ProfilDePage => {
