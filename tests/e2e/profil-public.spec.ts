@@ -2,6 +2,7 @@ import { expect, type Page, test } from '@playwright/test'
 import { type ProfilDePage, poserLesProfilsDePage } from '../fixtures/profils-de-page'
 import { ECRANS } from '../outils/e2e'
 import { payloadDeTest } from '../outils/payload-test'
+import { usagers } from '../outils/verrou'
 
 /**
  * The public page of a profile, end to end (tickets 101 to 103; plan 02 E43 and E44), on profiles of
@@ -23,6 +24,7 @@ test.describe.configure({ mode: 'serial' })
 
 test.beforeAll(async () => {
 	test.setTimeout(180_000)
+	await usagers('profils-de-page', 1)
 	profils = await poserLesProfilsDePage()
 })
 
@@ -30,6 +32,9 @@ test.beforeAll(async () => {
 // search specs (pages of 20) and the slugs of the import spec.
 test.afterAll(async () => {
 	test.setTimeout(180_000)
+	// The two projects (1440 and 390 px) share these profiles: the last one to end takes them away, or the
+	// first one to end would delete what the other is still reading.
+	if ((await usagers('profils-de-page', -1)) > 0 || !profils) return
 	const payload = await payloadDeTest()
 	for (const { id } of profils.values()) {
 		const profil = await payload
@@ -204,11 +209,31 @@ test.describe('E44 : la galerie du portfolio', { tag: '@mobile' }, () => {
 			// The original address is inside the optimizer's address, unchanged.
 			const src = (await image.getAttribute('src')) ?? ''
 			expect(new URL(src, page.url()).searchParams.get('url')).toBe(origines[rang] ?? 'sans adresse')
-			// The file itself answers with an image. (The optimizer of the bench refuses the loopback host of its
-			// storage, so the picture it makes is not checked here: the address it is given is.)
+			// The file itself answers with an image...
 			const reponse = await request.get(origines[rang] ?? '')
 			expect(reponse.ok(), origines[rang] ?? 'sans adresse').toBe(true)
 			expect(reponse.headers()['content-type']).toMatch(/^image\//)
+			// ...and so does the optimizer.
+			const optimisee = await request.get(new URL(src, page.url()).href)
+			expect(optimisee.status(), `optimiseur, photo ${rang + 1}`).toBe(200)
+			expect(optimisee.headers()['content-type']).toMatch(/^image\//)
+		}
+
+		// None is broken in the page: each one is drawn, once the browser has loaded it.
+		for (let rang = 0; rang < 6; rang++) {
+			const image = images.nth(rang)
+			await image.scrollIntoViewIfNeeded()
+			await expect
+				.poll(
+					() =>
+						image.evaluate(
+							element => element instanceof HTMLImageElement && element.complete && element.naturalWidth > 0
+						),
+					{
+						message: `photo ${rang + 1} chargée`,
+					}
+				)
+				.toBe(true)
 		}
 	})
 

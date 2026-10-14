@@ -234,6 +234,8 @@ describe('ce que « bun run test:e2e » donne au build et à Playwright', () => 
 			CI: 'true',
 			// The one public setting of the bench the pages freeze: the hostnames Umami counts on.
 			NEXT_PUBLIC_UMAMI_DOMAINS: 'localhost,127.0.0.1',
+			// Where the image optimizer may fetch the photos of the bench from (ticket 103).
+			IMAGES_DU_BANC: `${banc.S3_ENDPOINT}/${banc.S3_BUCKET}`,
 			...SANS_FICHIER_ENV,
 			NEXT_TELEMETRY_DISABLED: '1',
 			NODE_ENV: 'production',

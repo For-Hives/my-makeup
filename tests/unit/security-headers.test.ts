@@ -9,7 +9,7 @@ import { buildCustomRoute } from 'next/dist/server/lib/router-utils/filesystem'
 import { hasRemoteMatch } from 'next/dist/shared/lib/match-remote-pattern'
 import { compileNonPath } from 'next/dist/shared/lib/router/utils/prepare-destination'
 import { EnvError, MEDIA_ORIGIN_DEFAULT, mediaOrigin } from '@/lib/env'
-import { contentSecurityPolicy, mediaRemotePattern, securityHeaders } from '@/lib/security-headers'
+import { contentSecurityPolicy, imagesDuBanc, mediaRemotePattern, securityHeaders } from '@/lib/security-headers'
 
 // Made-up hosts only: a name in `.test` never resolves.
 const OTHER_MEDIA = 'https://medias.exemple.test'
@@ -299,5 +299,49 @@ describe('the register of intended changes', () => {
 		const named = [...line.matchAll(/`([A-Z][A-Za-z-]+)`/g)].map(([, name]) => name)
 
 		expect(named).toEqual(sent)
+	})
+})
+
+describe('the storage of the bench, for the image optimizer (ticket 103)', () => {
+	test('nothing is opened without the variable', () => {
+		expect(imagesDuBanc(undefined)).toBeNull()
+		expect(imagesDuBanc('  ')).toBeNull()
+	})
+
+	test('the bench opens one local folder, over http, and the photos of it only', () => {
+		const banc = imagesDuBanc('http://127.0.0.1:9110/mymakeup-test')
+
+		expect(banc?.remotePattern).toEqual({
+			hostname: '127.0.0.1',
+			pathname: '/mymakeup-test/**',
+			port: '9110',
+			protocol: 'http',
+		})
+		if (!banc) throw new Error('the bench storage was refused')
+		const accepted = (address: string) => hasRemoteMatch([], [banc.remotePattern], new URL(address))
+		expect(accepted('http://127.0.0.1:9110/mymakeup-test/photos/une.webp')).toBe(true)
+		expect(accepted('http://127.0.0.1:9110/autre-espace/une.webp')).toBe(false)
+		expect(accepted('http://127.0.0.1:9111/mymakeup-test/une.webp')).toBe(false)
+		expect(accepted('https://127.0.0.1:9110/mymakeup-test/une.webp')).toBe(false)
+	})
+
+	test.each([
+		['a remote host', 'http://exemple.test:9090/espace'],
+		['https', 'https://127.0.0.1:9090/espace'],
+		['no port', 'http://127.0.0.1/espace'],
+		['no bucket', 'http://127.0.0.1:9090'],
+		['a deeper path', 'http://127.0.0.1:9090/espace/dossier'],
+		['a final slash', 'http://127.0.0.1:9090/espace/'],
+		['a wildcard', 'http://127.0.0.1:9090/*'],
+		['not an address', 'espace'],
+	])('%s is refused', (_cas, valeur) => {
+		expect(() => imagesDuBanc(valeur)).toThrow('IMAGES_DU_BANC')
+	})
+
+	test('the production configuration opens nothing local', async () => {
+		const { images } = await production()
+
+		expect(images?.dangerouslyAllowLocalIP ?? false).toBe(false)
+		expect(images?.remotePatterns).toHaveLength(1)
 	})
 })
