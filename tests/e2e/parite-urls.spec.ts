@@ -39,6 +39,7 @@ const LIVREES: ReadonlySet<string> = new Set([
 	'adresse-inconnue',
 	'historiques',
 	'llms-txt',
+	'article',
 	'barre-finale',
 	'double-barre',
 	'toutes-les-news',

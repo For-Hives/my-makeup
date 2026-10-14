@@ -38,3 +38,26 @@ export function descriptionMeta(candidats: unknown, repli: string): string {
 	const texte = liste.map(texteSur).find(candidat => candidat.length >= DESCRIPTION_MIN)
 	return tronquer(texte ?? texteSur(repli), DESCRIPTION_MAX)
 }
+
+/** Markdown or HTML reduced to plain text, for a description. */
+export function texteBrut(valeur: unknown): string {
+	if (typeof valeur !== 'string') return ''
+	return texteSur(
+		valeur
+			.replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1')
+			.replace(/<[^>]*>/g, ' ')
+			.replace(/[#*_>`~|]+/g, ' ')
+	)
+}
+
+/**
+ * The description of a page the newsroom writes (a talent, an article), ticket 106: the text it wrote for
+ * the search engines is kept as it is, even under 70 characters (cut at 155), as on the site online. Only
+ * when it wrote none does the first text of 70 characters or more of `autres` serve (markdown reduced to
+ * plain text), then the fallback.
+ */
+export function descriptionEditoriale(redigee: unknown, autres: readonly unknown[], repli: string): string {
+	const texte = texteBrut(redigee)
+	if (texte) return tronquer(texte, DESCRIPTION_MAX)
+	return descriptionMeta(autres.map(texteBrut), repli)
+}
