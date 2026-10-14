@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { fauxUmami } from '../outils/faux-umami'
+import { fauxUmami, type OutilFauxUmami } from '../outils/faux-umami'
 
 /**
  * The audience measure, end to end (tickets 111 and 143): a real browser loads a page, the tracker
@@ -10,13 +10,19 @@ import { fauxUmami } from '../outils/faux-umami'
  * test. The others play a browser that is not automated, the way a visitor's is.
  */
 
-const umami = fauxUmami()
+// Read when a test starts, not when the file is listed: listing needs no bench.
+let umami: OutilFauxUmami
+
+// The fake Umami is one instance for the whole run, and every test reads what it received:
+// they take turns.
+test.describe.configure({ mode: 'serial' })
 
 /** The user agent of an ordinary Chrome: the default one of the headless browser says « HeadlessChrome ». */
 const AGENT_ORDINAIRE =
 	'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36'
 
 test.beforeEach(async () => {
+	umami = fauxUmami()
 	await umami.vider()
 })
 
@@ -60,13 +66,43 @@ test.describe('Un navigateur qui n’est pas automatisé', () => {
 		expect(scripts).toContain('GET /u/script.js')
 		expect(scripts).toContain('POST /u/api/send')
 	})
+
+	test('les Web Vitals de chaque visite arrivent au faux Umami, sans échantillon', async ({ context, page }) => {
+		await context.addInitScript(() => {
+			Object.defineProperty(navigator, 'webdriver', { get: () => false })
+		})
+		const vus = async () => (await umami.envois('web-vitals')).length
+
+		for (const visite of [1, 2, 3]) {
+			const avant = await vus()
+			await page.goto('/')
+			// The browser reports the metrics it has when the page goes out of sight.
+			await page.evaluate(() => {
+				Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true })
+				document.dispatchEvent(new Event('visibilitychange'))
+			})
+			await expect.poll(vus, { message: `visite ${visite}`, timeout: 10_000 }).toBeGreaterThan(avant)
+		}
+
+		const evenements = await umami.envois('web-vitals')
+		for (const recu of evenements) {
+			const { payload } = recu.corps as { payload: { data: Record<string, unknown>; tag: string } }
+			expect(Object.keys(payload.data).sort()).toEqual(['name', 'page', 'rating', 'value'])
+			expect(['CLS', 'FCP', 'INP', 'LCP', 'TTFB']).toContain(payload.data.name)
+			expect(['good', 'needs-improvement', 'poor']).toContain(payload.data.rating)
+			expect(payload.data.page).toBe('/')
+			expect(typeof payload.data.value).toBe('number')
+		}
+	})
 })
 
 test.describe('Un navigateur automatisé', () => {
 	test('rien n’est envoyé : le filtre de la page le refuse', async ({ page }) => {
 		await page.goto('/')
-		await page.waitForLoadState('networkidle')
-		await page.waitForTimeout(1500)
+		// The tracker has run when `window.umami` exists. Asking it for a page view then goes through
+		// the filter of the page, which settles before the call returns: nothing is waited for by the clock.
+		await page.waitForFunction(() => 'umami' in window)
+		await page.evaluate(() => (window as unknown as { umami: { track: () => Promise<void> } }).umami.track())
 		expect(await umami.recus()).toEqual([])
 	})
 })

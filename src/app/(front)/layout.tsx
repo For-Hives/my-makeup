@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
+import { WebVitals } from '@/components/analytics/WebVitals'
 import { umamiLoaderScript, umamiScriptAttributes } from '@/lib/analytics/umami'
 import { versionEnv } from '@/lib/env'
 import { SITE_ORIGIN } from '@/lib/urls-gelees'
@@ -32,7 +33,10 @@ export default function FrontLayout({ children }: { children: ReactNode }) {
 				{/* Inline and first: the filter of the measure exists before the Umami script does. */}
 				<script dangerouslySetInnerHTML={{ __html: MESURE }} />
 			</head>
-			<body className="bg-neutral-50 text-neutral-900 antialiased">{children}</body>
+			<body className="bg-neutral-50 text-neutral-900 antialiased">
+				<WebVitals />
+				{children}
+			</body>
 		</html>
 	)
 }
