@@ -20,7 +20,7 @@ async function monCompte(enTetes: Record<string, string>) {
 	return { status: reponse.status, compte: MonCompte.parse(await reponse.json()).user }
 }
 
-const cookieDe = (compte: CompteDeTest) => {
+const cookieDe = (compte: CompteDeTest<'admin'>) => {
 	const [cookie] = compte.session.cookies
 	if (!cookie) throw new Error('la session ne porte aucun cookie')
 	return cookie

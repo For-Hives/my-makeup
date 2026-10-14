@@ -5,6 +5,7 @@ import { compterLesDocuments, compterLesLignes, payloadDeTest, viderLaBase } fro
 const compteFictif = (nom: string) => ({
 	email: `${nom}-${crypto.randomUUID()}@example.test`,
 	password: crypto.randomUUID(),
+	role: 'admin' as const,
 })
 
 describe('Test coquille : Payload écrit dans la base du banc, puis la remet à zéro', () => {

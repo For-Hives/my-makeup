@@ -64,10 +64,13 @@ export type SupportedTimezones =
 export interface Config {
   auth: {
     admins: AdminAuthOperations;
+    pros: ProAuthOperations;
   };
   blocks: {};
   collections: {
     admins: Admin;
+    pros: Pro;
+    profils: Profil;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -76,6 +79,8 @@ export interface Config {
   collectionsJoins: {};
   collectionsSelect: {
     admins: AdminsSelect<false> | AdminsSelect<true>;
+    pros: ProsSelect<false> | ProsSelect<true>;
+    profils: ProfilsSelect<false> | ProfilsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -91,7 +96,7 @@ export interface Config {
   widgets: {
     collections: CollectionsWidget;
   };
-  user: Admin;
+  user: Admin | Pro;
   jobs: {
     tasks: unknown;
     workflows: unknown;
@@ -115,12 +120,31 @@ export interface AdminAuthOperations {
     password: string;
   };
 }
+export interface ProAuthOperations {
+  forgotPassword: {
+    email: string;
+    password: string;
+  };
+  login: {
+    email: string;
+    password: string;
+  };
+  registerFirstUser: {
+    email: string;
+    password: string;
+  };
+  unlock: {
+    email: string;
+    password: string;
+  };
+}
 /**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "admins".
  */
 export interface Admin {
   id: number;
+  role: 'admin' | 'redaction';
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -140,6 +164,70 @@ export interface Admin {
     | null;
   password?: string | null;
   collection: 'admins';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "pros".
+ */
+export interface Pro {
+  id: number;
+  /**
+   * Nom d’affichage, choisi à l’inscription. Plusieurs comptes peuvent porter le même.
+   */
+  nom?: string | null;
+  bloque?: boolean | null;
+  /**
+   * Comment le compte se connectait sur l’ancien site : local, google ou facebook.
+   */
+  legacyProvider?: string | null;
+  strapiId?: number | null;
+  legacyBcrypt?: string | null;
+  updatedAt: string;
+  createdAt: string;
+  email: string;
+  resetPasswordToken?: string | null;
+  resetPasswordExpiration?: string | null;
+  salt?: string | null;
+  hash?: string | null;
+  resetPasswordRequestedAt?: string | null;
+  _verified?: boolean | null;
+  _verificationToken?: string | null;
+  loginAttempts?: number | null;
+  lockUntil?: string | null;
+  sessions?:
+    | {
+        id: string;
+        createdAt?: string | null;
+        expiresAt: string;
+      }[]
+    | null;
+  password?: string | null;
+  collection: 'pros';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "profils".
+ */
+export interface Profil {
+  id: number;
+  pro: number | Pro;
+  /**
+   * Calculée à la création du profil, elle ne change plus : /profil/<slug>.
+   */
+  slug: string;
+  prenom?: string | null;
+  nom?: string | null;
+  nomArtiste?: string | null;
+  specialite?: string | null;
+  description?: string | null;
+  disponible?: boolean | null;
+  /**
+   * Sert à rediriger l’ancienne adresse du profil vers la nouvelle.
+   */
+  legacyUsername?: string | null;
+  strapiId?: number | null;
+  updatedAt: string;
+  createdAt: string;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -164,15 +252,29 @@ export interface PayloadKv {
  */
 export interface PayloadLockedDocument {
   id: number;
-  document?: {
-    relationTo: 'admins';
-    value: number | Admin;
-  } | null;
+  document?:
+    | ({
+        relationTo: 'admins';
+        value: number | Admin;
+      } | null)
+    | ({
+        relationTo: 'pros';
+        value: number | Pro;
+      } | null)
+    | ({
+        relationTo: 'profils';
+        value: number | Profil;
+      } | null);
   globalSlug?: string | null;
-  user: {
-    relationTo: 'admins';
-    value: number | Admin;
-  };
+  user:
+    | {
+        relationTo: 'admins';
+        value: number | Admin;
+      }
+    | {
+        relationTo: 'pros';
+        value: number | Pro;
+      };
   updatedAt: string;
   createdAt: string;
 }
@@ -182,10 +284,15 @@ export interface PayloadLockedDocument {
  */
 export interface PayloadPreference {
   id: number;
-  user: {
-    relationTo: 'admins';
-    value: number | Admin;
-  };
+  user:
+    | {
+        relationTo: 'admins';
+        value: number | Admin;
+      }
+    | {
+        relationTo: 'pros';
+        value: number | Pro;
+      };
   key?: string | null;
   value?:
     | {
@@ -215,6 +322,7 @@ export interface PayloadMigration {
  * via the `definition` "admins_select".
  */
 export interface AdminsSelect<T extends boolean = true> {
+  role?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -232,6 +340,54 @@ export interface AdminsSelect<T extends boolean = true> {
         createdAt?: T;
         expiresAt?: T;
       };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "pros_select".
+ */
+export interface ProsSelect<T extends boolean = true> {
+  nom?: T;
+  bloque?: T;
+  legacyProvider?: T;
+  strapiId?: T;
+  legacyBcrypt?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  email?: T;
+  resetPasswordToken?: T;
+  resetPasswordExpiration?: T;
+  salt?: T;
+  hash?: T;
+  resetPasswordRequestedAt?: T;
+  _verified?: T;
+  _verificationToken?: T;
+  loginAttempts?: T;
+  lockUntil?: T;
+  sessions?:
+    | T
+    | {
+        id?: T;
+        createdAt?: T;
+        expiresAt?: T;
+      };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "profils_select".
+ */
+export interface ProfilsSelect<T extends boolean = true> {
+  pro?: T;
+  slug?: T;
+  prenom?: T;
+  nom?: T;
+  nomArtiste?: T;
+  specialite?: T;
+  description?: T;
+  disponible?: T;
+  legacyUsername?: T;
+  strapiId?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
