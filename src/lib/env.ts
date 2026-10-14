@@ -27,6 +27,7 @@ export type RawEnv = Partial<
 	Record<
 		| 'DATABASE_URI'
 		| 'EMAIL_FROM'
+		| 'GOOGLE_OIDC_ISSUER'
 		| 'NEXT_PHASE'
 		| 'NEXT_PUBLIC_SITE_URL'
 		| 'NODE_ENV'
@@ -49,6 +50,11 @@ export type MailEnv = {
 
 export type ServerEnv = {
 	databaseUri: string
+	/**
+	 * The OpenID Connect issuer the Google sign-in talks to: Google itself, or on this machine the
+	 * fake provider of the test bench. Never a local one on a deployed site.
+	 */
+	googleIssuer: string
 	/** True when the database is on this machine: the only place where Payload may push its schema. */
 	localDatabase: boolean
 	/**
@@ -66,6 +72,9 @@ export const SECRET_MIN_LENGTH = 32
 
 /** The two deployed addresses a build can be made for: the site and its pre-production. */
 export const DEPLOYED_ORIGINS: readonly string[] = ['https://my-makeup.fr', 'https://preprod.my-makeup.fr']
+
+/** Google's own OpenID Connect issuer: the only one a deployed site talks to. */
+export const GOOGLE_ISSUER = 'https://accounts.google.com'
 
 /** Where the photos of the site are served from today: the public address of the production bucket. */
 export const MEDIA_ORIGIN_DEFAULT = 'https://r2-my-makeup.andy-cinquin.fr'
@@ -86,6 +95,7 @@ const DEFAULT_SENDER_NAME = 'My Makeup'
 const EXPECTED = {
 	DATABASE_URI: 'postgres://UTILISATEUR:MOT_DE_PASSE@HÔTE:PORT/BASE',
 	EMAIL_FROM: '« Nom <adresse@domaine> », ou une adresse seule',
+	GOOGLE_OIDC_ISSUER: `${GOOGLE_ISSUER}, ou sur ce poste l’adresse du faux Google du banc de test, comme http://127.0.0.1:7080, sans « / » final`,
 	NEXT_PUBLIC_SITE_URL: `${DEPLOYED_ORIGINS.join(', ')} ou une adresse de ce poste comme http://localhost:${DEFAULT_PORT}, sans « / » final`,
 	PAYLOAD_SECRET: `au moins ${SECRET_MIN_LENGTH} caractères, par exemple la sortie de « openssl rand -hex 32 »`,
 	R2_PUBLIC_URL: 'une adresse https://HÔTE, sans chemin ni « / » final',
@@ -152,6 +162,24 @@ function siteOrigin(value: string): string | undefined {
 	if (DEPLOYED_ORIGINS.includes(value)) return value
 	const loopback = url.hostname === 'localhost' || url.hostname === '127.0.0.1'
 	return url.protocol === 'http:' && loopback ? value : undefined
+}
+
+/**
+ * The issuer the Google sign-in talks to, when it is one of the two allowed kinds written in its
+ * exact form: Google itself, or a provider of this machine (the fake Google of the test bench,
+ * which stands in for Google by configuration).
+ */
+function oidcIssuer(value: string): { issuer: string; local: boolean } | undefined {
+	if (value === GOOGLE_ISSUER) return { issuer: value, local: false }
+	let url: URL
+	try {
+		url = new URL(value)
+	} catch {
+		return undefined
+	}
+	// Exact form only, as for the address of the site. Plain http: nothing local serves https.
+	const loopback = url.hostname === 'localhost' || url.hostname === '127.0.0.1'
+	return url.origin === value && url.protocol === 'http:' && loopback ? { issuer: value, local: true } : undefined
 }
 
 /**
@@ -250,6 +278,10 @@ const required = z.string({ error: ABSENT })
 
 const schema = z.object({
 	DATABASE_URI: required.refine(value => postgresUrl(value) !== undefined, { error: 'illisible' }),
+	GOOGLE_OIDC_ISSUER: z
+		.string()
+		.refine(value => oidcIssuer(value) !== undefined, { error: 'refusée' })
+		.optional(),
 	NEXT_PUBLIC_SITE_URL: z
 		.string()
 		.refine(value => siteOrigin(value) !== undefined, { error: 'refusée' })
@@ -294,10 +326,22 @@ export function parseServerEnv(source: RawEnv): ServerEnv {
 
 	const mail = mailEnv(raw, problems)
 
+	// A provider of this machine stands in for Google on this machine only. On the site and on
+	// its pre-production, whatever NODE_ENV says, the Google sign-in talks to Google and nobody else.
+	const issuer = raw.GOOGLE_OIDC_ISSUER === undefined ? undefined : oidcIssuer(raw.GOOGLE_OIDC_ISSUER)
+	if (issuer?.local && raw.NEXT_PUBLIC_SITE_URL !== undefined && DEPLOYED_ORIGINS.includes(raw.NEXT_PUBLIC_SITE_URL)) {
+		problems.push({
+			variable: 'GOOGLE_OIDC_ISSUER',
+			problem:
+				'refusée, car elle désigne un fournisseur de ce poste alors que le site est déployé. Un site déployé ne parle qu’à Google : retire cette variable.',
+		})
+	}
+
 	if (!parsed.success || problems.length > 0) throw new EnvError(problems)
 
 	return {
 		databaseUri: parsed.data.DATABASE_URI,
+		googleIssuer: issuer?.issuer ?? GOOGLE_ISSUER,
 		localDatabase: isLocalDatabase(parsed.data.DATABASE_URI),
 		...(mail && { mail }),
 		payloadSecret: parsed.data.PAYLOAD_SECRET,
@@ -314,6 +358,7 @@ function processEnv(): RawEnv {
 	return {
 		DATABASE_URI: process.env.DATABASE_URI,
 		EMAIL_FROM: process.env.EMAIL_FROM,
+		GOOGLE_OIDC_ISSUER: process.env.GOOGLE_OIDC_ISSUER,
 		NEXT_PHASE: process.env.NEXT_PHASE,
 		NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
 		NODE_ENV: process.env.NODE_ENV,
@@ -339,6 +384,8 @@ export function serverEnv(source: RawEnv = processEnv()): ServerEnv {
 	const site = raw.NEXT_PUBLIC_SITE_URL === undefined ? undefined : siteOrigin(raw.NEXT_PUBLIC_SITE_URL)
 	return {
 		databaseUri: raw.DATABASE_URI ?? '',
+		// Not read while Next builds, where nothing talks to a provider: the server reads it when it starts.
+		googleIssuer: GOOGLE_ISSUER,
 		localDatabase: isLocalDatabase(raw.DATABASE_URI ?? ''),
 		payloadSecret: raw.PAYLOAD_SECRET ?? '',
 		trustedOrigins: trustedOrigins(site, raw.NODE_ENV === 'production', raw.PORT),

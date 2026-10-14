@@ -154,6 +154,7 @@ L'application vérifie ses variables à chaque démarrage (`bun run dev`, `bun r
 | `SMTP_HOST` | Facultative. Le relais SMTP par lequel partent tous les mails : un nom d'hôte seul, sans protocole ni port. Absente, l'application n'envoie rien : Payload écrit une ligne de journal à la place de chaque mail. |
 | `SMTP_PORT` | Obligatoire dès que `SMTP_HOST` est réglée. Le port du relais, de 1 à 65535. |
 | `EMAIL_FROM` | Obligatoire dès que `SMTP_HOST` est réglée. L'expéditeur de tous les mails : `Nom <adresse@domaine>`, ou une adresse seule. |
+| `GOOGLE_OIDC_ISSUER` | Facultative. Le fournisseur auquel parle la connexion Google. Absente, c'est Google : `https://accounts.google.com`. Sur ce poste seulement, l'adresse du faux Google du banc de test, comme `http://127.0.0.1:7080`, sans `/` final. Refusée sur le site et sa préprod. |
 
 - `bun run build` est la seule exception : il ne vérifie rien, sauf `R2_PUBLIC_URL`, et passe sans secret ni base.
 - Le CLI de Payload (`bun run payload`, `payload:types`, `payload:importmap`, `payload:migrate`…) charge la même configuration : sans `DATABASE_URI` et `PAYLOAD_SECRET` valides, il s'arrête avec le même message. Le `.env` de l'étape 2 de « Démarrer en local » suffit.
@@ -163,6 +164,7 @@ L'application vérifie ses variables à chaque démarrage (`bun run dev`, `bun r
 - `R2_PUBLIC_URL` est publique. Elle est lue plus tôt que les autres, quand Next charge `next.config.ts` : une valeur refusée arrête aussi le build. Voir « Images ».
 - `NEXT_PUBLIC_APP_VERSION` et `SOURCE_COMMIT` sont facultatives. Elles sont lues dans `src/lib/env.ts` sans être vérifiées : aucune valeur n'arrête le démarrage (voir « Route de santé »). `next.config.ts` lit aussi `SOURCE_COMMIT`, au moment du build, pour le figer dans le build : il le lit lui-même, par son nom. De `src/lib/env.ts`, il n'appelle que `mediaOrigin`, pour `R2_PUBLIC_URL`.
 - `SMTP_HOST`, `SMTP_PORT` et `EMAIL_FROM` règlent l'adaptateur d'email de Payload. Elles ne se donnent jamais au build. Aucune connexion n'est ouverte au démarrage : un relais injoignable fait échouer l'envoi du mail, pas le démarrage. Le relais est utilisé tel quel, sans identifiant ni chiffrement : pour l'instant, cela ne convient qu'au capteur de mails du banc de test, où ces trois variables sont réglées par `.env.test`.
+- `GOOGLE_OIDC_ISSUER` fait prendre le faux Google du banc de test pour Google (voir « Le banc de test »). Une adresse locale est refusée dès que `NEXT_PUBLIC_SITE_URL` est celle du site ou de sa préprod, quel que soit le mode : l'application s'arrête au démarrage. Un build de production servi sur ce poste, comme pour les essais de bout en bout, l'accepte. La connexion Google elle-même, avec son client et son secret, arrive avec son ticket.
 - Une nouvelle variable s'ajoute dans `src/lib/env.ts` et dans `.env.exemple`, par le ticket qui commence à la lire.
 
 ### Base de données
@@ -338,7 +340,7 @@ Le détail est dans [`docs/qualite.md`](docs/qualite.md), « Renovate » : ce qu
 | `bun run test` | Les tests qui tournent sans le banc de test : les tests unitaires |
 | `bun run test:unit` | Les tests unitaires de `tests/unit/`, sans lire le fichier `.env` |
 | `bun run test:ci-garde` | Les garde-fous de `tests/ci/`, lancés à part de `bun run test` |
-| `bun run banc:up` | Démarre le banc de test : base, capteur de mails et stockage d'objets, en conteneurs |
+| `bun run banc:up` | Démarre le banc de test : base, capteur de mails, stockage d'objets et faux Google, en conteneurs |
 | `bun run banc:down` | Arrête le banc de test et efface tout ce qu'il contenait |
 | `bun run banc:prepare` | Reconstruit la base du banc depuis les collections du code, vide |
 | `bun run test:integration` | Les tests d'intégration de `tests/integration/`, sur le banc. Avec un chemin : ce fichier seul |
@@ -384,8 +386,10 @@ Lancé depuis un sous-dossier, `bun test` ne charge pas la garde : bun lit le `b
 | `SMTP_*`, `EMAIL_*`, `MAILGUN_*`, `RESEND_*` | Aucun domaine en `my-makeup.fr` : un expéditeur de test écrit depuis `@example.test` |
 | `S3_ENDPOINT` | Hôte local |
 | `S3_BUCKET` | Nom fini par `-test` |
+| `GOOGLE_OIDC_ISSUER` | Hôte local : le faux Google du banc, jamais Google |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Une valeur qui porte le mot « factice », et jamais sans `GOOGLE_OIDC_ISSUER` : la connexion viserait Google lui-même |
 
-Un hôte local est `localhost`, `127.0.0.1` ou `::1`, ou le nom du service dans le réseau de la pile de test : `postgres`, `mailpit`, `s3mock`. Une variable absente n'est pas vérifiée : les tests unitaires tournent sans aucune variable.
+Un hôte local est `localhost`, `127.0.0.1` ou `::1`, ou le nom du service dans le réseau de la pile de test : `postgres`, `mailpit`, `s3mock`, `faux-google`. Une variable absente n'est pas vérifiée : les tests unitaires tournent sans aucune variable.
 
 `bun test` lit tout seul le fichier `.env`, puis `.env.test`, qui l'emporte. Lancé sans `--no-env-file` sur un poste de développement, il tourne donc sous l'environnement du banc de test, et tout ce que `.env.test` ne règle pas vient du `.env` de travail : la garde vérifie aussi ces variables-là. Les tests ne dépendent jamais du `.env` de travail : les scripts passent `--no-env-file`, et c'est par eux qu'on lance les tests.
 
@@ -393,10 +397,10 @@ Une nouvelle variable qui désigne un service extérieur s'ajoute à la garde, a
 
 ### Le banc de test
 
-Les tests d'intégration tournent contre trois conteneurs jetables : PostgreSQL en mémoire, un capteur de mails et un stockage d'objets avec l'API S3. Rien n'y est réel, et rien n'est gardé à l'arrêt.
+Les tests d'intégration tournent contre quatre conteneurs jetables : PostgreSQL en mémoire, un capteur de mails, un stockage d'objets avec l'API S3 et un faux Google. Rien n'y est réel, et rien n'est gardé à l'arrêt.
 
 ```sh
-bun run banc:up                                                # démarre le banc, rend la main quand les trois services répondent
+bun run banc:up                                                # démarre le banc, rend la main quand les quatre services répondent
 bun run test:integration                                       # lance les tests d'intégration
 bun run test:integration tests/integration/banc-base.test.ts   # un seul fichier
 bun run banc:down                                              # arrête tout et efface les données
@@ -409,8 +413,9 @@ bun run banc:down                                              # arrête tout et
 - Un test obtient un compte fictif et sa session en un appel, sans mot de passe à saisir : `await creerCompte('admin')`.
 - Sur le banc, l'application envoie tous ses mails au capteur. Un test lit le sien, avec son destinataire, son sujet et ses liens : `await attendreLeMail({ pour: adresse })`.
 - Un test dépose un objet dans le stockage et le relit : `await deposerUnObjet(cle, contenu)`, `await lireUnObjet(cle)`.
+- La connexion Google se teste sans compte Google ni secret : le faux Google tient la place de Google (`GOOGLE_OIDC_ISSUER`), et un test choisit qui se connecte et comment cela finit, parmi quatre scénarios : `fauxGoogle().choisir({ scenario: 'refus' })`.
 
-Le détail est dans [`docs/tests/banc.md`](docs/tests/banc.md) : les services et leurs adresses, les deux variables d'instance, l'écriture d'un test d'intégration, la remise à zéro, le capteur de mails, le stockage d'objets, la fabrique de comptes, les images épinglées.
+Le détail est dans [`docs/tests/banc.md`](docs/tests/banc.md) : les services et leurs adresses, les deux variables d'instance, l'écriture d'un test d'intégration, la remise à zéro, le capteur de mails, le stockage d'objets, la fabrique de comptes, le faux Google et ses quatre scénarios, les images épinglées.
 
 ### Les essais de bout en bout
 

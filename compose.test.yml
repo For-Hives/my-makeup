@@ -1,4 +1,4 @@
-# The test bench: the three services the integration and end-to-end tests talk to. The same
+# The test bench: the four services the integration and end-to-end tests talk to. The same
 # file serves on a developer machine and in CI. It holds no real data and no real secret:
 # every value below is a throwaway one, also written in .env.test.
 #
@@ -6,9 +6,9 @@
 # these commands give the project name and the ports of the instance. Started bare
 # (`docker compose -f compose.test.yml up -d --wait`), the defaults below are those of .env.test.
 #
-# Nothing is kept: PostgreSQL writes in memory, the two other services in their own container.
-# Every image is pinned by tag and digest. Every port is published on the loopback interface
-# only, never on 0.0.0.0.
+# Nothing is kept: PostgreSQL writes in memory, the mail catcher and the object storage in
+# their own container, the fake Google nowhere at all. Every image is pinned by tag and digest.
+# Every port is published on the loopback interface only, never on 0.0.0.0.
 name: ${BANC_INSTANCE:-my-makeup-test}
 
 services:
@@ -56,6 +56,37 @@ services:
       - "127.0.0.1:${BANC_PORT_S3:-9090}:9090"
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/favicon.ico"]
+      interval: 1s
+      timeout: 3s
+      retries: 60
+
+  # The fake Google: an OpenID Connect provider that stands in for Google, with made-up
+  # identities only (docs/tests/banc.md, « Le faux Google »). It is the code of
+  # tests/outils/faux-google/, run by the bun of the Dockerfile: same image, same digest.
+  faux-google:
+    image: oven/bun:1.3.14@sha256:e10577f0db68676a7024391c6e5cb4b879ebd17188ab750cf10024a6d700e5c4
+    command: ["bun", "/banc/serveur.ts"]
+    environment:
+      # The address it is reached at from this machine, which is the issuer of its tokens: the
+      # host port, not the one of the container.
+      GOOGLE_OIDC_ISSUER: http://127.0.0.1:${BANC_PORT_GOOGLE:-7080}
+      # The made-up client of .env.test: the only one it accepts.
+      GOOGLE_CLIENT_ID: client-google-factice-du-banc
+      GOOGLE_CLIENT_SECRET: secret-google-factice-du-banc-de-test
+      FAUX_GOOGLE_ECOUTE: 0.0.0.0
+      FAUX_GOOGLE_PORT: "7080"
+    # Its code is read from the repository, read-only, and the container can write nowhere.
+    read_only: true
+    volumes:
+      - ./tests/outils/faux-google:/banc:ro
+    security_opt:
+      # Where SELinux is enforced (Fedora, with Podman), a container may not read a folder of
+      # the repository without this. Without SELinux it changes nothing.
+      - label=disable
+    ports:
+      - "127.0.0.1:${BANC_PORT_GOOGLE:-7080}:7080"
+    healthcheck:
+      test: ["CMD", "bun", "-e", "fetch('http://127.0.0.1:7080/.well-known/openid-configuration').then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
       interval: 1s
       timeout: 3s
       retries: 60

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { z } from 'zod'
 import {
@@ -39,7 +39,9 @@ const Compose = z.object({
 			ports: z.array(z.string()),
 			environment: z.record(z.string(), z.string()).optional(),
 			tmpfs: z.array(z.string()).optional(),
-			volumes: z.unknown().optional(),
+			volumes: z.array(z.string()).optional(),
+			read_only: z.boolean().optional(),
+			command: z.array(z.string()).optional(),
 			healthcheck: z.object({ test: z.array(z.string()) }),
 		})
 	),
@@ -55,9 +57,9 @@ const resoudre = (texte: string, variables: Record<string, string> = {}): string
 const portsPublies = (variables: Record<string, string> = {}): string[] =>
 	Object.values(compose.services).flatMap(({ ports }) => ports.map(port => resoudre(port, variables)))
 
-describe('compose.test.yml : trois services, épinglés, en mémoire, joignables de ce poste seulement', () => {
-	test('la pile compte la base, le capteur de mails et le stockage d’objets, et rien d’autre', () => {
-		expect(Object.keys(compose.services).sort()).toEqual(['mailpit', 'postgres', 's3mock'])
+describe('compose.test.yml : quatre services, épinglés, en mémoire, joignables de ce poste seulement', () => {
+	test('la pile compte la base, le capteur de mails, le stockage d’objets et le faux Google, et rien d’autre', () => {
+		expect(Object.keys(compose.services).sort()).toEqual(['faux-google', 'mailpit', 'postgres', 's3mock'])
 	})
 
 	test('chaque image est épinglée par son étiquette exacte et par son empreinte', () => {
@@ -69,14 +71,20 @@ describe('compose.test.yml : trois services, épinglés, en mémoire, joignables
 	})
 
 	test('chaque port n’est publié que sur l’interface locale', () => {
-		expect(portsPublies().length).toBe(4)
+		expect(portsPublies().length).toBe(5)
 		for (const port of portsPublies()) expect(port).toStartWith('127.0.0.1:')
 	})
 
 	test('rien n’est gardé : la base est en mémoire, aucun volume n’est déclaré', () => {
+		const { 'faux-google': fauxGoogle, ...autres } = compose.services
+
 		expect(compose.services.postgres?.tmpfs).toEqual(['/var/lib/postgresql'])
 		expect(compose.volumes).toBeUndefined()
-		for (const service of Object.values(compose.services)) expect(service.volumes).toBeUndefined()
+		for (const service of Object.values(autres)) expect(service.volumes).toBeUndefined()
+		// The one mount of the stack: the code of the fake Google, read from the repository. It can
+		// write neither there nor anywhere in its container.
+		expect(fauxGoogle?.volumes).toEqual(['./tests/outils/faux-google:/banc:ro'])
+		expect(fauxGoogle?.read_only).toBe(true)
 	})
 
 	test('chaque service dit lui-même quand il est prêt : c’est ce qu’attend « up --wait »', () => {
@@ -93,6 +101,7 @@ describe('compose.test.yml : trois services, épinglés, en mémoire, joignables
 				`127.0.0.1:${services.mails.port}:1025`,
 				`127.0.0.1:${new URL(services.mails.api).port}:8025`,
 				`127.0.0.1:${services.stockage.port}:9090`,
+				`127.0.0.1:${services.google.port}:7080`,
 			].sort()
 		)
 		expect(compose.services.postgres?.environment).toEqual({
@@ -103,6 +112,28 @@ describe('compose.test.yml : trois services, épinglés, en mémoire, joignables
 		expect(compose.services.s3mock?.environment).toEqual({
 			COM_ADOBE_TESTING_S3MOCK_STORE_INITIAL_BUCKETS: services.stockage.bucket,
 		})
+		// The fake Google presents itself under the address the application is given, and accepts
+		// the made-up client of .env.test: the same three variables on both sides.
+		const google: Record<string, string> = { ...compose.services['faux-google']?.environment }
+		google.GOOGLE_OIDC_ISSUER = resoudre(google.GOOGLE_OIDC_ISSUER ?? '')
+		expect(google).toEqual({
+			GOOGLE_OIDC_ISSUER: services.google.adresse,
+			GOOGLE_CLIENT_ID: services.google.clientId,
+			GOOGLE_CLIENT_SECRET: services.google.secret,
+			FAUX_GOOGLE_ECOUTE: '0.0.0.0',
+			FAUX_GOOGLE_PORT: '7080',
+		})
+	})
+
+	test('le faux Google tourne sur le bun du Dockerfile : même image, même empreinte, et le code du dépôt', () => {
+		const bunDuDockerfile = /^FROM (oven\/bun:\S+@sha256:[0-9a-f]{64}) /m.exec(
+			readFileSync(path.join(RACINE, 'Dockerfile'), 'utf8')
+		)?.[1]
+
+		expect(bunDuDockerfile).toBeDefined()
+		expect(compose.services['faux-google']?.image).toBe(bunDuDockerfile ?? '')
+		expect(compose.services['faux-google']?.command).toEqual(['bun', '/banc/serveur.ts'])
+		expect(existsSync(path.join(RACINE, 'tests/outils/faux-google/serveur.ts'))).toBe(true)
 	})
 
 	test('les variables données par « banc:up » règlent le nom du projet et chaque port', () => {
@@ -113,9 +144,14 @@ describe('compose.test.yml : trois services, épinglés, en mémoire, joignables
 		expect(portsPublies(variables).sort()).toEqual([
 			'127.0.0.1:1045:1025',
 			'127.0.0.1:5463:5432',
+			'127.0.0.1:7100:7080',
 			'127.0.0.1:8045:8025',
 			'127.0.0.1:9110:9090',
 		])
+		// Its tokens name the port of this machine, not the one of the container.
+		expect(resoudre(compose.services['faux-google']?.environment?.GOOGLE_OIDC_ISSUER ?? '', variables)).toBe(
+			'http://127.0.0.1:7100'
+		)
 	})
 })
 
@@ -123,11 +159,14 @@ describe('.env.test : l’environnement factice du banc', () => {
 	const fichier = readFileSync(FICHIER_ENV, 'utf8')
 	const environnement = lireFichierEnv(fichier)
 
-	test('il décrit les trois services et l’application, sans rien d’autre', () => {
+	test('il décrit les quatre services et l’application, sans rien d’autre', () => {
 		expect(Object.keys(environnement).sort()).toEqual([
 			'APP_ENV',
 			'DATABASE_URI',
 			'EMAIL_FROM',
+			'GOOGLE_CLIENT_ID',
+			'GOOGLE_CLIENT_SECRET',
+			'GOOGLE_OIDC_ISSUER',
 			'MAILPIT_URL',
 			'NEXT_PUBLIC_SITE_URL',
 			'PAYLOAD_SECRET',
@@ -142,7 +181,11 @@ describe('.env.test : l’environnement factice du banc', () => {
 		expect(servicesDuBanc(environnement).base.motDePasse).toBe('mot-de-passe-factice')
 		expect(environnement.PAYLOAD_SECRET).toContain('factice')
 		expect(environnement.PAYLOAD_SECRET?.length).toBeGreaterThanOrEqual(32)
+		expect(environnement.GOOGLE_CLIENT_ID).toContain('factice')
+		expect(environnement.GOOGLE_CLIENT_SECRET).toContain('factice')
 		expect(fichier).not.toContain('my-makeup.fr')
+		// Nothing that has the shape of a real Google credential, and never Google's own address.
+		expect(fichier).not.toMatch(/googleusercontent|GOCSPX|accounts\.google\.com/i)
 	})
 
 	test('bun lit ce fichier comme le banc le lit', async () => {
@@ -193,6 +236,9 @@ describe('Plusieurs bancs côte à côte : un nom d’instance et un décalage d
 			EMAIL_FROM: 'My Makeup <ne-pas-repondre@example.test>',
 			S3_ENDPOINT: 'http://127.0.0.1:9194',
 			S3_BUCKET: 'mymakeup-test',
+			GOOGLE_OIDC_ISSUER: 'http://127.0.0.1:7184',
+			GOOGLE_CLIENT_ID: 'client-google-factice-du-banc',
+			GOOGLE_CLIENT_SECRET: 'secret-google-factice-du-banc-de-test',
 		})
 	})
 
@@ -200,9 +246,13 @@ describe('Plusieurs bancs côte à côte : un nom d’instance et un décalage d
 		const ports = (decalage: number) =>
 			portsDuBanc(servicesDuBanc(environnementDuBanc({ nom: 'x', decalage }))).map(({ port }) => port)
 
-		expect(ports(0)).toEqual([5443, 1025, 8025, 9090])
+		expect(ports(0)).toEqual([5443, 1025, 8025, 9090, 7080])
 		for (const decalage of [1, 20, 104, DECALAGE_MAX])
 			expect(ports(decalage).filter(port => ports(0).includes(port))).toEqual([])
+		// Whatever the two offsets: two ports of the bench are further apart than the highest offset.
+		const tries = [...ports(0), 3100].sort((a, b) => a - b)
+		for (const [rang, port] of tries.entries())
+			if (rang > 0) expect(port - (tries[rang - 1] ?? 0)).toBeGreaterThan(DECALAGE_MAX)
 	})
 
 	test('aucun décalage ne pose un banc sur un port du développement', () => {
@@ -285,7 +335,7 @@ describe('La commande d’intégration', () => {
 
 		expect(messageBancMuet(instance, sondes)).toBe(
 			[
-				'Le banc de test « voisin » ne répond pas : base (127.0.0.1:5463), capteur de mails (127.0.0.1:1045), stockage d’objets (127.0.0.1:9110).',
+				'Le banc de test « voisin » ne répond pas : base (127.0.0.1:5463), capteur de mails (127.0.0.1:1045), stockage d’objets (127.0.0.1:9110), faux Google (127.0.0.1:7100).',
 				'Démarre-le d’abord : BANC_INSTANCE=voisin BANC_DECALAGE=20 bun run banc:up',
 			].join('\n')
 		)
