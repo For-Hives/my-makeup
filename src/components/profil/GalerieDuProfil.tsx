@@ -49,6 +49,9 @@ function Fleche({ vers }: { vers: 'gauche' | 'droite' }) {
 export function GalerieDuProfil({ photos, nom }: { photos: readonly PhotoDeLaGalerie[]; nom: string }) {
 	const piste = useRef<HTMLDivElement>(null)
 	const attente = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+	// True while the row scrolls toward a photo chosen by key or button: the position is then known, and what the
+	// scroll passes on its way (a smooth scroll, slowed by a busy machine) must not rewrite it.
+	const deplacement = useRef(false)
 	const [courante, setCourante] = useState(0)
 	const total = photos.length
 
@@ -62,6 +65,8 @@ export function GalerieDuProfil({ photos, nom }: { photos: readonly PhotoDeLaGal
 			const photo = element?.children.item(visee)
 			if (!element || !(photo instanceof HTMLElement) || typeof element.scrollTo !== 'function') return
 			const sansMouvement = typeof matchMedia === 'function' && matchMedia(SANS_MOUVEMENT).matches
+			// Nothing to wait for when the row is already there: no scroll event would end the wait.
+			deplacement.current = Math.abs(photo.offsetLeft - element.scrollLeft) > 1
 			element.scrollTo({ left: photo.offsetLeft, behavior: sansMouvement ? 'auto' : 'smooth' })
 		},
 		[total]
@@ -71,6 +76,11 @@ export function GalerieDuProfil({ photos, nom }: { photos: readonly PhotoDeLaGal
 	const lireLaPosition = useCallback(() => {
 		const element = piste.current
 		if (!element) return
+		// The scroll that was asked for has ended: the position stays the one that was asked for.
+		if (deplacement.current) {
+			deplacement.current = false
+			return
+		}
 		let proche = 0
 		let ecartMin = Number.POSITIVE_INFINITY
 		for (const [rang, photo] of Array.from(element.children).entries()) {
@@ -124,6 +134,13 @@ export function GalerieDuProfil({ photos, nom }: { photos: readonly PhotoDeLaGal
 				aria-label={`Photos de ${nom}`}
 				onKeyDown={auClavier}
 				onScroll={auDefilement}
+				// A finger or a wheel takes the row over: what follows is read from where it stops.
+				onTouchStart={() => {
+					deplacement.current = false
+				}}
+				onWheel={() => {
+					deplacement.current = false
+				}}
 				className="relative flex w-full snap-x snap-mandatory gap-8 overflow-x-auto overscroll-x-contain scroll-smooth rounded focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-offset-2 motion-reduce:scroll-auto"
 			>
 				{photos.map((photo, rang) => (

@@ -114,7 +114,13 @@ export function portDeLApplication(adresse: string): number {
  * and the production mode of the build it serves.
  */
 export function environnementDeLApplication(environnement: Environnement): EnvironnementDeProcessus {
-	return { ...environnement, ...SANS_FICHIER_ENV, ...SANS_TELEMETRIE, NODE_ENV: 'production' }
+	return {
+		...environnement,
+		...imagesDuBanc(environnement),
+		...SANS_FICHIER_ENV,
+		...SANS_TELEMETRIE,
+		NODE_ENV: 'production',
+	}
 }
 
 /**
@@ -203,6 +209,15 @@ const definies = (variables: Variables): EnvironnementDeProcessus =>
 	Object.fromEntries(Object.entries(variables).filter((entree): entree is [string, string] => entree[1] !== undefined))
 
 /**
+ * The address of the storage of the bench for the image optimizer (next.config.ts): the build freezes
+ * it, and the server reads it again. Nothing when the bench has no storage.
+ */
+function imagesDuBanc(environnement: Environnement): EnvironnementDeProcessus {
+	const { S3_ENDPOINT: point, S3_BUCKET: espace } = environnement
+	return point && espace ? { IMAGES_DU_BANC: `${point}/${espace}` } : {}
+}
+
+/**
  * The environment of `next build`: no database, no secret, no `.env`, as in the CI. The address
  * of the site is left out on purpose: present at build time it would be frozen into the build,
  * absent it is read when the application starts.
@@ -215,6 +230,8 @@ export function environnementDuBuild(variables: Variables, environnement: Enviro
 		...(environnement.NEXT_PUBLIC_UMAMI_DOMAINS && {
 			NEXT_PUBLIC_UMAMI_DOMAINS: environnement.NEXT_PUBLIC_UMAMI_DOMAINS,
 		}),
+		// The storage of the bench, where the image optimizer may fetch photos from (ticket 103).
+		...imagesDuBanc(environnement),
 		...SANS_FICHIER_ENV,
 		...SANS_TELEMETRIE,
 		NODE_ENV: 'production',

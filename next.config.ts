@@ -4,7 +4,7 @@ import { withPayload } from '@payloadcms/next/withPayload'
 import type { NextConfig } from 'next'
 import { enTetesEspace } from './src/lib/auth/entetes-espace'
 import { mediaOrigin } from './src/lib/env'
-import { mediaRemotePattern, securityHeaders } from './src/lib/security-headers'
+import { imagesDuBanc, mediaRemotePattern, securityHeaders } from './src/lib/security-headers'
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -13,6 +13,9 @@ const dirname = path.dirname(fileURLToPath(import.meta.url))
 // and the start. `next build` writes the headers into the build, and `next start` loads this
 // file again for `/_next/image`: both must be given the same R2_PUBLIC_URL.
 const media = mediaOrigin(process.env.R2_PUBLIC_URL)
+// The local storage of the test bench, when the bench gives it (never in production): its photos are fetched
+// over http from the loopback interface. Null otherwise.
+const banc = imagesDuBanc(process.env.IMAGES_DU_BANC)
 // True under `next dev` only.
 const development = process.env.NODE_ENV === 'development'
 
@@ -44,7 +47,10 @@ const nextConfig: NextConfig = {
 	// « X-Powered-By: Next.js, Payload » to every path.
 	poweredByHeader: false,
 	// `/_next/image` fetches a remote file from the media origin only: any other host gets a 400.
-	images: { remotePatterns: [mediaRemotePattern(media)] },
+	images: {
+		remotePatterns: [mediaRemotePattern(media), ...(banc ? [banc.remotePattern] : [])],
+		...(banc && { dangerouslyAllowLocalIP: true }),
+	},
 	// Every path leaves with the security headers (src/lib/security-headers.ts). A ticket that
 	// needs a header on some paths adds its own entry after this one.
 	headers: async () => [

@@ -80,3 +80,30 @@ export function mediaRemotePattern(mediaOrigin: string): {
 	const url = new URL(mediaOrigin)
 	return { hostname: url.hostname, pathname: '/**', port: url.port, protocol: 'https' }
 }
+
+/**
+ * The storage of the test bench, as the image optimizer may fetch from it (ticket 103). The simulator of
+ * the bench serves photos over plain http on the loopback interface, which `/_next/image` refuses by
+ * default (https only, no local address): without this, no photo of the bench loads. Production never
+ * sets IMAGES_DU_BANC (the bench sets it, for the build and for the server); a value that is not exactly
+ * `http://127.0.0.1:<port>/<bucket>` (or `localhost`) throws, so that nothing wider than one local
+ * folder can be opened by mistake. Empty or missing: nothing is opened.
+ */
+export function imagesDuBanc(raw: string | undefined): {
+	dangerouslyAllowLocalIP: true
+	remotePattern: { hostname: string; pathname: string; port: string; protocol: 'http' }
+} | null {
+	if (raw === undefined || raw.trim() === '') return null
+	const url = URL.canParse(raw) ? new URL(raw) : undefined
+	const bucket = url?.pathname.slice(1) ?? ''
+	const loopback = url?.hostname === '127.0.0.1' || url?.hostname === 'localhost'
+	if (!url || url.protocol !== 'http:' || !loopback || url.port === '' || !/^[a-z0-9][a-z0-9.-]*$/.test(bucket)) {
+		throw new Error('IMAGES_DU_BANC refusée. Attendu : http://127.0.0.1:PORT/ESPACE.')
+	}
+	if (raw !== `${url.origin}/${bucket}`)
+		throw new Error('IMAGES_DU_BANC refusée. Attendu : http://127.0.0.1:PORT/ESPACE.')
+	return {
+		dangerouslyAllowLocalIP: true,
+		remotePattern: { hostname: url.hostname, pathname: `/${bucket}/**`, port: url.port, protocol: 'http' },
+	}
+}
