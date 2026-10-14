@@ -140,13 +140,14 @@ describe('La lecture du profil pour sa page (tickets 101 et 102)', () => {
 		expect(JSON.stringify(profil)).not.toMatch(/06 39 98|example\.test/)
 	})
 
-	test('un profil vide : rien d’inventé, une disponibilité jamais posée compte comme disponible', async () => {
+	test('un profil vide n’est pas lu (brouillon, ticket 104), une disponibilité jamais posée compte comme disponible', async () => {
 		const payload = await payloadDeTest()
 
 		const vide = await lireLeProfilPublic(payload, slugDe('vide'))
 		const inconnue = await lireLeProfilPublic(payload, slugDe('disponibilite-inconnue'))
 
-		expect(vide).toMatchObject({ zone: null, lieu: null, photo: null, nomArtiste: null, liens: [], prestations: [] })
+		// A draft is not served until ticket 104 decides what the empty profile shows.
+		expect(vide).toBeNull()
 		expect(inconnue?.disponible).toBe(true)
 		expect((await lireLeProfilPublic(payload, slugDe('indisponible')))?.disponible).toBe(false)
 	})

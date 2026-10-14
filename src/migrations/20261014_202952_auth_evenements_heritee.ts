@@ -8,7 +8,7 @@ export async function up({ db }: MigrateUpArgs): Promise<void> {
 export async function down({ db }: MigrateDownArgs): Promise<void> {
 	await db.execute(sql`
    -- Written by hand: a row « heritee » was a successful sign-in, and the old list does not know the word.
-  UPDATE "auth_evenements" SET "code" = 'ok' WHERE "code" = 'heritee';
+  UPDATE "auth_evenements" SET "code" = 'ok' WHERE "code"::text = 'heritee';
   ALTER TABLE "auth_evenements" ALTER COLUMN "code" SET DATA TYPE text;
   DROP TYPE "public"."enum_auth_evenements_code";
   CREATE TYPE "public"."enum_auth_evenements_code" AS ENUM('ok', 'identifiants-invalides', 'trop-de-tentatives', 'service-indisponible', 'email-non-confirme', 'donnees-invalides', 'email-deja-pris', 'deja-confirme', 'lien-invalide', 'inconnu');
