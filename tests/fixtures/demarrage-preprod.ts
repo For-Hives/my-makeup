@@ -33,8 +33,9 @@ interface Demande {
 }
 
 /**
- * The `init` of ticket 049 as an old database sees it: one migration of a name it never played,
- * which creates every table and type the provisional migrations already created there.
+ * A migration an old database cannot take, as `init` (ticket 049) was for the databases of the
+ * provisional migrations: one migration of a name it never played, which creates every table and
+ * type the migrations of the code already created there.
  */
 const INIT_FICTIVE: typeof migrations = [
 	{
