@@ -3,10 +3,10 @@ import type { PostgresAdapter } from '@payloadcms/db-postgres'
 import type { DatabaseAdapterObj, Payload, SanitizedConfig } from 'payload'
 import { EnvError, PREPROD_ORIGIN, parseServerEnv, type RawEnv, serverEnv } from '@/lib/env'
 import { auDemarrage, avecLaRemiseAZero } from '@/preprod/au-demarrage'
+import { COLLECTIONS_DU_JEU, chargerLeJeuDeLaPreprod, lirePhotoDeLApplication } from '@/preprod/jeu'
 import { BASE_DE_LA_PREPROD, MARQUE_DE_REMISE } from '@/preprod/remise'
 import {
 	adressesDeLaSource,
-	demarrerLaPreprod,
 	MEDIAS_DE_LA_SOURCE_FICTIVE,
 	PreprodRefusee,
 	SOURCE_DE_LA_PREPROD,
@@ -15,9 +15,10 @@ import { DEPLOYED_ORIGINS } from '../../src/lib/env'
 import { definitionDeLaSource } from '../outils/source-strapi/donnees'
 
 /**
- * Ticket 027: what the pre-production does when it starts, and nowhere else. The task itself runs
- * on the bench (tests/integration/preprod-demarrage.test.ts); here, without any database: where it
- * runs, what it refuses, the reset before the migrations, and the data it poses.
+ * Tickets 027 and 053: what the pre-production does when it starts, and nowhere else. The task
+ * itself runs on the bench (tests/integration/preprod-demarrage.test.ts); here, without any
+ * database: where it runs, what it refuses, the reset before the migrations, the fictional set it
+ * loads, and the fake source the first slice posed (./tranche.ts, kept for the import on demand).
  */
 
 // Made-up values only. The remote address ends in `.test`, a name that never resolves.
@@ -26,14 +27,16 @@ const SECRET = 'k'.repeat(64)
 const JETON = 'essai-remise-027'
 
 const preprod: RawEnv = {
+	APP_ENV: 'preprod',
 	DATABASE_URI: REMOTE_URI,
 	NEXT_PUBLIC_SITE_URL: PREPROD_ORIGIN,
 	NODE_ENV: 'production',
 	PAYLOAD_SECRET: SECRET,
 }
-const site: RawEnv = { ...preprod, NEXT_PUBLIC_SITE_URL: 'https://my-makeup.fr' }
+const site: RawEnv = { ...preprod, APP_ENV: 'prod', NEXT_PUBLIC_SITE_URL: 'https://my-makeup.fr' }
 const poste: RawEnv = {
 	...preprod,
+	APP_ENV: undefined,
 	DATABASE_URI: 'postgres://banc:banc@127.0.0.1:5442/mymakeup_dev',
 	NODE_ENV: 'development',
 }
@@ -151,14 +154,32 @@ describe('the environment says where the pre-production is, and nowhere else', (
 	})
 
 	test('a production build served from its address is the pre-production; the token of a reset is read', () => {
-		expect(parseServerEnv(preprod).preprod).toEqual({})
-		expect(parseServerEnv({ ...preprod, PREPROD_REMISE_A_ZERO: ` ${JETON} ` }).preprod).toEqual({ remiseAZero: JETON })
+		expect(parseServerEnv(preprod).preprod).toEqual({ jeuFictif: true })
+		expect(parseServerEnv({ ...preprod, PREPROD_REMISE_A_ZERO: ` ${JETON} ` }).preprod).toEqual({
+			jeuFictif: true,
+			remiseAZero: JETON,
+		})
+	})
+
+	test('APP_ENV=preprod is what lets the start load the fictional set; without it the pre-production only says so', () => {
+		expect(parseServerEnv({ ...preprod, APP_ENV: undefined }).preprod).toEqual({ jeuFictif: false })
+	})
+
+	test('APP_ENV is refused when it contradicts where the application is served from: the server does not start', () => {
+		// The site and a development machine are never « preprod »; the pre-production is never anything else.
+		expect(refus({ ...site, APP_ENV: 'preprod' })).toEqual(['APP_ENV'])
+		expect(refus({ ...poste, APP_ENV: 'preprod' })).toEqual(['APP_ENV'])
+		expect(refus({ ...preprod, APP_ENV: 'prod' })).toEqual(['APP_ENV'])
+		expect(refus({ ...preprod, APP_ENV: 'test' })).toEqual(['APP_ENV'])
+		expect(refus({ ...preprod, APP_ENV: 'staging' })).toEqual(['APP_ENV'])
+		expect(refus({ ...site, APP_ENV: 'prod' })).toEqual([])
+		expect(refus({ ...poste, APP_ENV: 'test' })).toEqual([])
 	})
 
 	test('the site, `next dev` and a build while Next builds never are', () => {
 		expect(parseServerEnv(site).preprod).toBeUndefined()
 		expect(parseServerEnv(poste).preprod).toBeUndefined()
-		expect(parseServerEnv({ ...preprod, NODE_ENV: 'development' }).preprod).toBeUndefined()
+		expect(parseServerEnv({ ...preprod, APP_ENV: undefined, NODE_ENV: 'development' }).preprod).toBeUndefined()
 		expect(
 			serverEnv({ ...preprod, NEXT_PHASE: 'phase-production-build', PREPROD_REMISE_A_ZERO: JETON }).preprod
 		).toBeUndefined()
@@ -167,7 +188,7 @@ describe('the environment says where the pre-production is, and nowhere else', (
 	test('PREPROD_REMISE_A_ZERO is refused anywhere else than on the pre-production, the site first: the server does not start', () => {
 		expect(refus({ ...site, PREPROD_REMISE_A_ZERO: JETON })).toEqual(['PREPROD_REMISE_A_ZERO'])
 		expect(refus({ ...poste, PREPROD_REMISE_A_ZERO: JETON })).toEqual(['PREPROD_REMISE_A_ZERO'])
-		expect(refus({ ...preprod, NODE_ENV: 'development', PREPROD_REMISE_A_ZERO: JETON })).toEqual([
+		expect(refus({ ...preprod, APP_ENV: undefined, NODE_ENV: 'development', PREPROD_REMISE_A_ZERO: JETON })).toEqual([
 			'PREPROD_REMISE_A_ZERO',
 		])
 	})
@@ -194,9 +215,8 @@ describe('the task refuses to run in production, before it touches anything', ()
 		const { payload, touches } = payloadIntouchable()
 		const journal: string[] = []
 
-		const essai = demarrerLaPreprod(payload, {
+		const essai = chargerLeJeuDeLaPreprod(payload, {
 			preprod: parseServerEnv(site).preprod,
-			databaseUri: REMOTE_URI,
 			journal: ligne => journal.push(ligne),
 		})
 
@@ -227,12 +247,12 @@ describe('the task refuses to run in production, before it touches anything', ()
 		await auDemarrage(payload, parseServerEnv(preprod), false)
 
 		expect(journal).toEqual([
-			'[preprod] Démarrage de la préprod interrompu. L’import s’est arrêté sur une erreur inattendue (Error, code 57P01). Son texte n’est pas affiché : il peut porter des valeurs de la base. Ce qui était écrit avant reste écrit ; un nouveau passage reprend à partir de là.',
+			'[preprod] Démarrage de la préprod interrompu. Le jeu fictif s’est arrêté sur une erreur inattendue (Error, code 57P01). Son texte n’est pas affiché : il peut porter des valeurs de la base. Un jeton nouveau de PREPROD_REMISE_A_ZERO recommence d’une base vide.',
 		])
 	})
 })
 
-describe('the start import reads only the database of the pre-production', () => {
+describe('the fictional set is loaded on the database of the pre-production only, once', () => {
 	test('on another database, it refuses before it reads a collection, and poses nothing', async () => {
 		const requetes: string[] = []
 		const { payload, touches } = payloadIntouchable({
@@ -247,9 +267,8 @@ describe('the start import reads only the database of the pre-production', () =>
 		})
 		const journal: string[] = []
 
-		const essai = demarrerLaPreprod(payload, {
-			preprod: {},
-			databaseUri: REMOTE_URI,
+		const essai = chargerLeJeuDeLaPreprod(payload, {
+			preprod: { jeuFictif: true },
 			journal: ligne => journal.push(ligne),
 		})
 
@@ -261,6 +280,74 @@ describe('the start import reads only the database of the pre-production', () =>
 		expect(requetes).toEqual(['SELECT current_database() AS base'])
 		expect(touches).toEqual([])
 		expect(journal).toEqual([])
+	})
+
+	/** A Payload that counts what the set writes, and records every write. */
+	function payloadQuiCompte(documents: number) {
+		const ecritures: string[] = []
+		const payload = {
+			db: { pool: { query: async () => ({ rows: [{ base: BASE_DE_LA_PREPROD }] }) } },
+			count: async ({ collection }: { collection: string }) => ({
+				totalDocs: collection === 'profils' ? documents : 0,
+			}),
+			create: async () => {
+				ecritures.push('create')
+				throw new Error('create ne devait pas être appelé')
+			},
+		} as unknown as Payload
+		return { payload, ecritures }
+	}
+
+	test('a database that already holds a document of the set is kept: nothing is loaded, the log gives the counts', async () => {
+		const { payload, ecritures } = payloadQuiCompte(12)
+		const journal: string[] = []
+
+		const issue = await chargerLeJeuDeLaPreprod(payload, {
+			preprod: { jeuFictif: true },
+			journal: ligne => journal.push(ligne),
+		})
+
+		expect(issue.etat).toBe('deja-remplie')
+		expect(ecritures).toEqual([])
+		expect(journal).toEqual([
+			`Base déjà remplie (${COLLECTIONS_DU_JEU.map(c => `${c} ${c === 'profils' ? 12 : 0}`).join(', ')}) : pas de jeu fictif au démarrage.`,
+		])
+	})
+
+	test('without APP_ENV=preprod the set is not loaded, and the log says which variable to set', async () => {
+		const { payload, ecritures } = payloadQuiCompte(0)
+		const journal: string[] = []
+
+		const issue = await chargerLeJeuDeLaPreprod(payload, {
+			preprod: { jeuFictif: false },
+			journal: ligne => journal.push(ligne),
+		})
+
+		expect(issue.etat).toBe('non-declaree')
+		expect(ecritures).toEqual([])
+		expect(journal).toEqual([
+			'APP_ENV n’est pas « preprod » : le jeu fictif n’est pas chargé. Pose APP_ENV=preprod dans Coolify.',
+		])
+	})
+
+	test('on an empty database, the set guard still decides: a production environment writes nothing', async () => {
+		const { payload, ecritures } = payloadQuiCompte(0)
+
+		const essai = chargerLeJeuDeLaPreprod(payload, {
+			preprod: { jeuFictif: true },
+			variables: { APP_ENV: 'prod', NEXT_PUBLIC_SITE_URL: 'https://my-makeup.fr', DATABASE_URI: REMOTE_URI },
+			journal: () => undefined,
+		})
+
+		await expect(essai).rejects.toThrow('Jeu fictif refusé : APP_ENV vaut « prod »')
+		expect(ecritures).toEqual([])
+	})
+
+	test('the photos are read from the folder the build keeps next to the application', async () => {
+		const octets = await lirePhotoDeLApplication('photo-1.webp')
+
+		expect(octets.length).toBeGreaterThan(1000)
+		expect(octets.length).toBeLessThan(30_000)
 	})
 })
 
@@ -400,6 +487,7 @@ describe('the reset comes before Payload plays its migrations, on the pre-produc
 
 describe('the configuration of Payload runs the hook with its own environment', () => {
 	const VARIABLES = [
+		'APP_ENV',
 		'DATABASE_URI',
 		'NEXT_PHASE',
 		'NEXT_PUBLIC_SITE_URL',

@@ -36,3 +36,6 @@ next-env.d.ts
 .DS_Store
 *.pem
 .idea
+
+# sessions of the test bench, written by `bun run banc:session`
+/.banc/

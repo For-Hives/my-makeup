@@ -3,7 +3,8 @@
 // the bench: one start of Payload as the pre-production starts it (ticket 027). In production
 // mode, so that Payload plays its migrations when it connects, and ends this process when one of
 // them fails, as it ends the server; with the reset of a token before them
-// (src/preprod/au-demarrage.ts); then, when asked, the start import (src/preprod/tranche.ts).
+// (src/preprod/au-demarrage.ts); then, when asked, the load of the fictional set (src/preprod/jeu.ts,
+// ticket 053).
 //
 // The test gives what to start with in TEMOIN_PREPROD (JSON, `Demande` below) and reads what this
 // process prints: the lines of the start log, `[preprod] …`, then one line `ISSUE {…}`.
@@ -16,7 +17,8 @@ import { postgresAdapter } from '@payloadcms/db-postgres'
 import { BasePayload, type Payload, type SanitizedConfig } from 'payload'
 import { migrations } from '../../src/migrations'
 import { avecLaRemiseAZero } from '../../src/preprod/au-demarrage'
-import { demarrerLaPreprod, PreprodRefusee } from '../../src/preprod/tranche'
+import { chargerLeJeuDeLaPreprod } from '../../src/preprod/jeu'
+import { PreprodRefusee } from '../../src/preprod/remise'
 import { exigerBanc } from '../outils/payload-test'
 
 interface Demande {
@@ -24,12 +26,12 @@ interface Demande {
 	jeton?: string
 	/** The database the start accepts as the one of the pre-production. Nothing: the real one. */
 	base?: string
-	/** Where the fake source is posed: a name of the bench. */
+	/** The fake source of the first slice, which a reset drops with the database: a name of the bench. */
 	source: { base: string; role: string }
 	/** The migrations of the code, or the fictional `init` below. */
 	migrations: 'code' | 'init'
-	/** Whether the start import runs once Payload has started, as its `onInit` does. */
-	importer: boolean
+	/** Whether the fictional set is loaded once Payload has started, as its `onInit` does. */
+	charger: boolean
 }
 
 /**
@@ -62,7 +64,10 @@ const db = avecLaRemiseAZero(
 		prodMigrations: demande.migrations === 'init' ? INIT_FICTIVE : migrations,
 		push: false,
 	}),
-	{ databaseUri, preprod: demande.jeton === undefined ? {} : { remiseAZero: demande.jeton } },
+	{
+		databaseUri,
+		preprod: demande.jeton === undefined ? { jeuFictif: true } : { jeuFictif: true, remiseAZero: demande.jeton },
+	},
 	{
 		...(demande.base !== undefined && { base: demande.base }),
 		source: demande.source,
@@ -77,22 +82,14 @@ const payload = new BasePayload() as Payload
 // The adapter as `buildConfig` would sanitize it: postgresAdapter already sets every field.
 await payload.init({ config: { ...(await configuration), db: db as SanitizedConfig['db'] }, disableOnInit: true })
 
-if (demande.importer) {
+if (demande.charger) {
 	try {
-		const issue = await demarrerLaPreprod(payload, {
-			preprod: {},
-			databaseUri,
+		const issue = await chargerLeJeuDeLaPreprod(payload, {
+			preprod: { jeuFictif: true },
 			journal,
-			source: demande.source,
 			...(demande.base !== undefined && { base: demande.base }),
 		})
-		console.log(
-			`ISSUE ${JSON.stringify(
-				issue.etat === 'importee'
-					? { etat: issue.etat, code: issue.code, profils: issue.rapport.collections.profils }
-					: issue
-			)}`
-		)
+		console.log(`ISSUE ${JSON.stringify(issue)}`)
 	} catch (erreur) {
 		if (!(erreur instanceof PreprodRefusee)) throw erreur
 		console.log(`ISSUE ${JSON.stringify({ refus: erreur.message })}`)

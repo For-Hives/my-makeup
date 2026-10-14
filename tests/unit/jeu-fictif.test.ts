@@ -215,6 +215,10 @@ describe('Le jeu ne se charge que sur le banc ou sur la préprod', () => {
 		expect(cibleDuJeu(PREPROD)).toBe('preprod')
 	})
 
+	test('la préprod sans stockage d’objets est acceptée : ses profils sont alors chargés sans photo (ticket 053)', () => {
+		expect(cibleDuJeu({ ...PREPROD, S3_ENDPOINT: undefined, S3_BUCKET: undefined })).toBe('preprod')
+	})
+
 	test.each([
 		['la prod déclarée', { ...BANC, APP_ENV: 'prod' }, 'APP_ENV vaut « prod »'],
 		[
