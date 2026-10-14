@@ -21,6 +21,9 @@
 		"ci:biome": "biome ci . --reporter=github",
 		"typecheck": "next typegen && tsc --noEmit",
 		"test:unit": "bun --no-env-file test ./tests/unit",
+		"test:ci-garde": "bun --no-env-file test ./tests/ci",
+		"image:build": "docker build --tag my-makeup:local .",
+		"image:controle": "bun --no-env-file scripts/image/controle.ts",
 		"test": "bun run test:unit"
 	},
 	"dependencies": {

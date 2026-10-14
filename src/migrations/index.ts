@@ -1,3 +1,9 @@
-// No migration yet. `bun run payload:migrate:create` writes the first one and rewrites this
-// file, which is never edited by hand afterwards.
-export const migrations: never[] = []
+import * as migration_20261014_010035_socle_provisoire from './20261014_010035_socle_provisoire'
+
+export const migrations = [
+	{
+		up: migration_20261014_010035_socle_provisoire.up,
+		down: migration_20261014_010035_socle_provisoire.down,
+		name: '20261014_010035_socle_provisoire',
+	},
+]

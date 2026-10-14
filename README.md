@@ -39,6 +39,7 @@ Le reste :
 - `src/migrations/` : les migrations versionnées de la base.
 - `src/payload-types.ts` et `src/app/(payload)/admin/importMap.js` : fichiers générés par Payload, versionnés, jamais modifiés à la main.
 - `docker-compose.yml` : la base PostgreSQL de développement.
+- `Dockerfile` et `.dockerignore` : l'image de production (voir « Image Docker »).
 - `.env.exemple` : la liste des variables d'environnement, sans aucune valeur.
 - `tests/` : les tests. Un composant React s'y teste seul, sans navigateur : voir `docs/tests/composants.md`.
 
@@ -144,7 +145,7 @@ L'application vérifie ses variables à chaque démarrage (`bun run dev`, `bun r
 
 - Payload ne pousse son schéma que dans une base de ce poste : hôte `localhost`, `127.0.0.1` ou `::1`. Un nom de service Docker ou une adresse privée ne compte pas.
 - Partout ailleurs, le schéma change par les migrations versionnées de `src/migrations/`, que Payload joue quand il démarre en production. `bun run payload:migrate:create` en écrit une, à relire avant de la versionner.
-- Il n'y a encore aucune migration : démarrée en production sur une base vide, l'application n'a pas de tables.
+- Une migration provisoire porte le schéma du squelette : démarrée en production sur une base vide, l'application crée ses tables à son premier appel (voir « Image Docker »). Après `bun run payload:migrate:create`, passer `bun run check` : Biome remet en forme les fichiers écrits par Payload.
 - Hors de ce poste, une base qui n'existe pas est une erreur : Payload ne la crée pas.
 - Chaque processus ouvre 5 connexions au plus.
 
@@ -184,6 +185,56 @@ curl -i http://localhost:3000/api/health
 bun --no-env-file test tests/unit/health.test.ts tests/unit/version.test.ts
 ```
 
+## Image Docker
+
+Le `Dockerfile` construit l'image que l'hébergeur déploie : le serveur autonome de Next.js (`output: 'standalone'`) sur Node 24, sans bun, sans sources et sans dépendances de développement.
+
+```sh
+bun run image:build      # construit l'image my-makeup:local
+bun run image:controle   # la démarre contre une base jetable et vérifie le tableau ci-dessous
+```
+
+| Ce que l'image garantit | Comment |
+|---|---|
+| Elle se construit sans base ni secret | Le build ne reçoit que des variables publiques (liste ci-dessous). Les noms des variables d'exécution n'apparaissent ni dans l'historique de l'image ni dans sa configuration. |
+| Elle tourne sans droits d'administration | Le serveur tourne sous l'utilisateur `node` (uid 1000), jamais `root`. |
+| Elle joue les migrations une fois | Sur une base vide, le premier appel reçu démarre Payload, qui joue les migrations de `src/migrations/`. Aux démarrages suivants, rien n'est rejoué. |
+| Elle dit si elle est saine | Son contrôle de santé interroge `/api/health` toutes les 30 secondes : « healthy » quand la base répond, « unhealthy » après 3 échecs de suite. Pendant les 60 premières secondes, un échec ne compte pas. |
+| Elle redimensionne les images | `sharp` est dans l'image : `/_next/image` rend une image à la largeur demandée. |
+
+### Variables
+
+| Variable | Donnée | Rôle |
+|---|---|---|
+| `NEXT_PUBLIC_SITE_URL` | Au build (`--build-arg`, « Build Variable » dans Coolify) | L'adresse du site, figée dans le build. Une image construite sans elle est une image de test : le conteneur doit alors la recevoir au démarrage. |
+| `SOURCE_COMMIT` | Au build | Le commit construit : c'est la `version` de `/api/health`. |
+| `NEXT_PUBLIC_APP_VERSION` | Au build, facultative | Un libellé de version, à la place du commit. |
+| `DATABASE_URI`, `PAYLOAD_SECRET` | Au conteneur seulement | Jamais au build : dans Coolify, la case « Build Variable » reste décochée. |
+
+- Une nouvelle variable publique de build s'ajoute à trois endroits : une ligne `ARG` du `Dockerfile`, la liste de `scripts/image/regles.ts`, et `.env.exemple`.
+- Une nouvelle variable d'exécution ne s'ajoute qu'à `.env.exemple` (et à `src/lib/env.ts`). La garde de `tests/ci/` refuse alors tout `Dockerfile` qui la nomme, et `bun run image:controle` toute image qui la porte.
+- `.dockerignore` refuse tout, puis laisse passer ce dont le build a besoin. Un `.env` local, un dump de `.migration/` ou l'historique git n'atteignent jamais le build. La liste est figée par un test de `tests/ci/`.
+- Les versions de Node et de bun du `Dockerfile` sont celles de `.nvmrc` et de `packageManager`, chaque image étant figée par son digest. La garde C04 de `tests/ci/` échoue si l'une d'elles s'écarte.
+
+### Le contrôle de l'image
+
+`bun run image:controle [image]` a besoin de la commande `docker`, et de rien d'autre. Il crée un réseau, une base PostgreSQL en mémoire sans port publié, démarre l'image deux fois, puis arrête la base. Il supprime tout à la fin, même en cas d'échec. Il ne lit aucun fichier `.env`.
+
+| Variable | Effet |
+|---|---|
+| `CONTROLE_IMAGE_NOM` | Préfixe des conteneurs et du réseau (défaut : `mm-controle-image`). À changer pour lancer deux contrôles en même temps. |
+| `CONTROLE_IMAGE_PORT` | Port de l'application sur `127.0.0.1` (défaut : un port libre). |
+| `CONTROLE_IMAGE_COMMIT` | Le commit donné au build en `SOURCE_COMMIT` : la `version` de `/api/health` doit en être les 7 premiers caractères. |
+
+Pour rendre son verdict vite, le contrôle demande au moteur de jouer le contrôle de santé de l'image toutes les 2 secondes. Podman refuse ce réglage : le contrôle suit alors le rythme de l'image, et dure un peu plus de 2 minutes.
+
+Avec Podman, l'image se construit au format Docker, sinon Podman retire le contrôle de santé :
+
+```sh
+podman build --format docker --tag my-makeup:local .
+DOCKER_HOST=unix://$XDG_RUNTIME_DIR/podman/podman.sock bun run image:controle
+```
+
 ## Commandes
 
 | Commande | Rôle |
@@ -202,6 +253,9 @@ bun --no-env-file test tests/unit/health.test.ts tests/unit/version.test.ts
 | `bun run payload` | Le CLI de Payload |
 | `bun run test` | Tous les tests qui existent aujourd'hui : les tests unitaires |
 | `bun run test:unit` | Les tests unitaires de `tests/unit/`, sans lire le fichier `.env` |
+| `bun run test:ci-garde` | Les garde-fous de `tests/ci/`, lancés à part de `bun run test` |
+| `bun run image:build` | Construit l'image Docker `my-makeup:local` |
+| `bun run image:controle` | Vérifie l'image construite contre une base jetable (voir « Image Docker ») |
 
 Biome se lance par ces scripts ou par `bunx @biomejs/biome`, jamais par `npx biome` : c'est un paquet homonyme.
 
@@ -219,11 +273,11 @@ Les tests tournent avec `bun test`, lancé par les scripts ci-dessus. Pour un se
 | `tests/integration/` | Tests d'intégration, en `*.test.ts`, contre la pile de test locale |
 | `tests/e2e/` | Essais de bout en bout, en `*.spec.ts` |
 | `tests/sondes/` | Sondes du site en ligne, en lecture seule |
-| `tests/ci/` | Garde-fous de la CI |
+| `tests/ci/` | Garde-fous de la CI et de l'image Docker : chacun est joué sur le dépôt, puis sur un exemple fautif |
 | `tests/fixtures/` | Données fictives et fichiers témoins |
 | `tests/outils/` | Outils partagés par les tests |
 
-Seuls `unit/`, `fixtures/` et `outils/` existent pour l'instant : chaque autre dossier arrive avec son premier test.
+Seuls `unit/`, `ci/`, `fixtures/` et `outils/` existent pour l'instant : chaque autre dossier arrive avec son premier test.
 
 ### La garde d'environnement
 
