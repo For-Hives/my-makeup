@@ -41,18 +41,7 @@
  */
 
 import { DEPARTEMENTS, departementDuCodePostal, normaliserLieu } from '@/lib/departements'
-
-const VIDES = new Set(['null', 'undefined', '-', '.', 'nan'])
-
-/**
- * The city as typed, trimmed, or '' when nothing usable: villeAffichee() of src/lib/format-zone.js
- * of the old site. Kept private here until the port of that file is on the branch.
- */
-function villeAffichee(city: unknown): string {
-	if (typeof city !== 'string') return ''
-	const v = city.trim().replace(/\s+/g, ' ')
-	return VIDES.has(v.toLowerCase()) ? '' : v
-}
+import { villeAffichee } from '@/lib/format-zone'
 
 /** Types of street and parts of an address (lower case, no accents) */
 const VOIES = new Set([
