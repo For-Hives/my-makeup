@@ -4,7 +4,7 @@ import path from 'node:path'
 import { migrations } from '@/migrations'
 
 /**
- * The `init` migration (ticket 049), read as it is versioned: the only migration of the
+ * The `init` migration (ticket 049), read as it is versioned: the first migration of the
  * repository, written from an empty schema, which only creates. Its SQL creates every table and
  * every column its snapshot declares: the snapshot is what `bun run schema:derive` compares the
  * collections with, the SQL is what the databases receive.
@@ -48,10 +48,11 @@ function colonnesCreees(): Record<string, string[]> {
 }
 
 describe('one migration: init', () => {
-	test('the folder holds init, its snapshot and the generated index, nothing else', () => {
+	test('init is the first migration, the folder holds only pairs of migration and snapshot, and the generated index', () => {
 		expect(NOM).toMatch(/^\d{8}_\d{6}_init$/)
-		expect(migrations.map(({ name }) => name)).toEqual([NOM])
-		expect(readdirSync(DOSSIER).sort()).toEqual([`${NOM}.json`, `${NOM}.ts`, 'index.ts'])
+		const fichiers = readdirSync(DOSSIER).filter(fichier => fichier !== 'index.ts')
+		const noms = migrations.map(({ name }) => name)
+		expect(fichiers.sort()).toEqual(noms.flatMap(nom => [`${nom}.json`, `${nom}.ts`]).sort())
 	})
 
 	test('its snapshot follows an empty schema: nothing came before it', () => {

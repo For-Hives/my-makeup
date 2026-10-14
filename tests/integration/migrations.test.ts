@@ -35,6 +35,10 @@ import {
 
 const [init] = migrations
 const INIT = init?.name ?? ''
+/** Every versioned migration, in order: init, then the ones written after it. */
+const NOMS = migrations.map(({ name }) => name)
+/** What the table of the migrations holds once they have all played together. */
+const LOT_UN = NOMS.map(name => ({ name, batch: 1 }))
 
 let payload: Payload
 /** Where the commands of Payload write their log. */
@@ -126,8 +130,8 @@ afterAll(async () => {
 })
 
 describe('I22 : la migration init, sur une base effacée, puis rejouée', () => {
-	test('une seule migration versionnée : init', () => {
-		expect(migrations.map(({ name }) => name)).toEqual([expect.stringMatching(/^\d{8}_\d{6}_init$/)])
+	test('la première migration versionnée est init', () => {
+		expect(INIT).toMatch(/^\d{8}_\d{6}_init$/)
 	})
 
 	test('init passe sur une base effacée, sans ligne « dev » ; rejouée, elle ne fait rien', async () => {
@@ -143,7 +147,7 @@ describe('I22 : la migration init, sur une base effacée, puis rejouée', () => 
 		expect(premiere.code).toBe(0)
 		// The row the migration writes when it has run: answered « no », Payload's « dev mode »
 		// question ends the command with code 0 too, but before anything is played or written.
-		expect(await migrationsJouees(payload)).toEqual([{ name: INIT, batch: 1 }])
+		expect(await migrationsJouees(payload)).toEqual(LOT_UN)
 		expect(await lignesDeDeveloppement(payload)).toBe(0)
 		const schema = await schemaDeLaBase()
 		expect(schema.length).toBeGreaterThan(100)
@@ -153,7 +157,7 @@ describe('I22 : la migration init, sur une base effacée, puis rejouée', () => 
 		expect(seconde.sortie).toContain('Done.')
 		expect(seconde.sortie).not.toContain('Migrating:')
 		expect(seconde.code).toBe(0)
-		expect(await migrationsJouees(payload)).toEqual([{ name: INIT, batch: 1 }])
+		expect(await migrationsJouees(payload)).toEqual(LOT_UN)
 		expect(await schemaDeLaBase()).toEqual(schema)
 	}, 120_000)
 
@@ -182,7 +186,7 @@ describe('I22 : la migration init, sur une base effacée, puis rejouée', () => 
 			// Payload ends the process when it has nothing to write: here, the code of that end.
 			expect(issue).toEqual({ sortie: 0 })
 			expect(readdirSync(dossier).sort()).toEqual(avant)
-			expect(avant).toEqual([`${INIT}.json`])
+			expect(avant).toEqual(NOMS.map(nom => `${nom}.json`).sort())
 		} finally {
 			payload.db.migrationDir = dossierDOrigine
 			rmSync(dossier, { recursive: true, force: true })
@@ -194,11 +198,11 @@ describe('I22 : la migration init, sur une base effacée, puis rejouée', () => 
 
 		const descente = await commandeDePayload('migrate:down')
 
-		expect(descente.sortie).toContain(`Migrated down:  ${INIT}`)
+		for (const nom of NOMS) expect(descente.sortie).toContain(`Migrated down:  ${nom}`)
 		expect(descente.code).toBe(0)
 		expect(await schemaDeLaBase()).toEqual([])
 
-		expect(await jouerLesMigrations(payload, migrations, 'test')).toEqual([INIT])
+		expect(await jouerLesMigrations(payload, migrations, 'test')).toEqual(NOMS)
 		expect(await schemaDeLaBase()).toEqual(schema)
 	}, 120_000)
 })
@@ -235,7 +239,7 @@ describe('Avant le premier test ou essai, une base que les migrations n’ont pa
 		try {
 			await effacerLeSchema()
 			// Played as the application plays it: the migration passes, the column is missing.
-			expect(await jouerLesMigrations(payload, [retouchee], 'test')).toEqual([INIT])
+			expect(await jouerLesMigrations(payload, [retouchee, ...migrations.slice(1)], 'test')).toEqual(NOMS)
 
 			const constat = await constaterLeSchema(payload)
 
@@ -262,7 +266,7 @@ describe('Avant le premier test ou essai, une base que les migrations n’ont pa
 		)
 		try {
 			await effacerLeSchema()
-			await jouerLesMigrations(payload, [retouchee], 'test')
+			await jouerLesMigrations(payload, [retouchee, ...migrations.slice(1)], 'test')
 			const debut = performance.now()
 
 			const constat = await constaterLeSchema(payload)
