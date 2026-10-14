@@ -3,10 +3,21 @@
  * HTTP client, and the cookie of a browser context.
  *
  * The session is a real one: Payload opens it through its own login, signs the token and
- * records the session on the account, exactly as the login route does.
+ * records the session on the account, exactly as the login route does. An account that has no
+ * password anybody knows (an old Google account) gets its session the way a login by Google
+ * opens one: `ouvrirSessionSansMotDePasse`.
  */
 
-import { type AuthCollectionSlug, generatePayloadCookie, type Payload } from 'payload'
+import {
+	type AuthCollectionSlug,
+	createLocalReq,
+	generatePayloadCookie,
+	getFieldsToSign,
+	jwtSign,
+	type Payload,
+	type TypedUser,
+} from 'payload'
+import { addSessionToUser } from 'payload/shared'
 import { BancRefuse, type Variables } from './banc'
 
 /** A cookie as a browser context takes it: the shape of Playwright's `context.addCookies()`. */
@@ -63,7 +74,51 @@ export async function ouvrirSession(
 	const origine = origineDuSite(payload, variables)
 	const { exp, token } = await payload.login({ collection, data: { email, password: motDePasse } })
 	if (!token || !exp) throw new Error(`Payload n’a ouvert aucune session pour ce compte « ${collection} ».`)
+	return sessionDuJeton(payload, collection, { exp, token }, origine)
+}
 
+/** An account designated by its collection and its identifier. */
+export interface CompteDesigne {
+	collection: AuthCollectionSlug
+	id: number | string
+}
+
+/**
+ * Opens a session for an account without its password: the steps Payload takes once a password
+ * is accepted, which a login by Google takes once Google has vouched for the address (plan 01
+ * §2.3) — a session recorded on the account, then a token signed with its identifier.
+ *
+ * For an account that may log in, and that has no password anybody knows. Nothing here checks
+ * whether the account is confirmed or blocked: Payload ignores the session of an account that is
+ * not confirmed, and the site's own rules for a blocked account belong to the login (ticket 089).
+ */
+export async function ouvrirSessionSansMotDePasse(
+	payload: Payload,
+	{ collection, id }: CompteDesigne,
+	variables: Variables = process.env
+): Promise<Session> {
+	const origine = origineDuSite(payload, variables)
+	const collectionConfig = payload.collections[collection].config
+	const req = await createLocalReq({}, payload)
+	const compte = await payload.db.findOne<TypedUser>({ collection, req, where: { id: { equals: id } } })
+	if (!compte) throw new Error(`Aucun compte « ${collection} » ne porte l’identifiant ${id}.`)
+	const user = { ...compte, collection } as TypedUser
+	const { sid } = await addSessionToUser({ collectionConfig, payload, req, user })
+	const { exp, token } = await jwtSign({
+		fieldsToSign: getFieldsToSign({ collectionConfig, email: String(compte.email), sid, user }),
+		secret: payload.secret,
+		tokenExpiration: collectionConfig.auth.tokenExpiration,
+	})
+	return sessionDuJeton(payload, collection, { exp, token }, origine)
+}
+
+/** The two shapes of a session, from the token Payload signed for it. */
+function sessionDuJeton(
+	payload: Payload,
+	collection: AuthCollectionSlug,
+	{ exp, token }: { exp: number; token: string },
+	origine: string
+): Session {
 	// The cookie of the real login route: same name, same attributes.
 	const cookie = generatePayloadCookie({
 		collectionAuthConfig: payload.collections[collection].config.auth,

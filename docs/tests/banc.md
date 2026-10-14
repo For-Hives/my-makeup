@@ -241,6 +241,7 @@ Dans un essai de bout en bout, la page s'ouvre par un chemin (`page.goto('/admin
 - **Le cookie vaut pour l'adresse exacte du site.** Posé pour `http://localhost:3100`, il n'est pas envoyé à `http://127.0.0.1:3100`.
 - **Chaque appel donne un compte distinct** : deux tests en parallèle ne se partagent jamais un compte. Tous disparaissent à la remise à zéro, et leurs sessions avec eux.
 - **Aucun mot de passe ne sort de la fabrique.** Elle en tire un au hasard, s'en sert une fois pour ouvrir la session et l'oublie : il n'est ni rendu, ni écrit dans les journaux.
+- **Un test qui doit connaître le mot de passe le choisit** : `creerCompte('maquilleuse-bloquee', { motDePasse: () => connu })`. Un compte de l'ancien site ne le reçoit jamais : son mot de passe reste inconnu, comme après l'import.
 - **Hors du banc, la fabrique s'arrête avant toute écriture.** Elle vérifie l'environnement, puis la base à laquelle Payload est réellement connecté.
 
 Les types de compte sont déclarés dans `TYPES_DE_COMPTE` (`tests/outils/fabrique-comptes.ts`) :
@@ -252,8 +253,15 @@ Les types de compte sont déclarés dans `TYPES_DE_COMPTE` (`tests/outils/fabriq
 | `maquilleuse` | `pros` | Le compte d'une maquilleuse, adresse confirmée, avec son profil vide, comme à l'inscription. Deux appels donnent « A » et « B » |
 | `maquilleuse-non-verifiee` | `pros` | Le compte d'une maquilleuse qui n'a pas confirmé son adresse. Il ne peut pas se connecter : `session` vaut `null` |
 | `maquilleuse-sans-profil` | `pros` | Le compte d'une maquilleuse sans profil, comme certains comptes de l'ancien site. Sa création porte `CONTEXTE_SANS_PROFIL` (`src/collections/Profils.ts`) |
+| `maquilleuse-bloquee` | `pros` | Le compte d'une maquilleuse bloquée par l'admin (`bloque` vrai), avec son profil. `session` vaut `null` : bloquer ferme les sessions, et la connexion la refusera (ticket 089) |
+| `reprise-avec-hash` | `pros` | Un compte repris de l'ancien site avec son hash bcrypt, le hash de fixture. Il se connectera par le chemin hérité du site (ticket 087) : d'ici là, `session` vaut `null` |
+| `reprise-google` | `pros` | Un ancien compte Google, sans mot de passe. Sa session est ouverte sans mot de passe, comme par la connexion Google |
+| `reprise-google-avec-hash` | `pros` | Un ancien compte Google qui a aussi un hash, comme un compte réel. Session ouverte comme par Google |
+| `reprise-facebook` | `pros` | Un ancien compte Facebook. Facebook n'existe plus et il n'a pas de mot de passe : `session` vaut `null` jusqu'à ce qu'il s'en crée un par « Mot de passe oublié » (ticket 093) |
 
-Aucun mail ne part : la fabrique coupe le mail de confirmation que Payload enverrait à une nouvelle maquilleuse. Chaque maquilleuse reçoit un nom d'affichage fictif qui lui est propre.
+Aucun mail ne part : la fabrique coupe le mail de confirmation que Payload enverrait à une nouvelle maquilleuse. Chaque maquilleuse reçoit un nom d'affichage fictif qui lui est propre, et son profil vide, sauf `maquilleuse-sans-profil`.
+
+`tests/integration/banc-comptes-types.test.ts` crée chaque type et vérifie sa session sur « mon compte », ou qu'il n'en a pas et qu'aucun mot de passe connu ne l'ouvre. Toutes les variantes, créées puis vidées, tiennent en moins de 5 secondes : 0,9 à 1,3 s, la plus longue avec le calcul du hash de fixture (mesuré le 14/10/2026, trois passages).
 
 Une collection de comptes y ajoute son type par une déclaration :
 
@@ -264,7 +272,52 @@ export const TYPES_DE_COMPTE = {
 }
 ```
 
-`donnees` rend ce que le compte porte en plus de son adresse et de son mot de passe. Le compilateur vérifie ces données contre les champs de la collection.
+`donnees` rend ce que le compte porte en plus de son adresse et de son mot de passe. Le compilateur vérifie ces données contre les champs de la collection. `reprise` décrit un compte de l'ancien site, `connexion` dit comment il ouvre sa session (`declarerSansSession`, `declarerSansMotDePasse`). Un type nouveau a aussi son compte dans le jeu du banc : le compilateur le demande.
+
+### Les comptes de l'ancien site
+
+Les quatre types `reprise-*` sont les comptes tels que l'import les écrit (plan `01` §2.4, ticket 025) : adresse confirmée, fournisseur d'origine (`legacyProvider` : `local`, `google` ou `facebook`), identifiant de l'ancien site (`strapiId`), et un mot de passe tiré au hasard que personne ne connaît.
+
+- **Le hash de fixture vient d'un mot de passe fictif connu** : `MOT_DE_PASSE_HERITE_DE_FIXTURE`, exporté par la fabrique. C'est lui qu'un test de la connexion héritée saisit. Le hash est au format de l'ancien site (`$2a$10$`), avec un sel fixe (`SEL_BCRYPT_DE_FIXTURE`) : c'est toujours le même.
+- **Aucun hash n'est écrit dans le dépôt.** Le PostgreSQL du banc le calcule, avec pgcrypto, comme pour la fausse base Strapi. pgcrypto n'existe que le temps d'une transaction annulée : la base du banc n'en garde rien. Un test unitaire vérifie qu'aucun fichier versionné ne contient de hash bcrypt complet.
+- **La connexion de Payload refuse ces comptes**, avec le message générique : ni le mot de passe d'un test, ni celui de l'ancien site ne l'ouvrent. Le chemin hérité du site (ticket 087) lira le hash.
+- **Leur `strapiId` part de 1 000 000** (`strapiIdDeTest()`) : loin de ceux de la fausse base Strapi et du jeu du banc, qu'un test ne prend donc jamais.
+
+### Une session sans mot de passe
+
+Un compte qui n'a pas de mot de passe connu reçoit sa session comme la connexion Google la donnera : Payload inscrit une session sur le compte et signe son jeton, sans passer par le mot de passe. C'est ce que la fabrique fait pour les anciens comptes Google ; un test peut le faire pour tout compte du banc qui peut se connecter :
+
+```ts
+import { ouvrirSessionSansMotDePasse } from '../outils/session'
+
+const session = await ouvrirSessionSansMotDePasse(payload, { collection: 'pros', id })
+```
+
+La session a les deux mêmes formes que celle de la fabrique. L'outil ne vérifie ni la confirmation ni le blocage du compte : Payload ignore la session d'un compte non confirmé, et le refus d'un compte bloqué appartient à la connexion (ticket 089).
+
+## Le jeu du banc : un compte fixe de chaque type
+
+Le jeu pose dans la base du banc un exemplaire fixe de chaque type de la fabrique : toujours la même adresse, le même nom, le même identifiant de l'ancien site.
+
+```ts
+import { poserLesComptesDuJeu } from '../fixtures/comptes'
+
+const { comptes, crees, presents } = await poserLesComptesDuJeu()
+```
+
+| Ce qui est fixe | Valeur |
+|---|---|
+| L'adresse | `jeu-<type>@example.test` (`adresseDuJeu(type)`) : `jeu-admin@example.test`, `jeu-reprise-google@example.test`… |
+| Le nom d'une maquilleuse | Il dit ce qu'est le compte : « Maquilleuse du jeu », « Bloquée du jeu », « Reprise Google du jeu »… |
+| L'identifiant de l'ancien site | 900 001 à 900 004, pour les quatre comptes repris |
+| L'identifiant de chaque compte | Le même sur une base vide : les comptes sont créés un par un, dans l'ordre de `COMPTES_DU_JEU` |
+
+- **Rejouer le jeu ne crée aucun doublon.** Un compte se retrouve par son adresse ; s'il est là, il est laissé tel quel (`presents`), sinon il est créé (`crees`).
+- **Aucun mot de passe, aucune session.** Chaque compte reçoit un mot de passe tiré au hasard et oublié. Un test qui veut la session d'un compte du jeu l'ouvre par `ouvrirSessionSansMotDePasse`.
+- **Hors du banc, le jeu s'arrête avant toute lecture et toute écriture**, comme la fabrique.
+- Les données sont dans `tests/fixtures/comptes.ts` : `COMPTES_DU_JEU`. Un chargement sur une base vide prend 2 à 2,3 s pour les dix comptes (mesuré le 14/10/2026, trois passages).
+
+Les profils types (ticket 051) et la commande qui charge le tout (ticket 052) viendront s'ajouter au jeu.
 
 ## La matrice d'accès
 
