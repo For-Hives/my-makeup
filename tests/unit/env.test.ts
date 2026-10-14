@@ -342,3 +342,140 @@ describe('the version of /api/health is read here and never checked', () => {
 		expect(route).not.toContain('process.env')
 	})
 })
+
+describe('the mails leave through the relay the environment names, or not at all', () => {
+	const relay: RawEnv = {
+		...valid,
+		EMAIL_FROM: 'My Makeup <ne-pas-repondre@example.test>',
+		SMTP_HOST: '127.0.0.1',
+		SMTP_PORT: '1025',
+	}
+
+	test('SMTP_HOST, SMTP_PORT and EMAIL_FROM give the relay and the sender', () => {
+		expect(parseServerEnv(relay).mail).toEqual({
+			fromAddress: 'ne-pas-repondre@example.test',
+			fromName: 'My Makeup',
+			host: '127.0.0.1',
+			port: 1025,
+		})
+	})
+
+	test.each([
+		['missing', undefined],
+		['empty', ''],
+		['blank', '  '],
+	])('SMTP_HOST %s: no relay, whatever the two others hold, and nothing is refused', (_case, host) => {
+		expect(parseServerEnv({ ...relay, SMTP_HOST: host })).toStrictEqual(parseServerEnv(valid))
+		expect(parseServerEnv({ ...relay, SMTP_HOST: host, SMTP_PORT: 'pas un port', EMAIL_FROM: 'personne' }).mail).toBe(
+			undefined
+		)
+	})
+
+	test.each([
+		['a name between quotes', '"Équipe My Makeup" <equipe@example.test>', 'Équipe My Makeup', 'equipe@example.test'],
+		['spaces around', '  Léa   <lea@example.test>  ', 'Léa', 'lea@example.test'],
+		[
+			'an address alone: the name of the site',
+			'ne-pas-repondre@example.test',
+			'My Makeup',
+			'ne-pas-repondre@example.test',
+		],
+		['an address between brackets, without a name', '<lea@example.test>', 'My Makeup', 'lea@example.test'],
+	])('EMAIL_FROM with %s', (_case, from, fromName, fromAddress) => {
+		expect(parseServerEnv({ ...relay, EMAIL_FROM: from }).mail).toMatchObject({ fromAddress, fromName })
+	})
+
+	test.each([
+		'mailpit',
+		'relais.exemple.test',
+		'RELAIS.exemple.test',
+		'::1',
+		'2001:db8::25',
+	])('SMTP_HOST accepted: %s', host => {
+		expect(parseServerEnv({ ...relay, SMTP_HOST: host }).mail?.host).toBe(host)
+	})
+
+	test('SMTP_HOST set alone: the port and the sender are asked for, in one message', () => {
+		const error = refusal({ ...valid, SMTP_HOST: '127.0.0.1' })
+
+		expect(error.variables).toEqual(['SMTP_PORT', 'EMAIL_FROM'])
+		expect(error.message).toContain(
+			'- SMTP_PORT : absente, alors que SMTP_HOST est réglée. Attendu : un numéro de port, de 1 à 65535.'
+		)
+		expect(error.message).toContain(
+			'- EMAIL_FROM : absente, alors que SMTP_HOST est réglée. Attendu : « Nom <adresse@domaine> », ou une adresse seule.'
+		)
+	})
+
+	test.each([
+		['a protocol', 'smtp://relais.exemple.test'],
+		['a port', 'relais.exemple.test:587'],
+		['a path', 'relais.exemple.test/boite'],
+		['a space', 'relais exemple'],
+		['brackets', '[::1]'],
+		['a login', 'utilisateur@relais.exemple.test'],
+	])('SMTP_HOST with %s: refused as « illisible »', (_case, host) => {
+		const error = refusal({ ...relay, SMTP_HOST: host })
+
+		expect(error.variables).toEqual(['SMTP_HOST'])
+		expect(error.message).toContain('- SMTP_HOST : illisible. Attendu : un nom d’hôte seul, sans protocole ni port.')
+	})
+
+	test.each([
+		'0',
+		'65536',
+		'100000',
+		'25a',
+		'-1',
+		'1.5',
+		'smtp',
+	])('SMTP_PORT « %s »: refused as « illisible »', port => {
+		const error = refusal({ ...relay, SMTP_PORT: port })
+
+		expect(error.variables).toEqual(['SMTP_PORT'])
+		expect(error.message).toContain('- SMTP_PORT : illisible. Attendu : un numéro de port, de 1 à 65535.')
+	})
+
+	test('SMTP_PORT at both ends of the range is accepted', () => {
+		expect(parseServerEnv({ ...relay, SMTP_PORT: '1' }).mail?.port).toBe(1)
+		expect(parseServerEnv({ ...relay, SMTP_PORT: '65535' }).mail?.port).toBe(65_535)
+	})
+
+	test.each([
+		['a name without an address', 'My Makeup'],
+		['an address without a domain', 'My Makeup <ne-pas-repondre>'],
+		['two addresses', 'lea@example.test, zoe@example.test'],
+		['text after the address', 'My Makeup <lea@example.test> suite'],
+		['an address with two « @ »', 'lea@example.test@example.test'],
+		// A line break in a sender would write a header of its own into every mail.
+		['a line break in the name', 'My Makeup\r\nBcc: zoe@example.test <lea@example.test>'],
+		['a line break in the address', 'My Makeup <lea@example.test\nBcc:zoe@example.test>'],
+	])('EMAIL_FROM with %s: refused as « illisible »', (_case, from) => {
+		const error = refusal({ ...relay, EMAIL_FROM: from })
+
+		expect(error.variables).toEqual(['EMAIL_FROM'])
+		expect(error.message).toContain(
+			'- EMAIL_FROM : illisible. Attendu : « Nom <adresse@domaine> », ou une adresse seule.'
+		)
+	})
+
+	test('the message names the three variables and never shows a value', () => {
+		const error = refusal({
+			...valid,
+			EMAIL_FROM: 'Expéditeur Témoin <temoin',
+			SMTP_HOST: 'smtp://relais-temoin.exemple.test',
+			SMTP_PORT: '99999',
+		})
+
+		expect(error.variables).toEqual(['SMTP_HOST', 'SMTP_PORT', 'EMAIL_FROM'])
+		for (const part of ['émoin', 'temoin', 'exemple.test', 'smtp://', '99999'])
+			expect(error.message).not.toContain(part)
+	})
+
+	test('next build gets no relay, whatever its environment holds', () => {
+		const built = serverEnv({ ...relay, NEXT_PHASE: 'phase-production-build', NODE_ENV: 'production' })
+
+		expect(built.mail).toBeUndefined()
+		expect(serverEnv({ ...relay, NEXT_PHASE: 'phase-production-server' }).mail?.host).toBe('127.0.0.1')
+	})
+})

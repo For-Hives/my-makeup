@@ -1,6 +1,7 @@
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { postgresAdapter } from '@payloadcms/db-postgres'
+import { nodemailerAdapter } from '@payloadcms/email-nodemailer'
 import { buildConfig } from 'payload'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import { Admins } from './collections/Admins'
@@ -36,6 +37,18 @@ export default buildConfig({
 		// The schema is pushed into a database of this machine only. Payload never pushes in production.
 		push: env.localDatabase,
 	}),
+	// Every mail leaves through the relay the environment names (src/lib/env.ts): on the test bench,
+	// the mail catcher. Without SMTP_HOST there is no adapter, and Payload writes a log line instead.
+	email: env.mail
+		? nodemailerAdapter({
+				defaultFromAddress: env.mail.fromAddress,
+				defaultFromName: env.mail.fromName,
+				// Nothing connects while this file is loaded: the Payload CLI, the scripts and the tests
+				// load it too. An unreachable relay is an error of the mail that is sent, not of the start.
+				skipVerify: true,
+				transportOptions: { host: env.mail.host, port: env.mail.port },
+			})
+		: undefined,
 	// REST and the Local API are the only ways in. The two GraphQL routes answer 404 by themselves.
 	graphQL: { disable: true },
 	secret: env.payloadSecret,

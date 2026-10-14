@@ -26,20 +26,36 @@ import type { VersionSources } from './version'
 export type RawEnv = Partial<
 	Record<
 		| 'DATABASE_URI'
+		| 'EMAIL_FROM'
 		| 'NEXT_PHASE'
 		| 'NEXT_PUBLIC_SITE_URL'
 		| 'NODE_ENV'
 		| 'PAYLOAD_DROP_DATABASE'
 		| 'PAYLOAD_SECRET'
-		| 'PORT',
+		| 'PORT'
+		| 'SMTP_HOST'
+		| 'SMTP_PORT',
 		string
 	>
 >
+
+/** The relay every mail of the application leaves through, and the sender it leaves under. */
+export type MailEnv = {
+	host: string
+	port: number
+	fromAddress: string
+	fromName: string
+}
 
 export type ServerEnv = {
 	databaseUri: string
 	/** True when the database is on this machine: the only place where Payload may push its schema. */
 	localDatabase: boolean
+	/**
+	 * Nothing when SMTP_HOST is not set: Payload then gets no email adapter, and writes a log line
+	 * in place of each mail.
+	 */
+	mail?: MailEnv
 	payloadSecret: string
 	/** The only origins a session cookie is accepted from. Never empty: for Payload, empty means « any ». */
 	trustedOrigins: string[]
@@ -64,11 +80,17 @@ const DEFAULT_PORT = '3000'
 
 const ABSENT = 'absente'
 
+/** The name a mail is sent under when EMAIL_FROM holds an address alone. */
+const DEFAULT_SENDER_NAME = 'My Makeup'
+
 const EXPECTED = {
 	DATABASE_URI: 'postgres://UTILISATEUR:MOT_DE_PASSE@HÔTE:PORT/BASE',
+	EMAIL_FROM: '« Nom <adresse@domaine> », ou une adresse seule',
 	NEXT_PUBLIC_SITE_URL: `${DEPLOYED_ORIGINS.join(', ')} ou une adresse de ce poste comme http://localhost:${DEFAULT_PORT}, sans « / » final`,
 	PAYLOAD_SECRET: `au moins ${SECRET_MIN_LENGTH} caractères, par exemple la sortie de « openssl rand -hex 32 »`,
 	R2_PUBLIC_URL: 'une adresse https://HÔTE, sans chemin ni « / » final',
+	SMTP_HOST: 'un nom d’hôte seul, sans protocole ni port',
+	SMTP_PORT: 'un numéro de port, de 1 à 65535',
 } as const
 
 type CheckedVariable = keyof typeof EXPECTED
@@ -181,6 +203,49 @@ function trustedOrigins(site: string | undefined, production: boolean, port: str
 	return [...new Set([...local, ...localSite])]
 }
 
+/** A host name or an IP address, and nothing around it: no protocol, no port, no path, no bracket. */
+const HOST_ALONE = /^(?:[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?|(?=(?:[^:]*:){2})[0-9a-f:]{2,39})$/i
+
+/** `Name <address>`, the name between quotes or not. No control character: a line break would add a header. */
+const NAMED_SENDER = /^"?([^<>"\p{Cc}]*?)"?\s*<([^<>"\s@\p{Cc}]+@[^<>"\s@\p{Cc}]+)>$/u
+const ADDRESS_ALONE = /^[^<>"\s@\p{Cc}]+@[^<>"\s@\p{Cc}]+$/u
+
+/** Who the mails are from, read from `Name <address>` or from an address alone. */
+function sender(value: string): Pick<MailEnv, 'fromAddress' | 'fromName'> | undefined {
+	const text = value.trim()
+	if (ADDRESS_ALONE.test(text)) return { fromAddress: text, fromName: DEFAULT_SENDER_NAME }
+	const [, name, address] = NAMED_SENDER.exec(text) ?? []
+	return address ? { fromAddress: address, fromName: name?.trim() || DEFAULT_SENDER_NAME } : undefined
+}
+
+/**
+ * The relay the mails leave through. SMTP_HOST switches it on, and then asks for the two others:
+ * a relay without a port, or mails without a sender, are refused when the server starts and not
+ * at the first mail.
+ *
+ * The relay is used as it is given: no login and no encryption are set here. That suits the mail
+ * catcher of the test bench; what a real relay needs comes with the ticket that sends through one.
+ */
+function mailEnv(raw: RawEnv, problems: { variable: string; problem: string }[]): MailEnv | undefined {
+	if (raw.SMTP_HOST === undefined) return undefined
+	const refuse = (variable: 'EMAIL_FROM' | 'SMTP_HOST' | 'SMTP_PORT', problem: string) =>
+		problems.push({ variable, problem: `${problem}. Attendu : ${EXPECTED[variable]}.` })
+	const missing = `${ABSENT}, alors que SMTP_HOST est réglée`
+
+	const host = raw.SMTP_HOST.trim()
+	if (!HOST_ALONE.test(host)) refuse('SMTP_HOST', 'illisible')
+
+	const port = /^\d{1,5}$/.test(raw.SMTP_PORT?.trim() ?? '') ? Number(raw.SMTP_PORT) : Number.NaN
+	if (raw.SMTP_PORT === undefined) refuse('SMTP_PORT', missing)
+	else if (!(port >= 1 && port <= 65_535)) refuse('SMTP_PORT', 'illisible')
+
+	const from = raw.EMAIL_FROM === undefined ? undefined : sender(raw.EMAIL_FROM)
+	if (raw.EMAIL_FROM === undefined) refuse('EMAIL_FROM', missing)
+	else if (!from) refuse('EMAIL_FROM', 'illisible')
+
+	return from ? { host, port, ...from } : undefined
+}
+
 const required = z.string({ error: ABSENT })
 
 const schema = z.object({
@@ -227,11 +292,14 @@ export function parseServerEnv(source: RawEnv): ServerEnv {
 		})
 	}
 
+	const mail = mailEnv(raw, problems)
+
 	if (!parsed.success || problems.length > 0) throw new EnvError(problems)
 
 	return {
 		databaseUri: parsed.data.DATABASE_URI,
 		localDatabase: isLocalDatabase(parsed.data.DATABASE_URI),
+		...(mail && { mail }),
 		payloadSecret: parsed.data.PAYLOAD_SECRET,
 		trustedOrigins: trustedOrigins(parsed.data.NEXT_PUBLIC_SITE_URL, production, raw.PORT),
 	}
@@ -245,12 +313,15 @@ export function parseServerEnv(source: RawEnv): ServerEnv {
 function processEnv(): RawEnv {
 	return {
 		DATABASE_URI: process.env.DATABASE_URI,
+		EMAIL_FROM: process.env.EMAIL_FROM,
 		NEXT_PHASE: process.env.NEXT_PHASE,
 		NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
 		NODE_ENV: process.env.NODE_ENV,
 		PAYLOAD_DROP_DATABASE: process.env.PAYLOAD_DROP_DATABASE,
 		PAYLOAD_SECRET: process.env.PAYLOAD_SECRET,
 		PORT: process.env.PORT,
+		SMTP_HOST: process.env.SMTP_HOST,
+		SMTP_PORT: process.env.SMTP_PORT,
 	}
 }
 
@@ -260,6 +331,7 @@ function processEnv(): RawEnv {
  * `next build` is the one exception: it loads the Payload configuration to compile the routes, and
  * must work with no secret and no database. Nothing is checked then, and a missing secret stays
  * empty: Payload refuses to start with an empty secret, so such a configuration cannot serve.
+ * A build sends no mail either: it gets no relay, whatever its environment holds.
  */
 export function serverEnv(source: RawEnv = processEnv()): ServerEnv {
 	if (source.NEXT_PHASE !== BUILD_PHASE) return parseServerEnv(source)
