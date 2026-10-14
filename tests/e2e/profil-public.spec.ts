@@ -1,6 +1,7 @@
 import { expect, type Page, test } from '@playwright/test'
 import { type ProfilDePage, poserLesProfilsDePage } from '../fixtures/profils-de-page'
 import { ECRANS } from '../outils/e2e'
+import { payloadDeTest } from '../outils/payload-test'
 
 /**
  * The public page of a profile, end to end (tickets 101 to 103; plan 02 E43 and E44), on profiles of
@@ -163,5 +164,108 @@ test.describe('Les douze profils types du banc', () => {
 			expect(texteVisible(html), cle).not.toMatch(MOTS_INTERDITS)
 			expect(html, cle).not.toMatch(CLES_PRIVEES)
 		}
+	})
+})
+
+test.describe('E44 : la galerie du portfolio', { tag: '@mobile' }, () => {
+	test('six images avec leur texte alternatif, demandées depuis leur adresse d’origine, aucune cassée', async ({
+		page,
+		request,
+	}) => {
+		const { id, slug } = profil('reference')
+		await page.goto(`/profil/${slug}`)
+		const images = page.locator('[aria-roledescription="photo"] img')
+		await expect(images).toHaveCount(6)
+
+		// The addresses the portfolio is made from, as the database holds them, in the order she gave.
+		const stocke = await (await payloadDeTest()).findByID({ collection: 'profils', id, depth: 1, overrideAccess: true })
+		const origines = (stocke.galerie ?? []).map(photo => (typeof photo === 'object' ? photo.url : null))
+		expect(origines).toHaveLength(6)
+
+		for (let rang = 0; rang < 6; rang++) {
+			const image = images.nth(rang)
+			await expect(image).toHaveAttribute('alt', `Réalisation de Page Alpha (${rang + 1}/6)`)
+			// The original address is inside the optimizer's address, unchanged.
+			const src = (await image.getAttribute('src')) ?? ''
+			expect(new URL(src, page.url()).searchParams.get('url')).toBe(origines[rang] ?? 'sans adresse')
+			// The optimizer answers with an image.
+			const reponse = await request.get(src)
+			expect(reponse.ok(), src).toBe(true)
+			expect(reponse.headers()['content-type'], src).toMatch(/^image\//)
+		}
+	})
+
+	test('au clavier : la rangée prend le focus, les flèches changent de photo et la position est annoncée', async ({
+		page,
+	}) => {
+		await page.goto(`/profil/${profil('reference').slug}`)
+		const rangee = page.getByRole('group', { name: /^Photos de / })
+		const position = page.locator('section[aria-roledescription="carrousel"] [aria-live="polite"]')
+		await rangee.scrollIntoViewIfNeeded()
+		await expect(position).toHaveText('Photo 1 sur 6')
+
+		await rangee.focus()
+		await expect(rangee).toBeFocused()
+		await page.keyboard.press('ArrowRight')
+		await expect(position).toHaveText('Photo 2 sur 6')
+		await page.keyboard.press('ArrowRight')
+		await expect(position).toHaveText('Photo 3 sur 6')
+		// The row really moved: the third photo is at the left edge of the row.
+		await expect
+			.poll(async () =>
+				rangee.evaluate(piste => {
+					const photo = piste.children.item(2)
+					return photo instanceof HTMLElement ? Math.abs(photo.offsetLeft - piste.scrollLeft) : Number.NaN
+				})
+			)
+			.toBeLessThan(2)
+		await page.keyboard.press('ArrowLeft')
+		await expect(position).toHaveText('Photo 2 sur 6')
+		await page.keyboard.press('End')
+		await expect(position).toHaveText('Photo 6 sur 6')
+		await page.keyboard.press('Home')
+		await expect(position).toHaveText('Photo 1 sur 6')
+	})
+
+	test('les boutons « Photo suivante » et « Photo précédente »', async ({ page }) => {
+		await page.goto(`/profil/${profil('reference').slug}`)
+		const position = page.locator('section[aria-roledescription="carrousel"] [aria-live="polite"]')
+
+		await page.getByRole('button', { name: 'Photo suivante' }).click()
+		await expect(position).toHaveText('Photo 2 sur 6')
+		await page.getByRole('button', { name: 'Photo précédente' }).click()
+		await expect(position).toHaveText('Photo 1 sur 6')
+	})
+
+	test('un balayage du doigt change de photo : la position suit la rangée', async ({ page }) => {
+		await page.goto(`/profil/${profil('reference').slug}`)
+		const rangee = page.getByRole('group', { name: /^Photos de / })
+		const position = page.locator('section[aria-roledescription="carrousel"] [aria-live="polite"]')
+		await rangee.scrollIntoViewIfNeeded()
+
+		// A swipe is a scroll of the row that ends on a photo (the snapping): the position is read at its end.
+		await rangee.evaluate(piste => {
+			const photo = piste.children.item(3)
+			if (photo instanceof HTMLElement) piste.scrollTo({ left: photo.offsetLeft, behavior: 'instant' })
+		})
+		await expect(position).toHaveText('Photo 4 sur 6')
+	})
+
+	test('un profil sans galerie n’a pas de section portfolio', async ({ page, request }) => {
+		const html = await (await request.get(`/profil/${profil('vide').slug}`)).text()
+		expect(html).not.toContain('Portfolio')
+
+		await page.goto(`/profil/${profil('vide').slug}`)
+		await expect(page.getByRole('heading', { name: 'Portfolio' })).toHaveCount(0)
+		await expect(page.locator('[aria-roledescription="photo"]')).toHaveCount(0)
+	})
+
+	test('le profil aux dix photos tient à 390 px sans déborder', async ({ page }, testInfo) => {
+		await page.goto(`/profil/${profil('textes-maximaux').slug}`)
+		await expect(page.locator('[aria-roledescription="photo"]')).toHaveCount(10)
+		await page.setViewportSize(ECRANS.mobile)
+		expect(await sansDebordement(page)).toBe(true)
+		await page.getByRole('heading', { name: 'Portfolio' }).scrollIntoViewIfNeeded()
+		await testInfo.attach('portfolio-390px', { body: await page.screenshot(), contentType: 'image/png' })
 	})
 })

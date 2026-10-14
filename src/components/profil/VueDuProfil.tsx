@@ -1,6 +1,8 @@
 import { lignes } from '@/lib/profil/vue-publique'
 import type { ProfilPublic } from '@/services/public/profils'
 import { EnTeteDuProfil } from './EnTeteDuProfil'
+import { GalerieDuProfil } from './GalerieDuProfil'
+import { SectionDuProfil } from './SectionDuProfil'
 import {
 	SectionCompetences,
 	SectionContacts,
@@ -34,6 +36,11 @@ export function VueDuProfil({ profil }: { profil: ProfilPublic }) {
 					</div>
 					<div className="col-span-12 flex min-w-0 flex-col items-start gap-5 md:col-span-8">
 						{description.length > 0 && <SectionDescription lignes={description} />}
+						{profil.galerie.length > 0 && (
+							<SectionDuProfil titre="Portfolio">
+								<GalerieDuProfil photos={profil.galerie} nom={profil.nom} />
+							</SectionDuProfil>
+						)}
 						{profil.prestations.length > 0 && <SectionPrestations prestations={profil.prestations} />}
 						{profil.experiences.length > 0 && <SectionExperiences experiences={profil.experiences} />}
 					</div>

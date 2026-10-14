@@ -25,10 +25,15 @@ function lireLeType(type: ProfilDuJeu, surcharge: Partial<ProfilDeLaPage> = {}):
 	const photo = type.photos.principale
 		? { url: `${ADRESSE_DE_PHOTO}/${type.photos.principale}`, width: 400, height: 400 }
 		: null
+	const galerie = type.photos.galerie.map(fichier => ({
+		url: `${ADRESSE_DE_PHOTO}/${fichier}`,
+		width: 400,
+		height: 400,
+	}))
 	// What the public reading does: the contact details leave only when she published them.
 	const { telephone = null, email = null } = type.profil.coordonnees ?? {}
 	const coordonnees = type.profil.contactPublic === true && (telephone || email) ? { telephone, email } : null
-	return profilPublicDe(doc, { photo, coordonnees })
+	return profilPublicDe(doc, { photo, galerie, coordonnees })
 }
 
 const rendre = (profil: ProfilPublic): string => renderToStaticMarkup(<VueDuProfil profil={profil} />)
@@ -239,5 +244,29 @@ describe('E44 : les sections du profil', () => {
 			expect(html, profilType.cle).not.toMatch(/<\/h[23]>\s*<\/(?:div|li|section)>/)
 			expect(html, profilType.cle).not.toMatch(/<(?:p|li|h[1-6])[^>]*>\s*<\/(?:p|li|h[1-6])>/)
 		}
+	})
+})
+
+describe('E44 : le portfolio', () => {
+	test('six photos, chacune avec son texte alternatif, dans l’ordre donné', () => {
+		const html = rendre(lireLeType(type('reference')))
+
+		expect(html).toContain('Portfolio')
+		for (let n = 1; n <= 6; n++) expect(html).toContain(`alt="Réalisation de Inès Morel (${n}/6)"`)
+		expect(html.indexOf('(1/6)')).toBeLessThan(html.indexOf('(6/6)'))
+		expect(html).toContain('Photo 1 sur 6')
+	})
+
+	test('sans galerie, la section est absente', () => {
+		const html = rendre(lireLeType(type('vide')))
+
+		expect(html).not.toContain('Portfolio')
+		expect(html).not.toContain('Réalisation de')
+	})
+
+	test('une galerie dont les photos ont disparu n’affiche rien', () => {
+		const profil = lireLeType(type('reference'))
+
+		expect(rendre({ ...profil, galerie: [] })).not.toContain('Portfolio')
 	})
 })

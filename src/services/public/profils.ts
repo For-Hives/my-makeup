@@ -83,6 +83,7 @@ export const CHAMPS_DE_LA_PAGE_DU_PROFIL = {
 	rayonKm: true,
 	disponible: true,
 	photoPrincipale: true,
+	galerie: true,
 	reseaux: true,
 	prestations: true,
 	competences: true,
@@ -115,6 +116,8 @@ export interface ProfilPublic {
 	disponible: boolean
 	/** Her main photo, or `null`: the page then shows the picture of the site. */
 	photo: PhotoDeCarte | null
+	/** The photos of her portfolio, in the order she gave, a photo that is gone left out. */
+	galerie: PhotoDeCarte[]
 	/** Her commune, or `null`. */
 	lieu: string | null
 	/** True when she gave a radius around her commune. */
@@ -241,31 +244,33 @@ async function lireLesCoordonneesPubliees(payload: Payload, id: number): Promise
 }
 
 /**
- * The photos of one profile, in the order asked, a photo that is gone (or has no address) left out.
- * Read by identifier, as `lireLesPhotos` does for the cards: the access rule of the media opens a
- * photo to the public when it is asked by its identifier, and a profile the public reads names only
- * its own photos. An identifier named twice gives the photo twice.
+ * The photos a profile names (her main photo and her portfolio), by identifier, in one read; a photo that
+ * is gone, or has no address, is not in the map. Read by identifier, as `lireLesPhotos` does for the
+ * cards: the access rule of the media opens a photo to the public when it is asked by its identifier,
+ * and a profile the public reads names only its own photos.
  */
 async function lireLesPhotosDuProfil(
 	payload: Payload,
 	identifiants: readonly (number | string | undefined)[]
-): Promise<PhotoDeCarte[]> {
-	const demandes = identifiants.filter((identifiant): identifiant is number | string => identifiant !== undefined)
-	if (demandes.length === 0) return []
+): Promise<PhotosParIdentifiant> {
+	const demandes = [...new Set(identifiants)].filter(
+		(identifiant): identifiant is number | string => identifiant !== undefined
+	)
+	const photos = new Map<number | string, PhotoDeCarte>()
+	if (demandes.length === 0) return photos
 	const { docs } = await payload.find({
 		collection: 'media',
-		where: { id: { in: [...new Set(demandes)] } },
+		where: { id: { in: demandes } },
 		select: CHAMPS_DE_LA_PHOTO,
 		depth: 0,
 		limit: LIMITE_MAX_DE_LA_LISTE,
 		pagination: false,
 		overrideAccess: true,
 	})
-	const parIdentifiant = new Map<number | string, PhotoDeCarte>()
 	for (const media of docs)
 		if (typeof media.url === 'string' && media.url !== '')
-			parIdentifiant.set(media.id, { url: media.url, width: media.width ?? null, height: media.height ?? null })
-	return demandes.flatMap(identifiant => parIdentifiant.get(identifiant) ?? [])
+			photos.set(media.id, { url: media.url, width: media.width ?? null, height: media.height ?? null })
+	return photos
 }
 
 /**
@@ -285,9 +290,13 @@ export async function lireLeProfilPublic(payload: Payload, slug: string): Promis
 	})
 	const profil = docs[0]
 	if (!profil || !estVisible(profil)) return null
-	const [photo] = await lireLesPhotosDuProfil(payload, [identifiantDeLaPhoto(profil.photoPrincipale)])
+	const principale = identifiantDeLaPhoto(profil.photoPrincipale)
+	// The portfolio, in the order she gave; a photo named twice is shown twice.
+	const rangee = (profil.galerie ?? []).map(photo => identifiantDeLaPhoto(photo))
+	const photos = await lireLesPhotosDuProfil(payload, [principale, ...rangee])
 	return profilPublicDe(profil, {
-		photo: photo ?? null,
+		photo: (principale !== undefined && photos.get(principale)) || null,
+		galerie: rangee.flatMap(identifiant => (identifiant !== undefined && photos.get(identifiant)) || []),
 		coordonnees: await lireLesCoordonneesPubliees(payload, profil.id),
 	})
 }
@@ -305,6 +314,7 @@ export type ProfilDeLaPage = Pick<
 	| 'rayonKm'
 	| 'disponible'
 	| 'photoPrincipale'
+	| 'galerie'
 	| 'reseaux'
 	| 'prestations'
 	| 'competences'
@@ -322,7 +332,7 @@ export type ProfilDeLaPage = Pick<
  */
 export function profilPublicDe(
 	profil: ProfilDeLaPage,
-	lu: { photo: PhotoDeCarte | null; coordonnees: CoordonneesPubliques | null }
+	lu: { photo: PhotoDeCarte | null; galerie: PhotoDeCarte[]; coordonnees: CoordonneesPubliques | null }
 ): ProfilPublic {
 	const nom = nomAffiche(profil)
 	return {
@@ -333,6 +343,7 @@ export function profilPublicDe(
 		zone: formatZone({ city: profil.commune?.nom, radius: profil.rayonKm }) || null,
 		disponible: profil.disponible !== false,
 		photo: lu.photo,
+		galerie: lu.galerie,
 		lieu: villeAffichee(profil.commune?.nom) || null,
 		seDeplace: villeAffichee(profil.commune?.nom) !== '' && rayonKm(profil.rayonKm) !== null,
 		prestations: prestations(profil.prestations),

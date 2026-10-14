@@ -109,8 +109,8 @@ export function SectionCompetences({ competences }: { competences: readonly stri
 		<SectionDuProfil titre="Compétences">
 			<ul className="flex flex-wrap gap-3">
 				{competences.map((nom, rang) => (
-					// biome-ignore lint/suspicious/noArrayIndexKey: a skill can be listed twice, and the rows never move
 					<li
+						// biome-ignore lint/suspicious/noArrayIndexKey: a skill can be listed twice, and the rows never move
 						key={`${rang}-${nom}`}
 						className="rounded-full bg-indigo-100 px-3 py-2 font-medium text-indigo-700 text-xs [overflow-wrap:anywhere]"
 					>
@@ -172,8 +172,8 @@ function PrixEtDescription({ element }: { element: OptionPublique }) {
 			{element.prix.length > 0 && (
 				<div className="flex flex-col items-end gap-2">
 					{element.prix.map((ligne, rang) => (
-						// biome-ignore lint/suspicious/noArrayIndexKey: the lines are fixed text, never reordered
 						<p
+							// biome-ignore lint/suspicious/noArrayIndexKey: the lines are fixed text, never reordered
 							key={`${rang}-${ligne}`}
 							className="max-w-full whitespace-pre-line break-words rounded-full bg-gray-50 px-3 py-2 text-right text-gray-500 text-md italic"
 						>
