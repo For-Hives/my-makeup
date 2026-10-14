@@ -54,6 +54,7 @@ bun run migration:import --revue v.json           # écrit aussi la liste de rev
 | `--hors-ligne` | Ne demande rien au référentiel des communes : chaque réponse doit déjà être dans le fichier des réponses gardées, sinon l'import s'arrête avant toute écriture. Le fichier n'est jamais réécrit |
 | `--consentement-le <date>` | La date de bascule : `2026-11-02` (minuit UTC) ou avec heure et fuseau (`2026-11-02T08:00:00Z`). Elle date le consentement des profils qui affichent déjà un téléphone ou un email (ticket 064). Obligatoire dès qu'un profil repris en affiche : sinon l'import s'arrête avant toute écriture (code 1), à blanc comme en réel. Une date qui n'en est pas une est refusée de même. Sur le banc et dans la préprod, une date fictive est donnée d'office |
 | `--revue <fichier>` | Écrit aussi la liste de revue privée des villes à revoir dans ce fichier, lisible par son seul propriétaire (voir « Les communes ») |
+| `--sans-photos` | Ne donne aucun stockage des photos au passage : aucune photo n'est sondée ni adoptée, chacune est listée « sans-stockage » (comme dans la préprod). Il ne demande rien à aucun hôte de photos : c'est la répétition sans réseau vers le stockage réel |
 
 | Variable | Rôle |
 |---|---|
@@ -67,7 +68,7 @@ bun run migration:import --revue v.json           # écrit aussi la liste de rev
 | 1 | Refusé avant toute écriture : une variable manque ou ne va pas, la cible est distante sans `--cible-distante`, la cible n'a pas les tables de la v3, la table de décision est mal formée ou donne une commune que le référentiel ne connaît pas, le fichier des réponses gardées est mal formé, le référentiel des communes ne répond pas, hors ligne, une de ses réponses n'est pas gardée, ou le stockage des photos ne répond pas à une requête d'en-tête par 200 ou 404 dans les 10 secondes |
 | 2 | Ligne de commande incomprise |
 | 3 | Arrêté avant toute écriture : des cas attendent une décision, listés par identifiants |
-| 4 | La source a changé pendant le passage, ou la cible s'écarte de la source par autre chose que des documents refusés : un écart que le rapport n'explique pas |
+| 4 | La source a changé pendant le passage, ou la cible s'écarte de la source par autre chose que des documents refusés : un écart que le rapport n'explique pas. |
 | 5 | Des documents sont refusés, avant l'écriture ou par Payload : listés par identifiant et par champ, ils attendent une décision. En réel, la parité est incomplète d'autant |
 | 6 | Arrêté en cours de passage par une erreur de la base ou une erreur inattendue, nommée par son type et son code. Ce qui était écrit reste écrit ; un nouveau passage reprend à partir de là |
 
@@ -145,6 +146,30 @@ Une photo de l'ancien site n'est jamais copiée : son média est adopté là où
 Chaque prix saisi, celui d'une prestation comme celui d'une de ses options, passe par `parsePrice` (`src/lib/prix.ts`), la règle de l'ancien site portée telle quelle : le texte est gardé à l'octet près, et le montant est le premier nombre du texte quand il est compris entre 5 et 10 000 €. Un texte libre (« Sur devis ») garde son texte et n'a pas de montant. Une limite de la règle est reprise avec elle : « 2 h : 150 € » ne donne rien, « Entre 60 et 90 € » donne 60. Changer la lecture est une décision, avec une ligne au registre, pas un réglage de l'import.
 
 Le rapport compte les prix en nombres, sans en citer un seul : combien de prix, combien avec un montant, combien en texte libre, combien sans texte ; combien de profils ont une offre chiffrée à la source ; les profils qui la perdraient dans la cible (la liste doit rester vide) ; les profils dont un texte contient des chiffres que la règle ne lit pas (« chiffres non lus », texte gardé), à relire à la main. La ligne `prix-numerique` du registre est comptée une fois par profil qui gagne au moins un montant.
+
+## La répétition sur une copie de la prod (ticket 065)
+
+La répétition rejoue l'import entier sur une sauvegarde de la vraie base Strapi, restaurée sur ce poste, sans réseau vers la prod, puis détruite. Elle ne lit que les seize tables de l'import (`pg_restore -t`, sans propriétaires ni droits) : ni jeton, ni compte d'administration. Elle ne tient dans aucune commande unique (ticket 180) ; voici ses étapes, avec le banc d'une instance à elle (`BANC_INSTANCE=mm-065-067 BANC_DECALAGE=265`) :
+
+1. `bun run banc:up`, puis `bun run banc:prepare` : la cible, par les migrations, vide.
+2. Restaurer la sauvegarde dans une base du banc dont le nom finit par `_test`, lue par un rôle en lecture seule (celui de `STRAPI_SOURCE_URI`, comme sur la fausse source), avec `GRANT SELECT` et `default_transaction_read_only`. Compter les lignes de la copie : c'est l'instantané auquel la parité se compare.
+3. Un passage à blanc d'abord : il s'arrête sur les cas à décider et les liste par identifiants (code 3). Rédiger la table de décision (la proposition du ticket 066 : garder le compte au profil le plus rempli), hors du dépôt, en `.migration/` (jamais versionné, droits 0600).
+4. À blanc, puis `--reel`, puis `--reel` encore, avec `--sans-photos` tant que le stockage réel ne doit pas être sondé, `--communes` pour garder les réponses du référentiel, `--revue` et `--rapport`. Une réponse du référentiel qui manque d'arriver en 10 s arrête le passage ; les réponses reçues sont gardées, on relance (observé : une ou deux relances).
+5. Contrôler à part (en nombres seulement) : les lignes de la cible, les `legacyBcrypt` au format `$2a$10$` (I44), et chercher dans les fichiers de `.migration/` un hash (`$2a$`) ou un `@` (aucun).
+6. Détruire la copie (base et rôle), vider la cible, `bun run banc:down`.
+
+**Première répétition, le 14/10/2026.** Elle n'a pas pu se faire sur une copie fraîche : l'agent n'a aucun accès à la prod, et la sauvegarde la plus récente de ce poste date du 08/10 (16 h 06). La parité se compare donc à la copie elle-même, pas à l'instantané du 13/10 (91 comptes, 101 profils dont 13 écartés), qui est postérieur à la suppression des comptes de spam. Les nombres de la copie : 114 comptes (111 emails distincts), 100 profils (aucun sans compte : le spam n'était pas encore séparé de ses comptes), 6 articles, 14 talents, 574 fichiers.
+
+- **Passage à blanc** : arrêt sur un seul groupe de comptes au même email (quatre comptes, dont un seul a un profil). Avec la proposition du ticket 066 appliquée (le compte au profil rempli est gardé, les trois autres écartés), plus aucun arrêt.
+- **Passage réel** : 25 secondes en tout, démarrage de Payload compris. Créés : 111 comptes (3 écartés), 100 profils, 6 articles, 14 talents ; 0 refusé ; parité complète sur chaque collection. Le second passage dure 1 seconde : 0 création, 0 mise à jour, 111 + 100 + 6 + 14 inchangés.
+- **Comptes** : 65 « local », 37 « google », 9 « facebook » ; 65 hash hérités, tous au format `$2a$10$`, soit autant que de comptes locaux (I44). 11 comptes sans profil, comme à la source (I41). Aucun hash et aucun email dans les fichiers produits.
+- **Communes** : 45 villes rattachées sur 56 renseignées (80,4 %, cible 90 %), 11 à revoir, 2 adresses postales dont seule la commune est reprise. Profils non vides avec une commune : 45 sur 62.
+- **Prix** : 141 prix, 116 avec un montant, 25 en texte libre ; 21 profils avec une offre chiffrée, aucun ne la perd ; 3 profils avec des chiffres que la règle ne lit pas.
+- **Statuts** : 61 publiés, 39 brouillons (le statut est calculé par le serveur ; les 39 brouillons sont les profils entièrement vides).
+- **Photos, non vérifiées** : la répétition a tourné sans stockage (`--sans-photos`). 249 fichiers sont désignés par un profil repris, 7 par une entrée disparue, 318 par rien ; 4 ne sont pas des images. Les requêtes d'en-tête sur le stockage réel (I42) restent à faire.
+- **Source inchangée** (I43) : seize tables, 2 381 lignes, même empreinte avant et après ; la sauvegarde a la même empreinte SHA-256 avant et après ; la copie est détruite.
+- **Deux constats** : la sauvegarde du 08/10 n'a pas la colonne `files.uploaded_by`, ajoutée depuis par une extension de l'ancienne API (nulle pour les envois anciens) : la répétition l'a ajoutée, vide, à la copie. Et le référentiel `geo.api.gouv.fr` ne répond parfois pas dans les 10 secondes.
+- **Rester à faire** : la répétition sur une copie du jour (ticket 067 et P9), avec le stockage réel sondé ; la décision d'Andy pour les villes à revoir et les prix « chiffres non lus ».
 
 ## Jusqu'à la bascule seulement
 

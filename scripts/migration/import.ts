@@ -6,6 +6,7 @@
  *   bun scripts/migration/import.ts --rapport r.json   also writes the report as JSON
  *   bun scripts/migration/import.ts --decisions d.json the table of decisions (accounts that share an email)
  *   bun scripts/migration/import.ts --revue v.json     also writes the private list of the cities to review
+ *   bun scripts/migration/import.ts --sans-photos      no storage of the photos: none is read, none adopted (a rehearsal with no network)
  *   bun scripts/migration/import.ts --consentement-le 2026-11-02   the date of the switch: the consent date of the profiles that show a phone or an email today
  *
  * The cities become communes of the official list (geo.api.gouv.fr). Its answers are kept in a
@@ -120,7 +121,8 @@ async function principal(argumentsDeLaCommande: string[]): Promise<number> {
 	const payload = await getPayload({ config: configurationSansChangementDeSchema(await config) })
 	await verifierLeSchemaDeLaCible(payload)
 	// Where the photos are served from, as the application gives their addresses (src/payload.config.ts).
-	const baseDesMedias = mediaBaseUrl(process.env.R2_PUBLIC_URL, serverEnv().storage)
+	// `--sans-photos`: no storage at all, as in the pre-production; nothing is asked of any host.
+	const baseDesMedias = options.sansPhotos ? null : mediaBaseUrl(process.env.R2_PUBLIC_URL, serverEnv().storage)
 	const source = ouvrirLaSourceBun(adresseDeLaSource)
 	try {
 		const rapport = await importer({
@@ -131,7 +133,7 @@ async function principal(argumentsDeLaCommande: string[]): Promise<number> {
 			decisions,
 			consentiLe,
 			referentiel,
-			medias: { base: baseDesMedias },
+			medias: baseDesMedias === null ? undefined : { base: baseDesMedias },
 			// Read by its owner only: what was asked of the referential for each city to review.
 			surLaRevue: revue => {
 				if (options.revue) writeFileSync(options.revue, `${JSON.stringify(revue, null, '\t')}\n`, { mode: 0o600 })

@@ -99,6 +99,11 @@ describe('la ligne de commande : à blanc par défaut', () => {
 		})
 	})
 
+	test('--sans-photos ne prend pas de valeur et ne se répète pas', () => {
+		expect(lireLesArguments(['--sans-photos'])).toEqual({ mode: 'a-blanc', cibleDistante: false, sansPhotos: true })
+		expect(lireLesArguments(['--sans-photos', '--sans-photos'])).toBeNull()
+	})
+
 	test('une option inconnue, répétée ou sans sa valeur n’est pas comprise', () => {
 		for (const ligne of [['--prod'], ['--reel', '--reel'], ['--rapport'], ['--rapport', '--reel'], ['reel']])
 			expect(lireLesArguments(ligne), ligne.join(' ')).toBeNull()

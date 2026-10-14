@@ -17,6 +17,8 @@ export interface ArgumentsDImport {
 	communes?: string
 	/** Never ask the referential: every answer must be kept already. */
 	horsLigne?: true
+	/** Give the run no storage of the photos: none is probed, none adopted, each one is listed « sans-stockage ». */
+	sansPhotos?: true
 	/** Where to write the private list of review of the cities (./communes.ts). */
 	revue?: string
 	/** The date of the switch, as written on the command line: the consent date of the contact details shown today (ticket 064). */
@@ -38,7 +40,7 @@ const AVEC_FICHIER = {
 export const USAGE = [
 	'Usage : bun scripts/migration/import.ts [--reel] [--cible-distante] [--decisions <fichier.json>] [--rapport <fichier.json>]',
 	'                                        [--communes <fichier.json>] [--hors-ligne] [--revue <fichier.json>]',
-	'                                        [--consentement-le <date>]',
+	'                                        [--consentement-le <date>] [--sans-photos]',
 	'  sans option     à blanc : lit la source et la cible, dit ce qu’il écrirait, n’écrit rien',
 	'  --reel          écrit dans la base de DATABASE_URI, puis relit la cible pour prouver la parité',
 	`  ${DRAPEAU_CIBLE_DISTANTE} accepte une base qui n’est pas sur ce poste`,
@@ -47,6 +49,7 @@ export const USAGE = [
 	`  --communes      les réponses gardées du référentiel des communes (par défaut : ${FICHIER_DES_COMMUNES_PAR_DEFAUT})`,
 	'  --hors-ligne    ne demande rien au référentiel des communes : chaque réponse doit déjà être gardée',
 	'  --consentement-le  la date de bascule (2026-11-02, ou avec heure et fuseau) : date du consentement des profils qui affichent déjà leurs coordonnées. Obligatoire dès qu’un profil en affiche',
+	'  --sans-photos   ne lit aucun stockage : aucune photo n’est sondée ni adoptée, chacune est listée « sans-stockage » (répétition sans réseau)',
 	'  --revue         écrit la liste de revue privée des villes à revoir dans ce fichier',
 ].join('\n')
 
@@ -61,6 +64,7 @@ export function lireLesArguments(argumentsDeLaCommande: readonly string[]): Argu
 		if (option === '--reel') lus.mode = 'reel'
 		else if (option === DRAPEAU_CIBLE_DISTANTE) lus.cibleDistante = true
 		else if (option === '--hors-ligne') lus.horsLigne = true
+		else if (option === '--sans-photos') lus.sansPhotos = true
 		else if (Object.hasOwn(AVEC_FICHIER, option)) {
 			const fichier = argumentsDeLaCommande[++rang]
 			if (!fichier || fichier.startsWith('--')) return null
