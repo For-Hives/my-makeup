@@ -54,7 +54,7 @@ Le reste :
 - `Dockerfile` et `.dockerignore` : l'image de production (voir « Image Docker »).
 - `.github/workflows/ci.yml` et `ci/checks-requis.json` : la CI et les checks requis (voir « Intégration continue »).
 - `.env.exemple` : la liste des variables d'environnement, sans aucune valeur.
-- `tests/` : les tests. Un composant React s'y teste seul, sans navigateur : voir `docs/tests/composants.md`.
+- `tests/` : les tests. Un composant React s'y teste seul, sans navigateur : voir `docs/tests/composants.md`. Un service extérieur s'y simule, et aucun test n'appelle Internet : voir `docs/tests/http-sortant.md`.
 - `compose.test.yml` et `.env.test` : le banc de test local et son environnement factice, voir « Le banc de test ».
 
 Les versions sont figées dans `package.json`, et `bun.lock` est le seul fichier de verrouillage.
@@ -392,6 +392,22 @@ bun run banc:down                                              # arrête tout et
 - Un test obtient un compte fictif et sa session en un appel, sans mot de passe à saisir : `await creerCompte('admin')`.
 
 Le détail est dans [`docs/tests/banc.md`](docs/tests/banc.md) : les services et leurs adresses, les deux variables d'instance, l'écriture d'un test d'intégration, la remise à zéro, la fabrique de comptes, les images épinglées.
+
+### Le HTTP sortant
+
+Aucun test n'appelle Internet. `bun test`, lancé depuis la racine du dépôt, charge `tests/outils/precharge-http-sortant.ts` avant tout fichier de test (`bunfig.toml`, section `[test]`) : dès lors, aucune requête HTTP ne quitte le poste.
+
+- Un service extérieur se simule en une déclaration, dans le test :
+
+  ```ts
+  simuler(http.get('https://referentiel.example.test/communes', () => HttpResponse.json([{ nom: 'Annecy', code: '74010' }])))
+  ```
+
+- Une requête vers un hôte que rien ne déclare est refusée, et le test échoue avec un message qui nomme l'hôte, même si le code testé attrape l'erreur.
+- Les services du banc de test ne sont pas interceptés : ce poste, et les services de `compose.test.yml`.
+- Le code appelle un service extérieur par `fetch` : sous bun, c'est la seule sortie qui se simule.
+
+Le détail est dans [`docs/tests/http-sortant.md`](docs/tests/http-sortant.md) : les gestes (panne, réseau coupé, service muet), ce qui passe, les deux couches et leurs limites.
 
 ## Licence
 

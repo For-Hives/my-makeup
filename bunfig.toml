@@ -2,12 +2,18 @@
 [install]
 exact = true
 
-# Every `bun test` loads two files before any test file, in this order (bun reads this file from
+# Every `bun test` loads three files before any test file, in this order (bun reads this file from
 # the folder it is started in: the repository root).
 # 1. The guard: it stops the run when the environment could reach anything else than the local
 #    test bench (tests/outils/garde-environnement.ts). First, so that nothing is loaded after a refusal.
 # 2. Inside a jsdom window given back at once, the libraries that look for a browser while they
 #    load (tests/outils/precharge-react-dom.ts): a React component is then tested the same way
 #    whatever the order of the files.
+# 3. The interception of outgoing HTTP (tests/outils/precharge-http-sortant.ts): a service outside
+#    this machine is simulated by the test, or the test fails. No test calls the Internet.
 [test]
-preload = ["./tests/outils/garde-environnement.ts", "./tests/outils/precharge-react-dom.ts"]
+preload = [
+	"./tests/outils/garde-environnement.ts",
+	"./tests/outils/precharge-react-dom.ts",
+	"./tests/outils/precharge-http-sortant.ts",
+]

@@ -35,6 +35,13 @@ const HOTES_LOCAUX = ['localhost', '127.0.0.1', '::1']
 /** The services of the test stack, as named from inside its own container network. */
 const SERVICES_DU_BANC = { base: 'postgres', mails: 'mailpit', stockage: 's3mock' } as const
 
+/**
+ * Every host the bench answers on: this machine, and the services of the test stack under their
+ * names. The outgoing HTTP bench lets a request to one of them through, and refuses any other
+ * host (tests/outils/http-sortant.ts).
+ */
+export const HOTES_DU_BANC: readonly string[] = [...HOTES_LOCAUX, ...Object.values(SERVICES_DU_BANC)]
+
 const DOMAINE_DU_SITE = 'my-makeup.fr'
 const HOTE_PREPROD = `preprod.${DOMAINE_DU_SITE}`
 
