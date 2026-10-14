@@ -63,6 +63,10 @@ bun run migration:import --reel --rapport r.json  # écrit aussi le rapport en J
 | 5 | Des documents sont refusés, avant l'écriture ou par Payload : listés par identifiant et par champ, ils attendent une décision. En réel, la parité est incomplète d'autant |
 | 6 | Arrêté en cours de passage par une erreur de la base ou une erreur inattendue, nommée par son type et son code. Ce qui était écrit reste écrit ; un nouveau passage reprend à partir de là |
 
+### Dans la préprod
+
+La préprod lance l'import elle-même, au démarrage, sur une base vide : elle pose la fausse base Strapi du banc à côté de sa base, puis l'importe en réel, avec la table de décision du banc ([`docs/preprod.md`](../preprod.md), ticket 027). L'import tourne alors dans le processus de l'application, sous Node : il lit la source par le client PostgreSQL de Payload (`scripts/migration/import/source-pg.ts`), en lecture seule comme avec bun. Son rapport, en nombres seulement, est écrit dans le journal de démarrage. Aucune vraie base Strapi n'est lue : `STRAPI_SOURCE_URI` ne sert pas là.
+
 ## La table de décision
 
 Un fichier JSON, donné par `--decisions`. Pour les vraies données, il vit hors du dépôt, comme les listes privées qu'il tranche (ticket 066). Il nomme les comptes par leur identifiant dans l'ancienne base, jamais par leur email :
@@ -106,4 +110,5 @@ L'import suit la source : chaque passage remet dans la cible ce que l'ancien sit
 - `tests/unit/import-comptes.test.ts` et `tests/integration/import-comptes.test.ts` : un compte repris champ par champ, les hash copiés et vérifiés, une erreur de la base qui n'en dit rien, un compte refusé que la parité compte, l'arrêt sur les emails partagés et la table de décision, le second passage, et chaque écart lu contre sa règle.
 - `tests/unit/import-profils.test.ts` et `tests/integration/import-profils.test.ts` : un profil relié à son compte, son slug, la règle provisoire du statut, l'arrêt sur le profil d'un compte écarté, le second passage, et la lecture publique qui le donne.
 - `tests/e2e/tranche-profil-importe.spec.ts` : la première tranche de bout en bout, en un seul essai. La fausse base Strapi, l'import lancé comme une personne le lance, en production comme l'application, puis la page publique du profil fictif 21 dans l'application construite : 200, son nom dans le seul h1 du HTML du serveur, aucune coordonnée ni aucun champ réservé ; un slug inconnu en 404 ; un second import qui n'écrit rien. Ce que répond la page d'un brouillon (aujourd'hui 404, demain 200 en noindex) est au ticket 104.
+- `tests/integration/preprod-demarrage.test.ts` : l'import de démarrage de la préprod, sur le banc, et le lecteur `pg` de la source, qui donne le même rapport que celui de bun ([`docs/preprod.md`](../preprod.md)).
 - Dans un test d'intégration, `importerSurLeBanc()` lance un passage dans le processus du test, et `commandeDImport([...])` lance la commande (`tests/outils/import.ts`).
