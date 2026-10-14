@@ -18,14 +18,14 @@ Comment lire les tableaux des §5 et §6 :
 - **Une ligne par attribut de Strapi**, dans l'ordre du fichier de schéma. Le nombre de lignes est contrôlé (§10).
 - **Champ Payload** s'écrit `collection.champ`. Le type de champ de Payload est entre parenthèses.
 - **Repris tel quel** : la même valeur, à l'octet près.
-- **Transformé** : la règle est écrite ici et inscrite au registre des changements voulus (`docs/migration/CHANGEMENTS-VOULUS.md`, ticket 017).
+- **Transformé** : la règle est écrite ici. Quand elle vient du plan `01` §6.2 ou change ce que montre une page, elle est aussi inscrite au registre des changements voulus (`docs/migration/CHANGEMENTS-VOULUS.md`, ticket 017). Deux transformations ne changent aucune page et n'y sont pas : l'email du compte, mis en minuscules (§5.1), et la taille d'un fichier, relue en octets (§8).
 - **Abandonné** : le champ n'est pas repris, la raison est donnée. La colonne « Champ Payload » porte alors un tiret.
 
 Ce document est gelé : un ticket qui crée une collection reprend ces noms. S'il doit s'en écarter, il modifie ce document dans le même changement, ajoute une ligne datée au §12, et le contrôle du §10 reste vert.
 
 ## 2. Règles transverses
 
-1. **`strapiId`, jamais `id`.** L'identifiant de Strapi est rangé dans un champ numérique `strapiId`, sur `pros`, `profils`, `articles`, `talents` et `media`. Payload garde ses propres identifiants. Un champ nommé `id` n'est stocké à aucun niveau par Payload 3.90.2 (`@payloadcms/drizzle/dist/schema/traverseFields.js`, ligne 32) : il serait perdu sans erreur. `strapiId` est unique dans sa collection, posé par l'import seulement, jamais modifiable par l'API, absent des lectures publiques. Il est vide pour un document créé dans la v3. L'import retrouve un document par son `strapiId` : un second passage ne crée rien.
+1. **`strapiId`, jamais `id`.** L'identifiant de Strapi est rangé dans un champ numérique `strapiId`, sur `pros`, `profils`, `articles`, `talents` et `media`. Payload garde ses propres identifiants. Dans Payload 3.90.2, un champ nommé `id` n'est pas un champ ordinaire : au premier niveau d'une collection, il devient la clé primaire (`@payloadcms/drizzle/dist/postgres/schema/setColumnID.js`) ; dans une liste, c'est l'identifiant de la ligne (`payload/dist/fields/baseFields/baseIDField.js`). Il ne peut donc pas porter l'identifiant de Strapi à côté de celui de Payload. `strapiId` est unique dans sa collection, posé par l'import seulement, jamais modifiable par l'API, absent des lectures publiques. Il est vide pour un document créé dans la v3. L'import retrouve un document par son `strapiId` : un second passage ne crée rien.
 2. **Nul reste nul.** Une valeur absente à la source reste absente dans Payload. L'import ne la remplace ni par une chaîne vide, ni par zéro, ni par faux. La seule exception est `available` (§5.2).
 3. **Les dates d'origine sont gardées.** `created_at` devient `createdAt`, `updated_at` devient `updatedAt`, `published_at` devient l'état publié et `publishedAt` (§7). Ces dates sont des données : l'ancien site affiche `updatedAt` sur les articles et dans le `lastmod` du sitemap, et trie le blog par date de publication. Payload 3.90.2 garde un `createdAt` et un `updatedAt` fournis à la création, mais remplace `updatedAt` par l'heure courante à chaque mise à jour (`payload/dist/collections/operations/utilities/update.js`, lignes 310-311). Une mise à jour faite par l'import après la création ferait donc perdre la date d'origine.
 4. **Aucun hash dans un fichier.** Le hash bcrypt d'un mot de passe est copié de la base de Strapi à la base de Payload. Il ne passe que par la mémoire du script. Il n'est jamais écrit dans un fichier, un instantané, un journal, un rapport, une fixture ni ce dépôt. Les jetons de réinitialisation et de confirmation ne sont jamais lus.
@@ -42,7 +42,7 @@ Ce document est gelé : un ticket qui crée une collection reprend ces noms. S'i
 | Donnée | Plan `01` (dump du 08/10/2026, périmé) | Instantané du 13/10/2026 | Attendu dans Payload |
 |---|---|---|---|
 | Comptes (`up_users`) | 114 | 91 | 91, moins les comptes écartés par la table de décision des emails en double (§5.1) |
-| Profils (`makeup_artistes`) | 100 | 101 | 88 : les 101, moins les 13 profils écartés (§4.1) |
+| Profils (`makeup_artistes`) | 100 | 101 | 88 au plus : les 101, moins les 13 profils écartés (§4.1), moins les profils dont le compte est écarté par la table de décision des emails en double (§5.1, §11) |
 | Articles (`articles`) | 6 | 10 | 10 |
 | Talents (`talents`) | 14 | 14 | 14 |
 | Fichiers (`files`) | 574, dont 325 non référencés | 574, dont 325 non référencés | 248 au plus : les 249 fichiers référencés, moins 1 qui n'est pas une image (§8) |
@@ -127,17 +127,19 @@ Table `up_users`, 91 lignes. Collection d'authentification des maquilleuses (pla
 | `username` | `string`, 3 caractères au moins, unique, requis | `pros.nom` (`text`) | Repris tel quel. Nom d'affichage, non unique dans Payload : 2 noms sont portés chacun par 2 comptes. Le slug du profil vient du `username` du profil (§5.2), pas de celui-ci. |
 | `email` | `email`, 6 caractères au moins, requis | `pros.email` (identifiant de connexion, unique) | Transformé : espaces de bord retirés, minuscules. Jamais écrit dans un rapport. Une adresse est portée par 4 comptes : tant que la table de décision n'existe pas, l'import s'arrête (tickets 025 et 066). |
 | `provider` | `string` | `pros.legacyProvider` (`text`) | Repris tel quel : `local`, `google` ou `facebook`. |
-| `password` | `password`, privé | `pros.legacyBcrypt` (`text`, caché, ni lu ni modifié par l'API) | Seul un hash bcrypt complet est copié, de base à base (règle 4) ; toute autre valeur donne nul. 43 hash attendus. Le mot de passe Payload du compte repris est tiré au hasard. Le hash hérité est effacé à la première connexion réussie (ticket 087). |
+| `password` | `password`, privé | `pros.legacyBcrypt` (`text`, caché, ni lu ni modifié par l'API) | Seul un hash bcrypt complet est copié, de base à base (règle 4) ; toute autre valeur donne nul. 43 hash attendus au plus : un compte écarté par la table de décision des emails en double (ligne `email`) n'apporte pas le sien. Le mot de passe Payload du compte repris est tiré au hasard. Le hash hérité est effacé à la première connexion réussie (ticket 087). |
 | `resetPasswordToken` | `string`, privé | — | Abandonné : jeton à usage unique de Strapi, sans valeur dans Payload. Jamais lu. Une réinitialisation en cours à la bascule est à redemander. |
 | `confirmationToken` | `string`, privé | — | Abandonné : jeton à usage unique, et la confirmation d'email est coupée dans Strapi. Jamais lu. |
-| `confirmed` | `boolean`, faux par défaut | `pros._verified` (champ d'authentification de Payload) | Vrai pour tout compte repris (plan `01` §2.4, M1). À la source : 91 vrai sur 91. Une ligne qui ne serait pas à vrai est signalée au rapport, par identifiant. |
+| `confirmed` | `boolean`, faux par défaut | `pros._verified` (champ d'authentification de Payload) | Vrai pour tout compte repris (plan `01` §2.4, M1). À la source : 91 vrai sur 91. Une ligne qui ne serait pas à vrai est signalée au rapport, par identifiant. Payload 3.90.2 ne crée ce champ que si `auth.verify` est activé sur la collection `pros` : il l'est donc dans le schéma lui-même, en permanence (tickets 019 et 082). Un interrupteur d'environnement qui retirerait `auth.verify` retirerait le champ avec lui. |
 | `blocked` | `boolean`, faux par défaut | `pros.bloque` (`checkbox`) | Repris tel quel : 0 vrai, 91 faux. |
 | `role` | `relation` plusieurs-à-un vers `plugin::users-permissions.role` | — | Abandonné : dans Payload, le rôle d'une maquilleuse est sa collection. Les rôles et permissions de Strapi ne sont pas repris. |
 | `makeup_artiste` | `relation` un-à-un, côté inverse de `user` | `profils.pro` (porté par le profil) | Aucun champ sur `pros` : le lien est repris une seule fois, depuis l'attribut `user` du profil (§5.2). Un compte sans profil reste sans profil (ticket 025). |
 
+Dans la table `up_users`, chaque colonne porte le nom de son attribut, sauf deux : `reset_password_token` (attribut `resetPasswordToken`) et `confirmation_token` (attribut `confirmationToken`). `role` et `makeup_artiste` n'ont pas de colonne : ce sont des tables de liens (§7).
+
 ### 5.2 Profil : `api::makeup-artiste.makeup-artiste` → `profils`
 
-Table `makeup_artistes`, 101 lignes, sans brouillon dans Strapi : 88 profils à reprendre, 13 écartés (§4.1).
+Table `makeup_artistes`, 101 lignes, sans brouillon dans Strapi : 88 profils à reprendre au plus (§3), 13 écartés (§4.1).
 
 | Attribut Strapi | Type Strapi | Champ Payload | Règle |
 |---|---|---|---|
@@ -285,14 +287,16 @@ Ces colonnes ne sont pas des attributs des schémas : Strapi les ajoute à chaqu
 
 Les dates de Strapi sont des `timestamp without time zone`. Elles sont lues comme l'ancienne API les rend, en UTC ; le contrôle de parité les compare à celles de l'API publique.
 
-| Table de liens | Lignes au 13/10/2026 | Sert à |
-|---|---|---|
-| `makeup_artistes_user_links` | 88 | `profils.pro` |
-| `makeup_artistes_components` | 585 | Rattacher chaque ligne de composant à son profil et à son champ, dans l'ordre (`order`) |
-| `components_makeupartists_service_offers_components` | 23 | Rattacher chaque option à sa prestation, dans l'ordre |
-| `files_related_morphs` | 256 | `profils.photoPrincipale`, `profils.galerie`, `articles.galerie`, dans l'ordre ; 7 lignes visent une entrée disparue et sont ignorées |
-| `up_users_role_links` | 91 | Non reprise (§5.1, `role`) |
-| `files_folder_links` | 574 | Non reprise (§8, `folder_path`) |
+| Table de liens | Lignes au 13/10/2026 | Colonnes | Sert à |
+|---|---|---|---|
+| `makeup_artistes_user_links` | 88 | `id`, `makeup_artiste_id`, `user_id` | `profils.pro` |
+| `makeup_artistes_components` | 585 | `id`, `entity_id`, `component_id`, `component_type`, `field`, `order` | Rattacher chaque ligne de composant (`component_id`, dans la table du composant que nomme `component_type`) à son profil (`entity_id`) et à son champ (`field`), dans l'ordre (`order`) |
+| `components_makeupartists_service_offers_components` | 23 | `id`, `entity_id`, `component_id`, `component_type`, `field`, `order` | Rattacher chaque option (`component_id`) à sa prestation (`entity_id`), dans l'ordre (`order`) |
+| `files_related_morphs` | 256 | `id`, `file_id`, `related_id`, `related_type`, `field`, `order` | `profils.photoPrincipale`, `profils.galerie`, `articles.galerie`, dans l'ordre (`order`) : le fichier `file_id` est désigné par l'entrée `related_id` du type `related_type`, dans son champ `field` ; 7 lignes visent une entrée disparue et sont ignorées |
+| `up_users_role_links` | 91 | `id`, `user_id`, `role_id`, `user_order` | Non reprise (§5.1, `role`) |
+| `files_folder_links` | 574 | `id`, `file_id`, `folder_id`, `file_order` | Non reprise (§8, `folder_path`) |
+
+Les colonnes sont celles de l'instantané du 13/10/2026 : des noms, jamais une valeur.
 
 L'import part des liens, pas des tables de composants. Les 6 composants de premier niveau comptent 588 lignes pour 585 liens : une ligne de composant sans lien n'appartient à aucun profil et n'est pas reprise ; un lien sans ligne est signalé.
 
@@ -363,6 +367,9 @@ Le test `tests/unit/doc-schema-gele.test.ts` relit ce document et échoue si :
 - une ligne n'a ni champ cible, ni abandon motivé ;
 - un nombre du tableau ci-dessus ne correspond pas aux tableaux des §5 et §6 ;
 - la liste des 13 profils écartés ou les décomptes du 13/10/2026 changent ;
+- une règle « Transformé » n'est ni au registre des changements voulus, ni l'une des deux exceptions du §1 ;
+- les colonnes d'une table de liens du §7 changent ;
+- ce que le document dit de Payload (règle 1, `pros._verified`) n'est plus vrai sur la version installée ;
 - le document contient un hash, une adresse email ou un numéro de téléphone.
 
 ```sh
@@ -383,6 +390,7 @@ Chaque point a un défaut, écrit dans ce document. Sans décision contraire, c'
 |---|---|---|
 | Badge « Super maquilleuse » (`pro`, 1 profil) : repris ou abandonné ? | Repris dans `profils.superMaquilleuse`, pour ne rien perdre et garder la parité de la recherche | Question ouverte 14 des tickets de la v3 |
 | Email porté par 4 comptes | L'import s'arrête sans table de décision | Tickets 025 et 066 ; question ouverte 3 |
+| Profil dont le compte est écarté par cette table de décision | L'import s'arrête et liste le profil par identifiant | Ticket 066 |
 | Texte de ville qui n'est pas une commune | Zone vide, profil à revoir | Ticket 066 ; question ouverte 13 |
 | Rayon au-dessus de 200 km, galerie de plus de 10 photos, valeur plus longue que la limite cible | Comptés et listés, jamais tronqués | Ticket 066 |
 | Fichier référencé qui n'est pas une image, objet manquant | Signalé, non adopté ; « 404 connus » | Ticket 066 |
@@ -395,3 +403,4 @@ Noms fixés par ce document, parce que le plan ne les donnait pas : `profils.leg
 | Date | Changement |
 |---|---|
 | 14/10/2026 | Gel initial (ticket 015) : 71 attributs, schémas de Strapi au commit `ccd449d`, décomptes de l'instantané du 13/10/2026. |
+| 14/10/2026 | Suites de la relecture (ticket 220), sans changer un nom de champ ni une règle de reprise : raison de la règle 1 corrigée ; 88 profils et 43 hash attendus « au plus », et défaut pour un profil dont le compte est écarté (§11) ; portée du mot « Transformé » (§1) ; colonnes des tables de liens (§7) et des deux jetons (§5.1) ; condition d'existence de `pros._verified` (§5.1). |
