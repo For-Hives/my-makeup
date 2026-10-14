@@ -15,6 +15,8 @@
  *   (exactly both), `tous` (every document of the cast).
  * - `lire`, `creer`, `supprimer`: `autorise` or `refuse`. A refusal is also checked in the
  *   database: nothing was created, the document is still there.
+ * - `lire` with a field (`champ`): `visible` (the document read holds the field, with its stored
+ *   value) or `absent` (the document is read, without the field), or `refuse`.
  * - `modifier`: `autorise` (the new value is stored), `refuse` (refused, nothing changed) or
  *   `ignore` (accepted, but the field kept its value: a field the actor may not write). The value
  *   is put back afterwards, so that a line never changes the cast for the next ones.
@@ -71,6 +73,8 @@ export type Issue =
 	| 'publies'
 	| 'soiEtPublies'
 	| 'tous'
+	| 'visible'
+	| 'absent'
 	| 'incoherent'
 
 export interface Ligne {
@@ -80,8 +84,9 @@ export interface Ligne {
 	/** The document the operation targets, named by the role that owns it (`lire`, `modifier`, `supprimer`). */
 	document?: RoleAvecCompte
 	/**
-	 * `modifier` only: the field to change and the value sent. Without them, the usual field of the
+	 * `modifier`: the field to change and the value sent. Without them, the usual field of the
 	 * collection. `{ compteDe: role }` stands for the account of that role, known once the cast is made.
+	 * `lire`: the field whose presence in the document read the line checks (no value).
 	 */
 	champ?: string
 	valeur?: unknown
@@ -360,7 +365,12 @@ async function lire(voie: Voie, acteur: Acteur, ligne: Ligne, distribution: Dist
 	const id = documentDe(distribution, ligne)
 	const reponse = await demander(voie, acteur, { ...ligne, id })
 	if (!reponse.autorise) return 'refuse'
-	return (reponse.corps as { id?: number }).id === id ? 'autorise' : 'incoherent'
+	const corps = reponse.corps as Record<string, unknown>
+	if (corps.id !== id) return 'incoherent'
+	if (ligne.champ === undefined) return 'autorise'
+	// Payload strips a field its reader may not read; a field it keeps holds the stored value.
+	if (!(ligne.champ in corps)) return 'absent'
+	return egaux(corps[ligne.champ], (await stocke(ligne.collection, id))?.[ligne.champ]) ? 'visible' : 'incoherent'
 }
 
 async function creer(voie: Voie, acteur: Acteur, ligne: Ligne): Promise<Issue> {
@@ -431,7 +441,8 @@ export function jouer(ligne: Ligne, voie: Voie, distribution: Distribution): Pro
 /** The name of a line in the test report: who, what, on which document, what must happen. */
 export function nommer(ligne: Ligne, voie: Voie): string {
 	const document = ligne.document ? ` le document de « ${ligne.document} »` : ''
-	const champ = ligne.champ ? ` (${ligne.champ} = ${JSON.stringify(ligne.valeur)})` : ''
+	const valeur = ligne.operation === 'modifier' ? ` = ${JSON.stringify(ligne.valeur)}` : ''
+	const champ = ligne.champ ? ` (${ligne.champ}${valeur})` : ''
 	const par = voie === 'rest' ? 'REST' : 'API locale'
 	return `${ligne.collection} · ${ligne.role} · ${ligne.operation}${document}${champ} → ${ligne.attendu} · ${par}`
 }

@@ -1,8 +1,40 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { viderLeCapteur } from '../outils/mailpit'
-import { type Distribution, distribuer, jouer, type Ligne, nommer, VOIES } from '../outils/matrice-acces'
+import {
+	type CollectionDeLaMatrice,
+	type Distribution,
+	distribuer,
+	jouer,
+	type Ligne,
+	nommer,
+	ROLES,
+	type Role,
+	VOIES,
+} from '../outils/matrice-acces'
 import { viderLaBase } from '../outils/payload-test'
 import { viderLeStockage } from '../outils/s3'
+
+/** The owner of a document and the role `admin`: who reads the private fields of a profile or a media. */
+const PROPRIETAIRE_ET_ADMIN: readonly Role[] = ['maquilleuse', 'admin']
+
+/**
+ * The field-level reading of A's document, which every role reads (her profile is published, her
+ * photo is its main photo): for each field, the roles that read it; every other role reads the
+ * document without it. One line per field and per role.
+ */
+const lecturesDesChamps = (collection: CollectionDeLaMatrice, lecteurs: [string, readonly Role[]][]): Ligne[] =>
+	lecteurs.flatMap(([champ, quiLit]) =>
+		ROLES.map(
+			(role): Ligne => ({
+				role,
+				collection,
+				operation: 'lire',
+				document: 'maquilleuse',
+				champ,
+				attendu: quiLit.includes(role) ? 'visible' : 'absent',
+			})
+		)
+	)
 
 /**
  * The access matrix (plan 01 §5 P3; docs/tests/banc.md, « La matrice d'accès »).
@@ -247,6 +279,31 @@ const MATRICE: Ligne[] = [
 		attendu: 'refuse',
 	},
 	{ role: 'redaction', collection: 'profils', operation: 'supprimer', document: 'maquilleuse', attendu: 'refuse' },
+	// What each role reads of A's published profile, field by field (tickets 021, 042 and 043).
+	...lecturesDesChamps('profils', [
+		// Public: her networks (042), her photos (043), the badge of the search (021).
+		['reseaux', ROLES],
+		['photoPrincipale', ROLES],
+		['galerie', ROLES],
+		['superMaquilleuse', ROLES],
+		// Her account, what the import wrote, what an admin decided (021, I01).
+		['pro', PROPRIETAIRE_ET_ADMIN],
+		['strapiId', PROPRIETAIRE_ET_ADMIN],
+		['legacyUsername', PROPRIETAIRE_ET_ADMIN],
+		['statut', PROPRIETAIRE_ET_ADMIN],
+		['motif', PROPRIETAIRE_ET_ADMIN],
+		['verifie', PROPRIETAIRE_ET_ADMIN],
+		['verifieLe', PROPRIETAIRE_ET_ADMIN],
+		['siret', PROPRIETAIRE_ET_ADMIN],
+		// For the admin panel only (021).
+		['noteInterne', ['admin']],
+		['score', ['admin']],
+		// Her contact details, her choice to show them and its trace (042, U59, I07).
+		['coordonnees', PROPRIETAIRE_ET_ADMIN],
+		['contactPublic', PROPRIETAIRE_ET_ADMIN],
+		['consentiLe', PROPRIETAIRE_ET_ADMIN],
+		['sourceConsentement', PROPRIETAIRE_ET_ADMIN],
+	]),
 	{ role: 'admin', collection: 'profils', operation: 'lister', attendu: 'tous' },
 	{ role: 'admin', collection: 'profils', operation: 'lire', document: 'maquilleuse', attendu: 'autorise' },
 	{ role: 'admin', collection: 'profils', operation: 'creer', attendu: 'autorise' },
@@ -318,19 +375,30 @@ const MATRICE: Ligne[] = [
 		})
 	),
 	{ role: 'autreMaquilleuse', collection: 'media', operation: 'lister', attendu: 'soi' },
+	{ role: 'autreMaquilleuse', collection: 'media', operation: 'creer', attendu: 'autorise' },
 	{ role: 'autreMaquilleuse', collection: 'media', operation: 'lire', document: 'maquilleuse', attendu: 'autorise' },
 	{ role: 'autreMaquilleuse', collection: 'media', operation: 'modifier', document: 'maquilleuse', attendu: 'refuse' },
 	{ role: 'autreMaquilleuse', collection: 'media', operation: 'supprimer', document: 'maquilleuse', attendu: 'refuse' },
 	{ role: 'sansProfil', collection: 'media', operation: 'lister', attendu: 'aucun' },
 	{ role: 'sansProfil', collection: 'media', operation: 'lire', document: 'maquilleuse', attendu: 'autorise' },
 	{ role: 'sansProfil', collection: 'media', operation: 'lire', document: 'autreMaquilleuse', attendu: 'refuse' },
+	{ role: 'sansProfil', collection: 'media', operation: 'creer', attendu: 'autorise' },
 	{ role: 'sansProfil', collection: 'media', operation: 'modifier', document: 'maquilleuse', attendu: 'refuse' },
+	{ role: 'sansProfil', collection: 'media', operation: 'supprimer', document: 'maquilleuse', attendu: 'refuse' },
 	{ role: 'redaction', collection: 'media', operation: 'lister', attendu: 'refuse' },
 	{ role: 'redaction', collection: 'media', operation: 'lire', document: 'maquilleuse', attendu: 'autorise' },
 	{ role: 'redaction', collection: 'media', operation: 'lire', document: 'autreMaquilleuse', attendu: 'refuse' },
 	{ role: 'redaction', collection: 'media', operation: 'creer', attendu: 'refuse' },
 	{ role: 'redaction', collection: 'media', operation: 'modifier', document: 'maquilleuse', attendu: 'refuse' },
 	{ role: 'redaction', collection: 'media', operation: 'supprimer', document: 'maquilleuse', attendu: 'refuse' },
+	// What each role reads of A's photo, field by field (ticket 043).
+	...lecturesDesChamps('media', [
+		['url', ROLES],
+		['alt', ROLES],
+		['owner', PROPRIETAIRE_ET_ADMIN],
+		['strapiId', ['admin']],
+		['strapiFormats', ['admin']],
+	]),
 	{ role: 'admin', collection: 'media', operation: 'lister', attendu: 'tous' },
 	{ role: 'admin', collection: 'media', operation: 'lire', document: 'autreMaquilleuse', attendu: 'autorise' },
 	{ role: 'admin', collection: 'media', operation: 'creer', attendu: 'autorise' },
