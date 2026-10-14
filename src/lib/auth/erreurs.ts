@@ -9,6 +9,7 @@ import { ERREUR_SESSION_EXPIREE } from './retour'
 export const CODES_ERREUR = [
 	'identifiants-invalides',
 	'email-non-confirme',
+	'compte-bloque',
 	'trop-de-tentatives',
 	'service-indisponible',
 ] as const
@@ -18,6 +19,8 @@ const MESSAGES: Record<CodeErreur, string> = {
 	'identifiants-invalides': 'Email ou mot de passe incorrect.',
 	'email-non-confirme':
 		'Ton adresse email n’est pas encore confirmée. Regarde ta boîte mail (et tes spams) : le lien du mail active ton compte.',
+	// The words of the current site. Said only to someone who gave the right password.
+	'compte-bloque': 'Ce compte est bloqué. Écris-nous depuis la page contact pour en savoir plus.',
 	'trop-de-tentatives': 'Trop d’essais, réessaie dans quelques minutes.',
 	'service-indisponible': 'Le service est momentanément indisponible, réessaie dans quelques minutes.',
 }

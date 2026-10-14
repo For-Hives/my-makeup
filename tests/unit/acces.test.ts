@@ -12,7 +12,7 @@ import {
 	proprietaireALEnvoi,
 	versLAdressePublique,
 } from '@/collections/Media'
-import { CONTEXTE_SANS_PROFIL, consentementTrace, Profils } from '@/collections/Profils'
+import { CONTEXTE_SANS_PROFIL, consentementTrace, Profils, profilALaCreationDuCompte } from '@/collections/Profils'
 import { compteSansProfilAvantSuppression, Pros, premierCompteFerme } from '@/collections/Pros'
 import {
 	ACCES_REDACTION,
@@ -399,7 +399,7 @@ describe('La collection profils (ticket 020)', () => {
 	test('créer et supprimer un profil : admin seulement ; le serveur le crée avec le compte', () => {
 		expect(regles.create).toBe(adminSeulement)
 		expect(regles.delete).toBe(adminSeulement)
-		expect(Pros.hooks?.afterChange?.length).toBe(1)
+		expect(Pros.hooks?.afterChange).toContain(profilALaCreationDuCompte)
 		expect(CONTEXTE_SANS_PROFIL).toEqual({ profilAutomatique: false })
 	})
 

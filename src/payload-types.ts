@@ -532,13 +532,14 @@ export interface Article {
  */
 export interface AuthEvenement {
   id: number;
-  type: 'connexion' | 'deconnexion' | 'deconnexion-partout' | 'inscription' | 'confirmation';
+  type: 'connexion' | 'deconnexion' | 'deconnexion-partout' | 'inscription' | 'confirmation' | 'blocage' | 'deblocage';
   code:
     | 'ok'
     | 'identifiants-invalides'
     | 'trop-de-tentatives'
     | 'service-indisponible'
     | 'email-non-confirme'
+    | 'compte-bloque'
     | 'donnees-invalides'
     | 'email-deja-pris'
     | 'deja-confirme'

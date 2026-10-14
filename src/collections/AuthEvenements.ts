@@ -9,6 +9,8 @@ const LIBELLES_DES_TYPES: Record<(typeof TYPES_EVENEMENT)[number], string> = {
 	'deconnexion-partout': 'Déconnexion de tous les appareils',
 	inscription: 'Inscription',
 	confirmation: 'Confirmation de l’email',
+	blocage: 'Compte bloqué par un admin',
+	deblocage: 'Compte débloqué par un admin',
 }
 
 const LIBELLES_DES_CODES: Record<(typeof CODES_EVENEMENT)[number], string> = {
@@ -17,6 +19,7 @@ const LIBELLES_DES_CODES: Record<(typeof CODES_EVENEMENT)[number], string> = {
 	'trop-de-tentatives': 'Trop de tentatives',
 	'service-indisponible': 'Service indisponible',
 	'email-non-confirme': 'Email non confirmé',
+	'compte-bloque': 'Compte bloqué',
 	'donnees-invalides': 'Données invalides',
 	'email-deja-pris': 'Email déjà pris',
 	'deja-confirme': 'Déjà confirmé',
