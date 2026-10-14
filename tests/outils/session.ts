@@ -8,18 +8,9 @@
  * opens one: `ouvrirSessionSansMotDePasse`.
  */
 
-import {
-	type AuthCollectionSlug,
-	createLocalReq,
-	generatePayloadCookie,
-	getFieldsToSign,
-	jwtSign,
-	type Payload,
-	type TypedUser,
-} from 'payload'
-import { addSessionToUser } from 'payload/shared'
+import { type AuthCollectionSlug, generatePayloadCookie, type Payload } from 'payload'
 import { finDeVieDuCookie } from '../../src/lib/auth/etat-session'
-import { ouvrirParMotDePasse } from '../../src/lib/auth/jeton'
+import { type CompteDesigne, ouvrirParMotDePasse, ouvrirSansMotDePasse } from '../../src/lib/auth/jeton'
 import { BancRefuse, type Variables } from './banc'
 
 /** A cookie as a browser context takes it: the shape of Playwright's `context.addCookies()`. */
@@ -46,6 +37,8 @@ export interface Session {
 	/** When the session ends. */
 	expire: Date
 }
+
+export type { CompteDesigne }
 
 export interface Identifiants {
 	collection: AuthCollectionSlug
@@ -84,12 +77,6 @@ export interface OptionsDeSession {
 	dureeS?: number
 }
 
-/** An account designated by its collection and its identifier. */
-export interface CompteDesigne {
-	collection: AuthCollectionSlug
-	id: number | string
-}
-
 /**
  * Opens a session for an account without its password: the steps Payload takes once a password
  * is accepted, which a login by Google takes once Google has vouched for the address (plan 01
@@ -106,17 +93,7 @@ export async function ouvrirSessionSansMotDePasse(
 	options: OptionsDeSession = {}
 ): Promise<Session> {
 	const origine = origineDuSite(payload, variables)
-	const collectionConfig = payload.collections[collection].config
-	const req = await createLocalReq({}, payload)
-	const compte = await payload.db.findOne<TypedUser>({ collection, req, where: { id: { equals: id } } })
-	if (!compte) throw new Error(`Aucun compte « ${collection} » ne porte l’identifiant ${id}.`)
-	const user = { ...compte, collection } as TypedUser
-	const { sid } = await addSessionToUser({ collectionConfig, payload, req, user })
-	const { exp, token } = await jwtSign({
-		fieldsToSign: getFieldsToSign({ collectionConfig, email: String(compte.email), sid, user }),
-		secret: payload.secret,
-		tokenExpiration: options.dureeS ?? collectionConfig.auth.tokenExpiration,
-	})
+	const { exp, token } = await ouvrirSansMotDePasse(payload, { collection, id }, options.dureeS)
 	return sessionDuJeton(payload, collection, { exp, token }, origine)
 }
 

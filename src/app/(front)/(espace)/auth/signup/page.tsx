@@ -1,7 +1,9 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { BoutonGoogle } from '@/components/auth/BoutonGoogle'
 import { FormulaireDInscription } from '@/components/auth/FormulaireDInscription'
+import { googleEstActif } from '@/lib/auth/google/config'
 import { ESPACE_PAR_DEFAUT } from '@/lib/auth/retour'
 import { maquilleuseConnectee } from '@/lib/auth/session'
 import { sInscrire } from './actions'
@@ -21,6 +23,7 @@ export default async function PageDInscription() {
 	return (
 		<main className="flex min-h-dvh flex-col items-center justify-center gap-6 p-6 text-center">
 			<h1 className="font-semibold text-3xl">S’inscrire</h1>
+			{googleEstActif() ? <BoutonGoogle libelle="S’inscrire avec Google" /> : null}
 			<FormulaireDInscription action={sInscrire} />
 			<p>
 				Déjà un compte ?{' '}

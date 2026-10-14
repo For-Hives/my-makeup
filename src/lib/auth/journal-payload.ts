@@ -53,7 +53,12 @@ export const retenirLaDerniereConnexion: CollectionAfterLoginHook = async ({ req
 /** A REST sign-in that succeeded: one row. */
 export const noterLaConnexionRest: CollectionAfterLoginHook = async ({ req, user }) => {
 	if (estLaConnexionRest(req))
-		await journaliser(req.payload, { type: 'connexion', code: 'ok', dureeMs: dureeDepuis(req.context) })
+		await journaliser(req.payload, {
+			type: 'connexion',
+			code: 'ok',
+			dureeMs: dureeDepuis(req.context),
+			methode: 'mot-de-passe',
+		})
 	return user
 }
 
@@ -67,5 +72,10 @@ export const noterLEchecDeConnexionRest: CollectionAfterErrorHook = async ({ err
 		}
 	})()
 	if (req.method !== 'POST' || !chemin.endsWith('/pros/login')) return
-	await journaliser(req.payload, { type: 'connexion', code: codeDeLEchec(error), dureeMs: dureeDepuis(req.context) })
+	await journaliser(req.payload, {
+		type: 'connexion',
+		code: codeDeLEchec(error),
+		dureeMs: dureeDepuis(req.context),
+		methode: 'mot-de-passe',
+	})
 }

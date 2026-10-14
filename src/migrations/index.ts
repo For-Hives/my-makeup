@@ -6,6 +6,7 @@ import * as migration_20261014_190215_auth_journal_et_derniere_connexion from '.
 import * as migration_20261014_202841_auth_blocage from './20261014_202841_auth_blocage'
 import * as migration_20261014_202952_auth_evenements_heritee from './20261014_202952_auth_evenements_heritee'
 import * as migration_20261014_203454_auth_oubli_journal from './20261014_203454_auth_oubli_journal'
+import * as migration_20261014_203529_google_methode_du_journal from './20261014_203529_google_methode_du_journal'
 import * as migration_20261014_203606_inscription_antispam from './20261014_203606_inscription_antispam'
 
 export const migrations = [
@@ -48,6 +49,11 @@ export const migrations = [
 		up: migration_20261014_203454_auth_oubli_journal.up,
 		down: migration_20261014_203454_auth_oubli_journal.down,
 		name: '20261014_203454_auth_oubli_journal',
+	},
+	{
+		up: migration_20261014_203529_google_methode_du_journal.up,
+		down: migration_20261014_203529_google_methode_du_journal.down,
+		name: '20261014_203529_google_methode_du_journal',
 	},
 	{
 		up: migration_20261014_203606_inscription_antispam.up,

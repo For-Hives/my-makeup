@@ -184,7 +184,7 @@ export interface Pro {
   bloque?: boolean | null;
   derniereConnexion?: string | null;
   /**
-   * Comment le compte se connectait sur l’ancien site : local, google ou facebook.
+   * Comment le compte se connectait sur l’ancien site : local, google ou facebook. « google » aussi pour un compte créé par la connexion Google, qui ne s’ouvre que pour ceux-là.
    */
   legacyProvider?: string | null;
   strapiId?: number | null;
@@ -555,6 +555,12 @@ export interface AuthEvenement {
     | 'lien-invalide'
     | 'inconnu'
     | 'champ-piege';
+    | 'email-non-verifie'
+    | 'compte-refuse'
+    | 'annule'
+    | 'retour-invalide'
+    | 'inconnu';
+  methode?: ('mot-de-passe' | 'google') | null;
   dureeMs?: number | null;
   date: string;
 }
@@ -939,6 +945,7 @@ export interface ArticlesSelect<T extends boolean = true> {
 export interface AuthEvenementsSelect<T extends boolean = true> {
   type?: T;
   code?: T;
+  methode?: T;
   dureeMs?: T;
   date?: T;
 }

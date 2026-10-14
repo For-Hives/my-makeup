@@ -86,7 +86,7 @@ export async function inscrire({
 	const debut = Date.now()
 	const noter = async (code: CodeEvenement) => {
 		try {
-			await journal?.({ type: 'inscription', code, dureeMs: Date.now() - debut })
+			await journal?.({ type: 'inscription', code, dureeMs: Date.now() - debut, methode: 'mot-de-passe' })
 		} catch {
 			// The journal is not the sign-up's to fail.
 		}

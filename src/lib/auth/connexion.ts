@@ -79,7 +79,7 @@ export async function connecter(entrees: EntreesDeConnexion): Promise<ResultatCo
 async function noterLaTentative(journal: Journaliser | undefined, code: CodeEvenement, dureeMs: number): Promise<void> {
 	if (!journal) return
 	try {
-		await journal({ type: 'connexion', code, dureeMs })
+		await journal({ type: 'connexion', code, dureeMs, methode: 'mot-de-passe' })
 	} catch {
 		// `journaliser` never throws; a double might. The sign-in is not the journal's to fail.
 	}

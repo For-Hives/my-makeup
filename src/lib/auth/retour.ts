@@ -8,7 +8,7 @@ export const ESPACE_PAR_DEFAUT = '/auth/profil'
 export const PAGE_DE_CONNEXION = '/auth/signin'
 
 /** Pages and routes a sign-in must not send back to: they would loop, or are not pages. */
-const PAGES_SANS_RETOUR = ['/auth/signin', '/auth/signup', '/auth/error', '/api/']
+const PAGES_SANS_RETOUR = ['/auth/signin', '/auth/signup', '/auth/error', '/auth/google', '/api/']
 
 /**
  * The page to come back to after signing in: the requested one when it is on this site, the

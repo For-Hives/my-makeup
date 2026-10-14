@@ -46,10 +46,21 @@ export const CODES_EVENEMENT = [
 	'email-deja-pris',
 	'deja-confirme',
 	'lien-invalide',
+	'email-non-verifie',
+	'compte-refuse',
+	'annule',
+	'retour-invalide',
 	'inconnu',
 	'champ-piege',
 ] as const
 export type CodeEvenement = (typeof CODES_EVENEMENT)[number]
+
+/**
+ * How the person proved who she is (ticket 090). Older rows have none. Closed list, like the others:
+ * a value outside it is not written.
+ */
+export const METHODES_EVENEMENT = ['mot-de-passe', 'google'] as const
+export type MethodeEvenement = (typeof METHODES_EVENEMENT)[number]
 
 /** How long a row is kept, in days (plan 01 §2.3). */
 export const CONSERVATION_JOURNAL_JOURS = 90
@@ -61,12 +72,17 @@ export interface EvenementAuth {
 	code: CodeEvenement
 	/** How long the event took, in milliseconds. */
 	dureeMs?: number
+	/** How she signed in or up. Left out for the events that have no such thing (sign-out, confirmation). */
+	methode?: MethodeEvenement
 }
 
 /** The one door the code writes the journal through: a test hands it a double. */
 export type Journaliser = (evenement: EvenementAuth) => Promise<void>
 
 const estCode = (valeur: unknown): valeur is CodeEvenement => (CODES_EVENEMENT as readonly unknown[]).includes(valeur)
+
+const estMethode = (valeur: unknown): valeur is MethodeEvenement =>
+	(METHODES_EVENEMENT as readonly unknown[]).includes(valeur)
 
 /**
  * The row to write: a code outside the list becomes `inconnu`, the duration is a whole number of
@@ -79,6 +95,7 @@ export function ligneDeJournal(evenement: EvenementAuth, maintenant: Date = new 
 		type: evenement.type,
 		code: estCode(evenement.code) ? evenement.code : ('inconnu' as const),
 		...(typeof duree === 'number' && Number.isFinite(duree) && duree >= 0 && { dureeMs: Math.round(duree) }),
+		...(estMethode(evenement.methode) && { methode: evenement.methode }),
 		date: maintenant.toISOString(),
 	}
 }
