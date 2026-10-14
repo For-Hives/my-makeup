@@ -1,6 +1,7 @@
 import { APIError, type CollectionBeforeDeleteHook, type CollectionConfig, type Endpoint, Forbidden } from 'payload'
-// Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import { adminOuSoiMeme, adminSeulement, champAdminSeulement, jamais } from '../lib/acces'
+// Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
+import { freinerLaConnexion, rendreLaPlaceDeLaConnexion } from '../lib/auth/frein-payload'
 import { sessionsFermees } from './Admins'
 import { profilALaCreationDuCompte } from './Profils'
 
@@ -67,6 +68,9 @@ export const Pros: CollectionConfig<'pros'> = {
 	admin: { useAsTitle: 'email', defaultColumns: ['email', 'nom', '_verified', 'bloque'] },
 	auth: {
 		verify: true,
+		// No lock of the account: the brake is by client address (`freinerLaConnexion`), so that
+		// ten wrong passwords typed by anyone never lock the account they aimed at (AUTH-05).
+		maxLoginAttempts: 0,
 		// 14 days (plan 01 §2.3). Sliding renewal and the 90-day ceiling are ticket 079.
 		tokenExpiration: DUREE_SESSION_PRO_S,
 		// The token lives in the cookie only: no response of the API carries it (ticket 075).
@@ -82,7 +86,12 @@ export const Pros: CollectionConfig<'pros'> = {
 		unlock: adminSeulement,
 	},
 	endpoints: [premierCompteFerme],
-	hooks: { afterChange: [profilALaCreationDuCompte], beforeDelete: [compteSansProfilAvantSuppression] },
+	hooks: {
+		afterChange: [profilALaCreationDuCompte],
+		afterLogin: [rendreLaPlaceDeLaConnexion()],
+		beforeDelete: [compteSansProfilAvantSuppression],
+		beforeOperation: [freinerLaConnexion()],
+	},
 	fields: [
 		{
 			name: 'nom',

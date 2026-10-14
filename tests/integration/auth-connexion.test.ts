@@ -96,3 +96,88 @@ describe('connecter, avec la vraie base', () => {
 		for (const reponse of reponses) expect(reponse).toEqual({ ok: false, code: 'identifiants-invalides' })
 	})
 })
+
+describe('I14 : le frein par adresse, sans verrouiller le compte', () => {
+	const connexion = (email: string, password: string, xForwardedFor: string) =>
+		appelerRest('POST', '/api/pros/login', {
+			corps: { email, password },
+			enTetes: { 'x-forwarded-for': xForwardedFor },
+		})
+
+	test('le 11e échec d’une adresse est refusé en 429 ; le compte reste ouvert pour une autre adresse', async () => {
+		const compte = await creerCompte('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+		const adresseFrenee = '198.51.100.20'
+
+		for (let i = 0; i < 10; i++) expect((await connexion(compte.email, `faux-${i}`, adresseFrenee)).statut).toBe(401)
+		const onzieme = await connexion(compte.email, 'faux-10', adresseFrenee)
+
+		expect(onzieme.statut).toBe(429)
+		expect(onzieme.texte).toContain('Trop d’essais, réessaie dans quelques minutes.')
+		// The account is not locked: another address signs in with the right password…
+		expect((await connexion(compte.email, MOT_DE_PASSE, '198.51.100.21')).statut).toBe(200)
+		// …while the braked address is refused even with the right one, until the window runs out.
+		expect((await connexion(compte.email, MOT_DE_PASSE, adresseFrenee)).statut).toBe(429)
+		const payload = await payloadDeTest()
+		const ligne = await payload.db.findOne<{ id: number; lockUntil?: unknown }>({
+			collection: 'pros',
+			where: { id: { equals: compte.id } },
+		})
+		expect(ligne?.lockUntil ?? null).toBeNull()
+	})
+
+	test('les essais des autres ne bloquent pas une personne qui n’a rien fait de mal', async () => {
+		const compte = await creerCompte('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+		for (let i = 0; i < 12; i++) await connexion(compte.email, `faux-${i}`, '198.51.100.30')
+
+		expect((await connexion(compte.email, MOT_DE_PASSE, '198.51.100.31')).statut).toBe(200)
+	})
+
+	test('un en-tête X-Forwarded-For forgé n’y change rien : seule la dernière entrée compte', async () => {
+		const compte = await creerCompte('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+		for (let i = 0; i < 10; i++) await connexion(compte.email, 'faux', `10.1.1.${i}, 198.51.100.40`)
+
+		expect((await connexion(compte.email, 'faux', '10.9.9.9, 198.51.100.40')).statut).toBe(429)
+	})
+
+	test('une IPv6 compte par bloc /64', async () => {
+		const compte = await creerCompte('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+		for (let i = 0; i < 10; i++) await connexion(compte.email, 'faux', `2001:db8:0:50::${i + 1}`)
+
+		expect((await connexion(compte.email, 'faux', '2001:db8:0:50:aaaa::1')).statut).toBe(429)
+		expect((await connexion(compte.email, MOT_DE_PASSE, '2001:db8:0:51::1')).statut).toBe(200)
+	})
+
+	test('aucune adresse IP dans ce que l’application écrit, au refus comme avant', async () => {
+		const compte = await creerCompte('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+		const adresse = '203.0.113.77'
+		const ecrit: string[] = []
+		const sortie = process.stdout.write.bind(process.stdout)
+		const erreur = process.stderr.write.bind(process.stderr)
+		const noter =
+			(ecriture: typeof process.stdout.write) =>
+			(morceau: string | Uint8Array, ...suite: unknown[]) => {
+				ecrit.push(String(morceau))
+				return (ecriture as (...a: unknown[]) => boolean)(morceau, ...suite)
+			}
+		process.stdout.write = noter(sortie) as typeof process.stdout.write
+		process.stderr.write = noter(erreur) as typeof process.stderr.write
+		const consoles = (['log', 'info', 'warn', 'error'] as const).map(niveau => {
+			const original = console[niveau]
+			console[niveau] = (...arguments_: unknown[]) => {
+				ecrit.push(arguments_.map(String).join(' '))
+			}
+			return () => {
+				console[niveau] = original
+			}
+		})
+		try {
+			for (let i = 0; i < 11; i++) await connexion(compte.email, 'faux', adresse)
+		} finally {
+			process.stdout.write = sortie
+			process.stderr.write = erreur
+			for (const rendre of consoles) rendre()
+		}
+
+		expect(ecrit.join('\n')).not.toContain(adresse)
+	})
+})
