@@ -1,18 +1,24 @@
 import { describe, expect, test } from 'bun:test'
 import { readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
+import { configurationDesEssais } from '../outils/e2e'
 import {
+	absoluteNavigations,
 	aggregatorProblems,
 	buildContextProblems,
 	cacheDependentSteps,
 	durationProblems,
+	fixedWaits,
 	focusedOrSkippedTests,
 	handWrittenJavaScript,
 	imageProblems,
 	misalignedSetups,
 	misalignedVersions,
 	type PackageVersions,
+	type PlaywrightSettings,
 	permissionProblems,
+	playwrightConfigFileProblems,
+	playwrightSettingsProblems,
 	publicVariablesProblems,
 	type RequiredCheck,
 	readWorkflow,
@@ -1006,5 +1012,245 @@ describe('C08: the only JavaScript git tracks is generated', () => {
 		expect(handWrittenJavaScript([...ALLOWED, file, 'src/lib/slug.ts'], ALLOWED)).toEqual([
 			`${file} : un fichier JavaScript écrit à la main. Le dépôt est en TypeScript.`,
 		])
+	})
+})
+
+/* ------------------------------------------------------------------------------------------
+ * End-to-end tests
+ * ---------------------------------------------------------------------------------------- */
+
+const E2E = 'tests/e2e'
+
+/** Every file of tests/e2e, tracked by git or not: a test that is not committed yet is checked too. */
+function e2eFiles(): { file: string; text: string }[] {
+	return readdirSync(path.join(ROOT, E2E), { encoding: 'utf8', recursive: true })
+		.filter(file => /\.tsx?$/.test(file))
+		.sort()
+		.map(file => ({ file: `${E2E}/${file}`, text: read(`${E2E}/${file}`) }))
+}
+
+/** One line of a test file, at line 2 of a file that is otherwise sound. */
+const specWith = (line: string) => [
+	{ file: `${E2E}/exemple.spec.ts`, text: `import { expect, test } from '@playwright/test'\n${line}\n` },
+]
+
+describe('C06: no end-to-end test waits for a fixed time', () => {
+	test('no file of tests/e2e waits for a duration', () => {
+		const files = e2eFiles()
+
+		expect(files.map(({ file }) => file)).toContain(`${E2E}/coquille.spec.ts`)
+		expect(fixedWaits(files)).toEqual([])
+	})
+
+	test.each([
+		['the fixed wait of Playwright', 'await page.waitForTimeout(500)', 'waitForTimeout'],
+		['a timer wrapped in a promise', 'await new Promise(resolve => setTimeout(resolve, 500))', 'setTimeout'],
+		[
+			'a timer of the page',
+			'await page.evaluate(() => new Promise(fin => window.setTimeout (fin, 500)))',
+			'setTimeout',
+		],
+		['the promise form of the timer', "import { scheduler } from 'node:timers/promises'", 'timers/promises'],
+		[
+			'the same, loaded on the fly',
+			'const { setTimeout: attendre } = await import("timers/promises")',
+			'timers/promises',
+		],
+	])('red on %s', (_fault, line, name) => {
+		expect(fixedWaits(specWith(line))).toEqual([
+			`${E2E}/exemple.spec.ts:2 : attente fixe (« ${name} »). Un essai attend un état, jamais une durée : « await expect(…) » ou « expect.poll ».`,
+		])
+	})
+
+	test('waiting for a state passes, and a time limit is not a wait', () => {
+		const text = [
+			"await expect(page.getByRole('heading', { level: 1 })).toBeVisible()",
+			'await expect.poll(() => compter()).toBe(3)',
+			"await page.waitForURL('/admin')",
+			'await expect(page).toHaveURL(/admin/, { timeout: 10_000 })',
+			'test.setTimeout(60_000)',
+		].join('\n')
+
+		expect(fixedWaits([{ file: `${E2E}/exemple.spec.ts`, text }])).toEqual([])
+	})
+
+	test('several waits come out file by file, in the order of the lines', () => {
+		const waits = fixedWaits([
+			{ file: `${E2E}/b.spec.ts`, text: 'await page.waitForTimeout(1)\n' },
+			{ file: `${E2E}/a.spec.ts`, text: '\nsetTimeout(suite, 1)\nawait page.waitForTimeout(1)\n' },
+		])
+
+		expect(waits.map(wait => wait.split(' : ')[0])).toEqual([
+			`${E2E}/a.spec.ts:2`,
+			`${E2E}/a.spec.ts:3`,
+			`${E2E}/b.spec.ts:1`,
+		])
+	})
+})
+
+describe('C07: Playwright cannot point at production, and the CI cannot skip tests', () => {
+	const CONFIG = 'playwright.config.ts'
+	const GIVEN_AS_IT_IS = 'export default defineConfig(configurationDesEssais())'
+	/** The configuration as the CI evaluates it: `CI` set, and nothing else. */
+	const inCi: PlaywrightSettings = configurationDesEssais({ CI: 'true' })
+	const [firstProject] = inCi.projects ?? []
+
+	test('the configuration of the repository: no `.only` in the CI, `*.spec.ts` files only, a local address', () => {
+		expect(playwrightSettingsProblems(inCi)).toEqual([])
+		expect(inCi.testMatch).toBe('**/*.spec.ts')
+		expect(new URL(inCi.use?.baseURL ?? '').hostname).toBe('localhost')
+		// On a developer's machine `.only` is a tool: the CI alone forbids it.
+		expect(configurationDesEssais({}).forbidOnly).toBe(false)
+	})
+
+	test('playwright.config.ts gives that configuration as it is, and sets nothing itself', () => {
+		expect(playwrightConfigFileProblems(read(CONFIG), GIVEN_AS_IT_IS)).toEqual([])
+	})
+
+	test.each<[string, PlaywrightSettings, string]>([
+		['a run that tolerates `.only`', { forbidOnly: false }, 'forbidOnly doit être vrai en CI'],
+		['a configuration that says nothing about `.only`', { forbidOnly: undefined }, 'forbidOnly doit être vrai en CI'],
+		['no pattern at all', { testMatch: undefined }, 'testMatch doit se limiter aux fichiers « *.spec.ts »'],
+		['every TypeScript file', { testMatch: '**/*.ts' }, 'testMatch doit se limiter aux fichiers « *.spec.ts »'],
+		['the test files of bun too', { testMatch: ['**/*.spec.ts', '**/*.test.ts'] }, 'testMatch doit se limiter'],
+		['a pattern written as an expression', { testMatch: /\.spec\.ts$/ }, 'testMatch doit se limiter'],
+		['an empty list of patterns', { testMatch: [] }, 'testMatch doit se limiter'],
+		['the site', { use: { baseURL: 'https://my-makeup.fr' } }, 'baseURL vise le site en ligne (my-makeup.fr).'],
+		[
+			'the www host',
+			{ use: { baseURL: 'https://WWW.my-makeup.fr/auth' } },
+			'baseURL vise le site en ligne (www.my-makeup.fr).',
+		],
+		[
+			'the old API',
+			{ use: { baseURL: 'https://api.my-makeup.fr' } },
+			'baseURL vise le site en ligne (api.my-makeup.fr).',
+		],
+		['no address at all', { use: {} }, 'baseURL manque'],
+		['an address that is not one', { use: { baseURL: 'my-makeup' } }, 'baseURL n’est pas une adresse lisible.'],
+	])('red on %s', (_fault, change, expected) => {
+		const problems = playwrightSettingsProblems({ ...inCi, ...change })
+
+		expect(problems).toHaveLength(1)
+		expect(problems[0]).toStartWith(expected)
+	})
+
+	test('red on a project that widens the pattern or points at the site by itself', () => {
+		const problems = playwrightSettingsProblems({
+			...inCi,
+			projects: [
+				{ ...firstProject, name: 'large', testMatch: '**/*' },
+				{ ...firstProject, name: 'prod', use: { baseURL: 'https://www.my-makeup.fr' } },
+			],
+		})
+
+		expect(problems).toEqual([
+			'projet « large » : testMatch doit se limiter aux fichiers « *.spec.ts ».',
+			'projet « prod » : baseURL vise le site en ligne (www.my-makeup.fr).',
+		])
+	})
+
+	test('the pre-production and a domain that only looks like the site are not production', () => {
+		for (const baseURL of ['https://preprod.my-makeup.fr', 'https://not-my-makeup.fr', 'http://127.0.0.1:3100'])
+			expect(playwrightSettingsProblems({ ...inCi, use: { baseURL } }), baseURL).toEqual([])
+	})
+
+	test.each([
+		['a setting added after the checked ones', 'defineConfig({ ...configurationDesEssais(), forbidOnly: false })'],
+		[
+			'a configuration written in the file',
+			"defineConfig({ testDir: './tests', use: { baseURL: 'https://my-makeup.fr' } })",
+		],
+		[
+			'a variable given to the checked function',
+			"defineConfig(configurationDesEssais({ BASE_URL: 'https://my-makeup.fr' }))",
+		],
+	])('red on %s', (_fault, exported) => {
+		const text = broken(read(CONFIG), 'defineConfig(configurationDesEssais())', exported)
+
+		expect(playwrightConfigFileProblems(text, GIVEN_AS_IT_IS)).toEqual([
+			`playwright.config.ts doit se réduire à « ${GIVEN_AS_IT_IS} » : un réglage écrit dans ce fichier échapperait aux garde-fous.`,
+		])
+	})
+
+	test('red on a second statement in playwright.config.ts', () => {
+		const text = `${read(CONFIG)}\nprocess.env.BASE_URL = 'https://my-makeup.fr'\n`
+
+		expect(playwrightConfigFileProblems(text, GIVEN_AS_IT_IS)).toHaveLength(1)
+	})
+
+	test('no file of tests/e2e opens a full address', () => {
+		expect(absoluteNavigations(e2eFiles())).toEqual([])
+	})
+
+	test.each([
+		['a page opened on the site', "await page.goto('https://my-makeup.fr/')", 'goto'],
+		['a page opened on another local port', 'await page.goto("http://localhost:3000/admin")', 'goto'],
+		[
+			'a request sent to the old API',
+			"await request.post('https://api.my-makeup.fr/api/auth/local', { data })",
+			'post',
+		],
+		[
+			'a request read from the site',
+			"const reponse = await request.get(\n\t'https://www.my-makeup.fr/sitemap.xml'\n)",
+			'get',
+		],
+		['an address built from a host written in the test', `await page.goto(\`https://\${hote}/admin\`)`, 'goto'],
+		['a wait for a full address', "await page.waitForURL('http://127.0.0.1:3100/admin')", 'waitForURL'],
+	])('red on %s', (_fault, line, call) => {
+		expect(absoluteNavigations(specWith(line))).toEqual([
+			`${E2E}/exemple.spec.ts:2 : « ${call} » reçoit une adresse complète. Un essai ouvre un chemin, comme « /admin » : l’hôte est celui de baseURL, vérifié par la garde.`,
+		])
+	})
+
+	test('a path passes, and so does a full address that is only compared', () => {
+		const text = [
+			"await page.goto('/admin')",
+			"await request.get('/api/health')",
+			`await page.goto(\`/profil/\${slug}\`)`,
+			"await expect(page.locator('link[rel=canonical]')).toHaveAttribute('href', 'https://my-makeup.fr/')",
+			"expect(liens.get('accueil')).toBe('https://my-makeup.fr/')",
+		].join('\n')
+
+		expect(absoluteNavigations([{ file: `${E2E}/exemple.spec.ts`, text }])).toEqual([])
+	})
+
+	describe('Playwright itself, started as the CI starts it', () => {
+		/** Runs `playwright test` under Node with one target, and gives back its exit code and all it printed. */
+		async function playwright(baseURL: string, ...options: string[]) {
+			const child = Bun.spawn(['node', 'node_modules/@playwright/test/cli.js', 'test', ...options], {
+				cwd: ROOT,
+				env: { ...process.env, BASE_URL: baseURL },
+				stderr: 'pipe',
+				stdout: 'pipe',
+			})
+			const [code, out, err] = await Promise.all([
+				child.exited,
+				new Response(child.stdout).text(),
+				new Response(child.stderr).text(),
+			])
+			return { code, printed: out + err }
+		}
+
+		test('it stops before the first test when the target is production', async () => {
+			const { code, printed } = await playwright('https://www.my-makeup.fr')
+
+			expect(code).toBe(1)
+			expect(printed).toContain('BASE_URL vise la prod (« www.my-makeup.fr ») : aucun test ne vise la prod.')
+			// Neither a test nor the application was started: Playwright had not finished reading its configuration.
+			expect(printed).not.toContain('Running')
+			expect(printed).not.toContain('.spec.ts')
+			expect(printed).not.toContain('WebServer')
+		}, 30_000)
+
+		// The witness: with a local target the same command reads the configuration and finds the tests.
+		test('with a local target it reads its configuration and lists the tests at both screen sizes', async () => {
+			const { code, printed } = await playwright('http://localhost:3100', '--list')
+
+			expect(printed).toContain('[chromium] › coquille.spec.ts')
+			expect(printed).toContain('[mobile] › coquille.spec.ts')
+			expect(code).toBe(0)
+		}, 30_000)
 	})
 })

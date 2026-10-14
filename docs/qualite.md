@@ -73,7 +73,7 @@ Ce que ces tests ne prouvent pas : le rendu d'un vrai lecteur d'écran et le cla
 bunx playwright screenshot --viewport-size=390,844 --full-page http://127.0.0.1:3000/ /tmp/capture-390.png
 ```
 
-L'adresse est celle de la page changée, sur le serveur local (`bun run dev`). La capture s'écrit hors du dépôt.
+L'adresse est celle de la page changée, sur le serveur local (`bun run dev`). La capture s'écrit hors du dépôt. Elle demande le navigateur de Playwright, installé une fois par poste avec `bunx playwright install chromium` ([`docs/tests/e2e.md`](tests/e2e.md)).
 
 Ce qu'on y cherche :
 
@@ -203,8 +203,8 @@ Chaque garde-fou est joué deux fois : sur les fichiers du dépôt, où il ne do
 | C03 | Un check de `ci/checks-requis.json` absent ou renommé ; un second job affiché sous le nom `ci-ok`, dans n'importe quel workflow ; un job nommé `CodeQL` ; une analyse CodeQL écrite dans un workflow | En place |
 | C04 | Des versions de Node ou de bun qui diffèrent entre `.nvmrc`, `engines`, `packageManager`, le `Dockerfile` et les workflows ; une image sans digest | En place |
 | C05 | Un test en `.only` ; un test sauté sans son ticket : `.skip`, `.fixme`, `.todo`, `.skipIf(true)`, `.if(false)`. Le ticket s'écrit `// issue #N`, sur une ligne de l'appel ou sur la ligne du dessus | En place |
-| C06 | Une attente fixe dans les essais de bout en bout | Arrive avec les essais de bout en bout |
-| C07 | Une configuration Playwright qui peut viser la prod | Arrive avec les essais de bout en bout |
+| C06 | Une attente fixe dans `tests/e2e` : `waitForTimeout`, le minuteur `setTimeout` (nu ou de la page), sa forme en promesse (`timers/promises`). `test.setTimeout`, qui fixe la durée maximale d'un essai, n'en est pas une | En place |
+| C07 | Une configuration Playwright qui peut viser la prod : `forbidOnly` faux en CI, des fichiers autres que `*.spec.ts`, une `baseURL` sur `my-makeup.fr` ou ses sous-domaines (la préprod exceptée) ; un réglage écrit dans `playwright.config.ts` au lieu de `tests/outils/e2e.ts` ; un essai qui ouvre une adresse complète au lieu d'un chemin. Playwright lancé vers la prod est joué pour de vrai : il s'arrête avant le premier essai | En place |
 | C08 | Un fichier JavaScript écrit à la main (seul `importMap.js`, généré par Payload, est admis) | En place |
 
 Le même fichier garde aussi :

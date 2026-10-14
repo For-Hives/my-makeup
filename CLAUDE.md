@@ -14,6 +14,7 @@ My Makeup est un annuaire de maquilleuses professionnelles indépendantes. Cette
 | écrire ou relire un test, toucher une liste éditée en place, changer un écran | [`docs/qualite.md`](docs/qualite.md) |
 | tester un composant React | [`docs/tests/composants.md`](docs/tests/composants.md) |
 | écrire un test d'intégration, démarrer le banc de test, obtenir un compte de test | [`docs/tests/banc.md`](docs/tests/banc.md) |
+| écrire ou lancer un essai de bout en bout, contrôler l'accessibilité d'une page | [`docs/tests/e2e.md`](docs/tests/e2e.md) |
 | toucher la CI, un workflow ou le `Dockerfile` | [`docs/qualite.md`](docs/qualite.md), §6 à §9 |
 | monter une version, toucher `renovate.json` | [`docs/qualite.md`](docs/qualite.md), §11 |
 | créer ou changer une collection, un champ, ou l'import des données | [`docs/migration/SCHEMA.md`](docs/migration/SCHEMA.md) |
@@ -41,6 +42,7 @@ Tout se lance depuis la racine du dépôt. La table complète est dans le README
 | `bun run renovate:valide` | Après un changement de `renovate.json` : Renovate dit s'il sait lire le fichier. Il lui faut `docker`. |
 | `bun run banc:up` | Démarre le banc de test en conteneurs : base, capteur de mails, stockage d'objets. `bun run banc:down` l'arrête et efface tout. |
 | `bun run test:integration` | Les tests d'intégration, sur le banc démarré. Avec un chemin : ce fichier seul. Chaque lancement vide la base du banc. |
+| `bun run test:e2e` | Les essais de bout en bout, banc démarré : build de production, puis Playwright à 1440 et 390 px. Avec un chemin : ce fichier seul. Chaque lancement vide la base du banc. Le navigateur s'installe une fois par `bunx playwright install chromium`. |
 | `bun run build` | Build de production. Il passe sans base ni secret. |
 | `bun run payload:types` | Après un changement de collection : régénère `src/payload-types.ts`. |
 | `bun run payload:importmap` | Après l'ajout d'un composant d'administration. |
