@@ -107,3 +107,36 @@ Ce que la v3 change par rapport au site actuel est dans [`CHANGEMENTS-VOULUS.md`
   - CI 38501556779, sur le commit `2fe3629` : `qualite` 21 s, `unit` 19 s, `build` 1 min 28 s, `ci-ok` 2 s. 1 min 35 s en tout, pour une limite de 15 minutes.
   - C'est le premier passage du contrôle de l'image avec le Docker de GitHub. Avant lui, il n'avait tourné que derrière Podman.
   - Non vérifié : `ci-ok` rouge sur GitHub, et CodeQL sur une pull request vers `v3`. Les deux attendent la protection de la branche (tickets 028 et 029).
+- **Ticket 007 fait : l'application envoie ses mails par l'adaptateur de Payload, et les tests lisent le capteur de mails et le stockage d'objets.**
+  - Trois variables règlent l'envoi : `SMTP_HOST`, `SMTP_PORT` et `EMAIL_FROM`. Sur le banc, tout mail arrive dans le capteur. Sans `SMTP_HOST`, il n'y a pas d'adaptateur : Payload écrit une ligne de journal à la place de chaque mail.
+  - Deux clients pour les tests : `tests/outils/mailpit.ts` lit un mail par son destinataire exact, avec son sujet, son texte et ses liens ; `tests/outils/s3.ts` dépose, relit, liste et supprime un objet. Les deux refusent toute cible qui n'est pas le banc de leur instance.
+  - Vérifié : le test coquille écrit un document, un objet et un mail, puis relit les trois en 1,35 seconde, pour une limite de 5. Capteur arrêté : une erreur en français, qui nomme le service et la commande qui le démarre, en moins de 5 secondes. U87 reste vert. Le serveur autonome du build a envoyé au capteur le mail de réinitialisation de Payload.
+  - Reste au ticket 073 : identifiant, chiffrement, délai d'envoi, refus en production sans réglage. D'ici là, l'adaptateur ne convient qu'à un relais sans identifiant ni chiffrement. Le mail de réinitialisation de Payload est en anglais.
+  - Non vérifié : un envoi chiffré par le vrai fournisseur ; les deux clients sous Node.
+- **Ticket 013 fait : un essai de bout en bout ouvre le site local déjà connecté, et ne peut pas viser la prod.**
+  - `bun run test:e2e` vide la base du banc et construit l'application pour la production, sans base, sans secret et sans `.env`. Playwright la démarre sur le port du banc, lance les essais à 1440 et à 390 px, puis l'arrête.
+  - Vérifié : l'essai coquille ouvre l'accueil, puis l'administration avec une session de la fabrique, aux deux tailles. Une cible sur le domaine du site arrête tout avant le premier essai (U86). Les gardes C06 et C07 sont en place. Un essai en échec garde sa trace, sa vidéo et sa capture. Aucune violation d'accessibilité « serious » ou « critical » sur l'accueil provisoire.
+  - À savoir : le build et l'application ne lisent pas le `.env` de travail grâce à `__NEXT_PROCESSED_ENV`, un réglage interne de Next, non documenté ; un test le fige.
+  - Non vérifié : un lancement sur GitHub (ticket 014), et sous le Node de la CI.
+- **Ticket 035 fait : les règles Renovate de la v3 sont écrites, validées et figées par une garde.**
+  - `renovate.json` : versions exactes, 7 jours d'attente, le lundi avant 7 h, 3 PR ouvertes au plus, majeures sur approbation. Seules les mineures, les correctifs et les empreintes se fusionnent seuls, derrière les checks requis. Next reste sous 16.4.
+  - Jamais fusionnés seuls : Payload, Next, Biome, Playwright et axe, comme le demande le ticket ; et aussi bun, PostgreSQL, les versions forcées, les actions de la CI et les correctifs de sécurité.
+  - Vérifié : le validateur officiel de Renovate 44.140.0, en mode strict et sans réseau, accepte le fichier et refuse 4 variantes fautives. La garde `tests/ci/renovate.test.ts` a 122 tests. Comparée au moteur de Renovate sur 608 paires de dépendance et de type de mise à jour : 0 écart.
+  - Sans effet avant la bascule : Renovate ne lit que la branche par défaut, et `main` garde sa règle « sécurité seule ».
+  - Non vérifié : le comportement réel de Renovate sur GitHub, visible le premier lundi après la bascule.
+- **Ticket 037 fait : aucun test n'appelle Internet.**
+  - `bun test` charge un troisième fichier avant les tests : il intercepte le HTTP sortant. Un service se simule en une déclaration, `simuler`, avec MSW 2.15.0, déjà dans les dépendances. Une requête vers un hôte que rien ne déclare est refusée, et le test échoue avec un message qui nomme l'hôte, même si le code attrape l'erreur. Le banc n'est pas intercepté.
+  - Constat : sous bun 1.3.14, MSW ne voit que le `fetch` global. Un second filet, par les variables de proxy, retient `Bun.fetch`, `undici`, `node:http` et `node:https`.
+  - Vérifié : 28 tests unitaires et 3 d'intégration, contre un vrai serveur témoin qui ne reçoit rien. Un exemple simule une réponse 200, puis une panne 500.
+  - Limites : ni les sockets bruts (SMTP, PostgreSQL) ni les processus enfants ne sont couverts. Le code appelle un service extérieur par `fetch`, la seule sortie qui se simule. Chaque lancement paie environ 80 ms.
+  - Constaté à l'intégration : vers le banc, un `fetch` qui passe par MSW ignore `AbortSignal.timeout`. Le client du banc du ticket 007 abandonne maintenant par un minuteur explicite (commit `498695d`).
+- **Ticket 039 fait : le banc fournit un faux Google.**
+  - `bun run banc:up` démarre un quatrième conteneur : un fournisseur OpenID Connect écrit dans le dépôt, sous `tests/outils/faux-google/`, et lancé par l'image bun du `Dockerfile`. Aucune dépendance ni image nouvelle.
+  - `GOOGLE_OIDC_ISSUER` le fait prendre pour Google ; absente, c'est Google. Rien dans l'application ne la lit encore : c'est le ticket 090.
+  - Vérifié : un aller-retour complet (autorisation, code, échange avec PKCE, signature du jeton, profil) en 10 à 50 ms, pour une limite de 5 secondes ; les quatre scénarios, email vérifié, non vérifié, refus et panne ; l'application refuse de démarrer avec un fournisseur local quand son adresse est celle du site ou de la préprod. Le client et le secret du banc sont factices.
+  - Non vérifié : un vrai navigateur ; un démon Docker, le conteneur n'a tourné que derrière Podman.
+- **Tickets 012 et 029 : toujours pas finis.** Relevé le 14/10/2026 : `v3` n'est pas protégée, CodeQL n'a aucune analyse sur `v3`, et aucune pull request ne vise `v3`. Les deux attendent le ticket 028.
+- **Intégration des tickets 007, 013, 035, 037 et 039 dans `v3`.**
+  - Cinq fusions, dans cet ordre : `394cbe0`, `6126920`, `a9f8c45`, `d66dda0`, `0064a85`. Deux correctifs après fusion : `498695d` (le délai du client du banc sous MSW) et `5c03a89` (l'image bun du faux Google suivie par Renovate). Puis `7ccd07d`, qui accorde deux phrases des guides avec un banc à quatre services.
+  - Vérifié : installation figée sans changement ; Biome et contrôle de types verts ; 863 tests unitaires verts et 1 sauté ; 354 garde-fous de la CI verts ; build de production vert. Sur un banc à part, 37 tests d'intégration et 8 essais de bout en bout verts.
+  - Non vérifié à cette intégration : l'image Docker n'a pas été reconstruite. La branche `main` n'a reçu aucun commit.
