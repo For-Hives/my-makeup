@@ -148,6 +148,28 @@ export const MEDIA_ORIGIN_DEFAULT = 'https://r2-my-makeup.andy-cinquin.fr'
 /** Names that can only be this machine. A compose service name or a private address is not one. */
 const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '::1'])
 
+/**
+ * True for every way of writing a host that can only be this machine: the 127.0.0.0/8 range, 0.0.0.0, `::`,
+ * `::1`, an IPv4-mapped IPv6 address, short or padded forms included. The URL parser does the normalising.
+ */
+export function isLoopbackHost(host: string): boolean {
+	const bare = host.trim().replace(/^\[(.+)\]$/, '$1')
+	let name: string
+	try {
+		name = new URL(bare.includes(':') ? `http://[${bare}]` : `http://${bare}`).hostname
+	} catch {
+		return false
+	}
+	return (
+		name === 'localhost' ||
+		name === '0.0.0.0' ||
+		/^127\.\d+\.\d+\.\d+$/.test(name) ||
+		name === '[::]' ||
+		name === '[::1]' ||
+		name.startsWith('[::ffff:')
+	)
+}
+
 /** The value Next gives NEXT_PHASE while `next build` runs. */
 const BUILD_PHASE = 'phase-production-build'
 
@@ -420,7 +442,7 @@ function mailEnv(raw: RawEnv, problems: { variable: string; problem: string }[],
 
 	const host = raw.SMTP_HOST.trim()
 	if (!HOST_ALONE.test(host)) refuse('SMTP_HOST', 'illisible')
-	else if (inSite && LOOPBACK_HOSTS.has(host.toLowerCase()))
+	else if (inSite && isLoopbackHost(host))
 		refuse('SMTP_HOST', 'refusée, car elle désigne un relais de ce poste alors que le site est déployé')
 
 	const port = /^\d{1,5}$/.test(raw.SMTP_PORT?.trim() ?? '') ? Number(raw.SMTP_PORT) : Number.NaN

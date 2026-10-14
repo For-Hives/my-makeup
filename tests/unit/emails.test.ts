@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import { CONTEXTE_IMPORT } from '@/lib/contexte-import'
 import { creerEnvoiEmail, EnvoiEmailEchoue, type Journal, type MessageDuRelais } from '@/lib/emails/envoi'
 import { composerEmail, EmailInvalide, lienAbsolu, PIED_DE_EMAIL } from '@/lib/emails/gabarit'
-import { optionsDeTransport } from '@/lib/emails/relais'
+import { adaptateurSansRelais, DELAI_DU_RELAIS_MS, optionsDeTransport } from '@/lib/emails/relais'
 
 // Made-up values only: the domain is reserved for tests, the token is not one.
 const SITE = 'https://preprod.exemple.test'
@@ -200,7 +200,27 @@ describe('les réglages de transport du relais', () => {
 			host: '127.0.0.1',
 			port: 1025,
 			secure: false,
+			connectionTimeout: DELAI_DU_RELAIS_MS,
+			greetingTimeout: DELAI_DU_RELAIS_MS,
+			socketTimeout: DELAI_DU_RELAIS_MS,
 		})
+	})
+
+	test('un relais muet est abandonné vite : les trois délais de nodemailer sont réglés, et courts', () => {
+		const options = optionsDeTransport({ ...base, port: 465, auth: { user: 'resend', pass: 'cle-temoin' } })
+		for (const delai of [options.connectionTimeout, options.greetingTimeout, options.socketTimeout]) {
+			expect(delai).toBe(DELAI_DU_RELAIS_MS)
+		}
+		expect(DELAI_DU_RELAIS_MS).toBeLessThanOrEqual(15_000)
+	})
+
+	test('sans relais, un mail de Payload ne laisse qu’une ligne sans adresse ni objet', async () => {
+		const lignes: string[] = []
+		const adaptateur = adaptateurSansRelais({ payload: { logger: { warn: (l: string) => lignes.push(l) } } as never })
+		await adaptateur.sendEmail({ to: 'membre@example.test', subject: 'Confirme ton adresse', html: '<p>x</p>' })
+		expect(lignes).toHaveLength(1)
+		expect(lignes[0]).not.toContain('membre@example.test')
+		expect(lignes[0]).not.toContain('Confirme')
 	})
 
 	test('un relais avec identifiant : le port 465 est chiffré d’emblée, les autres exigent TLS', () => {
@@ -211,6 +231,9 @@ describe('les réglages de transport du relais', () => {
 			secure: true,
 			requireTLS: true,
 			auth,
+			connectionTimeout: DELAI_DU_RELAIS_MS,
+			greetingTimeout: DELAI_DU_RELAIS_MS,
+			socketTimeout: DELAI_DU_RELAIS_MS,
 		})
 		expect(optionsDeTransport({ ...base, port: 587, auth })).toMatchObject({ secure: false, requireTLS: true, auth })
 	})

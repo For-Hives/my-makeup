@@ -635,10 +635,27 @@ describe('the site itself sends through an authenticated relay, or does not star
 	})
 
 	test('a relay of this machine is refused on the site', () => {
-		for (const host of ['127.0.0.1', 'localhost', '::1']) {
+		for (const host of [
+			'127.0.0.1',
+			'localhost',
+			'LOCALHOST',
+			'::1',
+			'127.0.0.2',
+			'127.1',
+			'0.0.0.0',
+			'0:0:0:0:0:0:0:1',
+			'::',
+			'::ffff:7f00:1',
+		]) {
 			const error = refusal({ ...site, SMTP_HOST: host })
 			expect(error.variables).toEqual(['SMTP_HOST'])
 			expect(error.message).toContain('relais de ce poste alors que le site est déployé')
+		}
+	})
+
+	test('a relay of the network is not taken for this machine', () => {
+		for (const host of ['relais.exemple.test', '10.0.0.5', '128.0.0.1', '2001:db8::1']) {
+			expect(parseServerEnv({ ...site, SMTP_HOST: host }).mail?.host).toBe(host)
 		}
 	})
 

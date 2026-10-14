@@ -108,3 +108,52 @@ describe('un email transactionnel part de la v3 et se lit dans le capteur du ban
 		expect(lignes).toHaveLength(1)
 	})
 })
+
+describe('un relais qui se tait en route', () => {
+	test('la porte rend une erreur lisible dans un délai borné, avec une seule ligne de journal', async () => {
+		// It answers the greeting and EHLO, then says nothing: the case nodemailer waits ten minutes on.
+		const serveur = createServer(socket => {
+			socket.write('220 relais.exemple.test ESMTP\r\n')
+			socket.once('data', () => socket.write('250 relais.exemple.test\r\n'))
+			socket.on('error', () => undefined)
+		})
+		await new Promise<void>(resolve => serveur.listen(0, '127.0.0.1', resolve))
+		const port = (serveur.address() as { port: number }).port
+		try {
+			const payload = await payloadDeTest()
+			const adapter = await nodemailerAdapter({
+				defaultFromAddress: 'ne-pas-repondre@example.test',
+				defaultFromName: 'My Makeup',
+				skipVerify: true,
+				transportOptions: {
+					...optionsDeTransport({
+						host: '127.0.0.1',
+						port,
+						fromAddress: 'ne-pas-repondre@example.test',
+						fromName: 'My Makeup',
+					}),
+					// Short for the test, same mechanism as the real delay (asserted in the unit tests).
+					socketTimeout: 1500,
+				},
+			})
+			const adaptateur = adapter({ payload })
+			const lignes: string[] = []
+			const envoyer = creerEnvoiEmail({
+				relais: message => adaptateur.sendEmail(message),
+				journal: { info: ligne => lignes.push(ligne), erreur: ligne => lignes.push(ligne) },
+			})
+			const adresse = adresseFictive('muet')
+			const debut = Date.now()
+			const erreur = await envoyer({ a: adresse, ...composerEmail(contenu, SITE) }).then(
+				() => undefined,
+				(e: unknown) => e
+			)
+			expect(erreur).toBeInstanceOf(EnvoiEmailEchoue)
+			expect(Date.now() - debut).toBeLessThan(8000)
+			expect(lignes).toHaveLength(1)
+			for (const secret of [adresse, '127.0.0.1', 'Confirme']) expect(lignes.join('\n')).not.toContain(secret)
+		} finally {
+			await new Promise(resolve => serveur.close(resolve))
+		}
+	}, 15_000)
+})

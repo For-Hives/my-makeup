@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import { createServer } from 'node:net'
 import { initI18n } from '@payloadcms/translations'
 import { Forbidden, getRequestLanguage, type Payload, type SanitizedConfig, ValidationError } from 'payload'
+import { adaptateurSansRelais } from '@/lib/emails/relais'
 import { EnvError, type RawEnv } from '@/lib/env'
 import { migrations } from '@/migrations'
 
@@ -114,17 +115,18 @@ describe('src/payload.config.ts is hardened', () => {
 		expect(config.csrf.length).toBeGreaterThan(0)
 	})
 
-	test('no email adapter when nothing is set: Payload then only writes a log line, and opens no connection', async () => {
+	test('no relay when nothing is set: Payload's mails go to an adapter that writes a line with no address, and opens no connection', async () => {
 		// `nodemailerAdapter()` called with no transport creates an account at ethereal.email, and
 		// checks its transport when the server starts: without SMTP_HOST, it is not called at all.
-		expect((await configUnder(development)).email).toBeUndefined()
+		expect((await configUnder(development)).email).toBe(adaptateurSansRelais)
 		expect((await configUnder(preproduction)).email).toBeUndefined()
 		// The sender alone switches nothing on.
 		expect((await configUnder({ ...development, EMAIL_FROM: SENDER })).email).toBeUndefined()
-	})
+})
 })
 
-describe('Payload speaks French only, whatever the request asks for (ticket 221)', () => {
+describe('Payload speaks French only, whatever the request asks for (ticket 221)', () =>
+{
 	test('French is the one language Payload offers, and the one it falls back to', async () => {
 		const config = await configUnder(development)
 
@@ -157,10 +159,12 @@ describe('Payload speaks French only, whatever the request asks for (ticket 221)
 			'Cette valeur doit être inférieure à la longueur maximale de 70 caractères.'
 		)
 	})
-})
+}
+)
 
 /** A local port that counts who connects to it, and hangs up at once: never an SMTP server. */
-async function countingPort() {
+async
+function countingPort() {
 	let connections = 0
 	const server = createServer(socket => {
 		connections += 1
@@ -232,7 +236,7 @@ describe('the mails leave through the adapter of Payload, set by the environment
 		await expect(configUnder({ ...development, SMTP_HOST: '127.0.0.1' })).rejects.toBeInstanceOf(EnvError)
 	})
 
-	test('next build loads it with no adapter, even when the relay is in its environment', async () => {
+	test('next build loads it with the silent adapter, even when the relay is in its environment', async () => {
 		const config = await configUnder({
 			EMAIL_FROM: SENDER,
 			NEXT_PHASE: 'phase-production-build',
@@ -241,7 +245,7 @@ describe('the mails leave through the adapter of Payload, set by the environment
 			SMTP_PORT: '1025',
 		})
 
-		expect(config.email).toBeUndefined()
+		expect(config.email).toBe(adaptateurSansRelais)
 	})
 })
 
