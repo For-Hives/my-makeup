@@ -1,9 +1,10 @@
 # Qualité
 
-Ce document garde les règles de qualité de la v3. Il a deux parties :
+Ce document garde les règles de qualité de la v3. Il a trois parties :
 
 - **Les règles du travail, §1 à §5** : comment on teste, les sept règles des listes éditées en place, et ce qu'un écran doit tenir à 390 px. Ce sont des critères permanents : ils valent pour chaque ticket, sans être recopiés dans chacun.
 - **La CI, §6 à §10** : ce qui empêche une modification cassée d'entrer dans `v3`. Ces parties décrivent la CI de la v3, le check `ci-ok`, les garde-fous qui empêchent de rendre la CI menteuse, et le canari. Le fichier de la CI est `.github/workflows/ci.yml`. Les garde-fous sont dans `tests/ci/garde-fous-ci.test.ts`.
+- **Les mises à jour, §11** : les règles que Renovate suivra pour proposer les nouvelles versions, et pourquoi elles n'ont aucun effet avant la bascule. Le fichier est `renovate.json`. Sa garde est dans `tests/ci/renovate.test.ts`.
 
 À lire avec ce document :
 
@@ -315,3 +316,109 @@ Ce n'est pas le canari : rien n'a été poussé, aucune pull request n'a été o
 | Le script de `ci-ok`, avec un job en `failure` | Code de sortie 1 (test de `tests/ci/garde-fous-ci.test.ts`) |
 
 Le kit ne peut pas pourrir en silence : `tests/ci/canari.test.ts` rejoue les trois fautes à chaque CI, dans un dossier temporaire, et échoue si l'une d'elles n'est plus une faute.
+
+## 11. Renovate : les mises à jour des dépendances
+
+Renovate est le robot qui propose les nouvelles versions par des pull requests. `renovate.json` porte ses règles pour la v3. Elles sont écrites, validées et gardées par un test. Elles ne font encore rien.
+
+### Sans effet avant la bascule
+
+Renovate ne lit sa configuration que sur la branche par défaut du dépôt, `main`.
+
+- **Tant que `main` porte l'ancien site, c'est le `renovate.json` de `main` qui s'applique : la sécurité seule.** Il ne propose que les correctifs de sécurité, et ne fusionne rien seul. Cette branche n'y touche pas, et Renovate n'ouvre aucune pull request vers `v3`.
+- **Le fichier d'ici arrive sur `main` avec la v3**, par la fusion de la bascule. La règle « sécurité seule » s'arrête donc au moment où `main` cesse de porter l'ancien site, pas avant.
+- **Avant cette fusion, `main` doit être protégée** : `ci-ok` et `CodeQL` requis, administrateurs compris, comme pour `v3` (« Les deux checks requis », plus haut). La fusion automatique est confiée à GitHub, qui fusionne une pull request de Renovate quand les checks requis sont verts. Sans check requis sur `main`, plus rien ne tient cette porte : la protection vient d'abord, la configuration ensuite.
+- Le dépôt doit aussi autoriser la fusion automatique des pull requests (réglage « Allow auto-merge » de GitHub).
+
+Relevé du 14/10/2026, en lecture seule : le `renovate.json` de `main` est en sécurité seule ; `main` exige les checks de l'ancien site, pas encore `ci-ok` ; « Allow auto-merge » est activé ; aucune pull request n'a jamais visé `v3`.
+
+Pour le relire, avant la bascule puis après :
+
+```sh
+gh api "repos/For-Hives/my-makeup/contents/renovate.json?ref=main" --jq '.content | @base64d | fromjson | {extends, regles: [.packageRules[].description]}'
+gh api repos/For-Hives/my-makeup/branches/main/protection --jq '{checks: .required_status_checks.contexts, admins: .enforce_admins.enabled}'
+gh api repos/For-Hives/my-makeup --jq .allow_auto_merge
+gh pr list --repo For-Hives/my-makeup --author "app/renovate" --state open
+```
+
+### Ce que les règles décident
+
+| Sujet | Règle |
+|---|---|
+| Versions | Exactes partout, jamais une plage. Les actions sont figées par leur commit, les images par leur étiquette et leur empreinte, qui montent ensemble. |
+| Attente | 7 jours après la publication, pour toute version. Une version dont la date de publication est inconnue attend. |
+| Rythme | Le lundi avant 7 h, heure de Paris. 3 pull requests ouvertes au plus, 2 nouvelles par heure au plus. |
+| Fusion automatique | Une mineure, un correctif ou une empreinte, d'une version qui n'est pas une 0.x. Toujours par une pull request, que GitHub fusionne derrière les checks requis. |
+| Jamais fusionnés seuls | Payload, Next, Biome et Playwright. Aussi : bun, PostgreSQL, les versions forcées (`overrides`), les actions et la machine de la CI. |
+| Majeures | Proposées seulement après une case cochée au tableau de bord de Renovate, et jamais fusionnées seules. |
+| Sécurité | Un correctif de sécurité est proposé tout de suite, sans les 7 jours, avec l'étiquette `securite`. Il n'est jamais fusionné seul : il a moins de 7 jours. |
+| `bun.lock` | Recalculé une fois par mois, le premier du mois. Jamais fusionné seul : les dépendances indirectes y montent sans les 7 jours d'attente. |
+| Limites | Next reste en 16.3, TypeScript en 6, Node sur une ligne à support long (24, puis 26). |
+| Non suivi | `engines.node` : il vaut « 24.x », et Renovate le figerait sur une version exacte. |
+
+Ce qui monte ensemble, dans une seule pull request :
+
+| Groupe | Contenu | Pourquoi |
+|---|---|---|
+| `payload` | `payload` et tous les paquets `@payloadcms` | Chacun exige la version exacte de `payload` |
+| `next` | `next` et les paquets `@next` | Même version |
+| `react` | `react`, `react-dom` et leurs types | `react-dom` exige la version de `react` |
+| `tailwind` | `tailwindcss` et son plugin PostCSS | Le plugin exige la même version exacte |
+| `biome` | Biome | Il monte en même temps que dans le dépôt de référence, et `biome.json` nomme sa version |
+| `playwright` | Playwright, ses navigateurs et axe | Les navigateurs sont ceux d'une version précise |
+| `node` | `.nvmrc` et les images Node du `Dockerfile` | La garde C04 exige le même Node partout |
+| `bun` | `packageManager`, l'image du `Dockerfile` et les types | La garde C04 exige le même bun partout |
+| `postgres` | L'image de `docker-compose.yml` et celle de `compose.test.yml` | La même base en développement et sur le banc |
+
+Chaque règle de `renovate.json` dit sa raison dans son champ `description`.
+
+### La garde
+
+`tests/ci/renovate.test.ts` fige ces règles. Il tourne avec les autres garde-fous : `bun run test:ci-garde`, ou seul : `bun --no-env-file test tests/ci/renovate.test.ts`.
+
+- Il lit les règles comme Renovate les applique : toutes celles qui correspondent, dans l'ordre du fichier, la dernière l'emporte. Déplacer une règle peut donc changer la réponse, et la garde le voit.
+- Il pose la question pour chaque dépendance du dépôt et chaque type de mise à jour : les paquets de `package.json`, les images du `Dockerfile` et des fichiers compose, le Node de `.nvmrc`, les actions de la CI. Une dépendance ajoutée demain est contrôlée sans toucher au test.
+- Un réglage ou un filtre que la garde ne connaît pas est une faute en soi. Pour s'en servir : l'ajouter à `tests/outils/renovate.ts` avec son contrôle, dans le même commit.
+- Chaque contrôle est joué sur le fichier du dépôt, puis sur un exemple fautif fabriqué à partir de lui.
+
+Ce que la garde ne voit pas :
+
+- **Ce que font les préréglages** (`extends`). Leur liste est figée : en ajouter un, c'est changer la garde.
+- **Ce que Renovate fait vraiment d'une règle.** Les réponses de la garde ont été comparées une fois à celles du moteur de Renovate lui-même : voir « Relevés ».
+- **Les réglages de GitHub** : la protection de `main` et « Allow auto-merge ».
+
+### Modifier `renovate.json`
+
+1. Changer la règle et la garde dans le même commit.
+2. Demander à Renovate s'il sait lire le fichier :
+
+   ```sh
+   bun run renovate:valide
+   ```
+
+   La commande lance le validateur de Renovate en mode strict : une option inconnue, un horaire ou une expression illisibles, ou un réglage écrit à l'ancienne façon la font échouer. Il lui faut la commande `docker`, et rien d'autre. Avec Podman : `DOCKER_HOST=unix://$XDG_RUNTIME_DIR/podman/podman.sock bun run renovate:valide`.
+3. Relancer la garde.
+
+Le validateur tourne dans l'image officielle de Renovate, figée par son étiquette et son empreinte dans `scripts/ci/renovate-valide.ts`. Le conteneur n'a ni réseau ni dossier de ce poste : il reçoit le fichier sur son entrée, et rien d'autre. Le premier lancement télécharge l'image, environ 440 Mo.
+
+- **Monter l'image du validateur** : choisir une version d'au moins 7 jours, sans avis de sécurité ouvert (base de GitHub et avis du dépôt renovatebot/renovate), et changer l'étiquette et l'empreinte ensemble. Rien ne la monte seule : à faire avant la bascule, puis quand le fichier change.
+- **Ne pas chercher le validateur sous son nom dans le registre npm** : le paquet `renovate-config-validator` appartient à un tiers. Le vrai validateur est livré dans le paquet `renovate`.
+- La CI ne lance pas le validateur : elle n'a pas à télécharger l'image à chaque passage. Elle lance la garde.
+
+### Ce qui reste à faire à la main sur une pull request de Renovate
+
+- **Une action de la CI** : la garde de la CI cite la version de `actions/checkout`, et le tableau de « Modifier la CI » liste les versions. La pull request reste rouge tant que le test n'est pas mis à jour, et les avis de sécurité du dépôt de l'action se relisent avant de fusionner.
+- **Biome** : `biome.json` nomme la version dans l'adresse de son schéma.
+- **Payload** : relancer `bun run payload:types` et `bun run payload:importmap`. La CI refuse des fichiers générés qui ne sont plus à jour.
+- **Une alerte de sécurité ne respecte pas les limites de version.** Renovate peut ouvrir une pull request de sécurité vers Next 16.4 : elle se ferme à la main tant que la limite tient.
+- **Lever la limite de Next** : quand une version 3.x de Payload porte le correctif des noms d'erreurs, retirer la règle, sa ligne dans la garde et la ligne `next-16-3` du registre des changements voulus, ensemble.
+
+### Relevés
+
+| Date | Contrôle | Résultat |
+|---|---|---|
+| 14/10/2026 | `bun run renovate:valide`, Renovate 44.140.0, mode strict | Valide. Le même validateur refuse une option inconnue, un horaire illisible, une expression fausse et un réglage écrit à l'ancienne façon (quatre essais) |
+| 14/10/2026 | Renovate 44.140.0 lancé à blanc sur une copie du dépôt : il lit et cherche les versions, il n'écrit rien et n'a reçu aucun jeton | Il lit `package.json` et `bun.lock`, le `Dockerfile`, les deux fichiers compose, `.nvmrc` et `ci.yml`. Il ne propose ni Next 16.4, ni TypeScript 7, et ne touche pas à `engines.node`. bun 1.4 arrive dans une seule proposition pour `packageManager`, l'image et les types. Cinq versions de moins de 7 jours sont retenues. |
+| 14/10/2026 | Le moteur de Renovate 44.140.0, préréglages compris, interrogé sur chaque dépendance du dépôt et chaque type de mise à jour | 608 réponses, les mêmes que celles de la garde. Rien n'est fusionné seul hors des mineures, correctifs et empreintes ; aucune majeure sans approbation ; aucun correctif de sécurité fusionné seul |
+
+Ce que ces relevés ne montrent pas : les actions de la CI n'ont pas été cherchées, faute de jeton GitHub, et rien de ce qui se passe sur GitHub n'a pu être joué : une vraie pull request de Renovate, sa fusion par GitHub, le tableau de bord. Cela se constate le premier lundi après la bascule.
