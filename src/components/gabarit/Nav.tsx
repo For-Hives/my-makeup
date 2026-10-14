@@ -31,7 +31,6 @@ function Chevron() {
 function useConnectee(chemin: string): boolean {
 	const [connectee, setConnectee] = useState(false)
 	// A new page asks again: the visitor may have signed in or out since the last one.
-	// biome-ignore lint/correctness/useExhaustiveDependencies: `chemin` is the trigger, not a value read.
 	useEffect(() => {
 		const arret = new AbortController()
 		fetch('/api/espace/session', { cache: 'no-store', credentials: 'same-origin', signal: arret.signal })
