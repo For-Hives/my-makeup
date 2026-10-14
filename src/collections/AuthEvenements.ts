@@ -9,6 +9,7 @@ const LIBELLES_DES_TYPES: Record<(typeof TYPES_EVENEMENT)[number], string> = {
 	'deconnexion-partout': 'Déconnexion de tous les appareils',
 	inscription: 'Inscription',
 	confirmation: 'Confirmation de l’email',
+	renvoi: 'Renvoi de l’email de confirmation',
 }
 
 const LIBELLES_DES_CODES: Record<(typeof CODES_EVENEMENT)[number], string> = {
@@ -22,6 +23,7 @@ const LIBELLES_DES_CODES: Record<(typeof CODES_EVENEMENT)[number], string> = {
 	'deja-confirme': 'Déjà confirmé',
 	'lien-invalide': 'Lien invalide',
 	inconnu: 'Inconnu',
+	'champ-piege': 'Champ piège rempli',
 }
 
 /**

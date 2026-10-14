@@ -22,6 +22,7 @@ export const TYPES_EVENEMENT = [
 	'deconnexion-partout',
 	'inscription',
 	'confirmation',
+	'renvoi',
 ] as const
 export type TypeEvenement = (typeof TYPES_EVENEMENT)[number]
 
@@ -40,6 +41,7 @@ export const CODES_EVENEMENT = [
 	'deja-confirme',
 	'lien-invalide',
 	'inconnu',
+	'champ-piege',
 ] as const
 export type CodeEvenement = (typeof CODES_EVENEMENT)[number]
 
