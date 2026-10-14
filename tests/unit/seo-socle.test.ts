@@ -101,7 +101,8 @@ describe('robots (U52)', () => {
 			const requete = (chemin: string) =>
 				({
 					nextUrl: new URL(`https://exemple.test${chemin}`),
-					cookies: { get: () => ({ value: 'cookie' }) },
+					cookies: { get: () => ({ value: 'cookie' }), getAll: () => [] },
+					headers: new Headers(),
 				}) as unknown as Parameters<typeof proxy>[0]
 			process.env.APP_ENV = 'prod'
 			expect(proxy(requete('/')).headers.get('x-robots-tag')).toBeNull()

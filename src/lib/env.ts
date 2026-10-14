@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { finDuNettoyage } from './auth/cookies-herites'
 import type { VersionSources } from './version'
 
 /**
@@ -28,6 +29,7 @@ export type RawEnv = Partial<
 	Record<
 		| 'APP_ENV'
 		| 'AUTH_VERIFY'
+		| 'BASCULE_LE'
 		| 'DATABASE_URI'
 		| 'EMAIL_FROM'
 		| 'GOOGLE_OIDC_ISSUER'
@@ -197,6 +199,7 @@ const EXPECTED = {
 	APP_ENV:
 		'« test » sur le banc de test, « preprod » sur la préprod, « prod » sur le site en ligne, ou absente sur un poste',
 	AUTH_VERIFY: '« on » (la valeur par défaut) ou « off »',
+	BASCULE_LE: 'une date au format AAAA-MM-JJ, comme « 2027-02-01 », qui existe',
 	DATABASE_URI: 'postgres://UTILISATEUR:MOT_DE_PASSE@HÔTE:PORT/BASE',
 	EMAIL_FROM: '« Nom <adresse@domaine> », ou une adresse seule',
 	GOOGLE_OIDC_ISSUER: `${GOOGLE_ISSUER}, ou sur ce poste l’adresse du faux Google du banc de test, comme http://127.0.0.1:7080, sans « / » final`,
@@ -528,6 +531,10 @@ const schema = z.object({
 		.string()
 		.refine(value => ['on', 'off'].includes(value.trim().toLowerCase()), { error: 'illisible' })
 		.optional(),
+	BASCULE_LE: z
+		.string()
+		.refine(value => finDuNettoyage(value) !== undefined, { error: 'illisible' })
+		.optional(),
 	DATABASE_URI: required.refine(value => postgresUrl(value) !== undefined, { error: 'illisible' }),
 	GOOGLE_OIDC_ISSUER: z
 		.string()
@@ -620,6 +627,7 @@ function processEnv(): RawEnv {
 	return {
 		APP_ENV: process.env.APP_ENV,
 		AUTH_VERIFY: process.env.AUTH_VERIFY,
+		BASCULE_LE: process.env.BASCULE_LE,
 		DATABASE_URI: process.env.DATABASE_URI,
 		EMAIL_FROM: process.env.EMAIL_FROM,
 		GOOGLE_OIDC_ISSUER: process.env.GOOGLE_OIDC_ISSUER,
