@@ -11,6 +11,13 @@ Cette branche porte la réécriture du site : une seule application Next.js et P
 - `public/` est conservé : il contient les fichiers de vérification des moteurs de recherche, qui doivent continuer à répondre à la racine du site.
 - `dev-assets/` est conservé : ce sont les sources de design.
 
+## Suivre la migration
+
+Deux documents, sous `docs/migration/` :
+
+- [`CHANGEMENTS-VOULUS.md`](docs/migration/CHANGEMENTS-VOULUS.md) : le registre de tout ce que la v3 fait autrement que le site actuel, par décision. À la répétition de la bascule, seuls ces écarts sont acceptés.
+- [`JOURNAL.md`](docs/migration/JOURNAL.md) : les faits datés de la migration.
+
 ## Ce que contient le squelette
 
 Une application, trois zones, toutes sous `src/app/` :
