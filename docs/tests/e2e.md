@@ -106,6 +106,20 @@ expect(await violationsGraves(page)).toEqual([])
 - `a11y.spec.ts` contrôle l'accueil provisoire aux deux tailles, et prouve que le contrôle sait échouer : sur une page fautive, il trouve une image sans texte et un contraste trop faible.
 - Un contrôle automatique ne voit qu'une partie des fautes. L'ordre de lecture, le focus et ce que dit un vrai lecteur d'écran se vérifient à la main, à la recette.
 
+## La parité des adresses (I45)
+
+`tests/e2e/parite-urls.spec.ts` demande à l'application chaque adresse gelée ([`docs/migration/URLS.md`](../migration/URLS.md)) et vérifie le code que la table promet, la redirection en un seul saut vers la bonne destination, et le même h1 que l'ancien site. Il n'ouvre pas de navigateur : il interroge l'application avec `request`, sans suivre les redirections, et lit le HTML comme l'outil de mesure l'a lu.
+
+```sh
+bun run test:e2e tests/e2e/parite-urls.spec.ts
+```
+
+- **Les cas du banc** : les adresses écrites en clair dans l'inventaire gelé, les exemples de la table, et, pour les pages qui dépendent des données (profils, talents, articles), le jeu fictif du banc, que l'essai charge lui-même. Les hôtes (`http`, `www`, ancienne API) ne sont pas des cas : l'hébergeur répond.
+- **Le h1 de l'ancien site** est dans `tests/fixtures/parite-urls-h1.json`, en empreintes : pour chaque adresse, le nombre de h1 et le SHA-256 de leur texte. Le texte n'y est jamais. Une page qui avait deux h1 doit en avoir un seul. Une page de recherche avec des paramètres doit en avoir un seul, dont le texte dit ce qui a été cherché (registre des changements voulus). Pour refaire le fichier : `bun --no-env-file scripts/migration/parite-urls-h1.ts <baseline-2026-10.csv>`, avec le fichier privé de l'outil de mesure.
+- **Le bilan par type** s'affiche à chaque lancement : pour chaque famille de la table, les adresses vertes et celles « à venir ». Les familles de la liste `LIVREES` du fichier sont livrées : une adresse de ces familles qui ne répond plus comme la table fait échouer l'essai. Un ticket qui livre un type l'ajoute à cette liste dans son commit. Un type qui n'y est pas mais répond juste est compté vert.
+- **Un écart connu** est affiché et ne fait ni vert ni rouge. Aujourd'hui, un seul : Next répond lui-même à toute adresse avec `//`, par un 308, avant que le site ne lise l'adresse (`proxy.ts` ne la voit jamais). La table promet un 301 ; `//toutes-les-news` fait deux sauts. Le cas se règle chez l'hébergeur (une règle de réécriture devant l'application), pas dans le code.
+- **Sur la copie importée** : `PARITE_URLS_LISTE=<baseline-2026-10.csv> bun run test:e2e tests/e2e/parite-urls.spec.ts` rejoue toutes les adresses du fichier privé de l'outil de mesure, profils compris, contre un banc où l'import a tourné ([`docs/migration/IMPORT.md`](../migration/IMPORT.md)). Aucune adresse de profil n'est écrite nulle part : un profil se lit « profil #n » dans le bilan et dans les messages. Les profils vides du spam, que l'import ne reprend pas, répondent 404 ; la liste ne les distingue pas des autres, les deux codes sont admis.
+
 ## Quand un essai échoue
 
 | Quoi | Où |
