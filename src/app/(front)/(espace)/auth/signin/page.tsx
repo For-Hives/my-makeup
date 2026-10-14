@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { headers } from 'next/headers'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { AideSansMotDePasse } from '@/components/auth/AideSansMotDePasse'
 import { BoutonGoogle } from '@/components/auth/BoutonGoogle'
 import { FormulaireDeConnexion } from '@/components/auth/FormulaireDeConnexion'
 import { MessageReconnexion } from '@/components/auth/MessageReconnexion'
@@ -53,6 +54,7 @@ export default async function PageDeConnexion({
 			{reconnexion ? <MessageReconnexion google={google} /> : null}
 			{google ? <BoutonGoogle libelle="Se connecter avec Google" retour={retour} /> : null}
 			<FormulaireDeConnexion action={seConnecter} retour={retour} />
+			<AideSansMotDePasse />
 			<p>
 				Pas encore de compte ?{' '}
 				<Link className="underline" href="/auth/signup">
