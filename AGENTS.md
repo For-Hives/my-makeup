@@ -14,7 +14,8 @@ Avant le premier changement, lis [`CLAUDE.md`](CLAUDE.md) : les commandes, l'arc
    3. `bun run test` ;
    4. `bun run test:ci-garde` : les garde-fous que la CI lance sur chaque PR ;
    5. `bun run test:integration`, banc démarré (`bun run banc:up`), si ton changement touche ce que le banc couvre : la base, les comptes, les mails, le stockage ;
-   6. `bun run build`, si tu as changé du code ou de la configuration.
+   6. `bun run test:e2e`, banc démarré, si ton changement touche ce qu'on voit dans un navigateur : une page, un écran, un parcours ;
+   7. `bun run build`, si tu as changé du code ou de la configuration.
 
    Si une étape est rouge : corrige avec le test ciblé, puis relance le passage une fois.
 4. **La seconde passe complète est celle de la CI, sur la PR.** Tu ne la fais pas à sa place.

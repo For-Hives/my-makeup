@@ -56,6 +56,7 @@ Le reste :
 - `.env.exemple` : la liste des variables d'environnement, sans aucune valeur.
 - `tests/` : les tests. Un composant React s'y teste seul, sans navigateur : voir `docs/tests/composants.md`.
 - `compose.test.yml` et `.env.test` : le banc de test local et son environnement factice, voir « Le banc de test ».
+- `playwright.config.ts` : les essais de bout en bout, voir « Les essais de bout en bout ». Il ne règle rien lui-même : tout vient de `tests/outils/e2e.ts`.
 
 Les versions sont figées dans `package.json`, et `bun.lock` est le seul fichier de verrouillage.
 
@@ -326,6 +327,7 @@ La CI ne lit aucun secret, n'a aucun filtre de chemins et ne tolère aucun éche
 | `bun run banc:down` | Arrête le banc de test et efface tout ce qu'il contenait |
 | `bun run banc:prepare` | Reconstruit la base du banc depuis les collections du code, vide |
 | `bun run test:integration` | Les tests d'intégration de `tests/integration/`, sur le banc. Avec un chemin : ce fichier seul |
+| `bun run test:e2e` | Les essais de bout en bout de `tests/e2e/`, dans un vrai navigateur, contre l'application construite et branchée sur le banc. Avec un chemin : ce fichier seul |
 | `bun run image:build` | Construit l'image Docker `my-makeup:local` |
 | `bun run image:controle` | Vérifie l'image construite contre une base jetable (voir « Image Docker ») |
 
@@ -349,7 +351,7 @@ Les tests tournent avec `bun test`, lancé par les scripts ci-dessus. Pour un se
 | `tests/fixtures/` | Données fictives et fichiers témoins |
 | `tests/outils/` | Outils partagés par les tests |
 
-Seuls `unit/`, `integration/`, `ci/`, `fixtures/` et `outils/` existent pour l'instant : chaque autre dossier arrive avec son premier test.
+Seuls `unit/`, `integration/`, `e2e/`, `ci/`, `fixtures/` et `outils/` existent pour l'instant : chaque autre dossier arrive avec son premier test.
 
 ### La garde d'environnement
 
@@ -392,6 +394,25 @@ bun run banc:down                                              # arrête tout et
 - Un test obtient un compte fictif et sa session en un appel, sans mot de passe à saisir : `await creerCompte('admin')`.
 
 Le détail est dans [`docs/tests/banc.md`](docs/tests/banc.md) : les services et leurs adresses, les deux variables d'instance, l'écriture d'un test d'intégration, la remise à zéro, la fabrique de comptes, les images épinglées.
+
+### Les essais de bout en bout
+
+Un essai de bout en bout ouvre l'application dans un vrai navigateur, à 1440 px et à 390 px. L'application est construite pour la production, démarrée sur le port du banc et branchée sur lui ; elle ne lit aucun fichier `.env`.
+
+```sh
+bunx playwright install chromium               # une fois par poste : le navigateur de Playwright
+bun run banc:up
+bun run test:e2e                               # tous les essais
+bun run test:e2e tests/e2e/coquille.spec.ts    # un seul fichier
+```
+
+- La commande vide la base du banc, construit l'application, puis Playwright la démarre, lance les essais et l'arrête.
+- Une session s'obtient sans mot de passe : `creerCompte('admin')`, puis `context.addCookies(compte.session.cookies)`.
+- `violationsGraves(page)` (`tests/outils/axe.ts`) rend les violations d'accessibilité « serious » et « critical » de la page.
+- Un essai en échec garde sa trace, sa vidéo et sa capture dans `test-results/essais/`.
+- Une cible sur `my-makeup.fr` arrête tout avant le premier essai.
+
+Le détail est dans [`docs/tests/e2e.md`](docs/tests/e2e.md) : écrire un essai, l'accessibilité, lire un échec, les garde-fous, les pièges.
 
 ## Licence
 

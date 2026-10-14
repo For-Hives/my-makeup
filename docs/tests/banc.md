@@ -163,6 +163,8 @@ La session est une vraie session : Payload l'ouvre par sa propre connexion et l'
 | Un client HTTP (`fetch`, une route appelée dans un test) | `fetch(adresse, { headers: compte.session.enTetes })` : le cookie et l'en-tête `Origin` qui va avec |
 | Un navigateur (Playwright) | `await context.addCookies(compte.session.cookies)`, puis ouvrir le site à l'adresse de `NEXT_PUBLIC_SITE_URL` |
 
+Dans un essai de bout en bout, la page s'ouvre par un chemin (`page.goto('/admin')`) : la commande `bun run test:e2e` règle l'adresse. Voir [`e2e.md`](e2e.md).
+
 À savoir :
 
 - **Le cookie seul ne suffit pas à un client HTTP.** L'application ignore un cookie de session qui n'arrive pas d'une origine de confiance : il faut envoyer les deux en-têtes de `session.enTetes`. Un navigateur, lui, dit de lui-même d'où part la requête.

@@ -675,3 +675,125 @@ export function handWrittenJavaScript(tracked: readonly string[], allowed: reado
 		.filter(file => JAVASCRIPT.test(file) && !allowed.includes(file))
 		.map(file => `${file} : un fichier JavaScript écrit à la main. Le dépôt est en TypeScript.`)
 }
+
+/* ------------------------------------------------------------------------------------------
+ * End-to-end tests
+ * ---------------------------------------------------------------------------------------- */
+
+/** The ways of waiting for a duration instead of a state, each with the name it is reported under. */
+const FIXED_WAITS: readonly (readonly [name: string, written: RegExp])[] = [
+	['waitForTimeout', /\bwaitForTimeout\s*\(/g],
+	// The timer itself, bare or on the page. `test.setTimeout(…)` is something else: the time limit of a test.
+	['setTimeout', /(?:(?<![.\w$])|\b(?:window|globalThis|self)\s*\.\s*)setTimeout\s*\(/g],
+	// The promise form of setTimeout: `import { setTimeout } from 'node:timers/promises'`.
+	['timers/promises', /['"](?:node:)?timers\/promises['"]/g],
+]
+
+/**
+ * C06: no end-to-end test waits for a fixed time. A wait that is long enough on one machine is
+ * too short on another: a test waits for a state, with the assertions of Playwright.
+ */
+export function fixedWaits(files: readonly { file: string; text: string }[]): string[] {
+	const problems: { file: string; line: number; name: string }[] = []
+	for (const { file, text } of files)
+		for (const [name, written] of FIXED_WAITS)
+			for (const match of text.matchAll(written))
+				problems.push({ file, line: text.slice(0, match.index).split('\n').length, name })
+	return problems
+		.sort((a, b) => a.file.localeCompare(b.file) || a.line - b.line)
+		.map(
+			({ file, line, name }) =>
+				`${file}:${line} : attente fixe (« ${name} »). Un essai attend un état, jamais une durée : « await expect(…) » ou « expect.poll ».`
+		)
+}
+
+/** What C07 reads in the configuration of Playwright, once evaluated. */
+export interface PlaywrightSettings {
+	forbidOnly?: boolean
+	testMatch?: unknown
+	use?: { baseURL?: string }
+	projects?: readonly { name?: string; testMatch?: unknown; use?: { baseURL?: string } }[]
+}
+
+const SITE_DOMAIN = 'my-makeup.fr'
+/** The one host of the site's domain a test may open, and only when the run declares it. */
+const PREPROD_HOST = `preprod.${SITE_DOMAIN}`
+const SPEC_FILES = /\.spec\.ts$/
+
+/** True when the pattern can only match `*.spec.ts` files: a text, or texts, that end that way. */
+const onlySpecFiles = (testMatch: unknown): boolean => {
+	const patterns = Array.isArray(testMatch) ? (testMatch as unknown[]) : [testMatch]
+	return patterns.length > 0 && patterns.every(pattern => typeof pattern === 'string' && SPEC_FILES.test(pattern))
+}
+
+/** Why an address must not be the one the tests open, or nothing. */
+function baseUrlDefect(baseURL: string | undefined): string | undefined {
+	if (baseURL === undefined) return 'manque : chaque essai ouvrirait une adresse écrite dans son propre fichier.'
+	if (!URL.canParse(baseURL)) return 'n’est pas une adresse lisible.'
+	const host = new URL(baseURL).hostname.toLowerCase()
+	const ofTheSite = host === SITE_DOMAIN || host.endsWith(`.${SITE_DOMAIN}`)
+	return ofTheSite && host !== PREPROD_HOST ? `vise le site en ligne (${host}).` : undefined
+}
+
+/**
+ * C07, the configuration as the CI evaluates it: a test left in `.only` fails the run, only
+ * `*.spec.ts` files are tests, and no address of production is what the tests open.
+ */
+export function playwrightSettingsProblems(settings: PlaywrightSettings): string[] {
+	const problems: string[] = []
+	if (settings.forbidOnly !== true)
+		problems.push('forbidOnly doit être vrai en CI : un essai laissé en « .only » ferait sauter tous les autres.')
+	const projects = settings.projects ?? []
+	if (!onlySpecFiles(settings.testMatch))
+		problems.push(
+			'testMatch doit se limiter aux fichiers « *.spec.ts » : sinon Playwright ramasse aussi les tests de bun.'
+		)
+	for (const { name = '?', testMatch } of projects)
+		if (testMatch !== undefined && !onlySpecFiles(testMatch))
+			problems.push(`projet « ${name} » : testMatch doit se limiter aux fichiers « *.spec.ts ».`)
+	const defect = baseUrlDefect(settings.use?.baseURL)
+	if (defect) problems.push(`baseURL ${defect}`)
+	for (const { name = '?', use } of projects) {
+		const ownDefect = use?.baseURL === undefined ? undefined : baseUrlDefect(use.baseURL)
+		if (ownDefect) problems.push(`projet « ${name} » : baseURL ${ownDefect}`)
+	}
+	return problems
+}
+
+/**
+ * C07, the file itself: playwright.config.ts gives the checked configuration as it is. A
+ * setting written in the file would be read by Playwright and by none of the checks above.
+ */
+export function playwrightConfigFileProblems(text: string, expected: string): string[] {
+	const code = text
+		.replace(/\/\*[\s\S]*?\*\//g, '')
+		.split('\n')
+		.map(line => line.replace(/\/\/.*$/, '').trim())
+		.filter(line => line !== '' && !line.startsWith('import '))
+	return code.length === 1 && code[0] === expected
+		? []
+		: [
+				`playwright.config.ts doit se réduire à « ${expected} » : un réglage écrit dans ce fichier échapperait aux garde-fous.`,
+			]
+}
+
+/** A call that opens an address, given a literal that starts with a protocol. */
+const ABSOLUTE_NAVIGATION =
+	/\.(goto|get|post|put|patch|delete|head|fetch|waitForURL)\s*\(\s*(['"`])(https?:\/\/[^'"`\s$]*)/g
+
+/**
+ * C07, the tests: a test opens a path, never a full address. The host is the one of `baseURL`,
+ * which the guard of the tests has checked; an address written in a test would go around it.
+ */
+export function absoluteNavigations(files: readonly { file: string; text: string }[]): string[] {
+	const problems: { file: string; line: number; call: string }[] = []
+	for (const { file, text } of files)
+		for (const match of text.matchAll(ABSOLUTE_NAVIGATION))
+			problems.push({ file, line: text.slice(0, match.index).split('\n').length, call: match[1] ?? '' })
+	return problems
+		.sort((a, b) => a.file.localeCompare(b.file) || a.line - b.line)
+		.map(
+			({ file, line, call }) =>
+				`${file}:${line} : « ${call} » reçoit une adresse complète. Un essai ouvre un chemin, comme « /admin » : l’hôte est celui de baseURL, vérifié par la garde.`
+		)
+}

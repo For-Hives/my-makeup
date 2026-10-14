@@ -37,7 +37,7 @@ const DELAI_DE_DEMARRAGE_MS = 60_000
 
 type EnvironnementDeProcessus = Record<string, string | undefined>
 
-interface Banc {
+export interface Banc {
 	instance: Instance
 	/** `.env.test`, with the ports of this instance. */
 	environnement: Environnement
@@ -165,7 +165,7 @@ async function arreter(banc: Banc): Promise<void> {
 }
 
 /** Stops with the message that names what to start when a service of the bench is silent. */
-async function exigerBancDebout({ instance, services }: Banc): Promise<void> {
+export async function exigerBancDebout({ instance, services }: Banc): Promise<void> {
 	const muets = await servicesMuets(sondesDuBanc(services))
 	if (muets.length > 0) throw new BancRefuse(messageBancMuet(instance, muets))
 }
@@ -178,7 +178,7 @@ async function exigerBancDebout({ instance, services }: Banc): Promise<void> {
  * The address is the one this file worked out from `.env.test` for the instance: never a value
  * read from the environment.
  */
-async function effacerLeSchema({ services: { base } }: Banc): Promise<void> {
+export async function effacerLeSchema({ services: { base } }: Banc): Promise<void> {
 	// The same rule as the guard of the tests, asked again where the tables are dropped.
 	if (!['127.0.0.1', 'localhost'].includes(base.hote) || !base.nom.endsWith('_test'))
 		throw new BancRefuse(
@@ -224,10 +224,15 @@ async function tester(banc: Banc, demandes: string[]): Promise<number> {
 
 const USAGE = 'Usage : bun run banc:up | banc:down | banc:prepare | test:integration [fichier…]'
 
-async function principal([commande, ...suite]: string[]): Promise<number> {
+/** The bench this process works on: the instance named by BANC_INSTANCE and BANC_DECALAGE. */
+export function bancCourant(): Banc {
 	const instance = lireInstance()
 	const environnement = environnementDuBanc(instance)
-	const banc: Banc = { instance, environnement, services: servicesDuBanc(environnement) }
+	return { instance, environnement, services: servicesDuBanc(environnement) }
+}
+
+async function principal([commande, ...suite]: string[]): Promise<number> {
+	const banc = bancCourant()
 	switch (commande) {
 		case 'up':
 			await demarrer(banc)
@@ -247,7 +252,8 @@ async function principal([commande, ...suite]: string[]): Promise<number> {
 }
 
 try {
-	process.exit(await principal(process.argv.slice(2)))
+	// Only when this file is the command: scripts/e2e.ts imports the tools above without running it.
+	if (import.meta.main) process.exit(await principal(process.argv.slice(2)))
 } catch (erreur) {
 	if (!(erreur instanceof BancRefuse)) throw erreur
 	console.error(erreur.message)
