@@ -271,7 +271,7 @@ describe('Premier démarrage de la préprod, sur une base vide', () => {
 	})
 
 	test('sur la préprod sans stockage d’objets, les 12 profils sont chargés sans photo, et rien n’est envoyé au stockage', async () => {
-		await viderLaBase()
+		await Promise.all([viderLaBase(), viderLeStockage()])
 		const journal: string[] = []
 
 		const sans = await chargerLeJeuDeLaPreprod(payload, {
