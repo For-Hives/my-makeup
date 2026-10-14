@@ -25,6 +25,7 @@ import { LANGUE_DE_PAYLOAD } from './lib/langue-payload'
 import { adresseDuMedia, PREFIXE_DES_ENVOIS } from './lib/medias'
 import { requetesBornees } from './lib/requete-bornee'
 import { stockageS3 } from './lib/stockage'
+import { reserverLesVerrousAuxAdmins } from './lib/verrous-payload'
 import { migrations } from './migrations'
 import { auDemarrage, avecLaRemiseAZero } from './preprod/au-demarrage'
 
@@ -102,7 +103,11 @@ export default buildConfig({
 	// Once Payload has started and played its migrations: on the pre-production only, the import of
 	// the fake Strapi source into an empty database (ticket 027, docs/preprod.md). Anywhere else it
 	// does nothing.
-	onInit: payload => auDemarrage(payload, env),
+	onInit: async payload => {
+		// Payload's document locks are reserved to the accounts of the admin panel (ticket 094).
+		reserverLesVerrousAuxAdmins(payload)
+		await auDemarrage(payload, env)
+	},
 	plugins: [
 		// The photos go to the object storage the environment names (src/lib/env.ts): R2 on the site,
 		// the S3 simulator on the test bench. Each media keeps its own prefix: `media/` for a photo

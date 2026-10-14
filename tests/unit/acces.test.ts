@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { initI18n } from '@payloadcms/translations'
 import { type PayloadRequest, ValidationError } from 'payload'
-import { Admins, DUREE_SESSION_ADMIN_S, premierCompteAdmin, sessionsFermees } from '@/collections/Admins'
+import { Admins, DUREE_SESSION_ADMIN_S, sessionsFermees } from '@/collections/Admins'
 import { Articles } from '@/collections/Articles'
 import {
 	aucunEnvoiSansStockage,
@@ -200,15 +200,17 @@ describe('La collection admins (ticket 018)', () => {
 		expect([admin, redaction, null].map(user => acces.create?.(appel(user)))).toEqual([true, false, false])
 	})
 
-	test('le premier compte, créé sans session par l’écran du premier compte, est un admin', () => {
-		const hook = (operation: string, payloadAPI: string, user: Utilisateur | null, value: string) =>
-			premierCompteAdmin({ operation, req: { payloadAPI, user }, value } as never)
+	test('l’écran du premier compte est fermé sur admins comme sur pros, et rien ne force plus le rôle (ticket 094)', () => {
+		expect(Admins.endpoints).toContain(premierCompteFerme)
+		expect(Pros.endpoints).toContain(premierCompteFerme)
+		expect(() => premierCompteFerme.handler({ t: (cle: string) => cle } as never)).toThrow()
+		const role = Admins.fields.find(champ => 'name' in champ && champ.name === 'role')
+		expect(role).not.toHaveProperty('hooks')
+	})
 
-		expect(hook('create', 'REST', null, 'redaction')).toBe('admin')
-		// Anywhere else, the role stays the one given: an admin creating an account, the Local API, a change.
-		expect(hook('create', 'REST', admin, 'redaction')).toBe('redaction')
-		expect(hook('create', 'local', null, 'redaction')).toBe('redaction')
-		expect(hook('update', 'REST', null, 'redaction')).toBe('redaction')
+	test('la connexion est freinée par adresse, et une connexion réussie rend sa place (ticket 094)', () => {
+		expect(Admins.hooks?.beforeOperation).toHaveLength(1)
+		expect(Admins.hooks?.afterLogin).toHaveLength(1)
 	})
 
 	test('une session dure 8 heures', () => {

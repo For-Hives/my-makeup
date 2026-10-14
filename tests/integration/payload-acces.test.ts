@@ -553,6 +553,25 @@ const MATRICE: Ligne[] = [
 	// talents (ticket 022) and articles (ticket 046): the rules of the newsroom.
 	...lignesDeLaRedaction('talents'),
 	...lignesDeLaRedaction('articles'),
+	// Payload's document locks (ticket 094): reserved to the accounts of the admin panel. A makeup
+	// artist, a visitor and an account without a profile reach nothing; `redaction` and `admin` list,
+	// read, take, change and release a lock, the lock of the other admin included (a take-over).
+	...(['anonyme', 'maquilleuse', 'autreMaquilleuse', 'sansProfil'] as const).flatMap((role): Ligne[] => [
+		{ role, collection: 'payload-locked-documents', operation: 'lister', attendu: 'refuse' },
+		{ role, collection: 'payload-locked-documents', operation: 'lire', document: 'admin', attendu: 'refuse' },
+		// A lock in the name of an admin: the proof of the flaw, 201 before ticket 094.
+		{ role, collection: 'payload-locked-documents', operation: 'creer', attendu: 'refuse' },
+		{ role, collection: 'payload-locked-documents', operation: 'modifier', document: 'admin', attendu: 'refuse' },
+		{ role, collection: 'payload-locked-documents', operation: 'supprimer', document: 'admin', attendu: 'refuse' },
+	]),
+	...(['redaction', 'admin'] as const).flatMap((role): Ligne[] => [
+		{ role, collection: 'payload-locked-documents', operation: 'lister', attendu: 'tous' },
+		{ role, collection: 'payload-locked-documents', operation: 'lire', document: 'admin', attendu: 'autorise' },
+		{ role, collection: 'payload-locked-documents', operation: 'lire', document: 'redaction', attendu: 'autorise' },
+		{ role, collection: 'payload-locked-documents', operation: 'creer', attendu: 'autorise' },
+		{ role, collection: 'payload-locked-documents', operation: 'modifier', document: 'admin', attendu: 'autorise' },
+		{ role, collection: 'payload-locked-documents', operation: 'supprimer', document: 'admin', attendu: 'autorise' },
+	]),
 ]
 
 let distribution: Distribution

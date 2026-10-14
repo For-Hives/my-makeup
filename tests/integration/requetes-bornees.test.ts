@@ -163,15 +163,18 @@ describe('21 conditions : refus ; 20 : réponse (U60)', () => {
 		)
 	})
 
-	test('les verrous des documents, ouverts à tout compte : bornés eux aussi', async () => {
+	test('les verrous des documents, réservés aux comptes de l’administration : bornés eux aussi', async () => {
 		const verrous = '/api/payload-locked-documents'
 		const surLId = (n: number) => Array.from({ length: n }, (_, i) => `where[or][${i}][id][equals]=${i + 1}`).join('&')
-		for (const lecteur of [lecteurs.maquilleuse, lecteurs.redaction]) {
-			expect([lecteur.nom, (await lire(`${verrous}?${surLId(20)}`, lecteur)).statut]).toEqual([lecteur.nom, 200])
-			const refus = await lire(`${verrous}?${surLId(21)}`, lecteur)
-			expect([lecteur.nom, refus.statut]).toEqual([lecteur.nom, 400])
-			expect(refus.corps.errors?.[0]?.message).toBe(MESSAGE_TROP_DE_CONDITIONS)
-		}
+		// A makeup artist no longer reaches the locks (ticket 094): 403 within the bound; above it the
+		// bound answers first, as it runs before the access rules.
+		expect((await lire(`${verrous}?${surLId(20)}`, lecteurs.maquilleuse)).statut).toBe(403)
+		expect((await lire(`${verrous}?${surLId(21)}`, lecteurs.maquilleuse)).statut).toBe(400)
+		// The newsroom is bounded, like the public; the role `admin` is not.
+		expect((await lire(`${verrous}?${surLId(20)}`, lecteurs.redaction)).statut).toBe(200)
+		const refus = await lire(`${verrous}?${surLId(21)}`, lecteurs.redaction)
+		expect(refus.statut).toBe(400)
+		expect(refus.corps.errors?.[0]?.message).toBe(MESSAGE_TROP_DE_CONDITIONS)
 		expect((await lire(`${verrous}?${surLId(30)}`, lecteurs.admin)).statut).toBe(200)
 	})
 })

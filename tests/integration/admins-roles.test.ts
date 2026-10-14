@@ -69,16 +69,46 @@ describe('Les comptes admins : deux rôles, une session de 8 heures', () => {
 		expect((await monCompte(session.enTetes)).user).toBeNull()
 	})
 
-	test('sur une base vide, le premier compte est un admin, même si le formulaire disait redaction', async () => {
+	test('sur une base vide, l’écran du premier compte est fermé : un visiteur n’y crée aucun compte', async () => {
 		const email = `premier-${crypto.randomUUID()}@example.test`
+		const payload = await payloadDeTest()
+		expect((await payload.count({ collection: 'admins' })).totalDocs).toBe(0)
 
 		// What Payload's « create the first account » screen posts, without any session.
 		const { statut } = await appelerRest('POST', '/api/admins/first-register', {
-			corps: { email, password: crypto.randomUUID(), role: 'redaction' },
+			corps: { email, password: crypto.randomUUID(), role: 'admin' },
 		})
 
-		expect(statut).toBe(200)
+		expect(statut).toBe(403)
+		expect((await payload.count({ collection: 'admins' })).totalDocs).toBe(0)
+	})
+
+	test('sur une base vide, la session d’une maquilleuse ne crée aucun compte admin, avec ou sans rôle dans le corps', async () => {
+		const maquilleuse = await creerCompte('maquilleuse')
 		const payload = await payloadDeTest()
+
+		for (const corps of [
+			{ role: 'redaction' },
+			{ role: 'admin' },
+			// Without a role: the default would be `redaction`.
+			{},
+		]) {
+			const { statut } = await appelerRest('POST', '/api/admins/first-register', {
+				enTetes: maquilleuse.session.enTetes,
+				corps: { email: `intrus-${crypto.randomUUID()}@example.test`, password: crypto.randomUUID(), ...corps },
+			})
+			expect([JSON.stringify(corps), statut]).toEqual([JSON.stringify(corps), 403])
+		}
+		expect((await payload.count({ collection: 'admins' })).totalDocs).toBe(0)
+	})
+
+	test('le premier compte se crée par la Local API de la procédure d’exploitation, avec le rôle admin', async () => {
+		const email = `procedure-${crypto.randomUUID()}@example.test`
+		const payload = await payloadDeTest()
+
+		// What `bun run admin:creer` does: the Local API, without any request.
+		await payload.create({ collection: 'admins', data: { email, password: crypto.randomUUID(), role: 'admin' } })
+
 		const { docs } = await payload.find({ collection: 'admins', where: { email: { equals: email } } })
 		expect(docs.map(({ role }) => role)).toEqual(['admin'])
 	})
@@ -107,5 +137,41 @@ describe('Les comptes admins : deux rôles, une session de 8 heures', () => {
 
 		expect(statut).toBe(201)
 		expect((corps as { doc?: { role?: string } }).doc?.role).toBe('redaction')
+	})
+})
+
+describe('Le frein par adresse sur la connexion du back-office (ticket 094)', () => {
+	const MOT_DE_PASSE = 'un-mot-de-passe-de-test-094'
+	const connexion = (email: string, password: string, xForwardedFor: string) =>
+		appelerRest('POST', '/api/admins/login', {
+			corps: { email, password },
+			enTetes: { 'x-forwarded-for': xForwardedFor },
+		})
+
+	afterEach(async () => {
+		await viderLaBase()
+	})
+
+	test('le 11e échec d’une adresse est refusé en 429, même avec le bon mot de passe ; une autre adresse reste libre', async () => {
+		const compte = await creerCompte('admin', { motDePasse: () => MOT_DE_PASSE })
+		const adresseFrenee = '203.0.113.40'
+
+		for (let i = 0; i < 10; i++) expect((await connexion(compte.email, `faux-${i}`, adresseFrenee)).statut).toBe(401)
+		const onzieme = await connexion(compte.email, 'faux-10', adresseFrenee)
+
+		expect(onzieme.statut).toBe(429)
+		expect(onzieme.texte).toContain('Trop d’essais, réessaie dans quelques minutes.')
+		expect((await connexion(compte.email, MOT_DE_PASSE, adresseFrenee)).statut).toBe(429)
+		// Another address is not braked: it is answered by Payload, not refused as too many tries.
+		expect((await connexion(compte.email, 'faux-autre', '203.0.113.41')).statut).toBe(401)
+	})
+
+	test('un admin qui se trompe pas se connecte, avec son cookie', async () => {
+		const compte = await creerCompte('admin', { motDePasse: () => MOT_DE_PASSE })
+
+		const { statut, enTetes } = await connexion(compte.email, MOT_DE_PASSE, '203.0.113.42')
+
+		expect(statut).toBe(200)
+		expect(enTetes.get('set-cookie') ?? '').toStartWith('payload-token=')
 	})
 })

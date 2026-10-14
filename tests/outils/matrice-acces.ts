@@ -67,7 +67,15 @@ const TYPE_DU_ROLE: Record<RoleAvecCompte, TypeAvecSession> = {
 }
 
 /** The collections the matrix covers. */
-export const COLLECTIONS = ['admins', 'pros', 'profils', 'media', 'talents', 'articles'] as const
+export const COLLECTIONS = [
+	'admins',
+	'pros',
+	'profils',
+	'media',
+	'talents',
+	'articles',
+	'payload-locked-documents',
+] as const
 export type CollectionDeLaMatrice = (typeof COLLECTIONS)[number]
 
 /**
@@ -269,7 +277,33 @@ const PORTRAITS: Record<CollectionDeLaMatrice, Portrait> = {
 		donneesDeCreation: () => Promise.resolve(article('publie')),
 		jetable: async payload => (await payload.create({ collection: 'articles', data: article('publie') })).id,
 	},
+	// Payload's editing locks (ticket 094): a lock names a global, so that no document of the cast is
+	// involved, and the account that holds it, always an admin of the cast.
+	'payload-locked-documents': {
+		champ: 'globalSlug',
+		nouvelleValeur: () => nom('verrou-modifie'),
+		donneesDeCreation: async (_acteur, payload) => ({
+			globalSlug: nom('verrou-cree'),
+			user: { relationTo: 'admins', value: await premierAdmin(payload) },
+		}),
+		jetable: async payload => (await creerUnVerrou(payload, await premierAdmin(payload))).id,
+	},
 }
+
+/** An admin of the cast: the account a lock of the matrix is in the name of. */
+const premierAdmin = async (payload: Payload): Promise<number> => {
+	const { docs } = await payload.find({ collection: 'admins', depth: 0, limit: 1, sort: 'id' })
+	const admin = docs[0]
+	if (!admin) throw new Error('La distribution n’a aucun compte admin.')
+	return admin.id
+}
+
+/** A lock in the name of this admin, written without access control. */
+const creerUnVerrou = (payload: Payload, admin: number) =>
+	payload.create({
+		collection: 'payload-locked-documents',
+		data: { globalSlug: nom('verrou'), user: { relationTo: 'admins', value: admin } },
+	})
 
 /** A media sent for this account (a photo with its owner), or for nobody, as for an article. */
 async function mediaDe(payload: Payload, proprietaire: number | undefined): Promise<number> {
@@ -329,6 +363,12 @@ export async function distribuer(): Promise<Distribution> {
 			id: profil,
 			data: { statutChoisi, photoPrincipale: acteur.documents.media },
 		})
+	}
+	// One lock for each account of the admin panel, in its own name.
+	for (const role of ['admin', 'redaction'] as const) {
+		const compte = parRole[role].documents.admins
+		if (compte === undefined) throw new Error(`La distribution n’a pas de compte pour « ${role} ».`)
+		parRole[role].documents['payload-locked-documents'] = (await creerUnVerrou(payload, compte)).id
 	}
 	return { ...parRole, ...(await creerLesContenus(payload)) }
 }

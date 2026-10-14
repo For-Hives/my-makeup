@@ -1,23 +1,14 @@
-import type { CollectionConfig, Field, FieldHook } from 'payload'
-// Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
+import type { CollectionConfig, Field } from 'payload'
 import { adminOuSoiMeme, adminSeulement, champAdminSeulement, jamais, ROLES_ADMIN, type RoleAdmin } from '../lib/acces'
+// Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
+import { freinerLaConnexion, rendreLaPlaceDeLaConnexion } from '../lib/auth/frein-payload'
+import { premierCompteFerme } from '../lib/auth/premier-compte-ferme'
 
 /** How long a session of the admin panel lasts: 8 hours, then the account logs in again (plan 01 §2.3). */
 export const DUREE_SESSION_ADMIN_S = 8 * 60 * 60
 
 /** What the admin panel shows for each role. */
 const LIBELLES_DES_ROLES: Record<RoleAdmin, string> = { admin: 'Admin', redaction: 'Rédaction' }
-
-/**
- * The first account of an empty database is always an `admin`, whatever the form said.
- *
- * Payload's « create the first account » screen posts to `/api/admins/first-register`, which
- * creates the account without access control. It is the only way an anonymous request creates an
- * account through REST: anywhere else, creating an account takes the role `admin`. Without this
- * rule, a first account left on the default role would be a `redaction` that nobody could promote.
- */
-export const premierCompteAdmin: FieldHook = ({ operation, req, value }) =>
-	operation === 'create' && req.payloadAPI === 'REST' && !req.user ? 'admin' : value
 
 /**
  * The sessions of an account never leave the server, not even for the account itself (plan 02
@@ -41,14 +32,23 @@ export const sessionsFermees: Field = {
  *   only, never its role; the other collections say what it may do there (articles and talents).
  * - A makeup artist has no account here and never opens the panel (collection `pros`).
  * - A session lasts 8 hours.
- *
- * The accounts are created by hand, never imported (docs/migration/SCHEMA.md, §4.2).
+ * - The sign-in is braked by client address, like the one of the makeup artists (ticket 094).
+ * - `/api/admins/first-register` is closed, even on an empty table: the accounts are created by
+ *   the operating procedure (`bun run admin:creer`, scripts/admin/), never by a visitor, never
+ *   imported (docs/migration/SCHEMA.md, §4.2).
  */
 export const Admins: CollectionConfig<'admins'> = {
 	slug: 'admins',
 	labels: { singular: 'Compte admin', plural: 'Comptes admin' },
 	admin: { useAsTitle: 'email', defaultColumns: ['email', 'role'] },
+	// Payload's own lock of the account after 5 wrong passwords stays: an admin is worth it, and the
+	// lock is no new door for the brake. The brake by address adds to it (`freinerLaConnexion`).
 	auth: { tokenExpiration: DUREE_SESSION_ADMIN_S },
+	endpoints: [premierCompteFerme],
+	hooks: {
+		afterLogin: [rendreLaPlaceDeLaConnexion()],
+		beforeOperation: [freinerLaConnexion()],
+	},
 	access: {
 		read: adminOuSoiMeme('admins'),
 		create: adminSeulement,
@@ -66,7 +66,6 @@ export const Admins: CollectionConfig<'admins'> = {
 			defaultValue: 'redaction' satisfies RoleAdmin,
 			options: ROLES_ADMIN.map(role => ({ label: LIBELLES_DES_ROLES[role], value: role })),
 			access: { create: champAdminSeulement, update: champAdminSeulement },
-			hooks: { beforeChange: [premierCompteAdmin] },
 		},
 		sessionsFermees,
 	],
