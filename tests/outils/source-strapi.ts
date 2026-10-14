@@ -31,16 +31,10 @@ import {
 } from './banc'
 import { verifierBase } from './garde-environnement'
 import { deposerUnObjet, lireUnObjet, listerLesObjets, type Stockage, stockageDuBanc, supprimerUnObjet } from './s3'
-import { type DefinitionDeLaSource, definitionDeLaSource, type Ligne, type Valeur } from './source-strapi/donnees'
+import { type Executer, effacerLaBase, preparerLaBase, remplirLaBase } from './source-strapi/creation'
+import { type DefinitionDeLaSource, definitionDeLaSource, type Ligne } from './source-strapi/donnees'
 import type { EtatDeLaSource } from './source-strapi/inventaire'
-import {
-	CONVERSIONS,
-	creationDeTable,
-	identifiant,
-	NOMS_DES_TABLES,
-	type NomDeTable,
-	TABLES,
-} from './source-strapi/schema'
+import { identifiant, NOMS_DES_TABLES, type NomDeTable } from './source-strapi/schema'
 
 export { COMPTES_DE_FIXTURE, type CompteDeFixture } from './source-strapi/donnees'
 export { inventaire, inventaireEnMarkdown, type LigneDInventaire } from './source-strapi/inventaire'
@@ -70,12 +64,6 @@ const MOT_DE_PASSE_FACTICE = /^[A-Za-z0-9-]{8,100}$/
 
 /** How many objects are sent or removed at once. */
 const OBJETS_DE_FRONT = 10
-
-/** The cost of the bcrypt hashes, the one of every real hash (`$2a$10$`, plans/01 §2.4). */
-const COUT_BCRYPT = 10
-
-/** The alphabet of bcrypt, for its salt. */
-const ALPHABET_BCRYPT = './ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
 
 /**
  * The source of the bench this process works on. Throws `BancRefuse` when the environment does not
@@ -157,44 +145,11 @@ export function ouvrirLaSource(source: SourceStrapi = sourceDuBanc()): SQL {
 	return new SQL({ url: source.lecture, max: 1 })
 }
 
-const litteral = (texte: string): string => `'${texte.replaceAll("'", "''")}'`
-
-/** A salt of bcrypt drawn from the id of the account: the same account always gets the same hash. */
-function selBcrypt(id: number): string {
-	const octets = createHash('sha256').update(`sel-factice-${id}`).digest()
-	// 16 bytes of salt in 22 characters of 6 bits: the last character carries the last 2 bits only,
-	// its 4 low bits stay at 0, as bcrypt writes them.
-	const caracteres = Array.from({ length: 22 }, (_vide, rang) => {
-		const valeur = octets[rang] ?? 0
-		return ALPHABET_BCRYPT[rang === 21 ? valeur & 0x30 : valeur & 0x3f] ?? '.'
-	})
-	return `$2a$${COUT_BCRYPT}$${caracteres.join('')}`
-}
-
-/** One INSERT per table, every value a parameter cast to the type of its column. */
-async function remplir(sql: SQL, table: NomDeTable, lignes: readonly Ligne[]): Promise<void> {
-	if (lignes.length === 0) return
-	const colonnes = TABLES[table]
-	const inconnue = lignes.flatMap(ligne => Object.keys(ligne)).find(nom => !colonnes.some(c => c.nom === nom))
-	if (inconnue) throw new Error(`Fausse base Strapi : la table ${table} n’a pas de colonne ${inconnue}.`)
-	const parametres: (string | number | boolean | null)[] = []
-	const valeurs = lignes.map(ligne => {
-		const cellules = colonnes.map(colonne => {
-			const valeur: Valeur | undefined = ligne[colonne.nom]
-			parametres.push(
-				valeur === undefined || valeur === null ? null : typeof valeur === 'object' ? JSON.stringify(valeur) : valeur
-			)
-			return `$${parametres.length}::${CONVERSIONS[colonne.type]}`
-		})
-		return `(${cellules.join(', ')})`
-	})
-	const noms = colonnes.map(colonne => identifiant(colonne.nom)).join(', ')
-	await sql.unsafe(`INSERT INTO ${identifiant(table)} (${noms}) VALUES ${valeurs.join(', ')}`, parametres)
-	// As if the rows had been created one by one: the next id follows the highest one.
-	await sql.unsafe(
-		`SELECT setval(pg_get_serial_sequence(${litteral(identifiant(table))}, 'id'), (SELECT max(id) FROM ${identifiant(table)}))`
-	)
-}
+/** Runs the statements of ./source-strapi/creation.ts on a connection of bun. */
+const executerAvec =
+	(sql: Pick<SQL, 'unsafe'>): Executer =>
+	async (texte, parametres) =>
+		parametres === undefined ? [...(await sql.unsafe(texte))] : [...(await sql.unsafe(texte, [...parametres]))]
 
 /** The keys of every object the files of the source name: originals and derived formats. */
 function clesNommees(fichiers: readonly Ligne[], medias: string): string[] {
@@ -222,43 +177,13 @@ async function parPaquets<T>(elements: readonly T[], travail: (element: T) => Pr
  */
 export async function creerLaSourceStrapi(source: SourceStrapi = sourceDuBanc()): Promise<DefinitionDeLaSource> {
 	const definition = definitionDeLaSource(source.medias)
-	const base = identifiant(source.base)
-	const role = identifiant(source.role)
 	const motDePasse = decodeURIComponent(new URL(source.lecture).password)
 
-	await avec(source.maintenance, async sql => {
-		// Each statement on its own: CREATE DATABASE cannot run inside a transaction.
-		await sql.unsafe(`DROP DATABASE IF EXISTS ${base} WITH (FORCE)`)
-		await sql.unsafe(`CREATE DATABASE ${base}`)
-		const [existe] = await sql.unsafe('SELECT 1 FROM pg_roles WHERE rolname = $1', [source.role])
-		await sql.unsafe(
-			`${existe ? 'ALTER' : 'CREATE'} ROLE ${role} WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS NOINHERIT PASSWORD ${litteral(motDePasse)}`
-		)
-		await sql.unsafe(`REVOKE ALL ON DATABASE ${base} FROM PUBLIC`)
-		await sql.unsafe(`GRANT CONNECT ON DATABASE ${base} TO ${role}`)
-		// A second lock: every transaction of the role starts read-only.
-		await sql.unsafe(`ALTER ROLE ${role} IN DATABASE ${base} SET default_transaction_read_only = on`)
-	})
-
+	await avec(source.maintenance, sql =>
+		preparerLaBase(executerAvec(sql), { base: source.base, role: source.role, motDePasse })
+	)
 	await avec(source.administration, sql =>
-		sql.begin(async transaction => {
-			for (const table of NOMS_DES_TABLES) await transaction.unsafe(creationDeTable(table))
-			for (const table of NOMS_DES_TABLES) await remplir(transaction, table, definition.lignes[table])
-			// bcrypt by pgcrypto, with a fixed salt per account: the hash is written by PostgreSQL and
-			// read by nobody here. pgcrypto lives in a schema of its own, dropped once the hashes are
-			// written: the source keeps the tables of Strapi and nothing else.
-			await transaction.unsafe('CREATE SCHEMA fabrique; CREATE EXTENSION pgcrypto SCHEMA fabrique')
-			for (const [id, motDePasseDuCompte] of definition.motsDePasse)
-				await transaction.unsafe('UPDATE up_users SET password = fabrique.crypt($1, $2) WHERE id = $3', [
-					motDePasseDuCompte,
-					selBcrypt(id),
-					id,
-				])
-			await transaction.unsafe('DROP SCHEMA fabrique CASCADE')
-			await transaction.unsafe(`REVOKE ALL ON SCHEMA public FROM PUBLIC`)
-			await transaction.unsafe(`GRANT USAGE ON SCHEMA public TO ${role}`)
-			await transaction.unsafe(`GRANT SELECT ON ALL TABLES IN SCHEMA public TO ${role}`)
-		})
+		sql.begin(transaction => remplirLaBase(executerAvec(transaction), definition, source.role))
 	)
 
 	// The objects: those of the definition, and none of those it leaves missing on purpose.
@@ -273,10 +198,7 @@ export async function creerLaSourceStrapi(source: SourceStrapi = sourceDuBanc())
 
 /** Drops the source: database, role and the objects its files name. Nothing else of the bench is touched. */
 export async function effacerLaSourceStrapi(source: SourceStrapi = sourceDuBanc()): Promise<void> {
-	await avec(source.maintenance, async sql => {
-		await sql.unsafe(`DROP DATABASE IF EXISTS ${identifiant(source.base)} WITH (FORCE)`)
-		await sql.unsafe(`DROP ROLE IF EXISTS ${identifiant(source.role)}`)
-	})
+	await avec(source.maintenance, sql => effacerLaBase(executerAvec(sql), { base: source.base, role: source.role }))
 	const { lignes, objets } = definitionDeLaSource(source.medias)
 	const cles = new Set([...clesNommees(lignes.files, source.medias), ...objets.map(objet => objet.cle)])
 	await parPaquets([...cles], cle => supprimerUnObjet(cle, { stockage: source.stockage }))

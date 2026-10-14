@@ -21,6 +21,7 @@ import { mediaBaseUrl, serverEnv } from './lib/env'
 import { adresseDuMedia, PREFIXE_DES_ENVOIS } from './lib/medias'
 import { requetesBornees } from './lib/requete-bornee'
 import { migrations } from './migrations'
+import { auDemarrage } from './preprod/au-demarrage'
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -82,6 +83,10 @@ export default buildConfig({
 		: undefined,
 	// REST and the Local API are the only ways in. The two GraphQL routes answer 404 by themselves.
 	graphQL: { disable: true },
+	// Once Payload has started and played its migrations: on the pre-production only, the import of
+	// the fake Strapi source into an empty database, and the reset a new token asks for (ticket 027,
+	// docs/preprod.md). Anywhere else it does nothing.
+	onInit: payload => auDemarrage(payload, env),
 	plugins: [
 		// The photos go to the object storage the environment names (src/lib/env.ts): R2 on the site,
 		// the S3 simulator on the test bench. Each media keeps its own prefix: `media/` for a photo
