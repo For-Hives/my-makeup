@@ -172,3 +172,24 @@ describe('I15 : un compte migré (bcrypt) se connecte, son hash est remplacé, l
 		expect((await ligneDuCompte(compte.id)).legacyBcrypt).toStartWith('$2a$10$')
 	})
 })
+
+describe('088 : la porte REST répond aux refus avec le même plancher et la même réponse', () => {
+	test('adresse inconnue, mauvais mot de passe, compte hérité : 401, même corps, jamais avant 300 ms', async () => {
+		const [connu, herite] = await Promise.all([creerCompte('maquilleuse'), creerCompte('reprise-avec-hash')])
+		const essais = ['personne@example.test', connu.email, herite.email]
+		const reponses: { statut: number; texte: string; duree: number }[] = []
+		for (const email of essais) {
+			const debut = performance.now()
+			const { statut, texte } = await appelerRest('POST', '/api/pros/login', {
+				corps: { email, password: 'pas-le-bon' },
+				enTetes: { 'x-forwarded-for': '192.0.2.26' },
+			})
+			reponses.push({ statut, texte, duree: performance.now() - debut })
+		}
+
+		expect(reponses.map(r => r.statut)).toEqual([401, 401, 401])
+		expect(new Set(reponses.map(r => r.texte)).size).toBe(1)
+		// A lower bound only: a timer may fire a hair early, and the work itself may take longer.
+		for (const { duree } of reponses) expect(duree).toBeGreaterThanOrEqual(290)
+	})
+})

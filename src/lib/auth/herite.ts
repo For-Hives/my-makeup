@@ -1,4 +1,4 @@
-import { pbkdf2 } from 'node:crypto'
+import { pbkdf2, randomUUID } from 'node:crypto'
 import bcrypt from 'bcryptjs'
 import type { Payload } from 'payload'
 
@@ -19,11 +19,11 @@ import type { Payload } from 'payload'
 const FORME_D_UN_HASH_BCRYPT = /^\$2[aby]\$(?:0[4-9]|[12]\d|3[01])\$[./A-Za-z0-9]{53}$/
 
 /**
- * A well-formed bcrypt hash (cost 10, like those of the old site) of a random text nobody kept.
- * An account with no old hash is compared to it, so that it costs the same work as an account that
- * has one (ticket 088).
+ * A well-formed bcrypt hash (cost 10, like those of the old site) of a random text nobody keeps,
+ * worked out when the module loads: no hash is written in the repository. An account with no old
+ * hash is compared to it, so that it costs the same work as an account that has one (ticket 088).
  */
-export const HASH_FICTIF = '$2b$10$GtL8cKf4O3LN8FvwUJTIWecJzNA/PqgmdrmTuI5tRDMfVAMI5tjIO'
+export const HASH_FICTIF: Promise<string> = bcrypt.hash(randomUUID(), 10)
 
 export const estUnHashBcrypt = (valeur: unknown): valeur is string =>
 	typeof valeur === 'string' && FORME_D_UN_HASH_BCRYPT.test(valeur)
@@ -35,7 +35,7 @@ export const estUnHashBcrypt = (valeur: unknown): valeur is string =>
 export async function motDePasseDuHash(motDePasse: string, hash: unknown): Promise<boolean> {
 	const utilisable = estUnHashBcrypt(hash)
 	try {
-		const accepte = await bcrypt.compare(motDePasse, utilisable ? hash : HASH_FICTIF)
+		const accepte = await bcrypt.compare(motDePasse, utilisable ? hash : await HASH_FICTIF)
 		return utilisable && accepte
 	} catch {
 		return false
@@ -84,14 +84,15 @@ interface LigneDuCompte {
  */
 export async function remplacerLeHashHerite(
 	payload: Pick<Payload, 'db' | 'update'>,
-	{ email, password }: { email: string; password: string }
+	{ email, password }: { email: string; password: string },
+	travailFictif: (motDePasse: string) => Promise<void> = travailDeVerificationFictif
 ): Promise<boolean> {
 	const ligne = await payload.db.findOne<LigneDuCompte>({
 		collection: 'pros',
 		where: { email: { equals: email.trim().toLowerCase() } },
 	})
 	// An unknown address: Payload has done nothing for it, so the work it does for a known one is done here.
-	if (!ligne) await travailDeVerificationFictif(password)
+	if (!ligne) await travailFictif(password)
 	const hash = ligne?.legacyBcrypt
 	const accepte = await motDePasseDuHash(password, hash)
 	if (!accepte || !ligne) return false

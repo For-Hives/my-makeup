@@ -13,6 +13,7 @@ import {
 	travailDeVerificationFictif,
 } from '@/lib/auth/herite'
 import type { EvenementAuth } from '@/lib/auth/journal'
+import { egaliserLeTravailRest, retenirLesEchecsRest } from '@/lib/auth/temps-egalise-payload'
 
 /**
  * The sign-in of an account of the old site (ticket 087; plan 02 U72, U74) and the equal time of
@@ -108,10 +109,10 @@ describe('U74 : un hash mal formé est refusé sans exception', () => {
 		[HASH],
 	]
 
-	test('aucun ne passe pour un hash bcrypt', () => {
+	test('aucun ne passe pour un hash bcrypt', async () => {
 		for (const hash of MAL_FORMES) expect(estUnHashBcrypt(hash)).toBe(false)
 		expect(estUnHashBcrypt(HASH)).toBe(true)
-		expect(estUnHashBcrypt(HASH_FICTIF)).toBe(true)
+		expect(estUnHashBcrypt(await HASH_FICTIF)).toBe(true)
 	})
 
 	test('la comparaison rend faux, sans exception, même avec le bon mot de passe', async () => {
@@ -128,7 +129,7 @@ describe('U74 : un hash mal formé est refusé sans exception', () => {
 
 	test('le hash fictif ne s’ouvre pour aucun mot de passe', async () => {
 		for (const motDePasse of [MOT_DE_PASSE, 'x', 'password', ''])
-			expect(await motDePasseDuHash(motDePasse, HASH_FICTIF)).toBe(false)
+			expect(await motDePasseDuHash(motDePasse, await HASH_FICTIF)).toBe(false)
 	})
 })
 
@@ -317,5 +318,92 @@ describe('U73 : un refus prend le même temps, quel que soit le compte', () => {
 		})
 		expect(r.ok).toBe(true)
 		expect(depuis(debut)).toBe(0)
+	})
+})
+
+describe('U73 : l’adresse sans compte paie le travail de Payload', () => {
+	test('remplacerLeHashHerite : une adresse inconnue fait le travail fictif, un compte connu non', async () => {
+		const travaux: string[] = []
+		const travailFictif = (motDePasse: string) => {
+			travaux.push(motDePasse)
+			return Promise.resolve()
+		}
+
+		await remplacerLeHashHerite(
+			fauxPayload(undefined).payload,
+			{ email: 'a@example.test', password: 'un' },
+			travailFictif
+		)
+		await remplacerLeHashHerite(
+			fauxPayload({ id: 1, legacyBcrypt: HASH }).payload,
+			{ email: 'a@example.test', password: 'deux' },
+			travailFictif
+		)
+		await remplacerLeHashHerite(
+			fauxPayload({ id: 1 }).payload,
+			{ email: 'a@example.test', password: 'trois' },
+			travailFictif
+		)
+
+		expect(travaux).toEqual(['un'])
+	})
+})
+
+describe('U73 : la porte REST de la connexion', () => {
+	const contexte = (api = 'REST') => ({ payloadAPI: api, context: {} as Record<string, unknown> })
+	const compteConnu = { hash: 'h', salt: 's' }
+
+	function requete(api: string, trouve: unknown) {
+		const req = {
+			...contexte(api),
+			payload: { db: { findOne: () => Promise.resolve(trouve) } },
+		}
+		return req as unknown as Parameters<ReturnType<typeof egaliserLeTravailRest>>[0]['req']
+	}
+	const appel = (data: unknown, req: unknown) =>
+		({ args: { data }, collection: { slug: 'pros' }, operation: 'login', req }) as never
+
+	test('une adresse sans compte fait le travail fictif ; un compte connu, un compte sans mot de passe lisible et une saisie vide non', async () => {
+		const travaux: string[] = []
+		const hook = egaliserLeTravailRest({
+			travailFictif: motDePasse => {
+				travaux.push(motDePasse)
+				return Promise.resolve()
+			},
+		})
+		const saisie = { email: 'A@Example.test ', password: 'secret' }
+
+		await hook(appel(saisie, requete('REST', null)))
+		await hook(appel(saisie, requete('REST', compteConnu)))
+		await hook(appel(saisie, requete('REST', { id: 1 })))
+		await hook(appel({ email: '', password: 'x' }, requete('REST', null)))
+		await hook(appel({ email: 'a@example.test', password: '  ' }, requete('REST', null)))
+		await hook(appel(saisie, requete('local', null)))
+
+		// The unknown address, and the account with no hash and salt to check: Payload does nothing for them.
+		expect(travaux).toEqual(['secret', 'secret'])
+	})
+
+	test('un refus des identifiants attend le plancher, sur une horloge simulée ; un autre échec non', async () => {
+		const { horloge, depuis } = horlogeSimulee()
+		const req = requete('REST', null)
+		const debut = horloge.maintenant()
+		await egaliserLeTravailRest({ horloge, travailFictif: () => Promise.resolve() })(
+			appel({ email: 'a@example.test', password: 'x' }, req)
+		)
+		const apres = retenirLesEchecsRest({ horloge })
+
+		await apres({ error: new AuthenticationError(t as never), req } as never)
+		expect(depuis(debut)).toBe(PLANCHER_DE_REFUS_MS)
+
+		// Later than the floor already: no more wait.
+		await apres({ error: new AuthenticationError(t as never), req } as never)
+		expect(depuis(debut)).toBe(PLANCHER_DE_REFUS_MS)
+
+		// A brake (429) says nothing about the account: it answers at once.
+		const autre = requete('REST', null)
+		autre.context.plancherDeLaConnexion = horloge.maintenant() + 1000
+		await apres({ error: Object.assign(new Error('frein'), { status: 429 }), req: autre } as never)
+		expect(depuis(debut)).toBe(PLANCHER_DE_REFUS_MS)
 	})
 })

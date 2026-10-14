@@ -10,6 +10,7 @@ import {
 } from '../lib/auth/journal-payload'
 import { premierCompteFerme } from '../lib/auth/premier-compte-ferme'
 import { DUREE_SESSION_S, prolongerSousPlafond, refuserApresLePlafond } from '../lib/auth/session-glissante'
+import { egaliserLeTravailRest, retenirLesEchecsRest } from '../lib/auth/temps-egalise-payload'
 import { contenuEmailConfirmation, SUJET_DE_CONFIRMATION } from '../lib/emails/confirmation'
 import { composerEmail } from '../lib/emails/gabarit'
 import { sessionsFermees } from './Admins'
@@ -99,9 +100,9 @@ export const Pros: CollectionConfig<'pros'> = {
 	hooks: {
 		afterChange: [profilALaCreationDuCompte],
 		afterLogin: [rendreLaPlaceDeLaConnexion(), retenirLaDerniereConnexion, noterLaConnexionRest],
-		afterError: [noterLEchecDeConnexionRest],
+		afterError: [retenirLesEchecsRest(), noterLEchecDeConnexionRest],
 		beforeDelete: [compteSansProfilAvantSuppression],
-		beforeOperation: [noterLeDebutDeLaConnexion, freinerLaConnexion(), refuserApresLePlafond],
+		beforeOperation: [noterLeDebutDeLaConnexion, freinerLaConnexion(), egaliserLeTravailRest(), refuserApresLePlafond],
 		refresh: [prolongerSousPlafond],
 	},
 	fields: [
