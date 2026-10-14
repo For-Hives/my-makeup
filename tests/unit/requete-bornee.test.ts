@@ -135,7 +135,7 @@ describe('U60 : un filtre ou un tri sur email, hash ou sessions, refusé', () =>
 
 describe('La borne, posée sur chaque collection et jouée avant la base', () => {
 	/** The hook as Payload calls it. */
-	const appeler = (args: Record<string, unknown>, user: Utilisateur | null, overrideAccess?: boolean) =>
+	const appeler = (args: Record<string, unknown>, user: Utilisateur | null, overrideAccess?: boolean): unknown =>
 		requeteBornee({
 			args,
 			collection: {} as never,
