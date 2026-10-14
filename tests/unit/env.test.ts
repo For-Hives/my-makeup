@@ -1,0 +1,281 @@
+import { describe, expect, test } from 'bun:test'
+import { EnvError, isLocalDatabase, parseServerEnv, type RawEnv, SECRET_MIN_LENGTH, serverEnv } from '@/lib/env'
+
+// Made-up values only. The remote address ends in `.test`, a name that never resolves.
+const LOCAL_URI = 'postgres://banc:banc@127.0.0.1:5442/mymakeup_test'
+const REMOTE_URI = 'postgres://banc:MOT-DE-PASSE-TEMOIN@base.exemple.test:5432/mymakeup_test'
+const SECRET = 'k'.repeat(64)
+const valid: RawEnv = { DATABASE_URI: LOCAL_URI, PAYLOAD_SECRET: SECRET }
+
+/** The error this environment is refused with. Fails when it is accepted. */
+function refusal(env: RawEnv): EnvError {
+	try {
+		parseServerEnv(env)
+	} catch (error) {
+		if (error instanceof EnvError) return error
+		throw error
+	}
+	throw new Error('this environment was accepted')
+}
+
+describe('a missing or short secret stops the start', () => {
+	test.each([
+		['missing', undefined],
+		['empty', ''],
+		['blank', '   '],
+	])('PAYLOAD_SECRET %s: refused as « absente »', (_case, secret) => {
+		const error = refusal({ ...valid, PAYLOAD_SECRET: secret })
+		expect(error.variables).toEqual(['PAYLOAD_SECRET'])
+		expect(error.message).toContain('- PAYLOAD_SECRET : absente. Attendu : au moins 32 caractères')
+	})
+
+	test('PAYLOAD_SECRET one character too short: refused as « trop courte », the right length is accepted', () => {
+		const error = refusal({ ...valid, PAYLOAD_SECRET: 'k'.repeat(SECRET_MIN_LENGTH - 1) })
+		expect(error.variables).toEqual(['PAYLOAD_SECRET'])
+		expect(error.message).toContain('- PAYLOAD_SECRET : trop courte. Attendu : au moins 32 caractères')
+
+		const exact = 'k'.repeat(SECRET_MIN_LENGTH)
+		expect(parseServerEnv({ ...valid, PAYLOAD_SECRET: exact }).payloadSecret).toBe(exact)
+	})
+
+	test('a short secret padded with spaces is still too short', () => {
+		expect(refusal({ ...valid, PAYLOAD_SECRET: `court${' '.repeat(40)}` }).variables).toEqual(['PAYLOAD_SECRET'])
+	})
+
+	test('DATABASE_URI missing: refused as « absente »', () => {
+		const error = refusal({ ...valid, DATABASE_URI: undefined })
+		expect(error.variables).toEqual(['DATABASE_URI'])
+		expect(error.message).toContain('- DATABASE_URI : absente. Attendu : postgres://')
+	})
+
+	test.each([
+		['not an address', 'base locale'],
+		['another database engine', 'mysql://banc:banc@127.0.0.1:3306/mymakeup_test'],
+		['no host', 'postgres:///mymakeup_test'],
+		['no database name', 'postgres://banc:banc@127.0.0.1:5442'],
+	])('DATABASE_URI with %s: refused as « illisible »', (_case, uri) => {
+		const error = refusal({ ...valid, DATABASE_URI: uri })
+		expect(error.variables).toEqual(['DATABASE_URI'])
+		expect(error.message).toContain('- DATABASE_URI : illisible. Attendu : postgres://')
+	})
+
+	test('every variable to fix is listed in one message', () => {
+		const error = refusal({})
+		expect(error.variables).toEqual(['DATABASE_URI', 'PAYLOAD_SECRET'])
+		expect(error.message.split('\n')).toHaveLength(4)
+		expect(error.message).toStartWith('Configuration invalide : l’application ne démarre pas.')
+	})
+
+	test('the message names the variables and never shows a value', () => {
+		const refused: RawEnv = {
+			DATABASE_URI: 'mysql://banc:MOT-DE-PASSE-TEMOIN@base.exemple.test:3306/base_temoin',
+			NEXT_PUBLIC_SITE_URL: 'https://site-temoin.exemple.test',
+			NODE_ENV: 'production',
+			PAYLOAD_DROP_DATABASE: 'true',
+			PAYLOAD_SECRET: 'secret-temoin',
+		}
+		const dropped: RawEnv = { ...valid, DATABASE_URI: REMOTE_URI, PAYLOAD_DROP_DATABASE: 'true' }
+
+		const messages = [refusal(refused).message, refusal(dropped).message].join('\n')
+		for (const variable of ['DATABASE_URI', 'NEXT_PUBLIC_SITE_URL', 'PAYLOAD_SECRET', 'PAYLOAD_DROP_DATABASE'])
+			expect(messages).toContain(`- ${variable} : `)
+		for (const part of ['TEMOIN', 'temoin', 'exemple.test', 'mysql', 'banc', 'mymakeup_test', '3306', '5432'])
+			expect(messages).not.toContain(part)
+	})
+
+	test('a valid environment is given back as it is', () => {
+		expect(parseServerEnv(valid)).toEqual({
+			databaseUri: LOCAL_URI,
+			localDatabase: true,
+			payloadSecret: SECRET,
+			trustedOrigins: ['http://localhost:3000', 'http://127.0.0.1:3000'],
+		})
+	})
+})
+
+describe('the schema is pushed only into a database of this machine', () => {
+	test.each([
+		'postgres://banc:banc@localhost:5442/mymakeup_test',
+		'postgres://banc:banc@LOCALHOST:5442/mymakeup_test',
+		'postgresql://banc:banc@127.0.0.1/mymakeup_test',
+		'postgres://banc:banc@[::1]:5442/mymakeup_test',
+		'postgres://banc:banc@localhost:5442/mymakeup_test?host=127.0.0.1',
+	])('local: %s', uri => {
+		expect(isLocalDatabase(uri)).toBe(true)
+		expect(parseServerEnv({ ...valid, DATABASE_URI: uri }).localDatabase).toBe(true)
+	})
+
+	test.each([
+		REMOTE_URI,
+		// A compose service name or a private address is another machine as far as a push is concerned.
+		'postgres://banc:banc@postgres:5432/mymakeup_test',
+		'postgres://banc:banc@10.0.0.5:5432/mymakeup_test',
+		'postgres://banc:banc@192.168.1.20:5432/mymakeup_test',
+		// Look-alikes of a local name.
+		'postgres://banc:banc@localhost.exemple.test:5432/mymakeup_test',
+		'postgres://banc:banc@127.0.0.1.exemple.test:5432/mymakeup_test',
+		'postgres://banc:banc@%6cocalhost.exemple.test:5432/mymakeup_test',
+		// `pg` connects to the `host` parameter, not to the host of the address.
+		'postgres://banc:banc@localhost:5432/mymakeup_test?host=base.exemple.test',
+		'postgres://banc:banc@127.0.0.1:5432/mymakeup_test?host=127.0.0.1&host=base.exemple.test',
+		'postgres://banc:banc@localhost,base.exemple.test:5432/mymakeup_test',
+	])('not local: %s', uri => {
+		expect(isLocalDatabase(uri)).toBe(false)
+		expect(parseServerEnv({ ...valid, DATABASE_URI: uri }).localDatabase).toBe(false)
+	})
+
+	test.each([
+		'',
+		'base locale',
+		'postgres:///mymakeup_test',
+		'/var/run/postgresql mymakeup_test',
+	])('unreadable, so not local: « %s »', uri => {
+		expect(isLocalDatabase(uri)).toBe(false)
+	})
+
+	test('PAYLOAD_DROP_DATABASE, which empties the database: refused unless the database is local', () => {
+		const error = refusal({ ...valid, DATABASE_URI: REMOTE_URI, PAYLOAD_DROP_DATABASE: 'true' })
+		expect(error.variables).toEqual(['PAYLOAD_DROP_DATABASE'])
+		expect(error.message).toContain('- PAYLOAD_DROP_DATABASE : refusée, car la base n’est pas sur ce poste.')
+
+		expect(() => parseServerEnv({ ...valid, PAYLOAD_DROP_DATABASE: 'true' })).not.toThrow()
+		expect(() => parseServerEnv({ ...valid, DATABASE_URI: REMOTE_URI, PAYLOAD_DROP_DATABASE: 'false' })).not.toThrow()
+	})
+})
+
+describe('trusted origins: the site, its pre-production and this machine, each for itself', () => {
+	const production: RawEnv = { ...valid, DATABASE_URI: REMOTE_URI, NODE_ENV: 'production' }
+	const origins = (env: RawEnv) => parseServerEnv(env).trustedOrigins
+
+	test('outside production: this machine, on the port Next listens on', () => {
+		expect(origins(valid)).toEqual(['http://localhost:3000', 'http://127.0.0.1:3000'])
+		expect(origins({ ...valid, NODE_ENV: 'development', PORT: '3100' })).toEqual([
+			'http://localhost:3100',
+			'http://127.0.0.1:3100',
+		])
+		expect(origins({ ...valid, PORT: 'pas un port' })).toEqual(['http://localhost:3000', 'http://127.0.0.1:3000'])
+	})
+
+	test('outside production: a stated local address is added, a deployed one is not', () => {
+		expect(origins({ ...valid, NEXT_PUBLIC_SITE_URL: 'http://127.0.0.1:3123' })).toEqual([
+			'http://localhost:3000',
+			'http://127.0.0.1:3000',
+			'http://localhost:3123',
+			'http://127.0.0.1:3123',
+		])
+		expect(origins({ ...valid, NEXT_PUBLIC_SITE_URL: 'https://my-makeup.fr' })).toEqual([
+			'http://localhost:3000',
+			'http://127.0.0.1:3000',
+		])
+	})
+
+	test('in production: the site trusts itself only, the pre-production trusts itself only', () => {
+		expect(origins({ ...production, NEXT_PUBLIC_SITE_URL: 'https://my-makeup.fr' })).toEqual(['https://my-makeup.fr'])
+		expect(origins({ ...production, NEXT_PUBLIC_SITE_URL: 'https://preprod.my-makeup.fr' })).toEqual([
+			'https://preprod.my-makeup.fr',
+		])
+	})
+
+	test('in production on this machine: the stated address under both of its names, whatever PORT says', () => {
+		expect(origins({ ...production, NEXT_PUBLIC_SITE_URL: 'http://localhost:3123', PORT: '3000' })).toEqual([
+			'http://localhost:3123',
+			'http://127.0.0.1:3123',
+		])
+	})
+
+	test('in production without NEXT_PUBLIC_SITE_URL: the start is refused', () => {
+		const error = refusal(production)
+		expect(error.variables).toEqual(['NEXT_PUBLIC_SITE_URL'])
+		expect(error.message).toContain('- NEXT_PUBLIC_SITE_URL : absente, alors qu’elle est obligatoire en production.')
+	})
+
+	test.each([
+		'https://exemple.test',
+		'https://www.my-makeup.fr',
+		'https://my-makeup.fr.exemple.test',
+		'https://preprod.my-makeup.fr.exemple.test',
+		'http://my-makeup.fr',
+		'https://my-makeup.fr/',
+		'https://my-makeup.fr/admin',
+		'https://MY-MAKEUP.fr',
+		'https://localhost:3000',
+		'http://localhost.exemple.test:3000',
+		'http://192.168.1.20:3000',
+		'my-makeup.fr',
+		'*',
+	])('any other address is refused, in production or not: %s', site => {
+		for (const env of [valid, production]) {
+			const error = refusal({ ...env, NEXT_PUBLIC_SITE_URL: site })
+			expect(error.variables).toEqual(['NEXT_PUBLIC_SITE_URL'])
+			expect(error.message).toContain('- NEXT_PUBLIC_SITE_URL : refusée. Attendu : https://my-makeup.fr, ')
+		}
+	})
+})
+
+describe('the server stops when it starts with an environment that is not valid', () => {
+	/**
+	 * What src/instrumentation.ts runs when a server starts, in a process of its own: the only
+	 * variables it sees are the ones given here, and no `.env` file is read.
+	 */
+	function start(env: RawEnv) {
+		const script =
+			"import { stopOnInvalidEnv } from './src/instrumentation-node'; stopOnInvalidEnv(); console.log('started')"
+		const run = Bun.spawnSync([process.execPath, '--no-env-file', '-e', script], {
+			cwd: `${import.meta.dir}/../..`,
+			env: { ...env, PATH: process.env.PATH },
+			stderr: 'pipe',
+			stdout: 'pipe',
+		})
+		return { exitCode: run.exitCode, stderr: run.stderr.toString(), stdout: run.stdout.toString() }
+	}
+
+	test('a short secret: exit code 1, the message on the error output, no value and no stack trace', () => {
+		const run = start({ ...valid, PAYLOAD_SECRET: 'secret-temoin' })
+		expect(run.exitCode).toBe(1)
+		expect(run.stdout).toBe('')
+		expect(run.stderr.trim().split('\n')).toEqual([
+			'Configuration invalide : l’application ne démarre pas.',
+			'- PAYLOAD_SECRET : trop courte. Attendu : au moins 32 caractères, par exemple la sortie de « openssl rand -hex 32 ».',
+			'Aucune valeur n’est affichée ici. La liste des variables est dans .env.exemple.',
+		])
+	})
+
+	test('no variable at all: exit code 1, both secrets named', () => {
+		const run = start({})
+		expect(run.exitCode).toBe(1)
+		expect(run.stdout).toBe('')
+		expect(run.stderr).toContain('- DATABASE_URI : absente.')
+		expect(run.stderr).toContain('- PAYLOAD_SECRET : absente.')
+	})
+
+	test('a valid environment: the start goes on', () => {
+		expect(start(valid)).toEqual({ exitCode: 0, stderr: '', stdout: 'started\n' })
+	})
+
+	test('next build is never stopped', () => {
+		expect(start({ NEXT_PHASE: 'phase-production-build' })).toEqual({ exitCode: 0, stderr: '', stdout: 'started\n' })
+	})
+})
+
+describe('next build needs no secret and no database', () => {
+	const building: RawEnv = { NEXT_PHASE: 'phase-production-build', NODE_ENV: 'production' }
+
+	test('nothing is checked while Next builds, and nothing is made up', () => {
+		expect(serverEnv(building)).toEqual({
+			databaseUri: '',
+			localDatabase: false,
+			payloadSecret: '',
+			trustedOrigins: ['http://localhost:3000', 'http://127.0.0.1:3000'],
+		})
+	})
+
+	test('the same empty environment is refused once the build is over', () => {
+		expect(() => serverEnv({ NODE_ENV: 'production' })).toThrow(EnvError)
+		expect(() => serverEnv({ NEXT_PHASE: 'phase-production-server', NODE_ENV: 'production' })).toThrow(EnvError)
+	})
+
+	test('the list of trusted origins is never empty: for Payload, an empty list trusts every origin', () => {
+		for (const env of [building, { ...building, NEXT_PUBLIC_SITE_URL: 'https://exemple.test' }, valid])
+			expect(serverEnv(env).trustedOrigins.length).toBeGreaterThan(0)
+	})
+})
