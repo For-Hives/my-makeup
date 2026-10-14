@@ -1,8 +1,18 @@
 import { APIError, type CollectionBeforeDeleteHook, type CollectionConfig, type Endpoint, Forbidden } from 'payload'
-// Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import { adminOuSoiMeme, adminSeulement, champAdminSeulement, jamais } from '../lib/acces'
+// Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
+import { freinerLaConnexion, rendreLaPlaceDeLaConnexion } from '../lib/auth/frein-payload'
 import { sessionsFermees } from './Admins'
 import { profilALaCreationDuCompte } from './Profils'
+
+/** How long a session of a makeup artist lasts: 14 days (plan 01 §2.3). */
+export const DUREE_SESSION_PRO_S = 14 * 24 * 60 * 60
+
+/**
+ * The attributes of the session cookie (I09): HttpOnly always (Payload sets it), SameSite=Lax, and
+ * Secure on the deployed site. The sign-in sets it with these same attributes.
+ */
+export const cookiesDeSession = (production: boolean) => ({ secure: production, sameSite: 'Lax' as const })
 
 /**
  * Payload gives every account collection a « first account » route, which creates an account
@@ -56,7 +66,17 @@ export const Pros: CollectionConfig<'pros'> = {
 	slug: 'pros',
 	labels: { singular: 'Compte maquilleuse', plural: 'Comptes maquilleuses' },
 	admin: { useAsTitle: 'email', defaultColumns: ['email', 'nom', '_verified', 'bloque'] },
-	auth: { verify: true },
+	auth: {
+		verify: true,
+		// No lock of the account: the brake is by client address (`freinerLaConnexion`), so that
+		// ten wrong passwords typed by anyone never lock the account they aimed at (AUTH-05).
+		maxLoginAttempts: 0,
+		// 14 days (plan 01 §2.3). Sliding renewal and the 90-day ceiling are ticket 079.
+		tokenExpiration: DUREE_SESSION_PRO_S,
+		// The token lives in the cookie only: no response of the API carries it (ticket 075).
+		removeTokenFromResponses: true,
+		cookies: cookiesDeSession(process.env.NODE_ENV === 'production'),
+	},
 	access: {
 		admin: () => false,
 		read: adminOuSoiMeme('pros'),
@@ -66,7 +86,12 @@ export const Pros: CollectionConfig<'pros'> = {
 		unlock: adminSeulement,
 	},
 	endpoints: [premierCompteFerme],
-	hooks: { afterChange: [profilALaCreationDuCompte], beforeDelete: [compteSansProfilAvantSuppression] },
+	hooks: {
+		afterChange: [profilALaCreationDuCompte],
+		afterLogin: [rendreLaPlaceDeLaConnexion()],
+		beforeDelete: [compteSansProfilAvantSuppression],
+		beforeOperation: [freinerLaConnexion()],
+	},
 	fields: [
 		{
 			name: 'nom',

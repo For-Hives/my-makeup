@@ -18,6 +18,7 @@ import {
 	type TypedUser,
 } from 'payload'
 import { addSessionToUser } from 'payload/shared'
+import { ouvrirParMotDePasse } from '../../src/lib/auth/jeton'
 import { BancRefuse, type Variables } from './banc'
 
 /** A cookie as a browser context takes it: the shape of Playwright's `context.addCookies()`. */
@@ -72,7 +73,7 @@ export async function ouvrirSession(
 	variables: Variables = process.env
 ): Promise<Session> {
 	const origine = origineDuSite(payload, variables)
-	const { exp, token } = await payload.login({ collection, data: { email, password: motDePasse } })
+	const { exp, token } = await ouvrirParMotDePasse(payload, collection, { email, password: motDePasse })
 	if (!token || !exp) throw new Error(`Payload n’a ouvert aucune session pour ce compte « ${collection} ».`)
 	return sessionDuJeton(payload, collection, { exp, token }, origine)
 }
