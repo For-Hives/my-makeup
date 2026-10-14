@@ -1,0 +1,356 @@
+/**
+ * The fake Strapi source of the bench: a PostgreSQL database with the tables of the old API that
+ * the import reads, its pictures in the object storage, and a role that can only read it
+ * (docs/tests/source-strapi.md).
+ *
+ *   await creerLaSourceStrapi()              creates it, or creates it again: same rows, same objects
+ *   await empreinteDeLaSource()              its fingerprint: tables and objects, read by the read-only role
+ *   inventaire(await lireLaSource())         each case it carries, in numbers
+ *   const sql = ouvrirLaSource()             a read-only connection, as the import opens it
+ *   await effacerLaSourceStrapi()            drops the database, the role and the objects
+ *
+ * The source lives in the PostgreSQL of the bench, next to the database of the application, in
+ * its own database (`STRAPI_SOURCE_URI` of .env.test). Its objects are in the bucket of the bench,
+ * where the application reads its pictures: the import adopts them without copying them.
+ *
+ * Every tool works on the bench instance this process was started for, and no other: the
+ * variables must be exactly those of that instance, local, with a database name ending in
+ * « _test ». A hash or an email is never printed: errors name a variable, never a value.
+ */
+
+import { createHash } from 'node:crypto'
+import { SQL } from 'bun'
+import {
+	BancRefuse,
+	type Environnement,
+	environnementDuBanc,
+	type Instance,
+	lireInstance,
+	prefixeDeCommande,
+	type Variables,
+} from './banc'
+import { verifierBase } from './garde-environnement'
+import { deposerUnObjet, lireUnObjet, listerLesObjets, type Stockage, stockageDuBanc, supprimerUnObjet } from './s3'
+import { type DefinitionDeLaSource, definitionDeLaSource, type Ligne, type Valeur } from './source-strapi/donnees'
+import type { EtatDeLaSource } from './source-strapi/inventaire'
+import {
+	CONVERSIONS,
+	creationDeTable,
+	identifiant,
+	NOMS_DES_TABLES,
+	type NomDeTable,
+	TABLES,
+} from './source-strapi/schema'
+
+export { COMPTES_DE_FIXTURE, type CompteDeFixture } from './source-strapi/donnees'
+export { inventaire, inventaireEnMarkdown, type LigneDInventaire } from './source-strapi/inventaire'
+
+/** The fake source of one bench instance: where it lives, and who may read it. */
+export interface SourceStrapi {
+	instance: Instance
+	/** The database of the bench, as its owner: the source database is created and dropped from there. */
+	maintenance: string
+	/** The source database, as the owner of the bench: its tables are created and filled from there. */
+	administration: string
+	/** The source database, as the read-only role: `STRAPI_SOURCE_URI`. */
+	lecture: string
+	base: string
+	role: string
+	stockage: Stockage
+	/** The public address of the bucket: the URL of each file starts with it. */
+	medias: string
+}
+
+const SERVICE = 'la fausse base Strapi'
+
+/** A database, a role, a password: written into SQL statements, so only plain characters. */
+const NOM_DE_BASE = /^[a-z][a-z0-9_]{0,50}_test$/
+const NOM_DE_ROLE = /^[a-z][a-z0-9_]{0,62}$/
+const MOT_DE_PASSE_FACTICE = /^[A-Za-z0-9-]{8,100}$/
+
+/** How many objects are sent or removed at once. */
+const OBJETS_DE_FRONT = 10
+
+/** The cost of the bcrypt hashes, the one of every real hash (`$2a$10$`, plans/01 §2.4). */
+const COUT_BCRYPT = 10
+
+/** The alphabet of bcrypt, for its salt. */
+const ALPHABET_BCRYPT = './ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+
+/**
+ * The source of the bench this process works on. Throws `BancRefuse` when the environment does not
+ * point at it: no bench at all (a tool started by hand), or another one (a working `.env`, the
+ * bench of a neighbour).
+ *
+ * `environnement` is what the bench instance says (.env.test, with its ports): given by a unit
+ * test only, to check what is refused even when .env.test itself would say it.
+ */
+export function sourceDuBanc(
+	variables: Variables = process.env,
+	environnement: Environnement = environnementDuBanc(lireInstance(variables))
+): SourceStrapi {
+	const instance = lireInstance(variables)
+	const noms = ['DATABASE_URI', 'STRAPI_SOURCE_URI', 'S3_ENDPOINT', 'S3_BUCKET']
+	const ecart = noms.find(nom => !variables[nom] || variables[nom] !== environnement[nom])
+	if (ecart !== undefined) {
+		const prefixe = prefixeDeCommande(instance)
+		throw new BancRefuse(
+			[
+				variables[ecart]
+					? `${ecart} ne désigne pas le banc de test : ${SERVICE} n’est ni créée ni lue.`
+					: `Aucun banc de test n’est réglé (${ecart} manque) : ${SERVICE} n’est ni créée ni lue.`,
+				`Démarre le banc par « ${prefixe}bun run banc:up », puis crée la source par « ${prefixe}bun run banc:source ».`,
+			].join(' ')
+		)
+	}
+	const maintenance = variables.DATABASE_URI ?? ''
+	const lecture = variables.STRAPI_SOURCE_URI ?? ''
+	verifierBase(maintenance)
+	verifierBase(lecture, 'STRAPI_SOURCE_URI')
+	const deMaintenance = new URL(maintenance)
+	const deLecture = new URL(lecture)
+	const base = deLecture.pathname.slice(1)
+	const role = decodeURIComponent(deLecture.username)
+	const motDePasse = decodeURIComponent(deLecture.password)
+	if (deMaintenance.host !== deLecture.host)
+		throw new BancRefuse('STRAPI_SOURCE_URI doit désigner le même serveur que DATABASE_URI : celui du banc.')
+	if (!NOM_DE_BASE.test(base) || base === deMaintenance.pathname.slice(1))
+		throw new BancRefuse('STRAPI_SOURCE_URI doit nommer une base à elle, en minuscules, qui finit par « _test ».')
+	if (
+		!NOM_DE_ROLE.test(role) ||
+		role === decodeURIComponent(deMaintenance.username) ||
+		!MOT_DE_PASSE_FACTICE.test(motDePasse)
+	)
+		throw new BancRefuse(
+			'STRAPI_SOURCE_URI doit porter un rôle à lui (minuscules, chiffres, « _ ») et un mot de passe factice (lettres, chiffres, « - »).'
+		)
+	const administration = new URL(maintenance)
+	administration.pathname = `/${base}`
+	const stockage = stockageDuBanc(variables)
+	return {
+		instance,
+		maintenance,
+		administration: administration.href,
+		lecture,
+		base,
+		role,
+		stockage,
+		medias: `${stockage.adresse}/${encodeURIComponent(stockage.bucket)}`,
+	}
+}
+
+/** Runs `travail` on a connection of its own, always closed after. */
+async function avec<T>(adresse: string, travail: (sql: SQL) => Promise<T>): Promise<T> {
+	const sql = new SQL({ url: adresse, max: 1 })
+	try {
+		return await travail(sql)
+	} finally {
+		await sql.close()
+	}
+}
+
+/**
+ * A connection to the source as the read-only role, as the import opens it. The caller closes it
+ * (`await sql.close()`). Any write is refused by PostgreSQL.
+ */
+export function ouvrirLaSource(source: SourceStrapi = sourceDuBanc()): SQL {
+	return new SQL({ url: source.lecture, max: 1 })
+}
+
+const litteral = (texte: string): string => `'${texte.replaceAll("'", "''")}'`
+
+/** A salt of bcrypt drawn from the id of the account: the same account always gets the same hash. */
+function selBcrypt(id: number): string {
+	const octets = createHash('sha256').update(`sel-factice-${id}`).digest()
+	// 16 bytes of salt in 22 characters of 6 bits: the last character carries the last 2 bits only,
+	// its 4 low bits stay at 0, as bcrypt writes them.
+	const caracteres = Array.from({ length: 22 }, (_vide, rang) => {
+		const valeur = octets[rang] ?? 0
+		return ALPHABET_BCRYPT[rang === 21 ? valeur & 0x30 : valeur & 0x3f] ?? '.'
+	})
+	return `$2a$${COUT_BCRYPT}$${caracteres.join('')}`
+}
+
+/** One INSERT per table, every value a parameter cast to the type of its column. */
+async function remplir(sql: SQL, table: NomDeTable, lignes: readonly Ligne[]): Promise<void> {
+	if (lignes.length === 0) return
+	const colonnes = TABLES[table]
+	const inconnue = lignes.flatMap(ligne => Object.keys(ligne)).find(nom => !colonnes.some(c => c.nom === nom))
+	if (inconnue) throw new Error(`Fausse base Strapi : la table ${table} n’a pas de colonne ${inconnue}.`)
+	const parametres: (string | number | boolean | null)[] = []
+	const valeurs = lignes.map(ligne => {
+		const cellules = colonnes.map(colonne => {
+			const valeur: Valeur | undefined = ligne[colonne.nom]
+			parametres.push(
+				valeur === undefined || valeur === null ? null : typeof valeur === 'object' ? JSON.stringify(valeur) : valeur
+			)
+			return `$${parametres.length}::${CONVERSIONS[colonne.type]}`
+		})
+		return `(${cellules.join(', ')})`
+	})
+	const noms = colonnes.map(colonne => identifiant(colonne.nom)).join(', ')
+	await sql.unsafe(`INSERT INTO ${identifiant(table)} (${noms}) VALUES ${valeurs.join(', ')}`, parametres)
+	// As if the rows had been created one by one: the next id follows the highest one.
+	await sql.unsafe(
+		`SELECT setval(pg_get_serial_sequence(${litteral(identifiant(table))}, 'id'), (SELECT max(id) FROM ${identifiant(table)}))`
+	)
+}
+
+/** The keys of every object the files of the source name: originals and derived formats. */
+function clesNommees(fichiers: readonly Ligne[], medias: string): string[] {
+	const cles = new Set<string>()
+	const ajouter = (url: unknown) => {
+		if (typeof url === 'string' && url.startsWith(`${medias}/`)) cles.add(url.slice(medias.length + 1))
+	}
+	for (const fichier of fichiers) {
+		ajouter(fichier.url)
+		const formats = fichier.formats
+		if (formats && typeof formats === 'object')
+			for (const format of Object.values(formats)) ajouter((format as { url?: unknown } | null)?.url)
+	}
+	return [...cles].sort()
+}
+
+async function parPaquets<T>(elements: readonly T[], travail: (element: T) => Promise<unknown>): Promise<void> {
+	for (let debut = 0; debut < elements.length; debut += OBJETS_DE_FRONT)
+		await Promise.all(elements.slice(debut, debut + OBJETS_DE_FRONT).map(travail))
+}
+
+/**
+ * Creates the source, or creates it again from nothing: database, tables, rows, hashes, read-only
+ * role, objects. Two calls give the same source, and the same fingerprint.
+ */
+export async function creerLaSourceStrapi(source: SourceStrapi = sourceDuBanc()): Promise<DefinitionDeLaSource> {
+	const definition = definitionDeLaSource(source.medias)
+	const base = identifiant(source.base)
+	const role = identifiant(source.role)
+	const motDePasse = decodeURIComponent(new URL(source.lecture).password)
+
+	await avec(source.maintenance, async sql => {
+		// Each statement on its own: CREATE DATABASE cannot run inside a transaction.
+		await sql.unsafe(`DROP DATABASE IF EXISTS ${base} WITH (FORCE)`)
+		await sql.unsafe(`CREATE DATABASE ${base}`)
+		const [existe] = await sql.unsafe('SELECT 1 FROM pg_roles WHERE rolname = $1', [source.role])
+		await sql.unsafe(
+			`${existe ? 'ALTER' : 'CREATE'} ROLE ${role} WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS NOINHERIT PASSWORD ${litteral(motDePasse)}`
+		)
+		await sql.unsafe(`REVOKE ALL ON DATABASE ${base} FROM PUBLIC`)
+		await sql.unsafe(`GRANT CONNECT ON DATABASE ${base} TO ${role}`)
+		// A second lock: every transaction of the role starts read-only.
+		await sql.unsafe(`ALTER ROLE ${role} IN DATABASE ${base} SET default_transaction_read_only = on`)
+	})
+
+	await avec(source.administration, sql =>
+		sql.begin(async transaction => {
+			for (const table of NOMS_DES_TABLES) await transaction.unsafe(creationDeTable(table))
+			for (const table of NOMS_DES_TABLES) await remplir(transaction, table, definition.lignes[table])
+			// bcrypt by pgcrypto, with a fixed salt per account: the hash is written by PostgreSQL and
+			// read by nobody here. pgcrypto lives in a schema of its own, dropped once the hashes are
+			// written: the source keeps the tables of Strapi and nothing else.
+			await transaction.unsafe('CREATE SCHEMA fabrique; CREATE EXTENSION pgcrypto SCHEMA fabrique')
+			for (const [id, motDePasseDuCompte] of definition.motsDePasse)
+				await transaction.unsafe('UPDATE up_users SET password = fabrique.crypt($1, $2) WHERE id = $3', [
+					motDePasseDuCompte,
+					selBcrypt(id),
+					id,
+				])
+			await transaction.unsafe('DROP SCHEMA fabrique CASCADE')
+			await transaction.unsafe(`REVOKE ALL ON SCHEMA public FROM PUBLIC`)
+			await transaction.unsafe(`GRANT USAGE ON SCHEMA public TO ${role}`)
+			await transaction.unsafe(`GRANT SELECT ON ALL TABLES IN SCHEMA public TO ${role}`)
+		})
+	)
+
+	// The objects: those of the definition, and none of those it leaves missing on purpose.
+	const presentes = new Set(definition.objets.map(objet => objet.cle))
+	const manquantes = clesNommees(definition.lignes.files, source.medias).filter(cle => !presentes.has(cle))
+	await parPaquets(manquantes, cle => supprimerUnObjet(cle, { stockage: source.stockage }))
+	await parPaquets(definition.objets, objet =>
+		deposerUnObjet(objet.cle, objet.octets, { stockage: source.stockage, type: objet.type })
+	)
+	return definition
+}
+
+/** Drops the source: database, role and the objects its files name. Nothing else of the bench is touched. */
+export async function effacerLaSourceStrapi(source: SourceStrapi = sourceDuBanc()): Promise<void> {
+	await avec(source.maintenance, async sql => {
+		await sql.unsafe(`DROP DATABASE IF EXISTS ${identifiant(source.base)} WITH (FORCE)`)
+		await sql.unsafe(`DROP ROLE IF EXISTS ${identifiant(source.role)}`)
+	})
+	const { lignes, objets } = definitionDeLaSource(source.medias)
+	const cles = new Set([...clesNommees(lignes.files, source.medias), ...objets.map(objet => objet.cle)])
+	await parPaquets([...cles], cle => supprimerUnObjet(cle, { stockage: source.stockage }))
+}
+
+/** Every row of the source, read by the read-only role, and the keys the bucket holds. */
+export async function lireLaSource(source: SourceStrapi = sourceDuBanc()): Promise<EtatDeLaSource> {
+	const lues = await avec(source.lecture, async sql => {
+		const tables: Partial<Record<NomDeTable, Ligne[]>> = {}
+		for (const table of NOMS_DES_TABLES)
+			tables[table] = [...(await sql.unsafe(`SELECT * FROM ${identifiant(table)} ORDER BY id`))] as Ligne[]
+		return tables as Record<NomDeTable, Ligne[]>
+	})
+	const objets = new Set((await listerLesObjets('', { stockage: source.stockage })).map(objet => objet.cle))
+	return { lignes: lues, objets, medias: source.medias }
+}
+
+/** The fingerprint of the source: its schema, each table, each object its files name. */
+export interface EmpreinteDeLaSource {
+	/** SHA-256 of all that follows. */
+	empreinte: string
+	/** Table → number of rows and SHA-256 of the rows. */
+	tables: Record<string, { lignes: number; empreinte: string }>
+	schema: string
+	objets: { cles: number; presents: number; empreinte: string }
+}
+
+const sha256 = (contenu: string | Uint8Array): string => createHash('sha256').update(contenu).digest('hex')
+
+/**
+ * Computes the fingerprint by the read-only role. Every table of the schema `public` counts, the
+ * ones the source did not create included; each row is serialised and hashed by PostgreSQL, and
+ * no value leaves it. Each object named by a file counts by its content and its type, or as
+ * missing. Nothing is written anywhere.
+ */
+export async function empreinteDeLaSource(source: SourceStrapi = sourceDuBanc()): Promise<EmpreinteDeLaSource> {
+	const { schema, tables, fichiers } = await avec(source.lecture, async sql => {
+		const colonnes = (await sql.unsafe(`
+			SELECT c.relname AS table, a.attnum AS rang, a.attname AS colonne, format_type(a.atttypid, a.atttypmod) AS type
+			FROM pg_catalog.pg_class c
+			JOIN pg_catalog.pg_attribute a ON a.attrelid = c.oid AND a.attnum > 0 AND NOT a.attisdropped
+			WHERE c.relnamespace = 'public'::regnamespace AND c.relkind = 'r'
+			ORDER BY c.relname COLLATE "C", a.attnum
+		`)) as { table: string; rang: number; colonne: string; type: string }[]
+		const noms = [...new Set(colonnes.map(colonne => colonne.table))]
+		const empreintes: Record<string, { lignes: number; empreinte: string }> = {}
+		for (const nom of noms) {
+			const [ligne] = (await sql.unsafe(`
+				SELECT count(*)::int AS lignes,
+					coalesce(encode(sha256(convert_to(string_agg(h, E'\\n' ORDER BY h COLLATE "C"), 'UTF8')), 'hex'), '') AS empreinte
+				FROM (SELECT encode(sha256(convert_to(row_to_json(t)::text, 'UTF8')), 'hex') AS h FROM public.${identifiant(nom)} t) s
+			`)) as { lignes: number; empreinte: string }[]
+			empreintes[nom] = { lignes: ligne?.lignes ?? 0, empreinte: ligne?.empreinte ?? '' }
+		}
+		const lignesDesFichiers = noms.includes('files')
+			? ([...(await sql.unsafe('SELECT url, formats FROM files ORDER BY id'))] as Ligne[])
+			: []
+		return {
+			schema: sha256(colonnes.map(c => `${c.table}\t${c.rang}\t${c.colonne}\t${c.type}`).join('\n')),
+			tables: empreintes,
+			fichiers: lignesDesFichiers,
+		}
+	})
+
+	const cles = clesNommees(fichiers, source.medias)
+	const lignesDesObjets: string[] = []
+	for (const cle of cles) {
+		const objet = await lireUnObjet(cle, { stockage: source.stockage })
+		lignesDesObjets.push(`${cle}\t${objet ? `${sha256(objet.octets)}\t${objet.type}` : 'absent'}`)
+	}
+	const objets = {
+		cles: cles.length,
+		presents: lignesDesObjets.filter(ligne => !ligne.endsWith('\tabsent')).length,
+		empreinte: sha256(lignesDesObjets.join('\n')),
+	}
+	return { empreinte: sha256(JSON.stringify({ schema, tables, objets })), tables, schema, objets }
+}

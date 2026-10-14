@@ -45,6 +45,7 @@ Il faut Docker avec Compose. Sans démon Docker, les commandes du banc passent d
 | `MAILPIT_URL` | L'API du capteur, par laquelle un test lit les mails reçus |
 | `EMAIL_FROM` | L'expéditeur des mails du banc, sur le domaine réservé `example.test` |
 | `S3_ENDPOINT`, `S3_BUCKET` | Le stockage d'objets et son espace. Le nom de l'espace finit par `-test` |
+| `STRAPI_SOURCE_URI` | La fausse base Strapi que lit l'import, ouverte par un rôle qui ne peut rien y écrire. Elle vit dans le PostgreSQL du banc, dans une base à elle dont le nom finit par `_test` ([`source-strapi.md`](source-strapi.md)) |
 | `GOOGLE_OIDC_ISSUER` | L'adresse du faux Google : c'est elle qui le fait prendre pour Google par l'application |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Le client factice du banc et son secret factice. Les deux portent le mot « factice » |
 
@@ -332,6 +333,16 @@ Le fournisseur se teste aussi sans le banc, appelé comme une fonction : `bun --
 - **Le site et sa préprod refusent un fournisseur local.** Avec une adresse de site déployée dans `NEXT_PUBLIC_SITE_URL`, une `GOOGLE_OIDC_ISSUER` locale arrête l'application au démarrage (README, « Configuration durcie »).
 
 Le code est dans `tests/outils/faux-google/` : `fournisseur.ts` (le fournisseur), `identite.ts` (scénarios et identités), `serveur.ts` (ce que lance le conteneur). L'outil des tests est `tests/outils/faux-google.ts`.
+
+## La fausse base Strapi
+
+L'import lit l'ancienne base Strapi. Sur le banc, il lit une fausse base qui porte chaque cas connu de la vraie, avec ses photos dans le stockage d'objets, et qu'un rôle en lecture seule ouvre. Une commande la crée, à l'identique à chaque fois :
+
+```sh
+bun run banc:source
+```
+
+Son contenu, son inventaire, son empreinte et ses outils de test : [`source-strapi.md`](source-strapi.md).
 
 ## En CI
 
