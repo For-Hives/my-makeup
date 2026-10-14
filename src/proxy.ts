@@ -8,6 +8,7 @@ import {
 	VARIABLE_DE_BASCULE,
 } from '@/lib/auth/cookies-herites'
 import { COOKIE_DE_SESSION, decisionDeLEspace } from '@/lib/auth/espace-ferme'
+import { freinerLaRecherche } from '@/lib/recherche/frein'
 import { robotsPourChemin } from '@/lib/seo/robots'
 import { redirectionDeForme } from '@/lib/urls/forme'
 
@@ -18,6 +19,8 @@ import { redirectionDeForme } from '@/lib/urls/forme'
  * - The private pages of the space answer one redirection to the sign-in page when no session cookie
  *   comes with the request (ticket 075), or when its end date has passed (ticket 080: with the
  *   « session expirée » message). The authoritative check is the page's own (`exigerMaquilleuse`).
+ * - The search answers 429, in French, past 60 requests a minute from one address (ticket 100). No other
+ *   page is braked.
  * - The cookies of the old authentication are expired on the first request, and the sign-in page tells
  *   once to sign in again (ticket 081). The back-office, the API and the files are left alone.
  * - Every other response gets the robots directive (ticket 070). It reads APP_ENV at run time: the
@@ -37,6 +40,13 @@ export function proxy(requete: NextRequest) {
 		const consigneDeForme = robotsPourChemin(pathname, { APP_ENV: process.env.APP_ENV })
 		if (consigneDeForme) redirectionDeForme.headers.set('X-Robots-Tag', consigneDeForme)
 		return redirectionDeForme
+	}
+	const freinee = freinerLaRecherche({ chemin: pathname, methode: requete.method, entetes: requete.headers })
+	if (freinee) {
+		const reponseFreinee = new NextResponse(freinee.corps, { status: freinee.status, headers: freinee.entetes })
+		const consigneFreinee = robotsPourChemin(pathname, { APP_ENV: process.env.APP_ENV })
+		if (consigneFreinee) reponseFreinee.headers.set('X-Robots-Tag', consigneFreinee)
+		return reponseFreinee
 	}
 	const nettoyage = planDeNettoyage({
 		chemin: pathname,

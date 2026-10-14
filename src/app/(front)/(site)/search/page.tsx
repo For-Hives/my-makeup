@@ -1,8 +1,11 @@
 import Image from 'next/image'
 import { BlocDeRecherche } from '@/components/blocs/BlocDeRecherche'
-import { AucunResultat } from '@/components/recherche/EtatsDeRecherche'
+import { AucunResultat, RechercheEnEchec } from '@/components/recherche/EtatsDeRecherche'
 import { ListeDeResultats } from '@/components/recherche/ListeDeResultats'
+import { PagesDeResultats } from '@/components/recherche/PagesDeResultats'
+import { lireSansBloquer } from '@/lib/recherche/lecture'
 import { sectionsParLieu } from '@/lib/recherche/lieu'
+import { paginer, sectionsDeLaPage } from '@/lib/recherche/pagination'
 import { chercher } from '@/lib/recherche/resultats'
 import { lireLaRecherche, rechercheParMot, rechercheParVille, titreDesResultats } from '@/lib/recherche/saisie'
 import { metadonnees } from '@/lib/seo/metadonnees'
@@ -28,7 +31,8 @@ export const metadata = metadonnees({
  *   only ones the title counts; the others follow under their own headings.
  * - By a word, alone or with a city (ticket 099): the listed profiles that hold the words, best first
  *   (src/lib/recherche/pertinence.ts); with a city, hers come first, as above.
- * - The pages of 20, the error state and the brake by address are ticket 100.
+ * - Pages of 20, every profile once (ticket 100), and an error state with « Réessayer » when the
+ *   directory cannot be read in time. The brake by address is the proxy's (src/proxy.ts).
  *
  * A profile that is hidden, unavailable or entirely empty is not in the directory it ranks
  * (src/lib/profil/visibilite.ts). The text typed is never logged and never measured.
@@ -54,12 +58,26 @@ export default async function PageDeRecherche({ searchParams }: PageProps<'/sear
 		)
 	}
 
-	const annuaire = await (rechercheParMot(recherche) ? lAnnuaireAvecLesTextesEnCache : lAnnuaireEnCache)()
+	const lecture = await lireSansBloquer(rechercheParMot(recherche) ? lAnnuaireAvecLesTextesEnCache : lAnnuaireEnCache)
+	if (!lecture.reussie)
+		return (
+			<main className="relative flex flex-1 flex-col">
+				<BlocDeRecherche search={search} city={city} surLaPageDeRecherche />
+				<RechercheEnEchec recherche={recherche} />
+			</main>
+		)
+
+	const annuaire = lecture.valeur
 	const { locaux, parLieu, sections } = chercher(annuaire, recherche)
 	const tous = [...locaux, ...sections.flatMap(section => section.profils)]
-	const locauxDeLaPage = locaux
+	const page = paginer(tous, recherche.page)
+	const [locauxDeLaPage = [], ...sectionsDeCettePage] = sectionsDeLaPage(page, [
+		locaux.length,
+		...sections.map(section => section.profils.length),
+	])
+	// The sections that have something on this page, in order.
 	const groupes = sections
-		.map(section => ({ section, profils: section.profils }))
+		.map((section, rang) => ({ section, profils: sectionsDeCettePage[rang] ?? [] }))
 		.filter(({ profils }) => profils.length > 0)
 
 	return (
@@ -104,6 +122,7 @@ export default async function PageDeRecherche({ searchParams }: PageProps<'/sear
 							/>
 						</section>
 					))}
+					<PagesDeResultats recherche={recherche} page={page.page} pages={page.pages} />
 				</div>
 			)}
 		</main>
