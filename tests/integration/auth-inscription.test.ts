@@ -114,6 +114,22 @@ describe('I08 : l’inscription envoie le mail de confirmation, et le compte att
 	})
 })
 
+describe('des homonymes qui s’inscrivent au même instant', () => {
+	test('tous aboutissent, chacun avec son propre slug', async () => {
+		const toutes = await Promise.all(
+			Array.from({ length: 5 }, () => inscription({ nom: 'Homonyme Simultanée', verifier: false }))
+		)
+
+		expect(toutes.map(({ resultat }) => resultat.ok)).toEqual(Array(5).fill(true))
+		const payload = await payloadDeTest()
+		const pros = await Promise.all(toutes.map(({ email }) => compte(email)))
+		const slugs = (
+			await payload.find({ collection: 'profils', depth: 0, where: { pro: { in: pros.map(p => p?.id) } } })
+		).docs.map(({ slug }) => slug)
+		expect(new Set(slugs).size).toBe(5)
+	})
+})
+
 describe('l’interrupteur d’exploitation : AUTH_VERIFY', () => {
 	const base = { DATABASE_URI: process.env.DATABASE_URI, PAYLOAD_SECRET: process.env.PAYLOAD_SECRET }
 

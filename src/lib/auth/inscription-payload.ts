@@ -23,6 +23,9 @@ import type { CodeEvenement, Journaliser } from './journal'
  * No `next` import.
  */
 
+/** How many times a sign-up is tried when only a collision of slugs stands in its way. */
+const ESSAIS_MAX = 3
+
 export type ResultatDInscription = { ok: true; confirmee: boolean } | { ok: false; code: CodeEchecInscription }
 
 export interface EntreesDInscription {
@@ -63,37 +66,53 @@ export async function inscrire({
 			// The journal is not the sign-up's to fail.
 		}
 	}
-	const req = await createLocalReq({}, payload)
-	await initTransaction(req)
-	try {
-		const compte = await payload.create({
-			collection: 'pros',
-			data: { email: donnees.email, password: donnees.password, nom: donnees.nom, _verified: !verifier },
-			depth: 0,
-			disableVerificationEmail: true,
-			overrideAccess: true,
-			req,
-		})
-		if (verifier) {
-			// The token is hidden from every read: the adapter gives it to the server alone.
-			const ligne = await payload.db.findOne<{ id: number; _verificationToken?: string | null }>({
-				collection: 'pros',
-				req,
-				where: { id: { equals: compte.id } },
-			})
-			if (!ligne?._verificationToken) throw new Error('Le jeton de confirmation manque.')
-			await envoyer(
-				{ a: donnees.email, ...composerEmail(contenuEmailConfirmation(ligne._verificationToken), site) },
-				{ context: req.context }
-			)
+	// Two homonyms who sign up at the same moment compute the same free slug, and the second write
+	// breaks the unicity of the slug: the whole transaction is rolled back, and the next try sees the
+	// slug taken. The address and the mail are never retried: their refusal is the answer.
+	let code: CodeEchecInscription = 'service-indisponible'
+	for (let essai = 1; essai <= ESSAIS_MAX; essai++) {
+		const echec = await tenter()
+		if (echec === undefined) {
+			await noter('ok')
+			return { ok: true, confirmee: !verifier }
 		}
-		await commitTransaction(req)
-	} catch (erreur) {
-		await killTransaction(req)
-		const code = codeDeLEchec(erreur)
-		await noter(code === 'email-non-envoye' ? 'service-indisponible' : code)
-		return { ok: false, code }
+		code = echec
+		if (code !== 'service-indisponible') break
 	}
-	await noter('ok')
-	return { ok: true, confirmee: !verifier }
+	await noter(code === 'email-non-envoye' ? 'service-indisponible' : code)
+	return { ok: false, code }
+
+	/** One try, in its own transaction: nothing when it succeeded, the code of its failure otherwise. */
+	async function tenter(): Promise<CodeEchecInscription | undefined> {
+		const req = await createLocalReq({}, payload)
+		await initTransaction(req)
+		try {
+			const compte = await payload.create({
+				collection: 'pros',
+				data: { email: donnees.email, password: donnees.password, nom: donnees.nom, _verified: !verifier },
+				depth: 0,
+				disableVerificationEmail: true,
+				overrideAccess: true,
+				req,
+			})
+			if (verifier) {
+				// The token is hidden from every read: the adapter gives it to the server alone.
+				const ligne = await payload.db.findOne<{ id: number; _verificationToken?: string | null }>({
+					collection: 'pros',
+					req,
+					where: { id: { equals: compte.id } },
+				})
+				if (!ligne?._verificationToken) throw new Error('Le jeton de confirmation manque.')
+				await envoyer(
+					{ a: donnees.email, ...composerEmail(contenuEmailConfirmation(ligne._verificationToken), site) },
+					{ context: req.context }
+				)
+			}
+			await commitTransaction(req)
+			return undefined
+		} catch (erreur) {
+			await killTransaction(req)
+			return codeDeLEchec(erreur)
+		}
+	}
 }

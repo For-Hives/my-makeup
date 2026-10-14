@@ -16,6 +16,8 @@ test.beforeEach(({ context }) => context.setExtraHTTPHeaders({ 'x-forwarded-for'
 
 async function seConnecter(page: Page, email: string) {
 	await page.goto('/auth/signin')
+	// A click before the page has hydrated sends nothing.
+	await page.waitForLoadState('networkidle')
 	await page.getByLabel('Adresse email').fill(email)
 	await page.getByLabel('Mot de passe').fill(MOT_DE_PASSE)
 	await page.getByRole('button', { name: 'Se connecter' }).click()

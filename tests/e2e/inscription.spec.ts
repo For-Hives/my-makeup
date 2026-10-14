@@ -19,6 +19,8 @@ const adresse = () => `inscrite-${crypto.randomUUID()}@example.test`
 
 async function sInscrire(page: Page, email: string, nom = 'Léa Fictive') {
 	await page.goto('/auth/signup')
+	// A click before the page has hydrated sends nothing: the form is only a placeholder until then.
+	await page.waitForLoadState('networkidle')
 	await page.getByLabel('Nom', { exact: true }).fill(nom)
 	await page.getByLabel('Adresse email').fill(email)
 	await page.getByLabel('Mot de passe').fill(MOT_DE_PASSE)
@@ -28,6 +30,7 @@ async function sInscrire(page: Page, email: string, nom = 'Léa Fictive') {
 
 async function seConnecter(page: Page, email: string, retour?: string) {
 	await page.goto(retour ? `/auth/signin?callbackUrl=${encodeURIComponent(retour)}` : '/auth/signin')
+	await page.waitForLoadState('networkidle')
 	await page.getByLabel('Adresse email').fill(email)
 	await page.getByLabel('Mot de passe').fill(MOT_DE_PASSE)
 	await page.getByRole('button', { name: 'Se connecter' }).click()
@@ -94,6 +97,7 @@ test.describe('avant le lien', () => {
 	}) => {
 		const email = adresse()
 		await sInscrire(page, email)
+		await expect(page).toHaveURL(/\/auth\/verification-wall$/)
 		const lien = await lienDuMail(email)
 
 		await page.goto(lien)
@@ -123,6 +127,7 @@ test.describe('U25 : les messages du formulaire', () => {
 	test('un mot de passe de 7 caractères est refusé, ce que tu as tapé reste, le mot de passe non', async ({ page }) => {
 		const email = adresse()
 		await page.goto('/auth/signup')
+		await page.waitForLoadState('networkidle')
 		await page.getByLabel('Nom', { exact: true }).fill('Nom Gardé')
 		await page.getByLabel('Adresse email').fill(email)
 		await page.getByLabel('Mot de passe').fill('1234567')
