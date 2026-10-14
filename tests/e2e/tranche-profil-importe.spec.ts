@@ -55,6 +55,9 @@ async function importer(rapport: string) {
 		'--communes',
 		REFERENTIEL_DU_BANC,
 		'--hors-ligne',
+		// Profile 21 of the fake source shows contact details: the import needs the date of the switch.
+		'--consentement-le',
+		'2026-11-02T08:00:00Z',
 		'--rapport',
 		rapport
 	)
