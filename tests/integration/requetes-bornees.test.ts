@@ -144,14 +144,36 @@ describe('21 conditions : refus ; 20 : réponse (U60)', () => {
 		expect((await lire(`/api/profils?${conditions(60)}`, lecteurs.admin)).statut).toBe(200)
 	})
 
-	test('chaque collection de la configuration porte la borne, en premier', () => {
+	test('chaque collection porte la borne, en premier, celles que Payload ajoute lui-même comprises', () => {
 		for (const { config } of Object.values(payload.collections)) {
-			if (config.slug.startsWith('payload-')) continue
 			expect([config.slug, config.hooks.beforeOperation[0]]).toEqual([config.slug, requeteBornee])
+			expect(config.hooks.beforeOperation.filter(crochet => crochet === requeteBornee)).toHaveLength(1)
 		}
 		expect(Object.keys(payload.collections)).toEqual(
-			expect.arrayContaining(['admins', 'pros', 'profils', 'media', 'talents', 'articles'] satisfies CollectionSlug[])
+			expect.arrayContaining([
+				'admins',
+				'pros',
+				'profils',
+				'media',
+				'talents',
+				'articles',
+				'payload-locked-documents',
+				'payload-preferences',
+			] satisfies CollectionSlug[])
 		)
+	})
+
+	test('les verrous des documents, ouverts à tout compte : bornés eux aussi', async () => {
+		const verrous = '/api/payload-locked-documents'
+		const surLId = (n: number) =>
+			Array.from({ length: n }, (_, i) => `where[or][${i}][id][equals]=${i + 1}`).join('&')
+		for (const lecteur of [lecteurs.maquilleuse, lecteurs.redaction]) {
+			expect([lecteur.nom, (await lire(`${verrous}?${surLId(20)}`, lecteur)).statut]).toEqual([lecteur.nom, 200])
+			const refus = await lire(`${verrous}?${surLId(21)}`, lecteur)
+			expect([lecteur.nom, refus.statut]).toEqual([lecteur.nom, 400])
+			expect(refus.corps.errors?.[0]?.message).toBe(MESSAGE_TROP_DE_CONDITIONS)
+		}
+		expect((await lire(`${verrous}?${surLId(30)}`, lecteurs.admin)).statut).toBe(200)
 	})
 })
 

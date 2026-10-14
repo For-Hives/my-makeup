@@ -1,4 +1,4 @@
-import { APIError, type CollectionBeforeOperationHook, type PayloadRequest, type Plugin } from 'payload'
+import { APIError, type CollectionBeforeOperationHook, type Payload, type PayloadRequest, type Plugin } from 'payload'
 // Relative import on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import { estAdmin } from './acces'
 
@@ -161,9 +161,22 @@ export const requeteBornee: CollectionBeforeOperationHook = ({ args, overrideAcc
 }
 
 /**
+ * Puts `requeteBornee` first in every collection Payload built that does not have it yet: Payload's
+ * own collections (document locks, preferences, migrations), which it adds after the plugins. The
+ * document locks are open to any account (ticket 094): bounded too.
+ */
+export function bornerLesCollectionsDePayload(payload: Pick<Payload, 'collections'>): void {
+	for (const { config } of Object.values(payload.collections)) {
+		const crochets = config.hooks.beforeOperation
+		if (!crochets.includes(requeteBornee)) crochets.unshift(requeteBornee)
+	}
+}
+
+/**
  * Puts `requeteBornee` first in the `beforeOperation` of every collection of the configuration,
- * those of later tickets included. Payload's own collections (document locks, preferences,
- * migrations) are added after the plugins and are not bounded here.
+ * those of later tickets included; once Payload is built (`onInit`, before any request), in its
+ * own collections too (`bornerLesCollectionsDePayload`). The `onInit` of the configuration runs
+ * afterwards, as it was.
  */
 export const requetesBornees: Plugin = config => ({
 	...config,
@@ -174,4 +187,8 @@ export const requetesBornees: Plugin = config => ({
 			beforeOperation: [requeteBornee, ...(collection.hooks?.beforeOperation ?? [])],
 		},
 	})),
+	onInit: async payload => {
+		bornerLesCollectionsDePayload(payload)
+		await config.onInit?.(payload)
+	},
 })

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import type { CollectionConfig, Config, PayloadRequest } from 'payload'
+import type { CollectionConfig, Config, Payload, PayloadRequest } from 'payload'
 import {
 	CHAMPS_PRIVES,
 	CHAMPS_SECRETS,
@@ -184,5 +184,36 @@ describe('La borne, posée sur chaque collection et jouée avant la base', () =>
 			['b', [requeteBornee, autre]],
 		])
 		expect(borne.collections?.[1]?.hooks?.afterChange).toEqual([autre])
+	})
+
+	test('une fois Payload construit, ses propres collections la reçoivent aussi, une fois, puis l’onInit de la configuration tourne', async () => {
+		const autre = () => undefined
+		const ordre: string[] = []
+		const config = {
+			collections: [],
+			onInit: () => {
+				ordre.push('onInit de la configuration')
+			},
+		} as unknown as Config
+		const borne = await requetesBornees(config)
+		const collection = (beforeOperation: unknown[]) => ({ config: { hooks: { beforeOperation } } })
+		const collections = {
+			profils: collection([requeteBornee, autre]),
+			'payload-locked-documents': collection([]),
+			'payload-preferences': collection([autre]),
+		}
+		await borne.onInit?.({ collections } as unknown as Payload)
+		await borne.onInit?.({ collections } as unknown as Payload)
+		expect(Object.entries(collections).map(([slug, { config }]) => [slug, config.hooks.beforeOperation])).toEqual([
+			['profils', [requeteBornee, autre]],
+			['payload-locked-documents', [requeteBornee]],
+			['payload-preferences', [requeteBornee, autre]],
+		])
+		expect(ordre).toEqual(['onInit de la configuration', 'onInit de la configuration'])
+		// Without an `onInit` of its own, the configuration gets only the bound.
+		const seule = await requetesBornees({ collections: [] } as unknown as Config)
+		const vide = { collections: { 'payload-kv': collection([]) } }
+		await seule.onInit?.(vide as unknown as Payload)
+		expect(vide.collections['payload-kv'].config.hooks.beforeOperation).toEqual([requeteBornee])
 	})
 })
