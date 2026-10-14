@@ -117,7 +117,9 @@ test.describe('E44 : les offres, les prix et les coordonnées publiées', { tag:
 	test('les offres et leurs prix formatés, les options dans l’ordre, sont dans le HTML du serveur', async ({
 		request,
 	}) => {
-		const html = await (await request.get(`/profil/${profil('reference').slug}`)).text()
+		const source = await (await request.get(`/profil/${profil('reference').slug}`)).text()
+		// The page, not its structured data (ticket 105), which names the offers too.
+		const html = source.replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/g, '')
 
 		expect(html).toContain('Service(s) proposé(s)')
 		expect(html).toContain('À partir de 180\u00a0€')

@@ -23,6 +23,7 @@
 
 import type { Payload } from 'payload'
 import { formatZone, rayonKm, villeAffichee } from '@/lib/format-zone'
+import { estMontantDePrix, prixMinimal } from '@/lib/prix'
 import { nomAffiche, texte } from '@/lib/profil/nom-affiche'
 import { estIndexable, estVisible, FILTRE_LISTE } from '@/lib/profil/visibilite'
 import {
@@ -32,6 +33,7 @@ import {
 	type FormationPublique,
 	formations,
 	type LienDeContact,
+	lignes,
 	nomDArtisteAffiche,
 	noms,
 	type PrestationPublique,
@@ -136,6 +138,17 @@ export interface ProfilPublic {
 	indexable: boolean
 	/** Her telephone and email, only when she published them, else `null`. */
 	coordonnees: CoordonneesPubliques | null
+	/** The offers with a name, with their amount in euros (what the structured data prices; no option). */
+	offres: OffreChiffree[]
+	/** The lowest amount of her offers (src/lib/prix.ts, `prixMinimal`, U37), or `null`. */
+	prixMinimal: number | null
+}
+
+/** An offer as the structured data says it: its name, its text, and its amount in euros when it has a usable one. */
+export interface OffreChiffree {
+	nom: string
+	description: string
+	montant: number | null
 }
 
 /** The main photo of a card: where it is and how big, never the file's owner or its other fields. */
@@ -360,7 +373,25 @@ export function profilPublicDe(
 		description: texte(profil.description) || null,
 		indexable: estIndexable(profil),
 		coordonnees: lu.coordonnees,
+		offres: offresChiffrees(profil.prestations),
+		prixMinimal: prixMinimal(profil.prestations),
 	}
+}
+
+/** The offers with a name, each with its amount when it is one the site counts as a price. */
+function offresChiffrees(stockees: ProfilDeLaPage['prestations']): OffreChiffree[] {
+	return (stockees ?? []).flatMap(ligne => {
+		const nom = texte(ligne?.nom)
+		if (nom === '') return []
+		const montant = ligne?.prixAPartirDe
+		return [
+			{
+				nom,
+				description: lignes(ligne?.description).join(' '),
+				montant: estMontantDePrix(montant) ? montant : null,
+			},
+		]
+	})
 }
 
 /**
