@@ -11,7 +11,8 @@
  *   { role: 'redaction', collection: 'admins', operation: 'lister', attendu: 'soi' }
  *
  * - `lister`: `refuse`, or what the list holds: `aucun` (empty), `soi` (exactly the documents of
- *   the actor), `tous` (every document of the cast).
+ *   the actor), `publies` (exactly the documents of the cast the public reads), `soiEtPublies`
+ *   (exactly both), `tous` (every document of the cast).
  * - `lire`, `creer`, `supprimer`: `autorise` or `refuse`. A refusal is also checked in the
  *   database: nothing was created, the document is still there.
  * - `modifier`: `autorise` (the new value is stored), `refuse` (refused, nothing changed) or
@@ -20,13 +21,16 @@
  * - Anything else is `incoherent`: refused but written anyway, or a list nobody expects.
  *
  * The cast is made once per file (`distribuer`): one account per role, by the account factory,
- * with their documents. A deletion that must succeed acts on a throwaway document of the same
- * collection, never on the cast.
+ * with their documents. A's profile is published, B's stays a draft: what the public reads shows
+ * in the lines. A deletion that must succeed acts on a throwaway document of the same collection,
+ * never on the cast.
  */
 
 import { randomUUID } from 'node:crypto'
-import type { Payload, RequiredDataFromCollectionSlug } from 'payload'
+import type { Payload, RequiredDataFromCollectionSlug, Where } from 'payload'
 import { CONTEXTE_SANS_PROFIL } from '@/collections/Profils'
+import { PROFILS_PUBLIES } from '@/lib/acces'
+import { STATUT_PUBLIE } from '@/lib/profil/statut'
 import { creerCompte, DOMAINE_DES_COMPTES, motDePasseAleatoire, type TypeAvecSession } from './fabrique-comptes'
 import { payloadDeTest } from './payload-test'
 import { appelerRest } from './rest'
@@ -57,7 +61,16 @@ export const COLLECTIONS = ['admins', 'pros', 'profils'] as const
 export type CollectionDeLaMatrice = (typeof COLLECTIONS)[number]
 
 export type Operation = 'lister' | 'lire' | 'creer' | 'modifier' | 'supprimer'
-export type Issue = 'autorise' | 'refuse' | 'ignore' | 'aucun' | 'soi' | 'tous' | 'incoherent'
+export type Issue =
+	| 'autorise'
+	| 'refuse'
+	| 'ignore'
+	| 'aucun'
+	| 'soi'
+	| 'publies'
+	| 'soiEtPublies'
+	| 'tous'
+	| 'incoherent'
 
 export interface Ligne {
 	role: Role
@@ -126,6 +139,8 @@ interface Portrait {
 	donneesDeCreation: (acteur: Acteur, payload: Payload) => Promise<Record<string, unknown>>
 	/** A document made for one line to delete. */
 	jetable: (payload: Payload) => Promise<number>
+	/** Which documents the public reads, when the collection has some: a list may hold exactly them (`publies`). */
+	publics?: Where
 }
 
 const PORTRAITS: Record<CollectionDeLaMatrice, Portrait> = {
@@ -167,6 +182,7 @@ const PORTRAITS: Record<CollectionDeLaMatrice, Portrait> = {
 					data: { pro: await compteSansProfil(payload, 'jetable') } as RequiredDataFromCollectionSlug<'profils'>,
 				})
 			).id,
+		publics: PROFILS_PUBLIES,
 	},
 }
 
@@ -188,7 +204,15 @@ export async function distribuer(): Promise<Distribution> {
 		})
 	)
 	const anonyme: Acteur = { role: 'anonyme', enTetes: {}, documents: {} }
-	return Object.fromEntries([['anonyme', anonyme], ...acteurs.map(acteur => [acteur.role, acteur])]) as Distribution
+	const distribution = Object.fromEntries([
+		['anonyme', anonyme],
+		...acteurs.map(acteur => [acteur.role, acteur]),
+	]) as Distribution
+	// A's profile is published, as by the rule of ticket 044 or an admin; B's stays the draft it was created as.
+	const profilDeA = distribution.maquilleuse.documents.profils
+	if (profilDeA === undefined) throw new Error('La distribution n’a pas de profil pour « maquilleuse ».')
+	await payload.update({ collection: 'profils', id: profilDeA, data: { statut: STATUT_PUBLIE } })
+	return distribution
 }
 
 /** What one request gave: allowed (with what it returned) or refused. */
@@ -269,14 +293,32 @@ function documentDe(distribution: Distribution, ligne: Ligne): number {
 	return id
 }
 
+/** The documents of the cast the public reads in this collection, sorted: none when it has no public documents. */
+async function publicsDe(collection: CollectionDeLaMatrice, distribues: number[]): Promise<number[]> {
+	const publics = PORTRAITS[collection].publics
+	if (!publics) return []
+	const payload = await payloadDeTest()
+	const { docs } = await payload.find({
+		collection,
+		depth: 0,
+		pagination: false,
+		where: { and: [{ id: { in: distribues } }, publics] },
+	})
+	return identifiants({ docs })
+}
+
 async function lister(voie: Voie, acteur: Acteur, ligne: Ligne, distribution: Distribution): Promise<Issue> {
 	const reponse = await demander(voie, acteur, ligne)
 	if (!reponse.autorise) return 'refuse'
 	const vus = identifiants(reponse.corps)
 	const siens = [acteur.documents[ligne.collection]].filter((id): id is number => id !== undefined)
 	const distribues = Object.values(distribution).flatMap(({ documents }) => documents[ligne.collection] ?? [])
+	const publics = await publicsDe(ligne.collection, distribues)
+	const siensEtPublics = [...new Set([...siens, ...publics])].sort((a, b) => a - b)
 	if (vus.length === 0) return 'aucun'
 	if (egaux(vus, siens)) return 'soi'
+	if (egaux(vus, publics)) return 'publies'
+	if (egaux(vus, siensEtPublics)) return 'soiEtPublies'
 	if (distribues.every(id => vus.includes(id))) return 'tous'
 	return 'incoherent'
 }

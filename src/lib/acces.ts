@@ -15,6 +15,8 @@
  */
 
 import type { Access, FieldAccess, PayloadRequest, Where } from 'payload'
+// Relative import on purpose: this file is also loaded by the Payload CLI, outside of Next.
+import { STATUT_PUBLIE } from './profil/statut'
 
 /** The roles of an `admins` account, in the order the admin panel lists them. */
 export const ROLES_ADMIN = ['admin', 'redaction'] as const
@@ -75,3 +77,45 @@ export const adminOuProprietaire: Access = ({ req: { user } }) => {
 	if (user && estMaquilleuse(user)) return { pro: { equals: user.id } }
 	return false
 }
+
+/** The profiles the public reads: the published ones (U53). */
+export const PROFILS_PUBLIES: Where = { statut: { equals: STATUT_PUBLIE } }
+
+/**
+ * Reading profiles (ticket 021). The role `admin` reads every profile; a makeup artist reads her
+ * own profile, whatever its status, and the published ones; anyone else, anonymous or `redaction`,
+ * the published ones only (U53, I01). A session never shows less than the public sees.
+ *
+ * What each of them reads of a profile is then decided field by field (`champAdminOuProprietaire`).
+ */
+export const profilPublieOuProprietaire: Access = ({ req: { user } }) => {
+	if (estAdmin(user)) return true
+	if (user && estMaquilleuse(user)) return { or: [{ pro: { equals: user.id } }, PROFILS_PUBLIES] }
+	return PROFILS_PUBLIES
+}
+
+/** The identifier of the account a relationship field holds: the identifier itself, or the account once populated. */
+const identifiantDu = (valeur: unknown): string | undefined => {
+	const id = typeof valeur === 'object' && valeur !== null && 'id' in valeur ? valeur.id : valeur
+	return typeof id === 'number' || typeof id === 'string' ? String(id) : undefined
+}
+
+/**
+ * Only the role `admin` and the makeup artist a document belongs to, for one field: the account
+ * its field `champ` holds (`pro` on a profile, `owner` on a media). Anyone else does not read the
+ * field: Payload strips it from the answer.
+ *
+ * Meant for `read`. The owner's own field is read with the same rule, so when it is stripped the
+ * reader is not the owner, and every other field guarded by this rule is stripped too.
+ */
+export const champAdminOuProprietaire =
+	(champ: 'pro' | 'owner'): FieldAccess =>
+	({ req: { user }, doc }) => {
+		if (estAdmin(user)) return true
+		if (!user || !estMaquilleuse(user)) return false
+		const proprietaire = identifiantDu((doc as Record<string, unknown> | undefined)?.[champ])
+		return proprietaire !== undefined && proprietaire === String(user.id)
+	}
+
+/** The fields of a profile only its owner and `admin` read: the account, what the import wrote, what an admin decided. */
+export const champDuProfilAdminOuProprietaire: FieldAccess = champAdminOuProprietaire('pro')

@@ -8,11 +8,15 @@ import {
 	adminOuSoiMeme,
 	adminSeulement,
 	champAdminSeulement,
+	champDuProfilAdminOuProprietaire,
 	estAdmin,
 	estMaquilleuse,
 	estRedaction,
 	jamais,
+	PROFILS_PUBLIES,
+	profilPublieOuProprietaire,
 } from '@/lib/acces'
+import { STATUTS_DU_PROFIL } from '@/lib/profil/statut'
 
 /**
  * The access rules, called as Payload calls them, without a database: who reaches what. The
@@ -174,14 +178,79 @@ describe('La collection pros (ticket 019)', () => {
 describe('La collection profils (ticket 020)', () => {
 	const regles = Profils.access ?? {}
 
-	test('lire et modifier : son seul profil pour une maquilleuse, tout pour admin, rien pour les autres (U54)', () => {
-		for (const regle of [regles.read, regles.update]) {
-			expect(regle).toBe(adminOuProprietaire)
-			expect(regle?.(appel(maquilleuse) as never)).toEqual({ pro: { equals: 7 } })
-			expect(regle?.(appel(admin) as never)).toBe(true)
-			expect(regle?.(appel(redaction) as never)).toBe(false)
-			expect(regle?.(appel(null) as never)).toBe(false)
+	test('modifier : son seul profil pour une maquilleuse, tout pour admin, rien pour les autres (U54)', () => {
+		const regle = regles.update
+		expect(regle).toBe(adminOuProprietaire)
+		expect(regle?.(appel(maquilleuse) as never)).toEqual({ pro: { equals: 7 } })
+		expect(regle?.(appel(admin) as never)).toBe(true)
+		expect(regle?.(appel(redaction) as never)).toBe(false)
+		expect(regle?.(appel(null) as never)).toBe(false)
+	})
+
+	test('lire : les profils publiés pour l’anonyme et redaction (U53), plus le sien pour une maquilleuse, tout pour admin', () => {
+		const regle = regles.read
+		expect(regle).toBe(profilPublieOuProprietaire)
+		expect(PROFILS_PUBLIES).toEqual({ statut: { equals: 'publie' } })
+		expect(regle?.(appel(null) as never)).toEqual({ statut: { equals: 'publie' } })
+		expect(regle?.(appel(redaction) as never)).toEqual({ statut: { equals: 'publie' } })
+		expect(regle?.(appel(maquilleuse) as never)).toEqual({
+			or: [{ pro: { equals: 7 } }, { statut: { equals: 'publie' } }],
+		})
+		expect(regle?.(appel(admin) as never)).toBe(true)
+	})
+
+	test('les champs réservés : statut, motif, vérifiée et SIRET, lus par admin et la propriétaire seulement', () => {
+		// Read as Payload reads a field of a document: the request, and the document itself.
+		const lire = (user: Utilisateur | null, doc: Record<string, unknown>) =>
+			champDuProfilAdminOuProprietaire({ req: { user } as PayloadRequest, doc } as never)
+		expect(lire(admin, { pro: 9 })).toBe(true)
+		expect(lire(maquilleuse, { pro: 7 })).toBe(true)
+		// The account populated, as a read at depth 1 gives it.
+		expect(lire(maquilleuse, { pro: { id: 7 } })).toBe(true)
+		expect(lire(maquilleuse, { pro: 9 })).toBe(false)
+		// Same number, other collection: an account of the admin panel is not the owner.
+		expect(lire({ ...redaction, id: 7 } as unknown as Utilisateur, { pro: 7 })).toBe(false)
+		expect(lire(null, { pro: 7 })).toBe(false)
+		// The account already stripped from the answer: the reader is not the owner.
+		expect(lire(maquilleuse, {})).toBe(false)
+
+		for (const nom of ['statut', 'motif', 'verifie', 'verifieLe', 'siret', 'pro', 'legacyUsername', 'strapiId'])
+			expect(champ(Profils.fields, nom)?.access?.read).toBe(champDuProfilAdminOuProprietaire)
+		for (const nom of ['noteInterne', 'score'])
+			expect(champ(Profils.fields, nom)?.access?.read).toBe(champAdminSeulement)
+		// The badge of the search is public.
+		expect(champ(Profils.fields, 'superMaquilleuse')?.access?.read).toBeUndefined()
+	})
+
+	test('statut, motif, vérifiée, SIRET, note interne, score, badge et compte : seul admin les écrit (U55)', () => {
+		for (const nom of [
+			'statut',
+			'motif',
+			'verifie',
+			'verifieLe',
+			'siret',
+			'noteInterne',
+			'score',
+			'superMaquilleuse',
+			'pro',
+		]) {
+			const acces = champ(Profils.fields, nom)?.access as Record<string, (args: unknown) => boolean>
+			expect([admin, redaction, maquilleuse, null].map(user => acces.update?.(appel(user)))).toEqual([
+				true,
+				false,
+				false,
+				false,
+			])
+			expect(acces.create as unknown).toBe(champAdminSeulement)
 		}
+	})
+
+	test('le statut : brouillon, publié ou masqué ; un profil neuf est un brouillon', () => {
+		expect(STATUTS_DU_PROFIL).toEqual(['brouillon', 'publie', 'masque'])
+		const statut = champ(Profils.fields, 'statut') as { defaultValue?: unknown; options?: { value: string }[] }
+		// Not `required`: a profile created without one, by the server or a test, gets the default.
+		expect(statut).toMatchObject({ type: 'select', defaultValue: 'brouillon' })
+		expect(statut.options?.map(({ value }) => value)).toEqual(['brouillon', 'publie', 'masque'])
 	})
 
 	test('créer et supprimer un profil : admin seulement ; le serveur le crée avec le compte', () => {

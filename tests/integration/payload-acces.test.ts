@@ -122,11 +122,14 @@ const MATRICE: Ligne[] = [
 	),
 	{ role: 'sansProfil', collection: 'pros', operation: 'lister', attendu: 'soi' },
 
-	// profils (ticket 020): a makeup artist reads and changes her own profile only (U54, I02),
-	// never its account, its slug or what the import wrote; an account without a profile gets an
-	// empty list and a refusal on any write; `admin` reaches every profile; nobody else, any yet.
-	{ role: 'anonyme', collection: 'profils', operation: 'lister', attendu: 'refuse' },
-	{ role: 'anonyme', collection: 'profils', operation: 'lire', document: 'maquilleuse', attendu: 'refuse' },
+	// profils (tickets 020 and 021): a makeup artist changes her own profile only (U54, I02), never
+	// its account, its slug, what the import wrote or what an admin decides (I03, U55); she reads
+	// her own profile and the published ones; anyone else reads the published profiles only (U53,
+	// I01); an account without a profile gets the published ones and a refusal on any write;
+	// `admin` reaches every profile. In the cast, A's profile is published and B's is a draft.
+	{ role: 'anonyme', collection: 'profils', operation: 'lister', attendu: 'publies' },
+	{ role: 'anonyme', collection: 'profils', operation: 'lire', document: 'maquilleuse', attendu: 'autorise' },
+	{ role: 'anonyme', collection: 'profils', operation: 'lire', document: 'autreMaquilleuse', attendu: 'refuse' },
 	{ role: 'anonyme', collection: 'profils', operation: 'creer', attendu: 'refuse' },
 	{ role: 'anonyme', collection: 'profils', operation: 'modifier', document: 'maquilleuse', attendu: 'refuse' },
 	{ role: 'anonyme', collection: 'profils', operation: 'supprimer', document: 'maquilleuse', attendu: 'refuse' },
@@ -156,6 +159,15 @@ const MATRICE: Ligne[] = [
 			['strapiId', 999],
 			['legacyUsername', 'Ancien Pseudo'],
 			['pro', { compteDe: 'sansProfil' }],
+			// Reserved to the role `admin` (ticket 021, I03, U55).
+			['statut', 'masque'],
+			['motif', 'Motif envoyé par la maquilleuse'],
+			['verifie', true],
+			['verifieLe', '2026-10-14T00:00:00.000Z'],
+			['siret', '12345678901234'],
+			['noteInterne', 'Note envoyée par la maquilleuse'],
+			['score', 99],
+			['superMaquilleuse', true],
 		] as const
 	).map(
 		([champ, valeur]): Ligne => ({
@@ -168,8 +180,8 @@ const MATRICE: Ligne[] = [
 			attendu: 'ignore',
 		})
 	),
-	{ role: 'autreMaquilleuse', collection: 'profils', operation: 'lister', attendu: 'soi' },
-	{ role: 'autreMaquilleuse', collection: 'profils', operation: 'lire', document: 'maquilleuse', attendu: 'refuse' },
+	{ role: 'autreMaquilleuse', collection: 'profils', operation: 'lister', attendu: 'soiEtPublies' },
+	{ role: 'autreMaquilleuse', collection: 'profils', operation: 'lire', document: 'maquilleuse', attendu: 'autorise' },
 	{
 		role: 'autreMaquilleuse',
 		collection: 'profils',
@@ -184,13 +196,15 @@ const MATRICE: Ligne[] = [
 		document: 'maquilleuse',
 		attendu: 'refuse',
 	},
-	{ role: 'sansProfil', collection: 'profils', operation: 'lister', attendu: 'aucun' },
-	{ role: 'sansProfil', collection: 'profils', operation: 'lire', document: 'maquilleuse', attendu: 'refuse' },
+	{ role: 'sansProfil', collection: 'profils', operation: 'lister', attendu: 'publies' },
+	{ role: 'sansProfil', collection: 'profils', operation: 'lire', document: 'maquilleuse', attendu: 'autorise' },
+	{ role: 'sansProfil', collection: 'profils', operation: 'lire', document: 'autreMaquilleuse', attendu: 'refuse' },
 	{ role: 'sansProfil', collection: 'profils', operation: 'creer', attendu: 'refuse' },
 	{ role: 'sansProfil', collection: 'profils', operation: 'modifier', document: 'maquilleuse', attendu: 'refuse' },
 	{ role: 'sansProfil', collection: 'profils', operation: 'supprimer', document: 'maquilleuse', attendu: 'refuse' },
-	{ role: 'redaction', collection: 'profils', operation: 'lister', attendu: 'refuse' },
-	{ role: 'redaction', collection: 'profils', operation: 'lire', document: 'maquilleuse', attendu: 'refuse' },
+	{ role: 'redaction', collection: 'profils', operation: 'lister', attendu: 'publies' },
+	{ role: 'redaction', collection: 'profils', operation: 'lire', document: 'maquilleuse', attendu: 'autorise' },
+	{ role: 'redaction', collection: 'profils', operation: 'lire', document: 'autreMaquilleuse', attendu: 'refuse' },
 	{ role: 'redaction', collection: 'profils', operation: 'creer', attendu: 'refuse' },
 	{ role: 'redaction', collection: 'profils', operation: 'modifier', document: 'maquilleuse', attendu: 'refuse' },
 	{ role: 'redaction', collection: 'profils', operation: 'supprimer', document: 'maquilleuse', attendu: 'refuse' },
@@ -205,6 +219,13 @@ const MATRICE: Ligne[] = [
 			['strapiId', 999, 'ignore'],
 			['legacyUsername', 'Ancien Pseudo', 'ignore'],
 			['pro', { compteDe: 'sansProfil' }, 'autorise'],
+			['statut', 'masque', 'autorise'],
+			['motif', 'Photos sans rapport avec le maquillage', 'autorise'],
+			['verifie', true, 'autorise'],
+			['siret', '12345678901234', 'autorise'],
+			['noteInterne', 'Relancée par téléphone', 'autorise'],
+			['score', 4.5, 'autorise'],
+			['superMaquilleuse', true, 'autorise'],
 		] as const
 	).map(
 		([champ, valeur, attendu]): Ligne => ({

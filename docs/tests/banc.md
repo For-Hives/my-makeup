@@ -293,12 +293,13 @@ Chaque ligne est jouée deux fois : par l'API REST, avec la session de la fabriq
 | `autorise` | Accepté, et la base le montre : le document lu est le bon, le document existe, la nouvelle valeur est stockée, le document a disparu |
 | `ignore` | Accepté, mais le champ a gardé sa valeur : un champ que ce rôle ne peut pas écrire |
 | `aucun`, `soi`, `tous` | Pour `lister` : une liste vide, exactement les documents de celui qui agit, ou tous les documents de la distribution |
+| `publies`, `soiEtPublies` | Pour `lister` : exactement les documents de la distribution que lit le public, ou exactement ceux-là plus ceux de celui qui agit. Le portrait de la collection dit lesquels le public lit (`publics`) |
 
 Tout autre constat est `incoherent` : refusé mais écrit quand même, ou une liste que personne n'attend. Le test échoue.
 
 À savoir :
 
-- **La distribution est faite une fois par fichier** (`distribuer()`, `tests/outils/matrice-acces.ts`) : un compte par rôle, par la fabrique, avec ses documents.
+- **La distribution est faite une fois par fichier** (`distribuer()`, `tests/outils/matrice-acces.ts`) : un compte par rôle, par la fabrique, avec ses documents. Le profil de « A » (`maquilleuse`) y est publié, celui de « B » (`autreMaquilleuse`) reste un brouillon : une ligne de lecture dit ce que le public voit, et ce qu'il ne voit pas.
 - **Une ligne ne change pas la distribution.** Une valeur modifiée est remise comme avant, et une suppression qui doit réussir vise un document jetable de la même collection.
 - **Une collection nouvelle** donne à la matrice son portrait (`PORTRAITS`, même fichier) : le champ ordinaire à modifier, les données d'une création, un document jetable. **Un rôle nouveau** prend un type de la fabrique (`TYPE_DU_ROLE`).
 - **L'appel REST passe par la vraie route de l'application** (`appelerRest`, `tests/outils/rest.ts`), sans serveur : mêmes gestionnaires, même contrôle de session, mêmes règles. Il ne prouve pas l'aiguillage de Next lui-même, qu'un essai de bout en bout prouve.

@@ -226,6 +226,32 @@ export interface Profil {
    */
   legacyUsername?: string | null;
   strapiId?: number | null;
+  /**
+   * Seuls les profils publiés sont lus par le public.
+   */
+  statut?: ('brouillon' | 'publie' | 'masque') | null;
+  /**
+   * Pourquoi le profil est masqué. La maquilleuse le lit.
+   */
+  motif?: string | null;
+  verifie?: boolean | null;
+  verifieLe?: string | null;
+  /**
+   * 14 chiffres, sans espace.
+   */
+  siret?: string | null;
+  /**
+   * Lue par les admins seulement, jamais par la maquilleuse.
+   */
+  noteInterne?: string | null;
+  /**
+   * Repris de l’ancien site. Ce n’est pas la complétude. Lu par les admins seulement.
+   */
+  score?: number | null;
+  /**
+   * Le badge des cartes de la recherche. Public.
+   */
+  superMaquilleuse?: boolean | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -386,6 +412,14 @@ export interface ProfilsSelect<T extends boolean = true> {
   disponible?: T;
   legacyUsername?: T;
   strapiId?: T;
+  statut?: T;
+  motif?: T;
+  verifie?: T;
+  verifieLe?: T;
+  siret?: T;
+  noteInterne?: T;
+  score?: T;
+  superMaquilleuse?: T;
   updatedAt?: T;
   createdAt?: T;
 }

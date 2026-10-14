@@ -335,9 +335,9 @@ Pour mémoire : ces champs n'ont aucune ligne aux §5 et §6. Leur valeur à l'i
 | Champ Payload | Valeur à l'import | Défini par |
 |---|---|---|
 | `profils.contactPublic`, `profils.consentiLe` et la source du consentement | Téléphone ou email de contact rempli à la source : `contactPublic` vrai, `consentiLe` à la date de bascule (paramètre du passage), source « publié par la maquilleuse ». Sinon : faux, sans date. | Plan `01` §6.2 ; tickets 042 et 064 |
-| `profils.statut` | Profil entièrement vide (aucune des six conditions du profil publiable) : brouillon. Sinon : publié. | Décision du 13/10 ; tickets 044 et 059 |
+| `profils.statut` | Profil entièrement vide (aucune des six conditions du profil publiable) : brouillon. Sinon : publié. Les trois valeurs sont `brouillon`, `publie` et `masque` ; un profil créé dans la v3 commence en brouillon (ticket 021). | Décision du 13/10 ; tickets 021, 044 et 059 |
 | `profils.completude`, `profils.actif`, `profils.publiable`, `profils.derniereActivite` | Calculés par le serveur à l'enregistrement, jamais lus dans Strapi | Tickets 031 et 044 |
-| `profils.motif`, `profils.verifie`, `profils.siret`, `profils.verifieLe`, `profils.noteInterne` | Non renseignés | Ticket 021 |
+| `profils.motif`, `profils.verifie`, `profils.siret`, `profils.verifieLe`, `profils.noteInterne` | Non renseignés. Écrits par un admin seulement ; la note interne n'est lue que par un admin, les autres par l'admin et la propriétaire, jamais par le public | Ticket 021 |
 | `profils.aDomicile` | Non renseigné : Strapi ne le sait pas | Ticket 041 |
 | `media.prefix`, `media.filename`, `media.owner`, `media.strapiFormats` | §8 | Tickets 043 et 058 |
 | `admins` (toute la collection) | Rien d'importé (§4.2) | Ticket 018 |
@@ -404,3 +404,4 @@ Noms fixés par ce document, parce que le plan ne les donnait pas : `profils.leg
 |---|---|
 | 14/10/2026 | Gel initial (ticket 015) : 71 attributs, schémas de Strapi au commit `ccd449d`, décomptes de l'instantané du 13/10/2026. |
 | 14/10/2026 | Suites de la relecture (ticket 220), sans changer un nom de champ ni une règle de reprise : raison de la règle 1 corrigée ; 88 profils et 43 hash attendus « au plus », et défaut pour un profil dont le compte est écarté (§11) ; portée du mot « Transformé » (§1) ; colonnes des tables de liens (§7) et des deux jetons (§5.1) ; condition d'existence de `pros._verified` (§5.1). |
+| 14/10/2026 | Ticket 021, sans changer un nom de champ : les valeurs de `profils.statut` (§9) ; `profils.superMaquilleuse` (§5.2) est créé avec les champs réservés à l'admin, et reste lu par le public, comme le badge de la recherche. |
