@@ -31,6 +31,7 @@ export type TypeEvenement = (typeof TYPES_EVENEMENT)[number]
  */
 export const CODES_EVENEMENT = [
 	'ok',
+	'heritee',
 	'identifiants-invalides',
 	'trop-de-tentatives',
 	'service-indisponible',

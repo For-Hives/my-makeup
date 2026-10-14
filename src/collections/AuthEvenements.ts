@@ -13,6 +13,7 @@ const LIBELLES_DES_TYPES: Record<(typeof TYPES_EVENEMENT)[number], string> = {
 
 const LIBELLES_DES_CODES: Record<(typeof CODES_EVENEMENT)[number], string> = {
 	ok: 'Réussi',
+	heritee: 'Réussi, mot de passe de l’ancien site',
 	'identifiants-invalides': 'Identifiants invalides',
 	'trop-de-tentatives': 'Trop de tentatives',
 	'service-indisponible': 'Service indisponible',

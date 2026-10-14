@@ -7,6 +7,7 @@ import { getPayload } from 'payload'
 import { connecter } from '@/lib/auth/connexion'
 import { poserLeCookieDeSession } from '@/lib/auth/cookie-session'
 import type { CodeErreur } from '@/lib/auth/erreurs'
+import { remplacerLeHashHerite } from '@/lib/auth/herite'
 import { ouvrirParMotDePasse } from '@/lib/auth/jeton'
 import { journalDe } from '@/lib/auth/journal'
 import { retourSur } from '@/lib/auth/retour'
@@ -33,6 +34,7 @@ export async function seConnecter(_precedent: EtatDeConnexion, formulaire: FormD
 		email: formulaire.get('email'),
 		password: formulaire.get('password'),
 		journal: journalDe(payload),
+		herite: data => remplacerLeHashHerite(payload, data),
 	})
 	if (!resultat.ok) return { code: resultat.code }
 

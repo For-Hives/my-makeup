@@ -3,6 +3,7 @@ import * as migration_20261014_173900_sizes_des_medias from './20261014_173900_s
 import * as migration_20261014_175557_pros_sans_verrou_de_compte from './20261014_175557_pros_sans_verrou_de_compte'
 import * as migration_20261014_190000_admins_sans_verrou_de_compte from './20261014_190000_admins_sans_verrou_de_compte'
 import * as migration_20261014_190215_auth_journal_et_derniere_connexion from './20261014_190215_auth_journal_et_derniere_connexion'
+import * as migration_20261014_202952_auth_evenements_heritee from './20261014_202952_auth_evenements_heritee'
 
 export const migrations = [
 	{
@@ -29,5 +30,10 @@ export const migrations = [
 		up: migration_20261014_190215_auth_journal_et_derniere_connexion.up,
 		down: migration_20261014_190215_auth_journal_et_derniere_connexion.down,
 		name: '20261014_190215_auth_journal_et_derniere_connexion',
+	},
+	{
+		up: migration_20261014_202952_auth_evenements_heritee.up,
+		down: migration_20261014_202952_auth_evenements_heritee.down,
+		name: '20261014_202952_auth_evenements_heritee',
 	},
 ]

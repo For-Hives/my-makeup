@@ -535,6 +535,7 @@ export interface AuthEvenement {
   type: 'connexion' | 'deconnexion' | 'deconnexion-partout' | 'inscription' | 'confirmation';
   code:
     | 'ok'
+    | 'heritee'
     | 'identifiants-invalides'
     | 'trop-de-tentatives'
     | 'service-indisponible'
