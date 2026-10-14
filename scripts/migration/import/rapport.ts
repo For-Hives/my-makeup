@@ -15,24 +15,51 @@ import type { EmpreinteDesTables } from './source'
 
 export type Mode = 'a-blanc' | 'reel'
 
+/** How the documents of a collection split: accounts per provider of the old site, and legacy hashes. */
+export interface Repartition {
+	fournisseurs: Record<string, number>
+	hashHerites: number
+}
+
 /** What a run did, or would do, in one collection. */
 export interface BilanDeCollection extends Bilan {
 	/** Documents the source holds. */
 	source: number
 	/** `strapiId` of the documents of the target the source no longer gives: listed, never deleted. */
 	enTrop: number[]
+	/** `strapiId` of the documents of the source the import does not take: set aside by a decision. */
+	ecartes?: number[]
+	/** Accounts not confirmed at the source, taken confirmed. */
+	nonConfirmes?: number[]
+	/** What the run takes, split. */
+	repartition?: Repartition
+}
+
+/** The parity of a collection, and how the target splits, read again. */
+export interface PariteDeCollection extends Parite {
+	repartition?: Repartition
+}
+
+/** Why a run stopped before any write: the cases only a decision can settle (ticket 066). */
+export interface Arret {
+	/** Accounts that share one email without a decision, group by group, by identifier. */
+	emailsPartages: number[][]
 }
 
 export interface Rapport {
 	mode: Mode
 	cible: GenreDeCible
+	/** Set when the run stopped before any write; nothing was written then. */
+	arret: Arret | null
 	/** The source, fingerprinted before and after the run by the read-only connection. */
 	source: { avant: EmpreinteDesTables; apres: EmpreinteDesTables; inchangee: boolean }
 	collections: Partial<Record<CollectionImportee, BilanDeCollection>>
 	/** Transformations made on purpose, counted by reference. */
 	ecarts: Record<string, number>
+	/** Decisions of the table that name no case of the source: without effect. */
+	decisionsSansObjet: number
 	/** After a real run only: the target read again, collection by collection. */
-	parite: Partial<Record<CollectionImportee, Parite>> | null
+	parite: Partial<Record<CollectionImportee, PariteDeCollection>> | null
 }
 
 /** The order the import writes the collections in, and their names in the report. */
@@ -44,7 +71,7 @@ export const NOMS_DES_COLLECTIONS: Readonly<Record<CollectionImportee, string>> 
 
 /** True when a run left the source as it was and, for a real run, reached a complete parity. */
 export function importReussi(rapport: Rapport): boolean {
-	if (!rapport.source.inchangee) return false
+	if (rapport.arret || !rapport.source.inchangee) return false
 	if (rapport.mode === 'a-blanc') return true
 	return Object.values(rapport.parite ?? {}).every(pariteComplete)
 }
@@ -66,14 +93,36 @@ function ligneDeBilan(nom: string, bilan: BilanDeCollection, mode: Mode): string
 			`  - refusé : ${refus.strapiId} (${refus.motif}${refus.champs?.length ? ` : ${refus.champs.join(', ')}` : ''})`
 		)
 	if (bilan.enTrop.length > 0) lignes.push(`  - dans la cible, absents de la source, gardés : ${ids(bilan.enTrop)}`)
+	if (bilan.ecartes?.length) lignes.push(`  - écartés par la table de décision : ${ids(bilan.ecartes)}`)
+	if (bilan.nonConfirmes?.length)
+		lignes.push(`  - non confirmés à la source, repris confirmés : ${ids(bilan.nonConfirmes)}`)
+	if (bilan.repartition) lignes.push(`  - ${repartitionEnTexte(bilan.repartition)}`)
 	return lignes
 }
 
-function ligneDeParite(nom: string, p: Parite): string[] {
+function repartitionEnTexte({ fournisseurs, hashHerites }: Repartition): string {
+	const parFournisseur = Object.entries(fournisseurs)
+		.sort(([a], [b]) => a.localeCompare(b))
+		.map(([fournisseur, nombre]) => `${fournisseur} ${nombre}`)
+		.join(', ')
+	return `par fournisseur : ${parFournisseur || 'aucun'} ; ${pluriel(hashHerites, 'hash hérité', 'hash hérités')}`
+}
+
+function lignesDArret({ emailsPartages }: Arret): string[] {
+	return [
+		'Import arrêté avant toute écriture : rien n’est écrit.',
+		`- Des comptes de l’ancien site portent le même email, et la table de décision ne dit pas lequel garder. Groupes, par identifiant : ${emailsPartages.map(groupe => `[${groupe.join(', ')}]`).join(' ; ')}.`,
+		'  Une décision par groupe, dans la table donnée par --decisions (docs/migration/IMPORT.md).',
+		'',
+	]
+}
+
+function ligneDeParite(nom: string, p: PariteDeCollection): string[] {
 	const lignes = [
 		`${nom} : ${p.egaux} sur ${p.attendus} égaux, ${pariteComplete(p) ? 'parité complète' : 'parité incomplète'} ` +
 			`(empreinte ${p.empreinteCible.slice(0, 12)}…)`,
 	]
+	if (p.repartition) lignes.push(`  - dans la cible, ${repartitionEnTexte(p.repartition)}`)
 	if (p.differents.length > 0) lignes.push(`  - différents : ${ids(p.differents)}`)
 	if (p.manquants.length > 0) lignes.push(`  - manquants : ${ids(p.manquants)}`)
 	if (p.enTrop.length > 0) lignes.push(`  - en trop : ${ids(p.enTrop)}`)
@@ -86,6 +135,7 @@ export function rapportEnTexte(rapport: Rapport): string {
 		rapport.mode === 'reel' ? 'Import réel.' : 'Import à blanc : rien n’est écrit. Pour écrire, relance avec --reel.',
 		`Cible : ${rapport.cible === 'locale' ? 'une base de ce poste' : 'une base distante (--cible-distante)'}.`,
 		'',
+		...(rapport.arret ? lignesDArret(rapport.arret) : []),
 	]
 	for (const [collection, nom] of Object.entries(NOMS_DES_COLLECTIONS)) {
 		const bilan = rapport.collections[collection as CollectionImportee]
@@ -96,8 +146,12 @@ export function rapportEnTexte(rapport: Rapport): string {
 		'',
 		ecarts.length === 0
 			? 'Écarts voulus : aucun.'
-			: `Écarts voulus, à lire dans le registre : ${ecarts.map(([reference, n]) => `${reference} ${n}`).join(' ; ')}.`
+			: `Écarts voulus, à lire contre le registre ou le schéma : ${ecarts.map(([reference, n]) => `${reference} ${n}`).join(' ; ')}.`
 	)
+	if (rapport.decisionsSansObjet > 0)
+		lignes.push(
+			`${pluriel(rapport.decisionsSansObjet, 'décision de la table ne nomme', 'décisions de la table ne nomment')} aucun cas de la source : sans effet.`
+		)
 	if (rapport.parite) {
 		lignes.push('', 'Parité, la cible relue :')
 		for (const [collection, nom] of Object.entries(NOMS_DES_COLLECTIONS)) {

@@ -202,6 +202,8 @@ describe('le rapport', () => {
 	const rapport = (modif: Partial<Rapport> = {}): Rapport => ({
 		mode: 'reel',
 		cible: 'locale',
+		arret: null,
+		decisionsSansObjet: 0,
 		source: {
 			avant: { talents: { lignes: 3, empreinte: 'a'.repeat(64) } },
 			apres: { talents: { lignes: 3, empreinte: 'a'.repeat(64) } },

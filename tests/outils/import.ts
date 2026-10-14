@@ -9,6 +9,9 @@
  * The source must exist: a test file creates it (`creerLaSourceStrapi()`) and drops it at the end.
  */
 
+import { readFileSync } from 'node:fs'
+import path from 'node:path'
+import { type Decisions, lireLesDecisions } from '../../scripts/migration/import/decisions'
 import { importer, type OptionsDImport } from '../../scripts/migration/import/importer'
 import type { Mode, Rapport } from '../../scripts/migration/import/rapport'
 import { ouvrirLaSourceBun } from '../../scripts/migration/import/source-bun'
@@ -16,7 +19,20 @@ import { RACINE } from './banc'
 import { payloadDeTest } from './payload-test'
 import { sourceDuBanc } from './source-strapi'
 
-/** Runs the import in this process, against the source and the database of the bench. */
+/**
+ * The table of decisions of the bench (tests/fixtures/import/decisions-du-banc.json): of the four
+ * accounts of the fake source that share one email, account 9 is kept.
+ */
+export const FICHIER_DES_DECISIONS_DU_BANC = 'tests/fixtures/import/decisions-du-banc.json'
+
+export const DECISIONS_DU_BANC: Decisions = lireLesDecisions(
+	readFileSync(path.join(RACINE, FICHIER_DES_DECISIONS_DU_BANC), 'utf8')
+)
+
+/**
+ * Runs the import in this process, against the source and the database of the bench, with the
+ * table of decisions of the bench unless the test gives another one.
+ */
 export async function importerSurLeBanc(
 	mode: Mode = 'reel',
 	options: Partial<Omit<OptionsDImport, 'payload' | 'source' | 'mode'>> = {}
@@ -24,7 +40,7 @@ export async function importerSurLeBanc(
 	const payload = await payloadDeTest()
 	const source = ouvrirLaSourceBun(sourceDuBanc().lecture)
 	try {
-		return await importer({ payload, source, mode, cible: 'locale', ...options })
+		return await importer({ payload, source, mode, cible: 'locale', decisions: DECISIONS_DU_BANC, ...options })
 	} finally {
 		await source.fermer()
 	}

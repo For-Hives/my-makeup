@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { SQL } from 'bun'
-import { commandeDImport, importerSurLeBanc } from '../outils/import'
+import { commandeDImport, FICHIER_DES_DECISIONS_DU_BANC, importerSurLeBanc } from '../outils/import'
 import { compterLesMails, viderLeCapteur } from '../outils/mailpit'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
 import { appelerRest } from '../outils/rest'
@@ -70,7 +70,7 @@ describe('Critère 1 : à blanc, les créations sont annoncées et la base cible
 	})
 
 	test('la commande sans option est un passage à blanc', async () => {
-		const { code, sortie } = await commandeDImport([])
+		const { code, sortie } = await commandeDImport(['--decisions', FICHIER_DES_DECISIONS_DU_BANC])
 
 		expect(code).toBe(0)
 		expect(sortie).toContain('Import à blanc : rien n’est écrit.')
@@ -235,12 +235,18 @@ describe('Critère 5 : le rapport, en nombres, identifiants et empreintes seulem
 		const dossier = mkdtempSync(path.join(tmpdir(), 'rapport-import-'))
 		try {
 			const fichier = path.join(dossier, 'rapport.json')
-			const { code, sortie } = await commandeDImport(['--reel', '--rapport', fichier])
+			const { code, sortie } = await commandeDImport([
+				'--reel',
+				'--decisions',
+				FICHIER_DES_DECISIONS_DU_BANC,
+				'--rapport',
+				fichier,
+			])
 			const json = readFileSync(fichier, 'utf8')
 
 			expect(code).toBe(0)
 			expect(sortie).toContain('Talents : 3 sur 3 égaux, parité complète')
-			expect(JSON.parse(json)).toMatchObject({ mode: 'reel', ecarts: {}, source: { inchangee: true } })
+			expect(JSON.parse(json)).toMatchObject({ mode: 'reel', arret: null, source: { inchangee: true } })
 			for (const texte of [sortie, json])
 				for (const ligne of TALENTS_DE_LA_SOURCE)
 					for (const valeur of [ligne.title, ligne.slug, ligne.description, ligne.content])

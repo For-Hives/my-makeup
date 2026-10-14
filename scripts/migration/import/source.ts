@@ -29,7 +29,7 @@ export const iso = (colonne: string): string => `to_char(${colonne}, 'YYYY-MM-DD
  * The tables the import reads, in the order it reads them. The fingerprint of the source covers
  * them: the import proves at each run that it changed none of them (plan 02, I43).
  */
-export const TABLES_LUES = ['talents'] as const
+export const TABLES_LUES = ['up_users', 'talents'] as const
 
 /** Columns never read, not even to fingerprint them: the one-time tokens of the accounts (SCHEMA.md, rule 4). */
 const COLONNES_JAMAIS_LUES: Readonly<Record<string, readonly string[]>> = {

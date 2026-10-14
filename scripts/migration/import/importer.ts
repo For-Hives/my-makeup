@@ -3,13 +3,18 @@
  * write the difference when the run is real, then read the target again to prove the parity.
  *
  * - The source is read in one read-only snapshot, and fingerprinted before and after the run.
+ * - A case only a decision can settle (accounts that share one email) stops the run before any
+ *   write, dry or real, and the report lists it by identifiers.
  * - A dry run (the default) reads the target and says what it would write; it writes nothing.
- * - A real run writes collection by collection, then reads every collection again: its parity is
- *   complete when the target holds exactly what the source gives, with the same values.
+ * - A real run writes collection by collection, the accounts first, then reads every collection
+ *   again: its parity is complete when the target holds exactly what the source gives, with the
+ *   same values.
  */
 
 import type { Payload } from 'payload'
 import type { GenreDeCible } from './cible'
+import { ADAPTATEUR_COMPTES, comptesAttendus, lireLesComptes, repartitionDesComptes } from './comptes'
+import { AUCUNE_DECISION, type Decisions } from './decisions'
 import {
 	type Adaptateur,
 	type Attendu,
@@ -20,7 +25,7 @@ import {
 	planifier,
 	type Refus,
 } from './moteur'
-import type { BilanDeCollection, Mode, Rapport } from './rapport'
+import type { BilanDeCollection, Mode, PariteDeCollection, Rapport } from './rapport'
 import { empreinteDesTables, memesTables, type Source } from './source'
 import { ADAPTATEUR_TALENTS, lireLesTalents, talentsAttendus } from './talents'
 
@@ -29,6 +34,10 @@ export interface OptionsDImport {
 	source: Source
 	mode: Mode
 	cible: GenreDeCible
+	/** The table of decisions (./decisions.ts). None: every case to decide stops the run. */
+	decisions?: Decisions
+	/** The password of a new account; random by default. Given by a test only. */
+	tirerMotDePasse?: () => string
 }
 
 /** Counts the transformations of the expected documents, by reference. */
@@ -43,46 +52,84 @@ async function importerLaCollection(
 	adaptateur: Adaptateur,
 	source: number,
 	attendus: readonly Attendu[],
-	refuses: readonly Refus[]
+	refuses: readonly Refus[] = []
 ): Promise<BilanDeCollection> {
 	const plan = planifier(adaptateur, attendus, await lireLaCible(payload, adaptateur))
 	const bilan = mode === 'reel' ? await ecrire(payload, adaptateur, plan) : bilanDuPlan(plan)
 	return { ...bilan, refuses: [...refuses, ...bilan.refuses], source, enTrop: plan.enTrop }
 }
 
+/** The parity of a collection: the expected documents, less those the target refused while writing. */
+async function pariteDe(
+	payload: Payload,
+	adaptateur: Adaptateur,
+	attendus: readonly Attendu[],
+	bilan: BilanDeCollection
+): Promise<{ parite: PariteDeCollection; cible: Awaited<ReturnType<typeof lireLaCible>> }> {
+	const refuses = new Set(bilan.refuses.map(({ strapiId }) => strapiId))
+	const cible = await lireLaCible(payload, adaptateur)
+	return {
+		parite: parite(
+			adaptateur,
+			attendus.filter(({ strapiId }) => !refuses.has(strapiId)),
+			cible
+		),
+		cible,
+	}
+}
+
 export async function importer(options: OptionsDImport): Promise<Rapport> {
-	const { payload, source, mode, cible } = options
+	const { payload, source, mode, cible, decisions = AUCUNE_DECISION, tirerMotDePasse } = options
 	const avant = await source.lire(requete => empreinteDesTables(requete))
-	const lu = await source.lire(async requete => ({ talents: await lireLesTalents(requete) }))
+	const lu = await source.lire(async requete => ({
+		comptes: await lireLesComptes(requete),
+		talents: await lireLesTalents(requete),
+	}))
 
 	const rapport: Rapport = {
 		mode,
 		cible,
+		arret: null,
 		source: { avant, apres: avant, inchangee: true },
 		collections: {},
 		ecarts: {},
+		decisionsSansObjet: 0,
 		parite: null,
 	}
 
-	const talents = talentsAttendus(lu.talents)
-	compterLesEcarts(rapport.ecarts, talents.attendus)
-	rapport.collections.talents = await importerLaCollection(
-		options,
-		ADAPTATEUR_TALENTS,
-		lu.talents.length,
-		talents.attendus,
-		talents.refuses
-	)
+	const comptes = comptesAttendus(lu.comptes, decisions, tirerMotDePasse)
+	rapport.decisionsSansObjet = comptes.sansObjet
+	if (comptes.sansDecision.length > 0) {
+		rapport.arret = { emailsPartages: comptes.sansDecision }
+		rapport.collections.pros = {
+			...bilanDuPlan({ actions: [], enTrop: [] }),
+			source: lu.comptes.length,
+			enTrop: [],
+		}
+	} else {
+		const talents = talentsAttendus(lu.talents)
+		for (const { attendus } of [comptes, talents]) compterLesEcarts(rapport.ecarts, attendus)
 
-	if (mode === 'reel') {
-		// The documents refused while writing are not expected: they are listed for a decision.
-		const refusesEnEcrivant = new Set(rapport.collections.talents.refuses.map(({ strapiId }) => strapiId))
-		rapport.parite = {
-			talents: parite(
-				ADAPTATEUR_TALENTS,
-				talents.attendus.filter(({ strapiId }) => !refusesEnEcrivant.has(strapiId)),
-				await lireLaCible(payload, ADAPTATEUR_TALENTS)
-			),
+		rapport.collections.pros = {
+			...(await importerLaCollection(options, ADAPTATEUR_COMPTES, lu.comptes.length, comptes.attendus)),
+			ecartes: comptes.ecartes,
+			nonConfirmes: comptes.nonConfirmes,
+			repartition: repartitionDesComptes(comptes.attendus),
+		}
+		rapport.collections.talents = await importerLaCollection(
+			options,
+			ADAPTATEUR_TALENTS,
+			lu.talents.length,
+			talents.attendus,
+			talents.refuses
+		)
+
+		if (mode === 'reel') {
+			const pros = await pariteDe(payload, ADAPTATEUR_COMPTES, comptes.attendus, rapport.collections.pros)
+			rapport.parite = {
+				pros: { ...pros.parite, repartition: repartitionDesComptes(pros.cible) },
+				talents: (await pariteDe(payload, ADAPTATEUR_TALENTS, talents.attendus, rapport.collections.talents)).parite,
+			}
 		}
 	}
 
