@@ -136,7 +136,7 @@ Au 14/10/2026, tout ce document a été vérifié sur un poste de développement
 | `ci-ok` rouge sur une pull request cassée, fusion bloquée pour un administrateur aussi | Dès que `v3` est protégée | « Canari », plus bas | Pas encore |
 | La CI à cinq jobs tourne : `integration` et les deux lots `e2e` verts, puis `ci-ok` vert | À la première poussée de `v3` qui contient ces deux jobs | `gh run view NUMERO`, puis la seconde commande de « Durée de la CI » | 14/10/2026 : CI 38512540493, sur le commit `1016d81`, les sept jobs verts (46 tests d'intégration, 4 essais par lot `e2e`) |
 | Une CI verte dure moins de 15 minutes, et chaque lot `e2e` moins de 10 | Au même passage | Les deux commandes de « Durée de la CI » | 14/10/2026 : 1 min 52 s ; chaque lot `e2e` 1 min 44 s |
-| Un essai de bout en bout faux exprès rend `e2e`, puis `ci-ok`, rouges | Au canari, ou sur toute pull request qui porte la faute `tests/e2e/canari.spec.ts` | « Canari », plus bas : la ligne `e2e` | Pas encore : répété sur un poste le 14/10/2026, voir « Répétition locale » |
+| Un essai de bout en bout faux exprès rend `e2e`, puis `ci-ok`, rouges | Au canari, ou sur toute pull request qui porte la faute `tests/e2e/canari.spec.ts` | « Canari », plus bas : la ligne `e2e` | Oui, le 14/10/2026 : pull request #975, fermée sans fusion, CI 38513184222 ; `e2e (1/2)` rouge sur cet essai (3 tentatives), `e2e (2/2)` vert, puis `ci-ok` rouge, « Un job n'a pas réussi (failure) » |
 
 Au premier passage, le job `build` a été vert sur le Docker de GitHub. Avant lui, ces trois points n'avaient tourné que derrière Podman : s'il passe au rouge sans que l'image ait changé, les regarder d'abord.
 

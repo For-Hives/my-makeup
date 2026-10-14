@@ -175,3 +175,6 @@ Ce que la v3 change par rapport au site actuel est dans [`CHANGEMENTS-VOULUS.md`
   - Dans le journal de la CI : 46 tests d'intégration verts, 4 essais verts par lot `e2e`, 1 046 tests unitaires et 434 garde-fous verts.
   - C'est le premier passage du banc avec le Docker de GitHub (montage en lecture seule du faux Google compris), de l'installation du Chromium de Playwright sur ubuntu-24.04, et des essais sous le Node 24.21.0 de la CI. Avant lui, ils n'avaient tourné que derrière Podman, sur un poste.
   - Ticket 014 : deux critères sur trois sont constatés sur GitHub. Reste l'essai faux qui rend `ci-ok` rouge, sur une pull request (canari, ticket 029).
+- **Ticket 014 fait : l'essai faux rend `ci-ok` rouge sur une pull request.**
+  - Pull request #975 vers `v3`, branche `canari-014-e2e`, qui ne portait que `tests/e2e/canari.spec.ts`, le contenu du kit `scripts/ci/canari.ts`. CI 38513184222 : `qualite`, `unit`, `build`, `integration` et `e2e (2/2)` verts ; `e2e (1/2)` rouge sur l'essai faux, rejoué deux fois ; `ci-ok` rouge, « RESULTS: success success success success failure », puis « Un job n'a pas réussi (failure) : ci-ok est rouge. »
+  - La pull request est fermée sans fusion et sa branche supprimée. Voir la fusion refusée demandera la protection de `v3` (ticket 028), puis le canari complet à quatre fautes (ticket 029).
