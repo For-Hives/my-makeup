@@ -12,6 +12,7 @@ import path from 'node:path'
 const docs = path.resolve(import.meta.dir, '../../docs/migration')
 const register = readFileSync(path.join(docs, 'CHANGEMENTS-VOULUS.md'), 'utf8')
 const journal = readFileSync(path.join(docs, 'JOURNAL.md'), 'utf8')
+const schema = readFileSync(path.join(docs, 'SCHEMA.md'), 'utf8')
 
 type RegisterLine = {
 	/** The « Repère » cell as written, backticks included */
@@ -63,8 +64,13 @@ function readRegister(markdown: string): RegisterLine[] {
 const KEY = /^`[a-z0-9]+(?:-[a-z0-9]+)*`$/
 // A section of a plan, a dated decision or a ticket
 const SOURCE = /plan \d{2} §\d|\d{2}\/\d{2}\/\d{4}|ticket \d{3}/
-// A family of addresses in backticks, or « Aucune » said in full
-const PAGES = /`\/[^`]*`|^Aucune\b/
+// A family of addresses, in backticks. The tools that compare the two sites read every one of
+// them in a « Pages touchées » cell as a page where a difference is expected.
+const ADDRESS = /`\/[^`]*`/
+// « Aucune » said in full: the line touches no page
+const NO_PAGE = /^Aucune\b/
+// A remark about what does not change, which belongs in the cell before
+const UNCHANGED = /\b(?:aucun|sans effet|sans changement|inchangé|gardé)/i
 
 /** What is wrong with the lines of a register, one sentence per defect; empty when sound. */
 function problems(lines: RegisterLine[]): string[] {
@@ -79,22 +85,33 @@ function problems(lines: RegisterLine[]): string[] {
 			found.push(`${name}: ${line.cells.length} cells for ${line.columns} columns`)
 		if (line.cells.some(cell => cell === '')) found.push(`${name}: a cell is empty`)
 		if (!SOURCE.test(line.source)) found.push(`${name}: the source names no plan section, dated decision or ticket`)
-		if (!PAGES.test(line.pages)) found.push(`${name}: the pages name no address family and do not say « Aucune »`)
+		if (NO_PAGE.test(line.pages)) {
+			if (ADDRESS.test(line.pages)) found.push(`${name}: the pages say « Aucune » and still name an address`)
+		} else if (!ADDRESS.test(line.pages))
+			found.push(`${name}: the pages name no address family and do not say « Aucune »`)
+		else if (UNCHANGED.test(line.pages)) found.push(`${name}: the pages hold a remark about what does not change`)
 	}
 	return found
 }
 
-const EMAIL = /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/
+const EMAIL = /[\w.+-]+@([\w-]+(?:\.[\w-]+)+)/g
+// The site's own domain and its subdomains: an address there (the sender of the site's emails)
+// names no person. `not-my-makeup.fr` and `my-makeup.fr.exemple.test` are other domains.
+const SITE_DOMAIN = /^(?:[\w-]+\.)*my-makeup\.fr$/i
 const PHONE = /(?:\+33\s?|\b0)[1-9](?:[\s.-]?\d{2}){4}\b/
 const PROFILE_PATH = /\/profil\/([^\s`,;:)]*)/g
+// What stands for a profile in a family of addresses; nothing at all names no profile either
+const PROFILE_PLACEHOLDERS = ['<slug>', '<username>', '']
 
 /** The kinds of personal data found in a text; empty when there is none. */
 function personalData(text: string): string[] {
 	const found: string[] = []
-	if (EMAIL.test(text)) found.push('an email address')
+	for (const [, domain = ''] of text.matchAll(EMAIL))
+		if (!SITE_DOMAIN.test(domain)) found.push('an email address outside the site’s own domain')
 	if (PHONE.test(text)) found.push('a phone number')
-	for (const [, slug] of text.matchAll(PROFILE_PATH))
-		if (slug !== '<slug>' && slug !== '<username>') found.push('the address of a real profile')
+	// A family of addresses that ends a sentence: its punctuation is not part of the slug
+	for (const [, slug = ''] of text.matchAll(PROFILE_PATH))
+		if (!PROFILE_PLACEHOLDERS.includes(slug.replace(/[.!?…]+$/, ''))) found.push('the address of a real profile')
 	return found
 }
 
@@ -110,6 +127,10 @@ describe('the checks themselves', () => {
 			'| `sans-page` | a | b | plan 01 §6.2 | partout |',
 			'| `sans-page` | a |  | ticket 017 | Aucune. |',
 			'| Pas Un Repère | a | b | décision du 13/10/2026 | `/cgu` | en trop |',
+			'| `aucune-et-une-page` | a | b | ticket 017 | Aucune. `/cgu` le dit déjà. |',
+			'| `page-qui-ne-change-pas` | a | b | ticket 017 | `/auth/profil` : nouveau. Sans effet sur `/search`. |',
+			'| `affichage-garde` | a | b | ticket 017 | `/profil/<slug>` : affichage gardé. |',
+			'| `pages-qui-changent` | a | b | ticket 017 | `/profil/<slug>` de ces profils : 404 attendue. |',
 			'',
 			'| Titre | Autre |',
 			'|---|---|',
@@ -123,6 +144,9 @@ describe('the checks themselves', () => {
 			'`sans-page`: a cell is empty',
 			'Pas Un Repère: the key is not a kebab-case word in backticks',
 			'Pas Un Repère: 6 cells for 5 columns',
+			'`aucune-et-une-page`: the pages say « Aucune » and still name an address',
+			'`page-qui-ne-change-pas`: the pages hold a remark about what does not change',
+			'`affichage-garde`: the pages hold a remark about what does not change',
 			'(no key): the key is not a kebab-case word in backticks',
 			'(no key): the source names no plan section, dated decision or ticket',
 			'(no key): the pages name no address family and do not say « Aucune »',
@@ -131,10 +155,29 @@ describe('the checks themselves', () => {
 
 	test('an email address, a phone number and the address of a real profile are personal data', () => {
 		// Fictitious values: a reserved test domain and a number of the range kept for fiction
-		expect(personalData('écrire à prenom@example.test')).toEqual(['an email address'])
+		expect(personalData('écrire à prenom@example.test')).toEqual(['an email address outside the site’s own domain'])
 		expect(personalData('appeler le 06 39 98 00 00')).toEqual(['a phone number'])
 		expect(personalData('voir `/profil/un-vrai-slug`')).toEqual(['the address of a real profile'])
 		expect(personalData('`/profil/<slug>`, `/profil/<username>`, ids 67 et 104, le 13/10/2026')).toEqual([])
+	})
+
+	test('a family of addresses that ends a sentence is not the address of a real profile', () => {
+		expect(personalData('Les 13 profils répondent 404 sur /profil/<slug>.')).toEqual([])
+		expect(personalData('Qui redirige depuis /profil/<username> ? Et depuis /profil/<slug>…')).toEqual([])
+		expect(personalData('Toutes les adresses sous /profil/ sont comparées.')).toEqual([])
+		// The punctuation is dropped, the slug is still read
+		expect(personalData('La page /profil/un-vrai-slug.')).toEqual(['the address of a real profile'])
+	})
+
+	test('an address of the site itself is not personal data, an address that looks like one is', () => {
+		expect(personalData('Les emails partent de ne-pas-repondre@send.my-makeup.fr.')).toEqual([])
+		expect(personalData('Expéditeur : contact@my-makeup.fr, relu le 14/10/2026')).toEqual([])
+		for (const address of ['prenom@not-my-makeup.fr', 'prenom@my-makeup.fr.exemple.test', 'prenom@exemple.test'])
+			expect(personalData(`écrire à ${address}`), address).toEqual(['an email address outside the site’s own domain'])
+		// Every address is read, not only the first one
+		expect(personalData('de contact@my-makeup.fr à prenom@exemple.test')).toEqual([
+			'an email address outside the site’s own domain',
+		])
 	})
 })
 
@@ -166,6 +209,28 @@ describe('the register of intended changes', () => {
 	test('the deviations from the technical plan say they touch no page', () => {
 		const deviations = ['emails-resend', 'groupe-front', 'next-16-3']
 		for (const key of deviations) expect(lineOf(key)?.pages, key).toStartWith('Aucune')
+	})
+
+	test('a line that says « Aucune » names no address, and the other lines only name pages that change', () => {
+		const withoutPage = lines.filter(line => line.pages.startsWith('Aucune')).map(line => line.key)
+
+		// The two lines whose pages answer as today, and the three deviations from the technical plan
+		expect(withoutPage).toEqual([
+			'`slug-stocke`',
+			'`recherche-sans-profils-vides`',
+			'`emails-resend`',
+			'`groupe-front`',
+			'`next-16-3`',
+		])
+		expect(register).toContain('La case « Pages touchées » ne nomme que les familles où un écart est attendu')
+	})
+
+	test('the consent source is written as in the frozen schema and in the ticket that imports it', () => {
+		const source = /source (« publié par [^»]+ »)/.exec(schema)?.[1]
+
+		expect(source).toBe('« publié par la maquilleuse »')
+		expect(lineOf('coordonnees-consentement')?.cells.join(' ')).toContain(`source ${source}`)
+		expect(register).not.toContain('publié par la pro')
 	})
 
 	test('the 13 profiles left by the spam are listed by their numeric id', () => {

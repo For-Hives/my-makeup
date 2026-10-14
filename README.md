@@ -218,7 +218,7 @@ Les tests tournent avec `bun test`, lancé par les scripts ci-dessus. Pour un se
 
 | Dossier | Contenu |
 |---|---|
-| `tests/unit/` | Tests unitaires, en `*.test.ts` : ni base, ni réseau |
+| `tests/unit/` | Tests unitaires, en `*.test.ts`, et tests de composants React, en `*.test.tsx` : ni base, ni réseau |
 | `tests/integration/` | Tests d'intégration, en `*.test.ts`, contre la pile de test locale |
 | `tests/e2e/` | Essais de bout en bout, en `*.spec.ts` |
 | `tests/sondes/` | Sondes du site en ligne, en lecture seule |
