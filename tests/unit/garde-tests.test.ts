@@ -82,6 +82,32 @@ describe('U85 : refuse une DATABASE_URI non locale ou dont la base ne finit pas 
 		expect(() => verifierBase(uri)).toThrow(EnvironnementRefuse)
 	})
 
+	// `pg` connects to the `host` parameter and not to the host of the address: the address below
+	// reads as local and would reach the remote host. `hostaddr` is its libpq twin.
+	test.each([
+		['host, vers un hôte distant', '?host=db.example.test'],
+		['host, avec un autre port', '?host=db.example.test&port=6543'],
+		['host écrit en encodé', '?ho%73t=db.example.test'],
+		['host, après un autre paramètre', '?sslmode=disable&host=db.example.test'],
+		['host, même local : la garde ne lit qu’un hôte, celui de l’adresse', '?host=127.0.0.1'],
+		['host vide', '?host='],
+		['hostaddr', '?hostaddr=203.0.113.9'],
+	])('refuse un paramètre qui remplace l’hôte de l’adresse : %s', (_cas, parametres) => {
+		const uri = `postgres://banc:mot-de-passe-factice@127.0.0.1:5443/mymakeup_test${parametres}`
+
+		expect(messageDuRefus(() => verifierBase(uri))).toStartWith('Base refusée : DATABASE_URI porte un paramètre « host')
+	})
+
+	test('le refus d’un paramètre d’hôte nomme le paramètre, jamais sa valeur ni l’adresse', () => {
+		const uri = 'postgres://utilisateur-factice:mot-de-passe-factice@127.0.0.1:5443/mymakeup_test?host=db.example.test'
+		const message = messageDuRefus(() => verifierBase(uri))
+
+		expect(message).toBe(
+			"Base refusée : DATABASE_URI porte un paramètre « host », qui remplace l'hôte de l'adresse. Les tests ne lisent l'hôte de la base que dans l'adresse elle-même."
+		)
+		expect(messageDuRefus(() => verifierEnvironnement({ ...BANC, DATABASE_URI: uri }))).toBe(message)
+	})
+
 	test('le message nomme l’hôte et la base, en français, sans l’adresse complète', () => {
 		const uri = 'postgres://utilisateur-factice:mot-de-passe-factice@db.example.test:5432/mymakeup'
 		const message = messageDuRefus(() => verifierBase(uri))
@@ -113,6 +139,21 @@ describe('U85 : refuse une DATABASE_URI non locale ou dont la base ne finit pas 
 		expect(texte).not.toContain(MARQUE_DU_TEMOIN)
 		expect(texte).not.toContain('mot-de-passe-factice')
 		expect(texte).not.toContain('postgres://')
+	})
+
+	test('arrête bun avant le premier test quand un paramètre host détourne une adresse locale', async () => {
+		const { code, texte } = await lancerTemoin({
+			...BANC,
+			DATABASE_URI: `${BANC.DATABASE_URI}?host=db.example.test`,
+		})
+
+		expect(code).toBe(1)
+		expect(texte).toContain(
+			'Tests arrêtés avant le premier test. Base refusée : DATABASE_URI porte un paramètre « host »'
+		)
+		expect(texte).not.toContain(MARQUE_DU_TEMOIN)
+		expect(texte).not.toContain('db.example.test')
+		expect(texte).not.toContain('mot-de-passe-factice')
 	})
 
 	test('laisse tourner les tests quand tout est local : le témoin tourne', async () => {

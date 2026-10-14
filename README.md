@@ -227,12 +227,14 @@ Seuls `unit/`, `fixtures/` et `outils/` existent pour l'instant : chaque autre d
 
 ### La garde d'environnement
 
-`bun test` charge `tests/outils/garde-environnement.ts` avant tout fichier de test (`bunfig.toml`, section `[test]`). Si l'environnement permet de toucher autre chose que le banc de test local, la garde arrête tout avant le premier test. Son message nomme la variable en cause et ne recopie jamais une adresse complète.
+`bun test`, lancé depuis la racine du dépôt, charge `tests/outils/garde-environnement.ts` avant tout fichier de test (`bunfig.toml`, section `[test]`). Si l'environnement permet de toucher autre chose que le banc de test local, la garde arrête tout avant le premier test. Son message nomme la variable en cause et ne recopie jamais une adresse complète.
+
+Lancé depuis un sous-dossier, `bun test` ne charge pas la garde : bun lit le `bunfig.toml` du dossier où il est lancé, pas celui d'un dossier parent. Un outil de test qui ouvre lui-même une base appelle donc `verifierBase` sur l'adresse qu'il va ouvrir, sans compter sur ce chargement.
 
 | Variable | Règle |
 |---|---|
 | `APP_ENV` | `test` (ou rien), ou `preprod`. `prod` est toujours refusé, toute autre valeur aussi |
-| `DATABASE_URI` | Hôte local, et nom de base fini par `_test` |
+| `DATABASE_URI` | Hôte local, nom de base fini par `_test`, et aucun paramètre `host` ni `hostaddr` : il remplacerait l'hôte de l'adresse |
 | `BASE_URL`, `NEXT_PUBLIC_SITE_URL` | Adresse locale. La préprod seulement avec `APP_ENV=preprod`. Jamais la prod |
 | `SMTP_HOST` | Hôte local : le capteur de mails |
 | `SMTP_*`, `EMAIL_*`, `MAILGUN_*`, `RESEND_*` | Aucun domaine en `my-makeup.fr` : un expéditeur de test écrit depuis `@example.test` |
