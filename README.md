@@ -139,7 +139,7 @@ L'application vérifie ses variables à chaque démarrage (`bun run dev`, `bun r
 - `payload:types` et `payload:importmap` n'ouvrent aucune connexion : la base peut être arrêtée. Sur un clone sans `.env` (la CI, par exemple), deux valeurs de remplissage passées dans l'environnement suffisent : une adresse `postgres://` bien formée, sans base derrière, et 32 caractères quelconques.
 - `NEXT_PUBLIC_SITE_URL` est publique. Présente au moment du build, même vide, elle est figée dans le build. Absente du build, elle est lue au démarrage.
 - `https://v3.my-makeup.fr`, l'adresse provisoire de la prod avant la bascule, est refusée pour l'instant dans `NEXT_PUBLIC_SITE_URL`. Le ticket qui ouvrira cette adresse l'ajoute à `DEPLOYED_ORIGINS` (`src/lib/env.ts`), avec son test.
-- `NEXT_PUBLIC_APP_VERSION` et `SOURCE_COMMIT` sont facultatives. Elles sont lues dans `src/lib/env.ts` sans être vérifiées : aucune valeur n'arrête le démarrage (voir « Route de santé »). `next.config.ts` lit aussi `SOURCE_COMMIT`, au moment du build, pour le figer dans le build : c'est la seule lecture d'une variable hors de `src/lib/env.ts`.
+- `NEXT_PUBLIC_APP_VERSION` et `SOURCE_COMMIT` sont facultatives. Elles sont lues dans `src/lib/env.ts` sans être vérifiées : aucune valeur n'arrête le démarrage (voir « Route de santé »). `next.config.ts` lit aussi `SOURCE_COMMIT`, au moment du build, pour le figer dans le build : ce fichier est chargé avant le code de l'application et ne passe pas par `src/lib/env.ts`.
 - Une nouvelle variable s'ajoute dans `src/lib/env.ts` et dans `.env.exemple`, par le ticket qui commence à la lire.
 
 ### Base de données

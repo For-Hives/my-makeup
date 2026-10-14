@@ -12,7 +12,7 @@ Les faits datés de la migration sont dans [`JOURNAL.md`](JOURNAL.md).
 - Le repère ne change jamais : les outils et les tickets le citent.
 - La source est une section d'un plan, une décision datée ou un ticket.
 - Les pages sont des familles d'adresses, comme `/profil/<slug>`. Jamais l'adresse d'un vrai profil.
-- La case « Pages touchées » ne nomme que les familles où un écart est attendu : les outils de comparaison lisent chaque adresse qu'elle contient comme une page qui change. Une page qui ne change pas se dit dans la case d'à côté, jamais ici. Sans page touchée, la case commence par « Aucune » et ne nomme aucune adresse.
+- La case « Pages touchées » ne nomme que les familles où un écart est attendu : les outils de comparaison lisent chaque adresse qu'elle contient comme une page qui change. Une page qui ne change pas se dit dans la case qui décrit la v3, jamais ici. Sans page touchée, la case commence par « Aucune » et ne nomme aucune adresse.
 - Aucune donnée personnelle : ni nom, ni email, ni téléphone, ni pseudo, ni slug. Un profil ou un compte se désigne par son identifiant numérique dans l'ancienne base. Une adresse du site lui-même, sur le domaine `my-makeup.fr`, n'est pas une donnée personnelle.
 - Un nombre porte la date de sa source : le plan ou un relevé. L'import le recomptera.
 - Un changement visible sans ligne ici n'est pas fini. La ligne s'ajoute en bas du tableau de sa partie, dans le même commit que le changement.

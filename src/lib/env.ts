@@ -13,8 +13,8 @@ import type { VersionSources } from './version'
  * An error names the variable and what is expected, never the value it received.
  *
  * The optional variables behind the version of /api/health are read here too (`versionEnv`), and
- * never checked. One reader stays outside: next.config.ts, which copies the SOURCE_COMMIT of the
- * build into the bundles before any of this code exists.
+ * never checked. next.config.ts reads SOURCE_COMMIT by itself: it copies the commit of the build
+ * into the bundles, before any of this code is loaded.
  *
  * No `next` import: this file is also loaded by the Payload CLI, outside of Next.
  */
