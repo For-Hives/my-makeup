@@ -20,6 +20,14 @@ const LOCAL_URI = 'postgres://banc:banc@127.0.0.1:5442/mymakeup_test'
 const REMOTE_URI = 'postgres://banc:MOT-DE-PASSE-TEMOIN@base.exemple.test:5432/mymakeup_test'
 const SECRET = 'k'.repeat(64)
 const valid: RawEnv = { DATABASE_URI: LOCAL_URI, PAYLOAD_SECRET: SECRET }
+/** What the site itself must also hold since ticket 073: a relay with its login, and a sender. */
+const RELAIS_DU_SITE: RawEnv = {
+	EMAIL_FROM: 'My Makeup <ne-pas-repondre@example.test>',
+	SMTP_HOST: 'relais.exemple.test',
+	SMTP_PASSWORD: 'MOT-DE-PASSE-DU-RELAIS-TEMOIN',
+	SMTP_PORT: '465',
+	SMTP_USER: 'resend',
+}
 
 /** The error this environment is refused with. Fails when it is accepted. */
 function refusal(env: RawEnv): EnvError {
@@ -159,7 +167,7 @@ describe('the schema is pushed only into a database of this machine', () => {
 })
 
 describe('trusted origins: the site, its pre-production and this machine, each for itself', () => {
-	const production: RawEnv = { ...valid, DATABASE_URI: REMOTE_URI, NODE_ENV: 'production' }
+	const production: RawEnv = { ...valid, ...RELAIS_DU_SITE, DATABASE_URI: REMOTE_URI, NODE_ENV: 'production' }
 	const origins = (env: RawEnv) => parseServerEnv(env).trustedOrigins
 
 	test('outside production: this machine, on the port Next listens on', () => {
@@ -233,7 +241,7 @@ describe('trusted origins: the site, its pre-production and this machine, each f
 
 describe('the Google sign-in talks to Google, or on this machine to the fake Google of the test bench', () => {
 	const FAKE = 'http://127.0.0.1:7080'
-	const production: RawEnv = { ...valid, DATABASE_URI: REMOTE_URI, NODE_ENV: 'production' }
+	const production: RawEnv = { ...valid, ...RELAIS_DU_SITE, DATABASE_URI: REMOTE_URI, NODE_ENV: 'production' }
 	const SITE = 'https://my-makeup.fr'
 	const PREPROD = 'https://preprod.my-makeup.fr'
 
@@ -349,6 +357,7 @@ describe('the server stops when it starts with an environment that is not valid'
 	test('the production configuration with a local Google provider: exit code 1, the variable named, no value', () => {
 		const run = start({
 			...valid,
+			...RELAIS_DU_SITE,
 			DATABASE_URI: REMOTE_URI,
 			GOOGLE_OIDC_ISSUER: 'http://127.0.0.1:7080',
 			NEXT_PUBLIC_SITE_URL: 'https://my-makeup.fr',
@@ -584,6 +593,95 @@ describe('the mails leave through the relay the environment names, or not at all
 
 		expect(built.mail).toBeUndefined()
 		expect(serverEnv({ ...relay, NEXT_PHASE: 'phase-production-server' }).mail?.host).toBe('127.0.0.1')
+	})
+})
+
+describe('the site itself sends through an authenticated relay, or does not start (ticket 073)', () => {
+	const site: RawEnv = {
+		...valid,
+		...RELAIS_DU_SITE,
+		DATABASE_URI: REMOTE_URI,
+		NEXT_PUBLIC_SITE_URL: 'https://my-makeup.fr',
+		NODE_ENV: 'production',
+	}
+	const sansRelais: RawEnv = {
+		...site,
+		EMAIL_FROM: undefined,
+		SMTP_HOST: undefined,
+		SMTP_PASSWORD: undefined,
+		SMTP_PORT: undefined,
+		SMTP_USER: undefined,
+	}
+
+	test('the relay, its login and the sender are read, and the login stays in the mail setting only', () => {
+		expect(parseServerEnv(site).mail).toEqual({
+			auth: { pass: 'MOT-DE-PASSE-DU-RELAIS-TEMOIN', user: 'resend' },
+			fromAddress: 'ne-pas-repondre@example.test',
+			fromName: 'My Makeup',
+			host: 'relais.exemple.test',
+			port: 465,
+		})
+	})
+
+	test('the site in production without a relay: refused, the variable named', () => {
+		const error = refusal(sansRelais)
+		expect(error.variables).toEqual(['SMTP_HOST'])
+		expect(error.message).toContain('- SMTP_HOST : absente, alors qu’elle est obligatoire sur le site en ligne')
+	})
+
+	test('without a login: both variables named, with the relay set', () => {
+		const error = refusal({ ...site, SMTP_USER: undefined, SMTP_PASSWORD: undefined })
+		expect(error.variables).toEqual(['SMTP_USER', 'SMTP_PASSWORD'])
+	})
+
+	test('a relay of this machine is refused on the site', () => {
+		for (const host of [
+			'127.0.0.1',
+			'localhost',
+			'LOCALHOST',
+			'::1',
+			'127.0.0.2',
+			'127.1',
+			'0.0.0.0',
+			'0:0:0:0:0:0:0:1',
+			'::',
+			'::ffff:7f00:1',
+		]) {
+			const error = refusal({ ...site, SMTP_HOST: host })
+			expect(error.variables).toEqual(['SMTP_HOST'])
+			expect(error.message).toContain('relais de ce poste alors que le site est déployé')
+		}
+	})
+
+	test('a relay of the network is not taken for this machine', () => {
+		for (const host of ['relais.exemple.test', '10.0.0.5', '128.0.0.1', '2001:db8::1']) {
+			expect(parseServerEnv({ ...site, SMTP_HOST: host }).mail?.host).toBe(host)
+		}
+	})
+
+	test('the pre-production, a work station and the bench may go without a relay', () => {
+		const preprod = { ...sansRelais, NEXT_PUBLIC_SITE_URL: 'https://preprod.my-makeup.fr' }
+		expect(parseServerEnv(preprod).mail).toBeUndefined()
+		expect(parseServerEnv(valid).mail).toBeUndefined()
+		expect(parseServerEnv({ ...sansRelais, NEXT_PUBLIC_SITE_URL: 'http://localhost:3100' }).mail).toBeUndefined()
+	})
+
+	test('SMTP_USER and SMTP_PASSWORD go together', () => {
+		const relais: RawEnv = { ...valid, ...RELAIS_DU_SITE, SMTP_PORT: '587' }
+		expect(refusal({ ...relais, SMTP_PASSWORD: undefined }).variables).toEqual(['SMTP_PASSWORD'])
+		expect(refusal({ ...relais, SMTP_USER: undefined }).variables).toEqual(['SMTP_USER'])
+		expect(parseServerEnv({ ...relais, SMTP_USER: undefined, SMTP_PASSWORD: undefined }).mail?.auth).toBeUndefined()
+	})
+
+	test('no message of a refusal holds the password of the relay', () => {
+		const error = refusal({ ...site, SMTP_HOST: 'smtp://x', EMAIL_FROM: 'personne', SMTP_PORT: '99999' })
+		expect(error.message).not.toContain('MOT-DE-PASSE-DU-RELAIS-TEMOIN')
+		expect(error.message).not.toContain('relais.exemple.test')
+	})
+
+	test('next build asks for nothing and gets no relay', () => {
+		const built = serverEnv({ ...sansRelais, NEXT_PHASE: 'phase-production-build' })
+		expect(built.mail).toBeUndefined()
 	})
 })
 

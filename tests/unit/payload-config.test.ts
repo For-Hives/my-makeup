@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import { createServer } from 'node:net'
 import { initI18n } from '@payloadcms/translations'
 import { Forbidden, getRequestLanguage, type Payload, type SanitizedConfig, ValidationError } from 'payload'
+import { adaptateurSansRelais } from '@/lib/emails/relais'
 import { EnvError, type RawEnv } from '@/lib/env'
 import { migrations } from '@/migrations'
 
@@ -114,13 +115,13 @@ describe('src/payload.config.ts is hardened', () => {
 		expect(config.csrf.length).toBeGreaterThan(0)
 	})
 
-	test('no email adapter when nothing is set: Payload then only writes a log line, and opens no connection', async () => {
+	test('no relay when nothing is set: the mails of Payload go to an adapter that writes a line with no address, and opens no connection', async () => {
 		// `nodemailerAdapter()` called with no transport creates an account at ethereal.email, and
 		// checks its transport when the server starts: without SMTP_HOST, it is not called at all.
-		expect((await configUnder(development)).email).toBeUndefined()
-		expect((await configUnder(preproduction)).email).toBeUndefined()
+		expect((await configUnder(development)).email).toBe(adaptateurSansRelais)
+		expect((await configUnder(preproduction)).email).toBe(adaptateurSansRelais)
 		// The sender alone switches nothing on.
-		expect((await configUnder({ ...development, EMAIL_FROM: SENDER })).email).toBeUndefined()
+		expect((await configUnder({ ...development, EMAIL_FROM: SENDER })).email).toBe(adaptateurSansRelais)
 	})
 })
 
@@ -232,7 +233,7 @@ describe('the mails leave through the adapter of Payload, set by the environment
 		await expect(configUnder({ ...development, SMTP_HOST: '127.0.0.1' })).rejects.toBeInstanceOf(EnvError)
 	})
 
-	test('next build loads it with no adapter, even when the relay is in its environment', async () => {
+	test('next build loads it with the silent adapter, even when the relay is in its environment', async () => {
 		const config = await configUnder({
 			EMAIL_FROM: SENDER,
 			NEXT_PHASE: 'phase-production-build',
@@ -241,7 +242,7 @@ describe('the mails leave through the adapter of Payload, set by the environment
 			SMTP_PORT: '1025',
 		})
 
-		expect(config.email).toBeUndefined()
+		expect(config.email).toBe(adaptateurSansRelais)
 	})
 })
 
