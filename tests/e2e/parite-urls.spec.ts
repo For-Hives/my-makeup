@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { expect, test } from '@playwright/test'
-import { PROFILS_DU_JEU } from '../../src/jeu-fictif/profils'
-import { poserLeJeuDuBanc } from '../fixtures/jeu-du-banc'
+import { poserLesProfilsDeRecherche } from '../fixtures/profils-de-recherche'
+import { creerContenu, rafraichirLesPagesDesProfils, supprimerContenu } from '../outils/pages-publiques'
 import {
 	bilan,
 	type CasDeParite,
@@ -34,6 +34,8 @@ const anciens: TitresDeLAncienSite = JSON.parse(
 )
 
 const LIVREES: ReadonlySet<string> = new Set([
+	'accueil',
+	'recherche',
 	'adresse-inconnue',
 	'historiques',
 	'llms-txt',
@@ -49,45 +51,73 @@ const LIVREES: ReadonlySet<string> = new Set([
 ])
 
 test('I45 : les adresses gelées répondent comme la table, avec le même h1', async ({ request, baseURL }) => {
-	test.setTimeout(240_000)
+	test.setTimeout(300_000)
 	const privee = listePrivee()
+	const contenus: { collection: 'talents' | 'articles'; id: number }[] = []
 	let cas: CasDeParite[]
 	if (privee) cas = privee
 	else {
-		// The bench holds the fictional set: the pages that depend on the data are asked for it.
-		await poserLeJeuDuBanc()
+		// The bench holds made-up pages for the families that depend on the data.
+		const profils = await poserLesProfilsDeRecherche()
+		const profil = (cle: string) => {
+			const trouve = profils.get(cle)
+			if (!trouve) throw new Error(`pas de profil d’essai « ${cle} »`)
+			return trouve
+		}
+		await rafraichirLesPagesDesProfils(request, profil('reference'))
+		const suffixe = Date.now().toString(36)
+		const talent = `essai-parite-${suffixe}`
+		const publie = `essai-parite-publie-${suffixe}`
+		const brouillon = `essai-parite-brouillon-${suffixe}`
+		contenus.push(
+			{
+				collection: 'talents',
+				id: await creerContenu(request, 'talents', { title: `Essai ${talent}`, slug: talent, _status: 'published' }),
+			},
+			{
+				collection: 'articles',
+				id: await creerContenu(request, 'articles', { title: `Essai ${publie}`, slug: publie, _status: 'published' }),
+			},
+			{
+				collection: 'articles',
+				id: await creerContenu(request, 'articles', { title: `Essai ${brouillon}`, slug: brouillon, _status: 'draft' }),
+			}
+		)
 		const jeu: DonneesDuJeu = {
-			profilsVisibles: PROFILS_DU_JEU.filter(({ attendu }) => attendu.statut !== 'masque').map(
-				({ attendu }) => attendu.slug
-			),
-			profilsMasques: PROFILS_DU_JEU.filter(({ attendu }) => attendu.statut === 'masque').map(
-				({ attendu }) => attendu.slug
-			),
-			ancienNom: { ecrit: encodeURIComponent('zoé lefèvre'), slug: 'zoe-lefevre' },
+			profilsVisibles: [...profils.entries()].filter(([cle]) => cle !== 'masquee').map(([, { slug }]) => slug),
+			profilsMasques: [profil('masquee').slug],
+			ancienNom: { ecrit: encodeURIComponent('Essai Zoé'), slug: profil('ancien-nom-accentue').slug },
+			talents: [talent],
+			articlesPublies: [publie],
+			articlesBrouillons: [brouillon],
 		}
 		cas = casDuBanc(anciens, jeu)
 	}
 	expect(cas.length).toBeGreaterThan(30)
 
-	const resultats = []
-	for (const unCas of cas) {
-		// `//x` is a path of the site: written after the origin, it is not read as a host.
-		const resultat = await verifier(unCas, async adresse => {
-			const reponse = await request.get(`${baseURL}${adresse}`, { maxRedirects: 0, failOnStatusCode: false })
-			const entetes = reponse.headers()
-			return {
-				status: reponse.status(),
-				location: entetes.location ?? null,
-				contentType: entetes['content-type'] ?? null,
-				corps: () => reponse.text(),
-			}
-		})
-		resultats.push({ cas: unCas, resultat })
-	}
+	try {
+		const resultats = []
+		for (const unCas of cas) {
+			// `//x` is a path of the site: written after the origin, it is not read as a host.
+			const resultat = await verifier(unCas, async adresse => {
+				const reponse = await request.get(`${baseURL}${adresse}`, { maxRedirects: 0, failOnStatusCode: false })
+				const entetes = reponse.headers()
+				return {
+					status: reponse.status(),
+					location: entetes.location ?? null,
+					contentType: entetes['content-type'] ?? null,
+					corps: () => reponse.text(),
+				}
+			})
+			resultats.push({ cas: unCas, resultat })
+		}
 
-	const lignes = bilan(resultats, LIVREES)
-	console.log(`\n${ecrireLeBilan(lignes, LIVREES)}\n`)
-	for (const { cas: unCas, resultat } of resultats)
-		if (resultat.etat === 'ecart') console.log(`I45 écart connu ${unCas.etiquette} : ${resultat.raison}`)
-	expect(lignes.flatMap(({ regressions }) => regressions)).toEqual([])
+		const lignes = bilan(resultats, LIVREES)
+		console.log(`\n${ecrireLeBilan(lignes, LIVREES)}\n`)
+		for (const { cas: unCas, resultat } of resultats)
+			if (resultat.etat === 'ecart') console.log(`I45 écart connu ${unCas.etiquette} : ${resultat.raison}`)
+		expect(lignes.flatMap(({ regressions }) => regressions)).toEqual([])
+	} finally {
+		for (const { collection, id } of contenus) await supprimerContenu(request, collection, id)
+	}
 })

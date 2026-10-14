@@ -21,7 +21,6 @@
 
 import { createHash } from 'node:crypto'
 import { readdirSync, readFileSync } from 'node:fs'
-import { ARTICLES_DU_JEU, TALENTS_DU_JEU } from '../../src/jeu-fictif/redaction'
 import {
 	anonymousStatus,
 	FROZEN_URL_FAMILIES,
@@ -203,30 +202,35 @@ function casDepuisUneFamille(
 	}
 }
 
-/** Slugs of the fictional set that the cases of the data-dependent families use. */
+/** The made-up pages that the cases of the families depending on the data use. */
 export interface DonneesDuJeu {
 	/** `/profil/<slug>` that answer 200, and those that answer 404 (hidden). */
 	profilsVisibles: readonly string[]
 	profilsMasques: readonly string[]
 	/** The old username of a profile, as it is written in an address, and the slug it goes to. */
 	ancienNom: { ecrit: string; slug: string } | null
+	/** `/talent/<slug>` of published talents. */
+	talents: readonly string[]
+	/** `/blog/<slug>` of a published article, and of a draft (which answers 404). */
+	articlesPublies: readonly string[]
+	articlesBrouillons: readonly string[]
 }
 
 /**
  * The cases of the bench: the clear addresses of the frozen inventory whose answer does not depend
- * on the data, the examples of the table, and the fictional set for the pages that do.
+ * on the data, the examples of the table, and made-up pages for the ones that do.
  */
 export function casDuBanc(anciens: TitresDeLAncienSite, jeu: DonneesDuJeu): CasDeParite[] {
 	const cas = new Map<string, CasDeParite>()
 	const ajouter = (c: CasDeParite): void => {
 		if (!cas.has(c.adresse)) cas.set(c.adresse, c)
 	}
-	const slugsDesTalentsDuJeu = new Set(TALENTS_DU_JEU.map(({ slug }) => slug))
+	const slugsDesTalents = new Set(jeu.talents)
 	// What the bench cannot hold: the real articles and talents of the site (the import carries them).
 	const dependDesDonnees = (adresse: string): boolean => {
 		const [, premier, slug] = splitAddress(adresse).path.split('/')
 		if (premier === 'blog' && slug) return !/^inexistant-/.test(slug)
-		if (premier === 'talent' && slug) return !slugsDesTalentsDuJeu.has(slug) && !/^inexistant-/.test(slug)
+		if (premier === 'talent' && slug) return !slugsDesTalents.has(slug) && !/^inexistant-/.test(slug)
 		return false
 	}
 	const inventaire = [
@@ -269,16 +273,12 @@ export function casDuBanc(anciens: TitresDeLAncienSite, jeu: DonneesDuJeu): CasD
 				anciens
 			)
 		)
-	for (const { slug } of TALENTS_DU_JEU)
+	for (const slug of jeu.talents)
 		ajouter(casDepuisUneFamille(familleParId('talent'), { from: `/talent/${slug}` }, anciens))
-	for (const { slug, statut } of ARTICLES_DU_JEU)
-		ajouter(
-			casDepuisUneFamille(
-				familleParId(statut === 'published' ? 'article' : 'slug-inconnu'),
-				{ from: `/blog/${slug}` },
-				anciens
-			)
-		)
+	for (const slug of jeu.articlesPublies)
+		ajouter(casDepuisUneFamille(familleParId('article'), { from: `/blog/${slug}` }, anciens))
+	for (const slug of jeu.articlesBrouillons)
+		ajouter(casDepuisUneFamille(familleParId('slug-inconnu'), { from: `/blog/${slug}` }, anciens))
 	return [...cas.values()]
 }
 

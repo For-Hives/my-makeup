@@ -120,6 +120,13 @@ bun run test:e2e tests/e2e/parite-urls.spec.ts
 - **Un écart connu** est affiché et ne fait ni vert ni rouge. Aujourd'hui, un seul : Next répond lui-même à toute adresse avec `//`, par un 308, avant que le site ne lise l'adresse (`proxy.ts` ne la voit jamais). La table promet un 301 ; `//toutes-les-news` fait deux sauts. Le cas se règle chez l'hébergeur (une règle de réécriture devant l'application), pas dans le code.
 - **Sur la copie importée** : `PARITE_URLS_LISTE=<baseline-2026-10.csv> bun run test:e2e tests/e2e/parite-urls.spec.ts` rejoue toutes les adresses du fichier privé de l'outil de mesure, profils compris, contre un banc où l'import a tourné ([`docs/migration/IMPORT.md`](../migration/IMPORT.md)). Aucune adresse de profil n'est écrite nulle part : un profil se lit « profil #n » dans le bilan et dans les messages. Les profils vides du spam, que l'import ne reprend pas, répondent 404 ; la liste ne les distingue pas des autres, les deux codes sont admis.
 
+## Des données pour les pages publiques
+
+- Le cache de données de Next (`unstable_cache`, étiquettes `talents` et `profils`) est sur le disque, dans `.next/cache/fetch-cache`, et survit à un build : `bun run test:e2e` le vide avant de construire.
+- Dans un lancement, une page lue avant que les données n'existent garde ce qu'elle a vu. Un essai qui charge des données avec son propre Payload demande à l'application de rafraîchir (`tests/outils/pages-publiques.ts` : `rafraichirLesPagesDesProfils`, `creerContenu`, `supprimerContenu` passent par l'API REST, donc par les crochets de l'application).
+- Les essais de la recherche et de la parité chargent leurs propres profils, « Essai … » (`tests/fixtures/profils-de-recherche.ts`), sous un verrou entre les processus (`tests/outils/verrou.ts`), et non le jeu du banc : la fausse base de l'import (`tranche-profil-importe.spec.ts`) porte les mêmes noms inventés que le jeu, et refuse leurs adresses si le jeu est déjà là.
+- L'optimiseur d'images de Next refuse l'adresse locale du stockage du banc : une photo de carte ne s'y charge pas, son adresse se vérifie dans l'attribut `src`.
+
 ## Quand un essai échoue
 
 | Quoi | Où |

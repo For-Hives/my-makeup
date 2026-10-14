@@ -16,10 +16,13 @@ import { redirectionDeForme } from '@/lib/urls/forme'
 export function proxy(requete: NextRequest) {
 	const { pathname, search } = requete.nextUrl
 	// The path as the visitor wrote it: `nextUrl.pathname` may already have lost a repeated slash.
-	const forme = redirectionDeForme(cheminEcrit(requete.url) ?? pathname)
+	const forme = redirectionDeForme(cheminEcrit(requete.url ?? requete.nextUrl.href) ?? pathname)
 	if (forme) {
 		// A new URL on the host of the request: cloning `nextUrl` would keep the final slash it had.
-		const redirectionDeForme = NextResponse.redirect(new URL(`${forme.chemin}${search}`, requete.url), forme.status)
+		const redirectionDeForme = NextResponse.redirect(
+			new URL(`${forme.chemin}${search}`, requete.url ?? requete.nextUrl.href),
+			forme.status
+		)
 		const consigneDeForme = robotsPourChemin(pathname, { APP_ENV: process.env.APP_ENV })
 		if (consigneDeForme) redirectionDeForme.headers.set('X-Robots-Tag', consigneDeForme)
 		return redirectionDeForme

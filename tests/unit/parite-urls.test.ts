@@ -31,6 +31,13 @@ const inventaire = JSON.parse(readFileSync(join(RACINE, 'docs/migration/urls-inv
 	complements: { address?: string }[]
 }
 
+/** The hash the old site's tool wrote for an address, which the fixture must hold. */
+const hash = (adresse: string): string => {
+	const sha = anciens[adresse]?.sha
+	if (!sha) throw new Error(`pas d'empreinte pour ${adresse}`)
+	return sha
+}
+
 const page = (corps: string, status = 200, location: string | null = null): Reponse => ({
 	status,
 	location,
@@ -41,17 +48,15 @@ const page = (corps: string, status = 200, location: string | null = null): Repo
 describe('la lecture du h1, comme l’outil de mesure', () => {
 	// The three texts below are the public titles of the site; the hashes are those the tool wrote in 2026-10.
 	test('le titre de l’accueil, de la page 404 et de la recherche donnent les empreintes de l’ancien site', () => {
-		expect(sha256("Trouver la maquilleuse qui vous correspond n'a jamais été aussi simple")).toBe(
-			anciens['/']?.sha ?? ''
-		)
-		expect(sha256('404 - Page non trouvée')).toBe(anciens['/page-inexistante-audit-zz']?.sha ?? '')
-		expect(sha256('Rechercher une maquilleuse')).toBe(anciens['/search']?.sha ?? '')
+		expect(sha256("Trouver la maquilleuse qui vous correspond n'a jamais été aussi simple")).toBe(hash('/'))
+		expect(sha256('404 - Page non trouvée')).toBe(hash('/page-inexistante-audit-zz'))
+		expect(sha256('Rechercher une maquilleuse')).toBe(hash('/search'))
 	})
 
 	test('les balises, les commentaires de React, les espaces et les entités sont lus comme l’outil les lit', () => {
 		const html = `<html><head><script>var a = "<h1>x</h1>"</script></head><body>
 			<h1 class="a">Trouver la maquilleuse <!-- --> qui vous correspond n&#x27;a jamais\n été aussi simple</h1></body></html>`
-		expect(empreinteDesTitres(html)).toEqual({ n: 1, sha: anciens['/']?.sha })
+		expect(empreinteDesTitres(html)).toEqual({ n: 1, sha: hash('/') })
 		expect(empreinteDesTitres('<p>sans titre</p>')).toEqual({ n: 0, sha: null })
 		expect(empreinteDesTitres('<h1>Un</h1><h1>Deux</h1>').n).toBe(2)
 	})
@@ -83,6 +88,9 @@ describe('les cas du banc', () => {
 		profilsVisibles: ['alice-test'],
 		profilsMasques: ['masquee-test'],
 		ancienNom: { ecrit: 'zo%C3%A9%20lef%C3%A8vre', slug: 'zoe-lefevre' },
+		talents: ['maquillage-test'],
+		articlesPublies: ['article-test'],
+		articlesBrouillons: ['brouillon-test'],
 	})
 	const de = (adresse: string): CasDeParite => {
 		const trouve = cas.find(c => c.adresse === adresse)
@@ -92,7 +100,7 @@ describe('les cas du banc', () => {
 
 	test('une adresse redirigée est suivie jusqu’à sa destination, dont l’h1 est celui de l’ancien site', () => {
 		expect(de('/blog/')).toMatchObject({ famille: 'barre-finale', statuts: [308], vers: '/blog', statutFinal: 200 })
-		expect(de('/blog/').titre).toEqual({ mode: 'hash', sha: anciens['/blog']?.sha })
+		expect(de('/blog/').titre).toEqual({ mode: 'hash', sha: hash('/blog') })
 		expect(de('/toutes-les-news')).toMatchObject({ statuts: [301], vers: '/blog', familleFinale: 'blog' })
 		expect(de('/auth/profil')).toMatchObject({ famille: 'espace-prive', statuts: [307] })
 	})
@@ -105,10 +113,10 @@ describe('les cas du banc', () => {
 	test('une page inconnue doit avoir l’h1 de la 404 de l’ancien site, une recherche un seul h1', () => {
 		expect(de('/page-inexistante-audit-zz').titre).toEqual({
 			mode: 'hash',
-			sha: anciens['/page-inexistante-audit-zz']?.sha,
+			sha: hash('/page-inexistante-audit-zz'),
 		})
 		expect(de('/search?city=Annecy').titre).toEqual({ mode: 'un' })
-		expect(de('/search').titre).toEqual({ mode: 'hash', sha: anciens['/search']?.sha })
+		expect(de('/search').titre).toEqual({ mode: 'hash', sha: hash('/search') })
 	})
 
 	test('une page à deux h1 sur l’ancien site doit en avoir un seul', () => {
@@ -124,7 +132,10 @@ describe('les cas du banc', () => {
 		})
 		expect(cas.some(c => c.adresse === '/blog/cout-maquilleuse-professionnelle-guide-tarifs')).toBe(false)
 		expect(cas.some(c => c.adresse === '/talent/maquillage-fete')).toBe(false)
-		expect(cas.some(c => c.adresse === '/talent/maquillage-mariee')).toBe(true)
+		expect(cas.some(c => c.adresse === '/talent/maquillage-mariee')).toBe(false)
+		expect(de('/talent/maquillage-test')).toMatchObject({ famille: 'talent', statuts: [200] })
+		expect(de('/blog/article-test')).toMatchObject({ famille: 'article', statuts: [200] })
+		expect(de('/blog/brouillon-test')).toMatchObject({ famille: 'slug-inconnu', statuts: [404] })
 	})
 
 	test('les hôtes (http, www, ancienne API) ne sont pas des cas : l’hébergeur répond', () => {
