@@ -32,7 +32,8 @@ export const sessionsFermees: Field = {
  *   only, never its role; the other collections say what it may do there (articles and talents).
  * - A makeup artist has no account here and never opens the panel (collection `pros`).
  * - A session lasts 8 hours.
- * - The sign-in is braked by client address, like the one of the makeup artists (ticket 094).
+ * - The sign-in is braked by client address, like the one of the makeup artists (ticket 094), and
+ *   the account itself is never locked: knocking on someone's email must not shut her out.
  * - `/api/admins/first-register` is closed, even on an empty table: the accounts are created by
  *   the operating procedure (`bun run admin:creer`, scripts/admin/), never by a visitor, never
  *   imported (docs/migration/SCHEMA.md, §4.2).
@@ -41,9 +42,9 @@ export const Admins: CollectionConfig<'admins'> = {
 	slug: 'admins',
 	labels: { singular: 'Compte admin', plural: 'Comptes admin' },
 	admin: { useAsTitle: 'email', defaultColumns: ['email', 'role'] },
-	// Payload's own lock of the account after 5 wrong passwords stays: an admin is worth it, and the
-	// lock is no new door for the brake. The brake by address adds to it (`freinerLaConnexion`).
-	auth: { tokenExpiration: DUREE_SESSION_ADMIN_S },
+	// No lock of the account (AUTH-05, like `pros`): wrong passwords must never shut the owner out
+	// for every address. The brake by address is the only one (`freinerLaConnexion`).
+	auth: { tokenExpiration: DUREE_SESSION_ADMIN_S, maxLoginAttempts: 0 },
 	endpoints: [premierCompteFerme],
 	hooks: {
 		afterLogin: [rendreLaPlaceDeLaConnexion()],

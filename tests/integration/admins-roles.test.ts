@@ -162,8 +162,17 @@ describe('Le frein par adresse sur la connexion du back-office (ticket 094)', ()
 		expect(onzieme.statut).toBe(429)
 		expect(onzieme.texte).toContain('Trop d’essais, réessaie dans quelques minutes.')
 		expect((await connexion(compte.email, MOT_DE_PASSE, adresseFrenee)).statut).toBe(429)
-		// Another address is not braked: it is answered by Payload, not refused as too many tries.
-		expect((await connexion(compte.email, 'faux-autre', '203.0.113.41')).statut).toBe(401)
+		// Another address is not braked, and the account is not locked: the right password gets in.
+		expect((await connexion(compte.email, MOT_DE_PASSE, '203.0.113.41')).statut).toBe(200)
+	})
+
+	test('des mots de passe faux sous le frein ne verrouillent pas le compte, pour aucune adresse', async () => {
+		const compte = await creerCompte('admin', { motDePasse: () => MOT_DE_PASSE })
+
+		// Well past the 5 failures of Payload's default lock, still under the brake of 10.
+		for (let i = 0; i < 8; i++) expect((await connexion(compte.email, `faux-${i}`, '203.0.113.43')).statut).toBe(401)
+
+		expect((await connexion(compte.email, MOT_DE_PASSE, '203.0.113.44')).statut).toBe(200)
 	})
 
 	test('un admin qui se trompe pas se connecte, avec son cookie', async () => {
