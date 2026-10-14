@@ -43,7 +43,7 @@ Il faut Docker avec Compose. Sans démon Docker, les commandes du banc passent d
 | `NEXT_PUBLIC_SITE_URL` | L'adresse de l'application lancée contre le banc : `http://localhost:3100` |
 | `SMTP_HOST`, `SMTP_PORT` | Le capteur de mails. L'application envoie tous ses mails par ce relais |
 | `MAILPIT_URL` | L'API du capteur, par laquelle un test lit les mails reçus |
-| `EMAIL_FROM` | L'expéditeur des mails du banc, sur le domaine réservé `example.test` |
+| `EMAIL_FROM` | L'expéditeur des mails du banc, sur le domaine réservé `example.test`. Pas d'identifiant : le capteur n'en demande pas (`SMTP_USER` et `SMTP_PASSWORD` sont ceux du site) |
 | `S3_ENDPOINT`, `S3_BUCKET` | Le stockage d'objets et son espace. Le nom de l'espace finit par `-test` |
 | `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | La clé avec laquelle l'application signe ses requêtes au stockage. Le simulateur accepte toute clé : ces deux valeurs portent le mot « factice ». Sans `R2_PUBLIC_URL`, l'adresse publique d'une photo du banc est celle du simulateur : `S3_ENDPOINT`, puis l'espace, puis la clé de l'objet |
 | `STRAPI_SOURCE_URI` | La fausse base Strapi que lit l'import, ouverte par un rôle qui ne peut rien y écrire. Elle vit dans le PostgreSQL du banc, dans une base à elle dont le nom finit par `_test` ([`source-strapi.md`](source-strapi.md)) |

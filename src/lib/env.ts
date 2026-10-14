@@ -42,7 +42,9 @@ export type RawEnv = Partial<
 		| 'S3_ENDPOINT'
 		| 'S3_SECRET_ACCESS_KEY'
 		| 'SMTP_HOST'
-		| 'SMTP_PORT',
+		| 'SMTP_PASSWORD'
+		| 'SMTP_PORT'
+		| 'SMTP_USER',
 		string
 	>
 >
@@ -53,6 +55,8 @@ export type MailEnv = {
 	port: number
 	fromAddress: string
 	fromName: string
+	/** The login of the relay (ticket 073): set on the site, where Resend asks for one. Never logged. */
+	auth?: { user: string; pass: string }
 }
 
 /**
@@ -120,6 +124,9 @@ export const SECRET_MIN_LENGTH = 32
 /** The two deployed addresses a build can be made for: the site and its pre-production. */
 export const DEPLOYED_ORIGINS: readonly string[] = ['https://my-makeup.fr', 'https://preprod.my-makeup.fr']
 
+/** The address of the site itself: the only one where a mail relay is mandatory (ticket 073). */
+export const SITE_ORIGIN = 'https://my-makeup.fr'
+
 /** The address of the pre-production: the only one where the reset and the import at start may run. */
 export const PREPROD_ORIGIN = 'https://preprod.my-makeup.fr'
 
@@ -167,7 +174,9 @@ const EXPECTED = {
 		'l’adresse de l’API S3 du stockage, https://HÔTE, ou sur ce poste celle du banc de test, comme http://127.0.0.1:9090, sans chemin ni « / » final',
 	S3_SECRET_ACCESS_KEY: 'le secret de cette clé',
 	SMTP_HOST: 'un nom d’hôte seul, sans protocole ni port',
+	SMTP_PASSWORD: 'le mot de passe du relais (pour Resend, une clé d’envoi), avec SMTP_USER',
 	SMTP_PORT: 'un numéro de port, de 1 à 65535',
+	SMTP_USER: 'l’identifiant du relais (pour Resend, « resend »), avec SMTP_PASSWORD',
 } as const
 
 type CheckedVariable = keyof typeof EXPECTED
@@ -389,17 +398,30 @@ function sender(value: string): Pick<MailEnv, 'fromAddress' | 'fromName'> | unde
  * a relay without a port, or mails without a sender, are refused when the server starts and not
  * at the first mail.
  *
- * The relay is used as it is given: no login and no encryption are set here. That suits the mail
- * catcher of the test bench; what a real relay needs comes with the ticket that sends through one.
+ * SMTP_USER and SMTP_PASSWORD go together (Resend: the user « resend », a sending key as
+ * password). Without them the relay is used as it is given, which suits the mail catcher of the
+ * test bench.
+ *
+ * On the site itself (`inSite`: a production build served from https://my-makeup.fr) a mail relay is mandatory, with its login, and none of this machine is accepted:
+ * the application refuses to start instead of dropping the mails of its members (ticket 073).
  */
-function mailEnv(raw: RawEnv, problems: { variable: string; problem: string }[]): MailEnv | undefined {
-	if (raw.SMTP_HOST === undefined) return undefined
-	const refuse = (variable: 'EMAIL_FROM' | 'SMTP_HOST' | 'SMTP_PORT', problem: string) =>
+function mailEnv(raw: RawEnv, problems: { variable: string; problem: string }[], inSite: boolean): MailEnv | undefined {
+	const refuse = (variable: CheckedVariable, problem: string) =>
 		problems.push({ variable, problem: `${problem}. Attendu : ${EXPECTED[variable]}.` })
+	if (raw.SMTP_HOST === undefined) {
+		if (inSite)
+			refuse(
+				'SMTP_HOST',
+				`${ABSENT}, alors qu’elle est obligatoire sur le site en ligne : sans relais, aucun mail ne partirait`
+			)
+		return undefined
+	}
 	const missing = `${ABSENT}, alors que SMTP_HOST est réglée`
 
 	const host = raw.SMTP_HOST.trim()
 	if (!HOST_ALONE.test(host)) refuse('SMTP_HOST', 'illisible')
+	else if (inSite && LOOPBACK_HOSTS.has(host.toLowerCase()))
+		refuse('SMTP_HOST', 'refusée, car elle désigne un relais de ce poste alors que le site est déployé')
 
 	const port = /^\d{1,5}$/.test(raw.SMTP_PORT?.trim() ?? '') ? Number(raw.SMTP_PORT) : Number.NaN
 	if (raw.SMTP_PORT === undefined) refuse('SMTP_PORT', missing)
@@ -409,7 +431,18 @@ function mailEnv(raw: RawEnv, problems: { variable: string; problem: string }[])
 	if (raw.EMAIL_FROM === undefined) refuse('EMAIL_FROM', missing)
 	else if (!from) refuse('EMAIL_FROM', 'illisible')
 
-	return from ? { host, port, ...from } : undefined
+	const lonely = (present: string, absent: CheckedVariable) =>
+		refuse(absent, `${ABSENT}, alors que ${present} est réglée`)
+	if (raw.SMTP_USER !== undefined && raw.SMTP_PASSWORD === undefined) lonely('SMTP_USER', 'SMTP_PASSWORD')
+	if (raw.SMTP_PASSWORD !== undefined && raw.SMTP_USER === undefined) lonely('SMTP_PASSWORD', 'SMTP_USER')
+	if (inSite && raw.SMTP_USER === undefined && raw.SMTP_PASSWORD === undefined) {
+		refuse('SMTP_USER', `${ABSENT}, alors que le site en ligne n’envoie que par un relais authentifié`)
+		refuse('SMTP_PASSWORD', `${ABSENT}, alors que le site en ligne n’envoie que par un relais authentifié`)
+	}
+	const auth = raw.SMTP_USER !== undefined && raw.SMTP_PASSWORD !== undefined
+	return from
+		? { host, port, ...from, ...(auth && { auth: { user: raw.SMTP_USER ?? '', pass: raw.SMTP_PASSWORD ?? '' } }) }
+		: undefined
 }
 
 /**
@@ -501,7 +534,8 @@ export function parseServerEnv(source: RawEnv): ServerEnv {
 		})
 	}
 
-	const mail = mailEnv(raw, problems)
+	const inSite = production && raw.NEXT_PUBLIC_SITE_URL === SITE_ORIGIN
+	const mail = mailEnv(raw, problems, inSite)
 	const storage = storageEnv(raw, problems)
 	const preprod = preprodEnv(raw, problems)
 
@@ -553,7 +587,9 @@ function processEnv(): RawEnv {
 		S3_ENDPOINT: process.env.S3_ENDPOINT,
 		S3_SECRET_ACCESS_KEY: process.env.S3_SECRET_ACCESS_KEY,
 		SMTP_HOST: process.env.SMTP_HOST,
+		SMTP_PASSWORD: process.env.SMTP_PASSWORD,
 		SMTP_PORT: process.env.SMTP_PORT,
+		SMTP_USER: process.env.SMTP_USER,
 	}
 }
 

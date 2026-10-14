@@ -33,7 +33,17 @@ const preprod: RawEnv = {
 	NODE_ENV: 'production',
 	PAYLOAD_SECRET: SECRET,
 }
-const site: RawEnv = { ...preprod, APP_ENV: 'prod', NEXT_PUBLIC_SITE_URL: 'https://my-makeup.fr' }
+const site: RawEnv = {
+	...preprod,
+	APP_ENV: 'prod',
+	NEXT_PUBLIC_SITE_URL: 'https://my-makeup.fr',
+	// The site must hold a mail relay with its login (ticket 073).
+	EMAIL_FROM: 'My Makeup <ne-pas-repondre@example.test>',
+	SMTP_HOST: 'relais.exemple.test',
+	SMTP_PASSWORD: 'mot-de-passe-temoin',
+	SMTP_PORT: '465',
+	SMTP_USER: 'resend',
+}
 const poste: RawEnv = {
 	...preprod,
 	APP_ENV: undefined,
@@ -489,11 +499,16 @@ describe('the configuration of Payload runs the hook with its own environment', 
 	const VARIABLES = [
 		'APP_ENV',
 		'DATABASE_URI',
+		'EMAIL_FROM',
 		'NEXT_PHASE',
 		'NEXT_PUBLIC_SITE_URL',
 		'NODE_ENV',
 		'PAYLOAD_SECRET',
 		'PREPROD_REMISE_A_ZERO',
+		'SMTP_HOST',
+		'SMTP_PASSWORD',
+		'SMTP_PORT',
+		'SMTP_USER',
 	] as const
 	let chargements = 0
 

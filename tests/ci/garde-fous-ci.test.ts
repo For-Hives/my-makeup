@@ -166,8 +166,8 @@ describe('the image is built with public variables only, runs without root and s
 		],
 		[
 			'a variable of a later ticket that .env.exemple would list',
-			`${dockerfile}\nARG SMTP_PASSWORD\n`,
-			'ARG SMTP_PASSWORD : seules les variables publiques',
+			`${dockerfile}\nARG RESEND_API_KEY\n`,
+			'ARG RESEND_API_KEY : seules les variables publiques',
 		],
 		[
 			'a public variable nobody added to the list',
@@ -214,11 +214,11 @@ describe('the image is built with public variables only, runs without root and s
 	})
 
 	test('a runtime variable is recognised from .env.exemple alone, whatever the Dockerfile says', () => {
-		const withMail = `${envExample}\nSMTP_PASSWORD=\n`
+		const withMail = `${envExample}\nRESEND_API_KEY=\n`
 
-		expect(imageProblems(`${dockerfile}\nRUN echo "$SMTP_PASSWORD"\n`, envExample)).toEqual([])
-		expect(imageProblems(`${dockerfile}\nRUN echo "$SMTP_PASSWORD"\n`, withMail).join('\n')).toContain(
-			'SMTP_PASSWORD est une variable d’exécution'
+		expect(imageProblems(`${dockerfile}\nRUN echo "$RESEND_API_KEY"\n`, envExample)).toEqual([])
+		expect(imageProblems(`${dockerfile}\nRUN echo "$RESEND_API_KEY"\n`, withMail).join('\n')).toContain(
+			'RESEND_API_KEY est une variable d’exécution'
 		)
 	})
 
