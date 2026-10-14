@@ -100,12 +100,75 @@ jobs:
       - name: Check the image against a throwaway database
         run: CONTROLE_IMAGE_COMMIT="$GITHUB_SHA" bun run image:controle
 
+  # The integration tests, against the containers of the test bench (compose.test.yml): the
+  # same commands as on a developer's machine (docs/tests/banc.md).
+  integration:
+    name: integration
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+      - name: Install
+        run: bun install --frozen-lockfile
+      - name: Start the test bench
+        run: bun run banc:up
+      - name: Integration tests
+        run: bun run test:integration
+
+  # The end-to-end tests, in two shards side by side. Each shard starts its own bench and builds
+  # the application itself (docs/tests/e2e.md): nothing waits for the build job, so the longest
+  # chain of jobs stays under 15 minutes (docs/qualite.md, « Durée de la CI »).
+  e2e:
+    name: e2e (${{ matrix.shard }}/2)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    strategy:
+      # A failed shard does not stop the other one: one push shows every failed test.
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      # Playwright runs under Node, not bun.
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+      - name: Install
+        run: bun install --frozen-lockfile
+      - name: Browser of Playwright
+        run: bunx playwright install --with-deps chromium
+      - name: Start the test bench
+        run: bun run banc:up
+      # GitHub sets CI=true: a test left in `.only` fails the run, a failed test is retried twice.
+      - name: End-to-end tests
+        run: bun run test:e2e --shard=${{ matrix.shard }}/2
+      # Trace, video and screenshot of each failed test, and the report: sent only after a failure.
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: failure()
+        with:
+          name: e2e-${{ matrix.shard }}
+          path: |
+            playwright-report
+            test-results
+          retention-days: 14
+
   # THE required check. A needed job that failed, was cancelled or was skipped makes it red:
   # GitHub counts a skipped required job as passed, this job does not.
   ci-ok:
     name: ci-ok
     if: always()
-    needs: [qualite, unit, build]
+    needs: [qualite, unit, build, integration, e2e]
     runs-on: ubuntu-24.04
     timeout-minutes: 2
     steps:

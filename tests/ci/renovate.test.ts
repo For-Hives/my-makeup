@@ -111,6 +111,7 @@ describe('what Renovate follows in this repository', () => {
 			'actions/checkout',
 			'actions/setup-node',
 			'oven-sh/setup-bun',
+			'actions/upload-artifact',
 			'ubuntu',
 		])
 		expect(dependency('node', 'Dockerfile').version).toBe(`${read('.nvmrc').trim()}-bookworm-slim`)

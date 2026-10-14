@@ -5,6 +5,7 @@ import { configurationDesEssais } from '../outils/e2e'
 import {
 	absoluteNavigations,
 	aggregatorProblems,
+	benchJobProblems,
 	buildContextProblems,
 	cacheDependentSteps,
 	durationProblems,
@@ -273,6 +274,8 @@ const AGGREGATOR = 'ci-ok'
  * the jobs run side by side, it is also the 15 minutes a green run must not reach.
  */
 const CI_LIMIT_MINUTES = 15
+/** The end-to-end tests must take less than this many minutes: it is the time limit of their job. */
+const E2E_LIMIT_MINUTES = 10
 
 const workflows: Workflow[] = readdirSync(path.join(ROOT, WORKFLOWS))
 	.filter(file => /\.ya?ml$/.test(file))
@@ -292,7 +295,7 @@ const A_COMMIT = '1'.repeat(40)
 
 test('the workflows of the repository are read: the CI is one of them', () => {
 	expect(workflows.map(workflow => workflow.file)).toContain(CI)
-	expect(Object.keys(ci.jobs)).toEqual(['qualite', 'unit', 'build', AGGREGATOR])
+	expect(Object.keys(ci.jobs)).toEqual(['qualite', 'unit', 'build', 'integration', 'e2e', AGGREGATOR])
 })
 
 describe('C01: no step and no job is allowed to fail', () => {
@@ -503,8 +506,8 @@ describe('C03: the required checks exist under their exact names', () => {
 describe('C04: the workflows install the Node of .nvmrc and the bun of package.json', () => {
 	test('every setup step reads its version in the repository', () => {
 		expect(misalignedSetups(workflows)).toEqual([])
-		expect(ciText).toContain('node-version-file: .nvmrc')
-		expect(ciText.match(/bun-version-file: package\.json/g)).toHaveLength(3)
+		expect(ciText.match(/node-version-file: \.nvmrc/g)).toHaveLength(2)
+		expect(ciText.match(/bun-version-file: package\.json/g)).toHaveLength(5)
 	})
 
 	test.each([
@@ -742,17 +745,27 @@ describe('ci-ok is red when a job failed, was cancelled or was skipped', () => {
 		return { code: ran.exitCode, output: ran.stdout.toString() }
 	}
 
+	/** The results of the five jobs, in the order of `needs`: every one a success, but the ones given. */
+	const results = (changed: Partial<Record<'qualite' | 'unit' | 'build' | 'integration' | 'e2e', string>> = {}) =>
+		(['qualite', 'unit', 'build', 'integration', 'e2e'] as const).map(job => changed[job] ?? 'success').join(' ')
+
 	test('green when every job succeeded', () => {
-		expect(verdict('success success success')).toMatchObject({ code: 0 })
-		expect(verdict('success success success').output).toContain('ci-ok est vert')
+		expect(verdict(results())).toMatchObject({ code: 0 })
+		expect(verdict(results()).output).toContain('ci-ok est vert')
 	})
 
 	test.each([
-		['failed', 'success failure success'],
-		['was cancelled', 'cancelled success success'],
-		['was skipped', 'success success skipped'],
-		['has a result nobody knows', 'success success neutral'],
-		['failed, last of the list', 'success success failure'],
+		['failed', results({ unit: 'failure' })],
+		['was cancelled', results({ qualite: 'cancelled' })],
+		['was skipped', results({ build: 'skipped' })],
+		['has a result nobody knows', results({ build: 'neutral' })],
+		['failed, last of the list', results({ e2e: 'failure' })],
+		// The two jobs of the test bench, alone. A shard of the end-to-end tests that failed makes the
+		// whole matrix « failure »; one that hit its time limit makes it « cancelled ».
+		['of the test bench failed: the integration tests', results({ integration: 'failure' })],
+		['of the test bench failed: a shard of the end-to-end tests', results({ e2e: 'failure' })],
+		['of the test bench was cancelled: a shard that hit its time limit', results({ e2e: 'cancelled' })],
+		['of the test bench was skipped', results({ integration: 'skipped' })],
 	])('red when a job %s', (_fault, results) => {
 		const { code, output } = verdict(results)
 
@@ -767,7 +780,7 @@ describe('ci-ok is red when a job failed, was cancelled or was skipped', () => {
 
 	test('it always runs, waits for every other job, and nothing can be skipped by a condition', () => {
 		expect(aggregatorProblems(ci, AGGREGATOR)).toEqual([])
-		expect(ci.jobs[AGGREGATOR]?.needs).toEqual(['qualite', 'unit', 'build'])
+		expect(ci.jobs[AGGREGATOR]?.needs).toEqual(['qualite', 'unit', 'build', 'integration', 'e2e'])
 	})
 
 	test.each([
@@ -775,9 +788,15 @@ describe('ci-ok is red when a job failed, was cancelled or was skipped', () => {
 		['a ci-ok that runs on success only', '    if: always()\n', '    if: success()\n', 'sans « if: always() »'],
 		[
 			'a job ci-ok does not wait for',
-			'needs: [qualite, unit, build]',
-			'needs: [qualite, unit]',
-			'il n’attend pas le job « build »',
+			'needs: [qualite, unit, build, integration, e2e]',
+			'needs: [qualite, unit, build, integration]',
+			'il n’attend pas le job « e2e »',
+		],
+		[
+			'the integration tests left out of ci-ok',
+			'needs: [qualite, unit, build, integration, e2e]',
+			'needs: [qualite, unit, build, e2e]',
+			'il n’attend pas le job « integration »',
 		],
 		[
 			'a job added without being needed',
@@ -787,9 +806,9 @@ describe('ci-ok is red when a job failed, was cancelled or was skipped', () => {
 		],
 		[
 			'a needed job that does not exist',
-			'needs: [qualite, unit, build]',
-			'needs: [qualite, unit, build, e2e]',
-			'il attend « e2e », qui n’existe pas',
+			'needs: [qualite, unit, build, integration, e2e]',
+			'needs: [qualite, unit, build, integration, e2e, lighthouse]',
+			'il attend « lighthouse », qui n’existe pas',
 		],
 		[
 			'results read another way',
@@ -852,15 +871,8 @@ describe('the time limits of the CI: no run lasts 15 minutes', () => {
 	})
 
 	test('a job chained after the build does not fit: the message says where to read what to do', () => {
-		// What the end-to-end job will meet (docs/qualite.md, « Durée de la CI »): build, then it, then ci-ok.
-		const chained = brokenCi(
-			'  # THE required check.',
-			'  e2e:\n    name: e2e\n    needs: [build]\n    runs-on: ubuntu-24.04\n    timeout-minutes: 10\n    steps: []\n\n  # THE required check.'
-		)
-		const withIt = readWorkflow(
-			CI,
-			chained.text.replace('needs: [qualite, unit, build]', 'needs: [qualite, unit, build, e2e]')
-		)
+		// The end-to-end tests waiting for the build, as the plan first had them: build, then e2e, then ci-ok.
+		const withIt = brokenCi('    name: e2e (', '    needs: [build]\n    name: e2e (')
 
 		expect(durationProblems(withIt, CI_LIMIT_MINUTES)).toEqual([
 			'.github/workflows/ci.yml : la plus longue chaîne de jobs peut durer 24 minutes, il en faut moins de 15 (docs/qualite.md, « Durée de la CI », dit quoi faire quand un job s’enchaîne après un autre).',
@@ -897,6 +909,103 @@ describe('the time limits of the CI: no run lasts 15 minutes', () => {
 		],
 	])('red on %s', (_fault, from, to, expected) => {
 		expect(durationProblems(brokenCi(from, to), CI_LIMIT_MINUTES).join('\n')).toContain(expected)
+	})
+})
+
+describe('the CI runs the integration tests and the end-to-end tests on the test bench, in two shards', () => {
+	const SETUP_NODE_OF_E2E =
+		'      # Playwright runs under Node, not bun.\n      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0\n        with:\n          node-version-file: .nvmrc\n          package-manager-cache: false\n'
+	const BENCH_OF_INTEGRATION =
+		'      - name: Start the test bench\n        run: bun run banc:up\n      - name: Integration tests\n'
+	const E2E_TESTS = `run: bun run test:e2e --shard=${expression('matrix.shard')}/2`
+
+	test('each job starts the bench before its tests; the end-to-end tests run in two shards, in less than 10 minutes', () => {
+		expect(benchJobProblems(ci, E2E_LIMIT_MINUTES)).toEqual([])
+		expect(ci.jobs.e2e?.['timeout-minutes']).toBeLessThanOrEqual(E2E_LIMIT_MINUTES)
+	})
+
+	test.each([
+		[
+			'no integration job any more',
+			'  integration:\n    name: integration\n',
+			'  integ:\n    name: integ\n',
+			'n’a pas de job « integration » : le banc de test n’y tournerait plus',
+		],
+		[
+			'integration tests without the bench',
+			BENCH_OF_INTEGRATION,
+			'      - name: Integration tests\n',
+			'job integration : il doit lancer « bun run banc:up », seule dans son étape',
+		],
+		[
+			'integration tests started before the bench',
+			`${BENCH_OF_INTEGRATION}        run: bun run test:integration\n`,
+			'      - name: Integration tests\n        run: bun run test:integration\n      - name: Start the test bench\n        run: bun run banc:up\n',
+			'job integration : « bun run test:integration » doit venir après « bun run banc:up »',
+		],
+		[
+			'one integration file instead of the folder',
+			'run: bun run test:integration',
+			'run: bun run test:integration tests/integration/banc-base.test.ts',
+			'job integration : il doit lancer « bun run test:integration », seule dans son étape',
+		],
+		[
+			'the bench and the tests in one script',
+			'        run: bun run banc:up\n      - name: Integration tests\n        run: bun run test:integration\n',
+			'        run: |\n          bun run banc:up\n          bun run test:integration\n',
+			'job integration : il doit lancer « bun run test:integration », seule dans son étape',
+		],
+		[
+			'every end-to-end test in each shard',
+			E2E_TESTS,
+			'run: bun run test:e2e',
+			`job e2e : il doit lancer « bun run test:e2e --shard=${expression('matrix.shard')}/2 »`,
+		],
+		[
+			'end-to-end tests without their browser',
+			'      - name: Browser of Playwright\n        run: bunx playwright install --with-deps chromium\n',
+			'',
+			'job e2e : il doit lancer « bunx playwright install --with-deps chromium »',
+		],
+		[
+			'end-to-end tests without Node',
+			SETUP_NODE_OF_E2E,
+			'',
+			'job e2e : Playwright tourne sous Node, installé avant les essais',
+		],
+		['a single shard', 'shard: [1, 2]', 'shard: [1]', 'les essais tournent en 2 lots'],
+		[
+			'three shards for a command that cuts in two',
+			'shard: [1, 2]',
+			'shard: [1, 2, 3]',
+			'les essais tournent en 2 lots',
+		],
+		[
+			'a second dimension that runs every shard twice',
+			'        shard: [1, 2]\n',
+			'        shard: [1, 2]\n        navigateur: [chromium, firefox]\n',
+			'les essais tournent en 2 lots, « matrix: shard: [1, 2] », et rien d’autre',
+		],
+		[
+			'a failed shard that cancels the other one',
+			'      fail-fast: false\n',
+			'      fail-fast: true\n',
+			'« fail-fast: false », sinon un lot en échec annule l’autre',
+		],
+		[
+			'the default of GitHub, which cancels the other shard',
+			'      fail-fast: false\n',
+			'',
+			'« fail-fast: false », sinon un lot en échec annule l’autre',
+		],
+		[
+			'end-to-end tests allowed 15 minutes',
+			'    timeout-minutes: 10\n    strategy:',
+			'    timeout-minutes: 15\n    strategy:',
+			'job e2e : sa limite est de 15 minutes ; les essais de bout en bout doivent tenir en 10',
+		],
+	])('red on %s', (_fault, from, to, expected) => {
+		expect(benchJobProblems(brokenCi(from, to), E2E_LIMIT_MINUTES).join('\n')).toContain(expected)
 	})
 })
 

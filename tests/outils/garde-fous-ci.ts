@@ -611,6 +611,67 @@ export function durationProblems(workflow: Workflow, limit: number): string[] {
 	return problems
 }
 
+/** The shards of the end-to-end tests: the values of `matrix.shard`, which the command below reads. */
+export const E2E_SHARDS = [1, 2] as const
+/** The two jobs that run on the test bench, and the commands each one runs, in this order, one per step. */
+export const BENCH_JOBS = {
+	integration: ['bun install --frozen-lockfile', 'bun run banc:up', 'bun run test:integration'],
+	e2e: [
+		'bun install --frozen-lockfile',
+		'bunx playwright install --with-deps chromium',
+		'bun run banc:up',
+		// An expression of GitHub Actions, written so that it is not read as a template here.
+		`bun run test:e2e --shard=\${{ matrix.shard }}/${E2E_SHARDS.length}`,
+	],
+} as const
+
+/**
+ * The integration and end-to-end tests run on the test bench, in the CI as on a developer's
+ * machine. Each job starts the bench before its tests. The end-to-end tests run in two shards,
+ * under Node, and a failed shard does not cancel the other one. A green end-to-end job lasts
+ * less than `e2eLimit` minutes: its time limit is that bound.
+ */
+export function benchJobProblems(workflow: Workflow, e2eLimit: number): string[] {
+	const problems: string[] = []
+	for (const [id, commands] of Object.entries(BENCH_JOBS)) {
+		const job = workflow.jobs[id]
+		if (!job) {
+			problems.push(`${workflow.file} n’a pas de job « ${id} » : le banc de test n’y tournerait plus.`)
+			continue
+		}
+		const steps = job.steps ?? []
+		const ran = steps.map(step => (typeof step.run === 'string' ? step.run.trim() : undefined))
+		const found = commands.map(command => ran.indexOf(command))
+		for (const [rank, command] of commands.entries()) {
+			const at = found[rank] ?? -1
+			const before = rank > 0 ? (found[rank - 1] ?? -1) : -1
+			if (at === -1) problems.push(`${workflow.file}, job ${id} : il doit lancer « ${command} », seule dans son étape.`)
+			else if (at < before)
+				problems.push(`${workflow.file}, job ${id} : « ${command} » doit venir après « ${commands[rank - 1]} ».`)
+		}
+		if (id !== 'e2e') continue
+
+		const lastCommand = found.at(-1) ?? -1
+		const node = steps.findIndex(step => step.uses?.startsWith('actions/setup-node@'))
+		if (node === -1 || (lastCommand !== -1 && node > lastCommand))
+			problems.push(`${workflow.file}, job ${id} : Playwright tourne sous Node, installé avant les essais.`)
+		const strategy = isRecord(job.strategy) ? job.strategy : {}
+		const matrix = isRecord(strategy.matrix) ? strategy.matrix : {}
+		if (Object.keys(matrix).join() !== 'shard' || JSON.stringify(matrix.shard) !== JSON.stringify(E2E_SHARDS))
+			problems.push(
+				`${workflow.file}, job ${id} : les essais tournent en ${E2E_SHARDS.length} lots, « matrix: shard: [${E2E_SHARDS.join(', ')}] », et rien d’autre.`
+			)
+		if (strategy['fail-fast'] !== false)
+			problems.push(`${workflow.file}, job ${id} : « fail-fast: false », sinon un lot en échec annule l’autre.`)
+		const limit = job['timeout-minutes']
+		if (typeof limit === 'number' && limit > e2eLimit)
+			problems.push(
+				`${workflow.file}, job ${id} : sa limite est de ${limit} minutes ; les essais de bout en bout doivent tenir en ${e2eLimit}.`
+			)
+	}
+	return problems
+}
+
 /* ------------------------------------------------------------------------------------------
  * Test files and tracked files
  * ---------------------------------------------------------------------------------------- */
