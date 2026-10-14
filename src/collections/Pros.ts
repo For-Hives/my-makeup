@@ -133,7 +133,8 @@ export const Pros: CollectionConfig<'pros'> = {
 			access: { create: jamais, update: jamais },
 			admin: {
 				readOnly: true,
-				description: 'Comment le compte se connectait sur l’ancien site : local, google ou facebook.',
+				description:
+					'Comment le compte se connectait sur l’ancien site : local, google ou facebook. « google » aussi pour un compte créé par la connexion Google, qui ne s’ouvre que pour ceux-là.',
 			},
 		},
 		{

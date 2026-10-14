@@ -2,10 +2,12 @@ import type { Metadata } from 'next'
 import { headers } from 'next/headers'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { BoutonGoogle } from '@/components/auth/BoutonGoogle'
 import { FormulaireDeConnexion } from '@/components/auth/FormulaireDeConnexion'
 import { MessageReconnexion } from '@/components/auth/MessageReconnexion'
 import { ENTETE_DE_MESSAGE } from '@/lib/auth/cookies-herites'
-import { messageDeLUrl } from '@/lib/auth/erreurs'
+import { erreurDeLUrl } from '@/lib/auth/erreurs'
+import { googleEstActif } from '@/lib/auth/google/config'
 import { retourSur } from '@/lib/auth/retour'
 import { maquilleuseConnectee } from '@/lib/auth/session'
 import { seConnecter } from './actions'
@@ -27,7 +29,9 @@ export default async function PageDeConnexion({
 	const site = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost'
 	const retour = retourSur(callbackUrl, site)
 	// A closed list: the code of the address is never copied to the screen.
-	const message = messageDeLUrl(error)
+	const erreurUrl = erreurDeLUrl(error)
+	const message = erreurUrl?.message ?? null
+	const google = googleEstActif()
 	// Already signed in: the space, not a form (same predicate as the guard of the private pages).
 	if (await maquilleuseConnectee()) redirect(retour)
 
@@ -40,13 +44,14 @@ export default async function PageDeConnexion({
 			{message ? (
 				<p
 					role="status"
-					data-testid="session-expiree"
+					data-testid={erreurUrl?.code === 'session-expiree' ? 'session-expiree' : 'erreur-google'}
 					className="max-w-sm rounded-md bg-amber-50 p-3 text-amber-900 text-sm"
 				>
 					{message}
 				</p>
 			) : null}
-			{reconnexion ? <MessageReconnexion /> : null}
+			{reconnexion ? <MessageReconnexion google={google} /> : null}
+			{google ? <BoutonGoogle libelle="Se connecter avec Google" retour={retour} /> : null}
 			<FormulaireDeConnexion action={seConnecter} retour={retour} />
 			<p>
 				Pas encore de compte ?{' '}

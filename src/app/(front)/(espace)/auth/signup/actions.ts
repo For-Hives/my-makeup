@@ -44,7 +44,7 @@ export async function sInscrire(_precedent: EtatDInscription, formulaire: FormDa
 	const valeurs = { nom: texte(saisie.nom), email: texte(saisie.email), cgu: saisie.cgu === 'on' }
 	const validation = validerInscription(saisie)
 	if (!validation.ok) {
-		await journal({ type: 'inscription', code: 'donnees-invalides' })
+		await journal({ type: 'inscription', code: 'donnees-invalides', methode: 'mot-de-passe' })
 		return { erreurs: validation.erreurs, valeurs }
 	}
 

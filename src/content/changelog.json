@@ -30,6 +30,11 @@
 			"id": "tu-restes-connectee-tant-que-tu-passes-dans-ton-espace-pe",
 			"type": "amelioration",
 			"text": "Tu restes connectée tant que tu passes dans ton espace, pendant 90 jours au plus."
+		},
+		{
+			"id": "avec-google-l-inscription-arrive-directement-dans-ton-acc",
+			"type": "amelioration",
+			"text": "Avec Google, l’inscription arrive directement dans ton accueil sans email de confirmation, et si Google n’a pas confirmé ton adresse, un message te le dit au lieu d’une page d’erreur."
 		}
 	],
 	"releases": []
