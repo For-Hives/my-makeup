@@ -13,6 +13,8 @@ My Makeup est un annuaire de maquilleuses professionnelles indépendantes. Cette
 | installer, démarrer, régler une variable d'environnement | [`README.md`](README.md) |
 | écrire ou relire un test, toucher une liste éditée en place, changer un écran | [`docs/qualite.md`](docs/qualite.md) |
 | tester un composant React | [`docs/tests/composants.md`](docs/tests/composants.md) |
+| écrire un test d'intégration, démarrer le banc de test, obtenir un compte de test | [`docs/tests/banc.md`](docs/tests/banc.md) |
+| toucher la CI, un workflow ou le `Dockerfile` | [`docs/qualite.md`](docs/qualite.md), §6 à §9 |
 | créer ou changer une collection, un champ, ou l'import des données | [`docs/migration/SCHEMA.md`](docs/migration/SCHEMA.md) |
 | créer, déplacer ou retirer une adresse | [`docs/migration/URLS.md`](docs/migration/URLS.md) |
 | faire autrement que le site en ligne | [`docs/migration/CHANGEMENTS-VOULUS.md`](docs/migration/CHANGEMENTS-VOULUS.md) |
@@ -33,7 +35,10 @@ Tout se lance depuis la racine du dépôt. La table complète est dans le README
 | `bun run check` | Biome : format, lint, tri des imports. Il écrit ses corrections. |
 | `bun run ci:biome` | Biome en lecture seule. |
 | `bun run typecheck` | Types de routes de Next, puis `tsc` sans sortie. |
-| `bun run test` | Les suites de tests, sans le `.env` de travail. |
+| `bun run test` | Les tests unitaires : ceux qui tournent sans le banc de test, et sans le `.env` de travail. |
+| `bun run test:ci-garde` | Les garde-fous de la CI, du `Dockerfile` et des tests sautés. La CI les lance sur chaque PR. |
+| `bun run banc:up` | Démarre le banc de test en conteneurs : base, capteur de mails, stockage d'objets. `bun run banc:down` l'arrête et efface tout. |
+| `bun run test:integration` | Les tests d'intégration, sur le banc démarré. Avec un chemin : ce fichier seul. Chaque lancement vide la base du banc. |
 | `bun run build` | Build de production. Il passe sans base ni secret. |
 | `bun run payload:types` | Après un changement de collection : régénère `src/payload-types.ts`. |
 | `bun run payload:importmap` | Après l'ajout d'un composant d'administration. |
@@ -90,7 +95,7 @@ Ces règles n'ont pas d'exception. Si une tâche semble en demander une, arrête
 ## Pièges
 
 - **Biome** se lance par les scripts ci-dessus ou par `bunx @biomejs/biome`. Le paquet `biome` du registre npm est un homonyme : un lancement par npx l'installerait à sa place.
-- **`bun test` sans option lit le fichier `.env`.** Sur un poste de développement, la garde d'environnement arrête alors le lancement avant le premier test : c'est voulu. Passe `--no-env-file`, et lance depuis la racine, où `bunfig.toml` charge la garde.
+- **`bun test` sans option lit le fichier `.env`, puis `.env.test`, qui l'emporte.** Il tourne alors sous l'environnement du banc de test, et ce que `.env.test` ne règle pas vient du `.env` de travail. Les tests ne dépendent jamais de ce fichier : passe `--no-env-file`, et lance depuis la racine, où `bunfig.toml` charge la garde.
 - **Après un arrêt forcé du serveur de développement**, `bun run typecheck` peut échouer sur un fichier de `.next/dev/types/`. Supprime le dossier `.next/dev/` et relance.
 - **Branches.** `v3` est la branche d'intégration. Une branche de travail s'appelle `v3-<numéros des tickets>` : git refuse `v3/…` tant que `v3` existe. Avant une poussée, `git status -sb` montre la branche suivie : une branche créée depuis `origin/main` pousserait vers `main`.
 - **Versions figées.** Next reste en 16.3 (registre des changements voulus, repère `next-16-3`), et les paquets `@payloadcms/*` restent à la version exacte de `payload`. Aucune montée de version en passant.

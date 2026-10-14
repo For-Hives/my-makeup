@@ -26,7 +26,7 @@ Trois documents disent comment travailler ici, à une personne comme à un agent
 
 - [`CLAUDE.md`](CLAUDE.md) : les commandes, l'architecture, les interdits et les pièges.
 - [`AGENTS.md`](AGENTS.md) : à quel rythme lancer les tests, et quand un travail est fini.
-- [`docs/qualite.md`](docs/qualite.md) : les règles des tests, les sept règles des listes éditées en place, et ce qu'on regarde sur un écran à 390 px.
+- [`docs/qualite.md`](docs/qualite.md) : les règles des tests, les sept règles des listes éditées en place, ce qu'on regarde sur un écran à 390 px, puis la CI, ses garde-fous et le canari.
 
 Un test les garde : une commande qu'ils citent existe, un lien qu'ils donnent mène quelque part (`bun --no-env-file test tests/unit/guides-agents.test.ts`).
 
@@ -156,7 +156,7 @@ L'application vérifie ses variables à chaque démarrage (`bun run dev`, `bun r
 - `NEXT_PUBLIC_SITE_URL` est publique. Présente au moment du build, même vide, elle est figée dans le build. Absente du build, elle est lue au démarrage.
 - `https://v3.my-makeup.fr`, l'adresse provisoire de la prod avant la bascule, est refusée pour l'instant dans `NEXT_PUBLIC_SITE_URL`. Le ticket qui ouvrira cette adresse l'ajoute à `DEPLOYED_ORIGINS` (`src/lib/env.ts`), avec son test.
 - `R2_PUBLIC_URL` est publique. Elle est lue plus tôt que les autres, quand Next charge `next.config.ts` : une valeur refusée arrête aussi le build. Voir « Images ».
-- `NEXT_PUBLIC_APP_VERSION` et `SOURCE_COMMIT` sont facultatives. Elles sont lues dans `src/lib/env.ts` sans être vérifiées : aucune valeur n'arrête le démarrage (voir « Route de santé »). `next.config.ts` lit aussi `SOURCE_COMMIT`, au moment du build, pour le figer dans le build : ce fichier est chargé avant le code de l'application et ne passe pas par `src/lib/env.ts`.
+- `NEXT_PUBLIC_APP_VERSION` et `SOURCE_COMMIT` sont facultatives. Elles sont lues dans `src/lib/env.ts` sans être vérifiées : aucune valeur n'arrête le démarrage (voir « Route de santé »). `next.config.ts` lit aussi `SOURCE_COMMIT`, au moment du build, pour le figer dans le build : il le lit lui-même, par son nom. De `src/lib/env.ts`, il n'appelle que `mediaOrigin`, pour `R2_PUBLIC_URL`.
 - Une nouvelle variable s'ajoute dans `src/lib/env.ts` et dans `.env.exemple`, par le ticket qui commence à la lire.
 
 ### Base de données
