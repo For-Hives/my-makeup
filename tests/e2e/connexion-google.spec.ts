@@ -155,8 +155,24 @@ test.describe('E07 : connexion et inscription avec Google', { tag: '@mobile' }, 
 
 		await cliquerSurGoogle(page, '/auth/signin', 'Se connecter avec Google')
 
-		await expect(page).toHaveURL(/\/auth\/signin\?error=google-compte-refuse$/)
-		await expect(page.getByTestId('erreur-google')).toBeVisible()
+		await expect(page).toHaveURL(/\/auth\/signin\?error=email-deja-avec-mot-de-passe$/)
+		const message = page.getByTestId('erreur-google')
+		await expect(message).toContainText('a déjà un compte avec un mot de passe')
+		// The address is never copied to the screen.
+		await expect(message).not.toContainText(compte.email)
+		expect(await cookieDeSession(context)).toBeUndefined()
+	})
+
+	test('un compte Google bloqué lit le message du compte bloqué', async ({ context, page }) => {
+		const compte = await creerCompte('reprise-google')
+		const payload = await payloadDeTest()
+		await payload.update({ collection: 'pros', id: compte.id, data: { bloque: true }, overrideAccess: true })
+		await choisir(context, { email: compte.email })
+
+		await cliquerSurGoogle(page, '/auth/signin', 'Se connecter avec Google')
+
+		await expect(page).toHaveURL(/\/auth\/signin\?error=compte-bloque$/)
+		await expect(page.getByTestId('erreur-google')).toContainText('Ce compte est bloqué')
 		expect(await cookieDeSession(context)).toBeUndefined()
 	})
 
@@ -164,11 +180,15 @@ test.describe('E07 : connexion et inscription avec Google', { tag: '@mobile' }, 
 		context,
 		page,
 	}) => {
+		const attendu = {
+			refus: { code: 'google-annule', texte: 'Tu as annulé la connexion avec Google' },
+			panne: { code: 'google-indisponible', texte: 'Google ne répond pas pour le moment' },
+		} as const
 		for (const scenario of ['refus', 'panne'] as const) {
 			await choisir(context, { scenario, email: adresse(`google-${scenario}`) })
 			await cliquerSurGoogle(page, '/auth/signin', 'Se connecter avec Google')
-			await expect(page).toHaveURL(/\/auth\/signin\?error=google-echec$/)
-			await expect(page.getByTestId('erreur-google')).toContainText('La connexion avec Google n’a pas abouti')
+			await expect(page).toHaveURL(new RegExp(`/auth/signin\\?error=${attendu[scenario].code}$`))
+			await expect(page.getByTestId('erreur-google')).toContainText(attendu[scenario].texte)
 			await expect(page.getByRole('button', { name: 'Se connecter', exact: true })).toBeVisible()
 			expect(await cookieDeSession(context)).toBeUndefined()
 		}

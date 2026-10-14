@@ -59,13 +59,15 @@ const memeTexte = (a: string, b: string): boolean => {
 
 const CODE_URL_DU_REFUS: Record<CodeRefusDuCompte, CodeErreurGoogle> = {
 	'email-non-verifie': 'google-email-non-verifie',
-	'compte-refuse': 'google-compte-refuse',
-	'service-indisponible': 'google-echec',
+	'compte-refuse': 'email-deja-avec-mot-de-passe',
+	'compte-bloque': 'compte-bloque',
+	'service-indisponible': 'google-indisponible',
 }
 
 const CODE_JOURNAL_DU_REFUS: Record<CodeRefusDuCompte, CodeEvenement> = {
 	'email-non-verifie': 'email-non-verifie',
 	'compte-refuse': 'compte-refuse',
+	'compte-bloque': 'compte-bloque',
 	'service-indisponible': 'service-indisponible',
 }
 
@@ -92,11 +94,19 @@ export async function terminerLaConnexionGoogle({
 		return { ok: false, code: url }
 	}
 
+	// What Google said by itself (RFC 6749 §4.1.2.1): a refusal, an outage, or something else.
+	const refuserLeRetour = (erreur: string): Promise<IssueDeGoogle> => {
+		if (erreur === 'access_denied') return refuser('annule', 'google-annule')
+		if (erreur === 'server_error' || erreur === 'temporarily_unavailable')
+			return refuser('service-indisponible', 'google-indisponible')
+		return refuser('retour-invalide', 'google-echec')
+	}
+
 	const demande = ouvrirLeCookie(cookie, secret, maintenant)
 	if (!demande || retour.state === null || !memeTexte(retour.state, demande.state))
 		return refuser('retour-invalide', 'google-echec')
 	// She closed Google's screen, or refused: the state was ours, so this is a real answer.
-	if (retour.error !== null) return refuser('annule', 'google-echec')
+	if (retour.error !== null) return refuserLeRetour(retour.error)
 	if (retour.code === null || retour.code === '' || retour.code.length > CODE_MAX)
 		return refuser('retour-invalide', 'google-echec')
 
@@ -112,7 +122,7 @@ export async function terminerLaConnexionGoogle({
 	} catch (erreur) {
 		if (erreur instanceof JetonRefuse) return refuser('retour-invalide', 'google-echec')
 		// GoogleIndisponible, or anything unforeseen: the provider or the network, not the visitor.
-		return refuser('service-indisponible', 'google-echec')
+		return refuser('service-indisponible', 'google-indisponible')
 	}
 
 	const compte = await compteDeGoogle(payload, revendications)
@@ -122,7 +132,7 @@ export async function terminerLaConnexionGoogle({
 	try {
 		;({ token } = await ouvrirSansMotDePasse(payload, { collection: 'pros', id: compte.id }))
 	} catch {
-		return refuser('service-indisponible', 'google-echec')
+		return refuser('service-indisponible', 'google-indisponible')
 	}
 	// The date of the last sign-in (the `afterLogin` hook does it for a password): a failure to write
 	// it is not the sign-in's to fail.
