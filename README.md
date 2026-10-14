@@ -261,7 +261,8 @@ L'application vérifie ses variables à chaque démarrage (`bun run dev`, `bun r
 
 - Payload ne pousse son schéma que dans une base de ce poste : hôte `localhost`, `127.0.0.1` ou `::1`. Un nom de service Docker ou une adresse privée ne compte pas.
 - Partout ailleurs, le schéma change par les migrations versionnées de `src/migrations/`, que Payload joue quand il démarre en production. `bun run payload:migrate:create` en écrit une, à relire avant de la versionner.
-- Une migration provisoire porte le schéma du squelette : démarrée en production sur une base vide, l'application crée ses tables à son premier appel (voir « Image Docker »). Après `bun run payload:migrate:create`, passer `bun run check` : Biome remet en forme les fichiers écrits par Payload.
+- La migration `init` porte tout le schéma (ticket 049) : démarrée en production sur une base vide, l'application crée ses tables à son premier appel (voir « Image Docker »). Tout changement de collection vient ensuite avec sa propre migration, dans le même commit : la CI le vérifie (`bun run schema:derive`, voir `docs/qualite.md`, « La dérive de schéma »). Après `bun run payload:migrate:create`, passer `bun run check` : Biome remet en forme les fichiers écrits par Payload.
+- Le banc de test ne pousse pas le schéma : sa base est construite par les migrations seules, et ses tests refusent de tourner sur une base que les migrations ne construisent pas comme le code la décrit (voir `docs/tests/banc.md`, « Préparer la base du banc »).
 - Hors de ce poste, une base qui n'existe pas est une erreur : Payload ne la crée pas.
 - Chaque processus ouvre 5 connexions au plus.
 
@@ -455,7 +456,7 @@ Rien ne se publie avant la fusion de `v3` dans `main`. Le détail, et ce qu'il r
 | `bun run test:ci-garde` | Les garde-fous de `tests/ci/`, lancés à part de `bun run test` |
 | `bun run banc:up` | Démarre le banc de test : base, capteur de mails, stockage d'objets et faux Google, en conteneurs |
 | `bun run banc:down` | Arrête le banc de test et efface tout ce qu'il contenait |
-| `bun run banc:prepare` | Reconstruit la base du banc depuis les collections du code, vide |
+| `bun run banc:prepare` | Reconstruit la base du banc par les migrations versionnées, vide, puis vérifie qu'elle décrit les collections du code |
 | `bun run banc:source` | Crée la fausse base Strapi que lit l'import, banc démarré : base, rôle en lecture seule, photos dans le stockage. Relancée, elle la recrée à l'identique et donne la même empreinte. `--empreinte` la lit sans la toucher, `--effacer` la supprime (voir `docs/tests/source-strapi.md`) |
 | `bun run banc:import` | L'import des données de l'ancien site sur le banc : il lit la fausse base Strapi et écrit dans la base du banc. À blanc par défaut, `--reel` pour écrire (voir `docs/migration/IMPORT.md`) |
 | `bun run migration:import` | L'import des données de l'ancien site, avec `DATABASE_URI` et `STRAPI_SOURCE_URI` de l'environnement. À blanc par défaut ; `--reel` écrit ; une base qui n'est pas sur ce poste demande `--cible-distante` (voir `docs/migration/IMPORT.md`) |

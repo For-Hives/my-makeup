@@ -42,11 +42,11 @@ Mesuré le 14/10/2026 sur un poste de développement : 21 secondes pour les 8 es
 ## Ce que fait un lancement
 
 1. Il refuse de partir si la cible n'est pas l'application du banc, si le banc ne répond pas, ou si le port de l'application est déjà pris. Chaque refus dit quoi faire.
-2. Il vide la base du banc.
+2. Il vide la base du banc : l'application la reconstruira par ses migrations.
 3. Il construit l'application pour la production (`bun run build`), sans base, sans secret et sans fichier `.env`, comme en CI.
 4. Il lance Playwright, qui :
    - démarre l'application par `bun run start`, sur `127.0.0.1` et sur le port du banc, et attend que `/api/health` réponde ;
-   - vérifie de nouveau la cible, puis que l'application est saine (préparation globale, `tests/outils/serveur-e2e.ts`) ;
+   - vérifie de nouveau la cible, puis que l'application est saine, et que sa base est celle des migrations, conforme au code et sans trace de poussée (préparation globale, `tests/outils/serveur-e2e.ts`, voir ci-dessous) ;
    - lance les essais ;
    - arrête l'application, même si un essai échoue, et même sur un Ctrl+C.
 
@@ -54,11 +54,13 @@ L'application des essais ne lit aucun fichier `.env`, ni au build ni au démarra
 
 ## La base : les migrations, puis le code
 
-- Sur la base vide, l'application joue les migrations versionnées de `src/migrations/`, comme l'image Docker à son premier démarrage.
-- Puis, avant le premier essai, le Payload des essais se branche une fois sur la base et y ajoute ce que le code a de plus : une table ou une colonne qui n'a pas encore sa migration. C'est le cas jusqu'à la migration `init` du ticket 049. Un seul processus le fait, avant les essais, qui tournent en parallèle.
-- Si une table ou une colonne a été renommée ou retirée dans le code sans que les migrations suivent, Payload pose une question sur le terminal au lieu de se brancher. La préparation globale s'arrête alors au bout de 30 secondes, avec un message : mets les migrations à jour (`bun run payload:migrate:create`), puis relance.
-- Après un lancement, la base garde ce que les essais y ont laissé ; le lancement suivant la vide. Les tests d'intégration la vident aussi.
-- Ne démarre pas l'application à la main sur une base laissée par les essais : Payload y trouve la trace de sa poussée, demande une confirmation que personne ne donne, et l'application s'arrête.
+- Sur la base vide, l'application joue les migrations versionnées de `src/migrations/`, comme l'image Docker à son premier démarrage et comme la préprod. Ce sont elles seules qui construisent les tables : rien ne pousse le schéma du code dans la base du banc (ticket 049).
+- Avant le premier essai, la préparation globale lit la base sans rien y changer : le Payload des essais se branche sans pousser de schéma (`sansChangementDeSchema`, `tests/outils/payload-test.ts`), comme celui de chaque essai.
+- Elle refuse de lancer les essais, avec un message qui dit quoi faire, dans deux cas (`tests/outils/schema-du-banc.ts`) :
+  - la base porte la trace d'une poussée du schéma, une ligne `dev` de lot -1 dans `payload_migrations` : un Payload s'est branché en poussant le schéma, et une migration manquante y passerait inaperçue ;
+  - la base que les migrations ont construite ne décrit pas les collections du code : une collection changée sans sa migration, ou une migration dont le SQL ne crée pas ce que son instantané déclare. Le message donne le SQL qu'une migration contiendrait pour la rattraper, et demande d'écrire cette migration (`bun run payload:migrate:create`).
+- Une table ou une colonne renommée dans le code sans que les migrations suivent est refusée aussitôt, d'après les noms : le contrôle ne pose jamais de question. S'il en attendait une malgré tout, la préparation globale s'arrêterait au bout de 30 secondes, avec un message.
+- Après un lancement, la base garde ce que les essais y ont laissé, sans ligne `dev` ; le lancement suivant la vide. Les tests d'intégration la vident aussi.
 
 ## Écrire un essai
 
