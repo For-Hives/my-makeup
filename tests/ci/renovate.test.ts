@@ -105,7 +105,7 @@ describe('what Renovate follows in this repository', () => {
 
 		expect(names('Dockerfile')).toEqual(['oven/bun', 'node'])
 		expect(names('docker-compose.yml')).toEqual(['postgres'])
-		expect(names('compose.test.yml')).toEqual(['postgres', 'axllent/mailpit', 'adobe/s3mock'])
+		expect(names('compose.test.yml')).toEqual(['postgres', 'axllent/mailpit', 'adobe/s3mock', 'oven/bun'])
 		expect(names('.nvmrc')).toEqual(['node'])
 		expect(names(`${WORKFLOWS}/ci.yml`)).toEqual([
 			'actions/checkout',
@@ -565,6 +565,7 @@ describe('renovate.json: the rules Renovate will follow', () => {
 			// Not in the ticket, and never merged alone either: each rule of renovate.json says why.
 			['bun', 'package.json'],
 			['oven/bun', 'Dockerfile'],
+			['oven/bun', 'compose.test.yml'],
 			['undici', 'package.json'],
 			['postgres', 'compose.test.yml'],
 			['actions/checkout', `${WORKFLOWS}/ci.yml`],
@@ -690,7 +691,12 @@ describe('renovate.json: the rules Renovate will follow', () => {
 		test('Node of .nvmrc and of the Dockerfile, bun of packageManager and of the Dockerfile, Payload and its packages', () => {
 			expect(groupProblems(config, followed)).toEqual([])
 			expect([groupOf('node', '.nvmrc'), groupOf('node', 'Dockerfile')]).toEqual(['node', 'node'])
-			expect([groupOf('bun'), groupOf('oven/bun', 'Dockerfile'), groupOf('@types/bun')]).toEqual(['bun', 'bun', 'bun'])
+			expect([
+				groupOf('bun'),
+				groupOf('oven/bun', 'Dockerfile'),
+				groupOf('oven/bun', 'compose.test.yml'),
+				groupOf('@types/bun'),
+			]).toEqual(['bun', 'bun', 'bun', 'bun'])
 			expect([groupOf('postgres', 'docker-compose.yml'), groupOf('postgres', 'compose.test.yml')]).toEqual([
 				'postgres',
 				'postgres',

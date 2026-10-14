@@ -83,8 +83,8 @@ Une requête vers un hôte du banc n'est pas interceptée : elle atteint le vrai
 
 | Hôte | Ce qu'il désigne |
 |---|---|
-| `localhost`, `127.0.0.1`, `::1` | Ce poste : le capteur de mails, le stockage d'objets, l'application lancée contre le banc, un serveur ouvert par un test |
-| `postgres`, `mailpit`, `s3mock` | Les services de `compose.test.yml`, sous leur nom dans le réseau de la pile |
+| `localhost`, `127.0.0.1`, `::1` | Ce poste : le capteur de mails, le stockage d'objets, le faux Google, l'application lancée contre le banc, un serveur ouvert par un test |
+| `postgres`, `mailpit`, `s3mock`, `faux-google` | Les services de `compose.test.yml`, sous leur nom dans le réseau de la pile |
 
 - La liste est celle de la garde d'environnement : `HOTES_DU_BANC`, dans `tests/outils/garde-environnement.ts`. Un service ajouté au banc s'y ajoute, et nulle part ailleurs.
 - Tout autre hôte est « extérieur », la préprod et `127.0.0.2` compris.

@@ -367,7 +367,7 @@ Ce qui monte ensemble, dans une seule pull request :
 | `biome` | Biome | Il monte en même temps que dans le dépôt de référence, et `biome.json` nomme sa version |
 | `playwright` | Playwright, ses navigateurs et axe | Les navigateurs sont ceux d'une version précise |
 | `node` | `.nvmrc` et les images Node du `Dockerfile` | La garde C04 exige le même Node partout |
-| `bun` | `packageManager`, l'image du `Dockerfile` et les types | La garde C04 exige le même bun partout |
+| `bun` | `packageManager`, l'image du `Dockerfile`, celle du faux Google dans `compose.test.yml`, et les types | La garde C04 exige le même bun partout, et un test du banc la même image dans les deux fichiers |
 | `postgres` | L'image de `docker-compose.yml` et celle de `compose.test.yml` | La même base en développement et sur le banc |
 
 Chaque règle de `renovate.json` dit sa raison dans son champ `description`.
