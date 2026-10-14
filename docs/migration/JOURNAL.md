@@ -139,4 +139,5 @@ Ce que la v3 change par rapport au site actuel est dans [`CHANGEMENTS-VOULUS.md`
 - **Intégration des tickets 007, 013, 035, 037 et 039 dans `v3`.**
   - Cinq fusions, dans cet ordre : `394cbe0`, `6126920`, `a9f8c45`, `d66dda0`, `0064a85`. Deux correctifs après fusion : `498695d` (le délai du client du banc sous MSW) et `5c03a89` (l'image bun du faux Google suivie par Renovate). Puis `7ccd07d`, qui accorde deux phrases des guides avec un banc à quatre services.
   - Vérifié : installation figée sans changement ; Biome et contrôle de types verts ; 863 tests unitaires verts et 1 sauté ; 354 garde-fous de la CI verts ; build de production vert. Sur un banc à part, 37 tests d'intégration et 8 essais de bout en bout verts.
-  - Non vérifié à cette intégration : l'image Docker n'a pas été reconstruite. La branche `main` n'a reçu aucun commit.
+  - L'image Docker n'a pas été reconstruite sur le poste. La CI de GitHub l'a construite et contrôlée sur `85062b7` : CI 38507350913, verte, `qualite` 21 s, `unit` 14 s, `build` 1 min 27 s, `ci-ok` 2 s, 1 min 35 s en tout.
+  - La branche `main` n'a reçu aucun commit.
