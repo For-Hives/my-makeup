@@ -12,6 +12,8 @@ const LIBELLES_DES_TYPES: Record<(typeof TYPES_EVENEMENT)[number], string> = {
 	renvoi: 'Renvoi de l’email de confirmation',
 	'mot-de-passe-oublie': 'Demande de lien de mot de passe oublié',
 	reinitialisation: 'Nouveau mot de passe',
+	blocage: 'Compte bloqué par un admin',
+	deblocage: 'Compte débloqué par un admin',
 }
 
 const LIBELLES_DES_CODES: Record<(typeof CODES_EVENEMENT)[number], string> = {
@@ -21,6 +23,7 @@ const LIBELLES_DES_CODES: Record<(typeof CODES_EVENEMENT)[number], string> = {
 	'trop-de-tentatives': 'Trop de tentatives',
 	'service-indisponible': 'Service indisponible',
 	'email-non-confirme': 'Email non confirmé',
+	'compte-bloque': 'Compte bloqué',
 	'donnees-invalides': 'Données invalides',
 	'email-deja-pris': 'Email déjà pris',
 	'deja-confirme': 'Déjà confirmé',

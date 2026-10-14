@@ -540,6 +540,7 @@ export interface AuthEvenement {
     | 'confirmation'
     | 'mot-de-passe-oublie'
     | 'reinitialisation';
+  type: 'connexion' | 'deconnexion' | 'deconnexion-partout' | 'inscription' | 'confirmation' | 'blocage' | 'deblocage';
   code:
     | 'ok'
     | 'heritee'
@@ -547,6 +548,7 @@ export interface AuthEvenement {
     | 'trop-de-tentatives'
     | 'service-indisponible'
     | 'email-non-confirme'
+    | 'compte-bloque'
     | 'donnees-invalides'
     | 'email-deja-pris'
     | 'deja-confirme'

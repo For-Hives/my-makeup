@@ -1,5 +1,6 @@
 import { APIError, type CollectionBeforeDeleteHook, type CollectionConfig } from 'payload'
 import { adminOuSoiMeme, adminSeulement, champAdminSeulement, jamais } from '../lib/acces'
+import { fermerLesSessionsAuBlocage, noterLeBlocage, refuserUnCompteBloque } from '../lib/auth/compte-bloque'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import { freinerLaConnexion, rendreLaPlaceDeLaConnexion } from '../lib/auth/frein-payload'
 import {
@@ -62,6 +63,8 @@ export const compteSansProfilAvantSuppression: CollectionBeforeDeleteHook = asyn
  *   admin: no API reads or writes it, and Payload strips it from every read.
  * - Nobody creates an account through REST without being an admin: the sign-up of the site goes
  *   through the server (P5 tickets).
+ * - A blocked account (`bloque`) is turned away at the sign-in once its password is right, and blocking
+ *   closes its sessions (ticket 089, src/lib/auth/compte-bloque.ts).
  * - Creating an account creates its empty profile (collection `profils`), unless the creation
  *   says otherwise (`CONTEXTE_SANS_PROFIL`).
  *
@@ -109,9 +112,11 @@ export const Pros: CollectionConfig<'pros'> = {
 	},
 	endpoints: [premierCompteFerme],
 	hooks: {
-		afterChange: [profilALaCreationDuCompte, effacerLeHashHeriteApresUnMotDePasse],
+		afterChange: [profilALaCreationDuCompte, effacerLeHashHeriteApresUnMotDePasse, noterLeBlocage],
 		afterLogin: [rendreLaPlaceDeLaConnexion(), retenirLaDerniereConnexion, noterLaConnexionRest],
 		afterError: [retenirLesEchecsRest(), noterLEchecDeConnexionRest],
+		beforeChange: [fermerLesSessionsAuBlocage],
+		beforeLogin: [refuserUnCompteBloque],
 		beforeDelete: [compteSansProfilAvantSuppression],
 		beforeValidate: [effacerLeHashHeriteAuRenouvellement],
 		beforeOperation: [

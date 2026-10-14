@@ -1,4 +1,5 @@
 import { AuthenticationError, UnverifiedEmail } from 'payload'
+import { CompteBloque } from './compte-bloque'
 import type { CodeErreur } from './erreurs'
 import { type Frein, freinDeConnexion } from './frein'
 import { ipClient } from './ip-client'
@@ -93,6 +94,7 @@ export function codeDeLEchec(erreur: unknown): CodeErreur {
 	// Payload raises this one only after the password has been checked and found right: saying so
 	// tells nothing to someone who does not hold the password.
 	if (erreur instanceof UnverifiedEmail) return 'email-non-confirme'
+	if (erreur instanceof CompteBloque) return 'compte-bloque'
 	if (statut === 429) return 'trop-de-tentatives'
 	if (erreur instanceof AuthenticationError || (statut !== undefined && statut >= 400 && statut < 500))
 		return 'identifiants-invalides'
@@ -153,7 +155,8 @@ async function tenterLaConnexion(
 	}
 
 	// Not the visitor's failure, or a right password: the place goes back.
-	if (code === 'service-indisponible' || code === 'email-non-confirme') frein.rendre(cle, maintenant)
+	if (code === 'service-indisponible' || code === 'email-non-confirme' || code === 'compte-bloque')
+		frein.rendre(cle, maintenant)
 	if (code === 'identifiants-invalides') await attendreLePlancher(horloge, debut)
 	return { resultat: { ok: false, code }, heritee }
 }

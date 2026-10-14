@@ -572,18 +572,33 @@ function valeurDe(valeur: unknown, distribution: Distribution): unknown {
 	return distribution[(valeur as { compteDe: RoleAvecCompte }).compteDe].documents.pros
 }
 
+/** The sessions stored on an account of the makeup artists, as the database holds them. */
+async function sessionsDuCompte(collection: string, id: number): Promise<unknown[] | undefined> {
+	if (collection !== 'pros') return undefined
+	const payload = await payloadDeTest()
+	const ligne = await payload.db.findOne<{ id: number; sessions?: unknown[] }>({
+		collection: 'pros',
+		where: { id: { equals: id } },
+	})
+	return ligne?.sessions
+}
+
 async function modifier(voie: Voie, acteur: Acteur, ligne: Ligne, distribution: Distribution): Promise<Issue> {
 	const portrait = PORTRAITS[ligne.collection]
 	const id = documentDe(distribution, ligne)
 	const champ = ligne.champ ?? portrait.champ
 	const valeur = ligne.champ ? valeurDe(ligne.valeur, distribution) : portrait.nouvelleValeur()
 	const avant = (await stocke(ligne.collection, id))?.[champ]
+	const sessions = await sessionsDuCompte(ligne.collection, id)
 	const reponse = await demander(voie, acteur, { ...ligne, id, donnees: { [champ]: valeur } })
 	const apres = (await stocke(ligne.collection, id))?.[champ]
 	if (!egaux(apres, avant)) {
 		// Put the cast back as it was, whatever the line found.
 		const payload = await payloadDeTest()
 		await payload.update({ collection: ligne.collection, id, data: { [champ]: avant } })
+		// Blocking an account closes its sessions (ticket 089): the cast gets its own back.
+		if (sessions !== undefined)
+			await payload.db.updateOne({ collection: 'pros', id, data: { sessions }, returning: false })
 	}
 	if (reponse.autorise && egaux(apres, valeur) && !egaux(avant, valeur)) return 'autorise'
 	if (reponse.autorise && egaux(apres, avant)) return 'ignore'

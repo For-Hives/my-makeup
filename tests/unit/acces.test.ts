@@ -12,7 +12,7 @@ import {
 	proprietaireALEnvoi,
 	versLAdressePublique,
 } from '@/collections/Media'
-import { CONTEXTE_SANS_PROFIL, consentementTrace, Profils } from '@/collections/Profils'
+import { CONTEXTE_SANS_PROFIL, consentementTrace, Profils, profilALaCreationDuCompte } from '@/collections/Profils'
 import { compteSansProfilAvantSuppression, Pros, premierCompteFerme } from '@/collections/Pros'
 import {
 	ACCES_REDACTION,
@@ -400,7 +400,8 @@ describe('La collection profils (ticket 020)', () => {
 		expect(regles.create).toBe(adminSeulement)
 		expect(regles.delete).toBe(adminSeulement)
 		// The profile creation, then the erasing of the old-site hash after a new password (ticket 087).
-		expect(Pros.hooks?.afterChange?.length).toBe(2)
+		expect(Pros.hooks?.afterChange).toContain(profilALaCreationDuCompte)
+		expect(Pros.hooks?.afterChange?.length).toBe(3)
 		expect(CONTEXTE_SANS_PROFIL).toEqual({ profilAutomatique: false })
 	})
 
