@@ -13,10 +13,22 @@ Cette branche porte la réécriture du site : une seule application Next.js et P
 
 ## Suivre la migration
 
-Deux documents, sous `docs/migration/` :
+Quatre documents, sous `docs/migration/` :
 
 - [`CHANGEMENTS-VOULUS.md`](docs/migration/CHANGEMENTS-VOULUS.md) : le registre de tout ce que la v3 fait autrement que le site actuel, par décision. À la répétition de la bascule, seuls ces écarts sont acceptés.
 - [`JOURNAL.md`](docs/migration/JOURNAL.md) : les faits datés de la migration.
+- [`SCHEMA.md`](docs/migration/SCHEMA.md) : le schéma gelé. Il dit où va chaque champ de l'ancienne API dans la v3, ou pourquoi il n'est pas repris.
+- [`URLS.md`](docs/migration/URLS.md) : les URL gelées. Il dit ce que répond chaque famille d'adresses après la bascule.
+
+## Travailler dans ce dépôt
+
+Trois documents disent comment travailler ici, à une personne comme à un agent :
+
+- [`CLAUDE.md`](CLAUDE.md) : les commandes, l'architecture, les interdits et les pièges.
+- [`AGENTS.md`](AGENTS.md) : à quel rythme lancer les tests, et quand un travail est fini.
+- [`docs/qualite.md`](docs/qualite.md) : les règles des tests, les sept règles des listes éditées en place, et ce qu'on regarde sur un écran à 390 px.
+
+Un test les garde : une commande qu'ils citent existe, un lien qu'ils donnent mène quelque part (`bun --no-env-file test tests/unit/guides-agents.test.ts`).
 
 ## Ce que contient le squelette
 
