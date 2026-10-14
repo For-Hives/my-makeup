@@ -370,7 +370,9 @@ Pour mémoire : ces champs n'ont aucune ligne aux §5 et §6. Leur valeur à l'i
 | `profils.aDomicile` | Non renseigné : Strapi ne le sait pas | Ticket 041 |
 | `media.prefix`, `media.filename`, `media.owner`, `media.strapiFormats` | §8 | Tickets 043 et 058 |
 | `admins` (toute la collection) | Rien d'importé (§4.2) | Ticket 018 |
-| `demandes`, `journal`, `auth-evenements` | Nouvelles collections, vides à la bascule | Plan `01` §6.1 |
+| `demandes`, `journal` | Nouvelles collections, vides à la bascule | Plan `01` §6.1 |
+| `auth-evenements` (toute la collection) | Le journal d'authentification, vide à la bascule. Une ligne par connexion (réussie ou refusée), déconnexion, inscription et confirmation d'email : `type` et `code` pris dans deux listes fermées (`src/lib/auth/journal.ts`), `dureeMs` et `date`. Aucun champ de texte : ni IP, ni email, ni nom, ni jeton n'y entrent. Lue par un admin seulement, jamais écrite par une API : le serveur l'écrit, et une tâche quotidienne supprime les lignes de plus de 90 jours | Ticket 077 ; plan `01` §2.3 |
+| `pros.derniereConnexion` | La date de la dernière connexion, écrite par le serveur à chaque connexion ; lue par la propriétaire et un admin, écrite par aucune requête. Ce n'est pas `pros.derniereActivite` du plan `04` §3.6 (une écriture par 24 h au plus, à chaque visite de l'espace), qui reste à créer | Ticket 077 |
 
 ## 10. Contrôle du nombre de lignes
 
@@ -449,4 +451,7 @@ Noms fixés par ce document, parce que le plan ne les donnait pas : `profils.leg
 | 14/10/2026 | Sections des profils à l'import (ticket 060), sans changer un nom de champ : un lien de liste qui ne nomme aucune ligne est signalé, rien n'est inventé à sa place (§7) ; `prixAPartirDe` reste vide jusqu'au ticket 062, le téléphone et l'email de contact jusqu'au ticket 064. |
 | 14/10/2026 | Articles à l'import (ticket 061), sans changer un nom de champ : une image de la galerie est rattachée si son fichier est adopté, un autre fichier est signalé (§5.3). |
 | 14/10/2026 | Ticket 076, sans changer un nom de champ de l'import : `pros` n'a plus ni `loginAttempts` ni `lockUntil` (`maxLoginAttempts: 0`). Le frein de connexion est par adresse cliente, jamais par compte : des essais faux ne verrouillent pas le compte visé. Migration `pros_sans_verrou_de_compte`. |
+| 14/10/2026 | Ticket 094, sans changer un nom de champ de l'import : `admins` n'a plus ni `loginAttempts` ni `lockUntil` (`maxLoginAttempts: 0`), comme `pros` ; le frein de connexion est par adresse. Migration `admins_sans_verrou_de_compte`. |
 | 14/10/2026 | Ticket 133, sans changer un nom de champ : les règles d'envoi d'une photo (§8) : types lus dans le contenu, 10 Mo, nom imprévisible, quatre tailles dérivées (`media.sizes`, colonnes ajoutées par la migration `sizes_des_medias`), identifiants de photo vérifiés avant la base. |
+| 14/10/2026 | Ticket 077, sans changer un nom de champ de l'import : la collection `auth-evenements` (journal d'authentification, 90 jours) et le champ `pros.derniereConnexion` sont créés (§9). Migration `auth_journal_et_derniere_connexion`. |
+| 14/10/2026 | Ticket 082, sans changer un nom de champ ni le schéma : `pros._verificationToken`, une fois le lien de confirmation suivi, ne garde plus le jeton mais la trace de son usage (`utilise:` et un hachage), pour que le même lien dise « déjà confirmé » sans pouvoir servir. `pros.nom` est le nom saisi à l'inscription, libre et non unique ; le slug du profil en est tiré par le serveur (§5.2). |

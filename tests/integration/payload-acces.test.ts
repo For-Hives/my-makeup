@@ -550,9 +550,79 @@ const MATRICE: Ligne[] = [
 		})
 	),
 
+	// The date of the last sign-in (ticket 077): her own account shows it to her and to an admin;
+	// no request writes it, hers included.
+	{
+		role: 'maquilleuse',
+		collection: 'pros',
+		operation: 'lire',
+		document: 'maquilleuse',
+		champ: 'derniereConnexion',
+		attendu: 'visible',
+	},
+	{
+		role: 'admin',
+		collection: 'pros',
+		operation: 'lire',
+		document: 'maquilleuse',
+		champ: 'derniereConnexion',
+		attendu: 'visible',
+	},
+	{
+		role: 'maquilleuse',
+		collection: 'pros',
+		operation: 'modifier',
+		document: 'maquilleuse',
+		champ: 'derniereConnexion',
+		valeur: '2020-01-01T00:00:00.000Z',
+		attendu: 'ignore',
+	},
+	{
+		role: 'admin',
+		collection: 'pros',
+		operation: 'modifier',
+		document: 'maquilleuse',
+		champ: 'derniereConnexion',
+		valeur: '2020-01-01T00:00:00.000Z',
+		attendu: 'ignore',
+	},
+
+	// The authentication journal (ticket 077): only an admin reads it, and nobody writes it through
+	// an API, an admin included. The server writes it, and purges it after 90 days.
+	...ROLES.flatMap((role): Ligne[] => {
+		const collection = 'auth-evenements'
+		const lit = role === 'admin'
+		return [
+			{ role, collection, operation: 'lister', attendu: lit ? 'tous' : 'refuse' },
+			{ role, collection, operation: 'lire', attendu: lit ? 'autorise' : 'refuse' },
+			{ role, collection, operation: 'creer', attendu: 'refuse' },
+			{ role, collection, operation: 'modifier', attendu: 'refuse' },
+			{ role, collection, operation: 'supprimer', attendu: 'refuse' },
+		]
+	}),
+
 	// talents (ticket 022) and articles (ticket 046): the rules of the newsroom.
 	...lignesDeLaRedaction('talents'),
 	...lignesDeLaRedaction('articles'),
+	// Payload's document locks (ticket 094): reserved to the accounts of the admin panel. A makeup
+	// artist, a visitor and an account without a profile reach nothing; `redaction` and `admin` list,
+	// read, take, change and release a lock, the lock of the other admin included (a take-over).
+	...(['anonyme', 'maquilleuse', 'autreMaquilleuse', 'sansProfil'] as const).flatMap((role): Ligne[] => [
+		{ role, collection: 'payload-locked-documents', operation: 'lister', attendu: 'refuse' },
+		{ role, collection: 'payload-locked-documents', operation: 'lire', document: 'admin', attendu: 'refuse' },
+		// A lock in the name of an admin: the proof of the flaw, 201 before ticket 094.
+		{ role, collection: 'payload-locked-documents', operation: 'creer', attendu: 'refuse' },
+		{ role, collection: 'payload-locked-documents', operation: 'modifier', document: 'admin', attendu: 'refuse' },
+		{ role, collection: 'payload-locked-documents', operation: 'supprimer', document: 'admin', attendu: 'refuse' },
+	]),
+	...(['redaction', 'admin'] as const).flatMap((role): Ligne[] => [
+		{ role, collection: 'payload-locked-documents', operation: 'lister', attendu: 'tous' },
+		{ role, collection: 'payload-locked-documents', operation: 'lire', document: 'admin', attendu: 'autorise' },
+		{ role, collection: 'payload-locked-documents', operation: 'lire', document: 'redaction', attendu: 'autorise' },
+		{ role, collection: 'payload-locked-documents', operation: 'creer', attendu: 'autorise' },
+		{ role, collection: 'payload-locked-documents', operation: 'modifier', document: 'admin', attendu: 'autorise' },
+		{ role, collection: 'payload-locked-documents', operation: 'supprimer', document: 'admin', attendu: 'autorise' },
+	]),
 ]
 
 let distribution: Distribution

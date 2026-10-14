@@ -51,6 +51,20 @@ function payloadEspion() {
 	const payload = {
 		find: async (options: Record<string, unknown>) => {
 			lectures.push(options)
+			// The photos: read by the identifiers the profiles gave, with more fields than a card keeps.
+			if (options.collection === 'media')
+				return {
+					docs: [
+						{
+							id: 7,
+							url: 'https://photos.example.test/media/abc.webp',
+							width: 400,
+							height: 400,
+							filename: 'abc.webp',
+							owner: 3,
+						},
+					],
+				}
 			return {
 				docs: [
 					{
@@ -62,6 +76,7 @@ function payloadEspion() {
 						commune: { nom: 'Annecy', codeInsee: '74010' },
 						rayonKm: 30,
 						superMaquilleuse: true,
+						photoPrincipale: 7,
 					},
 				],
 				page: 1,
@@ -74,19 +89,47 @@ function payloadEspion() {
 }
 
 describe('U22 : la carte d’une liste, clés figées', () => {
-	test('ni email, ni téléphone, ni compte, ni score, ni statut : cinq clés', async () => {
+	test('ni email, ni téléphone, ni compte, ni score, ni statut : six clés, la photo comprise', async () => {
 		const { payload } = payloadEspion()
 
 		const { cartes } = await listerLesProfils(payload)
 
 		expect(cartes).toHaveLength(1)
-		expect(Object.keys(cartes[0] ?? {}).sort()).toEqual(['lieu', 'nom', 'slug', 'specialite', 'superMaquilleuse'])
+		expect(Object.keys(cartes[0] ?? {}).sort()).toEqual([
+			'lieu',
+			'nom',
+			'photo',
+			'slug',
+			'specialite',
+			'superMaquilleuse',
+		])
 		expect(cartes[0]).toEqual({
 			slug: 'zoe-fictive',
 			nom: 'Zoé Fictive',
 			specialite: 'Mariage',
 			lieu: 'Annecy et 30 km autour',
 			superMaquilleuse: true,
+			photo: { url: 'https://photos.example.test/media/abc.webp', width: 400, height: 400 },
+		})
+	})
+
+	test('la photo n’est que son adresse et sa taille : jamais son propriétaire, son nom de fichier ni ses autres champs', async () => {
+		const { payload } = payloadEspion()
+		const { cartes } = await listerLesProfils(payload)
+		expect(Object.keys(cartes[0]?.photo ?? {}).sort()).toEqual(['height', 'url', 'width'])
+	})
+
+	test('les photos de la liste se lisent en une requête, par les identifiants que la lecture des profils a donnés', async () => {
+		const { payload, lectures } = payloadEspion()
+
+		await listerLesProfils(payload)
+
+		const photos = lectures.filter(lecture => lecture.collection === 'media')
+		expect(photos).toHaveLength(1)
+		expect(photos[0]).toMatchObject({
+			where: { id: { in: [7] } },
+			select: { url: true, width: true, height: true, filename: true, prefix: true },
+			limit: LIMITE_MAX_DE_LA_LISTE,
 		})
 	})
 
@@ -96,7 +139,7 @@ describe('U22 : la carte d’une liste, clés figées', () => {
 		await listerLesProfils(payload, { page: 3, limite: 5000 })
 		await listerLesProfils(payload, { limite: 0 })
 
-		const [grande, nulle] = lectures
+		const [grande, nulle] = lectures.filter(lecture => lecture.collection === 'profils')
 		expect(grande).toMatchObject({ collection: 'profils', where: FILTRE_LISTE, overrideAccess: false, page: 3 })
 		expect(grande?.limit).toBe(LIMITE_MAX_DE_LA_LISTE)
 		expect(nulle?.limit).toBe(20)

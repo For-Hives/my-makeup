@@ -74,6 +74,7 @@ export interface Config {
     media: Media;
     talents: Talent;
     articles: Article;
+    'auth-evenements': AuthEvenement;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -87,6 +88,7 @@ export interface Config {
     media: MediaSelect<false> | MediaSelect<true>;
     talents: TalentsSelect<false> | TalentsSelect<true>;
     articles: ArticlesSelect<false> | ArticlesSelect<true>;
+    'auth-evenements': AuthEvenementsSelect<false> | AuthEvenementsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -159,8 +161,6 @@ export interface Admin {
   salt?: string | null;
   hash?: string | null;
   resetPasswordRequestedAt?: string | null;
-  loginAttempts?: number | null;
-  lockUntil?: string | null;
   sessions?:
     | {
         id: string;
@@ -182,6 +182,7 @@ export interface Pro {
    */
   nom?: string | null;
   bloque?: boolean | null;
+  derniereConnexion?: string | null;
   /**
    * Comment le compte se connectait sur l’ancien site : local, google ou facebook.
    */
@@ -527,6 +528,27 @@ export interface Article {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "auth-evenements".
+ */
+export interface AuthEvenement {
+  id: number;
+  type: 'connexion' | 'deconnexion' | 'deconnexion-partout' | 'inscription' | 'confirmation';
+  code:
+    | 'ok'
+    | 'identifiants-invalides'
+    | 'trop-de-tentatives'
+    | 'service-indisponible'
+    | 'email-non-confirme'
+    | 'donnees-invalides'
+    | 'email-deja-pris'
+    | 'deja-confirme'
+    | 'lien-invalide'
+    | 'inconnu';
+  dureeMs?: number | null;
+  date: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
@@ -572,6 +594,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'articles';
         value: number | Article;
+      } | null)
+    | ({
+        relationTo: 'auth-evenements';
+        value: number | AuthEvenement;
       } | null);
   globalSlug?: string | null;
   user:
@@ -639,8 +665,6 @@ export interface AdminsSelect<T extends boolean = true> {
   salt?: T;
   hash?: T;
   resetPasswordRequestedAt?: T;
-  loginAttempts?: T;
-  lockUntil?: T;
   sessions?:
     | T
     | {
@@ -656,6 +680,7 @@ export interface AdminsSelect<T extends boolean = true> {
 export interface ProsSelect<T extends boolean = true> {
   nom?: T;
   bloque?: T;
+  derniereConnexion?: T;
   legacyProvider?: T;
   strapiId?: T;
   legacyBcrypt?: T;
@@ -895,6 +920,16 @@ export interface ArticlesSelect<T extends boolean = true> {
   updatedAt?: T;
   createdAt?: T;
   _status?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "auth-evenements_select".
+ */
+export interface AuthEvenementsSelect<T extends boolean = true> {
+  type?: T;
+  code?: T;
+  dureeMs?: T;
+  date?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

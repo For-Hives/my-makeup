@@ -33,7 +33,13 @@ export class EnvironnementRefuse extends Error {
 const HOTES_LOCAUX = ['localhost', '127.0.0.1', '::1']
 
 /** The services of the test stack, as named from inside its own container network. */
-const SERVICES_DU_BANC = { base: 'postgres', mails: 'mailpit', stockage: 's3mock', google: 'faux-google' } as const
+const SERVICES_DU_BANC = {
+	base: 'postgres',
+	mails: 'mailpit',
+	stockage: 's3mock',
+	google: 'faux-google',
+	umami: 'faux-umami',
+} as const
 
 /**
  * Every host the bench answers on: this machine, and the services of the test stack under their
@@ -226,6 +232,22 @@ export function verifierGoogle(variables: Variables): void {
 }
 
 /**
+ * The audience measure goes to the fake Umami of the bench only: never to the real instance. A
+ * test run that names no instance relays nothing (the relay answers 404 without one).
+ */
+export function verifierUmami(variables: Variables): void {
+	const instance = variables.UMAMI_ORIGIN
+	if (!instance) return
+	const url = lireAdresse(instance, ['http:', 'https:'])
+	if (!url) refuser("UMAMI_ORIGIN n'est pas une adresse web lisible.")
+	const hote = hoteDe(url)
+	if (!estLocal(hote, SERVICES_DU_BANC.umami))
+		refuser(
+			`UMAMI_ORIGIN refusé (hôte ${montrer(hote)}) : les tests ne parlent qu'au faux Umami du banc, jamais à la vraie instance.`
+		)
+}
+
+/**
  * Every check, on the given variables. Returns the environment the run works in, or throws
  * `EnvironnementRefuse` on the first refusal.
  */
@@ -240,6 +262,7 @@ export function verifierEnvironnement(variables: Variables = process.env): Envir
 	verifierEnvoi(variables)
 	verifierStockage(variables)
 	verifierGoogle(variables)
+	verifierUmami(variables)
 	return environnement
 }
 

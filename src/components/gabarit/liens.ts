@@ -71,6 +71,8 @@ export const NAVIGATION: readonly EntreeDeNav[] = [
 
 export const LIEN_RECHERCHE = { nom: 'Trouver une maquilleuse', href: '/search' }
 export const LIEN_CONNEXION = { nom: 'Me connecter', href: '/auth/signin' }
+/** What the navigation shows instead of the sign-in link when a makeup artist is signed in (ticket 078). */
+export const LIEN_ESPACE = { nom: 'Mon espace', href: '/auth/profil' }
 
 export interface ColonneDePied {
 	titre: string

@@ -90,3 +90,25 @@ services:
       interval: 1s
       timeout: 3s
       retries: 60
+
+  # The fake Umami: the instance the site relays its audience measure to (docs/tests/banc.md,
+  # « Le faux Umami »). It records what it receives and serves a small tracker. It is the code of
+  # tests/outils/faux-umami/, run by the same bun as the fake Google.
+  faux-umami:
+    image: oven/bun:1.3.14@sha256:e10577f0db68676a7024391c6e5cb4b879ebd17188ab750cf10024a6d700e5c4
+    command: ["bun", "/banc/serveur.ts"]
+    environment:
+      FAUX_UMAMI_ECOUTE: 0.0.0.0
+      FAUX_UMAMI_PORT: "4200"
+    read_only: true
+    volumes:
+      - ./tests/outils/faux-umami:/banc:ro
+    security_opt:
+      - label=disable
+    ports:
+      - "127.0.0.1:${BANC_PORT_UMAMI:-4200}:4200"
+    healthcheck:
+      test: ["CMD", "bun", "-e", "fetch('http://127.0.0.1:4200/_sante').then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+      interval: 1s
+      timeout: 3s
+      retries: 60

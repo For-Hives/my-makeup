@@ -108,6 +108,7 @@ describe('a missing or short secret stops the start', () => {
 
 	test('a valid environment is given back as it is', () => {
 		expect(parseServerEnv(valid)).toEqual({
+			authVerify: true,
 			databaseUri: LOCAL_URI,
 			googleIssuer: 'https://accounts.google.com',
 			localDatabase: true,
@@ -388,11 +389,36 @@ describe('the server stops when it starts with an environment that is not valid'
 	})
 })
 
+describe('the confirmation of a new email is on, unless the operating switch says off (ticket 082)', () => {
+	test('absent, empty or « on »: a new account must confirm its email', () => {
+		for (const AUTH_VERIFY of [undefined, '', '  ', 'on', 'ON', ' on '])
+			expect(parseServerEnv({ ...valid, AUTH_VERIFY }).authVerify).toBe(true)
+	})
+
+	test('« off » is the switch, whatever its case or its spaces', () => {
+		for (const AUTH_VERIFY of ['off', 'OFF', ' off '])
+			expect(parseServerEnv({ ...valid, AUTH_VERIFY }).authVerify).toBe(false)
+	})
+
+	test('any other value stops the start, and the message names the variable, not the value', () => {
+		for (const AUTH_VERIFY of ['false', '0', 'non', 'desactive-12345']) {
+			const erreur = refusal({ ...valid, AUTH_VERIFY })
+			expect(erreur.variables).toEqual(['AUTH_VERIFY'])
+			expect(erreur.message).not.toContain(AUTH_VERIFY)
+		}
+	})
+
+	test('the build keeps the default, whatever the variable says', () => {
+		expect(serverEnv({ NEXT_PHASE: 'phase-production-build', AUTH_VERIFY: 'off' }).authVerify).toBe(true)
+	})
+})
+
 describe('next build needs no secret and no database', () => {
 	const building: RawEnv = { NEXT_PHASE: 'phase-production-build', NODE_ENV: 'production' }
 
 	test('nothing is checked while Next builds, and nothing is made up', () => {
 		expect(serverEnv(building)).toEqual({
+			authVerify: true,
 			databaseUri: '',
 			googleIssuer: 'https://accounts.google.com',
 			localDatabase: false,

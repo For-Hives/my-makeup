@@ -13,7 +13,12 @@ import { creerCompte } from '../outils/fabrique-comptes'
 test.describe('Essai coquille : le site local, déjà connecté', { tag: '@mobile' }, () => {
 	test('l’accueil s’ouvre, puis l’administration avec une session de la fabrique', async ({ context, page }) => {
 		await page.goto('/')
-		await expect(page.getByRole('heading', { level: 1, name: 'My Makeup' })).toBeVisible()
+		await expect(
+			page.getByRole('heading', {
+				level: 1,
+				name: "Trouver la maquilleuse qui vous correspond n'a jamais été aussi simple",
+			})
+		).toBeVisible()
 
 		// Nobody types a password: the factory gives the cookie of a session that is already open.
 		const compte = await creerCompte('admin')

@@ -90,7 +90,7 @@ export function exigerLaCibleDuJeu(payload: ConnexionDePayload, variables: Varia
 }
 
 /** The profile type, when its account is already in the database. */
-async function profilPresent(payload: Payload, type: ProfilDuJeu): Promise<ProfilPose | null> {
+export async function profilPresent(payload: Payload, type: ProfilDuJeu): Promise<ProfilPose | null> {
 	const { docs: comptes } = await payload.find({
 		collection: 'pros',
 		depth: 0,
@@ -118,7 +118,7 @@ async function profilPresent(payload: Payload, type: ProfilDuJeu): Promise<Profi
 }
 
 /** Creates one profile type, its account and its photos, in one transaction. */
-async function poserLeProfil(
+export async function poserLeProfil(
 	payload: Payload,
 	type: ProfilDuJeu,
 	lire: (photo: PhotoDuJeu) => Promise<Uint8Array>,

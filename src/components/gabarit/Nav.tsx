@@ -4,7 +4,8 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
-import { LIEN_CONNEXION, LIEN_RECHERCHE, NAVIGATION } from './liens'
+import { seDeconnecter } from '@/app/(front)/(espace)/auth/actions'
+import { LIEN_CONNEXION, LIEN_ESPACE, LIEN_RECHERCHE, NAVIGATION } from './liens'
 
 const LIEN = 'font-semibold text-gray-900 text-sm leading-6'
 const ANNEAU = 'focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-offset-2'
@@ -22,9 +23,32 @@ function Chevron() {
 }
 
 /**
+ * Whether a makeup artist is signed in, asked of the server by the browser once the page has
+ * loaded (ticket 078). The session cookie is HttpOnly and the page is static and shared: it can
+ * neither read the cookie nor depend on it. Until the answer comes, and whenever it cannot come,
+ * the visitor is taken for signed out, which is what a shared page says.
+ */
+function useConnectee(chemin: string): boolean {
+	const [connectee, setConnectee] = useState(false)
+	// A new page asks again: the visitor may have signed in or out since the last one.
+	useEffect(() => {
+		const arret = new AbortController()
+		fetch('/api/espace/session', { cache: 'no-store', credentials: 'same-origin', signal: arret.signal })
+			.then(reponse => (reponse.ok ? reponse.json() : { connectee: false }))
+			.then((corps: { connectee?: unknown }) => setConnectee(corps.connectee === true))
+			.catch(() => {
+				if (!arret.signal.aborted) setConnectee(false)
+			})
+		return () => arret.abort()
+	}, [chemin])
+	return connectee
+}
+
+/**
  * The navigation of every public page. One markup for both widths: under 1024 px a button opens
  * the menu and the groups unfold in place; from 1024 px the menu is a row and the groups are
- * popovers. It reads no cookie and no session: the page stays static.
+ * popovers. It reads no cookie and no session on the server: the page stays static, and the
+ * signed-in state is read in the browser (`useConnectee`).
  */
 export function Nav() {
 	const [menuOuvert, setMenuOuvert] = useState(false)
@@ -32,6 +56,7 @@ export function Nav() {
 	const racine = useRef<HTMLElement>(null)
 	const boutonMenu = useRef<HTMLButtonElement>(null)
 	const chemin = usePathname()
+	const connectee = useConnectee(chemin)
 
 	useEffect(() => {
 		setMenuOuvert(false)
@@ -147,9 +172,22 @@ export function Nav() {
 							</svg>
 							{LIEN_RECHERCHE.nom}
 						</Link>
-						<Link href={LIEN_CONNEXION.href} className={`btn-primary-simple ${ANNEAU}`}>
-							{LIEN_CONNEXION.nom}
-						</Link>
+						{connectee ? (
+							<>
+								<Link href={LIEN_ESPACE.href} className={`${LIEN} ${ANNEAU}`}>
+									{LIEN_ESPACE.nom}
+								</Link>
+								<form action={seDeconnecter}>
+									<button type="submit" className={`btn-primary-simple ${ANNEAU}`}>
+										Me déconnecter
+									</button>
+								</form>
+							</>
+						) : (
+							<Link href={LIEN_CONNEXION.href} className={`btn-primary-simple ${ANNEAU}`}>
+								{LIEN_CONNEXION.nom}
+							</Link>
+						)}
 					</div>
 				</div>
 			</nav>

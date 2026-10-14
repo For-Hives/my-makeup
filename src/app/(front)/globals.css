@@ -17,4 +17,16 @@
 	.btn-primary-with-icon {
 		@apply flex items-center rounded-lg border-2 border-indigo-900 bg-transparent px-4 py-2 text-indigo-900 text-sm leading-6;
 	}
+
+	.btn-primary {
+		@apply rounded-lg border-2 border-indigo-900 bg-indigo-900 px-4 py-2 font-bold text-sm text-white leading-6 focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-offset-2;
+	}
+
+	.btn-secondary-white {
+		@apply rounded-lg border-2 border-white bg-white px-4 py-2 font-bold text-indigo-900 text-sm leading-6;
+	}
+
+	.btn-secondary-white-bordered {
+		@apply rounded-lg border-2 border-white bg-transparent px-4 py-2 font-bold text-sm text-white leading-6;
+	}
 }

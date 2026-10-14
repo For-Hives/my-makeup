@@ -8,6 +8,7 @@ import sharp from 'sharp'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import { Admins } from './collections/Admins'
 import { Articles } from './collections/Articles'
+import { AuthEvenements } from './collections/AuthEvenements'
 import { avecLaCorbeille } from './collections/corbeille'
 import {
 	aucunEnvoiSansStockage,
@@ -25,6 +26,7 @@ import { LANGUE_DE_PAYLOAD } from './lib/langue-payload'
 import { adresseDuMedia, PREFIXE_DES_ENVOIS } from './lib/medias'
 import { requetesBornees } from './lib/requete-bornee'
 import { stockageS3 } from './lib/stockage'
+import { reserverLesVerrousAuxAdmins } from './lib/verrous-payload'
 import { migrations } from './migrations'
 import { auDemarrage, avecLaRemiseAZero } from './preprod/au-demarrage'
 
@@ -52,16 +54,16 @@ const media: CollectionConfig<'media'> = env.storage
 		}
 
 export default buildConfig({
-	// A wrong password or a braked address is a normal event, not an application error: the weekly
-	// report counts the error-level lines (decisions 2026-10-13).
-	loggingLevels: { APIError: 'info', AuthenticationError: 'info' },
+	// A wrong password, a braked address or an address not yet confirmed is a normal event, not an
+	// application error: the weekly report counts the error-level lines (decisions 2026-10-13).
+	loggingLevels: { APIError: 'info', AuthenticationError: 'info', UnverifiedEmail: 'info' },
 	admin: {
 		user: Admins.slug,
 		importMap: { baseDir: dirname },
 		// 'off' closes /api/og: an image rendered on demand, for anyone, with or without a session.
 		meta: { defaultOGImageType: 'off' },
 	},
-	collections: [Admins, Pros, Profils, media, Talents, Articles],
+	collections: [Admins, Pros, Profils, media, Talents, Articles, AuthEvenements],
 	// The site and the API share one origin: no other site may read this API from a browser.
 	cors: [],
 	// A session cookie is accepted from these origins only (src/lib/env.ts).
@@ -102,7 +104,11 @@ export default buildConfig({
 	// Once Payload has started and played its migrations: on the pre-production only, the import of
 	// the fake Strapi source into an empty database (ticket 027, docs/preprod.md). Anywhere else it
 	// does nothing.
-	onInit: payload => auDemarrage(payload, env),
+	onInit: async payload => {
+		// Payload's document locks are reserved to the accounts of the admin panel (ticket 094).
+		reserverLesVerrousAuxAdmins(payload)
+		await auDemarrage(payload, env)
+	},
 	plugins: [
 		// The photos go to the object storage the environment names (src/lib/env.ts): R2 on the site,
 		// the S3 simulator on the test bench. Each media keeps its own prefix: `media/` for a photo

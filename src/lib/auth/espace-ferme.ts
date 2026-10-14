@@ -1,4 +1,5 @@
-import { urlDeConnexion } from './retour'
+import { etatDuJeton } from './etat-session'
+import { urlDeConnexion, urlSessionExpiree } from './retour'
 
 /** The name of Payload's session cookie (`<cookiePrefix>-token`, prefix `payload` by default). */
 export const COOKIE_DE_SESSION = 'payload-token'
@@ -19,4 +20,27 @@ export const estPagePrivee = (chemin: string): boolean =>
 export function redirectionDeLEspace(chemin: string, recherche: string, aLeCookie: boolean): string | null {
 	if (!estPagePrivee(chemin) || aLeCookie) return null
 	return urlDeConnexion(`${chemin}${recherche}`)
+}
+
+/**
+ * The proxy's whole decision for a request, from the session cookie's value (ticket 080): the
+ * sign-in page to redirect to, or nothing.
+ * - No cookie: the sign-in page, without a message.
+ * - A cookie whose end date has passed: the sign-in page with the « session expirée » message. No
+ *   database is read, so it holds when the database is down. The cookie is left alone on purpose: a
+ *   browser may replay the request (Critical-CH) before it reads the answer, and a cookie deleted
+ *   by the first answer would turn the replay into a redirection without the message. The sign-in
+ *   page does not redirect on an expired cookie, so it loops on nothing, and the next sign-in
+ *   replaces it.
+ * - Any other cookie: nothing, the page decides (it is the one that asks Payload).
+ */
+export function decisionDeLEspace(
+	chemin: string,
+	recherche: string,
+	jeton: string | undefined,
+	maintenantS: number
+): string | null {
+	if (!estPagePrivee(chemin)) return null
+	if (etatDuJeton(jeton, maintenantS) === 'expire') return urlSessionExpiree(`${chemin}${recherche}`)
+	return redirectionDeLEspace(chemin, recherche, jeton !== undefined && jeton !== '')
 }

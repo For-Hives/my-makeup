@@ -1,0 +1,326 @@
+{
+	"/": {
+		"n": 1,
+		"sha": "371ccebaf3535e5a926c30aa8ac897891e12b09e976864c8c17aa81f753723bd"
+	},
+	"/a-propos": {
+		"n": 2,
+		"sha": "9258bdad0c76931a427deb78175de35d1b039edfaf0835263e1f37503fff23a6"
+	},
+	"/blog": {
+		"n": 1,
+		"sha": "ebdc933a5ee0d42eb9ea3310f0a319febb66b73307c4056b3da296e65ba2bd82"
+	},
+	"/toutes-les-news": {
+		"n": 1,
+		"sha": "fe42b915e2e0272007594bb7c495079df14c4fb1b5a2cb28ede7a0ac4ce30f9f"
+	},
+	"/contact": {
+		"n": 1,
+		"sha": "2b5c3d26721ae9c350cf3009318b626f0fc8a90b4a2ac0ca8099c05aa849282e"
+	},
+	"/pourquoi-utiliser-my-makeup-en-tant-que-particulier": {
+		"n": 1,
+		"sha": "3e4740e06c4fdbf5f3db9b1aa2f74c988da3182284ce96dd7eefe1b565b84ff2"
+	},
+	"/particulier/trouver-une-maquilleuse": {
+		"n": 2,
+		"sha": "131886bc080b0ade012e954eee280b0be7598ce8b670d71fb2ccb8f76e6d7449"
+	},
+	"/particulier/centraliser-ses-recherches": {
+		"n": 2,
+		"sha": "1b2885c095f5efb8e62d1baf658f2a4a60fc7bebe104d7c245f4b9e73e058002"
+	},
+	"/particulier/explorer-les-profils": {
+		"n": 2,
+		"sha": "ce2dc87792e24298e0d6f87065dde0f72b500ee7f67c4abcef48cef5d803373b"
+	},
+	"/pourquoi-rejoindre-my-makeup-en-tant-que-maquilleuse": {
+		"n": 1,
+		"sha": "9b1a23a2867c8658e59fad744ed6965de66040c0562f7f8317ece6ecd9eb6441"
+	},
+	"/maquilleuse/partenariats": {
+		"n": 2,
+		"sha": "6b90a2608439775f3b4c278fb54e4327df7da4d7889b4bd75f611ef092c2d567"
+	},
+	"/solutions/pour-les-particuliers": {
+		"n": 2,
+		"sha": "1c2eba4c54991294142b3b99601a907561475fefb1c21e81040831a3749e7d8f"
+	},
+	"/solutions/pour-les-maquilleuses": {
+		"n": 2,
+		"sha": "bda968814f6c2949555c1408a320f06b921a981f8ff3f7b88d2bccb233afbb7a"
+	},
+	"/cgu": {
+		"n": 1,
+		"sha": "31bbf8af2210d5e85401d0e7ca917d0f1df4c2b5d89f1347650b013e381db1c2"
+	},
+	"/mentions-legales": {
+		"n": 1,
+		"sha": "946a1243f104377bcd0e754f32d64a802e5f900b0d0c51aa685f8fff733acfab"
+	},
+	"/politique-de-confidentialite": {
+		"n": 1,
+		"sha": "c173f20be9ecd13f4cf1e15bbc04ae9c7043a4692b0af7df28cfee5e9da24430"
+	},
+	"/talent/maquillage-mariee": {
+		"n": 1,
+		"sha": "4e48c67875ac90adfbf436e897db2a9578ef533d9070fe9d7b6e8e63a8d4feea"
+	},
+	"/talent/maquillage-fete": {
+		"n": 1,
+		"sha": "3ec740d95bec2b8603f8afa9e8988595c8773d0f4efbed9286c22bbf48f2cb93"
+	},
+	"/talent/maquillage-professionnel": {
+		"n": 1,
+		"sha": "a53aea764b7d8e4b2834e66ef8db71c2c3f94e3e25b5ea44a2b3de0c67f96e01"
+	},
+	"/talent/maquillage-artistique": {
+		"n": 1,
+		"sha": "7bf9b81b241b8897a42f3a618584dcd17908f501faf0a0dc884851393b0dd615"
+	},
+	"/talent/maquillage-homme": {
+		"n": 1,
+		"sha": "4fdc4f7ea5e133c0e63e4fdad94fdf6ac3ea5fada88c0bc4656bb7e10757ba9f"
+	},
+	"/talent/maquillage-femme": {
+		"n": 1,
+		"sha": "10a294eb35704bed9905223372dffeb648497db95611d17a4e85eea800f0dad1"
+	},
+	"/talent/maquillage-enfant": {
+		"n": 1,
+		"sha": "41a234ef60bfe9e6c695fdd3926c3f4292fb2aab2895fb2324c80a33c35e999a"
+	},
+	"/talent/maquillage-beaute": {
+		"n": 1,
+		"sha": "fb5cfb085ead0c188df836102ad83d2a92c9eec0199a29b3e06c650a3360a97f"
+	},
+	"/talent/maquillage-soiree": {
+		"n": 1,
+		"sha": "1d799c5f553279581d074a31c7ef04f266da107de729ee841cd04ed6ae99080d"
+	},
+	"/talent/maquillage-film": {
+		"n": 1,
+		"sha": "3ada3dfb2e9c04af1faccbf6144758e9e1f3f4053f65b10c1848f69b585a94ca"
+	},
+	"/talent/maquillage-specialise": {
+		"n": 1,
+		"sha": "db424dc1b3445ba04ee28812e2c522af733d0d5035cefe9e8aca02208810e4bf"
+	},
+	"/talent/maquillage-theatre": {
+		"n": 1,
+		"sha": "10974d89009c9811c1ae83526f149f261f4778c0de619b8e7d6d124307b1d769"
+	},
+	"/talent/maquillage-fx": {
+		"n": 1,
+		"sha": "fc60d517f6d6a10c36ac389139610ba385defcfe9de6daa7bce85e746d308766"
+	},
+	"/talent/maquillage-cinema": {
+		"n": 1,
+		"sha": "98a4d42e5911c312b9a3b693c5e1c6f1ec2eeeba0a11a8c8d2d54c9b7c2d5d44"
+	},
+	"/blog/cout-maquilleuse-professionnelle-guide-tarifs": {
+		"n": 1,
+		"sha": "a7d5cd39e1b6b15a88c3b1c2d45d61cce159ff430708efa1c208830260abfc0c"
+	},
+	"/blog/choisir-maquilleuse-professionnelle-evenement": {
+		"n": 1,
+		"sha": "44988a5e0b75a8c26d61924e5c8e519f3fbaeda78e0eef4d952ed359a4c85fba"
+	},
+	"/blog/maximiser-investissement-maquilleuse-professionnelle": {
+		"n": 1,
+		"sha": "e2aaaacbd1df6ffb4b1f4c8139b827a207236a6a1e180ada3d812c31bbc5710d"
+	},
+	"/blog/tendances-maquillage-professionnel": {
+		"n": 1,
+		"sha": "2a76859f22fcea811b7e49664470a0c7a3fc2a3203d63c0fdf1b699ca9beb3af"
+	},
+	"/blog/conseils-visibilite-maquilleuse-professionnelle": {
+		"n": 1,
+		"sha": "140f312775d175e85399835da8735da1c2d38c260694a690dcda3bd5a73fd4e8"
+	},
+	"/blog/conseils-maquillage-professionnels-debutants": {
+		"n": 1,
+		"sha": "ac1f5290cf7031ce74424be1c975268bdeaea11a1f9025daaac3dd8d71678141"
+	},
+	"/blog/fiche-google-maquilleuse": {
+		"n": 1,
+		"sha": "d91f03c868152611a18031f0f1df99bb8005407ff28a2d8a7baf78f1970088b1"
+	},
+	"/blog/prix-maquillage-mariee-2027": {
+		"n": 1,
+		"sha": "eb7b5fe1e9f7c477ed3101c1c3f0dc869cdc4c6bc15de66e494c16abb6180f36"
+	},
+	"/blog/quand-reserver-maquilleuse-mariage": {
+		"n": 1,
+		"sha": "9d64c924f8c53a9d6ab3a62d5624cb3ed9efbca29e1649a270e323d0313cb403"
+	},
+	"/blog/essai-maquillage-mariee": {
+		"n": 1,
+		"sha": "404609ed906b3a1a6d1c0454a68fc69d82dc2b83c431eaf9e4bb617c32a9a179"
+	},
+	"/search": {
+		"n": 1,
+		"sha": "affedef5c2e930e9d270d8c1d62f076224942890baa5e4a3d14c057c42bdd631"
+	},
+	"/search?search=mariage&city=Paris": {
+		"n": 1,
+		"sha": "affedef5c2e930e9d270d8c1d62f076224942890baa5e4a3d14c057c42bdd631"
+	},
+	"/search?city=Annecy": {
+		"n": 1,
+		"sha": "affedef5c2e930e9d270d8c1d62f076224942890baa5e4a3d14c057c42bdd631"
+	},
+	"/search?search=zzqqxxyy": {
+		"n": 1,
+		"sha": "affedef5c2e930e9d270d8c1d62f076224942890baa5e4a3d14c057c42bdd631"
+	},
+	"/auth/signin": {
+		"n": 1,
+		"sha": "bbf679d761721cbc5bb46c1dcface5456fe9c18f2f76ca1de40f531db5088f89"
+	},
+	"/auth/signup": {
+		"n": 1,
+		"sha": "832dfcc496ca892051a74e95099449c09bb5560714056b28211779395061c292"
+	},
+	"/site-map": {
+		"n": 2,
+		"sha": "9350f85a12ae24a029f54b29b9b98180ba12c6e77ef67a99bd3066304d306533"
+	},
+	"/page-inexistante-audit-zz": {
+		"n": 1,
+		"sha": "d8440f8cd84d0fe7395e0fcd72bf820d15b982db743f0053d39a62bdf8a8f701"
+	},
+	"/profil/audit-inexistant-zz9": {
+		"n": 1,
+		"sha": "d8440f8cd84d0fe7395e0fcd72bf820d15b982db743f0053d39a62bdf8a8f701"
+	},
+	"/auth/profil": {
+		"n": 1,
+		"sha": "bbf679d761721cbc5bb46c1dcface5456fe9c18f2f76ca1de40f531db5088f89"
+	},
+	"/llms.txt": {
+		"n": 1,
+		"sha": "d8440f8cd84d0fe7395e0fcd72bf820d15b982db743f0053d39a62bdf8a8f701"
+	},
+	"/demande-envoyee": {
+		"n": 1,
+		"sha": "140da06f663b309347176110c4fa1081d66ce71e7c78d0c89470e509efdc8e85"
+	},
+	"/404": {
+		"n": 1,
+		"sha": "d8440f8cd84d0fe7395e0fcd72bf820d15b982db743f0053d39a62bdf8a8f701"
+	},
+	"/blog/": {
+		"n": 1,
+		"sha": "ebdc933a5ee0d42eb9ea3310f0a319febb66b73307c4056b3da296e65ba2bd82"
+	},
+	"//blog": {
+		"n": 1,
+		"sha": "ebdc933a5ee0d42eb9ea3310f0a319febb66b73307c4056b3da296e65ba2bd82"
+	},
+	"/talent/inexistant-inventaire-zz9": {
+		"n": 1,
+		"sha": "d8440f8cd84d0fe7395e0fcd72bf820d15b982db743f0053d39a62bdf8a8f701"
+	},
+	"/blog/inexistant-inventaire-zz9": {
+		"n": 1,
+		"sha": "d8440f8cd84d0fe7395e0fcd72bf820d15b982db743f0053d39a62bdf8a8f701"
+	},
+	"/search?search=mariage&city=Annecy": {
+		"n": 1,
+		"sha": "affedef5c2e930e9d270d8c1d62f076224942890baa5e4a3d14c057c42bdd631"
+	},
+	"/auth": {
+		"n": 0,
+		"sha": null
+	},
+	"/auth/init-account": {
+		"n": 1,
+		"sha": "bbf679d761721cbc5bb46c1dcface5456fe9c18f2f76ca1de40f531db5088f89"
+	},
+	"/auth/mot-de-passe-oublie": {
+		"n": 1,
+		"sha": "4542d61f5f6a365d7f27042144a343aa315edbae79ef2e7668dff27d82e1f7e5"
+	},
+	"/auth/reinitialiser": {
+		"n": 1,
+		"sha": "a3d65ca5697afe445b551e6cccd18a37be2d34d253a0418ab940f43f03476d84"
+	},
+	"/auth/verification-complete": {
+		"n": 1,
+		"sha": "1b31a409f4700d9d61d82a7ed287f8162ba57a6eb8651d9ad548522a1517180e"
+	},
+	"/auth/verification-wall": {
+		"n": 1,
+		"sha": "d63cb7769cb8a939a62cdcfe4999b4ebf062b264d0d80a7ec4c1d49ca3a672dd"
+	},
+	"/auth/error": {
+		"n": 1,
+		"sha": "4c93f684ff0ebbdc4289d4b63c6824dba7d3ebf6e04db89a0eb9ed299cdbf8bf"
+	},
+	"/api/auth/signin": {
+		"n": 1,
+		"sha": "bbf679d761721cbc5bb46c1dcface5456fe9c18f2f76ca1de40f531db5088f89"
+	},
+	"/talent/maquillage-mariee/": {
+		"n": 1,
+		"sha": "4e48c67875ac90adfbf436e897db2a9578ef533d9070fe9d7b6e8e63a8d4feea"
+	},
+	"/maquilleuse": {
+		"n": 1,
+		"sha": "d8440f8cd84d0fe7395e0fcd72bf820d15b982db743f0053d39a62bdf8a8f701"
+	},
+	"/particulier": {
+		"n": 1,
+		"sha": "d8440f8cd84d0fe7395e0fcd72bf820d15b982db743f0053d39a62bdf8a8f701"
+	},
+	"/maquilleuse/partenaires": {
+		"n": 1,
+		"sha": "d8440f8cd84d0fe7395e0fcd72bf820d15b982db743f0053d39a62bdf8a8f701"
+	},
+	"/affiliation": {
+		"n": 1,
+		"sha": "d8440f8cd84d0fe7395e0fcd72bf820d15b982db743f0053d39a62bdf8a8f701"
+	},
+	"/cgv": {
+		"n": 1,
+		"sha": "d8440f8cd84d0fe7395e0fcd72bf820d15b982db743f0053d39a62bdf8a8f701"
+	},
+	"/help": {
+		"n": 1,
+		"sha": "d8440f8cd84d0fe7395e0fcd72bf820d15b982db743f0053d39a62bdf8a8f701"
+	},
+	"/parrainage": {
+		"n": 1,
+		"sha": "d8440f8cd84d0fe7395e0fcd72bf820d15b982db743f0053d39a62bdf8a8f701"
+	},
+	"/recrutement": {
+		"n": 1,
+		"sha": "d8440f8cd84d0fe7395e0fcd72bf820d15b982db743f0053d39a62bdf8a8f701"
+	},
+	"/deposer-un-projet": {
+		"n": 1,
+		"sha": "d8440f8cd84d0fe7395e0fcd72bf820d15b982db743f0053d39a62bdf8a8f701"
+	},
+	"/profil": {
+		"n": 1,
+		"sha": "d8440f8cd84d0fe7395e0fcd72bf820d15b982db743f0053d39a62bdf8a8f701"
+	},
+	"/signin": {
+		"n": 1,
+		"sha": "d8440f8cd84d0fe7395e0fcd72bf820d15b982db743f0053d39a62bdf8a8f701"
+	},
+	"/signup": {
+		"n": 1,
+		"sha": "d8440f8cd84d0fe7395e0fcd72bf820d15b982db743f0053d39a62bdf8a8f701"
+	},
+	"/search?search=mariage": {
+		"n": 1,
+		"sha": "affedef5c2e930e9d270d8c1d62f076224942890baa5e4a3d14c057c42bdd631"
+	},
+	"/search?search=coiffure": {
+		"n": 1,
+		"sha": "affedef5c2e930e9d270d8c1d62f076224942890baa5e4a3d14c057c42bdd631"
+	}
+}

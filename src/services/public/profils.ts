@@ -22,10 +22,12 @@
  */
 
 import type { Payload } from 'payload'
-import { formatZone } from '@/lib/format-zone'
+import { formatZone, rayonKm } from '@/lib/format-zone'
 import { nomAffiche, texte } from '@/lib/profil/nom-affiche'
 import { estIndexable, estVisible, FILTRE_LISTE } from '@/lib/profil/visibilite'
+import type { PlaceDuProfil } from '@/lib/recherche/lieu'
 import { estUnSlug } from '@/lib/slug'
+import type { Profil } from '@/payload-types'
 
 /** The fields of a profile a public page reads, and nothing else. */
 export const CHAMPS_PUBLICS_DU_PROFIL = {
@@ -37,7 +39,7 @@ export const CHAMPS_PUBLICS_DU_PROFIL = {
 	description: true,
 } as const
 
-/** What a card of a list reads: the identity, the badge and the zone. */
+/** What a card of a list reads: the identity, the badge, the zone and the main photo. */
 export const CHAMPS_DE_LA_CARTE = {
 	slug: true,
 	prenom: true,
@@ -47,7 +49,15 @@ export const CHAMPS_DE_LA_CARTE = {
 	commune: true,
 	rayonKm: true,
 	superMaquilleuse: true,
+	photoPrincipale: true,
 } as const
+
+/**
+ * What a card reads of a photo: its public address and its size. The address is made from the file name
+ * and the prefix of the object (`generateFileURL`, src/payload.config.ts), so those two are read to make
+ * it, and a card keeps neither.
+ */
+export const CHAMPS_DE_LA_PHOTO = { url: true, width: true, height: true, filename: true, prefix: true } as const
 
 /** The most profiles one read of a list gives, and the size of a page when none is asked. */
 export const LIMITE_MAX_DE_LA_LISTE = 100
@@ -72,6 +82,13 @@ export interface ProfilPublic {
 	coordonnees: CoordonneesPubliques | null
 }
 
+/** The main photo of a card: where it is and how big, never the file's owner or its other fields. */
+export interface PhotoDeCarte {
+	url: string
+	width: number | null
+	height: number | null
+}
+
 /** A card of the list: the keys are frozen by the unit test (U22), never a contact detail. */
 export interface CarteDeProfil {
 	slug: string
@@ -80,6 +97,7 @@ export interface CarteDeProfil {
 	/** « Annecy », « Annecy et 30 km autour », or `null`. */
 	lieu: string | null
 	superMaquilleuse: boolean
+	photo: PhotoDeCarte | null
 }
 
 /** One page of the listed profiles. */
@@ -88,6 +106,66 @@ export interface PageDeProfils {
 	page: number
 	totalDocs: number
 	hasNextPage: boolean
+}
+
+type ProfilDeLaCarte = Pick<
+	Profil,
+	| 'slug'
+	| 'prenom'
+	| 'nom'
+	| 'nomArtiste'
+	| 'specialite'
+	| 'commune'
+	| 'rayonKm'
+	| 'superMaquilleuse'
+	| 'photoPrincipale'
+>
+
+/** The photos of the cards, by the identifier of the media. */
+type PhotosParIdentifiant = ReadonlyMap<number | string, PhotoDeCarte>
+
+/** The identifier a relationship to a photo holds, populated or not. */
+const identifiantDeLaPhoto = (photo: ProfilDeLaCarte['photoPrincipale']): number | string | undefined =>
+	typeof photo === 'object' && photo !== null ? photo.id : (photo ?? undefined)
+
+/**
+ * The main photos of profiles the public reads, by identifier. Payload fills a media in a profile for no
+ * one but its owner: the access rule of the media opens one when it is read by its identifier. The
+ * photos are read here in one request, by the identifiers the public read of the profiles gave, which is
+ * the same rule: a photo of a profile the public reads is public, and nothing else is read.
+ */
+async function lireLesPhotos(payload: Payload, profils: readonly ProfilDeLaCarte[]): Promise<PhotosParIdentifiant> {
+	const identifiants = [...new Set(profils.map(({ photoPrincipale }) => identifiantDeLaPhoto(photoPrincipale)))].filter(
+		(identifiant): identifiant is number | string => identifiant !== undefined
+	)
+	const photos = new Map<number | string, PhotoDeCarte>()
+	if (identifiants.length === 0) return photos
+	const { docs } = await payload.find({
+		collection: 'media',
+		where: { id: { in: identifiants } },
+		select: CHAMPS_DE_LA_PHOTO,
+		depth: 0,
+		limit: LIMITE_MAX_DE_LA_LISTE,
+		pagination: false,
+		overrideAccess: true,
+	})
+	for (const media of docs)
+		if (typeof media.url === 'string' && media.url !== '')
+			photos.set(media.id, { url: media.url, width: media.width ?? null, height: media.height ?? null })
+	return photos
+}
+
+/** A profile read for a list, as a card: the keys are frozen (U22), no coordinates and no contact. */
+function carteDe(profil: ProfilDeLaCarte, photos: PhotosParIdentifiant): CarteDeProfil {
+	const identifiant = identifiantDeLaPhoto(profil.photoPrincipale)
+	return {
+		slug: profil.slug,
+		nom: nomAffiche(profil),
+		specialite: texte(profil.specialite) || null,
+		lieu: formatZone({ city: profil.commune?.nom, radius: profil.rayonKm }) || null,
+		superMaquilleuse: profil.superMaquilleuse === true,
+		photo: (identifiant !== undefined && photos.get(identifiant)) || null,
+	}
 }
 
 /** The contact details of this profile if its owner published them, else `null`. */
@@ -157,16 +235,52 @@ export async function listerLesProfils(
 		pagination: true,
 		overrideAccess: false,
 	})
+	const photos = await lireLesPhotos(payload, resultat.docs)
 	return {
-		cartes: resultat.docs.map(profil => ({
-			slug: profil.slug,
-			nom: nomAffiche(profil),
-			specialite: texte(profil.specialite) || null,
-			lieu: formatZone({ city: profil.commune?.nom, radius: profil.rayonKm }) || null,
-			superMaquilleuse: profil.superMaquilleuse === true,
-		})),
+		cartes: resultat.docs.map(profil => carteDe(profil, photos)),
 		page: resultat.page ?? 1,
 		totalDocs: resultat.totalDocs,
 		hasNextPage: resultat.hasNextPage,
 	}
+}
+
+/** A listed profile with where she works: what the search by city ranks by. */
+export interface ProfilDeLAnnuaire extends PlaceDuProfil {
+	carte: CarteDeProfil
+}
+
+/** The most pages of the directory one read goes through: 1 000 profiles, ten times the site today. */
+const PAGES_MAX_DE_L_ANNUAIRE = 10
+
+/**
+ * Every listed profile, most complete first, then most recently changed (ticket 098): what a search by
+ * city places in its sections. Read in pages of 100, ten at most; the place of a profile is its
+ * commune and the département the server computed from its INSEE code. A card carries no coordinate:
+ * the centre of the commune stays here.
+ */
+export async function lireLAnnuaire(payload: Payload): Promise<ProfilDeLAnnuaire[]> {
+	const annuaire: ProfilDeLAnnuaire[] = []
+	for (let page = 1; page <= PAGES_MAX_DE_L_ANNUAIRE; page += 1) {
+		const resultat = await payload.find({
+			collection: 'profils',
+			where: FILTRE_LISTE,
+			select: CHAMPS_DE_LA_CARTE,
+			sort: ['-completude', '-updatedAt', 'slug'],
+			depth: 0,
+			limit: LIMITE_MAX_DE_LA_LISTE,
+			page,
+			pagination: true,
+			overrideAccess: false,
+		})
+		const photos = await lireLesPhotos(payload, resultat.docs)
+		for (const profil of resultat.docs)
+			annuaire.push({
+				carte: carteDe(profil, photos),
+				ville: texte(profil.commune?.nom) || null,
+				departement: texte(profil.commune?.departement) || null,
+				seDeplace: texte(profil.commune?.nom) !== '' && rayonKm(profil.rayonKm) !== null,
+			})
+		if (!resultat.hasNextPage) break
+	}
+	return annuaire
 }

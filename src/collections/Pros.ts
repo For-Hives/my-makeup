@@ -1,32 +1,31 @@
-import { APIError, type CollectionBeforeDeleteHook, type CollectionConfig, type Endpoint, Forbidden } from 'payload'
+import { APIError, type CollectionBeforeDeleteHook, type CollectionConfig } from 'payload'
 import { adminOuSoiMeme, adminSeulement, champAdminSeulement, jamais } from '../lib/acces'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import { freinerLaConnexion, rendreLaPlaceDeLaConnexion } from '../lib/auth/frein-payload'
+import {
+	noterLaConnexionRest,
+	noterLEchecDeConnexionRest,
+	noterLeDebutDeLaConnexion,
+	retenirLaDerniereConnexion,
+} from '../lib/auth/journal-payload'
+import { premierCompteFerme } from '../lib/auth/premier-compte-ferme'
+import { DUREE_SESSION_S, prolongerSousPlafond, refuserApresLePlafond } from '../lib/auth/session-glissante'
+import { contenuEmailConfirmation, SUJET_DE_CONFIRMATION } from '../lib/emails/confirmation'
+import { composerEmail } from '../lib/emails/gabarit'
 import { sessionsFermees } from './Admins'
 import { profilALaCreationDuCompte } from './Profils'
 
+// Kept exported from here: the tests and the earlier tickets import it from this file.
+export { premierCompteFerme }
+
 /** How long a session of a makeup artist lasts: 14 days (plan 01 §2.3). */
-export const DUREE_SESSION_PRO_S = 14 * 24 * 60 * 60
+export const DUREE_SESSION_PRO_S = DUREE_SESSION_S
 
 /**
  * The attributes of the session cookie (I09): HttpOnly always (Payload sets it), SameSite=Lax, and
  * Secure on the deployed site. The sign-in sets it with these same attributes.
  */
 export const cookiesDeSession = (production: boolean) => ({ secure: production, sameSite: 'Lax' as const })
-
-/**
- * Payload gives every account collection a « first account » route, which creates an account
- * without access control while the collection is empty. It serves the admin panel, which a makeup
- * artist never opens: here it is closed, so that no anonymous request creates an account through
- * REST, even on an empty database. A collection's own routes come before Payload's.
- */
-export const premierCompteFerme: Endpoint = {
-	path: '/first-register',
-	method: 'post',
-	handler: req => {
-		throw new Forbidden(req.t)
-	},
-}
 
 /**
  * An account that still has a profile is not deleted: the profile goes first, then the account.
@@ -59,19 +58,30 @@ export const compteSansProfilAvantSuppression: CollectionBeforeDeleteHook = asyn
  * - Creating an account creates its empty profile (collection `profils`), unless the creation
  *   says otherwise (`CONTEXTE_SANS_PROFIL`).
  *
- * `auth.verify` is on for good: `_verified` exists only while it is (SCHEMA.md, §5.1). How the
- * confirmation email reads, and when the site asks for it, belong to ticket 082.
+ * `auth.verify` is on for good: `_verified` exists only while it is (SCHEMA.md, §5.1). Whether a
+ * new account must confirm its email is the switch AUTH_VERIFY, read by the sign-up
+ * (src/lib/auth/inscription-payload.ts); the mail of the sign-up leaves through the door of ticket
+ * 073. The mail Payload sends itself, for an account an admin creates in the panel, reads the same
+ * and links to the page of the site that confirms the account, not to the admin panel.
  */
 export const Pros: CollectionConfig<'pros'> = {
 	slug: 'pros',
 	labels: { singular: 'Compte maquilleuse', plural: 'Comptes maquilleuses' },
 	admin: { useAsTitle: 'email', defaultColumns: ['email', 'nom', '_verified', 'bloque'] },
 	auth: {
-		verify: true,
+		verify: {
+			generateEmailSubject: () => SUJET_DE_CONFIRMATION,
+			generateEmailHTML: ({ token }) =>
+				composerEmail(
+					contenuEmailConfirmation(String(token)),
+					process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
+				).html,
+		},
 		// No lock of the account: the brake is by client address (`freinerLaConnexion`), so that
 		// ten wrong passwords typed by anyone never lock the account they aimed at (AUTH-05).
 		maxLoginAttempts: 0,
-		// 14 days (plan 01 §2.3). Sliding renewal and the 90-day ceiling are ticket 079.
+		// 14 days (plan 01 §2.3), renewed by a visit to the space (`RafraichirSession`) and never past 90 days
+		// from the opening of the session (ticket 079: the `refresh` hook and the `beforeOperation` one below).
 		tokenExpiration: DUREE_SESSION_PRO_S,
 		// The token lives in the cookie only: no response of the API carries it (ticket 075).
 		removeTokenFromResponses: true,
@@ -88,9 +98,11 @@ export const Pros: CollectionConfig<'pros'> = {
 	endpoints: [premierCompteFerme],
 	hooks: {
 		afterChange: [profilALaCreationDuCompte],
-		afterLogin: [rendreLaPlaceDeLaConnexion()],
+		afterLogin: [rendreLaPlaceDeLaConnexion(), retenirLaDerniereConnexion, noterLaConnexionRest],
+		afterError: [noterLEchecDeConnexionRest],
 		beforeDelete: [compteSansProfilAvantSuppression],
-		beforeOperation: [freinerLaConnexion()],
+		beforeOperation: [noterLeDebutDeLaConnexion, freinerLaConnexion(), refuserApresLePlafond],
+		refresh: [prolongerSousPlafond],
 	},
 	fields: [
 		{
@@ -105,6 +117,14 @@ export const Pros: CollectionConfig<'pros'> = {
 			type: 'checkbox',
 			defaultValue: false,
 			access: { create: champAdminSeulement, update: champAdminSeulement },
+		},
+		{
+			// Written by the server at each sign-in, through the Local API: no request writes it (ticket 077).
+			name: 'derniereConnexion',
+			label: 'Dernière connexion',
+			type: 'date',
+			access: { create: jamais, update: jamais },
+			admin: { readOnly: true, date: { pickerAppearance: 'dayAndTime' } },
 		},
 		{
 			name: 'legacyProvider',

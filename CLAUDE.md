@@ -15,6 +15,7 @@ My Makeup est un annuaire de maquilleuses professionnelles indépendantes. Cette
 | tester un composant React | [`docs/tests/composants.md`](docs/tests/composants.md) |
 | écrire un test d'intégration, démarrer le banc de test, obtenir un compte de test, tester la connexion Google | [`docs/tests/banc.md`](docs/tests/banc.md) |
 | écrire ou lancer un essai de bout en bout, contrôler l'accessibilité d'une page | [`docs/tests/e2e.md`](docs/tests/e2e.md) |
+| émettre un événement de mesure, toucher le chemin `/u` ou le faux Umami | [`docs/mesure/umami.md`](docs/mesure/umami.md) |
 | lancer ou écrire une sonde du site en ligne, en lecture seule | [`docs/tests/sondes.md`](docs/tests/sondes.md) |
 | appeler un service extérieur, ou le simuler dans un test | [`docs/tests/http-sortant.md`](docs/tests/http-sortant.md) |
 | toucher la CI, un workflow ou le `Dockerfile` | [`docs/qualite.md`](docs/qualite.md), §6 à §9 |
@@ -51,6 +52,7 @@ Tout se lance depuis la racine du dépôt. La table complète est dans le README
 | `bun run banc:session <compte>` | La session d'un compte du banc (`admin`, `redaction`, `maquilleuse`, `profil-reference`, une adresse…), écrite dans `.banc/sessions/` : état d'un navigateur Playwright et en-têtes pour `curl -H @fichier`. Le jeton n'est jamais affiché. |
 | `bun run test:integration` | Les tests d'intégration, sur le banc démarré. Avec un chemin : ce fichier seul. Chaque lancement vide la base du banc. |
 | `bun run test:e2e` | Les essais de bout en bout, banc démarré : build de production, puis Playwright à 1440 et 390 px. Avec un chemin : ce fichier seul. Chaque lancement vide la base du banc. Le navigateur s'installe une fois par `bunx playwright install chromium`. |
+| `bun run admin:creer <email>` | Crée un compte de l'administration : la seule façon d'avoir le premier ; ensuite un admin crée les autres dans l'administration. Le mot de passe se tape au clavier, jamais en argument. |
 | `bun run build` | Build de production. Il passe sans base ni secret. |
 | `bun run payload:types` | Après un changement de collection : régénère `src/payload-types.ts`. |
 | `bun run payload:importmap` | Après l'ajout d'un composant d'administration. |

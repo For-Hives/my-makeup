@@ -3,8 +3,8 @@ import { Footer } from '@/components/gabarit/Footer'
 import { Nav } from '@/components/gabarit/Nav'
 
 // The template of every public page: navigation, content, footer. It reads no cookie and no
-// session, so the pages stay static; the signed-in state of the navigation comes later, read in
-// the browser (ticket 078).
+// session, so the pages stay static; the signed-in state of the navigation is read in the browser
+// (ticket 078).
 export default function SiteLayout({ children }: { children: ReactNode }) {
 	return (
 		<div className="flex min-h-dvh flex-col">
