@@ -6,6 +6,10 @@
  * a remote or non-test database, the production site, a real mail relay or sending domain,
  * a remote or non-test bucket.
  *
+ * Only when `bun test` is started from the repository root: bun reads the bunfig.toml of the
+ * folder it is started in, not the one of a parent folder. Started from a sub-folder, the tests
+ * run without this guard.
+ *
  * Every destination is checked against an allow-list (local hosts, `_test` and `-test`
  * suffixes): a production host nobody thought of listing here is refused like the others.
  *
@@ -42,6 +46,14 @@ const ADRESSES = ['BASE_URL', 'NEXT_PUBLIC_SITE_URL'] as const
 
 /** Variables that say through whom, or in whose name, mail is sent, whatever the provider. */
 const FAMILLE_ENVOI = /^(SMTP|EMAIL|MAILGUN|RESEND)_/
+
+/**
+ * Query parameters of a connection string that name where to connect. The driver Payload uses
+ * (`pg`, through pg-connection-string) lets `host` replace the host of the address; `hostaddr` does
+ * the same for libpq. Read, they would have to be checked like the host; none is needed on the
+ * bench, so they are refused.
+ */
+const PARAMETRES_D_HOTE = ['host', 'hostaddr'] as const
 
 /** The site's domain or one of its subdomains, as a whole name (`not-my-makeup.fr` is another domain). */
 const DOMAINE_REEL = /(?<![a-z0-9-])(?:[a-z0-9-]+\.)*my-makeup\.fr(?![a-z0-9-]|\.[a-z0-9])/i
@@ -83,11 +95,23 @@ export function lireEnvironnement(valeur: string | undefined): EnvironnementAdmi
 	)
 }
 
-/** The database must be local and its name must end with `_test`. No database at all is fine. */
+/**
+ * The database must be local and its name must end with `_test`. No database at all is fine.
+ *
+ * Exported for the tools that open the database themselves: the preload only runs when `bun test`
+ * is started from the repository root, so such a tool calls `verifierBase` on the address it is
+ * about to connect to.
+ */
 export function verifierBase(uri: string | undefined): void {
 	if (!uri) return
 	const url = lireAdresse(uri, ['postgres:', 'postgresql:'])
 	if (!url) refuser("DATABASE_URI n'est pas une adresse PostgreSQL lisible.")
+	// The value of the parameter is never quoted: it is where the connection would really go.
+	const detour = PARAMETRES_D_HOTE.find(nom => url.searchParams.has(nom))
+	if (detour)
+		refuser(
+			`Base refusée : DATABASE_URI porte un paramètre « ${detour} », qui remplace l'hôte de l'adresse. Les tests ne lisent l'hôte de la base que dans l'adresse elle-même.`
+		)
 	const hote = hoteDe(url)
 	const base = url.pathname.slice(1)
 	if (!estLocal(hote, SERVICES_DU_BANC.base) || !base.endsWith('_test'))

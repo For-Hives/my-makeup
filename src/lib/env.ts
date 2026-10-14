@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import type { VersionSources } from './version'
 
 /**
  * The environment variables the server reads, checked in one place.
@@ -13,6 +14,10 @@ import { z } from 'zod'
  *
  * A variable is added here by the ticket that starts reading it, with its line in `.env.exemple`.
  * An error names the variable and what is expected, never the value it received.
+ *
+ * The optional variables behind the version of /api/health are read here too (`versionEnv`), and
+ * never checked. next.config.ts reads SOURCE_COMMIT by itself: it copies the commit of the build
+ * into the bundles, before any of this code is loaded.
  *
  * No `next` import: this file is also loaded by the Payload CLI, outside of Next.
  */
@@ -265,5 +270,33 @@ export function serverEnv(source: RawEnv = processEnv()): ServerEnv {
 		localDatabase: isLocalDatabase(raw.DATABASE_URI ?? ''),
 		payloadSecret: raw.PAYLOAD_SECRET ?? '',
 		trustedOrigins: trustedOrigins(site, raw.NODE_ENV === 'production', raw.PORT),
+	}
+}
+
+/** What `process.env` gives for the version shown by /api/health. All optional. */
+export type RawVersionEnv = Partial<Record<'BUILD_SOURCE_COMMIT' | 'NEXT_PUBLIC_APP_VERSION' | 'SOURCE_COMMIT', string>>
+
+/** Read by their full names, like `processEnv`: Next freezes the first two into the build. */
+function processVersionEnv(): RawVersionEnv {
+	return {
+		BUILD_SOURCE_COMMIT: process.env.BUILD_SOURCE_COMMIT,
+		NEXT_PUBLIC_APP_VERSION: process.env.NEXT_PUBLIC_APP_VERSION,
+		SOURCE_COMMIT: process.env.SOURCE_COMMIT,
+	}
+}
+
+/**
+ * Where the version shown by /api/health comes from (src/lib/version.ts turns it into a label).
+ *
+ * Nothing is checked and nothing stops the start: any text is a label, and a commit that is not a
+ * sha is ignored further on. The commit given to the build (BUILD_SOURCE_COMMIT, written by
+ * next.config.ts, empty when the build had none) wins over the one of the running container.
+ */
+export function versionEnv(
+	source: RawVersionEnv = processVersionEnv()
+): Pick<VersionSources, 'buildVersion' | 'commit'> {
+	return {
+		buildVersion: source.NEXT_PUBLIC_APP_VERSION,
+		commit: source.BUILD_SOURCE_COMMIT || source.SOURCE_COMMIT,
 	}
 }

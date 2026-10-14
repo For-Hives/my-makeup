@@ -28,4 +28,14 @@ describe('formatZone (plans/02 U14)', () => {
 		expect(villeAffichee('null')).toBe('')
 		expect(rayonKm(2000)).toBeNull()
 	})
+
+	// Two guards of the port that U14 only checks as « no forbidden word »: the exact answers of the
+	// old site's format-zone.js.
+	test('a negative radius is dropped, a city that is not a text gives nothing', () => {
+		expect(formatZone({ city: 'Annecy', radius: -5 })).toBe('Annecy')
+		expect(formatZone({ city: 42, radius: 30 })).toBe('')
+		expect(formatZone({ city: {}, radius: 30 })).toBe('')
+		expect(rayonKm(-5)).toBeNull()
+		expect(villeAffichee(42)).toBe('')
+	})
 })

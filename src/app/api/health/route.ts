@@ -1,5 +1,6 @@
 import config from '@payload-config'
 import { getPayload } from 'payload'
+import { versionEnv } from '@/lib/env'
 import { healthResponse } from '@/lib/health'
 import packageJson from '../../../../package.json'
 
@@ -12,8 +13,10 @@ export const dynamic = 'force-dynamic'
  */
 async function pingDatabase(): Promise<void> {
 	const payload = await getPayload({ config }).catch(() => {
-		// Payload did not start: no secret, or a first connection that failed (Payload logs
-		// that one itself). The health log names the step, not the message.
+		// Payload did not start: its first connection failed (Payload logs that one itself), or
+		// anything else its start runs did. The health log names the step, not the message.
+		// A missing or refused variable never comes here: the server stops when it starts
+		// (src/instrumentation.ts), so the route does not answer at all.
 		throw Object.assign(new Error('Payload did not start'), { code: 'PAYLOAD_INIT' })
 	})
 	await payload.db.pool.query('SELECT 1')
@@ -27,12 +30,7 @@ async function pingDatabase(): Promise<void> {
 export function GET(): Promise<Response> {
 	return healthResponse({
 		ping: pingDatabase,
-		versions: {
-			buildVersion: process.env.NEXT_PUBLIC_APP_VERSION,
-			// The commit given to the build (next.config.ts); the one of the running container
-			// when the build had none.
-			commit: process.env.BUILD_SOURCE_COMMIT || process.env.SOURCE_COMMIT,
-			packageVersion: packageJson.version,
-		},
+		// The label and the commit come from the environment, through the one file that reads it.
+		versions: { ...versionEnv(), packageVersion: packageJson.version },
 	})
 }

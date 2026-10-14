@@ -1,5 +1,5 @@
 {
-	"description": "Jeu fictif partagé entre l'ancien site et la v3 (plan 01 §6.2, ticket 016). Les valeurs attendues (slugAttendu, ordreDeCreation, segments) sont les résultats de src/lib/slug.js de la branche main, calculés sous Node. Elles ne se corrigent jamais à la main : un écart est un défaut du port.",
+	"description": "Jeu fictif figé (plan 01 §6.2, ticket 016) : les réponses de l'ancien site sur des profils inventés. Il ne vit que dans ce dépôt : l'ancien site ne le contient pas et ne le rejoue pas. Les valeurs attendues (slugAttendu, ordreDeCreation, segments) sont les résultats de src/lib/slug.js de la branche main, calculés sous Node. Elles ne se corrigent jamais à la main : un écart est un défaut du port. Pour les recalculer : la marche à suivre est au-dessus du bloc de tests du jeu, dans tests/unit/slugs.test.ts.",
 	"source": "origin/main 3585098, src/lib/slug.js (dernier changement : 897be06)",
 	"profils": [
 		{ "id": 3, "username": "zoé  lefèvre", "createdAt": "2025-06-01T10:00:00.000Z", "slugAttendu": "zoe-lefevre-4" },

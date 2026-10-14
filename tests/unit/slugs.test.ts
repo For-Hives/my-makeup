@@ -60,6 +60,16 @@ describe('attribuerSlugs (plans/02 U11-U12)', () => {
 			const slugs = Object.fromEntries(attribuerSlugs(ordre).map(p => [p.id, p.slug]))
 			expect(slugs).toStrictEqual(attendu)
 		}
+		// Above, the ids grow with the dates: sorting by id would give the same slugs. Here the
+		// older profile has the larger id, and still keeps the slug (answer of the old site's slug.js).
+		const idsContreDates = [
+			{ id: 3, username: 'Zoé Lefèvre', createdAt: '2025-06-01T10:00:00.000Z' },
+			{ id: 12, username: 'ZOE LEFEVRE', createdAt: '2023-01-01T10:00:00.000Z' },
+		]
+		for (const ordre of [idsContreDates, [...idsContreDates].reverse()]) {
+			const slugs = Object.fromEntries(attribuerSlugs(ordre).map(p => [p.id, p.slug]))
+			expect(slugs).toStrictEqual({ 12: 'zoe-lefevre', 3: 'zoe-lefevre-2' })
+		}
 	})
 
 	test('same date: the smaller id first; a new profile never changes older slugs', () => {
@@ -70,6 +80,14 @@ describe('attribuerSlugs (plans/02 U11-U12)', () => {
 		const slugs = (l: Parameters<typeof attribuerSlugs>[0]) =>
 			Object.fromEntries(attribuerSlugs(l).map(p => [p.id, p.slug]))
 		expect(slugs(avant)).toStrictEqual({ 4: 'ana', 5: 'ana-2' })
+		// The ids are compared as numbers: as texts, « 10 » would come before « 9 » (answer of the
+		// old site's slug.js).
+		const neufEtDix = [
+			{ id: 10, username: 'Ana', createdAt: '2024-01-01T00:00:00.000Z' },
+			{ id: 9, username: 'ana', createdAt: '2024-01-01T00:00:00.000Z' },
+		]
+		expect(slugs(neufEtDix)).toStrictEqual({ 9: 'ana', 10: 'ana-2' })
+		expect(slugs([...neufEtDix].reverse())).toStrictEqual({ 9: 'ana', 10: 'ana-2' })
 		const apres = [...avant, { id: 30, username: 'ana-2', createdAt: '2026-10-01T00:00:00.000Z' }]
 		expect(slugs(apres)).toStrictEqual({ 4: 'ana', 5: 'ana-2', 30: 'ana-2-2' })
 	})
@@ -171,7 +189,18 @@ describe('resoudreProfil (plans/02 U13, U61)', () => {
 })
 
 // The expected values of the fixture were computed by the old site's src/lib/slug.js (see its
-// « source » field), never by this port.
+// « source » field), never by this port. The old site neither holds nor runs this set: it is a
+// frozen snapshot of its answers.
+//
+// To compute it again while the old code exists, outside of this repository:
+// 1. extract the old code: `git show origin/main:src/lib/slug.js > slug.mjs`, in a temporary folder;
+// 2. under Node, on the `profils` of the fixture (id, username, createdAt), run attribuerSlugs:
+//    `slugAttendu` is the slug of each profile, `ordreDeCreation` the ids in the order returned;
+// 3. on each of its `segments`, run resoudreProfil(segment, tableDesSlugs(profils)): `id`, `slug`
+//    and `redirection` of the answer, or `id` and `slug` null when it answers null;
+// 4. replace the expected values, and write in `source` the commit of main and the last commit
+//    that changed slug.js.
+// Never with src/lib/slug.ts: the port would be compared to itself.
 describe('same slugs as the old site on a fictitious set (plans/01 §6.2)', () => {
 	const profils = jeu.profils.map(({ id, username, createdAt }) => ({ id, username, createdAt }))
 

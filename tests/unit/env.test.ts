@@ -1,5 +1,16 @@
 import { describe, expect, test } from 'bun:test'
-import { EnvError, isLocalDatabase, parseServerEnv, type RawEnv, SECRET_MIN_LENGTH, serverEnv } from '@/lib/env'
+import { readFileSync } from 'node:fs'
+import path from 'node:path'
+import {
+	EnvError,
+	isLocalDatabase,
+	parseServerEnv,
+	type RawEnv,
+	SECRET_MIN_LENGTH,
+	serverEnv,
+	versionEnv,
+} from '@/lib/env'
+import { deployedVersion } from '@/lib/version'
 
 // Made-up values only. The remote address ends in `.test`, a name that never resolves.
 const LOCAL_URI = 'postgres://banc:banc@127.0.0.1:5442/mymakeup_test'
@@ -192,6 +203,10 @@ describe('trusted origins: the site, its pre-production and this machine, each f
 	test.each([
 		'https://exemple.test',
 		'https://www.my-makeup.fr',
+		// The temporary address of the production application before the switch (plan 01 §4.9).
+		// Refused on purpose until the ticket that opens that address (185) adds it to
+		// DEPLOYED_ORIGINS and moves this case to the accepted ones.
+		'https://v3.my-makeup.fr',
 		'https://my-makeup.fr.exemple.test',
 		'https://preprod.my-makeup.fr.exemple.test',
 		'http://my-makeup.fr',
@@ -277,5 +292,53 @@ describe('next build needs no secret and no database', () => {
 	test('the list of trusted origins is never empty: for Payload, an empty list trusts every origin', () => {
 		for (const env of [building, { ...building, NEXT_PUBLIC_SITE_URL: 'https://exemple.test' }, valid])
 			expect(serverEnv(env).trustedOrigins.length).toBeGreaterThan(0)
+	})
+})
+
+// The reading behind /api/health: which variable gives the label, which one gives the commit.
+// What the label looks like is the business of src/lib/version.ts (tests/unit/version.test.ts).
+describe('the version of /api/health is read here and never checked', () => {
+	const BUILD_COMMIT = 'a'.repeat(40)
+	const RUNTIME_COMMIT = 'b'.repeat(40)
+
+	test('NEXT_PUBLIC_APP_VERSION is the label, SOURCE_COMMIT the commit', () => {
+		expect(versionEnv({ NEXT_PUBLIC_APP_VERSION: 'v3.1.0', SOURCE_COMMIT: RUNTIME_COMMIT })).toEqual({
+			buildVersion: 'v3.1.0',
+			commit: RUNTIME_COMMIT,
+		})
+	})
+
+	test('the commit frozen into the build wins over the one of the running container', () => {
+		const sources = versionEnv({ BUILD_SOURCE_COMMIT: BUILD_COMMIT, SOURCE_COMMIT: RUNTIME_COMMIT })
+
+		expect(sources.commit).toBe(BUILD_COMMIT)
+		expect(deployedVersion({ ...sources, packageVersion: '3.0.0' })).toBe('aaaaaaa')
+	})
+
+	test('a build that had no commit leaves an empty text: the commit of the container is read', () => {
+		// next.config.ts writes '' into BUILD_SOURCE_COMMIT when SOURCE_COMMIT was not given to the build.
+		const sources = versionEnv({ BUILD_SOURCE_COMMIT: '', SOURCE_COMMIT: RUNTIME_COMMIT })
+
+		expect(sources.commit).toBe(RUNTIME_COMMIT)
+		expect(deployedVersion({ ...sources, packageVersion: '3.0.0' })).toBe('bbbbbbb')
+	})
+
+	test('nothing set: nothing is made up, and the version falls back to package.json', () => {
+		expect(versionEnv({})).toEqual({ buildVersion: undefined, commit: undefined })
+		expect(deployedVersion({ ...versionEnv({}), packageVersion: '3.0.0' })).toBe('3.0.0')
+	})
+
+	test('no value is refused: a blank label and a commit that is not a sha are given as they are', () => {
+		expect(versionEnv({ NEXT_PUBLIC_APP_VERSION: '  ', SOURCE_COMMIT: 'pas un commit' })).toEqual({
+			buildVersion: '  ',
+			commit: 'pas un commit',
+		})
+	})
+
+	test('the health route reads them through this file, and reads the environment nowhere else', () => {
+		const route = readFileSync(path.resolve(import.meta.dir, '../../src/app/api/health/route.ts'), 'utf8')
+
+		expect(route).toContain('...versionEnv()')
+		expect(route).not.toContain('process.env')
 	})
 })
