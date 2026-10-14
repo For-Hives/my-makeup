@@ -100,6 +100,16 @@ describe('the Dockerfile is read instruction by instruction', () => {
 		expect(unknown).toEqual(['MAINTAINER quelqu’un'])
 	})
 
+	test('no declared name is dropped, whatever its case: the rules decide, not the reader', () => {
+		const { globalArgs, stages } = readDockerfile(
+			['ARG registre', 'FROM exemple/image:1', 'ARG npm_token Payload_Secret=x', 'ENV app_env=prod Autre=1'].join('\n')
+		)
+
+		expect(globalArgs).toEqual(['registre'])
+		expect(stages[0]?.args).toEqual(['npm_token', 'Payload_Secret'])
+		expect(stages[0]?.env).toEqual(['app_env', 'Autre'])
+	})
+
 	test('.dockerignore: comments and blank lines do not count', () => {
 		expect(dockerignoreRules('# tout\n*\n\n!src\n  !public  \n')).toEqual(['*', '!src', '!public'])
 	})

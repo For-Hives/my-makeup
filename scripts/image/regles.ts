@@ -42,8 +42,6 @@ const RUNTIME_ONLY_WITHOUT_EXAMPLE: readonly string[] = ['PAYLOAD_DROP_DATABASE'
 /** The path the health check of the image must ask. */
 export const HEALTH_PATH = '/api/health'
 
-const VARIABLE_NAME = /^[A-Z][A-Z0-9_]*$/
-
 /** True when the name says the variable is public: `NEXT_PUBLIC_*`, or the commit being built. */
 export function isPublicByName(name: string): boolean {
 	return name.startsWith('NEXT_PUBLIC_') || PUBLIC_WITHOUT_PREFIX.includes(name)
@@ -124,20 +122,22 @@ function jsonCommand(text: string): string[] | undefined {
 	}
 }
 
-/** `ARG A B=default` declares `A` and `B`. */
+/**
+ * `ARG A B=default` declares `A` and `B`. Every word is given back as it is written, in upper
+ * case or not: the rules refuse what they do not expect, the reader never drops a name.
+ */
 function declaredNames(rest: string): string[] {
 	return rest
 		.split(/\s+/)
+		.filter(Boolean)
 		.map(word => word.split('=')[0] ?? '')
-		.filter(name => VARIABLE_NAME.test(name))
 }
 
-/** `ENV A=1 B=2` sets `A` and `B`; the old form `ENV A value` sets `A`. */
+/** `ENV A=1 B=2` sets `A` and `B`; the old form `ENV A value` sets `A`. No name is dropped here either. */
 function assignedNames(rest: string): string[] {
 	const words = rest.split(/\s+/).filter(Boolean)
 	const pairs = words.filter(word => word.includes('='))
-	const names = pairs.length > 0 ? pairs.map(word => word.slice(0, word.indexOf('='))) : words.slice(0, 1)
-	return names.filter(name => VARIABLE_NAME.test(name))
+	return pairs.length > 0 ? pairs.map(word => word.slice(0, word.indexOf('='))) : words.slice(0, 1)
 }
 
 function stageFrom(rest: string): DockerfileStage {
