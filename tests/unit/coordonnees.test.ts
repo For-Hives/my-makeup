@@ -44,6 +44,32 @@ describe('Ce que le serveur accepte, avec les messages de l’ancien site', () =
 			"L'URL ne doit pas dépasser 200 caractères."
 		)
 	})
+
+	test.each([
+		['https', 'https://example.test/une-page'],
+		['http', 'http://example.test'],
+		['http en majuscules', 'HTTPS://EXAMPLE.TEST/PAGE'],
+		['sans protocole, un pseudo', '@un_pseudo'],
+		['sans protocole, un domaine', 'www.example.test/une-page'],
+		['un texte libre avec deux-points', 'Instagram : un_pseudo'],
+		['une adresse relative au protocole', '//example.test/une-page'],
+	])('un lien en http, en https ou sans protocole passe (%s)', (_cas, lien) => {
+		expect(validerLienDeReseau(lien)).toBe(true)
+	})
+
+	test.each([
+		['javascript', 'javascript:alert(document.cookie)'],
+		['javascript en majuscules', 'JavaScript:alert(1)'],
+		['javascript précédé d’espaces', '  javascript:alert(1)'],
+		['javascript coupé par une tabulation', 'java\tscript:alert(1)'],
+		['data', 'data:text/html,<script>alert(1)</script>'],
+		['vbscript', 'vbscript:msgbox(1)'],
+		['file', 'file:///etc/passwd'],
+		['mailto', 'mailto:contact@example.test'],
+	])('un lien qui nomme un autre protocole est refusé en français (%s)', (_cas, lien) => {
+		expect(validerLienDeReseau(lien)).toBe(MESSAGES_DES_COORDONNEES.lienSansProtocoleWeb)
+		expect(MESSAGES_DES_COORDONNEES.lienSansProtocoleWeb).toBe('Ce lien doit commencer par http:// ou https://.')
+	})
 })
 
 describe('La trace du consentement : posée par le serveur', () => {

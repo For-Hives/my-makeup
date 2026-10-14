@@ -45,6 +45,15 @@ async function stocke(id: number): Promise<Profil> {
 /** Everything that says how to reach her, or that she chose to be reached. */
 const FERME = ['coordonnees', 'contactPublic', 'consentiLe', 'sourceConsentement']
 
+/**
+ * The messages of the fields a 400 refuses, in French. Payload wraps them in a general message of its
+ * own, in English (« The following field is invalid: … »): Payload's own language is still the default.
+ */
+const messagesDesChamps = (corps: unknown): string[] =>
+	(corps as { errors: { data?: { errors?: { message: string }[] } }[] }).errors
+		.flatMap(({ data }) => data?.errors ?? [])
+		.map(({ message }) => message)
+
 describe('Lecture REST anonyme : réseaux lus, coordonnées absentes même avec contactPublic vrai (I01)', () => {
 	test('lue seule et en liste, la réponse a les réseaux et rien des coordonnées', async () => {
 		const { id } = await maquilleusePubliee(true)
@@ -173,8 +182,39 @@ describe('Téléphone de plus de 20 caractères ou email mal formé : refus en f
 		})
 
 		expect(statut).toBe(400)
-		const erreurs = (corps as { errors: { data?: { errors?: { message: string; path: string }[] } }[] }).errors
-		expect(erreurs.flatMap(({ data }) => data?.errors ?? []).map(({ message }) => message)).toEqual([message])
+		expect(messagesDesChamps(corps)).toEqual([message])
 		expect((await stocke(id)).coordonnees).toEqual(COORDONNEES)
+	})
+})
+
+describe('Un lien de réseau ne nomme que http ou https : la page publique en fait un lien', () => {
+	test.each([
+		['instagram', 'javascript:alert(document.cookie)'],
+		['siteWeb', 'data:text/html,<script>alert(1)</script>'],
+		['facebook', ' JavaScript:alert(1)'],
+	])('%s = %s : 400, le message du champ, rien d’écrit', async (reseau, lien) => {
+		const { compte, id } = await maquilleusePubliee(false)
+
+		const { statut, corps } = await appelerRest('PATCH', `/api/profils/${id}`, {
+			enTetes: compte.session.enTetes,
+			corps: { reseaux: { ...RESEAUX, [reseau]: lien } },
+		})
+
+		expect(statut).toBe(400)
+		expect(messagesDesChamps(corps)).toEqual(['Ce lien doit commencer par http:// ou https://.'])
+		expect((await stocke(id)).reseaux).toEqual(RESEAUX)
+	})
+
+	test('un lien sans protocole, comme un pseudo, reste accepté', async () => {
+		const { compte, id } = await maquilleusePubliee(false)
+		const reseaux = { ...RESEAUX, instagram: '@pseudo_fictif', siteWeb: 'www.example.test' }
+
+		const { statut } = await appelerRest('PATCH', `/api/profils/${id}`, {
+			enTetes: compte.session.enTetes,
+			corps: { reseaux },
+		})
+
+		expect(statut).toBe(200)
+		expect((await stocke(id)).reseaux).toEqual(reseaux)
 	})
 })

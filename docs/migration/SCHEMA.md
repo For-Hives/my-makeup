@@ -251,6 +251,8 @@ Table `components_makeupartists_networks`, 101 lignes. Composant simple : une li
 | `phone` | `string`, 20 caractères au plus | `profils.coordonnees.telephone` (`text`, fermé au public) | Repris tel quel. Jamais écrit dans un rapport. S'il est rempli, `contactPublic` passe à vrai (§9). |
 | `email` | `string`, 200 caractères au plus | `profils.coordonnees.email` (`email`, fermé au public) | Repris tel quel. C'est l'email de contact du profil, pas celui du compte. Jamais écrit dans un rapport. S'il est rempli, `contactPublic` passe à vrai (§9). |
 
+Un lien de `profils.reseaux` qui nomme un protocole autre que `http` ou `https` (`javascript:`, `data:`…) est refusé à toute écriture, import compris : la page publique en fait un lien (registre des changements voulus, `liens-reseaux-web`). Un lien sans protocole, comme `@pseudo`, est repris tel quel.
+
 ### 6.6 Prestation : `makeupartists.service-offers` → `profils.prestations`
 
 Table `components_makeupartists_service_offers`, 118 lignes.

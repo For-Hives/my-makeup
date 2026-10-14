@@ -6,8 +6,9 @@ import { z } from 'zod'
  *
  * The limits are those of the old API (Strapi): 200 characters for a link or an email, 20 for a
  * phone number. The messages are those of the profile form of the old site, word for word
- * (`ModalUpdateSocialMediaProfil.js`, branch main). Nothing else is checked: a value the old site
- * accepted stays valid, and the import never truncates nor corrects one in silence.
+ * (`ModalUpdateSocialMediaProfil.js`, branch main). One check is new: a link that names a
+ * protocol names `http` or `https` (registry, `liens-reseaux-web`). Nothing else is checked: a
+ * value the old site accepted stays valid, and the import never truncates nor corrects one in silence.
  */
 
 export const LONGUEUR_MAX_LIEN = 200
@@ -16,6 +17,8 @@ export const LONGUEUR_MAX_TELEPHONE = 20
 
 export const MESSAGES_DES_COORDONNEES = {
 	lienTropLong: "L'URL ne doit pas dépasser 200 caractères.",
+	/** New in the v3, not a text of the old site. */
+	lienSansProtocoleWeb: 'Ce lien doit commencer par http:// ou https://.',
 	emailInvalide: 'Veuillez entrer un email valide.',
 	emailTropLong: "L'email ne doit pas dépasser 200 caractères.",
 	telephoneTropLong: 'Le numéro de téléphone ne doit pas dépasser 20 caractères.',
@@ -26,10 +29,29 @@ type Valeur = string | null | undefined
 const vide = (valeur: Valeur): valeur is null | undefined | '' =>
 	valeur === null || valeur === undefined || valeur === ''
 
-/** A link to a network or a website: 200 characters at most. The signature of a Payload `validate`. */
+/** The only protocols a link of a public profile may name: a page of the web. */
+const PROTOCOLES_DU_WEB = new Set(['http:', 'https:'])
+
+/**
+ * True when the link names a protocol other than `http` or `https` (`javascript:`, `data:`…).
+ *
+ * The link is read by the URL parser of the platform, the one browsers follow: what it reads as an
+ * absolute address is what a browser opens from an `href`, spaces, tabs and capitals included. A
+ * link without a protocol (`@pseudo`, `www.example.test`) is not an absolute address: it passes.
+ */
+function nommeUnAutreProtocole(lien: string): boolean {
+	if (!URL.canParse(lien)) return false
+	return !PROTOCOLES_DU_WEB.has(new URL(lien).protocol)
+}
+
+/**
+ * A link to a network or a website: 200 characters at most, and no protocol but `http` or `https`,
+ * since the public profile makes it a link. The signature of a Payload `validate`.
+ */
 export function validerLienDeReseau(valeur: Valeur): true | string {
 	if (vide(valeur)) return true
-	return valeur.length <= LONGUEUR_MAX_LIEN ? true : MESSAGES_DES_COORDONNEES.lienTropLong
+	if (valeur.length > LONGUEUR_MAX_LIEN) return MESSAGES_DES_COORDONNEES.lienTropLong
+	return nommeUnAutreProtocole(valeur) ? MESSAGES_DES_COORDONNEES.lienSansProtocoleWeb : true
 }
 
 /** The phone number of contact: 20 characters at most, as on the old site. */
