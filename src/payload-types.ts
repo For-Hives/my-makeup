@@ -223,6 +223,24 @@ export interface Profil {
   nom?: string | null;
   nomArtiste?: string | null;
   specialite?: string | null;
+  /**
+   * Une commune de la liste officielle, avec son code INSEE. Jamais une adresse.
+   */
+  commune?: {
+    nom?: string | null;
+    codeInsee?: string | null;
+    /**
+     * Calculé depuis le code INSEE.
+     */
+    departement?: string | null;
+    latitude?: number | null;
+    longitude?: number | null;
+  };
+  rayonKm?: number | null;
+  /**
+   * Se déplace chez la cliente. Vide tant que la maquilleuse ne l’a pas dit.
+   */
+  aDomicile?: boolean | null;
   description?: string | null;
   disponible?: boolean | null;
   photoPrincipale?: (number | null) | Media;
@@ -570,6 +588,17 @@ export interface ProfilsSelect<T extends boolean = true> {
   nom?: T;
   nomArtiste?: T;
   specialite?: T;
+  commune?:
+    | T
+    | {
+        nom?: T;
+        codeInsee?: T;
+        departement?: T;
+        latitude?: T;
+        longitude?: T;
+      };
+  rayonKm?: T;
+  aDomicile?: T;
   description?: T;
   disponible?: T;
   photoPrincipale?: T;

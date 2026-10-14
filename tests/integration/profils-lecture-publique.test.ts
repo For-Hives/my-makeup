@@ -26,10 +26,12 @@ const RESERVE = {
 
 /**
  * What anyone but the owner and an admin reads of a published profile: its identity, its networks
- * (ticket 042), its photos (ticket 043), its lists (ticket 040), the badge of the search and Payload's dates. A new public field of the profile is
- * added here on purpose.
+ * (ticket 042), its photos (ticket 043), its lists (ticket 040), its zone (ticket 041), the badge of the search and Payload's
+ * dates. A new public field of the profile is added here on purpose.
  */
 const CLES_PUBLIQUES = [
+	'aDomicile',
+	'commune',
 	'competences',
 	'createdAt',
 	'description',
@@ -44,6 +46,7 @@ const CLES_PUBLIQUES = [
 	'photoPrincipale',
 	'prenom',
 	'prestations',
+	'rayonKm',
 	'reseaux',
 	'slug',
 	'specialite',

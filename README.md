@@ -96,6 +96,16 @@ Un profil porte cinq listes : les prestations, chacune avec ses options, les com
 
 Les tests : `tests/unit/listes-profil.test.ts` pour les règles, `tests/integration/profils-listes.test.ts` pour la collection, sur le banc de test.
 
+### Zone d'un profil
+
+La zone d'un profil est une commune de la liste officielle, un rayon d'action et « à domicile », partout en France. Elle n'a aucun champ pour une adresse postale. Les règles et leurs messages en français sont dans `src/lib/profil/zone.ts`, les champs dans `src/collections/profils/zone.ts` :
+
+- `commune` : son nom et son code INSEE, jamais l'un sans l'autre, et ses coordonnées si on les connaît. Elle s'envoie entière : ce qu'une requête n'en donne pas est vidé, jamais repris de la commune déjà enregistrée. Le serveur refuse une commune sans code INSEE, un code mal formé, une ville tapée en texte libre, une commune envoyée en liste, et un nom qui ressemble à une adresse (un numéro, un code postal, une virgule, « rue des Lilas »). Aucun nom de la liste officielle n'est refusé par cette règle : elle a été jouée sur toute la liste du 14/10/2026. Le code peut être celui d'un des 101 départements ou d'une des collectivités d'outre-mer de la liste officielle (975, 977, 978, 984, 986 à 989). Le serveur calcule lui-même le département depuis le code (« 74010 » donne « 74 », « 2A004 » donne « 2A », « 97701 » donne « 977 ») : une valeur envoyée pour lui est remplacée. `null` vide la commune.
+- `rayonKm` : de 0 à 200 km, en kilomètres entiers, ou vide. L'affichage garde sa propre borne de 1 000 km (`src/lib/format-zone.ts`), pour les valeurs de l'ancien site.
+- `aDomicile` : vide tant que la maquilleuse ne l'a pas dit.
+
+La zone suit la lecture de son profil, sans règle d'accès propre : qui lit un profil lit toute sa zone, code INSEE et coordonnées du centre de la commune compris, qui sont des données publiques de référence. Le public la lit donc avec les profils publiés. Que la commune existe vraiment dans la liste officielle, et que son nom soit celui de son code, le serveur ne le vérifie pas : l'espace maquilleuse et l'import la choisiront dans cette liste (tickets 123 et 063). Tests : `tests/unit/zone-profil.test.ts`, et sur le banc `tests/integration/profils-zone.test.ts`.
+
 ## Démarrer en local
 
 Il faut [bun](https://bun.sh) 1.3.14, Node 24 (`.nvmrc`), Docker avec Compose et `openssl`.

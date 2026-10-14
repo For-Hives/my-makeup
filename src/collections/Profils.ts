@@ -28,6 +28,7 @@ import { photosDeLaProprietaire, validerPhotosDuProfil } from '../lib/profil/pho
 import { validerSiret } from '../lib/profil/siret'
 import { LIBELLES_DES_STATUTS, STATUT_INITIAL, STATUTS_DU_PROFIL } from '../lib/profil/statut'
 import { premierSlugLibre, slugDeRepli, slugifier } from '../lib/slug'
+import { champsDeLaZone } from './profils/zone'
 import { CHAMPS_LISTES, identitesDesLignesAvantEcriture } from './profils-listes'
 
 /**
@@ -159,6 +160,8 @@ const INTERNE = { read: champAdminSeulement, create: champAdminSeulement, update
  *   verification, the SIRET, the internal note, the score and the badge by an admin only (I03,
  *   U55): what a makeup artist sends on them is ignored.
  * - Its lists keep their order and the identifier of each row (src/collections/profils-listes.ts).
+ * - Its zone is a commune with its INSEE code, a radius of 0 to 200 km and « à domicile », never a
+ *   postal address (src/collections/profils/zone.ts, ticket 041).
  */
 export const Profils: CollectionConfig<'profils'> = {
 	slug: 'profils',
@@ -197,6 +200,8 @@ export const Profils: CollectionConfig<'profils'> = {
 		{ name: 'nom', label: 'Nom', type: 'text', maxLength: 70 },
 		{ name: 'nomArtiste', label: 'Nom d’artiste', type: 'text', maxLength: 70 },
 		{ name: 'specialite', label: 'Spécialité', type: 'text', maxLength: 70 },
+		// Its commune, its radius and « à domicile », public with the profile (ticket 041).
+		...champsDeLaZone,
 		{ name: 'description', label: 'Description', type: 'textarea', maxLength: 2000 },
 		{ name: 'disponible', label: 'Disponible', type: 'checkbox', defaultValue: true },
 		// Its photos, media of its own account (ticket 043).
