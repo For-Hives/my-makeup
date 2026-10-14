@@ -26,7 +26,7 @@
 
 import { randomUUID } from 'node:crypto'
 import type { Payload } from 'payload'
-import { creerCompte, DOMAINE_DES_COMPTES, motDePasseAleatoire, type TypeDeCompte } from './fabrique-comptes'
+import { creerCompte, DOMAINE_DES_COMPTES, motDePasseAleatoire, type TypeAvecSession } from './fabrique-comptes'
 import { payloadDeTest } from './payload-test'
 import { appelerRest } from './rest'
 
@@ -35,18 +35,22 @@ export const VOIES = ['rest', 'locale'] as const
 export type Voie = (typeof VOIES)[number]
 
 /** Who sends the request. Each role but `anonyme` is an account of the cast. */
-export const ROLES = ['anonyme', 'admin', 'redaction'] as const
+export const ROLES = ['anonyme', 'admin', 'redaction', 'maquilleuse', 'autreMaquilleuse'] as const
 export type Role = (typeof ROLES)[number]
 type RoleAvecCompte = Exclude<Role, 'anonyme'>
 
 /** The type of account the factory makes for each role. */
-const TYPE_DU_ROLE: Record<RoleAvecCompte, TypeDeCompte> = {
+const TYPE_DU_ROLE: Record<RoleAvecCompte, TypeAvecSession> = {
 	admin: 'admin',
 	redaction: 'redaction',
+	/** « A »: the makeup artist who owns the documents a line names `maquilleuse`. */
+	maquilleuse: 'maquilleuse',
+	/** « B »: another makeup artist, who owns nothing of A's. */
+	autreMaquilleuse: 'maquilleuse',
 }
 
 /** The collections the matrix covers. */
-export const COLLECTIONS = ['admins'] as const
+export const COLLECTIONS = ['admins', 'pros'] as const
 export type CollectionDeLaMatrice = (typeof COLLECTIONS)[number]
 
 export type Operation = 'lister' | 'lire' | 'creer' | 'modifier' | 'supprimer'
@@ -81,6 +85,17 @@ export type Distribution = Record<Role, Acteur>
 /** A fresh address for each document a line creates or changes. */
 const adresse = (prefixe: string) => `${prefixe}-${randomUUID()}@${DOMAINE_DES_COMPTES}`
 
+/** A fresh made-up name. */
+const nom = (prefixe: string) => `${prefixe} ${randomUUID().slice(0, 8)}`
+
+/** The data of a makeup artist's account, address confirmed. */
+const compteDeMaquilleuse = (prefixe: string) => ({
+	email: adresse(prefixe),
+	password: motDePasseAleatoire(),
+	nom: nom('Maquilleuse'),
+	_verified: true,
+})
+
 /** What the matrix needs to know of a collection to play its lines. */
 interface Portrait {
 	/** The field a line changes when it names none, and a new value for it. */
@@ -103,6 +118,19 @@ const PORTRAITS: Record<CollectionDeLaMatrice, Portrait> = {
 				await payload.create({
 					collection: 'admins',
 					data: { email: adresse('jetable'), password: motDePasseAleatoire(), role: 'redaction' },
+				})
+			).id,
+	},
+	pros: {
+		champ: 'nom',
+		nouvelleValeur: () => nom('Renommée'),
+		donneesDeCreation: () => Promise.resolve(compteDeMaquilleuse('cree')),
+		jetable: async payload =>
+			(
+				await payload.create({
+					collection: 'pros',
+					data: compteDeMaquilleuse('jetable'),
+					disableVerificationEmail: true,
 				})
 			).id,
 	},

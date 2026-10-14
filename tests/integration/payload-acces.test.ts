@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
+import { viderLeCapteur } from '../outils/mailpit'
 import { type Distribution, distribuer, jouer, type Ligne, nommer, VOIES } from '../outils/matrice-acces'
 import { viderLaBase } from '../outils/payload-test'
 
@@ -48,6 +49,77 @@ const MATRICE: Ligne[] = [
 		attendu: 'autorise',
 	},
 	{ role: 'admin', collection: 'admins', operation: 'supprimer', document: 'redaction', attendu: 'autorise' },
+	// A makeup artist reaches no account of the admin panel (ticket 019).
+	{ role: 'maquilleuse', collection: 'admins', operation: 'lister', attendu: 'refuse' },
+	{ role: 'maquilleuse', collection: 'admins', operation: 'lire', document: 'admin', attendu: 'refuse' },
+	{ role: 'maquilleuse', collection: 'admins', operation: 'creer', attendu: 'refuse' },
+	{ role: 'maquilleuse', collection: 'admins', operation: 'modifier', document: 'admin', attendu: 'refuse' },
+	{ role: 'maquilleuse', collection: 'admins', operation: 'supprimer', document: 'admin', attendu: 'refuse' },
+
+	// pros (ticket 019): a makeup artist reads and changes her own account only (U57, I06), never
+	// its reserved fields; `admin` reaches every account; nobody else reaches any.
+	{ role: 'anonyme', collection: 'pros', operation: 'lister', attendu: 'refuse' },
+	{ role: 'anonyme', collection: 'pros', operation: 'lire', document: 'maquilleuse', attendu: 'refuse' },
+	{ role: 'anonyme', collection: 'pros', operation: 'creer', attendu: 'refuse' },
+	{ role: 'anonyme', collection: 'pros', operation: 'modifier', document: 'maquilleuse', attendu: 'refuse' },
+	{ role: 'anonyme', collection: 'pros', operation: 'supprimer', document: 'maquilleuse', attendu: 'refuse' },
+	{ role: 'maquilleuse', collection: 'pros', operation: 'lister', attendu: 'soi' },
+	{ role: 'maquilleuse', collection: 'pros', operation: 'lire', document: 'maquilleuse', attendu: 'autorise' },
+	{ role: 'maquilleuse', collection: 'pros', operation: 'lire', document: 'autreMaquilleuse', attendu: 'refuse' },
+	{ role: 'maquilleuse', collection: 'pros', operation: 'creer', attendu: 'refuse' },
+	{ role: 'maquilleuse', collection: 'pros', operation: 'modifier', document: 'maquilleuse', attendu: 'autorise' },
+	{ role: 'maquilleuse', collection: 'pros', operation: 'modifier', document: 'autreMaquilleuse', attendu: 'refuse' },
+	{ role: 'maquilleuse', collection: 'pros', operation: 'supprimer', document: 'maquilleuse', attendu: 'refuse' },
+	{ role: 'maquilleuse', collection: 'pros', operation: 'supprimer', document: 'autreMaquilleuse', attendu: 'refuse' },
+	...(
+		[
+			['bloque', true],
+			['_verified', false],
+			['legacyProvider', 'facebook'],
+			['strapiId', 999],
+		] as const
+	).map(
+		([champ, valeur]): Ligne => ({
+			role: 'maquilleuse',
+			collection: 'pros',
+			operation: 'modifier',
+			document: 'maquilleuse',
+			champ,
+			valeur,
+			attendu: 'ignore',
+		})
+	),
+	{ role: 'autreMaquilleuse', collection: 'pros', operation: 'lister', attendu: 'soi' },
+	{ role: 'autreMaquilleuse', collection: 'pros', operation: 'lire', document: 'maquilleuse', attendu: 'refuse' },
+	{ role: 'autreMaquilleuse', collection: 'pros', operation: 'modifier', document: 'maquilleuse', attendu: 'refuse' },
+	{ role: 'redaction', collection: 'pros', operation: 'lister', attendu: 'refuse' },
+	{ role: 'redaction', collection: 'pros', operation: 'lire', document: 'maquilleuse', attendu: 'refuse' },
+	{ role: 'redaction', collection: 'pros', operation: 'creer', attendu: 'refuse' },
+	{ role: 'redaction', collection: 'pros', operation: 'modifier', document: 'maquilleuse', attendu: 'refuse' },
+	{ role: 'redaction', collection: 'pros', operation: 'supprimer', document: 'maquilleuse', attendu: 'refuse' },
+	{ role: 'admin', collection: 'pros', operation: 'lister', attendu: 'tous' },
+	{ role: 'admin', collection: 'pros', operation: 'lire', document: 'maquilleuse', attendu: 'autorise' },
+	{ role: 'admin', collection: 'pros', operation: 'creer', attendu: 'autorise' },
+	{ role: 'admin', collection: 'pros', operation: 'modifier', document: 'maquilleuse', attendu: 'autorise' },
+	{ role: 'admin', collection: 'pros', operation: 'supprimer', document: 'maquilleuse', attendu: 'autorise' },
+	...(
+		[
+			['bloque', true, 'autorise'],
+			['_verified', false, 'autorise'],
+			['legacyProvider', 'facebook', 'ignore'],
+			['strapiId', 999, 'ignore'],
+		] as const
+	).map(
+		([champ, valeur, attendu]): Ligne => ({
+			role: 'admin',
+			collection: 'pros',
+			operation: 'modifier',
+			document: 'maquilleuse',
+			champ,
+			valeur,
+			attendu,
+		})
+	),
 ]
 
 let distribution: Distribution
@@ -56,7 +128,10 @@ beforeAll(async () => {
 	distribution = await distribuer()
 })
 
-afterAll(viderLaBase)
+// An account an admin creates through REST gets Payload's confirmation email: the mail catcher is emptied too.
+afterAll(async () => {
+	await Promise.all([viderLaBase(), viderLeCapteur()])
+})
 
 describe('La matrice d’accès, par l’API REST et par l’API locale avec les règles actives', () => {
 	for (const ligne of MATRICE)

@@ -3,6 +3,8 @@
  *
  * - `admins` opens the admin panel. Its role is `admin` (everything) or `redaction` (articles
  *   and talents only: it reads and changes its own account, nothing else of the accounts).
+ * - `pros` holds the accounts of the makeup artists. A makeup artist never enters the admin
+ *   panel; she reads and changes her own account.
  *
  * One rule per subject: the collections call these functions and never test a role themselves.
  * Every rule here has its lines in the access matrix (tests/integration/payload-acces.test.ts),
@@ -20,6 +22,7 @@ export type RoleAdmin = (typeof ROLES_ADMIN)[number]
 
 /** The collections of accounts. */
 export const COLLECTION_ADMINS = 'admins'
+export const COLLECTION_PROS = 'pros'
 
 type Utilisateur = PayloadRequest['user'] | undefined
 
@@ -29,6 +32,9 @@ export const estAdmin = (user: Utilisateur): boolean => user?.collection === COL
 /** An account of the admin panel with the role `redaction`: articles and talents only. */
 export const estRedaction = (user: Utilisateur): boolean =>
 	user?.collection === COLLECTION_ADMINS && user.role === 'redaction'
+
+/** The account of a makeup artist. */
+export const estMaquilleuse = (user: Utilisateur): boolean => user?.collection === COLLECTION_PROS
 
 /** Only the role `admin`, for a whole collection. */
 export const adminSeulement: Access = ({ req: { user } }) => estAdmin(user)
@@ -51,9 +57,10 @@ const soiMeme = (collection: string, user: Utilisateur): Where | false =>
  * The role `admin` reaches every account of the collection; any other account of the same
  * collection reaches its own document only; everyone else, nothing.
  *
- * On `admins`: a `redaction` account reads and changes itself only.
+ * On `admins`: a `redaction` account reads and changes itself only. On `pros`: a makeup artist
+ * reads and changes her own account only.
  */
 export const adminOuSoiMeme =
-	(collection: typeof COLLECTION_ADMINS): Access =>
+	(collection: typeof COLLECTION_ADMINS | typeof COLLECTION_PROS): Access =>
 	({ req: { user } }) =>
 		estAdmin(user) || soiMeme(collection, user)

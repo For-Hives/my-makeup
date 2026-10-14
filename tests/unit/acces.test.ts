@@ -1,7 +1,16 @@
 import { describe, expect, test } from 'bun:test'
 import type { PayloadRequest } from 'payload'
 import { Admins, DUREE_SESSION_ADMIN_S, premierCompteAdmin, sessionsFermees } from '@/collections/Admins'
-import { adminOuSoiMeme, adminSeulement, estAdmin, estRedaction, jamais } from '@/lib/acces'
+import { Pros, premierCompteFerme } from '@/collections/Pros'
+import {
+	adminOuSoiMeme,
+	adminSeulement,
+	champAdminSeulement,
+	estAdmin,
+	estMaquilleuse,
+	estRedaction,
+	jamais,
+} from '@/lib/acces'
 
 /**
  * The access rules, called as Payload calls them, without a database: who reaches what. The
@@ -19,6 +28,14 @@ const redaction = {
 } as unknown as Utilisateur
 /** An account of another collection with the same number as the admin: the collection decides, never the number. */
 const autreCollection = { id: 1, collection: 'pros', email: 'pro@example.test' } as unknown as Utilisateur
+/** « A », a makeup artist. */
+const maquilleuse = { id: 7, collection: 'pros', email: 'a@example.test' } as unknown as Utilisateur
+
+/** A field of a collection, by its name. */
+const champ = (fields: readonly unknown[], nom: string) =>
+	fields.find(f => typeof f === 'object' && f !== null && 'name' in f && f.name === nom) as
+		| { access?: Record<string, unknown>; hidden?: boolean; unique?: boolean; type?: string }
+		| undefined
 
 /** What an access rule receives: only the request, and only its account. */
 const appel = (user: Utilisateur | null) => ({ req: { user } as PayloadRequest })
@@ -27,6 +44,10 @@ describe('Les rôles', () => {
 	test('admin et redaction sont deux comptes de la collection admins', () => {
 		expect([admin, redaction, autreCollection, null].map(estAdmin)).toEqual([true, false, false, false])
 		expect([admin, redaction, autreCollection, null].map(estRedaction)).toEqual([false, true, false, false])
+	})
+
+	test('une maquilleuse est un compte de la collection pros', () => {
+		expect([admin, redaction, maquilleuse, null].map(estMaquilleuse)).toEqual([false, false, true, false])
 	})
 
 	test('un rôle inconnu n’ouvre rien', () => {
@@ -94,11 +115,67 @@ describe('La collection admins (ticket 018)', () => {
 	})
 })
 
+describe('La collection pros (ticket 019)', () => {
+	const regles = Pros.access ?? {}
+
+	test('lire et modifier : son seul compte pour une maquilleuse, tout pour admin, rien pour les autres (U57)', () => {
+		for (const regle of [regles.read, regles.update]) {
+			expect(regle?.(appel(maquilleuse) as never)).toEqual({ id: { equals: 7 } })
+			expect(regle?.(appel(admin) as never)).toBe(true)
+			expect(regle?.(appel(redaction) as never)).toBe(false)
+			expect(regle?.(appel(null) as never)).toBe(false)
+		}
+	})
+
+	test('créer, supprimer, déverrouiller : admin seulement ; personne n’ouvre le back-office par ce compte', () => {
+		for (const regle of [regles.create, regles.delete, regles.unlock]) expect(regle).toBe(adminSeulement)
+		expect([admin, redaction, maquilleuse, null].map(user => regles.admin?.(appel(user) as never))).toEqual([
+			false,
+			false,
+			false,
+			false,
+		])
+	})
+
+	test('le hash de l’ancien site n’est jamais lu ni écrit par une API, et Payload le retire de toute lecture (U57)', () => {
+		expect(champ(Pros.fields, 'legacyBcrypt')).toMatchObject({
+			type: 'text',
+			hidden: true,
+			access: { read: jamais, create: jamais, update: jamais },
+		})
+	})
+
+	test('bloqué et vérifié : admin seulement ; fournisseur d’origine et strapiId : jamais par une API', () => {
+		for (const nom of ['bloque', '_verified'])
+			expect(champ(Pros.fields, nom)?.access).toMatchObject({
+				create: champAdminSeulement,
+				update: champAdminSeulement,
+			})
+		for (const nom of ['legacyProvider', 'strapiId'])
+			expect(champ(Pros.fields, nom)?.access).toMatchObject({ create: jamais, update: jamais })
+		expect(champ(Pros.fields, 'strapiId')?.unique).toBe(true)
+	})
+
+	test('la confirmation de l’adresse est active dans le schéma lui-même : `_verified` existe', () => {
+		// `true` as written, `{}` once Payload has loaded the configuration: on either way.
+		const verify = typeof Pros.auth === 'object' ? Pros.auth.verify : undefined
+		expect(verify === true || (typeof verify === 'object' && verify !== null)).toBe(true)
+	})
+
+	test('l’écran du premier compte est fermé : la route refuse avant de rien créer', () => {
+		expect(premierCompteFerme).toMatchObject({ path: '/first-register', method: 'post' })
+		expect(() => premierCompteFerme.handler({ t: (cle: string) => cle } as never)).toThrow()
+		expect(Pros.endpoints).toContain(premierCompteFerme)
+	})
+})
+
 describe('Les règles réutilisables', () => {
 	test('adminOuSoiMeme compare la collection avant le numéro', () => {
 		const surAdmins = adminOuSoiMeme('admins')
 		// Same number as the admin, other collection: nothing.
 		expect(surAdmins(appel({ ...autreCollection, id: 2 } as unknown as Utilisateur) as never)).toBe(false)
 		expect(surAdmins(appel(redaction) as never)).toEqual({ id: { equals: 2 } })
+		const surPros = adminOuSoiMeme('pros')
+		expect(surPros(appel({ ...redaction, id: 7 } as unknown as Utilisateur) as never)).toBe(false)
 	})
 })

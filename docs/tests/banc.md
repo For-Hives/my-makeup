@@ -248,6 +248,10 @@ Les types de compte sont déclarés dans `TYPES_DE_COMPTE` (`tests/outils/fabriq
 |---|---|---|
 | `admin` | `admins` | Un compte de l'administration avec le rôle `admin` : il peut tout |
 | `redaction` | `admins` | Un compte de l'administration avec le rôle `redaction` : articles et talents, et son propre compte |
+| `maquilleuse` | `pros` | Le compte d'une maquilleuse, adresse confirmée. Deux appels donnent « A » et « B » |
+| `maquilleuse-non-verifiee` | `pros` | Le compte d'une maquilleuse qui n'a pas confirmé son adresse. Il ne peut pas se connecter : `session` vaut `null` |
+
+Aucun mail ne part : la fabrique coupe le mail de confirmation que Payload enverrait à une nouvelle maquilleuse. Chaque maquilleuse reçoit un nom d'affichage fictif qui lui est propre.
 
 Une collection de comptes y ajoute son type par une déclaration :
 
@@ -275,7 +279,7 @@ Chaque ligne est jouée deux fois : par l'API REST, avec la session de la fabriq
 
 | Champ de la ligne | Valeurs |
 |---|---|
-| `role` | Qui agit : `anonyme`, ou un compte de la distribution (`admin`, `redaction`) |
+| `role` | Qui agit : `anonyme`, ou un compte de la distribution (`admin`, `redaction`, `maquilleuse` pour « A », `autreMaquilleuse` pour « B ») |
 | `collection` | La collection visée |
 | `operation` | `lister`, `lire`, `creer`, `modifier`, `supprimer` |
 | `document` | Le document visé, désigné par le rôle à qui il appartient (`lire`, `modifier`, `supprimer`) |
