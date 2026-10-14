@@ -115,6 +115,22 @@ describe('the Dockerfile is read instruction by instruction', () => {
 	})
 })
 
+describe('the production build is served two ways', () => {
+	test('the image runs the standalone server; `bun run start` keeps `next start`, and the README says its warning is expected', () => {
+		const scripts = (JSON.parse(read('package.json')) as { scripts: Record<string, string> }).scripts
+		const readme = read('README.md')
+		const row = readme.split('\n').find(line => line.startsWith('| `bun run start` |')) ?? ''
+
+		expect(read('next.config.ts')).toContain("output: 'standalone'")
+		expect(readDockerfile(read('Dockerfile')).stages.at(-1)?.command).toEqual(['node', 'server.js'])
+		// Next warns that `next start` « does not work » with a standalone build, and serves it all the same.
+		// Whoever changes this script changes the two sentences of the README with it.
+		expect(scripts.start).toBe('next start')
+		expect(row).toContain('`output: standalone` est attendu')
+		expect(readme.includes('"next start" does not work with "output: standalone" configuration')).toBe(true)
+	})
+})
+
 describe('what the image check reads in a built image', () => {
 	const image = {
 		user: 'node',

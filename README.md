@@ -190,6 +190,8 @@ bun --no-env-file test tests/unit/health.test.ts tests/unit/version.test.ts
 
 Le `Dockerfile` construit l'image que l'hébergeur déploie : le serveur autonome de Next.js (`output: 'standalone'`) sur Node 24, sans bun, sans sources et sans dépendances de développement.
 
+L'image lance ce serveur autonome (`node server.js`). Sur ton poste, `bun run start` sert le même build avec `next start` : Next affiche alors « "next start" does not work with "output: standalone" configuration ». Cet avertissement est attendu : le site est servi normalement. `bun run start` reste la commande de ton poste, avec ses options `-p` et `-H`.
+
 ```sh
 bun run image:build      # construit l'image my-makeup:local
 bun run image:controle   # la démarre contre une base jetable et vérifie le tableau ci-dessous
@@ -257,7 +259,7 @@ La CI ne lit aucun secret, n'a aucun filtre de chemins et ne tolère aucun éche
 |---|---|
 | `bun run dev` | Serveur de développement, sur `127.0.0.1` seulement |
 | `bun run build` | Build de production |
-| `bun run start` | Sert le build de production |
+| `bun run start` | Sert le build de production avec `next start`. L'avertissement de Next sur `output: standalone` est attendu (voir « Image Docker ») |
 | `bun run check` | Biome : format, lint et tri des imports, avec écriture des corrections sûres |
 | `bun run lint` | Biome : lint seul, sans écriture |
 | `bun run ci:biome` | Biome en lecture seule, pour la CI |
