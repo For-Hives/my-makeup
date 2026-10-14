@@ -130,15 +130,32 @@ describe('les textes sont ceux du site actuel', () => {
 describe('demanderUnLien avec un Payload de pacotille', () => {
 	const journal: { type: string; code: string }[] = []
 	const appels: string[] = []
-	const payload = (echec = false) =>
+	const envoyes: { a: string; texte: string; html: string }[] = []
+	const rendus: number[] = []
+	const payload = () =>
 		({
-			forgotPassword: async ({ data }: { data: { email: string } }) => {
-				appels.push(data.email)
-				if (echec) throw new Error(`le relais refuse ${data.email}`)
-				return data.email.startsWith('connue') ? 'jeton' : null
+			db: {
+				// The reservation: a known account is found, an unknown one is not.
+				updateOne: async ({ data, where }: { data: Record<string, unknown>; where: unknown }) => {
+					if (data.resetPasswordRequestedAt === null) {
+						rendus.push(1)
+						return null
+					}
+					const adresse = JSON.stringify(where).match(/"equals":"([^"]+)"/)?.[1] ?? ''
+					appels.push(adresse)
+					return adresse.startsWith('connue') ? { id: 7, email: adresse } : null
+				},
+			},
+			forgotPassword: async ({ disableEmail }: { disableEmail?: boolean }) => {
+				if (!disableEmail) throw new Error('Payload must not send the mail itself')
+				return 'a'.repeat(40)
 			},
 			logger: { error: () => {} },
 		}) as unknown as Payload
+	const envoyer = (echec: boolean) => async (e: { a: string; texte: string; html: string }) => {
+		if (echec) throw new Error(`le relais refuse ${e.a}`)
+		envoyes.push(e)
+	}
 	const lancer = async (
 		email: unknown,
 		options: { echec?: boolean; frein?: ReturnType<typeof creerFrein>; apres?: (t: () => Promise<void>) => void } = {}
@@ -146,7 +163,9 @@ describe('demanderUnLien avec un Payload de pacotille', () => {
 		const travaux: Promise<void>[] = []
 		const debut = Date.now()
 		const resultat = await demanderUnLien({
-			payload: payload(options.echec),
+			payload: payload(),
+			envoyer: envoyer(options.echec ?? false),
+			site: 'https://my-makeup.fr',
 			headers: new Headers({ 'x-forwarded-for': '203.0.113.7' }),
 			email,
 			apres: options.apres ?? (t => void travaux.push(t())),
@@ -162,6 +181,10 @@ describe('demanderUnLien avec un Payload de pacotille', () => {
 		const connue = await lancer('connue@example.test')
 		const inconnue = await lancer('inconnue@example.test')
 		expect(connue.resultat).toEqual(inconnue.resultat)
+		expect(envoyes.map(e => e.a)).toEqual(['connue@example.test'])
+		// The mail leaves by the one door, with its two parts.
+		expect(envoyes[0]?.texte).toContain('/auth/reinitialiser?code=')
+		expect(envoyes[0]?.html).toContain('/auth/reinitialiser?code=')
 		for (const { duree } of [connue, inconnue]) {
 			expect(duree).toBeGreaterThanOrEqual(PLANCHER_DE_LA_DEMANDE_MS - 20)
 			expect(duree).toBeLessThan(PLANCHER_DE_LA_DEMANDE_MS + 200)
@@ -198,6 +221,8 @@ describe('demanderUnLien avec un Payload de pacotille', () => {
 		const { resultat } = await lancer('connue@example.test', { echec: true })
 		expect(resultat).toEqual({ ok: true })
 		expect(journal).toEqual([{ type: 'mot-de-passe-oublie', code: 'service-indisponible' }])
+		// The place of the mail is given back, so that she can ask again at once.
+		expect(rendus.length).toBe(1)
 	})
 
 	test('la 11e demande est refusée avant tout travail, connue ou non', async () => {

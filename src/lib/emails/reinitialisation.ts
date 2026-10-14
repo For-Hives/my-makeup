@@ -2,7 +2,7 @@ import type { ContenuEmail } from './gabarit'
 
 /**
  * The mail of a forgotten password (ticket 085): what it says, and where its button leads.
- * Payload sends it itself when the request is made (src/collections/Pros.ts), with this content.
+ * The request sends it by the one door of the site (src/lib/auth/reinitialisation-payload.ts), with this content.
  *
  * The link carries the token, so the path is built here and nowhere else. It opens
  * `/auth/reinitialiser`, which keeps the token out of the address (src/proxy.ts).

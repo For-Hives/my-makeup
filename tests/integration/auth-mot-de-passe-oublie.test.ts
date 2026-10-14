@@ -5,6 +5,8 @@ import { ouvrirParMotDePasse } from '@/lib/auth/jeton'
 import { journalDe } from '@/lib/auth/journal'
 import { DUREE_DU_LIEN_MS, PLANCHER_DE_LA_DEMANDE_MS } from '@/lib/auth/mot-de-passe-oublie'
 import { demanderUnLien, lienEncoreValable, reinitialiserLeMotDePasse } from '@/lib/auth/reinitialisation-payload'
+import { envoiEmailDePayload } from '@/lib/emails/envoi'
+import { serverEnv } from '@/lib/env'
 import { creerCompte } from '../outils/fabrique-comptes'
 import { attendreLeMail, compterLesMails, mailsRecus, viderLeCapteur } from '../outils/mailpit'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
@@ -39,6 +41,8 @@ function demande(email: unknown, options: { frein?: ReturnType<typeof creerFrein
 			payload,
 			headers: options.headers ?? adresseCliente(),
 			email,
+			envoyer: envoiEmailDePayload(payload, serverEnv()),
+			site: SITE,
 			apres: travail => {
 				travaux.push(travail())
 			},
@@ -151,6 +155,33 @@ describe('I10 : la demande envoie un mail avec un lien d’une heure', () => {
 		await demande(compte.email)
 		const mail = await attendreLeMail({ pour: compte.email })
 		expect(mail.texte + mail.html).not.toContain(ANCIEN)
+	})
+
+	test('le mail part par le point d’envoi du site : une partie texte et une partie HTML, toutes deux avec le lien', async () => {
+		const compte = await compteConnu()
+		await demande(compte.email)
+		const mail = await attendreLeMail({ pour: compte.email })
+		expect(mail.texte).toContain('/auth/reinitialiser?code=')
+		expect(mail.html).toContain('/auth/reinitialiser?code=')
+	})
+
+	test('un seul mail par compte et par quinze secondes, la demande rapprochée répond pareil', async () => {
+		const compte = await compteConnu()
+		const premiere = await demande(compte.email)
+		const seconde = await demande(compte.email)
+		expect(seconde.resultat).toEqual(premiere.resultat)
+		await attendreLeMail({ pour: compte.email })
+		expect(await compterLesMails()).toBe(1)
+		// The window is over: the next request sends again.
+		const payload = await payloadDeTest()
+		await payload.db.updateOne({
+			collection: 'pros',
+			data: { resetPasswordRequestedAt: new Date(Date.now() - 16_000).toISOString() },
+			returning: false,
+			where: { id: { equals: compte.id } },
+		})
+		await demande(compte.email)
+		expect(await compterLesMails()).toBe(2)
 	})
 
 	test('l’adresse est lue sans tenir compte de la casse ni des espaces', async () => {
@@ -272,6 +303,26 @@ describe('085 : choisir un nouveau mot de passe', () => {
 		expect((await seConnecter(compte.email, NOUVEAU)).ok).toBe(true)
 		expect((await seConnecter(compte.email, 'un-autre-mot-de-passe')).ok).toBe(false)
 		expect((await ligne(compte.id))?.resetPasswordToken ?? null).toBeNull()
+	})
+
+	test('deux envois du même lien au même instant : un seul passe, l’autre est « plus valable »', async () => {
+		const compte = await compteConnu()
+		await demande(compte.email)
+		const jeton = await jetonDuMail(compte.email)
+
+		const [a, b] = await Promise.all([
+			reinit(jeton, 'premier-mot-de-passe-fictif'),
+			reinit(jeton, 'second-mot-de-passe-fictif'),
+		])
+
+		expect([a.ok, b.ok].sort()).toEqual([false, true])
+		const refuse = a.ok ? b : a
+		expect(refuse).toEqual({ ok: false, code: 'code-invalide' })
+		// Exactly one of the two passwords works.
+		const gagnant = a.ok ? 'premier-mot-de-passe-fictif' : 'second-mot-de-passe-fictif'
+		const perdant = a.ok ? 'second-mot-de-passe-fictif' : 'premier-mot-de-passe-fictif'
+		expect((await seConnecter(compte.email, gagnant)).ok).toBe(true)
+		expect((await seConnecter(compte.email, perdant)).ok).toBe(false)
 	})
 
 	test('un mot de passe trop court, trop long ou mal confirmé est refusé, et le lien reste bon', async () => {

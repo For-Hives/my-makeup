@@ -7,6 +7,8 @@ import { getPayload } from 'payload'
 import type { EtatDeLaDemande } from '@/components/auth/FormulaireMotDePasseOublie'
 import { journalDe } from '@/lib/auth/journal'
 import { demanderUnLien } from '@/lib/auth/reinitialisation-payload'
+import { envoiEmailDePayload } from '@/lib/emails/envoi'
+import { serverEnv } from '@/lib/env'
 
 /**
  * The first step of the forgotten password (ticket 085). It answers the same sentence for every
@@ -25,6 +27,8 @@ export async function demanderLeLien(_precedent: EtatDeLaDemande, formulaire: Fo
 		headers: entetes,
 		email: formulaire.get('email'),
 		apres: travail => after(travail),
+		envoyer: envoiEmailDePayload(payload, serverEnv()),
+		site: process.env.NEXT_PUBLIC_SITE_URL ?? origine ?? 'http://localhost',
 		journal: journalDe(payload),
 	})
 	return resultat.ok ? { envoyee: true } : { code: resultat.code }
