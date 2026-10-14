@@ -236,6 +236,30 @@ describe('Adresse publique = préfixe du document + nom de fichier, à la racine
 		expect(await lireUnObjet(`media/${racine}`)).toBeUndefined()
 	})
 
+	test('la route de fichier de Payload renvoie vers l’adresse publique, jamais vers le disque du serveur', async () => {
+		const { compte, principale } = await maquilleuseAvecPhotos('publie')
+		const [admin, autre] = await Promise.all([creerCompte('admin'), creerCompte('maquilleuse')])
+		const chemin = `/api/media/file/${principale.filename}`
+
+		// Her own photo, or any photo for admin: a redirection to its public address.
+		for (const lecteur of [compte, admin]) {
+			const { statut, enTetes } = await appelerRest('GET', chemin, { enTetes: lecteur.session.enTetes })
+			expect(statut).toBe(302)
+			expect(enTetes.get('location')).toBe(`${base()}/media/${principale.filename}`)
+		}
+		// With the prefix Payload accepts in the query: the same.
+		const avecPrefixe = await appelerRest('GET', `${chemin}?prefix=media`, { enTetes: admin.session.enTetes })
+		expect([avecPrefixe.statut, avecPrefixe.enTetes.get('location')]).toEqual([302, principale.url ?? ''])
+		// The route lists no media by name: refused to the public and to another makeup artist.
+		expect((await appelerRest('GET', chemin)).statut).toBe(403)
+		expect((await appelerRest('GET', chemin, { enTetes: autre.session.enTetes })).statut).toBe(403)
+		// A name no media has: not found. A prefix it does not have: refused by Payload itself.
+		expect((await appelerRest('GET', '/api/media/file/inconnue.png', { enTetes: admin.session.enTetes })).statut).toBe(
+			404
+		)
+		expect((await appelerRest('GET', `${chemin}?prefix=ailleurs`, { enTetes: admin.session.enTetes })).statut).toBe(403)
+	})
+
 	test('une maquilleuse ne choisit ni le préfixe ni le nom de l’objet de sa photo', async () => {
 		const a = await creerCompte('maquilleuse')
 

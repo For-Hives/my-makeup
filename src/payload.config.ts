@@ -3,10 +3,16 @@ import { fileURLToPath } from 'node:url'
 import { postgresAdapter } from '@payloadcms/db-postgres'
 import { nodemailerAdapter } from '@payloadcms/email-nodemailer'
 import { s3Storage } from '@payloadcms/storage-s3'
-import { buildConfig } from 'payload'
+import { buildConfig, type CollectionConfig } from 'payload'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import { Admins } from './collections/Admins'
-import { aucunEnvoiSansStockage, champsDuStockageFermes, Media } from './collections/Media'
+import {
+	aucunEnvoiSansStockage,
+	champsDuStockageFermes,
+	Media,
+	UPLOAD_DES_MEDIAS,
+	versLAdressePublique,
+} from './collections/Media'
 import { Profils } from './collections/Profils'
 import { Pros } from './collections/Pros'
 import { mediaBaseUrl, serverEnv } from './lib/env'
@@ -22,11 +28,17 @@ const env = serverEnv()
 // Where the photos are served from: the public origin of the bucket, or the simulator of the test bench.
 const baseDesMedias = mediaBaseUrl(process.env.R2_PUBLIC_URL, env.storage)
 
+// Payload's own route for the file of a media sends to its public address: no photo is on this disk.
+const mediaServie: CollectionConfig<'media'> = {
+	...Media,
+	upload: { ...UPLOAD_DES_MEDIAS, handlers: [versLAdressePublique(baseDesMedias)] },
+}
+
 // Without an object storage, the media collection keeps its fields but receives no photo.
-const media = env.storage
-	? Media
+const media: CollectionConfig<'media'> = env.storage
+	? mediaServie
 	: {
-			...Media,
+			...mediaServie,
 			hooks: { ...Media.hooks, beforeOperation: [...(Media.hooks?.beforeOperation ?? []), aucunEnvoiSansStockage] },
 		}
 

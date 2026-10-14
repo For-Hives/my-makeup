@@ -4,7 +4,10 @@ import {
 	type CollectionBeforeOperationHook,
 	type CollectionConfig,
 	type Field,
+	NotFound,
 	type Plugin,
+	type UploadConfig,
+	type Where,
 } from 'payload'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import {
@@ -16,6 +19,7 @@ import {
 	jamais,
 	lectureDesMedias,
 } from '../lib/acces'
+import { adresseDuMedia } from '../lib/medias'
 
 /**
  * Where the object of a media is and what it is: written by the server only, from the file it
@@ -63,6 +67,35 @@ export const aucunEnvoiSansStockage: CollectionBeforeOperationHook = ({ args, op
 	return args
 }
 
+/** A handler of Payload's own route for the file of a media. */
+type GestionnaireDeFichier = NonNullable<UploadConfig['handlers']>[number]
+
+/**
+ * Payload's own route for the file of a media, `/api/media/file/<name>`, answers by a redirection
+ * to the public address of the photo (`adresseDuMedia`, from `base`): no photo is ever on the disk
+ * of the server, and the address the site gives is the direct one anyway.
+ *
+ * Payload checks the reading first (`lectureDesMedias`, without an identifier): the public and
+ * `redaction` are refused, a makeup artist reaches her own media only, and Payload hands it here.
+ * For `admin` it looks for nothing: the media is found by its name, and its prefix when the query
+ * gives one. A name no media has is not found.
+ */
+export const versLAdressePublique =
+	(base: string): GestionnaireDeFichier =>
+	async (req, { doc, params: { filename, prefix } }) => {
+		const conditions: Where[] = [{ filename: { equals: filename } }]
+		if (prefix !== undefined) conditions.push({ prefix: { equals: prefix } })
+		const media = (doc ?? (await req.payload.db.findOne({ collection: 'media', req, where: { and: conditions } }))) as {
+			filename?: string | null
+			prefix?: string | null
+		} | null
+		if (!media?.filename) throw new NotFound(req.t)
+		return Response.redirect(adresseDuMedia(base, media.prefix, media.filename), 302)
+	}
+
+/** Nothing is ever written on the disk of the server: with a storage, the object goes there; without one, nowhere. */
+export const UPLOAD_DES_MEDIAS: UploadConfig = { disableLocalStorage: true }
+
 /**
  * The photos of the site (plan 01 §6.1; docs/migration/SCHEMA.md, §8). Each one is an object of
  * the storage (`@payloadcms/storage-s3`, set up in src/payload.config.ts), under its own prefix.
@@ -72,6 +105,8 @@ export const aucunEnvoiSansStockage: CollectionBeforeOperationHook = ({ args, op
  * - A makeup artist sends photos; the server makes her the owner (`owner`), whatever her request
  *   says. She changes and deletes her own media only; `admin` reaches every one.
  * - The owner, the identifier and the formats of the old site are not public.
+ * - Payload's route for the file sends to the public address (`versLAdressePublique`, added by
+ *   src/payload.config.ts, which knows the base of the photos).
  *
  * The types, the size, the unpredictable name and the derived sizes of a photo sent in the v3 are
  * the work of ticket 133; the trash for a photo that no longer serves, of ticket 045.
@@ -86,8 +121,7 @@ export const Media: CollectionConfig<'media'> = {
 		update: adminOuProprietaireDuMedia,
 		delete: adminOuProprietaireDuMedia,
 	},
-	// Nothing is ever written on the disk of the server: with a storage, the object goes there; without one, nowhere.
-	upload: { disableLocalStorage: true },
+	upload: UPLOAD_DES_MEDIAS,
 	hooks: {
 		beforeOperation: [coordonneesParLeServeur],
 		beforeChange: [proprietaireALEnvoi],

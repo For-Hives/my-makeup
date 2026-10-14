@@ -8,6 +8,7 @@ import {
 	coordonneesParLeServeur,
 	Media,
 	proprietaireALEnvoi,
+	versLAdressePublique,
 } from '@/collections/Media'
 import { CONTEXTE_SANS_PROFIL, consentementTrace, Profils } from '@/collections/Profils'
 import { compteSansProfilAvantSuppression, Pros, premierCompteFerme } from '@/collections/Pros'
@@ -400,6 +401,44 @@ describe('La collection media (ticket 043)', () => {
 				expect(appels).toEqual([])
 				expect([id, adminOuProprietaireDuMedia({ req: { user } as PayloadRequest, id } as never)]).toEqual([id, false])
 			}
+	})
+
+	test('la route de fichier de Payload : une redirection vers l’adresse publique, jamais le disque', async () => {
+		const base = 'https://photos.example.test'
+		const recherches: unknown[] = []
+		const requete = (trouve: unknown) =>
+			({
+				t: (cle: string) => cle,
+				payload: {
+					db: {
+						findOne: (options: { where: unknown }) => {
+							recherches.push(options.where)
+							return Promise.resolve(trouve)
+						},
+					},
+				},
+			}) as unknown as PayloadRequest
+		const gestionnaire = versLAdressePublique(base)
+		const servir = async (...args: Parameters<typeof gestionnaire>) => (await gestionnaire(...args)) as Response
+		const params = { collection: 'media', filename: 'photo.png' }
+
+		// Her own media, handed by Payload once the rule found it.
+		const sienne = await servir(requete(null), {
+			doc: { id: 3, prefix: 'media', filename: 'photo.png' } as never,
+			params,
+		})
+		expect([sienne.status, sienne.headers.get('location')]).toEqual([302, `${base}/media/photo.png`])
+		expect(recherches).toEqual([])
+		// For admin, Payload hands nothing: the media is looked for by its name, and its prefix when given.
+		const trouvee = await servir(requete({ id: 4, prefix: '', filename: 'photo.png' }), {
+			doc: undefined as never,
+			params: { ...params, prefix: '' },
+		})
+		expect(trouvee.headers.get('location')).toBe(`${base}/photo.png`)
+		expect(recherches).toEqual([{ and: [{ filename: { equals: 'photo.png' } }, { prefix: { equals: '' } }] }])
+		// A name no media has.
+		await expect(servir(requete(null), { doc: undefined as never, params })).rejects.toMatchObject({ status: 404 })
+		expect(Media.upload).toMatchObject({ disableLocalStorage: true })
 	})
 
 	test('envoyer : une maquilleuse ou admin ; modifier et supprimer : sa propriétaire ou admin', () => {

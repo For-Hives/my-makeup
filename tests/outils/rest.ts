@@ -20,6 +20,8 @@ export interface ReponseRest {
 	corps: unknown
 	/** The body as it was sent, to look for a value anywhere in it. */
 	texte: string
+	/** The headers of the response, such as the `Location` of a redirection, which is never followed. */
+	enTetes: Headers
 }
 
 export interface OptionsRest {
@@ -58,7 +60,12 @@ export async function appelerRest(
 	})
 	const reponse = await ROUTES[methode](requete, { params: Promise.resolve({ slug }) })
 	const texte = await reponse.text()
-	return { statut: reponse.status, corps: texte ? (JSON.parse(texte) as unknown) : null, texte }
+	return {
+		statut: reponse.status,
+		corps: texte ? (JSON.parse(texte) as unknown) : null,
+		texte,
+		enTetes: reponse.headers,
+	}
 }
 
 /** A form that sends a file the way Payload reads it: the file under `file`, the other fields as JSON under `_payload`. */
