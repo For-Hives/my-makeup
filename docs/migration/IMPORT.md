@@ -73,7 +73,7 @@ bun run migration:import --revue v.json           # écrit aussi la liste de rev
 
 ### Dans la préprod
 
-La préprod lance l'import elle-même, au démarrage, sur une base vide : elle pose la fausse base Strapi du banc à côté de sa base, puis l'importe en réel, avec la table de décision du banc ([`docs/preprod.md`](../preprod.md), ticket 027). L'import tourne alors dans le processus de l'application, sous Node : il lit la source par le client PostgreSQL de Payload (`scripts/migration/import/source-pg.ts`), en lecture seule comme avec bun. Son rapport, en nombres seulement, est écrit dans le journal de démarrage. Aucune vraie base Strapi n'est lue : `STRAPI_SOURCE_URI` ne sert pas là. La préprod n'a pas de stockage des photos : l'import n'y adopte aucune photo et ne sonde aucun objet, et le rapport liste chaque fichier « sans-stockage ».
+La préprod ne lance plus l'import au démarrage (ticket 053) : sur une base vide, elle charge le jeu fictif du banc ([`docs/preprod.md`](../preprod.md)). Le code qui posait la fausse base Strapi à côté de la sienne et l'importait en réel dans le processus de l'application, sous Node (`src/preprod/tranche.ts`, qui lit la source par le client PostgreSQL de Payload, `scripts/migration/import/source-pg.ts`), est gardé et testé : le ticket 183 le reprendra pour un import lancé à la demande, par un geste dans Coolify. Aucune vraie base Strapi n'est lue par la préprod : `STRAPI_SOURCE_URI` ne sert pas là.
 
 ## La table de décision
 

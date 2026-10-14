@@ -26,6 +26,7 @@ import type { VersionSources } from './version'
 /** What `process.env` gives: every variable is text, or missing. */
 export type RawEnv = Partial<
 	Record<
+		| 'APP_ENV'
 		| 'DATABASE_URI'
 		| 'EMAIL_FROM'
 		| 'GOOGLE_OIDC_ISSUER'
@@ -70,10 +71,16 @@ export type StorageEnv = {
 
 /**
  * What the pre-production does that no other environment does (ticket 027, docs/preprod.md): it
- * imports the fake Strapi source when it starts on an empty database, and empties its database
- * once for each new token of PREPROD_REMISE_A_ZERO.
+ * loads the fictional set when it starts on an empty database (ticket 053), and empties its
+ * database once for each new token of PREPROD_REMISE_A_ZERO.
  */
 export type PreprodEnv = {
+	/**
+	 * True when the environment says it is the pre-production (`APP_ENV=preprod`): the fictional set
+	 * is then loaded when the database is empty (ticket 053). Without it the start loads nothing,
+	 * and says so in its log.
+	 */
+	jeuFictif: boolean
 	/** The token of the reset asked for, or nothing: the database is kept. */
 	remiseAZero?: string
 }
@@ -116,6 +123,9 @@ export const DEPLOYED_ORIGINS: readonly string[] = ['https://my-makeup.fr', 'htt
 /** The address of the pre-production: the only one where the reset and the import at start may run. */
 export const PREPROD_ORIGIN = 'https://preprod.my-makeup.fr'
 
+/** The values of APP_ENV the application knows: the bench, the pre-production, the site. */
+const APP_ENVS: readonly string[] = ['test', 'preprod', 'prod']
+
 /**
  * A token of PREPROD_REMISE_A_ZERO: lower case letters, digits and hyphens, 8 to 64 characters,
  * such as « 2026-10-15-matin ». It is written into the database once the reset is done.
@@ -142,6 +152,8 @@ const ABSENT = 'absente'
 const DEFAULT_SENDER_NAME = 'My Makeup'
 
 const EXPECTED = {
+	APP_ENV:
+		'« test » sur le banc de test, « preprod » sur la préprod, « prod » sur le site en ligne, ou absente sur un poste',
 	DATABASE_URI: 'postgres://UTILISATEUR:MOT_DE_PASSE@HÔTE:PORT/BASE',
 	EMAIL_FROM: '« Nom <adresse@domaine> », ou une adresse seule',
 	GOOGLE_OIDC_ISSUER: `${GOOGLE_ISSUER}, ou sur ce poste l’adresse du faux Google du banc de test, comme http://127.0.0.1:7080, sans « / » final`,
@@ -410,6 +422,20 @@ function mailEnv(raw: RawEnv, problems: { variable: string; problem: string }[])
  */
 function preprodEnv(raw: RawEnv, problems: { variable: string; problem: string }[]): PreprodEnv | undefined {
 	const preprod = raw.NODE_ENV === 'production' && raw.NEXT_PUBLIC_SITE_URL === PREPROD_ORIGIN
+	// APP_ENV says where the application believes it runs; the fictional set reads it too (src/jeu-fictif/garde.ts).
+	const appEnv = raw.APP_ENV?.trim()
+	if (appEnv !== undefined && !APP_ENVS.includes(appEnv))
+		problems.push({ variable: 'APP_ENV', problem: `illisible. Attendu : ${EXPECTED.APP_ENV}.` })
+	else if (appEnv === 'preprod' && !preprod)
+		problems.push({
+			variable: 'APP_ENV',
+			problem: `refusée, car ce n’est pas la préprod. Attendu : ${EXPECTED.APP_ENV}.`,
+		})
+	else if (preprod && appEnv !== undefined && appEnv !== 'preprod')
+		problems.push({
+			variable: 'APP_ENV',
+			problem: `refusée, car cette application est servie depuis la préprod. Attendu : ${EXPECTED.APP_ENV}.`,
+		})
 	const jeton = raw.PREPROD_REMISE_A_ZERO?.trim()
 	if (jeton !== undefined && !preprod)
 		problems.push({
@@ -422,7 +448,7 @@ function preprodEnv(raw: RawEnv, problems: { variable: string; problem: string }
 			problem: `illisible. Attendu : ${EXPECTED.PREPROD_REMISE_A_ZERO}.`,
 		})
 	if (!preprod) return undefined
-	return jeton === undefined ? {} : { remiseAZero: jeton }
+	return { jeuFictif: appEnv === 'preprod', ...(jeton !== undefined && { remiseAZero: jeton }) }
 }
 
 const required = z.string({ error: ABSENT })
@@ -511,6 +537,7 @@ export function parseServerEnv(source: RawEnv): ServerEnv {
  */
 function processEnv(): RawEnv {
 	return {
+		APP_ENV: process.env.APP_ENV,
 		DATABASE_URI: process.env.DATABASE_URI,
 		EMAIL_FROM: process.env.EMAIL_FROM,
 		GOOGLE_OIDC_ISSUER: process.env.GOOGLE_OIDC_ISSUER,

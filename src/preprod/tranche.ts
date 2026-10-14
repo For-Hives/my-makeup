@@ -1,4 +1,8 @@
 /**
+ * NOT RUN AT START since ticket 053: the pre-production loads the fictional set instead
+ * (./jeu.ts). This import is kept, with its tests, for the import that ticket 183 will run on
+ * demand in the deployed container.
+ *
  * The first slice on the pre-production (ticket 027, docs/preprod.md): when the application starts
  * there on an empty database, it poses the fake Strapi source of the bench next to that database,
  * imports it, and the page of the fictional profile 21 is then served like any other.

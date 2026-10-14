@@ -52,7 +52,7 @@ Le reste :
 - `src/collections/` : les collections de Payload. `src/lib/acces.ts` : qui peut lire, créer, modifier ou supprimer quoi (voir « Accès »).
 - `src/services/public/` : la seule lecture publique des données. Une page publique y lit un profil, champ par champ, avec les règles d'accès d'une visiteuse : jamais une coordonnée, ni ce qu'ont écrit l'import ou un admin.
 - `scripts/migration/` : les outils de la migration, dont l'import des données de l'ancien site (voir `docs/migration/IMPORT.md`).
-- `src/preprod/` : ce que fait la préprod quand elle démarre, et elle seule : sur une base vide, elle pose la fausse base Strapi du banc à côté de sa base et l'importe ; un jeton de `PREPROD_REMISE_A_ZERO` la remet à zéro. `scripts/preprod/controle.ts` : le contrôle que la CI lance contre elle (voir [`docs/preprod.md`](docs/preprod.md)).
+- `src/preprod/` : ce que fait la préprod quand elle démarre, et elle seule : sur une base vide, elle charge le jeu fictif du banc (12 profils types, 3 talents, 3 articles) ; un jeton de `PREPROD_REMISE_A_ZERO` la remet à zéro. `scripts/preprod/controle.ts` : le contrôle que la CI lance contre elle (voir [`docs/preprod.md`](docs/preprod.md)).
 - `src/lib/env.ts` : les variables d'environnement, vérifiées au démarrage par `src/instrumentation.ts`.
 - `src/migrations/` : les migrations versionnées de la base.
 - `src/payload-types.ts` et `src/app/(payload)/admin/importMap.js` : fichiers générés par Payload, versionnés, jamais modifiés à la main.
@@ -63,7 +63,7 @@ Le reste :
 - `.env.exemple` : la liste des variables d'environnement, sans aucune valeur.
 - `tests/` : les tests. Un composant React s'y teste seul, sans navigateur : voir `docs/tests/composants.md`. Un service extérieur s'y simule, et aucun test n'appelle Internet : voir `docs/tests/http-sortant.md`.
 - `compose.test.yml` et `.env.test` : le banc de test local et son environnement factice, voir « Le banc de test ».
-- `src/jeu-fictif/` : le jeu fictif du banc de test, que la préprod chargera aussi : les 12 profils types, leurs maquilleuses fictives et leurs photos, trois talents et trois articles dont un brouillon, voir « Le banc de test ».
+- `src/jeu-fictif/` : le jeu fictif du banc de test, que la préprod charge aussi : les 12 profils types, leurs maquilleuses fictives et leurs photos, trois talents et trois articles dont un brouillon, voir « Le banc de test ».
 - `playwright.config.ts` : les essais de bout en bout, voir « Les essais de bout en bout ». Il ne règle rien lui-même : tout vient de `tests/outils/e2e.ts`.
 - `src/content/changelog.json` : les notes de version, en attente puis publiées ; `.github/workflows/release.yml` : la publication d'une version, qui écrit `.release/version.json` (voir « Notes de version et publication »).
 
@@ -234,6 +234,7 @@ L'application vérifie ses variables à chaque démarrage (`bun run dev`, `bun r
 | `DATABASE_URI` | Obligatoire. Une adresse `postgres://` avec un hôte et un nom de base. |
 | `PAYLOAD_SECRET` | Obligatoire. 32 caractères au moins. |
 | `NEXT_PUBLIC_SITE_URL` | Obligatoire en production (`bun run start`, image Docker), inutile pour `bun run dev`. Sans `/` final, et l'une de ces adresses seulement : `https://my-makeup.fr`, `https://preprod.my-makeup.fr`, ou une adresse de ce poste comme `http://localhost:3000`. |
+| `APP_ENV` | Facultative. Où l'application dit tourner : `test` (le banc de test, `.env.test`), `preprod` ou `prod`. Absente sur un poste de développement. Sur la préprod, `preprod` est ce qui lui fait charger le jeu fictif au démarrage ; `preprod` est refusée ailleurs que sur `https://preprod.my-makeup.fr` en production, et une autre valeur est refusée sur la préprod : l'application ne démarre pas. |
 | `PAYLOAD_DROP_DATABASE` | Refusée si la base n'est pas sur ce poste : avec `true`, Payload efface toutes les tables. |
 | `R2_PUBLIC_URL` | Facultative. L'adresse publique des photos : `https://`, un hôte, sans chemin ni `/` final. Absente, c'est celle des photos du site en ligne, sauf sur le banc de test (voir plus bas). |
 | `S3_ENDPOINT` | Facultative. L'API S3 du stockage d'objets des photos : `https://` et un hôte, ou sur ce poste `http://127.0.0.1:PORT`, sans chemin ni `/` final. Absente, aucune photo n'est reçue. Refusée si elle est sur ce poste alors que le site est déployé. |
@@ -243,7 +244,7 @@ L'application vérifie ses variables à chaque démarrage (`bun run dev`, `bun r
 | `SMTP_PORT` | Obligatoire dès que `SMTP_HOST` est réglée. Le port du relais, de 1 à 65535. |
 | `EMAIL_FROM` | Obligatoire dès que `SMTP_HOST` est réglée. L'expéditeur de tous les mails : `Nom <adresse@domaine>`, ou une adresse seule. |
 | `GOOGLE_OIDC_ISSUER` | Facultative. Le fournisseur auquel parle la connexion Google. Absente, c'est Google : `https://accounts.google.com`. Sur ce poste seulement, l'adresse du faux Google du banc de test, comme `http://127.0.0.1:7080`, sans `/` final. Refusée sur le site et sa préprod. |
-| `PREPROD_REMISE_A_ZERO` | Préprod seulement, jamais dans un `.env` local. Un jeton de 8 à 64 caractères (minuscules, chiffres, tirets), comme `2026-10-15-matin` : au démarrage suivant, avant ses migrations, la préprod efface toute sa base et sa fausse source, rejoue les migrations et réimporte la source, une fois par jeton, et seulement sur sa base `mymakeup_preprod`. Refusée partout ailleurs, le site d'abord : l'application ne démarre pas (voir [`docs/preprod.md`](docs/preprod.md)). |
+| `PREPROD_REMISE_A_ZERO` | Préprod seulement, jamais dans un `.env` local. Un jeton de 8 à 64 caractères (minuscules, chiffres, tirets), comme `2026-10-15-matin` : au démarrage suivant, avant ses migrations, la préprod efface toute sa base et sa fausse source, rejoue les migrations et recharge le jeu fictif, une fois par jeton, et seulement sur sa base `mymakeup_preprod`. Refusée partout ailleurs, le site d'abord : l'application ne démarre pas (voir [`docs/preprod.md`](docs/preprod.md)). |
 
 - `bun run build` est la seule exception : il ne vérifie rien, sauf `R2_PUBLIC_URL`, et passe sans secret ni base.
 - Le CLI de Payload (`bun run payload`, `payload:types`, `payload:importmap`, `payload:migrate`…) charge la même configuration : sans `DATABASE_URI` et `PAYLOAD_SECRET` valides, il s'arrête avec le même message. Le `.env` de l'étape 2 de « Démarrer en local » suffit.
