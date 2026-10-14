@@ -1379,3 +1379,29 @@ describe('C07: Playwright cannot point at production, and the CI cannot skip tes
 		}, 30_000)
 	})
 })
+
+describe('Ticket 137: the reconciliation of the storage and the database runs after the journeys', () => {
+	const etapes = (workflow: Workflow) => workflow.jobs.e2e?.steps ?? []
+	const indexDe = (workflow: Workflow, morceau: string) =>
+		etapes(workflow).findIndex(etape => etape.run?.includes(morceau))
+
+	test('the e2e job runs `banc:rapprocher` right after the end-to-end tests, and the aggregator waits for that job', () => {
+		const essais = indexDe(ci, 'bun run test:e2e')
+		expect(essais).toBeGreaterThan(-1)
+		expect(indexDe(ci, 'bun run banc:rapprocher')).toBeGreaterThan(essais)
+		expect(ci.jobs[AGGREGATOR]?.needs).toContain('e2e')
+	})
+
+	test('red on a CI that drops the step', () => {
+		const sansEtape = brokenCi('        run: bun run banc:rapprocher --hors-import\n', '        run: echo rien\n')
+		expect(indexDe(sansEtape, 'bun run banc:rapprocher')).toBe(-1)
+	})
+
+	test('red on a step that tolerates a failure: C01 finds it', () => {
+		const tolerante = brokenCi(
+			'        run: bun run banc:rapprocher --hors-import\n',
+			'        continue-on-error: true\n        run: bun run banc:rapprocher --hors-import\n'
+		)
+		expect(toleratedFailures([tolerante]).length).toBeGreaterThan(0)
+	})
+})
