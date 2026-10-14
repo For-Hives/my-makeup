@@ -19,6 +19,7 @@ import { Profils } from './collections/Profils'
 import { Pros } from './collections/Pros'
 import { Talents } from './collections/Talents'
 import { mediaBaseUrl, serverEnv } from './lib/env'
+import { LANGUE_DE_PAYLOAD } from './lib/langue-payload'
 import { adresseDuMedia, PREFIXE_DES_ENVOIS } from './lib/medias'
 import { requetesBornees } from './lib/requete-bornee'
 import { stockageS3 } from './lib/stockage'
@@ -90,6 +91,9 @@ export default buildConfig({
 		: undefined,
 	// REST and the Local API are the only ways in. The two GraphQL routes answer 404 by themselves.
 	graphQL: { disable: true },
+	// Payload speaks French only: its errors, its own messages and the admin panel, whatever
+	// language a request asks for (src/lib/langue-payload.ts, ticket 221).
+	i18n: LANGUE_DE_PAYLOAD,
 	// Once Payload has started and played its migrations: on the pre-production only, the import of
 	// the fake Strapi source into an empty database (ticket 027, docs/preprod.md). Anywhere else it
 	// does nothing.

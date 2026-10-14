@@ -7,8 +7,8 @@ import { creerCompte } from '../outils/fabrique-comptes'
  * a session made by the account factory is accepted by the application itself: same database,
  * same secret, same origin.
  *
- * The admin panel is written by Payload, in English for now: it is found by its addresses and
- * by the address of the account, never by a label.
+ * The admin panel is written by Payload: it is found by its addresses and by the address of the
+ * account, never by a label. Its language, French, is checked in administration-francais.spec.ts.
  */
 test.describe('Essai coquille : le site local, déjà connecté', { tag: '@mobile' }, () => {
 	test('l’accueil s’ouvre, puis l’administration avec une session de la fabrique', async ({ context, page }) => {

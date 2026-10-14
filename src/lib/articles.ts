@@ -70,14 +70,21 @@ export async function queDesImagesDeLaRedaction(ids: (number | string)[], req: P
  * the article would make public (`lectureDesMedias`, src/lib/acces.ts).
  *
  * Every entry of the gallery is looked at: one that names no identifier at all is refused too.
+ *
+ * The envelope of the refusal is in the language of the request, French (src/lib/langue-payload.ts,
+ * ticket 221), and names the field by its label, as Payload does for a field it refuses itself:
+ * « Le champ suivant n’est pas valide : Galerie ».
  */
-export const galerieDImages: FieldHook = async ({ value, req }) => {
+export const galerieDImages: FieldHook = async ({ field, value, req }) => {
 	const entrees = value === undefined || value === null ? [] : Array.isArray(value) ? value : [value]
 	const ids = photosNommees(entrees)
 	if (ids.length !== entrees.length || !(await queDesImagesDeLaRedaction(ids, req)))
-		throw new ValidationError({
-			collection: 'articles',
-			errors: [{ message: MESSAGE_GALERIE_IMAGES, path: 'galerie' }],
-		})
+		throw new ValidationError(
+			{
+				collection: 'articles',
+				errors: [{ label: field.label || undefined, message: MESSAGE_GALERIE_IMAGES, path: 'galerie' }],
+			},
+			req.t
+		)
 	return value
 }

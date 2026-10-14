@@ -247,9 +247,16 @@ describe('Contenu de 60 000 caractères relu à l’identique ; PDF refusé dans
 		const enTetes = redaction.session.enTetes
 
 		for (const chemin of [`/api/articles/${article.id}`, `/api/articles/${article.id}?draft=true`]) {
-			const { statut, texte } = await appelerRest('PATCH', chemin, { enTetes, corps: { galerie: [image.id, pdf.id] } })
+			const { statut, corps, texte } = await appelerRest('PATCH', chemin, {
+				enTetes,
+				corps: { galerie: [image.id, pdf.id] },
+			})
 			expect(statut).toBe(400)
 			expect(texte).toContain('La galerie d’un article ne prend que des images')
+			// The envelope is in French too (ticket 221), with a no-break space before the colon.
+			expect((corps as { errors: { message: string }[] }).errors[0]?.message).toBe(
+				'Le champ suivant n’est pas valide : Galerie'
+			)
 		}
 		const creation = await appelerRest('POST', '/api/articles?draft=true', {
 			enTetes,
