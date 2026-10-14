@@ -129,6 +129,44 @@ docker compose down -v   # arrête la base et efface les données
 
 Biome se lance par ces scripts ou par `bunx @biomejs/biome`, jamais par `npx biome` : c'est un paquet homonyme.
 
+## Tests
+
+Les tests tournent avec `bun test`, lancé par les scripts ci-dessus. Pour un seul fichier : `bun --no-env-file test tests/unit/garde-tests.test.ts`.
+
+### Où ranger un test
+
+| Dossier | Contenu |
+|---|---|
+| `tests/unit/` | Tests unitaires, en `*.test.ts` : ni base, ni réseau |
+| `tests/integration/` | Tests d'intégration, en `*.test.ts`, contre la pile de test locale |
+| `tests/e2e/` | Essais de bout en bout, en `*.spec.ts` |
+| `tests/sondes/` | Sondes du site en ligne, en lecture seule |
+| `tests/ci/` | Garde-fous de la CI |
+| `tests/fixtures/` | Données fictives et fichiers témoins |
+| `tests/outils/` | Outils partagés par les tests |
+
+Seuls `unit/`, `fixtures/` et `outils/` existent pour l'instant : chaque autre dossier arrive avec son premier test.
+
+### La garde d'environnement
+
+`bun test` charge `tests/outils/garde-environnement.ts` avant tout fichier de test (`bunfig.toml`, section `[test]`). Si l'environnement permet de toucher autre chose que le banc de test local, la garde arrête tout avant le premier test. Son message nomme la variable en cause et ne recopie jamais une adresse complète.
+
+| Variable | Règle |
+|---|---|
+| `APP_ENV` | `test` (ou rien), ou `preprod`. `prod` est toujours refusé, toute autre valeur aussi |
+| `DATABASE_URI` | Hôte local, et nom de base fini par `_test` |
+| `BASE_URL`, `NEXT_PUBLIC_SITE_URL` | Adresse locale. La préprod seulement avec `APP_ENV=preprod`. Jamais la prod |
+| `SMTP_HOST` | Hôte local : le capteur de mails |
+| `SMTP_*`, `EMAIL_*`, `MAILGUN_*`, `RESEND_*` | Aucun domaine en `my-makeup.fr` : un expéditeur de test écrit depuis `@example.test` |
+| `S3_ENDPOINT` | Hôte local |
+| `S3_BUCKET` | Nom fini par `-test` |
+
+Un hôte local est `localhost`, `127.0.0.1` ou `::1`, ou le nom du service dans le réseau de la pile de test : `postgres`, `mailpit`, `minio`. Une variable absente n'est pas vérifiée : les tests unitaires tournent sans aucune variable.
+
+`bun test` lit le fichier `.env` tout seul. Lancé sans `--no-env-file` sur un poste de développement, il y trouve la base `mymakeup_dev`, et la garde l'arrête. C'est voulu : les tests ne lisent jamais le `.env` de travail, et les scripts passent `--no-env-file`.
+
+Une nouvelle variable qui désigne un service extérieur s'ajoute à la garde, avec son cas dans `tests/unit/garde-tests.test.ts`.
+
 ## Licence
 
 Aucune licence n'est accordée pour l'instant : tous droits réservés.
