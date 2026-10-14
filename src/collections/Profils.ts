@@ -28,6 +28,7 @@ import { photosDeLaProprietaire, validerPhotosDuProfil } from '../lib/profil/pho
 import { validerSiret } from '../lib/profil/siret'
 import { LIBELLES_DES_STATUTS, STATUT_INITIAL, STATUTS_DU_PROFIL } from '../lib/profil/statut'
 import { premierSlugLibre, slugDeRepli, slugifier } from '../lib/slug'
+import { CHAMPS_LISTES, identitesDesLignesAvantEcriture } from './profils-listes'
 
 /**
  * What a creation of an account hands to Payload (`context`) when the account must stay without a
@@ -157,6 +158,7 @@ const INTERNE = { read: champAdminSeulement, create: champAdminSeulement, update
  *   the creation; `strapiId` and `legacyUsername` by the import only; the status, the reason, the
  *   verification, the SIRET, the internal note, the score and the badge by an admin only (I03,
  *   U55): what a makeup artist sends on them is ignored.
+ * - Its lists keep their order and the identifier of each row (src/collections/profils-listes.ts).
  */
 export const Profils: CollectionConfig<'profils'> = {
 	slug: 'profils',
@@ -169,7 +171,7 @@ export const Profils: CollectionConfig<'profils'> = {
 		delete: adminSeulement,
 	},
 	hooks: {
-		beforeChange: [slugALaCreation, consentementTrace],
+		beforeChange: [identitesDesLignesAvantEcriture, slugALaCreation, consentementTrace],
 		afterChange: [slugDeRepliApresCreation],
 	},
 	fields: [
@@ -266,6 +268,8 @@ export const Profils: CollectionConfig<'profils'> = {
 			access: { read: champDuProfilAdminOuProprietaire, create: jamais, update: jamais },
 			admin: { readOnly: true, description: 'Posée par le serveur, avec la date.' },
 		},
+		// Offers with their options, skills, languages, courses, experiences (ticket 040).
+		...CHAMPS_LISTES,
 		{
 			name: 'legacyUsername',
 			label: 'Nom d’utilisateur sur l’ancien site',
