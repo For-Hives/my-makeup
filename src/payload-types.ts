@@ -538,9 +538,11 @@ export interface AuthEvenement {
     | 'deconnexion-partout'
     | 'inscription'
     | 'confirmation'
+    | 'renvoi'
     | 'mot-de-passe-oublie'
-    | 'reinitialisation';
-  type: 'connexion' | 'deconnexion' | 'deconnexion-partout' | 'inscription' | 'confirmation' | 'blocage' | 'deblocage';
+    | 'reinitialisation'
+    | 'blocage'
+    | 'deblocage';
   code:
     | 'ok'
     | 'heritee'
@@ -553,13 +555,12 @@ export interface AuthEvenement {
     | 'email-deja-pris'
     | 'deja-confirme'
     | 'lien-invalide'
-    | 'inconnu'
-    | 'champ-piege';
     | 'email-non-verifie'
     | 'compte-refuse'
     | 'annule'
     | 'retour-invalide'
-    | 'inconnu';
+    | 'inconnu'
+    | 'champ-piege';
   methode?: ('mot-de-passe' | 'google') | null;
   dureeMs?: number | null;
   date: string;

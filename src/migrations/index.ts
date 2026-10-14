@@ -8,6 +8,7 @@ import * as migration_20261014_202952_auth_evenements_heritee from './20261014_2
 import * as migration_20261014_203454_auth_oubli_journal from './20261014_203454_auth_oubli_journal'
 import * as migration_20261014_203529_google_methode_du_journal from './20261014_203529_google_methode_du_journal'
 import * as migration_20261014_203606_inscription_antispam from './20261014_203606_inscription_antispam'
+import * as migration_20261014_215710_integration_vague4 from './20261014_215710_integration_vague4'
 
 export const migrations = [
 	{
@@ -59,5 +60,10 @@ export const migrations = [
 		up: migration_20261014_203606_inscription_antispam.up,
 		down: migration_20261014_203606_inscription_antispam.down,
 		name: '20261014_203606_inscription_antispam',
+	},
+	{
+		up: migration_20261014_215710_integration_vague4.up,
+		down: migration_20261014_215710_integration_vague4.down,
+		name: '20261014_215710_integration_vague4',
 	},
 ]
