@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useRef } from 'react'
 import {
+	CHAMP_PIEGE,
 	type ChampInscription,
 	type CodeEchecInscription,
 	type ErreursInscription,
@@ -28,13 +29,38 @@ function Erreur({ champ, erreurs }: { champ: ChampInscription; erreurs: ErreursI
 	)
 }
 
+const TROP_DE_TENTATIVES = MESSAGES_ECHEC_INSCRIPTION['trop-de-tentatives']
+
+/**
+ * Past 5 sign-ups an hour, the proxy answers 429 with the sentence above as its body (ticket 084), and
+ * the client script of Next throws that body as the message of the failed action. It is turned back
+ * into the state of a refusal, so the form shows it under its fields instead of an error page.
+ */
+export function avecLeRefusDuProxy(action: ActionDInscription): ActionDInscription {
+	return async (precedent, formulaire) => {
+		try {
+			return await action(precedent, formulaire)
+		} catch (erreur) {
+			if (!(erreur instanceof Error) || !erreur.message.includes(TROP_DE_TENTATIVES)) throw erreur
+			const texte = (cle: string) => {
+				const valeur = formulaire.get(cle)
+				return typeof valeur === 'string' ? valeur : ''
+			}
+			return {
+				echec: 'trop-de-tentatives',
+				valeurs: { nom: texte('nom'), email: texte('email'), cgu: formulaire.get('cgu') === 'on' },
+			}
+		}
+	}
+}
+
 /**
  * The sign-up form (ticket 082). The page does not block the submit: the server checks the same
  * rules and answers one message per field, under the field, so that the wording is the same with or
  * without scripts. A key held down sends one request, as in the sign-in form.
  */
 export function FormulaireDInscription({ action }: { action: ActionDInscription }) {
-	const [etat, envoyer, enCours] = useActionState(action, null)
+	const [etat, envoyer, enCours] = useActionState(avecLeRefusDuProxy(action), null)
 	const verrou = useRef(false)
 	const erreurs = etat?.erreurs
 
@@ -118,6 +144,13 @@ export function FormulaireDInscription({ action }: { action: ActionDInscription 
 				</span>
 			</label>
 			<Erreur champ="cgu" erreurs={erreurs} />
+			{/* The trap (ticket 084): out of sight and of the tab order, and hidden from screen readers. A person never fills it. */}
+			<div aria-hidden="true" className="absolute -left-[10000px] h-px w-px overflow-hidden">
+				<label htmlFor={CHAMP_PIEGE}>
+					Laisse ce champ vide
+					<input id={CHAMP_PIEGE} name={CHAMP_PIEGE} type="text" tabIndex={-1} autoComplete="off" defaultValue="" />
+				</label>
+			</div>
 			<div role="alert" data-testid="erreur-inscription">
 				{etat?.echec ? (
 					<p className="rounded-md bg-red-50 p-3 text-red-800 text-sm">{MESSAGES_ECHEC_INSCRIPTION[etat.echec]}</p>

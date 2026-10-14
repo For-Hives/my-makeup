@@ -532,7 +532,7 @@ export interface Article {
  */
 export interface AuthEvenement {
   id: number;
-  type: 'connexion' | 'deconnexion' | 'deconnexion-partout' | 'inscription' | 'confirmation';
+  type: 'connexion' | 'deconnexion' | 'deconnexion-partout' | 'inscription' | 'confirmation' | 'renvoi';
   code:
     | 'ok'
     | 'identifiants-invalides'
@@ -543,7 +543,8 @@ export interface AuthEvenement {
     | 'email-deja-pris'
     | 'deja-confirme'
     | 'lien-invalide'
-    | 'inconnu';
+    | 'inconnu'
+    | 'champ-piege';
   dureeMs?: number | null;
   date: string;
 }

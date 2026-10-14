@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test'
 import { violationsGraves } from '../outils/axe'
-import { attendreLeMail } from '../outils/mailpit'
+import { attendreLeMail, mailsRecus } from '../outils/mailpit'
 import { payloadDeTest } from '../outils/payload-test'
 
 /**
@@ -11,8 +11,11 @@ import { payloadDeTest } from '../outils/payload-test'
 
 const MOT_DE_PASSE = 'motdepasse-fictif'
 let compteur = 0
-test.beforeEach(({ context }) =>
-	context.setExtraHTTPHeaders({ 'x-forwarded-for': `192.0.2.${150 + (++compteur % 90)}` })
+// One address for each test, and none shared between the workers: the sign-up is braked at 5 an hour
+// by client address (ticket 084), and the bench application sees every browser under the same one.
+const nouvelleAdresse = (travailleur: number) => `198.51.${100 + travailleur}.${++compteur % 250}`
+test.beforeEach(({ context }, info) =>
+	context.setExtraHTTPHeaders({ 'x-forwarded-for': nouvelleAdresse(info.workerIndex) })
 )
 
 const adresse = () => `inscrite-${crypto.randomUUID()}@example.test`
@@ -34,6 +37,24 @@ async function seConnecter(page: Page, email: string, retour?: string) {
 	await page.getByLabel('Adresse email').fill(email)
 	await page.getByLabel('Mot de passe').fill(MOT_DE_PASSE)
 	await page.getByRole('button', { name: 'Se connecter' }).click()
+}
+
+const aleatoireEnLettres = () =>
+	crypto
+		.randomUUID()
+		.replace(/-/g, '')
+		.replace(/[0-9]/g, chiffre => 'ghijklmnop'.charAt(Number(chiffre)))
+
+/** An account made by the server, as the sign-up would, without the mail and without taking a place in the brakes. */
+async function creerUnCompte(email: string, options: { confirme: boolean }) {
+	const payload = await payloadDeTest()
+	await payload.create({
+		collection: 'pros',
+		// A name of its own: two accounts made at once with the same name would fight for the same slug.
+		data: { email, password: MOT_DE_PASSE, nom: `Compte ${aleatoireEnLettres()}`, _verified: options.confirme },
+		disableVerificationEmail: true,
+		overrideAccess: true,
+	})
 }
 
 const lienDuMail = async (email: string): Promise<string> => {
@@ -142,15 +163,212 @@ test.describe('U25 : les messages du formulaire', () => {
 		await expect(page.getByLabel('J’accepte les conditions générales')).toBeChecked()
 	})
 
-	test('une adresse déjà utilisée est dite, sans erreur de serveur', async ({ page }) => {
+	test('E03 : une adresse déjà utilisée mène au même mur, sans doublon, et la propriétaire reçoit « tu as déjà un compte »', async ({
+		page,
+	}) => {
 		const email = adresse()
-		await sInscrire(page, email)
-		await expect(page).toHaveURL(/\/auth\/verification-wall$/)
+		await creerUnCompte(email, { confirme: true })
+		const payload = await payloadDeTest()
+		const comptesDeLAdresse = () => payload.count({ collection: 'pros', where: { email: { equals: email } } })
+		expect((await comptesDeLAdresse()).totalDocs).toBe(1)
 
 		await sInscrire(page, email, 'Autre Personne')
 
-		await expect(page.getByTestId('erreur-inscription')).toContainText('Cette adresse email est déjà utilisée.')
+		// The same wall as for a new address, no message about the address, no second account.
+		await expect(page).toHaveURL(/\/auth\/verification-wall$/)
+		await expect(page.getByRole('heading', { name: 'Vérifie ton adresse email My Makeup' })).toBeVisible()
+		expect((await comptesDeLAdresse()).totalDocs).toBe(1)
+		expect((await payload.count({ collection: 'pros', where: { nom: { equals: 'Autre Personne' } } })).totalDocs).toBe(
+			0
+		)
+		await expect
+			.poll(async () => (await mailsRecus(email)).map(({ sujet }) => sujet).filter(s => s.includes('déjà un compte')))
+			.toHaveLength(1)
+	})
+
+	test('E03 : une adresse dont le compte attend sa confirmation reçoit son lien de nouveau', async ({ page }) => {
+		const email = adresse()
+		await creerUnCompte(email, { confirme: false })
+
+		await sInscrire(page, email)
+
+		await expect(page).toHaveURL(/\/auth\/verification-wall$/)
+		await lienDuMail(email)
+		expect((await mailsRecus(email)).every(({ sujet }) => !sujet.includes('déjà un compte'))).toBe(true)
+	})
+})
+
+test.describe('E04 : renvoyer l’email de confirmation depuis le mur', () => {
+	async function ouvrirLeMur(page: Page) {
+		await page.goto('/auth/verification-wall')
+		await page.waitForLoadState('networkidle')
+	}
+	async function demander(page: Page, email: string) {
+		await page.getByLabel('Adresse email de ton inscription').fill(email)
+		const bouton = page.getByRole('button', { name: 'Renvoyer l’email de confirmation' })
+		// Wait for the answer itself: the text of an earlier answer would pass the next check.
+		await Promise.all([
+			page.waitForResponse(
+				reponse => reponse.request().method() === 'POST' && reponse.url().includes('verification-wall')
+			),
+			bouton.click(),
+		])
+		await expect(bouton).toBeEnabled()
+	}
+
+	test('un renvoi repart avec le lien du compte, le suivant dans la minute est refusé ; une adresse inconnue reçoit la même réponse qu’une adresse connue', async ({
+		page,
+	}) => {
+		test.setTimeout(90_000)
+		const email = adresse()
+		await creerUnCompte(email, { confirme: false })
+		await ouvrirLeMur(page)
+
+		// The first resending leaves at once, with the link of the account; a second one within the
+		// minute is refused, in French.
+		await demander(page, email)
+		await expect(page.getByTestId('retour-renvoi')).toContainText('un email vient de repartir')
+		await lienDuMail(email)
+		await expect(page.getByLabel('Adresse email de ton inscription')).toHaveValue(email)
+		await demander(page, email)
+		await expect(page.getByTestId('retour-renvoi')).toContainText('Un seul email par minute')
+		expect((await mailsRecus(email)).length).toBe(1)
+
+		// An address with no account: the same answer as a real one, and nothing leaves.
+		const inconnue = adresse()
+		await ouvrirLeMur(page)
+		await demander(page, inconnue)
+		await expect(page.getByTestId('retour-renvoi')).toContainText('un email vient de repartir')
+		await demander(page, inconnue)
+		await expect(page.getByTestId('retour-renvoi')).toContainText('Un seul email par minute')
+		expect(await mailsRecus(inconnue)).toEqual([])
+	})
+
+	test('le renvoi demandé juste après une inscription : la même réponse que l’adresse ait un compte ou non', async ({
+		page,
+	}) => {
+		test.setTimeout(90_000)
+		const neuve = adresse()
+		const prise = adresse()
+		await creerUnCompte(prise, { confirme: true })
+		const reponses: string[] = []
+
+		for (const email of [neuve, prise]) {
+			await sInscrire(page, email)
+			await expect(page).toHaveURL(/\/auth\/verification-wall$/)
+			await page.waitForLoadState('networkidle')
+			await demander(page, email)
+			reponses.push(((await page.getByTestId('retour-renvoi').textContent()) ?? '').trim())
+		}
+
+		expect(reponses[0]).toContain('Un seul email par minute')
+		expect(reponses[1]).toBe(reponses[0])
+	})
+
+	test('une adresse mal écrite est dite telle', async ({ page }) => {
+		await ouvrirLeMur(page)
+		await demander(page, 'pas-une-adresse')
+		await expect(page.getByTestId('retour-renvoi')).toContainText('Cette adresse email n’est pas valide.')
+	})
+
+	test('le frein par adresse cliente : la onzième demande de l’heure est refusée, quelle que soit la boîte', async ({
+		page,
+	}) => {
+		test.setTimeout(120_000)
+		await ouvrirLeMur(page)
+		for (let i = 0; i < 10; i++) {
+			await demander(page, adresse())
+			await expect(page.getByTestId('retour-renvoi')).toContainText('un email vient de repartir')
+		}
+
+		await demander(page, adresse())
+
+		await expect(page.getByTestId('retour-renvoi')).toContainText('Trop de demandes depuis cette adresse')
+	})
+})
+
+test.describe('Contre les faux comptes (ticket 084)', () => {
+	test('un champ piège rempli : l’écran de réussite, aucun compte, aucun email, un refus au journal', async ({
+		page,
+	}) => {
+		const email = adresse()
+		const payload = await payloadDeTest()
+		const lignes = async () =>
+			(
+				await payload.find({
+					collection: 'auth-evenements',
+					depth: 0,
+					limit: 1000,
+					where: { code: { equals: 'champ-piege' } },
+				})
+			).totalDocs
+		const avant = await lignes()
+		await page.goto('/auth/signup')
+		await page.waitForLoadState('networkidle')
+		await page.getByLabel('Nom', { exact: true }).fill('Script Fictif')
+		await page.getByLabel('Adresse email').fill(email)
+		await page.getByLabel('Mot de passe').fill(MOT_DE_PASSE)
+		await page.getByLabel('J’accepte les conditions générales').check()
+		// A script fills everything it finds; a person never sees this field.
+		await page.locator('input[name="commentaire"]').fill('http://spam.example.test', { force: true })
+
+		await page.getByRole('button', { name: 'S’inscrire' }).click()
+
+		await expect(page).toHaveURL(/\/auth\/verification-wall$/)
+		expect((await payload.count({ collection: 'pros', where: { email: { equals: email } } })).totalDocs).toBe(0)
+		expect(await mailsRecus(email)).toEqual([])
+		expect(await lignes()).toBe(avant + 1)
+	})
+
+	test('le champ piège ne se voit pas et n’est pas dans l’ordre du clavier', async ({ page }) => {
+		await page.goto('/auth/signup')
+		const piege = page.locator('input[name="commentaire"]')
+		await expect(piege).toHaveAttribute('tabindex', '-1')
+		await expect(piege).not.toBeInViewport()
+	})
+
+	test('la sixième inscription de l’heure depuis la même adresse est refusée, en français ; une autre adresse passe', async ({
+		browser,
+	}) => {
+		test.setTimeout(120_000)
+		const adresseCliente = nouvelleAdresse(test.info().workerIndex)
+		const contexte = await browser.newContext({ extraHTTPHeaders: { 'x-forwarded-for': adresseCliente } })
+		const page = await contexte.newPage()
+		for (let i = 0; i < 5; i++) {
+			await sInscrire(page, adresse())
+			await expect(page).toHaveURL(/\/auth\/verification-wall$/)
+		}
+
+		const refus = page.waitForResponse(
+			reponse => reponse.request().method() === 'POST' && reponse.url().endsWith('/auth/signup')
+		)
+		await sInscrire(page, adresse())
+
+		// A real 429 with a Retry-After, stopped by the proxy before the action; the form says it in French.
+		const reponse = await refus
+		expect(reponse.status()).toBe(429)
+		expect(Number(reponse.headers()['retry-after'])).toBeGreaterThan(0)
+		await expect(page.getByTestId('erreur-inscription')).toContainText('Trop d’inscriptions depuis cette adresse')
 		await expect(page).toHaveURL(/\/auth\/signup$/)
+		// The refusal leaves one row in the journal, and no account.
+		const payload = await payloadDeTest()
+		expect(
+			(
+				await payload.count({
+					collection: 'auth-evenements',
+					where: { and: [{ type: { equals: 'inscription' } }, { code: { equals: 'trop-de-tentatives' } }] },
+				})
+			).totalDocs
+		).toBeGreaterThanOrEqual(1)
+		await contexte.close()
+
+		const autre = await browser.newContext({
+			extraHTTPHeaders: { 'x-forwarded-for': nouvelleAdresse(test.info().workerIndex) },
+		})
+		const page2 = await autre.newPage()
+		await sInscrire(page2, adresse())
+		await expect(page2).toHaveURL(/\/auth\/verification-wall$/)
+		await autre.close()
 	})
 })
 

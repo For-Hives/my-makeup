@@ -2,6 +2,7 @@ import { afterAll, describe, expect, test } from 'bun:test'
 import { confirmerLEmail } from '@/lib/auth/confirmation'
 import { connecter } from '@/lib/auth/connexion'
 import { creerFrein } from '@/lib/auth/frein'
+import type { FreinsDeBoite } from '@/lib/auth/freins-inscription'
 import { inscrire } from '@/lib/auth/inscription-payload'
 import { ouvrirParMotDePasse } from '@/lib/auth/jeton'
 import { journalDe } from '@/lib/auth/journal'
@@ -25,6 +26,11 @@ const MOT_DE_PASSE = 'aaaaaaaa'
 const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3100'
 const frein = creerFrein({ nom: 'essai-inscription', limite: 1000, fenetreMs: 60_000 })
 let n = 0
+// The sign-ups of this file are many and fast: no floor, and brakes by mailbox wide open unless a test says otherwise.
+const largesFreins = (): FreinsDeBoite => ({
+	parMinute: creerFrein({ nom: `essai-boite-minute-${crypto.randomUUID()}`, limite: 1000, fenetreMs: 60_000 }),
+	parJour: creerFrein({ nom: `essai-boite-jour-${crypto.randomUUID()}`, limite: 1000, fenetreMs: 60_000 }),
+})
 const adresse = () => new Headers({ 'x-forwarded-for': `192.0.2.${150 + (n++ % 90)}` })
 const courriel = (prefixe: string) => `${prefixe}-${crypto.randomUUID()}@example.test`
 
@@ -33,6 +39,8 @@ async function inscription(options: {
 	nom?: string
 	verifier?: boolean
 	envoyer?: Parameters<typeof inscrire>[0]['envoyer']
+	plancherMs?: number
+	freins?: FreinsDeBoite
 }) {
 	const payload = await payloadDeTest()
 	const email = options.email ?? courriel('nouvelle')
@@ -43,6 +51,8 @@ async function inscription(options: {
 		envoyer: options.envoyer ?? envoiEmailDePayload(payload, serverEnv()),
 		site: SITE,
 		journal: journalDe(payload),
+		plancherMs: options.plancherMs ?? 0,
+		freins: options.freins ?? largesFreins(),
 	})
 	return { resultat, email, payload }
 }
@@ -259,22 +269,6 @@ describe('le lien du mail : à usage unique', () => {
 })
 
 describe('quand l’inscription ne peut pas aboutir', () => {
-	test('une adresse déjà utilisée (même en majuscules) : un refus clair, pas de second compte, pas de profil de plus, pas de mail', async () => {
-		const { email } = await inscription({})
-		await attendreLeMail({ pour: email })
-		const payload = await payloadDeTest()
-		const comptes = (await payload.count({ collection: 'pros' })).totalDocs
-		const profils = (await payload.count({ collection: 'profils' })).totalDocs
-		const mails = (await mailsRecus(email)).length
-
-		const doublon = await inscription({ email: email.toUpperCase(), nom: 'Autre Nom' })
-
-		expect(doublon.resultat).toEqual({ ok: false, code: 'email-deja-pris' })
-		expect((await payload.count({ collection: 'pros' })).totalDocs).toBe(comptes)
-		expect((await payload.count({ collection: 'profils' })).totalDocs).toBe(profils)
-		expect((await mailsRecus(email)).length).toBe(mails)
-	})
-
 	test('le mail ne part pas : rien n’est gardé (ni compte, ni profil), et elle peut réessayer avec la même adresse', async () => {
 		const email = courriel('retente')
 		const payload = await payloadDeTest()
