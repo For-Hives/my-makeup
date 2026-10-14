@@ -1,35 +1,52 @@
 /**
- * The profiles, `makeup_artistes` → `profils`: the first slice of their import (ticket 026).
+ * The profiles, `makeup_artistes` → `profils` (docs/migration/SCHEMA.md, §5.2): their identity
+ * (tickets 026 and 059). Their lists and their photos come with their own tickets (060, 058…).
  *
  * - Taken: the profiles linked to an account the import takes. The link (`pro`), the slug, the
- *   names, the speciality and the description (docs/migration/SCHEMA.md, §5.2). The other fields
- *   of the profile, its lists and its photos come with their own tickets (059, 060, 058…).
+ *   username of the old site (`legacyUsername`, as it is), the names, the speciality, the
+ *   description, the availability, the score, the « Super maquilleuse » badge and the dates.
  * - The slug is the one of the old site: the rule ported as it is (src/lib/slug.ts), computed on
  *   every profile of the source, the oldest keeping a slug two usernames share (register,
  *   `slug-stocke`).
- * - Provisional rule of the status, until the server computes it at each save (tickets 044 and
- *   059): a profile entirely empty at the source is a draft (register, `profils-vides-brouillon`),
- *   any other one is published. « Entirely empty » is the single rule of src/lib/profil/completude.ts,
- *   read on the source as the old site reads it: main picture, city, speciality, offers, description,
- *   networks.
- * - A profile whose account the table of decisions sets aside stops the import before any write,
- *   listed by its identifier, until the table decides to leave it aside too (`profilsEcartes`,
- *   SCHEMA.md §11). Set aside, it is listed with the documents the table sets aside.
- * - A profile without a link to an account the source holds is left aside and listed. Ticket 059
- *   sets the rule of the 13 profiles of the spam, and stops the import on any other one.
+ * - An availability never set (`null`) is « available » (register, `disponibilite-par-defaut`):
+ *   the only exception to « null stays null » (SCHEMA.md, rule 2).
+ * - The city typed becomes a commune of the official list, with its INSEE code, never an address
+ *   (./communes.ts, ticket 063; register, `ville-en-commune`): the text typed is never copied.
+ * - The status is never written: the server computes it at every save from what the import writes
+ *   (ticket 044). An entirely empty profile is a draft (register, `profils-vides-brouillon`), any
+ *   other is published. The import leaves the choice of the status to the rule (`automatique`): a
+ *   choice fixed by an earlier run, which wrote the status, goes back to the rule. It compares the
+ *   status the server stored with the one the rule gives, and lists the profiles whose status is
+ *   not the one the source itself gives (`statutsDifferentsDeLaSource`): a section not taken yet,
+ *   or a city that gives no commune.
+ * - The 13 empty profiles the spam of 10/10/2026 left without an account (SCHEMA.md §4.1) are set
+ *   aside and counted, never taken (register, `profils-spam-non-repris`). Any other profile without
+ *   an account in the source stops the import before any write, until the table of decisions
+ *   leaves it aside (`profilsEcartes`).
+ * - A profile whose account the table of decisions sets aside stops the import too, until the
+ *   table leaves it aside with its account (SCHEMA.md §11).
  *
  * The networks hold the contact details of the profile: they are read into memory to tell whether
- * a contact channel exists, and nothing else of them is kept.
+ * a contact channel exists at the source, and nothing else of them is kept here.
  */
 
 import { type ChampsDuProfil, estEntierementVide, type ReseauxDuProfil } from '../../../src/lib/profil/completude'
-import type { StatutDuProfil } from '../../../src/lib/profil/statut'
+import { type DocumentDuProfil, etatDuProfil, statutApres } from '../../../src/lib/profil/etat'
+import { CHOIX_INITIAL, type StatutDuProfil } from '../../../src/lib/profil/statut'
 import { attribuerSlugs } from '../../../src/lib/slug'
+import type { CommuneAttendue } from './communes'
 import { REFERENCES } from './ecarts'
 import type { Adaptateur, Attendu, Ecart } from './moteur'
 import { iso, type Requete } from './source'
 
-/** A row of `makeup_artistes`, as this slice reads it. */
+/**
+ * The profiles the spam of 10/10/2026 left without an account, empty, never modified
+ * (docs/migration/SCHEMA.md §4.1; decision of 13/10/2026): set aside by the import itself. The
+ * list never grows on its own: any other profile without an account stops the import.
+ */
+export const PROFILS_DU_SPAM: readonly number[] = [67, 74, 76, 77, 78, 79, 87, 88, 94, 95, 96, 104, 108]
+
+/** A row of `makeup_artistes`, as the import reads it. */
 export interface LigneProfil {
 	id: number
 	first_name: string | null
@@ -39,7 +56,13 @@ export interface LigneProfil {
 	description: string | null
 	city: string | null
 	username: string | null
+	/** A `decimal` of Strapi: the driver gives it as text. */
+	score: string | number | null
+	available: boolean | null
+	/** The « Super maquilleuse » badge, not the account. */
+	pro: boolean | null
 	created_at: string
+	updated_at: string
 }
 
 /** What a profile of the source holds besides its row: its account, and what tells whether it is empty. */
@@ -55,7 +78,7 @@ export interface ProfilLu extends LigneProfil {
 const TYPE_PROFIL = 'api::makeup-artiste.makeup-artiste'
 
 const LECTURE_DES_PROFILS = `SELECT id, first_name, last_name, company_artist_name, speciality, description, city, username,
-	${iso('created_at')} AS created_at
+	score, available, pro, ${iso('created_at')} AS created_at, ${iso('updated_at')} AS updated_at
 	FROM makeup_artistes ORDER BY id`
 
 const LECTURE_DES_LIENS =
@@ -92,8 +115,11 @@ export async function lireLesProfils(requete: Requete): Promise<ProfilLu[]> {
 	}))
 }
 
-/** What the single rule of completeness reads of a profile of the source, under the names of the old site. */
-export const champsDuProfil = (profil: ProfilLu): ChampsDuProfil => ({
+/**
+ * What the single rule of completeness reads of a profile of the source, under the names of the
+ * old site, as the old site reads it: main picture, city, speciality, offers, description, networks.
+ */
+export const champsDeLaSource = (profil: ProfilLu): ChampsDuProfil => ({
 	first_name: profil.first_name,
 	last_name: profil.last_name,
 	company_artist_name: profil.company_artist_name,
@@ -105,74 +131,126 @@ export const champsDuProfil = (profil: ProfilLu): ChampsDuProfil => ({
 	network: profil.reseaux,
 })
 
-/** Provisional rule of the status (tickets 044 and 059): entirely empty, a draft; otherwise published. */
-export const statutProvisoire = (profil: ProfilLu): StatutDuProfil =>
-	estEntierementVide(champsDuProfil(profil)) ? 'brouillon' : 'publie'
+/** Whether the source itself says a profile is entirely empty: none of the six conditions. */
+export const videALaSource = (profil: ProfilLu): boolean => estEntierementVide(champsDeLaSource(profil))
+
+/**
+ * The status the server computes for a profile from what the import writes, by its own rule
+ * (src/lib/profil/etat.ts), the choice of the status left to the rule: a draft when entirely empty,
+ * published otherwise.
+ */
+export function statutCalcule(valeurs: Readonly<Record<string, unknown>>): StatutDuProfil {
+	const { entierementVide } = etatDuProfil(valeurs as DocumentDuProfil)
+	return statutApres({ apres: { statutChoisi: CHOIX_INITIAL }, entierementVide }).statut
+}
+
+/** A `decimal` of Strapi as a number, or `null`. */
+const nombre = (valeur: string | number | null): number | null => (valeur === null ? null : Number(valeur))
 
 export const ADAPTATEUR_PROFILS: Adaptateur = {
 	collection: 'profils',
 	champs: {
 		pro: 'relation',
 		slug: 'texte',
+		legacyUsername: 'texte',
 		prenom: 'texte',
 		nom: 'texte',
 		nomArtiste: 'texte',
 		specialite: 'texte',
 		description: 'texte',
+		commune: 'objet',
+		disponible: 'booleen',
+		score: 'nombre',
+		superMaquilleuse: 'booleen',
+		statutChoisi: 'texte',
 		statut: 'texte',
+		createdAt: 'date',
+		updatedAt: 'date',
 	},
+	// Computed by the server at every save (ticket 044): compared, never sent.
+	calcules: ['statut'],
 }
 
-/** What the table of decisions makes of the profiles whose account it sets aside (SCHEMA.md §11). */
-export interface ProfilsDesComptesEcartes {
-	/** Profiles a decision leaves aside with their account: not taken, listed. */
+/** The profiles the import does not take, and those that stop it, split by what the table says of them. */
+export interface ProfilsLaisses {
+	/** Profiles a decision leaves aside (`profilsEcartes`): with their account set aside, or without an account. */
 	ecartes: number[]
-	/** Profiles of an account set aside that no decision names: they stop the import before any write. */
-	sansDecision: number[]
-	/** Decisions that name no profile of an account set aside: without effect. */
+	/** The profiles of the spam (`PROFILS_DU_SPAM`) the source holds without an account: set aside, counted. */
+	spam: number[]
+	/** Profiles of an account a decision sets aside, that no decision names: they stop the import (SCHEMA.md §11). */
+	deComptesEcartes: number[]
+	/** Profiles without an account in the source, out of the list of the spam, that no decision names: they stop it. */
+	sansCompte: number[]
+	/** Decisions that name none of these profiles: without effect. */
 	sansObjet: number
 }
 
-/** The profiles linked to an account the decisions set aside, split by what the table says of them. */
-export function profilsDesComptesEcartes(
+/**
+ * The profiles left aside or stopping the import, given the accounts the source holds, the
+ * accounts a decision sets aside, and the profiles a decision leaves aside.
+ *
+ * - A profile without an account in the source (no link, or a link to an account the source no
+ *   longer holds) is set aside when it is in the list of the spam; otherwise it needs a decision.
+ * - A profile of an account a decision sets aside needs a decision.
+ * - A decision is without effect when it names none of these cases: a profile of the spam, of an
+ *   account that is taken, or that the source no longer holds.
+ */
+export function profilsLaisses(
 	profils: readonly ProfilLu[],
-	comptesEcartes: readonly number[],
-	profilsEcartes: readonly number[]
-): ProfilsDesComptesEcartes {
-	const comptes = new Set(comptesEcartes)
-	const decides = new Set(profilsEcartes)
-	const concernes = profils
-		.filter(({ compte }) => compte !== null && comptes.has(compte))
-		.map(({ id }) => id)
-		.sort((a, b) => a - b)
-	return {
-		ecartes: concernes.filter(id => decides.has(id)),
-		sansDecision: concernes.filter(id => !decides.has(id)),
-		sansObjet: [...decides].filter(id => !concernes.includes(id)).length,
+	{
+		comptesDeLaSource,
+		comptesEcartes,
+		profilsEcartes,
+	}: {
+		comptesDeLaSource: ReadonlySet<number>
+		comptesEcartes: readonly number[]
+		profilsEcartes: readonly number[]
 	}
+): ProfilsLaisses {
+	const ecartesParDecision = new Set(comptesEcartes)
+	const decides = new Set(profilsEcartes)
+	const spamListe = new Set(PROFILS_DU_SPAM)
+	const laisses: ProfilsLaisses = { ecartes: [], spam: [], deComptesEcartes: [], sansCompte: [], sansObjet: 0 }
+	const concernes = new Set<number>()
+	for (const { id, compte } of [...profils].sort((a, b) => a.id - b.id)) {
+		const sansCompte = compte === null || !comptesDeLaSource.has(compte)
+		if (sansCompte && spamListe.has(id)) laisses.spam.push(id)
+		else if (sansCompte || (compte !== null && ecartesParDecision.has(compte))) {
+			concernes.add(id)
+			if (decides.has(id)) laisses.ecartes.push(id)
+			else laisses[sansCompte ? 'sansCompte' : 'deComptesEcartes'].push(id)
+		}
+	}
+	laisses.sansObjet = [...decides].filter(id => !concernes.has(id)).length
+	return laisses
 }
 
 export interface ProfilsAttendus {
 	attendus: Attendu[]
-	/** Profiles the table of decisions sets aside with their account: not taken, listed. */
-	ecartes: number[]
-	/** Profiles without an account the import takes, and no decision: left aside, listed (ticket 059). */
-	sansCompte: number[]
-	/** How many profiles the run takes per status. */
+	/** How many profiles the run takes per status, as the server computes it. */
 	statuts: Record<string, number>
+	/**
+	 * Profiles whose status, as the server computes it from what the import writes, is not the one
+	 * the source gives (a draft when entirely empty at the source, published otherwise): a section
+	 * the import does not take yet, or a city that gives no commune.
+	 */
+	statutsDifferentsDeLaSource: number[]
 }
 
 /**
  * The profiles the target must hold. `comptes` gives, for each account the import takes, its
- * identifier in Payload, or `null` while it is still to be created (a dry run). `ecartes` names
- * the profiles the table of decisions sets aside.
+ * identifier in Payload, or `null` while it is still to be created (a dry run). `laisses` names
+ * the profiles the import does not take (`profilsLaisses`): a profile out of both is linked to an
+ * account the import takes, or the import stopped before. `communes` gives the commune of each
+ * profile taken (./communes.ts); a profile it does not name has none.
  */
 export function profilsAttendus(
 	profils: readonly ProfilLu[],
 	comptes: ReadonlyMap<number, number | null>,
-	ecartes: readonly number[] = []
+	laisses: Pick<ProfilsLaisses, 'ecartes' | 'spam'> = { ecartes: [], spam: [] },
+	communes: ReadonlyMap<number, CommuneAttendue | null> = new Map()
 ): ProfilsAttendus {
-	const decides = new Set(ecartes)
+	const nonPris = new Set([...laisses.ecartes, ...laisses.spam])
 	// The slugs of the old site, computed on every profile of the source, as the old site did.
 	const slugs = new Map(
 		attribuerSlugs(profils.map(({ id, username, created_at }) => ({ id, username, createdAt: created_at }))).map(
@@ -180,43 +258,41 @@ export function profilsAttendus(
 		)
 	)
 	const attendus: Attendu[] = []
-	const sansCompte: number[] = []
 	const statuts: Record<string, number> = {}
+	const statutsDifferentsDeLaSource: number[] = []
 	for (const profil of profils) {
-		if (decides.has(profil.id)) continue
-		if (profil.compte === null || !comptes.has(profil.compte)) {
-			sansCompte.push(profil.id)
-			continue
-		}
+		if (nonPris.has(profil.id)) continue
+		if (profil.compte === null || !comptes.has(profil.compte))
+			throw new Error(`Le profil ${profil.id} n’a pas de compte repris : l’import aurait dû s’arrêter avant.`)
 		const slug = slugs.get(profil.id) ?? null
-		const statut = statutProvisoire(profil)
+		const valeurs: Record<string, unknown> = {
+			strapiId: profil.id,
+			pro: comptes.get(profil.compte) ?? null,
+			slug,
+			legacyUsername: profil.username,
+			prenom: profil.first_name,
+			nom: profil.last_name,
+			nomArtiste: profil.company_artist_name,
+			specialite: profil.speciality,
+			description: profil.description,
+			commune: communes.get(profil.id) ?? null,
+			disponible: profil.available ?? true,
+			score: nombre(profil.score),
+			superMaquilleuse: profil.pro,
+			statutChoisi: CHOIX_INITIAL,
+			createdAt: profil.created_at,
+			updatedAt: profil.updated_at,
+		}
+		const statut = statutCalcule(valeurs)
+		valeurs.statut = statut
 		statuts[statut] = (statuts[statut] ?? 0) + 1
+		if ((statut === 'brouillon') !== videALaSource(profil)) statutsDifferentsDeLaSource.push(profil.id)
 		const ecarts: Ecart[] = []
 		if (slug !== profil.username) ecarts.push({ champ: 'slug', reference: REFERENCES.slugStocke })
+		if ((profil.city?.trim() ?? '') !== '') ecarts.push({ champ: 'commune', reference: REFERENCES.villeEnCommune })
+		if (profil.available === null) ecarts.push({ champ: 'disponible', reference: REFERENCES.disponibiliteParDefaut })
 		if (statut === 'brouillon') ecarts.push({ champ: 'statut', reference: REFERENCES.profilVideEnBrouillon })
-		attendus.push({
-			strapiId: profil.id,
-			valeurs: {
-				strapiId: profil.id,
-				pro: comptes.get(profil.compte) ?? null,
-				slug,
-				prenom: profil.first_name,
-				nom: profil.last_name,
-				nomArtiste: profil.company_artist_name,
-				specialite: profil.speciality,
-				description: profil.description,
-				statut,
-			},
-			ecarts,
-		})
+		attendus.push({ strapiId: profil.id, valeurs, ecarts })
 	}
-	return {
-		attendus,
-		ecartes: profils
-			.filter(({ id }) => decides.has(id))
-			.map(({ id }) => id)
-			.sort((a, b) => a - b),
-		sansCompte,
-		statuts,
-	}
+	return { attendus, statuts, statutsDifferentsDeLaSource }
 }

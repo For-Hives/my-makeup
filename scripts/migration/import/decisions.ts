@@ -5,17 +5,23 @@
  *
  * It names documents by their identifier in the old base, never by a value:
  *
- *   { "emailsPartages": [{ "comptes": [9, 10, 11, 12], "retenu": 9 }], "profilsEcartes": [29] }
+ *   { "emailsPartages": [{ "comptes": [9, 10, 11, 12], "retenu": 9 }], "profilsEcartes": [29],
+ *     "communes": [{ "profil": 28, "codeInsee": "74243" }] }
  *
  * - `emailsPartages`: accounts of the old site that share one email (edge spaces and capitals
  *   aside). The v3 has one account per email: only `retenu` is taken, the others are set aside.
  *   A group the source holds without its decision stops the import before any write.
- * - `profilsEcartes`: profiles whose account a decision above sets aside, and that a person
- *   decided to leave aside with it. Such a profile without its decision stops the import before
- *   any write (docs/migration/SCHEMA.md, §11).
+ * - `profilsEcartes`: profiles a person decided to leave aside: a profile whose account a decision
+ *   above sets aside, or a profile without an account in the source that is not one of the 13
+ *   profiles of the spam (SCHEMA.md §4.1). Such a profile without its decision stops the import
+ *   before any write (docs/migration/SCHEMA.md, §11).
+ * - `communes`: for a profile whose city the import leaves « à revoir » (ticket 063), the commune a
+ *   person chose, by its INSEE code, or `null` for none: the zone stays empty, and the profile is no
+ *   longer « à revoir ». A line for a profile that is not « à revoir » is without effect.
  */
 
 import { z } from 'zod'
+import { departementDuCodeInsee } from '../../../src/lib/profil/zone'
 import { ImportRefuse } from './cible'
 
 const identifiant = z.number().int().positive()
@@ -39,6 +45,22 @@ const SCHEMA_DES_DECISIONS = z
 			.array(identifiant)
 			.refine(profils => new Set(profils).size === profils.length, { message: 'un profil est nommé deux fois' })
 			.default([]),
+		communes: z
+			.array(
+				z
+					.object({
+						profil: identifiant,
+						codeInsee: z
+							.string()
+							.refine(code => departementDuCodeInsee(code) !== null, { message: 'code INSEE mal formé' })
+							.nullable(),
+					})
+					.strict()
+			)
+			.refine(lignes => new Set(lignes.map(({ profil }) => profil)).size === lignes.length, {
+				message: 'un profil est nommé deux fois',
+			})
+			.optional(),
 	})
 	.strict()
 

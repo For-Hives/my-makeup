@@ -9,6 +9,7 @@
  */
 
 import type { GenreDeCible } from './cible'
+import type { BilanDesCommunes } from './communes'
 import type { Bilan, CollectionImportee, Parite } from './moteur'
 import { pariteComplete, sansEcartInexplique } from './moteur'
 import type { EmpreinteDesTables } from './source'
@@ -33,10 +34,14 @@ export interface BilanDeCollection extends Bilan {
 	nonConfirmes?: number[]
 	/** What the run takes, split. */
 	repartition?: Repartition
-	/** Profiles whose account the import does not take: left aside. */
-	sansCompte?: number[]
+	/** The empty profiles the spam left without an account (SCHEMA.md §4.1): set aside, never taken. */
+	spam?: number[]
 	/** How many documents per status. */
 	statuts?: Record<string, number>
+	/** Profiles whose status, computed by the server, is not the one the source gives. */
+	statutsDifferentsDeLaSource?: number[]
+	/** The cities typed, become communes (ticket 063): in numbers and identifiers, never a text. */
+	communes?: BilanDesCommunes
 }
 
 /** The parity of a collection, and how the target splits, read again. */
@@ -51,6 +56,8 @@ export interface Arret {
 	emailsPartages: number[][]
 	/** Profiles of an account a decision sets aside, that no decision names (SCHEMA.md §11). */
 	profilsDeComptesEcartes: number[]
+	/** Profiles without an account in the source, out of the list of the spam (SCHEMA.md §4.1), that no decision names. */
+	profilsSansCompte: number[]
 }
 
 export interface Rapport {
@@ -115,8 +122,35 @@ function ligneDeBilan(nom: string, bilan: BilanDeCollection, mode: Mode): string
 	if (bilan.nonConfirmes?.length)
 		lignes.push(`  - non confirmés à la source, repris confirmés : ${ids(bilan.nonConfirmes)}`)
 	if (bilan.repartition) lignes.push(`  - ${repartitionEnTexte(bilan.repartition)}`)
-	if (bilan.sansCompte?.length) lignes.push(`  - sans compte repris, laissés de côté : ${ids(bilan.sansCompte)}`)
+	if (bilan.spam?.length)
+		lignes.push(
+			`  - écartés, profils vides laissés sans compte par le spam (SCHEMA.md §4.1) : ${bilan.spam.length} (${ids(bilan.spam)})`
+		)
+	if (bilan.communes) lignes.push(...lignesDesCommunes(bilan.communes))
 	if (bilan.statuts) lignes.push(`  - ${statutsEnTexte(bilan.statuts)}`)
+	if (bilan.statutsDifferentsDeLaSource?.length)
+		lignes.push(
+			`  - statut autre que celui que donne la source (section pas encore reprise, ou ville sans commune) : ${ids(bilan.statutsDifferentsDeLaSource)}`
+		)
+	return lignes
+}
+
+/** A share in percent, the French way: « 81,8 % ». */
+const pourcentage = (part: number | null): string =>
+	part === null ? 'sans objet' : `${String(part).replace('.', ',')} %`
+
+function lignesDesCommunes(communes: BilanDesCommunes): string[] {
+	const lignes = [
+		`  - communes : ${communes.rattachees} sur ${pluriel(communes.villesRenseignees, 'ville renseignée', 'villes renseignées')} ` +
+			`(${pourcentage(communes.part)}, cible 90 %) ; profils non vides avec une commune : ` +
+			`${communes.profilsNonVidesAvecCommune} sur ${communes.profilsNonVides}`,
+	]
+	if (communes.aRevoir.length > 0)
+		lignes.push(`  - villes à revoir, zone vide (liste de revue privée, --revue) : ${ids(communes.aRevoir)}`)
+	if (communes.adresses.length > 0)
+		lignes.push(`  - adresses postales, dont seule la commune est reprise : ${ids(communes.adresses)}`)
+	if (communes.decidees.length > 0)
+		lignes.push(`  - villes tranchées par la table de décision : ${ids(communes.decidees)}`)
 	return lignes
 }
 
@@ -136,7 +170,7 @@ function repartitionEnTexte({ fournisseurs, hashHerites }: Repartition): string 
 	return `par fournisseur : ${parFournisseur || 'aucun'} ; ${pluriel(hashHerites, 'hash hérité', 'hash hérités')}`
 }
 
-function lignesDArret({ emailsPartages, profilsDeComptesEcartes }: Arret): string[] {
+function lignesDArret({ emailsPartages, profilsDeComptesEcartes, profilsSansCompte }: Arret): string[] {
 	const lignes = ['Import arrêté avant toute écriture : rien n’est écrit.']
 	if (emailsPartages.length > 0)
 		lignes.push(
@@ -147,6 +181,11 @@ function lignesDArret({ emailsPartages, profilsDeComptesEcartes }: Arret): strin
 		lignes.push(
 			`- Des profils appartiennent à un compte que la table de décision écarte, et elle ne dit pas quoi en faire. Profils, par identifiant : ${ids(profilsDeComptesEcartes)}.`,
 			'  Une décision par profil, dans la table donnée par --decisions (docs/migration/IMPORT.md).'
+		)
+	if (profilsSansCompte.length > 0)
+		lignes.push(
+			`- Des profils n’ont aucun compte dans la source et ne sont pas parmi les 13 profils du spam (SCHEMA.md §4.1). Profils, par identifiant : ${ids(profilsSansCompte)}.`,
+			'  Un profil sans compte ne se reprend pas : une décision par profil, dans la table donnée par --decisions (docs/migration/IMPORT.md).'
 		)
 	return [...lignes, '']
 }

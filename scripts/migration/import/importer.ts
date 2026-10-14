@@ -4,8 +4,10 @@
  *
  * - The source is read in one read-only snapshot, and fingerprinted before and after the run.
  * - A case only a decision can settle (accounts that share one email, the profile of an account
- *   a decision sets aside) stops the run before any write, dry or real, and the report lists it
- *   by identifiers.
+ *   a decision sets aside, a profile without an account out of the list of the spam) stops the
+ *   run before any write, dry or real, and the report lists it by identifiers.
+ * - The city of each profile taken becomes a commune of the official list (./communes.ts), asked
+ *   to the referential before any write: a referential that does not answer stops the run there.
  * - A dry run (the default) reads the target and says what it would write; it writes nothing.
  * - A real run writes collection by collection, the accounts first, then their profiles, then
  *   the talents, and reads every collection again: its parity is complete when the target holds
@@ -14,8 +16,10 @@
 
 import type { Payload } from 'payload'
 import type { GenreDeCible } from './cible'
+import { type CasARevoir, communesDesProfils } from './communes'
 import { ADAPTATEUR_COMPTES, comptesAttendus, lireLesComptes, repartitionDesComptes } from './comptes'
 import { AUCUNE_DECISION, type Decisions } from './decisions'
+import { REFERENCES } from './ecarts'
 import {
 	type Adaptateur,
 	type Attendu,
@@ -26,8 +30,9 @@ import {
 	planifier,
 	type Refus,
 } from './moteur'
-import { ADAPTATEUR_PROFILS, lireLesProfils, profilsAttendus, profilsDesComptesEcartes } from './profils'
+import { ADAPTATEUR_PROFILS, lireLesProfils, profilsAttendus, profilsLaisses, videALaSource } from './profils'
 import type { BilanDeCollection, Mode, PariteDeCollection, Rapport } from './rapport'
+import type { Referentiel } from './referentiel'
 import { empreinteDesTables, memesTables, type Source } from './source'
 import { ADAPTATEUR_TALENTS, lireLesTalents, talentsAttendus } from './talents'
 
@@ -38,6 +43,13 @@ export interface OptionsDImport {
 	cible: GenreDeCible
 	/** The table of decisions (./decisions.ts). None: every case to decide stops the run. */
 	decisions?: Decisions
+	/** The official list of the communes (./referentiel.ts): the referential, or its kept answers. */
+	referentiel: Referentiel
+	/**
+	 * Receives the private list of review: the profiles whose city is « à revoir », with what was
+	 * asked and the communes they could be. The command writes it where `--revue` says.
+	 */
+	surLaRevue?: (revue: CasARevoir[]) => void
 	/** The password of a new account; random by default. Given by a test only. */
 	tirerMotDePasse?: () => string
 }
@@ -91,7 +103,16 @@ function statutsDe(documents: readonly { valeurs: Readonly<Record<string, unknow
 }
 
 export async function importer(options: OptionsDImport): Promise<Rapport> {
-	const { payload, source, mode, cible, decisions = AUCUNE_DECISION, tirerMotDePasse } = options
+	const {
+		payload,
+		source,
+		mode,
+		cible,
+		decisions = AUCUNE_DECISION,
+		referentiel,
+		surLaRevue,
+		tirerMotDePasse,
+	} = options
 	const avant = await source.lire(requete => empreinteDesTables(requete))
 	const lu = await source.lire(async requete => ({
 		comptes: await lireLesComptes(requete),
@@ -111,12 +132,17 @@ export async function importer(options: OptionsDImport): Promise<Rapport> {
 	}
 
 	const comptes = comptesAttendus(lu.comptes, decisions, tirerMotDePasse)
-	const desComptesEcartes = profilsDesComptesEcartes(lu.profils, comptes.ecartes, decisions.profilsEcartes)
-	rapport.decisionsSansObjet = comptes.sansObjet + desComptesEcartes.sansObjet
-	if (comptes.sansDecision.length > 0 || desComptesEcartes.sansDecision.length > 0) {
+	const laisses = profilsLaisses(lu.profils, {
+		comptesDeLaSource: new Set(lu.comptes.map(({ id }) => id)),
+		comptesEcartes: comptes.ecartes,
+		profilsEcartes: decisions.profilsEcartes,
+	})
+	rapport.decisionsSansObjet = comptes.sansObjet + laisses.sansObjet
+	if (comptes.sansDecision.length > 0 || laisses.deComptesEcartes.length > 0 || laisses.sansCompte.length > 0) {
 		rapport.arret = {
 			emailsPartages: comptes.sansDecision,
-			profilsDeComptesEcartes: desComptesEcartes.sansDecision,
+			profilsDeComptesEcartes: laisses.deComptesEcartes,
+			profilsSansCompte: laisses.sansCompte,
 		}
 		rapport.collections.pros = {
 			...bilanDuPlan({ actions: [], enTrop: [] }),
@@ -127,6 +153,18 @@ export async function importer(options: OptionsDImport): Promise<Rapport> {
 		const talents = talentsAttendus(lu.talents)
 		for (const { attendus } of [comptes, talents]) compterLesEcarts(rapport.ecarts, attendus)
 
+		// Before any write: the referential may not answer, or a line of the table name an unknown commune.
+		const nonPris = new Set([...laisses.ecartes, ...laisses.spam])
+		const communes = await communesDesProfils(
+			lu.profils
+				.filter(({ id }) => !nonPris.has(id))
+				.map(profil => ({ id: profil.id, city: profil.city, videALaSource: videALaSource(profil) })),
+			referentiel,
+			decisions.communes
+		)
+		rapport.decisionsSansObjet += communes.sansObjet
+		surLaRevue?.(communes.revue)
+
 		rapport.collections.pros = {
 			...(await importerLaCollection(options, ADAPTATEUR_COMPTES, lu.comptes.length, comptes.attendus)),
 			ecartes: comptes.ecartes,
@@ -136,13 +174,16 @@ export async function importer(options: OptionsDImport): Promise<Rapport> {
 
 		// Each profile points at its account in Payload, read once the accounts are written.
 		const idsDesComptes = await idsDesComptesPris(payload, comptes.attendus)
-		const profils = profilsAttendus(lu.profils, idsDesComptes, desComptesEcartes.ecartes)
+		const profils = profilsAttendus(lu.profils, idsDesComptes, laisses, communes.communes)
 		compterLesEcarts(rapport.ecarts, profils.attendus)
+		if (laisses.spam.length > 0) rapport.ecarts[REFERENCES.profilsDuSpam] = laisses.spam.length
 		rapport.collections.profils = {
 			...(await importerLaCollection(options, ADAPTATEUR_PROFILS, lu.profils.length, profils.attendus)),
-			ecartes: profils.ecartes,
-			sansCompte: profils.sansCompte,
+			ecartes: laisses.ecartes,
+			spam: laisses.spam,
 			statuts: profils.statuts,
+			statutsDifferentsDeLaSource: profils.statutsDifferentsDeLaSource,
+			communes: communes.bilan,
 		}
 
 		rapport.collections.talents = await importerLaCollection(

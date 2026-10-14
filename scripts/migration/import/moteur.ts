@@ -20,8 +20,11 @@ import { createHash } from 'node:crypto'
 import { type CollectionSlug, type Payload, type RequestContext, ValidationError } from 'payload'
 import { CONTEXTE_IMPORT } from '../../../src/lib/contexte-import'
 
-/** How two values of a field are said equal. */
-export type Genre = 'texte' | 'date' | 'booleen' | 'nombre' | 'relation'
+/**
+ * How two values of a field are said equal. `objet` is a group of fields (the commune of a
+ * profile): equal when every field is, and empty when every field is.
+ */
+export type Genre = 'texte' | 'date' | 'booleen' | 'nombre' | 'relation' | 'objet'
 
 /** The collections the import writes. */
 export type CollectionImportee = Extract<CollectionSlug, 'pros' | 'profils' | 'talents'>
@@ -70,6 +73,12 @@ export interface Adaptateur {
 	collection: CollectionImportee
 	/** The compared fields and their kind. `createdAt` and `updatedAt` are restored after an update. */
 	champs: Readonly<Record<string, Genre>>
+	/**
+	 * Compared fields the server computes at every save (the status of a profile): never written by
+	 * the import, at the creation as at an update. Their expected value is what the server must
+	 * compute from the written ones: a difference on them is a difference all the same.
+	 */
+	calcules?: readonly string[]
 	/** Options of the writes of one document: a draft, no confirmation email, more context. */
 	options?: (attendu: Attendu) => OptionsDEcriture
 }
@@ -104,10 +113,24 @@ export interface Bilan {
 
 const DATES = new Set(['createdAt', 'updatedAt'])
 
+/**
+ * A group of fields as it is compared: its filled fields sorted by name, in JSON. An empty field
+ * counts as an absent one, and a group with no filled field is `null`, as Payload reads back an
+ * empty group.
+ */
+function groupeNormalise(valeur: object): string | null {
+	const champs = Object.entries(valeur)
+		.filter(([, sous]) => sous !== null && sous !== undefined)
+		.sort(([a], [b]) => a.localeCompare(b))
+	return champs.length === 0 ? null : JSON.stringify(champs)
+}
+
 /** A value as it is compared: `undefined` is `null`, a date is an ISO string, a relation is an id. */
 export function normaliser(genre: Genre, valeur: unknown): unknown {
 	if (valeur === undefined || valeur === null) return null
 	switch (genre) {
+		case 'objet':
+			return typeof valeur === 'object' ? groupeNormalise(valeur) : valeur
 		case 'date': {
 			const date = valeur instanceof Date ? valeur : new Date(String(valeur))
 			return Number.isNaN(date.getTime()) ? String(valeur) : date.toISOString()
@@ -258,6 +281,10 @@ export async function ecrire(payload: Payload, adaptateur: Adaptateur, plan: Pla
 	const bilan: Bilan = { crees: 0, modifies: 0, inchanges: 0, refuses: [] }
 	const creer = payload.create.bind(payload) as unknown as Ecrire
 	const modifier = payload.update.bind(payload) as unknown as Ecrire
+	// What the server computes is never sent: server code that writes it would make it a decision.
+	const calcules = new Set(adaptateur.calcules ?? [])
+	const ecrits = (valeurs: Readonly<Record<string, unknown>>) =>
+		Object.fromEntries(Object.entries(valeurs).filter(([champ]) => !calcules.has(champ)))
 	for (const action of plan.actions) {
 		const { attendu } = action
 		if (action.genre === 'inchange') {
@@ -275,14 +302,14 @@ export async function ecrire(payload: Payload, adaptateur: Adaptateur, plan: Pla
 			if (action.genre === 'creation') {
 				await creer({
 					...commun,
-					data: { ...attendu.valeurs, ...attendu.aLaCreation },
+					data: { ...ecrits(attendu.valeurs), ...attendu.aLaCreation },
 					draft: options.brouillon === true,
 					disableVerificationEmail: options.disableVerificationEmail,
 				})
 				bilan.crees++
 				continue
 			}
-			const champs = action.champs.filter(champ => !DATES.has(champ))
+			const champs = action.champs.filter(champ => !DATES.has(champ) && !calcules.has(champ))
 			if (champs.length > 0)
 				await modifier({ ...commun, id: action.id, data: choisir(attendu.valeurs, champs), draft: false })
 			const dates = choisir(attendu.valeurs, ['createdAt', 'updatedAt'])

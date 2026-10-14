@@ -1,16 +1,23 @@
 import { describe, expect, test } from 'bun:test'
+import { readFileSync } from 'node:fs'
+import path from 'node:path'
+import { REFERENCES } from '../../scripts/migration/import/ecarts'
+import { normaliser } from '../../scripts/migration/import/moteur'
 import {
+	ADAPTATEUR_PROFILS,
+	PROFILS_DU_SPAM,
 	type ProfilLu,
 	profilsAttendus,
-	profilsDesComptesEcartes,
-	statutProvisoire,
+	profilsLaisses,
+	statutCalcule,
+	videALaSource,
 } from '../../scripts/migration/import/profils'
 import { NOM_NEUTRE, nomAffiche, nomComplet, texte } from '../../src/lib/profil/nom-affiche'
 import { CHAMPS_PUBLICS_DU_PROFIL } from '../../src/services/public/profils'
 
 /**
- * Ticket 026: what the first slice of the import makes of a profile of the old site, the name of
- * its page, and the fields the public reading chooses. No database: the runs are in
+ * Tickets 026 and 059: what the import makes of a profile of the old site, the name of its page,
+ * and the fields the public reading chooses. No database: the runs are in
  * tests/integration/import-profils.test.ts. Every value here is fictional.
  */
 
@@ -23,7 +30,11 @@ const profil = (id: number, modif: Partial<ProfilLu> = {}): ProfilLu => ({
 	description: null,
 	city: null,
 	username: `Profil ${id}`,
+	score: null,
+	available: true,
+	pro: false,
 	created_at: '2024-01-01T10:00:00.000Z',
+	updated_at: '2024-02-01T10:00:00.000Z',
 	compte: id + 100,
 	aPhotoPrincipale: false,
 	prix: [],
@@ -31,13 +42,13 @@ const profil = (id: number, modif: Partial<ProfilLu> = {}): ProfilLu => ({
 	...modif,
 })
 
-describe('règle provisoire du statut : brouillon si entièrement vide, publié sinon', () => {
+describe('la source dit si un profil est entièrement vide, comme l’ancien site le lit', () => {
 	test('un nom seul laisse le profil entièrement vide', () => {
-		expect(statutProvisoire(profil(1, { first_name: 'Manon', last_name: 'Petit' }))).toBe('brouillon')
-		expect(statutProvisoire(profil(1, { reseaux: { instagram: '   ' } }))).toBe('brouillon')
+		expect(videALaSource(profil(1, { first_name: 'Manon', last_name: 'Petit' }))).toBe(true)
+		expect(videALaSource(profil(1, { reseaux: { instagram: '   ' } }))).toBe(true)
 	})
 
-	test('une seule des six conditions suffit à publier', () => {
+	test('une seule des six conditions suffit à ne plus l’être', () => {
 		const uneCondition: Partial<ProfilLu>[] = [
 			{ aPhotoPrincipale: true },
 			{ city: 'Annecy' },
@@ -46,19 +57,84 @@ describe('règle provisoire du statut : brouillon si entièrement vide, publié 
 			{ description: 'x'.repeat(200) },
 			{ reseaux: { phone: '06 39 98 00 00' } },
 		]
-		for (const modif of uneCondition) expect(statutProvisoire(profil(1, modif)), JSON.stringify(modif)).toBe('publie')
+		for (const modif of uneCondition) expect(videALaSource(profil(1, modif)), JSON.stringify(modif)).toBe(false)
 		// What is not a condition: a short description, a country, a price without a number.
 		for (const modif of [{ description: 'Courte.' }, { city: 'France' }, { prix: ['Sur devis'] }])
-			expect(statutProvisoire(profil(1, modif)), JSON.stringify(modif)).toBe('brouillon')
+			expect(videALaSource(profil(1, modif)), JSON.stringify(modif)).toBe(true)
+	})
+})
+
+describe('le statut est celui que le serveur calcule de ce que l’import écrit (ticket 044)', () => {
+	test('entièrement vide : brouillon ; une condition remplie : publié', () => {
+		expect(statutCalcule({ prenom: 'Manon', nom: 'Petit' })).toBe('brouillon')
+		expect(statutCalcule({ specialite: 'Mariage' })).toBe('publie')
+		expect(statutCalcule({ description: 'x'.repeat(200) })).toBe('publie')
+		expect(statutCalcule({ description: 'Courte.' })).toBe('brouillon')
+	})
+
+	test('le statut est comparé mais jamais écrit ; le choix du statut est rendu à la règle', () => {
+		expect(ADAPTATEUR_PROFILS.calcules).toEqual(['statut'])
+		expect(ADAPTATEUR_PROFILS.champs).toMatchObject({ statut: 'texte', statutChoisi: 'texte' })
+		const [attendu] = profilsAttendus([profil(21, { speciality: 'Mariage' })], new Map([[121, 501]])).attendus
+		expect(attendu?.valeurs).toMatchObject({ statut: 'publie', statutChoisi: 'automatique' })
+	})
+})
+
+describe('les profils que l’import ne prend pas (SCHEMA.md §4.1 et §11)', () => {
+	const profils = [
+		profil(21, { compte: 1 }),
+		profil(29, { compte: 11 }),
+		profil(31, { compte: 12 }),
+		// The spam: no account at all.
+		profil(67, { compte: null }),
+		profil(74, { compte: null }),
+		// No account, out of the list of the spam: a link to an account the source no longer holds.
+		profil(40, { compte: 99 }),
+		profil(41, { compte: null }),
+	]
+	const comptesDeLaSource = new Set([1, 11, 12])
+
+	test('la liste du spam est celle de SCHEMA.md §4.1', () => {
+		const schema = readFileSync(path.resolve(import.meta.dir, '../../docs/migration/SCHEMA.md'), 'utf8')
+		const section = schema.slice(schema.indexOf('### 4.1'), schema.indexOf('### 4.2'))
+		expect(section).toContain(`Identifiants (\`makeup_artistes.id\`) : ${PROFILS_DU_SPAM.join(', ')}.`)
+		expect(PROFILS_DU_SPAM).toHaveLength(13)
+	})
+
+	test('sans décision : les profils du spam sont écartés, tout autre profil sans compte arrête l’import', () => {
+		expect(profilsLaisses(profils, { comptesDeLaSource, comptesEcartes: [11, 12], profilsEcartes: [] })).toEqual({
+			ecartes: [],
+			spam: [67, 74],
+			deComptesEcartes: [29, 31],
+			sansCompte: [40, 41],
+			sansObjet: 0,
+		})
+	})
+
+	test('une décision par profil le laisse de côté ; une décision qui ne nomme aucun de ces cas est sans objet', () => {
+		expect(
+			profilsLaisses(profils, {
+				comptesDeLaSource,
+				comptesEcartes: [11, 12],
+				// 21 has its account, 67 is the spam already, 500 is not in the source.
+				profilsEcartes: [29, 41, 21, 67, 500],
+			})
+		).toEqual({ ecartes: [29, 41], spam: [67, 74], deComptesEcartes: [31], sansCompte: [40], sansObjet: 3 })
+	})
+
+	test('un profil de la liste du spam qui a un compte est un profil comme un autre', () => {
+		expect(
+			profilsLaisses([profil(67, { compte: 1 })], { comptesDeLaSource, comptesEcartes: [], profilsEcartes: [] })
+		).toEqual({ ecartes: [], spam: [], deComptesEcartes: [], sansCompte: [], sansObjet: 0 })
 	})
 })
 
 describe('les profils attendus', () => {
 	const profils = [
 		profil(21, { username: 'Zoé Lefèvre', compte: 1, speciality: 'Mariage', created_at: '2023-05-12T09:20:00.000Z' }),
-		profil(22, { username: 'lea-martin', compte: 2, first_name: 'Léa' }),
+		profil(22, { username: 'lea-martin', compte: 2, first_name: 'Léa', available: null }),
 		// Same slug as 21, created later: it takes the suffix, as on the old site.
-		profil(23, { username: 'zoe lefevre', compte: 3, created_at: '2024-01-01T00:00:00.000Z' }),
+		profil(23, { username: 'zoe lefevre', compte: 3, created_at: '2024-01-01T00:00:00.000Z', available: false }),
 		profil(24, { username: 'Sans compte', compte: null }),
 		profil(25, { username: 'Compte écarté', compte: 11 }),
 		// Older than 21 and without an account: its slug still counts in the table of the old site.
@@ -69,9 +145,10 @@ describe('les profils attendus', () => {
 		[2, 502],
 		[3, null],
 	])
+	const laisses = { ecartes: [25], spam: [24, 26] }
 
 	test('reliés à leur compte dans Payload, avec le slug de l’ancien site, calculé sur toute la source', () => {
-		const { attendus } = profilsAttendus(profils, comptes)
+		const { attendus } = profilsAttendus(profils, comptes, laisses)
 
 		expect(attendus.map(({ strapiId, valeurs }) => [strapiId, valeurs.pro, valeurs.slug])).toEqual([
 			[21, 501, 'zoe-lefevre-2'],
@@ -80,71 +157,82 @@ describe('les profils attendus', () => {
 		])
 	})
 
-	test('un profil sans compte repris est laissé de côté et listé', () => {
-		expect(profilsAttendus(profils, comptes).sansCompte).toEqual([24, 25, 26])
+	test('un profil ni pris ni laissé de côté est une erreur : l’import devait s’arrêter avant', () => {
+		expect(() => profilsAttendus(profils, comptes, { ecartes: [25], spam: [26] })).toThrow(
+			'Le profil 24 n’a pas de compte repris'
+		)
 	})
 
-	test('un profil que la table de décision écarte avec son compte est listé parmi les écartés', () => {
-		const { attendus, ecartes, sansCompte } = profilsAttendus(profils, comptes, [25])
-
-		expect(ecartes).toEqual([25])
-		expect(sansCompte).toEqual([24, 26])
-		expect(attendus.map(({ strapiId }) => strapiId)).toEqual([21, 22, 23])
-	})
-
-	test('chaque transformation porte sa référence : slug stocké, profil vide en brouillon', () => {
-		const { attendus, statuts } = profilsAttendus(profils, comptes)
+	test('chaque transformation porte sa référence : slug stocké, disponibilité par défaut, profil vide en brouillon', () => {
+		const { attendus, statuts } = profilsAttendus(profils, comptes, laisses)
 
 		expect(attendus.map(({ strapiId, ecarts }) => [strapiId, ecarts.map(({ reference }) => reference)])).toEqual([
 			[21, ['slug-stocke']],
-			[22, ['profils-vides-brouillon']],
+			[22, ['disponibilite-par-defaut', 'profils-vides-brouillon']],
 			[23, ['slug-stocke', 'profils-vides-brouillon']],
 		])
 		expect(statuts).toEqual({ publie: 1, brouillon: 2 })
+		for (const reference of ['disponibilite-par-defaut', 'profils-spam-non-repris'])
+			expect(Object.values(REFERENCES) as string[]).toContain(reference)
 	})
 
-	test('les noms, la spécialité et la description sont repris tels quels ; nul reste nul', () => {
-		const [zoe] = profilsAttendus(profils, comptes).attendus
+	test('l’identité, l’ancien nom d’utilisateur, le score, le badge et les dates tels quels ; nul reste nul, sauf la disponibilité', () => {
+		const [zoe, lea, ines] = profilsAttendus(
+			[
+				{ ...(profils[0] as ProfilLu), score: '12.50', pro: true, updated_at: '2026-09-28T10:11:12.131Z' },
+				...profils.slice(1),
+			],
+			comptes,
+			laisses
+		).attendus
 
 		expect(zoe?.valeurs).toEqual({
 			strapiId: 21,
 			pro: 501,
 			slug: 'zoe-lefevre-2',
+			legacyUsername: 'Zoé Lefèvre',
 			prenom: null,
 			nom: null,
 			nomArtiste: null,
 			specialite: 'Mariage',
 			description: null,
+			commune: null,
+			disponible: true,
+			score: 12.5,
+			superMaquilleuse: true,
+			statutChoisi: 'automatique',
 			statut: 'publie',
+			createdAt: '2023-05-12T09:20:00.000Z',
+			updatedAt: '2026-09-28T10:11:12.131Z',
 		})
+		expect([lea?.valeurs.disponible, lea?.valeurs.score, lea?.valeurs.legacyUsername]).toEqual([
+			true,
+			null,
+			'lea-martin',
+		])
+		expect(ines?.valeurs.disponible).toBe(false)
+	})
+
+	test('un statut que la source ne donne pas est listé : une section pas encore reprise', () => {
+		// 22 is empty in the v3 but not at the source: its only condition is its main picture.
+		const { statutsDifferentsDeLaSource } = profilsAttendus(
+			[profils[0] as ProfilLu, { ...(profils[1] as ProfilLu), aPhotoPrincipale: true }],
+			comptes
+		)
+
+		expect(statutsDifferentsDeLaSource).toEqual([22])
 	})
 })
 
-describe('les profils d’un compte que la table de décision écarte (SCHEMA.md §11)', () => {
-	const profils = [
-		profil(28, { compte: 9 }),
-		profil(29, { compte: 11 }),
-		profil(31, { compte: 12 }),
-		profil(30, { compte: 14 }),
-		profil(67, { compte: null }),
-	]
-
-	test('sans décision, chacun arrête l’import, nommé par identifiant', () => {
-		expect(profilsDesComptesEcartes(profils, [10, 11, 12], [])).toEqual({
-			ecartes: [],
-			sansDecision: [29, 31],
-			sansObjet: 0,
-		})
-	})
-
-	test('une décision par profil le laisse de côté ; une décision qui ne nomme aucun de ces profils est sans objet', () => {
-		expect(profilsDesComptesEcartes(profils, [10, 11, 12], [29, 30, 67])).toEqual({
-			ecartes: [29],
-			sansDecision: [31],
-			sansObjet: 2,
-		})
-		// The account of 28 is kept: nothing to decide for it.
-		expect(profilsDesComptesEcartes(profils, [], [28])).toEqual({ ecartes: [], sansDecision: [], sansObjet: 1 })
+describe('le moteur compare un groupe de champs comme un tout', () => {
+	test('un groupe vide vaut nul ; deux groupes égaux champ par champ sont égaux, dans n’importe quel ordre', () => {
+		expect(normaliser('objet', { nom: null, codeInsee: undefined })).toBeNull()
+		expect(normaliser('objet', { nom: 'Annecy', codeInsee: '74010' })).toBe(
+			normaliser('objet', { codeInsee: '74010', nom: 'Annecy', latitude: undefined })
+		)
+		expect(normaliser('objet', { nom: 'Annecy', codeInsee: '74010' })).not.toBe(
+			normaliser('objet', { nom: 'Annecy', codeInsee: '74011' })
+		)
 	})
 })
 

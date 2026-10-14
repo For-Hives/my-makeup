@@ -16,6 +16,9 @@ import { ECRANS } from '../outils/e2e'
 
 const DECISIONS_DU_BANC = 'tests/fixtures/import/decisions-du-banc.json'
 
+/** The kept answers of the referential of the communes for the fake source: the import asks nothing online. */
+const REFERENTIEL_DU_BANC = 'tests/fixtures/import/referentiel-du-banc.json'
+
 /** The keys a reading of a profile must never put into a page: what is private or reserved. */
 const CLES_PRIVEES =
 	/"(?:pro|strapiId|legacyUsername|statut|motif|verifie|verifieLe|siret|noteInterne|score|superMaquilleuse|coordonnees|telephone|contactPublic|consentiLe|sourceConsentement)"\s*:/
@@ -49,6 +52,9 @@ async function importer(rapport: string) {
 		'--reel',
 		'--decisions',
 		DECISIONS_DU_BANC,
+		'--communes',
+		REFERENTIEL_DU_BANC,
+		'--hors-ligne',
 		'--rapport',
 		rapport
 	)
