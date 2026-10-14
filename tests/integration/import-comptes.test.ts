@@ -6,7 +6,7 @@ import path from 'node:path'
 import { SQL } from 'bun'
 import { AUCUNE_DECISION } from '../../scripts/migration/import/decisions'
 import { CONTEXTE_SANS_PROFIL } from '../../src/collections/Profils'
-import { commandeDImport, FICHIER_DES_DECISIONS_DU_BANC, importerSurLeBanc } from '../outils/import'
+import { commandeDImport, DECISIONS_DU_BANC, FICHIER_DES_DECISIONS_DU_BANC, importerSurLeBanc } from '../outils/import'
 import { compterLesMails, viderLeCapteur } from '../outils/mailpit'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
 import {
@@ -178,6 +178,43 @@ describe('Critère 2 : autant de hash hérités que de comptes source avec un ha
 		expect((await comptesDeLaCible()).find(({ strapiId }) => strapiId === 17)?.legacyBcrypt ?? null).toBeNull()
 		expect(rapport.ecarts['SCHEMA.md §5.1 (password)']).toBe(1)
 		expect(rapport.parite?.pros?.repartition?.hashHerites).toBe(7)
+	})
+
+	test('le compte gardé sans hash prend celui d’un compte écarté : écrit en base, compté, jamais dans le rapport (prêt de 066)', async () => {
+		await avecLeProprietaire(async sql => {
+			await sql.unsafe('UPDATE up_users SET password = NULL WHERE id = 9')
+			await sql.unsafe('UPDATE up_users SET password = (SELECT password FROM up_users WHERE id = 1) WHERE id = 10')
+		})
+		const hashes = await hashDeLaSource()
+
+		const rapport = await importerSurLeBanc()
+
+		const cible = await comptesDeLaCible()
+		expect(cible.find(({ strapiId }) => strapiId === 9)?.legacyBcrypt).toBe(hashes.get(10) ?? 'absent')
+		expect(rapport.collections.pros?.hashRattaches).toEqual([9])
+		expect(rapport.ecarts['comptes-email-partage']).toBeGreaterThanOrEqual(1)
+		// Account 10 is set aside: its hash is on account 9 only, so the count is one more than without the loan.
+		expect(cible.filter(({ legacyBcrypt }) => typeof legacyBcrypt === 'string')).toHaveLength(8)
+		expect(JSON.stringify(rapport)).not.toMatch(/\$2[aby]\$/)
+	})
+
+	test('une décision qui refuse le prêt (pretDuHash faux) laisse le compte gardé sans hash', async () => {
+		await avecLeProprietaire(async sql => {
+			await sql.unsafe('UPDATE up_users SET password = NULL WHERE id = 9')
+			await sql.unsafe('UPDATE up_users SET password = (SELECT password FROM up_users WHERE id = 1) WHERE id = 10')
+		})
+
+		const rapport = await importerSurLeBanc('reel', {
+			decisions: {
+				...DECISIONS_DU_BANC,
+				emailsPartages: [{ comptes: [9, 10, 11, 12], retenu: 9, pretDuHash: false }],
+			},
+		})
+
+		const cible = await comptesDeLaCible()
+		expect(cible.find(({ strapiId }) => strapiId === 9)?.legacyBcrypt ?? null).toBeNull()
+		expect(rapport.collections.pros?.hashRattaches ?? []).toEqual([])
+		expect(rapport.collections.pros?.hashNonRattaches).toBeGreaterThanOrEqual(1)
 	})
 
 	test('ni la sortie de la commande ni son rapport JSON ne portent un hash, un email ou un nom', async () => {

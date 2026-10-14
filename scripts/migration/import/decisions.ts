@@ -11,6 +11,7 @@
  * - `emailsPartages`: accounts of the old site that share one email (edge spaces and capitals
  *   aside). The v3 has one account per email: only `retenu` is taken, the others are set aside; the kept account without a legacy hash takes
  *   the one of the first account set aside that has one (ticket 066 default).
+ *   `"pretDuHash": false` on a group refuses that loan: the kept account keeps no hash of an account set aside.
  *   A group the source holds without its decision stops the import before any write.
  * - `profilsEcartes`: profiles a person decided to leave aside: a profile whose account a decision
  *   above sets aside, or a profile without an account in the source that is not one of the 13
@@ -32,7 +33,7 @@ const SCHEMA_DES_DECISIONS = z
 		emailsPartages: z
 			.array(
 				z
-					.object({ comptes: z.array(identifiant).min(2), retenu: identifiant })
+					.object({ comptes: z.array(identifiant).min(2), retenu: identifiant, pretDuHash: z.boolean().optional() })
 					.strict()
 					.refine(({ comptes, retenu }) => comptes.includes(retenu), {
 						message: 'le compte retenu doit être l’un des comptes du groupe',
@@ -97,7 +98,7 @@ export interface ApplicationDesDecisions {
 	/** The accounts set aside by a decision. */
 	ecartes: number[]
 	/** For each group decided, the account kept and the accounts set aside in its favour. */
-	rattaches: { retenu: number; ecartes: number[] }[]
+	rattaches: { retenu: number; ecartes: number[]; pretDuHash: boolean }[]
 	/** The groups the source holds that no decision names exactly: the import stops. */
 	sansDecision: number[][]
 	/** Decisions that name no group of the source: they have no effect. */
@@ -127,7 +128,7 @@ export function appliquerLesDecisions(
 		appliquees.add(rang)
 		const autres = groupe.filter(id => id !== decision.retenu)
 		ecartes.push(...autres)
-		rattaches.push({ retenu: decision.retenu, ecartes: autres })
+		rattaches.push({ retenu: decision.retenu, ecartes: autres, pretDuHash: decision.pretDuHash !== false })
 	}
 	return {
 		ecartes: ecartes.sort((a, b) => a - b),

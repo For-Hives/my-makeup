@@ -189,7 +189,7 @@ function ligneDeBilan(nom: string, bilan: BilanDeCollection, mode: Mode): string
 		)
 	else if (bilan.hashNonRattaches)
 		lignes.push(
-			`  - ${pluriel(bilan.hashNonRattaches, 'hash écarté non rattaché', 'hash écartés non rattachés')} (le compte gardé a le sien)`
+			`  - ${pluriel(bilan.hashNonRattaches, 'hash écarté non rattaché', 'hash écartés non rattachés')} (le compte gardé a le sien, ou le prêt est refusé)`
 		)
 	if (bilan.sansOrigine)
 		lignes.push(`  - dans la cible, sans identifiant de l’ancien site (ajoutés à la main) : ${bilan.sansOrigine}`)

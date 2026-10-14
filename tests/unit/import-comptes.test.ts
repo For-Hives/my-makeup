@@ -201,6 +201,29 @@ describe('les comptes au même email', () => {
 			expect(resultat).toMatchObject({ hashRattaches: [3], hashNonRattaches: 1 })
 		})
 
+		test('une décision qui refuse le prêt (pretDuHash faux) laisse le compte gardé sans hash, le hash écarté est compté', () => {
+			const resultat = comptesAttendus(
+				[
+					ligne(1, { email: 'a@example.test', provider: 'google' }),
+					ligne(2, { email: 'a@example.test', provider: 'local', password: FORME_DE_HASH }),
+				],
+				{ emailsPartages: [{ comptes: [1, 2], retenu: 1, pretDuHash: false }] }
+			)
+			expect(hashDe(resultat, 1)).toBeNull()
+			expect(resultat).toMatchObject({ hashRattaches: [], hashNonRattaches: 1 })
+			expect(resultat.attendus[0]?.ecarts).not.toContainEqual(expect.objectContaining({ champ: 'legacyBcrypt' }))
+		})
+
+		test('la table de décision lit pretDuHash et refuse une valeur qui n’est pas un booléen', () => {
+			expect(
+				lireLesDecisions('{ "emailsPartages": [{ "comptes": [9, 10], "retenu": 9, "pretDuHash": false }] }')
+					.emailsPartages[0]
+			).toMatchObject({ pretDuHash: false })
+			expect(() =>
+				lireLesDecisions('{ "emailsPartages": [{ "comptes": [9, 10], "retenu": 9, "pretDuHash": "non" }] }')
+			).toThrow()
+		})
+
 		test('un mot de passe incomplet n’est pas prêté, et un groupe sans hash ne change rien', () => {
 			const resultat = comptesAttendus(
 				[ligne(1, { email: 'a@example.test' }), ligne(2, { email: 'a@example.test', password: 'pas-un-hash' })],

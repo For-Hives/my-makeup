@@ -124,7 +124,7 @@ export function comptesAttendus(
 	// The kept account that has no hash of its own takes the one of the first account set aside (lowest identifier) that has one.
 	const empruntes = new Map<number, string>()
 	let hashNonRattaches = 0
-	for (const { retenu, ecartes } of application.rattaches) {
+	for (const { retenu, ecartes, pretDuHash } of application.rattaches) {
 		const hashDesEcartes = ecartes.flatMap(id => {
 			const mot = parId.get(id)?.password
 			return mot != null && HASH_BCRYPT_COMPLET.test(mot) ? [mot] : []
@@ -132,7 +132,7 @@ export function comptesAttendus(
 		const motRetenu = parId.get(retenu)?.password
 		const aDejaLeSien = motRetenu != null && HASH_BCRYPT_COMPLET.test(motRetenu)
 		const [premier, ...reste] = hashDesEcartes
-		if (premier !== undefined && !aDejaLeSien) {
+		if (premier !== undefined && !aDejaLeSien && pretDuHash) {
 			empruntes.set(retenu, premier)
 			hashNonRattaches += reste.length
 		} else hashNonRattaches += hashDesEcartes.length
