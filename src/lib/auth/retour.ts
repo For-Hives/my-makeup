@@ -36,3 +36,9 @@ export function retourSur(brut: unknown, origine: string, defaut: string = ESPAC
 /** The sign-in page that brings the visitor back to `chemin` (path and query of the closed page). */
 export const urlDeConnexion = (chemin: string): string =>
 	`${PAGE_DE_CONNEXION}?callbackUrl=${encodeURIComponent(chemin)}`
+
+/** The `error` of the sign-in page that says the session ended. The only code of the address that is ever shown. */
+export const ERREUR_SESSION_EXPIREE = 'session-expiree'
+
+/** The sign-in page that says the session ended, and brings the visitor back to `chemin` (one redirection). */
+export const urlSessionExpiree = (chemin: string): string => `${urlDeConnexion(chemin)}&error=${ERREUR_SESSION_EXPIREE}`

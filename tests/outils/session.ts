@@ -78,6 +78,11 @@ export async function ouvrirSession(
 	return sessionDuJeton(payload, collection, { exp, token }, origine)
 }
 
+/** `dureeS`: how long the token lives, in seconds, instead of the collection's own (negative: it is born expired). */
+export interface OptionsDeSession {
+	dureeS?: number
+}
+
 /** An account designated by its collection and its identifier. */
 export interface CompteDesigne {
 	collection: AuthCollectionSlug
@@ -96,7 +101,8 @@ export interface CompteDesigne {
 export async function ouvrirSessionSansMotDePasse(
 	payload: Payload,
 	{ collection, id }: CompteDesigne,
-	variables: Variables = process.env
+	variables: Variables = process.env,
+	options: OptionsDeSession = {}
 ): Promise<Session> {
 	const origine = origineDuSite(payload, variables)
 	const collectionConfig = payload.collections[collection].config
@@ -108,7 +114,7 @@ export async function ouvrirSessionSansMotDePasse(
 	const { exp, token } = await jwtSign({
 		fieldsToSign: getFieldsToSign({ collectionConfig, email: String(compte.email), sid, user }),
 		secret: payload.secret,
-		tokenExpiration: collectionConfig.auth.tokenExpiration,
+		tokenExpiration: options.dureeS ?? collectionConfig.auth.tokenExpiration,
 	})
 	return sessionDuJeton(payload, collection, { exp, token }, origine)
 }
