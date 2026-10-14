@@ -79,18 +79,21 @@ export async function demanderAuBanc(
 	adresse: string,
 	requete: RequestInit = {}
 ): Promise<ReponseDuBanc> {
+	// A controller and a timer, not `AbortSignal.timeout`: under `bun test`, the global `fetch` is
+	// MSW's (tests/outils/http-sortant.ts), and a request it lets through to the bench ignores a
+	// timeout signal (bun 1.3.14, MSW 2.15.0). An explicit abort is honoured.
+	const controleur = new AbortController()
+	const delai = setTimeout(() => controleur.abort(), DELAI_D_UNE_REQUETE_MS)
 	try {
-		const reponse = await fetch(adresse, {
-			...requete,
-			redirect: 'error',
-			signal: AbortSignal.timeout(DELAI_D_UNE_REQUETE_MS),
-		})
+		const reponse = await fetch(adresse, { ...requete, redirect: 'error', signal: controleur.signal })
 		return { statut: reponse.status, entetes: reponse.headers, octets: new Uint8Array(await reponse.arrayBuffer()) }
 	} catch (cause) {
 		throw new BancRefuse(
 			messageBancMuet(cible.instance, [{ service: cible.service, adresse: new URL(adresse).host }]),
 			{ cause }
 		)
+	} finally {
+		clearTimeout(delai)
 	}
 }
 
