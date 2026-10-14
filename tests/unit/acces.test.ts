@@ -504,7 +504,8 @@ describe('La collection articles (ticket 046) : les règles des talents (U59)', 
 		// configuration in the same process completes them in place (see the talents).
 		expect(Articles.access).toMatchObject(ACCES_REDACTION)
 		expect(Articles.versions).toBe(VERSIONS_REDACTION)
-		expect(Articles.hooks?.beforeChange).toEqual([datePremierePublication])
+		// Beside the refresh of its pages (ticket 047, tests/unit/revalidation.test.ts).
+		expect(Articles.hooks?.beforeChange).toContain(datePremierePublication)
 	})
 
 	test('les champs de l’ancien site : titre et slug requis pour publier, le slug sous /blog, SEO bornés à 70 et 155', () => {

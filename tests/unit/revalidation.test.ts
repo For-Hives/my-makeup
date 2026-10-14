@@ -1,5 +1,5 @@
 import { describe, expect, mock, test } from 'bun:test'
-import { revalidateTag } from 'next/cache'
+import { revalidateTag } from 'next/cache.js'
 import type { PayloadRequest, RequestContext } from 'payload'
 import { horsDUneRequeteDeNext, rafraichissement } from '../../src/collections/revalidation'
 import { CONTEXTE_IMPORT } from '../../src/lib/contexte-import'

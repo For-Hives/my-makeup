@@ -12,7 +12,7 @@
  */
 
 import { mock } from 'bun:test'
-import * as cacheDeNext from 'next/cache'
+import * as cacheDeNext from 'next/cache.js'
 
 /** Next's own functions, kept before the replacement. */
 const NEXT = { ...cacheDeNext }
@@ -26,7 +26,7 @@ export interface Revalidation {
 
 let enregistrement: Revalidation[] | undefined
 
-mock.module('next/cache', () => ({
+mock.module('next/cache.js', () => ({
 	...NEXT,
 	revalidatePath: (...[chemin, type]: Parameters<typeof NEXT.revalidatePath>) => {
 		if (!enregistrement) return NEXT.revalidatePath(chemin, type)
