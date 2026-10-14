@@ -26,14 +26,19 @@ const RESERVE = {
 
 /**
  * What anyone but the owner and an admin reads of a published profile: its identity, its networks
- * (ticket 042), its photos (ticket 043), its lists (ticket 040), the badge of the search and Payload's dates. A new public field of the profile is
- * added here on purpose.
+ * (ticket 042), its photos (ticket 043), its lists (ticket 040), its zone (ticket 041), its state (ticket 044), the badge
+ * of the search and Payload's dates. A new public field of the profile is added here on purpose.
  */
 const CLES_PUBLIQUES = [
+	'aDomicile',
+	'actif',
+	'commune',
 	'competences',
+	'completude',
 	'createdAt',
 	'description',
 	'disponible',
+	'entierementVide',
 	'experiences',
 	'formations',
 	'galerie',
@@ -44,6 +49,8 @@ const CLES_PUBLIQUES = [
 	'photoPrincipale',
 	'prenom',
 	'prestations',
+	'publiable',
+	'rayonKm',
 	'reseaux',
 	'slug',
 	'specialite',
@@ -222,7 +229,7 @@ describe('L’admin masque un profil : la lecture anonyme suivante ne le rend pl
 
 		const masquage = await appelerRest('PATCH', `/api/profils/${profil.id}`, {
 			enTetes: admin.session.enTetes,
-			corps: { statut: 'masque', motif: 'Masqué pour le test' },
+			corps: { statutChoisi: 'masque', motif: 'Masqué pour le test' },
 		})
 
 		expect(masquage.statut).toBe(200)

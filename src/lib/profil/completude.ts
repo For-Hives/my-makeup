@@ -26,8 +26,10 @@
  * No server code here: the artist's space runs the same function in the browser.
  */
 
-import { parsePrice } from '@/lib/prix'
-import { villePublique } from '@/lib/profil/lieu-public'
+// Relative imports on purpose: the collection `profils` calls this file at every save (ticket 044),
+// and the collections are also loaded by the Payload CLI, outside of Next.
+import { parsePrice } from '../prix'
+import { villePublique } from './lieu-public'
 
 /** The 13 criteria of the progress bar, in display order */
 export const CRITERES = [

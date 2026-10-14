@@ -24,8 +24,8 @@
  * - Anything else is `incoherent`: refused but written anyway, or a list nobody expects.
  *
  * The cast is made once per file (`distribuer`): one account per role, by the account factory,
- * with their documents. A's profile is published, B's stays a draft: what the public reads shows
- * in the lines. A deletion that must succeed acts on a throwaway document of the same collection,
+ * with their documents. A's profile is published, B's stays a draft, both by an admin: what the
+ * public reads shows in the lines. A deletion that must succeed acts on a throwaway document of the same collection,
  * never on the cast.
  *
  * The documents of an editorial collection (talents) belong to nobody: the cast holds one
@@ -36,7 +36,7 @@ import { randomUUID } from 'node:crypto'
 import type { Payload, RequiredDataFromCollectionSlug, Where } from 'payload'
 import { CONTEXTE_SANS_PROFIL } from '@/collections/Profils'
 import { PROFILS_PUBLIES } from '@/lib/acces'
-import { STATUT_PUBLIE } from '@/lib/profil/statut'
+import { STATUT_INITIAL, STATUT_PUBLIE } from '@/lib/profil/statut'
 import { creerCompte, DOMAINE_DES_COMPTES, motDePasseAleatoire, type TypeAvecSession } from './fabrique-comptes'
 import { payloadDeTest } from './payload-test'
 import { fichierPourFormulaire, fichierPourPayload, nomDePhoto } from './photos'
@@ -276,18 +276,19 @@ export async function distribuer(): Promise<Distribution> {
 	const anonyme: Acteur = { role: 'anonyme', enTetes: {}, documents: {} }
 	const entrees = [['anonyme', anonyme], ...acteurs.map(acteur => [acteur.role, acteur])]
 	const parRole = Object.fromEntries(entrees) as Record<Role, Acteur>
-	// A's profile is published, as by the rule of ticket 044 or an admin; B's stays the draft it was created as.
+	// A's profile is published by an admin; B's stays a draft, held there by an admin: with a photo,
+	// the rule of ticket 044 would publish it. Both statuses are chosen, so that no line moves them.
 	// Each of them has a photo of her own, the main photo of her profile (ticket 043).
 	for (const role of ['maquilleuse', 'autreMaquilleuse'] as const) {
 		const acteur = parRole[role]
 		const profil = acteur.documents.profils
 		if (profil === undefined) throw new Error(`La distribution n’a pas de profil pour « ${role} ».`)
 		acteur.documents.media = await mediaDe(payload, acteur.documents.pros)
-		const statut = role === 'maquilleuse' ? { statut: STATUT_PUBLIE } : {}
+		const statutChoisi = role === 'maquilleuse' ? STATUT_PUBLIE : STATUT_INITIAL
 		await payload.update({
 			collection: 'profils',
 			id: profil,
-			data: { ...statut, photoPrincipale: acteur.documents.media },
+			data: { statutChoisi, photoPrincipale: acteur.documents.media },
 		})
 	}
 	return { ...parRole, contenus: await creerLesContenus(payload) }

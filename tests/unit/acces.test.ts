@@ -285,9 +285,9 @@ describe('La collection profils (ticket 020)', () => {
 		expect(champ(Profils.fields, 'superMaquilleuse')?.access?.read).toBeUndefined()
 	})
 
-	test('statut, motif, vérifiée, SIRET, note interne, score, badge et compte : seul admin les écrit (U55)', () => {
+	test('choix du statut, motif, vérifiée, SIRET, note interne, score, badge et compte : seul admin les écrit (U55)', () => {
 		for (const nom of [
-			'statut',
+			'statutChoisi',
 			'motif',
 			'verifie',
 			'verifieLe',
@@ -306,6 +306,15 @@ describe('La collection profils (ticket 020)', () => {
 			])
 			expect(acces.create as unknown).toBe(champAdminSeulement)
 		}
+		// The status itself is computed by the server from that choice (ticket 044): no API writes it.
+		const statut = champ(Profils.fields, 'statut')?.access as Record<string, (args: unknown) => boolean>
+		for (const operation of ['create', 'update'])
+			expect([admin, redaction, maquilleuse, null].map(user => statut[operation]?.(appel(user)))).toEqual([
+				false,
+				false,
+				false,
+				false,
+			])
 	})
 
 	test('le statut : brouillon, publié ou masqué ; un profil neuf est un brouillon', () => {

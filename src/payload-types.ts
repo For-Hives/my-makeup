@@ -223,6 +223,24 @@ export interface Profil {
   nom?: string | null;
   nomArtiste?: string | null;
   specialite?: string | null;
+  /**
+   * Une commune de la liste officielle, avec son code INSEE. Jamais une adresse.
+   */
+  commune?: {
+    nom?: string | null;
+    codeInsee?: string | null;
+    /**
+     * Calculé depuis le code INSEE.
+     */
+    departement?: string | null;
+    latitude?: number | null;
+    longitude?: number | null;
+  };
+  rayonKm?: number | null;
+  /**
+   * Se déplace chez la cliente. Vide tant que la maquilleuse ne l’a pas dit.
+   */
+  aDomicile?: boolean | null;
   description?: string | null;
   disponible?: boolean | null;
   photoPrincipale?: (number | null) | Media;
@@ -319,9 +337,13 @@ export interface Profil {
   legacyUsername?: string | null;
   strapiId?: number | null;
   /**
-   * Seuls les profils publiés sont lus par le public.
+   * Posé par le serveur à chaque enregistrement, selon le statut choisi en dessous. Seuls les profils publiés sont lus par le public.
    */
   statut?: ('brouillon' | 'publie' | 'masque') | null;
+  /**
+   * Automatique : le serveur pose le statut, brouillon pour un profil entièrement vide, publié sinon. Un autre choix est gardé, quoi que la maquilleuse enregistre.
+   */
+  statutChoisi?: ('automatique' | 'brouillon' | 'publie' | 'masque') | null;
   /**
    * Pourquoi le profil est masqué. La maquilleuse le lit.
    */
@@ -344,6 +366,34 @@ export interface Profil {
    * Le badge des cartes de la recherche. Public.
    */
   superMaquilleuse?: boolean | null;
+  /**
+   * Critères remplis, sur 13. Calculée par le serveur.
+   */
+  completude?: number | null;
+  /**
+   * Photo principale, ville et spécialité. Calculé par le serveur.
+   */
+  actif?: boolean | null;
+  /**
+   * Date à laquelle la case du dessus a pris sa valeur. Posée par le serveur.
+   */
+  actifDepuis?: string | null;
+  /**
+   * Les six conditions du profil publiable. Calculé par le serveur.
+   */
+  publiable?: boolean | null;
+  /**
+   * Date à laquelle la case du dessus a pris sa valeur. Posée par le serveur.
+   */
+  publiableDepuis?: string | null;
+  /**
+   * Aucune des six conditions : le profil reste en brouillon. Calculé par le serveur.
+   */
+  entierementVide?: boolean | null;
+  /**
+   * Date à laquelle la case du dessus a pris sa valeur. Posée par le serveur.
+   */
+  entierementVideDepuis?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -570,6 +620,17 @@ export interface ProfilsSelect<T extends boolean = true> {
   nom?: T;
   nomArtiste?: T;
   specialite?: T;
+  commune?:
+    | T
+    | {
+        nom?: T;
+        codeInsee?: T;
+        departement?: T;
+        latitude?: T;
+        longitude?: T;
+      };
+  rayonKm?: T;
+  aDomicile?: T;
   description?: T;
   disponible?: T;
   photoPrincipale?: T;
@@ -646,6 +707,7 @@ export interface ProfilsSelect<T extends boolean = true> {
   legacyUsername?: T;
   strapiId?: T;
   statut?: T;
+  statutChoisi?: T;
   motif?: T;
   verifie?: T;
   verifieLe?: T;
@@ -653,6 +715,13 @@ export interface ProfilsSelect<T extends boolean = true> {
   noteInterne?: T;
   score?: T;
   superMaquilleuse?: T;
+  completude?: T;
+  actif?: T;
+  actifDepuis?: T;
+  publiable?: T;
+  publiableDepuis?: T;
+  entierementVide?: T;
+  entierementVideDepuis?: T;
   updatedAt?: T;
   createdAt?: T;
 }

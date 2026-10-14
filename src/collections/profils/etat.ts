@@ -1,0 +1,73 @@
+import type { CollectionBeforeChangeHook, Field, FieldAccess } from 'payload'
+// Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
+import { champDuProfilAdminOuProprietaire, jamais } from '../../lib/acces'
+import { etatApresSauvegarde } from '../../lib/profil/etat'
+
+/** Written by the server only, at every save: what any request sends on it is ignored. */
+const CALCULE: { create: FieldAccess; update: FieldAccess } = { create: jamais, update: jamais }
+
+/** A flag of the state, read by everyone who reads the profile. */
+const drapeau = (name: string, label: string, description: string): Field => ({
+	name,
+	label,
+	type: 'checkbox',
+	access: CALCULE,
+	admin: { readOnly: true, position: 'sidebar', description },
+})
+
+/** The date a flag took its current value, read by the owner and an admin only. */
+const depuis = (name: string, label: string): Field => ({
+	name,
+	label,
+	type: 'date',
+	access: { read: champDuProfilAdminOuProprietaire, ...CALCULE },
+	admin: {
+		readOnly: true,
+		position: 'sidebar',
+		date: { pickerAppearance: 'dayAndTime' },
+		description: 'Date à laquelle la case du dessus a pris sa valeur. Posée par le serveur.',
+	},
+})
+
+/**
+ * The state of a profile (ticket 044; docs/migration/SCHEMA.md §9), computed and stored by the
+ * server at every save by the single rule (src/lib/profil/etat.ts, which reads
+ * src/lib/profil/completude.ts): never written by an API, whatever a request sends.
+ *
+ * The score and the three flags are read by everyone who reads the profile: they say nothing a
+ * reader does not see already (the phone and the email count only when shown), and the public
+ * pages filter on them (noindex, sitemap, search). The dates are read by the owner and an admin.
+ */
+export const CHAMPS_DE_L_ETAT: Field[] = [
+	{
+		name: 'completude',
+		label: 'Complétude',
+		type: 'number',
+		access: CALCULE,
+		admin: { readOnly: true, position: 'sidebar', description: 'Critères remplis, sur 13. Calculée par le serveur.' },
+	},
+	drapeau('actif', 'Actif', 'Photo principale, ville et spécialité. Calculé par le serveur.'),
+	depuis('actifDepuis', 'Actif ou non depuis le'),
+	drapeau('publiable', 'Publiable', 'Les six conditions du profil publiable. Calculé par le serveur.'),
+	depuis('publiableDepuis', 'Publiable ou non depuis le'),
+	drapeau(
+		'entierementVide',
+		'Entièrement vide',
+		'Aucune des six conditions : le profil reste en brouillon. Calculé par le serveur.'
+	),
+	depuis('entierementVideDepuis', 'Entièrement vide ou non depuis le'),
+]
+
+/**
+ * Before a profile is written: its state, the dates of its flags and its status, by the rule of
+ * src/lib/profil/etat.ts, from what the save holds once the access rules have run (`data` holds
+ * every field: Payload fills what a request leaves out with the stored value).
+ */
+export const etatAvantEcriture: CollectionBeforeChangeHook = ({ data, operation, originalDoc }) => ({
+	...data,
+	...etatApresSauvegarde({
+		avant: operation === 'update' ? originalDoc : undefined,
+		apres: data,
+		maintenant: new Date(),
+	}),
+})

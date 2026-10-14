@@ -80,9 +80,10 @@ describe('Liste anonyme refusée ; média d’un profil publié lu ; d’un prof
 		const admin = await creerCompte('admin')
 		expect((await appelerRest('GET', `/api/media/${principale.id}`)).statut).toBe(200)
 
+		// The admin hides it by her choice of status: the status itself is the server's (ticket 044).
 		await appelerRest('PATCH', `/api/profils/${profil.id}`, {
 			enTetes: admin.session.enTetes,
-			corps: { statut: 'masque' },
+			corps: { statutChoisi: 'masque' },
 		})
 
 		expect((await appelerRest('GET', `/api/media/${principale.id}`)).statut).toBe(404)
