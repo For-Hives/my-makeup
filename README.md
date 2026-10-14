@@ -40,6 +40,7 @@ Le reste :
 - `src/payload-types.ts` et `src/app/(payload)/admin/importMap.js` : fichiers générés par Payload, versionnés, jamais modifiés à la main.
 - `docker-compose.yml` : la base PostgreSQL de développement.
 - `Dockerfile` et `.dockerignore` : l'image de production (voir « Image Docker »).
+- `.github/workflows/ci.yml` et `ci/checks-requis.json` : la CI et les checks requis (voir « Intégration continue »).
 - `.env.exemple` : la liste des variables d'environnement, sans aucune valeur.
 - `tests/` : les tests. Un composant React s'y teste seul, sans navigateur : voir `docs/tests/composants.md`.
 
@@ -234,6 +235,21 @@ Avec Podman, l'image se construit au format Docker, sinon Podman retire le contr
 podman build --format docker --tag my-makeup:local .
 DOCKER_HOST=unix://$XDG_RUNTIME_DIR/podman/podman.sock bun run image:controle
 ```
+
+## Intégration continue
+
+Chaque pull request et chaque poussée sur `v3` lancent `.github/workflows/ci.yml` : trois jobs en parallèle, puis `ci-ok`, le seul check à exiger pour fusionner.
+
+| Job | Ce qu'il lance |
+|---|---|
+| `qualite` | Fichiers générés par Payload à jour, `bun run typecheck`, `bun run ci:biome`, `bun run test:ci-garde` |
+| `unit` | `bun run test:unit` |
+| `build` | `bun run image:build` sans secret ni base, puis `bun run image:controle` |
+| `ci-ok` | Rouge si l'un des trois a échoué, a été annulé ou a été sauté |
+
+Avant de pousser, les mêmes commandes se lancent en local : `bun run check`, `bun run typecheck`, `bun run test`, `bun run test:ci-garde`.
+
+La CI ne lit aucun secret, n'a aucun filtre de chemins et ne tolère aucun échec. Ces règles sont tenues par les garde-fous de `tests/ci/` : voir [`docs/qualite.md`](docs/qualite.md), qui dit aussi comment ajouter un job ou une action.
 
 ## Commandes
 
