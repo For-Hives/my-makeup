@@ -4,6 +4,15 @@ import { adminOuSoiMeme, adminSeulement, champAdminSeulement, jamais } from '../
 import { sessionsFermees } from './Admins'
 import { profilALaCreationDuCompte } from './Profils'
 
+/** How long a session of a makeup artist lasts: 14 days (plan 01 §2.3). */
+export const DUREE_SESSION_PRO_S = 14 * 24 * 60 * 60
+
+/**
+ * The attributes of the session cookie (I09): HttpOnly always (Payload sets it), SameSite=Lax, and
+ * Secure on the deployed site. The sign-in sets it with these same attributes.
+ */
+export const cookiesDeSession = (production: boolean) => ({ secure: production, sameSite: 'Lax' as const })
+
 /**
  * Payload gives every account collection a « first account » route, which creates an account
  * without access control while the collection is empty. It serves the admin panel, which a makeup
@@ -56,7 +65,14 @@ export const Pros: CollectionConfig<'pros'> = {
 	slug: 'pros',
 	labels: { singular: 'Compte maquilleuse', plural: 'Comptes maquilleuses' },
 	admin: { useAsTitle: 'email', defaultColumns: ['email', 'nom', '_verified', 'bloque'] },
-	auth: { verify: true },
+	auth: {
+		verify: true,
+		// 14 days (plan 01 §2.3). Sliding renewal and the 90-day ceiling are ticket 079.
+		tokenExpiration: DUREE_SESSION_PRO_S,
+		// The token lives in the cookie only: no response of the API carries it (ticket 075).
+		removeTokenFromResponses: true,
+		cookies: cookiesDeSession(process.env.NODE_ENV === 'production'),
+	},
 	access: {
 		admin: () => false,
 		read: adminOuSoiMeme('pros'),
