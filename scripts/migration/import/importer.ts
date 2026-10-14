@@ -100,6 +100,9 @@ function compterLesEcarts(ecarts: Record<string, number>, attendus: readonly Att
 		for (const { reference } of duDocument) ecarts[reference] = (ecarts[reference] ?? 0) + 1
 }
 
+/** The collections whose documents are all the import's: one that holds no `strapiId` was added by hand. */
+const COLLECTIONS_SANS_ORIGINE = new Set<string>(['pros', 'profils'])
+
 /** Plans one collection, writes it when the run is real, and gives what it did or would do. */
 async function importerLaCollection(
 	{ payload, mode }: OptionsDImport,
@@ -110,7 +113,17 @@ async function importerLaCollection(
 ): Promise<BilanDeCollection> {
 	const plan = planifier(adaptateur, attendus, await lireLaCible(payload, adaptateur))
 	const bilan = mode === 'reel' ? await ecrire(payload, adaptateur, plan) : bilanDuPlan(plan)
-	return { ...bilan, refuses: [...refuses, ...bilan.refuses], source, enTrop: plan.enTrop }
+	// A document added by hand holds no `strapiId`: the plan never sees it, the check must count it.
+	const sansOrigine = COLLECTIONS_SANS_ORIGINE.has(adaptateur.collection)
+		? (
+				await payload.count({
+					collection: adaptateur.collection,
+					where: { strapiId: { exists: false } },
+					overrideAccess: true,
+				})
+			).totalDocs
+		: 0
+	return { ...bilan, refuses: [...refuses, ...bilan.refuses], source, enTrop: plan.enTrop, sansOrigine }
 }
 
 /** The parity of a collection: the expected documents, and those refused before or while writing, counted apart. */
@@ -208,6 +221,8 @@ export async function importer(options: OptionsDImport): Promise<Rapport> {
 		const talents = talentsAttendus(lu.talents)
 		const articles = articlesRepartis(lu.articles)
 		for (const { attendus } of [comptes, talents]) compterLesEcarts(rapport.ecarts, attendus)
+		// This line of the register counts the accounts set aside, not the kept accounts that took a hash.
+		if (comptes.ecartes.length > 0) rapport.ecarts[REFERENCES.comptesEmailPartage] = comptes.ecartes.length
 
 		// Before any write: the referential may not answer, or a line of the table name an unknown commune.
 		const nonPris = new Set<number>([...laisses.ecartes, ...laisses.spam])
@@ -250,6 +265,8 @@ export async function importer(options: OptionsDImport): Promise<Rapport> {
 		rapport.collections.pros = {
 			...(await importerLaCollection(options, ADAPTATEUR_COMPTES, lu.comptes.length, comptes.attendus)),
 			ecartes: comptes.ecartes,
+			hashRattaches: comptes.hashRattaches,
+			hashNonRattaches: comptes.hashNonRattaches,
 			nonConfirmes: comptes.nonConfirmes,
 			repartition: repartitionDesComptes(comptes.attendus),
 		}

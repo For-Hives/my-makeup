@@ -15,6 +15,8 @@ export const REFERENCES = {
 	hashIncomplet: 'SCHEMA.md §5.1 (password)',
 	/** Every taken account is confirmed, as the accounts of the old site are. */
 	compteConfirme: 'confirmation-email',
+	/** Accounts that share one email: one is kept, the others are set aside and lend it their legacy hash (ticket 066). */
+	comptesEmailPartage: 'comptes-email-partage',
 	/** The slug of a profile: the rule of the old site, computed from its username, then stored. */
 	slugStocke: 'slug-stocke',
 	/** A profile entirely empty at the source is a draft. */

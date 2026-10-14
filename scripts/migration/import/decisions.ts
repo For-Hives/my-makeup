@@ -9,7 +9,8 @@
  *     "communes": [{ "profil": 28, "codeInsee": "74243" }] }
  *
  * - `emailsPartages`: accounts of the old site that share one email (edge spaces and capitals
- *   aside). The v3 has one account per email: only `retenu` is taken, the others are set aside.
+ *   aside). The v3 has one account per email: only `retenu` is taken, the others are set aside; the kept account without a legacy hash takes
+ *   the one of the first account set aside that has one (ticket 066 default).
  *   A group the source holds without its decision stops the import before any write.
  * - `profilsEcartes`: profiles a person decided to leave aside: a profile whose account a decision
  *   above sets aside, or a profile without an account in the source that is not one of the 13
@@ -95,6 +96,8 @@ const memesComptes = (a: readonly number[], b: readonly number[]): boolean =>
 export interface ApplicationDesDecisions {
 	/** The accounts set aside by a decision. */
 	ecartes: number[]
+	/** For each group decided, the account kept and the accounts set aside in its favour. */
+	rattaches: { retenu: number; ecartes: number[] }[]
 	/** The groups the source holds that no decision names exactly: the import stops. */
 	sansDecision: number[][]
 	/** Decisions that name no group of the source: they have no effect. */
@@ -111,6 +114,7 @@ export function appliquerLesDecisions(
 	decisions: Pick<Decisions, 'emailsPartages'>
 ): ApplicationDesDecisions {
 	const ecartes: number[] = []
+	const rattaches: ApplicationDesDecisions['rattaches'] = []
 	const sansDecision: number[][] = []
 	const appliquees = new Set<number>()
 	for (const groupe of groupes) {
@@ -121,10 +125,13 @@ export function appliquerLesDecisions(
 			continue
 		}
 		appliquees.add(rang)
-		ecartes.push(...groupe.filter(id => id !== decision.retenu))
+		const autres = groupe.filter(id => id !== decision.retenu)
+		ecartes.push(...autres)
+		rattaches.push({ retenu: decision.retenu, ecartes: autres })
 	}
 	return {
 		ecartes: ecartes.sort((a, b) => a - b),
+		rattaches,
 		sansDecision,
 		sansObjet: decisions.emailsPartages.length - appliquees.size,
 	}

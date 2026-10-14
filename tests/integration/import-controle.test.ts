@@ -126,7 +126,41 @@ describe('le contrôle de la parité (I39, I40, I43)', () => {
 		])
 
 		expect(code, sortie).toBe(1)
-		expect(sortie).toContain('--sans-photos et --reel ne vont pas ensemble')
+		expect(sortie).toContain('--sans-photos ne va pas avec --reel ni avec --controle')
 		expect(await photosDeLaCible()).toEqual(avant)
+	}, 60_000)
+
+	test('--sans-photos avec --controle est refusé sur une cible qui garde des médias, au lieu d’un faux écart', async () => {
+		await importerSurLeBanc()
+
+		const { code, sortie } = await controler('--sans-photos')
+
+		expect(code, sortie).toBe(1)
+		expect(sortie).toContain('--sans-photos ne va pas avec --reel ni avec --controle')
+	}, 60_000)
+
+	test('un compte ajouté à la main, sans identifiant de l’ancien site, fait échouer le contrôle', async () => {
+		await importerSurLeBanc()
+		await ecrireDansLaCible("INSERT INTO pros (email) VALUES ('ajoute-a-la-main@example.test')")
+
+		const { code, sortie } = await controler()
+
+		expect(code, sortie).toBe(4)
+		expect(sortie).toContain(
+			'Comptes : 0 création à faire, 0 mise à jour à faire, 0 document en trop, 1 document sans origine'
+		)
+		expect(sortie).not.toContain('ajoute-a-la-main')
+	}, 60_000)
+
+	test('un profil ajouté à la main fait échouer le contrôle', async () => {
+		await importerSurLeBanc()
+		await ecrireDansLaCible(
+			"INSERT INTO profils (pro_id, slug) SELECT id, 'ajoute-a-la-main' FROM pros WHERE strapi_id = 8"
+		)
+
+		const { code, sortie } = await controler()
+
+		expect(code, sortie).toBe(4)
+		expect(sortie).toMatch(/Profils : .* 1 document sans origine/)
 	}, 60_000)
 })

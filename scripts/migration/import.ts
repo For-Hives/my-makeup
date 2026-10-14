@@ -125,11 +125,11 @@ async function principal(argumentsDeLaCommande: string[]): Promise<number> {
 	// `--sans-photos`: no storage at all, as in the pre-production; nothing is asked of any host.
 	const baseDesMedias = options.sansPhotos ? null : mediaBaseUrl(process.env.R2_PUBLIC_URL, serverEnv().storage)
 	// Without storage, a real pass would drop every photo link of the profiles and leave the media behind.
-	if (options.sansPhotos && options.mode === 'reel') {
+	if (options.sansPhotos && (options.mode === 'reel' || options.controle)) {
 		const { totalDocs } = await payload.count({ collection: 'media', overrideAccess: true })
 		if (totalDocs > 0)
 			throw new ImportRefuse(
-				'--sans-photos et --reel ne vont pas ensemble sur une cible qui garde déjà des médias : le passage retirerait les photos des profils. Rien n’est écrit ; relance avec le stockage, sans --sans-photos.'
+				'--sans-photos ne va pas avec --reel ni avec --controle sur une cible qui garde déjà des médias : le passage retirerait les photos des profils, le contrôle verrait les médias en trop. Rien n’est écrit ; relance avec le stockage, sans --sans-photos.'
 			)
 	}
 	const source = ouvrirLaSourceBun(adresseDeLaSource)

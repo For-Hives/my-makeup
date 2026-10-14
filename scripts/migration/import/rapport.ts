@@ -30,6 +30,12 @@ export interface BilanDeCollection extends Bilan {
 	source: number
 	/** `strapiId` of the documents of the target the source no longer gives: listed, never deleted. */
 	enTrop: number[]
+	/** Documents of the target that hold no `strapiId` (pros, profils): added by hand, outside the import. */
+	sansOrigine?: number
+	/** Kept accounts that took the legacy hash of an account set aside (ticket 066). */
+	hashRattaches?: number[]
+	/** Legacy hashes of accounts set aside that no kept account could take. */
+	hashNonRattaches?: number
 	/** `strapiId` of the documents of the source the import does not take: set aside by a decision. */
 	ecartes?: number[]
 	/** Accounts not confirmed at the source, taken confirmed. */
@@ -118,15 +124,16 @@ export function codeDeSortie(rapport: Rapport): 0 | 3 | 4 | 5 {
 /** Per collection, what a real run would write or find too many: the gap between the target and the source. */
 export function ecartsDeLaCible(
 	rapport: Rapport
-): { collection: CollectionImportee; crees: number; modifies: number; enTrop: number }[] {
+): { collection: CollectionImportee; crees: number; modifies: number; enTrop: number; sansOrigine: number }[] {
 	return (Object.entries(rapport.collections) as [CollectionImportee, BilanDeCollection][])
 		.map(([collection, bilan]) => ({
 			collection,
 			crees: bilan.crees,
 			modifies: bilan.modifies,
 			enTrop: bilan.enTrop.length,
+			sansOrigine: bilan.sansOrigine ?? 0,
 		}))
-		.filter(({ crees, modifies, enTrop }) => crees + modifies + enTrop > 0)
+		.filter(({ crees, modifies, enTrop, sansOrigine }) => crees + modifies + enTrop + sansOrigine > 0)
 }
 
 /**
@@ -152,8 +159,8 @@ export function controleEnTexte(rapport: Rapport): string {
 	return [
 		'Contrôle : la cible n’est PAS la source.',
 		...ecarts.map(
-			({ collection, crees, modifies, enTrop }) =>
-				`  - ${NOMS_DES_COLLECTIONS[collection]} : ${pluriel(crees, 'création', 'créations')} à faire, ${pluriel(modifies, 'mise à jour', 'mises à jour')} à faire, ${pluriel(enTrop, 'document en trop', 'documents en trop')}`
+			({ collection, crees, modifies, enTrop, sansOrigine }) =>
+				`  - ${NOMS_DES_COLLECTIONS[collection]} : ${pluriel(crees, 'création', 'créations')} à faire, ${pluriel(modifies, 'mise à jour', 'mises à jour')} à faire, ${pluriel(enTrop, 'document en trop', 'documents en trop')}, ${pluriel(sansOrigine, 'document sans origine', 'documents sans origine')}`
 		),
 	].join('\n')
 }
@@ -176,6 +183,16 @@ function ligneDeBilan(nom: string, bilan: BilanDeCollection, mode: Mode): string
 		)
 	if (bilan.enTrop.length > 0) lignes.push(`  - dans la cible, absents de la source, gardés : ${ids(bilan.enTrop)}`)
 	if (bilan.ecartes?.length) lignes.push(`  - écartés par la table de décision : ${ids(bilan.ecartes)}`)
+	if (bilan.hashRattaches?.length)
+		lignes.push(
+			`  - hash hérité d’un compte écarté, rattaché au compte gardé : ${ids(bilan.hashRattaches)}${bilan.hashNonRattaches ? ` ; ${pluriel(bilan.hashNonRattaches, 'hash écarté non rattaché', 'hash écartés non rattachés')}` : ''}`
+		)
+	else if (bilan.hashNonRattaches)
+		lignes.push(
+			`  - ${pluriel(bilan.hashNonRattaches, 'hash écarté non rattaché', 'hash écartés non rattachés')} (le compte gardé a le sien)`
+		)
+	if (bilan.sansOrigine)
+		lignes.push(`  - dans la cible, sans identifiant de l’ancien site (ajoutés à la main) : ${bilan.sansOrigine}`)
 	if (bilan.nonConfirmes?.length)
 		lignes.push(`  - non confirmés à la source, repris confirmés : ${ids(bilan.nonConfirmes)}`)
 	if (bilan.repartition) lignes.push(`  - ${repartitionEnTexte(bilan.repartition)}`)
