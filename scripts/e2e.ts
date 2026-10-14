@@ -11,8 +11,9 @@
  *   2. empties the bench database: the application builds its tables itself, by its migrations;
  *   3. builds the application for production, with no database, no secret and no `.env`;
  *   4. runs Playwright under Node with the environment of the bench. Playwright starts the
- *      application on the port of the instance, waits until it is healthy, runs the tests and
- *      stops it (tests/outils/e2e.ts).
+ *      application on the port of the instance, waits until it is healthy, refuses a database
+ *      its migrations did not build as the code describes it (tests/outils/serveur-e2e.ts), runs
+ *      the tests and stops it (tests/outils/e2e.ts).
  *
  * The instance (name and ports) comes from BANC_INSTANCE and BANC_DECALAGE, like the bench.
  * Started with `--no-env-file`: a working `.env` never reaches the tests.

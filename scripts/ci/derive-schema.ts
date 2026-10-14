@@ -14,15 +14,19 @@
  * Exit code: 0 without drift, 1 with drift (what a migration would hold is printed), 2 on a
  * wrong use.
  *
- * Not yet a step of the CI: until the `init` migration closes the schema (ticket 049), the
- * local databases receive the schema by a push, and the versioned migrations are provisional.
+ * A step of the job `qualite` of the CI since the `init` migration closed the schema (ticket 049):
+ * a collection changed without its migration makes the CI red.
+ *
+ * Its names check (`ambiguites`) is also read by tests/outils/schema-du-banc.ts, which the
+ * global setup of Playwright loads under Node: this file finds its folder without `import.meta.dir`.
  */
 
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import type { Config, SanitizedConfig } from 'payload'
 
-const ROOT = path.resolve(import.meta.dir, '../..')
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 export const DOSSIER_DES_MIGRATIONS = path.join(ROOT, 'src/migrations')
 
 /**

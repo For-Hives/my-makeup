@@ -5,10 +5,12 @@
  *    declares it.
  * 2. The application answers at that address as a healthy one. Otherwise every test would fail
  *    on a timeout, one after the other, without saying why.
- * 3. On the bench, the Payload of the tests is attached to the database once, here, before the
- *    workers. The application has just built its tables by its versioned migrations; a table
- *    the code has and no migration has yet is then created by one process, not by every worker
- *    at the same moment.
+ * 3. On the bench, the application has just built every table by its versioned migrations, on
+ *    the database `bun run test:e2e` erased, as the pre-production does. The Payload of the tests
+ *    reads that database without changing its schema (tests/outils/payload-test.ts), and refuses
+ *    to run the tests when it carries the mark of a schema push, or when the migrations did not
+ *    build it as the collections of the code describe it: a missing migration stops the run
+ *    here, with what to do, instead of failing on the pre-production (ticket 049).
  */
 
 import { BancRefuse } from './banc'
@@ -41,21 +43,23 @@ export async function lireLaSante(adresse: string, demander: typeof fetch = fetc
 	}
 }
 
-/** Longest wait for the Payload of the tests to attach to the bench: a second or two when the schema is in order. */
+/** Longest wait for the Payload of the tests to attach to the bench and check its schema: a second or two when the schema is in order. */
 export const DELAI_DE_BRANCHEMENT_MS = 30_000
 
 export const MESSAGE_SCHEMA_EN_DESACCORD = [
-	'Payload attend une réponse en se branchant sur la base du banc : les migrations versionnées et les collections du code ne s’accordent plus (une table ou une colonne renommée, ou retirée du code).',
+	'Le contrôle du schéma attend une réponse sur la base du banc : les migrations versionnées et les collections du code ne s’accordent plus (une table ou une colonne renommée, ou retirée du code).',
 	'Mets les migrations à jour (bun run payload:migrate:create), puis relance. Aucun essai n’a tourné.',
 ].join('\n')
 
 /**
- * Runs `action` with the two ways Payload has of waiting for an answer turned into an error.
+ * Runs `action` with the two ways Payload and drizzle-kit have of waiting for an answer turned
+ * into an error: a backstop, since the check of the schema finds a renamed name before it asks
+ * anything (tests/outils/schema-du-banc.ts).
  *
- * When its schema push meets a question (a column renamed in the code and not in the
- * migrations), it asks it on the terminal and waits, for ever in a run nobody watches. When the
- * question is about data it could lose, and nobody can answer, it ends the process with the
- * code of a success: a run that passes without a single test.
+ * When drizzle-kit meets a question (a column renamed in the code and not in the migrations), it
+ * asks it on the terminal and waits, for ever in a run nobody watches. When Payload meets a
+ * question nobody can answer, it ends the process with the code of a success: a run that passes
+ * without a single test.
  */
 export async function sansQuestion<Resultat>(
 	action: () => Promise<Resultat>,
@@ -88,9 +92,16 @@ export default async function avantLePremierEssai(): Promise<void> {
 		if (!process.env.DATABASE_URI) throw new BancRefuse(messageSansBanc())
 		await sansQuestion(async () => {
 			// Loaded here and not at the top: a run against the pre-production has no Payload to load.
-			const { payloadDeTest } = await import('./payload-test')
+			const [{ payloadDeTest }, { exigerLeSchemaDesMigrations }] = await Promise.all([
+				import('./payload-test'),
+				import('./schema-du-banc'),
+			])
 			const payload = await payloadDeTest()
-			await payload.destroy()
+			try {
+				await exigerLeSchemaDesMigrations(payload, 'essai')
+			} finally {
+				await payload.destroy()
+			}
 		})
 	}
 
