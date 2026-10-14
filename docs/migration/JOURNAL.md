@@ -406,3 +406,34 @@ Ce que la v3 change par rapport au site actuel est dans [`CHANGEMENTS-VOULUS.md`
 - **Intégration des tickets 068 à 076, 133, 137 et 149 dans `v3`.**
   - Six fusions ; deux avec conflit, résolus en gardant les deux côtés. `src/proxy.ts` : porte de l'espace et en-tête robots dans une seule fonction. `src/migrations/index.ts` : les deux migrations en ordre d'horodatage, et le cliché de la dernière migration complété des colonnes `sizes`. Le lot 065-067 n'est pas fusionné (tickets non faits, bloquants sans accès à la prod).
   - Vérifié : installation figée sans changement ; Biome et contrôle de types verts ; 1 717 tests unitaires verts et 1 sauté ; 442 garde-fous de la CI verts ; build de production vert ; intégration complète sur un banc à part, 1 428 verts ; bout en bout, 61 verts et 2 échecs qui existent déjà sur la tête précédente de `v3` en passage complet (`jeu-du-banc` et `tranche-profil-importe` se perturbent en parallèle ; chacun passe seul). Le menu du gabarit ne se retrouve plus sur la page de connexion, qui est dans l'espace : l'essai du gabarit a été corrigé en conséquence.
+- **Ticket 072 fait : la table des URL est un test, par type de page.**
+  - `tests/e2e/parite-urls.spec.ts` (I45) imprime une ligne par famille d'adresses (vertes, « à venir ») ; une famille livrée qui n'est plus verte fait échouer le lancement. Un seul saut pour la barre finale et `/toutes-les-news` → `/blog` (proxy), `skipTrailingSlashRedirect` activé.
+  - Écart connu, non vert : Next répond lui-même `//x` par un 308 avant le proxy (301 attendu), et `//toutes-les-news` fait deux sauts (ligne `adresse-double-barre-308` du registre). Une réécriture à l'hébergement donnerait le 301. Un ticket qui livre un type d'adresse l'ajoute à `LIVREES`.
+- **Ticket 077 fait : chaque événement d'authentification laisse une ligne au journal, sans donnée personnelle.**
+  - Collection `auth-evenements` (type et issue en listes fermées, durée, date ; aucun champ texte), lecture réservée à l'admin, écriture hors de la transaction de connexion. Purge à 90 jours : première entrée de `src/lib/taches/`, lancée par le serveur de production.
+  - À savoir : la dernière connexion est `pros.derniereConnexion` (le plan 04 prévoit `derniereActivite`, en P5) ; une connexion par l'API locale ne laisse pas de ligne.
+- **Ticket 078 fait : la déconnexion ferme vraiment la session.**
+  - `fermerLaSession` retire la session en base (cet appareil, ou tous après confirmation) ; la Nav lit l'état par `GET /api/espace/session` et les pages publiques gardent leur cache ; arrivée sur l'accueil.
+- **Ticket 079 fait : la session glisse sur 14 jours, 90 jours au plus.**
+  - Règles pures dans `duree-session.ts` (aucun import, atteint par le composant client), hooks dans `session-glissante.ts` ; plafond refusé en 403. Ligne `session-14-jours-glissants` au registre et note de version.
+  - Reste : le cookie renouvelé par Payload n'applique pas `finDeVieDuCookie` (080) ; après un renouvellement, le message « session expirée » peut ne plus s'afficher à la fin.
+- **Ticket 080 fait : une session expirée donne un message clair et une seule redirection.**
+  - Le cookie survit 90 jours à son jeton (`etat-session.ts`) pour que le serveur sache qu'une session a existé ; une panne de base n'est pas un refus (`verifierUneSession`). Plan 02 I12 disait 401 : Payload répond 200 avec `user: null` ou 403, l'essai vérifie le refus.
+- **Ticket 081 fait : les cookies de l'ancien site sont effacés à la première visite.**
+  - Le proxy expire les cookies `next-auth.*` pendant 90 jours après `BASCULE_LE` (à poser dans Coolify le jour de la bascule) et la connexion dit une fois « Reconnecte-toi une fois ». Le lien « Mot de passe oublié » du message n'existe qu'avec 085/086 ; le bouton Google arrive avec 090.
+- **Ticket 082 fait : une maquilleuse s'inscrit, confirme son email, puis arrive dans l'onboarding.**
+  - `/auth/signup`, mur, lien à usage unique, `/auth/init-account` minimal ; compte, profil vide et mail dans une seule transaction. `AUTH_VERIFY` actif par défaut (`off` coupe ; à régler sur un poste sans `SMTP_HOST`). Textes en « tu » à valider ; adresse déjà prise dite telle quelle jusqu'à 083.
+- **Ticket 094 fait : le back-office n'ouvre qu'aux admins.**
+  - Premier compte fermé (`first-register` répond 403), créé par `bun run admin:creer` (mot de passe au clavier) ; verrous d'édition réservés aux comptes du panneau ; pas de verrou de compte sur `admins` (migration `admins_sans_verrou_de_compte`).
+  - Reste : sur une base non publique, ouverture temporaire de la base (ticket 185 à revoir) ; le premier admin de la préprod doit être créé par la commande, pas sur `/admin`.
+- **Ticket 097 fait : l'accueil de la v3, mot pour mot.**
+  - Recherche en tête, talents publiés avec leur lien, JSON-LD Organization et WebSite, Open Graph minimal ; page lue à chaque requête (le build n'a pas de base), cache au ticket 117.
+- **Ticket 098 fait : la recherche par ville, en sections par lieu.**
+  - `/search?city=` sans profil entièrement vide, titre qui ne compte que le lieu saisi, noindex ; la recherche par mot-clé et les pages de 20 sont aux tickets 099 et 100.
+- **Ticket 111 fait : la v3 sert la mesure Umami par son propre chemin `/u`.**
+  - `/u/script.js` et `/u/api/send` relaient vers l'instance (`UMAMI_ORIGIN`), tout autre chemin 404, coupure à 10 s, rien ne part hors de `my-makeup.fr` ; faux Umami au banc.
+- **Ticket 143 fait : un catalogue fermé d'événements et un seul chemin vers Umami.**
+  - 20 événements typés dans `src/lib/analytics/events.ts`, `track()` seul accès à `window.umami` (test statique), Web Vitals sur toutes les visites.
+- **Intégration des tickets 072, 077, 078, 079, 080, 081, 082, 094, 097, 098, 111 et 143 dans `v3`.**
+  - Sept fusions (le lot 065-067 n'est pas fusionné : tickets non faits, bloquants sans accès à la prod). Conflits résolus en gardant les deux côtés : `Pros.ts` (hooks du journal, de la session glissante et du frein), `profil/page.tsx`, `session.ts` (l'état de session de 080 et la date de fin de 079), `proxy.ts` (forme de l'adresse, nettoyage des cookies, porte de l'espace), `cookie-session.ts` (la règle de 080 appliquée à la pose du cookie), `env.ts`, `.env.exemple`, `README.md`, `changelog.json`, registre des changements, matrice d'accès, et `migrations/index.ts` (094 puis 077 ; le cliché de la dernière migration a perdu les colonnes de verrou de `admins`).
+  - Trois essais adaptés après fusion : le cookie du banc survit à son jeton (`banc-comptes`), l'essai E13 coupe le renouvellement de 079, l'essai des en-têtes de cache ne suppose plus l'accueil statique.
