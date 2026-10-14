@@ -1,13 +1,22 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
+import { readFileSync } from 'node:fs'
 import bcrypt from 'bcryptjs'
 import { AuthenticationError } from 'payload'
-import { connecter } from '@/lib/auth/connexion'
+import { connecter, type Horloge, PLANCHER_DE_REFUS_MS } from '@/lib/auth/connexion'
 import { creerFrein } from '@/lib/auth/frein'
-import { estUnHashBcrypt, HASH_FICTIF, motDePasseDuHash, remplacerLeHashHerite } from '@/lib/auth/herite'
+import {
+	estUnHashBcrypt,
+	HASH_FICTIF,
+	motDePasseDuHash,
+	PBKDF2_DE_PAYLOAD,
+	remplacerLeHashHerite,
+	travailDeVerificationFictif,
+} from '@/lib/auth/herite'
 import type { EvenementAuth } from '@/lib/auth/journal'
 
 /**
- * The sign-in of an account of the old site (ticket 087; plan 02 U72, U74). No database.
+ * The sign-in of an account of the old site (ticket 087; plan 02 U72, U74) and the equal time of
+ * every refusal (ticket 088; U73). No database, no real wait: the clock of the sign-in is a fake one.
  */
 
 const frein = creerFrein({ nom: 'essai-connexion-herite', limite: 1000, fenetreMs: 15 * 60_000 })
@@ -72,6 +81,19 @@ describe('U72 : le hash hérité est accepté, puis remplacé', () => {
 	})
 })
 
+describe('U73 : le travail d’une adresse inconnue est celui de Payload pour un compte connu', () => {
+	test('les paramètres de PBKDF2 sont ceux que Payload utilise (garde contre une mise à jour)', () => {
+		const source = readFileSync('node_modules/payload/dist/auth/strategies/local/generatePasswordSaltHash.js', 'utf8')
+		expect(source).toContain(`currentPasswordHashIterations = ${PBKDF2_DE_PAYLOAD.iterations}`)
+		expect(source).toContain(`currentPasswordHashKeyLength = ${PBKDF2_DE_PAYLOAD.longueur}`)
+		expect(source).toContain("'sha256'")
+	})
+
+	test('le travail fictif se termine, sans exception, pour tout texte', async () => {
+		for (const texte of ['x', '', 'é'.repeat(500)]) await travailDeVerificationFictif(texte)
+	})
+})
+
 describe('U74 : un hash mal formé est refusé sans exception', () => {
 	const MAL_FORMES: unknown[] = [
 		'',
@@ -129,6 +151,7 @@ describe('connecter : le chemin du hash hérité', () => {
 					evenements.push(e)
 					return Promise.resolve()
 				},
+				horloge: instantanee(),
 			},
 		}
 	}
@@ -180,5 +203,119 @@ describe('connecter : le chemin du hash hérité', () => {
 		})
 		await connecter(e)
 		expect(herite).toBe(1)
+	})
+})
+
+/** A clock that never waits: `connecter` only asks it for the time. */
+function instantanee(): Horloge {
+	let maintenant = 0
+	return {
+		maintenant: () => maintenant,
+		attendre: ms => {
+			maintenant += ms
+			return Promise.resolve()
+		},
+	}
+}
+
+/**
+ * A clock of the test: the time only moves when the work "costs" some (`travail`) or when the
+ * sign-in waits. No real time passes, so the test is the same on a slow runner.
+ */
+function horlogeSimulee() {
+	let maintenant = 1_000_000
+	const horloge: Horloge = {
+		maintenant: () => maintenant,
+		attendre: ms => {
+			maintenant += ms
+			return Promise.resolve()
+		},
+	}
+	return {
+		horloge,
+		travail: (ms: number) => {
+			maintenant += ms
+		},
+		depuis: (debut: number) => maintenant - debut,
+	}
+}
+
+describe('U73 : un refus prend le même temps, quel que soit le compte', () => {
+	// What each case costs before the floor: the comparison to a hash, the lookup, the Payload login.
+	const CAS = {
+		'adresse inconnue': { payload: 4, herite: 71 },
+		'mauvais mot de passe': { payload: 38, herite: 70 },
+		'compte hérité, mauvais mot de passe': { payload: 36, herite: 74 },
+		'compte sans mot de passe': { payload: 37, herite: 69 },
+	}
+
+	test('les quatre refus durent 300 ms, à 50 ms près, sans attente réelle', async () => {
+		const durees: number[] = []
+		const reponses: unknown[] = []
+		for (const cout of Object.values(CAS)) {
+			const { horloge, travail, depuis } = horlogeSimulee()
+			const debut = horloge.maintenant()
+			const r = await connecter({
+				ouvrir: () => (travail(cout.payload), refuse()),
+				herite: () => (travail(cout.herite), Promise.resolve(false)),
+				headers: adresse(2),
+				email: 'a@example.test',
+				password: 'pas-le-bon',
+				frein,
+				horloge,
+			})
+			durees.push(depuis(debut))
+			reponses.push(r)
+		}
+		expect(Math.max(...durees) - Math.min(...durees)).toBeLessThanOrEqual(50)
+		for (const duree of durees) expect(duree).toBeGreaterThanOrEqual(PLANCHER_DE_REFUS_MS)
+		expect(new Set(reponses.map(r => JSON.stringify(r))).size).toBe(1)
+		expect(reponses[0]).toEqual({ ok: false, code: 'identifiants-invalides' })
+	})
+
+	test('un refus déjà plus long que le plancher n’attend pas de plus', async () => {
+		const { horloge, travail, depuis } = horlogeSimulee()
+		const debut = horloge.maintenant()
+		await connecter({
+			ouvrir: () => (travail(450), refuse()),
+			herite: () => Promise.resolve(false),
+			headers: adresse(3),
+			email: 'a@example.test',
+			password: 'x',
+			frein,
+			horloge,
+		})
+		expect(depuis(debut)).toBe(450)
+	})
+
+	test('le plancher vaut pour le refus après le chemin hérité aussi, et le journal garde la durée', async () => {
+		const { horloge } = horlogeSimulee()
+		const durees: (number | undefined)[] = []
+		await connecter({
+			ouvrir: refuse,
+			herite: () => Promise.resolve(false),
+			headers: adresse(4),
+			email: 'a@example.test',
+			password: 'x',
+			frein,
+			horloge,
+			journal: e => (durees.push(e.dureeMs), Promise.resolve()),
+		})
+		expect(durees[0]).toBe(PLANCHER_DE_REFUS_MS)
+	})
+
+	test('une connexion réussie n’attend pas le plancher', async () => {
+		const { horloge, depuis } = horlogeSimulee()
+		const debut = horloge.maintenant()
+		const r = await connecter({
+			ouvrir: () => Promise.resolve({ token: 'jeton' }),
+			headers: adresse(5),
+			email: 'a@example.test',
+			password: 'x',
+			frein,
+			horloge,
+		})
+		expect(r.ok).toBe(true)
+		expect(depuis(debut)).toBe(0)
 	})
 })

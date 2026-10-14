@@ -8,6 +8,20 @@ import type { CodeEvenement, Journaliser } from './journal'
 /** A password longer than this is refused as wrong: hashing it would cost more than it proves. */
 export const MOT_DE_PASSE_MAX = 1024
 
+/** The shortest time a refusal of the credentials takes, whoever the account is (ticket 088). */
+export const PLANCHER_DE_REFUS_MS = 300
+
+/** The clock of the sign-in. A test hands it a fake one, so that it measures without waiting. */
+export interface Horloge {
+	maintenant: () => number
+	attendre: (ms: number) => Promise<void>
+}
+
+const horlogeReelle: Horloge = {
+	maintenant: () => Date.now(),
+	attendre: ms => new Promise(resolve => setTimeout(resolve, ms)),
+}
+
 export type ResultatConnexion = { ok: true; token: string } | { ok: false; code: CodeErreur }
 
 export interface EntreesDeConnexion {
@@ -26,6 +40,8 @@ export interface EntreesDeConnexion {
 	 * the account held the password in its old hash and now holds it in Payload's format.
 	 */
 	herite?: (data: { email: string; password: string }) => Promise<boolean>
+	/** The clock and the pause of the floor on a refusal (ticket 088). */
+	horloge?: Horloge
 }
 
 const estTexte = (valeur: unknown): valeur is string => typeof valeur === 'string'
@@ -44,13 +60,17 @@ const estTexte = (valeur: unknown): valeur is string => typeof valeur === 'strin
  * - An account of the old site has no password Payload knows: when Payload refuses, the password
  *   is checked against the old hash (`herite`); if it matches, the account takes the password in
  *   Payload's format, loses the old hash, and is signed in (ticket 087). The journal says `heritee`.
+ * - A refusal of the credentials takes the same time whatever the cause (unknown address, wrong
+ *   password, old account, account with no password): the same work, and no answer before
+ *   `PLANCHER_DE_REFUS_MS` (ticket 088).
  * - Gives back the token for the caller to put in the cookie. It never gives back the account.
  */
 export async function connecter(entrees: EntreesDeConnexion): Promise<ResultatConnexion> {
-	const debut = Date.now()
-	const { resultat, heritee } = await tenterLaConnexion(entrees)
+	const horloge = entrees.horloge ?? horlogeReelle
+	const debut = horloge.maintenant()
+	const { resultat, heritee } = await tenterLaConnexion(entrees, horloge, debut)
 	const code = resultat.ok ? (heritee ? 'heritee' : 'ok') : resultat.code
-	await noterLaTentative(entrees.journal, code, Date.now() - debut)
+	await noterLaTentative(entrees.journal, code, horloge.maintenant() - debut)
 	return resultat
 }
 
@@ -85,15 +105,11 @@ interface Tentative {
 	heritee: boolean
 }
 
-async function tenterLaConnexion({
-	ouvrir,
-	headers,
-	email,
-	password,
-	frein = freinDeConnexion,
-	maintenant,
-	herite,
-}: EntreesDeConnexion): Promise<Tentative> {
+async function tenterLaConnexion(
+	{ ouvrir, headers, email, password, frein = freinDeConnexion, maintenant, herite }: EntreesDeConnexion,
+	horloge: Horloge,
+	debut: number
+): Promise<Tentative> {
 	const cle = ipClient(headers)
 	const decision = frein.prendre(cle, maintenant)
 	if (!decision.autorise) return { resultat: { ok: false, code: 'trop-de-tentatives' }, heritee: false }
@@ -138,5 +154,12 @@ async function tenterLaConnexion({
 
 	// Not the visitor's failure, or a right password: the place goes back.
 	if (code === 'service-indisponible' || code === 'email-non-confirme') frein.rendre(cle, maintenant)
+	if (code === 'identifiants-invalides') await attendreLePlancher(horloge, debut)
 	return { resultat: { ok: false, code }, heritee }
+}
+
+/** Waits until the floor is reached since `debut`: a refusal never comes back sooner. */
+async function attendreLePlancher(horloge: Horloge, debut: number): Promise<void> {
+	const reste = PLANCHER_DE_REFUS_MS - (horloge.maintenant() - debut)
+	if (reste > 0) await horloge.attendre(reste)
 }

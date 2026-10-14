@@ -1,3 +1,4 @@
+import { pbkdf2 } from 'node:crypto'
 import bcrypt from 'bcryptjs'
 import type { Payload } from 'payload'
 
@@ -41,6 +42,28 @@ export async function motDePasseDuHash(motDePasse: string, hash: unknown): Promi
 	}
 }
 
+/**
+ * What Payload's own check of a password costs (`authenticateLocalStrategy`): PBKDF2-SHA256, 600 000
+ * rounds, 32 bytes. Payload does it for an account it knows and not for an unknown address; the
+ * sign-in does the same work for the unknown address so that no answer comes sooner (ticket 088).
+ * A test reads Payload's source and fails if these numbers change there.
+ */
+export const PBKDF2_DE_PAYLOAD = { iterations: 600_000, longueur: 32 } as const
+
+/** Does the work Payload does to check a password, on nothing: the result is of no use. */
+export function travailDeVerificationFictif(motDePasse: string): Promise<void> {
+	return new Promise(resolve =>
+		pbkdf2(
+			motDePasse,
+			'sel-fictif-sans-compte',
+			PBKDF2_DE_PAYLOAD.iterations,
+			PBKDF2_DE_PAYLOAD.longueur,
+			'sha256',
+			() => resolve()
+		)
+	)
+}
+
 interface LigneDuCompte {
 	id: number | string
 	legacyBcrypt?: string | null
@@ -51,7 +74,8 @@ interface LigneDuCompte {
  *
  * - Finds the account by its address (trimmed, lower case), reads its old hash, compares the
  *   password to it. An unknown address, an account with no hash, a badly formed hash: the same
- *   comparison, to the dummy hash, and a refusal.
+ *   comparison, to the dummy hash, and a refusal. An unknown address also gets the PBKDF2 work that
+ *   Payload does for a known account.
  * - On a match only: writes the password in Payload's format and sets `legacyBcrypt` to null, in
  *   one update. A wrong password touches nothing.
  *
@@ -66,6 +90,8 @@ export async function remplacerLeHashHerite(
 		collection: 'pros',
 		where: { email: { equals: email.trim().toLowerCase() } },
 	})
+	// An unknown address: Payload has done nothing for it, so the work it does for a known one is done here.
+	if (!ligne) await travailDeVerificationFictif(password)
 	const hash = ligne?.legacyBcrypt
 	const accepte = await motDePasseDuHash(password, hash)
 	if (!accepte || !ligne) return false
