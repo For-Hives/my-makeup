@@ -34,6 +34,27 @@ Le reste :
 
 Les versions sont figées dans `package.json`, et `bun.lock` est le seul fichier de verrouillage.
 
+### Complétude d'un profil
+
+Une seule règle dit où en est un profil : `src/lib/profil/completude.ts`. Elle est portée de l'ancien site sans changement. Le schéma, l'espace maquilleuse, la recherche et le sitemap passent tous par elle, sans refaire le calcul de leur côté.
+
+Elle donne :
+
+- le score sur 13 et la liste des manques, pour la barre de progression ;
+- les six conditions du profil publiable : photo principale, ville exploitable, spécialité, offre avec un prix chiffré, description d'au moins 200 caractères, canal de contact ;
+- `actif` : photo principale, ville exploitable et spécialité ;
+- `publiable` : les six conditions, sauf pour un compte interne, qui ne l'est jamais ;
+- `entierementVide` : aucune des six conditions. Un profil qui n'a qu'un nom est entièrement vide ; une seule condition remplie suffit à ne plus l'être.
+
+Le formulaire de devis ne compte pas comme canal de contact.
+
+La règle lit les champs sous leurs noms de l'ancien site (type `ChampsDuProfil`) : le code qui l'appelle fait la correspondance depuis son propre document. Une photo se passe comme un objet ou une liste, jamais comme un simple identifiant, qui compterait comme « pas de photo ».
+
+Les tests sont dans `tests/unit/completude.test.ts` et se lancent seuls avec `bun test tests/unit/completude.test.ts`. Deux fichiers de `tests/unit/fixtures/` servent de référence :
+
+- `completude-cas.json` : les cas partagés avec l'ancien site, copiés tels quels ;
+- `completude-ancien-site.json` : les réponses du code de l'ancien site sur ces cas et sur ceux de son API. Ces valeurs ne se corrigent jamais à la main : un écart est un défaut du port.
+
 ## Démarrer en local
 
 Il faut [bun](https://bun.sh) 1.3.14, Node 24 (`.nvmrc`), Docker avec Compose et `openssl`.
