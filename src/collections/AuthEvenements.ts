@@ -9,6 +9,8 @@ const LIBELLES_DES_TYPES: Record<(typeof TYPES_EVENEMENT)[number], string> = {
 	'deconnexion-partout': 'Déconnexion de tous les appareils',
 	inscription: 'Inscription',
 	confirmation: 'Confirmation de l’email',
+	'mot-de-passe-oublie': 'Demande de lien de mot de passe oublié',
+	reinitialisation: 'Nouveau mot de passe',
 }
 
 const LIBELLES_DES_CODES: Record<(typeof CODES_EVENEMENT)[number], string> = {

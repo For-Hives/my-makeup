@@ -1,6 +1,7 @@
 import type { CollectionAfterErrorHook, CollectionAfterLoginHook, CollectionBeforeOperationHook } from 'payload'
 import { codeDeLEchec } from './connexion'
 import { journaliser } from './journal'
+import { CONTEXTE_DE_REINITIALISATION } from './oubli-payload'
 
 /**
  * The hooks of `pros` that write the journal of the REST door of the sign-in, `POST /api/pros/login`
@@ -32,6 +33,8 @@ const dureeDepuis = (contexte: Record<string, unknown>): number | undefined => {
  * sign-in to finish. A failure of this write is not the sign-in's to fail.
  */
 export const retenirLaDerniereConnexion: CollectionAfterLoginHook = async ({ req, user }) => {
+	// The reset of a password opens a session of its own, which is dropped at once: it is no sign-in.
+	if (req.context[CONTEXTE_DE_REINITIALISATION]) return user
 	try {
 		await req.payload.update({
 			collection: 'pros',

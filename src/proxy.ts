@@ -8,6 +8,7 @@ import {
 	VARIABLE_DE_BASCULE,
 } from '@/lib/auth/cookies-herites'
 import { COOKIE_DE_SESSION, decisionDeLEspace } from '@/lib/auth/espace-ferme'
+import { COOKIE_DE_REINITIALISATION, planDuLien } from '@/lib/auth/mot-de-passe-oublie'
 import { robotsPourChemin } from '@/lib/seo/robots'
 import { redirectionDeForme } from '@/lib/urls/forme'
 
@@ -18,6 +19,9 @@ import { redirectionDeForme } from '@/lib/urls/forme'
  * - The private pages of the space answer one redirection to the sign-in page when no session cookie
  *   comes with the request (ticket 075), or when its end date has passed (ticket 080: with the
  *   « session expirée » message). The authoritative check is the page's own (`exigerMaquilleuse`).
+ * - The link of a forgotten-password mail (`/auth/reinitialiser?code=…`) answers one redirection to the bare
+ *   page, the code kept in a cookie of that page only (ticket 085): it never reaches a page, the audience
+ *   measurement, the history or a Referer.
  * - The cookies of the old authentication are expired on the first request, and the sign-in page tells
  *   once to sign in again (ticket 081). The back-office, the API and the files are left alone.
  * - Every other response gets the robots directive (ticket 070). It reads APP_ENV at run time: the
@@ -73,6 +77,28 @@ export function proxy(requete: NextRequest) {
 				secure: process.env.NODE_ENV === 'production',
 			})
 		return reponse
+	}
+	const lien = planDuLien(pathname, requete.nextUrl.searchParams)
+	if (lien) {
+		const cible = requete.nextUrl.clone()
+		cible.pathname = lien.aller
+		cible.search = ''
+		// 303: whatever the method, the next request is a GET of the bare page.
+		const redirection = NextResponse.redirect(cible, 303)
+		redirection.cookies.set({
+			name: COOKIE_DE_REINITIALISATION,
+			value: lien.cookie.valeur,
+			maxAge: lien.cookie.maxAgeS,
+			path: lien.aller,
+			httpOnly: true,
+			sameSite: 'lax',
+			secure: process.env.NODE_ENV === 'production',
+		})
+		redirection.headers.set('Cache-Control', 'private, no-store')
+		redirection.headers.set('Referrer-Policy', 'no-referrer')
+		const consigneDuLien = robotsPourChemin(pathname, { APP_ENV: process.env.APP_ENV })
+		if (consigneDuLien) redirection.headers.set('X-Robots-Tag', consigneDuLien)
+		return avecLeNettoyage(redirection)
 	}
 	const vers = decisionDeLEspace(
 		pathname,

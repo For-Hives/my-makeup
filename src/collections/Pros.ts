@@ -8,10 +8,13 @@ import {
 	noterLeDebutDeLaConnexion,
 	retenirLaDerniereConnexion,
 } from '../lib/auth/journal-payload'
+import { DUREE_DU_LIEN_MS } from '../lib/auth/mot-de-passe-oublie'
+import { fermerLesPortesRestDeLOubli } from '../lib/auth/oubli-payload'
 import { premierCompteFerme } from '../lib/auth/premier-compte-ferme'
 import { DUREE_SESSION_S, prolongerSousPlafond, refuserApresLePlafond } from '../lib/auth/session-glissante'
 import { contenuEmailConfirmation, SUJET_DE_CONFIRMATION } from '../lib/emails/confirmation'
 import { composerEmail } from '../lib/emails/gabarit'
+import { contenuEmailReinitialisation, SUJET_DE_REINITIALISATION } from '../lib/emails/reinitialisation'
 import { sessionsFermees } from './Admins'
 import { profilALaCreationDuCompte } from './Profils'
 
@@ -77,6 +80,17 @@ export const Pros: CollectionConfig<'pros'> = {
 					process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
 				).html,
 		},
+		// The link of a forgotten password lives one hour and serves once (tickets 085 and 086). The request
+		// goes through the site (`demanderUnLien`); the native REST doors are closed (`fermerLesPortesRestDeLOubli`).
+		forgotPassword: {
+			expiration: DUREE_DU_LIEN_MS,
+			generateEmailSubject: () => SUJET_DE_REINITIALISATION,
+			generateEmailHTML: args =>
+				composerEmail(
+					contenuEmailReinitialisation(String(args?.token)),
+					process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
+				).html,
+		},
 		// No lock of the account: the brake is by client address (`freinerLaConnexion`), so that
 		// ten wrong passwords typed by anyone never lock the account they aimed at (AUTH-05).
 		maxLoginAttempts: 0,
@@ -101,7 +115,12 @@ export const Pros: CollectionConfig<'pros'> = {
 		afterLogin: [rendreLaPlaceDeLaConnexion(), retenirLaDerniereConnexion, noterLaConnexionRest],
 		afterError: [noterLEchecDeConnexionRest],
 		beforeDelete: [compteSansProfilAvantSuppression],
-		beforeOperation: [noterLeDebutDeLaConnexion, freinerLaConnexion(), refuserApresLePlafond],
+		beforeOperation: [
+			noterLeDebutDeLaConnexion,
+			freinerLaConnexion(),
+			refuserApresLePlafond,
+			fermerLesPortesRestDeLOubli,
+		],
 		refresh: [prolongerSousPlafond],
 	},
 	fields: [

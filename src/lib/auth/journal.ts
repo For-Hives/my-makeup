@@ -22,6 +22,8 @@ export const TYPES_EVENEMENT = [
 	'deconnexion-partout',
 	'inscription',
 	'confirmation',
+	'mot-de-passe-oublie',
+	'reinitialisation',
 ] as const
 export type TypeEvenement = (typeof TYPES_EVENEMENT)[number]
 
