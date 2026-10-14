@@ -186,11 +186,67 @@ type Ecrire = (options: {
 const choisir = (valeurs: Readonly<Record<string, unknown>>, champs: readonly string[]) =>
 	Object.fromEntries(champs.filter(champ => champ in valeurs).map(champ => [champ, valeurs[champ]]))
 
-/** The refusal of a document by Payload, by field path; anything else is not a refusal and stops the run. */
-function refusDePayload(strapiId: number, erreur: unknown): Refus {
-	if (!(erreur instanceof ValidationError)) throw erreur
+/** The refusal of a document by Payload, by field path. */
+function refusDePayload(strapiId: number, erreur: ValidationError): Refus {
 	const champs = [...new Set(erreur.data.errors.map(({ path }) => path))].sort()
 	return { strapiId, motif: 'refuse-par-payload', champs }
+}
+
+/** A code is printed only when it has the form of one: capitals, digits and `_`, never a value. */
+const FORME_DE_CODE = /^[0-9A-Z_]{5,40}$/
+
+/**
+ * The code of an error of the database (its SQLSTATE, `23514`), or of the system (`ECONNRESET`),
+ * read on the error or on one of its causes. Never its message nor its detail: the error of a
+ * query carries the query and its parameters, an email or a hash among them.
+ */
+export function codeDeLErreur(erreur: unknown): string | undefined {
+	let courante = erreur
+	for (let profondeur = 0; profondeur < 5 && typeof courante === 'object' && courante !== null; profondeur++) {
+		const { code } = courante as { code?: unknown }
+		if (typeof code === 'string' && FORME_DE_CODE.test(code)) return code
+		courante = (courante as { cause?: unknown }).cause
+	}
+	return undefined
+}
+
+/**
+ * What the command says of an error the import did not write itself: its type and its code,
+ * never its message, which may carry the values of a query.
+ */
+export function messageDUneErreurInattendue(erreur: unknown): string {
+	const type = erreur instanceof Error && /^\w{1,60}$/.test(erreur.name) ? erreur.name : 'erreur sans type'
+	const code = codeDeLErreur(erreur)
+	return [
+		`L’import s’est arrêté sur une erreur inattendue (${type}${code ? `, code ${code}` : ''}).`,
+		'Son texte n’est pas affiché : il peut porter des valeurs de la base.',
+		'Ce qui était écrit avant reste écrit ; un nouveau passage reprend à partir de là.',
+	].join(' ')
+}
+
+/**
+ * A write the database failed for another reason than a value Payload refuses: a connection
+ * lost, a time limit, a trigger, a full disk. The run stops there. The message names the
+ * collection, the document and the code of the error, never the error itself, which is not kept.
+ * What was written before stays written: the next run takes up from there.
+ */
+export class ImportInterrompu extends Error {
+	override readonly name = 'ImportInterrompu'
+
+	constructor(
+		readonly collection: CollectionImportee,
+		readonly strapiId: number,
+		readonly code: string | undefined
+	) {
+		super(
+			[
+				`L’import s’est arrêté : la base n’a pas écrit le document ${strapiId} de « ${collection} »` +
+					`${code ? ` (code ${code})` : ''}.`,
+				'Le texte de l’erreur n’est pas affiché : il porte les valeurs de la requête.',
+				'Ce qui était écrit avant reste écrit ; un nouveau passage reprend à partir de là.',
+			].join(' ')
+		)
+	}
 }
 
 /**
@@ -234,6 +290,10 @@ export async function ecrire(payload: Payload, adaptateur: Adaptateur, plan: Pla
 				await payload.db.updateOne({ collection: adaptateur.collection, id: action.id, data: dates })
 			bilan.modifies++
 		} catch (erreur) {
+			// A value Payload refuses is listed, and the run goes on. Anything else stops it, and the
+			// error of the database is dropped here: its message holds the values of the query.
+			if (!(erreur instanceof ValidationError))
+				throw new ImportInterrompu(adaptateur.collection, attendu.strapiId, codeDeLErreur(erreur))
 			bilan.refuses.push(refusDePayload(attendu.strapiId, erreur))
 		}
 	}
@@ -261,48 +321,77 @@ export function empreinteDesDocuments(
 	return createHash('sha256').update(lignes.join('\n')).digest('hex')
 }
 
-/** The parity of a collection after a run: every expected document is in the target, with the same values. */
+/**
+ * The parity of a collection after a run: every document of the source the import takes is in
+ * the target, with the same values. A document refused, before the write or by Payload, counts:
+ * it is expected, and the target does not hold it as the source gives it.
+ */
 export interface Parite {
+	/** The documents of the source the import takes, the refused ones included. */
 	attendus: number
-	/** Expected documents found in the target by their `strapiId`. */
+	/** Expected documents found in the target by their `strapiId`, the refused ones aside. */
 	presents: number
 	/** Found, with every compared value equal. */
 	egaux: number
-	/** `strapiId` of the documents found with another value. */
+	/** `strapiId` of the documents refused during the run: listed, they wait for a decision (ticket 066). */
+	refuses: number[]
+	/** `strapiId` of the documents found with another value, the refused ones aside. */
 	differents: number[]
-	/** `strapiId` of the expected documents the target does not hold. */
+	/** `strapiId` of the expected documents the target does not hold, the refused ones aside. */
 	manquants: number[]
 	/** `strapiId` of the documents of the target that no expected document names. */
 	enTrop: number[]
+	/** The fingerprints of the expected documents and of the target, the refused ones aside on both sides. */
 	empreinteAttendue: string
 	empreinteCible: string
 }
 
-/** Compares the expected documents with the target, read again after the run. */
-export function parite(adaptateur: Adaptateur, attendus: readonly Attendu[], existants: readonly Existant[]): Parite {
-	const plan = planifier(adaptateur, attendus, existants)
+/**
+ * Compares the expected documents with the target, read again after the run. The refused
+ * documents are counted apart: whatever the target holds for one of them (nothing, or the values
+ * of an earlier run) is neither missing, nor different, nor more.
+ */
+export function parite(
+	adaptateur: Adaptateur,
+	attendus: readonly Attendu[],
+	existants: readonly Existant[],
+	refus: readonly Refus[] = []
+): Parite {
+	const refuses = [...new Set(refus.map(({ strapiId }) => strapiId))].sort((a, b) => a - b)
+	const ecartes = new Set(refuses)
+	const compares = attendus.filter(({ strapiId }) => !ecartes.has(strapiId))
+	const plan = planifier(adaptateur, compares, existants)
 	const ids = (genre: Action['genre']) =>
 		plan.actions.filter(action => action.genre === genre).map(({ attendu }) => attendu.strapiId)
 	const differents = ids('modification')
 	const manquants = ids('creation')
 	return {
-		attendus: attendus.length,
-		presents: attendus.length - manquants.length,
+		attendus: compares.length + refuses.length,
+		presents: compares.length - manquants.length,
 		egaux: ids('inchange').length,
+		refuses,
 		differents,
 		manquants,
-		enTrop: plan.enTrop,
-		empreinteAttendue: empreinteDesDocuments(adaptateur, attendus),
+		enTrop: plan.enTrop.filter(strapiId => !ecartes.has(strapiId)),
+		empreinteAttendue: empreinteDesDocuments(adaptateur, compares),
 		empreinteCible: empreinteDesDocuments(
 			adaptateur,
-			existants.map(({ valeurs }) => ({ strapiId: Number(valeurs.strapiId), valeurs }))
+			existants
+				.map(({ valeurs }) => ({ strapiId: Number(valeurs.strapiId), valeurs }))
+				.filter(({ strapiId }) => !ecartes.has(strapiId))
 		),
 	}
 }
 
-/** True when a parity is complete: nothing different, nothing missing, nothing more, same fingerprint. */
-export const pariteComplete = (p: Parite): boolean =>
+/**
+ * True when nothing but the refused documents separates the target from the source: nothing
+ * different, nothing missing, nothing more, the same fingerprint.
+ */
+export const sansEcartInexplique = (p: Parite): boolean =>
 	p.differents.length === 0 &&
 	p.manquants.length === 0 &&
 	p.enTrop.length === 0 &&
 	p.empreinteAttendue === p.empreinteCible
+
+/** True when a parity is complete: no document refused, and nothing else between the target and the source. */
+export const pariteComplete = (p: Parite): boolean => p.refuses.length === 0 && sansEcartInexplique(p)

@@ -8,22 +8,33 @@
  *
  * It reads the Strapi database of STRAPI_SOURCE_URI, read-only, and writes into the database of
  * Payload that DATABASE_URI names, through the Local API. A database that is not on this machine
- * is refused unless the command says `--cible-distante`, before Payload is even loaded.
+ * is refused unless the command says `--cible-distante`, before Payload is even loaded. The
+ * schema of the target is never changed: a target without the tables of the v3 is refused.
  *
- * Exit codes: 0 done; 1 refused (an environment variable, the table of decisions); 2 command line
- * not understood; 3 stopped before any write, on cases only a decision settles; 4 the source
- * changed during the run, or the parity of a real run is incomplete.
+ * Exit codes: 0 done; 1 refused before it starts (an environment variable, the target, the table
+ * of decisions); 2 command line not understood; 3 stopped before any write, on cases only a
+ * decision settles; 4 the source changed during the run, or the target differs from the source
+ * by more than the refused documents; 5 documents refused, listed; 6 stopped by an error of the
+ * database or an unexpected one, named by its type and its code only.
  *
  * What it prints, and the JSON report, hold numbers, identifiers of the old base and
- * fingerprints only: no name, no email, no hash.
+ * fingerprints only: no name, no email, no hash. An error is never printed with its message
+ * unless the import wrote that message itself: the error of a query carries its values.
  */
 
 import { readFileSync, writeFileSync } from 'node:fs'
+import { EnvError } from '../../src/lib/env'
 import { lireLesArguments, USAGE } from './import/arguments'
-import { ImportRefuse, verifierLaCible } from './import/cible'
+import {
+	configurationSansChangementDeSchema,
+	ImportRefuse,
+	verifierLaCible,
+	verifierLeSchemaDeLaCible,
+} from './import/cible'
 import { AUCUNE_DECISION, type Decisions, lireLesDecisions } from './import/decisions'
 import { importer } from './import/importer'
-import { importReussi, rapportEnTexte } from './import/rapport'
+import { ImportInterrompu, messageDUneErreurInattendue } from './import/moteur'
+import { codeDeSortie, rapportEnTexte } from './import/rapport'
 import { ouvrirLaSourceBun } from './import/source-bun'
 
 /** The table of decisions from its file. The file is not printed: an error says what is wrong in it. */
@@ -51,15 +62,15 @@ async function principal(argumentsDeLaCommande: string[]): Promise<number> {
 	const decisions = options.decisions ? lireLeFichierDesDecisions(options.decisions) : AUCUNE_DECISION
 
 	const [{ getPayload }, { default: config }] = await Promise.all([import('payload'), import('@payload-config')])
-	const payload = await getPayload({ config })
+	const payload = await getPayload({ config: configurationSansChangementDeSchema(await config) })
+	await verifierLeSchemaDeLaCible(payload)
 	const source = ouvrirLaSourceBun(adresseDeLaSource)
 	try {
 		const rapport = await importer({ payload, source, mode: options.mode, cible, decisions })
 		console.log(rapportEnTexte(rapport))
 		// Read by its owner only: it lists identifiers of the old base.
 		if (options.rapport) writeFileSync(options.rapport, `${JSON.stringify(rapport, null, '\t')}\n`, { mode: 0o600 })
-		if (rapport.arret) return 3
-		return importReussi(rapport) ? 0 : 4
+		return codeDeSortie(rapport)
 	} finally {
 		await source.fermer()
 	}
@@ -68,7 +79,11 @@ async function principal(argumentsDeLaCommande: string[]): Promise<number> {
 try {
 	process.exit(await principal(process.argv.slice(2)))
 } catch (erreur) {
-	if (!(erreur instanceof ImportRefuse)) throw erreur
-	console.error(erreur.message)
-	process.exit(1)
+	// These messages are written by the import or the application, and name no value.
+	if (erreur instanceof ImportRefuse || erreur instanceof EnvError) {
+		console.error(erreur.message)
+		process.exit(1)
+	}
+	console.error(erreur instanceof ImportInterrompu ? erreur.message : messageDUneErreurInattendue(erreur))
+	process.exit(6)
 }

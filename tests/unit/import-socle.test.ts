@@ -1,17 +1,26 @@
 import { describe, expect, test } from 'bun:test'
+import type { SanitizedConfig } from 'payload'
 import { lireLesArguments } from '../../scripts/migration/import/arguments'
-import { ImportRefuse, verifierLaCible } from '../../scripts/migration/import/cible'
+import {
+	configurationSansChangementDeSchema,
+	ImportRefuse,
+	verifierLaCible,
+} from '../../scripts/migration/import/cible'
 import {
 	type Adaptateur,
 	type Attendu,
+	codeDeLErreur,
 	type Existant,
 	empreinteDesDocuments,
+	ImportInterrompu,
+	messageDUneErreurInattendue,
 	normaliser,
 	parite,
 	pariteComplete,
 	planifier,
+	sansEcartInexplique,
 } from '../../scripts/migration/import/moteur'
-import { importReussi, type Rapport, rapportEnTexte } from '../../scripts/migration/import/rapport'
+import { codeDeSortie, type Rapport, rapportEnTexte } from '../../scripts/migration/import/rapport'
 import { memesTables } from '../../scripts/migration/import/source'
 import { type LigneTalent, talentAttendu, talentsAttendus } from '../../scripts/migration/import/talents'
 import { CONTEXTE_IMPORT, estUnImport } from '../../src/lib/contexte-import'
@@ -39,6 +48,29 @@ describe('la cible : une base de ce poste, ou une base distante que la commande 
 		for (const adresse of distantes) {
 			expect(() => verifierLaCible(adresse, { cibleDistante: false }), adresse).toThrow(ImportRefuse)
 			expect(verifierLaCible(adresse, { cibleDistante: true }), adresse).toBe('distante')
+		}
+	})
+
+	test('Payload se branche sur la cible sans en changer le schéma : ni poussée, ni migration', () => {
+		const avant = process.env.PAYLOAD_MIGRATING
+		const interrupteur = (): string | undefined => process.env.PAYLOAD_MIGRATING
+		const adaptateur = { name: 'postgres', prodMigrations: [{ name: 'socle' }] }
+		const config = { db: { name: 'postgres', init: () => adaptateur } } as unknown as SanitizedConfig
+		try {
+			delete process.env.PAYLOAD_MIGRATING
+			const pourLImport = configurationSansChangementDeSchema(config)
+
+			// Payload's own switch: no push of the schema when it connects.
+			expect(interrupteur()).toBe('true')
+			// No migration played when it connects in production; the adapter is the same otherwise.
+			const cree = pourLImport.db.init({ payload: {} as never }) as unknown as typeof adaptateur
+			expect(cree).toBe(adaptateur)
+			expect(cree.prodMigrations).toBeUndefined()
+			expect(cree.name).toBe('postgres')
+			expect(pourLImport.db.name).toBe('postgres')
+		} finally {
+			if (avant === undefined) delete process.env.PAYLOAD_MIGRATING
+			else process.env.PAYLOAD_MIGRATING = avant
 		}
 	})
 
@@ -136,6 +168,34 @@ describe('le moteur : chaque document retrouvé par son strapiId', () => {
 		expect(pariteComplete(incomplete)).toBe(false)
 	})
 
+	test('un document refusé compte : la parité le dit incomplète, sans le prendre pour un manquant ni un écart', () => {
+		const attendus = [attendu(1, 'Un'), attendu(2, 'Deux')]
+		// Document 2 was refused by Payload, its earlier values stay; document 5 was refused before the write.
+		const cible = [existant(4, 1, 'Un'), existant(6, 2, 'Deux d’avant')]
+		const refus = [
+			{ strapiId: 2, motif: 'refuse-par-payload', champs: ['title'] },
+			{ strapiId: 5, motif: 'slug-en-double', champs: ['slug'] },
+		]
+
+		const avecRefus = parite(ADAPTATEUR, attendus, cible, refus)
+
+		expect(avecRefus).toMatchObject({
+			attendus: 3,
+			presents: 1,
+			egaux: 1,
+			refuses: [2, 5],
+			differents: [],
+			manquants: [],
+			enTrop: [],
+		})
+		expect(avecRefus.empreinteCible).toBe(avecRefus.empreinteAttendue)
+		expect(sansEcartInexplique(avecRefus)).toBe(true)
+		expect(pariteComplete(avecRefus)).toBe(false)
+		// Without refusal, the same target is simply not equal.
+		expect(pariteComplete(parite(ADAPTATEUR, attendus, cible))).toBe(false)
+		expect(parite(ADAPTATEUR, attendus, cible)).toMatchObject({ refuses: [], differents: [2] })
+	})
+
 	test('l’empreinte ne dépend pas de l’ordre, et change avec la moindre valeur', () => {
 		const a = empreinteDesDocuments(ADAPTATEUR, [attendu(1, 'Un'), attendu(2, 'Deux')])
 		expect(empreinteDesDocuments(ADAPTATEUR, [attendu(2, 'Deux'), attendu(1, 'Un')])).toBe(a)
@@ -222,9 +282,10 @@ describe('le rapport', () => {
 		ecarts: {},
 		parite: {
 			talents: {
-				attendus: 3,
+				attendus: 4,
 				presents: 3,
 				egaux: 3,
+				refuses: [4],
 				differents: [],
 				manquants: [],
 				enTrop: [],
@@ -234,6 +295,18 @@ describe('le rapport', () => {
 		},
 		...modif,
 	})
+
+	/** The same run, where nothing was refused. */
+	const sansRefus = (modif: Partial<Rapport> = {}): Rapport => {
+		const base = rapport()
+		const talents = base.collections.talents ?? ({} as never)
+		const parite = base.parite?.talents ?? ({} as never)
+		return rapport({
+			collections: { talents: { ...talents, refuses: [] } },
+			parite: { talents: { ...parite, attendus: 3, refuses: [] } },
+			...modif,
+		})
+	}
 
 	test('il se lit en français, en nombres et en identifiants', () => {
 		expect(rapportEnTexte(rapport()).split('\n')).toEqual([
@@ -247,23 +320,27 @@ describe('le rapport', () => {
 			'Écarts voulus : aucun.',
 			'',
 			'Parité, la cible relue :',
-			'Talents : 3 sur 3 égaux, parité complète (empreinte bbbbbbbbbbbb…)',
+			'Talents : 3 sur 4 égaux, parité incomplète : 1 refusé (4), empreinte bbbbbbbbbbbb…',
 			'',
 			'Source : 1 table lue, 3 lignes, inchangée par l’import.',
 		])
+		expect(rapportEnTexte(sansRefus())).toContain('Talents : 3 sur 3 égaux, parité complète, empreinte bbbbbbbbbbbb…')
 		expect(rapportEnTexte(rapport({ mode: 'a-blanc', parite: null }))).toContain(
 			'Talents : 4 à la source ; 2 créations annoncées, 1 mise à jour annoncée'
 		)
 	})
 
-	test('un import réussit si la source n’a pas bougé et, en réel, si la parité est complète', () => {
-		expect(importReussi(rapport())).toBe(true)
-		expect(importReussi(rapport({ source: { ...rapport().source, inchangee: false } }))).toBe(false)
-		const incomplete = rapport().parite?.talents
-		expect(importReussi(rapport({ parite: { talents: { ...(incomplete ?? ({} as never)), manquants: [2] } } }))).toBe(
-			false
-		)
-		expect(importReussi(rapport({ mode: 'a-blanc', parite: null }))).toBe(true)
+	test('le code de sortie : 0 fini, 3 arrêté, 4 un écart inexpliqué ou la source changée, 5 des refusés', () => {
+		expect(codeDeSortie(sansRefus())).toBe(0)
+		expect(codeDeSortie(sansRefus({ mode: 'a-blanc', parite: null }))).toBe(0)
+		// A refused document is never read as a complete run, dry or real.
+		expect(codeDeSortie(rapport())).toBe(5)
+		expect(codeDeSortie(rapport({ mode: 'a-blanc', parite: null }))).toBe(5)
+		expect(codeDeSortie(sansRefus({ source: { ...rapport().source, inchangee: false } }))).toBe(4)
+		const talents = rapport().parite?.talents ?? ({} as never)
+		expect(codeDeSortie(rapport({ parite: { talents: { ...talents, manquants: [2] } } }))).toBe(4)
+		expect(codeDeSortie(rapport({ parite: { talents: { ...talents, empreinteCible: 'c'.repeat(64) } } }))).toBe(4)
+		expect(codeDeSortie(rapport({ arret: { emailsPartages: [[9, 10]] } }))).toBe(3)
 	})
 
 	test('deux empreintes de la source se comparent table par table', () => {
@@ -272,5 +349,45 @@ describe('le rapport', () => {
 			true
 		)
 		expect(memesTables(une, { ...une, talents: { lignes: 3, empreinte: 'c' } })).toBe(false)
+	})
+})
+
+describe('une erreur de la base : nommée par son code, jamais par son texte', () => {
+	/** An error of a query as the driver gives it: the query and its values in the message, the SQLSTATE in its cause. */
+	const erreurDeRequete = () => {
+		const erreur = new Error(
+			`Failed query: insert into "pros" ("email", "legacy_bcrypt") values ($1, $2) params: zoe@example.test,$2a$10$${'a'.repeat(53)}`,
+			{ cause: Object.assign(new Error('refus du banc'), { code: 'P0001', detail: 'Key (email)=(zoe@example.test)' }) }
+		)
+		erreur.name = 'DrizzleQueryError'
+		return erreur
+	}
+
+	test('le code se lit sur l’erreur ou sur l’une de ses causes, et seulement s’il a la forme d’un code', () => {
+		expect(codeDeLErreur(erreurDeRequete())).toBe('P0001')
+		expect(codeDeLErreur(Object.assign(new Error('x'), { code: 'ECONNRESET' }))).toBe('ECONNRESET')
+		expect(codeDeLErreur(Object.assign(new Error('x'), { code: 'zoe@example.test' }))).toBeUndefined()
+		for (const autre of [undefined, null, 'texte', 42, new Error('sans code')])
+			expect(codeDeLErreur(autre)).toBeUndefined()
+	})
+
+	test('une écriture interrompue dit la collection, le document et le code, et ne garde pas l’erreur', () => {
+		const interrompu = new ImportInterrompu('pros', 2, 'P0001')
+
+		expect(interrompu.message).toContain('la base n’a pas écrit le document 2 de « pros » (code P0001)')
+		expect(interrompu.cause).toBeUndefined()
+		expect(new ImportInterrompu('talents', 3, undefined).message).not.toContain('code')
+	})
+
+	test('une erreur inattendue se dit par son type et son code : ni requête, ni valeur', () => {
+		const message = messageDUneErreurInattendue(erreurDeRequete())
+
+		expect(message).toContain('(DrizzleQueryError, code P0001)')
+		for (const morceau of ['$2a$', '@example.test', 'insert into', 'refus du banc', 'Key (email)'])
+			expect(message).not.toContain(morceau)
+		// A type that is not a plain name is not printed either.
+		const etrange = Object.assign(new Error('x'), { name: 'zoe@example.test' })
+		expect(messageDUneErreurInattendue(etrange)).not.toContain('example.test')
+		expect(messageDUneErreurInattendue('texte jeté')).not.toContain('texte jeté')
 	})
 })

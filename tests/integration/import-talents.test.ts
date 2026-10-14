@@ -3,6 +3,7 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { SQL } from 'bun'
+import { codeDeSortie } from '../../scripts/migration/import/rapport'
 import { commandeDImport, FICHIER_DES_DECISIONS_DU_BANC, importerSurLeBanc } from '../outils/import'
 import { compterLesMails, viderLeCapteur } from '../outils/mailpit'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
@@ -24,6 +25,16 @@ const TALENTS_DE_LA_SOURCE = definitionDeLaSource(source.medias).lignes.talents
 /** A timestamp of the fake base (`2023-04-01 09:00:00.000`, UTC) as the old API gives it. */
 const enIso = (horodatage: unknown): string | null =>
 	horodatage === null ? null : `${String(horodatage).replace(' ', 'T')}Z`
+
+/** A connection to the database of the bench itself, the target of the import, as its owner. */
+async function avecLaBaseDuBanc<T>(travail: (sql: SQL) => Promise<T>, adresse = source.maintenance): Promise<T> {
+	const sql = new SQL({ url: adresse, max: 1 })
+	try {
+		return await travail(sql)
+	} finally {
+		await sql.close()
+	}
+}
 
 /** A write by the owner of the bench, the only one who may write into the source. */
 async function ecrireDansLaSource(requete: string): Promise<void> {
@@ -76,6 +87,17 @@ describe('Critère 1 : à blanc, les créations sont annoncées et la base cible
 		expect(sortie).toContain('Import à blanc : rien n’est écrit.')
 		expect(sortie).toContain('Talents : 3 à la source ; 3 créations annoncées')
 		expect(await talentsDeLaCible()).toEqual([])
+	}, 60_000)
+
+	test('la commande ne pousse pas le schéma : la marque que laisse le mode développement de Payload ne bouge pas', async () => {
+		// The Payload of this process pushed the schema when it started, and left its mark (batch -1).
+		const marques = () => avecLaBaseDuBanc(sql => sql.unsafe('SELECT name, batch, updated_at FROM payload_migrations'))
+		const avant = await marques()
+
+		const { code } = await commandeDImport(['--decisions', FICHIER_DES_DECISIONS_DU_BANC])
+
+		expect(code).toBe(0)
+		expect(await marques()).toEqual(avant)
 	}, 60_000)
 })
 
@@ -155,7 +177,9 @@ describe('Critère 2 : passage réel, autant de talents, champs égaux, slug ide
 		expect((await talentsDeLaCible()).map(({ strapiId }) => strapiId)).toEqual([1, 2, 3])
 		// The talent that keeps the slug is the oldest one, untouched.
 		expect((await talentsDeLaCible())[0]?.title).toBe('Maquillage de mariage')
-		expect(rapport.parite?.talents).toMatchObject({ attendus: 3, egaux: 3, manquants: [] })
+		// Refused, they count: the parity says it is incomplete by them, and by nothing else.
+		expect(rapport.parite?.talents).toMatchObject({ attendus: 5, egaux: 3, refuses: [5, 6], manquants: [] })
+		expect(codeDeSortie(rapport)).toBe(5)
 	})
 })
 
@@ -220,6 +244,33 @@ describe('Critère 4 : une cible non locale, sans drapeau, est refusée avant to
 		expect(sortie).not.toContain('base-distante.example.test')
 		expect(await talentsDeLaCible()).toEqual([])
 	})
+
+	test('une base de ce poste sans le schéma de la v3 est refusée, et l’import n’y crée aucune table', async () => {
+		const bancDeBase = new URL(source.maintenance)
+		const nom = `${bancDeBase.pathname.slice(1).replace(/_test$/, '')}_sans_schema_test`
+		const sansSchema = new URL(source.maintenance)
+		sansSchema.pathname = `/${nom}`
+		await avecLaBaseDuBanc(async sql => {
+			await sql.unsafe(`DROP DATABASE IF EXISTS ${nom} WITH (FORCE)`)
+			await sql.unsafe(`CREATE DATABASE ${nom}`)
+		})
+		try {
+			const { code, sortie } = await commandeDImport(['--reel', '--decisions', FICHIER_DES_DECISIONS_DU_BANC], {
+				...process.env,
+				DATABASE_URI: sansSchema.href,
+			})
+
+			expect(code, sortie).toBe(1)
+			expect(sortie).toContain('n’a pas le schéma de la v3')
+			const tables = await avecLaBaseDuBanc(
+				sql => sql.unsafe("SELECT count(*)::int AS n FROM information_schema.tables WHERE table_schema = 'public'"),
+				sansSchema.href
+			)
+			expect(tables).toEqual([{ n: 0 }])
+		} finally {
+			await avecLaBaseDuBanc(sql => sql.unsafe(`DROP DATABASE IF EXISTS ${nom} WITH (FORCE)`))
+		}
+	}, 60_000)
 
 	test('sans source nommée, la commande s’arrête aussi avant d’écrire', async () => {
 		const { code, sortie } = await commandeDImport(['--reel'], { ...process.env, STRAPI_SOURCE_URI: '' })

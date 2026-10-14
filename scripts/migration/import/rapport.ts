@@ -10,7 +10,7 @@
 
 import type { GenreDeCible } from './cible'
 import type { Bilan, CollectionImportee, Parite } from './moteur'
-import { pariteComplete } from './moteur'
+import { pariteComplete, sansEcartInexplique } from './moteur'
 import type { EmpreinteDesTables } from './source'
 
 export type Mode = 'a-blanc' | 'reel'
@@ -74,11 +74,22 @@ export const NOMS_DES_COLLECTIONS: Readonly<Record<CollectionImportee, string>> 
 	talents: 'Talents',
 }
 
-/** True when a run left the source as it was and, for a real run, reached a complete parity. */
-export function importReussi(rapport: Rapport): boolean {
-	if (rapport.arret || !rapport.source.inchangee) return false
-	if (rapport.mode === 'a-blanc') return true
-	return Object.values(rapport.parite ?? {}).every(pariteComplete)
+/**
+ * The exit code of the command for a run (docs/migration/IMPORT.md, « Codes de sortie »):
+ *
+ * - 3: stopped before any write, on cases only a decision settles;
+ * - 4: the source changed during the run, or the target differs from the source by more than the
+ *   refused documents: something the report cannot explain;
+ * - 5: documents refused, before the write or by Payload: listed, they wait for a decision, and
+ *   the parity of a real run is incomplete by them;
+ * - 0: done, nothing refused and, for a real run, a complete parity.
+ */
+export function codeDeSortie(rapport: Rapport): 0 | 3 | 4 | 5 {
+	if (rapport.arret) return 3
+	if (!rapport.source.inchangee) return 4
+	if (!Object.values(rapport.parite ?? {}).every(sansEcartInexplique)) return 4
+	const refuses = Object.values(rapport.collections).some(bilan => bilan.refuses.length > 0)
+	return refuses ? 5 : 0
 }
 
 const ids = (liste: readonly number[]): string => (liste.length === 0 ? 'aucun' : liste.join(', '))
@@ -132,10 +143,17 @@ function lignesDArret({ emailsPartages }: Arret): string[] {
 	]
 }
 
+/** How a parity reads: complete, incomplete by its refused documents only, or incomplete. */
+function etatDeLaParite(p: Parite): string {
+	if (pariteComplete(p)) return 'parité complète'
+	const refuses = p.refuses.length > 0 ? `${pluriel(p.refuses.length, 'refusé', 'refusés')} (${ids(p.refuses)})` : ''
+	if (sansEcartInexplique(p)) return `parité incomplète : ${refuses}`
+	return `parité incomplète${refuses ? ` : ${refuses}, et d’autres écarts` : ''}`
+}
+
 function ligneDeParite(nom: string, p: PariteDeCollection): string[] {
 	const lignes = [
-		`${nom} : ${p.egaux} sur ${p.attendus} égaux, ${pariteComplete(p) ? 'parité complète' : 'parité incomplète'} ` +
-			`(empreinte ${p.empreinteCible.slice(0, 12)}…)`,
+		`${nom} : ${p.egaux} sur ${p.attendus} égaux, ${etatDeLaParite(p)}, empreinte ${p.empreinteCible.slice(0, 12)}…`,
 	]
 	if (p.repartition) lignes.push(`  - dans la cible, ${repartitionEnTexte(p.repartition)}`)
 	if (p.statuts) lignes.push(`  - dans la cible, ${statutsEnTexte(p.statuts)}`)

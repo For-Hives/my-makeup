@@ -60,23 +60,15 @@ async function importerLaCollection(
 	return { ...bilan, refuses: [...refuses, ...bilan.refuses], source, enTrop: plan.enTrop }
 }
 
-/** The parity of a collection: the expected documents, less those the target refused while writing. */
+/** The parity of a collection: the expected documents, and those refused before or while writing, counted apart. */
 async function pariteDe(
 	payload: Payload,
 	adaptateur: Adaptateur,
 	attendus: readonly Attendu[],
 	bilan: BilanDeCollection
 ): Promise<{ parite: PariteDeCollection; cible: Awaited<ReturnType<typeof lireLaCible>> }> {
-	const refuses = new Set(bilan.refuses.map(({ strapiId }) => strapiId))
 	const cible = await lireLaCible(payload, adaptateur)
-	return {
-		parite: parite(
-			adaptateur,
-			attendus.filter(({ strapiId }) => !refuses.has(strapiId)),
-			cible
-		),
-		cible,
-	}
+	return { parite: parite(adaptateur, attendus, cible, bilan.refuses), cible }
 }
 
 /**

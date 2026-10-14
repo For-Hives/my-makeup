@@ -1,9 +1,11 @@
 import { afterAll, beforeEach, describe, expect, test } from 'bun:test'
+import { randomBytes } from 'node:crypto'
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { SQL } from 'bun'
 import { AUCUNE_DECISION } from '../../scripts/migration/import/decisions'
+import { CONTEXTE_SANS_PROFIL } from '../../src/collections/Profils'
 import { commandeDImport, FICHIER_DES_DECISIONS_DU_BANC, importerSurLeBanc } from '../outils/import'
 import { compterLesMails, viderLeCapteur } from '../outils/mailpit'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
@@ -203,6 +205,58 @@ describe('Critère 2 : autant de hash hérités que de comptes source avec un ha
 		} finally {
 			rmSync(dossier, { recursive: true, force: true })
 		}
+	}, 60_000)
+
+	test('une erreur de la base en cours d’écriture arrête la commande, qui ne dit ni hash, ni email, ni nom', async () => {
+		// Account 2 has a complete hash at the source: the query that fails carries it, with its email.
+		const compte = COMPTES_DE_FIXTURE[1]?.strapiId ?? 0
+		const payload = await payloadDeTest()
+		await payload.db.pool.query(
+			`CREATE FUNCTION banc_refus_d_un_compte() RETURNS trigger LANGUAGE plpgsql AS $$
+			 BEGIN IF NEW.strapi_id = ${compte} THEN RAISE EXCEPTION 'refus du banc' USING ERRCODE = 'P0001'; END IF; RETURN NEW; END $$`
+		)
+		await payload.db.pool.query(
+			'CREATE TRIGGER banc_refus_d_un_compte BEFORE INSERT ON pros FOR EACH ROW EXECUTE FUNCTION banc_refus_d_un_compte()'
+		)
+		try {
+			const { code, sortie } = await commandeDImport(['--reel', '--decisions', FICHIER_DES_DECISIONS_DU_BANC])
+
+			expect(code).toBe(6)
+			expect(sortie).toContain(`le document ${compte} de « pros »`)
+			expect(sortie).toContain('code P0001')
+			expect(sortie).not.toMatch(/\$2[aby]\$/)
+			expect(sortie).not.toMatch(/@example\.test/i)
+			expect(sortie).not.toContain('pbkdf2')
+			expect(sortie).not.toContain('refus du banc')
+			for (const { username } of COMPTES_DE_LA_SOURCE) expect(sortie).not.toContain(String(username))
+		} finally {
+			await payload.db.pool.query('DROP TRIGGER IF EXISTS banc_refus_d_un_compte ON pros')
+			await payload.db.pool.query('DROP FUNCTION IF EXISTS banc_refus_d_un_compte()')
+		}
+	}, 60_000)
+})
+
+describe('Un compte que la cible refuse : listé, et la parité le dit (I39)', () => {
+	test('un email déjà pris dans la v3 : le compte est refusé, la parité est incomplète, la commande sort en 5', async () => {
+		const payload = await payloadDeTest()
+		const ligne = COMPTES_DE_LA_SOURCE.find(({ id }) => Number(id) === 4)
+		await payload.create({
+			collection: 'pros',
+			data: { email: String(ligne?.email).trim().toLowerCase(), password: randomBytes(24).toString('base64url') },
+			context: CONTEXTE_SANS_PROFIL,
+			disableVerificationEmail: true,
+			overrideAccess: true,
+		})
+
+		const { code, sortie } = await commandeDImport(['--reel', '--decisions', FICHIER_DES_DECISIONS_DU_BANC])
+
+		expect(code, sortie).toBe(5)
+		expect(sortie).toContain('  - refusé : 4 (refuse-par-payload : email)')
+		expect(sortie).toContain('Comptes : 13 sur 14 égaux, parité incomplète : 1 refusé (4)')
+		// Its profile has no account to point at: refused as well, and counted.
+		expect(sortie).toContain('  - refusé : 24 (refuse-par-payload : pro)')
+		expect(sortie).toMatch(/Profils : \d+ sur \d+ égaux, parité incomplète : 1 refusé \(24\)/)
+		expect(sortie).not.toMatch(/@example\.test/i)
 	}, 60_000)
 })
 
