@@ -346,6 +346,7 @@ Le détail est dans [`docs/qualite.md`](docs/qualite.md), « Renovate » : ce qu
 | `bun run banc:up` | Démarre le banc de test : base, capteur de mails, stockage d'objets et faux Google, en conteneurs |
 | `bun run banc:down` | Arrête le banc de test et efface tout ce qu'il contenait |
 | `bun run banc:prepare` | Reconstruit la base du banc depuis les collections du code, vide |
+| `bun run banc:source` | Crée la fausse base Strapi que lit l'import, banc démarré : base, rôle en lecture seule, photos dans le stockage. Relancée, elle la recrée à l'identique et donne la même empreinte. `--empreinte` la lit sans la toucher, `--effacer` la supprime (voir `docs/tests/source-strapi.md`) |
 | `bun run test:integration` | Les tests d'intégration de `tests/integration/`, sur le banc. Avec un chemin : ce fichier seul |
 | `bun run test:e2e` | Les essais de bout en bout de `tests/e2e/`, dans un vrai navigateur, contre l'application construite et branchée sur le banc. Avec un chemin : ce fichier seul |
 | `bun run image:build` | Construit l'image Docker `my-makeup:local` |
@@ -383,6 +384,7 @@ Lancé depuis un sous-dossier, `bun test` ne charge pas la garde : bun lit le `b
 |---|---|
 | `APP_ENV` | `test` (ou rien), ou `preprod`. `prod` est toujours refusé, toute autre valeur aussi |
 | `DATABASE_URI` | Hôte local, nom de base fini par `_test`, et aucun paramètre `host` ni `hostaddr` : il remplacerait l'hôte de l'adresse |
+| `STRAPI_SOURCE_URI` | La même règle que `DATABASE_URI` : la fausse base Strapi du banc, jamais la vraie |
 | `BASE_URL`, `NEXT_PUBLIC_SITE_URL` | Adresse locale. La préprod seulement avec `APP_ENV=preprod`. Jamais la prod |
 | `SMTP_HOST` | Hôte local : le capteur de mails |
 | `MAILPIT_URL` | Hôte local : l'API du capteur de mails |
@@ -416,9 +418,10 @@ bun run banc:down                                              # arrête tout et
 - Un test obtient un compte fictif et sa session en un appel, sans mot de passe à saisir : `await creerCompte('admin')`.
 - Sur le banc, l'application envoie tous ses mails au capteur. Un test lit le sien, avec son destinataire, son sujet et ses liens : `await attendreLeMail({ pour: adresse })`.
 - Un test dépose un objet dans le stockage et le relit : `await deposerUnObjet(cle, contenu)`, `await lireUnObjet(cle)`.
+- L'import se teste sur une fausse base Strapi qui porte chaque cas connu de la vraie, ouverte en lecture seule, avec ses photos dans le stockage : `bun run banc:source` la crée, à l'identique à chaque fois.
 - La connexion Google se teste sans compte Google ni secret : le faux Google tient la place de Google (`GOOGLE_OIDC_ISSUER`), et un test choisit qui se connecte et comment cela finit, parmi quatre scénarios : `fauxGoogle().choisir({ scenario: 'refus' })`.
 
-Le détail est dans [`docs/tests/banc.md`](docs/tests/banc.md) : les services et leurs adresses, les deux variables d'instance, l'écriture d'un test d'intégration, la remise à zéro, le capteur de mails, le stockage d'objets, la fabrique de comptes, le faux Google et ses quatre scénarios, les images épinglées.
+Le détail est dans [`docs/tests/banc.md`](docs/tests/banc.md) : les services et leurs adresses, les deux variables d'instance, l'écriture d'un test d'intégration, la remise à zéro, le capteur de mails, le stockage d'objets, la fabrique de comptes, le faux Google et ses quatre scénarios, les images épinglées, la fausse base Strapi.
 
 ### Les essais de bout en bout
 

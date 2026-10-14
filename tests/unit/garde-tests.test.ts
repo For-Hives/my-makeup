@@ -422,3 +422,46 @@ describe('Trois environnements reconnus : test, preprod, prod (toujours refusée
 		expect(texte).not.toContain(MARQUE_DU_TEMOIN)
 	})
 })
+
+describe('La fausse base Strapi de l’import : STRAPI_SOURCE_URI locale, et en _test', () => {
+	const SOURCE = 'postgres://lecture_strapi:mot-de-passe-factice-de-lecture@127.0.0.1:5443/strapi_source_test'
+
+	test('accepte la source du banc, et un environnement sans source', () => {
+		expect(verifierEnvironnement({ ...BANC, STRAPI_SOURCE_URI: SOURCE })).toBe('test')
+		expect(verifierEnvironnement(BANC)).toBe('test')
+		const fichier = lireFichierEnv(readFileSync(path.join(RACINE, '.env.test'), 'utf8'))
+		expect(fichier.STRAPI_SOURCE_URI).toBe(SOURCE)
+	})
+
+	test.each([
+		['hôte distant : la vraie base Strapi', 'postgres://lecture_strapi:x@db.example.test:5432/strapi_source_test'],
+		['base qui ne finit pas par _test', 'postgres://lecture_strapi:x@127.0.0.1:5443/strapi'],
+		['paramètre host qui détourne l’adresse', `${SOURCE}?host=db.example.test`],
+	])('refuse : %s', (_cas, uri) => {
+		expect(() => verifierEnvironnement({ ...BANC, STRAPI_SOURCE_URI: uri })).toThrow(EnvironnementRefuse)
+	})
+
+	test('le message nomme STRAPI_SOURCE_URI, jamais sa valeur', () => {
+		const message = messageDuRefus(() =>
+			verifierEnvironnement({ ...BANC, STRAPI_SOURCE_URI: `${SOURCE}?host=db.example.test` })
+		)
+
+		expect(message).toStartWith('Base refusée : STRAPI_SOURCE_URI porte un paramètre « host »')
+		expect(message).not.toContain('mot-de-passe-factice')
+		expect(messageDuRefus(() => verifierEnvironnement({ ...BANC, STRAPI_SOURCE_URI: 'strapi_source_test' }))).toBe(
+			"STRAPI_SOURCE_URI n'est pas une adresse PostgreSQL lisible."
+		)
+	})
+
+	test('arrête bun avant le premier test quand la source vise un hôte distant', async () => {
+		const { code, texte } = await lancerTemoin({
+			...BANC,
+			STRAPI_SOURCE_URI: 'postgres://lecture_strapi:mot-de-passe-factice@db.example.test:5432/strapi_source_test',
+		})
+
+		expect(code).toBe(1)
+		expect(texte).toContain('Tests arrêtés avant le premier test. Base refusée : hôte « db.example.test »')
+		expect(texte).not.toContain('mot-de-passe-factice')
+		expect(texte).not.toContain(MARQUE_DU_TEMOIN)
+	})
+})

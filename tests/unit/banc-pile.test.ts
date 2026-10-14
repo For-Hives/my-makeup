@@ -174,6 +174,7 @@ describe('.env.test : l’environnement factice du banc', () => {
 			'S3_ENDPOINT',
 			'SMTP_HOST',
 			'SMTP_PORT',
+			'STRAPI_SOURCE_URI',
 		])
 	})
 
@@ -232,6 +233,7 @@ describe('Plusieurs bancs côte à côte : un nom d’instance et un décalage d
 			NEXT_PUBLIC_SITE_URL: 'http://localhost:3204',
 			SMTP_HOST: '127.0.0.1',
 			SMTP_PORT: '1129',
+			STRAPI_SOURCE_URI: 'postgres://lecture_strapi:mot-de-passe-factice-de-lecture@127.0.0.1:5547/strapi_source_test',
 			MAILPIT_URL: 'http://127.0.0.1:8129',
 			EMAIL_FROM: 'My Makeup <ne-pas-repondre@example.test>',
 			S3_ENDPOINT: 'http://127.0.0.1:9194',

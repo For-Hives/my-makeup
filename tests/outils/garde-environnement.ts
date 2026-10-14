@@ -111,20 +111,22 @@ export function lireEnvironnement(valeur: string | undefined): EnvironnementAdmi
 
 /**
  * The database must be local and its name must end with `_test`. No database at all is fine.
+ * `nom` is the variable the address comes from: `DATABASE_URI`, or `STRAPI_SOURCE_URI` for the
+ * fake Strapi source the import reads (docs/tests/source-strapi.md).
  *
  * Exported for the tools that open the database themselves: the preload only runs when `bun test`
  * is started from the repository root, so such a tool calls `verifierBase` on the address it is
  * about to connect to.
  */
-export function verifierBase(uri: string | undefined): void {
+export function verifierBase(uri: string | undefined, nom = 'DATABASE_URI'): void {
 	if (!uri) return
 	const url = lireAdresse(uri, ['postgres:', 'postgresql:'])
-	if (!url) refuser("DATABASE_URI n'est pas une adresse PostgreSQL lisible.")
+	if (!url) refuser(`${nom} n'est pas une adresse PostgreSQL lisible.`)
 	// The value of the parameter is never quoted: it is where the connection would really go.
-	const detour = PARAMETRES_D_HOTE.find(nom => url.searchParams.has(nom))
+	const detour = PARAMETRES_D_HOTE.find(parametre => url.searchParams.has(parametre))
 	if (detour)
 		refuser(
-			`Base refusée : DATABASE_URI porte un paramètre « ${detour} », qui remplace l'hôte de l'adresse. Les tests ne lisent l'hôte de la base que dans l'adresse elle-même.`
+			`Base refusée : ${nom} porte un paramètre « ${detour} », qui remplace l'hôte de l'adresse. Les tests ne lisent l'hôte de la base que dans l'adresse elle-même.`
 		)
 	const hote = hoteDe(url)
 	const base = url.pathname.slice(1)
@@ -230,6 +232,7 @@ export function verifierGoogle(variables: Variables): void {
 export function verifierEnvironnement(variables: Variables = process.env): EnvironnementAdmis {
 	const environnement = lireEnvironnement(variables.APP_ENV)
 	verifierBase(variables.DATABASE_URI)
+	verifierBase(variables.STRAPI_SOURCE_URI, 'STRAPI_SOURCE_URI')
 	for (const nom of ADRESSES) {
 		const adresse = variables[nom]
 		if (adresse) verifierCible(adresse, environnement, nom)
