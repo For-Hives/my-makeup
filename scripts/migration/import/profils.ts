@@ -460,13 +460,13 @@ export function profilsAttendus(
 		if (affiche) ecarts.push({ champ: 'contactPublic', reference: REFERENCES.coordonneesConsenties })
 		attendus.push({ strapiId: profil.id, valeurs, ecarts })
 	}
-	return { attendus, statuts, statutsDifferentsDeLaSource, photosNonReprises, liensSansLigne, prix }
 	return {
 		attendus,
 		statuts,
 		statutsDifferentsDeLaSource,
 		photosNonReprises,
 		liensSansLigne,
+		prix,
 		coordonneesARevoir: aRevoir,
 	}
 }
