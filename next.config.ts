@@ -2,8 +2,18 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { withPayload } from '@payloadcms/next/withPayload'
 import type { NextConfig } from 'next'
+import { mediaOrigin } from './src/lib/env'
+import { mediaRemotePattern, securityHeaders } from './src/lib/security-headers'
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
+
+// Two facts read when this file is loaded.
+// The origin the photos are served from: a refused R2_PUBLIC_URL stops the build, the dev server
+// and the start. `next build` writes the headers into the build, and `next start` loads this
+// file again for `/_next/image`: both must be given the same R2_PUBLIC_URL.
+const media = mediaOrigin(process.env.R2_PUBLIC_URL)
+// True under `next dev` only.
+const development = process.env.NODE_ENV === 'development'
 
 const nextConfig: NextConfig = {
 	// The build gives `.next/standalone`: a server with only the files it needs, which is all
@@ -19,6 +29,14 @@ const nextConfig: NextConfig = {
 	// The project root is stated, not inferred: a lockfile higher up in the file tree
 	// (a parent folder, another checkout) must not become the Turbopack root.
 	turbopack: { root: dirname },
+	// No response says what the site runs on. It also stops withPayload from adding its own
+	// « X-Powered-By: Next.js, Payload » to every path.
+	poweredByHeader: false,
+	// `/_next/image` fetches a remote file from the media origin only: any other host gets a 400.
+	images: { remotePatterns: [mediaRemotePattern(media)] },
+	// Every path leaves with the security headers (src/lib/security-headers.ts). A ticket that
+	// needs a header on some paths adds its own entry after this one.
+	headers: async () => [{ source: '/:path*', headers: securityHeaders({ development, mediaOrigin: media }) }],
 }
 
 // withPayload must stay the outermost wrapper: it adds Payload's server packages and aliases.

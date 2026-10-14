@@ -8,6 +8,9 @@ import { z } from 'zod'
  * - src/payload.config.ts checks them again, because the Payload CLI and the scripts load the
  *   configuration without starting the server.
  *
+ * One variable is read earlier, when Next loads its configuration: R2_PUBLIC_URL, by `mediaOrigin`
+ * below, called from next.config.ts.
+ *
  * A variable is added here by the ticket that starts reading it, with its line in `.env.exemple`.
  * An error names the variable and what is expected, never the value it received.
  *
@@ -43,6 +46,9 @@ export const SECRET_MIN_LENGTH = 32
 /** The two deployed addresses a build can be made for: the site and its pre-production. */
 export const DEPLOYED_ORIGINS: readonly string[] = ['https://my-makeup.fr', 'https://preprod.my-makeup.fr']
 
+/** Where the photos of the site are served from today: the public address of the production bucket. */
+export const MEDIA_ORIGIN_DEFAULT = 'https://r2-my-makeup.andy-cinquin.fr'
+
 /** Names that can only be this machine. A compose service name or a private address is not one. */
 const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '::1'])
 
@@ -57,6 +63,7 @@ const EXPECTED = {
 	DATABASE_URI: 'postgres://UTILISATEUR:MOT_DE_PASSE@HÔTE:PORT/BASE',
 	NEXT_PUBLIC_SITE_URL: `${DEPLOYED_ORIGINS.join(', ')} ou une adresse de ce poste comme http://localhost:${DEFAULT_PORT}, sans « / » final`,
 	PAYLOAD_SECRET: `au moins ${SECRET_MIN_LENGTH} caractères, par exemple la sortie de « openssl rand -hex 32 »`,
+	R2_PUBLIC_URL: 'une adresse https://HÔTE, sans chemin ni « / » final',
 } as const
 
 type CheckedVariable = keyof typeof EXPECTED
@@ -118,6 +125,34 @@ function siteOrigin(value: string): string | undefined {
 	if (DEPLOYED_ORIGINS.includes(value)) return value
 	const loopback = url.hostname === 'localhost' || url.hostname === '127.0.0.1'
 	return url.protocol === 'http:' && loopback ? value : undefined
+}
+
+/**
+ * A plain DNS name that ends with a top-level domain. No « * » and no bracket (Next reads the host
+ * of an image pattern as a glob), no single label and no IP address.
+ */
+const PLAIN_HOST = /^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/
+
+/**
+ * The origin the photos are served from: the one remote host the image optimizer may fetch from,
+ * and the one remote host the content policy names (next.config.ts).
+ *
+ * R2_PUBLIC_URL is public and read when the configuration of Next is loaded: by the build, which
+ * writes the headers, and again by `next start`. Missing or blank, it is the production bucket.
+ * A refused value throws: a build must stop rather than freeze a host nobody chose.
+ */
+export function mediaOrigin(raw: string | undefined): string {
+	// As everywhere in this file, an empty or blank variable is a missing one.
+	if (raw === undefined || raw.trim() === '') return MEDIA_ORIGIN_DEFAULT
+	let url: URL | undefined
+	try {
+		url = new URL(raw)
+	} catch {
+		url = undefined
+	}
+	// Exact form only, as for the address of the site: https, a plain host, nothing after it.
+	if (url?.protocol === 'https:' && url.origin === raw && PLAIN_HOST.test(url.hostname)) return raw
+	throw new EnvError([{ variable: 'R2_PUBLIC_URL', problem: `refusée. Attendu : ${EXPECTED.R2_PUBLIC_URL}.` }])
 }
 
 /** A local address under both of its names: a browser may be opened on either. */
