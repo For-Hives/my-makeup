@@ -60,7 +60,7 @@ Le formulaire de devis ne compte pas comme canal de contact.
 
 La règle lit les champs sous leurs noms de l'ancien site (type `ChampsDuProfil`) : le code qui l'appelle fait la correspondance depuis son propre document. Une photo se passe comme un objet ou une liste, jamais comme un simple identifiant, qui compterait comme « pas de photo ».
 
-Les tests sont dans `tests/unit/completude.test.ts` et se lancent seuls avec `bun test tests/unit/completude.test.ts`. Deux fichiers de `tests/unit/fixtures/` servent de référence :
+Les tests sont dans `tests/unit/completude.test.ts` et se lancent seuls avec `bun --no-env-file test tests/unit/completude.test.ts`. Deux fichiers de `tests/unit/fixtures/` servent de référence :
 
 - `completude-cas.json` : les cas partagés avec l'ancien site, copiés tels quels ;
 - `completude-ancien-site.json` : les réponses du code de l'ancien site sur ces cas et sur ceux de son API. Ces valeurs ne se corrigent jamais à la main : un écart est un défaut du port.
@@ -135,7 +135,8 @@ L'application vérifie ses variables à chaque démarrage (`bun run dev`, `bun r
 | `PAYLOAD_DROP_DATABASE` | Refusée si la base n'est pas sur ce poste : avec `true`, Payload efface toutes les tables. |
 
 - `bun run build` est la seule exception : il ne vérifie rien et passe sans secret ni base.
-- Le CLI de Payload (`bun run payload`, `payload:types`, `payload:importmap`, `payload:migrate`…) charge la même configuration : il lui faut un `.env` valide.
+- Le CLI de Payload (`bun run payload`, `payload:types`, `payload:importmap`, `payload:migrate`…) charge la même configuration : sans `DATABASE_URI` et `PAYLOAD_SECRET` valides, il s'arrête avec le même message. Le `.env` de l'étape 2 de « Démarrer en local » suffit.
+- `payload:types` et `payload:importmap` n'ouvrent aucune connexion : la base peut être arrêtée. Sur un clone sans `.env` (la CI, par exemple), deux valeurs de remplissage passées dans l'environnement suffisent : une adresse `postgres://` bien formée, sans base derrière, et 32 caractères quelconques.
 - `NEXT_PUBLIC_SITE_URL` est publique. Présente au moment du build, même vide, elle est figée dans le build. Absente du build, elle est lue au démarrage.
 - Une nouvelle variable s'ajoute dans `src/lib/env.ts` et dans `.env.exemple`, par le ticket qui commence à la lire.
 
@@ -166,7 +167,7 @@ L'application vérifie ses variables à chaque démarrage (`bun run dev`, `bun r
 
 - La question est posée à la base à chaque appel, par la connexion de Payload. La réponse n'est jamais mise en cache (`Cache-Control: no-store`) ni indexée (`X-Robots-Tag: noindex`).
 - La cause d'un 503 n'est écrite que dans les journaux du serveur, sur une ligne `[health] check failed: …` qui se termine par un code : `ECONNREFUSED` (base arrêtée), `timeout` (pas de réponse en 2 secondes), `PAYLOAD_INIT` (Payload n'a pas démarré).
-- Sans base, ou sans les deux variables obligatoires du `.env`, la route répond 503 : Payload ne démarre pas.
+- Sans base, la route répond 503 : Payload ne démarre pas. Sans une variable obligatoire, la route ne répond pas du tout : l'application refuse de démarrer (voir « Configuration durcie »).
 - Au premier appel après un démarrage, la route attend Payload. S'il lui faut plus de 2 secondes (par exemple pendant la poussée du schéma en développement), elle répond 503 cette fois-là, puis 200 dès qu'il est prêt.
 
 `version` est le commit déployé, réduit à ses 7 premiers caractères. Il est cherché dans cet ordre :
@@ -180,7 +181,7 @@ En local, sans ces variables, `version` est donc la version de `package.json`.
 
 ```sh
 curl -i http://localhost:3000/api/health
-bun test tests/unit/health.test.ts tests/unit/version.test.ts
+bun --no-env-file test tests/unit/health.test.ts tests/unit/version.test.ts
 ```
 
 ## Commandes
@@ -203,6 +204,8 @@ bun test tests/unit/health.test.ts tests/unit/version.test.ts
 | `bun run test:unit` | Les tests unitaires de `tests/unit/`, sans lire le fichier `.env` |
 
 Biome se lance par ces scripts ou par `bunx @biomejs/biome`, jamais par `npx biome` : c'est un paquet homonyme.
+
+`bun run payload` et les scripts `payload:*` ont besoin des deux variables obligatoires, donc du `.env` de l'étape 2 de « Démarrer en local » : voir « Configuration durcie ».
 
 ## Tests
 

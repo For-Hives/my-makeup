@@ -366,13 +366,13 @@ Le test `tests/unit/doc-schema-gele.test.ts` relit ce document et échoue si :
 - le document contient un hash, une adresse email ou un numéro de téléphone.
 
 ```sh
-bun test tests/unit/doc-schema-gele.test.ts
+bun --no-env-file test tests/unit/doc-schema-gele.test.ts
 ```
 
 L'inventaire des attributs est figé dans le test. Pour le recomparer aux vrais fichiers de schéma, tant que le dépôt de l'ancienne API existe :
 
 ```sh
-STRAPI_API_DIR=../api-my-makeup bun test tests/unit/doc-schema-gele.test.ts
+STRAPI_API_DIR=../api-my-makeup bun --no-env-file test tests/unit/doc-schema-gele.test.ts
 ```
 
 ## 11. Points en attente
