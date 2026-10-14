@@ -4,8 +4,8 @@
  *
  * - The source is read in one read-only snapshot, and fingerprinted before and after the run.
  * - A case only a decision can settle (accounts that share one email, the profile of an account
- *   a decision sets aside) stops the run before any write, dry or real, and the report lists it
- *   by identifiers.
+ *   a decision sets aside, a profile without an account out of the list of the spam) stops the
+ *   run before any write, dry or real, and the report lists it by identifiers.
  * - A dry run (the default) reads the target and says what it would write; it writes nothing.
  * - A real run writes collection by collection, the accounts first, then their profiles, then
  *   the talents, and reads every collection again: its parity is complete when the target holds
@@ -16,6 +16,7 @@ import type { Payload } from 'payload'
 import type { GenreDeCible } from './cible'
 import { ADAPTATEUR_COMPTES, comptesAttendus, lireLesComptes, repartitionDesComptes } from './comptes'
 import { AUCUNE_DECISION, type Decisions } from './decisions'
+import { REFERENCES } from './ecarts'
 import {
 	type Adaptateur,
 	type Attendu,
@@ -26,7 +27,7 @@ import {
 	planifier,
 	type Refus,
 } from './moteur'
-import { ADAPTATEUR_PROFILS, lireLesProfils, profilsAttendus, profilsDesComptesEcartes } from './profils'
+import { ADAPTATEUR_PROFILS, lireLesProfils, profilsAttendus, profilsLaisses } from './profils'
 import type { BilanDeCollection, Mode, PariteDeCollection, Rapport } from './rapport'
 import { empreinteDesTables, memesTables, type Source } from './source'
 import { ADAPTATEUR_TALENTS, lireLesTalents, talentsAttendus } from './talents'
@@ -111,12 +112,17 @@ export async function importer(options: OptionsDImport): Promise<Rapport> {
 	}
 
 	const comptes = comptesAttendus(lu.comptes, decisions, tirerMotDePasse)
-	const desComptesEcartes = profilsDesComptesEcartes(lu.profils, comptes.ecartes, decisions.profilsEcartes)
-	rapport.decisionsSansObjet = comptes.sansObjet + desComptesEcartes.sansObjet
-	if (comptes.sansDecision.length > 0 || desComptesEcartes.sansDecision.length > 0) {
+	const laisses = profilsLaisses(lu.profils, {
+		comptesDeLaSource: new Set(lu.comptes.map(({ id }) => id)),
+		comptesEcartes: comptes.ecartes,
+		profilsEcartes: decisions.profilsEcartes,
+	})
+	rapport.decisionsSansObjet = comptes.sansObjet + laisses.sansObjet
+	if (comptes.sansDecision.length > 0 || laisses.deComptesEcartes.length > 0 || laisses.sansCompte.length > 0) {
 		rapport.arret = {
 			emailsPartages: comptes.sansDecision,
-			profilsDeComptesEcartes: desComptesEcartes.sansDecision,
+			profilsDeComptesEcartes: laisses.deComptesEcartes,
+			profilsSansCompte: laisses.sansCompte,
 		}
 		rapport.collections.pros = {
 			...bilanDuPlan({ actions: [], enTrop: [] }),
@@ -136,13 +142,15 @@ export async function importer(options: OptionsDImport): Promise<Rapport> {
 
 		// Each profile points at its account in Payload, read once the accounts are written.
 		const idsDesComptes = await idsDesComptesPris(payload, comptes.attendus)
-		const profils = profilsAttendus(lu.profils, idsDesComptes, desComptesEcartes.ecartes)
+		const profils = profilsAttendus(lu.profils, idsDesComptes, laisses)
 		compterLesEcarts(rapport.ecarts, profils.attendus)
+		if (laisses.spam.length > 0) rapport.ecarts[REFERENCES.profilsDuSpam] = laisses.spam.length
 		rapport.collections.profils = {
 			...(await importerLaCollection(options, ADAPTATEUR_PROFILS, lu.profils.length, profils.attendus)),
-			ecartes: profils.ecartes,
-			sansCompte: profils.sansCompte,
+			ecartes: laisses.ecartes,
+			spam: laisses.spam,
 			statuts: profils.statuts,
+			statutsDifferentsDeLaSource: profils.statutsDifferentsDeLaSource,
 		}
 
 		rapport.collections.talents = await importerLaCollection(

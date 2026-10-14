@@ -19,6 +19,10 @@ export const REFERENCES = {
 	slugStocke: 'slug-stocke',
 	/** A profile entirely empty at the source is a draft. */
 	profilVideEnBrouillon: 'profils-vides-brouillon',
+	/** An availability never set (`null`) is « available ». */
+	disponibiliteParDefaut: 'disponibilite-par-defaut',
+	/** The 13 empty profiles left without an account by the spam of 10/10/2026 are not taken. */
+	profilsDuSpam: 'profils-spam-non-repris',
 } as const
 
 export type Reference = (typeof REFERENCES)[keyof typeof REFERENCES]

@@ -289,7 +289,11 @@ describe('Critère 4 : même email sans décision, arrêt et rapport par identif
 
 		const rapport = await importerSurLeBanc('reel', { decisions: AUCUNE_DECISION })
 
-		expect(rapport.arret).toEqual({ emailsPartages: [[9, 10, 11, 12]], profilsDeComptesEcartes: [] })
+		expect(rapport.arret).toEqual({
+			emailsPartages: [[9, 10, 11, 12]],
+			profilsDeComptesEcartes: [],
+			profilsSansCompte: [],
+		})
 		expect(rapport.parite).toBeNull()
 		expect(await comptesDeLaCible()).toEqual([])
 		const payload = await payloadDeTest()
@@ -323,7 +327,11 @@ describe('Critère 4 : même email sans décision, arrêt et rapport par identif
 			decisions: { emailsPartages: [{ comptes: [9, 10, 11], retenu: 9 }], profilsEcartes: [] },
 		})
 
-		expect(rapport.arret).toEqual({ emailsPartages: [[9, 10, 11, 12]], profilsDeComptesEcartes: [] })
+		expect(rapport.arret).toEqual({
+			emailsPartages: [[9, 10, 11, 12]],
+			profilsDeComptesEcartes: [],
+			profilsSansCompte: [],
+		})
 		expect(rapport.decisionsSansObjet).toBe(1)
 		expect(await comptesDeLaCible()).toEqual([])
 	})

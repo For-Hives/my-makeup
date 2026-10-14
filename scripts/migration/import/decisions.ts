@@ -10,9 +10,10 @@
  * - `emailsPartages`: accounts of the old site that share one email (edge spaces and capitals
  *   aside). The v3 has one account per email: only `retenu` is taken, the others are set aside.
  *   A group the source holds without its decision stops the import before any write.
- * - `profilsEcartes`: profiles whose account a decision above sets aside, and that a person
- *   decided to leave aside with it. Such a profile without its decision stops the import before
- *   any write (docs/migration/SCHEMA.md, §11).
+ * - `profilsEcartes`: profiles a person decided to leave aside: a profile whose account a decision
+ *   above sets aside, or a profile without an account in the source that is not one of the 13
+ *   profiles of the spam (SCHEMA.md §4.1). Such a profile without its decision stops the import
+ *   before any write (docs/migration/SCHEMA.md, §11).
  */
 
 import { z } from 'zod'

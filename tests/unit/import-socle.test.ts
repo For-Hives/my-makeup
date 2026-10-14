@@ -340,19 +340,31 @@ describe('le rapport', () => {
 		const talents = rapport().parite?.talents ?? ({} as never)
 		expect(codeDeSortie(rapport({ parite: { talents: { ...talents, manquants: [2] } } }))).toBe(4)
 		expect(codeDeSortie(rapport({ parite: { talents: { ...talents, empreinteCible: 'c'.repeat(64) } } }))).toBe(4)
-		expect(codeDeSortie(rapport({ arret: { emailsPartages: [[9, 10]], profilsDeComptesEcartes: [] } }))).toBe(3)
+		expect(
+			codeDeSortie(
+				rapport({ arret: { emailsPartages: [[9, 10]], profilsDeComptesEcartes: [], profilsSansCompte: [] } })
+			)
+		).toBe(3)
 	})
 
-	test('l’arrêt nomme chaque cas par identifiants : les comptes au même email, les profils d’un compte écarté', () => {
+	test('l’arrêt nomme chaque cas par identifiants : les comptes au même email, les profils d’un compte écarté ou sans compte', () => {
 		const texte = rapportEnTexte(
-			rapport({ arret: { emailsPartages: [[9, 10, 11, 12]], profilsDeComptesEcartes: [28, 29] }, parite: null })
+			rapport({
+				arret: { emailsPartages: [[9, 10, 11, 12]], profilsDeComptesEcartes: [28, 29], profilsSansCompte: [] },
+				parite: null,
+			})
 		)
 		expect(texte).toContain('Import arrêté avant toute écriture : rien n’est écrit.')
 		expect(texte).toContain('Groupes, par identifiant : [9, 10, 11, 12].')
 		expect(texte).toContain('Profils, par identifiant : 28, 29.')
-		expect(
-			rapportEnTexte(rapport({ arret: { emailsPartages: [], profilsDeComptesEcartes: [29] }, parite: null }))
-		).not.toContain('Groupes')
+		expect(texte).not.toContain('aucun compte dans la source')
+		const sansCompte = rapportEnTexte(
+			rapport({ arret: { emailsPartages: [], profilsDeComptesEcartes: [29], profilsSansCompte: [40] }, parite: null })
+		)
+		expect(sansCompte).not.toContain('Groupes')
+		expect(sansCompte).toContain(
+			'Des profils n’ont aucun compte dans la source et ne sont pas parmi les 13 profils du spam (SCHEMA.md §4.1). Profils, par identifiant : 40.'
+		)
 	})
 
 	test('deux empreintes de la source se comparent table par table', () => {

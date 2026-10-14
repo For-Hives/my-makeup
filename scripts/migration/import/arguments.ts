@@ -20,7 +20,7 @@ export const USAGE = [
 	'  sans option     à blanc : lit la source et la cible, dit ce qu’il écrirait, n’écrit rien',
 	'  --reel          écrit dans la base de DATABASE_URI, puis relit la cible pour prouver la parité',
 	`  ${DRAPEAU_CIBLE_DISTANTE} accepte une base qui n’est pas sur ce poste`,
-	'  --decisions     la table de décision des cas que l’import ne tranche pas seul (comptes au même email, profils d’un compte écarté)',
+	'  --decisions     la table de décision des cas que l’import ne tranche pas seul (comptes au même email, profils d’un compte écarté ou sans compte)',
 	'  --rapport       écrit aussi le rapport en JSON dans ce fichier (nombres, identifiants, empreintes)',
 ].join('\n')
 
