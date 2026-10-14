@@ -31,6 +31,7 @@ Le reste :
 - `src/payload-types.ts` et `src/app/(payload)/admin/importMap.js` : fichiers générés par Payload, versionnés, jamais modifiés à la main.
 - `docker-compose.yml` : la base PostgreSQL de développement.
 - `.env.exemple` : la liste des variables d'environnement, sans aucune valeur.
+- `tests/` : les tests. Un composant React s'y teste seul, sans navigateur : voir `docs/tests/composants.md`.
 
 Les versions sont figées dans `package.json`, et `bun.lock` est le seul fichier de verrouillage.
 
@@ -123,6 +124,8 @@ docker compose down -v   # arrête la base et efface les données
 | `bun run payload:types` | Régénère `src/payload-types.ts` après un changement de collection |
 | `bun run payload:importmap` | Régénère `importMap.js` après l'ajout d'un composant d'administration |
 | `bun run payload` | Le CLI de Payload |
+| `bun run test` | Tous les tests qui existent aujourd'hui : les tests unitaires |
+| `bun run test:unit` | Les tests unitaires de `tests/unit/`, sans lire le fichier `.env` |
 
 Biome se lance par ces scripts ou par `bunx @biomejs/biome`, jamais par `npx biome` : c'est un paquet homonyme.
 
