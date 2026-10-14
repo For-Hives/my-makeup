@@ -45,6 +45,7 @@ Il faut Docker avec Compose. Sans démon Docker, les commandes du banc passent d
 | `MAILPIT_URL` | L'API du capteur, par laquelle un test lit les mails reçus |
 | `EMAIL_FROM` | L'expéditeur des mails du banc, sur le domaine réservé `example.test` |
 | `S3_ENDPOINT`, `S3_BUCKET` | Le stockage d'objets et son espace. Le nom de l'espace finit par `-test` |
+| `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | La clé avec laquelle l'application signe ses requêtes au stockage. Le simulateur accepte toute clé : ces deux valeurs portent le mot « factice ». Sans `R2_PUBLIC_URL`, l'adresse publique d'une photo du banc est celle du simulateur : `S3_ENDPOINT`, puis l'espace, puis la clé de l'objet |
 | `STRAPI_SOURCE_URI` | La fausse base Strapi que lit l'import, ouverte par un rôle qui ne peut rien y écrire. Elle vit dans le PostgreSQL du banc, dans une base à elle dont le nom finit par `_test` ([`source-strapi.md`](source-strapi.md)) |
 | `GOOGLE_OIDC_ISSUER` | L'adresse du faux Google : c'est elle qui le fait prendre pour Google par l'application |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Le client factice du banc et son secret factice. Les deux portent le mot « factice » |
@@ -284,7 +285,7 @@ Chaque ligne est jouée deux fois : par l'API REST, avec la session de la fabriq
 | `collection` | La collection visée |
 | `operation` | `lister`, `lire`, `creer`, `modifier`, `supprimer` |
 | `document` | Le document visé, désigné par le rôle à qui il appartient (`lire`, `modifier`, `supprimer`) |
-| `champ`, `valeur` | Pour `modifier` : le champ envoyé et sa valeur. Sans eux, la matrice change un champ ordinaire de la collection. `{ compteDe: 'sansProfil' }` vaut le compte de ce rôle |
+| `champ`, `valeur` | Pour `modifier` : le champ envoyé et sa valeur. Sans eux, la matrice change un champ ordinaire de la collection. `{ compteDe: 'sansProfil' }` vaut le compte de ce rôle. Pour `lire` : `champ` seul, le champ dont la ligne regarde s'il est dans le document lu |
 | `attendu` | Ce qui doit arriver, ci-dessous |
 
 | Attendu | Ce que la matrice a constaté |
@@ -293,14 +294,18 @@ Chaque ligne est jouée deux fois : par l'API REST, avec la session de la fabriq
 | `autorise` | Accepté, et la base le montre : le document lu est le bon, le document existe, la nouvelle valeur est stockée, le document a disparu |
 | `ignore` | Accepté, mais le champ a gardé sa valeur : un champ que ce rôle ne peut pas écrire |
 | `aucun`, `soi`, `tous` | Pour `lister` : une liste vide, exactement les documents de celui qui agit, ou tous les documents de la distribution |
+| `publies`, `soiEtPublies` | Pour `lister` : exactement les documents de la distribution que lit le public, ou exactement ceux-là plus ceux de celui qui agit. Le portrait de la collection dit lesquels le public lit (`publics`) |
+| `visible`, `absent` | Pour `lire` avec un `champ` : le document lu porte le champ, avec la valeur stockée ; ou il est lu sans ce champ, que Payload a retiré de la réponse. Les lignes de lecture des champs visent le profil publié de « A » et sa photo, que tous les rôles lisent |
 
 Tout autre constat est `incoherent` : refusé mais écrit quand même, ou une liste que personne n'attend. Le test échoue.
 
 À savoir :
 
-- **La distribution est faite une fois par fichier** (`distribuer()`, `tests/outils/matrice-acces.ts`) : un compte par rôle, par la fabrique, avec ses documents.
+- **La distribution est faite une fois par fichier** (`distribuer()`, `tests/outils/matrice-acces.ts`) : un compte par rôle, par la fabrique, avec ses documents. Le profil de « A » (`maquilleuse`) y est publié, celui de « B » (`autreMaquilleuse`) reste un brouillon : une ligne de lecture dit ce que le public voit, et ce qu'il ne voit pas.
 - **Une ligne ne change pas la distribution.** Une valeur modifiée est remise comme avant, et une suppression qui doit réussir vise un document jetable de la même collection.
-- **Une collection nouvelle** donne à la matrice son portrait (`PORTRAITS`, même fichier) : le champ ordinaire à modifier, les données d'une création, un document jetable. **Un rôle nouveau** prend un type de la fabrique (`TYPE_DU_ROLE`).
+- **Une collection nouvelle** donne à la matrice son portrait (`PORTRAITS`, même fichier) : le champ ordinaire à modifier, les données d'une création, un document jetable (qui appartient à celui qui agit, quand la collection a des propriétaires), les documents que lit le public (`publics`), et `fichier` pour une collection de fichiers, dont une création envoie une photo. **Un rôle nouveau** prend un type de la fabrique (`TYPE_DU_ROLE`).
+- **Les photos de la distribution** : « A » et « B » ont chacune un média, la photo principale de leur profil. La matrice vide le stockage d'objets après ses lignes.
+- **Une photo de test** vient de `tests/outils/photos.ts` : un vrai PNG de 1 × 1 pixel, sous un nom à lui, pour l'API locale (`fichierPourPayload`) ou pour un formulaire (`fichierPourFormulaire`). `appelerRest` envoie un formulaire avec fichier par son option `formulaire` (`formulaireAvecFichier`, `tests/outils/rest.ts`), comme le site.
 - **L'appel REST passe par la vraie route de l'application** (`appelerRest`, `tests/outils/rest.ts`), sans serveur : mêmes gestionnaires, même contrôle de session, mêmes règles. Il ne prouve pas l'aiguillage de Next lui-même, qu'un essai de bout en bout prouve.
 
 ## Le faux Google

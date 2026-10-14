@@ -1,7 +1,40 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { viderLeCapteur } from '../outils/mailpit'
-import { type Distribution, distribuer, jouer, type Ligne, nommer, VOIES } from '../outils/matrice-acces'
+import {
+	type CollectionDeLaMatrice,
+	type Distribution,
+	distribuer,
+	jouer,
+	type Ligne,
+	nommer,
+	ROLES,
+	type Role,
+	VOIES,
+} from '../outils/matrice-acces'
 import { viderLaBase } from '../outils/payload-test'
+import { viderLeStockage } from '../outils/s3'
+
+/** The owner of a document and the role `admin`: who reads the private fields of a profile or a media. */
+const PROPRIETAIRE_ET_ADMIN: readonly Role[] = ['maquilleuse', 'admin']
+
+/**
+ * The field-level reading of A's document, which every role reads (her profile is published, her
+ * photo is its main photo): for each field, the roles that read it; every other role reads the
+ * document without it. One line per field and per role.
+ */
+const lecturesDesChamps = (collection: CollectionDeLaMatrice, lecteurs: [string, readonly Role[]][]): Ligne[] =>
+	lecteurs.flatMap(([champ, quiLit]) =>
+		ROLES.map(
+			(role): Ligne => ({
+				role,
+				collection,
+				operation: 'lire',
+				document: 'maquilleuse',
+				champ,
+				attendu: quiLit.includes(role) ? 'visible' : 'absent',
+			})
+		)
+	)
 
 /**
  * The access matrix (plan 01 §5 P3; docs/tests/banc.md, « La matrice d'accès »).
@@ -122,11 +155,14 @@ const MATRICE: Ligne[] = [
 	),
 	{ role: 'sansProfil', collection: 'pros', operation: 'lister', attendu: 'soi' },
 
-	// profils (ticket 020): a makeup artist reads and changes her own profile only (U54, I02),
-	// never its account, its slug or what the import wrote; an account without a profile gets an
-	// empty list and a refusal on any write; `admin` reaches every profile; nobody else, any yet.
-	{ role: 'anonyme', collection: 'profils', operation: 'lister', attendu: 'refuse' },
-	{ role: 'anonyme', collection: 'profils', operation: 'lire', document: 'maquilleuse', attendu: 'refuse' },
+	// profils (tickets 020 and 021): a makeup artist changes her own profile only (U54, I02), never
+	// its account, its slug, what the import wrote or what an admin decides (I03, U55); she reads
+	// her own profile and the published ones; anyone else reads the published profiles only (U53,
+	// I01); an account without a profile gets the published ones and a refusal on any write;
+	// `admin` reaches every profile. In the cast, A's profile is published and B's is a draft.
+	{ role: 'anonyme', collection: 'profils', operation: 'lister', attendu: 'publies' },
+	{ role: 'anonyme', collection: 'profils', operation: 'lire', document: 'maquilleuse', attendu: 'autorise' },
+	{ role: 'anonyme', collection: 'profils', operation: 'lire', document: 'autreMaquilleuse', attendu: 'refuse' },
 	{ role: 'anonyme', collection: 'profils', operation: 'creer', attendu: 'refuse' },
 	{ role: 'anonyme', collection: 'profils', operation: 'modifier', document: 'maquilleuse', attendu: 'refuse' },
 	{ role: 'anonyme', collection: 'profils', operation: 'supprimer', document: 'maquilleuse', attendu: 'refuse' },
@@ -156,6 +192,18 @@ const MATRICE: Ligne[] = [
 			['strapiId', 999],
 			['legacyUsername', 'Ancien Pseudo'],
 			['pro', { compteDe: 'sansProfil' }],
+			// Reserved to the role `admin` (ticket 021, I03, U55).
+			['statut', 'masque'],
+			['motif', 'Motif envoyé par la maquilleuse'],
+			['verifie', true],
+			['verifieLe', '2026-10-14T00:00:00.000Z'],
+			['siret', '12345678901234'],
+			['noteInterne', 'Note envoyée par la maquilleuse'],
+			['score', 99],
+			['superMaquilleuse', true],
+			// Traced by the server only (ticket 042).
+			['consentiLe', '2020-01-01T00:00:00.000Z'],
+			['sourceConsentement', 'import'],
 		] as const
 	).map(
 		([champ, valeur]): Ligne => ({
@@ -168,8 +216,34 @@ const MATRICE: Ligne[] = [
 			attendu: 'ignore',
 		})
 	),
-	{ role: 'autreMaquilleuse', collection: 'profils', operation: 'lister', attendu: 'soi' },
-	{ role: 'autreMaquilleuse', collection: 'profils', operation: 'lire', document: 'maquilleuse', attendu: 'refuse' },
+	// Her contact details, and her choice to show them, are hers to write (ticket 042).
+	...(
+		[
+			['coordonnees', { telephone: '06 39 98 11 11', email: 'contact-a@example.test' }],
+			['contactPublic', true],
+		] as const
+	).map(
+		([champ, valeur]): Ligne => ({
+			role: 'maquilleuse',
+			collection: 'profils',
+			operation: 'modifier',
+			document: 'maquilleuse',
+			champ,
+			valeur,
+			attendu: 'autorise',
+		})
+	),
+	{
+		role: 'autreMaquilleuse',
+		collection: 'profils',
+		operation: 'modifier',
+		document: 'maquilleuse',
+		champ: 'coordonnees',
+		valeur: { telephone: '06 39 98 22 22', email: 'contact-b@example.test' },
+		attendu: 'refuse',
+	},
+	{ role: 'autreMaquilleuse', collection: 'profils', operation: 'lister', attendu: 'soiEtPublies' },
+	{ role: 'autreMaquilleuse', collection: 'profils', operation: 'lire', document: 'maquilleuse', attendu: 'autorise' },
 	{
 		role: 'autreMaquilleuse',
 		collection: 'profils',
@@ -184,16 +258,52 @@ const MATRICE: Ligne[] = [
 		document: 'maquilleuse',
 		attendu: 'refuse',
 	},
-	{ role: 'sansProfil', collection: 'profils', operation: 'lister', attendu: 'aucun' },
-	{ role: 'sansProfil', collection: 'profils', operation: 'lire', document: 'maquilleuse', attendu: 'refuse' },
+	{ role: 'sansProfil', collection: 'profils', operation: 'lister', attendu: 'publies' },
+	{ role: 'sansProfil', collection: 'profils', operation: 'lire', document: 'maquilleuse', attendu: 'autorise' },
+	{ role: 'sansProfil', collection: 'profils', operation: 'lire', document: 'autreMaquilleuse', attendu: 'refuse' },
 	{ role: 'sansProfil', collection: 'profils', operation: 'creer', attendu: 'refuse' },
 	{ role: 'sansProfil', collection: 'profils', operation: 'modifier', document: 'maquilleuse', attendu: 'refuse' },
 	{ role: 'sansProfil', collection: 'profils', operation: 'supprimer', document: 'maquilleuse', attendu: 'refuse' },
-	{ role: 'redaction', collection: 'profils', operation: 'lister', attendu: 'refuse' },
-	{ role: 'redaction', collection: 'profils', operation: 'lire', document: 'maquilleuse', attendu: 'refuse' },
+	{ role: 'redaction', collection: 'profils', operation: 'lister', attendu: 'publies' },
+	{ role: 'redaction', collection: 'profils', operation: 'lire', document: 'maquilleuse', attendu: 'autorise' },
+	{ role: 'redaction', collection: 'profils', operation: 'lire', document: 'autreMaquilleuse', attendu: 'refuse' },
 	{ role: 'redaction', collection: 'profils', operation: 'creer', attendu: 'refuse' },
 	{ role: 'redaction', collection: 'profils', operation: 'modifier', document: 'maquilleuse', attendu: 'refuse' },
+	{
+		role: 'redaction',
+		collection: 'profils',
+		operation: 'modifier',
+		document: 'maquilleuse',
+		champ: 'coordonnees',
+		valeur: { telephone: '06 39 98 33 33', email: 'contact-redaction@example.test' },
+		attendu: 'refuse',
+	},
 	{ role: 'redaction', collection: 'profils', operation: 'supprimer', document: 'maquilleuse', attendu: 'refuse' },
+	// What each role reads of A's published profile, field by field (tickets 021, 042 and 043).
+	...lecturesDesChamps('profils', [
+		// Public: her networks (042), her photos (043), the badge of the search (021).
+		['reseaux', ROLES],
+		['photoPrincipale', ROLES],
+		['galerie', ROLES],
+		['superMaquilleuse', ROLES],
+		// Her account, what the import wrote, what an admin decided (021, I01).
+		['pro', PROPRIETAIRE_ET_ADMIN],
+		['strapiId', PROPRIETAIRE_ET_ADMIN],
+		['legacyUsername', PROPRIETAIRE_ET_ADMIN],
+		['statut', PROPRIETAIRE_ET_ADMIN],
+		['motif', PROPRIETAIRE_ET_ADMIN],
+		['verifie', PROPRIETAIRE_ET_ADMIN],
+		['verifieLe', PROPRIETAIRE_ET_ADMIN],
+		['siret', PROPRIETAIRE_ET_ADMIN],
+		// For the admin panel only (021).
+		['noteInterne', ['admin']],
+		['score', ['admin']],
+		// Her contact details, her choice to show them and its trace (042, U59, I07).
+		['coordonnees', PROPRIETAIRE_ET_ADMIN],
+		['contactPublic', PROPRIETAIRE_ET_ADMIN],
+		['consentiLe', PROPRIETAIRE_ET_ADMIN],
+		['sourceConsentement', PROPRIETAIRE_ET_ADMIN],
+	]),
 	{ role: 'admin', collection: 'profils', operation: 'lister', attendu: 'tous' },
 	{ role: 'admin', collection: 'profils', operation: 'lire', document: 'maquilleuse', attendu: 'autorise' },
 	{ role: 'admin', collection: 'profils', operation: 'creer', attendu: 'autorise' },
@@ -205,6 +315,16 @@ const MATRICE: Ligne[] = [
 			['strapiId', 999, 'ignore'],
 			['legacyUsername', 'Ancien Pseudo', 'ignore'],
 			['pro', { compteDe: 'sansProfil' }, 'autorise'],
+			['statut', 'masque', 'autorise'],
+			['motif', 'Photos sans rapport avec le maquillage', 'autorise'],
+			['verifie', true, 'autorise'],
+			['siret', '12345678901234', 'autorise'],
+			['noteInterne', 'Relancée par téléphone', 'autorise'],
+			['score', 4.5, 'autorise'],
+			['superMaquilleuse', true, 'autorise'],
+			['coordonnees', { telephone: '06 39 98 44 44', email: 'contact-admin@example.test' }, 'autorise'],
+			['consentiLe', '2020-01-01T00:00:00.000Z', 'ignore'],
+			['sourceConsentement', 'import', 'ignore'],
 		] as const
 	).map(
 		([champ, valeur, attendu]): Ligne => ({
@@ -212,6 +332,90 @@ const MATRICE: Ligne[] = [
 			collection: 'profils',
 			operation: 'modifier',
 			document: 'maquilleuse',
+			champ,
+			valeur,
+			attendu,
+		})
+	),
+
+	// media (ticket 043): the public never lists the media, and reads one only when it belongs to a
+	// published profile (U56, I04); a makeup artist sends photos, lists and reads her own, changes
+	// and deletes her own only, never their owner nor where their object is; `admin` reaches every
+	// media. In the cast, A's photo is the main photo of her published profile, B's of her draft.
+	{ role: 'anonyme', collection: 'media', operation: 'lister', attendu: 'refuse' },
+	{ role: 'anonyme', collection: 'media', operation: 'lire', document: 'maquilleuse', attendu: 'autorise' },
+	{ role: 'anonyme', collection: 'media', operation: 'lire', document: 'autreMaquilleuse', attendu: 'refuse' },
+	{ role: 'anonyme', collection: 'media', operation: 'creer', attendu: 'refuse' },
+	{ role: 'anonyme', collection: 'media', operation: 'modifier', document: 'maquilleuse', attendu: 'refuse' },
+	{ role: 'anonyme', collection: 'media', operation: 'supprimer', document: 'maquilleuse', attendu: 'refuse' },
+	{ role: 'maquilleuse', collection: 'media', operation: 'lister', attendu: 'soi' },
+	{ role: 'maquilleuse', collection: 'media', operation: 'lire', document: 'maquilleuse', attendu: 'autorise' },
+	{ role: 'maquilleuse', collection: 'media', operation: 'lire', document: 'autreMaquilleuse', attendu: 'refuse' },
+	{ role: 'maquilleuse', collection: 'media', operation: 'creer', attendu: 'autorise' },
+	{ role: 'maquilleuse', collection: 'media', operation: 'modifier', document: 'maquilleuse', attendu: 'autorise' },
+	{ role: 'maquilleuse', collection: 'media', operation: 'modifier', document: 'autreMaquilleuse', attendu: 'refuse' },
+	{ role: 'maquilleuse', collection: 'media', operation: 'supprimer', document: 'maquilleuse', attendu: 'autorise' },
+	{ role: 'maquilleuse', collection: 'media', operation: 'supprimer', document: 'autreMaquilleuse', attendu: 'refuse' },
+	...(
+		[
+			['owner', { compteDe: 'autreMaquilleuse' }],
+			['prefix', 'un-autre-dossier'],
+			['filename', 'un-autre-nom.png'],
+			['strapiId', 999],
+		] as const
+	).map(
+		([champ, valeur]): Ligne => ({
+			role: 'maquilleuse',
+			collection: 'media',
+			operation: 'modifier',
+			document: 'maquilleuse',
+			champ,
+			valeur,
+			attendu: 'ignore',
+		})
+	),
+	{ role: 'autreMaquilleuse', collection: 'media', operation: 'lister', attendu: 'soi' },
+	{ role: 'autreMaquilleuse', collection: 'media', operation: 'creer', attendu: 'autorise' },
+	{ role: 'autreMaquilleuse', collection: 'media', operation: 'lire', document: 'maquilleuse', attendu: 'autorise' },
+	{ role: 'autreMaquilleuse', collection: 'media', operation: 'modifier', document: 'maquilleuse', attendu: 'refuse' },
+	{ role: 'autreMaquilleuse', collection: 'media', operation: 'supprimer', document: 'maquilleuse', attendu: 'refuse' },
+	{ role: 'sansProfil', collection: 'media', operation: 'lister', attendu: 'aucun' },
+	{ role: 'sansProfil', collection: 'media', operation: 'lire', document: 'maquilleuse', attendu: 'autorise' },
+	{ role: 'sansProfil', collection: 'media', operation: 'lire', document: 'autreMaquilleuse', attendu: 'refuse' },
+	{ role: 'sansProfil', collection: 'media', operation: 'creer', attendu: 'autorise' },
+	{ role: 'sansProfil', collection: 'media', operation: 'modifier', document: 'maquilleuse', attendu: 'refuse' },
+	{ role: 'sansProfil', collection: 'media', operation: 'supprimer', document: 'maquilleuse', attendu: 'refuse' },
+	{ role: 'redaction', collection: 'media', operation: 'lister', attendu: 'refuse' },
+	{ role: 'redaction', collection: 'media', operation: 'lire', document: 'maquilleuse', attendu: 'autorise' },
+	{ role: 'redaction', collection: 'media', operation: 'lire', document: 'autreMaquilleuse', attendu: 'refuse' },
+	{ role: 'redaction', collection: 'media', operation: 'creer', attendu: 'refuse' },
+	{ role: 'redaction', collection: 'media', operation: 'modifier', document: 'maquilleuse', attendu: 'refuse' },
+	{ role: 'redaction', collection: 'media', operation: 'supprimer', document: 'maquilleuse', attendu: 'refuse' },
+	// What each role reads of A's photo, field by field (ticket 043).
+	...lecturesDesChamps('media', [
+		['url', ROLES],
+		['alt', ROLES],
+		['owner', PROPRIETAIRE_ET_ADMIN],
+		['strapiId', ['admin']],
+		['strapiFormats', ['admin']],
+	]),
+	{ role: 'admin', collection: 'media', operation: 'lister', attendu: 'tous' },
+	{ role: 'admin', collection: 'media', operation: 'lire', document: 'autreMaquilleuse', attendu: 'autorise' },
+	{ role: 'admin', collection: 'media', operation: 'creer', attendu: 'autorise' },
+	{ role: 'admin', collection: 'media', operation: 'modifier', document: 'autreMaquilleuse', attendu: 'autorise' },
+	{ role: 'admin', collection: 'media', operation: 'supprimer', document: 'autreMaquilleuse', attendu: 'autorise' },
+	...(
+		[
+			['owner', { compteDe: 'sansProfil' }, 'autorise'],
+			['prefix', 'un-autre-dossier', 'ignore'],
+			['strapiId', 999, 'ignore'],
+		] as const
+	).map(
+		([champ, valeur, attendu]): Ligne => ({
+			role: 'admin',
+			collection: 'media',
+			operation: 'modifier',
+			document: 'autreMaquilleuse',
 			champ,
 			valeur,
 			attendu,
@@ -225,9 +429,10 @@ beforeAll(async () => {
 	distribution = await distribuer()
 })
 
-// An account an admin creates through REST gets Payload's confirmation email: the mail catcher is emptied too.
+// An account an admin creates through REST gets Payload's confirmation email: the mail catcher is
+// emptied too. The photos of the cast and of the lines go to the object storage: emptied as well.
 afterAll(async () => {
-	await Promise.all([viderLaBase(), viderLeCapteur()])
+	await Promise.all([viderLaBase(), viderLeCapteur(), viderLeStockage()])
 })
 
 describe('La matrice d’accès, par l’API REST et par l’API locale avec les règles actives', () => {

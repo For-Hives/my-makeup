@@ -11,25 +11,32 @@
  *   { role: 'redaction', collection: 'admins', operation: 'lister', attendu: 'soi' }
  *
  * - `lister`: `refuse`, or what the list holds: `aucun` (empty), `soi` (exactly the documents of
- *   the actor), `tous` (every document of the cast).
+ *   the actor), `publies` (exactly the documents of the cast the public reads), `soiEtPublies`
+ *   (exactly both), `tous` (every document of the cast).
  * - `lire`, `creer`, `supprimer`: `autorise` or `refuse`. A refusal is also checked in the
  *   database: nothing was created, the document is still there.
+ * - `lire` with a field (`champ`): `visible` (the document read holds the field, with its stored
+ *   value) or `absent` (the document is read, without the field), or `refuse`.
  * - `modifier`: `autorise` (the new value is stored), `refuse` (refused, nothing changed) or
  *   `ignore` (accepted, but the field kept its value: a field the actor may not write). The value
  *   is put back afterwards, so that a line never changes the cast for the next ones.
  * - Anything else is `incoherent`: refused but written anyway, or a list nobody expects.
  *
  * The cast is made once per file (`distribuer`): one account per role, by the account factory,
- * with their documents. A deletion that must succeed acts on a throwaway document of the same
- * collection, never on the cast.
+ * with their documents. A's profile is published, B's stays a draft: what the public reads shows
+ * in the lines. A deletion that must succeed acts on a throwaway document of the same collection,
+ * never on the cast.
  */
 
 import { randomUUID } from 'node:crypto'
-import type { Payload, RequiredDataFromCollectionSlug } from 'payload'
+import type { Payload, RequiredDataFromCollectionSlug, Where } from 'payload'
 import { CONTEXTE_SANS_PROFIL } from '@/collections/Profils'
+import { PROFILS_PUBLIES } from '@/lib/acces'
+import { STATUT_PUBLIE } from '@/lib/profil/statut'
 import { creerCompte, DOMAINE_DES_COMPTES, motDePasseAleatoire, type TypeAvecSession } from './fabrique-comptes'
 import { payloadDeTest } from './payload-test'
-import { appelerRest } from './rest'
+import { fichierPourFormulaire, fichierPourPayload, nomDePhoto } from './photos'
+import { appelerRest, formulaireAvecFichier } from './rest'
 
 /** The two ways in: the REST API, and the Local API with the rules active. */
 export const VOIES = ['rest', 'locale'] as const
@@ -53,11 +60,22 @@ const TYPE_DU_ROLE: Record<RoleAvecCompte, TypeAvecSession> = {
 }
 
 /** The collections the matrix covers. */
-export const COLLECTIONS = ['admins', 'pros', 'profils'] as const
+export const COLLECTIONS = ['admins', 'pros', 'profils', 'media'] as const
 export type CollectionDeLaMatrice = (typeof COLLECTIONS)[number]
 
 export type Operation = 'lister' | 'lire' | 'creer' | 'modifier' | 'supprimer'
-export type Issue = 'autorise' | 'refuse' | 'ignore' | 'aucun' | 'soi' | 'tous' | 'incoherent'
+export type Issue =
+	| 'autorise'
+	| 'refuse'
+	| 'ignore'
+	| 'aucun'
+	| 'soi'
+	| 'publies'
+	| 'soiEtPublies'
+	| 'tous'
+	| 'visible'
+	| 'absent'
+	| 'incoherent'
 
 export interface Ligne {
 	role: Role
@@ -66,8 +84,9 @@ export interface Ligne {
 	/** The document the operation targets, named by the role that owns it (`lire`, `modifier`, `supprimer`). */
 	document?: RoleAvecCompte
 	/**
-	 * `modifier` only: the field to change and the value sent. Without them, the usual field of the
+	 * `modifier`: the field to change and the value sent. Without them, the usual field of the
 	 * collection. `{ compteDe: role }` stands for the account of that role, known once the cast is made.
+	 * `lire`: the field whose presence in the document read the line checks (no value).
 	 */
 	champ?: string
 	valeur?: unknown
@@ -124,8 +143,12 @@ interface Portrait {
 	nouvelleValeur: () => unknown
 	/** The data a line sends to create a document. */
 	donneesDeCreation: (acteur: Acteur, payload: Payload) => Promise<Record<string, unknown>>
-	/** A document made for one line to delete. */
-	jetable: (payload: Payload) => Promise<number>
+	/** A document made for one line to delete, owned by the actor when the collection has owners. */
+	jetable: (payload: Payload, acteur: Acteur) => Promise<number>
+	/** True for a collection of files: a creation sends a photo with its data (tests/outils/photos.ts). */
+	fichier?: true
+	/** Which documents the public reads, when the collection has some: a list may hold exactly them (`publies`). */
+	publics?: Where
 }
 
 const PORTRAITS: Record<CollectionDeLaMatrice, Portrait> = {
@@ -167,7 +190,22 @@ const PORTRAITS: Record<CollectionDeLaMatrice, Portrait> = {
 					data: { pro: await compteSansProfil(payload, 'jetable') } as RequiredDataFromCollectionSlug<'profils'>,
 				})
 			).id,
+		publics: PROFILS_PUBLIES,
 	},
+	media: {
+		champ: 'alt',
+		nouvelleValeur: () => nom('Texte alternatif'),
+		donneesDeCreation: () => Promise.resolve({ alt: nom('Envoyée') }),
+		jetable: (payload, acteur) =>
+			mediaDe(payload, acteur.utilisateur?.collection === 'pros' ? acteur.utilisateur.id : undefined),
+		fichier: true,
+	},
+}
+
+/** A media sent for this account (a photo with its owner), or for nobody, as for an article. */
+async function mediaDe(payload: Payload, proprietaire: number | undefined): Promise<number> {
+	const data = proprietaire === undefined ? {} : { owner: proprietaire }
+	return (await payload.create({ collection: 'media', data, file: fichierPourPayload(nomDePhoto('distribution')) })).id
 }
 
 /** Makes the cast: one account per role, through the account factory, with their documents. */
@@ -188,7 +226,25 @@ export async function distribuer(): Promise<Distribution> {
 		})
 	)
 	const anonyme: Acteur = { role: 'anonyme', enTetes: {}, documents: {} }
-	return Object.fromEntries([['anonyme', anonyme], ...acteurs.map(acteur => [acteur.role, acteur])]) as Distribution
+	const distribution = Object.fromEntries([
+		['anonyme', anonyme],
+		...acteurs.map(acteur => [acteur.role, acteur]),
+	]) as Distribution
+	// A's profile is published, as by the rule of ticket 044 or an admin; B's stays the draft it was created as.
+	// Each of them has a photo of her own, the main photo of her profile (ticket 043).
+	for (const role of ['maquilleuse', 'autreMaquilleuse'] as const) {
+		const acteur = distribution[role]
+		const profil = acteur.documents.profils
+		if (profil === undefined) throw new Error(`La distribution n’a pas de profil pour « ${role} ».`)
+		acteur.documents.media = await mediaDe(payload, acteur.documents.pros)
+		const statut = role === 'maquilleuse' ? { statut: STATUT_PUBLIE } : {}
+		await payload.update({
+			collection: 'profils',
+			id: profil,
+			data: { ...statut, photoPrincipale: acteur.documents.media },
+		})
+	}
+	return distribution
 }
 
 /** What one request gave: allowed (with what it returned) or refused. */
@@ -208,7 +264,12 @@ const estUnRefus = (erreur: unknown): boolean => {
 }
 
 async function parRest(acteur: Acteur, { collection, operation, id, donnees }: Demande): Promise<Reponse> {
-	const options = { enTetes: acteur.enTetes, corps: donnees }
+	// A creation in a collection of files sends a photo, in a form, as the site does.
+	const formulaire =
+		operation === 'creer' && PORTRAITS[collection].fichier
+			? formulaireAvecFichier(fichierPourFormulaire(), donnees)
+			: undefined
+	const options = formulaire ? { enTetes: acteur.enTetes, formulaire } : { enTetes: acteur.enTetes, corps: donnees }
 	const appel = {
 		lister: () => appelerRest('GET', `/api/${collection}?limit=100&depth=0`, options),
 		lire: () => appelerRest('GET', `/api/${collection}/${id}?depth=0`, options),
@@ -228,13 +289,14 @@ async function parApiLocale(acteur: Acteur, { collection, operation, id, donnees
 	const cible = id ?? -1
 	// A line sends what it wants: the collection checks the data, not the compiler.
 	const creer = payload.create.bind(payload) as unknown as (
-		options: typeof regles & { data: Record<string, unknown>; disableVerificationEmail: boolean }
+		options: typeof regles & { data: Record<string, unknown>; disableVerificationEmail: boolean; file?: unknown }
 	) => Promise<unknown>
+	const fichier = PORTRAITS[collection].fichier ? { file: fichierPourPayload() } : {}
 	try {
 		const corps = await {
 			lister: () => payload.find({ ...regles, limit: 100 }),
 			lire: () => payload.findByID({ ...regles, id: cible }),
-			creer: () => creer({ ...regles, data: donnees ?? {}, disableVerificationEmail: true }),
+			creer: () => creer({ ...regles, data: donnees ?? {}, disableVerificationEmail: true, ...fichier }),
 			modifier: () => payload.update({ ...regles, id: cible, data: donnees ?? {} }),
 			supprimer: () => payload.delete({ ...regles, id: cible }),
 		}[operation]()
@@ -269,14 +331,32 @@ function documentDe(distribution: Distribution, ligne: Ligne): number {
 	return id
 }
 
+/** The documents of the cast the public reads in this collection, sorted: none when it has no public documents. */
+async function publicsDe(collection: CollectionDeLaMatrice, distribues: number[]): Promise<number[]> {
+	const publics = PORTRAITS[collection].publics
+	if (!publics) return []
+	const payload = await payloadDeTest()
+	const { docs } = await payload.find({
+		collection,
+		depth: 0,
+		pagination: false,
+		where: { and: [{ id: { in: distribues } }, publics] },
+	})
+	return identifiants({ docs })
+}
+
 async function lister(voie: Voie, acteur: Acteur, ligne: Ligne, distribution: Distribution): Promise<Issue> {
 	const reponse = await demander(voie, acteur, ligne)
 	if (!reponse.autorise) return 'refuse'
 	const vus = identifiants(reponse.corps)
 	const siens = [acteur.documents[ligne.collection]].filter((id): id is number => id !== undefined)
 	const distribues = Object.values(distribution).flatMap(({ documents }) => documents[ligne.collection] ?? [])
+	const publics = await publicsDe(ligne.collection, distribues)
+	const siensEtPublics = [...new Set([...siens, ...publics])].sort((a, b) => a - b)
 	if (vus.length === 0) return 'aucun'
 	if (egaux(vus, siens)) return 'soi'
+	if (egaux(vus, publics)) return 'publies'
+	if (egaux(vus, siensEtPublics)) return 'soiEtPublies'
 	if (distribues.every(id => vus.includes(id))) return 'tous'
 	return 'incoherent'
 }
@@ -285,7 +365,12 @@ async function lire(voie: Voie, acteur: Acteur, ligne: Ligne, distribution: Dist
 	const id = documentDe(distribution, ligne)
 	const reponse = await demander(voie, acteur, { ...ligne, id })
 	if (!reponse.autorise) return 'refuse'
-	return (reponse.corps as { id?: number }).id === id ? 'autorise' : 'incoherent'
+	const corps = reponse.corps as Record<string, unknown>
+	if (corps.id !== id) return 'incoherent'
+	if (ligne.champ === undefined) return 'autorise'
+	// Payload strips a field its reader may not read; a field it keeps holds the stored value.
+	if (!(ligne.champ in corps)) return 'absent'
+	return egaux(corps[ligne.champ], (await stocke(ligne.collection, id))?.[ligne.champ]) ? 'visible' : 'incoherent'
 }
 
 async function creer(voie: Voie, acteur: Acteur, ligne: Ligne): Promise<Issue> {
@@ -327,7 +412,9 @@ async function supprimer(voie: Voie, acteur: Acteur, ligne: Ligne, distribution:
 	const payload = await payloadDeTest()
 	// A deletion that must succeed acts on a throwaway document: the cast stays whole.
 	const id =
-		ligne.attendu === 'autorise' ? await PORTRAITS[ligne.collection].jetable(payload) : documentDe(distribution, ligne)
+		ligne.attendu === 'autorise'
+			? await PORTRAITS[ligne.collection].jetable(payload, acteur)
+			: documentDe(distribution, ligne)
 	const reponse = await demander(voie, acteur, { ...ligne, id })
 	const reste = (await stocke(ligne.collection, id)) !== undefined
 	if (reponse.autorise) return reste ? 'incoherent' : 'autorise'
@@ -354,7 +441,8 @@ export function jouer(ligne: Ligne, voie: Voie, distribution: Distribution): Pro
 /** The name of a line in the test report: who, what, on which document, what must happen. */
 export function nommer(ligne: Ligne, voie: Voie): string {
 	const document = ligne.document ? ` le document de « ${ligne.document} »` : ''
-	const champ = ligne.champ ? ` (${ligne.champ} = ${JSON.stringify(ligne.valeur)})` : ''
+	const valeur = ligne.operation === 'modifier' ? ` = ${JSON.stringify(ligne.valeur)}` : ''
+	const champ = ligne.champ ? ` (${ligne.champ}${valeur})` : ''
 	const par = voie === 'rest' ? 'REST' : 'API locale'
 	return `${ligne.collection} · ${ligne.role} · ${ligne.operation}${document}${champ} → ${ligne.attendu} · ${par}`
 }

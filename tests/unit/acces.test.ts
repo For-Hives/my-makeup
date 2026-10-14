@@ -1,18 +1,38 @@
 import { describe, expect, test } from 'bun:test'
 import type { PayloadRequest } from 'payload'
 import { Admins, DUREE_SESSION_ADMIN_S, premierCompteAdmin, sessionsFermees } from '@/collections/Admins'
-import { CONTEXTE_SANS_PROFIL, Profils } from '@/collections/Profils'
+import {
+	aucunEnvoiSansStockage,
+	COORDONNEES_DU_FICHIER,
+	champsDuStockageFermes,
+	coordonneesParLeServeur,
+	Media,
+	proprietaireALEnvoi,
+	versLAdressePublique,
+} from '@/collections/Media'
+import { CONTEXTE_SANS_PROFIL, consentementTrace, Profils } from '@/collections/Profils'
 import { compteSansProfilAvantSuppression, Pros, premierCompteFerme } from '@/collections/Pros'
 import {
+	AUCUN_DOCUMENT,
+	adminOuMaquilleuse,
 	adminOuProprietaire,
+	adminOuProprietaireDuMedia,
 	adminOuSoiMeme,
 	adminSeulement,
 	champAdminSeulement,
+	champDuMediaAdminOuProprietaire,
+	champDuProfilAdminOuProprietaire,
 	estAdmin,
 	estMaquilleuse,
 	estRedaction,
+	identifiantPossible,
 	jamais,
+	lectureDesMedias,
+	PROFILS_PUBLIES,
+	profilPublieOuProprietaire,
 } from '@/lib/acces'
+import { validerPhotosDuProfil } from '@/lib/profil/photos'
+import { STATUTS_DU_PROFIL } from '@/lib/profil/statut'
 
 /**
  * The access rules, called as Payload calls them, without a database: who reaches what. The
@@ -41,6 +61,35 @@ const champ = (fields: readonly unknown[], nom: string) =>
 
 /** What an access rule receives: only the request, and only its account. */
 const appel = (user: Utilisateur | null) => ({ req: { user } as PayloadRequest })
+
+/**
+ * Identifiers no document can have, as a rule receives them: REST hands it `parseFloat` of the
+ * address (`abc` gives NaN, `1e999` Infinity), the Local API what its caller gives.
+ */
+const IDENTIFIANTS_IMPOSSIBLES = [
+	Number.NaN,
+	Number.POSITIVE_INFINITY,
+	1.5,
+	0,
+	-1,
+	2_147_483_648,
+	99_999_999_999,
+	'abc',
+	'1e999',
+	'99999999999',
+	'1.5',
+	'-1',
+	'',
+]
+
+describe('Un identifiant possible : ce qu’une règle passe à la base', () => {
+	test('un entier de 1 au plus grand entier de 32 bits, en nombre ou en chiffres', () => {
+		expect([1, 12, 2_147_483_647, '1', '12', '007', '2147483647'].map(identifiantPossible)).toEqual(Array(7).fill(true))
+		expect(IDENTIFIANTS_IMPOSSIBLES.map(identifiantPossible)).toEqual(
+			Array(IDENTIFIANTS_IMPOSSIBLES.length).fill(false)
+		)
+	})
+})
 
 describe('Les rôles', () => {
 	test('admin et redaction sont deux comptes de la collection admins', () => {
@@ -174,14 +223,106 @@ describe('La collection pros (ticket 019)', () => {
 describe('La collection profils (ticket 020)', () => {
 	const regles = Profils.access ?? {}
 
-	test('lire et modifier : son seul profil pour une maquilleuse, tout pour admin, rien pour les autres (U54)', () => {
-		for (const regle of [regles.read, regles.update]) {
-			expect(regle).toBe(adminOuProprietaire)
-			expect(regle?.(appel(maquilleuse) as never)).toEqual({ pro: { equals: 7 } })
-			expect(regle?.(appel(admin) as never)).toBe(true)
-			expect(regle?.(appel(redaction) as never)).toBe(false)
-			expect(regle?.(appel(null) as never)).toBe(false)
+	test('modifier : son seul profil pour une maquilleuse, tout pour admin, rien pour les autres (U54)', () => {
+		const regle = regles.update
+		expect(regle).toBe(adminOuProprietaire)
+		expect(regle?.(appel(maquilleuse) as never)).toEqual({ pro: { equals: 7 } })
+		expect(regle?.(appel(admin) as never)).toBe(true)
+		expect(regle?.(appel(redaction) as never)).toBe(false)
+		expect(regle?.(appel(null) as never)).toBe(false)
+	})
+
+	test('lire : les profils publiés pour l’anonyme et redaction (U53), plus le sien pour une maquilleuse, tout pour admin', () => {
+		const regle = regles.read
+		expect(regle).toBe(profilPublieOuProprietaire)
+		expect(PROFILS_PUBLIES).toEqual({ statut: { equals: 'publie' } })
+		expect(regle?.(appel(null) as never)).toEqual({ statut: { equals: 'publie' } })
+		expect(regle?.(appel(redaction) as never)).toEqual({ statut: { equals: 'publie' } })
+		expect(regle?.(appel(maquilleuse) as never)).toEqual({
+			or: [{ pro: { equals: 7 } }, { statut: { equals: 'publie' } }],
+		})
+		expect(regle?.(appel(admin) as never)).toBe(true)
+	})
+
+	test('lire un profil par un identifiant qu’aucun document ne peut porter : refusé à tous, avant la base', () => {
+		for (const id of IDENTIFIANTS_IMPOSSIBLES)
+			for (const user of [null, redaction, maquilleuse, admin])
+				expect([id, profilPublieOuProprietaire({ req: { user } as PayloadRequest, id } as never)]).toEqual([id, false])
+		// A possible identifier keeps the rule of the role.
+		expect(profilPublieOuProprietaire({ req: { user: null } as PayloadRequest, id: 12 } as never)).toEqual(
+			PROFILS_PUBLIES
+		)
+		expect(profilPublieOuProprietaire({ req: { user: admin } as PayloadRequest, id: '12' } as never)).toBe(true)
+	})
+
+	test('les champs réservés : statut, motif, vérifiée et SIRET, lus par admin et la propriétaire seulement', () => {
+		// Read as Payload reads a field of a document: the request, and the document itself.
+		const lire = (user: Utilisateur | null, doc: Record<string, unknown>) =>
+			champDuProfilAdminOuProprietaire({ req: { user } as PayloadRequest, doc } as never)
+		expect(lire(admin, { pro: 9 })).toBe(true)
+		expect(lire(maquilleuse, { pro: 7 })).toBe(true)
+		// The account populated, as a read at depth 1 gives it.
+		expect(lire(maquilleuse, { pro: { id: 7 } })).toBe(true)
+		expect(lire(maquilleuse, { pro: 9 })).toBe(false)
+		// Same number, other collection: an account of the admin panel is not the owner.
+		expect(lire({ ...redaction, id: 7 } as unknown as Utilisateur, { pro: 7 })).toBe(false)
+		expect(lire(null, { pro: 7 })).toBe(false)
+		// The account already stripped from the answer: the reader is not the owner.
+		expect(lire(maquilleuse, {})).toBe(false)
+
+		for (const nom of ['statut', 'motif', 'verifie', 'verifieLe', 'siret', 'pro', 'legacyUsername', 'strapiId'])
+			expect(champ(Profils.fields, nom)?.access?.read).toBe(champDuProfilAdminOuProprietaire)
+		for (const nom of ['noteInterne', 'score'])
+			expect(champ(Profils.fields, nom)?.access?.read).toBe(champAdminSeulement)
+		// The badge of the search is public.
+		expect(champ(Profils.fields, 'superMaquilleuse')?.access?.read).toBeUndefined()
+	})
+
+	test('statut, motif, vérifiée, SIRET, note interne, score, badge et compte : seul admin les écrit (U55)', () => {
+		for (const nom of [
+			'statut',
+			'motif',
+			'verifie',
+			'verifieLe',
+			'siret',
+			'noteInterne',
+			'score',
+			'superMaquilleuse',
+			'pro',
+		]) {
+			const acces = champ(Profils.fields, nom)?.access as Record<string, (args: unknown) => boolean>
+			expect([admin, redaction, maquilleuse, null].map(user => acces.update?.(appel(user)))).toEqual([
+				true,
+				false,
+				false,
+				false,
+			])
+			expect(acces.create as unknown).toBe(champAdminSeulement)
 		}
+	})
+
+	test('le statut : brouillon, publié ou masqué ; un profil neuf est un brouillon', () => {
+		expect(STATUTS_DU_PROFIL).toEqual(['brouillon', 'publie', 'masque'])
+		const statut = champ(Profils.fields, 'statut') as { defaultValue?: unknown; options?: { value: string }[] }
+		// Not `required`: a profile created without one, by the server or a test, gets the default.
+		expect(statut).toMatchObject({ type: 'select', defaultValue: 'brouillon' })
+		expect(statut.options?.map(({ value }) => value)).toEqual(['brouillon', 'publie', 'masque'])
+	})
+
+	test('les coordonnées et le choix de les montrer : lus par admin et la propriétaire seulement, jamais par redaction (U59)', () => {
+		for (const nom of ['coordonnees', 'contactPublic', 'consentiLe', 'sourceConsentement'])
+			expect(champ(Profils.fields, nom)?.access?.read).toBe(champDuProfilAdminOuProprietaire)
+		expect(
+			champDuProfilAdminOuProprietaire({ req: { user: redaction } as PayloadRequest, doc: { pro: 2 } } as never)
+		).toBe(false)
+		// The networks are public.
+		expect(champ(Profils.fields, 'reseaux')?.access?.read).toBeUndefined()
+	})
+
+	test('la date et la source du consentement : jamais écrites par une API, posées par le serveur', () => {
+		for (const nom of ['consentiLe', 'sourceConsentement'])
+			expect(champ(Profils.fields, nom)?.access).toMatchObject({ create: jamais, update: jamais })
+		expect(Profils.hooks?.beforeChange).toContain(consentementTrace)
 	})
 
 	test('créer et supprimer un profil : admin seulement ; le serveur le crée avec le compte', () => {
@@ -207,6 +348,234 @@ describe('La collection profils (ticket 020)', () => {
 
 	test('un compte qui a encore un profil n’est pas supprimé', () => {
 		expect(Pros.hooks?.beforeDelete).toContain(compteSansProfilAvantSuppression)
+	})
+})
+
+describe('La collection media (ticket 043)', () => {
+	const regles = Media.access ?? {}
+
+	/** What the read rule receives: the request, with a database that answers how many published profiles hold the media. */
+	function lecture(user: Utilisateur | null, id: number | undefined, rattache: boolean) {
+		const appels: unknown[] = []
+		const payload = {
+			count: (options: unknown) => {
+				appels.push(options)
+				return Promise.resolve({ totalDocs: rattache ? 1 : 0 })
+			},
+		}
+		const resultat = lectureDesMedias({ req: { user, payload } as unknown as PayloadRequest, id } as never)
+		return { resultat, appels }
+	}
+
+	test('lister : refusé à l’anonyme et à redaction ; ses médias pour une maquilleuse ; tout pour admin (U56)', async () => {
+		expect(regles.read).toBe(lectureDesMedias)
+		expect(await lecture(null, undefined, true).resultat).toBe(false)
+		expect(await lecture(redaction, undefined, true).resultat).toBe(false)
+		expect(await lecture(maquilleuse, undefined, true).resultat).toEqual({ owner: { equals: 7 } })
+		expect(await lecture(admin, undefined, false).resultat).toBe(true)
+	})
+
+	test('lire un média : lu s’il est rattaché à un profil publié, introuvable sinon (U56, I04)', async () => {
+		const publie = lecture(null, 12, true)
+		expect(await publie.resultat).toBe(true)
+		expect(publie.appels).toEqual([
+			expect.objectContaining({
+				collection: 'profils',
+				overrideAccess: true,
+				where: {
+					and: [PROFILS_PUBLIES, { or: [{ photoPrincipale: { equals: 12 } }, { galerie: { in: [12] } }] }],
+				},
+			}),
+		])
+		expect(await lecture(null, 12, false).resultat).toEqual(AUCUN_DOCUMENT)
+		expect(await lecture(redaction, 12, false).resultat).toEqual(AUCUN_DOCUMENT)
+		// Her own media, attached or not.
+		expect(await lecture(maquilleuse, 12, false).resultat).toEqual({ owner: { equals: 7 } })
+	})
+
+	test('lire, modifier ou supprimer un média par un identifiant qu’aucun document ne peut porter : refusé à tous, sans requête', async () => {
+		for (const id of IDENTIFIANTS_IMPOSSIBLES)
+			for (const user of [null, redaction, maquilleuse, admin]) {
+				const { resultat, appels } = lecture(user, id as never, true)
+				expect([id, await resultat]).toEqual([id, false])
+				expect(appels).toEqual([])
+				expect([id, adminOuProprietaireDuMedia({ req: { user } as PayloadRequest, id } as never)]).toEqual([id, false])
+			}
+	})
+
+	test('la route de fichier de Payload : une redirection vers l’adresse publique, jamais le disque', async () => {
+		const base = 'https://photos.example.test'
+		const recherches: unknown[] = []
+		const requete = (trouve: unknown) =>
+			({
+				t: (cle: string) => cle,
+				payload: {
+					db: {
+						findOne: (options: { where: unknown }) => {
+							recherches.push(options.where)
+							return Promise.resolve(trouve)
+						},
+					},
+				},
+			}) as unknown as PayloadRequest
+		const gestionnaire = versLAdressePublique(base)
+		const servir = async (...args: Parameters<typeof gestionnaire>) => (await gestionnaire(...args)) as Response
+		const params = { collection: 'media', filename: 'photo.png' }
+
+		// Her own media, handed by Payload once the rule found it.
+		const sienne = await servir(requete(null), {
+			doc: { id: 3, prefix: 'media', filename: 'photo.png' } as never,
+			params,
+		})
+		expect([sienne.status, sienne.headers.get('location')]).toEqual([302, `${base}/media/photo.png`])
+		expect(recherches).toEqual([])
+		// For admin, Payload hands nothing: the media is looked for by its name, and its prefix when given.
+		const trouvee = await servir(requete({ id: 4, prefix: '', filename: 'photo.png' }), {
+			doc: undefined as never,
+			params: { ...params, prefix: '' },
+		})
+		expect(trouvee.headers.get('location')).toBe(`${base}/photo.png`)
+		expect(recherches).toEqual([{ and: [{ filename: { equals: 'photo.png' } }, { prefix: { equals: '' } }] }])
+		// A name no media has.
+		await expect(servir(requete(null), { doc: undefined as never, params })).rejects.toMatchObject({ status: 404 })
+		expect(Media.upload).toMatchObject({ disableLocalStorage: true })
+	})
+
+	test('envoyer : une maquilleuse ou admin ; modifier et supprimer : sa propriétaire ou admin', () => {
+		expect(regles.create).toBe(adminOuMaquilleuse)
+		expect([admin, redaction, maquilleuse, null].map(user => adminOuMaquilleuse(appel(user) as never))).toEqual([
+			true,
+			false,
+			true,
+			false,
+		])
+		for (const regle of [regles.update, regles.delete]) {
+			expect(regle).toBe(adminOuProprietaireDuMedia)
+			expect(regle?.(appel(maquilleuse) as never)).toEqual({ owner: { equals: 7 } })
+			expect(regle?.(appel(admin) as never)).toBe(true)
+			expect(regle?.(appel(redaction) as never)).toBe(false)
+			expect(regle?.(appel(null) as never)).toBe(false)
+		}
+	})
+
+	test('le propriétaire : posé par le serveur à l’envoi, lu par lui et admin, écrit par admin seulement', () => {
+		const envoi = (user: Utilisateur | null, operation: string) =>
+			proprietaireALEnvoi({ data: { owner: 99, alt: 'x' }, operation, req: { user } } as never)
+		expect(envoi(maquilleuse, 'create')).toEqual({ owner: 7, alt: 'x' })
+		expect(envoi(admin, 'create')).toEqual({ owner: 99, alt: 'x' })
+		expect(envoi(maquilleuse, 'update')).toEqual({ owner: 99, alt: 'x' })
+		expect(champ(Media.fields, 'owner')?.access).toMatchObject({
+			read: champDuMediaAdminOuProprietaire,
+			create: champAdminSeulement,
+			update: champAdminSeulement,
+		})
+		const lire = (user: Utilisateur | null, doc: Record<string, unknown>) =>
+			champDuMediaAdminOuProprietaire({ req: { user } as PayloadRequest, doc } as never)
+		expect([lire(maquilleuse, { owner: 7 }), lire(maquilleuse, { owner: 8 }), lire(null, { owner: 7 })]).toEqual([
+			true,
+			false,
+			false,
+		])
+	})
+
+	test('l’objet d’un média : ses coordonnées sont écrites par le serveur, jamais par une requête', () => {
+		const data = Object.fromEntries([...COORDONNEES_DU_FICHIER.map(cle => [cle, 'envoyé']), ['alt', 'gardé']])
+		const args = coordonneesParLeServeur({ args: { data }, operation: 'update', req: { user: maquilleuse } } as never)
+		expect((args as { data: unknown }).data).toEqual({ alt: 'gardé' })
+		// The server, without a session (the import), writes them.
+		const serveur = { data: { prefix: '', filename: 'a.jpg' } }
+		expect(coordonneesParLeServeur({ args: serveur, operation: 'create', req: {} } as never) as unknown).toEqual(
+			serveur
+		)
+
+		const config = champsDuStockageFermes({
+			collections: [
+				{
+					slug: 'media',
+					fields: [
+						{ name: '_objectKey', type: 'text' },
+						{ name: 'prefix', type: 'text' },
+					],
+				},
+			],
+		} as never)
+		for (const field of (config as { collections: { fields: { access?: unknown }[] }[] }).collections[0]?.fields ?? [])
+			expect(field.access).toEqual({ create: jamais, update: jamais })
+	})
+
+	test('sans stockage, aucune photo n’est reçue', () => {
+		expect(() =>
+			aucunEnvoiSansStockage({ args: {}, operation: 'create', req: { file: { name: 'a.png' } } } as never)
+		).toThrow('Le stockage des photos n’est pas configuré')
+		const args = { data: { alt: 'x' } }
+		expect(aucunEnvoiSansStockage({ args, operation: 'update', req: {} } as never) as unknown).toBe(args)
+	})
+
+	test('le strapiId et les formats de l’ancien site : lus par admin seulement, jamais écrits par une API', () => {
+		for (const nom of ['strapiId', 'strapiFormats'])
+			expect(champ(Media.fields, nom)?.access).toMatchObject({
+				read: champAdminSeulement,
+				create: jamais,
+				update: jamais,
+			})
+	})
+})
+
+describe('Les photos d’un profil (ticket 043)', () => {
+	/** The validation as Payload calls it, with a database that holds these media and their owners. */
+	function valider(valeur: unknown, pro: unknown, media: { id: number; owner: unknown }[], avant?: unknown) {
+		const payload = { find: () => Promise.resolve({ docs: media }) }
+		return validerPhotosDuProfil(valeur, {
+			data: { pro },
+			previousValue: avant,
+			req: { payload } as unknown as PayloadRequest,
+		})
+	}
+
+	test('une photo que le profil a déjà reste, même d’un autre compte : seules les photos rattachées par la sauvegarde sont vérifiées', async () => {
+		const autre = [{ id: 3, owner: 8 }]
+		expect(await valider([3], 7, autre, [3])).toBe(true)
+		expect(await valider(3, 7, autre, 3)).toBe(true)
+		expect(await valider([3], 7, autre, [])).not.toBe(true)
+	})
+
+	test('une photo principale et une galerie, vers media ; la galerie garde l’ordre, 10 au plus', () => {
+		expect(champ(Profils.fields, 'photoPrincipale')).toMatchObject({ type: 'upload' })
+		expect(champ(Profils.fields, 'galerie')).toMatchObject({ type: 'upload', hasMany: true, maxRows: 10 })
+	})
+
+	test('ses propres photos passent, celles d’un autre compte sont refusées en français', async () => {
+		const siennes = [
+			{ id: 1, owner: 7 },
+			{ id: 2, owner: { id: 7 } },
+		]
+		expect(await valider([1, 2], 7, siennes)).toBe(true)
+		expect(await valider(1, { id: 7 }, siennes)).toBe(true)
+		expect(await valider(null, 7, [])).toBe(true)
+		expect(await valider([1, 3], 7, [...siennes, { id: 3, owner: 8 }])).toBe(
+			"Choisis à nouveau ta photo : elle n'a pas été acceptée, et tes modifications n'ont pas été enregistrées."
+		)
+		// A media that does not exist, or that has no owner (an article's), is refused too.
+		expect(await valider([4], 7, [])).not.toBe(true)
+		expect(await valider([5], 7, [{ id: 5, owner: null }])).not.toBe(true)
+	})
+
+	test('11 photos : refusé, avec le message de l’ancien site', async () => {
+		const onze = Array.from({ length: 11 }, (_, i) => ({ id: i + 1, owner: 7 }))
+		expect(
+			await valider(
+				onze.map(({ id }) => id),
+				7,
+				onze
+			)
+		).toBe('Ton portfolio contient déjà 10 photos : retires-en une pour en ajouter une autre.')
+		expect(
+			await valider(
+				onze.slice(0, 10).map(({ id }) => id),
+				7,
+				onze
+			)
+		).toBe(true)
 	})
 })
 

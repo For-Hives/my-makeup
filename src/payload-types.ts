@@ -71,6 +71,7 @@ export interface Config {
     admins: Admin;
     pros: Pro;
     profils: Profil;
+    media: Media;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -81,6 +82,7 @@ export interface Config {
     admins: AdminsSelect<false> | AdminsSelect<true>;
     pros: ProsSelect<false> | ProsSelect<true>;
     profils: ProfilsSelect<false> | ProfilsSelect<true>;
+    media: MediaSelect<false> | MediaSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -221,13 +223,108 @@ export interface Profil {
   specialite?: string | null;
   description?: string | null;
   disponible?: boolean | null;
+  photoPrincipale?: (number | null) | Media;
+  /**
+   * Dans l’ordre d’affichage, 10 photos au plus.
+   */
+  galerie?: (number | Media)[] | null;
+  reseaux?: {
+    youtube?: string | null;
+    facebook?: string | null;
+    instagram?: string | null;
+    siteWeb?: string | null;
+    linkedin?: string | null;
+  };
+  /**
+   * Fermées au public. La page du profil ne les montre que si « Coordonnées publiques » est cochée.
+   */
+  coordonnees?: {
+    telephone?: string | null;
+    email?: string | null;
+  };
+  /**
+   * Choisi par la maquilleuse : ses coordonnées s’affichent sur la page de son profil.
+   */
+  contactPublic?: boolean | null;
+  /**
+   * Posée par le serveur quand les coordonnées deviennent publiques.
+   */
+  consentiLe?: string | null;
+  /**
+   * Posée par le serveur, avec la date.
+   */
+  sourceConsentement?: ('maquilleuse' | 'admin' | 'import') | null;
   /**
    * Sert à rediriger l’ancienne adresse du profil vers la nouvelle.
    */
   legacyUsername?: string | null;
   strapiId?: number | null;
+  /**
+   * Seuls les profils publiés sont lus par le public.
+   */
+  statut?: ('brouillon' | 'publie' | 'masque') | null;
+  /**
+   * Pourquoi le profil est masqué. La maquilleuse le lit.
+   */
+  motif?: string | null;
+  verifie?: boolean | null;
+  verifieLe?: string | null;
+  /**
+   * 14 chiffres, sans espace.
+   */
+  siret?: string | null;
+  /**
+   * Lue par les admins seulement, jamais par la maquilleuse.
+   */
+  noteInterne?: string | null;
+  /**
+   * Repris de l’ancien site. Ce n’est pas la complétude. Lu par les admins seulement.
+   */
+  score?: number | null;
+  /**
+   * Le badge des cartes de la recherche. Public.
+   */
+  superMaquilleuse?: boolean | null;
   updatedAt: string;
   createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "media".
+ */
+export interface Media {
+  id: number;
+  alt?: string | null;
+  /**
+   * La maquilleuse qui a envoyé la photo, posée par le serveur. Vide pour une photo d’article.
+   */
+  owner?: (number | null) | Pro;
+  strapiId?: number | null;
+  /**
+   * Archive : les vignettes de l’ancien site, restées où elles sont.
+   */
+  strapiFormats?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  prefix?: string | null;
+  _objectKey?: string | null;
+  updatedAt: string;
+  createdAt: string;
+  url?: string | null;
+  thumbnailURL?: string | null;
+  filename?: string | null;
+  mimeType?: string | null;
+  filesize?: number | null;
+  width?: number | null;
+  height?: number | null;
+  focalX?: number | null;
+  focalY?: number | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -264,6 +361,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'profils';
         value: number | Profil;
+      } | null)
+    | ({
+        relationTo: 'media';
+        value: number | Media;
       } | null);
   globalSlug?: string | null;
   user:
@@ -384,10 +485,61 @@ export interface ProfilsSelect<T extends boolean = true> {
   specialite?: T;
   description?: T;
   disponible?: T;
+  photoPrincipale?: T;
+  galerie?: T;
+  reseaux?:
+    | T
+    | {
+        youtube?: T;
+        facebook?: T;
+        instagram?: T;
+        siteWeb?: T;
+        linkedin?: T;
+      };
+  coordonnees?:
+    | T
+    | {
+        telephone?: T;
+        email?: T;
+      };
+  contactPublic?: T;
+  consentiLe?: T;
+  sourceConsentement?: T;
   legacyUsername?: T;
   strapiId?: T;
+  statut?: T;
+  motif?: T;
+  verifie?: T;
+  verifieLe?: T;
+  siret?: T;
+  noteInterne?: T;
+  score?: T;
+  superMaquilleuse?: T;
   updatedAt?: T;
   createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "media_select".
+ */
+export interface MediaSelect<T extends boolean = true> {
+  alt?: T;
+  owner?: T;
+  strapiId?: T;
+  strapiFormats?: T;
+  prefix?: T;
+  _objectKey?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  url?: T;
+  thumbnailURL?: T;
+  filename?: T;
+  mimeType?: T;
+  filesize?: T;
+  width?: T;
+  height?: T;
+  focalX?: T;
+  focalY?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

@@ -20,6 +20,8 @@ export interface ReponseRest {
 	corps: unknown
 	/** The body as it was sent, to look for a value anywhere in it. */
 	texte: string
+	/** The headers of the response, such as the `Location` of a redirection, which is never followed. */
+	enTetes: Headers
 }
 
 export interface OptionsRest {
@@ -27,6 +29,11 @@ export interface OptionsRest {
 	enTetes?: Record<string, string>
 	/** Sent as JSON. */
 	corps?: unknown
+	/**
+	 * Sent as `multipart/form-data` instead of `corps`, as the admin panel and the site send a file:
+	 * the file under `file`, the other fields as JSON under `_payload` (see `formulaireAvecFichier`).
+	 */
+	formulaire?: FormData
 }
 
 /** The site the bench serves: a session cookie is accepted from that origin only. */
@@ -40,17 +47,31 @@ function origine(): string {
 export async function appelerRest(
 	methode: Methode,
 	chemin: string,
-	{ enTetes = {}, corps }: OptionsRest = {}
+	{ enTetes = {}, corps, formulaire }: OptionsRest = {}
 ): Promise<ReponseRest> {
 	if (!chemin.startsWith('/api/')) throw new Error(`« ${chemin} » n’est pas une adresse de l’API REST.`)
 	const adresse = new URL(chemin, origine())
 	const slug = adresse.pathname.slice('/api/'.length).split('/').map(decodeURIComponent)
 	const requete = new Request(adresse, {
 		method: methode,
-		headers: corps === undefined ? enTetes : { 'Content-Type': 'application/json', ...enTetes },
-		body: corps === undefined ? undefined : JSON.stringify(corps),
+		// A form gets its Content-Type, with its boundary, from the request itself.
+		headers: corps === undefined || formulaire ? enTetes : { 'Content-Type': 'application/json', ...enTetes },
+		body: formulaire ?? (corps === undefined ? undefined : JSON.stringify(corps)),
 	})
 	const reponse = await ROUTES[methode](requete, { params: Promise.resolve({ slug }) })
 	const texte = await reponse.text()
-	return { statut: reponse.status, corps: texte ? (JSON.parse(texte) as unknown) : null, texte }
+	return {
+		statut: reponse.status,
+		corps: texte ? (JSON.parse(texte) as unknown) : null,
+		texte,
+		enTetes: reponse.headers,
+	}
+}
+
+/** A form that sends a file the way Payload reads it: the file under `file`, the other fields as JSON under `_payload`. */
+export function formulaireAvecFichier(fichier: File, champs: Record<string, unknown> = {}): FormData {
+	const formulaire = new FormData()
+	formulaire.append('file', fichier)
+	formulaire.append('_payload', JSON.stringify(champs))
+	return formulaire
 }

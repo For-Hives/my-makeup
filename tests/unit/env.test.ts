@@ -5,6 +5,8 @@ import {
 	EnvError,
 	GOOGLE_ISSUER,
 	isLocalDatabase,
+	MEDIA_ORIGIN_DEFAULT,
+	mediaBaseUrl,
 	parseServerEnv,
 	type RawEnv,
 	SECRET_MIN_LENGTH,
@@ -582,5 +584,82 @@ describe('the mails leave through the relay the environment names, or not at all
 
 		expect(built.mail).toBeUndefined()
 		expect(serverEnv({ ...relay, NEXT_PHASE: 'phase-production-server' }).mail?.host).toBe('127.0.0.1')
+	})
+})
+
+describe('the photos go to the object storage the environment names, or nowhere (ticket 043)', () => {
+	// Made up: a bench address, and an R2 account that does not exist.
+	const bench: RawEnv = {
+		...valid,
+		S3_ENDPOINT: 'http://127.0.0.1:9090',
+		S3_BUCKET: 'mymakeup-test',
+		S3_ACCESS_KEY_ID: 'cle-temoin',
+		S3_SECRET_ACCESS_KEY: 'secret-temoin',
+	}
+	const r2: RawEnv = { ...bench, S3_ENDPOINT: 'https://compte-temoin.r2.cloudflarestorage.com', S3_BUCKET: 'my-makeup' }
+
+	test('nothing set: no storage, and nothing else changes', () => {
+		expect(parseServerEnv(valid).storage).toBeUndefined()
+	})
+
+	test('the four variables give the storage; the bench is local, R2 is not', () => {
+		expect(parseServerEnv(bench).storage).toEqual({
+			endpoint: 'http://127.0.0.1:9090',
+			bucket: 'mymakeup-test',
+			accessKeyId: 'cle-temoin',
+			secretAccessKey: 'secret-temoin',
+			local: true,
+		})
+		expect(parseServerEnv(r2).storage).toMatchObject({
+			endpoint: 'https://compte-temoin.r2.cloudflarestorage.com',
+			local: false,
+		})
+	})
+
+	test('S3_ENDPOINT set alone: the bucket and the key are asked for, in one message', () => {
+		expect(refusal({ ...valid, S3_ENDPOINT: 'http://127.0.0.1:9090' }).variables).toEqual([
+			'S3_BUCKET',
+			'S3_ACCESS_KEY_ID',
+			'S3_SECRET_ACCESS_KEY',
+		])
+	})
+
+	test.each([
+		['plain http away from this machine', 'http://stockage-temoin.exemple.test'],
+		['a path', 'https://compte-temoin.r2.cloudflarestorage.com/my-makeup'],
+		['a final slash', 'https://compte-temoin.r2.cloudflarestorage.com/'],
+		['no protocol', 'compte-temoin.r2.cloudflarestorage.com'],
+	])('S3_ENDPOINT with %s: refused', (_case, endpoint) => {
+		expect(refusal({ ...bench, S3_ENDPOINT: endpoint }).variables).toEqual(['S3_ENDPOINT'])
+	})
+
+	test.each([['Majuscules'], ['ab'], ['espace dedans'], ['-tiret-devant']])('S3_BUCKET « %s »: refused', bucket => {
+		expect(refusal({ ...bench, S3_BUCKET: bucket }).variables).toEqual(['S3_BUCKET'])
+	})
+
+	test('the storage of this machine is refused when the site is deployed', () => {
+		const error = refusal({ ...bench, NEXT_PUBLIC_SITE_URL: 'https://preprod.my-makeup.fr' })
+		expect(error.variables).toEqual(['S3_ENDPOINT'])
+		expect(parseServerEnv({ ...bench, NEXT_PUBLIC_SITE_URL: 'http://localhost:3100' }).storage?.local).toBe(true)
+	})
+
+	test('the message names the variables and never shows a key', () => {
+		const error = refusal({ ...valid, S3_ENDPOINT: 'http://stockage-temoin.exemple.test', S3_BUCKET: 'Mauvais' })
+		for (const part of ['stockage-temoin', 'Mauvais']) expect(error.message).not.toContain(part)
+		expect(refusal({ ...bench, S3_BUCKET: 'X' }).message).not.toContain('secret-temoin')
+	})
+
+	test('next build gets no storage, whatever its environment holds', () => {
+		expect(serverEnv({ ...r2, NEXT_PHASE: 'phase-production-build', NODE_ENV: 'production' }).storage).toBeUndefined()
+	})
+
+	test('the base of the photos: R2_PUBLIC_URL, else the bucket of the bench, else the photos of the site', () => {
+		const storage = parseServerEnv(bench).storage
+		expect(mediaBaseUrl(undefined, storage)).toBe('http://127.0.0.1:9090/mymakeup-test')
+		expect(mediaBaseUrl('', storage)).toBe('http://127.0.0.1:9090/mymakeup-test')
+		expect(mediaBaseUrl('https://photos.exemple.test', storage)).toBe('https://photos.exemple.test')
+		expect(mediaBaseUrl(undefined, parseServerEnv(r2).storage)).toBe(MEDIA_ORIGIN_DEFAULT)
+		expect(mediaBaseUrl(undefined, undefined)).toBe(MEDIA_ORIGIN_DEFAULT)
+		expect(() => mediaBaseUrl('http://photos.exemple.test', storage)).toThrow(EnvError)
 	})
 })

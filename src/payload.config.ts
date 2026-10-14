@@ -2,12 +2,21 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { postgresAdapter } from '@payloadcms/db-postgres'
 import { nodemailerAdapter } from '@payloadcms/email-nodemailer'
-import { buildConfig } from 'payload'
+import { s3Storage } from '@payloadcms/storage-s3'
+import { buildConfig, type CollectionConfig } from 'payload'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import { Admins } from './collections/Admins'
+import {
+	aucunEnvoiSansStockage,
+	champsDuStockageFermes,
+	Media,
+	UPLOAD_DES_MEDIAS,
+	versLAdressePublique,
+} from './collections/Media'
 import { Profils } from './collections/Profils'
 import { Pros } from './collections/Pros'
-import { serverEnv } from './lib/env'
+import { mediaBaseUrl, serverEnv } from './lib/env'
+import { adresseDuMedia, PREFIXE_DES_ENVOIS } from './lib/medias'
 import { migrations } from './migrations'
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -16,6 +25,23 @@ const dirname = path.dirname(fileURLToPath(import.meta.url))
 // file without starting the server. Throws when a variable is missing or not valid.
 const env = serverEnv()
 
+// Where the photos are served from: the public origin of the bucket, or the simulator of the test bench.
+const baseDesMedias = mediaBaseUrl(process.env.R2_PUBLIC_URL, env.storage)
+
+// Payload's own route for the file of a media sends to its public address: no photo is on this disk.
+const mediaServie: CollectionConfig<'media'> = {
+	...Media,
+	upload: { ...UPLOAD_DES_MEDIAS, handlers: [versLAdressePublique(baseDesMedias)] },
+}
+
+// Without an object storage, the media collection keeps its fields but receives no photo.
+const media: CollectionConfig<'media'> = env.storage
+	? mediaServie
+	: {
+			...mediaServie,
+			hooks: { ...Media.hooks, beforeOperation: [...(Media.hooks?.beforeOperation ?? []), aucunEnvoiSansStockage] },
+		}
+
 export default buildConfig({
 	admin: {
 		user: Admins.slug,
@@ -23,7 +49,7 @@ export default buildConfig({
 		// 'off' closes /api/og: an image rendered on demand, for anyone, with or without a session.
 		meta: { defaultOGImageType: 'off' },
 	},
-	collections: [Admins, Pros, Profils],
+	collections: [Admins, Pros, Profils, media],
 	// The site and the API share one origin: no other site may read this API from a browser.
 	cors: [],
 	// A session cookie is accepted from these origins only (src/lib/env.ts).
@@ -53,6 +79,37 @@ export default buildConfig({
 		: undefined,
 	// REST and the Local API are the only ways in. The two GraphQL routes answer 404 by themselves.
 	graphQL: { disable: true },
+	plugins: [
+		// The photos go to the object storage the environment names (src/lib/env.ts): R2 on the site,
+		// the S3 simulator on the test bench. Each media keeps its own prefix: `media/` for a photo
+		// sent in the v3, the folder of the old site for an adopted one. The public address is
+		// direct, never through Payload: the base of the photos, then the key (src/lib/medias.ts).
+		// Without a storage the plugin is off, but its fields stay: the schema never depends on the
+		// environment.
+		s3Storage({
+			enabled: env.storage !== undefined,
+			alwaysInsertFields: true,
+			bucket: env.storage?.bucket ?? '',
+			collections: {
+				media: {
+					prefix: PREFIXE_DES_ENVOIS,
+					disablePayloadAccessControl: true,
+					generateFileURL: ({ filename, prefix }) => adresseDuMedia(baseDesMedias, prefix, filename),
+				},
+			},
+			config: env.storage
+				? {
+						endpoint: env.storage.endpoint,
+						// R2 answers to the region `auto`; the simulator of the bench ignores it.
+						region: 'auto',
+						// The bucket in the path, as R2 and the simulator both read it.
+						forcePathStyle: true,
+						credentials: { accessKeyId: env.storage.accessKeyId, secretAccessKey: env.storage.secretAccessKey },
+					}
+				: {},
+		}),
+		champsDuStockageFermes,
+	],
 	secret: env.payloadSecret,
 	telemetry: false,
 	typescript: { outputFile: path.resolve(dirname, 'payload-types.ts') },

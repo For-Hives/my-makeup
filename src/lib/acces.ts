@@ -15,6 +15,8 @@
  */
 
 import type { Access, FieldAccess, PayloadRequest, Where } from 'payload'
+// Relative import on purpose: this file is also loaded by the Payload CLI, outside of Next.
+import { STATUT_PUBLIE } from './profil/statut'
 
 /** The roles of an `admins` account, in the order the admin panel lists them. */
 export const ROLES_ADMIN = ['admin', 'redaction'] as const
@@ -75,3 +77,121 @@ export const adminOuProprietaire: Access = ({ req: { user } }) => {
 	if (user && estMaquilleuse(user)) return { pro: { equals: user.id } }
 	return false
 }
+
+/** The largest identifier of a document: the identifiers are `serial` columns of Postgres, 32-bit integers. */
+const IDENTIFIANT_MAX = 2_147_483_647
+
+/**
+ * True for an identifier a document may have: a whole number from 1 to `IDENTIFIANT_MAX`, as a
+ * number or as its digits. REST hands a rule `parseFloat` of the address (`abc` gives NaN, `1e999`
+ * Infinity); the Local API, what its caller gives.
+ */
+export function identifiantPossible(id: number | string): boolean {
+	const nombre = typeof id === 'number' ? id : /^\d{1,10}$/.test(id) ? Number(id) : Number.NaN
+	return Number.isInteger(nombre) && nombre >= 1 && nombre <= IDENTIFIANT_MAX
+}
+
+/**
+ * True when a request names a document by an identifier no document can have. Postgres refuses to
+ * compare such a value with an identifier: the query would fail, and the request end in a 500
+ * logged as an error. A rule that answers a `Where` refuses it first (403), before any query.
+ */
+const identifiantImpossible = (id: number | string | null | undefined): boolean =>
+	id !== undefined && id !== null && !identifiantPossible(id)
+
+/** The profiles the public reads: the published ones (U53). */
+export const PROFILS_PUBLIES: Where = { statut: { equals: STATUT_PUBLIE } }
+
+/**
+ * Reading profiles (ticket 021). The role `admin` reads every profile; a makeup artist reads her
+ * own profile, whatever its status, and the published ones; anyone else, anonymous or `redaction`,
+ * the published ones only (U53, I01). A session never shows less than the public sees. An
+ * identifier no profile can have is refused to all (`identifiantImpossible`).
+ *
+ * What each of them reads of a profile is then decided field by field (`champAdminOuProprietaire`).
+ */
+export const profilPublieOuProprietaire: Access = ({ req: { user }, id }) => {
+	if (identifiantImpossible(id)) return false
+	if (estAdmin(user)) return true
+	if (user && estMaquilleuse(user)) return { or: [{ pro: { equals: user.id } }, PROFILS_PUBLIES] }
+	return PROFILS_PUBLIES
+}
+
+/** The identifier of the account a relationship field holds: the identifier itself, or the account once populated. */
+const identifiantDu = (valeur: unknown): string | undefined => {
+	const id = typeof valeur === 'object' && valeur !== null && 'id' in valeur ? valeur.id : valeur
+	return typeof id === 'number' || typeof id === 'string' ? String(id) : undefined
+}
+
+/**
+ * Only the role `admin` and the makeup artist a document belongs to, for one field: the account
+ * its field `champ` holds (`pro` on a profile, `owner` on a media). Anyone else does not read the
+ * field: Payload strips it from the answer.
+ *
+ * Meant for `read`. The owner's own field is read with the same rule, so when it is stripped the
+ * reader is not the owner, and every other field guarded by this rule is stripped too.
+ */
+export const champAdminOuProprietaire =
+	(champ: 'pro' | 'owner'): FieldAccess =>
+	({ req: { user }, doc }) => {
+		if (estAdmin(user)) return true
+		if (!user || !estMaquilleuse(user)) return false
+		const proprietaire = identifiantDu((doc as Record<string, unknown> | undefined)?.[champ])
+		return proprietaire !== undefined && proprietaire === String(user.id)
+	}
+
+/** The fields of a profile only its owner and `admin` read: the account, what the import wrote, what an admin decided. */
+export const champDuProfilAdminOuProprietaire: FieldAccess = champAdminOuProprietaire('pro')
+
+/** A condition no document meets: a read limited by it finds nothing, and a document read by its identifier is not found. */
+export const AUCUN_DOCUMENT: Where = { id: { exists: false } }
+
+/** True when this media is the main photo, or a photo of the gallery, of a published profile. */
+export async function rattacheAUnProfilPublie(req: PayloadRequest, media: number | string): Promise<boolean> {
+	const { totalDocs } = await req.payload.count({
+		collection: 'profils',
+		overrideAccess: true,
+		req,
+		where: {
+			and: [PROFILS_PUBLIES, { or: [{ photoPrincipale: { equals: media } }, { galerie: { in: [media] } }] }],
+		},
+	})
+	return totalDocs > 0
+}
+
+/**
+ * Reading media (ticket 043, U56, I04).
+ *
+ * - The role `admin` reads every media.
+ * - A list is closed to the public: a makeup artist lists her own media, anyone else is refused.
+ * - One media, read by its identifier, is read by anyone when it belongs to a published profile;
+ *   a makeup artist also reads her own. Any other media is not found, as if it did not exist.
+ * - An identifier no media can have is refused to all, before any query (`identifiantImpossible`).
+ *
+ * Payload gives the identifier to the rule when it reads one document, never for a list: that is
+ * how the two are told apart. A media populated in a profile is read as a list: for the public it
+ * stays an identifier, and a public page reads the photos through src/services/public/.
+ */
+export const lectureDesMedias: Access = async ({ req, id }) => {
+	if (identifiantImpossible(id)) return false
+	const { user } = req
+	if (estAdmin(user)) return true
+	const siens: Where | undefined = user && estMaquilleuse(user) ? { owner: { equals: user.id } } : undefined
+	if (id === undefined || id === null) return siens ?? false
+	if (await rattacheAUnProfilPublie(req, id)) return true
+	return siens ?? AUCUN_DOCUMENT
+}
+
+/** Sending a photo: a makeup artist, or the role `admin`. The server makes her the owner. */
+export const adminOuMaquilleuse: Access = ({ req: { user } }) => estAdmin(user) || estMaquilleuse(user)
+
+/** Changing or deleting a media: the role `admin`, or the makeup artist who owns it; never by an impossible identifier. */
+export const adminOuProprietaireDuMedia: Access = ({ req: { user }, id }) => {
+	if (identifiantImpossible(id)) return false
+	if (estAdmin(user)) return true
+	if (user && estMaquilleuse(user)) return { owner: { equals: user.id } }
+	return false
+}
+
+/** The fields of a media only its owner and `admin` read: the account that owns it. */
+export const champDuMediaAdminOuProprietaire: FieldAccess = champAdminOuProprietaire('owner')

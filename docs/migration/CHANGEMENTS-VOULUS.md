@@ -56,6 +56,7 @@ Les huit premières lignes sont les transformations du plan 01 §6.2, dans son o
 | Repère | Avant | Dans la v3 | Source | Pages touchées |
 |---|---|---|---|---|
 | `confirmation-email` | La confirmation d'email est coupée. Un compte est confirmé dès l'inscription. | Une inscription envoie un email de confirmation. Tant que l'email n'est pas confirmé, le compte ne se connecte pas. Les comptes repris de l'ancien site gardent leur état confirmé. | décision du 13/10/2026 ~20:45 ; ticket 082 ; plan 01 §6.1 | `/auth/signup`, `/auth/signin`, `/auth/verification-*` |
+| `liens-reseaux-web` | Le formulaire des réseaux accepte un lien en `javascript:` ou en `data:`, et l'API l'enregistre tel quel : la page du profil en ferait un lien. | Un lien de réseau ou de site qui nomme un protocole autre que `http` ou `https` est refusé, avec le message « Ce lien doit commencer par http:// ou https:// ». Un lien sans protocole, comme `@pseudo`, reste accepté. | ticket 042 | `/auth/profil` : un message d'erreur pour un lien qui nomme un autre protocole. |
 
 ## 4. Écarts au plan technique
 

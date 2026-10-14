@@ -170,8 +170,10 @@ describe('.env.test : l’environnement factice du banc', () => {
 			'MAILPIT_URL',
 			'NEXT_PUBLIC_SITE_URL',
 			'PAYLOAD_SECRET',
+			'S3_ACCESS_KEY_ID',
 			'S3_BUCKET',
 			'S3_ENDPOINT',
+			'S3_SECRET_ACCESS_KEY',
 			'SMTP_HOST',
 			'SMTP_PORT',
 			'STRAPI_SOURCE_URI',
@@ -184,6 +186,8 @@ describe('.env.test : l’environnement factice du banc', () => {
 		expect(environnement.PAYLOAD_SECRET?.length).toBeGreaterThanOrEqual(32)
 		expect(environnement.GOOGLE_CLIENT_ID).toContain('factice')
 		expect(environnement.GOOGLE_CLIENT_SECRET).toContain('factice')
+		expect(environnement.S3_ACCESS_KEY_ID).toContain('factice')
+		expect(environnement.S3_SECRET_ACCESS_KEY).toContain('factice')
 		expect(fichier).not.toContain('my-makeup.fr')
 		// Nothing that has the shape of a real Google credential, and never Google's own address.
 		expect(fichier).not.toMatch(/googleusercontent|GOCSPX|accounts\.google\.com/i)
@@ -238,6 +242,8 @@ describe('Plusieurs bancs côte à côte : un nom d’instance et un décalage d
 			EMAIL_FROM: 'My Makeup <ne-pas-repondre@example.test>',
 			S3_ENDPOINT: 'http://127.0.0.1:9194',
 			S3_BUCKET: 'mymakeup-test',
+			S3_ACCESS_KEY_ID: 'cle-factice-du-banc',
+			S3_SECRET_ACCESS_KEY: 'secret-factice-du-banc-de-test',
 			GOOGLE_OIDC_ISSUER: 'http://127.0.0.1:7184',
 			GOOGLE_CLIENT_ID: 'client-google-factice-du-banc',
 			GOOGLE_CLIENT_SECRET: 'secret-google-factice-du-banc-de-test',
