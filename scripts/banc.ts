@@ -137,7 +137,9 @@ async function demarrer(banc: Banc): Promise<void> {
 		muets = await servicesMuets(muets)
 	}
 	if (muets.length > 0)
-		throw new BancRefuse(`${messageBancMuet(instance, muets).split('\n')[0]} Voir « docker compose logs ».`)
+		throw new BancRefuse(
+			`${messageBancMuet(instance, muets).split('\n')[0]}\nLes journaux des conteneurs : docker compose --project-name ${instance.nom} logs`
+		)
 
 	const { base, mails, stockage } = services
 	console.log(
