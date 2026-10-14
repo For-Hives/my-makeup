@@ -324,9 +324,7 @@ function etatDeLaParite(p: Parite): string {
 function ligneDeParite(nom: string, p: PariteDeCollection, sansOrigine = 0): string[] {
 	// A document added by hand is not in the comparison by `strapiId`: it still breaks the parity.
 	const etat = sansOrigine > 0 && pariteComplete(p) ? 'parité incomplète' : etatDeLaParite(p)
-	const lignes = [
-		`${nom} : ${p.egaux} sur ${p.attendus} égaux, ${etat}, empreinte ${p.empreinteCible.slice(0, 12)}…`,
-	]
+	const lignes = [`${nom} : ${p.egaux} sur ${p.attendus} égaux, ${etat}, empreinte ${p.empreinteCible.slice(0, 12)}…`]
 	if (sansOrigine > 0)
 		lignes.push(
 			`  - dans la cible, ${pluriel(sansOrigine, 'document sans identifiant de l’ancien site (ajouté à la main)', 'documents sans identifiant de l’ancien site (ajoutés à la main)')}`
@@ -366,7 +364,8 @@ export function rapportEnTexte(rapport: Rapport): string {
 		lignes.push('', 'Parité, la cible relue :')
 		for (const [collection, nom] of Object.entries(NOMS_DES_COLLECTIONS)) {
 			const p = rapport.parite[collection as CollectionImportee]
-			if (p) lignes.push(...ligneDeParite(nom, p, rapport.collections[collection as CollectionImportee]?.sansOrigine ?? 0))
+			if (p)
+				lignes.push(...ligneDeParite(nom, p, rapport.collections[collection as CollectionImportee]?.sansOrigine ?? 0))
 		}
 	}
 	const tables = Object.values(rapport.source.apres)
