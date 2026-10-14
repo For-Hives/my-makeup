@@ -13,7 +13,7 @@ My Makeup est un annuaire de maquilleuses professionnelles indépendantes. Cette
 | installer, démarrer, régler une variable d'environnement | [`README.md`](README.md) |
 | écrire ou relire un test, toucher une liste éditée en place, changer un écran | [`docs/qualite.md`](docs/qualite.md) |
 | tester un composant React | [`docs/tests/composants.md`](docs/tests/composants.md) |
-| écrire un test d'intégration, démarrer le banc de test, obtenir un compte de test | [`docs/tests/banc.md`](docs/tests/banc.md) |
+| écrire un test d'intégration, démarrer le banc de test, obtenir un compte de test, tester la connexion Google | [`docs/tests/banc.md`](docs/tests/banc.md) |
 | toucher la CI, un workflow ou le `Dockerfile` | [`docs/qualite.md`](docs/qualite.md), §6 à §9 |
 | créer ou changer une collection, un champ, ou l'import des données | [`docs/migration/SCHEMA.md`](docs/migration/SCHEMA.md) |
 | créer, déplacer ou retirer une adresse | [`docs/migration/URLS.md`](docs/migration/URLS.md) |
@@ -37,7 +37,7 @@ Tout se lance depuis la racine du dépôt. La table complète est dans le README
 | `bun run typecheck` | Types de routes de Next, puis `tsc` sans sortie. |
 | `bun run test` | Les tests unitaires : ceux qui tournent sans le banc de test, et sans le `.env` de travail. |
 | `bun run test:ci-garde` | Les garde-fous de la CI, du `Dockerfile` et des tests sautés. La CI les lance sur chaque PR. |
-| `bun run banc:up` | Démarre le banc de test en conteneurs : base, capteur de mails, stockage d'objets. `bun run banc:down` l'arrête et efface tout. |
+| `bun run banc:up` | Démarre le banc de test en conteneurs : base, capteur de mails, stockage d'objets, faux Google. `bun run banc:down` l'arrête et efface tout. |
 | `bun run test:integration` | Les tests d'intégration, sur le banc démarré. Avec un chemin : ce fichier seul. Chaque lancement vide la base du banc. |
 | `bun run build` | Build de production. Il passe sans base ni secret. |
 | `bun run payload:types` | Après un changement de collection : régénère `src/payload-types.ts`. |

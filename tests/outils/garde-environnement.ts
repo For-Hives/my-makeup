@@ -4,7 +4,7 @@
  * bun loads this file before any test file (bunfig.toml, `[test] preload`). It stops the run
  * before the first test when the environment could reach anything else than the local bench:
  * a remote or non-test database, the production site, a real mail relay or sending domain,
- * a remote or non-test bucket.
+ * a remote or non-test bucket, Google itself or its real credentials.
  *
  * Only when `bun test` is started from the repository root: bun reads the bunfig.toml of the
  * folder it is started in, not the one of a parent folder. Started from a sub-folder, the tests
@@ -33,7 +33,7 @@ export class EnvironnementRefuse extends Error {
 const HOTES_LOCAUX = ['localhost', '127.0.0.1', '::1']
 
 /** The services of the test stack, as named from inside its own container network. */
-const SERVICES_DU_BANC = { base: 'postgres', mails: 'mailpit', stockage: 's3mock' } as const
+const SERVICES_DU_BANC = { base: 'postgres', mails: 'mailpit', stockage: 's3mock', google: 'faux-google' } as const
 
 const DOMAINE_DU_SITE = 'my-makeup.fr'
 const HOTE_PREPROD = `preprod.${DOMAINE_DU_SITE}`
@@ -46,6 +46,13 @@ const ADRESSES = ['BASE_URL', 'NEXT_PUBLIC_SITE_URL'] as const
 
 /** Variables that say through whom, or in whose name, mail is sent, whatever the provider. */
 const FAMILLE_ENVOI = /^(SMTP|EMAIL|MAILGUN|RESEND)_/
+
+/**
+ * The client the application presents to Google, and its secret. On the bench both are made up
+ * and say so: the word below is the allow-list, since a real credential cannot be told by its shape.
+ */
+const IDENTIFIANTS_GOOGLE = ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'] as const
+const MARQUE_DU_FACTICE = /factice/i
 
 /**
  * Query parameters of a connection string that name where to connect. The driver Payload uses
@@ -180,6 +187,36 @@ export function verifierStockage(variables: Variables): void {
 }
 
 /**
+ * The Google sign-in talks to the fake Google of the bench only, with the made-up client of the
+ * bench only. Without GOOGLE_OIDC_ISSUER the application would talk to Google itself: credentials
+ * set without it are refused too. A value is never quoted: it may be a real secret.
+ */
+export function verifierGoogle(variables: Variables): void {
+	const emetteur = variables.GOOGLE_OIDC_ISSUER
+	if (emetteur) {
+		const url = lireAdresse(emetteur, ['http:', 'https:'])
+		if (!url) refuser("GOOGLE_OIDC_ISSUER n'est pas une adresse web lisible.")
+		const hote = hoteDe(url)
+		if (!estLocal(hote, SERVICES_DU_BANC.google))
+			refuser(
+				`GOOGLE_OIDC_ISSUER refusé (hôte ${montrer(hote)}) : les tests ne parlent qu'au faux Google du banc, jamais à Google.`
+			)
+	}
+	for (const nom of IDENTIFIANTS_GOOGLE) {
+		const valeur = variables[nom]
+		if (!valeur) continue
+		if (!emetteur)
+			refuser(
+				`${nom} est réglé sans GOOGLE_OIDC_ISSUER : la connexion Google viserait Google lui-même. Les tests ne parlent qu'au faux Google du banc.`
+			)
+		if (!MARQUE_DU_FACTICE.test(valeur))
+			refuser(
+				`${nom} refusé : sa valeur ne porte pas le mot « factice ». Les tests n'utilisent que le client factice du banc, jamais un vrai identifiant Google.`
+			)
+	}
+}
+
+/**
  * Every check, on the given variables. Returns the environment the run works in, or throws
  * `EnvironnementRefuse` on the first refusal.
  */
@@ -192,6 +229,7 @@ export function verifierEnvironnement(variables: Variables = process.env): Envir
 	}
 	verifierEnvoi(variables)
 	verifierStockage(variables)
+	verifierGoogle(variables)
 	return environnement
 }
 

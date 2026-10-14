@@ -19,13 +19,13 @@ const versionEpinglee = (image: string): string => {
 	return version
 }
 
-describe('Le banc démarré : la base, le capteur de mails et le stockage d’objets répondent', () => {
+describe('Le banc démarré : la base, le capteur de mails, le stockage d’objets et le faux Google répondent', () => {
 	test('ce lancement tourne sous l’environnement de son instance', () => {
 		for (const [nom, valeur] of Object.entries(environnement))
 			expect({ nom, valeur: process.env[nom] }).toEqual({ nom, valeur })
 	})
 
-	test('les trois services répondent', async () => {
+	test('les quatre services répondent', async () => {
 		const muets = await servicesMuets(sondesDuBanc(services))
 
 		expect(muets.map(({ service }) => service)).toEqual([])

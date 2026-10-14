@@ -1,6 +1,7 @@
 /**
- * The local test bench, described in one place: the three containers of compose.test.yml
- * (PostgreSQL in memory, mail catcher, object storage) and the environment that points at them.
+ * The local test bench, described in one place: the four containers of compose.test.yml
+ * (PostgreSQL in memory, mail catcher, object storage, fake Google) and the environment that
+ * points at them.
  *
  * `.env.test` is the single source: it describes the default instance. Several benches run
  * side by side on one machine, each under its own name and its own ports, set by two variables:
@@ -117,6 +118,8 @@ export interface Services {
 	base: { adresse: string; hote: string; port: number; nom: string; utilisateur: string; motDePasse: string }
 	mails: { hote: string; port: number; api: string }
 	stockage: { adresse: string; port: number; bucket: string }
+	/** The fake Google: the address the application takes for Google's, and the made-up client it accepts. */
+	google: { adresse: string; port: number; clientId: string; secret: string }
 }
 
 const exiger = (environnement: Environnement, nom: string): string => {
@@ -131,13 +134,14 @@ const portDe = (adresse: string, nom: string): number => {
 	return port
 }
 
-/** Where each of the three services of an instance answers, read from its environment. */
+/** Where each of the four services of an instance answers, read from its environment. */
 export function servicesDuBanc(environnement: Environnement = environnementDuBanc()): Services {
 	const base = exiger(environnement, 'DATABASE_URI')
 	const url = new URL(base)
 	const stockage = exiger(environnement, 'S3_ENDPOINT')
 	const api = exiger(environnement, 'MAILPIT_URL')
 	portDe(api, 'MAILPIT_URL')
+	const google = exiger(environnement, 'GOOGLE_OIDC_ISSUER')
 	return {
 		base: {
 			adresse: base,
@@ -149,6 +153,12 @@ export function servicesDuBanc(environnement: Environnement = environnementDuBan
 		},
 		mails: { hote: exiger(environnement, 'SMTP_HOST'), port: Number(exiger(environnement, 'SMTP_PORT')), api },
 		stockage: { adresse: stockage, port: portDe(stockage, 'S3_ENDPOINT'), bucket: exiger(environnement, 'S3_BUCKET') },
+		google: {
+			adresse: google,
+			port: portDe(google, 'GOOGLE_OIDC_ISSUER'),
+			clientId: exiger(environnement, 'GOOGLE_CLIENT_ID'),
+			secret: exiger(environnement, 'GOOGLE_CLIENT_SECRET'),
+		},
 	}
 }
 
@@ -160,6 +170,7 @@ export function variablesDeCompose(instance: Instance, services: Services): Reco
 		BANC_PORT_SMTP: String(services.mails.port),
 		BANC_PORT_MAILPIT: String(portDe(services.mails.api, 'MAILPIT_URL')),
 		BANC_PORT_S3: String(services.stockage.port),
+		BANC_PORT_GOOGLE: String(services.google.port),
 	}
 }
 
@@ -170,6 +181,7 @@ export function portsDuBanc(services: Services): { port: number; service: string
 		{ port: services.mails.port, service: 'capteur de mails, SMTP' },
 		{ port: portDe(services.mails.api, 'MAILPIT_URL'), service: 'capteur de mails, API' },
 		{ port: services.stockage.port, service: 'stockage d’objets' },
+		{ port: services.google.port, service: 'faux Google' },
 	]
 }
 

@@ -24,6 +24,9 @@ const BANC = {
 	EMAIL_FROM: 'My Makeup <ne-pas-repondre@example.test>',
 	S3_ENDPOINT: 'http://127.0.0.1:9000',
 	S3_BUCKET: 'mymakeup-test',
+	GOOGLE_OIDC_ISSUER: 'http://127.0.0.1:7080',
+	GOOGLE_CLIENT_ID: 'client-google-factice-du-banc',
+	GOOGLE_CLIENT_SECRET: 'secret-google-factice-du-banc-de-test',
 }
 
 /**
@@ -218,6 +221,7 @@ describe('U87 : refuse un domaine d’envoi ou un bucket de prod dans l’enviro
 				SMTP_HOST: 'mailpit',
 				MAILPIT_URL: 'http://mailpit:8025',
 				S3_ENDPOINT: 'http://s3mock:9090',
+				GOOGLE_OIDC_ISSUER: 'http://faux-google:7080',
 			})
 		).toBe('test')
 		expect(verifierEnvironnement({})).toBe('test')
@@ -236,6 +240,9 @@ describe('U87 : refuse un domaine d’envoi ou un bucket de prod dans l’enviro
 			'MAILPIT_URL',
 			'S3_ENDPOINT',
 			'S3_BUCKET',
+			'GOOGLE_OIDC_ISSUER',
+			'GOOGLE_CLIENT_ID',
+			'GOOGLE_CLIENT_SECRET',
 		])
 			expect({ nom, valeur: fichier[nom] }).toEqual({ nom, valeur: expect.any(String) })
 	})
@@ -293,6 +300,72 @@ describe('U87 : refuse un domaine d’envoi ou un bucket de prod dans l’enviro
 
 		expect(message).toStartWith('S3_ENDPOINT')
 		if (hote) expect(message).toContain(hote)
+	})
+})
+
+describe('Connexion Google : refuse Google lui-même et tout identifiant Google qui ne se dit pas factice', () => {
+	const sansGoogle = Object.fromEntries(Object.entries(BANC).filter(([nom]) => !nom.startsWith('GOOGLE_')))
+
+	test('accepte le faux Google du banc et son client factice, et un environnement sans connexion Google', () => {
+		expect(verifierEnvironnement(BANC)).toBe('test')
+		expect(verifierEnvironnement(sansGoogle)).toBe('test')
+		expect(verifierEnvironnement({ ...sansGoogle, GOOGLE_OIDC_ISSUER: 'http://localhost:7219' })).toBe('test')
+	})
+
+	test.each([
+		['Google lui-même', 'https://accounts.google.com', '« accounts.google.com »'],
+		['un fournisseur distant', 'https://connexion.example.test', '« connexion.example.test »'],
+		['un hôte qui commence comme un hôte local', 'http://127.0.0.1.example.test:7080', '« 127.0.0.1.example.test »'],
+		['une adresse sans protocole web', '127.0.0.1:7080', undefined],
+	])('refuse %s dans GOOGLE_OIDC_ISSUER', (_cas, adresse, hote) => {
+		const message = messageDuRefus(() => verifierEnvironnement({ ...BANC, GOOGLE_OIDC_ISSUER: adresse }))
+
+		expect(message).toStartWith('GOOGLE_OIDC_ISSUER')
+		if (hote) expect(message).toContain(`refusé (hôte ${hote}) : les tests ne parlent qu'au faux Google du banc`)
+	})
+
+	test.each([
+		'GOOGLE_CLIENT_ID',
+		'GOOGLE_CLIENT_SECRET',
+	])('refuse %s réglé sans fournisseur : la connexion viserait Google lui-même', nom => {
+		const message = messageDuRefus(() =>
+			verifierEnvironnement({ ...sansGoogle, [nom]: BANC[nom as keyof typeof BANC] })
+		)
+
+		expect(message).toStartWith(
+			`${nom} est réglé sans GOOGLE_OIDC_ISSUER : la connexion Google viserait Google lui-même.`
+		)
+	})
+
+	test.each([
+		['GOOGLE_CLIENT_ID', 'identifiant-temoin-sans-le-mot'],
+		['GOOGLE_CLIENT_SECRET', 'valeur-temoin-sans-le-mot'],
+	])('refuse dans %s une valeur qui ne se dit pas factice, sans la recopier', (nom, valeur) => {
+		const message = messageDuRefus(() => verifierEnvironnement({ ...BANC, [nom]: valeur }))
+
+		expect(message).toBe(
+			`${nom} refusé : sa valeur ne porte pas le mot « factice ». Les tests n'utilisent que le client factice du banc, jamais un vrai identifiant Google.`
+		)
+		expect(message).not.toContain('temoin')
+	})
+
+	test('arrête bun avant le premier test quand l’environnement vise Google lui-même', async () => {
+		const { code, texte } = await lancerTemoin({ ...BANC, GOOGLE_OIDC_ISSUER: 'https://accounts.google.com' })
+
+		expect(code).toBe(1)
+		expect(texte).toContain(
+			'Tests arrêtés avant le premier test. GOOGLE_OIDC_ISSUER refusé (hôte « accounts.google.com »)'
+		)
+		expect(texte).not.toContain(MARQUE_DU_TEMOIN)
+	})
+
+	test('arrête bun avant le premier test sur un secret Google qui ne se dit pas factice, sans l’afficher', async () => {
+		const { code, texte } = await lancerTemoin({ ...BANC, GOOGLE_CLIENT_SECRET: 'valeur-temoin-sans-le-mot' })
+
+		expect(code).toBe(1)
+		expect(texte).toContain('Tests arrêtés avant le premier test. GOOGLE_CLIENT_SECRET refusé')
+		expect(texte).not.toContain('valeur-temoin-sans-le-mot')
+		expect(texte).not.toContain(MARQUE_DU_TEMOIN)
 	})
 })
 

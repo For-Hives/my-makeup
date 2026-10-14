@@ -1,7 +1,7 @@
 /**
  * Command line of the local test bench (docs/tests/banc.md).
  *
- *   bun run banc:up                     starts the three containers, returns once all three answer
+ *   bun run banc:up                     starts the four containers, returns once all four answer
  *   bun run banc:down                   stops them, removes containers and volumes
  *   bun run banc:prepare                rebuilds the bench database from the code, empty
  *   bun run test:integration [file…]    rebuilds the database, then runs the integration tests
@@ -32,7 +32,7 @@ import {
 } from '../tests/outils/banc'
 import { servicesMuets, sondesDuBanc } from '../tests/outils/banc-sondes'
 
-/** Longest wait for the three services, from the first line of `banc:up` to the last. */
+/** Longest wait for the four services, from the first line of `banc:up` to the last. */
 const DELAI_DE_DEMARRAGE_MS = 60_000
 
 type EnvironnementDeProcessus = Record<string, string | undefined>
@@ -141,13 +141,14 @@ async function demarrer(banc: Banc): Promise<void> {
 			`${messageBancMuet(instance, muets).split('\n')[0]}\nLes journaux des conteneurs : docker compose --project-name ${instance.nom} logs`
 		)
 
-	const { base, mails, stockage } = services
+	const { base, mails, stockage, google } = services
 	console.log(
 		[
 			`Banc de test « ${instance.nom} » prêt en ${secondes(debut)} s.`,
 			`- base : ${base.hote}:${base.port}, base « ${base.nom} », en mémoire`,
 			`- capteur de mails : SMTP ${mails.hote}:${mails.port}, boîte ${mails.api}`,
 			`- stockage d’objets : ${stockage.adresse}, espace « ${stockage.bucket} »`,
+			`- faux Google : ${google.adresse}, pris pour Google par GOOGLE_OIDC_ISSUER`,
 			`Pour l’arrêter et tout effacer : ${prefixeDeCommande(instance)}bun run banc:down`,
 		].join('\n')
 	)

@@ -1,31 +1,33 @@
 # Le banc de test local
 
-Le banc est ce contre quoi tournent les tests d'intégration : trois conteneurs, sur ce poste, que l'on démarre et que l'on jette. Rien n'y est réel. La base est vide et en mémoire, les mails n'en sortent pas, le stockage d'objets est un simulateur.
+Le banc est ce contre quoi tournent les tests d'intégration : quatre conteneurs, sur ce poste, que l'on démarre et que l'on jette. Rien n'y est réel. La base est vide et en mémoire, les mails n'en sortent pas, le stockage d'objets est un simulateur, et le faux Google ne connaît que des personnes inventées.
 
 | Service | Rôle | Adresse par défaut |
 |---|---|---|
 | PostgreSQL 18.6 | La base, en mémoire, sans durabilité | `127.0.0.1:5443`, base `mymakeup_test` |
 | Mailpit | Le capteur de mails : il reçoit tout ce que l'application envoie et ne transmet rien | SMTP `127.0.0.1:1025`, boîte et API `http://127.0.0.1:8025` |
 | S3Mock | Le stockage d'objets, avec l'API S3 | `http://127.0.0.1:9090`, espace `mymakeup-test` |
+| Faux Google | Un fournisseur OpenID Connect qui tient la place de Google pour la connexion Google | `http://127.0.0.1:7080` |
 
 La même pile sert sur un poste et en CI : `compose.test.yml`.
 
 ## Démarrer et arrêter
 
 ```sh
-bun run banc:up     # démarre les trois conteneurs, rend la main quand les trois services répondent
+bun run banc:up     # démarre les quatre conteneurs, rend la main quand les quatre services répondent
 bun run banc:down   # arrête tout, supprime conteneurs, réseau et volumes
 ```
 
-`banc:up` attend au plus une minute. Images déjà téléchargées, il met environ 5 secondes (mesuré le 14/10/2026 : 4,5 s). Il ne se contente pas de l'état des conteneurs : il interroge chaque service depuis le poste.
+`banc:up` attend au plus une minute. Images déjà téléchargées, il met 5 à 7 secondes (mesuré le 14/10/2026, avec les quatre services : 4,7 s, puis 6,7 s juste après un arrêt). Il ne se contente pas de l'état des conteneurs : il interroge chaque service depuis le poste.
 
 - la base exécute une requête ;
 - le capteur de mails répond en SMTP, et son API est prête ;
-- le stockage a son espace.
+- le stockage a son espace ;
+- le faux Google se présente sous l'adresse de l'instance.
 
 Relancé sur un banc déjà démarré, `banc:up` ne change rien et redit les adresses.
 
-`banc:down` ne garde rien : la base vit en mémoire, les deux autres services écrivent dans leur conteneur. Il vérifie ensuite qu'il ne reste ni conteneur ni volume au nom du banc.
+`banc:down` ne garde rien : la base vit en mémoire, le capteur de mails et le stockage écrivent dans leur conteneur, le faux Google n'écrit nulle part. Il vérifie ensuite qu'il ne reste ni conteneur ni volume au nom du banc.
 
 Il faut Docker avec Compose. Sans démon Docker, les commandes du banc passent d'elles-mêmes par Podman quand son socket existe (`$XDG_RUNTIME_DIR/podman/podman.sock`). Une variable `DOCKER_HOST` déjà réglée est respectée.
 
@@ -42,6 +44,8 @@ Il faut Docker avec Compose. Sans démon Docker, les commandes du banc passent d
 | `SMTP_HOST`, `SMTP_PORT` | Le capteur de mails |
 | `MAILPIT_URL` | L'API du capteur, par laquelle un test lit les mails reçus |
 | `S3_ENDPOINT`, `S3_BUCKET` | Le stockage d'objets et son espace. Le nom de l'espace finit par `-test` |
+| `GOOGLE_OIDC_ISSUER` | L'adresse du faux Google : c'est elle qui le fait prendre pour Google par l'application |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Le client factice du banc et son secret factice. Les deux portent le mot « factice » |
 
 Règles du fichier :
 
@@ -66,7 +70,7 @@ BANC_INSTANCE=ticket-018 BANC_DECALAGE=20 bun run test:integration
 BANC_INSTANCE=ticket-018 BANC_DECALAGE=20 bun run banc:down
 ```
 
-Avec un décalage de 20 : base sur 5463, SMTP sur 1045, boîte sur 8045, stockage sur 9110, application sur 3120.
+Avec un décalage de 20 : base sur 5463, SMTP sur 1045, boîte sur 8045, stockage sur 9110, faux Google sur 7100, application sur 3120.
 
 - Deux bancs de noms et de décalages différents ne partagent rien : ni conteneur, ni réseau, ni port, ni donnée.
 - Aucun décalage ne pose un banc sur un port du développement (5442 pour la base de `docker-compose.yml`, 5432, 3000).
@@ -82,10 +86,10 @@ bun run test:integration tests/integration/banc-base.test.ts   # un seul fichier
 
 La commande fait trois choses :
 
-1. Elle interroge les trois services. Si l'un d'eux ne répond pas, elle s'arrête avant le premier test et dit quoi démarrer :
+1. Elle interroge les quatre services. Si l'un d'eux ne répond pas, elle s'arrête avant le premier test et dit quoi démarrer :
 
    ```
-   Le banc de test « my-makeup-test » ne répond pas : base (127.0.0.1:5443), capteur de mails (127.0.0.1:1025), stockage d’objets (127.0.0.1:9090).
+   Le banc de test « my-makeup-test » ne répond pas : base (127.0.0.1:5443), capteur de mails (127.0.0.1:1025), stockage d’objets (127.0.0.1:9090), faux Google (127.0.0.1:7080).
    Démarre-le d’abord : bun run banc:up
    ```
 
@@ -182,6 +186,87 @@ export const TYPES_DE_COMPTE = {
 
 `donnees` rend ce que le compte porte en plus de son adresse et de son mot de passe. Le compilateur vérifie ces données contre les champs de la collection.
 
+## Le faux Google
+
+La connexion Google se teste sans compte Google, sans secret Google et sans Internet. Le banc lance un fournisseur OpenID Connect qui tient la place de Google : il a le même document de découverte, les mêmes chemins, le même échange de code, un jeton d'identité signé et ses clés publiques. Il ne connaît que des personnes inventées.
+
+### Le faire prendre pour Google
+
+Une variable suffit : `GOOGLE_OIDC_ISSUER`, l'adresse du fournisseur. `.env.test` la règle sur le faux Google, avec le client factice du banc.
+
+| Variable | Sur le banc | Sur le site et sa préprod |
+|---|---|---|
+| `GOOGLE_OIDC_ISSUER` | `http://127.0.0.1:7080` | Absente : c'est Google, `https://accounts.google.com` |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Le client et le secret factices de `.env.test` | Ceux de la console Google, donnés au conteneur, jamais dans le dépôt |
+
+Le fournisseur publie ses adresses dans son document de découverte, `<GOOGLE_OIDC_ISSUER>/.well-known/openid-configuration`, comme Google. Ses chemins sont ceux de Google : `/o/oauth2/v2/auth`, `/token`, `/v1/userinfo`, `/oauth2/v3/certs`.
+
+La connexion Google elle-même n'existe pas encore dans l'application : elle arrive avec son ticket (090), qui lira cette variable (`googleIssuer`, dans `src/lib/env.ts`) et ajoutera le client et son secret. Le banc fournit déjà le fournisseur, la variable et ses garde-fous.
+
+### Choisir qui se connecte
+
+Un test choisit l'identité renvoyée et la façon dont la connexion finit. Le choix voyage avec la demande d'autorisation, dans un cookie du fournisseur.
+
+```ts
+import { fauxGoogle } from '../outils/faux-google'
+
+const google = fauxGoogle()
+const choix = google.choisir({ scenario: 'email-verifie', email: 'lea@example.test', prenom: 'Léa', nomDeFamille: 'Martin' })
+```
+
+| Pour | Usage |
+|---|---|
+| Un navigateur (Playwright) | `await context.addCookies(choix.cookies)`, puis cliquer sur le bouton Google du site |
+| Un client HTTP (un test d'intégration) | `const retour = await google.autoriser(adresseDAutorisation, choix)` : l'outil joue le navigateur et rend l'adresse où Google le renvoie, avec `code` et `state`, ou `error` |
+
+Les quatre scénarios :
+
+| Scénario | Ce que voit l'application |
+|---|---|
+| `email-verifie` | La connexion aboutit. Le jeton d'identité dit `email_verified: true` |
+| `email-non-verifie` | La connexion aboutit. Le jeton d'identité dit `email_verified: false` |
+| `refus` | La personne ferme l'écran de Google : le navigateur revient avec `error=access_denied` et `state`, sans code |
+| `panne` | Le navigateur revient avec un code, puis l'échange du code répond 503 avec une page et non du JSON, à chaque essai : comme une vraie panne |
+
+À savoir :
+
+- **Sans choix, une personne fictive se connecte**, toujours la même, à l'adresse vérifiée : `camille.google@example.test`. C'est ce qui arrive quand on clique sur le bouton Google du site local sans rien préparer.
+- **La même adresse est le même compte Google.** L'identifiant Google (`sub`) se déduit de l'adresse, sans tenir compte de la casse : un second passage retrouve le même compte. Un test peut aussi donner son propre `sub`.
+- **Deux tests en parallèle ne se gênent pas.** Le fournisseur ne retient aucun choix : chaque demande porte le sien.
+- **Une adresse est toujours fictive.** Hors d'un domaine en `.test`, l'outil refuse l'identité, et le fournisseur refait le contrôle de son côté.
+- **Google ne dit que ce qu'on lui demande.** Sans la portée `email`, le jeton n'a pas d'adresse ; sans `profile`, pas de nom. La photo (`picture`) n'est rendue que si le test en donne une.
+- **L'outil ne parle qu'au faux Google.** `google.autoriser` refuse une adresse qui n'est pas la sienne : si l'application a construit une adresse vers Google, le test échoue sans que rien ne parte.
+
+### Ce qu'il refuse, comme Google
+
+- un autre client que le client factice du banc : page d'erreur 401 `invalid_client` ;
+- une adresse de retour qui n'est pas sur ce poste (`localhost` ou `127.0.0.1`) : page d'erreur 400 `redirect_uri_mismatch`, et le navigateur n'est renvoyé nulle part ;
+- un secret faux à l'échange du code : 401 `invalid_client` ;
+- un code déjà échangé, ou vieux de plus d'une minute : 400 `invalid_grant` ;
+- une adresse de retour différente entre la demande et l'échange : 400 `redirect_uri_mismatch` ;
+- une preuve PKCE absente ou fausse quand la demande portait un défi : 400 `invalid_grant`.
+
+### Le test coquille
+
+`tests/integration/banc-faux-google.test.ts` joue un aller-retour complet contre le conteneur : demande d'autorisation avec état, nonce et défi PKCE, retour avec le code, échange, signature du jeton d'identité vérifiée contre les clés publiées, lecture du profil. Puis les quatre scénarios, un par un. Chaque aller-retour doit tenir en moins de 5 secondes ; il prend 10 à 50 millisecondes (mesuré le 14/10/2026).
+
+```sh
+bun run test:integration tests/integration/banc-faux-google.test.ts
+```
+
+`google.allerRetour(choix)` est cet aller-retour, prêt à l'emploi. Il prouve le fournisseur : ce n'est pas la connexion de l'application.
+
+Le fournisseur se teste aussi sans le banc, appelé comme une fonction : `bun --no-env-file test tests/unit/banc-faux-google.test.ts`.
+
+### Aucun secret Google réel
+
+- Le client et le secret de `.env.test` sont inventés et portent le mot « factice ». Le fournisseur refuse de démarrer avec une valeur qui ne le porte pas, et la garde des tests arrête tout lancement qui en contient une.
+- La garde arrête aussi un lancement qui viserait Google lui-même : `GOOGLE_OIDC_ISSUER` doit être locale, et un client Google réglé sans elle est refusé.
+- La clé qui signe les jetons est tirée au démarrage du conteneur. Elle n'est écrite nulle part et change à chaque démarrage.
+- **Le site et sa préprod refusent un fournisseur local.** Avec une adresse de site déployée dans `NEXT_PUBLIC_SITE_URL`, une `GOOGLE_OIDC_ISSUER` locale arrête l'application au démarrage (README, « Configuration durcie »).
+
+Le code est dans `tests/outils/faux-google/` : `fournisseur.ts` (le fournisseur), `identite.ts` (scénarios et identités), `serveur.ts` (ce que lance le conteneur). L'outil des tests est `tests/outils/faux-google.ts`.
+
 ## En CI
 
 Les mêmes commandes : `bun run banc:up`, puis `bun run test:integration`. Lancé sans les commandes du banc (`docker compose -f compose.test.yml up -d --wait`), `compose.test.yml` démarre l'instance par défaut, sur les ports de `.env.test`.
@@ -195,9 +280,11 @@ Chaque image est épinglée par son étiquette exacte et par son empreinte, dans
 | `postgres` | 18.6-alpine | 17/09/2026 | Aucun : la même image que la base de développement, vérifiée au ticket 001 |
 | `axllent/mailpit` | v1.31.4 | 03/10/2026 | Aucun. 15 avis dans la base GitHub et 16 sur le dépôt, tous corrigés en 1.31.2 au plus tard |
 | `adobe/s3mock` | 5.2.3 | 19/09/2026 | Aucun, ni dans la base GitHub ni sur le dépôt |
+| `oven/bun` | 1.3.14 | 13/05/2026 | Aucun : la même image, à la même empreinte, que celle du `Dockerfile`, vérifiée au ticket 001 |
 
 - **Mailpit** : la v1.31.5 existe, mais elle n'avait que 3 jours le 14/10/2026. La règle des 7 jours donne la v1.31.4.
 - **S3Mock à la place de MinIO** : le plan nommait MinIO, avec S3Mock en repli. Le 14/10/2026, MinIO ne remplit plus les conditions : son dépôt est archivé (dernier commit en avril 2026), son image n'est plus téléchargeable (Docker Hub et quay.io refusent l'accès à `minio/minio`), et le dépôt a publié 7 avis de sécurité en 2026, dont 4 élevés, corrigés seulement dans des versions de 2026 alors que la dernière version publiée sur GitHub date d'octobre 2025. S3Mock est maintenu (dernier commit le 08/10/2026) et n'a aucun avis.
+- **bun pour le faux Google** : ce n'est pas une image de plus. Le faux Google est du code de ce dépôt (`tests/outils/faux-google/`), lu en lecture seule par le conteneur, et lancé par le bun qui construit déjà l'image du site. Un test vérifie que les deux références sont identiques (`tests/unit/banc-pile.test.ts`).
 - Vérifié par `gh api repos/<dépôt>/releases`, `gh api repos/<dépôt>/security-advisories` et `gh api "/advisories?ecosystem=…&affects=…"`, puis `skopeo inspect` pour les empreintes et les dates. Les paquets du système de chaque image n'ont pas été passés au scanner.
 
 Une montée de version change l'étiquette et l'empreinte ensemble. `tests/integration/banc-pile.test.ts` vérifie que la version qui tourne est bien celle qui est épinglée.
@@ -205,5 +292,7 @@ Une montée de version change l'étiquette et l'empreinte ensemble. `tests/integ
 ## Limites
 
 - **S3Mock n'est pas un vrai stockage.** Il accepte n'importe quels identifiants et ne vérifie ni les signatures ni les droits : une règle d'accès aux objets ne se prouve pas sur le banc. Il ne connaît que les adresses de la forme `http://hôte:port/espace/clé`.
+- **Le faux Google n'est pas Google.** Il n'a ni écran de connexion, ni écran de consentement, ni jeton de rafraîchissement, ni révocation. Il ne connaît qu'un client. Son adresse est en `http` et son émetteur n'est pas `https://accounts.google.com` : ce que l'application ferait d'un vrai certificat ou du vrai émetteur ne se prouve pas sur le banc.
+- **Le faux Google lit son code dans le dépôt.** Le conteneur monte `tests/outils/faux-google/` en lecture seule. Après un changement dans ce dossier, relancer `bun run banc:down` puis `bun run banc:up`. Sur un poste où SELinux est actif (Fedora, avec Podman), ce montage demande `label=disable`, déjà réglé dans `compose.test.yml`.
 - **Le banc n'écoute que sur ce poste** (`127.0.0.1`). Il n'a ni mot de passe sérieux ni chiffrement : il ne doit jamais être exposé.
 - **`bun --env-file=.env.test test`** ne vaut que pour l'instance par défaut, et saute la reconstruction du schéma. Passer par `bun run test:integration`.
