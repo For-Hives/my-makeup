@@ -12,7 +12,7 @@ import type { Revendications } from './oidc'
  * - The account is found by its address, lower-cased. One that came from Google (`legacyProvider` is
  *   « google ») opens a session. Any other account with this address (a password account, an old
  *   Facebook one) is refused, and nothing is linked: the person who owns that address on Google is
- *   not proven to own the account (AUTH-12; ticket 092 gives the refusal its own message). A blocked
+ *   not proven to own the account (AUTH-12; ticket 092). A blocked
  *   account is refused too.
  * - No account yet: it is made, confirmed at once (Google has checked the address, so no mail
  *   leaves), with her empty profile and its address, in one transaction. Its password is a random
@@ -24,7 +24,7 @@ import type { Revendications } from './oidc'
  * Nothing here logs. No `next` import.
  */
 
-export type CodeRefusDuCompte = 'email-non-verifie' | 'compte-refuse' | 'service-indisponible'
+export type CodeRefusDuCompte = 'email-non-verifie' | 'compte-refuse' | 'compte-bloque' | 'service-indisponible'
 
 export type ResultatDuCompte =
 	| { ok: true; id: number | string; nouveau: boolean }
@@ -86,8 +86,9 @@ export async function compteDeGoogle(payload: Payload, revendications: Revendica
 
 /** An account that exists: it opens a session if it came from Google and is not blocked. */
 async function accueillir(payload: Payload, compte: CompteTrouve): Promise<ResultatDuCompte> {
-	if (compte.legacyProvider !== FOURNISSEUR_GOOGLE || compte.bloque === true)
-		return { ok: false, code: 'compte-refuse' }
+	// Blocked first: whoever proves the address on Google is told why the account stays shut.
+	if (compte.bloque === true) return { ok: false, code: 'compte-bloque' }
+	if (compte.legacyProvider !== FOURNISSEUR_GOOGLE) return { ok: false, code: 'compte-refuse' }
 	// Google has just vouched for the address: an account still marked unconfirmed is confirmed, or
 	// Payload would ignore the session it is about to receive.
 	if (compte._verified !== true)
