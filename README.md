@@ -358,6 +358,7 @@ Rien ne se publie avant la fusion de `v3` dans `main`. Le détail, et ce qu'il r
 | `bun run banc:source` | Crée la fausse base Strapi que lit l'import, banc démarré : base, rôle en lecture seule, photos dans le stockage. Relancée, elle la recrée à l'identique et donne la même empreinte. `--empreinte` la lit sans la toucher, `--effacer` la supprime (voir `docs/tests/source-strapi.md`) |
 | `bun run test:integration` | Les tests d'intégration de `tests/integration/`, sur le banc. Avec un chemin : ce fichier seul |
 | `bun run test:e2e` | Les essais de bout en bout de `tests/e2e/`, dans un vrai navigateur, contre l'application construite et branchée sur le banc. Avec un chemin : ce fichier seul |
+| `bun run sondes` | Les sondes de `tests/sondes/` : lisent le site en ligne, en GET seulement, 2 requêtes par seconde au plus. Une autre cible par `SONDES_CIBLE` (voir « Les sondes du site en ligne ») |
 | `bun run image:build` | Construit l'image Docker `my-makeup:local` |
 | `bun run image:controle` | Vérifie l'image construite contre une base jetable (voir « Image Docker ») |
 | `bun run notes:ajouter` | Ajoute une note de version en attente : un type (`ajout`, `amelioration`, `correction`), puis la phrase entre guillemets (voir « Notes de version et publication ») |
@@ -383,7 +384,7 @@ Les tests tournent avec `bun test`, lancé par les scripts ci-dessus. Pour un se
 | `tests/fixtures/` | Données fictives et fichiers témoins |
 | `tests/outils/` | Outils partagés par les tests |
 
-Seuls `unit/`, `integration/`, `e2e/`, `ci/`, `fixtures/` et `outils/` existent pour l'instant : chaque autre dossier arrive avec son premier test.
+Tous ces dossiers existent. `tests/sondes/` ne contient aucun fichier `*.test.ts` ni `*.spec.ts` : les sondes se lancent par `bun run sondes`, et leurs tests sont dans `tests/unit/sondes.test.ts`.
 
 ### La garde d'environnement
 
@@ -452,6 +453,23 @@ bun run test:e2e tests/e2e/coquille.spec.ts    # un seul fichier
 - Une cible sur `my-makeup.fr` arrête tout avant le premier essai.
 
 Le détail est dans [`docs/tests/e2e.md`](docs/tests/e2e.md) : écrire un essai, l'accessibilité, lire un échec, les garde-fous, les pièges.
+
+### Les sondes du site en ligne
+
+Les sondes lisent le site en ligne comme une visiteuse anonyme, sans jamais rien y écrire : c'est la seule exception à « rien vers le site en ligne ». Les adresses ne changent pas avec la v3 : elles lisent aujourd'hui le site actuel.
+
+```sh
+bun run sondes                                       # https://my-makeup.fr
+SONDES_CIBLE=http://localhost:3100 bun run sondes    # une autre cible : le banc, un domaine temporaire
+```
+
+- R01 : la garde interrompt toute requête autre qu'un GET, tout ce qui va vers la mesure d'audience (`/u`) ou vers un autre hôte. Elle se vérifie avant la première requête.
+- R03 : 5 profils au hasard du sitemap répondent 200, avec un `h1` dans le HTML du serveur, sans « undefined » ni « null ».
+- R04 : une adresse inconnue répond 404.
+- Une requête à la fois, 2 par seconde au plus. Le rapport désigne un profil par une empreinte, jamais par son adresse.
+- `SONDES_CIBLE` n'est lue que par les sondes : la garde des essais refuse toujours la prod.
+
+Le détail est dans [`docs/tests/sondes.md`](docs/tests/sondes.md) : chaque sonde, la garde, lire le rapport, retrouver un profil rouge.
 
 ### Le HTTP sortant
 

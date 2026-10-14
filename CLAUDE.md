@@ -15,6 +15,7 @@ My Makeup est un annuaire de maquilleuses professionnelles indépendantes. Cette
 | tester un composant React | [`docs/tests/composants.md`](docs/tests/composants.md) |
 | écrire un test d'intégration, démarrer le banc de test, obtenir un compte de test, tester la connexion Google | [`docs/tests/banc.md`](docs/tests/banc.md) |
 | écrire ou lancer un essai de bout en bout, contrôler l'accessibilité d'une page | [`docs/tests/e2e.md`](docs/tests/e2e.md) |
+| lancer ou écrire une sonde du site en ligne, en lecture seule | [`docs/tests/sondes.md`](docs/tests/sondes.md) |
 | appeler un service extérieur, ou le simuler dans un test | [`docs/tests/http-sortant.md`](docs/tests/http-sortant.md) |
 | toucher la CI, un workflow ou le `Dockerfile` | [`docs/qualite.md`](docs/qualite.md), §6 à §9 |
 | monter une version, toucher `renovate.json` | [`docs/qualite.md`](docs/qualite.md), §11 |
