@@ -1,0 +1,24 @@
+/**
+ * Where each transformation of the import is written, so that every difference between the source
+ * and the target reads against a rule (docs/migration/IMPORT.md, « Le rapport »):
+ *
+ * - a key of the register of intended changes (docs/migration/CHANGEMENTS-VOULUS.md), for what a
+ *   page or a makeup artist can notice;
+ * - a section of the frozen schema (docs/migration/SCHEMA.md), for a rule that changes no page.
+ *
+ * tests/unit/import-comptes.test.ts checks that each one exists in its document.
+ */
+export const REFERENCES = {
+	/** The login: edge spaces removed, lower case (SCHEMA.md §1 and §5.1). */
+	emailEnMinuscules: 'SCHEMA.md §5.1 (email)',
+	/** A password of the old site that is not a complete bcrypt hash gives no legacy hash (§5.1). */
+	hashIncomplet: 'SCHEMA.md §5.1 (password)',
+	/** Every taken account is confirmed, as the accounts of the old site are. */
+	compteConfirme: 'confirmation-email',
+	/** The slug of a profile: the rule of the old site, computed from its username, then stored. */
+	slugStocke: 'slug-stocke',
+	/** A profile entirely empty at the source is a draft. */
+	profilVideEnBrouillon: 'profils-vides-brouillon',
+} as const
+
+export type Reference = (typeof REFERENCES)[keyof typeof REFERENCES]

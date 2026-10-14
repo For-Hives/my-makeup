@@ -13,12 +13,13 @@ Cette branche porte la réécriture du site : une seule application Next.js et P
 
 ## Suivre la migration
 
-Quatre documents, sous `docs/migration/` :
+Cinq documents, sous `docs/migration/` :
 
 - [`CHANGEMENTS-VOULUS.md`](docs/migration/CHANGEMENTS-VOULUS.md) : le registre de tout ce que la v3 fait autrement que le site actuel, par décision. À la répétition de la bascule, seuls ces écarts sont acceptés.
 - [`JOURNAL.md`](docs/migration/JOURNAL.md) : les faits datés de la migration.
 - [`SCHEMA.md`](docs/migration/SCHEMA.md) : le schéma gelé. Il dit où va chaque champ de l'ancienne API dans la v3, ou pourquoi il n'est pas repris.
 - [`URLS.md`](docs/migration/URLS.md) : les URL gelées. Il dit ce que répond chaque famille d'adresses après la bascule.
+- [`IMPORT.md`](docs/migration/IMPORT.md) : l'import des données de l'ancien site. Il dit ce que l'import garantit, comment le lancer, à blanc ou pour de vrai, et ce que dit son rapport.
 
 ## Travailler dans ce dépôt
 
@@ -36,7 +37,7 @@ Une application, trois zones, toutes sous `src/app/` :
 
 | Zone | Dossier | Adresse | État |
 |---|---|---|---|
-| Pages publiques | `(front)/(site)/` | `/` | Page d'accueil provisoire |
+| Pages publiques | `(front)/(site)/` | `/`, `/profil/<slug>` | Page d'accueil provisoire ; page publique d'un profil, première tranche : son nom en titre, sa spécialité et sa description, lus par `src/services/public/` |
 | Espace maquilleuse | `(front)/(espace)/auth/` | `/auth` | Page d'attente |
 | Administration | `(payload)/` | `/admin` et `/api` | Générée par Payload : les comptes `admins`, aux rôles `admin` et `redaction`, les comptes des maquilleuses, `pros`, leurs profils, `profils`, les photos, `media`, et les talents, `talents` |
 
@@ -48,6 +49,8 @@ Le reste :
 
 - `src/payload.config.ts` : la configuration de Payload (base PostgreSQL, collections `admins`, `pros`, `profils`, `media` et `talents`, stockage d'objets des photos).
 - `src/collections/` : les collections de Payload. `src/lib/acces.ts` : qui peut lire, créer, modifier ou supprimer quoi (voir « Accès »).
+- `src/services/public/` : la seule lecture publique des données. Une page publique y lit un profil, champ par champ, avec les règles d'accès d'une visiteuse : jamais une coordonnée, ni ce qu'ont écrit l'import ou un admin.
+- `scripts/migration/` : les outils de la migration, dont l'import des données de l'ancien site (voir `docs/migration/IMPORT.md`).
 - `src/lib/env.ts` : les variables d'environnement, vérifiées au démarrage par `src/instrumentation.ts`.
 - `src/migrations/` : les migrations versionnées de la base.
 - `src/payload-types.ts` et `src/app/(payload)/admin/importMap.js` : fichiers générés par Payload, versionnés, jamais modifiés à la main.
@@ -382,6 +385,8 @@ Rien ne se publie avant la fusion de `v3` dans `main`. Le détail, et ce qu'il r
 | `bun run banc:down` | Arrête le banc de test et efface tout ce qu'il contenait |
 | `bun run banc:prepare` | Reconstruit la base du banc depuis les collections du code, vide |
 | `bun run banc:source` | Crée la fausse base Strapi que lit l'import, banc démarré : base, rôle en lecture seule, photos dans le stockage. Relancée, elle la recrée à l'identique et donne la même empreinte. `--empreinte` la lit sans la toucher, `--effacer` la supprime (voir `docs/tests/source-strapi.md`) |
+| `bun run banc:import` | L'import des données de l'ancien site sur le banc : il lit la fausse base Strapi et écrit dans la base du banc. À blanc par défaut, `--reel` pour écrire (voir `docs/migration/IMPORT.md`) |
+| `bun run migration:import` | L'import des données de l'ancien site, avec `DATABASE_URI` et `STRAPI_SOURCE_URI` de l'environnement. À blanc par défaut ; `--reel` écrit ; une base qui n'est pas sur ce poste demande `--cible-distante` (voir `docs/migration/IMPORT.md`) |
 | `bun run test:integration` | Les tests d'intégration de `tests/integration/`, sur le banc. Avec un chemin : ce fichier seul |
 | `bun run test:e2e` | Les essais de bout en bout de `tests/e2e/`, dans un vrai navigateur, contre l'application construite et branchée sur le banc. Avec un chemin : ce fichier seul |
 | `bun run sondes` | Les sondes de `tests/sondes/` : lisent le site en ligne, en GET seulement, 2 requêtes par seconde au plus. Une autre cible par `SONDES_CIBLE` (voir « Les sondes du site en ligne ») |
@@ -458,7 +463,7 @@ bun run banc:down                                              # arrête tout et
 - Toute règle d'accès a ses lignes dans la matrice d'accès, jouées par l'API REST et par l'API locale avec les règles actives : `tests/integration/payload-acces.test.ts`.
 - Sur le banc, l'application envoie tous ses mails au capteur. Un test lit le sien, avec son destinataire, son sujet et ses liens : `await attendreLeMail({ pour: adresse })`.
 - Un test dépose un objet dans le stockage et le relit : `await deposerUnObjet(cle, contenu)`, `await lireUnObjet(cle)`.
-- L'import se teste sur une fausse base Strapi qui porte chaque cas connu de la vraie, ouverte en lecture seule, avec ses photos dans le stockage : `bun run banc:source` la crée, à l'identique à chaque fois.
+- L'import se teste sur une fausse base Strapi qui porte chaque cas connu de la vraie, ouverte en lecture seule, avec ses photos dans le stockage : `bun run banc:source` la crée, à l'identique à chaque fois. `bun run banc:import --reel` y lance l'import ; un test le lance par `importerSurLeBanc()` (`tests/outils/import.ts`).
 - La connexion Google se teste sans compte Google ni secret : le faux Google tient la place de Google (`GOOGLE_OIDC_ISSUER`), et un test choisit qui se connecte et comment cela finit, parmi quatre scénarios : `fauxGoogle().choisir({ scenario: 'refus' })`.
 
 Le détail est dans [`docs/tests/banc.md`](docs/tests/banc.md) : les services et leurs adresses, les deux variables d'instance, l'écriture d'un test d'intégration, la remise à zéro, le capteur de mails, le stockage d'objets, la fabrique de comptes et ses types, le jeu de comptes fixes, le faux Google et ses quatre scénarios, les images épinglées, la fausse base Strapi.
