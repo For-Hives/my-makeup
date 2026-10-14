@@ -24,8 +24,8 @@
 
 import type { Payload } from 'payload'
 import { formatZone, rayonKm, villeAffichee } from '@/lib/format-zone'
-import { cibleDeLAdresse, valeursARechercher } from '@/lib/profil/adresse'
 import { estMontantDePrix, prixMinimal } from '@/lib/prix'
+import { cibleDeLAdresse, valeursARechercher } from '@/lib/profil/adresse'
 import { nomAffiche, texte } from '@/lib/profil/nom-affiche'
 import { estIndexable, FILTRE_LISTE } from '@/lib/profil/visibilite'
 import {

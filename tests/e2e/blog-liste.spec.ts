@@ -33,7 +33,8 @@ test.describe('Blog', () => {
 		]
 		try {
 			// `publishedAt` is written by the server at the first publication: the second article comes later.
-			await new Promise(suite => setTimeout(suite, 1100))
+			const debut = Date.now()
+			await expect.poll(() => Date.now() - debut, { intervals: [250] }).toBeGreaterThan(1100)
 			identifiants.push(
 				await creerContenu(request, 'articles', {
 					title: `Essai ${recent}`,
