@@ -141,3 +141,32 @@ Ce que la v3 change par rapport au site actuel est dans [`CHANGEMENTS-VOULUS.md`
   - Vérifié : installation figée sans changement ; Biome et contrôle de types verts ; 863 tests unitaires verts et 1 sauté ; 354 garde-fous de la CI verts ; build de production vert. Sur un banc à part, 37 tests d'intégration et 8 essais de bout en bout verts.
   - L'image Docker n'a pas été reconstruite sur le poste. La CI de GitHub l'a construite et contrôlée sur `85062b7` : CI 38507350913, verte, `qualite` 21 s, `unit` 14 s, `build` 1 min 27 s, `ci-ok` 2 s, 1 min 35 s en tout.
   - La branche `main` n'a reçu aucun commit.
+- **Ticket 014, pas fini : la CI lance aussi les tests d'intégration et les essais de bout en bout, sur le banc.**
+  - `ci.yml` a cinq jobs : `qualite`, `unit`, `build`, `integration`, et `e2e` en deux lots côte à côte. `ci-ok` attend les cinq. Chaque job du banc le démarre par `bun run banc:up` ; chaque lot `e2e` construit l'application lui-même et n'attend pas `build`. La plus longue chaîne de limites reste `build` puis `ci-ok`, 14 minutes ; `integration` et chaque lot `e2e` sont limités à 10 minutes.
+  - Une garde de plus fige les deux jobs du banc. Le script de `ci-ok` est rouge quand `integration` ou `e2e` échoue, est annulé ou sauté.
+  - Le contrôle de dérive de schéma est prêt : `bun run schema:derive`, sans base ni secret, en 0,5 s environ. Il n'entre dans la CI qu'au ticket 049. Aucune dérive au 14/10/2026.
+  - `bun run ci:canari` écrit maintenant quatre fautes : la quatrième est un essai de bout en bout faux, `tests/e2e/canari.spec.ts`.
+  - Vérifié sur un poste par l'auteur : 37 tests d'intégration verts en 7,2 s ; chaque lot `e2e` avec `CI=true`, 4 essais verts ; l'essai faux planté rend rouges son lot, puis le script de `ci-ok`.
+  - Reste : l'essai faux sur GitHub, avec le canari (ticket 029).
+- **Ticket 023 fait : le banc contient une fausse base Strapi qui porte les cas connus de la vraie.**
+  - `bun run banc:source` crée, banc démarré, la base `strapi_source_test` : les 16 tables Strapi que lit l'import, au schéma de l'instantané du 13/10/2026, et leurs photos dans le stockage du banc. Tout est fictif et déterministe : relancée, la commande donne la même empreinte.
+  - Les cas portés : hash bcrypt `$2a$10$`, comptes Google avec et sans mot de passe, comptes Facebook, un email sur 4 comptes, 13 profils sans propriétaire, une ville saisie en adresse, des prix en texte, un fichier dont l'objet manque, des liens vers une entrée disparue. L'inventaire, 64 lignes, est dans `docs/tests/source-strapi.md`, le nombre réel du 13/10/2026 en face du nombre factice.
+  - La source s'ouvre par le rôle `lecture_strapi`, sous la nouvelle variable `STRAPI_SOURCE_URI` de `.env.test`, que la garde des tests contrôle. Trois comptes ont un mot de passe de fixture connu. Les hash sont calculés par PostgreSQL (pgcrypto) : aucune dépendance nouvelle.
+  - Vérifié : 9 tests d'intégration (empreinte stable, inventaire relu dans la base créée, huit sortes d'écriture refusées au rôle, hash vérifiés par une autre implémentation de bcrypt) et 28 tests unitaires.
+  - Constat du relecteur, non corrigé : le rôle peut lever pour lui-même la lecture seule par défaut, puis créer des grands objets, que l'empreinte ne voit pas, et changer ses propres réglages. Il n'a toujours aucun droit d'écrire dans les 16 tables.
+- **Ticket 036 fait : chaque changement visible a sa note de version en français.**
+  - Les notes vivent dans `src/content/changelog.json`, en attente puis publiées. `bun run notes:ajouter <type> "<phrase>"` en ajoute une. La règle refuse une phrase vide ou de plus de 280 caractères, un nom de fichier, du code, un email ou un téléphone ; un test l'applique à tout le fichier.
+  - `bun run release:publier --a-blanc` montre la prochaine version sans rien écrire. Dans le workflow `release.yml`, la publication réserve le numéro suivant, range les notes sous ce numéro, écrit `.release/version.json`, puis pousse le commit et l'étiquette `vX.Y.Z` d'un seul coup, sans forcer. Premier numéro : 3.0.0.
+  - `release.yml` part quand la CI finit verte sur une poussée de `main`, et relit `ci-ok` sur le commit avant de publier.
+  - Vérifié : 35 tests de publication sur de vrais dépôts git, dont deux publications concurrentes qui ne prennent jamais le même numéro ; 49 tests de la règle des notes ; 38 garde-fous du workflow, C01 à C03 compris.
+  - Non vérifié : le workflow n'a jamais tourné. GitHub ne le lance que depuis la branche par défaut, donc pas avant la fusion de `v3` dans `main`. La protection prévue pour `main` refusera sa poussée tant qu'elle n'a pas d'exception pour lui.
+- **Ticket 155 fait : des sondes en lecture seule contrôlent des profils au hasard et la page 404.**
+  - `bun run sondes` lit le site en ligne, ou l'origine donnée par `SONDES_CIBLE`. R01 vérifie d'abord la garde : tout ce qui n'est pas un GET, tout ce qui va vers `/u` ou vers un autre hôte, tout cookie est interrompu avant de partir. R03 : 5 profils tirés du sitemap répondent 200, avec un `h1` dans le HTML du serveur, sans « undefined » ni « null ». R04 : une adresse inconnue répond 404, à la racine et sous `/profil/`.
+  - Une requête à la fois, 500 ms au moins entre deux. Le rapport désigne un profil par une empreinte de 8 caractères, jamais par son adresse.
+  - Vérifié : 71 tests unitaires, contre un site simulé ; la garde des essais de bout en bout refuse toujours la prod (U86). Un lancement contre le site en ligne, par l'auteur, le 14/10/2026 : R01, R03 et R04 verts, 8 lectures en 3,6 s.
+  - Non vérifié : un lancement depuis GitHub, et contre le banc (ticket 156).
+- **Intégration des tickets 014, 023, 036 et 155 dans `v3`.**
+  - Quatre fusions, dans cet ordre : `942a6b3`, `d55dd4e`, `c961d7b`, `0fe9141`. Un conflit, dans `package.json` : les scripts des deux côtés sont gardés.
+  - Vérifié : installation figée sans changement ; Biome et contrôle de types verts ; 1 046 tests unitaires verts et 1 sauté ; 434 garde-fous de la CI verts ; build de production vert. Sur un banc à part, 46 tests d'intégration et 8 essais de bout en bout verts. `bun run schema:derive` : aucune dérive.
+  - Les sondes n'ont pas été relancées à l'intégration : elles lisent le site en ligne.
+  - La branche `main` n'a reçu aucun commit.
