@@ -6,6 +6,7 @@
  *   bun scripts/migration/import.ts --rapport r.json   also writes the report as JSON
  *   bun scripts/migration/import.ts --decisions d.json the table of decisions (accounts that share an email)
  *   bun scripts/migration/import.ts --revue v.json     also writes the private list of the cities to review
+ *   bun scripts/migration/import.ts --consentement-le 2026-11-02   the date of the switch: the consent date of the profiles that show a phone or an email today
  *
  * The cities become communes of the official list (geo.api.gouv.fr). Its answers are kept in a
  * file (`--communes`, by default .migration/referentiel-communes.json, never versioned): a second
@@ -42,6 +43,7 @@ import {
 import { AUCUNE_DECISION, type Decisions, lireLesDecisions } from './import/decisions'
 import { importer } from './import/importer'
 import { ImportInterrompu, messageDUneErreurInattendue } from './import/moteur'
+import { dateDeBascule } from './import/profils'
 import { codeDeSortie, rapportEnTexte } from './import/rapport'
 import {
 	lireLesReponses,
@@ -102,6 +104,11 @@ async function principal(argumentsDeLaCommande: string[]): Promise<number> {
 	const adresseDeLaSource = process.env.STRAPI_SOURCE_URI
 	if (!adresseDeLaSource)
 		throw new ImportRefuse('STRAPI_SOURCE_URI manque : l’import ne sait pas quelle base Strapi lire. Rien n’est écrit.')
+	const consentiLe = options.consentiLe === undefined ? undefined : dateDeBascule(options.consentiLe)
+	if (consentiLe === null)
+		throw new ImportRefuse(
+			'La date de --consentement-le n’est pas une date (2026-11-02, ou 2026-11-02T08:00:00Z) : rien n’est écrit.'
+		)
 	const decisions = options.decisions ? lireLeFichierDesDecisions(options.decisions) : AUCUNE_DECISION
 	const fichierDesCommunes = options.communes ?? FICHIER_DES_COMMUNES_PAR_DEFAUT
 	const referentiel = referentielGarde(
@@ -122,6 +129,7 @@ async function principal(argumentsDeLaCommande: string[]): Promise<number> {
 			mode: options.mode,
 			cible,
 			decisions,
+			consentiLe,
 			referentiel,
 			medias: { base: baseDesMedias },
 			// Read by its owner only: what was asked of the referential for each city to review.

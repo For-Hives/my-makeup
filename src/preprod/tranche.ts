@@ -75,6 +75,12 @@ export type IssueDuDemarrage =
 	| { etat: 'deja-remplie'; documents: Record<string, number> }
 	| { etat: 'importee'; code: number; rapport: Rapport }
 
+/**
+ * The date of the switch the pre-production gives the import (`--consentement-le`): fixed, so that a
+ * second start finds the consent dates of the fictional source's profiles unchanged. Made up.
+ */
+const DATE_DE_BASCULE_DE_LA_PREPROD = '2026-11-02T08:00:00.000Z'
+
 const journalParDefaut = (ligne: string): void => console.log(`[preprod] ${ligne}`)
 
 /** The `pg` module Payload's adapter connects with: the client of the source too. */
@@ -198,7 +204,15 @@ export async function demarrerLaPreprod(payload: Payload, options: OptionsDeDema
 	const referentiel = referentielGarde(lireLesReponses(JSON.stringify(referentielDuBanc)), null)
 	const sourceOuverte = ouvrirLaSourcePg(lecture, clientPg(payload))
 	try {
-		const rapport = await importer({ payload, source: sourceOuverte, mode: 'reel', cible, decisions, referentiel })
+		const rapport = await importer({
+			payload,
+			source: sourceOuverte,
+			mode: 'reel',
+			cible,
+			decisions,
+			referentiel,
+			consentiLe: DATE_DE_BASCULE_DE_LA_PREPROD,
+		})
 		for (const ligne of rapportEnTexte(rapport).split('\n')) if (ligne.trim() !== '') journal(ligne)
 		const code = codeDeSortie(rapport)
 		journal(`Import de démarrage fini, code ${code} : ${SENS_DU_CODE[code] ?? 'voir le rapport'}.`)

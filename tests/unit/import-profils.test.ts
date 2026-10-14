@@ -211,6 +211,11 @@ describe('les profils attendus', () => {
 			experiences: [],
 			prestations: [],
 			reseaux: null,
+			// Its contact details (ticket 064): none at the source, so closed, without date or source.
+			coordonnees: { telephone: null, email: null },
+			contactPublic: false,
+			consentiLe: null,
+			sourceConsentement: null,
 			statutChoisi: 'automatique',
 			statut: 'publie',
 			createdAt: '2023-05-12T09:20:00.000Z',

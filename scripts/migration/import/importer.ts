@@ -20,7 +20,7 @@
 
 import type { Payload } from 'payload'
 import { ADAPTATEUR_ARTICLES, articlesAttendus, articlesRepartis, lireLesArticles } from './articles'
-import type { GenreDeCible } from './cible'
+import { type GenreDeCible, ImportRefuse } from './cible'
 import { type CasARevoir, communesDesProfils } from './communes'
 import { ADAPTATEUR_COMPTES, comptesAttendus, lireLesComptes, repartitionDesComptes } from './comptes'
 import { AUCUNE_DECISION, type Decisions } from './decisions'
@@ -46,7 +46,14 @@ import {
 	planifier,
 	type Refus,
 } from './moteur'
-import { ADAPTATEUR_PROFILS, lireLesProfils, profilsAttendus, profilsLaisses, videALaSource } from './profils'
+import {
+	ADAPTATEUR_PROFILS,
+	affichesALaSource,
+	lireLesProfils,
+	profilsAttendus,
+	profilsLaisses,
+	videALaSource,
+} from './profils'
 import type { BilanDeCollection, Mode, PariteDeCollection, Rapport } from './rapport'
 import type { Referentiel } from './referentiel'
 import { empreinteDesTables, memesTables, type Source } from './source'
@@ -66,6 +73,12 @@ export interface OptionsDImport {
 	 * asked and the communes they could be. The command writes it where `--revue` says.
 	 */
 	surLaRevue?: (revue: CasARevoir[]) => void
+	/**
+	 * The date of the switch, an ISO string (`dateDeBascule`, ./profils.ts): the date of the consent of
+	 * the profiles that show a phone or an email on the old site (ticket 064). Required as soon as
+	 * one profile taken does; the run stops before any write without it.
+	 */
+	consentiLe?: string
 	/** The password of a new account; random by default. Given by a test only. */
 	tirerMotDePasse?: () => string
 	/**
@@ -151,6 +164,7 @@ export async function importer(options: OptionsDImport): Promise<Rapport> {
 		surLaRevue,
 		tirerMotDePasse,
 		medias,
+		consentiLe = null,
 	} = options
 	const avant = await source.lire(requete => empreinteDesTables(requete))
 	const lu = await source.lire(async requete => ({
@@ -197,6 +211,11 @@ export async function importer(options: OptionsDImport): Promise<Rapport> {
 
 		// Before any write: the referential may not answer, or a line of the table name an unknown commune.
 		const nonPris = new Set<number>([...laisses.ecartes, ...laisses.spam])
+		// Before any write: the consent of a profile that shows contact details needs its date.
+		if (consentiLe === null && lu.profils.some(profil => !nonPris.has(profil.id) && affichesALaSource(profil)))
+			throw new ImportRefuse(
+				'Des profils affichent un téléphone ou un email sur l’ancien site : la date de bascule manque (--consentement-le). Rien n’est écrit.'
+			)
 		const communes = await communesDesProfils(
 			lu.profils
 				.filter(({ id }) => !nonPris.has(id))
@@ -261,7 +280,7 @@ export async function importer(options: OptionsDImport): Promise<Rapport> {
 
 		// Each photo points at its media in Payload, read once the media are written.
 		const idsDesMedias = await idsDansLaCible(payload, ADAPTATEUR_MEDIAS, lesMedias, rapport.collections.media.refuses)
-		const profils = profilsAttendus(lu.profils, idsDesComptes, laisses, communes.communes, idsDesMedias)
+		const profils = profilsAttendus(lu.profils, idsDesComptes, laisses, communes.communes, idsDesMedias, consentiLe)
 		compterLesEcarts(rapport.ecarts, profils.attendus)
 		if (laisses.spam.length > 0) rapport.ecarts[REFERENCES.profilsDuSpam] = laisses.spam.length
 		rapport.collections.profils = {
