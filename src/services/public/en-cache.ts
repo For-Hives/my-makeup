@@ -30,3 +30,15 @@ export const lAnnuaireEnCache = unstable_cache(
 	['public:annuaire'],
 	{ tags: [ETIQUETTES.profils], revalidate: UNE_HEURE }
 )
+
+/**
+ * The same directory with the texts a search by a word looks into (ticket 099). Kept apart from the one
+ * above, which the search by city and the pages without a word read: it is heavier, and read only when a
+ * word was typed. The word itself is never part of the key: the directory is cached, the search is made
+ * on it in memory.
+ */
+export const lAnnuaireAvecLesTextesEnCache = unstable_cache(
+	async () => lireLAnnuaire(await getPayload({ config }), { avecLesTextes: true }),
+	['public:annuaire-textes'],
+	{ tags: [ETIQUETTES.profils], revalidate: UNE_HEURE }
+)

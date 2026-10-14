@@ -30,6 +30,11 @@
 			"id": "tu-restes-connectee-tant-que-tu-passes-dans-ton-espace-pe",
 			"type": "amelioration",
 			"text": "Tu restes connectée tant que tu passes dans ton espace, pendant 90 jours au plus."
+		},
+		{
+			"id": "quand-une-recherche-ne-trouve-personne-la-page-propose-ma",
+			"type": "amelioration",
+			"text": "Quand une recherche ne trouve personne, la page propose maintenant la zone voisine, et un lien pour créer ton profil si tu es maquilleuse."
 		}
 	],
 	"releases": []

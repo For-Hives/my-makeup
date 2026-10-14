@@ -1,10 +1,12 @@
 import Image from 'next/image'
 import { BlocDeRecherche } from '@/components/blocs/BlocDeRecherche'
+import { AucunResultat } from '@/components/recherche/EtatsDeRecherche'
 import { ListeDeResultats } from '@/components/recherche/ListeDeResultats'
 import { sectionsParLieu } from '@/lib/recherche/lieu'
-import { lireLaRecherche, rechercheParVille, titreDesResultats } from '@/lib/recherche/saisie'
+import { chercher } from '@/lib/recherche/resultats'
+import { lireLaRecherche, rechercheParMot, rechercheParVille, titreDesResultats } from '@/lib/recherche/saisie'
 import { metadonnees } from '@/lib/seo/metadonnees'
-import { lAnnuaireEnCache } from '@/services/public/en-cache'
+import { lAnnuaireAvecLesTextesEnCache, lAnnuaireEnCache } from '@/services/public/en-cache'
 
 // The address is the search: read at each request. The directory it ranks is read through the cache
 // of Next, tagged `profils` (ticket 047).
@@ -20,19 +22,22 @@ export const metadata = metadonnees({
 })
 
 /**
- * The search page (ticket 098): `/search?city=…`. The address is the only source of the search. A search by
- * city shows first the artists of the city or of the département typed, and counts only them in the
- * title; the others follow under their own headings. A profile that is hidden, unavailable or entirely
- * empty is not in the directory it ranks (src/lib/profil/visibilite.ts).
+ * The search page: `/search?search=…&city=…&page=…`. The address is the only source of the search.
  *
- * A search by a word, alone or with a city, is ticket 099: until then it shows the same invitation as a
- * search without anything. The pages of 20, the error state and the brake are ticket 100.
+ * - By city (ticket 098): the artists of the city or of the département typed come first and are the
+ *   only ones the title counts; the others follow under their own headings.
+ * - By a word, alone or with a city (ticket 099): the listed profiles that hold the words, best first
+ *   (src/lib/recherche/pertinence.ts); with a city, hers come first, as above.
+ * - The pages of 20, the error state and the brake by address are ticket 100.
+ *
+ * A profile that is hidden, unavailable or entirely empty is not in the directory it ranks
+ * (src/lib/profil/visibilite.ts). The text typed is never logged and never measured.
  */
 export default async function PageDeRecherche({ searchParams }: PageProps<'/search'>) {
 	const recherche = lireLaRecherche(await searchParams)
 	const { search, city } = recherche
 
-	if (!rechercheParVille(recherche)) {
+	if (!rechercheParVille(recherche) && !rechercheParMot(recherche)) {
 		return (
 			<main className="relative flex flex-1 flex-col">
 				<BlocDeRecherche search={search} city={city} surLaPageDeRecherche />
@@ -49,49 +54,53 @@ export default async function PageDeRecherche({ searchParams }: PageProps<'/sear
 		)
 	}
 
-	const annuaire = await lAnnuaireEnCache()
-	const { locaux, parLieu, sections } = sectionsParLieu(annuaire, city)
-	const total = annuaire.length
+	const annuaire = await (rechercheParMot(recherche) ? lAnnuaireAvecLesTextesEnCache : lAnnuaireEnCache)()
+	const { locaux, parLieu, sections } = chercher(annuaire, recherche)
+	const tous = [...locaux, ...sections.flatMap(section => section.profils)]
+	const locauxDeLaPage = locaux
+	const groupes = sections
+		.map(section => ({ section, profils: section.profils }))
+		.filter(({ profils }) => profils.length > 0)
 
 	return (
 		<main className="relative flex flex-1 flex-col">
 			<BlocDeRecherche search={search} city={city} surLaPageDeRecherche />
-			{total === 0 ? (
-				<div className="mx-auto flex w-full max-w-2xl flex-col items-center gap-4 px-4 py-24 text-center">
-					<h1 className="font-bold text-2xl text-gray-800">{titreDesResultats(recherche, 0)}</h1>
-					<p className="text-gray-700">
-						Essayez un autre mot (mariage, soirée, effets spéciaux…), une ville voisine ou la recherche sans ville.
-					</p>
-				</div>
+			{tous.length === 0 ? (
+				<AucunResultat
+					titre={titreDesResultats(recherche, 0)}
+					search={search}
+					city={city}
+					departements={city ? sectionsParLieu(annuaire, city).departements : []}
+				/>
 			) : (
 				<div className="w-full px-4 pb-16 md:px-16">
 					<h1 className="mb-8 font-bold text-2xl text-gray-800">
-						{titreDesResultats(recherche, parLieu ? locaux.length : total)}
+						{titreDesResultats(recherche, parLieu ? locaux.length : tous.length)}
 					</h1>
 					{parLieu && locaux.length === 0 && (
 						<p className="-mt-4 mb-8 text-gray-700">
 							Aucune maquilleuse n’indique « {city} » (ville ou département) dans son profil.
 						</p>
 					)}
-					{locaux.length > 0 && (
+					{locauxDeLaPage.length > 0 && (
 						<section aria-labelledby="recherche-titre-locaux">
 							<h2 id="recherche-titre-locaux" className="sr-only">
-								Maquilleuses de « {city} »
+								{parLieu ? `Maquilleuses de « ${city} »` : 'Résultats'}
 							</h2>
-							<ListeDeResultats cartes={locaux.map(({ carte }) => carte)} premiereDeLaPage />
+							<ListeDeResultats cartes={locauxDeLaPage.map(({ carte }) => carte)} premiereDeLaPage />
 						</section>
 					)}
-					{sections.map((section, rang) => (
+					{groupes.map(({ section, profils }, rang) => (
 						<section key={section.cle} aria-labelledby={`recherche-titre-${section.cle}`}>
 							<h2
 								id={`recherche-titre-${section.cle}`}
-								className={`mb-8 font-bold text-gray-800 text-xl ${rang > 0 || locaux.length > 0 ? 'mt-12' : ''}`}
+								className={`mb-8 font-bold text-gray-800 text-xl ${rang > 0 || locauxDeLaPage.length > 0 ? 'mt-12' : ''}`}
 							>
 								{section.titre}
 							</h2>
 							<ListeDeResultats
-								cartes={section.profils.map(({ carte }) => carte)}
-								premiereDeLaPage={rang === 0 && locaux.length === 0}
+								cartes={profils.map(({ carte }) => carte)}
+								premiereDeLaPage={rang === 0 && locauxDeLaPage.length === 0}
 							/>
 						</section>
 					))}

@@ -10,7 +10,10 @@ import { correspondanceLieu, lieuDuProfil, lireLieu, type PlaceDuProfil, section
 import {
 	champ,
 	LONGUEUR_MAX_DE_LA_SAISIE,
+	lireLaPage,
 	lireLaRecherche,
+	PAGE_MAX,
+	rechercheParMot,
 	rechercheParVille,
 	rechercheValide,
 	titreDesResultats,
@@ -53,6 +56,7 @@ describe('U17 : la saisie, normalisée', () => {
 		expect(lireLaRecherche({ search: ' mariage ', city: ['Annecy', 'Lyon'], page: '3', x: 'y' })).toEqual({
 			search: 'mariage',
 			city: 'Annecy',
+			page: 3,
 		})
 	})
 
@@ -103,6 +107,55 @@ describe('U17 : la saisie, normalisée', () => {
 	})
 })
 
+describe('U18 : les paramètres de l’adresse, leurs défauts et leurs bornes', () => {
+	test('sans paramètre : ni mot, ni ville, première page', () => {
+		expect(lireLaRecherche({})).toEqual({ search: '', city: '', page: 1 })
+	})
+
+	test('la page est un entier de 1 à 1 000, sinon la première', () => {
+		for (const [valeur, attendu] of [
+			['1', 1],
+			['2', 2],
+			['1000', 1000],
+			['1001', 1],
+			['0', 1],
+			['-3', 1],
+			['2.5', 1],
+			['1e2', 1],
+			['abc', 1],
+			['', 1],
+			[['4', '5'], 4],
+			[undefined, 1],
+			[7, 1],
+			['99999', 1],
+		] as const)
+			expect(lireLaPage(valeur), String(valeur)).toBe(attendu)
+		expect(PAGE_MAX).toBe(1000)
+	})
+
+	test('« specialite » dit ce que dit « search » quand « search » est vide, jamais l’inverse', () => {
+		expect(lireLaRecherche({ specialite: 'mariage', city: 'Annecy' })).toMatchObject({ search: 'mariage' })
+		expect(lireLaRecherche({ search: 'soirée', specialite: 'mariage' })).toMatchObject({ search: 'soirée' })
+		expect(lireLaRecherche({ specialite: ['a', 'b'] })).toMatchObject({ search: 'a' })
+	})
+
+	test('un paramètre inconnu est ignoré', () => {
+		expect(lireLaRecherche({ x: 'y', rayon: '30', limit: '500' })).toEqual({ search: '', city: '', page: 1 })
+	})
+
+	test('l’adresse de la page garde le mot et la ville, et laisse la première page sans paramètre', () => {
+		expect(urlPageRecherche({ search: 'mariage', city: 'Annecy', page: 1 })).toBe('/search?search=mariage&city=Annecy')
+		expect(urlPageRecherche({ search: 'mariage', city: 'Annecy', page: 3 })).toBe(
+			'/search?search=mariage&city=Annecy&page=3'
+		)
+		expect(urlPageRecherche({ search: 'été & soirée', page: 2 })).toBe(
+			'/search?search=%C3%A9t%C3%A9+%26+soir%C3%A9e&page=2'
+		)
+		expect(urlPageRecherche({ page: 2 })).toBe('/search?page=2')
+		expect(urlPageRecherche({ page: 99999 })).toBe(`/search?page=${PAGE_MAX}`)
+	})
+})
+
 describe('U19 : sans critère, sans erreur', () => {
 	test('une adresse sans paramètre n’est pas une recherche, et ne lève rien', () => {
 		for (const parametres of [{}, { search: '', city: '' }, { search: '   ' }, { city: [] }, undefined]) {
@@ -119,10 +172,18 @@ describe('U19 : sans critère, sans erreur', () => {
 		expect(rechercheParVille(lireLaRecherche({ city: 'Toute la France' }))).toBe(false)
 	})
 
-	test('un mot, seul ou avec une ville, n’est pas une recherche par ville : il vient avec le ticket du mot-clé', () => {
+	test('un mot, seul ou avec une ville, est une recherche par mot et non par ville', () => {
 		expect(rechercheValide(lireLaRecherche({ search: 'mariage' }))).toBe(true)
 		expect(rechercheParVille(lireLaRecherche({ search: 'mariage' }))).toBe(false)
 		expect(rechercheParVille(lireLaRecherche({ search: 'mariage', city: 'Annecy' }))).toBe(false)
+		expect(rechercheParMot(lireLaRecherche({ search: 'mariage' }))).toBe(true)
+		expect(rechercheParMot(lireLaRecherche({ search: 'mariage', city: 'Annecy' }))).toBe(true)
+		// A mot with a place the page cannot rank by is still a word.
+		expect(rechercheParMot(lireLaRecherche({ search: 'mariage', city: 'France' }))).toBe(true)
+		// The city typed twice, or alone, is a search by city.
+		expect(rechercheParMot(lireLaRecherche({ search: 'Annecy', city: 'annecy' }))).toBe(false)
+		expect(rechercheParMot(lireLaRecherche({ city: 'Annecy' }))).toBe(false)
+		expect(rechercheParMot(lireLaRecherche({}))).toBe(false)
 	})
 
 	test('sans lieu utilisable, une seule liste : tout le monde est « local »', () => {
@@ -266,6 +327,53 @@ describe('la lecture de l’annuaire', () => {
 		const texte = JSON.stringify(await lireLAnnuaire(payload))
 		for (const interdit of ['latitude', 'longitude', 'codeInsee', 'filename', '45.9'])
 			expect(texte, interdit).not.toContain(interdit)
+	})
+
+	test('avec les textes, chaque profil porte ce qu’une recherche par mot lit, à côté de sa carte et sans prix', async () => {
+		const { payload, lectures } = payloadEspion([
+			[
+				doc('a', {
+					description: '  Je fais le maquillage de mariage.  ',
+					competences: [{ nom: 'Teint', description: 'Peau mate' }, { nom: ' ' }, { description: 'Sans nom' }],
+					prestations: [
+						{
+							nom: 'Mariée',
+							description: 'Essai inclus',
+							prixTexte: '150 €',
+							prixAPartirDe: 150,
+							options: [{ nom: 'Cils' }],
+						},
+						{ nom: 'Soirée', description: null },
+					],
+				}),
+			],
+		])
+
+		const [a] = await lireLAnnuaire(payload, { avecLesTextes: true })
+
+		// Normalised once, at the read: no accent, lower case.
+		expect(a?.textes).toEqual({
+			ville: 'annecy',
+			specialite: 'mariage',
+			description: 'je fais le maquillage de mariage.',
+			competences: ['teint'],
+			descriptionsDesCompetences: ['peau mate', 'sans nom'],
+			descriptionsDesPrestations: ['essai inclus'],
+			nom: 'fictive',
+			prenom: 'zoe',
+		} as never)
+		// The card is the same keys as without the texts (U22): the texts stay beside it.
+		expect(Object.keys(a?.carte ?? {}).sort()).toEqual(
+			Object.keys((await lireLAnnuaire(payload))[0]?.carte ?? {}).sort()
+		)
+		const select = lectures.find(lecture => lecture.collection === 'profils')?.select as Record<string, unknown>
+		expect(Object.keys(select)).toEqual(expect.arrayContaining(['description', 'competences', 'prestations']))
+		for (const interdit of ['coordonnees', 'contactPublic', 'reseaux', 'noteInterne', 'pro'])
+			expect(select).not.toHaveProperty(interdit)
+		// Without the option, the texts are neither read nor carried.
+		const sans = (await lireLAnnuaire(payload))[0]
+		expect(sans).not.toHaveProperty('textes')
+		expect(JSON.stringify(sans)).not.toContain('150')
 	})
 
 	test('une photo qui n’est qu’un identifiant, ou sans adresse, donne une carte sans photo', async () => {
