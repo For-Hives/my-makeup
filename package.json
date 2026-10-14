@@ -21,7 +21,11 @@
 		"ci:biome": "biome ci . --reporter=github",
 		"typecheck": "next typegen && tsc --noEmit",
 		"test:unit": "bun --no-env-file test ./tests/unit",
-		"test": "bun run test:unit"
+		"test": "bun run test:unit",
+		"banc:up": "bun --no-env-file scripts/banc.ts up",
+		"banc:down": "bun --no-env-file scripts/banc.ts down",
+		"banc:prepare": "bun --no-env-file scripts/banc.ts prepare",
+		"test:integration": "bun --no-env-file scripts/banc.ts test"
 	},
 	"dependencies": {
 		"@hookform/resolvers": "5.9.1",

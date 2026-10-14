@@ -18,6 +18,8 @@ next-env.d.ts
 .env
 .env.*
 !.env.exemple
+# the environment of the local test bench: made-up values only, read by the tests
+!.env.test
 
 # migration working files (dumps, snapshots): local only
 /.migration/
