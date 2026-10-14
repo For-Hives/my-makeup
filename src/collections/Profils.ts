@@ -158,7 +158,9 @@ const INTERNE = { read: champAdminSeulement, create: champAdminSeulement, update
  *   import wrote, nor what an admin decided about it, except the « Super maquilleuse » badge.
  * - Nobody creates a profile through an API but an admin: the server creates it with the account.
  * - Its photos (`photoPrincipale`, `galerie`: 10 at most, in order) are media of its own account:
- *   a makeup artist never attaches the photo of another one (ticket 043).
+ *   a makeup artist never attaches the photo of another one (ticket 043). A photo a save takes out
+ *   of the profile, or the photos of a deleted profile, go to the bin of the storage once nothing
+ *   references them (src/collections/corbeille.ts, added through src/payload.config.ts, ticket 045).
  * - The networks are public. The contact details (`coordonnees`) are read by the owner and an
  *   admin only, never by the public through the API, even when she chose to show them
  *   (`contactPublic`): a public page reads them through src/services/public/. The server traces

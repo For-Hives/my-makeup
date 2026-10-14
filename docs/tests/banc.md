@@ -206,6 +206,30 @@ expect(await listerLesObjets('photos/')).toEqual([{ cle: 'photos/une.webp', tail
 - **Hors du banc, rien n'est lu ni vidé.** Le client s'arrête si `S3_ENDPOINT` ou `S3_BUCKET` ne sont pas exactement ceux du banc de l'instance, et il refuse toute adresse qui n'est pas sur ce poste et tout espace dont le nom ne finit pas par `-test`.
 - **Stockage arrêté** : la même erreur en une phrase que pour le capteur.
 
+### Espionner ce que l'application demande au stockage
+
+L'application écrit ses photos par le client S3 du SDK d'AWS : le greffon de stockage et la corbeille des photos (ticket 045). Un test enregistre chacune de ses requêtes, fait tomber le stockage exprès, et échoue si l'application efface un objet :
+
+```ts
+import { espionnerLeStockage, suppressionsSansCorbeille } from '../outils/espion-s3'
+
+const espion = espionnerLeStockage()
+espion.fairePanne(commande => commande.nom === 'CopyObject') // le stockage « tombe » pour ces requêtes
+// … le test …
+expect(suppressionsSansCorbeille(espion.journal)).toEqual([])
+espion.arreter()
+```
+
+| Outil (`tests/outils/espion-s3.ts`) | Effet |
+|---|---|
+| `espionnerLeStockage()` | Enregistre chaque requête de tout client S3 du processus, dans `espion.journal` : son nom (`PutObject`, `HeadObject`, `CopyObject`, `DeleteObject`…), ce qu'elle a reçu (`Key`, `CopySource`…) et si le stockage a répondu sans erreur |
+| `espion.fairePanne(regle)` | Désormais, une requête pour laquelle `regle` est vraie échoue avant de partir, comme un stockage qui ne répond pas (503) |
+| `espion.arreter()` | Remet le client du SDK comme avant. À appeler après chaque test, sinon le fichier suivant hérite de l'espion |
+| `suppressionsSansCorbeille(journal)` | Les clés retirées sans être la seconde moitié d'un déplacement vers la corbeille : un retrait sans copie confirmée sous `deleted/`, un retrait dans la corbeille, un retrait de plusieurs objets à la fois. Vide quand l'application n'a rien effacé |
+
+- **Il voit tout ce que fait Payload**, parce que Payload tourne dans le processus des tests, et les appels REST aussi. Il ne voit pas le client de test ci-dessus, qui passe par `fetch` : un test vide son espace librement.
+- `tests/integration/media-corbeille.test.ts` s'en sert après chaque test.
+
 ## Préparer la base du banc
 
 ```sh

@@ -7,6 +7,7 @@ import { buildConfig, type CollectionConfig } from 'payload'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import { Admins } from './collections/Admins'
 import { Articles } from './collections/Articles'
+import { avecLaCorbeille } from './collections/corbeille'
 import {
 	aucunEnvoiSansStockage,
 	champsDuStockageFermes,
@@ -20,6 +21,7 @@ import { Talents } from './collections/Talents'
 import { mediaBaseUrl, serverEnv } from './lib/env'
 import { adresseDuMedia, PREFIXE_DES_ENVOIS } from './lib/medias'
 import { requetesBornees } from './lib/requete-bornee'
+import { stockageS3 } from './lib/stockage'
 import { migrations } from './migrations'
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -89,28 +91,34 @@ export default buildConfig({
 		// direct, never through Payload: the base of the photos, then the key (src/lib/medias.ts).
 		// Without a storage the plugin is off, but its fields stay: the schema never depends on the
 		// environment.
-		s3Storage({
-			enabled: env.storage !== undefined,
-			alwaysInsertFields: true,
-			bucket: env.storage?.bucket ?? '',
-			collections: {
-				media: {
-					prefix: PREFIXE_DES_ENVOIS,
-					disablePayloadAccessControl: true,
-					generateFileURL: ({ filename, prefix }) => adresseDuMedia(baseDesMedias, prefix, filename),
+		// The plugin never deletes an object: a photo that no longer serves goes to the bin of the
+		// storage, `deleted/`, and the profiles clean up the photos they no longer reference
+		// (src/collections/corbeille.ts, ticket 045).
+		avecLaCorbeille(
+			s3Storage({
+				enabled: env.storage !== undefined,
+				alwaysInsertFields: true,
+				bucket: env.storage?.bucket ?? '',
+				collections: {
+					media: {
+						prefix: PREFIXE_DES_ENVOIS,
+						disablePayloadAccessControl: true,
+						generateFileURL: ({ filename, prefix }) => adresseDuMedia(baseDesMedias, prefix, filename),
+					},
 				},
-			},
-			config: env.storage
-				? {
-						endpoint: env.storage.endpoint,
-						// R2 answers to the region `auto`; the simulator of the bench ignores it.
-						region: 'auto',
-						// The bucket in the path, as R2 and the simulator both read it.
-						forcePathStyle: true,
-						credentials: { accessKeyId: env.storage.accessKeyId, secretAccessKey: env.storage.secretAccessKey },
-					}
-				: {},
-		}),
+				config: env.storage
+					? {
+							endpoint: env.storage.endpoint,
+							// R2 answers to the region `auto`; the simulator of the bench ignores it.
+							region: 'auto',
+							// The bucket in the path, as R2 and the simulator both read it.
+							forcePathStyle: true,
+							credentials: { accessKeyId: env.storage.accessKeyId, secretAccessKey: env.storage.secretAccessKey },
+						}
+					: {},
+			}),
+			env.storage && stockageS3(env.storage)
+		),
 		champsDuStockageFermes,
 		// Last, so that it sees every collection: a request too large, or that filters or sorts on a
 		// private field, is refused before the database (src/lib/requete-bornee.ts, ticket 048).

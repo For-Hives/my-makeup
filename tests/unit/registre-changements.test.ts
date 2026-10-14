@@ -214,10 +214,12 @@ describe('the register of intended changes', () => {
 	test('a line that says « Aucune » names no address, and the other lines only name pages that change', () => {
 		const withoutPage = lines.filter(line => line.pages.startsWith('Aucune')).map(line => line.key)
 
-		// The two lines whose pages answer as today, and the three deviations from the technical plan
+		// The two lines whose pages answer as today, the bin of the photos, which only the storage
+		// sees, and the three deviations from the technical plan
 		expect(withoutPage).toEqual([
 			'`slug-stocke`',
 			'`recherche-sans-profils-vides`',
+			'`photos-corbeille`',
 			'`emails-resend`',
 			'`groupe-front`',
 			'`next-16-3`',
