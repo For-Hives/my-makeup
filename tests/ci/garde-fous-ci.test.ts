@@ -239,6 +239,14 @@ describe('.dockerignore refuses everything but what the build needs', () => {
 		'postcss.config.json',
 		'src',
 		'public',
+		// The import and the fake Strapi source of the bench, all fictional: the pre-production
+		// poses that source and imports it when it starts on an empty database (ticket 027).
+		'scripts/migration/import',
+		'tests/outils/source-strapi/creation.ts',
+		'tests/outils/source-strapi/donnees.ts',
+		'tests/outils/source-strapi/images.ts',
+		'tests/outils/source-strapi/schema.ts',
+		'tests/fixtures/import/decisions-du-banc.json',
 	]
 	const dockerignore = read('.dockerignore')
 
@@ -562,6 +570,10 @@ describe('the CI reads no secret', () => {
 	const ALLOWED_SECRETS: string[] = [
 		// release.yml pushes the publication on main with the token of its own run (ticket 036).
 		'GITHUB_TOKEN',
+		// preprod.yml reads the page of the fictional profile through the protected access of the
+		// pre-production (ticket 027).
+		'PREPROD_BASIC_AUTH_USER',
+		'PREPROD_BASIC_AUTH_PASSWORD',
 	]
 
 	test('the CI reads none, and the other workflows only the ones of the allowed list', () => {

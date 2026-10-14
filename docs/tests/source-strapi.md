@@ -4,6 +4,8 @@ L'import de la v3 lit la base de l'ancienne API (Strapi 4) et adopte ses photos 
 
 Les tickets d'import (024 et suivants) et la connexion des comptes repris (095) s'en servent. Le schéma de référence est [`docs/migration/SCHEMA.md`](../migration/SCHEMA.md).
 
+La préprod pose la même source, sans ses photos, à côté de sa propre base quand elle démarre sur une base vide, puis l'importe ([`docs/preprod.md`](../preprod.md)). Les deux la créent par les mêmes instructions (`tests/outils/source-strapi/creation.ts`) : bun sur le banc, le client PostgreSQL de Payload dans la préprod. Ce fichier, `donnees.ts`, `images.ts` et `schema.ts` entrent donc dans l'image Docker : ils restent sans API de bun et sans aucune donnée réelle.
+
 | Élément | Où |
 |---|---|
 | La base | Une base à elle, `strapi_source_test`, dans le PostgreSQL du banc, à côté de la base de l'application |
@@ -11,6 +13,7 @@ Les tickets d'import (024 et suivants) et la connexion des comptes repris (095) 
 | Les photos | Dans l'espace du banc (`S3_BUCKET`), là où l'application lit les siennes : à la racine, et sous `1/` |
 | Les données | `tests/outils/source-strapi/donnees.ts` ; les tables : `tests/outils/source-strapi/schema.ts` |
 | L'outil | `tests/outils/source-strapi.ts` ; la commande : `scripts/source-strapi.ts` |
+| Les instructions de création | `tests/outils/source-strapi/creation.ts`, sans API de bun : la préprod s'en sert aussi |
 
 ## La commande
 

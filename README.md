@@ -51,6 +51,7 @@ Le reste :
 - `src/collections/` : les collections de Payload. `src/lib/acces.ts` : qui peut lire, créer, modifier ou supprimer quoi (voir « Accès »).
 - `src/services/public/` : la seule lecture publique des données. Une page publique y lit un profil, champ par champ, avec les règles d'accès d'une visiteuse : jamais une coordonnée, ni ce qu'ont écrit l'import ou un admin.
 - `scripts/migration/` : les outils de la migration, dont l'import des données de l'ancien site (voir `docs/migration/IMPORT.md`).
+- `src/preprod/` : ce que fait la préprod quand elle démarre, et elle seule : sur une base vide, elle pose la fausse base Strapi du banc à côté de sa base et l'importe ; un jeton de `PREPROD_REMISE_A_ZERO` la remet à zéro. `scripts/preprod/controle.ts` : le contrôle que la CI lance contre elle (voir [`docs/preprod.md`](docs/preprod.md)).
 - `src/lib/env.ts` : les variables d'environnement, vérifiées au démarrage par `src/instrumentation.ts`.
 - `src/migrations/` : les migrations versionnées de la base.
 - `src/payload-types.ts` et `src/app/(payload)/admin/importMap.js` : fichiers générés par Payload, versionnés, jamais modifiés à la main.
@@ -205,6 +206,7 @@ L'application vérifie ses variables à chaque démarrage (`bun run dev`, `bun r
 | `SMTP_PORT` | Obligatoire dès que `SMTP_HOST` est réglée. Le port du relais, de 1 à 65535. |
 | `EMAIL_FROM` | Obligatoire dès que `SMTP_HOST` est réglée. L'expéditeur de tous les mails : `Nom <adresse@domaine>`, ou une adresse seule. |
 | `GOOGLE_OIDC_ISSUER` | Facultative. Le fournisseur auquel parle la connexion Google. Absente, c'est Google : `https://accounts.google.com`. Sur ce poste seulement, l'adresse du faux Google du banc de test, comme `http://127.0.0.1:7080`, sans `/` final. Refusée sur le site et sa préprod. |
+| `PREPROD_REMISE_A_ZERO` | Préprod seulement, jamais dans un `.env` local. Un jeton de 8 à 64 caractères (minuscules, chiffres, tirets), comme `2026-10-15-matin` : au démarrage suivant, avant ses migrations, la préprod efface toute sa base et sa fausse source, rejoue les migrations et réimporte la source, une fois par jeton, et seulement sur sa base `mymakeup_preprod`. Refusée partout ailleurs, le site d'abord : l'application ne démarre pas (voir [`docs/preprod.md`](docs/preprod.md)). |
 
 - `bun run build` est la seule exception : il ne vérifie rien, sauf `R2_PUBLIC_URL`, et passe sans secret ni base.
 - Le CLI de Payload (`bun run payload`, `payload:types`, `payload:importmap`, `payload:migrate`…) charge la même configuration : sans `DATABASE_URI` et `PAYLOAD_SECRET` valides, il s'arrête avec le même message. Le `.env` de l'étape 2 de « Démarrer en local » suffit.
@@ -361,6 +363,8 @@ DOCKER_HOST=unix://$XDG_RUNTIME_DIR/podman/podman.sock bun run image:controle
 
 Chaque pull request et chaque poussée sur `v3` lancent `.github/workflows/ci.yml` : cinq jobs en parallèle, puis `ci-ok`, le seul check à exiger pour fusionner.
 
+Chaque poussée sur `v3` lance aussi `.github/workflows/preprod.yml`, qui n'est pas un check requis : il attend que la préprod serve le commit poussé, puis lit la page du profil fictif (voir [`docs/preprod.md`](docs/preprod.md)). Il lit deux secrets du dépôt, l'accès protégé de la préprod, et ne fait que des GET.
+
 | Job | Ce qu'il lance |
 |---|---|
 | `qualite` | Fichiers générés par Payload à jour, `bun run typecheck`, `bun run ci:biome`, `bun run test:ci-garde` |
@@ -426,6 +430,7 @@ Rien ne se publie avant la fusion de `v3` dans `main`. Le détail, et ce qu'il r
 | `bun run image:controle` | Vérifie l'image construite contre une base jetable (voir « Image Docker ») |
 | `bun run notes:ajouter` | Ajoute une note de version en attente : un type (`ajout`, `amelioration`, `correction`), puis la phrase entre guillemets (voir « Notes de version et publication ») |
 | `bun run release:publier` | Avec `--a-blanc` : montre la prochaine publication sans rien écrire. Avec `--pousser` : publie, dans le workflow `release.yml` seulement |
+| `bun run preprod:controle` | Lit la page du profil fictif sur la préprod, après avoir attendu le commit de `CONTROLE_PREPROD_COMMIT` : 200 et son nom en h1. Il lui faut `PREPROD_BASIC_AUTH_USER` et `PREPROD_BASIC_AUTH_PASSWORD` ; `CONTROLE_PREPROD_ADRESSE` vise un build de ce poste (voir [`docs/preprod.md`](docs/preprod.md)) |
 
 Biome se lance par ces scripts ou par `bunx @biomejs/biome`, jamais par `npx biome` : c'est un paquet homonyme.
 

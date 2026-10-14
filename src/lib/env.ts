@@ -35,6 +35,7 @@ export type RawEnv = Partial<
 		| 'PAYLOAD_DROP_DATABASE'
 		| 'PAYLOAD_SECRET'
 		| 'PORT'
+		| 'PREPROD_REMISE_A_ZERO'
 		| 'S3_ACCESS_KEY_ID'
 		| 'S3_BUCKET'
 		| 'S3_ENDPOINT'
@@ -67,6 +68,16 @@ export type StorageEnv = {
 	local: boolean
 }
 
+/**
+ * What the pre-production does that no other environment does (ticket 027, docs/preprod.md): it
+ * imports the fake Strapi source when it starts on an empty database, and empties its database
+ * once for each new token of PREPROD_REMISE_A_ZERO.
+ */
+export type PreprodEnv = {
+	/** The token of the reset asked for, or nothing: the database is kept. */
+	remiseAZero?: string
+}
+
 export type ServerEnv = {
 	databaseUri: string
 	/**
@@ -83,6 +94,11 @@ export type ServerEnv = {
 	mail?: MailEnv
 	payloadSecret: string
 	/**
+	 * Set on the pre-production only: a production build served from its address (ticket 027).
+	 * Nothing anywhere else, the site included.
+	 */
+	preprod?: PreprodEnv
+	/**
 	 * Nothing when S3_ENDPOINT is not set: no photo can then be sent, and the application writes
 	 * nothing on its own disk.
 	 */
@@ -96,6 +112,15 @@ export const SECRET_MIN_LENGTH = 32
 
 /** The two deployed addresses a build can be made for: the site and its pre-production. */
 export const DEPLOYED_ORIGINS: readonly string[] = ['https://my-makeup.fr', 'https://preprod.my-makeup.fr']
+
+/** The address of the pre-production: the only one where the reset and the import at start may run. */
+export const PREPROD_ORIGIN = 'https://preprod.my-makeup.fr'
+
+/**
+ * A token of PREPROD_REMISE_A_ZERO: lower case letters, digits and hyphens, 8 to 64 characters,
+ * such as « 2026-10-15-matin ». It is written into the database once the reset is done.
+ */
+export const JETON_DE_REMISE_A_ZERO = /^[a-z0-9][a-z0-9-]{7,63}$/
 
 /** Google's own OpenID Connect issuer: the only one a deployed site talks to. */
 export const GOOGLE_ISSUER = 'https://accounts.google.com'
@@ -122,6 +147,7 @@ const EXPECTED = {
 	GOOGLE_OIDC_ISSUER: `${GOOGLE_ISSUER}, ou sur ce poste l’adresse du faux Google du banc de test, comme http://127.0.0.1:7080, sans « / » final`,
 	NEXT_PUBLIC_SITE_URL: `${DEPLOYED_ORIGINS.join(', ')} ou une adresse de ce poste comme http://localhost:${DEFAULT_PORT}, sans « / » final`,
 	PAYLOAD_SECRET: `au moins ${SECRET_MIN_LENGTH} caractères, par exemple la sortie de « openssl rand -hex 32 »`,
+	PREPROD_REMISE_A_ZERO: `un jeton de 8 à 64 caractères, minuscules, chiffres et tirets, comme « 2026-10-15-matin », et seulement sur la préprod (${PREPROD_ORIGIN}, en production)`,
 	R2_PUBLIC_URL: 'une adresse https://HÔTE, sans chemin ni « / » final',
 	S3_ACCESS_KEY_ID: 'l’identifiant de la clé d’accès au stockage des photos',
 	S3_BUCKET: 'un nom d’espace : 3 à 63 caractères, minuscules, chiffres, points et tirets',
@@ -374,6 +400,31 @@ function mailEnv(raw: RawEnv, problems: { variable: string; problem: string }[])
 	return from ? { host, port, ...from } : undefined
 }
 
+/**
+ * The pre-production, and what it is asked to do, or nothing (ticket 027). The pre-production is a
+ * production build served from its own address: `next dev`, a test or the site never are.
+ *
+ * PREPROD_REMISE_A_ZERO empties the whole database: it is refused anywhere else than on the
+ * pre-production, the site first, and the server does not start. A token it cannot read is refused
+ * too.
+ */
+function preprodEnv(raw: RawEnv, problems: { variable: string; problem: string }[]): PreprodEnv | undefined {
+	const preprod = raw.NODE_ENV === 'production' && raw.NEXT_PUBLIC_SITE_URL === PREPROD_ORIGIN
+	const jeton = raw.PREPROD_REMISE_A_ZERO?.trim()
+	if (jeton !== undefined && !preprod)
+		problems.push({
+			variable: 'PREPROD_REMISE_A_ZERO',
+			problem: `refusée, car elle efface toute la base et ce n’est pas la préprod. Attendu : ${EXPECTED.PREPROD_REMISE_A_ZERO}.`,
+		})
+	else if (jeton !== undefined && !JETON_DE_REMISE_A_ZERO.test(jeton))
+		problems.push({
+			variable: 'PREPROD_REMISE_A_ZERO',
+			problem: `illisible. Attendu : ${EXPECTED.PREPROD_REMISE_A_ZERO}.`,
+		})
+	if (!preprod) return undefined
+	return jeton === undefined ? {} : { remiseAZero: jeton }
+}
+
 const required = z.string({ error: ABSENT })
 
 const schema = z.object({
@@ -426,6 +477,7 @@ export function parseServerEnv(source: RawEnv): ServerEnv {
 
 	const mail = mailEnv(raw, problems)
 	const storage = storageEnv(raw, problems)
+	const preprod = preprodEnv(raw, problems)
 
 	// A provider of this machine stands in for Google on this machine only. On the site and on
 	// its pre-production, whatever NODE_ENV says, the Google sign-in talks to Google and nobody else.
@@ -446,6 +498,7 @@ export function parseServerEnv(source: RawEnv): ServerEnv {
 		localDatabase: isLocalDatabase(parsed.data.DATABASE_URI),
 		...(mail && { mail }),
 		payloadSecret: parsed.data.PAYLOAD_SECRET,
+		...(preprod && { preprod }),
 		...(storage && { storage }),
 		trustedOrigins: trustedOrigins(parsed.data.NEXT_PUBLIC_SITE_URL, production, raw.PORT),
 	}
@@ -467,6 +520,7 @@ function processEnv(): RawEnv {
 		PAYLOAD_DROP_DATABASE: process.env.PAYLOAD_DROP_DATABASE,
 		PAYLOAD_SECRET: process.env.PAYLOAD_SECRET,
 		PORT: process.env.PORT,
+		PREPROD_REMISE_A_ZERO: process.env.PREPROD_REMISE_A_ZERO,
 		S3_ACCESS_KEY_ID: process.env.S3_ACCESS_KEY_ID,
 		S3_BUCKET: process.env.S3_BUCKET,
 		S3_ENDPOINT: process.env.S3_ENDPOINT,
@@ -483,6 +537,7 @@ function processEnv(): RawEnv {
  * must work with no secret and no database. Nothing is checked then, and a missing secret stays
  * empty: Payload refuses to start with an empty secret, so such a configuration cannot serve.
  * A build sends no mail either: it gets no relay, whatever its environment holds; and no storage.
+ * Nor is it ever the pre-production: nothing is imported or reset while Next builds.
  */
 export function serverEnv(source: RawEnv = processEnv()): ServerEnv {
 	if (source.NEXT_PHASE !== BUILD_PHASE) return parseServerEnv(source)

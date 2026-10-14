@@ -21,6 +21,7 @@ My Makeup est un annuaire de maquilleuses professionnelles indépendantes. Cette
 | monter une version, toucher `renovate.json` | [`docs/qualite.md`](docs/qualite.md), §11 |
 | créer ou changer une collection, un champ, ou l'import des données | [`docs/migration/SCHEMA.md`](docs/migration/SCHEMA.md) |
 | lancer l'import des données de l'ancien site, lire son rapport, y ajouter une collection | [`docs/migration/IMPORT.md`](docs/migration/IMPORT.md) |
+| comprendre ce que fait la préprod au démarrage, la remettre à zéro, lire son contrôle par la CI | [`docs/preprod.md`](docs/preprod.md) |
 | créer, déplacer ou retirer une adresse | [`docs/migration/URLS.md`](docs/migration/URLS.md) |
 | faire autrement que le site en ligne | [`docs/migration/CHANGEMENTS-VOULUS.md`](docs/migration/CHANGEMENTS-VOULUS.md) |
 | savoir ce qui est déjà fait et vérifié | [`docs/migration/JOURNAL.md`](docs/migration/JOURNAL.md) |

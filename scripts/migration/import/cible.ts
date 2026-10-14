@@ -61,8 +61,11 @@ export function configurationSansChangementDeSchema(config: SanitizedConfig): Sa
 	}
 }
 
-/** The collections the import writes. Their tables keep the name Payload gives them from their slug. */
-const COLLECTIONS_ECRITES: readonly CollectionImportee[] = ['pros', 'profils', 'talents']
+/**
+ * The collections the import writes. Their tables keep the name Payload gives them from their slug.
+ * The pre-production reads them too: a database where all of them are empty is an empty one (ticket 027).
+ */
+export const COLLECTIONS_ECRITES: readonly CollectionImportee[] = ['pros', 'profils', 'talents']
 
 /**
  * Refuses a target that does not hold the tables the import writes: the import creates none
