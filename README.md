@@ -48,6 +48,7 @@ Les pages publiques et l'espace maquilleuse partagent une seule coquille HTML, `
 Le reste :
 
 - `src/payload.config.ts` : la configuration de Payload (base PostgreSQL, collections `admins`, `pros`, `profils`, `media`, `talents` et `articles`, stockage d'objets des photos).
+- `src/lib/langue-payload.ts` : Payload parle français, et seulement français : l'enveloppe d'un refus (« Le champ suivant n’est pas valide : Téléphone »), ses propres messages et l'administration, même quand la requête demande l'anglais. Un refus construit avec les erreurs de Payload leur passe `req.t`, sinon il sort en anglais.
 - `src/collections/` : les collections de Payload. `src/lib/acces.ts` : qui peut lire, créer, modifier ou supprimer quoi (voir « Accès »).
 - `src/services/public/` : la seule lecture publique des données. Une page publique y lit un profil, champ par champ, avec les règles d'accès d'une visiteuse : jamais une coordonnée, ni ce qu'ont écrit l'import ou un admin.
 - `scripts/migration/` : les outils de la migration, dont l'import des données de l'ancien site (voir `docs/migration/IMPORT.md`).

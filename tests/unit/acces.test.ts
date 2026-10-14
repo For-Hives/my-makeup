@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test'
-import type { PayloadRequest } from 'payload'
+import { initI18n } from '@payloadcms/translations'
+import { type PayloadRequest, ValidationError } from 'payload'
 import { Admins, DUREE_SESSION_ADMIN_S, premierCompteAdmin, sessionsFermees } from '@/collections/Admins'
 import { Articles } from '@/collections/Articles'
 import {
@@ -54,6 +55,7 @@ import {
 	MESSAGE_GALERIE_IMAGES,
 	TYPES_D_IMAGE,
 } from '@/lib/articles'
+import { LANGUE_DE_PAYLOAD } from '@/lib/langue-payload'
 import { validerPhotosDuProfil } from '@/lib/profil/photos'
 import { STATUTS_DU_PROFIL } from '@/lib/profil/statut'
 
@@ -550,7 +552,13 @@ describe('La collection articles (ticket 046) : les règles des talents (U59)', 
 })
 
 describe('La galerie d’un article ne prend que des images de la rédaction (ticket 046)', () => {
-	/** The hook as Payload calls it, with a database that holds these media, their types and their owners. */
+	/** Payload’s translations in the one language the site gives them (src/lib/langue-payload.ts). */
+	const enFrancais = initI18n({ config: LANGUE_DE_PAYLOAD, context: 'api', language: 'fr' })
+
+	/**
+	 * The hook as Payload calls it: on the field of the gallery, with a request in French and a
+	 * database that holds these media, their types and their owners.
+	 */
 	function enregistrer(valeur: unknown, media: { id: number; mimeType: string | null; owner?: number | null }[]) {
 		const recherches: unknown[] = []
 		const payload = {
@@ -559,9 +567,30 @@ describe('La galerie d’un article ne prend que des images de la rédaction (ti
 				return Promise.resolve({ docs: media })
 			},
 		}
-		const resultat = galerieDImages({ value: valeur, req: { payload } as unknown as PayloadRequest } as never)
+		const resultat = enFrancais.then(({ t }) =>
+			galerieDImages({
+				field: champ(Articles.fields, 'galerie'),
+				value: valeur,
+				req: { payload, t } as unknown as PayloadRequest,
+			} as never)
+		)
 		return { resultat, recherches }
 	}
+
+	test('un refus a une enveloppe en français, qui nomme le champ : jamais « The following field is invalid »', async () => {
+		const { resultat } = enregistrer([1], [{ id: 1, mimeType: 'application/pdf' }])
+
+		const refus = await resultat.then(
+			() => undefined,
+			(erreur: unknown) => erreur
+		)
+		expect(refus).toBeInstanceOf(ValidationError)
+		// Payload's French puts a no-break space before the colon.
+		expect((refus as ValidationError).message).toBe('Le champ suivant n’est pas valide\u00a0: Galerie')
+		expect((refus as ValidationError).data.errors).toEqual([
+			{ label: 'Galerie', message: MESSAGE_GALERIE_IMAGES, path: 'galerie' },
+		])
+	})
 
 	test('JPEG, PNG, WebP, GIF et AVIF sont des images ; un PDF, une vidéo, un SVG, rien du tout n’en sont pas', () => {
 		for (const type of ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif'])

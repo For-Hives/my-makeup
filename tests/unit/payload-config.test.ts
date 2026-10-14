@@ -1,7 +1,8 @@
 import { describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import { createServer } from 'node:net'
-import type { Payload, SanitizedConfig } from 'payload'
+import { initI18n } from '@payloadcms/translations'
+import { Forbidden, getRequestLanguage, type Payload, type SanitizedConfig, ValidationError } from 'payload'
 import { EnvError, type RawEnv } from '@/lib/env'
 import { migrations } from '@/migrations'
 
@@ -120,6 +121,41 @@ describe('src/payload.config.ts is hardened', () => {
 		expect((await configUnder(preproduction)).email).toBeUndefined()
 		// The sender alone switches nothing on.
 		expect((await configUnder({ ...development, EMAIL_FROM: SENDER })).email).toBeUndefined()
+	})
+})
+
+describe('Payload speaks French only, whatever the request asks for (ticket 221)', () => {
+	test('French is the one language Payload offers, and the one it falls back to', async () => {
+		const config = await configUnder(development)
+
+		expect(Object.keys(config.i18n.supportedLanguages)).toEqual(['fr'])
+		expect(config.i18n.fallbackLanguage).toBe('fr')
+	})
+
+	test('a request that asks for English, by its header or by the cookie of the admin panel, gets French', async () => {
+		const config = await configUnder(development)
+		const langue = (headers: Record<string, string>, cookies: Record<string, string> = {}) =>
+			getRequestLanguage({ config, cookies: new Map(Object.entries(cookies)), headers: new Headers(headers) })
+
+		expect(langue({})).toBe('fr')
+		expect(langue({ 'Accept-Language': 'en' })).toBe('fr')
+		expect(langue({ 'Accept-Language': 'en-US,en;q=0.9' })).toBe('fr')
+		expect(langue({ 'Accept-Language': 'de' }, { 'payload-lng': 'en' })).toBe('fr')
+	})
+
+	test('the envelope of a refusal and Payload’s own refusals read in French', async () => {
+		const { t } = await initI18n({ config: (await configUnder(development)).i18n, context: 'api', language: 'fr' })
+
+		const refus = new ValidationError(
+			{ collection: 'profils', errors: [{ label: 'Téléphone', message: 'Trop long.', path: 'telephone' }] },
+			t
+		)
+		// Payload's French puts a no-break space before the colon.
+		expect(refus.message).toBe('Le champ suivant n’est pas valide\u00a0: Téléphone')
+		expect(new Forbidden(t).message).toBe('Vous n’êtes pas autorisé à effectuer cette action.')
+		expect(t('validation:shorterThanMax', { maxLength: 70 })).toBe(
+			'Cette valeur doit être inférieure à la longueur maximale de 70 caractères.'
+		)
 	})
 })
 
