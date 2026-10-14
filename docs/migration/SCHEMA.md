@@ -104,7 +104,7 @@ Seul un fichier désigné par un profil ou un article vivant devient un `media` 
 
 | Lignes de `files` au 13/10/2026 | Lignes | Sort |
 |---|---|---|
-| Désignées par une entrée vivante | 249 | Adoptées sans copie si ce sont des images. 1 n'est pas une image : signalée, non adoptée. 1 a son objet manquant dans le stockage (ligne 127 de `files`) : listée en « 404 connus ». |
+| Désignées par une entrée vivante | 249 | Adoptées sans copie si ce sont des images. 1 n'est pas une image : signalée, non adoptée. 1 a son objet manquant dans le stockage (ligne 127 de `files`) : adoptée quand même, sans taille, et listée en « 404 connus ». |
 | Liées à un profil supprimé | 7 | Non adoptées |
 | Sans aucune ligne de relation | 318 | Non adoptées |
 
@@ -416,7 +416,7 @@ Chaque point a un défaut, écrit dans ce document. Sans décision contraire, c'
 | Profil sans compte, hors de la liste du §4.1 | L'import s'arrête et liste le profil par identifiant ; une décision par profil l'écarte | Tickets 059 et 066 |
 | Texte de ville qui n'est pas une commune | Zone vide, profil à revoir, dans la liste de revue privée de l'import ; une ligne `communes` de sa table de décision le tranche | Tickets 063 et 066 ; question ouverte 13 |
 | Rayon au-dessus de 200 km, galerie de plus de 10 photos, valeur plus longue que la limite cible | Comptés et listés, jamais tronqués | Ticket 066 |
-| Fichier référencé qui n'est pas une image, objet manquant | Signalé, non adopté ; « 404 connus » | Ticket 066 |
+| Fichier référencé qui n'est pas une image, objet manquant | Pas une image : signalé, non adopté. Objet manquant : adopté sans taille, listé en « 404 connus ». Adresse que la v3 ne redonne pas à l'identique, ou fichier désigné par les entrées de plusieurs comptes : refusé, listé | Ticket 066 |
 | Lignes en double dans les listes | Gardées telles quelles, par parité | Question ouverte 15 |
 
 Noms fixés par ce document, parce que le plan ne les donnait pas : `profils.legacyUsername`, `profils.superMaquilleuse`, `profils.photoPrincipale`, `profils.galerie`, `articles.galerie`, les sous-champs de `profils.commune`, de `profils.reseaux` et de `profils.coordonnees`, les champs des listes du §6, `publishedAt`, `profils.sourceConsentement` (ticket 042), `profils.entierementVide`, `profils.actifDepuis`, `profils.publiableDepuis`, `profils.entierementVideDepuis` et `profils.statutChoisi` (ticket 044).
@@ -437,3 +437,6 @@ Noms fixés par ce document, parce que le plan ne les donnait pas : `profils.leg
 | 14/10/2026 | Identité des profils à l'import (ticket 059), sans changer un nom de champ : un profil sans compte hors de la liste du §4.1 arrête l'import, sauf décision par profil (§4.1, §11). |
 | 14/10/2026 | Communes à l'import (ticket 063), sans changer un nom de champ : une adresse postale donne sa commune, jamais sa rue (§5.2) ; un texte de ville à revoir se tranche par la table de décision de l'import (§11). |
 | 14/10/2026 | Migration `init` (ticket 049), sans changer un nom de champ : le schéma de P3 est figé dans une seule migration, `20261014_134242_init`, qui remplace les douze migrations provisoires ; son instantané est celui de la dernière d'entre elles. Tout changement d'une collection vient désormais avec sa migration, dans le même commit (`CLAUDE.md`, « Schéma »). |
+| 14/10/2026 | Photos à l'import (ticket 058), sans changer un nom de champ : une image est un fichier JPEG, PNG, WebP, GIF ou AVIF ; un fichier désigné dont l'objet manque est adopté sans taille et listé en « 404 connus » (§4.3) ; un fichier dont l'adresse n'est pas la base des photos suivie d'une clé que la v3 redonne à l'identique, ou que désignent les entrées de plusieurs comptes, est refusé et attend une décision (§11). Hors de l'import, un média se crée toujours avec son fichier (§8). |
+| 14/10/2026 | Sections des profils à l'import (ticket 060), sans changer un nom de champ : un lien de liste qui ne nomme aucune ligne est signalé, rien n'est inventé à sa place (§7) ; `prixAPartirDe` reste vide jusqu'au ticket 062, le téléphone et l'email de contact jusqu'au ticket 064. |
+| 14/10/2026 | Articles à l'import (ticket 061), sans changer un nom de champ : une image de la galerie est rattachée si son fichier est adopté, un autre fichier est signalé (§5.3). |

@@ -12,6 +12,7 @@ import {
 	statutCalcule,
 	videALaSource,
 } from '../../scripts/migration/import/profils'
+import { SECTIONS_VIDES } from '../../scripts/migration/import/sections'
 import { NOM_NEUTRE, nomAffiche, nomComplet, texte } from '../../src/lib/profil/nom-affiche'
 import { CHAMPS_PUBLICS_DU_PROFIL } from '../../src/services/public/profils'
 
@@ -39,6 +40,7 @@ const profil = (id: number, modif: Partial<ProfilLu> = {}): ProfilLu => ({
 	aPhotoPrincipale: false,
 	prix: [],
 	reseaux: null,
+	sections: SECTIONS_VIDES,
 	...modif,
 })
 
@@ -200,6 +202,15 @@ describe('les profils attendus', () => {
 			disponible: true,
 			score: 12.5,
 			superMaquilleuse: true,
+			// Its sections (ticket 060): none at the source, none in the target.
+			photoPrincipale: null,
+			galerie: [],
+			competences: [],
+			langues: [],
+			formations: [],
+			experiences: [],
+			prestations: [],
+			reseaux: null,
 			statutChoisi: 'automatique',
 			statut: 'publie',
 			createdAt: '2023-05-12T09:20:00.000Z',

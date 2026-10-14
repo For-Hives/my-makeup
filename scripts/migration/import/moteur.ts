@@ -22,12 +22,15 @@ import { CONTEXTE_IMPORT } from '../../../src/lib/contexte-import'
 
 /**
  * How two values of a field are said equal. `objet` is a group of fields (the commune of a
- * profile): equal when every field is, and empty when every field is.
+ * profile): equal when every field is, and empty when every field is. `relations` is a list of
+ * documents in order (a gallery). `liste` is a list of rows (the offers of a profile): equal when
+ * the rows are, in the same order, whatever identifier each row got from Payload. `json` is a
+ * value kept as it is (the formats of a file of the old site), its keys in any order.
  */
-export type Genre = 'texte' | 'date' | 'booleen' | 'nombre' | 'relation' | 'objet'
+export type Genre = 'texte' | 'date' | 'booleen' | 'nombre' | 'relation' | 'relations' | 'objet' | 'liste' | 'json'
 
 /** The collections the import writes. */
-export type CollectionImportee = Extract<CollectionSlug, 'pros' | 'profils' | 'talents'>
+export type CollectionImportee = Extract<CollectionSlug, 'pros' | 'media' | 'profils' | 'articles' | 'talents'>
 
 /**
  * A transformation made on purpose: the field, and where the rule is written. A key of the
@@ -125,12 +128,52 @@ function groupeNormalise(valeur: object): string | null {
 	return champs.length === 0 ? null : JSON.stringify(champs)
 }
 
+/** Compares two names the same way on every machine: by their code units, never by a locale. */
+const parNom = ([a]: [string, unknown], [b]: [string, unknown]): number => (a < b ? -1 : a > b ? 1 : 0)
+
+/** A value with the keys of each of its objects sorted, at every depth: two equal values give the same JSON. */
+function clesTriees(valeur: unknown): unknown {
+	if (Array.isArray(valeur)) return valeur.map(clesTriees)
+	if (typeof valeur !== 'object' || valeur === null) return valeur
+	return Object.entries(valeur)
+		.sort(parNom)
+		.map(([cle, sous]) => [cle, clesTriees(sous)])
+}
+
+/**
+ * The rows of a list as they are compared: each row without the identifier Payload gave it, its
+ * filled fields sorted by name, an empty field or an empty nested list counting as an absent one,
+ * the rows in their order. The values themselves are compared as they are: the import gives them
+ * in the form Payload reads back (a day of these lists at 12:00 UTC, src/lib/profil/listes.ts).
+ */
+function lignesNormalisees(lignes: readonly unknown[]): unknown[] {
+	return lignes.map(ligne => {
+		if (typeof ligne !== 'object' || ligne === null || Array.isArray(ligne)) return ligne
+		return Object.entries(ligne)
+			.filter(
+				([champ, sous]) =>
+					champ !== 'id' && sous !== null && sous !== undefined && !(Array.isArray(sous) && sous.length === 0)
+			)
+			.sort(parNom)
+			.map(([champ, sous]) => [champ, Array.isArray(sous) ? lignesNormalisees(sous) : sous])
+	})
+}
+
 /** A value as it is compared: `undefined` is `null`, a date is an ISO string, a relation is an id. */
 export function normaliser(genre: Genre, valeur: unknown): unknown {
 	if (valeur === undefined || valeur === null) return null
 	switch (genre) {
 		case 'objet':
 			return typeof valeur === 'object' ? groupeNormalise(valeur) : valeur
+		case 'relations': {
+			const ids = (Array.isArray(valeur) ? valeur : [valeur]).map(id => normaliser('relation', id))
+			return ids.length === 0 ? null : JSON.stringify(ids)
+		}
+		case 'liste':
+			if (!Array.isArray(valeur)) return valeur
+			return valeur.length === 0 ? null : JSON.stringify(lignesNormalisees(valeur))
+		case 'json':
+			return JSON.stringify(clesTriees(valeur))
 		case 'date': {
 			const date = valeur instanceof Date ? valeur : new Date(String(valeur))
 			return Number.isNaN(date.getTime()) ? String(valeur) : date.toISOString()

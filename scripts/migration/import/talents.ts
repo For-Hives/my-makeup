@@ -70,21 +70,30 @@ export function talentAttendu(ligne: LigneTalent): Attendu {
 }
 
 /**
- * The talents of the source split in two: those the import writes, and those it refuses before
- * any write. A slug that is not an address is refused; a slug two talents share stays with the
- * oldest one (the smallest id), and the next ones are refused.
+ * The documents of an editorial collection (talents, articles) split in two by their slug: those
+ * the import writes, and those it refuses before any write. A slug that is not an address is
+ * refused; a slug two documents share stays with the oldest one (the smallest id), and the next
+ * ones are refused.
  */
-export function talentsAttendus(lignes: readonly LigneTalent[]): { attendus: Attendu[]; refuses: Refus[] } {
-	const attendus: Attendu[] = []
+export function repartirParSlug<Ligne extends { id: number; slug: string | null }>(
+	lignes: readonly Ligne[]
+): { pris: Ligne[]; refuses: Refus[] } {
+	const pris: Ligne[] = []
 	const refuses: Refus[] = []
-	const pris = new Set<string>()
+	const slugs = new Set<string>()
 	for (const ligne of [...lignes].sort((a, b) => a.id - b.id)) {
 		if (!estUnSlug(ligne.slug)) refuses.push({ strapiId: ligne.id, motif: 'slug-pas-une-adresse', champs: ['slug'] })
-		else if (pris.has(ligne.slug)) refuses.push({ strapiId: ligne.id, motif: 'slug-en-double', champs: ['slug'] })
+		else if (slugs.has(ligne.slug)) refuses.push({ strapiId: ligne.id, motif: 'slug-en-double', champs: ['slug'] })
 		else {
-			pris.add(ligne.slug)
-			attendus.push(talentAttendu(ligne))
+			slugs.add(ligne.slug)
+			pris.push(ligne)
 		}
 	}
-	return { attendus, refuses }
+	return { pris, refuses }
+}
+
+/** The talents of the source split in two by their slug (`repartirParSlug`). */
+export function talentsAttendus(lignes: readonly LigneTalent[]): { attendus: Attendu[]; refuses: Refus[] } {
+	const { pris, refuses } = repartirParSlug(lignes)
+	return { attendus: pris.map(talentAttendu), refuses }
 }

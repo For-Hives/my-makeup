@@ -199,9 +199,12 @@ describe('chaque écart de l’import se lit contre une règle écrite', () => {
 	const registre = readFileSync(path.join(DOCS, 'CHANGEMENTS-VOULUS.md'), 'utf8')
 	const schema = readFileSync(path.join(DOCS, 'SCHEMA.md'), 'utf8')
 
-	/** The part of the frozen schema under a heading `### <numéro>`, up to the next heading. */
+	/**
+	 * The part of the frozen schema under a heading `### <numéro>` (`5.1`), or `## <numéro>.` (`8`),
+	 * up to the next heading.
+	 */
 	const sectionDuSchema = (numero: string): string => {
-		const debut = schema.indexOf(`\n### ${numero} `)
+		const debut = schema.indexOf(numero.includes('.') ? `\n### ${numero} ` : `\n## ${numero}. `)
 		if (debut < 0) return ''
 		const fin = schema.indexOf('\n#', debut + 1)
 		return schema.slice(debut, fin < 0 ? undefined : fin)
@@ -209,7 +212,7 @@ describe('chaque écart de l’import se lit contre une règle écrite', () => {
 
 	test('un repère est une ligne du registre ; une section du schéma nomme l’attribut', () => {
 		for (const reference of Object.values(REFERENCES)) {
-			const duSchema = /^SCHEMA\.md §(\d+\.\d+) \((\w+)\)$/.exec(reference)
+			const duSchema = /^SCHEMA\.md §(\d+(?:\.\d+)?) \((\w+)\)$/.exec(reference)
 			if (duSchema) expect(sectionDuSchema(duSchema[1] ?? ''), reference).toContain(`| \`${duSchema[2]}\` |`)
 			else expect(registre, reference).toContain(`| \`${reference}\` |`)
 		}
