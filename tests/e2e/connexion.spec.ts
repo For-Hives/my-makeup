@@ -35,7 +35,7 @@ test.describe('Connexion par email', { tag: '@mobile' }, () => {
 		await expect(page.getByRole('heading', { level: 1, name: 'Mon espace' })).toBeVisible()
 		const cookies = await context.cookies()
 		expect(cookies.map(c => c.name)).toEqual(['payload-token'])
-		expect(cookies[0]).toMatchObject({ httpOnly: true, sameSite: 'Lax', path: '/' })
+		expect(cookies[0]).toMatchObject({ httpOnly: true, path: '/', sameSite: 'Lax', secure: true })
 		expect(await page.evaluate(() => document.cookie)).toBe('')
 	})
 

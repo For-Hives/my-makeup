@@ -24,7 +24,10 @@ export function retourSur(brut: unknown, origine: string, defaut: string = ESPAC
 		if (url.origin !== base.origin) return defaut
 		if (PAGES_SANS_RETOUR.some(page => url.pathname === page.replace(/\/$/, '') || url.pathname.startsWith(page)))
 			return defaut
-		return `${url.pathname}${url.search}${url.hash}`
+		const sortie = `${url.pathname}${url.search}${url.hash}`
+		// A dot segment can leave a path that starts with `//` (`/.//host`): a browser reads it as another site.
+		if (/^[/\\]{2}/.test(sortie) || new URL(sortie, base).origin !== base.origin) return defaut
+		return sortie
 	} catch {
 		return defaut
 	}

@@ -88,6 +88,20 @@ test.describe('E09 : le retour après la connexion', () => {
 		}
 	})
 
+	test('déjà connectée, un retour à segment de points ne mène pas vers un autre site', async ({ page }) => {
+		const compte = await creerCompte('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+		await page.goto('/auth/signin')
+		await page.getByLabel('Adresse email').fill(compte.email)
+		await page.getByLabel('Mot de passe').fill(MOT_DE_PASSE)
+		await page.getByRole('button', { name: 'Se connecter' }).click()
+		await expect(page).toHaveURL(/\/auth\/profil$/)
+
+		for (const retour of ['/.//evil.example', '/%2e//evil.example', '/x/..//evil.example']) {
+			await page.goto(`/auth/signin?callbackUrl=${encodeURIComponent(retour)}`)
+			await expect(page).toHaveURL(/^https?:\/\/(?!evil)[^/]+\/auth\/profil$/)
+		}
+	})
+
 	test('une action envoyée depuis une autre origine est refusée : aucune session ne s’ouvre', async ({
 		baseURL,
 		page,
