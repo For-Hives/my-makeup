@@ -112,7 +112,10 @@ export const UPLOAD_DES_MEDIAS: UploadConfig = { disableLocalStorage: true }
  *   src/payload.config.ts, which knows the base of the photos).
  *
  * The types, the size, the unpredictable name and the derived sizes of a photo sent in the v3 are
- * the work of ticket 133; the trash for a photo that no longer serves, of ticket 045.
+ * the work of ticket 133. A media deleted, or whose file is replaced, sends its objects to the bin
+ * of the storage, never erased, and media are deleted or changed one at a time, never by a
+ * `where`: the hooks of the bin are added by src/collections/corbeille.ts (ticket 045), through
+ * src/payload.config.ts.
  */
 export const Media: CollectionConfig<'media'> = {
 	slug: 'media',

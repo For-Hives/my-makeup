@@ -130,6 +130,22 @@ Seul un choix différent de celui qui est enregistré change le choix. Le formul
 
 Tests : `tests/unit/etat-profil.test.ts`, et sur le banc `tests/integration/profils-completude.test.ts`, qui écrit chaque cas partagé de la complétude comme l'import l'écrira (`tests/outils/cas-completude.ts`) et compare l'état enregistré à la règle et aux réponses de l'ancien site.
 
+### Corbeille des photos
+
+Une photo qui ne sert plus part à la corbeille du stockage, jamais à la suppression directe : l'application n'efface jamais un objet. La règle du déplacement est dans `src/lib/corbeille.ts`, le moment où une photo ne sert plus dans `src/collections/corbeille.ts`, et le détail au §8 de [`docs/migration/SCHEMA.md`](docs/migration/SCHEMA.md).
+
+- La corbeille est le dossier `deleted/`, à la racine du stockage : `media/photo.webp` y devient `deleted/media/photo.webp`, avec chacune de ses tailles dérivées. L'objet y est copié, la copie est vérifiée, puis l'original est retiré : c'est le seul retrait de l'application (`src/lib/stockage.ts`), et un test échoue si un autre fichier en fait un.
+- Une photo part à la corbeille quand son média est supprimé, quand son fichier est remplacé, ou quand plus rien ne la désigne après un enregistrement ou la suppression de son profil : le serveur supprime alors lui-même son média. Une photo encore désignée par un profil, un article ou une version d'article reste où elle est.
+- Le greffon de stockage supprimait lui-même les objets : il n'en supprime plus aucun (`avecLaCorbeille`, dans `src/payload.config.ts`).
+- Si le stockage tombe pendant un déplacement, ce qui avait déjà bougé est remis en place, une fois, et la requête échoue en 503 avec le message « Le stockage des photos ne répond pas : rien n’a été modifié. Réessaie dans quelques minutes. ». Documents et objets restent comme avant.
+- Les médias et les profils se suppriment et se modifient un par un, par leur identifiant. Une opération sur plusieurs à la fois, par un filtre `where`, est refusée en 403 avant toute écriture, par toutes les API, l'API locale sans contrôle d'accès comprise (`unALaFois`) : Payload l'enregistrerait même si le stockage tombait pour l'un d'eux. La liste de l'administration n'offre donc plus de supprimer ni de modifier plusieurs lignes de ces deux collections. Seul l'import y échappe.
+- Sans stockage d'objets (`S3_ENDPOINT` absent), le ménage d'un profil ne supprime aucun média : leur objet ne pourrait pas bouger.
+- L'import n'y touche pas : sous son contexte, rien ne bouge.
+- L'adresse publique d'une photo en corbeille ne répond plus. Sur le site, le cache de R2 peut encore la servir quelques heures. Une règle du stockage efface la corbeille au bout de 30 jours : elle se pose à la main dans R2 (ticket 205). D'ici là, `remettreEnPlace` (`src/lib/corbeille.ts`) remet un objet à sa place.
+- Le journal du serveur écrit une ligne `[corbeille]` par déplacement : combien d'objets, jamais leurs clés.
+
+Tests : `tests/unit/corbeille.test.ts`, et sur le banc `tests/integration/media-corbeille.test.ts`, où chaque requête de l'application au stockage est espionnée (`tests/outils/espion-s3.ts`, voir [`docs/tests/banc.md`](docs/tests/banc.md)).
+
 ## Démarrer en local
 
 Il faut [bun](https://bun.sh) 1.3.14, Node 24 (`.nvmrc`), Docker avec Compose et `openssl`.
