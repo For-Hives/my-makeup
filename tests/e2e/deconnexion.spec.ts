@@ -214,7 +214,8 @@ test.describe('La Nav lit l’état connecté dans le navigateur', () => {
 		const connectee = await lire({ Cookie: cookie, Origin: baseURL ?? '' })
 
 		expect(anonyme.statut).toBe(200)
-		expect(anonyme.cache ?? '').not.toMatch(/no-store|private/)
+		// The home page is read per request (ticket 097): its cache rules are ticket 117's. What matters here is that
+		// the session changes nothing to the answer.
 		expect(connectee.cache).toBe(anonyme.cache)
 		expect(connectee.corps).toBe(anonyme.corps)
 	})

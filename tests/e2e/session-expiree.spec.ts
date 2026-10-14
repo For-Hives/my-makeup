@@ -128,6 +128,9 @@ test.describe('E13 : une expiration réelle', () => {
 		test.setTimeout(60_000)
 		const compte = await creerCompte('maquilleuse')
 		await context.addCookies([await cookieDeSession(compte, 8)])
+		// A visit to the space renews a session that has less than 7 days left (ticket 079): this one must
+		// run out by itself, so the renewal is cut off.
+		await page.route('**/api/pros/refresh-token', route => route.abort())
 		const redirections = suivreLesRedirections(page)
 
 		await page.goto('/auth/profil')
