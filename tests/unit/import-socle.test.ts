@@ -340,7 +340,19 @@ describe('le rapport', () => {
 		const talents = rapport().parite?.talents ?? ({} as never)
 		expect(codeDeSortie(rapport({ parite: { talents: { ...talents, manquants: [2] } } }))).toBe(4)
 		expect(codeDeSortie(rapport({ parite: { talents: { ...talents, empreinteCible: 'c'.repeat(64) } } }))).toBe(4)
-		expect(codeDeSortie(rapport({ arret: { emailsPartages: [[9, 10]] } }))).toBe(3)
+		expect(codeDeSortie(rapport({ arret: { emailsPartages: [[9, 10]], profilsDeComptesEcartes: [] } }))).toBe(3)
+	})
+
+	test('l’arrêt nomme chaque cas par identifiants : les comptes au même email, les profils d’un compte écarté', () => {
+		const texte = rapportEnTexte(
+			rapport({ arret: { emailsPartages: [[9, 10, 11, 12]], profilsDeComptesEcartes: [28, 29] }, parite: null })
+		)
+		expect(texte).toContain('Import arrêté avant toute écriture : rien n’est écrit.')
+		expect(texte).toContain('Groupes, par identifiant : [9, 10, 11, 12].')
+		expect(texte).toContain('Profils, par identifiant : 28, 29.')
+		expect(
+			rapportEnTexte(rapport({ arret: { emailsPartages: [], profilsDeComptesEcartes: [29] }, parite: null }))
+		).not.toContain('Groupes')
 	})
 
 	test('deux empreintes de la source se comparent table par table', () => {

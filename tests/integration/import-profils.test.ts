@@ -1,7 +1,10 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import path from 'node:path'
 import { attribuerSlugs } from '../../src/lib/slug'
 import { CHAMPS_PUBLICS_DU_PROFIL, lireLeProfilPublic } from '../../src/services/public/profils'
-import { importerSurLeBanc } from '../outils/import'
+import { commandeDImport, importerSurLeBanc } from '../outils/import'
 import { compterLesMails, viderLeCapteur } from '../outils/mailpit'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
 import { creerLaSourceStrapi, effacerLaSourceStrapi, empreinteDeLaSource, sourceDuBanc } from '../outils/source-strapi'
@@ -81,13 +84,16 @@ describe('Après l’import de la source factice', () => {
 			expect(compte?.strapiId, String(profil.strapiId)).toBe(LIENS.get(Number(profil.strapiId)) ?? -1)
 		}
 		expect(new Set(cible.map(({ pro }) => (typeof pro === 'object' ? pro.id : pro))).size).toBe(cible.length)
-		// The 13 profiles of the spam, and profile 29, whose account the table sets aside.
+		// Profile 29, whose account the table sets aside, is set aside by its own decision; the 13
+		// profiles of the spam have no account at all (ticket 059).
 		expect(premier.collections.profils).toMatchObject({
 			source: 27,
 			crees: 13,
 			refuses: [],
-			sansCompte: [29, 67, 74, 76, 77, 78, 79, 87, 88, 94, 95, 96, 104, 108],
+			ecartes: [29],
+			sansCompte: [67, 74, 76, 77, 78, 79, 87, 88, 94, 95, 96, 104, 108],
 		})
+		expect(premier.decisionsSansObjet).toBe(0)
 		expect(await compterLesMails()).toBe(0)
 	})
 
@@ -125,6 +131,27 @@ describe('Après l’import de la source factice', () => {
 		expect(await profilsDeLaCible()).toEqual(cible)
 		expect((await empreinteDeLaSource()).empreinte).toBe(empreinteAvant)
 	})
+})
+
+describe('Un profil dont la table de décision écarte le compte (SCHEMA.md §11)', () => {
+	test('sans décision pour ce profil, la commande s’arrête avant toute écriture et le nomme par identifiant', async () => {
+		const cible = await profilsDeLaCible()
+		const dossier = mkdtempSync(path.join(tmpdir(), 'decisions-import-'))
+		try {
+			// The accounts that share one email are decided, profile 29 of account 11 is not.
+			const fichier = path.join(dossier, 'decisions.json')
+			writeFileSync(fichier, JSON.stringify({ emailsPartages: [{ comptes: [9, 10, 11, 12], retenu: 9 }] }))
+
+			const { code, sortie } = await commandeDImport(['--reel', '--decisions', fichier])
+
+			expect(code, sortie).toBe(3)
+			expect(sortie).toContain('Import arrêté avant toute écriture')
+			expect(sortie).toContain('Profils, par identifiant : 29.')
+			expect(await profilsDeLaCible()).toEqual(cible)
+		} finally {
+			rmSync(dossier, { recursive: true, force: true })
+		}
+	}, 60_000)
 })
 
 describe('La lecture publique d’un profil repris', () => {

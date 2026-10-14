@@ -1,5 +1,10 @@
 import { describe, expect, test } from 'bun:test'
-import { type ProfilLu, profilsAttendus, statutProvisoire } from '../../scripts/migration/import/profils'
+import {
+	type ProfilLu,
+	profilsAttendus,
+	profilsDesComptesEcartes,
+	statutProvisoire,
+} from '../../scripts/migration/import/profils'
 import { NOM_NEUTRE, nomAffiche, nomComplet, texte } from '../../src/lib/profil/nom-affiche'
 import { CHAMPS_PUBLICS_DU_PROFIL } from '../../src/services/public/profils'
 
@@ -79,6 +84,14 @@ describe('les profils attendus', () => {
 		expect(profilsAttendus(profils, comptes).sansCompte).toEqual([24, 25, 26])
 	})
 
+	test('un profil que la table de décision écarte avec son compte est listé parmi les écartés', () => {
+		const { attendus, ecartes, sansCompte } = profilsAttendus(profils, comptes, [25])
+
+		expect(ecartes).toEqual([25])
+		expect(sansCompte).toEqual([24, 26])
+		expect(attendus.map(({ strapiId }) => strapiId)).toEqual([21, 22, 23])
+	})
+
 	test('chaque transformation porte sa référence : slug stocké, profil vide en brouillon', () => {
 		const { attendus, statuts } = profilsAttendus(profils, comptes)
 
@@ -104,6 +117,34 @@ describe('les profils attendus', () => {
 			description: null,
 			statut: 'publie',
 		})
+	})
+})
+
+describe('les profils d’un compte que la table de décision écarte (SCHEMA.md §11)', () => {
+	const profils = [
+		profil(28, { compte: 9 }),
+		profil(29, { compte: 11 }),
+		profil(31, { compte: 12 }),
+		profil(30, { compte: 14 }),
+		profil(67, { compte: null }),
+	]
+
+	test('sans décision, chacun arrête l’import, nommé par identifiant', () => {
+		expect(profilsDesComptesEcartes(profils, [10, 11, 12], [])).toEqual({
+			ecartes: [],
+			sansDecision: [29, 31],
+			sansObjet: 0,
+		})
+	})
+
+	test('une décision par profil le laisse de côté ; une décision qui ne nomme aucun de ces profils est sans objet', () => {
+		expect(profilsDesComptesEcartes(profils, [10, 11, 12], [29, 30, 67])).toEqual({
+			ecartes: [29],
+			sansDecision: [31],
+			sansObjet: 2,
+		})
+		// The account of 28 is kept: nothing to decide for it.
+		expect(profilsDesComptesEcartes(profils, [], [28])).toEqual({ ecartes: [], sansDecision: [], sansObjet: 1 })
 	})
 })
 

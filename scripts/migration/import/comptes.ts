@@ -110,7 +110,7 @@ export interface ComptesAttendus extends ApplicationDesDecisions {
 /** The accounts the import takes, those the decisions set aside, and the groups that stop it. */
 export function comptesAttendus(
 	lignes: readonly LigneCompte[],
-	decisions: Decisions,
+	decisions: Pick<Decisions, 'emailsPartages'>,
 	tirer: () => string = motDePasseAleatoire
 ): ComptesAttendus {
 	const application = appliquerLesDecisions(groupesDEmailPartage(lignes), decisions)

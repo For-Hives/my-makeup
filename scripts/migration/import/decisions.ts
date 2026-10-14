@@ -5,11 +5,14 @@
  *
  * It names documents by their identifier in the old base, never by a value:
  *
- *   { "emailsPartages": [{ "comptes": [9, 10, 11, 12], "retenu": 9 }] }
+ *   { "emailsPartages": [{ "comptes": [9, 10, 11, 12], "retenu": 9 }], "profilsEcartes": [29] }
  *
  * - `emailsPartages`: accounts of the old site that share one email (edge spaces and capitals
  *   aside). The v3 has one account per email: only `retenu` is taken, the others are set aside.
  *   A group the source holds without its decision stops the import before any write.
+ * - `profilsEcartes`: profiles whose account a decision above sets aside, and that a person
+ *   decided to leave aside with it. Such a profile without its decision stops the import before
+ *   any write (docs/migration/SCHEMA.md, §11).
  */
 
 import { z } from 'zod'
@@ -32,13 +35,17 @@ const SCHEMA_DES_DECISIONS = z
 					})
 			)
 			.default([]),
+		profilsEcartes: z
+			.array(identifiant)
+			.refine(profils => new Set(profils).size === profils.length, { message: 'un profil est nommé deux fois' })
+			.default([]),
 	})
 	.strict()
 
 export type Decisions = z.infer<typeof SCHEMA_DES_DECISIONS>
 
 /** No decision at all: every case the import cannot decide stops it. */
-export const AUCUNE_DECISION: Decisions = { emailsPartages: [] }
+export const AUCUNE_DECISION: Decisions = { emailsPartages: [], profilsEcartes: [] }
 
 /** The table of decisions read from the text of its file, or `ImportRefuse` with what is wrong, never a value. */
 export function lireLesDecisions(texte: string): Decisions {
@@ -77,7 +84,10 @@ export interface ApplicationDesDecisions {
  * when it names exactly its accounts: a group that changed since the decision was written (an
  * account added or deleted) is a new case, and stops the import.
  */
-export function appliquerLesDecisions(groupes: readonly number[][], decisions: Decisions): ApplicationDesDecisions {
+export function appliquerLesDecisions(
+	groupes: readonly number[][],
+	decisions: Pick<Decisions, 'emailsPartages'>
+): ApplicationDesDecisions {
 	const ecartes: number[] = []
 	const sansDecision: number[][] = []
 	const appliquees = new Set<number>()

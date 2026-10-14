@@ -289,7 +289,7 @@ describe('Critère 4 : même email sans décision, arrêt et rapport par identif
 
 		const rapport = await importerSurLeBanc('reel', { decisions: AUCUNE_DECISION })
 
-		expect(rapport.arret).toEqual({ emailsPartages: [[9, 10, 11, 12]] })
+		expect(rapport.arret).toEqual({ emailsPartages: [[9, 10, 11, 12]], profilsDeComptesEcartes: [] })
 		expect(rapport.parite).toBeNull()
 		expect(await comptesDeLaCible()).toEqual([])
 		const payload = await payloadDeTest()
@@ -308,18 +308,22 @@ describe('Critère 4 : même email sans décision, arrêt et rapport par identif
 	}, 60_000)
 
 	test('avec la table, seul le compte retenu est repris, quel qu’il soit', async () => {
-		await importerSurLeBanc('reel', { decisions: { emailsPartages: [{ comptes: [12, 11, 10, 9], retenu: 11 }] } })
+		// Account 9 is set aside this time: the table says what becomes of its profile, 28.
+		const rapport = await importerSurLeBanc('reel', {
+			decisions: { emailsPartages: [{ comptes: [12, 11, 10, 9], retenu: 11 }], profilsEcartes: [28] },
+		})
 
 		const groupe = (await comptesDeLaCible()).filter(({ strapiId }) => [9, 10, 11, 12].includes(Number(strapiId)))
 		expect(groupe.map(({ strapiId }) => strapiId)).toEqual([11])
+		expect(rapport.collections.profils?.ecartes).toEqual([28])
 	})
 
 	test('une décision qui ne nomme pas exactement le groupe ne vaut pas : l’import s’arrête', async () => {
 		const rapport = await importerSurLeBanc('reel', {
-			decisions: { emailsPartages: [{ comptes: [9, 10, 11], retenu: 9 }] },
+			decisions: { emailsPartages: [{ comptes: [9, 10, 11], retenu: 9 }], profilsEcartes: [] },
 		})
 
-		expect(rapport.arret).toEqual({ emailsPartages: [[9, 10, 11, 12]] })
+		expect(rapport.arret).toEqual({ emailsPartages: [[9, 10, 11, 12]], profilsDeComptesEcartes: [] })
 		expect(rapport.decisionsSansObjet).toBe(1)
 		expect(await comptesDeLaCible()).toEqual([])
 	})

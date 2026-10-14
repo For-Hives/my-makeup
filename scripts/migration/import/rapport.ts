@@ -49,6 +49,8 @@ export interface PariteDeCollection extends Parite {
 export interface Arret {
 	/** Accounts that share one email without a decision, group by group, by identifier. */
 	emailsPartages: number[][]
+	/** Profiles of an account a decision sets aside, that no decision names (SCHEMA.md §11). */
+	profilsDeComptesEcartes: number[]
 }
 
 export interface Rapport {
@@ -134,13 +136,19 @@ function repartitionEnTexte({ fournisseurs, hashHerites }: Repartition): string 
 	return `par fournisseur : ${parFournisseur || 'aucun'} ; ${pluriel(hashHerites, 'hash hérité', 'hash hérités')}`
 }
 
-function lignesDArret({ emailsPartages }: Arret): string[] {
-	return [
-		'Import arrêté avant toute écriture : rien n’est écrit.',
-		`- Des comptes de l’ancien site portent le même email, et la table de décision ne dit pas lequel garder. Groupes, par identifiant : ${emailsPartages.map(groupe => `[${groupe.join(', ')}]`).join(' ; ')}.`,
-		'  Une décision par groupe, dans la table donnée par --decisions (docs/migration/IMPORT.md).',
-		'',
-	]
+function lignesDArret({ emailsPartages, profilsDeComptesEcartes }: Arret): string[] {
+	const lignes = ['Import arrêté avant toute écriture : rien n’est écrit.']
+	if (emailsPartages.length > 0)
+		lignes.push(
+			`- Des comptes de l’ancien site portent le même email, et la table de décision ne dit pas lequel garder. Groupes, par identifiant : ${emailsPartages.map(groupe => `[${groupe.join(', ')}]`).join(' ; ')}.`,
+			'  Une décision par groupe, dans la table donnée par --decisions (docs/migration/IMPORT.md).'
+		)
+	if (profilsDeComptesEcartes.length > 0)
+		lignes.push(
+			`- Des profils appartiennent à un compte que la table de décision écarte, et elle ne dit pas quoi en faire. Profils, par identifiant : ${ids(profilsDeComptesEcartes)}.`,
+			'  Une décision par profil, dans la table donnée par --decisions (docs/migration/IMPORT.md).'
+		)
+	return [...lignes, '']
 }
 
 /** How a parity reads: complete, incomplete by its refused documents only, or incomplete. */

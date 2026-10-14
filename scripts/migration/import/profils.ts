@@ -12,9 +12,11 @@
  *   any other one is published. « Entirely empty » is the single rule of src/lib/profil/completude.ts,
  *   read on the source as the old site reads it: main picture, city, speciality, offers, description,
  *   networks.
- * - A profile whose account the import does not take (no link, an account set aside by the table
- *   of decisions) is left aside and listed by its identifier. Ticket 059 sets the rule of the 13
- *   profiles of the spam, and stops the import on any other one.
+ * - A profile whose account the table of decisions sets aside stops the import before any write,
+ *   listed by its identifier, until the table decides to leave it aside too (`profilsEcartes`,
+ *   SCHEMA.md §11). Set aside, it is listed with the documents the table sets aside.
+ * - A profile without a link to an account the source holds is left aside and listed. Ticket 059
+ *   sets the rule of the 13 profiles of the spam, and stops the import on any other one.
  *
  * The networks hold the contact details of the profile: they are read into memory to tell whether
  * a contact channel exists, and nothing else of them is kept.
@@ -121,9 +123,40 @@ export const ADAPTATEUR_PROFILS: Adaptateur = {
 	},
 }
 
+/** What the table of decisions makes of the profiles whose account it sets aside (SCHEMA.md §11). */
+export interface ProfilsDesComptesEcartes {
+	/** Profiles a decision leaves aside with their account: not taken, listed. */
+	ecartes: number[]
+	/** Profiles of an account set aside that no decision names: they stop the import before any write. */
+	sansDecision: number[]
+	/** Decisions that name no profile of an account set aside: without effect. */
+	sansObjet: number
+}
+
+/** The profiles linked to an account the decisions set aside, split by what the table says of them. */
+export function profilsDesComptesEcartes(
+	profils: readonly ProfilLu[],
+	comptesEcartes: readonly number[],
+	profilsEcartes: readonly number[]
+): ProfilsDesComptesEcartes {
+	const comptes = new Set(comptesEcartes)
+	const decides = new Set(profilsEcartes)
+	const concernes = profils
+		.filter(({ compte }) => compte !== null && comptes.has(compte))
+		.map(({ id }) => id)
+		.sort((a, b) => a - b)
+	return {
+		ecartes: concernes.filter(id => decides.has(id)),
+		sansDecision: concernes.filter(id => !decides.has(id)),
+		sansObjet: [...decides].filter(id => !concernes.includes(id)).length,
+	}
+}
+
 export interface ProfilsAttendus {
 	attendus: Attendu[]
-	/** Profiles whose account the import does not take: left aside, listed. */
+	/** Profiles the table of decisions sets aside with their account: not taken, listed. */
+	ecartes: number[]
+	/** Profiles without an account the import takes, and no decision: left aside, listed (ticket 059). */
 	sansCompte: number[]
 	/** How many profiles the run takes per status. */
 	statuts: Record<string, number>
@@ -131,12 +164,15 @@ export interface ProfilsAttendus {
 
 /**
  * The profiles the target must hold. `comptes` gives, for each account the import takes, its
- * identifier in Payload, or `null` while it is still to be created (a dry run).
+ * identifier in Payload, or `null` while it is still to be created (a dry run). `ecartes` names
+ * the profiles the table of decisions sets aside.
  */
 export function profilsAttendus(
 	profils: readonly ProfilLu[],
-	comptes: ReadonlyMap<number, number | null>
+	comptes: ReadonlyMap<number, number | null>,
+	ecartes: readonly number[] = []
 ): ProfilsAttendus {
+	const decides = new Set(ecartes)
 	// The slugs of the old site, computed on every profile of the source, as the old site did.
 	const slugs = new Map(
 		attribuerSlugs(profils.map(({ id, username, created_at }) => ({ id, username, createdAt: created_at }))).map(
@@ -147,6 +183,7 @@ export function profilsAttendus(
 	const sansCompte: number[] = []
 	const statuts: Record<string, number> = {}
 	for (const profil of profils) {
+		if (decides.has(profil.id)) continue
 		if (profil.compte === null || !comptes.has(profil.compte)) {
 			sansCompte.push(profil.id)
 			continue
@@ -173,5 +210,13 @@ export function profilsAttendus(
 			ecarts,
 		})
 	}
-	return { attendus, sansCompte, statuts }
+	return {
+		attendus,
+		ecartes: profils
+			.filter(({ id }) => decides.has(id))
+			.map(({ id }) => id)
+			.sort((a, b) => a - b),
+		sansCompte,
+		statuts,
+	}
 }

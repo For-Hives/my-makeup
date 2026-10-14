@@ -157,7 +157,9 @@ describe('la table de décision', () => {
 	test('elle se lit, et une table vide ne décide rien', () => {
 		expect(lireLesDecisions('{ "emailsPartages": [{ "comptes": [9, 10], "retenu": 10 }] }')).toEqual({
 			emailsPartages: [{ comptes: [9, 10], retenu: 10 }],
+			profilsEcartes: [],
 		})
+		expect(lireLesDecisions('{ "profilsEcartes": [29] }')).toEqual({ emailsPartages: [], profilsEcartes: [29] })
 		expect(lireLesDecisions('{}')).toEqual(AUCUNE_DECISION)
 	})
 
@@ -170,6 +172,9 @@ describe('la table de décision', () => {
 			'{ "emailsPartages": [{ "comptes": [9, 10], "retenu": 9, "email": "x@example.test" }] }',
 			'{ "emailsPartages": [{ "comptes": [9, 10], "retenu": 9 }, { "comptes": [10, 11], "retenu": 11 }] }',
 			'{ "autre": [] }',
+			'{ "profilsEcartes": [29, 29] }',
+			'{ "profilsEcartes": [0] }',
+			'{ "profilsEcartes": "29" }',
 		]
 		for (const texte of refusees) {
 			expect(() => lireLesDecisions(texte), texte).toThrow(ImportRefuse)
@@ -181,9 +186,12 @@ describe('la table de décision', () => {
 		}
 	})
 
-	test('la table du banc garde le compte 9 parmi les quatre comptes de la fausse base qui partagent un email', () => {
+	test('la table du banc garde le compte 9 parmi les quatre qui partagent un email, et écarte le profil 29 du compte 11', () => {
 		const texte = readFileSync(path.resolve(import.meta.dir, '../fixtures/import/decisions-du-banc.json'), 'utf8')
-		expect(lireLesDecisions(texte)).toEqual({ emailsPartages: [{ comptes: [9, 10, 11, 12], retenu: 9 }] })
+		expect(lireLesDecisions(texte)).toEqual({
+			emailsPartages: [{ comptes: [9, 10, 11, 12], retenu: 9 }],
+			profilsEcartes: [29],
+		})
 	})
 })
 

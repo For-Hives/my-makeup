@@ -3,8 +3,9 @@
  * write the difference when the run is real, then read the target again to prove the parity.
  *
  * - The source is read in one read-only snapshot, and fingerprinted before and after the run.
- * - A case only a decision can settle (accounts that share one email) stops the run before any
- *   write, dry or real, and the report lists it by identifiers.
+ * - A case only a decision can settle (accounts that share one email, the profile of an account
+ *   a decision sets aside) stops the run before any write, dry or real, and the report lists it
+ *   by identifiers.
  * - A dry run (the default) reads the target and says what it would write; it writes nothing.
  * - A real run writes collection by collection, the accounts first, then their profiles, then
  *   the talents, and reads every collection again: its parity is complete when the target holds
@@ -25,7 +26,7 @@ import {
 	planifier,
 	type Refus,
 } from './moteur'
-import { ADAPTATEUR_PROFILS, lireLesProfils, profilsAttendus } from './profils'
+import { ADAPTATEUR_PROFILS, lireLesProfils, profilsAttendus, profilsDesComptesEcartes } from './profils'
 import type { BilanDeCollection, Mode, PariteDeCollection, Rapport } from './rapport'
 import { empreinteDesTables, memesTables, type Source } from './source'
 import { ADAPTATEUR_TALENTS, lireLesTalents, talentsAttendus } from './talents'
@@ -110,9 +111,13 @@ export async function importer(options: OptionsDImport): Promise<Rapport> {
 	}
 
 	const comptes = comptesAttendus(lu.comptes, decisions, tirerMotDePasse)
-	rapport.decisionsSansObjet = comptes.sansObjet
-	if (comptes.sansDecision.length > 0) {
-		rapport.arret = { emailsPartages: comptes.sansDecision }
+	const desComptesEcartes = profilsDesComptesEcartes(lu.profils, comptes.ecartes, decisions.profilsEcartes)
+	rapport.decisionsSansObjet = comptes.sansObjet + desComptesEcartes.sansObjet
+	if (comptes.sansDecision.length > 0 || desComptesEcartes.sansDecision.length > 0) {
+		rapport.arret = {
+			emailsPartages: comptes.sansDecision,
+			profilsDeComptesEcartes: desComptesEcartes.sansDecision,
+		}
 		rapport.collections.pros = {
 			...bilanDuPlan({ actions: [], enTrop: [] }),
 			source: lu.comptes.length,
@@ -131,10 +136,11 @@ export async function importer(options: OptionsDImport): Promise<Rapport> {
 
 		// Each profile points at its account in Payload, read once the accounts are written.
 		const idsDesComptes = await idsDesComptesPris(payload, comptes.attendus)
-		const profils = profilsAttendus(lu.profils, idsDesComptes)
+		const profils = profilsAttendus(lu.profils, idsDesComptes, desComptesEcartes.ecartes)
 		compterLesEcarts(rapport.ecarts, profils.attendus)
 		rapport.collections.profils = {
 			...(await importerLaCollection(options, ADAPTATEUR_PROFILS, lu.profils.length, profils.attendus)),
+			ecartes: profils.ecartes,
 			sansCompte: profils.sansCompte,
 			statuts: profils.statuts,
 		}
