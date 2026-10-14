@@ -9,7 +9,8 @@
  * - `APP_ENV=test`, the bench: a database of this machine whose name ends with `_test`, the object
  *   storage of this machine in a bucket whose name ends with `-test`, and no deployed address;
  * - `APP_ENV=preprod`, the pre-production: its own address, `https://preprod.my-makeup.fr`, and
- *   no other.
+ *   no other. It may have no object storage yet: the set is then loaded without its photos
+ *   (./chargement.ts, ticket 053).
  *
  * `APP_ENV=prod`, the address of the site, a missing or unknown `APP_ENV` (a development `.env`
  * has none) are refused. A refusal names the variable, never its value.
@@ -92,9 +93,10 @@ export function cibleDuJeu(variables: VariablesDuJeu = process.env): CibleDuJeu 
 	if (variables.NEXT_PUBLIC_SITE_URL === ORIGINE_DU_SITE)
 		refuser('NEXT_PUBLIC_SITE_URL est l’adresse du site en ligne : le jeu fictif n’y va jamais.')
 	if (!variables.DATABASE_URI) refuser('DATABASE_URI manque.')
-	if (!variables.S3_ENDPOINT)
-		refuser('S3_ENDPOINT manque : les photos du jeu vont dans le stockage d’objets, et l’application n’en a pas.')
 	if (environnement === 'test') {
+		// The bench always has its storage; the pre-production may not have one yet (ticket 053).
+		if (!variables.S3_ENDPOINT)
+			refuser('S3_ENDPOINT manque : les photos du jeu vont dans le stockage d’objets, et l’application n’en a pas.')
 		verifierLeBanc(variables)
 		return 'banc'
 	}

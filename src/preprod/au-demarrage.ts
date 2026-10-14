@@ -7,7 +7,8 @@
  *    stops the process on a migration that fails, before any hook runs: the reset must come first
  *    to clear an old database a new migration cannot apply to (the `init` of ticket 049).
  * 2. `auDemarrage` is the `onInit` of Payload, once it has started and played its migrations: on
- *    an empty database, the fake Strapi source posed and imported (./tranche.ts).
+ *    an empty database, the fictional set of the bench loaded (./jeu.ts, ticket 053). It replaced
+ *    the import of the fake Strapi source of the first slice (./tranche.ts).
  *
  * Anywhere else than on the pre-production, the adapter is given back as it is, the hook returns
  * at once, and nothing more is loaded.
@@ -20,7 +21,9 @@
 import type { PostgresAdapter } from '@payloadcms/db-postgres'
 import type { DatabaseAdapterObj, Payload } from 'payload'
 import type { BaseDeLaSource } from '../../tests/outils/source-strapi/creation'
+import { JeuFictifRefuse } from '../jeu-fictif/garde'
 import type { ServerEnv } from '../lib/env'
+import type { OptionsDuJeuDeLaPreprod } from './jeu'
 
 /** The environment the hook reads: where it runs, and the database of Payload. */
 export type EnvDuDemarrage = Pick<ServerEnv, 'databaseUri' | 'preprod'>
@@ -42,16 +45,11 @@ async function typeEtCode(erreur: unknown): Promise<string> {
 	return `${type}${code ? `, code ${code}` : ''}`
 }
 
-/** The message of an error, when the import or this task wrote it; else its type and its code only. */
+/** The message of an error, when this task or the set wrote it; else its type and its code only. */
 async function messageDeLErreur(erreur: unknown): Promise<string> {
-	const [{ ImportRefuse }, { ImportInterrompu, messageDUneErreurInattendue }, { PreprodRefusee }] = await Promise.all([
-		import('../../scripts/migration/import/cible'),
-		import('../../scripts/migration/import/moteur'),
-		import('./remise'),
-	])
-	if (erreur instanceof ImportRefuse || erreur instanceof ImportInterrompu || erreur instanceof PreprodRefusee)
-		return erreur.message
-	return messageDUneErreurInattendue(erreur)
+	const { PreprodRefusee } = await import('./remise')
+	if (erreur instanceof JeuFictifRefuse || erreur instanceof PreprodRefusee) return erreur.message
+	return `Le jeu fictif s’est arrêté sur une erreur inattendue (${await typeEtCode(erreur)}). Son texte n’est pas affiché : il peut porter des valeurs de la base. Un jeton nouveau de PREPROD_REMISE_A_ZERO recommence d’une base vide.`
 }
 
 /** « 1 migration rejouée », « 12 migrations rejouées ». */
@@ -142,17 +140,22 @@ export function avecLaRemiseAZero(
 	}
 }
 
-/** The hook, `onInit` of Payload: on the pre-production, the start import of ./tranche.ts. */
+/** What a test may change in the start: the database it names, the environment the set reads, its photos. */
+export type OptionsDuDemarrage = Pick<OptionsDuJeuDeLaPreprod, 'base' | 'variables' | 'lirePhoto' | 'journal'>
+
+/** The hook, `onInit` of Payload: on the pre-production, the fictional set of ./jeu.ts. */
 export async function auDemarrage(
 	payload: Payload,
 	env: EnvDuDemarrage,
-	migrationEnCours = migrationEnCoursDansCeProcessus()
+	migrationEnCours = migrationEnCoursDansCeProcessus(),
+	options: OptionsDuDemarrage = {}
 ): Promise<void> {
 	if (!env.preprod || migrationEnCours) return
+	const ecrire = options.journal ?? journal
 	try {
-		const { demarrerLaPreprod } = await import('./tranche')
-		await demarrerLaPreprod(payload, { preprod: env.preprod, databaseUri: env.databaseUri, journal })
+		const { chargerLeJeuDeLaPreprod } = await import('./jeu')
+		await chargerLeJeuDeLaPreprod(payload, { ...options, preprod: env.preprod, journal: ecrire })
 	} catch (erreur) {
-		journal(`Démarrage de la préprod interrompu. ${await messageDeLErreur(erreur)}`)
+		ecrire(`Démarrage de la préprod interrompu. ${await messageDeLErreur(erreur)}`)
 	}
 }

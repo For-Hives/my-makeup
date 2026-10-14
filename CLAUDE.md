@@ -46,6 +46,9 @@ Tout se lance depuis la racine du dépôt. La table complète est dans le README
 | `bun run test:ci-garde` | Les garde-fous de la CI, du `Dockerfile`, des tests sautés et de `renovate.json`. La CI les lance sur chaque PR. |
 | `bun run renovate:valide` | Après un changement de `renovate.json` : Renovate dit s'il sait lire le fichier. Il lui faut `docker`. |
 | `bun run banc:up` | Démarre le banc de test en conteneurs : base, capteur de mails, stockage d'objets, faux Google. `bun run banc:down` l'arrête et efface tout. |
+| `bun run banc:complet` | Le banc complet en une commande : pile, base par les migrations, comptes types, 12 profils types, 3 talents, 3 articles dont un brouillon, puis l'application sur le port du banc (3100, au premier plan : lance-la en arrière-plan). `--sans-application` s'arrête avant. |
+| `bun run banc:reinitialiser` | Remet le banc à son état de départ en une dizaine de secondes : base, stockage, capteur de mails, jeu. Les sessions ouvertes sont perdues. |
+| `bun run banc:session <compte>` | La session d'un compte du banc (`admin`, `redaction`, `maquilleuse`, `profil-reference`, une adresse…), écrite dans `.banc/sessions/` : état d'un navigateur Playwright et en-têtes pour `curl -H @fichier`. Le jeton n'est jamais affiché. |
 | `bun run test:integration` | Les tests d'intégration, sur le banc démarré. Avec un chemin : ce fichier seul. Chaque lancement vide la base du banc. |
 | `bun run test:e2e` | Les essais de bout en bout, banc démarré : build de production, puis Playwright à 1440 et 390 px. Avec un chemin : ce fichier seul. Chaque lancement vide la base du banc. Le navigateur s'installe une fois par `bunx playwright install chromium`. |
 | `bun run build` | Build de production. Il passe sans base ni secret. |
@@ -56,6 +59,17 @@ Tout se lance depuis la racine du dépôt. La table complète est dans le README
 | `bun scripts/migration/urls-doc.ts` | Après un changement de la table des URL (voir « URL »). Avec `--check`, il dit seulement si le document suit la table. |
 | `bun run notes:ajouter <type> "<phrase>"` | Un changement qui se remarque par rapport au site en ligne : sa note de version, dans le même commit. Type `ajout`, `amelioration` ou `correction` (voir `docs/publication.md`). |
 | `bun run release:publier --a-blanc` | Montre ce que ferait la prochaine publication : le numéro, les notes rangées dessous. N'écrit rien. Seul le workflow `release.yml` publie. |
+
+### Un compte en ligne n'est jamais nécessaire : les quatre gestes du banc
+
+Une tâche qui demandait un compte (voir une page connectée, l'administration, un parcours de maquilleuse) se fait sur le banc local, avec des comptes et des profils fictifs :
+
+1. **Monter** : `bun run banc:complet`. Il démarre la pile, charge le jeu et lance l'application sur `http://localhost:3100` (ou sur le port de l'instance : `BANC_INSTANCE=mon-banc BANC_DECALAGE=20`). Il reste au premier plan ; pour la suite d'une session d'agent, lance-le en arrière-plan et attends la ligne « Application prête ».
+2. **Obtenir une session** : `bun run banc:session admin` (ou `redaction`, `maquilleuse`, `profil-reference`…). Les fichiers sont dans `.banc/sessions/<banc>/` : `<compte>.etat.json` pour `browser.newContext({ storageState })`, `<compte>.entetes` pour `curl -H @fichier`. Aucun mot de passe n'existe, aucun jeton n'est affiché.
+3. **Remettre à zéro** : `bun run banc:reinitialiser` (environ 10 secondes). Les sessions d'avant ne valent plus : redemande-les. `bun run test:integration` et `bun run test:e2e` vident aussi le banc, et `test:e2e` refuse de démarrer quand l'application du banc tient déjà son port.
+4. **Arrêter** : `bun run banc:down` efface tout.
+
+Le jeu et ses chiffres : [`docs/tests/banc.md`](docs/tests/banc.md), « Le banc complet ». Tout est fictif ; rien n'est réel, rien ne sort du poste.
 
 ## Architecture
 

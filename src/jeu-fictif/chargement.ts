@@ -16,6 +16,8 @@
  * - Each type is written in one transaction: if it fails, none of its documents stays. An object
  *   already sent to the storage stays until the next load of that type, which writes the same key
  *   again.
+ * - Without object storage (the pre-production before it has one), no photo is sent and the
+ *   profiles are loaded without them.
  * - No mail leaves: the confirmation email of a new account is not sent.
  *
  * Relative imports on purpose: like the collections, this file must load outside of Next.
@@ -52,6 +54,8 @@ export interface ProfilPose {
 
 export interface BilanDesProfils {
 	cible: CibleDuJeu
+	/** True when the pre-production has no object storage: the profiles were loaded without their photos. */
+	sansPhotos: boolean
 	/** Every profile type, in the order of the set, whether this load created it or found it. */
 	profils: ProfilPose[]
 	/** The types this load created. */
@@ -116,7 +120,8 @@ async function profilPresent(payload: Payload, type: ProfilDuJeu): Promise<Profi
 async function poserLeProfil(
 	payload: Payload,
 	type: ProfilDuJeu,
-	lire: (photo: PhotoDuJeu) => Promise<Uint8Array>
+	lire: (photo: PhotoDuJeu) => Promise<Uint8Array>,
+	sansPhotos: boolean
 ): Promise<ProfilPose> {
 	const req = await createLocalReq({}, payload)
 	await initTransaction(req)
@@ -155,7 +160,7 @@ async function poserLeProfil(
 			})
 			return media.id
 		}
-		const { principale, galerie } = type.photos
+		const { principale, galerie } = sansPhotos ? { principale: null, galerie: [] } : type.photos
 		const photoPrincipale = principale
 			? await deposer(principale, 'principale', `Portrait ${de(type.compte.nom)}`)
 			: null
@@ -203,7 +208,10 @@ export async function poserLesProfilsDuJeu(
 		return lecture
 	}
 
-	const bilan: BilanDesProfils = { cible, profils: [], crees: [], presents: [] }
+	// Only the pre-production may lack a storage (the guard asks the bench for one): its profiles
+	// then have no photo, and the states `attendu` promises for the bench do not hold there.
+	const sansPhotos = cible === 'preprod' && !variables.S3_ENDPOINT
+	const bilan: BilanDesProfils = { cible, sansPhotos, profils: [], crees: [], presents: [] }
 	for (const type of PROFILS_DU_JEU) {
 		const present = await profilPresent(payload, type)
 		if (present) {
@@ -211,7 +219,7 @@ export async function poserLesProfilsDuJeu(
 			bilan.presents.push(type.cle)
 			continue
 		}
-		bilan.profils.push(await poserLeProfil(payload, type, lire))
+		bilan.profils.push(await poserLeProfil(payload, type, lire, sansPhotos))
 		bilan.crees.push(type.cle)
 	}
 	return bilan
