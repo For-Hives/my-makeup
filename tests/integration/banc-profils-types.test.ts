@@ -150,12 +150,12 @@ describe('Le jeu du banc : les 12 profils types', () => {
 			expect({ cle: type.cle, etat: stocke }).toEqual({ cle: type.cle, etat: attendu })
 			// What the server stored is what the single rule reads in what it stored.
 			const { completude, actif, publiable, entierementVide } = etatDuProfil(profil)
-			expect({ completude, actif, publiable, entierementVide }).toEqual({
+			expect({
 				completude: stocke.completude,
 				actif: stocke.actif,
 				publiable: stocke.publiable,
 				entierementVide: stocke.entierementVide,
-			})
+			}).toEqual({ completude, actif, publiable, entierementVide })
 		}
 
 		const reference = await profilDu(bilan, PROFILS_DU_JEU[0] as ProfilDuJeu)
@@ -219,12 +219,12 @@ describe('Le jeu du banc : les 12 profils types', () => {
 
 		expect(medias).toHaveLength(PHOTOS_ENVOYEES)
 		// Every object has its media, every media its object: the same keys, the same sizes.
-		expect(objets).toEqual(
+		expect(
 			medias
 				.map(media => ({ cle: cleDuMedia(media.prefix, media.filename ?? ''), taille: media.filesize }))
 				// The order of the storage: byte by byte.
 				.sort((a, b) => (a.cle < b.cle ? -1 : a.cle > b.cle ? 1 : 0))
-		)
+		).toEqual(objets)
 		// Every media is shown once, by the profile of the account that owns it.
 		expect(servies.map(({ media }) => media).sort((a, b) => Number(a) - Number(b))).toEqual(medias.map(({ id }) => id))
 		for (const media of medias)
