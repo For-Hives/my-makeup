@@ -119,6 +119,22 @@ Les traces et les vidéos des essais réussis ne sont pas gardées. Les deux dos
 
 En CI, un essai en échec est rejoué deux fois, et un essai laissé en `.only` fait échouer le lancement.
 
+## En CI
+
+Le job `e2e` de `.github/workflows/ci.yml` lance les essais en deux lots côte à côte, `e2e (1/2)` et `e2e (2/2)`. Chaque lot fait ce qu'on fait sur un poste :
+
+```sh
+bunx playwright install --with-deps chromium   # le navigateur, et les bibliothèques du système qu'il demande
+bun run banc:up
+bun run test:e2e --shard=1/2                   # sa moitié des essais ; l'autre lot lance --shard=2/2
+```
+
+- Playwright partage les essais entre les deux lots ; chaque lot construit l'application lui-même, démarre son banc et ne dépend pas de l'autre. Un lot en échec n'arrête pas l'autre.
+- GitHub règle `CI=true` : un essai en échec est rejoué deux fois, et un essai laissé en `.only` fait échouer le lancement.
+- Un lot a 10 minutes au plus : au-delà, il est arrêté, et `ci-ok` est rouge. Sur un poste, un lot de 4 essais prend environ 13 secondes, build en cache compris (mesuré le 14/10/2026).
+- Après un échec, le lot envoie `playwright-report/` et `test-results/` : l'artefact `e2e-1` ou `e2e-2` du passage, sur la page de la CI, gardé 14 jours. Le rapport s'ouvre par `bunx playwright show-report playwright-report`, une fois l'artefact décompressé.
+- Pour le rejouer sur un poste, banc démarré : `CI=true bun run test:e2e --shard=1/2`.
+
 ## Ce qui empêche de viser la prod
 
 - La garde des tests (`tests/outils/garde-environnement.ts`) refuse toute cible sur `my-makeup.fr` et ses sous-domaines, dans tout environnement. La préprod n'est admise qu'avec `APP_ENV=preprod`. Elle est appelée trois fois avant le premier essai : par `bun run test:e2e` avant tout build, au chargement de la configuration de Playwright, puis par la préparation globale. Un lancement vers la prod s'arrête avant le premier essai, avec un message qui nomme la variable en cause.

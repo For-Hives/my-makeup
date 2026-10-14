@@ -1,10 +1,11 @@
 # Qualité
 
-Ce document garde les règles de qualité de la v3. Il a trois parties :
+Ce document garde les règles de qualité de la v3. Il a quatre parties :
 
 - **Les règles du travail, §1 à §5** : comment on teste, les sept règles des listes éditées en place, et ce qu'un écran doit tenir à 390 px. Ce sont des critères permanents : ils valent pour chaque ticket, sans être recopiés dans chacun.
 - **La CI, §6 à §10** : ce qui empêche une modification cassée d'entrer dans `v3`. Ces parties décrivent la CI de la v3, le check `ci-ok`, les garde-fous qui empêchent de rendre la CI menteuse, et le canari. Le fichier de la CI est `.github/workflows/ci.yml`. Les garde-fous sont dans `tests/ci/garde-fous-ci.test.ts`.
 - **Les mises à jour, §11** : les règles que Renovate suivra pour proposer les nouvelles versions, et pourquoi elles n'ont aucun effet avant la bascule. Le fichier est `renovate.json`. Sa garde est dans `tests/ci/renovate.test.ts`.
+- **La dérive de schéma, §12** : le contrôle qui dit si les collections du code et la dernière migration décrivent le même schéma. Il est prêt, et devient un contrôle bloquant de la CI à la clôture de P3.
 
 À lire avec ce document :
 
@@ -101,7 +102,7 @@ La protection de la branche `v3` exige deux checks. Leur liste est dans `ci/chec
 
 | Check | D'où il vient | Ce qu'il dit |
 |---|---|---|
-| `ci-ok` | Le dernier job de `.github/workflows/ci.yml` | Qualité, tests unitaires et image Docker ont tous réussi |
+| `ci-ok` | Le dernier job de `.github/workflows/ci.yml` | Qualité, tests unitaires, image Docker, tests d'intégration et essais de bout en bout ont tous réussi |
 | `CodeQL` | L'analyse de code de GitHub, en configuration par défaut | Aucune nouvelle alerte de sécurité dans le code |
 
 La protection elle-même se règle dans GitHub, pas dans ce dépôt.
@@ -125,7 +126,7 @@ La seconde commande doit montrer une ligne `ci-ok` de `github-actions` et une li
 
 ### Ce qui reste à constater sur GitHub
 
-Au 14/10/2026, tout ce document a été vérifié sur un poste de développement : les garde-fous, le script de `ci-ok`, la construction et le contrôle de l'image. La CI a tourné une première fois sur GitHub le même jour, à la poussée de `v3` qui apportait `ci.yml` : les deux premières lignes ci-dessous sont constatées. `v3` n'est pas protégée : les deux dernières restent à constater, puis à dater ici.
+Au 14/10/2026, tout ce document a été vérifié sur un poste de développement : les garde-fous, le script de `ci-ok`, la construction et le contrôle de l'image. La CI a tourné une première fois sur GitHub le même jour, à la poussée de `v3` qui apportait `ci.yml` : les deux premières lignes ci-dessous sont constatées. `v3` n'est pas protégée : les deux suivantes restent à constater, puis à dater ici. Les trois dernières viennent avec les jobs `integration` et `e2e` (ticket 014), joués sur un poste seulement : elles se constatent à la première poussée qui les porte.
 
 | À constater | Quand | Comment | Constaté le |
 |---|---|---|---|
@@ -133,6 +134,9 @@ Au 14/10/2026, tout ce document a été vérifié sur un poste de développement
 | Une CI verte dure moins de 15 minutes | Au même passage | La commande de « Durée de la CI » | 14/10/2026 : 1 min 35 s |
 | CodeQL analyse chaque pull request vers `v3`, sous le nom `CodeQL` | Dès que `v3` est protégée | Les deux commandes ci-dessus | Pas encore |
 | `ci-ok` rouge sur une pull request cassée, fusion bloquée pour un administrateur aussi | Dès que `v3` est protégée | « Canari », plus bas | Pas encore |
+| La CI à cinq jobs tourne : `integration` et les deux lots `e2e` verts, puis `ci-ok` vert | À la première poussée de `v3` qui contient ces deux jobs | `gh run view NUMERO`, puis la seconde commande de « Durée de la CI » | Pas encore |
+| Une CI verte dure moins de 15 minutes, et chaque lot `e2e` moins de 10 | Au même passage | Les deux commandes de « Durée de la CI » | Pas encore |
+| Un essai de bout en bout faux exprès rend `e2e`, puis `ci-ok`, rouges | Au canari, ou sur toute pull request qui porte la faute `tests/e2e/canari.spec.ts` | « Canari », plus bas : la ligne `e2e` | Pas encore : répété sur un poste le 14/10/2026, voir « Répétition locale » |
 
 Au premier passage, le job `build` a été vert sur le Docker de GitHub. Avant lui, ces trois points n'avaient tourné que derrière Podman : s'il passe au rouge sans que l'image ait changé, les regarder d'abord.
 
@@ -142,16 +146,21 @@ Au premier passage, le job `build` a été vert sur le Docker de GitHub. Avant l
 
 ## 7. Ce que lance la CI
 
-La CI se lance à chaque pull request et à chaque poussée sur `v3`. Trois jobs tournent en parallèle, puis `ci-ok` rend le verdict.
+La CI se lance à chaque pull request et à chaque poussée sur `v3`. Cinq jobs tournent en parallèle, puis `ci-ok` rend le verdict.
 
 | Job | Ce qu'il lance | Limite |
 |---|---|---|
 | `qualite` | Les fichiers générés par Payload sont à jour ; `bun run typecheck` ; `bun run ci:biome` ; `bun run test:ci-garde` | 10 min |
 | `unit` | `bun run test:unit` | 10 min |
 | `build` | `bun run image:build`, sans secret ni base, puis `bun run image:controle` | 12 min |
-| `ci-ok` | Rouge si l'un des trois a échoué, a été annulé ou a été sauté | 2 min |
+| `integration` | `bun run banc:up`, puis `bun run test:integration` : les tests d'intégration sur le banc de test ([`docs/tests/banc.md`](tests/banc.md)) | 10 min |
+| `e2e` | En deux lots côte à côte, `e2e (1/2)` et `e2e (2/2)`. Chacun installe le Chromium de Playwright, lance `bun run banc:up`, puis `bun run test:e2e` sur sa moitié des essais ([`docs/tests/e2e.md`](tests/e2e.md)) | 10 min par lot |
+| `ci-ok` | Rouge si l'un des cinq a échoué, a été annulé ou a été sauté | 2 min |
 
 - Dans `qualite`, les quatre contrôles sont tous joués, même quand l'un échoue : une seule poussée montre toutes les fautes.
+- Un lot `e2e` en échec n'arrête pas l'autre (`fail-fast: false`). Pour `ci-ok`, les deux lots ne font qu'un job : il est en échec dès qu'un lot l'est, annulé dès qu'un lot atteint sa limite.
+- Un lot `e2e` en échec envoie son rapport, ses traces, ses vidéos et ses captures : l'artefact `e2e-1` ou `e2e-2` du passage, gardé 14 jours.
+- Les tests d'intégration et les essais de bout en bout tournent sur le même banc de test que sur un poste, avec les mêmes commandes : chaque job démarre le sien.
 - La plus longue chaîne, `build` puis `ci-ok`, est limitée à 14 minutes : voir « Durée de la CI ».
 - Chaque commande tourne sous `bash -eo pipefail` (`defaults: run: shell: bash`) : une commande qui échoue arrête son étape, même au milieu d'un tube.
 - La CI ne lit aucun secret. Les deux variables que réclame le CLI de Payload reçoivent des valeurs de remplissage, écrites en clair dans le fichier.
@@ -163,9 +172,11 @@ Deux choses à ne pas confondre :
 - **La limite d'un job** (`timeout-minutes`) est un coupe-circuit : elle arrête un job bloqué. Ce n'est pas sa durée normale.
 - **Les 15 minutes** sont la durée qu'une CI verte ne doit pas atteindre.
 
-Aujourd'hui les trois jobs tournent côte à côte. La plus longue chaîne est `build` (12 minutes) puis `ci-ok` (2 minutes) : 14 minutes de limites. La garde vérifie que cette somme reste sous 15 : aucune CI ne peut durer 15 minutes, hors attente d'une machine.
+Aujourd'hui les cinq jobs tournent côte à côte. La plus longue chaîne est `build` (12 minutes) puis `ci-ok` (2 minutes) : 14 minutes de limites. La garde vérifie que cette somme reste sous 15 : aucune CI ne peut durer 15 minutes, hors attente d'une machine.
 
-Cette somme ne tiendra plus sous 15 le jour où un job s'enchaîne après un autre, comme les essais de bout en bout après `build` (`needs: [build]`). Il faudrait des limites au ras des durées normales, et une machine lente rendrait la CI rouge sans raison. Ce jour-là :
+Les essais de bout en bout n'attendent pas `build`, contrairement au plan qui leur faisait reprendre le build de ce job : chaque lot construit l'application lui-même, comme `bun run test:e2e` sur un poste (16 secondes à froid, mesuré sur un poste au ticket 013). La limite d'un lot, 10 minutes, est aussi la borne du critère « bout en bout en moins de 10 minutes » : un lot vert a duré moins que sa limite, et la garde refuse une limite plus haute.
+
+Cette somme ne tiendra plus sous 15 le jour où un job s'enchaîne après un autre (`needs: [build]`, par exemple). Il faudrait des limites au ras des durées normales, et une machine lente rendrait la CI rouge sans raison. Ce jour-là :
 
 1. Donner au nouveau job une limite de coupe-circuit : deux à trois fois sa durée normale.
 2. Relever `CI_LIMIT_MINUTES`, dans `tests/ci/garde-fous-ci.test.ts`, à la somme des limites de la nouvelle chaîne. La garde borne alors les coupe-circuits, et non plus les 15 minutes.
@@ -185,6 +196,7 @@ gh run view NUMERO --repo For-Hives/my-makeup --json jobs \
 |---|---|---|
 | 14/10/2026 | Poste de développement, Podman : ce n'est pas une CI | Image construite sans cache en 1 min 26 s ; contrôle de l'image en 2 min 11 s, au rythme de Podman ; tests unitaires, garde-fous, types et Biome en moins de 10 secondes à eux quatre |
 | 14/10/2026 | GitHub, CI 38501556779, commit `2fe3629` | 1 min 35 s en tout : `qualite` 21 s, `unit` 19 s, `build` 1 min 28 s, `ci-ok` 2 s |
+| 14/10/2026 | Poste de développement, Podman, les commandes des jobs `integration` et `e2e` jouées une à une : ce n'est pas une CI | Banc prêt en 4,2 s, images déjà téléchargées ; tests d'intégration : 37 verts en 7,2 s ; chaque lot `e2e` avec `CI=true` : 4 essais verts, build compris, en 13 s environ (build déjà en cache) |
 
 ### Pourquoi `ci-ok`
 
@@ -215,6 +227,7 @@ Le même fichier garde aussi :
 - les permissions : lecture du dépôt, rien de plus ;
 - `ci-ok` : il tourne toujours et attend tous les jobs. Aucun job n'est sous condition. Une commande (`run`) ne porte que `always()` ou `!cancelled()`, qui la font tourner plus souvent, jamais moins. `failure()` est réservé aux actions (`uses`) qui envoient un rapport : sous cette condition, une commande serait sautée quand tout va bien, et le job resterait vert sans elle ;
 - les durées : chaque job a sa limite, et la somme des limites de la plus longue chaîne reste sous 15 minutes (voir « Durée de la CI ») ;
+- le banc de test en CI : les jobs `integration` et `e2e` existent ; chacun lance `bun run banc:up` avant ses tests, chaque commande seule dans son étape ; `e2e` tourne en deux lots (`matrix: shard: [1, 2]`, et rien d'autre), sans qu'un lot en échec annule l'autre (`fail-fast: false`), sous Node, avec le Chromium de Playwright, et sa limite ne dépasse pas 10 minutes ;
 - l'image Docker : variables publiques seulement, quelle que soit la casse de leur nom, utilisateur sans droits, contrôle de santé, contexte de build en liste blanche (voir le README, « Image Docker »).
 
 ### Ce que les garde-fous ne voient pas
@@ -244,20 +257,24 @@ Les actions utilisées, vérifiées le 14/10/2026 (date de publication, base d'a
 | `actions/checkout` | v6.1.0 | 20/07/2026 |
 | `actions/setup-node` | v6.5.0 | 14/07/2026 |
 | `oven-sh/setup-bun` | v2.2.0 | 14/03/2026 |
+| `actions/upload-artifact` | v7.0.1 | 10/04/2026 |
+
+`actions/upload-artifact` envoie le rapport d'un lot `e2e` en échec. La v7.0.2, publiée le 07/10/2026, n'avait pas 7 jours le 14/10/2026 : la règle donne la v7.0.1. Vérifié par `gh api repos/actions/upload-artifact/releases`, `gh api repos/actions/upload-artifact/security-advisories` et `gh api "/advisories?ecosystem=actions&affects=actions/upload-artifact"` (aucun avis), et le commit de l'étiquette par `gh api repos/actions/upload-artifact/git/ref/tags/v7.0.1`.
 
 ## 10. Canari : la preuve que `ci-ok` peut échouer
 
-Un check requis qui ne peut pas échouer ne protège rien. Le canari est une pull request cassée exprès : un test faux, une erreur de type et une erreur Biome. GitHub doit refuser de la fusionner, même à un administrateur. Il se joue une fois dès que `v3` est protégée, puis une fois par trimestre.
+Un check requis qui ne peut pas échouer ne protège rien. Le canari est une pull request cassée exprès : un test faux, une erreur de type, une erreur Biome et un essai de bout en bout faux. GitHub doit refuser de la fusionner, même à un administrateur. Il se joue une fois dès que `v3` est protégée, puis une fois par trimestre.
 
-`bun run ci:canari` écrit les trois fichiers fautifs. Il refuse d'écrire ailleurs que sur une branche dont le nom commence par `canari-`. Il n'écrit que ces fichiers : il ne commite rien et ne pousse rien.
+`bun run ci:canari` écrit les quatre fichiers fautifs. Il refuse d'écrire ailleurs que sur une branche dont le nom commence par `canari-`. Il n'écrit que ces fichiers : il ne commite rien et ne pousse rien.
 
 | Fichier | Faute | Ce qui doit passer au rouge |
 |---|---|---|
 | `tests/unit/canari.test.ts` | Un test faux | Job `unit` |
 | `tests/ci/canari-types.ts` | Une erreur de type | Job `qualite`, étape « Types » |
 | `tests/ci/canari-biome.ts` | Une variable jamais lue | Job `qualite`, étape « Biome » |
+| `tests/e2e/canari.spec.ts` | Un essai de bout en bout faux | Job `e2e`, étape « End-to-end tests », dans le lot qui le reçoit |
 
-Les trois fichiers sont sous `tests/`, hors de l'image Docker : le job `build` reste vert, et chaque rouge désigne un seul outil.
+Les quatre fichiers sont sous `tests/`, hors de l'image Docker : le job `build` reste vert, et chaque rouge désigne un seul outil. L'essai faux n'ouvre aucune page : il échoue de la même façon dans les deux lots, et se rejoue sans navigateur.
 
 ### Le jouer
 
@@ -267,10 +284,10 @@ Il faut que `v3` soit protégée : `ci-ok` et `CodeQL` requis, administrateurs s
 git fetch origin
 git switch -c canari-2026-10 origin/v3
 bun run ci:canari
-git add tests/unit/canari.test.ts tests/ci/canari-types.ts tests/ci/canari-biome.ts
-git commit -m "test(v3): canary, three faults on purpose, never merge"
+git add tests/unit/canari.test.ts tests/ci/canari-types.ts tests/ci/canari-biome.ts tests/e2e/canari.spec.ts
+git commit -m "test(v3): canary, four faults on purpose, never merge"
 git push -u origin canari-2026-10
-gh pr create --base v3 --title "Canari : ne pas fusionner" --body "Trois fautes posées exprès (docs/qualite.md, « Canari »). À fermer sans fusion."
+gh pr create --base v3 --title "Canari : ne pas fusionner" --body "Quatre fautes posées exprès (docs/qualite.md, « Canari »). À fermer sans fusion."
 ```
 
 Une fois la CI terminée :
@@ -286,6 +303,8 @@ gh api repos/For-Hives/my-makeup/branches/v3/protection --jq .enforce_admins.ena
 | `qualite` | Rouge : « Types » et « Biome » en échec, les autres étapes vertes |
 | `unit` | Rouge : un test en échec |
 | `build` | Vert |
+| `integration` | Vert |
+| `e2e` | Rouge : un lot en échec, l'essai faux rejoué deux fois ; l'autre lot vert |
 | `ci-ok` | Rouge |
 | `mergeStateStatus` | `BLOCKED` |
 | `enforce_admins.enabled` | `true` : la fusion est bloquée pour un administrateur aussi |
@@ -300,13 +319,13 @@ gh pr close NUMERO --delete-branch
 
 ### Résultats
 
-| Date | Pull request | `qualite` | `unit` | `build` | `ci-ok` | Fusion |
-|---|---|---|---|---|---|---|
-| À jouer dès que `v3` est protégée | | | | | | |
+| Date | Pull request | `qualite` | `unit` | `build` | `integration` | `e2e` | `ci-ok` | Fusion |
+|---|---|---|---|---|---|---|---|---|
+| À jouer dès que `v3` est protégée | | | | | | | | |
 
 ### Répétition locale du 14/10/2026
 
-Ce n'est pas le canari : rien n'a été poussé, aucune pull request n'a été ouverte. Sur une copie de travail, les trois fichiers fautifs ont été écrits, chaque commande a été lancée une fois, puis les fichiers ont été retirés.
+Ce n'est pas le canari : rien n'a été poussé, aucune pull request n'a été ouverte. Sur une copie de travail, les trois premiers fichiers fautifs ont été écrits, chaque commande a été lancée une fois, puis les fichiers ont été retirés. Le quatrième, l'essai de bout en bout faux, a été répété de la même façon le même jour, avec le ticket 014, sur un banc à part : les deux dernières lignes.
 
 | Commande | Résultat |
 |---|---|
@@ -314,8 +333,10 @@ Ce n'est pas le canari : rien n'a été poussé, aucune pull request n'a été o
 | `bun run ci:biome` | `noUnusedVariables` sur `tests/ci/canari-biome.ts`, et rien d'autre ; code de sortie 1 |
 | `bun run typecheck` | `TS2322` sur `tests/ci/canari-types.ts`, et rien d'autre ; code de sortie 2 |
 | Le script de `ci-ok`, avec un job en `failure` | Code de sortie 1 (test de `tests/ci/garde-fous-ci.test.ts`) |
+| `CI=true bun run test:e2e --shard=1/2`, puis `--shard=2/2`, l'essai faux `tests/e2e/canari.spec.ts` posé, banc démarré | Lot 1 : l'essai faux en échec, puis rejoué deux fois, code de sortie 1. Lot 2 : 4 essais verts, code de sortie 0. Le job `e2e` aurait donc le résultat `failure` |
+| Le script de `ci-ok`, avec `success` pour les quatre premiers jobs et `failure` pour `e2e` | Code de sortie 1, « Un job n'a pas réussi (failure) : ci-ok est rouge. » |
 
-Le kit ne peut pas pourrir en silence : `tests/ci/canari.test.ts` rejoue les trois fautes à chaque CI, dans un dossier temporaire, et échoue si l'une d'elles n'est plus une faute.
+Le kit ne peut pas pourrir en silence : `tests/ci/canari.test.ts` rejoue les quatre fautes à chaque CI, dans un dossier temporaire, et échoue si l'une d'elles n'est plus une faute. L'essai faux y est lancé par Playwright lui-même, sans navigateur ni banc.
 
 ## 11. Renovate : les mises à jour des dépendances
 
@@ -422,3 +443,35 @@ Le validateur tourne dans l'image officielle de Renovate, figée par son étique
 | 14/10/2026 | Le moteur de Renovate 44.140.0, préréglages compris, interrogé sur chaque dépendance du dépôt et chaque type de mise à jour | 608 réponses, les mêmes que celles de la garde. Rien n'est fusionné seul hors des mineures, correctifs et empreintes ; aucune majeure sans approbation ; aucun correctif de sécurité fusionné seul |
 
 Ce que ces relevés ne montrent pas : les actions de la CI n'ont pas été cherchées, faute de jeton GitHub, et rien de ce qui se passe sur GitHub n'a pu être joué : une vraie pull request de Renovate, sa fusion par GitHub, le tableau de bord. Cela se constate le premier lundi après la bascule.
+
+## 12. La dérive de schéma
+
+La dérive, c'est l'écart entre le schéma que décrivent les collections du code et celui que créent les migrations versionnées. Une collection changée sans sa migration, c'est une base de préprod ou de prod qui ne suit plus le code.
+
+```sh
+bun run schema:derive
+```
+
+- La commande compare les collections du code à l'instantané que Payload a rangé avec la dernière migration (`src/migrations/*.json`). C'est la réponse de `migrate:create --skip-empty`, sans rien écrire.
+- Code de sortie 0 : « Aucune dérive de schéma ». Code de sortie 1 : elle liste le SQL qu'une migration contiendrait, puis dit d'écrire la migration par `bun run payload:migrate:create` et d'en relire le SQL.
+- Elle n'ouvre aucune base et ne lit aucun secret : Payload est chargé sans connexion, et les deux variables que réclame sa configuration reçoivent des valeurs de remplissage. Elle tourne en moins d'une seconde.
+- Un nom qui n'existe que d'un côté, alors que d'autres n'existent que de l'autre (une colonne renommée, ou retirée pendant qu'une autre était ajoutée), est une dérive en soi. La commande le dit tout de suite. Sans ce contrôle, drizzle-kit poserait la question « renommée ? » sur le terminal et attendrait pour toujours dans une CI : essayé le 14/10/2026, le processus a été arrêté au bout de 15 secondes sans réponse.
+- `--avant <instantane.json>` compare à un autre instantané que celui de la dernière migration, et `--instantane <fichier.json>` écrit celui des collections : ce sont les outils de son test, `tests/ci/derive-schema.test.ts`.
+
+### Prête, pas encore bloquante
+
+Jusqu'à la migration `init` qui clôt P3 (ticket 049), le schéma se pousse dans les bases locales et les seules migrations versionnées sont provisoires (`CLAUDE.md`, « Schéma »). Les tickets de P3 ajoutent des collections sans leur migration : un contrôle bloquant les arrêterait tous.
+
+- La CI ne lance donc pas encore la commande. Une étape qui tournerait sans pouvoir échouer serait une étape menteuse (« Les garde-fous »).
+- Son test tourne, lui, à chaque CI, avec les garde-fous : il prouve qu'elle voit une colonne ajoutée, une table ajoutée et une colonne renommée, qu'elle ne crie pas sans raison, et qu'elle rend un verdict sur le dépôt. Il ne dit pas que le dépôt est sans dérive.
+- Relevé du 14/10/2026 : aucune dérive, contre la migration provisoire `20261014_010035_socle_provisoire`.
+
+Le ticket 049 la rendra bloquante : une étape de plus dans le job `qualite`, à côté des fichiers générés, par exemple :
+
+```yaml
+      - name: Schema drift
+        if: ${{ !cancelled() }}
+        run: bun run schema:derive
+```
+
+Ce jour-là, la garde des fichiers générés et cette étape disent ensemble : un changement de collection vient avec ses types et sa migration, dans le même commit.

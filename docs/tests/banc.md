@@ -335,7 +335,9 @@ Le code est dans `tests/outils/faux-google/` : `fournisseur.ts` (le fournisseur)
 
 ## En CI
 
-Les mêmes commandes : `bun run banc:up`, puis `bun run test:integration`. Lancé sans les commandes du banc (`docker compose -f compose.test.yml up -d --wait`), `compose.test.yml` démarre l'instance par défaut, sur les ports de `.env.test`.
+Les mêmes commandes, dans le job `integration` de `.github/workflows/ci.yml` : `bun run banc:up`, puis `bun run test:integration`. Le banc y tourne sous le nom et sur les ports par défaut, avec le Docker de la machine de GitHub. Chaque lot du job `e2e` démarre aussi le sien ([`e2e.md`](e2e.md), « En CI »). Un job en échec rend `ci-ok` rouge ([`docs/qualite.md`](../qualite.md), « Ce que lance la CI »).
+
+Lancé sans les commandes du banc (`docker compose -f compose.test.yml up -d --wait`), `compose.test.yml` démarre l'instance par défaut, sur les ports de `.env.test`.
 
 ## Images
 
