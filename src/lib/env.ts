@@ -42,7 +42,8 @@ export type RawEnv = Partial<
 		| 'S3_ENDPOINT'
 		| 'S3_SECRET_ACCESS_KEY'
 		| 'SMTP_HOST'
-		| 'SMTP_PORT',
+		| 'SMTP_PORT'
+		| 'STATS_TOKEN',
 		string
 	>
 >
@@ -110,6 +111,11 @@ export type ServerEnv = {
 	 * nothing on its own disk.
 	 */
 	storage?: StorageEnv
+	/**
+	 * The service token of /api/stats/weekly (ticket 149). Nothing when STATS_TOKEN is not set: the
+	 * route then refuses every request.
+	 */
+	statsToken?: string
 	/** The only origins a session cookie is accepted from. Never empty: for Payload, empty means « any ». */
 	trustedOrigins: string[]
 }
@@ -168,6 +174,7 @@ const EXPECTED = {
 	S3_SECRET_ACCESS_KEY: 'le secret de cette clé',
 	SMTP_HOST: 'un nom d’hôte seul, sans protocole ni port',
 	SMTP_PORT: 'un numéro de port, de 1 à 65535',
+	STATS_TOKEN: `au moins ${SECRET_MIN_LENGTH} caractères, par exemple la sortie de « openssl rand -hex 32 »`,
 } as const
 
 type CheckedVariable = keyof typeof EXPECTED
@@ -464,6 +471,10 @@ const schema = z.object({
 		.refine(value => siteOrigin(value) !== undefined, { error: 'refusée' })
 		.optional(),
 	PAYLOAD_SECRET: required.refine(value => value.trim().length >= SECRET_MIN_LENGTH, { error: 'trop courte' }),
+	STATS_TOKEN: z
+		.string()
+		.refine(value => value.trim().length >= SECRET_MIN_LENGTH, { error: 'trop courte' })
+		.optional(),
 })
 
 /** An empty or blank variable is a missing one: `NAME=` in a .env file gives an empty text. */
@@ -526,6 +537,7 @@ export function parseServerEnv(source: RawEnv): ServerEnv {
 		payloadSecret: parsed.data.PAYLOAD_SECRET,
 		...(preprod && { preprod }),
 		...(storage && { storage }),
+		...(parsed.data.STATS_TOKEN !== undefined && { statsToken: parsed.data.STATS_TOKEN.trim() }),
 		trustedOrigins: trustedOrigins(parsed.data.NEXT_PUBLIC_SITE_URL, production, raw.PORT),
 	}
 }
@@ -554,6 +566,7 @@ function processEnv(): RawEnv {
 		S3_SECRET_ACCESS_KEY: process.env.S3_SECRET_ACCESS_KEY,
 		SMTP_HOST: process.env.SMTP_HOST,
 		SMTP_PORT: process.env.SMTP_PORT,
+		STATS_TOKEN: process.env.STATS_TOKEN,
 	}
 }
 
@@ -578,6 +591,16 @@ export function serverEnv(source: RawEnv = processEnv()): ServerEnv {
 		payloadSecret: raw.PAYLOAD_SECRET ?? '',
 		trustedOrigins: trustedOrigins(site, raw.NODE_ENV === 'production', raw.PORT),
 	}
+}
+
+/**
+ * The service token of /api/stats/weekly, or nothing: unset, blank or shorter than a secret. Read
+ * alone, so that the route answers 401 without the rest of the environment; a short value is
+ * refused when the server starts (`parseServerEnv`).
+ */
+export function statsTokenFromEnv(value: string | undefined = process.env.STATS_TOKEN): string | undefined {
+	const token = value?.trim()
+	return token !== undefined && token.length >= SECRET_MIN_LENGTH ? token : undefined
 }
 
 /** What `process.env` gives for the version shown by /api/health. All optional. */

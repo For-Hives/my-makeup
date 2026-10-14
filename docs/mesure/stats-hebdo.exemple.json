@@ -1,0 +1,161 @@
+{
+  "version": 1,
+  "periode": {
+    "debut": "2026-10-04T22:00:00.000Z",
+    "fin": "2026-10-11T22:00:00.000Z"
+  },
+  "genereLe": "2026-10-12T05:30:00.000Z",
+  "comptes": {
+    "total": 20,
+    "nouveaux": 20
+  },
+  "profils": {
+    "total": 19,
+    "entierementVides": 8,
+    "actifs": 11,
+    "publiables": 8,
+    "masques": 1,
+    "complets11": 11,
+    "quasiVides": 8,
+    "sansCanal": 9,
+    "modifies90j": 19,
+    "crees": 19
+  },
+  "cohorte": {
+    "profils": 4,
+    "actifs": 2
+  },
+  "inscriptions": [
+    {
+      "creeLe": "2026-10-05",
+      "completude": 0,
+      "actif": false,
+      "publiable": false
+    },
+    {
+      "creeLe": "2026-10-05",
+      "completude": 0,
+      "actif": false,
+      "publiable": false
+    },
+    {
+      "creeLe": "2026-10-05",
+      "completude": 13,
+      "actif": true,
+      "publiable": true
+    },
+    {
+      "creeLe": "2026-10-06",
+      "completude": 0,
+      "actif": false,
+      "publiable": false
+    },
+    {
+      "creeLe": "2026-10-06",
+      "completude": 12,
+      "actif": true,
+      "publiable": false
+    },
+    {
+      "creeLe": "2026-10-06",
+      "completude": 13,
+      "actif": true,
+      "publiable": true
+    },
+    {
+      "creeLe": "2026-10-07",
+      "completude": 0,
+      "actif": false,
+      "publiable": false
+    },
+    {
+      "creeLe": "2026-10-07",
+      "completude": 13,
+      "actif": true,
+      "publiable": false
+    },
+    {
+      "creeLe": "2026-10-07",
+      "completude": 13,
+      "actif": true,
+      "publiable": true
+    },
+    {
+      "creeLe": "2026-10-08",
+      "completude": 0,
+      "actif": false,
+      "publiable": false
+    },
+    {
+      "creeLe": "2026-10-08",
+      "completude": 13,
+      "actif": true,
+      "publiable": true
+    },
+    {
+      "creeLe": "2026-10-08",
+      "completude": 13,
+      "actif": true,
+      "publiable": true
+    },
+    {
+      "creeLe": "2026-10-09",
+      "completude": 0,
+      "actif": false,
+      "publiable": false
+    },
+    {
+      "creeLe": "2026-10-09",
+      "completude": 13,
+      "actif": true,
+      "publiable": true
+    },
+    {
+      "creeLe": "2026-10-09",
+      "completude": 13,
+      "actif": true,
+      "publiable": true
+    },
+    {
+      "creeLe": "2026-10-10",
+      "completude": 0,
+      "actif": false,
+      "publiable": false
+    },
+    {
+      "creeLe": "2026-10-10",
+      "completude": 13,
+      "actif": true,
+      "publiable": true
+    },
+    {
+      "creeLe": "2026-10-11",
+      "completude": 0,
+      "actif": false,
+      "publiable": false
+    },
+    {
+      "creeLe": "2026-10-11",
+      "completude": 13,
+      "actif": true,
+      "publiable": true
+    }
+  ],
+  "publiables": {
+    "parDepartement": {
+      "44": 1,
+      "51": 1,
+      "74": 6
+    },
+    "slugs": [
+      "chloe-bertin",
+      "emma-chevalier",
+      "ines-morel",
+      "jade-roussel",
+      "lea-garnier",
+      "manon-faure",
+      "marie-apolline-josephine-berenice-eugenie-heloise-marie-apolline-josep",
+      "zoe-lefevre"
+    ]
+  }
+}

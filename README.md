@@ -53,6 +53,7 @@ Le reste :
 - `src/services/public/` : la seule lecture publique des données. Une page publique y lit un profil, champ par champ, avec les règles d'accès d'une visiteuse : jamais une coordonnée, ni ce qu'ont écrit l'import ou un admin.
 - `scripts/migration/` : les outils de la migration, dont l'import des données de l'ancien site (voir `docs/migration/IMPORT.md`).
 - `src/preprod/` : ce que fait la préprod quand elle démarre, et elle seule : sur une base vide, elle charge le jeu fictif du banc (12 profils types, 3 talents, 3 articles) ; un jeton de `PREPROD_REMISE_A_ZERO` la remet à zéro. `scripts/preprod/controle.ts` : le contrôle que la CI lance contre elle (voir [`docs/preprod.md`](docs/preprod.md)).
+- `src/app/api/stats/weekly/route.ts` : les statistiques du rapport du lundi, des agrégats seulement, derrière le jeton `STATS_TOKEN` (voir [`docs/mesure/statistiques-hebdomadaires.md`](docs/mesure/statistiques-hebdomadaires.md)).
 - `src/lib/env.ts` : les variables d'environnement, vérifiées au démarrage par `src/instrumentation.ts`.
 - `src/migrations/` : les migrations versionnées de la base.
 - `src/payload-types.ts` et `src/app/(payload)/admin/importMap.js` : fichiers générés par Payload, versionnés, jamais modifiés à la main.
@@ -243,6 +244,7 @@ L'application vérifie ses variables à chaque démarrage (`bun run dev`, `bun r
 | `SMTP_HOST` | Facultative. Le relais SMTP par lequel partent tous les mails : un nom d'hôte seul, sans protocole ni port. Absente, l'application n'envoie rien : Payload écrit une ligne de journal à la place de chaque mail. |
 | `SMTP_PORT` | Obligatoire dès que `SMTP_HOST` est réglée. Le port du relais, de 1 à 65535. |
 | `EMAIL_FROM` | Obligatoire dès que `SMTP_HOST` est réglée. L'expéditeur de tous les mails : `Nom <adresse@domaine>`, ou une adresse seule. |
+| `STATS_TOKEN` | Facultative. Le jeton de service de `GET /api/stats/weekly`, que lit le rapport du lundi : 32 caractères au moins (`openssl rand -hex 32`). Absente, la route refuse tout le monde. Jamais donnée au build. |
 | `GOOGLE_OIDC_ISSUER` | Facultative. Le fournisseur auquel parle la connexion Google. Absente, c'est Google : `https://accounts.google.com`. Sur ce poste seulement, l'adresse du faux Google du banc de test, comme `http://127.0.0.1:7080`, sans `/` final. Refusée sur le site et sa préprod. |
 | `PREPROD_REMISE_A_ZERO` | Préprod seulement, jamais dans un `.env` local. Un jeton de 8 à 64 caractères (minuscules, chiffres, tirets), comme `2026-10-15-matin` : au démarrage suivant, avant ses migrations, la préprod efface toute sa base et sa fausse source, rejoue les migrations et recharge le jeu fictif, une fois par jeton, et seulement sur sa base `mymakeup_preprod`. Refusée partout ailleurs, le site d'abord : l'application ne démarre pas (voir [`docs/preprod.md`](docs/preprod.md)). |
 

@@ -189,6 +189,7 @@ La v3 ouvre des adresses que l'ancien site n'avait pas. La table ne dit rien d'e
 
 - `/admin` et ce qui suit : l'administration de Payload. L'ancien site y répondait 404.
 - `/api/…` : l'API de Payload. Seules `/api/health`, `/api/auth/*` et `/api/sendMail` sont gelées.
+- `/api/stats/weekly` : les statistiques du rapport du lundi, en `GET` seulement et avec un jeton de service (401 sans lui, 405 pour un autre verbe, jamais en cache) : [`docs/mesure/statistiques-hebdomadaires.md`](../mesure/statistiques-hebdomadaires.md).
 - `/_next/…` : les fichiers du build, qui changent à chaque déploiement.
 
 ## L'inventaire gelé

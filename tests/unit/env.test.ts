@@ -11,6 +11,7 @@ import {
 	type RawEnv,
 	SECRET_MIN_LENGTH,
 	serverEnv,
+	statsTokenFromEnv,
 	versionEnv,
 } from '@/lib/env'
 import { deployedVersion } from '@/lib/version'
@@ -457,6 +458,24 @@ describe('the mails leave through the relay the environment names, or not at all
 		SMTP_HOST: '127.0.0.1',
 		SMTP_PORT: '1025',
 	}
+
+	test('STATS_TOKEN: absent is fine, short is refused by name, long is kept', () => {
+		const base = { DATABASE_URI: 'postgres://u:p@localhost:5432/base', PAYLOAD_SECRET: 'x'.repeat(40) }
+		expect(parseServerEnv(base).statsToken).toBeUndefined()
+		expect(parseServerEnv({ ...base, STATS_TOKEN: ' ' }).statsToken).toBeUndefined()
+		expect(parseServerEnv({ ...base, STATS_TOKEN: 'y'.repeat(32) }).statsToken).toBe('y'.repeat(32))
+		const error = (() => {
+			try {
+				parseServerEnv({ ...base, STATS_TOKEN: 'court-secret' })
+			} catch (e) {
+				return e as EnvError
+			}
+		})()
+		expect(error?.variables).toEqual(['STATS_TOKEN'])
+		expect(error?.message).not.toContain('court-secret')
+		expect(statsTokenFromEnv('court')).toBeUndefined()
+		expect(statsTokenFromEnv(` ${'z'.repeat(32)} `)).toBe('z'.repeat(32))
+	})
 
 	test('SMTP_HOST, SMTP_PORT and EMAIL_FROM give the relay and the sender', () => {
 		expect(parseServerEnv(relay).mail).toEqual({
