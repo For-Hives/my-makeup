@@ -9,6 +9,7 @@
  */
 
 import type { GenreDeCible } from './cible'
+import type { BilanDesCommunes } from './communes'
 import type { Bilan, CollectionImportee, Parite } from './moteur'
 import { pariteComplete, sansEcartInexplique } from './moteur'
 import type { EmpreinteDesTables } from './source'
@@ -39,6 +40,8 @@ export interface BilanDeCollection extends Bilan {
 	statuts?: Record<string, number>
 	/** Profiles whose status, computed by the server, is not the one the source gives. */
 	statutsDifferentsDeLaSource?: number[]
+	/** The cities typed, become communes (ticket 063): in numbers and identifiers, never a text. */
+	communes?: BilanDesCommunes
 }
 
 /** The parity of a collection, and how the target splits, read again. */
@@ -123,11 +126,31 @@ function ligneDeBilan(nom: string, bilan: BilanDeCollection, mode: Mode): string
 		lignes.push(
 			`  - écartés, profils vides laissés sans compte par le spam (SCHEMA.md §4.1) : ${bilan.spam.length} (${ids(bilan.spam)})`
 		)
+	if (bilan.communes) lignes.push(...lignesDesCommunes(bilan.communes))
 	if (bilan.statuts) lignes.push(`  - ${statutsEnTexte(bilan.statuts)}`)
 	if (bilan.statutsDifferentsDeLaSource?.length)
 		lignes.push(
 			`  - statut autre que celui que donne la source (section pas encore reprise, ou ville sans commune) : ${ids(bilan.statutsDifferentsDeLaSource)}`
 		)
+	return lignes
+}
+
+/** A share in percent, the French way: « 81,8 % ». */
+const pourcentage = (part: number | null): string =>
+	part === null ? 'sans objet' : `${String(part).replace('.', ',')} %`
+
+function lignesDesCommunes(communes: BilanDesCommunes): string[] {
+	const lignes = [
+		`  - communes : ${communes.rattachees} sur ${pluriel(communes.villesRenseignees, 'ville renseignée', 'villes renseignées')} ` +
+			`(${pourcentage(communes.part)}, cible 90 %) ; profils non vides avec une commune : ` +
+			`${communes.profilsNonVidesAvecCommune} sur ${communes.profilsNonVides}`,
+	]
+	if (communes.aRevoir.length > 0)
+		lignes.push(`  - villes à revoir, zone vide (liste de revue privée, --revue) : ${ids(communes.aRevoir)}`)
+	if (communes.adresses.length > 0)
+		lignes.push(`  - adresses postales, dont seule la commune est reprise : ${ids(communes.adresses)}`)
+	if (communes.decidees.length > 0)
+		lignes.push(`  - villes tranchées par la table de décision : ${ids(communes.decidees)}`)
 	return lignes
 }
 

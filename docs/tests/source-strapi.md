@@ -183,6 +183,8 @@ Les identifiants sont ceux de la fausse base, jamais ceux de la vraie.
 | 30 | « annecy », en minuscules, avec un espace final |
 | 32 à 34 | Profils simples ; 34 a été créé la veille de l'instantané |
 
+Les villes de ces profils ont leurs réponses du référentiel des communes dans `tests/fixtures/import/referentiel-du-banc.json` : des données publiques de `geo.api.gouv.fr`, que l'import du banc lit hors ligne ([`docs/migration/IMPORT.md`](../migration/IMPORT.md), « Les communes »). Une ville ajoutée à la source y ajoute ses réponses, sinon l'import du banc s'arrête.
+
 **Listes** : la compétence 6, la langue 4 et la prestation 11 n'ont aucun lien. Chaque profil a sa ligne de réseaux, vide ou non.
 
 **Fichiers** (`files`), ids 101 à 113 : 101 à 104, 107 à 111 et 113 sous `1/` (fournisseur courant) ; 105, 106 et 112 à la racine (ancien fournisseur). 107 est désigné et son objet manque ; 108 est un PDF désigné ; 110 et 111 sont liés au profil 70, qui n'existe plus ; 112 et 113 (une vidéo) n'ont aucun lien. Les formats dérivés sont à la racine, comme ceux de Strapi.

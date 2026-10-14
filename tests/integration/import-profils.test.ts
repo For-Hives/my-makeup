@@ -73,7 +73,8 @@ beforeAll(async () => {
 	await creerLaSourceStrapi()
 	empreinteAvant = (await empreinteDeLaSource()).empreinte
 	premier = await importerSurLeBanc()
-})
+	// Emptying the base and creating the source take longer than the default 5 s on a loaded machine.
+}, 60_000)
 
 afterAll(async () => {
 	await viderLaBase()
@@ -192,11 +193,12 @@ describe('Après l’import de la source factice', () => {
 
 		expect(statuts[27]).toBe('brouillon')
 		expect(cible.every(({ statutChoisi }) => statutChoisi === 'automatique')).toBe(true)
-		// 32 has a city and nothing else: published at the source, a draft until its commune is taken (ticket 063).
-		expect(premier.collections.profils?.statutsDifferentsDeLaSource).toEqual([32])
-		expect(Object.entries(statuts).filter(([, statut]) => statut === 'publie')).toHaveLength(11)
-		expect(premier.ecarts).toMatchObject({ 'profils-vides-brouillon': 2, 'slug-stocke': 12 })
-		expect(premier.parite?.profils).toMatchObject({ attendus: 13, egaux: 13, statuts: { publie: 11, brouillon: 2 } })
+		// 32 has a city and nothing else: published by its commune (ticket 063), as at the source.
+		expect(statuts[32]).toBe('publie')
+		expect(premier.collections.profils?.statutsDifferentsDeLaSource).toEqual([])
+		expect(Object.entries(statuts).filter(([, statut]) => statut === 'publie')).toHaveLength(12)
+		expect(premier.ecarts).toMatchObject({ 'profils-vides-brouillon': 1, 'slug-stocke': 12 })
+		expect(premier.parite?.profils).toMatchObject({ attendus: 13, egaux: 13, statuts: { publie: 12, brouillon: 1 } })
 	})
 
 	test('second passage : 0 création, 0 mise à jour, et la source n’a pas bougé', async () => {

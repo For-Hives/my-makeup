@@ -6,6 +6,10 @@
  *   await importerSurLeBanc('a-blanc')   a dry run
  *   await commandeDImport(['--reel'])    the command itself, as a person runs it
  *
+ * Both read the kept answers of the referential of the communes for the fake source
+ * (tests/fixtures/import/referentiel-du-banc.json), offline: no test calls the Internet. A test
+ * that asks the referential itself simulates it (`simuler`) and gives `referentiel`.
+ *
  * The source must exist: a test file creates it (`creerLaSourceStrapi()`) and drops it at the end.
  */
 
@@ -14,6 +18,7 @@ import path from 'node:path'
 import { type Decisions, lireLesDecisions } from '../../scripts/migration/import/decisions'
 import { importer, type OptionsDImport } from '../../scripts/migration/import/importer'
 import type { Mode, Rapport } from '../../scripts/migration/import/rapport'
+import { lireLesReponses, type ReferentielGarde, referentielGarde } from '../../scripts/migration/import/referentiel'
 import { ouvrirLaSourceBun } from '../../scripts/migration/import/source-bun'
 import { RACINE } from './banc'
 import { payloadDeTest } from './payload-test'
@@ -30,8 +35,18 @@ export const DECISIONS_DU_BANC: Decisions = lireLesDecisions(
 )
 
 /**
+ * The kept answers of the referential of the communes for every city of the fake source: public
+ * reference data of geo.api.gouv.fr (names, INSEE codes, postal codes, centres), never a personal one.
+ */
+export const FICHIER_DU_REFERENTIEL_DU_BANC = 'tests/fixtures/import/referentiel-du-banc.json'
+
+/** The referential of the bench: its kept answers, offline. A question it does not keep stops the run. */
+export const referentielDuBanc = (): ReferentielGarde =>
+	referentielGarde(lireLesReponses(readFileSync(path.join(RACINE, FICHIER_DU_REFERENTIEL_DU_BANC), 'utf8')), null)
+
+/**
  * Runs the import in this process, against the source and the database of the bench, with the
- * table of decisions of the bench unless the test gives another one.
+ * table of decisions and the referential of the bench unless the test gives others.
  */
 export async function importerSurLeBanc(
 	mode: Mode = 'reel',
@@ -40,18 +55,32 @@ export async function importerSurLeBanc(
 	const payload = await payloadDeTest()
 	const source = ouvrirLaSourceBun(sourceDuBanc().lecture)
 	try {
-		return await importer({ payload, source, mode, cible: 'locale', decisions: DECISIONS_DU_BANC, ...options })
+		return await importer({
+			payload,
+			source,
+			mode,
+			cible: 'locale',
+			decisions: DECISIONS_DU_BANC,
+			referentiel: referentielDuBanc(),
+			...options,
+		})
 	} finally {
 		await source.fermer()
 	}
 }
 
-/** Runs `bun scripts/migration/import.ts` as a person would, under this environment, and gives what it printed. */
+/**
+ * Runs `bun scripts/migration/import.ts` as a person would, under this environment, and gives what
+ * it printed. Unless the options name another file, it reads the referential of the bench offline:
+ * a child process is out of reach of the simulation of outgoing calls (docs/tests/http-sortant.md).
+ */
 export async function commandeDImport(
 	options: readonly string[],
 	environnement: Readonly<Record<string, string | undefined>> = process.env
 ): Promise<{ code: number; sortie: string }> {
-	const enfant = Bun.spawn([process.execPath, '--no-env-file', 'scripts/migration/import.ts', ...options], {
+	const communes = options.includes('--communes') ? [] : ['--communes', FICHIER_DU_REFERENTIEL_DU_BANC, '--hors-ligne']
+	const ligne = [process.execPath, '--no-env-file', 'scripts/migration/import.ts', ...options, ...communes]
+	const enfant = Bun.spawn(ligne, {
 		cwd: RACINE,
 		env: { ...environnement },
 		stdout: 'pipe',

@@ -10,6 +10,8 @@
  *   `slug-stocke`).
  * - An availability never set (`null`) is « available » (register, `disponibilite-par-defaut`):
  *   the only exception to « null stays null » (SCHEMA.md, rule 2).
+ * - The city typed becomes a commune of the official list, with its INSEE code, never an address
+ *   (./communes.ts, ticket 063; register, `ville-en-commune`): the text typed is never copied.
  * - The status is never written: the server computes it at every save from what the import writes
  *   (ticket 044). An entirely empty profile is a draft (register, `profils-vides-brouillon`), any
  *   other is published. The import leaves the choice of the status to the rule (`automatique`): a
@@ -32,6 +34,7 @@ import { type ChampsDuProfil, estEntierementVide, type ReseauxDuProfil } from '.
 import { type DocumentDuProfil, etatDuProfil, statutApres } from '../../../src/lib/profil/etat'
 import { CHOIX_INITIAL, type StatutDuProfil } from '../../../src/lib/profil/statut'
 import { attribuerSlugs } from '../../../src/lib/slug'
+import type { CommuneAttendue } from './communes'
 import { REFERENCES } from './ecarts'
 import type { Adaptateur, Attendu, Ecart } from './moteur'
 import { iso, type Requete } from './source'
@@ -155,6 +158,7 @@ export const ADAPTATEUR_PROFILS: Adaptateur = {
 		nomArtiste: 'texte',
 		specialite: 'texte',
 		description: 'texte',
+		commune: 'objet',
 		disponible: 'booleen',
 		score: 'nombre',
 		superMaquilleuse: 'booleen',
@@ -237,12 +241,14 @@ export interface ProfilsAttendus {
  * The profiles the target must hold. `comptes` gives, for each account the import takes, its
  * identifier in Payload, or `null` while it is still to be created (a dry run). `laisses` names
  * the profiles the import does not take (`profilsLaisses`): a profile out of both is linked to an
- * account the import takes, or the import stopped before.
+ * account the import takes, or the import stopped before. `communes` gives the commune of each
+ * profile taken (./communes.ts); a profile it does not name has none.
  */
 export function profilsAttendus(
 	profils: readonly ProfilLu[],
 	comptes: ReadonlyMap<number, number | null>,
-	laisses: Pick<ProfilsLaisses, 'ecartes' | 'spam'> = { ecartes: [], spam: [] }
+	laisses: Pick<ProfilsLaisses, 'ecartes' | 'spam'> = { ecartes: [], spam: [] },
+	communes: ReadonlyMap<number, CommuneAttendue | null> = new Map()
 ): ProfilsAttendus {
 	const nonPris = new Set([...laisses.ecartes, ...laisses.spam])
 	// The slugs of the old site, computed on every profile of the source, as the old site did.
@@ -269,6 +275,7 @@ export function profilsAttendus(
 			nomArtiste: profil.company_artist_name,
 			specialite: profil.speciality,
 			description: profil.description,
+			commune: communes.get(profil.id) ?? null,
 			disponible: profil.available ?? true,
 			score: nombre(profil.score),
 			superMaquilleuse: profil.pro,
@@ -282,6 +289,7 @@ export function profilsAttendus(
 		if ((statut === 'brouillon') !== videALaSource(profil)) statutsDifferentsDeLaSource.push(profil.id)
 		const ecarts: Ecart[] = []
 		if (slug !== profil.username) ecarts.push({ champ: 'slug', reference: REFERENCES.slugStocke })
+		if ((profil.city?.trim() ?? '') !== '') ecarts.push({ champ: 'commune', reference: REFERENCES.villeEnCommune })
 		if (profil.available === null) ecarts.push({ champ: 'disponible', reference: REFERENCES.disponibiliteParDefaut })
 		if (statut === 'brouillon') ecarts.push({ champ: 'statut', reference: REFERENCES.profilVideEnBrouillon })
 		attendus.push({ strapiId: profil.id, valeurs, ecarts })

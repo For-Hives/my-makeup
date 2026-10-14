@@ -19,6 +19,8 @@ export const REFERENCES = {
 	slugStocke: 'slug-stocke',
 	/** A profile entirely empty at the source is a draft. */
 	profilVideEnBrouillon: 'profils-vides-brouillon',
+	/** The city typed becomes a commune of the official list, never an address; the text is not copied. */
+	villeEnCommune: 'ville-en-commune',
 	/** An availability never set (`null`) is « available ». */
 	disponibiliteParDefaut: 'disponibilite-par-defaut',
 	/** The 13 empty profiles left without an account by the spam of 10/10/2026 are not taken. */

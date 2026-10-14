@@ -196,6 +196,7 @@ describe('les profils attendus', () => {
 			nomArtiste: null,
 			specialite: 'Mariage',
 			description: null,
+			commune: null,
 			disponible: true,
 			score: 12.5,
 			superMaquilleuse: true,
