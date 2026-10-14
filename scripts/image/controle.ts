@@ -181,6 +181,12 @@ async function main(): Promise<void> {
 		await docker(['network', 'rm', names.network])
 	}
 
+	// Interrupted by hand or by the CI: nothing is left behind either.
+	for (const signal of ['SIGINT', 'SIGTERM'] as const)
+		process.once(signal, () => {
+			cleanUp().finally(() => process.exit(130))
+		})
+
 	/** Starts the image and gives the port it answers on. */
 	const startApplication = async (container: string): Promise<number> => {
 		const run = (extra: string[]) =>
