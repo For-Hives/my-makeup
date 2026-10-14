@@ -33,7 +33,9 @@
 		"banc:prepare": "bun --no-env-file scripts/banc.ts prepare",
 		"banc:source": "bun --no-env-file scripts/source-strapi.ts",
 		"test:integration": "bun --no-env-file scripts/banc.ts test",
-		"test:e2e": "bun --no-env-file scripts/e2e.ts"
+		"test:e2e": "bun --no-env-file scripts/e2e.ts",
+		"notes:ajouter": "bun --no-env-file scripts/release/ajouter-note.ts",
+		"release:publier": "bun --no-env-file scripts/release/publication.ts"
 	},
 	"dependencies": {
 		"@hookform/resolvers": "5.9.1",

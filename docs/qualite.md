@@ -223,8 +223,8 @@ Le même fichier garde aussi :
 
 - les déclencheurs de la CI : aucun filtre de chemins, aucun filtre sur les pull requests, `v3` dans les poussées, jamais `pull_request_target` ;
 - les actions : chacune figée par un commit complet, avec sa version en commentaire ;
-- les secrets : `ci.yml` n'en lit aucun, ni par son nom, ni en bloc (`toJSON(secrets)`, un nom calculé, `secrets: inherit`). Le jeton de la CI compte comme un secret, sous ses deux noms : `secrets.GITHUB_TOKEN` et `github.token` ;
-- les permissions : lecture du dépôt, rien de plus ;
+- les secrets : `ci.yml` n'en lit aucun, ni par son nom, ni en bloc (`toJSON(secrets)`, un nom calculé, `secrets: inherit`). Le jeton de la CI compte comme un secret, sous ses deux noms : `secrets.GITHUB_TOKEN` et `github.token`. Les autres workflows ne lisent que les secrets de la liste admise du test : aujourd'hui le seul jeton du passage, que `release.yml` reçoit pour pousser la publication ([`docs/publication.md`](publication.md)) ;
+- les permissions : `ci.yml` lit le dépôt, rien de plus. Le workflow de publication donne l'écriture à son seul job ; `tests/ci/publication.test.ts` le garde, avec sa dépendance à `ci-ok` ;
 - `ci-ok` : il tourne toujours et attend tous les jobs. Aucun job n'est sous condition. Une commande (`run`) ne porte que `always()` ou `!cancelled()`, qui la font tourner plus souvent, jamais moins. `failure()` est réservé aux actions (`uses`) qui envoient un rapport : sous cette condition, une commande serait sautée quand tout va bien, et le job resterait vert sans elle ;
 - les durées : chaque job a sa limite, et la somme des limites de la plus longue chaîne reste sous 15 minutes (voir « Durée de la CI ») ;
 - le banc de test en CI : les jobs `integration` et `e2e` existent ; chacun lance `bun run banc:up` avant ses tests, chaque commande seule dans son étape ; `e2e` tourne en deux lots (`matrix: shard: [1, 2]`, et rien d'autre), sans qu'un lot en échec annule l'autre (`fail-fast: false`), sous Node, avec le Chromium de Playwright, et sa limite ne dépasse pas 10 minutes ;

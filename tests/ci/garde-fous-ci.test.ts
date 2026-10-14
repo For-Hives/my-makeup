@@ -559,7 +559,10 @@ describe('every action is pinned by its commit', () => {
 
 describe('the CI reads no secret', () => {
 	/** Frozen here: a workflow reads a secret only when its name is added to this list, in the same commit. */
-	const ALLOWED_SECRETS: string[] = []
+	const ALLOWED_SECRETS: string[] = [
+		// release.yml pushes the publication on main with the token of its own run (ticket 036).
+		'GITHUB_TOKEN',
+	]
 
 	test('the CI reads none, and the other workflows only the ones of the allowed list', () => {
 		expect(unexpectedSecrets([ci])).toEqual([])

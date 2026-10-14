@@ -47,7 +47,7 @@ Selon ce que le changement touche :
 | Une collection ou un champ | Les règles « Schéma » de [`CLAUDE.md`](CLAUDE.md) sont tenues. |
 | Une adresse publique | Les règles « URL » de [`CLAUDE.md`](CLAUDE.md) sont tenues. |
 
-La note de version s'écrit dans le journal des notes de version du dépôt. Tant qu'il n'existe pas (ticket 036), elle va dans le message du commit, sur une ligne qui commence par `Note de version :`.
+La note de version s'ajoute par `bun run notes:ajouter <type> "<phrase>"`, dans le même commit que le changement. Elle attend dans `src/content/changelog.json` jusqu'à la publication suivante, qui la range sous son numéro. Le type, la règle de la phrase et la publication : [`docs/publication.md`](docs/publication.md).
 
 ## Compte rendu
 

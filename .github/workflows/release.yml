@@ -1,0 +1,56 @@
+# The publication of a version (docs/publication.md). It depends on ci-ok: it starts when the
+# CI of a push on main has ended green, ci-ok included, and the script reads the check itself
+# before publishing. Then it reserves the next number, moves the pending release notes under it
+# and pushes .release/version.json with its tag. Coolify watches that file and deploys the
+# production; no other push deploys it.
+#
+# Rules, enforced by tests/ci/publication.test.ts and by the guard rails of every workflow
+# (tests/ci/garde-fous-ci.test.ts, C01 to C03):
+# - triggered by the end of the CI only, on main, for a push of this repository;
+# - one publication at a time, never cancelled half-way;
+# - no `bun install`: no code of a dependency runs next to the token that pushes on main;
+# - the token is the one of the run, and only this job may write.
+#
+# GitHub starts a workflow_run workflow from the default branch only: nothing is published
+# before v3 is merged into main.
+name: Publication
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+concurrency:
+  group: publication
+  cancel-in-progress: false
+
+jobs:
+  publication:
+    name: publication
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      checks: read
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+      - name: Publish the version
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          SOURCE_COMMIT: ${{ github.event.workflow_run.head_sha }}
+        run: bun run release:publier --pousser
