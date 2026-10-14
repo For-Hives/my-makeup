@@ -19,6 +19,8 @@ export const REFERENCES = {
 	slugStocke: 'slug-stocke',
 	/** A profile entirely empty at the source is a draft. */
 	profilVideEnBrouillon: 'profils-vides-brouillon',
+	/** A profile not empty at the source that the rule makes a draft, its only content (a city) being unread. */
+	profilNonVideEnBrouillon: 'profil-non-vide-en-brouillon',
 	/** The city typed becomes a commune of the official list, never an address; the text is not copied. */
 	villeEnCommune: 'ville-en-commune',
 	/** An availability never set (`null`) is « available ». */

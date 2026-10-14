@@ -141,7 +141,13 @@ export function codeDuControle(rapport: Rapport): 0 | 3 | 4 | 5 {
 
 /** What a check says about the target, in French, by collection and in numbers only. */
 export function controleEnTexte(rapport: Rapport): string {
+	// A run that stopped, lost a document or saw the source move compared nothing: it cannot say "same".
+	if (rapport.arret) return 'Contrôle : sans conclusion, le passage s’est arrêté sur des cas à décider (code 3).'
+	if (!rapport.source.inchangee) return 'Contrôle : sans conclusion, la source a changé pendant le passage (code 4).'
 	const ecarts = ecartsDeLaCible(rapport)
+	const refuses = Object.values(rapport.collections).reduce((total, bilan) => total + bilan.refuses.length, 0)
+	if (ecarts.length === 0 && refuses > 0)
+		return `Contrôle : sans conclusion complète, ${pluriel(refuses, 'document refusé', 'documents refusés')} attend une décision (code 5).`
 	if (ecarts.length === 0) return 'Contrôle : la cible est la source (0 création, 0 mise à jour, 0 document en trop).'
 	return [
 		'Contrôle : la cible n’est PAS la source.',

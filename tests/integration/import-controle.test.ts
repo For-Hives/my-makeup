@@ -38,6 +38,19 @@ async function comptesDeLaCible(): Promise<number> {
 	}
 }
 
+/** How many main photos and photo links the profiles of the target hold, and how many media documents. */
+async function photosDeLaCible(): Promise<{ principales: number; liens: number; medias: number }> {
+	const sql = new SQL({ url: source.maintenance, max: 1 })
+	try {
+		const [ligne] = await sql.unsafe(
+			'SELECT (SELECT count(*)::int FROM profils WHERE photo_principale_id IS NOT NULL) AS principales, (SELECT count(*)::int FROM profils_rels WHERE media_id IS NOT NULL) AS liens, (SELECT count(*)::int FROM media) AS medias'
+		)
+		return ligne
+	} finally {
+		await sql.close()
+	}
+}
+
 beforeEach(async () => {
 	await viderLaBase()
 	await viderLeCapteur()
@@ -97,5 +110,23 @@ describe('le contrôle de la parité (I39, I40, I43)', () => {
 		expect(code).toBe(2)
 		expect(sortie).toContain('Usage')
 		expect(await comptesDeLaCible()).toBe(0)
+	}, 60_000)
+
+	test('--sans-photos avec --reel est refusé sur une cible qui garde des médias : rien n’est retiré', async () => {
+		await importerSurLeBanc()
+		const avant = await photosDeLaCible()
+		expect(avant.principales).toBeGreaterThan(0)
+		expect(avant.medias).toBeGreaterThan(0)
+
+		const { code, sortie } = await commandeDImport([
+			'--reel',
+			'--sans-photos',
+			'--decisions',
+			FICHIER_DES_DECISIONS_DU_BANC,
+		])
+
+		expect(code, sortie).toBe(1)
+		expect(sortie).toContain('--sans-photos et --reel ne vont pas ensemble')
+		expect(await photosDeLaCible()).toEqual(avant)
 	}, 60_000)
 })

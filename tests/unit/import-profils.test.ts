@@ -241,6 +241,18 @@ describe('les profils attendus', () => {
 
 		expect(statutsDifferentsDeLaSource).toEqual([22])
 	})
+
+	test('un profil non vide à la source qui devient brouillon porte sa propre référence, pas celle des profils vides', () => {
+		const { attendus } = profilsAttendus(
+			[profils[0] as ProfilLu, { ...(profils[1] as ProfilLu), aPhotoPrincipale: true }],
+			comptes
+		)
+		const references = (id: number) => attendus.find(({ strapiId }) => strapiId === id)?.ecarts.map(e => e.reference)
+
+		expect(references(22)).toContain('profil-non-vide-en-brouillon')
+		expect(references(22)).not.toContain('profils-vides-brouillon')
+		expect(Object.values(REFERENCES) as string[]).toContain('profil-non-vide-en-brouillon')
+	})
 })
 
 describe('le moteur compare un groupe de champs comme un tout', () => {

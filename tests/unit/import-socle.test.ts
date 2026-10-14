@@ -393,6 +393,32 @@ describe('le rapport', () => {
 		).toBe(3)
 	})
 
+	test('le contrôle ne dit « la cible est la source » que s’il a pu comparer (codes 3, 4 et 5)', () => {
+		const arrete = rapport({
+			mode: 'a-blanc',
+			parite: null,
+			arret: { emailsPartages: [[9, 10]], profilsDeComptesEcartes: [], profilsSansCompte: [] },
+		})
+		expect(controleEnTexte(arrete)).toContain('sans conclusion')
+		expect(controleEnTexte(arrete)).toContain('code 3')
+		expect(controleEnTexte(arrete)).not.toContain('la cible est la source')
+
+		const base = sansRefus({ mode: 'a-blanc', parite: null })
+		const talents = { ...(base.collections.talents ?? ({} as never)), crees: 0, modifies: 0, enTrop: [] }
+		const refuse = {
+			...base,
+			collections: { talents: { ...talents, refuses: [{ strapiId: 4, motif: 'slug-en-double' }] } },
+		} as Rapport
+		expect(codeDuControle(refuse)).toBe(5)
+		expect(controleEnTexte(refuse)).toContain('code 5')
+		expect(controleEnTexte(refuse)).not.toContain('la cible est la source')
+
+		const bouge = { ...base, collections: { talents }, source: { ...base.source, inchangee: false } } as Rapport
+		expect(codeDuControle(bouge)).toBe(4)
+		expect(controleEnTexte(bouge)).toContain('code 4')
+		expect(controleEnTexte(bouge)).not.toContain('la cible est la source')
+	})
+
 	test('l’arrêt nomme chaque cas par identifiants : les comptes au même email, les profils d’un compte écarté ou sans compte', () => {
 		const texte = rapportEnTexte(
 			rapport({
