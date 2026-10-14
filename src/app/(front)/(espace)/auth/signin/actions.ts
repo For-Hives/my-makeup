@@ -1,12 +1,14 @@
 'use server'
 
 import config from '@payload-config'
-import { cookies, headers } from 'next/headers'
+import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
-import { generatePayloadCookie, getPayload } from 'payload'
+import { getPayload } from 'payload'
 import { connecter } from '@/lib/auth/connexion'
+import { poserLeCookieDeSession } from '@/lib/auth/cookie-session'
 import type { CodeErreur } from '@/lib/auth/erreurs'
 import { ouvrirParMotDePasse } from '@/lib/auth/jeton'
+import { journalDe } from '@/lib/auth/journal'
 import { retourSur } from '@/lib/auth/retour'
 
 export type EtatDeConnexion = { code: CodeErreur } | null
@@ -30,23 +32,11 @@ export async function seConnecter(_precedent: EtatDeConnexion, formulaire: FormD
 		headers: entetes,
 		email: formulaire.get('email'),
 		password: formulaire.get('password'),
+		journal: journalDe(payload),
 	})
 	if (!resultat.ok) return { code: resultat.code }
 
-	const auth = payload.collections.pros.config.auth
-	const cookie = generatePayloadCookie({
-		collectionAuthConfig: auth,
-		cookiePrefix: payload.config.cookiePrefix,
-		returnCookieAsObject: true,
-		token: resultat.token,
-	})
-	;(await cookies()).set(cookie.name, resultat.token, {
-		domain: auth.cookies.domain,
-		expires: cookie.expires ? new Date(cookie.expires) : undefined,
-		httpOnly: true,
-		sameSite: typeof auth.cookies.sameSite === 'string' ? (auth.cookies.sameSite.toLowerCase() as 'lax') : 'lax',
-		secure: auth.cookies.secure || false,
-	})
+	await poserLeCookieDeSession(payload, resultat.token)
 
 	const site = process.env.NEXT_PUBLIC_SITE_URL ?? origine ?? 'http://localhost'
 	const destination = retourSur(formulaire.get('callbackUrl'), site)

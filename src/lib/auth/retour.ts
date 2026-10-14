@@ -36,3 +36,12 @@ export function retourSur(brut: unknown, origine: string, defaut: string = ESPAC
 /** The sign-in page that brings the visitor back to `chemin` (path and query of the closed page). */
 export const urlDeConnexion = (chemin: string): string =>
 	`${PAGE_DE_CONNEXION}?callbackUrl=${encodeURIComponent(chemin)}`
+
+/** Where a sign-out leads: the home page, public and always there (AUTH-07: it was a 404). */
+export const PAGE_APRES_DECONNEXION = '/'
+
+/** The wall of verification: the page that tells a new account to look in its mailbox (ticket 082). */
+export const PAGE_DU_MUR = '/auth/verification-wall'
+
+/** The onboarding: where a new, confirmed and signed-in account lands (ticket 082). */
+export const PAGE_D_ACCUEIL_DU_COMPTE = '/auth/init-account'

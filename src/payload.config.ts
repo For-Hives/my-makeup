@@ -8,6 +8,7 @@ import sharp from 'sharp'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import { Admins } from './collections/Admins'
 import { Articles } from './collections/Articles'
+import { AuthEvenements } from './collections/AuthEvenements'
 import { avecLaCorbeille } from './collections/corbeille'
 import {
 	aucunEnvoiSansStockage,
@@ -52,16 +53,16 @@ const media: CollectionConfig<'media'> = env.storage
 		}
 
 export default buildConfig({
-	// A wrong password or a braked address is a normal event, not an application error: the weekly
-	// report counts the error-level lines (decisions 2026-10-13).
-	loggingLevels: { APIError: 'info', AuthenticationError: 'info' },
+	// A wrong password, a braked address or an address not yet confirmed is a normal event, not an
+	// application error: the weekly report counts the error-level lines (decisions 2026-10-13).
+	loggingLevels: { APIError: 'info', AuthenticationError: 'info', UnverifiedEmail: 'info' },
 	admin: {
 		user: Admins.slug,
 		importMap: { baseDir: dirname },
 		// 'off' closes /api/og: an image rendered on demand, for anyone, with or without a session.
 		meta: { defaultOGImageType: 'off' },
 	},
-	collections: [Admins, Pros, Profils, media, Talents, Articles],
+	collections: [Admins, Pros, Profils, media, Talents, Articles, AuthEvenements],
 	// The site and the API share one origin: no other site may read this API from a browser.
 	cors: [],
 	// A session cookie is accepted from these origins only (src/lib/env.ts).

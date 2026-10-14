@@ -30,6 +30,12 @@ export default async function PageDeConnexion({
 			<h1 className="font-semibold text-3xl">Se connecter</h1>
 			<FormulaireDeConnexion action={seConnecter} retour={retour} />
 			<p>
+				Pas encore de compte ?{' '}
+				<Link className="underline" href="/auth/signup">
+					Inscris-toi
+				</Link>
+			</p>
+			<p>
 				<Link className="underline" href="/">
 					Retour à l’accueil
 				</Link>
