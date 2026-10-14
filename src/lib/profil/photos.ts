@@ -1,5 +1,6 @@
 import type { PayloadRequest, Where } from 'payload'
 // Relative import on purpose: this file is also loaded by the Payload CLI, outside of Next.
+import { identifiantPossible } from '../acces'
 import { GALERIE_MAX } from '../medias'
 
 /**
@@ -35,23 +36,42 @@ export const photosDeLaProprietaire = ({ data }: { data: unknown }): Where | boo
 	return pro === undefined ? false : { owner: { equals: pro } }
 }
 
+/** What Payload hands a `validate` of these fields. `hasMany` is the one of the field, when it is known. */
+interface OptionsDeValidation {
+	data: unknown
+	hasMany?: boolean
+	previousValue?: unknown
+	req: PayloadRequest
+}
+
 /**
  * `validate` of `photoPrincipale` and `galerie`: 10 photos at most, and each photo the save
  * attaches an existing media that belongs to the account of the profile. A photo the profile
  * already holds stays, as on the old API (`checkRequestedFiles`, which checks the new files only):
  * an admin who gives a profile to another account does not lose its photos on the next save.
  *
+ * Refused, with the same message and before any query (ticket 133, addendum of 14/10/2026):
+ * - an entry that names no identifier (`true`, `{}`, `{ relationTo, value }`), instead of ignoring
+ *   it, and a list given to a field that holds one photo;
+ * - a new photo whose identifier no media can have (`identifiantPossible`): Postgres would fail on
+ *   it and the request end in a 500.
+ *
  * The media are read without access control: the rule is the owner, not what the request may read.
  */
 export async function validerPhotosDuProfil(
 	valeur: unknown,
-	{ data, previousValue, req }: { data: unknown; previousValue?: unknown; req: PayloadRequest }
+	{ data, hasMany, previousValue, req }: OptionsDeValidation
 ): Promise<true | string> {
-	const toutes = photosNommees(valeur)
+	const plusieurs = hasMany ?? Array.isArray(valeur)
+	if (!plusieurs && Array.isArray(valeur)) return MESSAGES_DES_PHOTOS.photoRefusee
+	const entrees = (Array.isArray(valeur) ? valeur : [valeur]).filter(entree => entree !== undefined && entree !== null)
+	const toutes = photosNommees(entrees)
+	if (toutes.length !== entrees.length) return MESSAGES_DES_PHOTOS.photoRefusee
 	if (toutes.length > GALERIE_MAX) return MESSAGES_DES_PHOTOS.galeriePleine
 	const dejaLa = new Set(photosNommees(previousValue).map(String))
 	const ids = toutes.filter(id => !dejaLa.has(String(id)))
 	if (ids.length === 0) return true
+	if (!ids.every(identifiantPossible)) return MESSAGES_DES_PHOTOS.photoRefusee
 	const pro = identifiantDe((data as { pro?: unknown } | undefined)?.pro)
 	const { docs } = await req.payload.find({
 		collection: 'media',
@@ -69,3 +89,15 @@ export async function validerPhotosDuProfil(
 	})
 	return toutesASonCompte ? true : MESSAGES_DES_PHOTOS.photoRefusee
 }
+
+/** `validate` of `photoPrincipale`: one photo, never a list. */
+export const validerPhotoPrincipale = (
+	valeur: unknown,
+	options: Omit<OptionsDeValidation, 'hasMany'>
+): Promise<true | string> => validerPhotosDuProfil(valeur, { ...options, hasMany: false })
+
+/** `validate` of `galerie`: a list, in order. */
+export const validerGalerie = (
+	valeur: unknown,
+	options: Omit<OptionsDeValidation, 'hasMany'>
+): Promise<true | string> => validerPhotosDuProfil(valeur, { ...options, hasMany: true })

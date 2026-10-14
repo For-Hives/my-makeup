@@ -91,7 +91,7 @@ const appel = (user: Utilisateur | null) => ({ req: { user } as PayloadRequest }
  * Identifiers no document can have, as a rule receives them: REST hands it `parseFloat` of the
  * address (`abc` gives NaN, `1e999` Infinity), the Local API what its caller gives.
  */
-const IDENTIFIANTS_IMPOSSIBLES = [
+export const IDENTIFIANTS_IMPOSSIBLES = [
 	Number.NaN,
 	Number.POSITIVE_INFINITY,
 	1.5,
@@ -869,6 +869,9 @@ describe('La collection media (ticket 043)', () => {
 	})
 })
 
+const MESSAGE_REFUS =
+	"Choisis à nouveau ta photo : elle n'a pas été acceptée, et tes modifications n'ont pas été enregistrées."
+
 describe('Les photos d’un profil (ticket 043)', () => {
 	/** The validation as Payload calls it, with a database that holds these media and their owners. */
 	function valider(valeur: unknown, pro: unknown, media: { id: number; owner: unknown }[], avant?: unknown) {
@@ -906,6 +909,41 @@ describe('Les photos d’un profil (ticket 043)', () => {
 		// A media that does not exist, or that has no owner (an article's), is refused too.
 		expect(await valider([4], 7, [])).not.toBe(true)
 		expect(await valider([5], 7, [{ id: 5, owner: null }])).not.toBe(true)
+	})
+
+	test('133 : un identifiant impossible est refusé avant toute requête, un `find` espion n’est jamais appelé', async () => {
+		let appels = 0
+		const payload = {
+			find: () => {
+				appels++
+				return Promise.resolve({ docs: [] })
+			},
+		}
+		const valider133 = (valeur: unknown, hasMany: boolean) =>
+			validerPhotosDuProfil(valeur, { data: { pro: 7 }, hasMany, req: { payload } as unknown as PayloadRequest })
+		for (const id of IDENTIFIANTS_IMPOSSIBLES) {
+			expect([id, await valider133(id, false)]).toEqual([id, MESSAGE_REFUS])
+			expect([id, await valider133([id], true)]).toEqual([id, MESSAGE_REFUS])
+		}
+		expect(appels).toBe(0)
+	})
+
+	test('133 : une entrée qui ne nomme aucun identifiant est refusée au lieu d’être ignorée', async () => {
+		const payload = { find: () => Promise.resolve({ docs: [{ id: 5, owner: 7 }] }) }
+		const valider133 = (valeur: unknown, hasMany: boolean) =>
+			validerPhotosDuProfil(valeur, { data: { pro: 7 }, hasMany, req: { payload } as unknown as PayloadRequest })
+		for (const entree of [true, {}, { relationTo: 'media', value: 5 }, [[5]]])
+			expect([entree, await valider133(entree, false)]).toEqual([entree, MESSAGE_REFUS])
+		expect(await valider133([5], false)).toBe(MESSAGE_REFUS)
+		expect(await valider133([5, true], true)).toBe(MESSAGE_REFUS)
+		expect(await valider133([5, {}], true)).toBe(MESSAGE_REFUS)
+		// The valid forms keep their behaviour: digits or number, a populated document, an empty value.
+		expect(await valider133([5], true)).toBe(true)
+		expect(await valider133('5', false)).toBe(true)
+		expect(await valider133(5, false)).toBe(true)
+		expect(await valider133({ id: 5 }, false)).toBe(true)
+		expect(await valider133(null, false)).toBe(true)
+		expect(await valider133([], true)).toBe(true)
 	})
 
 	test('11 photos : refusé, avec le message de l’ancien site', async () => {

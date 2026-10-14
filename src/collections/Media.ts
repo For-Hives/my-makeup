@@ -20,6 +20,7 @@ import {
 	jamais,
 	lectureDesMedias,
 } from '../lib/acces'
+import { juger, nomImprevisible, TYPES_DE_PHOTO } from '../lib/envoi-photo'
 import { adresseDuMedia } from '../lib/medias'
 
 /**
@@ -65,6 +66,25 @@ export const MESSAGE_SANS_STOCKAGE =
  */
 export const aucunEnvoiSansStockage: CollectionBeforeOperationHook = ({ args, operation, req }) => {
 	if ((operation === 'create' || operation === 'update') && req.file) throw new APIError(MESSAGE_SANS_STOCKAGE, 503)
+	return args
+}
+
+/**
+ * A file sent to the site is a JPEG, a PNG or a WebP of 10 MiB at most, read in its content
+ * (ticket 133, `src/lib/envoi-photo.ts`), whoever sends it. Anything else is refused (400) before
+ * Payload reads it, so that nothing reaches the storage. The photo is then stored under a name the
+ * server draws (`<uuid>.<extension of its real type>`): the original name appears nowhere.
+ *
+ * The import sends no file (it adopts photos where they are) and is not concerned.
+ */
+export const photoValideEtRenommee: CollectionBeforeOperationHook = ({ args, operation, req }) => {
+	const fichier = req.file
+	if ((operation !== 'create' && operation !== 'update') || !fichier) return args
+	const octets = fichier.data
+	const verdict = juger(octets, Math.max(fichier.size ?? 0, octets.length))
+	if (!verdict.accepte) throw new APIError(verdict.message, 400)
+	fichier.name = nomImprevisible(verdict.type)
+	fichier.mimetype = verdict.type
 	return args
 }
 
@@ -114,7 +134,20 @@ export const unFichierALaCreation: CollectionBeforeChangeHook = ({ data, operati
  * Nothing is ever written on the disk of the server: with a storage, the object goes there;
  * without one, nowhere. A creation without a file is left to `unFichierALaCreation`.
  */
-export const UPLOAD_DES_MEDIAS: UploadConfig = { disableLocalStorage: true, filesRequiredOnCreate: false }
+export const UPLOAD_DES_MEDIAS: UploadConfig = {
+	disableLocalStorage: true,
+	filesRequiredOnCreate: false,
+	// Second lock, behind `photoValideEtRenommee`: Payload reads the type in the content as well.
+	mimeTypes: Object.keys(TYPES_DE_PHOTO),
+	// Derived sizes, stored next to the original (same folder, same unpredictable base name).
+	// Payload makes only the sizes the photo is large enough for; the bin moves them with it.
+	imageSizes: [
+		{ name: 'thumbnail', width: 245 },
+		{ name: 'small', width: 500 },
+		{ name: 'medium', width: 750 },
+		{ name: 'large', width: 1000 },
+	],
+}
 
 /**
  * The photos of the site (plan 01 §6.1; docs/migration/SCHEMA.md, §8). Each one is an object of
@@ -132,7 +165,7 @@ export const UPLOAD_DES_MEDIAS: UploadConfig = { disableLocalStorage: true, file
  *   src/payload.config.ts, which knows the base of the photos).
  *
  * The types, the size, the unpredictable name and the derived sizes of a photo sent in the v3 are
- * the work of ticket 133. A media deleted, or whose file is replaced, sends its objects to the bin
+ * those of ticket 133 (`photoValideEtRenommee`, `UPLOAD_DES_MEDIAS`). A media deleted, or whose file is replaced, sends its objects to the bin
  * of the storage, never erased, and media are deleted or changed one at a time, never by a
  * `where`: the hooks of the bin are added by src/collections/corbeille.ts (ticket 045), through
  * src/payload.config.ts.
@@ -149,7 +182,7 @@ export const Media: CollectionConfig<'media'> = {
 	},
 	upload: UPLOAD_DES_MEDIAS,
 	hooks: {
-		beforeOperation: [coordonneesParLeServeur],
+		beforeOperation: [coordonneesParLeServeur, photoValideEtRenommee],
 		beforeChange: [unFichierALaCreation, proprietaireALEnvoi],
 	},
 	fields: [
