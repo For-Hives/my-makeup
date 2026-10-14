@@ -26,6 +26,7 @@ import { formatZone, rayonKm } from '@/lib/format-zone'
 import { nomAffiche, texte } from '@/lib/profil/nom-affiche'
 import { estIndexable, estVisible, FILTRE_LISTE } from '@/lib/profil/visibilite'
 import type { PlaceDuProfil } from '@/lib/recherche/lieu'
+import { normaliserLesTextes, type TextesNormalises } from '@/lib/recherche/pertinence'
 import { estUnSlug } from '@/lib/slug'
 import type { Profil } from '@/payload-types'
 
@@ -247,6 +248,39 @@ export async function listerLesProfils(
 /** A listed profile with where she works: what the search by city ranks by. */
 export interface ProfilDeLAnnuaire extends PlaceDuProfil {
 	carte: CarteDeProfil
+	/**
+	 * What she wrote that a search by a word looks into (ticket 099). Beside the card, never in it: a card
+	 * is what a page renders, and carries none of this. Read only when asked (`avecLesTextes`).
+	 */
+	textes?: TextesNormalises
+}
+
+/** The fields a search by a word reads on top of a card: her texts, and no price, no contact, no link. */
+const CHAMPS_DE_LA_RECHERCHE = {
+	...CHAMPS_DE_LA_CARTE,
+	description: true,
+	competences: true,
+	prestations: true,
+} as const
+
+type ProfilCherche = ProfilDeLaCarte & Pick<Profil, 'description' | 'competences' | 'prestations'>
+
+/** The texts a search by a word looks into (the commune, the speciality, the description, the skills and the offers), normalised. */
+function textesDe(profil: ProfilCherche): TextesNormalises {
+	const noms = <T extends { nom?: string | null }>(liste: readonly T[] | null | undefined): string[] =>
+		(liste ?? []).map(element => texte(element.nom)).filter(nom => nom !== '')
+	const descriptions = <T extends { description?: string | null }>(liste: readonly T[] | null | undefined): string[] =>
+		(liste ?? []).map(element => texte(element.description)).filter(description => description !== '')
+	return normaliserLesTextes({
+		ville: texte(profil.commune?.nom),
+		specialite: texte(profil.specialite),
+		description: texte(profil.description),
+		competences: noms(profil.competences),
+		descriptionsDesCompetences: descriptions(profil.competences),
+		descriptionsDesPrestations: descriptions(profil.prestations),
+		nom: texte(profil.nom),
+		prenom: texte(profil.prenom),
+	})
 }
 
 /** The most pages of the directory one read goes through: 1 000 profiles, ten times the site today. */
@@ -256,15 +290,19 @@ const PAGES_MAX_DE_L_ANNUAIRE = 10
  * Every listed profile, most complete first, then most recently changed (ticket 098): what a search by
  * city places in its sections. Read in pages of 100, ten at most; the place of a profile is its
  * commune and the département the server computed from its INSEE code. A card carries no coordinate:
- * the centre of the commune stays here.
+ * the centre of the commune stays here. With `avecLesTextes` (ticket 099) each profile also carries the
+ * texts a search by a word looks into, beside its card.
  */
-export async function lireLAnnuaire(payload: Payload): Promise<ProfilDeLAnnuaire[]> {
+export async function lireLAnnuaire(
+	payload: Payload,
+	{ avecLesTextes = false }: { avecLesTextes?: boolean } = {}
+): Promise<ProfilDeLAnnuaire[]> {
 	const annuaire: ProfilDeLAnnuaire[] = []
 	for (let page = 1; page <= PAGES_MAX_DE_L_ANNUAIRE; page += 1) {
 		const resultat = await payload.find({
 			collection: 'profils',
 			where: FILTRE_LISTE,
-			select: CHAMPS_DE_LA_CARTE,
+			select: avecLesTextes ? CHAMPS_DE_LA_RECHERCHE : CHAMPS_DE_LA_CARTE,
 			sort: ['-completude', '-updatedAt', 'slug'],
 			depth: 0,
 			limit: LIMITE_MAX_DE_LA_LISTE,
@@ -279,6 +317,7 @@ export async function lireLAnnuaire(payload: Payload): Promise<ProfilDeLAnnuaire
 				ville: texte(profil.commune?.nom) || null,
 				departement: texte(profil.commune?.departement) || null,
 				seDeplace: texte(profil.commune?.nom) !== '' && rayonKm(profil.rayonKm) !== null,
+				...(avecLesTextes && { textes: textesDe(profil) }),
 			})
 		if (!resultat.hasNextPage) break
 	}

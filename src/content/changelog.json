@@ -50,6 +50,11 @@
 			"id": "avec-google-l-inscription-arrive-directement-dans-ton-acc",
 			"type": "amelioration",
 			"text": "Avec Google, l’inscription arrive directement dans ton accueil sans email de confirmation, et si Google n’a pas confirmé ton adresse, un message te le dit au lieu d’une page d’erreur."
+		},
+		{
+			"id": "quand-une-recherche-ne-trouve-personne-la-page-propose-ma",
+			"type": "amelioration",
+			"text": "Quand une recherche ne trouve personne, la page propose maintenant la zone voisine, et un lien pour créer ton profil si tu es maquilleuse."
 		}
 	],
 	"releases": []

@@ -11,6 +11,7 @@ import { COOKIE_DE_SESSION, decisionDeLEspace } from '@/lib/auth/espace-ferme'
 import { ipClient } from '@/lib/auth/ip-client'
 import { CHEMIN_DE_L_INSCRIPTION, CHEMIN_DU_REFUS, secondesAvantUneInscription } from '@/lib/auth/refus-inscription'
 import { COOKIE_DE_REINITIALISATION, planDuLien } from '@/lib/auth/mot-de-passe-oublie'
+import { freinerLaRecherche } from '@/lib/recherche/frein'
 import { robotsPourChemin } from '@/lib/seo/robots'
 import { redirectionDeForme } from '@/lib/urls/forme'
 
@@ -24,6 +25,8 @@ import { redirectionDeForme } from '@/lib/urls/forme'
  * - The link of a forgotten-password mail (`/auth/reinitialiser?code=…`) answers one redirection to the bare
  *   page, the code kept in a cookie of that page only (ticket 085): it never reaches a page, the audience
  *   measurement, the history or a Referer.
+ * - The search answers 429, in French, past 60 requests a minute from one address (ticket 100). No other
+ *   page is braked.
  * - The cookies of the old authentication are expired on the first request, and the sign-in page tells
  *   once to sign in again (ticket 081). The back-office, the API and the files are left alone.
  * - A sign-up past the 5 an hour of its client address is sent to the route that answers 429 (ticket 084).
@@ -44,6 +47,13 @@ export function proxy(requete: NextRequest) {
 		const consigneDeForme = robotsPourChemin(pathname, { APP_ENV: process.env.APP_ENV })
 		if (consigneDeForme) redirectionDeForme.headers.set('X-Robots-Tag', consigneDeForme)
 		return redirectionDeForme
+	}
+	const freinee = freinerLaRecherche({ chemin: pathname, methode: requete.method, entetes: requete.headers })
+	if (freinee) {
+		const reponseFreinee = new NextResponse(freinee.corps, { status: freinee.status, headers: freinee.entetes })
+		const consigneFreinee = robotsPourChemin(pathname, { APP_ENV: process.env.APP_ENV })
+		if (consigneFreinee) reponseFreinee.headers.set('X-Robots-Tag', consigneFreinee)
+		return reponseFreinee
 	}
 	const nettoyage = planDeNettoyage({
 		chemin: pathname,
