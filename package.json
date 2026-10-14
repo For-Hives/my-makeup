@@ -17,7 +17,9 @@
 		"lint": "biome lint . --max-diagnostics=200",
 		"check": "biome check --write .",
 		"ci:biome": "biome ci . --reporter=github",
-		"typecheck": "next typegen && tsc --noEmit"
+		"typecheck": "next typegen && tsc --noEmit",
+		"test:unit": "bun --no-env-file test ./tests/unit",
+		"test": "bun run test:unit"
 	},
 	"dependencies": {
 		"@hookform/resolvers": "5.9.1",

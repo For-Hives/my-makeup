@@ -1,3 +1,8 @@
 # Versions are pinned exactly: `bun add` writes "1.2.3", never "^1.2.3".
 [install]
 exact = true
+
+# Every `bun test` loads the guard before any test file: it stops the run when the environment
+# could reach anything else than the local test bench (tests/outils/garde-environnement.ts).
+[test]
+preload = ["./tests/outils/garde-environnement.ts"]
