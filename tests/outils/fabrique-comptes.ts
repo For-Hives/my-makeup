@@ -215,7 +215,7 @@ let hashDeFixture: Promise<string> | undefined
 
 /**
  * The fixture hash, worked out by the PostgreSQL of the bench with pgcrypto, as the fake Strapi
- * source does: no bcrypt library in the repository, and no hash written in a file. pgcrypto lives
+ * source does: no hash written in a file, and an oracle that does not share the bcryptjs the site checks it with. pgcrypto lives
  * inside one transaction, which is rolled back: the bench database keeps nothing of it. Worked out
  * once per process.
  */

@@ -3,6 +3,10 @@ import { adminOuSoiMeme, adminSeulement, champAdminSeulement, jamais } from '../
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import { freinerLaConnexion, rendreLaPlaceDeLaConnexion } from '../lib/auth/frein-payload'
 import {
+	effacerLeHashHeriteApresUnMotDePasse,
+	effacerLeHashHeriteAuRenouvellement,
+} from '../lib/auth/hash-herite-payload'
+import {
 	noterLaConnexionRest,
 	noterLEchecDeConnexionRest,
 	noterLeDebutDeLaConnexion,
@@ -12,6 +16,7 @@ import { DUREE_DU_LIEN_MS } from '../lib/auth/mot-de-passe-oublie'
 import { fermerLesPortesRestDeLOubli } from '../lib/auth/oubli-payload'
 import { premierCompteFerme } from '../lib/auth/premier-compte-ferme'
 import { DUREE_SESSION_S, prolongerSousPlafond, refuserApresLePlafond } from '../lib/auth/session-glissante'
+import { egaliserLeTravailRest, retenirLesEchecsRest } from '../lib/auth/temps-egalise-payload'
 import { contenuEmailConfirmation, SUJET_DE_CONFIRMATION } from '../lib/emails/confirmation'
 import { composerEmail } from '../lib/emails/gabarit'
 import { sessionsFermees } from './Admins'
@@ -104,13 +109,15 @@ export const Pros: CollectionConfig<'pros'> = {
 	},
 	endpoints: [premierCompteFerme],
 	hooks: {
-		afterChange: [profilALaCreationDuCompte],
+		afterChange: [profilALaCreationDuCompte, effacerLeHashHeriteApresUnMotDePasse],
 		afterLogin: [rendreLaPlaceDeLaConnexion(), retenirLaDerniereConnexion, noterLaConnexionRest],
-		afterError: [noterLEchecDeConnexionRest],
+		afterError: [retenirLesEchecsRest(), noterLEchecDeConnexionRest],
 		beforeDelete: [compteSansProfilAvantSuppression],
+		beforeValidate: [effacerLeHashHeriteAuRenouvellement],
 		beforeOperation: [
 			noterLeDebutDeLaConnexion,
 			freinerLaConnexion(),
+			egaliserLeTravailRest(),
 			refuserApresLePlafond,
 			fermerLesPortesRestDeLOubli,
 		],

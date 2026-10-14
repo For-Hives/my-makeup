@@ -542,6 +542,7 @@ export interface AuthEvenement {
     | 'reinitialisation';
   code:
     | 'ok'
+    | 'heritee'
     | 'identifiants-invalides'
     | 'trop-de-tentatives'
     | 'service-indisponible'
