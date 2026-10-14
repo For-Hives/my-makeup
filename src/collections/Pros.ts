@@ -2,6 +2,12 @@ import { APIError, type CollectionBeforeDeleteHook, type CollectionConfig, type 
 import { adminOuSoiMeme, adminSeulement, champAdminSeulement, jamais } from '../lib/acces'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import { freinerLaConnexion, rendreLaPlaceDeLaConnexion } from '../lib/auth/frein-payload'
+import {
+	noterLaConnexionRest,
+	noterLEchecDeConnexionRest,
+	noterLeDebutDeLaConnexion,
+	retenirLaDerniereConnexion,
+} from '../lib/auth/journal-payload'
 import { sessionsFermees } from './Admins'
 import { profilALaCreationDuCompte } from './Profils'
 
@@ -88,9 +94,10 @@ export const Pros: CollectionConfig<'pros'> = {
 	endpoints: [premierCompteFerme],
 	hooks: {
 		afterChange: [profilALaCreationDuCompte],
-		afterLogin: [rendreLaPlaceDeLaConnexion()],
+		afterLogin: [rendreLaPlaceDeLaConnexion(), retenirLaDerniereConnexion, noterLaConnexionRest],
+		afterError: [noterLEchecDeConnexionRest],
 		beforeDelete: [compteSansProfilAvantSuppression],
-		beforeOperation: [freinerLaConnexion()],
+		beforeOperation: [noterLeDebutDeLaConnexion, freinerLaConnexion()],
 	},
 	fields: [
 		{
@@ -105,6 +112,14 @@ export const Pros: CollectionConfig<'pros'> = {
 			type: 'checkbox',
 			defaultValue: false,
 			access: { create: champAdminSeulement, update: champAdminSeulement },
+		},
+		{
+			// Written by the server at each sign-in, through the Local API: no request writes it (ticket 077).
+			name: 'derniereConnexion',
+			label: 'Dernière connexion',
+			type: 'date',
+			access: { create: jamais, update: jamais },
+			admin: { readOnly: true, date: { pickerAppearance: 'dayAndTime' } },
 		},
 		{
 			name: 'legacyProvider',

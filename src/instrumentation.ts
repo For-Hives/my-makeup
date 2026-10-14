@@ -9,7 +9,8 @@ export async function register(): Promise<void> {
 	// Written as a positive test on purpose: Next compiles this file for the Edge runtime as well,
 	// and drops this block there. The check itself lives in a file only Node.js loads.
 	if (process.env.NEXT_RUNTIME === 'nodejs') {
-		const { stopOnInvalidEnv } = await import('./instrumentation-node')
+		const { startDailyTasks, stopOnInvalidEnv } = await import('./instrumentation-node')
 		stopOnInvalidEnv()
+		startDailyTasks()
 	}
 }

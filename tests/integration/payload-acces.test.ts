@@ -550,6 +550,57 @@ const MATRICE: Ligne[] = [
 		})
 	),
 
+	// The date of the last sign-in (ticket 077): her own account shows it to her and to an admin;
+	// no request writes it, hers included.
+	{
+		role: 'maquilleuse',
+		collection: 'pros',
+		operation: 'lire',
+		document: 'maquilleuse',
+		champ: 'derniereConnexion',
+		attendu: 'visible',
+	},
+	{
+		role: 'admin',
+		collection: 'pros',
+		operation: 'lire',
+		document: 'maquilleuse',
+		champ: 'derniereConnexion',
+		attendu: 'visible',
+	},
+	{
+		role: 'maquilleuse',
+		collection: 'pros',
+		operation: 'modifier',
+		document: 'maquilleuse',
+		champ: 'derniereConnexion',
+		valeur: '2020-01-01T00:00:00.000Z',
+		attendu: 'ignore',
+	},
+	{
+		role: 'admin',
+		collection: 'pros',
+		operation: 'modifier',
+		document: 'maquilleuse',
+		champ: 'derniereConnexion',
+		valeur: '2020-01-01T00:00:00.000Z',
+		attendu: 'ignore',
+	},
+
+	// The authentication journal (ticket 077): only an admin reads it, and nobody writes it through
+	// an API, an admin included. The server writes it, and purges it after 90 days.
+	...ROLES.flatMap((role): Ligne[] => {
+		const collection = 'auth-evenements'
+		const lit = role === 'admin'
+		return [
+			{ role, collection, operation: 'lister', attendu: lit ? 'tous' : 'refuse' },
+			{ role, collection, operation: 'lire', attendu: lit ? 'autorise' : 'refuse' },
+			{ role, collection, operation: 'creer', attendu: 'refuse' },
+			{ role, collection, operation: 'modifier', attendu: 'refuse' },
+			{ role, collection, operation: 'supprimer', attendu: 'refuse' },
+		]
+	}),
+
 	// talents (ticket 022) and articles (ticket 046): the rules of the newsroom.
 	...lignesDeLaRedaction('talents'),
 	...lignesDeLaRedaction('articles'),

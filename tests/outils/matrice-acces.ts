@@ -67,7 +67,7 @@ const TYPE_DU_ROLE: Record<RoleAvecCompte, TypeAvecSession> = {
 }
 
 /** The collections the matrix covers. */
-export const COLLECTIONS = ['admins', 'pros', 'profils', 'media', 'talents', 'articles'] as const
+export const COLLECTIONS = ['admins', 'pros', 'profils', 'media', 'talents', 'articles', 'auth-evenements'] as const
 export type CollectionDeLaMatrice = (typeof COLLECTIONS)[number]
 
 /**
@@ -140,7 +140,12 @@ export type Contenus = Record<CollectionEditoriale, Record<Etat, number>>
  * `contenus`: the documents of the editorial collections. `photosDesArticles`: the photo in the
  * gallery of each article of the cast, by the state of the article; a media nobody owns.
  */
-export type Distribution = Record<Role, Acteur> & { contenus: Contenus; photosDesArticles: Record<Etat, number> }
+export type Distribution = Record<Role, Acteur> & {
+	contenus: Contenus
+	photosDesArticles: Record<Etat, number>
+	/** A row of the authentication journal (ticket 077): it belongs to nobody, only an admin reads it. */
+	evenement: number
+}
 
 /** A fresh address for each document a line creates or changes. */
 const adresse = (prefixe: string) => `${prefixe}-${randomUUID()}@${DOMAINE_DES_COMPTES}`
@@ -190,6 +195,15 @@ const article = (etat: Etat, galerie: number[] = []): RequiredDataFromCollection
 	galerie,
 	_status: etat === 'publie' ? 'published' : 'draft',
 })
+
+/** A row of the authentication journal, written by the server as it writes them. */
+const evenement = async (payload: Payload): Promise<number> =>
+	(
+		await payload.create({
+			collection: 'auth-evenements',
+			data: { type: 'connexion', code: 'ok', dureeMs: 12, date: new Date().toISOString() },
+		})
+	).id
 
 /** What the matrix needs to know of a collection to play its lines. */
 interface Portrait {
@@ -254,6 +268,12 @@ const PORTRAITS: Record<CollectionDeLaMatrice, Portrait> = {
 		jetable: (payload, acteur) =>
 			mediaDe(payload, acteur.utilisateur?.collection === 'pros' ? acteur.utilisateur.id : undefined),
 		fichier: true,
+	},
+	'auth-evenements': {
+		champ: 'dureeMs',
+		nouvelleValeur: () => 999,
+		donneesDeCreation: () => Promise.resolve({ type: 'connexion', code: 'ok', dureeMs: 1 }),
+		jetable: evenement,
 	},
 	talents: {
 		champ: 'title',
@@ -330,7 +350,7 @@ export async function distribuer(): Promise<Distribution> {
 			data: { statutChoisi, photoPrincipale: acteur.documents.media },
 		})
 	}
-	return { ...parRole, ...(await creerLesContenus(payload)) }
+	return { ...parRole, ...(await creerLesContenus(payload)), evenement: await evenement(payload) }
 }
 
 /** What one request gave: allowed (with what it returned) or refused. */
@@ -415,6 +435,7 @@ const identifiants = (corps: unknown): number[] =>
  */
 function documentDe(distribution: Distribution, ligne: Ligne): number {
 	const { collection, document } = ligne
+	if (collection === 'auth-evenements') return distribution.evenement
 	const deLEtat = (etat: Etat) =>
 		estEditoriale(collection)
 			? distribution.contenus[collection][etat]
@@ -460,6 +481,7 @@ async function lister(voie: Voie, acteur: Acteur, ligne: Ligne, distribution: Di
 		...ROLES.flatMap(role => distribution[role].documents[collection] ?? []),
 		...contenus,
 		...sansProprietaire,
+		...(collection === 'auth-evenements' ? [distribution.evenement] : []),
 	]
 	const publics = await publicsDe(collection, distribues)
 	const siensEtPublics = [...new Set([...siens, ...publics])].sort((a, b) => a - b)
