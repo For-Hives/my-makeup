@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
+import { createServer } from 'node:net'
 import type { Payload, SanitizedConfig } from 'payload'
 import { EnvError, type RawEnv } from '@/lib/env'
 import { migrations } from '@/migrations'
@@ -8,6 +9,7 @@ import { migrations } from '@/migrations'
 const LOCAL_URI = 'postgres://banc:banc@127.0.0.1:5442/mymakeup_test'
 const REMOTE_URI = 'postgres://banc:banc@base.exemple.test:5432/mymakeup_test'
 const SECRET = 'k'.repeat(64)
+const SENDER = 'My Makeup <ne-pas-repondre@example.test>'
 
 const development: RawEnv = { DATABASE_URI: LOCAL_URI, NODE_ENV: 'development', PAYLOAD_SECRET: SECRET, PORT: '3123' }
 const preproduction: RawEnv = {
@@ -19,12 +21,15 @@ const preproduction: RawEnv = {
 
 const VARIABLES = [
 	'DATABASE_URI',
+	'EMAIL_FROM',
 	'NEXT_PHASE',
 	'NEXT_PUBLIC_SITE_URL',
 	'NODE_ENV',
 	'PAYLOAD_DROP_DATABASE',
 	'PAYLOAD_SECRET',
 	'PORT',
+	'SMTP_HOST',
+	'SMTP_PORT',
 ] as const
 
 let loads = 0
@@ -109,10 +114,98 @@ describe('src/payload.config.ts is hardened', () => {
 	})
 
 	test('no email adapter when nothing is set: Payload then only writes a log line, and opens no connection', async () => {
-		// Tripwire for the ticket that adds emails: `nodemailerAdapter()` called with no transport
-		// creates an account at ethereal.email, and checks its transport when the server starts.
+		// `nodemailerAdapter()` called with no transport creates an account at ethereal.email, and
+		// checks its transport when the server starts: without SMTP_HOST, it is not called at all.
 		expect((await configUnder(development)).email).toBeUndefined()
 		expect((await configUnder(preproduction)).email).toBeUndefined()
+		// The sender alone switches nothing on.
+		expect((await configUnder({ ...development, EMAIL_FROM: SENDER })).email).toBeUndefined()
+	})
+})
+
+/** A local port that counts who connects to it, and hangs up at once: never an SMTP server. */
+async function countingPort() {
+	let connections = 0
+	const server = createServer(socket => {
+		connections += 1
+		socket.destroy()
+	})
+	await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve))
+	const address = server.address()
+	if (address === null || typeof address === 'string') throw new Error('no local port')
+	return {
+		port: address.port,
+		connections: () => connections,
+		close: () => new Promise(resolve => server.close(resolve)),
+	}
+}
+
+/** The adapter the configuration holds, as Payload starts it. Nothing connects here either. */
+async function emailOf(config: SanitizedConfig) {
+	const adapter = await config.email
+	if (!adapter) throw new Error('the configuration has no email adapter')
+	return adapter({ payload: {} as Payload })
+}
+
+describe('the mails leave through the adapter of Payload, set by the environment', () => {
+	const mail = { subject: 'Essai', text: 'Bonjour', to: 'lea@example.test' }
+
+	test('SMTP_HOST, SMTP_PORT and EMAIL_FROM: the nodemailer adapter, under the sender of the environment', async () => {
+		const relay = await countingPort()
+		try {
+			const config = await configUnder({
+				...development,
+				EMAIL_FROM: SENDER,
+				SMTP_HOST: '127.0.0.1',
+				SMTP_PORT: String(relay.port),
+			})
+			const email = await emailOf(config)
+
+			expect(email.name).toBe('nodemailer')
+			expect(email.defaultFromName).toBe('My Makeup')
+			expect(email.defaultFromAddress).toBe('ne-pas-repondre@example.test')
+			// Loading the configuration and starting the adapter opened nothing: the Payload CLI and the
+			// scripts load this file with no relay within reach.
+			expect(relay.connections()).toBe(0)
+
+			// The first mail is what connects, and it goes where the environment says.
+			await expect(email.sendEmail(mail)).rejects.toThrow()
+			expect(relay.connections()).toBe(1)
+		} finally {
+			await relay.close()
+		}
+	})
+
+	test('a relay that is stopped: the mail fails at once, and the error says where it was sent', async () => {
+		const relay = await countingPort()
+		await relay.close()
+		const config = await configUnder({
+			...development,
+			EMAIL_FROM: SENDER,
+			SMTP_HOST: '127.0.0.1',
+			SMTP_PORT: String(relay.port),
+		})
+		const email = await emailOf(config)
+
+		const start = performance.now()
+		await expect(email.sendEmail(mail)).rejects.toThrow(`connect ECONNREFUSED 127.0.0.1:${relay.port}`)
+		expect(performance.now() - start).toBeLessThan(5000)
+	})
+
+	test('a relay without its port or its sender: the configuration cannot be loaded', async () => {
+		await expect(configUnder({ ...development, SMTP_HOST: '127.0.0.1' })).rejects.toBeInstanceOf(EnvError)
+	})
+
+	test('next build loads it with no adapter, even when the relay is in its environment', async () => {
+		const config = await configUnder({
+			EMAIL_FROM: SENDER,
+			NEXT_PHASE: 'phase-production-build',
+			NODE_ENV: 'production',
+			SMTP_HOST: '127.0.0.1',
+			SMTP_PORT: '1025',
+		})
+
+		expect(config.email).toBeUndefined()
 	})
 })
 

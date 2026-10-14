@@ -149,6 +149,9 @@ L'application vérifie ses variables à chaque démarrage (`bun run dev`, `bun r
 | `NEXT_PUBLIC_SITE_URL` | Obligatoire en production (`bun run start`, image Docker), inutile pour `bun run dev`. Sans `/` final, et l'une de ces adresses seulement : `https://my-makeup.fr`, `https://preprod.my-makeup.fr`, ou une adresse de ce poste comme `http://localhost:3000`. |
 | `PAYLOAD_DROP_DATABASE` | Refusée si la base n'est pas sur ce poste : avec `true`, Payload efface toutes les tables. |
 | `R2_PUBLIC_URL` | Facultative. L'adresse publique des photos : `https://`, un hôte, sans chemin ni `/` final. Absente, c'est celle des photos du site en ligne. |
+| `SMTP_HOST` | Facultative. Le relais SMTP par lequel partent tous les mails : un nom d'hôte seul, sans protocole ni port. Absente, l'application n'envoie rien : Payload écrit une ligne de journal à la place de chaque mail. |
+| `SMTP_PORT` | Obligatoire dès que `SMTP_HOST` est réglée. Le port du relais, de 1 à 65535. |
+| `EMAIL_FROM` | Obligatoire dès que `SMTP_HOST` est réglée. L'expéditeur de tous les mails : `Nom <adresse@domaine>`, ou une adresse seule. |
 
 - `bun run build` est la seule exception : il ne vérifie rien, sauf `R2_PUBLIC_URL`, et passe sans secret ni base.
 - Le CLI de Payload (`bun run payload`, `payload:types`, `payload:importmap`, `payload:migrate`…) charge la même configuration : sans `DATABASE_URI` et `PAYLOAD_SECRET` valides, il s'arrête avec le même message. Le `.env` de l'étape 2 de « Démarrer en local » suffit.
@@ -157,6 +160,7 @@ L'application vérifie ses variables à chaque démarrage (`bun run dev`, `bun r
 - `https://v3.my-makeup.fr`, l'adresse provisoire de la prod avant la bascule, est refusée pour l'instant dans `NEXT_PUBLIC_SITE_URL`. Le ticket qui ouvrira cette adresse l'ajoute à `DEPLOYED_ORIGINS` (`src/lib/env.ts`), avec son test.
 - `R2_PUBLIC_URL` est publique. Elle est lue plus tôt que les autres, quand Next charge `next.config.ts` : une valeur refusée arrête aussi le build. Voir « Images ».
 - `NEXT_PUBLIC_APP_VERSION` et `SOURCE_COMMIT` sont facultatives. Elles sont lues dans `src/lib/env.ts` sans être vérifiées : aucune valeur n'arrête le démarrage (voir « Route de santé »). `next.config.ts` lit aussi `SOURCE_COMMIT`, au moment du build, pour le figer dans le build : il le lit lui-même, par son nom. De `src/lib/env.ts`, il n'appelle que `mediaOrigin`, pour `R2_PUBLIC_URL`.
+- `SMTP_HOST`, `SMTP_PORT` et `EMAIL_FROM` règlent l'adaptateur d'email de Payload. Elles ne se donnent jamais au build. Aucune connexion n'est ouverte au démarrage : un relais injoignable fait échouer l'envoi du mail, pas le démarrage. Le relais est utilisé tel quel, sans identifiant ni chiffrement : pour l'instant, cela ne convient qu'au capteur de mails du banc de test, où ces trois variables sont réglées par `.env.test`.
 - Une nouvelle variable s'ajoute dans `src/lib/env.ts` et dans `.env.exemple`, par le ticket qui commence à la lire.
 
 ### Base de données

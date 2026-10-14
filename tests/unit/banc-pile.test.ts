@@ -127,6 +127,7 @@ describe('.env.test : l’environnement factice du banc', () => {
 		expect(Object.keys(environnement).sort()).toEqual([
 			'APP_ENV',
 			'DATABASE_URI',
+			'EMAIL_FROM',
 			'MAILPIT_URL',
 			'NEXT_PUBLIC_SITE_URL',
 			'PAYLOAD_SECRET',
@@ -189,6 +190,7 @@ describe('Plusieurs bancs côte à côte : un nom d’instance et un décalage d
 			SMTP_HOST: '127.0.0.1',
 			SMTP_PORT: '1129',
 			MAILPIT_URL: 'http://127.0.0.1:8129',
+			EMAIL_FROM: 'My Makeup <ne-pas-repondre@example.test>',
 			S3_ENDPOINT: 'http://127.0.0.1:9194',
 			S3_BUCKET: 'mymakeup-test',
 		})

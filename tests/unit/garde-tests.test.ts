@@ -234,10 +234,22 @@ describe('U87 : refuse un domaine d’envoi ou un bucket de prod dans l’enviro
 			'NEXT_PUBLIC_SITE_URL',
 			'SMTP_HOST',
 			'MAILPIT_URL',
+			'EMAIL_FROM',
 			'S3_ENDPOINT',
 			'S3_BUCKET',
 		])
 			expect({ nom, valeur: fichier[nom] }).toEqual({ nom, valeur: expect.any(String) })
+	})
+
+	test('l’expéditeur du banc est sur un domaine réservé : la garde refuse ce fichier dès qu’il écrit au nom du site', () => {
+		const fichier = lireFichierEnv(readFileSync(path.join(RACINE, '.env.test'), 'utf8'))
+
+		expect(fichier.EMAIL_FROM).toEndWith('@example.test>')
+		expect(
+			messageDuRefus(() =>
+				verifierEnvironnement({ ...fichier, EMAIL_FROM: 'My Makeup <ne-pas-repondre@send.my-makeup.fr>' })
+			)
+		).toStartWith("EMAIL_FROM cite un domaine d'envoi réel (« send.my-makeup.fr »)")
 	})
 
 	test.each([
