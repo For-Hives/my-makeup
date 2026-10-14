@@ -5,8 +5,9 @@
  *   and talents only: it reads and changes its own account, nothing else of the accounts).
  * - `pros` holds the accounts of the makeup artists. A makeup artist never enters the admin
  *   panel; she reads and changes her own account, and her own profile.
- * - The editorial collections (talents, then articles) are written by the newsroom, `admin` and
- *   `redaction`; everyone else reads their published documents only.
+ * - The editorial collections (talents and articles) are written by the newsroom, `admin` and
+ *   `redaction`; everyone else reads their published documents only. The photos of the articles
+ *   belong to nobody: the newsroom sends them and changes them.
  *
  * One rule per subject: the collections call these functions and never test a role themselves.
  * Every rule here has its lines in the access matrix (tests/integration/payload-acces.test.ts),
@@ -40,8 +41,8 @@ export const estRedaction = (user: Utilisateur): boolean =>
 /** The account of a makeup artist. */
 export const estMaquilleuse = (user: Utilisateur): boolean => user?.collection === COLLECTION_PROS
 
-/** Only the role `admin`, for a whole collection. */
-export const adminSeulement: Access = ({ req: { user } }) => estAdmin(user)
+/** Only the role `admin`, for a whole collection; never by an impossible identifier (`identifiantImpossible`). */
+export const adminSeulement: Access = ({ req: { user }, id }) => !identifiantImpossible(id) && estAdmin(user)
 
 /** Only the role `admin`, for one field: anyone else's value is ignored, the stored one is kept. */
 export const champAdminSeulement: FieldAccess = ({ req: { user } }) => estAdmin(user)
@@ -59,22 +60,25 @@ const soiMeme = (collection: string, user: Utilisateur): Where | false =>
 
 /**
  * The role `admin` reaches every account of the collection; any other account of the same
- * collection reaches its own document only; everyone else, nothing.
+ * collection reaches its own document only; everyone else, nothing. An identifier no account can
+ * have is refused to all, before any query (ticket 048).
  *
  * On `admins`: a `redaction` account reads and changes itself only. On `pros`: a makeup artist
  * reads and changes her own account only.
  */
 export const adminOuSoiMeme =
 	(collection: typeof COLLECTION_ADMINS | typeof COLLECTION_PROS): Access =>
-	({ req: { user } }) =>
-		estAdmin(user) || soiMeme(collection, user)
+	({ req: { user }, id }) =>
+		!identifiantImpossible(id) && (estAdmin(user) || soiMeme(collection, user))
 
 /**
  * The role `admin` reaches every profile; a makeup artist reaches the profile she owns (its
  * `pro` is her account); everyone else, nothing. An account without a profile matches no
- * document: an empty list, and a refusal on any write.
+ * document: an empty list, and a refusal on any write. An identifier no profile can have is
+ * refused to all, before any query (ticket 048).
  */
-export const adminOuProprietaire: Access = ({ req: { user } }) => {
+export const adminOuProprietaire: Access = ({ req: { user }, id }) => {
+	if (identifiantImpossible(id)) return false
 	if (estAdmin(user)) return true
 	if (user && estMaquilleuse(user)) return { pro: { equals: user.id } }
 	return false
@@ -148,6 +152,13 @@ export const champDuProfilAdminOuProprietaire: FieldAccess = champAdminOuProprie
 /** A condition no document meets: a read limited by it finds nothing, and a document read by its identifier is not found. */
 export const AUCUN_DOCUMENT: Where = { id: { exists: false } }
 
+/**
+ * The media of the newsroom: those that belong to nobody, the photos of the articles (ticket 046).
+ * A photo of a makeup artist always has its owner (ticket 043), and a profile only takes photos of
+ * its own account: the two never mix.
+ */
+export const MEDIAS_DE_LA_REDACTION: Where = { owner: { exists: false } }
+
 /** True when this media is the main photo, or a photo of the gallery, of a published profile. */
 export async function rattacheAUnProfilPublie(req: PayloadRequest, media: number | string): Promise<boolean> {
 	const { totalDocs } = await req.payload.count({
@@ -162,12 +173,32 @@ export async function rattacheAUnProfilPublie(req: PayloadRequest, media: number
 }
 
 /**
- * Reading media (ticket 043, U56, I04).
+ * True when this media is in the gallery of a published article (ticket 046). The article read is
+ * its published version: a photo a draft adds stays out of reach until the article is published.
+ */
+export async function rattacheAUnArticlePublie(req: PayloadRequest, media: number | string): Promise<boolean> {
+	const { totalDocs } = await req.payload.count({
+		collection: 'articles',
+		overrideAccess: true,
+		req,
+		where: { and: [SEULEMENT_PUBLIES, { galerie: { in: [media] } }] },
+	})
+	return totalDocs > 0
+}
+
+/**
+ * Reading media (tickets 043 and 046, U56, I04).
  *
  * - The role `admin` reads every media.
- * - A list is closed to the public: a makeup artist lists her own media, anyone else is refused.
- * - One media, read by its identifier, is read by anyone when it belongs to a published profile;
- *   a makeup artist also reads her own. Any other media is not found, as if it did not exist.
+ * - A list is closed to the public: a makeup artist lists her own media, the role `redaction` the
+ *   media of the newsroom (`MEDIAS_DE_LA_REDACTION`), anyone else is refused.
+ * - One media, read by its identifier, is read by anyone when it belongs to a published profile or
+ *   when it is a photo of the newsroom in the gallery of a published article; a makeup artist also
+ *   reads her own, `redaction` those of the newsroom. Any other media is not found, as if it did not
+ *   exist: the photo of a draft too.
+ * - A published article never opens the photo of a makeup artist: its gallery takes only photos of
+ *   the newsroom (src/lib/articles.ts), and should one get an owner afterwards, the article no
+ *   longer opens it (docs/migration/SCHEMA.md, §8).
  * - An identifier no media can have is refused to all, before any query (`identifiantImpossible`).
  *
  * Payload gives the identifier to the rule when it reads one document, never for a list: that is
@@ -178,21 +209,39 @@ export const lectureDesMedias: Access = async ({ req, id }) => {
 	if (identifiantImpossible(id)) return false
 	const { user } = req
 	if (estAdmin(user)) return true
-	const siens: Where | undefined = user && estMaquilleuse(user) ? { owner: { equals: user.id } } : undefined
+	const siens = mediasDe(user)
 	if (id === undefined || id === null) return siens ?? false
 	if (await rattacheAUnProfilPublie(req, id)) return true
-	return siens ?? AUCUN_DOCUMENT
+	if (!(await rattacheAUnArticlePublie(req, id))) return siens ?? AUCUN_DOCUMENT
+	// A published article opens the photos of the newsroom only, never the photo of a makeup artist.
+	return siens && siens !== MEDIAS_DE_LA_REDACTION ? { or: [siens, MEDIAS_DE_LA_REDACTION] } : MEDIAS_DE_LA_REDACTION
 }
 
-/** Sending a photo: a makeup artist, or the role `admin`. The server makes her the owner. */
-export const adminOuMaquilleuse: Access = ({ req: { user } }) => estAdmin(user) || estMaquilleuse(user)
+/**
+ * The media an account reaches without them being public: hers for a makeup artist, those of the
+ * newsroom for `redaction`; none for anyone else.
+ */
+const mediasDe = (user: Utilisateur): Where | undefined => {
+	if (user && estMaquilleuse(user)) return { owner: { equals: user.id } }
+	if (estRedaction(user)) return MEDIAS_DE_LA_REDACTION
+	return undefined
+}
 
-/** Changing or deleting a media: the role `admin`, or the makeup artist who owns it; never by an impossible identifier. */
+/**
+ * Sending a photo: a makeup artist, the newsroom (`admin` and `redaction`, for the articles). The
+ * server makes a makeup artist the owner; the photo of the newsroom belongs to nobody.
+ */
+export const adminRedactionOuMaquilleuse: Access = ({ req: { user } }) =>
+	estAdminOuRedaction(user) || estMaquilleuse(user)
+
+/**
+ * Changing or deleting a media: the role `admin`; the makeup artist who owns it; `redaction` for a
+ * media of the newsroom, never the photo of a makeup artist. Never by an impossible identifier.
+ */
 export const adminOuProprietaireDuMedia: Access = ({ req: { user }, id }) => {
 	if (identifiantImpossible(id)) return false
 	if (estAdmin(user)) return true
-	if (user && estMaquilleuse(user)) return { owner: { equals: user.id } }
-	return false
+	return mediasDe(user) ?? false
 }
 
 /** The fields of a media only its owner and `admin` read: the account that owns it. */
@@ -204,8 +253,12 @@ export const champDuMediaAdminOuProprietaire: FieldAccess = champAdminOuPropriet
  */
 export const estAdminOuRedaction = (user: Utilisateur): boolean => estAdmin(user) || estRedaction(user)
 
-/** Only the newsroom, for a whole collection: creating, changing, publishing, deleting, reading the versions. */
-export const adminOuRedaction: Access = ({ req: { user } }) => estAdminOuRedaction(user)
+/**
+ * Only the newsroom, for a whole collection: creating, changing, publishing, deleting, reading the
+ * versions. Never by an impossible identifier.
+ */
+export const adminOuRedaction: Access = ({ req: { user }, id }) =>
+	!identifiantImpossible(id) && estAdminOuRedaction(user)
 
 /** Only the newsroom, for one field: anyone else gets the document without it. */
 export const champAdminOuRedaction: FieldAccess = ({ req: { user } }) => estAdminOuRedaction(user)
@@ -217,6 +270,7 @@ export const SEULEMENT_PUBLIES: Where = { _status: { equals: 'published' } }
  * Reading an editorial collection (drafts on): the newsroom reads every document, drafts
  * included; everyone else, a makeup artist as an anonymous visitor, the published ones only. A
  * draft is out of reach for them, even through `?draft=true`: Payload adds the same condition to
- * the versions it would show instead.
+ * the versions it would show instead. An identifier no document can have is refused to all.
  */
-export const adminRedactionOuPublies: Access = ({ req: { user } }) => estAdminOuRedaction(user) || SEULEMENT_PUBLIES
+export const adminRedactionOuPublies: Access = ({ req: { user }, id }) =>
+	!identifiantImpossible(id) && (estAdminOuRedaction(user) || SEULEMENT_PUBLIES)

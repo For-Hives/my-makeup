@@ -170,13 +170,13 @@ Table `articles`, 10 lignes, toutes publiées. Brouillons possibles dans Strapi.
 
 | Attribut Strapi | Type Strapi | Champ Payload | Règle |
 |---|---|---|---|
-| `title` | `string`, requis | `articles.title` (`text`, requis) | Repris tel quel. |
+| `title` | `string`, requis | `articles.title` (`text`, requis pour publier) | Repris tel quel. |
 | `content` | `richtext`, requis | `articles.content` (`code`, markdown) | Repris tel quel, à l'octet près : le markdown reste du markdown. Champ `code` et non `textarea` : Payload limite `text` et `textarea` à 40 000 caractères par défaut. |
 | `author` | `string`, requis | `articles.author` (`text`) | Repris tel quel. Signature affichée sur la page de l'article. |
-| `galery` | `media` multiple, tous types de fichiers | `articles.galerie` (`upload` vers `media`, plusieurs, images seulement) | Nom corrigé : `galery` était une faute de frappe. Aucun article ne désigne de fichier au 13/10/2026. Une image est rattachée si son média est adopté ; un fichier qui n'est pas une image est signalé, non adopté. |
+| `galery` | `media` multiple, tous types de fichiers | `articles.galerie` (`upload` vers `media`, plusieurs, images seulement) | Nom corrigé : `galery` était une faute de frappe. Aucun article ne désigne de fichier au 13/10/2026. Une image est rattachée si son média est adopté ; un fichier qui n'est pas une image est signalé, non adopté. Une image, c'est un média de type JPEG, PNG, WebP, GIF ou AVIF : tout autre type (PDF, vidéo, SVG) est refusé, brouillon compris. Un média de la galerie n'a pas de propriétaire : la photo d'une maquilleuse y est refusée, brouillon compris (§8). |
 | `seo_title` | `string`, 70 caractères au plus, requis | `articles.seo_title` (`text`, 70 au plus) | Repris tel quel. |
 | `seo_description` | `string`, 155 caractères au plus, requis | `articles.seo_description` (`textarea`, 155 au plus) | Repris tel quel. |
-| `slug` | `string`, requis | `articles.slug` (`text`, unique) | Repris tel quel : l'adresse `/blog/<slug>` est conservée. Strapi n'impose pas l'unicité : un doublon est listé (règle 5). |
+| `slug` | `string`, requis | `articles.slug` (`text`, unique, requis pour publier) | Repris tel quel : l'adresse `/blog/<slug>` est conservée. Strapi n'impose pas l'unicité : un doublon est listé (règle 5). Comme pour les talents, un slug qui n'a pas déjà la forme d'une adresse est refusé, puis listé (règle 5) ; les 10 slugs du 13/10/2026 l'ont. |
 | `excerpt` | `text` | `articles.excerpt` (`textarea`) | Repris tel quel. |
 
 ### 5.4 Talent : `api::talent.talent` → `talents`
@@ -336,6 +336,7 @@ Règles du ticket 043, pour tout `media` :
 - **Le serveur seul écrit où est l'objet** : ce qu'une requête dit du nom, du préfixe, de l'adresse, du type ou de la taille est ignoré. L'import adopte un fichier sans le copier par l'API locale, sans compte, avec le contexte `skipCloudStorage` du greffon de stockage, qui ne touche alors ni au préfixe ni au stockage.
 - **`media.owner`** est posé par le serveur : la maquilleuse qui envoie la photo, quel que soit le propriétaire que dit sa requête. Seul un admin le change. Il n'est pas lu par le public.
 - **Un profil n'accepte que des photos de son compte** : `profils.photoPrincipale` et `profils.galerie` (10 photos au plus, dans l'ordre) ne désignent que des médias dont `owner` est le compte du profil. Une photo que le profil a déjà reste, comme sur l'ancienne API, qui ne vérifie que les fichiers nouveaux.
+- **Un article n'accepte que des images de la rédaction** (ticket 046) : `articles.galerie` ne désigne que des médias sans `owner`, de type JPEG, PNG, WebP, GIF ou AVIF. La règle vaut pour la rédaction, pour un admin et pour l'import, brouillon compris, et pour chaque photo de la galerie à chaque enregistrement. Un article publié n'ouvre au public que ses photos sans propriétaire : une photo qu'un admin donne ensuite à une maquilleuse suit les règles des photos de son compte.
 - Les types, la taille, le nom imprévisible et les tailles dérivées d'une photo envoyée sont ceux du ticket 133 ; la corbeille d'une photo qui ne sert plus, ceux du ticket 045.
 
 ## 9. Champs de Payload sans source dans Strapi
@@ -422,3 +423,4 @@ Noms fixés par ce document, parce que le plan ne les donnait pas : `profils.leg
 | 14/10/2026 | Talents (ticket 022), sans changer un nom de champ : `talents.title` et `talents.slug` sont requis pour publier (un brouillon peut s'en passer) ; un slug qui n'a pas déjà la forme d'une adresse est refusé, pas corrigé (§5.4). |
 | 14/10/2026 | Zone du profil (ticket 041), sans changer un nom de champ : règles du serveur sur `profils.commune` ajoutées au §5.2, dont les collectivités d'outre-mer de la liste officielle, le refus d'un nom qui ressemble à une adresse ou qui n'a pas les caractères d'un nom de commune, et des coordonnées gardées à deux décimales. |
 | 14/10/2026 | État du profil (ticket 044) : `profils.entierementVide`, les trois dates de passage et `profils.statutChoisi` sont créés ; `profils.statut` devient calculé par le serveur, l'admin choisit par `profils.statutChoisi` ; la règle du statut est écrite au §9 ; `profils.derniereActivite` n'est pas créé, le plan `04` §3.6 le met sur le compte. |
+| 14/10/2026 | Articles (ticket 046), sans changer un nom de champ : les règles des talents (`articles.title` et `articles.slug` requis pour publier, slug refusé s'il n'a pas la forme d'une adresse) ; les types d'image de `articles.galerie`, refusés aussi dans un brouillon ; un média de la galerie n'a pas de propriétaire, et la photo d'une maquilleuse y est refusée (§5.3, §8). `author`, `content`, `seo_title` et `seo_description`, requis par Strapi, ne le sont pas dans la v3, comme le tableau le disait déjà : un article importé n'est jamais refusé pour un de ces champs vide. |

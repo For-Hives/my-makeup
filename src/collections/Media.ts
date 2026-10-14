@@ -11,8 +11,8 @@ import {
 } from 'payload'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import {
-	adminOuMaquilleuse,
 	adminOuProprietaireDuMedia,
+	adminRedactionOuMaquilleuse,
 	champAdminSeulement,
 	champDuMediaAdminOuProprietaire,
 	estMaquilleuse,
@@ -101,9 +101,12 @@ export const UPLOAD_DES_MEDIAS: UploadConfig = { disableLocalStorage: true }
  * the storage (`@payloadcms/storage-s3`, set up in src/payload.config.ts), under its own prefix.
  *
  * - The public never lists the media; it reads one media when it belongs to a published profile
- *   (U56, I04). A makeup artist lists and reads her own; `admin` reads everything.
+ *   (U56, I04) or to the gallery of a published article (ticket 046). A makeup artist lists and
+ *   reads her own; `admin` reads everything.
  * - A makeup artist sends photos; the server makes her the owner (`owner`), whatever her request
  *   says. She changes and deletes her own media only; `admin` reaches every one.
+ * - The newsroom sends the photos of the articles: they belong to nobody, and `redaction` lists,
+ *   reads, changes and deletes them, never the photo of a makeup artist (ticket 046).
  * - The owner, the identifier and the formats of the old site are not public.
  * - Payload's route for the file sends to the public address (`versLAdressePublique`, added by
  *   src/payload.config.ts, which knows the base of the photos).
@@ -117,7 +120,7 @@ export const Media: CollectionConfig<'media'> = {
 	admin: { useAsTitle: 'filename', defaultColumns: ['filename', 'owner', 'alt'] },
 	access: {
 		read: lectureDesMedias,
-		create: adminOuMaquilleuse,
+		create: adminRedactionOuMaquilleuse,
 		update: adminOuProprietaireDuMedia,
 		delete: adminOuProprietaireDuMedia,
 	},

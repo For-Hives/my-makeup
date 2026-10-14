@@ -13,7 +13,8 @@
  * - `lister`: `refuse`, or what the list holds: `aucun` (empty), `soi` (exactly the documents of
  *   the actor), `publies` (exactly the documents of the cast the public reads; on an editorial
  *   collection: its published documents only, never its draft), `soiEtPublies` (exactly both),
- *   `tous` (every document of the cast).
+ *   `sansProprietaire` (on `media`: exactly the photos of the articles of the cast, which belong to
+ *   nobody), `tous` (every document of the cast).
  * - `lire`, `creer`, `supprimer`: `autorise` or `refuse`. A refusal is also checked in the
  *   database: nothing was created, the document is still there.
  * - `lire` with a field (`champ`): `visible` (the document read holds the field, with its stored
@@ -28,8 +29,10 @@
  * public reads shows in the lines. A deletion that must succeed acts on a throwaway document of the same collection,
  * never on the cast.
  *
- * The documents of an editorial collection (talents) belong to nobody: the cast holds one
- * published and one draft, which a line names by their state, `publie` or `brouillon`.
+ * The documents of an editorial collection (talents, articles) belong to nobody: the cast holds
+ * one published and one draft, which a line names by their state, `publie` or `brouillon`. Each
+ * article of the cast has a photo in its gallery, a media that belongs to nobody: on `media`, the
+ * same two words name the photo of the published article and the photo of the draft.
  */
 
 import { randomUUID } from 'node:crypto'
@@ -64,14 +67,14 @@ const TYPE_DU_ROLE: Record<RoleAvecCompte, TypeAvecSession> = {
 }
 
 /** The collections the matrix covers. */
-export const COLLECTIONS = ['admins', 'pros', 'profils', 'media', 'talents'] as const
+export const COLLECTIONS = ['admins', 'pros', 'profils', 'media', 'talents', 'articles'] as const
 export type CollectionDeLaMatrice = (typeof COLLECTIONS)[number]
 
 /**
  * The editorial collections (src/collections/redaction.ts): written by the newsroom, read by the
  * public when published. Nobody owns their documents.
  */
-export const COLLECTIONS_EDITORIALES = ['talents'] as const satisfies readonly CollectionDeLaMatrice[]
+export const COLLECTIONS_EDITORIALES = ['talents', 'articles'] as const satisfies readonly CollectionDeLaMatrice[]
 export type CollectionEditoriale = (typeof COLLECTIONS_EDITORIALES)[number]
 
 /** The state of a document of an editorial collection, which names it in a line. */
@@ -92,6 +95,7 @@ export type Issue =
 	| 'soi'
 	| 'publies'
 	| 'soiEtPublies'
+	| 'sansProprietaire'
 	| 'tous'
 	| 'visible'
 	| 'absent'
@@ -103,7 +107,8 @@ export interface Ligne {
 	operation: Operation
 	/**
 	 * The document the operation targets (`lire`, `modifier`, `supprimer`): named by the role that
-	 * owns it, or, on an editorial collection, by its state.
+	 * owns it, or, on an editorial collection, by its state. On `media`, a state names the photo of
+	 * the article in that state.
 	 */
 	document?: RoleAvecCompte | Etat
 	/**
@@ -131,7 +136,11 @@ export interface Acteur {
 /** The documents of the editorial collections, one per state. */
 export type Contenus = Record<CollectionEditoriale, Record<Etat, number>>
 
-export type Distribution = Record<Role, Acteur> & { contenus: Contenus }
+/**
+ * `contenus`: the documents of the editorial collections. `photosDesArticles`: the photo in the
+ * gallery of each article of the cast, by the state of the article; a media nobody owns.
+ */
+export type Distribution = Record<Role, Acteur> & { contenus: Contenus; photosDesArticles: Record<Etat, number> }
 
 /** A fresh address for each document a line creates or changes. */
 const adresse = (prefixe: string) => `${prefixe}-${randomUUID()}@${DOMAINE_DES_COMPTES}`
@@ -168,6 +177,17 @@ const talent = (etat: Etat): RequiredDataFromCollectionSlug<'talents'> => ({
 	slug: `talent-${randomUUID()}`,
 	description: 'Une page fictive de la matrice d’accès.',
 	content: '## Un talent\n\nUne page fictive de la matrice d’accès.\n',
+	_status: etat === 'publie' ? 'published' : 'draft',
+})
+
+/** An article with made-up content, in the state asked for, with these photos in its gallery. */
+const article = (etat: Etat, galerie: number[] = []): RequiredDataFromCollectionSlug<'articles'> => ({
+	title: nom('Article'),
+	slug: `article-${randomUUID()}`,
+	author: 'Rédaction fictive',
+	excerpt: 'Un article fictif de la matrice d’accès.',
+	content: '## Un article\n\nUn article fictif de la matrice d’accès.\n',
+	galerie,
 	_status: etat === 'publie' ? 'published' : 'draft',
 })
 
@@ -242,6 +262,13 @@ const PORTRAITS: Record<CollectionDeLaMatrice, Portrait> = {
 		donneesDeCreation: () => Promise.resolve(talent('publie')),
 		jetable: async payload => (await payload.create({ collection: 'talents', data: talent('publie') })).id,
 	},
+	articles: {
+		champ: 'title',
+		nouvelleValeur: () => nom('Titre'),
+		// Created published: creating and publishing in one request.
+		donneesDeCreation: () => Promise.resolve(article('publie')),
+		jetable: async payload => (await payload.create({ collection: 'articles', data: article('publie') })).id,
+	},
 }
 
 /** A media sent for this account (a photo with its owner), or for nobody, as for an article. */
@@ -250,10 +277,22 @@ async function mediaDe(payload: Payload, proprietaire: number | undefined): Prom
 	return (await payload.create({ collection: 'media', data, file: fichierPourPayload(nomDePhoto('distribution')) })).id
 }
 
-/** One document per state, in each editorial collection, written without access control. */
-async function creerLesContenus(payload: Payload): Promise<Contenus> {
-	const creer = async (etat: Etat) => (await payload.create({ collection: 'talents', data: talent(etat) })).id
-	return { talents: { publie: await creer('publie'), brouillon: await creer('brouillon') } }
+/**
+ * One document per state, in each editorial collection, written without access control. Each
+ * article has a photo of its own in its gallery, sent by nobody, as the newsroom sends them.
+ */
+async function creerLesContenus(payload: Payload): Promise<Pick<Distribution, 'contenus' | 'photosDesArticles'>> {
+	const talentDe = async (etat: Etat) => (await payload.create({ collection: 'talents', data: talent(etat) })).id
+	const photosDesArticles = { publie: await mediaDe(payload, undefined), brouillon: await mediaDe(payload, undefined) }
+	const articleDe = async (etat: Etat) =>
+		(await payload.create({ collection: 'articles', data: article(etat, [photosDesArticles[etat]]) })).id
+	return {
+		contenus: {
+			talents: { publie: await talentDe('publie'), brouillon: await talentDe('brouillon') },
+			articles: { publie: await articleDe('publie'), brouillon: await articleDe('brouillon') },
+		},
+		photosDesArticles,
+	}
 }
 
 /** Makes the cast: one account per role, through the account factory, with their documents. */
@@ -291,7 +330,7 @@ export async function distribuer(): Promise<Distribution> {
 			data: { statutChoisi, photoPrincipale: acteur.documents.media },
 		})
 	}
-	return { ...parRole, contenus: await creerLesContenus(payload) }
+	return { ...parRole, ...(await creerLesContenus(payload)) }
 }
 
 /** What one request gave: allowed (with what it returned) or refused. */
@@ -370,16 +409,23 @@ const egaux = (a: unknown, b: unknown): boolean => JSON.stringify(a ?? null) ===
 const identifiants = (corps: unknown): number[] =>
 	((corps as { docs?: { id: number }[] }).docs ?? []).map(({ id }) => id).sort((a, b) => a - b)
 
-/** The document a line names in its collection: the one of a role, or, on an editorial collection, the one of a state. */
+/**
+ * The document a line names in its collection: the one of a role, or, on an editorial collection,
+ * the one of a state; on `media`, a state names the photo of the article in that state.
+ */
 function documentDe(distribution: Distribution, ligne: Ligne): number {
 	const { collection, document } = ligne
+	const deLEtat = (etat: Etat) =>
+		estEditoriale(collection)
+			? distribution.contenus[collection][etat]
+			: collection === 'media'
+				? distribution.photosDesArticles[etat]
+				: undefined
 	const id =
 		document === undefined
 			? undefined
 			: estUnEtat(document)
-				? estEditoriale(collection)
-					? distribution.contenus[collection][document]
-					: undefined
+				? deLEtat(document)
 				: distribution[document].documents[collection]
 	if (id === undefined)
 		throw new Error(`Ligne mal formée : aucun document « ${ligne.document} » dans « ${ligne.collection} ».`)
@@ -407,13 +453,21 @@ async function lister(voie: Voie, acteur: Acteur, ligne: Ligne, distribution: Di
 	const vus = identifiants(reponse.corps)
 	const siens = [acteur.documents[collection]].filter((id): id is number => id !== undefined)
 	const contenus = estEditoriale(collection) ? Object.values(distribution.contenus[collection]) : []
-	const distribues = [...ROLES.flatMap(role => distribution[role].documents[collection] ?? []), ...contenus]
+	// The photos of the articles: the media of the cast that belong to nobody.
+	const sansProprietaire =
+		collection === 'media' ? Object.values(distribution.photosDesArticles).sort((a, b) => a - b) : []
+	const distribues = [
+		...ROLES.flatMap(role => distribution[role].documents[collection] ?? []),
+		...contenus,
+		...sansProprietaire,
+	]
 	const publics = await publicsDe(collection, distribues)
 	const siensEtPublics = [...new Set([...siens, ...publics])].sort((a, b) => a - b)
 	if (vus.length === 0) return 'aucun'
 	if (egaux(vus, siens)) return 'soi'
 	if (egaux(vus, publics)) return 'publies'
 	if (egaux(vus, siensEtPublics)) return 'soiEtPublies'
+	if (sansProprietaire.length > 0 && egaux(vus, sansProprietaire)) return 'sansProprietaire'
 	if (distribues.every(id => vus.includes(id))) return 'tous'
 	if (estEditoriale(collection) && vus.includes(distribution.contenus[collection].publie))
 		return (await seulementPublies(collection, vus)) ? 'publies' : 'incoherent'
