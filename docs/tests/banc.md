@@ -141,7 +141,7 @@ Règles :
 
 `tests/integration/banc-base.test.ts` est le test coquille de la base : il crée un document, le relit, vide la base. Lancé seul, banc démarré, il passe en 2 à 3 secondes (mesuré le 14/10/2026 : 2,2 s, commande comprise).
 
-`tests/integration/banc-stockage-mails.test.ts` est le test coquille des trois services : il écrit un document, un objet et un mail, puis relit les trois. Lancé seul, banc démarré, le fichier entier passe en 2 à 3 secondes (mesuré le 14/10/2026 : 2,3 s, commande comprise).
+`tests/integration/banc-stockage-mails.test.ts` est le test coquille de la base, du stockage et du capteur de mails : il écrit un document, un objet et un mail, puis relit les trois. Lancé seul, banc démarré, le fichier entier passe en 2 à 3 secondes (mesuré le 14/10/2026 : 2,3 s, commande comprise).
 
 ## Lire les mails : le capteur
 
