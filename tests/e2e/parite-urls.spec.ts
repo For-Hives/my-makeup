@@ -42,6 +42,7 @@ const LIVREES: ReadonlySet<string> = new Set([
 	'barre-finale',
 	'double-barre',
 	'toutes-les-news',
+	'blog',
 	'api-nextauth',
 	'api-sendmail',
 	'sante',

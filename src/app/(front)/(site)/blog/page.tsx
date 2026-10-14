@@ -1,0 +1,41 @@
+import type { Metadata } from 'next'
+import { Cta } from '@/components/blocs/Cta'
+import { ListeDesArticles } from '@/components/blog/ListeDesArticles'
+import { metadonnees } from '@/lib/seo/metadonnees'
+import { lesArticlesEnCache } from '@/services/public/en-cache'
+
+// Rendered at each request: the build runs without a database. The articles are read through the cache
+// of Next, tagged `articles`: a save of an article in the admin panel refreshes the list (ticket 047).
+// The cache of the page itself is ticket 117.
+export const dynamic = 'force-dynamic'
+
+// `/toutes-les-news` redirects here (ticket 072): the list shows every published article, not the
+// last three of the old page.
+export const metadata: Metadata = metadonnees({
+	titre: 'Blog et actualités',
+	description:
+		"L'actualité de My-Makeup, nos conseils pour choisir une maquilleuse professionnelle et les nouveautés qui arrivent bientôt.",
+	repli: "L'actualité de My-Makeup : conseils, nouveautés et articles pour trouver la maquilleuse qui vous correspond.",
+	chemin: '/blog',
+})
+
+export default async function PageDuBlog() {
+	const articles = await lesArticlesEnCache()
+	return (
+		<main className="relative">
+			<section className="relative px-4 py-20 md:px-8 2xl:px-0">
+				<div className="mx-auto max-w-7xl">
+					<div className="mx-auto mb-10">
+						<h1 className="w-full text-start font-bold text-4xl text-gray-900 tracking-tight">Blog & News</h1>
+						<p className="mt-6 w-full text-start text-gray-700 text-lg md:w-2/3">
+							Les actualités de My-Makeup, ce que nous faisons pour améliorer votre quotidien ! Et les nouveautés qui
+							arrivent bientôt !
+						</p>
+					</div>
+					<ListeDesArticles articles={articles} />
+				</div>
+			</section>
+			<Cta />
+		</main>
+	)
+}

@@ -12,6 +12,7 @@ import config from '@payload-config'
 import { unstable_cache } from 'next/cache'
 import { getPayload } from 'payload'
 import { ETIQUETTES } from '@/lib/revalidation'
+import { listerLesArticles } from './liste-articles'
 import { lireLAnnuaire } from './profils'
 import { listerLesTalents } from './talents'
 
@@ -41,4 +42,11 @@ export const lAnnuaireAvecLesTextesEnCache = unstable_cache(
 	async () => lireLAnnuaire(await getPayload({ config }), { avecLesTextes: true }),
 	['public:annuaire-textes'],
 	{ tags: [ETIQUETTES.profils], revalidate: UNE_HEURE }
+)
+
+/** The articles of the blog list (ticket 107): refreshed by a save of an article. */
+export const lesArticlesEnCache = unstable_cache(
+	async () => listerLesArticles(await getPayload({ config })),
+	['public:articles'],
+	{ tags: [ETIQUETTES.articles], revalidate: UNE_HEURE }
 )
