@@ -158,6 +158,12 @@ jobs:
       # GitHub sets CI=true: a test left in `.only` fails the run, a failed test is retried twice.
       - name: End-to-end tests
         run: bun run test:e2e --shard=${{ matrix.shard }}/2
+      # Ticket 137: after the journeys, the objects of the storage outside the bin must be exactly
+      # those of the photos the profiles and articles name. An orphan makes this step, then ci-ok, red.
+      # It reads and removes nothing. `--hors-import`: the media the import adopted from the fake source
+      # (erased at the end of its test) do not count; what the v3 wrote does. No `continue-on-error`.
+      - name: Reconcile the storage and the database
+        run: bun run banc:rapprocher --hors-import
       # Trace, video and screenshot of each failed test, and the report: sent only after a failure.
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: failure()

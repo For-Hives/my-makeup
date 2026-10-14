@@ -308,16 +308,27 @@ describe('La lecture publique d’un profil repris', () => {
 
 		const profil = await lireLeProfilPublic(payload, 'zoe-lefevre')
 
-		expect(profil).toEqual({
+		expect(profil).toMatchObject({
 			slug: 'zoe-lefevre',
 			nom: 'Zoé Lefèvre',
 			specialite: 'Mariage',
 			description: String(PRIS.find(({ id }) => id === 21)?.description),
 		})
-		// Profile 21 publishes a phone and an email on the old site: neither leaves this reading.
-		const texte = JSON.stringify(profil)
-		expect(texte).not.toContain('06 39 98')
-		expect(texte).not.toContain('@example.test')
+		// Profile 21 has a phone and an email on the old site: they leave this reading only when she
+		// published them (ticket 071), and then they are exactly what the old site holds.
+		const cible = (await profilsDeLaCible()).find(({ strapiId }) => strapiId === 21)
+		const stocke = await payload.findByID({ collection: 'profils', id: cible?.id ?? 0, depth: 0 })
+		if (stocke.contactPublic === true) {
+			expect(profil?.coordonnees).toEqual({
+				telephone: stocke.coordonnees?.telephone ?? null,
+				email: stocke.coordonnees?.email ?? null,
+			})
+		} else {
+			expect(profil?.coordonnees).toBeNull()
+			const texte = JSON.stringify(profil)
+			expect(texte).not.toContain('06 39 98')
+			expect(texte).not.toContain('@example.test')
+		}
 	})
 
 	test('un brouillon, un slug inconnu, une ancienne forme du nom ne donnent rien', async () => {

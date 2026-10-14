@@ -26,6 +26,7 @@
 import { randomBytes } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
 import { commitTransaction, createLocalReq, initTransaction, killTransaction, type Payload } from 'payload'
+import { CONTEXTE_FICHIER_NOMME } from '../lib/envoi-photo'
 import { type CibleDuJeu, cibleDuJeu, JeuFictifRefuse, type VariablesDuJeu } from './garde'
 import { type PhotoDuJeu, PROFILS_DU_JEU, type ProfilDuJeu } from './profils'
 
@@ -155,6 +156,8 @@ async function poserLeProfil(
 				collection: 'media',
 				data: { alt, owner: compte.id },
 				depth: 0,
+				// The set names its files: the bench finds a photo by its fixed name.
+				context: { [CONTEXTE_FICHIER_NOMME]: true },
 				file: { data: octets, mimetype: TYPE_DES_PHOTOS, name: nomDuFichier(type.cle, place), size: octets.length },
 				req,
 			})

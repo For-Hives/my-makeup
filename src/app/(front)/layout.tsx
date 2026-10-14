@@ -1,9 +1,11 @@
 import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
+import { SITE_ORIGIN } from '@/lib/urls-gelees'
 import './globals.css'
 
 export const metadata: Metadata = {
-	title: { default: 'My Makeup', template: '%s | My Makeup' },
+	metadataBase: new URL(SITE_ORIGIN),
+	title: { default: 'My-Makeup', template: '%s | My-Makeup' },
 	icons: { icon: '/favicon.webp' },
 }
 

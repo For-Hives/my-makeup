@@ -100,8 +100,11 @@ function compterLesEcarts(ecarts: Record<string, number>, attendus: readonly Att
 		for (const { reference } of duDocument) ecarts[reference] = (ecarts[reference] ?? 0) + 1
 }
 
-/** The collections whose documents are all the import's: one that holds no `strapiId` was added by hand. */
-const COLLECTIONS_SANS_ORIGINE = new Set<string>(['pros', 'profils'])
+/**
+ * The collections whose documents are all the import's: one that holds no `strapiId` was added by hand.
+ * Media is left out on purpose: a photo uploaded in the v3 legitimately has none (IMPORT.md).
+ */
+const COLLECTIONS_SANS_ORIGINE = new Set<string>(['pros', 'profils', 'articles', 'talents'])
 
 /** Plans one collection, writes it when the run is real, and gives what it did or would do. */
 async function importerLaCollection(

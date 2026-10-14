@@ -10,7 +10,13 @@
  * Nothing connects when the client is built: the first request does.
  */
 
-import { CopyObjectCommand, DeleteObjectCommand, HeadObjectCommand, S3Client } from '@aws-sdk/client-s3'
+import {
+	CopyObjectCommand,
+	DeleteObjectCommand,
+	HeadObjectCommand,
+	ListObjectsV2Command,
+	S3Client,
+} from '@aws-sdk/client-s3'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import type { StockageDesObjets } from './corbeille'
 import type { StorageEnv } from './env'
@@ -26,6 +32,38 @@ export const sourceDeLaCopie = (bucket: string, cle: string): string =>
 const introuvable = (erreur: unknown): boolean => {
 	const { name, $metadata } = (erreur ?? {}) as { name?: unknown; $metadata?: { httpStatusCode?: unknown } }
 	return name === 'NotFound' || name === 'NoSuchKey' || $metadata?.httpStatusCode === 404
+}
+
+/** One object of the storage as a listing shows it. */
+export interface ObjetDuStockage {
+	cle: string
+	/** In bytes. */
+	taille: number
+}
+
+/** The client of a storage, as R2 and the simulator of the bench both read it. */
+const clientDe = ({ endpoint, accessKeyId, secretAccessKey }: StorageEnv): S3Client =>
+	new S3Client({
+		endpoint,
+		region: 'auto',
+		forcePathStyle: true,
+		credentials: { accessKeyId, secretAccessKey },
+	})
+
+/**
+ * Every object of the bucket, bin included, by key: all the pages of the listing are read. It only
+ * reads (`ListObjectsV2`): the reconciliation of ticket 137 removes nothing.
+ */
+export async function listerLeStockage(env: StorageEnv): Promise<ObjetDuStockage[]> {
+	const client = clientDe(env)
+	const objets: ObjetDuStockage[] = []
+	let suite: string | undefined
+	do {
+		const page = await client.send(new ListObjectsV2Command({ Bucket: env.bucket, ContinuationToken: suite }))
+		for (const { Key, Size } of page.Contents ?? []) if (Key !== undefined) objets.push({ cle: Key, taille: Size ?? 0 })
+		suite = page.IsTruncated ? page.NextContinuationToken : undefined
+	} while (suite)
+	return objets
 }
 
 /** The storage of this environment (`serverEnv().storage`), as the bin needs it. */

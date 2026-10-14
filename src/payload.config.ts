@@ -4,6 +4,7 @@ import { postgresAdapter } from '@payloadcms/db-postgres'
 import { nodemailerAdapter } from '@payloadcms/email-nodemailer'
 import { s3Storage } from '@payloadcms/storage-s3'
 import { buildConfig, type CollectionConfig } from 'payload'
+import sharp from 'sharp'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import { Admins } from './collections/Admins'
 import { Articles } from './collections/Articles'
@@ -18,6 +19,7 @@ import {
 import { Profils } from './collections/Profils'
 import { Pros } from './collections/Pros'
 import { Talents } from './collections/Talents'
+import { adaptateurSansRelais, optionsDeTransport } from './lib/emails/relais'
 import { mediaBaseUrl, serverEnv } from './lib/env'
 import { LANGUE_DE_PAYLOAD } from './lib/langue-payload'
 import { adresseDuMedia, PREFIXE_DES_ENVOIS } from './lib/medias'
@@ -50,6 +52,9 @@ const media: CollectionConfig<'media'> = env.storage
 		}
 
 export default buildConfig({
+	// A wrong password or a braked address is a normal event, not an application error: the weekly
+	// report counts the error-level lines (decisions 2026-10-13).
+	loggingLevels: { APIError: 'info', AuthenticationError: 'info' },
 	admin: {
 		user: Admins.slug,
 		importMap: { baseDir: dirname },
@@ -78,7 +83,7 @@ export default buildConfig({
 		env
 	),
 	// Every mail leaves through the relay the environment names (src/lib/env.ts): on the test bench,
-	// the mail catcher. Without SMTP_HOST there is no adapter, and Payload writes a log line instead.
+	// the mail catcher. Without SMTP_HOST, Payload's own mails go to an adapter that logs one line, no address.
 	email: env.mail
 		? nodemailerAdapter({
 				defaultFromAddress: env.mail.fromAddress,
@@ -86,9 +91,9 @@ export default buildConfig({
 				// Nothing connects while this file is loaded: the Payload CLI, the scripts and the tests
 				// load it too. An unreachable relay is an error of the mail that is sent, not of the start.
 				skipVerify: true,
-				transportOptions: { host: env.mail.host, port: env.mail.port },
+				transportOptions: optionsDeTransport(env.mail),
 			})
-		: undefined,
+		: adaptateurSansRelais,
 	// REST and the Local API are the only ways in. The two GraphQL routes answer 404 by themselves.
 	graphQL: { disable: true },
 	// Payload speaks French only: its errors, its own messages and the admin panel, whatever
@@ -139,6 +144,8 @@ export default buildConfig({
 		requetesBornees,
 	],
 	secret: env.payloadSecret,
+	// Derived sizes of a photo (ticket 133): without it, Payload makes none.
+	sharp,
 	telemetry: false,
 	typescript: { outputFile: path.resolve(dirname, 'payload-types.ts') },
 })

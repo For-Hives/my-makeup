@@ -1,0 +1,164 @@
+import { describe, expect, test } from 'bun:test'
+import { readdirSync, readFileSync, statSync } from 'node:fs'
+import { join } from 'node:path'
+import type { Payload } from 'payload'
+import { estIndexable, estListe, estVisible, FILTRE_INDEXABLE, FILTRE_LISTE } from '@/lib/profil/visibilite'
+import { LIMITE_MAX_DE_LA_LISTE, listerLesProfils } from '@/services/public/profils'
+
+/**
+ * The public reading of the profiles, without a database (ticket 071; plan 02 §7.2, U20 and U22):
+ * the three rules, the keys of a card, and the guard that keeps every public page behind the
+ * module. The runs against the bench: tests/integration/lecture-publique.test.ts.
+ */
+
+describe('U20 : listé, indexable, visible', () => {
+	test('le masqué, l’indisponible et l’entièrement vide ne sont pas listés', () => {
+		expect(estListe({ statut: 'publie', disponible: true, entierementVide: false })).toBe(true)
+		expect(estListe({ statut: 'masque', disponible: true, entierementVide: false })).toBe(false)
+		expect(estListe({ statut: 'publie', disponible: false, entierementVide: false })).toBe(false)
+		expect(estListe({ statut: 'publie', disponible: true, entierementVide: true })).toBe(false)
+	})
+
+	test('une disponibilité jamais posée compte comme disponible (available=null)', () => {
+		expect(estListe({ statut: 'publie', disponible: null, entierementVide: false })).toBe(true)
+		expect(estListe({ statut: 'publie', entierementVide: false })).toBe(true)
+	})
+
+	test('indexable : publiable et pas masqué ; un profil visible mais non publiable reste hors de l’index', () => {
+		expect(estIndexable({ statut: 'publie', publiable: true })).toBe(true)
+		expect(estIndexable({ statut: 'publie', publiable: false })).toBe(false)
+		expect(estIndexable({ statut: 'publie', publiable: null })).toBe(false)
+		expect(estIndexable({ statut: 'masque', publiable: true })).toBe(false)
+		expect(estVisible({ statut: 'publie', publiable: false })).toBe(true)
+	})
+
+	test('visible à son adresse : tout sauf le masqué, indisponible ou non', () => {
+		expect(estVisible({ statut: 'publie', disponible: false, entierementVide: true })).toBe(true)
+		expect(estVisible({ statut: 'masque' })).toBe(false)
+	})
+
+	test('les filtres de la base, sans le statut que la règle de lecture pose déjà', () => {
+		expect(FILTRE_LISTE).toEqual({
+			and: [{ disponible: { not_equals: false } }, { entierementVide: { not_equals: true } }],
+		})
+		expect(FILTRE_INDEXABLE).toEqual({ publiable: { equals: true } })
+	})
+})
+
+/** A Payload that records the reads it is given and answers one profile. */
+function payloadEspion() {
+	const lectures: Record<string, unknown>[] = []
+	const payload = {
+		find: async (options: Record<string, unknown>) => {
+			lectures.push(options)
+			return {
+				docs: [
+					{
+						id: 1,
+						slug: 'zoe-fictive',
+						prenom: 'Zoé',
+						nom: 'Fictive',
+						specialite: 'Mariage',
+						commune: { nom: 'Annecy', codeInsee: '74010' },
+						rayonKm: 30,
+						superMaquilleuse: true,
+					},
+				],
+				page: 1,
+				totalDocs: 1,
+				hasNextPage: false,
+			}
+		},
+	}
+	return { payload: payload as unknown as Payload, lectures }
+}
+
+describe('U22 : la carte d’une liste, clés figées', () => {
+	test('ni email, ni téléphone, ni compte, ni score, ni statut : cinq clés', async () => {
+		const { payload } = payloadEspion()
+
+		const { cartes } = await listerLesProfils(payload)
+
+		expect(cartes).toHaveLength(1)
+		expect(Object.keys(cartes[0] ?? {}).sort()).toEqual(['lieu', 'nom', 'slug', 'specialite', 'superMaquilleuse'])
+		expect(cartes[0]).toEqual({
+			slug: 'zoe-fictive',
+			nom: 'Zoé Fictive',
+			specialite: 'Mariage',
+			lieu: 'Annecy et 30 km autour',
+			superMaquilleuse: true,
+		})
+	})
+
+	test('la lecture choisit ses champs, garde les règles d’accès, filtre sur « listé » et se borne elle-même', async () => {
+		const { payload, lectures } = payloadEspion()
+
+		await listerLesProfils(payload, { page: 3, limite: 5000 })
+		await listerLesProfils(payload, { limite: 0 })
+
+		const [grande, nulle] = lectures
+		expect(grande).toMatchObject({ collection: 'profils', where: FILTRE_LISTE, overrideAccess: false, page: 3 })
+		expect(grande?.limit).toBe(LIMITE_MAX_DE_LA_LISTE)
+		expect(nulle?.limit).toBe(20)
+		const champs = Object.keys(grande?.select as object).sort()
+		for (const prive of ['coordonnees', 'contactPublic', 'pro', 'score', 'noteInterne', 'statut', 'email'])
+			expect(champs).not.toContain(prive)
+	})
+})
+
+/** The TypeScript and TSX files under a folder, relative paths. */
+function fichiersDe(dossier: string): string[] {
+	return readdirSync(dossier).flatMap(nom => {
+		const chemin = join(dossier, nom)
+		return statSync(chemin).isDirectory() ? fichiersDe(chemin) : /\.tsx?$/.test(nom) ? [chemin] : []
+	})
+}
+
+/** The text of each call of a method of Payload (`.find({ … })`), up to its closing brace. */
+function appelsDe(code: string, methode: string): string[] {
+	const appels: string[] = []
+	for (const debut of code.matchAll(new RegExp(`\\.${methode}\\(\\s*\\{`, 'g'))) {
+		let profondeur = 0
+		let fin = debut.index
+		for (; fin < code.length; fin += 1) {
+			if (code[fin] === '{') profondeur += 1
+			if (code[fin] === '}' && --profondeur === 0) break
+		}
+		appels.push(code.slice(debut.index, fin + 1))
+	}
+	return appels
+}
+
+const LECTURES_DE_PAYLOAD = ['find', 'findByID', 'findDistinct', 'count', 'findVersions', 'findGlobal']
+
+describe('Un seul point de lecture publique', () => {
+	test('aucune page ni aucun composant du site ne lit une collection : ils passent par src/services/public/', () => {
+		const fautes = fichiersDe('src/app/(front)').flatMap(fichier => {
+			const code = readFileSync(fichier, 'utf8')
+			return LECTURES_DE_PAYLOAD.filter(methode => new RegExp(`\\.${methode}\\(`).test(code)).map(
+				methode => `${fichier} : .${methode}(`
+			)
+		})
+		expect(fautes).toEqual([])
+	})
+
+	test('chaque lecture en liste du module donne sa limite, et garde les règles d’accès', () => {
+		const fichiers = fichiersDe('src/services/public')
+		expect(fichiers.length).toBeGreaterThan(0)
+		const fautes = fichiers.flatMap(fichier => {
+			const code = readFileSync(fichier, 'utf8')
+			return appelsDe(code, 'find').flatMap(appel => [
+				...(/\blimit:/.test(appel) ? [] : [`${fichier} : un .find( sans limit`]),
+				...(/overrideAccess:\s*(false|true)/.test(appel) ? [] : [`${fichier} : un .find( sans overrideAccess`]),
+			])
+		})
+		expect(fautes).toEqual([])
+	})
+
+	test('le contrôle voit une lecture sans limite', () => {
+		const appels = appelsDe("await payload.find({ collection: 'profils', depth: 0 })", 'find')
+		expect(appels).toHaveLength(1)
+		expect(appels[0]).not.toMatch(/\blimit:/)
+		expect(appelsDe('payload.find({ where: { a: { equals: 1 } }, limit: 3 })', 'find')[0]).toMatch(/\blimit:/)
+	})
+})

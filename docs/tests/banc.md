@@ -43,7 +43,7 @@ Il faut Docker avec Compose. Sans démon Docker, les commandes du banc passent d
 | `NEXT_PUBLIC_SITE_URL` | L'adresse de l'application lancée contre le banc : `http://localhost:3100` |
 | `SMTP_HOST`, `SMTP_PORT` | Le capteur de mails. L'application envoie tous ses mails par ce relais |
 | `MAILPIT_URL` | L'API du capteur, par laquelle un test lit les mails reçus |
-| `EMAIL_FROM` | L'expéditeur des mails du banc, sur le domaine réservé `example.test` |
+| `EMAIL_FROM` | L'expéditeur des mails du banc, sur le domaine réservé `example.test`. Pas d'identifiant : le capteur n'en demande pas (`SMTP_USER` et `SMTP_PASSWORD` sont ceux du site) |
 | `S3_ENDPOINT`, `S3_BUCKET` | Le stockage d'objets et son espace. Le nom de l'espace finit par `-test` |
 | `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | La clé avec laquelle l'application signe ses requêtes au stockage. Le simulateur accepte toute clé : ces deux valeurs portent le mot « factice ». Sans `R2_PUBLIC_URL`, l'adresse publique d'une photo du banc est celle du simulateur : `S3_ENDPOINT`, puis l'espace, puis la clé de l'objet |
 | `STRAPI_SOURCE_URI` | La fausse base Strapi que lit l'import, ouverte par un rôle qui ne peut rien y écrire. Elle vit dans le PostgreSQL du banc, dans une base à elle dont le nom finit par `_test` ([`source-strapi.md`](source-strapi.md)) |
@@ -609,6 +609,20 @@ Le fournisseur se teste aussi sans le banc, appelé comme une fonction : `bun --
 - **Le site et sa préprod refusent un fournisseur local.** Avec une adresse de site déployée dans `NEXT_PUBLIC_SITE_URL`, une `GOOGLE_OIDC_ISSUER` locale arrête l'application au démarrage (README, « Configuration durcie »).
 
 Le code est dans `tests/outils/faux-google/` : `fournisseur.ts` (le fournisseur), `identite.ts` (scénarios et identités), `serveur.ts` (ce que lance le conteneur). L'outil des tests est `tests/outils/faux-google.ts`.
+
+## Le rapprochement du stockage et de la base
+
+`bun run banc:rapprocher` (ticket 137, plan 02 I27 et §10.1 point 5) compare les objets du stockage du banc aux médias de sa base. Il ne supprime rien et n'écrit rien : il liste le stockage, lit la base, et n'a aucune option qui supprime. La même règle (`src/lib/rapprochement.ts`) servira au contrôle complet d'avant purge, sur d'autres données.
+
+Il nomme trois sortes d'orphelins, par clé d'objet ou par identifiant, sans aucune donnée personnelle :
+
+- **un objet sans média** : une clé du stockage qu'aucun média ne nomme (hors corbeille) ;
+- **un média sans objet** : un média dont l'objet d'origine ou une taille dérivée manque ;
+- **un média sans profil** : un média qu'aucune photo principale, aucune galerie de profil, aucun article (versions comprises) ne désigne.
+
+La corbeille (`deleted/`) est comptée à part, comme les vignettes de l'ancien site décrites dans `media.strapiFormats` : ce ne sont pas des orphelins. Code de sortie 0 sans orphelin (« 0 orphelin »), 1 avec, 2 si le banc ne répond pas. Avec `--json`, la sortie est le rapport en JSON. Avec `--hors-import`, les médias que l'import a repris de l'ancien site (`strapiId`) restent listés mais ne comptent pas pour le code de sortie : c'est l'option de la CI, parce que l'essai de bout en bout de l'import efface sa fausse source à la fin, et que les médias repris perdent alors leurs objets exprès. Le contrôle complet d'avant purge se lance sans l'option.
+
+En CI, l'étape « Reconcile the storage and the database » du job `e2e` le lance (avec `--hors-import`) après les essais de bout en bout : à ce moment, les objets hors corbeille doivent être exactement ceux des photos des profils et des articles. Un orphelin fait passer l'étape au rouge, donc `ci-ok` au rouge. `tests/integration/rapprochement.test.ts` prouve les trois sortes d'orphelins, l'absence de toute écriture et le code de sortie ; `tests/ci/garde-fous-ci.test.ts` garde l'étape dans le workflow.
 
 ## La fausse base Strapi
 

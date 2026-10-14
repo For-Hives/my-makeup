@@ -2,6 +2,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { withPayload } from '@payloadcms/next/withPayload'
 import type { NextConfig } from 'next'
+import { enTetesEspace } from './src/lib/auth/entetes-espace'
 import { mediaOrigin } from './src/lib/env'
 import { mediaRemotePattern, securityHeaders } from './src/lib/security-headers'
 
@@ -30,6 +31,9 @@ const nextConfig: NextConfig = {
 	// `next dev` writes an AGENTS.md and a CLAUDE.md at the project root when it is started
 	// by a coding agent. The guides of this repository are written by hand: nothing is generated.
 	agentRules: false,
+	// The app has two root layouts, so an address no route matches needs src/app/global-not-found.tsx
+	// to answer a 404 in French, in the template of the site.
+	experimental: { globalNotFound: true },
 	// The project root is stated, not inferred: a lockfile higher up in the file tree
 	// (a parent folder, another checkout) must not become the Turbopack root.
 	turbopack: { root: dirname },
@@ -40,7 +44,11 @@ const nextConfig: NextConfig = {
 	images: { remotePatterns: [mediaRemotePattern(media)] },
 	// Every path leaves with the security headers (src/lib/security-headers.ts). A ticket that
 	// needs a header on some paths adds its own entry after this one.
-	headers: async () => [{ source: '/:path*', headers: securityHeaders({ development, mediaOrigin: media }) }],
+	headers: async () => [
+		{ source: '/:path*', headers: securityHeaders({ development, mediaOrigin: media }) },
+		// The authentication pages and the space: never cached, never indexed (tickets 074 and 075).
+		{ source: '/auth/:path*', headers: enTetesEspace() },
+	],
 }
 
 // withPayload must stay the outermost wrapper: it adds Payload's server packages and aliases.

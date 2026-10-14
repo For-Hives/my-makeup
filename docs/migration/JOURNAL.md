@@ -365,3 +365,44 @@ Ce que la v3 change par rapport au site actuel est dans [`CHANGEMENTS-VOULUS.md`
   - Une fusion, sans conflit : lot 052-053. Le lot 065-067 n'est pas fusionné : les deux tickets restent non faits (pas de copie de la prod du jour, pas de requêtes d'en-tête sur le stockage réel), avec deux bloquants du relecteur non levables sans accès à la prod.
   - Vérifié : installation figée sans changement ; Biome et contrôle de types verts ; 1 545 tests unitaires verts et 1 sauté ; 439 garde-fous de la CI verts ; build de production vert. Les tests d'intégration et de bout en bout complets n'ont pas été relancés : le moteur de conteneurs n'était pas joignable à l'intégration ; les auteurs les ont passés en ciblé sur leur banc.
   - La branche `main` n'a reçu aucun commit.
+- **Ticket 068 fait : les pages publiques partagent une Nav, un menu mobile et un pied de page.**
+  - Le gabarit vit dans `(front)/(site)/layout.tsx` ; le menu mobile se parcourt au clavier (Entrée, Tab, Échap). Aucun débordement à 390, 768 et 1440 px, aucune ressource d'un domaine tiers.
+  - Vérifié : essais de bout en bout `gabarit` verts aux deux tailles, liens du pied de page rapprochés de la table des URL gelées. Non vérifié : l'ouverture réelle de chaque lien, car la plupart des pages appartiennent à des tickets suivants (097 à 112) ; leurs préchargements rendent 404 en attendant. Les icônes sont des SVG en ligne, sans bibliothèque.
+- **Ticket 069 fait : 404 et erreurs en français, jamais de 200 sur une erreur.**
+  - `global-not-found`, `(site)/not-found`, `(site)/error` et `global-error`. Une adresse inconnue répond 404, une base morte répond 500.
+  - Vérifié : E59 et E61 en bout en bout, test unitaire des pages d'erreur. E60 (base indisponible) seulement en test de composant et en contrôle manuel, sans essai de bout en bout.
+  - À savoir : sur une base morte, le serveur rend la coquille vide de Next ; la page française n'apparaît qu'après hydratation. Un rendu serveur demande une capture d'erreur dans les pages 101 et 104.
+- **Ticket 070 fait : le socle SEO commun.**
+  - `src/lib/seo/` (titre de 60 caractères au plus, description de 70 à 155, canonique absolue sur `https://my-makeup.fr`, robots par chemin) et `src/proxy.ts`, qui pose `X-Robots-Tag` : `noindex` sur `/auth` et `/search`, et sur toute la préprod (`APP_ENV` lu à chaque requête).
+  - Vérifié : U44 à U46, U50, U52 verts ; en bout en bout, la canonique de l'accueil et les en-têtes de `/auth` et `/search`. Non vérifié : E66 en bout en bout, ni le passage de l'en-tête par le cache d'une préprod réelle.
+  - À savoir : sur la préprod, une page peut porter une canonique et `noindex` ensemble (la canonique ne dépend pas de l'environnement).
+- **Ticket 071 fait : une seule lecture publique des profils, et les listes REST bornées.**
+  - `src/services/public/profils.ts` donne la liste (listé, indexable, visible) et un profil par slug ; les coordonnées n'en sortent que si `contactPublic`. Un test échoue si une page de `(front)` lit une collection sans ce module. Côté REST, toute lecture en liste est plafonnée à 100 pour tout compte sauf l'admin (défaut décidé le 14/10 vers 15 h 30).
+  - Vérifié : fichiers d'intégration `lecture-publique` et `lecture-bornee-rest` verts chez l'auteur ; `/profil/<slug>` répond 200, un slug inconnu 404. Non fait : la ligne dans `plans/decisions.md`, que l'auteur ne pouvait pas écrire.
+  - À savoir : `statut` n'est pas filtrable par le public ; un brouillon répond donc 404 comme avant. Les cartes n'ont pas de photo (ticket 098).
+- **Ticket 073 fait : un email transactionnel part de la v3 et se lit dans le capteur du banc.**
+  - Un seul point d'envoi (`src/lib/emails/`), SMTP avec identifiant et TLS, trois délais de 10 s, et rien ne part pendant l'import. Sans relais, la v3 démarre en local et refuse de démarrer sur le site ; le refus d'un relais local couvre tout `127.0.0.0/8`, `0.0.0.0` et `::`.
+  - Vérifié : `emails.test.ts` sur le banc, dont un relais qui se tait après EHLO. Non vérifié : le service Resend réel.
+  - À savoir : les mails propres à Payload (confirmation, mot de passe oublié) passent par un adaptateur muet sans relais ; ils contournent encore le point d'envoi, ce qui revient aux tickets 082 et 085.
+- **Ticket 074 fait : une maquilleuse se connecte avec son email et son mot de passe.**
+  - Cookie `HttpOnly`, `SameSite=Lax`, `Secure` en production ; email insensible à la casse. Les refus 401 et 429 sont journalisés au niveau info.
+  - Vérifié : tests unitaires et d'intégration. Non vérifié dans cette passe : les essais de bout en bout ajoutés par le correctif de relecture (assertion `Secure`, retour interne).
+- **Ticket 075 fait : l'espace est fermé sans session et ne laisse fuir aucun jeton.**
+  - Le proxy renvoie d'une seule redirection vers la connexion ; la page décide seule de la validité du jeton. Le retour (`retourSur`) refuse maintenant tout chemin qui commence encore par `//` ou `/\` après normalisation (redirection ouverte corrigée après relecture).
+  - À savoir : `src/proxy.ts` réunit la porte de l'espace (075) et l'en-tête robots (070), sans `matcher`.
+- **Ticket 076 fait : le frein par adresse cliente, sans verrou de compte.**
+  - Onzième échec refusé en 429, compte jamais verrouillé ; l'adresse vient de la dernière entrée de `X-Forwarded-For`, en sautant les relais de `TRUSTED_PROXY_CIDRS` (facultative). Brique réutilisable (`ipClient`) pour 083, 086, 094, 100 et 161.
+  - Reste, pour le propriétaire : renseigner `TRUSTED_PROXY_CIDRS` avant la bascule si Cloudflare proxifie le domaine de l'application. Le frein est en mémoire du processus. La variable n'est pas dans le tableau du README.
+- **Ticket 133 fait : le serveur n'accepte d'une maquilleuse que de vraies photos.**
+  - Le type est lu dans le contenu (JPEG, PNG, WebP), 10 Mo au plus, nom imprévisible `media/<uuid>.<ext>`, quatre tailles dérivées (`sizes`, migration `sizes_des_medias`, `sharp`). Les identifiants de photo invalides sont refusés en 400 avant la base.
+  - Vérifié : `envoi-photo.test.ts` et suite d'intégration complète chez l'auteur. Le registre porte la ligne `photos-noms-imprevisibles`.
+  - À savoir : la règle vaut pour tout rôle ; les EXIF des JPEG et PNG restent dans l'original (rien ne les retire côté serveur).
+- **Ticket 137 fait : un rapprochement à blanc compare le stockage et la base.**
+  - `bun run banc:rapprocher` nomme les objets sans média, les médias sans objet et les médias sans profil, sans rien supprimer ; la corbeille est comptée à part. La CI le lance après les essais de bout en bout (`--hors-import`).
+  - À savoir : il ne prouvera quelque chose que lorsque les tickets 134 à 136 enverront des photos dans les essais.
+- **Ticket 149 fait : une route de statistiques hebdomadaires, en agrégats seulement.**
+  - `GET /api/stats/weekly`, derrière le jeton `STATS_TOKEN` (32 caractères au moins) : 401 sans jeton, 400 sur une période invalide, 405 sur un autre verbe, jamais en cache. Schéma strict et exemple publié (`docs/mesure/`).
+  - Reste : les tickets 150 et 151 (l'outil de rapport, dans le dépôt des plans) ne sont pas faits ; un lot autorisé à écrire dans `plans/mesures/outil` doit les reprendre.
+- **Intégration des tickets 068 à 076, 133, 137 et 149 dans `v3`.**
+  - Six fusions ; deux avec conflit, résolus en gardant les deux côtés. `src/proxy.ts` : porte de l'espace et en-tête robots dans une seule fonction. `src/migrations/index.ts` : les deux migrations en ordre d'horodatage, et le cliché de la dernière migration complété des colonnes `sizes`. Le lot 065-067 n'est pas fusionné (tickets non faits, bloquants sans accès à la prod).
+  - Vérifié : installation figée sans changement ; Biome et contrôle de types verts ; 1 717 tests unitaires verts et 1 sauté ; 442 garde-fous de la CI verts ; build de production vert ; intégration complète sur un banc à part, 1 428 verts ; bout en bout, 61 verts et 2 échecs qui existent déjà sur la tête précédente de `v3` en passage complet (`jeu-du-banc` et `tranche-profil-importe` se perturbent en parallèle ; chacun passe seul). Le menu du gabarit ne se retrouve plus sur la page de connexion, qui est dans l'espace : l'essai du gabarit a été corrigé en conséquence.

@@ -166,8 +166,8 @@ describe('the image is built with public variables only, runs without root and s
 		],
 		[
 			'a variable of a later ticket that .env.exemple would list',
-			`${dockerfile}\nARG SMTP_PASSWORD\n`,
-			'ARG SMTP_PASSWORD : seules les variables publiques',
+			`${dockerfile}\nARG RESEND_API_KEY\n`,
+			'ARG RESEND_API_KEY : seules les variables publiques',
 		],
 		[
 			'a public variable nobody added to the list',
@@ -214,11 +214,11 @@ describe('the image is built with public variables only, runs without root and s
 	})
 
 	test('a runtime variable is recognised from .env.exemple alone, whatever the Dockerfile says', () => {
-		const withMail = `${envExample}\nSMTP_PASSWORD=\n`
+		const withMail = `${envExample}\nRESEND_API_KEY=\n`
 
-		expect(imageProblems(`${dockerfile}\nRUN echo "$SMTP_PASSWORD"\n`, envExample)).toEqual([])
-		expect(imageProblems(`${dockerfile}\nRUN echo "$SMTP_PASSWORD"\n`, withMail).join('\n')).toContain(
-			'SMTP_PASSWORD est une variable d’exécution'
+		expect(imageProblems(`${dockerfile}\nRUN echo "$RESEND_API_KEY"\n`, envExample)).toEqual([])
+		expect(imageProblems(`${dockerfile}\nRUN echo "$RESEND_API_KEY"\n`, withMail).join('\n')).toContain(
+			'RESEND_API_KEY est une variable d’exécution'
 		)
 	})
 
@@ -1377,5 +1377,31 @@ describe('C07: Playwright cannot point at production, and the CI cannot skip tes
 			expect(printed).toContain('[mobile] › coquille.spec.ts')
 			expect(code).toBe(0)
 		}, 30_000)
+	})
+})
+
+describe('Ticket 137: the reconciliation of the storage and the database runs after the journeys', () => {
+	const etapes = (workflow: Workflow) => workflow.jobs.e2e?.steps ?? []
+	const indexDe = (workflow: Workflow, morceau: string) =>
+		etapes(workflow).findIndex(etape => etape.run?.includes(morceau))
+
+	test('the e2e job runs `banc:rapprocher` right after the end-to-end tests, and the aggregator waits for that job', () => {
+		const essais = indexDe(ci, 'bun run test:e2e')
+		expect(essais).toBeGreaterThan(-1)
+		expect(indexDe(ci, 'bun run banc:rapprocher')).toBeGreaterThan(essais)
+		expect(ci.jobs[AGGREGATOR]?.needs).toContain('e2e')
+	})
+
+	test('red on a CI that drops the step', () => {
+		const sansEtape = brokenCi('        run: bun run banc:rapprocher --hors-import\n', '        run: echo rien\n')
+		expect(indexDe(sansEtape, 'bun run banc:rapprocher')).toBe(-1)
+	})
+
+	test('red on a step that tolerates a failure: C01 finds it', () => {
+		const tolerante = brokenCi(
+			'        run: bun run banc:rapprocher --hors-import\n',
+			'        continue-on-error: true\n        run: bun run banc:rapprocher --hors-import\n'
+		)
+		expect(toleratedFailures([tolerante]).length).toBeGreaterThan(0)
 	})
 })

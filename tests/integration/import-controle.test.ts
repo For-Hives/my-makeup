@@ -163,4 +163,21 @@ describe('le contrôle de la parité (I39, I40, I43)', () => {
 		expect(code, sortie).toBe(4)
 		expect(sortie).toMatch(/Profils : .* 1 document sans origine/)
 	}, 60_000)
+
+	test.each([
+		['articles', 'Articles'],
+		['talents', 'Talents'],
+	])('un document de %s ajouté à la main fait échouer le contrôle, et la parité ne se dit pas complète', async (table, nom) => {
+		await importerSurLeBanc()
+		await ecrireDansLaCible(`INSERT INTO ${table} (slug, title) VALUES ('ajoute-a-la-main', 'x')`)
+
+		const { code, sortie } = await controler()
+		expect(code, sortie).toBe(4)
+		expect(sortie).toMatch(new RegExp(`${nom} : .* 1 document sans origine`))
+
+		const reel = await commandeDImport(['--reel', '--decisions', FICHIER_DES_DECISIONS_DU_BANC])
+		const ligne = reel.sortie.split('\n').find(l => l.startsWith(`${nom} : `) && l.includes('égaux'))
+		expect(ligne, reel.sortie).toContain('parité incomplète')
+		expect(ligne).not.toContain('parité complète')
+	}, 90_000)
 })
