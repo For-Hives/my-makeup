@@ -124,6 +124,7 @@ En CI, un essai en échec est rejoué deux fois, et un essai laissé en `.only` 
 - La garde des tests (`tests/outils/garde-environnement.ts`) refuse toute cible sur `my-makeup.fr` et ses sous-domaines, dans tout environnement. La préprod n'est admise qu'avec `APP_ENV=preprod`. Elle est appelée trois fois avant le premier essai : par `bun run test:e2e` avant tout build, au chargement de la configuration de Playwright, puis par la préparation globale. Un lancement vers la prod s'arrête avant le premier essai, avec un message qui nomme la variable en cause.
 - Un essai n'ouvre que des chemins (garde-fou C07).
 - `playwright.config.ts` ne règle rien lui-même : tous les réglages viennent de `tests/outils/e2e.ts`, que les garde-fous de `tests/ci/` lisent (C07 : pas de `.only` en CI, seuls les `*.spec.ts`, aucune adresse de la prod dans `baseURL`).
+- Les sondes de `tests/sondes/` lisent le site en ligne, en GET seulement ([`sondes.md`](sondes.md)). Elles ne passent ni par Playwright ni par cette garde, qu'elles n'assouplissent pas : elles ont leur propre garde et leur propre variable, `SONDES_CIBLE`.
 
 ## Lancer Playwright sans la commande
 
