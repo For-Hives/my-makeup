@@ -1,19 +1,84 @@
+import type { Metadata } from 'next'
+import { Collaboration } from '@/components/accueil/Collaboration'
+import { Presentation } from '@/components/accueil/Presentation'
+import { Project } from '@/components/accueil/Project'
+import { Talents } from '@/components/accueil/Talents'
+import { Cta } from '@/components/blocs/Cta'
+import { Hero } from '@/components/blocs/Hero'
+import { RESEAUX } from '@/components/gabarit/liens'
+import { donneesStructureesDeLAccueil, NOM_DU_SITE, serializeJsonLd } from '@/lib/seo/json-ld'
 import { metadonnees } from '@/lib/seo/metadonnees'
+import { SITE_ORIGIN } from '@/lib/urls-gelees'
+import { lesTalentsEnCache } from '@/services/public/en-cache'
+import type { TalentPublic } from '@/services/public/talents'
 
-export const metadata = metadonnees({
-	titre: 'Maquilleuse professionnelle près de chez vous',
-	description:
-		'Trouvez une maquilleuse professionnelle à domicile près de chez vous, pour un mariage, une soirée ou un shooting. Comparez les profils et les tarifs.',
+// Rendered at each request: the build runs without a database. The talents are read through the cache of
+// Next, tagged `talents`: a save of a talent in the admin panel refreshes them (ticket 047). The cache of
+// the page itself is ticket 117.
+export const dynamic = 'force-dynamic'
+
+const TITRE = 'Maquilleuse professionnelle près de chez vous'
+const DESCRIPTION =
+	'Trouvez une maquilleuse professionnelle à domicile près de chez vous, pour un mariage, une soirée ou un shooting. Comparez les profils et les tarifs.'
+
+const base = metadonnees({
+	titre: TITRE,
+	description: DESCRIPTION,
 	repli:
 		'Annuaire de maquilleuses professionnelles indépendantes : trouvez celle qui vous correspond, près de chez vous.',
 	chemin: '/',
 })
 
-export default function HomePage() {
+// The preview of a shared link (ticket 116 gives it to every page): the home page has it from now on,
+// with the picture the site online shares.
+export const metadata: Metadata = {
+	...base,
+	openGraph: {
+		type: 'website',
+		locale: 'fr_FR',
+		siteName: NOM_DU_SITE,
+		url: SITE_ORIGIN,
+		title: String((base.title as { absolute: string }).absolute),
+		description: DESCRIPTION,
+		images: [{ url: `${SITE_ORIGIN}/assets/og-my-makeup.jpg` }],
+	},
+}
+
+const RESEAUX_PUBLICS = RESEAUX.filter(({ href }) => href.startsWith('https://')).map(({ href }) => href)
+
+/** The talents, or none when the database does not answer: the home page stays a page, never a 500. */
+async function lireLesTalents(): Promise<readonly TalentPublic[]> {
+	try {
+		return await lesTalentsEnCache()
+	} catch (erreur) {
+		console.error('[accueil] les talents ne se lisent pas :', erreur instanceof Error ? erreur.message : erreur)
+		return []
+	}
+}
+
+export default async function PageDAccueil() {
+	const talents = await lireLesTalents()
 	return (
-		<main className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-center">
-			<h1 className="font-semibold text-4xl">My Makeup</h1>
-			<p className="max-w-prose text-lg text-neutral-700">Annuaire de maquilleuses professionnelles indépendantes.</p>
+		<main className="relative">
+			<script
+				type="application/ld+json"
+				// biome-ignore lint/security/noDangerouslySetInnerHtml: serializeJsonLd escapes <, > and &, so the data cannot close the tag.
+				dangerouslySetInnerHTML={{ __html: serializeJsonLd(donneesStructureesDeLAccueil(RESEAUX_PUBLICS)) }}
+			/>
+			<Hero
+				titre={<>Trouver la maquilleuse qui vous correspond n&apos;a jamais été aussi simple</>}
+				description={
+					<>
+						Trouvez la maquilleuse spécialisée dans le domaine que vous recherchez, maquillage pour les mariées,
+						maquillage de soirée, maquillage professionnel...
+					</>
+				}
+			/>
+			<Presentation />
+			{talents.length > 0 && <Talents talents={talents} />}
+			<Collaboration />
+			<Project />
+			<Cta />
 		</main>
 	)
 }

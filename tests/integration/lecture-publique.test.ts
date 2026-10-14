@@ -45,11 +45,12 @@ describe('La liste : le vide, l’indisponible et le masqué sont absents', () =
 
 		const { cartes } = await listerLesProfils(payload, { limite: 100 })
 
-		const texte = JSON.stringify(cartes)
+		// The address of a photo is made of random characters: it is checked apart, the rest has no digit pair to hide.
+		const texte = JSON.stringify(cartes.map(({ photo: _photo, ...reste }) => reste))
 		expect(texte).not.toContain('@')
 		expect(texte).not.toMatch(/0[1-9][ .]?\d{2}/)
 		for (const carte of cartes)
-			expect(Object.keys(carte).sort()).toEqual(['lieu', 'nom', 'slug', 'specialite', 'superMaquilleuse'])
+			expect(Object.keys(carte).sort()).toEqual(['lieu', 'nom', 'photo', 'slug', 'specialite', 'superMaquilleuse'])
 	})
 
 	test('la pagination est stable : deux pages de cinq se suivent sans se recouper', async () => {

@@ -8,7 +8,8 @@
  * One run, in this order:
  *   1. refuses a target that is not the application of the bench, a bench that does not answer,
  *      and a port that is already taken;
- *   2. empties the bench database: the application builds its tables itself, by its migrations;
+ *   2. empties the bench database: the application builds its tables itself, by its migrations, and
+ *      the data cache of Next that a former run left on the disk (.next/cache/fetch-cache);
  *   3. builds the application for production, with no database, no secret and no `.env`;
  *   4. runs Playwright under Node with the environment of the bench. Playwright starts the
  *      application on the port of the instance, waits until it is healthy, refuses a database
@@ -19,6 +20,7 @@
  * Started with `--no-env-file`: a working `.env` never reaches the tests.
  */
 
+import { rmSync } from 'node:fs'
 import path from 'node:path'
 import { BancRefuse, portOuvert, RACINE } from '../tests/outils/banc'
 import {
@@ -101,6 +103,10 @@ async function principal(demandes: string[]): Promise<number> {
 	const port = portDeLApplication(adresse)
 	if (await portOuvert(port)) throw new BancRefuse(messagePortPris(port))
 	await effacerLeSchema(banc)
+
+	// The data cache of Next (`unstable_cache`, tickets 097 and 098) lives on the disk, in .next/cache, and
+	// outlives a build: an entry of the last run, made before its data existed, would answer this run's pages.
+	rmSync(path.join(RACINE, '.next/cache/fetch-cache'), { recursive: true, force: true })
 
 	console.log(`Essais de bout en bout sur le banc « ${banc.instance.nom} » : build de l’application, puis ${adresse}.`)
 	const build = await lancer(

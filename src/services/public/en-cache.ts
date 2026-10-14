@@ -1,0 +1,32 @@
+/**
+ * The public reads that a page keeps in Next's cache (tickets 097 and 098): the build runs without a
+ * database, so a page renders on its first request and reads these. Each one carries the tag of the
+ * list it reads (`ETIQUETTES`, src/lib/revalidation.ts): a save of a profile or of a talent refreshes
+ * it (src/collections/revalidation.ts), and the import refreshes nothing. The time is only a net: a
+ * change made outside of a request of Next (a script) is seen within the hour.
+ *
+ * The rest of the cache work, the pages themselves, is ticket 117.
+ */
+
+import config from '@payload-config'
+import { unstable_cache } from 'next/cache'
+import { getPayload } from 'payload'
+import { ETIQUETTES } from '@/lib/revalidation'
+import { lireLAnnuaire } from './profils'
+import { listerLesTalents } from './talents'
+
+const UNE_HEURE = 60 * 60
+
+/** The talents of the home page. */
+export const lesTalentsEnCache = unstable_cache(
+	async () => listerLesTalents(await getPayload({ config })),
+	['public:talents'],
+	{ tags: [ETIQUETTES.talents], revalidate: UNE_HEURE }
+)
+
+/** Every listed profile, with her place: what the search by city ranks. */
+export const lAnnuaireEnCache = unstable_cache(
+	async () => lireLAnnuaire(await getPayload({ config })),
+	['public:annuaire'],
+	{ tags: [ETIQUETTES.profils], revalidate: UNE_HEURE }
+)

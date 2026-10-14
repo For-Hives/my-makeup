@@ -37,7 +37,7 @@ Une application, trois zones, toutes sous `src/app/` :
 
 | Zone | Dossier | Adresse | État |
 |---|---|---|---|
-| Pages publiques | `(front)/(site)/` | `/`, `/profil/<slug>` | Page d'accueil provisoire ; page publique d'un profil, première tranche : son nom en titre, sa spécialité et sa description, lus par `src/services/public/` |
+| Pages publiques | `(front)/(site)/` | `/`, `/search`, `/profil/<slug>` | Accueil du site en ligne (recherche en tête, talents lus par `src/services/public/talents.ts`, données structurées) ; recherche par ville, en sections par lieu ; page publique d'un profil, première tranche : son nom en titre, sa spécialité et sa description |
 | Espace maquilleuse | `(front)/(espace)/auth/` | `/auth` | Page d'attente |
 | Administration | `(payload)/` | `/admin` et `/api` | Générée par Payload : les comptes `admins`, aux rôles `admin` et `redaction`, les comptes des maquilleuses, `pros`, leurs profils, `profils`, les photos, `media`, les talents, `talents`, et les articles du blog, `articles` |
 
@@ -54,6 +54,7 @@ Le reste :
 - `scripts/migration/` : les outils de la migration, dont l'import des données de l'ancien site (voir `docs/migration/IMPORT.md`).
 - `src/preprod/` : ce que fait la préprod quand elle démarre, et elle seule : sur une base vide, elle charge le jeu fictif du banc (12 profils types, 3 talents, 3 articles) ; un jeton de `PREPROD_REMISE_A_ZERO` la remet à zéro. `scripts/preprod/controle.ts` : le contrôle que la CI lance contre elle (voir [`docs/preprod.md`](docs/preprod.md)).
 - `src/components/gabarit/` : le gabarit des pages publiques (Nav et menu mobile, pied de page, pages 404 et d'erreur), posé par `(front)/(site)/layout.tsx`. Il ne lit ni cookie ni session : les pages restent statiques. `src/app/global-not-found.tsx` répond la 404 d'une adresse qu'aucune route ne connaît, dans ce même gabarit.
+- `src/lib/recherche/` : ce que la page de recherche lit de l'adresse (`saisie.ts`) et la mise en sections par lieu (`lieu.ts` : la ville, puis le département tapé, puis le même département, ceux qui se déplacent, le reste). `src/services/public/en-cache.ts` : les lectures publiques gardées dans le cache de Next, sous l'étiquette de la liste qu'elles lisent (`talents`, `profils`). `src/lib/urls/forme.ts` : la forme d'une adresse (barre finale, `//`, `/toutes-les-news`), répondue par `src/proxy.ts` en un seul saut ; Next ne répond plus lui-même à la barre finale (`skipTrailingSlashRedirect`).
 - `src/lib/seo/` et `src/proxy.ts` : le socle SEO. Titre (60 caractères au plus), description (70 à 155), adresse canonique absolue sur `https://my-makeup.fr` sans barre finale, et consigne robots. `src/proxy.ts` pose `X-Robots-Tag` à chaque requête : `noindex` sur `/auth` et `/search`, qui ne sont pas bloquées dans `robots.txt`, et sur toute la préprod (`APP_ENV=preprod`, lu au démarrage de l'application et non au build). Une page `noindex` n'a pas d'adresse canonique. Jamais `noarchive`, `nocache`, `nosnippet` ni `max-snippet` : les assistants citent le site.
 - `src/app/api/stats/weekly/route.ts` : les statistiques du rapport du lundi, des agrégats seulement, derrière le jeton `STATS_TOKEN` (voir [`docs/mesure/statistiques-hebdomadaires.md`](docs/mesure/statistiques-hebdomadaires.md)).
 - `src/lib/env.ts` : les variables d'environnement, vérifiées au démarrage par `src/instrumentation.ts`.

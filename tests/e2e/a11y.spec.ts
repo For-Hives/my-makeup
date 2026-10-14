@@ -15,9 +15,14 @@ const PAGE_FAUTIVE = `<!doctype html>
 </html>`
 
 test.describe('Accessibilité : aucune violation « serious » ni « critical »', { tag: '@mobile' }, () => {
-	test('l’accueil provisoire', async ({ page }) => {
+	test('l’accueil', async ({ page }) => {
 		await page.goto('/')
-		await expect(page.getByRole('heading', { level: 1, name: 'My Makeup' })).toBeVisible()
+		await expect(
+			page.getByRole('heading', {
+				level: 1,
+				name: "Trouver la maquilleuse qui vous correspond n'a jamais été aussi simple",
+			})
+		).toBeVisible()
 
 		expect(await violationsGraves(page)).toEqual([])
 	})

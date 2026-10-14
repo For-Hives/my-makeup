@@ -37,6 +37,9 @@ const nextConfig: NextConfig = {
 	// The project root is stated, not inferred: a lockfile higher up in the file tree
 	// (a parent folder, another checkout) must not become the Turbopack root.
 	turbopack: { root: dirname },
+	// The final slash is answered by src/proxy.ts (ticket 072), in one hop and with the redirects of the
+	// frozen table: Next's own 308 would make `/toutes-les-news/` a chain of two.
+	skipTrailingSlashRedirect: true,
 	// No response says what the site runs on. It also stops withPayload from adding its own
 	// « X-Powered-By: Next.js, Payload » to every path.
 	poweredByHeader: false,
