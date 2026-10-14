@@ -551,6 +551,76 @@ test.describe('UI-07 recherche', () => {
 		await expect(cartes.getByText('Pro', { exact: true })).toHaveCount(1)
 	})
 
+	// Ticket 14: a card used to link to the username, the old address of the
+	// profile, which answers a 308 to her slug; and the username alone does
+	// not tell the slug of the second of two names that give the same one
+	test('carte : la page du profil à l’adresse du sitemap, en 200 sans 308 ; deux noms qui donnent le même slug, chacune sa page', async ({
+		page,
+		request,
+	}) => {
+		const xml = await (await request.get('/sitemap.xml')).text()
+		const sitemap = [...xml.matchAll(/<loc>([^<]*)<\/loc>/g)]
+			.map(m => new URL(decoder(m[1])).pathname)
+			.filter(chemin => chemin.startsWith('/profil/'))
+		// the profile asked by each page or data request (prefetch, click)
+		const demandes = []
+		page.on('request', r => {
+			const profil = /^(?:\/_next\/data\/[^/]+)?\/profil\/([^/]+?)(?:\.json)?$/.exec(new URL(r.url()).pathname)
+			if (profil) demandes.push(decodeURIComponent(profil[1]))
+		})
+		const redirections = []
+		page.on('response', r => {
+			if (r.status() >= 300 && r.status() < 400) redirections.push(r.url())
+		})
+
+		// a city alone: the whole directory, every searchable profile
+		await page.goto('/search?city=Annecy')
+		const cartes = page.getByTestId('search-result')
+		const carte = nom => cartes.filter({ has: page.getByRole('heading', { name: nom, exact: true }) })
+		// the slugs are read beside the search: until then, the usernames
+		await expect(carte('Zoe Lefevre')).toHaveAttribute('href', '/profil/zoe-lefevre-2')
+		const liens = await cartes.evaluateAll(as =>
+			as.map(a => [a.querySelector('h2').textContent, a.getAttribute('href')])
+		)
+		const hrefs = liens.map(([, href]) => href)
+		// usernames that are not their slug (accent and space, capitals), and
+		// the two that give the same slug
+		expect(liens).toContainEqual(['Zoé Lefèvre', '/profil/zoe-lefevre'])
+		expect(liens).toContainEqual(['Zoe Lefevre', '/profil/zoe-lefevre-2'])
+		expect(liens).toContainEqual(['Léa Nantaise', '/profil/leanantes'])
+		// the searchable publiable profiles: the address of the sitemap
+		const cherchables = publiables.filter(p => p.available !== false).map(p => `/profil/${p.attendu.slug}`)
+		expect(sitemap).toEqual(expect.arrayContaining(cherchables))
+		expect(hrefs).toEqual(expect.arrayContaining(cherchables))
+		// each card: her own page, 200 without redirection
+		for (const [nom, href] of liens) {
+			const profil = await html(request, href)
+			expect(profil.reponse.status(), href).toBe(200)
+			expect(textesDes(profil.html, 'h1'), href).toEqual([nom])
+		}
+
+		// in the browser: the click opens her page, never the old address,
+		// neither prefetched nor followed
+		await carte('Zoe Lefevre').click()
+		await expect(page).toHaveURL(`${APP}/profil/zoe-lefevre-2`)
+		await expect(page.getByRole('heading', { level: 1 })).toHaveText('Zoe Lefevre')
+		const adresses = hrefs.map(href => decodeURIComponent(href.slice('/profil/'.length)))
+		expect(demandes).toContain('zoe-lefevre-2')
+		expect(demandes.filter(profil => !adresses.includes(profil))).toEqual([])
+		expect(redirections).toEqual([])
+
+		// what the page reads for that: an id and a slug, only for the
+		// profiles whose username is not their slug
+		const slugs = await request.get('/api/slugs-des-cartes')
+		expect(slugs.status()).toBe(200)
+		expect(await slugs.json()).toEqual({
+			101: 'zoe-lefevre',
+			103: 'leanantes',
+			109: 'zoe-lefevre-2',
+			111: 'textes-max',
+		})
+	})
+
 	test('aucun résultat : un h1 et un message utile', async ({ page }) => {
 		await page.goto('/search?search=zzqq')
 		await expect(page.getByRole('heading', { level: 1 })).toHaveText('Aucun résultat pour « zzqq »')

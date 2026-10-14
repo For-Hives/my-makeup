@@ -34,6 +34,7 @@ import {
 	urlApiRecherche,
 	urlPageRecherche,
 } from '@/lib/recherche'
+import { cheminCarte } from '@/lib/slug'
 import { QUALITE_PHOTO, ratioMedia, sizesGrille } from '@/lib/taille-image'
 
 // result cards of the API at `url`
@@ -70,6 +71,26 @@ function lireAnnuaire() {
 	return promesse
 }
 
+// { promesse, lu }: the slugs of the cards (ticket 14), read once a visit
+// (10 min) like the directory, from the front's own server
+let slugsLus = null
+
+function lireSlugs() {
+	const maintenant = Date.now()
+	if (slugsLus && maintenant - slugsLus.lu < DUREE_ANNUAIRE_MS) return slugsLus.promesse
+	const promesse = fetch('/api/slugs-des-cartes', { signal: signalAvecDelai(DELAI_RECHERCHE_MS) }).then(reponse => {
+		if (!reponse.ok) throw new Error(`HTTP ${reponse.status}`)
+		return reponse.json()
+	})
+	const entree = { promesse, lu: maintenant }
+	slugsLus = entree
+	// read again by the next search after a failure
+	promesse.catch(() => {
+		if (slugsLus === entree) slugsLus = null
+	})
+	return promesse
+}
+
 /**
  * Search (UI-07): the URL is the search (/search?search=…&city=…&page=…). A
  * city alone is enough; one API call per search at most, never for a page
@@ -81,6 +102,10 @@ function lireAnnuaire() {
  * search only returns the profiles that name the city: a search by city
  * alone reads the directory instead, every searchable profile, once per
  * visit (10 min), so a city searched again costs no call.
+ * The cards link to the slugs of the profiles, the addresses of the sitemap,
+ * read beside the first search (ticket 14, /api/slugs-des-cartes): until
+ * they come, or when they do not, a card links to the username, which
+ * answers a 308 to her slug.
  */
 function SearchPage() {
 	const router = useRouter()
@@ -96,6 +121,21 @@ function SearchPage() {
 	const lastCounted = useRef(null)
 	// search whose first photo (the LCP of a phone) has loaded or failed
 	const [photoChargee, setPhotoChargee] = useState(null)
+	// slugs of the cards: null until read or failed
+	const [slugs, setSlugs] = useState(null)
+
+	useEffect(() => {
+		if (!pret) return
+		let abandonnee = false
+		lireSlugs()
+			.catch(() => ({}))
+			.then(lus => {
+				if (!abandonnee) setSlugs(lus)
+			})
+		return () => {
+			abandonnee = true
+		}
+	}, [pret])
 
 	useEffect(() => {
 		if (!pret) return
@@ -158,11 +198,13 @@ function SearchPage() {
 	const statut = renderSearchState1({ pret, etat, search, city })
 	const resultats = statut === 'ok' ? etat.resultats : []
 	// UI-09: the cards prefetch their profile pages (≈ 80 KB of JavaScript and
-	// data) once the first photo is there, not while it downloads
+	// data) once the first photo is there, not while it downloads, and once
+	// the slugs are read, never the old address
 	const cleAffichee = statut === 'ok' ? etat.cle : null
 	const cartes = {
-		prefetch: cleAffichee !== null && photoChargee === cleAffichee,
+		prefetch: cleAffichee !== null && photoChargee === cleAffichee && slugs !== null,
 		surPremierePhoto: () => setPhotoChargee(cleAffichee),
+		slugs,
 	}
 	const { locaux, sections, parLieu } = sectionsParLieu(resultats, city, statut === 'ok' ? etat.annuaire : [])
 	const pagination = paginer([...locaux, ...sections.flatMap(section => section.profils)], page)
@@ -229,12 +271,12 @@ function CarteResultat({ result, rang, prioritaire, cartes }) {
 		.filter(Boolean)
 		.slice(0, 7)
 	const photo = photoPrincipale(result)
-	const username = texte(result.username)
 
 	return (
 		<Link
-			// the old URL of the profile answers a 308 to its slug
-			href={`/profil/${encodeURIComponent(username)}`}
+			// her slug, the address of the sitemap; her username (the old URL,
+			// a 308 to her slug) while the slugs are not read
+			href={cheminCarte(result, cartes.slugs)}
 			prefetch={cartes.prefetch ? undefined : false}
 			data-cy={`search-result`}
 			onClick={() => track('search_result_click', { rank: rang, pid: result.id })}
