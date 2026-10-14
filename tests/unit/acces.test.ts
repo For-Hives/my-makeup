@@ -386,9 +386,12 @@ describe('La collection talents (ticket 022) : la rédaction écrit, le public l
 	})
 
 	test('ce sont les règles de la rédaction, que les articles reprendront, avec les brouillons', () => {
-		expect(Talents.access).toBe(ACCES_REDACTION)
+		// Loading the Payload configuration (tests/unit/payload-config.test.ts, in the same process,
+		// sometimes first) gives the collection a completed copy of its rules and completes the
+		// versions in place: the rules and the drafts are compared, not the objects as written.
+		expect(Talents.access).toMatchObject(ACCES_REDACTION)
 		expect(Talents.versions).toBe(VERSIONS_REDACTION)
-		expect(VERSIONS_REDACTION).toEqual({ drafts: true })
+		expect(VERSIONS_REDACTION.drafts).toBeTruthy()
 	})
 
 	test('un slug unique, requis pour publier ; un titre requis pour publier', () => {
