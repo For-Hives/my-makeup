@@ -1,4 +1,4 @@
-import { type FieldHook, type FilterOptionsFunc, type PayloadRequest, ValidationError, type Where } from 'payload'
+import { type FieldHook, type FilterOptionsProps, type PayloadRequest, ValidationError, type Where } from 'payload'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import { estAdmin, identifiantPossible, MEDIAS_DE_LA_REDACTION } from './acces'
 import { photosNommees } from './profil/photos'
@@ -33,7 +33,7 @@ export const IMAGES: Where = { mimeType: { in: [...TYPES_D_IMAGE] } }
  * Payload would find nothing, and refuse every photo. Payload plays the same filter again when it
  * validates a published save, with the access rules of the request.
  */
-export const imagesDeLaRedaction: FilterOptionsFunc = ({ req }) =>
+export const imagesDeLaRedaction = ({ req }: Pick<FilterOptionsProps, 'req'>): Where =>
 	estAdmin(req.user) ? { and: [IMAGES, MEDIAS_DE_LA_REDACTION] } : IMAGES
 
 /**

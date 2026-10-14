@@ -165,8 +165,7 @@ describe('21 conditions : refus ; 20 : réponse (U60)', () => {
 
 	test('les verrous des documents, ouverts à tout compte : bornés eux aussi', async () => {
 		const verrous = '/api/payload-locked-documents'
-		const surLId = (n: number) =>
-			Array.from({ length: n }, (_, i) => `where[or][${i}][id][equals]=${i + 1}`).join('&')
+		const surLId = (n: number) => Array.from({ length: n }, (_, i) => `where[or][${i}][id][equals]=${i + 1}`).join('&')
 		for (const lecteur of [lecteurs.maquilleuse, lecteurs.redaction]) {
 			expect([lecteur.nom, (await lire(`${verrous}?${surLId(20)}`, lecteur)).statut]).toEqual([lecteur.nom, 200])
 			const refus = await lire(`${verrous}?${surLId(21)}`, lecteur)

@@ -428,9 +428,9 @@ describe('Média d’un article publié lisible, d’un brouillon non', () => {
 		expect(await lecturePar(maquilleuse.session.enTetes)).toBe(200)
 		expect(await lecturePar(admin.session.enTetes)).toBe(200)
 		const payload = await payloadDeTest()
-		await expect(
-			payload.findByID({ collection: 'media', id: photo.id, overrideAccess: false })
-		).rejects.toMatchObject({ status: 404 })
+		await expect(payload.findByID({ collection: 'media', id: photo.id, overrideAccess: false })).rejects.toMatchObject({
+			status: 404,
+		})
 	})
 
 	test('la liste des médias reste fermée au public ; la rédaction ne liste que les siens, jamais les photos d’une maquilleuse', async () => {
