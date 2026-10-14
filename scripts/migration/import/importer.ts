@@ -238,7 +238,15 @@ export async function importer(options: OptionsDImport): Promise<Rapport> {
 		// Each profile, and each media of a profile, points at its account in Payload, read once the
 		// accounts are written.
 		const idsDesComptes = await idsDansLaCible(payload, ADAPTATEUR_COMPTES, comptes.attendus)
-		const lesMedias = mediasAttendus(classement.adoptables, presences, idsDesComptes)
+		// A file whose account Payload refused is not adopted: written without an owner, it would pass
+		// for a newsroom photo. It is listed, and the next run takes it once the account exists.
+		const comptesRefuses = new Set(rapport.collections.pros.refuses.map(({ strapiId }) => strapiId))
+		const adoptables = classement.adoptables.filter(({ fichier, compte }) => {
+			const refuse = compte !== null && comptesRefuses.has(compte)
+			if (refuse) classement.nonAdoptes.push({ fichier: fichier.id, motif: 'compte-refuse' })
+			return !refuse
+		})
+		const lesMedias = mediasAttendus(adoptables, presences, idsDesComptes)
 		compterLesEcarts(rapport.ecarts, lesMedias)
 		rapport.collections.media = {
 			...(await importerLaCollection(

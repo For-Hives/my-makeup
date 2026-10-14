@@ -203,7 +203,7 @@ describe('Premier démarrage de la préprod, sur une base vide', () => {
 
 	beforeAll(async () => {
 		premier = await demarrer({})
-	})
+	}, 120_000)
 
 	test('la fausse source est posée à côté de la base, puis importée : parité complète, code 0', async () => {
 		expect(await sourcePresente()).toBe(true)

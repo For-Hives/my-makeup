@@ -131,7 +131,7 @@ export function emplacementDansLAdresse(adresse: string | null, base: string): E
 }
 
 /** Why a designated file is not adopted. */
-export type MotifDeNonAdoption = 'pas-une-image' | 'sans-stockage'
+export type MotifDeNonAdoption = 'pas-une-image' | 'sans-stockage' | 'compte-refuse'
 
 /** Why a designated file is refused: it waits for a decision (ticket 066). */
 export type MotifDeRefus = 'adresse-hors-de-la-base' | 'plusieurs-proprietaires'

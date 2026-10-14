@@ -127,6 +127,7 @@ Une photo de l'ancien site n'est jamais copiée : son média est adopté là où
 - **Rien ne bouge dans le stockage** : le média est créé par l'API locale sans fichier, avec le contexte `skipCloudStorage` du greffon de stockage, qui ne touche alors ni au préfixe ni au stockage, et avec le contexte d'import, qui coupe la corbeille. Hors de l'import, un média se crée toujours avec son fichier (README, « Variables d'environnement »).
 - **Une photo dont le fichier n'est pas adopté** (pas une image, refusé, aucun stockage) est signalée par son profil ou son article, jamais inventée : la photo principale reste vide, la galerie la saute.
 - **Sans stockage** (la préprod), l'import ne reçoit pas de base des photos : aucun fichier n'est adopté, aucun objet n'est sondé, chaque fichier désigné est listé « sans-stockage ».
+- **Compte refusé** : un fichier dont le compte est refusé par Payload (un email déjà pris, par exemple) n’est pas adopté : il est listé « compte-refuse », car un média sans propriétaire passerait pour une photo de la rédaction. Le passage suivant le prend, une fois le compte créé.
 
 ## Ce qui est repris
 
