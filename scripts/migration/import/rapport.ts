@@ -33,11 +33,16 @@ export interface BilanDeCollection extends Bilan {
 	nonConfirmes?: number[]
 	/** What the run takes, split. */
 	repartition?: Repartition
+	/** Profiles whose account the import does not take: left aside. */
+	sansCompte?: number[]
+	/** How many documents per status. */
+	statuts?: Record<string, number>
 }
 
 /** The parity of a collection, and how the target splits, read again. */
 export interface PariteDeCollection extends Parite {
 	repartition?: Repartition
+	statuts?: Record<string, number>
 }
 
 /** Why a run stopped before any write: the cases only a decision can settle (ticket 066). */
@@ -97,8 +102,18 @@ function ligneDeBilan(nom: string, bilan: BilanDeCollection, mode: Mode): string
 	if (bilan.nonConfirmes?.length)
 		lignes.push(`  - non confirmés à la source, repris confirmés : ${ids(bilan.nonConfirmes)}`)
 	if (bilan.repartition) lignes.push(`  - ${repartitionEnTexte(bilan.repartition)}`)
+	if (bilan.sansCompte?.length) lignes.push(`  - sans compte repris, laissés de côté : ${ids(bilan.sansCompte)}`)
+	if (bilan.statuts) lignes.push(`  - ${statutsEnTexte(bilan.statuts)}`)
 	return lignes
 }
+
+const statutsEnTexte = (statuts: Record<string, number>): string =>
+	`par statut : ${
+		Object.entries(statuts)
+			.sort(([a], [b]) => a.localeCompare(b))
+			.map(([statut, nombre]) => `${statut} ${nombre}`)
+			.join(', ') || 'aucun'
+	}`
 
 function repartitionEnTexte({ fournisseurs, hashHerites }: Repartition): string {
 	const parFournisseur = Object.entries(fournisseurs)
@@ -123,6 +138,7 @@ function ligneDeParite(nom: string, p: PariteDeCollection): string[] {
 			`(empreinte ${p.empreinteCible.slice(0, 12)}…)`,
 	]
 	if (p.repartition) lignes.push(`  - dans la cible, ${repartitionEnTexte(p.repartition)}`)
+	if (p.statuts) lignes.push(`  - dans la cible, ${statutsEnTexte(p.statuts)}`)
 	if (p.differents.length > 0) lignes.push(`  - différents : ${ids(p.differents)}`)
 	if (p.manquants.length > 0) lignes.push(`  - manquants : ${ids(p.manquants)}`)
 	if (p.enTrop.length > 0) lignes.push(`  - en trop : ${ids(p.enTrop)}`)

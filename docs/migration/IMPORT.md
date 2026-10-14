@@ -2,7 +2,7 @@
 
 L'import lit la base de l'ancienne API (Strapi 4) et écrit ce qu'elle contient dans la base de la v3, par l'API locale de Payload. Où va chaque champ, et pourquoi un champ n'est pas repris : [`SCHEMA.md`](SCHEMA.md). Ce que la v3 fait autrement que le site actuel : [`CHANGEMENTS-VOULUS.md`](CHANGEMENTS-VOULUS.md).
 
-L'import se construit ticket par ticket. Il reprend aujourd'hui les comptes des maquilleuses (ticket 025) et les talents (ticket 024). Les profils, les photos et les articles arrivent avec leurs tickets.
+L'import se construit ticket par ticket. Il reprend aujourd'hui les comptes des maquilleuses (ticket 025), l'identité de leurs profils (ticket 026, la première tranche) et les talents (ticket 024). Le reste des profils, les photos et les articles arrivent avec leurs tickets.
 
 ## Ce qu'il garantit
 
@@ -52,7 +52,7 @@ bun run migration:import --reel --rapport r.json  # écrit aussi le rapport en J
 
 | Code de sortie | Sens |
 |---|---|
-| 0 | Fini : la source n'a pas bougé et, en réel, la parité est complète |
+| 0 | Fini : la source n'a pas bougé et, en réel, la parité est complète. Un document refusé ne l'empêche pas : il est listé, et attend une décision |
 | 1 | Refusé avant de commencer : une variable manque, la cible est distante sans `--cible-distante`, ou la table de décision est mal formée |
 | 2 | Ligne de commande incomprise |
 | 3 | Arrêté avant toute écriture : des cas attendent une décision, listés par identifiants |
@@ -75,10 +75,10 @@ Un fichier JSON, donné par `--decisions`. Pour les vraies données, il vit hors
 
 Il ne porte que des nombres, des identifiants de l'ancienne base et des empreintes : ni nom, ni email, ni téléphone, ni hash ([`SCHEMA.md`](SCHEMA.md), règle 8).
 
-- **Par collection** : le nombre de documents de la source, les créations, les mises à jour, les inchangés, les refusés (identifiant, motif, champs), et les documents de la cible que la source ne donne plus. Pour les comptes, en plus : les comptes écartés par la table de décision, ceux qui n'étaient pas confirmés à la source, le nombre de comptes par fournisseur et le nombre de hash hérités.
+- **Par collection** : le nombre de documents de la source, les créations, les mises à jour, les inchangés, les refusés (identifiant, motif, champs), et les documents de la cible que la source ne donne plus. Pour les comptes, en plus : les comptes écartés par la table de décision, ceux qui n'étaient pas confirmés à la source, le nombre de comptes par fournisseur et le nombre de hash hérités. Pour les profils : ceux laissés de côté faute de compte repris, et le nombre de profils par statut.
 - **L'arrêt**, s'il a lieu : les groupes de comptes au même email sans décision, par identifiants.
 - **Les écarts voulus** : chaque transformation faite exprès, comptée par sa référence. Une référence est un repère du registre des changements voulus (`slug-stocke`), ou une section de [`SCHEMA.md`](SCHEMA.md) pour les deux transformations qui ne changent aucune page (§1). Un écart sans référence est un défaut : la parité le montre.
-- **La parité**, après un passage réel : par collection, les documents attendus, présents, égaux, différents, manquants et en trop, et l'empreinte des valeurs attendues face à celle de la cible. Pour les comptes, le nombre de comptes par fournisseur et de hash hérités, relus dans la cible (plan 02, I39 et I44).
+- **La parité**, après un passage réel : par collection, les documents attendus, présents, égaux, différents, manquants et en trop, et l'empreinte des valeurs attendues face à celle de la cible. Pour les comptes, le nombre de comptes par fournisseur et de hash hérités, relus dans la cible (plan 02, I39 et I44) ; pour les profils, le nombre de profils par statut.
 - **La source** : le nombre de lignes et l'empreinte de chaque table lue, avant et après, et si elle a changé.
 
 ## Ce qui est repris
@@ -86,6 +86,7 @@ Il ne porte que des nombres, des identifiants de l'ancienne base et des empreint
 | Collection | Ticket | Règles |
 |---|---|---|
 | `pros` | 025 | Email sans espaces de bord, en minuscules ; nom (`username`), fournisseur d'origine, blocage, dates et `strapiId` tels quels ([`SCHEMA.md`](SCHEMA.md), §5.1). Le compte arrive confirmé, sans session, avec un mot de passe tiré au hasard que personne ne connaît, sans email envoyé et sans profil. Seul un hash bcrypt complet est copié dans `legacyBcrypt` ; toute autre valeur ne donne rien. Un second passage ne touche ni au mot de passe, ni au hash d'un compte inchangé |
+| `profils` | 026 | Première tranche : seuls les profils reliés à un compte repris. Le lien au compte (`pro`), le slug, le prénom, le nom, le nom d'artiste, la spécialité et la description ([`SCHEMA.md`](SCHEMA.md), §5.2). Le slug est celui de l'ancien site : la règle portée (`src/lib/slug.ts`), calculée sur tous les profils de la source, le plus ancien gardant un slug que deux noms d'utilisateur donnent (registre, `slug-stocke`). Statut, par une règle provisoire : un profil entièrement vide à la source (`src/lib/profil/completude.ts`, lue sur la source comme l'ancien site la lit) est un brouillon (registre, `profils-vides-brouillon`), les autres sont publiés. Un profil dont le compte n'est pas repris (sans lien, ou compte écarté par la table de décision) est laissé de côté et listé. La suite (ancien nom d'utilisateur, score, dates, disponibilité, statut calculé par le serveur, les 13 profils du spam) : ticket 059 ; les listes : 060 ; les photos : 058 |
 | `talents` | 024 | Chaque champ tel quel ([`SCHEMA.md`](SCHEMA.md), §5.4). Publié si la source a une date de publication, brouillon sinon. Un slug qui n'a pas la forme d'une adresse, ou que deux talents portent, est refusé et listé : le plus ancien garde le slug |
 
 ## Les tests
@@ -93,4 +94,6 @@ Il ne porte que des nombres, des identifiants de l'ancienne base et des empreint
 - `tests/unit/import-socle.test.ts` : la cible, la ligne de commande, le contexte, la comparaison, la parité, le rapport. Sans base.
 - `tests/integration/import-talents.test.ts` : les passages sur le banc, à blanc et réels, deux fois de suite, la source changée, la cible refusée, le rapport sans valeur.
 - `tests/unit/import-comptes.test.ts` et `tests/integration/import-comptes.test.ts` : un compte repris champ par champ, les hash copiés et vérifiés, l'arrêt sur les emails partagés et la table de décision, le second passage, et chaque écart lu contre sa règle.
+- `tests/unit/import-profils.test.ts` et `tests/integration/import-profils.test.ts` : un profil relié à son compte, son slug, la règle provisoire du statut, le second passage, et la lecture publique qui le donne.
+- `tests/e2e/tranche-profil-importe.spec.ts` : la première tranche de bout en bout, en un seul essai. La fausse base Strapi, l'import lancé comme une personne le lance, puis la page publique du profil fictif 21 dans l'application construite : 200, son nom dans le seul h1 du HTML du serveur, aucune coordonnée ni aucun champ réservé ; un slug inconnu et le brouillon en 404 ; un second import qui n'écrit rien.
 - Dans un test d'intégration, `importerSurLeBanc()` lance un passage dans le processus du test, et `commandeDImport([...])` lance la commande (`tests/outils/import.ts`).

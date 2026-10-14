@@ -15,6 +15,10 @@ export const REFERENCES = {
 	hashIncomplet: 'SCHEMA.md §5.1 (password)',
 	/** Every taken account is confirmed, as the accounts of the old site are. */
 	compteConfirme: 'confirmation-email',
+	/** The slug of a profile: the rule of the old site, computed from its username, then stored. */
+	slugStocke: 'slug-stocke',
+	/** A profile entirely empty at the source is a draft. */
+	profilVideEnBrouillon: 'profils-vides-brouillon',
 } as const
 
 export type Reference = (typeof REFERENCES)[keyof typeof REFERENCES]

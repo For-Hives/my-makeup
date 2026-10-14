@@ -6,9 +6,9 @@
  * - A case only a decision can settle (accounts that share one email) stops the run before any
  *   write, dry or real, and the report lists it by identifiers.
  * - A dry run (the default) reads the target and says what it would write; it writes nothing.
- * - A real run writes collection by collection, the accounts first, then reads every collection
- *   again: its parity is complete when the target holds exactly what the source gives, with the
- *   same values.
+ * - A real run writes collection by collection, the accounts first, then their profiles, then
+ *   the talents, and reads every collection again: its parity is complete when the target holds
+ *   exactly what the source gives, with the same values.
  */
 
 import type { Payload } from 'payload'
@@ -25,6 +25,7 @@ import {
 	planifier,
 	type Refus,
 } from './moteur'
+import { ADAPTATEUR_PROFILS, lireLesProfils, profilsAttendus } from './profils'
 import type { BilanDeCollection, Mode, PariteDeCollection, Rapport } from './rapport'
 import { empreinteDesTables, memesTables, type Source } from './source'
 import { ADAPTATEUR_TALENTS, lireLesTalents, talentsAttendus } from './talents'
@@ -78,11 +79,30 @@ async function pariteDe(
 	}
 }
 
+/**
+ * The identifier in Payload of each account the run takes, by its `strapiId`: `null` for an
+ * account still to be created, in a dry run.
+ */
+async function idsDesComptesPris(payload: Payload, comptes: readonly Attendu[]): Promise<Map<number, number | null>> {
+	const existants = new Map(
+		(await lireLaCible(payload, ADAPTATEUR_COMPTES)).map(({ id, valeurs }) => [Number(valeurs.strapiId), id])
+	)
+	return new Map(comptes.map(({ strapiId }) => [strapiId, existants.get(strapiId) ?? null]))
+}
+
+/** How many documents of the target per status. */
+function statutsDe(documents: readonly { valeurs: Readonly<Record<string, unknown>> }[]): Record<string, number> {
+	const statuts: Record<string, number> = {}
+	for (const { valeurs } of documents) statuts[String(valeurs.statut)] = (statuts[String(valeurs.statut)] ?? 0) + 1
+	return statuts
+}
+
 export async function importer(options: OptionsDImport): Promise<Rapport> {
 	const { payload, source, mode, cible, decisions = AUCUNE_DECISION, tirerMotDePasse } = options
 	const avant = await source.lire(requete => empreinteDesTables(requete))
 	const lu = await source.lire(async requete => ({
 		comptes: await lireLesComptes(requete),
+		profils: await lireLesProfils(requete),
 		talents: await lireLesTalents(requete),
 	}))
 
@@ -116,6 +136,17 @@ export async function importer(options: OptionsDImport): Promise<Rapport> {
 			nonConfirmes: comptes.nonConfirmes,
 			repartition: repartitionDesComptes(comptes.attendus),
 		}
+
+		// Each profile points at its account in Payload, read once the accounts are written.
+		const idsDesComptes = await idsDesComptesPris(payload, comptes.attendus)
+		const profils = profilsAttendus(lu.profils, idsDesComptes)
+		compterLesEcarts(rapport.ecarts, profils.attendus)
+		rapport.collections.profils = {
+			...(await importerLaCollection(options, ADAPTATEUR_PROFILS, lu.profils.length, profils.attendus)),
+			sansCompte: profils.sansCompte,
+			statuts: profils.statuts,
+		}
+
 		rapport.collections.talents = await importerLaCollection(
 			options,
 			ADAPTATEUR_TALENTS,
@@ -126,8 +157,10 @@ export async function importer(options: OptionsDImport): Promise<Rapport> {
 
 		if (mode === 'reel') {
 			const pros = await pariteDe(payload, ADAPTATEUR_COMPTES, comptes.attendus, rapport.collections.pros)
+			const lesProfils = await pariteDe(payload, ADAPTATEUR_PROFILS, profils.attendus, rapport.collections.profils)
 			rapport.parite = {
 				pros: { ...pros.parite, repartition: repartitionDesComptes(pros.cible) },
+				profils: { ...lesProfils.parite, statuts: statutsDe(lesProfils.cible) },
 				talents: (await pariteDe(payload, ADAPTATEUR_TALENTS, talents.attendus, rapport.collections.talents)).parite,
 			}
 		}

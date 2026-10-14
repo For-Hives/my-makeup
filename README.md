@@ -37,7 +37,7 @@ Une application, trois zones, toutes sous `src/app/` :
 
 | Zone | Dossier | Adresse | État |
 |---|---|---|---|
-| Pages publiques | `(front)/(site)/` | `/` | Page d'accueil provisoire |
+| Pages publiques | `(front)/(site)/` | `/`, `/profil/<slug>` | Page d'accueil provisoire ; page publique d'un profil, première tranche : son nom en titre, sa spécialité et sa description, lus par `src/services/public/` |
 | Espace maquilleuse | `(front)/(espace)/auth/` | `/auth` | Page d'attente |
 | Administration | `(payload)/` | `/admin` et `/api` | Générée par Payload : les comptes `admins`, aux rôles `admin` et `redaction`, les comptes des maquilleuses, `pros`, leurs profils, `profils`, les photos, `media`, et les talents, `talents` |
 
@@ -49,6 +49,8 @@ Le reste :
 
 - `src/payload.config.ts` : la configuration de Payload (base PostgreSQL, collections `admins`, `pros`, `profils`, `media` et `talents`, stockage d'objets des photos).
 - `src/collections/` : les collections de Payload. `src/lib/acces.ts` : qui peut lire, créer, modifier ou supprimer quoi (voir « Accès »).
+- `src/services/public/` : la seule lecture publique des données. Une page publique y lit un profil, champ par champ, avec les règles d'accès d'une visiteuse : jamais une coordonnée, ni ce qu'ont écrit l'import ou un admin.
+- `scripts/migration/` : les outils de la migration, dont l'import des données de l'ancien site (voir `docs/migration/IMPORT.md`).
 - `src/lib/env.ts` : les variables d'environnement, vérifiées au démarrage par `src/instrumentation.ts`.
 - `src/migrations/` : les migrations versionnées de la base.
 - `src/payload-types.ts` et `src/app/(payload)/admin/importMap.js` : fichiers générés par Payload, versionnés, jamais modifiés à la main.
