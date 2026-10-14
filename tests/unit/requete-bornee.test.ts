@@ -6,6 +6,10 @@ import {
 	CONDITIONS_MAX,
 	cheminsDeLaRequete,
 	compterLesConditions,
+	LIMITE_REST_MAX,
+	LIMITE_REST_PAR_DEFAUT,
+	lectureEnListeBornee,
+	limiteRestBornee,
 	MESSAGE_CHAMP_PRIVE,
 	MESSAGE_TROP_DE_CONDITIONS,
 	refusDeLaRequete,
@@ -215,5 +219,45 @@ describe('La borne, posée sur chaque collection et jouée avant la base', () =>
 		const vide = { collections: { 'payload-kv': collection([]) } }
 		await seule.onInit?.(vide as unknown as Payload)
 		expect(vide.collections['payload-kv'].config.hooks.beforeOperation).toEqual([requeteBornee])
+	})
+})
+
+describe('Ticket 071 : la lecture en liste par REST est plafonnée', () => {
+	test('sans limit, 10 ; 0, négative ou au-dessus de 100, 100 ; entre les deux, la valeur', () => {
+		expect([LIMITE_REST_PAR_DEFAUT, LIMITE_REST_MAX]).toEqual([10, 100])
+		expect(limiteRestBornee(undefined)).toBe(10)
+		expect(limiteRestBornee('abc')).toBe(10)
+		expect(limiteRestBornee(Number.NaN)).toBe(10)
+		for (const limite of [0, -1, 101, 1000]) expect(limiteRestBornee(limite)).toBe(100)
+	})
+
+	test('le greffon met l’endpoint en tête de chaque collection, une fois, et respecte « endpoints: false »', async () => {
+		const autre = { method: 'get', path: '/', handler: () => new Response() } as const
+		const borne = await requetesBornees({
+			collections: [{ slug: 'a' }, { slug: 'b', endpoints: [autre] }, { slug: 'c', endpoints: false }],
+		} as unknown as Config)
+		expect(borne.collections?.map(({ slug, endpoints }) => [slug, endpoints])).toEqual([
+			['a', [lectureEnListeBornee]],
+			['b', [lectureEnListeBornee, autre]],
+			['c', false],
+		])
+	})
+
+	test('après onInit, c’est le premier GET / de chaque collection de Payload, sans doublon', async () => {
+		const borne = await requetesBornees({ collections: [] } as unknown as Config)
+		const defaut = { method: 'get', path: '/', handler: () => new Response() }
+		const collections = {
+			profils: { config: { hooks: { beforeOperation: [] }, endpoints: [lectureEnListeBornee, defaut] } },
+			'payload-locked-documents': { config: { hooks: { beforeOperation: [] }, endpoints: [defaut] } },
+		}
+		await borne.onInit?.({ collections } as unknown as Payload)
+		await borne.onInit?.({ collections } as unknown as Payload)
+		for (const { config } of Object.values(collections)) {
+			const premier = (config.endpoints as { method: string; path: string }[]).find(
+				e => e.method === 'get' && e.path === '/'
+			)
+			expect(premier).toBe(lectureEnListeBornee)
+			expect(config.endpoints.filter(e => e === lectureEnListeBornee)).toHaveLength(1)
+		}
 	})
 })

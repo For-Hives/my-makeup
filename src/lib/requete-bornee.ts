@@ -1,4 +1,15 @@
-import { APIError, type CollectionBeforeOperationHook, type Payload, type PayloadRequest, type Plugin } from 'payload'
+import {
+	APIError,
+	type Collection,
+	type CollectionBeforeOperationHook,
+	type Endpoint,
+	findOperation,
+	headersWithCors,
+	type Payload,
+	type PayloadRequest,
+	type Plugin,
+	parseParams,
+} from 'payload'
 // Relative import on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import { estAdmin } from './acces'
 
@@ -23,10 +34,23 @@ import { estAdmin } from './acces'
  *
  * Code of the server that reads without the rules (`overrideAccess`) is not bounded: it is not a
  * request of a visitor.
+ *
+ * - **A list read over REST is capped** (ticket 071, default pending Andy's word in
+ *   plans/decisions.md): for anyone but `admin`, at most `LIMITE_REST_MAX` documents, and
+ *   `LIMITE_REST_PAR_DEFAUT` without a `limit`. `limit=0`, `pagination=false`, a negative or a huge
+ *   `limit` no longer hand over a whole collection. The cap sits on the route (`lectureEnListeBornee`,
+ *   the first `GET /` of every collection), not in `beforeOperation`: the local API, the relation
+ *   checks of Payload and the population of media are not requests of a visitor and stay whole.
  */
 
 /** The most conditions a filter holds for anyone but `admin` (U60). */
 export const CONDITIONS_MAX = 20
+
+/** The most documents a list read over REST gives for anyone but `admin`. */
+export const LIMITE_REST_MAX = 100
+
+/** The size of a page of a list read over REST without a `limit`, for anyone but `admin`. */
+export const LIMITE_REST_PAR_DEFAUT = 10
 
 /** The secrets of an account: never a filter nor a sort, for anyone. */
 export const CHAMPS_SECRETS = [
@@ -161,7 +185,60 @@ export const requeteBornee: CollectionBeforeOperationHook = ({ args, overrideAcc
 }
 
 /**
- * Puts `requeteBornee` first in every collection Payload built that does not have it yet: Payload's
+ * The `limit` a list read over REST is given for anyone but `admin`: absent (or not a number) is
+ * `LIMITE_REST_PAR_DEFAUT`; 0, negative or above `LIMITE_REST_MAX` is `LIMITE_REST_MAX`.
+ */
+export function limiteRestBornee(limite: unknown): number {
+	if (typeof limite !== 'number' || !Number.isFinite(limite)) return LIMITE_REST_PAR_DEFAUT
+	return limite <= 0 || limite > LIMITE_REST_MAX ? LIMITE_REST_MAX : Math.trunc(limite)
+}
+
+/**
+ * `GET /` of a collection, the list read, bounded: Payload's own handler with the cap above for
+ * anyone but `admin`, which is read as it asks. The access rules and the bounds of
+ * `requeteBornee` apply as ever.
+ */
+export const lectureEnListeBornee: Endpoint = {
+	method: 'get',
+	path: '/',
+	handler: async req => {
+		const slug = req.routeParams?.collection
+		const collections: Partial<Record<string, Collection>> = req.payload.collections
+		const collection = typeof slug === 'string' ? collections[slug] : undefined
+		if (!collection) return Response.json({ message: 'Route not found' }, { status: 404 })
+		const { depth, draft, joins, limit, page, pagination, populate, select, sort, trash, where } = parseParams(
+			req.query
+		)
+		const borne = !estAdmin(req.user)
+		const resultat = await findOperation({
+			collection,
+			depth,
+			draft,
+			joins,
+			limit: borne ? limiteRestBornee(limit) : limit,
+			page,
+			pagination: borne ? true : pagination,
+			populate,
+			req,
+			select,
+			sort,
+			trash,
+			where,
+		})
+		return Response.json(resultat, { headers: headersWithCors({ headers: new Headers(), req }), status: 200 })
+	},
+}
+
+/** `lectureEnListeBornee` first in the endpoints of a collection, unless it is there or endpoints are off. */
+const avecLectureBornee = (endpoints: Endpoint[] | false | undefined): Endpoint[] | false =>
+	endpoints === false
+		? false
+		: endpoints?.includes(lectureEnListeBornee)
+			? endpoints
+			: [lectureEnListeBornee, ...(endpoints ?? [])]
+
+/**
+ * Puts `requeteBornee` and the bounded list read first in every collection Payload built that does not have them yet: Payload's
  * own collections (document locks, preferences, migrations), which it adds after the plugins. The
  * document locks are open to any account (ticket 094): bounded too.
  */
@@ -169,6 +246,8 @@ export function bornerLesCollectionsDePayload(payload: Pick<Payload, 'collection
 	for (const { config } of Object.values(payload.collections)) {
 		const crochets = config.hooks.beforeOperation
 		if (!crochets.includes(requeteBornee)) crochets.unshift(requeteBornee)
+		const endpoints = avecLectureBornee(config.endpoints)
+		if (endpoints !== config.endpoints) config.endpoints = endpoints
 	}
 }
 
@@ -186,6 +265,7 @@ export const requetesBornees: Plugin = config => ({
 			...collection.hooks,
 			beforeOperation: [requeteBornee, ...(collection.hooks?.beforeOperation ?? [])],
 		},
+		endpoints: avecLectureBornee(collection.endpoints),
 	})),
 	onInit: async payload => {
 		bornerLesCollectionsDePayload(payload)
