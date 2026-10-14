@@ -1,5 +1,6 @@
-import { type FieldHook, type PayloadRequest, ValidationError, type Where } from 'payload'
-// Relative import on purpose: this file is also loaded by the Payload CLI, outside of Next.
+import { type FieldHook, type FilterOptionsFunc, type PayloadRequest, ValidationError, type Where } from 'payload'
+// Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
+import { estAdmin, identifiantPossible, MEDIAS_DE_LA_REDACTION } from './acces'
 import { photosNommees } from './profil/photos'
 
 /**
@@ -13,39 +14,67 @@ export const TYPES_D_IMAGE = ['image/jpeg', 'image/png', 'image/webp', 'image/gi
 export const estUneImage = (type: unknown): boolean =>
 	typeof type === 'string' && (TYPES_D_IMAGE as readonly string[]).includes(type)
 
-/** The message of a gallery that names something else than an image. */
-export const MESSAGE_GALERIE_IMAGES = 'La galerie d’un article ne prend que des images : JPEG, PNG, WebP, GIF ou AVIF.'
+/**
+ * The message of a gallery that names anything but an image of the newsroom. One message for every
+ * refusal: a save never tells whether a media it may not read exists, nor whose it is.
+ */
+export const MESSAGE_GALERIE_IMAGES =
+	'La galerie d’un article ne prend que des images envoyées par la rédaction (JPEG, PNG, WebP, GIF ou AVIF), jamais la photo d’une maquilleuse.'
 
-/** In the admin panel, the media offered for the gallery: the images. */
-export const IMAGES_SEULEMENT: Where = { mimeType: { in: [...TYPES_D_IMAGE] } }
+/** The media that are images. */
+export const IMAGES: Where = { mimeType: { in: [...TYPES_D_IMAGE] } }
 
 /**
- * Whether every media these identifiers name is an image: one query, without access control (the
- * rule is the type of the file, not what the request may read). A media that does not exist is not
- * an image.
+ * In the admin panel, the media offered for the gallery: the images of the newsroom, those that
+ * belong to nobody. The photo of a makeup artist is never offered.
+ *
+ * `admin` reads every media: the owner is part of the filter. `redaction` reads only the media of
+ * the newsroom (`lectureDesMedias`), and may not filter on the owner, a field it does not read:
+ * Payload would find nothing, and refuse every photo. Payload plays the same filter again when it
+ * validates a published save, with the access rules of the request.
  */
-export async function queDesImages(ids: (number | string)[], req: PayloadRequest): Promise<boolean> {
+export const imagesDeLaRedaction: FilterOptionsFunc = ({ req }) =>
+	estAdmin(req.user) ? { and: [IMAGES, MEDIAS_DE_LA_REDACTION] } : IMAGES
+
+/**
+ * Whether every media these identifiers name is an image of the newsroom: an image that belongs to
+ * nobody (docs/migration/SCHEMA.md, §8). A media that does not exist is not one, and neither is an
+ * identifier no media can have, refused before any query (Postgres would fail on it).
+ *
+ * One query, without access control: the rule is the file and its owner, not what the request may
+ * read.
+ */
+export async function queDesImagesDeLaRedaction(ids: (number | string)[], req: PayloadRequest): Promise<boolean> {
 	if (ids.length === 0) return true
+	if (!ids.every(identifiantPossible)) return false
 	const { docs } = await req.payload.find({
 		collection: 'media',
 		depth: 0,
 		overrideAccess: true,
 		pagination: false,
 		req,
-		select: { mimeType: true },
+		select: { mimeType: true, owner: true },
 		where: { id: { in: ids } },
 	})
-	const types = new Map(docs.map(({ id, mimeType }) => [String(id), mimeType]))
-	return ids.every(id => estUneImage(types.get(String(id))))
+	const trouves = new Map(docs.map(media => [String(media.id), media]))
+	return ids.every(id => {
+		const media = trouves.get(String(id))
+		return media !== undefined && estUneImage(media.mimeType) && (media.owner ?? null) === null
+	})
 }
 
 /**
- * `beforeChange` of the gallery: a save that names anything but images is refused (400), with the
- * French message on the field. A hook, not `validate`: Payload skips the validation of a draft, and
- * a draft must not hold a PDF either.
+ * `beforeChange` of the gallery: a save that names anything but images of the newsroom is refused
+ * (400), with the French message on the field. A hook, not `validate`: Payload skips the validation
+ * of a draft, and a draft must hold neither a PDF nor the photo of a makeup artist, which publishing
+ * the article would make public (`lectureDesMedias`, src/lib/acces.ts).
+ *
+ * Every entry of the gallery is looked at: one that names no identifier at all is refused too.
  */
 export const galerieDImages: FieldHook = async ({ value, req }) => {
-	if (!(await queDesImages(photosNommees(value), req)))
+	const entrees = value === undefined || value === null ? [] : Array.isArray(value) ? value : [value]
+	const ids = photosNommees(entrees)
+	if (ids.length !== entrees.length || !(await queDesImagesDeLaRedaction(ids, req)))
 		throw new ValidationError({
 			collection: 'articles',
 			errors: [{ message: MESSAGE_GALERIE_IMAGES, path: 'galerie' }],

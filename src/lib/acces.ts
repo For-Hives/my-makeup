@@ -193,8 +193,12 @@ export async function rattacheAUnArticlePublie(req: PayloadRequest, media: numbe
  * - A list is closed to the public: a makeup artist lists her own media, the role `redaction` the
  *   media of the newsroom (`MEDIAS_DE_LA_REDACTION`), anyone else is refused.
  * - One media, read by its identifier, is read by anyone when it belongs to a published profile or
- *   to the gallery of a published article; a makeup artist also reads her own, `redaction` those of
- *   the newsroom. Any other media is not found, as if it did not exist: the photo of a draft too.
+ *   when it is a photo of the newsroom in the gallery of a published article; a makeup artist also
+ *   reads her own, `redaction` those of the newsroom. Any other media is not found, as if it did not
+ *   exist: the photo of a draft too.
+ * - A published article never opens the photo of a makeup artist: its gallery takes only photos of
+ *   the newsroom (src/lib/articles.ts), and should one get an owner afterwards, the article no
+ *   longer opens it (docs/migration/SCHEMA.md, §8).
  * - An identifier no media can have is refused to all, before any query (`identifiantImpossible`).
  *
  * Payload gives the identifier to the rule when it reads one document, never for a list: that is
@@ -207,8 +211,10 @@ export const lectureDesMedias: Access = async ({ req, id }) => {
 	if (estAdmin(user)) return true
 	const siens = mediasDe(user)
 	if (id === undefined || id === null) return siens ?? false
-	if ((await rattacheAUnProfilPublie(req, id)) || (await rattacheAUnArticlePublie(req, id))) return true
-	return siens ?? AUCUN_DOCUMENT
+	if (await rattacheAUnProfilPublie(req, id)) return true
+	if (!(await rattacheAUnArticlePublie(req, id))) return siens ?? AUCUN_DOCUMENT
+	// A published article opens the photos of the newsroom only, never the photo of a makeup artist.
+	return siens && siens !== MEDIAS_DE_LA_REDACTION ? { or: [siens, MEDIAS_DE_LA_REDACTION] } : MEDIAS_DE_LA_REDACTION
 }
 
 /**

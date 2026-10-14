@@ -266,6 +266,35 @@ describe('Contenu de 60 000 caractères relu à l’identique ; PDF refusé dans
 		expect((await payload.count({ collection: 'articles' })).totalDocs).toBe(1)
 	})
 
+	test('un identifiant qu’aucun média ne peut porter : refusé avec le message, jamais une erreur du serveur', async () => {
+		const image = await mediaDuType('image/png')
+		const article = await ecrireArticle({ slug: 'un-article-fictif', galerie: [image.id] })
+		const redaction = await creerCompte('redaction')
+		const enTetes = redaction.session.enTetes
+
+		for (const impossible of ['abc', '99999999999', 99_999_999_999, 1.5, -1, '', { id: 'x' }]) {
+			const galerie = [image.id, impossible]
+			for (const [methode, chemin] of [
+				['PATCH', `/api/articles/${article.id}`],
+				['PATCH', `/api/articles/${article.id}?draft=true`],
+				['POST', '/api/articles'],
+				['POST', '/api/articles?draft=true'],
+			] as const) {
+				const corps = methode === 'POST' ? { title: 'Fictif', slug: 'fictif', galerie } : { galerie }
+				const { statut, texte } = await appelerRest(methode, chemin, { enTetes, corps })
+				expect([impossible, chemin, statut]).toEqual([impossible, chemin, 400])
+				expect(texte).toContain('La galerie d’un article ne prend que des images')
+			}
+			// The import too: a validation error, never a failed query.
+			await expect(ecrireArticle({ slug: 'import-fictif', galerie: galerie as never })).rejects.toMatchObject({
+				status: 400,
+			})
+		}
+		const payload = await payloadDeTest()
+		expect((await payload.findByID({ collection: 'articles', id: article.id, depth: 0 })).galerie).toEqual([image.id])
+		expect((await payload.count({ collection: 'articles' })).totalDocs).toBe(1)
+	})
+
 	test('des images, dans l’ordre donné : enregistrées, et l’ordre est gardé', async () => {
 		const images = [await mediaDuType('image/png'), await mediaDuType('image/png'), await mediaDuType('image/png')]
 		const article = await ecrireArticle({ slug: 'un-article-fictif' })
@@ -337,6 +366,71 @@ describe('Média d’un article publié lisible, d’un brouillon non', () => {
 
 		await appelerRest('PATCH', `/api/articles/${article.id}`, { enTetes, corps: { _status: 'published' } })
 		expect((await appelerRest('GET', `/api/media/${ajoutee.id}`)).statut).toBe(200)
+	})
+
+	test('la photo d’une maquilleuse n’entre dans aucune galerie : refusée à la rédaction, à un admin et à l’import ; elle reste privée', async () => {
+		const maquilleuse = await creerCompte('maquilleuse')
+		const envoi = await appelerRest('POST', '/api/media?depth=0', {
+			enTetes: maquilleuse.session.enTetes,
+			formulaire: formulaireAvecFichier(fichierPourFormulaire()),
+		})
+		expect(envoi.statut).toBe(201)
+		const privee = (envoi.corps as { doc: Media }).doc.id
+		const image = await mediaDuType('image/png')
+		const article = await ecrireArticle({ slug: 'un-article-fictif', galerie: [image.id] })
+		const [redaction, admin] = [await creerCompte('redaction'), await creerCompte('admin')]
+
+		for (const enTetes of [redaction.session.enTetes, admin.session.enTetes]) {
+			for (const [methode, chemin] of [
+				['PATCH', `/api/articles/${article.id}`],
+				['PATCH', `/api/articles/${article.id}?draft=true`],
+				['POST', '/api/articles'],
+				['POST', '/api/articles?draft=true'],
+			] as const) {
+				const galerie = [image.id, privee]
+				const corps = methode === 'POST' ? { title: 'Fictif', slug: 'fictif', galerie } : { galerie }
+				const { statut, texte } = await appelerRest(methode, chemin, { enTetes, corps })
+				expect([chemin, statut]).toEqual([chemin, 400])
+				expect(texte).toContain('jamais la photo d’une maquilleuse')
+			}
+		}
+		await expect(ecrireArticle({ slug: 'import-fictif', galerie: [privee] })).rejects.toMatchObject({ status: 400 })
+
+		// What a published article would have opened: her photo stays out of reach of the public.
+		const payload = await payloadDeTest()
+		expect((await payload.findByID({ collection: 'articles', id: article.id, depth: 0 })).galerie).toEqual([image.id])
+		expect((await payload.count({ collection: 'articles' })).totalDocs).toBe(1)
+		expect((await appelerRest('GET', `/api/media/${privee}`)).statut).toBe(404)
+	})
+
+	test('une photo d’article qu’un admin donne ensuite à une maquilleuse n’est plus ouverte par l’article', async () => {
+		const photo = await mediaDuType('image/png')
+		await ecrireArticle({ slug: 'un-article-fictif', galerie: [photo.id] })
+		const [maquilleuse, autre, redaction, admin] = [
+			await creerCompte('maquilleuse'),
+			await creerCompte('maquilleuse'),
+			await creerCompte('redaction'),
+			await creerCompte('admin'),
+		]
+		const lecturePar = async (enTetes: Record<string, string> = {}) =>
+			(await appelerRest('GET', `/api/media/${photo.id}`, { enTetes })).statut
+		expect(await lecturePar()).toBe(200)
+
+		const don = await appelerRest('PATCH', `/api/media/${photo.id}`, {
+			enTetes: admin.session.enTetes,
+			corps: { owner: maquilleuse.id },
+		})
+		expect(don.statut).toBe(200)
+		// Her profile is a draft: her photo is private, published article or not. The newsroom loses it too.
+		expect(await lecturePar()).toBe(404)
+		expect(await lecturePar(autre.session.enTetes)).toBe(404)
+		expect(await lecturePar(redaction.session.enTetes)).toBe(404)
+		expect(await lecturePar(maquilleuse.session.enTetes)).toBe(200)
+		expect(await lecturePar(admin.session.enTetes)).toBe(200)
+		const payload = await payloadDeTest()
+		await expect(
+			payload.findByID({ collection: 'media', id: photo.id, overrideAccess: false })
+		).rejects.toMatchObject({ status: 404 })
 	})
 
 	test('la liste des médias reste fermée au public ; la rédaction ne liste que les siens, jamais les photos d’une maquilleuse', async () => {

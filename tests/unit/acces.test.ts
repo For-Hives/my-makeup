@@ -46,7 +46,14 @@ import {
 	profilPublieOuProprietaire,
 	SEULEMENT_PUBLIES,
 } from '@/lib/acces'
-import { estUneImage, galerieDImages, IMAGES_SEULEMENT, MESSAGE_GALERIE_IMAGES, TYPES_D_IMAGE } from '@/lib/articles'
+import {
+	estUneImage,
+	galerieDImages,
+	IMAGES,
+	imagesDeLaRedaction,
+	MESSAGE_GALERIE_IMAGES,
+	TYPES_D_IMAGE,
+} from '@/lib/articles'
 import { validerPhotosDuProfil } from '@/lib/profil/photos'
 import { STATUTS_DU_PROFIL } from '@/lib/profil/statut'
 
@@ -513,20 +520,28 @@ describe('La collection articles (ticket 046) : les règles des talents (U59)', 
 		expect(champ(Articles.fields, 'publishedAt')).toBe(champPublieLe as never)
 	})
 
-	test('la galerie : des médias, plusieurs, des images seulement, brouillons compris', () => {
+	test('la galerie : des médias, plusieurs, des images de la rédaction seulement, brouillons compris', async () => {
 		expect(champ(Articles.fields, 'galerie')).toMatchObject({
 			type: 'upload',
 			hasMany: true,
-			filterOptions: IMAGES_SEULEMENT,
+			filterOptions: imagesDeLaRedaction,
 			hooks: { beforeChange: [galerieDImages] },
 		})
-		expect(IMAGES_SEULEMENT).toEqual({ mimeType: { in: [...TYPES_D_IMAGE] } })
+		expect(IMAGES).toEqual({ mimeType: { in: [...TYPES_D_IMAGE] } })
+		const offertes = (user: Utilisateur) => imagesDeLaRedaction({ req: { user } } as never)
+		// The admin panel offers `admin` the images that belong to nobody: never the photo of a makeup artist.
+		expect(offertes(admin)).toEqual({ and: [IMAGES, { owner: { exists: false } }] })
+		// `redaction` only reads those (its read rule), and may not filter on the owner, a field it does not read.
+		expect(offertes(redaction)).toEqual(IMAGES)
+		expect(await lectureDesMedias({ req: { user: redaction } as PayloadRequest } as never)).toEqual(
+			MEDIAS_DE_LA_REDACTION
+		)
 	})
 })
 
-describe('La galerie d’un article ne prend que des images (ticket 046)', () => {
-	/** The hook as Payload calls it, with a database that holds these media and their types. */
-	function enregistrer(valeur: unknown, media: { id: number; mimeType: string | null }[]) {
+describe('La galerie d’un article ne prend que des images de la rédaction (ticket 046)', () => {
+	/** The hook as Payload calls it, with a database that holds these media, their types and their owners. */
+	function enregistrer(valeur: unknown, media: { id: number; mimeType: string | null; owner?: number | null }[]) {
 		const recherches: unknown[] = []
 		const payload = {
 			find: (options: { where: unknown }) => {
@@ -564,9 +579,11 @@ describe('La galerie d’un article ne prend que des images (ticket 046)', () =>
 		)
 		expect(await images.resultat).toEqual([2, { id: 1 }])
 		expect(images.recherches).toEqual([{ id: { in: [2, 1] } }])
-		const vide = enregistrer([], [])
-		expect(await vide.resultat).toEqual([])
-		expect(vide.recherches).toEqual([])
+		for (const sansGalerie of [[], null, undefined]) {
+			const vide = enregistrer(sansGalerie, [])
+			expect(await vide.resultat).toEqual(sansGalerie)
+			expect(vide.recherches).toEqual([])
+		}
 	})
 
 	test('un PDF, ou un média qui n’existe pas : refusé, avec le message en français sur le champ', async () => {
@@ -584,6 +601,33 @@ describe('La galerie d’un article ne prend que des images (ticket 046)', () =>
 				status: 400,
 				data: { errors: [{ message: MESSAGE_GALERIE_IMAGES, path: 'galerie' }] },
 			})
+	})
+
+	test('la photo d’une maquilleuse : refusée, même si c’est une image ; le même message, pour ne rien dire d’elle', async () => {
+		const { resultat } = enregistrer(
+			[1, 2],
+			[
+				{ id: 1, mimeType: 'image/png', owner: null },
+				{ id: 2, mimeType: 'image/png', owner: 7 },
+			]
+		)
+		await expect(resultat).rejects.toMatchObject({
+			status: 400,
+			data: { errors: [{ message: MESSAGE_GALERIE_IMAGES, path: 'galerie' }] },
+		})
+		expect(MESSAGE_GALERIE_IMAGES).toContain('jamais la photo d’une maquilleuse')
+	})
+
+	test('un identifiant qu’aucun média ne peut porter, ou une entrée qui n’en nomme aucun : refusé, sans requête', async () => {
+		const image = { id: 1, mimeType: 'image/png', owner: null }
+		for (const entree of [...IDENTIFIANTS_IMPOSSIBLES, { id: 'x' }, { id: 1.5 }, null, {}, true, [1]]) {
+			const { resultat, recherches } = enregistrer([1, entree], [image])
+			await expect(resultat).rejects.toMatchObject({ status: 400 })
+			expect([entree, recherches]).toEqual([entree, []])
+		}
+		const seul = enregistrer('abc', [image])
+		await expect(seul.resultat).rejects.toMatchObject({ status: 400 })
+		expect(seul.recherches).toEqual([])
 	})
 })
 
@@ -640,9 +684,10 @@ describe('La collection media (ticket 043)', () => {
 		expect(await lecture(maquilleuse, 12, false).resultat).toEqual({ owner: { equals: 7 } })
 	})
 
-	test('lire un média : lu s’il est dans la galerie d’un article publié, introuvable sinon (ticket 046)', async () => {
+	test('lire un média : lu s’il est une photo de la rédaction dans la galerie d’un article publié, introuvable sinon (ticket 046)', async () => {
 		const dUnArticle = lecture(null, 12, { articles: true })
-		expect(await dUnArticle.resultat).toBe(true)
+		// Only if it belongs to nobody: an article never opens the photo of a makeup artist.
+		expect(await dUnArticle.resultat).toEqual(MEDIAS_DE_LA_REDACTION)
 		expect(dUnArticle.appels).toEqual([
 			expect.objectContaining({ collection: 'profils' }),
 			expect.objectContaining({
@@ -652,7 +697,11 @@ describe('La collection media (ticket 043)', () => {
 				where: { and: [SEULEMENT_PUBLIES, { galerie: { in: [12] } }] },
 			}),
 		])
-		for (const user of [null, maquilleuse]) expect(await lecture(user, 12, { articles: true }).resultat).toBe(true)
+		expect(await lecture(redaction, 12, { articles: true }).resultat).toEqual(MEDIAS_DE_LA_REDACTION)
+		// A makeup artist: the photos of the newsroom of a published article, and her own.
+		expect(await lecture(maquilleuse, 12, { articles: true }).resultat).toEqual({
+			or: [{ owner: { equals: 7 } }, MEDIAS_DE_LA_REDACTION],
+		})
 		expect(await lecture(null, 12, { articles: false, profils: false }).resultat).toEqual(AUCUN_DOCUMENT)
 	})
 

@@ -1,6 +1,6 @@
 import type { CollectionConfig } from 'payload'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
-import { galerieDImages, IMAGES_SEULEMENT } from '../lib/articles'
+import { galerieDImages, imagesDeLaRedaction } from '../lib/articles'
 import {
 	ACCES_REDACTION,
 	champPublieLe,
@@ -20,9 +20,10 @@ import {
  *   article keeps its slug: the import copies it as it is, so the addresses of today stay the same.
  * - `content` is markdown, in a `code` field, without a length limit: Payload limits `text` and
  *   `textarea` to 40 000 characters.
- * - The gallery holds images only, never a PDF (`galerieDImages`), drafts included. Its photos
- *   belong to nobody: the newsroom sends them, and the public reads one when it is in the gallery
- *   of a published article (`lectureDesMedias`, src/lib/acces.ts).
+ * - The gallery holds images of the newsroom only, never a PDF nor the photo of a makeup artist
+ *   (`galerieDImages`), drafts and the import included. Its photos belong to nobody: the newsroom
+ *   sends them, and the public reads one when it is in the gallery of a published article
+ *   (`lectureDesMedias`, src/lib/acces.ts).
  */
 export const Articles: CollectionConfig<'articles'> = {
 	slug: 'articles',
@@ -55,9 +56,11 @@ export const Articles: CollectionConfig<'articles'> = {
 			type: 'upload',
 			relationTo: 'media',
 			hasMany: true,
-			filterOptions: IMAGES_SEULEMENT,
+			filterOptions: imagesDeLaRedaction,
 			hooks: { beforeChange: [galerieDImages] },
-			admin: { description: 'Des images seulement : JPEG, PNG, WebP, GIF ou AVIF.' },
+			admin: {
+				description: 'Des images de la rédaction, jamais la photo d’une maquilleuse : JPEG, PNG, WebP, GIF ou AVIF.',
+			},
 		},
 		champPublieLe,
 		champStrapiId,

@@ -434,7 +434,7 @@ export interface Article {
    */
   content?: string | null;
   /**
-   * Des images seulement : JPEG, PNG, WebP, GIF ou AVIF.
+   * Des images de la rédaction, jamais la photo d’une maquilleuse : JPEG, PNG, WebP, GIF ou AVIF.
    */
   galerie?: (number | Media)[] | null;
   publishedAt?: string | null;
