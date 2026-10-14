@@ -192,8 +192,8 @@ export function statutApres({
 	let statutChoisi = choixGarde
 	if (estUnChoix(apres.statutChoisi) && apres.statutChoisi !== choixStocke) statutChoisi = apres.statutChoisi
 	else if (estUnStatut(apres.statut) && apres.statut !== statutStocke) statutChoisi = apres.statut
-	if (statutChoisi !== CHOIX_INITIAL) return { statut: statutChoisi, statutChoisi }
-	return { statut: entierementVide ? 'brouillon' : 'publie', statutChoisi }
+	if (statutChoisi === 'automatique') return { statut: entierementVide ? 'brouillon' : 'publie', statutChoisi }
+	return { statut: statutChoisi, statutChoisi }
 }
 
 /** What the server writes on a profile at every save: the state, its dates, the status. */
