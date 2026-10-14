@@ -41,6 +41,7 @@ Le reste :
 - `docker-compose.yml` : la base PostgreSQL de développement.
 - `.env.exemple` : la liste des variables d'environnement, sans aucune valeur.
 - `tests/` : les tests. Un composant React s'y teste seul, sans navigateur : voir `docs/tests/composants.md`.
+- `compose.test.yml` et `.env.test` : le banc de test local et son environnement factice, voir « Le banc de test ».
 
 Les versions sont figées dans `package.json`, et `bun.lock` est le seul fichier de verrouillage.
 
@@ -200,8 +201,12 @@ bun --no-env-file test tests/unit/health.test.ts tests/unit/version.test.ts
 | `bun run payload:migrate` | Joue les migrations de `src/migrations/` qui ne l'ont pas encore été |
 | `bun run payload:migrate:create` | Écrit une migration à partir des collections, à relire avant de la versionner |
 | `bun run payload` | Le CLI de Payload |
-| `bun run test` | Tous les tests qui existent aujourd'hui : les tests unitaires |
+| `bun run test` | Les tests qui tournent sans le banc de test : les tests unitaires |
 | `bun run test:unit` | Les tests unitaires de `tests/unit/`, sans lire le fichier `.env` |
+| `bun run banc:up` | Démarre le banc de test : base, capteur de mails et stockage d'objets, en conteneurs |
+| `bun run banc:down` | Arrête le banc de test et efface tout ce qu'il contenait |
+| `bun run banc:prepare` | Reconstruit la base du banc depuis les collections du code, vide |
+| `bun run test:integration` | Les tests d'intégration de `tests/integration/`, sur le banc. Avec un chemin : ce fichier seul |
 
 Biome se lance par ces scripts ou par `bunx @biomejs/biome`, jamais par `npx biome` : c'est un paquet homonyme.
 
@@ -223,7 +228,7 @@ Les tests tournent avec `bun test`, lancé par les scripts ci-dessus. Pour un se
 | `tests/fixtures/` | Données fictives et fichiers témoins |
 | `tests/outils/` | Outils partagés par les tests |
 
-Seuls `unit/`, `fixtures/` et `outils/` existent pour l'instant : chaque autre dossier arrive avec son premier test.
+Seuls `unit/`, `integration/`, `fixtures/` et `outils/` existent pour l'instant : chaque autre dossier arrive avec son premier test.
 
 ### La garde d'environnement
 
@@ -235,15 +240,35 @@ Seuls `unit/`, `fixtures/` et `outils/` existent pour l'instant : chaque autre d
 | `DATABASE_URI` | Hôte local, et nom de base fini par `_test` |
 | `BASE_URL`, `NEXT_PUBLIC_SITE_URL` | Adresse locale. La préprod seulement avec `APP_ENV=preprod`. Jamais la prod |
 | `SMTP_HOST` | Hôte local : le capteur de mails |
+| `MAILPIT_URL` | Hôte local : l'API du capteur de mails |
 | `SMTP_*`, `EMAIL_*`, `MAILGUN_*`, `RESEND_*` | Aucun domaine en `my-makeup.fr` : un expéditeur de test écrit depuis `@example.test` |
 | `S3_ENDPOINT` | Hôte local |
 | `S3_BUCKET` | Nom fini par `-test` |
 
-Un hôte local est `localhost`, `127.0.0.1` ou `::1`, ou le nom du service dans le réseau de la pile de test : `postgres`, `mailpit`, `minio`. Une variable absente n'est pas vérifiée : les tests unitaires tournent sans aucune variable.
+Un hôte local est `localhost`, `127.0.0.1` ou `::1`, ou le nom du service dans le réseau de la pile de test : `postgres`, `mailpit`, `s3mock`. Une variable absente n'est pas vérifiée : les tests unitaires tournent sans aucune variable.
 
-`bun test` lit le fichier `.env` tout seul. Lancé sans `--no-env-file` sur un poste de développement, il y trouve la base `mymakeup_dev`, et la garde l'arrête. C'est voulu : les tests ne lisent jamais le `.env` de travail, et les scripts passent `--no-env-file`.
+`bun test` lit tout seul le fichier `.env`, puis `.env.test`, qui l'emporte. Lancé sans `--no-env-file` sur un poste de développement, il tourne donc sous l'environnement du banc de test, et tout ce que `.env.test` ne règle pas vient du `.env` de travail : la garde vérifie aussi ces variables-là. Les tests ne dépendent jamais du `.env` de travail : les scripts passent `--no-env-file`, et c'est par eux qu'on lance les tests.
 
 Une nouvelle variable qui désigne un service extérieur s'ajoute à la garde, avec son cas dans `tests/unit/garde-tests.test.ts`.
+
+### Le banc de test
+
+Les tests d'intégration tournent contre trois conteneurs jetables : PostgreSQL en mémoire, un capteur de mails et un stockage d'objets avec l'API S3. Rien n'y est réel, et rien n'est gardé à l'arrêt.
+
+```sh
+bun run banc:up                                                # démarre le banc, rend la main quand les trois services répondent
+bun run test:integration                                       # lance les tests d'intégration
+bun run test:integration tests/integration/banc-base.test.ts   # un seul fichier
+bun run banc:down                                              # arrête tout et efface les données
+```
+
+- `.env.test` décrit le banc. Il est versionné, parce que toutes ses valeurs sont factices.
+- Sans le banc, `bun run test:integration` s'arrête avant le premier test et dit quoi démarrer.
+- Lancer les tests d'intégration vide la base du banc.
+- Plusieurs bancs tournent côte à côte sur un même poste, chacun sous son nom et sur ses ports : `BANC_INSTANCE=mon-banc BANC_DECALAGE=20 bun run banc:up`.
+- Un test obtient un compte fictif et sa session en un appel, sans mot de passe à saisir : `await creerCompte('admin')`.
+
+Le détail est dans [`docs/tests/banc.md`](docs/tests/banc.md) : les services et leurs adresses, les deux variables d'instance, l'écriture d'un test d'intégration, la remise à zéro, la fabrique de comptes, les images épinglées.
 
 ## Licence
 
