@@ -102,4 +102,8 @@ Ce que la v3 change par rapport au site actuel est dans [`CHANGEMENTS-VOULUS.md`
 - **Intégration des tickets 004, 005, 006, 010, 012, 029, 030, 034 et 220 dans `v3`.**
   - Cinq fusions, dans cet ordre : `cee5112`, `5f09a63`, `aca0a78`, `46fb26c`, `b2e5814`. Puis `99c264e`, qui accorde les guides avec le banc de test et la CI réunis.
   - Vérifié sur `99c264e` : installation figée sans changement ; Biome et contrôle de types verts ; 610 tests unitaires verts et 1 sauté ; 194 garde-fous de la CI verts ; 14 tests d'intégration verts ; build de production vert, sans base ni secret ; image construite puis contrôlée.
-  - Non vérifié à cette date : aucun workflow n'a encore tourné sur GitHub.
+  - Tête de `v3` poussée sur GitHub : `2fe3629`. La branche `main` n'a reçu aucun commit.
+- **Première CI de `v3` sur GitHub : verte.**
+  - CI 38501556779, sur le commit `2fe3629` : `qualite` 21 s, `unit` 19 s, `build` 1 min 28 s, `ci-ok` 2 s. 1 min 35 s en tout, pour une limite de 15 minutes.
+  - C'est le premier passage du contrôle de l'image avec le Docker de GitHub. Avant lui, il n'avait tourné que derrière Podman.
+  - Non vérifié : `ci-ok` rouge sur GitHub, et CodeQL sur une pull request vers `v3`. Les deux attendent la protection de la branche (tickets 028 et 029).

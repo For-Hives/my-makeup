@@ -124,16 +124,16 @@ La seconde commande doit montrer une ligne `ci-ok` de `github-actions` et une li
 
 ### Ce qui reste à constater sur GitHub
 
-Au 14/10/2026, tout ce document a été vérifié sur un poste de développement : les garde-fous, le script de `ci-ok`, la construction et le contrôle de l'image. Rien n'a encore tourné sur GitHub : `ci.yml` n'y a jamais été poussé, et `v3` n'est pas protégée. Les lignes ci-dessous restent donc à constater, puis à dater ici.
+Au 14/10/2026, tout ce document a été vérifié sur un poste de développement : les garde-fous, le script de `ci-ok`, la construction et le contrôle de l'image. La CI a tourné une première fois sur GitHub le même jour, à la poussée de `v3` qui apportait `ci.yml` : les deux premières lignes ci-dessous sont constatées. `v3` n'est pas protégée : les deux dernières restent à constater, puis à dater ici.
 
 | À constater | Quand | Comment | Constaté le |
 |---|---|---|---|
-| La CI tourne : `qualite`, `unit`, `build` verts, puis `ci-ok` vert | À la première poussée de `v3` qui contient `ci.yml` | `gh run list --repo For-Hives/my-makeup --branch v3 --limit 5`, puis `gh run view NUMERO` | Pas encore |
-| Une CI verte dure moins de 15 minutes | Au même passage | La commande de « Durée de la CI » | Pas encore |
+| La CI tourne : `qualite`, `unit`, `build` verts, puis `ci-ok` vert | À la première poussée de `v3` qui contient `ci.yml` | `gh run list --repo For-Hives/my-makeup --branch v3 --limit 5`, puis `gh run view NUMERO` | 14/10/2026 : CI 38501556779, sur le commit `2fe3629`, les quatre jobs verts |
+| Une CI verte dure moins de 15 minutes | Au même passage | La commande de « Durée de la CI » | 14/10/2026 : 1 min 35 s |
 | CodeQL analyse chaque pull request vers `v3`, sous le nom `CodeQL` | Dès que `v3` est protégée | Les deux commandes ci-dessus | Pas encore |
 | `ci-ok` rouge sur une pull request cassée, fusion bloquée pour un administrateur aussi | Dès que `v3` est protégée | « Canari », plus bas | Pas encore |
 
-Si le job `build` est rouge au premier passage, regarder d'abord ces trois points. Ils n'ont tourné que derrière Podman, jamais sur le Docker de GitHub :
+Au premier passage, le job `build` a été vert sur le Docker de GitHub. Avant lui, ces trois points n'avaient tourné que derrière Podman : s'il passe au rouge sans que l'image ait changé, les regarder d'abord.
 
 - `scripts/image/controle.ts`, `startApplication` : le contrôle lance le conteneur avec `--health-interval=2s` en gardant la commande de santé de l'image. Docker l'accepte, Podman le refuse : seul le repli (le rythme de l'image, 30 secondes) a été joué.
 - Le même fichier, `UNHEALTHY_ANSWER_MAX_MS` : base arrêtée, le premier 503 doit arriver en moins de 3 secondes. La route abandonne la base au bout de 2 secondes ; le relevé local est de 1,7 à 1,8 seconde.
@@ -183,7 +183,7 @@ gh run view NUMERO --repo For-Hives/my-makeup --json jobs \
 | Date | Où | Durée |
 |---|---|---|
 | 14/10/2026 | Poste de développement, Podman : ce n'est pas une CI | Image construite sans cache en 1 min 26 s ; contrôle de l'image en 2 min 11 s, au rythme de Podman ; tests unitaires, garde-fous, types et Biome en moins de 10 secondes à eux quatre |
-| À relever au premier passage sur GitHub | | |
+| 14/10/2026 | GitHub, CI 38501556779, commit `2fe3629` | 1 min 35 s en tout : `qualite` 21 s, `unit` 19 s, `build` 1 min 28 s, `ci-ok` 2 s |
 
 ### Pourquoi `ci-ok`
 
