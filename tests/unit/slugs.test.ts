@@ -8,6 +8,7 @@ import {
 	slugifier,
 	tableDesSlugs,
 } from '@/lib/slug'
+import jeu from './fixtures/slugs-ancien-site.json'
 
 // Ported from tests/unit/slug.test.mjs of the old site (branch main): same cases, same expected values.
 
@@ -166,5 +167,42 @@ describe('resoudreProfil (plans/02 U13, U61)', () => {
 	test('path of a profile', () => {
 		expect(cheminProfil('zoe-lefevre')).toBe('/profil/zoe-lefevre')
 		expect(table.slugParId.get('2')).toBe('zoe-lefevre-2')
+	})
+})
+
+// The expected values of the fixture were computed by the old site's src/lib/slug.js (see its
+// « source » field), never by this port.
+describe('same slugs as the old site on a fictitious set (plans/01 §6.2)', () => {
+	const profils = jeu.profils.map(({ id, username, createdAt }) => ({ id, username, createdAt }))
+
+	test('each profile gets the slug the old site gives it, whatever the order of the list', () => {
+		const attendu = Object.fromEntries(jeu.profils.map(p => [p.id, p.slugAttendu]))
+		for (const ordre of [profils, [...profils].reverse()]) {
+			const slugs = Object.fromEntries(attribuerSlugs(ordre).map(p => [p.id, p.slug]))
+			expect(slugs).toStrictEqual(attendu)
+		}
+	})
+
+	test('the profiles come back in the same creation order', () => {
+		expect(attribuerSlugs(profils).map(p => p.id)).toStrictEqual(jeu.ordreDeCreation)
+	})
+
+	test('a slug or an old username is served or redirected as on the old site', () => {
+		const table = tableDesSlugs(profils)
+		for (const { segment, id, slug, redirection } of jeu.segments) {
+			const r = resoudreProfil(segment, table)
+			const obtenu = r ? { id: r.profil.id, slug: r.slug, redirection: r.redirection } : null
+			expect(obtenu, segment).toStrictEqual(slug === null ? null : { id, slug, redirection })
+		}
+	})
+
+	test('the set is large enough to mean something', () => {
+		expect(jeu.profils.length).toBeGreaterThanOrEqual(50)
+		expect(new Set(jeu.profils.map(p => p.slugAttendu)).size).toBe(jeu.profils.length)
+		expect(jeu.profils.every(p => p.slugAttendu.length > 0 && p.slugAttendu.length <= SLUG_MAX)).toBe(true)
+		expect(jeu.profils.filter(p => /-\d+$/.test(p.slugAttendu)).length).toBeGreaterThanOrEqual(10)
+		expect(jeu.segments.filter(s => s.redirection === true).length).toBeGreaterThanOrEqual(10)
+		expect(jeu.segments.filter(s => s.redirection === false).length).toBeGreaterThanOrEqual(5)
+		expect(jeu.segments.filter(s => s.slug === null).length).toBeGreaterThanOrEqual(3)
 	})
 })
