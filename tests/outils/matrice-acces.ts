@@ -11,7 +11,8 @@
  *   { role: 'redaction', collection: 'admins', operation: 'lister', attendu: 'soi' }
  *
  * - `lister`: `refuse`, or what the list holds: `aucun` (empty), `soi` (exactly the documents of
- *   the actor), `tous` (every document of the cast).
+ *   the actor), `tous` (every document of the cast), `publies` (on an editorial collection: its
+ *   published documents only, never its draft).
  * - `lire`, `creer`, `supprimer`: `autorise` or `refuse`. A refusal is also checked in the
  *   database: nothing was created, the document is still there.
  * - `modifier`: `autorise` (the new value is stored), `refuse` (refused, nothing changed) or
@@ -22,6 +23,9 @@
  * The cast is made once per file (`distribuer`): one account per role, by the account factory,
  * with their documents. A deletion that must succeed acts on a throwaway document of the same
  * collection, never on the cast.
+ *
+ * The documents of an editorial collection (talents) belong to nobody: the cast holds one
+ * published and one draft, which a line names by their state, `publie` or `brouillon`.
  */
 
 import { randomUUID } from 'node:crypto'
@@ -53,18 +57,37 @@ const TYPE_DU_ROLE: Record<RoleAvecCompte, TypeAvecSession> = {
 }
 
 /** The collections the matrix covers. */
-export const COLLECTIONS = ['admins', 'pros', 'profils'] as const
+export const COLLECTIONS = ['admins', 'pros', 'profils', 'talents'] as const
 export type CollectionDeLaMatrice = (typeof COLLECTIONS)[number]
 
+/**
+ * The editorial collections (src/collections/redaction.ts): written by the newsroom, read by the
+ * public when published. Nobody owns their documents.
+ */
+export const COLLECTIONS_EDITORIALES = ['talents'] as const satisfies readonly CollectionDeLaMatrice[]
+export type CollectionEditoriale = (typeof COLLECTIONS_EDITORIALES)[number]
+
+/** The state of a document of an editorial collection, which names it in a line. */
+export const ETATS = ['publie', 'brouillon'] as const
+export type Etat = (typeof ETATS)[number]
+
+const estEditoriale = (collection: CollectionDeLaMatrice): collection is CollectionEditoriale =>
+	(COLLECTIONS_EDITORIALES as readonly string[]).includes(collection)
+
+const estUnEtat = (document: RoleAvecCompte | Etat): document is Etat => (ETATS as readonly string[]).includes(document)
+
 export type Operation = 'lister' | 'lire' | 'creer' | 'modifier' | 'supprimer'
-export type Issue = 'autorise' | 'refuse' | 'ignore' | 'aucun' | 'soi' | 'tous' | 'incoherent'
+export type Issue = 'autorise' | 'refuse' | 'ignore' | 'aucun' | 'soi' | 'tous' | 'publies' | 'incoherent'
 
 export interface Ligne {
 	role: Role
 	collection: CollectionDeLaMatrice
 	operation: Operation
-	/** The document the operation targets, named by the role that owns it (`lire`, `modifier`, `supprimer`). */
-	document?: RoleAvecCompte
+	/**
+	 * The document the operation targets (`lire`, `modifier`, `supprimer`): named by the role that
+	 * owns it, or, on an editorial collection, by its state.
+	 */
+	document?: RoleAvecCompte | Etat
 	/**
 	 * `modifier` only: the field to change and the value sent. Without them, the usual field of the
 	 * collection. `{ compteDe: role }` stands for the account of that role, known once the cast is made.
@@ -86,7 +109,10 @@ export interface Acteur {
 	documents: Partial<Record<CollectionDeLaMatrice, number>>
 }
 
-export type Distribution = Record<Role, Acteur>
+/** The documents of the editorial collections, one per state. */
+export type Contenus = Record<CollectionEditoriale, Record<Etat, number>>
+
+export type Distribution = Record<Role, Acteur> & { contenus: Contenus }
 
 /** A fresh address for each document a line creates or changes. */
 const adresse = (prefixe: string) => `${prefixe}-${randomUUID()}@${DOMAINE_DES_COMPTES}`
@@ -116,6 +142,15 @@ const compteSansProfil = async (payload: Payload, prefixe: string): Promise<numb
 /** The profile of an account, if it has one. */
 const profilDe = async (payload: Payload, compte: number): Promise<number | undefined> =>
 	(await payload.find({ collection: 'profils', depth: 0, limit: 1, where: { pro: { equals: compte } } })).docs[0]?.id
+
+/** A talent with made-up content, in the state asked for: what the newsroom writes. */
+const talent = (etat: Etat): RequiredDataFromCollectionSlug<'talents'> => ({
+	title: nom('Talent'),
+	slug: `talent-${randomUUID()}`,
+	description: 'Une page fictive de la matrice d’accès.',
+	content: '## Un talent\n\nUne page fictive de la matrice d’accès.\n',
+	_status: etat === 'publie' ? 'published' : 'draft',
+})
 
 /** What the matrix needs to know of a collection to play its lines. */
 interface Portrait {
@@ -168,6 +203,19 @@ const PORTRAITS: Record<CollectionDeLaMatrice, Portrait> = {
 				})
 			).id,
 	},
+	talents: {
+		champ: 'title',
+		nouvelleValeur: () => nom('Titre'),
+		// Created published: creating and publishing in one request.
+		donneesDeCreation: () => Promise.resolve(talent('publie')),
+		jetable: async payload => (await payload.create({ collection: 'talents', data: talent('publie') })).id,
+	},
+}
+
+/** One document per state, in each editorial collection, written without access control. */
+async function creerLesContenus(payload: Payload): Promise<Contenus> {
+	const creer = async (etat: Etat) => (await payload.create({ collection: 'talents', data: talent(etat) })).id
+	return { talents: { publie: await creer('publie'), brouillon: await creer('brouillon') } }
 }
 
 /** Makes the cast: one account per role, through the account factory, with their documents. */
@@ -188,7 +236,8 @@ export async function distribuer(): Promise<Distribution> {
 		})
 	)
 	const anonyme: Acteur = { role: 'anonyme', enTetes: {}, documents: {} }
-	return Object.fromEntries([['anonyme', anonyme], ...acteurs.map(acteur => [acteur.role, acteur])]) as Distribution
+	const parRole = Object.fromEntries([['anonyme', anonyme], ...acteurs.map(acteur => [acteur.role, acteur])])
+	return { ...(parRole as Record<Role, Acteur>), contenus: await creerLesContenus(payload) }
 }
 
 /** What one request gave: allowed (with what it returned) or refused. */
@@ -261,9 +310,17 @@ const egaux = (a: unknown, b: unknown): boolean => JSON.stringify(a ?? null) ===
 const identifiants = (corps: unknown): number[] =>
 	((corps as { docs?: { id: number }[] }).docs ?? []).map(({ id }) => id).sort((a, b) => a - b)
 
-/** The document of the role a line names, in its collection. */
+/** The document a line names in its collection: the one of a role, or, on an editorial collection, the one of a state. */
 function documentDe(distribution: Distribution, ligne: Ligne): number {
-	const id = ligne.document ? distribution[ligne.document].documents[ligne.collection] : undefined
+	const { collection, document } = ligne
+	const id =
+		document === undefined
+			? undefined
+			: estUnEtat(document)
+				? estEditoriale(collection)
+					? distribution.contenus[collection][document]
+					: undefined
+				: distribution[document].documents[collection]
 	if (id === undefined)
 		throw new Error(`Ligne mal formée : aucun document « ${ligne.document} » dans « ${ligne.collection} ».`)
 	return id
@@ -272,13 +329,24 @@ function documentDe(distribution: Distribution, ligne: Ligne): number {
 async function lister(voie: Voie, acteur: Acteur, ligne: Ligne, distribution: Distribution): Promise<Issue> {
 	const reponse = await demander(voie, acteur, ligne)
 	if (!reponse.autorise) return 'refuse'
+	const { collection } = ligne
 	const vus = identifiants(reponse.corps)
-	const siens = [acteur.documents[ligne.collection]].filter((id): id is number => id !== undefined)
-	const distribues = Object.values(distribution).flatMap(({ documents }) => documents[ligne.collection] ?? [])
+	const siens = [acteur.documents[collection]].filter((id): id is number => id !== undefined)
+	const contenus = estEditoriale(collection) ? Object.values(distribution.contenus[collection]) : []
+	const distribues = [...ROLES.flatMap(role => distribution[role].documents[collection] ?? []), ...contenus]
 	if (vus.length === 0) return 'aucun'
 	if (egaux(vus, siens)) return 'soi'
 	if (distribues.every(id => vus.includes(id))) return 'tous'
+	if (estEditoriale(collection) && vus.includes(distribution.contenus[collection].publie))
+		return (await seulementPublies(collection, vus)) ? 'publies' : 'incoherent'
 	return 'incoherent'
+}
+
+/** Whether every one of these documents is published, read in the database without access control. */
+async function seulementPublies(collection: CollectionEditoriale, ids: number[]): Promise<boolean> {
+	const payload = await payloadDeTest()
+	const { docs } = await payload.find({ collection, depth: 0, limit: ids.length, where: { id: { in: ids } } })
+	return docs.length === ids.length && docs.every(({ _status }) => _status === 'published')
 }
 
 async function lire(voie: Voie, acteur: Acteur, ligne: Ligne, distribution: Distribution): Promise<Issue> {

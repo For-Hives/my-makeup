@@ -38,7 +38,7 @@ Une application, trois zones, toutes sous `src/app/` :
 |---|---|---|---|
 | Pages publiques | `(front)/(site)/` | `/` | Page d'accueil provisoire |
 | Espace maquilleuse | `(front)/(espace)/auth/` | `/auth` | Page d'attente |
-| Administration | `(payload)/` | `/admin` et `/api` | Générée par Payload : les comptes `admins`, aux rôles `admin` et `redaction`, les comptes des maquilleuses, `pros`, et leurs profils, `profils` |
+| Administration | `(payload)/` | `/admin` et `/api` | Générée par Payload : les comptes `admins`, aux rôles `admin` et `redaction`, les comptes des maquilleuses, `pros`, leurs profils, `profils`, et les talents, `talents` |
 
 Les noms entre parenthèses rangent les fichiers et n'apparaissent pas dans les adresses.
 
@@ -46,7 +46,7 @@ Les pages publiques et l'espace maquilleuse partagent une seule coquille HTML, `
 
 Le reste :
 
-- `src/payload.config.ts` : la configuration de Payload (base PostgreSQL, collections `admins`, `pros` et `profils`).
+- `src/payload.config.ts` : la configuration de Payload (base PostgreSQL, collections `admins`, `pros`, `profils` et `talents`).
 - `src/collections/` : les collections de Payload. `src/lib/acces.ts` : qui peut lire, créer, modifier ou supprimer quoi (voir « Accès »).
 - `src/lib/env.ts` : les variables d'environnement, vérifiées au démarrage par `src/instrumentation.ts`.
 - `src/migrations/` : les migrations versionnées de la base.
@@ -188,6 +188,7 @@ L'application vérifie ses variables à chaque démarrage (`bun run dev`, `bun r
 - Deux rôles ouvrent l'administration : `admin` peut tout ; `redaction` ne lit et ne modifie que son propre compte, sans pouvoir changer son rôle. Une session de l'administration dure 8 heures. Le premier compte d'une base vide est toujours un `admin`, quel que soit le rôle choisi sur l'écran du premier compte.
 - Une maquilleuse (collection `pros`) n'entre jamais dans l'administration. Elle ne lit et ne modifie que son propre compte, sans pouvoir changer ses champs réservés (bloqué, vérifié, fournisseur d'origine, identifiant de l'ancien site). Aucun anonyme ne crée de compte par l'API REST, même sur une base vide. Le mot de passe, le hash hérité de l'ancien site et les sessions ne sortent jamais, pas même pour un admin : Payload rend la liste des sessions toujours vide. L'email d'un compte est rangé en minuscules : deux adresses qui ne diffèrent que par la casse sont le même compte.
 - Créer le compte d'une maquilleuse crée son profil vide (collection `profils`), avec un slug unique calculé par le serveur à partir du nom du compte (`src/lib/slug.ts`) : `-2`, `-3` pour les homonymes, `maquilleuse-<identifiant>` pour un nom qui ne donne rien. Le slug ne change plus ensuite, et aucune API ne l'écrit. Une création qui porte `CONTEXTE_SANS_PROFIL` (`src/collections/Profils.ts`) laisse le compte sans profil : c'est ce que fera l'import pour les comptes qui n'en ont pas. Une maquilleuse ne lit et ne modifie que son propre profil ; un compte sans profil reçoit une liste vide. Un compte qui a encore un profil n'est pas supprimé : le profil part d'abord.
+- Les talents (collection `talents`, les pages `/talent/<slug>`) sont écrits par la rédaction, c'est-à-dire les rôles `admin` et `redaction` : créer, modifier, publier, dépublier, supprimer, lire les brouillons et les versions. Tout autre visiteur, maquilleuse connectée comprise, ne lit que les talents publiés, même en demandant les brouillons (`?draft=true`), et n'écrit rien. Deux talents n'ont jamais le même slug ; un slug s'écrit déjà comme une adresse (minuscules sans accent, mots séparés par un tiret), sinon il est refusé à la publication, jamais corrigé. L'identifiant de l'ancien site (`strapiId`) n'est écrit que par l'import et ne sort que pour la rédaction. Ces règles de la rédaction sont dans `src/collections/redaction.ts`, pour les articles aussi.
 - Les règles sont dans `src/lib/acces.ts`. Chacune a ses lignes dans la matrice d'accès, jouée par l'API REST et par l'API locale (`tests/integration/payload-acces.test.ts`, voir [`docs/tests/banc.md`](docs/tests/banc.md), « La matrice d'accès »).
 
 ### En-têtes de sécurité

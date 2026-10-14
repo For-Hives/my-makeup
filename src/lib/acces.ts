@@ -5,6 +5,8 @@
  *   and talents only: it reads and changes its own account, nothing else of the accounts).
  * - `pros` holds the accounts of the makeup artists. A makeup artist never enters the admin
  *   panel; she reads and changes her own account, and her own profile.
+ * - The editorial collections (talents, then articles) are written by the newsroom, `admin` and
+ *   `redaction`; everyone else reads their published documents only.
  *
  * One rule per subject: the collections call these functions and never test a role themselves.
  * Every rule here has its lines in the access matrix (tests/integration/payload-acces.test.ts),
@@ -75,3 +77,26 @@ export const adminOuProprietaire: Access = ({ req: { user } }) => {
 	if (user && estMaquilleuse(user)) return { pro: { equals: user.id } }
 	return false
 }
+
+/**
+ * The newsroom: an account of the admin panel with the role `admin` or `redaction`. It writes the
+ * editorial collections, talents (ticket 022) and articles (ticket 046).
+ */
+export const estAdminOuRedaction = (user: Utilisateur): boolean => estAdmin(user) || estRedaction(user)
+
+/** Only the newsroom, for a whole collection: creating, changing, publishing, deleting, reading the versions. */
+export const adminOuRedaction: Access = ({ req: { user } }) => estAdminOuRedaction(user)
+
+/** Only the newsroom, for one field: anyone else gets the document without it. */
+export const champAdminOuRedaction: FieldAccess = ({ req: { user } }) => estAdminOuRedaction(user)
+
+/** The documents of an editorial collection that the public may read: the published ones. */
+export const SEULEMENT_PUBLIES: Where = { _status: { equals: 'published' } }
+
+/**
+ * Reading an editorial collection (drafts on): the newsroom reads every document, drafts
+ * included; everyone else, a makeup artist as an anonymous visitor, the published ones only. A
+ * draft is out of reach for them, even through `?draft=true`: Payload adds the same condition to
+ * the versions it would show instead.
+ */
+export const adminRedactionOuPublies: Access = ({ req: { user } }) => estAdminOuRedaction(user) || SEULEMENT_PUBLIES

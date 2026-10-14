@@ -217,6 +217,74 @@ const MATRICE: Ligne[] = [
 			attendu,
 		})
 	),
+
+	// talents (ticket 022): the newsroom (`redaction` and `admin`) creates, changes, publishes,
+	// unpublishes and deletes, and reads drafts too; everyone else, a makeup artist as an anonymous
+	// visitor, reads the published talents only and writes nothing (U59). Nobody writes `strapiId`.
+	...(['anonyme', 'maquilleuse', 'autreMaquilleuse', 'sansProfil'] as const).flatMap((role): Ligne[] => [
+		{ role, collection: 'talents', operation: 'lister', attendu: 'publies' },
+		{ role, collection: 'talents', operation: 'lire', document: 'publie', attendu: 'autorise' },
+		{ role, collection: 'talents', operation: 'lire', document: 'brouillon', attendu: 'refuse' },
+		{ role, collection: 'talents', operation: 'creer', attendu: 'refuse' },
+		{ role, collection: 'talents', operation: 'modifier', document: 'publie', attendu: 'refuse' },
+		{
+			role,
+			collection: 'talents',
+			operation: 'modifier',
+			document: 'brouillon',
+			champ: '_status',
+			valeur: 'published',
+			attendu: 'refuse',
+		},
+		{ role, collection: 'talents', operation: 'supprimer', document: 'publie', attendu: 'refuse' },
+		{ role, collection: 'talents', operation: 'supprimer', document: 'brouillon', attendu: 'refuse' },
+	]),
+	...(['redaction', 'admin'] as const).flatMap((role): Ligne[] => [
+		{ role, collection: 'talents', operation: 'lister', attendu: 'tous' },
+		{ role, collection: 'talents', operation: 'lire', document: 'publie', attendu: 'autorise' },
+		{ role, collection: 'talents', operation: 'lire', document: 'brouillon', attendu: 'autorise' },
+		// Created published: created and published in one request.
+		{ role, collection: 'talents', operation: 'creer', attendu: 'autorise' },
+		{ role, collection: 'talents', operation: 'modifier', document: 'publie', attendu: 'autorise' },
+		{ role, collection: 'talents', operation: 'modifier', document: 'brouillon', attendu: 'autorise' },
+		{
+			role,
+			collection: 'talents',
+			operation: 'modifier',
+			document: 'brouillon',
+			champ: '_status',
+			valeur: 'published',
+			attendu: 'autorise',
+		},
+		{
+			role,
+			collection: 'talents',
+			operation: 'modifier',
+			document: 'publie',
+			champ: '_status',
+			valeur: 'draft',
+			attendu: 'autorise',
+		},
+		{
+			role,
+			collection: 'talents',
+			operation: 'modifier',
+			document: 'publie',
+			champ: 'slug',
+			valeur: 'une-autre-adresse',
+			attendu: 'autorise',
+		},
+		{
+			role,
+			collection: 'talents',
+			operation: 'modifier',
+			document: 'publie',
+			champ: 'strapiId',
+			valeur: 999,
+			attendu: 'ignore',
+		},
+		{ role, collection: 'talents', operation: 'supprimer', document: 'publie', attendu: 'autorise' },
+	]),
 ]
 
 let distribution: Distribution

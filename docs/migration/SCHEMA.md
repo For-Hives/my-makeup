@@ -185,12 +185,12 @@ Table `talents`, 14 lignes, toutes publiées. Brouillons possibles dans Strapi. 
 
 | Attribut Strapi | Type Strapi | Champ Payload | Règle |
 |---|---|---|---|
-| `title` | `string` | `talents.title` (`text`) | Repris tel quel. |
+| `title` | `string` | `talents.title` (`text`, requis pour publier) | Repris tel quel. |
 | `seo_title` | `string` | `talents.seo_title` (`text`) | Repris tel quel. |
 | `description` | `text` | `talents.description` (`textarea`) | Repris tel quel. |
 | `seo_description` | `text` | `talents.seo_description` (`textarea`) | Repris tel quel. |
 | `content` | `richtext` | `talents.content` (`code`, markdown) | Repris tel quel, à l'octet près. Même raison que pour les articles. |
-| `slug` | `string` | `talents.slug` (`text`, unique) | Repris tel quel : les 14 adresses `/talent/<slug>` sont conservées. Un doublon est listé (règle 5). |
+| `slug` | `string` | `talents.slug` (`text`, unique, requis pour publier) | Repris tel quel : les 14 adresses `/talent/<slug>` sont conservées. Un doublon, ou un slug qui n'a pas déjà la forme d'une adresse (celle que donne `src/lib/slug.ts` : minuscules sans accent, mots séparés par un tiret), est refusé, puis listé (règle 5). |
 
 ## 6. Composants (7)
 
@@ -404,3 +404,4 @@ Noms fixés par ce document, parce que le plan ne les donnait pas : `profils.leg
 |---|---|
 | 14/10/2026 | Gel initial (ticket 015) : 71 attributs, schémas de Strapi au commit `ccd449d`, décomptes de l'instantané du 13/10/2026. |
 | 14/10/2026 | Suites de la relecture (ticket 220), sans changer un nom de champ ni une règle de reprise : raison de la règle 1 corrigée ; 88 profils et 43 hash attendus « au plus », et défaut pour un profil dont le compte est écarté (§11) ; portée du mot « Transformé » (§1) ; colonnes des tables de liens (§7) et des deux jetons (§5.1) ; condition d'existence de `pros._verified` (§5.1). |
+| 14/10/2026 | Talents (ticket 022), sans changer un nom de champ : `talents.title` et `talents.slug` sont requis pour publier (un brouillon peut s'en passer) ; un slug qui n'a pas déjà la forme d'une adresse est refusé, pas corrigé (§5.4). |

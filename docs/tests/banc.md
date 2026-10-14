@@ -283,7 +283,7 @@ Chaque ligne est jouée deux fois : par l'API REST, avec la session de la fabriq
 | `role` | Qui agit : `anonyme`, ou un compte de la distribution (`admin`, `redaction`, `maquilleuse` pour « A », `autreMaquilleuse` pour « B », `sansProfil` pour un compte sans profil) |
 | `collection` | La collection visée |
 | `operation` | `lister`, `lire`, `creer`, `modifier`, `supprimer` |
-| `document` | Le document visé, désigné par le rôle à qui il appartient (`lire`, `modifier`, `supprimer`) |
+| `document` | Le document visé, désigné par le rôle à qui il appartient (`lire`, `modifier`, `supprimer`). Sur une collection de la rédaction, dont les documents n'appartiennent à personne : `publie` ou `brouillon` |
 | `champ`, `valeur` | Pour `modifier` : le champ envoyé et sa valeur. Sans eux, la matrice change un champ ordinaire de la collection. `{ compteDe: 'sansProfil' }` vaut le compte de ce rôle |
 | `attendu` | Ce qui doit arriver, ci-dessous |
 
@@ -293,6 +293,7 @@ Chaque ligne est jouée deux fois : par l'API REST, avec la session de la fabriq
 | `autorise` | Accepté, et la base le montre : le document lu est le bon, le document existe, la nouvelle valeur est stockée, le document a disparu |
 | `ignore` | Accepté, mais le champ a gardé sa valeur : un champ que ce rôle ne peut pas écrire |
 | `aucun`, `soi`, `tous` | Pour `lister` : une liste vide, exactement les documents de celui qui agit, ou tous les documents de la distribution |
+| `publies` | Pour `lister`, sur une collection de la rédaction : le document publié de la distribution, jamais son brouillon, et seulement des documents publiés |
 
 Tout autre constat est `incoherent` : refusé mais écrit quand même, ou une liste que personne n'attend. Le test échoue.
 
@@ -301,6 +302,7 @@ Tout autre constat est `incoherent` : refusé mais écrit quand même, ou une li
 - **La distribution est faite une fois par fichier** (`distribuer()`, `tests/outils/matrice-acces.ts`) : un compte par rôle, par la fabrique, avec ses documents.
 - **Une ligne ne change pas la distribution.** Une valeur modifiée est remise comme avant, et une suppression qui doit réussir vise un document jetable de la même collection.
 - **Une collection nouvelle** donne à la matrice son portrait (`PORTRAITS`, même fichier) : le champ ordinaire à modifier, les données d'une création, un document jetable. **Un rôle nouveau** prend un type de la fabrique (`TYPE_DU_ROLE`).
+- **Les collections de la rédaction** (`COLLECTIONS_EDITORIALES` : les talents, puis les articles) ont des brouillons, et leurs documents n'appartiennent à personne. La distribution en tient un publié et un brouillon par collection (`contenus`), qu'une ligne désigne par `publie` ou `brouillon`. Publier, c'est modifier `_status` : `{ champ: '_status', valeur: 'published' }` sur le brouillon ; dépublier, `'draft'` sur le document publié.
 - **L'appel REST passe par la vraie route de l'application** (`appelerRest`, `tests/outils/rest.ts`), sans serveur : mêmes gestionnaires, même contrôle de session, mêmes règles. Il ne prouve pas l'aiguillage de Next lui-même, qu'un essai de bout en bout prouve.
 
 ## Le faux Google

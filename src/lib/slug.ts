@@ -205,3 +205,12 @@ export function resoudreProfil(segment: unknown, table: TableDesSlugs): ProfilRe
 
 /** Path of a profile page. */
 export const cheminProfil = (slug: string): string => `/profil/${encodeURIComponent(slug)}`
+
+/**
+ * A slug as `slugifier` writes it, the form of every address of the site: lower case ASCII
+ * letters and digits, words joined by one dash, 70 characters at most. The slug of a talent or of
+ * an article is written by the newsroom and must already have this form: it is refused, never
+ * corrected in silence, so that an address never differs from the slug that was typed.
+ */
+export const estUnSlug = (texte: unknown): texte is string =>
+	typeof texte === 'string' && texte !== '' && slugifier(texte) === texte
