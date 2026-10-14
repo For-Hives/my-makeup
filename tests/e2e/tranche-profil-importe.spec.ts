@@ -20,10 +20,16 @@ const DECISIONS_DU_BANC = 'tests/fixtures/import/decisions-du-banc.json'
 const CLES_PRIVEES =
 	/"(?:pro|strapiId|legacyUsername|statut|motif|verifie|verifieLe|siret|noteInterne|score|superMaquilleuse|coordonnees|telephone|contactPublic|consentiLe|sourceConsentement)"\s*:/
 
-/** Runs a command of bun in the repository, under the environment of the bench, and gives its exit code and output. */
+/**
+ * Runs a command of bun in the repository, under the environment of the bench and the production
+ * mode of the application it serves, and gives its exit code and output.
+ */
 function bun(...ligne: string[]): Promise<{ code: number | null; sortie: string }> {
 	return new Promise((resoudre, rejeter) => {
-		const enfant = spawn('bun', ['--no-env-file', ...ligne], { cwd: RACINE, env: process.env })
+		const enfant = spawn('bun', ['--no-env-file', ...ligne], {
+			cwd: RACINE,
+			env: { ...process.env, NODE_ENV: 'production' },
+		})
 		let sortie = ''
 		enfant.stdout.on('data', morceau => {
 			sortie += String(morceau)
@@ -87,9 +93,8 @@ test('un profil repris de la fausse base Strapi s’affiche sur sa page publique
 	await expect(titre).toBeVisible()
 	await testInfo.attach('profil-390px', { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' })
 
-	// An unknown slug, and the profile the import left a draft (entirely empty): 404.
+	// An unknown slug: 404. What a draft answers is ticket 104's (200 in noindex, as today).
 	expect((await request.get('/profil/audit-inexistant-zz9')).status()).toBe(404)
-	expect((await request.get('/profil/manon-petit')).status()).toBe(404)
 
 	// A second run of the import writes nothing.
 	const second = await importer(testInfo.outputPath('rapport-2.json'))

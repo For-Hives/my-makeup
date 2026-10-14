@@ -9,9 +9,11 @@ export const dynamic = 'force-dynamic'
 
 /**
  * The public page of a profile, first slice (ticket 026): the name of the makeup artist in the
- * only h1, her speciality and her description, all in the HTML of the server. An unknown or
- * unpublished slug answers 404. The profile is read by the public reading only
- * (src/services/public/profils.ts), which never gives a contact detail.
+ * only h1, her speciality and her description, all in the HTML of the server. An unknown slug
+ * answers 404. So does a profile that is not published, for now: ticket 104 gives the page of a
+ * profile that is visible but cannot be published a 200 in noindex, as on the site today. The
+ * profile is read by the public reading only (src/services/public/profils.ts), which never gives
+ * a contact detail.
  */
 export default async function PageDuProfil({ params }: PageProps<'/profil/[slug]'>) {
 	const { slug } = await params
