@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import {
 	EnvError,
+	GOOGLE_ISSUER,
 	isLocalDatabase,
 	parseServerEnv,
 	type RawEnv,
@@ -97,6 +98,7 @@ describe('a missing or short secret stops the start', () => {
 	test('a valid environment is given back as it is', () => {
 		expect(parseServerEnv(valid)).toEqual({
 			databaseUri: LOCAL_URI,
+			googleIssuer: 'https://accounts.google.com',
 			localDatabase: true,
 			payloadSecret: SECRET,
 			trustedOrigins: ['http://localhost:3000', 'http://127.0.0.1:3000'],
@@ -227,6 +229,81 @@ describe('trusted origins: the site, its pre-production and this machine, each f
 	})
 })
 
+describe('the Google sign-in talks to Google, or on this machine to the fake Google of the test bench', () => {
+	const FAKE = 'http://127.0.0.1:7080'
+	const production: RawEnv = { ...valid, DATABASE_URI: REMOTE_URI, NODE_ENV: 'production' }
+	const SITE = 'https://my-makeup.fr'
+	const PREPROD = 'https://preprod.my-makeup.fr'
+
+	test('nothing set: Google itself, in production or not', () => {
+		expect(GOOGLE_ISSUER).toBe('https://accounts.google.com')
+		expect(parseServerEnv(valid).googleIssuer).toBe(GOOGLE_ISSUER)
+		expect(parseServerEnv({ ...production, NEXT_PUBLIC_SITE_URL: SITE }).googleIssuer).toBe(GOOGLE_ISSUER)
+		expect(parseServerEnv({ ...valid, GOOGLE_OIDC_ISSUER: '  ' }).googleIssuer).toBe(GOOGLE_ISSUER)
+	})
+
+	test('Google written out is accepted everywhere, the site and its pre-production included', () => {
+		for (const env of [valid, { ...production, NEXT_PUBLIC_SITE_URL: SITE }])
+			expect(parseServerEnv({ ...env, GOOGLE_OIDC_ISSUER: GOOGLE_ISSUER }).googleIssuer).toBe(GOOGLE_ISSUER)
+	})
+
+	test.each([
+		['a development server', valid],
+		['a development server that states a local address', { ...valid, NEXT_PUBLIC_SITE_URL: 'http://localhost:3100' }],
+		// The end-to-end tests run a production build on this machine, against the bench.
+		['a production build served on this machine', { ...production, NEXT_PUBLIC_SITE_URL: 'http://localhost:3100' }],
+	])('the fake Google of the bench is accepted on this machine: %s', (_case, env) => {
+		expect(parseServerEnv({ ...env, GOOGLE_OIDC_ISSUER: FAKE }).googleIssuer).toBe(FAKE)
+		expect(parseServerEnv({ ...env, GOOGLE_OIDC_ISSUER: 'http://localhost:7219' }).googleIssuer).toBe(
+			'http://localhost:7219'
+		)
+	})
+
+	test.each([
+		['the site, in production', { ...production, NEXT_PUBLIC_SITE_URL: SITE }],
+		['the pre-production, in production', { ...production, NEXT_PUBLIC_SITE_URL: PREPROD }],
+		['the address of the site, whatever NODE_ENV says', { ...valid, NEXT_PUBLIC_SITE_URL: SITE }],
+		[
+			'the address of the pre-production, in development',
+			{ ...valid, NEXT_PUBLIC_SITE_URL: PREPROD, NODE_ENV: 'development' },
+		],
+	])('a local provider is refused on a deployed site: %s', (_case, env) => {
+		for (const issuer of [FAKE, 'http://localhost:7080']) {
+			const error = refusal({ ...env, GOOGLE_OIDC_ISSUER: issuer })
+			expect(error.variables).toEqual(['GOOGLE_OIDC_ISSUER'])
+			expect(error.message).toContain(
+				'- GOOGLE_OIDC_ISSUER : refusée, car elle désigne un fournisseur de ce poste alors que le site est déployé. Un site déployé ne parle qu’à Google : retire cette variable.'
+			)
+			expect(error.message).not.toContain('7080')
+		}
+	})
+
+	test.each([
+		'https://connexion.exemple.test',
+		'https://accounts.google.com/',
+		'http://accounts.google.com',
+		'https://accounts.google.com.exemple.test',
+		'https://ACCOUNTS.google.com',
+		// A provider of the bench is reached over plain http, on a loopback name, and nowhere else.
+		'https://127.0.0.1:7080',
+		'http://127.0.0.1:7080/',
+		'http://127.0.0.1:7080/o/oauth2/v2/auth',
+		'http://localhost.exemple.test:7080',
+		'http://192.168.1.20:7080',
+		'http://faux-google:7080',
+		'127.0.0.1:7080',
+	])('any other provider is refused, deployed or not: %s', issuer => {
+		for (const env of [valid, { ...production, NEXT_PUBLIC_SITE_URL: SITE }]) {
+			const error = refusal({ ...env, GOOGLE_OIDC_ISSUER: issuer })
+			expect(error.variables).toEqual(['GOOGLE_OIDC_ISSUER'])
+			expect(error.message).toContain(
+				'- GOOGLE_OIDC_ISSUER : refusée. Attendu : https://accounts.google.com, ou sur ce poste l’adresse du faux Google du banc de test'
+			)
+			expect(error.message).not.toContain('exemple.test')
+		}
+	})
+})
+
 describe('the server stops when it starts with an environment that is not valid', () => {
 	/**
 	 * What src/instrumentation.ts runs when a server starts, in a process of its own: the only
@@ -267,6 +344,33 @@ describe('the server stops when it starts with an environment that is not valid'
 		expect(start(valid)).toEqual({ exitCode: 0, stderr: '', stdout: 'started\n' })
 	})
 
+	test('the production configuration with a local Google provider: exit code 1, the variable named, no value', () => {
+		const run = start({
+			...valid,
+			DATABASE_URI: REMOTE_URI,
+			GOOGLE_OIDC_ISSUER: 'http://127.0.0.1:7080',
+			NEXT_PUBLIC_SITE_URL: 'https://my-makeup.fr',
+			NODE_ENV: 'production',
+		})
+		expect(run.exitCode).toBe(1)
+		expect(run.stdout).toBe('')
+		expect(run.stderr.trim().split('\n')).toEqual([
+			'Configuration invalide : l’application ne démarre pas.',
+			'- GOOGLE_OIDC_ISSUER : refusée, car elle désigne un fournisseur de ce poste alors que le site est déployé. Un site déployé ne parle qu’à Google : retire cette variable.',
+			'Aucune valeur n’est affichée ici. La liste des variables est dans .env.exemple.',
+		])
+	})
+
+	test('the same local provider with the bench address of the site: the start goes on', () => {
+		const run = start({
+			...valid,
+			GOOGLE_OIDC_ISSUER: 'http://127.0.0.1:7080',
+			NEXT_PUBLIC_SITE_URL: 'http://localhost:3100',
+			NODE_ENV: 'production',
+		})
+		expect(run).toEqual({ exitCode: 0, stderr: '', stdout: 'started\n' })
+	})
+
 	test('next build is never stopped', () => {
 		expect(start({ NEXT_PHASE: 'phase-production-build' })).toEqual({ exitCode: 0, stderr: '', stdout: 'started\n' })
 	})
@@ -278,6 +382,7 @@ describe('next build needs no secret and no database', () => {
 	test('nothing is checked while Next builds, and nothing is made up', () => {
 		expect(serverEnv(building)).toEqual({
 			databaseUri: '',
+			googleIssuer: 'https://accounts.google.com',
 			localDatabase: false,
 			payloadSecret: '',
 			trustedOrigins: ['http://localhost:3000', 'http://127.0.0.1:3000'],
