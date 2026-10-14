@@ -32,6 +32,8 @@ export type RawEnv = Partial<
 		| 'BASCULE_LE'
 		| 'DATABASE_URI'
 		| 'EMAIL_FROM'
+		| 'GOOGLE_CLIENT_ID'
+		| 'GOOGLE_CLIENT_SECRET'
 		| 'GOOGLE_OIDC_ISSUER'
 		| 'NEXT_PHASE'
 		| 'NEXT_PUBLIC_SITE_URL'
@@ -115,6 +117,12 @@ export type ServerEnv = {
 	 * fake provider of the test bench. Never a local one on a deployed site.
 	 */
 	googleIssuer: string
+	/**
+	 * The client of the Google sign-in (ticket 090): both variables set, or nothing. Without it the
+	 * site has no Google button and the routes of the sign-in send the visitor back to the form. The
+	 * secret never leaves the server and is never logged.
+	 */
+	google?: { clientId: string; clientSecret: string }
 	/** True when the database is on this machine: the only place where Payload may push its schema. */
 	localDatabase: boolean
 	/**
@@ -219,6 +227,8 @@ const EXPECTED = {
 	BASCULE_LE: 'une date au format AAAA-MM-JJ, comme « 2027-02-01 », qui existe',
 	DATABASE_URI: 'postgres://UTILISATEUR:MOT_DE_PASSE@HÔTE:PORT/BASE',
 	EMAIL_FROM: '« Nom <adresse@domaine> », ou une adresse seule',
+	GOOGLE_CLIENT_ID: 'l’identifiant du client OAuth de la console Google, avec GOOGLE_CLIENT_SECRET',
+	GOOGLE_CLIENT_SECRET: 'le secret de ce client OAuth, avec GOOGLE_CLIENT_ID',
 	GOOGLE_OIDC_ISSUER: `${GOOGLE_ISSUER}, ou sur ce poste l’adresse du faux Google du banc de test, comme http://127.0.0.1:7080, sans « / » final`,
 	NEXT_PUBLIC_SITE_URL: `${DEPLOYED_ORIGINS.join(', ')} ou une adresse de ce poste comme http://localhost:${DEFAULT_PORT}, sans « / » final`,
 	PAYLOAD_SECRET: `au moins ${SECRET_MIN_LENGTH} caractères, par exemple la sortie de « openssl rand -hex 32 »`,
@@ -594,6 +604,8 @@ const schema = z.object({
 		.refine(value => finDuNettoyage(value) !== undefined, { error: 'illisible' })
 		.optional(),
 	DATABASE_URI: required.refine(value => postgresUrl(value) !== undefined, { error: 'illisible' }),
+	GOOGLE_CLIENT_ID: z.string().optional(),
+	GOOGLE_CLIENT_SECRET: z.string().optional(),
 	GOOGLE_OIDC_ISSUER: z
 		.string()
 		.refine(value => oidcIssuer(value) !== undefined, { error: 'refusée' })
@@ -664,6 +676,17 @@ export function parseServerEnv(source: RawEnv): ServerEnv {
 		})
 	}
 
+	// The client of the Google sign-in is both halves or nothing: one alone could never sign anybody in.
+	for (const [present, absente] of [
+		['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'],
+		['GOOGLE_CLIENT_SECRET', 'GOOGLE_CLIENT_ID'],
+	] as const)
+		if (raw[present] !== undefined && raw[absente] === undefined)
+			problems.push({
+				variable: absente,
+				problem: `${ABSENT}, alors que ${present} est réglée. Attendu : ${EXPECTED[absente]}.`,
+			})
+
 	// Nothing reaches the live instance of Umami from a site that is not the site, and no instance
 	// of this machine stands in for it on a deployed one.
 	const umami = parsed.success ? umamiFromEnv(raw.UMAMI_ORIGIN, raw.NEXT_PUBLIC_SITE_URL) : undefined
@@ -692,6 +715,10 @@ export function parseServerEnv(source: RawEnv): ServerEnv {
 		authVerify: parsed.data.AUTH_VERIFY?.trim().toLowerCase() !== 'off',
 		databaseUri: parsed.data.DATABASE_URI,
 		googleIssuer: issuer?.issuer ?? GOOGLE_ISSUER,
+		...(raw.GOOGLE_CLIENT_ID !== undefined &&
+			raw.GOOGLE_CLIENT_SECRET !== undefined && {
+				google: { clientId: raw.GOOGLE_CLIENT_ID.trim(), clientSecret: raw.GOOGLE_CLIENT_SECRET.trim() },
+			}),
 		localDatabase: isLocalDatabase(parsed.data.DATABASE_URI),
 		...(mail && { mail }),
 		payloadSecret: parsed.data.PAYLOAD_SECRET,
@@ -715,6 +742,8 @@ function processEnv(): RawEnv {
 		BASCULE_LE: process.env.BASCULE_LE,
 		DATABASE_URI: process.env.DATABASE_URI,
 		EMAIL_FROM: process.env.EMAIL_FROM,
+		GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
+		GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
 		GOOGLE_OIDC_ISSUER: process.env.GOOGLE_OIDC_ISSUER,
 		NEXT_PHASE: process.env.NEXT_PHASE,
 		NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,

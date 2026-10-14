@@ -141,7 +141,9 @@ describe('aucune donnée personnelle dans le journal, même glissée dans la sai
 		for (const glisse of [...glisses, compte.email, String(compte.id).padStart(8, '#')])
 			expect(texte).not.toContain(glisse)
 		for (const ligne of nouvelles)
-			expect(Object.keys(ligne).sort()).toEqual(['code', 'date', 'dureeMs', 'id', 'type'].filter(cle => cle in ligne))
+			expect(Object.keys(ligne).sort()).toEqual(
+				['code', 'date', 'dureeMs', 'id', 'methode', 'type'].filter(cle => cle in ligne)
+			)
 		expect(nouvelles.some(({ code }) => code === 'inconnu')).toBe(true)
 	})
 })

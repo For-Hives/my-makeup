@@ -437,3 +437,46 @@ Ce que la v3 change par rapport au site actuel est dans [`CHANGEMENTS-VOULUS.md`
 - **Intégration des tickets 072, 077, 078, 079, 080, 081, 082, 094, 097, 098, 111 et 143 dans `v3`.**
   - Sept fusions (le lot 065-067 n'est pas fusionné : tickets non faits, bloquants sans accès à la prod). Conflits résolus en gardant les deux côtés : `Pros.ts` (hooks du journal, de la session glissante et du frein), `profil/page.tsx`, `session.ts` (l'état de session de 080 et la date de fin de 079), `proxy.ts` (forme de l'adresse, nettoyage des cookies, porte de l'espace), `cookie-session.ts` (la règle de 080 appliquée à la pose du cookie), `env.ts`, `.env.exemple`, `README.md`, `changelog.json`, registre des changements, matrice d'accès, et `migrations/index.ts` (094 puis 077 ; le cliché de la dernière migration a perdu les colonnes de verrou de `admins`).
   - Trois essais adaptés après fusion : le cookie du banc survit à son jeton (`banc-comptes`), l'essai E13 coupe le renouvellement de 079, l'essai des en-têtes de cache ne suppose plus l'accueil statique.
+- **Ticket 083 fait : s'inscrire avec un email déjà utilisé ne révèle rien et ne crée pas de doublon.**
+  - Même mur, même durée (plancher de 1,5 s) et mêmes réponses du renvoi pour une adresse neuve ou prise ; la propriétaire reçoit « Tu as déjà un compte » ; les variantes Gmail comptent comme la même boîte ; un compte non confirmé qui se réinscrit reçoit de nouveau son lien. Renvoi : un par minute, 5 par jour par boîte.
+  - Vérifié : intégration `auth-inscription-email-pris` et `auth-inscription`, e2e `inscription.spec.ts`. Non vérifié : la durée réelle du relais Resend contre le plancher ; le texte du mail « déjà un compte » attend la validation d'Andy.
+- **Ticket 084 fait : les faux comptes d'inscription sont arrêtés avant d'encombrer l'annuaire.**
+  - La sixième inscription de l'heure depuis une adresse cliente reçoit un vrai 429 en français (le proxy la réécrit vers `/auth/signup/refus`) ; champ piège ; purge à 7 jours des comptes jamais confirmés et de leur profil vide ; refus au journal, au plus 3 lignes par heure, adresse et motif.
+  - Les freins sont en mémoire d'un seul processus. « Chaque refus au journal » est donc borné.
+- **Ticket 085 fait : le mot de passe oublié, de bout en bout.**
+  - Lien d'une heure, à usage unique (deux envois simultanés : un seul passe), code retiré de l'adresse par le proxy ; le mail part par la porte d'envoi unique avec texte et HTML ; un mail par compte et par 15 s.
+- **Ticket 086 fait : le mot de passe oublié ne révèle aucun compte et ferme les autres sessions.**
+  - Même réponse et même plancher de 300 ms pour toute adresse, aucun mail pour une adresse inconnue, frein par adresse cliente, lien de l'ancien site : « Ce lien n'est plus valable ».
+  - Reste : un compte bloqué n'est pas exclu de la demande de lien (89 refuse sa connexion, pas la demande).
+- **Ticket 087 fait : un compte de l'ancien site se connecte avec son mot de passe habituel, puis son hash est remplacé.**
+  - Le hash bcrypt est lu par une porte interne, jamais par l'API ; un nouveau mot de passe posé autrement (admin, lien de réinitialisation) efface l'ancien hash ; événement `heritee`. Vérifié en intégration (`auth-connexion-herite`).
+  - Reste : l'historique de la branche contient un faux hash bcrypt dans deux commits (fusion sans réécriture).
+- **Ticket 088 fait : la connexion répond dans le même temps, que le compte existe ou non.**
+  - Plancher de 300 ms et même travail de hachage pour les quatre cas de refus, y compris un compte sans mot de passe, sur le formulaire et sur la porte REST. Non revérifié en durées réelles après le dernier changement.
+- **Ticket 089 fait : un compte bloqué par l'admin ne peut plus se connecter.**
+  - Bon mot de passe : `compte-bloque` (403 en REST) ; mauvais : message générique ; bloquer ferme les sessions ; lignes `blocage` et `deblocage` au journal.
+  - Reste : la classe d'erreur `CompteBloque` n'est pas dans `loggingLevels` de Payload : chaque refus est journalisé au niveau erreur.
+- **Ticket 090 fait : une maquilleuse inscrite avec Google sur l'ancien site se connecte avec Google.**
+  - Client OpenID Connect écrit à la main (PKCE, état scellé, jeton RS256 vérifié), retour sur `/auth/google/retour` ; seul un compte d'origine Google est ouvert, les autres sont refusés sans rien lier ; champ `methode` au journal. Vérifié contre le faux Google du banc, jamais contre le vrai Google.
+  - Andy doit déclarer `<site>/auth/google/retour` dans la console Google (préprod comprise).
+- **Ticket 091 fait : une nouvelle maquilleuse s'inscrit avec Google et arrive dans l'onboarding.**
+  - Compte confirmé et profil vide créés en une transaction, aucun mail ; email non vérifié par Google : refus en français, aucun compte.
+  - Reste : un lien venu d'un autre site perd la session (Payload ignore le cookie sur une navigation `cross-site` sans `Origin`) ; à traiter par un ticket.
+- **Ticket 099 fait : la recherche par mot-clé, seule ou avec une ville.**
+  - Classement porté de l'ancienne API (accents ignorés, une faute par 5 lettres, mots vides ignorés) ; l'état « aucun résultat » propose des suites ; le texte saisi n'est ni journalisé ni mesuré.
+- **Ticket 100 fait : la recherche par pages de 20, avec état d'erreur et frein.**
+  - Pages de 20 sans doublon, « La recherche n'a pas abouti » avec « Réessayer », 429 en français à la 61e recherche de la minute par adresse. p95 de 57 ms sur 500 profils, classement en mémoire seulement.
+  - Reste : la borne de 50 Ko est lue en octets transmis (12,7 Ko en gzip) ; le cache de données de Next refuse plus de 2 Mo d'annuaire.
+- **Ticket 101 fait : le profil public est rendu par le serveur.**
+  - En-tête, description et zone, un seul h1, aucune coordonnée non publiée dans la page.
+- **Ticket 102 fait : les sections du profil public.**
+  - Compétences, parcours, langues, prestations et prix (en liste), réseaux, coordonnées publiées ; les 12 profils du banc sans « undefined » ni titre orphelin.
+  - Reste : le profil brouillon ou masqué répond encore 404 (ticket 104) ; « Demander un devis » n'est dans aucun ticket.
+- **Ticket 103 : galerie du profil, pas terminé.**
+  - Parcours clavier et geste annoncés « Photo n sur N », section absente sans galerie ; mais aucune image rendue n'a été vue, l'optimiseur du banc répond 400 (hôte du stockage refusé). Le ticket reste à finir.
+- **Intégration des tickets 083, 084, 085, 086, 087, 088, 089, 090, 091, 099, 100, 101, 102 dans `v3`.**
+  - Sept fusions ; le lot 065-067 n'est pas fusionné (tickets non faits, critères qui demandent une copie fraîche de la prod). Conflits résolus en gardant les deux côtés : journal d'authentification (types, codes, méthode, libellés), `Pros.ts` (hooks), `connexion.ts`, `proxy.ts`, `index.ts` des migrations, documents, notes de version. Le lot 103 est fusionné avec le lot 101-102.
+  - Les cinq migrations de l'énumération du journal partaient du même instantané : une migration d'intégration `integration_vague4` pose l'instantané de la somme et remet les valeurs de `enum_auth_evenements_type` dans l'ordre de la collection.
+  - Vérifié sur `v3` fusionné : `bun run check`, `typecheck`, `test` (2 195 verts, 1 sauté), `test:ci-garde` (442 verts), `build`, `schema:derive` sans dérive. Intégration sur le banc, `--timeout 60000` : 1 699 verts sur 1 702 au premier passage ; les trois échecs sont corrigés (les descentes des migrations du journal s'enchaînent, la clé `methode` entre dans l'essai du journal, le profil brouillon `vide` n'est pas lu avant le ticket 104) et les trois fichiers repassent. Bout en bout, un seul worker : 207 verts, 1 rouge, `tranche-profil-importe`.
+  - Ce rouge n'est pas de cette vague : il existe déjà sur `2b494d4` quand `jeu-du-banc` et `parite-urls` passent avant lui. Le jeu du banc tient les comptes 900001 à 900004 et les slugs `zoe-lefevre` et `ines-morel`, que l'import de l'essai refuse ou compte en trop (parité incomplète, code 4). L'essai passe seul. À traiter par un ticket (isoler l'import ou vider le jeu avant lui).
+  - Les essais de la page de profil retirent maintenant leurs profils à la fin : laissés dans le banc, ils faisaient passer d'autres essais de recherche à la page 2 (pages de 20).

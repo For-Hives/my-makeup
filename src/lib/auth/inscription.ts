@@ -98,8 +98,13 @@ export function validerInscription(entree: {
 	return { ok: false, erreurs }
 }
 
-/** The codes of a sign-up that failed for a reason that is not one field, and what each says. */
-export const CODES_ECHEC_INSCRIPTION = ['email-deja-pris', 'email-non-envoye', 'service-indisponible'] as const
+/** The codes of a sign-up that failed for a reason that is not one field, and what each says. The code « email-deja-pris » is the answer only when the confirmation is off (ticket 083). */
+export const CODES_ECHEC_INSCRIPTION = [
+	'email-deja-pris',
+	'email-non-envoye',
+	'service-indisponible',
+	'trop-de-tentatives',
+] as const
 export type CodeEchecInscription = (typeof CODES_ECHEC_INSCRIPTION)[number]
 
 export const MESSAGES_ECHEC_INSCRIPTION: Record<CodeEchecInscription, string> = {
@@ -107,4 +112,12 @@ export const MESSAGES_ECHEC_INSCRIPTION: Record<CodeEchecInscription, string> = 
 	'email-non-envoye':
 		'L’email de confirmation n’a pas pu partir. Ton compte n’est pas créé : réessaie dans un instant.',
 	'service-indisponible': 'Le service est momentanément indisponible, réessaie dans quelques minutes.',
+	'trop-de-tentatives': 'Trop d’inscriptions depuis cette adresse. Réessaie un peu plus tard, dans une heure au plus.',
 }
+
+/**
+ * The name of the trap field (ticket 084): a field a person never sees and never fills, so whoever
+ * fills it is a script. Its name is not one a browser fills by itself (no « url », « phone »,
+ * « company », « address »).
+ */
+export const CHAMP_PIEGE = 'commentaire'

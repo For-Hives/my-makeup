@@ -1,8 +1,11 @@
 import config from '@payload-config'
 import type { Metadata } from 'next'
+import { headers } from 'next/headers'
 import Link from 'next/link'
 import { getPayload } from 'payload'
-import { confirmerLEmail, type ResultatDeConfirmation } from '@/lib/auth/confirmation'
+import { confirmerSousFrein, type ResultatDeConfirmation } from '@/lib/auth/confirmation'
+import { freinDeConfirmation } from '@/lib/auth/freins-inscription'
+import { ipClient } from '@/lib/auth/ip-client'
 import { journalDe } from '@/lib/auth/journal'
 import { PAGE_D_ACCUEIL_DU_COMPTE } from '@/lib/auth/retour'
 
@@ -35,7 +38,13 @@ export default async function ConfirmationDeLEmail({
 }) {
 	const { code } = await searchParams
 	const payload = await getPayload({ config })
-	const resultat = await confirmerLEmail(payload, code, journalDe(payload))
+	const resultat = await confirmerSousFrein(
+		payload,
+		code,
+		freinDeConfirmation,
+		ipClient(await headers()),
+		journalDe(payload)
+	)
 	const connexion = `/auth/signin?callbackUrl=${encodeURIComponent(PAGE_D_ACCUEIL_DU_COMPTE)}`
 
 	return (

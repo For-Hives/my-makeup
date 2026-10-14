@@ -95,3 +95,13 @@ export function creerFrein({ nom, limite, fenetreMs, clesMax = CLES_PAR_DEFAUT }
 
 /** The sign-in: 10 failures per address and per 15 minutes (plan 01 §2.3). */
 export const freinDeConnexion: Frein = creerFrein({ nom: 'connexion', limite: 10, fenetreMs: 15 * 60 * 1000 })
+
+/** The request of a link for a forgotten password: 10 per address and per 15 minutes, every request counted (ticket 086). */
+export const freinDeLOubli: Frein = creerFrein({ nom: 'mot-de-passe-oublie', limite: 10, fenetreMs: 15 * 60 * 1000 })
+
+/** The choice of the new password: 10 failures per address and per 15 minutes (ticket 086). */
+export const freinDeLaReinitialisation: Frein = creerFrein({
+	nom: 'reinitialisation',
+	limite: 10,
+	fenetreMs: 15 * 60 * 1000,
+})

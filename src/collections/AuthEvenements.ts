@@ -1,7 +1,7 @@
 import type { CollectionConfig } from 'payload'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import { adminSeulement, estAdmin } from '../lib/acces'
-import { CODES_EVENEMENT, TYPES_EVENEMENT } from '../lib/auth/journal'
+import { CODES_EVENEMENT, METHODES_EVENEMENT, TYPES_EVENEMENT } from '../lib/auth/journal'
 
 const LIBELLES_DES_TYPES: Record<(typeof TYPES_EVENEMENT)[number], string> = {
 	connexion: 'Connexion',
@@ -9,19 +9,36 @@ const LIBELLES_DES_TYPES: Record<(typeof TYPES_EVENEMENT)[number], string> = {
 	'deconnexion-partout': 'Déconnexion de tous les appareils',
 	inscription: 'Inscription',
 	confirmation: 'Confirmation de l’email',
+	renvoi: 'Renvoi de l’email de confirmation',
+	'mot-de-passe-oublie': 'Demande de lien de mot de passe oublié',
+	reinitialisation: 'Nouveau mot de passe',
+	blocage: 'Compte bloqué par un admin',
+	deblocage: 'Compte débloqué par un admin',
 }
 
 const LIBELLES_DES_CODES: Record<(typeof CODES_EVENEMENT)[number], string> = {
 	ok: 'Réussi',
+	heritee: 'Réussi, mot de passe de l’ancien site',
 	'identifiants-invalides': 'Identifiants invalides',
 	'trop-de-tentatives': 'Trop de tentatives',
 	'service-indisponible': 'Service indisponible',
 	'email-non-confirme': 'Email non confirmé',
+	'compte-bloque': 'Compte bloqué',
 	'donnees-invalides': 'Données invalides',
 	'email-deja-pris': 'Email déjà pris',
 	'deja-confirme': 'Déjà confirmé',
 	'lien-invalide': 'Lien invalide',
+	'email-non-verifie': 'Email non vérifié par Google',
+	'compte-refuse': 'Compte refusé pour Google',
+	annule: 'Annulé chez Google',
+	'retour-invalide': 'Retour de Google invalide',
 	inconnu: 'Inconnu',
+	'champ-piege': 'Champ piège rempli',
+}
+
+const LIBELLES_DES_METHODES: Record<(typeof METHODES_EVENEMENT)[number], string> = {
+	'mot-de-passe': 'Mot de passe',
+	google: 'Google',
 }
 
 /**
@@ -39,7 +56,7 @@ export const AuthEvenements: CollectionConfig<'auth-evenements'> = {
 	slug: 'auth-evenements',
 	labels: { singular: 'Événement d’authentification', plural: 'Journal d’authentification' },
 	admin: {
-		defaultColumns: ['date', 'type', 'code', 'dureeMs'],
+		defaultColumns: ['date', 'type', 'methode', 'code', 'dureeMs'],
 		hidden: ({ user }) => !estAdmin(user as Parameters<typeof estAdmin>[0]),
 	},
 	defaultSort: '-date',
@@ -66,6 +83,14 @@ export const AuthEvenements: CollectionConfig<'auth-evenements'> = {
 			required: true,
 			index: true,
 			options: CODES_EVENEMENT.map(code => ({ label: LIBELLES_DES_CODES[code], value: code })),
+		},
+		{
+			// Ticket 090. Rows older than the Google sign-in have none.
+			name: 'methode',
+			label: 'Méthode',
+			type: 'select',
+			index: true,
+			options: METHODES_EVENEMENT.map(methode => ({ label: LIBELLES_DES_METHODES[methode], value: methode })),
 		},
 		{ name: 'dureeMs', label: 'Durée (ms)', type: 'number', min: 0 },
 		{

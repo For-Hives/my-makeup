@@ -8,6 +8,10 @@ import {
 	VARIABLE_DE_BASCULE,
 } from '@/lib/auth/cookies-herites'
 import { COOKIE_DE_SESSION, decisionDeLEspace } from '@/lib/auth/espace-ferme'
+import { ipClient } from '@/lib/auth/ip-client'
+import { COOKIE_DE_REINITIALISATION, planDuLien } from '@/lib/auth/mot-de-passe-oublie'
+import { CHEMIN_DE_L_INSCRIPTION, CHEMIN_DU_REFUS, secondesAvantUneInscription } from '@/lib/auth/refus-inscription'
+import { freinerLaRecherche } from '@/lib/recherche/frein'
 import { robotsPourChemin } from '@/lib/seo/robots'
 import { redirectionDeForme } from '@/lib/urls/forme'
 
@@ -18,8 +22,14 @@ import { redirectionDeForme } from '@/lib/urls/forme'
  * - The private pages of the space answer one redirection to the sign-in page when no session cookie
  *   comes with the request (ticket 075), or when its end date has passed (ticket 080: with the
  *   « session expirée » message). The authoritative check is the page's own (`exigerMaquilleuse`).
+ * - The link of a forgotten-password mail (`/auth/reinitialiser?code=…`) answers one redirection to the bare
+ *   page, the code kept in a cookie of that page only (ticket 085): it never reaches a page, the audience
+ *   measurement, the history or a Referer.
+ * - The search answers 429, in French, past 60 requests a minute from one address (ticket 100). No other
+ *   page is braked.
  * - The cookies of the old authentication are expired on the first request, and the sign-in page tells
  *   once to sign in again (ticket 081). The back-office, the API and the files are left alone.
+ * - A sign-up past the 5 an hour of its client address is sent to the route that answers 429 (ticket 084).
  * - Every other response gets the robots directive (ticket 070). It reads APP_ENV at run time: the
  *   pre-production gets its variables after the build. The paths of the account and of the search
  *   answer noindex everywhere.
@@ -38,6 +48,13 @@ export function proxy(requete: NextRequest) {
 		if (consigneDeForme) redirectionDeForme.headers.set('X-Robots-Tag', consigneDeForme)
 		return redirectionDeForme
 	}
+	const freinee = freinerLaRecherche({ chemin: pathname, methode: requete.method, entetes: requete.headers })
+	if (freinee) {
+		const reponseFreinee = new NextResponse(freinee.corps, { status: freinee.status, headers: freinee.entetes })
+		const consigneFreinee = robotsPourChemin(pathname, { APP_ENV: process.env.APP_ENV })
+		if (consigneFreinee) reponseFreinee.headers.set('X-Robots-Tag', consigneFreinee)
+		return reponseFreinee
+	}
 	const nettoyage = planDeNettoyage({
 		chemin: pathname,
 		noms: requete.cookies.getAll().map(cookie => cookie.name),
@@ -49,6 +66,15 @@ export function proxy(requete: NextRequest) {
 	const entetes = new Headers(requete.headers)
 	entetes.delete(ENTETE_DE_MESSAGE)
 	if (nettoyage.afficherLeMessage) entetes.set(ENTETE_DE_MESSAGE, '1')
+	if (
+		requete.method === 'POST' &&
+		pathname === CHEMIN_DE_L_INSCRIPTION &&
+		secondesAvantUneInscription(ipClient(requete.headers)) !== undefined
+	) {
+		// Past 5 sign-ups an hour from this address (ticket 084): a Server Action cannot answer 429
+		// itself, so the request is sent to the route that does, before the action runs.
+		return NextResponse.rewrite(new URL(CHEMIN_DU_REFUS, requete.url ?? requete.nextUrl.href))
+	}
 	const avecLeNettoyage = (reponse: NextResponse): NextResponse => {
 		for (const nom of nettoyage.aEffacer) reponse.cookies.set(cookieDEffacement(nom))
 		if (nettoyage.retenirLeMessage)
@@ -73,6 +99,28 @@ export function proxy(requete: NextRequest) {
 				secure: process.env.NODE_ENV === 'production',
 			})
 		return reponse
+	}
+	const lien = planDuLien(pathname, requete.nextUrl.searchParams)
+	if (lien) {
+		const cible = requete.nextUrl.clone()
+		cible.pathname = lien.aller
+		cible.search = ''
+		// 303: whatever the method, the next request is a GET of the bare page.
+		const redirection = NextResponse.redirect(cible, 303)
+		redirection.cookies.set({
+			name: COOKIE_DE_REINITIALISATION,
+			value: lien.cookie.valeur,
+			maxAge: lien.cookie.maxAgeS,
+			path: lien.aller,
+			httpOnly: true,
+			sameSite: 'lax',
+			secure: process.env.NODE_ENV === 'production',
+		})
+		redirection.headers.set('Cache-Control', 'private, no-store')
+		redirection.headers.set('Referrer-Policy', 'no-referrer')
+		const consigneDuLien = robotsPourChemin(pathname, { APP_ENV: process.env.APP_ENV })
+		if (consigneDuLien) redirection.headers.set('X-Robots-Tag', consigneDuLien)
+		return avecLeNettoyage(redirection)
 	}
 	const vers = decisionDeLEspace(
 		pathname,

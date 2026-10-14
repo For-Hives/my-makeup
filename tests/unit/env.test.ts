@@ -241,6 +241,37 @@ describe('trusted origins: the site, its pre-production and this machine, each f
 	})
 })
 
+describe('the client of the Google sign-in is both halves or nothing (ticket 090)', () => {
+	const ID = 'client-factice-du-banc'
+	const SECRET_DU_CLIENT = 'secret-factice-du-banc-de-test'
+
+	test('neither: no Google client, and the site still starts', () => {
+		expect(parseServerEnv(valid).google).toBeUndefined()
+		expect(parseServerEnv({ ...valid, GOOGLE_CLIENT_ID: ' ', GOOGLE_CLIENT_SECRET: '' }).google).toBeUndefined()
+	})
+
+	test('both: the client is read, trimmed', () => {
+		const env = parseServerEnv({ ...valid, GOOGLE_CLIENT_ID: ` ${ID} `, GOOGLE_CLIENT_SECRET: SECRET_DU_CLIENT })
+		expect(env.google).toEqual({ clientId: ID, clientSecret: SECRET_DU_CLIENT })
+	})
+
+	test.each([
+		['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'],
+		['GOOGLE_CLIENT_SECRET', 'GOOGLE_CLIENT_ID'],
+	] as const)('%s alone: refused, naming the one that is missing and never a value', (present, absente) => {
+		const error = (() => {
+			try {
+				parseServerEnv({ ...valid, [present]: 'valeur-que-personne-ne-doit-lire' })
+			} catch (e) {
+				return e as EnvError
+			}
+			throw new Error('should have thrown')
+		})()
+		expect(error.variables).toEqual([absente])
+		expect(error.message).not.toContain('valeur-que-personne-ne-doit-lire')
+	})
+})
+
 describe('the Google sign-in talks to Google, or on this machine to the fake Google of the test bench', () => {
 	const FAKE = 'http://127.0.0.1:7080'
 	const production: RawEnv = { ...valid, ...RELAIS_DU_SITE, DATABASE_URI: REMOTE_URI, NODE_ENV: 'production' }

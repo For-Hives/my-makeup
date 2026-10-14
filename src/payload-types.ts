@@ -184,7 +184,7 @@ export interface Pro {
   bloque?: boolean | null;
   derniereConnexion?: string | null;
   /**
-   * Comment le compte se connectait sur l’ancien site : local, google ou facebook.
+   * Comment le compte se connectait sur l’ancien site : local, google ou facebook. « google » aussi pour un compte créé par la connexion Google, qui ne s’ouvre que pour ceux-là.
    */
   legacyProvider?: string | null;
   strapiId?: number | null;
@@ -532,18 +532,36 @@ export interface Article {
  */
 export interface AuthEvenement {
   id: number;
-  type: 'connexion' | 'deconnexion' | 'deconnexion-partout' | 'inscription' | 'confirmation';
+  type:
+    | 'connexion'
+    | 'deconnexion'
+    | 'deconnexion-partout'
+    | 'inscription'
+    | 'confirmation'
+    | 'renvoi'
+    | 'mot-de-passe-oublie'
+    | 'reinitialisation'
+    | 'blocage'
+    | 'deblocage';
   code:
     | 'ok'
+    | 'heritee'
     | 'identifiants-invalides'
     | 'trop-de-tentatives'
     | 'service-indisponible'
     | 'email-non-confirme'
+    | 'compte-bloque'
     | 'donnees-invalides'
     | 'email-deja-pris'
     | 'deja-confirme'
     | 'lien-invalide'
-    | 'inconnu';
+    | 'email-non-verifie'
+    | 'compte-refuse'
+    | 'annule'
+    | 'retour-invalide'
+    | 'inconnu'
+    | 'champ-piege';
+  methode?: ('mot-de-passe' | 'google') | null;
   dureeMs?: number | null;
   date: string;
 }
@@ -928,6 +946,7 @@ export interface ArticlesSelect<T extends boolean = true> {
 export interface AuthEvenementsSelect<T extends boolean = true> {
   type?: T;
   code?: T;
+  methode?: T;
   dureeMs?: T;
   date?: T;
 }

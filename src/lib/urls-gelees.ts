@@ -457,6 +457,24 @@ export const FROZEN_URL_FAMILIES: readonly FrozenUrlFamily[] = [
 		examples: [{ from: '/auth/error' }, { from: '/auth/error?error=erreur-inconnue' }],
 	},
 
+	{
+		id: 'espace-google',
+		kind: 'espace',
+		patterns: ['/auth/google', '/auth/google/retour'],
+		statusToday: [404],
+		status: 307,
+		redirect: {
+			to: "Google (`accounts.google.com`) pour le départ ; pour le retour, l'espace ou `/auth/signin?error=<code>`",
+			family: 'espace-connexion',
+		},
+		servedBy: 'application',
+		today:
+			"Le bouton Google passait par NextAuth (`/api/auth/signin/google`, `/api/auth/callback/google`) ; ces deux chemins n'existent plus (404)",
+		after:
+			'Nouveau : départ et retour de la connexion Google (`/auth/google`, `/auth/google/retour`), `noindex`, `private, no-store`. Adresse de retour à déclarer dans la console Google',
+		examples: [{ from: '/auth/google/retour', to: '/auth/signin?error=google-echec' }],
+	},
+
 	// Routes of the old code
 	{
 		id: 'api-nextauth',

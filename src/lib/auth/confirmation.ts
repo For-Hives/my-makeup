@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto'
 import type { Payload } from 'payload'
+import type { Frein } from './frein'
 import type { Journaliser } from './journal'
 
 /**
@@ -42,6 +43,22 @@ export async function confirmerLEmail(
 		// The journal is not the confirmation's to fail.
 	}
 	return resultat
+}
+
+/**
+ * `confirmerLEmail` behind a brake by client address (ticket 084): past the limit, the answer is
+ * « lien invalide » with no read of the table and no row in the journal, so that a script knocking
+ * on the page with random codes fills neither.
+ */
+export async function confirmerSousFrein(
+	payload: Payload,
+	code: unknown,
+	frein: Frein,
+	cle: string,
+	journal?: Journaliser
+): Promise<ResultatDeConfirmation> {
+	if (!frein.prendre(cle).autorise) return 'lien-invalide'
+	return confirmerLEmail(payload, code, journal)
 }
 
 async function confirmer(payload: Payload, code: unknown): Promise<ResultatDeConfirmation> {

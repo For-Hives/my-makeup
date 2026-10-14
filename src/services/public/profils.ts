@@ -22,10 +22,23 @@
  */
 
 import type { Payload } from 'payload'
-import { formatZone, rayonKm } from '@/lib/format-zone'
+import { formatZone, rayonKm, villeAffichee } from '@/lib/format-zone'
 import { nomAffiche, texte } from '@/lib/profil/nom-affiche'
 import { estIndexable, estVisible, FILTRE_LISTE } from '@/lib/profil/visibilite'
+import {
+	contacts,
+	type ExperiencePublique,
+	experiences,
+	type FormationPublique,
+	formations,
+	type LienDeContact,
+	nomDArtisteAffiche,
+	noms,
+	type PrestationPublique,
+	prestations,
+} from '@/lib/profil/vue-publique'
 import type { PlaceDuProfil } from '@/lib/recherche/lieu'
+import { normaliserLesTextes, type TextesNormalises } from '@/lib/recherche/pertinence'
 import { estUnSlug } from '@/lib/slug'
 import type { Profil } from '@/payload-types'
 
@@ -59,6 +72,27 @@ export const CHAMPS_DE_LA_CARTE = {
  */
 export const CHAMPS_DE_LA_PHOTO = { url: true, width: true, height: true, filename: true, prefix: true } as const
 
+/**
+ * What the page of a profile reads (tickets 101 to 103): the fields above, her zone, her
+ * availability and her photos. The commune is chosen down to its name: its code and its centre
+ * stay in the database. The contact details are not here: they are read apart, and only when she
+ * published them (`lireLesCoordonneesPubliees`).
+ */
+export const CHAMPS_DE_LA_PAGE_DU_PROFIL = {
+	...CHAMPS_PUBLICS_DU_PROFIL,
+	commune: { nom: true },
+	rayonKm: true,
+	disponible: true,
+	photoPrincipale: true,
+	galerie: true,
+	reseaux: true,
+	prestations: true,
+	competences: true,
+	langues: true,
+	formations: true,
+	experiences: true,
+} as const
+
 /** The most profiles one read of a list gives, and the size of a page when none is asked. */
 export const LIMITE_MAX_DE_LA_LISTE = 100
 export const LIMITE_PAR_DEFAUT = 20
@@ -74,7 +108,29 @@ export interface ProfilPublic {
 	slug: string
 	/** The name of the h1 (src/lib/profil/nom-affiche.ts). */
 	nom: string
+	/** The artist name under the h1, only when it adds something to the name (`nomDArtisteAffiche`). */
+	nomArtiste: string | null
 	specialite: string | null
+	/** « Annecy », « Annecy et 30 km autour », or `null` (src/lib/format-zone.ts). */
+	zone: string | null
+	/** False only when she said so: an availability never set counts as available, as on the old site. */
+	disponible: boolean
+	/** Her main photo, or `null`: the page then shows the picture of the site. */
+	photo: PhotoDeCarte | null
+	/** The photos of her portfolio, in the order she gave, a photo that is gone left out. */
+	galerie: PhotoDeCarte[]
+	/** Her commune, or `null`. */
+	lieu: string | null
+	/** True when she gave a radius around her commune. */
+	seDeplace: boolean
+	/** The sections below hold only rows that say something, in the order she gave them. */
+	prestations: PrestationPublique[]
+	competences: string[]
+	langues: string[]
+	formations: FormationPublique[]
+	experiences: ExperiencePublique[]
+	/** Her networks, and her telephone and email only when she published them. */
+	liens: LienDeContact[]
 	description: string | null
 	/** Publishable: the page may be indexed. Otherwise it is shown in noindex. */
 	indexable: boolean
@@ -189,6 +245,36 @@ async function lireLesCoordonneesPubliees(payload: Payload, id: number): Promise
 }
 
 /**
+ * The photos a profile names (her main photo and her portfolio), by identifier, in one read; a photo that
+ * is gone, or has no address, is not in the map. Read by identifier, as `lireLesPhotos` does for the
+ * cards: the access rule of the media opens a photo to the public when it is asked by its identifier,
+ * and a profile the public reads names only its own photos.
+ */
+async function lireLesPhotosDuProfil(
+	payload: Payload,
+	identifiants: readonly (number | string | undefined)[]
+): Promise<PhotosParIdentifiant> {
+	const demandes = [...new Set(identifiants)].filter(
+		(identifiant): identifiant is number | string => identifiant !== undefined
+	)
+	const photos = new Map<number | string, PhotoDeCarte>()
+	if (demandes.length === 0) return photos
+	const { docs } = await payload.find({
+		collection: 'media',
+		where: { id: { in: demandes } },
+		select: CHAMPS_DE_LA_PHOTO,
+		depth: 0,
+		limit: LIMITE_MAX_DE_LA_LISTE,
+		pagination: false,
+		overrideAccess: true,
+	})
+	for (const media of docs)
+		if (typeof media.url === 'string' && media.url !== '')
+			photos.set(media.id, { url: media.url, width: media.width ?? null, height: media.height ?? null })
+	return photos
+}
+
+/**
  * The published profile of this slug, or `null`: unknown, not published, or not even a slug (an
  * old address by username gets its redirection in ticket 104).
  */
@@ -197,7 +283,7 @@ export async function lireLeProfilPublic(payload: Payload, slug: string): Promis
 	const { docs } = await payload.find({
 		collection: 'profils',
 		where: { slug: { equals: slug } },
-		select: { ...CHAMPS_PUBLICS_DU_PROFIL, id: true, statut: true, publiable: true },
+		select: { ...CHAMPS_DE_LA_PAGE_DU_PROFIL, id: true, statut: true, publiable: true },
 		depth: 0,
 		limit: 1,
 		pagination: false,
@@ -205,13 +291,75 @@ export async function lireLeProfilPublic(payload: Payload, slug: string): Promis
 	})
 	const profil = docs[0]
 	if (!profil || !estVisible(profil)) return null
+	const principale = identifiantDeLaPhoto(profil.photoPrincipale)
+	// The portfolio, in the order she gave; a photo named twice is shown twice.
+	const rangee = (profil.galerie ?? []).map(photo => identifiantDeLaPhoto(photo))
+	const photos = await lireLesPhotosDuProfil(payload, [principale, ...rangee])
+	return profilPublicDe(profil, {
+		photo: (principale !== undefined && photos.get(principale)) || null,
+		galerie: rangee.flatMap(identifiant => (identifiant !== undefined && photos.get(identifiant)) || []),
+		coordonnees: await lireLesCoordonneesPubliees(payload, profil.id),
+	})
+}
+
+/** What a profile read for its page holds: the fields of `CHAMPS_DE_LA_PAGE_DU_PROFIL` and the state. */
+export type ProfilDeLaPage = Pick<
+	Profil,
+	| 'slug'
+	| 'prenom'
+	| 'nom'
+	| 'nomArtiste'
+	| 'specialite'
+	| 'description'
+	| 'commune'
+	| 'rayonKm'
+	| 'disponible'
+	| 'photoPrincipale'
+	| 'galerie'
+	| 'reseaux'
+	| 'prestations'
+	| 'competences'
+	| 'langues'
+	| 'formations'
+	| 'experiences'
+	| 'statut'
+	| 'publiable'
+>
+
+/**
+ * The page of a profile from what was read: pure, so that a test gives it the profiles of the set
+ * without a database. The photos and the contact details are read apart (they are read by their own
+ * rules) and given here.
+ */
+export function profilPublicDe(
+	profil: ProfilDeLaPage,
+	lu: { photo: PhotoDeCarte | null; galerie: PhotoDeCarte[]; coordonnees: CoordonneesPubliques | null }
+): ProfilPublic {
+	const nom = nomAffiche(profil)
 	return {
 		slug: profil.slug,
-		nom: nomAffiche(profil),
+		nom,
+		nomArtiste: nomDArtisteAffiche(profil, nom),
 		specialite: texte(profil.specialite) || null,
+		zone: formatZone({ city: profil.commune?.nom, radius: profil.rayonKm }) || null,
+		disponible: profil.disponible !== false,
+		photo: lu.photo,
+		galerie: lu.galerie,
+		lieu: villeAffichee(profil.commune?.nom) || null,
+		seDeplace: villeAffichee(profil.commune?.nom) !== '' && rayonKm(profil.rayonKm) !== null,
+		prestations: prestations(profil.prestations),
+		competences: noms(profil.competences),
+		langues: noms(profil.langues),
+		formations: formations(profil.formations),
+		experiences: experiences(profil.experiences),
+		liens: contacts({
+			reseaux: profil.reseaux,
+			telephone: lu.coordonnees?.telephone,
+			email: lu.coordonnees?.email,
+		}),
 		description: texte(profil.description) || null,
 		indexable: estIndexable(profil),
-		coordonnees: await lireLesCoordonneesPubliees(payload, profil.id),
+		coordonnees: lu.coordonnees,
 	}
 }
 
@@ -247,6 +395,39 @@ export async function listerLesProfils(
 /** A listed profile with where she works: what the search by city ranks by. */
 export interface ProfilDeLAnnuaire extends PlaceDuProfil {
 	carte: CarteDeProfil
+	/**
+	 * What she wrote that a search by a word looks into (ticket 099). Beside the card, never in it: a card
+	 * is what a page renders, and carries none of this. Read only when asked (`avecLesTextes`).
+	 */
+	textes?: TextesNormalises
+}
+
+/** The fields a search by a word reads on top of a card: her texts, and no price, no contact, no link. */
+const CHAMPS_DE_LA_RECHERCHE = {
+	...CHAMPS_DE_LA_CARTE,
+	description: true,
+	competences: true,
+	prestations: true,
+} as const
+
+type ProfilCherche = ProfilDeLaCarte & Pick<Profil, 'description' | 'competences' | 'prestations'>
+
+/** The texts a search by a word looks into (the commune, the speciality, the description, the skills and the offers), normalised. */
+function textesDe(profil: ProfilCherche): TextesNormalises {
+	const noms = <T extends { nom?: string | null }>(liste: readonly T[] | null | undefined): string[] =>
+		(liste ?? []).map(element => texte(element.nom)).filter(nom => nom !== '')
+	const descriptions = <T extends { description?: string | null }>(liste: readonly T[] | null | undefined): string[] =>
+		(liste ?? []).map(element => texte(element.description)).filter(description => description !== '')
+	return normaliserLesTextes({
+		ville: texte(profil.commune?.nom),
+		specialite: texte(profil.specialite),
+		description: texte(profil.description),
+		competences: noms(profil.competences),
+		descriptionsDesCompetences: descriptions(profil.competences),
+		descriptionsDesPrestations: descriptions(profil.prestations),
+		nom: texte(profil.nom),
+		prenom: texte(profil.prenom),
+	})
 }
 
 /** The most pages of the directory one read goes through: 1 000 profiles, ten times the site today. */
@@ -256,15 +437,19 @@ const PAGES_MAX_DE_L_ANNUAIRE = 10
  * Every listed profile, most complete first, then most recently changed (ticket 098): what a search by
  * city places in its sections. Read in pages of 100, ten at most; the place of a profile is its
  * commune and the département the server computed from its INSEE code. A card carries no coordinate:
- * the centre of the commune stays here.
+ * the centre of the commune stays here. With `avecLesTextes` (ticket 099) each profile also carries the
+ * texts a search by a word looks into, beside its card.
  */
-export async function lireLAnnuaire(payload: Payload): Promise<ProfilDeLAnnuaire[]> {
+export async function lireLAnnuaire(
+	payload: Payload,
+	{ avecLesTextes = false }: { avecLesTextes?: boolean } = {}
+): Promise<ProfilDeLAnnuaire[]> {
 	const annuaire: ProfilDeLAnnuaire[] = []
 	for (let page = 1; page <= PAGES_MAX_DE_L_ANNUAIRE; page += 1) {
 		const resultat = await payload.find({
 			collection: 'profils',
 			where: FILTRE_LISTE,
-			select: CHAMPS_DE_LA_CARTE,
+			select: avecLesTextes ? CHAMPS_DE_LA_RECHERCHE : CHAMPS_DE_LA_CARTE,
 			sort: ['-completude', '-updatedAt', 'slug'],
 			depth: 0,
 			limit: LIMITE_MAX_DE_LA_LISTE,
@@ -279,6 +464,7 @@ export async function lireLAnnuaire(payload: Payload): Promise<ProfilDeLAnnuaire
 				ville: texte(profil.commune?.nom) || null,
 				departement: texte(profil.commune?.departement) || null,
 				seDeplace: texte(profil.commune?.nom) !== '' && rayonKm(profil.rayonKm) !== null,
+				...(avecLesTextes && { textes: textesDe(profil) }),
 			})
 		if (!resultat.hasNextPage) break
 	}

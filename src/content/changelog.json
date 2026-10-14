@@ -30,6 +30,41 @@
 			"id": "tu-restes-connectee-tant-que-tu-passes-dans-ton-espace-pe",
 			"type": "amelioration",
 			"text": "Tu restes connectée tant que tu passes dans ton espace, pendant 90 jours au plus."
+		},
+		{
+			"id": "si-ton-email-n-arrive-pas-tu-peux-le-renvoyer-depuis-la-p",
+			"type": "amelioration",
+			"text": "Si ton email n’arrive pas, tu peux le renvoyer depuis la page qui te demande de vérifier ta boîte mail."
+		},
+		{
+			"id": "s-inscrire-avec-l-adresse-de-quelqu-un-d-autre-ne-cree-pl",
+			"type": "correction",
+			"text": "S’inscrire avec l’adresse de quelqu’un d’autre ne crée plus de second compte, et les faux comptes jamais confirmés disparaissent au bout de 7 jours."
+		},
+		{
+			"id": "tu-peux-retrouver-l-acces-a-ton-compte-mot-de-passe-oubli",
+			"type": "amelioration",
+			"text": "Tu peux retrouver l’accès à ton compte : « Mot de passe oublié ? » t’envoie par email un lien, valable une heure, pour choisir un nouveau mot de passe, et tes autres appareils sont alors déconnectés."
+		},
+		{
+			"id": "avec-google-l-inscription-arrive-directement-dans-ton-acc",
+			"type": "amelioration",
+			"text": "Avec Google, l’inscription arrive directement dans ton accueil sans email de confirmation, et si Google n’a pas confirmé ton adresse, un message te le dit au lieu d’une page d’erreur."
+		},
+		{
+			"id": "quand-une-recherche-ne-trouve-personne-la-page-propose-ma",
+			"type": "amelioration",
+			"text": "Quand une recherche ne trouve personne, la page propose maintenant la zone voisine, et un lien pour créer ton profil si tu es maquilleuse."
+		},
+		{
+			"id": "sur-le-profil-d-une-maquilleuse-les-competences-langues-f",
+			"type": "amelioration",
+			"text": "Sur le profil d’une maquilleuse, les compétences, langues, formations, expériences, prestations avec leurs prix et réseaux sont lisibles dès l’ouverture de la page, même sans JavaScript."
+		},
+		{
+			"id": "le-portfolio-d-une-maquilleuse-se-parcourt-au-doigt-et-au",
+			"type": "amelioration",
+			"text": "Le portfolio d’une maquilleuse se parcourt au doigt et au clavier, avec les flèches, et annonce la photo affichée (« Photo 2 sur 6 »)."
 		}
 	],
 	"releases": []

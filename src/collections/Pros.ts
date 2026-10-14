@@ -1,15 +1,23 @@
 import { APIError, type CollectionBeforeDeleteHook, type CollectionConfig } from 'payload'
 import { adminOuSoiMeme, adminSeulement, champAdminSeulement, jamais } from '../lib/acces'
+import { fermerLesSessionsAuBlocage, noterLeBlocage, refuserUnCompteBloque } from '../lib/auth/compte-bloque'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import { freinerLaConnexion, rendreLaPlaceDeLaConnexion } from '../lib/auth/frein-payload'
+import {
+	effacerLeHashHeriteApresUnMotDePasse,
+	effacerLeHashHeriteAuRenouvellement,
+} from '../lib/auth/hash-herite-payload'
 import {
 	noterLaConnexionRest,
 	noterLEchecDeConnexionRest,
 	noterLeDebutDeLaConnexion,
 	retenirLaDerniereConnexion,
 } from '../lib/auth/journal-payload'
+import { DUREE_DU_LIEN_MS } from '../lib/auth/mot-de-passe-oublie'
+import { fermerLesPortesRestDeLOubli } from '../lib/auth/oubli-payload'
 import { premierCompteFerme } from '../lib/auth/premier-compte-ferme'
 import { DUREE_SESSION_S, prolongerSousPlafond, refuserApresLePlafond } from '../lib/auth/session-glissante'
+import { egaliserLeTravailRest, retenirLesEchecsRest } from '../lib/auth/temps-egalise-payload'
 import { contenuEmailConfirmation, SUJET_DE_CONFIRMATION } from '../lib/emails/confirmation'
 import { composerEmail } from '../lib/emails/gabarit'
 import { sessionsFermees } from './Admins'
@@ -55,6 +63,8 @@ export const compteSansProfilAvantSuppression: CollectionBeforeDeleteHook = asyn
  *   admin: no API reads or writes it, and Payload strips it from every read.
  * - Nobody creates an account through REST without being an admin: the sign-up of the site goes
  *   through the server (P5 tickets).
+ * - A blocked account (`bloque`) is turned away at the sign-in once its password is right, and blocking
+ *   closes its sessions (ticket 089, src/lib/auth/compte-bloque.ts).
  * - Creating an account creates its empty profile (collection `profils`), unless the creation
  *   says otherwise (`CONTEXTE_SANS_PROFIL`).
  *
@@ -77,6 +87,11 @@ export const Pros: CollectionConfig<'pros'> = {
 					process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
 				).html,
 		},
+		// The link of a forgotten password lives one hour and serves once (tickets 085 and 086). The request
+		// goes through the site (`demanderUnLien`), which sends the mail by the one door of the site; the native REST doors are closed (`fermerLesPortesRestDeLOubli`).
+		forgotPassword: {
+			expiration: DUREE_DU_LIEN_MS,
+		},
 		// No lock of the account: the brake is by client address (`freinerLaConnexion`), so that
 		// ten wrong passwords typed by anyone never lock the account they aimed at (AUTH-05).
 		maxLoginAttempts: 0,
@@ -97,11 +112,20 @@ export const Pros: CollectionConfig<'pros'> = {
 	},
 	endpoints: [premierCompteFerme],
 	hooks: {
-		afterChange: [profilALaCreationDuCompte],
+		afterChange: [profilALaCreationDuCompte, effacerLeHashHeriteApresUnMotDePasse, noterLeBlocage],
 		afterLogin: [rendreLaPlaceDeLaConnexion(), retenirLaDerniereConnexion, noterLaConnexionRest],
-		afterError: [noterLEchecDeConnexionRest],
+		afterError: [retenirLesEchecsRest(), noterLEchecDeConnexionRest],
+		beforeChange: [fermerLesSessionsAuBlocage],
+		beforeLogin: [refuserUnCompteBloque],
 		beforeDelete: [compteSansProfilAvantSuppression],
-		beforeOperation: [noterLeDebutDeLaConnexion, freinerLaConnexion(), refuserApresLePlafond],
+		beforeValidate: [effacerLeHashHeriteAuRenouvellement],
+		beforeOperation: [
+			noterLeDebutDeLaConnexion,
+			freinerLaConnexion(),
+			egaliserLeTravailRest(),
+			refuserApresLePlafond,
+			fermerLesPortesRestDeLOubli,
+		],
 		refresh: [prolongerSousPlafond],
 	},
 	fields: [
@@ -133,7 +157,8 @@ export const Pros: CollectionConfig<'pros'> = {
 			access: { create: jamais, update: jamais },
 			admin: {
 				readOnly: true,
-				description: 'Comment le compte se connectait sur l’ancien site : local, google ou facebook.',
+				description:
+					'Comment le compte se connectait sur l’ancien site : local, google ou facebook. « google » aussi pour un compte créé par la connexion Google, qui ne s’ouvre que pour ceux-là.',
 			},
 		},
 		{
