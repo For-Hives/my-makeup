@@ -4,11 +4,18 @@
  * error, or anything typed in the URL, is never displayed.
  */
 
-export const CODES_ERREUR = ['identifiants-invalides', 'trop-de-tentatives', 'service-indisponible'] as const
+export const CODES_ERREUR = [
+	'identifiants-invalides',
+	'email-non-confirme',
+	'trop-de-tentatives',
+	'service-indisponible',
+] as const
 export type CodeErreur = (typeof CODES_ERREUR)[number]
 
 const MESSAGES: Record<CodeErreur, string> = {
 	'identifiants-invalides': 'Email ou mot de passe incorrect.',
+	'email-non-confirme':
+		'Ton adresse email n’est pas encore confirmée. Regarde ta boîte mail (et tes spams) : le lien du mail active ton compte.',
 	'trop-de-tentatives': 'Trop d’essais, réessaie dans quelques minutes.',
 	'service-indisponible': 'Le service est momentanément indisponible, réessaie dans quelques minutes.',
 }

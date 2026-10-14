@@ -8,6 +8,8 @@ import {
 	noterLeDebutDeLaConnexion,
 	retenirLaDerniereConnexion,
 } from '../lib/auth/journal-payload'
+import { contenuEmailConfirmation, SUJET_DE_CONFIRMATION } from '../lib/emails/confirmation'
+import { composerEmail } from '../lib/emails/gabarit'
 import { sessionsFermees } from './Admins'
 import { profilALaCreationDuCompte } from './Profils'
 
@@ -65,15 +67,25 @@ export const compteSansProfilAvantSuppression: CollectionBeforeDeleteHook = asyn
  * - Creating an account creates its empty profile (collection `profils`), unless the creation
  *   says otherwise (`CONTEXTE_SANS_PROFIL`).
  *
- * `auth.verify` is on for good: `_verified` exists only while it is (SCHEMA.md, §5.1). How the
- * confirmation email reads, and when the site asks for it, belong to ticket 082.
+ * `auth.verify` is on for good: `_verified` exists only while it is (SCHEMA.md, §5.1). Whether a
+ * new account must confirm its email is the switch AUTH_VERIFY, read by the sign-up
+ * (src/lib/auth/inscription-payload.ts); the mail of the sign-up leaves through the door of ticket
+ * 073. The mail Payload sends itself, for an account an admin creates in the panel, reads the same
+ * and links to the page of the site that confirms the account, not to the admin panel.
  */
 export const Pros: CollectionConfig<'pros'> = {
 	slug: 'pros',
 	labels: { singular: 'Compte maquilleuse', plural: 'Comptes maquilleuses' },
 	admin: { useAsTitle: 'email', defaultColumns: ['email', 'nom', '_verified', 'bloque'] },
 	auth: {
-		verify: true,
+		verify: {
+			generateEmailSubject: () => SUJET_DE_CONFIRMATION,
+			generateEmailHTML: ({ token }) =>
+				composerEmail(
+					contenuEmailConfirmation(String(token)),
+					process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
+				).html,
+		},
 		// No lock of the account: the brake is by client address (`freinerLaConnexion`), so that
 		// ten wrong passwords typed by anyone never lock the account they aimed at (AUTH-05).
 		maxLoginAttempts: 0,

@@ -1,4 +1,4 @@
-import { AuthenticationError } from 'payload'
+import { AuthenticationError, UnverifiedEmail } from 'payload'
 import type { CodeErreur } from './erreurs'
 import { type Frein, freinDeConnexion } from './frein'
 import { ipClient } from './ip-client'
@@ -31,8 +31,9 @@ const estTexte = (valeur: unknown): valeur is string => typeof valeur === 'strin
  *   the sign-in succeeds.
  * - No composition rule on the password: an old account has one the sign-up rule would refuse
  *   (AUTH-11). The email is trimmed and lower-cased by Payload.
- * - Every refusal of the account (unknown address, wrong password, address not confirmed) gives the
- *   same code: nothing says which one it is. The Local API is called with no `req`, so Payload's
+ * - Every refusal of the account (unknown address, wrong password) gives the same code: nothing says
+ *   which one it is. One exception, on purpose (ticket 082): an address not yet confirmed, with the
+ *   right password, says so, because the visitor has to go and click the link of her mail. The Local API is called with no `req`, so Payload's
  *   own brake hook (REST door) does not count this attempt a second time.
  * - Gives back the token for the caller to put in the cookie. It never gives back the account.
  */
@@ -59,6 +60,9 @@ async function noterLaTentative(journal: Journaliser | undefined, code: CodeEven
  */
 export function codeDeLEchec(erreur: unknown): CodeErreur {
 	const statut = (erreur as { status?: number } | null)?.status
+	// Payload raises this one only after the password has been checked and found right: saying so
+	// tells nothing to someone who does not hold the password.
+	if (erreur instanceof UnverifiedEmail) return 'email-non-confirme'
 	if (statut === 429) return 'trop-de-tentatives'
 	if (erreur instanceof AuthenticationError || (statut !== undefined && statut >= 400 && statut < 500))
 		return 'identifiants-invalides'
@@ -93,8 +97,8 @@ async function tenterLaConnexion({
 		return { ok: true, token }
 	} catch (erreur) {
 		const code = codeDeLEchec(erreur)
-		// Not the visitor's failure: the place goes back.
-		if (code === 'service-indisponible') frein.rendre(cle, maintenant)
+		// Not the visitor's failure, or a right password: the place goes back.
+		if (code === 'service-indisponible' || code === 'email-non-confirme') frein.rendre(cle, maintenant)
 		return { ok: false, code }
 	}
 }

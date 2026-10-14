@@ -15,6 +15,16 @@
 			"id": "la-deconnexion-ferme-vraiment-ta-session-et-te-ramene-a-l",
 			"type": "correction",
 			"text": "La déconnexion ferme vraiment ta session, et te ramène à l’accueil au lieu d’une page introuvable."
+		},
+		{
+			"id": "quand-tu-t-inscris-tu-recois-un-email-pour-confirmer-ton",
+			"type": "ajout",
+			"text": "Quand tu t’inscris, tu reçois un email pour confirmer ton adresse, puis tu arrives sur ton espace."
+		},
+		{
+			"id": "a-l-inscription-ton-nom-est-libre-et-ton-mot-de-passe-n-a",
+			"type": "amelioration",
+			"text": "À l’inscription, ton nom est libre et ton mot de passe n’a plus besoin de majuscule ni de chiffre : huit caractères suffisent."
 		}
 	],
 	"releases": []

@@ -27,6 +27,7 @@ import type { VersionSources } from './version'
 export type RawEnv = Partial<
 	Record<
 		| 'APP_ENV'
+		| 'AUTH_VERIFY'
 		| 'DATABASE_URI'
 		| 'EMAIL_FROM'
 		| 'GOOGLE_OIDC_ISSUER'
@@ -91,6 +92,12 @@ export type PreprodEnv = {
 }
 
 export type ServerEnv = {
+	/**
+	 * Whether a new account must confirm its email before it can sign in (AUTH_VERIFY, ticket 082).
+	 * On unless AUTH_VERIFY is « off »: the operating switch of the sign-up, for a day when the mail
+	 * relay is down. Off, a new account is confirmed on the spot and signed in.
+	 */
+	authVerify: boolean
 	databaseUri: string
 	/**
 	 * The OpenID Connect issuer the Google sign-in talks to: Google itself, or on this machine the
@@ -189,6 +196,7 @@ const DEFAULT_SENDER_NAME = 'My Makeup'
 const EXPECTED = {
 	APP_ENV:
 		'« test » sur le banc de test, « preprod » sur la préprod, « prod » sur le site en ligne, ou absente sur un poste',
+	AUTH_VERIFY: '« on » (la valeur par défaut) ou « off »',
 	DATABASE_URI: 'postgres://UTILISATEUR:MOT_DE_PASSE@HÔTE:PORT/BASE',
 	EMAIL_FROM: '« Nom <adresse@domaine> », ou une adresse seule',
 	GOOGLE_OIDC_ISSUER: `${GOOGLE_ISSUER}, ou sur ce poste l’adresse du faux Google du banc de test, comme http://127.0.0.1:7080, sans « / » final`,
@@ -516,6 +524,10 @@ function preprodEnv(raw: RawEnv, problems: { variable: string; problem: string }
 const required = z.string({ error: ABSENT })
 
 const schema = z.object({
+	AUTH_VERIFY: z
+		.string()
+		.refine(value => ['on', 'off'].includes(value.trim().toLowerCase()), { error: 'illisible' })
+		.optional(),
 	DATABASE_URI: required.refine(value => postgresUrl(value) !== undefined, { error: 'illisible' }),
 	GOOGLE_OIDC_ISSUER: z
 		.string()
@@ -586,6 +598,7 @@ export function parseServerEnv(source: RawEnv): ServerEnv {
 	if (!parsed.success || problems.length > 0) throw new EnvError(problems)
 
 	return {
+		authVerify: parsed.data.AUTH_VERIFY?.trim().toLowerCase() !== 'off',
 		databaseUri: parsed.data.DATABASE_URI,
 		googleIssuer: issuer?.issuer ?? GOOGLE_ISSUER,
 		localDatabase: isLocalDatabase(parsed.data.DATABASE_URI),
@@ -606,6 +619,7 @@ export function parseServerEnv(source: RawEnv): ServerEnv {
 function processEnv(): RawEnv {
 	return {
 		APP_ENV: process.env.APP_ENV,
+		AUTH_VERIFY: process.env.AUTH_VERIFY,
 		DATABASE_URI: process.env.DATABASE_URI,
 		EMAIL_FROM: process.env.EMAIL_FROM,
 		GOOGLE_OIDC_ISSUER: process.env.GOOGLE_OIDC_ISSUER,
@@ -642,6 +656,8 @@ export function serverEnv(source: RawEnv = processEnv()): ServerEnv {
 	const raw = withoutBlanks(source)
 	const site = raw.NEXT_PUBLIC_SITE_URL === undefined ? undefined : siteOrigin(raw.NEXT_PUBLIC_SITE_URL)
 	return {
+		// Not read while Next builds, where nothing signs anybody up: the server reads it when it starts.
+		authVerify: true,
 		databaseUri: raw.DATABASE_URI ?? '',
 		// Not read while Next builds, where nothing talks to a provider: the server reads it when it starts.
 		googleIssuer: GOOGLE_ISSUER,

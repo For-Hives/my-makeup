@@ -21,15 +21,15 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   CREATE INDEX "payload_locked_documents_rels_auth_evenements_id_idx" ON "payload_locked_documents_rels" USING btree ("auth_evenements_id");`)
 }
 
-export async function down({ db, payload, req }: MigrateDownArgs): Promise<void> {
+export async function down({ db }: MigrateDownArgs): Promise<void> {
+	// Written by hand: the order Payload generated drops the table, and its constraint with it, before it drops the constraint.
 	await db.execute(sql`
-   ALTER TABLE "auth_evenements" DISABLE ROW LEVEL SECURITY;
-  DROP TABLE "auth_evenements" CASCADE;
-  ALTER TABLE "payload_locked_documents_rels" DROP CONSTRAINT "payload_locked_documents_rels_auth_evenements_fk";
-  
+   ALTER TABLE "payload_locked_documents_rels" DROP CONSTRAINT "payload_locked_documents_rels_auth_evenements_fk";
   DROP INDEX "payload_locked_documents_rels_auth_evenements_id_idx";
-  ALTER TABLE "pros" DROP COLUMN "derniere_connexion";
   ALTER TABLE "payload_locked_documents_rels" DROP COLUMN "auth_evenements_id";
+  ALTER TABLE "pros" DROP COLUMN "derniere_connexion";
+  ALTER TABLE "auth_evenements" DISABLE ROW LEVEL SECURITY;
+  DROP TABLE "auth_evenements" CASCADE;
   DROP TYPE "public"."enum_auth_evenements_type";
   DROP TYPE "public"."enum_auth_evenements_code";`)
 }

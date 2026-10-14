@@ -76,7 +76,7 @@ describe('connecter, avec la vraie base', () => {
 		expect(faux).toEqual({ ok: false, code: 'identifiants-invalides' })
 	})
 
-	test('une adresse inconnue, un mauvais mot de passe et un compte non confirmé donnent la même réponse', async () => {
+	test('une adresse inconnue, un mauvais mot de passe et un mauvais mot de passe sur un compte non confirmé donnent la même réponse', async () => {
 		const [connu, nonConfirme] = await Promise.all([
 			creerCompte('maquilleuse', { motDePasse: () => MOT_DE_PASSE }),
 			creerCompte('maquilleuse-non-verifiee', { motDePasse: () => MOT_DE_PASSE }),
@@ -90,10 +90,27 @@ describe('connecter, avec la vraie base', () => {
 		const reponses = await Promise.all([
 			essayer('personne@example.test', MOT_DE_PASSE),
 			essayer(connu.email, 'mauvais'),
-			essayer(nonConfirme.email, MOT_DE_PASSE),
+			essayer(nonConfirme.email, 'mauvais'),
 		])
 
 		for (const reponse of reponses) expect(reponse).toEqual({ ok: false, code: 'identifiants-invalides' })
+	})
+
+	test('un compte non confirmé qui donne le bon mot de passe reçoit le message dédié (ticket 082)', async () => {
+		const nonConfirme = await creerCompte('maquilleuse-non-verifiee', { motDePasse: () => MOT_DE_PASSE })
+		const payload = await payloadDeTest()
+		const ouvrir = (data: { email: string; password: string }) => ouvrirParMotDePasse(payload, 'pros', data)
+		const frein = creerFrein({ nom: 'essai-int-non-confirme', limite: 50, fenetreMs: 60_000 })
+
+		const reponse = await connecter({
+			ouvrir,
+			headers: adresse(15),
+			email: nonConfirme.email,
+			password: MOT_DE_PASSE,
+			frein,
+		})
+
+		expect(reponse).toEqual({ ok: false, code: 'email-non-confirme' })
 	})
 })
 

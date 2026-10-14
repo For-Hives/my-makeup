@@ -53,9 +53,9 @@ const media: CollectionConfig<'media'> = env.storage
 		}
 
 export default buildConfig({
-	// A wrong password or a braked address is a normal event, not an application error: the weekly
-	// report counts the error-level lines (decisions 2026-10-13).
-	loggingLevels: { APIError: 'info', AuthenticationError: 'info' },
+	// A wrong password, a braked address or an address not yet confirmed is a normal event, not an
+	// application error: the weekly report counts the error-level lines (decisions 2026-10-13).
+	loggingLevels: { APIError: 'info', AuthenticationError: 'info', UnverifiedEmail: 'info' },
 	admin: {
 		user: Admins.slug,
 		importMap: { baseDir: dirname },
