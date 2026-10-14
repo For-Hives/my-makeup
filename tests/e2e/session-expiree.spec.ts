@@ -1,4 +1,5 @@
 import { expect, type Page, test } from '@playwright/test'
+import { lireExpiration, SURVIE_DU_COOKIE_APRES_FIN_S } from '../../src/lib/auth/etat-session'
 import { creerCompte } from '../outils/fabrique-comptes'
 import { payloadDeTest } from '../outils/payload-test'
 import { ouvrirSessionSansMotDePasse } from '../outils/session'
@@ -15,7 +16,7 @@ test.beforeEach(({ context }) =>
 	context.setExtraHTTPHeaders({ 'x-forwarded-for': `192.0.2.${150 + (++compteur % 80)}` })
 )
 
-/** The cookie of a session whose token ended `dureeS` seconds from now, kept by the browser for an hour more. */
+/** The cookie of a session whose token ends `dureeS` seconds from now, with the end date the site gives its cookie (it outlives the token). */
 async function cookieDeSession(compte: Awaited<ReturnType<typeof creerCompte<'maquilleuse'>>>, dureeS: number) {
 	const payload = await payloadDeTest()
 	const session = await ouvrirSessionSansMotDePasse(payload, { collection: 'pros', id: compte.id }, process.env, {
@@ -23,8 +24,7 @@ async function cookieDeSession(compte: Awaited<ReturnType<typeof creerCompte<'ma
 	})
 	const cookie = session.cookies[0]
 	if (!cookie) throw new Error('pas de cookie')
-	// The end date of the token is in it; the cookie itself outlives it, as a browser keeps one that nobody has cleaned.
-	return { ...cookie, expires: Math.floor(Date.now() / 1000) + 3600 }
+	return cookie
 }
 
 /**
@@ -122,7 +122,7 @@ test.describe('E12 : un jeton expiré', { tag: '@mobile' }, () => {
 })
 
 test.describe('E13 : une expiration réelle', () => {
-	test('@lent une session courte tient, puis finit d’elle-même : le même renvoi, le même message', {
+	test('une session courte tient, puis finit d’elle-même : le même renvoi, le même message', {
 		tag: '@lent',
 	}, async ({ context, page }) => {
 		test.setTimeout(60_000)
@@ -134,12 +134,41 @@ test.describe('E13 : une expiration réelle', () => {
 		await expect(page.getByRole('heading', { level: 1, name: 'Mon espace' })).toBeVisible()
 		expect([...redirections]).toEqual([])
 
-		// The clock does the rest: no cookie was touched between the two visits.
-		await page.waitForTimeout(9000)
-		await page.goto('/auth/profil')
-
-		await expect(page).toHaveURL(/\/auth\/signin\?callbackUrl=%2Fauth%2Fprofil&error=session-expiree$/)
+		// The clock does the rest: no cookie was touched between the visits. Wait on the state, not on a duration.
+		await expect
+			.poll(
+				async () => {
+					await page.goto('/auth/profil')
+					return page.url()
+				},
+				{ intervals: [1000], timeout: 30_000 }
+			)
+			.toMatch(/\/auth\/signin\?callbackUrl=%2Fauth%2Fprofil&error=session-expiree$/)
+		// The browser still holds the cookie the site set: it outlives its token, which is why the server can tell.
+		expect((await context.cookies()).map(c => c.name)).toEqual(['payload-token'])
 		await expect(page.getByTestId('session-expiree')).toHaveText(MESSAGE)
 		expect([...redirections]).toEqual(['/auth/profil'])
+	})
+})
+
+test.describe('le cookie posé par la connexion', () => {
+	test('survit à son jeton : sans cela, le navigateur l’oublierait à la seconde où il expire', async ({
+		context,
+		page,
+	}) => {
+		const compte = await creerCompte('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+
+		await page.goto('/auth/signin')
+		await page.getByLabel('Adresse email').fill(compte.email)
+		await page.getByLabel('Mot de passe').fill(MOT_DE_PASSE)
+		await page.getByRole('button', { name: 'Se connecter' }).click()
+		await expect(page).toHaveURL(/\/auth\/profil$/)
+
+		const cookie = (await context.cookies()).find(c => c.name === 'payload-token')
+		if (!cookie) throw new Error('pas de cookie de session')
+		const finDuJeton = lireExpiration(cookie.value)
+		if (finDuJeton === null) throw new Error('jeton illisible')
+		// 90 days of grace, give or take the clock of the browser.
+		expect(cookie.expires - finDuJeton).toBeGreaterThan(SURVIE_DU_COOKIE_APRES_FIN_S - 60)
 	})
 })

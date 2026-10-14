@@ -4,7 +4,13 @@ import { redirect } from 'next/navigation'
 import { getPayload } from 'payload'
 import { COLLECTION_PROS } from '../acces'
 import { COOKIE_DE_SESSION } from './espace-ferme'
-import { classerLaSession, type EtatDeSession, etatDuJeton, type Verification } from './etat-session'
+import {
+	classerLaSession,
+	type EtatDeSession,
+	etatDuJeton,
+	type Verification,
+	verifierUneSession,
+} from './etat-session'
 import { urlDeConnexion, urlSessionExpiree } from './retour'
 
 /** What a page of the space may know about the makeup artist: never the account document. */
@@ -34,19 +40,21 @@ export type SessionLue = { etat: 'connectee'; maquilleuse: Maquilleuse } | { eta
 async function verifier(): Promise<
 	{ verification: 'acceptee'; maquilleuse: Maquilleuse } | { verification: Exclude<Verification, 'acceptee'> }
 > {
-	try {
-		const entetes = await headers()
-		const payload = await getPayload({ config })
-		const { user } = await payload.auth({ headers: entetes })
-		if (user) {
-			if (user.collection !== COLLECTION_PROS) return { verification: 'refusee' }
-			return { verification: 'acceptee', maquilleuse: { id: user.id, nom: user.nom ?? '', email: String(user.email) } }
-		}
-		await payload.find({ collection: COLLECTION_PROS, depth: 0, limit: 1, pagination: false, select: {} })
-		return { verification: 'refusee' }
-	} catch {
-		return { verification: 'panne' }
-	}
+	const resultat = await verifierUneSession({
+		authentifier: async () => {
+			const entetes = await headers()
+			const payload = await getPayload({ config })
+			return (await payload.auth({ headers: entetes })).user
+		},
+		convient: user => user.collection === COLLECTION_PROS,
+		sonder: async () => {
+			const payload = await getPayload({ config })
+			await payload.find({ collection: COLLECTION_PROS, depth: 0, limit: 1, pagination: false, select: {} })
+		},
+	})
+	if (resultat.verification !== 'acceptee') return resultat
+	const user = resultat.utilisateur as { id: number | string; nom?: string | null; email: unknown }
+	return { verification: 'acceptee', maquilleuse: { id: user.id, nom: user.nom ?? '', email: String(user.email) } }
 }
 
 /**

@@ -2,7 +2,14 @@ import { describe, expect, test } from 'bun:test'
 import { NextRequest } from 'next/server'
 import { MESSAGE_SESSION_EXPIREE, messageDeLUrl } from '@/lib/auth/erreurs'
 import { decisionDeLEspace } from '@/lib/auth/espace-ferme'
-import { classerLaSession, etatDuJeton, lireExpiration } from '@/lib/auth/etat-session'
+import {
+	classerLaSession,
+	etatDuJeton,
+	finDeVieDuCookie,
+	lireExpiration,
+	SURVIE_DU_COOKIE_APRES_FIN_S,
+	verifierUneSession,
+} from '@/lib/auth/etat-session'
 import { retourSur, urlSessionExpiree } from '@/lib/auth/retour'
 import { proxy } from '@/proxy'
 
@@ -126,5 +133,53 @@ describe('un code d’erreur inconnu n’est jamais recopié à l’écran', () 
 			null,
 		])
 			expect(messageDeLUrl(brut)).toBeNull()
+	})
+})
+
+describe('U70 : la décision panne ou refus, avec ses dépendances simulées', () => {
+	const ok = async () => undefined
+	const casse = async () => {
+		throw new Error('connexion perdue')
+	}
+
+	test('un utilisateur accepté par Payload : session acceptée, sans sonder la base', async () => {
+		let sondee = false
+		const r = await verifierUneSession({
+			authentifier: async () => ({ id: 1 }),
+			convient: () => true,
+			sonder: async () => {
+				sondee = true
+			},
+		})
+		expect(r).toEqual({ verification: 'acceptee', utilisateur: { id: 1 } })
+		expect(sondee).toBe(false)
+	})
+
+	test('pas d’utilisateur et la base répond : refus (déconnexion)', async () => {
+		const r = await verifierUneSession({ authentifier: async () => null, convient: () => true, sonder: ok })
+		expect(r).toEqual({ verification: 'refusee' })
+	})
+
+	test('pas d’utilisateur et la base ne répond pas : panne, jamais refus', async () => {
+		const r = await verifierUneSession({ authentifier: async () => null, convient: () => true, sonder: casse })
+		expect(r).toEqual({ verification: 'panne' })
+	})
+
+	test('Payload lui-même qui échoue : panne', async () => {
+		const r = await verifierUneSession({ authentifier: casse as () => Promise<null>, convient: () => true, sonder: ok })
+		expect(r).toEqual({ verification: 'panne' })
+	})
+
+	test('un utilisateur d’une autre collection (jeton d’admin) : refus', async () => {
+		const r = await verifierUneSession({ authentifier: async () => ({ id: 1 }), convient: () => false, sonder: ok })
+		expect(r).toEqual({ verification: 'refusee' })
+	})
+})
+
+describe('le cookie survit à son jeton', () => {
+	test('sa date de fin est celle du jeton plus 90 jours, jamais moins', () => {
+		expect(finDeVieDuCookie(MAINTENANT).getTime()).toBe((MAINTENANT + 90 * 86_400) * 1000)
+		expect(SURVIE_DU_COOKIE_APRES_FIN_S).toBe(90 * 86_400)
+		expect(finDeVieDuCookie(MAINTENANT).getTime()).toBeGreaterThan(MAINTENANT * 1000)
 	})
 })

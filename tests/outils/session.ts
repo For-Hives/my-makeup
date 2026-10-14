@@ -18,6 +18,7 @@ import {
 	type TypedUser,
 } from 'payload'
 import { addSessionToUser } from 'payload/shared'
+import { finDeVieDuCookie } from '../../src/lib/auth/etat-session'
 import { ouvrirParMotDePasse } from '../../src/lib/auth/jeton'
 import { BancRefuse, type Variables } from './banc'
 
@@ -140,7 +141,8 @@ function sessionDuJeton(
 				name: cookie.name,
 				value: token,
 				url: origine,
-				expires: exp,
+				// As the site sets it: the cookie outlives its token (ticket 080).
+				expires: Math.floor(finDeVieDuCookie(exp).getTime() / 1000),
 				httpOnly: cookie.httpOnly ?? false,
 				secure: cookie.secure ?? false,
 				sameSite: cookie.sameSite ?? 'Lax',

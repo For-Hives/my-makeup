@@ -42,6 +42,23 @@ export function lireExpiration(jeton: string): number | null {
 	}
 }
 
+/**
+ * How long the browser keeps the session cookie after its token ended: 90 days, the longest a
+ * session may live (plan 01 §2.3). Without it the browser drops the cookie at the very second the
+ * token ends, the server sees « never signed in », and the « session expirée » message could never
+ * be shown (finding of the review of 080). The stale cookie is harmless: Payload refuses the token.
+ */
+export const SURVIE_DU_COOKIE_APRES_FIN_S = 90 * 24 * 3600
+
+/**
+ * When the browser may forget the session cookie, for a token that ends at `exp` (Unix seconds): later
+ * than the token itself. The one rule for every place that sets the cookie (sign-in; the sliding
+ * renewal of ticket 079 must use it too).
+ */
+export function finDeVieDuCookie(exp: number): Date {
+	return new Date((exp + SURVIE_DU_COOKIE_APRES_FIN_S) * 1000)
+}
+
 /** Where a token stands at `maintenantS` (Unix seconds). A token that says nothing of its end date is unreadable. */
 export function etatDuJeton(jeton: string | undefined, maintenantS: number): EtatDuJeton {
 	if (jeton === undefined || jeton === '') return 'absent'
@@ -61,4 +78,37 @@ export function classerLaSession(jeton: EtatDuJeton, verification?: Verification
 	if (verification === 'acceptee') return 'connectee'
 	if (verification === 'refusee') return 'anonyme'
 	return 'indisponible'
+}
+
+/** What `verifierUneSession` needs from the outside: Payload's check and a small query on the database. */
+export interface OutilsDeVerification<Utilisateur> {
+	/** Payload's own check of the request: the user, or null when it refuses (it swallows its own errors into null). */
+	authentifier: () => Promise<Utilisateur | null>
+	/** Whether this user is one the space accepts (not an admin's token, which has the same cookie name). */
+	convient: (utilisateur: Utilisateur) => boolean
+	/** A small query on the database: it throws when the database does not answer. */
+	sonder: () => Promise<unknown>
+}
+
+/**
+ * Tells a refusal from an outage. Payload's strategy turns every error into « no user », so a null
+ * user is believed only when the database answers right after; otherwise the check could not be made
+ * and nobody is signed out (AUTH-01, U70). Any throw is an outage.
+ */
+export async function verifierUneSession<Utilisateur>({
+	authentifier,
+	convient,
+	sonder,
+}: OutilsDeVerification<Utilisateur>): Promise<
+	{ verification: 'acceptee'; utilisateur: Utilisateur } | { verification: Exclude<Verification, 'acceptee'> }
+> {
+	try {
+		const utilisateur = await authentifier()
+		if (utilisateur)
+			return convient(utilisateur) ? { verification: 'acceptee', utilisateur } : { verification: 'refusee' }
+		await sonder()
+		return { verification: 'refusee' }
+	} catch {
+		return { verification: 'panne' }
+	}
 }

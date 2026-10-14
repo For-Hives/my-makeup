@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation'
 import { generatePayloadCookie, getPayload } from 'payload'
 import { connecter } from '@/lib/auth/connexion'
 import type { CodeErreur } from '@/lib/auth/erreurs'
+import { finDeVieDuCookie, lireExpiration } from '@/lib/auth/etat-session'
 import { ouvrirParMotDePasse } from '@/lib/auth/jeton'
 import { retourSur } from '@/lib/auth/retour'
 
@@ -40,9 +41,12 @@ export async function seConnecter(_precedent: EtatDeConnexion, formulaire: FormD
 		returnCookieAsObject: true,
 		token: resultat.token,
 	})
+	// The cookie outlives its token, so that a visitor whose session ended is told so (ticket 080).
+	const finDuJeton = lireExpiration(resultat.token)
 	;(await cookies()).set(cookie.name, resultat.token, {
 		domain: auth.cookies.domain,
-		expires: cookie.expires ? new Date(cookie.expires) : undefined,
+		expires:
+			finDuJeton === null ? (cookie.expires ? new Date(cookie.expires) : undefined) : finDeVieDuCookie(finDuJeton),
 		httpOnly: true,
 		sameSite: typeof auth.cookies.sameSite === 'string' ? (auth.cookies.sameSite.toLowerCase() as 'lax') : 'lax',
 		secure: auth.cookies.secure || false,
