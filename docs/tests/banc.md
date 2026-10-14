@@ -365,7 +365,53 @@ const { comptes, crees, presents } = await poserLesComptesDuJeu()
 - **Hors du banc, le jeu s'arrête avant toute lecture et toute écriture**, comme la fabrique.
 - Les données sont dans `tests/fixtures/comptes.ts` : `COMPTES_DU_JEU`. Un chargement sur une base vide prend 2 à 2,3 s pour les dix comptes (mesuré le 14/10/2026, trois passages).
 
-Les profils types (ticket 051) et la commande qui charge le tout (ticket 052) viendront s'ajouter au jeu.
+Les profils types sont la section suivante. La commande qui charge le tout (ticket 052) viendra s'ajouter au jeu.
+
+## Le jeu du banc : les 12 profils types
+
+Le jeu pose aussi douze profils fictifs, les types du plan `02` §6. Chacun a sa maquilleuse fictive et ses photos, et c'est toujours le même contenu.
+
+```ts
+import { poserLesProfilsDuJeu } from '@/jeu-fictif/chargement'
+
+const { profils, crees, presents } = await poserLesProfilsDuJeu(await payloadDeTest())
+// profils : pour chaque type, dans l'ordre du tableau, sa clé, son compte, son profil et son slug
+```
+
+| # | Type (`cle`) | Maquilleuse, slug | Ce que porte le profil | État calculé par le serveur |
+|---|---|---|---|---|
+| 1 | `reference` | Inès Morel, `ines-morel` | Complet, disponible, à Annecy, « Maquillage mariage », trois offres chiffrées, une photo principale et six photos en galerie. Il publie son téléphone et son email | Publiable, publié, 13 sur 13 |
+| 2 | `ville-voisine` | Léa Garnier, `lea-garnier` | Complet, à Annemasse | Publiable, publié |
+| 3 | `ville-eloignee` | Chloé Bertin, `chloe-bertin` | Complet, à Nantes | Publiable, publié |
+| 4 | `indisponible` | Manon Faure, `manon-faure` | Complet, à Annecy, `disponible` faux | Publiable, publié |
+| 5 | `disponibilite-inconnue` | Jade Roussel, `jade-roussel` | Complet, à Annecy, `disponible` vide (nul) | Publiable, publié |
+| 6 | `vide` | Nina Perret, `nina-perret` | Rien : le profil tel que l'inscription le crée | Ni actif ni publiable, entièrement vide, brouillon, 0 sur 13 |
+| 7 | `actif-non-publiable` | Clara Dumas, `clara-dumas` | Complet, mais ses offres sont « sur devis », sans montant | Actif, pas publiable, publié |
+| 8 | `sans-contact-public` | Louise Girard, `louise-girard` | Complet, sans réseau ; téléphone et email enregistrés mais fermés au public | Actif, pas publiable, publié, 12 sur 13 |
+| 9 | `ancien-nom-accentue` | Zoé Lefèvre, `zoe-lefevre` | Complet, à Thonon-les-Bains, avec l'ancien nom d'utilisateur « zoé lefèvre » | Publiable, publié |
+| 10 | `verifiee` | Emma Chevalier, `emma-chevalier` | Complet ; vérifiée par un admin, avec le badge des cartes de la recherche | Publiable, publié |
+| 11 | `masquee` | Alice Fontaine, `alice-fontaine` | Complet ; masqué par un admin (`statutChoisi`), avec un motif | Publiable, masqué |
+| 12 | `textes-maximaux` | Un nom de 141 caractères, et le slug le plus long : 70 caractères | Chaque texte à la borne du serveur, le rayon à 200 km, dix photos en galerie, la commune au nom le plus long de la liste officielle | Publiable, publié |
+
+| Ce qui est fixe | Valeur |
+|---|---|
+| Le compte de chaque maquilleuse | `jeu-profil-<cle>@example.test` (`adresseDuProfil(cle)`), confirmé, sous le nom du tableau. Son mot de passe est tiré au hasard et oublié aussitôt : un test qui veut sa session l'ouvre par `ouvrirSessionSansMotDePasse` |
+| Les identifiants | Les mêmes sur une base vide : les types sont créés un par un, dans l'ordre du tableau. Après les comptes du jeu, ils les suivent |
+| Les photos | Six fichiers WebP de 400 × 400 pixels, moins de 30 Ko chacun, sans métadonnées, dans `src/jeu-fictif/photos/`. Ils sont tirés des illustrations de `dev-assets/illustration/` : des visages dessinés, aucune personne réelle |
+| Les objets du stockage | Chaque photo d'un profil est un média à elle, qui appartient au compte de la maquilleuse, sous la clé `media/jeu-<cle>-principale.webp` ou `media/jeu-<cle>-galerie-<rang>.webp` : la même à chaque chargement |
+| Les coordonnées | Des numéros de la plage réservée à la fiction (06 39 98 …), des adresses et des liens sur `example.test`. Le consentement à montrer les coordonnées est daté du 01/09/2026, donné par la maquilleuse |
+
+- **Le jeu écrit ce qu'écrit une maquilleuse ou un admin**, et rien de ce que calcule le serveur : le slug vient du nom du compte, l'état et le statut de la règle (ticket 044). Seul le profil masqué choisit son statut.
+- **Rejouer le jeu ne crée rien.** Un type se retrouve par l'adresse de son compte ; s'il est là, il est laissé tel quel (`presents`), même s'il a changé.
+- **Chaque type s'écrit dans une transaction.** Interrompu, il ne laisse ni compte, ni profil, ni média. Les photos déjà envoyées restent dans le stockage jusqu'au chargement suivant, qui réécrit les mêmes clés : il ne reste alors aucun objet orphelin.
+- **Aucun mail ne part** : la confirmation d'un compte neuf n'est pas envoyée.
+- **Hors du banc et de la préprod, rien n'est lu ni écrit** (`src/jeu-fictif/garde.ts`). Le jeu accepte `APP_ENV=test` avec une base de ce poste en `_test`, le stockage de ce poste dans un espace en `-test` et aucune adresse déployée ; ou `APP_ENV=preprod` avec l'adresse `https://preprod.my-makeup.fr`. Il refuse `APP_ENV=prod`, l'adresse du site en ligne, un `APP_ENV` absent (comme dans un `.env` de développement) ou inconnu, l'absence de stockage d'objets, et un Payload branché sur une autre base que `DATABASE_URI`. Le refus (`JeuFictifRefuse`) nomme la variable, jamais sa valeur.
+- **Avec les comptes du jeu, la base tient 19 profils** : les 12 types, et les profils vides des sept comptes de maquilleuse du jeu qui en ont un.
+- Un chargement sur une base vide prend environ 4 secondes, et 20 à 40 millisecondes sur une base déjà remplie (mesuré le 14/10/2026, deux passages : 3,9 s et 4,0 s, puis 36 ms et 23 ms).
+
+Les données sont dans `src/jeu-fictif/profils.ts` (`PROFILS_DU_JEU`), avec, pour chaque type, ce que le serveur doit calculer (`attendu`). Le jeu vit sous `src/` et non sous `tests/`, parce que la préprod le chargera aussi (ticket 053), et que l'image Docker ne contient pas `tests/`.
+
+`tests/unit/jeu-fictif.test.ts` vérifie le jeu sans le banc : les douze types, l'état que leur donne la règle unique, les longueurs du profil aux textes maximaux, les six photos et la garde. `tests/integration/banc-profils-types.test.ts` le charge sur le banc : chaque profil relié à sa maquilleuse, l'état enregistré, les photos et leurs objets, le rechargement.
 
 ## La matrice d'accès
 

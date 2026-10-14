@@ -62,6 +62,7 @@ Le reste :
 - `.env.exemple` : la liste des variables d'environnement, sans aucune valeur.
 - `tests/` : les tests. Un composant React s'y teste seul, sans navigateur : voir `docs/tests/composants.md`. Un service extérieur s'y simule, et aucun test n'appelle Internet : voir `docs/tests/http-sortant.md`.
 - `compose.test.yml` et `.env.test` : le banc de test local et son environnement factice, voir « Le banc de test ».
+- `src/jeu-fictif/` : le jeu fictif du banc de test, que la préprod chargera aussi : les 12 profils types, leurs maquilleuses fictives et leurs photos, voir « Le banc de test ».
 - `playwright.config.ts` : les essais de bout en bout, voir « Les essais de bout en bout ». Il ne règle rien lui-même : tout vient de `tests/outils/e2e.ts`.
 - `src/content/changelog.json` : les notes de version, en attente puis publiées ; `.github/workflows/release.yml` : la publication d'une version, qui écrit `.release/version.json` (voir « Notes de version et publication »).
 
@@ -532,13 +533,14 @@ bun run banc:down                                              # arrête tout et
 - Plusieurs bancs tournent côte à côte sur un même poste, chacun sous son nom et sur ses ports : `BANC_INSTANCE=mon-banc BANC_DECALAGE=20 bun run banc:up`.
 - Un test obtient un compte fictif et sa session en un appel, sans mot de passe à saisir : `await creerCompte('admin')`, `'redaction'`, `'maquilleuse'` (avec son profil vide), `'maquilleuse-sans-profil'`, ou `'maquilleuse-non-verifiee'` (sans session).
 - La fabrique crée aussi les comptes que l'ancien site apporte et ceux qui ne se connectent pas : `'maquilleuse-bloquee'`, `'reprise-avec-hash'` (hash bcrypt d'un mot de passe fictif connu), `'reprise-google'` et `'reprise-google-avec-hash'` (session ouverte sans mot de passe, comme par Google), `'reprise-facebook'`. Le jeu du banc en pose un exemplaire fixe de chaque type, sans doublon quand on le rejoue : `await poserLesComptesDuJeu()` (`tests/fixtures/comptes.ts`).
+- Le jeu du banc pose aussi les 12 profils types du plan de tests (référence, ville voisine, ville éloignée, indisponible, disponibilité inconnue, vide, actif non publiable, sans contact public, ancien nom accentué, vérifiée, masquée, textes maximaux), chacun avec sa maquilleuse fictive et ses photos, toujours les mêmes, sans doublon quand on le rejoue : `await poserLesProfilsDuJeu(payload)` (`src/jeu-fictif/`). Hors du banc et de la préprod, il refuse de tourner avant de rien lire ni écrire.
 - Toute règle d'accès a ses lignes dans la matrice d'accès, jouées par l'API REST et par l'API locale avec les règles actives : `tests/integration/payload-acces.test.ts`.
 - Sur le banc, l'application envoie tous ses mails au capteur. Un test lit le sien, avec son destinataire, son sujet et ses liens : `await attendreLeMail({ pour: adresse })`.
 - Un test dépose un objet dans le stockage et le relit : `await deposerUnObjet(cle, contenu)`, `await lireUnObjet(cle)`.
 - L'import se teste sur une fausse base Strapi qui porte chaque cas connu de la vraie, ouverte en lecture seule, avec ses photos dans le stockage : `bun run banc:source` la crée, à l'identique à chaque fois. `bun run banc:import --reel` y lance l'import ; un test le lance par `importerSurLeBanc()` (`tests/outils/import.ts`).
 - La connexion Google se teste sans compte Google ni secret : le faux Google tient la place de Google (`GOOGLE_OIDC_ISSUER`), et un test choisit qui se connecte et comment cela finit, parmi quatre scénarios : `fauxGoogle().choisir({ scenario: 'refus' })`.
 
-Le détail est dans [`docs/tests/banc.md`](docs/tests/banc.md) : les services et leurs adresses, les deux variables d'instance, l'écriture d'un test d'intégration, la remise à zéro, le capteur de mails, le stockage d'objets, la fabrique de comptes et ses types, le jeu de comptes fixes, le faux Google et ses quatre scénarios, les images épinglées, la fausse base Strapi.
+Le détail est dans [`docs/tests/banc.md`](docs/tests/banc.md) : les services et leurs adresses, les deux variables d'instance, l'écriture d'un test d'intégration, la remise à zéro, le capteur de mails, le stockage d'objets, la fabrique de comptes et ses types, le jeu de comptes fixes, les 12 profils types, le faux Google et ses quatre scénarios, les images épinglées, la fausse base Strapi.
 
 ### Les essais de bout en bout
 
