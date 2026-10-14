@@ -1,0 +1,128 @@
+# The CI of the v3. One check is required to merge: ci-ok, the last job of this file.
+#
+# Rules, each of them enforced by tests/ci/garde-fous-ci.test.ts (docs/qualite.md):
+# - no path filter: a required check that does not run stays « pending », and a pending
+#   check ends up merged around;
+# - no step allowed to fail, no command under a condition that could skip it, no step that
+#   depends on a cache;
+# - every action pinned by its commit, with its version in a comment;
+# - no secret: every value below is a public placeholder.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, v3]
+
+permissions:
+  contents: read
+
+# With `shell: bash`, GitHub runs every command under `bash -eo pipefail`: a command that
+# fails in a pipe fails its step. Without this line it would be `bash -e`, and it would pass.
+defaults:
+  run:
+    shell: bash
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  qualite:
+    name: qualite
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+      - name: Install
+        run: bun install --frozen-lockfile
+      # The four checks below run even when an earlier one failed: one push shows every
+      # fault at once. The job is red as soon as one of them is.
+      - name: Generated files are up to date
+        if: ${{ !cancelled() }}
+        env:
+          # Placeholders, not secrets: the Payload CLI refuses to load the configuration
+          # without these two variables, and neither generator connects to a database.
+          DATABASE_URI: postgres://generation@127.0.0.1:5432/generation
+          PAYLOAD_SECRET: valeur-de-remplissage-sans-aucun-secret-0123456789
+        run: bun run payload:types && bun run payload:importmap && git diff --exit-code
+      - name: Types
+        if: ${{ !cancelled() }}
+        run: bun run typecheck
+      - name: Biome
+        if: ${{ !cancelled() }}
+        run: bun run ci:biome
+      - name: Guard rails of the CI
+        if: ${{ !cancelled() }}
+        run: bun run test:ci-garde
+
+  unit:
+    name: unit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+      - name: Install
+        run: bun install --frozen-lockfile
+      - name: Unit tests
+        run: bun run test:unit
+
+  build:
+    name: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+      - name: Install
+        run: bun install --frozen-lockfile
+      # No secret and no database: the only thing the build receives is the commit.
+      - name: Build the image
+        run: bun run image:build --build-arg "SOURCE_COMMIT=$GITHUB_SHA"
+      - name: Check the image against a throwaway database
+        run: CONTROLE_IMAGE_COMMIT="$GITHUB_SHA" bun run image:controle
+
+  # THE required check. A needed job that failed, was cancelled or was skipped makes it red:
+  # GitHub counts a skipped required job as passed, this job does not.
+  ci-ok:
+    name: ci-ok
+    if: always()
+    needs: [qualite, unit, build]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - name: Every job must have succeeded
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+          DETAIL: ${{ toJSON(needs) }}
+        run: |
+          echo "$DETAIL"
+          if [ -z "$RESULTS" ]; then
+            echo "::error::ci-ok n'a reçu le résultat d'aucun job."
+            exit 1
+          fi
+          for result in $RESULTS; do
+            if [ "$result" != "success" ]; then
+              echo "::error::Un job n'a pas réussi ($result) : ci-ok est rouge."
+              exit 1
+            fi
+          done
+          echo "Tous les jobs ont réussi : ci-ok est vert."

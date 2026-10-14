@@ -6,6 +6,9 @@ import type { NextConfig } from 'next'
 const dirname = path.dirname(fileURLToPath(import.meta.url))
 
 const nextConfig: NextConfig = {
+	// The build gives `.next/standalone`: a server with only the files it needs, which is all
+	// the Docker image copies (Dockerfile, last stage).
+	output: 'standalone',
 	// The commit Coolify gives to the build (SOURCE_COMMIT), frozen into the bundles: the
 	// version of /api/health is then the commit of the build, even in a container that
 	// receives no SOURCE_COMMIT. Empty when the build had none: the route reads the runtime one.
