@@ -2,9 +2,9 @@
  * The zone of a profile as it is stored (plan 01 §3.3 P7.4 and §6.2; docs/migration/SCHEMA.md,
  * §5.2): a commune of the official list (its name, its INSEE code, its département, its
  * coordinates), a radius of 0 to 200 km, and « à domicile ». Never a postal address: the zone has
- * no field for one, and a name of commune that looks like one is refused. All of France, without
- * a pilot area (decision of 13/10/2026, evening): the overseas collectivities of the official list
- * too.
+ * no field for one, a name of commune that looks like one is refused, and the coordinates are
+ * rounded to about 1 km. All of France, without a pilot area (decision of 13/10/2026, evening):
+ * the overseas collectivities of the official list too.
  *
  * The rules of the server, in one place: the département an INSEE code names, and what is wrong
  * with a value, in French. The collection (src/collections/Profils.ts) calls them; the zone of
@@ -12,7 +12,8 @@
  *
  * Checking that a commune is really on the official list (geo.api.gouv.fr), and that its name is
  * the one of its code, is not done here: the space (ticket 123) and the import (ticket 063) choose
- * it there. Here, only its form.
+ * it there. Here, only its form: a name made of the characters of a name of commune, which does
+ * not look like an address.
  *
  * Relative imports on purpose: the collection that calls this file is also loaded by the Payload
  * CLI, outside of Next.
@@ -29,6 +30,12 @@ export const BORNES_DU_RAYON_KM = { min: 0, max: 200 } as const
 
 /** The longest name of a commune kept; the longest of the official list has 45 characters. */
 export const NOM_DE_COMMUNE_MAX = 70
+
+/**
+ * The decimals kept of a coordinate: the centre of a commune to about 1 km (0.01° is 1.1 km of
+ * latitude), never a point that locates a home.
+ */
+export const DECIMALES_DES_COORDONNEES = 2
 
 /** The fields of the commune of a profile, in the order of SCHEMA.md §5.2. */
 export const CHAMPS_DE_LA_COMMUNE = ['nom', 'codeInsee', 'departement', 'latitude', 'longitude'] as const
@@ -57,6 +64,8 @@ export const MESSAGES_DE_LA_ZONE = {
 	codeInseeSansNom: 'Il manque le nom de la commune de ce code INSEE.',
 	nomInvalide: `Le nom de la commune est un texte de ${NOM_DE_COMMUNE_MAX} caractères au plus.`,
 	nomAdresse: 'Ce nom ressemble à une adresse : choisis ta commune dans la liste, jamais ton adresse.',
+	nomCaracteres:
+		'Le nom d’une commune n’a que des lettres, des espaces, des traits d’union, des apostrophes et des parenthèses : choisis ta commune dans la liste.',
 	latitude: 'La latitude de la commune va de -90 à 90.',
 	longitude: 'La longitude de la commune va de -180 à 180.',
 	coordonneesIncompletes: 'La latitude et la longitude de la commune vont ensemble.',
@@ -204,6 +213,27 @@ export function ressembleAUneAdresse(nom: string): boolean {
 	return mots.some((mot, i) => i < mots.length - 1 && VOIES.has(mot))
 }
 
+/**
+ * The characters of a name of the official list: letters of any script with their accents, spaces,
+ * hyphens, apostrophes and parentheses (« Château-Chinon (Ville) », « L’Haÿ-les-Roses »), and the
+ * ordinal of an arrondissement, the only digits (removed before this check). An email, a website,
+ * an abbreviation (« St. ») or a symbol is not a name of commune.
+ */
+const CARACTERES_D_UN_NOM = /^[\p{L}\p{M} '’()-]*$/u
+
+/** Whether a name holds only the characters of a name of commune (`CARACTERES_D_UN_NOM`). */
+export function aLesCaracteresDUnNom(nom: string): boolean {
+	return CARACTERES_D_UN_NOM.test(nom.trim().replace(ARRONDISSEMENT, ''))
+}
+
+/** A coordinate as the collection stores it: rounded to `DECIMALES_DES_COORDONNEES`; anything else as it came. */
+export function coordonneeArrondie(valeur: unknown): unknown {
+	if (typeof valeur !== 'number' || !Number.isFinite(valeur)) return valeur
+	const facteur = 10 ** DECIMALES_DES_COORDONNEES
+	// `|| 0`: never a negative zero.
+	return Math.round(valeur * facteur) / facteur || 0
+}
+
 /** A name as the collection stores it: without spaces around, null when empty. */
 export function nomNormalise(nom: unknown): unknown {
 	if (typeof nom !== 'string') return nom
@@ -244,7 +274,7 @@ function coordonnee(valeur: unknown, borne: number): 'absente' | 'valide' | 'inv
  * - Empty (nothing given): no error, a profile may have no zone yet.
  * - A commune has its name and its INSEE code, the one never without the other, and the code is
  *   well formed (`departementDuCodeInsee`). Its name never looks like an address
- *   (`ressembleAUneAdresse`).
+ *   (`ressembleAUneAdresse`), and holds only the characters of a name (`aLesCaracteresDUnNom`).
  * - Its coordinates are optional; given, they come together, in their bounds, with a commune.
  *
  * The département is not checked: the server computes it from the code, whatever was sent.
@@ -260,6 +290,7 @@ export function erreursDeLaCommune(commune: CommuneSaisie | null | undefined): E
 	if (!vide(nom) && (typeof nom !== 'string' || nom.trim().length > NOM_DE_COMMUNE_MAX))
 		erreurs.nom = MESSAGES_DE_LA_ZONE.nomInvalide
 	else if (typeof nom === 'string' && ressembleAUneAdresse(nom)) erreurs.nom = MESSAGES_DE_LA_ZONE.nomAdresse
+	else if (typeof nom === 'string' && !aLesCaracteresDUnNom(nom)) erreurs.nom = MESSAGES_DE_LA_ZONE.nomCaracteres
 	else if (vide(nom) && !vide(codeInsee)) erreurs.nom = MESSAGES_DE_LA_ZONE.codeInseeSansNom
 
 	const lat = coordonnee(latitude, 90)

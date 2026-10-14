@@ -5,6 +5,7 @@ import {
 	type CommuneSaisie,
 	codeInseeNormalise,
 	communeEnChamps,
+	coordonneeArrondie,
 	departementDuCodeInsee,
 	type ErreursDeLaCommune,
 	erreursDeLaCommune,
@@ -34,17 +35,18 @@ const verdictDe =
  * for one. The rules and their French messages live in src/lib/profil/zone.ts.
  *
  * - `commune`: a commune of the official list, with its name and its INSEE code, the one never
- *   without the other; its coordinates if known. It is sent whole: what a request leaves out of it
- *   is emptied, never taken from the stored one. Empty while the makeup artist has not chosen one;
- *   `null` empties it; a text alone (a city typed freely), an array, or a name that looks like an
- *   address is refused. `departement` is computed by the server from the code.
+ *   without the other; the coordinates of its centre if known, rounded to about 1 km. It is sent
+ *   whole: what a request leaves out of it is emptied, never taken from the stored one. Empty while
+ *   the makeup artist has not chosen one; `null` empties it; a text alone (a city typed freely), an
+ *   array, a name that looks like an address or holds other characters than a name's is refused.
+ *   `departement` is computed by the server from the code.
  * - `rayonKm`: a whole number of kilometres, from 0 to 200, or empty.
  * - `aDomicile`: empty while she has not said it (the old site does not know it).
  *
  * These fields carry no access rule of their own: whoever reads a profile reads its zone, and
  * whoever changes a profile changes its zone. The public reads it with the published profiles
- * (ticket 021): the commune, its INSEE code, its département and the coordinates of its centre are
- * public reference data, not personal data.
+ * (ticket 021): the commune, its INSEE code, its département and the coordinates of its centre,
+ * to about 1 km, are public reference data, not personal data.
  */
 export const champsDeLaZone: Field[] = [
 	{
@@ -79,8 +81,21 @@ export const champsDeLaZone: Field[] = [
 				hooks: { beforeChange: [departementDuCode] },
 				admin: { readOnly: true, description: 'Calculé depuis le code INSEE.' },
 			},
-			{ name: 'latitude', label: 'Latitude', type: 'number', validate: verdictDe('latitude') },
-			{ name: 'longitude', label: 'Longitude', type: 'number', validate: verdictDe('longitude') },
+			// The centre of the commune, to about 1 km: never a point that locates a home.
+			{
+				name: 'latitude',
+				label: 'Latitude',
+				type: 'number',
+				hooks: { beforeValidate: [({ value }) => coordonneeArrondie(value)] },
+				validate: verdictDe('latitude'),
+			},
+			{
+				name: 'longitude',
+				label: 'Longitude',
+				type: 'number',
+				hooks: { beforeValidate: [({ value }) => coordonneeArrondie(value)] },
+				validate: verdictDe('longitude'),
+			},
 		],
 	},
 	{

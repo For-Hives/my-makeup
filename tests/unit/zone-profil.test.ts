@@ -9,6 +9,8 @@ import {
 	type CommuneSaisie,
 	codeInseeNormalise,
 	communeEnChamps,
+	coordonneeArrondie,
+	DECIMALES_DES_COORDONNEES,
 	departementDuCodeInsee,
 	erreursDeLaCommune,
 	MESSAGES_DE_LA_ZONE,
@@ -188,6 +190,69 @@ describe('un nom de commune n’est jamais une adresse', () => {
 			expect(ressembleAUneAdresse(nom), nom).toBe(false)
 			expect(erreursDeLaCommune({ nom, codeInsee: '74010' }), nom).toEqual({})
 		}
+	})
+})
+
+describe('un nom de commune n’a que les caractères d’un nom de commune', () => {
+	test('un email, un site, une abréviation ou un symbole : refusés en français', () => {
+		const textes = [
+			'moi@exemple.fr',
+			'www.mon-site-fictif.fr',
+			'St. Gervais',
+			'Annecy & alentours',
+			'Annecy + alentours',
+			'Annecy !',
+			'Où ça ?',
+			'Annecy_Centre',
+			'« Annecy »',
+			'"Annecy"',
+			'#Annecy',
+			'Annecy*',
+			'[Annecy]',
+			'Annecy\u200b',
+		]
+		for (const nom of textes)
+			expect(erreursDeLaCommune({ nom, codeInsee: '74010' }), nom).toEqual({ nom: MESSAGES_DE_LA_ZONE.nomCaracteres })
+		expect(MESSAGES_DE_LA_ZONE.nomCaracteres).toBe(
+			'Le nom d’une commune n’a que des lettres, des espaces, des traits d’union, des apostrophes et des parenthèses : choisis ta commune dans la liste.'
+		)
+	})
+
+	test('les lettres de toutes les langues, leurs accents, le trait d’union, l’apostrophe et les parenthèses passent', () => {
+		// Made-up names, one per kind of character the official list holds.
+		for (const nom of [
+			'Œuvre-sur-Mer',
+			'Ÿonne',
+			'L’Île-Fictive',
+			"L'Île-Fictive",
+			'Fictive (Ville)',
+			'Haÿ ʻO Fictif',
+			'Ville - Fictive',
+		])
+			expect(erreursDeLaCommune({ nom, codeInsee: '74010' }), nom).toEqual({})
+	})
+
+	test('le nom n’est pas comparé à celui de son code : c’est le travail de la liste de l’espace et de l’import', () => {
+		// A decision of ticket 041, written in the README: the server checks the form of the name only.
+		expect(erreursDeLaCommune({ nom: 'Lyon', codeInsee: '74010' })).toEqual({})
+	})
+})
+
+describe('les coordonnées de la commune sont celles de son centre, à environ 1 km près', () => {
+	test('arrondies à deux décimales : aucune ne situe une adresse', () => {
+		expect(DECIMALES_DES_COORDONNEES).toBe(2)
+		expect(coordonneeArrondie(48.85341234)).toBe(48.85)
+		expect(coordonneeArrondie(2.34881234)).toBe(2.35)
+		expect(coordonneeArrondie(45.8992)).toBe(45.9)
+		expect(coordonneeArrondie(-21.11551)).toBe(-21.12)
+		expect(coordonneeArrondie(-0.001)).toBe(0)
+		expect(Object.is(coordonneeArrondie(-0.001), -0)).toBe(false)
+		expect(coordonneeArrondie(6)).toBe(6)
+	})
+
+	test('ce qui n’est pas un nombre fini est laissé tel quel, pour que la vérification le refuse', () => {
+		for (const valeur of [null, undefined, '45.8992', Number.NaN, Number.POSITIVE_INFINITY, true])
+			expect(Object.is(coordonneeArrondie(valeur), valeur), String(valeur)).toBe(true)
 	})
 })
 

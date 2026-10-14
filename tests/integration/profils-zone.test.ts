@@ -16,7 +16,8 @@ import { appelerRest } from '../outils/rest'
 afterEach(viderLaBase)
 
 const ANNECY = { nom: 'Annecy', codeInsee: '74010', latitude: 45.8992, longitude: 6.1294 } as const
-const ANNECY_STOCKEE = { ...ANNECY, departement: '74' } as const
+/** Annecy as the server stores it: its département, and the coordinates of its centre to about 1 km. */
+const ANNECY_STOCKEE = { ...ANNECY, departement: '74', latitude: 45.9, longitude: 6.13 } as const
 const COMMUNE_VIDE = { nom: null, codeInsee: null, departement: null, latitude: null, longitude: null } as const
 
 type Maquilleuse = CompteDeTest<'maquilleuse'>
@@ -60,7 +61,7 @@ describe('La zone enregistrée se relit telle quelle', () => {
 		const enregistre = await modifier(compte, profil, { commune: ANNECY, rayonKm: 30, aDomicile: true })
 		expect(enregistre.statut).toBe(200)
 
-		const attendu = { commune: { ...ANNECY, departement: '74' }, rayonKm: 30, aDomicile: true }
+		const attendu = { commune: ANNECY_STOCKEE, rayonKm: 30, aDomicile: true }
 		const relu = await appelerRest('GET', `/api/profils/${profil}?depth=0`, { enTetes: compte.session.enTetes })
 		expect(relu.statut).toBe(200)
 		expect(relu.corps).toMatchObject(attendu)
@@ -73,11 +74,7 @@ describe('La zone enregistrée se relit telle quelle', () => {
 
 		expect((await modifier(compte, profil, { prenom: 'Léa' })).statut).toBe(200)
 
-		expect(await zoneStockee(profil)).toEqual({
-			commune: { ...ANNECY, departement: '74' },
-			rayonKm: 30,
-			aDomicile: false,
-		})
+		expect(await zoneStockee(profil)).toEqual({ commune: ANNECY_STOCKEE, rayonKm: 30, aDomicile: false })
 	})
 
 	test('un profil créé avec son compte n’a pas encore de zone : rien n’est supposé', async () => {
@@ -91,10 +88,16 @@ describe('La zone enregistrée se relit telle quelle', () => {
 
 		const ajaccio = { nom: 'Ajaccio', codeInsee: ' 2a004 ', departement: '13', latitude: 41.9192, longitude: 8.7386 }
 		expect((await modifier(compte, profil, { commune: ajaccio })).statut).toBe(200)
-		expect((await zoneStockee(profil)).commune).toEqual({ ...ajaccio, codeInsee: '2A004', departement: '2A' })
+		expect((await zoneStockee(profil)).commune).toEqual({
+			...ajaccio,
+			codeInsee: '2A004',
+			departement: '2A',
+			latitude: 41.92,
+			longitude: 8.74,
+		})
 
 		expect((await modifier(compte, profil, { commune: { ...ANNECY, departement: '2A' } })).statut).toBe(200)
-		expect((await zoneStockee(profil)).commune).toEqual({ ...ANNECY, departement: '74' })
+		expect((await zoneStockee(profil)).commune).toEqual(ANNECY_STOCKEE)
 	})
 
 	test('toute la France : une commune d’une collectivité d’outre-mer de la liste officielle est acceptée', async () => {
@@ -172,7 +175,7 @@ describe('Une zone mal formée est refusée en français, et rien ne change', ()
 		expect(champsRefuses(sansCode.corps)).toEqual([
 			{ path: 'commune.codeInsee', message: MESSAGES_DE_LA_ZONE.communeSansCodeInsee },
 		])
-		expect((await zoneStockee(profil)).commune).toEqual({ ...ANNECY, departement: '74' })
+		expect((await zoneStockee(profil)).commune).toEqual(ANNECY_STOCKEE)
 	})
 
 	test('une ville en texte libre, comme sur l’ancien site, n’est pas une commune : refusée', async () => {
@@ -256,6 +259,22 @@ describe('Une zone mal formée est refusée en français, et rien ne change', ()
 		expect((await zoneStockee(profil)).commune).toEqual(ANNECY_STOCKEE)
 	})
 
+	test('un nom fait d’autres caractères que ceux d’un nom de commune est refusé : un email, un site, un symbole', async () => {
+		const { compte, profil } = await maquilleuseEtSonProfil()
+		await modifier(compte, profil, { commune: ANNECY })
+
+		for (const nom of ['moi@exemple.test', 'www.site-fictif.test', 'St. Gervais', 'Annecy & alentours']) {
+			const refus = await modifier(compte, profil, { commune: { ...ANNECY, nom } })
+			expect(refus.statut, nom).toBe(400)
+			expect(champsRefuses(refus.corps), nom).toEqual([
+				{ path: 'commune.nom', message: MESSAGES_DE_LA_ZONE.nomCaracteres },
+			])
+		}
+		expect((await zoneStockee(profil)).commune).toEqual(ANNECY_STOCKEE)
+		// Its form only: whether the name is the one of its code, the list of the space and of the import says it.
+		expect((await modifier(compte, profil, { commune: { ...ANNECY, nom: 'Lyon' } })).statut).toBe(200)
+	})
+
 	test('le serveur aussi est tenu par les bornes : l’import d’un rayon de 400 km est refusé, jamais ramené à 200', async () => {
 		const payload = await payloadDeTest()
 		const compte = await payload.create({
@@ -278,7 +297,32 @@ describe('Une zone mal formée est refusée en français, et rien ne change', ()
 			collection: 'profils',
 			data: { pro: compte.id, slug: 'zone-importee', commune: ANNECY, rayonKm: 30 },
 		})
-		expect(importe).toMatchObject({ commune: { ...ANNECY, departement: '74' }, rayonKm: 30, aDomicile: null })
+		expect(importe).toMatchObject({ commune: ANNECY_STOCKEE, rayonKm: 30, aDomicile: null })
+	})
+})
+
+describe('Les coordonnées de la commune sont celles de son centre, à environ 1 km près', () => {
+	test('envoyées au huitième de décimale, elles sont gardées à deux, et le public ne lit que celles-là', async () => {
+		const { compte, profil } = await maquilleuseEtSonProfil()
+
+		const precises = { ...ANNECY, latitude: 48.85341234, longitude: 2.34881234 }
+		expect((await modifier(compte, profil, { commune: precises })).statut).toBe(200)
+
+		const arrondies = { latitude: 48.85, longitude: 2.35 }
+		expect((await zoneStockee(profil)).commune).toMatchObject(arrondies)
+		// With a commune, the profile is published (ticket 044): what the public reads.
+		const publique = await appelerRest('GET', `/api/profils/${profil}?depth=0`)
+		expect(publique.statut).toBe(200)
+		expect((publique.corps as { commune: unknown }).commune).toMatchObject(arrondies)
+	})
+
+	test('le serveur aussi les arrondit : l’import d’un centre au mètre près', async () => {
+		const { profil } = await maquilleuseEtSonProfil()
+		const payload = await payloadDeTest()
+
+		await payload.update({ collection: 'profils', id: profil, data: { commune: { ...ANNECY, latitude: 45.899247 } } })
+
+		expect((await zoneStockee(profil)).commune).toEqual(ANNECY_STOCKEE)
 	})
 })
 
@@ -292,7 +336,7 @@ describe('Lecture anonyme : la commune et son département sortent avec le profi
 		// With a commune, the rule of ticket 044 publishes the first; an admin holds the other as a draft.
 		await payload.update({ collection: 'profils', id: brouillon.profil, data: { statutChoisi: 'brouillon' } })
 
-		const attendu = { commune: { nom: 'Annecy', codeInsee: '74010', departement: '74' }, rayonKm: 30, aDomicile: true }
+		const attendu = { commune: ANNECY_STOCKEE, rayonKm: 30, aDomicile: true }
 		const seul = await appelerRest('GET', `/api/profils/${profil}?depth=0`)
 		expect(seul.statut).toBe(200)
 		expect(seul.corps).toMatchObject(attendu)
