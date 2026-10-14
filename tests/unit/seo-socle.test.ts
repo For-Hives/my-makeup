@@ -99,7 +99,9 @@ describe('robots (U52)', () => {
 		const avant = process.env.APP_ENV
 		try {
 			const requete = (chemin: string) =>
-				({ nextUrl: new URL(`https://exemple.test${chemin}`) }) as Parameters<typeof proxy>[0]
+				({ nextUrl: new URL(`https://exemple.test${chemin}`), cookies: { has: () => true } }) as unknown as Parameters<
+					typeof proxy
+				>[0]
 			process.env.APP_ENV = 'prod'
 			expect(proxy(requete('/')).headers.get('x-robots-tag')).toBeNull()
 			expect(proxy(requete('/search')).headers.get('x-robots-tag')).toBe(NOINDEX)
