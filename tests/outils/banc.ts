@@ -204,6 +204,15 @@ export function messageBancMuet(instance: Instance, muets: readonly ServiceInter
 }
 
 /**
+ * The arguments of `bun test` for an integration run: the files asked for, or the whole folder.
+ * A file is an argument that looks like a path; the value of an option (`-t 'un nom'`) is not one.
+ */
+export function argumentsDeTest(demandes: readonly string[]): string[] {
+	const fichierDemande = demandes.some(argument => !argument.startsWith('-') && /[/.]/.test(argument))
+	return ['--no-env-file', 'test', ...demandes, ...(fichierDemande ? [] : ['./tests/integration'])]
+}
+
+/**
  * The container engine to talk to when the default one does not answer: the socket of rootless
  * Podman, if it exists. A `DOCKER_HOST` already set is never replaced.
  */

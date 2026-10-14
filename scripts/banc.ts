@@ -1,15 +1,19 @@
 /**
  * Command line of the local test bench (docs/tests/banc.md).
  *
- *   bun run banc:up      starts the three containers, returns once all three answer
- *   bun run banc:down    stops them, removes containers and volumes
+ *   bun run banc:up                     starts the three containers, returns once all three answer
+ *   bun run banc:down                   stops them, removes containers and volumes
+ *   bun run banc:prepare                rebuilds the bench database from the code, empty
+ *   bun run test:integration [file…]    rebuilds the database, then runs the integration tests
  *
  * The instance (name and ports) comes from BANC_INSTANCE and BANC_DECALAGE: tests/outils/banc.ts.
  * Started with `--no-env-file`: a working `.env` never reaches the bench.
  */
 
 import { existsSync } from 'node:fs'
+import { SQL } from 'bun'
 import {
+	argumentsDeTest,
 	BancRefuse,
 	type Environnement,
 	environnementDuBanc,
@@ -158,9 +162,67 @@ async function arreter(banc: Banc): Promise<void> {
 	console.log(`Banc de test « ${banc.instance.nom} » arrêté : conteneurs et volumes supprimés, rien n’est gardé.`)
 }
 
-const USAGE = 'Usage : bun run banc:up | banc:down'
+/** Stops with the message that names what to start when a service of the bench is silent. */
+async function exigerBancDebout({ instance, services }: Banc): Promise<void> {
+	const muets = await servicesMuets(sondesDuBanc(services))
+	if (muets.length > 0) throw new BancRefuse(messageBancMuet(instance, muets))
+}
 
-async function principal([commande]: string[]): Promise<number> {
+/**
+ * Drops every table of the bench database. Payload then builds its tables from the collections
+ * of the code when it starts, on an empty database: it has no question to ask, whatever changed
+ * in a collection since the last run.
+ *
+ * The address is the one this file worked out from `.env.test` for the instance: never a value
+ * read from the environment.
+ */
+async function effacerLeSchema({ services: { base } }: Banc): Promise<void> {
+	// The same rule as the guard of the tests, asked again where the tables are dropped.
+	if (!['127.0.0.1', 'localhost'].includes(base.hote) || !base.nom.endsWith('_test'))
+		throw new BancRefuse(
+			'.env.test ne désigne pas une base locale dont le nom finit par « _test » : rien n’est effacé.'
+		)
+	const sql = new SQL({ url: base.adresse, max: 1 })
+	try {
+		await sql.unsafe('DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public')
+	} finally {
+		await sql.close()
+	}
+}
+
+async function preparer(banc: Banc): Promise<void> {
+	await exigerBancDebout(banc)
+	await effacerLeSchema(banc)
+	// Set before the Payload configuration is loaded: it reads the environment when it is imported.
+	Object.assign(process.env, banc.environnement)
+	const { compterLesDocuments } = await import('../tests/outils/payload-test')
+	// Counting is what starts Payload, which builds the tables.
+	const comptes = Object.values(await compterLesDocuments())
+	if (comptes.some(compte => compte !== 0)) throw new BancRefuse('La base du banc n’est pas vide après sa préparation.')
+	console.log(
+		`Base du banc « ${banc.instance.nom} » prête : schéma reconstruit depuis le code, ${comptes.length} collections, toutes vides.`
+	)
+}
+
+async function tester(banc: Banc, demandes: string[]): Promise<number> {
+	await exigerBancDebout(banc)
+	await effacerLeSchema(banc)
+	return Bun.spawn([process.execPath, ...argumentsDeTest(demandes)], {
+		cwd: RACINE,
+		env: {
+			...process.env,
+			...banc.environnement,
+			BANC_INSTANCE: banc.instance.nom,
+			BANC_DECALAGE: String(banc.instance.decalage),
+			NODE_ENV: 'test',
+		},
+		stdio: ['inherit', 'inherit', 'inherit'],
+	}).exited
+}
+
+const USAGE = 'Usage : bun run banc:up | banc:down | banc:prepare | test:integration [fichier…]'
+
+async function principal([commande, ...suite]: string[]): Promise<number> {
 	const instance = lireInstance()
 	const environnement = environnementDuBanc(instance)
 	const banc: Banc = { instance, environnement, services: servicesDuBanc(environnement) }
@@ -171,6 +233,11 @@ async function principal([commande]: string[]): Promise<number> {
 		case 'down':
 			await arreter(banc)
 			return 0
+		case 'prepare':
+			await preparer(banc)
+			return 0
+		case 'test':
+			return tester(banc, suite)
 		default:
 			console.error(USAGE)
 			return 2

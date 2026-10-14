@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { z } from 'zod'
 import {
+	argumentsDeTest,
 	BancRefuse,
 	DECALAGE_MAX,
 	environnementDuBanc,
@@ -12,6 +13,8 @@ import {
 	type Instance,
 	lireFichierEnv,
 	lireInstance,
+	messageBancMuet,
+	portOuvert,
 	portsDuBanc,
 	prefixeDeCommande,
 	RACINE,
@@ -19,6 +22,7 @@ import {
 	socketDeRepli,
 	variablesDeCompose,
 } from '../outils/banc'
+import { sondesDuBanc } from '../outils/banc-sondes'
 import { verifierEnvironnement } from '../outils/garde-environnement'
 
 const PAR_DEFAUT: Instance = { nom: INSTANCE_PAR_DEFAUT, decalage: 0 }
@@ -249,5 +253,75 @@ describe('Le moteur de conteneurs : Docker, ou Podman sans démon', () => {
 		expect(
 			socketDeRepli({ DOCKER_HOST: 'unix:///ailleurs.sock', XDG_RUNTIME_DIR: '/run/user/1000' }, () => true)
 		).toBeUndefined()
+	})
+})
+
+describe('La commande d’intégration', () => {
+	test('lance un seul fichier quand on le lui donne, tout le dossier sinon, jamais avec le .env de travail', () => {
+		expect(argumentsDeTest(['tests/integration/banc-base.test.ts'])).toEqual([
+			'--no-env-file',
+			'test',
+			'tests/integration/banc-base.test.ts',
+		])
+		expect(argumentsDeTest([])).toEqual(['--no-env-file', 'test', './tests/integration'])
+	})
+
+	test('une option et sa valeur ne sont pas prises pour un fichier', () => {
+		expect(argumentsDeTest(['--bail'])).toEqual(['--no-env-file', 'test', '--bail', './tests/integration'])
+		expect(argumentsDeTest(['-t', 'remise à zéro'])).toEqual([
+			'--no-env-file',
+			'test',
+			'-t',
+			'remise à zéro',
+			'./tests/integration',
+		])
+	})
+
+	test('le message d’un banc muet nomme les services, leur adresse et la commande qui démarre le banc', () => {
+		const instance: Instance = { nom: 'voisin', decalage: 20 }
+		const sondes = sondesDuBanc(servicesDuBanc(environnementDuBanc(instance)))
+
+		expect(messageBancMuet(instance, sondes)).toBe(
+			[
+				'Le banc de test « voisin » ne répond pas : base (127.0.0.1:5463), capteur de mails (127.0.0.1:1045), stockage d’objets (127.0.0.1:9110).',
+				'Démarre-le d’abord : BANC_INSTANCE=voisin BANC_DECALAGE=20 bun run banc:up',
+			].join('\n')
+		)
+		expect(messageBancMuet(instance, sondes)).not.toContain('mot-de-passe-factice')
+	})
+
+	/** An offset no bench of this machine listens on: its four ports are closed. */
+	async function decalageSansBanc(): Promise<number> {
+		for (let decalage = DECALAGE_MAX; decalage > DECALAGE_MAX - 50; decalage--) {
+			const ports = portsDuBanc(servicesDuBanc(environnementDuBanc({ nom: 'x', decalage })))
+			const ouverts = await Promise.all(ports.map(({ port }) => portOuvert(port)))
+			if (!ouverts.includes(true)) return decalage
+		}
+		throw new Error('aucun décalage libre pour ce test')
+	}
+
+	test('sans la pile, elle s’arrête avant le premier test et dit quoi démarrer', async () => {
+		const decalage = await decalageSansBanc()
+		const enfant = Bun.spawn(
+			[process.execPath, '--no-env-file', 'scripts/banc.ts', 'test', './tests/fixtures/temoin-garde.ts'],
+			{
+				cwd: RACINE,
+				env: { BANC_INSTANCE: 'banc-absent', BANC_DECALAGE: String(decalage), PATH: process.env.PATH ?? '' },
+				stdout: 'pipe',
+				stderr: 'pipe',
+			}
+		)
+		const [code, sortie, erreurs] = await Promise.all([
+			enfant.exited,
+			new Response(enfant.stdout).text(),
+			new Response(enfant.stderr).text(),
+		])
+
+		expect(erreurs).toContain('Le banc de test « banc-absent » ne répond pas : base (127.0.0.1:')
+		expect(erreurs).toContain(
+			`Démarre-le d’abord : BANC_INSTANCE=banc-absent BANC_DECALAGE=${decalage} bun run banc:up`
+		)
+		expect(sortie + erreurs).not.toContain('TEMOIN-GARDE')
+		expect(code).toBe(1)
 	})
 })
