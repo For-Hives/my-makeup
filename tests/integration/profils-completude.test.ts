@@ -113,7 +113,8 @@ describe('Valeurs stockées égales à la fonction unique sur les cas partagés 
 		for (const [i, cas] of CAS_PARTAGES.entries()) {
 			const { compte, profil } = await maquilleuseEtSonProfil()
 			const photo = async () =>
-				(await payload.create({ collection: 'media', data: { owner: compte.id }, file: fichierPourPayload() })).id
+				(await payload.create({ collection: 'media', data: { owner: Number(compte.id) }, file: fichierPourPayload() }))
+					.id
 			await payload.update({ collection: 'profils', id: profil, data: await documentDuCas(cas.profil, photo) })
 
 			const stockee = await etat(profil)
@@ -359,7 +360,13 @@ describe('Valeurs envoyées par la maquilleuse ignorées et recalculées', () =>
 			statutFixe: true,
 		})
 
-		const attendu = { completude: 0, actif: false, publiable: false, entierementVide: true, statut: 'brouillon' }
+		const attendu = {
+			completude: 0,
+			actif: false,
+			publiable: false,
+			entierementVide: true,
+			statut: 'brouillon',
+		} as const
 		expect(await etat(profil)).toEqual(attendu)
 		expect((corps as { doc: unknown }).doc).toMatchObject(attendu)
 		const apres = await stocke(profil)

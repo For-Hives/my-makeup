@@ -154,8 +154,8 @@ describe('le statut après une sauvegarde', () => {
 	})
 
 	test('sans statut fixé, il suit le profil dans les deux sens', () => {
-		const brouillon = { statut: 'brouillon', statutFixe: false }
-		const publie = { statut: 'publie', statutFixe: false }
+		const brouillon = { statut: 'brouillon', statutFixe: false } as const
+		const publie = { statut: 'publie', statutFixe: false } as const
 		expect(statutApres({ avant: brouillon, apres: brouillon, entierementVide: false })).toEqual(publie)
 		expect(statutApres({ avant: publie, apres: publie, entierementVide: true })).toEqual(brouillon)
 		expect(statutApres({ avant: publie, apres: publie, entierementVide: false })).toEqual(publie)
@@ -187,7 +187,7 @@ describe('le statut après une sauvegarde', () => {
 		expect(fixe).toEqual({ statut: 'brouillon', statutFixe: true })
 		expect(statutApres({ avant: fixe, apres: fixe, entierementVide: false })).toEqual(fixe)
 		// An admin publishes an empty profile: it stays published.
-		const publie = { statut: 'publie', statutFixe: true }
+		const publie = { statut: 'publie', statutFixe: true } as const
 		expect(statutApres({ avant: publie, apres: publie, entierementVide: true })).toEqual(publie)
 		// Created with another status than the draft: fixed too.
 		expect(statutApres({ apres: { statut: 'publie' }, entierementVide: true })).toEqual(publie)
