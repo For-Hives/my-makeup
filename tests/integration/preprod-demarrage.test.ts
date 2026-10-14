@@ -239,7 +239,7 @@ describe('Premier démarrage de la préprod, sur une base vide', () => {
 			where: { _status: { equals: 'draft' } },
 		})
 		expect(brouillons.totalDocs).toBe(1)
-		// The first admin is the one the person who opens /admin creates.
+		// The first admin is created by the operating procedure (`bun run admin:creer`), never by the start.
 		expect(await nombreDe('admins')).toBe(0)
 	})
 

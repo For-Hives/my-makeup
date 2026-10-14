@@ -38,6 +38,7 @@
 		"banc:reinitialiser": "bun --no-env-file scripts/banc.ts reinitialiser",
 		"banc:session": "bun --no-env-file scripts/banc.ts session",
 		"migration:import": "bun scripts/migration/import.ts",
+		"admin:creer": "bun scripts/admin/creer-admin.ts",
 		"test:integration": "bun --no-env-file scripts/banc.ts test",
 		"test:e2e": "bun --no-env-file scripts/e2e.ts",
 		"sondes": "bun --no-env-file tests/sondes/sondes.ts",

@@ -64,7 +64,7 @@ Gardes :
 - **Sur la base `mymakeup_preprod` seulement.** Sur une autre base, rien n'est effacé : `Remise à zéro « … » non faite, la base est gardée.`, suivi de la raison. L'application démarre ensuite sur la base telle qu'elle est.
 - Sans migration à rejouer, la remise est refusée avant d'effacer quoi que ce soit.
 - Une erreur pendant la remise est écrite dans le journal par son type et son code, et l'application démarre sur la base telle qu'elle est.
-- Le premier compte admin est à recréer après une remise (à la première visite de `/admin`).
+- Le premier compte admin est à recréer après une remise, par `bun run admin:creer` depuis un poste (README, « Créer un compte admin ») : l'écran du premier compte de `/admin` est fermé.
 
 ## Relancer l'import
 

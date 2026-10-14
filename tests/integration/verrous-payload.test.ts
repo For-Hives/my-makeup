@@ -17,11 +17,11 @@ type Compte = Awaited<ReturnType<typeof creerCompte<'admin'>>>
 let payload: Payload
 let admin: Compte
 let autreAdmin: Compte
-let redaction: Compte
+let redaction: Awaited<ReturnType<typeof creerCompte<'redaction'>>>
 let maquilleuse: Awaited<ReturnType<typeof creerCompte<'maquilleuse'>>>
 let talent: number
 
-const auNomDe = (compte: { id: string | number }, collection = 'admins') => ({
+const auNomDe = (compte: { id: string | number }, collection: 'admins' | 'pros' = 'admins') => ({
 	relationTo: collection,
 	value: Number(compte.id),
 })

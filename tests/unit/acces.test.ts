@@ -205,7 +205,8 @@ describe('La collection admins (ticket 018)', () => {
 		expect(Pros.endpoints).toContain(premierCompteFerme)
 		expect(() => premierCompteFerme.handler({ t: (cle: string) => cle } as never)).toThrow()
 		const role = Admins.fields.find(champ => 'name' in champ && champ.name === 'role')
-		expect(role).not.toHaveProperty('hooks')
+		// Once Payload has sanitized the configuration the field may carry empty hook lists: none holds a hook.
+		expect(Object.values((role as { hooks?: Record<string, unknown[]> }).hooks ?? {}).flat()).toEqual([])
 	})
 
 	test('la connexion est freinée par adresse, et une connexion réussie rend sa place (ticket 094)', () => {

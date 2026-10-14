@@ -51,6 +51,7 @@ Tout se lance depuis la racine du dépôt. La table complète est dans le README
 | `bun run banc:session <compte>` | La session d'un compte du banc (`admin`, `redaction`, `maquilleuse`, `profil-reference`, une adresse…), écrite dans `.banc/sessions/` : état d'un navigateur Playwright et en-têtes pour `curl -H @fichier`. Le jeton n'est jamais affiché. |
 | `bun run test:integration` | Les tests d'intégration, sur le banc démarré. Avec un chemin : ce fichier seul. Chaque lancement vide la base du banc. |
 | `bun run test:e2e` | Les essais de bout en bout, banc démarré : build de production, puis Playwright à 1440 et 390 px. Avec un chemin : ce fichier seul. Chaque lancement vide la base du banc. Le navigateur s'installe une fois par `bunx playwright install chromium`. |
+| `bun run admin:creer <email>` | Crée un compte de l'administration : la seule façon d'en avoir un. Le mot de passe se tape au clavier, jamais en argument. |
 | `bun run build` | Build de production. Il passe sans base ni secret. |
 | `bun run payload:types` | Après un changement de collection : régénère `src/payload-types.ts`. |
 | `bun run payload:importmap` | Après l'ajout d'un composant d'administration. |

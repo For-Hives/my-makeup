@@ -126,8 +126,13 @@ describe('Anonyme : au plus 100 profils par lecture REST, 10 sans limit', () => 
 })
 
 describe('Les verrous de Payload et l’admin', () => {
-	test('une maquilleuse connectée lit au plus 100 verrous, 10 sans limit', async () => {
-		const enTetes = maquilleuse.session.enTetes
+	test('une maquilleuse connectée ne lit aucun verrou (ticket 094) ; la rédaction en lit au plus 100, 10 sans limit', async () => {
+		const refus = await lire(
+			'/api/payload-locked-documents?limit=0&pagination=false&depth=0',
+			maquilleuse.session.enTetes
+		)
+		expect(refus.statut).toBe(403)
+		const enTetes = redaction.session.enTetes
 		const tout = await lire('/api/payload-locked-documents?limit=0&pagination=false&depth=0', enTetes)
 		expect(tout.statut).toBe(200)
 		expect(tout.liste.docs).toHaveLength(LIMITE_REST_MAX)
