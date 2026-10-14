@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { viderLeCapteur } from '../outils/mailpit'
 import {
 	type CollectionDeLaMatrice,
+	type CollectionEditoriale,
 	type Distribution,
 	distribuer,
 	jouer,
@@ -35,6 +36,79 @@ const lecturesDesChamps = (collection: CollectionDeLaMatrice, lecteurs: [string,
 			})
 		)
 	)
+
+/**
+ * The rules of the newsroom on one editorial collection (src/collections/redaction.ts): the
+ * newsroom (`redaction` and `admin`) creates, changes, publishes, unpublishes and deletes, and reads
+ * drafts too; everyone else, a makeup artist as an anonymous visitor, reads the published documents
+ * only and writes nothing (U59). Nobody writes `strapiId`. Talents (ticket 022), articles (046).
+ */
+const lignesDeLaRedaction = (collection: CollectionEditoriale): Ligne[] => [
+	...(['anonyme', 'maquilleuse', 'autreMaquilleuse', 'sansProfil'] as const).flatMap((role): Ligne[] => [
+		{ role, collection, operation: 'lister', attendu: 'publies' },
+		{ role, collection, operation: 'lire', document: 'publie', attendu: 'autorise' },
+		{ role, collection, operation: 'lire', document: 'brouillon', attendu: 'refuse' },
+		{ role, collection, operation: 'creer', attendu: 'refuse' },
+		{ role, collection, operation: 'modifier', document: 'publie', attendu: 'refuse' },
+		{
+			role,
+			collection,
+			operation: 'modifier',
+			document: 'brouillon',
+			champ: '_status',
+			valeur: 'published',
+			attendu: 'refuse',
+		},
+		{ role, collection, operation: 'supprimer', document: 'publie', attendu: 'refuse' },
+		{ role, collection, operation: 'supprimer', document: 'brouillon', attendu: 'refuse' },
+	]),
+	...(['redaction', 'admin'] as const).flatMap((role): Ligne[] => [
+		{ role, collection, operation: 'lister', attendu: 'tous' },
+		{ role, collection, operation: 'lire', document: 'publie', attendu: 'autorise' },
+		{ role, collection, operation: 'lire', document: 'brouillon', attendu: 'autorise' },
+		// Created published: created and published in one request.
+		{ role, collection, operation: 'creer', attendu: 'autorise' },
+		{ role, collection, operation: 'modifier', document: 'publie', attendu: 'autorise' },
+		{ role, collection, operation: 'modifier', document: 'brouillon', attendu: 'autorise' },
+		{
+			role,
+			collection,
+			operation: 'modifier',
+			document: 'brouillon',
+			champ: '_status',
+			valeur: 'published',
+			attendu: 'autorise',
+		},
+		{
+			role,
+			collection,
+			operation: 'modifier',
+			document: 'publie',
+			champ: '_status',
+			valeur: 'draft',
+			attendu: 'autorise',
+		},
+		{
+			role,
+			collection,
+			operation: 'modifier',
+			document: 'publie',
+			champ: 'slug',
+			valeur: 'une-autre-adresse',
+			attendu: 'autorise',
+		},
+		{
+			role,
+			collection,
+			operation: 'modifier',
+			document: 'publie',
+			champ: 'strapiId',
+			valeur: 999,
+			attendu: 'ignore',
+		},
+		{ role, collection, operation: 'supprimer', document: 'publie', attendu: 'autorise' },
+	]),
+]
 
 /**
  * The access matrix (plan 01 §5 P3; docs/tests/banc.md, « La matrice d'accès »).
@@ -385,12 +459,35 @@ const MATRICE: Ligne[] = [
 	{ role: 'sansProfil', collection: 'media', operation: 'creer', attendu: 'autorise' },
 	{ role: 'sansProfil', collection: 'media', operation: 'modifier', document: 'maquilleuse', attendu: 'refuse' },
 	{ role: 'sansProfil', collection: 'media', operation: 'supprimer', document: 'maquilleuse', attendu: 'refuse' },
-	{ role: 'redaction', collection: 'media', operation: 'lister', attendu: 'refuse' },
+	// The newsroom lists, reads, sends, changes and deletes the photos of the articles, which belong
+	// to nobody; a photo of a makeup artist it only reads when it is public (ticket 046).
+	{ role: 'redaction', collection: 'media', operation: 'lister', attendu: 'sansProprietaire' },
 	{ role: 'redaction', collection: 'media', operation: 'lire', document: 'maquilleuse', attendu: 'autorise' },
 	{ role: 'redaction', collection: 'media', operation: 'lire', document: 'autreMaquilleuse', attendu: 'refuse' },
-	{ role: 'redaction', collection: 'media', operation: 'creer', attendu: 'refuse' },
+	{ role: 'redaction', collection: 'media', operation: 'lire', document: 'publie', attendu: 'autorise' },
+	{ role: 'redaction', collection: 'media', operation: 'lire', document: 'brouillon', attendu: 'autorise' },
+	{ role: 'redaction', collection: 'media', operation: 'creer', attendu: 'autorise' },
+	{ role: 'redaction', collection: 'media', operation: 'modifier', document: 'brouillon', attendu: 'autorise' },
+	{
+		role: 'redaction',
+		collection: 'media',
+		operation: 'modifier',
+		document: 'brouillon',
+		champ: 'owner',
+		valeur: { compteDe: 'maquilleuse' },
+		attendu: 'ignore',
+	},
 	{ role: 'redaction', collection: 'media', operation: 'modifier', document: 'maquilleuse', attendu: 'refuse' },
+	{ role: 'redaction', collection: 'media', operation: 'supprimer', document: 'brouillon', attendu: 'autorise' },
 	{ role: 'redaction', collection: 'media', operation: 'supprimer', document: 'maquilleuse', attendu: 'refuse' },
+	// The photo of a published article is read by everyone; the photo of a draft by the newsroom
+	// only (ticket 046). Nobody else changes or deletes them.
+	...(['anonyme', 'maquilleuse', 'autreMaquilleuse', 'sansProfil'] as const).flatMap((role): Ligne[] => [
+		{ role, collection: 'media', operation: 'lire', document: 'publie', attendu: 'autorise' },
+		{ role, collection: 'media', operation: 'lire', document: 'brouillon', attendu: 'refuse' },
+		{ role, collection: 'media', operation: 'modifier', document: 'publie', attendu: 'refuse' },
+		{ role, collection: 'media', operation: 'supprimer', document: 'publie', attendu: 'refuse' },
+	]),
 	// What each role reads of A's photo, field by field (ticket 043).
 	...lecturesDesChamps('media', [
 		['url', ROLES],
@@ -401,6 +498,7 @@ const MATRICE: Ligne[] = [
 	]),
 	{ role: 'admin', collection: 'media', operation: 'lister', attendu: 'tous' },
 	{ role: 'admin', collection: 'media', operation: 'lire', document: 'autreMaquilleuse', attendu: 'autorise' },
+	{ role: 'admin', collection: 'media', operation: 'lire', document: 'brouillon', attendu: 'autorise' },
 	{ role: 'admin', collection: 'media', operation: 'creer', attendu: 'autorise' },
 	{ role: 'admin', collection: 'media', operation: 'modifier', document: 'autreMaquilleuse', attendu: 'autorise' },
 	{ role: 'admin', collection: 'media', operation: 'supprimer', document: 'autreMaquilleuse', attendu: 'autorise' },
@@ -422,73 +520,9 @@ const MATRICE: Ligne[] = [
 		})
 	),
 
-	// talents (ticket 022): the newsroom (`redaction` and `admin`) creates, changes, publishes,
-	// unpublishes and deletes, and reads drafts too; everyone else, a makeup artist as an anonymous
-	// visitor, reads the published talents only and writes nothing (U59). Nobody writes `strapiId`.
-	...(['anonyme', 'maquilleuse', 'autreMaquilleuse', 'sansProfil'] as const).flatMap((role): Ligne[] => [
-		{ role, collection: 'talents', operation: 'lister', attendu: 'publies' },
-		{ role, collection: 'talents', operation: 'lire', document: 'publie', attendu: 'autorise' },
-		{ role, collection: 'talents', operation: 'lire', document: 'brouillon', attendu: 'refuse' },
-		{ role, collection: 'talents', operation: 'creer', attendu: 'refuse' },
-		{ role, collection: 'talents', operation: 'modifier', document: 'publie', attendu: 'refuse' },
-		{
-			role,
-			collection: 'talents',
-			operation: 'modifier',
-			document: 'brouillon',
-			champ: '_status',
-			valeur: 'published',
-			attendu: 'refuse',
-		},
-		{ role, collection: 'talents', operation: 'supprimer', document: 'publie', attendu: 'refuse' },
-		{ role, collection: 'talents', operation: 'supprimer', document: 'brouillon', attendu: 'refuse' },
-	]),
-	...(['redaction', 'admin'] as const).flatMap((role): Ligne[] => [
-		{ role, collection: 'talents', operation: 'lister', attendu: 'tous' },
-		{ role, collection: 'talents', operation: 'lire', document: 'publie', attendu: 'autorise' },
-		{ role, collection: 'talents', operation: 'lire', document: 'brouillon', attendu: 'autorise' },
-		// Created published: created and published in one request.
-		{ role, collection: 'talents', operation: 'creer', attendu: 'autorise' },
-		{ role, collection: 'talents', operation: 'modifier', document: 'publie', attendu: 'autorise' },
-		{ role, collection: 'talents', operation: 'modifier', document: 'brouillon', attendu: 'autorise' },
-		{
-			role,
-			collection: 'talents',
-			operation: 'modifier',
-			document: 'brouillon',
-			champ: '_status',
-			valeur: 'published',
-			attendu: 'autorise',
-		},
-		{
-			role,
-			collection: 'talents',
-			operation: 'modifier',
-			document: 'publie',
-			champ: '_status',
-			valeur: 'draft',
-			attendu: 'autorise',
-		},
-		{
-			role,
-			collection: 'talents',
-			operation: 'modifier',
-			document: 'publie',
-			champ: 'slug',
-			valeur: 'une-autre-adresse',
-			attendu: 'autorise',
-		},
-		{
-			role,
-			collection: 'talents',
-			operation: 'modifier',
-			document: 'publie',
-			champ: 'strapiId',
-			valeur: 999,
-			attendu: 'ignore',
-		},
-		{ role, collection: 'talents', operation: 'supprimer', document: 'publie', attendu: 'autorise' },
-	]),
+	// talents (ticket 022) and articles (ticket 046): the rules of the newsroom.
+	...lignesDeLaRedaction('talents'),
+	...lignesDeLaRedaction('articles'),
 ]
 
 let distribution: Distribution

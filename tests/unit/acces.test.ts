@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import type { PayloadRequest } from 'payload'
 import { Admins, DUREE_SESSION_ADMIN_S, premierCompteAdmin, sessionsFermees } from '@/collections/Admins'
+import { Articles } from '@/collections/Articles'
 import {
 	aucunEnvoiSansStockage,
 	COORDONNEES_DU_FICHIER,
@@ -12,15 +13,21 @@ import {
 } from '@/collections/Media'
 import { CONTEXTE_SANS_PROFIL, consentementTrace, Profils } from '@/collections/Profils'
 import { compteSansProfilAvantSuppression, Pros, premierCompteFerme } from '@/collections/Pros'
-import { ACCES_REDACTION, champStrapiId, VERSIONS_REDACTION } from '@/collections/redaction'
+import {
+	ACCES_REDACTION,
+	champPublieLe,
+	champStrapiId,
+	datePremierePublication,
+	VERSIONS_REDACTION,
+} from '@/collections/redaction'
 import { Talents } from '@/collections/Talents'
 import {
 	AUCUN_DOCUMENT,
-	adminOuMaquilleuse,
 	adminOuProprietaire,
 	adminOuProprietaireDuMedia,
 	adminOuRedaction,
 	adminOuSoiMeme,
+	adminRedactionOuMaquilleuse,
 	adminRedactionOuPublies,
 	adminSeulement,
 	champAdminOuRedaction,
@@ -34,10 +41,12 @@ import {
 	identifiantPossible,
 	jamais,
 	lectureDesMedias,
+	MEDIAS_DE_LA_REDACTION,
 	PROFILS_PUBLIES,
 	profilPublieOuProprietaire,
 	SEULEMENT_PUBLIES,
 } from '@/lib/acces'
+import { estUneImage, galerieDImages, IMAGES_SEULEMENT, MESSAGE_GALERIE_IMAGES, TYPES_D_IMAGE } from '@/lib/articles'
 import { validerPhotosDuProfil } from '@/lib/profil/photos'
 import { STATUTS_DU_PROFIL } from '@/lib/profil/statut'
 
@@ -420,26 +429,160 @@ describe('La collection talents (ticket 022) : la rédaction écrit, le public l
 	})
 })
 
+describe('La collection articles (ticket 046) : les règles des talents (U59)', () => {
+	const regles = Articles.access ?? {}
+	const tousLesComptes = [admin, redaction, maquilleuse, autreCollection, null]
+
+	test('lire : tout pour la rédaction, brouillons compris ; les articles publiés seulement pour les autres', () => {
+		expect(regles.read).toBe(adminRedactionOuPublies)
+		expect(tousLesComptes.map(user => regles.read?.(appel(user) as never))).toEqual([
+			true,
+			true,
+			SEULEMENT_PUBLIES,
+			SEULEMENT_PUBLIES,
+			SEULEMENT_PUBLIES,
+		])
+	})
+
+	test('créer, modifier (donc publier), supprimer, lire les versions : la rédaction seulement', () => {
+		for (const regle of [regles.create, regles.update, regles.delete, regles.readVersions])
+			expect(tousLesComptes.map(user => regle?.(appel(user) as never))).toEqual([true, true, false, false, false])
+	})
+
+	test('les règles et les brouillons de la rédaction, comme les talents', () => {
+		// The rules and the drafts are compared, not the objects as written: loading the Payload
+		// configuration in the same process completes them in place (see the talents).
+		expect(Articles.access).toMatchObject(ACCES_REDACTION)
+		expect(Articles.versions).toBe(VERSIONS_REDACTION)
+		expect(Articles.hooks?.beforeChange).toEqual([datePremierePublication])
+	})
+
+	test('les champs de l’ancien site : titre et slug requis pour publier, le slug sous /blog, SEO bornés à 70 et 155', () => {
+		expect(champ(Articles.fields, 'title')).toMatchObject({ type: 'text', required: true })
+		expect(champ(Articles.fields, 'slug')).toMatchObject({
+			type: 'text',
+			required: true,
+			unique: true,
+			admin: { description: expect.stringContaining('/blog/<adresse>') },
+		})
+		expect(champ(Articles.fields, 'seo_title')).toMatchObject({ type: 'text', maxLength: 70 })
+		expect(champ(Articles.fields, 'seo_description')).toMatchObject({ type: 'textarea', maxLength: 155 })
+		expect(champ(Articles.fields, 'excerpt')).toMatchObject({ type: 'textarea' })
+		expect(champ(Articles.fields, 'author')).toMatchObject({ type: 'text' })
+		// Markdown without the 40 000 characters of `text` and `textarea`.
+		expect(champ(Articles.fields, 'content')).toMatchObject({ type: 'code' })
+		expect(champ(Articles.fields, 'content')).not.toHaveProperty('maxLength')
+	})
+
+	test('strapiId : écrit par l’import, lu par la rédaction ; la date de publication n’est écrite par aucune API', () => {
+		expect(champ(Articles.fields, 'strapiId')).toBe(champStrapiId as never)
+		expect(champ(Articles.fields, 'publishedAt')).toBe(champPublieLe as never)
+	})
+
+	test('la galerie : des médias, plusieurs, des images seulement, brouillons compris', () => {
+		expect(champ(Articles.fields, 'galerie')).toMatchObject({
+			type: 'upload',
+			hasMany: true,
+			filterOptions: IMAGES_SEULEMENT,
+			hooks: { beforeChange: [galerieDImages] },
+		})
+		expect(IMAGES_SEULEMENT).toEqual({ mimeType: { in: [...TYPES_D_IMAGE] } })
+	})
+})
+
+describe('La galerie d’un article ne prend que des images (ticket 046)', () => {
+	/** The hook as Payload calls it, with a database that holds these media and their types. */
+	function enregistrer(valeur: unknown, media: { id: number; mimeType: string | null }[]) {
+		const recherches: unknown[] = []
+		const payload = {
+			find: (options: { where: unknown }) => {
+				recherches.push(options.where)
+				return Promise.resolve({ docs: media })
+			},
+		}
+		const resultat = galerieDImages({ value: valeur, req: { payload } as unknown as PayloadRequest } as never)
+		return { resultat, recherches }
+	}
+
+	test('JPEG, PNG, WebP, GIF et AVIF sont des images ; un PDF, une vidéo, un SVG, rien du tout n’en sont pas', () => {
+		for (const type of ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif'])
+			expect([type, estUneImage(type)]).toEqual([type, true])
+		for (const type of [
+			'application/pdf',
+			'video/mp4',
+			'image/svg+xml',
+			'image/heic',
+			'text/html',
+			'',
+			null,
+			undefined,
+		])
+			expect([type, estUneImage(type)]).toEqual([type, false])
+	})
+
+	test('une galerie d’images est gardée telle quelle, dans son ordre ; une galerie vide ne demande rien', async () => {
+		const images = enregistrer(
+			[2, { id: 1 }],
+			[
+				{ id: 1, mimeType: 'image/png' },
+				{ id: 2, mimeType: 'image/webp' },
+			]
+		)
+		expect(await images.resultat).toEqual([2, { id: 1 }])
+		expect(images.recherches).toEqual([{ id: { in: [2, 1] } }])
+		const vide = enregistrer([], [])
+		expect(await vide.resultat).toEqual([])
+		expect(vide.recherches).toEqual([])
+	})
+
+	test('un PDF, ou un média qui n’existe pas : refusé, avec le message en français sur le champ', async () => {
+		for (const [valeur, media] of [
+			[
+				[1, 3],
+				[
+					{ id: 1, mimeType: 'image/png' },
+					{ id: 3, mimeType: 'application/pdf' },
+				],
+			],
+			[[4], []],
+		] as const)
+			await expect(enregistrer(valeur, [...media]).resultat).rejects.toMatchObject({
+				status: 400,
+				data: { errors: [{ message: MESSAGE_GALERIE_IMAGES, path: 'galerie' }] },
+			})
+	})
+})
+
 describe('La collection media (ticket 043)', () => {
 	const regles = Media.access ?? {}
 
-	/** What the read rule receives: the request, with a database that answers how many published profiles hold the media. */
-	function lecture(user: Utilisateur | null, id: number | undefined, rattache: boolean) {
+	/**
+	 * What the read rule receives: the request, with a database that answers how many published
+	 * documents hold the media: `rattache` for every collection, or by collection.
+	 */
+	function lecture(
+		user: Utilisateur | null,
+		id: number | undefined,
+		rattache: boolean | Partial<Record<'profils' | 'articles', boolean>>
+	) {
 		const appels: unknown[] = []
 		const payload = {
-			count: (options: unknown) => {
+			count: (options: { collection: 'profils' | 'articles' }) => {
 				appels.push(options)
-				return Promise.resolve({ totalDocs: rattache ? 1 : 0 })
+				const oui = typeof rattache === 'boolean' ? rattache : (rattache[options.collection] ?? false)
+				return Promise.resolve({ totalDocs: oui ? 1 : 0 })
 			},
 		}
 		const resultat = lectureDesMedias({ req: { user, payload } as unknown as PayloadRequest, id } as never)
 		return { resultat, appels }
 	}
 
-	test('lister : refusé à l’anonyme et à redaction ; ses médias pour une maquilleuse ; tout pour admin (U56)', async () => {
+	test('lister : refusé à l’anonyme ; ses médias pour une maquilleuse ; ceux de la rédaction pour redaction ; tout pour admin (U56)', async () => {
 		expect(regles.read).toBe(lectureDesMedias)
 		expect(await lecture(null, undefined, true).resultat).toBe(false)
-		expect(await lecture(redaction, undefined, true).resultat).toBe(false)
+		// The photos of the articles: those nobody owns (ticket 046).
+		expect(MEDIAS_DE_LA_REDACTION).toEqual({ owner: { exists: false } })
+		expect(await lecture(redaction, undefined, true).resultat).toEqual(MEDIAS_DE_LA_REDACTION)
 		expect(await lecture(maquilleuse, undefined, true).resultat).toEqual({ owner: { equals: 7 } })
 		expect(await lecture(admin, undefined, false).resultat).toBe(true)
 	})
@@ -457,9 +600,26 @@ describe('La collection media (ticket 043)', () => {
 			}),
 		])
 		expect(await lecture(null, 12, false).resultat).toEqual(AUCUN_DOCUMENT)
-		expect(await lecture(redaction, 12, false).resultat).toEqual(AUCUN_DOCUMENT)
+		// The newsroom also reads its own photos, attached or not.
+		expect(await lecture(redaction, 12, false).resultat).toEqual(MEDIAS_DE_LA_REDACTION)
 		// Her own media, attached or not.
 		expect(await lecture(maquilleuse, 12, false).resultat).toEqual({ owner: { equals: 7 } })
+	})
+
+	test('lire un média : lu s’il est dans la galerie d’un article publié, introuvable sinon (ticket 046)', async () => {
+		const dUnArticle = lecture(null, 12, { articles: true })
+		expect(await dUnArticle.resultat).toBe(true)
+		expect(dUnArticle.appels).toEqual([
+			expect.objectContaining({ collection: 'profils' }),
+			expect.objectContaining({
+				collection: 'articles',
+				overrideAccess: true,
+				// The published version of the article: a draft never opens its photos.
+				where: { and: [SEULEMENT_PUBLIES, { galerie: { in: [12] } }] },
+			}),
+		])
+		for (const user of [null, maquilleuse]) expect(await lecture(user, 12, { articles: true }).resultat).toBe(true)
+		expect(await lecture(null, 12, { articles: false, profils: false }).resultat).toEqual(AUCUN_DOCUMENT)
 	})
 
 	test('lire, modifier ou supprimer un média par un identifiant qu’aucun document ne peut porter : refusé à tous, sans requête', async () => {
@@ -510,19 +670,16 @@ describe('La collection media (ticket 043)', () => {
 		expect(Media.upload).toMatchObject({ disableLocalStorage: true })
 	})
 
-	test('envoyer : une maquilleuse ou admin ; modifier et supprimer : sa propriétaire ou admin', () => {
-		expect(regles.create).toBe(adminOuMaquilleuse)
-		expect([admin, redaction, maquilleuse, null].map(user => adminOuMaquilleuse(appel(user) as never))).toEqual([
-			true,
-			false,
-			true,
-			false,
-		])
+	test('envoyer : une maquilleuse, admin ou redaction ; modifier et supprimer : sa propriétaire, admin, ou redaction pour les photos de la rédaction', () => {
+		expect(regles.create).toBe(adminRedactionOuMaquilleuse)
+		expect(
+			[admin, redaction, maquilleuse, null].map(user => adminRedactionOuMaquilleuse(appel(user) as never))
+		).toEqual([true, true, true, false])
 		for (const regle of [regles.update, regles.delete]) {
 			expect(regle).toBe(adminOuProprietaireDuMedia)
 			expect(regle?.(appel(maquilleuse) as never)).toEqual({ owner: { equals: 7 } })
 			expect(regle?.(appel(admin) as never)).toBe(true)
-			expect(regle?.(appel(redaction) as never)).toBe(false)
+			expect(regle?.(appel(redaction) as never)).toEqual(MEDIAS_DE_LA_REDACTION)
 			expect(regle?.(appel(null) as never)).toBe(false)
 		}
 	})

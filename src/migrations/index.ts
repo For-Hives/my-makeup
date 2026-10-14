@@ -7,6 +7,7 @@ import * as migration_20261014_061848_profils_listes_provisoire from './20261014
 import * as migration_20261014_062220_profils_champs_reserves_provisoire from './20261014_062220_profils_champs_reserves_provisoire'
 import * as migration_20261014_062549_profils_contact_provisoire from './20261014_062549_profils_contact_provisoire'
 import * as migration_20261014_063859_media_lecture_provisoire from './20261014_063859_media_lecture_provisoire'
+import * as migration_20261014_075031_articles_provisoire from './20261014_075031_articles_provisoire'
 
 export const migrations = [
 	{
@@ -53,5 +54,10 @@ export const migrations = [
 		up: migration_20261014_063859_media_lecture_provisoire.up,
 		down: migration_20261014_063859_media_lecture_provisoire.down,
 		name: '20261014_063859_media_lecture_provisoire',
+	},
+	{
+		up: migration_20261014_075031_articles_provisoire.up,
+		down: migration_20261014_075031_articles_provisoire.down,
+		name: '20261014_075031_articles_provisoire',
 	},
 ]

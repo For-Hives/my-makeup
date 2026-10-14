@@ -73,6 +73,7 @@ export interface Config {
     profils: Profil;
     media: Media;
     talents: Talent;
+    articles: Article;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -85,6 +86,7 @@ export interface Config {
     profils: ProfilsSelect<false> | ProfilsSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
     talents: TalentsSelect<false> | TalentsSelect<true>;
+    articles: ArticlesSelect<false> | ArticlesSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -411,6 +413,38 @@ export interface Talent {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "articles".
+ */
+export interface Article {
+  id: number;
+  title: string;
+  /**
+   * La page répond à /blog/<adresse>. Changer l’adresse d’une page publiée casse les liens et les résultats de recherche qui y mènent.
+   */
+  slug: string;
+  /**
+   * Signature affichée sous le titre.
+   */
+  author?: string | null;
+  excerpt?: string | null;
+  seo_title?: string | null;
+  seo_description?: string | null;
+  /**
+   * En markdown.
+   */
+  content?: string | null;
+  /**
+   * Des images seulement : JPEG, PNG, WebP, GIF ou AVIF.
+   */
+  galerie?: (number | Media)[] | null;
+  publishedAt?: string | null;
+  strapiId?: number | null;
+  updatedAt: string;
+  createdAt: string;
+  _status?: ('draft' | 'published') | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
@@ -452,6 +486,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'talents';
         value: number | Talent;
+      } | null)
+    | ({
+        relationTo: 'articles';
+        value: number | Article;
       } | null);
   globalSlug?: string | null;
   user:
@@ -690,6 +728,25 @@ export interface TalentsSelect<T extends boolean = true> {
   description?: T;
   seo_description?: T;
   content?: T;
+  publishedAt?: T;
+  strapiId?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  _status?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "articles_select".
+ */
+export interface ArticlesSelect<T extends boolean = true> {
+  title?: T;
+  slug?: T;
+  author?: T;
+  excerpt?: T;
+  seo_title?: T;
+  seo_description?: T;
+  content?: T;
+  galerie?: T;
   publishedAt?: T;
   strapiId?: T;
   updatedAt?: T;
