@@ -434,6 +434,18 @@ describe('CLAUDE.md', () => {
 			expect(headings, heading).toContain(heading)
 	})
 
+	test('every access rule adds its lines to the access matrix, which exists (ticket 018)', () => {
+		const architecture = section(guide, /^## Architecture/)
+
+		expect(architecture).toMatch(/toute règle d['’]accès ajoute ses lignes à la matrice d['’]accès/i)
+		expect(architecture).toContain('`tests/integration/payload-acces.test.ts`')
+		expect(guides['AGENTS.md']).toMatch(
+			/toute règle d['’]accès ajoute ses lignes à `tests\/integration\/payload-acces\.test\.ts`/i
+		)
+		expect(existsSync(path.join(ROOT, 'tests/integration/payload-acces.test.ts'))).toBe(true)
+		expect(existsSync(path.join(ROOT, 'src/lib/acces.ts'))).toBe(true)
+	})
+
 	test('it loads AGENTS.md and points to the documents an agent needs', () => {
 		const files = citedFiles(guide)
 

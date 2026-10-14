@@ -95,8 +95,14 @@ describe('Hors du banc, la fabrique s’arrête avant toute écriture', () => {
 
 describe('Ce que la fabrique tire au sort', () => {
 	test('chaque type de compte vit dans une collection de comptes', () => {
-		expect(Object.keys(TYPES_DE_COMPTE)).toEqual(['admin'])
+		expect(Object.keys(TYPES_DE_COMPTE)).toEqual(['admin', 'redaction'])
 		expect(TYPES_DE_COMPTE.admin.collection).toBe('admins')
+		expect(TYPES_DE_COMPTE.redaction.collection).toBe('admins')
+	})
+
+	test('les deux rôles de l’administration : admin et redaction', () => {
+		expect(TYPES_DE_COMPTE.admin.donnees()).toEqual({ role: 'admin' })
+		expect(TYPES_DE_COMPTE.redaction.donnees()).toEqual({ role: 'redaction' })
 	})
 
 	test('une adresse en @example.test, jamais deux fois la même', () => {

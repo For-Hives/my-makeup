@@ -38,7 +38,7 @@ Une application, trois zones, toutes sous `src/app/` :
 |---|---|---|---|
 | Pages publiques | `(front)/(site)/` | `/` | Page d'accueil provisoire |
 | Espace maquilleuse | `(front)/(espace)/auth/` | `/auth` | Page d'attente |
-| Administration | `(payload)/` | `/admin` et `/api` | Générée par Payload, une collection de comptes `admins` |
+| Administration | `(payload)/` | `/admin` et `/api` | Générée par Payload : les comptes `admins`, aux rôles `admin` et `redaction` |
 
 Les noms entre parenthèses rangent les fichiers et n'apparaissent pas dans les adresses.
 
@@ -47,6 +47,7 @@ Les pages publiques et l'espace maquilleuse partagent une seule coquille HTML, `
 Le reste :
 
 - `src/payload.config.ts` : la configuration de Payload (base PostgreSQL, collection `admins`).
+- `src/collections/` : les collections de Payload. `src/lib/acces.ts` : qui peut lire, créer, modifier ou supprimer quoi (voir « Accès »).
 - `src/lib/env.ts` : les variables d'environnement, vérifiées au démarrage par `src/instrumentation.ts`.
 - `src/migrations/` : les migrations versionnées de la base.
 - `src/payload-types.ts` et `src/app/(payload)/admin/importMap.js` : fichiers générés par Payload, versionnés, jamais modifiés à la main.
@@ -184,6 +185,8 @@ L'application vérifie ses variables à chaque démarrage (`bun run dev`, `bun r
 - Dans un navigateur, une page ouverte depuis un autre site (un lien dans un webmail, un résultat de recherche) arrive sans en-tête `Origin` et avec `Sec-Fetch-Site: cross-site` : le cookie de session est ignoré pour cette page, et la personne y paraît déconnectée. Une adresse tapée, un favori et un lien du site lui-même ne sont pas concernés. Ce que fait une page privée dans ce cas reste à décider par les tickets des pages privées.
 - Aucun autre site ne peut lire l'API depuis un navigateur : aucune origine n'est ouverte en CORS.
 - `/api/og`, l'image de partage de l'administration, est fermée.
+- Deux rôles ouvrent l'administration : `admin` peut tout ; `redaction` ne lit et ne modifie que son propre compte, sans pouvoir changer son rôle. Une session de l'administration dure 8 heures. Le premier compte d'une base vide est toujours un `admin`, quel que soit le rôle choisi sur l'écran du premier compte.
+- Les règles sont dans `src/lib/acces.ts`. Chacune a ses lignes dans la matrice d'accès, jouée par l'API REST et par l'API locale (`tests/integration/payload-acces.test.ts`, voir [`docs/tests/banc.md`](docs/tests/banc.md), « La matrice d'accès »).
 
 ### En-têtes de sécurité
 
@@ -427,7 +430,8 @@ bun run banc:down                                              # arrête tout et
 - Sans le banc, `bun run test:integration` s'arrête avant le premier test et dit quoi démarrer.
 - Lancer les tests d'intégration vide la base du banc.
 - Plusieurs bancs tournent côte à côte sur un même poste, chacun sous son nom et sur ses ports : `BANC_INSTANCE=mon-banc BANC_DECALAGE=20 bun run banc:up`.
-- Un test obtient un compte fictif et sa session en un appel, sans mot de passe à saisir : `await creerCompte('admin')`.
+- Un test obtient un compte fictif et sa session en un appel, sans mot de passe à saisir : `await creerCompte('admin')`, ou `'redaction'`.
+- Toute règle d'accès a ses lignes dans la matrice d'accès, jouées par l'API REST et par l'API locale avec les règles actives : `tests/integration/payload-acces.test.ts`.
 - Sur le banc, l'application envoie tous ses mails au capteur. Un test lit le sien, avec son destinataire, son sujet et ses liens : `await attendreLeMail({ pour: adresse })`.
 - Un test dépose un objet dans le stockage et le relit : `await deposerUnObjet(cle, contenu)`, `await lireUnObjet(cle)`.
 - L'import se teste sur une fausse base Strapi qui porte chaque cas connu de la vraie, ouverte en lecture seule, avec ses photos dans le stockage : `bun run banc:source` la crée, à l'identique à chaque fois.

@@ -33,8 +33,10 @@ const declarer = <Slug extends AuthCollectionSlug>(declaration: DeclarationDeCom
  * declaration each: nothing else changes in this file.
  */
 export const TYPES_DE_COMPTE = {
-	/** An account of the admin panel, as the skeleton defines it: no role yet. */
-	admin: declarer({ collection: 'admins', donnees: () => ({}) }),
+	/** An account of the admin panel with the role `admin`: it may do everything. */
+	admin: declarer({ collection: 'admins', donnees: () => ({ role: 'admin' }) }),
+	/** An account of the admin panel with the role `redaction`: articles and talents, and its own account. */
+	redaction: declarer({ collection: 'admins', donnees: () => ({ role: 'redaction' }) }),
 }
 
 export type TypeDeCompte = keyof typeof TYPES_DE_COMPTE

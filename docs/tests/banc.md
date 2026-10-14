@@ -119,7 +119,7 @@ test('un compte créé se relit', async () => {
 
 	const cree = await payload.create({
 		collection: 'admins',
-		data: { email: 'lea@example.test', password: crypto.randomUUID() },
+		data: { email: 'lea@example.test', password: crypto.randomUUID(), role: 'admin' },
 	})
 
 	expect((await payload.findByID({ collection: 'admins', id: cree.id })).email).toBe('lea@example.test')
@@ -242,16 +242,61 @@ Dans un essai de bout en bout, la page s'ouvre par un chemin (`page.goto('/admin
 - **Aucun mot de passe ne sort de la fabrique.** Elle en tire un au hasard, s'en sert une fois pour ouvrir la session et l'oublie : il n'est ni rendu, ni écrit dans les journaux.
 - **Hors du banc, la fabrique s'arrête avant toute écriture.** Elle vérifie l'environnement, puis la base à laquelle Payload est réellement connecté.
 
-Les types de compte sont déclarés dans `TYPES_DE_COMPTE` (`tests/outils/fabrique-comptes.ts`). Aujourd'hui il n'y en a qu'un, `admin`, le compte d'administration du squelette. Une collection de comptes y ajoute son type par une déclaration :
+Les types de compte sont déclarés dans `TYPES_DE_COMPTE` (`tests/outils/fabrique-comptes.ts`) :
+
+| Type | Collection | Ce que c'est |
+|---|---|---|
+| `admin` | `admins` | Un compte de l'administration avec le rôle `admin` : il peut tout |
+| `redaction` | `admins` | Un compte de l'administration avec le rôle `redaction` : articles et talents, et son propre compte |
+
+Une collection de comptes y ajoute son type par une déclaration :
 
 ```ts
 export const TYPES_DE_COMPTE = {
-	admin: declarer({ collection: 'admins', donnees: () => ({}) }),
-	// maquilleuse: declarer({ collection: 'pros', donnees: () => ({ … }) }),
+	admin: declarer({ collection: 'admins', donnees: () => ({ role: 'admin' }) }),
+	redaction: declarer({ collection: 'admins', donnees: () => ({ role: 'redaction' }) }),
 }
 ```
 
 `donnees` rend ce que le compte porte en plus de son adresse et de son mot de passe. Le compilateur vérifie ces données contre les champs de la collection.
+
+## La matrice d'accès
+
+Toute règle d'accès, qui dit qui lit, crée, modifie ou supprime quoi, ajoute ses lignes à la matrice d'accès, dans le même commit : `tests/integration/payload-acces.test.ts`. Les règles elles-mêmes sont dans `src/lib/acces.ts`, et les collections les appellent.
+
+Une ligne dit qui agit, sur quoi, et ce qui doit arriver :
+
+```ts
+{ role: 'redaction', collection: 'admins', operation: 'modifier', document: 'admin', attendu: 'refuse' },
+{ role: 'redaction', collection: 'admins', operation: 'modifier', document: 'redaction', champ: 'role', valeur: 'admin', attendu: 'ignore' },
+```
+
+Chaque ligne est jouée deux fois : par l'API REST, avec la session de la fabrique, et par l'API locale avec les règles actives (`overrideAccess: false`). Cela fait un test par voie, dont le nom redit la ligne.
+
+| Champ de la ligne | Valeurs |
+|---|---|
+| `role` | Qui agit : `anonyme`, ou un compte de la distribution (`admin`, `redaction`) |
+| `collection` | La collection visée |
+| `operation` | `lister`, `lire`, `creer`, `modifier`, `supprimer` |
+| `document` | Le document visé, désigné par le rôle à qui il appartient (`lire`, `modifier`, `supprimer`) |
+| `champ`, `valeur` | Pour `modifier` : le champ envoyé et sa valeur. Sans eux, la matrice change un champ ordinaire de la collection |
+| `attendu` | Ce qui doit arriver, ci-dessous |
+
+| Attendu | Ce que la matrice a constaté |
+|---|---|
+| `refuse` | Refusé (403 ou 404 en REST, erreur de l'API locale), et rien n'a changé en base : rien de créé, rien de modifié, rien de supprimé |
+| `autorise` | Accepté, et la base le montre : le document lu est le bon, le document existe, la nouvelle valeur est stockée, le document a disparu |
+| `ignore` | Accepté, mais le champ a gardé sa valeur : un champ que ce rôle ne peut pas écrire |
+| `aucun`, `soi`, `tous` | Pour `lister` : une liste vide, exactement les documents de celui qui agit, ou tous les documents de la distribution |
+
+Tout autre constat est `incoherent` : refusé mais écrit quand même, ou une liste que personne n'attend. Le test échoue.
+
+À savoir :
+
+- **La distribution est faite une fois par fichier** (`distribuer()`, `tests/outils/matrice-acces.ts`) : un compte par rôle, par la fabrique, avec ses documents.
+- **Une ligne ne change pas la distribution.** Une valeur modifiée est remise comme avant, et une suppression qui doit réussir vise un document jetable de la même collection.
+- **Une collection nouvelle** donne à la matrice son portrait (`PORTRAITS`, même fichier) : le champ ordinaire à modifier, les données d'une création, un document jetable. **Un rôle nouveau** prend un type de la fabrique (`TYPE_DU_ROLE`).
+- **L'appel REST passe par la vraie route de l'application** (`appelerRest`, `tests/outils/rest.ts`), sans serveur : mêmes gestionnaires, même contrôle de session, mêmes règles. Il ne prouve pas l'aiguillage de Next lui-même, qu'un essai de bout en bout prouve.
 
 ## Le faux Google
 

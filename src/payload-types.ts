@@ -121,6 +121,7 @@ export interface AdminAuthOperations {
  */
 export interface Admin {
   id: number;
+  role: 'admin' | 'redaction';
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -215,6 +216,7 @@ export interface PayloadMigration {
  * via the `definition` "admins_select".
  */
 export interface AdminsSelect<T extends boolean = true> {
+  role?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;

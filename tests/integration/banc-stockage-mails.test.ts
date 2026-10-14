@@ -68,7 +68,7 @@ describe('Test coquille : la base, le stockage d’objets et le capteur de mails
 		async () => {
 			const debut = performance.now()
 			const payload = await payloadDeTest()
-			const compte = { email: adresseFictive('coquille'), password: crypto.randomUUID() }
+			const compte = { email: adresseFictive('coquille'), password: crypto.randomUUID(), role: 'admin' as const }
 			const cle = `coquille/${crypto.randomUUID()}.txt`
 			const destinataire = adresseFictive('coquille-mail')
 
