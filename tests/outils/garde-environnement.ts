@@ -29,7 +29,7 @@ export class EnvironnementRefuse extends Error {
 const HOTES_LOCAUX = ['localhost', '127.0.0.1', '::1']
 
 /** The services of the test stack, as named from inside its own container network. */
-const SERVICES_DU_BANC = { base: 'postgres', mails: 'mailpit', stockage: 'minio' } as const
+const SERVICES_DU_BANC = { base: 'postgres', mails: 'mailpit', stockage: 's3mock' } as const
 
 const DOMAINE_DU_SITE = 'my-makeup.fr'
 const HOTE_PREPROD = `preprod.${DOMAINE_DU_SITE}`
@@ -115,12 +115,20 @@ export function verifierCible(adresse: string, environnement: EnvironnementAdmis
 
 /**
  * Mail goes to the local mail catcher only, and no sending variable may name the site's real
- * domain: a test sender lives on a reserved domain such as `example.test`.
+ * domain: a test sender lives on a reserved domain such as `example.test`. The API the tests
+ * read and empty the catcher through is local too.
  */
 export function verifierEnvoi(variables: Variables): void {
 	const relais = variables.SMTP_HOST?.trim().toLowerCase()
 	if (relais && !estLocal(relais, SERVICES_DU_BANC.mails))
 		refuser(`SMTP_HOST refusé (${montrer(relais)}) : les tests n'envoient qu'au capteur de mails local.`)
+	if (variables.MAILPIT_URL) {
+		const url = lireAdresse(variables.MAILPIT_URL, ['http:', 'https:'])
+		if (!url) refuser("MAILPIT_URL n'est pas une adresse web lisible.")
+		const hote = hoteDe(url)
+		if (!estLocal(hote, SERVICES_DU_BANC.mails))
+			refuser(`MAILPIT_URL refusée (hôte ${montrer(hote)}) : les tests ne lisent que le capteur de mails local.`)
+	}
 	for (const [nom, valeur] of Object.entries(variables)) {
 		if (!FAMILLE_ENVOI.test(nom)) continue
 		const domaine = valeur?.match(DOMAINE_REEL)?.[0]

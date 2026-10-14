@@ -1,5 +1,7 @@
 import { describe, expect, test } from 'bun:test'
+import { readFileSync } from 'node:fs'
 import path from 'node:path'
+import { lireFichierEnv } from '../outils/banc'
 import {
 	EnvironnementRefuse,
 	lireEnvironnement,
@@ -18,6 +20,7 @@ const BANC = {
 	BASE_URL: 'http://localhost:3100',
 	NEXT_PUBLIC_SITE_URL: 'http://localhost:3100',
 	SMTP_HOST: '127.0.0.1',
+	MAILPIT_URL: 'http://127.0.0.1:8025',
 	EMAIL_FROM: 'My Makeup <ne-pas-repondre@example.test>',
 	S3_ENDPOINT: 'http://127.0.0.1:9000',
 	S3_BUCKET: 'mymakeup-test',
@@ -168,8 +171,32 @@ describe('U86 : refuse une BASE_URL e2e sur my-makeup.fr, www. ou api.', () => {
 describe('U87 : refuse un domaine d’envoi ou un bucket de prod dans l’environnement de test', () => {
 	test('accepte le banc : capteur de mails et stockage locaux, expéditeur réservé, bucket en -test', () => {
 		expect(verifierEnvironnement(BANC)).toBe('test')
-		expect(verifierEnvironnement({ ...BANC, SMTP_HOST: 'mailpit', S3_ENDPOINT: 'http://minio:9000' })).toBe('test')
+		expect(
+			verifierEnvironnement({
+				...BANC,
+				SMTP_HOST: 'mailpit',
+				MAILPIT_URL: 'http://mailpit:8025',
+				S3_ENDPOINT: 'http://s3mock:9090',
+			})
+		).toBe('test')
 		expect(verifierEnvironnement({})).toBe('test')
+	})
+
+	test('le fichier .env.test du dépôt passe la garde : c’est l’environnement du banc', () => {
+		const fichier = lireFichierEnv(readFileSync(path.join(RACINE, '.env.test'), 'utf8'))
+
+		expect(verifierEnvironnement(fichier)).toBe('test')
+		// Each rule of the guard has something to read in the file: none passes for want of a variable.
+		for (const nom of [
+			'APP_ENV',
+			'DATABASE_URI',
+			'NEXT_PUBLIC_SITE_URL',
+			'SMTP_HOST',
+			'MAILPIT_URL',
+			'S3_ENDPOINT',
+			'S3_BUCKET',
+		])
+			expect({ nom, valeur: fichier[nom] }).toEqual({ nom, valeur: expect.any(String) })
 	})
 
 	test.each([
@@ -191,6 +218,16 @@ describe('U87 : refuse un domaine d’envoi ou un bucket de prod dans l’enviro
 		const message = messageDuRefus(() => verifierEnvironnement({ ...BANC, SMTP_HOST: 'smtp.resend.com' }))
 
 		expect(message).toStartWith('SMTP_HOST refusé (« smtp.resend.com »)')
+	})
+
+	test.each([
+		['un capteur distant', 'https://mailpit.example.test', '« mailpit.example.test »'],
+		['une adresse sans protocole web', '127.0.0.1:8025', undefined],
+	])('refuse %s dans MAILPIT_URL', (_cas, adresse, hote) => {
+		const message = messageDuRefus(() => verifierEnvironnement({ ...BANC, MAILPIT_URL: adresse }))
+
+		expect(message).toStartWith('MAILPIT_URL')
+		if (hote) expect(message).toContain(hote)
 	})
 
 	test.each([
