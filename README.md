@@ -84,6 +84,18 @@ Les tests sont dans `tests/unit/completude.test.ts` et se lancent seuls avec `bu
 - `completude-cas.json` : les cas partagés avec l'ancien site, copiés tels quels ;
 - `completude-ancien-site.json` : les réponses du code de l'ancien site sur ces cas et sur ceux de son API. Ces valeurs ne se corrigent jamais à la main : un écart est un défaut du port.
 
+### Listes d'un profil
+
+Un profil porte cinq listes : les prestations, chacune avec ses options, les compétences, les langues, les formations et les expériences. Les champs sont dans `src/collections/profils-listes.ts`, leurs noms dans [`docs/migration/SCHEMA.md`](docs/migration/SCHEMA.md), §6. Les règles sont dans `src/lib/profil/listes.ts`, que les formulaires de l'espace maquilleuse appelleront aussi.
+
+- **L'ordre est celui de l'envoi.** Une liste s'envoie entière, dans l'ordre voulu. Une sauvegarde qui n'envoie pas une liste la laisse telle quelle.
+- **Le serveur donne l'identifiant de chaque ligne, et le garde.** Une ligne renvoyée avec son identifiant le garde d'une sauvegarde à l'autre, et retirer une ligne ne change l'identifiant d'aucune autre. Toute autre ligne est une ligne nouvelle, qui reçoit un identifiant neuf : une ligne sans identifiant, une ligne venue avec un identifiant que le serveur n'a pas donné à cette liste (tiré de son contenu, ou pris à un autre profil), la seconde copie d'une même ligne. Après une sauvegarde, les identifiants se relisent dans la réponse.
+- **Les bornes**, refusées avec un message en français, sans rien écrire : 70 caractères pour un nom, un prix saisi, un diplôme, une école, une entreprise, un poste ou une ville ; 2 000 pour une description ; un montant de 5 à 10 000 €, la règle de `src/lib/prix.ts`, ou rien pour un prix « sur devis » ; la fin d'une expérience pas avant son début ; une formation obtenue au plus un an après la date du jour.
+- **Une date est un jour**, rangé à 12:00 UTC : le même jour dans tous les fuseaux de la France. Un texte « AAAA-MM-JJ » donne ce jour, et un texte vide ne donne aucune date.
+- Aucun champ d'une ligne n'est obligatoire pour le serveur : une ligne reprise de l'ancien site garde ses valeurs vides. Les formulaires de l'espace disent ce qu'ils exigent.
+
+Les tests : `tests/unit/listes-profil.test.ts` pour les règles, `tests/integration/profils-listes.test.ts` pour la collection, sur le banc de test.
+
 ## Démarrer en local
 
 Il faut [bun](https://bun.sh) 1.3.14, Node 24 (`.nvmrc`), Docker avec Compose et `openssl`.

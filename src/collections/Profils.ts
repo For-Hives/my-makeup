@@ -9,6 +9,7 @@ import type {
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import { adminOuProprietaire, adminSeulement, champAdminSeulement, jamais } from '../lib/acces'
 import { premierSlugLibre, slugDeRepli, slugifier } from '../lib/slug'
+import { CHAMPS_LISTES, identitesDesLignesAvantEcriture } from './profils-listes'
 
 /**
  * What a creation of an account hands to Payload (`context`) when the account must stay without a
@@ -95,6 +96,7 @@ export const profilALaCreationDuCompte: CollectionAfterChangeHook = async ({ con
  * - Nobody creates a profile through an API but an admin: the server creates it with the account.
  * - `pro` (the account that owns it) is written by an admin only; `slug` by the server only, at
  *   the creation; `strapiId` and `legacyUsername` by the import only.
+ * - Its lists keep their order and the identifier of each row (src/collections/profils-listes.ts).
  */
 export const Profils: CollectionConfig<'profils'> = {
 	slug: 'profils',
@@ -107,7 +109,7 @@ export const Profils: CollectionConfig<'profils'> = {
 		delete: adminSeulement,
 	},
 	hooks: {
-		beforeChange: [slugALaCreation],
+		beforeChange: [identitesDesLignesAvantEcriture, slugALaCreation],
 		afterChange: [slugDeRepliApresCreation],
 	},
 	fields: [
@@ -135,6 +137,8 @@ export const Profils: CollectionConfig<'profils'> = {
 		{ name: 'specialite', label: 'Spécialité', type: 'text', maxLength: 70 },
 		{ name: 'description', label: 'Description', type: 'textarea', maxLength: 2000 },
 		{ name: 'disponible', label: 'Disponible', type: 'checkbox', defaultValue: true },
+		// Offers with their options, skills, languages, courses, experiences (ticket 040).
+		...CHAMPS_LISTES,
 		{
 			name: 'legacyUsername',
 			label: 'Nom d’utilisateur sur l’ancien site',

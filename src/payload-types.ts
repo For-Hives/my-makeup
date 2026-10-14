@@ -221,6 +221,63 @@ export interface Profil {
   specialite?: string | null;
   description?: string | null;
   disponible?: boolean | null;
+  prestations?:
+    | {
+        nom?: string | null;
+        description?: string | null;
+        prixTexte?: string | null;
+        /**
+         * De 5 à 10 000 €. Vide quand le prix saisi n’a pas de montant (« Sur devis »).
+         */
+        prixAPartirDe?: number | null;
+        options?:
+          | {
+              nom?: string | null;
+              description?: string | null;
+              prixTexte?: string | null;
+              /**
+               * De 5 à 10 000 €. Vide quand le prix saisi n’a pas de montant (« Sur devis »).
+               */
+              prixAPartirDe?: number | null;
+              id?: string | null;
+            }[]
+          | null;
+        id?: string | null;
+      }[]
+    | null;
+  competences?:
+    | {
+        nom?: string | null;
+        description?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  langues?:
+    | {
+        nom?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  formations?:
+    | {
+        diplome?: string | null;
+        ecole?: string | null;
+        obtenuLe?: string | null;
+        description?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  experiences?:
+    | {
+        entreprise?: string | null;
+        poste?: string | null;
+        ville?: string | null;
+        debut?: string | null;
+        fin?: string | null;
+        description?: string | null;
+        id?: string | null;
+      }[]
+    | null;
   /**
    * Sert à rediriger l’ancienne adresse du profil vers la nouvelle.
    */
@@ -384,6 +441,57 @@ export interface ProfilsSelect<T extends boolean = true> {
   specialite?: T;
   description?: T;
   disponible?: T;
+  prestations?:
+    | T
+    | {
+        nom?: T;
+        description?: T;
+        prixTexte?: T;
+        prixAPartirDe?: T;
+        options?:
+          | T
+          | {
+              nom?: T;
+              description?: T;
+              prixTexte?: T;
+              prixAPartirDe?: T;
+              id?: T;
+            };
+        id?: T;
+      };
+  competences?:
+    | T
+    | {
+        nom?: T;
+        description?: T;
+        id?: T;
+      };
+  langues?:
+    | T
+    | {
+        nom?: T;
+        id?: T;
+      };
+  formations?:
+    | T
+    | {
+        diplome?: T;
+        ecole?: T;
+        obtenuLe?: T;
+        description?: T;
+        id?: T;
+      };
+  experiences?:
+    | T
+    | {
+        entreprise?: T;
+        poste?: T;
+        ville?: T;
+        debut?: T;
+        fin?: T;
+        description?: T;
+        id?: T;
+      };
   legacyUsername?: T;
   strapiId?: T;
   updatedAt?: T;

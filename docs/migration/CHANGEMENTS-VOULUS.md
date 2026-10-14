@@ -56,6 +56,7 @@ Les huit premières lignes sont les transformations du plan 01 §6.2, dans son o
 | Repère | Avant | Dans la v3 | Source | Pages touchées |
 |---|---|---|---|---|
 | `confirmation-email` | La confirmation d'email est coupée. Un compte est confirmé dès l'inscription. | Une inscription envoie un email de confirmation. Tant que l'email n'est pas confirmé, le compte ne se connecte pas. Les comptes repris de l'ancien site gardent leur état confirmé. | décision du 13/10/2026 ~20:45 ; ticket 082 ; plan 01 §6.1 | `/auth/signup`, `/auth/signin`, `/auth/verification-*` |
+| `listes-profil-bornes` | La fin d'une expérience peut précéder son début, et une formation peut être datée de n'importe quel jour : ni les fenêtres de l'espace ni l'API ne comparent ces dates (lu dans le code du site actuel le 14/10/2026). Le prix d'une prestation n'est qu'un texte. | Le serveur refuse, avec un message en français, la fin d'une expérience antérieure à son début (le même jour passe) et une formation obtenue plus d'un an après la date du jour. Le montant d'un prix, quand il y en a un, va de 5 à 10 000 €, les bornes qui comptent déjà pour un profil publiable ; le texte du prix reste libre. Chaque ligne d'une liste garde l'identifiant que le serveur lui a donné. | plan 02 §7.2 U30 ; ticket 040 ; ticket 032 | `/auth/profil` |
 
 ## 4. Écarts au plan technique
 
