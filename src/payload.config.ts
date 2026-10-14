@@ -4,19 +4,41 @@ import { postgresAdapter } from '@payloadcms/db-postgres'
 import { buildConfig } from 'payload'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import { Admins } from './collections/Admins'
+import { serverEnv } from './lib/env'
+import { migrations } from './migrations'
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
+
+// Checked here as well as in src/instrumentation.ts: the Payload CLI and the scripts load this
+// file without starting the server. Throws when a variable is missing or not valid.
+const env = serverEnv()
 
 export default buildConfig({
 	admin: {
 		user: Admins.slug,
 		importMap: { baseDir: dirname },
+		// 'off' closes /api/og: an image rendered on demand, for anyone, with or without a session.
+		meta: { defaultOGImageType: 'off' },
 	},
 	collections: [Admins],
+	// The site and the API share one origin: no other site may read this API from a browser.
+	cors: [],
+	// A session cookie is accepted from these origins only (src/lib/env.ts).
+	csrf: env.trustedOrigins,
 	db: postgresAdapter({
-		pool: { connectionString: process.env.DATABASE_URI || '' },
+		// Outside this machine, a database that does not exist is an error: Payload must not create an empty one.
+		disableCreateDatabase: !env.localDatabase,
+		migrationDir: path.resolve(dirname, 'migrations'),
+		// 5 connections per process, not the 10 of `pg`: a build and a server run several processes at once.
+		pool: { connectionString: env.databaseUri, max: 5 },
+		// Everywhere else, the schema changes by these migrations: Payload plays them when it starts in production.
+		prodMigrations: migrations,
+		// The schema is pushed into a database of this machine only. Payload never pushes in production.
+		push: env.localDatabase,
 	}),
-	secret: process.env.PAYLOAD_SECRET || '',
+	// REST and the Local API are the only ways in. The two GraphQL routes answer 404 by themselves.
+	graphQL: { disable: true },
+	secret: env.payloadSecret,
 	telemetry: false,
 	typescript: { outputFile: path.resolve(dirname, 'payload-types.ts') },
 })

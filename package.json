@@ -14,6 +14,8 @@
 		"payload": "bun node_modules/payload/bin.js --disable-transpile",
 		"payload:types": "bun node_modules/payload/bin.js generate:types --disable-transpile",
 		"payload:importmap": "bun node_modules/payload/bin.js generate:importmap --disable-transpile",
+		"payload:migrate": "bun node_modules/payload/bin.js migrate --disable-transpile",
+		"payload:migrate:create": "bun node_modules/payload/bin.js migrate:create --disable-transpile",
 		"lint": "biome lint . --max-diagnostics=200",
 		"check": "biome check --write .",
 		"ci:biome": "biome ci . --reporter=github",
