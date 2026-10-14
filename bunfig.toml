@@ -1,3 +1,9 @@
 # Versions are pinned exactly: `bun add` writes "1.2.3", never "^1.2.3".
 [install]
 exact = true
+
+# Every `bun test` first loads, inside a jsdom window given back at once, the libraries that look
+# for a browser while they load (tests/outils/precharge-react-dom.ts): a React component is then
+# tested the same way whatever the order of the files.
+[test]
+preload = ["./tests/outils/precharge-react-dom.ts"]
