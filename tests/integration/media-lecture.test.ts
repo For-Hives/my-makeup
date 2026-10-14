@@ -88,6 +88,26 @@ describe('Liste anonyme refusée ; média d’un profil publié lu ; d’un prof
 		expect((await appelerRest('GET', `/api/media/${principale.id}`)).statut).toBe(404)
 	})
 
+	test('un identifiant mal formé : refusé avant la base, jamais une erreur 500', async () => {
+		const [maquilleuse, admin] = await Promise.all([creerCompte('maquilleuse'), creerCompte('admin')])
+		const payload = await payloadDeTest()
+
+		for (const enTetes of [{}, maquilleuse.session.enTetes, admin.session.enTetes])
+			for (const id of ['abc', 'wp-login.php', '1e999', '99999999999', '1.5']) {
+				expect([id, (await appelerRest('GET', `/api/media/${id}`, { enTetes })).statut]).toEqual([id, 403])
+				// A change or a deletion: refused by the rule (403), or by Payload itself before it (400), when
+				// it reads no identifier at all in the address (`abc` gives NaN, « Missing ID »).
+				for (const reponse of [
+					await appelerRest('PATCH', `/api/media/${id}`, { enTetes, corps: { alt: 'Texte fictif' } }),
+					await appelerRest('DELETE', `/api/media/${id}`, { enTetes }),
+				])
+					expect([id, [400, 403].includes(reponse.statut)]).toEqual([id, true])
+			}
+		await expect(payload.findByID({ collection: 'media', id: 'abc', overrideAccess: false })).rejects.toMatchObject({
+			status: 403,
+		})
+	})
+
 	test('une photo envoyée mais rattachée à rien : introuvable pour le public, lue par sa propriétaire', async () => {
 		const compte = await creerCompte('maquilleuse')
 		const media = await envoyer(compte)

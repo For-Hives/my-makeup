@@ -225,3 +225,21 @@ describe('L’admin masque un profil : la lecture anonyme suivante ne le rend pl
 		expect(identifiants((await appelerRest('GET', '/api/profils?depth=0')).corps)).toEqual([])
 	})
 })
+
+/** Addresses a robot tries: none names an identifier a profile or a media can have. */
+const IDENTIFIANTS_MAL_FORMES = ['abc', 'wp-login.php', '1e999', '99999999999', '1.5']
+
+describe('Un identifiant de profil mal formé : refusé avant la base, jamais une erreur 500', () => {
+	test('par REST pour l’anonyme, une maquilleuse et l’admin ; par l’API locale avec les règles actives', async () => {
+		const [maquilleuse, admin] = await Promise.all([creerCompte('maquilleuse'), creerCompte('admin')])
+		const payload = await payloadDeTest()
+
+		for (const enTetes of [{}, maquilleuse.session.enTetes, admin.session.enTetes])
+			for (const id of IDENTIFIANTS_MAL_FORMES)
+				expect([id, (await appelerRest('GET', `/api/profils/${id}`, { enTetes })).statut]).toEqual([id, 403])
+		for (const id of IDENTIFIANTS_MAL_FORMES)
+			await expect(payload.findByID({ collection: 'profils', id, overrideAccess: false })).rejects.toMatchObject({
+				status: 403,
+			})
+	})
+})

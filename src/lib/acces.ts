@@ -78,17 +78,40 @@ export const adminOuProprietaire: Access = ({ req: { user } }) => {
 	return false
 }
 
+/** The largest identifier of a document: the identifiers are `serial` columns of Postgres, 32-bit integers. */
+const IDENTIFIANT_MAX = 2_147_483_647
+
+/**
+ * True for an identifier a document may have: a whole number from 1 to `IDENTIFIANT_MAX`, as a
+ * number or as its digits. REST hands a rule `parseFloat` of the address (`abc` gives NaN, `1e999`
+ * Infinity); the Local API, what its caller gives.
+ */
+export function identifiantPossible(id: number | string): boolean {
+	const nombre = typeof id === 'number' ? id : /^\d{1,10}$/.test(id) ? Number(id) : Number.NaN
+	return Number.isInteger(nombre) && nombre >= 1 && nombre <= IDENTIFIANT_MAX
+}
+
+/**
+ * True when a request names a document by an identifier no document can have. Postgres refuses to
+ * compare such a value with an identifier: the query would fail, and the request end in a 500
+ * logged as an error. A rule that answers a `Where` refuses it first (403), before any query.
+ */
+const identifiantImpossible = (id: number | string | null | undefined): boolean =>
+	id !== undefined && id !== null && !identifiantPossible(id)
+
 /** The profiles the public reads: the published ones (U53). */
 export const PROFILS_PUBLIES: Where = { statut: { equals: STATUT_PUBLIE } }
 
 /**
  * Reading profiles (ticket 021). The role `admin` reads every profile; a makeup artist reads her
  * own profile, whatever its status, and the published ones; anyone else, anonymous or `redaction`,
- * the published ones only (U53, I01). A session never shows less than the public sees.
+ * the published ones only (U53, I01). A session never shows less than the public sees. An
+ * identifier no profile can have is refused to all (`identifiantImpossible`).
  *
  * What each of them reads of a profile is then decided field by field (`champAdminOuProprietaire`).
  */
-export const profilPublieOuProprietaire: Access = ({ req: { user } }) => {
+export const profilPublieOuProprietaire: Access = ({ req: { user }, id }) => {
+	if (identifiantImpossible(id)) return false
 	if (estAdmin(user)) return true
 	if (user && estMaquilleuse(user)) return { or: [{ pro: { equals: user.id } }, PROFILS_PUBLIES] }
 	return PROFILS_PUBLIES
@@ -143,12 +166,14 @@ export async function rattacheAUnProfilPublie(req: PayloadRequest, media: number
  * - A list is closed to the public: a makeup artist lists her own media, anyone else is refused.
  * - One media, read by its identifier, is read by anyone when it belongs to a published profile;
  *   a makeup artist also reads her own. Any other media is not found, as if it did not exist.
+ * - An identifier no media can have is refused to all, before any query (`identifiantImpossible`).
  *
  * Payload gives the identifier to the rule when it reads one document, never for a list: that is
  * how the two are told apart. A media populated in a profile is read as a list: for the public it
  * stays an identifier, and a public page reads the photos through src/services/public/.
  */
 export const lectureDesMedias: Access = async ({ req, id }) => {
+	if (identifiantImpossible(id)) return false
 	const { user } = req
 	if (estAdmin(user)) return true
 	const siens: Where | undefined = user && estMaquilleuse(user) ? { owner: { equals: user.id } } : undefined
@@ -160,8 +185,9 @@ export const lectureDesMedias: Access = async ({ req, id }) => {
 /** Sending a photo: a makeup artist, or the role `admin`. The server makes her the owner. */
 export const adminOuMaquilleuse: Access = ({ req: { user } }) => estAdmin(user) || estMaquilleuse(user)
 
-/** Changing or deleting a media: the role `admin`, or the makeup artist who owns it. */
-export const adminOuProprietaireDuMedia: Access = ({ req: { user } }) => {
+/** Changing or deleting a media: the role `admin`, or the makeup artist who owns it; never by an impossible identifier. */
+export const adminOuProprietaireDuMedia: Access = ({ req: { user }, id }) => {
+	if (identifiantImpossible(id)) return false
 	if (estAdmin(user)) return true
 	if (user && estMaquilleuse(user)) return { owner: { equals: user.id } }
 	return false

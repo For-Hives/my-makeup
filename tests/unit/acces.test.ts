@@ -24,6 +24,7 @@ import {
 	estAdmin,
 	estMaquilleuse,
 	estRedaction,
+	identifiantPossible,
 	jamais,
 	lectureDesMedias,
 	PROFILS_PUBLIES,
@@ -59,6 +60,35 @@ const champ = (fields: readonly unknown[], nom: string) =>
 
 /** What an access rule receives: only the request, and only its account. */
 const appel = (user: Utilisateur | null) => ({ req: { user } as PayloadRequest })
+
+/**
+ * Identifiers no document can have, as a rule receives them: REST hands it `parseFloat` of the
+ * address (`abc` gives NaN, `1e999` Infinity), the Local API what its caller gives.
+ */
+const IDENTIFIANTS_IMPOSSIBLES = [
+	Number.NaN,
+	Number.POSITIVE_INFINITY,
+	1.5,
+	0,
+	-1,
+	2_147_483_648,
+	99_999_999_999,
+	'abc',
+	'1e999',
+	'99999999999',
+	'1.5',
+	'-1',
+	'',
+]
+
+describe('Un identifiant possible : ce qu’une règle passe à la base', () => {
+	test('un entier de 1 au plus grand entier de 32 bits, en nombre ou en chiffres', () => {
+		expect([1, 12, 2_147_483_647, '1', '12', '007', '2147483647'].map(identifiantPossible)).toEqual(Array(7).fill(true))
+		expect(IDENTIFIANTS_IMPOSSIBLES.map(identifiantPossible)).toEqual(
+			Array(IDENTIFIANTS_IMPOSSIBLES.length).fill(false)
+		)
+	})
+})
 
 describe('Les rôles', () => {
 	test('admin et redaction sont deux comptes de la collection admins', () => {
@@ -213,6 +243,17 @@ describe('La collection profils (ticket 020)', () => {
 		expect(regle?.(appel(admin) as never)).toBe(true)
 	})
 
+	test('lire un profil par un identifiant qu’aucun document ne peut porter : refusé à tous, avant la base', () => {
+		for (const id of IDENTIFIANTS_IMPOSSIBLES)
+			for (const user of [null, redaction, maquilleuse, admin])
+				expect([id, profilPublieOuProprietaire({ req: { user } as PayloadRequest, id } as never)]).toEqual([id, false])
+		// A possible identifier keeps the rule of the role.
+		expect(profilPublieOuProprietaire({ req: { user: null } as PayloadRequest, id: 12 } as never)).toEqual(
+			PROFILS_PUBLIES
+		)
+		expect(profilPublieOuProprietaire({ req: { user: admin } as PayloadRequest, id: '12' } as never)).toBe(true)
+	})
+
 	test('les champs réservés : statut, motif, vérifiée et SIRET, lus par admin et la propriétaire seulement', () => {
 		// Read as Payload reads a field of a document: the request, and the document itself.
 		const lire = (user: Utilisateur | null, doc: Record<string, unknown>) =>
@@ -349,6 +390,16 @@ describe('La collection media (ticket 043)', () => {
 		expect(await lecture(redaction, 12, false).resultat).toEqual(AUCUN_DOCUMENT)
 		// Her own media, attached or not.
 		expect(await lecture(maquilleuse, 12, false).resultat).toEqual({ owner: { equals: 7 } })
+	})
+
+	test('lire, modifier ou supprimer un média par un identifiant qu’aucun document ne peut porter : refusé à tous, sans requête', async () => {
+		for (const id of IDENTIFIANTS_IMPOSSIBLES)
+			for (const user of [null, redaction, maquilleuse, admin]) {
+				const { resultat, appels } = lecture(user, id as never, true)
+				expect([id, await resultat]).toEqual([id, false])
+				expect(appels).toEqual([])
+				expect([id, adminOuProprietaireDuMedia({ req: { user } as PayloadRequest, id } as never)]).toEqual([id, false])
+			}
 	})
 
 	test('envoyer : une maquilleuse ou admin ; modifier et supprimer : sa propriétaire ou admin', () => {
