@@ -50,7 +50,7 @@ bun install --frozen-lockfile
 test -e .env || printf 'DATABASE_URI=postgres://mymakeup:local-dev-only@127.0.0.1:5442/mymakeup_dev\nPAYLOAD_SECRET=%s\n' "$(openssl rand -hex 32)" > .env
 ```
 
-Cette commande écrit les deux variables listées dans `.env.exemple` :
+Cette commande écrit les deux variables obligatoires de `.env.exemple` :
 
 - `DATABASE_URI` : l'adresse de la base locale de `docker-compose.yml`. Ces identifiants sont jetables et ne servent qu'à cette base.
 - `PAYLOAD_SECRET` : un secret tiré au hasard par `openssl`, propre à ce poste.
@@ -86,6 +86,34 @@ Si le port 3000 est pris : `PORT=3100 bun run dev`.
 ```sh
 docker compose down      # arrête la base, garde les données
 docker compose down -v   # arrête la base et efface les données
+```
+
+## Route de santé
+
+`GET /api/health` dit si l'application peut servir. C'est l'adresse que lisent Coolify, le contrôle de santé de l'image et la surveillance du site. Le chemin et les clés sont ceux du site en ligne.
+
+| Cas | Réponse |
+|---|---|
+| La base répond | `200` et `{"ok":true,"version":"…"}` |
+| La base ne répond pas dans les 2 secondes | `503` et `{"ok":false}`, sans aucun détail |
+
+- La question est posée à la base à chaque appel, par la connexion de Payload. La réponse n'est jamais mise en cache (`Cache-Control: no-store`) ni indexée (`X-Robots-Tag: noindex`).
+- La cause d'un 503 n'est écrite que dans les journaux du serveur, sur une ligne `[health] check failed: …` qui se termine par un code : `ECONNREFUSED` (base arrêtée), `timeout` (pas de réponse en 2 secondes), `PAYLOAD_INIT` (Payload n'a pas démarré).
+- Sans base, ou sans les deux variables obligatoires du `.env`, la route répond 503 : Payload ne démarre pas.
+- Au premier appel après un démarrage, la route attend Payload. S'il lui faut plus de 2 secondes (par exemple pendant la poussée du schéma en développement), elle répond 503 cette fois-là, puis 200 dès qu'il est prêt.
+
+`version` est le commit déployé, réduit à ses 7 premiers caractères. Il est cherché dans cet ordre :
+
+1. `NEXT_PUBLIC_APP_VERSION`, lue au build : un libellé est affiché tel quel, un commit complet (40 caractères) est raccourci ;
+2. `SOURCE_COMMIT` donné au build (dans Coolify : « Include Source Commit in Build ») ;
+3. `SOURCE_COMMIT` donné au conteneur qui tourne, si le build n'en avait pas ;
+4. la version de `package.json`.
+
+En local, sans ces variables, `version` est donc la version de `package.json`.
+
+```sh
+curl -i http://localhost:3000/api/health
+bun test tests/unit/health.test.ts tests/unit/version.test.ts
 ```
 
 ## Commandes
