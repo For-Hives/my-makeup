@@ -158,13 +158,25 @@ describe('les comptes au même email', () => {
 		const hashDe = (resultat: ReturnType<typeof comptesAttendus>, id: number) =>
 			resultat.attendus.find(({ strapiId }) => strapiId === id)?.valeurs.legacyBcrypt
 
-		test('un compte local écarté prête son hash au compte Google gardé, qui garde son fournisseur', () => {
+		test('un compte local écarté ne prête pas son hash au compte Google gardé sans décision explicite', () => {
 			const resultat = comptesAttendus(
 				[
 					ligne(1, { email: 'a@example.test', provider: 'google' }),
 					ligne(2, { email: 'A@example.test', provider: 'local', password: FORME_DE_HASH }),
 				],
 				{ emailsPartages: [{ comptes: [1, 2], retenu: 1 }] }
+			)
+			expect(hashDe(resultat, 1)).toBeNull()
+			expect(resultat).toMatchObject({ hashRattaches: [], hashNonRattaches: 1 })
+		})
+
+		test('un compte local écarté prête son hash au compte Google gardé quand la décision l’accorde (pretDuHash vrai), qui garde son fournisseur', () => {
+			const resultat = comptesAttendus(
+				[
+					ligne(1, { email: 'a@example.test', provider: 'google' }),
+					ligne(2, { email: 'A@example.test', provider: 'local', password: FORME_DE_HASH }),
+				],
+				{ emailsPartages: [{ comptes: [1, 2], retenu: 1, pretDuHash: true }] }
 			)
 			expect(resultat.attendus.map(({ strapiId }) => strapiId)).toEqual([1])
 			expect(hashDe(resultat, 1)).toBe(FORME_DE_HASH)

@@ -10,8 +10,8 @@
  *
  * - `emailsPartages`: accounts of the old site that share one email (edge spaces and capitals
  *   aside). The v3 has one account per email: only `retenu` is taken, the others are set aside; the kept account without a legacy hash takes
- *   the one of the first account set aside that has one (ticket 066 default).
- *   `"pretDuHash": false` on a group refuses that loan: the kept account keeps no hash of an account set aside.
+ *   the one of the first account set aside that has one (ticket 066 default), but only when the kept account is a local one: the old site never verified emails, so a password must not open a Google or Facebook account that had none.
+ *   `"pretDuHash": false` on a group refuses the loan; `true` grants it to a kept account that is not local (a person confirmed both accounts are the same one).
  *   A group the source holds without its decision stops the import before any write.
  * - `profilsEcartes`: profiles a person decided to leave aside: a profile whose account a decision
  *   above sets aside, or a profile without an account in the source that is not one of the 13
@@ -98,7 +98,7 @@ export interface ApplicationDesDecisions {
 	/** The accounts set aside by a decision. */
 	ecartes: number[]
 	/** For each group decided, the account kept and the accounts set aside in its favour. */
-	rattaches: { retenu: number; ecartes: number[]; pretDuHash: boolean }[]
+	rattaches: { retenu: number; ecartes: number[]; pretDuHash: boolean | undefined }[]
 	/** The groups the source holds that no decision names exactly: the import stops. */
 	sansDecision: number[][]
 	/** Decisions that name no group of the source: they have no effect. */
@@ -128,7 +128,7 @@ export function appliquerLesDecisions(
 		appliquees.add(rang)
 		const autres = groupe.filter(id => id !== decision.retenu)
 		ecartes.push(...autres)
-		rattaches.push({ retenu: decision.retenu, ecartes: autres, pretDuHash: decision.pretDuHash !== false })
+		rattaches.push({ retenu: decision.retenu, ecartes: autres, pretDuHash: decision.pretDuHash })
 	}
 	return {
 		ecartes: ecartes.sort((a, b) => a - b),

@@ -131,8 +131,10 @@ export function comptesAttendus(
 		})
 		const motRetenu = parId.get(retenu)?.password
 		const aDejaLeSien = motRetenu != null && HASH_BCRYPT_COMPLET.test(motRetenu)
+		// Without an explicit decision, only a local kept account takes a loan: a Google or Facebook one never had a password.
+		const prete = pretDuHash ?? (parId.get(retenu)?.provider ?? 'local') === 'local'
 		const [premier, ...reste] = hashDesEcartes
-		if (premier !== undefined && !aDejaLeSien && pretDuHash) {
+		if (premier !== undefined && !aDejaLeSien && prete) {
 			empruntes.set(retenu, premier)
 			hashNonRattaches += reste.length
 		} else hashNonRattaches += hashDesEcartes.length
