@@ -91,3 +91,75 @@ Les actions utilisées, vérifiées le 14/10/2026 (date de publication, base d'a
 | `actions/checkout` | v6.1.0 | 20/07/2026 |
 | `actions/setup-node` | v6.5.0 | 14/07/2026 |
 | `oven-sh/setup-bun` | v2.2.0 | 14/03/2026 |
+
+## Canari : la preuve que `ci-ok` peut échouer
+
+Un check requis qui ne peut pas échouer ne protège rien. Le canari est une pull request cassée exprès : un test faux, une erreur de type et une erreur Biome. GitHub doit refuser de la fusionner, même à un administrateur. Il se joue une fois dès que `v3` est protégée, puis une fois par trimestre.
+
+`bun run ci:canari` écrit les trois fichiers fautifs. Il refuse d'écrire ailleurs que sur une branche dont le nom commence par `canari-`. Il n'écrit que ces fichiers : il ne commite rien et ne pousse rien.
+
+| Fichier | Faute | Ce qui doit passer au rouge |
+|---|---|---|
+| `tests/unit/canari.test.ts` | Un test faux | Job `unit` |
+| `tests/ci/canari-types.ts` | Une erreur de type | Job `qualite`, étape « Types » |
+| `tests/ci/canari-biome.ts` | Une variable jamais lue | Job `qualite`, étape « Biome » |
+
+Les trois fichiers sont sous `tests/`, hors de l'image Docker : le job `build` reste vert, et chaque rouge désigne un seul outil.
+
+### Le jouer
+
+Il faut que `v3` soit protégée : `ci-ok` et `CodeQL` requis, administrateurs soumis à la règle.
+
+```sh
+git fetch origin
+git switch -c canari-2026-10 origin/v3
+bun run ci:canari
+git add tests/unit/canari.test.ts tests/ci/canari-types.ts tests/ci/canari-biome.ts
+git commit -m "test(v3): canary, three faults on purpose, never merge"
+git push -u origin canari-2026-10
+gh pr create --base v3 --title "Canari : ne pas fusionner" --body "Trois fautes posées exprès (docs/qualite.md, « Canari »). À fermer sans fusion."
+```
+
+Une fois la CI terminée :
+
+```sh
+gh pr checks NUMERO
+gh pr view NUMERO --json mergeStateStatus --jq .mergeStateStatus
+gh api repos/For-Hives/my-makeup/branches/v3/protection --jq .enforce_admins.enabled
+```
+
+| Ce qu'on lit | Attendu |
+|---|---|
+| `qualite` | Rouge : « Types » et « Biome » en échec, les autres étapes vertes |
+| `unit` | Rouge : un test en échec |
+| `build` | Vert |
+| `ci-ok` | Rouge |
+| `mergeStateStatus` | `BLOCKED` |
+| `enforce_admins.enabled` | `true` : la fusion est bloquée pour un administrateur aussi |
+
+Ne pas essayer le bouton de fusion « pour voir » : si la protection était mal réglée, le canari entrerait dans `v3`. Les deux dernières lignes du tableau suffisent.
+
+Puis fermer sans fusionner, et noter le résultat dans le tableau ci-dessous :
+
+```sh
+gh pr close NUMERO --delete-branch
+```
+
+### Résultats
+
+| Date | Pull request | `qualite` | `unit` | `build` | `ci-ok` | Fusion |
+|---|---|---|---|---|---|---|
+| À jouer dès que `v3` est protégée | | | | | | |
+
+### Répétition locale du 14/10/2026
+
+Ce n'est pas le canari : rien n'a été poussé, aucune pull request n'a été ouverte. Sur une copie de travail, les trois fichiers fautifs ont été écrits, chaque commande a été lancée une fois, puis les fichiers ont été retirés.
+
+| Commande | Résultat |
+|---|---|
+| `bun --no-env-file test tests/unit/canari.test.ts` | 1 test en échec, code de sortie 1 |
+| `bun run ci:biome` | `noUnusedVariables` sur `tests/ci/canari-biome.ts`, et rien d'autre ; code de sortie 1 |
+| `bun run typecheck` | `TS2322` sur `tests/ci/canari-types.ts`, et rien d'autre ; code de sortie 2 |
+| Le script de `ci-ok`, avec un job en `failure` | Code de sortie 1 (test de `tests/ci/garde-fous-ci.test.ts`) |
+
+Le kit ne peut pas pourrir en silence : `tests/ci/canari.test.ts` rejoue les trois fautes à chaque CI, dans un dossier temporaire, et échoue si l'une d'elles n'est plus une faute.

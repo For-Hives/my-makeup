@@ -261,6 +261,7 @@ La CI ne lit aucun secret, n'a aucun filtre de chemins et ne tolère aucun éche
 | `bun run check` | Biome : format, lint et tri des imports, avec écriture des corrections sûres |
 | `bun run lint` | Biome : lint seul, sans écriture |
 | `bun run ci:biome` | Biome en lecture seule, pour la CI |
+| `bun run ci:canari` | Écrit les trois fautes du canari de la CI, sur une branche `canari-…` seulement (voir `docs/qualite.md`) |
 | `bun run typecheck` | Génère les types de routes de Next, puis contrôle les types (`tsc --noEmit`) |
 | `bun run payload:types` | Régénère `src/payload-types.ts` après un changement de collection |
 | `bun run payload:importmap` | Régénère `importMap.js` après l'ajout d'un composant d'administration |
