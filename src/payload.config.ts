@@ -21,7 +21,7 @@ import { mediaBaseUrl, serverEnv } from './lib/env'
 import { adresseDuMedia, PREFIXE_DES_ENVOIS } from './lib/medias'
 import { requetesBornees } from './lib/requete-bornee'
 import { migrations } from './migrations'
-import { auDemarrage } from './preprod/au-demarrage'
+import { auDemarrage, avecLaRemiseAZero } from './preprod/au-demarrage'
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -58,17 +58,22 @@ export default buildConfig({
 	cors: [],
 	// A session cookie is accepted from these origins only (src/lib/env.ts).
 	csrf: env.trustedOrigins,
-	db: postgresAdapter({
-		// Outside this machine, a database that does not exist is an error: Payload must not create an empty one.
-		disableCreateDatabase: !env.localDatabase,
-		migrationDir: path.resolve(dirname, 'migrations'),
-		// 5 connections per process, not the 10 of `pg`: a build and a server run several processes at once.
-		pool: { connectionString: env.databaseUri, max: 5 },
-		// Everywhere else, the schema changes by these migrations: Payload plays them when it starts in production.
-		prodMigrations: migrations,
-		// The schema is pushed into a database of this machine only. Payload never pushes in production.
-		push: env.localDatabase,
-	}),
+	// On the pre-production only, a new reset token empties the database before Payload plays its
+	// migrations (ticket 027, docs/preprod.md). Anywhere else, the adapter as it is.
+	db: avecLaRemiseAZero(
+		postgresAdapter({
+			// Outside this machine, a database that does not exist is an error: Payload must not create an empty one.
+			disableCreateDatabase: !env.localDatabase,
+			migrationDir: path.resolve(dirname, 'migrations'),
+			// 5 connections per process, not the 10 of `pg`: a build and a server run several processes at once.
+			pool: { connectionString: env.databaseUri, max: 5 },
+			// Everywhere else, the schema changes by these migrations: Payload plays them when it starts in production.
+			prodMigrations: migrations,
+			// The schema is pushed into a database of this machine only. Payload never pushes in production.
+			push: env.localDatabase,
+		}),
+		env
+	),
 	// Every mail leaves through the relay the environment names (src/lib/env.ts): on the test bench,
 	// the mail catcher. Without SMTP_HOST there is no adapter, and Payload writes a log line instead.
 	email: env.mail
@@ -84,8 +89,8 @@ export default buildConfig({
 	// REST and the Local API are the only ways in. The two GraphQL routes answer 404 by themselves.
 	graphQL: { disable: true },
 	// Once Payload has started and played its migrations: on the pre-production only, the import of
-	// the fake Strapi source into an empty database, and the reset a new token asks for (ticket 027,
-	// docs/preprod.md). Anywhere else it does nothing.
+	// the fake Strapi source into an empty database (ticket 027, docs/preprod.md). Anywhere else it
+	// does nothing.
 	onInit: payload => auDemarrage(payload, env),
 	plugins: [
 		// The photos go to the object storage the environment names (src/lib/env.ts): R2 on the site,
