@@ -48,6 +48,7 @@ Les huit premières lignes sont les transformations du plan 01 §6.2, dans son o
 | Repère | Avant | Dans la v3 | Source | Pages touchées |
 |---|---|---|---|---|
 | `recherche-sans-profils-vides` | Jusqu'au 13/10/2026, la recherche listait aussi les profils entièrement vides : 96 cartes, dont 39 vides. | La recherche ne liste pas un profil entièrement vide, c'est-à-dire un profil qui ne remplit aucune des six conditions du profil publiable. Le site actuel le fait déjà depuis le 13/10/2026 à 23:06 (57 cartes) : la v3 garde ce comportement. | décisions du 13/10/2026 ~20:45 et ~23:06 | `/search` |
+| `en-tetes-securite` | Le site actuel n'envoie aucun en-tête de sécurité avec ses pages (relevé du 14/10/2026 sur l'accueil). | Chaque réponse part avec cinq en-têtes : `Strict-Transport-Security`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy` et `Content-Security-Policy-Report-Only`. La politique de contenu est en mode rapport : le navigateur signale ce qu'elle refuserait, et ne bloque rien. Elle ne nomme aucun domaine tiers pour la mesure. Comme aujourd'hui, aucune réponse ne nomme la technologie du site, et l'optimiseur d'images n'accepte que l'hôte des photos. | plan 01 §4.8 ; ticket 034 | `/` et toutes les autres adresses du site : les en-têtes de la réponse seulement. |
 
 ## 3. Comptes et espace maquilleuse
 

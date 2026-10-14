@@ -133,11 +133,13 @@ L'application vérifie ses variables à chaque démarrage (`bun run dev`, `bun r
 | `PAYLOAD_SECRET` | Obligatoire. 32 caractères au moins. |
 | `NEXT_PUBLIC_SITE_URL` | Obligatoire en production (`bun run start`, image Docker), inutile pour `bun run dev`. Sans `/` final, et l'une de ces adresses seulement : `https://my-makeup.fr`, `https://preprod.my-makeup.fr`, ou une adresse de ce poste comme `http://localhost:3000`. |
 | `PAYLOAD_DROP_DATABASE` | Refusée si la base n'est pas sur ce poste : avec `true`, Payload efface toutes les tables. |
+| `R2_PUBLIC_URL` | Facultative. L'adresse publique des photos : `https://`, un hôte, sans chemin ni `/` final. Absente, c'est celle des photos du site en ligne. |
 
-- `bun run build` est la seule exception : il ne vérifie rien et passe sans secret ni base.
+- `bun run build` est la seule exception : il ne vérifie rien, sauf `R2_PUBLIC_URL`, et passe sans secret ni base.
 - Le CLI de Payload (`bun run payload`, `payload:types`, `payload:importmap`, `payload:migrate`…) charge la même configuration : sans `DATABASE_URI` et `PAYLOAD_SECRET` valides, il s'arrête avec le même message. Le `.env` de l'étape 2 de « Démarrer en local » suffit.
 - `payload:types` et `payload:importmap` n'ouvrent aucune connexion : la base peut être arrêtée. Sur un clone sans `.env` (la CI, par exemple), deux valeurs de remplissage passées dans l'environnement suffisent : une adresse `postgres://` bien formée, sans base derrière, et 32 caractères quelconques.
 - `NEXT_PUBLIC_SITE_URL` est publique. Présente au moment du build, même vide, elle est figée dans le build. Absente du build, elle est lue au démarrage.
+- `R2_PUBLIC_URL` est publique. Elle est lue plus tôt que les autres, quand Next charge `next.config.ts` : une valeur refusée arrête aussi le build. Voir « Images ».
 - Une nouvelle variable s'ajoute dans `src/lib/env.ts` et dans `.env.exemple`, par le ticket qui commence à la lire.
 
 ### Base de données
@@ -155,6 +157,37 @@ L'application vérifie ses variables à chaque démarrage (`bun run dev`, `bun r
 - Un client qui n'est pas un navigateur (`curl`, un test) doit envoyer l'en-tête `Origin` d'une origine de confiance avec son cookie de session. Sans cet en-tête, le cookie est ignoré.
 - Aucun autre site ne peut lire l'API depuis un navigateur : aucune origine n'est ouverte en CORS.
 - `/api/og`, l'image de partage de l'administration, est fermée.
+
+### En-têtes de sécurité
+
+Chaque réponse part avec cinq en-têtes, sur toutes les adresses : pages, API, administration, fichiers, erreurs.
+
+| En-tête | Valeur | Effet |
+|---|---|---|
+| `Strict-Transport-Security` | `max-age=31536000` | Pendant un an, le navigateur ne demande plus le site qu'en https. Ce domaine seulement : ni `includeSubDomains`, ni `preload`. Sans effet sur une adresse en http, donc sur ce poste. |
+| `X-Content-Type-Options` | `nosniff` | Un fichier est lu selon le type que le serveur annonce, jamais selon son contenu. |
+| `Referrer-Policy` | `strict-origin-when-cross-origin` | Un autre site apprend de quel site vient la visite, sans le chemin ni les paramètres. |
+| `Permissions-Policy` | caméra, micro, position, paiement et USB coupés | Le site ne s'en sert pas : ni une page ni un cadre inclus ne peut les demander. |
+| `Content-Security-Policy-Report-Only` | la politique de contenu | En mode rapport : voir ci-dessous. |
+
+- Aucune réponse ne nomme la technologie du site : il n'y a pas d'en-tête `X-Powered-By`.
+- La politique de contenu est en mode rapport. Le navigateur écrit dans sa console ce qu'elle refuserait, et ne bloque rien. Aucun rapport n'est envoyé, ni au site ni ailleurs.
+- Elle ne nomme qu'une origine extérieure : celle des photos. La mesure passe par le site lui-même : aucun domaine tiers n'y figure pour elle, et il ne faut pas en ajouter.
+- Elle autorise les scripts écrits dans la page : Next en a besoin pour les pages rendues d'avance. `bun run dev` autorise en plus `eval`, dont React a besoin en développement.
+- Les valeurs sont dans `src/lib/security-headers.ts`, et `next.config.ts` les pose sur `/:path*`. Un en-tête propre à certaines adresses s'ajoute dans `next.config.ts`, après cette entrée.
+
+### Images
+
+- `/_next/image` ne va chercher une image distante que sur l'hôte des photos, en https. Toute autre adresse reçoit une erreur 400, sans qu'aucune requête ne parte.
+- L'hôte des photos est celui de `R2_PUBLIC_URL`. Sans cette variable, c'est celui des photos du site en ligne.
+- Cet hôte est aussi le seul que nomme la politique de contenu.
+- `R2_PUBLIC_URL` se donne au build et à `bun run start`, avec la même valeur : la politique de contenu garde l'hôte du build, et `/_next/image` relit la variable au démarrage.
+- Une image servie par `/_next/image` porte en plus la politique de Next pour les images, appliquée celle-là : ni script, ni cadre.
+
+```sh
+curl -sI http://localhost:3000/ | grep -i -E 'strict-transport|x-content-type|referrer-policy|permissions-policy|content-security|x-powered'
+bun --no-env-file test tests/unit/security-headers.test.ts
+```
 
 ## Route de santé
 
