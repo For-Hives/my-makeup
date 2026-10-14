@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test'
 import { type EtatDInscription, FormulaireDInscription } from '@/components/auth/FormulaireDInscription'
-import { MESSAGES_ECHEC_INSCRIPTION, MESSAGES_INSCRIPTION } from '@/lib/auth/inscription'
+import { CHAMP_PIEGE, MESSAGES_ECHEC_INSCRIPTION, MESSAGES_INSCRIPTION } from '@/lib/auth/inscription'
 import { ouvrirFenetre } from '../outils/dom-react'
 
 const fenetre = ouvrirFenetre()
@@ -95,4 +95,26 @@ test('Entrée maintenue : un seul envoi tant que le premier n’a pas répondu',
 
 	repondre()
 	await fenetre.attendre(() => zone.querySelector('[role="alert"] p'))
+})
+
+test('le champ piège existe, hors de vue, hors du clavier et caché des lecteurs d’écran (ticket 084)', async () => {
+	const zone = await fenetre.monter(formulaire(async () => null))
+
+	const piege = zone.querySelector(`input[name="${CHAMP_PIEGE}"]`)
+	expect(piege).not.toBeNull()
+	expect(piege?.getAttribute('tabindex')).toBe('-1')
+	expect(piege?.getAttribute('autocomplete')).toBe('off')
+	expect(piege?.closest('[aria-hidden="true"]')).not.toBeNull()
+	expect((piege as HTMLInputElement).value).toBe('')
+})
+
+test('le refus du frein par adresse se lit en français sous le formulaire', async () => {
+	const zone = await fenetre.monter(formulaire(async () => ({ echec: 'trop-de-tentatives' })))
+
+	await fenetre.cliquer(fenetre.bouton('S’inscrire'))
+	await fenetre.attendre(() => zone.querySelector('[data-testid="erreur-inscription"]')?.textContent)
+
+	expect(zone.querySelector('[data-testid="erreur-inscription"]')?.textContent).toBe(
+		MESSAGES_ECHEC_INSCRIPTION['trop-de-tentatives']
+	)
 })

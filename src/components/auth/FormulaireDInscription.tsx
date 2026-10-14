@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useRef } from 'react'
 import {
+	CHAMP_PIEGE,
 	type ChampInscription,
 	type CodeEchecInscription,
 	type ErreursInscription,
@@ -118,6 +119,13 @@ export function FormulaireDInscription({ action }: { action: ActionDInscription 
 				</span>
 			</label>
 			<Erreur champ="cgu" erreurs={erreurs} />
+			{/* The trap (ticket 084): out of sight and of the tab order, and hidden from screen readers. A person never fills it. */}
+			<div aria-hidden="true" className="absolute -left-[10000px] h-px w-px overflow-hidden">
+				<label htmlFor={CHAMP_PIEGE}>
+					Laisse ce champ vide
+					<input id={CHAMP_PIEGE} name={CHAMP_PIEGE} type="text" tabIndex={-1} autoComplete="off" defaultValue="" />
+				</label>
+			</div>
 			<div role="alert" data-testid="erreur-inscription">
 				{etat?.echec ? (
 					<p className="rounded-md bg-red-50 p-3 text-red-800 text-sm">{MESSAGES_ECHEC_INSCRIPTION[etat.echec]}</p>

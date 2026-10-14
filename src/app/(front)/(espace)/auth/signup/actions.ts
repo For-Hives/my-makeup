@@ -6,8 +6,10 @@ import { redirect } from 'next/navigation'
 import { getPayload } from 'payload'
 import type { EtatDInscription } from '@/components/auth/FormulaireDInscription'
 import { poserLeCookieDeSession } from '@/lib/auth/cookie-session'
-import { validerInscription } from '@/lib/auth/inscription'
+import { freinDInscription } from '@/lib/auth/freins-inscription'
+import { CHAMP_PIEGE, validerInscription } from '@/lib/auth/inscription'
 import { inscrire } from '@/lib/auth/inscription-payload'
+import { ipClient } from '@/lib/auth/ip-client'
 import { ouvrirParMotDePasse } from '@/lib/auth/jeton'
 import { journalDe } from '@/lib/auth/journal'
 import { PAGE_D_ACCUEIL_DU_COMPTE, PAGE_DU_MUR } from '@/lib/auth/retour'
@@ -26,6 +28,16 @@ const texte = (valeur: FormDataEntryValue | null): string => (typeof valeur === 
  * - Confirmation off (the operating switch): the account is confirmed at once, she is signed in and
  *   sent to the onboarding.
  *
+ * Against the fake accounts (ticket 084), before any account is made:
+ * - The trap field (`CHAMP_PIEGE`), hidden from every person, is filled by scripts only. Then she is
+ *   shown the same success screen as anyone, nothing is created and no mail leaves.
+ * - The brake by client address: 5 sign-ups an hour. A Server Action answers with the status of the
+ *   framework, so the refusal is the code `trop-de-tentatives`, shown in French under the form.
+ * - Each refusal leaves a row in the journal with its reason (never an address or an email).
+ *
+ * An address that already has an account (or a Gmail variant of one) gets the same wall as a new
+ * one (ticket 083): `inscrire` tells the truth to the owner's mailbox only.
+ *
  * As for the sign-in, the origin of the request is checked here as well as by Next.
  */
 export async function sInscrire(_precedent: EtatDInscription, formulaire: FormData): Promise<EtatDInscription> {
@@ -35,6 +47,14 @@ export async function sInscrire(_precedent: EtatDInscription, formulaire: FormDa
 	if (origine !== null && !payload.config.csrf.includes(origine)) return { echec: 'service-indisponible' }
 
 	const journal = journalDe(payload)
+	const client = ipClient(entetes)
+	const piege = formulaire.get(CHAMP_PIEGE)
+	if (typeof piege === 'string' && piege.trim() !== '') {
+		// A script. It is counted by the same brake so that a flood cannot fill the journal, and it is
+		// shown the screen of a success, which it cannot tell from a real one.
+		if (freinDInscription.prendre(client).autorise) await journal({ type: 'inscription', code: 'champ-piege' })
+		redirect(PAGE_DU_MUR)
+	}
 	const saisie = {
 		nom: formulaire.get('nom'),
 		email: formulaire.get('email'),
@@ -46,6 +66,12 @@ export async function sInscrire(_precedent: EtatDInscription, formulaire: FormDa
 	if (!validation.ok) {
 		await journal({ type: 'inscription', code: 'donnees-invalides' })
 		return { erreurs: validation.erreurs, valeurs }
+	}
+
+	const place = freinDInscription.prendre(client)
+	if (!place.autorise) {
+		await journal({ type: 'inscription', code: 'trop-de-tentatives' })
+		return { echec: 'trop-de-tentatives', valeurs }
 	}
 
 	const env = serverEnv()

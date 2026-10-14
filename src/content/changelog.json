@@ -30,6 +30,16 @@
 			"id": "tu-restes-connectee-tant-que-tu-passes-dans-ton-espace-pe",
 			"type": "amelioration",
 			"text": "Tu restes connectée tant que tu passes dans ton espace, pendant 90 jours au plus."
+		},
+		{
+			"id": "si-ton-email-n-arrive-pas-tu-peux-le-renvoyer-depuis-la-p",
+			"type": "amelioration",
+			"text": "Si ton email n’arrive pas, tu peux le renvoyer depuis la page qui te demande de vérifier ta boîte mail."
+		},
+		{
+			"id": "s-inscrire-avec-l-adresse-de-quelqu-un-d-autre-ne-cree-pl",
+			"type": "correction",
+			"text": "S’inscrire avec l’adresse de quelqu’un d’autre ne crée plus de second compte, et les faux comptes jamais confirmés disparaissent au bout de 7 jours."
 		}
 	],
 	"releases": []
