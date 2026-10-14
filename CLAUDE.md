@@ -22,6 +22,7 @@ My Makeup est un annuaire de maquilleuses professionnelles indépendantes. Cette
 | créer, déplacer ou retirer une adresse | [`docs/migration/URLS.md`](docs/migration/URLS.md) |
 | faire autrement que le site en ligne | [`docs/migration/CHANGEMENTS-VOULUS.md`](docs/migration/CHANGEMENTS-VOULUS.md) |
 | savoir ce qui est déjà fait et vérifié | [`docs/migration/JOURNAL.md`](docs/migration/JOURNAL.md) |
+| écrire une note de version, comprendre la publication d'une version | [`docs/publication.md`](docs/publication.md) |
 
 Les tickets et les plans cités par leur numéro vivent dans le dépôt des plans, hors de ce dépôt.
 
@@ -49,6 +50,8 @@ Tout se lance depuis la racine du dépôt. La table complète est dans le README
 | `bun run payload:importmap` | Après l'ajout d'un composant d'administration. |
 | `bun run payload:migrate:create` | Écrit une migration depuis les collections (voir « Schéma »). |
 | `bun scripts/migration/urls-doc.ts` | Après un changement de la table des URL (voir « URL »). Avec `--check`, il dit seulement si le document suit la table. |
+| `bun run notes:ajouter <type> "<phrase>"` | Un changement qui se remarque par rapport au site en ligne : sa note de version, dans le même commit. Type `ajout`, `amelioration` ou `correction` (voir `docs/publication.md`). |
+| `bun run release:publier --a-blanc` | Montre ce que ferait la prochaine publication : le numéro, les notes rangées dessous. N'écrit rien. Seul le workflow `release.yml` publie. |
 
 ## Architecture
 
@@ -62,7 +65,7 @@ Ce qui existe aujourd'hui est décrit dans le README, « Ce que contient le sque
 - **Les photos** vivent dans un stockage d'objets (Cloudflare R2, par `@payloadcms/storage-s3`). Une photo qui ne sert plus part à la corbeille, jamais à la suppression directe.
 - **Les pages publiques sont rendues côté serveur** et rafraîchies par étiquettes : publier ou modifier un contenu rafraîchit les pages qui le lisent.
 - **Les emails** partent en SMTP par Resend (`@payloadcms/email-nodemailer`).
-- **Fichiers générés, jamais modifiés à la main** : `src/payload-types.ts`, `src/app/(payload)/admin/importMap.js`, `src/migrations/index.ts`, et les tableaux de `docs/migration/URLS.md` placés entre deux marques `urls:`.
+- **Fichiers générés, jamais modifiés à la main** : `src/payload-types.ts`, `src/app/(payload)/admin/importMap.js`, `src/migrations/index.ts`, les tableaux de `docs/migration/URLS.md` placés entre deux marques `urls:`, et `.release/version.json`, que seule la publication écrit : il déploie la prod.
 
 ## Interdits
 
