@@ -1271,12 +1271,13 @@
           "notNull": false,
           "default": "'brouillon'"
         },
-        "statut_fixe": {
-          "name": "statut_fixe",
-          "type": "boolean",
+        "statut_choisi": {
+          "name": "statut_choisi",
+          "type": "enum_profils_statut_choisi",
+          "typeSchema": "public",
           "primaryKey": false,
           "notNull": false,
-          "default": false
+          "default": "'automatique'"
         },
         "motif": {
           "name": "motif",
@@ -3052,6 +3053,16 @@
         "masque"
       ]
     },
+    "public.enum_profils_statut_choisi": {
+      "name": "enum_profils_statut_choisi",
+      "schema": "public",
+      "values": [
+        "automatique",
+        "brouillon",
+        "publie",
+        "masque"
+      ]
+    },
     "public.enum_talents_status": {
       "name": "enum_talents_status",
       "schema": "public",
@@ -3079,6 +3090,6 @@
     "tables": {},
     "columns": {}
   },
-  "id": "09fe9002-36e3-4bbf-9857-44c5c828ca5f",
+  "id": "235e9ffb-a2f6-4abc-81a2-cc73a614d831",
   "prevId": "00000000-0000-0000-0000-000000000000"
 }

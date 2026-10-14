@@ -337,13 +337,13 @@ export interface Profil {
   legacyUsername?: string | null;
   strapiId?: number | null;
   /**
-   * Seuls les profils publiés sont lus par le public. Sans statut fixé, le serveur le pose : brouillon pour un profil entièrement vide, publié sinon. Masqué ne change jamais seul.
+   * Posé par le serveur à chaque enregistrement, selon le statut choisi en dessous. Seuls les profils publiés sont lus par le public.
    */
   statut?: ('brouillon' | 'publie' | 'masque') | null;
   /**
-   * Coché dès qu’un admin change le statut : le serveur ne le change plus. Décoché sans changer le statut, il suit de nouveau la règle, dès cet enregistrement.
+   * Automatique : le serveur pose le statut, brouillon pour un profil entièrement vide, publié sinon. Un autre choix est gardé, quoi que la maquilleuse enregistre.
    */
-  statutFixe?: boolean | null;
+  statutChoisi?: ('automatique' | 'brouillon' | 'publie' | 'masque') | null;
   /**
    * Pourquoi le profil est masqué. La maquilleuse le lit.
    */
@@ -707,7 +707,7 @@ export interface ProfilsSelect<T extends boolean = true> {
   legacyUsername?: T;
   strapiId?: T;
   statut?: T;
-  statutFixe?: T;
+  statutChoisi?: T;
   motif?: T;
   verifie?: T;
   verifieLe?: T;

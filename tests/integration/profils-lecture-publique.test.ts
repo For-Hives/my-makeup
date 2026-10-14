@@ -229,7 +229,7 @@ describe('L’admin masque un profil : la lecture anonyme suivante ne le rend pl
 
 		const masquage = await appelerRest('PATCH', `/api/profils/${profil.id}`, {
 			enTetes: admin.session.enTetes,
-			corps: { statut: 'masque', motif: 'Masqué pour le test' },
+			corps: { statutChoisi: 'masque', motif: 'Masqué pour le test' },
 		})
 
 		expect(masquage.statut).toBe(200)

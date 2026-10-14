@@ -277,18 +277,18 @@ export async function distribuer(): Promise<Distribution> {
 	const entrees = [['anonyme', anonyme], ...acteurs.map(acteur => [acteur.role, acteur])]
 	const parRole = Object.fromEntries(entrees) as Record<Role, Acteur>
 	// A's profile is published by an admin; B's stays a draft, held there by an admin: with a photo,
-	// the rule of ticket 044 would publish it. Both statuses are fixed, so that no line moves them.
+	// the rule of ticket 044 would publish it. Both statuses are chosen, so that no line moves them.
 	// Each of them has a photo of her own, the main photo of her profile (ticket 043).
 	for (const role of ['maquilleuse', 'autreMaquilleuse'] as const) {
 		const acteur = parRole[role]
 		const profil = acteur.documents.profils
 		if (profil === undefined) throw new Error(`La distribution n’a pas de profil pour « ${role} ».`)
 		acteur.documents.media = await mediaDe(payload, acteur.documents.pros)
-		const statut = role === 'maquilleuse' ? { statut: STATUT_PUBLIE } : { statut: STATUT_INITIAL, statutFixe: true }
+		const statutChoisi = role === 'maquilleuse' ? STATUT_PUBLIE : STATUT_INITIAL
 		await payload.update({
 			collection: 'profils',
 			id: profil,
-			data: { ...statut, photoPrincipale: acteur.documents.media },
+			data: { statutChoisi, photoPrincipale: acteur.documents.media },
 		})
 	}
 	return { ...parRole, contenus: await creerLesContenus(payload) }

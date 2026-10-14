@@ -218,8 +218,8 @@ const MATRICE: Ligne[] = [
 			// Traced by the server only (ticket 042).
 			['consentiLe', '2020-01-01T00:00:00.000Z'],
 			['sourceConsentement', 'import'],
-			// Computed by the server at every save (ticket 044); the status fixed by an admin only.
-			['statutFixe', false],
+			// Computed by the server at every save (ticket 044); its choice, by an admin only.
+			['statutChoisi', 'masque'],
 			...ETAT_ENVOYE,
 		] as const
 	).map(
@@ -320,7 +320,7 @@ const MATRICE: Ligne[] = [
 		['contactPublic', PROPRIETAIRE_ET_ADMIN],
 		['consentiLe', PROPRIETAIRE_ET_ADMIN],
 		['sourceConsentement', PROPRIETAIRE_ET_ADMIN],
-		// Its state, public; since when, and whether an admin fixed its status, for her and the admin (044).
+		// Its state, public; since when, and the status an admin chose, for her and the admin (044).
 		['completude', ROLES],
 		['actif', ROLES],
 		['publiable', ROLES],
@@ -328,7 +328,7 @@ const MATRICE: Ligne[] = [
 		['actifDepuis', PROPRIETAIRE_ET_ADMIN],
 		['publiableDepuis', PROPRIETAIRE_ET_ADMIN],
 		['entierementVideDepuis', PROPRIETAIRE_ET_ADMIN],
-		['statutFixe', PROPRIETAIRE_ET_ADMIN],
+		['statutChoisi', PROPRIETAIRE_ET_ADMIN],
 	]),
 	{ role: 'admin', collection: 'profils', operation: 'lister', attendu: 'tous' },
 	{ role: 'admin', collection: 'profils', operation: 'lire', document: 'maquilleuse', attendu: 'autorise' },
@@ -341,7 +341,9 @@ const MATRICE: Ligne[] = [
 			['strapiId', 999, 'ignore'],
 			['legacyUsername', 'Ancien Pseudo', 'ignore'],
 			['pro', { compteDe: 'sansProfil' }, 'autorise'],
-			['statut', 'masque', 'autorise'],
+			// The admin chooses the status; the server computes it, from her choice (ticket 044).
+			['statut', 'masque', 'ignore'],
+			['statutChoisi', 'masque', 'autorise'],
 			['motif', 'Photos sans rapport avec le maquillage', 'autorise'],
 			['verifie', true, 'autorise'],
 			['siret', '12345678901234', 'autorise'],
@@ -351,8 +353,7 @@ const MATRICE: Ligne[] = [
 			['coordonnees', { telephone: '06 39 98 44 44', email: 'contact-admin@example.test' }, 'autorise'],
 			['consentiLe', '2020-01-01T00:00:00.000Z', 'ignore'],
 			['sourceConsentement', 'import', 'ignore'],
-			// The admin hands A's status back to the rule; the state stays the server's (ticket 044).
-			['statutFixe', false, 'autorise'],
+			// The state stays the server's (ticket 044).
 			...ETAT_ENVOYE.map(([champ, valeur]) => [champ, valeur, 'ignore'] as const),
 		] as const
 	).map(

@@ -26,7 +26,14 @@ import {
 } from '../lib/profil/coordonnees'
 import { photosDeLaProprietaire, validerPhotosDuProfil } from '../lib/profil/photos'
 import { validerSiret } from '../lib/profil/siret'
-import { LIBELLES_DES_STATUTS, STATUT_INITIAL, STATUTS_DU_PROFIL } from '../lib/profil/statut'
+import {
+	CHOIX_DU_STATUT,
+	CHOIX_INITIAL,
+	LIBELLES_DES_CHOIX,
+	LIBELLES_DES_STATUTS,
+	STATUT_INITIAL,
+	STATUTS_DU_PROFIL,
+} from '../lib/profil/statut'
 import { premierSlugLibre, slugDeRepli, slugifier } from '../lib/slug'
 import { CHAMPS_DE_L_ETAT, etatAvantEcriture } from './profils/etat'
 import { champsDeLaZone } from './profils/zone'
@@ -157,16 +164,17 @@ const INTERNE = { read: champAdminSeulement, create: champAdminSeulement, update
  *   (`contactPublic`): a public page reads them through src/services/public/. The server traces
  *   that choice: the date and the source of the consent (ticket 042).
  * - `pro` (the account that owns it) is written by an admin only; `slug` by the server only, at
- *   the creation; `strapiId` and `legacyUsername` by the import only; the status, the reason, the
- *   verification, the SIRET, the internal note, the score and the badge by an admin only (I03,
- *   U55): what a makeup artist sends on them is ignored.
+ *   the creation; `strapiId` and `legacyUsername` by the import only; the choice of the status,
+ *   the reason, the verification, the SIRET, the internal note, the score and the badge by an
+ *   admin only (I03, U55): what a makeup artist sends on them is ignored. The status itself is
+ *   computed by the server (ticket 044).
  * - Its lists keep their order and the identifier of each row (src/collections/profils-listes.ts).
  * - Its zone is a commune with its INSEE code, a radius of 0 to 200 km and « à domicile », never a
  *   postal address (src/collections/profils/zone.ts, ticket 041).
  * - At every save, the server computes and stores its completeness, whether it is active,
  *   publishable or entirely empty, and since when (src/collections/profils/etat.ts, ticket 044).
  *   Its status follows: an entirely empty profile is a draft, any other is published, unless an
- *   admin fixed the status (`statutFixe`); a hidden profile stays hidden whatever the save.
+ *   admin chose another status (`statutChoisi`); a hidden profile stays hidden whatever the save.
  */
 export const Profils: CollectionConfig<'profils'> = {
 	slug: 'profils',
@@ -296,35 +304,38 @@ export const Profils: CollectionConfig<'profils'> = {
 			access: { read: champDuProfilAdminOuProprietaire, create: jamais, update: jamais },
 			admin: { readOnly: true },
 		},
-		// Reserved to the role `admin` (ticket 021).
+		// Computed by the server at every save, from the choice of an admin and the rule (ticket 044).
 		{
 			name: 'statut',
 			label: 'Statut',
 			type: 'select',
-			// Not `required`, so that a creation that gives none (the server, the import, a test)
-			// needs no status in its data: it gets the default. An empty status is not `publie`.
+			// Not `required`, so that a creation needs no status in its data: it gets the default, which
+			// the server replaces. An empty status is not `publie`.
 			defaultValue: STATUT_INITIAL,
 			// Every public read filters on it.
 			index: true,
 			options: STATUTS_DU_PROFIL.map(statut => ({ label: LIBELLES_DES_STATUTS[statut], value: statut })),
-			access: RESERVE_LU_PAR_LA_PROPRIETAIRE,
+			// No API writes it: what a request sends, an admin's included, is ignored (src/lib/profil/etat.ts).
+			access: { read: champDuProfilAdminOuProprietaire, create: jamais, update: jamais },
 			admin: {
+				readOnly: true,
 				position: 'sidebar',
 				description:
-					'Seuls les profils publiés sont lus par le public. Sans statut fixé, le serveur le pose : brouillon pour un profil entièrement vide, publié sinon. Masqué ne change jamais seul.',
+					'Posé par le serveur à chaque enregistrement, selon le statut choisi en dessous. Seuls les profils publiés sont lus par le public.',
 			},
 		},
+		// Reserved to the role `admin` (tickets 021 and 044).
 		{
-			// Ticket 044: set by the server when the status changes in a save, unticked by an admin only.
-			name: 'statutFixe',
-			label: 'Statut fixé par l’admin',
-			type: 'checkbox',
-			defaultValue: false,
+			name: 'statutChoisi',
+			label: 'Statut choisi par l’admin',
+			type: 'select',
+			defaultValue: CHOIX_INITIAL,
+			options: CHOIX_DU_STATUT.map(choix => ({ label: LIBELLES_DES_CHOIX[choix], value: choix })),
 			access: RESERVE_LU_PAR_LA_PROPRIETAIRE,
 			admin: {
 				position: 'sidebar',
 				description:
-					'Coché dès qu’un admin change le statut : le serveur ne le change plus. Décoché sans changer le statut, il suit de nouveau la règle, dès cet enregistrement.',
+					'Automatique : le serveur pose le statut, brouillon pour un profil entièrement vide, publié sinon. Un autre choix est gardé, quoi que la maquilleuse enregistre.',
 			},
 		},
 		{

@@ -8,17 +8,24 @@
  * this file only maps a document of `profils` to the fields that rule reads (`champsDuProfil`),
  * then says what the collection stores. Nothing here computes a condition on its own.
  *
- * The status (src/lib/profil/statut.ts) follows the rule while nobody fixed it: an entirely empty
- * profile is a draft, any other is published, both ways. A status an admin set is never
- * overwritten (`statutFixe`), and a hidden profile stays hidden whatever the save.
+ * The status (src/lib/profil/statut.ts) follows the rule while an admin has chosen nothing else:
+ * an entirely empty profile is a draft, any other is published, both ways. A status an admin
+ * chose (`statutChoisi`) is never overwritten, and a hidden profile stays hidden whatever the save.
  *
  * Relative imports on purpose: the collection that calls this file is also loaded by the Payload
  * CLI, outside of Next.
  */
 
 import { estMontantDePrix } from '../prix'
-import { type ChampsDuProfil, completude } from './completude'
-import { STATUT_INITIAL, STATUTS_DU_PROFIL, type StatutDuProfil } from './statut'
+import { type ChampsDuProfil, completude, villeExploitable } from './completude'
+import {
+	CHOIX_DU_STATUT,
+	CHOIX_INITIAL,
+	type ChoixDuStatut,
+	STATUT_INITIAL,
+	STATUTS_DU_PROFIL,
+	type StatutDuProfil,
+} from './statut'
 
 /** The networks of a profile, as the collection names them. */
 interface ReseauxDuDocument {
@@ -53,10 +60,24 @@ export interface DocumentDuProfil {
 }
 
 /**
+ * The city the rule reads for a commune: its name, and only next to its INSEE code.
+ *
+ * Every name of the official list (14/10/2026) is a usable city for the rule as it is, but one:
+ * « Pont de Montvert - Sud Mont Lozère » (48116), seven words with its spaced hyphen, over the six
+ * the rule allows. A name the rule refuses is so read once more with its spaced hyphens joined, as
+ * the other names of the list write them (« Pont de Montvert-Sud Mont Lozère »). A name the rule
+ * reads is passed as it is; a text that is no city (« France », « Partout ») stays none.
+ */
+function villeDeLaCommune(commune: DocumentDuProfil['commune']): string | null {
+	if (!commune?.codeInsee || typeof commune.nom !== 'string') return null
+	return villeExploitable(commune.nom) ? commune.nom : commune.nom.replace(/\s+-\s+/g, '-')
+}
+
+/**
  * A document of `profils` under the names of the old site, as the single rule reads it.
  *
  * - The city is the name of the commune (ticket 041), and only a commune with its INSEE code: the
- *   server stores no other.
+ *   server stores no other (`villeDeLaCommune`).
  * - A photo is passed as an object, never as a bare identifier, which the rule would count as no
  *   photo; the gallery as its list.
  * - The price of an offer is its amount (`prixAPartirDe`, read from the text typed by the same
@@ -74,7 +95,7 @@ export function champsDuProfil(document: DocumentDuProfil | null | undefined): C
 		last_name: d.nom,
 		speciality: d.specialite,
 		company_artist_name: d.nomArtiste,
-		city: d.commune?.codeInsee ? d.commune.nom : null,
+		city: villeDeLaCommune(d.commune),
 		description: d.description,
 		main_picture: d.photoPrincipale === null || d.photoPrincipale === undefined ? null : { id: d.photoPrincipale },
 		image_gallery: d.galerie ?? null,
@@ -129,25 +150,32 @@ type DateDePassage = (typeof DATES_DE_PASSAGE)[Drapeau]
 /** What the collection stores of the status, before or after a save. */
 export interface StatutStocke {
 	readonly statut?: unknown
-	readonly statutFixe?: unknown
+	readonly statutChoisi?: unknown
 }
 
 const estUnStatut = (statut: unknown): statut is StatutDuProfil =>
 	(STATUTS_DU_PROFIL as readonly unknown[]).includes(statut)
 
+const estUnChoix = (choix: unknown): choix is ChoixDuStatut => (CHOIX_DU_STATUT as readonly unknown[]).includes(choix)
+
 /**
- * The status after a save.
+ * The choice of the status and the status, after a save.
  *
- * - `masque` is never changed by the rule: only an admin hides and shows a profile again.
- * - A status that changes in a save was set by an admin (or by the server writing it), since a
- *   makeup artist cannot write it: it becomes fixed (`statutFixe`), and the rule no longer moves
- *   it. A creation that gives another status than the initial draft fixes it too.
- * - An admin hands the status back to the rule by unticking `statutFixe`, in a save that leaves
- *   the status as it is: the rule applies at once.
- * - Otherwise the rule: an entirely empty profile is a draft, any other is published.
+ * - An admin chooses in `statutChoisi`: `automatique` (the rule), or a status the profile keeps
+ *   whatever is saved. Only a choice that differs from the stored one changes it: a save that
+ *   sends the stored choice again (the admin panel sends every field, even from a form loaded
+ *   before the makeup artist's last save) leaves it as it is, and the rule decides.
+ * - No API writes `statut`: the access rules drop it. Server code that writes it, rules lifted
+ *   (the import, a seed, a test), makes it the choice when it differs from the stored status: a
+ *   status no rule gave is a decision. A choice written in the same save wins over it.
+ * - The status is the choice, or, while the choice is `automatique`, the rule: an entirely empty
+ *   profile is a draft, any other is published.
+ * - `masque` never comes from the rule: a hidden profile stored with no choice (from before this
+ *   field) stays hidden, and keeps `masque` as its choice.
  *
  * `avant` is what was stored, nothing for a creation; `apres` is what the save holds once the
- * access rules have run. A status that is none of the three counts as the initial draft.
+ * access rules have run. A status or a choice that is none of the known ones counts as the
+ * initial one.
  */
 export function statutApres({
 	avant,
@@ -157,24 +185,25 @@ export function statutApres({
 	avant?: StatutStocke | null
 	apres: StatutStocke
 	entierementVide: boolean
-}): { statut: StatutDuProfil; statutFixe: boolean } {
-	const stocke = avant?.statut
-	const precedent = estUnStatut(stocke) ? stocke : STATUT_INITIAL
-	// A save that holds no status keeps the stored one.
-	const statut = estUnStatut(apres.statut) ? apres.statut : precedent
-	const statutFixe = apres.statutFixe === true || statut !== precedent
-	if (statut === 'masque' || statutFixe) return { statut, statutFixe }
-	return { statut: entierementVide ? 'brouillon' : 'publie', statutFixe }
+}): { statut: StatutDuProfil; statutChoisi: ChoixDuStatut } {
+	const statutStocke = estUnStatut(avant?.statut) ? avant.statut : STATUT_INITIAL
+	const choixStocke = estUnChoix(avant?.statutChoisi) ? avant.statutChoisi : CHOIX_INITIAL
+	const choixGarde: ChoixDuStatut = statutStocke === 'masque' && choixStocke === CHOIX_INITIAL ? 'masque' : choixStocke
+	let statutChoisi = choixGarde
+	if (estUnChoix(apres.statutChoisi) && apres.statutChoisi !== choixStocke) statutChoisi = apres.statutChoisi
+	else if (estUnStatut(apres.statut) && apres.statut !== statutStocke) statutChoisi = apres.statut
+	if (statutChoisi !== CHOIX_INITIAL) return { statut: statutChoisi, statutChoisi }
+	return { statut: entierementVide ? 'brouillon' : 'publie', statutChoisi }
 }
 
 /** What the server writes on a profile at every save: the state, its dates, the status. */
 export type EcritureDeLEtat = EtatDuProfil &
-	Record<DateDePassage, string> & { statut: StatutDuProfil; statutFixe: boolean }
+	Record<DateDePassage, string> & { statut: StatutDuProfil; statutChoisi: ChoixDuStatut }
 
 /**
  * What a save stores, whatever the request sent on these fields: the state by the single rule; for
  * each flag, the date it took its current value (kept while the value stays, `maintenant` when it
- * changes, and at the creation); the status.
+ * changes, and at the creation); the choice of the status and the status.
  *
  * `avant` is the stored document, nothing for a creation; `apres` is the document the save holds
  * once the access rules have run.

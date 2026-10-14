@@ -18,7 +18,7 @@ import { viderLeStockage } from '../outils/s3'
  * At every save, the server knows whether a profile is empty, active or publishable (ticket 044;
  * plan 02 §7.3, I20): it computes them with the single rule of the old site, stores them with the
  * date each took its value, and moves the status of the profile from draft to published and back,
- * unless an admin fixed it. Made-up values only, but for the commune, public reference data.
+ * unless an admin chose another status. Made-up values only, but for the commune, public reference data.
  */
 
 afterEach(async () => {
@@ -192,7 +192,7 @@ describe('Profil créé vide : brouillon ; première des six conditions remplie 
 			entierementVide: true,
 			statut: 'brouillon',
 		})
-		expect(cree.statutFixe).toBe(false)
+		expect(cree.statutChoisi).toBe('automatique')
 		for (const date of DATES) {
 			expect([date, Date.parse(String(cree[date])) >= avant - 1000]).toEqual([date, true])
 			expect([date, Date.parse(String(cree[date])) <= Date.now()]).toEqual([date, true])
@@ -210,6 +210,23 @@ describe('Profil créé vide : brouillon ; première des six conditions remplie 
 			expect([condition, (await appelerRest('GET', `/api/profils/${profil}`)).statut]).toEqual([condition, 200])
 		}
 	}, 30_000)
+
+	test('une commune de plus de six mots est une ville exploitable : seule, elle publie le profil', async () => {
+		const { compte, profil } = await maquilleuseEtSonProfil()
+
+		// The only name of the official list (14/10/2026) the rule refused as it is.
+		await modifier(compte, profil, { commune: { nom: 'Pont de Montvert - Sud Mont Lozère', codeInsee: '48116' } })
+
+		expect(await etat(profil)).toEqual({
+			completude: 1,
+			actif: false,
+			publiable: false,
+			entierementVide: false,
+			statut: 'publie',
+		})
+		await modifier(compte, profil, { photoPrincipale: await envoyerUnePhoto(compte), specialite: 'Mariage' })
+		expect(await etat(profil)).toMatchObject({ actif: true, statut: 'publie' })
+	})
 
 	test('vidé de tout ce qui comptait, il repasse en brouillon, et le public ne le lit plus', async () => {
 		const { compte, profil } = await maquilleuseEtSonProfil()
@@ -292,7 +309,7 @@ describe('Un profil masqué reste masqué quelle que soit la sauvegarde', () => 
 		const { compte, profil } = await maquilleuseEtSonProfil()
 		const admin = await creerCompte('admin')
 		await modifier(compte, profil, await toutesLesConditions(compte))
-		await modifier(admin, profil, { statut: 'masque', motif: 'Masqué pour le test' })
+		await modifier(admin, profil, { statutChoisi: 'masque', motif: 'Masqué pour le test' })
 		expect(await etat(profil)).toMatchObject({ publiable: true, statut: 'masque' })
 
 		await modifier(compte, profil, RIEN)
@@ -301,13 +318,17 @@ describe('Un profil masqué reste masqué quelle que soit la sauvegarde', () => 
 		expect(await etat(profil)).toMatchObject({ publiable: true, statut: 'masque' })
 		await modifier(admin, profil, { noteInterne: 'Relue' })
 		expect((await etat(profil)).statut).toBe('masque')
-		// Even handed back to the rule, a hidden profile stays hidden: only an admin shows it again.
-		await modifier(admin, profil, { statutFixe: false })
+		// An admin's form that sends another status, with the stored choice: the status is not hers to write.
+		await modifier(admin, profil, { statut: 'publie', statutChoisi: 'masque', noteInterne: 'Relue encore' })
 		expect((await etat(profil)).statut).toBe('masque')
 		const payload = await payloadDeTest()
 		await payload.update({ collection: 'profils', id: profil, data: { prenom: 'Par le serveur' } })
 		expect((await etat(profil)).statut).toBe('masque')
 		expect((await appelerRest('GET', `/api/profils/${profil}`)).statut).toBe(404)
+
+		// Only an admin shows it again, by handing it back to the rule.
+		await modifier(admin, profil, { statutChoisi: 'automatique' })
+		expect(await etat(profil)).toMatchObject({ publiable: true, statut: 'publie' })
 	}, 30_000)
 })
 
@@ -318,32 +339,67 @@ describe('Un statut posé par l’admin n’est jamais écrasé', () => {
 		await modifier(rempli.compte, rempli.profil, { specialite: 'Mariage' })
 		const vide = await maquilleuseEtSonProfil()
 
-		await modifier(admin, rempli.profil, { statut: 'brouillon' })
-		await modifier(admin, vide.profil, { statut: 'publie' })
+		await modifier(admin, rempli.profil, { statutChoisi: 'brouillon' })
+		await modifier(admin, vide.profil, { statutChoisi: 'publie' })
 		await modifier(rempli.compte, rempli.profil, { description: DESCRIPTION })
 		await modifier(vide.compte, vide.profil, { prenom: 'Prénom' })
 
 		expect(await etat(rempli.profil)).toMatchObject({ entierementVide: false, statut: 'brouillon' })
 		expect(await etat(vide.profil)).toMatchObject({ entierementVide: true, statut: 'publie' })
-		expect((await stocke(rempli.profil)).statutFixe).toBe(true)
-		expect((await stocke(vide.profil)).statutFixe).toBe(true)
+		expect((await stocke(rempli.profil)).statutChoisi).toBe('brouillon')
+		expect((await stocke(vide.profil)).statutChoisi).toBe('publie')
 	})
 
-	test('l’admin décoche « statut fixé » : le statut suit de nouveau la règle, dès cet enregistrement', async () => {
+	test('un formulaire d’admin chargé avant l’enregistrement de la maquilleuse ne fixe aucun statut', async () => {
+		const admin = await creerCompte('admin')
+		const { compte, profil } = await maquilleuseEtSonProfil()
+		// What the admin's form holds, loaded while the profile was still an empty draft.
+		const charge = await stocke(profil)
+		await modifier(compte, profil, { specialite: 'Mariage' })
+		expect(await etat(profil)).toMatchObject({ statut: 'publie' })
+
+		// She saves her note, with the status and the choice her form loaded.
+		await modifier(admin, profil, { statut: charge.statut, statutChoisi: charge.statutChoisi, noteInterne: 'Relue' })
+
+		expect(await etat(profil)).toMatchObject({ entierementVide: false, statut: 'publie' })
+		expect((await stocke(profil)).statutChoisi).toBe('automatique')
+		await modifier(compte, profil, { specialite: null })
+		expect(await etat(profil)).toMatchObject({ entierementVide: true, statut: 'brouillon' })
+	})
+
+	test('le formulaire entier renvoyé tel qu’il a été chargé : la règle décide, rien n’est fixé', async () => {
+		const admin = await creerCompte('admin')
+		const { compte, profil } = await maquilleuseEtSonProfil()
+		// The admin panel sends every field of the form it loaded.
+		const { corps } = await appelerRest('GET', `/api/profils/${profil}?depth=0`, { enTetes: admin.session.enTetes })
+		const { id: _id, createdAt: _cree, updatedAt: _modifie, ...formulaire } = corps as Record<string, unknown>
+		await modifier(compte, profil, { specialite: 'Mariage' })
+
+		await modifier(admin, profil, { ...formulaire, noteInterne: 'Relue' })
+
+		// Her speciality is lost with the old form, so the profile is empty again: a draft by the rule.
+		expect(await etat(profil)).toMatchObject({ entierementVide: true, statut: 'brouillon' })
+		expect((await stocke(profil)).statutChoisi).toBe('automatique')
+		await modifier(compte, profil, { specialite: 'Mariage' })
+		expect(await etat(profil)).toMatchObject({ entierementVide: false, statut: 'publie' })
+	})
+
+	test('l’admin choisit « automatique » : le statut suit de nouveau la règle, dès cet enregistrement', async () => {
 		const admin = await creerCompte('admin')
 		const { compte, profil } = await maquilleuseEtSonProfil()
 		await modifier(compte, profil, { specialite: 'Mariage' })
-		await modifier(admin, profil, { statut: 'brouillon' })
+		await modifier(admin, profil, { statutChoisi: 'brouillon' })
+		expect(await etat(profil)).toMatchObject({ statut: 'brouillon' })
 
-		await modifier(admin, profil, { statutFixe: false })
+		await modifier(admin, profil, { statutChoisi: 'automatique' })
 
 		expect(await etat(profil)).toMatchObject({ statut: 'publie' })
-		expect((await stocke(profil)).statutFixe).toBe(false)
+		expect((await stocke(profil)).statutChoisi).toBe('automatique')
 	})
 })
 
 describe('Valeurs envoyées par la maquilleuse ignorées et recalculées', () => {
-	test('par REST : l’état, ses dates et « statut fixé » envoyés sont ignorés ; le serveur les recalcule', async () => {
+	test('par REST : l’état, ses dates, le statut et son choix envoyés sont ignorés ; le serveur les recalcule', async () => {
 		const { compte, profil } = await maquilleuseEtSonProfil()
 		const avant = await stocke(profil)
 
@@ -357,7 +413,7 @@ describe('Valeurs envoyées par la maquilleuse ignorées et recalculées', () =>
 			publiableDepuis: '2020-01-01T00:00:00.000Z',
 			entierementVideDepuis: '2020-01-01T00:00:00.000Z',
 			statut: 'publie',
-			statutFixe: true,
+			statutChoisi: 'publie',
 		})
 
 		const attendu = {
@@ -370,7 +426,7 @@ describe('Valeurs envoyées par la maquilleuse ignorées et recalculées', () =>
 		expect(await etat(profil)).toEqual(attendu)
 		expect((corps as { doc: unknown }).doc).toMatchObject(attendu)
 		const apres = await stocke(profil)
-		expect(apres.statutFixe).toBe(false)
+		expect(apres.statutChoisi).toBe('automatique')
 		for (const date of DATES) expect([date, apres[date]]).toEqual([date, avant[date]])
 	})
 

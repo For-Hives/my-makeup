@@ -289,13 +289,8 @@ describe('Lecture anonyme : la commune et son département sortent avec le profi
 		await modifier(compte, profil, { commune: ANNECY, rayonKm: 30, aDomicile: true })
 		await modifier(brouillon.compte, brouillon.profil, { commune: ANNECY })
 		const payload = await payloadDeTest()
-		await payload.update({ collection: 'profils', id: profil, data: { statut: 'publie' } })
-		// With a commune, the rule of ticket 044 would publish it: an admin holds it as a draft.
-		await payload.update({
-			collection: 'profils',
-			id: brouillon.profil,
-			data: { statut: 'brouillon', statutFixe: true },
-		})
+		// With a commune, the rule of ticket 044 publishes the first; an admin holds the other as a draft.
+		await payload.update({ collection: 'profils', id: brouillon.profil, data: { statutChoisi: 'brouillon' } })
 
 		const attendu = { commune: { nom: 'Annecy', codeInsee: '74010', departement: '74' }, rayonKm: 30, aDomicile: true }
 		const seul = await appelerRest('GET', `/api/profils/${profil}?depth=0`)
