@@ -15,6 +15,7 @@ My Makeup est un annuaire de maquilleuses professionnelles indépendantes. Cette
 | tester un composant React | [`docs/tests/composants.md`](docs/tests/composants.md) |
 | écrire un test d'intégration, démarrer le banc de test, obtenir un compte de test | [`docs/tests/banc.md`](docs/tests/banc.md) |
 | écrire ou lancer un essai de bout en bout, contrôler l'accessibilité d'une page | [`docs/tests/e2e.md`](docs/tests/e2e.md) |
+| appeler un service extérieur, ou le simuler dans un test | [`docs/tests/http-sortant.md`](docs/tests/http-sortant.md) |
 | toucher la CI, un workflow ou le `Dockerfile` | [`docs/qualite.md`](docs/qualite.md), §6 à §9 |
 | monter une version, toucher `renovate.json` | [`docs/qualite.md`](docs/qualite.md), §11 |
 | créer ou changer une collection, un champ, ou l'import des données | [`docs/migration/SCHEMA.md`](docs/migration/SCHEMA.md) |
@@ -100,6 +101,7 @@ Ces règles n'ont pas d'exception. Si une tâche semble en demander une, arrête
 
 - **Biome** se lance par les scripts ci-dessus ou par `bunx @biomejs/biome`. Le paquet `biome` du registre npm est un homonyme : un lancement par npx l'installerait à sa place.
 - **`bun test` sans option lit le fichier `.env`, puis `.env.test`, qui l'emporte.** Il tourne alors sous l'environnement du banc de test, et ce que `.env.test` ne règle pas vient du `.env` de travail. Les tests ne dépendent jamais de ce fichier : passe `--no-env-file`, et lance depuis la racine, où `bunfig.toml` charge la garde.
+- **Aucun test n'appelle Internet.** Sous `bun test`, une requête vers un hôte qui n'est pas du banc est refusée et fait échouer le test, même si le code attrape l'erreur. Le service se simule dans le test, par `simuler`. Le code l'appelle par `fetch` : c'est la seule sortie qui se simule. Vers un service extérieur, une requête faite par `node:http`, `undici` ou `Bun.fetch` est toujours refusée.
 - **Après un arrêt forcé du serveur de développement**, `bun run typecheck` peut échouer sur un fichier de `.next/dev/types/`. Supprime le dossier `.next/dev/` et relance.
 - **Branches.** `v3` est la branche d'intégration. Une branche de travail s'appelle `v3-<numéros des tickets>` : git refuse `v3/…` tant que `v3` existe. Avant une poussée, `git status -sb` montre la branche suivie : une branche créée depuis `origin/main` pousserait vers `main`.
 - **Versions figées.** Next reste en 16.3 (registre des changements voulus, repère `next-16-3`), et les paquets `@payloadcms/*` restent à la version exacte de `payload`. Aucune montée de version en passant. Renovate ne propose rien sur `v3` : `renovate.json` ne prend effet qu'à la bascule.
