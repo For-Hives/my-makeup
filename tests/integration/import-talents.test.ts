@@ -90,7 +90,8 @@ describe('Critère 1 : à blanc, les créations sont annoncées et la base cible
 	}, 60_000)
 
 	test('la commande ne pousse pas le schéma : la marque que laisse le mode développement de Payload ne bouge pas', async () => {
-		// The Payload of this process pushed the schema when it started, and left its mark (batch -1).
+		// The rows the migrations of the bench wrote. A push of the schema would add its own mark, a
+		// row `dev` of batch -1, or touch it if it were there.
 		const marques = () => avecLaBaseDuBanc(sql => sql.unsafe('SELECT name, batch, updated_at FROM payload_migrations'))
 		const avant = await marques()
 

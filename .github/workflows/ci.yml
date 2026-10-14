@@ -45,7 +45,7 @@ jobs:
           bun-version-file: package.json
       - name: Install
         run: bun install --frozen-lockfile
-      # The four checks below run even when an earlier one failed: one push shows every
+      # The five checks below run even when an earlier one failed: one push shows every
       # fault at once. The job is red as soon as one of them is.
       - name: Generated files are up to date
         if: ${{ !cancelled() }}
@@ -55,6 +55,11 @@ jobs:
           DATABASE_URI: postgres://generation@127.0.0.1:5432/generation
           PAYLOAD_SECRET: valeur-de-remplissage-sans-aucun-secret-0123456789
         run: bun run payload:types && bun run payload:importmap && git diff --exit-code
+      # A collection changed without its migration: red. No database and no secret, the
+      # command sets its own placeholders (docs/qualite.md, « La dérive de schéma »).
+      - name: Schema drift
+        if: ${{ !cancelled() }}
+        run: bun run schema:derive
       - name: Types
         if: ${{ !cancelled() }}
         run: bun run typecheck

@@ -3,7 +3,7 @@
  *
  *   bun run banc:up                     starts the four containers, returns once all four answer
  *   bun run banc:down                   stops them, removes containers and volumes
- *   bun run banc:prepare                rebuilds the bench database from the code, empty
+ *   bun run banc:prepare                rebuilds the bench database by the migrations, empty
  *   bun run test:integration [file…]    rebuilds the database, then runs the integration tests
  *
  * The instance (name and ports) comes from BANC_INSTANCE and BANC_DECALAGE: tests/outils/banc.ts.
@@ -172,9 +172,9 @@ export async function exigerBancDebout({ instance, services }: Banc): Promise<vo
 }
 
 /**
- * Drops every table of the bench database. Payload then builds its tables from the collections
- * of the code when it starts, on an empty database: it has no question to ask, whatever changed
- * in a collection since the last run.
+ * Drops every table of the bench database. The versioned migrations then build them again on an
+ * empty database: `reconstruireLaBase` below, or the application of the end-to-end tests when it
+ * starts. Nothing is left of a previous run, and Payload has no question to ask.
  *
  * The address is the one this file worked out from `.env.test` for the instance: never a value
  * read from the environment.
@@ -193,23 +193,46 @@ export async function effacerLeSchema({ services: { base } }: Banc): Promise<voi
 	}
 }
 
-async function preparer(banc: Banc): Promise<void> {
-	await exigerBancDebout(banc)
+/**
+ * Rebuilds the bench database as the pre-production and the production build theirs: dropped,
+ * then the versioned migrations of `src/migrations/` played on the empty database (ticket 049).
+ * Then refuses, with what to do, a database the migrations did not build as the collections of
+ * the code describe it: a missing migration stops here, before the first test, and not on the
+ * pre-production. Gives the names of the migrations played.
+ */
+async function reconstruireLaBase(banc: Banc): Promise<string[]> {
 	await effacerLeSchema(banc)
 	// Set before the Payload configuration is loaded: it reads the environment when it is imported.
 	Object.assign(process.env, banc.environnement)
+	const [{ payloadDeTest }, { exigerLeSchemaDesMigrations, jouerLesMigrations }, { migrations }] = await Promise.all([
+		import('../tests/outils/payload-test'),
+		import('../tests/outils/schema-du-banc'),
+		import('../src/migrations'),
+	])
+	// The Payload of the tests changes no schema when it connects: the migrations build every table.
+	const payload = await payloadDeTest()
+	const jouees = await jouerLesMigrations(payload, migrations, 'test')
+	await exigerLeSchemaDesMigrations(payload, 'test')
+	return jouees
+}
+
+async function preparer(banc: Banc): Promise<void> {
+	await exigerBancDebout(banc)
+	const jouees = await reconstruireLaBase(banc)
 	const { compterLesDocuments } = await import('../tests/outils/payload-test')
-	// Counting is what starts Payload, which builds the tables.
 	const comptes = Object.values(await compterLesDocuments())
 	if (comptes.some(compte => compte !== 0)) throw new BancRefuse('La base du banc n’est pas vide après sa préparation.')
 	console.log(
-		`Base du banc « ${banc.instance.nom} » prête : schéma reconstruit depuis le code, ${comptes.length} collections, toutes vides.`
+		`Base du banc « ${banc.instance.nom} » prête : ${jouees.length > 1 ? 'migrations jouées' : 'migration jouée'} sur une base vide (${jouees.join(', ')}), schéma conforme aux collections du code, ${comptes.length} collections, toutes vides.`
 	)
 }
 
 async function tester(banc: Banc, demandes: string[]): Promise<number> {
 	await exigerBancDebout(banc)
-	await effacerLeSchema(banc)
+	const jouees = await reconstruireLaBase(banc)
+	console.log(
+		`Base du banc « ${banc.instance.nom} » reconstruite par ${jouees.length > 1 ? 'les migrations' : 'la migration'} ${jouees.join(', ')} : schéma conforme aux collections du code.`
+	)
 	return Bun.spawn([process.execPath, ...argumentsDeTest(demandes)], {
 		cwd: RACINE,
 		env: {

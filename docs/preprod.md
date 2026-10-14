@@ -1,6 +1,6 @@
 # La préprod de la v3
 
-La préprod est la v3 en ligne, fermée au public : `https://preprod.my-makeup.fr`. Coolify la construit avec le `Dockerfile` du dépôt et la redéploie à chaque poussée sur `v3`. Elle est derrière un accès protégé (HTTP Basic), porte la consigne `noindex` et n'envoie aucun mail. Sa base est à elle, non publique, et jetable jusqu'à la fin du schéma provisoire (ticket 049) : elle ne reçoit que des données fictives.
+La préprod est la v3 en ligne, fermée au public : `https://preprod.my-makeup.fr`. Coolify la construit avec le `Dockerfile` du dépôt et la redéploie à chaque poussée sur `v3`. Elle est derrière un accès protégé (HTTP Basic), porte la consigne `noindex` et n'envoie aucun mail. Sa base est à elle, non publique, et ne reçoit que des données fictives. Depuis la migration `init` (ticket 049), son schéma vient de cette seule migration, puis des migrations qui la suivront : elle ne repart d'une base vide que par une remise à zéro.
 
 Ce document dit ce que fait la préprod quand elle démarre (ticket 027), comment la remettre à zéro, et comment la CI la contrôle.
 
@@ -53,7 +53,7 @@ Elle a lieu quand Payload se connecte, **avant** ses migrations. C'est ce qui la
 2. Redéployer (ou redémarrer) l'application.
 3. Lire le journal : `Remise à zéro « 2026-10-15-matin » faite : … migrations rejouées sur une base vide.`, puis l'import.
 
-**Pour la migration `init` du ticket 049** : poser le jeton nouveau avant le déploiement qui apporte `init`, ou au plus tard avec lui. Si ce déploiement est déjà parti sans jeton, l'application s'arrête au démarrage (`Error running migration …` dans le journal) : poser le jeton, puis redéployer. Au démarrage suivant, la base est vidée avant que Payload joue `init` sur une base vide.
+**Pour la migration `init` du ticket 049** : la base de la préprod a joué les migrations provisoires (`20261014_010035_socle_provisoire` et les suivantes), que `init` remplace. `init` ne s'applique pas sur cette base : elle crée des tables qui y existent déjà. Poser un jeton nouveau **avant** que la poussée sur `v3` qui apporte `init` soit déployée, ou au plus tard avec elle. Si ce déploiement est déjà parti sans jeton, l'application s'arrête au démarrage (`Error running migration 2026…_init` dans le journal) : poser le jeton, puis redéployer. Au démarrage suivant, la base est vidée avant que Payload joue `init` sur une base vide, et le journal dit : `Remise à zéro « … » faite : 1 migration rejouée sur une base vide.` Puis le contrôle de la CI (`preprod.yml`) relit la page du profil fictif.
 
 Gardes :
 

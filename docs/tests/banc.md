@@ -96,10 +96,10 @@ La commande fait trois choses :
    Démarre-le d’abord : bun run banc:up
    ```
 
-2. Elle efface le schéma de la base du banc. Payload le reconstruit depuis les collections du code au début des tests.
+2. Elle efface le schéma de la base du banc, puis y joue les migrations versionnées de `src/migrations/`, comme la préprod à son premier démarrage. Elle s'arrête avant le premier test si la base qu'elles construisent ne décrit pas les collections du code (voir « Préparer la base du banc »).
 3. Elle lance `bun test` sous l'environnement du banc, sans lire le fichier `.env` de travail.
 
-Le schéma est effacé à chaque lancement pour une raison précise. Quand une collection a changé, Payload demande une confirmation avant de modifier une base qui contient déjà des tables. Dans un lancement de tests, personne ne répond. Sur une base vide, il ne demande rien.
+Le schéma est effacé à chaque lancement : les migrations repartent d'une base vide, et rien d'un lancement précédent ne reste.
 
 Conséquence : **lancer les tests d'intégration vide le banc**. Les données qu'on y aurait chargées à la main sont perdues.
 
@@ -129,7 +129,7 @@ test('un compte créé se relit', async () => {
 
 | Outil (`tests/outils/payload-test.ts`) | Effet |
 |---|---|
-| `await payloadDeTest()` | Le Payload des tests, branché sur la base du banc. Le même pour tous les fichiers d'un lancement |
+| `await payloadDeTest()` | Le Payload des tests, branché sur la base du banc, sans jamais en changer le schéma. Le même pour tous les fichiers d'un lancement |
 | `await viderLaBase()` | Remise à zéro : vide toutes les tables et remet les compteurs à 1. Le schéma reste |
 | `await compterLesDocuments()` | Le nombre de documents de chaque collection, celles de Payload comprises |
 | `await compterLesLignes()` | Le nombre de lignes de chaque table, y compris celles qu'une collection cache (sessions, relations) |
@@ -260,7 +260,17 @@ expect(chemins).toEqual([`/profil/${profil.slug}`, '/search', '/site-map', '/sit
 bun run banc:prepare
 ```
 
-Efface le schéma de la base du banc, puis le reconstruit depuis les collections du code. La base est alors vide et à jour. À lancer avant de démarrer l'application contre le banc, ou après avoir changé une collection. Les tests d'intégration le font d'eux-mêmes.
+Efface le schéma de la base du banc, puis y joue les migrations versionnées de `src/migrations/`. La base est alors vide et à jour. À lancer avant de démarrer l'application contre le banc, ou après avoir écrit une migration. Les tests d'intégration le font d'eux-mêmes.
+
+Depuis la migration `init` (ticket 049), la base du banc n'est construite que par les migrations, comme celle de la préprod : rien ne pousse le schéma du code, ni la commande, ni le Payload des tests (`sansChangementDeSchema`, `tests/outils/payload-test.ts`). Une migration manquante se voit donc ici, et non sur la préprod. Une fois les migrations jouées, la commande refuse de continuer, avec un message qui dit quoi faire (`tests/outils/schema-du-banc.ts`) :
+
+- si la base porte la trace d'une poussée du schéma, une ligne `dev` de lot -1 dans `payload_migrations` ;
+- si la base que les migrations ont construite ne décrit pas les collections du code : une collection changée sans sa migration, ou une migration dont le SQL ne crée pas ce que son instantané déclare. Le message donne le SQL qu'une migration contiendrait pour la rattraper ;
+- si un nom n'existe que d'un côté, à côté d'autres noms de l'autre côté : une colonne renommée sans sa migration. Le refus vient tout de suite, sans question.
+
+Une migration qui échoue arrête aussi la commande, avec le message de Payload.
+
+Le contrôle de la migration elle-même, sur une base effacée puis rejouée, est le test I22 : `tests/integration/migrations.test.ts`.
 
 ## Comptes de test : la fabrique
 
@@ -580,4 +590,4 @@ Une montée de version change l'étiquette et l'empreinte ensemble. `tests/integ
 - **Le faux Google n'est pas Google.** Il n'a ni écran de connexion, ni écran de consentement, ni jeton de rafraîchissement, ni révocation. Il ne connaît qu'un client. Son adresse est en `http` et son émetteur n'est pas `https://accounts.google.com` : ce que l'application ferait d'un vrai certificat ou du vrai émetteur ne se prouve pas sur le banc.
 - **Le faux Google lit son code dans le dépôt.** Le conteneur monte `tests/outils/faux-google/` en lecture seule. Après un changement dans ce dossier, relancer `bun run banc:down` puis `bun run banc:up`. Sur un poste où SELinux est actif (Fedora, avec Podman), ce montage demande `label=disable`, déjà réglé dans `compose.test.yml`.
 - **Le banc n'écoute que sur ce poste** (`127.0.0.1`). Il n'a ni mot de passe sérieux ni chiffrement : il ne doit jamais être exposé.
-- **`bun --env-file=.env.test test`** ne vaut que pour l'instance par défaut, et saute la reconstruction du schéma. Passer par `bun run test:integration`.
+- **`bun --env-file=.env.test test`** ne vaut que pour l'instance par défaut, et saute la reconstruction de la base par les migrations : le Payload des tests ne crée aucune table. Passer par `bun run test:integration`.

@@ -150,14 +150,14 @@ La CI se lance à chaque pull request et à chaque poussée sur `v3`. Cinq jobs 
 
 | Job | Ce qu'il lance | Limite |
 |---|---|---|
-| `qualite` | Les fichiers générés par Payload sont à jour ; `bun run typecheck` ; `bun run ci:biome` ; `bun run test:ci-garde` | 10 min |
+| `qualite` | Les fichiers générés par Payload sont à jour ; aucune dérive de schéma (`bun run schema:derive`) ; `bun run typecheck` ; `bun run ci:biome` ; `bun run test:ci-garde` | 10 min |
 | `unit` | `bun run test:unit` | 10 min |
 | `build` | `bun run image:build`, sans secret ni base, puis `bun run image:controle` | 12 min |
 | `integration` | `bun run banc:up`, puis `bun run test:integration` : les tests d'intégration sur le banc de test ([`docs/tests/banc.md`](tests/banc.md)) | 10 min |
 | `e2e` | En deux lots côte à côte, `e2e (1/2)` et `e2e (2/2)`. Chacun installe le Chromium de Playwright, lance `bun run banc:up`, puis `bun run test:e2e` sur sa moitié des essais ([`docs/tests/e2e.md`](tests/e2e.md)) | 10 min par lot |
 | `ci-ok` | Rouge si l'un des cinq a échoué, a été annulé ou a été sauté | 2 min |
 
-- Dans `qualite`, les quatre contrôles sont tous joués, même quand l'un échoue : une seule poussée montre toutes les fautes.
+- Dans `qualite`, les cinq contrôles sont tous joués, même quand l'un échoue : une seule poussée montre toutes les fautes.
 - Un lot `e2e` en échec n'arrête pas l'autre (`fail-fast: false`). Pour `ci-ok`, les deux lots ne font qu'un job : il est en échec dès qu'un lot l'est, annulé dès qu'un lot atteint sa limite.
 - Un lot `e2e` en échec envoie son rapport, ses traces, ses vidéos et ses captures : l'artefact `e2e-1` ou `e2e-2` du passage, gardé 14 jours.
 - Les tests d'intégration et les essais de bout en bout tournent sur le même banc de test que sur un poste, avec les mêmes commandes : chaque job démarre le sien.
@@ -459,15 +459,9 @@ bun run schema:derive
 - Un nom qui n'existe que d'un côté, alors que d'autres n'existent que de l'autre (une colonne renommée, ou retirée pendant qu'une autre était ajoutée), est une dérive en soi. La commande le dit tout de suite. Sans ce contrôle, drizzle-kit poserait la question « renommée ? » sur le terminal et attendrait pour toujours dans une CI : essayé le 14/10/2026, le processus a été arrêté au bout de 15 secondes sans réponse.
 - `--avant <instantane.json>` compare à un autre instantané que celui de la dernière migration, et `--instantane <fichier.json>` écrit celui des collections : ce sont les outils de son test, `tests/ci/derive-schema.test.ts`.
 
-### Prête, pas encore bloquante
+### Bloquante depuis la migration `init`
 
-Jusqu'à la migration `init` qui clôt P3 (ticket 049), le schéma se pousse dans les bases locales et les seules migrations versionnées sont provisoires (`CLAUDE.md`, « Schéma »). Les tickets de P3 ajoutent des collections sans leur migration : un contrôle bloquant les arrêterait tous.
-
-- La CI ne lance donc pas encore la commande. Une étape qui tournerait sans pouvoir échouer serait une étape menteuse (« Les garde-fous »).
-- Son test tourne, lui, à chaque CI, avec les garde-fous : il prouve qu'elle voit une colonne ajoutée, une table ajoutée et une colonne renommée, qu'elle ne crie pas sans raison, et qu'elle rend un verdict sur le dépôt. Il ne dit pas que le dépôt est sans dérive.
-- Relevé du 14/10/2026 : aucune dérive, contre la migration provisoire `20261014_010035_socle_provisoire`.
-
-Le ticket 049 la rendra bloquante : une étape de plus dans le job `qualite`, à côté des fichiers générés, par exemple :
+Le schéma de P3 est figé dans une seule migration, `init` (ticket 049), qui a remplacé les migrations provisoires. Depuis, la commande est une étape du job `qualite` :
 
 ```yaml
       - name: Schema drift
@@ -475,4 +469,7 @@ Le ticket 049 la rendra bloquante : une étape de plus dans le job `qualite`, à
         run: bun run schema:derive
 ```
 
-Ce jour-là, la garde des fichiers générés et cette étape disent ensemble : un changement de collection vient avec ses types et sa migration, dans le même commit.
+- Une collection changée sans sa migration rend le job `qualite` rouge, donc `ci-ok`. La garde des fichiers générés et cette étape disent ensemble : un changement de collection vient avec ses types et sa migration, dans le même commit.
+- La garde de `tests/ci/derive-schema.test.ts` garde l'étape : la commande exacte, seule dans son étape, après l'installation, sans condition qui la sauterait (`schemaDriftProblems`, `tests/outils/garde-fous-ci.ts`). Le même test prouve que la commande voit une colonne ajoutée, une table ajoutée et une colonne renommée, et qu'elle ne trouve aucune dérive sur le dépôt.
+- La commande compare les collections à l'instantané de la dernière migration, pas au SQL de la migration. Une migration dont le SQL ne crée pas ce que son instantané déclare lui échappe : c'est le banc de test qui la voit, avant le premier test d'intégration et avant le premier essai de bout en bout ([`docs/tests/banc.md`](tests/banc.md), « Préparer la base du banc »).
+- Relevé du 14/10/2026 : aucune dérive, contre `20261014_134242_init`. Un champ ajouté à `talents` sans sa migration, essayé sur un poste puis retiré : code 1, avec les deux instructions qu'une migration contiendrait (la table et ses versions).

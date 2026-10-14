@@ -271,7 +271,7 @@ describe('Remise à zéro gardée, avant les migrations', () => {
 			expect(remise.code).toBe(0)
 			expect(remise.journal.slice(0, 3)).toEqual([
 				'Remise à zéro « essai-027-a » : la base et la fausse source Strapi sont effacées, avant les migrations.',
-				`Remise à zéro « essai-027-a » faite : ${migrations.length} migrations rejouées sur une base vide.`,
+				`Remise à zéro « essai-027-a » faite : ${migrations.length > 1 ? `${migrations.length} migrations rejouées` : '1 migration rejouée'} sur une base vide.`,
 				'Base vide (pros 0, profils 0, talents 0) : la fausse source Strapi est posée, puis importée.',
 			])
 			expect(remise.issue).toMatchObject({ etat: 'importee', code: 0, profils: { crees: 13, modifies: 0 } })

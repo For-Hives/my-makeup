@@ -858,3 +858,35 @@ export function absoluteNavigations(files: readonly { file: string; text: string
 				`${file}:${line} : « ${call} » reçoit une adresse complète. Un essai ouvre un chemin, comme « /admin » : l’hôte est celui de baseURL, vérifié par la garde.`
 		)
 }
+
+/* ------------------------------------------------------------------------------------------
+ * The schema drift check
+ * ---------------------------------------------------------------------------------------- */
+
+/** The job that checks the schema, and the command that does it (docs/qualite.md, « La dérive de schéma »). */
+export const SCHEMA_DRIFT = { job: 'qualite', command: 'bun run schema:derive', after: 'bun install --frozen-lockfile' }
+
+/**
+ * Since the `init` migration (ticket 049), a collection changed without its migration makes the
+ * CI red: the job `qualite` runs `bun run schema:derive`, alone in its step, once the dependencies
+ * are installed, under no condition that could skip it.
+ */
+export function schemaDriftProblems(workflow: Workflow): string[] {
+	const { job: id, command, after } = SCHEMA_DRIFT
+	const steps = workflow.jobs[id]?.steps ?? []
+	const ran = steps.map(step => (typeof step.run === 'string' ? step.run.trim() : undefined))
+	const at = ran.indexOf(command)
+	if (at === -1)
+		return [
+			`${workflow.file}, job ${id} : il doit lancer « ${command} », seule dans son étape : sans elle, une collection changée sans sa migration passerait.`,
+		]
+	const problems: string[] = []
+	if (at < ran.indexOf(after))
+		problems.push(`${workflow.file}, job ${id} : « ${command} » doit venir après « ${after} ».`)
+	const step = steps[at]
+	if (step?.if !== undefined && !RUNS_ANYWAY.includes(condition(step.if)))
+		problems.push(
+			`${workflow.file}, job ${id} : « ${command} » ne tourne que sous « ${condition(step.if)} » ; seules ${RUNS_ANYWAY.join(' et ')} sont admises.`
+		)
+	return problems
+}

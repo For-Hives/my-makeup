@@ -10,14 +10,17 @@ import {
 	lireArguments,
 	verdict,
 } from '../../scripts/ci/derive-schema'
+import { readWorkflow, SCHEMA_DRIFT, schemaDriftProblems } from '../outils/garde-fous-ci'
 
 /**
- * The schema drift check (docs/qualite.md, « La dérive de schéma »). It is ready, and not yet a
- * step of the CI: it becomes one when the `init` migration closes the schema (ticket 049).
+ * The schema drift check (docs/qualite.md, « La dérive de schéma »), a step of the job `qualite`
+ * of the CI since the `init` migration closed the schema (ticket 049).
  *
- * So no test here says that the repository has no drift: that would make the check blocking
- * before its time. The command is run on the repository, where it must give a verdict, and on
- * snapshots made from the schema of the collections, where the right answer is known.
+ * The command is run on the repository, where it finds no drift, and on snapshots made from the
+ * schema of the collections, where the right answer is known: a field added to a collection
+ * without its migration is a column the collections have and the last migration does not, and
+ * the command is red. The guard below keeps the step in the CI, where a red command makes the
+ * CI red.
  */
 
 const ROOT = path.resolve(import.meta.dir, '../..')
@@ -122,14 +125,14 @@ describe('the command, against snapshots made from the schema of the collections
 		expect(performance.now() - debut).toBeLessThan(10_000)
 	}, 20_000)
 
-	test('on the repository it gives a verdict against the last migration, whatever it is', () => {
+	test('on the repository: no drift against the last migration, every collection has its migration', () => {
 		const derniere = derniereMigration()
 
 		expect(derniere?.nom).toMatch(/^\d{8}_\d{6}_\w+$/)
-		expect(surLeDepot.sortie).toContain(`le schéma de la dernière migration (${derniere?.nom})`)
-		// Drift or not: before ticket 049 the repository may drift, and that is allowed.
-		expect([0, 1]).toContain(surLeDepot.code)
-		expect(surLeDepot.sortie).toMatch(/^(Aucune dérive de schéma|Dérive de schéma) :/m)
+		expect(surLeDepot.sortie).toContain(
+			`Aucune dérive de schéma : les collections du code décrivent le schéma de la dernière migration (${derniere?.nom}).`
+		)
+		expect(surLeDepot.code).toBe(0)
 	})
 
 	test('a wrong use is refused before anything is loaded', async () => {
@@ -137,6 +140,51 @@ describe('the command, against snapshots made from the schema of the collections
 
 		expect(sortie).toContain('Usage : bun run schema:derive')
 		expect(code).toBe(2)
+	})
+})
+
+describe('the CI runs the check, and is red when it is', () => {
+	const CI = '.github/workflows/ci.yml'
+	const texte = readFileSync(path.join(ROOT, CI), 'utf8')
+	const ci = (de = texte) => readWorkflow(CI, de)
+	const ETAPE = `      - name: Schema drift\n        if: \${{ !cancelled() }}\n        run: ${SCHEMA_DRIFT.command}\n`
+	const change = (avant: string, apres: string): string => {
+		if (!texte.includes(avant)) throw new Error(`${CI} no longer holds: ${avant}`)
+		return texte.replace(avant, apres)
+	}
+
+	test('the job qualite runs « bun run schema:derive », alone in its step, after the installation', () => {
+		expect(texte).toContain(ETAPE)
+		expect(schemaDriftProblems(ci())).toEqual([])
+	})
+
+	test.each([
+		[
+			'the step removed',
+			() => change(ETAPE, ''),
+			'job qualite : il doit lancer « bun run schema:derive », seule dans son étape',
+		],
+		[
+			'the command with an option that compares with something else',
+			() => change(`run: ${SCHEMA_DRIFT.command}\n`, `run: ${SCHEMA_DRIFT.command} --avant ancien.json\n`),
+			'job qualite : il doit lancer « bun run schema:derive », seule dans son étape',
+		],
+		[
+			'the step skipped on a condition',
+			() => change(ETAPE, ETAPE.replace('!cancelled()', "github.event_name == 'push'")),
+			"« bun run schema:derive » ne tourne que sous « github.event_name == 'push' »",
+		],
+		[
+			'the step before the installation',
+			() =>
+				change(ETAPE, '').replace(
+					'      - name: Install\n        run: bun install --frozen-lockfile\n',
+					`${ETAPE}      - name: Install\n        run: bun install --frozen-lockfile\n`
+				),
+			'« bun run schema:derive » doit venir après « bun install --frozen-lockfile »',
+		],
+	])('red on %s', (_faute, fautif, attendu) => {
+		expect(schemaDriftProblems(ci(fautif())).join('\n')).toContain(attendu)
 	})
 })
 

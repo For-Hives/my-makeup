@@ -5,12 +5,14 @@
  * Both work on one database only: the one of the bench instance this process was started for.
  * Everywhere else they stop before the first write.
  *
- * `bun run test:integration` and `bun run banc:prepare` rebuild the bench database from the
- * code before Payload starts here, so that Payload finds either an empty database or its own
- * schema, and never has a question to ask.
+ * The Payload of the tests never changes the schema (`sansChangementDeSchema`): the tables of the
+ * bench are built by the versioned migrations only. `bun run test:integration` and
+ * `bun run banc:prepare` erase the bench database and play the migrations before the tests; the
+ * application of the end-to-end tests plays them itself when it starts (ticket 049,
+ * tests/outils/schema-du-banc.ts).
  */
 
-import type { CollectionSlug, Payload } from 'payload'
+import type { CollectionSlug, Payload, SanitizedConfig } from 'payload'
 import { BancRefuse, environnementDuBanc, lireInstance, prefixeDeCommande, type Variables } from './banc'
 
 /** The bookkeeping of the schema, not data: a reset keeps it, or Payload would no longer know its own schema. */
@@ -48,21 +50,35 @@ export function exigerConnexionDuBanc(payload: ConnexionDePayload, variables: Va
 		throw new BancRefuse('Payload n’est pas branché sur la base du banc de test : rien n’est écrit.')
 }
 
+/**
+ * The configuration of the application, with a database adapter that never changes the schema
+ * when it connects. Payload would otherwise push the schema of the code into a database of this
+ * machine out of production (`pushDevSchema`, which leaves a row `dev` of batch -1 in
+ * `payload_migrations`), or play its migrations in production. The adapter's own switch, `push`,
+ * turns the first off; the second has nothing to play.
+ */
+export function sansChangementDeSchema(config: SanitizedConfig): SanitizedConfig {
+	const { init } = config.db
+	return {
+		...config,
+		db: { ...config.db, init: options => Object.assign(init(options), { push: false, prodMigrations: undefined }) },
+	}
+}
+
 let instance: Promise<Payload> | undefined
 
 async function demarrerPayload(): Promise<Payload> {
 	// Before the configuration is even loaded: it connects to whatever the environment names.
 	exigerBanc()
 	const [{ getPayload }, { default: config }] = await Promise.all([import('payload'), import('@payload-config')])
-	const payload = await getPayload({ config })
+	const payload = await getPayload({ config: sansChangementDeSchema(await config) })
 	exigerConnexionDuBanc(payload)
 	return payload
 }
 
 /**
- * The Payload of the tests, connected to the bench database. The first call starts it, and
- * Payload then builds any missing table from the collections of the code; the next calls give
- * the same instance back.
+ * The Payload of the tests, connected to the bench database, without ever changing its schema.
+ * The first call starts it; the next calls give the same instance back.
  */
 export function payloadDeTest(): Promise<Payload> {
 	instance ??= demarrerPayload()

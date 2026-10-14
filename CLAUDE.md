@@ -52,7 +52,7 @@ Tout se lance depuis la racine du dépôt. La table complète est dans le README
 | `bun run payload:types` | Après un changement de collection : régénère `src/payload-types.ts`. |
 | `bun run payload:importmap` | Après l'ajout d'un composant d'administration. |
 | `bun run payload:migrate:create` | Écrit une migration depuis les collections (voir « Schéma »). |
-| `bun run schema:derive` | Dit s'il manque une migration aux collections du code, sans base ni secret. Pas encore bloquant en CI : il le devient avec la migration `init` (ticket 049). |
+| `bun run schema:derive` | Dit s'il manque une migration aux collections du code, sans base ni secret. Bloquant en CI depuis la migration `init` (ticket 049) : une collection changée sans sa migration rend le job `qualite` rouge. |
 | `bun scripts/migration/urls-doc.ts` | Après un changement de la table des URL (voir « URL »). Avec `--check`, il dit seulement si le document suit la table. |
 | `bun run notes:ajouter <type> "<phrase>"` | Un changement qui se remarque par rapport au site en ligne : sa note de version, dans le même commit. Type `ajout`, `amelioration` ou `correction` (voir `docs/publication.md`). |
 | `bun run release:publier --a-blanc` | Montre ce que ferait la prochaine publication : le numéro, les notes rangées dessous. N'écrit rien. Seul le workflow `release.yml` publie. |
@@ -88,7 +88,8 @@ Ces règles n'ont pas d'exception. Si une tâche semble en demander une, arrête
 - Les noms des collections et des champs sont ceux de [`docs/migration/SCHEMA.md`](docs/migration/SCHEMA.md). S'en écarter, c'est modifier ce document dans le même changement.
 - Tout changement de collection se termine par `bun run payload:types`. Le fichier généré est versionné, et relancer la commande ne le change plus.
 - Une migration s'écrit avec `bun run payload:migrate:create`. **Lis son SQL avant de la versionner** : elle contient ce que ton changement demande, rien d'autre, et aucune suppression que tu n'as pas voulue. Relancée aussitôt, la commande ne trouve plus aucun changement de schéma : c'est la preuve qu'il n'y a pas de dérive.
-- Jusqu'à la migration `init` qui clôt le schéma (ticket 049), le schéma se pousse dans la base locale, et les seules migrations versionnées sont provisoires. Après elle, tout changement de collection vient avec sa migration, dans le même commit.
+- Le schéma de P3 est figé dans une seule migration, `init` (ticket 049). Depuis, **tout changement de collection vient avec sa migration, dans le même commit** : la CI le vérifie (`bun run schema:derive`), et le banc de test refuse de lancer ses tests sur une base que les migrations ne construisent pas comme le code la décrit.
+- Le banc de test ne pousse jamais le schéma : sa base est construite par les migrations versionnées seules, comme celle de la préprod. Seule la base de développement de `docker-compose.yml` reçoit encore le schéma poussé par `bun run dev`.
 
 ## URL
 
