@@ -55,6 +55,16 @@
 			"id": "quand-une-recherche-ne-trouve-personne-la-page-propose-ma",
 			"type": "amelioration",
 			"text": "Quand une recherche ne trouve personne, la page propose maintenant la zone voisine, et un lien pour créer ton profil si tu es maquilleuse."
+		},
+		{
+			"id": "sur-le-profil-d-une-maquilleuse-les-competences-langues-f",
+			"type": "amelioration",
+			"text": "Sur le profil d’une maquilleuse, les compétences, langues, formations, expériences, prestations avec leurs prix et réseaux sont lisibles dès l’ouverture de la page, même sans JavaScript."
+		},
+		{
+			"id": "le-portfolio-d-une-maquilleuse-se-parcourt-au-doigt-et-au",
+			"type": "amelioration",
+			"text": "Le portfolio d’une maquilleuse se parcourt au doigt et au clavier, avec les flèches, et annonce la photo affichée (« Photo 2 sur 6 »)."
 		}
 	],
 	"releases": []
