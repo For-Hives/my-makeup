@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { type BilanDesProfils, poserLesProfilsDuJeu } from '@/jeu-fictif/chargement'
-import { lireLeProfilPublic, listerLesProfils } from '@/services/public/profils'
+import { lireLAdresseDeProfil, lireLeProfilPublic, listerLesProfils } from '@/services/public/profils'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
 import { viderLeStockage } from '../outils/s3'
 
@@ -140,15 +140,36 @@ describe('La lecture du profil pour sa page (tickets 101 et 102)', () => {
 		expect(JSON.stringify(profil)).not.toMatch(/06 39 98|example\.test/)
 	})
 
-	test('un profil vide n’est pas lu (brouillon, ticket 104), une disponibilité jamais posée compte comme disponible', async () => {
+	test('un profil vide (brouillon) est lu mais pas indexable, une disponibilité jamais posée compte comme disponible', async () => {
 		const payload = await payloadDeTest()
 
 		const vide = await lireLeProfilPublic(payload, slugDe('vide'))
 		const inconnue = await lireLeProfilPublic(payload, slugDe('disponibilite-inconnue'))
 
-		// A draft is not served until ticket 104 decides what the empty profile shows.
-		expect(vide).toBeNull()
+		// A draft answers its page in noindex (ticket 104).
+		expect(vide?.indexable).toBe(false)
 		expect(inconnue?.disponible).toBe(true)
 		expect((await lireLeProfilPublic(payload, slugDe('indisponible')))?.disponible).toBe(false)
+	})
+})
+
+describe('L’adresse d’un profil (ticket 104)', () => {
+	test('le slug donne le profil, publié ou non ; le masqué et l’inconnu ne donnent rien', async () => {
+		const payload = await payloadDeTest()
+
+		expect((await lireLAdresseDeProfil(payload, slugDe('reference'))).type).toBe('profil')
+		expect((await lireLAdresseDeProfil(payload, slugDe('vide'))).type).toBe('profil')
+		expect(await lireLAdresseDeProfil(payload, slugDe('masquee'))).toEqual({ type: 'inconnue' })
+		expect(await lireLAdresseDeProfil(payload, 'audit-inexistant-zz9')).toEqual({ type: 'inconnue' })
+		expect(await lireLAdresseDeProfil(payload, 'a\u0000b')).toEqual({ type: 'inconnue' })
+	})
+
+	test('l’ancien nom d’utilisateur et une variante du slug mènent au slug, jamais à un masqué', async () => {
+		const payload = await payloadDeTest()
+		const slug = slugDe('ancien-nom-accentue')
+
+		expect(await lireLAdresseDeProfil(payload, 'zoé lefèvre')).toEqual({ type: 'redirection', slug })
+		expect(await lireLAdresseDeProfil(payload, slug.toUpperCase())).toEqual({ type: 'redirection', slug })
+		expect(await lireLAdresseDeProfil(payload, slugDe('masquee').toUpperCase())).toEqual({ type: 'inconnue' })
 	})
 })

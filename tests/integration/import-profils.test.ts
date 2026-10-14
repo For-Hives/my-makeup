@@ -331,10 +331,11 @@ describe('La lecture publique d’un profil repris', () => {
 		}
 	})
 
-	test('un brouillon, un slug inconnu, une ancienne forme du nom ne donnent rien', async () => {
+	test('un slug inconnu, une ancienne forme du nom ne donnent rien (le brouillon est lu, en noindex : ticket 104)', async () => {
 		const payload = await payloadDeTest()
 
-		for (const slug of ['manon-petit', 'audit-inexistant-zz9', 'Zoe-Lefevre', 'zoé lefèvre', ''])
+		expect((await lireLeProfilPublic(payload, 'manon-petit'))?.indexable).toBe(false)
+		for (const slug of ['audit-inexistant-zz9', 'Zoe-Lefevre', 'zoé lefèvre', ''])
 			expect(await lireLeProfilPublic(payload, slug), slug).toBeNull()
 	})
 

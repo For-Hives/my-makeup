@@ -8,9 +8,10 @@
  *
  * - The fields are chosen one by one (`CHAMPS_PUBLICS_DU_PROFIL`, `CHAMPS_DE_LA_CARTE`): never the
  *   account, never what the import or an admin wrote.
- * - The reading keeps the access rules of the collection (`overrideAccess: false`), as an
- *   anonymous visitor: a profile that is not published is not found. The three rules (listed,
- *   indexable, visible) are src/lib/profil/visibilite.ts; none is written again here.
+ * - The lists keep the access rules of the collection (`overrideAccess: false`), as an anonymous
+ *   visitor. The page of a profile lifts them (`lireLAdresseDeProfil`): a draft answers in noindex
+ *   (ticket 104). The three rules (listed, indexable, visible) are src/lib/profil/visibilite.ts;
+ *   none is written again here.
  * - The contact details are the one thing read without the access rules, by the identifier of a
  *   profile the access rules already gave, and only when its owner published them
  *   (`contactPublic`). A hidden profile gives nothing.
@@ -23,8 +24,9 @@
 
 import type { Payload } from 'payload'
 import { formatZone, rayonKm, villeAffichee } from '@/lib/format-zone'
+import { cibleDeLAdresse, valeursARechercher } from '@/lib/profil/adresse'
 import { nomAffiche, texte } from '@/lib/profil/nom-affiche'
-import { estIndexable, estVisible, FILTRE_LISTE } from '@/lib/profil/visibilite'
+import { estIndexable, FILTRE_LISTE } from '@/lib/profil/visibilite'
 import {
 	contacts,
 	type ExperiencePublique,
@@ -274,32 +276,75 @@ async function lireLesPhotosDuProfil(
 	return photos
 }
 
+/** What the address of a profile leads to: the profile, a redirection to its slug, or nothing. */
+export type AdresseDeProfil =
+	| { type: 'profil'; profil: ProfilPublic }
+	| { type: 'redirection'; slug: string }
+	| { type: 'inconnue' }
+
 /**
- * The published profile of this slug, or `null`: unknown, not published, or not even a slug (an
- * old address by username gets its redirection in ticket 104).
+ * What the address `/profil/<segment>` leads to (ticket 104): the profile itself, a redirection to its
+ * slug (an old username, or a variant of the slug), or nothing (unknown, or hidden). The rule is
+ * src/lib/profil/adresse.ts.
+ *
+ * The read lifts the access rules of the collection, which keep the published profiles only, for two
+ * reasons: a profile that is visible but not published (a draft) answers its page in noindex, as on the
+ * site today, and the old username (`legacyUsername`) is closed to the public. Nothing else is lifted:
+ * the fields are chosen one by one, a hidden profile is dropped by the rule (`estVisible`), and the
+ * contact details are read apart.
  */
-export async function lireLeProfilPublic(payload: Payload, slug: string): Promise<ProfilPublic | null> {
-	if (!estUnSlug(slug)) return null
+export async function lireLAdresseDeProfil(payload: Payload, segment: string): Promise<AdresseDeProfil> {
+	const valeurs = valeursARechercher(segment)
+	if (!valeurs) return { type: 'inconnue' }
 	const { docs } = await payload.find({
 		collection: 'profils',
-		where: { slug: { equals: slug } },
-		select: { ...CHAMPS_DE_LA_PAGE_DU_PROFIL, id: true, statut: true, publiable: true },
+		where: {
+			or: [
+				{ slug: { equals: valeurs.segment } },
+				{ slug: { equals: valeurs.slugifie } },
+				{ legacyUsername: { equals: valeurs.segment } },
+			],
+		},
+		select: {
+			...CHAMPS_DE_LA_PAGE_DU_PROFIL,
+			id: true,
+			statut: true,
+			publiable: true,
+			legacyUsername: true,
+			createdAt: true,
+		},
+		sort: ['createdAt', 'id'],
 		depth: 0,
-		limit: 1,
+		// Two usernames can be the same, a slug is unique: a handful of candidates at most.
+		limit: LIMITE_DES_CANDIDATS,
 		pagination: false,
-		overrideAccess: false,
+		overrideAccess: true,
 	})
-	const profil = docs[0]
-	if (!profil || !estVisible(profil)) return null
+	const cible = cibleDeLAdresse(segment, docs)
+	if (cible.type !== 'profil') return cible
+	const { profil } = cible
 	const principale = identifiantDeLaPhoto(profil.photoPrincipale)
 	// The portfolio, in the order she gave; a photo named twice is shown twice.
 	const rangee = (profil.galerie ?? []).map(photo => identifiantDeLaPhoto(photo))
 	const photos = await lireLesPhotosDuProfil(payload, [principale, ...rangee])
-	return profilPublicDe(profil, {
-		photo: (principale !== undefined && photos.get(principale)) || null,
-		galerie: rangee.flatMap(identifiant => (identifiant !== undefined && photos.get(identifiant)) || []),
-		coordonnees: await lireLesCoordonneesPubliees(payload, profil.id),
-	})
+	return {
+		type: 'profil',
+		profil: profilPublicDe(profil, {
+			photo: (principale !== undefined && photos.get(principale)) || null,
+			galerie: rangee.flatMap(identifiant => (identifiant !== undefined && photos.get(identifiant)) || []),
+			coordonnees: await lireLesCoordonneesPubliees(payload, profil.id),
+		}),
+	}
+}
+
+/** How many profiles one address can match: the slug, its variant, and the profiles sharing an old username. */
+const LIMITE_DES_CANDIDATS = 20
+
+/** The profile at this slug, or `null`: unknown, hidden, or a slug that is not the profile's own. */
+export async function lireLeProfilPublic(payload: Payload, slug: string): Promise<ProfilPublic | null> {
+	if (!estUnSlug(slug)) return null
+	const cible = await lireLAdresseDeProfil(payload, slug)
+	return cible.type === 'profil' ? cible.profil : null
 }
 
 /** What a profile read for its page holds: the fields of `CHAMPS_DE_LA_PAGE_DU_PROFIL` and the state. */

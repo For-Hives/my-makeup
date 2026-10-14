@@ -227,8 +227,12 @@ export function casDuBanc(anciens: TitresDeLAncienSite, jeu: DonneesDuJeu): CasD
 	}
 	const slugsDesTalents = new Set(jeu.talents)
 	// What the bench cannot hold: the real articles and talents of the site (the import carries them).
+	const slugsDesProfils = new Set([...jeu.profilsVisibles, ...jeu.profilsMasques])
 	const dependDesDonnees = (adresse: string): boolean => {
-		const [, premier, slug] = splitAddress(adresse).path.split('/')
+		// A repeated slash in front (`//profil/…`) is the same address once it is normalised.
+		const [, premier, slug] = splitAddress(adresse).path.replace(/^\/+/, '/').split('/')
+		// A real profile of the site: the bench holds the profiles of its own set only (ticket 104).
+		if (premier === 'profil' && slug) return !slugsDesProfils.has(slugEcrit(slug))
 		if (premier === 'blog' && slug) return !/^inexistant-/.test(slug)
 		if (premier === 'talent' && slug) return !slugsDesTalents.has(slug) && !/^inexistant-/.test(slug)
 		return false
@@ -318,6 +322,15 @@ export function lireLeCsv(texte: string): Record<string, string>[] {
 	}
 	const [entetes = [], ...corps] = lignes
 	return corps.map(valeurs => Object.fromEntries(entetes.map((nom, i) => [nom, valeurs[i] ?? ''])))
+}
+
+/** A path segment as it was written, decoded when it can be. */
+const slugEcrit = (segment: string): string => {
+	try {
+		return decodeURIComponent(segment)
+	} catch {
+		return segment
+	}
 }
 
 const estUneAdresseDeProfil = (chemin: string): boolean => /^\/{1,2}profil\/[^/]+/.test(chemin)
