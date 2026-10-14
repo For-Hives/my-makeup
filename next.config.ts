@@ -2,6 +2,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { withPayload } from '@payloadcms/next/withPayload'
 import type { NextConfig } from 'next'
+import { enTetesEspace } from './src/lib/auth/entetes-espace'
 import { mediaOrigin } from './src/lib/env'
 import { mediaRemotePattern, securityHeaders } from './src/lib/security-headers'
 
@@ -40,7 +41,11 @@ const nextConfig: NextConfig = {
 	images: { remotePatterns: [mediaRemotePattern(media)] },
 	// Every path leaves with the security headers (src/lib/security-headers.ts). A ticket that
 	// needs a header on some paths adds its own entry after this one.
-	headers: async () => [{ source: '/:path*', headers: securityHeaders({ development, mediaOrigin: media }) }],
+	headers: async () => [
+		{ source: '/:path*', headers: securityHeaders({ development, mediaOrigin: media }) },
+		// The authentication pages and the space: never cached, never indexed (tickets 074 and 075).
+		{ source: '/auth/:path*', headers: enTetesEspace() },
+	],
 }
 
 // withPayload must stay the outermost wrapper: it adds Payload's server packages and aliases.

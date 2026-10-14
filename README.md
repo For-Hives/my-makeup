@@ -55,6 +55,7 @@ Le reste :
 - `src/preprod/` : ce que fait la préprod quand elle démarre, et elle seule : sur une base vide, elle charge le jeu fictif du banc (12 profils types, 3 talents, 3 articles) ; un jeton de `PREPROD_REMISE_A_ZERO` la remet à zéro. `scripts/preprod/controle.ts` : le contrôle que la CI lance contre elle (voir [`docs/preprod.md`](docs/preprod.md)).
 - `src/lib/env.ts` : les variables d'environnement, vérifiées au démarrage par `src/instrumentation.ts`.
 - `src/migrations/` : les migrations versionnées de la base.
+- `src/lib/auth/` : la connexion des maquilleuses. `connexion.ts` (email et mot de passe, un code d'erreur et jamais le compte), `frein.ts` et `ip-client.ts` (le frein par adresse cliente, voir « Connexion et frein »), `retour.ts` (la page de retour, interne seulement), `session.ts` (la garde des pages privées), `espace-ferme.ts` et `src/proxy.ts` (la porte rapide sans cookie).
 - `src/payload-types.ts` et `src/app/(payload)/admin/importMap.js` : fichiers générés par Payload, versionnés, jamais modifiés à la main.
 - `docker-compose.yml` : la base PostgreSQL de développement.
 - `Dockerfile` et `.dockerignore` : l'image de production (voir « Image Docker »).
@@ -269,12 +270,20 @@ L'application vérifie ses variables à chaque démarrage (`bun run dev`, `bun r
 - Hors de ce poste, une base qui n'existe pas est une erreur : Payload ne la crée pas.
 - Chaque processus ouvre 5 connexions au plus.
 
+### Connexion et frein
+
+- La connexion est une Server Action (`src/app/(front)/(espace)/auth/signin/actions.ts`). Le jeton de session n'existe que dans le cookie `payload-token` (HttpOnly, SameSite=Lax, Secure en production, 14 jours) : aucune réponse de l'API, aucune page ne le porte.
+- `/auth/profil` et `/auth/init-account` sans cookie : une seule redirection 307 vers `/auth/signin?callbackUrl=<page>` (`src/proxy.ts`). Avec un cookie qui ne vaut plus rien, la page elle-même fait la même redirection, et la connexion affiche son formulaire : une seule règle (`maquilleuseConnectee`) décide dans les deux sens, donc aucune boucle. La session d'un compte admin n'ouvre pas l'espace.
+- Toutes les pages `/auth/**` partent avec `Cache-Control: private, no-store` et `X-Robots-Tag: noindex, nofollow` (`next.config.ts`).
+- Le frein compte les échecs par adresse cliente : 10 par 15 minutes, le 11e est refusé (code `trop-de-tentatives` pour le formulaire, 429 pour `POST /api/pros/login`). Jamais par compte : le compte visé n'est pas verrouillé (`maxLoginAttempts: 0`). L'adresse est la dernière entrée de `X-Forwarded-For`, celle que le proxy a écrite ; une IPv6 compte par bloc /64. Les compteurs sont en mémoire, par processus : une seule instance de l'application. Aucune adresse n'est journalisée.
+- Brique réutilisable : `creerFrein({ nom, limite, fenetreMs })` (`src/lib/auth/frein.ts`) avec `ipClient(headers)`. L'inscription, l'oubli de mot de passe, la recherche et le contact prennent chacun leur frein.
+
 ### Accès
 
 - GraphQL est coupé : `/api/graphql` et `/api/graphql-playground` répondent 404.
 - Un cookie de session n'est accepté que depuis une origine de confiance. En production, c'est l'adresse de `NEXT_PUBLIC_SITE_URL` et elle seule : le site ne fait pas confiance à la préprod, ni la préprod au site. Ailleurs, c'est ce poste : `localhost` et `127.0.0.1`, sur le port du serveur.
 - Un client qui n'est pas un navigateur (`curl`, un test) doit envoyer l'en-tête `Origin` d'une origine de confiance avec son cookie de session. Sans cet en-tête, le cookie est ignoré.
-- Dans un navigateur, une page ouverte depuis un autre site (un lien dans un webmail, un résultat de recherche) arrive sans en-tête `Origin` et avec `Sec-Fetch-Site: cross-site` : le cookie de session est ignoré pour cette page, et la personne y paraît déconnectée. Une adresse tapée, un favori et un lien du site lui-même ne sont pas concernés. Ce que fait une page privée dans ce cas reste à décider par les tickets des pages privées.
+- Dans un navigateur, une page ouverte depuis un autre site (un lien dans un webmail, un résultat de recherche) arrive sans en-tête `Origin` et avec `Sec-Fetch-Site: cross-site` : le cookie de session est ignoré pour cette page, et la personne y paraît déconnectée. Une adresse tapée, un favori et un lien du site lui-même ne sont pas concernés. Une page privée de l'espace (`/auth/profil`) traite cette personne comme n'ayant pas de session : une redirection vers `/auth/signin?callbackUrl=…`, où elle se reconnecte une fois (ticket 075).
 - Aucun autre site ne peut lire l'API depuis un navigateur : aucune origine n'est ouverte en CORS.
 - `/api/og`, l'image de partage de l'administration, est fermée.
 - Deux rôles ouvrent l'administration : `admin` peut tout ; `redaction` ne lit et ne modifie que son propre compte, sans pouvoir changer son rôle. Une session de l'administration dure 8 heures. Le premier compte d'une base vide est toujours un `admin`, quel que soit le rôle choisi sur l'écran du premier compte.
