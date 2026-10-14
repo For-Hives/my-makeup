@@ -1,6 +1,15 @@
 import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
-import { attribuerSlugs, cheminProfil, resoudreProfil, SLUG_MAX, slugifier, tableDesSlugs } from '../../src/lib/slug.js'
+import {
+	attribuerSlugs,
+	cheminCarte,
+	cheminProfil,
+	resoudreProfil,
+	SLUG_MAX,
+	slugifier,
+	slugsDesCartes,
+	tableDesSlugs,
+} from '../../src/lib/slug.js'
 
 describe('slugifier (plans/02 U09-U10)', () => {
 	test('U09 « Zoé Lefèvre » → zoe-lefevre', () => {
@@ -150,5 +159,70 @@ describe('resoudreProfil (plans/02 U13, U61)', () => {
 	test('path of a profile', () => {
 		assert.equal(cheminProfil('zoe-lefevre'), '/profil/zoe-lefevre')
 		assert.equal(table.slugParId.get('2'), 'zoe-lefevre-2')
+	})
+})
+
+describe('slugsDesCartes, cheminCarte: the search cards (ticket 14)', () => {
+	const profils = [
+		{ id: 1, username: 'Zoé Lefèvre', createdAt: '2023-01-01T00:00:00.000Z' },
+		{ id: 2, username: 'ZOE LEFEVRE', createdAt: '2024-01-01T00:00:00.000Z' },
+		{
+			id: 3,
+			username: 'camille-annemasse',
+			createdAt: '2024-02-01T00:00:00.000Z',
+		},
+		{ id: 4, username: 'LeaNantes', createdAt: '2024-03-01T00:00:00.000Z' },
+		// the username of the second one typed as her slug, created later
+		{ id: 5, username: 'zoe-lefevre-2', createdAt: '2025-01-01T00:00:00.000Z' },
+		{ id: 6, username: '✨', createdAt: '2025-02-01T00:00:00.000Z' },
+	]
+	const table = tableDesSlugs(profils)
+	const slugs = slugsDesCartes(table)
+
+	test('only the profiles whose slug is not their username, by String(id)', () => {
+		assert.deepEqual(slugs, {
+			1: 'zoe-lefevre',
+			2: 'zoe-lefevre-2',
+			4: 'leanantes',
+			5: 'zoe-lefevre-2-2',
+			6: 'maquilleuse-6',
+		})
+		assert.deepEqual(Object.keys(slugs), ['1', '2', '4', '5', '6'])
+		// plain JSON, the answer of /api/slugs-des-cartes
+		assert.deepEqual(JSON.parse(JSON.stringify(slugs)), slugs)
+		assert.deepEqual(slugsDesCartes(tableDesSlugs([])), {})
+	})
+
+	test('every card links to the slug of her own profile, served without a 308', () => {
+		for (const { id, username } of profils) {
+			const chemin = cheminCarte({ id, username }, slugs)
+			assert.equal(chemin, cheminProfil(table.slugParId.get(String(id))), username)
+			const trouve = resoudreProfil(decodeURIComponent(chemin.slice('/profil/'.length)), table)
+			assert.equal(trouve.profil.id, id, username)
+			assert.equal(trouve.redirection, false, username)
+		}
+		// two usernames that give the same slug, and the username typed as the
+		// slug of the older one: three cards, three pages
+		assert.equal(cheminCarte({ id: 1, username: 'Zoé Lefèvre' }, slugs), '/profil/zoe-lefevre')
+		assert.equal(cheminCarte({ id: 2, username: 'ZOE LEFEVRE' }, slugs), '/profil/zoe-lefevre-2')
+		assert.equal(cheminCarte({ id: 5, username: 'zoe-lefevre-2' }, slugs), '/profil/zoe-lefevre-2-2')
+	})
+
+	test('a profile missing from the slugs (created since they were read): her username, the old address', () => {
+		assert.equal(cheminCarte({ id: 99, username: 'Inès Nouvelle' }, slugs), '/profil/In%C3%A8s%20Nouvelle')
+		assert.equal(cheminCarte({ id: 1, username: 'Zoé Lefèvre' }, {}), '/profil/Zo%C3%A9%20Lef%C3%A8vre')
+		for (const vide of [undefined, null]) {
+			assert.equal(cheminCarte({ id: 1, username: 'LeaNantes' }, vide), '/profil/LeaNantes')
+		}
+	})
+
+	test('only a slug of the map is used: never an inherited key, never an empty value', () => {
+		for (const id of ['constructor', '__proto__', 'toString']) {
+			assert.equal(cheminCarte({ id, username: 'ana' }, slugs), '/profil/ana')
+		}
+		assert.equal(cheminCarte({ id: 7, username: 'ana' }, { 7: '' }), '/profil/ana')
+		assert.equal(cheminCarte({ id: 7, username: 'ana' }, { 7: 42 }), '/profil/ana')
+		assert.equal(cheminCarte({ id: undefined, username: 'ana' }, { undefined: 'autre' }), '/profil/ana')
+		assert.equal(cheminCarte({ id: 7, username: null }, {}), '/profil/')
 	})
 })

@@ -10,7 +10,9 @@ const couperPattern1 = /-+$/
  *   oldest profile (createdAt, then id) keeps it and the next ones get -2,
  *   -3… A new profile never changes the slug of an older one;
  * - resoudreProfil: what /profil/<segment> serves: the profile of that slug,
- *   or a 308 to the slug from the old URL (raw username, spaces, capitals).
+ *   or a 308 to the slug from the old URL (raw username, spaces, capitals);
+ * - slugsDesCartes, cheminCarte: the link of a search card, the slug of her
+ *   profile (ticket 14), served by /api/slugs-des-cartes.
  *
  * Nothing is stored in Strapi: the table is computed from the list of the
  * profiles (username, createdAt) each time a page or the sitemap needs it.
@@ -18,8 +20,10 @@ const couperPattern1 = /-+$/
  * - deleting a profile can move the -2 of a later one;
  * - a username equal to the slug of another profile (« zoe-lefevre-2 »
  *   created after « ZOE LEFEVRE ») serves that other profile: the slug
- *   wins, so an indexed URL never changes hands, but the search card of the
- *   newer profile, which links to its username, opens the other one.
+ *   wins, so an indexed URL never changes hands. The search card of the
+ *   newer profile links to her own slug, unless she was created after the
+ *   slugs of the cards were read (60 s on the server, 10 min in the page):
+ *   her card then links to her username, which opens the other one.
  * Neither case existed in production on 2026-10-08 (100 profiles, 72
  * usernames to normalise, no collision).
  */
@@ -166,3 +170,33 @@ export function resoudreProfil(segment, table) {
  * @returns {string}
  */
 export const cheminProfil = slug => `/profil/${encodeURIComponent(slug)}`
+
+/**
+ * What a search card needs to link to the slug of her profile, the address
+ * of the sitemap: String(id) → slug of every profile whose slug is not her
+ * username. Plain JSON, the answer of /api/slugs-des-cartes.
+ * @param {TableDesSlugs} table
+ * @returns {Record<string, string>}
+ */
+export function slugsDesCartes(table) {
+	const slugs = {}
+	for (const profil of table.parSlug.values()) {
+		if (profil.slug !== profil.username) slugs[String(profil.id)] = profil.slug
+	}
+	return slugs
+}
+
+/**
+ * Path a search card links to: her slug when the map has it, else her
+ * username, which is then her slug, or for a profile created since the map
+ * was read her old URL, which answers a 308 to it.
+ * @param {{id?: number|string|null, username?: string|null}} carte - a result of the search API
+ * @param {Record<string, string>|null|undefined} slugs - slugsDesCartes()
+ * @returns {string}
+ */
+export function cheminCarte(carte, slugs) {
+	const cle = carte?.id === undefined || carte?.id === null ? null : String(carte.id)
+	const slug = cle !== null && slugs && typeof slugs === 'object' && Object.hasOwn(slugs, cle) ? slugs[cle] : null
+	if (typeof slug === 'string' && slug !== '') return cheminProfil(slug)
+	return cheminProfil(typeof carte?.username === 'string' ? carte.username : '')
+}
