@@ -4,7 +4,8 @@ import { notFound, permanentRedirect } from 'next/navigation'
 import { getPayload } from 'payload'
 import { cache } from 'react'
 import { VueDuProfil } from '@/components/profil/VueDuProfil'
-import { metadonnees } from '@/lib/seo/metadonnees'
+import { serializeJsonLd } from '@/lib/seo/json-ld'
+import { donneesStructureesDuProfil, metadonneesDuProfil } from '@/lib/seo/profil'
 import { cheminProfil } from '@/lib/slug'
 import { type AdresseDeProfil, lireLAdresseDeProfil } from '@/services/public/profils'
 
@@ -27,26 +28,18 @@ const adresseDeProfil = cache(async (segment: string): Promise<AdresseDeProfil> 
 })
 
 /**
- * Indexed only when the profile can be published (E66): otherwise a noindex tag and no canonical
- * address. The title, the description and the structured data are ticket 105's. An unknown or hidden
- * profile has the 404 page, which Next marks noindex by itself.
+ * Title, description, canonical address and robots (ticket 105). Indexed only when the profile can be
+ * published (E66): otherwise a noindex tag and no canonical address. An unknown or hidden profile has
+ * the 404 page, which Next marks noindex by itself.
  */
 export async function generateMetadata({ params }: PageProps<'/profil/[slug]'>): Promise<Metadata> {
 	const { slug } = await params
 	const adresse = await adresseDeProfil(slug)
-	if (adresse.type !== 'profil') return {}
-	const { profil } = adresse
-	return metadonnees({
-		titre: profil.nom,
-		description: profil.description,
-		repli: `${profil.nom}, maquilleuse professionnelle sur My-Makeup.`,
-		chemin: cheminProfil(profil.slug),
-		indexable: profil.indexable,
-	})
+	return adresse.type === 'profil' ? metadonneesDuProfil(adresse.profil) : {}
 }
 
 /**
- * The public page of a profile, rendered by the server (tickets 101 to 104): her name in the only h1,
+ * The public page of a profile, rendered by the server (tickets 101 to 105): her name in the only h1,
  * her speciality, her zone, her availability, her main photo and her description are in the HTML
  * served, with no JavaScript. What the address leads to is src/lib/profil/adresse.ts:
  * - a profile that is not hidden answers 200; when it cannot be published yet it carries a noindex tag
@@ -62,5 +55,14 @@ export default async function PageDuProfil({ params }: PageProps<'/profil/[slug]
 	const adresse = await adresseDeProfil(slug)
 	if (adresse.type === 'redirection') permanentRedirect(cheminProfil(adresse.slug))
 	if (adresse.type === 'inconnue') notFound()
-	return <VueDuProfil profil={adresse.profil} />
+	return (
+		<>
+			<script
+				type="application/ld+json"
+				// biome-ignore lint/security/noDangerouslySetInnerHtml: serializeJsonLd escapes <, > and &, so the data cannot close the tag.
+				dangerouslySetInnerHTML={{ __html: serializeJsonLd(donneesStructureesDuProfil(adresse.profil)) }}
+			/>
+			<VueDuProfil profil={adresse.profil} />
+		</>
+	)
 }
