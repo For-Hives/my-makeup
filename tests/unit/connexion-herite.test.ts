@@ -34,7 +34,7 @@ interface Ecriture {
 }
 
 /** The two things `remplacerLeHashHerite` touches: the raw read of the account, and the update. */
-function fauxPayload(ligne: { id: number; legacyBcrypt?: unknown } | undefined) {
+function fauxPayload(ligne: { id: number; legacyBcrypt?: unknown; hash?: unknown; salt?: unknown } | undefined) {
 	const lectures: unknown[] = []
 	const ecritures: Ecriture[] = []
 	return {
@@ -44,7 +44,8 @@ function fauxPayload(ligne: { id: number; legacyBcrypt?: unknown } | undefined) 
 			db: {
 				findOne: (args: unknown) => {
 					lectures.push(args)
-					return Promise.resolve(ligne ?? null)
+					// A known account holds a password of Payload's, unless the test says it does not.
+					return Promise.resolve(ligne ? { hash: 'h', salt: 's', ...ligne } : null)
 				},
 			},
 			update: (args: Ecriture) => {
@@ -322,7 +323,7 @@ describe('U73 : un refus prend le même temps, quel que soit le compte', () => {
 })
 
 describe('U73 : l’adresse sans compte paie le travail de Payload', () => {
-	test('remplacerLeHashHerite : une adresse inconnue fait le travail fictif, un compte connu non', async () => {
+	test('remplacerLeHashHerite : une adresse inconnue ou sans mot de passe de Payload fait le travail fictif, un compte connu non', async () => {
 		const travaux: string[] = []
 		const travailFictif = (motDePasse: string) => {
 			travaux.push(motDePasse)
@@ -339,13 +340,19 @@ describe('U73 : l’adresse sans compte paie le travail de Payload', () => {
 			{ email: 'a@example.test', password: 'deux' },
 			travailFictif
 		)
+		// An account with a hash of the old site and no password of Payload's: Payload checks nothing.
 		await remplacerLeHashHerite(
-			fauxPayload({ id: 1 }).payload,
+			fauxPayload({ id: 1, legacyBcrypt: HASH, hash: null, salt: null }).payload,
 			{ email: 'a@example.test', password: 'trois' },
 			travailFictif
 		)
+		await remplacerLeHashHerite(
+			fauxPayload({ id: 1, hash: undefined, salt: 's' }).payload,
+			{ email: 'a@example.test', password: 'quatre' },
+			travailFictif
+		)
 
-		expect(travaux).toEqual(['un'])
+		expect(travaux).toEqual(['un', 'trois', 'quatre'])
 	})
 })
 

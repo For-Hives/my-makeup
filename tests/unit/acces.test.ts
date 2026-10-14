@@ -399,7 +399,8 @@ describe('La collection profils (ticket 020)', () => {
 	test('créer et supprimer un profil : admin seulement ; le serveur le crée avec le compte', () => {
 		expect(regles.create).toBe(adminSeulement)
 		expect(regles.delete).toBe(adminSeulement)
-		expect(Pros.hooks?.afterChange?.length).toBe(1)
+		// The profile creation, then the erasing of the old-site hash after a new password (ticket 087).
+		expect(Pros.hooks?.afterChange?.length).toBe(2)
 		expect(CONTEXTE_SANS_PROFIL).toEqual({ profilAutomatique: false })
 	})
 

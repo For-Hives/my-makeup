@@ -162,6 +162,65 @@ describe('I15 : un compte migré (bcrypt) se connecte, son hash est remplacé, l
 		expect(dump).not.toContain('$2a$')
 	})
 
+	test('un mot de passe choisi autrement (admin, API locale) efface le hash hérité : l’ancien ne marche plus, le nouveau si', async () => {
+		const compte = await creerCompte('reprise-avec-hash')
+		const { entrees, appels, frein } = await brancher('essai-int-herite-6')
+		const payload = await payloadDeTest()
+		const nouveau = 'nouveau-mot-de-passe-42'
+
+		await payload.update({ collection: 'pros', id: compte.id, data: { password: nouveau }, overrideAccess: true })
+
+		expect((await ligneDuCompte(compte.id)).legacyBcrypt ?? null).toBeNull()
+		const ancien = await connecter({
+			...entrees,
+			headers: adresse(26),
+			email: compte.email,
+			password: MOT_DE_PASSE_HERITE_DE_FIXTURE,
+			frein,
+		})
+		const choisi = await connecter({ ...entrees, headers: adresse(26), email: compte.email, password: nouveau, frein })
+		expect(ancien).toEqual({ ok: false, code: 'identifiants-invalides' })
+		expect(choisi.ok).toBe(true)
+		expect(appels.herite).toBe(1)
+		expect(await rangees('heritee')).toHaveLength(0)
+	})
+
+	test('un mot de passe défini par l’admin en REST efface aussi le hash hérité', async () => {
+		const [admin, compte] = await Promise.all([creerCompte('admin'), creerCompte('reprise-avec-hash')])
+		const { statut } = await appelerRest('PATCH', `/api/pros/${compte.id}`, {
+			corps: { password: 'choisi-par-l-admin-42' },
+			enTetes: admin.session.enTetes,
+		})
+		expect(statut).toBe(200)
+		expect((await ligneDuCompte(compte.id)).legacyBcrypt ?? null).toBeNull()
+	})
+
+	test('le lien de réinitialisation efface le hash hérité : l’ancien mot de passe ne marche plus', async () => {
+		const compte = await creerCompte('reprise-avec-hash')
+		const { entrees, frein } = await brancher('essai-int-herite-7')
+		const payload = await payloadDeTest()
+		const nouveau = 'apres-reinitialisation-42'
+
+		const jeton = await payload.forgotPassword({
+			collection: 'pros',
+			data: { email: compte.email },
+			disableEmail: true,
+		})
+		await payload.resetPassword({ collection: 'pros', data: { token: jeton, password: nouveau }, overrideAccess: true })
+
+		expect((await ligneDuCompte(compte.id)).legacyBcrypt ?? null).toBeNull()
+		const ancien = await connecter({
+			...entrees,
+			headers: adresse(27),
+			email: compte.email,
+			password: MOT_DE_PASSE_HERITE_DE_FIXTURE,
+			frein,
+		})
+		const choisi = await connecter({ ...entrees, headers: adresse(27), email: compte.email, password: nouveau, frein })
+		expect(ancien).toEqual({ ok: false, code: 'identifiants-invalides' })
+		expect(choisi.ok).toBe(true)
+	})
+
 	test('la porte REST native ne connaît pas le chemin hérité : le compte y reçoit un refus', async () => {
 		const compte = await creerCompte('reprise-avec-hash')
 		const { statut } = await appelerRest('POST', '/api/pros/login', {

@@ -67,6 +67,8 @@ export function travailDeVerificationFictif(motDePasse: string): Promise<void> {
 interface LigneDuCompte {
 	id: number | string
 	legacyBcrypt?: string | null
+	hash?: unknown
+	salt?: unknown
 }
 
 /**
@@ -74,8 +76,8 @@ interface LigneDuCompte {
  *
  * - Finds the account by its address (trimmed, lower case), reads its old hash, compares the
  *   password to it. An unknown address, an account with no hash, a badly formed hash: the same
- *   comparison, to the dummy hash, and a refusal. An unknown address also gets the PBKDF2 work that
- *   Payload does for a known account.
+ *   comparison, to the dummy hash, and a refusal. An unknown address, or an account with no password of Payload's, also gets the
+ *   PBKDF2 work that Payload does for a known account.
  * - On a match only: writes the password in Payload's format and sets `legacyBcrypt` to null, in
  *   one update. A wrong password touches nothing.
  *
@@ -91,8 +93,9 @@ export async function remplacerLeHashHerite(
 		collection: 'pros',
 		where: { email: { equals: email.trim().toLowerCase() } },
 	})
-	// An unknown address: Payload has done nothing for it, so the work it does for a known one is done here.
-	if (!ligne) await travailFictif(password)
+	// No row, or a row with no password of Payload's: Payload has checked nothing for it, so the work it
+	// does for a known account is done here (the same test as the REST door, temps-egalise-payload.ts).
+	if (!ligne || typeof ligne.salt !== 'string' || typeof ligne.hash !== 'string') await travailFictif(password)
 	const hash = ligne?.legacyBcrypt
 	const accepte = await motDePasseDuHash(password, hash)
 	if (!accepte || !ligne) return false

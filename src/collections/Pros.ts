@@ -3,6 +3,10 @@ import { adminOuSoiMeme, adminSeulement, champAdminSeulement, jamais } from '../
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import { freinerLaConnexion, rendreLaPlaceDeLaConnexion } from '../lib/auth/frein-payload'
 import {
+	effacerLeHashHeriteApresUnMotDePasse,
+	effacerLeHashHeriteAuRenouvellement,
+} from '../lib/auth/hash-herite-payload'
+import {
 	noterLaConnexionRest,
 	noterLEchecDeConnexionRest,
 	noterLeDebutDeLaConnexion,
@@ -98,10 +102,11 @@ export const Pros: CollectionConfig<'pros'> = {
 	},
 	endpoints: [premierCompteFerme],
 	hooks: {
-		afterChange: [profilALaCreationDuCompte],
+		afterChange: [profilALaCreationDuCompte, effacerLeHashHeriteApresUnMotDePasse],
 		afterLogin: [rendreLaPlaceDeLaConnexion(), retenirLaDerniereConnexion, noterLaConnexionRest],
 		afterError: [retenirLesEchecsRest(), noterLEchecDeConnexionRest],
 		beforeDelete: [compteSansProfilAvantSuppression],
+		beforeValidate: [effacerLeHashHeriteAuRenouvellement],
 		beforeOperation: [noterLeDebutDeLaConnexion, freinerLaConnexion(), egaliserLeTravailRest(), refuserApresLePlafond],
 		refresh: [prolongerSousPlafond],
 	},
