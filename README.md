@@ -26,7 +26,7 @@ Trois documents disent comment travailler ici, à une personne comme à un agent
 
 - [`CLAUDE.md`](CLAUDE.md) : les commandes, l'architecture, les interdits et les pièges.
 - [`AGENTS.md`](AGENTS.md) : à quel rythme lancer les tests, et quand un travail est fini.
-- [`docs/qualite.md`](docs/qualite.md) : les règles des tests, les sept règles des listes éditées en place, ce qu'on regarde sur un écran à 390 px, puis la CI, ses garde-fous et le canari.
+- [`docs/qualite.md`](docs/qualite.md) : les règles des tests, les sept règles des listes éditées en place, ce qu'on regarde sur un écran à 390 px, puis la CI, ses garde-fous et le canari, et les règles des mises à jour (Renovate).
 
 Un test les garde : une commande qu'ils citent existe, un lien qu'ils donnent mène quelque part (`bun --no-env-file test tests/unit/guides-agents.test.ts`).
 
@@ -53,6 +53,7 @@ Le reste :
 - `docker-compose.yml` : la base PostgreSQL de développement.
 - `Dockerfile` et `.dockerignore` : l'image de production (voir « Image Docker »).
 - `.github/workflows/ci.yml` et `ci/checks-requis.json` : la CI et les checks requis (voir « Intégration continue »).
+- `renovate.json` : les règles des mises à jour des dépendances, sans effet avant la bascule (voir « Mises à jour des dépendances »).
 - `.env.exemple` : la liste des variables d'environnement, sans aucune valeur.
 - `tests/` : les tests. Un composant React s'y teste seul, sans navigateur : voir `docs/tests/composants.md`.
 - `compose.test.yml` et `.env.test` : le banc de test local et son environnement factice, voir « Le banc de test ».
@@ -306,6 +307,15 @@ Avant de pousser, les mêmes commandes se lancent en local : `bun run check`, `b
 
 La CI ne lit aucun secret, n'a aucun filtre de chemins et ne tolère aucun échec. Ces règles sont tenues par les garde-fous de `tests/ci/` : voir [`docs/qualite.md`](docs/qualite.md), qui dit aussi comment ajouter un job ou une action.
 
+## Mises à jour des dépendances
+
+`renovate.json` porte les règles que Renovate suivra pour proposer les nouvelles versions : versions exactes, 7 jours d'attente, majeures sur approbation, et une fusion automatique réservée aux petites mises à jour, derrière le check requis `ci-ok`. Payload, Next, Biome et Playwright ne sont jamais fusionnés seuls.
+
+- **Ces règles n'ont aucun effet avant la bascule.** Renovate ne lit que le `renovate.json` de la branche par défaut : tant que `main` porte l'ancien site, c'est le sien qui s'applique, en sécurité seule.
+- Une garde de `tests/ci/` fige les règles, et `bun run renovate:valide` demande à Renovate s'il sait lire le fichier.
+
+Le détail est dans [`docs/qualite.md`](docs/qualite.md), « Renovate » : ce que chaque règle décide, comment en changer une, et ce qui doit être réglé sur `main` avant la bascule.
+
 ## Commandes
 
 | Commande | Rôle |
@@ -317,6 +327,7 @@ La CI ne lit aucun secret, n'a aucun filtre de chemins et ne tolère aucun éche
 | `bun run lint` | Biome : lint seul, sans écriture |
 | `bun run ci:biome` | Biome en lecture seule, pour la CI |
 | `bun run ci:canari` | Écrit les trois fautes du canari de la CI, sur une branche `canari-…` seulement (voir `docs/qualite.md`) |
+| `bun run renovate:valide` | Fait valider `renovate.json` par Renovate, en mode strict. Il lui faut `docker` (voir `docs/qualite.md`, « Renovate ») |
 | `bun run typecheck` | Génère les types de routes de Next, puis contrôle les types (`tsc --noEmit`) |
 | `bun run payload:types` | Régénère `src/payload-types.ts` après un changement de collection |
 | `bun run payload:importmap` | Régénère `importMap.js` après l'ajout d'un composant d'administration |

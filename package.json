@@ -20,6 +20,7 @@
 		"check": "biome check --write .",
 		"ci:biome": "biome ci . --reporter=github",
 		"ci:canari": "bun --no-env-file scripts/ci/canari.ts",
+		"renovate:valide": "bun --no-env-file scripts/ci/renovate-valide.ts",
 		"typecheck": "next typegen && tsc --noEmit",
 		"test:unit": "bun --no-env-file test ./tests/unit",
 		"test:ci-garde": "bun --no-env-file test ./tests/ci",
