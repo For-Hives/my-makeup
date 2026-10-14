@@ -20,7 +20,13 @@ import {
 	planifier,
 	sansEcartInexplique,
 } from '../../scripts/migration/import/moteur'
-import { codeDeSortie, type Rapport, rapportEnTexte } from '../../scripts/migration/import/rapport'
+import {
+	codeDeSortie,
+	codeDuControle,
+	controleEnTexte,
+	type Rapport,
+	rapportEnTexte,
+} from '../../scripts/migration/import/rapport'
 import { memesTables } from '../../scripts/migration/import/source'
 import { type LigneTalent, talentAttendu, talentsAttendus } from '../../scripts/migration/import/talents'
 import { CONTEXTE_IMPORT, estUnImport } from '../../src/lib/contexte-import'
@@ -102,6 +108,12 @@ describe('la ligne de commande : à blanc par défaut', () => {
 	test('--sans-photos ne prend pas de valeur et ne se répète pas', () => {
 		expect(lireLesArguments(['--sans-photos'])).toEqual({ mode: 'a-blanc', cibleDistante: false, sansPhotos: true })
 		expect(lireLesArguments(['--sans-photos', '--sans-photos'])).toBeNull()
+	})
+
+	test('--controle est un passage à blanc : il ne va pas avec --reel', () => {
+		expect(lireLesArguments(['--controle'])).toEqual({ mode: 'a-blanc', cibleDistante: false, controle: true })
+		expect(lireLesArguments(['--controle', '--reel'])).toBeNull()
+		expect(lireLesArguments(['--reel', '--controle'])).toBeNull()
 	})
 
 	test('une option inconnue, répétée ou sans sa valeur n’est pas comprise', () => {
@@ -347,6 +359,35 @@ describe('le rapport', () => {
 		expect(codeDeSortie(rapport({ parite: { talents: { ...talents, empreinteCible: 'c'.repeat(64) } } }))).toBe(4)
 		expect(
 			codeDeSortie(
+				rapport({ arret: { emailsPartages: [[9, 10]], profilsDeComptesEcartes: [], profilsSansCompte: [] } })
+			)
+		).toBe(3)
+	})
+
+	test('le contrôle : 0 si la cible est la source, 4 dès qu’un passage réel écrirait ou qu’un document est en trop', () => {
+		const talentsPropres = (bilan: object): Rapport => {
+			const base = sansRefus({ mode: 'a-blanc', parite: null })
+			const talents = { ...(base.collections.talents ?? ({} as never)), crees: 0, modifies: 0, enTrop: [], ...bilan }
+			return { ...base, collections: { talents } } as Rapport
+		}
+		const propre = talentsPropres({})
+		expect(codeDuControle(propre)).toBe(0)
+		expect(controleEnTexte(propre)).toBe(
+			'Contrôle : la cible est la source (0 création, 0 mise à jour, 0 document en trop).'
+		)
+		// A document removed by hand is a creation to make, a value changed by hand an update, an extra one a document too many.
+		for (const bilan of [{ crees: 1 }, { modifies: 1 }, { enTrop: [9] }]) {
+			expect(codeDuControle(talentsPropres(bilan)), JSON.stringify(bilan)).toBe(4)
+			expect(controleEnTexte(talentsPropres(bilan))).toContain('Contrôle : la cible n’est PAS la source.')
+		}
+		expect(controleEnTexte(talentsPropres({ crees: 2, modifies: 1 }))).toContain(
+			'Talents : 2 créations à faire, 1 mise à jour à faire, 0 document en trop'
+		)
+		// The codes of a dry run are kept: stopped, a source that moved, a document refused.
+		expect(codeDuControle(rapport({ mode: 'a-blanc', parite: null }))).toBe(5)
+		expect(codeDuControle(talentsPropres({ crees: 1, refuses: [{ strapiId: 4, motif: 'slug-en-double' }] }))).toBe(5)
+		expect(
+			codeDuControle(
 				rapport({ arret: { emailsPartages: [[9, 10]], profilsDeComptesEcartes: [], profilsSansCompte: [] } })
 			)
 		).toBe(3)

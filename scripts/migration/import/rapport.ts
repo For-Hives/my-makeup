@@ -115,6 +115,43 @@ export function codeDeSortie(rapport: Rapport): 0 | 3 | 4 | 5 {
 	return refuses ? 5 : 0
 }
 
+/** Per collection, what a real run would write or find too many: the gap between the target and the source. */
+export function ecartsDeLaCible(
+	rapport: Rapport
+): { collection: CollectionImportee; crees: number; modifies: number; enTrop: number }[] {
+	return (Object.entries(rapport.collections) as [CollectionImportee, BilanDeCollection][])
+		.map(([collection, bilan]) => ({
+			collection,
+			crees: bilan.crees,
+			modifies: bilan.modifies,
+			enTrop: bilan.enTrop.length,
+		}))
+		.filter(({ crees, modifies, enTrop }) => crees + modifies + enTrop > 0)
+}
+
+/**
+ * The exit code of a check (`--controle`): the one of a dry run, and 4 as well as soon as the
+ * target is not the source: an account removed or an email changed by hand shows as a creation or
+ * an update that a real run would make, a document added by hand as one too many.
+ */
+export function codeDuControle(rapport: Rapport): 0 | 3 | 4 | 5 {
+	const code = codeDeSortie(rapport)
+	return code === 0 && ecartsDeLaCible(rapport).length > 0 ? 4 : code
+}
+
+/** What a check says about the target, in French, by collection and in numbers only. */
+export function controleEnTexte(rapport: Rapport): string {
+	const ecarts = ecartsDeLaCible(rapport)
+	if (ecarts.length === 0) return 'Contrôle : la cible est la source (0 création, 0 mise à jour, 0 document en trop).'
+	return [
+		'Contrôle : la cible n’est PAS la source.',
+		...ecarts.map(
+			({ collection, crees, modifies, enTrop }) =>
+				`  - ${NOMS_DES_COLLECTIONS[collection]} : ${pluriel(crees, 'création', 'créations')} à faire, ${pluriel(modifies, 'mise à jour', 'mises à jour')} à faire, ${pluriel(enTrop, 'document en trop', 'documents en trop')}`
+		),
+	].join('\n')
+}
+
 const ids = (liste: readonly number[]): string => (liste.length === 0 ? 'aucun' : liste.join(', '))
 
 const pluriel = (nombre: number, singulier: string, pluriel: string): string =>

@@ -1,0 +1,101 @@
+import { afterAll, beforeEach, describe, expect, test } from 'bun:test'
+import { SQL } from 'bun'
+import { commandeDImport, FICHIER_DES_DECISIONS_DU_BANC, importerSurLeBanc } from '../outils/import'
+import { viderLeCapteur } from '../outils/mailpit'
+import { viderLaBase } from '../outils/payload-test'
+import { creerLaSourceStrapi, effacerLaSourceStrapi, sourceDuBanc } from '../outils/source-strapi'
+
+/**
+ * Ticket 067: the check of the parity (`--controle`). A dry run that says whether the target is the
+ * source, and exits 4 as soon as it is not: an account removed by hand, an email changed by hand, a
+ * document the source does not give. The runs of the import itself are in the other import tests.
+ */
+
+const source = sourceDuBanc()
+
+/** The command of the check, against the bench, with the table of decisions of the bench. */
+const controler = (...options: string[]) =>
+	commandeDImport(['--controle', '--decisions', FICHIER_DES_DECISIONS_DU_BANC, ...options])
+
+/** A write by the owner of the bench database, as a person with access to it would make. */
+async function ecrireDansLaCible(requete: string): Promise<void> {
+	const sql = new SQL({ url: source.maintenance, max: 1 })
+	try {
+		await sql.unsafe(requete)
+	} finally {
+		await sql.close()
+	}
+}
+
+/** How many accounts the target holds. */
+async function comptesDeLaCible(): Promise<number> {
+	const sql = new SQL({ url: source.maintenance, max: 1 })
+	try {
+		const [ligne] = await sql.unsafe('SELECT count(*)::int AS n FROM pros')
+		return ligne.n
+	} finally {
+		await sql.close()
+	}
+}
+
+beforeEach(async () => {
+	await viderLaBase()
+	await viderLeCapteur()
+	await creerLaSourceStrapi()
+})
+
+afterAll(async () => {
+	await viderLaBase()
+	await effacerLaSourceStrapi()
+})
+
+describe('le contrôle de la parité (I39, I40, I43)', () => {
+	test('une cible vide n’est pas la source : tout est à créer, et le contrôle n’écrit rien', async () => {
+		const { code, sortie } = await controler()
+
+		expect(code, sortie).toBe(4)
+		expect(sortie).toContain('Contrôle : la cible n’est PAS la source.')
+		expect(sortie).toMatch(/Comptes : [1-9]\d* créations? à faire/)
+		expect(await comptesDeLaCible()).toBe(0)
+	}, 60_000)
+
+	test('après un import réel, la cible est la source : code 0, et un second contrôle dit la même chose', async () => {
+		await importerSurLeBanc()
+
+		for (const _passage of [1, 2]) {
+			const { code, sortie } = await controler()
+			expect(code, sortie).toBe(0)
+			expect(sortie).toContain('Contrôle : la cible est la source (0 création, 0 mise à jour, 0 document en trop).')
+		}
+	}, 60_000)
+
+	test('un email changé à la main dans la cible fait échouer le contrôle, sans que le rapport le montre', async () => {
+		await importerSurLeBanc()
+		await ecrireDansLaCible("UPDATE pros SET email = 'modifie-a-la-main@example.test' WHERE strapi_id = 8")
+
+		const { code, sortie } = await controler()
+
+		expect(code, sortie).toBe(4)
+		expect(sortie).toContain('Comptes : 0 création à faire, 1 mise à jour à faire, 0 document en trop')
+		expect(sortie).not.toContain('modifie-a-la-main')
+	}, 60_000)
+
+	test('un compte retiré à la main de la cible fait échouer le contrôle', async () => {
+		await importerSurLeBanc()
+		// Account 8 has no profile: removing it leaves nothing else behind.
+		await ecrireDansLaCible('DELETE FROM pros WHERE strapi_id = 8')
+
+		const { code, sortie } = await controler()
+
+		expect(code, sortie).toBe(4)
+		expect(sortie).toContain('Comptes : 1 création à faire, 0 mise à jour à faire, 0 document en trop')
+	}, 60_000)
+
+	test('une commande qui demande à la fois d’écrire et de contrôler n’est pas comprise, et n’écrit rien', async () => {
+		const { code, sortie } = await controler('--reel')
+
+		expect(code).toBe(2)
+		expect(sortie).toContain('Usage')
+		expect(await comptesDeLaCible()).toBe(0)
+	}, 60_000)
+})

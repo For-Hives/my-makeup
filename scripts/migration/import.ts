@@ -6,6 +6,7 @@
  *   bun scripts/migration/import.ts --rapport r.json   also writes the report as JSON
  *   bun scripts/migration/import.ts --decisions d.json the table of decisions (accounts that share an email)
  *   bun scripts/migration/import.ts --revue v.json     also writes the private list of the cities to review
+ *   bun scripts/migration/import.ts --controle         dry run that says whether the target is the source: exit 4 if not
  *   bun scripts/migration/import.ts --sans-photos      no storage of the photos: none is read, none adopted (a rehearsal with no network)
  *   bun scripts/migration/import.ts --consentement-le 2026-11-02   the date of the switch: the consent date of the profiles that show a phone or an email today
  *
@@ -45,7 +46,7 @@ import { AUCUNE_DECISION, type Decisions, lireLesDecisions } from './import/deci
 import { importer } from './import/importer'
 import { ImportInterrompu, messageDUneErreurInattendue } from './import/moteur'
 import { dateDeBascule } from './import/profils'
-import { codeDeSortie, rapportEnTexte } from './import/rapport'
+import { codeDeSortie, codeDuControle, controleEnTexte, rapportEnTexte } from './import/rapport'
 import {
 	lireLesReponses,
 	type ReferentielGarde,
@@ -140,9 +141,10 @@ async function principal(argumentsDeLaCommande: string[]): Promise<number> {
 			},
 		})
 		console.log(rapportEnTexte(rapport))
+		if (options.controle) console.log(controleEnTexte(rapport))
 		// Read by its owner only: it lists identifiers of the old base.
 		if (options.rapport) writeFileSync(options.rapport, `${JSON.stringify(rapport, null, '\t')}\n`, { mode: 0o600 })
-		return codeDeSortie(rapport)
+		return options.controle ? codeDuControle(rapport) : codeDeSortie(rapport)
 	} finally {
 		garderLesReponses(fichierDesCommunes, referentiel)
 		await source.fermer()
