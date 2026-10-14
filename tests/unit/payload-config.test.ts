@@ -121,7 +121,7 @@ describe('src/payload.config.ts is hardened', () => {
 		expect((await configUnder(development)).email).toBe(adaptateurSansRelais)
 		expect((await configUnder(preproduction)).email).toBe(adaptateurSansRelais)
 		// The sender alone switches nothing on.
-		expect((await configUnder({ ...development, EMAIL_FROM: SENDER })).email).toBeUndefined()
+		expect((await configUnder({ ...development, EMAIL_FROM: SENDER })).email).toBe(adaptateurSansRelais)
 	})
 })
 
