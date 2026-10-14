@@ -322,6 +322,7 @@ Deux pages, aux chemins de l'ancien site : `/auth/mot-de-passe-oublie` (l'adress
 - Le code du lien ne reste pas dans l'adresse : `src/proxy.ts` répond une redirection vers `/auth/reinitialiser` et le garde dans le cookie `mm-reinit` (HttpOnly, propre à cette page, une heure). La page dit « Ce lien n'est plus valable » pour un lien périmé, déjà servi ou venu de l'ancien site.
 - Choisir un nouveau mot de passe, en une transaction : nouveau hash, toutes les sessions du compte fermées, hash de l'ancien site effacé, jeton effacé. La maquilleuse se connecte ensuite avec son nouveau mot de passe.
 - Le journal (`auth-evenements`) a les types `mot-de-passe-oublie` et `reinitialisation`.
+- Les comptes sans mot de passe passent par la même porte (ticket 093) : une ancienne inscrite Google ou Facebook demande un lien avec son adresse, reçoit le même mail, choisit son mot de passe et se connecte avec, sur le même compte et le même profil. Google marche toujours ensuite. Avant cela, la connexion par mot de passe de ce compte répond le message commun. Il n'y a aucun bouton Facebook : une ligne d'aide (`AideSansMotDePasse`), affichée à tout le monde sur la page de connexion, dit aux anciennes inscrites Facebook de passer par « Mot de passe oublié ».
 
 ### Créer un compte admin
 
