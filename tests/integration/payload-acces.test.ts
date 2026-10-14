@@ -168,6 +168,9 @@ const MATRICE: Ligne[] = [
 			['noteInterne', 'Note envoyée par la maquilleuse'],
 			['score', 99],
 			['superMaquilleuse', true],
+			// Traced by the server only (ticket 042).
+			['consentiLe', '2020-01-01T00:00:00.000Z'],
+			['sourceConsentement', 'import'],
 		] as const
 	).map(
 		([champ, valeur]): Ligne => ({
@@ -180,6 +183,32 @@ const MATRICE: Ligne[] = [
 			attendu: 'ignore',
 		})
 	),
+	// Her contact details, and her choice to show them, are hers to write (ticket 042).
+	...(
+		[
+			['coordonnees', { telephone: '06 39 98 11 11', email: 'contact-a@example.test' }],
+			['contactPublic', true],
+		] as const
+	).map(
+		([champ, valeur]): Ligne => ({
+			role: 'maquilleuse',
+			collection: 'profils',
+			operation: 'modifier',
+			document: 'maquilleuse',
+			champ,
+			valeur,
+			attendu: 'autorise',
+		})
+	),
+	{
+		role: 'autreMaquilleuse',
+		collection: 'profils',
+		operation: 'modifier',
+		document: 'maquilleuse',
+		champ: 'coordonnees',
+		valeur: { telephone: '06 39 98 22 22', email: 'contact-b@example.test' },
+		attendu: 'refuse',
+	},
 	{ role: 'autreMaquilleuse', collection: 'profils', operation: 'lister', attendu: 'soiEtPublies' },
 	{ role: 'autreMaquilleuse', collection: 'profils', operation: 'lire', document: 'maquilleuse', attendu: 'autorise' },
 	{
@@ -207,6 +236,15 @@ const MATRICE: Ligne[] = [
 	{ role: 'redaction', collection: 'profils', operation: 'lire', document: 'autreMaquilleuse', attendu: 'refuse' },
 	{ role: 'redaction', collection: 'profils', operation: 'creer', attendu: 'refuse' },
 	{ role: 'redaction', collection: 'profils', operation: 'modifier', document: 'maquilleuse', attendu: 'refuse' },
+	{
+		role: 'redaction',
+		collection: 'profils',
+		operation: 'modifier',
+		document: 'maquilleuse',
+		champ: 'coordonnees',
+		valeur: { telephone: '06 39 98 33 33', email: 'contact-redaction@example.test' },
+		attendu: 'refuse',
+	},
 	{ role: 'redaction', collection: 'profils', operation: 'supprimer', document: 'maquilleuse', attendu: 'refuse' },
 	{ role: 'admin', collection: 'profils', operation: 'lister', attendu: 'tous' },
 	{ role: 'admin', collection: 'profils', operation: 'lire', document: 'maquilleuse', attendu: 'autorise' },
@@ -226,6 +264,9 @@ const MATRICE: Ligne[] = [
 			['noteInterne', 'Relancée par téléphone', 'autorise'],
 			['score', 4.5, 'autorise'],
 			['superMaquilleuse', true, 'autorise'],
+			['coordonnees', { telephone: '06 39 98 44 44', email: 'contact-admin@example.test' }, 'autorise'],
+			['consentiLe', '2020-01-01T00:00:00.000Z', 'ignore'],
+			['sourceConsentement', 'import', 'ignore'],
 		] as const
 	).map(
 		([champ, valeur, attendu]): Ligne => ({

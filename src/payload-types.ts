@@ -221,6 +221,32 @@ export interface Profil {
   specialite?: string | null;
   description?: string | null;
   disponible?: boolean | null;
+  reseaux?: {
+    youtube?: string | null;
+    facebook?: string | null;
+    instagram?: string | null;
+    siteWeb?: string | null;
+    linkedin?: string | null;
+  };
+  /**
+   * Fermées au public. La page du profil ne les montre que si « Coordonnées publiques » est cochée.
+   */
+  coordonnees?: {
+    telephone?: string | null;
+    email?: string | null;
+  };
+  /**
+   * Choisi par la maquilleuse : ses coordonnées s’affichent sur la page de son profil.
+   */
+  contactPublic?: boolean | null;
+  /**
+   * Posée par le serveur quand les coordonnées deviennent publiques.
+   */
+  consentiLe?: string | null;
+  /**
+   * Posée par le serveur, avec la date.
+   */
+  sourceConsentement?: ('maquilleuse' | 'admin' | 'import') | null;
   /**
    * Sert à rediriger l’ancienne adresse du profil vers la nouvelle.
    */
@@ -410,6 +436,24 @@ export interface ProfilsSelect<T extends boolean = true> {
   specialite?: T;
   description?: T;
   disponible?: T;
+  reseaux?:
+    | T
+    | {
+        youtube?: T;
+        facebook?: T;
+        instagram?: T;
+        siteWeb?: T;
+        linkedin?: T;
+      };
+  coordonnees?:
+    | T
+    | {
+        telephone?: T;
+        email?: T;
+      };
+  contactPublic?: T;
+  consentiLe?: T;
+  sourceConsentement?: T;
   legacyUsername?: T;
   strapiId?: T;
   statut?: T;

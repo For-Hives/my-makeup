@@ -3,6 +3,7 @@ import * as migration_20261014_050526_admins_roles_provisoire from './20261014_0
 import * as migration_20261014_051533_pros_comptes_provisoire from './20261014_051533_pros_comptes_provisoire'
 import * as migration_20261014_052503_profils_proprietaire_provisoire from './20261014_052503_profils_proprietaire_provisoire'
 import * as migration_20261014_062220_profils_champs_reserves_provisoire from './20261014_062220_profils_champs_reserves_provisoire'
+import * as migration_20261014_062549_profils_contact_provisoire from './20261014_062549_profils_contact_provisoire'
 
 export const migrations = [
 	{
@@ -29,5 +30,10 @@ export const migrations = [
 		up: migration_20261014_062220_profils_champs_reserves_provisoire.up,
 		down: migration_20261014_062220_profils_champs_reserves_provisoire.down,
 		name: '20261014_062220_profils_champs_reserves_provisoire',
+	},
+	{
+		up: migration_20261014_062549_profils_contact_provisoire.up,
+		down: migration_20261014_062549_profils_contact_provisoire.down,
+		name: '20261014_062549_profils_contact_provisoire',
 	},
 ]

@@ -15,6 +15,14 @@ import {
 	jamais,
 	profilPublieOuProprietaire,
 } from '../lib/acces'
+import {
+	consentementApres,
+	LIBELLES_DES_SOURCES,
+	SOURCES_DU_CONSENTEMENT,
+	validerEmailDeContact,
+	validerLienDeReseau,
+	validerTelephone,
+} from '../lib/profil/coordonnees'
 import { validerSiret } from '../lib/profil/siret'
 import { LIBELLES_DES_STATUTS, STATUT_INITIAL, STATUTS_DU_PROFIL } from '../lib/profil/statut'
 import { premierSlugLibre, slugDeRepli, slugifier } from '../lib/slug'
@@ -84,6 +92,28 @@ export const slugDeRepliApresCreation: CollectionAfterChangeHook = async ({ doc,
 }
 
 /**
+ * The trace of the consent to show the contact details (ticket 042): when `contactPublic` is
+ * switched on, the server writes the date and the source itself; switched off, both are emptied.
+ * The rule is `consentementApres` (src/lib/profil/coordonnees.ts).
+ */
+export const consentementTrace: CollectionBeforeChangeHook = ({ data, originalDoc, req }) => {
+	const compte = req.user?.collection === 'pros' || req.user?.collection === 'admins' ? req.user.collection : undefined
+	return {
+		...data,
+		...consentementApres({ avant: originalDoc?.contactPublic, donnees: data, compte, maintenant: new Date() }),
+	}
+}
+
+/** The networks of a profile, as on the old site: a link each, public. */
+const RESEAUX = [
+	['youtube', 'YouTube'],
+	['facebook', 'Facebook'],
+	['instagram', 'Instagram'],
+	['siteWeb', 'Site web'],
+	['linkedin', 'LinkedIn'],
+] as const
+
+/**
  * Creating an account creates its empty profile, in the same transaction: if the profile cannot
  * be created, neither is the account. `CONTEXTE_SANS_PROFIL` leaves the account without one.
  */
@@ -115,6 +145,10 @@ const INTERNE = { read: champAdminSeulement, create: champAdminSeulement, update
  * - What the public reads of a profile is its identity: never the account it belongs to, what the
  *   import wrote, nor what an admin decided about it, except the « Super maquilleuse » badge.
  * - Nobody creates a profile through an API but an admin: the server creates it with the account.
+ * - The networks are public. The contact details (`coordonnees`) are read by the owner and an
+ *   admin only, never by the public through the API, even when she chose to show them
+ *   (`contactPublic`): a public page reads them through src/services/public/. The server traces
+ *   that choice: the date and the source of the consent (ticket 042).
  * - `pro` (the account that owns it) is written by an admin only; `slug` by the server only, at
  *   the creation; `strapiId` and `legacyUsername` by the import only; the status, the reason, the
  *   verification, the SIRET, the internal note, the score and the badge by an admin only (I03,
@@ -131,7 +165,7 @@ export const Profils: CollectionConfig<'profils'> = {
 		delete: adminSeulement,
 	},
 	hooks: {
-		beforeChange: [slugALaCreation],
+		beforeChange: [slugALaCreation, consentementTrace],
 		afterChange: [slugDeRepliApresCreation],
 	},
 	fields: [
@@ -159,6 +193,55 @@ export const Profils: CollectionConfig<'profils'> = {
 		{ name: 'specialite', label: 'Spécialité', type: 'text', maxLength: 70 },
 		{ name: 'description', label: 'Description', type: 'textarea', maxLength: 2000 },
 		{ name: 'disponible', label: 'Disponible', type: 'checkbox', defaultValue: true },
+		// The networks are public; the contact details are not (ticket 042).
+		{
+			name: 'reseaux',
+			label: 'Réseaux',
+			type: 'group',
+			fields: RESEAUX.map(([name, label]) => ({ name, label, type: 'text' as const, validate: validerLienDeReseau })),
+		},
+		{
+			// Never read by the public through the API, whatever `contactPublic` says: a public page
+			// shows them through src/services/public/, and only when `contactPublic` is true.
+			name: 'coordonnees',
+			label: 'Coordonnées',
+			type: 'group',
+			access: { read: champDuProfilAdminOuProprietaire },
+			admin: {
+				description: 'Fermées au public. La page du profil ne les montre que si « Coordonnées publiques » est cochée.',
+			},
+			fields: [
+				{ name: 'telephone', label: 'Téléphone', type: 'text', validate: validerTelephone },
+				{ name: 'email', label: 'Email de contact', type: 'email', validate: validerEmailDeContact },
+			],
+		},
+		{
+			name: 'contactPublic',
+			label: 'Coordonnées publiques',
+			type: 'checkbox',
+			defaultValue: false,
+			access: { read: champDuProfilAdminOuProprietaire },
+			admin: { description: 'Choisi par la maquilleuse : ses coordonnées s’affichent sur la page de son profil.' },
+		},
+		{
+			name: 'consentiLe',
+			label: 'Consentement donné le',
+			type: 'date',
+			access: { read: champDuProfilAdminOuProprietaire, create: jamais, update: jamais },
+			admin: {
+				readOnly: true,
+				date: { pickerAppearance: 'dayAndTime' },
+				description: 'Posée par le serveur quand les coordonnées deviennent publiques.',
+			},
+		},
+		{
+			name: 'sourceConsentement',
+			label: 'Source du consentement',
+			type: 'select',
+			options: SOURCES_DU_CONSENTEMENT.map(source => ({ label: LIBELLES_DES_SOURCES[source], value: source })),
+			access: { read: champDuProfilAdminOuProprietaire, create: jamais, update: jamais },
+			admin: { readOnly: true, description: 'Posée par le serveur, avec la date.' },
+		},
 		{
 			name: 'legacyUsername',
 			label: 'Nom d’utilisateur sur l’ancien site',

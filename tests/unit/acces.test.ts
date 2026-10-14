@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import type { PayloadRequest } from 'payload'
 import { Admins, DUREE_SESSION_ADMIN_S, premierCompteAdmin, sessionsFermees } from '@/collections/Admins'
-import { CONTEXTE_SANS_PROFIL, Profils } from '@/collections/Profils'
+import { CONTEXTE_SANS_PROFIL, consentementTrace, Profils } from '@/collections/Profils'
 import { compteSansProfilAvantSuppression, Pros, premierCompteFerme } from '@/collections/Pros'
 import {
 	adminOuProprietaire,
@@ -251,6 +251,22 @@ describe('La collection profils (ticket 020)', () => {
 		// Not `required`: a profile created without one, by the server or a test, gets the default.
 		expect(statut).toMatchObject({ type: 'select', defaultValue: 'brouillon' })
 		expect(statut.options?.map(({ value }) => value)).toEqual(['brouillon', 'publie', 'masque'])
+	})
+
+	test('les coordonnées et le choix de les montrer : lus par admin et la propriétaire seulement, jamais par redaction (U59)', () => {
+		for (const nom of ['coordonnees', 'contactPublic', 'consentiLe', 'sourceConsentement'])
+			expect(champ(Profils.fields, nom)?.access?.read).toBe(champDuProfilAdminOuProprietaire)
+		expect(
+			champDuProfilAdminOuProprietaire({ req: { user: redaction } as PayloadRequest, doc: { pro: 2 } } as never)
+		).toBe(false)
+		// The networks are public.
+		expect(champ(Profils.fields, 'reseaux')?.access).toBeUndefined()
+	})
+
+	test('la date et la source du consentement : jamais écrites par une API, posées par le serveur', () => {
+		for (const nom of ['consentiLe', 'sourceConsentement'])
+			expect(champ(Profils.fields, nom)?.access).toMatchObject({ create: jamais, update: jamais })
+		expect(Profils.hooks?.beforeChange).toContain(consentementTrace)
 	})
 
 	test('créer et supprimer un profil : admin seulement ; le serveur le crée avec le compte', () => {
