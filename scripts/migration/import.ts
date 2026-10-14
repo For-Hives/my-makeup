@@ -12,7 +12,9 @@
  * run asks nothing again. `--hors-ligne` asks nothing at all, and stops on an answer not kept.
  *
  * It reads the Strapi database of STRAPI_SOURCE_URI, read-only, and writes into the database of
- * Payload that DATABASE_URI names, through the Local API. A database that is not on this machine
+ * Payload that DATABASE_URI names, through the Local API. The photos are adopted where they are:
+ * their objects are read by requests for headers at the public base of the photos of the
+ * application (R2_PUBLIC_URL, or the storage of the bench), never written. A database that is not on this machine
  * is refused unless the command says `--cible-distante`, before Payload is even loaded. The
  * schema of the target is never changed: a target without the tables of the v3 is refused.
  *
@@ -29,7 +31,7 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
-import { EnvError } from '../../src/lib/env'
+import { EnvError, mediaBaseUrl, serverEnv } from '../../src/lib/env'
 import { FICHIER_DES_COMMUNES_PAR_DEFAUT, lireLesArguments, USAGE } from './import/arguments'
 import {
 	configurationSansChangementDeSchema,
@@ -110,6 +112,8 @@ async function principal(argumentsDeLaCommande: string[]): Promise<number> {
 	const [{ getPayload }, { default: config }] = await Promise.all([import('payload'), import('@payload-config')])
 	const payload = await getPayload({ config: configurationSansChangementDeSchema(await config) })
 	await verifierLeSchemaDeLaCible(payload)
+	// Where the photos are served from, as the application gives their addresses (src/payload.config.ts).
+	const baseDesMedias = mediaBaseUrl(process.env.R2_PUBLIC_URL, serverEnv().storage)
 	const source = ouvrirLaSourceBun(adresseDeLaSource)
 	try {
 		const rapport = await importer({
@@ -119,6 +123,7 @@ async function principal(argumentsDeLaCommande: string[]): Promise<number> {
 			cible,
 			decisions,
 			referentiel,
+			medias: { base: baseDesMedias },
 			// Read by its owner only: what was asked of the referential for each city to review.
 			surLaRevue: revue => {
 				if (options.revue) writeFileSync(options.revue, `${JSON.stringify(revue, null, '\t')}\n`, { mode: 0o600 })

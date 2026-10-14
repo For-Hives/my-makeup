@@ -10,6 +10,7 @@
 
 import type { GenreDeCible } from './cible'
 import type { BilanDesCommunes } from './communes'
+import type { BilanDesFichiers } from './medias'
 import type { Bilan, CollectionImportee, Parite } from './moteur'
 import { pariteComplete, sansEcartInexplique } from './moteur'
 import type { EmpreinteDesTables } from './source'
@@ -42,6 +43,8 @@ export interface BilanDeCollection extends Bilan {
 	statutsDifferentsDeLaSource?: number[]
 	/** The cities typed, become communes (ticket 063): in numbers and identifiers, never a text. */
 	communes?: BilanDesCommunes
+	/** The files of the source, adopted or not (ticket 058): in numbers and identifiers, never an address. */
+	fichiers?: BilanDesFichiers
 }
 
 /** The parity of a collection, and how the target splits, read again. */
@@ -79,6 +82,7 @@ export interface Rapport {
 /** The order the import writes the collections in, and their names in the report. */
 export const NOMS_DES_COLLECTIONS: Readonly<Record<CollectionImportee, string>> = {
 	pros: 'Comptes',
+	media: 'Médias',
 	profils: 'Profils',
 	talents: 'Talents',
 }
@@ -126,12 +130,33 @@ function ligneDeBilan(nom: string, bilan: BilanDeCollection, mode: Mode): string
 		lignes.push(
 			`  - écartés, profils vides laissés sans compte par le spam (SCHEMA.md §4.1) : ${bilan.spam.length} (${ids(bilan.spam)})`
 		)
+	if (bilan.fichiers) lignes.push(...lignesDesFichiers(bilan.fichiers))
 	if (bilan.communes) lignes.push(...lignesDesCommunes(bilan.communes))
 	if (bilan.statuts) lignes.push(`  - ${statutsEnTexte(bilan.statuts)}`)
 	if (bilan.statutsDifferentsDeLaSource?.length)
 		lignes.push(
 			`  - statut autre que celui que donne la source (section pas encore reprise, ou ville sans commune) : ${ids(bilan.statutsDifferentsDeLaSource)}`
 		)
+	return lignes
+}
+
+function lignesDesFichiers(fichiers: BilanDesFichiers): string[] {
+	const lignes = [
+		`  - fichiers : ${fichiers.designes} désignés par un profil ou un article repris ; ` +
+			`désignés par aucun, donc non adoptés : ${fichiers.deEntreesNonPrises} liés à une entrée non reprise, ` +
+			`${fichiers.deEntreesDisparues} à une entrée disparue, ${fichiers.sansLien} sans lien`,
+	]
+	if (fichiers.sansStockage)
+		lignes.push('  - aucun stockage des photos n’est donné à ce passage : aucun fichier n’est adopté')
+	const parMotif = new Map<string, number[]>()
+	for (const { fichier, motif } of fichiers.nonAdoptes) parMotif.set(motif, [...(parMotif.get(motif) ?? []), fichier])
+	for (const [motif, liste] of parMotif) lignes.push(`  - non adoptés (${motif}) : ${ids(liste)}`)
+	if (fichiers.introuvables.length > 0)
+		lignes.push(`  - 404 connus, adoptés sans objet dans le stockage : ${ids(fichiers.introuvables)}`)
+	if (fichiers.nomsDifferents.length > 0)
+		lignes.push(`  - objet nommé autrement que hash suivi de ext : ${ids(fichiers.nomsDifferents)}`)
+	if (fichiers.envoyesParUnAutreCompte.length > 0)
+		lignes.push(`  - envoyés par un autre compte que celui du profil : ${ids(fichiers.envoyesParUnAutreCompte)}`)
 	return lignes
 }
 

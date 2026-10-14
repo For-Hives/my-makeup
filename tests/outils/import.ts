@@ -8,7 +8,8 @@
  *
  * Both read the kept answers of the referential of the communes for the fake source
  * (tests/fixtures/import/referentiel-du-banc.json), offline: no test calls the Internet. A test
- * that asks the referential itself simulates it (`simuler`) and gives `referentiel`.
+ * that asks the referential itself simulates it (`simuler`) and gives `referentiel`. Both adopt the
+ * photos of the source in the storage of the bench, where the source put them.
  *
  * The source must exist: a test file creates it (`creerLaSourceStrapi()`) and drops it at the end.
  */
@@ -62,6 +63,7 @@ export async function importerSurLeBanc(
 			cible: 'locale',
 			decisions: DECISIONS_DU_BANC,
 			referentiel: referentielDuBanc(),
+			medias: { base: sourceDuBanc().medias },
 			...options,
 		})
 	} finally {

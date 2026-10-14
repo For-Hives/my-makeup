@@ -4,6 +4,7 @@ import {
 	type CollectionBeforeOperationHook,
 	type CollectionConfig,
 	type Field,
+	MissingFile,
 	NotFound,
 	type Plugin,
 	type UploadConfig,
@@ -93,8 +94,27 @@ export const versLAdressePublique =
 		return Response.redirect(adresseDuMedia(base, media.prefix, media.filename), 302)
 	}
 
-/** Nothing is ever written on the disk of the server: with a storage, the object goes there; without one, nowhere. */
-export const UPLOAD_DES_MEDIAS: UploadConfig = { disableLocalStorage: true }
+/**
+ * A media always names its object: a creation that ends without a file name is refused, as
+ * Payload refuses an upload without a file (`MissingFile`, 400).
+ *
+ * Payload's own check (`filesRequiredOnCreate`) is off, for one case only: the import adopts a
+ * photo of the old site where it already is, without copying it (ticket 058). It creates the
+ * document through the Local API with the name and the prefix read in the address of the file,
+ * and no file. A request never gets there: Payload and `coordonneesParLeServeur` drop the name it
+ * sends, so without a file it has none, and it is refused here.
+ */
+export const unFichierALaCreation: CollectionBeforeChangeHook = ({ data, operation, req }) => {
+	if (operation === 'create' && (typeof data.filename !== 'string' || data.filename === ''))
+		throw new MissingFile(req.t)
+	return data
+}
+
+/**
+ * Nothing is ever written on the disk of the server: with a storage, the object goes there;
+ * without one, nowhere. A creation without a file is left to `unFichierALaCreation`.
+ */
+export const UPLOAD_DES_MEDIAS: UploadConfig = { disableLocalStorage: true, filesRequiredOnCreate: false }
 
 /**
  * The photos of the site (plan 01 §6.1; docs/migration/SCHEMA.md, §8). Each one is an object of
@@ -130,7 +150,7 @@ export const Media: CollectionConfig<'media'> = {
 	upload: UPLOAD_DES_MEDIAS,
 	hooks: {
 		beforeOperation: [coordonneesParLeServeur],
-		beforeChange: [proprietaireALEnvoi],
+		beforeChange: [unFichierALaCreation, proprietaireALEnvoi],
 	},
 	fields: [
 		{ name: 'alt', label: 'Texte alternatif', type: 'text' },

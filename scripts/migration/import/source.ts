@@ -31,6 +31,7 @@ export const iso = (colonne: string): string => `to_char(${colonne}, 'YYYY-MM-DD
  */
 export const TABLES_LUES = [
 	'up_users',
+	'files',
 	'makeup_artistes',
 	'makeup_artistes_user_links',
 	'makeup_artistes_components',

@@ -8,10 +8,14 @@
  *   run before any write, dry or real, and the report lists it by identifiers.
  * - The city of each profile taken becomes a commune of the official list (./communes.ts), asked
  *   to the referential before any write: a referential that does not answer stops the run there.
+ * - The files the profiles taken designate are adopted where they are
+ *   (./medias.ts): the storage is read before any write, by requests for headers only, and a
+ *   storage that does not answer stops the run there. Nothing is ever written in the storage.
  * - A dry run (the default) reads the target and says what it would write; it writes nothing.
- * - A real run writes collection by collection, the accounts first, then their profiles, then
- *   the talents, and reads every collection again: its parity is complete when the target holds
- *   exactly what the source gives, with the same values.
+ * - A real run writes collection by collection, in the order of plan 01 §5 (P4): the accounts
+ *   first, then the media they own, the profiles, the talents, and reads every collection again:
+ *   its parity is complete when the target holds exactly what the source gives, with the same
+ *   values.
  */
 
 import type { Payload } from 'payload'
@@ -20,6 +24,17 @@ import { type CasARevoir, communesDesProfils } from './communes'
 import { ADAPTATEUR_COMPTES, comptesAttendus, lireLesComptes, repartitionDesComptes } from './comptes'
 import { AUCUNE_DECISION, type Decisions } from './decisions'
 import { REFERENCES } from './ecarts'
+import {
+	ADAPTATEUR_MEDIAS,
+	bilanDesFichiers,
+	classerLesFichiers,
+	lireLesFichiers,
+	mediasAttendus,
+	type Presence,
+	type Sonde,
+	sondeHttp,
+	sonderLesObjets,
+} from './medias'
 import {
 	type Adaptateur,
 	type Attendu,
@@ -52,6 +67,17 @@ export interface OptionsDImport {
 	surLaRevue?: (revue: CasARevoir[]) => void
 	/** The password of a new account; random by default. Given by a test only. */
 	tirerMotDePasse?: () => string
+	/**
+	 * The storage of the photos (./medias.ts): the public base of the photos (`mediaBaseUrl`,
+	 * src/lib/env.ts), and how the headers of an object are read (`HEAD` by default). None: the run
+	 * has no storage (the pre-production), and no file is adopted.
+	 */
+	medias?: OptionsDesMedias
+}
+
+export interface OptionsDesMedias {
+	base: string
+	sonder?: Sonde
 }
 
 /** Counts the transformations of the expected documents, by reference. */
@@ -85,14 +111,25 @@ async function pariteDe(
 }
 
 /**
- * The identifier in Payload of each account the run takes, by its `strapiId`: `null` for an
- * account still to be created, in a dry run.
+ * The identifier in Payload of each document the run takes in a collection, by its `strapiId`:
+ * `null` for a document still to be created, in a dry run. A document Payload refused while
+ * writing is left out: nothing may point at it.
  */
-async function idsDesComptesPris(payload: Payload, comptes: readonly Attendu[]): Promise<Map<number, number | null>> {
+async function idsDansLaCible(
+	payload: Payload,
+	adaptateur: Adaptateur,
+	attendus: readonly Attendu[],
+	refuses: readonly Refus[] = []
+): Promise<Map<number, number | null>> {
 	const existants = new Map(
-		(await lireLaCible(payload, ADAPTATEUR_COMPTES)).map(({ id, valeurs }) => [Number(valeurs.strapiId), id])
+		(await lireLaCible(payload, adaptateur)).map(({ id, valeurs }) => [Number(valeurs.strapiId), id])
 	)
-	return new Map(comptes.map(({ strapiId }) => [strapiId, existants.get(strapiId) ?? null]))
+	const refusesParPayload = new Set(refuses.map(({ strapiId }) => strapiId))
+	return new Map(
+		attendus
+			.filter(({ strapiId }) => !refusesParPayload.has(strapiId))
+			.map(({ strapiId }) => [strapiId, existants.get(strapiId) ?? null])
+	)
 }
 
 /** How many documents of the target per status. */
@@ -112,10 +149,12 @@ export async function importer(options: OptionsDImport): Promise<Rapport> {
 		referentiel,
 		surLaRevue,
 		tirerMotDePasse,
+		medias,
 	} = options
 	const avant = await source.lire(requete => empreinteDesTables(requete))
 	const lu = await source.lire(async requete => ({
 		comptes: await lireLesComptes(requete),
+		fichiers: await lireLesFichiers(requete),
 		profils: await lireLesProfils(requete),
 		talents: await lireLesTalents(requete),
 	}))
@@ -154,7 +193,7 @@ export async function importer(options: OptionsDImport): Promise<Rapport> {
 		for (const { attendus } of [comptes, talents]) compterLesEcarts(rapport.ecarts, attendus)
 
 		// Before any write: the referential may not answer, or a line of the table name an unknown commune.
-		const nonPris = new Set([...laisses.ecartes, ...laisses.spam])
+		const nonPris = new Set<number>([...laisses.ecartes, ...laisses.spam])
 		const communes = await communesDesProfils(
 			lu.profils
 				.filter(({ id }) => !nonPris.has(id))
@@ -165,6 +204,28 @@ export async function importer(options: OptionsDImport): Promise<Rapport> {
 		rapport.decisionsSansObjet += communes.sansObjet
 		surLaRevue?.(communes.revue)
 
+		// Before any write: which files are adopted, and what the storage holds of their objects, read
+		// by requests for headers only. A storage that does not answer stops the run here.
+		const profilsPris = new Map(
+			lu.profils.flatMap(({ id, compte }) => (nonPris.has(id) || compte === null ? [] : [[id, compte] as const]))
+		)
+		const classement = classerLesFichiers(
+			lu.fichiers,
+			{
+				profils: profilsPris,
+				// The articles are ticket 061: a file of an article is not designated yet.
+				articles: new Set(),
+				profilsDeLaSource: new Set(lu.profils.map(({ id }) => id)),
+				articlesDeLaSource: new Set(),
+			},
+			medias?.base ?? null
+		)
+		const presences: Map<number, Presence> = medias
+			? await sonderLesObjets(classement.adoptables, medias.base, medias.sonder ?? sondeHttp)
+			: new Map()
+		const nonImages = classement.nonAdoptes.filter(({ motif }) => motif === 'pas-une-image').length
+		if (nonImages > 0) rapport.ecarts[REFERENCES.fichiersNonImages] = nonImages
+
 		rapport.collections.pros = {
 			...(await importerLaCollection(options, ADAPTATEUR_COMPTES, lu.comptes.length, comptes.attendus)),
 			ecartes: comptes.ecartes,
@@ -172,8 +233,22 @@ export async function importer(options: OptionsDImport): Promise<Rapport> {
 			repartition: repartitionDesComptes(comptes.attendus),
 		}
 
-		// Each profile points at its account in Payload, read once the accounts are written.
-		const idsDesComptes = await idsDesComptesPris(payload, comptes.attendus)
+		// Each profile, and each media of a profile, points at its account in Payload, read once the
+		// accounts are written.
+		const idsDesComptes = await idsDansLaCible(payload, ADAPTATEUR_COMPTES, comptes.attendus)
+		const lesMedias = mediasAttendus(classement.adoptables, presences, idsDesComptes)
+		compterLesEcarts(rapport.ecarts, lesMedias)
+		rapport.collections.media = {
+			...(await importerLaCollection(
+				options,
+				ADAPTATEUR_MEDIAS,
+				lu.fichiers.fichiers.length,
+				lesMedias,
+				classement.refuses
+			)),
+			fichiers: bilanDesFichiers(classement, presences, medias === undefined),
+		}
+
 		const profils = profilsAttendus(lu.profils, idsDesComptes, laisses, communes.communes)
 		compterLesEcarts(rapport.ecarts, profils.attendus)
 		if (laisses.spam.length > 0) rapport.ecarts[REFERENCES.profilsDuSpam] = laisses.spam.length
@@ -199,6 +274,7 @@ export async function importer(options: OptionsDImport): Promise<Rapport> {
 			const lesProfils = await pariteDe(payload, ADAPTATEUR_PROFILS, profils.attendus, rapport.collections.profils)
 			rapport.parite = {
 				pros: { ...pros.parite, repartition: repartitionDesComptes(pros.cible) },
+				media: (await pariteDe(payload, ADAPTATEUR_MEDIAS, lesMedias, rapport.collections.media)).parite,
 				profils: { ...lesProfils.parite, statuts: statutsDe(lesProfils.cible) },
 				talents: (await pariteDe(payload, ADAPTATEUR_TALENTS, talents.attendus, rapport.collections.talents)).parite,
 			}

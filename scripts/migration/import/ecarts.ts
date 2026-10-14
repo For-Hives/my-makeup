@@ -25,6 +25,10 @@ export const REFERENCES = {
 	disponibiliteParDefaut: 'disponibilite-par-defaut',
 	/** The 13 empty profiles left without an account by the spam of 10/10/2026 are not taken. */
 	profilsDuSpam: 'profils-spam-non-repris',
+	/** The size of an adopted file is the one of its object in the storage, in bytes, not the rounded one of Strapi (§8). */
+	tailleEnOctets: 'SCHEMA.md §8 (size)',
+	/** A designated file that is not an image is not adopted: its profile or its article loses it. */
+	fichiersNonImages: 'fichiers-non-images-non-repris',
 } as const
 
 export type Reference = (typeof REFERENCES)[keyof typeof REFERENCES]
