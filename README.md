@@ -215,9 +215,9 @@ bun run dev
 
 - Accueil provisoire : <http://localhost:3000>
 - Espace maquilleuse : <http://localhost:3000/auth>
-- Administration : <http://localhost:3000/admin>. À la première visite, Payload crée ses tables puis propose de créer le premier compte.
+- Administration : <http://localhost:3000/admin>. À la première visite, Payload crée ses tables. L'écran du premier compte est fermé : crée le tien par `bun run admin:creer <ton adresse>` (voir « Créer un compte admin »).
 
-Le serveur de développement n'écoute que sur `127.0.0.1` : il n'est pas joignable depuis le réseau local, où le premier venu pourrait créer ce premier compte.
+Le serveur de développement n'écoute que sur `127.0.0.1` : il n'est pas joignable depuis le réseau local.
 
 Si le port 3000 est pris : `PORT=3100 bun run dev`.
 
@@ -301,6 +301,24 @@ L'application vérifie ses variables à chaque démarrage (`bun run dev`, `bun r
 - **Après le lien**, elle se connecte et arrive dans l'onboarding (`/auth/init-account`), réduit pour l'instant à son arrivée : les étapes qui remplissent le profil viennent avec les tickets de l'espace.
 - L'interrupteur `AUTH_VERIFY` est décrit dans « Variables d'environnement ». Le schéma de `pros` ne change pas avec lui : `auth.verify` reste actif, et `off` crée le compte déjà confirmé.
 
+### Créer un compte admin
+
+L'écran « créer le premier compte » de l'administration est fermé (`POST /api/admins/first-register` répond 403, même sur une base vide). Tant qu'aucun admin n'existe, et pour chaque nouveau compte, on passe par la commande ; une fois connecté, un `admin` peut aussi créer des comptes `admin` ou `redaction` dans l'administration (le rôle par défaut est `redaction`) :
+
+```sh
+bun run admin:creer <email>                    # un admin, sur la base de DATABASE_URI
+bun run admin:creer <email> --role=redaction   # un compte rédaction
+bun run admin:creer <email> --cible-distante   # quand DATABASE_URI n'est pas sur ce poste
+```
+
+- **Le mot de passe se tape au clavier, deux fois, sans s'afficher.** Il n'existe aucune option, aucune variable d'environnement ni aucun tube pour le donner : hors d'un terminal, la commande refuse. Douze caractères au moins, aucune règle de composition. Elle n'affiche que l'identifiant et le rôle du compte créé, jamais l'adresse ni le mot de passe.
+- **Elle écrit par l'API locale** dans la base de `DATABASE_URI`, sans toucher au schéma : les tables sont celles que l'application a créées. Une base qui n'est pas sur ce poste est refusée sauf `--cible-distante`, avant tout chargement. Elle refuse une adresse qui a déjà un compte, et deux saisies différentes.
+- **Aucun compte admin de l'ancien site n'est importé** : les trois comptes de l'ancien Strapi ne sont pas repris, ils se recréent ici. Le rôle `admin` est celui du propriétaire ; `redaction` sert aux comptes qui n'écrivent que des articles et des talents.
+- Sur la préprod, le premier compte est à recréer après chaque remise à zéro, depuis un poste, avec `--cible-distante` et la base de la préprod nommée par `DATABASE_URI` dans l'environnement du seul processus (jamais dans un fichier du dépôt).
+- **Quand la base n'est pas publique** (préprod, puis production, ticket 185), l'image déployée ne contient ni `bun` ni `scripts/` : la commande ne peut pas s'y lancer. Elle se lance depuis un poste, par une ouverture **temporaire** de la base : dans Coolify, ressource de la base, « Make it publicly available » sur un port, ou un tunnel vers elle. Dans l'ordre : ouvrir, lancer `DATABASE_URI=… bun run admin:creer <email> --cible-distante` (la variable posée sur cette seule ligne, jamais dans un fichier), puis **refermer l'ouverture aussitôt**. La base est sensible : ne jamais laisser le port ouvert, et le pare-feu du serveur reste la seule autre barrière. Aucun accès SSH n'est configuré, c'est donc le chemin prévu pour la préprod. Pour la production, le ticket 185 reprend cette procédure.
+
+Les tests : `tests/unit/admin-creer.test.ts` (les règles et la commande), `tests/integration/admins-roles.test.ts` (l'écran du premier compte fermé, le frein), `tests/integration/verrous-payload.test.ts` et la matrice d'accès (les verrous), et `tests/e2e/admin-refuse-maquilleuse.spec.ts` (E54 : une maquilleuse connectée n'ouvre pas `/admin`, et les verrous marchent pour les comptes du panneau).
+
 ### Accès
 
 - GraphQL est coupé : `/api/graphql` et `/api/graphql-playground` répondent 404.
@@ -309,7 +327,8 @@ L'application vérifie ses variables à chaque démarrage (`bun run dev`, `bun r
 - Dans un navigateur, une page ouverte depuis un autre site (un lien dans un webmail, un résultat de recherche) arrive sans en-tête `Origin` et avec `Sec-Fetch-Site: cross-site` : le cookie de session est ignoré pour cette page, et la personne y paraît déconnectée. Une adresse tapée, un favori et un lien du site lui-même ne sont pas concernés. Une page privée de l'espace (`/auth/profil`) traite cette personne comme n'ayant pas de session : une redirection vers `/auth/signin?callbackUrl=…`, où elle se reconnecte une fois (ticket 075).
 - Aucun autre site ne peut lire l'API depuis un navigateur : aucune origine n'est ouverte en CORS.
 - `/api/og`, l'image de partage de l'administration, est fermée.
-- Deux rôles ouvrent l'administration : `admin` peut tout ; `redaction` ne lit et ne modifie que son propre compte, sans pouvoir changer son rôle. Une session de l'administration dure 8 heures. Le premier compte d'une base vide est toujours un `admin`, quel que soit le rôle choisi sur l'écran du premier compte.
+- Deux rôles ouvrent l'administration : `admin` peut tout ; `redaction` ne lit et ne modifie que son propre compte, sans pouvoir changer son rôle. Une session de l'administration dure 8 heures. Aucun visiteur ne crée de compte de l'administration : l'écran du premier compte (`POST /api/admins/first-register`) répond 403, sur une base vide comme sur une base pleine, et pour une maquilleuse connectée comme pour un visiteur. Le premier compte se crée par `bun run admin:creer` (voir « Créer un compte admin »), jamais importés de l'ancien site. La connexion de l'administration (`POST /api/admins/login`) a le même frein par adresse que celle des maquilleuses ; comme pour les maquilleuses, le compte n'est jamais verrouillé (`maxLoginAttempts: 0`), pour qu'on ne puisse pas enfermer dehors le propriétaire en frappant à son adresse.
+- Les verrous d'édition de Payload (collection interne `payload-locked-documents`) sont réservés aux comptes `admin` et `redaction` : une maquilleuse et un visiteur reçoivent 403 en lecture, en pose, en changement et en retrait. Un verrou porte toujours le compte de la session, quel que soit le `user` du corps de la requête : la reprise en main d'un document par un second compte du panneau passe par là. Les règles sont posées au démarrage (`src/lib/verrous-payload.ts`).
 - Une maquilleuse (collection `pros`) n'entre jamais dans l'administration. Elle ne lit et ne modifie que son propre compte, sans pouvoir changer ses champs réservés (bloqué, vérifié, fournisseur d'origine, identifiant de l'ancien site). Aucun anonyme ne crée de compte par l'API REST, même sur une base vide. Le mot de passe, le hash hérité de l'ancien site et les sessions ne sortent jamais, pas même pour un admin : Payload rend la liste des sessions toujours vide. L'email d'un compte est rangé en minuscules : deux adresses qui ne diffèrent que par la casse sont le même compte.
 - Créer le compte d'une maquilleuse crée son profil vide (collection `profils`), avec un slug unique calculé par le serveur à partir du nom du compte (`src/lib/slug.ts`) : `-2`, `-3` pour les homonymes, `maquilleuse-<identifiant>` pour un nom qui ne donne rien. Le slug ne change plus ensuite, et aucune API ne l'écrit. Une création qui porte `CONTEXTE_SANS_PROFIL` (`src/collections/Profils.ts`) laisse le compte sans profil : c'est ce que fera l'import pour les comptes qui n'en ont pas. Une maquilleuse ne modifie que son propre profil ; un compte sans profil ne modifie rien. Un compte qui a encore un profil n'est pas supprimé : le profil part d'abord.
 - Un profil a un statut : `brouillon` (celui d'un profil neuf), `publie` ou `masque`. L'anonyme et le rôle `redaction` ne lisent que les profils publiés ; une maquilleuse lit le sien, quel que soit son statut, et les profils publiés. Le serveur calcule lui-même le statut : brouillon pour un profil entièrement vide, publié sinon, à moins qu'un admin n'en ait choisi un autre (voir « État d'un profil »). Ce que lit le public d'un profil est son identité et le badge « Super maquilleuse », jamais le compte relié, ni ce qu'a écrit l'import (`strapiId`, `legacyUsername`), ni ce qu'a décidé un admin. Seul un admin écrit le choix du statut, le motif, la vérification et sa date, le SIRET, la note interne, le score et le badge : ce qu'une maquilleuse envoie sur ces champs est ignoré. Elle lit son statut, son motif, sa vérification et son SIRET, jamais la note interne ni le score.
@@ -499,6 +518,7 @@ Rien ne se publie avant la fusion de `v3` dans `main`. Le détail, et ce qu'il r
 | `bun run banc:import` | L'import des données de l'ancien site sur le banc : il lit la fausse base Strapi et écrit dans la base du banc. À blanc par défaut, `--reel` pour écrire (voir `docs/migration/IMPORT.md`) |
 | `bun run banc:rapprocher [--json] [--hors-import]` | Le rapprochement à blanc du stockage et de la base du banc : objets sans média, médias sans objet, médias sans profil, avec la corbeille comptée à part. Ne supprime rien (aucune option ne le permet) ; code de sortie 1 s'il trouve un orphelin. La CI le lance après les essais de bout en bout (voir `docs/tests/banc.md`, « Le rapprochement du stockage et de la base »). |
 | `bun run migration:import` | L'import des données de l'ancien site, avec `DATABASE_URI` et `STRAPI_SOURCE_URI` de l'environnement. À blanc par défaut ; `--reel` écrit ; une base qui n'est pas sur ce poste demande `--cible-distante` (voir `docs/migration/IMPORT.md`) |
+| `bun run admin:creer <email>` | Crée un compte de l'administration, et la seule façon d'avoir le premier. Le mot de passe se tape au clavier, deux fois (voir « Créer un compte admin ») |
 | `bun run test:integration` | Les tests d'intégration de `tests/integration/`, sur le banc. Avec un chemin : ce fichier seul |
 | `bun run test:e2e` | Les essais de bout en bout de `tests/e2e/`, dans un vrai navigateur, contre l'application construite et branchée sur le banc. Avec un chemin : ce fichier seul |
 | `bun run sondes` | Les sondes de `tests/sondes/` : lisent le site en ligne, en GET seulement, 2 requêtes par seconde au plus. Une autre cible par `SONDES_CIBLE` (voir « Les sondes du site en ligne ») |

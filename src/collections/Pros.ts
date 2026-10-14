@@ -1,4 +1,4 @@
-import { APIError, type CollectionBeforeDeleteHook, type CollectionConfig, type Endpoint, Forbidden } from 'payload'
+import { APIError, type CollectionBeforeDeleteHook, type CollectionConfig } from 'payload'
 import { adminOuSoiMeme, adminSeulement, champAdminSeulement, jamais } from '../lib/acces'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import { freinerLaConnexion, rendreLaPlaceDeLaConnexion } from '../lib/auth/frein-payload'
@@ -11,8 +11,12 @@ import {
 import { contenuEmailConfirmation, SUJET_DE_CONFIRMATION } from '../lib/emails/confirmation'
 import { composerEmail } from '../lib/emails/gabarit'
 import { DUREE_SESSION_S, prolongerSousPlafond, refuserApresLePlafond } from '../lib/auth/session-glissante'
+import { premierCompteFerme } from '../lib/auth/premier-compte-ferme'
 import { sessionsFermees } from './Admins'
 import { profilALaCreationDuCompte } from './Profils'
+
+// Kept exported from here: the tests and the earlier tickets import it from this file.
+export { premierCompteFerme }
 
 /** How long a session of a makeup artist lasts: 14 days (plan 01 §2.3). */
 export const DUREE_SESSION_PRO_S = DUREE_SESSION_S
@@ -22,20 +26,6 @@ export const DUREE_SESSION_PRO_S = DUREE_SESSION_S
  * Secure on the deployed site. The sign-in sets it with these same attributes.
  */
 export const cookiesDeSession = (production: boolean) => ({ secure: production, sameSite: 'Lax' as const })
-
-/**
- * Payload gives every account collection a « first account » route, which creates an account
- * without access control while the collection is empty. It serves the admin panel, which a makeup
- * artist never opens: here it is closed, so that no anonymous request creates an account through
- * REST, even on an empty database. A collection's own routes come before Payload's.
- */
-export const premierCompteFerme: Endpoint = {
-	path: '/first-register',
-	method: 'post',
-	handler: req => {
-		throw new Forbidden(req.t)
-	},
-}
 
 /**
  * An account that still has a profile is not deleted: the profile goes first, then the account.

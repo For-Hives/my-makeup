@@ -11,7 +11,7 @@ La première requête qui arrive après un démarrage (le contrôle de santé de
 1. **Remise à zéro**, si `PREPROD_REMISE_A_ZERO` porte un jeton nouveau (voir plus bas). Elle a lieu quand Payload se connecte à sa base, **avant** qu'il joue ses migrations.
 2. **Migrations** : Payload joue celles de `src/migrations/` qui manquent à la base, comme partout en production. Une migration qui échoue arrête l'application.
 3. **Base déjà remplie ?** Si l'une des collections qu'écrit le jeu (`pros`, `media`, `profils`, `talents`, `articles`) contient un document, rien d'autre ne se passe : la base est gardée telle quelle. Un compte admin seul ne compte pas.
-4. **Base vide** : l'application charge le **jeu fictif du banc de test** ([`tests/banc.md`](tests/banc.md), « Le banc complet ») : les 12 profils types avec leur maquilleuse fictive et leurs photos, 3 talents et 3 articles dont un brouillon. Ce chargement a remplacé l'import de la fausse base Strapi que faisait la première tranche. Il ne crée **aucun compte d'administration** : le premier admin est celui que l'on crée en ouvrant `/admin`.
+4. **Base vide** : l'application charge le **jeu fictif du banc de test** ([`tests/banc.md`](tests/banc.md), « Le banc complet ») : les 12 profils types avec leur maquilleuse fictive et leurs photos, 3 talents et 3 articles dont un brouillon. Ce chargement a remplacé l'import de la fausse base Strapi que faisait la première tranche. Il ne crée **aucun compte d'administration** : le premier admin se crée par `bun run admin:creer` (README, « Créer un compte admin »), l'écran du premier compte de `/admin` étant fermé.
 5. Le profil fictif de Zoé Lefèvre (le type 9, l'ancien nom accentué) est alors en ligne : `https://preprod.my-makeup.fr/profil/zoe-lefevre`, son nom en titre.
 
 Il faut deux choses dans Coolify, en variables d'exécution (jamais « Build Variable »), pour que ce chargement ait lieu et soit complet :
@@ -64,7 +64,7 @@ Gardes :
 - **Sur la base `mymakeup_preprod` seulement.** Sur une autre base, rien n'est effacé : `Remise à zéro « … » non faite, la base est gardée.`, suivi de la raison. L'application démarre ensuite sur la base telle qu'elle est.
 - Sans migration à rejouer, la remise est refusée avant d'effacer quoi que ce soit.
 - Une erreur pendant la remise est écrite dans le journal par son type et son code, et l'application démarre sur la base telle qu'elle est.
-- Le premier compte admin est à recréer après une remise (à la première visite de `/admin`).
+- Le premier compte admin est à recréer après une remise, par `bun run admin:creer` depuis un poste, par une ouverture temporaire de la base (README, « Créer un compte admin », dernière puce) : l'écran du premier compte de `/admin` est fermé. **Avant que cette version arrive sur la préprod**, il faut donc que le premier admin existe déjà, sinon `/admin` n'offre plus aucun moyen d'en créer un.
 
 ## Relancer l'import
 
