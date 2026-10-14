@@ -57,7 +57,10 @@ async function verifier(): Promise<
 	})
 	if (resultat.verification !== 'acceptee') return resultat
 	const user = resultat.utilisateur as { id: number | string; nom?: string | null; email: unknown }
-	return { verification: 'acceptee', maquilleuse: { id: user.id, nom: user.nom ?? '', email: String(user.email), expire: null } }
+	return {
+		verification: 'acceptee',
+		maquilleuse: { id: user.id, nom: user.nom ?? '', email: String(user.email), expire: null },
+	}
 }
 
 /**

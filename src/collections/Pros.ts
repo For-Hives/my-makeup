@@ -8,10 +8,10 @@ import {
 	noterLeDebutDeLaConnexion,
 	retenirLaDerniereConnexion,
 } from '../lib/auth/journal-payload'
+import { premierCompteFerme } from '../lib/auth/premier-compte-ferme'
+import { DUREE_SESSION_S, prolongerSousPlafond, refuserApresLePlafond } from '../lib/auth/session-glissante'
 import { contenuEmailConfirmation, SUJET_DE_CONFIRMATION } from '../lib/emails/confirmation'
 import { composerEmail } from '../lib/emails/gabarit'
-import { DUREE_SESSION_S, prolongerSousPlafond, refuserApresLePlafond } from '../lib/auth/session-glissante'
-import { premierCompteFerme } from '../lib/auth/premier-compte-ferme'
 import { sessionsFermees } from './Admins'
 import { profilALaCreationDuCompte } from './Profils'
 
