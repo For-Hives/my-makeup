@@ -26,6 +26,7 @@
  * No server code here: the artist's space runs the same function in the browser.
  */
 
+import { parsePrice } from '@/lib/prix'
 import { villePublique } from '@/lib/profil/lieu-public'
 
 /** The 13 criteria of the progress bar, in display order */
@@ -177,16 +178,10 @@ export function villeExploitable(city: unknown): boolean {
 
 /**
  * First amount read in a text price (« à partir de 80 € », « 1 200 € »), or null (« Sur devis »,
- * out of 5 to 10 000).
+ * out of 5 to 10 000). The reading itself is the single price rule of src/lib/prix.ts.
  */
 export function prixNumerique(price: unknown): number | null {
-	const v = texte(price)
-		.replace(/(\d)[\s\u00a0\u202f](?=\d{3}\b)/g, '$1')
-		.replace(',', '.')
-	const m = /(\d+(?:\.\d+)?)/.exec(v)
-	if (m === null) return null
-	const montant = Number(m[1])
-	return montant >= 5 && montant <= 10_000 ? montant : null
+	return parsePrice(price).prixAPartirDe
 }
 
 /** Length of the description, leading and trailing spaces ignored, runs of spaces counted once. */
