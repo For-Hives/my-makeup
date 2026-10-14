@@ -138,6 +138,7 @@ test.describe('E59 et E65 : l’article du blog', { tag: '@mobile' }, () => {
 			expect(reponse?.status(), slug).toBe(404)
 			await expect(page.getByRole('heading', { level: 1, name: '404 - Page non trouvée' })).toBeVisible()
 			await expect(page.getByRole('navigation', { name: 'Navigation principale' })).toBeVisible()
+			// Without a browser, as a robot reads it: the status.
 			expect((await request.get(`/blog/${slug}`)).status(), slug).toBe(404)
 		}
 	})

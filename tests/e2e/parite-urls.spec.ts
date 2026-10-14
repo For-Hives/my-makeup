@@ -40,6 +40,7 @@ const LIVREES: ReadonlySet<string> = new Set([
 	'historiques',
 	'llms-txt',
 	'article',
+	'talent',
 	'barre-finale',
 	'double-barre',
 	'toutes-les-news',

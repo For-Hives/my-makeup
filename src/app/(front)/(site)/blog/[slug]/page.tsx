@@ -98,7 +98,7 @@ export default async function PageDeLArticle({ params }: PageProps<'/blog/[slug]
 				<script
 					key={bloc['@type']}
 					type="application/ld+json"
-					// biome-ignore lint/security/noDangerouslySetInnerHtml: serializeJsonLd escapes <, > and &, so the data cannot close the tag.
+					// serializeJsonLd escapes <, > and &, so the data cannot close the tag.
 					dangerouslySetInnerHTML={{ __html: serializeJsonLd(bloc) }}
 				/>
 			))}

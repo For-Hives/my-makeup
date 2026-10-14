@@ -192,6 +192,8 @@ Table `talents`, 14 lignes, toutes publiées. Brouillons possibles dans Strapi. 
 | `content` | `richtext` | `talents.content` (`code`, markdown) | Repris tel quel, à l'octet près. Même raison que pour les articles. |
 | `slug` | `string` | `talents.slug` (`text`, unique, requis pour publier) | Repris tel quel : les 14 adresses `/talent/<slug>` sont conservées. Un doublon, ou un slug qui n'a pas déjà la forme d'une adresse (celle que donne `src/lib/slug.ts` : minuscules sans accent, mots séparés par un tiret), est refusé, puis listé (règle 5). |
 
+Un champ de plus, qui n'existe pas dans Strapi (ticket 108) : `talents.titreDeLaPage` (`text`, optionnel). C'est le titre de la page (l'onglet et les résultats de recherche), écrit par la rédaction : de 50 à 60 caractères, et différent de `seo_title`, qui reste le titre affiché en haut de la page. Il est vide à l'import et l'import ne l'écrit jamais ; vide, la page garde le titre du site actuel (`talents.title` suivi du nom du site).
+
 ## 6. Composants (7)
 
 Chaque composant répétable devient un champ `array` du profil. L'identifiant d'une ligne de composant n'est pas repris (§7).
@@ -448,6 +450,7 @@ Noms fixés par ce document, parce que le plan ne les donnait pas : `profils.leg
 | 14/10/2026 | Migration `init` (ticket 049), sans changer un nom de champ : le schéma de P3 est figé dans une seule migration, `20261014_134242_init`, qui remplace les douze migrations provisoires ; son instantané est celui de la dernière d'entre elles. Tout changement d'une collection vient désormais avec sa migration, dans le même commit (`CLAUDE.md`, « Schéma »). |
 | 14/10/2026 | Photos à l'import (ticket 058), sans changer un nom de champ : une image est un fichier JPEG, PNG, WebP, GIF ou AVIF ; un fichier désigné dont l'objet manque est adopté sans taille et listé en « 404 connus » (§4.3) ; un fichier dont l'adresse n'est pas la base des photos suivie d'une clé que la v3 redonne à l'identique, ou que désignent les entrées de plusieurs comptes, est refusé et attend une décision (§11). Hors de l'import, un média se crée toujours avec son fichier (§8). |
 | 14/10/2026 | Coordonnées à l'import (ticket 064), sans changer un nom de champ : une valeur de téléphone ou d'email faite d'espaces est vide ; `contactPublic` vrai dès que l'un des deux est rempli, avec la date de bascule donnée à la commande (`--consentement-le`). |
+| 15/10/2026 | Talents (ticket 108) : `talents.titreDeLaPage` est créé (§5.4), le titre de la page de 50 à 60 caractères que Bing demande ; les autres champs ne changent pas. |
 | 14/10/2026 | Sections des profils à l'import (ticket 060), sans changer un nom de champ : un lien de liste qui ne nomme aucune ligne est signalé, rien n'est inventé à sa place (§7) ; `prixAPartirDe` reste vide jusqu'au ticket 062, le téléphone et l'email de contact jusqu'au ticket 064. |
 | 14/10/2026 | Articles à l'import (ticket 061), sans changer un nom de champ : une image de la galerie est rattachée si son fichier est adopté, un autre fichier est signalé (§5.3). |
 | 14/10/2026 | Ticket 076, sans changer un nom de champ de l'import : `pros` n'a plus ni `loginAttempts` ni `lockUntil` (`maxLoginAttempts: 0`). Le frein de connexion est par adresse cliente, jamais par compte : des essais faux ne verrouillent pas le compte visé. Migration `pros_sans_verrou_de_compte`. |

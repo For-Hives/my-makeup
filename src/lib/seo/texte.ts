@@ -2,6 +2,8 @@
 
 export const MARQUE = 'My-Makeup'
 export const TITRE_MAX = 60
+/** The shortest title of the page of a talent the newsroom writes (ticket 108): Bing asks for 50 to 60. */
+export const TITRE_MIN_DES_TALENTS = 50
 export const DESCRIPTION_MIN = 70
 export const DESCRIPTION_MAX = 155
 

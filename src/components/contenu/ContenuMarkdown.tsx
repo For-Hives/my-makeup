@@ -22,7 +22,7 @@ export function ContenuMarkdown({ html }: { html: string }) {
 				'[&_code]:rounded [&_code]:bg-gray-100 [&_code]:px-1 [&_pre]:my-4 [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-gray-100 [&_pre]:p-4',
 				'break-words',
 			].join(' ')}
-			// biome-ignore lint/security/noDangerouslySetInnerHtml: the HTML comes from markdownEnHtml, which sanitizes it (rehype-sanitize).
+			// the HTML comes from markdownEnHtml, which sanitizes it (rehype-sanitize).
 			dangerouslySetInnerHTML={{ __html: html }}
 		/>
 	)
