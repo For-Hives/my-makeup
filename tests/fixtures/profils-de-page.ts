@@ -52,6 +52,8 @@ function variante(type: ProfilDuJeu): ProfilDuJeu {
 		compte: { email: `page-profil-${type.cle}@example.test`, nom: `Page ${nom}` },
 		// The old username of the set belongs to the profile of the search: it stays unique in the bench.
 		profil: sansAncienNom({ ...type.profil, ...identite }),
+		// The profile of an availability never set has no portfolio: the section is then absent from its page.
+		photos: type.cle === 'disponibilite-inconnue' ? { ...type.photos, galerie: [] } : type.photos,
 	}
 }
 
