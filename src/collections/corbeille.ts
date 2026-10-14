@@ -2,6 +2,7 @@ import {
 	APIError,
 	type CollectionAfterChangeHook,
 	type CollectionAfterDeleteHook,
+	type CollectionBeforeOperationHook,
 	type CollectionConfig,
 	type PayloadRequest,
 	type Plugin,
@@ -33,12 +34,18 @@ import { identifiantDe, photosNommees } from '../lib/profil/photos'
  *   takes with it every photo of its account that nothing references.
  * - **Under the context of the import** (`estUnImport`), nothing of this happens: no media is
  *   deleted, no object moves.
+ * - **Without an object storage** (S3_ENDPOINT not set), no object can move: the clean-up of a
+ *   profile deletes no media, so that no record is lost while its object stays where it is.
  *
  * The moves come last, inside the transaction of the request: if the storage fails, what has
  * already moved is put back, and the request fails (503) with every document as it was. Nothing of
- * the request is kept. One limit is Payload's own: an operation on several documents at once (by a
- * `where`) reports the error of one document but still commits its transaction, the writes of that
- * document included; its objects, back in place, may then be orphans, never lost.
+ * the request is kept.
+ *
+ * That holds for an operation on one document only. Payload runs an operation on several documents
+ * at once (by a `where`, as the list view of the admin panel deletes) document by document, keeps
+ * the error of one of them in its answer, and commits the writes of all the others, and of that
+ * one. So `media` and `profils` refuse it (`unALaFois`), by every API, outside the import; the
+ * admin panel no longer offers it.
  *
  * The storage plugin deletes the objects itself, after a deletion or a replacement: its own
  * deletions are taken away (`sansSuppressionDuGreffon`). `avecLaCorbeille` wraps the plugin, and
@@ -48,6 +55,10 @@ import { identifiantDe, photosNommees } from '../lib/profil/photos'
 /** The answer to a request whose photos the storage could not move: nothing was changed. */
 export const MESSAGE_PANNE_DU_STOCKAGE =
 	'Le stockage des photos ne répond pas : rien n’a été modifié. Réessaie dans quelques minutes.'
+
+/** The answer to a deletion or a change of several media, or of several profiles, at once. */
+export const MESSAGE_UN_A_LA_FOIS =
+	'Les photos et les profils se suppriment et se modifient un par un, depuis leur fiche : rien n’a été modifié.'
 
 /** The objects of one request that wait for the bin while a caller holds it (`corbeilleRetenue`). */
 interface Attente {
@@ -114,6 +125,10 @@ async function versLaCorbeille(
  * the last step: when `travail` fails, nothing has moved; when the storage fails, nothing stays
  * moved. A deletion that takes several documents with it (a profile and its photos, an account and
  * its profile) runs in here, so that its objects move after the last document is written.
+ *
+ * The holds of one request run one inside the other, never side by side: a failed `travail` drops
+ * every move asked since it began. Payload would run them side by side for the documents of one
+ * operation on several at once, which `unALaFois` refuses on `media` and `profils`.
  */
 export async function corbeilleRetenue<T>(req: PayloadRequest, sujet: string, travail: () => Promise<T>): Promise<T> {
 	const attente = ATTENTES.get(req) ?? { cles: [], retenue: 0, stockage: undefined }
@@ -174,11 +189,23 @@ async function encoreReferencees(req: PayloadRequest, ids: (number | string)[]):
 /**
  * The clean-up of a profile: each of these media that nothing references any more is deleted, and
  * its objects go to the bin, all at once after the last deletion. A media that no longer exists is
- * left alone.
+ * left alone. Without a storage, no media is deleted: its object could not move, and the record is
+ * all that would still say where it is.
  */
-async function menage(req: PayloadRequest, candidates: (number | string)[], sujet: string): Promise<void> {
+async function menage(
+	req: PayloadRequest,
+	stockage: StockageDesObjets | undefined,
+	candidates: (number | string)[],
+	sujet: string
+): Promise<void> {
 	const ids = [...new Map(candidates.map(id => [String(id), id])).values()]
 	if (ids.length === 0) return
+	if (!stockage) {
+		req.payload.logger.warn(
+			`[corbeille] ${sujet}: no object storage, the clean-up is skipped and ${ids.length} media kept`
+		)
+		return
+	}
 	const referencees = await encoreReferencees(req, ids)
 	const inutiles = ids.filter(id => !referencees.has(String(id)))
 	if (inutiles.length === 0) return
@@ -199,40 +226,51 @@ async function menage(req: PayloadRequest, candidates: (number | string)[], suje
 }
 
 /** `afterChange` of `profils`: the photos a save takes out of the profile go through the clean-up. */
-export const menageApresEnregistrement: CollectionAfterChangeHook = async ({
-	context,
-	doc,
-	operation,
-	previousDoc,
-	req,
-}) => {
-	if (operation !== 'update' || estUnImport(context)) return doc
-	const gardees = new Set(photosDuProfil(doc).map(String))
-	const retirees = photosDuProfil(previousDoc).filter(id => !gardees.has(String(id)))
-	await menage(req, retirees, `profile ${doc.id}`)
-	return doc
-}
+export const menageApresEnregistrement =
+	(stockage: StockageDesObjets | undefined): CollectionAfterChangeHook =>
+	async ({ context, doc, operation, previousDoc, req }) => {
+		if (operation !== 'update' || estUnImport(context)) return doc
+		const gardees = new Set(photosDuProfil(doc).map(String))
+		const retirees = photosDuProfil(previousDoc).filter(id => !gardees.has(String(id)))
+		await menage(req, stockage, retirees, `profile ${doc.id}`)
+		return doc
+	}
 
 /** `afterDelete` of `profils`: its photos, and every photo of its account, go through the clean-up. */
-export const menageApresSuppression: CollectionAfterDeleteHook = async ({ context, doc, id, req }) => {
-	if (estUnImport(context)) return doc
-	const compte = identifiantDe((doc as { pro?: unknown }).pro)
-	const duCompte =
-		compte === undefined
-			? []
-			: (
-					await req.payload.find({
-						collection: 'media',
-						depth: 0,
-						overrideAccess: true,
-						pagination: false,
-						req,
-						select: { owner: true },
-						where: { owner: { equals: compte } },
-					})
-				).docs.map(media => media.id)
-	await menage(req, [...photosDuProfil(doc), ...duCompte], `profile ${id}`)
-	return doc
+export const menageApresSuppression =
+	(stockage: StockageDesObjets | undefined): CollectionAfterDeleteHook =>
+	async ({ context, doc, id, req }) => {
+		if (estUnImport(context)) return doc
+		const compte = identifiantDe((doc as { pro?: unknown }).pro)
+		const duCompte =
+			compte === undefined || !stockage
+				? []
+				: (
+						await req.payload.find({
+							collection: 'media',
+							depth: 0,
+							overrideAccess: true,
+							pagination: false,
+							req,
+							select: { owner: true },
+							where: { owner: { equals: compte } },
+						})
+					).docs.map(media => media.id)
+		await menage(req, stockage, [...photosDuProfil(doc), ...duCompte], `profile ${id}`)
+		return doc
+	}
+
+/**
+ * `beforeOperation` of `media` and `profils`: a deletion or a change goes one document at a time,
+ * by its identifier. An operation on several at once (by a `where`) is refused before anything is
+ * read or written, whoever asks and by every API, the Local API without access control included:
+ * Payload would commit it even when the storage fails for one of its documents. The import, which
+ * moves nothing, writes as it likes.
+ */
+export const unALaFois: CollectionBeforeOperationHook = ({ args, context, operation }) => {
+	if (estUnImport(context) || (operation !== 'delete' && operation !== 'update')) return args
+	if ((args as { id?: unknown }).id !== undefined) return args
+	throw new APIError(MESSAGE_UN_A_LA_FOIS, 403, null, true)
 }
 
 /** `afterDelete` of `media`: its objects go to the bin. */
@@ -290,11 +328,22 @@ export function sansSuppressionDuGreffon(collection: CollectionConfig, avant: Cr
 	}
 }
 
-/** Adds these hooks after those the collection already has: the bin comes last. */
-const apres = (collection: CollectionConfig, crochets: Pick<Crochets, 'afterChange' | 'afterDelete'>) => ({
+/**
+ * Gives a collection the bin: one document at a time first, before its own `beforeOperation`
+ * hooks; these hooks after its own `afterChange` and `afterDelete`, so that the bin comes last.
+ * The list view of the admin panel no longer offers to delete or change several documents at once
+ * (`disableBulkDelete`, `disableBulkEdit`): Payload then refuses it by REST too, before `unALaFois`.
+ */
+const avecLesCrochets = (
+	collection: CollectionConfig,
+	crochets: Pick<Crochets, 'afterChange' | 'afterDelete'>
+): CollectionConfig => ({
 	...collection,
+	disableBulkDelete: true,
+	disableBulkEdit: true,
 	hooks: {
 		...collection.hooks,
+		beforeOperation: [unALaFois, ...(collection.hooks?.beforeOperation ?? [])],
 		afterChange: [...(collection.hooks?.afterChange ?? []), ...(crochets.afterChange ?? [])],
 		afterDelete: [...(collection.hooks?.afterDelete ?? []), ...(crochets.afterDelete ?? [])],
 	},
@@ -303,8 +352,8 @@ const apres = (collection: CollectionConfig, crochets: Pick<Crochets, 'afterChan
 /**
  * The storage plugin (`greffon`, `@payloadcms/storage-s3`), with the bin in place of its
  * deletions: its own deletions are taken away from every collection it touches, then `media` and
- * `profils` get the hooks of the bin, after all their own. `stockage` is the storage the bin moves
- * the objects in, or nothing when the application has none.
+ * `profils` get the bin (`avecLesCrochets`). `stockage` is the storage the bin moves the objects
+ * in, or nothing when the application has none.
  */
 export const avecLaCorbeille =
 	(greffon: Plugin, stockage: StockageDesObjets | undefined): Plugin =>
@@ -316,9 +365,15 @@ export const avecLaCorbeille =
 			collections: (configuree.collections ?? []).map(collection => {
 				const sans = sansSuppressionDuGreffon(collection, avant.get(collection.slug))
 				if (sans.slug === 'media')
-					return apres(sans, { afterChange: [auRemplacement(stockage)], afterDelete: [aLaSuppression(stockage)] })
+					return avecLesCrochets(sans, {
+						afterChange: [auRemplacement(stockage)],
+						afterDelete: [aLaSuppression(stockage)],
+					})
 				if (sans.slug === 'profils')
-					return apres(sans, { afterChange: [menageApresEnregistrement], afterDelete: [menageApresSuppression] })
+					return avecLesCrochets(sans, {
+						afterChange: [menageApresEnregistrement(stockage)],
+						afterDelete: [menageApresSuppression(stockage)],
+					})
 				return sans
 			}),
 		}

@@ -160,7 +160,8 @@ const INTERNE = { read: champAdminSeulement, create: champAdminSeulement, update
  * - Its photos (`photoPrincipale`, `galerie`: 10 at most, in order) are media of its own account:
  *   a makeup artist never attaches the photo of another one (ticket 043). A photo a save takes out
  *   of the profile, or the photos of a deleted profile, go to the bin of the storage once nothing
- *   references them (src/collections/corbeille.ts, added through src/payload.config.ts, ticket 045).
+ *   references them, and profiles are deleted or changed one at a time, never by a `where`
+ *   (src/collections/corbeille.ts, added through src/payload.config.ts, ticket 045).
  * - The networks are public. The contact details (`coordonnees`) are read by the owner and an
  *   admin only, never by the public through the API, even when she chose to show them
  *   (`contactPublic`): a public page reads them through src/services/public/. The server traces

@@ -1,8 +1,16 @@
 import { describe, expect, test } from 'bun:test'
 import { readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
-import type { CollectionAfterChangeHook, CollectionAfterDeleteHook, CollectionConfig, Config, Plugin } from 'payload'
-import { avecLaCorbeille, sansSuppressionDuGreffon } from '@/collections/corbeille'
+import type {
+	CollectionAfterChangeHook,
+	CollectionAfterDeleteHook,
+	CollectionBeforeOperationHook,
+	CollectionConfig,
+	Config,
+	Plugin,
+} from 'payload'
+import { avecLaCorbeille, MESSAGE_UN_A_LA_FOIS, sansSuppressionDuGreffon, unALaFois } from '@/collections/corbeille'
+import { CONTEXTE_IMPORT } from '@/lib/contexte-import'
 import {
 	cleEnCorbeille,
 	clesDesObjets,
@@ -362,6 +370,29 @@ describe('Le greffon de stockage perd ses suppressions ; media et profils reçoi
 		expect(talents?.hooks).toBeUndefined()
 	})
 
+	test('media et profils : un document à la fois, d’abord ; la liste de l’administration n’offre plus d’agir sur plusieurs', async () => {
+		const avant: CollectionBeforeOperationHook = ({ args }) => args
+		const [media, profils, talents] = (
+			await avecLaCorbeille(
+				faussePlugin().plugin,
+				undefined
+			)({
+				collections: collections().map(collection =>
+					collection.slug === 'media'
+						? { ...collection, hooks: { ...collection.hooks, beforeOperation: [avant] } }
+						: collection
+				),
+			} as Config)
+		).collections as CollectionConfig[]
+
+		expect(media?.hooks?.beforeOperation).toEqual([unALaFois, avant])
+		expect(profils?.hooks?.beforeOperation).toEqual([unALaFois])
+		for (const collection of [media, profils])
+			expect(collection).toMatchObject({ disableBulkDelete: true, disableBulkEdit: true })
+		expect(talents?.disableBulkDelete).toBeUndefined()
+		expect(talents?.disableBulkEdit).toBeUndefined()
+	})
+
 	test('l’envoi du greffon ne voit plus le document précédent : il ne peut plus effacer l’ancien fichier', async () => {
 		const fausse = faussePlugin()
 		const [media] =
@@ -390,5 +421,128 @@ describe('Le greffon de stockage perd ses suppressions ; media et profils reçoi
 	test('un greffon qui n’ajoute rien (stockage absent) : la collection reste telle quelle', () => {
 		const collection: CollectionConfig = { slug: 'media', fields: [], hooks: { afterChange: [propre] } }
 		expect(sansSuppressionDuGreffon(collection, collection.hooks)).toBe(collection)
+	})
+})
+
+describe('Plusieurs médias ou profils à la fois : refusé avant toute écriture, sauf pour l’import', () => {
+	const operation = (nom: string, args: Record<string, unknown>, context: Record<string, unknown> = {}) =>
+		unALaFois({
+			args: args as never,
+			collection: {} as never,
+			context,
+			operation: nom as never,
+			overrideAccess: true,
+			req: {} as never,
+		})
+
+	test('une suppression ou une modification par un filtre : refusée en 403, avec le message en français', () => {
+		for (const nom of ['delete', 'update']) {
+			let erreur: unknown
+			try {
+				operation(nom, { where: { id: { equals: 1 } } })
+			} catch (e) {
+				erreur = e
+			}
+			expect(erreur).toMatchObject({ message: MESSAGE_UN_A_LA_FOIS, status: 403, isPublic: true })
+		}
+	})
+
+	test('par son identifiant, une lecture, une création : passent telles quelles', () => {
+		for (const [nom, args] of [
+			['delete', { id: 1 }],
+			['update', { id: 1, data: {} }],
+			['update', { id: 0, data: {} }],
+			['read', { where: {} }],
+			['create', { data: {} }],
+		] as const)
+			expect(operation(nom, args)).toBe(args as never)
+	})
+
+	test('sous le contexte d’import : passent aussi, l’import ne déplace rien', () => {
+		const args = { where: { id: { in: [1, 2] } } }
+		expect(operation('delete', args, CONTEXTE_IMPORT)).toBe(args as never)
+		expect(operation('update', args, CONTEXTE_IMPORT)).toBe(args as never)
+	})
+})
+
+describe('Sans stockage d’objets, le ménage d’un profil ne supprime aucun média', () => {
+	/** A request whose Local API writes down what it is asked, finds nothing, and deletes nothing. */
+	function fausseRequete() {
+		const appels: string[] = []
+		const avertissements: string[] = []
+		const req = {
+			context: {},
+			payload: {
+				find: async ({ collection }: { collection: string }) => {
+					appels.push(`find ${collection}`)
+					return { docs: [] }
+				},
+				findVersions: async ({ collection }: { collection: string }) => {
+					appels.push(`findVersions ${collection}`)
+					return { docs: [] }
+				},
+				delete: async ({ collection }: { collection: string }) => {
+					appels.push(`delete ${collection}`)
+				},
+				logger: { info: () => {}, warn: (ligne: string) => avertissements.push(ligne), error: () => {} },
+			},
+		}
+		return { appels, avertissements, req: req as never }
+	}
+
+	/** The hooks of the bin on `profils`, as src/payload.config.ts sets them, with this storage or none. */
+	async function crochetsDesProfils(stockage: StockageDesObjets | undefined) {
+		const profilsSeuls: CollectionConfig[] = [{ slug: 'profils', fields: [] }]
+		const config = await avecLaCorbeille(config => config, stockage)({ collections: profilsSeuls } as Config)
+		const [profils] = config.collections as CollectionConfig[]
+		const [apresEnregistrement] = profils?.hooks?.afterChange ?? []
+		const [apresSuppression] = profils?.hooks?.afterDelete ?? []
+		if (!apresEnregistrement || !apresSuppression) throw new Error('La corbeille n’a pas posé ses crochets.')
+		return { apresEnregistrement, apresSuppression }
+	}
+
+	const avant = { id: 7, pro: 3, photoPrincipale: 11, galerie: [12, { id: 13 }] }
+	const apres = { id: 7, pro: 3, photoPrincipale: null, galerie: [] }
+
+	test('une photo retirée, un profil supprimé : aucune lecture, aucune suppression ; une ligne le dit', async () => {
+		const { apresEnregistrement, apresSuppression } = await crochetsDesProfils(undefined)
+		const enregistrement = fausseRequete()
+		const suppression = fausseRequete()
+
+		await apresEnregistrement({
+			collection: {} as never,
+			context: {},
+			data: {},
+			doc: apres,
+			operation: 'update',
+			previousDoc: avant,
+			req: enregistrement.req,
+		})
+		await apresSuppression({ collection: {} as never, context: {}, doc: avant, id: 7, req: suppression.req })
+
+		expect(enregistrement.appels).toEqual([])
+		expect(suppression.appels).toEqual([])
+		expect(enregistrement.avertissements).toEqual([
+			'[corbeille] profile 7: no object storage, the clean-up is skipped and 3 media kept',
+		])
+		expect(suppression.avertissements).toHaveLength(1)
+	})
+
+	test('avec un stockage, le même enregistrement cherche ce que rien ne désigne plus : le ménage n’est coupé que sans stockage', async () => {
+		const { apresEnregistrement } = await crochetsDesProfils(new StockageEnMemoire())
+		const { appels, avertissements, req } = fausseRequete()
+
+		await apresEnregistrement({
+			collection: {} as never,
+			context: {},
+			data: {},
+			doc: apres,
+			operation: 'update',
+			previousDoc: avant,
+			req,
+		})
+
+		expect(appels).toEqual(['find profils', 'find articles', 'findVersions articles', 'find media'])
+		expect(avertissements).toEqual([])
 	})
 })

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
-import { MESSAGE_PANNE_DU_STOCKAGE } from '@/collections/corbeille'
+import { MESSAGE_PANNE_DU_STOCKAGE, MESSAGE_UN_A_LA_FOIS } from '@/collections/corbeille'
 import { CONTEXTE_IMPORT } from '@/lib/contexte-import'
 import { remettreEnPlace } from '@/lib/corbeille'
 import { serverEnv } from '@/lib/env'
@@ -255,6 +255,103 @@ describe('Panne du stockage : document et objet intacts, erreur remontée', () =
 	})
 })
 
+describe('Panne du stockage : plusieurs documents à la fois sont refusés, rien n’est écrit', () => {
+	// Payload commits an operation on several documents (by a `where`) even when one of them fails:
+	// media and profiles are deleted and changed one at a time, where a failure undoes everything.
+
+	test('la propriétaire supprime sa photo principale par un filtre, pendant une panne : refusé ; média, objet et profil intacts', async () => {
+		const compte = await creerCompte('maquilleuse')
+		const photo = await envoyer(compte)
+		await enregistrerOuEchouer(compte, { photoPrincipale: photo.id })
+		espion.fairePanne(commande => commande.nom === 'HeadObject')
+		const avant = espion.journal.length
+
+		const { statut } = await appelerRest('DELETE', `/api/media?where[id][equals]=${photo.id}`, {
+			enTetes: compte.session.enTetes,
+		})
+
+		expect(statut).toBe(403)
+		expect(espion.journal.slice(avant)).toEqual([])
+		expect(await stocke(photo.id)).not.toBeNull()
+		expect(await octets(cle(photo))).toBeDefined()
+		expect((await profilDe(compte)).photoPrincipale).toBe(photo.id)
+		expect(await corbeille()).toEqual([])
+	})
+
+	test('la propriétaire change sa photo principale par un filtre, pendant une panne : refusé ; le profil garde l’ancienne', async () => {
+		const compte = await creerCompte('maquilleuse')
+		const [ancienne, nouvelle] = [await envoyer(compte), await envoyer(compte)]
+		await enregistrerOuEchouer(compte, { photoPrincipale: ancienne.id })
+		const profil = await profilDe(compte)
+		espion.fairePanne(commande => commande.nom === 'CopyObject')
+
+		const { statut } = await appelerRest('PATCH', `/api/profils?where[id][equals]=${profil.id}&depth=0`, {
+			enTetes: compte.session.enTetes,
+			corps: { photoPrincipale: nouvelle.id },
+		})
+
+		expect(statut).toBe(403)
+		expect((await profilDe(compte)).photoPrincipale).toBe(ancienne.id)
+		expect(await stocke(ancienne.id)).not.toBeNull()
+		expect(await octets(cle(ancienne))).toBeDefined()
+		expect(await corbeille()).toEqual([])
+	})
+
+	test('un admin supprime deux profils par un filtre, et le stockage tombe à la troisième copie : refusé ; profils, médias et objets intacts', async () => {
+		const [a, b, admin] = await Promise.all([
+			creerCompte('maquilleuse'),
+			creerCompte('maquilleuse'),
+			creerCompte('admin'),
+		])
+		const [a1, a2, b1, b2] = [await envoyer(a), await envoyer(a), await envoyer(b), await envoyer(b)]
+		await enregistrerOuEchouer(a, { photoPrincipale: a1.id, galerie: [a2.id] })
+		await enregistrerOuEchouer(b, { photoPrincipale: b1.id, galerie: [b2.id] })
+		const [profilA, profilB] = [await profilDe(a), await profilDe(b)]
+		let copiesEnCorbeille = 0
+		espion.fairePanne(
+			commande =>
+				commande.nom === 'CopyObject' && String(commande.entree.Key).startsWith('deleted/') && ++copiesEnCorbeille === 3
+		)
+
+		const { statut } = await appelerRest('DELETE', `/api/profils?where[id][in]=${profilA.id},${profilB.id}`, {
+			enTetes: admin.session.enTetes,
+		})
+
+		expect(statut).toBe(403)
+		expect([(await profilDe(a)).id, (await profilDe(b)).id]).toEqual([profilA.id, profilB.id])
+		for (const media of [a1, a2, b1, b2]) {
+			expect(await stocke(media.id)).not.toBeNull()
+			expect(await octets(cle(media))).toBeDefined()
+		}
+		expect(await corbeille()).toEqual([])
+	})
+
+	test('par l’API locale, même sans contrôle d’accès : chaque suppression et chaque modification par un filtre est refusée en français', async () => {
+		const payload = await payloadDeTest()
+		const compte = await creerCompte('maquilleuse')
+		const photo = await envoyer(compte)
+		await enregistrerOuEchouer(compte, { photoPrincipale: photo.id })
+		const profil = await profilDe(compte)
+		const media = { collection: 'media', where: { id: { equals: photo.id } } } as const
+		const profils = { collection: 'profils', where: { id: { equals: profil.id } } } as const
+
+		for (const operation of [
+			() => payload.delete(media),
+			() => payload.update({ ...media, data: { alt: 'Texte fictif' } }),
+			() => payload.delete(profils),
+			() => payload.update({ ...profils, data: { photoPrincipale: null } }),
+		])
+			await expect(operation()).rejects.toThrow(MESSAGE_UN_A_LA_FOIS)
+
+		const gardee = await stocke(photo.id)
+		expect(gardee).not.toBeNull()
+		expect(gardee?.alt).not.toBe('Texte fictif')
+		expect((await profilDe(compte)).photoPrincipale).toBe(photo.id)
+		expect(await octets(cle(photo))).toBeDefined()
+		expect(await corbeille()).toEqual([])
+	})
+})
+
 describe('Un test échoue si une suppression d’objet est appelée ; la remise en place est essayée une fois', () => {
 	test('l’espion voit les requêtes du greffon de stockage : un envoi est un PutObject de sa clé', async () => {
 		const compte = await creerCompte('maquilleuse')
@@ -336,6 +433,19 @@ describe('Avec le contexte d’import, rien n’est déplacé', () => {
 		const avant = espion.journal.length
 
 		await payload.delete({ collection: 'media', id: media.id, context: CONTEXTE_IMPORT })
+
+		expect(await stocke(media.id)).toBeNull()
+		expect(await octets(cle(media))).toBeDefined()
+		expect(espion.journal.slice(avant)).toEqual([])
+	})
+
+	test('l’import peut supprimer par un filtre : le média part, son objet reste où il est', async () => {
+		const payload = await payloadDeTest()
+		const compte = await creerCompte('maquilleuse')
+		const media = await envoyer(compte)
+		const avant = espion.journal.length
+
+		await payload.delete({ collection: 'media', where: { id: { equals: media.id } }, context: CONTEXTE_IMPORT })
 
 		expect(await stocke(media.id)).toBeNull()
 		expect(await octets(cle(media))).toBeDefined()
