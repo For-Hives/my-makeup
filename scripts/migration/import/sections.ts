@@ -22,6 +22,7 @@
  * No `bun` import here: the import can run under Node too.
  */
 
+import { parsePrice } from '../../../src/lib/prix'
 import type { ReseauxDuProfil } from '../../../src/lib/profil/completude'
 import { dateDuJour } from '../../../src/lib/profil/listes'
 import { TYPE_PROFIL } from './medias'
@@ -237,6 +238,15 @@ export async function lireLesSections(requete: Requete): Promise<Map<number, Sec
 const leJour = (date: string | null): unknown => (date === null ? null : dateDuJour(date))
 
 /**
+ * A price of the source: the text byte for byte (not trimmed: rule 2), and the amount the single
+ * rule reads in it, or null.
+ */
+const prixDeLaSource = (saisie: string | null) => ({
+	prixTexte: saisie,
+	prixAPartirDe: parsePrice(saisie).prixAPartirDe,
+})
+
+/**
  * The lists and the networks of a profile, under the names of Payload, in the order of the old
  * site, each value as it is. The rows carry no identifier: Payload gives one.
  */
@@ -262,8 +272,12 @@ export function valeursDesListes(sections: SectionsLues): Record<string, unknown
 		prestations: sections.prestations.map(({ name, description, price, options }) => ({
 			nom: name,
 			description,
-			prixTexte: price,
-			options: options.map(option => ({ nom: option.name, description: option.description, prixTexte: option.price })),
+			...prixDeLaSource(price),
+			options: options.map(option => ({
+				nom: option.name,
+				description: option.description,
+				...prixDeLaSource(option.price),
+			})),
 		})),
 		reseaux: reseau
 			? {
