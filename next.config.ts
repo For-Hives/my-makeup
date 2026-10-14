@@ -30,6 +30,9 @@ const nextConfig: NextConfig = {
 	// `next dev` writes an AGENTS.md and a CLAUDE.md at the project root when it is started
 	// by a coding agent. The guides of this repository are written by hand: nothing is generated.
 	agentRules: false,
+	// The app has two root layouts, so an address no route matches needs src/app/global-not-found.tsx
+	// to answer a 404 in French, in the template of the site.
+	experimental: { globalNotFound: true },
 	// The project root is stated, not inferred: a lockfile higher up in the file tree
 	// (a parent folder, another checkout) must not become the Turbopack root.
 	turbopack: { root: dirname },
