@@ -5,6 +5,16 @@
 			"id": "les-pages-introuvables-et-les-pages-d-erreur-s-affichent",
 			"type": "amelioration",
 			"text": "Les pages introuvables et les pages d'erreur s'affichent en français, dans le même cadre que le reste du site."
+		},
+		{
+			"id": "tu-peux-te-deconnecter-de-tous-tes-appareils-d-un-seul-co",
+			"type": "ajout",
+			"text": "Tu peux te déconnecter de tous tes appareils d’un seul coup, depuis ton espace."
+		},
+		{
+			"id": "la-deconnexion-ferme-vraiment-ta-session-et-te-ramene-a-l",
+			"type": "correction",
+			"text": "La déconnexion ferme vraiment ta session, et te ramène à l’accueil au lieu d’une page introuvable."
 		}
 	],
 	"releases": []
