@@ -7,6 +7,7 @@ import type { EtatDeRenvoi } from '@/components/auth/FormulaireDeRenvoi'
 import { freinDeRenvoi } from '@/lib/auth/freins-inscription'
 import { ipClient } from '@/lib/auth/ip-client'
 import { journalDe } from '@/lib/auth/journal'
+import { journaliserUnRefus } from '@/lib/auth/refus-inscription'
 import { MESSAGES_RENVOI, renvoyerLaConfirmation } from '@/lib/auth/renvoi'
 import { envoiEmailDePayload } from '@/lib/emails/envoi'
 import { serverEnv } from '@/lib/env'
@@ -26,8 +27,9 @@ export async function renvoyerLEmail(_precedent: EtatDeRenvoi, formulaire: FormD
 		return { erreur: 'Le service est momentanément indisponible, réessaie dans quelques minutes.', valeur }
 
 	const journal = journalDe(payload)
-	if (!freinDeRenvoi.prendre(ipClient(entetes)).autorise) {
-		await journal({ type: 'renvoi', code: 'trop-de-tentatives' })
+	const client = ipClient(entetes)
+	if (!freinDeRenvoi.prendre(client).autorise) {
+		await journaliserUnRefus(journal, client, 'renvoi', 'trop-de-tentatives')
 		return { erreur: MESSAGES_RENVOI['trop-de-tentatives'], valeur }
 	}
 

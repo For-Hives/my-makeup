@@ -12,12 +12,16 @@ import { creerFrein, type Frein } from './frein'
  *   ticket 082 on the page that wrote a journal row for every visit).
  *
  * By mailbox (the canonical form of the address, hashed: `cleDeBoite`), for every mail
- * the resending and the « tu as déjà un compte » answer send to an address: 1 a minute and 5 a day (the
- * mail of the sign-up itself is not counted: she may ask for it again at once). A mailbox that is not
- * an account is counted like one, so a refusal never says whether an account exists.
+ * the resending and the sign-up send to an address: 1 a minute and 5 a day. The sign-up of a NEW address
+ * takes its place too (its result ignored: that mail always leaves), exactly as the « tu as déjà un
+ * compte » mail of a taken one does, so a resend asked right after a sign-up reads the same answer
+ * whether the address had an account or not. A mailbox that is not an account is counted like one.
  */
 
 export const freinDInscription: Frein = creerFrein({ nom: 'inscription', limite: 5, fenetreMs: 60 * 60 * 1000 })
+
+/** The rows of refusals the journal takes: 3 an hour for a client address and an outcome (`journaliserUnRefus`). */
+export const freinDeJournal: Frein = creerFrein({ nom: 'journal-refus', limite: 3, fenetreMs: 60 * 60 * 1000 })
 
 export const freinDeRenvoi: Frein = creerFrein({ nom: 'renvoi', limite: 10, fenetreMs: 60 * 60 * 1000 })
 

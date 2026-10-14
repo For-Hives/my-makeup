@@ -17,7 +17,7 @@ export function contenuEmailDejaInscrite(): ContenuEmail {
 		titre: 'Tu as déjà un compte My Makeup',
 		paragraphes: [
 			'Quelqu’un, peut-être toi, vient de s’inscrire sur My Makeup avec cette adresse email. Elle a déjà un compte : aucun second compte n’a été créé.',
-			'Si c’est toi, connecte-toi avec ton mot de passe habituel.',
+			'Si c’est toi, connecte-toi comme d’habitude, par le moyen que tu avais choisi.',
 			'Si ce n’est pas toi, tu peux ignorer ce message : ton compte n’a pas changé.',
 		],
 		action: { libelle: 'Me connecter', chemin: '/auth/signin' },

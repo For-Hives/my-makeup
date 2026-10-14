@@ -39,6 +39,24 @@ async function seConnecter(page: Page, email: string, retour?: string) {
 	await page.getByRole('button', { name: 'Se connecter' }).click()
 }
 
+const aleatoireEnLettres = () =>
+	crypto
+		.randomUUID()
+		.replace(/-/g, '')
+		.replace(/[0-9]/g, chiffre => 'ghijklmnop'.charAt(Number(chiffre)))
+
+/** An account made by the server, as the sign-up would, without the mail and without taking a place in the brakes. */
+async function creerUnCompte(email: string, options: { confirme: boolean }) {
+	const payload = await payloadDeTest()
+	await payload.create({
+		collection: 'pros',
+		// A name of its own: two accounts made at once with the same name would fight for the same slug.
+		data: { email, password: MOT_DE_PASSE, nom: `Compte ${aleatoireEnLettres()}`, _verified: options.confirme },
+		disableVerificationEmail: true,
+		overrideAccess: true,
+	})
+}
+
 const lienDuMail = async (email: string): Promise<string> => {
 	const mail = await attendreLeMail({ pour: email })
 	const lien = mail.liens.find(l => l.includes('/auth/verification-complete'))
@@ -149,9 +167,7 @@ test.describe('U25 : les messages du formulaire', () => {
 		page,
 	}) => {
 		const email = adresse()
-		await sInscrire(page, email)
-		await expect(page).toHaveURL(/\/auth\/verification-wall$/)
-		await attendreLeMail({ pour: email })
+		await creerUnCompte(email, { confirme: true })
 		const payload = await payloadDeTest()
 		const comptesDeLAdresse = () => payload.count({ collection: 'pros', where: { email: { equals: email } } })
 		expect((await comptesDeLAdresse()).totalDocs).toBe(1)
@@ -168,6 +184,17 @@ test.describe('U25 : les messages du formulaire', () => {
 		await expect
 			.poll(async () => (await mailsRecus(email)).map(({ sujet }) => sujet).filter(s => s.includes('déjà un compte')))
 			.toHaveLength(1)
+	})
+
+	test('E03 : une adresse dont le compte attend sa confirmation reçoit son lien de nouveau', async ({ page }) => {
+		const email = adresse()
+		await creerUnCompte(email, { confirme: false })
+
+		await sInscrire(page, email)
+
+		await expect(page).toHaveURL(/\/auth\/verification-wall$/)
+		await lienDuMail(email)
+		expect((await mailsRecus(email)).every(({ sujet }) => !sujet.includes('déjà un compte'))).toBe(true)
 	})
 })
 
@@ -189,26 +216,23 @@ test.describe('E04 : renvoyer l’email de confirmation depuis le mur', () => {
 		await expect(bouton).toBeEnabled()
 	}
 
-	test('un renvoi repart avec le même lien, le suivant dans la minute est refusé ; une adresse inconnue reçoit la même réponse qu’une adresse connue', async ({
+	test('un renvoi repart avec le lien du compte, le suivant dans la minute est refusé ; une adresse inconnue reçoit la même réponse qu’une adresse connue', async ({
 		page,
 	}) => {
+		test.setTimeout(90_000)
 		const email = adresse()
-		await sInscrire(page, email)
-		await expect(page).toHaveURL(/\/auth\/verification-wall$/)
-		await lienDuMail(email)
+		await creerUnCompte(email, { confirme: false })
+		await ouvrirLeMur(page)
 
-		// The first resending leaves at once, with the very link of the sign-up mail; a second one within
-		// the minute is refused, in French.
+		// The first resending leaves at once, with the link of the account; a second one within the
+		// minute is refused, in French.
 		await demander(page, email)
 		await expect(page.getByTestId('retour-renvoi')).toContainText('un email vient de repartir')
-		await expect.poll(async () => (await mailsRecus(email)).length).toBe(2)
-		const liens = (await mailsRecus(email)).map(({ liens }) =>
-			liens.find(l => l.includes('/auth/verification-complete'))
-		)
-		expect(new Set(liens).size).toBe(1)
+		await lienDuMail(email)
 		await expect(page.getByLabel('Adresse email de ton inscription')).toHaveValue(email)
 		await demander(page, email)
 		await expect(page.getByTestId('retour-renvoi')).toContainText('Un seul email par minute')
+		expect((await mailsRecus(email)).length).toBe(1)
 
 		// An address with no account: the same answer as a real one, and nothing leaves.
 		const inconnue = adresse()
@@ -218,6 +242,27 @@ test.describe('E04 : renvoyer l’email de confirmation depuis le mur', () => {
 		await demander(page, inconnue)
 		await expect(page.getByTestId('retour-renvoi')).toContainText('Un seul email par minute')
 		expect(await mailsRecus(inconnue)).toEqual([])
+	})
+
+	test('le renvoi demandé juste après une inscription : la même réponse que l’adresse ait un compte ou non', async ({
+		page,
+	}) => {
+		test.setTimeout(90_000)
+		const neuve = adresse()
+		const prise = adresse()
+		await creerUnCompte(prise, { confirme: true })
+		const reponses: string[] = []
+
+		for (const email of [neuve, prise]) {
+			await sInscrire(page, email)
+			await expect(page).toHaveURL(/\/auth\/verification-wall$/)
+			await page.waitForLoadState('networkidle')
+			await demander(page, email)
+			reponses.push(((await page.getByTestId('retour-renvoi').textContent()) ?? '').trim())
+		}
+
+		expect(reponses[0]).toContain('Un seul email par minute')
+		expect(reponses[1]).toBe(reponses[0])
 	})
 
 	test('une adresse mal écrite est dite telle', async ({ page }) => {
@@ -294,10 +339,27 @@ test.describe('Contre les faux comptes (ticket 084)', () => {
 			await expect(page).toHaveURL(/\/auth\/verification-wall$/)
 		}
 
+		const refus = page.waitForResponse(
+			reponse => reponse.request().method() === 'POST' && reponse.url().endsWith('/auth/signup')
+		)
 		await sInscrire(page, adresse())
 
+		// A real 429 with a Retry-After, stopped by the proxy before the action; the form says it in French.
+		const reponse = await refus
+		expect(reponse.status()).toBe(429)
+		expect(Number(reponse.headers()['retry-after'])).toBeGreaterThan(0)
 		await expect(page.getByTestId('erreur-inscription')).toContainText('Trop d’inscriptions depuis cette adresse')
 		await expect(page).toHaveURL(/\/auth\/signup$/)
+		// The refusal leaves one row in the journal, and no account.
+		const payload = await payloadDeTest()
+		expect(
+			(
+				await payload.count({
+					collection: 'auth-evenements',
+					where: { and: [{ type: { equals: 'inscription' } }, { code: { equals: 'trop-de-tentatives' } }] },
+				})
+			).totalDocs
+		).toBeGreaterThanOrEqual(1)
 		await contexte.close()
 
 		const autre = await browser.newContext({

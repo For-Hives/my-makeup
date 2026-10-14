@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, test } from 'bun:test'
 import { creerFrein, type Frein } from '@/lib/auth/frein'
 import type { FreinsDeBoite } from '@/lib/auth/freins-inscription'
-import { inscrire } from '@/lib/auth/inscription-payload'
+import { inscrire, PLANCHER_INSCRIPTION_MS } from '@/lib/auth/inscription-payload'
 import { journalDe } from '@/lib/auth/journal'
 import { renvoyerLaConfirmation } from '@/lib/auth/renvoi'
 import { envoiEmailDePayload } from '@/lib/emails/envoi'
@@ -87,7 +87,7 @@ const lienDuMail = (liens: string[]) => liens.find(l => l.includes('/auth/verifi
 const mediane = (valeurs: number[]) => [...valeurs].sort((a, b) => a - b)[Math.floor(valeurs.length / 2)] ?? 0
 
 describe('E03 : une adresse déjà utilisée ne révèle rien et ne crée pas de doublon', () => {
-	test('même réponse que pour une adresse neuve, aucun second compte ni profil, et la vraie propriétaire reçoit « tu as déjà un compte »', async () => {
+	test('même réponse que pour une adresse neuve, aucun second compte ni profil, et la vraie propriétaire, encore en attente, reçoit son lien de nouveau', async () => {
 		const email = courriel('deja')
 		const neuve = await inscription(email)
 		await attendreLeMail({ pour: email })
@@ -99,12 +99,26 @@ describe('E03 : une adresse déjà utilisée ne révèle rien et ne crée pas de
 		expect(doublon).toEqual(neuve)
 		expect(await comptes()).toBe(c)
 		expect(await profils()).toBe(p)
+		// Her account is still waiting: the mail she lost leaves again, with the same link.
 		const recus = await mailsRecus(email)
 		expect(recus.length).toBe(mails + 1)
-		const mail = recus.find(m => m.sujet.includes('déjà un compte'))
-		expect(mail).toBeDefined()
-		expect(lienDuMail(mail?.liens ?? [])).toBeUndefined()
-		expect(mail?.liens.some(l => l.endsWith('/auth/signin'))).toBe(true)
+		expect(lienDuMail(recus[1]?.liens ?? [])).toBe(lienDuMail(recus[0]?.liens ?? []))
+	})
+
+	test('un compte confirmé reçoit « tu as déjà un compte », sans lien de confirmation', async () => {
+		const email = courriel('confirme-deux-fois')
+		await inscription(email, { verifier: false })
+		const [c, p] = [await comptes(), await profils()]
+
+		const doublon = await inscription(email)
+
+		expect(doublon).toEqual({ ok: true, confirmee: false })
+		expect(await comptes()).toBe(c)
+		expect(await profils()).toBe(p)
+		const mail = await attendreLeMail({ pour: email })
+		expect(mail.sujet).toContain('déjà un compte')
+		expect(lienDuMail(mail.liens)).toBeUndefined()
+		expect(mail.liens.some(l => l.endsWith('/auth/signin'))).toBe(true)
 	})
 
 	test('le journal garde le motif « email-deja-pris », sans adresse ni nom', async () => {
@@ -154,7 +168,7 @@ describe('E03 : une adresse déjà utilisée ne révèle rien et ne crée pas de
 		await inscription(prise)
 		const mesurer = async (email: string) => {
 			const debut = performance.now()
-			await inscription(email, { plancherMs: 700 })
+			await inscription(email, { plancherMs: PLANCHER_INSCRIPTION_MS })
 			return performance.now() - debut
 		}
 		// Warm up (first connection, first render of the mail), then alternate the two cases.
@@ -168,14 +182,14 @@ describe('E03 : une adresse déjà utilisée ne révèle rien et ne crée pas de
 		}
 
 		expect(Math.abs(mediane(neuves) - mediane(prises))).toBeLessThan(50)
-		expect(Math.min(...neuves, ...prises)).toBeGreaterThanOrEqual(695)
-	}, 30_000)
+		expect(Math.min(...neuves, ...prises)).toBeGreaterThanOrEqual(PLANCHER_INSCRIPTION_MS - 5)
+	}, 60_000)
 
 	test('une propriétaire submergée : au plus un mail « déjà un compte » par minute et par boîte', async () => {
 		const email = courriel('submergee')
 		const { freins, avancer } = freinsAvecHorloge()
-		await inscription(email, { freins })
-		await attendreLeMail({ pour: email })
+		// A confirmed account (no mail, no place taken); the sign-ups that follow are on the wall's rules.
+		await inscription(email, { verifier: false })
 		const dejaUnCompte = async () => (await mailsRecus(email)).filter(m => m.sujet.includes('déjà un compte')).length
 
 		await inscription(email, { freins })
@@ -194,7 +208,7 @@ describe('variantes Gmail : une boîte, un compte', () => {
 	test('points, étiquette « + », googlemail.com et majuscules sont la même boîte que le compte existant', async () => {
 		const base = local()
 		const existant = `${base.replace('.', '')}@gmail.com`
-		await inscription(existant)
+		await inscription(existant, { verifier: false })
 		const c = await comptes()
 		const p = await profils()
 
@@ -243,32 +257,68 @@ describe('variantes Gmail : une boîte, un compte', () => {
 })
 
 describe('E04 : le renvoi de la confirmation est limité', () => {
-	test('un par minute, 5 par jour, le même lien à chaque fois, et le jour suivant il repart', async () => {
+	test('un par minute, 5 par jour (l’inscription compte pour un), le même lien à chaque fois, et le jour suivant il repart', async () => {
 		const email = courriel('renvoi')
 		const { freins, avancer } = freinsAvecHorloge()
 		await inscription(email, { freins })
 		const premier = await attendreLeMail({ pour: email })
 		const lien = lienDuMail(premier.liens)
 
-		// The first resending leaves at once; a second one in the same minute is refused.
-		expect(await renvoi(email, freins)).toEqual({ ok: true })
+		// The sign-up took the place of the minute: a resend at once is refused, one a minute later leaves.
 		expect(await renvoi(email, freins)).toMatchObject({ ok: false, code: 'trop-de-renvois', raison: 'minute' })
-
 		for (let i = 2; i <= 5; i++) {
 			avancer(61_000)
 			expect(await renvoi(email, freins)).toEqual({ ok: true })
+			expect(await renvoi(email, freins)).toMatchObject({ ok: false, code: 'trop-de-renvois', raison: 'minute' })
 		}
 		const recus = await mailsRecus(email)
-		expect(recus.length).toBe(6)
+		expect(recus.length).toBe(5)
 		expect(recus.every(m => lienDuMail(m.liens) === lien)).toBe(true)
 
 		avancer(61_000)
 		expect(await renvoi(email, freins)).toMatchObject({ ok: false, code: 'trop-de-renvois', raison: 'jour' })
-		expect((await mailsRecus(email)).length).toBe(6)
+		expect((await mailsRecus(email)).length).toBe(5)
 
 		avancer(24 * 60 * 60 * 1000)
 		expect(await renvoi(email, freins)).toEqual({ ok: true })
-		expect((await mailsRecus(email)).length).toBe(7)
+		expect((await mailsRecus(email)).length).toBe(6)
+	})
+
+	test('l’inscription suivie du renvoi donne les mêmes réponses pour une adresse neuve et pour une adresse prise : pas d’oracle', async () => {
+		const prise = courriel('oracle-prise')
+		await inscription(prise)
+		const neuve = courriel('oracle-neuve')
+		const { freins, avancer } = freinsAvecHorloge()
+		const { freins: freinsDeLaPrise, avancer: avancerLaPrise } = freinsAvecHorloge()
+		// The taken address has an old account: its sign-up and resend run on their own clock.
+		const sequence = async (email: string, f: FreinsDeBoite, avance: (ms: number) => void) => {
+			const inscrite = await inscription(email, { freins: f })
+			const premier = await renvoi(email, f)
+			avance(61_000)
+			const deuxieme = await renvoi(email, f)
+			return [inscrite, premier, deuxieme]
+		}
+
+		const pourLaNeuve = await sequence(neuve, freins, avancer)
+		const pourLaPrise = await sequence(prise, freinsDeLaPrise, avancerLaPrise)
+
+		expect(pourLaNeuve[1]).toMatchObject({ ok: false, code: 'trop-de-renvois', raison: 'minute' })
+		expect(pourLaPrise).toEqual(pourLaNeuve)
+	})
+
+	test('un second formulaire sur un compte pas encore confirmé renvoie son lien, pas « connecte-toi »', async () => {
+		const email = courriel('relance')
+		const { freins, avancer } = freinsAvecHorloge()
+		await inscription(email, { freins })
+		const premier = await attendreLeMail({ pour: email })
+		avancer(61_000)
+
+		await inscription(email, { freins })
+
+		const recus = await mailsRecus(email)
+		expect(recus.length).toBe(2)
+		expect(recus.every(m => !m.sujet.includes('déjà un compte'))).toBe(true)
+		expect(lienDuMail(recus[1]?.liens ?? [])).toBe(lienDuMail(premier.liens))
 	})
 
 	test('même réponse, même limite, pour une adresse sans compte : rien ne part et rien ne se devine', async () => {
@@ -295,8 +345,9 @@ describe('E04 : le renvoi de la confirmation est limité', () => {
 
 	test('les variantes Gmail d’une adresse partagent la même limite', async () => {
 		const base = `zz.renvoi${unique()}`
-		const { freins } = freinsAvecHorloge()
+		const { freins, avancer } = freinsAvecHorloge()
 		await inscription(`${base.replace('.', '')}@gmail.com`, { freins })
+		avancer(61_000)
 
 		expect(await renvoi(`${base.replace('.', '')}@gmail.com`, freins)).toEqual({ ok: true })
 		expect(await renvoi(`${base}+x@gmail.com`, freins)).toMatchObject({ ok: false, code: 'trop-de-renvois' })
@@ -313,6 +364,7 @@ describe('E04 : le renvoi de la confirmation est limité', () => {
 		const email = courriel('journal-renvoi')
 		const { freins, avancer } = freinsAvecHorloge()
 		await inscription(email, { freins })
+		avancer(61_000)
 		const avant = (await journal()).length
 
 		await renvoi(email, freins)

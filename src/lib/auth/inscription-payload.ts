@@ -3,7 +3,7 @@ import { contenuEmailConfirmation } from '../emails/confirmation'
 import { contenuEmailDejaInscrite } from '../emails/deja-inscrite'
 import { EnvoiEmailEchoue, type EnvoyerEmail } from '../emails/envoi'
 import { composerEmail } from '../emails/gabarit'
-import { trouverLeCompte } from './compte-par-email'
+import { type CompteTrouve, trouverLeCompte } from './compte-par-email'
 import { cleDeBoite } from './email-canonique'
 import { FREINS_DE_BOITE, type FreinsDeBoite, prendreUnMailPour } from './freins-inscription'
 import type { CodeEchecInscription, DonneesInscription } from './inscription'
@@ -99,7 +99,7 @@ export async function inscrire({
 	async function traiter(): Promise<ResultatDInscription> {
 		try {
 			const existant = await trouverLeCompte(payload, donnees.email)
-			if (existant) return await dejaPris(existant.email)
+			if (existant) return await dejaPris(existant)
 		} catch {
 			await noter('service-indisponible')
 			return { ok: false, code: 'service-indisponible' }
@@ -111,6 +111,10 @@ export async function inscrire({
 		for (let essai = 1; essai <= ESSAIS_MAX; essai++) {
 			const echec = await tenter()
 			if (echec === undefined) {
+				// The new address takes a place in the mailbox brakes, exactly as the « déjà un compte » mail
+				// of a taken one does: a resend asked right after reads the same answer for both, so the
+				// wall cannot be used to tell them apart. The result does not matter, this mail has left.
+				if (verifier) prendreUnMailPour(cleDeBoite(donnees.email), freins)
 				await noter('ok')
 				return { ok: true, confirmee: !verifier }
 			}
@@ -119,7 +123,7 @@ export async function inscrire({
 				// Two sign-ups with the same address at the same moment: the other one won. Told only if
 				// the address really has an account now (any other refusal on the email is not that).
 				const gagnant = await trouverLeCompte(payload, donnees.email).catch(() => undefined)
-				if (gagnant) return await dejaPris(gagnant.email)
+				if (gagnant) return await dejaPris(gagnant)
 				code = 'service-indisponible'
 			}
 			if (code !== 'service-indisponible') break
@@ -129,14 +133,18 @@ export async function inscrire({
 	}
 
 	/** The address has an account. Neutral when the confirmation is on, honest when it is off. */
-	async function dejaPris(destinataire: string): Promise<ResultatDInscription> {
+	async function dejaPris(compte: CompteTrouve): Promise<ResultatDInscription> {
 		if (!verifier) {
 			await noter('email-deja-pris')
 			return { ok: false, code: 'email-deja-pris' }
 		}
-		if (prendreUnMailPour(cleDeBoite(destinataire), freins).autorise) {
+		if (prendreUnMailPour(cleDeBoite(compte.email), freins).autorise) {
+			// An account still waiting for its confirmation gets its link again (she lost the first mail);
+			// a confirmed one is told she has an account. The same choice as the resend (`renvoi.ts`).
+			const contenu =
+				!compte.verifie && compte.jeton ? contenuEmailConfirmation(compte.jeton) : contenuEmailDejaInscrite()
 			try {
-				await envoyer({ a: destinataire, ...composerEmail(contenuEmailDejaInscrite(), site) })
+				await envoyer({ a: compte.email, ...composerEmail(contenu, site) })
 			} catch (erreur) {
 				// The same refusal as a new address whose mail cannot leave: a relay in trouble splits nothing.
 				await noter('service-indisponible')
