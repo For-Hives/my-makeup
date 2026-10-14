@@ -1,7 +1,7 @@
 /**
  * Command line of the local test bench (docs/tests/banc.md).
  *
- *   bun run banc:up                     starts the four containers, returns once all four answer
+ *   bun run banc:up                     starts the five containers, returns once all five answer
  *   bun run banc:down                   stops them, removes containers and volumes
  *   bun run banc:prepare                rebuilds the bench database by the migrations, empty
  *   bun run banc:complet                starts the stack, loads the whole set, builds and starts the application
@@ -45,7 +45,7 @@ import {
 } from '../tests/outils/e2e'
 import { lireLaSante } from '../tests/outils/serveur-e2e'
 
-/** Longest wait for the four services, from the first line of `banc:up` to the last. */
+/** Longest wait for the five services, from the first line of `banc:up` to the last. */
 const DELAI_DE_DEMARRAGE_MS = 60_000
 
 type EnvironnementDeProcessus = Record<string, string | undefined>
@@ -154,7 +154,7 @@ async function demarrer(banc: Banc): Promise<void> {
 			`${messageBancMuet(instance, muets).split('\n')[0]}\nLes journaux des conteneurs : docker compose --project-name ${instance.nom} logs`
 		)
 
-	const { base, mails, stockage, google } = services
+	const { base, mails, stockage, google, umami } = services
 	console.log(
 		[
 			`Banc de test « ${instance.nom} » prêt en ${secondes(debut)} s.`,
@@ -162,6 +162,7 @@ async function demarrer(banc: Banc): Promise<void> {
 			`- capteur de mails : SMTP ${mails.hote}:${mails.port}, boîte ${mails.api}`,
 			`- stockage d’objets : ${stockage.adresse}, espace « ${stockage.bucket} »`,
 			`- faux Google : ${google.adresse}, pris pour Google par GOOGLE_OIDC_ISSUER`,
+			`- faux Umami : ${umami.adresse}, pris pour l’instance Umami par UMAMI_ORIGIN`,
 			`Pour l’arrêter et tout effacer : ${prefixeDeCommande(instance)}bun run banc:down`,
 		].join('\n')
 	)

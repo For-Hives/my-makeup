@@ -57,9 +57,9 @@ const resoudre = (texte: string, variables: Record<string, string> = {}): string
 const portsPublies = (variables: Record<string, string> = {}): string[] =>
 	Object.values(compose.services).flatMap(({ ports }) => ports.map(port => resoudre(port, variables)))
 
-describe('compose.test.yml : quatre services, épinglés, en mémoire, joignables de ce poste seulement', () => {
-	test('la pile compte la base, le capteur de mails, le stockage d’objets et le faux Google, et rien d’autre', () => {
-		expect(Object.keys(compose.services).sort()).toEqual(['faux-google', 'mailpit', 'postgres', 's3mock'])
+describe('compose.test.yml : cinq services, épinglés, en mémoire, joignables de ce poste seulement', () => {
+	test('la pile compte la base, le capteur de mails, le stockage d’objets, le faux Google et le faux Umami, et rien d’autre', () => {
+		expect(Object.keys(compose.services).sort()).toEqual(['faux-google', 'faux-umami', 'mailpit', 'postgres', 's3mock'])
 	})
 
 	test('chaque image est épinglée par son étiquette exacte et par son empreinte', () => {
@@ -71,12 +71,12 @@ describe('compose.test.yml : quatre services, épinglés, en mémoire, joignable
 	})
 
 	test('chaque port n’est publié que sur l’interface locale', () => {
-		expect(portsPublies().length).toBe(5)
+		expect(portsPublies().length).toBe(6)
 		for (const port of portsPublies()) expect(port).toStartWith('127.0.0.1:')
 	})
 
 	test('rien n’est gardé : la base est en mémoire, aucun volume n’est déclaré', () => {
-		const { 'faux-google': fauxGoogle, ...autres } = compose.services
+		const { 'faux-google': fauxGoogle, 'faux-umami': fauxUmami, ...autres } = compose.services
 
 		expect(compose.services.postgres?.tmpfs).toEqual(['/var/lib/postgresql'])
 		expect(compose.volumes).toBeUndefined()
@@ -85,6 +85,9 @@ describe('compose.test.yml : quatre services, épinglés, en mémoire, joignable
 		// write neither there nor anywhere in its container.
 		expect(fauxGoogle?.volumes).toEqual(['./tests/outils/faux-google:/banc:ro'])
 		expect(fauxGoogle?.read_only).toBe(true)
+		// Same for the fake Umami.
+		expect(fauxUmami?.volumes).toEqual(['./tests/outils/faux-umami:/banc:ro'])
+		expect(fauxUmami?.read_only).toBe(true)
 	})
 
 	test('chaque service dit lui-même quand il est prêt : c’est ce qu’attend « up --wait »', () => {
@@ -102,6 +105,7 @@ describe('compose.test.yml : quatre services, épinglés, en mémoire, joignable
 				`127.0.0.1:${new URL(services.mails.api).port}:8025`,
 				`127.0.0.1:${services.stockage.port}:9090`,
 				`127.0.0.1:${services.google.port}:7080`,
+				`127.0.0.1:${services.umami.port}:4200`,
 			].sort()
 		)
 		expect(compose.services.postgres?.environment).toEqual({
@@ -123,6 +127,17 @@ describe('compose.test.yml : quatre services, épinglés, en mémoire, joignable
 			FAUX_GOOGLE_ECOUTE: '0.0.0.0',
 			FAUX_GOOGLE_PORT: '7080',
 		})
+		// The fake Umami listens where the bench publishes it.
+		expect(compose.services['faux-umami']?.environment).toEqual({
+			FAUX_UMAMI_ECOUTE: '0.0.0.0',
+			FAUX_UMAMI_PORT: '4200',
+		})
+	})
+
+	test('le faux Umami tourne sur le même bun, avec le code du dépôt', () => {
+		expect(compose.services['faux-umami']?.image).toBe(compose.services['faux-google']?.image ?? '')
+		expect(compose.services['faux-umami']?.command).toEqual(['bun', '/banc/serveur.ts'])
+		expect(existsSync(path.join(RACINE, 'tests/outils/faux-umami/serveur.ts'))).toBe(true)
 	})
 
 	test('le faux Google tourne sur le bun du Dockerfile : même image, même empreinte, et le code du dépôt', () => {
@@ -143,6 +158,7 @@ describe('compose.test.yml : quatre services, épinglés, en mémoire, joignable
 		expect(resoudre(compose.name, variables)).toBe('banc-voisin')
 		expect(portsPublies(variables).sort()).toEqual([
 			'127.0.0.1:1045:1025',
+			'127.0.0.1:4220:4200',
 			'127.0.0.1:5463:5432',
 			'127.0.0.1:7100:7080',
 			'127.0.0.1:8045:8025',
@@ -159,7 +175,7 @@ describe('.env.test : l’environnement factice du banc', () => {
 	const fichier = readFileSync(FICHIER_ENV, 'utf8')
 	const environnement = lireFichierEnv(fichier)
 
-	test('il décrit les quatre services et l’application, sans rien d’autre', () => {
+	test('il décrit les cinq services et l’application, sans rien d’autre', () => {
 		expect(Object.keys(environnement).sort()).toEqual([
 			'APP_ENV',
 			'DATABASE_URI',
@@ -169,6 +185,7 @@ describe('.env.test : l’environnement factice du banc', () => {
 			'GOOGLE_OIDC_ISSUER',
 			'MAILPIT_URL',
 			'NEXT_PUBLIC_SITE_URL',
+			'NEXT_PUBLIC_UMAMI_DOMAINS',
 			'PAYLOAD_SECRET',
 			'S3_ACCESS_KEY_ID',
 			'S3_BUCKET',
@@ -177,6 +194,7 @@ describe('.env.test : l’environnement factice du banc', () => {
 			'SMTP_HOST',
 			'SMTP_PORT',
 			'STRAPI_SOURCE_URI',
+			'UMAMI_ORIGIN',
 		])
 	})
 
@@ -247,6 +265,8 @@ describe('Plusieurs bancs côte à côte : un nom d’instance et un décalage d
 			GOOGLE_OIDC_ISSUER: 'http://127.0.0.1:7184',
 			GOOGLE_CLIENT_ID: 'client-google-factice-du-banc',
 			GOOGLE_CLIENT_SECRET: 'secret-google-factice-du-banc-de-test',
+			UMAMI_ORIGIN: 'http://127.0.0.1:4304',
+			NEXT_PUBLIC_UMAMI_DOMAINS: 'localhost,127.0.0.1',
 		})
 	})
 
@@ -254,7 +274,7 @@ describe('Plusieurs bancs côte à côte : un nom d’instance et un décalage d
 		const ports = (decalage: number) =>
 			portsDuBanc(servicesDuBanc(environnementDuBanc({ nom: 'x', decalage }))).map(({ port }) => port)
 
-		expect(ports(0)).toEqual([5443, 1025, 8025, 9090, 7080])
+		expect(ports(0)).toEqual([5443, 1025, 8025, 9090, 7080, 4200])
 		for (const decalage of [1, 20, 104, DECALAGE_MAX])
 			expect(ports(decalage).filter(port => ports(0).includes(port))).toEqual([])
 		// Whatever the two offsets: two ports of the bench are further apart than the highest offset.
@@ -343,7 +363,7 @@ describe('La commande d’intégration', () => {
 
 		expect(messageBancMuet(instance, sondes)).toBe(
 			[
-				'Le banc de test « voisin » ne répond pas : base (127.0.0.1:5463), capteur de mails (127.0.0.1:1045), stockage d’objets (127.0.0.1:9110), faux Google (127.0.0.1:7100).',
+				'Le banc de test « voisin » ne répond pas : base (127.0.0.1:5463), capteur de mails (127.0.0.1:1045), stockage d’objets (127.0.0.1:9110), faux Google (127.0.0.1:7100), faux Umami (127.0.0.1:4220).',
 				'Démarre-le d’abord : BANC_INSTANCE=voisin BANC_DECALAGE=20 bun run banc:up',
 			].join('\n')
 		)

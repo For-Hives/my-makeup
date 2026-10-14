@@ -232,11 +232,14 @@ describe('ce que « bun run test:e2e » donne au build et à Playwright', () => 
 		expect(build).toEqual({
 			PATH: '/usr/bin',
 			CI: 'true',
+			// The one public setting of the bench the pages freeze: the hostnames Umami counts on.
+			NEXT_PUBLIC_UMAMI_DOMAINS: 'localhost,127.0.0.1',
 			...SANS_FICHIER_ENV,
 			NEXT_TELEMETRY_DISABLED: '1',
 			NODE_ENV: 'production',
 		})
-		for (const nom of Object.keys(banc)) expect(build, nom).not.toHaveProperty(nom)
+		for (const nom of Object.keys(banc).filter(nom => nom !== 'NEXT_PUBLIC_UMAMI_DOMAINS'))
+			expect(build, nom).not.toHaveProperty(nom)
 	})
 
 	test('Playwright reçoit le banc de l’instance, qui l’emporte sur ce que le poste réglait', () => {

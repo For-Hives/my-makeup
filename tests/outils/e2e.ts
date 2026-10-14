@@ -211,6 +211,10 @@ export function environnementDuBuild(variables: Variables, environnement: Enviro
 	const duBanc = [...Object.keys(environnement), 'BASE_URL']
 	return {
 		...Object.fromEntries(Object.entries(definies(variables)).filter(([nom]) => !duBanc.includes(nom))),
+		// The one public setting of the bench the pages freeze: the hostnames Umami counts on.
+		...(environnement.NEXT_PUBLIC_UMAMI_DOMAINS && {
+			NEXT_PUBLIC_UMAMI_DOMAINS: environnement.NEXT_PUBLIC_UMAMI_DOMAINS,
+		}),
 		...SANS_FICHIER_ENV,
 		...SANS_TELEMETRIE,
 		NODE_ENV: 'production',

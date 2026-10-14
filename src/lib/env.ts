@@ -45,7 +45,8 @@ export type RawEnv = Partial<
 		| 'SMTP_PASSWORD'
 		| 'SMTP_PORT'
 		| 'SMTP_USER'
-		| 'STATS_TOKEN',
+		| 'STATS_TOKEN'
+		| 'UMAMI_ORIGIN',
 		string
 	>
 >
@@ -90,6 +91,14 @@ export type PreprodEnv = {
 	remiseAZero?: string
 }
 
+/** The Umami instance the `/u` relay talks to. */
+export type UmamiEnv = {
+	/** An origin, with a path when the instance lives under one, and no final slash. */
+	origin: string
+	/** True when the instance is on this machine: the fake Umami of the test bench. */
+	local: boolean
+}
+
 export type ServerEnv = {
 	databaseUri: string
 	/**
@@ -120,6 +129,11 @@ export type ServerEnv = {
 	 * route then refuses every request.
 	 */
 	statsToken?: string
+	/**
+	 * The Umami instance behind the site's own `/u` path (ticket 111). Nothing when none is wired: `/u`
+	 * then answers 404. On the site, unset means the current instance.
+	 */
+	umami?: UmamiEnv
 	/** The only origins a session cookie is accepted from. Never empty: for Payload, empty means « any ». */
 	trustedOrigins: string[]
 }
@@ -132,6 +146,9 @@ export const DEPLOYED_ORIGINS: readonly string[] = ['https://my-makeup.fr', 'htt
 
 /** The address of the site itself: the only one where a mail relay is mandatory (ticket 073). */
 export const SITE_ORIGIN = 'https://my-makeup.fr'
+
+/** The Umami instance of the site today: the one the live site measures into. Never reached from anywhere else than the site. */
+export const UMAMI_ORIGIN_DEFAULT = 'https://umami.wadefade.fr'
 
 /** The address of the pre-production: the only one where the reset and the import at start may run. */
 export const PREPROD_ORIGIN = 'https://preprod.my-makeup.fr'
@@ -205,6 +222,7 @@ const EXPECTED = {
 	SMTP_PASSWORD: 'le mot de passe du relais (pour Resend, une clé d’envoi), avec SMTP_USER',
 	SMTP_PORT: 'un numéro de port, de 1 à 65535',
 	SMTP_USER: 'l’identifiant du relais (pour Resend, « resend »), avec SMTP_PASSWORD',
+	UMAMI_ORIGIN: `une origine https://HÔTE (un chemin est permis, jamais de paramètres), ou sur ce poste celle du faux Umami du banc de test, comme http://127.0.0.1:4200`,
 	STATS_TOKEN: `au moins ${SECRET_MIN_LENGTH} caractères, par exemple la sortie de « openssl rand -hex 32 »`,
 } as const
 
@@ -285,6 +303,46 @@ function oidcIssuer(value: string): { issuer: string; local: boolean } | undefin
 	// Exact form only, as for the address of the site. Plain http: nothing local serves https.
 	const loopback = url.hostname === 'localhost' || url.hostname === '127.0.0.1'
 	return url.origin === value && url.protocol === 'http:' && loopback ? { issuer: value, local: true } : undefined
+}
+
+/**
+ * The Umami instance, when it is written in its exact form: an https origin (a path is allowed
+ * when the instance lives under one), or on this machine an http one (the fake Umami of the test
+ * bench serves no https). No credentials, no query, no fragment, no final slash.
+ */
+function umamiOrigin(value: string): UmamiEnv | undefined {
+	let url: URL
+	try {
+		url = new URL(value)
+	} catch {
+		return undefined
+	}
+	if (url.username !== '' || url.password !== '' || url.search !== '' || url.hash !== '') return undefined
+	if (value.includes('?') || value.includes('#')) return undefined
+	const path = url.pathname === '/' ? '' : url.pathname
+	if (value !== `${url.origin}${path}`) return undefined
+	const loopback = url.hostname === 'localhost' || url.hostname === '127.0.0.1'
+	if (url.protocol === 'https:') return { origin: value, local: loopback }
+	return url.protocol === 'http:' && loopback ? { origin: value, local: true } : undefined
+}
+
+/**
+ * The Umami instance behind `/u`, or nothing, for a site served from `site`.
+ *
+ * - Set: that instance, once it is written in its exact form.
+ * - Unset: the instance of the site today, on the site (https://my-makeup.fr) and nowhere else.
+ *   The pre-production, a test and a development machine measure into nothing.
+ *
+ * Read alone by the relay, which must not need the rest of the environment; an origin it cannot
+ * read gives nothing here and stops the server when it starts (`parseServerEnv`).
+ */
+export function umamiFromEnv(
+	value: string | undefined = process.env.UMAMI_ORIGIN,
+	site: string | undefined = process.env.NEXT_PUBLIC_SITE_URL
+): UmamiEnv | undefined {
+	const set = value?.trim()
+	if (set !== undefined && set !== '') return umamiOrigin(set)
+	return site === SITE_ORIGIN ? { origin: UMAMI_ORIGIN_DEFAULT, local: false } : undefined
 }
 
 /**
@@ -526,6 +584,10 @@ const schema = z.object({
 		.refine(value => siteOrigin(value) !== undefined, { error: 'refusée' })
 		.optional(),
 	PAYLOAD_SECRET: required.refine(value => value.trim().length >= SECRET_MIN_LENGTH, { error: 'trop courte' }),
+	UMAMI_ORIGIN: z
+		.string()
+		.refine(value => umamiOrigin(value.trim()) !== undefined, { error: 'refusée' })
+		.optional(),
 	STATS_TOKEN: z
 		.string()
 		.refine(value => value.trim().length >= SECRET_MIN_LENGTH, { error: 'trop courte' })
@@ -583,6 +645,28 @@ export function parseServerEnv(source: RawEnv): ServerEnv {
 		})
 	}
 
+	// Nothing reaches the live instance of Umami from a site that is not the site, and no instance
+	// of this machine stands in for it on a deployed one.
+	const umami = parsed.success ? umamiFromEnv(raw.UMAMI_ORIGIN, raw.NEXT_PUBLIC_SITE_URL) : undefined
+	const deployedElsewhere =
+		raw.NEXT_PUBLIC_SITE_URL !== undefined &&
+		DEPLOYED_ORIGINS.includes(raw.NEXT_PUBLIC_SITE_URL) &&
+		raw.NEXT_PUBLIC_SITE_URL !== SITE_ORIGIN
+	if (umami && raw.UMAMI_ORIGIN !== undefined) {
+		if (umami.local && raw.NEXT_PUBLIC_SITE_URL !== undefined && DEPLOYED_ORIGINS.includes(raw.NEXT_PUBLIC_SITE_URL))
+			problems.push({
+				variable: 'UMAMI_ORIGIN',
+				problem:
+					'refusée, car elle désigne une instance de ce poste alors que le site est déployé. Un site déployé ne mesure que dans sa vraie instance.',
+			})
+		else if (deployedElsewhere && umami.origin === UMAMI_ORIGIN_DEFAULT)
+			problems.push({
+				variable: 'UMAMI_ORIGIN',
+				problem:
+					'refusée, car elle désigne l’instance du site alors que ce n’est pas le site. Seul le site mesure dans sa vraie instance : retire cette variable.',
+			})
+	}
+
 	if (!parsed.success || problems.length > 0) throw new EnvError(problems)
 
 	return {
@@ -594,6 +678,7 @@ export function parseServerEnv(source: RawEnv): ServerEnv {
 		...(preprod && { preprod }),
 		...(storage && { storage }),
 		...(parsed.data.STATS_TOKEN !== undefined && { statsToken: parsed.data.STATS_TOKEN.trim() }),
+		...(umami && { umami }),
 		trustedOrigins: trustedOrigins(parsed.data.NEXT_PUBLIC_SITE_URL, production, raw.PORT),
 	}
 }
@@ -625,6 +710,7 @@ function processEnv(): RawEnv {
 		SMTP_PORT: process.env.SMTP_PORT,
 		SMTP_USER: process.env.SMTP_USER,
 		STATS_TOKEN: process.env.STATS_TOKEN,
+		UMAMI_ORIGIN: process.env.UMAMI_ORIGIN,
 	}
 }
 
