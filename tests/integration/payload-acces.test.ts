@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { viderLeCapteur } from '../outils/mailpit'
 import { type Distribution, distribuer, jouer, type Ligne, nommer, VOIES } from '../outils/matrice-acces'
 import { viderLaBase } from '../outils/payload-test'
+import { viderLeStockage } from '../outils/s3'
 
 /**
  * The access matrix (plan 01 §5 P3; docs/tests/banc.md, « La matrice d'accès »).
@@ -279,6 +280,79 @@ const MATRICE: Ligne[] = [
 			attendu,
 		})
 	),
+
+	// media (ticket 043): the public never lists the media, and reads one only when it belongs to a
+	// published profile (U56, I04); a makeup artist sends photos, lists and reads her own, changes
+	// and deletes her own only, never their owner nor where their object is; `admin` reaches every
+	// media. In the cast, A's photo is the main photo of her published profile, B's of her draft.
+	{ role: 'anonyme', collection: 'media', operation: 'lister', attendu: 'refuse' },
+	{ role: 'anonyme', collection: 'media', operation: 'lire', document: 'maquilleuse', attendu: 'autorise' },
+	{ role: 'anonyme', collection: 'media', operation: 'lire', document: 'autreMaquilleuse', attendu: 'refuse' },
+	{ role: 'anonyme', collection: 'media', operation: 'creer', attendu: 'refuse' },
+	{ role: 'anonyme', collection: 'media', operation: 'modifier', document: 'maquilleuse', attendu: 'refuse' },
+	{ role: 'anonyme', collection: 'media', operation: 'supprimer', document: 'maquilleuse', attendu: 'refuse' },
+	{ role: 'maquilleuse', collection: 'media', operation: 'lister', attendu: 'soi' },
+	{ role: 'maquilleuse', collection: 'media', operation: 'lire', document: 'maquilleuse', attendu: 'autorise' },
+	{ role: 'maquilleuse', collection: 'media', operation: 'lire', document: 'autreMaquilleuse', attendu: 'refuse' },
+	{ role: 'maquilleuse', collection: 'media', operation: 'creer', attendu: 'autorise' },
+	{ role: 'maquilleuse', collection: 'media', operation: 'modifier', document: 'maquilleuse', attendu: 'autorise' },
+	{ role: 'maquilleuse', collection: 'media', operation: 'modifier', document: 'autreMaquilleuse', attendu: 'refuse' },
+	{ role: 'maquilleuse', collection: 'media', operation: 'supprimer', document: 'maquilleuse', attendu: 'autorise' },
+	{ role: 'maquilleuse', collection: 'media', operation: 'supprimer', document: 'autreMaquilleuse', attendu: 'refuse' },
+	...(
+		[
+			['owner', { compteDe: 'autreMaquilleuse' }],
+			['prefix', 'un-autre-dossier'],
+			['filename', 'un-autre-nom.png'],
+			['strapiId', 999],
+		] as const
+	).map(
+		([champ, valeur]): Ligne => ({
+			role: 'maquilleuse',
+			collection: 'media',
+			operation: 'modifier',
+			document: 'maquilleuse',
+			champ,
+			valeur,
+			attendu: 'ignore',
+		})
+	),
+	{ role: 'autreMaquilleuse', collection: 'media', operation: 'lister', attendu: 'soi' },
+	{ role: 'autreMaquilleuse', collection: 'media', operation: 'lire', document: 'maquilleuse', attendu: 'autorise' },
+	{ role: 'autreMaquilleuse', collection: 'media', operation: 'modifier', document: 'maquilleuse', attendu: 'refuse' },
+	{ role: 'autreMaquilleuse', collection: 'media', operation: 'supprimer', document: 'maquilleuse', attendu: 'refuse' },
+	{ role: 'sansProfil', collection: 'media', operation: 'lister', attendu: 'aucun' },
+	{ role: 'sansProfil', collection: 'media', operation: 'lire', document: 'maquilleuse', attendu: 'autorise' },
+	{ role: 'sansProfil', collection: 'media', operation: 'lire', document: 'autreMaquilleuse', attendu: 'refuse' },
+	{ role: 'sansProfil', collection: 'media', operation: 'modifier', document: 'maquilleuse', attendu: 'refuse' },
+	{ role: 'redaction', collection: 'media', operation: 'lister', attendu: 'refuse' },
+	{ role: 'redaction', collection: 'media', operation: 'lire', document: 'maquilleuse', attendu: 'autorise' },
+	{ role: 'redaction', collection: 'media', operation: 'lire', document: 'autreMaquilleuse', attendu: 'refuse' },
+	{ role: 'redaction', collection: 'media', operation: 'creer', attendu: 'refuse' },
+	{ role: 'redaction', collection: 'media', operation: 'modifier', document: 'maquilleuse', attendu: 'refuse' },
+	{ role: 'redaction', collection: 'media', operation: 'supprimer', document: 'maquilleuse', attendu: 'refuse' },
+	{ role: 'admin', collection: 'media', operation: 'lister', attendu: 'tous' },
+	{ role: 'admin', collection: 'media', operation: 'lire', document: 'autreMaquilleuse', attendu: 'autorise' },
+	{ role: 'admin', collection: 'media', operation: 'creer', attendu: 'autorise' },
+	{ role: 'admin', collection: 'media', operation: 'modifier', document: 'autreMaquilleuse', attendu: 'autorise' },
+	{ role: 'admin', collection: 'media', operation: 'supprimer', document: 'autreMaquilleuse', attendu: 'autorise' },
+	...(
+		[
+			['owner', { compteDe: 'sansProfil' }, 'autorise'],
+			['prefix', 'un-autre-dossier', 'ignore'],
+			['strapiId', 999, 'ignore'],
+		] as const
+	).map(
+		([champ, valeur, attendu]): Ligne => ({
+			role: 'admin',
+			collection: 'media',
+			operation: 'modifier',
+			document: 'autreMaquilleuse',
+			champ,
+			valeur,
+			attendu,
+		})
+	),
 ]
 
 let distribution: Distribution
@@ -287,9 +361,10 @@ beforeAll(async () => {
 	distribution = await distribuer()
 })
 
-// An account an admin creates through REST gets Payload's confirmation email: the mail catcher is emptied too.
+// An account an admin creates through REST gets Payload's confirmation email: the mail catcher is
+// emptied too. The photos of the cast and of the lines go to the object storage: emptied as well.
 afterAll(async () => {
-	await Promise.all([viderLaBase(), viderLeCapteur()])
+	await Promise.all([viderLaBase(), viderLeCapteur(), viderLeStockage()])
 })
 
 describe('La matrice d’accès, par l’API REST et par l’API locale avec les règles actives', () => {

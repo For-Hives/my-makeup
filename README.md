@@ -38,7 +38,7 @@ Une application, trois zones, toutes sous `src/app/` :
 |---|---|---|---|
 | Pages publiques | `(front)/(site)/` | `/` | Page d'accueil provisoire |
 | Espace maquilleuse | `(front)/(espace)/auth/` | `/auth` | Page d'attente |
-| Administration | `(payload)/` | `/admin` et `/api` | Générée par Payload : les comptes `admins`, aux rôles `admin` et `redaction`, les comptes des maquilleuses, `pros`, et leurs profils, `profils` |
+| Administration | `(payload)/` | `/admin` et `/api` | Générée par Payload : les comptes `admins`, aux rôles `admin` et `redaction`, les comptes des maquilleuses, `pros`, leurs profils, `profils`, et les photos, `media` |
 
 Les noms entre parenthèses rangent les fichiers et n'apparaissent pas dans les adresses.
 
@@ -46,7 +46,7 @@ Les pages publiques et l'espace maquilleuse partagent une seule coquille HTML, `
 
 Le reste :
 
-- `src/payload.config.ts` : la configuration de Payload (base PostgreSQL, collections `admins`, `pros` et `profils`).
+- `src/payload.config.ts` : la configuration de Payload (base PostgreSQL, collections `admins`, `pros`, `profils` et `media`, stockage d'objets des photos).
 - `src/collections/` : les collections de Payload. `src/lib/acces.ts` : qui peut lire, créer, modifier ou supprimer quoi (voir « Accès »).
 - `src/lib/env.ts` : les variables d'environnement, vérifiées au démarrage par `src/instrumentation.ts`.
 - `src/migrations/` : les migrations versionnées de la base.
@@ -152,7 +152,10 @@ L'application vérifie ses variables à chaque démarrage (`bun run dev`, `bun r
 | `PAYLOAD_SECRET` | Obligatoire. 32 caractères au moins. |
 | `NEXT_PUBLIC_SITE_URL` | Obligatoire en production (`bun run start`, image Docker), inutile pour `bun run dev`. Sans `/` final, et l'une de ces adresses seulement : `https://my-makeup.fr`, `https://preprod.my-makeup.fr`, ou une adresse de ce poste comme `http://localhost:3000`. |
 | `PAYLOAD_DROP_DATABASE` | Refusée si la base n'est pas sur ce poste : avec `true`, Payload efface toutes les tables. |
-| `R2_PUBLIC_URL` | Facultative. L'adresse publique des photos : `https://`, un hôte, sans chemin ni `/` final. Absente, c'est celle des photos du site en ligne. |
+| `R2_PUBLIC_URL` | Facultative. L'adresse publique des photos : `https://`, un hôte, sans chemin ni `/` final. Absente, c'est celle des photos du site en ligne, sauf sur le banc de test (voir plus bas). |
+| `S3_ENDPOINT` | Facultative. L'API S3 du stockage d'objets des photos : `https://` et un hôte, ou sur ce poste `http://127.0.0.1:PORT`, sans chemin ni `/` final. Absente, aucune photo n'est reçue. Refusée si elle est sur ce poste alors que le site est déployé. |
+| `S3_BUCKET` | Obligatoire dès que `S3_ENDPOINT` est réglée. L'espace des photos : 3 à 63 caractères, minuscules, chiffres, points et tirets. |
+| `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | Obligatoires dès que `S3_ENDPOINT` est réglée. La clé d'accès au stockage et son secret. |
 | `SMTP_HOST` | Facultative. Le relais SMTP par lequel partent tous les mails : un nom d'hôte seul, sans protocole ni port. Absente, l'application n'envoie rien : Payload écrit une ligne de journal à la place de chaque mail. |
 | `SMTP_PORT` | Obligatoire dès que `SMTP_HOST` est réglée. Le port du relais, de 1 à 65535. |
 | `EMAIL_FROM` | Obligatoire dès que `SMTP_HOST` est réglée. L'expéditeur de tous les mails : `Nom <adresse@domaine>`, ou une adresse seule. |
@@ -166,6 +169,8 @@ L'application vérifie ses variables à chaque démarrage (`bun run dev`, `bun r
 - `R2_PUBLIC_URL` est publique. Elle est lue plus tôt que les autres, quand Next charge `next.config.ts` : une valeur refusée arrête aussi le build. Voir « Images ».
 - `NEXT_PUBLIC_APP_VERSION` et `SOURCE_COMMIT` sont facultatives. Elles sont lues dans `src/lib/env.ts` sans être vérifiées : aucune valeur n'arrête le démarrage (voir « Route de santé »). `next.config.ts` lit aussi `SOURCE_COMMIT`, au moment du build, pour le figer dans le build : il le lit lui-même, par son nom. De `src/lib/env.ts`, il n'appelle que `mediaOrigin`, pour `R2_PUBLIC_URL`.
 - `SMTP_HOST`, `SMTP_PORT` et `EMAIL_FROM` règlent l'adaptateur d'email de Payload. Elles ne se donnent jamais au build. Aucune connexion n'est ouverte au démarrage : un relais injoignable fait échouer l'envoi du mail, pas le démarrage. Le relais est utilisé tel quel, sans identifiant ni chiffrement : pour l'instant, cela ne convient qu'au capteur de mails du banc de test, où ces trois variables sont réglées par `.env.test`.
+- `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY_ID` et `S3_SECRET_ACCESS_KEY` règlent le stockage des photos (`@payloadcms/storage-s3`) : Cloudflare R2 sur le site, le simulateur S3 sur le banc de test, où `.env.test` les règle. Elles ne se donnent jamais au build. Sans elles, la collection `media` garde ses champs (le schéma ne dépend pas de l'environnement), mais une photo envoyée est refusée : rien n'est jamais écrit sur le disque du serveur.
+- L'adresse publique d'une photo est la base des photos, puis la clé de son objet : son préfixe (`media/` pour une photo envoyée dans la v3), puis son nom de fichier. La base est `R2_PUBLIC_URL` ; sans elle, sur le banc de test, c'est le simulateur et son espace (`http://127.0.0.1:9090/mymakeup-test`), sinon l'hôte des photos du site en ligne. La règle est dans `src/lib/medias.ts`.
 - `GOOGLE_OIDC_ISSUER` fait prendre le faux Google du banc de test pour Google (voir « Le banc de test »). Une adresse locale est refusée dès que `NEXT_PUBLIC_SITE_URL` est celle du site ou de sa préprod, quel que soit le mode : l'application s'arrête au démarrage. Un build de production servi sur ce poste, comme pour les essais de bout en bout, l'accepte. La connexion Google elle-même, avec son client et son secret, arrive avec son ticket.
 - Une nouvelle variable s'ajoute dans `src/lib/env.ts` et dans `.env.exemple`, par le ticket qui commence à la lire.
 
@@ -190,6 +195,7 @@ L'application vérifie ses variables à chaque démarrage (`bun run dev`, `bun r
 - Créer le compte d'une maquilleuse crée son profil vide (collection `profils`), avec un slug unique calculé par le serveur à partir du nom du compte (`src/lib/slug.ts`) : `-2`, `-3` pour les homonymes, `maquilleuse-<identifiant>` pour un nom qui ne donne rien. Le slug ne change plus ensuite, et aucune API ne l'écrit. Une création qui porte `CONTEXTE_SANS_PROFIL` (`src/collections/Profils.ts`) laisse le compte sans profil : c'est ce que fera l'import pour les comptes qui n'en ont pas. Une maquilleuse ne modifie que son propre profil ; un compte sans profil ne modifie rien. Un compte qui a encore un profil n'est pas supprimé : le profil part d'abord.
 - Un profil a un statut : `brouillon` (celui d'un profil neuf), `publie` ou `masque`. L'anonyme et le rôle `redaction` ne lisent que les profils publiés ; une maquilleuse lit le sien, quel que soit son statut, et les profils publiés. Ce que lit le public d'un profil est son identité et le badge « Super maquilleuse », jamais le compte relié, ni ce qu'a écrit l'import (`strapiId`, `legacyUsername`), ni ce qu'a décidé un admin. Seul un admin écrit le statut, le motif, la vérification et sa date, le SIRET, la note interne, le score et le badge : ce qu'une maquilleuse envoie sur ces champs est ignoré. Elle lit son statut, son motif, sa vérification et son SIRET, jamais la note interne ni le score.
 - Les réseaux d'un profil sont publics. Ses coordonnées (`coordonnees` : téléphone et email de contact) ne sont lues que par la propriétaire et un admin, jamais par le public ni par le rôle `redaction`, même quand elle a choisi de les montrer (`contactPublic`) : une page publique les lira par `src/services/public/`. Quand `contactPublic` devient vrai, le serveur pose lui-même la date (`consentiLe`) et la source du consentement (`sourceConsentement` : `maquilleuse` ou `admin`, selon le compte qui enregistre) ; il les vide quand il redevient faux. Aucune API ne les écrit. Un téléphone de plus de 20 caractères ou un email mal formé est refusé, avec le message de l'ancien site.
+- Les photos (collection `media`) sont des objets du stockage, chacun sous son propre préfixe. Le public ne liste jamais les médias : il lit un média seulement s'il est la photo principale ou une photo de la galerie d'un profil publié ; un autre est introuvable (404). Une maquilleuse envoie ses photos, liste et lit les siennes, ne modifie et ne supprime que les siennes ; le serveur la pose comme propriétaire (`owner`), quel que soit le propriétaire que dit sa requête, et ce que dit une requête sur l'objet lui-même (nom, préfixe, adresse, type, taille) est ignoré. Un profil n'accepte que des photos de son compte : une photo principale et une galerie ordonnée de 10 photos au plus. Le propriétaire, l'identifiant et les formats de l'ancien site ne sont pas publics.
 - Les règles sont dans `src/lib/acces.ts`. Chacune a ses lignes dans la matrice d'accès, jouée par l'API REST et par l'API locale (`tests/integration/payload-acces.test.ts`, voir [`docs/tests/banc.md`](docs/tests/banc.md), « La matrice d'accès »).
 
 ### En-têtes de sécurité
@@ -277,7 +283,7 @@ bun run image:controle   # la démarre contre une base jetable et vérifie le ta
 | `NEXT_PUBLIC_SITE_URL` | Au build (`--build-arg`, « Build Variable » dans Coolify) | L'adresse du site, figée dans le build. Une image construite sans elle est une image de test : le conteneur doit alors la recevoir au démarrage. |
 | `SOURCE_COMMIT` | Au build | Le commit construit : c'est la `version` de `/api/health`. |
 | `NEXT_PUBLIC_APP_VERSION` | Au build, facultative | Un libellé de version, à la place du commit. |
-| `DATABASE_URI`, `PAYLOAD_SECRET` | Au conteneur seulement | Jamais au build : dans Coolify, la case « Build Variable » reste décochée. |
+| `DATABASE_URI`, `PAYLOAD_SECRET`, `S3_*` | Au conteneur seulement | Jamais au build : dans Coolify, la case « Build Variable » reste décochée. |
 
 - Une nouvelle variable publique de build s'ajoute à trois endroits : une ligne `ARG` du `Dockerfile`, la liste de `scripts/image/regles.ts`, et `.env.exemple`.
 - Une nouvelle variable d'exécution ne s'ajoute qu'à `.env.exemple` (et à `src/lib/env.ts`). La garde de `tests/ci/` refuse alors tout `Dockerfile` qui la nomme, et `bun run image:controle` toute image qui la porte.

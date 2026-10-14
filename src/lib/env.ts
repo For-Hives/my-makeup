@@ -10,7 +10,8 @@ import type { VersionSources } from './version'
  *   configuration without starting the server.
  *
  * One variable is read earlier, when Next loads its configuration: R2_PUBLIC_URL, by `mediaOrigin`
- * below, called from next.config.ts.
+ * below, called from next.config.ts. src/payload.config.ts reads it again, by `mediaBaseUrl`, for
+ * the address of each photo.
  *
  * A variable is added here by the ticket that starts reading it, with its line in `.env.exemple`.
  * An error names the variable and what is expected, never the value it received.
@@ -34,6 +35,10 @@ export type RawEnv = Partial<
 		| 'PAYLOAD_DROP_DATABASE'
 		| 'PAYLOAD_SECRET'
 		| 'PORT'
+		| 'S3_ACCESS_KEY_ID'
+		| 'S3_BUCKET'
+		| 'S3_ENDPOINT'
+		| 'S3_SECRET_ACCESS_KEY'
 		| 'SMTP_HOST'
 		| 'SMTP_PORT',
 		string
@@ -46,6 +51,20 @@ export type MailEnv = {
 	port: number
 	fromAddress: string
 	fromName: string
+}
+
+/**
+ * The object storage the photos are written to (ticket 043): Cloudflare R2 on the site, the S3
+ * simulator on the test bench. The keys never leave the server.
+ */
+export type StorageEnv = {
+	/** The S3 API of the storage, an origin without a path: `https://<account>.r2.cloudflarestorage.com`. */
+	endpoint: string
+	bucket: string
+	accessKeyId: string
+	secretAccessKey: string
+	/** True when the storage is on this machine: the test bench. */
+	local: boolean
 }
 
 export type ServerEnv = {
@@ -63,6 +82,11 @@ export type ServerEnv = {
 	 */
 	mail?: MailEnv
 	payloadSecret: string
+	/**
+	 * Nothing when S3_ENDPOINT is not set: no photo can then be sent, and the application writes
+	 * nothing on its own disk.
+	 */
+	storage?: StorageEnv
 	/** The only origins a session cookie is accepted from. Never empty: for Payload, empty means « any ». */
 	trustedOrigins: string[]
 }
@@ -99,6 +123,11 @@ const EXPECTED = {
 	NEXT_PUBLIC_SITE_URL: `${DEPLOYED_ORIGINS.join(', ')} ou une adresse de ce poste comme http://localhost:${DEFAULT_PORT}, sans « / » final`,
 	PAYLOAD_SECRET: `au moins ${SECRET_MIN_LENGTH} caractères, par exemple la sortie de « openssl rand -hex 32 »`,
 	R2_PUBLIC_URL: 'une adresse https://HÔTE, sans chemin ni « / » final',
+	S3_ACCESS_KEY_ID: 'l’identifiant de la clé d’accès au stockage des photos',
+	S3_BUCKET: 'un nom d’espace : 3 à 63 caractères, minuscules, chiffres, points et tirets',
+	S3_ENDPOINT:
+		'l’adresse de l’API S3 du stockage, https://HÔTE, ou sur ce poste celle du banc de test, comme http://127.0.0.1:9090, sans chemin ni « / » final',
+	S3_SECRET_ACCESS_KEY: 'le secret de cette clé',
 	SMTP_HOST: 'un nom d’hôte seul, sans protocole ni port',
 	SMTP_PORT: 'un numéro de port, de 1 à 65535',
 } as const
@@ -208,6 +237,77 @@ export function mediaOrigin(raw: string | undefined): string {
 	// Exact form only, as for the address of the site: https, a plain host, nothing after it.
 	if (url?.protocol === 'https:' && url.origin === raw && PLAIN_HOST.test(url.hostname)) return raw
 	throw new EnvError([{ variable: 'R2_PUBLIC_URL', problem: `refusée. Attendu : ${EXPECTED.R2_PUBLIC_URL}.` }])
+}
+
+/**
+ * Where the photos are served from, with the bucket in the path when there is one to add: the
+ * public origin of the bucket (R2_PUBLIC_URL, or the one of the site in production), or on this
+ * machine the S3 simulator of the test bench, which serves a bucket under its own name
+ * (`http://127.0.0.1:9090/mymakeup-test`). The address of a photo is this, then its key.
+ *
+ * Read by src/payload.config.ts with the environment of the server. A refused R2_PUBLIC_URL throws,
+ * as in `mediaOrigin`.
+ */
+export function mediaBaseUrl(r2PublicUrl: string | undefined, storage: StorageEnv | undefined): string {
+	const set = r2PublicUrl !== undefined && r2PublicUrl.trim() !== ''
+	if (!set && storage?.local) return `${storage.endpoint}/${storage.bucket}`
+	return mediaOrigin(r2PublicUrl)
+}
+
+/** A bucket name as S3 and R2 accept it. */
+const BUCKET_NAME = /^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/
+
+/**
+ * The endpoint of the storage, when it is written in its exact form: an https origin, or on this
+ * machine an http one (the S3 simulator of the test bench serves no https).
+ */
+function storageEndpoint(value: string): { endpoint: string; local: boolean } | undefined {
+	let url: URL
+	try {
+		url = new URL(value)
+	} catch {
+		return undefined
+	}
+	if (url.origin !== value) return undefined
+	const loopback = url.hostname === 'localhost' || url.hostname === '127.0.0.1'
+	if (url.protocol === 'https:') return { endpoint: value, local: loopback }
+	return url.protocol === 'http:' && loopback ? { endpoint: value, local: true } : undefined
+}
+
+/**
+ * The storage of the photos. S3_ENDPOINT switches it on, and then asks for the three others: a
+ * storage without a bucket or a key is refused when the server starts, not at the first photo.
+ */
+function storageEnv(raw: RawEnv, problems: { variable: string; problem: string }[]): StorageEnv | undefined {
+	if (raw.S3_ENDPOINT === undefined) return undefined
+	const refuse = (
+		variable: 'S3_ACCESS_KEY_ID' | 'S3_BUCKET' | 'S3_ENDPOINT' | 'S3_SECRET_ACCESS_KEY',
+		problem: string
+	) => problems.push({ variable, problem: `${problem}. Attendu : ${EXPECTED[variable]}.` })
+	const missing = `${ABSENT}, alors que S3_ENDPOINT est réglée`
+
+	const endpoint = storageEndpoint(raw.S3_ENDPOINT)
+	if (!endpoint) refuse('S3_ENDPOINT', 'refusée')
+	if (raw.S3_BUCKET === undefined) refuse('S3_BUCKET', missing)
+	else if (!BUCKET_NAME.test(raw.S3_BUCKET)) refuse('S3_BUCKET', 'refusée')
+	if (raw.S3_ACCESS_KEY_ID === undefined) refuse('S3_ACCESS_KEY_ID', missing)
+	if (raw.S3_SECRET_ACCESS_KEY === undefined) refuse('S3_SECRET_ACCESS_KEY', missing)
+
+	// Like the fake Google: the simulator of this machine never stands in for the storage of a deployed site.
+	if (endpoint?.local && raw.NEXT_PUBLIC_SITE_URL !== undefined && DEPLOYED_ORIGINS.includes(raw.NEXT_PUBLIC_SITE_URL))
+		problems.push({
+			variable: 'S3_ENDPOINT',
+			problem:
+				'refusée, car elle désigne un stockage de ce poste alors que le site est déployé. Un site déployé écrit ses photos dans son vrai stockage.',
+		})
+
+	if (!endpoint || !raw.S3_BUCKET || !raw.S3_ACCESS_KEY_ID || !raw.S3_SECRET_ACCESS_KEY) return undefined
+	return {
+		...endpoint,
+		bucket: raw.S3_BUCKET,
+		accessKeyId: raw.S3_ACCESS_KEY_ID,
+		secretAccessKey: raw.S3_SECRET_ACCESS_KEY,
+	}
 }
 
 /** A local address under both of its names: a browser may be opened on either. */
@@ -325,6 +425,7 @@ export function parseServerEnv(source: RawEnv): ServerEnv {
 	}
 
 	const mail = mailEnv(raw, problems)
+	const storage = storageEnv(raw, problems)
 
 	// A provider of this machine stands in for Google on this machine only. On the site and on
 	// its pre-production, whatever NODE_ENV says, the Google sign-in talks to Google and nobody else.
@@ -345,6 +446,7 @@ export function parseServerEnv(source: RawEnv): ServerEnv {
 		localDatabase: isLocalDatabase(parsed.data.DATABASE_URI),
 		...(mail && { mail }),
 		payloadSecret: parsed.data.PAYLOAD_SECRET,
+		...(storage && { storage }),
 		trustedOrigins: trustedOrigins(parsed.data.NEXT_PUBLIC_SITE_URL, production, raw.PORT),
 	}
 }
@@ -365,6 +467,10 @@ function processEnv(): RawEnv {
 		PAYLOAD_DROP_DATABASE: process.env.PAYLOAD_DROP_DATABASE,
 		PAYLOAD_SECRET: process.env.PAYLOAD_SECRET,
 		PORT: process.env.PORT,
+		S3_ACCESS_KEY_ID: process.env.S3_ACCESS_KEY_ID,
+		S3_BUCKET: process.env.S3_BUCKET,
+		S3_ENDPOINT: process.env.S3_ENDPOINT,
+		S3_SECRET_ACCESS_KEY: process.env.S3_SECRET_ACCESS_KEY,
 		SMTP_HOST: process.env.SMTP_HOST,
 		SMTP_PORT: process.env.SMTP_PORT,
 	}
@@ -376,7 +482,7 @@ function processEnv(): RawEnv {
  * `next build` is the one exception: it loads the Payload configuration to compile the routes, and
  * must work with no secret and no database. Nothing is checked then, and a missing secret stays
  * empty: Payload refuses to start with an empty secret, so such a configuration cannot serve.
- * A build sends no mail either: it gets no relay, whatever its environment holds.
+ * A build sends no mail either: it gets no relay, whatever its environment holds; and no storage.
  */
 export function serverEnv(source: RawEnv = processEnv()): ServerEnv {
 	if (source.NEXT_PHASE !== BUILD_PHASE) return parseServerEnv(source)

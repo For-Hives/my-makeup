@@ -15,6 +15,7 @@ import {
 	jamais,
 	profilPublieOuProprietaire,
 } from '../lib/acces'
+import { GALERIE_MAX } from '../lib/medias'
 import {
 	consentementApres,
 	LIBELLES_DES_SOURCES,
@@ -23,6 +24,7 @@ import {
 	validerLienDeReseau,
 	validerTelephone,
 } from '../lib/profil/coordonnees'
+import { photosDeLaProprietaire, validerPhotosDuProfil } from '../lib/profil/photos'
 import { validerSiret } from '../lib/profil/siret'
 import { LIBELLES_DES_STATUTS, STATUT_INITIAL, STATUTS_DU_PROFIL } from '../lib/profil/statut'
 import { premierSlugLibre, slugDeRepli, slugifier } from '../lib/slug'
@@ -145,6 +147,8 @@ const INTERNE = { read: champAdminSeulement, create: champAdminSeulement, update
  * - What the public reads of a profile is its identity: never the account it belongs to, what the
  *   import wrote, nor what an admin decided about it, except the « Super maquilleuse » badge.
  * - Nobody creates a profile through an API but an admin: the server creates it with the account.
+ * - Its photos (`photoPrincipale`, `galerie`: 10 at most, in order) are media of its own account:
+ *   a makeup artist never attaches the photo of another one (ticket 043).
  * - The networks are public. The contact details (`coordonnees`) are read by the owner and an
  *   admin only, never by the public through the API, even when she chose to show them
  *   (`contactPublic`): a public page reads them through src/services/public/. The server traces
@@ -193,6 +197,26 @@ export const Profils: CollectionConfig<'profils'> = {
 		{ name: 'specialite', label: 'Spécialité', type: 'text', maxLength: 70 },
 		{ name: 'description', label: 'Description', type: 'textarea', maxLength: 2000 },
 		{ name: 'disponible', label: 'Disponible', type: 'checkbox', defaultValue: true },
+		// Its photos, media of its own account (ticket 043).
+		{
+			name: 'photoPrincipale',
+			label: 'Photo principale',
+			type: 'upload',
+			relationTo: 'media',
+			filterOptions: photosDeLaProprietaire,
+			validate: validerPhotosDuProfil,
+		},
+		{
+			name: 'galerie',
+			label: 'Galerie',
+			type: 'upload',
+			relationTo: 'media',
+			hasMany: true,
+			maxRows: GALERIE_MAX,
+			filterOptions: photosDeLaProprietaire,
+			validate: validerPhotosDuProfil,
+			admin: { description: 'Dans l’ordre d’affichage, 10 photos au plus.' },
+		},
 		// The networks are public; the contact details are not (ticket 042).
 		{
 			name: 'reseaux',

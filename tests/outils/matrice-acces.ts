@@ -33,7 +33,8 @@ import { PROFILS_PUBLIES } from '@/lib/acces'
 import { STATUT_PUBLIE } from '@/lib/profil/statut'
 import { creerCompte, DOMAINE_DES_COMPTES, motDePasseAleatoire, type TypeAvecSession } from './fabrique-comptes'
 import { payloadDeTest } from './payload-test'
-import { appelerRest } from './rest'
+import { fichierPourFormulaire, fichierPourPayload, nomDePhoto } from './photos'
+import { appelerRest, formulaireAvecFichier } from './rest'
 
 /** The two ways in: the REST API, and the Local API with the rules active. */
 export const VOIES = ['rest', 'locale'] as const
@@ -57,7 +58,7 @@ const TYPE_DU_ROLE: Record<RoleAvecCompte, TypeAvecSession> = {
 }
 
 /** The collections the matrix covers. */
-export const COLLECTIONS = ['admins', 'pros', 'profils'] as const
+export const COLLECTIONS = ['admins', 'pros', 'profils', 'media'] as const
 export type CollectionDeLaMatrice = (typeof COLLECTIONS)[number]
 
 export type Operation = 'lister' | 'lire' | 'creer' | 'modifier' | 'supprimer'
@@ -137,8 +138,10 @@ interface Portrait {
 	nouvelleValeur: () => unknown
 	/** The data a line sends to create a document. */
 	donneesDeCreation: (acteur: Acteur, payload: Payload) => Promise<Record<string, unknown>>
-	/** A document made for one line to delete. */
-	jetable: (payload: Payload) => Promise<number>
+	/** A document made for one line to delete, owned by the actor when the collection has owners. */
+	jetable: (payload: Payload, acteur: Acteur) => Promise<number>
+	/** True for a collection of files: a creation sends a photo with its data (tests/outils/photos.ts). */
+	fichier?: true
 	/** Which documents the public reads, when the collection has some: a list may hold exactly them (`publies`). */
 	publics?: Where
 }
@@ -184,6 +187,20 @@ const PORTRAITS: Record<CollectionDeLaMatrice, Portrait> = {
 			).id,
 		publics: PROFILS_PUBLIES,
 	},
+	media: {
+		champ: 'alt',
+		nouvelleValeur: () => nom('Texte alternatif'),
+		donneesDeCreation: () => Promise.resolve({ alt: nom('Envoyée') }),
+		jetable: (payload, acteur) =>
+			mediaDe(payload, acteur.utilisateur?.collection === 'pros' ? acteur.utilisateur.id : undefined),
+		fichier: true,
+	},
+}
+
+/** A media sent for this account (a photo with its owner), or for nobody, as for an article. */
+async function mediaDe(payload: Payload, proprietaire: number | undefined): Promise<number> {
+	const data = proprietaire === undefined ? {} : { owner: proprietaire }
+	return (await payload.create({ collection: 'media', data, file: fichierPourPayload(nomDePhoto('distribution')) })).id
 }
 
 /** Makes the cast: one account per role, through the account factory, with their documents. */
@@ -209,9 +226,19 @@ export async function distribuer(): Promise<Distribution> {
 		...acteurs.map(acteur => [acteur.role, acteur]),
 	]) as Distribution
 	// A's profile is published, as by the rule of ticket 044 or an admin; B's stays the draft it was created as.
-	const profilDeA = distribution.maquilleuse.documents.profils
-	if (profilDeA === undefined) throw new Error('La distribution n’a pas de profil pour « maquilleuse ».')
-	await payload.update({ collection: 'profils', id: profilDeA, data: { statut: STATUT_PUBLIE } })
+	// Each of them has a photo of her own, the main photo of her profile (ticket 043).
+	for (const role of ['maquilleuse', 'autreMaquilleuse'] as const) {
+		const acteur = distribution[role]
+		const profil = acteur.documents.profils
+		if (profil === undefined) throw new Error(`La distribution n’a pas de profil pour « ${role} ».`)
+		acteur.documents.media = await mediaDe(payload, acteur.documents.pros)
+		const statut = role === 'maquilleuse' ? { statut: STATUT_PUBLIE } : {}
+		await payload.update({
+			collection: 'profils',
+			id: profil,
+			data: { ...statut, photoPrincipale: acteur.documents.media },
+		})
+	}
 	return distribution
 }
 
@@ -232,7 +259,12 @@ const estUnRefus = (erreur: unknown): boolean => {
 }
 
 async function parRest(acteur: Acteur, { collection, operation, id, donnees }: Demande): Promise<Reponse> {
-	const options = { enTetes: acteur.enTetes, corps: donnees }
+	// A creation in a collection of files sends a photo, in a form, as the site does.
+	const formulaire =
+		operation === 'creer' && PORTRAITS[collection].fichier
+			? formulaireAvecFichier(fichierPourFormulaire(), donnees)
+			: undefined
+	const options = formulaire ? { enTetes: acteur.enTetes, formulaire } : { enTetes: acteur.enTetes, corps: donnees }
 	const appel = {
 		lister: () => appelerRest('GET', `/api/${collection}?limit=100&depth=0`, options),
 		lire: () => appelerRest('GET', `/api/${collection}/${id}?depth=0`, options),
@@ -252,13 +284,14 @@ async function parApiLocale(acteur: Acteur, { collection, operation, id, donnees
 	const cible = id ?? -1
 	// A line sends what it wants: the collection checks the data, not the compiler.
 	const creer = payload.create.bind(payload) as unknown as (
-		options: typeof regles & { data: Record<string, unknown>; disableVerificationEmail: boolean }
+		options: typeof regles & { data: Record<string, unknown>; disableVerificationEmail: boolean; file?: unknown }
 	) => Promise<unknown>
+	const fichier = PORTRAITS[collection].fichier ? { file: fichierPourPayload() } : {}
 	try {
 		const corps = await {
 			lister: () => payload.find({ ...regles, limit: 100 }),
 			lire: () => payload.findByID({ ...regles, id: cible }),
-			creer: () => creer({ ...regles, data: donnees ?? {}, disableVerificationEmail: true }),
+			creer: () => creer({ ...regles, data: donnees ?? {}, disableVerificationEmail: true, ...fichier }),
 			modifier: () => payload.update({ ...regles, id: cible, data: donnees ?? {} }),
 			supprimer: () => payload.delete({ ...regles, id: cible }),
 		}[operation]()
@@ -369,7 +402,9 @@ async function supprimer(voie: Voie, acteur: Acteur, ligne: Ligne, distribution:
 	const payload = await payloadDeTest()
 	// A deletion that must succeed acts on a throwaway document: the cast stays whole.
 	const id =
-		ligne.attendu === 'autorise' ? await PORTRAITS[ligne.collection].jetable(payload) : documentDe(distribution, ligne)
+		ligne.attendu === 'autorise'
+			? await PORTRAITS[ligne.collection].jetable(payload, acteur)
+			: documentDe(distribution, ligne)
 	const reponse = await demander(voie, acteur, { ...ligne, id })
 	const reste = (await stocke(ligne.collection, id)) !== undefined
 	if (reponse.autorise) return reste ? 'incoherent' : 'autorise'

@@ -119,3 +119,53 @@ export const champAdminOuProprietaire =
 
 /** The fields of a profile only its owner and `admin` read: the account, what the import wrote, what an admin decided. */
 export const champDuProfilAdminOuProprietaire: FieldAccess = champAdminOuProprietaire('pro')
+
+/** A condition no document meets: a read limited by it finds nothing, and a document read by its identifier is not found. */
+export const AUCUN_DOCUMENT: Where = { id: { exists: false } }
+
+/** True when this media is the main photo, or a photo of the gallery, of a published profile. */
+export async function rattacheAUnProfilPublie(req: PayloadRequest, media: number | string): Promise<boolean> {
+	const { totalDocs } = await req.payload.count({
+		collection: 'profils',
+		overrideAccess: true,
+		req,
+		where: {
+			and: [PROFILS_PUBLIES, { or: [{ photoPrincipale: { equals: media } }, { galerie: { in: [media] } }] }],
+		},
+	})
+	return totalDocs > 0
+}
+
+/**
+ * Reading media (ticket 043, U56, I04).
+ *
+ * - The role `admin` reads every media.
+ * - A list is closed to the public: a makeup artist lists her own media, anyone else is refused.
+ * - One media, read by its identifier, is read by anyone when it belongs to a published profile;
+ *   a makeup artist also reads her own. Any other media is not found, as if it did not exist.
+ *
+ * Payload gives the identifier to the rule when it reads one document, never for a list: that is
+ * how the two are told apart. A media populated in a profile is read as a list: for the public it
+ * stays an identifier, and a public page reads the photos through src/services/public/.
+ */
+export const lectureDesMedias: Access = async ({ req, id }) => {
+	const { user } = req
+	if (estAdmin(user)) return true
+	const siens: Where | undefined = user && estMaquilleuse(user) ? { owner: { equals: user.id } } : undefined
+	if (id === undefined || id === null) return siens ?? false
+	if (await rattacheAUnProfilPublie(req, id)) return true
+	return siens ?? AUCUN_DOCUMENT
+}
+
+/** Sending a photo: a makeup artist, or the role `admin`. The server makes her the owner. */
+export const adminOuMaquilleuse: Access = ({ req: { user } }) => estAdmin(user) || estMaquilleuse(user)
+
+/** Changing or deleting a media: the role `admin`, or the makeup artist who owns it. */
+export const adminOuProprietaireDuMedia: Access = ({ req: { user } }) => {
+	if (estAdmin(user)) return true
+	if (user && estMaquilleuse(user)) return { owner: { equals: user.id } }
+	return false
+}
+
+/** The fields of a media only its owner and `admin` read: the account that owns it. */
+export const champDuMediaAdminOuProprietaire: FieldAccess = champAdminOuProprietaire('owner')

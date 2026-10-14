@@ -26,16 +26,18 @@ const RESERVE = {
 
 /**
  * What anyone but the owner and an admin reads of a published profile: its identity, its networks
- * (ticket 042), the badge of the search and Payload's dates. A new public field of the profile is
+ * (ticket 042), its photos (ticket 043), the badge of the search and Payload's dates. A new public field of the profile is
  * added here on purpose.
  */
 const CLES_PUBLIQUES = [
 	'createdAt',
 	'description',
 	'disponible',
+	'galerie',
 	'id',
 	'nom',
 	'nomArtiste',
+	'photoPrincipale',
 	'prenom',
 	'reseaux',
 	'slug',

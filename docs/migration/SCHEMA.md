@@ -328,6 +328,14 @@ Table `files`, 574 lignes, 21 colonnes. Ce type appartient au greffon d'envoi de
 
 Les nouveaux fichiers, envoyés dans la v3, suivent d'autres règles (préfixe `media/`, nom imprévisible, jpeg, png ou webp, 10 Mo au plus) : elles sont écrites par le ticket 043, pas ici.
 
+Règles du ticket 043, pour tout `media` :
+
+- **Chaque document porte le préfixe de son objet** (`media.prefix`, vide à la racine du stockage) et son nom de fichier (`media.filename`, unique dans la collection). La clé de l'objet est le préfixe, puis le nom ; l'adresse publique est la base des photos (`R2_PUBLIC_URL`), puis cette clé (`src/lib/medias.ts`). Une photo envoyée dans la v3 est rangée sous `media/` ; une photo adoptée garde le préfixe lu dans son adresse, à la racine ou non.
+- **Le serveur seul écrit où est l'objet** : ce qu'une requête dit du nom, du préfixe, de l'adresse, du type ou de la taille est ignoré. L'import adopte un fichier sans le copier par l'API locale, sans compte, avec le contexte `skipCloudStorage` du greffon de stockage, qui ne touche alors ni au préfixe ni au stockage.
+- **`media.owner`** est posé par le serveur : la maquilleuse qui envoie la photo, quel que soit le propriétaire que dit sa requête. Seul un admin le change. Il n'est pas lu par le public.
+- **Un profil n'accepte que des photos de son compte** : `profils.photoPrincipale` et `profils.galerie` (10 photos au plus, dans l'ordre) ne désignent que des médias dont `owner` est le compte du profil. Une photo que le profil a déjà reste, comme sur l'ancienne API, qui ne vérifie que les fichiers nouveaux.
+- Les types, la taille, le nom imprévisible et les tailles dérivées d'une photo envoyée sont ceux du ticket 133 ; la corbeille d'une photo qui ne sert plus, ceux du ticket 045.
+
 ## 9. Champs de Payload sans source dans Strapi
 
 Pour mémoire : ces champs n'ont aucune ligne aux §5 et §6. Leur valeur à l'import est fixée ici quand le plan la donne.
@@ -406,3 +414,4 @@ Noms fixés par ce document, parce que le plan ne les donnait pas : `profils.leg
 | 14/10/2026 | Suites de la relecture (ticket 220), sans changer un nom de champ ni une règle de reprise : raison de la règle 1 corrigée ; 88 profils et 43 hash attendus « au plus », et défaut pour un profil dont le compte est écarté (§11) ; portée du mot « Transformé » (§1) ; colonnes des tables de liens (§7) et des deux jetons (§5.1) ; condition d'existence de `pros._verified` (§5.1). |
 | 14/10/2026 | Ticket 021, sans changer un nom de champ : les valeurs de `profils.statut` (§9) ; `profils.superMaquilleuse` (§5.2) est créé avec les champs réservés à l'admin, et reste lu par le public, comme le badge de la recherche. |
 | 14/10/2026 | Ticket 042 : la source du consentement est nommée `profils.sourceConsentement`, de valeurs `maquilleuse`, `admin` et `import` (§9, §11). |
+| 14/10/2026 | Ticket 043, sans changer un nom de champ : les règles des médias de la v3 (§8) : préfixe propre à chaque document, adresse publique, propriétaire posé par le serveur, photos d'un profil limitées à son compte. |
