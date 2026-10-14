@@ -28,6 +28,7 @@ import { photosDeLaProprietaire, validerPhotosDuProfil } from '../lib/profil/pho
 import { validerSiret } from '../lib/profil/siret'
 import { LIBELLES_DES_STATUTS, STATUT_INITIAL, STATUTS_DU_PROFIL } from '../lib/profil/statut'
 import { premierSlugLibre, slugDeRepli, slugifier } from '../lib/slug'
+import { CHAMPS_DE_L_ETAT, etatAvantEcriture } from './profils/etat'
 import { champsDeLaZone } from './profils/zone'
 import { CHAMPS_LISTES, identitesDesLignesAvantEcriture } from './profils-listes'
 
@@ -162,6 +163,10 @@ const INTERNE = { read: champAdminSeulement, create: champAdminSeulement, update
  * - Its lists keep their order and the identifier of each row (src/collections/profils-listes.ts).
  * - Its zone is a commune with its INSEE code, a radius of 0 to 200 km and « à domicile », never a
  *   postal address (src/collections/profils/zone.ts, ticket 041).
+ * - At every save, the server computes and stores its completeness, whether it is active,
+ *   publishable or entirely empty, and since when (src/collections/profils/etat.ts, ticket 044).
+ *   Its status follows: an entirely empty profile is a draft, any other is published, unless an
+ *   admin fixed the status (`statutFixe`); a hidden profile stays hidden whatever the save.
  */
 export const Profils: CollectionConfig<'profils'> = {
 	slug: 'profils',
@@ -174,7 +179,8 @@ export const Profils: CollectionConfig<'profils'> = {
 		delete: adminSeulement,
 	},
 	hooks: {
-		beforeChange: [identitesDesLignesAvantEcriture, slugALaCreation, consentementTrace],
+		// The state comes last: it reads the save as the other hooks leave it (ticket 044).
+		beforeChange: [identitesDesLignesAvantEcriture, slugALaCreation, consentementTrace, etatAvantEcriture],
 		afterChange: [slugDeRepliApresCreation],
 	},
 	fields: [
@@ -302,7 +308,24 @@ export const Profils: CollectionConfig<'profils'> = {
 			index: true,
 			options: STATUTS_DU_PROFIL.map(statut => ({ label: LIBELLES_DES_STATUTS[statut], value: statut })),
 			access: RESERVE_LU_PAR_LA_PROPRIETAIRE,
-			admin: { position: 'sidebar', description: 'Seuls les profils publiés sont lus par le public.' },
+			admin: {
+				position: 'sidebar',
+				description:
+					'Seuls les profils publiés sont lus par le public. Sans statut fixé, le serveur le pose : brouillon pour un profil entièrement vide, publié sinon. Masqué ne change jamais seul.',
+			},
+		},
+		{
+			// Ticket 044: set by the server when the status changes in a save, unticked by an admin only.
+			name: 'statutFixe',
+			label: 'Statut fixé par l’admin',
+			type: 'checkbox',
+			defaultValue: false,
+			access: RESERVE_LU_PAR_LA_PROPRIETAIRE,
+			admin: {
+				position: 'sidebar',
+				description:
+					'Coché dès qu’un admin change le statut : le serveur ne le change plus. Décoché sans changer le statut, il suit de nouveau la règle, dès cet enregistrement.',
+			},
 		},
 		{
 			name: 'motif',
@@ -360,5 +383,7 @@ export const Profils: CollectionConfig<'profils'> = {
 			access: { create: champAdminSeulement, update: champAdminSeulement },
 			admin: { position: 'sidebar', description: 'Le badge des cartes de la recherche. Public.' },
 		},
+		// Computed by the server at every save (ticket 044).
+		...CHAMPS_DE_L_ETAT,
 	],
 }

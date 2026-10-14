@@ -18,6 +18,20 @@ import { viderLeStockage } from '../outils/s3'
 const PROPRIETAIRE_ET_ADMIN: readonly Role[] = ['maquilleuse', 'admin']
 
 /**
+ * What a request may send on the state of A's profile, which only has a photo (ticket 044): each
+ * value differs from what the server computes, so that a write that took would show.
+ */
+const ETAT_ENVOYE = [
+	['completude', 13],
+	['actif', true],
+	['publiable', true],
+	['entierementVide', true],
+	['actifDepuis', '2020-01-01T00:00:00.000Z'],
+	['publiableDepuis', '2020-01-01T00:00:00.000Z'],
+	['entierementVideDepuis', '2020-01-01T00:00:00.000Z'],
+] as const
+
+/**
  * The field-level reading of A's document, which every role reads (her profile is published, her
  * photo is its main photo): for each field, the roles that read it; every other role reads the
  * document without it. One line per field and per role.
@@ -204,6 +218,9 @@ const MATRICE: Ligne[] = [
 			// Traced by the server only (ticket 042).
 			['consentiLe', '2020-01-01T00:00:00.000Z'],
 			['sourceConsentement', 'import'],
+			// Computed by the server at every save (ticket 044); the status fixed by an admin only.
+			['statutFixe', false],
+			...ETAT_ENVOYE,
 		] as const
 	).map(
 		([champ, valeur]): Ligne => ({
@@ -303,6 +320,15 @@ const MATRICE: Ligne[] = [
 		['contactPublic', PROPRIETAIRE_ET_ADMIN],
 		['consentiLe', PROPRIETAIRE_ET_ADMIN],
 		['sourceConsentement', PROPRIETAIRE_ET_ADMIN],
+		// Its state, public; since when, and whether an admin fixed its status, for her and the admin (044).
+		['completude', ROLES],
+		['actif', ROLES],
+		['publiable', ROLES],
+		['entierementVide', ROLES],
+		['actifDepuis', PROPRIETAIRE_ET_ADMIN],
+		['publiableDepuis', PROPRIETAIRE_ET_ADMIN],
+		['entierementVideDepuis', PROPRIETAIRE_ET_ADMIN],
+		['statutFixe', PROPRIETAIRE_ET_ADMIN],
 	]),
 	{ role: 'admin', collection: 'profils', operation: 'lister', attendu: 'tous' },
 	{ role: 'admin', collection: 'profils', operation: 'lire', document: 'maquilleuse', attendu: 'autorise' },
@@ -325,6 +351,9 @@ const MATRICE: Ligne[] = [
 			['coordonnees', { telephone: '06 39 98 44 44', email: 'contact-admin@example.test' }, 'autorise'],
 			['consentiLe', '2020-01-01T00:00:00.000Z', 'ignore'],
 			['sourceConsentement', 'import', 'ignore'],
+			// The admin hands A's status back to the rule; the state stays the server's (ticket 044).
+			['statutFixe', false, 'autorise'],
+			...ETAT_ENVOYE.map(([champ, valeur]) => [champ, valeur, 'ignore'] as const),
 		] as const
 	).map(
 		([champ, valeur, attendu]): Ligne => ({

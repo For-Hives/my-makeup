@@ -40,8 +40,9 @@
  * gives the same place: the public page reads it again from its props.
  */
 
-import { DEPARTEMENTS, departementDuCodePostal, normaliserLieu } from '@/lib/departements'
-import { villeAffichee } from '@/lib/format-zone'
+// Relative imports on purpose: read by the completeness rule, which the collection `profils` calls.
+import { DEPARTEMENTS, departementDuCodePostal, normaliserLieu } from '../departements'
+import { villeAffichee } from '../format-zone'
 
 /** Types of street and parts of an address (lower case, no accents) */
 const VOIES = new Set([

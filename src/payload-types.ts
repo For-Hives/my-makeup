@@ -337,9 +337,13 @@ export interface Profil {
   legacyUsername?: string | null;
   strapiId?: number | null;
   /**
-   * Seuls les profils publiés sont lus par le public.
+   * Seuls les profils publiés sont lus par le public. Sans statut fixé, le serveur le pose : brouillon pour un profil entièrement vide, publié sinon. Masqué ne change jamais seul.
    */
   statut?: ('brouillon' | 'publie' | 'masque') | null;
+  /**
+   * Coché dès qu’un admin change le statut : le serveur ne le change plus. Décoché sans changer le statut, il suit de nouveau la règle, dès cet enregistrement.
+   */
+  statutFixe?: boolean | null;
   /**
    * Pourquoi le profil est masqué. La maquilleuse le lit.
    */
@@ -362,6 +366,34 @@ export interface Profil {
    * Le badge des cartes de la recherche. Public.
    */
   superMaquilleuse?: boolean | null;
+  /**
+   * Critères remplis, sur 13. Calculée par le serveur.
+   */
+  completude?: number | null;
+  /**
+   * Photo principale, ville et spécialité. Calculé par le serveur.
+   */
+  actif?: boolean | null;
+  /**
+   * Date à laquelle la case du dessus a pris sa valeur. Posée par le serveur.
+   */
+  actifDepuis?: string | null;
+  /**
+   * Les six conditions du profil publiable. Calculé par le serveur.
+   */
+  publiable?: boolean | null;
+  /**
+   * Date à laquelle la case du dessus a pris sa valeur. Posée par le serveur.
+   */
+  publiableDepuis?: string | null;
+  /**
+   * Aucune des six conditions : le profil reste en brouillon. Calculé par le serveur.
+   */
+  entierementVide?: boolean | null;
+  /**
+   * Date à laquelle la case du dessus a pris sa valeur. Posée par le serveur.
+   */
+  entierementVideDepuis?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -675,6 +707,7 @@ export interface ProfilsSelect<T extends boolean = true> {
   legacyUsername?: T;
   strapiId?: T;
   statut?: T;
+  statutFixe?: T;
   motif?: T;
   verifie?: T;
   verifieLe?: T;
@@ -682,6 +715,13 @@ export interface ProfilsSelect<T extends boolean = true> {
   noteInterne?: T;
   score?: T;
   superMaquilleuse?: T;
+  completude?: T;
+  actif?: T;
+  actifDepuis?: T;
+  publiable?: T;
+  publiableDepuis?: T;
+  entierementVide?: T;
+  entierementVideDepuis?: T;
   updatedAt?: T;
   createdAt?: T;
 }

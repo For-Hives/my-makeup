@@ -8,6 +8,7 @@ import * as migration_20261014_062220_profils_champs_reserves_provisoire from '.
 import * as migration_20261014_062549_profils_contact_provisoire from './20261014_062549_profils_contact_provisoire'
 import * as migration_20261014_063859_media_lecture_provisoire from './20261014_063859_media_lecture_provisoire'
 import * as migration_20261014_074656_profils_zone_provisoire from './20261014_074656_profils_zone_provisoire'
+import * as migration_20261014_075428_profils_etat_provisoire from './20261014_075428_profils_etat_provisoire'
 
 export const migrations = [
 	{
@@ -59,5 +60,10 @@ export const migrations = [
 		up: migration_20261014_074656_profils_zone_provisoire.up,
 		down: migration_20261014_074656_profils_zone_provisoire.down,
 		name: '20261014_074656_profils_zone_provisoire',
+	},
+	{
+		up: migration_20261014_075428_profils_etat_provisoire.up,
+		down: migration_20261014_075428_profils_etat_provisoire.down,
+		name: '20261014_075428_profils_etat_provisoire',
 	},
 ]
