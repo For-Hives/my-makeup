@@ -1,0 +1,1208 @@
+{
+	"description": "Réponses du code de l’ancien site sur des profils fictifs (ticket 031). « front » : completude() de src/lib/profil/completude.js. « api » : profileConditions() et isEntirelyEmpty() de src/utils/profile-conditions.js. Ces valeurs sont calculées par l’ancien code, jamais corrigées à la main : un écart est un défaut du port.",
+	"source": {
+		"front": "For-Hives/my-makeup, origin/main 3585098, src/lib/profil/completude.js et lieu-public.js (dernier changement : 897be06)",
+		"api": "For-Hives/api-my-makeup, main ccd449d, src/utils/profile-conditions.js et public-city.js"
+	},
+	"partages": {
+		"description": "Les cas de completude-cas.json, dans le même ordre : résultat complet du front (avec les manques) et conditions de l’API.",
+		"cas": [
+			{
+				"nom": "vide",
+				"front": {
+					"score": 0,
+					"sur": 13,
+					"manquants": [
+						"nom",
+						"specialite",
+						"nom_artiste",
+						"ville",
+						"description",
+						"photo",
+						"competences",
+						"experiences",
+						"formations",
+						"offres",
+						"reseaux",
+						"langues",
+						"galerie"
+					],
+					"actif": false,
+					"publiable": false,
+					"interne": false
+				},
+				"api": {
+					"pricedOffer": false,
+					"description": false,
+					"mainPicture": false,
+					"contactChannel": false,
+					"usableCity": false,
+					"speciality": false,
+					"entirelyEmpty": true
+				}
+			},
+			{
+				"nom": "complet (API de contenu, médias en data)",
+				"front": {
+					"score": 13,
+					"sur": 13,
+					"manquants": [],
+					"actif": true,
+					"publiable": true,
+					"interne": false
+				},
+				"api": {
+					"pricedOffer": true,
+					"description": true,
+					"mainPicture": true,
+					"contactChannel": true,
+					"usableCity": true,
+					"speciality": true,
+					"entirelyEmpty": false
+				}
+			},
+			{
+				"nom": "complet aplati (/api/me-makeup)",
+				"front": {
+					"score": 13,
+					"sur": 13,
+					"manquants": [],
+					"actif": true,
+					"publiable": true,
+					"interne": false
+				},
+				"api": {
+					"pricedOffer": true,
+					"description": true,
+					"mainPicture": true,
+					"contactChannel": true,
+					"usableCity": true,
+					"speciality": true,
+					"entirelyEmpty": false
+				}
+			},
+			{
+				"nom": "sans photo principale",
+				"front": {
+					"score": 12,
+					"sur": 13,
+					"manquants": ["photo"],
+					"actif": false,
+					"publiable": false,
+					"interne": false
+				},
+				"api": {
+					"pricedOffer": true,
+					"description": true,
+					"mainPicture": false,
+					"contactChannel": true,
+					"usableCity": true,
+					"speciality": true,
+					"entirelyEmpty": false
+				}
+			},
+			{
+				"nom": "ville France",
+				"front": {
+					"score": 13,
+					"sur": 13,
+					"manquants": [],
+					"actif": false,
+					"publiable": false,
+					"interne": false
+				},
+				"api": {
+					"pricedOffer": true,
+					"description": true,
+					"mainPicture": true,
+					"contactChannel": true,
+					"usableCity": false,
+					"speciality": true,
+					"entirelyEmpty": false
+				}
+			},
+			{
+				"nom": "adresse postale avec code postal et commune (comptée par sa commune)",
+				"front": {
+					"score": 13,
+					"sur": 13,
+					"manquants": [],
+					"actif": true,
+					"publiable": true,
+					"interne": false
+				},
+				"api": {
+					"pricedOffer": true,
+					"description": true,
+					"mainPicture": true,
+					"contactChannel": true,
+					"usableCity": true,
+					"speciality": true,
+					"entirelyEmpty": false
+				}
+			},
+			{
+				"nom": "adresse postale sans commune ni code postal",
+				"front": {
+					"score": 13,
+					"sur": 13,
+					"manquants": [],
+					"actif": false,
+					"publiable": false,
+					"interne": false
+				},
+				"api": {
+					"pricedOffer": true,
+					"description": true,
+					"mainPicture": true,
+					"contactChannel": true,
+					"usableCity": false,
+					"speciality": true,
+					"entirelyEmpty": false
+				}
+			},
+			{
+				"nom": "rue collée à la commune par une virgule, sans code postal (pas une ville exploitable)",
+				"front": {
+					"score": 13,
+					"sur": 13,
+					"manquants": [],
+					"actif": false,
+					"publiable": false,
+					"interne": false
+				},
+				"api": {
+					"pricedOffer": true,
+					"description": true,
+					"mainPicture": true,
+					"contactChannel": true,
+					"usableCity": false,
+					"speciality": true,
+					"entirelyEmpty": false
+				}
+			},
+			{
+				"nom": "code de département puis texte libre (pas une ville exploitable)",
+				"front": {
+					"score": 13,
+					"sur": 13,
+					"manquants": [],
+					"actif": false,
+					"publiable": false,
+					"interne": false
+				},
+				"api": {
+					"pricedOffer": true,
+					"description": true,
+					"mainPicture": true,
+					"contactChannel": true,
+					"usableCity": false,
+					"speciality": true,
+					"entirelyEmpty": false
+				}
+			},
+			{
+				"nom": "sans spécialité",
+				"front": {
+					"score": 12,
+					"sur": 13,
+					"manquants": ["specialite"],
+					"actif": false,
+					"publiable": false,
+					"interne": false
+				},
+				"api": {
+					"pricedOffer": true,
+					"description": true,
+					"mainPicture": true,
+					"contactChannel": true,
+					"usableCity": true,
+					"speciality": false,
+					"entirelyEmpty": false
+				}
+			},
+			{
+				"nom": "offre sur devis seulement",
+				"front": {
+					"score": 13,
+					"sur": 13,
+					"manquants": [],
+					"actif": true,
+					"publiable": false,
+					"interne": false
+				},
+				"api": {
+					"pricedOffer": false,
+					"description": true,
+					"mainPicture": true,
+					"contactChannel": true,
+					"usableCity": true,
+					"speciality": true,
+					"entirelyEmpty": false
+				}
+			},
+			{
+				"nom": "description de 199 caractères",
+				"front": {
+					"score": 13,
+					"sur": 13,
+					"manquants": [],
+					"actif": true,
+					"publiable": false,
+					"interne": false
+				},
+				"api": {
+					"pricedOffer": true,
+					"description": false,
+					"mainPicture": true,
+					"contactChannel": true,
+					"usableCity": true,
+					"speciality": true,
+					"entirelyEmpty": false
+				}
+			},
+			{
+				"nom": "description de 200 caractères",
+				"front": {
+					"score": 13,
+					"sur": 13,
+					"manquants": [],
+					"actif": true,
+					"publiable": true,
+					"interne": false
+				},
+				"api": {
+					"pricedOffer": true,
+					"description": true,
+					"mainPicture": true,
+					"contactChannel": true,
+					"usableCity": true,
+					"speciality": true,
+					"entirelyEmpty": false
+				}
+			},
+			{
+				"nom": "sans canal de contact",
+				"front": {
+					"score": 12,
+					"sur": 13,
+					"manquants": ["reseaux"],
+					"actif": true,
+					"publiable": false,
+					"interne": false
+				},
+				"api": {
+					"pricedOffer": true,
+					"description": true,
+					"mainPicture": true,
+					"contactChannel": false,
+					"usableCity": true,
+					"speciality": true,
+					"entirelyEmpty": false
+				}
+			},
+			{
+				"nom": "sans canal, formulaire de devis en ligne",
+				"front": {
+					"score": 12,
+					"sur": 13,
+					"manquants": ["reseaux"],
+					"actif": true,
+					"publiable": true,
+					"interne": false
+				},
+				"api": {
+					"pricedOffer": true,
+					"description": true,
+					"mainPicture": true,
+					"contactChannel": false,
+					"usableCity": true,
+					"speciality": true,
+					"entirelyEmpty": false
+				}
+			},
+			{
+				"nom": "compte interne",
+				"front": {
+					"score": 13,
+					"sur": 13,
+					"manquants": [],
+					"actif": true,
+					"publiable": false,
+					"interne": true
+				},
+				"api": {
+					"pricedOffer": true,
+					"description": true,
+					"mainPicture": true,
+					"contactChannel": true,
+					"usableCity": true,
+					"speciality": true,
+					"entirelyEmpty": false
+				}
+			}
+		]
+	},
+	"api": {
+		"description": "Les cas des tests de l’ancienne API (tests/unit/profile-conditions.test.js), avec ce que le front en dit.",
+		"cas": [
+			{
+				"nom": "rien du tout",
+				"profil": {},
+				"front": {
+					"score": 0,
+					"sur": 13,
+					"manquants": [
+						"nom",
+						"specialite",
+						"nom_artiste",
+						"ville",
+						"description",
+						"photo",
+						"competences",
+						"experiences",
+						"formations",
+						"offres",
+						"reseaux",
+						"langues",
+						"galerie"
+					],
+					"actif": false,
+					"publiable": false,
+					"interne": false
+				},
+				"api": {
+					"pricedOffer": false,
+					"description": false,
+					"mainPicture": false,
+					"contactChannel": false,
+					"usableCity": false,
+					"speciality": false,
+					"entirelyEmpty": true
+				}
+			},
+			{
+				"nom": "un nom et rien d’autre",
+				"profil": {
+					"first_name": "Prenom",
+					"last_name": "Nom"
+				},
+				"front": {
+					"score": 1,
+					"sur": 13,
+					"manquants": [
+						"specialite",
+						"nom_artiste",
+						"ville",
+						"description",
+						"photo",
+						"competences",
+						"experiences",
+						"formations",
+						"offres",
+						"reseaux",
+						"langues",
+						"galerie"
+					],
+					"actif": false,
+					"publiable": false,
+					"interne": false
+				},
+				"api": {
+					"pricedOffer": false,
+					"description": false,
+					"mainPicture": false,
+					"contactChannel": false,
+					"usableCity": false,
+					"speciality": false,
+					"entirelyEmpty": true
+				}
+			},
+			{
+				"nom": "juste sous chacune des six conditions",
+				"profil": {
+					"id": 1,
+					"username": "presque",
+					"first_name": "Prenom",
+					"last_name": "Nom",
+					"company_artist_name": "Studio Fictif",
+					"action_radius": 30,
+					"available": true,
+					"pro": true,
+					"score": 4,
+					"speciality": "   ",
+					"city": "France",
+					"description": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+					"main_picture": null,
+					"image_gallery": [
+						{
+							"id": 2
+						}
+					],
+					"skills": [
+						{
+							"id": 1,
+							"name": "Teint"
+						}
+					],
+					"service_offers": [
+						{
+							"id": 1,
+							"name": "Forfait",
+							"price": "Sur devis"
+						},
+						{
+							"id": 2,
+							"name": "Retouche",
+							"price": "2"
+						},
+						{
+							"id": 3,
+							"name": "Tournage",
+							"price": "12 000 €"
+						},
+						{
+							"id": 4,
+							"name": "Essai",
+							"price": null
+						},
+						null
+					],
+					"network": {
+						"id": 1,
+						"instagram": " ",
+						"email": "",
+						"phone": null
+					}
+				},
+				"front": {
+					"score": 7,
+					"sur": 13,
+					"manquants": ["specialite", "photo", "experiences", "formations", "reseaux", "langues"],
+					"actif": false,
+					"publiable": false,
+					"interne": false
+				},
+				"api": {
+					"pricedOffer": false,
+					"description": false,
+					"mainPicture": false,
+					"contactChannel": false,
+					"usableCity": false,
+					"speciality": false,
+					"entirelyEmpty": true
+				}
+			},
+			{
+				"nom": "juste sous chacune des six conditions, rue sans commune",
+				"profil": {
+					"id": 1,
+					"username": "presque",
+					"first_name": "Prenom",
+					"last_name": "Nom",
+					"company_artist_name": "Studio Fictif",
+					"action_radius": 30,
+					"available": true,
+					"pro": true,
+					"score": 4,
+					"speciality": "   ",
+					"city": "9 impasse des Essais Fictifs",
+					"description": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+					"main_picture": null,
+					"image_gallery": [
+						{
+							"id": 2
+						}
+					],
+					"skills": [
+						{
+							"id": 1,
+							"name": "Teint"
+						}
+					],
+					"service_offers": [
+						{
+							"id": 1,
+							"name": "Forfait",
+							"price": "Sur devis"
+						},
+						{
+							"id": 2,
+							"name": "Retouche",
+							"price": "2"
+						},
+						{
+							"id": 3,
+							"name": "Tournage",
+							"price": "12 000 €"
+						},
+						{
+							"id": 4,
+							"name": "Essai",
+							"price": null
+						},
+						null
+					],
+					"network": {
+						"id": 1,
+						"instagram": " ",
+						"email": "",
+						"phone": null
+					}
+				},
+				"front": {
+					"score": 7,
+					"sur": 13,
+					"manquants": ["specialite", "photo", "experiences", "formations", "reseaux", "langues"],
+					"actif": false,
+					"publiable": false,
+					"interne": false
+				},
+				"api": {
+					"pricedOffer": false,
+					"description": false,
+					"mainPicture": false,
+					"contactChannel": false,
+					"usableCity": false,
+					"speciality": false,
+					"entirelyEmpty": true
+				}
+			},
+			{
+				"nom": "une offre chiffrée seule",
+				"profil": {
+					"id": 1,
+					"username": "seul",
+					"first_name": "Prenom",
+					"service_offers": [
+						{
+							"price": "Sur devis"
+						},
+						{
+							"price": "80€"
+						}
+					]
+				},
+				"front": {
+					"score": 1,
+					"sur": 13,
+					"manquants": [
+						"nom",
+						"specialite",
+						"nom_artiste",
+						"ville",
+						"description",
+						"photo",
+						"competences",
+						"experiences",
+						"formations",
+						"reseaux",
+						"langues",
+						"galerie"
+					],
+					"actif": false,
+					"publiable": false,
+					"interne": false
+				},
+				"api": {
+					"pricedOffer": true,
+					"description": false,
+					"mainPicture": false,
+					"contactChannel": false,
+					"usableCity": false,
+					"speciality": false,
+					"entirelyEmpty": false
+				}
+			},
+			{
+				"nom": "une description de 200 caractères seule",
+				"profil": {
+					"id": 1,
+					"username": "seul",
+					"first_name": "Prenom",
+					"description": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+				},
+				"front": {
+					"score": 1,
+					"sur": 13,
+					"manquants": [
+						"nom",
+						"specialite",
+						"nom_artiste",
+						"ville",
+						"photo",
+						"competences",
+						"experiences",
+						"formations",
+						"offres",
+						"reseaux",
+						"langues",
+						"galerie"
+					],
+					"actif": false,
+					"publiable": false,
+					"interne": false
+				},
+				"api": {
+					"pricedOffer": false,
+					"description": true,
+					"mainPicture": false,
+					"contactChannel": false,
+					"usableCity": false,
+					"speciality": false,
+					"entirelyEmpty": false
+				}
+			},
+			{
+				"nom": "une photo principale seule",
+				"profil": {
+					"id": 1,
+					"username": "seul",
+					"first_name": "Prenom",
+					"main_picture": {
+						"id": 1,
+						"url": "/m/1.webp"
+					}
+				},
+				"front": {
+					"score": 1,
+					"sur": 13,
+					"manquants": [
+						"nom",
+						"specialite",
+						"nom_artiste",
+						"ville",
+						"description",
+						"competences",
+						"experiences",
+						"formations",
+						"offres",
+						"reseaux",
+						"langues",
+						"galerie"
+					],
+					"actif": false,
+					"publiable": false,
+					"interne": false
+				},
+				"api": {
+					"pricedOffer": false,
+					"description": false,
+					"mainPicture": true,
+					"contactChannel": false,
+					"usableCity": false,
+					"speciality": false,
+					"entirelyEmpty": false
+				}
+			},
+			{
+				"nom": "un téléphone seul",
+				"profil": {
+					"id": 1,
+					"username": "seul",
+					"first_name": "Prenom",
+					"network": {
+						"id": 1,
+						"phone": "0600000000"
+					}
+				},
+				"front": {
+					"score": 1,
+					"sur": 13,
+					"manquants": [
+						"nom",
+						"specialite",
+						"nom_artiste",
+						"ville",
+						"description",
+						"photo",
+						"competences",
+						"experiences",
+						"formations",
+						"offres",
+						"langues",
+						"galerie"
+					],
+					"actif": false,
+					"publiable": false,
+					"interne": false
+				},
+				"api": {
+					"pricedOffer": false,
+					"description": false,
+					"mainPicture": false,
+					"contactChannel": true,
+					"usableCity": false,
+					"speciality": false,
+					"entirelyEmpty": false
+				}
+			},
+			{
+				"nom": "un email seul",
+				"profil": {
+					"id": 1,
+					"username": "seul",
+					"first_name": "Prenom",
+					"network": {
+						"id": 1,
+						"email": "contact@studio-fictif.example"
+					}
+				},
+				"front": {
+					"score": 1,
+					"sur": 13,
+					"manquants": [
+						"nom",
+						"specialite",
+						"nom_artiste",
+						"ville",
+						"description",
+						"photo",
+						"competences",
+						"experiences",
+						"formations",
+						"offres",
+						"langues",
+						"galerie"
+					],
+					"actif": false,
+					"publiable": false,
+					"interne": false
+				},
+				"api": {
+					"pricedOffer": false,
+					"description": false,
+					"mainPicture": false,
+					"contactChannel": true,
+					"usableCity": false,
+					"speciality": false,
+					"entirelyEmpty": false
+				}
+			},
+			{
+				"nom": "une ville exploitable seule",
+				"profil": {
+					"id": 1,
+					"username": "seul",
+					"first_name": "Prenom",
+					"city": "Annecy"
+				},
+				"front": {
+					"score": 1,
+					"sur": 13,
+					"manquants": [
+						"nom",
+						"specialite",
+						"nom_artiste",
+						"description",
+						"photo",
+						"competences",
+						"experiences",
+						"formations",
+						"offres",
+						"reseaux",
+						"langues",
+						"galerie"
+					],
+					"actif": false,
+					"publiable": false,
+					"interne": false
+				},
+				"api": {
+					"pricedOffer": false,
+					"description": false,
+					"mainPicture": false,
+					"contactChannel": false,
+					"usableCity": true,
+					"speciality": false,
+					"entirelyEmpty": false
+				}
+			},
+			{
+				"nom": "une spécialité seule",
+				"profil": {
+					"id": 1,
+					"username": "seul",
+					"first_name": "Prenom",
+					"speciality": "Mariage"
+				},
+				"front": {
+					"score": 1,
+					"sur": 13,
+					"manquants": [
+						"nom",
+						"nom_artiste",
+						"ville",
+						"description",
+						"photo",
+						"competences",
+						"experiences",
+						"formations",
+						"offres",
+						"reseaux",
+						"langues",
+						"galerie"
+					],
+					"actif": false,
+					"publiable": false,
+					"interne": false
+				},
+				"api": {
+					"pricedOffer": false,
+					"description": false,
+					"mainPicture": false,
+					"contactChannel": false,
+					"usableCity": false,
+					"speciality": true,
+					"entirelyEmpty": false
+				}
+			},
+			{
+				"nom": "une adresse postale seule, comptée par sa commune",
+				"profil": {
+					"city": "12 rue des Essais Fictifs, 74000 Annecy"
+				},
+				"front": {
+					"score": 1,
+					"sur": 13,
+					"manquants": [
+						"nom",
+						"specialite",
+						"nom_artiste",
+						"description",
+						"photo",
+						"competences",
+						"experiences",
+						"formations",
+						"offres",
+						"reseaux",
+						"langues",
+						"galerie"
+					],
+					"actif": false,
+					"publiable": false,
+					"interne": false
+				},
+				"api": {
+					"pricedOffer": false,
+					"description": false,
+					"mainPicture": false,
+					"contactChannel": false,
+					"usableCity": true,
+					"speciality": false,
+					"entirelyEmpty": false
+				}
+			},
+			{
+				"nom": "une rue sans commune seule",
+				"profil": {
+					"city": "9 impasse des Essais Fictifs"
+				},
+				"front": {
+					"score": 1,
+					"sur": 13,
+					"manquants": [
+						"nom",
+						"specialite",
+						"nom_artiste",
+						"description",
+						"photo",
+						"competences",
+						"experiences",
+						"formations",
+						"offres",
+						"reseaux",
+						"langues",
+						"galerie"
+					],
+					"actif": false,
+					"publiable": false,
+					"interne": false
+				},
+				"api": {
+					"pricedOffer": false,
+					"description": false,
+					"mainPicture": false,
+					"contactChannel": false,
+					"usableCity": false,
+					"speciality": false,
+					"entirelyEmpty": true
+				}
+			},
+			{
+				"nom": "un code de département puis du texte libre",
+				"profil": {
+					"city": "74 et alentours"
+				},
+				"front": {
+					"score": 1,
+					"sur": 13,
+					"manquants": [
+						"nom",
+						"specialite",
+						"nom_artiste",
+						"description",
+						"photo",
+						"competences",
+						"experiences",
+						"formations",
+						"offres",
+						"reseaux",
+						"langues",
+						"galerie"
+					],
+					"actif": false,
+					"publiable": false,
+					"interne": false
+				},
+				"api": {
+					"pricedOffer": false,
+					"description": false,
+					"mainPicture": false,
+					"contactChannel": false,
+					"usableCity": false,
+					"speciality": false,
+					"entirelyEmpty": true
+				}
+			},
+			{
+				"nom": "une galerie, des compétences et des langues, aucune des six conditions",
+				"profil": {
+					"image_gallery": [
+						{
+							"id": 2
+						}
+					],
+					"skills": [
+						{
+							"id": 1
+						}
+					],
+					"language": [
+						{
+							"id": 1
+						}
+					],
+					"experiences": [
+						{
+							"id": 1
+						}
+					],
+					"courses": [
+						{
+							"id": 1
+						}
+					],
+					"company_artist_name": "Studio Fictif"
+				},
+				"front": {
+					"score": 6,
+					"sur": 13,
+					"manquants": ["nom", "specialite", "ville", "description", "photo", "offres", "reseaux"],
+					"actif": false,
+					"publiable": false,
+					"interne": false
+				},
+				"api": {
+					"pricedOffer": false,
+					"description": false,
+					"mainPicture": false,
+					"contactChannel": false,
+					"usableCity": false,
+					"speciality": false,
+					"entirelyEmpty": true
+				}
+			}
+		]
+	},
+	"ecarts": {
+		"description": "Seul désaccord entre les deux anciens codes : une commune qui porte le nom d’un type de voie. Le front la compte comme une ville exploitable, l’API non. La v3 suit le front, dont viennent les cas partagés.",
+		"cas": [
+			{
+				"nom": "ville « Rue » seule",
+				"profil": {
+					"city": "Rue"
+				},
+				"front": {
+					"score": 1,
+					"sur": 13,
+					"manquants": [
+						"nom",
+						"specialite",
+						"nom_artiste",
+						"description",
+						"photo",
+						"competences",
+						"experiences",
+						"formations",
+						"offres",
+						"reseaux",
+						"langues",
+						"galerie"
+					],
+					"actif": false,
+					"publiable": false,
+					"interne": false
+				},
+				"api": {
+					"pricedOffer": false,
+					"description": false,
+					"mainPicture": false,
+					"contactChannel": false,
+					"usableCity": false,
+					"speciality": false,
+					"entirelyEmpty": true
+				},
+				"villeExploitableFront": true
+			},
+			{
+				"nom": "ville « Cours » seule",
+				"profil": {
+					"city": "Cours"
+				},
+				"front": {
+					"score": 1,
+					"sur": 13,
+					"manquants": [
+						"nom",
+						"specialite",
+						"nom_artiste",
+						"description",
+						"photo",
+						"competences",
+						"experiences",
+						"formations",
+						"offres",
+						"reseaux",
+						"langues",
+						"galerie"
+					],
+					"actif": false,
+					"publiable": false,
+					"interne": false
+				},
+				"api": {
+					"pricedOffer": false,
+					"description": false,
+					"mainPicture": false,
+					"contactChannel": false,
+					"usableCity": false,
+					"speciality": false,
+					"entirelyEmpty": true
+				},
+				"villeExploitableFront": true
+			},
+			{
+				"nom": "ville « Cours-la-Ville » seule",
+				"profil": {
+					"city": "Cours-la-Ville"
+				},
+				"front": {
+					"score": 1,
+					"sur": 13,
+					"manquants": [
+						"nom",
+						"specialite",
+						"nom_artiste",
+						"description",
+						"photo",
+						"competences",
+						"experiences",
+						"formations",
+						"offres",
+						"reseaux",
+						"langues",
+						"galerie"
+					],
+					"actif": false,
+					"publiable": false,
+					"interne": false
+				},
+				"api": {
+					"pricedOffer": false,
+					"description": false,
+					"mainPicture": false,
+					"contactChannel": false,
+					"usableCity": false,
+					"speciality": false,
+					"entirelyEmpty": true
+				},
+				"villeExploitableFront": true
+			},
+			{
+				"nom": "ville « 47360 Cours » seule",
+				"profil": {
+					"city": "47360 Cours"
+				},
+				"front": {
+					"score": 1,
+					"sur": 13,
+					"manquants": [
+						"nom",
+						"specialite",
+						"nom_artiste",
+						"description",
+						"photo",
+						"competences",
+						"experiences",
+						"formations",
+						"offres",
+						"reseaux",
+						"langues",
+						"galerie"
+					],
+					"actif": false,
+					"publiable": false,
+					"interne": false
+				},
+				"api": {
+					"pricedOffer": false,
+					"description": false,
+					"mainPicture": false,
+					"contactChannel": false,
+					"usableCity": false,
+					"speciality": false,
+					"entirelyEmpty": true
+				},
+				"villeExploitableFront": true
+			},
+			{
+				"nom": "ville « La Place » seule",
+				"profil": {
+					"city": "La Place"
+				},
+				"front": {
+					"score": 1,
+					"sur": 13,
+					"manquants": [
+						"nom",
+						"specialite",
+						"nom_artiste",
+						"description",
+						"photo",
+						"competences",
+						"experiences",
+						"formations",
+						"offres",
+						"reseaux",
+						"langues",
+						"galerie"
+					],
+					"actif": false,
+					"publiable": false,
+					"interne": false
+				},
+				"api": {
+					"pricedOffer": false,
+					"description": false,
+					"mainPicture": false,
+					"contactChannel": false,
+					"usableCity": false,
+					"speciality": false,
+					"entirelyEmpty": true
+				},
+				"villeExploitableFront": true
+			}
+		]
+	}
+}
