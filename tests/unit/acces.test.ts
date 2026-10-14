@@ -12,17 +12,23 @@ import {
 } from '@/collections/Media'
 import { CONTEXTE_SANS_PROFIL, consentementTrace, Profils } from '@/collections/Profils'
 import { compteSansProfilAvantSuppression, Pros, premierCompteFerme } from '@/collections/Pros'
+import { ACCES_REDACTION, champStrapiId, VERSIONS_REDACTION } from '@/collections/redaction'
+import { Talents } from '@/collections/Talents'
 import {
 	AUCUN_DOCUMENT,
 	adminOuMaquilleuse,
 	adminOuProprietaire,
 	adminOuProprietaireDuMedia,
+	adminOuRedaction,
 	adminOuSoiMeme,
+	adminRedactionOuPublies,
 	adminSeulement,
+	champAdminOuRedaction,
 	champAdminSeulement,
 	champDuMediaAdminOuProprietaire,
 	champDuProfilAdminOuProprietaire,
 	estAdmin,
+	estAdminOuRedaction,
 	estMaquilleuse,
 	estRedaction,
 	identifiantPossible,
@@ -30,6 +36,7 @@ import {
 	lectureDesMedias,
 	PROFILS_PUBLIES,
 	profilPublieOuProprietaire,
+	SEULEMENT_PUBLIES,
 } from '@/lib/acces'
 import { validerPhotosDuProfil } from '@/lib/profil/photos'
 import { STATUTS_DU_PROFIL } from '@/lib/profil/statut'
@@ -348,6 +355,65 @@ describe('La collection profils (ticket 020)', () => {
 
 	test('un compte qui a encore un profil n’est pas supprimé', () => {
 		expect(Pros.hooks?.beforeDelete).toContain(compteSansProfilAvantSuppression)
+	})
+})
+
+describe('La collection talents (ticket 022) : la rédaction écrit, le public lit ce qui est publié (U59)', () => {
+	const regles = Talents.access ?? {}
+	const tousLesComptes = [admin, redaction, maquilleuse, autreCollection, null]
+
+	test('admin et redaction forment la rédaction ; une maquilleuse et un anonyme n’en sont pas', () => {
+		expect(tousLesComptes.map(estAdminOuRedaction)).toEqual([true, true, false, false, false])
+	})
+
+	test('lire : tout pour la rédaction, brouillons compris ; les talents publiés seulement pour les autres', () => {
+		expect(regles.read).toBe(adminRedactionOuPublies)
+		expect(SEULEMENT_PUBLIES).toEqual({ _status: { equals: 'published' } })
+		expect(tousLesComptes.map(user => regles.read?.(appel(user) as never))).toEqual([
+			true,
+			true,
+			SEULEMENT_PUBLIES,
+			SEULEMENT_PUBLIES,
+			SEULEMENT_PUBLIES,
+		])
+	})
+
+	test('créer, modifier (donc publier), supprimer, lire les versions : la rédaction seulement', () => {
+		for (const regle of [regles.create, regles.update, regles.delete, regles.readVersions]) {
+			expect(regle).toBe(adminOuRedaction)
+			expect(tousLesComptes.map(user => regle?.(appel(user) as never))).toEqual([true, true, false, false, false])
+		}
+	})
+
+	test('ce sont les règles de la rédaction, que les articles reprendront, avec les brouillons', () => {
+		expect(Talents.access).toBe(ACCES_REDACTION)
+		expect(Talents.versions).toBe(VERSIONS_REDACTION)
+		expect(VERSIONS_REDACTION).toEqual({ drafts: true })
+	})
+
+	test('un slug unique, requis pour publier ; un titre requis pour publier', () => {
+		expect(champ(Talents.fields, 'slug')).toMatchObject({ type: 'text', required: true, unique: true })
+		expect(champ(Talents.fields, 'title')).toMatchObject({ type: 'text', required: true })
+	})
+
+	test('strapiId : écrit par l’import seulement, lu par la rédaction seulement', () => {
+		expect(champ(Talents.fields, 'strapiId')).toBe(champStrapiId as never)
+		expect(champStrapiId).toMatchObject({
+			type: 'number',
+			unique: true,
+			access: { read: champAdminOuRedaction, create: jamais, update: jamais },
+		})
+		expect(tousLesComptes.map(user => champAdminOuRedaction(appel(user) as never))).toEqual([
+			true,
+			true,
+			false,
+			false,
+			false,
+		])
+	})
+
+	test('la date de publication n’est écrite par aucune API', () => {
+		expect(champ(Talents.fields, 'publishedAt')?.access).toMatchObject({ create: jamais, update: jamais })
 	})
 })
 

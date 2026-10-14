@@ -15,6 +15,7 @@ import {
 } from './collections/Media'
 import { Profils } from './collections/Profils'
 import { Pros } from './collections/Pros'
+import { Talents } from './collections/Talents'
 import { mediaBaseUrl, serverEnv } from './lib/env'
 import { adresseDuMedia, PREFIXE_DES_ENVOIS } from './lib/medias'
 import { migrations } from './migrations'
@@ -49,7 +50,7 @@ export default buildConfig({
 		// 'off' closes /api/og: an image rendered on demand, for anyone, with or without a session.
 		meta: { defaultOGImageType: 'off' },
 	},
-	collections: [Admins, Pros, Profils, media],
+	collections: [Admins, Pros, Profils, media, Talents],
 	// The site and the API share one origin: no other site may read this API from a browser.
 	cors: [],
 	// A session cookie is accepted from these origins only (src/lib/env.ts).

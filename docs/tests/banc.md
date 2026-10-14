@@ -284,7 +284,7 @@ Chaque ligne est jouée deux fois : par l'API REST, avec la session de la fabriq
 | `role` | Qui agit : `anonyme`, ou un compte de la distribution (`admin`, `redaction`, `maquilleuse` pour « A », `autreMaquilleuse` pour « B », `sansProfil` pour un compte sans profil) |
 | `collection` | La collection visée |
 | `operation` | `lister`, `lire`, `creer`, `modifier`, `supprimer` |
-| `document` | Le document visé, désigné par le rôle à qui il appartient (`lire`, `modifier`, `supprimer`) |
+| `document` | Le document visé, désigné par le rôle à qui il appartient (`lire`, `modifier`, `supprimer`). Sur une collection de la rédaction, dont les documents n'appartiennent à personne : `publie` ou `brouillon` |
 | `champ`, `valeur` | Pour `modifier` : le champ envoyé et sa valeur. Sans eux, la matrice change un champ ordinaire de la collection. `{ compteDe: 'sansProfil' }` vaut le compte de ce rôle. Pour `lire` : `champ` seul, le champ dont la ligne regarde s'il est dans le document lu |
 | `attendu` | Ce qui doit arriver, ci-dessous |
 
@@ -294,7 +294,7 @@ Chaque ligne est jouée deux fois : par l'API REST, avec la session de la fabriq
 | `autorise` | Accepté, et la base le montre : le document lu est le bon, le document existe, la nouvelle valeur est stockée, le document a disparu |
 | `ignore` | Accepté, mais le champ a gardé sa valeur : un champ que ce rôle ne peut pas écrire |
 | `aucun`, `soi`, `tous` | Pour `lister` : une liste vide, exactement les documents de celui qui agit, ou tous les documents de la distribution |
-| `publies`, `soiEtPublies` | Pour `lister` : exactement les documents de la distribution que lit le public, ou exactement ceux-là plus ceux de celui qui agit. Le portrait de la collection dit lesquels le public lit (`publics`) |
+| `publies`, `soiEtPublies` | Pour `lister` : exactement les documents de la distribution que lit le public, ou exactement ceux-là plus ceux de celui qui agit. Le portrait de la collection dit lesquels le public lit (`publics`). Sur une collection de la rédaction, `publies` : le document publié de la distribution, jamais son brouillon, et seulement des documents publiés |
 | `visible`, `absent` | Pour `lire` avec un `champ` : le document lu porte le champ, avec la valeur stockée ; ou il est lu sans ce champ, que Payload a retiré de la réponse. Les lignes de lecture des champs visent le profil publié de « A » et sa photo, que tous les rôles lisent |
 
 Tout autre constat est `incoherent` : refusé mais écrit quand même, ou une liste que personne n'attend. Le test échoue.
@@ -306,6 +306,7 @@ Tout autre constat est `incoherent` : refusé mais écrit quand même, ou une li
 - **Une collection nouvelle** donne à la matrice son portrait (`PORTRAITS`, même fichier) : le champ ordinaire à modifier, les données d'une création, un document jetable (qui appartient à celui qui agit, quand la collection a des propriétaires), les documents que lit le public (`publics`), et `fichier` pour une collection de fichiers, dont une création envoie une photo. **Un rôle nouveau** prend un type de la fabrique (`TYPE_DU_ROLE`).
 - **Les photos de la distribution** : « A » et « B » ont chacune un média, la photo principale de leur profil. La matrice vide le stockage d'objets après ses lignes.
 - **Une photo de test** vient de `tests/outils/photos.ts` : un vrai PNG de 1 × 1 pixel, sous un nom à lui, pour l'API locale (`fichierPourPayload`) ou pour un formulaire (`fichierPourFormulaire`). `appelerRest` envoie un formulaire avec fichier par son option `formulaire` (`formulaireAvecFichier`, `tests/outils/rest.ts`), comme le site.
+- **Les collections de la rédaction** (`COLLECTIONS_EDITORIALES` : les talents, puis les articles) ont des brouillons, et leurs documents n'appartiennent à personne. La distribution en tient un publié et un brouillon par collection (`contenus`), qu'une ligne désigne par `publie` ou `brouillon`. Publier, c'est modifier `_status` : `{ champ: '_status', valeur: 'published' }` sur le brouillon ; dépublier, `'draft'` sur le document publié.
 - **L'appel REST passe par la vraie route de l'application** (`appelerRest`, `tests/outils/rest.ts`), sans serveur : mêmes gestionnaires, même contrôle de session, mêmes règles. Il ne prouve pas l'aiguillage de Next lui-même, qu'un essai de bout en bout prouve.
 
 ## Le faux Google

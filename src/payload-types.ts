@@ -72,6 +72,7 @@ export interface Config {
     pros: Pro;
     profils: Profil;
     media: Media;
+    talents: Talent;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -83,6 +84,7 @@ export interface Config {
     pros: ProsSelect<false> | ProsSelect<true>;
     profils: ProfilsSelect<false> | ProfilsSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
+    talents: TalentsSelect<false> | TalentsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -328,6 +330,30 @@ export interface Media {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "talents".
+ */
+export interface Talent {
+  id: number;
+  title: string;
+  /**
+   * La page répond à /talent/<adresse>. Changer l’adresse d’une page publiée casse les liens et les résultats de recherche qui y mènent.
+   */
+  slug: string;
+  seo_title?: string | null;
+  description?: string | null;
+  seo_description?: string | null;
+  /**
+   * En markdown.
+   */
+  content?: string | null;
+  publishedAt?: string | null;
+  strapiId?: number | null;
+  updatedAt: string;
+  createdAt: string;
+  _status?: ('draft' | 'published') | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
@@ -365,6 +391,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'media';
         value: number | Media;
+      } | null)
+    | ({
+        relationTo: 'talents';
+        value: number | Talent;
       } | null);
   globalSlug?: string | null;
   user:
@@ -540,6 +570,23 @@ export interface MediaSelect<T extends boolean = true> {
   height?: T;
   focalX?: T;
   focalY?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "talents_select".
+ */
+export interface TalentsSelect<T extends boolean = true> {
+  title?: T;
+  slug?: T;
+  seo_title?: T;
+  description?: T;
+  seo_description?: T;
+  content?: T;
+  publishedAt?: T;
+  strapiId?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  _status?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

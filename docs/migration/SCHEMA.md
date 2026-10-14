@@ -185,12 +185,12 @@ Table `talents`, 14 lignes, toutes publiées. Brouillons possibles dans Strapi. 
 
 | Attribut Strapi | Type Strapi | Champ Payload | Règle |
 |---|---|---|---|
-| `title` | `string` | `talents.title` (`text`) | Repris tel quel. |
+| `title` | `string` | `talents.title` (`text`, requis pour publier) | Repris tel quel. |
 | `seo_title` | `string` | `talents.seo_title` (`text`) | Repris tel quel. |
 | `description` | `text` | `talents.description` (`textarea`) | Repris tel quel. |
 | `seo_description` | `text` | `talents.seo_description` (`textarea`) | Repris tel quel. |
 | `content` | `richtext` | `talents.content` (`code`, markdown) | Repris tel quel, à l'octet près. Même raison que pour les articles. |
-| `slug` | `string` | `talents.slug` (`text`, unique) | Repris tel quel : les 14 adresses `/talent/<slug>` sont conservées. Un doublon est listé (règle 5). |
+| `slug` | `string` | `talents.slug` (`text`, unique, requis pour publier) | Repris tel quel : les 14 adresses `/talent/<slug>` sont conservées. Un doublon, ou un slug qui n'a pas déjà la forme d'une adresse (celle que donne `src/lib/slug.ts` : minuscules sans accent, mots séparés par un tiret), est refusé, puis listé (règle 5). |
 
 ## 6. Composants (7)
 
@@ -417,3 +417,4 @@ Noms fixés par ce document, parce que le plan ne les donnait pas : `profils.leg
 | 14/10/2026 | Ticket 021, sans changer un nom de champ : les valeurs de `profils.statut` (§9) ; `profils.superMaquilleuse` (§5.2) est créé avec les champs réservés à l'admin, et reste lu par le public, comme le badge de la recherche. |
 | 14/10/2026 | Ticket 042 : la source du consentement est nommée `profils.sourceConsentement`, de valeurs `maquilleuse`, `admin` et `import` (§9, §11). |
 | 14/10/2026 | Ticket 043, sans changer un nom de champ : les règles des médias de la v3 (§8) : préfixe propre à chaque document, adresse publique, propriétaire posé par le serveur, photos d'un profil limitées à son compte. |
+| 14/10/2026 | Talents (ticket 022), sans changer un nom de champ : `talents.title` et `talents.slug` sont requis pour publier (un brouillon peut s'en passer) ; un slug qui n'a pas déjà la forme d'une adresse est refusé, pas corrigé (§5.4). |
