@@ -23,6 +23,8 @@ export const REFERENCES = {
 	villeEnCommune: 'ville-en-commune',
 	/** An availability never set (`null`) is « available ». */
 	disponibiliteParDefaut: 'disponibilite-par-defaut',
+	/** The amount read in the price typed of an offer or an option; the text stays (ticket 062). */
+	prixNumerique: 'prix-numerique',
 	/** The 13 empty profiles left without an account by the spam of 10/10/2026 are not taken. */
 	profilsDuSpam: 'profils-spam-non-repris',
 	/** The size of an adopted file is the one of its object in the storage, in bytes, not the rounded one of Strapi (§8). */

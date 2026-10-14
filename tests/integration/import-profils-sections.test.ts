@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { SQL } from 'bun'
 import type { Rapport } from '../../scripts/migration/import/rapport'
+import { parsePrice, prixMinimal } from '../../src/lib/prix'
 import type { Profil } from '../../src/payload-types'
 import { importerSurLeBanc } from '../outils/import'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
@@ -89,7 +90,7 @@ function listesAttendues(id: number) {
 			nom: offre.name,
 			description: offre.description,
 			prixTexte: offre.price,
-			prixAPartirDe: null,
+			prixAPartirDe: parsePrice(offre.price).prixAPartirDe,
 			options: lignesDe(
 				lignes.components_makeupartists_service_offers_components,
 				lignes.components_service_offers_options,
@@ -100,7 +101,7 @@ function listesAttendues(id: number) {
 				nom: option.name,
 				description: option.description,
 				prixTexte: option.price,
-				prixAPartirDe: null,
+				prixAPartirDe: parsePrice(option.price).prixAPartirDe,
 			})),
 		})),
 	}
@@ -218,7 +219,7 @@ describe('Les sections de chaque profil sont reprises dans leur ordre (ticket 06
 		expect(noms(p => p.prestations)).not.toContain('Maquillage soirée')
 	})
 
-	test('le texte de prix est la saisie, à l’octet près ; le montant attend le ticket 062', async () => {
+	test('le texte de prix est la saisie, à l’octet près ; le montant est lu par la règle unique (062)', async () => {
 		const prixDeLaSource = [
 			...lignes.components_makeupartists_service_offers.filter(({ id }) => Number(id) !== 11),
 			...lignes.components_service_offers_options,
@@ -238,7 +239,39 @@ describe('Les sections de chaque profil sont reprises dans leur ordre (ticket 06
 		expect(kaci?.prestations?.map(({ prixTexte }) => prixTexte)).toEqual([null, ''])
 		const zoe = (await profilsDeLaCible()).find(({ strapiId }) => strapiId === 21)
 		expect(encode(zoe?.prestations?.[0]?.prixTexte)).toEqual(encode('à partir de 120 €'))
-		expect(prixDeLaCible.every(({ prixAPartirDe }) => prixAPartirDe === null)).toBe(true)
+		// 062: the amount is there when the text reads, empty otherwise (the text stays either way).
+		for (const { prixTexte, prixAPartirDe } of prixDeLaCible)
+			expect(prixAPartirDe ?? null, String(prixTexte)).toBe(parsePrice(prixTexte).prixAPartirDe)
+		expect(zoe?.prestations?.map(({ prixAPartirDe }) => prixAPartirDe)).toEqual([120, 80, null])
+		expect(zoe?.prestations?.[0]?.options?.map(({ prixAPartirDe }) => prixAPartirDe)).toEqual([15, null])
+		// A free text keeps its text and has no amount; digits the rule does not read stay readable.
+		const libres = prixDeLaCible.filter(({ prixAPartirDe }) => prixAPartirDe === null)
+		expect(libres.map(({ prixTexte }) => prixTexte)).toContain('Sur devis')
+		expect(libres.map(({ prixTexte }) => prixTexte)).toContain('2 h : 150 €')
+	})
+
+	test('aucun profil ne perd son offre chiffrée, et le rapport le dit en nombres (062)', async () => {
+		const cible = await profilsDeLaCible()
+		for (const profil of cible) {
+			const offres = listesAttendues(Number(profil.strapiId)).prestations
+			const chiffreeALaSource = offres.some(({ prixAPartirDe }) => prixAPartirDe !== null)
+			expect(prixMinimal(profil.prestations) !== null, String(profil.strapiId)).toBe(chiffreeALaSource)
+		}
+		const { prix } = premier.collections.profils ?? {}
+		const lignesDePrix = cible.flatMap(({ prestations }) => (prestations ?? []).flatMap(o => [o, ...(o.options ?? [])]))
+		expect(prix).toMatchObject({
+			prix: lignesDePrix.length,
+			avecMontant: lignesDePrix.filter(({ prixAPartirDe }) => prixAPartirDe !== null).length,
+			offresChiffreesPerdues: [],
+		})
+		// Profile 23 (60 is read) is no écart; 22 (an option at 0,50 € / km, under 5 €) and 24 (« 2 h : 150 € ») are listed.
+		expect(prix?.chiffresNonLus).toEqual([22, 24])
+		expect(premier.ecarts['prix-numerique']).toBe(
+			cible.filter(({ prestations }) =>
+				(prestations ?? []).some(o => [o, ...(o.options ?? [])].some(({ prixAPartirDe }) => prixAPartirDe !== null))
+			).length
+		)
+		expect(JSON.stringify(premier)).not.toContain('Sur devis')
 	})
 
 	test('les réseaux sont les liens de l’ancien site ; téléphone et email attendent le ticket 064', async () => {

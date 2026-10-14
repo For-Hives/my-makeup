@@ -13,6 +13,7 @@ import type { BilanDesCommunes } from './communes'
 import type { BilanDesFichiers, PhotoNonReprise } from './medias'
 import type { Bilan, CollectionImportee, Parite } from './moteur'
 import { pariteComplete, sansEcartInexplique } from './moteur'
+import type { BilanDesPrix } from './profils'
 import type { EmpreinteDesTables } from './source'
 
 export type Mode = 'a-blanc' | 'reel'
@@ -49,6 +50,8 @@ export interface BilanDeCollection extends Bilan {
 	photosNonReprises?: PhotoNonReprise[]
 	/** Profiles with a link of a list that names no row (SCHEMA.md §7). */
 	liensSansLigne?: number[]
+	/** The prices read (ticket 062): in numbers and identifiers, never a text. */
+	prix?: BilanDesPrix
 }
 
 /** The parity of a collection, and how the target splits, read again. */
@@ -150,6 +153,20 @@ function ligneDeBilan(nom: string, bilan: BilanDeCollection, mode: Mode): string
 		)
 	if (bilan.liensSansLigne?.length)
 		lignes.push(`  - liens de liste qui ne nomment aucune ligne, signalés : ${ids(bilan.liensSansLigne)}`)
+	if (bilan.prix) lignes.push(...lignesDesPrix(bilan.prix))
+	return lignes
+}
+
+function lignesDesPrix(prix: BilanDesPrix): string[] {
+	const lignes = [
+		`  - prix : ${prix.prix} (offres et options), ${prix.avecMontant} avec un montant, ${prix.textesLibres} en texte libre (texte gardé, montant vide), ${prix.sansTexte} sans texte ; ` +
+			`${pluriel(prix.profilsAvecOffreChiffree, 'profil avec une offre chiffrée', 'profils avec une offre chiffrée')}, ` +
+			`offre chiffrée perdue : ${ids(prix.offresChiffreesPerdues)}`,
+	]
+	if (prix.chiffresNonLus.length > 0)
+		lignes.push(
+			`  - prix en texte avec des chiffres que la règle ne lit pas, texte gardé : ${ids(prix.chiffresNonLus)}`
+		)
 	return lignes
 }
 

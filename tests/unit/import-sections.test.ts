@@ -110,9 +110,10 @@ describe('les listes d’un profil, sous les noms de Payload', () => {
 					nom: 'Mariage',
 					description: null,
 					prixTexte: '  à partir de 120 € ',
+					prixAPartirDe: 120,
 					options: [
-						{ nom: 'Retouche', description: null, prixTexte: '' },
-						{ nom: 'Essai', description: 'Une heure.', prixTexte: null },
+						{ nom: 'Retouche', description: null, prixTexte: '', prixAPartirDe: null },
+						{ nom: 'Essai', description: 'Une heure.', prixTexte: null, prixAPartirDe: null },
 					],
 				},
 			],
@@ -126,6 +127,94 @@ describe('les listes d’un profil, sous les noms de Payload', () => {
 			},
 		})
 		expect(JSON.stringify(valeurs)).not.toContain('06 39 98')
+	})
+
+	test('le prix lu par la règle unique : le nombre quand il se lit, le texte toujours tel quel (ticket 062)', () => {
+		const saisies = [
+			'50',
+			'50€',
+			' 1 200 € ',
+			'à partir de 80',
+			'Sur devis',
+			'Entre 60 et 90 €',
+			'2 h : 150 €',
+			'3',
+			'',
+			null,
+		]
+		const { prestations } = valeursDesListes(
+			sections({
+				prestations: saisies.map((price, i) => ({
+					id: i + 1,
+					name: `Offre ${i + 1}`,
+					description: null,
+					price,
+					options: [{ name: 'Option', description: null, price }],
+				})),
+			})
+		) as {
+			prestations: {
+				prixTexte: string | null
+				prixAPartirDe: number | null
+				options: { prixAPartirDe: number | null }[]
+			}[]
+		}
+
+		expect(prestations.map(({ prixTexte, prixAPartirDe }) => [prixTexte, prixAPartirDe])).toEqual([
+			['50', 50],
+			['50€', 50],
+			[' 1 200 € ', 1200],
+			['à partir de 80', 80],
+			['Sur devis', null],
+			// The old site reads the first number of the text: ported as it is (src/lib/prix.ts).
+			['Entre 60 et 90 €', 60],
+			['2 h : 150 €', null],
+			// Out of bounds (5 to 10 000 €): no amount, the text stays.
+			['3', null],
+			['', null],
+			[null, null],
+		])
+		// An option goes through the same rule as its offer.
+		const options = prestations.flatMap(({ options }) => options)
+		expect(options.map(({ prixAPartirDe }) => prixAPartirDe)).toEqual(
+			prestations.map(({ prixAPartirDe }) => prixAPartirDe)
+		)
+	})
+
+	test('le bilan des prix compte en nombres et liste les profils, sans jamais citer un texte', () => {
+		const offre = (id: number, price: string | null) => ({ id, name: 'Offre', description: null, price, options: [] })
+		const { prix, attendus } = profilsAttendus(
+			[
+				profil(1, { prestations: [offre(1, '80'), offre(2, 'Sur devis')] }),
+				profil(2, { prestations: [offre(3, '2 h : 150 €')] }),
+				profil(3, { prestations: [offre(4, null), offre(5, '')] }),
+				profil(4, {
+					prestations: [{ ...offre(6, 'Sur devis'), options: [{ name: 'Option', description: null, price: '15 €' }] }],
+				}),
+			],
+			new Map([
+				[101, 1],
+				[102, 2],
+				[103, 3],
+				[104, 4],
+			])
+		)
+
+		expect(prix).toEqual({
+			prix: 7,
+			avecMontant: 2,
+			textesLibres: 3,
+			sansTexte: 2,
+			profilsAvecOffreChiffree: 1,
+			offresChiffreesPerdues: [],
+			chiffresNonLus: [2],
+		})
+		// The register line is counted once per profile that gains an amount, options included.
+		const comptes = attendus.map(
+			({ ecarts }) => ecarts.filter(({ reference }) => reference === 'prix-numerique').length
+		)
+		expect(comptes).toEqual([1, 0, 0, 1])
+		expect(JSON.stringify(prix)).not.toContain('Sur devis')
 	})
 
 	test('un profil sans section n’a que des listes vides, et pas de réseaux', () => {

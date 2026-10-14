@@ -273,6 +273,7 @@ export async function importer(options: OptionsDImport): Promise<Rapport> {
 			communes: communes.bilan,
 			photosNonReprises: profils.photosNonReprises,
 			liensSansLigne: profils.liensSansLigne,
+			prix: profils.prix,
 		}
 
 		const lesArticles = articlesAttendus(articles.pris, lu.fichiers.liens, idsDesMedias)

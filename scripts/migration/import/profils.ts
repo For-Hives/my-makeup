@@ -30,10 +30,15 @@
  *   (./sections.ts, ticket 060): a photo whose file is not adopted (./medias.ts) is reported, never
  *   invented.
  *
+ * - Its prices keep the text typed and gain the amount the single rule reads in it (src/lib/prix.ts,
+ *   ticket 062): `bilanDesPrix` counts them, and lists the profiles that would lose their priced
+ *   offer or hold digits the rule does not read.
+ *
  * The network row of Strapi also holds the contact details of the profile: they are read into
  * memory to tell whether a contact channel exists at the source, and are not written here.
  */
 
+import { estMontantDePrix, parsePrice, prixMinimal } from '../../../src/lib/prix'
 import { type ChampsDuProfil, estEntierementVide, type ReseauxDuProfil } from '../../../src/lib/profil/completude'
 import { type DocumentDuProfil, etatDuProfil, statutApres } from '../../../src/lib/profil/etat'
 import { CHOIX_INITIAL, type StatutDuProfil } from '../../../src/lib/profil/statut'
@@ -229,6 +234,34 @@ export function profilsLaisses(
 	return laisses
 }
 
+/** What the prices of a run give, in numbers and identifiers (ticket 062). */
+export interface BilanDesPrix {
+	/** Prices of the profiles taken: one per offer and one per option. */
+	prix: number
+	/** Among them, the prices that give an amount. */
+	avecMontant: number
+	/** The prices in free text: the text is kept, the amount is empty. */
+	textesLibres: number
+	/** The prices with nothing typed. */
+	sansTexte: number
+	/** Profiles taken whose offers hold an amount at the source, by the rule of the old site. */
+	profilsAvecOffreChiffree: number
+	/** Profiles that hold an amount at the source and have none in the target: the gaps, listed. */
+	offresChiffreesPerdues: number[]
+	/** Profiles with a text that holds digits and gives no amount (« 2 h : 150 € »): the text is kept, listed. */
+	chiffresNonLus: number[]
+}
+
+type PrixEcrit = { prixTexte?: string | null; prixAPartirDe?: number | null }
+
+/** The prices written for one profile: its offers, then their options. */
+function prixDesPrestations(prestations: unknown): PrixEcrit[] {
+	return ((prestations ?? []) as (PrixEcrit & { options?: PrixEcrit[] })[]).flatMap(offre => [
+		offre,
+		...(offre.options ?? []),
+	])
+}
+
 export interface ProfilsAttendus {
 	attendus: Attendu[]
 	/** How many profiles the run takes per status, as the server computes it. */
@@ -243,6 +276,8 @@ export interface ProfilsAttendus {
 	photosNonReprises: PhotoNonReprise[]
 	/** Profiles taken with a link of a list that names no row. */
 	liensSansLigne: number[]
+	/** The prices, in numbers and identifiers. */
+	prix: BilanDesPrix
 }
 
 /**
@@ -273,6 +308,15 @@ export function profilsAttendus(
 	const statutsDifferentsDeLaSource: number[] = []
 	const photosNonReprises: PhotoNonReprise[] = []
 	const liensSansLigne: number[] = []
+	const prix: BilanDesPrix = {
+		prix: 0,
+		avecMontant: 0,
+		textesLibres: 0,
+		sansTexte: 0,
+		profilsAvecOffreChiffree: 0,
+		offresChiffreesPerdues: [],
+		chiffresNonLus: [],
+	}
 	for (const profil of profils) {
 		if (nonPris.has(profil.id)) continue
 		if (profil.compte === null || !comptes.has(profil.compte))
@@ -312,11 +356,25 @@ export function profilsAttendus(
 		statuts[statut] = (statuts[statut] ?? 0) + 1
 		if ((statut === 'brouillon') !== videALaSource(profil)) statutsDifferentsDeLaSource.push(profil.id)
 		const ecarts: Ecart[] = []
+		const ecrits = prixDesPrestations(valeurs.prestations)
+		for (const { prixTexte, prixAPartirDe } of ecrits) {
+			prix.prix += 1
+			if (prixAPartirDe !== null && prixAPartirDe !== undefined) prix.avecMontant += 1
+			else if ((prixTexte?.trim() ?? '') === '') prix.sansTexte += 1
+			else prix.textesLibres += 1
+		}
+		if (ecrits.some(({ prixAPartirDe }) => estMontantDePrix(prixAPartirDe)))
+			ecarts.push({ champ: 'prestations', reference: REFERENCES.prixNumerique })
+		const chiffreeALaSource = sections.prestations.some(({ price }) => parsePrice(price).prixAPartirDe !== null)
+		if (chiffreeALaSource) prix.profilsAvecOffreChiffree += 1
+		if (chiffreeALaSource && prixMinimal(ecrits) === null) prix.offresChiffreesPerdues.push(profil.id)
+		if (ecrits.some(({ prixTexte, prixAPartirDe }) => prixAPartirDe === null && /\d/.test(prixTexte ?? '')))
+			prix.chiffresNonLus.push(profil.id)
 		if (slug !== profil.username) ecarts.push({ champ: 'slug', reference: REFERENCES.slugStocke })
 		if ((profil.city?.trim() ?? '') !== '') ecarts.push({ champ: 'commune', reference: REFERENCES.villeEnCommune })
 		if (profil.available === null) ecarts.push({ champ: 'disponible', reference: REFERENCES.disponibiliteParDefaut })
 		if (statut === 'brouillon') ecarts.push({ champ: 'statut', reference: REFERENCES.profilVideEnBrouillon })
 		attendus.push({ strapiId: profil.id, valeurs, ecarts })
 	}
-	return { attendus, statuts, statutsDifferentsDeLaSource, photosNonReprises, liensSansLigne }
+	return { attendus, statuts, statutsDifferentsDeLaSource, photosNonReprises, liensSansLigne, prix }
 }
