@@ -19,6 +19,7 @@ import { Pros } from './collections/Pros'
 import { Talents } from './collections/Talents'
 import { mediaBaseUrl, serverEnv } from './lib/env'
 import { adresseDuMedia, PREFIXE_DES_ENVOIS } from './lib/medias'
+import { requetesBornees } from './lib/requete-bornee'
 import { migrations } from './migrations'
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -111,6 +112,9 @@ export default buildConfig({
 				: {},
 		}),
 		champsDuStockageFermes,
+		// Last, so that it sees every collection: a request too large, or that filters or sorts on a
+		// private field, is refused before the database (src/lib/requete-bornee.ts, ticket 048).
+		requetesBornees,
 	],
 	secret: env.payloadSecret,
 	telemetry: false,

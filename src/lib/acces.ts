@@ -41,8 +41,8 @@ export const estRedaction = (user: Utilisateur): boolean =>
 /** The account of a makeup artist. */
 export const estMaquilleuse = (user: Utilisateur): boolean => user?.collection === COLLECTION_PROS
 
-/** Only the role `admin`, for a whole collection. */
-export const adminSeulement: Access = ({ req: { user } }) => estAdmin(user)
+/** Only the role `admin`, for a whole collection; never by an impossible identifier (`identifiantImpossible`). */
+export const adminSeulement: Access = ({ req: { user }, id }) => !identifiantImpossible(id) && estAdmin(user)
 
 /** Only the role `admin`, for one field: anyone else's value is ignored, the stored one is kept. */
 export const champAdminSeulement: FieldAccess = ({ req: { user } }) => estAdmin(user)
@@ -60,22 +60,25 @@ const soiMeme = (collection: string, user: Utilisateur): Where | false =>
 
 /**
  * The role `admin` reaches every account of the collection; any other account of the same
- * collection reaches its own document only; everyone else, nothing.
+ * collection reaches its own document only; everyone else, nothing. An identifier no account can
+ * have is refused to all, before any query (ticket 048).
  *
  * On `admins`: a `redaction` account reads and changes itself only. On `pros`: a makeup artist
  * reads and changes her own account only.
  */
 export const adminOuSoiMeme =
 	(collection: typeof COLLECTION_ADMINS | typeof COLLECTION_PROS): Access =>
-	({ req: { user } }) =>
-		estAdmin(user) || soiMeme(collection, user)
+	({ req: { user }, id }) =>
+		!identifiantImpossible(id) && (estAdmin(user) || soiMeme(collection, user))
 
 /**
  * The role `admin` reaches every profile; a makeup artist reaches the profile she owns (its
  * `pro` is her account); everyone else, nothing. An account without a profile matches no
- * document: an empty list, and a refusal on any write.
+ * document: an empty list, and a refusal on any write. An identifier no profile can have is
+ * refused to all, before any query (ticket 048).
  */
-export const adminOuProprietaire: Access = ({ req: { user } }) => {
+export const adminOuProprietaire: Access = ({ req: { user }, id }) => {
+	if (identifiantImpossible(id)) return false
 	if (estAdmin(user)) return true
 	if (user && estMaquilleuse(user)) return { pro: { equals: user.id } }
 	return false
@@ -244,8 +247,12 @@ export const champDuMediaAdminOuProprietaire: FieldAccess = champAdminOuPropriet
  */
 export const estAdminOuRedaction = (user: Utilisateur): boolean => estAdmin(user) || estRedaction(user)
 
-/** Only the newsroom, for a whole collection: creating, changing, publishing, deleting, reading the versions. */
-export const adminOuRedaction: Access = ({ req: { user } }) => estAdminOuRedaction(user)
+/**
+ * Only the newsroom, for a whole collection: creating, changing, publishing, deleting, reading the
+ * versions. Never by an impossible identifier.
+ */
+export const adminOuRedaction: Access = ({ req: { user }, id }) =>
+	!identifiantImpossible(id) && estAdminOuRedaction(user)
 
 /** Only the newsroom, for one field: anyone else gets the document without it. */
 export const champAdminOuRedaction: FieldAccess = ({ req: { user } }) => estAdminOuRedaction(user)
@@ -257,6 +264,7 @@ export const SEULEMENT_PUBLIES: Where = { _status: { equals: 'published' } }
  * Reading an editorial collection (drafts on): the newsroom reads every document, drafts
  * included; everyone else, a makeup artist as an anonymous visitor, the published ones only. A
  * draft is out of reach for them, even through `?draft=true`: Payload adds the same condition to
- * the versions it would show instead.
+ * the versions it would show instead. An identifier no document can have is refused to all.
  */
-export const adminRedactionOuPublies: Access = ({ req: { user } }) => estAdminOuRedaction(user) || SEULEMENT_PUBLIES
+export const adminRedactionOuPublies: Access = ({ req: { user }, id }) =>
+	!identifiantImpossible(id) && (estAdminOuRedaction(user) || SEULEMENT_PUBLIES)

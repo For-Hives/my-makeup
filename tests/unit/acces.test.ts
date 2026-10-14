@@ -107,6 +107,40 @@ describe('Un identifiant possible : ce qu’une règle passe à la base', () => 
 	})
 })
 
+describe('Un identifiant impossible : refusé par chaque règle, avant la base (ticket 048)', () => {
+	const REGLES = {
+		adminSeulement,
+		'adminOuSoiMeme(admins)': adminOuSoiMeme('admins'),
+		'adminOuSoiMeme(pros)': adminOuSoiMeme('pros'),
+		adminOuProprietaire,
+		profilPublieOuProprietaire,
+		adminOuProprietaireDuMedia,
+		adminOuRedaction,
+		adminRedactionOuPublies,
+	}
+
+	test('pour chaque compte, anonyme compris : refusé, sans condition à passer à la base', () => {
+		for (const [nom, regle] of Object.entries(REGLES))
+			for (const user of [null, admin, redaction, maquilleuse])
+				for (const id of IDENTIFIANTS_IMPOSSIBLES)
+					expect([nom, id, regle({ req: { user } as PayloadRequest, id } as never)]).toEqual([nom, id, false])
+	})
+
+	test('un identifiant possible, ou aucun (une liste, une création) : la règle décide comme avant', () => {
+		for (const id of [12, '12', undefined]) {
+			expect(adminSeulement({ req: { user: admin } as PayloadRequest, id } as never)).toBe(true)
+			expect(adminOuRedaction({ req: { user: redaction } as PayloadRequest, id } as never)).toBe(true)
+			expect(adminRedactionOuPublies({ req: { user: null } as PayloadRequest, id } as never)).toEqual(SEULEMENT_PUBLIES)
+			expect(adminOuSoiMeme('pros')({ req: { user: maquilleuse } as PayloadRequest, id } as never)).toEqual({
+				id: { equals: 7 },
+			})
+			expect(adminOuProprietaire({ req: { user: maquilleuse } as PayloadRequest, id } as never)).toEqual({
+				pro: { equals: 7 },
+			})
+		}
+	})
+})
+
 describe('Les rôles', () => {
 	test('admin et redaction sont deux comptes de la collection admins', () => {
 		expect([admin, redaction, autreCollection, null].map(estAdmin)).toEqual([true, false, false, false])
