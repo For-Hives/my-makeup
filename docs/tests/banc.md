@@ -1,6 +1,6 @@
 # Le banc de test local
 
-Le banc est ce contre quoi tournent les tests d'intégration : quatre conteneurs, sur ce poste, que l'on démarre et que l'on jette. Rien n'y est réel. La base est vide et en mémoire, les mails n'en sortent pas, le stockage d'objets est un simulateur, et le faux Google ne connaît que des personnes inventées.
+Le banc est ce contre quoi tournent les tests d'intégration : cinq conteneurs, sur ce poste, que l'on démarre et que l'on jette. Rien n'y est réel. La base est vide et en mémoire, les mails n'en sortent pas, le stockage d'objets est un simulateur, le faux Google ne connaît que des personnes inventées et le faux Umami ne compte que les visites du banc.
 
 | Service | Rôle | Adresse par défaut |
 |---|---|---|
@@ -8,22 +8,24 @@ Le banc est ce contre quoi tournent les tests d'intégration : quatre conteneurs
 | Mailpit | Le capteur de mails : il reçoit tout ce que l'application envoie et ne transmet rien | SMTP `127.0.0.1:1025`, boîte et API `http://127.0.0.1:8025` |
 | S3Mock | Le stockage d'objets, avec l'API S3 | `http://127.0.0.1:9090`, espace `mymakeup-test` |
 | Faux Google | Un fournisseur OpenID Connect qui tient la place de Google pour la connexion Google | `http://127.0.0.1:7080` |
+| Faux Umami | Une instance Umami qui tient la place de la vraie : elle sert un traceur et note ce que le site lui relaie | `http://127.0.0.1:4200` |
 
 La même pile sert sur un poste et en CI : `compose.test.yml`.
 
 ## Démarrer et arrêter
 
 ```sh
-bun run banc:up     # démarre les quatre conteneurs, rend la main quand les quatre services répondent
+bun run banc:up     # démarre les cinq conteneurs, rend la main quand les cinq services répondent
 bun run banc:down   # arrête tout, supprime conteneurs, réseau et volumes
 ```
 
-`banc:up` attend au plus une minute. Images déjà téléchargées, il met 5 à 7 secondes (mesuré le 14/10/2026, avec les quatre services : 4,7 s, puis 6,7 s juste après un arrêt). Il ne se contente pas de l'état des conteneurs : il interroge chaque service depuis le poste.
+`banc:up` attend au plus une minute. Images déjà téléchargées, il met 5 à 7 secondes (mesuré le 14/10/2026, avec quatre services : 4,7 s, puis 6,7 s juste après un arrêt). Il ne se contente pas de l'état des conteneurs : il interroge chaque service depuis le poste.
 
 - la base exécute une requête ;
 - le capteur de mails répond en SMTP, et son API est prête ;
 - le stockage a son espace ;
-- le faux Google se présente sous l'adresse de l'instance.
+- le faux Google se présente sous l'adresse de l'instance ;
+- le faux Umami dit qui il est.
 
 Relancé sur un banc déjà démarré, `banc:up` ne change rien et redit les adresses.
 
@@ -89,10 +91,10 @@ bun run test:integration tests/integration/banc-base.test.ts   # un seul fichier
 
 La commande fait trois choses :
 
-1. Elle interroge les quatre services. Si l'un d'eux ne répond pas, elle s'arrête avant le premier test et dit quoi démarrer :
+1. Elle interroge les cinq services. Si l'un d'eux ne répond pas, elle s'arrête avant le premier test et dit quoi démarrer :
 
    ```
-   Le banc de test « my-makeup-test » ne répond pas : base (127.0.0.1:5443), capteur de mails (127.0.0.1:1025), stockage d’objets (127.0.0.1:9090), faux Google (127.0.0.1:7080).
+   Le banc de test « my-makeup-test » ne répond pas : base (127.0.0.1:5443), capteur de mails (127.0.0.1:1025), stockage d’objets (127.0.0.1:9090), faux Google (127.0.0.1:7080), faux Umami (127.0.0.1:4200).
    Démarre-le d’abord : bun run banc:up
    ```
 
@@ -436,7 +438,7 @@ bun run banc:down            # 4. tout arrêter et tout effacer
 
 **1. `bun run banc:complet`**, dans cet ordre :
 
-1. démarre les quatre conteneurs, ou constate qu'ils tournent déjà (`banc:up`) ;
+1. démarre les cinq conteneurs, ou constate qu'ils tournent déjà (`banc:up`) ;
 2. remet le banc à son état de départ (voir 3) ;
 3. construit l'application pour la production, sans base ni secret, comme `test:e2e` ;
 4. la démarre sur le port du banc, `http://localhost:3100` par défaut, `127.0.0.1` seulement, et dit « Application prête » quand `/api/health` répond.
@@ -666,3 +668,22 @@ Une montée de version change l'étiquette et l'empreinte ensemble. `tests/integ
 - **Le faux Google lit son code dans le dépôt.** Le conteneur monte `tests/outils/faux-google/` en lecture seule. Après un changement dans ce dossier, relancer `bun run banc:down` puis `bun run banc:up`. Sur un poste où SELinux est actif (Fedora, avec Podman), ce montage demande `label=disable`, déjà réglé dans `compose.test.yml`.
 - **Le banc n'écoute que sur ce poste** (`127.0.0.1`). Il n'a ni mot de passe sérieux ni chiffrement : il ne doit jamais être exposé.
 - **`bun --env-file=.env.test test`** ne vaut que pour l'instance par défaut, et saute la reconstruction de la base par les migrations : le Payload des tests ne crée aucune table. Passer par `bun run test:integration`.
+
+## Le faux Umami
+
+La mesure d'audience se teste sans la vraie instance Umami. Le site relaie sa mesure vers l'adresse de `UMAMI_ORIGIN` (voir [`docs/mesure/umami.md`](../mesure/umami.md)) ; `.env.test` la règle sur le faux Umami, et la garde des tests refuse toute autre instance.
+
+Il tient la place de la vraie sur deux chemins, ceux que le site relaie :
+
+| Chemin | Ce qu'il fait |
+|---|---|
+| `GET /script.js` | Sert un traceur de remplacement : il lit les mêmes attributs que le vrai (`data-website-id`, `data-host-url`, `data-domains`, `data-tag`, `data-before-send`), envoie une page vue au chargement, passe par le filtre de la page avant chaque envoi et expose `window.umami.track` |
+| `POST /api/send` | Note l'envoi : son corps, et si un cookie, un Referer, un en-tête d'autorisation et l'adresse du visiteur l'accompagnaient. La valeur d'un cookie n'est jamais gardée |
+| `GET` et `DELETE /_recus` | Lit, puis oublie, ce qui a été reçu |
+| `GET /_sante` | Dit qui répond : la sonde du banc |
+
+Un test le lit par `fauxUmami()` (`tests/outils/faux-umami.ts`) : `recus()`, `envois('cta_click')` et `vider()`. Le traceur est un remplaçant, pas une copie du vrai : il prouve ce que le site lui donne et ce qu'il relaie, pas le comportement de la version d'Umami en ligne.
+
+Le navigateur de Playwright se déclare automatisé (`navigator.webdriver`, agent `HeadlessChrome`), et le filtre du site refuse de le mesurer. Un essai qui veut voir arriver une mesure joue un navigateur ordinaire : un agent d'un Chrome ordinaire et `webdriver` à faux (`tests/e2e/mesure-umami.spec.ts`).
+
+Les noms d'hôte que le traceur compte sont ceux du banc (`NEXT_PUBLIC_UMAMI_DOMAINS` de `.env.test`) ; le build des essais de bout en bout les reçoit, parce que les pages les figent.

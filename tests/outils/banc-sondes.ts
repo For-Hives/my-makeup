@@ -1,7 +1,7 @@
 /**
- * The four questions of « the bench answers », asked from this machine: the database runs a
+ * The five questions of « the bench answers », asked from this machine: the database runs a
  * query, the mail catcher greets on SMTP and its API is ready, the object storage holds its
- * bucket, the fake Google presents itself under the address of this instance.
+ * bucket, the fake Google presents itself under the address of this instance, the fake Umami says who it is.
  *
  * Read-only: a probe never writes. Runs under bun only (it uses bun's PostgreSQL client).
  */
@@ -10,7 +10,7 @@ import { createConnection } from 'node:net'
 import { SQL } from 'bun'
 import type { ServiceInterroge, Services } from './banc'
 
-/** One of the four services, and the question that tells whether it answers. Rejects when it does not. */
+/** One of the five services, and the question that tells whether it answers. Rejects when it does not. */
 export interface Sonde extends ServiceInterroge {
 	interroger: () => Promise<void>
 }
@@ -41,7 +41,7 @@ function saluerSmtp(hote: string, port: number): Promise<void> {
 }
 
 export function sondesDuBanc(services: Services): Sonde[] {
-	const { base, mails, stockage, google } = services
+	const { base, mails, stockage, google, umami } = services
 	return [
 		{
 			service: 'base',
@@ -81,6 +81,15 @@ export function sondesDuBanc(services: Services): Sonde[] {
 				).json()
 				if ((decouverte as { issuer?: unknown } | null)?.issuer !== google.adresse)
 					throw new Error('un autre fournisseur répond à cette adresse')
+			},
+		},
+		{
+			service: 'faux Umami',
+			adresse: new URL(umami.adresse).host,
+			interroger: async () => {
+				const sante: unknown = await (await requete(`${umami.adresse}/_sante`, 'GET')).json()
+				if ((sante as { service?: unknown } | null)?.service !== 'faux-umami')
+					throw new Error('un autre service répond à cette adresse')
 			},
 		},
 	]

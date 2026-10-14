@@ -1,6 +1,6 @@
 /**
- * The local test bench, described in one place: the four containers of compose.test.yml
- * (PostgreSQL in memory, mail catcher, object storage, fake Google) and the environment that
+ * The local test bench, described in one place: the five containers of compose.test.yml
+ * (PostgreSQL in memory, mail catcher, object storage, fake Google, fake Umami) and the environment that
  * points at them.
  *
  * `.env.test` is the single source: it describes the default instance. Several benches run
@@ -126,6 +126,8 @@ export interface Services {
 	stockage: { adresse: string; port: number; bucket: string }
 	/** The fake Google: the address the application takes for Google's, and the made-up client it accepts. */
 	google: { adresse: string; port: number; clientId: string; secret: string }
+	/** The fake Umami: the instance the application relays its audience measure to. */
+	umami: { adresse: string; port: number }
 }
 
 const exiger = (environnement: Environnement, nom: string): string => {
@@ -140,7 +142,7 @@ const portDe = (adresse: string, nom: string): number => {
 	return port
 }
 
-/** Where each of the four services of an instance answers, read from its environment. */
+/** Where each of the five services of an instance answers, read from its environment. */
 export function servicesDuBanc(environnement: Environnement = environnementDuBanc()): Services {
 	const base = exiger(environnement, 'DATABASE_URI')
 	const url = new URL(base)
@@ -148,6 +150,7 @@ export function servicesDuBanc(environnement: Environnement = environnementDuBan
 	const api = exiger(environnement, 'MAILPIT_URL')
 	portDe(api, 'MAILPIT_URL')
 	const google = exiger(environnement, 'GOOGLE_OIDC_ISSUER')
+	const umami = exiger(environnement, 'UMAMI_ORIGIN')
 	return {
 		base: {
 			adresse: base,
@@ -165,6 +168,7 @@ export function servicesDuBanc(environnement: Environnement = environnementDuBan
 			clientId: exiger(environnement, 'GOOGLE_CLIENT_ID'),
 			secret: exiger(environnement, 'GOOGLE_CLIENT_SECRET'),
 		},
+		umami: { adresse: umami, port: portDe(umami, 'UMAMI_ORIGIN') },
 	}
 }
 
@@ -177,6 +181,7 @@ export function variablesDeCompose(instance: Instance, services: Services): Reco
 		BANC_PORT_MAILPIT: String(portDe(services.mails.api, 'MAILPIT_URL')),
 		BANC_PORT_S3: String(services.stockage.port),
 		BANC_PORT_GOOGLE: String(services.google.port),
+		BANC_PORT_UMAMI: String(services.umami.port),
 	}
 }
 
@@ -188,6 +193,7 @@ export function portsDuBanc(services: Services): { port: number; service: string
 		{ port: portDe(services.mails.api, 'MAILPIT_URL'), service: 'capteur de mails, API' },
 		{ port: services.stockage.port, service: 'stockage d’objets' },
 		{ port: services.google.port, service: 'faux Google' },
+		{ port: services.umami.port, service: 'faux Umami' },
 	]
 }
 
