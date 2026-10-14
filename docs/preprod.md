@@ -10,7 +10,7 @@ La première requête qui arrive après un démarrage (le contrôle de santé de
 
 1. **Remise à zéro**, si `PREPROD_REMISE_A_ZERO` porte un jeton nouveau (voir plus bas). Elle a lieu quand Payload se connecte à sa base, **avant** qu'il joue ses migrations.
 2. **Migrations** : Payload joue celles de `src/migrations/` qui manquent à la base, comme partout en production. Une migration qui échoue arrête l'application.
-3. **Base déjà remplie ?** Si l'une des collections qu'écrit l'import (`pros`, `media`, `profils`, `talents`) contient un document, rien d'autre ne se passe : la base est gardée telle quelle. Un compte admin seul ne compte pas.
+3. **Base déjà remplie ?** Si l'une des collections qu'écrit l'import (`pros`, `media`, `profils`, `articles`, `talents`) contient un document, rien d'autre ne se passe : la base est gardée telle quelle. Un compte admin seul ne compte pas.
 4. **Base vide** : l'application pose la fausse base Strapi du banc de test ([`tests/source-strapi.md`](tests/source-strapi.md)) à côté de sa base, sur le même serveur PostgreSQL : une base `strapi_source_preprod`, lue par un rôle en lecture seule, `lecture_strapi_preprod`, dont le mot de passe est tiré au démarrage et n'existe qu'en mémoire. Puis elle lance l'import réel de cette source ([`migration/IMPORT.md`](migration/IMPORT.md)), avec la table de décision du banc et, hors ligne, les réponses gardées du référentiel des communes du banc (`tests/fixtures/import/referentiel-du-banc.json`) : la préprod ne demande rien à geo.api.gouv.fr.
 5. Le profil fictif 21 est alors en ligne : `https://preprod.my-makeup.fr/profil/zoe-lefevre`, son nom en titre.
 
@@ -29,7 +29,7 @@ Le code : `src/preprod/au-demarrage.ts` (branché dans `src/payload.config.ts` :
 Chaque ligne commence par `[preprod]`. Elles se lisent dans l'onglet « Logs » de l'application dans Coolify, ou par son API (`GET /api/v1/applications/<uuid>/logs`). Elles ne portent que des nombres et des identifiants de l'ancienne base : ni nom, ni email, ni hash. Sur une base vide :
 
 ```text
-[preprod] Base vide (pros 0, media 0, profils 0, talents 0) : la fausse source Strapi est posée, puis importée.
+[preprod] Base vide (pros 0, media 0, profils 0, articles 0, talents 0) : la fausse source Strapi est posée, puis importée.
 [preprod] Fausse source Strapi posée à côté de la base : 16 tables, … lignes, toutes fictives.
 [preprod] Import réel.
 [preprod] Comptes : 17 à la source ; 14 créations, 0 mise à jour, 0 inchangé, 0 refusé
@@ -37,12 +37,13 @@ Chaque ligne commence par `[preprod]`. Elles se lisent dans l'onglet « Logs » 
 [preprod]   - …
 [preprod]   - aucun stockage des photos n’est donné à ce passage : aucun fichier n’est adopté
 [preprod] Profils : 27 à la source ; 13 créations, 0 mise à jour, 0 inchangé, 0 refusé
+[preprod] Articles : 2 à la source ; 2 créations, 0 mise à jour, 0 inchangé, 0 refusé
 [preprod] Talents : 3 à la source ; 3 créations, 0 mise à jour, 0 inchangé, 0 refusé
 [preprod] …
 [preprod] Import de démarrage fini, code 0 : fini, parité complète.
 ```
 
-Aux démarrages suivants, une seule ligne : `Base déjà remplie (pros 14, media 0, profils 13, talents 3) : pas d’import au démarrage.`
+Aux démarrages suivants, une seule ligne : `Base déjà remplie (pros 14, media 0, profils 13, articles 2, talents 3) : pas d’import au démarrage.`
 
 Le code de l'import a le sens de la commande ([`migration/IMPORT.md`](migration/IMPORT.md), « Codes de sortie ») : 5 veut dire « documents refusés, en attente d'une décision », jamais un succès.
 

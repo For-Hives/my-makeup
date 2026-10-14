@@ -213,6 +213,7 @@ describe('Premier démarrage de la préprod, sur une base vide', () => {
 		expect(rapport.collections.pros).toMatchObject({ source: 17, crees: 14, modifies: 0 })
 		expect(rapport.collections.profils).toMatchObject({ source: 27, crees: 13, modifies: 0 })
 		expect(rapport.collections.talents).toMatchObject({ source: 3, crees: 3, modifies: 0 })
+		expect(rapport.collections.articles).toMatchObject({ source: 2, crees: 2, modifies: 0 })
 		// The pre-production has no storage: no photo of the source is adopted, each one is reported (ticket 058).
 		expect(rapport.collections.media).toMatchObject({ source: 13, crees: 0, refuses: [] })
 		expect(rapport.collections.media?.fichiers).toMatchObject({ designes: 9, sansStockage: true, introuvables: [] })
@@ -223,7 +224,7 @@ describe('Premier démarrage de la préprod, sur une base vide', () => {
 		const journal = premier.journal.join('\n')
 
 		expect(premier.journal[0]).toBe(
-			'Base vide (pros 0, media 0, profils 0, talents 0) : la fausse source Strapi est posée, puis importée.'
+			'Base vide (pros 0, media 0, profils 0, articles 0, talents 0) : la fausse source Strapi est posée, puis importée.'
 		)
 		expect(journal).toContain('Fausse source Strapi posée à côté de la base : 16 tables,')
 		expect(journal).toContain('Comptes : 17 à la source ; 14 créations, 0 mise à jour, 0 inchangé, 0 refusé')
@@ -231,6 +232,7 @@ describe('Premier démarrage de la préprod, sur une base vide', () => {
 		expect(journal).toContain('Talents : 3 à la source ; 3 créations, 0 mise à jour, 0 inchangé, 0 refusé')
 		expect(journal).toContain('Médias : 13 à la source ; 0 création, 0 mise à jour, 0 inchangé, 0 refusé')
 		expect(journal).toContain('aucun stockage des photos n’est donné à ce passage : aucun fichier n’est adopté')
+		expect(journal).toContain('Articles : 2 à la source ; 2 créations, 0 mise à jour, 0 inchangé, 0 refusé')
 		expect(premier.journal.at(-1)).toBe('Import de démarrage fini, code 0 : fini, parité complète.')
 		expect(journal).not.toMatch(/@|\$2[aby]\$|06 39 98|zoe|Zoé/i)
 	})
@@ -247,10 +249,10 @@ describe('Premier démarrage de la préprod, sur une base vide', () => {
 
 		expect(second.issue).toEqual({
 			etat: 'deja-remplie',
-			documents: { pros: 14, media: 0, profils: 13, talents: 3 },
+			documents: { pros: 14, media: 0, profils: 13, articles: 2, talents: 3 },
 		})
 		expect(second.journal).toEqual([
-			'Base déjà remplie (pros 14, media 0, profils 13, talents 3) : pas d’import au démarrage.',
+			'Base déjà remplie (pros 14, media 0, profils 13, articles 2, talents 3) : pas d’import au démarrage.',
 		])
 		expect(await compterLesDocuments()).toEqual(avant)
 	})
@@ -282,7 +284,7 @@ describe('Remise à zéro gardée, avant les migrations', () => {
 			expect(remise.journal.slice(0, 3)).toEqual([
 				'Remise à zéro « essai-027-a » : la base et la fausse source Strapi sont effacées, avant les migrations.',
 				`Remise à zéro « essai-027-a » faite : ${migrations.length} migrations rejouées sur une base vide.`,
-				'Base vide (pros 0, media 0, profils 0, talents 0) : la fausse source Strapi est posée, puis importée.',
+				'Base vide (pros 0, media 0, profils 0, articles 0, talents 0) : la fausse source Strapi est posée, puis importée.',
 			])
 			expect(remise.issue).toMatchObject({ etat: 'importee', code: 0, profils: { crees: 13, modifies: 0 } })
 			expect(await nombreDe('admins')).toBe(0)
@@ -297,7 +299,7 @@ describe('Remise à zéro gardée, avant les migrations', () => {
 			expect(encore.code).toBe(0)
 			expect(encore.journal).toEqual([
 				'Remise à zéro « essai-027-a » déjà faite : rien n’est effacé.',
-				'Base déjà remplie (pros 14, media 0, profils 13, talents 3) : pas d’import au démarrage.',
+				'Base déjà remplie (pros 14, media 0, profils 13, articles 2, talents 3) : pas d’import au démarrage.',
 			])
 		},
 		DUREE
@@ -378,7 +380,7 @@ describe('Le lecteur de la source sous Node', () => {
 			const parPg = await lire(ouvrirLaSourcePg(sourceDuBanc().lecture, pg))
 
 			expect(parPg).toEqual(parBun)
-			expect(Object.keys(parPg.source.avant)).toHaveLength(15)
+			expect(Object.keys(parPg.source.avant)).toHaveLength(16)
 			expect(parPg.collections.media).toMatchObject({ crees: 8 })
 		} finally {
 			await effacerLaSourceStrapi()

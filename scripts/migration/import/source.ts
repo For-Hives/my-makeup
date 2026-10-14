@@ -44,6 +44,7 @@ export const TABLES_LUES = [
 	'components_makeupartists_service_offers',
 	'components_makeupartists_service_offers_components',
 	'components_service_offers_options',
+	'articles',
 	'talents',
 ] as const
 

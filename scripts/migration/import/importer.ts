@@ -8,17 +8,18 @@
  *   run before any write, dry or real, and the report lists it by identifiers.
  * - The city of each profile taken becomes a commune of the official list (./communes.ts), asked
  *   to the referential before any write: a referential that does not answer stops the run there.
- * - The files the profiles taken designate are adopted where they are
+ * - The files the profiles and the articles taken designate are adopted where they are
  *   (./medias.ts): the storage is read before any write, by requests for headers only, and a
  *   storage that does not answer stops the run there. Nothing is ever written in the storage.
  * - A dry run (the default) reads the target and says what it would write; it writes nothing.
  * - A real run writes collection by collection, in the order of plan 01 §5 (P4): the accounts
  *   first, then the media they own, the profiles with their sections and their photos, the
- *   talents, and reads every collection again: its parity is complete when the target holds
- *   exactly what the source gives, with the same values.
+ *   articles, the talents, and reads every collection again: its parity is complete when the
+ *   target holds exactly what the source gives, with the same values.
  */
 
 import type { Payload } from 'payload'
+import { ADAPTATEUR_ARTICLES, articlesAttendus, articlesRepartis, lireLesArticles } from './articles'
 import type { GenreDeCible } from './cible'
 import { type CasARevoir, communesDesProfils } from './communes'
 import { ADAPTATEUR_COMPTES, comptesAttendus, lireLesComptes, repartitionDesComptes } from './comptes'
@@ -156,6 +157,7 @@ export async function importer(options: OptionsDImport): Promise<Rapport> {
 		comptes: await lireLesComptes(requete),
 		fichiers: await lireLesFichiers(requete),
 		profils: await lireLesProfils(requete),
+		articles: await lireLesArticles(requete),
 		talents: await lireLesTalents(requete),
 	}))
 
@@ -190,6 +192,7 @@ export async function importer(options: OptionsDImport): Promise<Rapport> {
 		}
 	} else {
 		const talents = talentsAttendus(lu.talents)
+		const articles = articlesRepartis(lu.articles)
 		for (const { attendus } of [comptes, talents]) compterLesEcarts(rapport.ecarts, attendus)
 
 		// Before any write: the referential may not answer, or a line of the table name an unknown commune.
@@ -213,10 +216,9 @@ export async function importer(options: OptionsDImport): Promise<Rapport> {
 			lu.fichiers,
 			{
 				profils: profilsPris,
-				// The articles are ticket 061: a file of an article is not designated yet.
-				articles: new Set(),
+				articles: new Set(articles.pris.map(({ id }) => id)),
 				profilsDeLaSource: new Set(lu.profils.map(({ id }) => id)),
-				articlesDeLaSource: new Set(),
+				articlesDeLaSource: new Set(lu.articles.map(({ id }) => id)),
 			},
 			medias?.base ?? null
 		)
@@ -265,6 +267,18 @@ export async function importer(options: OptionsDImport): Promise<Rapport> {
 			liensSansLigne: profils.liensSansLigne,
 		}
 
+		const lesArticles = articlesAttendus(articles.pris, lu.fichiers.liens, idsDesMedias)
+		rapport.collections.articles = {
+			...(await importerLaCollection(
+				options,
+				ADAPTATEUR_ARTICLES,
+				lu.articles.length,
+				lesArticles.attendus,
+				articles.refuses
+			)),
+			photosNonReprises: lesArticles.photosNonReprises,
+		}
+
 		rapport.collections.talents = await importerLaCollection(
 			options,
 			ADAPTATEUR_TALENTS,
@@ -280,6 +294,8 @@ export async function importer(options: OptionsDImport): Promise<Rapport> {
 				pros: { ...pros.parite, repartition: repartitionDesComptes(pros.cible) },
 				media: (await pariteDe(payload, ADAPTATEUR_MEDIAS, lesMedias, rapport.collections.media)).parite,
 				profils: { ...lesProfils.parite, statuts: statutsDe(lesProfils.cible) },
+				articles: (await pariteDe(payload, ADAPTATEUR_ARTICLES, lesArticles.attendus, rapport.collections.articles))
+					.parite,
 				talents: (await pariteDe(payload, ADAPTATEUR_TALENTS, talents.attendus, rapport.collections.talents)).parite,
 			}
 		}

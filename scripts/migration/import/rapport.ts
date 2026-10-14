@@ -45,7 +45,7 @@ export interface BilanDeCollection extends Bilan {
 	communes?: BilanDesCommunes
 	/** The files of the source, adopted or not (ticket 058): in numbers and identifiers, never an address. */
 	fichiers?: BilanDesFichiers
-	/** Photos of the entries taken whose file is not adopted: reported, never invented (ticket 060). */
+	/** Photos of the entries taken whose file is not adopted: reported, never invented (tickets 060, 061). */
 	photosNonReprises?: PhotoNonReprise[]
 	/** Profiles with a link of a list that names no row (SCHEMA.md §7). */
 	liensSansLigne?: number[]
@@ -88,6 +88,7 @@ export const NOMS_DES_COLLECTIONS: Readonly<Record<CollectionImportee, string>> 
 	pros: 'Comptes',
 	media: 'Médias',
 	profils: 'Profils',
+	articles: 'Articles',
 	talents: 'Talents',
 }
 
