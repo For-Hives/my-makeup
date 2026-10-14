@@ -79,8 +79,9 @@ test.describe('Gabarit des pages publiques', { tag: '@mobile' }, () => {
 		// Navigation: a link of the menu leads to its page, and the menu is closed there.
 		await page.keyboard.press('Enter')
 		await page.getByRole('link', { name: 'Me connecter' }).click()
+		// The sign-in page (ticket 074) belongs to the space, which has no public template: the menu is not there.
 		await expect(page).toHaveURL(/\/auth\/signin$/)
-		await expect(bouton).toHaveAttribute('aria-expanded', 'false')
+		await expect(bouton).toHaveCount(0)
 	})
 
 	test('capture à 390 px', async ({ page }, info) => {
