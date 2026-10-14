@@ -116,6 +116,9 @@ describe('src/payload.config.ts is hardened', () => {
 	})
 })
 
+// The two handlers, called directly. That Next really routes /api/graphql and
+// /api/graphql-playground to them is the HTTP-level I05 of plan 02 §7.3: it belongs to
+// tests/integration/payload-acces and comes with the integration bench (ticket 018).
 describe('I05: GraphQL is switched off, its two routes answer 404 without running anything', () => {
 	const ROUTES = ['src/app/(payload)/api/graphql/route.ts', 'src/app/(payload)/api/graphql-playground/route.ts']
 	const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'] as const

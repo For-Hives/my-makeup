@@ -2,6 +2,13 @@ import { describe, expect, test } from 'bun:test'
 import { HEALTH_DATABASE_TIMEOUT_MS, healthPayload, healthResponse } from '../../src/lib/health'
 import { deployedVersion } from '../../src/lib/version'
 
+// The two cases of the route are tested here on `healthResponse`, with an injected database.
+// No test goes through the real route yet: its `SELECT 1` on the pool of Payload, the
+// PAYLOAD_INIT case and `force-dynamic` need a database. That test (database up: 200 with `ok`
+// and `version`; database down: 503 `{"ok":false}`) comes with the integration bench or with
+// the check of the container (tickets 005 and 010). What the route reads from the environment
+// is tested in tests/unit/env.test.ts.
+
 const COMMIT = 'f'.repeat(40)
 const VERSIONS = { commit: COMMIT, packageVersion: '1.0.0' }
 
