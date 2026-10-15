@@ -20,7 +20,8 @@
  */
 
 import { createHash } from 'node:crypto'
-import { readdirSync, readFileSync } from 'node:fs'
+import { readFileSync } from 'node:fs'
+import { cleIndexNow } from '../../src/lib/seo/indexnow'
 import {
 	anonymousStatus,
 	FROZEN_URL_FAMILIES,
@@ -154,13 +155,14 @@ function inventoryFamily(entree: { address: string; first: number }): FrozenUrlF
 }
 
 /**
- * The table writes the key file of IndexNow with a key of zeros: the file that `public/` holds has the
- * real key as its name, which is public by design (it is served at the root of the site).
+ * The table writes the key file of IndexNow with a key of zeros: the real key is the variable INDEXNOW_KEY
+ * (ticket 219), the one the application under test is given. Without it the address stays the one of zeros,
+ * which answers 404.
  */
 function adresseDeLaCleIndexNow(adresse: string): string {
 	if (!/^\/0{32}\.txt$/.test(adresse)) return adresse
-	const fichier = readdirSync(new URL('../../public/', import.meta.url)).find(nom => /^[0-9a-f]{32}\.txt$/.test(nom))
-	return fichier ? `/${fichier}` : adresse
+	const cle = cleIndexNow()
+	return cle ? `/${cle}.txt` : adresse
 }
 
 const FAMILLES_DE_L_HEBERGEMENT = new Set(

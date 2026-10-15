@@ -128,9 +128,9 @@ Sans ces deux fichiers à la racine du site, la vérification de Bing peut tombe
 | `verification-indexnow` | `/<clé>.txt` | Fichier de clé IndexNow : la clé fait 32 caractères hexadécimaux | Même adresse et même contenu : la clé elle-même | 200 | — |
 <!-- urls:familles:verification:fin -->
 
-- La table garde l'empreinte SHA-256 de chaque fichier tel que l'ancien site le sert. Le test compare cette empreinte au fichier de `public/`.
+- La table garde l'empreinte SHA-256 de chaque fichier tel que l'ancien site le sert. Le test compare cette empreinte au fichier de `public/`, sauf pour la clé IndexNow, qui n'est plus un fichier du dépôt.
 - Le 14/10/2026, les deux fichiers servis par l'ancien site étaient identiques, à l'octet près, à ceux de `public/`.
-- La clé IndexNow n'est pas recopiée dans la table : son adresse est un motif. Le jour où la clé passe dans une variable d'environnement, la v3 doit toujours servir la même adresse et le même contenu.
+- La clé IndexNow n'est pas recopiée dans la table : son adresse est un motif. Depuis le ticket 219, la clé vit dans la variable d'environnement `INDEXNOW_KEY` et le site la sert à la même adresse, avec le même contenu, par une route (`docs/seo/indexnow.md`). Le jour de la bascule, la variable porte la clé de l'ancien site (le nom de son fichier à la racine) ; sans elle, l'adresse répond 404.
 
 ### Anciennes adresses en 404
 

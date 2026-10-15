@@ -552,21 +552,17 @@ describe('the verification files of the search engines', () => {
 		expect(sha256(join(PUBLIC, 'BingSiteAuth.xml'))).toBe(bing.sha256 ?? '')
 	})
 
-	test('the IndexNow key file is in public/, alone, with the frozen content: the key itself', () => {
-		const keyFiles = readdirSync(PUBLIC).filter(name => /^[0-9a-f]{32}\.txt$/.test(name))
-		expect(keyFiles).toHaveLength(1)
-		const [keyFile = ''] = keyFiles
-		expect(ids(familiesFor(`/${keyFile}`))).toEqual(['verification-indexnow'])
-		expect(sha256(join(PUBLIC, keyFile))).toBe(indexnow.sha256 ?? '')
-		expect(readFileSync(join(PUBLIC, keyFile), 'utf8')).toBe(keyFile.replace(/\.txt$/, ''))
+	test('the IndexNow key file is no file of public/ (ticket 219): its address is a frozen family, served from INDEXNOW_KEY', () => {
+		expect(readdirSync(PUBLIC).filter(name => /^[0-9a-f]{32}\.txt$/.test(name))).toEqual([])
+		expect(ids(familiesFor('/0123456789abcdef0123456789abcdef.txt'))).toEqual(['verification-indexnow'])
 	})
 
 	test('the table does not repeat the key', () => {
-		const [keyFile = ''] = readdirSync(PUBLIC).filter(name => /^[0-9a-f]{32}\.txt$/.test(name))
-		const key = keyFile.replace(/\.txt$/, '')
-		expect(key).toHaveLength(32)
+		const key = readFileSync(join(ROOT, '.env.exemple'), 'utf8').match(/^INDEXNOW_KEY=(.*)$/m)?.[1]
+		// The example file holds the name of the variable and no value; nothing of the repository holds a real key.
+		expect(key).toBe('')
 		for (const file of ['src/lib/urls-gelees.ts', 'docs/migration/urls-inventaire.json', 'docs/migration/URLS.md'])
-			expect(readFileSync(join(ROOT, file), 'utf8').includes(key)).toBe(false)
+			expect(readFileSync(join(ROOT, file), 'utf8')).not.toMatch(/\b(?!0{32}\b)[0-9a-f]{32}\.txt/)
 	})
 
 	test('the old site read both files with the bytes of public/ on 2026-10-14', () => {
