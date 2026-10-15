@@ -50,7 +50,10 @@ export function echecDePayload<Champ extends string>(
 	 */
 	champDuChemin: string | ((chemin: string) => string) = ''
 ): { ok: false; message: string; champs?: Partial<Record<Champ, string>> } {
-	const versLeChamp = typeof champDuChemin === 'string' ? (chemin: string) => chemin.replace(champDuChemin, '') : champDuChemin
+	const versLeChamp =
+		typeof champDuChemin === 'string'
+			? (chemin: string) => (chemin.startsWith(champDuChemin) ? chemin.slice(champDuChemin.length) : '')
+			: champDuChemin
 	const parChamp: Partial<Record<Champ, string>> = {}
 	for (const { path, message } of erreursDeChamp(erreur)) {
 		const champ = champs.find(nom => nom === versLeChamp(path))
