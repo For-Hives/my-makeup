@@ -150,7 +150,7 @@ describe('I29 : ni email ni téléphone, et une réponse légère', () => {
 			expect(texte, interdit).not.toContain(interdit)
 		const visible = annuaire.find(({ carte }) => carte.slug === 'recherche-visible')
 		expect(Object.keys(visible?.carte ?? {}).sort()).toEqual(
-			['lieu', 'nom', 'photo', 'slug', 'specialite', 'superMaquilleuse'].sort()
+			['lieu', 'nom', 'photo', 'pid', 'slug', 'specialite', 'superMaquilleuse'].sort()
 		)
 	})
 
