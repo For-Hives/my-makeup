@@ -145,7 +145,8 @@ describe('aucune donnée personnelle dans le journal, même glissée dans la sai
 				['code', 'date', 'dureeMs', 'id', 'methode', 'type'].filter(cle => cle in ligne)
 			)
 		expect(nouvelles.some(({ code }) => code === 'inconnu')).toBe(true)
-	})
+		// About thirty sign-in attempts, each held back by the 300 ms floor: more than the 5 s default of bun.
+	}, 60_000)
 })
 
 describe('un échec d’écriture du journal ne fait pas échouer la connexion', () => {
