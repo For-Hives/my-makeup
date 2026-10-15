@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useActionState, useEffect, useRef } from 'react'
+import { type Suivre, track } from '@/lib/analytics/track'
 import { type CodeErreur, messageErreur } from '@/lib/auth/erreurs'
 
 export type EtatDeConnexion = { code: CodeErreur } | null
@@ -12,13 +13,27 @@ export type ActionDeConnexion = (precedent: EtatDeConnexion, formulaire: FormDat
  * reader, and the address does not change. A key held down sends one request: React would queue
  * every submit, so the form refuses the next one until the first has answered.
  */
-export function FormulaireDeConnexion({ action, retour }: { action: ActionDeConnexion; retour: string }) {
+export function FormulaireDeConnexion({
+	action,
+	retour,
+	suivre = track,
+}: {
+	action: ActionDeConnexion
+	retour: string
+	suivre?: Suivre
+}) {
 	const [etat, envoyer, enCours] = useActionState(action, null)
 	const verrou = useRef(false)
 
 	useEffect(() => {
 		if (!enCours) verrou.current = false
 	}, [enCours, etat])
+
+	// A refusal is a new state each time, so each one is sent once (ticket 146). A success ends in a
+	// redirection and never comes back here: the next page sends it (`ConnexionReussie`).
+	useEffect(() => {
+		if (etat) suivre('login_result', { method: 'email', ok: false, code: etat.code })
+	}, [etat, suivre])
 
 	return (
 		<form

@@ -2,6 +2,7 @@ import config from '@payload-config'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { getPayload } from 'payload'
+import { attributsDeLaMarque, COOKIE_DE_MARQUE_DE_CONNEXION } from '@/lib/analytics/marque-connexion'
 import { cookieDeSession } from '@/lib/auth/cookie-session'
 import { CHEMIN_DU_DEPART_GOOGLE, COOKIE_DE_GOOGLE, configGoogle, siteDeLEspace } from '@/lib/auth/google/config'
 import { terminerLaConnexionGoogle } from '@/lib/auth/google/connexion-google'
@@ -75,5 +76,11 @@ export async function GET(requete: Request) {
 	const reponse = depenser(passerParLeSite(retourSur(issue.destination, site)))
 	// On the response itself: a cookie set through `cookies()` is not carried by a response we build.
 	reponse.cookies.set(cookieDeSession(payload, issue.token))
+	// Tells the next page to send `login_result` (ticket 146).
+	reponse.cookies.set(
+		COOKIE_DE_MARQUE_DE_CONNEXION,
+		'google',
+		attributsDeLaMarque(process.env.NODE_ENV === 'production')
+	)
 	return reponse
 }
