@@ -203,6 +203,18 @@ Deux cartes de `/auth/profil` s'éditent dans le panneau commun (tickets 125 et 
 
 Tests : `tests/unit/espace-reseaux.test.ts`, `tests/unit/espace-coordonnees.test.ts`, `tests/unit/espace-reseaux-coordonnees-panneaux.test.tsx`, sur le banc `tests/integration/espace-reseaux-coordonnees.test.ts`, et `tests/e2e/espace-reseaux-coordonnees.spec.ts`.
 
+### Photos dans l'espace
+
+Les cartes « Photo principale » et « Portfolio » de `/auth/profil` s'éditent dans le panneau commun (tickets 134 à 136). Une photo ne passe jamais par une action serveur : le navigateur l'envoie à la route de médias de Payload (`POST /api/media`, où le ticket 133 contrôle le type, le poids et le nom), puis une action serveur nomme les photos sur le profil.
+
+- **Réduction dans le navigateur** (`src/lib/espace/photo.ts` pour les décisions, `photo-navigateur.ts` pour le canvas) : JPEG, PNG ou WebP lus dans les octets, 25 Mo au plus au choix, puis 2 000 px au plus sur le grand côté, WebP (JPEG si le navigateur ne sait pas encoder le WebP), 1 Mo au plus, par paliers de qualité. Les messages sont ceux du site en ligne, au mot près. Le réencodage retire l'EXIF.
+- **Rien n'est envoyé avant « Enregistrer »** : fermer le panneau ne crée aucun objet.
+- **Le geste « envoyer puis enregistrer »** est dans `src/lib/espace/envoi-des-photos.ts`, avec ses trois issues séparées. Un fichier refusé ou une coupure du réseau pendant l'envoi : rien n'est enregistré, les fichiers déjà envoyés dans le geste sont supprimés (ils vont à la corbeille). Un « non » explicite du serveur : de même. Un appel au serveur qui se perd (résultat inconnu) : **rien n'est supprimé**, car l'enregistrement a pu aboutir ; la maquilleuse est invitée à recharger la page, et le rapprochement du ticket 137 voit les éventuels objets laissés. Session expirée : rien n'est supprimé non plus (elle n'en aurait pas le droit), le fichier envoyé est gardé pour le nouvel essai.
+- **Photo principale** (`enregistrer-photo.ts`, action `enregistrerMaPhotoPrincipale`) : le schéma strict ne prend qu'un identifiant. L'ancienne photo part à la corbeille par les crochets du profil (ticket 045), dans la même transaction.
+- **Lecture** : `lirePhotosDeLEspace` (`src/lib/espace/photos.ts`) lit les médias que le profil désigne, par ses identifiants et jamais par la requête.
+
+Tests : `tests/unit/espace-photo.test.ts`, `tests/unit/espace-photo-panneau.test.tsx`, sur le banc `tests/integration/espace-photo.test.ts`, et `tests/e2e/espace-photo.spec.ts` (une photo de 8 Mo faite pour l'occasion : `tests/outils/photo-de-8-mo.ts`).
+
 ## Démarrer en local
 
 Il faut [bun](https://bun.sh) 1.3.14, Node 24 (`.nvmrc`), Docker avec Compose et `openssl`.

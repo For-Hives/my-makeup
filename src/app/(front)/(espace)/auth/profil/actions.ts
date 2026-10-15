@@ -9,8 +9,10 @@ import { enregistrerCoordonnees } from '@/lib/espace/enregistrer-coordonnees'
 import { enregistrerDescription } from '@/lib/espace/enregistrer-description'
 import { enregistrerDisponibilite } from '@/lib/espace/enregistrer-disponibilite'
 import { enregistrerIdentite } from '@/lib/espace/enregistrer-identite'
+import { enregistrerPhotoPrincipale } from '@/lib/espace/enregistrer-photo'
 import { enregistrerReseaux } from '@/lib/espace/enregistrer-reseaux'
 import type { ValeursDeLIdentite } from '@/lib/espace/identite'
+import type { ValeursDeLaPhoto } from '@/lib/espace/photo-principale'
 import { utilisatriceDeLaRequete } from '@/lib/espace/requete'
 import type { ValeursDesReseaux } from '@/lib/espace/reseaux'
 import { MESSAGE_ECHEC, MESSAGE_SESSION, type ResultatDEnregistrement } from '@/lib/espace/resultat'
@@ -102,6 +104,26 @@ export async function enregistrerMesCoordonnees(
 	if (origine !== null && !payload.config.csrf.includes(origine)) return { ok: false, message: MESSAGE_ECHEC }
 
 	const resultat = await enregistrerCoordonnees(payload, utilisateur, saisie)
+	if (resultat.ok) revalidatePath('/auth/profil')
+	return resultat
+}
+
+/**
+ * Names the main photo of the signed-in makeup artist (ticket 134), on the same terms as her
+ * identity. The file was sent beforehand to the media route of Payload; this action only names it.
+ * The public profile reads the photo under the tags of `profils`: the write refreshes them through
+ * the hooks of the collection.
+ */
+export async function enregistrerMaPhotoPrincipale(
+	saisie: unknown
+): Promise<ResultatDEnregistrement<ValeursDeLaPhoto>> {
+	const contexte = await utilisatriceDeLaRequete()
+	if (contexte === null) return { ok: false, message: MESSAGE_SESSION, session: 'expiree' }
+	const { payload, utilisateur } = contexte
+	const origine = (await headers()).get('origin')
+	if (origine !== null && !payload.config.csrf.includes(origine)) return { ok: false, message: MESSAGE_ECHEC }
+
+	const resultat = await enregistrerPhotoPrincipale(payload, utilisateur, saisie)
 	if (resultat.ok) revalidatePath('/auth/profil')
 	return resultat
 }

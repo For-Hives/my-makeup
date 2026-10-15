@@ -3,6 +3,7 @@ import { BoutonsDeDeconnexion } from '@/components/auth/BoutonsDeDeconnexion'
 import { CarteDeSection } from '@/components/espace/CarteDeSection'
 import { EditeurDeCoordonnees } from '@/components/espace/EditeurDeCoordonnees'
 import { EditeurDeDescription } from '@/components/espace/EditeurDeDescription'
+import { EditeurDeLaPhoto } from '@/components/espace/EditeurDeLaPhoto'
 import { EditeurDeLocalisation } from '@/components/espace/EditeurDeLocalisation'
 import { EditeurDeReseaux } from '@/components/espace/EditeurDeReseaux'
 import { EditeurDIdentite } from '@/components/espace/EditeurDIdentite'
@@ -13,11 +14,13 @@ import { cartesDuProfil } from '@/lib/espace/cartes'
 import { estDisponible } from '@/lib/espace/disponibilite'
 import { libelleDeLaCommune } from '@/lib/espace/localisation'
 import { profilDeLaMaquilleuse } from '@/lib/espace/mon-profil'
+import { lirePhotosDeLEspace } from '@/lib/espace/photos'
 import { utilisatriceDeLaRequete } from '@/lib/espace/requete'
 import { texte } from '@/lib/profil/nom-affiche'
 import {
 	enregistrerMaDescription,
 	enregistrerMaDisponibilite,
+	enregistrerMaPhotoPrincipale,
 	enregistrerMesCoordonnees,
 	enregistrerMesReseaux,
 	enregistrerMonIdentite,
@@ -40,6 +43,7 @@ export default async function PageProfil() {
 	const maquilleuse = await exigerMaquilleuse('/auth/profil')
 	const contexte = await utilisatriceDeLaRequete()
 	const profil = contexte === null ? null : await profilDeLaMaquilleuse(contexte.payload, contexte.utilisateur)
+	const photos = contexte === null || profil === null ? null : await lirePhotosDeLEspace(contexte.payload, profil)
 
 	return (
 		<main className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 py-8">
@@ -92,6 +96,8 @@ export default async function PageProfil() {
 									disponible={estDisponible(profil.disponible)}
 									envoyer={enregistrerMaDisponibilite}
 								/>
+							) : carte.section === 'photo' ? (
+								<EditeurDeLaPhoto photo={photos?.photo ?? null} envoyer={enregistrerMaPhotoPrincipale} />
 							) : carte.section === 'reseaux' ? (
 								<EditeurDeReseaux
 									valeurs={{
