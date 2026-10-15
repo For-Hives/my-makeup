@@ -14,6 +14,7 @@ import { rayonKm } from '../format-zone'
 import { formatPrix } from '../prix'
 import { texte } from '../profil/nom-affiche'
 import { moisAnnee, periode } from '../profil/vue-publique'
+import { dateLongue } from './coordonnees'
 import { estDisponible, TEXTE_DISPONIBLE, TEXTE_HORS_RECHERCHE, TEXTE_INDISPONIBLE } from './disponibilite'
 import { libelleDeLaCommune } from './localisation'
 
@@ -70,6 +71,7 @@ export type ProfilDeLEspace = Pick<
 	| 'reseaux'
 	| 'coordonnees'
 	| 'contactPublic'
+	| 'consentiLe'
 >
 
 const ou = (valeur: unknown): string | null => texte(valeur) || null
@@ -110,6 +112,13 @@ const RESEAUX = [
 	['youtube', 'YouTube'],
 	['siteWeb', 'Site web'],
 ] as const
+
+/** « Oui, depuis le 15 octobre 2026 » when the server dated her choice, « Oui » without a date, else « Non ». */
+function affichage(profil: ProfilDeLEspace): string {
+	if (profil.contactPublic !== true) return 'Non'
+	const depuis = dateLongue(profil.consentiLe)
+	return depuis === null ? 'Oui' : `Oui, depuis le ${depuis}`
+}
 
 /** The cards of a profile, one per section, in the order of the page. */
 export function cartesDuProfil(profil: ProfilDeLEspace): Carte[] {
@@ -193,7 +202,7 @@ export function cartesDuProfil(profil: ProfilDeLEspace): Carte[] {
 			lignes: [
 				ligne('Téléphone', profil.coordonnees?.telephone),
 				ligne('Email de contact', profil.coordonnees?.email),
-				{ libelle: 'Affichées sur ton profil', valeur: profil.contactPublic === true ? 'Oui' : 'Non' },
+				{ libelle: 'Affichées sur ton profil', valeur: affichage(profil) },
 			],
 		},
 	]

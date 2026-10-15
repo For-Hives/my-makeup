@@ -1,8 +1,10 @@
 import type { Metadata } from 'next'
 import { BoutonsDeDeconnexion } from '@/components/auth/BoutonsDeDeconnexion'
 import { CarteDeSection } from '@/components/espace/CarteDeSection'
+import { EditeurDeCoordonnees } from '@/components/espace/EditeurDeCoordonnees'
 import { EditeurDeDescription } from '@/components/espace/EditeurDeDescription'
 import { EditeurDeLocalisation } from '@/components/espace/EditeurDeLocalisation'
+import { EditeurDeReseaux } from '@/components/espace/EditeurDeReseaux'
 import { EditeurDIdentite } from '@/components/espace/EditeurDIdentite'
 import { InterrupteurDeDisponibilite } from '@/components/espace/InterrupteurDeDisponibilite'
 import { RafraichirSession } from '@/components/espace/RafraichirSession'
@@ -13,7 +15,13 @@ import { libelleDeLaCommune } from '@/lib/espace/localisation'
 import { profilDeLaMaquilleuse } from '@/lib/espace/mon-profil'
 import { utilisatriceDeLaRequete } from '@/lib/espace/requete'
 import { texte } from '@/lib/profil/nom-affiche'
-import { enregistrerMaDescription, enregistrerMaDisponibilite, enregistrerMonIdentite } from './actions'
+import {
+	enregistrerMaDescription,
+	enregistrerMaDisponibilite,
+	enregistrerMesCoordonnees,
+	enregistrerMesReseaux,
+	enregistrerMonIdentite,
+} from './actions'
 import { chercherMesCommunes, enregistrerMaLocalisation } from './localisation-actions'
 
 // Read per request: it depends on the session, and the build has no database. A page that reads
@@ -83,6 +91,26 @@ export default async function PageProfil() {
 								<InterrupteurDeDisponibilite
 									disponible={estDisponible(profil.disponible)}
 									envoyer={enregistrerMaDisponibilite}
+								/>
+							) : carte.section === 'reseaux' ? (
+								<EditeurDeReseaux
+									valeurs={{
+										instagram: texte(profil.reseaux?.instagram),
+										facebook: texte(profil.reseaux?.facebook),
+										youtube: texte(profil.reseaux?.youtube),
+										linkedin: texte(profil.reseaux?.linkedin),
+										siteWeb: texte(profil.reseaux?.siteWeb),
+									}}
+									envoyer={enregistrerMesReseaux}
+								/>
+							) : carte.section === 'coordonnees' ? (
+								<EditeurDeCoordonnees
+									valeurs={{
+										telephone: texte(profil.coordonnees?.telephone),
+										email: texte(profil.coordonnees?.email),
+										contactPublic: profil.contactPublic === true,
+									}}
+									envoyer={enregistrerMesCoordonnees}
 								/>
 							) : null
 						}

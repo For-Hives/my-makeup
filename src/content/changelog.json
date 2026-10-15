@@ -95,6 +95,16 @@
 			"id": "tu-peux-te-declarer-disponible-ou-indisponible-depuis-ton",
 			"type": "ajout",
 			"text": "Tu peux te déclarer disponible ou indisponible depuis ton espace. Indisponible, ton profil n’apparaît plus dans la recherche."
+		},
+		{
+			"id": "tu-choisis-si-ton-telephone-et-ton-email-s-affichent-sur",
+			"type": "ajout",
+			"text": "Tu choisis si ton téléphone et ton email s’affichent sur ton profil, et ton espace te dit depuis quand."
+		},
+		{
+			"id": "tu-peux-renseigner-tes-reseaux-et-ton-site-depuis-ton-esp",
+			"type": "ajout",
+			"text": "Tu peux renseigner tes réseaux et ton site depuis ton espace : écris ton pseudo ou colle l’adresse, on s’occupe du reste."
 		}
 	],
 	"releases": []

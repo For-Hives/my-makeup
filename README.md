@@ -193,6 +193,16 @@ Quand un profil, un article ou un talent est créé, modifié ou supprimé, le s
 
 Tests : `tests/unit/revalidation.test.ts`, et sur le banc `tests/integration/revalidation.test.ts` (I21), qui écoute Next par l'espion du cache (`tests/outils/espion-cache.ts`, voir [`docs/tests/banc.md`](docs/tests/banc.md)).
 
+### Réseaux et coordonnées dans l'espace
+
+Deux cartes de `/auth/profil` s'éditent dans le panneau commun (tickets 125 et 126). Chacune a une règle pure, lue par le formulaire et par l'action serveur, et une fonction d'enregistrement qui suit le contrat de l'identité : session relue, origine contrôlée, profil trouvé par le compte, écriture avec les règles d'accès, valeurs rendues telles que la base les a gardées, message en français sinon.
+
+- **Réseaux** (`src/lib/espace/reseaux.ts`, `enregistrer-reseaux.ts`) : Instagram, Facebook, YouTube, LinkedIn et site web. `normaliserReseau` range « @pseudo », un pseudo seul ou une adresse en une seule adresse `https://` : `@studio` et `https://www.instagram.com/studio/` donnent la même valeur (U28). L'adresse d'un autre site dans le champ d'un réseau est refusée sous le champ (E30) ; le site web accepte toute adresse web, jamais un `@pseudo`. Un champ vidé retire le réseau. Un réseau compte comme canal de contact pour la complétude. Une clé hors des cinq champs refuse la requête entière.
+- **Coordonnées** (`src/lib/espace/coordonnees.ts`, `enregistrer-coordonnees.ts`) : téléphone (20 caractères au plus, de 9 à 15 chiffres), email de contact, et son choix d'afficher les deux sur sa page. La date et la source du choix sont posées par le serveur (`consentementTrace`) : la requête ne les porte pas, et le schéma strict refuse `consentiLe`. Choix coupé : la date est effacée, la page publique ne lit plus rien. Coordonnées masquées et aucun réseau : le profil n'est pas publiable. La carte dit « Oui, depuis le … » quand le choix est daté.
+- **Lecture de la page** : `profilDeLaMaquilleuse` lit aussi `pro` pour la règle d'accès des champs fermés au public (sans lui, Payload retirerait `coordonnees`, `contactPublic` et `consentiLe` de sa propre page), puis le retire avant de rendre le profil.
+
+Tests : `tests/unit/espace-reseaux.test.ts`, `tests/unit/espace-coordonnees.test.ts`, `tests/unit/espace-reseaux-coordonnees-panneaux.test.tsx`, sur le banc `tests/integration/espace-reseaux-coordonnees.test.ts`, et `tests/e2e/espace-reseaux-coordonnees.spec.ts`.
+
 ## Démarrer en local
 
 Il faut [bun](https://bun.sh) 1.3.14, Node 24 (`.nvmrc`), Docker avec Compose et `openssl`.

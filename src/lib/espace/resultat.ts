@@ -44,12 +44,16 @@ function erreursDeChamp(erreur: unknown): { path: string; message: string }[] {
 export function echecDePayload<Champ extends string>(
 	erreur: unknown,
 	champs: readonly Champ[],
-	/** The field of the form a path of Payload belongs to, when it has another name (`commune.nom`). */
-	champDuChemin: (chemin: string) => string = chemin => chemin
+	/**
+	 * Where a path of Payload meets a field of the form, when the names differ: a group prefix
+	 * (« reseaux. », for `reseaux.instagram`) or a function (`commune.nom` belongs to `codeInsee`).
+	 */
+	champDuChemin: string | ((chemin: string) => string) = ''
 ): { ok: false; message: string; champs?: Partial<Record<Champ, string>> } {
+	const versLeChamp = typeof champDuChemin === 'string' ? (chemin: string) => chemin.replace(champDuChemin, '') : champDuChemin
 	const parChamp: Partial<Record<Champ, string>> = {}
 	for (const { path, message } of erreursDeChamp(erreur)) {
-		const champ = champs.find(nom => nom === champDuChemin(path))
+		const champ = champs.find(nom => nom === versLeChamp(path))
 		if (champ !== undefined && parChamp[champ] === undefined) parChamp[champ] = message
 	}
 	return Object.keys(parChamp).length > 0
