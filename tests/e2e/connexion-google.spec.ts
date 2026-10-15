@@ -60,7 +60,7 @@ test.describe('E07 : connexion et inscription avec Google', { tag: '@mobile' }, 
 			(await payload.find({ collection: 'pros', depth: 0, where: { email: { equals: compte.email } } })).totalDocs
 		).toBe(1)
 
-		await page.getByRole('button', { name: 'Me déconnecter', exact: true }).click()
+		await page.getByRole('main').getByRole('button', { name: 'Me déconnecter', exact: true }).click()
 
 		await expect(page).toHaveURL(/\/$/)
 		expect(await cookieDeSession(context)).toBeUndefined()
@@ -116,7 +116,7 @@ test.describe('E07 : connexion et inscription avec Google', { tag: '@mobile' }, 
 		expect(await compterLesMails()).toBe(0)
 
 		await page.getByRole('link', { name: 'Aller à mon espace' }).click()
-		await page.getByRole('button', { name: 'Me déconnecter', exact: true }).click()
+		await page.getByRole('main').getByRole('button', { name: 'Me déconnecter', exact: true }).click()
 		await expect(page).toHaveURL(/\/$/)
 
 		await cliquerSurGoogle(page, '/auth/signup', 'S’inscrire avec Google')

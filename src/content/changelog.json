@@ -65,6 +65,21 @@
 			"id": "le-portfolio-d-une-maquilleuse-se-parcourt-au-doigt-et-au",
 			"type": "amelioration",
 			"text": "Le portfolio d’une maquilleuse se parcourt au doigt et au clavier, avec les flèches, et annonce la photo affichée (« Photo 2 sur 6 »)."
+		},
+		{
+			"id": "ton-espace-affiche-ton-profil-section-par-section-avec-a",
+			"type": "ajout",
+			"text": "Ton espace affiche ton profil section par section, avec « à compléter » là où il manque quelque chose."
+		},
+		{
+			"id": "tu-modifies-ton-prenom-ton-nom-ton-nom-d-artiste-et-ta-sp",
+			"type": "ajout",
+			"text": "Tu modifies ton prénom, ton nom, ton nom d’artiste et ta spécialité depuis ton espace : la page n’affiche la nouvelle valeur qu’une fois enregistrée, et un échec te le dit."
+		},
+		{
+			"id": "le-panneau-de-modification-de-ton-espace-s-ouvre-des-le-p",
+			"type": "amelioration",
+			"text": "Le panneau de modification de ton espace s’ouvre dès le premier tap, prend tout l’écran du téléphone, se parcourt au clavier (Échap pour fermer) et annonce le résultat aux lecteurs d’écran."
 		}
 	],
 	"releases": []
