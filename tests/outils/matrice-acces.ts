@@ -75,6 +75,7 @@ export const COLLECTIONS = [
 	'talents',
 	'articles',
 	'auth-evenements',
+	'demandes',
 	'payload-locked-documents',
 ] as const
 export type CollectionDeLaMatrice = (typeof COLLECTIONS)[number]
@@ -154,6 +155,8 @@ export type Distribution = Record<Role, Acteur> & {
 	photosDesArticles: Record<Etat, number>
 	/** A row of the authentication journal (ticket 077): it belongs to nobody, only an admin reads it. */
 	evenement: number
+	/** A contact message (ticket 158): it belongs to nobody, only an admin reads it. */
+	demande: number
 }
 
 /** A fresh address for each document a line creates or changes. */
@@ -213,6 +216,22 @@ const evenement = async (payload: Payload): Promise<number> =>
 			data: { type: 'connexion', code: 'ok', dureeMs: 12, date: new Date().toISOString() },
 		})
 	).id
+
+/** The data of a contact message, as the server writes it: made-up values only. */
+const donneesDeDemande = () => ({
+	type: 'contact' as const,
+	statut: 'nouvelle' as const,
+	etatMail: 'envoye' as const,
+	prenom: 'Léa',
+	nom: nom('Témoin'),
+	email: adresse('demande'),
+	telephone: '01 99 00 12 34',
+	message: 'Un message fictif de la matrice d’accès.',
+})
+
+/** A contact message, written by the server as it writes them: without access control. */
+const demande = async (payload: Payload): Promise<number> =>
+	(await payload.create({ collection: 'demandes', data: donneesDeDemande() })).id
 
 /** What the matrix needs to know of a collection to play its lines. */
 interface Portrait {
@@ -283,6 +302,13 @@ const PORTRAITS: Record<CollectionDeLaMatrice, Portrait> = {
 		nouvelleValeur: () => 999,
 		donneesDeCreation: () => Promise.resolve({ type: 'connexion', code: 'ok', dureeMs: 1 }),
 		jetable: evenement,
+	},
+	// Contact messages (ticket 158): the server writes them, an admin reads them, nobody else reaches them.
+	demandes: {
+		champ: 'statut',
+		nouvelleValeur: () => 'transmise',
+		donneesDeCreation: () => Promise.resolve(donneesDeDemande()),
+		jetable: demande,
 	},
 	talents: {
 		champ: 'title',
@@ -391,7 +417,12 @@ export async function distribuer(): Promise<Distribution> {
 		if (compte === undefined) throw new Error(`La distribution n’a pas de compte pour « ${role} ».`)
 		parRole[role].documents['payload-locked-documents'] = (await creerUnVerrou(payload, compte)).id
 	}
-	return { ...parRole, ...(await creerLesContenus(payload)), evenement: await evenement(payload) }
+	return {
+		...parRole,
+		...(await creerLesContenus(payload)),
+		evenement: await evenement(payload),
+		demande: await demande(payload),
+	}
 }
 
 /** What one request gave: allowed (with what it returned) or refused. */
@@ -477,6 +508,7 @@ const identifiants = (corps: unknown): number[] =>
 function documentDe(distribution: Distribution, ligne: Ligne): number {
 	const { collection, document } = ligne
 	if (collection === 'auth-evenements') return distribution.evenement
+	if (collection === 'demandes') return distribution.demande
 	const deLEtat = (etat: Etat) =>
 		estEditoriale(collection)
 			? distribution.contenus[collection][etat]
@@ -523,6 +555,7 @@ async function lister(voie: Voie, acteur: Acteur, ligne: Ligne, distribution: Di
 		...contenus,
 		...sansProprietaire,
 		...(collection === 'auth-evenements' ? [distribution.evenement] : []),
+		...(collection === 'demandes' ? [distribution.demande] : []),
 	]
 	const publics = await publicsDe(collection, distribues)
 	const siensEtPublics = [...new Set([...siens, ...publics])].sort((a, b) => a - b)

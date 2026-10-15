@@ -30,6 +30,7 @@ export type RawEnv = Partial<
 		| 'APP_ENV'
 		| 'AUTH_VERIFY'
 		| 'BASCULE_LE'
+		| 'CONTACT_TO'
 		| 'DATABASE_URI'
 		| 'EMAIL_FROM'
 		| 'GOOGLE_CLIENT_ID'
@@ -105,6 +106,12 @@ export type UmamiEnv = {
 }
 
 export type ServerEnv = {
+	/**
+	 * Who receives the messages of the contact form (ticket 158): CONTACT_TO, else on the site itself the
+	 * public address of the team, else an address of the domain reserved for tests (nothing real is written
+	 * to on a work station, the bench or the pre-production unless CONTACT_TO says so).
+	 */
+	contactTo: string
 	/**
 	 * Whether a new account must confirm its email before it can sign in (AUTH_VERIFY, ticket 082).
 	 * On unless AUTH_VERIFY is « off »: the operating switch of the sign-up, for a day when the mail
@@ -225,6 +232,7 @@ const EXPECTED = {
 		'« test » sur le banc de test, « preprod » sur la préprod, « prod » sur le site en ligne, ou absente sur un poste',
 	AUTH_VERIFY: '« on » (la valeur par défaut) ou « off »',
 	BASCULE_LE: 'une date au format AAAA-MM-JJ, comme « 2027-02-01 », qui existe',
+	CONTACT_TO: 'une adresse email seule, comme « equipe@domaine »',
 	DATABASE_URI: 'postgres://UTILISATEUR:MOT_DE_PASSE@HÔTE:PORT/BASE',
 	EMAIL_FROM: '« Nom <adresse@domaine> », ou une adresse seule',
 	GOOGLE_CLIENT_ID: 'l’identifiant du client OAuth de la console Google, avec GOOGLE_CLIENT_SECRET',
@@ -486,6 +494,12 @@ function trustedOrigins(site: string | undefined, production: boolean, port: str
 	return [...new Set([...local, ...localSite])]
 }
 
+/** The public address of the team: where the contact form writes on the site itself, and nowhere else by default. */
+export const CONTACT_TO_SITE = 'contact@my-makeup.fr'
+
+/** Where the contact form writes anywhere but the site when CONTACT_TO is not set: a domain reserved for tests. */
+export const CONTACT_TO_TEST = 'contact@example.test'
+
 /** A host name or an IP address, and nothing around it: no protocol, no port, no path, no bracket. */
 const HOST_ALONE = /^(?:[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?|(?=(?:[^:]*:){2})[0-9a-f:]{2,39})$/i
 
@@ -499,6 +513,13 @@ function sender(value: string): Pick<MailEnv, 'fromAddress' | 'fromName'> | unde
 	if (ADDRESS_ALONE.test(text)) return { fromAddress: text, fromName: DEFAULT_SENDER_NAME }
 	const [, name, address] = NAMED_SENDER.exec(text) ?? []
 	return address ? { fromAddress: address, fromName: name?.trim() || DEFAULT_SENDER_NAME } : undefined
+}
+
+/** Who receives the contact form: CONTACT_TO, else the team on the site itself, else a domain reserved for tests. */
+function contactTo(value: string | undefined, site: string | undefined): string {
+	const set = value?.trim()
+	if (set !== undefined && set !== '') return set
+	return site === SITE_ORIGIN ? CONTACT_TO_SITE : CONTACT_TO_TEST
 }
 
 /**
@@ -602,6 +623,10 @@ const schema = z.object({
 	BASCULE_LE: z
 		.string()
 		.refine(value => finDuNettoyage(value) !== undefined, { error: 'illisible' })
+		.optional(),
+	CONTACT_TO: z
+		.string()
+		.refine(value => ADDRESS_ALONE.test(value.trim()), { error: 'illisible' })
 		.optional(),
 	DATABASE_URI: required.refine(value => postgresUrl(value) !== undefined, { error: 'illisible' }),
 	GOOGLE_CLIENT_ID: z.string().optional(),
@@ -713,6 +738,7 @@ export function parseServerEnv(source: RawEnv): ServerEnv {
 
 	return {
 		authVerify: parsed.data.AUTH_VERIFY?.trim().toLowerCase() !== 'off',
+		contactTo: contactTo(parsed.data.CONTACT_TO, parsed.data.NEXT_PUBLIC_SITE_URL),
 		databaseUri: parsed.data.DATABASE_URI,
 		googleIssuer: issuer?.issuer ?? GOOGLE_ISSUER,
 		...(raw.GOOGLE_CLIENT_ID !== undefined &&
@@ -740,6 +766,7 @@ function processEnv(): RawEnv {
 		APP_ENV: process.env.APP_ENV,
 		AUTH_VERIFY: process.env.AUTH_VERIFY,
 		BASCULE_LE: process.env.BASCULE_LE,
+		CONTACT_TO: process.env.CONTACT_TO,
 		DATABASE_URI: process.env.DATABASE_URI,
 		EMAIL_FROM: process.env.EMAIL_FROM,
 		GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
@@ -781,6 +808,8 @@ export function serverEnv(source: RawEnv = processEnv()): ServerEnv {
 	return {
 		// Not read while Next builds, where nothing signs anybody up: the server reads it when it starts.
 		authVerify: true,
+		// Not read while Next builds, where nothing is sent: the server reads it when it starts.
+		contactTo: CONTACT_TO_TEST,
 		databaseUri: raw.DATABASE_URI ?? '',
 		// Not read while Next builds, where nothing talks to a provider: the server reads it when it starts.
 		googleIssuer: GOOGLE_ISSUER,

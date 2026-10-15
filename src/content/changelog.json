@@ -135,6 +135,11 @@
 			"id": "tu-peux-voir-ta-page-comme-une-visiteuse-la-voit-meme-si",
 			"type": "amelioration",
 			"text": "Tu peux voir ta page comme une visiteuse la voit, même si ton profil n’est pas encore affiché dans l’annuaire : le bouton « Voir mon profil public » ouvre ton aperçu, avec un bandeau qui te dit où en est ton profil."
+		},
+		{
+			"id": "tu-peux-ecrire-a-l-equipe-depuis-la-page-contact-ton-mess",
+			"type": "ajout",
+			"text": "Vous pouvez écrire à l’équipe depuis la page Contact : votre message est enregistré avant d’être envoyé, il ne se perd plus si l’envoi de l’email échoue, et les erreurs s’affichent sous les champs."
 		}
 	],
 	"releases": []

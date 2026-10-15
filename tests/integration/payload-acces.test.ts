@@ -601,6 +601,22 @@ const MATRICE: Ligne[] = [
 		]
 	}),
 
+	// Contact messages (ticket 158; plan 02 U58 adapted): only an admin reads them, and nobody writes
+	// them through an API, an admin included. The form has no account: the server writes the row. An
+	// anonymous visitor and a makeup artist reach nothing, and `redaction` does not see this collection.
+	...ROLES.flatMap((role): Ligne[] => {
+		const collection = 'demandes'
+		const lit = role === 'admin'
+		return [
+			{ role, collection, operation: 'lister', attendu: lit ? 'tous' : 'refuse' },
+			{ role, collection, operation: 'lire', attendu: lit ? 'autorise' : 'refuse' },
+			{ role, collection, operation: 'lire', champ: 'message', attendu: lit ? 'visible' : 'refuse' },
+			{ role, collection, operation: 'creer', attendu: 'refuse' },
+			{ role, collection, operation: 'modifier', attendu: 'refuse' },
+			{ role, collection, operation: 'supprimer', attendu: 'refuse' },
+		]
+	}),
+
 	// talents (ticket 022) and articles (ticket 046): the rules of the newsroom.
 	...lignesDeLaRedaction('talents'),
 	...lignesDeLaRedaction('articles'),

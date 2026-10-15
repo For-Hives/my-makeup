@@ -10,6 +10,7 @@ import * as migration_20261014_203529_google_methode_du_journal from './20261014
 import * as migration_20261014_203606_inscription_antispam from './20261014_203606_inscription_antispam'
 import * as migration_20261014_215710_integration_vague4 from './20261014_215710_integration_vague4'
 import * as migration_20261014_231211_talents_titre_de_la_page from './20261014_231211_talents_titre_de_la_page'
+import * as migration_20261015_110700_contact_demandes from './20261015_110700_contact_demandes'
 
 export const migrations = [
 	{
@@ -71,5 +72,10 @@ export const migrations = [
 		up: migration_20261014_231211_talents_titre_de_la_page.up,
 		down: migration_20261014_231211_talents_titre_de_la_page.down,
 		name: '20261014_231211_talents_titre_de_la_page',
+	},
+	{
+		up: migration_20261015_110700_contact_demandes.up,
+		down: migration_20261015_110700_contact_demandes.down,
+		name: '20261015_110700_contact_demandes',
 	},
 ]
