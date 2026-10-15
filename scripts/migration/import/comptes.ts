@@ -103,6 +103,10 @@ export function groupesDEmailPartage(lignes: readonly LigneCompte[]): number[][]
 
 export interface ComptesAttendus extends ApplicationDesDecisions {
 	attendus: Attendu[]
+	/** Kept accounts that received the legacy hash of an account set aside (ticket 066). */
+	hashRattaches: number[]
+	/** Legacy hashes of accounts set aside that no kept account could take. */
+	hashNonRattaches: number
 	/** Accounts not confirmed at the source: taken confirmed, and listed. */
 	nonConfirmes: number[]
 }
@@ -116,9 +120,39 @@ export function comptesAttendus(
 	const application = appliquerLesDecisions(groupesDEmailPartage(lignes), decisions)
 	const enAttente = new Set([...application.ecartes, ...application.sansDecision.flat()])
 	const pris = lignes.filter(({ id }) => !enAttente.has(id))
+	const parId = new Map(lignes.map(ligne => [ligne.id, ligne]))
+	// The kept account that has no hash of its own takes the one of the first account set aside (lowest identifier) that has one.
+	const empruntes = new Map<number, string>()
+	let hashNonRattaches = 0
+	for (const { retenu, ecartes, pretDuHash } of application.rattaches) {
+		const hashDesEcartes = ecartes.flatMap(id => {
+			const mot = parId.get(id)?.password
+			return mot != null && HASH_BCRYPT_COMPLET.test(mot) ? [mot] : []
+		})
+		const motRetenu = parId.get(retenu)?.password
+		const aDejaLeSien = motRetenu != null && HASH_BCRYPT_COMPLET.test(motRetenu)
+		// Without an explicit decision, only a local kept account takes a loan: a Google or Facebook one never had a password.
+		const prete = pretDuHash ?? (parId.get(retenu)?.provider ?? 'local') === 'local'
+		const [premier, ...reste] = hashDesEcartes
+		if (premier !== undefined && !aDejaLeSien && prete) {
+			empruntes.set(retenu, premier)
+			hashNonRattaches += reste.length
+		} else hashNonRattaches += hashDesEcartes.length
+	}
 	return {
 		...application,
-		attendus: pris.map(ligne => compteAttendu(ligne, tirer)),
+		hashRattaches: [...empruntes.keys()].sort((a, b) => a - b),
+		hashNonRattaches,
+		attendus: pris.map(ligne => {
+			const attendu = compteAttendu(ligne, tirer)
+			const emprunte = empruntes.get(ligne.id)
+			if (emprunte === undefined) return attendu
+			return {
+				...attendu,
+				valeurs: { ...attendu.valeurs, legacyBcrypt: emprunte },
+				ecarts: [...attendu.ecarts, { champ: 'legacyBcrypt', reference: REFERENCES.comptesEmailPartage }],
+			}
+		}),
 		nonConfirmes: pris.filter(({ confirmed }) => confirmed !== true).map(({ id }) => id),
 	}
 }

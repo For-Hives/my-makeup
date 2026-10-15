@@ -6,6 +6,8 @@
  *   bun scripts/migration/import.ts --rapport r.json   also writes the report as JSON
  *   bun scripts/migration/import.ts --decisions d.json the table of decisions (accounts that share an email)
  *   bun scripts/migration/import.ts --revue v.json     also writes the private list of the cities to review
+ *   bun scripts/migration/import.ts --controle         dry run that says whether the target is the source: exit 4 if not
+ *   bun scripts/migration/import.ts --sans-photos      no storage of the photos: none is read, none adopted (a rehearsal with no network)
  *   bun scripts/migration/import.ts --consentement-le 2026-11-02   the date of the switch: the consent date of the profiles that show a phone or an email today
  *
  * The cities become communes of the official list (geo.api.gouv.fr). Its answers are kept in a
@@ -44,7 +46,7 @@ import { AUCUNE_DECISION, type Decisions, lireLesDecisions } from './import/deci
 import { importer } from './import/importer'
 import { ImportInterrompu, messageDUneErreurInattendue } from './import/moteur'
 import { dateDeBascule } from './import/profils'
-import { codeDeSortie, rapportEnTexte } from './import/rapport'
+import { codeDeSortie, codeDuControle, controleEnTexte, rapportEnTexte } from './import/rapport'
 import {
 	lireLesReponses,
 	type ReferentielGarde,
@@ -120,7 +122,22 @@ async function principal(argumentsDeLaCommande: string[]): Promise<number> {
 	const payload = await getPayload({ config: configurationSansChangementDeSchema(await config) })
 	await verifierLeSchemaDeLaCible(payload)
 	// Where the photos are served from, as the application gives their addresses (src/payload.config.ts).
-	const baseDesMedias = mediaBaseUrl(process.env.R2_PUBLIC_URL, serverEnv().storage)
+	// `--sans-photos`: no storage at all, as in the pre-production; nothing is asked of any host.
+	const baseDesMedias = options.sansPhotos ? null : mediaBaseUrl(process.env.R2_PUBLIC_URL, serverEnv().storage)
+	// A check without storage cannot conclude on the photos: every file is « sans-stockage », so no
+	// media document is expected and the verdict would be a false green. Refused outright.
+	if (options.sansPhotos && options.controle)
+		throw new ImportRefuse(
+			'--sans-photos ne va pas avec --controle : sans stockage, aucune photo n’est comparée et le contrôle ne pourrait pas conclure sur les médias. Rien n’est écrit ; relance avec le stockage, sans --sans-photos.'
+		)
+	// Without storage, a real pass would drop every photo link of the profiles and leave the media behind.
+	if (options.sansPhotos && options.mode === 'reel') {
+		const { totalDocs } = await payload.count({ collection: 'media', overrideAccess: true })
+		if (totalDocs > 0)
+			throw new ImportRefuse(
+				'--sans-photos ne va pas avec --reel sur une cible qui garde déjà des médias : le passage retirerait les photos des profils. Rien n’est écrit ; relance avec le stockage, sans --sans-photos.'
+			)
+	}
 	const source = ouvrirLaSourceBun(adresseDeLaSource)
 	try {
 		const rapport = await importer({
@@ -131,16 +148,17 @@ async function principal(argumentsDeLaCommande: string[]): Promise<number> {
 			decisions,
 			consentiLe,
 			referentiel,
-			medias: { base: baseDesMedias },
+			medias: baseDesMedias === null ? undefined : { base: baseDesMedias },
 			// Read by its owner only: what was asked of the referential for each city to review.
 			surLaRevue: revue => {
 				if (options.revue) writeFileSync(options.revue, `${JSON.stringify(revue, null, '\t')}\n`, { mode: 0o600 })
 			},
 		})
 		console.log(rapportEnTexte(rapport))
+		if (options.controle) console.log(controleEnTexte(rapport))
 		// Read by its owner only: it lists identifiers of the old base.
 		if (options.rapport) writeFileSync(options.rapport, `${JSON.stringify(rapport, null, '\t')}\n`, { mode: 0o600 })
-		return codeDeSortie(rapport)
+		return options.controle ? codeDuControle(rapport) : codeDeSortie(rapport)
 	} finally {
 		garderLesReponses(fichierDesCommunes, referentiel)
 		await source.fermer()

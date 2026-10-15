@@ -30,6 +30,12 @@ export interface BilanDeCollection extends Bilan {
 	source: number
 	/** `strapiId` of the documents of the target the source no longer gives: listed, never deleted. */
 	enTrop: number[]
+	/** Documents of the target that hold no `strapiId` (pros, profils): added by hand, outside the import. */
+	sansOrigine?: number
+	/** Kept accounts that took the legacy hash of an account set aside (ticket 066). */
+	hashRattaches?: number[]
+	/** Legacy hashes of accounts set aside that no kept account could take. */
+	hashNonRattaches?: number
 	/** `strapiId` of the documents of the source the import does not take: set aside by a decision. */
 	ecartes?: number[]
 	/** Accounts not confirmed at the source, taken confirmed. */
@@ -115,6 +121,50 @@ export function codeDeSortie(rapport: Rapport): 0 | 3 | 4 | 5 {
 	return refuses ? 5 : 0
 }
 
+/** Per collection, what a real run would write or find too many: the gap between the target and the source. */
+export function ecartsDeLaCible(
+	rapport: Rapport
+): { collection: CollectionImportee; crees: number; modifies: number; enTrop: number; sansOrigine: number }[] {
+	return (Object.entries(rapport.collections) as [CollectionImportee, BilanDeCollection][])
+		.map(([collection, bilan]) => ({
+			collection,
+			crees: bilan.crees,
+			modifies: bilan.modifies,
+			enTrop: bilan.enTrop.length,
+			sansOrigine: bilan.sansOrigine ?? 0,
+		}))
+		.filter(({ crees, modifies, enTrop, sansOrigine }) => crees + modifies + enTrop + sansOrigine > 0)
+}
+
+/**
+ * The exit code of a check (`--controle`): the one of a dry run, and 4 as well as soon as the
+ * target is not the source: an account removed or an email changed by hand shows as a creation or
+ * an update that a real run would make, a document added by hand as one too many.
+ */
+export function codeDuControle(rapport: Rapport): 0 | 3 | 4 | 5 {
+	const code = codeDeSortie(rapport)
+	return code === 0 && ecartsDeLaCible(rapport).length > 0 ? 4 : code
+}
+
+/** What a check says about the target, in French, by collection and in numbers only. */
+export function controleEnTexte(rapport: Rapport): string {
+	// A run that stopped, lost a document or saw the source move compared nothing: it cannot say "same".
+	if (rapport.arret) return 'Contrôle : sans conclusion, le passage s’est arrêté sur des cas à décider (code 3).'
+	if (!rapport.source.inchangee) return 'Contrôle : sans conclusion, la source a changé pendant le passage (code 4).'
+	const ecarts = ecartsDeLaCible(rapport)
+	const refuses = Object.values(rapport.collections).reduce((total, bilan) => total + bilan.refuses.length, 0)
+	if (ecarts.length === 0 && refuses > 0)
+		return `Contrôle : sans conclusion complète, ${pluriel(refuses, 'document refusé', 'documents refusés')} attend une décision (code 5).`
+	if (ecarts.length === 0) return 'Contrôle : la cible est la source (0 création, 0 mise à jour, 0 document en trop).'
+	return [
+		'Contrôle : la cible n’est PAS la source.',
+		...ecarts.map(
+			({ collection, crees, modifies, enTrop, sansOrigine }) =>
+				`  - ${NOMS_DES_COLLECTIONS[collection]} : ${pluriel(crees, 'création', 'créations')} à faire, ${pluriel(modifies, 'mise à jour', 'mises à jour')} à faire, ${pluriel(enTrop, 'document en trop', 'documents en trop')}, ${pluriel(sansOrigine, 'document sans origine', 'documents sans origine')}`
+		),
+	].join('\n')
+}
+
 const ids = (liste: readonly number[]): string => (liste.length === 0 ? 'aucun' : liste.join(', '))
 
 const pluriel = (nombre: number, singulier: string, pluriel: string): string =>
@@ -133,6 +183,16 @@ function ligneDeBilan(nom: string, bilan: BilanDeCollection, mode: Mode): string
 		)
 	if (bilan.enTrop.length > 0) lignes.push(`  - dans la cible, absents de la source, gardés : ${ids(bilan.enTrop)}`)
 	if (bilan.ecartes?.length) lignes.push(`  - écartés par la table de décision : ${ids(bilan.ecartes)}`)
+	if (bilan.hashRattaches?.length)
+		lignes.push(
+			`  - hash hérité d’un compte écarté, rattaché au compte gardé : ${ids(bilan.hashRattaches)}${bilan.hashNonRattaches ? ` ; ${pluriel(bilan.hashNonRattaches, 'hash écarté non rattaché', 'hash écartés non rattachés')}` : ''}`
+		)
+	else if (bilan.hashNonRattaches)
+		lignes.push(
+			`  - ${pluriel(bilan.hashNonRattaches, 'hash écarté non rattaché', 'hash écartés non rattachés')} (le compte gardé a le sien, ou le prêt est refusé)`
+		)
+	if (bilan.sansOrigine)
+		lignes.push(`  - dans la cible, sans identifiant de l’ancien site (ajoutés à la main) : ${bilan.sansOrigine}`)
 	if (bilan.nonConfirmes?.length)
 		lignes.push(`  - non confirmés à la source, repris confirmés : ${ids(bilan.nonConfirmes)}`)
 	if (bilan.repartition) lignes.push(`  - ${repartitionEnTexte(bilan.repartition)}`)
@@ -261,10 +321,14 @@ function etatDeLaParite(p: Parite): string {
 	return `parité incomplète${refuses ? ` : ${refuses}, et d’autres écarts` : ''}`
 }
 
-function ligneDeParite(nom: string, p: PariteDeCollection): string[] {
-	const lignes = [
-		`${nom} : ${p.egaux} sur ${p.attendus} égaux, ${etatDeLaParite(p)}, empreinte ${p.empreinteCible.slice(0, 12)}…`,
-	]
+function ligneDeParite(nom: string, p: PariteDeCollection, sansOrigine = 0): string[] {
+	// A document added by hand is not in the comparison by `strapiId`: it still breaks the parity.
+	const etat = sansOrigine > 0 && pariteComplete(p) ? 'parité incomplète' : etatDeLaParite(p)
+	const lignes = [`${nom} : ${p.egaux} sur ${p.attendus} égaux, ${etat}, empreinte ${p.empreinteCible.slice(0, 12)}…`]
+	if (sansOrigine > 0)
+		lignes.push(
+			`  - dans la cible, ${pluriel(sansOrigine, 'document sans identifiant de l’ancien site (ajouté à la main)', 'documents sans identifiant de l’ancien site (ajoutés à la main)')}`
+		)
 	if (p.repartition) lignes.push(`  - dans la cible, ${repartitionEnTexte(p.repartition)}`)
 	if (p.statuts) lignes.push(`  - dans la cible, ${statutsEnTexte(p.statuts)}`)
 	if (p.differents.length > 0) lignes.push(`  - différents : ${ids(p.differents)}`)
@@ -300,7 +364,8 @@ export function rapportEnTexte(rapport: Rapport): string {
 		lignes.push('', 'Parité, la cible relue :')
 		for (const [collection, nom] of Object.entries(NOMS_DES_COLLECTIONS)) {
 			const p = rapport.parite[collection as CollectionImportee]
-			if (p) lignes.push(...ligneDeParite(nom, p))
+			if (p)
+				lignes.push(...ligneDeParite(nom, p, rapport.collections[collection as CollectionImportee]?.sansOrigine ?? 0))
 		}
 	}
 	const tables = Object.values(rapport.source.apres)

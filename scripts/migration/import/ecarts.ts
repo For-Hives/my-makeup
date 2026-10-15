@@ -15,10 +15,14 @@ export const REFERENCES = {
 	hashIncomplet: 'SCHEMA.md §5.1 (password)',
 	/** Every taken account is confirmed, as the accounts of the old site are. */
 	compteConfirme: 'confirmation-email',
+	/** Accounts that share one email: one is kept, the others are set aside and lend it their legacy hash (ticket 066). */
+	comptesEmailPartage: 'comptes-email-partage',
 	/** The slug of a profile: the rule of the old site, computed from its username, then stored. */
 	slugStocke: 'slug-stocke',
 	/** A profile entirely empty at the source is a draft. */
 	profilVideEnBrouillon: 'profils-vides-brouillon',
+	/** A profile not empty at the source that the rule makes a draft, its only content (a city) being unread. */
+	profilNonVideEnBrouillon: 'profil-non-vide-en-brouillon',
 	/** The city typed becomes a commune of the official list, never an address; the text is not copied. */
 	villeEnCommune: 'ville-en-commune',
 	/** An availability never set (`null`) is « available ». */

@@ -456,7 +456,11 @@ export function profilsAttendus(
 		if (slug !== profil.username) ecarts.push({ champ: 'slug', reference: REFERENCES.slugStocke })
 		if ((profil.city?.trim() ?? '') !== '') ecarts.push({ champ: 'commune', reference: REFERENCES.villeEnCommune })
 		if (profil.available === null) ecarts.push({ champ: 'disponible', reference: REFERENCES.disponibiliteParDefaut })
-		if (statut === 'brouillon') ecarts.push({ champ: 'statut', reference: REFERENCES.profilVideEnBrouillon })
+		if (statut === 'brouillon')
+			ecarts.push({
+				champ: 'statut',
+				reference: videALaSource(profil) ? REFERENCES.profilVideEnBrouillon : REFERENCES.profilNonVideEnBrouillon,
+			})
 		if (affiche) ecarts.push({ champ: 'contactPublic', reference: REFERENCES.coordonneesConsenties })
 		attendus.push({ strapiId: profil.id, valeurs, ecarts })
 	}
