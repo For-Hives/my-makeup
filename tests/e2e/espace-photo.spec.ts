@@ -15,8 +15,23 @@ import { lireUnObjet } from '../outils/s3'
  * The brake of the sign-in counts by client address: each test sends its own made-up address.
  */
 
-/** A commune of the official list: the city a profile needs to be active. */
-const ANNECY = { nom: 'Annecy', codeInsee: '74010' } as const
+/**
+ * A commune of the official list, far from the cities the search specs look at (Annecy, Nantes,
+ * Annemasse…): the city a profile needs to be active, without crowding their lists.
+ */
+const VILLE = { nom: 'Lille', codeInsee: '59350' } as const
+
+/** The accounts a test made: their active, published profiles would crowd the lists of the search specs. */
+const creees: number[] = []
+
+test.afterEach(async () => {
+	const payload = await payloadDeTest()
+	for (const compte of creees.splice(0)) {
+		const { docs } = await payload.find({ collection: 'profils', depth: 0, where: { pro: { equals: compte } } })
+		for (const { id } of docs) await payload.delete({ collection: 'profils', id }).catch(() => undefined)
+		await payload.delete({ collection: 'pros', id: compte }).catch(() => undefined)
+	}
+})
 
 let compteur = 0
 test.beforeEach(({ context }) =>
@@ -31,6 +46,7 @@ async function maquilleuse(
 	avecPhoto = false
 ): Promise<{ compte: Maquilleuse; ancienne: number | null; slug: string }> {
 	const compte = await creerCompte('maquilleuse')
+	creees.push(Number(compte.id))
 	const payload = await payloadDeTest()
 	const { docs } = await payload.find({ collection: 'profils', depth: 0, where: { pro: { equals: compte.id } } })
 	const [fiche] = docs
@@ -51,7 +67,7 @@ async function maquilleuse(
 			prenom: 'Léa',
 			nom: 'Fictive',
 			specialite: 'Mariée',
-			commune: ANNECY,
+			commune: VILLE,
 			...(ancienne === null ? {} : { photoPrincipale: ancienne }),
 		},
 	})
