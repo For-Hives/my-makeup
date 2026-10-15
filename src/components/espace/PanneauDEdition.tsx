@@ -111,7 +111,7 @@ export function PanneauDEdition({
 				className="flex h-full w-full flex-col bg-white outline-none sm:h-auto sm:max-h-full sm:max-w-lg sm:rounded-lg"
 			>
 				<div className="flex items-center justify-between gap-3 border-neutral-200 border-b px-5 py-3">
-					<h2 id={`${identifiant}-titre`} className="font-bold text-lg">
+					<h2 id={`${identifiant}-titre`} tabIndex={-1} className="font-bold text-lg outline-none">
 						{titre}
 					</h2>
 					<button

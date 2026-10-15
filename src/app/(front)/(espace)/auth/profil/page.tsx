@@ -4,6 +4,7 @@ import { CarteDeSection } from '@/components/espace/CarteDeSection'
 import { EditeurDeCoordonnees } from '@/components/espace/EditeurDeCoordonnees'
 import { EditeurDeDescription } from '@/components/espace/EditeurDeDescription'
 import { EditeurDeLocalisation } from '@/components/espace/EditeurDeLocalisation'
+import { EditeurDePuces } from '@/components/espace/EditeurDePuces'
 import { EditeurDeReseaux } from '@/components/espace/EditeurDeReseaux'
 import { EditeurDIdentite } from '@/components/espace/EditeurDIdentite'
 import { InterrupteurDeDisponibilite } from '@/components/espace/InterrupteurDeDisponibilite'
@@ -13,12 +14,15 @@ import { cartesDuProfil } from '@/lib/espace/cartes'
 import { estDisponible } from '@/lib/espace/disponibilite'
 import { libelleDeLaCommune } from '@/lib/espace/localisation'
 import { profilDeLaMaquilleuse } from '@/lib/espace/mon-profil'
+import { pucesDeLaListe } from '@/lib/espace/puces'
 import { utilisatriceDeLaRequete } from '@/lib/espace/requete'
 import { texte } from '@/lib/profil/nom-affiche'
 import {
 	enregistrerMaDescription,
 	enregistrerMaDisponibilite,
+	enregistrerMesCompetences,
 	enregistrerMesCoordonnees,
+	enregistrerMesLangues,
 	enregistrerMesReseaux,
 	enregistrerMonIdentite,
 } from './actions'
@@ -91,6 +95,18 @@ export default async function PageProfil() {
 								<InterrupteurDeDisponibilite
 									disponible={estDisponible(profil.disponible)}
 									envoyer={enregistrerMaDisponibilite}
+								/>
+							) : carte.section === 'langues' ? (
+								<EditeurDePuces
+									liste="langues"
+									puces={pucesDeLaListe(profil.langues)}
+									envoyer={enregistrerMesLangues}
+								/>
+							) : carte.section === 'competences' ? (
+								<EditeurDePuces
+									liste="competences"
+									puces={pucesDeLaListe(profil.competences)}
+									envoyer={enregistrerMesCompetences}
 								/>
 							) : carte.section === 'reseaux' ? (
 								<EditeurDeReseaux

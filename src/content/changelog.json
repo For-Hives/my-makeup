@@ -105,6 +105,11 @@
 			"id": "tu-peux-renseigner-tes-reseaux-et-ton-site-depuis-ton-esp",
 			"type": "ajout",
 			"text": "Tu peux renseigner tes réseaux et ton site depuis ton espace : écris ton pseudo ou colle l’adresse, on s’occupe du reste."
+		},
+		{
+			"id": "tu-modifies-tes-langues-et-tes-competences-depuis-ton-esp",
+			"type": "ajout",
+			"text": "Tu modifies tes langues et tes compétences depuis ton espace : Entrée ajoute, un nom déjà dans ta liste est refusé avec un message, chaque retrait est annoncé et le focus reste dans le panneau."
 		}
 	],
 	"releases": []
