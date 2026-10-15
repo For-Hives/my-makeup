@@ -109,7 +109,7 @@ async function avecUnDelai(envoi: Promise<'envoye' | 'echec'>, ms: number): Prom
 }
 
 /** What the mail to the team needs: the form and `apres` are the business of the first send only. */
-export type EntreesDExpedition = Omit<EntreesDuContact, 'formulaire' | 'apres'>
+export type EntreesDExpedition = Omit<EntreesDuContact, 'formulaire' | 'apres' | 'client' | 'freins'>
 
 /**
  * Sends the mail to the team and tells the row how it went. Never throws. Gives the state the row was
