@@ -562,3 +562,25 @@ Ce que la v3 change par rapport au site actuel est dans [`CHANGEMENTS-VOULUS.md`
   - Six lots fusionnés ; le lot 065-067 n'est pas fusionné (aucun commit, copie fraîche de la prod et requêtes d'en-tête sur le stockage réel nécessaires). Le lot 096 n'avait aucun commit à fusionner.
   - Conflits résolus en gardant tous les côtés : `page.tsx` et `actions.ts` de l'espace (une branche et une action par carte), `changelog.json`, README, `cartes.ts`, et `echecDePayload` (le troisième argument accepte un préfixe de groupe ou une fonction de chemin).
   - Vérifié : check, typecheck, tests unitaires (2659), garde CI (442), build, intégration sur banc (1805 réussis, 3 ignorés). E2E : en un seul bloc local, 3 à 6 échecs d'isolation (`tranche-profil-importe`, `jeu-du-banc`, recherche) qui existent aussi sur la tête d'avant la vague ; les mêmes fichiers passent seuls.
+- **Ticket 117 fait : une modification publiée est visible en moins d'une minute.**
+  - La page d'un profil publié, d'un talent et d'un article lit ses données dans le cache de Next, sous l'étiquette de son document (`profil:<slug>`, `talent:<slug>`, `article:<slug>`) ; un enregistrement l'expire (047). Les pages restent en `force-dynamic`, seule la lecture est gardée.
+  - Ne sont pas gardés : adresse inconnue, brouillon, profil masqué, redirection. Cinq essais de bout en bout verts (description, profil masqué, profil devenu publiable, deux lectures sans relecture de la base).
+  - Reste : changer ou supprimer un fichier de média ne rafraîchit aucune page (jusqu'à une heure, filet de `revalidate`). Le test E62 du sitemap peut échouer en même temps que `partage-open-graph` ; seul, il passe.
+- **Tickets 127 et 128 faits : langues et compétences en liste de puces.**
+  - Un éditeur commun (`EditeurDePuces`) : un identifiant par puce, focus gardé, retrait annoncé, doublon refusé avec un message, Entrée maintenue une seule fois, nom de 70 caractères au plus (E30), échec honnête (E31). Au plus 100 puces par requête.
+  - La description d'une compétence est reprise de la ligne stockée par identifiant. Le texte resté dans le champ est ajouté à « Enregistrer » au lieu d'être perdu.
+- **Tickets 129, 130 et 131 faits : expériences, formations et prestations ligne par ligne.**
+  - Éditeur de liste commun, règles L1 à L7 jouées sur les trois sections. Fin avant début refusée (U30), formation datée de plus d'un an dans le futur refusée, prix lu par le serveur (U29) ; une prestation chiffrée rend le profil publiable (U04).
+  - Champs obligatoires choisis par l'agent : expérience (entreprise, poste, début), formation (diplôme, école), prestation (nom). Écarts au registre : `listes-champs-requis`, `listes-prix-lu-par-le-serveur`, `listes-ligne-en-cours-gardee`. Le serveur ne refuse pas les doublons déjà stockés. Les options d'une prestation restent au ticket 132.
+  - Pas d'essai Playwright pour ces trois sections.
+- **Tickets 134, 135 et 136 faits : photo principale et portfolio.**
+  - La photo est réduite dans le navigateur et envoyée à `POST /api/media` seulement à « Enregistrer » ; une action stricte ne reçoit que des identifiants. Remplacement et retrait envoient l'ancien objet à la corbeille (I24, I25) ; 10 photos au plus (U80) ; fichier refusé écarté sans perdre les autres (E36). Un essai e2e par parcours, à 1440 et 390 px.
+  - Reste : une réponse perdue ou une session expirée peut laisser un média orphelin, que le rapprochement du ticket 137 signale. Le texte alternatif n'est pas encore lu par les pages publiques.
+- **Ticket 138 fait : où en est le profil.**
+  - En tête de `/auth/profil` : score sur 13, état (vide, non publiable, publiable, interne), conséquence et liste de ce qui manque, avec un lien vers chaque carte. Rien n'est calculé dans la page : tout vient de `completude()` (U08).
+- **Ticket 139 fait : la maquilleuse voit sa page comme une visiteuse.**
+  - `/auth/apercu-profil` dessine la page avec le même composant et la même lecture que la page publique, sous un bandeau d'état ; privée, `no-store`, `noindex`, sans canonique ni JSON-LD. Profil trouvé par la session seule.
+  - Registre : `apercu-profil-public`. La route n'est pas `/auth/profil/apercu` car les gardes lisent tout `/profil/<x>` comme un profil.
+- **Intégration des tickets 117, 127, 128, 129, 130, 131, 134, 135, 136, 138 et 139 dans `v3` (vague 8).**
+  - Six lots fusionnés. Non fusionnés : 065-067 (aucun commit, copie fraîche de la prod et requêtes d'en-tête sur le stockage réel nécessaires) et 108 (aucun commit ; les 14 titres d'onglet restent à écrire par Andy).
+  - Conflits résolus en gardant tous les côtés : `changelog.json` (à chaque lot), README, `page.tsx` et `actions.ts` de l'espace, `profils.ts` (le champ `publie` du 117 et la lecture de l'aperçu du 139).
