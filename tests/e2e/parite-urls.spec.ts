@@ -69,6 +69,15 @@ const ADRESSES_LIVREES: readonly string[] = [
 	'/particulier/explorer-les-profils',
 	'/solutions/pour-les-particuliers',
 ]
+	'mentions-legales',
+])
+
+/**
+ * The three legal pages (ticket 112). `/mentions-legales` is a family of its own and is in the list above;
+ * `/cgu` and `/politique-de-confidentialite` belong to the family of the fixed pages, which is not
+ * delivered yet: they are held green one by one here.
+ */
+const PAGES_JURIDIQUES = ['/mentions-legales', '/cgu', '/politique-de-confidentialite']
 
 test('I45 : les adresses gelées répondent comme la table, avec le même h1', async ({ request, baseURL }) => {
 	test.setTimeout(300_000)
@@ -145,6 +154,12 @@ test('I45 : les adresses gelées répondent comme la table, avec le même h1', a
 			expect(trouve, `${adresse} n'est pas dans les cas`).toBeDefined()
 			expect(trouve?.resultat, adresse).toMatchObject({ etat: 'vert' })
 		}
+		if (!privee)
+			for (const adresse of PAGES_JURIDIQUES) {
+				const trouve = resultats.find(({ cas: unCas }) => unCas.adresse === adresse)
+				expect(trouve, `${adresse} est dans les cas`).toBeDefined()
+				expect(trouve?.resultat.etat, adresse).toBe('vert')
+			}
 	} finally {
 		for (const { collection, id } of contenus) await supprimerContenu(request, collection, id)
 	}
