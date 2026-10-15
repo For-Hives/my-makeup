@@ -16,6 +16,7 @@ import {
 	rangApresRetrait,
 	type ValeursDeLigne,
 } from '@/lib/espace/liste'
+import { mesurerLEnregistrement, sectionMesureeDeLaListe } from '@/lib/espace/mesure'
 import { MESSAGE_ECHEC, type ResultatDEnregistrement } from '@/lib/espace/resultat'
 import {
 	BOUTON,
@@ -351,6 +352,7 @@ function PanneauDeListe({
 							}),
 				})),
 			}).catch(() => ({ ok: false, message: MESSAGE_ECHEC }))
+			mesurerLEnregistrement(sectionMesureeDeLaListe(section), resultat)
 			if (resultat.ok) {
 				onEnregistre()
 				return

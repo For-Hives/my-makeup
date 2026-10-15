@@ -10,6 +10,7 @@ import {
 	schemaDeLaDescription,
 	type ValeursDeLaDescription,
 } from '@/lib/espace/description'
+import { mesurerLEnregistrement } from '@/lib/espace/mesure'
 import { MESSAGE_ECHEC, type ResultatDEnregistrement } from '@/lib/espace/resultat'
 import { PanneauDEdition } from './PanneauDEdition'
 
@@ -115,6 +116,7 @@ function FormulaireDeDescription({
 				ok: false,
 				message: MESSAGE_ECHEC,
 			}))
+			mesurerLEnregistrement('description', resultat)
 			if (resultat.ok) {
 				onEnregistre()
 				return

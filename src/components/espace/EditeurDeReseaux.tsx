@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react'
 import { type Resolver, useForm } from 'react-hook-form'
+import { mesurerLEnregistrement } from '@/lib/espace/mesure'
 import {
 	CHAMPS_DES_RESEAUX,
 	type ChampDeReseau,
@@ -117,6 +118,7 @@ function FormulaireDeReseaux({
 				ok: false,
 				message: MESSAGE_ECHEC,
 			}))
+			mesurerLEnregistrement('reseaux', resultat)
 			if (resultat.ok) {
 				onEnregistre()
 				return

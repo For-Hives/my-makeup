@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react'
 import type { ValeursDeLaDisponibilite } from '@/lib/espace/disponibilite'
+import { mesurerLEnregistrement } from '@/lib/espace/mesure'
 import { MESSAGE_ECHEC, type ResultatDEnregistrement } from '@/lib/espace/resultat'
 
 export type EnvoiDeLaDisponibilite = (
@@ -47,6 +48,7 @@ export function InterrupteurDeDisponibilite({
 			const resultat: ResultatDEnregistrement<ValeursDeLaDisponibilite> = await envoyer({ disponible: !etat }).catch(
 				() => ({ ok: false, message: MESSAGE_ECHEC })
 			)
+			mesurerLEnregistrement('disponibilite', resultat)
 			if (resultat.ok) {
 				setEtat(resultat.valeurs.disponible)
 				setAnnonce(

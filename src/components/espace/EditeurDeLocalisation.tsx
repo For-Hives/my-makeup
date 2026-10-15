@@ -11,6 +11,7 @@ import {
 	schemaDuRayonSaisi,
 	type ValeursDeLaLocalisation,
 } from '@/lib/espace/localisation'
+import { mesurerLEnregistrement } from '@/lib/espace/mesure'
 import { MESSAGE_ECHEC, type ResultatDEnregistrement } from '@/lib/espace/resultat'
 import { BORNES_DU_RAYON_KM } from '@/lib/profil/zone'
 import { ChampDeCommune, type RechercheDeCommunes } from './ChampDeCommune'
@@ -137,6 +138,7 @@ function FormulaireDeLocalisation({
 				rayonKm: rayonDuTexte(saisie.rayon),
 				aDomicile: saisie.aDomicile,
 			}).catch((): ResultatDEnregistrement<ValeursDeLaLocalisation> => ({ ok: false, message: MESSAGE_ECHEC }))
+			mesurerLEnregistrement('localisation', resultat)
 			if (resultat.ok) {
 				onEnregistre()
 				return

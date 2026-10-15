@@ -1,5 +1,4 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { BoutonsDeDeconnexion } from '@/components/auth/BoutonsDeDeconnexion'
 import { AvancementDuProfil } from '@/components/espace/AvancementDuProfil'
@@ -14,6 +13,7 @@ import { EditeurDIdentite } from '@/components/espace/EditeurDIdentite'
 import { EditeurDuPortfolio } from '@/components/espace/EditeurDuPortfolio'
 import { EditeurDExperiences, EditeurDeFormations, EditeurDePrestations } from '@/components/espace/EditeursDeListes'
 import { InterrupteurDeDisponibilite } from '@/components/espace/InterrupteurDeDisponibilite'
+import { LienDeVue } from '@/components/espace/LienDeVue'
 import { RafraichirSession } from '@/components/espace/RafraichirSession'
 import { SuppressionDuCompte } from '@/components/espace/SuppressionDuCompte'
 import { PAGE_D_ACCUEIL_DU_COMPTE } from '@/lib/auth/retour'
@@ -75,13 +75,14 @@ export default async function PageProfil() {
 			<p>Bonjour {texte(maquilleuse.nom) || 'toi'}, tu es connectée.</p>
 			{profil === null ? null : (
 				<>
-					<Link
+					<LienDeVue
+						vue="publique"
 						href={CHEMIN_DE_L_APERCU}
 						data-testid="voir-mon-profil-public"
 						className="flex min-h-[44px] w-fit items-center rounded-lg px-2 font-semibold text-indigo-900 underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600"
 					>
 						Voir mon profil public
-					</Link>
+					</LienDeVue>
 					<AvancementDuProfil avancement={avancementDuProfil(profil)} />
 					{cartesDuProfil(profil).map(carte => (
 						<CarteDeSection

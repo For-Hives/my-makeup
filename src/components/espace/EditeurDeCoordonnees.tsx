@@ -9,6 +9,7 @@ import {
 	schemaDesCoordonnees,
 	type ValeursDesCoordonnees,
 } from '@/lib/espace/coordonnees'
+import { mesurerLEnregistrement } from '@/lib/espace/mesure'
 import { MESSAGE_ECHEC, type ResultatDEnregistrement } from '@/lib/espace/resultat'
 import { PanneauDEdition } from './PanneauDEdition'
 
@@ -111,6 +112,7 @@ function FormulaireDeCoordonnees({
 				ok: false,
 				message: MESSAGE_ECHEC,
 			}))
+			mesurerLEnregistrement('coordonnees', resultat)
 			if (resultat.ok) {
 				onEnregistre(resultat.valeurs.contactPublic)
 				return

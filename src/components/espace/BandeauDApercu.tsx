@@ -1,5 +1,5 @@
-import Link from 'next/link'
 import { CHEMIN_DE_L_ESPACE, type EtatDeLApercu } from '@/lib/espace/apercu'
+import { LienDeVue } from './LienDeVue'
 
 /**
  * The banner above the preview of her own page (ticket 139): what a visitor sees below, where her
@@ -18,12 +18,13 @@ export function BandeauDApercu({ etat }: { etat: EtatDeLApercu }) {
 				<p className="min-w-0 flex-1 basis-64">
 					<strong className="font-semibold">{etat.titre}</strong> {etat.texte}
 				</p>
-				<Link
+				<LienDeVue
+					vue="edition"
 					href={CHEMIN_DE_L_ESPACE}
 					className="flex min-h-[44px] items-center rounded-lg px-2 font-semibold underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600"
 				>
 					Modifier mon profil
-				</Link>
+				</LienDeVue>
 			</div>
 		</section>
 	)
