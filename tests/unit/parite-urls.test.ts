@@ -269,3 +269,46 @@ describe('la liste privée de la copie importée', () => {
 		expect(profil?.statuts).toEqual([200, 404])
 	})
 })
+
+describe('le titre de l’onglet des talents importés (ticket 108)', () => {
+	const csv = [
+		'url,chemin,statut_initial,statut_final,url_finale,type,h1_nb,h1_sha256',
+		`https://my-makeup.fr/talent/mariage,/talent/mariage,200,200,https://my-makeup.fr/talent/mariage,html,1,${sha256('Mariage')}`,
+		`https://my-makeup.fr/blog,/blog,200,200,https://my-makeup.fr/blog,html,1,${sha256('Le blog')}`,
+	].join('\n')
+	const html = (titre: string, h1 = 'Mariage') =>
+		`<html><head><title>${titre}</title></head><body><h1>${h1}</h1></body></html>`
+	const BON = 'Maquilleuse mariage : trouver la bonne pro près de chez vous' // 59 characters
+
+	test('seul un talent de la copie importée exige le titre écrit par la rédaction', () => {
+		const [talent, blog] = casDeLaListePrivee(csv)
+		expect(talent?.titreDeLOngletRequis).toBe(true)
+		expect(blog?.titreDeLOngletRequis).toBeUndefined()
+	})
+
+	test('un titre de 50 à 60 caractères, distinct du h1, est vert', async () => {
+		expect(BON.length).toBeGreaterThanOrEqual(50)
+		const [talent] = casDeLaListePrivee(csv)
+		if (!talent) throw new Error('pas de cas')
+		expect((await verifier(talent, async () => page(html(BON)))).etat).toBe('vert')
+	})
+
+	test('le titre court de l’ancien site (« titre | My-Makeup »), trop court, échoue', async () => {
+		const [talent] = casDeLaListePrivee(csv)
+		if (!talent) throw new Error('pas de cas')
+		const resultat = await verifier(talent, async () => page(html('Mariage | My-Makeup')))
+		expect(resultat.etat).toBe('rouge')
+		expect(JSON.stringify(resultat)).toContain('au lieu de 50 à 60')
+	})
+
+	test('un titre trop long, ou le h1 lui-même, échoue', async () => {
+		const [talent] = casDeLaListePrivee(csv)
+		if (!talent) throw new Error('pas de cas')
+		expect((await verifier(talent, async () => page(html(`${BON} et plus encore`)))).etat).toBe('rouge')
+		const long = 'Mariage'.padEnd(55, 'x')
+		const [meme] = casDeLaListePrivee(csv.replace(sha256('Mariage'), sha256(long)))
+		if (!meme) throw new Error('pas de cas')
+		const memeTexte = await verifier(meme, async () => page(html(long, long)))
+		expect(JSON.stringify(memeTexte)).toContain('identique au h1')
+	})
+})
