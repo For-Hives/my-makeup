@@ -105,6 +105,11 @@
 			"id": "tu-peux-renseigner-tes-reseaux-et-ton-site-depuis-ton-esp",
 			"type": "ajout",
 			"text": "Tu peux renseigner tes réseaux et ton site depuis ton espace : écris ton pseudo ou colle l’adresse, on s’occupe du reste."
+		},
+		{
+			"id": "ton-espace-te-dit-ou-en-est-ton-profil-un-pourcentage-de",
+			"type": "ajout",
+			"text": "Ton espace te dit où en est ton profil : un pourcentage de complétude, ce qui te manque pour être publiable, et ce que ça change pour ta visibilité dans la recherche."
 		}
 	],
 	"releases": []

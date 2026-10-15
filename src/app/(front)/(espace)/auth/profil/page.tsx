@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { BoutonsDeDeconnexion } from '@/components/auth/BoutonsDeDeconnexion'
+import { AvancementDuProfil } from '@/components/espace/AvancementDuProfil'
 import { CarteDeSection } from '@/components/espace/CarteDeSection'
 import { EditeurDeCoordonnees } from '@/components/espace/EditeurDeCoordonnees'
 import { EditeurDeDescription } from '@/components/espace/EditeurDeDescription'
@@ -9,6 +10,7 @@ import { EditeurDIdentite } from '@/components/espace/EditeurDIdentite'
 import { InterrupteurDeDisponibilite } from '@/components/espace/InterrupteurDeDisponibilite'
 import { RafraichirSession } from '@/components/espace/RafraichirSession'
 import { exigerMaquilleuse } from '@/lib/auth/session'
+import { avancementDuProfil } from '@/lib/espace/avancement'
 import { cartesDuProfil } from '@/lib/espace/cartes'
 import { estDisponible } from '@/lib/espace/disponibilite'
 import { libelleDeLaCommune } from '@/lib/espace/localisation'
@@ -55,67 +57,70 @@ export default async function PageProfil() {
 					et on s’en occupe.
 				</p>
 			) : (
-				cartesDuProfil(profil).map(carte => (
-					<CarteDeSection
-						key={carte.section}
-						carte={carte}
-						action={
-							carte.section === 'identite' ? (
-								<EditeurDIdentite
-									valeurs={{
-										prenom: texte(profil.prenom),
-										nom: texte(profil.nom),
-										nomArtiste: texte(profil.nomArtiste),
-										specialite: texte(profil.specialite),
-									}}
-									envoyer={enregistrerMonIdentite}
-									proprietaire={String(maquilleuse.id)}
-								/>
-							) : carte.section === 'description' ? (
-								<EditeurDeDescription
-									valeurs={{ description: texte(profil.description) }}
-									envoyer={enregistrerMaDescription}
-								/>
-							) : carte.section === 'localisation' ? (
-								<EditeurDeLocalisation
-									valeurs={{
-										codeInsee: texte(profil.commune?.codeInsee),
-										libelle: libelleDeLaCommune(profil.commune ?? {}),
-										rayonKm: typeof profil.rayonKm === 'number' ? profil.rayonKm : null,
-										aDomicile: profil.aDomicile === true,
-									}}
-									envoyer={enregistrerMaLocalisation}
-									chercher={chercherMesCommunes}
-								/>
-							) : carte.section === 'disponibilite' ? (
-								<InterrupteurDeDisponibilite
-									disponible={estDisponible(profil.disponible)}
-									envoyer={enregistrerMaDisponibilite}
-								/>
-							) : carte.section === 'reseaux' ? (
-								<EditeurDeReseaux
-									valeurs={{
-										instagram: texte(profil.reseaux?.instagram),
-										facebook: texte(profil.reseaux?.facebook),
-										youtube: texte(profil.reseaux?.youtube),
-										linkedin: texte(profil.reseaux?.linkedin),
-										siteWeb: texte(profil.reseaux?.siteWeb),
-									}}
-									envoyer={enregistrerMesReseaux}
-								/>
-							) : carte.section === 'coordonnees' ? (
-								<EditeurDeCoordonnees
-									valeurs={{
-										telephone: texte(profil.coordonnees?.telephone),
-										email: texte(profil.coordonnees?.email),
-										contactPublic: profil.contactPublic === true,
-									}}
-									envoyer={enregistrerMesCoordonnees}
-								/>
-							) : null
-						}
-					/>
-				))
+				<>
+					<AvancementDuProfil avancement={avancementDuProfil(profil)} />
+					{cartesDuProfil(profil).map(carte => (
+						<CarteDeSection
+							key={carte.section}
+							carte={carte}
+							action={
+								carte.section === 'identite' ? (
+									<EditeurDIdentite
+										valeurs={{
+											prenom: texte(profil.prenom),
+											nom: texte(profil.nom),
+											nomArtiste: texte(profil.nomArtiste),
+											specialite: texte(profil.specialite),
+										}}
+										envoyer={enregistrerMonIdentite}
+										proprietaire={String(maquilleuse.id)}
+									/>
+								) : carte.section === 'description' ? (
+									<EditeurDeDescription
+										valeurs={{ description: texte(profil.description) }}
+										envoyer={enregistrerMaDescription}
+									/>
+								) : carte.section === 'localisation' ? (
+									<EditeurDeLocalisation
+										valeurs={{
+											codeInsee: texte(profil.commune?.codeInsee),
+											libelle: libelleDeLaCommune(profil.commune ?? {}),
+											rayonKm: typeof profil.rayonKm === 'number' ? profil.rayonKm : null,
+											aDomicile: profil.aDomicile === true,
+										}}
+										envoyer={enregistrerMaLocalisation}
+										chercher={chercherMesCommunes}
+									/>
+								) : carte.section === 'disponibilite' ? (
+									<InterrupteurDeDisponibilite
+										disponible={estDisponible(profil.disponible)}
+										envoyer={enregistrerMaDisponibilite}
+									/>
+								) : carte.section === 'reseaux' ? (
+									<EditeurDeReseaux
+										valeurs={{
+											instagram: texte(profil.reseaux?.instagram),
+											facebook: texte(profil.reseaux?.facebook),
+											youtube: texte(profil.reseaux?.youtube),
+											linkedin: texte(profil.reseaux?.linkedin),
+											siteWeb: texte(profil.reseaux?.siteWeb),
+										}}
+										envoyer={enregistrerMesReseaux}
+									/>
+								) : carte.section === 'coordonnees' ? (
+									<EditeurDeCoordonnees
+										valeurs={{
+											telephone: texte(profil.coordonnees?.telephone),
+											email: texte(profil.coordonnees?.email),
+											contactPublic: profil.contactPublic === true,
+										}}
+										envoyer={enregistrerMesCoordonnees}
+									/>
+								) : null
+							}
+						/>
+					))}
+				</>
 			)}
 			<div className="mt-4 flex justify-center">
 				<BoutonsDeDeconnexion />

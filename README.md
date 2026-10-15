@@ -203,6 +203,12 @@ Deux cartes de `/auth/profil` s'éditent dans le panneau commun (tickets 125 et 
 
 Tests : `tests/unit/espace-reseaux.test.ts`, `tests/unit/espace-coordonnees.test.ts`, `tests/unit/espace-reseaux-coordonnees-panneaux.test.tsx`, sur le banc `tests/integration/espace-reseaux-coordonnees.test.ts`, et `tests/e2e/espace-reseaux-coordonnees.spec.ts`.
 
+### Où en est le profil (ticket 138)
+
+En tête de l'espace, `AvancementDuProfil` (`src/components/espace/`) dit où en est le profil : pourcentage (score sur 13), état (vide, pas encore publiable, publiable, compte interne), ce que l'état change (un profil entièrement vide n'est pas listé dans la recherche ; seul un profil publiable est indexé), et la liste des manques, chacun lié à sa carte (`#carte-<section>`), les points requis pour être publiable d'abord. `avancementDuProfil` (`src/lib/espace/avancement.ts`) ne calcule rien : il formule la définition unique (`src/lib/profil/completude.ts`) lue par le même passage de champs que la sauvegarde du serveur. Le bloc est rendu côté serveur ; chaque enregistrement rafraîchit la page (`revalidatePath`), donc il bouge sans rechargement.
+
+Tests : `tests/unit/espace-avancement.test.tsx` (U01, U02, U04 à U08), sur le banc `tests/integration/espace-avancement.test.ts` (I20 : le bloc égale l'état stocké) et `tests/e2e/espace-avancement.spec.ts`.
+
 ## Démarrer en local
 
 Il faut [bun](https://bun.sh) 1.3.14, Node 24 (`.nvmrc`), Docker avec Compose et `openssl`.
