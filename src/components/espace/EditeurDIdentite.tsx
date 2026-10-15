@@ -1,18 +1,33 @@
 'use client'
 
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
+import { urlSessionExpiree } from '@/lib/auth/retour'
 import {
 	CHAMPS_DE_L_IDENTITE,
 	LIBELLES_DE_L_IDENTITE,
 	schemaDeLIdentite,
 	type ValeursDeLIdentite,
 } from '@/lib/espace/identite'
-import { MESSAGE_ECHEC, type ResultatDEnregistrement } from '@/lib/espace/resultat'
+import { MESSAGE_ECHEC, MESSAGE_SESSION, type ResultatDEnregistrement } from '@/lib/espace/resultat'
+import {
+	garderLaSaisie,
+	lireLaSaisie,
+	oublierLaSaisie,
+	peutRediriger,
+	type SaisieGardee,
+	type Stockage,
+	stockageDeLOnglet,
+} from '@/lib/espace/saisie-gardee'
 import { PanneauDEdition } from './PanneauDEdition'
 
 export type EnvoiDeLIdentite = (valeurs: ValeursDeLIdentite) => Promise<ResultatDEnregistrement<ValeursDeLIdentite>>
+
+/** The page of the space the editor lives on: where the sign-in page brings her back. */
+const PAGE_DE_L_ESPACE = '/auth/profil'
+
+const aller = (url: string): void => window.location.assign(url)
 
 const BOUTON = 'min-h-11 rounded-md px-4 py-2 font-medium'
 const CHAMP = 'min-h-11 rounded-md border border-neutral-400 bg-white px-3 py-2 text-base'
@@ -29,12 +44,45 @@ const CHAMP = 'min-h-11 rounded-md border border-neutral-400 bg-white px-3 py-2 
  * - The result is announced in a `role="status"` that is outside the panel, so it is still there
  *   once the panel has closed.
  *
- * The send function is a property: the page gives the server action, a test gives a fake.
+ * - The session ends while she types (ticket 121, E32): the save fails with nothing stored, what she
+ *   typed is kept in the tab (`saisie-gardee.ts`), she is sent once to the sign-in page, and back
+ *   on her space the same panel opens again with her typing. The draft is forgotten after a save
+ *   or when she abandons. A second « expired » right after the redirection does not send her
+ *   away again: the message stays in the panel.
+ *
+ * The send function is a property: the page gives the server action, a test gives a fake. So are
+ * `proprietaire` (whose draft it is: another account on this browser never sees it), and the
+ * storage and the navigation, which a test replaces.
  */
-export function EditeurDIdentite({ valeurs, envoyer }: { valeurs: ValeursDeLIdentite; envoyer: EnvoiDeLIdentite }) {
+export function EditeurDIdentite({
+	valeurs,
+	envoyer,
+	proprietaire,
+	stockage = stockageDeLOnglet,
+	naviguer = aller,
+}: {
+	valeurs: ValeursDeLIdentite
+	envoyer: EnvoiDeLIdentite
+	proprietaire: string
+	stockage?: () => Stockage | null
+	naviguer?: (url: string) => void
+}) {
 	const [ouvert, setOuvert] = useState(false)
 	const [annonce, setAnnonce] = useState('')
+	const [retrouvee, setRetrouvee] = useState<Record<keyof ValeursDeLIdentite, string> | null>(null)
 	const declencheur = useRef<HTMLButtonElement>(null)
+
+	// Back from the sign-in page: the typing kept before the redirection opens the panel again.
+	useEffect(() => {
+		const gardee = lireLaSaisie(stockage(), 'identite', proprietaire, CHAMPS_DE_L_IDENTITE, Date.now())
+		if (gardee === null) return
+		if (CHAMPS_DE_L_IDENTITE.every(champ => gardee.valeurs[champ] === valeurs[champ])) {
+			oublierLaSaisie(stockage(), 'identite', proprietaire)
+			return
+		}
+		setRetrouvee(gardee.valeurs)
+		setOuvert(true)
+	}, [proprietaire, stockage, valeurs])
 
 	return (
 		<>
@@ -45,6 +93,7 @@ export function EditeurDIdentite({ valeurs, envoyer }: { valeurs: ValeursDeLIden
 				aria-label="Modifier mon identité"
 				onClick={() => {
 					setAnnonce('')
+					setRetrouvee(null)
 					setOuvert(true)
 				}}
 				// Held down, Enter repeats: it opens the panel once.
@@ -61,7 +110,11 @@ export function EditeurDIdentite({ valeurs, envoyer }: { valeurs: ValeursDeLIden
 			{ouvert ? (
 				<FormulaireDIdentite
 					valeurs={valeurs}
+					retrouvee={retrouvee}
 					envoyer={envoyer}
+					proprietaire={proprietaire}
+					stockage={stockage}
+					naviguer={naviguer}
 					retour={declencheur}
 					onEnregistre={() => {
 						setAnnonce('Ton identité est enregistrée.')
@@ -76,13 +129,21 @@ export function EditeurDIdentite({ valeurs, envoyer }: { valeurs: ValeursDeLIden
 
 function FormulaireDIdentite({
 	valeurs,
+	retrouvee,
 	envoyer,
+	proprietaire,
+	stockage,
+	naviguer,
 	retour,
 	onEnregistre,
 	onFermer,
 }: {
 	valeurs: ValeursDeLIdentite
+	retrouvee: ValeursDeLIdentite | null
 	envoyer: EnvoiDeLIdentite
+	proprietaire: string
+	stockage: () => Stockage | null
+	naviguer: (url: string) => void
 	retour: React.RefObject<HTMLButtonElement | null>
 	onEnregistre: () => void
 	onFermer: () => void
@@ -91,22 +152,59 @@ function FormulaireDIdentite({
 		register,
 		handleSubmit,
 		setError,
+		setValue,
+		getValues,
 		formState: { errors, isDirty },
 	} = useForm<ValeursDeLIdentite>({ resolver: zodResolver(schemaDeLIdentite), defaultValues: valeurs })
 	const [enCours, setEnCours] = useState(false)
 	const [message, setMessage] = useState('')
+	const [sessionExpiree, setSessionExpiree] = useState(false)
 	const verrou = useRef(false)
+
+	// The typing kept before the redirection comes back into the fields, as changes still to save.
+	useEffect(() => {
+		if (retrouvee === null) return
+		for (const champ of CHAMPS_DE_L_IDENTITE) setValue(champ, retrouvee[champ], { shouldDirty: true })
+	}, [retrouvee, setValue])
+
+	const fermer = () => {
+		oublierLaSaisie(stockage(), 'identite', proprietaire)
+		onFermer()
+	}
 
 	async function enregistrer(saisie: ValeursDeLIdentite) {
 		setEnCours(true)
 		setMessage('')
+		setSessionExpiree(false)
+		let partie = false
 		try {
 			const resultat: ResultatDEnregistrement<ValeursDeLIdentite> = await envoyer(saisie).catch(() => ({
 				ok: false,
 				message: MESSAGE_ECHEC,
 			}))
 			if (resultat.ok) {
+				oublierLaSaisie(stockage(), 'identite', proprietaire)
 				onEnregistre()
+				return
+			}
+			if (resultat.session === 'expiree') {
+				// Nothing was stored. Keep the typing, then send her to sign in: once, never in a loop.
+				const maintenant = Date.now()
+				const avant = lireLaSaisie(stockage(), 'identite', proprietaire, CHAMPS_DE_L_IDENTITE, maintenant)
+				const redirige = peutRediriger(avant, maintenant)
+				const gardee: SaisieGardee<ValeursDeLIdentite> = {
+					valeurs: getValues(),
+					le: maintenant,
+					redirigeLe: redirige ? maintenant : (avant?.redirigeLe ?? null),
+				}
+				const gardeeAvecSucces = garderLaSaisie(stockage(), 'identite', proprietaire, gardee)
+				if (redirige && gardeeAvecSucces) {
+					partie = true
+					naviguer(urlSessionExpiree(PAGE_DE_L_ESPACE))
+					return
+				}
+				setSessionExpiree(true)
+				setMessage(MESSAGE_SESSION)
 				return
 			}
 			setMessage(resultat.message)
@@ -115,8 +213,11 @@ function FormulaireDIdentite({
 				if (texte) setError(champ, { message: texte })
 			}
 		} finally {
-			verrou.current = false
-			setEnCours(false)
+			// Leaving for the sign-in page: the form stays locked until the page goes.
+			if (!partie) {
+				verrou.current = false
+				setEnCours(false)
+			}
 		}
 	}
 
@@ -126,8 +227,13 @@ function FormulaireDIdentite({
 			enCours={enCours}
 			modifie={isDirty}
 			retour={retour}
-			onFermer={onFermer}
+			onFermer={fermer}
 		>
+			{retrouvee !== null ? (
+				<p role="status" className="mb-4 rounded-md bg-neutral-100 p-3 text-sm">
+					Tu t’es reconnectée : on a retrouvé ce que tu avais saisi. Vérifie-le, puis enregistre.
+				</p>
+			) : null}
 			<form
 				noValidate
 				aria-busy={enCours}
@@ -166,7 +272,25 @@ function FormulaireDIdentite({
 					)
 				})}
 				<div role="alert">
-					{message ? <p className="rounded-md bg-red-50 p-3 text-red-800 text-sm">{message}</p> : null}
+					{message ? (
+						<p className="rounded-md bg-red-50 p-3 text-red-800 text-sm">
+							{message}
+							{sessionExpiree ? (
+								<>
+									{' '}
+									<a
+										className="font-medium underline"
+										href={urlSessionExpiree(PAGE_DE_L_ESPACE)}
+										target="_blank"
+										rel="noopener"
+									>
+										Te reconnecter (nouvel onglet)
+									</a>
+									, puis reviens ici et enregistre à nouveau : ta saisie est toujours là.
+								</>
+							) : null}
+						</p>
+					) : null}
 				</div>
 				<button
 					type="submit"

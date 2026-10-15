@@ -77,6 +77,28 @@ describe('la porte de l’espace et la date de fin du cookie', () => {
 		expect(decisionDeLEspace('/auth/profil', '', 'pas-un-jeton', MAINTENANT)).toBeNull()
 	})
 
+	test('121 : une sauvegarde (POST) n’est jamais redirigée, cookie expiré ou absent : l’action répond elle-même', () => {
+		const expire = jeton({ exp: MAINTENANT - 60 })
+		for (const methode of ['POST', 'PUT', 'PATCH', 'DELETE']) {
+			expect(decisionDeLEspace('/auth/profil', '', expire, MAINTENANT, methode)).toBeNull()
+			expect(decisionDeLEspace('/auth/profil', '', undefined, MAINTENANT, methode)).toBeNull()
+		}
+		expect(decisionDeLEspace('/auth/profil', '', expire, MAINTENANT, 'GET')).not.toBeNull()
+		expect(decisionDeLEspace('/auth/profil', '', expire, MAINTENANT, 'HEAD')).not.toBeNull()
+	})
+
+	test('121 : le proxy laisse passer le POST d’une session expirée', () => {
+		const expire = jeton({ exp: Math.floor(Date.now() / 1000) - 60 })
+		const reponse = proxy(
+			new NextRequest('http://localhost:3280/auth/profil', {
+				method: 'POST',
+				headers: { cookie: `payload-token=${expire}` },
+			})
+		)
+		expect(reponse.status).toBe(200)
+		expect(reponse.headers.get('location')).toBeNull()
+	})
+
 	test('la page de connexion, avec un cookie expiré, n’est jamais renvoyée : pas de boucle', () => {
 		for (const chemin of ['/auth/signin', '/auth/signup', '/', '/api/pros/me'])
 			expect(decisionDeLEspace(chemin, '', jeton({ exp: MAINTENANT - 60 }), MAINTENANT)).toBeNull()

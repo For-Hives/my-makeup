@@ -126,7 +126,8 @@ export function proxy(requete: NextRequest) {
 		pathname,
 		search,
 		requete.cookies.get(COOKIE_DE_SESSION)?.value,
-		Math.floor(Date.now() / 1000)
+		Math.floor(Date.now() / 1000),
+		requete.method
 	)
 	if (vers) {
 		// Built from the URL of the request, so the host is the one the visitor used (the Host header the proxy forwards).

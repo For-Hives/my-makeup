@@ -2,6 +2,7 @@ import { expect, type Page, test } from '@playwright/test'
 import { violationsGraves } from '../outils/axe'
 import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
 import { payloadDeTest } from '../outils/payload-test'
+import { ouvrirSessionSansMotDePasse } from '../outils/session'
 
 /**
  * The page of her space and the panel of her identity (tickets 118, 119, 120; plan 02 E16, E19, E30,
@@ -320,5 +321,107 @@ test.describe('120 : au doigt et au clavier', { tag: '@mobile' }, () => {
 		await expect(statut).toBeVisible()
 		expect(await statut.evaluate(noeud => noeud.closest('[role="dialog"]') === null)).toBe(true)
 		expect(await violationsGraves(page)).toEqual([])
+	})
+})
+
+test.describe('121 : la session expire pendant l’édition', { tag: '@mobile' }, () => {
+	const MOT_DE_PASSE = 'motdepasse-fictif'
+
+	test('E32 : message, rien d’enregistré, une seule redirection, saisie retrouvée dans le même panneau, puis effacée', async ({
+		context,
+		page,
+	}) => {
+		const compte = await creerCompte('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
+		const payload = await payloadDeTest()
+		const fiche = await ficheDe(compte)
+		await payload.update({ collection: 'profils', id: fiche.id, data: IDENTITE })
+		await context.addCookies(compte.session.cookies)
+		const depart = new Set<string>()
+		page.on('response', reponse => {
+			if (reponse.request().resourceType() !== 'document' || reponse.status() < 300 || reponse.status() >= 400) return
+			// Chromium replays a request once for a client hint: that replay is not a redirection.
+			const vers = new URL(reponse.headers().location ?? '', reponse.url())
+			if (vers.href !== reponse.url()) depart.add(new URL(reponse.url()).pathname)
+		})
+		await page.goto('/auth/profil')
+		await ouvrir(page)
+		await page.getByLabel('Prénom').fill('Inès')
+		await page.getByLabel('Spécialité').fill('Effets spéciaux')
+
+		// The session ends while she types: the browser now holds a token that has run out.
+		const expiree = await ouvrirSessionSansMotDePasse(payload, { collection: 'pros', id: compte.id }, process.env, {
+			dureeS: -60,
+		})
+		await context.clearCookies()
+		await context.addCookies(expiree.cookies)
+		await page.getByRole('button', { name: 'Enregistrer' }).click()
+
+		// One trip to the sign-in page, with the message; nothing was stored.
+		await expect(page).toHaveURL(/\/auth\/signin\?callbackUrl=%2Fauth%2Fprofil&error=session-expiree$/)
+		await expect(page.getByTestId('session-expiree')).toHaveText('Ta session a expiré, reconnecte-toi.')
+		expect((await ficheDe(compte)).prenom).toBe('Léa')
+		expect([...depart]).toEqual([])
+
+		await page.getByLabel('Adresse email').fill(compte.email)
+		await page.getByLabel('Mot de passe').fill(MOT_DE_PASSE)
+		await page.getByRole('button', { name: 'Se connecter' }).click()
+
+		// Back in her space: the same panel, her typing in it, the card still showing the stored values.
+		await expect(page).toHaveURL(/\/auth\/profil$/)
+		await expect(dialogue(page)).toBeVisible()
+		await expect(page.getByText('on a retrouvé ce que tu avais saisi')).toBeVisible()
+		await expect(page.getByLabel('Prénom')).toHaveValue('Inès')
+		await expect(page.getByLabel('Spécialité')).toHaveValue('Effets spéciaux')
+		await expect(page.getByTestId('carte-identite')).toContainText('Léa')
+
+		await page.getByRole('button', { name: 'Enregistrer' }).click()
+		await expect(dialogue(page)).toHaveCount(0)
+		await expect(page.getByTestId('carte-identite')).toContainText('Effets spéciaux')
+		expect(await ficheDe(compte)).toMatchObject({ prenom: 'Inès', specialite: 'Effets spéciaux' })
+		// Forgotten after the success: a reload opens nothing.
+		expect(await page.evaluate(() => window.sessionStorage.length)).toBe(0)
+		await page.reload()
+		await expect(page.getByTestId('carte-identite')).toContainText('Effets spéciaux')
+		await expect(dialogue(page)).toHaveCount(0)
+	})
+
+	test('abandonner après le retour efface la saisie ; une autre maquilleuse sur le navigateur ne la voit pas', async ({
+		context,
+		page,
+	}) => {
+		const compte = await maquilleuse(context)
+		await page.goto('/auth/profil')
+		await expect(page.getByTestId('carte-identite')).toBeVisible()
+		const cle = await page.evaluate(
+			([proprietaire]) => {
+				const cle = `mm:saisie:identite:${proprietaire}`
+				window.sessionStorage.setItem(
+					cle,
+					JSON.stringify({
+						valeurs: { prenom: 'Gardée', nom: 'Fictive', nomArtiste: '', specialite: 'Teint' },
+						le: Date.now(),
+						redirigeLe: null,
+					})
+				)
+				return cle
+			},
+			[String(compte.id)]
+		)
+		await page.evaluate(() =>
+			window.sessionStorage.setItem(
+				'mm:saisie:identite:autre',
+				JSON.stringify({ valeurs: {}, le: Date.now(), redirigeLe: null })
+			)
+		)
+		await page.reload()
+		await expect(dialogue(page)).toBeVisible()
+		await expect(page.getByLabel('Prénom')).toHaveValue('Gardée')
+
+		await page.getByRole('button', { name: 'Fermer' }).click()
+		await page.getByRole('button', { name: 'Abandonner mes modifications' }).click()
+		await expect(dialogue(page)).toHaveCount(0)
+		expect(await page.evaluate(k => window.sessionStorage.getItem(k), cle)).toBeNull()
+		await page.reload()
+		await expect(dialogue(page)).toHaveCount(0)
 	})
 })
