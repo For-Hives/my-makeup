@@ -125,6 +125,11 @@
 			"id": "tu-peux-choisir-ta-photo-principale-et-composer-ton-portf",
 			"type": "ajout",
 			"text": "Tu peux choisir ta photo principale et composer ton portfolio depuis ton espace : tes photos sont réduites avant l’envoi, une photo refusée est écartée sans perdre les autres, et chaque photo retirée est annoncée."
+		},
+		{
+			"id": "ton-espace-te-dit-ou-en-est-ton-profil-un-pourcentage-de",
+			"type": "ajout",
+			"text": "Ton espace te dit où en est ton profil : un pourcentage de complétude, ce qui te manque pour être publiable, et ce que ça change pour ta visibilité dans la recherche."
 		}
 	],
 	"releases": []
