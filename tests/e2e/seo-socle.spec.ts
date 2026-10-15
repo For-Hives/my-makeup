@@ -37,4 +37,18 @@ test.describe('Socle SEO', () => {
 		expect(reponse?.headers()['x-robots-tag'] ?? '').not.toMatch(/noarchive|nocache|nosnippet|max-snippet/)
 		expect(source).not.toMatch(/noarchive|nocache|nosnippet|max-snippet|data-nosnippet/)
 	})
+
+	test('E63 : robots.txt ouvre tout sauf l’API et donne le sitemap absolu', async ({ request }) => {
+		const reponse = await request.get('/robots.txt')
+
+		expect(reponse.status()).toBe(200)
+		expect(reponse.headers()['content-type']).toContain('text/plain')
+		const texte = await reponse.text()
+		expect(texte).toMatch(/User-Agent: \*/i)
+		expect(texte).toContain('Allow: /')
+		expect(texte).toContain('Disallow: /api/')
+		expect(texte).toContain('Sitemap: https://my-makeup.fr/sitemap.xml')
+		expect(texte).not.toMatch(/Disallow:\s*\/(auth|search)/)
+		expect(texte).not.toMatch(/GPTBot|ClaudeBot|CCBot|Google-Extended/)
+	})
 })

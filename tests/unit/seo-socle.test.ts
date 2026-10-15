@@ -1,9 +1,9 @@
 import { describe, expect, test } from 'bun:test'
-import { readdirSync, readFileSync, statSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { serializeJsonLd } from '../../src/lib/seo/json-ld'
 import { metadonnees } from '../../src/lib/seo/metadonnees'
-import { CHEMINS_NOINDEX, NOINDEX, NOINDEX_PREPROD, robotsPourChemin } from '../../src/lib/seo/robots'
+import { CHEMINS_NOINDEX, NOINDEX, NOINDEX_PREPROD, reglesRobots, robotsPourChemin } from '../../src/lib/seo/robots'
 import { DESCRIPTION_MAX, DESCRIPTION_MIN, descriptionMeta, TITRE_MAX, titrePage } from '../../src/lib/seo/texte'
 import { urlCanonique } from '../../src/lib/seo/url'
 import { proxy } from '../../src/proxy'
@@ -139,5 +139,24 @@ describe('reprise par les assistants', () => {
 			const contenu = readFileSync(fichier, 'utf8').replace(/^\s*(\/\/|\*|\/\*).*$/gm, '')
 			expect(contenu, fichier).not.toMatch(INTERDITS)
 		}
+	})
+})
+
+describe('robots.txt (E63)', () => {
+	test('ouvre tout sauf l’API, avec le sitemap en adresse absolue', () => {
+		const { rules, sitemap } = reglesRobots()
+		expect(rules).toEqual({ userAgent: '*', allow: '/', disallow: ['/api/'] })
+		expect(sitemap).toBe('https://my-makeup.fr/sitemap.xml')
+	})
+
+	test('n’interdit ni /auth ni /search, et ne vise aucun robot d’assistant', () => {
+		const texte = JSON.stringify(reglesRobots())
+		for (const chemin of CHEMINS_NOINDEX) expect(texte).not.toContain(chemin)
+		expect(texte).not.toMatch(/GPTBot|ClaudeBot|CCBot|Google-Extended|Perplexity|Claude-|OAI-/)
+	})
+
+	test('une seule source : la route lit reglesRobots, aucun fichier statique', () => {
+		expect(existsSync(join(RACINE, 'public/robots.txt'))).toBe(false)
+		expect(readFileSync(join(RACINE, 'src/app/robots.ts'), 'utf8')).toContain('reglesRobots()')
 	})
 })

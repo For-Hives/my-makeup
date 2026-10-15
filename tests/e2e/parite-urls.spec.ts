@@ -54,6 +54,7 @@ const LIVREES: ReadonlySet<string> = new Set([
 	'profil',
 	'profil-ancien-nom',
 	'profil-non-repris',
+	'robots',
 ])
 
 test('I45 : les adresses gelées répondent comme la table, avec le même h1', async ({ request, baseURL }) => {
