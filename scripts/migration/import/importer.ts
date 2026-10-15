@@ -19,6 +19,7 @@
  */
 
 import type { Payload } from 'payload'
+import { marquerUnImportEnCours } from '../../../src/lib/contexte-import'
 import { ADAPTATEUR_ARTICLES, articlesAttendus, articlesRepartis, lireLesArticles } from './articles'
 import { type GenreDeCible, ImportRefuse } from './cible'
 import { type CasARevoir, communesDesProfils } from './communes'
@@ -170,6 +171,16 @@ function statutsDe(documents: readonly { valeurs: Readonly<Record<string, unknow
 }
 
 export async function importer(options: OptionsDImport): Promise<Rapport> {
+	// The daily purges of the application wait while an import runs in this process (ticket 162).
+	const finDeLImport = marquerUnImportEnCours()
+	try {
+		return await passerLImport(options)
+	} finally {
+		finDeLImport()
+	}
+}
+
+async function passerLImport(options: OptionsDImport): Promise<Rapport> {
 	const {
 		payload,
 		source,

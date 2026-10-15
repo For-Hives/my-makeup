@@ -1,6 +1,7 @@
 import type { Payload } from 'payload'
 import { COLLECTION_JOURNAL, seuilDePurge } from '../auth/journal'
 import { purgeDesComptesNonConfirmes } from './comptes-non-confirmes'
+import { purgeDesMessagesDeContact } from './messages-de-contact'
 
 /**
  * The daily tasks of the application (ticket 077): the purges that keep a retention promise, one
@@ -42,6 +43,7 @@ export const purgeDuJournalDAuthentification: TacheQuotidienne = {
 export const TACHES_QUOTIDIENNES: readonly TacheQuotidienne[] = [
 	purgeDuJournalDAuthentification,
 	purgeDesComptesNonConfirmes,
+	purgeDesMessagesDeContact,
 ]
 
 export type ResultatDeTache = { nom: string; supprimes: number } | { nom: string; echec: true }
