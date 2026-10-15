@@ -482,6 +482,10 @@ export interface Talent {
    */
   slug: string;
   seo_title?: string | null;
+  /**
+   * De 50 à 60 caractères, différent du titre affiché en haut de la page. Vide : le titre du talent, suivi du nom du site.
+   */
+  titreDeLaPage?: string | null;
   description?: string | null;
   seo_description?: string | null;
   /**
@@ -911,6 +915,7 @@ export interface TalentsSelect<T extends boolean = true> {
   title?: T;
   slug?: T;
   seo_title?: T;
+  titreDeLaPage?: T;
   description?: T;
   seo_description?: T;
   content?: T;

@@ -29,19 +29,32 @@ export const messageErreur = (code: CodeErreur): string => MESSAGES[code]
 
 /**
  * The codes the Google sign-in sends the visitor back to the sign-in page with (`?error=`), and
- * their messages (tickets 090 and 091). A closed list, like the rest: nothing Google said is shown.
- * Ticket 092 gives the refusals and the failures their own, finer messages.
+ * their messages (tickets 090 to 092). A closed list, like the rest: nothing Google said is shown,
+ * and neither is the address of the account. `email-deja-avec-mot-de-passe` is the code of the
+ * current site; `compte-bloque` is the one of the password sign-in (ticket 089), with its message.
  */
-export const CODES_ERREUR_GOOGLE = ['google-echec', 'google-email-non-verifie', 'google-compte-refuse'] as const
+export const CODES_ERREUR_GOOGLE = [
+	'google-echec',
+	'google-annule',
+	'google-indisponible',
+	'google-email-non-verifie',
+	'email-deja-avec-mot-de-passe',
+	'compte-bloque',
+] as const
 export type CodeErreurGoogle = (typeof CODES_ERREUR_GOOGLE)[number]
 
 const MESSAGES_GOOGLE: Record<CodeErreurGoogle, string> = {
 	'google-echec':
 		'La connexion avec Google n’a pas abouti. Réessaie dans un instant, ou connecte-toi avec ton email et ton mot de passe.',
+	'google-annule':
+		'Tu as annulé la connexion avec Google. Réessaie quand tu veux, ou connecte-toi avec ton email et ton mot de passe.',
+	'google-indisponible':
+		'Google ne répond pas pour le moment. Réessaie dans quelques minutes, ou connecte-toi avec ton email et ton mot de passe.',
 	'google-email-non-verifie':
 		'Google n’a pas confirmé ton adresse email : on ne peut pas t’inscrire ni te connecter avec ce compte Google. Inscris-toi avec ton email et un mot de passe.',
-	'google-compte-refuse':
-		'Cette adresse email ne peut pas se connecter avec Google. Connecte-toi avec ton email et ton mot de passe, ou utilise « Mot de passe oublié ».',
+	'email-deja-avec-mot-de-passe':
+		'Cette adresse email a déjà un compte avec un mot de passe : la connexion avec Google ne l’ouvre pas. Connecte-toi avec ton email et ton mot de passe, ou utilise « Mot de passe oublié ».',
+	'compte-bloque': MESSAGES['compte-bloque'],
 }
 
 /** What the sign-in page says when the session ended (the words of the current site). */

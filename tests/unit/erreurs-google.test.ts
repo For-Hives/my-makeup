@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { CODES_ERREUR_GOOGLE, erreurDeLUrl, messageDeLUrl } from '@/lib/auth/erreurs'
+import { CODES_ERREUR_GOOGLE, erreurDeLUrl, messageDeLUrl, messageErreur } from '@/lib/auth/erreurs'
 import { ligneDeJournal, METHODES_EVENEMENT } from '@/lib/auth/journal'
 import { retourSur } from '@/lib/auth/retour'
 
@@ -13,6 +13,15 @@ describe('?error= : une liste fermée, jamais ce qui est écrit dans l’adresse
 			expect(message).not.toMatch(/oauth|token|jeton|invalid|error/i)
 			expect(erreurDeLUrl(code)?.code).toBe(code)
 		}
+	})
+
+	test('chaque cas a son code et son message : annulation, panne, mot de passe, blocage', () => {
+		const messages = CODES_ERREUR_GOOGLE.map(code => messageDeLUrl(code))
+		expect(new Set(messages).size).toBe(CODES_ERREUR_GOOGLE.length)
+		expect(messageDeLUrl('google-annule')).toContain('annulé')
+		expect(messageDeLUrl('google-indisponible')).toContain('ne répond pas')
+		expect(messageDeLUrl('email-deja-avec-mot-de-passe')).toContain('déjà un compte avec un mot de passe')
+		expect(messageDeLUrl('compte-bloque')).toBe(messageErreur('compte-bloque'))
 	})
 
 	test('l’email non vérifié a son propre message', () => {

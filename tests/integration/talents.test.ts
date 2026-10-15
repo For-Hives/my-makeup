@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 import type { RequiredDataFromCollectionSlug } from 'payload'
+import { lireLeTalent } from '@/services/public/talents'
 import { creerCompte } from '../outils/fabrique-comptes'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
 import { appelerRest } from '../outils/rest'
@@ -221,5 +222,39 @@ describe('La date de la première publication', () => {
 	test('la date que donne l’import est gardée', async () => {
 		const talent = await ecrireTalent({ slug: 'maquillage-mariee', publishedAt: '2023-04-01T09:00:00.000Z' })
 		expect(talent.publishedAt).toBe('2023-04-01T09:00:00.000Z')
+	})
+})
+
+describe('Le titre de la page d’un talent (ticket 108)', () => {
+	const TITRE_DE_55 = 'Maquillage fictif : une maquilleuse près de chez vous'
+
+	test('de 50 à 60 caractères, différent du h1 : enregistré, lu par la lecture publique ; sinon refusé en français', async () => {
+		expect(TITRE_DE_55.length).toBe(53)
+		const talent = await ecrireTalent({
+			slug: 'maquillage-fictif',
+			seo_title: 'Maquillage fictif',
+			titreDeLaPage: TITRE_DE_55,
+		})
+		const payload = await payloadDeTest()
+		const lu = await lireLeTalent(payload, 'maquillage-fictif')
+		expect(lu).toMatchObject({ titreDeLaPage: TITRE_DE_55, titreAffiche: 'Maquillage fictif' })
+
+		await expect(
+			payload.update({ collection: 'talents', id: talent.id, data: { titreDeLaPage: 'Trop court' } })
+		).rejects.toThrow()
+		await expect(
+			payload.update({ collection: 'talents', id: talent.id, data: { titreDeLaPage: 'x'.repeat(61) } })
+		).rejects.toThrow()
+		await expect(
+			payload.update({ collection: 'talents', id: talent.id, data: { seo_title: TITRE_DE_55 } })
+		).rejects.toThrow()
+		// Left empty, nothing is refused: the page keeps the title of the site online.
+		await payload.update({ collection: 'talents', id: talent.id, data: { titreDeLaPage: '' } })
+		expect((await lireLeTalent(payload, 'maquillage-fictif'))?.titreDeLaPage).toBe('')
+	})
+
+	test('un brouillon n’est pas lu par la page, un anonyme ne lit que le publié', async () => {
+		await ecrireTalent({ slug: 'maquillage-fx', _status: 'draft' })
+		expect(await lireLeTalent(await payloadDeTest(), 'maquillage-fx')).toBeNull()
 	})
 })

@@ -39,15 +39,21 @@ const LIVREES: ReadonlySet<string> = new Set([
 	'adresse-inconnue',
 	'historiques',
 	'llms-txt',
+	'article',
+	'talent',
 	'barre-finale',
 	'double-barre',
 	'toutes-les-news',
+	'blog',
 	'api-nextauth',
 	'api-sendmail',
 	'sante',
 	'fichiers-publics',
 	'verification-bing',
 	'verification-indexnow',
+	'profil',
+	'profil-ancien-nom',
+	'profil-non-repris',
 ])
 
 test('I45 : les adresses gelées répondent comme la table, avec le même h1', async ({ request, baseURL }) => {

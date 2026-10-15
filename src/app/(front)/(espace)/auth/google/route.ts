@@ -47,6 +47,7 @@ export async function GET(requete: Request) {
 		reponse.headers.set('Cache-Control', 'private, no-store')
 		return reponse
 	} catch {
-		return retourAuFormulaire('google-echec')
+		// Google cannot be reached (its discovery document): an outage, not the visitor's doing.
+		return retourAuFormulaire('google-indisponible')
 	}
 }

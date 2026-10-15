@@ -1,24 +1,68 @@
 import config from '@payload-config'
-import { notFound } from 'next/navigation'
+import type { Metadata } from 'next'
+import { notFound, permanentRedirect } from 'next/navigation'
 import { getPayload } from 'payload'
+import { cache } from 'react'
 import { VueDuProfil } from '@/components/profil/VueDuProfil'
-import { lireLeProfilPublic } from '@/services/public/profils'
+import { serializeJsonLd } from '@/lib/seo/json-ld'
+import { donneesStructureesDuProfil, metadonneesDuProfil } from '@/lib/seo/profil'
+import { cheminProfil } from '@/lib/slug'
+import { type AdresseDeProfil, lireLAdresseDeProfil } from '@/services/public/profils'
 
 // Read at each request: the build runs without a database. The refresh by tags of ticket 047 comes
 // after this page.
 export const dynamic = 'force-dynamic'
 
+/** The segment as the visitor wrote it: Next gives it decoded or not, depending on the path. */
+function segmentEcrit(segment: string): string {
+	try {
+		return decodeURIComponent(segment)
+	} catch {
+		return segment
+	}
+}
+
+/** What the address leads to, read once for the metadata and the page of one request. */
+const adresseDeProfil = cache(async (segment: string): Promise<AdresseDeProfil> => {
+	return lireLAdresseDeProfil(await getPayload({ config }), segmentEcrit(segment))
+})
+
 /**
- * The public page of a profile, rendered by the server (tickets 101 to 103): her name in the only h1,
+ * Title, description, canonical address and robots (ticket 105). Indexed only when the profile can be
+ * published (E66): otherwise a noindex tag and no canonical address. An unknown or hidden profile has
+ * the 404 page, which Next marks noindex by itself.
+ */
+export async function generateMetadata({ params }: PageProps<'/profil/[slug]'>): Promise<Metadata> {
+	const { slug } = await params
+	const adresse = await adresseDeProfil(slug)
+	return adresse.type === 'profil' ? metadonneesDuProfil(adresse.profil) : {}
+}
+
+/**
+ * The public page of a profile, rendered by the server (tickets 101 to 105): her name in the only h1,
  * her speciality, her zone, her availability, her main photo and her description are in the HTML
- * served, with no JavaScript. An unknown slug answers 404. So does a profile that is not published,
- * for now: ticket 104 gives the page of a profile that is visible but cannot be published a 200 in
- * noindex, as on the site today. The profile is read by the public reading only
- * (src/services/public/profils.ts), which never gives a contact detail she did not publish.
+ * served, with no JavaScript. What the address leads to is src/lib/profil/adresse.ts:
+ * - a profile that is not hidden answers 200; when it cannot be published yet it carries a noindex tag
+ *   and no canonical address, as on the site today;
+ * - the old address by username, or a variant of the slug, answers one 308 to the slug;
+ * - an unknown slug, a hidden profile and the profiles of the spam, which the import does not take,
+ *   answer the 404 page in French.
+ * The profile is read by the public reading only (src/services/public/profils.ts), which never gives a
+ * contact detail she did not publish.
  */
 export default async function PageDuProfil({ params }: PageProps<'/profil/[slug]'>) {
 	const { slug } = await params
-	const profil = await lireLeProfilPublic(await getPayload({ config }), slug)
-	if (!profil) notFound()
-	return <VueDuProfil profil={profil} />
+	const adresse = await adresseDeProfil(slug)
+	if (adresse.type === 'redirection') permanentRedirect(cheminProfil(adresse.slug))
+	if (adresse.type === 'inconnue') notFound()
+	return (
+		<>
+			<script
+				type="application/ld+json"
+				// biome-ignore lint/security/noDangerouslySetInnerHtml: serializeJsonLd escapes <, > and &, so the data cannot close the tag.
+				dangerouslySetInnerHTML={{ __html: serializeJsonLd(donneesStructureesDuProfil(adresse.profil)) }}
+			/>
+			<VueDuProfil profil={adresse.profil} />
+		</>
+	)
 }

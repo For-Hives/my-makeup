@@ -334,7 +334,7 @@ describe('un compte qui ne vient pas de Google n’est jamais ouvert ni lié', (
 
 		const { issue } = await passer({ email: compte.email })
 
-		expect(issue).toEqual({ ok: false, code: 'google-compte-refuse' })
+		expect(issue).toEqual({ ok: false, code: 'email-deja-avec-mot-de-passe' })
 		const apres = await payload.db.findOne<{ id: number; legacyProvider?: string; sessions?: unknown[] }>({
 			collection: 'pros',
 			where: { id: { equals: compte.id } },
@@ -344,14 +344,30 @@ describe('un compte qui ne vient pas de Google n’est jamais ouvert ni lié', (
 		expect(await comptes(compte.email)).toHaveLength(1)
 	})
 
-	test('un compte Google bloqué est refusé', async () => {
+	test('un compte Google bloqué est refusé, avec son propre code', async () => {
 		const compte = await creerCompte('reprise-google')
 		const payload = await payloadDeTest()
 		await payload.update({ collection: 'pros', id: compte.id, data: { bloque: true }, overrideAccess: true })
 
 		const { issue } = await passer({ email: compte.email })
 
-		expect(issue).toEqual({ ok: false, code: 'google-compte-refuse' })
+		expect(issue).toEqual({ ok: false, code: 'compte-bloque' })
+		expect(await comptes(compte.email)).toHaveLength(1)
+	})
+
+	test('un compte à mot de passe bloqué est dit bloqué, et rien n’est lié', async () => {
+		const compte = await creerCompte('maquilleuse')
+		const payload = await payloadDeTest()
+		await payload.update({ collection: 'pros', id: compte.id, data: { bloque: true }, overrideAccess: true })
+
+		const { issue } = await passer({ email: compte.email })
+
+		expect(issue).toEqual({ ok: false, code: 'compte-bloque' })
+		const apres = await payload.db.findOne<{ id: number; legacyProvider?: string }>({
+			collection: 'pros',
+			where: { id: { equals: compte.id } },
+		})
+		expect(apres?.legacyProvider).not.toBe('google')
 	})
 })
 
@@ -360,14 +376,14 @@ describe('l’annulation et la panne de Google ne cassent rien', () => {
 		const email = adresse('refus')
 		const { issue, retour } = await passer({ scenario: 'refus', email })
 		expect(retour.searchParams.get('error')).toBe('access_denied')
-		expect(issue).toEqual({ ok: false, code: 'google-echec' })
+		expect(issue).toEqual({ ok: false, code: 'google-annule' })
 		expect(await comptes(email)).toHaveLength(0)
 	})
 
 	test('panne à l’échange du code : retour à la connexion avec un code, sans exception', async () => {
 		const email = adresse('panne')
 		const { issue } = await passer({ scenario: 'panne', email })
-		expect(issue).toEqual({ ok: false, code: 'google-echec' })
+		expect(issue).toEqual({ ok: false, code: 'google-indisponible' })
 		expect(await comptes(email)).toHaveLength(0)
 	})
 

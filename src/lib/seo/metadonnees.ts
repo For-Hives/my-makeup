@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { descriptionMeta, titrePage } from './texte'
+import { descriptionEditoriale, descriptionMeta, titrePage } from './texte'
 import { urlCanonique } from './url'
 
 export interface EntreesDePage {
@@ -26,3 +26,18 @@ export function metadonnees({ titre, description, repli, chemin, indexable = tru
 
 /** The not-found pages: titled, no canonical. Next adds their noindex tag by itself. */
 export const metadonneesIntrouvable = (titre: string): Metadata => ({ title: { absolute: titrePage(titre) } })
+
+/**
+ * The metadata of a page the newsroom writes (a talent, an article): the defaults, with the description
+ * of `descriptionEditoriale` (the newsroom's own text kept as it is).
+ */
+export function metadonneesEditoriales({
+	descriptionRedigee,
+	autres,
+	...entrees
+}: Omit<EntreesDePage, 'description'> & { descriptionRedigee: unknown; autres: readonly unknown[] }): Metadata {
+	return {
+		...metadonnees({ ...entrees, description: [] }),
+		description: descriptionEditoriale(descriptionRedigee, autres, entrees.repli),
+	}
+}

@@ -41,3 +41,55 @@ export async function listerLesTalents(payload: Payload): Promise<TalentPublic[]
 		estUnSlug(talent.slug) && texte(talent.title) ? [{ slug: talent.slug, titre: texte(talent.title) }] : []
 	)
 }
+
+/** The fields of a talent the page of its speciality reads (ticket 108), and nothing else. */
+export const CHAMPS_DE_LA_PAGE_DU_TALENT = {
+	slug: true,
+	title: true,
+	seo_title: true,
+	titreDeLaPage: true,
+	description: true,
+	seo_description: true,
+	content: true,
+} as const
+
+/** A talent as its page shows it. A field never filled in is an empty string, never `null`. */
+export interface TalentDeLaPage {
+	slug: string
+	/** The short name of the speciality: the breadcrumb, the home page. */
+	titre: string
+	/** The title at the top of the page, the only h1: `seo_title`, else the title. */
+	titreAffiche: string
+	/** The title of the tab and of the search results, written by the newsroom; empty when it wrote none. */
+	titreDeLaPage: string
+	presentation: string
+	descriptionSeo: string
+	/** The markdown as written: the page converts it (src/lib/markdown.ts). */
+	contenu: string
+}
+
+/** The published talent of this slug, or `null`: unknown, a draft, or not even a slug. */
+export async function lireLeTalent(payload: Payload, slug: string): Promise<TalentDeLaPage | null> {
+	if (!estUnSlug(slug)) return null
+	const { docs } = await payload.find({
+		collection: 'talents',
+		where: { slug: { equals: slug } },
+		select: CHAMPS_DE_LA_PAGE_DU_TALENT,
+		depth: 0,
+		limit: 1,
+		pagination: false,
+		overrideAccess: false,
+	})
+	const talent = docs[0]
+	const titre = texte(talent?.title)
+	if (!talent || !estUnSlug(talent.slug) || !titre) return null
+	return {
+		slug: talent.slug,
+		titre,
+		titreAffiche: texte(talent.seo_title) || titre,
+		titreDeLaPage: texte(talent.titreDeLaPage),
+		presentation: texte(talent.description),
+		descriptionSeo: texte(talent.seo_description),
+		contenu: typeof talent.content === 'string' ? talent.content : '',
+	}
+}

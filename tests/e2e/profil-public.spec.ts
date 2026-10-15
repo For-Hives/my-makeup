@@ -2,6 +2,7 @@ import { expect, type Page, test } from '@playwright/test'
 import { type ProfilDePage, poserLesProfilsDePage } from '../fixtures/profils-de-page'
 import { ECRANS } from '../outils/e2e'
 import { payloadDeTest } from '../outils/payload-test'
+import { usagers } from '../outils/verrou'
 
 /**
  * The public page of a profile, end to end (tickets 101 to 103; plan 02 E43 and E44), on profiles of
@@ -23,13 +24,17 @@ test.describe.configure({ mode: 'serial' })
 
 test.beforeAll(async () => {
 	test.setTimeout(180_000)
+	await usagers('profils-de-page', 1)
 	profils = await poserLesProfilsDePage()
 })
 
-// The profiles of the page are taken away at the end: left in the bench, they would crowd the lists of the
-// search specs (pages of 20) and the slugs of the import spec.
+// The profiles of the page are taken away at the end by the last process: left in the bench, they would crowd the
+// lists of the search specs (pages of 20) and the slugs of the import spec.
 test.afterAll(async () => {
 	test.setTimeout(180_000)
+	// The two projects (1440 and 390 px) share these profiles: the last one to end takes them away, or the
+	// first one to end would delete what the other is still reading.
+	if ((await usagers('profils-de-page', -1)) > 0 || !profils) return
 	const payload = await payloadDeTest()
 	for (const { id } of profils.values()) {
 		const profil = await payload
@@ -117,7 +122,9 @@ test.describe('E44 : les offres, les prix et les coordonnées publiées', { tag:
 	test('les offres et leurs prix formatés, les options dans l’ordre, sont dans le HTML du serveur', async ({
 		request,
 	}) => {
-		const html = await (await request.get(`/profil/${profil('reference').slug}`)).text()
+		const source = await (await request.get(`/profil/${profil('reference').slug}`)).text()
+		// The page, not its structured data (ticket 105), which names the offers too.
+		const html = source.replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/g, '')
 
 		expect(html).toContain('Service(s) proposé(s)')
 		expect(html).toContain('À partir de 180\u00a0€')
@@ -161,16 +168,14 @@ test.describe('E44 : les offres, les prix et les coordonnées publiées', { tag:
 })
 
 test.describe('Les douze profils types du banc', () => {
-	test('aucun « undefined » ni « null », un seul h1 ; le profil masqué et le brouillon répondent 404', async ({
+	test('aucun « undefined » ni « null », un seul h1 ; le profil masqué répond 404, un brouillon 200 en noindex', async ({
 		request,
 	}) => {
 		test.setTimeout(120_000)
 		expect(profils.size).toBe(12)
 		for (const [cle, { slug, type }] of profils) {
-			const reponse = await request.get(`/profil/${slug}`)
-			// A page answers for a published profile only, for now: ticket 104 gives the page of a draft a 200 in
-			// noindex, as on the site today, and updates this line.
-			if (type.attendu.statut !== 'publie') {
+			const reponse = await request.get(`/profil/${slug}`, { headers: { 'User-Agent': ROBOT } })
+			if (type.attendu.statut === 'masque') {
 				expect(reponse.status(), cle).toBe(404)
 				continue
 			}
@@ -179,7 +184,96 @@ test.describe('Les douze profils types du banc', () => {
 			expect(html.match(/<h1[\s>]/g), cle).toHaveLength(1)
 			expect(texteVisible(html), cle).not.toMatch(MOTS_INTERDITS)
 			expect(html, cle).not.toMatch(CLES_PRIVEES)
+			// Indexed only when the profile is publishable (E66).
+			expect(/<meta name="robots" content="noindex/.test(html), cle).toBe(type.attendu.publiable !== true)
 		}
+	})
+})
+
+/** A robot: it is sent the metadata in the head, as a search engine reads it. */
+const ROBOT = 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)'
+
+const ANCIEN_NOM = 'Page Ancien Nom E46'
+
+test.describe('E46 : l’ancienne adresse par nom d’utilisateur', () => {
+	test.beforeAll(async () => {
+		// The old username is written by the import only: the test writes it as the import does, without the access rules.
+		const payload = await payloadDeTest()
+		await payload.update({
+			collection: 'profils',
+			id: profil('indisponible').id,
+			data: { legacyUsername: ANCIEN_NOM },
+			context: { import: true },
+		})
+		await payload.update({
+			collection: 'profils',
+			id: profil('masquee').id,
+			data: { legacyUsername: `${ANCIEN_NOM} masquée` },
+			context: { import: true },
+		})
+	})
+
+	test('@smoke l’ancien nom, encodé dans l’adresse, redirige en un saut (308) vers le slug, qui répond 200', async ({
+		request,
+	}) => {
+		const { slug } = profil('indisponible')
+		const reponse = await request.get(`/profil/${encodeURIComponent(ANCIEN_NOM)}`, { maxRedirects: 0 })
+
+		expect(reponse.status()).toBe(308)
+		expect(new URL(reponse.headers().location ?? '', 'http://x').pathname).toBe(`/profil/${slug}`)
+		expect((await request.get(`/profil/${slug}`, { maxRedirects: 0 })).status()).toBe(200)
+	})
+
+	test('une variante du slug (majuscules) redirige elle aussi vers le slug', async ({ request }) => {
+		const { slug } = profil('reference')
+		const reponse = await request.get(`/profil/${slug.toUpperCase()}`, { maxRedirects: 0 })
+
+		expect(reponse.status()).toBe(308)
+		expect(new URL(reponse.headers().location ?? '', 'http://x').pathname).toBe(`/profil/${slug}`)
+	})
+})
+
+test.describe('E47 : le profil masqué, l’inconnu et l’adresse impossible', () => {
+	test('un profil masqué répond 404 en français, par son slug comme par son ancien nom, sans redirection', async ({
+		request,
+	}) => {
+		const { slug } = profil('masquee')
+		for (const adresse of [slug, slug.toUpperCase(), encodeURIComponent(`${ANCIEN_NOM} masquée`)]) {
+			const reponse = await request.get(`/profil/${adresse}`, { maxRedirects: 0 })
+			expect(reponse.status(), adresse).toBe(404)
+			expect(await reponse.text(), adresse).toContain('404 - Page non trouvée')
+		}
+	})
+
+	test('une adresse qui ne peut mener nulle part répond 404, jamais 500', async ({ request }) => {
+		for (const adresse of ['%00', 'a%00b', '%F0%9F%99%82', 'a'.repeat(300), '-']) {
+			const reponse = await request.get(`/profil/${adresse}`, { maxRedirects: 0 })
+			expect(reponse.status(), adresse).toBe(404)
+		}
+	})
+})
+
+test.describe('E66 : un profil non publiable est en noindex, sans adresse canonique', { tag: '@mobile' }, () => {
+	for (const cle of ['vide', 'actif-non-publiable']) {
+		test(`« ${cle} » répond 200, noindex, sans adresse canonique`, async ({ page, request }) => {
+			const { slug } = profil(cle)
+			const html = await (await request.get(`/profil/${slug}`, { headers: { 'User-Agent': ROBOT } })).text()
+			expect(html).toMatch(/<meta name="robots" content="noindex/)
+			expect(html).not.toContain('rel="canonical"')
+
+			const reponse = await page.goto(`/profil/${slug}`)
+			expect(reponse?.status()).toBe(200)
+			await expect(page.locator('meta[name="robots"]').first()).toHaveAttribute('content', /noindex/)
+			await expect(page.locator('link[rel="canonical"]')).toHaveCount(0)
+		})
+	}
+
+	test('un profil publiable est indexable : adresse canonique, pas de noindex', async ({ page }) => {
+		const { slug } = profil('reference')
+		await page.goto(`/profil/${slug}`)
+
+		await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', new RegExp(`/profil/${slug}$`))
+		await expect(page.locator('meta[name="robots"][content*="noindex"]')).toHaveCount(0)
 	})
 })
 
@@ -204,11 +298,31 @@ test.describe('E44 : la galerie du portfolio', { tag: '@mobile' }, () => {
 			// The original address is inside the optimizer's address, unchanged.
 			const src = (await image.getAttribute('src')) ?? ''
 			expect(new URL(src, page.url()).searchParams.get('url')).toBe(origines[rang] ?? 'sans adresse')
-			// The file itself answers with an image. (The optimizer of the bench refuses the loopback host of its
-			// storage, so the picture it makes is not checked here: the address it is given is.)
+			// The file itself answers with an image...
 			const reponse = await request.get(origines[rang] ?? '')
 			expect(reponse.ok(), origines[rang] ?? 'sans adresse').toBe(true)
 			expect(reponse.headers()['content-type']).toMatch(/^image\//)
+			// ...and so does the optimizer.
+			const optimisee = await request.get(new URL(src, page.url()).href)
+			expect(optimisee.status(), `optimiseur, photo ${rang + 1}`).toBe(200)
+			expect(optimisee.headers()['content-type']).toMatch(/^image\//)
+		}
+
+		// None is broken in the page: each one is drawn, once the browser has loaded it.
+		for (let rang = 0; rang < 6; rang++) {
+			const image = images.nth(rang)
+			await image.scrollIntoViewIfNeeded()
+			await expect
+				.poll(
+					() =>
+						image.evaluate(
+							element => element instanceof HTMLImageElement && element.complete && element.naturalWidth > 0
+						),
+					{
+						message: `photo ${rang + 1} chargée`,
+					}
+				)
+				.toBe(true)
 		}
 	})
 

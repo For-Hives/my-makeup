@@ -73,8 +73,7 @@ test.describe('Recherche par ville', () => {
 		const photo = carte.locator('img')
 		await expect(photo).toBeVisible()
 		await expect(photo).toHaveAttribute('alt', `Photo de ${reference.nom}`)
-		// The photo is its own, not the default one. (The image optimizer of Next refuses the local address of the
-		// bench's storage, so the picture itself cannot load here: the address is what is checked.)
+		// The photo is its own, not the default one.
 		await expect(photo).toHaveAttribute('src', /essai-reference-principale/)
 
 		// Nothing overflows sideways, at 1440 px as at 390 px.
