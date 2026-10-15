@@ -10,6 +10,7 @@
 *
 !package.json
 !bun.lock
+!patches
 !next.config.ts
 !tsconfig.json
 !postcss.config.json

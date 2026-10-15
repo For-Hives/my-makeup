@@ -235,6 +235,8 @@ describe('.dockerignore refuses everything but what the build needs', () => {
 	const ALLOWED = [
 		'package.json',
 		'bun.lock',
+		// The patches bun applies to a dependency when it installs it (`patchedDependencies` of package.json).
+		'patches',
 		'next.config.ts',
 		'tsconfig.json',
 		'postcss.config.json',
