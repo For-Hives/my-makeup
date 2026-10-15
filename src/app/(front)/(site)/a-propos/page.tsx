@@ -1,0 +1,34 @@
+import type { Metadata } from 'next'
+import { Cta } from '@/components/blocs/Cta'
+import { Hero } from '@/components/blocs/Hero'
+import { ArticleDePage } from '@/components/pages-fixes/ArticleDePage'
+import { A_PROPOS } from '@/components/pages-fixes/textes-maquilleuses'
+import { metadonnees } from '@/lib/seo/metadonnees'
+
+export const metadata: Metadata = metadonnees({
+	titre: 'My-Makeup la plateforme de recherche de maquilleuse !',
+	description:
+		'Apprenez-en plus sur My-Makeup, votre plateforme de mise en relation entre maquilleuses professionnelles et clients.',
+	repli: 'My-Makeup met en relation des maquilleuses professionnelles et des clients : découvrez qui nous sommes.',
+	chemin: '/a-propos',
+})
+
+export default function PageAPropos() {
+	return (
+		<main className="relative">
+			<Hero
+				image="/assets/back/maquilleuse_europeenne_white.webp"
+				titre={
+					<>
+						La solution de vos rêves&nbsp;:&nbsp;<span className="text-indigo-900">My&nbsp;Makeup</span>
+					</>
+				}
+				description="Découvrez comment My-Makeup peut aider les personnes à trouver la maquilleuse professionnelle qui leur correspond. Et comment nous pouvons aider les maquilleuses professionnelles à présenter leur travail et à se faire connaître de nouveaux clients."
+				recherche={false}
+				inscription
+			/>
+			<ArticleDePage contenu={A_PROPOS} />
+			<Cta />
+		</main>
+	)
+}

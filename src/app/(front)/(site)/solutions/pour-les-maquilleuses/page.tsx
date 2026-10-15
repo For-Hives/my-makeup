@@ -1,0 +1,36 @@
+import type { Metadata } from 'next'
+import { Cta } from '@/components/blocs/Cta'
+import { Hero } from '@/components/blocs/Hero'
+import { ArticleDePage } from '@/components/pages-fixes/ArticleDePage'
+import { SOLUTIONS_MAQUILLEUSES } from '@/components/pages-fixes/textes-maquilleuses'
+import { metadonnees } from '@/lib/seo/metadonnees'
+
+export const metadata: Metadata = metadonnees({
+	titre: 'Solutions My-Makeup pour les Maquilleuses !',
+	description: "Avec notre plateforme, donner un coup de boost à votre carrière n'a jamais été aussi simple !",
+	repli:
+		'Une plateforme gratuite pour présenter votre travail de maquilleuse et vous faire connaître des particuliers.',
+	chemin: '/solutions/pour-les-maquilleuses',
+})
+
+export default function PageSolutionsMaquilleuses() {
+	return (
+		<main className="relative">
+			<Hero
+				image="/assets/back/maquilleuse_asiatique_white.webp"
+				titre={
+					<>
+						Développez Votre Carrière de Maquilleuse avec&nbsp;
+						<span className="text-indigo-900">My&nbsp;Makeup&nbsp;</span>
+						La solution de vos rêves&nbsp;!
+					</>
+				}
+				description="Découvrez comment My-Makeup peut aider les maquilleuses professionnelles à présenter leur travail et à se faire connaître des particuliers qui cherchent une maquilleuse, gratuitement."
+				recherche={false}
+				inscription
+			/>
+			<ArticleDePage contenu={SOLUTIONS_MAQUILLEUSES} />
+			<Cta />
+		</main>
+	)
+}
