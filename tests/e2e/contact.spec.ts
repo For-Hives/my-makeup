@@ -161,7 +161,8 @@ test.describe('E69 : le formulaire se remplit et s’envoie au clavier, les erre
 		await page.keyboard.press('Enter')
 
 		await expect(page.getByTestId('contact-envoye')).toBeVisible()
-		await expect.poll(async () => (await lignesDe(s.email)).length).toBe(1)
+		// The first read of the worker starts the Payload client, which is slow when the machine is busy.
+		await expect.poll(async () => (await lignesDe(s.email)).length, { timeout: 20_000 }).toBe(1)
 	})
 })
 
@@ -231,5 +232,74 @@ test.describe('L’événement de contact', () => {
 		expect(payload.data).toEqual({ ok: true, status: 200 })
 		const tout = JSON.stringify(recus)
 		for (const saisi of [s.prenom, s.nom, s.email, s.telephone, 'MARQUEUR-ESSAI']) expect(tout).not.toContain(saisi)
+	})
+})
+
+test.describe('161 : le champ piège et le frein', () => {
+	test('le champ piège est hors de vue, hors du clavier et caché aux lecteurs d’écran', async ({ page }) => {
+		await ouvrir(page)
+		const piege = page.locator('input[name="commentaire"]')
+		await expect(piege).toHaveAttribute('tabindex', '-1')
+		await expect(piege).not.toBeInViewport()
+		await expect(page.getByRole('textbox', { name: 'Laissez ce champ vide' })).toHaveCount(0)
+		await expect(page.locator('[aria-hidden="true"]').filter({ has: piege })).toHaveCount(1)
+	})
+
+	test('un robot qui le remplit voit la confirmation, et rien n’est écrit ni envoyé', async ({ page }) => {
+		const s = saisie()
+		await ouvrir(page)
+		await remplir(page, s)
+		await page.locator('input[name="commentaire"]').evaluate((champ: HTMLInputElement) => {
+			champ.value = 'http://spam.example'
+		})
+		await page.getByRole('button', { name: 'Envoyer l’email' }).click()
+
+		await expect(page.getByTestId('contact-envoye')).toBeVisible()
+		await neDepassePas(async () => (await lignesDe(s.email)).length + (await mailsDe(s.email)).length, 0)
+		expect(await lignesDe(s.email)).toEqual([])
+		expect(await mailsDe(s.email)).toEqual([])
+	})
+
+	test('la sixième demande de l’heure depuis la même adresse est refusée en 429, en français, la saisie gardée ; une autre adresse passe', async ({
+		browser,
+	}) => {
+		test.setTimeout(120_000)
+		const adresseCliente = `198.51.${100 + test.info().workerIndex}.${(Date.now() % 200) + 1}`
+		const contexte = await browser.newContext({ extraHTTPHeaders: { 'x-forwarded-for': adresseCliente } })
+		const page = await contexte.newPage()
+		for (let i = 0; i < 5; i++) {
+			await ouvrir(page)
+			await remplir(page, saisie())
+			await page.getByRole('button', { name: 'Envoyer l’email' }).click()
+			await expect(page.getByTestId('contact-envoye')).toBeVisible()
+		}
+
+		const s = saisie()
+		await ouvrir(page)
+		await remplir(page, s)
+		const refus = page.waitForResponse(
+			reponse => reponse.request().method() === 'POST' && reponse.url().endsWith('/contact')
+		)
+		await page.getByRole('button', { name: 'Envoyer l’email' }).click()
+
+		const reponse = await refus
+		expect(reponse.status()).toBe(429)
+		expect(Number(reponse.headers()['retry-after'])).toBeGreaterThan(0)
+		await expect(page.getByTestId('erreur-contact')).toContainText('beaucoup de messages en peu de temps')
+		await expect(page.getByLabel('Message')).toHaveValue(s.message)
+		await expect(page.getByLabel('Email')).toHaveValue(s.email)
+		expect(await lignesDe(s.email)).toEqual([])
+		expect(await mailsDe(s.email)).toEqual([])
+		await contexte.close()
+
+		const autre = await browser.newContext({
+			extraHTTPHeaders: { 'x-forwarded-for': `203.0.${100 + test.info().workerIndex}.${(Date.now() % 200) + 1}` },
+		})
+		const page2 = await autre.newPage()
+		await ouvrir(page2)
+		await remplir(page2, saisie())
+		await page2.getByRole('button', { name: 'Envoyer l’email' }).click()
+		await expect(page2.getByTestId('contact-envoye')).toBeVisible()
+		await autre.close()
 	})
 })

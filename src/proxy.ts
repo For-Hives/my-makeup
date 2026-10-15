@@ -11,6 +11,7 @@ import { COOKIE_DE_SESSION, decisionDeLEspace } from '@/lib/auth/espace-ferme'
 import { ipClient } from '@/lib/auth/ip-client'
 import { COOKIE_DE_REINITIALISATION, planDuLien } from '@/lib/auth/mot-de-passe-oublie'
 import { CHEMIN_DE_L_INSCRIPTION, CHEMIN_DU_REFUS, secondesAvantUneInscription } from '@/lib/auth/refus-inscription'
+import { CHEMIN_DU_CONTACT, CHEMIN_DU_REFUS_DE_CONTACT, secondesAvantUnMessage } from '@/lib/contact/frein'
 import { freinerLaRecherche } from '@/lib/recherche/frein'
 import { robotsPourChemin } from '@/lib/seo/robots'
 import { redirectionDeForme } from '@/lib/urls/forme'
@@ -30,6 +31,7 @@ import { redirectionDeForme } from '@/lib/urls/forme'
  * - The cookies of the old authentication are expired on the first request, and the sign-in page tells
  *   once to sign in again (ticket 081). The back-office, the API and the files are left alone.
  * - A sign-up past the 5 an hour of its client address is sent to the route that answers 429 (ticket 084).
+ * - A contact message past the 5 an hour of its client address is sent to the route that answers 429 (ticket 161).
  * - Every other response gets the robots directive (ticket 070). It reads APP_ENV at run time: the
  *   pre-production gets its variables after the build. The paths of the account and of the search
  *   answer noindex everywhere.
@@ -74,6 +76,14 @@ export function proxy(requete: NextRequest) {
 		// Past 5 sign-ups an hour from this address (ticket 084): a Server Action cannot answer 429
 		// itself, so the request is sent to the route that does, before the action runs.
 		return NextResponse.rewrite(new URL(CHEMIN_DU_REFUS, requete.url ?? requete.nextUrl.href))
+	}
+	if (
+		requete.method === 'POST' &&
+		pathname === CHEMIN_DU_CONTACT &&
+		secondesAvantUnMessage(ipClient(requete.headers)) !== undefined
+	) {
+		// Past 5 messages an hour from this address (ticket 161): same device as the sign-up above.
+		return NextResponse.rewrite(new URL(CHEMIN_DU_REFUS_DE_CONTACT, requete.url ?? requete.nextUrl.href))
 	}
 	const avecLeNettoyage = (reponse: NextResponse): NextResponse => {
 		for (const nom of nettoyage.aEffacer) reponse.cookies.set(cookieDEffacement(nom))

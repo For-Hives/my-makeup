@@ -47,6 +47,11 @@ const GROUPE_NOMINAL: Record<ChampDuContact, string> = {
 export const MESSAGE_ENVOYE = 'Le message a bien été envoyé !'
 export const MESSAGE_NON_ENREGISTRE =
 	'Une erreur s’est produite ! Votre message n’a pas été envoyé. Ce que vous avez écrit est conservé : réessayez dans un instant.'
+/** Said when a brake refuses the send (ticket 161): the proxy's 429 and the action's own refusal use the same sentence. */
+export const MESSAGE_TROP_DE_MESSAGES =
+	'Vous avez envoyé beaucoup de messages en peu de temps. Ce que vous avez écrit est conservé : patientez un peu, puis réessayez.'
+/** The trap field of the form (ticket 161): out of sight, never filled by a person. */
+export const CHAMP_PIEGE_DU_CONTACT = 'commentaire'
 export const RESUME_DES_ERREURS = 'Le message n’a pas été envoyé : corrigez les champs signalés.'
 
 /**
@@ -102,4 +107,6 @@ export type EtatDuContact =
 	| { erreurs: ErreursDeContact; valeurs: MessageDeContact }
 	/** The message was not stored (`reseau`: the request itself failed). The typing comes back. */
 	| { echec: true; reseau?: true; valeurs: MessageDeContact }
+	/** A brake refused the send (ticket 161). The typing comes back. */
+	| { limite: true; valeurs: MessageDeContact }
 	| null

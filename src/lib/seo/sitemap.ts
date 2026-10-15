@@ -88,6 +88,10 @@ export const PAGES_EXCLUES: readonly { readonly chemin: string; readonly raison:
 	{ chemin: '/toutes-les-news', raison: 'Elle redirige vers /blog (301) : une adresse du sitemap répond 200.' },
 	{ chemin: '/sitemap.xml', raison: 'Le sitemap lui-même.' },
 	{ chemin: '/robots.txt', raison: 'Le fichier robots.' },
+	{
+		chemin: '/contact/refus',
+		raison: 'La route qui répond 429 à un message de contact freiné (ticket 161) : aucune page.',
+	},
 ]
 
 /** Path prefixes that are never in the sitemap: the account, the API, the administration, the measuring relay. */

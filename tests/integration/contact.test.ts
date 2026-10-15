@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { createServer } from 'node:net'
 import { nodemailerAdapter } from '@payloadcms/email-nodemailer'
 import { enregistrerUnMessageDeContact, stockageDePayload } from '@/lib/contact/envoi-payload'
+import { creerFreinsDeContact, type FreinsDeContact } from '@/lib/contact/frein'
 import { creerEnvoiEmail, type EnvoyerEmail, envoiEmailDePayload } from '@/lib/emails/envoi'
 import { optionsDeTransport } from '@/lib/emails/relais'
 import { serverEnv } from '@/lib/env'
@@ -37,18 +38,20 @@ function visiteuse(surcharge: Record<string, string> = {}) {
 
 async function lignesDe(email: string) {
 	const payload = await payloadDeTest()
-	return (await payload.find({ collection: 'demandes', where: { email: { equals: email } }, limit: 10, depth: 0 })).docs
+	return (await payload.find({ collection: 'demandes', where: { email: { equals: email } }, limit: 30, depth: 0 })).docs
 }
 
 async function envoyerLeFormulaire(
 	v: ReturnType<typeof visiteuse>,
-	options: { envoyer?: EnvoyerEmail; delaiMs?: number } = {}
+	options: { envoyer?: EnvoyerEmail; delaiMs?: number; client?: string; freins?: FreinsDeContact } = {}
 ) {
 	const payload = await payloadDeTest()
 	const travaux: Promise<void>[] = []
 	const lignes: string[] = []
 	const resultat = await enregistrerUnMessageDeContact({
 		formulaire: v.formulaire,
+		client: options.client ?? '203.0.113.9',
+		freins: options.freins ?? creerFreinsDeContact(v.equipe),
 		stockage: stockageDePayload(payload),
 		envoyer: options.envoyer ?? envoiEmailDePayload(payload, serverEnv()),
 		destinataire: v.equipe,
@@ -204,4 +207,63 @@ describe('I33 adapté : un email en panne ne perd pas le message', () => {
 			await new Promise(resolve => serveur.close(resolve))
 		}
 	}, 20_000)
+})
+
+describe('I34 : champ piège rempli, demande invalide ou limite atteinte : aucune ligne, aucun mail', () => {
+	test('le champ piège rempli : le succès d’une visiteuse, aucune ligne, aucun mail', async () => {
+		const v = visiteuse({ commentaire: 'Super site, visitez mon offre' })
+		const { resultat, termine } = await envoyerLeFormulaire(v)
+		await termine()
+
+		expect(resultat).toEqual({ ok: true })
+		expect(await lignesDe(v.champs.email as string)).toEqual([])
+		expect(await mailsRecus(v.equipe)).toEqual([])
+	})
+
+	test('la sixième demande de l’heure d’une adresse est refusée : une ligne et un mail pour chacune des cinq, aucun pour la sixième', async () => {
+		const freins = creerFreinsDeContact(crypto.randomUUID())
+		const client = '198.51.100.7'
+		const envois = []
+		for (let i = 0; i < 6; i++) {
+			const v = visiteuse()
+			const { resultat, termine } = await envoyerLeFormulaire(v, { client, freins })
+			await termine()
+			envois.push({ v, resultat })
+		}
+
+		for (const { v, resultat } of envois.slice(0, 5)) {
+			expect(resultat).toEqual({ ok: true })
+			expect(await lignesDe(v.champs.email as string)).toHaveLength(1)
+		}
+		const sixieme = envois[5]
+		expect(sixieme?.resultat).toMatchObject({ ok: false, code: 'trop-de-messages' })
+		expect(await lignesDe(sixieme?.v.champs.email as string)).toEqual([])
+		expect(await mailsRecus(sixieme?.v.equipe as string)).toEqual([])
+
+		// Another address is free.
+		const autre = visiteuse()
+		const suite = await envoyerLeFormulaire(autre, { client: '198.51.100.8', freins })
+		await suite.termine()
+		expect(suite.resultat).toEqual({ ok: true })
+	})
+
+	test('la vingt et unième demande du jour pour un même email est refusée, d’où qu’elle vienne', async () => {
+		const freins = creerFreinsDeContact(crypto.randomUUID())
+		const email = unique('insistante')
+		for (let i = 0; i < 20; i++) {
+			const { resultat, termine } = await envoyerLeFormulaire(visiteuse({ email }), {
+				client: `192.0.2.${i + 1}`,
+				freins,
+			})
+			await termine()
+			expect(resultat).toEqual({ ok: true })
+		}
+		const v = visiteuse({ email })
+		const { resultat, termine } = await envoyerLeFormulaire(v, { client: '192.0.2.200', freins })
+		await termine()
+
+		expect(resultat).toMatchObject({ ok: false, code: 'trop-de-messages' })
+		expect(await lignesDe(email)).toHaveLength(20)
+		expect(await mailsRecus(v.equipe)).toEqual([])
+	})
 })

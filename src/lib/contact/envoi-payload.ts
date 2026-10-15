@@ -4,15 +4,20 @@ import type { EnvoyerEmail, Journal } from '../emails/envoi'
 import { composerEmail } from '../emails/gabarit'
 import { SITE_ORIGIN } from '../env'
 import type { EtatDuMail, StatutDeDemande } from './etats'
-import { type ErreursDeContact, type MessageDeContact, validerLeMessage } from './message'
+import { FREINS_DE_CONTACT, type FreinsDeContact, prendreUnePlaceDeContact } from './frein'
+import { CHAMP_PIEGE_DU_CONTACT, type ErreursDeContact, type MessageDeContact, validerLeMessage } from './message'
 
 /**
  * A contact message, server side (tickets 158 and 159). No `next` import: the Server Action calls it,
  * and so do the tests.
  *
  * The order is the point:
+ * 0. The trap field (ticket 161) is hidden from every person: if it is filled, the answer is the success of
+ *    anyone, and nothing is stored, sent or counted.
  * 1. The message is checked. A message that fails a rule creates no row and sends no mail, whoever
  *    called the action.
+ *    Then the brakes (ticket 161): 5 an hour by client address, 20 a day by mailbox. A refused message is
+ *    neither stored nor sent.
  * 2. It is stored in `demandes` (`nouvelle`, mail `en-attente`). If the store fails, nothing is sent and
  *    the visitor is told: a message that is not kept is not a message that was sent.
  * 3. The answer goes back, and the mail to the team leaves after it (`apres`: `after` of Next in a Server
@@ -60,6 +65,7 @@ export type ResultatDuContact =
 	| { ok: true }
 	| { ok: false; code: 'donnees-invalides'; erreurs: ErreursDeContact }
 	| { ok: false; code: 'enregistrement-impossible' }
+	| { ok: false; code: 'trop-de-messages'; reessayerDansS: number }
 
 export interface EntreesDuContact {
 	/** What the form sent. */
@@ -73,6 +79,10 @@ export interface EntreesDuContact {
 	apres: (travail: () => Promise<void>) => void
 	journal: Journal
 	delaiMs?: number
+	/** The client address as `ipClient` gives it: the key of the brake by address. */
+	client: string
+	/** The brakes in use; the shared ones by default. */
+	freins?: FreinsDeContact
 }
 
 /** The kind of a failure, in a word: what a log may keep of an error that may quote what was typed. */
@@ -135,8 +145,15 @@ async function expedier(
 }
 
 export async function enregistrerUnMessageDeContact(entrees: EntreesDuContact): Promise<ResultatDuContact> {
+	const piege = entrees.formulaire.get(CHAMP_PIEGE_DU_CONTACT)
+	// A script. It is shown the success of a person, which it cannot tell from a real one.
+	if (typeof piege === 'string' && piege.trim() !== '') return { ok: true }
+
 	const verifie = validerLeMessage(entrees.formulaire)
 	if (!verifie.ok) return { ok: false, code: 'donnees-invalides', erreurs: verifie.erreurs }
+
+	const place = prendreUnePlaceDeContact(entrees.client, verifie.message.email, entrees.freins ?? FREINS_DE_CONTACT)
+	if (!place.autorise) return { ok: false, code: 'trop-de-messages', reessayerDansS: place.reessayerDansS }
 
 	let id: number
 	try {

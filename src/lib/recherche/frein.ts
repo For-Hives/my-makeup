@@ -30,7 +30,7 @@ export const freinDeRecherche: Frein = creerFrein({
 export const CHEMIN_DE_LA_RECHERCHE = '/search'
 
 /** The key of a loopback address, as `ipClient` gives it: `127.x.y.z`, or the /64 block of `::1`. */
-const estUneAdresseLocale = (cle: string): boolean =>
+export const estUneAdresseLocale = (cle: string): boolean =>
 	cle === SANS_PROXY || cle.startsWith('127.') || cle === '0:0:0:0::/64'
 
 /** The page that answers a braked address: plain HTML, in French, with a way back. */
