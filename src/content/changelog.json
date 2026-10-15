@@ -105,6 +105,11 @@
 			"id": "tu-peux-renseigner-tes-reseaux-et-ton-site-depuis-ton-esp",
 			"type": "ajout",
 			"text": "Tu peux renseigner tes réseaux et ton site depuis ton espace : écris ton pseudo ou colle l’adresse, on s’occupe du reste."
+		},
+		{
+			"id": "tu-peux-voir-ta-page-comme-une-visiteuse-la-voit-meme-si",
+			"type": "amelioration",
+			"text": "Tu peux voir ta page comme une visiteuse la voit, même si ton profil n’est pas encore affiché dans l’annuaire : le bouton « Voir mon profil public » ouvre ton aperçu, avec un bandeau qui te dit où en est ton profil."
 		}
 	],
 	"releases": []
