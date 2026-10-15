@@ -3,6 +3,7 @@ import { act } from 'react'
 import { EditeurDIdentite, type EnvoiDeLIdentite } from '@/components/espace/EditeurDIdentite'
 import type { ValeursDeLIdentite } from '@/lib/espace/identite'
 import { MESSAGE_ECHEC } from '@/lib/espace/resultat'
+import type { Stockage } from '@/lib/espace/saisie-gardee'
 import { ouvrirFenetre } from '../outils/dom-react'
 
 /**
@@ -26,7 +27,9 @@ function faussementEnvoi(reponse?: Awaited<ReturnType<EnvoiDeLIdentite>>) {
 }
 
 async function ouvrir(envoyer: EnvoiDeLIdentite) {
-	const zone = await fenetre.monter(<EditeurDIdentite valeurs={VALEURS} envoyer={envoyer} />)
+	const zone = await fenetre.monter(
+		<EditeurDIdentite valeurs={VALEURS} envoyer={envoyer} proprietaire="7" stockage={() => null} />
+	)
 	await fenetre.cliquer(fenetre.bouton('Modifier mon identité'))
 	return zone
 }
@@ -245,5 +248,143 @@ describe('E68 : le clavier dans le dialogue', () => {
 		await touche(fenetre.bouton('Continuer à modifier'), 'Escape')
 		expect(fenetre.w.document.querySelector('[role="alert"]')?.textContent ?? '').not.toContain('non enregistrées')
 		expect(dialogue()).not.toBeNull()
+	})
+})
+
+describe('121 (E32) : la session expire pendant la saisie', () => {
+	const EXPIREE: Awaited<ReturnType<EnvoiDeLIdentite>> = {
+		ok: false,
+		message: 'Ta session a expiré : ta modification n’a pas été enregistrée. Reconnecte-toi, puis recommence.',
+		session: 'expiree',
+	}
+
+	function faussementStockage(): Stockage & { contenu: Map<string, string> } {
+		const contenu = new Map<string, string>()
+		return {
+			contenu,
+			getItem: cle => contenu.get(cle) ?? null,
+			setItem: (cle, valeur) => void contenu.set(cle, valeur),
+			removeItem: cle => void contenu.delete(cle),
+		}
+	}
+
+	async function monter(envoyer: EnvoiDeLIdentite, stockage: Stockage | null, naviguer: (url: string) => void) {
+		await fenetre.monter(
+			<EditeurDIdentite
+				valeurs={VALEURS}
+				envoyer={envoyer}
+				proprietaire="7"
+				stockage={() => stockage}
+				naviguer={naviguer}
+			/>
+		)
+	}
+
+	test('le message, rien d’enregistré, la saisie gardée, un seul renvoi vers la connexion', async () => {
+		const stockage = faussementStockage()
+		const vers: string[] = []
+		const { appels, envoyer } = faussementEnvoi(EXPIREE)
+		await monter(envoyer, stockage, url => vers.push(url))
+		await fenetre.cliquer(fenetre.bouton('Modifier mon identité'))
+
+		await fenetre.saisir(fenetre.champ('Prénom'), 'Inès')
+		await fenetre.cliquer(fenetre.bouton('Enregistrer'))
+		await fenetre.attendre(() => vers.length > 0 || null)
+
+		expect(vers).toEqual(['/auth/signin?callbackUrl=%2Fauth%2Fprofil&error=session-expiree'])
+		expect(appels).toHaveLength(1)
+		const gardee = JSON.parse([...stockage.contenu.values()][0] ?? 'null')
+		expect(gardee.valeurs).toEqual({ ...VALEURS, prenom: 'Inès' })
+		expect(gardee.redirigeLe).toBeNumber()
+		// Still locked while the page leaves: a second click sends nothing.
+		await fenetre.cliquer(fenetre.bouton(/Enregistrement/))
+		expect(appels).toHaveLength(1)
+	})
+
+	test('de retour : le même panneau s’ouvre avec la saisie, un message, puis un enregistrement réussi efface tout', async () => {
+		const stockage = faussementStockage()
+		stockage.setItem(
+			'mm:saisie:identite:7',
+			JSON.stringify({ valeurs: { ...VALEURS, prenom: 'Inès' }, le: Date.now(), redirigeLe: Date.now() - 20_000 })
+		)
+		const { appels, envoyer } = faussementEnvoi()
+		await monter(envoyer, stockage, () => {})
+
+		await fenetre.attendre(() => dialogue())
+		expect((fenetre.champ('Prénom') as HTMLInputElement).value).toBe('Inès')
+		expect(dialogue()?.textContent).toContain('on a retrouvé ce que tu avais saisi')
+
+		await fenetre.cliquer(fenetre.bouton('Enregistrer'))
+		await fenetre.attendre(() => (dialogue() === null ? true : null))
+		expect(appels).toEqual([{ ...VALEURS, prenom: 'Inès' }])
+		expect(stockage.contenu.size).toBe(0)
+	})
+
+	test('de retour, une deuxième expiration aussitôt : pas de nouveau renvoi, le message reste dans le panneau, la saisie aussi', async () => {
+		const stockage = faussementStockage()
+		stockage.setItem(
+			'mm:saisie:identite:7',
+			JSON.stringify({ valeurs: { ...VALEURS, prenom: 'Inès' }, le: Date.now(), redirigeLe: Date.now() - 20_000 })
+		)
+		const vers: string[] = []
+		const { envoyer } = faussementEnvoi(EXPIREE)
+		await monter(envoyer, stockage, url => vers.push(url))
+		await fenetre.attendre(() => dialogue())
+
+		await fenetre.cliquer(fenetre.bouton('Enregistrer'))
+		const alerte = await fenetre.attendre(() => fenetre.w.document.querySelector('[role="alert"] p'))
+
+		expect(vers).toEqual([])
+		expect(alerte.textContent).toContain('Ta session a expiré')
+		expect(alerte.querySelector('a')?.getAttribute('href')).toBe(
+			'/auth/signin?callbackUrl=%2Fauth%2Fprofil&error=session-expiree'
+		)
+		expect((fenetre.champ('Prénom') as HTMLInputElement).value).toBe('Inès')
+		expect(stockage.contenu.size).toBe(1)
+	})
+
+	test('abandonner efface la saisie gardée', async () => {
+		const stockage = faussementStockage()
+		stockage.setItem(
+			'mm:saisie:identite:7',
+			JSON.stringify({ valeurs: { ...VALEURS, prenom: 'Inès' }, le: Date.now(), redirigeLe: null })
+		)
+		const { envoyer } = faussementEnvoi()
+		await monter(envoyer, stockage, () => {})
+		await fenetre.attendre(() => dialogue())
+
+		await fenetre.cliquer(fenetre.bouton('Fermer'))
+		await fenetre.cliquer(fenetre.bouton('Abandonner mes modifications'))
+
+		expect(dialogue()).toBeNull()
+		expect(stockage.contenu.size).toBe(0)
+	})
+
+	test('la saisie d’un autre compte, ou identique aux valeurs enregistrées, n’ouvre rien', async () => {
+		const stockage = faussementStockage()
+		stockage.setItem(
+			'mm:saisie:identite:8',
+			JSON.stringify({ valeurs: { ...VALEURS, prenom: 'Autre' }, le: Date.now(), redirigeLe: null })
+		)
+		stockage.setItem('mm:saisie:identite:7', JSON.stringify({ valeurs: VALEURS, le: Date.now(), redirigeLe: null }))
+		const { envoyer } = faussementEnvoi()
+		await monter(envoyer, stockage, () => {})
+
+		expect(dialogue()).toBeNull()
+		expect([...stockage.contenu.keys()]).toEqual(['mm:saisie:identite:8'])
+	})
+
+	test('un navigateur sans stockage : pas de renvoi qui perdrait la saisie, le message et le lien en nouvel onglet', async () => {
+		const vers: string[] = []
+		const { envoyer } = faussementEnvoi(EXPIREE)
+		await monter(envoyer, null, url => vers.push(url))
+		await fenetre.cliquer(fenetre.bouton('Modifier mon identité'))
+		await fenetre.saisir(fenetre.champ('Prénom'), 'Inès')
+		await fenetre.cliquer(fenetre.bouton('Enregistrer'))
+
+		const alerte = await fenetre.attendre(() => fenetre.w.document.querySelector('[role="alert"] a'))
+		expect(vers).toEqual([])
+		expect(alerte.getAttribute('target')).toBe('_blank')
+		expect((fenetre.champ('Prénom') as HTMLInputElement).value).toBe('Inès')
 	})
 })

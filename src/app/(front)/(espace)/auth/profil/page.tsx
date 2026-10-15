@@ -55,6 +55,7 @@ export default async function PageProfil() {
 										specialite: texte(profil.specialite),
 									}}
 									envoyer={enregistrerMonIdentite}
+									proprietaire={String(maquilleuse.id)}
 								/>
 							) : null
 						}

@@ -33,14 +33,19 @@ export function redirectionDeLEspace(chemin: string, recherche: string, aLeCooki
  *   page does not redirect on an expired cookie, so it loops on nothing, and the next sign-in
  *   replaces it.
  * - Any other cookie: nothing, the page decides (it is the one that asks Payload).
+ * - A request that is not a GET or HEAD (a Server Action): nothing, whatever the cookie (ticket 121).
  */
 export function decisionDeLEspace(
 	chemin: string,
 	recherche: string,
 	jeton: string | undefined,
-	maintenantS: number
+	maintenantS: number,
+	methode = 'GET'
 ): string | null {
 	if (!estPagePrivee(chemin)) return null
+	// A save is a POST (a Server Action): a redirection would swallow it and the form would lose
+	// what was typed (ticket 121). The action reads the session again and answers « expired » itself.
+	if (methode !== 'GET' && methode !== 'HEAD') return null
 	if (etatDuJeton(jeton, maintenantS) === 'expire') return urlSessionExpiree(`${chemin}${recherche}`)
 	return redirectionDeLEspace(chemin, recherche, jeton !== undefined && jeton !== '')
 }
