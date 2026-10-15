@@ -580,7 +580,7 @@ Ce que la v3 change par rapport au site actuel est dans [`CHANGEMENTS-VOULUS.md`
   - En tête de `/auth/profil` : score sur 13, état (vide, non publiable, publiable, interne), conséquence et liste de ce qui manque, avec un lien vers chaque carte. Rien n'est calculé dans la page : tout vient de `completude()` (U08).
 - **Ticket 139 fait : la maquilleuse voit sa page comme une visiteuse.**
   - `/auth/apercu-profil` dessine la page avec le même composant et la même lecture que la page publique, sous un bandeau d'état ; privée, `no-store`, `noindex`, sans canonique ni JSON-LD. Profil trouvé par la session seule.
-  - Registre : `apercu-profil-public`. La route n'est pas `/auth/profil/apercu` car les gardes lisent tout `/profil/<x>` comme un profil.
+  - Registre : `apercu-profil-public`. La route est `apercu-profil` à côté de `profil`, et non dessous : les gardes lisent tout chemin placé sous l’adresse publique d’un profil comme un profil.
 - **Intégration des tickets 117, 127, 128, 129, 130, 131, 134, 135, 136, 138 et 139 dans `v3` (vague 8).**
   - Six lots fusionnés. Non fusionnés : 065-067 (aucun commit, copie fraîche de la prod et requêtes d'en-tête sur le stockage réel nécessaires) et 108 (aucun commit ; les 14 titres d'onglet restent à écrire par Andy).
   - Conflits résolus en gardant tous les côtés : `changelog.json` (à chaque lot), README, `page.tsx` et `actions.ts` de l'espace, `profils.ts` (le champ `publie` du 117 et la lecture de l'aperçu du 139).

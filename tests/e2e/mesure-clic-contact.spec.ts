@@ -114,8 +114,8 @@ test.describe('E52 : un clic de contact est compté une fois, avec le bon canal'
 			{ pid, channel: 'email' },
 			{ pid, channel: 'instagram' },
 		])
-		// Once only: nothing more arrives afterwards.
-		await page.waitForTimeout(500)
+		// Once only: nothing more arrives once the network is quiet.
+		await page.waitForLoadState('networkidle')
 		expect(await umami.envois('contact_click')).toHaveLength(3)
 	})
 
@@ -124,7 +124,7 @@ test.describe('E52 : un clic de contact est compté une fois, avec le bon canal'
 		await ouvrir(page, `/profil/${slug}`)
 		await cliquer(page, TELEPHONE)
 		await cliquer(page, EMAIL)
-		await page.waitForTimeout(1000)
+		await page.waitForLoadState('networkidle')
 		expect(await umami.envois('contact_click')).toHaveLength(0)
 	})
 
@@ -141,7 +141,7 @@ test.describe('E52 : un clic de contact est compté une fois, avec le bon canal'
 	test('U84 : un lien de relance (utm_campaign=relance) ne compte pas', async ({ page }) => {
 		await ouvrir(page, `/profil/${slug}?utm_source=email&utm_campaign=relance`)
 		await cliquer(page, TELEPHONE)
-		await page.waitForTimeout(1000)
+		await page.waitForLoadState('networkidle')
 		expect(await umami.envois('contact_click')).toHaveLength(0)
 	})
 
@@ -151,7 +151,7 @@ test.describe('E52 : un clic de contact est compté une fois, avec le bon canal'
 		await page.goto('/auth/apercu-profil')
 		await expect(page.getByRole('link', { name: TELEPHONE })).toBeVisible()
 		await cliquer(page, TELEPHONE)
-		await page.waitForTimeout(1000)
+		await page.waitForLoadState('networkidle')
 		expect(await umami.envois('contact_click')).toHaveLength(0)
 	})
 
@@ -160,7 +160,7 @@ test.describe('E52 : un clic de contact est compté une fois, avec le bon canal'
 		await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
 		await expect(page.locator('main a[href^="tel:"], main a[href^="mailto:"]')).toHaveCount(0)
 		await expect(page.getByText('Réseaux sociaux & contacts')).toHaveCount(0)
-		await page.waitForTimeout(500)
+		await page.waitForLoadState('networkidle')
 		expect(await umami.envois('contact_click')).toHaveLength(0)
 	})
 })

@@ -60,8 +60,8 @@ test.describe('La mesure de la recherche, des appels à l’action et de la 404'
 		// A reload shows the same search again: not a new one.
 		await page.reload()
 		await page.waitForFunction(() => 'umami' in window)
-		// A negative check has nothing to wait for but time: the tracker has run, the page effects too.
-		await page.waitForTimeout(1500)
+		// A negative check waits for the network to settle: any event would have left by then.
+		await page.waitForLoadState('networkidle')
 		expect((await umami.envois('search_submit')).length).toBe(1)
 
 		// A click on a result: its rank and its profile.
@@ -111,7 +111,7 @@ test.describe('La mesure de la recherche, des appels à l’action et de la 404'
 
 		await page.reload()
 		await page.waitForFunction(() => 'umami' in window)
-		await page.waitForTimeout(1500)
+		await page.waitForLoadState('networkidle')
 		expect((await umami.envois('not_found')).length).toBe(1)
 	})
 
@@ -125,8 +125,8 @@ test.describe('La mesure de la recherche, des appels à l’action et de la 404'
 
 		await page.reload()
 		await page.waitForFunction(() => 'umami' in window)
-		// A negative check has nothing to wait for but time: the tracker has run, the page effects too.
-		await page.waitForTimeout(1500)
+		// A negative check waits for the network to settle: any event would have left by then.
+		await page.waitForLoadState('networkidle')
 		expect((await umami.envois('not_found')).length).toBe(1)
 	})
 })
