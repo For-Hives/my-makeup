@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto'
+import { type PostgresAdapter, sql } from '@payloadcms/db-postgres'
 import type {
 	CollectionAfterChangeHook,
 	CollectionBeforeChangeHook,
@@ -79,6 +80,21 @@ const slugsPris =
 	}
 
 /**
+ * Two creations whose names give the same base wait for each other: the second reads the taken slugs
+ * once the first has committed, and takes the next one. Without it, homonyms created at the same
+ * moment computed the same free slug, and all but one failed on the unique index (CI of 15/10/2026).
+ * A lock of PostgreSQL held until the end of the transaction of the creation, on the base alone: two
+ * other names never wait for each other. Outside a transaction there is nothing to wait for.
+ */
+async function reserverLaBase(req: PayloadRequest, base: string): Promise<void> {
+	const id = await req.transactionID
+	// The adapter of the configuration is the PostgreSQL one; `sessions` holds the transaction of each request.
+	const { sessions } = req.payload.db as unknown as Pick<PostgresAdapter, 'sessions'>
+	const transaction = id === undefined || id === null ? undefined : sessions?.[id]
+	await transaction?.db.execute(sql`select pg_advisory_xact_lock(hashtext(${`profils.slug:${base}`}))`)
+}
+
+/**
  * A new profile gets its slug from the name of its account, computed by the server with the rule
  * of the old site (src/lib/slug.ts): the first free of `base`, `base-2`, `base-3`… A name that
  * gives no slug (only emojis, or no name) gives `maquilleuse-<identifier of the profile>`, once
@@ -101,7 +117,9 @@ export const slugALaCreation: CollectionBeforeChangeHook = async ({ data, operat
 			})
 		: null
 	const base = slugifier(compte?.nom)
-	return { ...data, slug: base ? await premierSlugLibre(base, slugsPris(req)) : `${PREFIXE_PROVISOIRE}${randomUUID()}` }
+	if (!base) return { ...data, slug: `${PREFIXE_PROVISOIRE}${randomUUID()}` }
+	await reserverLaBase(req, base)
+	return { ...data, slug: await premierSlugLibre(base, slugsPris(req)) }
 }
 
 /** The fallback slug, `maquilleuse-<id>`, written as soon as the profile has its identifier. */

@@ -125,18 +125,21 @@ describe('I08 : l’inscription envoie le mail de confirmation, et le compte att
 })
 
 describe('des homonymes qui s’inscrivent au même instant', () => {
+	/** More than the 5 connections of the pool, and more than the 3 tries the sign-up had (CI of 15/10/2026). */
+	const HOMONYMES = 8
+
 	test('tous aboutissent, chacun avec son propre slug', async () => {
 		const toutes = await Promise.all(
-			Array.from({ length: 5 }, () => inscription({ nom: 'Homonyme Simultanée', verifier: false }))
+			Array.from({ length: HOMONYMES }, () => inscription({ nom: 'Homonyme Simultanée', verifier: false }))
 		)
 
-		expect(toutes.map(({ resultat }) => resultat.ok)).toEqual(Array(5).fill(true))
+		expect(toutes.map(({ resultat }) => resultat.ok)).toEqual(Array(HOMONYMES).fill(true))
 		const payload = await payloadDeTest()
 		const pros = await Promise.all(toutes.map(({ email }) => compte(email)))
 		const slugs = (
 			await payload.find({ collection: 'profils', depth: 0, where: { pro: { in: pros.map(p => p?.id) } } })
 		).docs.map(({ slug }) => slug)
-		expect(new Set(slugs).size).toBe(5)
+		expect(new Set(slugs).size).toBe(HOMONYMES)
 	})
 })
 
