@@ -52,6 +52,16 @@ export const texteAlternatif = (rang: number, total: number): string => `Photo $
 /**
  * The button « Modifier » of the card « Portfolio », and the panel it opens (tickets 135 and 136).
  *
+ * - Each photo has a button « Retirer ». A removal is only in the panel until « Enregistrer »: closing
+ *   the panel brings the photo back (136). Once saved, the photo is gone from her space and from her
+ *   public profile, and its object goes to the bin of the storage unless something still uses it
+ *   (the server does it, ticket 045). The browser never deletes a stored photo itself.
+ * - The removal follows the rules of the lists edited in place (docs/qualite.md, §3): a line has an
+ *   identifier of its own (L1); the focus stays in the panel, on the line that takes the place of the
+ *   one removed, or on the line above, or, when the list is empty, on the field to add photos after a
+ *   key and on the heading after a tap or a click (L4); each removal is announced (L5); Enter held
+ *   removes one photo (L7).
+ *
  * - She picks several files at once. Each one is checked and reduced in the browser; one that is
  *   not accepted is set aside with its reason, without losing the others (E36). Ten photos at most:
  *   the eleventh is refused (U80). The same file picked twice is refused (rule L6).
@@ -153,11 +163,19 @@ function FormulaireDuPortfolio({
 		}))
 	)
 	const [refus, setRefus] = useState<{ cle: string; texte: string }[]>([])
+	const [annonce, setAnnonce] = useState('')
 	const [message, setMessage] = useState('')
 	const [sessionExpiree, setSessionExpiree] = useState(false)
 	const [preparation, setPreparation] = useState(false)
 	const [enCours, setEnCours] = useState(false)
 	const verrou = useRef(false)
+	const boutons = useRef(new Map<string, HTMLButtonElement>())
+	const titre = useRef<HTMLHeadingElement>(null)
+	const champ = useRef<HTMLInputElement>(null)
+	// Where the focus goes once the list is drawn again, and how the last gesture was made.
+	const apres = useRef<{ cle: string | null } | null>(null)
+	const geste = useRef<'clavier' | 'pointeur'>('clavier')
+	const nombreDAnnonces = useRef(0)
 	const lignesCourantes = useRef(lignes)
 	lignesCourantes.current = lignes
 
@@ -168,6 +186,36 @@ function FormulaireDuPortfolio({
 		},
 		[]
 	)
+
+	// After a removal, the focus stays in the panel (L4).
+	useEffect(() => {
+		const cible = apres.current
+		if (cible === null) return
+		apres.current = null
+		const bouton = cible.cle === null ? undefined : boutons.current.get(cible.cle)
+		if (bouton) bouton.focus()
+		// Empty list: never a text field after a tap (it would open the keyboard of a phone).
+		else if (geste.current === 'pointeur') titre.current?.focus()
+		else champ.current?.focus()
+	}, [lignes])
+
+	function retirer(cle: string) {
+		const rang = lignes.findIndex(ligne => ligne.cle === cle)
+		const retiree = lignes[rang]
+		if (retiree === undefined) return
+		libererApercu(retiree.apercu)
+		const restantes = lignes.filter(ligne => ligne.cle !== cle)
+		// The line that takes its place, else the one above, else nothing.
+		apres.current = { cle: (restantes[rang] ?? restantes[rang - 1])?.cle ?? null }
+		setLignes(restantes)
+		setRefus([])
+		setMessage('')
+		// The same sentence twice is not read twice: a character no one hears tells the two apart.
+		nombreDAnnonces.current += 1
+		setAnnonce(
+			`${texteAlternatif(rang + 1, lignes.length)} est retirée. Elle disparaît de ton portfolio quand tu enregistres.${nombreDAnnonces.current % 2 === 0 ? '\u200b' : ''}`
+		)
+	}
 
 	async function choisir(fichiers: File[]) {
 		setMessage('')
@@ -243,26 +291,37 @@ function FormulaireDuPortfolio({
 	}
 
 	const nouvelles = lignes.filter(ligne => ligne.enAttente).length
+	const gardees = lignes.length - nouvelles
+	const modifie = nouvelles > 0 || gardees !== photos.length
 	return (
 		<PanneauDEdition
 			titre="Modifier mon portfolio"
 			enCours={enCours || preparation}
-			modifie={nouvelles > 0}
+			modifie={modifie}
 			retour={retour}
 			onFermer={onFermer}
 		>
 			<form
 				noValidate
 				aria-busy={enCours}
+				onKeyDownCapture={() => {
+					geste.current = 'clavier'
+				}}
+				onMouseDownCapture={() => {
+					geste.current = 'pointeur'
+				}}
 				onSubmit={evenement => {
 					evenement.preventDefault()
 					void enregistrer()
 				}}
 				className="flex flex-col gap-4"
 			>
-				<h3 className="font-medium">
+				<h3 ref={titre} tabIndex={-1} className="font-medium outline-none">
 					Photos de ton portfolio ({lignes.length} / {GALERIE_MAX})
 				</h3>
+				<p role="status" data-testid="annonce-retrait" className="text-sm">
+					{annonce}
+				</p>
 				{lignes.length === 0 ? (
 					<p className="text-neutral-600 italic">Tu n’as pas encore de photo dans ton portfolio.</p>
 				) : (
@@ -276,6 +335,23 @@ function FormulaireDuPortfolio({
 									className="aspect-square w-full rounded object-cover"
 								/>
 								{ligne.enAttente ? <span className="font-semibold text-indigo-900 text-xs">À enregistrer</span> : null}
+								<button
+									type="button"
+									ref={bouton => {
+										if (bouton) boutons.current.set(ligne.cle, bouton)
+										else boutons.current.delete(ligne.cle)
+									}}
+									aria-label={`Retirer la photo ${rang + 1}`}
+									disabled={enCours}
+									onClick={() => retirer(ligne.cle)}
+									// Held down, Enter repeats: one removal.
+									onKeyDown={evenement => {
+										if (evenement.repeat) evenement.preventDefault()
+									}}
+									className={`${BOUTON} border border-red-300 bg-white text-red-800 disabled:opacity-60`}
+								>
+									Retirer
+								</button>
 							</li>
 						))}
 					</ul>
@@ -285,6 +361,7 @@ function FormulaireDuPortfolio({
 						Ajouter des photos
 					</label>
 					<input
+						ref={champ}
 						id="portfolio-fichiers"
 						type="file"
 						multiple
@@ -339,7 +416,7 @@ function FormulaireDuPortfolio({
 				</div>
 				<button
 					type="submit"
-					disabled={enCours || preparation || nouvelles === 0}
+					disabled={enCours || preparation || !modifie}
 					className={`${BOUTON} bg-neutral-900 text-white disabled:cursor-not-allowed disabled:opacity-60`}
 				>
 					{enCours ? 'Enregistrement…' : 'Enregistrer'}

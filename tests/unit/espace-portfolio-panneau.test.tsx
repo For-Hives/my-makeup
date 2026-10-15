@@ -48,7 +48,13 @@ function banc(
 		journal.prepares.push(f.name)
 		const motif = options.refuser?.(f)
 		if (motif) return { ok: false, raison: 'type', code: 'type', message: motif }
-		return { ok: true, fichier: new File(['petit'], f.name, { type: 'image/webp' }), largeur: 8, hauteur: 6, taille: 5 }
+		return {
+			ok: true,
+			fichier: new File([String(f.lastModified)], f.name, { type: 'image/webp' }),
+			largeur: 8,
+			hauteur: 6,
+			taille: 5,
+		}
 	}
 	const televerser =
 		options.televerser ??
@@ -274,5 +280,178 @@ describe('L7 : Entrée maintenue n’agit qu’une fois', () => {
 		sur.dispatchEvent(evenement)
 		expect(evenement.defaultPrevented).toBe(true)
 		expect(b.journal.televerses).toEqual([])
+	})
+})
+
+/** The panel with three photos she already has, and a gesture of the keyboard or of the pointer. */
+const retirer = (rang: number) => fenetre.cliquer(fenetre.bouton(`Retirer la photo ${rang}`))
+/** A removal by the keyboard: no mouse button goes down. */
+const retirerAuClavier = async (rang: number) => {
+	const bouton = fenetre.bouton(`Retirer la photo ${rang}`)
+	bouton.focus()
+	const { act } = await import('react')
+	await act(async () => {
+		bouton.dispatchEvent(new fenetre.w.KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }))
+		bouton.click()
+	})
+}
+const actif = () => fenetre.w.document.activeElement
+const annonce = () => fenetre.w.document.querySelector('[data-testid="annonce-retrait"]')?.textContent ?? ''
+const TROIS = [photoDeLEspace(1), photoDeLEspace(2), photoDeLEspace(3)]
+
+describe('E35 : retirer une photo, la validation la retire de la liste', () => {
+	test('retirer la 2e puis enregistrer : la liste envoyée n’a plus que les deux autres, aucun fichier n’est envoyé', async () => {
+		const b = banc({ existantes: TROIS })
+		await b.monter()
+		await retirer(2)
+		expect(images()).toHaveLength(2)
+		await enregistrer()
+		await fenetre.attendre(() => dialogue() === null)
+
+		expect(b.journal.enregistres).toEqual([[1, 3]])
+		expect(b.journal.televerses).toEqual([])
+		expect(b.journal.supprimes).toEqual([])
+		expect(fenetre.w.document.body.textContent).toContain('Ton portfolio est enregistré.')
+	})
+
+	test('tout retirer puis enregistrer : la liste vide est envoyée', async () => {
+		const b = banc({ existantes: [photoDeLEspace(1)] })
+		await b.monter()
+		await retirer(1)
+		await enregistrer()
+		await fenetre.attendre(() => dialogue() === null)
+		expect(b.journal.enregistres).toEqual([[]])
+	})
+
+	test('« Enregistrer » est éteint tant que rien n’a changé, et se rallume au premier retrait', async () => {
+		await banc({ existantes: TROIS }).monter()
+		expect(prete()).toBe(false)
+		await retirer(1)
+		expect(prete()).toBe(true)
+	})
+
+	test('retirer puis fermer sans valider : rien n’est enregistré, la photo est toujours là à la réouverture', async () => {
+		const b = banc({ existantes: TROIS })
+		await b.monter()
+		await retirer(1)
+		await fenetre.cliquer(fenetre.bouton('Fermer'))
+		await fenetre.cliquer(fenetre.bouton('Abandonner mes modifications'))
+
+		expect(dialogue()).toBeNull()
+		expect(b.journal.enregistres).toEqual([])
+		await fenetre.cliquer(fenetre.bouton('Modifier mon portfolio'))
+		expect(images()).toHaveLength(3)
+	})
+
+	test('un échec du serveur garde la photo retirée dans le panneau et dit l’échec ; rien n’est supprimé par le navigateur', async () => {
+		const b = banc({ existantes: TROIS, envoyer: async () => ({ ok: false, message: MESSAGE_ECHEC }) })
+		await b.monter()
+		await retirer(2)
+		await enregistrer()
+		await fenetre.attendre(() => alertes().includes(MESSAGE_ECHEC))
+		expect(images()).toHaveLength(2)
+		expect(b.journal.supprimes).toEqual([])
+	})
+})
+
+describe('L1 : un identifiant par ligne', () => {
+	test('deux photos choisies de même nom : retirer la première laisse la seconde intacte', async () => {
+		const televerses: string[] = []
+		const b = banc({
+			televerser: async fichier => {
+				televerses.push(await fichier.text())
+				return { ok: true, id: 100 + televerses.length }
+			},
+		})
+		await b.monter()
+		const [premiere, seconde] = [source('a.jpg'), source('a.jpg')]
+		await choisirDesFichiers(fenetre, champ(), [premiere, seconde])
+		await fenetre.attendre(() => images().length === 2)
+		await retirer(1)
+
+		expect(images()).toHaveLength(1)
+		await enregistrer()
+		await fenetre.attendre(() => dialogue() === null)
+		expect(televerses).toEqual([String(seconde.lastModified)])
+	})
+})
+
+describe('L4 : après un retrait, le focus reste dans le panneau', () => {
+	test('la ligne du milieu : le focus va sur la ligne qui prend sa place', async () => {
+		await banc({ existantes: TROIS }).monter()
+		await retirerAuClavier(2)
+		expect(actif()?.getAttribute('aria-label')).toBe('Retirer la photo 2')
+		expect(dialogue()?.contains(actif())).toBe(true)
+	})
+
+	test('la dernière ligne : le focus va sur la ligne du dessus', async () => {
+		await banc({ existantes: TROIS }).monter()
+		await retirerAuClavier(3)
+		expect(actif()?.getAttribute('aria-label')).toBe('Retirer la photo 2')
+	})
+
+	test('la seule ligne : au clavier le focus va sur le champ d’ajout, au clic sur le titre, jamais sur un champ', async () => {
+		await banc({ existantes: [photoDeLEspace(1)] }).monter()
+		await retirerAuClavier(1)
+		expect(actif()).toBe(champ())
+		await fenetre.demonter()
+
+		await banc({ existantes: [photoDeLEspace(1)] }).monter()
+		await retirer(1)
+		expect(actif()?.tagName).toBe('H3')
+		expect(dialogue()?.contains(actif())).toBe(true)
+	})
+})
+
+describe('L5 : chaque retrait est annoncé', () => {
+	test('la zone existe et est vide à l’ouverture ; elle nomme la photo retirée', async () => {
+		await banc({ existantes: TROIS }).monter()
+		const zone = fenetre.w.document.querySelector('[data-testid="annonce-retrait"]')
+		expect(zone?.getAttribute('role')).toBe('status')
+		expect(annonce()).toBe('')
+		await retirer(2)
+		expect(annonce()).toContain('Photo 2 sur 3 de ton portfolio est retirée')
+	})
+
+	test('deux retraits de même nom sont annoncés deux fois : le texte change entre les deux', async () => {
+		const b = banc({ existantes: TROIS })
+		await b.monter()
+		await retirer(2)
+		const premiere = annonce()
+		await choisir('a.jpg')
+		await fenetre.attendre(() => images().length === 3)
+		await retirer(2)
+		const seconde = annonce()
+
+		expect(premiere).toContain('Photo 2 sur 3 de ton portfolio est retirée')
+		expect(seconde).toContain('Photo 2 sur 3 de ton portfolio est retirée')
+		expect(seconde).not.toBe(premiere)
+	})
+})
+
+describe('L7 : Entrée maintenue retire une seule photo', () => {
+	test('les répétitions d’Entrée sur « Retirer » sont ignorées ; un appui retire une photo', async () => {
+		await banc({ existantes: TROIS }).monter()
+		const bouton = fenetre.bouton('Retirer la photo 1')
+		const repetition = new fenetre.w.KeyboardEvent('keydown', {
+			key: 'Enter',
+			repeat: true,
+			bubbles: true,
+			cancelable: true,
+		})
+		bouton.dispatchEvent(repetition)
+		expect(repetition.defaultPrevented).toBe(true)
+		expect(images()).toHaveLength(3)
+
+		await retirerAuClavier(1)
+		const suite = new fenetre.w.KeyboardEvent('keydown', {
+			key: 'Enter',
+			repeat: true,
+			bubbles: true,
+			cancelable: true,
+		})
+		actif()?.dispatchEvent(suite)
+		expect(suite.defaultPrevented).toBe(true)
+		expect(images()).toHaveLength(2)
 	})
 })

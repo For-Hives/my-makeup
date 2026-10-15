@@ -6,6 +6,7 @@ import { violationsGraves } from '../outils/axe'
 import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
 import { payloadDeTest } from '../outils/payload-test'
 import { fichierPourPayload } from '../outils/photos'
+import { lireUnObjet } from '../outils/s3'
 
 /**
  * The portfolio in her space (tickets 135 and 136; plan 02 E34, E35, E36, U80): several photos
@@ -245,5 +246,85 @@ test.describe('135 : le portfolio, ajouter des photos', { tag: '@mobile' }, () =
 		await expect.poll(async () => (await mediasDe(compte)).length).toBe(1)
 		expect(photosNommees((await profilStocke(compte)).galerie)).toHaveLength(1)
 		expect(await orphelinsDe(compte)).toEqual([])
+	})
+})
+
+test.describe('136 : le portfolio, retirer une photo', { tag: '@mobile' }, () => {
+	test('E35 : la photo retirée disparaît de l’espace et du profil public, son objet est en corbeille, 0 orphelin', async ({
+		context,
+		page,
+	}) => {
+		test.setTimeout(120_000)
+		const { compte, slug } = await maquilleuse(context, 3)
+		const payload = await payloadDeTest()
+		const avant = photosNommees((await profilStocke(compte)).galerie)
+		const retiree = await payload.findByID({ collection: 'media', id: Number(avant[1]), depth: 0 })
+		const octets = (await lireUnObjet(`media/${retiree.filename}`))?.octets
+		expect(octets).toBeDefined()
+		await page.goto('/auth/profil')
+		await expect(page.getByTestId('carte-portfolio')).toContainText('3 photos')
+		await ouvrir(page)
+
+		await page.getByRole('button', { name: 'Retirer la photo 2' }).click()
+		await expect(lignes(page)).toHaveCount(2)
+		await expect(dialogue(page).getByTestId('annonce-retrait')).toContainText(
+			'Photo 2 sur 3 de ton portfolio est retirée'
+		)
+		// The focus stays in the panel, on the photo that takes the place of the one removed.
+		await expect(dialogue(page).getByRole('button', { name: 'Retirer la photo 2' })).toBeFocused()
+		expect(photosNommees((await profilStocke(compte)).galerie)).toHaveLength(3)
+		expect(await violationsGraves(page)).toEqual([])
+		await page.getByRole('button', { name: 'Enregistrer' }).click()
+
+		await expect(dialogue(page)).toHaveCount(0, { timeout: 60_000 })
+		await expect(page.getByTestId('carte-portfolio')).toContainText('2 photos')
+		expect(photosNommees((await profilStocke(compte)).galerie)).toEqual([avant[0], avant[2]])
+		expect(await lireUnObjet(`media/${retiree.filename}`)).toBeUndefined()
+		expect((await lireUnObjet(`deleted/media/${retiree.filename}`))?.octets).toEqual(octets)
+		expect(await orphelinsDe(compte)).toEqual([])
+
+		await page.goto(`/profil/${slug}`)
+		await expect(page.getByRole('img', { name: /^Réalisation de Léa Fictive \(\d\/2\)$/ })).toHaveCount(2, {
+			timeout: 30_000,
+		})
+		await expect(page.getByRole('img', { name: /\(\d\/3\)$/ })).toHaveCount(0)
+	})
+
+	test('retirer puis fermer sans valider : la photo est toujours là, rien n’a changé', async ({ context, page }) => {
+		const { compte } = await maquilleuse(context, 2)
+		const avant = photosNommees((await profilStocke(compte)).galerie)
+		await page.goto('/auth/profil')
+		await ouvrir(page)
+
+		await page.getByRole('button', { name: 'Retirer la photo 1' }).click()
+		await expect(lignes(page)).toHaveCount(1)
+		await page.getByRole('button', { name: 'Fermer' }).click()
+		await page.getByRole('button', { name: 'Abandonner mes modifications' }).click()
+		await expect(dialogue(page)).toHaveCount(0)
+
+		expect(photosNommees((await profilStocke(compte)).galerie)).toEqual(avant)
+		await ouvrir(page)
+		await expect(lignes(page)).toHaveCount(2)
+		expect(await orphelinsDe(compte)).toEqual([])
+	})
+
+	test('L7 : Entrée maintenue sur « Retirer » ne retire qu’une photo, le focus reste dans le panneau', async ({
+		context,
+		page,
+	}, info) => {
+		test.skip(info.project.name === 'mobile', 'Une touche tenue enfoncée est un geste de clavier.')
+		await maquilleuse(context, 4)
+		await page.goto('/auth/profil')
+		await ouvrir(page)
+
+		await dialogue(page).getByRole('button', { name: 'Retirer la photo 2' }).focus()
+		// A key pressed again without being released is sent with `repeat: true`.
+		for (let i = 0; i < 6; i++) await page.keyboard.down('Enter')
+		await page.keyboard.up('Enter')
+
+		await expect(lignes(page)).toHaveCount(3)
+		await expect(dialogue(page)).toBeVisible()
+		const focus = await page.evaluate(() => document.querySelector('[role="dialog"]')?.contains(document.activeElement))
+		expect(focus).toBe(true)
 	})
 })

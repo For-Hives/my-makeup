@@ -105,6 +105,11 @@
 			"id": "tu-peux-renseigner-tes-reseaux-et-ton-site-depuis-ton-esp",
 			"type": "ajout",
 			"text": "Tu peux renseigner tes réseaux et ton site depuis ton espace : écris ton pseudo ou colle l’adresse, on s’occupe du reste."
+		},
+		{
+			"id": "tu-peux-choisir-ta-photo-principale-et-composer-ton-portf",
+			"type": "ajout",
+			"text": "Tu peux choisir ta photo principale et composer ton portfolio depuis ton espace : tes photos sont réduites avant l’envoi, une photo refusée est écartée sans perdre les autres, et chaque photo retirée est annoncée."
 		}
 	],
 	"releases": []
