@@ -480,3 +480,29 @@ Ce que la v3 change par rapport au site actuel est dans [`CHANGEMENTS-VOULUS.md`
   - Vérifié sur `v3` fusionné : `bun run check`, `typecheck`, `test` (2 195 verts, 1 sauté), `test:ci-garde` (442 verts), `build`, `schema:derive` sans dérive. Intégration sur le banc, `--timeout 60000` : 1 699 verts sur 1 702 au premier passage ; les trois échecs sont corrigés (les descentes des migrations du journal s'enchaînent, la clé `methode` entre dans l'essai du journal, le profil brouillon `vide` n'est pas lu avant le ticket 104) et les trois fichiers repassent. Bout en bout, un seul worker : 207 verts, 1 rouge, `tranche-profil-importe`.
   - Ce rouge n'est pas de cette vague : il existe déjà sur `2b494d4` quand `jeu-du-banc` et `parite-urls` passent avant lui. Le jeu du banc tient les comptes 900001 à 900004 et les slugs `zoe-lefevre` et `ines-morel`, que l'import de l'essai refuse ou compte en trop (parité incomplète, code 4). L'essai passe seul. À traiter par un ticket (isoler l'import ou vider le jeu avant lui).
   - Les essais de la page de profil retirent maintenant leurs profils à la fin : laissés dans le banc, ils faisaient passer d'autres essais de recherche à la page 2 (pages de 20).
+- **Ticket 92 fait : les refus et pannes de Google donnent un message français.**
+  - Chaque cas a son code stable : `email-deja-avec-mot-de-passe` (aucun lien créé), `compte-bloque` (testé avant le compte à mot de passe), `google-annule`, `google-indisponible`, `google-echec` pour un retour forgé. Le texte brut de l'adresse n'est jamais affiché (liste fermée de codes).
+  - Reste : `google-indisponible` couvre aussi quelques pannes du côté du site (base, session) ; le ticket 146 doit faire correspondre les codes `google-*` du catalogue de mesure.
+- **Ticket 93 fait : un compte Google ou un ancien compte Facebook se crée un mot de passe.**
+  - Le « Mot de passe oublié » marchait déjà pour un compte sans mot de passe ; le ticket ajoute la ligne d'aide sur `/auth/signin` (affichée à tous, aucun bouton Facebook) et les essais E74 (Google, Facebook : même profil avant et après, lien rejoué refusé).
+- **Ticket 95 fait : après l'import, les comptes de fixture se connectent par les parcours hérités.**
+  - Compte local, Google sans mot de passe et ancien Facebook : chacun se connecte par son parcours, un seul hash hérité en moins, source inchangée (I43). L'essai ne se lance que s'il est le premier fichier nommé (`describe.skipIf` sur `process.argv`) : à lancer seul.
+- **Ticket 103 fait : galerie du profil, images vues.**
+  - Le banc ouvre son seul dossier de stockage à l'optimiseur (`IMAGES_DU_BANC`, jamais en production) : les 6 images répondent 200 et sont chargées aux deux tailles. Deux défauts corrigés au passage : la position annoncée lue en plein défilement, et le nettoyage du spec de page qui retirait les profils sous les pieds de l'autre projet (`usagers()` dans `tests/outils/verrou.ts`).
+  - Reste : le geste au doigt n'est éprouvé que par un défilement simulé.
+- **Ticket 104 fait : statuts et adresses du profil public.**
+  - Une seule règle (`src/lib/profil/adresse.ts`) : profil non masqué en 200, en noindex sans canonique s'il n'est pas publiable (brouillons compris) ; ancien nom d'utilisateur ou variante du slug en un 308 vers le slug ; inconnu, masqué ou segment inutilisable en 404 français. Les 13 profils de spam, non importés, tombent dans le 404 des inconnus.
+  - La page lit avec `overrideAccess` et écarte elle-même les profils masqués (`lireLAdresseDeProfil`) : c'est le point à relire.
+  - Reste : une séquence `%` mal formée (`/profil/%E0%A4%A`) répond 500 sur la route dynamique, à traiter dans le proxy.
+- **Ticket 105 fait : titre, description et données structurées du profil.**
+  - Titre unique, description de 70 à 155 caractères, canonique ou noindex, `ProfilePage` avec `Person`, offres chiffrées en EUR et fil d'Ariane, sérialisés par `serializeJsonLd` (une balise fermante dans un texte ne casse rien). Le fil d'Ariane n'a pas d'étape de zone (pas de page de zone avant le ticket 218).
+- **Ticket 106 fait : l'article de blog.**
+  - Markdown assaini par une seule fonction (`src/lib/markdown.ts`), un seul h1 (les `#` deviennent des h2), 404 français pour un brouillon ou un inconnu, JSON-LD `Article` et fil d'Ariane. Cinq dépendances remark/rehype ajoutées (versions vérifiées, à porter dans `versions.md`).
+  - Reste : le HTML brut d'une 404 produite par `notFound()` n'a pas de h1 (Next l'envoie dans le flux RSC) ; la CSP n'autorise que les images du site et des médias.
+- **Ticket 107 fait : la liste du blog.**
+  - `/blog` montre tous les articles publiés, le plus récent d'abord, sans brouillon ; `/toutes-les-news` y mène déjà par un 301 (ticket 072). Écart voulu au registre : `blog-tous-les-articles` (l'ancienne page n'en montrait que trois).
+- **Ticket 108 : pages talent, pas terminé.**
+  - La page est rendue (un h1, 404 français, fil d'Ariane) et le champ `talents.titreDeLaPage` existe avec sa validation de 50 à 60 caractères ; mais aucun des 14 titres n'est écrit : ce sont des textes d'Andy. Le ticket reste ouvert.
+- **Intégration des tickets 092, 093, 095, 103, 104, 105, 106, 107 dans `v3` (vague 5).**
+  - Sept fusions ; le lot 065-067 n'est pas fusionné (tickets non faits, copie fraîche de la prod et stockage réel nécessaires). Le ticket 108 est fusionné avec le 106 sans être fait.
+  - Conflits résolus en gardant les deux côtés : spec `profil-public` (le nettoyage par `usagers()` du lot 103 est gardé, le verrou de 104 retiré), page du profil (routage 308/404 de 104 avec métadonnées et JSON-LD de 105), imports de `profils.ts`, README et `CHANGEMENTS-VOULUS.md`. Une attente fixe du spec `blog-liste` (refusée par `test:ci-garde`, C06) remplacée par un `expect.poll`.
