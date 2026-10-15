@@ -14,6 +14,7 @@ import { rayonKm } from '../format-zone'
 import { formatPrix } from '../prix'
 import { texte } from '../profil/nom-affiche'
 import { moisAnnee, periode } from '../profil/vue-publique'
+import { libelleDeLaCommune } from './localisation'
 
 /** The sections, in the order of the page. Each one will have its « Modifier » button. */
 export const SECTIONS = [
@@ -88,14 +89,13 @@ const rassembler = (parties: readonly unknown[], separateur: string): string | n
 
 function carteLocalisation(profil: ProfilDeLEspace): Carte {
 	const commune = texte(profil.commune?.nom)
-	const departement = texte(profil.commune?.departement)
 	const km = rayonKm(profil.rayonKm)
 	const domicile = profil.aDomicile === true ? 'Oui' : profil.aDomicile === false ? 'Non' : null
 	return {
 		section: 'localisation',
 		titre: 'Localisation',
 		lignes: [
-			{ libelle: 'Commune', valeur: commune === '' ? null : departement ? `${commune} (${departement})` : commune },
+			{ libelle: 'Commune', valeur: ou(libelleDeLaCommune(profil.commune ?? {})) },
 			{ libelle: 'Rayon', valeur: km === null ? null : `${km} km` },
 			{ libelle: 'Se déplace à domicile', valeur: commune === '' ? null : domicile },
 		],

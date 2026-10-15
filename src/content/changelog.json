@@ -80,6 +80,11 @@
 			"id": "le-panneau-de-modification-de-ton-espace-s-ouvre-des-le-p",
 			"type": "amelioration",
 			"text": "Le panneau de modification de ton espace s’ouvre dès le premier tap, prend tout l’écran du téléphone, se parcourt au clavier (Échap pour fermer) et annonce le résultat aux lecteurs d’écran."
+		},
+		{
+			"id": "tu-choisis-ta-commune-dans-la-liste-officielle-avec-ton-r",
+			"type": "ajout",
+			"text": "Tu choisis ta commune dans la liste officielle, avec ton rayon d’action et « à domicile », depuis ton espace."
 		}
 	],
 	"releases": []
