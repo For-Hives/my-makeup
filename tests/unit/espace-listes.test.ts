@@ -7,10 +7,11 @@ import {
 	lignesDuProfil,
 	memeLigne,
 	nettoyerLaLigne,
+	OPTIONS_MAX,
 	rangApresRetrait,
 	schemaDeLaListe,
 } from '@/lib/espace/liste'
-import { PRESTATIONS, prixDeLaSaisie } from '@/lib/espace/prestations'
+import { OPTIONS_DE_PRESTATION, PRESTATIONS, prixDeLaSaisie } from '@/lib/espace/prestations'
 
 /**
  * The rules of the lists of her space (tickets 129 to 131; plan 02 U29, U30): what the form and the
@@ -207,7 +208,8 @@ describe('le schéma de la requête est strict', () => {
 	test('une clé en trop, une valeur qui n’est pas un texte, trop de lignes : refusés', () => {
 		expect(schema.safeParse({ lignes: [], profil: 3 }).success).toBe(false)
 		expect(schema.safeParse({ lignes: [{ valeurs: { ...valeurs, nom: 3 } }] }).success).toBe(false)
-		expect(schema.safeParse({ lignes: [{ valeurs, options: [] }] }).success).toBe(false)
+		// Only an offer holds options: another section refuses the key.
+		expect(schemaDeLaListe(EXPERIENCES).safeParse({ lignes: [{ valeurs: {}, options: [] }] }).success).toBe(false)
 		expect(schema.safeParse({ lignes: Array.from({ length: LIGNES_MAX + 1 }, () => ({ valeurs })) }).success).toBe(
 			false
 		)
@@ -233,8 +235,64 @@ describe('les aides de la liste', () => {
 			prestations: [{ id: 'a', nom: 'Mariée', prixTexte: '80', prixAPartirDe: 80 }, { nom: 'sans id' }, null],
 		}
 		expect(lignesDuProfil(PRESTATIONS, profil)).toEqual([
-			{ id: 'a', valeurs: { nom: 'Mariée', description: '', prix: '80' } },
+			{ id: 'a', valeurs: { nom: 'Mariée', description: '', prix: '80' }, options: [] },
 		])
 		expect(lignesDuProfil(PRESTATIONS, null)).toEqual([])
+	})
+})
+
+describe('132 : les options d’une prestation', () => {
+	const schema = schemaDeLaListe(PRESTATIONS)
+	const valeurs = { nom: 'Mariée', description: '', prix: '80' }
+	const option = { nom: 'Essai', description: '', prix: '30' }
+
+	test('la page lit les options d’une prestation avec leur identifiant, dans l’ordre', () => {
+		const profil = {
+			prestations: [
+				{
+					id: 'a',
+					nom: 'Mariée',
+					options: [
+						{ id: 'o2', nom: 'Cils', prixTexte: 'sur devis' },
+						{ id: 'o1', nom: 'Essai', prixTexte: '30', prixAPartirDe: 30 },
+						{ nom: 'sans id' },
+					],
+				},
+			],
+		}
+		expect(lignesDuProfil(PRESTATIONS, profil)[0]?.options).toEqual([
+			{ id: 'o2', valeurs: { nom: 'Cils', description: '', prix: 'sur devis' } },
+			{ id: 'o1', valeurs: { nom: 'Essai', description: '', prix: '30' } },
+		])
+	})
+
+	test('la requête peut porter les options, avec ou sans identifiant, et pas de montant', () => {
+		expect(
+			schema.safeParse({ lignes: [{ valeurs, options: [{ valeurs: option }, { id: 'o1', valeurs: option }] }] }).success
+		).toBe(true)
+		expect(
+			schema.safeParse({ lignes: [{ valeurs, options: [{ valeurs: { ...option, prixAPartirDe: 30 } }] }] }).success
+		).toBe(false)
+		expect(schema.safeParse({ lignes: [{ valeurs, options: [{ valeurs: option, profil: 1 }] }] }).success).toBe(false)
+		expect(
+			schema.safeParse({
+				lignes: [{ valeurs, options: Array.from({ length: OPTIONS_MAX + 1 }, () => ({ valeurs: option })) }],
+			}).success
+		).toBe(false)
+	})
+
+	test('une option se lit comme une prestation : « 30 » est un montant, « sur devis » est gardé', () => {
+		expect(OPTIONS_DE_PRESTATION.versLeStockage(option)).toEqual({
+			nom: 'Essai',
+			description: null,
+			prixTexte: '30',
+			prixAPartirDe: 30,
+		})
+		expect(OPTIONS_DE_PRESTATION.versLeStockage({ ...option, prix: 'sur devis' })).toMatchObject({
+			prixTexte: 'sur devis',
+			prixAPartirDe: null,
+		})
+		expect(OPTIONS_DE_PRESTATION.requis.nom).toBe('Le nom de l’option est requis.')
+		expect(OPTIONS_DE_PRESTATION.retrait('Essai')).toBe('Option Essai retirée')
 	})
 })

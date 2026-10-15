@@ -135,6 +135,11 @@
 			"id": "tu-peux-voir-ta-page-comme-une-visiteuse-la-voit-meme-si",
 			"type": "amelioration",
 			"text": "Tu peux voir ta page comme une visiteuse la voit, même si ton profil n’est pas encore affiché dans l’annuaire : le bouton « Voir mon profil public » ouvre ton aperçu, avec un bandeau qui te dit où en est ton profil."
+		},
+		{
+			"id": "tu-ajoutes-modifies-et-retires-les-options-de-chaque-pres",
+			"type": "ajout",
+			"text": "Tu ajoutes, modifies et retires les options de chaque prestation depuis ton espace, sans perdre ta place dans le champ pendant que tu tapes, même juste après un enregistrement."
 		}
 	],
 	"releases": []

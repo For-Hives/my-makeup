@@ -122,6 +122,9 @@ const champParNom = (cas: Cas, champ: string): HTMLInputElement | HTMLTextAreaEl
 	return element
 }
 
+/** A section with options always sends them, empty when the row has none (ticket 132). */
+const sansOptions = (cas: Cas): { options?: [] } => (cas.nom === 'prestations' ? { options: [] } : {})
+
 async function remplir(cas: Cas, valeurs: Record<string, string>) {
 	for (const [champ, valeur] of Object.entries(valeurs)) await fenetre.saisir(champParNom(cas, champ), valeur)
 }
@@ -155,7 +158,18 @@ function fauxEnvoi(reponse?: Awaited<ReturnType<EnvoiDeLaListe>>) {
 			reponse ?? {
 				ok: true,
 				valeurs: {
-					lignes: liste.lignes.map((ligne, rang) => ({ id: ligne.id ?? `nouvelle-${rang}`, valeurs: ligne.valeurs })),
+					lignes: liste.lignes.map((ligne, rang) => ({
+						id: ligne.id ?? `nouvelle-${rang}`,
+						valeurs: ligne.valeurs,
+						...(ligne.options === undefined
+							? {}
+							: {
+									options: ligne.options.map((option, place) => ({
+										id: option.id ?? `option-${rang}-${place}`,
+										valeurs: option.valeurs,
+									})),
+								}),
+					})),
 				},
 			}
 		)
@@ -200,7 +214,7 @@ for (const cas of CAS) {
 			expect(lignesAffichees()).toHaveLength(1)
 			await fenetre.cliquer(fenetre.bouton('Enregistrer'))
 			await fenetre.attendre(() => appels.length === 1)
-			expect(appels[0]?.lignes).toEqual([{ id: 'bbb', valeurs: { ...cas.autre } }])
+			expect(appels[0]?.lignes).toEqual([{ id: 'bbb', valeurs: { ...cas.autre }, ...sansOptions(cas) }])
 		})
 
 		test('L2 : la frappe garde le focus, vingt caractères dans chaque champ, juste après un ajout', async () => {
@@ -377,7 +391,14 @@ for (const cas of CAS) {
 			await fenetre.cliquer(fenetre.bouton('Enregistrer'))
 			await fenetre.attendre(() => fenetre.w.document.querySelector('[role="dialog"]') === null)
 
-			expect(appels).toEqual([{ lignes: [{ id: 'aaa', valeurs: { ...cas.ligne } }, { valeurs: { ...cas.autre } }] }])
+			expect(appels).toEqual([
+				{
+					lignes: [
+						{ id: 'aaa', valeurs: { ...cas.ligne }, ...sansOptions(cas) },
+						{ valeurs: { ...cas.autre }, ...sansOptions(cas) },
+					],
+				},
+			])
 			expect(fenetre.w.document.querySelector('[role="status"]')?.textContent).toBe(cas.enregistre)
 		})
 
@@ -522,5 +543,284 @@ describe('131, U29 : le prix, sous le champ, dit le montant retenu', () => {
 			'Ce texte ne doit pas dépasser 70 caractères.'
 		)
 		expect(lignesAffichees()).toHaveLength(0)
+	})
+})
+
+describe('132 : les options d’une prestation', () => {
+	const cas = CAS[2] as Cas
+	const ESSAI = { nom: 'Essai', description: '', prix: '30' }
+	const CILS = { nom: 'Cils', description: 'Pose de cils', prix: 'sur devis' }
+	const mariee = (options: LigneEnregistree[]): LigneEnregistree => ({
+		id: 'p1',
+		valeurs: { nom: 'Maquillage de mariée', description: '', prix: 'à partir de 80 €' },
+		options,
+	})
+	const deux = (): LigneEnregistree[] => [
+		mariee([
+			{ id: 'o1', valeurs: ESSAI },
+			{ id: 'o2', valeurs: CILS },
+		]),
+	]
+
+	const options = (): HTMLElement[] => [...dialogue().querySelectorAll<HTMLElement>('li[data-option]')]
+	const champDOption = (rang: number, nom: string): HTMLInputElement | HTMLTextAreaElement => {
+		const element = options()[rang]?.querySelector<HTMLInputElement | HTMLTextAreaElement>(`[name="${nom}"]`)
+		if (!element) throw new Error(`pas de champ ${nom} à l’option ${rang}`)
+		return element
+	}
+	const champDAjout = (nom: string): HTMLInputElement | HTMLTextAreaElement => {
+		const element = dialogue().querySelector<HTMLInputElement | HTMLTextAreaElement>(`#options-${nom}`)
+		if (!element) throw new Error(`pas de champ d’ajout ${nom}`)
+		return element
+	}
+	const retraitsDOptions = (): HTMLElement[] => [...dialogue().querySelectorAll<HTMLElement>('[data-retirer-option]')]
+	const ajouterUneOption = async (valeurs: Record<string, string>) => {
+		for (const [nom, valeur] of Object.entries(valeurs)) await fenetre.saisir(champDAjout(nom), valeur)
+		await fenetre.cliquer(fenetre.bouton('Ajouter l’option'))
+	}
+	const modifierLaPrestation = async (rang = 0) =>
+		fenetre.cliquer(fenetre.bouton(/^Modifier /, lignesAffichees()[rang]))
+	const alerte = (): string => dialogue().querySelector('#options-doublon')?.textContent ?? ''
+
+	async function taperVingtCaracteres(element: HTMLInputElement | HTMLTextAreaElement, retrouver: () => Element) {
+		element.focus()
+		let saisi = ''
+		for (let n = 0; n < 20; n++) {
+			saisi += 'a'
+			await fenetre.saisir(element, saisi)
+			expect(actif()).toBe(element)
+			expect(retrouver()).toBe(element)
+		}
+		expect(element.value).toBe('a'.repeat(20))
+	}
+
+	test('la prestation ouverte montre ses options, dans l’ordre, chacune avec ses trois champs', async () => {
+		await ouvrir(cas, deux())
+		expect(lignesAffichees()[0]?.textContent).toContain('2 options')
+		await modifierLaPrestation()
+		expect(options()).toHaveLength(2)
+		expect(champDOption(0, 'nom').value).toBe('Essai')
+		expect(champDOption(1, 'nom').value).toBe('Cils')
+		expect(champDOption(1, 'description').value).toBe('Pose de cils')
+		expect(champDOption(1, 'prix').value).toBe('sur devis')
+	})
+
+	test('L2 : juste après un enregistrement, vingt caractères d’affilée dans chaque champ de chaque option, focus fixe', async () => {
+		const { appels, envoyer } = fauxEnvoi()
+		await ouvrir(cas, deux(), envoyer)
+		await fenetre.cliquer(fenetre.bouton('Enregistrer'))
+		await fenetre.attendre(() => fenetre.w.document.querySelector('[role="dialog"]') === null)
+		expect(appels).toHaveLength(1)
+
+		// Reopened on what the server gave back, as after a save.
+		await fenetre.cliquer(fenetre.bouton(cas.ouvrir))
+		await modifierLaPrestation()
+		for (const rang of [0, 1]) {
+			for (const nom of ['nom', 'description', 'prix']) {
+				await taperVingtCaracteres(champDOption(rang, nom), () => champDOption(rang, nom))
+			}
+		}
+	}, 60_000)
+
+	test('L2 : une option qui vient d’être ajoutée se tape aussi sans perdre le focus', async () => {
+		await ouvrir(cas, [mariee([])])
+		await modifierLaPrestation()
+		await ajouterUneOption(ESSAI)
+		for (const nom of ['nom', 'description', 'prix']) {
+			await taperVingtCaracteres(champDOption(0, nom), () => champDOption(0, nom))
+		}
+		// And the small form that adds one.
+		await taperVingtCaracteres(champDAjout('nom'), () => champDAjout('nom'))
+	}, 60_000)
+
+	test('L1 : deux options identiques se retirent séparément, chacune garde son identifiant', async () => {
+		const { appels, envoyer } = fauxEnvoi()
+		await ouvrir(
+			cas,
+			[
+				mariee([
+					{ id: 'o1', valeurs: ESSAI },
+					{ id: 'o2', valeurs: ESSAI },
+				]),
+			],
+			envoyer
+		)
+		await modifierLaPrestation()
+		await fenetre.cliquer(retraitsDOptions()[0] as HTMLElement)
+		expect(options()).toHaveLength(1)
+		await fenetre.cliquer(fenetre.bouton('Valider la modification'))
+		await fenetre.cliquer(fenetre.bouton('Enregistrer'))
+		await fenetre.attendre(() => appels.length === 1)
+		expect(appels[0]?.lignes[0]?.options).toEqual([{ id: 'o2', valeurs: ESSAI }])
+	})
+
+	test('une option ajoutée part sans identifiant, les autres gardent le leur, dans l’ordre, sous la bonne prestation', async () => {
+		const { appels, envoyer } = fauxEnvoi()
+		const autre: LigneEnregistree = {
+			id: 'p2',
+			valeurs: { nom: 'Maquillage de soirée', description: '', prix: '60' },
+			options: [{ id: 'o9', valeurs: { nom: 'Retouches', description: '', prix: '' } }],
+		}
+		await ouvrir(cas, [mariee([{ id: 'o1', valeurs: ESSAI }]), autre], envoyer)
+		await modifierLaPrestation(1)
+		await ajouterUneOption(CILS)
+		await fenetre.cliquer(fenetre.bouton('Valider la modification'))
+		await fenetre.cliquer(fenetre.bouton('Enregistrer'))
+		await fenetre.attendre(() => appels.length === 1)
+		expect(appels[0]?.lignes.map(ligne => [ligne.id, ligne.options])).toEqual([
+			['p1', [{ id: 'o1', valeurs: ESSAI }]],
+			['p2', [{ id: 'o9', valeurs: { nom: 'Retouches', description: '', prix: '' } }, { valeurs: CILS }]],
+		])
+	})
+
+	test('L6 : une option identique à une option de la liste est refusée, avec son message', async () => {
+		await ouvrir(cas, [mariee([{ id: 'o1', valeurs: ESSAI }])])
+		await modifierLaPrestation()
+		await ajouterUneOption(ESSAI)
+		expect(options()).toHaveLength(1)
+		expect(alerte()).toBe('Une option identique est déjà dans la liste.')
+		// Typing again takes the message away.
+		await fenetre.saisir(champDAjout('nom'), 'Essai 2')
+		expect(alerte()).toBe('')
+	})
+
+	test('L6 : deux options rendues identiques par la saisie refusent la prestation, qui n’est pas validée', async () => {
+		await ouvrir(cas, deux())
+		await modifierLaPrestation()
+		await fenetre.saisir(champDOption(1, 'nom'), 'Essai')
+		await fenetre.saisir(champDOption(1, 'description'), '')
+		await fenetre.saisir(champDOption(1, 'prix'), '30')
+		await fenetre.cliquer(fenetre.bouton('Valider la modification'))
+		expect(alerte()).toBe('Une option identique est déjà dans la liste.')
+		expect(fenetre.bouton('Valider la modification')).toBeTruthy()
+	})
+
+	test('L7 : Entrée maintenue sur « Ajouter l’option » ajoute une seule option', async () => {
+		await ouvrir(cas, [mariee([])])
+		await modifierLaPrestation()
+		await fenetre.saisir(champDAjout('nom'), 'Essai')
+		const bouton = fenetre.bouton('Ajouter l’option')
+		expect(await activerAuClavier(bouton)).toBe(true)
+		expect(options()).toHaveLength(1)
+		// The fields are empty again: the repeats do nothing, and would not add a second option anyway.
+		await fenetre.saisir(champDAjout('nom'), 'Cils')
+		expect(await activerAuClavier(bouton, { repeat: true })).toBe(false)
+		expect(options()).toHaveLength(1)
+	})
+
+	test('L7 : Entrée maintenue dans un champ de l’ajout ajoute une seule option, et ne valide pas la prestation', async () => {
+		await ouvrir(cas, [mariee([])])
+		await modifierLaPrestation()
+		await fenetre.saisir(champDAjout('nom'), 'Essai')
+		const envoyer = async (repeat: boolean) =>
+			act(async () => {
+				champDAjout('nom').dispatchEvent(
+					new fenetre.w.KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true, repeat })
+				)
+			})
+		await envoyer(false)
+		expect(options()).toHaveLength(1)
+		await fenetre.saisir(champDAjout('nom'), 'Cils')
+		await envoyer(true)
+		expect(options()).toHaveLength(1)
+		expect(fenetre.bouton('Valider la modification')).toBeTruthy()
+	})
+
+	test('L7 : Entrée maintenue sur « Retirer » d’une option ne retire qu’une option', async () => {
+		await ouvrir(cas, deux())
+		await modifierLaPrestation()
+		await activerAuClavier(retraitsDOptions()[0] as HTMLElement)
+		expect(options()).toHaveLength(1)
+		expect(await activerAuClavier(retraitsDOptions()[0] as HTMLElement, { repeat: true })).toBe(false)
+		expect(options()).toHaveLength(1)
+	})
+
+	test('L4 : au clavier, le focus reste dans le panneau : l’option qui prend la place, puis celle du dessus, puis le formulaire d’ajout', async () => {
+		const trois = [
+			mariee([
+				{ id: 'a', valeurs: ESSAI },
+				{ id: 'b', valeurs: CILS },
+				{ id: 'c', valeurs: { nom: 'Retouches', description: '', prix: '' } },
+			]),
+		]
+		await ouvrir(cas, trois)
+		await modifierLaPrestation()
+		await activerAuClavier(retraitsDOptions()[0] as HTMLElement)
+		expect(actif()).toBe(retraitsDOptions()[0] as HTMLElement)
+		await activerAuClavier(retraitsDOptions()[1] as HTMLElement)
+		expect(actif()).toBe(retraitsDOptions()[0] as HTMLElement)
+		await activerAuClavier(retraitsDOptions()[0] as HTMLElement)
+		expect(options()).toHaveLength(0)
+		expect(actif()).toBe(champDAjout('nom'))
+		expect(dialogue().contains(actif())).toBe(true)
+	})
+
+	test('L4 : après un clic, le focus ne va jamais sur un champ : l’option suivante, ou le titre des options', async () => {
+		await ouvrir(cas, deux())
+		await modifierLaPrestation()
+		await fenetre.cliquer(retraitsDOptions()[0] as HTMLElement)
+		expect(actif()).toBe(retraitsDOptions()[0] as HTMLElement)
+		await fenetre.cliquer(retraitsDOptions()[0] as HTMLElement)
+		expect(options()).toHaveLength(0)
+		expect(actif()?.hasAttribute('data-titre-options')).toBe(true)
+		expect(dialogue().contains(actif())).toBe(true)
+	})
+
+	test('L5 : chaque retrait d’option est dit, même nom deux fois', async () => {
+		await ouvrir(cas, [
+			mariee([
+				{ id: 'a', valeurs: ESSAI },
+				{ id: 'b', valeurs: ESSAI },
+			]),
+		])
+		await modifierLaPrestation()
+		expect(zoneDAnnonce().textContent).toBe('')
+		await fenetre.cliquer(retraitsDOptions()[0] as HTMLElement)
+		const premiere = zoneDAnnonce().querySelector('span')
+		expect(zoneDAnnonce().textContent).toBe('Option Essai retirée')
+		await fenetre.cliquer(retraitsDOptions()[0] as HTMLElement)
+		expect(zoneDAnnonce().textContent).toBe('Option Essai retirée')
+		expect(zoneDAnnonce().querySelector('span')).not.toBe(premiere)
+	})
+
+	test('une option sans nom n’est pas ajoutée, et une option laissée en cours de saisie n’est pas perdue en silence', async () => {
+		await ouvrir(cas, [mariee([])])
+		await modifierLaPrestation()
+		await ajouterUneOption({ prix: '30' })
+		expect(options()).toHaveLength(0)
+		expect(dialogue().querySelector('#options-nom-erreur')?.textContent).toBe('Le nom de l’option est requis.')
+
+		await fenetre.saisir(champDAjout('nom'), 'Essai')
+		await fenetre.cliquer(fenetre.bouton('Valider la modification'))
+		expect(alerte()).toContain('option en cours de saisie')
+		expect(fenetre.bouton('Valider la modification')).toBeTruthy()
+	})
+
+	test('une option dont on a vidé le nom est signalée sous son champ, et la prestation n’est pas validée', async () => {
+		await ouvrir(cas, deux())
+		await modifierLaPrestation()
+		await fenetre.saisir(champDOption(0, 'nom'), '')
+		expect(options()[0]?.textContent).toContain('Le nom de l’option est requis.')
+		await fenetre.cliquer(fenetre.bouton('Valider la modification'))
+		expect(fenetre.bouton('Valider la modification')).toBeTruthy()
+		expect(actif()).toBe(champDOption(0, 'nom'))
+	})
+
+	test('le prix d’une option dit le montant retenu comme celui d’une prestation', async () => {
+		await ouvrir(cas, [mariee([])])
+		await modifierLaPrestation()
+		await fenetre.saisir(champDAjout('prix'), '30 €')
+		expect(dialogue().textContent).toMatch(/Montant retenu pour ton profil : 30\s€\./)
+	})
+
+	test('E31 : un échec garde les options saisies et le panneau ouvert', async () => {
+		const { envoyer } = fauxEnvoi({ ok: false, message: MESSAGE_ECHEC })
+		await ouvrir(cas, [mariee([])], envoyer)
+		await modifierLaPrestation()
+		await ajouterUneOption(ESSAI)
+		await fenetre.cliquer(fenetre.bouton('Valider la modification'))
+		await fenetre.cliquer(fenetre.bouton('Enregistrer'))
+		await fenetre.attendre(() => dialogue().querySelector('[role="alert"] p'))
+		expect(lignesAffichees()[0]?.textContent).toContain('1 option')
 	})
 })

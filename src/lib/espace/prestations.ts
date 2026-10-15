@@ -9,7 +9,9 @@
  *   publishable profile (U04). A request cannot carry an amount: the schema has no such field.
  * - Several prices of one offer are typed with « ; » between them, and stored one per line, as on
  *   the old site.
- * - The options of an offer are not edited here (ticket 132): they are kept from the stored row.
+ * - The options of an offer (ticket 132) are edited in the same panel: each has a name (required), a
+ *   description and a price, read by the same rules as the offer's own. A request that sends no
+ *   `options` for an offer keeps the stored ones.
  */
 
 import { formatMontant, formatPrix, parsePrice } from '../prix'
@@ -49,13 +51,10 @@ function bornes(valeurs: ValeursDeLigne): ErreursDeLigne {
 /** The two stored fields of a price typed in the form. */
 const prixStocke = (saisie: string | undefined) => parsePrice(prixDeLaSaisie(saisie ?? ''))
 
-export const PRESTATIONS: DefinitionDeListe = {
-	section: 'prestations',
-	singulier: 'prestation',
-	pluriel: 'prestations',
-	designation: 'la prestation',
+/** What an offer and an option share: their three fields, bounds, price reading and storage. */
+const COMMUN = {
 	champs: [
-		{ nom: 'nom', libelle: 'Nom de la prestation', genre: 'texte', exemple: 'Maquillage de mariée' },
+		{ nom: 'nom', libelle: 'Nom', genre: 'texte' },
 		{ nom: 'description', libelle: 'Description', genre: 'long' },
 		{
 			nom: 'prix',
@@ -65,14 +64,11 @@ export const PRESTATIONS: DefinitionDeListe = {
 			aide: 'Un montant (80, 80 €, à partir de 80) ou un texte (sur devis). Pour plusieurs formules, sépare-les par un point-virgule.',
 		},
 	],
-	requis: { nom: 'Le nom de la prestation est requis.' },
-	doublon: 'Une prestation identique est déjà dans la liste.',
 	bornes,
-	resume: valeurs =>
+	resume: (valeurs: ValeursDeLigne) =>
 		[valeurs.nom, formatPrix(prixStocke(valeurs.prix)).replace(/\n/g, ', ')].map(texte).filter(Boolean).join(' - '),
-	nom: valeurs => texte(valeurs.nom),
-	retrait: nom => `Prestation ${nom} retirée`.replace(/\s+/g, ' '),
-	depuisLeStockage: stockee => ({
+	nom: (valeurs: ValeursDeLigne) => texte(valeurs.nom),
+	depuisLeStockage: (stockee: Readonly<Record<string, unknown>>) => ({
 		nom: texte(stockee.nom),
 		description: typeof stockee.description === 'string' ? stockee.description.trim() : '',
 		prix: prixEnSaisie(
@@ -84,16 +80,48 @@ export const PRESTATIONS: DefinitionDeListe = {
 					: ''
 		),
 	}),
-	versLeStockage: valeurs => {
+	versLeStockage: (valeurs: ValeursDeLigne) => {
 		const { prixTexte, prixAPartirDe } = prixStocke(valeurs.prix)
 		return { nom: valeurs.nom || null, description: valeurs.description || null, prixTexte, prixAPartirDe }
 	},
-	garder: stockee => ({ options: Array.isArray(stockee.options) ? stockee.options : [] }),
-	indice: valeurs => {
+	indice: (valeurs: ValeursDeLigne) => {
 		if (prixDeLaSaisie(valeurs.prix ?? '') === '') return ''
 		const { prixAPartirDe } = prixStocke(valeurs.prix)
 		return prixAPartirDe === null
 			? MESSAGES_DES_PRESTATIONS.sansMontant
 			: MESSAGES_DES_PRESTATIONS.montant(formatMontant(prixAPartirDe))
 	},
+} as const
+
+/** The options of an offer (ticket 132): the same three fields, the name required. */
+export const OPTIONS_DE_PRESTATION: DefinitionDeListe = {
+	...COMMUN,
+	section: 'options',
+	singulier: 'option',
+	pluriel: 'options',
+	designation: 'l’option',
+	champs: [
+		{ ...COMMUN.champs[0], libelle: 'Nom de l’option', exemple: 'Essai avant le jour J' },
+		...COMMUN.champs.slice(1),
+	],
+	requis: { nom: 'Le nom de l’option est requis.' },
+	doublon: 'Une option identique est déjà dans la liste.',
+	retrait: nom => `Option ${nom} retirée`.replace(/\s+/g, ' '),
+}
+
+export const PRESTATIONS: DefinitionDeListe = {
+	...COMMUN,
+	section: 'prestations',
+	singulier: 'prestation',
+	pluriel: 'prestations',
+	designation: 'la prestation',
+	champs: [
+		{ ...COMMUN.champs[0], libelle: 'Nom de la prestation', exemple: 'Maquillage de mariée' },
+		...COMMUN.champs.slice(1),
+	],
+	requis: { nom: 'Le nom de la prestation est requis.' },
+	doublon: 'Une prestation identique est déjà dans la liste.',
+	retrait: nom => `Prestation ${nom} retirée`.replace(/\s+/g, ' '),
+	options: OPTIONS_DE_PRESTATION,
+	garder: stockee => ({ options: Array.isArray(stockee.options) ? stockee.options : [] }),
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { type FormEvent, type KeyboardEvent, type RefObject, useEffect, useRef, useState } from 'react'
+import { type FormEvent, type RefObject, useEffect, useRef, useState } from 'react'
 import {
 	type DefinitionDeListe,
 	erreursDeLaLigne,
@@ -11,39 +11,35 @@ import {
 	ligneVide,
 	MESSAGES_DE_LISTE,
 	memeLigne,
+	memesLignes,
 	nettoyerLaLigne,
 	rangApresRetrait,
 	type ValeursDeLigne,
 } from '@/lib/espace/liste'
 import { MESSAGE_ECHEC, type ResultatDEnregistrement } from '@/lib/espace/resultat'
+import {
+	BOUTON,
+	BOUTON_DE_LIGNE,
+	CHAMP,
+	ignorerLaRepetition,
+	nouvelleCle,
+	type LigneEditee as OptionEditee,
+} from './aides-de-liste'
+import { EditeurDOptions, erreursDesOptions } from './EditeurDOptions'
 import { PanneauDEdition } from './PanneauDEdition'
 
 export type EnvoiDeLaListe = (liste: ListeEnvoyee) => Promise<ResultatDEnregistrement<ListeEnregistree>>
 
-const BOUTON = 'min-h-11 rounded-md px-4 py-2 font-medium'
-const BOUTON_DE_LIGNE = 'min-h-11 rounded-md border border-neutral-400 bg-white px-3 py-2 text-sm'
-const CHAMP = 'min-h-11 rounded-md border border-neutral-400 bg-white px-3 py-2 text-base'
-
 /** A row in the panel. `cle` is the key of its display: it belongs to the row, never to what it says (L1, L2). */
-interface LigneEditee {
-	readonly cle: string
-	/** The identifier the server gave to the row; none for a row just added. */
-	readonly id: string | null
-	readonly valeurs: ValeursDeLigne
+interface LigneEditee extends OptionEditee {
+	/** Its own list, for a section that has one (the options of an offer, ticket 132). */
+	readonly options: readonly OptionEditee[]
 }
 
 type CibleDuFocus =
 	| { genre: 'retirer'; cle: string; n: number }
 	| { genre: 'formulaire'; n: number }
 	| { genre: 'titre'; n: number }
-
-let compteurDeCles = 0
-const nouvelleCle = (): string => `ligne-${++compteurDeCles}`
-
-/** Held down, Enter repeats: a button acts once (L7). */
-function ignorerLaRepetition(evenement: KeyboardEvent<HTMLElement>): void {
-	if (evenement.key === 'Enter' && evenement.repeat) evenement.preventDefault()
-}
 
 /**
  * The button « Modifier » of the card of a list, and the panel it opens (tickets 129 to 131): the
@@ -140,10 +136,22 @@ function PanneauDeListe({
 	const { section, champs, singulier } = definition
 	const vide = ligneVide(definition)
 	const [lignes, setLignes] = useState<LigneEditee[]>(() =>
-		depart.map(ligne => ({ cle: nouvelleCle(), id: ligne.id, valeurs: ligne.valeurs }))
+		depart.map(ligne => ({
+			cle: nouvelleCle(),
+			id: ligne.id,
+			valeurs: ligne.valeurs,
+			options: (ligne.options ?? []).map(option => ({ cle: nouvelleCle(), id: option.id, valeurs: option.valeurs })),
+		}))
 	)
 	const [initiales] = useState(depart)
+	const definitionDesOptions = definition.options
 	const [formulaire, setFormulaire] = useState<ValeursDeLigne>(vide)
+	// The options of the row in the form, and the text of the small form that adds one (ticket 132).
+	const [optionsDuFormulaire, setOptionsDuFormulaire] = useState<OptionEditee[]>([])
+	const [saisieDOption, setSaisieDOption] = useState<ValeursDeLigne>(
+		definitionDesOptions === undefined ? {} : ligneVide(definitionDesOptions)
+	)
+	const [refusDesOptions, setRefusDesOptions] = useState('')
 	const [enEdition, setEnEdition] = useState<string | null>(null)
 	const [erreurs, setErreurs] = useState<Readonly<Record<string, string>>>({})
 	const [doublon, setDoublon] = useState('')
@@ -158,17 +166,34 @@ function PanneauDeListe({
 	// What the form holds, compared with what it started from: the row being edited, or an empty row.
 	const ligneEditee = lignes.find(ligne => ligne.cle === enEdition)
 	const depuisLeFormulaire = nettoyerLaLigne(definition, formulaire)
+	const optionsNettoyees = optionsDuFormulaire.map(option => ({
+		...option,
+		valeurs: definitionDesOptions ? nettoyerLaLigne(definitionDesOptions, option.valeurs) : option.valeurs,
+	}))
+	/** True when two lists of options say the same; a section without options has none to compare. */
+	const memesOptions = (a: readonly { valeurs: ValeursDeLigne }[], b: readonly { valeurs: ValeursDeLigne }[]) =>
+		definitionDesOptions === undefined || memesLignes(definitionDesOptions, a, b)
+	const optionEnCours =
+		definitionDesOptions !== undefined &&
+		!ligneEstVide(definitionDesOptions, nettoyerLaLigne(definitionDesOptions, saisieDOption))
 	const formulaireEnCours =
-		ligneEditee === undefined
-			? !ligneEstVide(definition, depuisLeFormulaire)
-			: !memeLigne(definition, ligneEditee.valeurs, depuisLeFormulaire)
+		optionEnCours ||
+		(ligneEditee === undefined
+			? !ligneEstVide(definition, depuisLeFormulaire) || optionsDuFormulaire.length > 0
+			: !memeLigne(definition, ligneEditee.valeurs, depuisLeFormulaire) ||
+				!memesOptions(optionsNettoyees, ligneEditee.options))
 	const listeModifiee =
 		lignes.length !== initiales.length ||
-		lignes.some(
-			(ligne, rang) =>
-				ligne.id !== initiales[rang]?.id ||
-				(initiales[rang] !== undefined && !memeLigne(definition, ligne.valeurs, initiales[rang].valeurs))
-		)
+		lignes.some((ligne, rang) => {
+			const depart = initiales[rang]
+			return (
+				ligne.id !== depart?.id ||
+				(depart !== undefined &&
+					(!memeLigne(definition, ligne.valeurs, depart.valeurs) ||
+						!memesOptions(ligne.options, depart.options ?? []) ||
+						ligne.options.map(option => option.id).join() !== (depart.options ?? []).map(option => option.id).join()))
+			)
+		})
 
 	// The focus, once the rows have been drawn again.
 	useEffect(() => {
@@ -196,6 +221,9 @@ function PanneauDeListe({
 
 	function remettreLeFormulaire() {
 		setFormulaire(vide)
+		setOptionsDuFormulaire([])
+		if (definitionDesOptions) setSaisieDOption(ligneVide(definitionDesOptions))
+		setRefusDesOptions('')
 		setEnEdition(null)
 		setErreurs({})
 		setDoublon('')
@@ -212,22 +240,58 @@ function PanneauDeListe({
 			if (premier) racine.current?.querySelector<HTMLElement>(`#${section}-${premier.nom}`)?.focus()
 			return
 		}
+		if (definitionDesOptions !== undefined && !optionsSontValides(definitionDesOptions)) return
 		// Validated as it was loaded, a row changes nothing; any other copy of a listed row is refused (L6).
-		const inchangee = ligneEditee !== undefined && memeLigne(definition, ligneEditee.valeurs, valeurs)
-		if (!inchangee && lignes.some(ligne => ligne.cle !== enEdition && memeLigne(definition, ligne.valeurs, valeurs))) {
+		const memeQue = (ligne: LigneEditee) =>
+			memeLigne(definition, ligne.valeurs, valeurs) && memesOptions(ligne.options, optionsNettoyees)
+		const inchangee = ligneEditee !== undefined && memeQue(ligneEditee)
+		if (!inchangee && lignes.some(ligne => ligne.cle !== enEdition && memeQue(ligne))) {
 			setDoublon(definition.doublon)
 			return
 		}
 		setMessage('')
 		setLignes(avant =>
 			ligneEditee === undefined
-				? [...avant, { cle: nouvelleCle(), id: null, valeurs }]
-				: avant.map(ligne => (ligne.cle === enEdition ? { ...ligne, valeurs } : ligne))
+				? [...avant, { cle: nouvelleCle(), id: null, valeurs, options: optionsNettoyees }]
+				: avant.map(ligne => (ligne.cle === enEdition ? { ...ligne, valeurs, options: optionsNettoyees } : ligne))
 		)
 		remettreLeFormulaire()
 	}
 
+	/**
+	 * The options of the row in the form, before the row is validated (ticket 132): nothing left typed in the
+	 * small form that adds one, every option within its bounds, no two alike. Says why, and puts the focus
+	 * where it is wrong.
+	 */
+	function optionsSontValides(options: DefinitionDeListe): boolean {
+		if (optionEnCours) {
+			setRefusDesOptions(MESSAGES_DE_LISTE.optionEnCours)
+			racine.current?.querySelector<HTMLElement>(`#options-${options.champs[0]?.nom}`)?.focus()
+			return false
+		}
+		const erreurs = erreursDesOptions(options, optionsDuFormulaire, new Date())
+		const fautive = optionsDuFormulaire.find(option => erreurs[option.cle] !== undefined)
+		if (fautive) {
+			const champ = options.champs.find(({ nom }) => erreurs[fautive.cle]?.[nom] !== undefined)
+			racine.current?.querySelector<HTMLElement>(`#option-${fautive.cle}-${champ?.nom}`)?.focus()
+			return false
+		}
+		if (
+			optionsNettoyees.some((option, rang) =>
+				optionsNettoyees.slice(0, rang).some(autre => memeLigne(options, autre.valeurs, option.valeurs))
+			)
+		) {
+			setRefusDesOptions(options.doublon)
+			racine.current?.querySelector<HTMLElement>(`#options-${options.champs[0]?.nom}`)?.focus()
+			return false
+		}
+		return true
+	}
+
 	function modifier(ligne: LigneEditee) {
+		setOptionsDuFormulaire(ligne.options.map(option => ({ ...option })))
+		if (definitionDesOptions) setSaisieDOption(ligneVide(definitionDesOptions))
+		setRefusDesOptions('')
 		setFormulaire(ligne.valeurs)
 		setEnEdition(ligne.cle)
 		setErreurs({})
@@ -246,7 +310,8 @@ function PanneauDeListe({
 		if (ligne.cle === enEdition) {
 			// The row being edited is gone: back to « Ajouter ». What was typed over it stays, to be added as a
 			// new row; a form left as it was loaded is emptied, or a reflex click would put the row back (L3).
-			if (memeLigne(definition, ligne.valeurs, nettoyerLaLigne(definition, formulaire))) remettreLeFormulaire()
+			if (memeLigne(definition, ligne.valeurs, depuisLeFormulaire) && memesOptions(ligne.options, optionsNettoyees))
+				remettreLeFormulaire()
 			else {
 				setEnEdition(null)
 				setErreurs({})
@@ -272,9 +337,19 @@ function PanneauDeListe({
 		setMessage('')
 		try {
 			const resultat: ResultatDEnregistrement<ListeEnregistree> = await envoyer({
-				lignes: lignes.map(ligne =>
-					ligne.id === null ? { valeurs: ligne.valeurs } : { id: ligne.id, valeurs: ligne.valeurs }
-				),
+				lignes: lignes.map(ligne => ({
+					...(ligne.id === null ? {} : { id: ligne.id }),
+					valeurs: ligne.valeurs,
+					// A section with options always sends them, so that removing the last one is saved too.
+					...(definitionDesOptions === undefined
+						? {}
+						: {
+								options: ligne.options.map(option => ({
+									...(option.id === null ? {} : { id: option.id }),
+									valeurs: option.valeurs,
+								})),
+							}),
+				})),
 			}).catch(() => ({ ok: false, message: MESSAGE_ECHEC }))
 			if (resultat.ok) {
 				onEnregistre()
@@ -316,6 +391,9 @@ function PanneauDeListe({
 								>
 									<span className="min-w-0 break-words text-sm">
 										{definition.resume(ligne.valeurs) || '(sans nom)'}
+										{ligne.options.length > 0
+											? ` (${ligne.options.length} option${ligne.options.length > 1 ? 's' : ''})`
+											: ''}
 									</span>
 									<span className="flex gap-2">
 										<button
@@ -414,6 +492,18 @@ function PanneauDeListe({
 							</div>
 						)
 					})}
+					{definitionDesOptions ? (
+						<EditeurDOptions
+							definition={definitionDesOptions}
+							options={optionsDuFormulaire}
+							onOptions={setOptionsDuFormulaire}
+							saisie={saisieDOption}
+							onSaisie={setSaisieDOption}
+							refus={refusDesOptions}
+							onRefus={setRefusDesOptions}
+							annoncer={phrase => setAnnonce(({ rang }) => ({ phrase, rang: rang + 1 }))}
+						/>
+					) : null}
 					{doublon ? (
 						<p id={`${section}-doublon`} role="alert" className="rounded-md bg-amber-50 p-3 text-amber-900 text-sm">
 							{doublon}
