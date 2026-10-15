@@ -691,3 +691,5 @@ Ce que la v3 change par rapport au site actuel est dans [`CHANGEMENTS-VOULUS.md`
   - `plans/mesures/outil` 0.5.0 puis 0.6.0 : `MM_MODE=v3` lit `/api/stats/weekly` (jeton `MM_STATS_TOKEN`) et les sources de santé (`coolify`, `sauvegarde`, `sondes`) de l'application unique. Le code est dans le dépôt des plans, pas dans `v3`.
 - **Vague 2 : ticket 171 non fusionné, aucun ticket nouveau.**
   - L'auteur n'a rien changé (le reste est hors de son périmètre : appliquer les correctifs aux deux anciens dépôts et voir le message d'entretien). Les deux correctifs s'appliquent encore proprement aux têtes `ccd449d` (API) et `7f43f1b` (site).
+- **Ticket 108 fait : les 14 pages talent ont leur titre d'onglet.**
+  - Titres de 50 à 60 caractères dans `src/content/talents-titres.ts`, copiés dans `titreDeLaPage` par l'import seulement quand le champ est vide (option `amorces` du moteur d'import) ; un titre saisi dans l'admin est conservé. Ligne `titre-page-talent` au registre des changements voulus. Les essais de bout en bout et I45 ne sont pas rejoués dans cette vague.
