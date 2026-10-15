@@ -612,29 +612,40 @@ export function durationProblems(workflow: Workflow, limit: number): string[] {
 	return problems
 }
 
-/** The shards of the end-to-end tests: the values of `matrix.shard`, which the command below reads. */
-export const E2E_SHARDS = [1, 2] as const
+/**
+ * The shards of the two jobs of the test bench: `matrix.shard` runs from 1 to this number, the name of
+ * the job shows it, and the command of the tests divides by it. A matrix and a divisor that differ
+ * would drop tests without a word (`--shard=3/2` runs nothing) or run some twice.
+ */
+export const SHARDS = { integration: 3, e2e: 4 } as const
+/** An expression of GitHub Actions, written so that it is not read as a template here. */
+const SHARD = '${{ matrix.shard }}'
 /** The two jobs that run on the test bench, and the commands each one runs, in this order, one per step. */
 export const BENCH_JOBS = {
-	integration: ['bun install --frozen-lockfile', 'bun run banc:up', 'bun run test:integration'],
+	integration: [
+		'bun install --frozen-lockfile',
+		'bun run banc:up',
+		`bun run test:integration --shard=${SHARD}/${SHARDS.integration}`,
+	],
 	e2e: [
 		'bun install --frozen-lockfile',
 		'bunx playwright install --with-deps chromium',
 		'bun run banc:up',
-		// An expression of GitHub Actions, written so that it is not read as a template here.
-		`bun run test:e2e --shard=\${{ matrix.shard }}/${E2E_SHARDS.length}`,
+		`bun run test:e2e --shard=${SHARD}/${SHARDS.e2e}`,
 	],
 } as const
 
 /**
  * The integration and end-to-end tests run on the test bench, in the CI as on a developer's
- * machine. Each job starts the bench before its tests. The end-to-end tests run in two shards,
- * under Node, and a failed shard does not cancel the other one. A green end-to-end job lasts
- * less than `e2eLimit` minutes: its time limit is that bound.
+ * machine. Each job starts the bench before its tests, and runs in shards side by side, each with
+ * its own bench: `matrix: shard: [1, …, N]` and nothing else, the name `<job> (shard/N)`, the
+ * command divided by the same N, and a failed shard that does not cancel the others. The
+ * end-to-end tests run under Node. A green shard lasts less than `limit` minutes: its time limit
+ * is that bound.
  */
-export function benchJobProblems(workflow: Workflow, e2eLimit: number): string[] {
+export function benchJobProblems(workflow: Workflow, limit: number): string[] {
 	const problems: string[] = []
-	for (const [id, commands] of Object.entries(BENCH_JOBS)) {
+	for (const [id, commands] of Object.entries(BENCH_JOBS) as [keyof typeof BENCH_JOBS, readonly string[]][]) {
 		const job = workflow.jobs[id]
 		if (!job) {
 			problems.push(`${workflow.file} n’a pas de job « ${id} » : le banc de test n’y tournerait plus.`)
@@ -650,25 +661,30 @@ export function benchJobProblems(workflow: Workflow, e2eLimit: number): string[]
 			else if (at < before)
 				problems.push(`${workflow.file}, job ${id} : « ${command} » doit venir après « ${commands[rank - 1]} ».`)
 		}
+
+		const shards = SHARDS[id]
+		const expected = Array.from({ length: shards }, (_, rank) => rank + 1)
+		const strategy = isRecord(job.strategy) ? job.strategy : {}
+		const matrix = isRecord(strategy.matrix) ? strategy.matrix : {}
+		if (Object.keys(matrix).join() !== 'shard' || JSON.stringify(matrix.shard) !== JSON.stringify(expected))
+			problems.push(
+				`${workflow.file}, job ${id} : les tests tournent en ${shards} lots, « matrix: shard: [${expected.join(', ')}] », et rien d’autre.`
+			)
+		if (job.name !== `${id} (${SHARD}/${shards})`)
+			problems.push(`${workflow.file}, job ${id} : son nom dit ses lots, « ${id} (${SHARD}/${shards}) ».`)
+		if (strategy['fail-fast'] !== false)
+			problems.push(`${workflow.file}, job ${id} : « fail-fast: false », sinon un lot en échec annule les autres.`)
+		const minutes = job['timeout-minutes']
+		if (typeof minutes === 'number' && minutes > limit)
+			problems.push(
+				`${workflow.file}, job ${id} : sa limite est de ${minutes} minutes ; chaque lot doit tenir en ${limit}.`
+			)
 		if (id !== 'e2e') continue
 
 		const lastCommand = found.at(-1) ?? -1
 		const node = steps.findIndex(step => step.uses?.startsWith('actions/setup-node@'))
 		if (node === -1 || (lastCommand !== -1 && node > lastCommand))
 			problems.push(`${workflow.file}, job ${id} : Playwright tourne sous Node, installé avant les essais.`)
-		const strategy = isRecord(job.strategy) ? job.strategy : {}
-		const matrix = isRecord(strategy.matrix) ? strategy.matrix : {}
-		if (Object.keys(matrix).join() !== 'shard' || JSON.stringify(matrix.shard) !== JSON.stringify(E2E_SHARDS))
-			problems.push(
-				`${workflow.file}, job ${id} : les essais tournent en ${E2E_SHARDS.length} lots, « matrix: shard: [${E2E_SHARDS.join(', ')}] », et rien d’autre.`
-			)
-		if (strategy['fail-fast'] !== false)
-			problems.push(`${workflow.file}, job ${id} : « fail-fast: false », sinon un lot en échec annule l’autre.`)
-		const limit = job['timeout-minutes']
-		if (typeof limit === 'number' && limit > e2eLimit)
-			problems.push(
-				`${workflow.file}, job ${id} : sa limite est de ${limit} minutes ; les essais de bout en bout doivent tenir en ${e2eLimit}.`
-			)
 	}
 	return problems
 }

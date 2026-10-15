@@ -158,19 +158,21 @@ En CI, un essai en échec est rejoué deux fois, et un essai laissé en `.only` 
 
 ## En CI
 
-Le job `e2e` de `.github/workflows/ci.yml` lance les essais en deux lots côte à côte, `e2e (1/2)` et `e2e (2/2)`. Chaque lot fait ce qu'on fait sur un poste :
+Le job `e2e` de `.github/workflows/ci.yml` lance les essais en quatre lots côte à côte, de `e2e (1/4)` à `e2e (4/4)`. Chaque lot fait ce qu'on fait sur un poste :
 
 ```sh
 bunx playwright install --with-deps chromium   # le navigateur, et les bibliothèques du système qu'il demande
 bun run banc:up
-bun run test:e2e --shard=1/2                   # sa moitié des essais ; l'autre lot lance --shard=2/2
+bun run test:e2e --shard=1/4                   # son quart des essais ; les autres lots lancent --shard=2/4 à 4/4
 ```
 
-- Playwright partage les essais entre les deux lots ; chaque lot construit l'application lui-même, démarre son banc et ne dépend pas de l'autre. Un lot en échec n'arrête pas l'autre.
+- Playwright partage les essais entre les lots ; chaque lot construit l'application lui-même, démarre son banc et ne dépend d'aucun autre. Un lot en échec n'arrête pas les autres.
+- Dans un lot, deux processus de Playwright jouent les essais côte à côte, sur le même banc et la même application. Un essai ne compte donc jamais ce que toute la base ou tout le faux Umami contient : il lit ce qu'il a posé lui-même (son talent, ses profils « Essai … », les mesures de son propre navigateur, `agentDeLEssai` de `tests/outils/faux-umami.ts`), et ne vide jamais ce qui est partagé.
+- Le nombre de lots est celui de `SHARDS` (`tests/outils/garde-fous-ci.ts`) : la garde refuse une matrice, un nom de job ou une commande qui en dirait un autre.
 - GitHub règle `CI=true` : un essai en échec est rejoué deux fois, et un essai laissé en `.only` fait échouer le lancement.
-- Un lot a 10 minutes au plus : au-delà, il est arrêté, et `ci-ok` est rouge. Sur un poste, un lot de 4 essais prend environ 13 secondes, build en cache compris (mesuré le 14/10/2026).
-- Après un échec, le lot envoie `playwright-report/` et `test-results/` : l'artefact `e2e-1` ou `e2e-2` du passage, sur la page de la CI, gardé 14 jours. Le rapport s'ouvre par `bunx playwright show-report playwright-report`, une fois l'artefact décompressé.
-- Pour le rejouer sur un poste, banc démarré : `CI=true bun run test:e2e --shard=1/2`.
+- Un lot a 10 minutes au plus : au-delà, il est arrêté, et `ci-ok` est rouge.
+- Après un échec, le lot envoie `playwright-report/` et `test-results/` : l'artefact `e2e-1` à `e2e-4` du passage, sur la page de la CI, gardé 14 jours. Le rapport s'ouvre par `bunx playwright show-report playwright-report`, une fois l'artefact décompressé.
+- Pour le rejouer sur un poste, banc démarré : `CI=true bun run test:e2e --shard=1/4 --workers=2`.
 
 ## Ce qui empêche de viser la prod
 

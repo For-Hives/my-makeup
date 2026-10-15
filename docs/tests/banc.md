@@ -647,7 +647,7 @@ Son contenu, son inventaire, son empreinte et ses outils de test : [`source-stra
 
 ## En CI
 
-Les mêmes commandes, dans le job `integration` de `.github/workflows/ci.yml` : `bun run banc:up`, puis `bun run test:integration`. Le banc y tourne sous le nom et sur les ports par défaut, avec le Docker de la machine de GitHub. Chaque lot du job `e2e` démarre aussi le sien ([`e2e.md`](e2e.md), « En CI »). Un job en échec rend `ci-ok` rouge ([`docs/qualite.md`](../qualite.md), « Ce que lance la CI »).
+Les mêmes commandes, dans le job `integration` de `.github/workflows/ci.yml`, en trois lots côte à côte : `bun run banc:up`, puis `bun run test:integration --shard=N/3`. bun répartit les fichiers de tests entre les lots, un fichier sur trois dans l'ordre alphabétique ; chaque lot démarre son propre banc, si bien que deux lots ne partagent jamais une base. Pour rejouer un lot sur un poste, banc démarré : `bun run test:integration --shard=2/3`. Le banc y tourne sous le nom et sur les ports par défaut, avec le Docker de la machine de GitHub. Chaque lot du job `e2e` démarre aussi le sien ([`e2e.md`](e2e.md), « En CI »). Un job en échec rend `ci-ok` rouge ([`docs/qualite.md`](../qualite.md), « Ce que lance la CI »).
 
 Lancé sans les commandes du banc (`docker compose -f compose.test.yml up -d --wait`), `compose.test.yml` démarre l'instance par défaut, sur les ports de `.env.test`.
 

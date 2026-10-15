@@ -25,6 +25,7 @@ import {
 	type RequiredCheck,
 	readWorkflow,
 	requiredCheckProblems,
+	SHARDS,
 	toleratedFailures,
 	triggerProblems,
 	unexpectedSecrets,
@@ -286,8 +287,11 @@ const AGGREGATOR = 'ci-ok'
  * the jobs run side by side, it is also the 15 minutes a green run must not reach.
  */
 const CI_LIMIT_MINUTES = 15
-/** The end-to-end tests must take less than this many minutes: it is the time limit of their job. */
-const E2E_LIMIT_MINUTES = 10
+/**
+ * Each shard of the integration tests and of the end-to-end tests must take less than this many
+ * minutes: it is the time limit of their jobs.
+ */
+const BENCH_LIMIT_MINUTES = 10
 
 const workflows: Workflow[] = readdirSync(path.join(ROOT, WORKFLOWS))
 	.filter(file => /\.ya?ml$/.test(file))
@@ -997,23 +1001,27 @@ describe('the time limits of the CI: no run lasts 15 minutes', () => {
 	})
 })
 
-describe('the CI runs the integration tests and the end-to-end tests on the test bench, in two shards', () => {
+describe('the CI runs the integration tests and the end-to-end tests on the test bench, in shards', () => {
 	const SETUP_NODE_OF_E2E =
 		'      # Playwright runs under Node, not bun.\n      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0\n        with:\n          node-version-file: .nvmrc\n          package-manager-cache: false\n'
 	const BENCH_OF_INTEGRATION =
 		'      - name: Start the test bench\n        run: bun run banc:up\n      - name: Integration tests\n'
-	const E2E_TESTS = `run: bun run test:e2e --shard=${expression('matrix.shard')}/2`
+	const SHARD = expression('matrix.shard')
+	const INTEGRATION_TESTS = `run: bun run test:integration --shard=${SHARD}/3`
+	const E2E_TESTS = `run: bun run test:e2e --shard=${SHARD}/4`
 
-	test('each job starts the bench before its tests; the end-to-end tests run in two shards, in less than 10 minutes', () => {
-		expect(benchJobProblems(ci, E2E_LIMIT_MINUTES)).toEqual([])
-		expect(ci.jobs.e2e?.['timeout-minutes']).toBeLessThanOrEqual(E2E_LIMIT_MINUTES)
+	test('each job starts the bench before its tests; three shards of integration tests, four of end-to-end tests, each in less than 10 minutes', () => {
+		expect(SHARDS).toEqual({ integration: 3, e2e: 4 })
+		expect(benchJobProblems(ci, BENCH_LIMIT_MINUTES)).toEqual([])
+		expect(ci.jobs.integration?.['timeout-minutes']).toBeLessThanOrEqual(BENCH_LIMIT_MINUTES)
+		expect(ci.jobs.e2e?.['timeout-minutes']).toBeLessThanOrEqual(BENCH_LIMIT_MINUTES)
 	})
 
 	test.each([
 		[
 			'no integration job any more',
-			'  integration:\n    name: integration\n',
-			'  integ:\n    name: integ\n',
+			'  integration:\n    name: integration',
+			'  integ:\n    name: integ',
 			'n’a pas de job « integration » : le banc de test n’y tournerait plus',
 		],
 		[
@@ -1024,27 +1032,69 @@ describe('the CI runs the integration tests and the end-to-end tests on the test
 		],
 		[
 			'integration tests started before the bench',
-			`${BENCH_OF_INTEGRATION}        run: bun run test:integration\n`,
-			'      - name: Integration tests\n        run: bun run test:integration\n      - name: Start the test bench\n        run: bun run banc:up\n',
-			'job integration : « bun run test:integration » doit venir après « bun run banc:up »',
+			`${BENCH_OF_INTEGRATION}        ${INTEGRATION_TESTS}\n`,
+			`      - name: Integration tests\n        ${INTEGRATION_TESTS}\n      - name: Start the test bench\n        run: bun run banc:up\n`,
+			`job integration : « bun run test:integration --shard=${SHARD}/3 » doit venir après « bun run banc:up »`,
 		],
 		[
-			'one integration file instead of the folder',
-			'run: bun run test:integration',
+			'one integration file instead of its shard of the folder',
+			INTEGRATION_TESTS,
 			'run: bun run test:integration tests/integration/banc-base.test.ts',
-			'job integration : il doit lancer « bun run test:integration », seule dans son étape',
+			`job integration : il doit lancer « bun run test:integration --shard=${SHARD}/3 », seule dans son étape`,
+		],
+		[
+			'every integration test in each shard',
+			INTEGRATION_TESTS,
+			'run: bun run test:integration',
+			`job integration : il doit lancer « bun run test:integration --shard=${SHARD}/3 »`,
+		],
+		[
+			'integration tests divided by another number than their shards',
+			INTEGRATION_TESTS,
+			`run: bun run test:integration --shard=${SHARD}/2`,
+			`job integration : il doit lancer « bun run test:integration --shard=${SHARD}/3 »`,
 		],
 		[
 			'the bench and the tests in one script',
-			'        run: bun run banc:up\n      - name: Integration tests\n        run: bun run test:integration\n',
-			'        run: |\n          bun run banc:up\n          bun run test:integration\n',
-			'job integration : il doit lancer « bun run test:integration », seule dans son étape',
+			`        run: bun run banc:up\n      - name: Integration tests\n        ${INTEGRATION_TESTS}\n`,
+			`        run: |\n          bun run banc:up\n          bun run test:integration --shard=${SHARD}/3\n`,
+			`job integration : il doit lancer « bun run test:integration --shard=${SHARD}/3 », seule dans son étape`,
+		],
+		[
+			'an integration shard left out of the matrix',
+			'shard: [1, 2, 3]\n',
+			'shard: [1, 2]\n',
+			'job integration : les tests tournent en 3 lots, « matrix: shard: [1, 2, 3] », et rien d’autre',
+		],
+		[
+			'integration tests without their shards',
+			`    name: integration (${SHARD}/3)`,
+			'    name: integration',
+			`job integration : son nom dit ses lots, « integration (${SHARD}/3) »`,
+		],
+		[
+			'a failed integration shard that cancels the others',
+			'      fail-fast: false\n      matrix:\n        shard: [1, 2, 3]\n',
+			'      fail-fast: true\n      matrix:\n        shard: [1, 2, 3]\n',
+			'job integration : « fail-fast: false », sinon un lot en échec annule les autres',
+		],
+		[
+			'integration tests allowed 15 minutes',
+			'    timeout-minutes: 10\n    strategy:\n      # A failed shard does not stop the others: one push shows every failed test.\n      fail-fast: false\n      matrix:\n        shard: [1, 2, 3]',
+			'    timeout-minutes: 15\n    strategy:\n      # A failed shard does not stop the others: one push shows every failed test.\n      fail-fast: false\n      matrix:\n        shard: [1, 2, 3]',
+			'job integration : sa limite est de 15 minutes ; chaque lot doit tenir en 10',
 		],
 		[
 			'every end-to-end test in each shard',
 			E2E_TESTS,
 			'run: bun run test:e2e',
-			`job e2e : il doit lancer « bun run test:e2e --shard=${expression('matrix.shard')}/2 »`,
+			`job e2e : il doit lancer « bun run test:e2e --shard=${SHARD}/4 »`,
+		],
+		[
+			'end-to-end tests divided by another number than their shards',
+			E2E_TESTS,
+			`run: bun run test:e2e --shard=${SHARD}/2`,
+			`job e2e : il doit lancer « bun run test:e2e --shard=${SHARD}/4 »`,
 		],
 		[
 			'end-to-end tests without their browser',
@@ -1058,39 +1108,51 @@ describe('the CI runs the integration tests and the end-to-end tests on the test
 			'',
 			'job e2e : Playwright tourne sous Node, installé avant les essais',
 		],
-		['a single shard', 'shard: [1, 2]', 'shard: [1]', 'les essais tournent en 2 lots'],
+		['a single shard', 'shard: [1, 2, 3, 4]', 'shard: [1]', 'job e2e : les tests tournent en 4 lots'],
 		[
-			'three shards for a command that cuts in two',
-			'shard: [1, 2]',
-			'shard: [1, 2, 3]',
-			'les essais tournent en 2 lots',
+			'five shards for a command that cuts in four',
+			'shard: [1, 2, 3, 4]',
+			'shard: [1, 2, 3, 4, 5]',
+			'job e2e : les tests tournent en 4 lots',
+		],
+		[
+			'a shard counted from zero',
+			'shard: [1, 2, 3, 4]',
+			'shard: [0, 1, 2, 3]',
+			'job e2e : les tests tournent en 4 lots',
 		],
 		[
 			'a second dimension that runs every shard twice',
-			'        shard: [1, 2]\n',
-			'        shard: [1, 2]\n        navigateur: [chromium, firefox]\n',
-			'les essais tournent en 2 lots, « matrix: shard: [1, 2] », et rien d’autre',
+			'        shard: [1, 2, 3, 4]\n',
+			'        shard: [1, 2, 3, 4]\n        navigateur: [chromium, firefox]\n',
+			'job e2e : les tests tournent en 4 lots, « matrix: shard: [1, 2, 3, 4] », et rien d’autre',
 		],
 		[
-			'a failed shard that cancels the other one',
-			'      fail-fast: false\n',
-			'      fail-fast: true\n',
-			'« fail-fast: false », sinon un lot en échec annule l’autre',
+			'a name that says another number of shards',
+			`    name: e2e (${SHARD}/4)`,
+			`    name: e2e (${SHARD}/2)`,
+			`job e2e : son nom dit ses lots, « e2e (${SHARD}/4) »`,
 		],
 		[
-			'the default of GitHub, which cancels the other shard',
-			'      fail-fast: false\n',
-			'',
-			'« fail-fast: false », sinon un lot en échec annule l’autre',
+			'a failed shard that cancels the others',
+			'      fail-fast: false\n      matrix:\n        shard: [1, 2, 3, 4]\n',
+			'      fail-fast: true\n      matrix:\n        shard: [1, 2, 3, 4]\n',
+			'job e2e : « fail-fast: false », sinon un lot en échec annule les autres',
+		],
+		[
+			'the default of GitHub, which cancels the other shards',
+			'      fail-fast: false\n      matrix:\n        shard: [1, 2, 3, 4]\n',
+			'      matrix:\n        shard: [1, 2, 3, 4]\n',
+			'job e2e : « fail-fast: false », sinon un lot en échec annule les autres',
 		],
 		[
 			'end-to-end tests allowed 15 minutes',
-			'    timeout-minutes: 10\n    strategy:',
-			'    timeout-minutes: 15\n    strategy:',
-			'job e2e : sa limite est de 15 minutes ; les essais de bout en bout doivent tenir en 10',
+			'    timeout-minutes: 10\n    strategy:\n      # A failed shard does not stop the others: one push shows every failed test.\n      fail-fast: false\n      matrix:\n        shard: [1, 2, 3, 4]',
+			'    timeout-minutes: 15\n    strategy:\n      # A failed shard does not stop the others: one push shows every failed test.\n      fail-fast: false\n      matrix:\n        shard: [1, 2, 3, 4]',
+			'job e2e : sa limite est de 15 minutes ; chaque lot doit tenir en 10',
 		],
 	])('red on %s', (_fault, from, to, expected) => {
-		expect(benchJobProblems(brokenCi(from, to), E2E_LIMIT_MINUTES).join('\n')).toContain(expected)
+		expect(benchJobProblems(brokenCi(from, to), BENCH_LIMIT_MINUTES).join('\n')).toContain(expected)
 	})
 })
 
