@@ -3,6 +3,8 @@ import { initI18n } from '@payloadcms/translations'
 import { type PayloadRequest, ValidationError } from 'payload'
 import { Admins, DUREE_SESSION_ADMIN_S, sessionsFermees } from '@/collections/Admins'
 import { Articles } from '@/collections/Articles'
+import { AuthEvenements } from '@/collections/AuthEvenements'
+import { Demandes } from '@/collections/Demandes'
 import {
 	aucunEnvoiSansStockage,
 	COORDONNEES_DU_FICHIER,
@@ -31,6 +33,7 @@ import {
 	adminRedactionOuMaquilleuse,
 	adminRedactionOuPublies,
 	adminSeulement,
+	cacheeSaufAdmin,
 	champAdminOuRedaction,
 	champAdminSeulement,
 	champDuMediaAdminOuProprietaire,
@@ -147,6 +150,27 @@ describe('Un identifiant impossible : refusé par chaque règle, avant la base (
 				pro: { equals: 7 },
 			})
 		}
+	})
+})
+
+describe('U59 : le panneau de la rédaction ne montre que les articles, les talents et les médias', () => {
+	test('seul un admin voit les collections masquées', () => {
+		expect([admin, redaction, maquilleuse, null].map(user => cacheeSaufAdmin({ user }))).toEqual([
+			false,
+			true,
+			true,
+			true,
+		])
+	})
+
+	test('les comptes, les profils, les maquilleuses, les demandes et le journal sont masqués à la rédaction', () => {
+		for (const collection of [Admins, Profils, Pros, Demandes, AuthEvenements])
+			expect(collection.admin?.hidden, collection.slug).toBe(cacheeSaufAdmin)
+	})
+
+	test('les articles, les talents et les médias restent dans le menu de la rédaction', () => {
+		for (const collection of [Articles, Talents, Media])
+			expect(collection.admin?.hidden, collection.slug).toBeUndefined()
 	})
 })
 

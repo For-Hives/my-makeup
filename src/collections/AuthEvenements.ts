@@ -1,6 +1,6 @@
 import type { CollectionConfig } from 'payload'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
-import { adminSeulement, estAdmin } from '../lib/acces'
+import { adminSeulement, cacheeSaufAdmin } from '../lib/acces'
 import { CODES_EVENEMENT, METHODES_EVENEMENT, TYPES_EVENEMENT } from '../lib/auth/journal'
 
 const LIBELLES_DES_TYPES: Record<(typeof TYPES_EVENEMENT)[number], string> = {
@@ -57,7 +57,7 @@ export const AuthEvenements: CollectionConfig<'auth-evenements'> = {
 	labels: { singular: 'Événement d’authentification', plural: 'Journal d’authentification' },
 	admin: {
 		defaultColumns: ['date', 'type', 'methode', 'code', 'dureeMs'],
-		hidden: ({ user }) => !estAdmin(user as Parameters<typeof estAdmin>[0]),
+		hidden: cacheeSaufAdmin,
 	},
 	defaultSort: '-date',
 	timestamps: false,

@@ -1,5 +1,13 @@
 import type { CollectionConfig, Field } from 'payload'
-import { adminOuSoiMeme, adminSeulement, champAdminSeulement, jamais, ROLES_ADMIN, type RoleAdmin } from '../lib/acces'
+import {
+	adminOuSoiMeme,
+	adminSeulement,
+	cacheeSaufAdmin,
+	champAdminSeulement,
+	jamais,
+	ROLES_ADMIN,
+	type RoleAdmin,
+} from '../lib/acces'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import { freinerLaConnexion, rendreLaPlaceDeLaConnexion } from '../lib/auth/frein-payload'
 import { premierCompteFerme } from '../lib/auth/premier-compte-ferme'
@@ -41,7 +49,7 @@ export const sessionsFermees: Field = {
 export const Admins: CollectionConfig<'admins'> = {
 	slug: 'admins',
 	labels: { singular: 'Compte admin', plural: 'Comptes admin' },
-	admin: { useAsTitle: 'email', defaultColumns: ['email', 'role'] },
+	admin: { useAsTitle: 'email', defaultColumns: ['email', 'role'], hidden: cacheeSaufAdmin },
 	// No lock of the account (AUTH-05, like `pros`): wrong passwords must never shut the owner out
 	// for every address. The brake by address is the only one (`freinerLaConnexion`).
 	auth: { tokenExpiration: DUREE_SESSION_ADMIN_S, maxLoginAttempts: 0 },
