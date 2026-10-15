@@ -9,6 +9,7 @@ import {
 	supprimerLeMedia,
 	televerserLaPhoto,
 } from '@/lib/espace/envoi-des-photos'
+import { causeDuRefusLocal, mesurerLEnregistrement, mesurerUnRefusDePhoto } from '@/lib/espace/mesure'
 import { ACCEPT, MESSAGES_PHOTO, type PhotoPreparee } from '@/lib/espace/photo'
 import { preparerPhotoNavigateur } from '@/lib/espace/photo-navigateur'
 import type { IdentifiantDePhoto, PhotoDeLEspace } from '@/lib/espace/photos'
@@ -240,6 +241,7 @@ function FormulaireDuPortfolio({
 				}
 				const prete = await preparer(fichier)
 				if (!prete.ok) {
+					mesurerUnRefusDePhoto(causeDuRefusLocal(prete))
 					refuser(fichier, prete.message)
 					continue
 				}
@@ -272,9 +274,18 @@ function FormulaireDuPortfolio({
 		try {
 			const issue = await envoyerPuisEnregistrer<ValeursDuPortfolio>({
 				photos: lignes,
-				televerser,
+				televerser: async (fichier, alt) => {
+					const envoi = await televerser(fichier, alt)
+					// A session that ended is not a refusal of the photo.
+					if (!envoi.ok && envoi.session !== 'expiree') mesurerUnRefusDePhoto(envoi.cause ?? 'server')
+					return envoi
+				},
 				supprimer,
-				enregistrer: ids => envoyer({ galerie: ids }),
+				enregistrer: async ids => {
+					const resultat = await envoyer({ galerie: ids })
+					mesurerLEnregistrement('portfolio', resultat)
+					return resultat
+				},
 				marquerEnvoyee: (cle, id) =>
 					setLignes(courantes => courantes.map(ligne => (ligne.cle === cle ? { ...ligne, id } : ligne))),
 			})

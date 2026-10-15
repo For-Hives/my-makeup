@@ -6,6 +6,7 @@ import { enregistrerListe } from '@/lib/espace/enregistrer-liste'
 import { EXPERIENCES } from '@/lib/espace/experiences'
 import { FORMATIONS } from '@/lib/espace/formations'
 import type { DefinitionDeListe, ListeEnregistree } from '@/lib/espace/liste'
+import { avecPassagePublicable } from '@/lib/espace/passage-publiable'
 import { PRESTATIONS } from '@/lib/espace/prestations'
 import { utilisatriceDeLaRequete } from '@/lib/espace/requete'
 import { MESSAGE_ECHEC, MESSAGE_SESSION, type ResultatDEnregistrement } from '@/lib/espace/resultat'
@@ -25,7 +26,9 @@ async function enregistrerMaListe(
 	const origine = (await headers()).get('origin')
 	if (origine !== null && !payload.config.csrf.includes(origine)) return { ok: false, message: MESSAGE_ECHEC }
 
-	const resultat = await enregistrerListe(payload, utilisateur, saisie, definition)
+	const resultat = await avecPassagePublicable(payload, utilisateur, () =>
+		enregistrerListe(payload, utilisateur, saisie, definition)
+	)
 	if (resultat.ok) revalidatePath('/auth/profil')
 	return resultat
 }

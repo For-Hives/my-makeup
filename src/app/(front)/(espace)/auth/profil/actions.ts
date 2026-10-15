@@ -14,6 +14,7 @@ import { enregistrerPortfolio } from '@/lib/espace/enregistrer-portfolio'
 import { enregistrerCompetences, enregistrerLangues } from '@/lib/espace/enregistrer-puces'
 import { enregistrerReseaux } from '@/lib/espace/enregistrer-reseaux'
 import type { ValeursDeLIdentite } from '@/lib/espace/identite'
+import { avecPassagePublicable } from '@/lib/espace/passage-publiable'
 import type { ValeursDeLaPhoto } from '@/lib/espace/photo-principale'
 import type { ValeursDuPortfolio } from '@/lib/espace/portfolio'
 import type { ValeursDesPuces } from '@/lib/espace/puces'
@@ -36,7 +37,9 @@ export async function enregistrerMonIdentite(saisie: unknown): Promise<ResultatD
 	const origine = (await headers()).get('origin')
 	if (origine !== null && !payload.config.csrf.includes(origine)) return { ok: false, message: MESSAGE_ECHEC }
 
-	const resultat = await enregistrerIdentite(payload, utilisateur, saisie)
+	const resultat = await avecPassagePublicable(payload, utilisateur, () =>
+		enregistrerIdentite(payload, utilisateur, saisie)
+	)
 	if (resultat.ok) revalidatePath('/auth/profil')
 	return resultat
 }
@@ -54,7 +57,9 @@ export async function enregistrerMaDescription(
 	const origine = (await headers()).get('origin')
 	if (origine !== null && !payload.config.csrf.includes(origine)) return { ok: false, message: MESSAGE_ECHEC }
 
-	const resultat = await enregistrerDescription(payload, utilisateur, saisie)
+	const resultat = await avecPassagePublicable(payload, utilisateur, () =>
+		enregistrerDescription(payload, utilisateur, saisie)
+	)
 	if (resultat.ok) revalidatePath('/auth/profil')
 	return resultat
 }
@@ -73,7 +78,9 @@ export async function enregistrerMaDisponibilite(
 	const origine = (await headers()).get('origin')
 	if (origine !== null && !payload.config.csrf.includes(origine)) return { ok: false, message: MESSAGE_ECHEC }
 
-	const resultat = await enregistrerDisponibilite(payload, utilisateur, saisie)
+	const resultat = await avecPassagePublicable(payload, utilisateur, () =>
+		enregistrerDisponibilite(payload, utilisateur, saisie)
+	)
 	if (resultat.ok) revalidatePath('/auth/profil')
 	return resultat
 }
@@ -89,7 +96,9 @@ export async function enregistrerMesReseaux(saisie: unknown): Promise<ResultatDE
 	const origine = (await headers()).get('origin')
 	if (origine !== null && !payload.config.csrf.includes(origine)) return { ok: false, message: MESSAGE_ECHEC }
 
-	const resultat = await enregistrerReseaux(payload, utilisateur, saisie)
+	const resultat = await avecPassagePublicable(payload, utilisateur, () =>
+		enregistrerReseaux(payload, utilisateur, saisie)
+	)
 	if (resultat.ok) revalidatePath('/auth/profil')
 	return resultat
 }
@@ -107,7 +116,9 @@ export async function enregistrerMesCoordonnees(
 	const origine = (await headers()).get('origin')
 	if (origine !== null && !payload.config.csrf.includes(origine)) return { ok: false, message: MESSAGE_ECHEC }
 
-	const resultat = await enregistrerCoordonnees(payload, utilisateur, saisie)
+	const resultat = await avecPassagePublicable(payload, utilisateur, () =>
+		enregistrerCoordonnees(payload, utilisateur, saisie)
+	)
 	if (resultat.ok) revalidatePath('/auth/profil')
 	return resultat
 }
@@ -123,7 +134,9 @@ export async function enregistrerMesLangues(saisie: unknown): Promise<ResultatDE
 	const origine = (await headers()).get('origin')
 	if (origine !== null && !payload.config.csrf.includes(origine)) return { ok: false, message: MESSAGE_ECHEC }
 
-	const resultat = await enregistrerLangues(payload, utilisateur, saisie)
+	const resultat = await avecPassagePublicable(payload, utilisateur, () =>
+		enregistrerLangues(payload, utilisateur, saisie)
+	)
 	if (resultat.ok) revalidatePath('/auth/profil')
 	return resultat
 }
@@ -136,7 +149,9 @@ export async function enregistrerMesCompetences(saisie: unknown): Promise<Result
 	const origine = (await headers()).get('origin')
 	if (origine !== null && !payload.config.csrf.includes(origine)) return { ok: false, message: MESSAGE_ECHEC }
 
-	const resultat = await enregistrerCompetences(payload, utilisateur, saisie)
+	const resultat = await avecPassagePublicable(payload, utilisateur, () =>
+		enregistrerCompetences(payload, utilisateur, saisie)
+	)
 	if (resultat.ok) revalidatePath('/auth/profil')
 	return resultat
 }
@@ -156,7 +171,9 @@ export async function enregistrerMaPhotoPrincipale(
 	const origine = (await headers()).get('origin')
 	if (origine !== null && !payload.config.csrf.includes(origine)) return { ok: false, message: MESSAGE_ECHEC }
 
-	const resultat = await enregistrerPhotoPrincipale(payload, utilisateur, saisie)
+	const resultat = await avecPassagePublicable(payload, utilisateur, () =>
+		enregistrerPhotoPrincipale(payload, utilisateur, saisie)
+	)
 	if (resultat.ok) revalidatePath('/auth/profil')
 	return resultat
 }
@@ -172,7 +189,9 @@ export async function enregistrerMonPortfolio(saisie: unknown): Promise<Resultat
 	const origine = (await headers()).get('origin')
 	if (origine !== null && !payload.config.csrf.includes(origine)) return { ok: false, message: MESSAGE_ECHEC }
 
-	const resultat = await enregistrerPortfolio(payload, utilisateur, saisie)
+	const resultat = await avecPassagePublicable(payload, utilisateur, () =>
+		enregistrerPortfolio(payload, utilisateur, saisie)
+	)
 	if (resultat.ok) revalidatePath('/auth/profil')
 	return resultat
 }

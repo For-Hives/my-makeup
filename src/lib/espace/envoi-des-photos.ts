@@ -29,7 +29,10 @@ export const MESSAGE_RESULTAT_INCERTAIN =
 
 export type ResultatDEnvoiDUnFichier =
 	| { ok: true; id: IdentifiantDePhoto }
-	| { ok: false; message: string; session?: 'expiree' }
+	| { ok: false; message: string; session?: 'expiree'; cause?: CauseDeRefus }
+
+/** Why a photo was refused, in the words of the event `upload_error` (ticket 147). */
+export type CauseDeRefus = 'size' | 'type' | 'server'
 
 /** What a test replaces: the network. */
 export type Reseau = (adresse: string, options?: RequestInit) => Promise<Response>
@@ -55,16 +58,18 @@ export async function televerserLaPhoto(
 			credentials: 'same-origin',
 		})
 	} catch {
-		return { ok: false, message: MESSAGES_PHOTO['envoi-impossible'] }
+		return { ok: false, message: MESSAGES_PHOTO['envoi-impossible'], cause: 'server' }
 	}
 	if (reponse.status === 401 || reponse.status === 403)
 		return { ok: false, message: MESSAGE_SESSION, session: 'expiree' }
-	if (reponse.status === 413) return { ok: false, message: MESSAGES_PHOTO['refus-taille'] }
+	if (reponse.status === 413) return { ok: false, message: MESSAGES_PHOTO['refus-taille'], cause: 'size' }
 	if (reponse.status === 400 || reponse.status === 415) {
 		const texte = await reponse.text().catch(() => '')
+		const taille = texte.includes(MESSAGES_D_ENVOI.taille)
 		return {
 			ok: false,
-			message: texte.includes(MESSAGES_D_ENVOI.taille) ? MESSAGES_PHOTO['refus-taille'] : MESSAGES_PHOTO['refus-type'],
+			message: taille ? MESSAGES_PHOTO['refus-taille'] : MESSAGES_PHOTO['refus-type'],
+			cause: taille ? 'size' : 'type',
 		}
 	}
 	if (reponse.status === 201) {
@@ -72,7 +77,7 @@ export async function televerserLaPhoto(
 		const id = (corps as { doc?: { id?: unknown } } | null)?.doc?.id
 		if (typeof id === 'number' || typeof id === 'string') return { ok: true, id }
 	}
-	return { ok: false, message: MESSAGES_PHOTO['envoi-impossible'] }
+	return { ok: false, message: MESSAGES_PHOTO['envoi-impossible'], cause: 'server' }
 }
 
 /** Deletes a media nothing references (a file sent in a gesture that did not end). Never throws. */
@@ -101,7 +106,7 @@ export interface PhotoAEnvoyer {
 }
 
 export type IssueDeLEnvoi<Valeurs extends Record<string, unknown>> =
-	| { ok: true; valeurs: Valeurs }
+	| { ok: true; valeurs: Valeurs; devenuPublicable?: true }
 	| {
 			ok: false
 			message: string

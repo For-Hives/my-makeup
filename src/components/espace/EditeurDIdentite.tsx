@@ -10,6 +10,7 @@ import {
 	schemaDeLIdentite,
 	type ValeursDeLIdentite,
 } from '@/lib/espace/identite'
+import { mesurerLEnregistrement } from '@/lib/espace/mesure'
 import { MESSAGE_ECHEC, MESSAGE_SESSION, type ResultatDEnregistrement } from '@/lib/espace/resultat'
 import {
 	garderLaSaisie,
@@ -182,6 +183,7 @@ function FormulaireDIdentite({
 				ok: false,
 				message: MESSAGE_ECHEC,
 			}))
+			mesurerLEnregistrement('identite', resultat)
 			if (resultat.ok) {
 				oublierLaSaisie(stockage(), 'identite', proprietaire)
 				onEnregistre()

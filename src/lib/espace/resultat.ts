@@ -5,7 +5,12 @@
  */
 
 export type ResultatDEnregistrement<Valeurs extends Record<string, unknown>> =
-	| { ok: true; valeurs: Valeurs }
+	| {
+			ok: true
+			valeurs: Valeurs
+			/** Set by the server when this very save made her profile « publiable » (ticket 147). */
+			devenuPublicable?: true
+	  }
 	| {
 			ok: false
 			/** The message under the form, always in French. */

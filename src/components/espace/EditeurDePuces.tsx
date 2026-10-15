@@ -1,6 +1,7 @@
 'use client'
 
 import { type FormEvent, useLayoutEffect, useRef, useState } from 'react'
+import { mesurerLEnregistrement } from '@/lib/espace/mesure'
 import {
 	type ChampDePuces,
 	COMPETENCES,
@@ -171,6 +172,7 @@ function FormulaireDePuces({
 			const resultat: ResultatDEnregistrement<ValeursDesPuces> = await envoyer({
 				puces: liste.map(({ id, nom }) => (id.startsWith(LOCAL) ? { nom } : { id, nom })),
 			}).catch(() => ({ ok: false, message: MESSAGE_ECHEC }))
+			mesurerLEnregistrement(sorte.champ, resultat)
 			if (resultat.ok) {
 				onEnregistre(resultat.valeurs.puces)
 				return

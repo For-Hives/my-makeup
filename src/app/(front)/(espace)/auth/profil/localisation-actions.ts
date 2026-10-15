@@ -9,6 +9,7 @@ import {
 	type ResultatDeRecherche,
 	type ValeursDeLaLocalisation,
 } from '@/lib/espace/localisation'
+import { avecPassagePublicable } from '@/lib/espace/passage-publiable'
 import { chercherDesCommunes, proposition } from '@/lib/espace/referentiel-communes'
 import { utilisatriceDeLaRequete } from '@/lib/espace/requete'
 import { MESSAGE_ECHEC, MESSAGE_SESSION, type ResultatDEnregistrement } from '@/lib/espace/resultat'
@@ -55,7 +56,9 @@ export async function enregistrerMaLocalisation(
 	const { payload, utilisateur } = contexte
 	if (!(await origineDeConfiance(payload.config.csrf))) return { ok: false, message: MESSAGE_ECHEC }
 
-	const resultat = await enregistrerLocalisation(payload, utilisateur, saisie)
+	const resultat = await avecPassagePublicable(payload, utilisateur, () =>
+		enregistrerLocalisation(payload, utilisateur, saisie)
+	)
 	if (resultat.ok) revalidatePath('/auth/profil')
 	return resultat
 }

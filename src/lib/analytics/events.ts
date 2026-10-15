@@ -61,6 +61,10 @@ export const SECTIONS_DE_PROFIL = [
 	'offres',
 	'portfolio',
 	'onboarding',
+	// The cards of the space that have no modal of their own on the live site (ticket 147).
+	'coordonnees',
+	'disponibilite',
+	'photo',
 ] as const
 
 export const METRIQUES_WEB_VITALS = ['CLS', 'FCP', 'INP', 'LCP', 'TTFB'] as const

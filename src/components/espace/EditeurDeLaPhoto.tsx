@@ -9,6 +9,7 @@ import {
 	supprimerLeMedia,
 	televerserLaPhoto,
 } from '@/lib/espace/envoi-des-photos'
+import { causeDuRefusLocal, mesurerLEnregistrement, mesurerUnRefusDePhoto } from '@/lib/espace/mesure'
 import { ACCEPT, type PhotoPreparee } from '@/lib/espace/photo'
 import { preparerPhotoNavigateur } from '@/lib/espace/photo-navigateur'
 import type { ValeursDeLaPhoto } from '@/lib/espace/photo-principale'
@@ -165,6 +166,7 @@ function FormulaireDeLaPhoto({
 		try {
 			const prete = await preparer(fichier)
 			if (!prete.ok) {
+				mesurerUnRefusDePhoto(causeDuRefusLocal(prete))
 				setErreur(prete.message)
 				return
 			}
@@ -186,11 +188,19 @@ function FormulaireDeLaPhoto({
 		try {
 			const issue = await envoyerPuisEnregistrer<ValeursDeLaPhoto>({
 				photos: [choisie],
-				televerser,
+				televerser: async (fichier, alt) => {
+					const envoi = await televerser(fichier, alt)
+					// A session that ended is not a refusal of the photo.
+					if (!envoi.ok && envoi.session !== 'expiree') mesurerUnRefusDePhoto(envoi.cause ?? 'server')
+					return envoi
+				},
 				supprimer,
-				enregistrer: ids => {
+				enregistrer: async ids => {
 					const [id] = ids
-					return envoyer({ photoPrincipale: id as IdentifiantDePhoto })
+					const resultat = await envoyer({ photoPrincipale: id as IdentifiantDePhoto })
+					// Only an answer of the server is a save; a lost call counts nothing.
+					mesurerLEnregistrement('photo', resultat)
+					return resultat
 				},
 				marquerEnvoyee: (_cle, id) => setChoisie(courante => (courante === null ? courante : { ...courante, id })),
 			})

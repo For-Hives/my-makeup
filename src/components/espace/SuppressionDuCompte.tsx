@@ -7,6 +7,7 @@ import {
 	type ResultatDeLaSuppression,
 	type ValeursDeLaSuppression,
 } from '@/lib/espace/confirmation-suppression'
+import { mesurerLaSuppressionDuCompte } from '@/lib/espace/mesure'
 import { PanneauDEdition } from './PanneauDEdition'
 
 export type EnvoiDeLaSuppression = (valeurs: ValeursDeLaSuppression) => Promise<ResultatDeLaSuppression>
@@ -111,6 +112,8 @@ function FormulaireDeSuppression({
 				message: MESSAGE_ECHEC_DE_SUPPRESSION,
 			}))
 			if (resultat.ok) {
+				// Counted once the server has deleted the account, and only then.
+				mesurerLaSuppressionDuCompte()
 				// The lock stays on: nothing more can be sent, the browser leaves.
 				setFait(true)
 				aller(PAGE_APRES_SUPPRESSION)
