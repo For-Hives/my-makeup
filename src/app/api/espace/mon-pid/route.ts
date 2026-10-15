@@ -1,0 +1,32 @@
+import { cookies } from 'next/headers'
+import { COOKIE_DE_SESSION } from '@/lib/auth/espace-ferme'
+import { utilisatriceDeLaRequete } from '@/lib/espace/requete'
+import { pidDuProfil } from '@/lib/profil/pid'
+
+// Read per request: it depends on the session, and the build has no database.
+export const dynamic = 'force-dynamic'
+
+/**
+ * The `pid` of the profile of the signed-in makeup artist, or `null` (ticket 144). The public page of a
+ * profile is shared and cached, so it cannot know who looks at it: the browser asks here, to leave
+ * out the clicks of an artist on her own contacts. The `pid` is the public id the measure counts, found
+ * by her session, never one the request gave. Never cached; a request without the session cookie is
+ * answered without touching the database.
+ */
+export async function GET(): Promise<Response> {
+	const entetes = { 'Cache-Control': 'private, no-store' }
+	if (!(await cookies()).has(COOKIE_DE_SESSION)) return Response.json({ pid: null }, { headers: entetes })
+	const contexte = await utilisatriceDeLaRequete()
+	if (contexte === null) return Response.json({ pid: null }, { headers: entetes })
+	const { docs } = await contexte.payload.find({
+		collection: 'profils',
+		depth: 0,
+		limit: 1,
+		overrideAccess: true,
+		pagination: false,
+		select: { strapiId: true },
+		where: { pro: { equals: contexte.utilisateur.id } },
+	})
+	const profil = docs[0]
+	return Response.json({ pid: profil ? pidDuProfil(profil) : null }, { headers: entetes })
+}

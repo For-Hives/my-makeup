@@ -31,7 +31,7 @@ export default async function PageDApercu() {
 	return (
 		<>
 			<BandeauDApercu etat={etatDeLApercu(apercu.etat)} />
-			<VueDuProfil profil={apercu.profil} />
+			<VueDuProfil profil={apercu.profil} mesure={false} />
 		</>
 	)
 }

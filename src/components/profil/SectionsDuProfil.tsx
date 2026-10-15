@@ -1,4 +1,5 @@
 import Image from 'next/image'
+import type { Pid } from '@/lib/analytics/events'
 import type {
 	ExperiencePublique,
 	FormationPublique,
@@ -7,6 +8,7 @@ import type {
 	PrestationPublique,
 } from '@/lib/profil/vue-publique'
 import { LIBELLES_DES_CANAUX } from '@/lib/profil/vue-publique'
+import { LienDeContactMesure } from './LienDeContactMesure'
 import { SectionDuProfil } from './SectionDuProfil'
 
 /**
@@ -74,7 +76,46 @@ const ICONES: Readonly<Record<LienDeContact['canal'], string>> = {
 /** Networks and websites open in a new tab; an email and a telephone do not. */
 const NOUVEL_ONGLET = new Set<LienDeContact['canal']>(['instagram', 'facebook', 'linkedin', 'youtube', 'website'])
 
-export function SectionContacts({ liens }: { liens: readonly LienDeContact[] }) {
+function LienDuContact({
+	lien: { canal, libelle },
+	href,
+	pid,
+	mesure,
+}: {
+	lien: LienDeContact
+	href: string
+	pid: Pid | null
+	mesure: boolean
+}) {
+	const proprietes = {
+		href,
+		...(NOUVEL_ONGLET.has(canal) ? { target: '_blank' } : {}),
+		rel: 'noopener nofollow noreferrer',
+		className:
+			'break-words text-indigo-900 underline [overflow-wrap:anywhere] focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-offset-2',
+	}
+	return mesure && pid !== null ? (
+		<LienDeContactMesure pid={pid} canal={canal} {...proprietes}>
+			{libelle}
+		</LienDeContactMesure>
+	) : (
+		<a {...proprietes}>{libelle}</a>
+	)
+}
+
+/**
+ * `pid` and `mesure`: the links count their click (ticket 144). The preview of her own page does not
+ * (`mesure` false), and a profile whose `pid` is unknown cannot be counted.
+ */
+export function SectionContacts({
+	liens,
+	pid,
+	mesure = true,
+}: {
+	liens: readonly LienDeContact[]
+	pid: Pid | null
+	mesure?: boolean
+}) {
 	return (
 		<SectionDuProfil titre="Réseaux sociaux & contacts">
 			<ul className="flex flex-col gap-3">
@@ -85,14 +126,7 @@ export function SectionContacts({ liens }: { liens: readonly LienDeContact[] }) 
 						<div className="min-w-0">
 							<span className="block font-semibold text-gray-700">{LIBELLES_DES_CANAUX[canal]}</span>
 							{href ? (
-								<a
-									href={href}
-									{...(NOUVEL_ONGLET.has(canal) ? { target: '_blank' } : {})}
-									rel="noopener nofollow noreferrer"
-									className="break-words text-indigo-900 underline [overflow-wrap:anywhere] focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-offset-2"
-								>
-									{libelle}
-								</a>
+								<LienDuContact lien={{ canal, libelle, href }} href={href} pid={pid} mesure={mesure} />
 							) : (
 								<span className="break-words text-gray-700 [overflow-wrap:anywhere]">{libelle}</span>
 							)}
