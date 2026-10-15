@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { expect, test } from '@playwright/test'
+import { SITE_ORIGIN } from '../../src/lib/urls-gelees'
 import { poserLesProfilsDeRecherche } from '../fixtures/profils-de-recherche'
 import { creerContenu, rafraichirLesPagesDesProfils, supprimerContenu } from '../outils/pages-publiques'
 import {
@@ -54,7 +55,20 @@ const LIVREES: ReadonlySet<string> = new Set([
 	'profil',
 	'profil-ancien-nom',
 	'profil-non-repris',
+	'demande-envoyee',
 ])
+
+/**
+ * Addresses of the family « pages-fixes » that are delivered before the whole family is: each one must be
+ * green on its own (the family joins the list above when its last page is done).
+ */
+const ADRESSES_LIVREES: readonly string[] = [
+	'/pourquoi-utiliser-my-makeup-en-tant-que-particulier',
+	'/particulier/trouver-une-maquilleuse',
+	'/particulier/centraliser-ses-recherches',
+	'/particulier/explorer-les-profils',
+	'/solutions/pour-les-particuliers',
+]
 
 test('I45 : les adresses gelées répondent comme la table, avec le même h1', async ({ request, baseURL }) => {
 	test.setTimeout(300_000)
@@ -123,6 +137,14 @@ test('I45 : les adresses gelées répondent comme la table, avec le même h1', a
 		for (const { cas: unCas, resultat } of resultats)
 			if (resultat.etat === 'ecart') console.log(`I45 écart connu ${unCas.etiquette} : ${resultat.raison}`)
 		expect(lignes.flatMap(({ regressions }) => regressions)).toEqual([])
+		for (const adresse of privee ? [] : ADRESSES_LIVREES) {
+			const trouve = resultats.find(
+				({ cas: unCas }) =>
+					unCas.adresse === adresse || unCas.adresse.endsWith(`//${new URL(SITE_ORIGIN).host}${adresse}`)
+			)
+			expect(trouve, `${adresse} n'est pas dans les cas`).toBeDefined()
+			expect(trouve?.resultat, adresse).toMatchObject({ etat: 'vert' })
+		}
 	} finally {
 		for (const { collection, id } of contenus) await supprimerContenu(request, collection, id)
 	}
