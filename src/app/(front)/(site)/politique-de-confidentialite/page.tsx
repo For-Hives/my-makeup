@@ -2,7 +2,9 @@ import Link from 'next/link'
 import { OppositionMesure } from '@/components/analytics/OppositionMesure'
 import { PageJuridique } from '@/components/legal/PageJuridique'
 import { EDITEUR, formatSiret } from '@/lib/legal'
+import { JOURS_AVANT_EFFACEMENT_DES_PHOTOS, PRESTATAIRES } from '@/lib/prestataires'
 import { metadonnees } from '@/lib/seo/metadonnees'
+import { DELAI_AVANT_PURGE_JOURS } from '@/lib/taches/comptes-non-confirmes'
 
 // Static: the text is in the code, and the page reads no cookie and no data (ticket 112).
 export const metadata = metadonnees({
@@ -51,7 +53,10 @@ export default function PolitiqueDeConfidentialite() {
 				{`Base légale : l'exécution des conditions d'utilisation que vous acceptez à l'inscription ; notre intérêt légitime pour les emails liés au service.`}
 			</p>
 			<p>
-				{`Durée : tant que votre compte existe. Vous pouvez supprimer votre compte et votre profil depuis votre espace ; pour faire effacer aussi les photos déjà envoyées, écrivez-nous.`}
+				{`Confirmation de l'adresse email : à l'inscription, nous envoyons à l'adresse indiquée un email contenant un lien. Tant que vous ne l'avez pas suivi, le compte ne permet pas de se connecter, et un compte jamais confirmé est supprimé, avec son profil vide, au bout de ${DELAI_AVANT_PURGE_JOURS} jours.`}
+			</p>
+			<p>
+				{`Durée : tant que votre compte existe. Vous pouvez supprimer votre compte et votre profil depuis votre espace : votre profil, vos informations et vos photos disparaissent du site aussitôt. Une photo retirée ou remplacée, comme celles d'un compte supprimé, est ensuite effacée définitivement de notre stockage au bout de ${JOURS_AVANT_EFFACEMENT_DES_PHOTOS} jours ; pendant ce délai, elle n'est plus affichée (le cache du service de stockage peut cependant la servir encore quelques heures).`}
 			</p>
 			<p>
 				{`Si vous choisissez « Se connecter avec Google », Google nous transmet votre nom et votre adresse email pour créer ou ouvrir votre compte.`}
@@ -62,23 +67,9 @@ export default function PolitiqueDeConfidentialite() {
 				{`Données : nom, prénom, email, téléphone et message. Le message est enregistré sur notre serveur, puis envoyé par email à l'équipe via le service Resend, pour vous répondre (intérêt légitime). Seuls les administrateurs de My Makeup peuvent le lire. Durée : 12 mois après sa réception, puis suppression automatique de notre serveur. La copie reçue par email est effacée de notre boîte dans le même délai.`}
 			</p>
 
-			<h2>Demandes de devis</h2>
-			<p>
-				{`Lorsque le bouton « Demander un devis » est proposé sur un profil, il ouvre un formulaire en ligne fourni par un prestataire hébergé dans l'Union européenne, qui agit pour notre compte en tant que sous-traitant, avec un contrat conforme à l'article 28 du RGPD.`}
-			</p>
-			<p>
-				{`Données : type de prestation, date, commune, nombre de personnes, essai, budget indicatif, message, prénom, email et téléphone (facultatif), ainsi que le profil depuis lequel la demande est faite et la provenance de la visite (paramètres de campagne, nom du site précédent, sans l'adresse complète de la page).`}
-			</p>
-			<p>
-				{`Pourquoi : transmettre votre demande à la maquilleuse choisie, avec votre accord donné dans le formulaire, et suivre qu'une réponse vous a bien été apportée. Si elle n'est pas disponible, nous pouvons vous proposer une autre maquilleuse, toujours avec votre accord.`}
-			</p>
-			<p>
-				{`Durée : 12 mois, puis suppression, y compris dans notre boîte email et dans l'outil de formulaire. Nos statistiques de suivi ne contiennent aucune donnée permettant de vous identifier.`}
-			</p>
-
 			<h2>Mesure d&apos;audience</h2>
 			<p>
-				{`Nous mesurons la fréquentation du site avec Umami, un outil que nous installons et administrons nous-mêmes, sur un serveur loué (voir « Hébergement et prestataires »). Il ne dépose aucun cookie, n'enregistre aucun identifiant sur votre appareil et ne conserve pas votre adresse IP. Il compte les pages vues, le site de provenance, le type d'appareil et de navigateur, le pays, la rapidité d'affichage des pages, et les clics sur certains boutons (contact d'une maquilleuse, demande de devis, recherche) sans jamais enregistrer ce que vous saisissez, ni votre identité, ni vos coordonnées.`}
+				{`Nous mesurons la fréquentation du site avec Umami, un outil que nous installons et administrons nous-mêmes, sur un serveur loué (voir « Hébergement et prestataires »). Il ne dépose aucun cookie, n'enregistre aucun identifiant sur votre appareil et ne conserve pas votre adresse IP. Il compte les pages vues, le site de provenance, le type d'appareil et de navigateur, le pays, la rapidité d'affichage des pages, et les clics sur certains boutons (contact d'une maquilleuse, recherche) sans jamais enregistrer ce que vous saisissez, ni votre identité, ni vos coordonnées.`}
 			</p>
 			<p>
 				{`À l'inscription d'une maquilleuse, la réponse choisie à la question facultative « Comment as-tu connu My Makeup ? » est envoyée à Umami de la même façon, sans cookie, et sert seulement à compter d'où viennent les inscriptions. Elle n'est enregistrée ni dans le compte ni dans le profil de la maquilleuse.`}
@@ -113,21 +104,12 @@ export default function PolitiqueDeConfidentialite() {
 			</p>
 
 			<h2>Hébergement et prestataires</h2>
-			{/* Keep this list true: the database runs in Coolify at netcup since
-								    08/10/2026 (URG-10), Umami stays on the Contabo VPS, and every email
-								    of the site (contact form, password reset) leaves through Resend from
-								    send.my-makeup.fr, region eu-west-1 (Ireland), since 09/10/2026. */}
+			{/* The list comes from src/lib/prestataires.ts, which a test compares to the configured
+			    services: edit it there, never here. */}
 			<ul>
-				<li>{`netcup GmbH (Allemagne) : hébergement du site.`}</li>
-				<li>{`Contabo GmbH (Allemagne) : hébergement de notre outil de mesure d'audience (Umami).`}</li>
-				<li>{`Cloudflare (service R2) : stockage des photos des profils.`}</li>
-				<li>
-					{`Resend, Inc. (États-Unis) : envoi des emails du site (formulaire de contact, réinitialisation du mot de passe), depuis ses serveurs situés dans l'Union européenne (Irlande) ; le transfert vers la société est encadré comme indiqué ci-dessous.`}
-				</li>
-				<li>
-					{`Lorsque le bouton « Demander un devis » est proposé : outil de formulaire de devis, hébergé dans l'Union européenne (sous-traitant).`}
-				</li>
-				<li>{`Google : uniquement si vous choisissez de vous connecter avec Google.`}</li>
+				{PRESTATAIRES.map(({ id, nom, phrase }) => (
+					<li key={id}>{`${nom} : ${phrase}`}</li>
+				))}
 			</ul>
 			<p>
 				{`Lorsque l'un de ces prestataires est établi hors de l'Union européenne, le transfert est encadré par le cadre de protection des données UE–États-Unis (Data Privacy Framework) ou par des clauses contractuelles types de la Commission européenne. Nous ne vendons ni ne louons aucune donnée personnelle.`}
