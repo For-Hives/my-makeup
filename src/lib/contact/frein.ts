@@ -12,9 +12,10 @@ import { estUneAdresseLocale } from '../recherche/frein'
  * What is counted is every message that got past the checks of the form, as the sign-up does. A
  * message the checks refuse costs nothing, and neither does the trap field (no row, no mail, no place).
  *
- * The address brake is also read by the proxy (`secondesAvantUnMessage`), which answers a real 429:
- * a Server Action cannot choose its status. The mailbox brake lives in the action alone: the proxy does
- * not read the body of a request, so that refusal is a state of the form, not a status.
+ * Both brakes are also read, without taking a place, by the proxy (`secondesAvantUnMessage`,
+ * `secondesAvantUneBoite`), which answers a real 429: a Server Action cannot choose its status. For the
+ * mailbox the proxy reads a copy of the body of the request (`emailDuCorps`); the action stays the
+ * authoritative check and the only one that takes places.
  *
  * A request that did not come through the proxy of the site (no `X-Forwarded-For`, or a loopback
  * address: development, the bench) is never counted by address, as for the search.
@@ -108,4 +109,60 @@ export function secondesAvantUnMessage(
 		return undefined
 	}
 	return decision.reessayerDansS
+}
+
+/** The largest body the proxy reads to find the mailbox: the form holds five short fields. */
+const TAILLE_MAX_DU_CORPS = 64 * 1024
+
+/**
+ * The email field of a contact POST, whatever the encoding of the action. React prefixes the fields of a
+ * Server Action in a multipart body (`1_email` once a state is bound; a plain form posts `email`), so the
+ * name is matched by its end. `undefined` when there is none (a test in tests/unit/contact-frein.test.ts and
+ * the integration test I34 fail if a change of React's encoding makes the mailbox brake blind).
+ */
+export function emailDuFormulaire(formulaire: FormData): string | undefined {
+	for (const [nom, valeur] of formulaire.entries()) {
+		if ((nom === 'email' || nom.endsWith('_email')) && typeof valeur === 'string') return valeur
+	}
+	return undefined
+}
+
+/** Reads the mailbox from a copy of a request. Never throws: a body that cannot be read counts for nothing. */
+export async function emailDuCorps(requete: Request): Promise<string | undefined> {
+	try {
+		const taille = Number(requete.headers.get('content-length') ?? 0)
+		if (taille > TAILLE_MAX_DU_CORPS) return undefined
+		const type = requete.headers.get('content-type') ?? ''
+		if (!type.startsWith('multipart/form-data') && !type.startsWith('application/x-www-form-urlencoded'))
+			return undefined
+		return emailDuFormulaire(await requete.clone().formData())
+	} catch {
+		return undefined
+	}
+}
+
+/** Seconds before this mailbox may send again, or `undefined` when it may. Reads, takes nothing. */
+export function secondesAvantUneBoite(
+	email: string,
+	freins: FreinsDeContact = FREINS_DE_CONTACT,
+	maintenant = Date.now()
+): number | undefined {
+	const cle = cleDeBoite(email)
+	const decision = freins.parEmail.prendre(cle, maintenant)
+	if (decision.autorise) {
+		freins.parEmail.rendre(cle, maintenant)
+		return undefined
+	}
+	return decision.reessayerDansS
+}
+
+/** Why a contact POST must be refused before the action runs, and for how long: the address first, then the mailbox. */
+export async function secondesAvantUnMessageDeCetteRequete(
+	requete: Request,
+	client: string
+): Promise<number | undefined> {
+	const adresse = secondesAvantUnMessage(client)
+	if (adresse !== undefined) return adresse
+	const email = await emailDuCorps(requete)
+	return email === undefined ? undefined : secondesAvantUneBoite(email)
 }

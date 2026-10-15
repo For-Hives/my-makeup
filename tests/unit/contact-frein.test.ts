@@ -1,15 +1,19 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
 import { NextRequest } from 'next/server'
 import { POST as refuser } from '@/app/(front)/(site)/contact/refus/route'
+import { cleDeBoite } from '@/lib/auth/email-canonique'
 import { enregistrerUnMessageDeContact, type StockageDesDemandes } from '@/lib/contact/envoi-payload'
 import {
 	creerFreinsDeContact,
+	emailDuFormulaire,
 	freinDeContactParAdresse,
+	freinDeContactParEmail,
 	prendreUnePlaceDeContact,
+	secondesAvantUneBoite,
 	secondesAvantUnMessage,
 } from '@/lib/contact/frein'
 import { CHAMP_PIEGE_DU_CONTACT, MESSAGE_TROP_DE_MESSAGES } from '@/lib/contact/message'
-import { proxy } from '@/proxy'
+import { proxy, proxyDuContact } from '@/proxy'
 
 /** The brakes of the contact form (ticket 161; plan 02 U77), then the trap field and the proxy that answers 429. */
 
@@ -151,16 +155,30 @@ describe('le flux : champ piège et limites ne créent ni ligne ni mail', () => 
 describe('le proxy renvoie un 429 en français à la sixième demande', () => {
 	beforeEach(() => {
 		freinDeContactParAdresse.vider()
+		freinDeContactParEmail.vider()
 	})
 
 	const requete = (methode: string, adresse: string, chemin = '/contact') =>
 		new NextRequest(`http://localhost:3361${chemin}`, { method: methode, headers: { 'x-forwarded-for': adresse } })
 
+	/** A POST with a multipart body named as React names the fields of a Server Action with a bound state. */
+	const action = (adresse: string, email: string, prefixe = '1_') => {
+		const corps = new FormData()
+		corps.set('$ACTION_REF_1', '')
+		corps.set(`${prefixe}prenom`, 'Léa')
+		corps.set(`${prefixe}email`, email)
+		return new NextRequest('http://localhost:3361/contact', {
+			method: 'POST',
+			headers: { 'x-forwarded-for': adresse, 'next-action': 'abc' },
+			body: corps,
+		})
+	}
+
 	test('POST /contact passe tant que l’adresse a des places, puis est réécrit vers la route de refus', async () => {
 		for (let i = 0; i < 5; i++) freinDeContactParAdresse.prendre('198.51.100.1')
-		const refuse = proxy(requete('POST', '198.51.100.1'))
+		const refuse = await proxy(requete('POST', '198.51.100.1'))
 		expect(refuse.headers.get('x-middleware-rewrite')).toContain('/contact/refus')
-		expect(proxy(requete('POST', '198.51.100.2')).headers.get('x-middleware-rewrite')).toBeNull()
+		expect((await proxy(requete('POST', '198.51.100.2'))).headers.get('x-middleware-rewrite')).toBeNull()
 		// Reading the page is never braked.
 		expect(proxy(requete('GET', '198.51.100.1')).headers.get('x-middleware-rewrite')).toBeNull()
 	})
@@ -188,5 +206,54 @@ describe('le proxy renvoie un 429 en français à la sixième demande', () => {
 			new Request('http://localhost/contact/refus', { method: 'POST', headers: { 'x-forwarded-for': '198.51.100.9' } })
 		)
 		expect(libre.status).toBe(404)
+	})
+
+	test('la vingt et unième demande du jour pour une boîte est réécrite vers la route de refus, d’où qu’elle vienne', async () => {
+		for (let i = 0; i < 20; i++) freinDeContactParEmail.prendre(cleDeBoite('boite.pleine@example.test'))
+		// The same mailbox, written otherwise, from an address that has sent nothing.
+		const refusee = await proxyDuContact(action('203.0.113.5', ' Boite.Pleine@Example.test '))
+		expect(refusee.headers.get('x-middleware-rewrite')).toContain('/contact/refus')
+		const libre = await proxyDuContact(action('203.0.113.5', 'autre@example.test'))
+		expect(libre.headers.get('x-middleware-rewrite')).toBeNull()
+		// The proxy only reads: the brake still holds 20 places for the pleine mailbox, none for the other.
+		expect(secondesAvantUneBoite('autre@example.test')).toBeUndefined()
+	})
+
+	test('une adresse locale ou sans corps lisible n’est refusée par la boîte que si le corps le permet', async () => {
+		for (let i = 0; i < 20; i++) freinDeContactParEmail.prendre(cleDeBoite('boite.pleine@example.test'))
+		const sansCorps = await proxyDuContact(requete('POST', '127.0.0.1'))
+		expect(sansCorps.headers.get('x-middleware-rewrite')).toBeNull()
+		const pleine = await proxyDuContact(action('127.0.0.1', 'boite.pleine@example.test'))
+		expect(pleine.headers.get('x-middleware-rewrite')).toContain('/contact/refus')
+	})
+
+	test('la route de refus répond 429 pour une boîte pleine dont le corps est celui d’une action', async () => {
+		for (let i = 0; i < 20; i++) freinDeContactParEmail.prendre(cleDeBoite('boite.pleine@example.test'))
+		const corps = new FormData()
+		corps.set('1_email', 'boite.pleine@example.test')
+		const reponse = await refuser(
+			new Request('http://localhost/contact/refus', {
+				method: 'POST',
+				headers: { 'x-forwarded-for': '203.0.113.5', 'next-action': 'abc' },
+				body: corps,
+			})
+		)
+		expect(reponse.status).toBe(429)
+		expect(await reponse.text()).toBe(MESSAGE_TROP_DE_MESSAGES)
+	})
+})
+
+describe('emailDuFormulaire : le nom du champ dans le corps d’une action', () => {
+	test('trouve l’email avec ou sans préfixe de React, jamais un autre champ', () => {
+		const a = new FormData()
+		a.set('1_email', 'a@example.test')
+		expect(emailDuFormulaire(a)).toBe('a@example.test')
+		const b = new FormData()
+		b.set('email', 'b@example.test')
+		expect(emailDuFormulaire(b)).toBe('b@example.test')
+		const c = new FormData()
+		c.set('1_nom', 'x')
+		c.set('1_emailing', 'y')
+		expect(emailDuFormulaire(c)).toBeUndefined()
 	})
 })

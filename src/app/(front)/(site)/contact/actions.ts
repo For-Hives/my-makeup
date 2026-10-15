@@ -16,8 +16,8 @@ import { serverEnv } from '@/lib/env'
  * code runs; the origin is checked here as well, as for the sign-in.
  *
  * Brakes (ticket 161): the trap field and the limits are applied in `enregistrerUnMessageDeContact`. The proxy answers
- * a real 429 past 5 messages an hour from one address; the check here is the second line, and the only one for
- * the 20 a day by mailbox (a refusal shown by the form, with her typing kept).
+ * a real 429 past 5 messages an hour from one address or 20 a day from one mailbox; the check here is the
+ * authoritative one (it takes the places), and shows the same sentence with her typing kept if the proxy saw nothing.
  *
  * Whatever the mail does, a stored message is answered with the confirmation. Nothing she typed is logged.
  */

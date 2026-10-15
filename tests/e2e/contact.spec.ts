@@ -49,7 +49,7 @@ async function remplir(page: Page, s: Saisie) {
 
 async function lignesDe(email: string) {
 	const payload = await payloadDeTest()
-	return (await payload.find({ collection: 'demandes', where: { email: { equals: email } }, depth: 0, limit: 10 })).docs
+	return (await payload.find({ collection: 'demandes', where: { email: { equals: email } }, depth: 0, limit: 30 })).docs
 }
 
 async function mailsDe(email: string): Promise<Mail[]> {
@@ -301,5 +301,53 @@ test.describe('161 : le champ piège et le frein', () => {
 		await page2.getByRole('button', { name: 'Envoyer l’email' }).click()
 		await expect(page2.getByTestId('contact-envoye')).toBeVisible()
 		await autre.close()
+	})
+
+	test('la vingt et unième demande du jour pour une même boîte est refusée en 429, d’où qu’elle vienne, la saisie gardée', async ({
+		browser,
+	}) => {
+		test.setTimeout(120_000)
+		const s = saisie({ email: `Boite.Pleine-${crypto.randomUUID()}@Example.test` })
+		const jeton = `${100 + test.info().workerIndex}.${(Date.now() % 200) + 1}`
+		const depuis = async (adresse: string) => {
+			const contexte = await browser.newContext({ extraHTTPHeaders: { 'x-forwarded-for': adresse } })
+			return { contexte, page: await contexte.newPage() }
+		}
+
+		// A first, real submit: it shows how the browser encodes the action, which the next 19 replay.
+		const premiere = await depuis(`198.51.${jeton}`)
+		await ouvrir(premiere.page)
+		await remplir(premiere.page, s)
+		const envoi = premiere.page.waitForRequest(r => r.method() === 'POST' && r.url().endsWith('/contact'))
+		await premiere.page.getByRole('button', { name: 'Envoyer l’email' }).click()
+		const modele = await envoi
+		await expect(premiere.page.getByTestId('contact-envoye')).toBeVisible()
+		const corps = modele.postDataBuffer()
+		expect(corps).not.toBeNull()
+		const entetes = modele.headers()
+		for (let i = 0; i < 19; i++) {
+			const reponse = await premiere.contexte.request.post('/contact', {
+				headers: {
+					'next-action': entetes['next-action'] ?? '',
+					'content-type': entetes['content-type'] ?? '',
+					'x-forwarded-for': `192.0.2.${i + 1}`,
+				},
+				data: corps,
+			})
+			expect(reponse.status(), `rejeu ${i + 1}`).toBe(200)
+		}
+		await premiere.contexte.close()
+		await expect.poll(async () => (await lignesDe(s.email)).length, { timeout: 30_000 }).toBe(20)
+
+		const derniere = await depuis(`203.0.${jeton}`)
+		await ouvrir(derniere.page)
+		await remplir(derniere.page, s)
+		const refus = derniere.page.waitForResponse(r => r.request().method() === 'POST' && r.url().endsWith('/contact'))
+		await derniere.page.getByRole('button', { name: 'Envoyer l’email' }).click()
+		const reponse = await refus
+		expect(reponse.status()).toBe(429)
+		await expect(derniere.page.getByTestId('erreur-contact')).toContainText('beaucoup de messages en peu de temps')
+		await expect(derniere.page.getByLabel('Message')).toHaveValue(s.message)
+		await derniere.contexte.close()
 	})
 })
