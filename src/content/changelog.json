@@ -135,6 +135,11 @@
 			"id": "tu-peux-voir-ta-page-comme-une-visiteuse-la-voit-meme-si",
 			"type": "amelioration",
 			"text": "Tu peux voir ta page comme une visiteuse la voit, même si ton profil n’est pas encore affiché dans l’annuaire : le bouton « Voir mon profil public » ouvre ton aperçu, avec un bandeau qui te dit où en est ton profil."
+		},
+		{
+			"id": "tu-peux-supprimer-ton-compte-depuis-ton-espace-tu-retapes",
+			"type": "amelioration",
+			"text": "Tu peux supprimer ton compte depuis ton espace : tu retapes ton mot de passe pour confirmer, et ton profil, ton compte et tes photos disparaissent d'un seul coup."
 		}
 	],
 	"releases": []

@@ -14,10 +14,12 @@ import { EditeurDuPortfolio } from '@/components/espace/EditeurDuPortfolio'
 import { EditeurDExperiences, EditeurDeFormations, EditeurDePrestations } from '@/components/espace/EditeursDeListes'
 import { InterrupteurDeDisponibilite } from '@/components/espace/InterrupteurDeDisponibilite'
 import { RafraichirSession } from '@/components/espace/RafraichirSession'
+import { SuppressionDuCompte } from '@/components/espace/SuppressionDuCompte'
 import { exigerMaquilleuse } from '@/lib/auth/session'
 import { CHEMIN_DE_L_APERCU } from '@/lib/espace/apercu'
 import { avancementDuProfil } from '@/lib/espace/avancement'
 import { cartesDuProfil } from '@/lib/espace/cartes'
+import { modeDeConfirmation } from '@/lib/espace/confirmation-suppression'
 import { estDisponible } from '@/lib/espace/disponibilite'
 import { EXPERIENCES } from '@/lib/espace/experiences'
 import { FORMATIONS } from '@/lib/espace/formations'
@@ -42,6 +44,7 @@ import {
 } from './actions'
 import { enregistrerMesExperiences, enregistrerMesFormations, enregistrerMesPrestations } from './listes-actions'
 import { chercherMesCommunes, enregistrerMaLocalisation } from './localisation-actions'
+import { supprimerMonCompteAction } from './suppression-actions'
 
 // Read per request: it depends on the session, and the build has no database. A page that reads
 // the session is never shared nor stored (`private, no-store`, ticket 075).
@@ -178,6 +181,10 @@ export default async function PageProfil() {
 			<div className="mt-4 flex justify-center">
 				<BoutonsDeDeconnexion />
 			</div>
+			<SuppressionDuCompte
+				mode={contexte === null ? 'mot-de-passe' : modeDeConfirmation(contexte.utilisateur)}
+				envoyer={supprimerMonCompteAction}
+			/>
 		</main>
 	)
 }
