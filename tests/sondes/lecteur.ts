@@ -32,11 +32,13 @@ export interface Page {
 	/** The `Content-Type` header, or null. */
 	type: string | null
 	corps: string
+	/** All the headers of the answer. */
+	entetes: Headers
 }
 
 export interface Lecteur {
 	/** Reads a path of the target. Calls made together are served one after the other. */
-	lire: (chemin: string) => Promise<Page>
+	lire: (chemin: string, entetes?: Record<string, string>) => Promise<Page>
 	/** The start of each request, in the time of the clock, in order. */
 	readonly departs: readonly number[]
 }
@@ -63,7 +65,7 @@ export function creerLecteur({
 	// The tail of the queue: a request starts when the one before it has finished.
 	let file: Promise<unknown> = Promise.resolve()
 
-	const lireMaintenant = async (chemin: string): Promise<Page> => {
+	const lireMaintenant = async (chemin: string, entetes?: Record<string, string>): Promise<Page> => {
 		const precedent = departs.at(-1)
 		if (precedent !== undefined) {
 			// Again until the time has come: a timer may fire a fraction of a millisecond early.
@@ -76,9 +78,15 @@ export function creerLecteur({
 		const abandon = new AbortController()
 		const minuteur = setTimeout(() => abandon.abort(), delaiMs)
 		try {
-			const reponse = await lecture(chemin, { signal: abandon.signal })
+			const reponse = await lecture(chemin, { signal: abandon.signal, ...(entetes ? { headers: entetes } : {}) })
 			const corps = await reponse.text()
-			return { chemin, statut: reponse.status, type: reponse.headers.get('content-type'), corps }
+			return {
+				chemin,
+				statut: reponse.status,
+				type: reponse.headers.get('content-type'),
+				corps,
+				entetes: reponse.headers,
+			}
 		} catch (erreur) {
 			if (abandon.signal.aborted)
 				throw new LectureTropLongue(`aucune réponse complète en ${Math.round(delaiMs / 1000)} s`)
@@ -90,8 +98,8 @@ export function creerLecteur({
 
 	return {
 		departs,
-		lire(chemin) {
-			const tour = file.then(() => lireMaintenant(chemin))
+		lire(chemin, entetes) {
+			const tour = file.then(() => lireMaintenant(chemin, entetes))
 			file = tour.catch(() => undefined)
 			return tour
 		},

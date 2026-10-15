@@ -44,6 +44,13 @@ export const CHEMIN_DE_LA_MESURE = '/u'
 /** Headers that would make the probe someone: a probe reads as an anonymous visitor. */
 const ENTETES_D_IDENTITE = ['authorization', 'cookie'] as const
 
+/**
+ * The one address that takes the service token (R02, ticket 156): the weekly statistics, a read of
+ * aggregates behind a token of the service. A token is never sent anywhere else, and never to
+ * another host than the target. The token is the only identity a probe may carry.
+ */
+export const CHEMIN_DES_STATS = '/api/stats/weekly'
+
 /** Hosts a run may read in plain HTTP: this machine (the bench, ticket 156). */
 const HOTES_LOCAUX = ['localhost', '127.0.0.1', '[::1]']
 
@@ -92,7 +99,8 @@ const versLaMesure = (url: URL): boolean =>
 export function controlerRequete(
 	entree: string | URL | Request,
 	init: RequestInit,
-	cible: URL
+	cible: URL,
+	jeton?: string
 ): { adresse: URL; entetes: Headers } {
 	const demande = entree instanceof Request ? entree : undefined
 	const methode = (init.method ?? demande?.method ?? METHODE_DE_LECTURE).toUpperCase()
@@ -114,11 +122,19 @@ export function controlerRequete(
 		)
 
 	const entetes = new Headers(init.headers ?? demande?.headers)
-	for (const nom of ENTETES_D_IDENTITE)
-		if (entetes.has(nom))
+	for (const nom of ENTETES_D_IDENTITE) {
+		if (!entetes.has(nom)) continue
+		// The token of the service, to the statistics route only: anything else about identity stays refused.
+		const jetonDuService =
+			nom === 'authorization' &&
+			jeton !== undefined &&
+			adresse.pathname === CHEMIN_DES_STATS &&
+			entetes.get('authorization') === `Bearer ${jeton}`
+		if (!jetonDuService)
 			throw new RequeteInterdite(
 				`Requête interrompue : l’en-tête « ${nom} » ferait de la sonde quelqu’un. Une sonde lit comme une visiteuse anonyme.`
 			)
+	}
 	if (!entetes.has('user-agent')) entetes.set('user-agent', AGENT_DES_SONDES)
 	return { adresse, entetes }
 }
@@ -127,9 +143,9 @@ export function controlerRequete(
  * The guarded reader of a target: a function shaped like `fetch` that hands the transport a GET
  * on the target, or throws `RequeteInterdite` without calling it.
  */
-export function garder(cible: URL, transport: Transport = transportReel): LectureGardee {
+export function garder(cible: URL, transport: Transport = transportReel, jeton?: string): LectureGardee {
 	return async (entree, init = {}) => {
-		const { adresse, entetes } = controlerRequete(entree, init, cible)
+		const { adresse, entetes } = controlerRequete(entree, init, cible, jeton)
 		return transport(adresse, {
 			method: METHODE_DE_LECTURE,
 			headers: entetes,
