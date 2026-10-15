@@ -140,6 +140,11 @@
 			"id": "tu-ajoutes-modifies-et-retires-les-options-de-chaque-pres",
 			"type": "ajout",
 			"text": "Tu ajoutes, modifies et retires les options de chaque prestation depuis ton espace, sans perdre ta place dans le champ pendant que tu tapes, même juste après un enregistrement."
+		},
+		{
+			"id": "apres-avoir-confirme-ton-adresse-tu-crees-ton-profil-en-t",
+			"type": "ajout",
+			"text": "Après avoir confirmé ton adresse, tu crées ton profil en trois étapes (identité, zone, photo) et tu peux reprendre là où tu t’étais arrêtée."
 		}
 	],
 	"releases": []

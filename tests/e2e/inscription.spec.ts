@@ -85,7 +85,7 @@ test.describe('E01 : inscription, mur, lien, connexion, onboarding', { tag: '@mo
 		await expect(page).toHaveURL(/\/auth\/signin\?callbackUrl=%2Fauth%2Finit-account$/)
 		await seConnecter(page, email, '/auth/init-account')
 		await expect(page).toHaveURL(/\/auth\/init-account$/)
-		await expect(page.getByRole('heading', { name: 'Bienvenue sur My Makeup' })).toBeVisible()
+		await expect(page.getByRole('heading', { level: 1, name: 'Prépare ton profil' })).toBeVisible()
 		// Her profile and its address were made by the server, with the account.
 		const payload = await payloadDeTest()
 		const compte = (await payload.find({ collection: 'pros', depth: 0, where: { email: { equals: email } } })).docs[0]

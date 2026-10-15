@@ -1,29 +1,59 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
-import { PAGE_D_ACCUEIL_DU_COMPTE } from '@/lib/auth/retour'
+import { redirect } from 'next/navigation'
+import { Accueil } from '@/components/espace/accueil/Accueil'
+import { PAGE_D_ACCUEIL_DU_COMPTE, urlDeConnexion } from '@/lib/auth/retour'
 import { exigerMaquilleuse } from '@/lib/auth/session'
+import { libelleDeLaCommune } from '@/lib/espace/localisation'
+import { profilDeLaMaquilleuse } from '@/lib/espace/mon-profil'
+import { positionDAccueil } from '@/lib/espace/onboarding'
+import { garantirLeProfil } from '@/lib/espace/profil-vide'
+import { utilisatriceDeLaRequete } from '@/lib/espace/requete'
+import { texte } from '@/lib/profil/nom-affiche'
+import { chercherMesCommunes, enregistrerMaLocalisation } from '../profil/localisation-actions'
+import { enregistrerMaPhotoDAccueil, enregistrerMonIdentiteDAccueil } from './actions'
 
 // Read per request: it depends on the session, and the build has no database.
 export const dynamic = 'force-dynamic'
 
-export const metadata: Metadata = { title: 'Bienvenue' }
+export const metadata: Metadata = { title: 'Prépare ton profil' }
 
-// The onboarding of a new account, reduced to its arrival (ticket 082): the steps that fill the
-// profile come with the tickets of the space. Her empty profile and its address already exist.
+/**
+ * The onboarding of a new account (ticket 140): identity, zone, main photo. The step shown is read
+ * from her stored profile, so she resumes where she left. An account that came without a profile
+ * (some accounts of the old site) gets an empty one here, made by the server. A profile that is
+ * already active has nothing left to do here: she goes to her space.
+ */
 export default async function PageDAccueilDuCompte() {
-	const maquilleuse = await exigerMaquilleuse(PAGE_D_ACCUEIL_DU_COMPTE)
+	await exigerMaquilleuse(PAGE_D_ACCUEIL_DU_COMPTE)
+	const contexte = await utilisatriceDeLaRequete()
+	if (contexte === null) return redirect(urlDeConnexion(PAGE_D_ACCUEIL_DU_COMPTE))
+	await garantirLeProfil(contexte.payload, contexte.utilisateur)
+	const profil = await profilDeLaMaquilleuse(contexte.payload, contexte.utilisateur)
+	if (profil === null) throw new Error('Le profil de la maquilleuse n’a pas pu être créé.')
+	const position = positionDAccueil(profil)
+	if (position === 'terminee') return redirect('/auth/profil')
+
 	return (
-		<main className="flex min-h-dvh flex-col items-center justify-center gap-4 p-6 text-center">
-			<h1 className="font-semibold text-3xl">Bienvenue sur My Makeup</h1>
-			<p>
-				{maquilleuse.nom || 'Bienvenue'}, ton compte est prêt. Il te reste à remplir ton profil pour apparaître dans
-				l’annuaire.
-			</p>
-			<p>
-				<Link className="underline" href="/auth/profil">
-					Aller à mon espace
-				</Link>
-			</p>
+		<main className="mx-auto flex w-full max-w-xl flex-col gap-5 px-4 py-8">
+			<Accueil
+				etapeInitiale={position}
+				identite={{
+					prenom: texte(profil.prenom),
+					nom: texte(profil.nom),
+					nomArtiste: texte(profil.nomArtiste),
+					specialite: texte(profil.specialite),
+				}}
+				localisation={{
+					codeInsee: texte(profil.commune?.codeInsee),
+					libelle: libelleDeLaCommune(profil.commune ?? {}),
+					rayonKm: typeof profil.rayonKm === 'number' ? profil.rayonKm : null,
+					aDomicile: profil.aDomicile === true,
+				}}
+				envoyerIdentite={enregistrerMonIdentiteDAccueil}
+				envoyerLocalisation={enregistrerMaLocalisation}
+				chercherCommunes={chercherMesCommunes}
+				envoyerPhoto={enregistrerMaPhotoDAccueil}
+			/>
 		</main>
 	)
 }
