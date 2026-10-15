@@ -1,9 +1,10 @@
 'use server'
 
 import config from '@payload-config'
-import { headers } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { getPayload } from 'payload'
+import { attributsDeLaMarque, COOKIE_DE_MARQUE_DE_CONNEXION } from '@/lib/analytics/marque-connexion'
 import { connecter } from '@/lib/auth/connexion'
 import { poserLeCookieDeSession } from '@/lib/auth/cookie-session'
 import type { CodeErreur } from '@/lib/auth/erreurs'
@@ -39,6 +40,12 @@ export async function seConnecter(_precedent: EtatDeConnexion, formulaire: FormD
 	if (!resultat.ok) return { code: resultat.code }
 
 	await poserLeCookieDeSession(payload, resultat.token)
+	// Tells the next page to send `login_result` (ticket 146).
+	;(await cookies()).set(
+		COOKIE_DE_MARQUE_DE_CONNEXION,
+		'email',
+		attributsDeLaMarque(process.env.NODE_ENV === 'production')
+	)
 
 	const site = process.env.NEXT_PUBLIC_SITE_URL ?? origine ?? 'http://localhost'
 	const destination = retourSur(formulaire.get('callbackUrl'), site)

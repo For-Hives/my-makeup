@@ -38,6 +38,14 @@ export const CODES_D_ERREUR_D_AUTHENTIFICATION = [
 	'email-non-confirme',
 	'compte-bloque',
 	'erreur-inconnue',
+	// Sign-up refusals (ticket 146).
+	'email-deja-pris',
+	'email-non-envoye',
+	// The returns from Google (ticket 146): the codes of `?error=` on the sign-in page.
+	'google-echec',
+	'google-annule',
+	'google-indisponible',
+	'google-email-non-verifie',
 ] as const
 
 /** Value of `section` of `profile_save`: one per modal of the space, plus the onboarding. */

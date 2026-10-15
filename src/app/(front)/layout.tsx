@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
+import { ConnexionReussie } from '@/components/analytics/ConnexionReussie'
 import { WebVitals } from '@/components/analytics/WebVitals'
 import { umamiLoaderScript, umamiScriptAttributes } from '@/lib/analytics/umami'
 import { versionEnv } from '@/lib/env'
@@ -35,6 +36,7 @@ export default function FrontLayout({ children }: { children: ReactNode }) {
 			</head>
 			<body className="bg-neutral-50 text-neutral-900 antialiased">
 				<WebVitals />
+				<ConnexionReussie />
 				{children}
 			</body>
 		</html>

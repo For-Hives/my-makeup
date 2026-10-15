@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { AideSansMotDePasse } from '@/components/auth/AideSansMotDePasse'
 import { BoutonGoogle } from '@/components/auth/BoutonGoogle'
+import { EvenementsDeLaPageDeConnexion } from '@/components/auth/EvenementsDeLaPageDeConnexion'
 import { FormulaireDeConnexion } from '@/components/auth/FormulaireDeConnexion'
 import { MessageReconnexion } from '@/components/auth/MessageReconnexion'
 import { ENTETE_DE_MESSAGE } from '@/lib/auth/cookies-herites'
@@ -41,6 +42,7 @@ export default async function PageDeConnexion({
 
 	return (
 		<main className="flex min-h-dvh flex-col items-center justify-center gap-6 p-6 text-center">
+			<EvenementsDeLaPageDeConnexion code={erreurUrl?.code ?? null} />
 			<h1 className="font-semibold text-3xl">Se connecter</h1>
 			{message ? (
 				<p

@@ -1,6 +1,7 @@
 'use client'
 
 import { useActionState, useEffect, useRef } from 'react'
+import { type Suivre, track } from '@/lib/analytics/track'
 import {
 	CHAMP_PIEGE,
 	type ChampInscription,
@@ -59,14 +60,20 @@ export function avecLeRefusDuProxy(action: ActionDInscription): ActionDInscripti
  * rules and answers one message per field, under the field, so that the wording is the same with or
  * without scripts. A key held down sends one request, as in the sign-in form.
  */
-export function FormulaireDInscription({ action }: { action: ActionDInscription }) {
+export function FormulaireDInscription({ action, suivre = track }: { action: ActionDInscription; suivre?: Suivre }) {
 	const [etat, envoyer, enCours] = useActionState(avecLeRefusDuProxy(action), null)
 	const verrou = useRef(false)
+	const commence = useRef(false)
 	const erreurs = etat?.erreurs
 
 	useEffect(() => {
 		if (!enCours) verrou.current = false
 	}, [enCours, etat])
+
+	// A refused sign-up is an authentication error, once per answer (ticket 146).
+	useEffect(() => {
+		if (etat?.echec) suivre('auth_error', { code: etat.echec })
+	}, [etat, suivre])
 
 	const proprietes = (champ: ChampInscription) => ({
 		'aria-invalid': erreurs?.[champ] ? (true as const) : undefined,
@@ -79,7 +86,12 @@ export function FormulaireDInscription({ action }: { action: ActionDInscription 
 			noValidate
 			onSubmit={evenement => {
 				if (verrou.current) evenement.preventDefault()
-				else verrou.current = true
+				else {
+					verrou.current = true
+					// The start of a sign-up: the first send of this visit, not each retry after a typo.
+					if (!commence.current) suivre('signup_start', { method: 'email' })
+					commence.current = true
+				}
 			}}
 			className="flex w-full max-w-sm flex-col gap-4 text-left"
 		>
