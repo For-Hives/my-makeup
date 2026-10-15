@@ -120,6 +120,11 @@
 			"id": "tu-peux-modifier-tes-experiences-tes-formations-et-tes-pr",
 			"type": "amelioration",
 			"text": "Tu peux modifier tes expériences, tes formations et tes prestations ligne par ligne dans ton espace, et ton prix se lit tout seul : « à partir de 80 € » compte pour rendre ton profil publiable, « sur devis » reste affiché tel quel."
+		},
+		{
+			"id": "tu-peux-choisir-ta-photo-principale-et-composer-ton-portf",
+			"type": "ajout",
+			"text": "Tu peux choisir ta photo principale et composer ton portfolio depuis ton espace : tes photos sont réduites avant l’envoi, une photo refusée est écartée sans perdre les autres, et chaque photo retirée est annoncée."
 		}
 	],
 	"releases": []

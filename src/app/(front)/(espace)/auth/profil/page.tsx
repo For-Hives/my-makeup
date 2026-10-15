@@ -3,10 +3,12 @@ import { BoutonsDeDeconnexion } from '@/components/auth/BoutonsDeDeconnexion'
 import { CarteDeSection } from '@/components/espace/CarteDeSection'
 import { EditeurDeCoordonnees } from '@/components/espace/EditeurDeCoordonnees'
 import { EditeurDeDescription } from '@/components/espace/EditeurDeDescription'
+import { EditeurDeLaPhoto } from '@/components/espace/EditeurDeLaPhoto'
 import { EditeurDeLocalisation } from '@/components/espace/EditeurDeLocalisation'
 import { EditeurDePuces } from '@/components/espace/EditeurDePuces'
 import { EditeurDeReseaux } from '@/components/espace/EditeurDeReseaux'
 import { EditeurDIdentite } from '@/components/espace/EditeurDIdentite'
+import { EditeurDuPortfolio } from '@/components/espace/EditeurDuPortfolio'
 import { EditeurDExperiences, EditeurDeFormations, EditeurDePrestations } from '@/components/espace/EditeursDeListes'
 import { InterrupteurDeDisponibilite } from '@/components/espace/InterrupteurDeDisponibilite'
 import { RafraichirSession } from '@/components/espace/RafraichirSession'
@@ -18,18 +20,21 @@ import { FORMATIONS } from '@/lib/espace/formations'
 import { lignesDuProfil } from '@/lib/espace/liste'
 import { libelleDeLaCommune } from '@/lib/espace/localisation'
 import { profilDeLaMaquilleuse } from '@/lib/espace/mon-profil'
-import { pucesDeLaListe } from '@/lib/espace/puces'
+import { lirePhotosDeLEspace } from '@/lib/espace/photos'
 import { PRESTATIONS } from '@/lib/espace/prestations'
+import { pucesDeLaListe } from '@/lib/espace/puces'
 import { utilisatriceDeLaRequete } from '@/lib/espace/requete'
 import { texte } from '@/lib/profil/nom-affiche'
 import {
 	enregistrerMaDescription,
 	enregistrerMaDisponibilite,
+	enregistrerMaPhotoPrincipale,
 	enregistrerMesCompetences,
 	enregistrerMesCoordonnees,
 	enregistrerMesLangues,
 	enregistrerMesReseaux,
 	enregistrerMonIdentite,
+	enregistrerMonPortfolio,
 } from './actions'
 import { enregistrerMesExperiences, enregistrerMesFormations, enregistrerMesPrestations } from './listes-actions'
 import { chercherMesCommunes, enregistrerMaLocalisation } from './localisation-actions'
@@ -50,6 +55,7 @@ export default async function PageProfil() {
 	const maquilleuse = await exigerMaquilleuse('/auth/profil')
 	const contexte = await utilisatriceDeLaRequete()
 	const profil = contexte === null ? null : await profilDeLaMaquilleuse(contexte.payload, contexte.utilisateur)
+	const photos = contexte === null || profil === null ? null : await lirePhotosDeLEspace(contexte.payload, profil)
 
 	return (
 		<main className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 py-8">
@@ -114,6 +120,10 @@ export default async function PageProfil() {
 									puces={pucesDeLaListe(profil.competences)}
 									envoyer={enregistrerMesCompetences}
 								/>
+							) : carte.section === 'photo' ? (
+								<EditeurDeLaPhoto photo={photos?.photo ?? null} envoyer={enregistrerMaPhotoPrincipale} />
+							) : carte.section === 'portfolio' ? (
+								<EditeurDuPortfolio photos={photos?.galerie ?? []} envoyer={enregistrerMonPortfolio} />
 							) : carte.section === 'reseaux' ? (
 								<EditeurDeReseaux
 									valeurs={{

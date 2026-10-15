@@ -215,6 +215,20 @@ Trois cartes de `/auth/profil` s'éditent ligne par ligne dans un panneau commun
 
 Tests : `tests/unit/espace-listes.test.ts`, `tests/unit/espace-listes-panneaux.test.tsx` (L1 à L7 jouées sur les trois sections) et, sur le banc, `tests/integration/espace-listes.test.ts`.
 
+### Photos dans l'espace
+
+Les cartes « Photo principale » et « Portfolio » de `/auth/profil` s'éditent dans le panneau commun (tickets 134 à 136). Une photo ne passe jamais par une action serveur : le navigateur l'envoie à la route de médias de Payload (`POST /api/media`, où le ticket 133 contrôle le type, le poids et le nom), puis une action serveur nomme les photos sur le profil.
+
+- **Réduction dans le navigateur** (`src/lib/espace/photo.ts` pour les décisions, `photo-navigateur.ts` pour le canvas) : JPEG, PNG ou WebP lus dans les octets, 25 Mo au plus au choix, puis 2 000 px au plus sur le grand côté, WebP (JPEG si le navigateur ne sait pas encoder le WebP), 1 Mo au plus, par paliers de qualité. Les messages sont ceux du site en ligne, au mot près. Le réencodage retire l'EXIF.
+- **Rien n'est envoyé avant « Enregistrer »** : fermer le panneau ne crée aucun objet.
+- **Le geste « envoyer puis enregistrer »** est dans `src/lib/espace/envoi-des-photos.ts`, avec ses trois issues séparées. Un fichier refusé ou une coupure du réseau pendant l'envoi : rien n'est enregistré, les fichiers déjà envoyés dans le geste sont supprimés (ils vont à la corbeille). Un « non » explicite du serveur : de même. Un appel au serveur qui se perd (résultat inconnu) : **rien n'est supprimé**, car l'enregistrement a pu aboutir ; la maquilleuse est invitée à recharger la page, et le rapprochement du ticket 137 voit les éventuels objets laissés. Session expirée : rien n'est supprimé non plus (elle n'en aurait pas le droit), le fichier envoyé est gardé pour le nouvel essai.
+- **Photo principale** (`enregistrer-photo.ts`, action `enregistrerMaPhotoPrincipale`) : le schéma strict ne prend qu'un identifiant. L'ancienne photo part à la corbeille par les crochets du profil (ticket 045), dans la même transaction.
+- **Portfolio** (`portfolio.ts`, `enregistrer-portfolio.ts`, action `enregistrerMonPortfolio`) : le serveur reçoit la liste entière des identifiants, dans l'ordre voulu, 10 au plus (U80), aucun deux fois. Les photos ajoutées se placent après celles qu'elle avait. Le panneau choisit plusieurs fichiers d'un coup ; un fichier refusé est écarté avec son nom et sa cause, sans perdre les autres ; le même fichier choisi deux fois est refusé (règle L6). Chaque photo est envoyée avec le texte alternatif « Photo du portfolio », et l'aperçu d'une ligne dit son rang (« Photo 2 sur 5 de ton portfolio »).
+- **Retrait** (ticket 136) : retirer une photo ne change rien tant qu'elle n'a pas enregistré. À l'enregistrement, la liste sans la photo est écrite, et les crochets du profil envoient l'objet (original et tailles) à la corbeille s'il n'est plus désigné par rien : une photo encore principale reste en place (I25). Le navigateur ne supprime jamais lui-même une photo enregistrée. Le retrait suit les règles de liste : une clé par ligne (L1), le focus reste dans le panneau (L4), une annonce `role="status"` par retrait, renouvelée quand la phrase se répète (L5), Entrée maintenue ne retire qu'une photo (L7). Sans objet pour une photo : L2 (aucun champ de saisie dans une ligne) et L3 (aucun formulaire de modification).
+- **Lecture** : `lirePhotosDeLEspace` (`src/lib/espace/photos.ts`) lit les médias que le profil désigne, par ses identifiants et jamais par la requête.
+
+Tests : `tests/unit/espace-photo.test.ts`, `tests/unit/espace-photo-panneau.test.tsx`, `tests/unit/espace-portfolio-panneau.test.tsx`, sur le banc `tests/integration/espace-photo.test.ts` et `tests/integration/espace-portfolio.test.ts` (qui rejoue le rapprochement du ticket 137 : 0 orphelin), et `tests/e2e/espace-photo.spec.ts`, `tests/e2e/espace-portfolio.spec.ts` (une photo de 8 Mo faite pour l'occasion : `tests/outils/photo-de-8-mo.ts`).
+
 ## Démarrer en local
 
 Il faut [bun](https://bun.sh) 1.3.14, Node 24 (`.nvmrc`), Docker avec Compose et `openssl`.
