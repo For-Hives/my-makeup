@@ -200,6 +200,8 @@ gh run view NUMERO --repo For-Hives/my-makeup --json jobs \
 | 14/10/2026 | GitHub, CI 38501556779, commit `2fe3629` | 1 min 35 s en tout : `qualite` 21 s, `unit` 19 s, `build` 1 min 28 s, `ci-ok` 2 s |
 | 14/10/2026 | Poste de développement, Podman, les commandes des jobs `integration` et `e2e` jouées une à une : ce n'est pas une CI | Banc prêt en 4,2 s, images déjà téléchargées ; tests d'intégration : 37 verts en 7,2 s ; chaque lot `e2e` avec `CI=true` : 4 essais verts, build compris, en 13 s environ (build déjà en cache) |
 | 14/10/2026 | GitHub, CI 38512540493, commit `1016d81`, la première à cinq jobs | 1 min 52 s en tout : `qualite` 31 s, `unit` 19 s, `build` 1 min 27 s, `integration` 55 s, `e2e (1/2)` 1 min 44 s, `e2e (2/2)` 1 min 44 s, `ci-ok` 3 s |
+| 15/10/2026 | GitHub, avant les lots : CI 38759642930, commit `71bb44c`, et les précédentes | `integration` 8 min 16 s à 10 min 16 s (7 min 43 s de tests, 2 005 tests) ; un lot `e2e` sur deux annulé à sa limite de 10 minutes, ou bloqué par l'application (voir le patch de `payload`, `CLAUDE.md`, « Pièges ») |
+| 15/10/2026 | GitHub, CI 38769675350, pull request #977, commit `d68a981`, la première à trois lots d'intégration et quatre lots `e2e` | 5 min 34 s en tout : `qualite` 56 s, `unit` 1 min 20 s, `build` 2 min 7 s, `integration` 3 min 32 s, 5 min 26 s et 4 min 57 s (2 031 tests : 252, 1 501 et 278), `e2e` 4 min 59 s, 5 min 1 s, 4 min 4 s et 5 min 5 s (476 essais, 119 par lot, aucun rejoué), `ci-ok` 2 s |
 
 ### Pourquoi `ci-ok`
 
