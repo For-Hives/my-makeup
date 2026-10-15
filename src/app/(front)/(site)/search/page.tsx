@@ -1,8 +1,11 @@
 import Image from 'next/image'
+import { MesureDeRecherche } from '@/components/analytics/MesureDePage'
 import { BlocDeRecherche } from '@/components/blocs/BlocDeRecherche'
 import { AucunResultat, RechercheEnEchec } from '@/components/recherche/EtatsDeRecherche'
 import { ListeDeResultats } from '@/components/recherche/ListeDeResultats'
 import { PagesDeResultats } from '@/components/recherche/PagesDeResultats'
+import { empreinte } from '@/lib/analytics/doublon'
+import { trancheDeResultats } from '@/lib/analytics/valeurs'
 import { lireSansBloquer } from '@/lib/recherche/lecture'
 import { sectionsParLieu } from '@/lib/recherche/lieu'
 import { paginer, sectionsDeLaPage } from '@/lib/recherche/pagination'
@@ -79,10 +82,21 @@ export default async function PageDeRecherche({ searchParams }: PageProps<'/sear
 	const groupes = sections
 		.map((section, rang) => ({ section, profils: sectionsDeCettePage[rang] ?? [] }))
 		.filter(({ profils }) => profils.length > 0)
+	// The rank of a card is its place in the whole list, over all the pages: the sections follow one another.
+	const rangsDeDepart = groupes.reduce<number[]>(
+		(departs, { profils }, i) => [...departs, (departs[i] ?? 0) + profils.length],
+		[page.premier + locauxDeLaPage.length]
+	)
 
 	return (
 		<main className="relative flex flex-1 flex-col">
 			<BlocDeRecherche search={search} city={city} surLaPageDeRecherche />
+			{/* Two facts and a hash: never the words (ticket 145). Page 1 and page 2 are the same search. */}
+			<MesureDeRecherche
+				aUneVille={city !== ''}
+				resultats={trancheDeResultats(tous.length)}
+				empreinte={empreinte(`${search}|${city}`)}
+			/>
 			{tous.length === 0 ? (
 				<AucunResultat
 					titre={titreDesResultats(recherche, 0)}
@@ -105,7 +119,11 @@ export default async function PageDeRecherche({ searchParams }: PageProps<'/sear
 							<h2 id="recherche-titre-locaux" className="sr-only">
 								{parLieu ? `Maquilleuses de « ${city} »` : 'Résultats'}
 							</h2>
-							<ListeDeResultats cartes={locauxDeLaPage.map(({ carte }) => carte)} premiereDeLaPage />
+							<ListeDeResultats
+								cartes={locauxDeLaPage.map(({ carte }) => carte)}
+								premiereDeLaPage
+								rangDuPremier={page.premier}
+							/>
 						</section>
 					)}
 					{groupes.map(({ section, profils }, rang) => (
@@ -118,6 +136,7 @@ export default async function PageDeRecherche({ searchParams }: PageProps<'/sear
 							</h2>
 							<ListeDeResultats
 								cartes={profils.map(({ carte }) => carte)}
+								rangDuPremier={rangsDeDepart[rang] ?? page.premier}
 								premiereDeLaPage={rang === 0 && locauxDeLaPage.length === 0}
 							/>
 						</section>

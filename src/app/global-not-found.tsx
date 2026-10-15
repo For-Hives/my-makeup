@@ -1,4 +1,5 @@
 import './(front)/globals.css'
+import { MesureDePageIntrouvable } from '@/components/analytics/MesureDePage'
 import { Footer } from '@/components/gabarit/Footer'
 import { Nav } from '@/components/gabarit/Nav'
 import { PageIntrouvable } from '@/components/gabarit/PageIntrouvable'
@@ -12,6 +13,7 @@ export default function GlobalNotFound() {
 	return (
 		<html lang="fr">
 			<body className="bg-neutral-50 text-neutral-900 antialiased">
+				<MesureDePageIntrouvable />
 				<div className="flex min-h-dvh flex-col">
 					<Nav />
 					<div className="flex flex-1 flex-col">

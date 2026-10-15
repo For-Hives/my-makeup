@@ -65,6 +65,9 @@ function payloadEspion() {
 						},
 					],
 				}
+			// The id of the old site, read apart (it is a field the public does not read).
+			if (options.collection === 'profils' && (options.select as Record<string, unknown>)?.strapiId === true)
+				return { docs: [{ id: 1, strapiId: 4242 }] }
 			return {
 				docs: [
 					{
@@ -89,7 +92,7 @@ function payloadEspion() {
 }
 
 describe('U22 : la carte d’une liste, clés figées', () => {
-	test('ni email, ni téléphone, ni compte, ni score, ni statut : six clés, la photo comprise', async () => {
+	test('ni email, ni téléphone, ni compte, ni score, ni statut : sept clés, la photo et l’identifiant de mesure compris', async () => {
 		const { payload } = payloadEspion()
 
 		const { cartes } = await listerLesProfils(payload)
@@ -99,17 +102,35 @@ describe('U22 : la carte d’une liste, clés figées', () => {
 			'lieu',
 			'nom',
 			'photo',
+			'pid',
 			'slug',
 			'specialite',
 			'superMaquilleuse',
 		])
 		expect(cartes[0]).toEqual({
 			slug: 'zoe-fictive',
+			pid: 4242,
 			nom: 'Zoé Fictive',
 			specialite: 'Mariage',
 			lieu: 'Annecy et 30 km autour',
 			superMaquilleuse: true,
 			photo: { url: 'https://photos.example.test/media/abc.webp', width: 400, height: 400 },
+		})
+	})
+
+	test('l’identifiant de mesure : celui de l’ancien site s’il y en a un, lu à part, sur les seuls profils déjà donnés', async () => {
+		const { payload, lectures } = payloadEspion()
+
+		await listerLesProfils(payload)
+
+		const lecturesDesIdentifiants = lectures.filter(
+			lecture => lecture.collection === 'profils' && (lecture.select as Record<string, unknown>)?.strapiId === true
+		)
+		expect(lecturesDesIdentifiants).toHaveLength(1)
+		expect(lecturesDesIdentifiants[0]).toMatchObject({
+			where: { id: { in: [1] } },
+			select: { strapiId: true },
+			overrideAccess: true,
 		})
 	})
 
@@ -139,7 +160,9 @@ describe('U22 : la carte d’une liste, clés figées', () => {
 		await listerLesProfils(payload, { page: 3, limite: 5000 })
 		await listerLesProfils(payload, { limite: 0 })
 
-		const [grande, nulle] = lectures.filter(lecture => lecture.collection === 'profils')
+		const [grande, nulle] = lectures.filter(
+			lecture => lecture.collection === 'profils' && lecture.overrideAccess === false
+		)
 		expect(grande).toMatchObject({ collection: 'profils', where: FILTRE_LISTE, overrideAccess: false, page: 3 })
 		expect(grande?.limit).toBe(LIMITE_MAX_DE_LA_LISTE)
 		expect(nulle?.limit).toBe(20)

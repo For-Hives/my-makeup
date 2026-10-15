@@ -1,0 +1,132 @@
+import { expect, test } from '@playwright/test'
+import { type ProfilDeRecherche, poserLesProfilsDeRecherche } from '../fixtures/profils-de-recherche'
+import { fauxUmami, type OutilFauxUmami } from '../outils/faux-umami'
+import { rafraichirLesPagesDesProfils } from '../outils/pages-publiques'
+
+/**
+ * The events of the search, the calls to action and the 404 (ticket 145; plan 04 §3.3, events 4 to 6
+ * and 8). A browser that is not automated visits the site, and the fake Umami of the bench receives
+ * what the site relays. Nothing typed may reach it.
+ */
+
+let umami: OutilFauxUmami
+let reference: ProfilDeRecherche
+
+test.describe.configure({ mode: 'serial' })
+
+const AGENT_ORDINAIRE =
+	'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36'
+
+type Donnees = Record<string, unknown>
+const donneesDe = (recu: { corps: unknown }): Donnees => (recu.corps as { payload: { data: Donnees } }).payload.data
+
+test.describe('La mesure de la recherche, des appels à l’action et de la 404', () => {
+	test.use({ userAgent: AGENT_ORDINAIRE })
+
+	test.beforeAll(async () => {
+		test.setTimeout(180_000)
+		const profils = await poserLesProfilsDeRecherche()
+		const trouve = profils.get('reference')
+		if (!trouve) throw new Error('pas de profil d’essai « reference »')
+		reference = trouve
+	})
+
+	test.beforeEach(async ({ context, request }) => {
+		await rafraichirLesPagesDesProfils(request, reference)
+		await context.addInitScript(() => {
+			Object.defineProperty(navigator, 'webdriver', { get: () => false })
+		})
+		umami = fauxUmami()
+		await umami.vider()
+	})
+
+	test('la soumission du formulaire : une fois, la tranche et la ville, jamais le texte ; le clic donne rang et profil', async ({
+		page,
+	}) => {
+		await page.goto('/')
+		await page.getByLabel('Prestation recherchée').fill('mariage lea@example.test')
+		await page.getByLabel('Ville de la prestation').fill('Annecy')
+		await page.getByRole('button', { name: 'Trouver une maquilleuse' }).click()
+		await expect(page).toHaveURL(/\/search\?/)
+
+		await expect.poll(async () => (await umami.envois('search_submit')).length, { timeout: 10_000 }).toBe(1)
+		const [soumission] = await umami.envois('search_submit')
+		const donnees = soumission ? donneesDe(soumission) : {}
+		expect(Object.keys(donnees).sort()).toEqual(['from', 'has_city', 'results'])
+		expect(donnees.from).toBe('formulaire')
+		expect(donnees.has_city).toBe(true)
+		expect(['0', '1-5', '6-20', '21+']).toContain(donnees.results)
+
+		// A reload shows the same search again: not a new one.
+		await page.reload()
+		await page.waitForFunction(() => 'umami' in window)
+		// A negative check has nothing to wait for but time: the tracker has run, the page effects too.
+		await page.waitForTimeout(1500)
+		expect((await umami.envois('search_submit')).length).toBe(1)
+
+		// A click on a result: its rank and its profile.
+		await page.goto('/search?city=Annecy')
+		const cartes = page.locator('main ul li a[href^="/profil/"]')
+		await expect(cartes.first()).toBeVisible()
+		await cartes.nth(1).click()
+		await expect.poll(async () => (await umami.envois('search_result_click')).length, { timeout: 10_000 }).toBe(1)
+		const [clic] = await umami.envois('search_result_click')
+		const clique = clic ? donneesDe(clic) : {}
+		expect(Object.keys(clique).sort()).toEqual(['pid', 'rank'])
+		expect(clique.rank).toBe(2)
+		expect(typeof clique.pid === 'number' || /^v3-\d+$/.test(String(clique.pid))).toBe(true)
+
+		// Nothing typed went anywhere.
+		const tout = JSON.stringify((await umami.recus()).map(recu => recu.corps))
+		expect(tout).not.toContain('lea@example.test')
+		expect(tout).not.toContain('mariage lea')
+	})
+
+	test('un appel à l’action de la page et celui de la navigation', async ({ page }) => {
+		await page.goto('/')
+		await page.getByRole('link', { name: 'Je suis maquilleuse' }).first().scrollIntoViewIfNeeded()
+		await page.getByRole('link', { name: 'Je suis maquilleuse' }).first().click({ noWaitAfter: true })
+		await expect.poll(async () => (await umami.envois('cta_click')).length, { timeout: 10_000 }).toBe(1)
+		const [cta] = await umami.envois('cta_click')
+		expect(cta ? donneesDe(cta) : {}).toEqual({ where: 'cta_inscription' })
+
+		await umami.vider()
+		await page.goto('/a-propos')
+		await page
+			.getByRole('navigation', { name: 'Navigation principale' })
+			.getByRole('link', { name: 'Trouver une maquilleuse' })
+			.click()
+		await expect.poll(async () => (await umami.envois('cta_click')).length, { timeout: 10_000 }).toBe(1)
+		const [nav] = await umami.envois('cta_click')
+		expect(['nav_recherche', 'nav_recherche_mobile']).toContain(nav ? donneesDe(nav).where : null)
+	})
+
+	test('la 404 d’une adresse que rien ne sert : une fois, « autre »', async ({ page }) => {
+		const reponse = await page.goto('/cette-page-n-existe-pas')
+		expect(reponse?.status()).toBe(404)
+
+		await expect.poll(async () => (await umami.envois('not_found')).length, { timeout: 10_000 }).toBe(1)
+		const [introuvable] = await umami.envois('not_found')
+		expect(introuvable ? donneesDe(introuvable) : {}).toEqual({ kind: 'autre' })
+
+		await page.reload()
+		await page.waitForFunction(() => 'umami' in window)
+		await page.waitForTimeout(1500)
+		expect((await umami.envois('not_found')).length).toBe(1)
+	})
+
+	test('la 404 : une fois, d’une liste fermée, rien de plus au rechargement', async ({ page }) => {
+		const reponse = await page.goto('/profil/profil-qui-n-existe-pas')
+		expect(reponse?.status()).toBe(404)
+
+		await expect.poll(async () => (await umami.envois('not_found')).length, { timeout: 10_000 }).toBe(1)
+		const [introuvable] = await umami.envois('not_found')
+		expect(introuvable ? donneesDe(introuvable) : {}).toEqual({ kind: 'profil' })
+
+		await page.reload()
+		await page.waitForFunction(() => 'umami' in window)
+		// A negative check has nothing to wait for but time: the tracker has run, the page effects too.
+		await page.waitForTimeout(1500)
+		expect((await umami.envois('not_found')).length).toBe(1)
+	})
+})

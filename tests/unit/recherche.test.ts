@@ -302,7 +302,7 @@ describe('la lecture de l’annuaire', () => {
 		const annuaire = await lireLAnnuaire(payload)
 
 		expect(annuaire.map(({ carte }) => carte.slug)).toEqual(['a', 'b', 'c'])
-		const profils = lectures.filter(lecture => lecture.collection === 'profils')
+		const profils = lectures.filter(lecture => lecture.collection === 'profils' && lecture.overrideAccess === false)
 		expect(profils.map(({ page }) => page)).toEqual([1, 2, 3])
 		for (const lecture of profils)
 			expect(lecture).toMatchObject({ collection: 'profils', limit: 100, overrideAccess: false, depth: 0 })
@@ -311,7 +311,9 @@ describe('la lecture de l’annuaire', () => {
 	test('il ne lit jamais plus de dix pages', async () => {
 		const { payload, lectures } = payloadEspion(Array.from({ length: 50 }, () => [doc('x')]))
 		await lireLAnnuaire(payload)
-		expect(lectures.filter(lecture => lecture.collection === 'profils')).toHaveLength(10)
+		expect(
+			lectures.filter(lecture => lecture.collection === 'profils' && lecture.overrideAccess === false)
+		).toHaveLength(10)
 	})
 
 	test('la place d’un profil est sa commune et son département ; le centre de la commune n’en sort pas', async () => {

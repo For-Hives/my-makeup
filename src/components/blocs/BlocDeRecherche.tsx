@@ -1,3 +1,4 @@
+import { SuiviDeLaSoumission } from '@/components/analytics/SuiviDeLaSoumission'
 import { IconeLieu, IconeLoupe } from './icones'
 
 const CHAMP =
@@ -35,6 +36,7 @@ export function BlocDeRecherche({ search = '', city = '', surLaPageDeRecherche =
 					role="search"
 					className="flex w-full flex-col items-center justify-between gap-6 sm:gap-4 md:flex-row md:flex-wrap lg:gap-6"
 				>
+					<SuiviDeLaSoumission />
 					<div className="flex w-full flex-col gap-4 px-2 md:w-full md:flex-row lg:w-auto lg:gap-6 lg:px-0">
 						<div className="relative w-full md:w-full lg:w-auto">
 							<label htmlFor={`${prefixe}-prestation`} className="sr-only">
