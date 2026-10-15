@@ -19,6 +19,7 @@ Les documents, sous `docs/migration/` :
 - [`JOURNAL.md`](docs/migration/JOURNAL.md) : les faits datés de la migration.
 - [`SCHEMA.md`](docs/migration/SCHEMA.md) : le schéma gelé. Il dit où va chaque champ de l'ancienne API dans la v3, ou pourquoi il n'est pas repris.
 - [`URLS.md`](docs/migration/URLS.md) : les URL gelées. Il dit ce que répond chaque famille d'adresses après la bascule.
+- [`GEL.md`](docs/migration/GEL.md) : le gel de l'ancien site. Il dit quand il commence (au départ de la répétition de la bascule), ce qui reste permis après (sécurité, bandeau, lecture seule, contenus), et la commande `bun run migration:gel` qui le contrôle.
 - [`IMPORT.md`](docs/migration/IMPORT.md) : l'import des données de l'ancien site. Il dit ce que l'import garantit, comment le lancer, à blanc ou pour de vrai, et ce que dit son rapport.
 - [`LECTURE-SEULE.md`](docs/migration/LECTURE-SEULE.md) : le gel de l'ancien site par un réglage (`LEGACY_READ_ONLY`), son retrait en une minute et les correctifs prêts à appliquer à l'ancienne API et à l'ancien site.
 
