@@ -67,3 +67,21 @@ describe('la tâche', () => {
 		expect(journal).toEqual(['Tâche quotidienne purge-messages-contact : 2 ligne(s) supprimée(s).'])
 	})
 })
+
+describe('l’import marque son passage (importer lui-même)', () => {
+	test('importEnCours() est vrai pendant importer(), faux après, même si l’import échoue', async () => {
+		const { importer } = await import('../../scripts/migration/import/importer')
+		let vuPendant: boolean | null = null
+		const source = {
+			lire: async () => {
+				vuPendant = importEnCours()
+				throw new Error('stop')
+			},
+		}
+		const options = { payload: {}, source, mode: 'essai', cible: 'locale' } as unknown as Parameters<typeof importer>[0]
+
+		await expect(importer(options)).rejects.toThrow('stop')
+		expect(vuPendant).toBe(true)
+		expect(importEnCours()).toBe(false)
+	})
+})

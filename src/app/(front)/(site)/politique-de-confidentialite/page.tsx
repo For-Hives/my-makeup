@@ -59,7 +59,7 @@ export default function PolitiqueDeConfidentialite() {
 
 			<h2>Formulaire de contact</h2>
 			<p>
-				{`Données : nom, prénom, email, téléphone et message. Le message est enregistré sur notre serveur, puis envoyé par email à l'équipe via le service Resend, pour vous répondre (intérêt légitime). Seuls les administrateurs de My Makeup peuvent le lire. Durée : 12 mois après sa réception, puis suppression automatique, y compris dans notre boîte email.`}
+				{`Données : nom, prénom, email, téléphone et message. Le message est enregistré sur notre serveur, puis envoyé par email à l'équipe via le service Resend, pour vous répondre (intérêt légitime). Seuls les administrateurs de My Makeup peuvent le lire. Durée : 12 mois après sa réception, puis suppression automatique de notre serveur. La copie reçue par email est effacée de notre boîte dans le même délai.`}
 			</p>
 
 			<h2>Demandes de devis</h2>
