@@ -72,8 +72,9 @@ export function PanneauDEdition({
 	}
 
 	function surTouche(evenement: KeyboardEvent<HTMLDivElement>) {
-		// A key held down repeats: Enter would send the form again and again.
-		if (evenement.key === 'Enter' && evenement.repeat) {
+		// A key held down repeats: Enter would send the form again and again. A long text keeps its
+		// effect: held down, Enter makes new lines.
+		if (evenement.key === 'Enter' && evenement.repeat && (evenement.target as HTMLElement).tagName !== 'TEXTAREA') {
 			evenement.preventDefault()
 			return
 		}
