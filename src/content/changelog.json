@@ -80,6 +80,11 @@
 			"id": "le-panneau-de-modification-de-ton-espace-s-ouvre-des-le-p",
 			"type": "amelioration",
 			"text": "Le panneau de modification de ton espace s’ouvre dès le premier tap, prend tout l’écran du téléphone, se parcourt au clavier (Échap pour fermer) et annonce le résultat aux lecteurs d’écran."
+		},
+		{
+			"id": "tu-rediges-ta-description-depuis-ton-espace-avec-un-compt",
+			"type": "ajout",
+			"text": "Tu rédiges ta description depuis ton espace, avec un compteur qui montre les 200 caractères qui rendent ton profil publiable, une limite de 2 000 caractères et tes sauts de ligne gardés."
 		}
 	],
 	"releases": []
