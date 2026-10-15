@@ -90,3 +90,12 @@ Un profil sans contact public n'a ni section ni lien, donc aucun événement. Le
 Le `pid` d'une carte (`CarteDeProfil.pid`) est lu à part, par les identifiants que la lecture publique a donnés (`lireLesPid`) : l'ancien identifiant n'est pas un champ que le public lit.
 
 Tests : `tests/unit/mesure-recherche-erreurs.test.ts`, et `tests/e2e/mesure-recherche-erreurs.spec.ts` contre le faux Umami.
+
+## L'onboarding : les étapes et l'origine déclarée (ticket 148)
+
+| Événement | Quand | Propriétés |
+|---|---|---|
+| `onboarding_step` | Le serveur a répondu qu'il a enregistré une étape de `/auth/init-account` | `step` : `identite`, `zone`, `photo`, puis `termine` quand le serveur dit que les trois étapes sont faites. `verification_email` et `compte_cree` restent dans la liste pour les séries de l'ancien site, la v3 ne les émet pas |
+| `onboarding_source` | La réponse à « Comment as-tu connu My Makeup ? » est choisie, et l'identité est enregistrée | `source` : `instagram`, `google`, `bouche-a-oreille`, `ecole`, `ia`, `autre` |
+
+Chaque étape est comptée une fois par visite : un « Précédent » suivi d'un nouveau « Suivant » ne recompte rien, et un échec du serveur n'émet rien. L'origine part une seule fois, avec l'étape `identite`, seulement si elle est choisie (une réponse effacée ne part pas). **Elle n'est stockée nulle part** : ni envoyée au serveur avec l'identité, ni dans un champ de la base ou du compte. Les origines se lisent en totaux hebdomadaires dans Umami, jamais rapprochées d'un compte. Le code est dans `src/components/espace/accueil/Accueil.tsx`. Test : `tests/unit/mesure-onboarding.test.tsx`, qui vérifie aussi qu'aucune collection n'a de champ pour la réponse.

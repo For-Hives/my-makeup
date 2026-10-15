@@ -18,8 +18,8 @@ export type Origine = (typeof ORIGINES_DECLAREES)[number]
 
 /**
  * « Comment as-tu connu My Makeup ? » (decision UI-05): one optional answer. It is kept out of the
- * form, of the schema and of every request: nothing about it is stored. Counting it is the work of
- * ticket 148, which reads `origine` here.
+ * form, of the schema and of every request: nothing about it is stored. The parent counts it (ticket 148) as the
+ * `onboarding_source` event once the identity is stored, and nowhere else.
  */
 function QuestionDOrigine({ origine, choisir }: { origine: Origine | null; choisir: (o: Origine | null) => void }) {
 	const premiere = useRef<HTMLInputElement>(null)
