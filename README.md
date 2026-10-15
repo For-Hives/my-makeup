@@ -161,6 +161,16 @@ Seul un choix différent de celui qui est enregistré change le choix. Le formul
 
 Tests : `tests/unit/etat-profil.test.ts`, et sur le banc `tests/integration/profils-completude.test.ts`, qui écrit chaque cas partagé de la complétude comme l'import l'écrira (`tests/outils/cas-completude.ts`) et compare l'état enregistré à la règle et aux réponses de l'ancien site.
 
+### La liste des profils dans l'administration
+
+La liste de `profils` montre, dans l'ordre : l'adresse, la commune, la complétude, « publiable », le statut et la dernière modification, la plus récente d'abord (`defaultSort: '-updatedAt'`). La dernière activité d'un profil est son dernier enregistrement (`updatedAt`) : `derniereActivite` est prévue sur le compte, pas sur le profil (`docs/migration/SCHEMA.md`, §9). La recherche du panneau lit l'adresse, le prénom, le nom, le nom d'artiste et la commune. Les filtres du panneau (publiable, entièrement vide, statut, statut choisi) lisent les drapeaux stockés à chaque enregistrement : ils ne calculent rien.
+
+Une valeur qui n'est pas un choix est refusée avec une phrase, jamais ignorée ni répondue par une erreur de la base : un admin qui envoie un `statutChoisi` inconnu reçoit un 400 « Ce statut n'existe pas », et un filtre sur un statut inconnu (`where[statut][equals]=archive`) un 400 « Ce filtre nomme un statut qui n'existe pas ». Ce que la maquilleuse envoie sur ces champs reste ignoré.
+
+**Masquer un profil** (ticket 166) : l'admin ouvre la fiche, choisit « Masqué » dans « Statut choisi par l'admin » et sauvegarde ; la page publique répond 404 et le profil sort de la recherche, du plan du site et du sitemap en moins d'une minute (les pages gardent leur lecture sous l'étiquette du profil, qu'un enregistrement rafraîchit). Le choix « Automatique » le remet en ligne, dans le sitemap s'il est publiable. La rédaction ne change aucun statut. Le motif et le journal de la modération viennent avec le ticket S13, après la bascule.
+
+Tests : `tests/unit/profils-filtre-statut.test.ts`, sur le banc `tests/integration/admin-profils-liste.test.ts` (les 12 profils du banc, le tri, les refus, le masquage), et `tests/e2e/admin-profils.spec.ts` (E53, E56 sans journal).
+
 ### Corbeille des photos
 
 Une photo qui ne sert plus part à la corbeille du stockage, jamais à la suppression directe : l'application n'efface jamais un objet. La règle du déplacement est dans `src/lib/corbeille.ts`, le moment où une photo ne sert plus dans `src/collections/corbeille.ts`, et le détail au §8 de [`docs/migration/SCHEMA.md`](docs/migration/SCHEMA.md).

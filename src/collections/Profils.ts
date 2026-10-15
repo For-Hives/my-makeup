@@ -2,10 +2,14 @@ import { randomUUID } from 'node:crypto'
 import type {
 	CollectionAfterChangeHook,
 	CollectionBeforeChangeHook,
+	CollectionBeforeOperationHook,
+	CollectionBeforeValidateHook,
 	CollectionConfig,
 	PayloadRequest,
 	RequiredDataFromCollectionSlug,
+	Validate,
 } from 'payload'
+import { APIError, ValidationError } from 'payload'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import {
 	adminOuProprietaire,
@@ -141,6 +145,68 @@ export const profilALaCreationDuCompte: CollectionAfterChangeHook = async ({ con
 	return doc
 }
 
+/** The choice of status must be one of the choices; empty is the default. */
+const MESSAGE_DU_CHOIX = 'Ce statut n’existe pas : choisis automatique, brouillon, publié ou masqué.'
+
+const estUnChoixDuStatut = (value: unknown): boolean =>
+	value === undefined || value === null || (CHOIX_DU_STATUT as readonly unknown[]).includes(value)
+
+const validerLeChoixDuStatut: Validate = value => (estUnChoixDuStatut(value) ? true : MESSAGE_DU_CHOIX)
+
+/** The statuses a filter may name: the column is an enumeration of the database, which fails with a 500 on any other. */
+const VALEURS_PAR_CHAMP: Record<string, readonly string[]> = {
+	statut: STATUTS_DU_PROFIL,
+	statutChoisi: CHOIX_DU_STATUT,
+}
+const OPERATEURS_DE_VALEUR = ['equals', 'not_equals', 'in', 'not_in', 'like', 'contains'] as const
+
+/** Every value a `where` compares a status field with, whatever the nesting of `and` and `or`. */
+export function valeursInconnues(where: unknown, trouvees: string[] = []): string[] {
+	if (Array.isArray(where)) {
+		for (const element of where) valeursInconnues(element, trouvees)
+		return trouvees
+	}
+	if (typeof where !== 'object' || where === null) return trouvees
+	for (const [cle, valeur] of Object.entries(where)) {
+		if (cle === 'and' || cle === 'or') valeursInconnues(valeur, trouvees)
+		else if (cle in VALEURS_PAR_CHAMP && typeof valeur === 'object' && valeur !== null) {
+			const permises = VALEURS_PAR_CHAMP[cle] ?? []
+			for (const operateur of OPERATEURS_DE_VALEUR) {
+				const compare: unknown = (valeur as Record<string, unknown>)[operateur]
+				for (const v of Array.isArray(compare) ? compare : compare === undefined ? [] : [compare])
+					if (typeof v !== 'string' || !permises.includes(v)) trouvees.push(`${cle} : ${String(v)}`)
+			}
+		}
+	}
+	return trouvees
+}
+
+/**
+ * A filter on a status nobody holds is refused with a sentence (ticket 165), not answered by a 500
+ * of the database: the admin panel builds such a filter from its address.
+ */
+export const refuserUnFiltreSurUnStatutInconnu: CollectionBeforeOperationHook = ({ args, operation }) => {
+	if (operation !== 'read' && operation !== 'count') return args
+	if (valeursInconnues((args as { where?: unknown }).where).length > 0)
+		throw new APIError('Ce filtre nomme un statut qui n’existe pas : brouillon, publié ou masqué.', 400)
+	return args
+}
+
+/**
+ * An admin who sends a status that is no choice is told so (ticket 165). The check of the field
+ * comes too late to see it: the hooks of `beforeChange` (the state of ticket 044) have already put
+ * a valid choice back. What a makeup artist sends is ignored, as before.
+ */
+export const refuserUnChoixInconnu: CollectionBeforeValidateHook = ({ data, req }) => {
+	if (req.user?.collection === 'admins' && !estUnChoixDuStatut(data?.statutChoisi))
+		throw new ValidationError({
+			collection: 'profils',
+			errors: [{ message: MESSAGE_DU_CHOIX, path: 'statutChoisi' }],
+			req,
+		})
+	return data
+}
+
 /** What only the role `admin` writes, and only `admin` and the owner read (ticket 021). */
 const RESERVE_LU_PAR_LA_PROPRIETAIRE = {
 	read: champDuProfilAdminOuProprietaire,
@@ -187,8 +253,17 @@ const INTERNE = { read: champAdminSeulement, create: champAdminSeulement, update
  */
 export const Profils: CollectionConfig<'profils'> = {
 	slug: 'profils',
+	defaultSort: '-updatedAt',
 	labels: { singular: 'Profil', plural: 'Profils' },
-	admin: { useAsTitle: 'slug', defaultColumns: ['slug', 'prenom', 'nom', 'statut', 'pro'] },
+	// The list of the admin (ticket 165): where a profile stands at a glance, the last touched first. The
+	// last activity of a profile is its last save (`updatedAt`): `derniereActivite` lives on the account
+	// in the plan, not here (docs/migration/SCHEMA.md, §9). The filters of the panel read the stored
+	// flags (`publiable`, `entierementVide`, `statut`), so they cost no computation.
+	admin: {
+		useAsTitle: 'slug',
+		defaultColumns: ['slug', 'commune.nom', 'completude', 'publiable', 'statut', 'updatedAt'],
+		listSearchableFields: ['slug', 'prenom', 'nom', 'nomArtiste', 'commune.nom'],
+	},
 	access: {
 		read: profilPublieOuProprietaire,
 		create: adminSeulement,
@@ -196,6 +271,8 @@ export const Profils: CollectionConfig<'profils'> = {
 		delete: adminSeulement,
 	},
 	hooks: {
+		beforeOperation: [refuserUnFiltreSurUnStatutInconnu],
+		beforeValidate: [refuserUnChoixInconnu],
 		// The state comes last: it reads the save as the other hooks leave it (ticket 044). The refresh
 		// reads the stored row, which no hook changes before the write.
 		beforeChange: [
@@ -350,6 +427,8 @@ export const Profils: CollectionConfig<'profils'> = {
 			type: 'select',
 			defaultValue: CHOIX_INITIAL,
 			options: CHOIX_DU_STATUT.map(choix => ({ label: LIBELLES_DES_CHOIX[choix], value: choix })),
+			// A value that is no choice is refused with a sentence, never ignored (ticket 165).
+			validate: validerLeChoixDuStatut,
 			access: RESERVE_LU_PAR_LA_PROPRIETAIRE,
 			admin: {
 				position: 'sidebar',
