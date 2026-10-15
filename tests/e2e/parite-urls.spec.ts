@@ -57,6 +57,7 @@ const LIVREES: ReadonlySet<string> = new Set([
 	'profil-non-repris',
 	'demande-envoyee',
 	'robots',
+	'mentions-legales',
 ])
 
 /**
@@ -69,9 +70,11 @@ const ADRESSES_LIVREES: readonly string[] = [
 	'/particulier/centraliser-ses-recherches',
 	'/particulier/explorer-les-profils',
 	'/solutions/pour-les-particuliers',
+	'/a-propos',
+	'/maquilleuse/partenariats',
+	'/pourquoi-rejoindre-my-makeup-en-tant-que-maquilleuse',
+	'/solutions/pour-les-maquilleuses',
 ]
-	'mentions-legales',
-])
 
 /**
  * The three legal pages (ticket 112). `/mentions-legales` is a family of its own and is in the list above;
