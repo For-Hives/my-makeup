@@ -531,3 +531,34 @@ Ce que la v3 change par rapport au site actuel est dans [`CHANGEMENTS-VOULUS.md`
   - 065 et 067 : `--controle` refuse `--sans-photos` (plus de faux vert sur les photos) ; il faut encore une copie de la prod du jour et le stockage réel. 096 : correctif de délai du test du journal et accessibilité de la connexion ; il faut un `ci-ok` entièrement vert, et la tranche 2/2 de l'e2e expire en CI pour une cause qui n'est pas l'authentification.
 - **Intégration des tickets 065, 067, 096, 108, 109, 110, 112, 115, 116, 118, 119 et 120 dans `v3` (vague 6).**
   - Huit lots fusionnés, aucun écarté. Conflits résolus en gardant les deux côtés : README, `CHANGEMENTS-VOULUS.md` (une seule ligne « Page d'un talent », celle qui garde la phrase sur I45) et `tests/e2e/parite-urls.spec.ts` (listes `LIVREES` et `ADRESSES_LIVREES` fusionnées, les quatre pages du ticket 110 ajoutées).
+
+## 15/10/2026
+
+- **Ticket 096 fait : sortie de P5, les suites d'authentification sont vertes en CI.**
+  - `ci-ok` vert sur la tête de `v3` (unit, qualité, build, intégration, e2e 1/2 et 2/2 verts, aucune ligne en échec) ; les quatre preuves (hash remplacé, ancien cookie refusé, cookie absent après la déconnexion, cookie hérité expiré) et l'accessibilité des pages d'authentification à 390 et 1440 px passent. Le registre porte la confirmation par email, la reconnexion unique et la fin de Facebook.
+  - Reste : un test du back-office (verrou d'édition, ticket 094) a passé au deuxième essai ; à surveiller.
+- **Ticket 113 fait : sitemap.**
+  - `/sitemap.xml` (route, une lecture mise en cache d'une heure) : profils publiables, talents, articles et pages fixes d'une table explicite, sans double barre ; chaque adresse répond 200 sans redirection (E62, I45). `/toutes-les-news` (301) et `/contact` (pas encore de page) en sont absents.
+  - Reste : le ticket 158 doit retirer la marque « à venir » de `/contact` quand la page existe (un test échoue sinon).
+- **Ticket 114 fait : plan du site généré.**
+  - `/site-map` : un seul h1, mêmes pages fixes et mêmes profils publiables que le sitemap, liens en 200. Registre : `plan-du-site-un-h1`. Le lien Contact manque jusqu'au ticket 158.
+- **Ticket 108 : toujours pas terminé.** Les 14 titres d'onglet restent à écrire par Andy.
+- **Ticket 121 fait : une session expirée pendant l'édition ne perd pas la saisie.**
+  - Le proxy ne redirige plus un `POST` ; l'action répond « session expirée », la saisie reste dans le `sessionStorage` de l'onglet (une clé par section et par compte, un jour au plus), un seul renvoi vers la connexion, le panneau se rouvre avec la saisie (E32). Fenêtre anti-boucle de 10 minutes.
+  - Reste : les tickets 122 à 135 réutilisent `saisie-gardee.ts` ; le code du brouillon est encore dans `EditeurDIdentite`.
+- **Ticket 122 fait : la description, avec le seuil des 200 caractères en vue.**
+  - Compteur sur la définition unique, 2 000 caractères au plus après retrait du HTML, sauts de ligne gardés, échec honnête (E19, E31, U27). Le HTML est retiré par l'action, pas par un hook de collection.
+- **Ticket 123 fait : commune et rayon d'action.**
+  - Le serveur reçoit le seul code INSEE et prend nom et centre dans la liste officielle ; rayon de 0 à 200 km ; panne de la liste : message clair, ancienne commune gardée. Recherche par action serveur (le navigateur n'appelle jamais `geo.api.gouv.fr`).
+  - Pas d'e2e (la liste réelle serait appelée) : jsdom, intégration avec liste simulée, et une vérification à la main à 390 px.
+- **Ticket 124 fait : disponible ou indisponible.**
+  - Interrupteur enregistré par un schéma strict à un booléen ; il ne change qu'après la réponse du serveur ; une valeur absente (profil importé) se lit « Disponible » ; un profil indisponible sort de la liste et de la recherche.
+- **Ticket 125 fait : réseaux sociaux et site.**
+  - « @pseudo » et adresse complète donnent la même valeur (U28), autre site refusé sous le champ, vider un champ retire le réseau (E30, E31).
+- **Ticket 126 fait : téléphone et email publics ou privés.**
+  - La date du choix est posée par le serveur ; coupé, les coordonnées sont absentes du HTML et des données de la page ; jamais dans les listes (U22). Correction au passage : la page de l'espace ne lisait pas `pro`, donc jamais son propre téléphone ni son email.
+  - Reste : téléphone de 9 à 15 chiffres exigé (plus strict que la collection) ; pas de capture à 390 px des deux panneaux.
+- **Intégration des tickets 096, 108, 113, 114, 121, 122, 123, 124, 125 et 126 dans `v3` (vague 7).**
+  - Six lots fusionnés ; le lot 065-067 n'est pas fusionné (aucun commit, copie fraîche de la prod et requêtes d'en-tête sur le stockage réel nécessaires). Le lot 096 n'avait aucun commit à fusionner.
+  - Conflits résolus en gardant tous les côtés : `page.tsx` et `actions.ts` de l'espace (une branche et une action par carte), `changelog.json`, README, `cartes.ts`, et `echecDePayload` (le troisième argument accepte un préfixe de groupe ou une fonction de chemin).
+  - Vérifié : check, typecheck, tests unitaires (2659), garde CI (442), build, intégration sur banc (1805 réussis, 3 ignorés). E2E : en un seul bloc local, 3 à 6 échecs d'isolation (`tranche-profil-importe`, `jeu-du-banc`, recherche) qui existent aussi sur la tête d'avant la vague ; les mêmes fichiers passent seuls.
