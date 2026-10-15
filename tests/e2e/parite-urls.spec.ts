@@ -58,6 +58,8 @@ const LIVREES: ReadonlySet<string> = new Set([
 	'demande-envoyee',
 	'robots',
 	'mentions-legales',
+	'sitemap',
+	'plan-du-site',
 ])
 
 /**

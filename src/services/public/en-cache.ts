@@ -13,6 +13,7 @@ import { unstable_cache } from 'next/cache'
 import { getPayload } from 'payload'
 import { ETIQUETTES } from '@/lib/revalidation'
 import { listerLesArticles } from './liste-articles'
+import { lireLesPagesIndexables } from './pages-indexables'
 import { lireLAnnuaire } from './profils'
 import { listerLesTalents } from './talents'
 
@@ -49,4 +50,14 @@ export const lesArticlesEnCache = unstable_cache(
 	async () => listerLesArticles(await getPayload({ config })),
 	['public:articles'],
 	{ tags: [ETIQUETTES.articles], revalidate: UNE_HEURE }
+)
+
+/**
+ * The profiles, talents and articles the sitemap and the plan of the site list (tickets 113 and 114): one
+ * reading for both, refreshed by a save of any of the three collections. An error is not cached.
+ */
+export const lesPagesIndexablesEnCache = unstable_cache(
+	async () => lireLesPagesIndexables(await getPayload({ config })),
+	['public:pages-indexables'],
+	{ tags: [ETIQUETTES.profils, ETIQUETTES.talents, ETIQUETTES.articles], revalidate: UNE_HEURE }
 )
