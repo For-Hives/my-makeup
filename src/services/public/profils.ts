@@ -23,10 +23,12 @@
  */
 
 import type { Payload } from 'payload'
+import type { Pid } from '@/lib/analytics/events'
 import { formatZone, rayonKm, villeAffichee } from '@/lib/format-zone'
 import { estMontantDePrix, prixMinimal } from '@/lib/prix'
 import { cibleDeLAdresse, valeursARechercher } from '@/lib/profil/adresse'
 import { nomAffiche, texte } from '@/lib/profil/nom-affiche'
+import { pidDuProfil } from '@/lib/profil/pid'
 import { STATUT_PUBLIE } from '@/lib/profil/statut'
 import { estIndexable, FILTRE_LISTE } from '@/lib/profil/visibilite'
 import {
@@ -85,6 +87,8 @@ export const CHAMPS_DE_LA_PHOTO = { url: true, width: true, height: true, filena
  */
 export const CHAMPS_DE_LA_PAGE_DU_PROFIL = {
 	...CHAMPS_PUBLICS_DU_PROFIL,
+	// Only to make the `pid` of the audience measure (src/lib/profil/pid.ts); the page shows none of it.
+	strapiId: true,
 	commune: { nom: true },
 	rayonKm: true,
 	disponible: true,
@@ -111,6 +115,8 @@ export interface CoordonneesPubliques {
 /** A profile as a public page shows it. */
 export interface ProfilPublic {
 	slug: string
+	/** The id the audience measure counts the profile under (src/lib/profil/pid.ts), or `null` when unknown. */
+	pid: Pid | null
 	/** The name of the h1 (src/lib/profil/nom-affiche.ts). */
 	nom: string
 	/** The artist name under the h1, only when it adds something to the name (`nomDArtisteAffiche`). */
@@ -425,6 +431,7 @@ export type ProfilDeLaPage = Pick<
 	| 'experiences'
 	| 'statut'
 	| 'publiable'
+	| 'strapiId'
 >
 
 /**
@@ -433,12 +440,13 @@ export type ProfilDeLaPage = Pick<
  * rules) and given here.
  */
 export function profilPublicDe(
-	profil: ProfilDeLaPage,
+	profil: ProfilDeLaPage & { id?: number },
 	lu: { photo: PhotoDeCarte | null; galerie: PhotoDeCarte[]; coordonnees: CoordonneesPubliques | null }
 ): ProfilPublic {
 	const nom = nomAffiche(profil)
 	return {
 		slug: profil.slug,
+		pid: pidDuProfil(profil),
 		nom,
 		nomArtiste: nomDArtisteAffiche(profil, nom),
 		specialite: texte(profil.specialite) || null,

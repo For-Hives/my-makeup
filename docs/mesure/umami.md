@@ -57,3 +57,16 @@ track('profile_publiable') // un événement sans propriété n'en prend pas
 - Aucun appel direct à Umami hors de `src/lib/analytics/` : un test statique le garde.
 
 Les Web Vitals (`web-vitals`, un événement par mesure : `CLS`, `FCP`, `INP`, `LCP`, `TTFB`) partent de chaque page chargée, sans échantillon, depuis `src/components/analytics/WebVitals.tsx`. Le nom garde son tiret : la série existe déjà dans le rapport du lundi.
+
+## Le clic sur un contact d'un profil public (`contact_click`)
+
+Chaque lien de la section « Réseaux sociaux & contacts » d'un profil public (téléphone, email, Instagram, Facebook, LinkedIn, YouTube, site) émet un `contact_click` avec le `pid` du profil et le `channel`, une fois par clic (le clic du milieu aussi). C'est le principal signal de demande. Le code est `src/lib/analytics/contact-click.ts` (la règle et l'envoi) et `src/components/profil/LienDeContactMesure.tsx` (le lien).
+
+Il ne part pas :
+
+- quand la visiteuse est la propriétaire du profil. La page publique est partagée et en cache : elle ne sait pas qui la lit. Le navigateur demande donc à `GET /api/espace/mon-pid` le `pid` du profil de la session (jamais mis en cache, `null` sans cookie, sans accès à la base dans ce cas) et le compare à celui de la page. Le clic attend cette réponse si elle n'est pas encore venue ; si elle échoue, le clic est compté ;
+- quand elle vient de son espace (le référent est une page `/auth/...` du site) ;
+- quand l'adresse porte `utm_campaign=relance` (lien d'un email de relance) ;
+- depuis l'aperçu de sa propre page (`/auth/apercu-profil`), qui ne compte aucun clic (`mesure={false}`).
+
+Un profil sans contact public n'a ni section ni lien, donc aucun événement. Le `pid` d'un profil est l'identifiant de l'ancien site s'il en a un, sinon `v3-<id>` (`src/lib/profil/pid.ts`). Tests : U84 dans `tests/unit/mesure-clic-contact.test.tsx`, E52 dans `tests/e2e/mesure-clic-contact.spec.ts`.
