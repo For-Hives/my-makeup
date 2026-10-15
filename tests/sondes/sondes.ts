@@ -1,15 +1,21 @@
 /**
- * The read-only probes of a live site (plan 02 §7.6, ticket 155): R01, R03 and R04.
+ * The read-only probes of a live site (plan 02 §7.6, tickets 155 and 156): R01 to R06.
  *
  *     bun run sondes                                      # the site in production
  *     SONDES_CIBLE=http://localhost:3100 bun run sondes   # another target: the bench, a temporary domain
+ *     SONDES_STATS_TOKEN=… bun run sondes                 # with the token of the service, R02 compares
+ *     SONDES_API=aucune bun run sondes                    # Strapi is stopped: no Strapi part in R05
  *
  * - R01: the guard interrupts any request that is not a read, and blocks the audience
  *   measurement. Checked first, without the network: if the guard lets one forbidden request
  *   through, nothing else runs.
+ * - R02: the profile addresses of the sitemap are exactly the publishable profiles (the statistics
+ *   route, with the token of the service). Without the token: `inconnu`, never `vert`.
  * - R03: five profiles drawn at random from the sitemap answer 200, with an `h1` in the HTML
  *   the server sends, and neither « undefined » nor « null » in what it shows.
  * - R04: an unknown address answers 404, at the root and under `/profil/`.
+ * - R05: the security headers, the private lists closed, the old routes gone; Strapi's API while it runs.
+ * - R06: certificates (21 days) and domains (30 days) of the site, the photos and Umami.
  *
  * Every request goes through the guard (tests/sondes/garde.ts), one at a time, two per second
  * at most (tests/sondes/lecteur.ts). The report never writes the address of a real profile.
@@ -21,12 +27,24 @@
  */
 
 import { SITE_ORIGIN } from '../../src/lib/urls-gelees'
+import {
+	type LireUnCertificat,
+	type LireUnDomaine,
+	lecteurRdap,
+	lireLeCertificat,
+	sondeR06,
+	surveillanceDe,
+} from './certificats'
 import { cheminsDeProfils, empreinte, lireLeHtml, type Occurrence } from './contenu'
-import { CibleRefusee, cibleDesSondes, garder, RequeteInterdite, type Transport } from './garde'
+import { sondeR05 } from './entetes'
+import { CHEMIN_DES_STATS, CibleRefusee, cibleDesSondes, garder, RequeteInterdite, type Transport } from './garde'
 import { creerLecteur, ecartLePlusCourt, HORLOGE_REELLE, type Horloge, type Lecteur, type Page } from './lecteur'
+import { CHEMIN_DU_SITEMAP, NOM_DU_JETON, sondeR02 } from './profils-publiables'
+import { type Constat, raisonDe, type Verdict } from './resultat'
 
-export type IdDeSonde = 'R01' | 'R03' | 'R04'
-export type Verdict = 'vert' | 'rouge' | 'non lancée'
+export type { Verdict }
+export { CHEMIN_DU_SITEMAP }
+export type IdDeSonde = 'R01' | 'R02' | 'R03' | 'R04' | 'R05' | 'R06'
 
 export interface Resultat {
 	id: IdDeSonde
@@ -44,21 +62,25 @@ export interface Rapport {
 	/** Shortest gap between the starts of two requests, or null with fewer than two. */
 	ecartMinimalMs: number | null
 	dureeMs: number
-	/** True when every probe is green. */
+	/** True when every probe is green: an `inconnu` or a probe not run is not. */
 	vert: boolean
+	/** True when at least one probe is red or was not run: the exit code of the command. */
+	rouge: boolean
 }
 
 /** How many profiles R03 reads. */
 export const NOMBRE_DE_PROFILS = 5
-export const CHEMIN_DU_SITEMAP = '/sitemap.xml'
 
 /** The beginning of the unknown addresses R04 asks for; a random end keeps every cache out. */
 export const DEBUT_DES_ADRESSES_INCONNUES = 'sonde-inexistante'
 
 const TITRES: Record<IdDeSonde, string> = {
 	R01: 'La garde interrompt toute écriture et bloque la mesure d’audience',
+	R02: 'Les profils du sitemap sont exactement les profils publiables',
 	R03: 'Des profils au hasard : 200, un h1 dans le HTML serveur, ni « undefined » ni « null »',
 	R04: 'Une adresse inconnue répond 404',
+	R05: 'En-têtes de sécurité présents, listes privées fermées, anciennes routes disparues',
+	R06: 'Certificats valides plus de 21 jours, domaines plus de 30 jours',
 }
 
 const resultat = (id: IdDeSonde, ok: boolean, constats: string[]): Resultat => ({
@@ -68,12 +90,17 @@ const resultat = (id: IdDeSonde, ok: boolean, constats: string[]): Resultat => (
 	constats,
 })
 
-/** Why a request failed, without an address that could name a profile. */
-function raison(erreur: unknown): string {
-	if (!(erreur instanceof Error)) return 'erreur inconnue'
-	const message = erreur.message.replace(/\/profil\/[^\s/?#'"]+/g, '/profil/<…>')
-	return erreur.name === 'LectureTropLongue' ? message : `${erreur.name} : ${message}`
-}
+const depuis = (id: IdDeSonde, { verdict, constats }: Constat): Resultat => ({
+	id,
+	titre: TITRES[id],
+	verdict,
+	constats,
+})
+
+/** The Strapi API of the real site, read by R05 while it runs. */
+export const API_STRAPI_PAR_DEFAUT = 'https://api.my-makeup.fr'
+
+const raison = raisonDe
 
 /* ------------------------------------------------------------------------------------------
  * R01: the guard, checked before any request leaves
@@ -83,6 +110,9 @@ function raison(erreur: unknown): string {
  * The forbidden requests R01 tries, and why each is forbidden. Every one must be interrupted
  * before the transport sees it.
  */
+/** A token that exists only here: the guard of R01 is armed with it, to prove it is sent nowhere else. */
+const JETON_FACTICE = 'jeton-factice-de-la-sonde-r01'
+
 const ESSAIS_INTERDITS: readonly { nom: string; entree: string; init: RequestInit }[] = [
 	{ nom: 'POST', entree: '/', init: { method: 'POST', body: '{}' } },
 	{ nom: 'PUT', entree: '/', init: { method: 'PUT', body: '{}' } },
@@ -93,6 +123,21 @@ const ESSAIS_INTERDITS: readonly { nom: string; entree: string; init: RequestIni
 	{ nom: 'GET /u/api/send', entree: '/u/api/send', init: {} },
 	{ nom: 'GET vers un autre hôte', entree: 'https://mesure.example.test/script.js', init: {} },
 	{ nom: 'GET avec un cookie', entree: '/', init: { headers: { cookie: 'session=factice' } } },
+	{
+		nom: 'GET avec le jeton hors des statistiques',
+		entree: '/',
+		init: { headers: { authorization: `Bearer ${JETON_FACTICE}` } },
+	},
+	{
+		nom: 'GET des statistiques avec un autre jeton',
+		entree: CHEMIN_DES_STATS,
+		init: { headers: { authorization: 'Bearer autre-jeton-factice' } },
+	},
+	{
+		nom: 'GET des statistiques avec un cookie',
+		entree: CHEMIN_DES_STATS,
+		init: { headers: { cookie: 'session=factice' } },
+	},
 ]
 
 /**
@@ -101,10 +146,14 @@ const ESSAIS_INTERDITS: readonly { nom: string; entree: string; init: RequestIni
  */
 export async function sondeR01(cible: URL, garde: typeof garder = garder): Promise<Resultat> {
 	const recues: string[] = []
-	const lecture = garde(cible, async adresse => {
-		recues.push(adresse.pathname)
-		return new Response(null, { status: 204 })
-	})
+	const lecture = garde(
+		cible,
+		async adresse => {
+			recues.push(adresse.pathname)
+			return new Response(null, { status: 204 })
+		},
+		JETON_FACTICE
+	)
 
 	const passees: string[] = []
 	const autres: string[] = []
@@ -118,7 +167,10 @@ export async function sondeR01(cible: URL, garde: typeof garder = garder): Promi
 	}
 	const interdites = recues.length
 	await lecture('/').catch((erreur: unknown) => autres.push(`lecture de contrôle : ${raison(erreur)}`))
-	const controle = recues.length === interdites + 1
+	await lecture(CHEMIN_DES_STATS, { headers: { authorization: `Bearer ${JETON_FACTICE}` } }).catch((erreur: unknown) =>
+		autres.push(`lecture de contrôle avec le jeton : ${raison(erreur)}`)
+	)
+	const controle = recues.length === interdites + 2
 
 	const constats = [
 		`${ESSAIS_INTERDITS.length} requêtes interdites essayées (${ESSAIS_INTERDITS.map(({ nom }) => nom).join(', ')}) : ${
@@ -126,7 +178,9 @@ export async function sondeR01(cible: URL, garde: typeof garder = garder): Promi
 		}`,
 		...passees.map(nom => `laissée passer : ${nom}`),
 		...autres,
-		controle ? 'une lecture (GET /) passe la garde' : 'la lecture de contrôle (GET /) n’a pas passé la garde',
+		controle
+			? 'une lecture (GET /) passe la garde, et le jeton passe vers les statistiques seules'
+			: 'une lecture de contrôle (GET /, ou le jeton vers les statistiques) n’a pas passé la garde',
 	]
 	return resultat('R01', passees.length === 0 && interdites === 0 && autres.length === 0 && controle, constats)
 }
@@ -235,6 +289,16 @@ export interface OptionsDesSondes {
 	nombreDeProfils?: number
 	/** The guard. Always `garder`, except in the test that proves a broken guard stops the run. */
 	garde?: typeof garder
+	/** The token of the service for R02. Without it R02 is `inconnu`. */
+	jeton?: string | undefined
+	/** The Strapi API, for the Strapi part of R05 while it runs. Without it that part is not played. */
+	api?: URL | undefined
+	/** What reads a certificate: a TLS handshake unless a test stands in for it. */
+	certificat?: LireUnCertificat
+	/** What reads the end date of a domain: the public registry unless a test stands in for it. */
+	domaine?: LireUnDomaine
+	/** The date of the run. */
+	maintenant?: () => Date
 }
 
 const nonLancee = (id: IdDeSonde, pourquoi: string): Resultat => ({
@@ -245,7 +309,7 @@ const nonLancee = (id: IdDeSonde, pourquoi: string): Resultat => ({
 })
 
 /**
- * Runs R01, then R03 and R04 on the target. A request interrupted by the guard during a probe
+ * Runs R01, then R02 to R06 on the target. A request interrupted by the guard during a probe
  * makes it red and stops the run: a probe that tries to write is broken, whatever it found.
  */
 export async function lancerLesSondes({
@@ -255,13 +319,35 @@ export async function lancerLesSondes({
 	hasard = Math.random,
 	nombreDeProfils = NOMBRE_DE_PROFILS,
 	garde = garder,
+	jeton,
+	api,
+	certificat = lireLeCertificat(),
+	domaine = lecteurRdap(transport, horloge),
+	maintenant = () => new Date(),
 }: OptionsDesSondes): Promise<Rapport> {
 	const debut = horloge.maintenant()
 	const resultats: Resultat[] = [await sondeR01(cible, garde)]
-	const lecteur = creerLecteur({ lecture: garde(cible, transport), horloge })
+	const lecteur = creerLecteur({ lecture: garde(cible, transport, jeton || undefined), horloge })
+	const lecteurApi = api ? creerLecteur({ lecture: garde(api, transport), horloge }) : undefined
+	const surveillance = surveillanceDe(cible, api)
 	const suite: readonly [IdDeSonde, () => Promise<Resultat>][] = [
+		['R02', async () => depuis('R02', await sondeR02(lecteur, { jeton, maintenant }))],
 		['R03', () => sondeR03(lecteur, hasard, nombreDeProfils)],
 		['R04', () => sondeR04(lecteur, hasard)],
+		['R05', async () => depuis('R05', await sondeR05({ site: lecteur, strapi: lecteurApi }))],
+		[
+			'R06',
+			async () =>
+				depuis(
+					'R06',
+					surveillance
+						? await sondeR06({ surveillance, certificat, domaine, maintenant })
+						: {
+								verdict: 'inconnu',
+								constats: ['la cible n’est pas en https : pas de certificat à lire, les domaines ne sont pas lus'],
+							}
+				),
+		],
 	]
 
 	let arret = resultats[0]?.verdict === 'vert' ? undefined : 'la garde ne tient pas (R01) : aucune requête n’est partie'
@@ -280,13 +366,18 @@ export async function lancerLesSondes({
 		}
 	}
 
+	const lecteurs = lecteurApi ? [lecteur, lecteurApi] : [lecteur]
+	const ecarts = lecteurs
+		.map(({ departs }) => ecartLePlusCourt(departs))
+		.filter((ecart): ecart is number => ecart !== null)
 	return {
 		cible: cible.origin,
 		resultats,
-		requetes: lecteur.departs.length,
-		ecartMinimalMs: ecartLePlusCourt(lecteur.departs),
+		requetes: lecteurs.reduce((somme, { departs }) => somme + departs.length, 0),
+		ecartMinimalMs: ecarts.length === 0 ? null : Math.min(...ecarts),
 		dureeMs: horloge.maintenant() - debut,
 		vert: resultats.every(({ verdict }) => verdict === 'vert'),
+		rouge: resultats.some(({ verdict }) => verdict === 'rouge' || verdict === 'non lancée'),
 	}
 }
 
@@ -303,24 +394,38 @@ export function formaterRapport(rapport: Rapport): string {
 		rapport.ecartMinimalMs === null
 			? ''
 			: `, ${Math.round(rapport.ecartMinimalMs)} ms au moins entre deux requêtes (2 par seconde au plus)`
+	const inconnues = rapport.resultats.filter(({ verdict }) => verdict === 'inconnu').length
 	lignes.push(
 		'',
 		`${rapport.requetes} requête${rapport.requetes > 1 ? 's' : ''} GET en ${secondes(rapport.dureeMs)}${ecart}.`,
-		rapport.vert ? 'Toutes les sondes sont vertes.' : 'Au moins une sonde n’est pas verte.'
+		rapport.vert
+			? 'Toutes les sondes sont vertes.'
+			: rapport.rouge
+				? 'Au moins une sonde est rouge ou n’a pas été lancée.'
+				: `Aucune sonde rouge, mais ${inconnues} inconnue${inconnues > 1 ? 's' : ''} : ce n’est pas un vert.`
 	)
 	return lignes.join('\n')
 }
 
+/** The Strapi API to read: `SONDES_API`, an origin; `aucune` once Strapi is stopped. The real site has its API by default. */
+export function apiDesSondes(valeur: string | undefined, cible: URL): URL | undefined {
+	if (valeur === 'aucune') return undefined
+	if (valeur) return cibleDesSondes(valeur)
+	return cible.origin === SITE_ORIGIN ? new URL(API_STRAPI_PAR_DEFAUT) : undefined
+}
+
 if (import.meta.main) {
 	let cible: URL
+	let api: URL | undefined
 	try {
 		cible = cibleDesSondes(process.env.SONDES_CIBLE || SITE_ORIGIN)
+		api = apiDesSondes(process.env.SONDES_API, cible)
 	} catch (erreur) {
 		if (!(erreur instanceof CibleRefusee)) throw erreur
 		console.error(erreur.message)
 		process.exit(2)
 	}
-	const rapport = await lancerLesSondes({ cible })
+	const rapport = await lancerLesSondes({ cible, api, jeton: process.env[NOM_DU_JETON] })
 	console.log(formaterRapport(rapport))
-	process.exit(rapport.vert ? 0 : 1)
+	process.exit(rapport.rouge ? 1 : 0)
 }

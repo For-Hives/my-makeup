@@ -725,11 +725,16 @@ Les sondes lisent le site en ligne comme une visiteuse anonyme, sans jamais rien
 ```sh
 bun run sondes                                       # https://my-makeup.fr
 SONDES_CIBLE=http://localhost:3100 bun run sondes    # une autre cible : le banc, un domaine temporaire
+SONDES_STATS_TOKEN=… bun run sondes                  # avec le jeton du service, R02 compare
+SONDES_API=aucune bun run sondes                     # Strapi est arrêté : plus de partie Strapi dans R05
 ```
 
 - R01 : la garde interrompt toute requête autre qu'un GET, tout ce qui va vers la mesure d'audience (`/u`) ou vers un autre hôte. Elle se vérifie avant la première requête.
+- R02 : les profils du sitemap sont exactement les profils publiables (route des statistiques, avec le jeton). Sans jeton : « inconnu », jamais « vert ».
 - R03 : 5 profils au hasard du sitemap répondent 200, avec un `h1` dans le HTML du serveur, sans « undefined » ni « null ».
 - R04 : une adresse inconnue répond 404.
+- R05 : les cinq en-têtes de sécurité, les listes privées fermées (401 ou 403), les anciennes routes en 404 ; l'API de Strapi tant qu'il tourne.
+- R06 : certificats valides plus de 21 jours, domaines plus de 30 jours (site, photos, Umami).
 - Une requête à la fois, 2 par seconde au plus. Le rapport désigne un profil par une empreinte, jamais par son adresse.
 - `SONDES_CIBLE` n'est lue que par les sondes : la garde des essais refuse toujours la prod.
 
