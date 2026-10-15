@@ -35,6 +35,10 @@ Le filtre n'envoie rien depuis un navigateur automatisé (`navigator.webdriver`,
 
 Le script est écrit en chaîne, sans syntaxe postérieure à ES2019 : un `?.` laissé dans un script en ligne a déjà coûté les visites de Safari avant 13.4. Un test lit le texte.
 
+## L'opposition d'une visiteuse
+
+La politique de confidentialité (`/politique-de-confidentialite`) porte un bouton, « Ne plus mesurer mes visites » (`src/components/analytics/OppositionMesure.tsx`). Un clic pose la clé `umami.disabled` dans le `localStorage` du navigateur : le filtre de l'en-tête et le traceur d'Umami la lisent, et plus rien ne part vers le faux Umami ni vers l'instance. Le bouton devient « Réactiver la mesure d'audience » ; un second clic retire la clé. Le choix vaut pour ce navigateur, jusqu'à ce qu'on le retire. La clé et les deux gestes sont dans `src/lib/analytics/opposition.ts`. Un stockage bloqué (fenêtre privée, données coupées) ne casse rien et ne compte pas pour une opposition.
+
 ## Le catalogue d'événements
 
 `src/lib/analytics/events.ts` est la table fermée des événements (le plan 04 §3.3, sans `devis_click` ni `demande_envoyee`) et `track()` (`src/lib/analytics/track.ts`) est le seul chemin d'une page vers Umami :

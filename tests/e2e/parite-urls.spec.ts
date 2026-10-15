@@ -54,7 +54,15 @@ const LIVREES: ReadonlySet<string> = new Set([
 	'profil',
 	'profil-ancien-nom',
 	'profil-non-repris',
+	'mentions-legales',
 ])
+
+/**
+ * The three legal pages (ticket 112). `/mentions-legales` is a family of its own and is in the list above;
+ * `/cgu` and `/politique-de-confidentialite` belong to the family of the fixed pages, which is not
+ * delivered yet: they are held green one by one here.
+ */
+const PAGES_JURIDIQUES = ['/mentions-legales', '/cgu', '/politique-de-confidentialite']
 
 test('I45 : les adresses gelées répondent comme la table, avec le même h1', async ({ request, baseURL }) => {
 	test.setTimeout(300_000)
@@ -123,6 +131,12 @@ test('I45 : les adresses gelées répondent comme la table, avec le même h1', a
 		for (const { cas: unCas, resultat } of resultats)
 			if (resultat.etat === 'ecart') console.log(`I45 écart connu ${unCas.etiquette} : ${resultat.raison}`)
 		expect(lignes.flatMap(({ regressions }) => regressions)).toEqual([])
+		if (!privee)
+			for (const adresse of PAGES_JURIDIQUES) {
+				const trouve = resultats.find(({ cas: unCas }) => unCas.adresse === adresse)
+				expect(trouve, `${adresse} est dans les cas`).toBeDefined()
+				expect(trouve?.resultat.etat, adresse).toBe('vert')
+			}
 	} finally {
 		for (const { collection, id } of contenus) await supprimerContenu(request, collection, id)
 	}
