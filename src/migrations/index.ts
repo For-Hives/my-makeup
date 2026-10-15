@@ -11,6 +11,7 @@ import * as migration_20261014_203606_inscription_antispam from './20261014_2036
 import * as migration_20261014_215710_integration_vague4 from './20261014_215710_integration_vague4'
 import * as migration_20261014_231211_talents_titre_de_la_page from './20261014_231211_talents_titre_de_la_page'
 import * as migration_20261015_110700_contact_demandes from './20261015_110700_contact_demandes'
+import * as migration_20261015_123244_demandes_statuts_repondue_spam from './20261015_123244_demandes_statuts_repondue_spam'
 
 export const migrations = [
 	{
@@ -77,5 +78,10 @@ export const migrations = [
 		up: migration_20261015_110700_contact_demandes.up,
 		down: migration_20261015_110700_contact_demandes.down,
 		name: '20261015_110700_contact_demandes',
+	},
+	{
+		up: migration_20261015_123244_demandes_statuts_repondue_spam.up,
+		down: migration_20261015_123244_demandes_statuts_repondue_spam.down,
+		name: '20261015_123244_demandes_statuts_repondue_spam',
 	},
 ]

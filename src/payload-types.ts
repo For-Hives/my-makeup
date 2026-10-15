@@ -578,7 +578,10 @@ export interface AuthEvenement {
 export interface Demande {
   id: number;
   type: 'contact';
-  statut: 'nouvelle' | 'transmise';
+  /**
+   * Passe le message à « Répondue » quand tu as répondu à la personne, ou à « Spam » si ce n’est pas un vrai message.
+   */
+  statut: 'nouvelle' | 'transmise' | 'repondue' | 'spam';
   etatMail: 'en-attente' | 'envoye' | 'echec';
   prenom: string;
   nom: string;

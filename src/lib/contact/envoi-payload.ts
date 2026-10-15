@@ -108,12 +108,18 @@ async function avecUnDelai(envoi: Promise<'envoye' | 'echec'>, ms: number): Prom
 	}
 }
 
-/** Sends the mail to the team and tells the row how it went. Never throws. */
-async function expedier(
+/** What the mail to the team needs: the form and `apres` are the business of the first send only. */
+export type EntreesDExpedition = Omit<EntreesDuContact, 'formulaire' | 'apres'>
+
+/**
+ * Sends the mail to the team and tells the row how it went. Never throws. Gives the state the row was
+ * left in: the first send and the re-send of an admin (ticket 163) share it.
+ */
+export async function expedier(
 	id: number,
 	message: MessageDeContact,
-	{ stockage, envoyer, destinataire, journal, delaiMs = DELAI_DE_L_ENVOI_MS }: EntreesDuContact
-): Promise<void> {
+	{ stockage, envoyer, destinataire, journal, delaiMs = DELAI_DE_L_ENVOI_MS }: EntreesDExpedition
+): Promise<'envoye' | 'echec'> {
 	const marquer = async (etat: EtatDuMail, statut?: StatutDeDemande) => {
 		try {
 			await stockage.marquer(id, etat, statut)
@@ -134,14 +140,21 @@ async function expedier(
 	})
 
 	const issue = await avecUnDelai(envoi, delaiMs)
-	if (issue === 'envoye') return marquer('envoye', 'transmise')
-	if (issue === 'echec') return marquer('echec')
+	if (issue === 'envoye') {
+		await marquer('envoye', 'transmise')
+		return 'envoye'
+	}
+	if (issue === 'echec') {
+		await marquer('echec')
+		return 'echec'
+	}
 	journal.erreur('L’email d’un message de contact n’est pas parti : le service d’envoi ne répond pas à temps.')
 	await marquer('echec')
 	// A relay that was only slow: if the mail leaves after all, the row says so.
 	void envoi.then(async fin => {
 		if (fin === 'envoye') await marquer('envoye', 'transmise')
 	})
+	return 'echec'
 }
 
 export async function enregistrerUnMessageDeContact(entrees: EntreesDuContact): Promise<ResultatDuContact> {
@@ -163,6 +176,6 @@ export async function enregistrerUnMessageDeContact(entrees: EntreesDuContact): 
 		return { ok: false, code: 'enregistrement-impossible' }
 	}
 
-	entrees.apres(() => expedier(id, verifie.message, entrees))
+	entrees.apres(async () => void (await expedier(id, verifie.message, entrees)))
 	return { ok: true }
 }

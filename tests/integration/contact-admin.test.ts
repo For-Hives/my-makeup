@@ -1,0 +1,159 @@
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
+import { stockageDePayload } from '@/lib/contact/envoi-payload'
+import { serverEnv } from '@/lib/env'
+import { creerCompte } from '../outils/fabrique-comptes'
+import { mailsRecus, viderLeCapteur } from '../outils/mailpit'
+import { payloadDeTest, viderLaBase } from '../outils/payload-test'
+import { appelerRest } from '../outils/rest'
+
+/**
+ * The admin side of the contact messages (ticket 163; plan 02 E58, in its server half): the status
+ * cycle kept by the collection, and the re-send of a mail in `echec`, once however many clicks. The
+ * panel itself, in a browser: tests/e2e/admin-messages-contact.spec.ts. The access of every role is in
+ * the matrix (tests/integration/payload-acces.test.ts).
+ */
+
+beforeAll(viderLeCapteur)
+afterAll(async () => {
+	await Promise.all([viderLaBase(), viderLeCapteur()])
+})
+
+const unique = () => `visiteuse-${crypto.randomUUID()}@example.test`
+
+/** A stored message, the way the form stores it. `echec`: its mail did not leave. */
+async function messageEnBase(etatMail: 'echec' | 'envoye' = 'echec') {
+	const payload = await payloadDeTest()
+	const stockage = stockageDePayload(payload)
+	const email = unique()
+	const id = await stockage.creer({
+		prenom: 'Léa',
+		nom: 'Témoin',
+		email,
+		telephone: '01 99 00 12 34',
+		message: 'Bonjour, une question sur le site.',
+	})
+	await stockage.marquer(id, etatMail)
+	return { id, email, payload }
+}
+
+const mailsPour = async (email: string) =>
+	(await mailsRecus(serverEnv().contactTo)).filter(mail => mail.repondreA.some(({ adresse }) => adresse === email))
+
+describe('Le cycle des statuts, tenu par la collection', () => {
+	test('un admin marque un message répondu, puis spam ; il ne revient pas de « répondue » à « transmise »', async () => {
+		const { id } = await messageEnBase('envoye')
+		const { session } = await creerCompte('admin')
+		const enTetes = session.enTetes
+		const statut = async () =>
+			((await (await payloadDeTest()).findByID({ collection: 'demandes', id, depth: 0 })) as { statut: string }).statut
+
+		expect((await appelerRest('PATCH', `/api/demandes/${id}`, { enTetes, corps: { statut: 'repondue' } })).statut).toBe(
+			200
+		)
+		expect(await statut()).toBe('repondue')
+
+		const refus = await appelerRest('PATCH', `/api/demandes/${id}`, { enTetes, corps: { statut: 'transmise' } })
+		expect(refus.statut).toBe(400)
+		expect(refus.texte).toContain('ne peut pas passer à')
+		expect(await statut()).toBe('repondue')
+
+		expect((await appelerRest('PATCH', `/api/demandes/${id}`, { enTetes, corps: { statut: 'spam' } })).statut).toBe(200)
+		expect(await statut()).toBe('spam')
+	})
+
+	test('un admin ne réécrit pas la date de réception, ni ne dit « transmise » pour un email en échec', async () => {
+		const { id, payload } = await messageEnBase('echec')
+		const { session } = await creerCompte('admin')
+		const enTetes = session.enTetes
+		const avant = (await payload.findByID({ collection: 'demandes', id, depth: 0 })).createdAt
+
+		const date = await appelerRest('PATCH', `/api/demandes/${id}`, {
+			enTetes,
+			corps: { createdAt: '2000-01-01T00:00:00.000Z', statut: 'repondue' },
+		})
+		expect(date.statut).toBe(200)
+		const apres = await payload.findByID({ collection: 'demandes', id, depth: 0 })
+		expect(apres.createdAt).toBe(avant)
+		expect(apres.statut).toBe('repondue')
+
+		const autre = await messageEnBase('echec')
+		const refus = await appelerRest('PATCH', `/api/demandes/${autre.id}`, { enTetes, corps: { statut: 'transmise' } })
+		expect(refus.statut).toBe(400)
+		expect(refus.texte).toContain('que lorsque son email est parti')
+		expect(await autre.payload.findByID({ collection: 'demandes', id: autre.id, depth: 0 })).toMatchObject({
+			statut: 'nouvelle',
+			etatMail: 'echec',
+		})
+	})
+
+	test('un « le mail est parti » tardif du serveur ne ramène pas un message répondu à « transmise »', async () => {
+		const { id, payload } = await messageEnBase('echec')
+		const { session } = await creerCompte('admin')
+		await appelerRest('PATCH', `/api/demandes/${id}`, { enTetes: session.enTetes, corps: { statut: 'repondue' } })
+
+		await stockageDePayload(payload).marquer(id, 'envoye', 'transmise')
+
+		const ligne = await payload.findByID({ collection: 'demandes', id, depth: 0 })
+		expect(ligne).toMatchObject({ statut: 'repondue', etatMail: 'envoye' })
+	})
+})
+
+describe('E58 (côté serveur) : le renvoi de l’email d’un message en échec', () => {
+	test('l’admin renvoie : un mail vers l’équipe, réponse vers la visiteuse, la ligne passe à envoyé et transmise', async () => {
+		const { id, email, payload } = await messageEnBase('echec')
+		const { session } = await creerCompte('admin')
+
+		const reponse = await appelerRest('POST', `/api/demandes/${id}/renvoyer`, { enTetes: session.enTetes })
+
+		expect(reponse.statut).toBe(200)
+		expect(reponse.corps).toEqual({ etatMail: 'envoye' })
+		const mails = await mailsPour(email)
+		expect(mails).toHaveLength(1)
+		expect(mails[0]?.sujet).toBe('Nouveau message de contact')
+		expect(mails[0]?.texte).toContain('une question sur le site.')
+		expect(await payload.findByID({ collection: 'demandes', id, depth: 0 })).toMatchObject({
+			statut: 'transmise',
+			etatMail: 'envoye',
+		})
+	})
+
+	test('double clic : deux demandes en même temps, un seul email, l’autre apprend que le message n’est plus en échec', async () => {
+		const { id, email } = await messageEnBase('echec')
+		const { session } = await creerCompte('admin')
+
+		const [a, b] = await Promise.all([
+			appelerRest('POST', `/api/demandes/${id}/renvoyer`, { enTetes: session.enTetes }),
+			appelerRest('POST', `/api/demandes/${id}/renvoyer`, { enTetes: session.enTetes }),
+		])
+
+		expect([a.statut, b.statut].sort()).toEqual([200, 409])
+		expect(await mailsPour(email)).toHaveLength(1)
+		// A click that comes later still sends nothing.
+		expect((await appelerRest('POST', `/api/demandes/${id}/renvoyer`, { enTetes: session.enTetes })).statut).toBe(409)
+		expect(await mailsPour(email)).toHaveLength(1)
+	})
+
+	test('un message dont l’email est déjà parti ne repart pas ; un message inconnu répond 404', async () => {
+		const { id, email } = await messageEnBase('envoye')
+		const { session } = await creerCompte('admin')
+
+		expect((await appelerRest('POST', `/api/demandes/${id}/renvoyer`, { enTetes: session.enTetes })).statut).toBe(409)
+		expect(
+			(await appelerRest('POST', `/api/demandes/${id + 100000}/renvoyer`, { enTetes: session.enTetes })).statut
+		).toBe(404)
+		expect((await appelerRest('POST', '/api/demandes/abc/renvoyer', { enTetes: session.enTetes })).statut).toBe(404)
+		expect(await mailsPour(email)).toEqual([])
+	})
+
+	test('ni la rédaction, ni une maquilleuse, ni un visiteur ne renvoient : 403, aucun mail', async () => {
+		const { id, email } = await messageEnBase('echec')
+		const [redaction, maquilleuse] = await Promise.all([creerCompte('redaction'), creerCompte('maquilleuse')])
+
+		for (const enTetes of [redaction.session.enTetes, maquilleuse.session.enTetes, undefined])
+			expect((await appelerRest('POST', `/api/demandes/${id}/renvoyer`, enTetes ? { enTetes } : {})).statut).toBe(403)
+
+		expect(await mailsPour(email)).toEqual([])
+		const ligne = await (await payloadDeTest()).findByID({ collection: 'demandes', id, depth: 0 })
+		expect(ligne.etatMail).toBe('echec')
+	})
+})
