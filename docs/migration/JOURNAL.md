@@ -674,3 +674,20 @@ Ce que la v3 change par rapport au site actuel est dans [`CHANGEMENTS-VOULUS.md`
 - **Intégration des tickets 171 (en partie), 172, 173, 174 et 189 dans `v3` (vague 1 de la réécriture).**
   - Quatre lots fusionnés ; un conflit sur `README.md` (« Six documents » contre « Les documents », deux lignes ajoutées à la même liste), résolu en gardant « Les documents » et les deux lignes.
   - Vérifié : check, typecheck, tests unitaires (3338, 1 sauté), garde CI (442), build, intégration sur banc (2026 réussis, 3 sautés), e2e (462 réussis ; `parite-urls` I45 échoue déjà avant la vague : l'adresse du fichier de clé IndexNow répond 404 sur le banc sans `INDEXNOW_KEY` ; 10 autres échecs du premier passage, état du banc pollué, repassés au vert isolément).
+- **Ticket 012 fait : la CI et ses garde-fous sont dans le dépôt.**
+  - `.github/workflows/ci.yml` et `ci-ok`, le seul check à exiger, sont en place avec leurs tests de garde-fous (entrée de l'intégration du 14/10 pour le détail). Le ticket est marqué fait depuis ; l'entrée « pas fini » plus haut est datée.
+- **Ticket 029 fait : le canari de la CI a été joué.**
+  - PR d'essai #976 vers `v3` avec les quatre fautes du kit `bun run ci:canari` : `ci-ok` est rouge (unit, qualité et e2e rouges, intégration annulé à sa limite). PR fermée sans fusion, branche supprimée.
+  - Le critère « fusion bloquée pour un administrateur » est retiré : il suppose la protection de la branche, que seul Andy active.
+- **Ticket 049 fait (en partie prouvé) : la migration initiale et le contrôle de dérive.**
+  - Migration `20261014_134242_init`, tests `migrations.test.ts` et étape `schema:derive` de la CI. Restent à constater à la mise en place de la préprod : base vide sur init (jeton `PREPROD_REMISE_A_ZERO`, ticket 027), push de schéma des essais de bout en bout et `payload_migrations` sans ligne batch=-1.
+- **Ticket 092 fait : les erreurs de connexion Google ont des codes stables.**
+  - `email-deja-avec-mot-de-passe`, `compte-bloque`, `google-annule`, `google-indisponible`, `google-echec` ; `google-compte-refuse` est retiré. Le ticket 146 doit aligner le catalogue de mesure sur les codes `google-*`.
+- **Ticket 093 fait : « Mot de passe oublié » aide un compte sans mot de passe.**
+  - Ligne d'aide `AideSansMotDePasse` sur `/auth/signin`, essais E74 ; pas de mail dédié. Les essais d'intégration veulent `--timeout 40000` sous charge.
+- **Ticket 095 fait : l'import puis la connexion sont éprouvés.**
+  - Comptes 1, 4 et 5 de la source fictive ; le compte 3 reste au suivi M2. L'essai ne tourne que s'il est le premier fichier nommé de la commande.
+- **Tickets 150 et 151 faits : l'outil de rapport lit la v3.**
+  - `plans/mesures/outil` 0.5.0 puis 0.6.0 : `MM_MODE=v3` lit `/api/stats/weekly` (jeton `MM_STATS_TOKEN`) et les sources de santé (`coolify`, `sauvegarde`, `sondes`) de l'application unique. Le code est dans le dépôt des plans, pas dans `v3`.
+- **Vague 2 : ticket 171 non fusionné, aucun ticket nouveau.**
+  - L'auteur n'a rien changé (le reste est hors de son périmètre : appliquer les correctifs aux deux anciens dépôts et voir le message d'entretien). Les deux correctifs s'appliquent encore proprement aux têtes `ccd449d` (API) et `7f43f1b` (site).
