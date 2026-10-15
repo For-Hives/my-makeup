@@ -147,6 +147,7 @@ export function buildContextProblems(dockerignore: string, allowed: readonly str
 
 interface Step {
 	name?: string
+	id?: string
 	uses?: string
 	run?: string
 	shell?: unknown

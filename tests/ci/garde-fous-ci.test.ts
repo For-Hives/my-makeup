@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test'
-import { readdirSync, readFileSync } from 'node:fs'
+import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { configurationDesEssais } from '../outils/e2e'
 import {
@@ -563,6 +564,68 @@ describe('every action is pinned by its commit', () => {
 		['a container image as an action', 'uses: docker://alpine:3.22', 'n’est pas figée par un commit complet'],
 	])('red on %s', (_fault, uses, expected) => {
 		expect(unpinnedActions([brokenCi(CHECKOUT, uses)]).join('\n')).toContain(expected)
+	})
+})
+
+describe('preprod.yml: without the two secrets of the pre-production, the check is skipped with a warning, never red', () => {
+	const PREPROD = `${WORKFLOWS}/preprod.yml`
+	const preprod = workflows.find(workflow => workflow.file === PREPROD)
+	const steps = Object.values(preprod?.jobs ?? {})[0]?.steps ?? []
+	const garde = steps.find(step => step.id === 'acces')
+	const controle = steps.find(step => step.run === 'bun run preprod:controle')
+
+	/** The very script of the step, run by bash as GitHub runs it, with the given secrets. */
+	function presence(secrets: Record<string, string>): { code: number; output: string; sortie: string } {
+		const script = garde?.run
+		if (typeof script !== 'string') throw new Error('preprod.yml has no step « acces »')
+		const dossier = mkdtempSync(path.join(tmpdir(), 'preprod-secrets-'))
+		try {
+			const fichier = path.join(dossier, 'sortie')
+			writeFileSync(fichier, '')
+			// The command line of « shell: bash », the default of the workflow.
+			const ran = Bun.spawnSync(['bash', '--noprofile', '--norc', '-eo', 'pipefail', '-c', script], {
+				env: { PATH: process.env.PATH ?? '', GITHUB_OUTPUT: fichier, ...secrets },
+			})
+			return { code: ran.exitCode, output: ran.stdout.toString(), sortie: readFileSync(fichier, 'utf8') }
+		} finally {
+			rmSync(dossier, { recursive: true, force: true })
+		}
+	}
+
+	test('the check only runs when the step says both secrets are there', () => {
+		expect(garde?.env).toEqual({
+			PREPROD_BASIC_AUTH_USER: expression('secrets.PREPROD_BASIC_AUTH_USER'),
+			PREPROD_BASIC_AUTH_PASSWORD: expression('secrets.PREPROD_BASIC_AUTH_PASSWORD'),
+		})
+		expect(steps.indexOf(garde ?? {})).toBeLessThan(steps.indexOf(controle ?? {}))
+		expect(controle?.if).toBe("steps.acces.outputs.presents == 'true'")
+	})
+
+	test('both secrets set: the check runs, without a warning', () => {
+		const { code, output, sortie } = presence({
+			PREPROD_BASIC_AUTH_USER: 'utilisateur-factice',
+			PREPROD_BASIC_AUTH_PASSWORD: 'mot-de-passe-factice',
+		})
+		expect(code).toBe(0)
+		expect(sortie).toBe('presents=true\n')
+		expect(output).not.toContain('::warning::')
+	})
+
+	test.each([
+		['no secret at all', {}],
+		[
+			'empty secrets, what GitHub gives for a secret that is not set',
+			{ PREPROD_BASIC_AUTH_USER: '', PREPROD_BASIC_AUTH_PASSWORD: '' },
+		],
+		['the user only', { PREPROD_BASIC_AUTH_USER: 'utilisateur-factice' }],
+		['the password only', { PREPROD_BASIC_AUTH_PASSWORD: 'mot-de-passe-factice' }],
+	])('%s: green, a warning that names both secrets, and the check is skipped', (_cas, secrets) => {
+		const { code, output, sortie } = presence(secrets)
+		expect(code).toBe(0)
+		expect(sortie).toBe('presents=false\n')
+		expect(output).toContain('::warning::Contrôle de la préprod sauté')
+		expect(output).toContain('PREPROD_BASIC_AUTH_USER et PREPROD_BASIC_AUTH_PASSWORD')
+		expect(output).not.toContain('factice')
 	})
 })
 
