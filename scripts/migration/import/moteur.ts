@@ -82,6 +82,12 @@ export interface Adaptateur {
 	 * compute from the written ones: a difference on them is a difference all the same.
 	 */
 	calcules?: readonly string[]
+	/**
+	 * Compared fields the import only fills in: written when the target holds nothing for them, never
+	 * over a value already there (a title the newsroom typed in the admin). An empty expected value
+	 * writes nothing. They are left out of the fingerprint, which a later edit would change.
+	 */
+	amorces?: readonly string[]
 	/** Options of the writes of one document: a draft, no confirmation email, more context. */
 	options?: (attendu: Attendu) => OptionsDEcriture
 }
@@ -189,10 +195,16 @@ export function normaliser(genre: Genre, valeur: unknown): unknown {
 
 /** The fields whose value in the target differs from the expected one. */
 export function champsDifferents(adaptateur: Adaptateur, attendu: Attendu, existant: Existant): string[] {
+	const amorces = new Set(adaptateur.amorces ?? [])
+	const vide = (valeur: unknown) => valeur === null || valeur === ''
 	return Object.entries(adaptateur.champs)
-		.filter(
-			([champ, genre]) => normaliser(genre, attendu.valeurs[champ]) !== normaliser(genre, existant.valeurs[champ])
-		)
+		.filter(([champ, genre]) => {
+			const voulu = normaliser(genre, attendu.valeurs[champ])
+			const present = normaliser(genre, existant.valeurs[champ])
+			// A field the import only fills in differs when it is missing in the target, nothing else.
+			if (amorces.has(champ)) return !vide(voulu) && vide(present)
+			return voulu !== present
+		})
 		.map(([champ]) => champ)
 }
 
@@ -379,7 +391,10 @@ export function empreinteDesDocuments(
 	adaptateur: Adaptateur,
 	documents: readonly { strapiId: number; valeurs: Readonly<Record<string, unknown>> }[]
 ): string {
-	const champs = Object.keys(adaptateur.champs).sort()
+	const amorces = new Set(adaptateur.amorces ?? [])
+	const champs = Object.keys(adaptateur.champs)
+		.filter(champ => !amorces.has(champ))
+		.sort()
 	const lignes = [...documents]
 		.sort((a, b) => a.strapiId - b.strapiId)
 		.map(({ strapiId, valeurs }) =>

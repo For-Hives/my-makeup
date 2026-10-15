@@ -37,6 +37,8 @@ export const REFERENCES = {
 	fichiersNonImages: 'fichiers-non-images-non-repris',
 	/** A phone or an email shown on the old site stays public, with a consent dated from the switch. */
 	coordonneesConsenties: 'coordonnees-consentement',
+	/** The title of the tab of a talent page, which the source does not have, is written by the project (ticket 108). */
+	titreDesPagesTalent: 'titre-page-talent',
 } as const
 
 export type Reference = (typeof REFERENCES)[keyof typeof REFERENCES]
