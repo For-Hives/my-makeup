@@ -18,6 +18,7 @@ import { fermerLesPortesRestDeLOubli } from '../lib/auth/oubli-payload'
 import { premierCompteFerme } from '../lib/auth/premier-compte-ferme'
 import { DUREE_SESSION_S, prolongerSousPlafond, refuserApresLePlafond } from '../lib/auth/session-glissante'
 import { egaliserLeTravailRest, retenirLesEchecsRest } from '../lib/auth/temps-egalise-payload'
+import { supprimerUnCompte } from '../lib/compte/suppression-route'
 import { contenuEmailConfirmation, SUJET_DE_CONFIRMATION } from '../lib/emails/confirmation'
 import { composerEmail } from '../lib/emails/gabarit'
 import { sessionsFermees } from './Admins'
@@ -36,9 +37,11 @@ export const DUREE_SESSION_PRO_S = DUREE_SESSION_S
 export const cookiesDeSession = (production: boolean) => ({ secure: production, sameSite: 'Lax' as const })
 
 /**
- * An account that still has a profile is not deleted: the profile goes first, then the account.
- * The profile cannot exist without its account (`profils.pro` is required), and the whole
- * deletion of an account (profile, photos, requests) is the work of its own tickets (I36, I37).
+ * An account that still has a profile is not deleted by the Local API: the profile goes first, then
+ * the account. The profile cannot exist without its account (`profils.pro` is required). The deletion
+ * of an account with everything that hangs on it (profile, photos, sessions) is the one cascade of
+ * `src/lib/compte/suppression.ts`, which the makeup artist (ticket 141) and the admin (ticket 167,
+ * `DELETE /api/pros/:id`) both call.
  */
 export const compteSansProfilAvantSuppression: CollectionBeforeDeleteHook = async ({ id, req }) => {
 	const { totalDocs } = await req.payload.count({
@@ -110,7 +113,9 @@ export const Pros: CollectionConfig<'pros'> = {
 		delete: adminSeulement,
 		unlock: adminSeulement,
 	},
-	endpoints: [premierCompteFerme],
+	// The admin's deletion is the cascade of the account (ticket 167); several accounts at once would skip it.
+	disableBulkDelete: true,
+	endpoints: [premierCompteFerme, supprimerUnCompte],
 	hooks: {
 		afterChange: [profilALaCreationDuCompte, effacerLeHashHeriteApresUnMotDePasse, noterLeBlocage],
 		afterLogin: [rendreLaPlaceDeLaConnexion(), retenirLaDerniereConnexion, noterLaConnexionRest],

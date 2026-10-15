@@ -2,6 +2,7 @@ import {
 	APIError,
 	type CollectionAfterChangeHook,
 	type CollectionAfterDeleteHook,
+	type CollectionBeforeDeleteHook,
 	type CollectionBeforeOperationHook,
 	type CollectionConfig,
 	type PayloadRequest,
@@ -261,6 +262,32 @@ export const menageApresSuppression =
 	}
 
 /**
+ * `beforeDelete` of `pros`: every photo of the account that nothing references goes through the
+ * clean-up, before the database clears its owner. An account with a profile has them taken by the
+ * deletion of the profile; this is for an account without one (ticket 167: no orphan photo).
+ */
+export const menageAvantSuppressionDuCompte =
+	(stockage: StockageDesObjets | undefined): CollectionBeforeDeleteHook =>
+	async ({ context, id, req }) => {
+		if (estUnImport(context) || !stockage) return
+		const { docs } = await req.payload.find({
+			collection: 'media',
+			depth: 0,
+			overrideAccess: true,
+			pagination: false,
+			req,
+			select: {},
+			where: { owner: { equals: id } },
+		})
+		await menage(
+			req,
+			stockage,
+			docs.map(media => media.id),
+			`account ${id}`
+		)
+	}
+
+/**
  * `beforeOperation` of `media` and `profils`: a deletion or a change goes one document at a time,
  * by its identifier. An operation on several at once (by a `where`) is refused before anything is
  * read or written, whoever asks and by every API, the Local API without access control included:
@@ -374,6 +401,14 @@ export const avecLaCorbeille =
 						afterChange: [menageApresEnregistrement(stockage)],
 						afterDelete: [menageApresSuppression(stockage)],
 					})
+				if (sans.slug === 'pros')
+					return {
+						...sans,
+						hooks: {
+							...sans.hooks,
+							beforeDelete: [...(sans.hooks?.beforeDelete ?? []), menageAvantSuppressionDuCompte(stockage)],
+						},
+					}
 				return sans
 			}),
 		}
