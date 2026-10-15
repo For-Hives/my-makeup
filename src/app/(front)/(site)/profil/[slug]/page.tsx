@@ -7,10 +7,12 @@ import { VueDuProfil } from '@/components/profil/VueDuProfil'
 import { serializeJsonLd } from '@/lib/seo/json-ld'
 import { donneesStructureesDuProfil, metadonneesDuProfil } from '@/lib/seo/profil'
 import { cheminProfil } from '@/lib/slug'
-import { type AdresseDeProfil, lireLAdresseDeProfil } from '@/services/public/profils'
+import { lAdresseDeProfilEnCache } from '@/services/public/en-cache'
+import type { AdresseDeProfil } from '@/services/public/profils'
 
-// Read at each request: the build runs without a database. The refresh by tags of ticket 047 comes
-// after this page.
+// Rendered at each request: the build runs without a database. The profile is read through the cache of
+// Next, under its tag `profil:<slug>` (ticket 117): a save refreshes it (ticket 047), and two visits of a
+// page that did not change read nothing in the database.
 export const dynamic = 'force-dynamic'
 
 /** The segment as the visitor wrote it: Next gives it decoded or not, depending on the path. */
@@ -24,7 +26,7 @@ function segmentEcrit(segment: string): string {
 
 /** What the address leads to, read once for the metadata and the page of one request. */
 const adresseDeProfil = cache(async (segment: string): Promise<AdresseDeProfil> => {
-	return lireLAdresseDeProfil(await getPayload({ config }), segmentEcrit(segment))
+	return lAdresseDeProfilEnCache(await getPayload({ config }), segmentEcrit(segment))
 })
 
 /**

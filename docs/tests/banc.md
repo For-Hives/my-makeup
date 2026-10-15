@@ -254,7 +254,7 @@ expect(chemins).toEqual([`/profil/${profil.slug}`, '/search', '/site-map', '/sit
 
 - **`next/cache` est remplacé dès le chargement du fichier, pour tout le lancement.** Hors d'un `espionnerLeCache`, ses fonctions sont celles de Next, qui refusent de rafraîchir hors d'une de ses requêtes : l'enregistrement passe sans rien rafraîchir, comme dans un script.
 - **Un espion à la fois** : `espionnerLeCache` ne s'imbrique pas.
-- **Il dit ce que Next reçoit, pas ce que Next fait de son cache.** Qu'une page rafraîchie montre la modification se prouve de bout en bout (ticket 117).
+- **Il dit ce que Next reçoit, pas ce que Next fait de son cache.** Qu'une page rafraîchie montre la modification se prouve de bout en bout (ticket 117, `tests/e2e/fraicheur-pages.spec.ts`).
 
 ## Préparer la base du banc
 

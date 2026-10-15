@@ -11,14 +11,14 @@ import { markdownEnHtml } from '@/lib/markdown'
 import { donneesStructureesDuFilDAriane, NOM_DU_SITE, serializeJsonLd } from '@/lib/seo/json-ld'
 import { metadonneesEditoriales } from '@/lib/seo/metadonnees'
 import { urlCanonique } from '@/lib/seo/url'
-import { lireLeTalent } from '@/services/public/talents'
+import { leTalentEnCache } from '@/services/public/en-cache'
 
-// Read at each request: the build runs without a database. The cache of the page is ticket 117; a save
-// of a talent already refreshes the tags and paths it will carry (ticket 047).
+// Rendered at each request: the build runs without a database. The talent is read through the cache of
+// Next, under its tag `talent:<slug>`: a save of a talent refreshes it (tickets 047 and 117).
 export const dynamic = 'force-dynamic'
 
 /** The page and its metadata read the same talent: once per request. */
-const lireLeTalentUneFois = cache(async (slug: string) => lireLeTalent(await getPayload({ config }), slug))
+const lireLeTalentUneFois = cache(async (slug: string) => leTalentEnCache(await getPayload({ config }), slug))
 
 export async function generateMetadata({ params }: PageProps<'/talent/[slug]'>): Promise<Metadata> {
 	const { slug } = await params

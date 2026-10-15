@@ -12,8 +12,8 @@ import { lesTalentsEnCache } from '@/services/public/en-cache'
 import type { TalentPublic } from '@/services/public/talents'
 
 // Rendered at each request: the build runs without a database. The talents are read through the cache of
-// Next, tagged `talents`: a save of a talent in the admin panel refreshes them (ticket 047). The cache of
-// the page itself is ticket 117.
+// Next, tagged `talents`: a save of a talent in the admin panel refreshes them (tickets 047 and 117), and
+// a visit of a page that did not change reads nothing in the database.
 export const dynamic = 'force-dynamic'
 
 const TITRE = 'Maquilleuse professionnelle près de chez vous'

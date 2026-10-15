@@ -5,17 +5,24 @@
  * it (src/collections/revalidation.ts), and the import refreshes nothing. The time is only a net: a
  * change made outside of a request of Next (a script) is seen within the hour.
  *
- * The rest of the cache work, the pages themselves, is ticket 117.
+ * Ticket 117 adds the reads of one page: a profile, a talent, an article. Each is kept under the tag of
+ * its document (`profil:<slug>`…), so that a save refreshes that page alone and a second visit of an
+ * unchanged page asks the database nothing. Only a document the public sees is kept: an unknown address,
+ * a draft, a hidden profile, a redirection are read again at each visit (an address anybody can invent
+ * must not fill the cache), and the 404 of a document that appears is never stale.
  */
 
 import config from '@payload-config'
 import { unstable_cache } from 'next/cache'
-import { getPayload } from 'payload'
+import { getPayload, type Payload } from 'payload'
+import { valeursARechercher } from '@/lib/profil/adresse'
 import { ETIQUETTES } from '@/lib/revalidation'
+import { estUnSlug } from '@/lib/slug'
+import { type ArticlePublic, lireUnArticlePublic } from './articles'
 import { listerLesArticles } from './liste-articles'
 import { lireLesPagesIndexables } from './pages-indexables'
-import { lireLAnnuaire } from './profils'
-import { listerLesTalents } from './talents'
+import { type AdresseDeProfil, lireLAdresseDeProfil, lireLAnnuaire } from './profils'
+import { lireLeTalent, listerLesTalents, type TalentDeLaPage } from './talents'
 
 const UNE_HEURE = 60 * 60
 
@@ -61,3 +68,86 @@ export const lesPagesIndexablesEnCache = unstable_cache(
 	['public:pages-indexables'],
 	{ tags: [ETIQUETTES.profils, ETIQUETTES.talents, ETIQUETTES.articles], revalidate: UNE_HEURE }
 )
+
+/** What a read of one page gives: the document to keep, or what to answer without keeping anything. */
+type Lecture<T, E> = { garder: T } | { ecart: E }
+
+/** Thrown to leave the cache without writing: `unstable_cache` keeps a value, never a failure. */
+class PasGardee extends Error {}
+
+/**
+ * Keeps the document of one page in Next's cache under its tag, and only when the read finds it. When it
+ * does not (`ecart`), the answer of that read is given back and nothing is written.
+ */
+async function enCacheSiTrouve<T, E>(
+	cle: string[],
+	etiquette: string,
+	lire: () => Promise<Lecture<T, E>>
+): Promise<{ garder: T } | { ecart: E }> {
+	let ecart: { ecart: E } | undefined
+	const lue = unstable_cache(
+		async () => {
+			const lecture = await lire()
+			if ('garder' in lecture) return lecture.garder
+			ecart = lecture
+			throw new PasGardee()
+		},
+		cle,
+		{ tags: [etiquette], revalidate: UNE_HEURE }
+	)
+	try {
+		return { garder: await lue() }
+	} catch (erreur) {
+		if (ecart) return ecart
+		throw erreur
+	}
+}
+
+/**
+ * What the address `/profil/<segment>` leads to. A published profile read at its own slug is kept under
+ * `profil:<slug>`; everything else (a variant, an old username, a draft, an unknown or hidden profile) is
+ * read at each visit, as before.
+ */
+export async function lAdresseDeProfilEnCache(payload: Payload, segment: string): Promise<AdresseDeProfil> {
+	const slug = valeursARechercher(segment)?.segment
+	if (slug === undefined || !estUnSlug(slug)) return lireLAdresseDeProfil(payload, segment)
+	const lecture = await enCacheSiTrouve<AdresseDeProfil & { type: 'profil' }, AdresseDeProfil>(
+		['public:profil', slug],
+		ETIQUETTES.profil(slug),
+		async () => {
+			const adresse = await lireLAdresseDeProfil(payload, slug)
+			return adresse.type === 'profil' && adresse.publie && adresse.profil.slug === slug
+				? { garder: adresse }
+				: { ecart: adresse }
+		}
+	)
+	return 'garder' in lecture ? lecture.garder : lecture.ecart
+}
+
+/** The published talent of this slug, kept under `talent:<slug>`; `null` (unknown, a draft) is not kept. */
+export async function leTalentEnCache(payload: Payload, slug: string): Promise<TalentDeLaPage | null> {
+	if (!estUnSlug(slug)) return null
+	const lecture = await enCacheSiTrouve<TalentDeLaPage, null>(
+		['public:talent', slug],
+		ETIQUETTES.talent(slug),
+		async () => {
+			const talent = await lireLeTalent(payload, slug)
+			return talent ? { garder: talent } : { ecart: null }
+		}
+	)
+	return 'garder' in lecture ? lecture.garder : null
+}
+
+/** The published article of this slug, kept under `article:<slug>`; `null` (unknown, a draft) is not kept. */
+export async function lArticleEnCache(payload: Payload, slug: string): Promise<ArticlePublic | null> {
+	if (!estUnSlug(slug)) return null
+	const lecture = await enCacheSiTrouve<ArticlePublic, null>(
+		['public:article', slug],
+		ETIQUETTES.article(slug),
+		async () => {
+			const article = await lireUnArticlePublic(payload, slug)
+			return article ? { garder: article } : { ecart: null }
+		}
+	)
+	return 'garder' in lecture ? lecture.garder : null
+}
