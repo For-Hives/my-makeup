@@ -9,8 +9,10 @@ import { enregistrerCoordonnees } from '@/lib/espace/enregistrer-coordonnees'
 import { enregistrerDescription } from '@/lib/espace/enregistrer-description'
 import { enregistrerDisponibilite } from '@/lib/espace/enregistrer-disponibilite'
 import { enregistrerIdentite } from '@/lib/espace/enregistrer-identite'
+import { enregistrerCompetences, enregistrerLangues } from '@/lib/espace/enregistrer-puces'
 import { enregistrerReseaux } from '@/lib/espace/enregistrer-reseaux'
 import type { ValeursDeLIdentite } from '@/lib/espace/identite'
+import type { ValeursDesPuces } from '@/lib/espace/puces'
 import { utilisatriceDeLaRequete } from '@/lib/espace/requete'
 import type { ValeursDesReseaux } from '@/lib/espace/reseaux'
 import { MESSAGE_ECHEC, MESSAGE_SESSION, type ResultatDEnregistrement } from '@/lib/espace/resultat'
@@ -102,6 +104,35 @@ export async function enregistrerMesCoordonnees(
 	if (origine !== null && !payload.config.csrf.includes(origine)) return { ok: false, message: MESSAGE_ECHEC }
 
 	const resultat = await enregistrerCoordonnees(payload, utilisateur, saisie)
+	if (resultat.ok) revalidatePath('/auth/profil')
+	return resultat
+}
+
+/**
+ * Saves the languages of the signed-in makeup artist (ticket 127): same guards as the identity, the
+ * session read again, the origin checked, the profile found by her account.
+ */
+export async function enregistrerMesLangues(saisie: unknown): Promise<ResultatDEnregistrement<ValeursDesPuces>> {
+	const contexte = await utilisatriceDeLaRequete()
+	if (contexte === null) return { ok: false, message: MESSAGE_SESSION, session: 'expiree' }
+	const { payload, utilisateur } = contexte
+	const origine = (await headers()).get('origin')
+	if (origine !== null && !payload.config.csrf.includes(origine)) return { ok: false, message: MESSAGE_ECHEC }
+
+	const resultat = await enregistrerLangues(payload, utilisateur, saisie)
+	if (resultat.ok) revalidatePath('/auth/profil')
+	return resultat
+}
+
+/** Saves the skills of the signed-in makeup artist (ticket 128), on the same terms as her languages. */
+export async function enregistrerMesCompetences(saisie: unknown): Promise<ResultatDEnregistrement<ValeursDesPuces>> {
+	const contexte = await utilisatriceDeLaRequete()
+	if (contexte === null) return { ok: false, message: MESSAGE_SESSION, session: 'expiree' }
+	const { payload, utilisateur } = contexte
+	const origine = (await headers()).get('origin')
+	if (origine !== null && !payload.config.csrf.includes(origine)) return { ok: false, message: MESSAGE_ECHEC }
+
+	const resultat = await enregistrerCompetences(payload, utilisateur, saisie)
 	if (resultat.ok) revalidatePath('/auth/profil')
 	return resultat
 }
