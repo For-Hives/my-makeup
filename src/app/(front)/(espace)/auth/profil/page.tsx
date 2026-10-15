@@ -6,13 +6,18 @@ import { EditeurDeDescription } from '@/components/espace/EditeurDeDescription'
 import { EditeurDeLocalisation } from '@/components/espace/EditeurDeLocalisation'
 import { EditeurDeReseaux } from '@/components/espace/EditeurDeReseaux'
 import { EditeurDIdentite } from '@/components/espace/EditeurDIdentite'
+import { EditeurDExperiences, EditeurDeFormations, EditeurDePrestations } from '@/components/espace/EditeursDeListes'
 import { InterrupteurDeDisponibilite } from '@/components/espace/InterrupteurDeDisponibilite'
 import { RafraichirSession } from '@/components/espace/RafraichirSession'
 import { exigerMaquilleuse } from '@/lib/auth/session'
 import { cartesDuProfil } from '@/lib/espace/cartes'
 import { estDisponible } from '@/lib/espace/disponibilite'
+import { EXPERIENCES } from '@/lib/espace/experiences'
+import { FORMATIONS } from '@/lib/espace/formations'
+import { lignesDuProfil } from '@/lib/espace/liste'
 import { libelleDeLaCommune } from '@/lib/espace/localisation'
 import { profilDeLaMaquilleuse } from '@/lib/espace/mon-profil'
+import { PRESTATIONS } from '@/lib/espace/prestations'
 import { utilisatriceDeLaRequete } from '@/lib/espace/requete'
 import { texte } from '@/lib/profil/nom-affiche'
 import {
@@ -22,6 +27,7 @@ import {
 	enregistrerMesReseaux,
 	enregistrerMonIdentite,
 } from './actions'
+import { enregistrerMesExperiences, enregistrerMesFormations, enregistrerMesPrestations } from './listes-actions'
 import { chercherMesCommunes, enregistrerMaLocalisation } from './localisation-actions'
 
 // Read per request: it depends on the session, and the build has no database. A page that reads
@@ -111,6 +117,15 @@ export default async function PageProfil() {
 										contactPublic: profil.contactPublic === true,
 									}}
 									envoyer={enregistrerMesCoordonnees}
+								/>
+							) : carte.section === 'experiences' ? (
+								<EditeurDExperiences lignes={lignesDuProfil(EXPERIENCES, profil)} envoyer={enregistrerMesExperiences} />
+							) : carte.section === 'formations' ? (
+								<EditeurDeFormations lignes={lignesDuProfil(FORMATIONS, profil)} envoyer={enregistrerMesFormations} />
+							) : carte.section === 'prestations' ? (
+								<EditeurDePrestations
+									lignes={lignesDuProfil(PRESTATIONS, profil)}
+									envoyer={enregistrerMesPrestations}
 								/>
 							) : null
 						}

@@ -105,6 +105,11 @@
 			"id": "tu-peux-renseigner-tes-reseaux-et-ton-site-depuis-ton-esp",
 			"type": "ajout",
 			"text": "Tu peux renseigner tes réseaux et ton site depuis ton espace : écris ton pseudo ou colle l’adresse, on s’occupe du reste."
+		},
+		{
+			"id": "tu-peux-modifier-tes-experiences-tes-formations-et-tes-pr",
+			"type": "amelioration",
+			"text": "Tu peux modifier tes expériences, tes formations et tes prestations ligne par ligne dans ton espace, et ton prix se lit tout seul : « à partir de 80 € » compte pour rendre ton profil publiable, « sur devis » reste affiché tel quel."
 		}
 	],
 	"releases": []

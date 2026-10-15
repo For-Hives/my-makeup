@@ -203,6 +203,17 @@ Deux cartes de `/auth/profil` s'éditent dans le panneau commun (tickets 125 et 
 
 Tests : `tests/unit/espace-reseaux.test.ts`, `tests/unit/espace-coordonnees.test.ts`, `tests/unit/espace-reseaux-coordonnees-panneaux.test.tsx`, sur le banc `tests/integration/espace-reseaux-coordonnees.test.ts`, et `tests/e2e/espace-reseaux-coordonnees.spec.ts`.
 
+### Expériences, formations et prestations dans l'espace
+
+Trois cartes de `/auth/profil` s'éditent ligne par ligne dans un panneau commun (tickets 129, 130 et 131) : une liste de lignes, avec « Modifier » et « Retirer » sur chacune, un formulaire qui ajoute ou change une ligne, et « Enregistrer » qui envoie la liste entière. Les trois partagent un éditeur (`src/components/espace/EditeurDeListe.tsx`) et une description par section (`DefinitionDeListe`, `src/lib/espace/liste.ts`) : `experiences.ts`, `formations.ts` et `prestations.ts` disent les champs, ce qui est obligatoire, les bornes et la façon de lire et d'écrire une ligne stockée. Le formulaire et le serveur lisent ces mêmes règles, qui appellent celles de la collection (`src/lib/profil/listes.ts`) et du prix (`src/lib/prix.ts`).
+
+- **Les sept règles des listes** (`docs/qualite.md`, §3) sont tenues par l'éditeur : clé d'affichage propre à chaque ligne (L1, L2), retrait de la ligne en cours (L3), focus après un retrait (L4), zone `role="status"` (L5), doublon refusé avec un message (L6), Entrée maintenue une fois (L7). Entrée maintenue garde ses retours à la ligne dans un texte long : `PanneauDEdition` ne retient plus les répétitions d'Entrée dans un `textarea`.
+- **Enregistrement** (`src/lib/espace/enregistrer-liste.ts`, action dans `listes-actions.ts`) : schéma strict (les lignes, chacune avec ses textes, aucune autre clé : une requête ne peut pas porter un montant de prix), profil trouvé par le compte, liste écrite entière dans l'ordre envoyé, identifiants gardés par la collection. Les bornes valent pour chaque ligne ; l'obligation (entreprise, poste et début ; diplôme et école ; nom) ne vaut que pour une ligne neuve ou changée, pour qu'une ligne importée avec un champ vide ne bloque jamais les autres. Un échec rend un message en français et laisse la base telle quelle (E31).
+- **Dates** (U30) : la fin d'une expérience ne précède pas son début ; une formation n'est pas datée de plus d'un an après aujourd'hui.
+- **Prix** (U29) : une seule saisie (« 80 », « 80 € », « à partir de 80 », « sur devis »), plusieurs formules séparées par « ; ». Le serveur en tire le montant par `parsePrice` et garde le texte ; le formulaire dit le montant retenu. Une prestation chiffrée remplit le critère « publiable » (U04). Les options d'une prestation ne sont pas modifiées ici (ticket 132) : elles sont reprises de la ligne stockée à chaque enregistrement.
+
+Tests : `tests/unit/espace-listes.test.ts`, `tests/unit/espace-listes-panneaux.test.tsx` (L1 à L7 jouées sur les trois sections) et, sur le banc, `tests/integration/espace-listes.test.ts`.
+
 ## Démarrer en local
 
 Il faut [bun](https://bun.sh) 1.3.14, Node 24 (`.nvmrc`), Docker avec Compose et `openssl`.
