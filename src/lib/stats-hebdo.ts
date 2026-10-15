@@ -10,14 +10,16 @@
  * - `lirePeriode`, the period asked for.
  * - `agregerStats`, the counts, from the profiles and the account dates the caller read.
  *
- * Later tickets add optional keys (169: contact messages, sign-ins, inherited hashes): a reader
- * that knows `version: 1` must keep working on an answer that has fewer of them.
+ * Optional keys came later (169: contact messages, sign-ins, inherited hashes; 212 and 213 next):
+ * a reader that knows `version: 1` must keep working on an answer that has fewer of them.
  *
  * Relative imports on purpose, like the rest of src/lib: no `next` import.
  */
 
 import { createHash, timingSafeEqual } from 'node:crypto'
 import { z } from 'zod'
+import { CODES_EVENEMENT, TYPES_EVENEMENT } from './auth/journal'
+import { ETATS_DU_MAIL, STATUTS_DE_DEMANDE } from './contact/etats'
 import { completude } from './profil/completude'
 import { champsDuProfil, type DocumentDuProfil } from './profil/etat'
 
@@ -87,6 +89,44 @@ export const StatsHebdo = z.strictObject({
 		parDepartement: z.record(z.string(), compte),
 		slugs: z.array(z.string()),
 	}),
+	/** Ticket 169. The contact messages received in the period: counts by status and by mail state. */
+	contact: z
+		.strictObject({
+			total: compte,
+			parStatut: z.record(z.string(), compte),
+			parEtatMail: z.record(z.string(), compte),
+		})
+		.optional(),
+	/**
+	 * Ticket 169. The authentication events of the period, from the journal (no IP, no email: the
+	 * journal holds none). `connexions` is the `connexion` events alone.
+	 */
+	auth: z
+		.strictObject({
+			parType: z.record(z.string(), compte),
+			connexions: z.strictObject({
+				total: compte,
+				parCode: z.record(z.string(), compte),
+				/** 95th percentile of the duration of a sign-in, in ms (nearest rank); null without any duration. */
+				dureeP95Ms: compte.nullable(),
+			}),
+		})
+		.optional(),
+	/**
+	 * Ticket 169, for the follow-up M6 of plan 01 §2.4. A snapshot of today, not of the period:
+	 * the hashes of the old site still stored, and the accounts that never had a password of their
+	 * own, by provider of the old site.
+	 */
+	herites: z
+		.strictObject({
+			hashRestants: compte,
+			/**
+			 * Accounts of a provider other than `local` with no inherited hash, by `legacyProvider` (`google`,
+			 * `facebook`, `autre`). Payload keeps no mark of a password set later (reset link): those stay counted.
+			 */
+			sansMotDePasseParFournisseur: z.record(z.string(), compte),
+		})
+		.optional(),
 })
 
 export type StatsHebdo = z.infer<typeof StatsHebdo>
@@ -227,6 +267,70 @@ export function agregerStats({
 		},
 	}
 }
+
+/** The closed lists, as counters at zero: a count that is zero is in the answer, not missing from it. */
+const compteurs = (cles: readonly string[]): Record<string, number> => Object.fromEntries(cles.map(cle => [cle, 0]))
+
+/** Adds one to a counter that is in the list; a key outside it is ignored. */
+function ajouter(compteur: Record<string, number>, cle: unknown): boolean {
+	if (typeof cle !== 'string' || !Object.hasOwn(compteur, cle)) return false
+	compteur[cle] = (compteur[cle] ?? 0) + 1
+	return true
+}
+
+/** What the count of the messages reads of a row of `demandes`: two closed lists, nothing typed by a visitor. */
+export interface DemandePourStats {
+	statut?: string | null
+	etatMail?: string | null
+}
+
+/** Contact messages received in the period (the caller read them): counts by status and by mail state. */
+export function agregerContact(demandes: readonly DemandePourStats[]): NonNullable<StatsHebdo['contact']> {
+	const parStatut = compteurs(STATUTS_DE_DEMANDE)
+	const parEtatMail = compteurs(ETATS_DU_MAIL)
+	for (const { statut, etatMail } of demandes) {
+		ajouter(parStatut, statut)
+		ajouter(parEtatMail, etatMail)
+	}
+	return { total: demandes.length, parStatut, parEtatMail }
+}
+
+/** What the count of the sign-ins reads of a row of the journal. */
+export interface EvenementPourStats {
+	type?: string | null
+	code?: string | null
+	dureeMs?: number | null
+}
+
+/** Nearest-rank percentile of a list of durations; null for an empty list. */
+export function centile(valeurs: readonly number[], p: number): number | null {
+	if (valeurs.length === 0) return null
+	const tries = [...valeurs].sort((a, b) => a - b)
+	return tries[Math.max(0, Math.ceil(p * tries.length) - 1)] ?? null
+}
+
+/** Authentication events of the period (the caller read them): by kind, and the sign-ins by outcome with their 95th percentile. */
+export function agregerAuth(evenements: readonly EvenementPourStats[]): NonNullable<StatsHebdo['auth']> {
+	const parType = compteurs(TYPES_EVENEMENT)
+	const parCode = compteurs(CODES_EVENEMENT)
+	const durees: number[] = []
+	let total = 0
+	for (const { type, code, dureeMs } of evenements) {
+		if (!ajouter(parType, type) || type !== 'connexion') continue
+		total++
+		ajouter(parCode, code)
+		if (typeof dureeMs === 'number') durees.push(dureeMs)
+	}
+	const p95 = centile(durees, 0.95)
+	return { parType, connexions: { total, parCode, dureeP95Ms: p95 === null ? null : Math.round(p95) } }
+}
+
+/**
+ * The providers of the old site whose accounts the report counts without a password; any other value
+ * but `local` is `autre`. A `local` account has no place here: it had a password on the old site, so
+ * once its hash is gone it has signed in and has a password of Payload's.
+ */
+export const FOURNISSEURS_HERITES = ['google', 'facebook', 'autre'] as const
 
 /** The token of an `Authorization: Bearer` header, or nothing. */
 export function jetonDeLEntete(entete: string | null): string | undefined {
