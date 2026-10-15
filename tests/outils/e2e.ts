@@ -117,6 +117,7 @@ export function environnementDeLApplication(environnement: Environnement): Envir
 	return {
 		...environnement,
 		...imagesDuBanc(environnement),
+		...communesDuBanc(environnement),
 		...SANS_FICHIER_ENV,
 		...SANS_TELEMETRIE,
 		NODE_ENV: 'production',
@@ -215,6 +216,16 @@ const definies = (variables: Variables): EnvironnementDeProcessus =>
 function imagesDuBanc(environnement: Environnement): EnvironnementDeProcessus {
 	const { S3_ENDPOINT: point, S3_BUCKET: espace } = environnement
 	return point && espace ? { IMAGES_DU_BANC: `${point}/${espace}` } : {}
+}
+
+/**
+ * The fake list of the communes of the bench, which the application asks instead of geo.api.gouv.fr:
+ * no test of a browser calls the Internet. Only the application of the tests receives it; the
+ * integration tests simulate the official list itself (docs/tests/http-sortant.md).
+ */
+function communesDuBanc(environnement: Environnement): EnvironnementDeProcessus {
+	const adresse = environnement.FAUSSES_COMMUNES
+	return adresse ? { COMMUNES_DU_BANC: adresse } : {}
 }
 
 /**

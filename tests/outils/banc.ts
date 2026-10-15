@@ -1,5 +1,5 @@
 /**
- * The local test bench, described in one place: the five containers of compose.test.yml
+ * The local test bench, described in one place: the six containers of compose.test.yml
  * (PostgreSQL in memory, mail catcher, object storage, fake Google, fake Umami) and the environment that
  * points at them.
  *
@@ -128,6 +128,8 @@ export interface Services {
 	google: { adresse: string; port: number; clientId: string; secret: string }
 	/** The fake Umami: the instance the application relays its audience measure to. */
 	umami: { adresse: string; port: number }
+	/** The fake list of the communes: what the application of the end-to-end tests asks instead of geo.api.gouv.fr. */
+	communes: { adresse: string; port: number }
 }
 
 const exiger = (environnement: Environnement, nom: string): string => {
@@ -142,7 +144,7 @@ const portDe = (adresse: string, nom: string): number => {
 	return port
 }
 
-/** Where each of the five services of an instance answers, read from its environment. */
+/** Where each of the six services of an instance answers, read from its environment. */
 export function servicesDuBanc(environnement: Environnement = environnementDuBanc()): Services {
 	const base = exiger(environnement, 'DATABASE_URI')
 	const url = new URL(base)
@@ -151,6 +153,7 @@ export function servicesDuBanc(environnement: Environnement = environnementDuBan
 	portDe(api, 'MAILPIT_URL')
 	const google = exiger(environnement, 'GOOGLE_OIDC_ISSUER')
 	const umami = exiger(environnement, 'UMAMI_ORIGIN')
+	const communes = exiger(environnement, 'FAUSSES_COMMUNES')
 	return {
 		base: {
 			adresse: base,
@@ -169,6 +172,7 @@ export function servicesDuBanc(environnement: Environnement = environnementDuBan
 			secret: exiger(environnement, 'GOOGLE_CLIENT_SECRET'),
 		},
 		umami: { adresse: umami, port: portDe(umami, 'UMAMI_ORIGIN') },
+		communes: { adresse: communes, port: portDe(communes, 'FAUSSES_COMMUNES') },
 	}
 }
 
@@ -182,6 +186,7 @@ export function variablesDeCompose(instance: Instance, services: Services): Reco
 		BANC_PORT_S3: String(services.stockage.port),
 		BANC_PORT_GOOGLE: String(services.google.port),
 		BANC_PORT_UMAMI: String(services.umami.port),
+		BANC_PORT_COMMUNES: String(services.communes.port),
 	}
 }
 
@@ -194,6 +199,7 @@ export function portsDuBanc(services: Services): { port: number; service: string
 		{ port: services.stockage.port, service: 'stockage d’objets' },
 		{ port: services.google.port, service: 'faux Google' },
 		{ port: services.umami.port, service: 'faux Umami' },
+		{ port: services.communes.port, service: 'fausse liste des communes' },
 	]
 }
 

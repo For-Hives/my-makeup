@@ -15,11 +15,31 @@
  */
 
 import { z } from 'zod'
+import { DEPLOYED_ORIGINS } from '../env'
 import { aLesCaracteresDUnNom, departementDuCodeInsee, ressembleAUneAdresse } from '../profil/zone'
 import { libelleDeLaCommune, RECHERCHE_MAX, RECHERCHE_MIN } from './localisation'
 
 /** The public address of the list. */
 export const ADRESSE_DES_COMMUNES = 'https://geo.api.gouv.fr'
+
+/** The only form the address of the fake list of the bench may take: http, on this machine, a port. */
+const FAUSSE_LISTE = /^http:\/\/(?:127\.0\.0\.1|localhost):\d{1,5}$/
+
+/**
+ * Where the list is asked: the official one, or the fake list of the test bench when the bench gives
+ * it (COMMUNES_DU_BANC, set by tests/outils/e2e.ts for the application of the end-to-end tests,
+ * which must never call the Internet). Like IMAGES_DU_BANC, production never sets it: a value that
+ * is not exactly an http address of this machine with a port, or one given to a deployed site, is
+ * refused loudly rather than followed.
+ */
+export function adresseDesCommunes(variables: Readonly<Record<string, string | undefined>> = process.env): string {
+	const banc = variables.COMMUNES_DU_BANC?.trim()
+	if (!banc) return ADRESSE_DES_COMMUNES
+	if (!FAUSSE_LISTE.test(banc)) throw new Error('COMMUNES_DU_BANC refusée. Attendu : http://127.0.0.1:PORT.')
+	if (DEPLOYED_ORIGINS.includes(variables.NEXT_PUBLIC_SITE_URL ?? ''))
+		throw new Error('COMMUNES_DU_BANC refusée : un site déployé ne demande que la liste officielle.')
+	return banc
+}
 
 /** How long a question waits for its answer. */
 export const DELAI_DES_COMMUNES_MS = 5000
@@ -57,7 +77,7 @@ type Reponse = { genre: 'ok'; corps: unknown } | { genre: 'inconnue' } | { genre
 
 /** One question to the list: its JSON, an unknown code (404), or a failure of any kind. */
 async function demander(chemin: string, parametres: Record<string, string>): Promise<Reponse> {
-	const adresse = new URL(chemin, ADRESSE_DES_COMMUNES)
+	const adresse = new URL(chemin, adresseDesCommunes())
 	for (const [cle, valeur] of Object.entries(parametres)) adresse.searchParams.set(cle, valeur)
 	const arret = new AbortController()
 	const minuteur = setTimeout(() => arret.abort(), DELAI_DES_COMMUNES_MS)

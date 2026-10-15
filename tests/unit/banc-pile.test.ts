@@ -58,9 +58,16 @@ const resoudre = (texte: string, variables: Record<string, string> = {}): string
 const portsPublies = (variables: Record<string, string> = {}): string[] =>
 	Object.values(compose.services).flatMap(({ ports }) => ports.map(port => resoudre(port, variables)))
 
-describe('compose.test.yml : cinq services, épinglés, en mémoire, joignables de ce poste seulement', () => {
-	test('la pile compte la base, le capteur de mails, le stockage d’objets, le faux Google et le faux Umami, et rien d’autre', () => {
-		expect(Object.keys(compose.services).sort()).toEqual(['faux-google', 'faux-umami', 'mailpit', 'postgres', 's3mock'])
+describe('compose.test.yml : six services, épinglés, en mémoire, joignables de ce poste seulement', () => {
+	test('la pile compte la base, le capteur de mails, le stockage d’objets, le faux Google, le faux Umami et la fausse liste des communes, et rien d’autre', () => {
+		expect(Object.keys(compose.services).sort()).toEqual([
+			'faux-communes',
+			'faux-google',
+			'faux-umami',
+			'mailpit',
+			'postgres',
+			's3mock',
+		])
 	})
 
 	test('chaque image est épinglée par son étiquette exacte et par son empreinte', () => {
@@ -72,12 +79,17 @@ describe('compose.test.yml : cinq services, épinglés, en mémoire, joignables 
 	})
 
 	test('chaque port n’est publié que sur l’interface locale', () => {
-		expect(portsPublies().length).toBe(6)
+		expect(portsPublies().length).toBe(7)
 		for (const port of portsPublies()) expect(port).toStartWith('127.0.0.1:')
 	})
 
 	test('rien n’est gardé : la base est en mémoire, aucun volume n’est déclaré', () => {
-		const { 'faux-google': fauxGoogle, 'faux-umami': fauxUmami, ...autres } = compose.services
+		const {
+			'faux-google': fauxGoogle,
+			'faux-umami': fauxUmami,
+			'faux-communes': faussesCommunes,
+			...autres
+		} = compose.services
 
 		expect(compose.services.postgres?.tmpfs).toEqual(['/var/lib/postgresql'])
 		expect(compose.volumes).toBeUndefined()
@@ -89,6 +101,9 @@ describe('compose.test.yml : cinq services, épinglés, en mémoire, joignables 
 		// Same for the fake Umami.
 		expect(fauxUmami?.volumes).toEqual(['./tests/outils/faux-umami:/banc:ro'])
 		expect(fauxUmami?.read_only).toBe(true)
+		// And for the fake list of the communes.
+		expect(faussesCommunes?.volumes).toEqual(['./tests/outils/faux-communes:/banc:ro'])
+		expect(faussesCommunes?.read_only).toBe(true)
 	})
 
 	test('chaque service dit lui-même quand il est prêt : c’est ce qu’attend « up --wait »', () => {
@@ -107,6 +122,7 @@ describe('compose.test.yml : cinq services, épinglés, en mémoire, joignables 
 				`127.0.0.1:${services.stockage.port}:9090`,
 				`127.0.0.1:${services.google.port}:7080`,
 				`127.0.0.1:${services.umami.port}:4200`,
+				`127.0.0.1:${services.communes.port}:2050`,
 			].sort()
 		)
 		expect(compose.services.postgres?.environment).toEqual({
@@ -133,12 +149,22 @@ describe('compose.test.yml : cinq services, épinglés, en mémoire, joignables 
 			FAUX_UMAMI_ECOUTE: '0.0.0.0',
 			FAUX_UMAMI_PORT: '4200',
 		})
+		// The fake list of the communes too.
+		expect(compose.services['faux-communes']?.environment).toEqual({
+			FAUX_COMMUNES_ECOUTE: '0.0.0.0',
+			FAUX_COMMUNES_PORT: '2050',
+		})
 	})
 
-	test('le faux Umami tourne sur le même bun, avec le code du dépôt', () => {
-		expect(compose.services['faux-umami']?.image).toBe(compose.services['faux-google']?.image ?? '')
-		expect(compose.services['faux-umami']?.command).toEqual(['bun', '/banc/serveur.ts'])
-		expect(existsSync(path.join(RACINE, 'tests/outils/faux-umami/serveur.ts'))).toBe(true)
+	test('le faux Umami et la fausse liste des communes tournent sur le même bun, avec le code du dépôt', () => {
+		for (const [service, dossier] of [
+			['faux-umami', 'faux-umami'],
+			['faux-communes', 'faux-communes'],
+		] as const) {
+			expect(compose.services[service]?.image).toBe(compose.services['faux-google']?.image ?? '')
+			expect(compose.services[service]?.command).toEqual(['bun', '/banc/serveur.ts'])
+			expect(existsSync(path.join(RACINE, `tests/outils/${dossier}/serveur.ts`))).toBe(true)
+		}
 	})
 
 	test('le faux Google tourne sur le bun du Dockerfile : même image, même empreinte, et le code du dépôt', () => {
@@ -159,6 +185,7 @@ describe('compose.test.yml : cinq services, épinglés, en mémoire, joignables 
 		expect(resoudre(compose.name, variables)).toBe('banc-voisin')
 		expect(portsPublies(variables).sort()).toEqual([
 			'127.0.0.1:1045:1025',
+			'127.0.0.1:2070:2050',
 			'127.0.0.1:4220:4200',
 			'127.0.0.1:5463:5432',
 			'127.0.0.1:7100:7080',
@@ -176,11 +203,12 @@ describe('.env.test : l’environnement factice du banc', () => {
 	const fichier = readFileSync(FICHIER_ENV, 'utf8')
 	const environnement = lireFichierEnv(fichier)
 
-	test('il décrit les cinq services et l’application, sans rien d’autre', () => {
+	test('il décrit les six services et l’application, sans rien d’autre', () => {
 		expect(Object.keys(environnement).sort()).toEqual([
 			'APP_ENV',
 			'DATABASE_URI',
 			'EMAIL_FROM',
+			'FAUSSES_COMMUNES',
 			'GOOGLE_CLIENT_ID',
 			'GOOGLE_CLIENT_SECRET',
 			'GOOGLE_OIDC_ISSUER',
@@ -273,6 +301,7 @@ describe('Plusieurs bancs côte à côte : un nom d’instance et un décalage d
 			UMAMI_ORIGIN: 'http://127.0.0.1:4304',
 			NEXT_PUBLIC_UMAMI_DOMAINS: 'localhost,127.0.0.1',
 			INDEXNOW_KEY: '0123456789abcdef0123456789abcdef',
+			FAUSSES_COMMUNES: 'http://127.0.0.1:2154',
 		})
 	})
 
@@ -280,7 +309,7 @@ describe('Plusieurs bancs côte à côte : un nom d’instance et un décalage d
 		const ports = (decalage: number) =>
 			portsDuBanc(servicesDuBanc(environnementDuBanc({ nom: 'x', decalage }))).map(({ port }) => port)
 
-		expect(ports(0)).toEqual([5443, 1025, 8025, 9090, 7080, 4200])
+		expect(ports(0)).toEqual([5443, 1025, 8025, 9090, 7080, 4200, 2050])
 		for (const decalage of [1, 20, 104, DECALAGE_MAX])
 			expect(ports(decalage).filter(port => ports(0).includes(port))).toEqual([])
 		// Whatever the two offsets: two ports of the bench are further apart than the highest offset.
@@ -369,7 +398,7 @@ describe('La commande d’intégration', () => {
 
 		expect(messageBancMuet(instance, sondes)).toBe(
 			[
-				'Le banc de test « voisin » ne répond pas : base (127.0.0.1:5463), capteur de mails (127.0.0.1:1045), stockage d’objets (127.0.0.1:9110), faux Google (127.0.0.1:7100), faux Umami (127.0.0.1:4220).',
+				'Le banc de test « voisin » ne répond pas : base (127.0.0.1:5463), capteur de mails (127.0.0.1:1045), stockage d’objets (127.0.0.1:9110), faux Google (127.0.0.1:7100), faux Umami (127.0.0.1:4220), fausse liste des communes (127.0.0.1:2070).',
 				'Démarre-le d’abord : BANC_INSTANCE=voisin BANC_DECALAGE=20 bun run banc:up',
 			].join('\n')
 		)

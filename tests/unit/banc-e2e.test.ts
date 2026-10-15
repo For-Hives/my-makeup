@@ -182,6 +182,8 @@ describe('l’application des essais, démarrée par Playwright', () => {
 		expect(env).toMatchObject({ ...banc, ...SANS_FICHIER_ENV, NODE_ENV: 'production', NEXT_TELEMETRY_DISABLED: '1' })
 		expect(env.DATABASE_URI).toEndWith(':5463/mymakeup_test')
 		expect(env.NEXT_PUBLIC_SITE_URL).toBe('http://localhost:3120')
+		// The fake list of the communes of the instance, never geo.api.gouv.fr (docs/tests/banc.md).
+		expect(env.COMMUNES_DU_BANC).toBe('http://127.0.0.1:2070')
 	})
 
 	test('le script « start » de package.json est bien celui qui sert le build', () => {

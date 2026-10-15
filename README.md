@@ -699,7 +699,7 @@ Une nouvelle variable qui désigne un service extérieur s'ajoute à la garde, a
 
 ### Le banc de test
 
-Les tests d'intégration tournent contre cinq conteneurs jetables : PostgreSQL en mémoire, un capteur de mails, un stockage d'objets avec l'API S3, un faux Google et un faux Umami. Rien n'y est réel, et rien n'est gardé à l'arrêt.
+Les tests d'intégration tournent contre six conteneurs jetables : PostgreSQL en mémoire, un capteur de mails, un stockage d'objets avec l'API S3, un faux Google, un faux Umami et une fausse liste des communes. Rien n'y est réel, et rien n'est gardé à l'arrêt.
 
 Pour travailler dans le site local, sans écrire de test, **quatre gestes** (l'agent n'a plus besoin d'un compte en ligne) :
 
