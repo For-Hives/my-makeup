@@ -155,6 +155,11 @@
 			"id": "tu-peux-ecrire-a-l-equipe-depuis-la-page-contact-ton-mess",
 			"type": "ajout",
 			"text": "Vous pouvez écrire à l’équipe depuis la page Contact : votre message est enregistré avant d’être envoyé, il ne se perd plus si l’envoi de l’email échoue, et les erreurs s’affichent sous les champs."
+		},
+		{
+			"id": "chaque-page-de-specialite-a-un-titre-d-onglet-plus-comple",
+			"type": "amelioration",
+			"text": "Chaque page de spécialité a un titre d’onglet plus complet, pour mieux apparaître dans les résultats de recherche."
 		}
 	],
 	"releases": []

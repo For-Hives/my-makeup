@@ -7,7 +7,9 @@
  * before any write and listed (rule 5): it is never corrected.
  */
 
+import { TITRES_DES_PAGES_TALENT } from '../../../src/content/talents-titres'
 import { estUnSlug } from '../../../src/lib/slug'
+import { REFERENCES } from './ecarts'
 import type { Adaptateur, Attendu, Refus } from './moteur'
 import { iso, type Requete } from './source'
 
@@ -39,17 +41,21 @@ export const ADAPTATEUR_TALENTS: Adaptateur = {
 		seo_title: 'texte',
 		description: 'texte',
 		seo_description: 'texte',
+		titreDeLaPage: 'texte',
 		content: 'texte',
 		_status: 'texte',
 		publishedAt: 'date',
 		createdAt: 'date',
 		updatedAt: 'date',
 	},
+	// The source has no title for the tab: the import fills it in, and keeps what the newsroom typed.
+	amorces: ['titreDeLaPage'],
 	options: attendu => ({ brouillon: attendu.valeurs._status === 'draft' }),
 }
 
 /** The talent the target must hold: the same values, under the same names. */
 export function talentAttendu(ligne: LigneTalent): Attendu {
+	const titreDeLaPage = ligne.slug === null ? undefined : TITRES_DES_PAGES_TALENT[ligne.slug]
 	return {
 		strapiId: ligne.id,
 		valeurs: {
@@ -64,8 +70,9 @@ export function talentAttendu(ligne: LigneTalent): Attendu {
 			publishedAt: ligne.published_at,
 			createdAt: ligne.created_at,
 			updatedAt: ligne.updated_at,
+			...(titreDeLaPage === undefined ? {} : { titreDeLaPage }),
 		},
-		ecarts: [],
+		ecarts: titreDeLaPage === undefined ? [] : [{ champ: 'titreDeLaPage', reference: REFERENCES.titreDesPagesTalent }],
 	}
 }
 
