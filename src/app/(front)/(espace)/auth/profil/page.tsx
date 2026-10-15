@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { BoutonsDeDeconnexion } from '@/components/auth/BoutonsDeDeconnexion'
 import { AvancementDuProfil } from '@/components/espace/AvancementDuProfil'
 import { CarteDeSection } from '@/components/espace/CarteDeSection'
@@ -14,6 +15,7 @@ import { EditeurDuPortfolio } from '@/components/espace/EditeurDuPortfolio'
 import { EditeurDExperiences, EditeurDeFormations, EditeurDePrestations } from '@/components/espace/EditeursDeListes'
 import { InterrupteurDeDisponibilite } from '@/components/espace/InterrupteurDeDisponibilite'
 import { RafraichirSession } from '@/components/espace/RafraichirSession'
+import { PAGE_D_ACCUEIL_DU_COMPTE } from '@/lib/auth/retour'
 import { exigerMaquilleuse } from '@/lib/auth/session'
 import { CHEMIN_DE_L_APERCU } from '@/lib/espace/apercu'
 import { avancementDuProfil } from '@/lib/espace/avancement'
@@ -59,22 +61,16 @@ export default async function PageProfil() {
 	const maquilleuse = await exigerMaquilleuse('/auth/profil')
 	const contexte = await utilisatriceDeLaRequete()
 	const profil = contexte === null ? null : await profilDeLaMaquilleuse(contexte.payload, contexte.utilisateur)
-	const photos = contexte === null || profil === null ? null : await lirePhotosDeLEspace(contexte.payload, profil)
+	// An account that came without a profile (some accounts of the old site) gets one in the onboarding (ticket 140).
+	if (contexte === null || profil === null) return redirect(PAGE_D_ACCUEIL_DU_COMPTE)
+	const photos = await lirePhotosDeLEspace(contexte.payload, profil)
 
 	return (
 		<main className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 py-8">
 			<h1 className="font-semibold text-3xl">Mon espace</h1>
 			<RafraichirSession expire={maquilleuse.expire} />
 			<p>Bonjour {texte(maquilleuse.nom) || 'toi'}, tu es connectée.</p>
-			{profil === null ? (
-				<p className="rounded-md bg-amber-50 p-4 text-amber-900">
-					Ton profil n’est pas encore créé. Écris-nous à{' '}
-					<a className="underline" href="mailto:contact@my-makeup.fr">
-						contact@my-makeup.fr
-					</a>{' '}
-					et on s’en occupe.
-				</p>
-			) : (
+			{profil === null ? null : (
 				<>
 					<Link
 						href={CHEMIN_DE_L_APERCU}
@@ -134,9 +130,9 @@ export default async function PageProfil() {
 										envoyer={enregistrerMesCompetences}
 									/>
 								) : carte.section === 'photo' ? (
-									<EditeurDeLaPhoto photo={photos?.photo ?? null} envoyer={enregistrerMaPhotoPrincipale} />
+									<EditeurDeLaPhoto photo={photos.photo} envoyer={enregistrerMaPhotoPrincipale} />
 								) : carte.section === 'portfolio' ? (
-									<EditeurDuPortfolio photos={photos?.galerie ?? []} envoyer={enregistrerMonPortfolio} />
+									<EditeurDuPortfolio photos={photos.galerie} envoyer={enregistrerMonPortfolio} />
 								) : carte.section === 'reseaux' ? (
 									<EditeurDeReseaux
 										valeurs={{
