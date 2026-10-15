@@ -64,7 +64,10 @@ test.describe('L’opposition à la mesure', () => {
 		await page.goto('/cgu')
 		await page.waitForFunction(() => 'umami' in window)
 		await page.evaluate(() => (window as unknown as { umami: { track: () => Promise<void> } }).umami.track())
-		expect(await umami.recus()).toEqual([])
+		// Measures of the first page (sent before the click) may still reach the fake after it was emptied:
+		// only what the page opened after the click sends counts.
+		const apresLeClic = (await umami.recus()).filter(recu => JSON.stringify(recu.corps).includes('/cgu'))
+		expect(apresLeClic).toEqual([])
 
 		// The choice outlives the page: the button says so when the policy is opened again.
 		await page.goto('/politique-de-confidentialite')
