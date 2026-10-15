@@ -6,9 +6,8 @@ import { Talents } from '@/components/accueil/Talents'
 import { Cta } from '@/components/blocs/Cta'
 import { Hero } from '@/components/blocs/Hero'
 import { RESEAUX } from '@/components/gabarit/liens'
-import { donneesStructureesDeLAccueil, NOM_DU_SITE, serializeJsonLd } from '@/lib/seo/json-ld'
+import { donneesStructureesDeLAccueil, serializeJsonLd } from '@/lib/seo/json-ld'
 import { metadonnees } from '@/lib/seo/metadonnees'
-import { SITE_ORIGIN } from '@/lib/urls-gelees'
 import { lesTalentsEnCache } from '@/services/public/en-cache'
 import type { TalentPublic } from '@/services/public/talents'
 
@@ -21,28 +20,14 @@ const TITRE = 'Maquilleuse professionnelle près de chez vous'
 const DESCRIPTION =
 	'Trouvez une maquilleuse professionnelle à domicile près de chez vous, pour un mariage, une soirée ou un shooting. Comparez les profils et les tarifs.'
 
-const base = metadonnees({
+// The preview of a shared link comes with the other tags: the picture of the site (ticket 116).
+export const metadata: Metadata = metadonnees({
 	titre: TITRE,
 	description: DESCRIPTION,
 	repli:
 		'Annuaire de maquilleuses professionnelles indépendantes : trouvez celle qui vous correspond, près de chez vous.',
 	chemin: '/',
 })
-
-// The preview of a shared link (ticket 116 gives it to every page): the home page has it from now on,
-// with the picture the site online shares.
-export const metadata: Metadata = {
-	...base,
-	openGraph: {
-		type: 'website',
-		locale: 'fr_FR',
-		siteName: NOM_DU_SITE,
-		url: SITE_ORIGIN,
-		title: String((base.title as { absolute: string }).absolute),
-		description: DESCRIPTION,
-		images: [{ url: `${SITE_ORIGIN}/assets/og-my-makeup.jpg` }],
-	},
-}
 
 const RESEAUX_PUBLICS = RESEAUX.filter(({ href }) => href.startsWith('https://')).map(({ href }) => href)
 

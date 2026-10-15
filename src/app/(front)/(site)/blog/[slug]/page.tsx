@@ -35,6 +35,7 @@ export async function generateMetadata({ params }: PageProps<'/blog/[slug]'>): P
 		autres: [article.extrait, article.contenu],
 		repli: `${article.titre} : un article du blog de ${NOM_DU_SITE} sur le maquillage et les maquilleuses professionnelles.`,
 		chemin: `/blog/${article.slug}`,
+		typeDePartage: 'article',
 	})
 }
 

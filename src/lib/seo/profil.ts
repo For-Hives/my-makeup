@@ -14,6 +14,7 @@ import type { ProfilPublic } from '@/services/public/profils'
 import { SITE_ORIGIN } from '../urls-gelees'
 import { NOM_DU_SITE } from './json-ld'
 import { metadonnees } from './metadonnees'
+import { imageDePartageDeLaPhoto } from './partage'
 import { MARQUE, TITRE_MAX, texteSur, tronquer } from './texte'
 import { urlCanonique } from './url'
 
@@ -43,6 +44,9 @@ export function metadonneesDuProfil(profil: ProfilPublic): Metadata {
 		repli: `Découvre ${profil.nom}, ${detail}, sur ${MARQUE} : prestations, tarifs et moyens de contact.`,
 		chemin: cheminDuProfil(profil.slug),
 		indexable: profil.indexable,
+		typeDePartage: 'profile',
+		// Her main photo, lightened; the picture of the site when she has none.
+		image: imageDePartageDeLaPhoto(profil.photo),
 	})
 }
 

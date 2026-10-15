@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { balisesDePartage, type ImageDePartage, type TypeDePartage } from './partage'
 import { descriptionEditoriale, descriptionMeta, titrePage } from './texte'
 import { urlCanonique } from './url'
 
@@ -13,15 +14,32 @@ export interface EntreesDePage {
 	chemin: string
 	/** False for a page that must not be indexed: it then has no canonical address. */
 	indexable?: boolean
+	/** `og:type`: « website » unless the page is a profile or an article. */
+	typeDePartage?: TypeDePartage
+	/** The picture of the shared link; the picture of the site when the page has none (ticket 116). */
+	image?: ImageDePartage
 }
 
-/** What every page gets by default: title, description, canonical address and robots. */
-export function metadonnees({ titre, description, repli, chemin, indexable = true }: EntreesDePage): Metadata {
+/** The metadata of a page once its description is known. A page that is not indexed keeps its share tags. */
+function assembler(
+	{ titre, chemin, indexable = true, typeDePartage, image }: EntreesDePage,
+	description: string
+): Metadata {
+	const titreComplet = titrePage(titre)
 	return {
-		title: { absolute: titrePage(titre) },
-		description: descriptionMeta(description, repli),
+		title: { absolute: titreComplet },
+		description,
 		...(indexable ? { alternates: { canonical: urlCanonique(chemin) } } : { robots: { index: false, follow: true } }),
+		...balisesDePartage({ titre: titreComplet, description, url: urlCanonique(chemin), type: typeDePartage, image }),
 	}
+}
+
+/**
+ * What every page gets by default: title, description, canonical address, robots, and the tags of a shared
+ * link (Open Graph and Twitter card).
+ */
+export function metadonnees(entrees: EntreesDePage): Metadata {
+	return assembler(entrees, descriptionMeta(entrees.description, entrees.repli))
 }
 
 /** The not-found pages: titled, no canonical. Next adds their noindex tag by itself. */
@@ -36,8 +54,5 @@ export function metadonneesEditoriales({
 	autres,
 	...entrees
 }: Omit<EntreesDePage, 'description'> & { descriptionRedigee: unknown; autres: readonly unknown[] }): Metadata {
-	return {
-		...metadonnees({ ...entrees, description: [] }),
-		description: descriptionEditoriale(descriptionRedigee, autres, entrees.repli),
-	}
+	return assembler({ ...entrees, description: [] }, descriptionEditoriale(descriptionRedigee, autres, entrees.repli))
 }
