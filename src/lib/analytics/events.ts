@@ -63,6 +63,21 @@ export const SECTIONS_DE_PROFIL = [
 	'onboarding',
 ] as const
 
+/**
+ * Value of `step` of `onboarding_step` (ticket 148). `identite`, `zone` and `photo` are the three
+ * steps of the onboarding of the space, sent once the server stored the step; `termine` is sent once
+ * the server reported the profile active. `verification_email` and `compte_cree` are the steps of the
+ * live site: they stay listed so that its series keep their names.
+ */
+export const ETAPES_D_ACCUEIL_MESUREES = [
+	'verification_email',
+	'compte_cree',
+	'identite',
+	'zone',
+	'photo',
+	'termine',
+] as const
+
 export const METRIQUES_WEB_VITALS = ['CLS', 'FCP', 'INP', 'LCP', 'TTFB'] as const
 export const NOTES_WEB_VITALS = ['good', 'needs-improvement', 'poor'] as const
 
@@ -136,7 +151,7 @@ export const CATALOGUE = {
 	profile_publiable: {},
 	account_delete: {},
 	// 16-17. The onboarding (ticket 148).
-	onboarding_step: { step: parmi(['verification_email', 'compte_cree', 'termine']) },
+	onboarding_step: { step: parmi(ETAPES_D_ACCUEIL_MESUREES) },
 	onboarding_source: { source: parmi(ORIGINES_DECLAREES) },
 	// 20-21. New in the v3: the reveal of a phone number, and an error boundary.
 	contact_reveal: { pid, channel: parmi(CANAUX_DE_CONTACT) },

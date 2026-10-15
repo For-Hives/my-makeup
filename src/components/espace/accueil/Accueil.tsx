@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { type Suivre, track } from '@/lib/analytics/track'
 import type { ResultatDEnvoiDUnFichier } from '@/lib/espace/envoi-des-photos'
 import type { ValeursDeLIdentite } from '@/lib/espace/identite'
 import type { ValeursDeLaLocalisation } from '@/lib/espace/localisation'
@@ -47,6 +48,7 @@ export function Accueil({
 	televerser,
 	supprimer,
 	naviguer = aller,
+	suivre = track,
 }: {
 	etapeInitiale: EtapeDAccueil
 	identite: ValeursDeLIdentite
@@ -59,6 +61,7 @@ export function Accueil({
 	televerser?: (fichier: File, alt: string) => Promise<ResultatDEnvoiDUnFichier>
 	supprimer?: (id: IdentifiantDePhoto) => Promise<unknown>
 	naviguer?: (url: string) => void
+	suivre?: Suivre
 }) {
 	const [etape, setEtape] = useState<EtapeDAccueil>(etapeInitiale)
 	const [valeursIdentite, setValeursIdentite] = useState(identite)
@@ -66,6 +69,15 @@ export function Accueil({
 	const [origine, setOrigine] = useState<Origine | null>(null)
 	const titre = useRef<HTMLHeadingElement>(null)
 	const premier = useRef(true)
+	// Measure (ticket 148): each step is counted once per visit, the declared origin once, and neither
+	// is ever stored or sent to the server.
+	const etapesMesurees = useRef(new Set<string>())
+	const origineMesuree = useRef(false)
+	const mesurerEtape = (etapeFranchie: 'identite' | 'zone' | 'photo' | 'termine') => {
+		if (etapesMesurees.current.has(etapeFranchie)) return
+		etapesMesurees.current.add(etapeFranchie)
+		suivre('onboarding_step', { step: etapeFranchie })
+	}
 
 	// The title of the step that opens takes the focus, so that a keyboard or a screen reader follows.
 	useEffect(() => {
@@ -110,6 +122,11 @@ export function Accueil({
 					choisirOrigine={setOrigine}
 					titre={titre}
 					surFait={valeurs => {
+						mesurerEtape('identite')
+						if (origine !== null && !origineMesuree.current) {
+							origineMesuree.current = true
+							suivre('onboarding_source', { source: origine })
+						}
 						setValeursIdentite(valeurs)
 						setEtape(2)
 					}}
@@ -122,6 +139,7 @@ export function Accueil({
 					chercher={chercherCommunes}
 					titre={titre}
 					surFait={valeurs => {
+						mesurerEtape('zone')
 						setValeursZone(valeurs)
 						setEtape(3)
 					}}
@@ -137,6 +155,8 @@ export function Accueil({
 					titre={titre}
 					retour={() => setEtape(2)}
 					surFait={({ position }) => {
+						mesurerEtape('photo')
+						if (position === 'terminee') mesurerEtape('termine')
 						// Only the server's reading of the stored profile sends her on; a missing step reads the page again.
 						naviguer(position === 'terminee' ? ESPACE : PAGE_DE_L_ACCUEIL)
 					}}
