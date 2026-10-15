@@ -10,6 +10,7 @@ import type {
 import {
 	adminOuProprietaire,
 	adminSeulement,
+	cacheeSaufAdmin,
 	champAdminSeulement,
 	champDuProfilAdminOuProprietaire,
 	jamais,
@@ -188,7 +189,7 @@ const INTERNE = { read: champAdminSeulement, create: champAdminSeulement, update
 export const Profils: CollectionConfig<'profils'> = {
 	slug: 'profils',
 	labels: { singular: 'Profil', plural: 'Profils' },
-	admin: { useAsTitle: 'slug', defaultColumns: ['slug', 'prenom', 'nom', 'statut', 'pro'] },
+	admin: { useAsTitle: 'slug', defaultColumns: ['slug', 'prenom', 'nom', 'statut', 'pro'], hidden: cacheeSaufAdmin },
 	access: {
 		read: profilPublieOuProprietaire,
 		create: adminSeulement,

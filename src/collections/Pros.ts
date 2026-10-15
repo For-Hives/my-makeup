@@ -1,5 +1,5 @@
 import { APIError, type CollectionBeforeDeleteHook, type CollectionConfig } from 'payload'
-import { adminOuSoiMeme, adminSeulement, champAdminSeulement, jamais } from '../lib/acces'
+import { adminOuSoiMeme, adminSeulement, cacheeSaufAdmin, champAdminSeulement, jamais } from '../lib/acces'
 import { fermerLesSessionsAuBlocage, noterLeBlocage, refuserUnCompteBloque } from '../lib/auth/compte-bloque'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import { freinerLaConnexion, rendreLaPlaceDeLaConnexion } from '../lib/auth/frein-payload'
@@ -77,7 +77,7 @@ export const compteSansProfilAvantSuppression: CollectionBeforeDeleteHook = asyn
 export const Pros: CollectionConfig<'pros'> = {
 	slug: 'pros',
 	labels: { singular: 'Compte maquilleuse', plural: 'Comptes maquilleuses' },
-	admin: { useAsTitle: 'email', defaultColumns: ['email', 'nom', '_verified', 'bloque'] },
+	admin: { useAsTitle: 'email', defaultColumns: ['email', 'nom', '_verified', 'bloque'], hidden: cacheeSaufAdmin },
 	auth: {
 		verify: {
 			generateEmailSubject: () => SUJET_DE_CONFIRMATION,

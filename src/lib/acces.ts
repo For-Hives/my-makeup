@@ -41,6 +41,14 @@ export const estRedaction = (user: Utilisateur): boolean =>
 /** The account of a makeup artist. */
 export const estMaquilleuse = (user: Utilisateur): boolean => user?.collection === COLLECTION_PROS
 
+/**
+ * Hides a collection from the admin panel unless the account has the role `admin`: the newsroom
+ * (`redaction`) sees the articles, the talents and their images, and nothing else (ticket 164). It
+ * is a matter of what the panel shows; what an account reads and writes is said by the access
+ * rules of the collection, which hold whatever the panel shows.
+ */
+export const cacheeSaufAdmin = ({ user }: { user: unknown }): boolean => !estAdmin(user as Utilisateur)
+
 /** Only the role `admin`, for a whole collection; never by an impossible identifier (`identifiantImpossible`). */
 export const adminSeulement: Access = ({ req: { user }, id }) => !identifiantImpossible(id) && estAdmin(user)
 

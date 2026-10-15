@@ -1,6 +1,6 @@
 import { type CollectionBeforeChangeHook, type CollectionConfig, ValidationError } from 'payload'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
-import { adminSeulement, estAdmin, jamais } from '../lib/acces'
+import { adminSeulement, cacheeSaufAdmin, jamais } from '../lib/acces'
 import {
 	ETATS_DU_MAIL,
 	estUnStatutDeDemande,
@@ -91,7 +91,7 @@ export const Demandes: CollectionConfig<'demandes'> = {
 	labels: { singular: 'Message de contact', plural: 'Messages de contact' },
 	admin: {
 		defaultColumns: ['createdAt', 'type', 'statut', 'etatMail', 'prenom', 'nom'],
-		hidden: ({ user }) => !estAdmin(user as Parameters<typeof estAdmin>[0]),
+		hidden: cacheeSaufAdmin,
 		useAsTitle: 'nom',
 		components: { beforeListTable: ['/components/admin/EchecsDEnvoi#EchecsDEnvoi'] },
 	},
