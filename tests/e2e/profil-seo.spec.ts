@@ -54,9 +54,16 @@ test.describe('E64 : les profils, titre, description, adresse canonique, un seul
 		let lus = 0
 		for (const [cle, { slug, type }] of profils) {
 			const reponse = await request.get(`/profil/${slug}`)
-			// A hidden profile and a draft are a 404 (ticket 104 may open the draft); every other one is a page.
-			if (type.attendu.statut !== 'publie') {
+			// A hidden profile is a 404; a draft is a page in noindex without a canonical address (ticket 104).
+			if (type.attendu.statut === 'masque') {
 				expect(reponse.status(), cle).toBe(404)
+				continue
+			}
+			if (type.attendu.statut !== 'publie') {
+				expect(reponse.status(), cle).toBe(200)
+				const brouillon = entetes(await reponse.text())
+				expect(brouillon.canonique, cle).toBeNull()
+				expect(brouillon.robots, cle).toBe('noindex, follow')
 				continue
 			}
 			expect(reponse.status(), cle).toBe(200)
