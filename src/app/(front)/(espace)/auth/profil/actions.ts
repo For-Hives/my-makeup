@@ -2,6 +2,8 @@
 
 import { revalidatePath } from 'next/cache'
 import { headers } from 'next/headers'
+import type { ValeursDeLaDisponibilite } from '@/lib/espace/disponibilite'
+import { enregistrerDisponibilite } from '@/lib/espace/enregistrer-disponibilite'
 import { enregistrerIdentite } from '@/lib/espace/enregistrer-identite'
 import type { ValeursDeLIdentite } from '@/lib/espace/identite'
 import { utilisatriceDeLaRequete } from '@/lib/espace/requete'
@@ -23,6 +25,25 @@ export async function enregistrerMonIdentite(saisie: unknown): Promise<ResultatD
 	if (origine !== null && !payload.config.csrf.includes(origine)) return { ok: false, message: MESSAGE_ECHEC }
 
 	const resultat = await enregistrerIdentite(payload, utilisateur, saisie)
+	if (resultat.ok) revalidatePath('/auth/profil')
+	return resultat
+}
+
+/**
+ * Saves the availability of the signed-in makeup artist (ticket 124), on the same terms as her
+ * identity. The public list and the search read it under the tags of `profils`: the write refreshes
+ * them through the hooks of the collection.
+ */
+export async function enregistrerMaDisponibilite(
+	saisie: unknown
+): Promise<ResultatDEnregistrement<ValeursDeLaDisponibilite>> {
+	const contexte = await utilisatriceDeLaRequete()
+	if (contexte === null) return { ok: false, message: MESSAGE_SESSION, session: 'expiree' }
+	const { payload, utilisateur } = contexte
+	const origine = (await headers()).get('origin')
+	if (origine !== null && !payload.config.csrf.includes(origine)) return { ok: false, message: MESSAGE_ECHEC }
+
+	const resultat = await enregistrerDisponibilite(payload, utilisateur, saisie)
 	if (resultat.ok) revalidatePath('/auth/profil')
 	return resultat
 }

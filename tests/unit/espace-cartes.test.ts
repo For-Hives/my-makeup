@@ -19,8 +19,8 @@ describe('une carte par section, dans l’ordre de la page', () => {
 			expect(lignes.length).toBeGreaterThan(0)
 		}
 		const valeurs = cartes.flatMap(c => c.lignes.map(l => l.valeur))
-		// The coordinates line « shown on your profile » is a yes/no, the rest is empty.
-		expect(valeurs.filter(v => v !== null)).toEqual(['Non'])
+		// The coordinates line « shown on your profile » is a yes/no; an empty profile reads « Disponible » (ticket 124); the rest is empty.
+		expect(valeurs.filter(v => v !== null)).toEqual(['Disponible', 'Non'])
 	})
 })
 
@@ -57,6 +57,7 @@ describe('les valeurs enregistrées', () => {
 		])
 		expect(carte(PROFIL, 'localisation').lignes.map(l => l.valeur)).toEqual(['Annecy (74)', '30 km', 'Oui'])
 		expect(carte(PROFIL, 'disponibilite').lignes[0]?.valeur).toBe('Pas disponible en ce moment')
+		expect(carte(PROFIL, 'disponibilite').lignes[1]?.valeur).toContain('n’apparaît plus')
 		expect(carte(PROFIL, 'competences').lignes.map(l => l.valeur)).toEqual(['Teint', 'Regard'])
 		expect(carte(PROFIL, 'formations').lignes[0]?.valeur).toBe('CAP esthétique - École fictive - janvier 2020')
 		expect(carte(PROFIL, 'experiences').lignes[0]?.valeur).toBe('Maquilleuse - Studio - mars 2021 - aujourd’hui')
