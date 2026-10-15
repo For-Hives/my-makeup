@@ -575,6 +575,10 @@ describe('the CI reads no secret', () => {
 		// pre-production (ticket 027).
 		'PREPROD_BASIC_AUTH_USER',
 		'PREPROD_BASIC_AUTH_PASSWORD',
+		// preprod-controles.yml puts the pre-production back to its seeded state through the API of Coolify
+		// (ticket 174): the address of Coolify and a token that may write the variables of one application.
+		'COOLIFY_URL',
+		'COOLIFY_TOKEN',
 	]
 
 	test('the CI reads none, and the other workflows only the ones of the allowed list', () => {

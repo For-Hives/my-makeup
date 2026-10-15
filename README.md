@@ -570,6 +570,8 @@ Chaque pull request et chaque poussée sur `v3` lancent `.github/workflows/ci.ym
 
 Chaque poussée sur `v3` lance aussi `.github/workflows/preprod.yml`, qui n'est pas un check requis : il attend que la préprod serve le commit poussé, puis lit la page du profil fictif (voir [`docs/preprod.md`](docs/preprod.md)). Il lit deux secrets du dépôt, l'accès protégé de la préprod, et ne fait que des GET.
 
+`.github/workflows/preprod-controles.yml` se lance à la main sur `v3` : il remet la préprod à son état semé, joue les parcours rapides puis le contrôle d'un hôte, avec des secrets du dépôt et sans qu'on saisisse un mot de passe (voir [`docs/preprod.md`](docs/preprod.md), « Les contrôles par la CI »).
+
 | Job | Ce qu'il lance |
 |---|---|
 | `qualite` | Fichiers générés par Payload à jour, `bun run typecheck`, `bun run ci:biome`, `bun run test:ci-garde` |
@@ -635,6 +637,7 @@ Rien ne se publie avant la fusion de `v3` dans `main`. Le détail, et ce qu'il r
 | `bun run admin:creer <email>` | Crée un compte de l'administration, et la seule façon d'avoir le premier. Le mot de passe se tape au clavier, deux fois (voir « Créer un compte admin ») |
 | `bun run test:integration` | Les tests d'intégration de `tests/integration/`, sur le banc. Avec un chemin : ce fichier seul |
 | `bun run test:e2e` | Les essais de bout en bout de `tests/e2e/`, dans un vrai navigateur, contre l'application construite et branchée sur le banc. Avec un chemin : ce fichier seul |
+| `bun run preprod:remise-ci` | La remise de la préprod à son état semé, pour le lancement manuel de la CI (ticket 174) : lit `COOLIFY_URL` et `COOLIFY_TOKEN`, ne vise que la préprod (voir [`docs/preprod.md`](docs/preprod.md), « Les contrôles par la CI ») |
 | `bun run bascule:controle` | Le contrôle d'un hôte (ticket 173) : lit en GET, 2 requêtes par seconde au plus, toutes les adresses de l'inventaire, le sitemap, le fichier robots, les anciennes routes d'authentification et le script de mesure, et écrit un rapport daté. L'hôte par `CONTROLE_HOTE_CIBLE` (voir [`docs/tests/controle-hote.md`](docs/tests/controle-hote.md)) |
 | `bun run sondes` | Les sondes de `tests/sondes/` : lisent le site en ligne, en GET seulement, 2 requêtes par seconde au plus. Une autre cible par `SONDES_CIBLE` (voir « Les sondes du site en ligne ») |
 | `bun run image:build` | Construit l'image Docker `my-makeup:local` |

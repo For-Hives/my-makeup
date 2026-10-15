@@ -45,6 +45,7 @@
 		"notes:ajouter": "bun --no-env-file scripts/release/ajouter-note.ts",
 		"release:publier": "bun --no-env-file scripts/release/publication.ts",
 		"bascule:controle": "bun --no-env-file scripts/bascule/lancer-controle-hote.ts",
+		"preprod:remise-ci": "bun --no-env-file scripts/preprod/lancer-remise-ci.ts",
 		"preprod:controle": "bun --no-env-file scripts/preprod/controle.ts",
 		"indexnow:tout": "bun --no-env-file scripts/seo/indexnow-tout.ts"
 	},
