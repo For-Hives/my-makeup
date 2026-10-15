@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { PROFILS_DU_JEU } from '../../src/jeu-fictif/profils'
 import { ARTICLES_DU_JEU, TALENTS_DU_JEU } from '../../src/jeu-fictif/redaction'
 import { CONTENU_DU_BANC, poserLeJeuDuBanc } from '../fixtures/jeu-du-banc'
 import { payloadDeTest } from '../outils/payload-test'
@@ -9,8 +10,8 @@ import { ouvrirSessionSansMotDePasse } from '../outils/session'
  * and counts its 12 profile types, its 3 talents and its 3 articles, one of them a draft.
  *
  * The bench is shared with the other tests of the run, which write their own profiles, talents
- * and articles: the test counts what belongs to the set, by the account of a profile type and by
- * the slugs of the set, never the total of a list. One test, on the large screen only.
+ * and articles: the test counts what belongs to the set, by the slugs of the profile types, the talents
+ * and the articles of the set, never the total of a list. One test, on the large screen only.
  */
 test.describe('Le jeu du banc dans l’administration', () => {
 	test('l’admin du jeu voit les 12 profils types, les 3 talents et les 3 articles', async ({ context, page }) => {
@@ -23,7 +24,10 @@ test.describe('Le jeu du banc dans l’administration', () => {
 		await context.addCookies(session.cookies)
 
 		await page.goto('/admin/collections/profils?limit=100')
-		await expect(page.locator('tbody tr').filter({ hasText: 'jeu-profil-' })).toHaveCount(CONTENU_DU_BANC.profilsTypes)
+		// The list shows the slug of a profile, no longer the address of its account (ticket 165).
+		for (const { attendu } of PROFILS_DU_JEU)
+			await expect(page.getByRole('link', { name: attendu.slug, exact: true })).toHaveCount(1)
+		expect(PROFILS_DU_JEU).toHaveLength(CONTENU_DU_BANC.profilsTypes)
 
 		await page.goto('/admin/collections/talents?limit=100')
 		for (const { slug } of TALENTS_DU_JEU)
