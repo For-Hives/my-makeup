@@ -3,10 +3,12 @@
 import { type ReactNode, useActionState, useEffect, useMemo, useRef } from 'react'
 import { track } from '@/lib/analytics/track'
 import {
+	CHAMP_PIEGE_DU_CONTACT,
 	type ChampDuContact,
 	type EtatDuContact,
 	MESSAGE_ENVOYE,
 	MESSAGE_NON_ENREGISTRE,
+	MESSAGE_TROP_DE_MESSAGES,
 	RESUME_DES_ERREURS,
 } from '@/lib/contact/message'
 
@@ -30,6 +32,7 @@ const LIBELLES: Record<ChampDuContact, string> = {
 function issue(etat: Exclude<EtatDuContact, null>): { ok: boolean; status: number } {
 	if ('envoye' in etat) return { ok: true, status: 200 }
 	if ('erreurs' in etat) return { ok: false, status: 400 }
+	if ('limite' in etat) return { ok: false, status: 429 }
 	return { ok: false, status: etat.reseau ? 0 : 500 }
 }
 
@@ -41,22 +44,21 @@ export function avecLEchecDuReseau(action: ActionDuContact): ActionDuContact {
 	return async (precedent, formulaire) => {
 		try {
 			return await action(precedent, formulaire)
-		} catch {
+		} catch (erreur) {
+			// The proxy's 429 (ticket 161) comes back as the message of the failed action.
+			const limite = erreur instanceof Error && erreur.message.includes(MESSAGE_TROP_DE_MESSAGES)
 			const texte = (cle: ChampDuContact) => {
 				const valeur = formulaire.get(cle)
 				return typeof valeur === 'string' ? valeur : ''
 			}
-			return {
-				echec: true,
-				reseau: true,
-				valeurs: {
-					prenom: texte('prenom'),
-					nom: texte('nom'),
-					email: texte('email'),
-					telephone: texte('telephone'),
-					message: texte('message'),
-				},
+			const valeurs = {
+				prenom: texte('prenom'),
+				nom: texte('nom'),
+				email: texte('email'),
+				telephone: texte('telephone'),
+				message: texte('message'),
 			}
+			return limite ? { limite: true, valeurs } : { echec: true, reseau: true, valeurs }
 		}
 	}
 }
@@ -157,7 +159,7 @@ export function FormulaireDeContact({ action, suivre = track }: { action: Action
 				if (verrou.current) evenement.preventDefault()
 				else verrou.current = true
 			}}
-			className="mx-auto my-32 max-w-xl px-4 sm:mt-20 md:px-0"
+			className="relative mx-auto my-32 max-w-xl px-4 sm:mt-20 md:px-0"
 		>
 			<div key={generation} className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-2">
 				<Champ champ="prenom" large={false} erreur={erreurs?.prenom}>
@@ -184,10 +186,27 @@ export function FormulaireDeContact({ action, suivre = track }: { action: Action
 					</p>
 				</div>
 			</div>
+			{/* The trap (ticket 161): out of sight and of the tab order, and hidden from screen readers. A person never fills it. */}
+			<div aria-hidden="true" className="absolute -left-[10000px] h-px w-px overflow-hidden">
+				<label htmlFor={CHAMP_PIEGE_DU_CONTACT}>
+					Laissez ce champ vide
+					<input
+						id={CHAMP_PIEGE_DU_CONTACT}
+						name={CHAMP_PIEGE_DU_CONTACT}
+						type="text"
+						tabIndex={-1}
+						autoComplete="off"
+						defaultValue=""
+					/>
+				</label>
+			</div>
 			<div role="alert" data-testid="erreur-contact" className="mt-6 empty:hidden">
 				{erreurs ? <p className="rounded-md bg-red-50 p-3 text-red-800 text-sm">{RESUME_DES_ERREURS}</p> : null}
 				{etat && 'echec' in etat ? (
 					<p className="rounded-md bg-red-50 p-3 text-red-800 text-sm">{MESSAGE_NON_ENREGISTRE}</p>
+				) : null}
+				{etat && 'limite' in etat ? (
+					<p className="rounded-md bg-red-50 p-3 text-red-800 text-sm">{MESSAGE_TROP_DE_MESSAGES}</p>
 				) : null}
 			</div>
 			<div className="mt-10">

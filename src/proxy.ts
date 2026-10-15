@@ -11,6 +11,11 @@ import { COOKIE_DE_SESSION, decisionDeLEspace } from '@/lib/auth/espace-ferme'
 import { ipClient } from '@/lib/auth/ip-client'
 import { COOKIE_DE_REINITIALISATION, planDuLien } from '@/lib/auth/mot-de-passe-oublie'
 import { CHEMIN_DE_L_INSCRIPTION, CHEMIN_DU_REFUS, secondesAvantUneInscription } from '@/lib/auth/refus-inscription'
+import {
+	CHEMIN_DU_CONTACT,
+	CHEMIN_DU_REFUS_DE_CONTACT,
+	secondesAvantUnMessageDeCetteRequete,
+} from '@/lib/contact/frein'
 import { freinerLaRecherche } from '@/lib/recherche/frein'
 import { robotsPourChemin } from '@/lib/seo/robots'
 import { redirectionDeForme } from '@/lib/urls/forme'
@@ -30,11 +35,13 @@ import { redirectionDeForme } from '@/lib/urls/forme'
  * - The cookies of the old authentication are expired on the first request, and the sign-in page tells
  *   once to sign in again (ticket 081). The back-office, the API and the files are left alone.
  * - A sign-up past the 5 an hour of its client address is sent to the route that answers 429 (ticket 084).
+ * - A contact message past the 5 an hour of its client address, or the 20 a day of its mailbox (read from a
+ *   copy of the body), is sent to the route that answers 429 (ticket 161). That path alone answers a promise.
  * - Every other response gets the robots directive (ticket 070). It reads APP_ENV at run time: the
  *   pre-production gets its variables after the build. The paths of the account and of the search
  *   answer noindex everywhere.
  */
-export function proxy(requete: NextRequest) {
+function proxyDuSite(requete: NextRequest) {
 	const { pathname, search } = requete.nextUrl
 	// The path as the visitor wrote it: `nextUrl.pathname` may already have lost a repeated slash.
 	const forme = redirectionDeForme(cheminEcrit(requete.url ?? requete.nextUrl.href) ?? pathname)
@@ -152,4 +159,25 @@ function cheminEcrit(url: string): string | undefined {
 	if (debut === -1) return undefined
 	const reste = url.slice(url.indexOf('/', debut + 3))
 	return reste.split(/[?#]/, 1)[0]
+}
+
+/**
+ * Next calls this and awaits what it returns. The type says `NextResponse`, as every path but one answers at
+ * once; a contact POST answers a promise of one (the mailbox is read from the body), which only Next
+ * and `proxyDuContact` rely on.
+ */
+export function proxy(requete: NextRequest): NextResponse
+export function proxy(requete: NextRequest): NextResponse | Promise<NextResponse> {
+	const reponse = proxyDuSite(requete)
+	if (requete.method !== 'POST' || requete.nextUrl.pathname !== CHEMIN_DU_CONTACT) return reponse
+	// A redirect of form (repeated or final slash) comes first, as for every other path.
+	if (reponse.headers.has('location')) return reponse
+	return proxyDuContact(requete, reponse)
+}
+
+/** The contact POST: past a brake (ticket 161), the request is rewritten to the route that answers 429 (same device as the sign-up, ticket 084). */
+export async function proxyDuContact(requete: NextRequest, reponse = proxyDuSite(requete)): Promise<NextResponse> {
+	const attente = await secondesAvantUnMessageDeCetteRequete(requete, ipClient(requete.headers))
+	if (attente === undefined) return reponse
+	return NextResponse.rewrite(new URL(CHEMIN_DU_REFUS_DE_CONTACT, requete.url ?? requete.nextUrl.href))
 }

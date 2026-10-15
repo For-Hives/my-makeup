@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { enregistrerUnMessageDeContact, type StockageDesDemandes } from '@/lib/contact/envoi-payload'
 import type { EtatDuMail, StatutDeDemande } from '@/lib/contact/etats'
+import { creerFreinsDeContact } from '@/lib/contact/frein'
 import type { MessageDeContact } from '@/lib/contact/message'
 import { type EmailAEnvoyer, EnvoiEmailEchoue, type EnvoyerEmail } from '@/lib/emails/envoi'
 
@@ -49,16 +50,19 @@ function banc(options: { creer?: () => Promise<number>; envoyer?: EnvoyerEmail; 
 			evenements.push('envoyer')
 			mails.push(email)
 		})
+	const freins = creerFreinsDeContact(crypto.randomUUID())
 	const entrees = (surcharge: Record<string, unknown> = {}) => ({
 		formulaire: formulaire(surcharge),
 		stockage,
 		envoyer,
 		destinataire: 'equipe@example.test',
+		client: '203.0.113.9',
+		freins,
 		apres: (travail: () => Promise<void>) => void travaux.push(travail()),
 		journal: { info: (l: string) => void lignes.push(l), erreur: (l: string) => void lignes.push(l) },
 		...(options.delaiMs !== undefined && { delaiMs: options.delaiMs }),
 	})
-	return { entrees, evenements, lignes, lignesDeLaBase, mails, termine: () => Promise.all(travaux) }
+	return { entrees, freins, evenements, lignes, lignesDeLaBase, mails, termine: () => Promise.all(travaux) }
 }
 
 describe('I32 adapté : la ligne est écrite avant l’envoi, puis marquée transmise', () => {

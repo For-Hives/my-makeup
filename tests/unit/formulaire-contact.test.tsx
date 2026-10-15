@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test'
 import { type ActionDuContact, avecLEchecDuReseau, FormulaireDeContact } from '@/components/contact/FormulaireDeContact'
-import type { EtatDuContact, MessageDeContact } from '@/lib/contact/message'
+import { type EtatDuContact, MESSAGE_TROP_DE_MESSAGES, type MessageDeContact } from '@/lib/contact/message'
 import { ouvrirFenetre } from '../outils/dom-react'
 
 /** The contact form alone, in a jsdom window (tickets 158 and 160; plan 02 E51 and E69 are played in a browser by tests/e2e/contact.spec.ts). */
@@ -213,4 +213,40 @@ test('avecLEchecDuReseau rend la saisie telle qu’elle a été tapée', async (
 		reseau: true,
 		valeurs: { prenom: 'Léa', nom: '', email: '', telephone: '', message: 'Bonjour' },
 	})
+})
+
+test('161 : le champ piège est hors de vue, hors du clavier et caché aux lecteurs d’écran', async () => {
+	const { element } = monter(async () => null)
+	const zone = await fenetre.monter(element)
+
+	const piege = zone.querySelector<HTMLInputElement>('input[name="commentaire"]')
+	expect(piege).toBeTruthy()
+	expect(piege?.getAttribute('tabindex')).toBe('-1')
+	expect(piege?.getAttribute('autocomplete')).toBe('off')
+	expect(piege?.value).toBe('')
+	expect(piege?.closest('[aria-hidden="true"]')).toBeTruthy()
+})
+
+test('161 : une limite atteinte dit la phrase en français, garde la saisie et compte 429', async () => {
+	const { element, mesures } = monter(async () => ({ limite: true, valeurs: VALEURS }))
+	const zone = await fenetre.monter(element)
+	await remplir()
+
+	await fenetre.cliquer(fenetre.bouton('Envoyer l’email'))
+	await fenetre.attendre(() => zone.querySelector('[role="alert"] p'))
+
+	expect(zone.querySelector('[role="alert"]')?.textContent).toContain('beaucoup de messages en peu de temps')
+	expect(fenetre.champ('Message').value).toBe('Une question.')
+	expect(fenetre.champ('Email').value).toBe('lea.temoin@example.test')
+	expect(mesures.map(m => m.proprietes)).toEqual([{ ok: false, status: 429 }])
+})
+
+test('161 : le 429 du proxy, relevé par le script de Next, redevient une limite avec la saisie gardée', async () => {
+	const action = avecLEchecDuReseau(async () => {
+		throw new Error(MESSAGE_TROP_DE_MESSAGES)
+	})
+	const formulaire = new FormData()
+	for (const [cle, valeur] of Object.entries(VALEURS)) formulaire.set(cle, valeur)
+
+	expect(await action(null, formulaire)).toEqual({ limite: true, valeurs: VALEURS })
 })
