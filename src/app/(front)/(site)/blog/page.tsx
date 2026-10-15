@@ -5,8 +5,8 @@ import { metadonnees } from '@/lib/seo/metadonnees'
 import { lesArticlesEnCache } from '@/services/public/en-cache'
 
 // Rendered at each request: the build runs without a database. The articles are read through the cache
-// of Next, tagged `articles`: a save of an article in the admin panel refreshes the list (ticket 047).
-// The cache of the page itself is ticket 117.
+// of Next, tagged `articles`: a save of an article in the admin panel refreshes the list (tickets 047 and 117), and a
+// visit of a page that did not change reads nothing in the database.
 export const dynamic = 'force-dynamic'
 
 // `/toutes-les-news` redirects here (ticket 072): the list shows every published article, not the

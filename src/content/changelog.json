@@ -105,6 +105,11 @@
 			"id": "tu-peux-renseigner-tes-reseaux-et-ton-site-depuis-ton-esp",
 			"type": "ajout",
 			"text": "Tu peux renseigner tes réseaux et ton site depuis ton espace : écris ton pseudo ou colle l’adresse, on s’occupe du reste."
+		},
+		{
+			"id": "quand-tu-modifies-ton-profil-ta-page-publique-est-a-jour",
+			"type": "amelioration",
+			"text": "Quand tu modifies ton profil, ta page publique est à jour en moins d’une minute, ainsi que la recherche et le plan du site."
 		}
 	],
 	"releases": []

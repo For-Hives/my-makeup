@@ -27,6 +27,7 @@ import { formatZone, rayonKm, villeAffichee } from '@/lib/format-zone'
 import { estMontantDePrix, prixMinimal } from '@/lib/prix'
 import { cibleDeLAdresse, valeursARechercher } from '@/lib/profil/adresse'
 import { nomAffiche, texte } from '@/lib/profil/nom-affiche'
+import { STATUT_PUBLIE } from '@/lib/profil/statut'
 import { estIndexable, FILTRE_LISTE } from '@/lib/profil/visibilite'
 import {
 	contacts,
@@ -291,7 +292,7 @@ async function lireLesPhotosDuProfil(
 
 /** What the address of a profile leads to: the profile, a redirection to its slug, or nothing. */
 export type AdresseDeProfil =
-	| { type: 'profil'; profil: ProfilPublic }
+	| { type: 'profil'; profil: ProfilPublic; publie: boolean }
 	| { type: 'redirection'; slug: string }
 	| { type: 'inconnue' }
 
@@ -342,6 +343,8 @@ export async function lireLAdresseDeProfil(payload: Payload, segment: string): P
 	const photos = await lireLesPhotosDuProfil(payload, [principale, ...rangee])
 	return {
 		type: 'profil',
+		// Only a published profile is refreshed by a save (src/lib/revalidation.ts): the page keeps it in the cache.
+		publie: profil.statut === STATUT_PUBLIE,
 		profil: profilPublicDe(profil, {
 			photo: (principale !== undefined && photos.get(principale)) || null,
 			galerie: rangee.flatMap(identifiant => (identifiant !== undefined && photos.get(identifiant)) || []),
