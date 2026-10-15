@@ -10,8 +10,9 @@ import type { MessageDeContact } from './message'
  *
  * - Only a message whose mail is in `echec` is sent again. The admin's click first takes the message
  *   (`reserver`: `echec` becomes `en-attente`, in one statement that tests the old state), then sends. A
- *   second click, a second tab, or a retry of the browser finds `en-attente` and sends nothing: one click
- *   or ten, one mail.
+ *   second click, a second tab, or a retry of the browser finds `en-attente` and sends nothing: a double
+ *   click sends one mail. Once a send has ended in `echec` (also when the relay was slower than the 8 s
+ *   deadline, and may still deliver late), a new click is a new send.
  * - The mail is the one of the first send, from what is stored. The row ends `envoye` and `transmise`, or
  *   `echec` again; the answer says which, so the panel shows the result.
  */

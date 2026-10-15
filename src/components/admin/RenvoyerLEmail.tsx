@@ -15,7 +15,8 @@ type Phase = 'repos' | 'envoi' | 'envoye' | 'echec' | 'deja'
 
 const PHRASES: Record<Exclude<Phase, 'repos' | 'envoi'>, string> = {
 	envoye: 'L’email a été renvoyé à l’équipe.',
-	echec: 'L’email n’a pas pu partir. Le message est gardé : tu peux réessayer dans un instant.',
+	echec:
+		'L’email n’a pas pu partir. Le message est gardé. Si l’équipe ne l’a pas reçu dans quelques minutes, tu peux le renvoyer.',
 	deja: 'Cet email n’est plus en échec : il est déjà parti, ou un autre envoi est en cours.',
 }
 

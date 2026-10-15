@@ -61,6 +61,31 @@ describe('Le cycle des statuts, tenu par la collection', () => {
 		expect(await statut()).toBe('spam')
 	})
 
+	test('un admin ne réécrit pas la date de réception, ni ne dit « transmise » pour un email en échec', async () => {
+		const { id, payload } = await messageEnBase('echec')
+		const { session } = await creerCompte('admin')
+		const enTetes = session.enTetes
+		const avant = (await payload.findByID({ collection: 'demandes', id, depth: 0 })).createdAt
+
+		const date = await appelerRest('PATCH', `/api/demandes/${id}`, {
+			enTetes,
+			corps: { createdAt: '2000-01-01T00:00:00.000Z', statut: 'repondue' },
+		})
+		expect(date.statut).toBe(200)
+		const apres = await payload.findByID({ collection: 'demandes', id, depth: 0 })
+		expect(apres.createdAt).toBe(avant)
+		expect(apres.statut).toBe('repondue')
+
+		const autre = await messageEnBase('echec')
+		const refus = await appelerRest('PATCH', `/api/demandes/${autre.id}`, { enTetes, corps: { statut: 'transmise' } })
+		expect(refus.statut).toBe(400)
+		expect(refus.texte).toContain('que lorsque son email est parti')
+		expect(await autre.payload.findByID({ collection: 'demandes', id: autre.id, depth: 0 })).toMatchObject({
+			statut: 'nouvelle',
+			etatMail: 'echec',
+		})
+	})
+
 	test('un « le mail est parti » tardif du serveur ne ramène pas un message répondu à « transmise »', async () => {
 		const { id, payload } = await messageEnBase('echec')
 		const { session } = await creerCompte('admin')

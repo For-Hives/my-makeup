@@ -33,8 +33,14 @@ const LIBELLES_DES_ETATS_DU_MAIL: Record<(typeof ETATS_DU_MAIL)[number], string>
  *   A late « the mail left » that arrives after an admin marked the message answered or spam changes nothing
  *   of its status.
  */
-const garderLeCycle: CollectionBeforeChangeHook = ({ data, originalDoc, operation, req }) => {
-	if (operation !== 'update' || !originalDoc) return data
+const garderLeCycle: CollectionBeforeChangeHook = ({ data: recu, originalDoc, operation, req }) => {
+	if (operation !== 'update' || !originalDoc) return recu
+	// The date of reception is the server's: the retention purge keys on it, so no request rewrites it.
+	const data = { ...recu }
+	if (req.user) {
+		if (originalDoc.createdAt === undefined) delete data.createdAt
+		else data.createdAt = originalDoc.createdAt
+	}
 	const de: unknown = originalDoc.statut
 	const vers: unknown = data.statut
 	if (!estUnStatutDeDemande(de) || !estUnStatutDeDemande(vers) || de === vers) return data
@@ -45,6 +51,17 @@ const garderLeCycle: CollectionBeforeChangeHook = ({ data, originalDoc, operatio
 					{
 						path: 'statut',
 						message: `Un message « ${LIBELLES_DES_STATUTS[de]} » ne peut pas passer à « ${LIBELLES_DES_STATUTS[vers]} ».`,
+					},
+				],
+			})
+		// `transmise` is the server's word for « the mail left »: an admin cannot say it while it did not.
+		if (vers === 'transmise' && originalDoc.etatMail !== 'envoye')
+			throw new ValidationError({
+				errors: [
+					{
+						path: 'statut',
+						message:
+							'Le message n’est « Transmis à l’équipe » que lorsque son email est parti. Renvoie l’email, ou marque le message « Répondu ».',
 					},
 				],
 			})
