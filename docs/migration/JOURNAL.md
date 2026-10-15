@@ -506,3 +506,28 @@ Ce que la v3 change par rapport au site actuel est dans [`CHANGEMENTS-VOULUS.md`
 - **Intégration des tickets 092, 093, 095, 103, 104, 105, 106, 107 dans `v3` (vague 5).**
   - Sept fusions ; le lot 065-067 n'est pas fusionné (tickets non faits, copie fraîche de la prod et stockage réel nécessaires). Le ticket 108 est fusionné avec le 106 sans être fait.
   - Conflits résolus en gardant les deux côtés : spec `profil-public` (le nettoyage par `usagers()` du lot 103 est gardé, le verrou de 104 retiré), page du profil (routage 308/404 de 104 avec métadonnées et JSON-LD de 105), imports de `profils.ts`, README et `CHANGEMENTS-VOULUS.md`. Une attente fixe du spec `blog-liste` (refusée par `test:ci-garde`, C06) remplacée par un `expect.poll`.
+- **Ticket 109 fait : les pages fixes des particuliers.**
+  - Cinq pages (`/pourquoi-utiliser-my-makeup-en-tant-que-particulier`, `/solutions/pour-les-particuliers`, trois guides `/particulier/*`) et `/demande-envoyee` (noindex, sans mesure), aux mêmes adresses, textes du jour du portage. Un seul h1 par page (registre : `pages-particuliers-un-seul-h1`, `demande-envoyee-sans-mesure`).
+  - Reste : la description de `/particulier/trouver-une-maquilleuse` garde la faute « tout vos besoins » de l'ancien site ; pas de capture à 390 px.
+- **Ticket 110 fait : les pages fixes des maquilleuses et « À propos ».**
+  - `/a-propos`, `/maquilleuse/partenariats`, `/pourquoi-rejoindre-my-makeup-en-tant-que-maquilleuse`, `/solutions/pour-les-maquilleuses`, statiques, un seul h1 (registre : `pages-maquilleuses-un-h1`). Aucune mention de Maeva, conformément à la décision D3.
+  - Reste : `ArticleDePage` (110) et `GuideParticulier` (109) se ressemblent, à fusionner plus tard.
+- **Ticket 112 fait : CGU, confidentialité et mentions légales à l'identique.**
+  - Textes mot pour mot (empreinte du texte brut en fixture), identité légale dans `src/lib/legal.ts`, bouton d'opposition à la mesure Umami (clé `umami.disabled`).
+  - Reste : les textes parlent encore du devis, hors projet depuis le 08/10 ; le numéro de téléphone et la durée de 25 mois sont à confirmer par Andy avant la bascule.
+- **Ticket 115 fait : `robots.txt` généré par le site.**
+  - `src/app/robots.ts` depuis `reglesRobots()` : tout autorisé sauf `/api/`, sitemap absolu sur `https://my-makeup.fr`. Le sitemap lui-même reste au ticket 113.
+- **Ticket 116 fait : aperçus de partage.**
+  - Balises Open Graph et Twitter sur chaque type de page via `metadonnees()` ; photo principale d'un profil en 1 200 px (300 Ko au plus, mesuré sur une photo synthétique, pas sur R2). Registre : `partage-image-article`.
+- **Ticket 108 : toujours pas terminé.**
+  - I45 exige maintenant, sur la copie importée, un titre d'onglet écrit de 50 à 60 caractères par talent : il échoue tant qu'Andy n'a pas écrit les 14 titres.
+- **Ticket 118 fait : l'espace affiche le profil de la maquilleuse connectée.**
+  - `/auth/profil` montre une carte par section (valeur stockée ou « à compléter »), sous la Nav du site ; une maquilleuse ne voit jamais le profil d'une autre (U54).
+- **Ticket 119 fait : la maquilleuse modifie son identité.**
+  - L'enregistrement rend les valeurs réellement stockées ou un message français ; le profil est trouvé par la session, jamais par la requête ; les champs réservés sont refusés (U32).
+- **Ticket 120 fait : le panneau d'édition au doigt et au clavier.**
+  - Parcours clavier complet (E68), Entrée maintenue ne crée qu'un enregistrement, résultat annoncé aux lecteurs d'écran.
+- **Tickets 065, 067 et 096 : fusionnés, pas faits.**
+  - 065 et 067 : `--controle` refuse `--sans-photos` (plus de faux vert sur les photos) ; il faut encore une copie de la prod du jour et le stockage réel. 096 : correctif de délai du test du journal et accessibilité de la connexion ; il faut un `ci-ok` entièrement vert, et la tranche 2/2 de l'e2e expire en CI pour une cause qui n'est pas l'authentification.
+- **Intégration des tickets 065, 067, 096, 108, 109, 110, 112, 115, 116, 118, 119 et 120 dans `v3` (vague 6).**
+  - Huit lots fusionnés, aucun écarté. Conflits résolus en gardant les deux côtés : README, `CHANGEMENTS-VOULUS.md` (une seule ligne « Page d'un talent », celle qui garde la phrase sur I45) et `tests/e2e/parite-urls.spec.ts` (listes `LIVREES` et `ADRESSES_LIVREES` fusionnées, les quatre pages du ticket 110 ajoutées).
