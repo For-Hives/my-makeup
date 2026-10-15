@@ -25,6 +25,11 @@ export interface EtatPublic {
 	slug: string
 	/** Shown to the public: a published profile (`statut`), a published article or talent (`_status`). */
 	visible: boolean
+	/**
+	 * In the sitemap: a profile is there when it is publishable, a published article or talent always.
+	 * Left out, it is `visible`. Read by IndexNow only (src/lib/seo/indexnow.ts, ticket 219).
+	 */
+	indexable?: boolean
 }
 
 /**

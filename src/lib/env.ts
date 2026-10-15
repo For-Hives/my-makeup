@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { finDuNettoyage } from './auth/cookies-herites'
+import { FORMAT_DE_LA_CLE } from './seo/indexnow'
 import type { VersionSources } from './version'
 
 /**
@@ -36,6 +37,7 @@ export type RawEnv = Partial<
 		| 'GOOGLE_CLIENT_ID'
 		| 'GOOGLE_CLIENT_SECRET'
 		| 'GOOGLE_OIDC_ISSUER'
+		| 'INDEXNOW_KEY'
 		| 'NEXT_PHASE'
 		| 'NEXT_PUBLIC_SITE_URL'
 		| 'NODE_ENV'
@@ -238,6 +240,7 @@ const EXPECTED = {
 	GOOGLE_CLIENT_ID: 'l’identifiant du client OAuth de la console Google, avec GOOGLE_CLIENT_SECRET',
 	GOOGLE_CLIENT_SECRET: 'le secret de ce client OAuth, avec GOOGLE_CLIENT_ID',
 	GOOGLE_OIDC_ISSUER: `${GOOGLE_ISSUER}, ou sur ce poste l’adresse du faux Google du banc de test, comme http://127.0.0.1:7080, sans « / » final`,
+	INDEXNOW_KEY: '32 caractères hexadécimaux en minuscules, comme la sortie de « openssl rand -hex 16 »',
 	NEXT_PUBLIC_SITE_URL: `${DEPLOYED_ORIGINS.join(', ')} ou une adresse de ce poste comme http://localhost:${DEFAULT_PORT}, sans « / » final`,
 	PAYLOAD_SECRET: `au moins ${SECRET_MIN_LENGTH} caractères, par exemple la sortie de « openssl rand -hex 32 »`,
 	PREPROD_REMISE_A_ZERO: `un jeton de 8 à 64 caractères, minuscules, chiffres et tirets, comme « 2026-10-15-matin », et seulement sur la préprod (${PREPROD_ORIGIN}, en production)`,
@@ -635,6 +638,10 @@ const schema = z.object({
 		.string()
 		.refine(value => oidcIssuer(value) !== undefined, { error: 'refusée' })
 		.optional(),
+	INDEXNOW_KEY: z
+		.string()
+		.refine(value => FORMAT_DE_LA_CLE.test(value.trim()), { error: 'illisible' })
+		.optional(),
 	NEXT_PUBLIC_SITE_URL: z
 		.string()
 		.refine(value => siteOrigin(value) !== undefined, { error: 'refusée' })
@@ -772,6 +779,7 @@ function processEnv(): RawEnv {
 		GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
 		GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
 		GOOGLE_OIDC_ISSUER: process.env.GOOGLE_OIDC_ISSUER,
+		INDEXNOW_KEY: process.env.INDEXNOW_KEY,
 		NEXT_PHASE: process.env.NEXT_PHASE,
 		NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
 		NODE_ENV: process.env.NODE_ENV,

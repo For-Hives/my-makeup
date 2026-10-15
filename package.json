@@ -44,7 +44,8 @@
 		"sondes": "bun --no-env-file tests/sondes/sondes.ts",
 		"notes:ajouter": "bun --no-env-file scripts/release/ajouter-note.ts",
 		"release:publier": "bun --no-env-file scripts/release/publication.ts",
-		"preprod:controle": "bun --no-env-file scripts/preprod/controle.ts"
+		"preprod:controle": "bun --no-env-file scripts/preprod/controle.ts",
+		"indexnow:tout": "bun --no-env-file scripts/seo/indexnow-tout.ts"
 	},
 	"dependencies": {
 		"@aws-sdk/client-s3": "3.1147.0",
