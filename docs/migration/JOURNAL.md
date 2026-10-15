@@ -491,9 +491,9 @@ Ce que la v3 change par rapport au site actuel est dans [`CHANGEMENTS-VOULUS.md`
   - Le banc ouvre son seul dossier de stockage à l'optimiseur (`IMAGES_DU_BANC`, jamais en production) : les 6 images répondent 200 et sont chargées aux deux tailles. Deux défauts corrigés au passage : la position annoncée lue en plein défilement, et le nettoyage du spec de page qui retirait les profils sous les pieds de l'autre projet (`usagers()` dans `tests/outils/verrou.ts`).
   - Reste : le geste au doigt n'est éprouvé que par un défilement simulé.
 - **Ticket 104 fait : statuts et adresses du profil public.**
-  - Une seule règle (`src/lib/profil/adresse.ts`) : profil non masqué en 200, en noindex sans canonique s'il n'est pas publiable (brouillons compris) ; ancien nom d'utilisateur ou variante du slug en un 308 vers le slug ; inconnu, masqué ou segment inutilisable en 404 français. Les 13 profils de spam, non importés, tombent dans le 404 des inconnus.
+  - Une seule règle (`adresse.ts` du dossier `src/lib/profil`) : profil non masqué en 200, en noindex sans canonique s'il n'est pas publiable (brouillons compris) ; ancien nom d'utilisateur ou variante du slug en un 308 vers le slug ; inconnu, masqué ou segment inutilisable en 404 français. Les 13 profils de spam, non importés, tombent dans le 404 des inconnus.
   - La page lit avec `overrideAccess` et écarte elle-même les profils masqués (`lireLAdresseDeProfil`) : c'est le point à relire.
-  - Reste : une séquence `%` mal formée (`/profil/%E0%A4%A`) répond 500 sur la route dynamique, à traiter dans le proxy.
+  - Reste : une séquence `%` mal formée (une adresse de profil terminée par `%E0%A4%A`) répond 500 sur la route dynamique, à traiter dans le proxy.
 - **Ticket 105 fait : titre, description et données structurées du profil.**
   - Titre unique, description de 70 à 155 caractères, canonique ou noindex, `ProfilePage` avec `Person`, offres chiffrées en EUR et fil d'Ariane, sérialisés par `serializeJsonLd` (une balise fermante dans un texte ne casse rien). Le fil d'Ariane n'a pas d'étape de zone (pas de page de zone avant le ticket 218).
 - **Ticket 106 fait : l'article de blog.**
