@@ -311,8 +311,7 @@ test.describe('136 : le portfolio, retirer une photo', { tag: '@mobile' }, () =>
 	test('L7 : Entrée maintenue sur « Retirer » ne retire qu’une photo, le focus reste dans le panneau', async ({
 		context,
 		page,
-	}, info) => {
-		test.skip(info.project.name === 'mobile', 'Une touche tenue enfoncée est un geste de clavier.')
+	}) => {
 		await maquilleuse(context, 4)
 		await page.goto('/auth/profil')
 		await ouvrir(page)
