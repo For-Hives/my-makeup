@@ -145,6 +145,11 @@
 			"id": "apres-avoir-confirme-ton-adresse-tu-crees-ton-profil-en-t",
 			"type": "ajout",
 			"text": "Après avoir confirmé ton adresse, tu crées ton profil en trois étapes (identité, zone, photo) et tu peux reprendre là où tu t’étais arrêtée."
+		},
+		{
+			"id": "tu-peux-supprimer-ton-compte-depuis-ton-espace-tu-retapes",
+			"type": "amelioration",
+			"text": "Tu peux supprimer ton compte depuis ton espace : tu retapes ton mot de passe pour confirmer, et ton profil, ton compte et tes photos disparaissent d'un seul coup."
 		}
 	],
 	"releases": []
