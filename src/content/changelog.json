@@ -85,6 +85,11 @@
 			"id": "tu-rediges-ta-description-depuis-ton-espace-avec-un-compt",
 			"type": "ajout",
 			"text": "Tu rédiges ta description depuis ton espace, avec un compteur qui montre les 200 caractères qui rendent ton profil publiable, une limite de 2 000 caractères et tes sauts de ligne gardés."
+		},
+		{
+			"id": "tu-choisis-ta-commune-dans-la-liste-officielle-avec-ton-r",
+			"type": "ajout",
+			"text": "Tu choisis ta commune dans la liste officielle, avec ton rayon d’action et « à domicile », depuis ton espace."
 		}
 	],
 	"releases": []

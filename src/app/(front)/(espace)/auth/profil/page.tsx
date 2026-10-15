@@ -2,14 +2,17 @@ import type { Metadata } from 'next'
 import { BoutonsDeDeconnexion } from '@/components/auth/BoutonsDeDeconnexion'
 import { CarteDeSection } from '@/components/espace/CarteDeSection'
 import { EditeurDeDescription } from '@/components/espace/EditeurDeDescription'
+import { EditeurDeLocalisation } from '@/components/espace/EditeurDeLocalisation'
 import { EditeurDIdentite } from '@/components/espace/EditeurDIdentite'
 import { RafraichirSession } from '@/components/espace/RafraichirSession'
 import { exigerMaquilleuse } from '@/lib/auth/session'
 import { cartesDuProfil } from '@/lib/espace/cartes'
+import { libelleDeLaCommune } from '@/lib/espace/localisation'
 import { profilDeLaMaquilleuse } from '@/lib/espace/mon-profil'
 import { utilisatriceDeLaRequete } from '@/lib/espace/requete'
 import { texte } from '@/lib/profil/nom-affiche'
 import { enregistrerMaDescription, enregistrerMonIdentite } from './actions'
+import { chercherMesCommunes, enregistrerMaLocalisation } from './localisation-actions'
 
 // Read per request: it depends on the session, and the build has no database. A page that reads
 // the session is never shared nor stored (`private, no-store`, ticket 075).
@@ -62,6 +65,17 @@ export default async function PageProfil() {
 								<EditeurDeDescription
 									valeurs={{ description: texte(profil.description) }}
 									envoyer={enregistrerMaDescription}
+								/>
+							) : carte.section === 'localisation' ? (
+								<EditeurDeLocalisation
+									valeurs={{
+										codeInsee: texte(profil.commune?.codeInsee),
+										libelle: libelleDeLaCommune(profil.commune ?? {}),
+										rayonKm: typeof profil.rayonKm === 'number' ? profil.rayonKm : null,
+										aDomicile: profil.aDomicile === true,
+									}}
+									envoyer={enregistrerMaLocalisation}
+									chercher={chercherMesCommunes}
 								/>
 							) : null
 						}
