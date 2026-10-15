@@ -1,0 +1,448 @@
+From 18581d322d49927486a9182b581f75f2134beccc Mon Sep 17 00:00:00 2001
+From: Andy Cinquin <cinquin.andy@gmail.com>
+Date: Thu, 15 Oct 2026 17:30:53 +0200
+Subject: [PATCH] feat(api): LEGACY_READ_ONLY freezes writes and registration
+ (v3 ticket 171)
+
+One variable and a restart close writes, registration, password reset and
+uploads (403); reads, search and sign-in stay. Unset it to undo.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .env.example                                  |   5 +
+ README.md                                     |   1 +
+ config/permissions.js                         |   3 +-
+ .../makeup-artiste/controllers/me-makeup.js   |   6 +
+ src/index.js                                  |  23 ++-
+ src/utils/read-only.js                        |  85 +++++++++
+ tests/integration/read-only.test.js           | 169 ++++++++++++++++++
+ tests/unit/read-only.test.js                  |  41 +++++
+ 8 files changed, 331 insertions(+), 2 deletions(-)
+ create mode 100644 src/utils/read-only.js
+ create mode 100644 tests/integration/read-only.test.js
+ create mode 100644 tests/unit/read-only.test.js
+
+diff --git a/.env.example b/.env.example
+index 482a333..5bb10dc 100644
+--- a/.env.example
++++ b/.env.example
+@@ -24,6 +24,11 @@ CORS_ORIGINS=http://localhost:3000
+ # false: leave the users-permissions email settings as the admin set them
+ #EMAIL_SETTINGS_SYNC=true
+ 
++# true: read-only API (freeze before the switch to the new site). Reads, search
++# and sign-in stay; writes, registration, password reset and uploads answer
++# 403. Remove the line and restart to undo; no rebuild.
++#LEGACY_READ_ONLY=true
++
+ # Daily sweep (04:00, Paris time) of the pictures sent from the artist space
+ # and never put on a profile for 24 h: log (default) only logs their count
+ # and ids, delete removes at most 50 per run (database and R2), off does
+diff --git a/README.md b/README.md
+index 191febc..8ed2ba6 100644
+--- a/README.md
++++ b/README.md
+@@ -159,6 +159,7 @@ sent before this column existed, have it empty.
+ | `EMAIL_SETTINGS_SYNC`      | `false` skips writing the email settings at start                                                    |
+ | `DOCUMENTATION_ENABLED`    | `true` serves `/documentation` outside development                                                   |
+ | `PERMISSIONS_SYNC`         | `false` skips applying `config/permissions.js` at start                                              |
++| `LEGACY_READ_ONLY`         | `true` freezes the API for the switch to the new site: reads, search and sign-in stay, every write, registration, password reset and upload answers 403 (`src/utils/read-only.js`). Unset it and restart to undo. Ignores `PERMISSIONS_SYNC=false` |
+ | `MEDIA_SWEEP`              | Daily sweep of unused artist uploads: `log` (default), `delete` or `off`                             |
+ | `MEDIA_REMOVAL`            | `log` stops every picture deletion and only logs it; `delete` (default) deletes                      |
+ | `CRON_ENABLED`             | `false` turns off the scheduled tasks (the media sweep)                                              |
+diff --git a/config/permissions.js b/config/permissions.js
+index 4885e8a..15f1b61 100644
+--- a/config/permissions.js
++++ b/config/permissions.js
+@@ -3,7 +3,8 @@
+ // missing from the database are added, any other action of these two roles
+ // is removed. A box ticked by hand in the admin is therefore undone at the
+ // next restart: change this file instead. PERMISSIONS_SYNC=false skips the
+-// sync, for an emergency change made from the admin.
++// sync, for an emergency change made from the admin. LEGACY_READ_ONLY=true
++// applies a reduced copy of these lists (src/utils/read-only.js).
+ //
+ // Calls made by the front (my-makeup), checked one by one:
+ // - public: /api/articles, /api/talents, /api/makeup-artistes (sitemap,
+diff --git a/src/api/makeup-artiste/controllers/me-makeup.js b/src/api/makeup-artiste/controllers/me-makeup.js
+index 1a31353..ec2239e 100644
+--- a/src/api/makeup-artiste/controllers/me-makeup.js
++++ b/src/api/makeup-artiste/controllers/me-makeup.js
+@@ -5,6 +5,7 @@
+  */
+ 
+ const { FILE_NOT_ALLOWED } = require("../services/me-makeup");
++const { isReadOnly } = require("../../../utils/read-only");
+ 
+ module.exports = {
+   async initMakeup(ctx, next) {
+@@ -50,6 +51,11 @@ module.exports = {
+         .service("api::makeup-artiste.me-makeup")
+         .meMakeupArtist(ctx.state.user);
+ 
++      // Read by the artist space (server side) to show the maintenance
++      // message: the API alone tells whether it is frozen
++      if (isReadOnly(process.env)) {
++        ctx.set("X-Read-Only", "true");
++      }
+       ctx.body = data;
+     } catch (err) {
+       console.log(err);
+diff --git a/src/index.js b/src/index.js
+index a4e3b33..d56aa23 100644
+--- a/src/index.js
++++ b/src/index.js
+@@ -7,6 +7,11 @@ const {
+   wantedEmailSettings,
+ } = require("./utils/email-settings");
+ const { syncRolePermissions } = require("./utils/permissions");
++const {
++  isReadOnly,
++  readOnlyPermissions,
++  subscribeReadOnly,
++} = require("./utils/read-only");
+ const { subscribeRetiredProviders } = require("./utils/retired-providers");
+ 
+ module.exports = {
+@@ -44,8 +49,24 @@ module.exports = {
+     // Former Facebook accounts sign in with a password once they set one
+     subscribeRetiredProviders(strapi);
+ 
++    // LEGACY_READ_ONLY=true freezes the API for the switch to the new site:
++    // reads, search and sign-in stay, writes and registration are refused.
++    // Unset (or any other value) and restart: back to config/permissions.js.
++    const readOnly = isReadOnly(process.env);
++    subscribeReadOnly(strapi);
++
+     // Public and Authenticated permissions come from config/permissions.js
+-    if (process.env.PERMISSIONS_SYNC === "false") {
++    // (reduced to reads and sign-in in read-only mode, which ignores
++    // PERMISSIONS_SYNC=false: the freeze must hold)
++    if (readOnly) {
++      strapi.log.warn(
++        "[read-only] LEGACY_READ_ONLY=true: writes and registration refused"
++      );
++      await syncRolePermissions(
++        strapi,
++        readOnlyPermissions(strapi.config.get("permissions"))
++      );
++    } else if (process.env.PERMISSIONS_SYNC === "false") {
+       strapi.log.warn(
+         "[permissions] PERMISSIONS_SYNC=false: role permissions left as they are in the database"
+       );
+diff --git a/src/utils/read-only.js b/src/utils/read-only.js
+new file mode 100644
+index 0000000..8793ea7
+--- /dev/null
++++ b/src/utils/read-only.js
+@@ -0,0 +1,85 @@
++"use strict";
++
++const { errors } = require("@strapi/utils");
++
++const { ForbiddenError } = errors;
++
++/**
++ * Read-only mode of the API (LEGACY_READ_ONLY=true), for the freeze that
++ * precedes the switch to the new site: reads, search and sign-in keep
++ * working, every write and registration is refused with a 403.
++ *
++ * Permissions are re-applied at every start (src/utils/permissions.js), so
++ * removing boxes by hand in the admin would not last. The mode is a view on
++ * config/permissions.js, applied by the same sync: one variable and one
++ * restart turn it on, the same restart without it turns it off.
++ */
++
++const READ_ONLY_MESSAGE = "The site is read-only for a maintenance";
++
++// What stays open while the mode is on. Anything else of config/permissions.js
++// is dropped: it either writes (profile, upload, registration, password
++// reset, email confirmation) or has no reason to stay once nobody can write.
++const KEPT_PUBLIC = [
++  "api::article.article.find",
++  "api::article.article.findOne",
++  "api::talent.talent.find",
++  "api::talent.talent.findOne",
++  "api::makeup-artiste.makeup-artiste.find",
++  "api::makeup-artiste.makeup-artiste.findOne",
++  "api::searching.searching.searchMakeup",
++  // sign-in: local password (POST /auth/local) and Google (connect, callback)
++  "plugin::users-permissions.auth.callback",
++  "plugin::users-permissions.auth.connect",
++];
++const KEPT_AUTHENTICATED = [
++  "api::makeup-artiste.me-makeup.meMakeup",
++  "plugin::users-permissions.user.me",
++];
++
++/**
++ * @param {Record<string, string | undefined>} env
++ * @returns {boolean} true only for the exact value "true"
++ */
++const isReadOnly = (env) => env.LEGACY_READ_ONLY === "true";
++
++/**
++ * @param {{ public: string[], authenticated: string[] }} wanted
++ *   Permissions of config/permissions.js
++ * @returns {{ public: string[], authenticated: string[] }} The same lists,
++ *   reduced to the read and sign-in actions
++ */
++const readOnlyPermissions = (wanted) => ({
++  public: wanted.public.filter((action) => KEPT_PUBLIC.includes(action)),
++  authenticated: wanted.authenticated.filter((action) =>
++    KEPT_AUTHENTICATED.includes(action)
++  ),
++});
++
++/**
++ * Users lifecycle: while the mode is on, no account is created by any path.
++ * The public route is already refused by the permissions; this one stops
++ * the account a Google sign-in would create (users-permissions registers it
++ * when none matches), and an account added from the admin. The mode is read
++ * at each call, so nothing is stored: a restart without the variable is
++ * enough.
++ *
++ * @param {object} strapi
++ */
++const subscribeReadOnly = (strapi) => {
++  strapi.db.lifecycles.subscribe({
++    models: ["plugin::users-permissions.user"],
++    beforeCreate() {
++      if (isReadOnly(process.env)) {
++        throw new ForbiddenError(READ_ONLY_MESSAGE);
++      }
++    },
++  });
++};
++
++module.exports = {
++  READ_ONLY_MESSAGE,
++  isReadOnly,
++  readOnlyPermissions,
++  subscribeReadOnly,
++};
+diff --git a/tests/integration/read-only.test.js b/tests/integration/read-only.test.js
+new file mode 100644
+index 0000000..b519ecf
+--- /dev/null
++++ b/tests/integration/read-only.test.js
+@@ -0,0 +1,169 @@
++// LEGACY_READ_ONLY=true: reads, search and sign-in stay, writes and
++// registration answer 403 and write nothing; one variable and a restart
++// (the bootstrap run again) bring everything back.
++const { describe, it, expect, beforeAll, afterAll } = require("@jest/globals");
++const { setupStrapi, stopStrapi } = require("../helpers/strapi");
++const { http, findRole, createAccount, picture } = require("../helpers/fixtures");
++const permissions = require("../../config/permissions");
++const { bootstrap } = require("../../src/index");
++
++const PERMISSION_UID = "plugin::users-permissions.permission";
++const USER_UID = "plugin::users-permissions.user";
++const PROFILE_UID = "api::makeup-artiste.makeup-artiste";
++
++// A restart with these variables: the bootstrap again, on the same database
++const restart = async (env) => {
++  for (const [key, value] of Object.entries(env)) {
++    if (value === undefined) delete process.env[key];
++    else process.env[key] = value;
++  }
++  await bootstrap({ strapi });
++};
++
++const actionsOf = async (type) => {
++  const role = await findRole(type);
++  const rows = await strapi.query(PERMISSION_UID).findMany({
++    select: ["action"],
++    where: { role: { id: role.id } },
++  });
++  return rows.map((row) => row.action).sort();
++};
++
++describe("read-only mode", () => {
++  let owner;
++  const as = (verb, path) =>
++    http()[verb](path).set("Authorization", `Bearer ${owner.jwt}`);
++  const register = (name) =>
++    http()
++      .post("/api/auth/local/register")
++      .send({
++        username: name,
++        email: `${name}@example.test`,
++        password: "Fictional-1234",
++      });
++
++  beforeAll(async () => {
++    await setupStrapi();
++    owner = await createAccount("readonly", { city: "Annecy" });
++  }, 60000);
++
++  afterAll(async () => {
++    await stopStrapi();
++  });
++
++  it("starts as usual: writes work", async () => {
++    await as("patch", "/api/me-makeup").send({ city: "Lyon" }).expect(200);
++    await register("before").expect(200);
++  });
++
++  it("with the variable: writes and registration answer 403, nothing is written", async () => {
++    // PERMISSIONS_SYNC=false does not lift the freeze
++    await restart({ LEGACY_READ_ONLY: "true", PERMISSIONS_SYNC: "false" });
++
++    const profileBefore = await strapi.entityService.findOne(
++      PROFILE_UID,
++      owner.profile.id
++    );
++    const usersBefore = await strapi.query(USER_UID).count();
++
++    await as("post", "/api/me-makeup").expect(403);
++    await as("patch", "/api/me-makeup").send({ city: "Paris" }).expect(403);
++    await as("delete", "/api/me-makeup").expect(403);
++    await as("post", "/api/upload")
++      .attach("files", await picture(), {
++        filename: "photo.png",
++        contentType: "image/png",
++      })
++      .expect(403);
++    await register("after").expect(403);
++    await http()
++      .post("/api/auth/forgot-password")
++      .send({ email: "readonly@example.test" })
++      .expect(403);
++    await http()
++      .post("/api/auth/reset-password")
++      .send({ code: "x", password: "Fictional-5678", passwordConfirmation: "Fictional-5678" })
++      .expect(403);
++
++    expect(
++      await strapi.entityService.findOne(PROFILE_UID, owner.profile.id)
++    ).toEqual(profileBefore);
++    expect(await strapi.query(USER_UID).count()).toBe(usersBefore);
++  });
++
++  it("with the variable: reads, search and sign-in are unchanged", async () => {
++    const me = await as("get", "/api/me-makeup").expect(200);
++    expect(me.body.city).toBe("Lyon");
++    expect(me.headers["x-read-only"]).toBe("true");
++    await as("get", "/api/users/me").expect(200);
++    await http().get("/api/makeup-artistes").expect(200);
++    await http().get("/api/articles").expect(200);
++    await http().get("/api/talents").expect(200);
++    await http()
++      .get("/api/searching")
++      .set("X-Forwarded-For", "203.0.113.171")
++      .expect(200);
++    const login = await http()
++      .post("/api/auth/local")
++      .set("X-Forwarded-For", "203.0.113.172")
++      .send({ identifier: "readonly@example.test", password: "Fictional-1234" })
++      .expect(200);
++    expect(login.body.jwt).toBeTruthy();
++  });
++
++  it("logs the mode without any data", async () => {
++    const messages = [];
++    const warn = strapi.log.warn;
++    strapi.log.warn = (message) => messages.push(message);
++    try {
++      await restart({ LEGACY_READ_ONLY: "true" });
++    } finally {
++      strapi.log.warn = warn;
++    }
++    expect(messages).toEqual([
++      "[read-only] LEGACY_READ_ONLY=true: writes and registration refused",
++    ]);
++  });
++
++  it("without the variable, one restart brings back the permissions and registration", async () => {
++    await restart({ LEGACY_READ_ONLY: undefined, PERMISSIONS_SYNC: undefined });
++
++    expect(await actionsOf("public")).toEqual([...permissions.public].sort());
++    expect(await actionsOf("authenticated")).toEqual(
++      [...permissions.authenticated].sort()
++    );
++
++    const me = await as("get", "/api/me-makeup").expect(200);
++    expect(me.headers["x-read-only"]).toBeUndefined();
++    await as("patch", "/api/me-makeup").send({ city: "Paris" }).expect(200);
++    await register("restored").expect(200);
++  });
++
++  it("no account is created while the mode is on, whatever the path (Google sign-in included)", async () => {
++    const role = await findRole("authenticated");
++    const add = () =>
++      strapi.plugins["users-permissions"].services.user.add({
++        username: "google-newcomer",
++        email: "google-newcomer@example.test",
++        provider: "google",
++        confirmed: true,
++        role: role.id,
++      });
++
++    await restart({ LEGACY_READ_ONLY: "true" });
++    await expect(add()).rejects.toThrow("read-only");
++    await restart({ LEGACY_READ_ONLY: undefined });
++    expect(
++      await strapi
++        .query(USER_UID)
++        .count({ where: { email: "google-newcomer@example.test" } })
++    ).toBe(0);
++
++    await add();
++    expect(
++      await strapi
++        .query(USER_UID)
++        .count({ where: { email: "google-newcomer@example.test" } })
++    ).toBe(1);
++  });
++});
+diff --git a/tests/unit/read-only.test.js b/tests/unit/read-only.test.js
+new file mode 100644
+index 0000000..3b13f06
+--- /dev/null
++++ b/tests/unit/read-only.test.js
+@@ -0,0 +1,41 @@
++const { describe, it, expect } = require("@jest/globals");
++const permissions = require("../../config/permissions");
++const { isReadOnly, readOnlyPermissions } = require("../../src/utils/read-only");
++
++describe("isReadOnly", () => {
++  it("is on only for the exact value true", () => {
++    expect(isReadOnly({ LEGACY_READ_ONLY: "true" })).toBe(true);
++    for (const value of [undefined, "", "false", "1", "TRUE", "yes"]) {
++      expect(isReadOnly({ LEGACY_READ_ONLY: value })).toBe(false);
++    }
++  });
++});
++
++describe("readOnlyPermissions", () => {
++  const reduced = readOnlyPermissions(permissions);
++
++  it("keeps reads, search and sign-in, nothing that writes", () => {
++    expect([...reduced.public].sort()).toEqual([
++      "api::article.article.find",
++      "api::article.article.findOne",
++      "api::makeup-artiste.makeup-artiste.find",
++      "api::makeup-artiste.makeup-artiste.findOne",
++      "api::searching.searching.searchMakeup",
++      "api::talent.talent.find",
++      "api::talent.talent.findOne",
++      "plugin::users-permissions.auth.callback",
++      "plugin::users-permissions.auth.connect",
++    ]);
++    expect([...reduced.authenticated].sort()).toEqual([
++      "api::makeup-artiste.me-makeup.meMakeup",
++      "plugin::users-permissions.user.me",
++    ]);
++  });
++
++  it("only ever removes actions of config/permissions.js", () => {
++    expect(permissions.public).toEqual(expect.arrayContaining(reduced.public));
++    expect(permissions.authenticated).toEqual(
++      expect.arrayContaining(reduced.authenticated)
++    );
++  });
++});
+-- 
+2.56.0
+

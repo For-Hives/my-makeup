@@ -1,0 +1,113 @@
+From 48f8aa085174f4feb54d07f4766a1e30c1079851 Mon Sep 17 00:00:00 2001
+From: Andy Cinquin <cinquin.andy@gmail.com>
+Date: Thu, 15 Oct 2026 17:32:15 +0200
+Subject: [PATCH] feat(front): the artist space shows a maintenance message
+ when the API is read-only (v3 ticket 171)
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/lib/lecture-seule.js          | 16 ++++++++++++++++
+ src/pages/auth/profil.js          | 13 +++++++++++--
+ tests/unit/lecture-seule.test.mjs | 16 ++++++++++++++++
+ 3 files changed, 43 insertions(+), 2 deletions(-)
+ create mode 100644 src/lib/lecture-seule.js
+ create mode 100644 tests/unit/lecture-seule.test.mjs
+
+diff --git a/src/lib/lecture-seule.js b/src/lib/lecture-seule.js
+new file mode 100644
+index 0000000..9104ce4
+--- /dev/null
++++ b/src/lib/lecture-seule.js
+@@ -0,0 +1,16 @@
++/**
++ * The API tells when it is read-only (freeze before the switch to the new
++ * site) with an X-Read-Only header on the profile read. No variable here:
++ * the same restart of the API turns the message on and off.
++ * @param {{ headers?: { get: (name: string) => string | null } } | null | undefined} response
++ * @returns {boolean}
++ */
++export function apiEnLectureSeule(response) {
++	return response?.headers?.get('x-read-only') === 'true'
++}
++
++export const MESSAGE_LECTURE_SEULE = {
++	title: 'Maintenance en cours',
++	description:
++		'Tu peux consulter ton profil, mais pas le modifier pour le moment : tes changements ne seraient pas gardés. Reviens un peu plus tard.',
++}
+diff --git a/src/pages/auth/profil.js b/src/pages/auth/profil.js
+index 4f86c0d..03ef983 100644
+--- a/src/pages/auth/profil.js
++++ b/src/pages/auth/profil.js
+@@ -7,12 +7,14 @@ import React from 'react'
+ import DangerZone from '@/components/Global/DangerZone'
+ import Footer from '@/components/Global/Footer'
+ import Nav from '@/components/Global/Nav'
++import Warning from '@/components/Global/Warning'
+ import InfosProfil from '@/components/Profil/Parents/InfosProfil'
+ import ResumeProfil from '@/components/Profil/Parents/ResumeProfil'
+ import { track } from '@/lib/analytics'
+ import { messageErreur } from '@/lib/auth-erreurs'
+ import { aCookieDeSession, cookiesSessionAEffacer, DELAI_STRAPI_MS, urlSessionExpiree } from '@/lib/auth-session'
+ import { devisFormUrl } from '@/lib/devis'
++import { apiEnLectureSeule, MESSAGE_LECTURE_SEULE } from '@/lib/lecture-seule'
+ import { devientPubliable } from '@/lib/profil/completude'
+ import { filtrerProfilPrive } from '@/lib/profil-prive'
+ import { API_SERVEUR, authOptions, journalAuth } from '@/pages/api/auth/[...nextauth]'
+@@ -21,7 +23,7 @@ import { API_SERVEUR, authOptions, journalAuth } from '@/pages/api/auth/[...next
+ // flag as the public profile page and the sitemap
+ const FORMULAIRE_DEVIS = devisFormUrl(process.env.NEXT_PUBLIC_DEVIS_FORM_URL) !== null
+ 
+-function Profil({ data, erreur }) {
++function Profil({ data, erreur, lectureSeule = false }) {
+ 	// the modals read the Strapi JWT from here (loaded after the page)
+ 	const { data: session } = useSession()
+ 	const router = useRouter()
+@@ -81,6 +83,11 @@ function Profil({ data, erreur }) {
+ 			<main className={'relative'}>
+ 				{user ? (
+ 					<>
++						{lectureSeule && (
++							<div role="status" className="mx-auto max-w-3xl px-4 pt-6">
++								<Warning title={MESSAGE_LECTURE_SEULE.title} description={MESSAGE_LECTURE_SEULE.description} />
++							</div>
++						)}
+ 						<ResumeProfil user={user} handleUpdateUser={handleUpdateUser} isPublic={isPublic} />
+ 						<InfosProfil
+ 							user={user}
+@@ -170,7 +177,9 @@ export const getServerSideProps = async ({ req, res, resolvedUrl }) => {
+ 	// allow list: never the password hash, tokens or admin relations, and
+ 	// no session (nor JWT) in __NEXT_DATA__
+ 	const data = filtrerProfilPrive(await response.json().catch(() => null))
+-	return data ? { props: { data } } : { props: { data: null, erreur: 'service-indisponible' } }
++	return data
++		? { props: { data, lectureSeule: apiEnLectureSeule(response) } }
++		: { props: { data: null, erreur: 'service-indisponible' } }
+ }
+ 
+ export default Profil
+diff --git a/tests/unit/lecture-seule.test.mjs b/tests/unit/lecture-seule.test.mjs
+new file mode 100644
+index 0000000..68bf6ed
+--- /dev/null
++++ b/tests/unit/lecture-seule.test.mjs
+@@ -0,0 +1,16 @@
++import assert from 'node:assert/strict'
++import { test } from 'node:test'
++import { apiEnLectureSeule, MESSAGE_LECTURE_SEULE } from '../../src/lib/lecture-seule.js'
++
++test('read-only only when the API says so', () => {
++	assert.equal(apiEnLectureSeule(new Response('{}', { headers: { 'X-Read-Only': 'true' } })), true)
++	assert.equal(apiEnLectureSeule(new Response('{}')), false)
++	assert.equal(apiEnLectureSeule(new Response('{}', { headers: { 'X-Read-Only': 'false' } })), false)
++	assert.equal(apiEnLectureSeule(undefined), false)
++	assert.equal(apiEnLectureSeule(null), false)
++})
++
++test('the message is in French and says why nothing can be saved', () => {
++	assert.match(MESSAGE_LECTURE_SEULE.title, /Maintenance/)
++	assert.match(MESSAGE_LECTURE_SEULE.description, /pas le modifier/)
++})
+-- 
+2.56.0
+
