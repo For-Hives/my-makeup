@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test'
 import { violationsGraves } from '../outils/axe'
-import { fauxUmami } from '../outils/faux-umami'
+import { fauxUmami, unAgentParEssai } from '../outils/faux-umami'
 import { type Mail, mailsRecus } from '../outils/mailpit'
 import { payloadDeTest } from '../outils/payload-test'
 
@@ -199,22 +199,22 @@ test.describe('160 : un double clic ou Entrée maintenue n’envoient qu’un me
 	})
 })
 
-/** The user agent of an ordinary Chrome: the default one of the headless browser says « HeadlessChrome », which is not measured. */
-const AGENT_ORDINAIRE =
-	'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36'
-
 test.describe('L’événement de contact', () => {
-	test.use({ userAgent: AGENT_ORDINAIRE })
+	// The default user agent of the headless browser says « HeadlessChrome », which is not measured: an ordinary
+	// Chrome, with a mark of its own. The fake Umami is shared by every worker of the run, and the test reads
+	// only what came from its browser (tests/outils/faux-umami.ts).
+	test.use(unAgentParEssai())
 
 	test('un message enregistré émet un événement, une fois, sans rien de ce qui a été saisi', async ({
 		context,
 		page,
+		userAgent,
 	}) => {
 		// The filter of the page does not measure an automated browser: this one plays an ordinary one.
 		await context.addInitScript(() => {
 			Object.defineProperty(navigator, 'webdriver', { get: () => false })
 		})
-		const umami = fauxUmami()
+		const umami = fauxUmami().pourLAgent(userAgent)
 		const evenements = async () => (await umami.envois('platform_contact_submit')).length
 		const avant = await evenements()
 		const s = saisie({ message: 'Un message très personnel MARQUEUR-ESSAI' })

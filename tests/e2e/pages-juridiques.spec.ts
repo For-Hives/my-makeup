@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { fauxUmami, type OutilFauxUmami } from '../outils/faux-umami'
+import { fauxUmami, type LectureFauxUmami, unAgentParEssai } from '../outils/faux-umami'
 
 /**
  * The three legal pages in a browser (ticket 112): they answer 200 with a single h1, and the button
@@ -30,17 +30,14 @@ test.describe('Les pages juridiques', { tag: '@mobile' }, () => {
 })
 
 test.describe('L’opposition à la mesure', () => {
-	// The fake Umami is one instance for the whole run: the tests of this file take turns.
-	test.describe.configure({ mode: 'serial' })
-	let umami: OutilFauxUmami
-	// The default agent of the headless browser says « HeadlessChrome », which the filter refuses to measure.
-	test.use({
-		userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
-	})
+	let umami: LectureFauxUmami
+	// The default agent of the headless browser says « HeadlessChrome », which the filter refuses to measure: an
+	// ordinary Chrome, with a mark of its own. The fake Umami is shared by every worker of the run, and the test
+	// reads only what came from its browser (tests/outils/faux-umami.ts).
+	test.use(unAgentParEssai())
 
-	test.beforeEach(async ({ context }) => {
-		umami = fauxUmami()
-		await umami.vider()
+	test.beforeEach(async ({ context, userAgent }) => {
+		umami = fauxUmami().pourLAgent(userAgent)
 		await context.addInitScript(() => {
 			Object.defineProperty(navigator, 'webdriver', { get: () => false })
 		})
@@ -48,12 +45,13 @@ test.describe('L’opposition à la mesure', () => {
 
 	test('un clic coupe l’envoi au faux Umami sur ce navigateur, un second le rétablit', async ({ page }) => {
 		const vues = async () => (await umami.envois()).length
+		const vuesDesCgu = async () =>
+			(await umami.recus()).filter(recu => JSON.stringify(recu.corps).includes('/cgu')).length
 		const cle = () => page.evaluate(() => window.localStorage.getItem('umami.disabled'))
 
 		// Before the click, the visit is counted.
 		await page.goto('/politique-de-confidentialite')
 		await expect.poll(vues, { timeout: 10_000 }).toBeGreaterThan(0)
-		await umami.vider()
 
 		// One click: this browser is out.
 		await page.getByRole('button', { name: 'Ne plus mesurer mes visites' }).click()
@@ -64,10 +62,9 @@ test.describe('L’opposition à la mesure', () => {
 		await page.goto('/cgu')
 		await page.waitForFunction(() => 'umami' in window)
 		await page.evaluate(() => (window as unknown as { umami: { track: () => Promise<void> } }).umami.track())
-		// Measures of the first page (sent before the click) may still reach the fake after it was emptied:
+		// Measures of the first page (sent before the click) may still reach the fake after it:
 		// only what the page opened after the click sends counts.
-		const apresLeClic = (await umami.recus()).filter(recu => JSON.stringify(recu.corps).includes('/cgu'))
-		expect(apresLeClic).toEqual([])
+		expect(await vuesDesCgu()).toBe(0)
 
 		// The choice outlives the page: the button says so when the policy is opened again.
 		await page.goto('/politique-de-confidentialite')
@@ -78,6 +75,6 @@ test.describe('L’opposition à la mesure', () => {
 		await expect(page.getByText("La mesure d'audience est active sur ce navigateur.")).toBeVisible()
 		expect(await cle()).toBeNull()
 		await page.goto('/cgu')
-		await expect.poll(vues, { timeout: 10_000 }).toBeGreaterThan(0)
+		await expect.poll(vuesDesCgu, { timeout: 10_000 }).toBeGreaterThan(0)
 	})
 })
