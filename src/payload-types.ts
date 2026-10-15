@@ -81,7 +81,11 @@ export interface Config {
     'payload-preferences': PayloadPreference;
     'payload-migrations': PayloadMigration;
   };
-  collectionsJoins: {};
+  collectionsJoins: {
+    pros: {
+      profil: 'profils';
+    };
+  };
   collectionsSelect: {
     admins: AdminsSelect<false> | AdminsSelect<true>;
     pros: ProsSelect<false> | ProsSelect<true>;
@@ -183,6 +187,9 @@ export interface Pro {
    * Nom d’affichage, choisi à l’inscription. Plusieurs comptes peuvent porter le même.
    */
   nom?: string | null;
+  /**
+   * Bloquer ferme les sessions ouvertes du compte et refuse sa connexion. Débloquer rend l’accès.
+   */
   bloque?: boolean | null;
   derniereConnexion?: string | null;
   /**
@@ -191,6 +198,11 @@ export interface Pro {
   legacyProvider?: string | null;
   strapiId?: number | null;
   legacyBcrypt?: string | null;
+  profil?: {
+    docs?: (number | Profil)[];
+    hasNextPage?: boolean;
+    totalDocs?: number;
+  };
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -732,6 +744,7 @@ export interface ProsSelect<T extends boolean = true> {
   legacyProvider?: T;
   strapiId?: T;
   legacyBcrypt?: T;
+  profil?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;

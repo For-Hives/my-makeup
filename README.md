@@ -173,6 +173,16 @@ Une valeur qui n'est pas un choix est refusée avec une phrase, jamais ignorée 
 
 Tests : `tests/unit/profils-filtre-statut.test.ts`, sur le banc `tests/integration/admin-profils-liste.test.ts` (les 12 profils du banc, le tri, les refus, le masquage), et `tests/e2e/admin-profils.spec.ts` (E53, E56 sans journal).
 
+### La liste des comptes dans l'administration
+
+La liste de `pros` montre, dans l'ordre : l'adresse, la création, « Adresse confirmée », « Bloqué », la dernière connexion et la présence d'un profil, le compte le plus récent d'abord (`defaultSort: '-createdAt'`). La dernière activité d'un compte est pour l'instant sa dernière connexion (`derniereConnexion`) : `derniereActivite` du plan n'existe pas encore (`docs/migration/SCHEMA.md`, §9). La colonne « Profil » lit le champ `profil`, un champ de jointure vers `profils.pro` : il n'a ni colonne ni migration, et seul un admin le lit.
+
+Au-dessus du tableau, trois liens donnent le nombre de comptes « non confirmés », « sans profil » et « bloqués » et filtrent la liste (`src/components/admin/FiltresDesComptes.tsx`, la règle dans `src/lib/compte/filtres-admin.ts`). Ce sont des filtres du panneau : ils se combinent avec les autres. Le panneau ne sait pas filtrer sur un champ de jointure (il plante), donc « sans profil » nomme les propriétaires de profils (`where[id][not_in]`), lus à chaque affichage ; l'API REST accepte aussi `where[profil][exists]=false`. Au-delà de quelques centaines de profils, l'adresse deviendrait longue : il faudrait alors une case stockée.
+
+**Bloquer** (ticket 168) : l'admin ouvre la fiche du compte, coche « Bloqué » dans la colonne de droite et sauvegarde. Les sessions du compte sont fermées et sa connexion est refusée (ticket 089) ; décocher rend l'accès. La rédaction ne voit pas la collection et ne change aucun blocage.
+
+Tests : `tests/unit/comptes-filtres-admin.test.ts`, sur le banc `tests/integration/admin-comptes-liste.test.ts` (les 20 comptes du banc, les trois filtres, le blocage par l'API) et `tests/e2e/admin-comptes.spec.ts` (la liste, le filtre, le blocage depuis la fiche, une capture à 390 px).
+
 ### Corbeille des photos
 
 Une photo qui ne sert plus part à la corbeille du stockage, jamais à la suppression directe : l'application n'efface jamais un objet. La règle du déplacement est dans `src/lib/corbeille.ts`, le moment où une photo ne sert plus dans `src/collections/corbeille.ts`, et le détail au §8 de [`docs/migration/SCHEMA.md`](docs/migration/SCHEMA.md).

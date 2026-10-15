@@ -77,7 +77,15 @@ export const compteSansProfilAvantSuppression: CollectionBeforeDeleteHook = asyn
 export const Pros: CollectionConfig<'pros'> = {
 	slug: 'pros',
 	labels: { singular: 'Compte maquilleuse', plural: 'Comptes maquilleuses' },
-	admin: { useAsTitle: 'email', defaultColumns: ['email', 'nom', '_verified', 'bloque'], hidden: cacheeSaufAdmin },
+	defaultSort: '-createdAt',
+	// The list of the admin (ticket 168): creation date, confirmed address, block, last sign-in and whether
+	// a profile exists, the newest account first. The filters are above the table (FiltresDesComptes).
+	admin: {
+		useAsTitle: 'email',
+		defaultColumns: ['email', 'createdAt', '_verified', 'bloque', 'derniereConnexion', 'profil'],
+		hidden: cacheeSaufAdmin,
+		components: { beforeListTable: ['/components/admin/FiltresDesComptes#FiltresDesComptes'] },
+	},
 	auth: {
 		verify: {
 			generateEmailSubject: () => SUJET_DE_CONFIRMATION,
@@ -141,6 +149,10 @@ export const Pros: CollectionConfig<'pros'> = {
 			type: 'checkbox',
 			defaultValue: false,
 			access: { create: champAdminSeulement, update: champAdminSeulement },
+			admin: {
+				position: 'sidebar',
+				description: 'Bloquer ferme les sessions ouvertes du compte et refuse sa connexion. Débloquer rend l’accès.',
+			},
 		},
 		{
 			// Written by the server at each sign-in, through the Local API: no request writes it (ticket 077).
@@ -178,9 +190,22 @@ export const Pros: CollectionConfig<'pros'> = {
 		{
 			// Merged into Payload's own field: only an admin confirms an account by hand.
 			name: '_verified',
+			label: 'Adresse confirmée',
 			type: 'checkbox',
 			access: { create: champAdminSeulement, update: champAdminSeulement },
 		},
 		sessionsFermees,
+		{
+			// Virtual: no column, no migration. It reads `profils.pro`, so the list can tell an account that has a profile.
+			name: 'profil',
+			label: 'Profil',
+			type: 'join',
+			collection: 'profils',
+			on: 'pro',
+			maxDepth: 0,
+			access: { read: champAdminSeulement },
+			// The panel's filter builder cannot build a filter on a join field (it crashes): the filters are above the table.
+			admin: { components: { Cell: '/components/admin/ProfilDuCompte#ProfilDuCompte' }, disableListFilter: true },
+		},
 	],
 }
