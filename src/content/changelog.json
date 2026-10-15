@@ -130,6 +130,11 @@
 			"id": "ton-espace-te-dit-ou-en-est-ton-profil-un-pourcentage-de",
 			"type": "ajout",
 			"text": "Ton espace te dit où en est ton profil : un pourcentage de complétude, ce qui te manque pour être publiable, et ce que ça change pour ta visibilité dans la recherche."
+		},
+		{
+			"id": "tu-peux-voir-ta-page-comme-une-visiteuse-la-voit-meme-si",
+			"type": "amelioration",
+			"text": "Tu peux voir ta page comme une visiteuse la voit, même si ton profil n’est pas encore affiché dans l’annuaire : le bouton « Voir mon profil public » ouvre ton aperçu, avec un bandeau qui te dit où en est ton profil."
 		}
 	],
 	"releases": []

@@ -406,7 +406,7 @@ export const FROZEN_URL_FAMILIES: readonly FrozenUrlFamily[] = [
 		id: 'espace-prive',
 		kind: 'espace',
 		planRow: 7,
-		patterns: ['/auth/profil', '/auth/init-account'],
+		patterns: ['/auth/profil', '/auth/apercu-profil', '/auth/init-account'],
 		statusToday: [307],
 		status: 200,
 		withoutSession: {
@@ -418,6 +418,7 @@ export const FROZEN_URL_FAMILIES: readonly FrozenUrlFamily[] = [
 		after: 'Mêmes chemins, `noindex`, `private, no-store`',
 		examples: [
 			{ from: '/auth/profil', to: '/auth/signin?callbackUrl=%2Fauth%2Fprofil' },
+			{ from: '/auth/apercu-profil', to: '/auth/signin?callbackUrl=%2Fauth%2Fapercu-profil' },
 			{ from: '/auth/init-account', to: '/auth/signin?callbackUrl=%2Fauth%2Finit-account' },
 		],
 	},

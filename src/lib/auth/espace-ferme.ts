@@ -5,7 +5,7 @@ import { urlDeConnexion, urlSessionExpiree } from './retour'
 export const COOKIE_DE_SESSION = 'payload-token'
 
 /** The private pages of the space. Their sub-paths are private too. */
-export const PAGES_PRIVEES = ['/auth/profil', '/auth/init-account'] as const
+export const PAGES_PRIVEES = ['/auth/profil', '/auth/apercu-profil', '/auth/init-account'] as const
 
 export const estPagePrivee = (chemin: string): boolean =>
 	PAGES_PRIVEES.some(page => chemin === page || chemin.startsWith(`${page}/`))

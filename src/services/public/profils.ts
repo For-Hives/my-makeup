@@ -336,20 +336,60 @@ export async function lireLAdresseDeProfil(payload: Payload, segment: string): P
 	})
 	const cible = cibleDeLAdresse(segment, docs)
 	if (cible.type !== 'profil') return cible
-	const { profil } = cible
+	return {
+		type: 'profil',
+		// Only a published profile is refreshed by a save (src/lib/revalidation.ts): the page keeps it in the cache.
+		publie: cible.profil.statut === STATUT_PUBLIE,
+		profil: await profilPublicLu(payload, cible.profil),
+	}
+}
+
+/** A profile read with `CHAMPS_DE_LA_PAGE_DU_PROFIL` and its id, as a public page shows it: photos and published contact included. */
+async function profilPublicLu(payload: Payload, profil: ProfilDeLaPage & { id: number }): Promise<ProfilPublic> {
 	const principale = identifiantDeLaPhoto(profil.photoPrincipale)
 	// The portfolio, in the order she gave; a photo named twice is shown twice.
 	const rangee = (profil.galerie ?? []).map(photo => identifiantDeLaPhoto(photo))
 	const photos = await lireLesPhotosDuProfil(payload, [principale, ...rangee])
+	return profilPublicDe(profil, {
+		photo: (principale !== undefined && photos.get(principale)) || null,
+		galerie: rangee.flatMap(identifiant => (identifiant !== undefined && photos.get(identifiant)) || []),
+		coordonnees: await lireLesCoordonneesPubliees(payload, profil.id),
+	})
+}
+
+/** Where her profile stands, as the preview banner says it (src/lib/espace/apercu.ts). */
+export type EtatDuProfilApercu = Pick<Profil, 'statut' | 'disponible' | 'entierementVide' | 'publiable'>
+
+/**
+ * Her own page as a visitor sees it (ticket 139): the same `ProfilPublic` as `lireLAdresseDeProfil`,
+ * built by the same code, for the profile with this identifier whether it is listed, a draft or even
+ * hidden. The identifier is the one the server found by her session (`identifiantDuProfil`), never one
+ * a request gave. The contact details are the ones she published, exactly as the public sees them.
+ * `null` when the profile does not exist.
+ */
+export async function lireLApercuDuProfil(
+	payload: Payload,
+	id: number
+): Promise<{ profil: ProfilPublic; etat: EtatDuProfilApercu } | null> {
+	const { docs } = await payload.find({
+		collection: 'profils',
+		where: { id: { equals: id } },
+		select: { ...CHAMPS_DE_LA_PAGE_DU_PROFIL, id: true, statut: true, publiable: true, entierementVide: true },
+		depth: 0,
+		limit: 1,
+		pagination: false,
+		overrideAccess: true,
+	})
+	const doc = docs[0]
+	if (!doc) return null
 	return {
-		type: 'profil',
-		// Only a published profile is refreshed by a save (src/lib/revalidation.ts): the page keeps it in the cache.
-		publie: profil.statut === STATUT_PUBLIE,
-		profil: profilPublicDe(profil, {
-			photo: (principale !== undefined && photos.get(principale)) || null,
-			galerie: rangee.flatMap(identifiant => (identifiant !== undefined && photos.get(identifiant)) || []),
-			coordonnees: await lireLesCoordonneesPubliees(payload, profil.id),
-		}),
+		profil: await profilPublicLu(payload, doc),
+		etat: {
+			statut: doc.statut,
+			disponible: doc.disponible,
+			entierementVide: doc.entierementVide,
+			publiable: doc.publiable,
+		},
 	}
 }
 

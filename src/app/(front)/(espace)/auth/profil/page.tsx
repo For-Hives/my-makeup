@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import { BoutonsDeDeconnexion } from '@/components/auth/BoutonsDeDeconnexion'
 import { AvancementDuProfil } from '@/components/espace/AvancementDuProfil'
 import { CarteDeSection } from '@/components/espace/CarteDeSection'
@@ -14,6 +15,7 @@ import { EditeurDExperiences, EditeurDeFormations, EditeurDePrestations } from '
 import { InterrupteurDeDisponibilite } from '@/components/espace/InterrupteurDeDisponibilite'
 import { RafraichirSession } from '@/components/espace/RafraichirSession'
 import { exigerMaquilleuse } from '@/lib/auth/session'
+import { CHEMIN_DE_L_APERCU } from '@/lib/espace/apercu'
 import { avancementDuProfil } from '@/lib/espace/avancement'
 import { cartesDuProfil } from '@/lib/espace/cartes'
 import { estDisponible } from '@/lib/espace/disponibilite'
@@ -74,6 +76,13 @@ export default async function PageProfil() {
 				</p>
 			) : (
 				<>
+					<Link
+						href={CHEMIN_DE_L_APERCU}
+						data-testid="voir-mon-profil-public"
+						className="flex min-h-[44px] w-fit items-center rounded-lg px-2 font-semibold text-indigo-900 underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600"
+					>
+						Voir mon profil public
+					</Link>
 					<AvancementDuProfil avancement={avancementDuProfil(profil)} />
 					{cartesDuProfil(profil).map(carte => (
 						<CarteDeSection
