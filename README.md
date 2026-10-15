@@ -635,6 +635,7 @@ Rien ne se publie avant la fusion de `v3` dans `main`. Le détail, et ce qu'il r
 | `bun run admin:creer <email>` | Crée un compte de l'administration, et la seule façon d'avoir le premier. Le mot de passe se tape au clavier, deux fois (voir « Créer un compte admin ») |
 | `bun run test:integration` | Les tests d'intégration de `tests/integration/`, sur le banc. Avec un chemin : ce fichier seul |
 | `bun run test:e2e` | Les essais de bout en bout de `tests/e2e/`, dans un vrai navigateur, contre l'application construite et branchée sur le banc. Avec un chemin : ce fichier seul |
+| `bun run bascule:controle` | Le contrôle d'un hôte (ticket 173) : lit en GET, 2 requêtes par seconde au plus, toutes les adresses de l'inventaire, le sitemap, le fichier robots, les anciennes routes d'authentification et le script de mesure, et écrit un rapport daté. L'hôte par `CONTROLE_HOTE_CIBLE` (voir [`docs/tests/controle-hote.md`](docs/tests/controle-hote.md)) |
 | `bun run sondes` | Les sondes de `tests/sondes/` : lisent le site en ligne, en GET seulement, 2 requêtes par seconde au plus. Une autre cible par `SONDES_CIBLE` (voir « Les sondes du site en ligne ») |
 | `bun run image:build` | Construit l'image Docker `my-makeup:local` |
 | `bun run image:controle` | Vérifie l'image construite contre une base jetable (voir « Image Docker ») |
