@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import { existsSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { z } from 'zod'
+import { cleSiLEnvoiEstPermis, FORMAT_DE_LA_CLE } from '../../src/lib/seo/indexnow'
 import {
 	argumentsDeTest,
 	BancRefuse,
@@ -183,6 +184,7 @@ describe('.env.test : l’environnement factice du banc', () => {
 			'GOOGLE_CLIENT_ID',
 			'GOOGLE_CLIENT_SECRET',
 			'GOOGLE_OIDC_ISSUER',
+			'INDEXNOW_KEY',
 			'MAILPIT_URL',
 			'NEXT_PUBLIC_SITE_URL',
 			'NEXT_PUBLIC_UMAMI_DOMAINS',
@@ -207,6 +209,9 @@ describe('.env.test : l’environnement factice du banc', () => {
 		expect(environnement.S3_ACCESS_KEY_ID).toContain('factice')
 		expect(environnement.S3_SECRET_ACCESS_KEY).toContain('factice')
 		expect(fichier).not.toContain('my-makeup.fr')
+		// The key of IndexNow is served by the bench, and nothing is ever sent from it.
+		expect(environnement.INDEXNOW_KEY).toMatch(FORMAT_DE_LA_CLE)
+		expect(cleSiLEnvoiEstPermis(environnement)).toBeUndefined()
 		// Nothing that has the shape of a real Google credential, and never Google's own address.
 		expect(fichier).not.toMatch(/googleusercontent|GOCSPX|accounts\.google\.com/i)
 	})
@@ -267,6 +272,7 @@ describe('Plusieurs bancs côte à côte : un nom d’instance et un décalage d
 			GOOGLE_CLIENT_SECRET: 'secret-google-factice-du-banc-de-test',
 			UMAMI_ORIGIN: 'http://127.0.0.1:4304',
 			NEXT_PUBLIC_UMAMI_DOMAINS: 'localhost,127.0.0.1',
+			INDEXNOW_KEY: '0123456789abcdef0123456789abcdef',
 		})
 	})
 
