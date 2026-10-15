@@ -90,6 +90,11 @@
 			"id": "tu-choisis-ta-commune-dans-la-liste-officielle-avec-ton-r",
 			"type": "ajout",
 			"text": "Tu choisis ta commune dans la liste officielle, avec ton rayon d’action et « à domicile », depuis ton espace."
+		},
+		{
+			"id": "tu-peux-te-declarer-disponible-ou-indisponible-depuis-ton",
+			"type": "ajout",
+			"text": "Tu peux te déclarer disponible ou indisponible depuis ton espace. Indisponible, ton profil n’apparaît plus dans la recherche."
 		}
 	],
 	"releases": []

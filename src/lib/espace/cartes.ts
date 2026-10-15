@@ -14,6 +14,7 @@ import { rayonKm } from '../format-zone'
 import { formatPrix } from '../prix'
 import { texte } from '../profil/nom-affiche'
 import { moisAnnee, periode } from '../profil/vue-publique'
+import { estDisponible, TEXTE_DISPONIBLE, TEXTE_HORS_RECHERCHE, TEXTE_INDISPONIBLE } from './disponibilite'
 import { libelleDeLaCommune } from './localisation'
 
 /** The sections, in the order of the page. Each one will have its « Modifier » button. */
@@ -133,16 +134,10 @@ export function cartesDuProfil(profil: ProfilDeLEspace): Carte[] {
 		{
 			section: 'disponibilite',
 			titre: 'Disponibilité',
-			lignes: [
-				{
-					valeur:
-						profil.disponible === true
-							? 'Disponible'
-							: profil.disponible === false
-								? 'Pas disponible en ce moment'
-								: null,
-				},
-			],
+			// No value stored (an imported profile) reads « Disponible », as the public list does.
+			lignes: estDisponible(profil.disponible)
+				? [{ valeur: TEXTE_DISPONIBLE }]
+				: [{ valeur: TEXTE_INDISPONIBLE }, { valeur: TEXTE_HORS_RECHERCHE }],
 		},
 		{
 			section: 'photo',
