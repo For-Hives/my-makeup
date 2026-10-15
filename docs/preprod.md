@@ -91,7 +91,35 @@ CONTROLE_PREPROD_ADRESSE=http://127.0.0.1:3227 bun run preprod:controle   # un b
 
 Les tests : `tests/unit/preprod-controle.test.ts`, contre une préprod simulée.
 
+## Les contrôles par la CI, sans mot de passe saisi (ticket 174)
+
+`.github/workflows/preprod-controles.yml` se lance **à la main** (« Run workflow », sur la branche `v3` seulement : sur une autre branche, la première étape s'arrête avant de récupérer le code). Un lancement suffit. Dans l'ordre :
+
+1. **Remise à l'état semé** (`bun run preprod:remise-ci`, `scripts/preprod/remise-ci.ts`). Le script demande à Coolify l'application de la préprod, vérifie que Coolify la donne bien pour `https://preprod.my-makeup.fr` et pour rien d'autre (le site, son `www` et son `api` ne sont jamais une cible : U86), pose **une seule variable**, `PREPROD_REMISE_A_ZERO`, avec un jeton fait du numéro du lancement (`ci-<lancement>-<tentative>`, neuf à chaque lancement et à chaque relance), redémarre l'application, puis lit son journal jusqu'à la ligne `Remise à zéro « … » faite`. Un journal qui dit « non faite », « interrompue » ou « déjà faite », ou qui reste muet 15 minutes, rend le lancement rouge. Le jeton n'est pas un secret.
+2. **Parcours rapides** (`bun run preprod:controle`) : la version servie, puis la page du profil fictif (200, son nom dans le seul `h1`).
+3. **Contrôle de l'hôte** (`bun run bascule:controle`, [`tests/controle-hote.md`](tests/controle-hote.md)) : toutes les adresses de l'inventaire, le sitemap, le fichier robots, les anciennes routes d'authentification et le script de mesure, en lecture seule, sur `https://preprod.my-makeup.fr`.
+
+Le résultat se lit dans le résumé du lancement (« Summary » de la page du lancement) : une partie par étape, en nombres et en empreintes. Rouge : l'étape qui échoue le dit, et les suivantes ne tournent pas.
+
+**Aucun mot de passe n'est saisi par un agent ni par une personne** : le lancement lit quatre secrets du dépôt, à poser par Andy dans GitHub (Settings › Secrets and variables › Actions) :
+
+| Secret | Rôle |
+|---|---|
+| `PREPROD_BASIC_AUTH_USER`, `PREPROD_BASIC_AUTH_PASSWORD` | L'accès protégé de la préprod (déjà lus par `preprod.yml`) |
+| `COOLIFY_URL` | L'adresse de Coolify, en `https://`, sans chemin ni identifiant |
+| `COOLIFY_TOKEN` | Un jeton d'API Coolify, créé pour cet usage, qui peut écrire une variable et redémarrer une application (droits « write » et « deploy »). Il est envoyé à Coolify seul, dans un en-tête, et ne s'écrit jamais |
+
+Chaque secret se lit par son nom, dans le bloc `env` d'une étape, et nulle part ailleurs (test : `tests/unit/preprod-controles-ci.test.ts`). Sans l'un d'eux, l'étape échoue et nomme la variable, pas sa valeur. Aucune étape n'installe de dépendance : aucun code tiers ne tourne à côté des secrets.
+
+Gardes :
+
+- **La préprod seulement.** La cible du contrôle est écrite dans le fichier du workflow, et le test ci-dessus échoue si le fichier nomme un autre hôte. Le script de remise refuse toute application que Coolify ne donne pas pour la préprod seule.
+- **Une base marquée préprod seulement.** Le script n'écrit que `PREPROD_REMISE_A_ZERO` : il ne lit pas les variables de l'application et ne touche pas à `DATABASE_URI`. C'est l'application qui efface, et elle refuse toute base autre que `mymakeup_preprod` (« Remettre la préprod à zéro », gardes) et la variable elle-même hors de la préprod.
+- **Une remise efface tout**, le compte admin compris : après un lancement, le premier compte est à recréer (README, « Créer un compte admin »). Un lancement n'a donc rien à faire un jour où quelqu'un travaille sur la préprod.
+- **Un lancement à la fois** : un second attend la fin du premier.
+
 ## Les tests
 
+- `tests/unit/preprod-controles-ci.test.ts` (ticket 174) : la remise de la CI contre un Coolify simulé (l'ordre, une seule variable, la préprod seule, aucun secret écrit) et le fichier du workflow (lancement à la main, branche `v3`, cible unique, secrets dans les blocs `env`).
 - `tests/unit/preprod.test.ts` : où est la préprod, `APP_ENV` et la variable de remise refusées ailleurs, la tâche qui refuse hors de la préprod ou sur une autre base sans rien toucher (le site en particulier : ni lecture, ni écriture), le jeu qui ne se charge pas sur une base déjà remplie ni sans `APP_ENV=preprod`, la remise avant la connexion de Payload (jeton nouveau, même jeton, autre base, erreur), le crochet et la remise branchés dans la configuration de Payload, la source posée à côté de la base et entièrement fictive.
 - `tests/integration/preprod-demarrage.test.ts` : sur le banc, le démarrage sur une base vide (les 12 profils types, 3 talents et 3 articles chargés, page du profil fictif), le second démarrage qui n'écrit rien, le refus sur une autre base, et des démarrages entiers de Payload en production, chacun dans son processus (`tests/fixtures/demarrage-preprod.ts`) : la remise une fois par jeton et le schéma que les migrations reconstruisent ; une migration `init` fictive que l'ancienne base ne prend pas, qui arrête Payload sans jeton et passe avec un jeton nouveau ; une remise refusée sur une autre base. Enfin le lecteur `pg` de la source, qui lit comme celui de bun. `tests/integration/banc-jeu-complet.test.ts` charge le jeu sans stockage, comme la préprod qui n'en a pas encore.
