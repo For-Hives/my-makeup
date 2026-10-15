@@ -10,9 +10,11 @@ import { enregistrerDescription } from '@/lib/espace/enregistrer-description'
 import { enregistrerDisponibilite } from '@/lib/espace/enregistrer-disponibilite'
 import { enregistrerIdentite } from '@/lib/espace/enregistrer-identite'
 import { enregistrerPhotoPrincipale } from '@/lib/espace/enregistrer-photo'
+import { enregistrerPortfolio } from '@/lib/espace/enregistrer-portfolio'
 import { enregistrerReseaux } from '@/lib/espace/enregistrer-reseaux'
 import type { ValeursDeLIdentite } from '@/lib/espace/identite'
 import type { ValeursDeLaPhoto } from '@/lib/espace/photo-principale'
+import type { ValeursDuPortfolio } from '@/lib/espace/portfolio'
 import { utilisatriceDeLaRequete } from '@/lib/espace/requete'
 import type { ValeursDesReseaux } from '@/lib/espace/reseaux'
 import { MESSAGE_ECHEC, MESSAGE_SESSION, type ResultatDEnregistrement } from '@/lib/espace/resultat'
@@ -124,6 +126,22 @@ export async function enregistrerMaPhotoPrincipale(
 	if (origine !== null && !payload.config.csrf.includes(origine)) return { ok: false, message: MESSAGE_ECHEC }
 
 	const resultat = await enregistrerPhotoPrincipale(payload, utilisateur, saisie)
+	if (resultat.ok) revalidatePath('/auth/profil')
+	return resultat
+}
+
+/**
+ * Names the photos of the portfolio of the signed-in makeup artist, in order (tickets 135 and 136),
+ * on the same terms as her identity. The files were sent beforehand to the media route of Payload.
+ */
+export async function enregistrerMonPortfolio(saisie: unknown): Promise<ResultatDEnregistrement<ValeursDuPortfolio>> {
+	const contexte = await utilisatriceDeLaRequete()
+	if (contexte === null) return { ok: false, message: MESSAGE_SESSION, session: 'expiree' }
+	const { payload, utilisateur } = contexte
+	const origine = (await headers()).get('origin')
+	if (origine !== null && !payload.config.csrf.includes(origine)) return { ok: false, message: MESSAGE_ECHEC }
+
+	const resultat = await enregistrerPortfolio(payload, utilisateur, saisie)
 	if (resultat.ok) revalidatePath('/auth/profil')
 	return resultat
 }

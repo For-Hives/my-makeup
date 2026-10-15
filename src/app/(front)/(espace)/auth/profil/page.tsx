@@ -7,6 +7,7 @@ import { EditeurDeLaPhoto } from '@/components/espace/EditeurDeLaPhoto'
 import { EditeurDeLocalisation } from '@/components/espace/EditeurDeLocalisation'
 import { EditeurDeReseaux } from '@/components/espace/EditeurDeReseaux'
 import { EditeurDIdentite } from '@/components/espace/EditeurDIdentite'
+import { EditeurDuPortfolio } from '@/components/espace/EditeurDuPortfolio'
 import { InterrupteurDeDisponibilite } from '@/components/espace/InterrupteurDeDisponibilite'
 import { RafraichirSession } from '@/components/espace/RafraichirSession'
 import { exigerMaquilleuse } from '@/lib/auth/session'
@@ -24,6 +25,7 @@ import {
 	enregistrerMesCoordonnees,
 	enregistrerMesReseaux,
 	enregistrerMonIdentite,
+	enregistrerMonPortfolio,
 } from './actions'
 import { chercherMesCommunes, enregistrerMaLocalisation } from './localisation-actions'
 
@@ -98,6 +100,8 @@ export default async function PageProfil() {
 								/>
 							) : carte.section === 'photo' ? (
 								<EditeurDeLaPhoto photo={photos?.photo ?? null} envoyer={enregistrerMaPhotoPrincipale} />
+							) : carte.section === 'portfolio' ? (
+								<EditeurDuPortfolio photos={photos?.galerie ?? []} envoyer={enregistrerMonPortfolio} />
 							) : carte.section === 'reseaux' ? (
 								<EditeurDeReseaux
 									valeurs={{
