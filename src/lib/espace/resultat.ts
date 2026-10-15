@@ -43,11 +43,13 @@ function erreursDeChamp(erreur: unknown): { path: string; message: string }[] {
  */
 export function echecDePayload<Champ extends string>(
 	erreur: unknown,
-	champs: readonly Champ[]
+	champs: readonly Champ[],
+	/** The path of the group the fields live in, when they do (« reseaux. »): Payload names `reseaux.instagram`. */
+	prefixe = ''
 ): { ok: false; message: string; champs?: Partial<Record<Champ, string>> } {
 	const parChamp: Partial<Record<Champ, string>> = {}
 	for (const { path, message } of erreursDeChamp(erreur)) {
-		const champ = champs.find(nom => nom === path)
+		const champ = champs.find(nom => `${prefixe}${nom}` === path)
 		if (champ !== undefined && parChamp[champ] === undefined) parChamp[champ] = message
 	}
 	return Object.keys(parChamp).length > 0

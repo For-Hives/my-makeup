@@ -3,8 +3,10 @@
 import { revalidatePath } from 'next/cache'
 import { headers } from 'next/headers'
 import { enregistrerIdentite } from '@/lib/espace/enregistrer-identite'
+import { enregistrerReseaux } from '@/lib/espace/enregistrer-reseaux'
 import type { ValeursDeLIdentite } from '@/lib/espace/identite'
 import { utilisatriceDeLaRequete } from '@/lib/espace/requete'
+import type { ValeursDesReseaux } from '@/lib/espace/reseaux'
 import { MESSAGE_ECHEC, MESSAGE_SESSION, type ResultatDEnregistrement } from '@/lib/espace/resultat'
 
 /**
@@ -23,6 +25,22 @@ export async function enregistrerMonIdentite(saisie: unknown): Promise<ResultatD
 	if (origine !== null && !payload.config.csrf.includes(origine)) return { ok: false, message: MESSAGE_ECHEC }
 
 	const resultat = await enregistrerIdentite(payload, utilisateur, saisie)
+	if (resultat.ok) revalidatePath('/auth/profil')
+	return resultat
+}
+
+/**
+ * Saves the networks and the website of the signed-in makeup artist (ticket 125): same guards as
+ * the identity, the session read again, the origin checked, the profile found by her account.
+ */
+export async function enregistrerMesReseaux(saisie: unknown): Promise<ResultatDEnregistrement<ValeursDesReseaux>> {
+	const contexte = await utilisatriceDeLaRequete()
+	if (contexte === null) return { ok: false, message: MESSAGE_SESSION, session: 'expiree' }
+	const { payload, utilisateur } = contexte
+	const origine = (await headers()).get('origin')
+	if (origine !== null && !payload.config.csrf.includes(origine)) return { ok: false, message: MESSAGE_ECHEC }
+
+	const resultat = await enregistrerReseaux(payload, utilisateur, saisie)
 	if (resultat.ok) revalidatePath('/auth/profil')
 	return resultat
 }

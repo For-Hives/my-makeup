@@ -80,6 +80,11 @@
 			"id": "le-panneau-de-modification-de-ton-espace-s-ouvre-des-le-p",
 			"type": "amelioration",
 			"text": "Le panneau de modification de ton espace s’ouvre dès le premier tap, prend tout l’écran du téléphone, se parcourt au clavier (Échap pour fermer) et annonce le résultat aux lecteurs d’écran."
+		},
+		{
+			"id": "tu-peux-renseigner-tes-reseaux-et-ton-site-depuis-ton-esp",
+			"type": "ajout",
+			"text": "Tu peux renseigner tes réseaux et ton site depuis ton espace : écris ton pseudo ou colle l’adresse, on s’occupe du reste."
 		}
 	],
 	"releases": []
