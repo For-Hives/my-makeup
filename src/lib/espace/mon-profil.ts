@@ -26,6 +26,7 @@ const CHAMPS_LUS = {
 	reseaux: true,
 	coordonnees: true,
 	contactPublic: true,
+	consentiLe: true,
 } as const
 
 /**
@@ -59,13 +60,19 @@ export async function profilDeLaMaquilleuse(
 ): Promise<ProfilDeLEspace | null> {
 	const id = await identifiantDuProfil(payload, utilisateur)
 	if (id === null) return null
-	return payload.findByID({
+	// The rule of a field closed to the public (`coordonnees`, `contactPublic`, `consentiLe`) reads the
+	// account in `pro` of the document it is given: a selection without it would strip those fields
+	// from her own page. `pro` is read for the rule and dropped before the page gets the profile.
+	const profil = await payload.findByID({
 		collection: 'profils',
 		depth: 0,
 		disableErrors: true,
 		id,
 		overrideAccess: false,
-		select: CHAMPS_LUS,
+		select: { ...CHAMPS_LUS, pro: true },
 		user: utilisateur,
 	})
+	if (profil === null) return null
+	const { pro: _compte, ...visible } = profil
+	return visible
 }

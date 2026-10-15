@@ -82,6 +82,11 @@
 			"text": "Le panneau de modification de ton espace s’ouvre dès le premier tap, prend tout l’écran du téléphone, se parcourt au clavier (Échap pour fermer) et annonce le résultat aux lecteurs d’écran."
 		},
 		{
+			"id": "tu-choisis-si-ton-telephone-et-ton-email-s-affichent-sur",
+			"type": "ajout",
+			"text": "Tu choisis si ton téléphone et ton email s’affichent sur ton profil, et ton espace te dit depuis quand."
+		},
+		{
 			"id": "tu-peux-renseigner-tes-reseaux-et-ton-site-depuis-ton-esp",
 			"type": "ajout",
 			"text": "Tu peux renseigner tes réseaux et ton site depuis ton espace : écris ton pseudo ou colle l’adresse, on s’occupe du reste."

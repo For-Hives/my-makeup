@@ -2,6 +2,8 @@
 
 import { revalidatePath } from 'next/cache'
 import { headers } from 'next/headers'
+import type { CoordonneesEnregistrees } from '@/lib/espace/coordonnees'
+import { enregistrerCoordonnees } from '@/lib/espace/enregistrer-coordonnees'
 import { enregistrerIdentite } from '@/lib/espace/enregistrer-identite'
 import { enregistrerReseaux } from '@/lib/espace/enregistrer-reseaux'
 import type { ValeursDeLIdentite } from '@/lib/espace/identite'
@@ -41,6 +43,24 @@ export async function enregistrerMesReseaux(saisie: unknown): Promise<ResultatDE
 	if (origine !== null && !payload.config.csrf.includes(origine)) return { ok: false, message: MESSAGE_ECHEC }
 
 	const resultat = await enregistrerReseaux(payload, utilisateur, saisie)
+	if (resultat.ok) revalidatePath('/auth/profil')
+	return resultat
+}
+
+/**
+ * Saves the contact details of the signed-in makeup artist and her choice to show them (ticket
+ * 126): same guards as the identity. The server dates her choice; the request cannot.
+ */
+export async function enregistrerMesCoordonnees(
+	saisie: unknown
+): Promise<ResultatDEnregistrement<CoordonneesEnregistrees>> {
+	const contexte = await utilisatriceDeLaRequete()
+	if (contexte === null) return { ok: false, message: MESSAGE_SESSION, session: 'expiree' }
+	const { payload, utilisateur } = contexte
+	const origine = (await headers()).get('origin')
+	if (origine !== null && !payload.config.csrf.includes(origine)) return { ok: false, message: MESSAGE_ECHEC }
+
+	const resultat = await enregistrerCoordonnees(payload, utilisateur, saisie)
 	if (resultat.ok) revalidatePath('/auth/profil')
 	return resultat
 }

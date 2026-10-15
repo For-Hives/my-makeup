@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { BoutonsDeDeconnexion } from '@/components/auth/BoutonsDeDeconnexion'
 import { CarteDeSection } from '@/components/espace/CarteDeSection'
+import { EditeurDeCoordonnees } from '@/components/espace/EditeurDeCoordonnees'
 import { EditeurDeReseaux } from '@/components/espace/EditeurDeReseaux'
 import { EditeurDIdentite } from '@/components/espace/EditeurDIdentite'
 import { RafraichirSession } from '@/components/espace/RafraichirSession'
@@ -9,7 +10,7 @@ import { cartesDuProfil } from '@/lib/espace/cartes'
 import { profilDeLaMaquilleuse } from '@/lib/espace/mon-profil'
 import { utilisatriceDeLaRequete } from '@/lib/espace/requete'
 import { texte } from '@/lib/profil/nom-affiche'
-import { enregistrerMesReseaux, enregistrerMonIdentite } from './actions'
+import { enregistrerMesCoordonnees, enregistrerMesReseaux, enregistrerMonIdentite } from './actions'
 
 // Read per request: it depends on the session, and the build has no database. A page that reads
 // the session is never shared nor stored (`private, no-store`, ticket 075).
@@ -67,6 +68,15 @@ export default async function PageProfil() {
 										siteWeb: texte(profil.reseaux?.siteWeb),
 									}}
 									envoyer={enregistrerMesReseaux}
+								/>
+							) : carte.section === 'coordonnees' ? (
+								<EditeurDeCoordonnees
+									valeurs={{
+										telephone: texte(profil.coordonnees?.telephone),
+										email: texte(profil.coordonnees?.email),
+										contactPublic: profil.contactPublic === true,
+									}}
+									envoyer={enregistrerMesCoordonnees}
 								/>
 							) : null
 						}
