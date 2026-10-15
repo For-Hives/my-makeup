@@ -136,21 +136,31 @@ describe('Le slug ne change plus (I19)', () => {
 	})
 })
 
-describe('Un compte qui a encore un profil n’est pas supprimé', () => {
-	test('l’admin supprime d’abord le profil, puis le compte', async () => {
-		const [admin, a] = await Promise.all([creerCompte('admin'), creerCompte('maquilleuse')])
-		const [profil] = await profilsDe(Number(a.id))
+describe('Un compte qui a encore un profil n’est pas supprimé tout seul', () => {
+	test('la suppression native refuse (409) ; la route de l’admin emporte le profil avec le compte (ticket 167)', async () => {
+		const [admin, a, b] = await Promise.all([
+			creerCompte('admin'),
+			creerCompte('maquilleuse'),
+			creerCompte('maquilleuse'),
+		])
 		const payload = await payloadDeTest()
 
-		const refus = await appelerRest('DELETE', `/api/pros/${a.id}`, { enTetes: admin.session.enTetes })
-		expect(refus.statut).toBe(409)
-		expect(refus.texte).toContain('Ce compte a encore un profil')
+		await expect(payload.delete({ collection: 'pros', id: a.id, overrideAccess: true })).rejects.toMatchObject({
+			status: 409,
+			message: expect.stringContaining('Ce compte a encore un profil'),
+		})
 		expect((await payload.count({ collection: 'pros', where: { id: { equals: a.id } } })).totalDocs).toBe(1)
 
+		expect((await appelerRest('DELETE', `/api/pros/${a.id}`, { enTetes: admin.session.enTetes })).statut).toBe(200)
+		expect((await payload.count({ collection: 'pros', where: { id: { equals: a.id } } })).totalDocs).toBe(0)
+		expect((await profilsDe(Number(a.id))).length).toBe(0)
+
+		// A profile deleted first leaves an account without a profile, which goes as well.
+		const [profil] = await profilsDe(Number(b.id))
 		expect((await appelerRest('DELETE', `/api/profils/${profil?.id}`, { enTetes: admin.session.enTetes })).statut).toBe(
 			200
 		)
-		expect((await appelerRest('DELETE', `/api/pros/${a.id}`, { enTetes: admin.session.enTetes })).statut).toBe(200)
-		expect((await payload.count({ collection: 'pros', where: { id: { equals: a.id } } })).totalDocs).toBe(0)
+		expect((await appelerRest('DELETE', `/api/pros/${b.id}`, { enTetes: admin.session.enTetes })).statut).toBe(200)
+		expect((await payload.count({ collection: 'pros', where: { id: { equals: b.id } } })).totalDocs).toBe(0)
 	})
 })

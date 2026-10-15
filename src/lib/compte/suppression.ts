@@ -5,7 +5,7 @@ import { corbeilleRetenue } from '../../collections/corbeille'
 /**
  * The deletion of an account and everything that hangs on it (ticket 141; plan 01 AUTH-13, P7.7;
  * plan 02 I36, I38). The one mechanism: the makeup artist who deletes her account uses it, and the
- * admin who deletes a fake account will use it too (ticket 167).
+ * admin who deletes a fake account uses it too (ticket 167, `DELETE /api/pros/:id`, src/lib/compte/suppression-route.ts).
  *
  * In ONE transaction, under ONE hold of the bin (`corbeilleRetenue`):
  * 1. her profile, by identifier. Deleting it sends to the bin every photo of the account that
@@ -28,8 +28,12 @@ import { corbeilleRetenue } from '../../collections/corbeille'
  * It is safe to call twice for the same account at the same time: the second call waits for the
  * first and gives its answer. An account that is already gone is no error.
  *
- * The requests of the contact form (collection `demandes`, not built yet) are anonymised by the
- * ticket that creates the collection.
+ * The messages of the contact form (collection `demandes`) hold no link to an account: they are
+ * addressed to the team, not to a makeup artist, so there is nothing of hers in them to anonymise.
+ * The ticket that adds requests to a makeup artist adds their anonymisation here.
+ *
+ * The photos of an account without a profile are taken by the `beforeDelete` hook of `pros`
+ * (`menageAvantSuppressionDuCompte`, src/collections/corbeille.ts), under the same hold of the bin.
  */
 
 /** What the deletion did. `supprime: false`: the account did not exist (any more). */
