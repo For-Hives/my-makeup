@@ -124,12 +124,18 @@ async function principal(argumentsDeLaCommande: string[]): Promise<number> {
 	// Where the photos are served from, as the application gives their addresses (src/payload.config.ts).
 	// `--sans-photos`: no storage at all, as in the pre-production; nothing is asked of any host.
 	const baseDesMedias = options.sansPhotos ? null : mediaBaseUrl(process.env.R2_PUBLIC_URL, serverEnv().storage)
+	// A check without storage cannot conclude on the photos: every file is « sans-stockage », so no
+	// media document is expected and the verdict would be a false green. Refused outright.
+	if (options.sansPhotos && options.controle)
+		throw new ImportRefuse(
+			'--sans-photos ne va pas avec --controle : sans stockage, aucune photo n’est comparée et le contrôle ne pourrait pas conclure sur les médias. Rien n’est écrit ; relance avec le stockage, sans --sans-photos.'
+		)
 	// Without storage, a real pass would drop every photo link of the profiles and leave the media behind.
-	if (options.sansPhotos && (options.mode === 'reel' || options.controle)) {
+	if (options.sansPhotos && options.mode === 'reel') {
 		const { totalDocs } = await payload.count({ collection: 'media', overrideAccess: true })
 		if (totalDocs > 0)
 			throw new ImportRefuse(
-				'--sans-photos ne va pas avec --reel ni avec --controle sur une cible qui garde déjà des médias : le passage retirerait les photos des profils, le contrôle verrait les médias en trop. Rien n’est écrit ; relance avec le stockage, sans --sans-photos.'
+				'--sans-photos ne va pas avec --reel sur une cible qui garde déjà des médias : le passage retirerait les photos des profils. Rien n’est écrit ; relance avec le stockage, sans --sans-photos.'
 			)
 	}
 	const source = ouvrirLaSourceBun(adresseDeLaSource)

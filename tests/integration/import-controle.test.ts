@@ -126,17 +126,16 @@ describe('le contrôle de la parité (I39, I40, I43)', () => {
 		])
 
 		expect(code, sortie).toBe(1)
-		expect(sortie).toContain('--sans-photos ne va pas avec --reel ni avec --controle')
+		expect(sortie).toContain('--sans-photos ne va pas avec --reel sur une cible')
 		expect(await photosDeLaCible()).toEqual(avant)
 	}, 60_000)
 
-	test('--sans-photos avec --controle est refusé sur une cible qui garde des médias, au lieu d’un faux écart', async () => {
-		await importerSurLeBanc()
-
+	test('--sans-photos avec --controle est refusé, même sur une cible sans média : pas de faux vert', async () => {
 		const { code, sortie } = await controler('--sans-photos')
 
 		expect(code, sortie).toBe(1)
-		expect(sortie).toContain('--sans-photos ne va pas avec --reel ni avec --controle')
+		expect(sortie).toContain('--sans-photos ne va pas avec --controle')
+		expect(sortie).not.toContain('la cible est la source')
 	}, 60_000)
 
 	test('un compte ajouté à la main, sans identifiant de l’ancien site, fait échouer le contrôle', async () => {
