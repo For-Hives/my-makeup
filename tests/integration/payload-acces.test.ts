@@ -587,6 +587,34 @@ const MATRICE: Ligne[] = [
 		attendu: 'ignore',
 	},
 
+	// The profile of an account (ticket 168, a join field with no stored value): the account list of the
+	// admin shows whether one exists; the owner of the account does not read it, nor does she write it.
+	{
+		role: 'admin',
+		collection: 'pros',
+		operation: 'lire',
+		document: 'maquilleuse',
+		champ: 'profil',
+		attendu: 'visible',
+	},
+	{
+		role: 'maquilleuse',
+		collection: 'pros',
+		operation: 'lire',
+		document: 'maquilleuse',
+		champ: 'profil',
+		attendu: 'absent',
+	},
+	{
+		role: 'maquilleuse',
+		collection: 'pros',
+		operation: 'modifier',
+		document: 'maquilleuse',
+		champ: 'profil',
+		valeur: [],
+		attendu: 'ignore',
+	},
+
 	// The authentication journal (ticket 077): only an admin reads it, and nobody writes it through
 	// an API, an admin included. The server writes it, and purges it after 90 days.
 	...ROLES.flatMap((role): Ligne[] => {
