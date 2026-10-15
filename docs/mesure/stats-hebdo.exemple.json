@@ -157,5 +157,64 @@
       "marie-apolline-josephine-berenice-eugenie-heloise-marie-apolline-josep",
       "zoe-lefevre"
     ]
+  },
+  "contact": {
+    "total": 3,
+    "parStatut": {
+      "nouvelle": 1,
+      "transmise": 1,
+      "repondue": 1,
+      "spam": 0
+    },
+    "parEtatMail": {
+      "en-attente": 0,
+      "envoye": 2,
+      "echec": 1
+    }
+  },
+  "auth": {
+    "parType": {
+      "connexion": 47,
+      "deconnexion": 12,
+      "deconnexion-partout": 0,
+      "inscription": 19,
+      "confirmation": 15,
+      "renvoi": 2,
+      "mot-de-passe-oublie": 4,
+      "reinitialisation": 3,
+      "blocage": 0,
+      "deblocage": 0
+    },
+    "connexions": {
+      "total": 47,
+      "parCode": {
+        "ok": 31,
+        "heritee": 6,
+        "identifiants-invalides": 9,
+        "trop-de-tentatives": 1,
+        "service-indisponible": 0,
+        "email-non-confirme": 0,
+        "compte-bloque": 0,
+        "donnees-invalides": 0,
+        "email-deja-pris": 0,
+        "deja-confirme": 0,
+        "lien-invalide": 0,
+        "email-non-verifie": 0,
+        "compte-refuse": 0,
+        "annule": 0,
+        "retour-invalide": 0,
+        "inconnu": 0,
+        "champ-piege": 0
+      },
+      "dureeP95Ms": 412
+    }
+  },
+  "herites": {
+    "hashRestants": 37,
+    "sansMotDePasseParFournisseur": {
+      "google": 38,
+      "facebook": 9,
+      "autre": 0
+    }
   }
 }

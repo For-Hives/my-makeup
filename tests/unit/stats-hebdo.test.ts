@@ -1,6 +1,9 @@
 import { describe, expect, test } from 'bun:test'
 import {
+	agregerAuth,
+	agregerContact,
 	agregerStats,
+	centile,
 	jetonDeLEntete,
 	jetonValide,
 	lirePeriode,
@@ -210,5 +213,65 @@ describe('the published example', () => {
 		const sansSlugs = JSON.stringify({ ...exemple, publiables: { ...exemple.publiables, slugs: [] } })
 		expect(sansSlugs).not.toContain('@')
 		expect(sansSlugs).not.toMatch(/\d{9}/)
+	})
+})
+
+describe('ticket 169: contact messages, sign-ins and inherited hashes', () => {
+	test('agregerContact: one message per state, every state of the closed lists present', () => {
+		const contact = agregerContact([
+			{ statut: 'nouvelle', etatMail: 'en-attente' },
+			{ statut: 'transmise', etatMail: 'envoye' },
+			{ statut: 'repondue', etatMail: 'envoye' },
+			{ statut: 'spam', etatMail: 'echec' },
+			{ statut: 'inconnu', etatMail: null },
+		])
+		expect(contact.total).toBe(5)
+		expect(contact.parStatut).toEqual({ nouvelle: 1, transmise: 1, repondue: 1, spam: 1 })
+		expect(contact.parEtatMail).toEqual({ 'en-attente': 1, envoye: 2, echec: 1 })
+		expect(agregerContact([]).parStatut).toEqual({ nouvelle: 0, transmise: 0, repondue: 0, spam: 0 })
+	})
+
+	test('centile: nearest rank, null when empty', () => {
+		expect(centile([], 0.95)).toBeNull()
+		expect(centile([7], 0.95)).toBe(7)
+		expect(
+			centile(
+				Array.from({ length: 100 }, (_, i) => 100 - i),
+				0.95
+			)
+		).toBe(95)
+		expect(centile([10, 20, 30, 40], 0.95)).toBe(40)
+		expect(centile([10, 20, 30, 40], 0.5)).toBe(20)
+	})
+
+	test('agregerAuth: by kind, the sign-ins by code, the 95th percentile of their durations only', () => {
+		const auth = agregerAuth([
+			{ type: 'connexion', code: 'ok', dureeMs: 100 },
+			{ type: 'connexion', code: 'ok', dureeMs: 300 },
+			{ type: 'connexion', code: 'heritee', dureeMs: 900 },
+			{ type: 'connexion', code: 'identifiants-invalides' },
+			{ type: 'deconnexion', code: 'ok', dureeMs: 5000 },
+			{ type: 'inscription', code: 'champ-piege' },
+			{ type: 'pirate', code: 'ok' },
+		])
+		expect(auth.parType.connexion).toBe(4)
+		expect(auth.parType.deconnexion).toBe(1)
+		expect(auth.parType.inscription).toBe(1)
+		expect(Object.values(auth.parType).reduce((a, b) => a + b, 0)).toBe(6)
+		expect(auth.connexions.total).toBe(4)
+		expect(auth.connexions.parCode.ok).toBe(2)
+		expect(auth.connexions.parCode.heritee).toBe(1)
+		expect(auth.connexions.parCode['champ-piege']).toBe(0)
+		expect(auth.connexions.dureeP95Ms).toBe(900)
+		expect(agregerAuth([]).connexions.dureeP95Ms).toBeNull()
+	})
+
+	test('the new keys are optional: an answer without them, the old example, still fits; a stray key does not', () => {
+		const { contact: _c, auth: _a, herites: _h, ...ancien } = exemple as unknown as StatsHebdo
+		expect(StatsHebdo.safeParse(ancien).success).toBe(true)
+		const avec = StatsHebdo.parse(exemple)
+		expect(avec.contact?.total).toBe(3)
+		expect(StatsHebdo.safeParse({ ...avec, contact: { ...avec.contact, email: 'x' } }).success).toBe(false)
+		expect(StatsHebdo.safeParse({ ...avec, herites: { hashRestants: 1 } }).success).toBe(false)
 	})
 })
