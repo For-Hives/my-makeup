@@ -655,3 +655,22 @@ Ce que la v3 change par rapport au site actuel est dans [`CHANGEMENTS-VOULUS.md`
 - **Intégration des tickets 167, 168, 169 et 219 dans `v3` (vague 11).**
   - Quatre lots fusionnés, aucun conflit (167 et 168 touchent tous deux `Pros.ts`, fusion automatique saine).
   - Vérifié : check, typecheck, tests unitaires (3278, 1 sauté), garde CI (442), build, dérive de schéma nulle, intégration sur banc (2025 réussis, 3 sautés ; 1 échec, « homonymes qui s'inscrivent au même instant » de `auth-inscription`, qui passe seul 17/17 deux fois), e2e des fiches 167 et 168, de la liste des profils (E53) et des messages de contact.
+- **Ticket 152 fait : le rapport du lundi veille les paquets et l'activité du dépôt de la v3.**
+  - L'outil `plans/mesures/outil` (0.7.0) suit `payload` et `next` aux versions de la branche principale, `@strapi/strapi` tant que Strapi tourne, et lit l'activité GitHub et les résultats de `ci-ok`. Rien dans ce dépôt ; entrée ajoutée tardivement.
+- **Ticket 172 fait : le gel de l'existant est une procédure et une commande de contrôle, pas une date.**
+  - `docs/migration/GEL.md` : début du gel écrit au journal le jour où la répétition démarre (ticket 180), recapture et inventaire refaits après. `bun run migration:gel --debut <heure>` liste tout commit postérieur hors sécurité, bandeau, lecture seule et contenus (portée, type ou ligne `Gel:`), et toute capture ou inventaire antérieur au gel (sortie 1).
+  - Reste : la date n'est écrite nulle part avant le ticket 180 ; les alias de catégories sont un choix de l'auteur (`scripts/migration/gel-regles.ts`).
+- **Ticket 173 fait : une commande contrôle en lecture toutes les adresses de l'inventaire sur un hôte.**
+  - `bun run bascule:controle` : GET seuls, 2 requêtes par seconde au plus, prod refusée sauf lecture, rapport daté en nombres et empreintes (un profil s'écrit « profil #xxxxxxxx »). Sur le banc : 107 requêtes, 0 réponse 5xx, huit anciennes routes d'authentification en 404, script de mesure servi.
+  - Reste : le critère « 100 % conformes » n'est pas atteint, cinq familles (espace-connexion, espace-erreur, espace-racine, espace-verification, slug-inconnu) sont comptées « à venir » dans `tests/e2e/controle-hote.spec.ts` ; l'adresse IndexNow n'est lue qu'avec `INDEXNOW_KEY`.
+- **Ticket 174 fait : les contrôles se lancent sur la préprod sans qu'un agent saisisse un mot de passe.**
+  - `.github/workflows/preprod-controles.yml` (lancement manuel, branche `v3`) : remise à l'état semé par l'API de Coolify (jeton `PREPROD_REMISE_A_ZERO`), parcours rapides, contrôle d'hôte, résumé par étape. Testé contre un Coolify simulé seulement.
+  - À faire par Andy : poser `COOLIFY_URL` et `COOLIFY_TOKEN` dans GitHub, puis jouer un vrai lancement. Chaque lancement efface la base de la préprod, compte admin compris.
+- **Ticket 189 fait : la politique de confidentialité dit vrai le jour de la bascule.**
+  - La liste des sous-traitants vient de `src/lib/prestataires.ts`, comparée par test aux services configurés ; plus de section devis ; confirmation d'e-mail (7 jours) et effacement des photos (30 jours) décrits. Écart `politique-a-jour-a-la-bascule` au registre.
+  - Reste : la règle R2 d'effacement à 30 jours est posée à la main par Andy (ticket 205) ; sans elle la phrase est fausse. Contabo reste cité (hébergeur d'Umami). `/cgu` contient encore « devis ».
+- **Ticket 171 livré en partie, non marqué fait : le gel de l'ancien site par un réglage.**
+  - Le correctif (`LEGACY_READ_ONLY=true` sur l'ancienne API, message d'entretien dans l'ancien front) est écrit et testé dans des clones jetables ; `docs/migration/LECTURE-SEULE.md` et deux correctifs `git am` sont dans `v3`. Rien n'est appliqué aux deux anciens dépôts : décision d'Andy requise. Message non vu dans un navigateur.
+- **Intégration des tickets 171 (en partie), 172, 173, 174 et 189 dans `v3` (vague 1 de la réécriture).**
+  - Quatre lots fusionnés ; un conflit sur `README.md` (« Six documents » contre « Les documents », deux lignes ajoutées à la même liste), résolu en gardant « Les documents » et les deux lignes.
+  - Vérifié : check, typecheck, tests unitaires (3338, 1 sauté), garde CI (442), build, intégration sur banc (2026 réussis, 3 sautés), e2e (462 réussis ; `parite-urls` I45 échoue déjà avant la vague : l'adresse du fichier de clé IndexNow répond 404 sur le banc sans `INDEXNOW_KEY` ; 10 autres échecs du premier passage, état du banc pollué, repassés au vert isolément).
