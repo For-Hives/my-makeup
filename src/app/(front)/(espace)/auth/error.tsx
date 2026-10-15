@@ -1,10 +1,12 @@
 'use client'
 
+import { MesureDErreur } from '@/components/analytics/MesureDePage'
 import { MESSAGE_VERIFICATION_IMPOSSIBLE } from '@/lib/auth/erreurs'
 
 // The space cannot check the session for now (a passing outage): the cookie is untouched, nobody
 // is signed out. The message and the trace of the error stay in the server log; she reads a sentence.
 export default function ErreurDeLEspace({
+	error,
 	unstable_retry,
 }: {
 	error: Error & { digest?: string }
@@ -12,6 +14,7 @@ export default function ErreurDeLEspace({
 }) {
 	return (
 		<main className="flex min-h-dvh flex-col items-center justify-center gap-4 p-6 text-center">
+			<MesureDErreur scope="espace" erreur={error} />
 			<h1 className="font-semibold text-3xl">Un souci passager</h1>
 			<p role="alert" data-testid="verification-impossible">
 				{MESSAGE_VERIFICATION_IMPOSSIBLE}

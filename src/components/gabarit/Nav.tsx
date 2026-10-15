@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { seDeconnecter } from '@/app/(front)/(espace)/auth/actions'
+import { LienSuivi } from '@/components/analytics/LienSuivi'
 import { LIEN_CONNEXION, LIEN_ESPACE, LIEN_RECHERCHE, NAVIGATION } from './liens'
 
 const LIEN = 'font-semibold text-gray-900 text-sm leading-6'
@@ -162,7 +163,11 @@ export function Nav() {
 						))}
 					</ul>
 					<div className="flex flex-col items-start gap-8 lg:flex-row lg:items-center lg:gap-10">
-						<Link href={LIEN_RECHERCHE.href} className={`btn-primary-with-icon ${ANNEAU}`}>
+						<LienSuivi
+							href={LIEN_RECHERCHE.href}
+							suivi={{ nom: 'nav_recherche' }}
+							className={`btn-primary-with-icon ${ANNEAU}`}
+						>
 							<svg aria-hidden="true" className="mr-2 h-5 w-5 text-indigo-900" viewBox="0 0 20 20" fill="currentColor">
 								<path
 									fillRule="evenodd"
@@ -171,7 +176,7 @@ export function Nav() {
 								/>
 							</svg>
 							{LIEN_RECHERCHE.nom}
-						</Link>
+						</LienSuivi>
 						{connectee ? (
 							<>
 								<Link href={LIEN_ESPACE.href} className={`${LIEN} ${ANNEAU}`}>

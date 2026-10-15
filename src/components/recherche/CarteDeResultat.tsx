@@ -1,5 +1,5 @@
 import Image from 'next/image'
-import Link from 'next/link'
+import { LienSuivi } from '@/components/analytics/LienSuivi'
 import type { CarteDeProfil } from '@/services/public/profils'
 
 /** The picture of a card whose artist has no photo yet: the one of the site online. */
@@ -42,11 +42,21 @@ function IconeFlamme() {
  * one link to the page of her profile, at its final address (`/profil/<slug>`). It holds nothing that
  * is not on the card of the list: no contact detail, no coordinate.
  */
-export function CarteDeResultat({ carte, prioritaire }: { carte: CarteDeProfil; prioritaire: boolean }) {
+export function CarteDeResultat({
+	carte,
+	prioritaire,
+	rang,
+}: {
+	carte: CarteDeProfil
+	prioritaire: boolean
+	/** Rank (1-based) of the card in the whole list: the click reports it with the profile, nothing else. */
+	rang: number
+}) {
 	const photo = carte.photo
 	return (
-		<Link
+		<LienSuivi
 			href={`/profil/${carte.slug}`}
+			suivi={{ nom: 'search_result_click', proprietes: { rank: rang, pid: carte.pid } }}
 			className="flex w-full flex-col items-center rounded border border-gray-300 bg-white focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-offset-2"
 		>
 			<div className="relative h-[350px] w-full">
@@ -78,6 +88,6 @@ export function CarteDeResultat({ carte, prioritaire }: { carte: CarteDeProfil; 
 			<div className="flex w-full flex-col gap-4 p-4 pt-6">
 				{carte.specialite && <p className="font-bold text-gray-900 text-lg">{carte.specialite}</p>}
 			</div>
-		</Link>
+		</LienSuivi>
 	)
 }

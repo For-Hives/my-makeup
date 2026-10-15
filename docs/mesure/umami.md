@@ -70,3 +70,23 @@ Il ne part pas :
 - depuis l'aperçu de sa propre page (`/auth/apercu-profil`), qui ne compte aucun clic (`mesure={false}`).
 
 Un profil sans contact public n'a ni section ni lien, donc aucun événement. Le `pid` d'un profil est l'identifiant de l'ancien site s'il en a un, sinon `v3-<id>` (`src/lib/profil/pid.ts`). Tests : U84 dans `tests/unit/mesure-clic-contact.test.tsx`, E52 dans `tests/e2e/mesure-clic-contact.spec.ts`.
+
+## La recherche, les appels à l'action et les pages d'erreur (ticket 145)
+
+| Événement | Quand | Propriétés |
+|---|---|---|
+| `search_submit` | La page de résultats d'une recherche s'affiche | `has_city` (une ville a été saisie), `results` (`0`, `1-5`, `6-20`, `21+`), `from` (`formulaire` si le formulaire vient d'être envoyé, `lien` sinon) |
+| `search_result_click` | Clic sur la carte d'un résultat | `rank` (place dans toute la liste, toutes pages comprises, à partir de 1), `pid` |
+| `cta_click` | Clic sur un appel à l'action | `where` : `cta_recherche` et `cta_inscription` (bloc de fin de page), `nav_recherche` (bouton de la barre, écran large), `nav_recherche_mobile` (le même bouton, menu déplié sous 1024 px) |
+| `not_found` | Une page 404 s'affiche | `kind` : `profil`, `talent`, `blog` d'après le premier segment de l'adresse, `autre` sinon |
+| `app_error` | Une page d'erreur s'affiche | `scope` (`site`, `espace`, `global`), `code` (`chunk_load` si un script n'a pas pu charger, `render` sinon) |
+
+**Aucun texte saisi ne part.** La page de résultats ne donne au navigateur que deux faits (une ville, une tranche) et une empreinte courte des mots, qui sert à ne pas recompter la même recherche ; l'empreinte n'est jamais envoyée. Le message d'une erreur n'est jamais lu.
+
+**Aucun doublon.** Le navigateur retient, pour l'onglet (`sessionStorage`, clé `mm-mesure-dernier`), la dernière vue comptée. Une 404 ou une page d'erreur rechargée n'est pas recomptée ; une recherche revue (page suivante, retour) non plus, sauf si le formulaire vient d'être envoyé (`src/lib/analytics/doublon.ts`). Un stockage bloqué compte chaque vue.
+
+**Le traceur sur les pages qui l'ont perdu.** Le script de l'en-tête ne s'exécute pas quand le navigateur dessine lui-même la page après un échec du serveur : la 404 d'une adresse que rien ne sert (`src/app/global-not-found.tsx`), celle d'un profil, d'un talent ou d'un article inconnu, et toute page d'erreur. Ces pages ajoutent donc le traceur elles-mêmes avant d'émettre (`src/lib/analytics/chargeur.ts`), s'il n'est pas déjà là. La page d'erreur globale (`global-error.tsx`) fait de même.
+
+Le `pid` d'une carte (`CarteDeProfil.pid`) est lu à part, par les identifiants que la lecture publique a donnés (`lireLesPid`) : l'ancien identifiant n'est pas un champ que le public lit.
+
+Tests : `tests/unit/mesure-recherche-erreurs.test.ts`, et `tests/e2e/mesure-recherche-erreurs.spec.ts` contre le faux Umami.

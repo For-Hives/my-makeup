@@ -23,12 +23,12 @@
  */
 
 import type { Payload } from 'payload'
-import type { Pid } from '@/lib/analytics/events'
+import { type Pid, pidDuProfil } from '@/lib/analytics/pid'
 import { formatZone, rayonKm, villeAffichee } from '@/lib/format-zone'
 import { estMontantDePrix, prixMinimal } from '@/lib/prix'
 import { cibleDeLAdresse, valeursARechercher } from '@/lib/profil/adresse'
 import { nomAffiche, texte } from '@/lib/profil/nom-affiche'
-import { pidDuProfil } from '@/lib/profil/pid'
+import { pidDuProfil as pidDeLaPage } from '@/lib/profil/pid'
 import { STATUT_PUBLIE } from '@/lib/profil/statut'
 import { estIndexable, FILTRE_LISTE } from '@/lib/profil/visibilite'
 import {
@@ -170,6 +170,8 @@ export interface PhotoDeCarte {
 /** A card of the list: the keys are frozen by the unit test (U22), never a contact detail. */
 export interface CarteDeProfil {
 	slug: string
+	/** The id the measure counts the profile under (src/lib/analytics/pid.ts): public, no personal data. */
+	pid: Pid
 	nom: string
 	specialite: string | null
 	/** « Annecy », « Annecy et 30 km autour », or `null`. */
@@ -188,6 +190,7 @@ export interface PageDeProfils {
 
 type ProfilDeLaCarte = Pick<
 	Profil,
+	| 'id'
 	| 'slug'
 	| 'prenom'
 	| 'nom'
@@ -233,11 +236,33 @@ async function lireLesPhotos(payload: Payload, profils: readonly ProfilDeLaCarte
 	return photos
 }
 
+/**
+ * The measure id of profiles the public reads (`pid`, plan 04 §3.2). The old id lives in a field the
+ * public does not read, so it is read here, by the identifiers the public read of the profiles gave,
+ * and nothing else is read of those profiles.
+ */
+async function lireLesPid(payload: Payload, profils: readonly { id: number }[]): Promise<ReadonlyMap<number, Pid>> {
+	const pid = new Map<number, Pid>()
+	if (profils.length === 0) return pid
+	const { docs } = await payload.find({
+		collection: 'profils',
+		where: { id: { in: profils.map(({ id }) => id) } },
+		select: { strapiId: true },
+		depth: 0,
+		limit: LIMITE_MAX_DE_LA_LISTE,
+		pagination: false,
+		overrideAccess: true,
+	})
+	for (const { id, strapiId } of docs) pid.set(id, pidDuProfil({ id, strapiId }))
+	return pid
+}
+
 /** A profile read for a list, as a card: the keys are frozen (U22), no coordinates and no contact. */
-function carteDe(profil: ProfilDeLaCarte, photos: PhotosParIdentifiant): CarteDeProfil {
+function carteDe(profil: ProfilDeLaCarte, photos: PhotosParIdentifiant, pids: ReadonlyMap<number, Pid>): CarteDeProfil {
 	const identifiant = identifiantDeLaPhoto(profil.photoPrincipale)
 	return {
 		slug: profil.slug,
+		pid: pids.get(profil.id) ?? pidDuProfil({ id: profil.id }),
 		nom: nomAffiche(profil),
 		specialite: texte(profil.specialite) || null,
 		lieu: formatZone({ city: profil.commune?.nom, radius: profil.rayonKm }) || null,
@@ -446,7 +471,7 @@ export function profilPublicDe(
 	const nom = nomAffiche(profil)
 	return {
 		slug: profil.slug,
-		pid: pidDuProfil(profil),
+		pid: pidDeLaPage(profil),
 		nom,
 		nomArtiste: nomDArtisteAffiche(profil, nom),
 		specialite: texte(profil.specialite) || null,
@@ -511,8 +536,9 @@ export async function listerLesProfils(
 		overrideAccess: false,
 	})
 	const photos = await lireLesPhotos(payload, resultat.docs)
+	const pids = await lireLesPid(payload, resultat.docs)
 	return {
-		cartes: resultat.docs.map(profil => carteDe(profil, photos)),
+		cartes: resultat.docs.map(profil => carteDe(profil, photos, pids)),
 		page: resultat.page ?? 1,
 		totalDocs: resultat.totalDocs,
 		hasNextPage: resultat.hasNextPage,
@@ -585,9 +611,10 @@ export async function lireLAnnuaire(
 			overrideAccess: false,
 		})
 		const photos = await lireLesPhotos(payload, resultat.docs)
+		const pids = await lireLesPid(payload, resultat.docs)
 		for (const profil of resultat.docs)
 			annuaire.push({
-				carte: carteDe(profil, photos),
+				carte: carteDe(profil, photos, pids),
 				ville: texte(profil.commune?.nom) || null,
 				departement: texte(profil.commune?.departement) || null,
 				seDeplace: texte(profil.commune?.nom) !== '' && rayonKm(profil.rayonKm) !== null,
