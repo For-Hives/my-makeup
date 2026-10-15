@@ -24,7 +24,9 @@ const PAGES = [
 	},
 ] as const
 
-// The words of the live site, as the hash of their plain text (the text itself is the page's).
+// The words of the live site, as the hash of their plain text (the text itself is the page's). The one
+// wanted difference: the paragraph « Formulaire de contact » of the policy (ticket 162, register
+// `contact-conservation-12-mois`).
 const EN_LIGNE: Record<string, { lignes: number; sha: string }> = JSON.parse(
 	readFileSync(path.join(process.cwd(), 'tests/fixtures/pages-juridiques-texte.json'), 'utf8')
 )
