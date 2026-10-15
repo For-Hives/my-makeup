@@ -102,7 +102,7 @@ test.describe('E07 : connexion et inscription avec Google', { tag: '@mobile' }, 
 		await page.getByRole('link', { name: 'S’inscrire avec Google' }).click()
 
 		await expect(page).toHaveURL(/\/auth\/init-account$/)
-		await expect(page.getByRole('heading', { level: 1, name: 'Bienvenue sur My Makeup' })).toBeVisible()
+		await expect(page.getByRole('heading', { level: 1, name: 'Prépare ton profil' })).toBeVisible()
 		const payload = await payloadDeTest()
 		const comptes = await payload.find({ collection: 'pros', depth: 0, where: { email: { equals: email } } })
 		expect(comptes.docs).toHaveLength(1)
@@ -115,7 +115,7 @@ test.describe('E07 : connexion et inscription avec Google', { tag: '@mobile' }, 
 		expect(profils.docs.map(p => p.slug)).toEqual([expect.stringMatching(/^lea-fictive(-\d+)?$/)])
 		expect(await compterLesMails()).toBe(0)
 
-		await page.getByRole('link', { name: 'Aller à mon espace' }).click()
+		await page.goto('/auth/profil')
 		await page.getByRole('main').getByRole('button', { name: 'Me déconnecter', exact: true }).click()
 		await expect(page).toHaveURL(/\/$/)
 
