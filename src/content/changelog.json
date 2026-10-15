@@ -65,6 +65,11 @@
 			"id": "le-portfolio-d-une-maquilleuse-se-parcourt-au-doigt-et-au",
 			"type": "amelioration",
 			"text": "Le portfolio d’une maquilleuse se parcourt au doigt et au clavier, avec les flèches, et annonce la photo affichée (« Photo 2 sur 6 »)."
+		},
+		{
+			"id": "ton-espace-affiche-ton-profil-section-par-section-avec-a",
+			"type": "ajout",
+			"text": "Ton espace affiche ton profil section par section, avec « à compléter » là où il manque quelque chose."
 		}
 	],
 	"releases": []
