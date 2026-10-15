@@ -74,7 +74,7 @@ Depuis le ticket 053, le démarrage de la préprod n'importe plus la fausse sour
 
 `.github/workflows/preprod.yml` tourne à chaque poussée sur `v3`, et à la main (« Run workflow »). Il attend que la préprod serve le commit poussé (la `version` de `/api/health`, 20 minutes au plus), puis lit la page du profil fictif : 200, et « Zoé Lefèvre » dans le seul `h1` du HTML du serveur. Ce n'est pas un check requis : rouge, il dit que la préprod est en retard ou cassée, sans bloquer aucune fusion.
 
-Il lit deux secrets du dépôt, à poser par Andy dans GitHub (Settings › Secrets and variables › Actions) : `PREPROD_BASIC_AUTH_USER` et `PREPROD_BASIC_AUTH_PASSWORD`, l'accès protégé de la préprod. Sans eux, le contrôle échoue et le dit. Il n'installe aucune dépendance : aucun code tiers ne tourne à côté des secrets, et le script ne les affiche jamais.
+Il lit deux secrets du dépôt, à poser par Andy dans GitHub (Settings › Secrets and variables › Actions) : `PREPROD_BASIC_AUTH_USER` et `PREPROD_BASIC_AUTH_PASSWORD`, l'accès protégé de la préprod. Tant qu'ils ne sont pas posés, le job ne contrôle rien et reste vert : sa première étape le dit par un avertissement sur la page du passage (« Contrôle de la préprod sauté »), et l'étape du contrôle est sautée. Un seul des deux posé compte comme aucun. Une fois posés, le contrôle tourne, et un secret faux le rend rouge (401). Il n'installe aucune dépendance : aucun code tiers ne tourne à côté des secrets, et le script ne les affiche jamais.
 
 Le même contrôle se lance depuis un poste :
 

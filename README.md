@@ -571,7 +571,7 @@ DOCKER_HOST=unix://$XDG_RUNTIME_DIR/podman/podman.sock bun run image:controle
 
 Chaque pull request et chaque poussée sur `v3` lancent `.github/workflows/ci.yml` : cinq jobs en parallèle, puis `ci-ok`, le seul check à exiger pour fusionner.
 
-Chaque poussée sur `v3` lance aussi `.github/workflows/preprod.yml`, qui n'est pas un check requis : il attend que la préprod serve le commit poussé, puis lit la page du profil fictif (voir [`docs/preprod.md`](docs/preprod.md)). Il lit deux secrets du dépôt, l'accès protégé de la préprod, et ne fait que des GET.
+Chaque poussée sur `v3` lance aussi `.github/workflows/preprod.yml`, qui n'est pas un check requis : il attend que la préprod serve le commit poussé, puis lit la page du profil fictif (voir [`docs/preprod.md`](docs/preprod.md)). Il lit deux secrets du dépôt, l'accès protégé de la préprod, et ne fait que des GET. Tant que ces deux secrets ne sont pas posés, il ne contrôle rien, reste vert et le dit par un avertissement.
 
 `.github/workflows/preprod-controles.yml` se lance à la main sur `v3` : il remet la préprod à son état semé, joue les parcours rapides puis le contrôle d'un hôte, avec des secrets du dépôt et sans qu'on saisisse un mot de passe (voir [`docs/preprod.md`](docs/preprod.md), « Les contrôles par la CI »).
 
@@ -580,8 +580,8 @@ Chaque poussée sur `v3` lance aussi `.github/workflows/preprod.yml`, qui n'est 
 | `qualite` | Fichiers générés par Payload à jour, `bun run typecheck`, `bun run ci:biome`, `bun run test:ci-garde` |
 | `unit` | `bun run test:unit` |
 | `build` | `bun run image:build` sans secret ni base, puis `bun run image:controle` |
-| `integration` | `bun run banc:up`, puis `bun run test:integration` : le banc de test, en CI comme sur un poste |
-| `e2e` | En deux lots côte à côte : le Chromium de Playwright, `bun run banc:up`, puis `bun run test:e2e` sur la moitié des essais |
+| `integration` | En trois lots côte à côte : `bun run banc:up`, puis `bun run test:integration --shard=N/3` sur un tiers des fichiers : le banc de test, en CI comme sur un poste |
+| `e2e` | En quatre lots côte à côte : le Chromium de Playwright, `bun run banc:up`, puis `bun run test:e2e --shard=N/4` sur un quart des essais |
 | `ci-ok` | Rouge si l'un des cinq a échoué, a été annulé ou a été sauté |
 
 Avant de pousser, les mêmes commandes se lancent en local : `bun run check`, `bun run typecheck`, `bun run test`, `bun run test:ci-garde`, et, banc démarré, `bun run test:integration` et `bun run test:e2e`.
@@ -699,7 +699,7 @@ Une nouvelle variable qui désigne un service extérieur s'ajoute à la garde, a
 
 ### Le banc de test
 
-Les tests d'intégration tournent contre cinq conteneurs jetables : PostgreSQL en mémoire, un capteur de mails, un stockage d'objets avec l'API S3, un faux Google et un faux Umami. Rien n'y est réel, et rien n'est gardé à l'arrêt.
+Les tests d'intégration tournent contre six conteneurs jetables : PostgreSQL en mémoire, un capteur de mails, un stockage d'objets avec l'API S3, un faux Google, un faux Umami et une fausse liste des communes. Rien n'y est réel, et rien n'est gardé à l'arrêt.
 
 Pour travailler dans le site local, sans écrire de test, **quatre gestes** (l'agent n'a plus besoin d'un compte en ligne) :
 

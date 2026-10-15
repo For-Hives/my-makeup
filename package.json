@@ -33,7 +33,7 @@
 		"banc:prepare": "bun --no-env-file scripts/banc.ts prepare",
 		"banc:source": "bun --no-env-file scripts/source-strapi.ts",
 		"banc:import": "bun --no-env-file scripts/migration/banc-import.ts",
-	"banc:rapprocher": "bun --no-env-file scripts/medias/rapprochement.ts",
+		"banc:rapprocher": "bun --no-env-file scripts/medias/rapprochement.ts",
 		"banc:complet": "bun --no-env-file scripts/banc.ts complet",
 		"banc:reinitialiser": "bun --no-env-file scripts/banc.ts reinitialiser",
 		"banc:session": "bun --no-env-file scripts/banc.ts session",
@@ -93,5 +93,8 @@
 		"dompurify": "3.4.17",
 		"nodemailer": "10.0.15",
 		"undici": "7.29.1"
+	},
+	"patchedDependencies": {
+		"payload@3.90.2": "patches/payload@3.90.2.patch"
 	}
 }

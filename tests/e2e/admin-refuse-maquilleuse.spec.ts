@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import type { Where } from 'payload'
 import { creerCompte } from '../outils/fabrique-comptes'
 import { payloadDeTest } from '../outils/payload-test'
 
@@ -51,6 +52,11 @@ test.describe('Les verrous d’édition du back-office marchent pour les comptes
 			},
 		})
 		const chemin = `/admin/collections/talents/${talent.id}`
+		// The bench is shared with the other tests, which open documents in the panel too: only the
+		// lock of this talent is read, never every lock of the database.
+		const ceVerrou: Where = {
+			and: [{ 'document.relationTo': { equals: 'talents' } }, { 'document.value': { equals: talent.id } }],
+		}
 		const [contextePremier, contexteSecond] = await Promise.all([browser.newContext(), browser.newContext()])
 		try {
 			await contextePremier.addCookies(premier.session.cookies)
@@ -61,9 +67,15 @@ test.describe('Les verrous d’édition du back-office marchent pour les comptes
 			await pagePremier.goto(chemin)
 			await expect(pagePremier.locator('input[name="title"]')).toHaveValue('Talent des verrous')
 			// The panel takes the lock when the form first asks the server for its state: on the first edit.
-			await pagePremier.locator('input[name="title"]').pressSequentially(' modifié')
-			await expect.poll(async () => (await payload.count({ collection: 'payload-locked-documents' })).totalDocs).toBe(1)
-			const verrou = (await payload.find({ collection: 'payload-locked-documents', depth: 0 })).docs[0]
+			// The form hydrates after it shows: keys typed too early reach no handler and take no lock, so
+			// the edit is made again until the lock is there (as admin-suppression-compte.spec.ts clicks).
+			const verrous = async () =>
+				(await payload.count({ collection: 'payload-locked-documents', where: ceVerrou })).totalDocs
+			await expect(async () => {
+				await pagePremier.locator('input[name="title"]').pressSequentially(' modifié')
+				await expect.poll(verrous, { timeout: 3_000 }).toBe(1)
+			}).toPass({ timeout: 30_000 })
+			const verrou = (await payload.find({ collection: 'payload-locked-documents', depth: 0, where: ceVerrou })).docs[0]
 			expect(verrou?.user).toEqual({ relationTo: 'admins', value: Number(premier.id) })
 
 			await pageSecond.goto(chemin)

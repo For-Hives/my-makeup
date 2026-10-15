@@ -160,3 +160,64 @@ describe('Une maquilleuse n’atteint pas les verrous (ticket 094)', () => {
 		).toBe(403)
 	})
 })
+
+/**
+ * Saving through REST checks the lock of the document first (`overrideLock` is false there, unlike the
+ * Local API). Payload 3.90.2 read the lock outside the transaction of the save: a second connection
+ * while the first one is held. With as many saves at once as the pool has connections (5), every save
+ * held one and waited for another, for ever, and the whole application stopped answering. Payload is
+ * patched (patches/payload@3.90.2.patch): the lock is read in the transaction of the save.
+ */
+describe('Des enregistrements simultanés par REST ne bloquent pas l’application (CI du 15/10/2026)', () => {
+	/** More saves at once than the 5 connections of the pool. */
+	const SIMULTANES = 12
+
+	test(`${SIMULTANES} enregistrements à la fois, par l’administration : tous répondent, en quelques secondes`, async () => {
+		const talents = await Promise.all(
+			Array.from({ length: SIMULTANES }, (_, rang) =>
+				payload.create({
+					collection: 'talents',
+					data: {
+						title: `Talent simultané ${rang}`,
+						slug: `talent-simultane-${rang}-${crypto.randomUUID()}`,
+						description: 'Un talent fictif des enregistrements simultanés.',
+						content: '## Un talent\n\nUn talent fictif.\n',
+						_status: 'published',
+					},
+				})
+			)
+		)
+		const enregistrements = Promise.all(
+			talents.map(({ id }, rang) =>
+				appelerRest('PATCH', `/api/talents/${id}`, {
+					enTetes: admin.session.enTetes,
+					corps: { description: `Une description changée, la ${rang + 1}e.` },
+				}).then(({ statut }) => statut)
+			)
+		)
+		const bloque = new Promise<'bloqué'>(fin => setTimeout(() => fin('bloqué'), 15_000))
+
+		expect(await Promise.race([enregistrements, bloque])).toEqual(Array(SIMULTANES).fill(200))
+	}, 30_000)
+
+	test('le verrou d’un autre compte refuse toujours l’enregistrement, et celui du titulaire le laisse passer', async () => {
+		const verrou = await payload.create({
+			collection: 'payload-locked-documents',
+			data: { document: { relationTo: 'talents', value: talent }, user: auNomDe(autreAdmin) },
+		})
+		try {
+			const refuse = await appelerRest('PATCH', `/api/talents/${talent}`, {
+				enTetes: admin.session.enTetes,
+				corps: { description: 'Un enregistrement sur un talent verrouillé par un autre.' },
+			})
+			expect(refuse.statut).toBe(423)
+			const titulaireEnregistre = await appelerRest('PATCH', `/api/talents/${talent}`, {
+				enTetes: autreAdmin.session.enTetes,
+				corps: { description: 'L’enregistrement du titulaire du verrou.' },
+			})
+			expect(titulaireEnregistre.statut).toBe(200)
+		} finally {
+			await payload.delete({ collection: 'payload-locked-documents', where: { id: { equals: verrou.id } } })
+		}
+	})
+})

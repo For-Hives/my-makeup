@@ -10,7 +10,7 @@ import { createConnection } from 'node:net'
 import { SQL } from 'bun'
 import type { ServiceInterroge, Services } from './banc'
 
-/** One of the five services, and the question that tells whether it answers. Rejects when it does not. */
+/** One of the six services, and the question that tells whether it answers. Rejects when it does not. */
 export interface Sonde extends ServiceInterroge {
 	interroger: () => Promise<void>
 }
@@ -41,7 +41,7 @@ function saluerSmtp(hote: string, port: number): Promise<void> {
 }
 
 export function sondesDuBanc(services: Services): Sonde[] {
-	const { base, mails, stockage, google, umami } = services
+	const { base, mails, stockage, google, umami, communes } = services
 	return [
 		{
 			service: 'base',
@@ -89,6 +89,15 @@ export function sondesDuBanc(services: Services): Sonde[] {
 			interroger: async () => {
 				const sante: unknown = await (await requete(`${umami.adresse}/_sante`, 'GET')).json()
 				if ((sante as { service?: unknown } | null)?.service !== 'faux-umami')
+					throw new Error('un autre service répond à cette adresse')
+			},
+		},
+		{
+			service: 'fausse liste des communes',
+			adresse: new URL(communes.adresse).host,
+			interroger: async () => {
+				const sante: unknown = await (await requete(`${communes.adresse}/_sante`, 'GET')).json()
+				if ((sante as { service?: unknown } | null)?.service !== 'faux-communes')
 					throw new Error('un autre service répond à cette adresse')
 			},
 		},

@@ -55,7 +55,7 @@ export const CANARY_FAULTS: readonly CanaryFault[] = [
 	{
 		file: 'tests/e2e/canari.spec.ts',
 		command: 'bun run test:e2e',
-		red: 'e2e, one of the two shards › End-to-end tests',
+		red: 'e2e, one of the shards › End-to-end tests',
 		content: `${HEADER}import { expect, test } from '@playwright/test'\n\ntest('canary: a false end-to-end test', () => {\n\texpect(1 + 1).toBe(3)\n})\n`,
 	},
 ]

@@ -1,0 +1,14 @@
+diff --git a/dist/utilities/checkDocumentLockStatus.js b/dist/utilities/checkDocumentLockStatus.js
+index 502abc62a4a1281e86509bf6957f5a3b79f76bac..eb39b1b90c118e89dc5e34e3dda2462d93a98ce0 100644
+--- a/dist/utilities/checkDocumentLockStatus.js
++++ b/dist/utilities/checkDocumentLockStatus.js
+@@ -46,6 +46,9 @@ export const checkDocumentLockStatus = async ({ id, collectionSlug, globalSlug,
+             collection: lockedDocumentsCollectionSlug,
+             limit: 1,
+             pagination: false,
++            // In the transaction of the operation, like the deleteMany below: without req, postgres reads on a
++            // second connection while the operation holds one, and enough saves at once exhaust the pool for good.
++            req: payload.db.name === 'mongoose' ? undefined : req,
+             sort: '-updatedAt',
+             where: lockedDocumentQuery
+         });

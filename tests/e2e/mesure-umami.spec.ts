@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { fauxUmami, type OutilFauxUmami } from '../outils/faux-umami'
+import { AGENT_AUTOMATISE, fauxUmami, unAgentParEssai } from '../outils/faux-umami'
 
 /**
  * The audience measure, end to end (tickets 111 and 143): a real browser loads a page, the tracker
@@ -10,30 +10,18 @@ import { fauxUmami, type OutilFauxUmami } from '../outils/faux-umami'
  * test. The others play a browser that is not automated, the way a visitor's is.
  */
 
-// Read when a test starts, not when the file is listed: listing needs no bench.
-let umami: OutilFauxUmami
-
-// The fake Umami is one instance for the whole run, and every test reads what it received:
-// they take turns.
-test.describe.configure({ mode: 'serial' })
-
-/** The user agent of an ordinary Chrome: the default one of the headless browser says « HeadlessChrome ». */
-const AGENT_ORDINAIRE =
-	'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36'
-
-test.beforeEach(async () => {
-	umami = fauxUmami()
-	await umami.vider()
-})
+// The fake Umami is one instance for every worker of the run: each test reads only what came with its
+// own user agent (tests/outils/faux-umami.ts), never empties it, and never reads all of it.
+test.use(unAgentParEssai())
 
 test.describe('Un navigateur qui n’est pas automatisé', () => {
-	test.use({ userAgent: AGENT_ORDINAIRE })
-
 	test('une page vue arrive au faux Umami, par /u, sans cookie ni Referer, avec la version du build', async ({
 		context,
 		page,
 		request,
+		userAgent,
 	}) => {
+		const umami = fauxUmami().pourLAgent(userAgent)
 		// The version of the build is the one /api/health shows: the tag of every event.
 		const version = ((await (await request.get('/api/health')).json()) as { version: string }).version
 		await context.addInitScript(() => {
@@ -67,7 +55,12 @@ test.describe('Un navigateur qui n’est pas automatisé', () => {
 		expect(scripts).toContain('POST /u/api/send')
 	})
 
-	test('les Web Vitals de chaque visite arrivent au faux Umami, sans échantillon', async ({ context, page }) => {
+	test('les Web Vitals de chaque visite arrivent au faux Umami, sans échantillon', async ({
+		context,
+		page,
+		userAgent,
+	}) => {
+		const umami = fauxUmami().pourLAgent(userAgent)
 		await context.addInitScript(() => {
 			Object.defineProperty(navigator, 'webdriver', { get: () => false })
 		})
@@ -97,7 +90,11 @@ test.describe('Un navigateur qui n’est pas automatisé', () => {
 })
 
 test.describe('Un navigateur automatisé', () => {
-	test('rien n’est envoyé : le filtre de la page le refuse', async ({ page }) => {
+	// The user agent of the headless browser, marked like the others: the filter of the page still refuses it.
+	test.use(unAgentParEssai(AGENT_AUTOMATISE))
+
+	test('rien n’est envoyé : le filtre de la page le refuse', async ({ page, userAgent }) => {
+		const umami = fauxUmami().pourLAgent(userAgent)
 		await page.goto('/')
 		// The tracker has run when `window.umami` exists. Asking it for a page view then goes through
 		// the filter of the page, which settles before the call returns: nothing is waited for by the clock.
@@ -118,9 +115,12 @@ test.describe('Le chemin /u', () => {
 
 	test('une mesure postée avec un cookie, un Referer et une adresse arrive sans les deux premiers', async ({
 		request,
+		userAgent,
 	}) => {
+		const umami = fauxUmami().pourLAgent(userAgent)
 		const reponse = await request.post('/u/api/send', {
 			headers: {
+				'User-Agent': String(userAgent),
 				Cookie: 'authjs.session-token=valeur-fictive',
 				Referer: 'https://exemple.test/auth/profil?x=1',
 				Authorization: 'Bearer valeur-fictive',
@@ -134,8 +134,10 @@ test.describe('Le chemin /u', () => {
 		expect(recu).toMatchObject({ cookie: false, referer: false, autorisation: false, adresse: '203.0.113.7' })
 	})
 
-	test('un GET sur l’envoi répond 405, tout autre chemin sous /u répond 404', async ({ request }) => {
-		expect((await request.get('/u/api/send')).status()).toBe(405)
+	test('un GET sur l’envoi répond 405, tout autre chemin sous /u répond 404', async ({ request, userAgent }) => {
+		const umami = fauxUmami().pourLAgent(userAgent)
+		const avecSonAgent = { headers: { 'User-Agent': String(userAgent) } }
+		expect((await request.get('/u/api/send', avecSonAgent)).status()).toBe(405)
 		for (const chemin of [
 			'/u',
 			'/u/',
@@ -146,7 +148,7 @@ test.describe('Le chemin /u', () => {
 			'/u/login',
 			'/U/script.js',
 		])
-			expect((await request.get(chemin)).status(), chemin).toBe(404)
+			expect((await request.get(chemin, avecSonAgent)).status(), chemin).toBe(404)
 		expect(await umami.recus()).toEqual([])
 	})
 })

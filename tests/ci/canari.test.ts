@@ -57,7 +57,7 @@ describe('the canary plants four faults, one per tool', () => {
 			['tests/unit/canari.test.ts', 'bun run test:unit', 'unit › Unit tests'],
 			['tests/ci/canari-types.ts', 'bun run typecheck', 'qualite › Types'],
 			['tests/ci/canari-biome.ts', 'bun run ci:biome', 'qualite › Biome'],
-			['tests/e2e/canari.spec.ts', 'bun run test:e2e', 'e2e, one of the two shards › End-to-end tests'],
+			['tests/e2e/canari.spec.ts', 'bun run test:e2e', 'e2e, one of the shards › End-to-end tests'],
 		])
 	})
 

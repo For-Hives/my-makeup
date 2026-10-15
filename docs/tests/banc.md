@@ -1,6 +1,6 @@
 # Le banc de test local
 
-Le banc est ce contre quoi tournent les tests d'intégration : cinq conteneurs, sur ce poste, que l'on démarre et que l'on jette. Rien n'y est réel. La base est vide et en mémoire, les mails n'en sortent pas, le stockage d'objets est un simulateur, le faux Google ne connaît que des personnes inventées et le faux Umami ne compte que les visites du banc.
+Le banc est ce contre quoi tournent les tests d'intégration : six conteneurs, sur ce poste, que l'on démarre et que l'on jette. Rien n'y est réel. La base est vide et en mémoire, les mails n'en sortent pas, le stockage d'objets est un simulateur, le faux Google ne connaît que des personnes inventées, le faux Umami ne compte que les visites du banc et la fausse liste des communes répond à la place de geo.api.gouv.fr.
 
 | Service | Rôle | Adresse par défaut |
 |---|---|---|
@@ -15,7 +15,7 @@ La même pile sert sur un poste et en CI : `compose.test.yml`.
 ## Démarrer et arrêter
 
 ```sh
-bun run banc:up     # démarre les cinq conteneurs, rend la main quand les cinq services répondent
+bun run banc:up     # démarre les six conteneurs, rend la main quand les six services répondent
 bun run banc:down   # arrête tout, supprime conteneurs, réseau et volumes
 ```
 
@@ -25,7 +25,8 @@ bun run banc:down   # arrête tout, supprime conteneurs, réseau et volumes
 - le capteur de mails répond en SMTP, et son API est prête ;
 - le stockage a son espace ;
 - le faux Google se présente sous l'adresse de l'instance ;
-- le faux Umami dit qui il est.
+- le faux Umami dit qui il est ;
+- la fausse liste des communes dit qui elle est.
 
 Relancé sur un banc déjà démarré, `banc:up` ne change rien et redit les adresses.
 
@@ -91,10 +92,10 @@ bun run test:integration tests/integration/banc-base.test.ts   # un seul fichier
 
 La commande fait trois choses :
 
-1. Elle interroge les cinq services. Si l'un d'eux ne répond pas, elle s'arrête avant le premier test et dit quoi démarrer :
+1. Elle interroge les six services. Si l'un d'eux ne répond pas, elle s'arrête avant le premier test et dit quoi démarrer :
 
    ```
-   Le banc de test « my-makeup-test » ne répond pas : base (127.0.0.1:5443), capteur de mails (127.0.0.1:1025), stockage d’objets (127.0.0.1:9090), faux Google (127.0.0.1:7080), faux Umami (127.0.0.1:4200).
+   Le banc de test « my-makeup-test » ne répond pas : base (127.0.0.1:5443), capteur de mails (127.0.0.1:1025), stockage d’objets (127.0.0.1:9090), faux Google (127.0.0.1:7080), faux Umami (127.0.0.1:4200), fausse liste des communes (127.0.0.1:2050).
    Démarre-le d’abord : bun run banc:up
    ```
 
@@ -438,7 +439,7 @@ bun run banc:down            # 4. tout arrêter et tout effacer
 
 **1. `bun run banc:complet`**, dans cet ordre :
 
-1. démarre les cinq conteneurs, ou constate qu'ils tournent déjà (`banc:up`) ;
+1. démarre les six conteneurs, ou constate qu'ils tournent déjà (`banc:up`) ;
 2. remet le banc à son état de départ (voir 3) ;
 3. construit l'application pour la production, sans base ni secret, comme `test:e2e` ;
 4. la démarre sur le port du banc, `http://localhost:3100` par défaut, `127.0.0.1` seulement, et dit « Application prête » quand `/api/health` répond.
@@ -647,7 +648,7 @@ Son contenu, son inventaire, son empreinte et ses outils de test : [`source-stra
 
 ## En CI
 
-Les mêmes commandes, dans le job `integration` de `.github/workflows/ci.yml` : `bun run banc:up`, puis `bun run test:integration`. Le banc y tourne sous le nom et sur les ports par défaut, avec le Docker de la machine de GitHub. Chaque lot du job `e2e` démarre aussi le sien ([`e2e.md`](e2e.md), « En CI »). Un job en échec rend `ci-ok` rouge ([`docs/qualite.md`](../qualite.md), « Ce que lance la CI »).
+Les mêmes commandes, dans le job `integration` de `.github/workflows/ci.yml`, en trois lots côte à côte : `bun run banc:up`, puis `bun run test:integration --shard=N/3`. bun répartit les fichiers de tests entre les lots, un fichier sur trois dans l'ordre alphabétique ; chaque lot démarre son propre banc, si bien que deux lots ne partagent jamais une base. Pour rejouer un lot sur un poste, banc démarré : `bun run test:integration --shard=2/3`. Le banc y tourne sous le nom et sur les ports par défaut, avec le Docker de la machine de GitHub. Chaque lot du job `e2e` démarre aussi le sien ([`e2e.md`](e2e.md), « En CI »). Un job en échec rend `ci-ok` rouge ([`docs/qualite.md`](../qualite.md), « Ce que lance la CI »).
 
 Lancé sans les commandes du banc (`docker compose -f compose.test.yml up -d --wait`), `compose.test.yml` démarre l'instance par défaut, sur les ports de `.env.test`.
 
@@ -696,3 +697,19 @@ Un test le lit par `fauxUmami()` (`tests/outils/faux-umami.ts`) : `recus()`, `en
 Le navigateur de Playwright se déclare automatisé (`navigator.webdriver`, agent `HeadlessChrome`), et le filtre du site refuse de le mesurer. Un essai qui veut voir arriver une mesure joue un navigateur ordinaire : un agent d'un Chrome ordinaire et `webdriver` à faux (`tests/e2e/mesure-umami.spec.ts`).
 
 Les noms d'hôte que le traceur compte sont ceux du banc (`NEXT_PUBLIC_UMAMI_DOMAINS` de `.env.test`) ; le build des essais de bout en bout les reçoit, parce que les pages les figent.
+
+## La fausse liste des communes
+
+L'espace de la maquilleuse demande la liste officielle des communes (geo.api.gouv.fr) : quand elle cherche sa commune, et quand elle l'enregistre (`src/lib/espace/referentiel-communes.ts`). Depuis les machines de la CI, la vraie liste répondait parfois en plus de 5 secondes, ou pas du tout, et les essais qui choisissent une commune échouaient avec elle (CI du 15/10/2026). L'application des essais de bout en bout ne l'appelle donc plus : elle demande la fausse liste du banc, `tests/outils/faux-communes/`, qui répond aux mêmes questions à partir de quelques communes de la liste officielle (celles du jeu fictif et de la fabrique de profils, et Lillers et Lillebonne, qui partagent le début du nom de Lille).
+
+| Chemin | Ce qu'il fait |
+|---|---|
+| `GET /communes?nom=…` | Les communes dont le nom contient le texte, accents et majuscules mis à part : le nom exact d'abord, puis les plus peuplées ; `limit` borne la réponse |
+| `GET /communes?codePostal=…` | Les communes d'un code postal |
+| `GET /communes/<code INSEE>` | Une commune, ou 404 en texte, comme la liste officielle |
+| `GET /_sante` | Dit qui répond : la sonde du banc |
+
+- `.env.test` donne son adresse sous `FAUSSES_COMMUNES`. `bun run test:e2e` et `bun run banc:complet` la passent à l'application sous `COMMUNES_DU_BANC` (`tests/outils/e2e.ts`), et à elle seule.
+- Les tests d'intégration ne la voient pas : ils simulent la liste officielle elle-même, par `simuler`, pour jouer aussi ses pannes ([`http-sortant.md`](http-sortant.md)).
+- Comme `IMAGES_DU_BANC`, la production ne règle jamais `COMMUNES_DU_BANC` : une valeur qui n'est pas exactement `http://127.0.0.1:PORT` (ou `localhost`), ou qui est donnée à un site déployé, est refusée bruyamment au lieu d'être suivie (`tests/unit/banc-fausses-communes.test.ts`).
+- Un essai qui a besoin d'une autre commune l'ajoute à `COMMUNES` de `tests/outils/faux-communes/fournisseur.ts`, avec les données de la liste officielle : nom, code INSEE, département, codes postaux, centre.

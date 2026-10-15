@@ -153,13 +153,15 @@ La CI se lance à chaque pull request et à chaque poussée sur `v3`. Cinq jobs 
 | `qualite` | Les fichiers générés par Payload sont à jour ; aucune dérive de schéma (`bun run schema:derive`) ; `bun run typecheck` ; `bun run ci:biome` ; `bun run test:ci-garde` | 10 min |
 | `unit` | `bun run test:unit` | 10 min |
 | `build` | `bun run image:build`, sans secret ni base, puis `bun run image:controle` | 12 min |
-| `integration` | `bun run banc:up`, puis `bun run test:integration` : les tests d'intégration sur le banc de test ([`docs/tests/banc.md`](tests/banc.md)) | 10 min |
-| `e2e` | En deux lots côte à côte, `e2e (1/2)` et `e2e (2/2)`. Chacun installe le Chromium de Playwright, lance `bun run banc:up`, puis `bun run test:e2e` sur sa moitié des essais ([`docs/tests/e2e.md`](tests/e2e.md)) | 10 min par lot |
+| `integration` | En trois lots côte à côte, de `integration (1/3)` à `integration (3/3)`. Chacun lance `bun run banc:up`, puis `bun run test:integration --shard=N/3` : un tiers des fichiers de tests d'intégration, sur son propre banc de test ([`docs/tests/banc.md`](tests/banc.md)) | 10 min par lot |
+| `e2e` | En quatre lots côte à côte, de `e2e (1/4)` à `e2e (4/4)`. Chacun installe le Chromium de Playwright, lance `bun run banc:up`, puis `bun run test:e2e --shard=N/4` sur son quart des essais ([`docs/tests/e2e.md`](tests/e2e.md)) | 10 min par lot |
 | `ci-ok` | Rouge si l'un des cinq a échoué, a été annulé ou a été sauté | 2 min |
 
 - Dans `qualite`, les cinq contrôles sont tous joués, même quand l'un échoue : une seule poussée montre toutes les fautes.
-- Un lot `e2e` en échec n'arrête pas l'autre (`fail-fast: false`). Pour `ci-ok`, les deux lots ne font qu'un job : il est en échec dès qu'un lot l'est, annulé dès qu'un lot atteint sa limite.
-- Un lot `e2e` en échec envoie son rapport, ses traces, ses vidéos et ses captures : l'artefact `e2e-1` ou `e2e-2` du passage, gardé 14 jours.
+- Un lot en échec n'arrête pas les autres (`fail-fast: false`). Pour `ci-ok`, les lots d'un job ne font qu'un : il est en échec dès qu'un lot l'est, annulé dès qu'un lot atteint sa limite. `needs` de `ci-ok` nomme donc les jobs, pas les lots.
+- Un lot `e2e` en échec envoie son rapport, ses traces, ses vidéos et ses captures : l'artefact `e2e-1` à `e2e-4` du passage, gardé 14 jours.
+- Le nombre de lots de chaque job est `SHARDS`, dans `tests/outils/garde-fous-ci.ts`. Pour le changer : la matrice (`shard: [1, …, N]`), le nom du job (`… (${{ matrix.shard }}/N)`), le diviseur de la commande (`--shard=${{ matrix.shard }}/N`) et `SHARDS`, dans le même commit. La garde refuse qu'un des quatre dise un autre nombre : une matrice et un diviseur différents perdraient des tests sans rien dire.
+- Pourquoi des lots : au 15/10/2026, environ 2 000 tests d'intégration et 450 essais de bout en bout. En un job, les tests d'intégration duraient 7 min 40 s et un lot `e2e` sur deux dépassait ses 10 minutes ; découpés, chaque lot reste loin de sa limite (« Durée de la CI »).
 - Les tests d'intégration et les essais de bout en bout tournent sur le même banc de test que sur un poste, avec les mêmes commandes : chaque job démarre le sien.
 - La plus longue chaîne, `build` puis `ci-ok`, est limitée à 14 minutes : voir « Durée de la CI ».
 - Chaque commande tourne sous `bash -eo pipefail` (`defaults: run: shell: bash`) : une commande qui échoue arrête son étape, même au milieu d'un tube.
@@ -198,6 +200,8 @@ gh run view NUMERO --repo For-Hives/my-makeup --json jobs \
 | 14/10/2026 | GitHub, CI 38501556779, commit `2fe3629` | 1 min 35 s en tout : `qualite` 21 s, `unit` 19 s, `build` 1 min 28 s, `ci-ok` 2 s |
 | 14/10/2026 | Poste de développement, Podman, les commandes des jobs `integration` et `e2e` jouées une à une : ce n'est pas une CI | Banc prêt en 4,2 s, images déjà téléchargées ; tests d'intégration : 37 verts en 7,2 s ; chaque lot `e2e` avec `CI=true` : 4 essais verts, build compris, en 13 s environ (build déjà en cache) |
 | 14/10/2026 | GitHub, CI 38512540493, commit `1016d81`, la première à cinq jobs | 1 min 52 s en tout : `qualite` 31 s, `unit` 19 s, `build` 1 min 27 s, `integration` 55 s, `e2e (1/2)` 1 min 44 s, `e2e (2/2)` 1 min 44 s, `ci-ok` 3 s |
+| 15/10/2026 | GitHub, avant les lots : CI 38759642930, commit `71bb44c`, et les précédentes | `integration` 8 min 16 s à 10 min 16 s (7 min 43 s de tests, 2 005 tests) ; un lot `e2e` sur deux annulé à sa limite de 10 minutes, ou bloqué par l'application (voir le patch de `payload`, `CLAUDE.md`, « Pièges ») |
+| 15/10/2026 | GitHub, CI 38769675350, pull request #977, commit `d68a981`, la première à trois lots d'intégration et quatre lots `e2e` | 5 min 34 s en tout : `qualite` 56 s, `unit` 1 min 20 s, `build` 2 min 7 s, `integration` 3 min 32 s, 5 min 26 s et 4 min 57 s (2 031 tests : 252, 1 501 et 278), `e2e` 4 min 59 s, 5 min 1 s, 4 min 4 s et 5 min 5 s (476 essais, 119 par lot, aucun rejoué), `ci-ok` 2 s |
 
 ### Pourquoi `ci-ok`
 
@@ -228,7 +232,7 @@ Le même fichier garde aussi :
 - les permissions : `ci.yml` lit le dépôt, rien de plus. Le workflow de publication donne l'écriture à son seul job ; `tests/ci/publication.test.ts` le garde, avec sa dépendance à `ci-ok` ;
 - `ci-ok` : il tourne toujours et attend tous les jobs. Aucun job n'est sous condition. Une commande (`run`) ne porte que `always()` ou `!cancelled()`, qui la font tourner plus souvent, jamais moins. `failure()` est réservé aux actions (`uses`) qui envoient un rapport : sous cette condition, une commande serait sautée quand tout va bien, et le job resterait vert sans elle ;
 - les durées : chaque job a sa limite, et la somme des limites de la plus longue chaîne reste sous 15 minutes (voir « Durée de la CI ») ;
-- le banc de test en CI : les jobs `integration` et `e2e` existent ; chacun lance `bun run banc:up` avant ses tests, chaque commande seule dans son étape ; `e2e` tourne en deux lots (`matrix: shard: [1, 2]`, et rien d'autre), sans qu'un lot en échec annule l'autre (`fail-fast: false`), sous Node, avec le Chromium de Playwright, et sa limite ne dépasse pas 10 minutes ;
+- le banc de test en CI : les jobs `integration` et `e2e` existent ; chacun lance `bun run banc:up` avant ses tests, chaque commande seule dans son étape ; chacun tourne en lots, trois pour `integration`, quatre pour `e2e` (`matrix: shard: [1, …, N]`, et rien d'autre ; le même N dans le nom du job et dans le diviseur de `--shard`), sans qu'un lot en échec annule les autres (`fail-fast: false`), et la limite d'un lot ne dépasse pas 10 minutes ; `e2e` tourne sous Node, avec le Chromium de Playwright ;
 - l'image Docker : variables publiques seulement, quelle que soit la casse de leur nom, utilisateur sans droits, contrôle de santé, contexte de build en liste blanche (voir le README, « Image Docker »).
 
 ### Ce que les garde-fous ne voient pas
@@ -275,7 +279,7 @@ Un check requis qui ne peut pas échouer ne protège rien. Le canari est une pul
 | `tests/ci/canari-biome.ts` | Une variable jamais lue | Job `qualite`, étape « Biome » |
 | `tests/e2e/canari.spec.ts` | Un essai de bout en bout faux | Job `e2e`, étape « End-to-end tests », dans le lot qui le reçoit |
 
-Les quatre fichiers sont sous `tests/`, hors de l'image Docker : le job `build` reste vert, et chaque rouge désigne un seul outil. L'essai faux n'ouvre aucune page : il échoue de la même façon dans les deux lots, et se rejoue sans navigateur.
+Les quatre fichiers sont sous `tests/`, hors de l'image Docker : le job `build` reste vert, et chaque rouge désigne un seul outil. L'essai faux n'ouvre aucune page : il échoue de la même façon dans chaque lot, et se rejoue sans navigateur.
 
 ### Le jouer
 
@@ -305,7 +309,7 @@ gh api repos/For-Hives/my-makeup/branches/v3/protection --jq .enforce_admins.ena
 | `unit` | Rouge : un test en échec |
 | `build` | Vert |
 | `integration` | Vert |
-| `e2e` | Rouge : un lot en échec, l'essai faux rejoué deux fois ; l'autre lot vert |
+| `e2e` | Rouge : un lot en échec, l'essai faux rejoué deux fois ; les autres lots verts |
 | `ci-ok` | Rouge |
 | `mergeStateStatus` | `BLOCKED` |
 | `enforce_admins.enabled` | `true` : la fusion est bloquée pour un administrateur aussi |

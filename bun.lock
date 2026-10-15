@@ -45,6 +45,9 @@
       },
     },
   },
+  "patchedDependencies": {
+    "payload@3.90.2": "patches/payload@3.90.2.patch",
+  },
   "overrides": {
     "dompurify": "3.4.17",
     "nodemailer": "10.0.15",

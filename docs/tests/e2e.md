@@ -139,6 +139,7 @@ bun run test:e2e tests/e2e/parite-urls.spec.ts
 - L'essai de la fraîcheur (`fraicheur-pages.spec.ts`, ticket 117) prouve qu'une page vient du cache en changeant la base **derrière le dos de l'application** : un `payload.update` du processus de l'essai n'est pas une requête de Next, rien n'est rafraîchi, et la page doit encore montrer l'ancien texte ; un enregistrement par l'API REST la rafraîchit. Chaque essai pose son propre profil (« Essai Fraicheur… », tiré du profil type « actif mais pas publiable ») et le retire par l'application.
 - L'essai des pages de la recherche (`recherche-mot-cle.spec.ts`, E41 et I29) a besoin de plus de 20 résultats, que le banc n'a pas : il crée 45 profils générés par la fabrique (`tests/outils/fabrique-profils.ts`, `fabriquerParLApplication`) **par l'API de l'application**, pour que chaque enregistrement rafraîchisse les pages comme pour une visiteuse, et les retire à la fin. Ils sont dans des communes loin d'Annecy et de Nantes et aucun ne se déplace : pour les autres recherches du banc, ils viennent en dernier, sous « Autres maquilleuses ». Chaque projet (1440 et 390 px) a son préfixe et son mot : ils ne se voient pas. La même fabrique sème, par l'API locale, les 500 profils de l'essai de charge I31 (`tests/integration/recherche.test.ts`).
 - L'essai du frein (I30) envoie ses requêtes avec un `X-Forwarded-For` de la plage de documentation, tiré au hasard : une requête qui n'est pas passée par le proxy (sans l'en-tête, ou avec l'adresse de bouclage que Next y écrit) n'est jamais freinée, si bien que les essais qui partent tous de l'adresse du poste ne se gênent pas.
+- L'application des essais ne demande pas la liste officielle des communes (geo.api.gouv.fr), qui répondait trop lentement ou pas du tout depuis la CI : elle demande la fausse liste du banc, par `COMMUNES_DU_BANC` ([`banc.md`](banc.md), « La fausse liste des communes »). Un essai qui choisit une commune la trouve là, aux deux tailles, sans Internet.
 - L'optimiseur d'images de Next n'accepte que l'hôte des photos, en https. Pour que les photos du banc (le simulateur de stockage, en http sur `127.0.0.1`) se chargent, le build et le serveur des essais reçoivent `IMAGES_DU_BANC=http://127.0.0.1:<port>/<espace>` (`tests/outils/e2e.ts`) : `next.config.ts` ouvre alors cet espace-là et lui seul (`imagesDuBanc`, `src/lib/security-headers.ts`). La production ne règle jamais cette variable ; une valeur qui n'est pas exactement une adresse locale avec un port et un espace est refusée, et un test garde la configuration de production fermée aux adresses locales.
 
 ## Quand un essai échoue
@@ -158,19 +159,21 @@ En CI, un essai en échec est rejoué deux fois, et un essai laissé en `.only` 
 
 ## En CI
 
-Le job `e2e` de `.github/workflows/ci.yml` lance les essais en deux lots côte à côte, `e2e (1/2)` et `e2e (2/2)`. Chaque lot fait ce qu'on fait sur un poste :
+Le job `e2e` de `.github/workflows/ci.yml` lance les essais en quatre lots côte à côte, de `e2e (1/4)` à `e2e (4/4)`. Chaque lot fait ce qu'on fait sur un poste :
 
 ```sh
 bunx playwright install --with-deps chromium   # le navigateur, et les bibliothèques du système qu'il demande
 bun run banc:up
-bun run test:e2e --shard=1/2                   # sa moitié des essais ; l'autre lot lance --shard=2/2
+bun run test:e2e --shard=1/4                   # son quart des essais ; les autres lots lancent --shard=2/4 à 4/4
 ```
 
-- Playwright partage les essais entre les deux lots ; chaque lot construit l'application lui-même, démarre son banc et ne dépend pas de l'autre. Un lot en échec n'arrête pas l'autre.
+- Playwright partage les essais entre les lots ; chaque lot construit l'application lui-même, démarre son banc et ne dépend d'aucun autre. Un lot en échec n'arrête pas les autres.
+- Dans un lot, deux processus de Playwright jouent les essais côte à côte, sur le même banc et la même application. Un essai ne compte donc jamais ce que toute la base ou tout le faux Umami contient : il lit ce qu'il a posé lui-même (son talent, ses profils « Essai … », les mesures de son propre navigateur, `agentDeLEssai` de `tests/outils/faux-umami.ts`), et ne vide jamais ce qui est partagé.
+- Le nombre de lots est celui de `SHARDS` (`tests/outils/garde-fous-ci.ts`) : la garde refuse une matrice, un nom de job ou une commande qui en dirait un autre.
 - GitHub règle `CI=true` : un essai en échec est rejoué deux fois, et un essai laissé en `.only` fait échouer le lancement.
-- Un lot a 10 minutes au plus : au-delà, il est arrêté, et `ci-ok` est rouge. Sur un poste, un lot de 4 essais prend environ 13 secondes, build en cache compris (mesuré le 14/10/2026).
-- Après un échec, le lot envoie `playwright-report/` et `test-results/` : l'artefact `e2e-1` ou `e2e-2` du passage, sur la page de la CI, gardé 14 jours. Le rapport s'ouvre par `bunx playwright show-report playwright-report`, une fois l'artefact décompressé.
-- Pour le rejouer sur un poste, banc démarré : `CI=true bun run test:e2e --shard=1/2`.
+- Un lot a 10 minutes au plus : au-delà, il est arrêté, et `ci-ok` est rouge.
+- Après un échec, le lot envoie `playwright-report/` et `test-results/` : l'artefact `e2e-1` à `e2e-4` du passage, sur la page de la CI, gardé 14 jours. Le rapport s'ouvre par `bunx playwright show-report playwright-report`, une fois l'artefact décompressé.
+- Pour le rejouer sur un poste, banc démarré : `CI=true bun run test:e2e --shard=1/4 --workers=2`.
 
 ## Ce qui empêche de viser la prod
 

@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { type ProfilDeRecherche, poserLesProfilsDeRecherche } from '../fixtures/profils-de-recherche'
-import { fauxUmami, type OutilFauxUmami } from '../outils/faux-umami'
+import { fauxUmami, type LectureFauxUmami, unAgentParEssai } from '../outils/faux-umami'
 import { rafraichirLesPagesDesProfils } from '../outils/pages-publiques'
 
 /**
@@ -9,19 +9,18 @@ import { rafraichirLesPagesDesProfils } from '../outils/pages-publiques'
  * what the site relays. Nothing typed may reach it.
  */
 
-let umami: OutilFauxUmami
+let umami: LectureFauxUmami
 let reference: ProfilDeRecherche
 
 test.describe.configure({ mode: 'serial' })
-
-const AGENT_ORDINAIRE =
-	'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36'
 
 type Donnees = Record<string, unknown>
 const donneesDe = (recu: { corps: unknown }): Donnees => (recu.corps as { payload: { data: Donnees } }).payload.data
 
 test.describe('La mesure de la recherche, des appels à l’action et de la 404', () => {
-	test.use({ userAgent: AGENT_ORDINAIRE })
+	// An ordinary Chrome, with a mark of its own: the fake Umami is shared by every worker of the run, and the
+	// test reads only what came from its browser (tests/outils/faux-umami.ts).
+	test.use(unAgentParEssai())
 
 	test.beforeAll(async () => {
 		test.setTimeout(180_000)
@@ -31,13 +30,12 @@ test.describe('La mesure de la recherche, des appels à l’action et de la 404'
 		reference = trouve
 	})
 
-	test.beforeEach(async ({ context, request }) => {
+	test.beforeEach(async ({ context, request, userAgent }) => {
 		await rafraichirLesPagesDesProfils(request, reference)
 		await context.addInitScript(() => {
 			Object.defineProperty(navigator, 'webdriver', { get: () => false })
 		})
-		umami = fauxUmami()
-		await umami.vider()
+		umami = fauxUmami().pourLAgent(userAgent)
 	})
 
 	test('la soumission du formulaire : une fois, la tranche et la ville, jamais le texte ; le clic donne rang et profil', async ({
@@ -90,14 +88,13 @@ test.describe('La mesure de la recherche, des appels à l’action et de la 404'
 		const [cta] = await umami.envois('cta_click')
 		expect(cta ? donneesDe(cta) : {}).toEqual({ where: 'cta_inscription' })
 
-		await umami.vider()
 		await page.goto('/a-propos')
 		await page
 			.getByRole('navigation', { name: 'Navigation principale' })
 			.getByRole('link', { name: 'Trouver une maquilleuse' })
 			.click()
-		await expect.poll(async () => (await umami.envois('cta_click')).length, { timeout: 10_000 }).toBe(1)
-		const [nav] = await umami.envois('cta_click')
+		await expect.poll(async () => (await umami.envois('cta_click')).length, { timeout: 10_000 }).toBe(2)
+		const [, nav] = await umami.envois('cta_click')
 		expect(['nav_recherche', 'nav_recherche_mobile']).toContain(nav ? donneesDe(nav).where : null)
 	})
 

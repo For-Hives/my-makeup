@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test'
 import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
-import { fauxUmami, type OutilFauxUmami } from '../outils/faux-umami'
+import { fauxUmami, type LectureFauxUmami, unAgentParEssai } from '../outils/faux-umami'
 import { payloadDeTest } from '../outils/payload-test'
 
 /**
@@ -17,7 +17,7 @@ const TELEPHONE = '06 12 34 56 78'
 const EMAIL = 'contact-mesure@example.test'
 const INSTAGRAM = 'https://instagram.com/mesure.exemple'
 
-let umami: OutilFauxUmami
+let umami: LectureFauxUmami
 let compte: CompteDeTest<'maquilleuse'>
 let autre: CompteDeTest<'maquilleuse'>
 let slug: string
@@ -25,14 +25,13 @@ let slugSansContact: string
 
 test.describe.configure({ mode: 'serial' })
 
-const AGENT_ORDINAIRE =
-	'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36'
-test.use({ userAgent: AGENT_ORDINAIRE })
+// An ordinary Chrome, with a mark of its own: the fake Umami is shared by every worker of the run, and each
+// test reads only what came from its browser (tests/outils/faux-umami.ts).
+test.use(unAgentParEssai())
 
 /** The brake of the sign-in counts by client address: this file sends its own made-up address. */
-test.beforeEach(async ({ context }) => {
-	umami = fauxUmami()
-	await umami.vider()
+test.beforeEach(async ({ context, userAgent }) => {
+	umami = fauxUmami().pourLAgent(userAgent)
 	await context.addInitScript(() => {
 		Object.defineProperty(navigator, 'webdriver', { get: () => false })
 	})

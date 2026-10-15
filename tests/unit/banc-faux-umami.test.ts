@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { BancRefuse } from '../outils/banc'
-import { fauxUmami } from '../outils/faux-umami'
+import { AGENT_AUTOMATISE, AGENT_ORDINAIRE, agentDeLEssai, fauxUmami } from '../outils/faux-umami'
 import { creerFauxUmami } from '../outils/faux-umami/fournisseur'
 import { EnvironnementRefuse, verifierUmami } from '../outils/garde-environnement'
 
@@ -52,6 +52,31 @@ describe('le faux Umami', () => {
 
 		await outil.vider()
 		expect(await outil.recus()).toEqual([])
+	})
+
+	test('un essai ne lit que ce que son navigateur a envoyé : celui d’à côté ne le gêne pas', async () => {
+		const outil = fauxUmami({ UMAMI_ORIGIN: adresse })
+		const [le, lautre] = [agentDeLEssai(), agentDeLEssai()]
+		const envoyer = (agent: string, name: string) =>
+			fetch(`${adresse}/api/send`, {
+				method: 'POST',
+				body: JSON.stringify({ type: 'event', payload: { name } }),
+				headers: { 'Content-Type': 'application/json', 'User-Agent': agent },
+			})
+		await envoyer(le, 'cta_click')
+		await envoyer(lautre, 'cta_click')
+		await envoyer(lautre, 'not_found')
+
+		expect(le).not.toBe(lautre)
+		expect(le.startsWith(AGENT_ORDINAIRE)).toBe(true)
+		expect(agentDeLEssai(AGENT_AUTOMATISE)).toContain('HeadlessChrome')
+		expect(await outil.pourLAgent(le).envois('cta_click')).toHaveLength(1)
+		expect(await outil.pourLAgent(le).recus()).toHaveLength(1)
+		expect(await outil.pourLAgent(lautre).recus()).toHaveLength(2)
+		expect(await outil.pourLAgent(lautre).envois('not_found')).toHaveLength(1)
+		// Without the mark of a test, it would read what every other test sent.
+		expect(() => outil.pourLAgent(AGENT_ORDINAIRE)).toThrow(BancRefuse)
+		expect(() => outil.pourLAgent(undefined)).toThrow('agentDeLEssai')
 	})
 
 	test('un autre chemin, ou une autre méthode : 404', async () => {
