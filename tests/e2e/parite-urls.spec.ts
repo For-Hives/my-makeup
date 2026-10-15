@@ -56,6 +56,7 @@ const LIVREES: ReadonlySet<string> = new Set([
 	'profil-ancien-nom',
 	'profil-non-repris',
 	'demande-envoyee',
+	'robots',
 ])
 
 /**
