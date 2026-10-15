@@ -5,7 +5,7 @@ import { violationsGraves } from '../outils/axe'
  * The exit of P5 (ticket 096): no « serious » or « critical » accessibility violation on the
  * authentication pages that need no session, at 1440 px (project `chromium`) and at 390 px
  * (project `mobile`, thanks to the tag). The sign-up page, the wall and the forgotten-password pages
- * are also read by their own specs; this one adds the sign-in page in each of its states and the
+ * are also read by their own specs; this one adds the sign-in page in each of its states (including the single-reconnection message) and the
  * confirmation page, so that every page of the authentication is read at both sizes.
  */
 
@@ -28,4 +28,24 @@ test.describe('Accessibilité des pages d’authentification', { tag: '@mobile' 
 			expect(await violationsGraves(page)).toEqual([])
 		})
 	}
+
+	test('la connexion, avec le message « Reconnecte-toi une fois » : aucune violation grave', async ({
+		baseURL,
+		context,
+		page,
+	}) => {
+		await context.addCookies([
+			{
+				name: '__Secure-next-auth.session-token.0',
+				value: 'ancienne-valeur',
+				domain: new URL(baseURL ?? '').hostname,
+				path: '/',
+				secure: true,
+			},
+		])
+		await page.goto('/auth/profil')
+		await expect(page).toHaveURL(/\/auth\/signin/)
+		await expect(page.getByTestId('message-reconnexion')).toBeVisible()
+		expect(await violationsGraves(page)).toEqual([])
+	})
 })
