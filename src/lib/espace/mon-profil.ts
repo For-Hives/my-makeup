@@ -1,6 +1,4 @@
-import config from '@payload-config'
-import { headers } from 'next/headers'
-import { getPayload, type Payload } from 'payload'
+import type { Payload } from 'payload'
 import { COLLECTION_PROS } from '../acces'
 import type { ProfilDeLEspace } from './cartes'
 
@@ -31,34 +29,43 @@ const CHAMPS_LUS = {
 } as const
 
 /**
- * The profile of this makeup artist, and hers only: it is found by her account, never by an
- * identifier that comes from the request, and read with the access rules on (`overrideAccess:
- * false`) as herself. Nobody else's profile can come out of it (U54).
+ * The identifier of her profile, found by her account. The field `pro` is closed to a query made
+ * as herself (field access applies to the paths of a `where`), so this one lookup is made by the
+ * server, and gives back an identifier and nothing else. `utilisateur` comes from the session
+ * (`payload.auth`), never from the request.
  */
-export async function profilDeLaMaquilleuse(
-	payload: Payload,
-	utilisateur: UtilisateurDeLEspace
-): Promise<(ProfilDeLEspace & { id: number }) | null> {
+export async function identifiantDuProfil(payload: Payload, utilisateur: UtilisateurDeLEspace): Promise<number | null> {
 	if (utilisateur.collection !== COLLECTION_PROS) return null
 	const { docs } = await payload.find({
 		collection: 'profils',
 		depth: 0,
 		limit: 1,
-		overrideAccess: false,
+		overrideAccess: true,
 		pagination: false,
-		select: CHAMPS_LUS,
-		user: utilisateur,
+		select: {},
 		where: { pro: { equals: utilisateur.id } },
 	})
-	return docs[0] ?? null
+	return docs[0]?.id ?? null
 }
 
-/** The session of the request as a user of Payload, or nothing: for a page and an action of the space. */
-export async function utilisatriceDeLaRequete(): Promise<{
-	payload: Payload
+/**
+ * The profile of this makeup artist, and hers only: found by her account (`identifiantDuProfil`),
+ * never by an identifier that comes from the request, then read with the access rules on
+ * (`overrideAccess: false`) as herself. Nobody else's profile can come out of it (U54).
+ */
+export async function profilDeLaMaquilleuse(
+	payload: Payload,
 	utilisateur: UtilisateurDeLEspace
-} | null> {
-	const payload = await getPayload({ config })
-	const { user } = await payload.auth({ headers: await headers() })
-	return user?.collection === COLLECTION_PROS ? { payload, utilisateur: user } : null
+): Promise<ProfilDeLEspace | null> {
+	const id = await identifiantDuProfil(payload, utilisateur)
+	if (id === null) return null
+	return payload.findByID({
+		collection: 'profils',
+		depth: 0,
+		disableErrors: true,
+		id,
+		overrideAccess: false,
+		select: CHAMPS_LUS,
+		user: utilisateur,
+	})
 }

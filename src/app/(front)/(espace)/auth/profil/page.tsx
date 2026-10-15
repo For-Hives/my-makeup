@@ -1,11 +1,14 @@
 import type { Metadata } from 'next'
 import { BoutonsDeDeconnexion } from '@/components/auth/BoutonsDeDeconnexion'
 import { CarteDeSection } from '@/components/espace/CarteDeSection'
+import { EditeurDIdentite } from '@/components/espace/EditeurDIdentite'
 import { RafraichirSession } from '@/components/espace/RafraichirSession'
 import { exigerMaquilleuse } from '@/lib/auth/session'
 import { cartesDuProfil } from '@/lib/espace/cartes'
-import { profilDeLaMaquilleuse, utilisatriceDeLaRequete } from '@/lib/espace/mon-profil'
+import { profilDeLaMaquilleuse } from '@/lib/espace/mon-profil'
+import { utilisatriceDeLaRequete } from '@/lib/espace/requete'
 import { texte } from '@/lib/profil/nom-affiche'
+import { enregistrerMonIdentite } from './actions'
 
 // Read per request: it depends on the session, and the build has no database. A page that reads
 // the session is never shared nor stored (`private, no-store`, ticket 075).
@@ -14,9 +17,10 @@ export const dynamic = 'force-dynamic'
 export const metadata: Metadata = { title: 'Mon espace' }
 
 /**
- * The space of the makeup artist (ticket 118): one card per section of her profile, with
+ * The space of the makeup artist (tickets 118 and 119): one card per section of her profile, with
  * the value stored or « à compléter ». Each section plugs its button « Modifier » into its card as
- * it arrives. The page hands the browser plain text, nothing of the account nor of the session.
+ * it arrives. The page hands the browser plain text and the identity she edits, nothing of the
+ * account nor of the session.
  */
 export default async function PageProfil() {
 	const maquilleuse = await exigerMaquilleuse('/auth/profil')
@@ -37,7 +41,25 @@ export default async function PageProfil() {
 					et on s’en occupe.
 				</p>
 			) : (
-				cartesDuProfil(profil).map(carte => <CarteDeSection key={carte.section} carte={carte} />)
+				cartesDuProfil(profil).map(carte => (
+					<CarteDeSection
+						key={carte.section}
+						carte={carte}
+						action={
+							carte.section === 'identite' ? (
+								<EditeurDIdentite
+									valeurs={{
+										prenom: texte(profil.prenom),
+										nom: texte(profil.nom),
+										nomArtiste: texte(profil.nomArtiste),
+										specialite: texte(profil.specialite),
+									}}
+									envoyer={enregistrerMonIdentite}
+								/>
+							) : null
+						}
+					/>
+				))
 			)}
 			<div className="mt-4 flex justify-center">
 				<BoutonsDeDeconnexion />
