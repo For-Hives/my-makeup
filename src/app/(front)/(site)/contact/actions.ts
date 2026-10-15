@@ -1,0 +1,40 @@
+'use server'
+
+import config from '@payload-config'
+import { headers } from 'next/headers'
+import { after } from 'next/server'
+import { getPayload } from 'payload'
+import { enregistrerUnMessageDeContact, stockageDePayload } from '@/lib/contact/envoi-payload'
+import { type EtatDuContact, saisieDuContact } from '@/lib/contact/message'
+import { envoiEmailDePayload } from '@/lib/emails/envoi'
+import { serverEnv } from '@/lib/env'
+
+/**
+ * The contact form (ticket 158). The message is checked, stored, then sent to the team after the answer
+ * (src/lib/contact/envoi-payload.ts). Next refuses a Server Action called from another origin before this
+ * code runs; the origin is checked here as well, as for the sign-in.
+ *
+ * Whatever the mail does, a stored message is answered with the confirmation. Nothing she typed is logged.
+ */
+export async function envoyerUnMessage(_precedent: EtatDuContact, formulaire: FormData): Promise<EtatDuContact> {
+	const valeurs = saisieDuContact(formulaire)
+	const payload = await getPayload({ config })
+	const origine = (await headers()).get('origin')
+	if (origine !== null && !payload.config.csrf.includes(origine)) return { echec: true, valeurs }
+
+	const env = serverEnv()
+	const resultat = await enregistrerUnMessageDeContact({
+		formulaire,
+		stockage: stockageDePayload(payload),
+		envoyer: envoiEmailDePayload(payload, env),
+		destinataire: env.contactTo,
+		apres: travail => after(travail),
+		journal: {
+			info: ligne => payload.logger.info({ msg: ligne }),
+			erreur: ligne => payload.logger.error({ msg: ligne }),
+		},
+	})
+	if (resultat.ok) return { envoye: true }
+	if (resultat.code === 'donnees-invalides') return { erreurs: resultat.erreurs, valeurs }
+	return { echec: true, valeurs }
+}

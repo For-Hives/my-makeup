@@ -109,6 +109,7 @@ describe('a missing or short secret stops the start', () => {
 	test('a valid environment is given back as it is', () => {
 		expect(parseServerEnv(valid)).toEqual({
 			authVerify: true,
+			contactTo: 'contact@example.test',
 			databaseUri: LOCAL_URI,
 			googleIssuer: 'https://accounts.google.com',
 			localDatabase: true,
@@ -450,6 +451,7 @@ describe('next build needs no secret and no database', () => {
 	test('nothing is checked while Next builds, and nothing is made up', () => {
 		expect(serverEnv(building)).toEqual({
 			authVerify: true,
+			contactTo: 'contact@example.test',
 			databaseUri: '',
 			googleIssuer: 'https://accounts.google.com',
 			localDatabase: false,
@@ -524,6 +526,32 @@ describe('the mails leave through the relay the environment names, or not at all
 		SMTP_HOST: '127.0.0.1',
 		SMTP_PORT: '1025',
 	}
+
+	test('CONTACT_TO: the team on the site, a reserved domain elsewhere, and a value that is kept', () => {
+		expect(parseServerEnv(valid).contactTo).toBe('contact@example.test')
+		expect(parseServerEnv({ ...valid, NEXT_PUBLIC_SITE_URL: 'http://localhost:3100' }).contactTo).toBe(
+			'contact@example.test'
+		)
+		// On the site itself the relay is mandatory: the team's public address is the default there.
+		expect(
+			parseServerEnv({
+				...valid,
+				...RELAIS_DU_SITE,
+				NODE_ENV: 'production',
+				NEXT_PUBLIC_SITE_URL: 'https://my-makeup.fr',
+			}).contactTo
+		).toBe('contact@my-makeup.fr')
+		expect(parseServerEnv({ ...valid, CONTACT_TO: ' equipe@example.test ' }).contactTo).toBe('equipe@example.test')
+		expect(() => parseServerEnv({ ...valid, CONTACT_TO: 'pas une adresse' })).toThrow(EnvError)
+		let error: EnvError | undefined
+		try {
+			parseServerEnv({ ...valid, CONTACT_TO: 'Equipe <equipe@example.test>' })
+		} catch (caught) {
+			error = caught as EnvError
+		}
+		expect(error?.variables).toEqual(['CONTACT_TO'])
+		expect(error?.message).not.toContain('equipe@example.test')
+	})
 
 	test('STATS_TOKEN: absent is fine, short is refused by name, long is kept', () => {
 		const base = { DATABASE_URI: 'postgres://u:p@localhost:5432/base', PAYLOAD_SECRET: 'x'.repeat(40) }

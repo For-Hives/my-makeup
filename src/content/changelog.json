@@ -150,6 +150,11 @@
 			"id": "tu-peux-supprimer-ton-compte-depuis-ton-espace-tu-retapes",
 			"type": "amelioration",
 			"text": "Tu peux supprimer ton compte depuis ton espace : tu retapes ton mot de passe pour confirmer, et ton profil, ton compte et tes photos disparaissent d'un seul coup."
+		},
+		{
+			"id": "tu-peux-ecrire-a-l-equipe-depuis-la-page-contact-ton-mess",
+			"type": "ajout",
+			"text": "Vous pouvez écrire à l’équipe depuis la page Contact : votre message est enregistré avant d’être envoyé, il ne se perd plus si l’envoi de l’email échoue, et les erreurs s’affichent sous les champs."
 		}
 	],
 	"releases": []

@@ -48,7 +48,7 @@ export const PAGES_FIXES: readonly PageFixe[] = [
 	{ chemin: '/', titre: 'Accueil', groupe: null },
 	{ chemin: '/a-propos', titre: 'À propos', groupe: 'site' },
 	{ chemin: '/blog', titre: 'Blog', groupe: 'solutions' },
-	{ chemin: '/contact', titre: 'Contact', groupe: 'site', aVenir: '158' },
+	{ chemin: '/contact', titre: 'Contact', groupe: 'site' },
 	{
 		chemin: '/pourquoi-utiliser-my-makeup-en-tant-que-particulier',
 		titre: 'Pourquoi My-Makeup ?',

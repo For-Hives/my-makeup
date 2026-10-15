@@ -60,6 +60,7 @@ const LIVREES: ReadonlySet<string> = new Set([
 	'mentions-legales',
 	'sitemap',
 	'plan-du-site',
+	'pages-fixes',
 ])
 
 /**
@@ -76,6 +77,7 @@ const ADRESSES_LIVREES: readonly string[] = [
 	'/maquilleuse/partenariats',
 	'/pourquoi-rejoindre-my-makeup-en-tant-que-maquilleuse',
 	'/solutions/pour-les-maquilleuses',
+	'/contact',
 ]
 
 /**

@@ -25,6 +25,8 @@ export type ContenuEmail = {
 	paragraphes: readonly string[]
 	/** The one button of the mail, when it has one. `chemin` is a path of the site: Â« /auth/... Â». */
 	action?: { libelle: string; chemin: string }
+	/** The footer, when the mail is not an automatic mail to a person (the contact message to the team). One line. */
+	pied?: string
 }
 
 /** The mail as it leaves: both parts, and the absolute link of the button. */
@@ -93,6 +95,7 @@ export function composerEmail(contenu: ContenuEmail, site: string): EmailComposÃ
 	const titre = exigerUneLigne(contenu.titre, 'Le titre')
 	const paragraphes = contenu.paragraphes.map(paragraphe => paragraphe.trim()).filter(paragraphe => paragraphe !== '')
 	if (paragraphes.length === 0) throw new EmailInvalide('Un email dit au moins une phrase.')
+	const pied = contenu.pied === undefined ? PIED_DE_EMAIL : exigerUneLigne(contenu.pied, 'Le pied de page')
 	const action = contenu.action
 		? {
 				libelle: exigerUneLigne(contenu.action.libelle, 'Le libellÃ© du bouton'),
@@ -106,7 +109,7 @@ export function composerEmail(contenu: ContenuEmail, site: string): EmailComposÃ
 		...paragraphes.flatMap(paragraphe => [paragraphe, '']),
 		...(action ? [`${action.libelle} : ${action.lien}`, ''] : []),
 		'--',
-		PIED_DE_EMAIL,
+		pied,
 	].join('\n')
 
 	const html = `<!doctype html>
@@ -128,7 +131,7 @@ ${
 		: ''
 }
 <hr style="border:none;border-top:1px solid #e8dfe2;margin:24px 0;">
-<p style="margin:0;font-size:13px;line-height:1.5;color:#6b5a60;">${echapperHtml(PIED_DE_EMAIL)}</p>
+<p style="margin:0;font-size:13px;line-height:1.5;color:#6b5a60;">${echapperHtml(pied)}</p>
 </td></tr>
 </table>
 </body>

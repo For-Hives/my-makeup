@@ -28,6 +28,8 @@ export type EmailAEnvoyer = {
 	sujet: string
 	texte: string
 	html: string
+	/** Where a reply goes, when it must not go to the sender (the contact form, ticket 158). One address, whole. */
+	repondreA?: string
 }
 
 export type OptionsDEnvoi = {
@@ -39,7 +41,7 @@ export type OptionsDEnvoi = {
 export type EnvoyerEmail = (email: EmailAEnvoyer, options?: OptionsDEnvoi) => Promise<void>
 
 /** What the relay is asked to send. */
-export type MessageDuRelais = { to: string; subject: string; text: string; html: string }
+export type MessageDuRelais = { to: string; subject: string; text: string; html: string; replyTo?: string }
 
 /** The relay: Payload's mail adapter on the site and on the bench. */
 export type Relais = (message: MessageDuRelais) => Promise<unknown>
@@ -76,13 +78,22 @@ export function creerEnvoiEmail({ relais, journal }: { relais: Relais | undefine
 		// A malformed mail is a bug of the caller, not a failure of the relay: it is thrown as it is.
 		if (!ADRESSE.test(email.a)) throw new EmailInvalide('L’adresse du destinataire est illisible.')
 		const sujet = exigerUneLigne(email.sujet, 'Le sujet')
+		// The address of a reply is typed by a visitor: it is checked like the recipient, and refused if it could write a header.
+		if (email.repondreA !== undefined && !ADRESSE.test(email.repondreA))
+			throw new EmailInvalide('L’adresse de réponse est illisible.')
 
 		if (!relais) {
 			journal.info('Aucun relais d’envoi n’est réglé (SMTP_HOST) : l’email n’est pas parti.')
 			return
 		}
 		try {
-			await relais({ to: email.a, subject: sujet, text: email.texte, html: email.html })
+			await relais({
+				to: email.a,
+				subject: sujet,
+				text: email.texte,
+				html: email.html,
+				...(email.repondreA !== undefined && { replyTo: email.repondreA }),
+			})
 		} catch (erreur) {
 			journal.erreur(`Un email n’est pas parti (nature : ${natureDeLEchec(erreur)}).`)
 			throw new EnvoiEmailEchoue()

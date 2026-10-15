@@ -75,6 +75,7 @@ export interface Config {
     talents: Talent;
     articles: Article;
     'auth-evenements': AuthEvenement;
+    demandes: Demande;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -89,6 +90,7 @@ export interface Config {
     talents: TalentsSelect<false> | TalentsSelect<true>;
     articles: ArticlesSelect<false> | ArticlesSelect<true>;
     'auth-evenements': AuthEvenementsSelect<false> | AuthEvenementsSelect<true>;
+    demandes: DemandesSelect<false> | DemandesSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -571,6 +573,23 @@ export interface AuthEvenement {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "demandes".
+ */
+export interface Demande {
+  id: number;
+  type: 'contact';
+  statut: 'nouvelle' | 'transmise';
+  etatMail: 'en-attente' | 'envoye' | 'echec';
+  prenom: string;
+  nom: string;
+  email: string;
+  telephone: string;
+  message: string;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
@@ -620,6 +639,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'auth-evenements';
         value: number | AuthEvenement;
+      } | null)
+    | ({
+        relationTo: 'demandes';
+        value: number | Demande;
       } | null);
   globalSlug?: string | null;
   user:
@@ -954,6 +977,22 @@ export interface AuthEvenementsSelect<T extends boolean = true> {
   methode?: T;
   dureeMs?: T;
   date?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "demandes_select".
+ */
+export interface DemandesSelect<T extends boolean = true> {
+  type?: T;
+  statut?: T;
+  etatMail?: T;
+  prenom?: T;
+  nom?: T;
+  email?: T;
+  telephone?: T;
+  message?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
