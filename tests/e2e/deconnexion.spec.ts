@@ -42,7 +42,7 @@ test.describe('E10 : la déconnexion', { tag: '@mobile' }, () => {
 		await seConnecter(page, compte.email)
 		expect(await cookieDeSession(context)).toBeDefined()
 
-		await page.getByRole('button', { name: 'Me déconnecter', exact: true }).click()
+		await page.getByRole('main').getByRole('button', { name: 'Me déconnecter', exact: true }).click()
 
 		await expect(page).toHaveURL(/\/$/)
 		await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
@@ -70,7 +70,7 @@ test.describe('E10 : la déconnexion', { tag: '@mobile' }, () => {
 			).totalDocs
 		await seConnecter(page, compte.email)
 
-		await page.getByRole('button', { name: 'Me déconnecter', exact: true }).click()
+		await page.getByRole('main').getByRole('button', { name: 'Me déconnecter', exact: true }).click()
 		await expect(page).toHaveURL(/\/$/)
 
 		await expect.poll(compter).toBeGreaterThanOrEqual(1)
@@ -90,7 +90,7 @@ test.describe('E11 : l’ancien cookie réinjecté', () => {
 		await expect(pageAvant.getByRole('heading', { name: 'Mon espace' })).toBeVisible()
 		await avant.close()
 
-		await page.getByRole('button', { name: 'Me déconnecter', exact: true }).click()
+		await page.getByRole('main').getByRole('button', { name: 'Me déconnecter', exact: true }).click()
 		await expect(page).toHaveURL(/\/$/)
 
 		const apres = await contexteAvec(browser, ancien)
@@ -110,7 +110,7 @@ test.describe('E17 : la déconnexion dans un onglet', () => {
 		await onglet.goto('/auth/profil')
 		await expect(onglet.getByRole('heading', { name: 'Mon espace' })).toBeVisible()
 
-		await page.getByRole('button', { name: 'Me déconnecter', exact: true }).click()
+		await page.getByRole('main').getByRole('button', { name: 'Me déconnecter', exact: true }).click()
 		await expect(page).toHaveURL(/\/$/)
 
 		await onglet.goto('/auth/profil')

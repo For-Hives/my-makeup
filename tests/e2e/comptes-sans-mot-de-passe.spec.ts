@@ -90,7 +90,7 @@ test.describe('E74 : un compte sans mot de passe en définit un', () => {
 		await definirSonMotDePasse(page, compte.email)
 		await seConnecter(page, compte.email, CHOIX)
 		await expect(page).toHaveURL(/\/auth\/profil$/)
-		await page.getByRole('button', { name: 'Me déconnecter', exact: true }).click()
+		await page.getByRole('main').getByRole('button', { name: 'Me déconnecter', exact: true }).click()
 		await expect(page).toHaveURL(/\/$/)
 
 		await choisirSurGoogle(context, compte.email)

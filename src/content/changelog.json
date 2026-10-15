@@ -75,6 +75,11 @@
 			"id": "tu-modifies-ton-prenom-ton-nom-ton-nom-d-artiste-et-ta-sp",
 			"type": "ajout",
 			"text": "Tu modifies ton prénom, ton nom, ton nom d’artiste et ta spécialité depuis ton espace : la page n’affiche la nouvelle valeur qu’une fois enregistrée, et un échec te le dit."
+		},
+		{
+			"id": "le-panneau-de-modification-de-ton-espace-s-ouvre-des-le-p",
+			"type": "amelioration",
+			"text": "Le panneau de modification de ton espace s’ouvre dès le premier tap, prend tout l’écran du téléphone, se parcourt au clavier (Échap pour fermer) et annonce le résultat aux lecteurs d’écran."
 		}
 	],
 	"releases": []
