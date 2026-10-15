@@ -65,6 +65,30 @@ export const sha256 = (texte: string): string => createHash('sha256').update(tex
 export const titresPrincipaux = (html: string): string[] =>
 	[...sansScripts(html).matchAll(/<h1\b[^>]*>([\s\S]*?)<\/h1\s*>/gi)].map(m => texteDe(m[1] ?? ''))
 
+/** The `<title>` of a page of HTML, entities decoded. */
+export const titreDeLOnglet = (html: string): string =>
+	texteDe(/<title\b[^>]*>([\s\S]*?)<\/title\s*>/i.exec(sansScripts(html))?.[1] ?? '')
+
+/** The length the title of the tab of a talent is written to (ticket 108; Bing asks for 50 to 60 characters). */
+export const TITRE_DE_TALENT_MIN = 50
+export const TITRE_DE_TALENT_MAX = 60
+
+/**
+ * What is wrong with the title of the tab of a page of a talent once the newsroom has written it (ticket
+ * 108): 50 to 60 characters, and not the h1. A title the newsroom did not write is the short one, with the
+ * brand after it, and fails the first test.
+ */
+export function defautsDuTitreDeTalent(html: string): string[] {
+	const titre = titreDeLOnglet(html)
+	const defauts: string[] = []
+	if (titre.length < TITRE_DE_TALENT_MIN || titre.length > TITRE_DE_TALENT_MAX)
+		defauts.push(
+			`titre de l’onglet de ${titre.length} caractères au lieu de ${TITRE_DE_TALENT_MIN} à ${TITRE_DE_TALENT_MAX}`
+		)
+	if (titresPrincipaux(html).includes(titre)) defauts.push('titre de l’onglet identique au h1')
+	return defauts
+}
+
 /** What the old site's measuring tool keeps of the h1 of a page: their number, and the hash of their texts. */
 export function empreinteDesTitres(html: string): { n: number; sha: string | null } {
 	const titres = titresPrincipaux(html)
@@ -101,6 +125,8 @@ export interface CasDeParite {
 	/** The family of the page the redirect ends on. */
 	familleFinale?: string
 	titre: AttenteDuTitre | 'non-verifie'
+	/** The title of the tab must be the one the newsroom wrote (50 to 60 characters, not the h1): the imported talents. */
+	titreDeLOngletRequis?: true
 	/** A real profile: no address of it is written in any message. */
 	masque?: true
 	/** A difference we know about and do not hide: the case is reported, not counted green or red. */
@@ -374,6 +400,8 @@ export function casDeLaListePrivee(csv: string): CasDeParite[] {
 						? { mode: 'hash', sha }
 						: { mode: 'un' },
 			...(famille.rule === 'double-slash' ? { ecartConnu: ECART_DOUBLE_BARRE } : {}),
+			// A talent of the imported copy: its tab is titled by the newsroom (ticket 108).
+			...(famille.id === 'talent' && !redirige && direct === 200 ? { titreDeLOngletRequis: true as const } : {}),
 		})
 	}
 	return cas
@@ -412,13 +440,15 @@ export type Resultat =
 
 const estUnePageHtml = (reponse: Reponse): boolean => (reponse.contentType ?? '').includes('text/html')
 
-async function verifierLeTitre(attente: CasDeParite['titre'], reponse: Reponse): Promise<string[]> {
-	if (attente === 'non-verifie' || !estUnePageHtml(reponse)) return []
-	const { n, sha } = empreinteDesTitres(await reponse.corps())
+async function verifierLeTitre(cas: CasDeParite, reponse: Reponse): Promise<string[]> {
+	if (cas.titre === 'non-verifie' || !estUnePageHtml(reponse)) return []
+	const attente = cas.titre
+	const html = await reponse.corps()
+	const { n, sha } = empreinteDesTitres(html)
 	if (attente.mode === 'aucun') return n === 0 ? [] : [`${n} h1 au lieu de 0`]
 	if (n !== 1) return [`${n} h1 au lieu d'un seul`]
 	if (attente.mode === 'hash' && sha !== attente.sha) return ['h1 différent de celui de l’ancien site']
-	return []
+	return cas.titreDeLOngletRequis && reponse.status === 200 ? defautsDuTitreDeTalent(html) : []
 }
 
 /** The path and query a Location header goes to (the host is the one of the run). */
@@ -446,10 +476,10 @@ export async function verifier(cas: CasDeParite, chercher: Chercher): Promise<Re
 			const finale = await chercher(cas.vers)
 			if (finale.status !== cas.statutFinal)
 				destination.push(`la destination répond ${finale.status} au lieu de ${cas.statutFinal}`)
-			else destination.push(...(await verifierLeTitre(cas.titre, finale)))
+			else destination.push(...(await verifierLeTitre(cas, finale)))
 		}
 	} else {
-		defauts.push(...(await verifierLeTitre(cas.titre, premiere)))
+		defauts.push(...(await verifierLeTitre(cas, premiere)))
 	}
 	const dire = (textes: string[]): string[] => (cas.masque ? textes.map(masquer) : textes)
 	if (defauts.length > 0) return { etat: 'rouge', defauts: dire(defauts), destination: dire(destination) }
