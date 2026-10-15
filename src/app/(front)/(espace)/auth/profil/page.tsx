@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { BoutonsDeDeconnexion } from '@/components/auth/BoutonsDeDeconnexion'
 import { CarteDeSection } from '@/components/espace/CarteDeSection'
+import { EditeurDeDescription } from '@/components/espace/EditeurDeDescription'
 import { EditeurDIdentite } from '@/components/espace/EditeurDIdentite'
 import { RafraichirSession } from '@/components/espace/RafraichirSession'
 import { exigerMaquilleuse } from '@/lib/auth/session'
@@ -8,7 +9,7 @@ import { cartesDuProfil } from '@/lib/espace/cartes'
 import { profilDeLaMaquilleuse } from '@/lib/espace/mon-profil'
 import { utilisatriceDeLaRequete } from '@/lib/espace/requete'
 import { texte } from '@/lib/profil/nom-affiche'
-import { enregistrerMonIdentite } from './actions'
+import { enregistrerMaDescription, enregistrerMonIdentite } from './actions'
 
 // Read per request: it depends on the session, and the build has no database. A page that reads
 // the session is never shared nor stored (`private, no-store`, ticket 075).
@@ -55,6 +56,11 @@ export default async function PageProfil() {
 										specialite: texte(profil.specialite),
 									}}
 									envoyer={enregistrerMonIdentite}
+								/>
+							) : carte.section === 'description' ? (
+								<EditeurDeDescription
+									valeurs={{ description: texte(profil.description) }}
+									envoyer={enregistrerMaDescription}
 								/>
 							) : null
 						}

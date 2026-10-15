@@ -2,6 +2,8 @@
 
 import { revalidatePath } from 'next/cache'
 import { headers } from 'next/headers'
+import type { ValeursDeLaDescription } from '@/lib/espace/description'
+import { enregistrerDescription } from '@/lib/espace/enregistrer-description'
 import { enregistrerIdentite } from '@/lib/espace/enregistrer-identite'
 import type { ValeursDeLIdentite } from '@/lib/espace/identite'
 import { utilisatriceDeLaRequete } from '@/lib/espace/requete'
@@ -23,6 +25,24 @@ export async function enregistrerMonIdentite(saisie: unknown): Promise<ResultatD
 	if (origine !== null && !payload.config.csrf.includes(origine)) return { ok: false, message: MESSAGE_ECHEC }
 
 	const resultat = await enregistrerIdentite(payload, utilisateur, saisie)
+	if (resultat.ok) revalidatePath('/auth/profil')
+	return resultat
+}
+
+/**
+ * Saves the description of the signed-in makeup artist (ticket 122), under the same guards as her
+ * identity: session read again, origin checked, profile found by her account.
+ */
+export async function enregistrerMaDescription(
+	saisie: unknown
+): Promise<ResultatDEnregistrement<ValeursDeLaDescription>> {
+	const contexte = await utilisatriceDeLaRequete()
+	if (contexte === null) return { ok: false, message: MESSAGE_SESSION, session: 'expiree' }
+	const { payload, utilisateur } = contexte
+	const origine = (await headers()).get('origin')
+	if (origine !== null && !payload.config.csrf.includes(origine)) return { ok: false, message: MESSAGE_ECHEC }
+
+	const resultat = await enregistrerDescription(payload, utilisateur, saisie)
 	if (resultat.ok) revalidatePath('/auth/profil')
 	return resultat
 }
