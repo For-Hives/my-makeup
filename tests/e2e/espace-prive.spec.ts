@@ -63,6 +63,62 @@ test.describe('Pages de l’espace sans session', { tag: '@mobile' }, () => {
 	})
 })
 
+test.describe('Arrivée depuis un autre site (ticket 223)', () => {
+	const EXTERNE = 'http://lien-externe.test'
+
+	test('un lien d’un autre site vers l’espace garde la session : le relais repart du site, sans redirection', async ({
+		baseURL,
+		context,
+		page,
+	}) => {
+		const compte = await creerCompte('maquilleuse')
+		await context.addCookies(compte.session.cookies)
+		await page.route(`${EXTERNE}/**`, route =>
+			route.fulfill({
+				contentType: 'text/html',
+				body: `<!doctype html><title>Un mail</title><a href="${baseURL}/auth/profil?venue=mail">Ouvrir mon espace</a>`,
+			})
+		)
+		// The navigations to the page that got a real answer: who sent each one, and what came back.
+		const arrivees: { depuis: string; relais: boolean; statut: number }[] = []
+		page.on('response', async reponse => {
+			if (!reponse.request().isNavigationRequest() || new URL(reponse.url()).pathname !== '/auth/profil') return
+			// Chrome may replay a request on its own (a redirection to the same address): only real answers count.
+			if (reponse.status() >= 300) return
+			// The body of a page that the browser leaves at once cannot always be read: then it is the relay's.
+			const corps = await reponse.text().catch(() => 'http-equiv="refresh"')
+			arrivees.push({
+				depuis: reponse.request().headers().referer ?? '',
+				relais: corps.includes('http-equiv="refresh"'),
+				statut: reponse.status(),
+			})
+		})
+
+		await page.goto(`${EXTERNE}/`)
+		await page.getByRole('link', { name: 'Ouvrir mon espace' }).click()
+
+		// She stays on her page, signed in: no sign-in form, no redirection.
+		await expect(page).toHaveURL(/\/auth\/profil\?venue=mail$/)
+		await expect(page.getByRole('button', { name: 'Se connecter' })).toHaveCount(0)
+		await expect(page.getByRole('main')).toBeVisible()
+		// Two answers: the relay page to the request that came from the other site, then the page itself, asked
+		// by the relay from this site (its referrer is the address of the page).
+		expect(arrivees).toEqual([
+			{ depuis: `${EXTERNE}/`, relais: true, statut: 200 },
+			{ depuis: `${baseURL}/auth/profil?venue=mail`, relais: false, statut: 200 },
+		])
+	})
+
+	test('sans cookie, la même arrivée mène à la connexion, comme avant', async ({ request }) => {
+		const reponse = await request.get('/auth/profil', {
+			headers: { 'sec-fetch-site': 'cross-site' },
+			maxRedirects: 0,
+		})
+		expect(reponse.status()).toBe(307)
+		expect(reponse.headers().location).toBe('/auth/signin?callbackUrl=%2Fauth%2Fprofil')
+	})
+})
+
 test.describe('E09 : le retour après la connexion', () => {
 	test('une page interne est respectée', async ({ page }) => {
 		const compte = await creerCompte('maquilleuse', { motDePasse: () => MOT_DE_PASSE })

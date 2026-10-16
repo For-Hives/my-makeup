@@ -19,6 +19,15 @@ const google = {
 const cookieDeSession = async (context: import('@playwright/test').BrowserContext) =>
 	(await context.cookies()).find(({ name }) => name === 'payload-token')
 
+// Each test comes from an address of its own: the return from Google is braked by address (ticket 223), and
+// the failed returns of the whole file, in both projects, would otherwise add up on the one address of the bench.
+let compteur = 0
+let client = ''
+test.beforeEach(({ context }) => {
+	client = `192.0.2.${20 + (++compteur % 200)}`
+	return context.setExtraHTTPHeaders({ 'x-forwarded-for': client })
+})
+
 const adresse = (prefixe: string) => `${prefixe}-${crypto.randomUUID().slice(0, 8)}@example.test`
 
 /** Tells the fake Google who signs in, the way the provider reads it: a cookie of its own. */
@@ -199,7 +208,10 @@ test.describe('E07 : connexion et inscription avec Google', { tag: '@mobile' }, 
 	}) => {
 		const compte = await creerCompte('reprise-google')
 		// 1. A return nobody asked for: no cookie of the departure.
-		const sansCookie = await request.get('/auth/google/retour?code=code-forge&state=state-forge', { maxRedirects: 0 })
+		const sansCookie = await request.get('/auth/google/retour?code=code-forge&state=state-forge', {
+			maxRedirects: 0,
+			headers: { 'x-forwarded-for': client },
+		})
 		expect(sansCookie.status()).toBe(307)
 		expect(
 			new URL(sansCookie.headers().location ?? '').pathname + new URL(sansCookie.headers().location ?? '').search
@@ -207,7 +219,7 @@ test.describe('E07 : connexion et inscription avec Google', { tag: '@mobile' }, 
 		expect(sansCookie.headers()['set-cookie'] ?? '').not.toContain('payload-token=')
 
 		// 2. The departure is real, the return carries another state: refused. With its own state, it opens.
-		const depart = await request.get('/auth/google', { maxRedirects: 0 })
+		const depart = await request.get('/auth/google', { maxRedirects: 0, headers: { 'x-forwarded-for': client } })
 		expect(depart.status()).toBe(307)
 		const cookie = /google-oidc=([^;]+)/.exec(depart.headers()['set-cookie'] ?? '')?.[1] ?? ''
 		expect(cookie).not.toBe('')
@@ -219,7 +231,7 @@ test.describe('E07 : connexion et inscription avec Google', { tag: '@mobile' }, 
 		}
 		const faux = await request.get(avecState('state-change'), {
 			maxRedirects: 0,
-			headers: { Cookie: `google-oidc=${cookie}` },
+			headers: { Cookie: `google-oidc=${cookie}`, 'x-forwarded-for': client },
 		})
 		expect(faux.status()).toBe(307)
 		const versLeFormulaire = new URL(faux.headers().location ?? '')
@@ -227,7 +239,7 @@ test.describe('E07 : connexion et inscription avec Google', { tag: '@mobile' }, 
 		expect(faux.headers()['set-cookie'] ?? '').not.toContain('payload-token=')
 		const juste = await request.get(avecState(retour.searchParams.get('state') ?? ''), {
 			maxRedirects: 0,
-			headers: { Cookie: `google-oidc=${cookie}` },
+			headers: { Cookie: `google-oidc=${cookie}`, 'x-forwarded-for': client },
 		})
 		expect(juste.status()).toBe(200)
 		expect(juste.headers()['set-cookie'] ?? '').toContain('payload-token=')

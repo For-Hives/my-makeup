@@ -25,7 +25,7 @@ import { adaptateurSansRelais, optionsDeTransport } from './lib/emails/relais'
 import { mediaBaseUrl, serverEnv } from './lib/env'
 import { LANGUE_DE_PAYLOAD } from './lib/langue-payload'
 import { adresseDuMedia, PREFIXE_DES_ENVOIS } from './lib/medias'
-import { reglagesDuPool } from './lib/pool-base'
+import { avecLEcouteDuPool, reglagesDuPool } from './lib/pool-base'
 import { requetesBornees } from './lib/requete-bornee'
 import { stockageS3 } from './lib/stockage'
 import { reserverLesVerrousAuxAdmins } from './lib/verrous-payload'
@@ -55,11 +55,24 @@ const media: CollectionConfig<'media'> = env.storage
 			hooks: { ...Media.hooks, beforeOperation: [...(Media.hooks?.beforeOperation ?? []), aucunEnvoiSansStockage] },
 		}
 
+// Payload types the keys as its own error names, and reads them by the `name` of the error that is thrown.
+const niveauxDeJournal = {
+	APIError: 'info',
+	AuthenticationError: 'info',
+	CompteBloque: 'info',
+	UnverifiedEmail: 'info',
+} as const
+
 export default buildConfig({
 	// A wrong password, a braked address or an address not yet confirmed is a normal event, not an
 	// application error: the weekly report counts the error-level lines (decisions 2026-10-13).
-	loggingLevels: { APIError: 'info', AuthenticationError: 'info', UnverifiedEmail: 'info' },
+	// CompteBloque (ticket 089) sets its own `name`, so `APIError` does not cover it (ticket 223). Payload's
+	// « Missing ID » refusal is a plain APIError: already `info`, a test holds it.
+	loggingLevels: niveauxDeJournal,
 	admin: {
+		// Without it the admin panel asks gravatar.com for an image computed from the admin's email: a
+		// fingerprint of the address sent to a third party (ticket 223).
+		avatar: 'default',
 		user: Admins.slug,
 		importMap: { baseDir: dirname },
 		// 'off' closes /api/og: an image rendered on demand, for anyone, with or without a session.
@@ -72,19 +85,22 @@ export default buildConfig({
 	csrf: env.trustedOrigins,
 	// On the pre-production only, a new reset token empties the database before Payload plays its
 	// migrations (ticket 027, docs/preprod.md). Anywhere else, the adapter as it is.
-	db: avecLaRemiseAZero(
-		postgresAdapter({
-			// Outside this machine, a database that does not exist is an error: Payload must not create an empty one.
-			disableCreateDatabase: !env.localDatabase,
-			migrationDir: path.resolve(dirname, 'migrations'),
-			// 5 connections per process and a wait limit for a free one (src/lib/pool-base.ts, ticket 222).
-			pool: reglagesDuPool(env.databaseUri),
-			// Everywhere else, the schema changes by these migrations: Payload plays them when it starts in production.
-			prodMigrations: migrations,
-			// The schema is pushed into a database of this machine only. Payload never pushes in production.
-			push: env.localDatabase,
-		}),
-		env
+	// A connection of the pool that PostgreSQL cuts must not kill the server (ticket 223).
+	db: avecLEcouteDuPool(
+		avecLaRemiseAZero(
+			postgresAdapter({
+				// Outside this machine, a database that does not exist is an error: Payload must not create an empty one.
+				disableCreateDatabase: !env.localDatabase,
+				migrationDir: path.resolve(dirname, 'migrations'),
+				// 5 connections per process and a wait limit for a free one (src/lib/pool-base.ts, ticket 222).
+				pool: reglagesDuPool(env.databaseUri),
+				// Everywhere else, the schema changes by these migrations: Payload plays them when it starts in production.
+				prodMigrations: migrations,
+				// The schema is pushed into a database of this machine only. Payload never pushes in production.
+				push: env.localDatabase,
+			}),
+			env
+		)
 	),
 	// Every mail leaves through the relay the environment names (src/lib/env.ts): on the test bench,
 	// the mail catcher. Without SMTP_HOST, Payload's own mails go to an adapter that logs one line, no address.

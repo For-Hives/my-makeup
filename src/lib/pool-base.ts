@@ -1,3 +1,6 @@
+import type { PostgresAdapter } from '@payloadcms/db-postgres'
+import type { DatabaseAdapterObj } from 'payload'
+
 /**
  * The settings of the connection pool of the PostgreSQL adapter (ticket 222), read by
  * `src/payload.config.ts` and by the tests: one place, no copy.
@@ -24,4 +27,60 @@ export interface ReglagesDuPool {
 
 export function reglagesDuPool(connectionString: string): ReglagesDuPool {
 	return { connectionString, connectionTimeoutMillis: DELAI_CONNEXION_MS, max: CONNEXIONS_MAX }
+}
+
+/** What the listener needs of a pool: `pg`'s `Pool` is an event emitter. */
+export interface PoolEcoutable {
+	on(evenement: 'error', ecouteur: (erreur: Error & { code?: string }) => void): unknown
+}
+
+const POOLS_ECOUTES = new WeakSet<object>()
+
+/**
+ * Listens to the `'error'` event of the pool (ticket 223). A connection that sits idle in a pool and
+ * is cut (PostgreSQL stopped, restarted or unreachable) makes the pool emit `'error'`; an emitter
+ * with no listener for that event throws, and the process dies with an uncaught exception. With a
+ * listener, the connection is dropped by `pg`, the next query opens a new one, and the health check
+ * answers 503 during the outage and 200 once the database is back.
+ *
+ * One short line per lost connection, with the code of the error and never its message: a message
+ * such as « connect ECONNREFUSED 10.0.0.5:5432 » carries the address of the database. Once per pool,
+ * whatever the number of times Payload starts (hot reload in development).
+ */
+export function ecouterLePool(pool: PoolEcoutable, ligne: (texte: string) => void): void {
+	// A pool that cannot be listened to (a stand-in in a test) has no event to fail on.
+	if (typeof pool.on !== 'function' || POOLS_ECOUTES.has(pool)) return
+	POOLS_ECOUTES.add(pool)
+	pool.on('error', erreur => {
+		ligne(
+			`Connexion à la base perdue (code ${typeof erreur?.code === 'string' ? erreur.code : 'inconnu'}), elle sera rouverte à la prochaine requête.`
+		)
+	})
+}
+
+/**
+ * The database adapter of Payload, listening to the errors of its pool from the moment it connects
+ * (`ecouterLePool`). Everything else is the adapter itself: the same object, only `connect` is wrapped.
+ * Done on the adapter and not in `onInit`, which reads nothing of `payload.db` on the site.
+ */
+export function avecLEcouteDuPool(
+	adaptateur: DatabaseAdapterObj<PostgresAdapter>
+): DatabaseAdapterObj<PostgresAdapter> {
+	return {
+		...adaptateur,
+		init: args => {
+			const db = adaptateur.init(args)
+			const connecter = db.connect
+			if (!connecter) return db
+			db.connect = async parametres => {
+				try {
+					await connecter.call(db, parametres)
+				} finally {
+					// Even when the first connection fails: the pool exists, and its idle connections will be cut too.
+					if (db.pool) ecouterLePool(db.pool, ligne => db.payload.logger.warn(ligne))
+				}
+			}
+			return db
+		},
+	}
 }

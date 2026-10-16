@@ -7,9 +7,10 @@ import {
 	planDeNettoyage,
 	VARIABLE_DE_BASCULE,
 } from '@/lib/auth/cookies-herites'
-import { COOKIE_DE_SESSION, decisionDeLEspace } from '@/lib/auth/espace-ferme'
+import { COOKIE_DE_SESSION, decisionDeLEspace, estPagePrivee } from '@/lib/auth/espace-ferme'
 import { ipClient } from '@/lib/auth/ip-client'
 import { COOKIE_DE_REINITIALISATION, planDuLien } from '@/lib/auth/mot-de-passe-oublie'
+import { ENTETES_DE_RELAIS, pageDeRelais, venueDUnAutreSite } from '@/lib/auth/page-de-relais'
 import { CHEMIN_DE_L_INSCRIPTION, CHEMIN_DU_REFUS, secondesAvantUneInscription } from '@/lib/auth/refus-inscription'
 import {
 	CHEMIN_DU_CONTACT,
@@ -37,12 +38,31 @@ import { redirectionDeForme } from '@/lib/urls/forme'
  * - A sign-up past the 5 an hour of its client address is sent to the route that answers 429 (ticket 084).
  * - A contact message past the 5 an hour of its client address, or the 20 a day of its mailbox (read from a
  *   copy of the body), is sent to the route that answers 429 (ticket 161). That path alone answers a promise.
+ * - A private page asked with a session cookie by a navigation another site started (`Sec-Fetch-Site:
+ *   cross-site`, a link in a mail) answers the relay page of the return from Google (ticket 223): Payload
+ *   ignores the cookie of a cross-site request with no `Origin`, and the relay restarts the navigation
+ *   from the site itself.
+ * - A path that does not decode (`/profil/%E0%A4%A`) answers the 404 page of the site, not Next's error; under
+ *   `/api/` it answers a JSON 400 (ticket 223).
+ * - A response that carries a cookie of the cleaning is `private, no-store`: no shared cache keeps it (ticket 223).
  * - Every other response gets the robots directive (ticket 070). It reads APP_ENV at run time: the
  *   pre-production gets its variables after the build. The paths of the account and of the search
  *   answer noindex everywhere.
  */
 function proxyDuSite(requete: NextRequest) {
 	const { pathname, search } = requete.nextUrl
+	if (pathname.startsWith('/api/') && !decodable(pathname)) {
+		// Under the API Next would answer a 500 and an error-level line: a client error is a 400 in JSON.
+		const refus = NextResponse.json({ errors: [{ message: 'Adresse illisible.' }] }, { status: 400 })
+		refus.headers.set('X-Robots-Tag', 'noindex')
+		return refus
+	}
+	if (cheminIllisible(pathname)) {
+		// An address Next cannot decode answers its own error page: the 404 of the site is what a visitor expects.
+		const introuvable = NextResponse.rewrite(new URL(CHEMIN_INTROUVABLE, requete.url ?? requete.nextUrl.href))
+		introuvable.headers.set('X-Robots-Tag', 'noindex')
+		return introuvable
+	}
 	// The path as the visitor wrote it: `nextUrl.pathname` may already have lost a repeated slash.
 	const forme = redirectionDeForme(cheminEcrit(requete.url ?? requete.nextUrl.href) ?? pathname)
 	if (forme) {
@@ -83,6 +103,9 @@ function proxyDuSite(requete: NextRequest) {
 		return NextResponse.rewrite(new URL(CHEMIN_DU_REFUS, requete.url ?? requete.nextUrl.href))
 	}
 	const avecLeNettoyage = (reponse: NextResponse): NextResponse => {
+		if (nettoyage.aEffacer.length > 0 || nettoyage.retenirLeMessage || nettoyage.oublierLeMessage)
+			// A page that sets a cookie is for this visitor alone (ticket 223).
+			reponse.headers.set('Cache-Control', 'private, no-store')
 		for (const nom of nettoyage.aEffacer) reponse.cookies.set(cookieDEffacement(nom))
 		if (nettoyage.retenirLeMessage)
 			reponse.cookies.set({
@@ -147,10 +170,36 @@ function proxyDuSite(requete: NextRequest) {
 		if (consigneRedirection) redirection.headers.set('X-Robots-Tag', consigneRedirection)
 		return avecLeNettoyage(redirection)
 	}
+	if (requete.method === 'GET' && estPagePrivee(pathname) && venueDUnAutreSite(requete.headers)) {
+		// She comes from another site with a session cookie that Payload would ignore (ticket 223): the
+		// relay page restarts the navigation from this site, where the cookie counts.
+		const relais = new NextResponse(pageDeRelais(`${pathname}${search}`), { status: 200, headers: ENTETES_DE_RELAIS })
+		const consigneDuRelais = robotsPourChemin(pathname, { APP_ENV: process.env.APP_ENV })
+		if (consigneDuRelais) relais.headers.set('X-Robots-Tag', consigneDuRelais)
+		return avecLeNettoyage(relais)
+	}
 	const reponse = avecLeNettoyage(NextResponse.next({ request: { headers: entetes } }))
 	const consigne = robotsPourChemin(pathname, { APP_ENV: process.env.APP_ENV })
 	if (consigne) reponse.headers.set('X-Robots-Tag', consigne)
 	return reponse
+}
+
+/** Where an address that does not decode is sent: no page lives there, so Next answers its 404 page. */
+const CHEMIN_INTROUVABLE = '/introuvable-adresse-illisible'
+
+/** True when the path has a percent sequence that does not decode, outside the API and Next's own files. */
+function cheminIllisible(chemin: string): boolean {
+	if (chemin.startsWith('/api/') || chemin.startsWith('/_next/')) return false
+	return !decodable(chemin)
+}
+
+function decodable(chemin: string): boolean {
+	try {
+		decodeURIComponent(chemin)
+		return true
+	} catch {
+		return false
+	}
 }
 
 /** The path of a request URL, with its repeated slashes: `new URL` keeps them, but not a base that swallows them. */

@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import { createServer } from 'node:net'
 import { initI18n } from '@payloadcms/translations'
 import { Forbidden, getRequestLanguage, type Payload, type SanitizedConfig, ValidationError } from 'payload'
+import { CompteBloque } from '@/lib/auth/compte-bloque'
 import { adaptateurSansRelais } from '@/lib/emails/relais'
 import { EnvError, type RawEnv } from '@/lib/env'
 import { migrations } from '@/migrations'
@@ -83,6 +84,16 @@ describe('src/payload.config.ts is hardened', () => {
 			poolOptions: { connectionString: LOCAL_URI, max: 5 },
 			push: true,
 		})
+	})
+
+	test('ticket 223 : the admin panel asks no avatar of gravatar.com, and the blocked account is logged as info', async () => {
+		const config = await configUnder(development)
+
+		// Without it, the panel loads an image computed from the admin's email from a third party.
+		expect(config.admin.avatar).toBe('default')
+		// CompteBloque sets its own `name`: `APIError` does not cover it. Payload reads the level by that name.
+		expect(config.loggingLevels).toMatchObject({ APIError: 'info', CompteBloque: 'info' })
+		expect(new CompteBloque().name).toBe('CompteBloque')
 	})
 
 	test('on any other database: no schema push, no database created, the versioned migrations instead', async () => {

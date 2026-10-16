@@ -6,35 +6,18 @@ import { attributsDeLaMarque, COOKIE_DE_MARQUE_DE_CONNEXION } from '@/lib/analyt
 import { cookieDeSession } from '@/lib/auth/cookie-session'
 import { CHEMIN_DU_DEPART_GOOGLE, COOKIE_DE_GOOGLE, configGoogle, siteDeLEspace } from '@/lib/auth/google/config'
 import { terminerLaConnexionGoogle } from '@/lib/auth/google/connexion-google'
+import { ipClient } from '@/lib/auth/ip-client'
 import { journalDe } from '@/lib/auth/journal'
+import { ENTETES_DE_RELAIS, pageDeRelais } from '@/lib/auth/page-de-relais'
 import { retourSur } from '@/lib/auth/retour'
 import { serverEnv } from '@/lib/env'
 
 // Read per request, never cached: it opens a session.
 export const dynamic = 'force-dynamic'
 
-const echapper = (texte: string): string =>
-	texte.replace(
-		/[&<>"']/g,
-		lettre => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[lettre] ?? lettre
-	)
-
-/**
- * The page that ends the return: a short page that sends the browser on to `chemin` by itself.
- *
- * Not a redirection, on purpose. The browser comes from Google, so a redirection keeps the whole
- * chain « cross-site » (`Sec-Fetch-Site`), and Payload ignores a session cookie on a cross-site
- * request that carries no `Origin`: the first page of the space would take her for signed out. A
- * navigation that a page of this site starts is « same-origin », and the cookie counts. No script
- * is needed.
- */
+/** The page that ends the return: the relay page (`src/lib/auth/page-de-relais.ts`), so that the first page of the space sees the cookie. */
 function passerParLeSite(chemin: string): NextResponse {
-	const cible = echapper(chemin)
-	const page = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><meta http-equiv="refresh" content="0;url=${cible}"><title>Connexion en cours</title></head><body><p>Connexion en cours… <a href="${cible}">Continuer</a></p></body></html>`
-	return new NextResponse(page, {
-		status: 200,
-		headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'private, no-store' },
-	})
+	return new NextResponse(pageDeRelais(chemin), { status: 200, headers: ENTETES_DE_RELAIS })
 }
 
 /**
@@ -69,6 +52,8 @@ export async function GET(requete: Request) {
 		retour: { code: parametres.get('code'), state: parametres.get('state'), error: parametres.get('error') },
 		cookie: (await cookies()).get(COOKIE_DE_GOOGLE)?.value,
 		journal: journalDe(payload),
+		// The brake by address and the bound on the journal rows (ticket 223).
+		client: ipClient(requete.headers),
 	})
 	if (!issue.ok) return depenser(vers(`/auth/signin?error=${issue.code}`))
 

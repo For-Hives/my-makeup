@@ -30,4 +30,19 @@ test.describe('L’administration s’affiche en français', { tag: '@mobile' },
 			contentType: 'image/png',
 		})
 	})
+
+	// Ticket 223, constat 5: no avatar from gravatar.com, which would receive a fingerprint of the admin's email.
+	test('l’administration ne demande aucune image à gravatar.com', async ({ context, page }) => {
+		const admin = await creerCompte('admin')
+		await context.addCookies(admin.session.cookies)
+		const demandes: string[] = []
+		page.on('request', requete => void demandes.push(requete.url()))
+
+		await page.goto('/admin')
+		await expect(page.getByRole('button', { name: 'Collections' })).toBeVisible()
+		await page.waitForLoadState('networkidle')
+
+		expect(demandes.length).toBeGreaterThan(0)
+		expect(demandes.filter(adresse => /gravatar\.com/i.test(adresse))).toEqual([])
+	})
 })

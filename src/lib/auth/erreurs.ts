@@ -40,6 +40,8 @@ export const CODES_ERREUR_GOOGLE = [
 	'google-email-non-verifie',
 	'email-deja-avec-mot-de-passe',
 	'compte-bloque',
+	// The return was braked (ticket 223): too many returns from this address.
+	'trop-de-tentatives',
 ] as const
 export type CodeErreurGoogle = (typeof CODES_ERREUR_GOOGLE)[number]
 
@@ -55,6 +57,7 @@ const MESSAGES_GOOGLE: Record<CodeErreurGoogle, string> = {
 	'email-deja-avec-mot-de-passe':
 		'Cette adresse email a déjà un compte avec un mot de passe : la connexion avec Google ne l’ouvre pas. Connecte-toi avec ton email et ton mot de passe, ou utilise « Mot de passe oublié ».',
 	'compte-bloque': MESSAGES['compte-bloque'],
+	'trop-de-tentatives': MESSAGES['trop-de-tentatives'],
 }
 
 /** What the sign-in page says when the session ended (the words of the current site). */

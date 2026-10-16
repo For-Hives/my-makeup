@@ -58,4 +58,16 @@ test.describe('E18 : les cookies hérités', { tag: '@mobile' }, () => {
 		await expect(page.getByRole('button', { name: 'Se connecter' })).toBeVisible()
 		await expect(page.getByTestId('message-reconnexion')).toHaveCount(0)
 	})
+
+	// Ticket 223, constat 8: a response that carries a cookie is for this visitor alone.
+	test('une page publique qui efface un cookie hérité n’est gardée par aucun cache partagé', async ({ request }) => {
+		const avec = await request.get('/contact', { headers: { cookie: `${NOMS[0]}=ancienne-valeur` } })
+		expect(avec.status()).toBe(200)
+		expect(avec.headers()['set-cookie']).toContain('Max-Age=0')
+		expect(avec.headers()['cache-control']).toBe('private, no-store')
+
+		const sans = await request.get('/contact')
+		expect(sans.headers()['set-cookie']).toBeUndefined()
+		expect(sans.headers()['cache-control'] ?? '').not.toContain('private')
+	})
 })
