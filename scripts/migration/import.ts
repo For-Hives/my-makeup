@@ -19,7 +19,9 @@
  * Payload that DATABASE_URI names, through the Local API. The photos are adopted where they are:
  * their objects are read by requests for headers at the public base of the photos of the
  * application (R2_PUBLIC_URL, or the storage of the bench), never written. A database that is not on this machine
- * is refused unless the command says `--cible-distante`, before Payload is even loaded. The
+ * is refused unless the command says `--cible-distante`, before Payload is even loaded; that flag
+ * demands `--base-attendue <name>`, and a target whose `current_database()` differs is refused
+ * before the first read (ticket 233). The
  * schema of the target is never changed: a target without the tables of the v3 is refused.
  *
  * Exit codes: 0 done; 1 refused before any write (an environment variable, the target, the table
@@ -40,6 +42,7 @@ import { FICHIER_DES_COMMUNES_PAR_DEFAUT, lireLesArguments, USAGE } from './impo
 import {
 	configurationSansChangementDeSchema,
 	ImportRefuse,
+	verifierLaBaseAttendue,
 	verifierLaCible,
 	verifierLeSchemaDeLaCible,
 } from './import/cible'
@@ -121,6 +124,8 @@ async function principal(argumentsDeLaCommande: string[]): Promise<number> {
 
 	const [{ getPayload }, { default: config }] = await Promise.all([import('payload'), import('@payload-config')])
 	const payload = await getPayload({ config: configurationSansChangementDeSchema(await config) })
+	// Named by `--base-attendue` (required with `--cible-distante`): checked before the first read.
+	if (options.baseAttendue !== undefined) await verifierLaBaseAttendue(payload, options.baseAttendue)
 	await verifierLeSchemaDeLaCible(payload)
 	// Where the photos are served from, as the application gives their addresses (src/payload.config.ts).
 	// `--sans-photos`: no storage at all; nothing is asked of any host.

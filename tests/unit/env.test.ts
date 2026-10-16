@@ -888,3 +888,124 @@ describe('there is no pre-production: APP_ENV knows the bench and the site only 
 		expect(env).not.toHaveProperty('preprod')
 	})
 })
+
+describe('the import of the old site runs on the site only, once per token (ticket 233)', () => {
+	const SOURCE = 'postgres://lecture_strapi:MOT-DE-PASSE-TEMOIN@base-strapi.exemple.test:5432/strapi'
+	const site: RawEnv = {
+		...valid,
+		...RELAIS_DU_SITE,
+		APP_ENV: 'prod',
+		DATABASE_URI: REMOTE_URI,
+		NEXT_PUBLIC_SITE_URL: 'https://my-makeup.fr',
+		NODE_ENV: 'production',
+		STRAPI_SOURCE_URI: SOURCE,
+	}
+	const demande: RawEnv = { ...site, IMPORT_JETON: '2026-11-05-passage-a' }
+
+	test('STRAPI_SOURCE_URI is known to the application: read as an address, kept apart, never refused for being local', () => {
+		expect(parseServerEnv(site).sourceStrapi).toBe(SOURCE)
+		expect(parseServerEnv(site).importation).toBeUndefined()
+		// The bench sets it to its fake source, on this machine.
+		const banc = 'postgres://lecture_strapi_test:x@127.0.0.1:5443/strapi_source_test'
+		expect(parseServerEnv({ ...valid, STRAPI_SOURCE_URI: banc }).sourceStrapi).toBe(banc)
+		expect(parseServerEnv(valid).sourceStrapi).toBeUndefined()
+		const error = refusal({ ...valid, STRAPI_SOURCE_URI: 'pas une adresse' })
+		expect(error.variables).toEqual(['STRAPI_SOURCE_URI'])
+		expect(error.message).not.toContain('pas une adresse')
+	})
+
+	test('a token alone is a dry run, read with the defaults', () => {
+		expect(parseServerEnv(demande).importation).toEqual({
+			jeton: '2026-11-05-passage-a',
+			mode: 'a-blanc',
+			cibleEnService: false,
+		})
+	})
+
+	test('every variable is read', () => {
+		const decisions = JSON.stringify({ emailsPartages: [], profilsEcartes: [29] })
+		expect(
+			parseServerEnv({
+				...demande,
+				IMPORT_CIBLE_EN_SERVICE: 'oui',
+				IMPORT_COMMUNES: '[]',
+				IMPORT_CONSENTEMENT_LE: '2026-11-02T08:00:00Z',
+				IMPORT_DECISIONS: decisions,
+				IMPORT_MODE: 'reel',
+			}).importation
+		).toEqual({
+			cibleEnService: true,
+			communes: '[]',
+			consentiLe: '2026-11-02T08:00:00Z',
+			decisions,
+			jeton: '2026-11-05-passage-a',
+			mode: 'reel',
+		})
+	})
+
+	test.each([
+		['a work station', { ...demande, NODE_ENV: undefined, NEXT_PUBLIC_SITE_URL: undefined, APP_ENV: undefined }],
+		['a development server with the site address', { ...demande, NODE_ENV: 'development' }],
+		[
+			'a production build served from this machine',
+			{ ...demande, NEXT_PUBLIC_SITE_URL: 'http://localhost:3000', DATABASE_URI: LOCAL_URI },
+		],
+		['the site without APP_ENV', { ...demande, APP_ENV: undefined }],
+		['the test bench', { ...demande, APP_ENV: 'test' }],
+	])('refused on %s, naming the variable and never its value', (_cas, env) => {
+		const error = refusal(env)
+		expect(error.variables).toContain('IMPORT_JETON')
+		expect(error.message).toContain('- IMPORT_JETON : refusée, car ce n’est pas le site')
+		expect(error.message).not.toContain('2026-11-05-passage-a')
+		expect(error.message).not.toContain('MOT-DE-PASSE-TEMOIN')
+	})
+
+	test('any other IMPORT_* variable is refused off the site too, token or not', () => {
+		for (const [variable, valeur] of [
+			['IMPORT_MODE', 'reel'],
+			['IMPORT_DECISIONS', '{}'],
+			['IMPORT_CONSENTEMENT_LE', '2026-11-02'],
+			['IMPORT_COMMUNES', '[]'],
+			['IMPORT_CIBLE_EN_SERVICE', 'oui'],
+		] as const)
+			expect(refusal({ ...valid, [variable]: valeur }).variables, variable).toEqual([variable])
+	})
+
+	test('a variable without the token is refused on the site: it would do nothing', () => {
+		const error = refusal({ ...site, IMPORT_MODE: 'reel' })
+		expect(error.variables).toEqual(['IMPORT_MODE'])
+		expect(error.message).toContain('IMPORT_JETON est absente')
+	})
+
+	test.each([
+		['IMPORT_JETON', 'court'],
+		['IMPORT_JETON', 'MAJUSCULES-INTERDITES'],
+		['IMPORT_JETON', `${'a'.repeat(65)}`],
+		['IMPORT_MODE', 'dry-run'],
+		['IMPORT_CIBLE_EN_SERVICE', 'true'],
+		['IMPORT_CONSENTEMENT_LE', 'demain'],
+		['IMPORT_CONSENTEMENT_LE', '2026-13-45'],
+		['IMPORT_DECISIONS', '{pas du json'],
+		['IMPORT_COMMUNES', 'pas du json'],
+	])('%s = « %s » is unreadable', (variable, valeur) => {
+		const error = refusal({ ...demande, [variable]: valeur })
+		expect(error.variables).toEqual([variable])
+		expect(error.message).not.toContain(valeur)
+	})
+
+	test('a check does not go with a target left as it is', () => {
+		const error = refusal({ ...demande, IMPORT_MODE: 'controle', IMPORT_CIBLE_EN_SERVICE: 'oui' })
+		expect(error.variables).toEqual(['IMPORT_CIBLE_EN_SERVICE'])
+	})
+
+	test('the token needs a source to read', () => {
+		const error = refusal({ ...demande, STRAPI_SOURCE_URI: undefined })
+		expect(error.variables).toEqual(['STRAPI_SOURCE_URI'])
+	})
+
+	test('next build reads no import: nothing runs while Next builds', () => {
+		const construction = serverEnv({ ...demande, NEXT_PHASE: 'phase-production-build' })
+		expect(construction.importation).toBeUndefined()
+		expect(construction.sourceStrapi).toBeUndefined()
+	})
+})

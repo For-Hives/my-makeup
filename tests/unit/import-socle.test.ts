@@ -1,9 +1,12 @@
 import { describe, expect, test } from 'bun:test'
+import { readFileSync } from 'node:fs'
+import path from 'node:path'
 import type { SanitizedConfig } from 'payload'
 import { lireLesArguments } from '../../scripts/migration/import/arguments'
 import {
 	configurationSansChangementDeSchema,
 	ImportRefuse,
+	verifierLaBaseAttendue,
 	verifierLaCible,
 } from '../../scripts/migration/import/cible'
 import {
@@ -40,7 +43,9 @@ describe('la cible : une base de ce poste, ou une base distante que la commande 
 	test('une base locale est acceptée, avec ou sans drapeau', () => {
 		for (const hote of ['127.0.0.1:5443', 'localhost:5442', '[::1]:5432'])
 			expect(verifierLaCible(`postgres://u:p@${hote}/base`, { cibleDistante: false })).toBe('locale')
-		expect(verifierLaCible('postgres://u:p@127.0.0.1/base', { cibleDistante: true })).toBe('locale')
+		expect(verifierLaCible('postgres://u:p@127.0.0.1/base', { cibleDistante: true, baseAttendue: 'base' })).toBe(
+			'locale'
+		)
 	})
 
 	test('une base distante est refusée sans le drapeau, acceptée avec', () => {
@@ -53,7 +58,7 @@ describe('la cible : une base de ce poste, ou une base distante que la commande 
 		]
 		for (const adresse of distantes) {
 			expect(() => verifierLaCible(adresse, { cibleDistante: false }), adresse).toThrow(ImportRefuse)
-			expect(verifierLaCible(adresse, { cibleDistante: true }), adresse).toBe('distante')
+			expect(verifierLaCible(adresse, { cibleDistante: true, baseAttendue: 'prod' }), adresse).toBe('distante')
 		}
 	})
 
@@ -91,7 +96,75 @@ describe('la cible : une base de ce poste, ou une base distante que la commande 
 		expect(message).toContain('DATABASE_URI')
 		expect(message).toContain('--cible-distante')
 		for (const morceau of ['base.example.test', 'secret-de-test', 'utilisateur']) expect(message).not.toContain(morceau)
-		expect(() => verifierLaCible(undefined, { cibleDistante: true })).toThrow('DATABASE_URI manque')
+		expect(() => verifierLaCible(undefined, { cibleDistante: true, baseAttendue: 'prod' })).toThrow(
+			'DATABASE_URI manque'
+		)
+	})
+})
+
+describe('L9 (ticket 233) : --cible-distante exige --base-attendue, et la base doit porter ce nom', () => {
+	test('--cible-distante sans --base-attendue est refusé (code 1), avant la lecture de l’adresse', () => {
+		for (const adresse of ['postgres://u:p@base.example.test:5432/prod', 'postgres://u:p@127.0.0.1/base', undefined]) {
+			let message = ''
+			try {
+				verifierLaCible(adresse, { cibleDistante: true })
+			} catch (erreur) {
+				expect(erreur).toBeInstanceOf(ImportRefuse)
+				message = (erreur as Error).message
+			}
+			expect(message, String(adresse)).toContain('--cible-distante exige --base-attendue')
+			expect(message).not.toContain('example.test')
+		}
+		expect(() =>
+			verifierLaCible('postgres://u:p@base.example.test/prod', { cibleDistante: true, baseAttendue: '' })
+		).toThrow(ImportRefuse)
+	})
+
+	test('une base locale sans le drapeau n’a pas besoin du nom', () => {
+		expect(verifierLaCible('postgres://u:p@127.0.0.1/base', { cibleDistante: false })).toBe('locale')
+	})
+
+	test('--base-attendue prend un nom, et ne se répète pas', () => {
+		expect(lireLesArguments(['--base-attendue'])).toBeNull()
+		expect(lireLesArguments(['--base-attendue', '--reel'])).toBeNull()
+		expect(lireLesArguments(['--base-attendue', 'a', '--base-attendue', 'b'])).toBeNull()
+	})
+
+	const payloadDont = (base: string | undefined) =>
+		({
+			db: { pool: { query: async () => ({ rows: base === undefined ? [] : [{ base }] }) } },
+		}) as unknown as Parameters<typeof verifierLaBaseAttendue>[0]
+
+	test('la base qui donne le nom attendu passe ; une autre est refusée sans dire laquelle', async () => {
+		await expect(verifierLaBaseAttendue(payloadDont('mymakeup_v3'), 'mymakeup_v3')).resolves.toBeUndefined()
+		let message = ''
+		try {
+			await verifierLaBaseAttendue(payloadDont('mymakeup_preprod_ancienne'), 'mymakeup_v3')
+		} catch (erreur) {
+			expect(erreur).toBeInstanceOf(ImportRefuse)
+			message = (erreur as Error).message
+		}
+		expect(message).toContain('« mymakeup_v3 »')
+		expect(message).toContain('--base-attendue')
+		expect(message).not.toContain('mymakeup_preprod_ancienne')
+		await expect(verifierLaBaseAttendue(payloadDont(undefined), 'mymakeup_v3')).rejects.toBeInstanceOf(ImportRefuse)
+	})
+})
+
+describe('L1 (ticket 233) : les deux scripts qui écrivent dans une base ne lisent jamais le .env de travail', () => {
+	test('migration:import et admin:creer portent --no-env-file', () => {
+		const { scripts } = JSON.parse(readFileSync(path.join(import.meta.dir, '../../package.json'), 'utf8')) as {
+			scripts: Record<string, string>
+		}
+		expect(scripts['migration:import']).toBe('bun --no-env-file scripts/migration/import.ts')
+		expect(scripts['admin:creer']).toBe('bun --no-env-file scripts/admin/creer-admin.ts')
+	})
+
+	test('banc:import (qui n’est pas migration:import) le porte aussi, et charge import.ts en direct', () => {
+		const { scripts } = JSON.parse(readFileSync(path.join(import.meta.dir, '../../package.json'), 'utf8')) as {
+			scripts: Record<string, string>
+		}
+		expect(scripts['banc:import']).toBe('bun --no-env-file scripts/migration/banc-import.ts')
 	})
 })
 
@@ -102,6 +175,11 @@ describe('la ligne de commande : à blanc par défaut', () => {
 			mode: 'reel',
 			cibleDistante: true,
 			rapport: 'r.json',
+		})
+		expect(lireLesArguments(['--cible-distante', '--base-attendue', 'mymakeup_v3'])).toEqual({
+			mode: 'a-blanc',
+			cibleDistante: true,
+			baseAttendue: 'mymakeup_v3',
 		})
 	})
 
