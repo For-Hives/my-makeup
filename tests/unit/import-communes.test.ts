@@ -120,6 +120,69 @@ describe('ce que l’import cherche dans une ville saisie : un nom, un code post
 		expect(rechercheDeLaVille('12 rue des Lilas')).toMatchObject({ nom: null, codePostal: null, adresse: true })
 	})
 
+	test('un numéro de département en tête est retiré : « 74 Bourg-Fictif » est une commune, pas une adresse (ticket 226)', () => {
+		// The number is the département: the commune is looked for there only.
+		expect(rechercheDeLaVille('74 Bourg-Fictif')).toEqual({
+			nom: 'bourg-fictif',
+			codePostal: null,
+			departement: '74',
+			adresse: false,
+		})
+		expect(rechercheDeLaVille('2a Bourg-Fictif')).toMatchObject({
+			nom: 'bourg-fictif',
+			departement: '2A',
+			adresse: false,
+		})
+		expect(rechercheDeLaVille('974  Bourg-Fictif ')).toMatchObject({
+			nom: 'bourg-fictif',
+			departement: '974',
+			adresse: false,
+		})
+		// The case of the name does not matter: « 74 annecy » is the same place as « 74 Annecy ».
+		for (const ville of ['74 bourg-fictif', '74 BOURG-FICTIF', '74 Bourg-fictif'])
+			expect(rechercheDeLaVille(ville), ville).toEqual({
+				nom: 'bourg-fictif',
+				codePostal: null,
+				departement: '74',
+				adresse: false,
+			})
+		expect(rechercheDeLaVille('2a bourg-fictif')).toMatchObject({ departement: '2A', adresse: false })
+		expect(rechercheDeLaVille('13 marseille')).toMatchObject({ nom: 'marseille', departement: '13', adresse: false })
+		// Not a département (no such code), or not one place after it: read as before.
+		expect(rechercheDeLaVille('00 Bourg-Fictif')).toMatchObject({ adresse: true })
+		expect(rechercheDeLaVille('74 et alentours')).toMatchObject({ nom: null })
+		expect(rechercheDeLaVille('12 Les Marais, Bourg-Fictif')).toMatchObject({ nom: 'bourg-fictif', adresse: true })
+		expect(rechercheDeLaVille('3 impasse des Pinceaux')).toMatchObject({ nom: null, adresse: true })
+	})
+
+	test('une ville précédée de son département n’est plus listée sous « adresses » (ticket 226)', async () => {
+		simulerLeReferentiel()
+		const { communes, bilan } = await communesDesProfils(
+			[{ id: 1, city: '74 Bourg-Fictif', videALaSource: false }],
+			referentielGeoApi()
+		)
+
+		expect(communes.get(1)?.codeInsee).toBe('74901')
+		expect(bilan.adresses).toEqual([])
+	})
+
+	test('le numéro de tête est un département, pas un numéro de rue : « 01 Bourg-Fictif » ne prend pas la commune du 74', async () => {
+		simulerLeReferentiel()
+		const { communes, bilan } = await communesDesProfils(
+			[
+				{ id: 1, city: '74 Bourg-Fictif', videALaSource: false },
+				{ id: 2, city: '01 Bourg-Fictif', videALaSource: false },
+			],
+			referentielGeoApi()
+		)
+
+		expect(communes.get(1)?.codeInsee).toBe('74901')
+		// Ain holds no such commune: « à revoir », never the commune of another département.
+		expect(communes.get(2)).toBeNull()
+		expect(bilan.aRevoir).toEqual([2])
+		expect(bilan.adresses).toEqual([])
+	})
+
 	test('ce qui n’est pas une commune ne se cherche pas : un pays, une liste, une phrase, un numéro', () => {
 		for (const ville of ['France', 'Toute la France', 'Paris, Lyon et Annecy', '74'])
 			expect(rechercheDeLaVille(ville), ville).toMatchObject({ nom: null, codePostal: null })

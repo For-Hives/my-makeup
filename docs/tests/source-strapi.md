@@ -61,9 +61,12 @@ Chaque outil s'arrête avant d'ouvrir quoi que ce soit si `DATABASE_URI`, `STRAP
 L'import lit la source par un rôle qui ne peut rien y écrire (SCHEMA.md, règle 7). Sur le banc, ce rôle est `lecture_strapi` :
 
 - il a le droit de se connecter à la base de la source et de lire ses tables, rien d'autre : ni insertion, ni modification, ni suppression, ni vidage, ni création de table, ni table temporaire, ni compteur ;
-- chacune de ses transactions commence en lecture seule (`default_transaction_read_only`). Même s'il la remet en écriture, il n'a aucun droit d'écrire.
+- chacune de ses transactions commence en lecture seule (`default_transaction_read_only`). Même s'il la remet en écriture, il n'a aucun droit d'écrire dans les seize tables ;
+- il ne crée aucun grand objet : `lo_create`, `lo_creat`, `lo_from_bytea` et les deux `lo_import` sont retirés à tout le monde, sauf au propriétaire, dans la base de la source (ticket 227). Un grand objet vit hors des tables ; sans ce retrait, un rôle qui lève sa lecture seule pourrait en créer que l'empreinte des tables ne verrait pas. Le retrait est ensuite vérifié (`has_function_privilege`) : il ne vaut que fait par un super-utilisateur ou le propriétaire de `pg_catalog` (sinon PostgreSQL ne répond que par un avertissement), et la création de la source échoue, en le disant, si le rôle garde un de ces droits. L'empreinte de l'import (`empreinteDesTables`) compte aussi ces grands objets, de sorte que « source inchangée » du rapport les voit.
 
-Toute écriture échoue avec une erreur de PostgreSQL (`42501`, droit refusé, ou `25006`, transaction en lecture seule). Le test d'intégration essaie chacune.
+Toute écriture dans une table échoue avec une erreur de PostgreSQL (`42501`, droit refusé, ou `25006`, transaction en lecture seule) ; la création d'un grand objet échoue en `42501`, même après `SET default_transaction_read_only = off`. Le test d'intégration essaie chacune.
+
+**Ce que le rôle peut encore faire, et que la source ne peut pas lui interdire.** Un rôle PostgreSQL règle ses propres paramètres : il peut lever son verrou pour de bon (`ALTER ROLE … IN DATABASE … SET default_transaction_read_only = off`, une fois la lecture seule levée dans sa session), poser d'autres paramètres (`work_mem`, `statement_timeout`…) et changer son mot de passe. Aucune de ces trois actions ne lui donne un droit d'écrire dans une table, mais elles changent le rôle, pas les données. `bun run banc:source` les remet à zéro à chaque création de la source : la base est recréée avec son verrou, le rôle est remis à zéro (`ALTER ROLE … RESET ALL`), son mot de passe est réécrit. C'est donc le seul geste qui garantit un rôle intact ; l'empreinte, elle, voit les tables, les objets du stockage et les grands objets (`pg_largeobject_metadata`), pas les réglages du rôle.
 
 ## Les trois comptes de fixture
 
@@ -81,7 +84,8 @@ L'empreinte dit si la source a changé. Elle couvre :
 
 - le schéma : chaque table du schéma `public`, celles que la source n'a pas créées comprises, avec ses colonnes et leurs types ;
 - chaque ligne de chaque table, toutes colonnes comprises : PostgreSQL la sérialise et la hache lui-même, aucune valeur n'en sort ;
-- chaque objet que nomment les fichiers, originaux et formats dérivés : son contenu et son type, ou son absence.
+- chaque objet que nomment les fichiers, originaux et formats dérivés : son contenu et son type, ou son absence ;
+- les grands objets de la base (`pg_largeobject_metadata`, ticket 227) : leur nombre, leurs identifiants et leur propriétaire. Ils vivent hors des tables, d'où cette ligne à part.
 
 Elle se calcule par le rôle en lecture seule et n'écrit rien. Recréer la source redonne la même empreinte ; changer une ligne ou un objet la change.
 
@@ -128,18 +132,22 @@ Les nombres de la vraie base viennent de l'instantané du 13/10/2026 ([`SCHEMA.m
 | Profils | Ville qui n’est pas une commune exploitable (pays, texte libre) | — | 1 |
 | Profils | Ville homonyme de plusieurs communes | — | 1 |
 | Listes | Compétences | 200 | 6 |
-| Listes | Expériences | 57 | 3 |
-| Listes | Formations | 47 | 2 |
+| Listes | Expériences | 57 | 4 |
+| Listes | Formations | 47 | 3 |
 | Listes | Langues | 65 | 4 |
 | Listes | Réseaux | 101 | 27 |
-| Listes | Prestations | 118 | 11 |
-| Listes | Options de prestation | 23 | 3 |
+| Listes | Prestations | 118 | 12 |
+| Listes | Options de prestation | 23 | 4 |
 | Listes | Lignes de liste qu’aucun lien ne rattache | 3 | 3 |
 | Listes | Lignes identiques dans une même liste | — | 1 |
 | Listes | Listes rangées par `order` dans un autre ordre que leurs liens | — | 2 |
 | Listes | Réseaux avec un téléphone ou un email de contact | — | 3 |
 | Listes | Prix écrits sans nombre lisible (prestations et options) | — | 4 |
-| Listes | Prix vides ou nuls (prestations et options) | — | 2 |
+| Listes | Prix vides ou nuls (prestations et options) | — | 4 |
+| Listes | Expériences dont la fin précède le début (hors des bornes de la v3) | — | 1 |
+| Listes | Formations obtenues plus d’un an après le jour (hors des bornes de la v3) | — | 1 |
+| Listes | Options dont le nom dépasse 70 caractères (hors des bornes de la v3) | — | 1 |
+| Listes | Prestations dont la description dépasse 2 000 caractères (hors des bornes de la v3) | — | 1 |
 | Fichiers | Fichiers | 574 | 13 |
 | Fichiers | Fichiers désignés par un profil | 249 | 9 |
 | Fichiers | … comme photo principale | 49 | 3 |
@@ -186,7 +194,8 @@ Les identifiants sont ceux de la fausse base, jamais ceux de la vraie.
 | 28 | « Saint-Julien », nom de plusieurs communes |
 | 29, 31 | Ville vide (chaîne vide), ville nulle |
 | 30 | « annecy », en minuscules, avec un espace final |
-| 32 à 34 | Profils simples ; 34 a été créé la veille de l'instantané |
+| 32, 34 | Profils simples ; 34 a été créé la veille de l'instantané |
+| 33 | Quatre lignes hors des bornes de la v3, une par borne (ticket 226) : une expérience dont la fin précède le début, une formation « obtenue » en 2099, une prestation dont la description a 2 001 caractères, et une option au nom de 71 caractères sur la prestation « Cours particulier ». L'import les laisse de côté et les liste ; le reste du profil est repris |
 
 Les villes de ces profils ont leurs réponses du référentiel des communes dans `tests/fixtures/import/referentiel-du-banc.json` : des données publiques de `geo.api.gouv.fr`, que l'import du banc lit hors ligne ([`docs/migration/IMPORT.md`](../migration/IMPORT.md), « Les communes »). Une ville ajoutée à la source y ajoute ses réponses, sinon l'import du banc s'arrête.
 
@@ -202,7 +211,7 @@ Ces cas n'étaient pas dans la vraie base le 13/10/2026, ou n'y ont pas été me
 
 - un compte bloqué ou non confirmé, un jeton de réinitialisation ou de confirmation rempli, un hash bcrypt incomplet ;
 - un article ou un talent en brouillon, un fichier désigné par un article ;
-- une galerie de plus de 10 photos, une valeur plus longue que la limite de la v3, une fin d'expérience avant son début ;
+- une galerie de plus de 10 photos ;
 - un fichier dont `hash` et `ext` ne donnent pas le nom de l'objet, un `uploaded_by` qui désigne un autre compte que celui du profil ;
 - un lien vers une ligne de liste qui n'existe pas.
 

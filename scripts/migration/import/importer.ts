@@ -23,9 +23,16 @@ import { marquerUnImportEnCours } from '../../../src/lib/contexte-import'
 import { ADAPTATEUR_ARTICLES, articlesAttendus, articlesRepartis, lireLesArticles } from './articles'
 import { type GenreDeCible, ImportRefuse } from './cible'
 import { type CasARevoir, communesDesProfils } from './communes'
-import { ADAPTATEUR_COMPTES, comptesAttendus, lireLesComptes, repartitionDesComptes } from './comptes'
+import {
+	ADAPTATEUR_COMPTES,
+	ADAPTATEUR_COMPTES_EN_SERVICE,
+	comptesAttendus,
+	lireLesComptes,
+	repartitionDesComptes,
+} from './comptes'
 import { AUCUNE_DECISION, type Decisions } from './decisions'
 import { REFERENCES } from './ecarts'
+import { comptesSupprimesDansLaV3, refuserUneCibleEnService, sansLesComptesSupprimes } from './garde-bascule'
 import {
 	ADAPTATEUR_MEDIAS,
 	bilanDesFichiers,
@@ -49,7 +56,9 @@ import {
 } from './moteur'
 import {
 	ADAPTATEUR_PROFILS,
+	ADAPTATEUR_PROFILS_EN_SERVICE,
 	affichesALaSource,
+	consentementsGardes,
 	lireLesProfils,
 	profilsAttendus,
 	profilsLaisses,
@@ -80,6 +89,16 @@ export interface OptionsDImport {
 	 * one profile taken does; the run stops before any write without it.
 	 */
 	consentiLe?: string
+	/**
+	 * Run on a target the v3 already uses (`--cible-en-service`, ./garde-bascule.ts): without it, such a
+	 * target is refused before any write; with it, the accounts the target holds are left as they are.
+	 */
+	cibleEnService?: boolean
+	/**
+	 * The day the run is made, for the bound of the date a course was obtained (a year ahead at most,
+	 * as the server reads it with its own clock). The clock by default; a test gives a fixed day.
+	 */
+	maintenant?: Date
 	/** The password of a new account; random by default. Given by a test only. */
 	tirerMotDePasse?: () => string
 	/**
@@ -192,15 +211,23 @@ async function passerLImport(options: OptionsDImport): Promise<Rapport> {
 		tirerMotDePasse,
 		medias,
 		consentiLe = null,
+		maintenant = new Date(),
+		cibleEnService = false,
 	} = options
+	const adaptateurDesComptes = cibleEnService ? ADAPTATEUR_COMPTES_EN_SERVICE : ADAPTATEUR_COMPTES
 	const avant = await source.lire(requete => empreinteDesTables(requete))
-	const lu = await source.lire(async requete => ({
+	const luBrut = await source.lire(async requete => ({
 		comptes: await lireLesComptes(requete),
 		fichiers: await lireLesFichiers(requete),
 		profils: await lireLesProfils(requete),
 		articles: await lireLesArticles(requete),
 		talents: await lireLesTalents(requete),
 	}))
+
+	// An account deleted in the v3 is gone for good: on a target in service the run neither takes it nor its profile.
+	const supprimes = await comptesSupprimesDansLaV3(payload)
+	const lu = cibleEnService ? sansLesComptesSupprimes(luBrut, supprimes) : luBrut
+	const adaptateurDesProfils = cibleEnService ? ADAPTATEUR_PROFILS_EN_SERVICE : ADAPTATEUR_PROFILS
 
 	const rapport: Rapport = {
 		mode,
@@ -219,6 +246,13 @@ async function passerLImport(options: OptionsDImport): Promise<Rapport> {
 		comptesEcartes: comptes.ecartes,
 		profilsEcartes: decisions.profilsEcartes,
 	})
+	// Before any write, dry or real: a target the v3 already uses would get the old hash and email back.
+	if (!cibleEnService)
+		await refuserUneCibleEnService(
+			payload,
+			comptes.attendus,
+			luBrut.comptes.map(({ id }) => id)
+		)
 	rapport.decisionsSansObjet = comptes.sansObjet + laisses.sansObjet
 	if (comptes.sansDecision.length > 0 || laisses.deComptesEcartes.length > 0 || laisses.sansCompte.length > 0) {
 		rapport.arret = {
@@ -265,7 +299,7 @@ async function passerLImport(options: OptionsDImport): Promise<Rapport> {
 			{
 				profils: profilsPris,
 				articles: new Set(articles.pris.map(({ id }) => id)),
-				profilsDeLaSource: new Set(lu.profils.map(({ id }) => id)),
+				profilsDeLaSource: new Set(luBrut.profils.map(({ id }) => id)),
 				articlesDeLaSource: new Set(lu.articles.map(({ id }) => id)),
 			},
 			medias?.base ?? null
@@ -277,17 +311,20 @@ async function passerLImport(options: OptionsDImport): Promise<Rapport> {
 		if (nonImages > 0) rapport.ecarts[REFERENCES.fichiersNonImages] = nonImages
 
 		rapport.collections.pros = {
-			...(await importerLaCollection(options, ADAPTATEUR_COMPTES, lu.comptes.length, comptes.attendus)),
+			...(await importerLaCollection(options, adaptateurDesComptes, lu.comptes.length, comptes.attendus)),
 			ecartes: comptes.ecartes,
 			hashRattaches: comptes.hashRattaches,
 			hashNonRattaches: comptes.hashNonRattaches,
 			nonConfirmes: comptes.nonConfirmes,
 			repartition: repartitionDesComptes(comptes.attendus),
+			supprimesDansLaV3: cibleEnService
+				? [...supprimes].filter(id => luBrut.comptes.some(c => c.id === id)).sort((a, b) => a - b)
+				: [],
 		}
 
 		// Each profile, and each media of a profile, points at its account in Payload, read once the
 		// accounts are written.
-		const idsDesComptes = await idsDansLaCible(payload, ADAPTATEUR_COMPTES, comptes.attendus)
+		const idsDesComptes = await idsDansLaCible(payload, adaptateurDesComptes, comptes.attendus)
 		// A file whose account Payload refused is not adopted: written without an owner, it would pass
 		// for a newsroom photo. It is listed, and the next run takes it once the account exists.
 		const comptesRefuses = new Set(rapport.collections.pros.refuses.map(({ strapiId }) => strapiId))
@@ -311,9 +348,25 @@ async function passerLImport(options: OptionsDImport): Promise<Rapport> {
 
 		// Each photo points at its media in Payload, read once the media are written.
 		const idsDesMedias = await idsDansLaCible(payload, ADAPTATEUR_MEDIAS, lesMedias, rapport.collections.media.refuses)
-		const profils = profilsAttendus(lu.profils, idsDesComptes, laisses, communes.communes, idsDesMedias, consentiLe)
+		const profils = profilsAttendus(
+			lu.profils,
+			idsDesComptes,
+			laisses,
+			communes.communes,
+			idsDesMedias,
+			consentiLe,
+			maintenant
+		)
 		if (laisses.spam.length > 0) rapport.ecarts[REFERENCES.profilsDuSpam] = laisses.spam.length
-		const bilanDesProfils = await importerLaCollection(options, ADAPTATEUR_PROFILS, lu.profils.length, profils.attendus)
+		const consentements = cibleEnService
+			? []
+			: consentementsGardes(profils.attendus, await lireLaCible(payload, ADAPTATEUR_PROFILS))
+		const bilanDesProfils = await importerLaCollection(
+			options,
+			adaptateurDesProfils,
+			lu.profils.length,
+			profils.attendus
+		)
 		// Only the profiles the target holds are counted: a refused one carries no difference.
 		compterLesEcarts(
 			rapport.ecarts,
@@ -330,6 +383,9 @@ async function passerLImport(options: OptionsDImport): Promise<Rapport> {
 			liensSansLigne: profils.liensSansLigne,
 			prix: profils.prix,
 			coordonneesARevoir: profils.coordonneesARevoir,
+			consentementsGardes: consentements,
+			rayonsARevoir: profils.rayonsARevoir,
+			lignesLaissees: profils.lignesLaissees,
 		}
 
 		const lesArticles = articlesAttendus(articles.pris, lu.fichiers.liens, idsDesMedias)
@@ -353,8 +409,8 @@ async function passerLImport(options: OptionsDImport): Promise<Rapport> {
 		)
 
 		if (mode === 'reel') {
-			const pros = await pariteDe(payload, ADAPTATEUR_COMPTES, comptes.attendus, rapport.collections.pros)
-			const lesProfils = await pariteDe(payload, ADAPTATEUR_PROFILS, profils.attendus, rapport.collections.profils)
+			const pros = await pariteDe(payload, adaptateurDesComptes, comptes.attendus, rapport.collections.pros)
+			const lesProfils = await pariteDe(payload, adaptateurDesProfils, profils.attendus, rapport.collections.profils)
 			rapport.parite = {
 				pros: { ...pros.parite, repartition: repartitionDesComptes(pros.cible) },
 				media: (await pariteDe(payload, ADAPTATEUR_MEDIAS, lesMedias, rapport.collections.media)).parite,

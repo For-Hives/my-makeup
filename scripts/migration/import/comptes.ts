@@ -64,6 +64,17 @@ export const ADAPTATEUR_COMPTES: Adaptateur = {
 	options: () => ({ disableVerificationEmail: true, contexte: CONTEXTE_SANS_PROFIL }),
 }
 
+/**
+ * The accounts on a target the v3 already uses (`--cible-en-service`, ticket 227): an account the
+ * target holds is left exactly as it is, every field of it, so that the import puts back neither the
+ * legacy hash a sign-in erased, nor the email, the confirmation or the block the v3 changed. Only an
+ * account the target misses is created.
+ */
+export const ADAPTATEUR_COMPTES_EN_SERVICE: Adaptateur = {
+	...ADAPTATEUR_COMPTES,
+	figes: Object.keys(ADAPTATEUR_COMPTES.champs),
+}
+
 /** The account the target must hold. The password is given at the creation only. */
 export function compteAttendu(ligne: LigneCompte, tirer: () => string = motDePasseAleatoire): Attendu {
 	const email = emailNormalise(ligne.email)

@@ -13,7 +13,7 @@ import type { BilanDesCommunes } from './communes'
 import type { BilanDesFichiers, PhotoNonReprise } from './medias'
 import type { Bilan, CollectionImportee, Parite } from './moteur'
 import { pariteComplete, sansEcartInexplique } from './moteur'
-import type { BilanDesPrix } from './profils'
+import type { BilanDesPrix, LigneLaisseeDUnProfil, RayonARevoir } from './profils'
 import type { EmpreinteDesTables } from './source'
 
 export type Mode = 'a-blanc' | 'reel'
@@ -38,6 +38,8 @@ export interface BilanDeCollection extends Bilan {
 	hashNonRattaches?: number
 	/** `strapiId` of the documents of the source the import does not take: set aside by a decision. */
 	ecartes?: number[]
+	/** `strapiId` of the accounts of the source deleted in the v3, left out with their profile (`--cible-en-service`). */
+	supprimesDansLaV3?: number[]
 	/** Accounts not confirmed at the source, taken confirmed. */
 	nonConfirmes?: number[]
 	/** What the run takes, split. */
@@ -60,6 +62,12 @@ export interface BilanDeCollection extends Bilan {
 	prix?: BilanDesPrix
 	/** Contact details left out because the server would refuse them: profile and field, never the value (ticket 064). */
 	coordonneesARevoir?: { profil: number; champ: string }[]
+	/** Radii above 200 km (register `rayon-200-km`): the field is left empty, the profile is taken (ticket 226). */
+	rayonsARevoir?: RayonARevoir[]
+	/** Profiles whose date of consent differs from the date this run asks for: the target keeps its own (ticket 227). */
+	consentementsGardes?: number[]
+	/** Rows of a list outside a bound of the v3, left out of their profile: profile, list and rank, never the text (ticket 226). */
+	lignesLaissees?: LigneLaisseeDUnProfil[]
 }
 
 /** The parity of a collection, and how the target splits, read again. */
@@ -191,6 +199,10 @@ function ligneDeBilan(nom: string, bilan: BilanDeCollection, mode: Mode): string
 		lignes.push(
 			`  - ${pluriel(bilan.hashNonRattaches, 'hash écarté non rattaché', 'hash écartés non rattachés')} (le compte gardé a le sien, ou le prêt est refusé)`
 		)
+	if (bilan.supprimesDansLaV3?.length)
+		lignes.push(
+			`  - supprimés dans la v3, ni repris ni leur profil : ${bilan.supprimesDansLaV3.length} (${ids(bilan.supprimesDansLaV3)})`
+		)
 	if (bilan.sansOrigine)
 		lignes.push(`  - dans la cible, sans identifiant de l’ancien site (ajoutés à la main) : ${bilan.sansOrigine}`)
 	if (bilan.nonConfirmes?.length)
@@ -221,6 +233,26 @@ function ligneDeBilan(nom: string, bilan: BilanDeCollection, mode: Mode): string
 			`  - coordonnées laissées de côté, que le serveur refuserait (à revoir à la main) : ${bilan.coordonneesARevoir
 				.map(({ profil, champ }) => `${profil} (${champ})`)
 				.join(', ')}`
+		)
+	if (bilan.consentementsGardes?.length)
+		lignes.push(
+			`  - date de consentement déjà posée, gardée (la date demandée est autre) : ${bilan.consentementsGardes.length} (${ids(bilan.consentementsGardes)})`
+		)
+	if (bilan.rayonsARevoir?.length)
+		lignes.push(
+			`  - rayon d’action au-dessus de 200 km, champ laissé vide, profil repris : ${bilan.rayonsARevoir.length} (${bilan.rayonsARevoir
+				.map(({ profil, rayonKm }) => `${profil} : ${rayonKm} km`)
+				.join(', ')})`
+		)
+	if (bilan.lignesLaissees?.length)
+		lignes.push(
+			`  - lignes de liste hors des bornes de la v3, laissées de côté, reste du profil repris : ${bilan.lignesLaissees.length} (${bilan.lignesLaissees
+				.map(({ profil, liste, rang, prestation }) =>
+					prestation === undefined
+						? `${profil} : ${liste} n° ${rang}`
+						: `${profil} : ${liste} n° ${rang} de la prestation n° ${prestation}`
+				)
+				.join(', ')})`
 		)
 	return lignes
 }

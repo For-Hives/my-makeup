@@ -13,6 +13,13 @@
 import { parsePrice } from '@/lib/prix'
 import { type ChampsDuProfil, completude, villeExploitable } from '@/lib/profil/completude'
 import { lieuPublic } from '@/lib/profil/lieu-public'
+import {
+	LONGUEUR_DESCRIPTION,
+	LONGUEUR_NOM,
+	messageDeFin,
+	messageDeTexte,
+	messageDObtention,
+} from '@/lib/profil/listes'
 import { attribuerSlugs, slugDeRepli, slugifier } from '@/lib/slug'
 import {
 	COMPTES_DE_FIXTURE,
@@ -393,6 +400,36 @@ export const CAS: readonly Cas[] = [
 		l => prix(l).filter(p => p.prixTexte !== null && p.prixAPartirDe === null).length,
 	],
 	[L, 'Prix vides ou nuls (prestations et options)', '—', l => prix(l).filter(p => p.prixTexte === null).length],
+	[
+		L,
+		'Expériences dont la fin précède le début (hors des bornes de la v3)',
+		'—',
+		l =>
+			l.lignes.components_makeupartists_experiences.filter(e => messageDeFin(e.date_end, e.date_start) !== null).length,
+	],
+	[
+		L,
+		'Formations obtenues plus d’un an après le jour (hors des bornes de la v3)',
+		'—',
+		l =>
+			l.lignes.components_makeupartists_courses.filter(f => messageDObtention(f.date_graduation, new Date()) !== null)
+				.length,
+	],
+	[
+		L,
+		'Options dont le nom dépasse 70 caractères (hors des bornes de la v3)',
+		'—',
+		l => l.lignes.components_service_offers_options.filter(o => messageDeTexte(o.name, LONGUEUR_NOM) !== null).length,
+	],
+	[
+		L,
+		'Prestations dont la description dépasse 2 000 caractères (hors des bornes de la v3)',
+		'—',
+		l =>
+			l.lignes.components_makeupartists_service_offers.filter(
+				p => messageDeTexte(p.description, LONGUEUR_DESCRIPTION) !== null
+			).length,
+	],
 
 	[F, 'Fichiers', '574', l => l.fichiers.length],
 	[F, 'Fichiers désignés par un profil', '249', l => l.fichiersDesProfils.length],

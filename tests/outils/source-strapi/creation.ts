@@ -49,6 +49,35 @@ function exigerDesNoms({ base, role }: BaseDeLaSource): void {
 		throw new Error('Fausse base Strapi : une base et un rôle s’écrivent en minuscules, chiffres et « _ ».')
 }
 
+/** The functions of PostgreSQL that create a large object, server side (`lo_create`) or by the client library (`lo_creat`, `lo_import`). */
+const FONCTIONS_DE_GRANDS_OBJETS = [
+	'pg_catalog.lo_create(oid)',
+	'pg_catalog.lo_creat(integer)',
+	'pg_catalog.lo_from_bytea(oid, bytea)',
+	'pg_catalog.lo_import(text)',
+	'pg_catalog.lo_import(text, oid)',
+] as const
+
+/**
+ * Checks that the role cannot run the functions that create a large object. PostgreSQL only warns
+ * (« no privileges could be revoked ») when the one who revokes is neither a superuser nor the owner
+ * of `pg_catalog`, and the role then keeps the privilege: the check reads the privilege itself.
+ */
+export async function exigerLaRevocation(executer: Executer, role: string): Promise<void> {
+	const encore: string[] = []
+	for (const fonction of FONCTIONS_DE_GRANDS_OBJETS) {
+		const [ligne] = (await executer("SELECT has_function_privilege($1::name, $2::text, 'EXECUTE') AS permis", [
+			role,
+			fonction,
+		])) as { permis?: boolean }[]
+		if (ligne?.permis !== false) encore.push(fonction)
+	}
+	if (encore.length > 0)
+		throw new Error(
+			`Fausse base Strapi : le rôle « ${role} » peut encore créer des grands objets (${encore.join(', ')}). Le retrait de ce droit demande un super-utilisateur : crée la base avec un compte qui l’est.`
+		)
+}
+
 /** A salt of bcrypt drawn from the id of the account: the same account always gets the same hash. */
 export function selBcrypt(id: number): string {
 	const octets = createHash('sha256').update(`sel-factice-${id}`).digest()
@@ -88,7 +117,7 @@ async function remplir(executer: Executer, table: NomDeTable, lignes: readonly L
 
 /**
  * Creates the source database from nothing, and its read-only role with this password: dropped
- * first when they exist. Each statement on its own: CREATE DATABASE cannot run inside a transaction.
+ * first when they exist (a role that exists is reset: no parameter of its own, its password rewritten). Each statement on its own: CREATE DATABASE cannot run inside a transaction.
  */
 export async function preparerLaBase(
 	executer: Executer,
@@ -103,6 +132,9 @@ export async function preparerLaBase(
 	await executer(
 		`${roles.length > 0 ? 'ALTER' : 'CREATE'} ROLE ${identifiant(role)} WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS NOINHERIT PASSWORD ${litteral(motDePasse)}`
 	)
+	// What the role set for itself in an earlier life (its parameters, outside any database) is wiped:
+	// a role that already existed is made again from nothing, as the database is.
+	await executer(`ALTER ROLE ${identifiant(role)} RESET ALL`)
 	await executer(`REVOKE ALL ON DATABASE ${identifiant(base)} FROM PUBLIC`)
 	await executer(`GRANT CONNECT ON DATABASE ${identifiant(base)} TO ${identifiant(role)}`)
 	// A second lock: every transaction of the role starts read-only.
@@ -134,6 +166,11 @@ export async function remplirLaBase(executer: Executer, definition: DefinitionDe
 	await executer('REVOKE ALL ON SCHEMA public FROM PUBLIC')
 	await executer(`GRANT USAGE ON SCHEMA public TO ${identifiant(role)}`)
 	await executer(`GRANT SELECT ON ALL TABLES IN SCHEMA public TO ${identifiant(role)}`)
+	// Large objects live outside the tables: PostgreSQL lets anybody create one, and a role that lifted its
+	// own read-only default could fill the source with objects the fingerprint of the tables never sees.
+	// The functions that create one are taken from everybody but the owner (ticket 227).
+	await executer(`REVOKE EXECUTE ON FUNCTION ${FONCTIONS_DE_GRANDS_OBJETS.join(', ')} FROM PUBLIC`)
+	await exigerLaRevocation(executer, role)
 }
 
 /** Drops the source database and its role, when they exist. Nothing else of the server is touched. */

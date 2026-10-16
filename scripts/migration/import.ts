@@ -9,6 +9,7 @@
  *   bun scripts/migration/import.ts --controle         dry run that says whether the target is the source: exit 4 if not
  *   bun scripts/migration/import.ts --sans-photos      no storage of the photos: none is read, none adopted (a rehearsal with no network)
  *   bun scripts/migration/import.ts --consentement-le 2026-11-02   the date of the switch: the consent date of the profiles that show a phone or an email today
+ *   bun scripts/migration/import.ts --cible-en-service  on a target the v3 already uses: the accounts it holds are left as they are (without it, such a target is refused)
  *
  * The cities become communes of the official list (geo.api.gouv.fr). Its answers are kept in a
  * file (`--communes`, by default .migration/referentiel-communes.json, never versioned): a second
@@ -147,6 +148,7 @@ async function principal(argumentsDeLaCommande: string[]): Promise<number> {
 			cible,
 			decisions,
 			consentiLe,
+			cibleEnService: options.cibleEnService === true,
 			referentiel,
 			medias: baseDesMedias === null ? undefined : { base: baseDesMedias },
 			// Read by its owner only: what was asked of the referential for each city to review.

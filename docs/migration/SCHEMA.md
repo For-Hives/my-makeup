@@ -147,7 +147,7 @@ Table `makeup_artistes`, 101 lignes, sans brouillon dans Strapi : 88 profils à 
 | `first_name` | `string`, 2 à 70 caractères | `profils.prenom` (`text`) | Repris tel quel. |
 | `speciality` | `string`, 70 caractères au plus | `profils.specialite` (`text`) | Repris tel quel. Texte libre. |
 | `city` | `string`, 70 caractères au plus, texte libre | `profils.commune` (groupe : `nom`, `codeInsee`, `departement`, `latitude`, `longitude`) | Transformé (plan `01` §6.2, ticket 063) : le texte saisi devient une commune du référentiel officiel. Le texte saisi n'est copié dans aucun champ. Une adresse postale n'est jamais importée : seule sa commune l'est, jamais sa rue. Texte ambigu, ou qui n'est pas une commune : zone vide, profil à revoir (ticket 066). Le serveur refuse une commune sans code INSEE ou dont le code est mal formé, un nom qui ressemble à une adresse, et un nom fait d'autres caractères que ceux d'un nom de commune (lettres, espaces, traits d'union, apostrophes, parenthèses) ; une commune s'enregistre entière. Il ne compare pas le nom à celui de son code : c'est la liste officielle de l'espace et de l'import qui les donne ensemble. Il calcule lui-même `departement` depuis le code : un des 101 départements, ou une collectivité d'outre-mer de la liste officielle (975, 977, 978, 984, 986 à 989). Il garde `latitude` et `longitude` à deux décimales, le centre de la commune à environ 1 km près (ticket 041). |
-| `action_radius` | `integer`, 0 à 2 147 483 647 | `profils.rayonKm` (`number`, 0 à 200) | Repris tel quel de 0 à 200. L'ancien site accepte jusqu'à 1 000 km : une valeur au-dessus de 200 est comptée et listée (règle 5), jamais ramenée à 200 en silence. |
+| `action_radius` | `integer`, 0 à 2 147 483 647 | `profils.rayonKm` (`number`, 0 à 200) | Repris tel quel de 0 à 200. L'ancien site accepte jusqu'à 1 000 km : une valeur au-dessus de 200 est comptée et listée (règle 5), jamais ramenée à 200 en silence : le champ reste vide, le profil est repris, le rapport donne son identifiant et la valeur (ticket 226, registre `rayon-200-km`). |
 | `score` | `decimal` | `profils.score` (`number`, réservé à l'admin) | Repris tel quel. Jamais dans une lecture publique. Ce n'est pas la complétude, qui est calculée (§9). |
 | `available` | `boolean` | `profils.disponible` (`checkbox`) | Transformé (plan `01` §6.2) : vrai et faux repris tels quels, **nul devient vrai** (48 profils). Seule exception à la règle 2. |
 | `skills` | `component` répétable `makeupartists.skills` | `profils.competences` (`array`) | Lignes du §6.1, dans l'ordre. |
@@ -217,7 +217,7 @@ Table `components_makeupartists_experiences`, 57 lignes.
 | `job_name` | `string`, 70 caractères au plus | `profils.experiences.poste` (`text`) | Repris tel quel. |
 | `city` | `string`, 70 caractères au plus | `profils.experiences.ville` (`text`) | Repris tel quel. C'est la ville d'un ancien poste, en texte libre : elle ne passe pas par le référentiel des communes. |
 | `date_start` | `date` | `profils.experiences.debut` (`date`) | Repris tel quel : une date sans heure, qui reste au même jour quel que soit le fuseau. |
-| `date_end` | `date` | `profils.experiences.fin` (`date`) | Même règle. Une fin antérieure au début est listée (règle 5), pas corrigée. |
+| `date_end` | `date` | `profils.experiences.fin` (`date`) | Même règle. Une fin antérieure au début est listée (règle 5), pas corrigée : le serveur refuserait le profil entier, donc la ligne est laissée de côté et listée par profil et par rang, le reste du profil est repris (ticket 226, §11). |
 | `description` | `text`, 2 000 caractères au plus | `profils.experiences.description` (`textarea`) | Repris tel quel. |
 
 ### 6.3 Formation : `makeupartists.courses` → `profils.formations`
@@ -228,7 +228,7 @@ Table `components_makeupartists_courses`, 47 lignes.
 |---|---|---|---|
 | `diploma` | `string`, 70 caractères au plus | `profils.formations.diplome` (`text`) | Repris tel quel. |
 | `school` | `string`, 70 caractères au plus | `profils.formations.ecole` (`text`) | Repris tel quel. |
-| `date_graduation` | `date` | `profils.formations.obtenuLe` (`date`) | Repris tel quel : une date sans heure, qui reste au même jour. |
+| `date_graduation` | `date` | `profils.formations.obtenuLe` (`date`) | Repris tel quel : une date sans heure, qui reste au même jour. Le serveur refuse une date de plus d'un an après le jour de l'enregistrement : cette ligne est laissée de côté et listée par profil et par rang, le reste du profil est repris (ticket 226, §11). |
 | `course_description` | `text`, 2 000 caractères au plus | `profils.formations.description` (`textarea`) | Repris tel quel. |
 
 ### 6.4 Langue : `makeupartists.language` → `profils.langues`
@@ -262,7 +262,7 @@ Table `components_makeupartists_service_offers`, 118 lignes.
 | Attribut Strapi | Type Strapi | Champ Payload | Règle |
 |---|---|---|---|
 | `name` | `string`, 70 caractères au plus | `profils.prestations.nom` (`text`) | Repris tel quel. |
-| `description` | `text` | `profils.prestations.description` (`textarea`) | Repris tel quel. |
+| `description` | `text` | `profils.prestations.description` (`textarea`, 2 000 caractères au plus) | Repris tel quel. Strapi ne borne pas ce texte, le serveur de la v3 le borne à 2 000 : une prestation plus longue est laissée de côté avec ses options et listée par profil et par rang, le reste du profil est repris (ticket 226, §11). |
 | `options` | `component` répétable `service-offers.options` | `profils.prestations.options` (`array` imbriqué) | Lignes du §6.7, dans l'ordre de `components_makeupartists_service_offers_components`. |
 | `price` | `text`, 70 caractères au plus | `profils.prestations.prixTexte` (`text`) et `profils.prestations.prixAPartirDe` (`number`) | `prixTexte` : repris tel quel, à l'octet près. `prixAPartirDe` : transformé (plan `01` §6.2, ticket 062), le nombre lu par la règle de prix unique (`src/lib/prix.ts`, ticket 032), nul quand le texte n'a pas de nombre lisible. |
 
@@ -272,7 +272,7 @@ Table `components_service_offers_options`, 23 lignes.
 
 | Attribut Strapi | Type Strapi | Champ Payload | Règle |
 |---|---|---|---|
-| `name` | `string` | `profils.prestations.options.nom` (`text`) | Repris tel quel. |
+| `name` | `string` | `profils.prestations.options.nom` (`text`, 70 caractères au plus) | Repris tel quel. Strapi ne borne pas ce nom, le serveur de la v3 le borne à 70 : une option plus longue est laissée de côté et listée par profil, par rang de sa prestation et par son rang, le reste du profil est repris (ticket 226, §11). |
 | `description` | `text`, 2 000 caractères au plus | `profils.prestations.options.description` (`textarea`) | Repris tel quel. |
 | `price` | `text`, 70 caractères au plus | `profils.prestations.options.prixTexte` (`text`) et `profils.prestations.options.prixAPartirDe` (`number`) | Même règle que le prix d'une prestation (§6.6). |
 
@@ -374,6 +374,7 @@ Pour mémoire : ces champs n'ont aucune ligne aux §5 et §6. Leur valeur à l'i
 | `admins` (toute la collection) | Rien d'importé (§4.2) | Ticket 018 |
 | `demandes`, `journal` | Nouvelles collections, vides à la bascule | Plan `01` §6.1 |
 | `demandes` (toute la collection) | Les messages du formulaire de contact (tickets 158 et 159), vide à la bascule, réservée au type `contact` : `type`, `statut` (`nouvelle`, `transmise`, `repondue`, `spam`), `etatMail` (`en-attente`, `envoye`, `echec`), `prenom`, `nom`, `email`, `telephone` et `message` (100, 100, 254, 30 et 5 000 caractères au plus, comme le site en ligne), et les dates de Payload. Lue par un admin seulement, jamais créée ni supprimée par une API : le serveur l'écrit avant d'envoyer le mail, et un mail qui échoue marque `echec` sans perdre le message. Un admin ne change que le `statut` (cycle `nouvelle` → `transmise` → `repondue`, et `spam` depuis chacun ; le retour de `repondue` à `transmise` est refusé) ; tous les autres champs sont figés, et le bouton « Renvoyer l'email » (`POST /api/demandes/:id/renvoyer`, admin seulement) ne renvoie qu'un message en `echec`, une seule fois par clic. `conclue`, `perdue` et la demande à une maquilleuse viennent avec leur ticket | Tickets 158 et 159 ; plan `01` §5 P8 |
+| `comptes-supprimes` (toute la collection) | Les comptes de l'ancien site supprimés dans la v3, vide à la bascule. Une ligne par compte supprimé qui avait un identifiant de l'ancien site (`strapiId`, unique) et le jour de la suppression : aucun email, aucun nom, aucun jeton. Écrite par le serveur dans la transaction de la suppression (`src/lib/compte/suppression.ts`), jamais purgée, lue par un admin seulement et par l'import, qui ne ramène jamais un compte qui y figure (`docs/migration/IMPORT.md`, « Jusqu'à la bascule seulement ») | Ticket 227 |
 | `auth-evenements` (toute la collection) | Le journal d'authentification, vide à la bascule. Une ligne par connexion (réussie ou refusée), déconnexion, inscription, confirmation d'email, demande de lien de mot de passe oublié et choix d'un nouveau mot de passe : `type`, `code` et `methode` (`mot-de-passe` ou `google`, vide sur les lignes d'avant la connexion Google) pris dans des listes fermées (`src/lib/auth/journal.ts` ; le code `heritee` dit une connexion par l'ancien mot de passe, ticket 087), `dureeMs` et `date`. Aucun champ de texte : ni IP, ni email, ni nom, ni jeton n'y entrent. Lue par un admin seulement, jamais écrite par une API : le serveur l'écrit, et une tâche quotidienne supprime les lignes de plus de 90 jours | Ticket 077 ; plan `01` §2.3 |
 | `pros.derniereConnexion` | La date de la dernière connexion, écrite par le serveur à chaque connexion ; lue par la propriétaire et un admin, écrite par aucune requête. Ce n'est pas `pros.derniereActivite` du plan `04` §3.6 (une écriture par 24 h au plus, à chaque visite de l'espace), qui reste à créer | Ticket 077 |
 | `pros.profil` | Champ de jointure vers `profils.pro`, sans colonne ni valeur stockée : il dit à la liste des comptes de l'administration si un profil existe. Lu par un admin seulement ; aucune requête ne l'écrit. Le panneau ne filtre pas dessus (« sans profil » passe par les propriétaires de profils) | Ticket 168 |
@@ -428,7 +429,9 @@ Chaque point a un défaut, écrit dans ce document. Sans décision contraire, c'
 | Profil dont le compte est écarté par cette table de décision | L'import s'arrête et liste le profil par identifiant | Ticket 066 |
 | Profil sans compte, hors de la liste du §4.1 | L'import s'arrête et liste le profil par identifiant ; une décision par profil l'écarte | Tickets 059 et 066 |
 | Texte de ville qui n'est pas une commune | Zone vide, profil à revoir, dans la liste de revue privée de l'import ; une ligne `communes` de sa table de décision le tranche | Tickets 063 et 066 ; question ouverte 13 |
-| Rayon au-dessus de 200 km, galerie de plus de 10 photos, valeur plus longue que la limite cible | Comptés et listés, jamais tronqués | Ticket 066 |
+| Rayon au-dessus de 200 km | Champ laissé vide, profil repris, profil et valeur listés (registre `rayon-200-km`), jamais ramené à 200 | Ticket 066 |
+| Ligne d'une liste hors d'une borne de la v3 : fin d'expérience avant son début, formation datée de plus d'un an après le jour, nom d'option de plus de 70 caractères, description de prestation de plus de 2 000 | La ligne est laissée de côté (une prestation emporte ses options), listée par profil, liste et rang, jamais par son texte ; le reste du profil est repris. Écrire la ligne ferait refuser le profil entier | Ticket 066 |
+| Galerie de plus de 10 photos, autre valeur plus longue que la limite cible | Comptés et listés, jamais tronqués | Ticket 066 |
 | Fichier référencé qui n'est pas une image, objet manquant | Pas une image : signalé, non adopté. Objet manquant : adopté sans taille, listé en « 404 connus ». Adresse que la v3 ne redonne pas à l'identique, ou fichier désigné par les entrées de plusieurs comptes : refusé, listé | Ticket 066 |
 | Lignes en double dans les listes | Gardées telles quelles, par parité | Question ouverte 15 |
 
@@ -465,5 +468,7 @@ Noms fixés par ce document, parce que le plan ne les donnait pas : `profils.leg
 | 14/10/2026 | Ticket 087, sans changer un nom de champ de l'import : la liste des issues de `auth-evenements.code` gagne `heritee` (connexion par l'ancien mot de passe). Migration `auth_evenements_heritee`. |
 | 15/10/2026 | Tickets 158 et 159, sans changer un nom de champ de l'import : la collection `demandes` (messages du formulaire de contact) est créée (§9). Migration `contact_demandes`. |
 | 15/10/2026 | Ticket 168, sans changer un nom de champ de l'import ni le schéma de la base : `pros.profil`, un champ de jointure vers `profils.pro` (lu par un admin seulement), montre dans la liste des comptes si un profil existe ; il n'a ni colonne ni migration. `pros._verified` prend l'étiquette « Adresse confirmée ». |
+| 16/10/2026 | Ticket 226, sans changer un nom de champ : le rayon d'action est repris (§5.2) ; une ligne de liste hors d'une borne de la v3 est laissée de côté et listée au lieu de faire refuser le profil (§6.2, §6.3, §6.6, §6.7, §11). |
+| 16/10/2026 | Ticket 227, sans changer un nom de champ de l'import : la collection `comptes-supprimes` (identifiants de l'ancien site des comptes supprimés dans la v3) est créée (§9), pour qu'un rejeu ne ramène pas un compte supprimé. Migration `comptes_supprimes`. |
 
 Note d'intégration (tickets 085 et 086) : la migration `20261014_203454_auth_oubli_journal` reconstruit l'énumération `enum_auth_evenements_type` à la descente à partir de la liste des cinq types qui la précèdent. Quand plusieurs lots ajoutent des types au journal, régénérer leurs migrations dans l'ordre de fusion ; une descente dans le désordre échouerait ou ferait perdre des valeurs.

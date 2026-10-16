@@ -1,4 +1,11 @@
-import { commitTransaction, createLocalReq, initTransaction, killTransaction, type Payload } from 'payload'
+import {
+	commitTransaction,
+	createLocalReq,
+	initTransaction,
+	killTransaction,
+	type Payload,
+	type PayloadRequest,
+} from 'payload'
 // Relative import on purpose: the bin is the one in the collections, and this file may be loaded outside of Next.
 import { corbeilleRetenue } from '../../collections/corbeille'
 
@@ -28,6 +35,10 @@ import { corbeilleRetenue } from '../../collections/corbeille'
  * It is safe to call twice for the same account at the same time: the second call waits for the
  * first and gives its answer. An account that is already gone is no error.
  *
+ * An account that came from the old site leaves one row behind, its identifier on the old site and the day
+ * (collection `comptes-supprimes`, same transaction): the import reads the old site again, and without
+ * this row a rerun would bring the account and its public profile back.
+ *
  * The messages of the contact form (collection `demandes`) hold no link to an account: they are
  * addressed to the team, not to a makeup artist, so there is nothing of hers in them to anonymise.
  * The ticket that adds requests to a makeup artist adds their anonymisation here.
@@ -52,6 +63,23 @@ function enCours(): Map<string, Promise<BilanDeSuppression>> {
 	return g[REGISTRE]
 }
 
+async function retenirLaSuppression(payload: Payload, strapiId: number, req: PayloadRequest): Promise<void> {
+	const { totalDocs } = await payload.count({
+		collection: 'comptes-supprimes',
+		overrideAccess: true,
+		req,
+		where: { strapiId: { equals: strapiId } },
+	})
+	if (totalDocs === 0)
+		await payload.create({
+			collection: 'comptes-supprimes',
+			data: { strapiId, date: new Date().toISOString() },
+			depth: 0,
+			overrideAccess: true,
+			req,
+		})
+}
+
 async function supprimer(payload: Payload, id: number | string): Promise<BilanDeSuppression> {
 	const req = await createLocalReq({}, payload)
 	const proprietaire = await initTransaction(req)
@@ -64,7 +92,7 @@ async function supprimer(payload: Payload, id: number | string): Promise<BilanDe
 				id,
 				overrideAccess: true,
 				req,
-				select: {},
+				select: { strapiId: true },
 			})
 			if (compte === null) return { supprime: false, profils: 0 }
 			const { docs } = await payload.find({
@@ -80,6 +108,9 @@ async function supprimer(payload: Payload, id: number | string): Promise<BilanDe
 			for (const profil of docs)
 				await payload.delete({ collection: 'profils', depth: 0, id: profil.id, overrideAccess: true, req })
 			await payload.delete({ collection: 'pros', depth: 0, id, overrideAccess: true, req })
+			// She came from the old site, which the import still reads: her identifier is kept so that a
+			// rerun never brings her back. Same transaction: both happen or neither.
+			if (typeof compte.strapiId === 'number') await retenirLaSuppression(payload, compte.strapiId, req)
 			return { supprime: true, profils: docs.length }
 		})
 		if (proprietaire) await commitTransaction(req)

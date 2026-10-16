@@ -25,6 +25,19 @@ const { lignes } = definitionDeLaSource(source.medias)
 /** The profiles the import takes: profile 29 is set aside by the table of decisions of the bench, the 13 of the spam have no account. */
 const PRIS = lignes.makeup_artistes_user_links.map(lien => Number(lien.makeup_artiste_id)).filter(id => id !== 29)
 
+/**
+ * The rows of the fake source that sit outside a bound of the v3 (ticket 226): the import leaves
+ * them out of their profile and lists them. Written here by identifier, never computed by the import.
+ */
+const HORS_BORNES = {
+	experiences: [4],
+	formations: [3],
+	prestations: [12],
+	options: [4],
+} as const
+
+const sauf = (ids: readonly number[]) => (ligne: Ligne) => !ids.includes(Number(ligne.id))
+
 /** The rows of a component table, by identifier. */
 const parId = (table: readonly Ligne[]) => new Map(table.map(ligne => [Number(ligne.id), ligne]))
 
@@ -62,48 +75,51 @@ function listesAttendues(id: number) {
 		langues: deProfil(id, lignes.components_makeupartists_languages, 'makeupartists.language', 'language').map(c => ({
 			nom: c.name,
 		})),
-		formations: deProfil(id, lignes.components_makeupartists_courses, 'makeupartists.courses', 'courses').map(c => ({
-			diplome: c.diploma,
-			ecole: c.school,
-			obtenuLe: jour(c.date_graduation),
-			description: c.course_description,
-		})),
-		experiences: deProfil(
-			id,
-			lignes.components_makeupartists_experiences,
-			'makeupartists.experiences',
-			'experiences'
-		).map(c => ({
-			entreprise: c.company,
-			poste: c.job_name,
-			ville: c.city,
-			debut: jour(c.date_start),
-			fin: jour(c.date_end),
-			description: c.description,
-		})),
+		formations: deProfil(id, lignes.components_makeupartists_courses, 'makeupartists.courses', 'courses')
+			.filter(sauf(HORS_BORNES.formations))
+			.map(c => ({
+				diplome: c.diploma,
+				ecole: c.school,
+				obtenuLe: jour(c.date_graduation),
+				description: c.course_description,
+			})),
+		experiences: deProfil(id, lignes.components_makeupartists_experiences, 'makeupartists.experiences', 'experiences')
+			.filter(sauf(HORS_BORNES.experiences))
+			.map(c => ({
+				entreprise: c.company,
+				poste: c.job_name,
+				ville: c.city,
+				debut: jour(c.date_start),
+				fin: jour(c.date_end),
+				description: c.description,
+			})),
 		prestations: deProfil(
 			id,
 			lignes.components_makeupartists_service_offers,
 			'makeupartists.service-offers',
 			'service_offers'
-		).map(offre => ({
-			nom: offre.name,
-			description: offre.description,
-			prixTexte: offre.price,
-			prixAPartirDe: parsePrice(offre.price).prixAPartirDe,
-			options: lignesDe(
-				lignes.components_makeupartists_service_offers_components,
-				lignes.components_service_offers_options,
-				Number(offre.id),
-				'service-offers.options',
-				'options'
-			).map(option => ({
-				nom: option.name,
-				description: option.description,
-				prixTexte: option.price,
-				prixAPartirDe: parsePrice(option.price).prixAPartirDe,
+		)
+			.filter(sauf(HORS_BORNES.prestations))
+			.map(offre => ({
+				nom: offre.name,
+				description: offre.description,
+				prixTexte: offre.price,
+				prixAPartirDe: parsePrice(offre.price).prixAPartirDe,
+				options: lignesDe(
+					lignes.components_makeupartists_service_offers_components,
+					lignes.components_service_offers_options,
+					Number(offre.id),
+					'service-offers.options',
+					'options'
+				)
+					.filter(sauf(HORS_BORNES.options))
+					.map(option => ({
+						nom: option.name,
+						description: option.description,
+						prixTexte: option.price,
+						prixAPartirDe: parsePrice(option.price).prixAPartirDe,
+					})),
 			})),
-		})),
 	}
 }
 
@@ -221,8 +237,8 @@ describe('Les sections de chaque profil sont reprises dans leur ordre (ticket 06
 
 	test('le texte de prix est la saisie, à l’octet près ; le montant est lu par la règle unique (062)', async () => {
 		const prixDeLaSource = [
-			...lignes.components_makeupartists_service_offers.filter(({ id }) => Number(id) !== 11),
-			...lignes.components_service_offers_options,
+			...lignes.components_makeupartists_service_offers.filter(sauf([11, ...HORS_BORNES.prestations])),
+			...lignes.components_service_offers_options.filter(sauf(HORS_BORNES.options)),
 		].map(({ price }) => price)
 		const prixDeLaCible = (await profilsDeLaCible())
 			.flatMap(({ prestations }) => prestations ?? [])
@@ -290,6 +306,52 @@ describe('Les sections de chaque profil sont reprises dans leur ordre (ticket 06
 				linkedin: reseau?.linkedin ?? null,
 			})
 		}
+	})
+})
+
+describe('Une ligne hors d’une borne de la v3 et un rayon au-dessus de 200 km (ticket 226)', () => {
+	test('le profil 33 est repris sans ses quatre lignes hors bornes, qui sont listées par rang, jamais par texte', async () => {
+		const hugo = (await profilsDeLaCible()).find(({ strapiId }) => strapiId === 33)
+
+		expect(hugo?.experiences ?? []).toEqual([])
+		expect(hugo?.formations ?? []).toEqual([])
+		// The offer 12 is out (its description), the offer 10 stays, and loses its option (its name).
+		expect(hugo?.prestations?.map(({ nom, options }) => [nom, options?.length ?? 0])).toEqual([
+			['Cours particulier', 0],
+		])
+		expect(hugo?.statut).toBe('publie')
+		expect(premier.collections.profils).toMatchObject({ refuses: [] })
+		expect(premier.collections.profils?.lignesLaissees).toEqual([
+			{ profil: 33, liste: 'formations', rang: 1 },
+			{ profil: 33, liste: 'experiences', rang: 1 },
+			{ profil: 33, liste: 'prestations', rang: 2 },
+			{ profil: 33, liste: 'options', rang: 1, prestation: 1 },
+		])
+		const texte = JSON.stringify(premier)
+		expect(texte).not.toContain('Maison Fictive')
+		expect(texte).not.toContain('Option au nom trop long')
+		expect(texte).not.toContain('Une phrase de remplissage')
+	})
+
+	test('le rayon de 0 à 200 km est repris ; au-dessus, le champ reste vide et le profil est listé avec la valeur', async () => {
+		const cible = await profilsDeLaCible()
+		const rayon = (id: number) => cible.find(({ strapiId }) => strapiId === id)?.rayonKm ?? null
+
+		expect([21, 22, 23, 24].map(rayon)).toEqual([30, 50, 20, null])
+		// 26 holds 400 km at the source: its zone stays empty, it is taken, and listed with the value.
+		expect(rayon(26)).toBeNull()
+		expect(cible.some(({ strapiId }) => strapiId === 26)).toBe(true)
+		expect(premier.collections.profils?.rayonsARevoir).toEqual([{ profil: 26, rayonKm: 400 }])
+		expect(premier.ecarts['rayon-200-km']).toBe(1)
+		// Parity: the radius is a compared field, and explained.
+		expect(premier.parite?.profils).toMatchObject({ differents: [], manquants: [], enTrop: [] })
+	})
+
+	test('un second passage ne crée ni ne modifie rien', async () => {
+		const second = await importerSurLeBanc()
+
+		expect(second.collections.profils).toMatchObject({ crees: 0, modifies: 0, refuses: [] })
+		expect(second.collections.profils?.lignesLaissees).toHaveLength(4)
 	})
 })
 

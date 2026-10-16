@@ -629,6 +629,20 @@ const MATRICE: Ligne[] = [
 		]
 	}),
 
+	// The accounts of the old site deleted in the v3 (ticket 227): only an admin reads them, and nobody
+	// writes them through an API, an admin included. The server writes the row when an account goes.
+	...ROLES.flatMap((role): Ligne[] => {
+		const collection = 'comptes-supprimes'
+		const lit = role === 'admin'
+		return [
+			{ role, collection, operation: 'lister', attendu: lit ? 'tous' : 'refuse' },
+			{ role, collection, operation: 'lire', attendu: lit ? 'autorise' : 'refuse' },
+			{ role, collection, operation: 'creer', attendu: 'refuse' },
+			{ role, collection, operation: 'modifier', attendu: 'refuse' },
+			{ role, collection, operation: 'supprimer', attendu: 'refuse' },
+		]
+	}),
+
 	// Contact messages (tickets 158 and 163; plan 02 U58 adapted): only an admin reads them, and nobody
 	// creates or deletes them through an API, an admin included. The form has no account: the server writes
 	// the row. An admin changes its status (answered, spam) and nothing else: what the visitor typed and the

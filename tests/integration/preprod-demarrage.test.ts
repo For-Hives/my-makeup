@@ -430,7 +430,8 @@ describe('Le lecteur de la source sous Node', () => {
 			const parPg = await lire(ouvrirLaSourcePg(sourceDuBanc().lecture, pg))
 
 			expect(parPg).toEqual(parBun)
-			expect(Object.keys(parPg.source.avant)).toHaveLength(16)
+			// The 16 tables, and the large objects of the database (ticket 227).
+			expect(Object.keys(parPg.source.avant)).toHaveLength(17)
 			expect(parPg.collections.media).toMatchObject({ crees: 8 })
 		} finally {
 			await effacerLaSourceStrapi()

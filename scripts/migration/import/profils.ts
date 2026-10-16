@@ -47,12 +47,20 @@ import { type ChampsDuProfil, estEntierementVide, type ReseauxDuProfil } from '.
 import { validerEmailDeContact, validerTelephone } from '../../../src/lib/profil/coordonnees'
 import { type DocumentDuProfil, etatDuProfil, statutApres } from '../../../src/lib/profil/etat'
 import { CHOIX_INITIAL, type StatutDuProfil } from '../../../src/lib/profil/statut'
+import { BORNES_DU_RAYON_KM } from '../../../src/lib/profil/zone'
 import { attribuerSlugs } from '../../../src/lib/slug'
 import type { CommuneAttendue } from './communes'
 import { REFERENCES } from './ecarts'
 import { type PhotoNonReprise, photosDeLEntree } from './medias'
-import type { Adaptateur, Attendu, Ecart } from './moteur'
-import { lireLesSections, SECTIONS_VIDES, type SectionsLues, valeursDesListes } from './sections'
+import { type Adaptateur, type Attendu, type Ecart, normaliser } from './moteur'
+import {
+	type LigneLaissee,
+	lignesDansLesBornes,
+	lireLesSections,
+	SECTIONS_VIDES,
+	type SectionsLues,
+	valeursDesListes,
+} from './sections'
 import { iso, type Requete } from './source'
 
 /**
@@ -71,6 +79,8 @@ export interface LigneProfil {
 	speciality: string | null
 	description: string | null
 	city: string | null
+	/** The radius in km, an `integer` of Strapi (0 to 2 147 483 647): the v3 takes 0 to 200 (`rayonDeLaSource`). */
+	action_radius?: number | null
 	username: string | null
 	/** A `decimal` of Strapi: the driver gives it as text. */
 	score: string | number | null
@@ -92,7 +102,7 @@ export interface ProfilLu extends LigneProfil {
 	sections: SectionsLues
 }
 
-const LECTURE_DES_PROFILS = `SELECT id, first_name, last_name, company_artist_name, speciality, description, city, username,
+const LECTURE_DES_PROFILS = `SELECT id, first_name, last_name, company_artist_name, speciality, description, city, action_radius, username,
 	score, available, pro, ${iso('created_at')} AS created_at, ${iso('updated_at')} AS updated_at
 	FROM makeup_artistes ORDER BY id`
 
@@ -151,7 +161,29 @@ export function statutCalcule(valeurs: Readonly<Record<string, unknown>>): Statu
 }
 
 /** A `decimal` of Strapi as a number, or `null`. */
-const nombre = (valeur: string | number | null): number | null => (valeur === null ? null : Number(valeur))
+const nombre = (valeur: string | number | null | undefined): number | null =>
+	valeur === null || valeur === undefined ? null : Number(valeur)
+
+/** A radius of the source that the v3 does not take: the profile, and the value (a distance, nothing personal). */
+export type RayonARevoir = { profil: number; rayonKm: number }
+
+/**
+ * The radius of action of a profile of the source (register, `rayon-200-km`): a whole number of
+ * kilometres from 0 to 200 is taken as it is, nothing is empty. A radius the server would refuse
+ * (above 200 km: the old site accepted up to 1 000, and the real base held 400) is never brought
+ * back to 200 in silence: the field stays empty and `rayonsARevoir` lists the profile.
+ */
+export function rayonDeLaSource(profil: Pick<LigneProfil, 'action_radius'>): number | null {
+	const rayon = nombre(profil.action_radius)
+	if (rayon === null) return null
+	return Number.isInteger(rayon) && rayon >= BORNES_DU_RAYON_KM.min && rayon <= BORNES_DU_RAYON_KM.max ? rayon : null
+}
+
+/** The radius of the source that `rayonDeLaSource` leaves out, for the report. */
+export function rayonARevoir(profil: Pick<LigneProfil, 'id' | 'action_radius'>): RayonARevoir | null {
+	const rayon = nombre(profil.action_radius)
+	return rayon !== null && rayonDeLaSource(profil) === null ? { profil: profil.id, rayonKm: rayon } : null
+}
 
 /** The words the old site reads as no value (`texte()`, src/lib/profil/vue-publique.js). */
 const MOTS_VIDES = new Set(['null', 'undefined'])
@@ -224,6 +256,7 @@ export const ADAPTATEUR_PROFILS: Adaptateur = {
 		specialite: 'texte',
 		description: 'texte',
 		commune: 'objet',
+		rayonKm: 'nombre',
 		disponible: 'booleen',
 		score: 'nombre',
 		superMaquilleuse: 'booleen',
@@ -246,6 +279,42 @@ export const ADAPTATEUR_PROFILS: Adaptateur = {
 	},
 	// Computed by the server at every save (ticket 044): compared, never sent.
 	calcules: ['statut'],
+	// The date of the consent is the one of the first run that gave it: a later run with another date of
+	// the switch keeps it (ticket 227). The server dates it again when the contact details are closed
+	// then opened (src/lib/profil/coordonnees.ts), and the field is empty then, so the run fills it in.
+	amorces: ['consentiLe'],
+}
+
+/**
+ * The profiles on a target the v3 already uses (`--cible-en-service`, ticket 227): a profile the target
+ * holds is left exactly as it is, every field of it. A makeup artist who closed her phone or her email,
+ * moved her commune or changed her lists and photos in the v3 would otherwise get the old site back,
+ * with a public phone and the consent of the import. Only a profile the target misses is created.
+ */
+export const ADAPTATEUR_PROFILS_EN_SERVICE: Adaptateur = {
+	...ADAPTATEUR_PROFILS,
+	figes: Object.keys(ADAPTATEUR_PROFILS.champs),
+}
+
+/**
+ * The profiles whose date of consent differs from the date this run asks for: the target keeps the
+ * date it holds (`amorces`), the run counts the difference. Identifiers only.
+ */
+export function consentementsGardes(
+	attendus: readonly Attendu[],
+	existants: readonly { valeurs: Readonly<Record<string, unknown>> }[]
+): number[] {
+	const gardees = new Map(
+		existants.map(({ valeurs }) => [Number(valeurs.strapiId), normaliser('date', valeurs.consentiLe)] as const)
+	)
+	return attendus
+		.filter(({ strapiId, valeurs }) => {
+			const demandee = normaliser('date', valeurs.consentiLe)
+			const gardee = gardees.get(strapiId)
+			return demandee !== null && gardee !== undefined && gardee !== null && gardee !== demandee
+		})
+		.map(({ strapiId }) => strapiId)
+		.sort((a, b) => a - b)
 }
 
 /** The profiles the import does not take, and those that stop it, split by what the table says of them. */
@@ -330,6 +399,16 @@ function prixDesPrestations(prestations: unknown): PrixEcrit[] {
 	])
 }
 
+/**
+ * Whether the source gives a priced offer to a profile and the target holds none: the smallest
+ * price of a card counts the offers only, never their options (`prixMinimal`, ticket 032). So an
+ * option with an amount does not hide an offer that lost its own.
+ */
+export function offreChiffreePerdue(prixDuSource: readonly (string | null)[], ecrites: readonly PrixEcrit[]): boolean {
+	const chiffreeALaSource = prixDuSource.some(price => parsePrice(price).prixAPartirDe !== null)
+	return chiffreeALaSource && prixMinimal(ecrites) === null
+}
+
 export interface ProfilsAttendus {
 	attendus: Attendu[]
 	/** How many profiles the run takes per status, as the server computes it. */
@@ -348,7 +427,14 @@ export interface ProfilsAttendus {
 	prix: BilanDesPrix
 	/** Contact details left out because the server would refuse them: by profile and field, never the value. */
 	coordonneesARevoir: CoordonneeARevoir[]
+	/** Radii above the 200 km of the v3: the field is empty, the profile is taken (register, `rayon-200-km`). */
+	rayonsARevoir: RayonARevoir[]
+	/** Rows of a list outside a bound of the v3, left out of their profile: by profile, list and rank, never the text. */
+	lignesLaissees: LigneLaisseeDUnProfil[]
 }
+
+/** A row of a profile left out because the server would refuse the whole profile for it. */
+export type LigneLaisseeDUnProfil = LigneLaissee & { profil: number }
 
 /**
  * The profiles the target must hold. `comptes` gives, for each account the import takes, its
@@ -366,7 +452,8 @@ export function profilsAttendus(
 	laisses: Pick<ProfilsLaisses, 'ecartes' | 'spam'> = { ecartes: [], spam: [] },
 	communes: ReadonlyMap<number, CommuneAttendue | null> = new Map(),
 	medias: ReadonlyMap<number, number | null> = new Map(),
-	consentiLe: string | null = null
+	consentiLe: string | null = null,
+	maintenant: Date = new Date()
 ): ProfilsAttendus {
 	const nonPris = new Set([...laisses.ecartes, ...laisses.spam])
 	// The slugs of the old site, computed on every profile of the source, as the old site did.
@@ -390,6 +477,8 @@ export function profilsAttendus(
 		chiffresNonLus: [],
 	}
 	const aRevoir: CoordonneeARevoir[] = []
+	const rayonsARevoir: RayonARevoir[] = []
+	const lignesLaissees: LigneLaisseeDUnProfil[] = []
 	for (const profil of profils) {
 		if (nonPris.has(profil.id)) continue
 		if (profil.compte === null || !comptes.has(profil.compte))
@@ -403,6 +492,11 @@ export function profilsAttendus(
 			photosNonReprises.push({ entree: profil.id, fichier })
 		if (sections.liensSansLigne > 0) liensSansLigne.push(profil.id)
 		aRevoir.push(...coordonneesARevoir(profil))
+		const rayon = rayonARevoir(profil)
+		if (rayon) rayonsARevoir.push(rayon)
+		// A row outside a bound of the v3 is left out and listed: kept, it would make the server refuse the whole profile.
+		const bornees = lignesDansLesBornes(sections, maintenant)
+		lignesLaissees.push(...bornees.laissees.map(ligne => ({ profil: profil.id, ...ligne })))
 		const affiche = affichesALaSource(profil)
 		if (affiche && consentiLe === null)
 			throw new Error(
@@ -419,12 +513,13 @@ export function profilsAttendus(
 			specialite: profil.speciality,
 			description: profil.description,
 			commune: communes.get(profil.id) ?? null,
+			rayonKm: rayonDeLaSource(profil),
 			disponible: profil.available ?? true,
 			score: nombre(profil.score),
 			superMaquilleuse: profil.pro,
 			photoPrincipale: principale.ids[0] ?? null,
 			galerie: galerie.ids,
-			...valeursDesListes(sections),
+			...valeursDesListes(bornees.sections),
 			coordonnees: coordonneesDeLaSource(profil),
 			contactPublic: affiche,
 			consentiLe: affiche ? consentiLe : null,
@@ -448,11 +543,13 @@ export function profilsAttendus(
 		}
 		if (ecrits.some(({ prixAPartirDe }) => estMontantDePrix(prixAPartirDe)))
 			ecarts.push({ champ: 'prestations', reference: REFERENCES.prixNumerique })
-		const chiffreeALaSource = sections.prestations.some(({ price }) => parsePrice(price).prixAPartirDe !== null)
-		if (chiffreeALaSource) prix.profilsAvecOffreChiffree += 1
-		if (chiffreeALaSource && prixMinimal(ecrits) === null) prix.offresChiffreesPerdues.push(profil.id)
+		const prixDesOffres = sections.prestations.map(({ price }) => price)
+		if (prixDesOffres.some(price => parsePrice(price).prixAPartirDe !== null)) prix.profilsAvecOffreChiffree += 1
+		if (offreChiffreePerdue(prixDesOffres, (valeurs.prestations ?? []) as PrixEcrit[]))
+			prix.offresChiffreesPerdues.push(profil.id)
 		if (ecrits.some(({ prixTexte, prixAPartirDe }) => prixAPartirDe === null && /\d/.test(prixTexte ?? '')))
 			prix.chiffresNonLus.push(profil.id)
+		if (rayon) ecarts.push({ champ: 'rayonKm', reference: REFERENCES.rayon200Km })
 		if (slug !== profil.username) ecarts.push({ champ: 'slug', reference: REFERENCES.slugStocke })
 		if ((profil.city?.trim() ?? '') !== '') ecarts.push({ champ: 'commune', reference: REFERENCES.villeEnCommune })
 		if (profil.available === null) ecarts.push({ champ: 'disponible', reference: REFERENCES.disponibiliteParDefaut })
@@ -472,5 +569,7 @@ export function profilsAttendus(
 		liensSansLigne,
 		prix,
 		coordonneesARevoir: aRevoir,
+		rayonsARevoir,
+		lignesLaissees,
 	}
 }

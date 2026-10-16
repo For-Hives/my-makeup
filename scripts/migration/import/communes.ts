@@ -18,6 +18,7 @@
  *   INSEE code, or none. A line that names a profile not « à revoir » is without effect.
  */
 
+import { DEPARTEMENTS } from '../../../src/lib/departements'
 import { villeExploitable } from '../../../src/lib/profil/completude'
 import { lieuPublic } from '../../../src/lib/profil/lieu-public'
 import {
@@ -89,6 +90,34 @@ export function nomCompare(nom: string): string {
 		.trim()
 }
 
+/** A code of département in front of a place and nothing else: « 74 Annecy », « 2A Ajaccio ». */
+const DEPARTEMENT_EN_TETE = /^(\d{2}|2[AB]|97\d)\s+(\D+)$/i
+
+/**
+ * The city typed without a code of département in front of a place (« 74 Annecy » → « Annecy »),
+ * and that code: the number is the département, not a street number, so the text is no postal
+ * address, and the commune is looked for in that département only (« 12 Le Bourg » then finds a
+ * Le Bourg of Aveyron or goes « à revoir », never one of another département). The old site reads
+ * the number as dropped before a place (`lieuPublic`: an address, with the place alone left); the
+ * number goes here, before the city is read, only when that is all the text holds. Any other text
+ * (« 74 et alentours », « 12 Les Marais, Annecy ») is kept as typed, without a département.
+ */
+export function departementEnTete(texte: string): { texte: string; departement: string | null } {
+	const inchange = { texte, departement: null }
+	const trouve = DEPARTEMENT_EN_TETE.exec(texte)
+	const departement = (trouve?.[1] ?? '').toUpperCase()
+	if (!trouve || !Object.hasOwn(DEPARTEMENTS, departement)) return inchange
+	const reste = (trouve[2] ?? '').trim()
+	if (/[,;:/|+()[\]]/.test(reste)) return inchange
+	const avecLeNumero = lieuPublic(texte)
+	const sansLeNumero = lieuPublic(reste)
+	return avecLeNumero.adresse &&
+		!sansLeNumero.adresse &&
+		nomCompare(avecLeNumero.commune) === nomCompare(sansLeNumero.commune)
+		? { texte: reste, departement }
+		: inchange
+}
+
 /** The last postal code of a text: five digits alone. */
 const CODE_POSTAL = /(?<!\d)\d{5}(?!\d)/g
 
@@ -99,7 +128,7 @@ const CODE_POSTAL = /(?<!\d)\d{5}(?!\d)/g
  * sentence. A city that is not one for the old site (« France », « 74 ») gives no name.
  */
 export function rechercheDeLaVille(ville: string | null): Recherche | null {
-	const texte = ville?.trim() ?? ''
+	const { texte, departement: dEnTete } = departementEnTete(ville?.trim() ?? '')
 	if (texte === '') return null
 	const lieu = lieuPublic(texte)
 	const codePostal = [...texte.matchAll(CODE_POSTAL)].at(-1)?.[0] ?? null
@@ -114,7 +143,7 @@ export function rechercheDeLaVille(ville: string | null): Recherche | null {
 	return {
 		nom: cherchable ? nom.toLowerCase() : null,
 		codePostal,
-		departement: lieu.departement,
+		departement: lieu.departement ?? dEnTete,
 		adresse: lieu.adresse,
 	}
 }
