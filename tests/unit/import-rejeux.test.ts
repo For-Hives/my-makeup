@@ -44,7 +44,7 @@ describe('sur une cible en service, un compte déjà repris reste tel quel (tick
 			email: 'ancien@example.test',
 			nom: 'Ancien nom',
 			legacyProvider: 'local',
-			legacyBcrypt: '$2a$10$abcdefghijklmnopqrstuuabcdefghijklmnopqrstuvwxyz01234',
+			legacyBcrypt: 'hash-herite-fictif',
 			bloque: false,
 			_verified: true,
 			createdAt: '2024-01-01T10:00:00.000Z',
