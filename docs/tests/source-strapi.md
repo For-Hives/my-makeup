@@ -69,7 +69,7 @@ Toute écriture échoue avec une erreur de PostgreSQL (`42501`, droit refusé, o
 
 Les comptes 1 et 2 (`local`) et 3 (`google`, avec un mot de passe, comme un vrai compte) ont un mot de passe connu, écrit dans `COMPTES_DE_FIXTURE`. Ce document ne le recopie pas. Ce sont eux qui se connecteront par le chemin hérité (plan `01` §2.4, M2 ; ticket 095).
 
-Après l'import, trois comptes de la source se connectent chacun par leur parcours (ticket 095, `tests/integration/import-puis-connexion.test.ts`, lancé seul) : le compte 1 par son mot de passe habituel, le compte 4 (Google, sans mot de passe) par le faux Google, le compte 5 (Facebook) par « Mot de passe oublié ». Le compte 3, Google avec un hash, garde le chemin hérité comme le 1 et reste disponible pour le suivi M2 du plan.
+Après l'import, trois comptes de la source se connectent chacun par leur parcours (ticket 095, `tests/integration/import-puis-connexion.test.ts`, joué avec la suite complète) : le compte 1 par son mot de passe habituel, le compte 4 (Google, sans mot de passe) par le faux Google, le compte 5 (Facebook) par « Mot de passe oublié ». Le compte 3, Google avec un hash, garde le chemin hérité comme le 1 et reste disponible pour le suivi M2 du plan.
 
 Les hash ne sont écrits dans aucun fichier. PostgreSQL les calcule à la création de la source, par la fonction `crypt` de son extension `pgcrypto`, avec un sel tiré de l'identifiant du compte : le même compte a toujours le même hash. Ils commencent par `$2a$10$`, comme ceux de Strapi. L'extension est posée dans un schéma à part, retiré dès les hash écrits : la source ne garde que les tables de Strapi.
 

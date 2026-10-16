@@ -18,13 +18,10 @@ import {
  * its own way: the usual password (the old hash is replaced), Google (the fake provider), and the
  * forgotten password (an old Facebook account). The source is the same at the end.
  *
- * It runs the whole import and several password checks, so it stays out of the default suite: it
- * runs only when the command names this file.
- *
- *   bun run test:integration tests/integration/import-puis-connexion.test.ts
+ * It runs the whole import and several password checks, and it is part of the whole suite (ticket 225): it
+ * empties the database and the mail catcher before and after, like the other import tests, and creates and
+ * erases the source it needs. Alone: `bun run test:integration tests/integration/import-puis-connexion.test.ts`.
  */
-
-const NOMME = process.argv.some(argument => argument.endsWith('import-puis-connexion.test.ts'))
 
 function failure(): never {
 	throw new Error('Le compte local de fixture manque.')
@@ -69,7 +66,7 @@ async function profilsDe(id: number | string) {
 	).docs.map(({ id: profil, slug }) => ({ id: profil, slug }))
 }
 
-describe.skipIf(!NOMME)('095 : après l’import, trois comptes de fixture se connectent par leur parcours', () => {
+describe('095 : après l’import, trois comptes de fixture se connectent par leur parcours', () => {
 	beforeAll(async () => {
 		oublierLesDocuments()
 		await Promise.all([viderLaBase(), viderLeCapteur()])

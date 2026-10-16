@@ -1,12 +1,18 @@
 import { expect, test } from '@playwright/test'
-import { type ProfilDeRecherche, poserLesProfilsDeRecherche } from '../fixtures/profils-de-recherche'
+import { MOT_DES_ESSAIS, type ProfilDeRecherche, poserLesProfilsDeRecherche } from '../fixtures/profils-de-recherche'
 import { rafraichirLesPagesDesProfils } from '../outils/pages-publiques'
 
 /**
  * The search by city (ticket 098; plan 02 E38 and E42). The bench is shared with the other tests, which
  * write their own profiles: the tests count the profiles they loaded themselves
  * (tests/fixtures/profils-de-recherche.ts), by their address.
+ *
+ * Every search carries the word only those profiles hold (ticket 225): the city places them, and no profile of
+ * another test, in Annecy or anywhere, can change a count or push one of them onto a second page.
  */
+
+const MOT = encodeURIComponent(MOT_DES_ESSAIS)
+const chercher = (ville: string) => `/search?search=${MOT}&city=${encodeURIComponent(ville)}`
 
 // What the fixture holds, by the rule of the directory: listed, whatever the profile can be published or not.
 const LISTES = [
@@ -52,17 +58,16 @@ test.describe('Recherche par ville', () => {
 	test('E38 : par ville, des cartes avec nom, spécialité, zone et photo, et un titre qui ne compte que la ville', {
 		tag: ['@smoke', '@mobile'],
 	}, async ({ page }) => {
-		await page.goto('/search?city=Annecy')
+		await page.goto(chercher('Annecy'))
 
 		const titre = page.getByRole('heading', { level: 1 })
 		await expect(titre).toHaveCount(1)
-		await expect(titre).toHaveText(/^\d+ résultats? pour « Annecy »$/)
+		await expect(titre).toHaveText(`${A_ANNECY.length} résultats pour « ${MOT_DES_ESSAIS} » à « Annecy »`)
 		const compte = Number(((await titre.textContent()) ?? '').match(/^(\d+)/)?.[1])
 		// The title counts the artists of Annecy: the first list, before the first section.
 		expect(await page.locator('main ul').first().locator('> li').count()).toBe(compte)
 		const total = await page.locator('main li a[href^="/profil/"]').count()
-		expect(compte).toBeGreaterThanOrEqual(A_ANNECY.length)
-		expect(compte).toBeLessThan(total)
+		expect(total).toBe(LISTES.length)
 
 		const reference = profil('reference')
 		const carte = page.locator(`a[href="/profil/${reference.slug}"]`)
@@ -84,7 +89,7 @@ test.describe('Recherche par ville', () => {
 	test('les maquilleuses de la ville d’abord, puis le même département, puis celles qui se déplacent', async ({
 		page,
 	}) => {
-		await page.goto('/search?city=Annecy')
+		await page.goto(chercher('Annecy'))
 
 		// The sections under the artists of the city: the list of the city has its own, with a hidden title.
 		const sections = page.locator('main section').filter({ hasNot: page.locator('#recherche-titre-locaux') })
@@ -102,18 +107,22 @@ test.describe('Recherche par ville', () => {
 	})
 
 	test('un département tapé ouvre la liste par ses maquilleuses', async ({ page }) => {
-		await page.goto('/search?city=Haute-Savoie')
+		await page.goto(chercher('Haute-Savoie'))
 
-		await expect(page.getByRole('heading', { level: 1 })).toHaveText(/^\d+ résultats? pour « Haute-Savoie »$/)
+		await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+			`${LISTES.length - 1} résultats pour « ${MOT_DES_ESSAIS} » à « Haute-Savoie »`
+		)
 		const premiere = page.locator('main ul').first()
 		for (const cle of [...A_ANNECY, 'ville-voisine', 'ancien-nom-accentue'] as const)
 			await expect(premiere.locator(`a[href="/profil/${profil(cle).slug}"]`)).toHaveCount(1)
 	})
 
 	test('une ville où personne ne travaille le dit, et garde les autres sous leurs titres', async ({ page }) => {
-		await page.goto('/search?city=Grenoble')
+		await page.goto(chercher('Grenoble'))
 
-		await expect(page.getByRole('heading', { level: 1 })).toHaveText('Aucun résultat pour « Grenoble »')
+		await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+			`Aucun résultat pour « ${MOT_DES_ESSAIS} » à « Grenoble »`
+		)
 		await expect(
 			page.getByText('Aucune maquilleuse n’indique « Grenoble » (ville ou département) dans son profil.')
 		).toBeVisible()
@@ -123,7 +132,7 @@ test.describe('Recherche par ville', () => {
 	// E42, as the decisions of 09/10 and 13/10 changed it: empty, unavailable and hidden are absent; a
 	// profile that is active but cannot be published is there.
 	test('E42 : vide, indisponible et masqué sont absents ; actif non publiable est présent', async ({ page }) => {
-		await page.goto('/search?city=Annecy')
+		await page.goto(chercher('Annecy'))
 
 		const adresses = await page
 			.locator('main li a[href^="/profil/"]')
@@ -137,7 +146,7 @@ test.describe('Recherche par ville', () => {
 		page,
 		request,
 	}) => {
-		await page.goto('/search?city=Annecy')
+		await page.goto(chercher('Annecy'))
 		const adresses = await page
 			.locator('main li a[href^="/profil/"]')
 			.evaluateAll(liens => liens.map(lien => lien.getAttribute('href')))

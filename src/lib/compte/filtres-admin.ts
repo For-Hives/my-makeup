@@ -27,5 +27,7 @@ export function lienDuFiltre(cle: CleDeFiltre, proprietaires: readonly (number |
 	if (cle === 'non-confirmes') return `${base}?where[_verified][equals]=false`
 	if (cle === 'bloques') return `${base}?where[bloque][equals]=true`
 	if (proprietaires.length === 0) return `${base}?where[id][exists]=true`
-	return `${base}?${proprietaires.map((id, i) => `where[id][not_in][${i}]=${encodeURIComponent(String(id))}`).join('&')}`
+	// One value with commas, as the REST API reads `in` and `not_in`: the panel parses its address with `qs`, which
+	// turns an array of more than 20 entries (`[21]=…`) into an object, and the filter then drops them all.
+	return `${base}?where[id][not_in]=${proprietaires.map(id => encodeURIComponent(String(id))).join(',')}`
 }

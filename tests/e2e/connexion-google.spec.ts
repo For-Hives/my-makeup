@@ -1,7 +1,7 @@
 import { expect, type Page, test } from '@playwright/test'
 import { creerCompte } from '../outils/fabrique-comptes'
 import { fauxGoogle } from '../outils/faux-google'
-import { compterLesMails, viderLeCapteur } from '../outils/mailpit'
+import { mailsRecus } from '../outils/mailpit'
 import { payloadDeTest } from '../outils/payload-test'
 
 /**
@@ -35,8 +35,6 @@ async function cliquerSurGoogle(page: Page, depart: string, libelle: string) {
 	await page.getByRole('link', { name: libelle }).click()
 }
 
-test.beforeEach(() => viderLeCapteur())
-
 test.describe('E07 : connexion et inscription avec Google', { tag: '@mobile' }, () => {
 	test('l’ancien compte Google se connecte, retrouve son espace, et la déconnexion ferme la session', async ({
 		context,
@@ -66,7 +64,8 @@ test.describe('E07 : connexion et inscription avec Google', { tag: '@mobile' }, 
 		expect(await cookieDeSession(context)).toBeUndefined()
 		await page.goto('/auth/profil')
 		await expect(page).toHaveURL(/\/auth\/signin/)
-		expect(await compterLesMails()).toBe(0)
+		// Only the mails of this person: the catcher is shared with the tests that run at the same time.
+		expect(await mailsRecus(compte.email)).toEqual([])
 	})
 
 	test('la page demandée avant la connexion est celle où l’on arrive', async ({ context, page }) => {
@@ -113,7 +112,7 @@ test.describe('E07 : connexion et inscription avec Google', { tag: '@mobile' }, 
 			where: { pro: { equals: comptes.docs[0]?.id } },
 		})
 		expect(profils.docs.map(p => p.slug)).toEqual([expect.stringMatching(/^lea-fictive(-\d+)?$/)])
-		expect(await compterLesMails()).toBe(0)
+		expect(await mailsRecus(email)).toEqual([])
 
 		await page.goto('/auth/profil')
 		await page.getByRole('main').getByRole('button', { name: 'Me déconnecter', exact: true }).click()
@@ -128,7 +127,7 @@ test.describe('E07 : connexion et inscription avec Google', { tag: '@mobile' }, 
 			(await payload.find({ collection: 'profils', depth: 0, where: { pro: { equals: comptes.docs[0]?.id } } }))
 				.totalDocs
 		).toBe(1)
-		expect(await compterLesMails()).toBe(0)
+		expect(await mailsRecus(email)).toEqual([])
 	})
 
 	test('un email que Google n’a pas vérifié : un message en français, aucun compte, aucune session', async ({

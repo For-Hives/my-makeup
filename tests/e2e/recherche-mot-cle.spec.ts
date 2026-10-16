@@ -1,7 +1,7 @@
 import { randomInt } from 'node:crypto'
 import { gzipSync } from 'node:zlib'
 import { type APIRequestContext, expect, request as pwRequest, test } from '@playwright/test'
-import { type ProfilDeRecherche, poserLesProfilsDeRecherche } from '../fixtures/profils-de-recherche'
+import { MOT_DES_ESSAIS, type ProfilDeRecherche, poserLesProfilsDeRecherche } from '../fixtures/profils-de-recherche'
 import { COMMUNES_ELOIGNEES, fabriquerParLApplication, retirerParLApplication } from '../outils/fabrique-profils'
 import { rafraichirLesPagesDesProfils } from '../outils/pages-publiques'
 
@@ -13,6 +13,10 @@ import { rafraichirLesPagesDesProfils } from '../outils/pages-publiques'
  */
 
 const GENEREES = 45
+
+// The word only the loaded profiles hold (ticket 225), with the word under test: a search for « mariage » alone
+// is cut at 20 results, and the profiles of the other tests that speak of marriage push these ones off the page.
+const MOT = encodeURIComponent(MOT_DES_ESSAIS)
 
 let profils: ReadonlyMap<string, ProfilDeRecherche>
 const profil = (cle: string): ProfilDeRecherche => {
@@ -38,14 +42,14 @@ test.describe('Recherche par mot, par pages', () => {
 		tag: ['@smoke', '@mobile'],
 	}, async ({ page }) => {
 		await page.goto('/search')
-		await page.getByLabel('Prestation recherchée').fill('mariage')
+		await page.getByLabel('Prestation recherchée').fill(`mariage ${MOT_DES_ESSAIS}`)
 		await page.getByLabel('Ville de la prestation').fill('Annecy')
 		await page.getByRole('button', { name: 'Trouver une maquilleuse' }).click()
 
-		await expect(page).toHaveURL(/\/search\?search=mariage&city=Annecy$/)
+		await expect(page).toHaveURL(`/search?search=mariage+${MOT}&city=Annecy`)
 		const titre = page.getByRole('heading', { level: 1 })
 		await expect(titre).toHaveCount(1)
-		await expect(titre).toHaveText(/^\d+ résultats? pour « mariage » à « Annecy »$/)
+		await expect(titre).toHaveText(`5 résultats pour « mariage ${MOT_DES_ESSAIS} » à « Annecy »`)
 		// The artists of Annecy whose profile speaks of marriage lead the list; the title counts them only.
 		const premiere = page.locator('main ul').first()
 		await expect(premiere.locator(lien('reference'))).toHaveCount(1)
@@ -55,17 +59,17 @@ test.describe('Recherche par mot, par pages', () => {
 		await expect(premiere.locator(lien('ville-eloignee'))).toHaveCount(0)
 		await expect(page.locator('main section').locator(lien('ville-eloignee'))).toHaveCount(1)
 		// The form keeps what was typed.
-		await expect(page.getByLabel('Prestation recherchée')).toHaveValue('mariage')
+		await expect(page.getByLabel('Prestation recherchée')).toHaveValue(`mariage ${MOT_DES_ESSAIS}`)
 		await expect(page.getByLabel('Ville de la prestation')).toHaveValue('Annecy')
 	})
 
 	test('un mot qu’aucun profil de la ville ne porte le dit, et garde les autres sous leurs titres', async ({
 		page,
 	}) => {
-		await page.goto('/search?search=%C3%A9v%C3%A9nementiel&city=Annecy')
+		await page.goto(`/search?search=%C3%A9v%C3%A9nementiel+${MOT}&city=Annecy`)
 
 		await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-			'Aucun résultat pour « événementiel » à « Annecy »'
+			`Aucun résultat pour « événementiel ${MOT_DES_ESSAIS} » à « Annecy »`
 		)
 		await expect(
 			page.getByText('Aucune maquilleuse n’indique « Annecy » (ville ou département) dans son profil.')
@@ -76,25 +80,25 @@ test.describe('Recherche par mot, par pages', () => {
 	})
 
 	test('sans accent et avec une faute, on trouve : « Anecy » et « evenementiel »', async ({ page }) => {
-		await page.goto('/search?search=Anecy')
+		await page.goto(`/search?search=Anecy+${MOT}`)
 		await expect(page.locator(lien('reference'))).toHaveCount(1)
 
-		await page.goto('/search?search=evenementiel')
+		await page.goto(`/search?search=evenementiel+${MOT}`)
 		await expect(page.locator(lien('ville-eloignee'))).toHaveCount(1)
 		await expect(page.locator(lien('reference'))).toHaveCount(0)
 	})
 
 	test('les mots de la demande sont ignorés : « je cherche une maquilleuse pour mon mariage »', async ({ page }) => {
-		await page.goto('/search?search=je+cherche+une+maquilleuse+pour+mon+mariage')
+		await page.goto(`/search?search=je+cherche+une+maquilleuse+pour+mon+mariage+${MOT}`)
 
 		await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-			/^\d+ résultats? pour « je cherche une maquilleuse pour mon mariage »$/
+			new RegExp(`^\\d+ résultats? pour « je cherche une maquilleuse pour mon mariage ${MOT_DES_ESSAIS} »$`)
 		)
 		await expect(page.locator(lien('reference'))).toHaveCount(1)
 	})
 
 	test('un profil masqué, indisponible ou vide ne sort jamais d’une recherche par mot', async ({ page }) => {
-		await page.goto('/search?search=mariage')
+		await page.goto(`/search?search=mariage+${MOT}`)
 
 		const adresses = await page
 			.locator('main li a[href^="/profil/"]')
@@ -133,6 +137,8 @@ test.describe('Recherche par mot, par pages', () => {
 		await expect(zone).toHaveAttribute('href', '/search?city=74')
 		await zone.click()
 		await expect(page.getByRole('heading', { level: 1 })).toHaveText(/^\d+ résultats? pour « 74 »$/)
+		// Which profiles lead the list of the 74 is read among the ones this file loaded: the others' count moves.
+		await page.goto(`/search?search=${MOT}&city=74`)
 		await expect(page.locator('main ul').first().locator(lien('reference'))).toHaveCount(1)
 	})
 

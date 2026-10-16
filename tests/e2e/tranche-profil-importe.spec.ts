@@ -3,12 +3,23 @@ import { readFileSync } from 'node:fs'
 import { expect, test } from '@playwright/test'
 import { RACINE } from '../outils/banc'
 import { ECRANS } from '../outils/e2e'
+import { creerCompte } from '../outils/fabrique-comptes'
+import { payloadDeTest, viderLaBase } from '../outils/payload-test'
+import { viderLeStockage } from '../outils/s3'
 
 /**
  * Ticket 026, the first slice, end to end: the fake Strapi source of the bench, the import as a
  * person runs it, then the public page of the fictional profile 21 in the application built for
  * production. One test, on the large screen only: the import writes into the bench, and two
  * screen sizes would run it twice at once. The 390 px look is taken inside the same test.
+ *
+ * It has the bench to itself (ticket 225). The real import refuses a slug another test wrote (the set holds
+ * « zoe-lefevre » and « ines-morel »), and counts in excess every account that carries an identifier of the old
+ * site and is not in the source (the accounts of the set, the ones of the Google and import tests): no test can
+ * work around that and stay out of its way. So it is the `import-final` project of tests/outils/e2e.ts, which
+ * `bun run test:e2e` plays in a second run, when every other test is over, and it begins by emptying the database
+ * and the storage (the photos of the tests that are gone would be orphans). A file run alone or after any other,
+ * one worker or several, finds the same state.
  *
  * The source and the import are commands of bun, started from here with the environment of the
  * bench that `bun run test:e2e` gives Playwright.
@@ -67,6 +78,20 @@ async function importer(rapport: string) {
 	}
 }
 
+/** Saves the profile with the specialty it has, through the application: its cached page is rendered again. */
+async function rafraichirLaPage(request: import('@playwright/test').APIRequestContext, slug: string) {
+	const payload = await payloadDeTest()
+	const { docs } = await payload.find({ collection: 'profils', depth: 0, where: { slug: { equals: slug } } })
+	const profil = docs[0]
+	if (!profil) throw new Error(`Le profil « ${slug} » n’est pas dans la base après l’import.`)
+	const admin = await creerCompte('admin')
+	const reponse = await request.patch(`/api/profils/${profil.id}`, {
+		headers: admin.session.enTetes,
+		data: { specialite: profil.specialite ?? '' },
+	})
+	expect(reponse.ok(), await reponse.text()).toBe(true)
+}
+
 test.afterAll(async () => {
 	await bun('scripts/source-strapi.ts', '--effacer')
 })
@@ -76,11 +101,18 @@ test('un profil repris de la fausse base Strapi s’affiche sur sa page publique
 	request,
 }, testInfo) => {
 	test.setTimeout(180_000)
+	// Nothing else runs now: the import starts on an empty database and an empty storage, as on the day of the switch.
+	await viderLaBase()
+	await viderLeStockage()
 	const source = await bun('scripts/source-strapi.ts')
 	expect(source.code, source.sortie).toBe(0)
 
 	const premier = await importer(testInfo.outputPath('rapport-1.json'))
 	expect(premier.collections.profils).toMatchObject({ crees: 13, modifies: 0 })
+
+	// The pages of the application keep what it saw before the database was emptied (the set had a « zoe-lefevre »
+	// too): a save through the application, as the admin panel does it, refreshes the page of the profile.
+	await rafraichirLaPage(request, 'zoe-lefevre')
 
 	// The HTML of the server, as a search engine reads it: 200, the name in the only h1.
 	const reponse = await request.get('/profil/zoe-lefevre')

@@ -6,15 +6,19 @@ import { garderLesGraves } from '../outils/axe'
 import { BancRefuse, environnementDuBanc, lireInstance } from '../outils/banc'
 import {
 	applicationDesEssais,
-	argumentsDePlaywright,
 	cibleDesEssais,
 	configurationDesEssais,
+	DOSSIER_DES_RESULTATS,
+	DOSSIER_DES_TRACES,
+	DOSSIER_DES_TRACES_FINALES,
+	ESSAI_SEUL_SUR_LE_BANC,
 	environnementDePlaywright,
 	environnementDuBuild,
 	exigerCibleDuBanc,
 	messageApplicationMuette,
 	messagePortPris,
 	messageSansBanc,
+	phasesDePlaywright,
 	portDeLApplication,
 	SANS_FICHIER_ENV,
 } from '../outils/e2e'
@@ -121,6 +125,7 @@ describe('la configuration de Playwright', () => {
 		expect(projets.map(({ name, use }) => [name, use?.viewport?.width, use?.browserName])).toEqual([
 			['chromium', 1440, 'chromium'],
 			['mobile', 390, 'chromium'],
+			['import-final', 1440, 'chromium'],
 		])
 		const [bureau, mobile] = projets
 
@@ -130,6 +135,16 @@ describe('la configuration de Playwright', () => {
 		expect(retenu('coquille.spec.ts Essai coquille @mobile l’accueil s’ouvre')).toBe(true)
 		expect(retenu('admin.spec.ts Liste des profils')).toBe(false)
 		expect(mobile?.use).toMatchObject({ isMobile: true, hasTouch: true })
+	})
+
+	test('l’import réel veut le banc pour lui : un projet à part, que ni l’une ni l’autre des deux tailles ne joue', () => {
+		const [bureau, mobile, seul] = projets
+
+		expect(seul?.dependencies).toBeUndefined()
+		expect(seul?.testMatch).toBe(ESSAI_SEUL_SUR_LE_BANC)
+		expect(bureau?.testIgnore).toBe(ESSAI_SEUL_SUR_LE_BANC)
+		expect(mobile?.testIgnore).toBe(ESSAI_SEUL_SUR_LE_BANC)
+		expect(seul?.testMatch).toMatch(/tranche-profil-importe\.spec\.ts$/)
 	})
 
 	test('trace, vidéo et capture sont gardées pour un essai en échec, dès la première tentative', () => {
@@ -260,13 +275,61 @@ describe('ce que « bun run test:e2e » donne au build et à Playwright', () => 
 		})
 	})
 
-	test('ce qui est demandé passe tel quel : un fichier, une option', () => {
-		expect(argumentsDePlaywright([])).toEqual(['test'])
-		expect(argumentsDePlaywright(['tests/e2e/coquille.spec.ts', '--project=mobile'])).toEqual([
+	test('sans demande, deux passages : tous les essais aux deux tailles, puis l’import réel seul (ticket 225)', () => {
+		expect(phasesDePlaywright([])).toEqual({
+			principale: ['test', '--project=chromium', '--project=mobile', '--pass-with-no-tests'],
+			finale: [
+				'test',
+				'--project=import-final',
+				'--pass-with-no-tests',
+				'--reporter=list',
+				'--output=test-results/essais-final',
+			],
+		})
+	})
+
+	test('ce qui est demandé passe tel quel dans les deux passages : un fichier, une option, un quart', () => {
+		const { principale, finale } = phasesDePlaywright(['tests/e2e/coquille.spec.ts', '--workers=1', '--shard=2/4'])
+
+		expect(principale).toEqual([
 			'test',
 			'tests/e2e/coquille.spec.ts',
+			'--workers=1',
+			'--shard=2/4',
+			'--project=chromium',
 			'--project=mobile',
+			'--pass-with-no-tests',
 		])
+		expect(finale?.slice(0, 4)).toEqual(['test', 'tests/e2e/coquille.spec.ts', '--workers=1', '--shard=2/4'])
+	})
+
+	test('un projet demandé, sous ses deux écritures, choisit son passage et ne se répète pas dans l’autre', () => {
+		expect(phasesDePlaywright(['--project=mobile', '--headed'])).toEqual({
+			principale: ['test', '--headed', '--project=mobile', '--pass-with-no-tests'],
+		})
+		expect(phasesDePlaywright(['--project', 'chromium', '-g', 'un titre']).principale).toEqual([
+			'test',
+			'-g',
+			'un titre',
+			'--project=chromium',
+			'--pass-with-no-tests',
+		])
+		const seul = phasesDePlaywright(['--project=import-final'])
+		expect(seul.principale).toBeUndefined()
+		expect(seul.finale).toContain('--project=import-final')
+		const lesDeux = phasesDePlaywright(['--project=mobile', '--project=import-final'])
+		expect(lesDeux.principale).toContain('--project=mobile')
+		expect(lesDeux.finale).toContain('--project=import-final')
+		expect(lesDeux.finale).not.toContain('--project=mobile')
+	})
+
+	test('le passage de l’import réel garde ses traces à part : il n’efface ni le rapport ni les traces du premier', () => {
+		const { finale } = phasesDePlaywright([])
+
+		expect(finale).toContain(`--output=${DOSSIER_DES_TRACES_FINALES}`)
+		expect(DOSSIER_DES_TRACES_FINALES.startsWith(`${DOSSIER_DES_RESULTATS}/`)).toBe(true)
+		expect(DOSSIER_DES_TRACES_FINALES).not.toBe(DOSSIER_DES_TRACES)
+		expect(finale).toContain('--reporter=list')
 	})
 
 	test('une BASE_URL qui n’est pas l’application du banc est refusée, pas remplacée', () => {
