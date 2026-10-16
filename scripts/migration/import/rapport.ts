@@ -38,6 +38,8 @@ export interface BilanDeCollection extends Bilan {
 	hashNonRattaches?: number
 	/** `strapiId` of the documents of the source the import does not take: set aside by a decision. */
 	ecartes?: number[]
+	/** `strapiId` of the accounts of the source deleted in the v3, left out with their profile (`--cible-en-service`). */
+	supprimesDansLaV3?: number[]
 	/** Accounts not confirmed at the source, taken confirmed. */
 	nonConfirmes?: number[]
 	/** What the run takes, split. */
@@ -196,6 +198,10 @@ function ligneDeBilan(nom: string, bilan: BilanDeCollection, mode: Mode): string
 	else if (bilan.hashNonRattaches)
 		lignes.push(
 			`  - ${pluriel(bilan.hashNonRattaches, 'hash écarté non rattaché', 'hash écartés non rattachés')} (le compte gardé a le sien, ou le prêt est refusé)`
+		)
+	if (bilan.supprimesDansLaV3?.length)
+		lignes.push(
+			`  - supprimés dans la v3, ni repris ni leur profil : ${bilan.supprimesDansLaV3.length} (${ids(bilan.supprimesDansLaV3)})`
 		)
 	if (bilan.sansOrigine)
 		lignes.push(`  - dans la cible, sans identifiant de l’ancien site (ajoutés à la main) : ${bilan.sansOrigine}`)

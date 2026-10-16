@@ -76,6 +76,7 @@ export const COLLECTIONS = [
 	'articles',
 	'auth-evenements',
 	'demandes',
+	'comptes-supprimes',
 	'payload-locked-documents',
 ] as const
 export type CollectionDeLaMatrice = (typeof COLLECTIONS)[number]
@@ -157,6 +158,8 @@ export type Distribution = Record<Role, Acteur> & {
 	evenement: number
 	/** A contact message (ticket 158): it belongs to nobody, only an admin reads it. */
 	demande: number
+	/** A deleted account of the old site (ticket 227): it belongs to nobody, only an admin reads it. */
+	compteSupprime: number
 }
 
 /** A fresh address for each document a line creates or changes. */
@@ -233,6 +236,15 @@ const donneesDeDemande = () => ({
 const demande = async (payload: Payload): Promise<number> =>
 	(await payload.create({ collection: 'demandes', data: donneesDeDemande() })).id
 
+/** The identifier of a deleted account, written by the server as it writes it: a made-up one, never reused. */
+const compteSupprime = async (payload: Payload): Promise<number> =>
+	(
+		await payload.create({
+			collection: 'comptes-supprimes',
+			data: { strapiId: 9_000_000 + Math.floor(Math.random() * 1_000_000_000), date: new Date().toISOString() },
+		})
+	).id
+
 /** What the matrix needs to know of a collection to play its lines. */
 interface Portrait {
 	/** The field a line changes when it names none, and a new value for it. */
@@ -302,6 +314,12 @@ const PORTRAITS: Record<CollectionDeLaMatrice, Portrait> = {
 		nouvelleValeur: () => 999,
 		donneesDeCreation: () => Promise.resolve({ type: 'connexion', code: 'ok', dureeMs: 1 }),
 		jetable: evenement,
+	},
+	'comptes-supprimes': {
+		champ: 'strapiId',
+		nouvelleValeur: () => 1,
+		donneesDeCreation: () => Promise.resolve({ strapiId: 8_000_000 + Math.floor(Math.random() * 1_000_000_000) }),
+		jetable: compteSupprime,
 	},
 	// Contact messages (ticket 158): the server writes them, an admin reads them, nobody else reaches them.
 	demandes: {
@@ -422,6 +440,7 @@ export async function distribuer(): Promise<Distribution> {
 		...(await creerLesContenus(payload)),
 		evenement: await evenement(payload),
 		demande: await demande(payload),
+		compteSupprime: await compteSupprime(payload),
 	}
 }
 
@@ -509,6 +528,7 @@ function documentDe(distribution: Distribution, ligne: Ligne): number {
 	const { collection, document } = ligne
 	if (collection === 'auth-evenements') return distribution.evenement
 	if (collection === 'demandes') return distribution.demande
+	if (collection === 'comptes-supprimes') return distribution.compteSupprime
 	const deLEtat = (etat: Etat) =>
 		estEditoriale(collection)
 			? distribution.contenus[collection][etat]
@@ -556,6 +576,7 @@ async function lister(voie: Voie, acteur: Acteur, ligne: Ligne, distribution: Di
 		...sansProprietaire,
 		...(collection === 'auth-evenements' ? [distribution.evenement] : []),
 		...(collection === 'demandes' ? [distribution.demande] : []),
+		...(collection === 'comptes-supprimes' ? [distribution.compteSupprime] : []),
 	]
 	const publics = await publicsDe(collection, distribues)
 	const siensEtPublics = [...new Set([...siens, ...publics])].sort((a, b) => a - b)

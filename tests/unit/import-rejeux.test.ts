@@ -1,9 +1,13 @@
 import { describe, expect, test } from 'bun:test'
 import { lireLesArguments } from '../../scripts/migration/import/arguments'
 import { ADAPTATEUR_COMPTES, ADAPTATEUR_COMPTES_EN_SERVICE } from '../../scripts/migration/import/comptes'
-import { messageDeLaBascule } from '../../scripts/migration/import/garde-bascule'
+import { messageDeLaBascule, sansLesComptesSupprimes } from '../../scripts/migration/import/garde-bascule'
 import { type Attendu, champsDifferents, empreinteDesDocuments, planifier } from '../../scripts/migration/import/moteur'
-import { ADAPTATEUR_PROFILS, consentementsGardes } from '../../scripts/migration/import/profils'
+import {
+	ADAPTATEUR_PROFILS,
+	ADAPTATEUR_PROFILS_EN_SERVICE,
+	consentementsGardes,
+} from '../../scripts/migration/import/profils'
 
 /**
  * Ticket 227: a run of the import does not undo what the v3 wrote. The guard of a target in service,
@@ -13,23 +17,23 @@ import { ADAPTATEUR_PROFILS, consentementsGardes } from '../../scripts/migration
 
 describe('la garde d’une cible déjà utilisée par la v3 (ticket 227)', () => {
 	test('aucune trace : aucun refus', () => {
-		expect(messageDeLaBascule({ connexions: 0, comptesConnectes: 0, hashEfface: [] })).toBeNull()
+		expect(messageDeLaBascule({ connexions: 0, comptesConnectes: 0, hashEfface: [], supprimes: [] })).toBeNull()
 	})
 
 	test('une connexion réussie ou un hash effacé : refus en français, avec le nom de l’option, sans valeur', () => {
-		const connexions = messageDeLaBascule({ connexions: 3, comptesConnectes: 0, hashEfface: [] })
-		const hash = messageDeLaBascule({ connexions: 0, comptesConnectes: 0, hashEfface: [1, 4] })
+		const connexions = messageDeLaBascule({ connexions: 3, comptesConnectes: 0, hashEfface: [], supprimes: [] })
+		const hash = messageDeLaBascule({ connexions: 0, comptesConnectes: 0, hashEfface: [1, 4], supprimes: [] })
 
 		expect(connexions).toContain('3 connexions')
 		expect(connexions).toContain('Rien n’est écrit')
 		expect(connexions).toContain('--cible-en-service')
 		expect(hash).toContain('2 comptes dont le hash hérité a déjà été effacé')
 		expect(hash).toContain('1, 4')
-		expect(messageDeLaBascule({ connexions: 1, comptesConnectes: 0, hashEfface: [7] })).toMatch(
+		expect(messageDeLaBascule({ connexions: 1, comptesConnectes: 0, hashEfface: [7], supprimes: [] })).toMatch(
 			/1 connexion .*1 compte /
 		)
 		// The journal is purged after 90 days: the date of last sign-in of the accounts is a trace of its own.
-		const date = messageDeLaBascule({ connexions: 0, comptesConnectes: 2, hashEfface: [] })
+		const date = messageDeLaBascule({ connexions: 0, comptesConnectes: 2, hashEfface: [], supprimes: [] })
 		expect(date).toContain('2 comptes avec une date de dernière connexion')
 		expect(`${connexions}${hash}${date}`).not.toMatch(/\$2[aby]\$|@/)
 	})
@@ -145,5 +149,64 @@ describe('la date de consentement déjà posée est gardée (ticket 227)', () =>
 		// 2 asks the date it holds; 3 holds none (the run fills it in); 5 is new; 4 and 1 differ.
 		expect(consentementsGardes(attendus, existants)).toEqual([1, 4])
 		expect(consentementsGardes([profil(1, null)], existants)).toEqual([])
+	})
+})
+
+describe('un compte supprimé dans la v3 ne revient pas (ticket 227)', () => {
+	test('un compte de la source supprimé suffit à refuser, avec son ancien identifiant et sans autre valeur', () => {
+		const message = messageDeLaBascule({ connexions: 0, comptesConnectes: 0, hashEfface: [], supprimes: [5, 9] })
+
+		expect(message).toContain('2 comptes de l’ancien site supprimés dans la v3')
+		expect(message).toContain('5, 9')
+		expect(message).toContain('Rien n’est écrit')
+		expect(message).toContain('--cible-en-service')
+		expect(message).not.toMatch(/\$2[aby]\$|@/)
+	})
+
+	test('avec l’option, le compte supprimé et son profil sortent de ce que la source donne ; les autres restent', () => {
+		const lu = {
+			comptes: [{ id: 1 }, { id: 2 }, { id: 3 }],
+			profils: [
+				{ id: 11, compte: 1 },
+				{ id: 12, compte: 2 },
+				{ id: 13, compte: null },
+			],
+			ailleurs: 'inchangé',
+		}
+
+		const reste = sansLesComptesSupprimes(lu, new Set([2, 99]))
+
+		expect(reste.comptes.map(({ id }) => id)).toEqual([1, 3])
+		expect(reste.profils.map(({ id }) => id)).toEqual([11, 13])
+		expect(reste.ailleurs).toBe('inchangé')
+		expect(sansLesComptesSupprimes(lu, new Set())).toBe(lu)
+	})
+})
+
+describe('sur une cible en service, un profil déjà repris reste tel quel (ticket 227)', () => {
+	const profil = (valeurs: Record<string, unknown>): Attendu => ({
+		strapiId: 1,
+		valeurs: { strapiId: 1, ...valeurs },
+		ecarts: [],
+	})
+	const existant = { id: 7, valeurs: { strapiId: 1, contactPublic: false, coordonnees: { telephone: null } } }
+
+	test('ce que la maquilleuse a fermé dans la v3 n’est pas rouvert : aucun champ n’est comparé', () => {
+		const attendu = profil({
+			contactPublic: true,
+			coordonnees: { telephone: '0100000000' },
+			sourceConsentement: 'import',
+		})
+
+		expect(champsDifferents(ADAPTATEUR_PROFILS, attendu, existant)).toContain('contactPublic')
+		expect(champsDifferents(ADAPTATEUR_PROFILS_EN_SERVICE, attendu, existant)).toEqual([])
+		const plan = planifier(ADAPTATEUR_PROFILS_EN_SERVICE, [attendu], [existant])
+		expect(plan.actions.map(({ genre }) => genre)).toEqual(['inchange'])
+	})
+
+	test('un profil qui manque est créé, avec tous ses champs', () => {
+		const plan = planifier(ADAPTATEUR_PROFILS_EN_SERVICE, [profil({ contactPublic: false })], [])
+
+		expect(plan.actions.map(({ genre }) => genre)).toEqual(['creation'])
 	})
 })

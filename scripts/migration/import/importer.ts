@@ -32,7 +32,7 @@ import {
 } from './comptes'
 import { AUCUNE_DECISION, type Decisions } from './decisions'
 import { REFERENCES } from './ecarts'
-import { refuserUneCibleEnService } from './garde-bascule'
+import { comptesSupprimesDansLaV3, refuserUneCibleEnService, sansLesComptesSupprimes } from './garde-bascule'
 import {
 	ADAPTATEUR_MEDIAS,
 	bilanDesFichiers,
@@ -56,6 +56,7 @@ import {
 } from './moteur'
 import {
 	ADAPTATEUR_PROFILS,
+	ADAPTATEUR_PROFILS_EN_SERVICE,
 	affichesALaSource,
 	consentementsGardes,
 	lireLesProfils,
@@ -215,13 +216,18 @@ async function passerLImport(options: OptionsDImport): Promise<Rapport> {
 	} = options
 	const adaptateurDesComptes = cibleEnService ? ADAPTATEUR_COMPTES_EN_SERVICE : ADAPTATEUR_COMPTES
 	const avant = await source.lire(requete => empreinteDesTables(requete))
-	const lu = await source.lire(async requete => ({
+	const luBrut = await source.lire(async requete => ({
 		comptes: await lireLesComptes(requete),
 		fichiers: await lireLesFichiers(requete),
 		profils: await lireLesProfils(requete),
 		articles: await lireLesArticles(requete),
 		talents: await lireLesTalents(requete),
 	}))
+
+	// An account deleted in the v3 is gone for good: on a target in service the run neither takes it nor its profile.
+	const supprimes = await comptesSupprimesDansLaV3(payload)
+	const lu = cibleEnService ? sansLesComptesSupprimes(luBrut, supprimes) : luBrut
+	const adaptateurDesProfils = cibleEnService ? ADAPTATEUR_PROFILS_EN_SERVICE : ADAPTATEUR_PROFILS
 
 	const rapport: Rapport = {
 		mode,
@@ -241,7 +247,12 @@ async function passerLImport(options: OptionsDImport): Promise<Rapport> {
 		profilsEcartes: decisions.profilsEcartes,
 	})
 	// Before any write, dry or real: a target the v3 already uses would get the old hash and email back.
-	if (!cibleEnService) await refuserUneCibleEnService(payload, comptes.attendus)
+	if (!cibleEnService)
+		await refuserUneCibleEnService(
+			payload,
+			comptes.attendus,
+			luBrut.comptes.map(({ id }) => id)
+		)
 	rapport.decisionsSansObjet = comptes.sansObjet + laisses.sansObjet
 	if (comptes.sansDecision.length > 0 || laisses.deComptesEcartes.length > 0 || laisses.sansCompte.length > 0) {
 		rapport.arret = {
@@ -288,7 +299,7 @@ async function passerLImport(options: OptionsDImport): Promise<Rapport> {
 			{
 				profils: profilsPris,
 				articles: new Set(articles.pris.map(({ id }) => id)),
-				profilsDeLaSource: new Set(lu.profils.map(({ id }) => id)),
+				profilsDeLaSource: new Set(luBrut.profils.map(({ id }) => id)),
 				articlesDeLaSource: new Set(lu.articles.map(({ id }) => id)),
 			},
 			medias?.base ?? null
@@ -306,6 +317,9 @@ async function passerLImport(options: OptionsDImport): Promise<Rapport> {
 			hashNonRattaches: comptes.hashNonRattaches,
 			nonConfirmes: comptes.nonConfirmes,
 			repartition: repartitionDesComptes(comptes.attendus),
+			supprimesDansLaV3: cibleEnService
+				? [...supprimes].filter(id => luBrut.comptes.some(c => c.id === id)).sort((a, b) => a - b)
+				: [],
 		}
 
 		// Each profile, and each media of a profile, points at its account in Payload, read once the
@@ -344,8 +358,15 @@ async function passerLImport(options: OptionsDImport): Promise<Rapport> {
 			maintenant
 		)
 		if (laisses.spam.length > 0) rapport.ecarts[REFERENCES.profilsDuSpam] = laisses.spam.length
-		const consentements = consentementsGardes(profils.attendus, await lireLaCible(payload, ADAPTATEUR_PROFILS))
-		const bilanDesProfils = await importerLaCollection(options, ADAPTATEUR_PROFILS, lu.profils.length, profils.attendus)
+		const consentements = cibleEnService
+			? []
+			: consentementsGardes(profils.attendus, await lireLaCible(payload, ADAPTATEUR_PROFILS))
+		const bilanDesProfils = await importerLaCollection(
+			options,
+			adaptateurDesProfils,
+			lu.profils.length,
+			profils.attendus
+		)
 		// Only the profiles the target holds are counted: a refused one carries no difference.
 		compterLesEcarts(
 			rapport.ecarts,
@@ -389,7 +410,7 @@ async function passerLImport(options: OptionsDImport): Promise<Rapport> {
 
 		if (mode === 'reel') {
 			const pros = await pariteDe(payload, adaptateurDesComptes, comptes.attendus, rapport.collections.pros)
-			const lesProfils = await pariteDe(payload, ADAPTATEUR_PROFILS, profils.attendus, rapport.collections.profils)
+			const lesProfils = await pariteDe(payload, adaptateurDesProfils, profils.attendus, rapport.collections.profils)
 			rapport.parite = {
 				pros: { ...pros.parite, repartition: repartitionDesComptes(pros.cible) },
 				media: (await pariteDe(payload, ADAPTATEUR_MEDIAS, lesMedias, rapport.collections.media)).parite,

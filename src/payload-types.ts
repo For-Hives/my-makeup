@@ -76,6 +76,7 @@ export interface Config {
     articles: Article;
     'auth-evenements': AuthEvenement;
     demandes: Demande;
+    'comptes-supprimes': ComptesSupprime;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -95,6 +96,7 @@ export interface Config {
     articles: ArticlesSelect<false> | ArticlesSelect<true>;
     'auth-evenements': AuthEvenementsSelect<false> | AuthEvenementsSelect<true>;
     demandes: DemandesSelect<false> | DemandesSelect<true>;
+    'comptes-supprimes': ComptesSupprimesSelect<false> | ComptesSupprimesSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -604,6 +606,17 @@ export interface Demande {
   createdAt: string;
 }
 /**
+ * Les comptes de l’ancien site supprimés dans la v3. L’import ne les reprend jamais : leur identifiant seul est gardé.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "comptes-supprimes".
+ */
+export interface ComptesSupprime {
+  id: number;
+  strapiId: number;
+  date: string;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
@@ -658,6 +671,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'demandes';
         value: number | Demande;
+      } | null)
+    | ({
+        relationTo: 'comptes-supprimes';
+        value: number | ComptesSupprime;
       } | null);
   globalSlug?: string | null;
   user:
@@ -1009,6 +1026,14 @@ export interface DemandesSelect<T extends boolean = true> {
   message?: T;
   updatedAt?: T;
   createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "comptes-supprimes_select".
+ */
+export interface ComptesSupprimesSelect<T extends boolean = true> {
+  strapiId?: T;
+  date?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

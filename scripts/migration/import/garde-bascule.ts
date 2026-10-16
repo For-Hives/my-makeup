@@ -12,11 +12,15 @@
  *   (`auth-evenements`), which the import never writes;
  * - an account with a last sign-in date (`pros.derniereConnexion`, ticket 077): the journal is purged
  *   after 90 days, this date is not, and a Google or Facebook account never had a legacy hash to lose;
- * - an account that holds no legacy hash where the source gives one: a sign-in or a reset erased it.
+ * - an account that holds no legacy hash where the source gives one: a sign-in or a reset erased it;
+ * - an account of the source that was deleted in the v3 (collection `comptes-supprimes`, written by the
+ *   deletion itself and never purged): the source still holds it, and a run would bring it back with its
+ *   public profile.
  *
  * `--cible-en-service` lifts the guard on purpose, and then the import leaves every account it
- * already took exactly as it is (`ADAPTATEUR_COMPTES_EN_SERVICE`, ./comptes.ts): it only creates the
- * missing ones. The message names counts and identifiers of the old base, never a value.
+ * already took exactly as it is (`ADAPTATEUR_COMPTES_EN_SERVICE`, ./comptes.ts) and the profiles it holds
+ * as they are (`ADAPTATEUR_PROFILS_EN_SERVICE`, ./profils.ts): it only creates the missing ones, and never an
+ * account deleted in the v3 nor its profile (`sansLesComptesSupprimes`). The message names counts and identifiers of the old base, never a value.
  */
 
 import type { Payload } from 'payload'
@@ -33,10 +37,29 @@ export interface TracesDeLaBascule {
 	comptesConnectes: number
 	/** `strapiId` of the accounts that hold no legacy hash where the source gives one. */
 	hashEfface: number[]
+	/** `strapiId` of the accounts of the source that were deleted in the v3. */
+	supprimes: number[]
+}
+
+/** The identifiers on the old site of the accounts deleted in the v3: all that is left of them. */
+export async function comptesSupprimesDansLaV3(payload: Payload): Promise<Set<number>> {
+	const { docs } = await payload.find({
+		collection: 'comptes-supprimes',
+		depth: 0,
+		limit: 0,
+		pagination: false,
+		overrideAccess: true,
+		select: { strapiId: true },
+	})
+	return new Set(docs.map(({ strapiId }) => Number(strapiId)))
 }
 
 /** Reads the traces of the use of the v3 on the target. Writes nothing. */
-export async function tracesDeLaBascule(payload: Payload, comptes: readonly Attendu[]): Promise<TracesDeLaBascule> {
+export async function tracesDeLaBascule(
+	payload: Payload,
+	comptes: readonly Attendu[],
+	idsDeLaSource: readonly number[] = comptes.map(({ strapiId }) => strapiId)
+): Promise<TracesDeLaBascule> {
 	const { totalDocs } = await payload.count({
 		collection: COLLECTION_JOURNAL,
 		where: { and: [{ type: { in: ['connexion', 'reinitialisation'] } }, { code: { in: ['ok', 'heritee'] } }] },
@@ -58,12 +81,19 @@ export async function tracesDeLaBascule(payload: Payload, comptes: readonly Atte
 		})
 		.map(({ strapiId }) => strapiId)
 		.sort((a, b) => a - b)
-	return { connexions: totalDocs, comptesConnectes, hashEfface }
+	const retires = await comptesSupprimesDansLaV3(payload)
+	const supprimes = idsDeLaSource.filter(id => retires.has(id)).sort((a, b) => a - b)
+	return { connexions: totalDocs, comptesConnectes, hashEfface, supprimes }
 }
 
 /** Why the run refuses the target, or `null` when it shows no trace of the v3 in use. */
-export function messageDeLaBascule({ connexions, comptesConnectes, hashEfface }: TracesDeLaBascule): string | null {
-	if (connexions === 0 && comptesConnectes === 0 && hashEfface.length === 0) return null
+export function messageDeLaBascule({
+	connexions,
+	comptesConnectes,
+	hashEfface,
+	supprimes,
+}: TracesDeLaBascule): string | null {
+	if (connexions === 0 && comptesConnectes === 0 && hashEfface.length === 0 && supprimes.length === 0) return null
 	const s = (nombre: number) => (nombre > 1 ? 's' : '')
 	const traces = [
 		connexions > 0 &&
@@ -72,16 +102,39 @@ export function messageDeLaBascule({ connexions, comptesConnectes, hashEfface }:
 			`${comptesConnectes} compte${s(comptesConnectes)} avec une date de dernière connexion dans la v3`,
 		hashEfface.length > 0 &&
 			`${hashEfface.length} compte${s(hashEfface.length)} dont le hash hérité a déjà été effacé (anciens identifiants : ${hashEfface.join(', ')})`,
+		supprimes.length > 0 &&
+			`${supprimes.length} compte${s(supprimes.length)} de l’ancien site supprimé${s(supprimes.length)} dans la v3 (anciens identifiants : ${supprimes.join(', ')})`,
 	].filter(Boolean)
 	return [
 		`La cible est déjà utilisée par la v3 : ${traces.join(' ; ')}.`,
-		'Un nouveau passage remettrait le hash et l’email de l’ancien site sur des comptes que leurs propriétaires ont changés.',
-		`Rien n’est écrit. Pour rejouer l’import quand même, sans toucher aux comptes déjà repris, ajoute ${DRAPEAU_CIBLE_EN_SERVICE} (docs/migration/IMPORT.md).`,
+		'Un nouveau passage remettrait le hash et l’email de l’ancien site sur des comptes que leurs propriétaires ont changés, et ramènerait les comptes qu’elles ont supprimés.',
+		`Rien n’est écrit. Pour rejouer l’import quand même, sans toucher aux comptes ni aux profils déjà repris, et sans ramener un compte supprimé, ajoute ${DRAPEAU_CIBLE_EN_SERVICE} (docs/migration/IMPORT.md).`,
 	].join(' ')
 }
 
 /** Refuses a target the v3 already uses (`ImportRefuse`, exit code 1), before any write. */
-export async function refuserUneCibleEnService(payload: Payload, comptes: readonly Attendu[]): Promise<void> {
-	const message = messageDeLaBascule(await tracesDeLaBascule(payload, comptes))
+export async function refuserUneCibleEnService(
+	payload: Payload,
+	comptes: readonly Attendu[],
+	idsDeLaSource?: readonly number[]
+): Promise<void> {
+	const message = messageDeLaBascule(await tracesDeLaBascule(payload, comptes, idsDeLaSource))
 	if (message !== null) throw new ImportRefuse(message)
+}
+
+/**
+ * What the source gives, less the accounts deleted in the v3 and their profiles: the run with
+ * `--cible-en-service` never brings them back. The photos stay in the list of the files, and are
+ * counted as those of a profile that is not taken.
+ */
+export function sansLesComptesSupprimes<T extends { comptes: { id: number }[]; profils: { compte: number | null }[] }>(
+	lu: T,
+	supprimes: ReadonlySet<number>
+): T {
+	if (supprimes.size === 0) return lu
+	return {
+		...lu,
+		comptes: lu.comptes.filter(({ id }) => !supprimes.has(id)),
+		profils: lu.profils.filter(({ compte }) => compte === null || !supprimes.has(compte)),
+	}
 }

@@ -111,7 +111,9 @@ export function departementEnTete(texte: string): { texte: string; departement: 
 	if (/[,;:/|+()[\]]/.test(reste)) return inchange
 	const avecLeNumero = lieuPublic(texte)
 	const sansLeNumero = lieuPublic(reste)
-	return avecLeNumero.adresse && !sansLeNumero.adresse && nomCompare(avecLeNumero.commune) === nomCompare(sansLeNumero.commune)
+	return avecLeNumero.adresse &&
+		!sansLeNumero.adresse &&
+		nomCompare(avecLeNumero.commune) === nomCompare(sansLeNumero.commune)
 		? { texte: reste, departement }
 		: inchange
 }

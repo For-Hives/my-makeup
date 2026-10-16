@@ -286,6 +286,17 @@ export const ADAPTATEUR_PROFILS: Adaptateur = {
 }
 
 /**
+ * The profiles on a target the v3 already uses (`--cible-en-service`, ticket 227): a profile the target
+ * holds is left exactly as it is, every field of it. A makeup artist who closed her phone or her email,
+ * moved her commune or changed her lists and photos in the v3 would otherwise get the old site back,
+ * with a public phone and the consent of the import. Only a profile the target misses is created.
+ */
+export const ADAPTATEUR_PROFILS_EN_SERVICE: Adaptateur = {
+	...ADAPTATEUR_PROFILS,
+	figes: Object.keys(ADAPTATEUR_PROFILS.champs),
+}
+
+/**
  * The profiles whose date of consent differs from the date this run asks for: the target keeps the
  * date it holds (`amorces`), the run counts the difference. Identifiers only.
  */
