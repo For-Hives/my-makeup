@@ -11,6 +11,7 @@ import {
 	MESSAGES_INSCRIPTION,
 	validerInscription,
 } from '@/lib/auth/inscription'
+import { codeDeLEchec as codeDeLEchecDInscription, estUneAdresseDejaPrise } from '@/lib/auth/inscription-payload'
 import { contenuEmailConfirmation } from '@/lib/emails/confirmation'
 import { composerEmail } from '@/lib/emails/gabarit'
 
@@ -204,5 +205,35 @@ describe('confirmerLEmail : la logique du lien, sans base', () => {
 		expect(lignes).toHaveLength(1)
 		expect(lignes[0]).toMatchObject({ type: 'confirmation', code: 'ok' })
 		expect(JSON.stringify(lignes)).not.toContain(JETON)
+	})
+})
+
+describe('« adresse déjà utilisée » : seulement pour l’unicité de l’email (ticket 224)', () => {
+	// The two shapes Payload gives, as the real ones read on the bench (tests/integration/auth-inscription-email-pris.test.ts).
+	const refus = (message: string, path = 'email') => ({ data: { errors: [{ message, path }] } })
+	const unicite = refus("Un utilisateur avec l'email donné est déjà enregistré.")
+	const forme = refus('S’il vous plaît, veuillez entrer une adresse e-mail valide.')
+
+	test('l’unicité (auth ou index, en français ou en anglais) est une adresse déjà prise', () => {
+		for (const erreur of [
+			unicite,
+			refus('La valeur doit être unique'),
+			refus('Value must be unique'),
+			refus('A user with the given email is already registered.'),
+		]) {
+			expect(estUneAdresseDejaPrise(erreur)).toBe(true)
+			expect(codeDeLEchecDInscription(erreur)).toBe('email-deja-pris')
+		}
+	})
+
+	test('une erreur de forme sur l’email, ou l’unicité d’un autre champ, ne l’est pas', () => {
+		for (const erreur of [forme, refus('La valeur doit être unique', 'nom'), new Error('x'), null, { data: {} }])
+			expect(estUneAdresseDejaPrise(erreur)).toBe(false)
+	})
+
+	test('une erreur de forme sur l’email est un refus du champ ; toute autre est un service indisponible', () => {
+		expect(codeDeLEchecDInscription(forme)).toBe('email-invalide')
+		for (const erreur of [refus('La valeur doit être unique', 'nom'), new Error('x'), null, { data: {} }])
+			expect(codeDeLEchecDInscription(erreur)).toBe('service-indisponible')
 	})
 })

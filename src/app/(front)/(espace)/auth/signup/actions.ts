@@ -88,7 +88,10 @@ export async function sInscrire(_precedent: EtatDInscription, formulaire: FormDa
 		site,
 		journal,
 	})
-	if (!resultat.ok) return { echec: resultat.code, valeurs }
+	if (!resultat.ok)
+		return resultat.code === 'email-invalide'
+			? { erreurs: resultat.erreurs, valeurs }
+			: { echec: resultat.code, valeurs }
 
 	if (!resultat.confirmee) redirect(PAGE_DU_MUR)
 

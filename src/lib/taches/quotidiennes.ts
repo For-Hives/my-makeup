@@ -1,6 +1,7 @@
 import type { Payload } from 'payload'
 import { COLLECTION_JOURNAL, seuilDePurge } from '../auth/journal'
 import { purgeDesComptesNonConfirmes } from './comptes-non-confirmes'
+import { repriseDesMessagesBloques } from './messages-bloques'
 import { purgeDesMessagesDeContact } from './messages-de-contact'
 
 /**
@@ -20,7 +21,7 @@ import { purgeDesMessagesDeContact } from './messages-de-contact'
 export interface TacheQuotidienne {
 	/** A short name, written in the log. */
 	nom: string
-	/** Does the work for the day `maintenant`; gives the number of rows it removed. */
+	/** Does the work for the day `maintenant`; gives the number of rows it removed or put right (the field is called `supprimes` in the result, as the first tasks only removed). */
 	executer: (payload: Payload, maintenant: Date) => Promise<number>
 }
 
@@ -44,6 +45,7 @@ export const TACHES_QUOTIDIENNES: readonly TacheQuotidienne[] = [
 	purgeDuJournalDAuthentification,
 	purgeDesComptesNonConfirmes,
 	purgeDesMessagesDeContact,
+	repriseDesMessagesBloques,
 ]
 
 export type ResultatDeTache = { nom: string; supprimes: number } | { nom: string; echec: true }
@@ -61,7 +63,7 @@ export async function lancerLesTachesQuotidiennes(
 	for (const tache of taches) {
 		try {
 			const supprimes = await tache.executer(payload, maintenant)
-			payload.logger.info({ msg: `Tâche quotidienne ${tache.nom} : ${supprimes} ligne(s) supprimée(s).` })
+			payload.logger.info({ msg: `Tâche quotidienne ${tache.nom} : ${supprimes} ligne(s) traitée(s).` })
 			resultats.push({ nom: tache.nom, supprimes })
 		} catch {
 			payload.logger.error({ msg: `Tâche quotidienne ${tache.nom} : échec.` })

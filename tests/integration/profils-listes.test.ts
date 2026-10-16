@@ -311,6 +311,22 @@ describe('Le serveur valide les bornes, et refuse en français', () => {
 		])
 	})
 
+	test('une date de l’an 0, que PostgreSQL ne stocke pas, est refusée en 400 et non en 500 (ticket 224)', async () => {
+		const a = await maquilleuse()
+
+		const reponse = await enregistrer(a, {
+			experiences: [{ entreprise: 'Studio fictif', debut: '0000-01-01' }],
+			formations: [{ diplome: 'CAP Esthétique', obtenuLe: '0000-12-31T00:00:00.000Z' }],
+		})
+
+		expect(reponse.statut).toBe(400)
+		expect(refus(reponse.corps).sort((x, y) => x.path.localeCompare(y.path))).toEqual([
+			{ path: 'experiences.0.debut', message: 'Cette date n’est pas valide.' },
+			{ path: 'formations.0.obtenuLe', message: 'Cette date n’est pas valide.' },
+		])
+		expect((await stocke(a.profil)).experiences ?? []).toEqual([])
+	})
+
 	test('une sauvegarde refusée ne vide aucune section déjà enregistrée', async () => {
 		const a = await maquilleuse()
 		await enregistrer(a, { prestations: TROIS_PRESTATIONS, langues: [{ nom: 'Anglais' }] })

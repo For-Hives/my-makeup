@@ -64,7 +64,7 @@ describe('la tâche', () => {
 		expect(TACHES_QUOTIDIENNES).toContain(purgeDesMessagesDeContact)
 		const { payload, journal } = payloadEspion()
 		await lancerLesTachesQuotidiennes(payload, MOMENT, [purgeDesMessagesDeContact])
-		expect(journal).toEqual(['Tâche quotidienne purge-messages-contact : 2 ligne(s) supprimée(s).'])
+		expect(journal).toEqual(['Tâche quotidienne purge-messages-contact : 2 ligne(s) traitée(s).'])
 	})
 })
 
@@ -83,5 +83,40 @@ describe('l’import marque son passage (importer lui-même)', () => {
 		await expect(importer(options)).rejects.toThrow('stop')
 		expect(vu.pendant).toBe(true)
 		expect(importEnCours()).toBe(false)
+	})
+})
+
+describe('la reprise des messages restés en cours d’envoi (ticket 224)', () => {
+	test('elle est dans les tâches quotidiennes et ne touche que les messages de contact « en-attente » plus vieux que le délai', async () => {
+		const { repriseDesMessagesBloques, DELAI_DE_REPRISE_MS } = await import('@/lib/taches/messages-bloques')
+		expect(TACHES_QUOTIDIENNES).toContain(repriseDesMessagesBloques)
+		const appels: { data: unknown; where: unknown }[] = []
+		const payload = {
+			update: (args: { data: unknown; where: unknown }) => {
+				appels.push(args)
+				return Promise.resolve({ docs: [{ id: 1 }], errors: [] })
+			},
+		} as unknown as Payload
+		const maintenant = new Date('2026-10-16T10:00:00.000Z')
+
+		expect(await repriseDesMessagesBloques.executer(payload, maintenant)).toBe(1)
+
+		expect(DELAI_DE_REPRISE_MS).toBe(15 * 60 * 1000)
+		expect(appels).toEqual([
+			{
+				collection: 'demandes',
+				depth: 0,
+				overrideAccess: true,
+				select: { etatMail: true },
+				data: { etatMail: 'echec' },
+				where: {
+					and: [
+						{ type: { equals: 'contact' } },
+						{ etatMail: { equals: 'en-attente' } },
+						{ updatedAt: { less_than: '2026-10-16T09:45:00.000Z' } },
+					],
+				},
+			},
+		] as never)
 	})
 })

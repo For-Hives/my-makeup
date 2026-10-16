@@ -1,6 +1,6 @@
 import type { Payload } from 'payload'
 import { identifiantDe } from '../profil/photos'
-import { identifiantDuProfil, type UtilisateurDeLEspace } from './mon-profil'
+import { identifiantDuProfilAEcrire, type UtilisateurDeLEspace } from './mon-profil'
 import { schemaDeLaPhoto, type ValeursDeLaPhoto } from './photo-principale'
 import { echecDePayload, MESSAGE_ECHEC, type ResultatDEnregistrement } from './resultat'
 
@@ -24,7 +24,7 @@ export async function enregistrerPhotoPrincipale(
 	const lue = schemaDeLaPhoto.safeParse(saisie)
 	if (!lue.success) return { ok: false, message: MESSAGE_ECHEC }
 	try {
-		const id = await identifiantDuProfil(payload, utilisateur)
+		const id = await identifiantDuProfilAEcrire(payload, utilisateur)
 		if (id === null) return { ok: false, message: MESSAGE_ECHEC }
 		const stocke = await payload.update({
 			collection: 'profils',

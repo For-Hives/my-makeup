@@ -1,6 +1,6 @@
 import type { Payload } from 'payload'
 import { CHAMPS_DE_L_IDENTITE, erreursParChamp, schemaDeLIdentiteStrict, type ValeursDeLIdentite } from './identite'
-import { identifiantDuProfil, type UtilisateurDeLEspace } from './mon-profil'
+import { identifiantDuProfilAEcrire, type UtilisateurDeLEspace } from './mon-profil'
 import { echecDePayload, MESSAGE_ECHEC, type ResultatDEnregistrement } from './resultat'
 
 /**
@@ -29,7 +29,7 @@ export async function enregistrerIdentite(
 			: { ok: false, message: MESSAGE_ECHEC }
 	}
 	try {
-		const id = await identifiantDuProfil(payload, utilisateur)
+		const id = await identifiantDuProfilAEcrire(payload, utilisateur)
 		if (id === null) return { ok: false, message: MESSAGE_ECHEC }
 		const stocke = await payload.update({
 			collection: 'profils',

@@ -172,10 +172,19 @@ describe('Une date de ces listes est un jour, sans heure', () => {
 			'01/03/2024',
 			'March 1, 2024',
 			'2024-03-01Tmidi',
+			'0000-01-01',
+			'0000-12-31T00:00:00.000Z',
 		])
 			expect(jourCalendaire(pasUneDate)).toBeNull()
 		for (const pasUneDate of [20240301, null, undefined, new Date('invalide'), {}])
 			expect(jourCalendaire(pasUneDate)).toBeNull()
+	})
+
+	test('l’an 0 n’existe pas pour PostgreSQL : refusé avec la phrase des dates ; l’an 1 passe', () => {
+		expect(jourCalendaire('0001-01-01')).toBe('0001-01-01')
+		expect(messageDeDate('0000-01-01')).toBe(MESSAGES.dateInvalide)
+		expect(messageDeFin('0000-06-01', '2020-01-01')).toBe(MESSAGES.dateInvalide)
+		expect(dateDuJour('0000-01-01')).toBe('0000-01-01')
 	})
 
 	test('stockée à midi UTC ; un champ vide devient nul ; le reste est laissé à la validation', () => {

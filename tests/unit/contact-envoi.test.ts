@@ -1,9 +1,9 @@
 import { describe, expect, test } from 'bun:test'
-import { enregistrerUnMessageDeContact, type StockageDesDemandes } from '@/lib/contact/envoi-payload'
+import { enregistrerUnMessageDeContact, expedier, type StockageDesDemandes } from '@/lib/contact/envoi-payload'
 import type { EtatDuMail, StatutDeDemande } from '@/lib/contact/etats'
 import { creerFreinsDeContact } from '@/lib/contact/frein'
 import type { MessageDeContact } from '@/lib/contact/message'
-import { type EmailAEnvoyer, EnvoiEmailEchoue, type EnvoyerEmail } from '@/lib/emails/envoi'
+import { AUCUN_RELAIS, type EmailAEnvoyer, EnvoiEmailEchoue, type EnvoyerEmail } from '@/lib/emails/envoi'
 
 /**
  * The contact message, server side, with doubles for the store and the mail door (tickets 158 and 159; plan 02
@@ -179,6 +179,29 @@ describe('I33 adapté : un email en panne ne perd pas le message', () => {
 		}
 		expect(await enregistrerUnMessageDeContact(entrees)).toEqual({ ok: true })
 		await b.termine()
+	})
+})
+
+describe('ticket 224 : sans relais d’envoi, le message n’est pas dit transmis', () => {
+	const sansRelais: EnvoyerEmail = async () => AUCUN_RELAIS
+
+	test('la porte signale qu’il n’y a pas de relais : la ligne reste en échec, jamais transmise, et le journal le dit', async () => {
+		const b = banc({ envoyer: sansRelais })
+		const resultat = await enregistrerUnMessageDeContact(b.entrees())
+		await b.termine()
+
+		expect(resultat).toEqual({ ok: true })
+		expect([...b.lignesDeLaBase.values()]).toEqual([{ message: MARQUEURS, etatMail: 'echec', statut: 'nouvelle' }])
+		expect(b.lignes.join('\n')).toContain('aucun relais')
+		for (const marqueur of Object.values(MARQUEURS)) expect(b.lignes.join('\n')).not.toContain(marqueur)
+	})
+
+	test('l’envoi de l’admin sans relais rend « echec » aussi, et rien n’est marqué envoyé', async () => {
+		const b = banc({ envoyer: sansRelais })
+		const etat = await expedier(1, MARQUEURS, { ...b.entrees(), stockage: b.entrees().stockage })
+
+		expect(etat).toBe('echec')
+		expect(b.evenements).not.toContain('marquer:envoye')
 	})
 })
 

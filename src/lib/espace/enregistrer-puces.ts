@@ -1,5 +1,5 @@
 import type { Payload } from 'payload'
-import { identifiantDuProfil, type UtilisateurDeLEspace } from './mon-profil'
+import { identifiantDuProfilAEcrire, type UtilisateurDeLEspace } from './mon-profil'
 import {
 	COMPETENCES,
 	dejaDansLaListe,
@@ -11,6 +11,7 @@ import {
 	type ValeursDesPuces,
 } from './puces'
 import { MESSAGE_ECHEC, type ResultatDEnregistrement } from './resultat'
+import { MESSAGE_PROFIL_VERROUILLE, ProfilVerrouille } from './verrou'
 
 type LigneStockee = { id?: string | null; nom?: string | null; description?: string | null }
 
@@ -40,7 +41,7 @@ async function enregistrerLesPuces(
 	const lue = lireLesPuces(sorte, saisie)
 	if (!lue.ok) return { ok: false, message: lue.message }
 	try {
-		const id = await identifiantDuProfil(payload, utilisateur)
+		const id = await identifiantDuProfilAEcrire(payload, utilisateur)
 		if (id === null) return { ok: false, message: MESSAGE_ECHEC }
 		const actuel = await payload.findByID({
 			collection: 'profils',
@@ -78,8 +79,9 @@ async function enregistrerLesPuces(
 		})
 		const puces: Puce[] = pucesDeLaListe((stocke[sorte.champ] ?? []) as LigneStockee[])
 		return { ok: true, valeurs: { puces } }
-	} catch {
-		return { ok: false, message: MESSAGE_ECHEC }
+	} catch (erreur) {
+		// A profile an admin has open (ticket 224) says so; anything else is the generic failure.
+		return { ok: false, message: erreur instanceof ProfilVerrouille ? MESSAGE_PROFIL_VERROUILLE : MESSAGE_ECHEC }
 	}
 }
 

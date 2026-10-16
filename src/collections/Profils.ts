@@ -24,6 +24,7 @@ import {
 import { GALERIE_MAX } from '../lib/medias'
 import {
 	consentementApres,
+	groupeVideSiNul,
 	LIBELLES_DES_SOURCES,
 	SOURCES_DU_CONSENTEMENT,
 	validerEmailDeContact,
@@ -359,6 +360,16 @@ export const Profils: CollectionConfig<'profils'> = {
 			name: 'reseaux',
 			label: 'Réseaux',
 			type: 'group',
+			// `null` empties the group (Payload stops with a 500 on it otherwise, ticket 224).
+			hooks: {
+				beforeValidate: [
+					({ value }) =>
+						groupeVideSiNul(
+							value,
+							RESEAUX.map(([name]) => name)
+						),
+				],
+			},
 			fields: RESEAUX.map(([name, label]) => ({ name, label, type: 'text' as const, validate: validerLienDeReseau })),
 		},
 		{
@@ -368,6 +379,7 @@ export const Profils: CollectionConfig<'profils'> = {
 			label: 'Coordonnées',
 			type: 'group',
 			access: { read: champDuProfilAdminOuProprietaire },
+			hooks: { beforeValidate: [({ value }) => groupeVideSiNul(value, ['telephone', 'email'])] },
 			admin: {
 				description: 'Fermées au public. La page du profil ne les montre que si « Coordonnées publiques » est cochée.',
 			},

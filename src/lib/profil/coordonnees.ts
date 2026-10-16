@@ -128,3 +128,13 @@ export function consentementApres({
 		sourceConsentement: donnees.sourceConsentement ?? 'import',
 	}
 }
+
+/**
+ * A group of the profile sent as `null` (a request that empties it): the group with every field
+ * empty. Payload stops with a 500 on a group that is `null` when it reads the fields inside, so
+ * the group hook turns it into this before. Anything else is returned as it came, for the checks
+ * of the fields to read. The signature of the body of a Payload `beforeValidate` of a group.
+ */
+export function groupeVideSiNul(valeur: unknown, champs: readonly string[]): unknown {
+	return valeur === null ? Object.fromEntries(champs.map(champ => [champ, null])) : valeur
+}

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { CONTEXTE_IMPORT } from '@/lib/contexte-import'
-import { creerEnvoiEmail, EnvoiEmailEchoue, type Journal, type MessageDuRelais } from '@/lib/emails/envoi'
+import { AUCUN_RELAIS, creerEnvoiEmail, EnvoiEmailEchoue, type Journal, type MessageDuRelais } from '@/lib/emails/envoi'
 import { composerEmail, EmailInvalide, lienAbsolu, PIED_DE_EMAIL } from '@/lib/emails/gabarit'
 import { adaptateurSansRelais, DELAI_DU_RELAIS_MS, optionsDeTransport } from '@/lib/emails/relais'
 
@@ -130,8 +130,9 @@ describe('le point d’envoi unique', () => {
 		const { journal, lignes } = journalEnregistre()
 		const envoyer = creerEnvoiEmail({ relais: undefined, journal })
 
-		await envoyer(email)
+		const issue = await envoyer(email)
 
+		expect(issue).toBe(AUCUN_RELAIS)
 		expect(lignes).toHaveLength(1)
 		expect(lignes.join('\n')).not.toContain(ADRESSE)
 		expect(lignes.join('\n')).not.toContain(JETON)

@@ -1,3 +1,5 @@
+import { MESSAGE_PROFIL_VERROUILLE, ProfilVerrouille } from './verrou'
+
 /**
  * What a save of the space gives back to the form (ticket 119): the values as the server stored
  * them, or a message in French (never the raw message of Payload), with the fields it is about.
@@ -55,6 +57,8 @@ export function echecDePayload<Champ extends string>(
 	 */
 	champDuChemin: string | ((chemin: string) => string) = ''
 ): { ok: false; message: string; champs?: Partial<Record<Champ, string>> } {
+	// An admin has her profile open: nothing was written, and the form keeps what she typed (ticket 224).
+	if (erreur instanceof ProfilVerrouille) return { ok: false, message: MESSAGE_PROFIL_VERROUILLE }
 	const versLeChamp =
 		typeof champDuChemin === 'string'
 			? (chemin: string) => (chemin.startsWith(champDuChemin) ? chemin.slice(champDuChemin.length) : '')

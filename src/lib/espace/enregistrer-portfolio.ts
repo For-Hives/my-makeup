@@ -1,6 +1,6 @@
 import type { Payload } from 'payload'
 import { MESSAGES_DES_PHOTOS, photosNommees } from '../profil/photos'
-import { identifiantDuProfil, type UtilisateurDeLEspace } from './mon-profil'
+import { identifiantDuProfilAEcrire, type UtilisateurDeLEspace } from './mon-profil'
 import { schemaDuPortfolio, type ValeursDuPortfolio } from './portfolio'
 import { echecDePayload, MESSAGE_ECHEC, type ResultatDEnregistrement } from './resultat'
 
@@ -31,7 +31,7 @@ export async function enregistrerPortfolio(
 		return message ? { ok: false, message, champs: { galerie: message } } : { ok: false, message: MESSAGE_ECHEC }
 	}
 	try {
-		const id = await identifiantDuProfil(payload, utilisateur)
+		const id = await identifiantDuProfilAEcrire(payload, utilisateur)
 		if (id === null) return { ok: false, message: MESSAGE_ECHEC }
 		const stocke = await payload.update({
 			collection: 'profils',

@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import {
 	consentementApres,
+	groupeVideSiNul,
 	MESSAGES_DES_COORDONNEES,
 	validerEmailDeContact,
 	validerLienDeReseau,
@@ -130,5 +131,15 @@ describe('La trace du consentement : posée par le serveur', () => {
 		expect(
 			consentementApres({ avant: undefined, donnees: { contactPublic: true }, compte: undefined, maintenant })
 		).toEqual({ consentiLe: maintenant.toISOString(), sourceConsentement: 'import' })
+	})
+})
+
+describe('Un groupe envoyé à null (ticket 224)', () => {
+	test('devient le groupe vide ; tout autre contenu est rendu tel quel', () => {
+		expect(groupeVideSiNul(null, ['telephone', 'email'])).toEqual({ telephone: null, email: null })
+		const groupe = { telephone: '06 39 98 12 34' }
+		expect(groupeVideSiNul(groupe, ['telephone', 'email'])).toBe(groupe)
+		expect(groupeVideSiNul(undefined, ['telephone'])).toBeUndefined()
+		expect(groupeVideSiNul('texte', ['telephone'])).toBe('texte')
 	})
 })
