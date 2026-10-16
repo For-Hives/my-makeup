@@ -1,6 +1,5 @@
 import { readFileSync } from 'node:fs'
 import { expect, test } from '@playwright/test'
-import { SITE_ORIGIN } from '../../src/lib/urls-gelees'
 import { poserLesProfilsDeRecherche } from '../fixtures/profils-de-recherche'
 import { creerContenu, rafraichirLesPagesDesProfils, supprimerContenu } from '../outils/pages-publiques'
 import {
@@ -34,6 +33,10 @@ const anciens: TitresDeLAncienSite = JSON.parse(
 	readFileSync(new URL('../fixtures/parite-urls-h1.json', import.meta.url), 'utf8')
 )
 
+// Every family of the inventory is delivered but `slug-inconnu` (ticket 228, constat 3): the 404 of an unknown
+// talent, article or profile is raised by `notFound()`, which Next sends as a stream, so the HTML of the server
+// has its 404 status, its title and its `noindex` but not the h1 of the 404 page. The fix needs the proxy to
+// know the slug; the day of the switch it is the one family that is not green.
 const LIVREES: ReadonlySet<string> = new Set([
 	'accueil',
 	'recherche',
@@ -61,29 +64,21 @@ const LIVREES: ReadonlySet<string> = new Set([
 	'sitemap',
 	'plan-du-site',
 	'pages-fixes',
+	'espace-connexion',
+	'espace-prive',
+	'espace-verification',
+	'espace-racine',
+	'espace-erreur',
+	'espace-google',
+	'mesure-script',
+	'mesure-envoi',
+	'mesure-autre',
 ])
 
 /**
- * Addresses of the family « pages-fixes » that are delivered before the whole family is: each one must be
- * green on its own (the family joins the list above when its last page is done).
- */
-const ADRESSES_LIVREES: readonly string[] = [
-	'/pourquoi-utiliser-my-makeup-en-tant-que-particulier',
-	'/particulier/trouver-une-maquilleuse',
-	'/particulier/centraliser-ses-recherches',
-	'/particulier/explorer-les-profils',
-	'/solutions/pour-les-particuliers',
-	'/a-propos',
-	'/maquilleuse/partenariats',
-	'/pourquoi-rejoindre-my-makeup-en-tant-que-maquilleuse',
-	'/solutions/pour-les-maquilleuses',
-	'/contact',
-]
-
-/**
  * The three legal pages (ticket 112). `/mentions-legales` is a family of its own and is in the list above;
- * `/cgu` and `/politique-de-confidentialite` belong to the family of the fixed pages, which is not
- * delivered yet: they are held green one by one here.
+ * `/cgu` and `/politique-de-confidentialite` belong to the family of the fixed pages, which is delivered:
+ * they are held green one by one here all the same, on a bench with the whole inventory.
  */
 const PAGES_JURIDIQUES = ['/mentions-legales', '/cgu', '/politique-de-confidentialite']
 
@@ -154,14 +149,6 @@ test('I45 : les adresses gelées répondent comme la table, avec le même h1', a
 		for (const { cas: unCas, resultat } of resultats)
 			if (resultat.etat === 'ecart') console.log(`I45 écart connu ${unCas.etiquette} : ${resultat.raison}`)
 		expect(lignes.flatMap(({ regressions }) => regressions)).toEqual([])
-		for (const adresse of privee ? [] : ADRESSES_LIVREES) {
-			const trouve = resultats.find(
-				({ cas: unCas }) =>
-					unCas.adresse === adresse || unCas.adresse.endsWith(`//${new URL(SITE_ORIGIN).host}${adresse}`)
-			)
-			expect(trouve, `${adresse} n'est pas dans les cas`).toBeDefined()
-			expect(trouve?.resultat, adresse).toMatchObject({ etat: 'vert' })
-		}
 		if (!privee)
 			for (const adresse of PAGES_JURIDIQUES) {
 				const trouve = resultats.find(({ cas: unCas }) => unCas.adresse === adresse)

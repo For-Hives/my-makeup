@@ -64,9 +64,9 @@ function readRegister(markdown: string): RegisterLine[] {
 const KEY = /^`[a-z0-9]+(?:-[a-z0-9]+)*`$/
 // A section of a plan, a dated decision or a ticket
 const SOURCE = /plan \d{2} §\d|\d{2}\/\d{2}\/\d{4}|ticket \d{3}/
-// A family of addresses, in backticks. The tools that compare the two sites read every one of
+// A family of addresses, in backticks: a path of the site, or an address on another host of the domain (`http`, `www`, `api`). The tools that compare the two sites read every one of
 // them in a « Pages touchées » cell as a page where a difference is expected.
-const ADDRESS = /`\/[^`]*`/
+const ADDRESS = /`(?:\/|https?:\/\/)[^`]*`/
 // « Aucune » said in full: the line touches no page
 const NO_PAGE = /^Aucune\b/
 // A remark about what does not change, which belongs in the cell before
@@ -247,6 +247,87 @@ describe('the register of intended changes', () => {
 
 	test('it holds no personal data', () => {
 		expect(personalData(register)).toEqual([])
+	})
+})
+
+const urls = readFileSync(path.join(docs, 'URLS.md'), 'utf8')
+
+type ChangedFamily = { id: string; addresses: string[] }
+
+/** The families of the table between the `urls:ecarts` marks of URLS.md: what the addresses of the old site stop answering. */
+function readChangedFamilies(markdown: string): ChangedFamily[] {
+	const block = /<!-- urls:ecarts:debut -->\n([\s\S]*?)\n<!-- urls:ecarts:fin -->/.exec(markdown)?.[1] ?? ''
+	return block
+		.split('\n')
+		.filter(row => row.startsWith('|') && !isSeparator(row))
+		.slice(1)
+		.map(row => {
+			const [family = '', addresses = ''] = splitRow(row)
+			return { id: family.replaceAll('`', ''), addresses: [...addresses.matchAll(/`([^`]+)`/g)].map(m => m[1] ?? '') }
+		})
+}
+
+/**
+ * The families of the table that no line of the register names: neither by the key of a line, nor by one of
+ * its addresses in the « Pages touchées » cell of a line.
+ */
+function familiesWithoutLine(changed: ChangedFamily[], registerLines: RegisterLine[]): string[] {
+	const pages = new Set(registerLines.flatMap(line => [...line.pages.matchAll(/`([^`]+)`/g)].map(m => m[1] ?? '')))
+	const keys = new Set(registerLines.map(line => line.key))
+	return changed
+		.filter(({ id, addresses }) => !keys.has(`\`${id}\``) && !addresses.some(address => pages.has(address)))
+		.map(({ id }) => id)
+}
+
+describe('the families of addresses that change, in URLS.md', () => {
+	const changed = readChangedFamilies(urls)
+
+	test('the table of URLS.md is read, with its eleven families', () => {
+		expect(changed.map(({ id }) => id)).toEqual([
+			'profil-non-repris',
+			'toutes-les-news',
+			'double-barre',
+			'http',
+			'www',
+			'ancienne-api',
+			'espace-racine',
+			'espace-erreur',
+			'espace-google',
+			'api-nextauth',
+			'api-sendmail',
+		])
+		for (const { id, addresses } of changed) expect(addresses.length, id).toBeGreaterThan(0)
+	})
+
+	test('every one of them is named by a line of the register', () => {
+		expect(familiesWithoutLine(changed, lines)).toEqual([])
+	})
+
+	test('a family that no line names is reported, by its key or by its addresses', () => {
+		const some = [
+			'| Repère | Avant | Dans la v3 | Source | Pages touchées |',
+			'|---|---|---|---|---|',
+			'| `par-ses-adresses` | a | b | ticket 033 | `/auth`, `/ailleurs` |',
+			'| `ancienne-api` | a | b | ticket 033 | `/autre` |',
+		].join('\n')
+		const families = [
+			{ id: 'espace-racine', addresses: ['/auth'] },
+			{ id: 'ancienne-api', addresses: ['https://api.my-makeup.fr/*'] },
+			{ id: 'espace-erreur', addresses: ['/auth/error'] },
+			{ id: 'sans-adresse', addresses: [] },
+		]
+		expect(familiesWithoutLine(families, readRegister(some))).toEqual(['espace-erreur', 'sans-adresse'])
+	})
+
+	test('an address is compared whole: « /auth/error/autre » does not name « /auth/error »', () => {
+		const only = readRegister(
+			[
+				'| Repère | Avant | Dans la v3 | Source | Pages touchées |',
+				'|---|---|---|---|---|',
+				'| `x` | a | b | ticket 033 | `/auth/error/autre` |',
+			].join('\n')
+		)
+		expect(familiesWithoutLine([{ id: 'espace-erreur', addresses: ['/auth/error'] }], only)).toEqual(['espace-erreur'])
 	})
 })
 

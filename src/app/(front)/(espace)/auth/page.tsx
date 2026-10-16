@@ -1,20 +1,14 @@
-import type { Metadata } from 'next'
-import Link from 'next/link'
+import { redirect } from 'next/navigation'
+import { maquilleuseConnectee } from '@/lib/auth/session'
 
-export const metadata: Metadata = {
-	title: 'Espace maquilleuse',
-}
+// Read per request: it depends on the session, and the build has no database.
+export const dynamic = 'force-dynamic'
 
-// Placeholder of the makeup artist's space: sign-in, sign-up and the profile editor come later.
-export default function AuthPage() {
-	return (
-		<main className="flex min-h-dvh flex-col items-center justify-center gap-4 p-6 text-center">
-			<h1 className="font-semibold text-4xl">Espace maquilleuse</h1>
-			<p>
-				<Link className="underline" href="/">
-					Retour à l’accueil
-				</Link>
-			</p>
-		</main>
-	)
+/**
+ * The bare address of the space (ticket 228, `espace-racine` of docs/migration/URLS.md): the server
+ * sends on, in one hop, to the space when a session is open and to the sign-in page otherwise. The
+ * current site showed an empty page that the browser then sent on.
+ */
+export default async function RacineDeLEspace() {
+	redirect((await maquilleuseConnectee()) ? '/auth/profil' : '/auth/signin')
 }
