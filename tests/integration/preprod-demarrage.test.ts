@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
+import { afterAll, beforeAll, describe, expect, setDefaultTimeout, test } from 'bun:test'
 import path from 'node:path'
 import type { Payload } from 'payload'
 import { importer } from '../../scripts/migration/import/importer'
@@ -19,6 +19,11 @@ import { DECISIONS_DU_BANC, referentielDuBanc } from '../outils/import'
 import { compterLesDocuments, exigerBanc, payloadDeTest, viderLaBase } from '../outils/payload-test'
 import { listerLesObjets, viderLeStockage } from '../outils/s3'
 import { creerLaSourceStrapi, effacerLaSourceStrapi, sourceDuBanc } from '../outils/source-strapi'
+
+// The bench is shared by every checkout of the machine, and a suite under load runs several times slower than alone:
+// the default 5 s is passed by the heaviest tests of this file (ticket 225). The delay bounds a call that hangs, it
+// is not a duration the test promises. A test that times out leaves its queries running into the next file.
+setDefaultTimeout(30_000)
 
 /**
  * Tickets 027 and 053: the start of the pre-production, on the bench. The task the application

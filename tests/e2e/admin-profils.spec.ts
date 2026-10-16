@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test'
 import { lirePhotoDuJeu, poserLeProfil } from '../../src/jeu-fictif/chargement'
 import { PROFILS_DU_JEU, type ProfilDuJeu } from '../../src/jeu-fictif/profils'
 import { creerCompte } from '../outils/fabrique-comptes'
+import { sansLeReseauDuDehors } from '../outils/hors-reseau'
 import { payloadDeTest } from '../outils/payload-test'
 
 /**
@@ -59,6 +60,7 @@ test.describe('L’admin retrouve, corrige et masque un profil', () => {
 		test.setTimeout(180_000)
 		const suffixe = unSuffixe()
 		await context.addCookies(await sessionDAdmin())
+		await sansLeReseauDuDehors(context)
 		try {
 			// A reference profile (publishable), an empty one and one active but not publishable.
 			await Promise.all(['reference', 'vide', 'actif-non-publiable'].map(cle => poserUnProfil(cle, suffixe)))

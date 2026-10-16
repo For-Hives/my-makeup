@@ -1,5 +1,6 @@
 import { type BrowserContext, expect, type Page, test } from '@playwright/test'
 import { creerCompte } from '../outils/fabrique-comptes'
+import { sansLeReseauDuDehors } from '../outils/hors-reseau'
 import { type Mail, mailsRecus } from '../outils/mailpit'
 import { payloadDeTest } from '../outils/payload-test'
 
@@ -139,6 +140,7 @@ test.describe('E53 : l’admin ouvre chaque collection sans erreur', () => {
 	test('aucune erreur de console ni réponse 500 sur les huit listes', async ({ context, page }) => {
 		test.setTimeout(90_000)
 		await ouvrirEnAdmin(context)
+		await sansLeReseauDuDehors(context)
 		const erreurs: string[] = []
 		page.on('pageerror', erreur => erreurs.push(`pageerror : ${erreur.message}`))
 		page.on('console', message => {

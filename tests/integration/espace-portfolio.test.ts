@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
+import { afterEach, beforeEach, describe, expect, setDefaultTimeout, test } from 'bun:test'
 import type { Payload } from 'payload'
 import sharp from 'sharp'
 import { serverEnv } from '@/lib/env'
@@ -16,6 +16,11 @@ import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
 import { appelerRest, formulaireAvecFichier } from '../outils/rest'
 import { lireUnObjet, viderLeStockage } from '../outils/s3'
+
+// The bench is shared by every checkout of the machine, and a suite under load runs several times slower than alone:
+// the default 5 s is passed by the heaviest tests of this file (ticket 225). The delay bounds a call that hangs, it
+// is not a duration the test promises. A test that times out leaves its queries running into the next file.
+setDefaultTimeout(30_000)
 
 /**
  * The portfolio from her space (tickets 135 and 136; plan 02 E34, E35, I25, U80, E36 on the server

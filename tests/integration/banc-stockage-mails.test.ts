@@ -157,7 +157,10 @@ describe('Le capteur de mails : lire ce que l’application a envoyé', () => {
 		const destinataire = adresseFictive('deux-mails')
 
 		await payload.sendEmail({ to: destinataire, subject: 'Premier', text: 'Un' })
+		// The second mail goes out once the first is in the catcher: the order never depends on the clock's resolution.
+		await attendreLeMail({ pour: destinataire, sujet: 'Premier' })
 		await payload.sendEmail({ to: destinataire, subject: 'Second', text: 'Deux' })
+		await attendreLeMail({ pour: destinataire, sujet: 'Second' })
 
 		expect((await mailsRecus(destinataire)).map(({ sujet }) => sujet)).toEqual(['Second', 'Premier'])
 		expect((await attendreLeMail({ pour: destinataire })).sujet).toBe('Second')

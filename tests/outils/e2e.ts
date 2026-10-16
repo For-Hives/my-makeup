@@ -23,6 +23,16 @@ import { type EnvironnementAdmis, lireEnvironnement, verifierCible } from './gar
 export const DOSSIER_DES_ESSAIS = './tests/e2e'
 export const MOTIF_DES_ESSAIS = '**/*.spec.ts'
 
+/**
+ * The one test that needs the bench to itself (ticket 225): the real import of the fake Strapi source empties the
+ * database, and refuses or counts in excess every account and slug another test wrote. It is a project of its own,
+ * `import-final`, which `bun run test:e2e` plays in a second run, when the first one (the two screen sizes) is over:
+ * Playwright's own way to order projects (`dependencies`) plays the whole suite again whenever a file is named,
+ * and puts every test of a shard in the first one.
+ */
+export const ESSAI_SEUL_SUR_LE_BANC = '**/tranche-profil-importe.spec.ts'
+export const PROJET_DE_L_ESSAI_SEUL = 'import-final'
+
 /** A test carries this tag to run at the phone width too. */
 export const ETIQUETTE_MOBILE = '@mobile'
 
@@ -40,6 +50,8 @@ export const DOSSIER_DU_RAPPORT = 'playwright-report'
 export const DOSSIER_DES_RESULTATS = 'test-results'
 /** Trace, video and screenshot of each failed test. Playwright empties this folder when a run starts. */
 export const DOSSIER_DES_TRACES = `${DOSSIER_DES_RESULTATS}/essais`
+/** The traces of the last run, the one that plays the test that has the bench to itself. */
+export const DOSSIER_DES_TRACES_FINALES = `${DOSSIER_DES_RESULTATS}/essais-final`
 /** The results of the last run, for the tools that read them. */
 export const FICHIER_DES_RESULTATS = `${DOSSIER_DES_RESULTATS}/resultats.json`
 
@@ -192,11 +204,21 @@ export function configurationDesEssais(variables: Variables = process.env): Play
 			screenshot: 'only-on-failure',
 		},
 		projects: [
-			{ name: 'chromium', use: { browserName: 'chromium', viewport: ECRANS.chromium } },
+			{
+				name: 'chromium',
+				testIgnore: ESSAI_SEUL_SUR_LE_BANC,
+				use: { browserName: 'chromium', viewport: ECRANS.chromium },
+			},
 			{
 				name: 'mobile',
 				grep: new RegExp(ETIQUETTE_MOBILE),
+				testIgnore: ESSAI_SEUL_SUR_LE_BANC,
 				use: { browserName: 'chromium', viewport: ECRANS.mobile, isMobile: true, hasTouch: true, deviceScaleFactor: 3 },
+			},
+			{
+				name: PROJET_DE_L_ESSAI_SEUL,
+				testMatch: ESSAI_SEUL_SUR_LE_BANC,
+				use: { browserName: 'chromium', viewport: ECRANS.chromium },
 			},
 		],
 	}
@@ -268,9 +290,52 @@ export function environnementDePlaywright(
 	}
 }
 
-/** The arguments of `playwright test`: what was asked for goes through as it is, a file like an option. */
-export function argumentsDePlaywright(demandes: readonly string[]): string[] {
-	return ['test', ...demandes]
+/** The two runs of a `bun run test:e2e`: the arguments of `playwright test` for each, or nothing for a run not asked for. */
+export interface PhasesDePlaywright {
+	/** Everything but the test that has the bench to itself, at the screen sizes asked for. */
+	principale?: string[]
+	/** That test, alone, once the first run is over. */
+	finale?: string[]
+}
+
+/**
+ * Splits what was asked for (`bun run test:e2e …`) into the two runs of `playwright test`. Everything goes through as
+ * it is, a file like an option (`--shard`, `--workers`, `-g`), except the projects, which each run takes for itself:
+ * the first one plays `chromium` and `mobile`, the second plays `import-final` (PROJET_DE_L_ESSAI_SEUL). Asked for
+ * nothing, both run; `--project=mobile` runs the first one only; `--project=import-final` the second one only.
+ *
+ * Each run passes when it finds no test: a file, a title or a shard that belongs to the other run leaves this one empty.
+ * The second one reads its results on screen and keeps its traces in a folder of its own, so that it does not erase the
+ * report and the traces of the first.
+ */
+export function phasesDePlaywright(demandes: readonly string[]): PhasesDePlaywright {
+	const projets: string[] = []
+	const reste: string[] = []
+	for (let i = 0; i < demandes.length; i += 1) {
+		const argument = demandes[i] ?? ''
+		if (argument.startsWith('--project=')) projets.push(argument.slice('--project='.length))
+		else if ((argument === '--project' || argument === '-p') && i + 1 < demandes.length)
+			projets.push(demandes[++i] ?? '')
+		else reste.push(argument)
+	}
+	const dEcran = projets.filter(projet => projet !== PROJET_DE_L_ESSAI_SEUL)
+	const principale = projets.length === 0 ? ['chromium', 'mobile'] : dEcran
+	const finale = projets.length === 0 || projets.includes(PROJET_DE_L_ESSAI_SEUL)
+	return {
+		...(principale.length > 0 && {
+			principale: ['test', ...reste, ...principale.map(projet => `--project=${projet}`), '--pass-with-no-tests'],
+		}),
+		...(finale && {
+			finale: [
+				'test',
+				...reste,
+				`--project=${PROJET_DE_L_ESSAI_SEUL}`,
+				'--pass-with-no-tests',
+				'--reporter=list',
+				`--output=${DOSSIER_DES_TRACES_FINALES}`,
+			],
+		}),
+	}
 }
 
 /**

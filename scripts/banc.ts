@@ -209,6 +209,36 @@ export async function effacerLeSchema({ services: { base } }: Banc): Promise<voi
 }
 
 /**
+ * Empties what lives next to the database and outlasts it: the mails of the catcher, the objects of the
+ * storage, and the fake Strapi source. An integration run leaves them behind, and a run of the end-to-end
+ * tests that starts on an empty database would still find them: mails and photos of accounts that no longer
+ * exist, files under the fixed names the set gives its photos (ticket 225). The fake Umami and the fake
+ * Google keep no state a test reads whole.
+ */
+export async function viderCeQueLaBaseNeContientPas({ instance, environnement }: Banc): Promise<void> {
+	const variables = {
+		...environnement,
+		BANC_INSTANCE: instance.nom,
+		BANC_DECALAGE: String(instance.decalage),
+	}
+	const [
+		{ stockageDuBanc, viderLeStockage },
+		{ capteurDuBanc, viderLeCapteur },
+		{ effacerLaSourceStrapi, sourceDuBanc },
+	] = await Promise.all([
+		import('../tests/outils/s3'),
+		import('../tests/outils/mailpit'),
+		import('../tests/outils/source-strapi'),
+	])
+	// The source first: erasing it deletes the objects it named, the storage is then emptied whole.
+	await effacerLaSourceStrapi(sourceDuBanc(variables, environnement))
+	await Promise.all([
+		viderLeStockage({ stockage: stockageDuBanc(variables) }),
+		viderLeCapteur({ capteur: capteurDuBanc(variables) }),
+	])
+}
+
+/**
  * Rebuilds the bench database as the pre-production and the production build theirs: dropped,
  * then the versioned migrations of `src/migrations/` played on the empty database (ticket 049).
  * Then refuses, with what to do, a database the migrations did not build as the collections of

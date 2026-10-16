@@ -177,9 +177,13 @@ test.describe('Plan du site (ticket 114)', () => {
 				expect(liens).toContain(`/talent/${talent}`)
 				expect(liens).toContain(`/blog/${publie}`)
 				expect(liens).not.toContain(`/blog/${brouillon}`)
-				// Every profile of the sitemap is linked from the plan, and the other way round.
+				// The sitemap and the plan agree on the profiles of this file, one way and the other. Not on every profile
+				// of the bench: other tests publish and hide theirs while this one reads the two pages one after the other.
 				const profilsDuSitemap = sitemap.filter(chemin => chemin.startsWith('/profil/'))
-				expect(liens.filter(href => href.startsWith('/profil/')).sort()).toEqual(profilsDuSitemap.sort())
+				const sesProfils = etat.map(({ slug }) => `/profil/${slug}`)
+				expect(sesProfils.filter(chemin => liens.includes(chemin)).sort()).toEqual(
+					sesProfils.filter(chemin => profilsDuSitemap.includes(chemin)).sort()
+				)
 
 				// Every link answers 200, with no redirection.
 				for (const chemin of new Set(chemins)) {

@@ -1,9 +1,14 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'bun:test'
+import { afterAll, beforeAll, beforeEach, describe, expect, setDefaultTimeout, test } from 'bun:test'
 import { oublierLesDocuments } from '@/lib/auth/google/oidc'
 import { creerCompte, type TypeDeCompte } from '../outils/fabrique-comptes'
 import { viderLeCapteur } from '../outils/mailpit'
 import { CHOIX, choisirUnMotDePasse, connecterParGoogle, demanderLeLien, seConnecter } from '../outils/parcours-herites'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
+
+// The bench is shared by every checkout of the machine, and a suite under load runs several times slower than alone:
+// the default 5 s is passed by the heaviest tests of this file (ticket 225). The delay bounds a call that hangs, it
+// is not a duration the test promises. A test that times out leaves its queries running into the next file.
+setDefaultTimeout(30_000)
 
 /**
  * Ticket 093 (plan 02 E74, in its integration half): an account that holds no password of its own,

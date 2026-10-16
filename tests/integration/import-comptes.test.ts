@@ -1,4 +1,4 @@
-import { afterAll, beforeEach, describe, expect, test } from 'bun:test'
+import { afterAll, beforeEach, describe, expect, setDefaultTimeout, test } from 'bun:test'
 import { randomBytes } from 'node:crypto'
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -18,6 +18,11 @@ import {
 } from '../outils/source-strapi'
 import { definitionDeLaSource } from '../outils/source-strapi/donnees'
 import { HASH_BCRYPT_COMPLET } from '../outils/source-strapi/inventaire'
+
+// The bench is shared by every checkout of the machine, and a suite under load runs several times slower than alone:
+// the default 5 s is passed by the heaviest tests of this file (ticket 225). The delay bounds a call that hangs, it
+// is not a duration the test promises. A test that times out leaves its queries running into the next file.
+setDefaultTimeout(30_000)
 
 /**
  * Ticket 025: the accounts of the makeup artists are taken with their bcrypt hash, copied from base

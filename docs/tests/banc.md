@@ -108,6 +108,14 @@ Conséquence : **lancer les tests d'intégration vide le banc**. Les données qu
 
 `bun run test` ne lance que les tests unitaires : il n'a pas besoin du banc.
 
+### Les délais, la charge et la remise à zéro de la base (ticket 225)
+
+- **Un délai de 5 secondes est celui de bun par défaut, et il ne suffit pas sous charge.** Sur un poste qui fait tourner plusieurs bancs ou plusieurs agents à la fois (charge de 20 à 30 relevée le 16/10/2026), la suite complète a vu 20 tests dépasser 5 secondes. Un test qui expire laisse ses requêtes tourner : elles passent dans le fichier suivant, et le `TRUNCATE` de celui-ci tombe sur un interblocage (`deadlock detected`), d'où les rouges en cascade.
+- **Les fichiers lourds portent donc un délai explicite**, en tête de fichier : `setDefaultTimeout(30_000)` (il ne vaut que pour ce fichier, et pour ses crochets). Les fichiers concernés : les comptes (`banc-comptes-types`, `auth-comptes-sans-mot-de-passe`, `espace-suppression`, `admin-suppression-compte`), les médias (`espace-portfolio`, `espace-photo`, `envoi-photo`, `rapprochement`) et l'import et la préprod (`import-comptes`, `import-talents`, `revalidation`, `preprod-demarrage`). Le délai borne un appel qui se bloque ; il n'est pas une durée que le test promet. Un test qui promet une durée l'écrit dans son `expect` (le « moins de 5 secondes » de `banc-comptes-types.test.ts`).
+- **Un test qui vide la base attend la fin de son `TRUNCATE`** (`await viderLaBase()`, dans le test ou dans `afterEach`) avant de rendre la main : aucune requête ne doit lui survivre. `viderLaBase` n'est jamais lancée sans `await`, ni dans un `Promise.all` avec d'autres requêtes de la même base.
+- **Un test d'ordre n'attend pas l'horloge.** Deux mails envoyés au même instant peuvent porter la même date : un test qui veut « le plus récent d'abord » attend le premier mail dans le capteur avant d'envoyer le second (`banc-stockage-mails.test.ts`).
+- **Aucun test n'est sauté selon la commande.** `import-puis-connexion.test.ts` (ticket 095) fait partie de la suite complète : il vide la base, le capteur et le stockage avant et après, comme les autres essais de l'import, et crée puis efface sa source.
+
 ## Écrire un test d'intégration
 
 Le fichier se range dans `tests/integration/`, en `*.test.ts`.

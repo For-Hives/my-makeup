@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
+import { afterEach, beforeEach, describe, expect, setDefaultTimeout, test } from 'bun:test'
 import { MESSAGE_PANNE_DU_STOCKAGE } from '@/collections/corbeille'
 import type { Media } from '@/payload-types'
 import { type Espion, espionnerLeStockage, suppressionsSansCorbeille } from '../outils/espion-s3'
@@ -7,6 +7,11 @@ import { payloadDeTest, viderLaBase } from '../outils/payload-test'
 import { fichierPourFormulaire } from '../outils/photos'
 import { appelerRest, formulaireAvecFichier } from '../outils/rest'
 import { lireUnObjet, listerLesObjets, viderLeStockage } from '../outils/s3'
+
+// The bench is shared by every checkout of the machine, and a suite under load runs several times slower than alone:
+// the default 5 s is passed by the heaviest tests of this file (ticket 225). The delay bounds a call that hangs, it
+// is not a duration the test promises. A test that times out leaves its queries running into the next file.
+setDefaultTimeout(30_000)
 
 /**
  * The admin deletes the account of a makeup artist (ticket 167; plan 02 I37): the same result as

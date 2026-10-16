@@ -42,13 +42,14 @@ Mesuré le 14/10/2026 sur un poste de développement : 21 secondes pour les 8 es
 ## Ce que fait un lancement
 
 1. Il refuse de partir si la cible n'est pas l'application du banc, si le banc ne répond pas, ou si le port de l'application est déjà pris. Chaque refus dit quoi faire.
-2. Il vide la base du banc : l'application la reconstruira par ses migrations.
+2. Il vide la base du banc : l'application la reconstruira par ses migrations. Il vide aussi ce qui vit à côté d'elle et qu'un lancement précédent a pu laisser, les tests d'intégration surtout : le capteur de mails, le stockage d'objets et la fausse base Strapi (ticket 225). Un essai part ainsi du même état que le banc ait servi ou non, sans « réinitialiser à la main » après `bun run test:integration`.
 3. Il construit l'application pour la production (`bun run build`), sans base, sans secret et sans fichier `.env`, comme en CI.
 4. Il lance Playwright, qui :
    - démarre l'application par `bun run start`, sur `127.0.0.1` et sur le port du banc, et attend que `/api/health` réponde ;
    - vérifie de nouveau la cible, puis que l'application est saine, et que sa base est celle des migrations, conforme au code et sans trace de poussée (préparation globale, `tests/outils/serveur-e2e.ts`, voir ci-dessous) ;
    - lance les essais ;
    - arrête l'application, même si un essai échoue, et même sur un Ctrl+C.
+5. Il le lance **deux fois**, l'une après l'autre (`phasesDePlaywright`, `tests/outils/e2e.ts`) : d'abord tous les essais aux deux tailles, puis, seul, l'import réel de la fausse base Strapi (`tranche-profil-importe.spec.ts`, projet `import-final`). Le second passage joue même quand le premier a échoué. Pourquoi : cet essai vide la base et le stockage avant d'importer, parce que l'import refuse les adresses du jeu du banc (`zoe-lefevre`, `ines-morel`) et compte « en trop » tout compte qui porte un identifiant de l'ancien site sans venir de la source (les comptes du jeu, ceux des essais de la connexion Google) : aucun autre essai ne peut tourner à côté. Les options passent aux deux passages (`--shard`, `--workers`, un fichier, `-g`), un passage qui ne trouve aucun essai réussit ; `--project=mobile` ne joue que le premier, `--project=import-final` que le second. Les traces du second passage sont dans `test-results/essais-final/` et ses résultats sur l'écran : il n'efface ni le rapport ni les traces du premier. (Les dépendances de projets de Playwright n'y suffisent pas : un fichier demandé rejouerait toute la suite, et un lot de la CI recevrait tous les essais.)
 
 L'application des essais ne lit aucun fichier `.env`, ni au build ni au démarrage : elle ne reçoit que l'environnement du banc (`.env.test`). Ce qu'un `.env` de travail contient ne l'atteint jamais.
 
@@ -89,6 +90,7 @@ Règles :
 - **`@lent`** marque un essai qui attend une vraie durée (une session de 8 s qui finit d'elle-même, E13). Aucune configuration ne le filtre encore : il tourne avec les autres, et le ticket de la CI nocturne décidera de le séparer.
 - **L'administration est écrite par Payload**, en français (ticket 221) : on y trouve un élément par son adresse (`a[href="/admin/account"]`) ou par une donnée du compte, pas par un libellé.
 - **Aucune donnée réelle** : les comptes sont en `@example.test`, comme partout dans les tests.
+- **Un essai ne lit que ses propres données** (ticket 225). Tous les essais partagent le même banc et tournent en même temps : un essai ne compte jamais ce que le banc contient en tout (les mails du capteur, les profils d'une ville, les résultats d'un mot, les comptes d'une collection). Il crée ce qu'il lit sous un préfixe unique par essai (`crypto.randomUUID()`), lit les mails de l'adresse de sa personne fictive (`mailsRecus(email)`, `attendreLeMail`), et cherche un mot ou une commune que seuls ses profils portent. Il ne vide jamais un service partagé (capteur de mails, stockage, base).
 
 Les deux fichiers du ticket 013 servent d'exemples : `coquille.spec.ts` (l'accueil, puis l'administration avec une session de la fabrique, et sans session) et `a11y.spec.ts`.
 
@@ -148,7 +150,8 @@ bun run test:e2e tests/e2e/parite-urls.spec.ts
 |---|---|
 | Trace (chaque action, le réseau, la page à chaque étape), vidéo et capture de l'essai en échec | `test-results/essais/<essai>/` : `trace.zip`, `video.webm`, `test-failed-1.png` |
 | Le rapport complet, traces et vidéos comprises | `playwright-report/`, à ouvrir par `bunx playwright show-report playwright-report` |
-| Les résultats, pour un outil | `test-results/resultats.json` |
+| Les résultats, pour un outil | `test-results/resultats.json` (premier passage) |
+| L'essai de l'import réel, joué seul à la fin | `test-results/essais-final/` ; ses résultats sont sur l'écran |
 | Ce que l'application a écrit | Dans la sortie du lancement, sur les lignes qui commencent par `[WebServer]` |
 
 Une trace s'ouvre par `bunx playwright show-trace`, suivi du chemin de son `trace.zip`.
@@ -191,4 +194,23 @@ bun run test:e2e --shard=1/4                   # son quart des essais ; les autr
 - **`localhost` n'est pas `127.0.0.1`.** Le cookie de session vaut pour l'adresse exacte de l'application, `http://localhost:<port>` : un essai qui ouvrirait `127.0.0.1` y serait déconnecté.
 - **`.next/` contient ensuite le build des essais**, construit sans l'adresse du site. Avant un `bun run start` à toi, relance `bun run build`.
 - **Le Payload des essais régénère `src/payload-types.ts`** quand une collection a changé, comme dans les tests d'intégration. Un fichier modifié après un lancement veut dire que `bun run payload:types` n'a pas été lancé.
-- **L'administration charge un avatar depuis gravatar.com**, avec l'empreinte d'une adresse fictive. Sur l'accueil et l'administration, c'est la seule adresse hors du poste que le navigateur contacte (relevé du 14/10/2026). Les tickets de l'administration la retirent.
+- **L'administration charge un avatar depuis gravatar.com**, avec l'empreinte d'une adresse fictive. Sur l'accueil et l'administration, c'est la seule adresse hors du poste que le navigateur contacte (relevé du 14/10/2026). Les tickets de l'administration la retirent. Un essai qui compte les erreurs de la console de l'administration appelle `sansLeReseauDuDehors(context)` (`tests/outils/hors-reseau.ts`) : toute requête qui sort du poste reçoit une image vide, et le réseau ne peut pas le rendre rouge (relevé du 16/10 : `net::ERR_NETWORK_CHANGED` pendant un passage complet).
+
+## Passe seul, échoue en série : les causes relevées (ticket 225)
+
+Relevé du 16/10/2026, sur `0833b85` : chaque cause a été trouvée, puis corrigée dans l'essai ou dans l'outillage, jamais par une relance, une attente fixe ou un délai allongé seul.
+
+| Essai | Cause | Correction |
+|---|---|---|
+| Import de la tranche | Le jeu du banc tient les slugs `zoe-lefevre` et `ines-morel` : l'import refuse les profils 21 et 23, et il compte « en trop » les comptes 900001 à 900004 (et ceux que d'autres essais créent avec un identifiant de l'ancien site) : sortie 4 | Un passage à part, seul, qui vide la base et le stockage avant d'importer (voir « Ce que fait un lancement », point 5) |
+| E07, connexion Google | `compterLesMails()` comptait tous les mails du capteur, et `beforeEach` le vidait : un mail d'un essai voisin le rendait rouge | L'essai lit les mails de l'adresse de sa personne fictive (`mailsRecus`) et ne vide plus le capteur |
+| E39, profil masqué, recherche par ville | Les listes sont coupées à 20 résultats et leur nombre bouge avec les profils des autres essais (le jeu, la fabrique, les essais de l'espace) : une maquilleuse d'essai passait en page 2, un titre comptait des profils d'autres essais | Les profils d'essai de la recherche portent un mot à eux dans leur spécialité (`MOT_DES_ESSAIS`, `tests/fixtures/profils-de-recherche.ts`) : chaque recherche le tape avec son mot ou sa ville, et ne trouve que ces profils |
+| Premier passage après les tests d'intégration | Ils laissent des mails, des photos aux noms du jeu et la fausse source Strapi : la base est vidée, ces restes non | Le lancement les vide aussi (point 2 de « Ce que fait un lancement ») |
+| Admin, filtre « sans profil » (`admin-comptes.spec.ts`) | Vu au passage complet : avec plus de 20 profils dans le banc, le panneau ignorait le filtre. Son lien écrivait un paramètre par propriétaire (`[0]` à `[n]`), et `qs` transforme en objet toute liste de plus de 20 entrées. C'était un défaut du site, pas de l'essai | Le lien écrit une seule valeur à virgules (`where[id][not_in]=3,7`) : `src/lib/compte/filtres-admin.ts` |
+
+| Admin, erreurs de console (`admin-comptes`, `admin-profils`, `admin-messages-contact`) | Le panneau demande l'avatar de gravatar.com : un changement de réseau du poste pendant le passage (`net::ERR_NETWORK_CHANGED`) devenait une erreur de console, donc un rouge qui n'est pas celui du site | Les trois essais répondent eux-mêmes à toute requête qui sort du poste (`sansLeReseauDuDehors`) |
+| Plan du site en mobile (`sitemap.spec.ts`) | Il lisait la page du plan, puis le sitemap, et exigeait les mêmes profils sur les deux, tous ceux du banc : `profil-public.spec.ts` publie et masque ses propres profils entre les deux lectures (vu : `page-juliet` dans le sitemap, pas dans le plan) | Les deux pages doivent s'accorder sur les profils de ce fichier, dans un sens et dans l'autre ; les profils des autres essais ne comptent pas |
+
+Le deuxième passage de `bun run test:e2e` redémarre l'application et vide de nouveau le cache de données du disque : il n'y retrouve pas les pages que le premier passage y a laissées (la fiche `zoe-lefevre` du jeu, par exemple).
+
+Les autres essais vus intermittents (accueil E02, réseaux U28 en mobile, mesure Umami, `jeu-du-banc`) sont verts aux deux passages complets du 16/10 : aucune cause de leur côté à corriger, ils ne sont pas touchés.

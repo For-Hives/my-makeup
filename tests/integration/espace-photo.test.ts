@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
+import { afterEach, beforeEach, describe, expect, setDefaultTimeout, test } from 'bun:test'
 import type { Payload } from 'payload'
 import { enregistrerPhotoPrincipale } from '@/lib/espace/enregistrer-photo'
 import type { UtilisateurDeLEspace } from '@/lib/espace/mon-profil'
@@ -14,6 +14,11 @@ import { payloadDeTest, viderLaBase } from '../outils/payload-test'
 import { fichierPourFormulaire } from '../outils/photos'
 import { appelerRest, formulaireAvecFichier } from '../outils/rest'
 import { lireUnObjet, listerLesObjets, viderLeStockage } from '../outils/s3'
+
+// The bench is shared by every checkout of the machine, and a suite under load runs several times slower than alone:
+// the default 5 s is passed by the heaviest tests of this file (ticket 225). The delay bounds a call that hangs, it
+// is not a duration the test promises. A test that times out leaves its queries running into the next file.
+setDefaultTimeout(30_000)
 
 /**
  * The main photo chosen from her space (ticket 134; plan 02 I24, U03, E36 on the server side): the

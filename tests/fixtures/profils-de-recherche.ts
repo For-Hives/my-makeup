@@ -19,6 +19,13 @@ import { sousVerrou } from '../outils/verrou'
 /** The type of the set that is left out: its long names say nothing about the search. */
 const ECARTE = 'textes-maximaux'
 
+/**
+ * The word only these profiles carry (in their speciality). A search for it, alone or with another word and a
+ * city, finds exactly these profiles whatever the other tests write into the shared bench: the total of a
+ * search by « mariage » or « Annecy » moves with them, and pushes a profile onto another page of 20.
+ */
+export const MOT_DES_ESSAIS = 'Quasarium'
+
 /** The surname of each type: what its card shows after « Essai ». */
 const NOMS: Readonly<Record<string, string>> = {
 	reference: 'Alpha',
@@ -43,7 +50,12 @@ function variante(type: ProfilDuJeu): ProfilDuJeu {
 		...type,
 		cle: `essai-${type.cle}`,
 		compte: { email: `essai-recherche-${type.cle}@example.test`, nom: `Essai ${nom}` },
-		profil: { ...type.profil, ...identite },
+		profil: {
+			...type.profil,
+			...identite,
+			// Only a type that has a speciality gets the word: adding one would change what the profile lacks.
+			...(type.profil.specialite ? { specialite: `${type.profil.specialite} ${MOT_DES_ESSAIS}` } : {}),
+		},
 		photos: { principale: type.photos.principale, galerie: [] },
 	}
 }
