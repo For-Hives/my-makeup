@@ -1,4 +1,4 @@
-import { afterAll, afterEach, describe, expect, test } from 'bun:test'
+import { afterAll, afterEach, describe, expect, setDefaultTimeout, test } from 'bun:test'
 import type { CollectionSlug } from 'payload'
 import { CONTEXTE_IMPORT } from '@/lib/contexte-import'
 import type { Profil } from '@/payload-types'
@@ -9,6 +9,11 @@ import { compterLesMails, viderLeCapteur } from '../outils/mailpit'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
 import { appelerRest } from '../outils/rest'
 import { creerLaSourceStrapi, effacerLaSourceStrapi } from '../outils/source-strapi'
+
+// The bench is shared by every checkout of the machine, and a suite under load runs several times slower than alone:
+// the default 5 s is passed by the heaviest tests of this file (ticket 225). The delay bounds a call that hangs, it
+// is not a duration the test promises. A test that times out leaves its queries running into the next file.
+setDefaultTimeout(30_000)
 
 /**
  * Ticket 047, plan 02 I21: a publication or a change refreshes the public pages that show the
