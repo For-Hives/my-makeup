@@ -375,7 +375,7 @@ L'application vérifie ses variables à chaque démarrage (`bun run dev`, `bun r
 - La migration `init` porte tout le schéma (ticket 049) : démarrée en production sur une base vide, l'application crée ses tables à son premier appel (voir « Image Docker »). Tout changement de collection vient ensuite avec sa propre migration, dans le même commit : la CI le vérifie (`bun run schema:derive`, voir `docs/qualite.md`, « La dérive de schéma »). Après `bun run payload:migrate:create`, passer `bun run check` : Biome remet en forme les fichiers écrits par Payload.
 - Le banc de test ne pousse pas le schéma : sa base est construite par les migrations seules, et ses tests refusent de tourner sur une base que les migrations ne construisent pas comme le code la décrit (voir `docs/tests/banc.md`, « Préparer la base du banc »).
 - Hors de ce poste, une base qui n'existe pas est une erreur : Payload ne la crée pas.
-- Chaque processus ouvre 5 connexions au plus.
+- Chaque processus ouvre 5 connexions au plus. Une requête qui n'obtient pas de connexion en 5 secondes échoue avec une erreur au lieu d'attendre pour toujours (`src/lib/pool-base.ts`, ticket 222).
 
 ### Connexion et frein
 
