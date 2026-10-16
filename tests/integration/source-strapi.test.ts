@@ -193,6 +193,80 @@ describe('Critère 3 : la source s’ouvre par un rôle en lecture seule, et une
 	})
 })
 
+describe('Le rôle en lecture seule ne crée pas de grand objet, et son verrou se remet à zéro (ticket 227)', () => {
+	/** As the owner of the bench, the only one who may write into the source or change the role. */
+	async function avecLeProprietaire<T>(adresse: string, travail: (sql: SQL) => Promise<T>): Promise<T> {
+		const sql = new SQL({ url: adresse, max: 1 })
+		try {
+			return await travail(sql)
+		} finally {
+			await sql.close()
+		}
+	}
+
+	test('même en levant sa lecture seule, le rôle ne crée aucun grand objet : droit refusé (42501)', async () => {
+		await creerLaSourceStrapi()
+		const avant = await empreinteDeLaSource()
+		const sql = lecture()
+		await sql.unsafe('SET default_transaction_read_only = off')
+		const essais = {
+			lo_create: 'SELECT lo_create(0)',
+			lo_creat: 'SELECT lo_creat(-1)',
+			lo_from_bytea: "SELECT lo_from_bytea(0, 'contenu'::bytea)",
+		}
+		const refus: Record<string, string> = {}
+		for (const [essai, requete] of Object.entries(essais)) refus[essai] = await codeDuRefus(sql.unsafe(requete))
+
+		expect(refus).toEqual({ lo_create: '42501', lo_creat: '42501', lo_from_bytea: '42501' })
+		const [ligne] = await sql.unsafe('SELECT count(*)::int AS n FROM pg_largeobject_metadata')
+		expect(ligne?.n).toBe(0)
+		expect((await empreinteDeLaSource()).empreinte).toBe(avant.empreinte)
+	})
+
+	test('l’empreinte compte les grands objets : un objet créé par le propriétaire la change, une nouvelle création la rend', async () => {
+		await creerLaSourceStrapi()
+		const avant = await empreinteDeLaSource()
+		expect(avant.grandsObjets.nombre).toBe(0)
+
+		await avecLeProprietaire(source.administration, sql => sql.unsafe('SELECT lo_create(0)'))
+		const apres = await empreinteDeLaSource()
+
+		expect(apres.grandsObjets.nombre).toBe(1)
+		expect(apres.empreinte).not.toBe(avant.empreinte)
+		// The tables did not move: only the large object did.
+		expect(apres.tables).toEqual(avant.tables)
+		await creerLaSourceStrapi()
+		expect((await empreinteDeLaSource()).empreinte).toBe(avant.empreinte)
+	}, 60_000)
+
+	test('ce que le rôle a réglé lui-même ne survit pas à une nouvelle création de la source', async () => {
+		await creerLaSourceStrapi()
+		const sql = lecture()
+		await sql.unsafe('SET default_transaction_read_only = off')
+		// The role can lift its own lock for good, set its parameters, and change its password.
+		await sql.unsafe(`ALTER ROLE ${source.role} IN DATABASE ${source.base} SET default_transaction_read_only = off`)
+		await sql.unsafe(`ALTER ROLE ${source.role} SET work_mem = '1MB'`)
+		await sql.unsafe(`ALTER ROLE ${source.role} SET statement_timeout = '1ms'`)
+		await sql.unsafe(`ALTER ROLE ${source.role} PASSWORD 'un-autre-mot-de-passe-factice'`)
+
+		await creerLaSourceStrapi()
+
+		const reglages = await avecLeProprietaire(source.maintenance, sql =>
+			sql.unsafe(
+				`SELECT d.datname AS base, s.setconfig AS reglages FROM pg_db_role_setting s
+				LEFT JOIN pg_database d ON d.oid = s.setdatabase
+				WHERE s.setrole = (SELECT oid FROM pg_roles WHERE rolname = $1)`,
+				[source.role]
+			)
+		)
+		// Nothing role-wide is left, and the database holds the lock again, and only it.
+		expect(reglages.map(({ base }: { base: string | null }) => base)).toEqual([source.base])
+		expect(reglages[0]?.reglages).toEqual(['default_transaction_read_only=on'])
+		const lignes = await lecture().unsafe('SHOW default_transaction_read_only')
+		expect(lignes[0]?.default_transaction_read_only).toBe('on')
+	}, 60_000)
+})
+
 describe('Critère 4 : trois comptes ont un mot de passe de fixture connu et un hash bcrypt', () => {
 	test('les trois hash sont complets, au format de Strapi, et s’ouvrent avec leur mot de passe de fixture', async () => {
 		await creerLaSourceStrapi()

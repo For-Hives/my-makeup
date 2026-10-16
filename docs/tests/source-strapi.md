@@ -61,9 +61,12 @@ Chaque outil s'arrête avant d'ouvrir quoi que ce soit si `DATABASE_URI`, `STRAP
 L'import lit la source par un rôle qui ne peut rien y écrire (SCHEMA.md, règle 7). Sur le banc, ce rôle est `lecture_strapi` :
 
 - il a le droit de se connecter à la base de la source et de lire ses tables, rien d'autre : ni insertion, ni modification, ni suppression, ni vidage, ni création de table, ni table temporaire, ni compteur ;
-- chacune de ses transactions commence en lecture seule (`default_transaction_read_only`). Même s'il la remet en écriture, il n'a aucun droit d'écrire.
+- chacune de ses transactions commence en lecture seule (`default_transaction_read_only`). Même s'il la remet en écriture, il n'a aucun droit d'écrire dans les seize tables ;
+- il ne crée aucun grand objet : `lo_create`, `lo_creat`, `lo_from_bytea` et les deux `lo_import` sont retirés à tout le monde, sauf au propriétaire, dans la base de la source (ticket 227). Un grand objet vit hors des tables ; sans ce retrait, un rôle qui lève sa lecture seule pourrait en créer que l'empreinte des tables ne verrait pas.
 
-Toute écriture échoue avec une erreur de PostgreSQL (`42501`, droit refusé, ou `25006`, transaction en lecture seule). Le test d'intégration essaie chacune.
+Toute écriture dans une table échoue avec une erreur de PostgreSQL (`42501`, droit refusé, ou `25006`, transaction en lecture seule) ; la création d'un grand objet échoue en `42501`, même après `SET default_transaction_read_only = off`. Le test d'intégration essaie chacune.
+
+**Ce que le rôle peut encore faire, et que la source ne peut pas lui interdire.** Un rôle PostgreSQL règle ses propres paramètres : il peut lever son verrou pour de bon (`ALTER ROLE … IN DATABASE … SET default_transaction_read_only = off`, une fois la lecture seule levée dans sa session), poser d'autres paramètres (`work_mem`, `statement_timeout`…) et changer son mot de passe. Aucune de ces trois actions ne lui donne un droit d'écrire dans une table, mais elles changent le rôle, pas les données. `bun run banc:source` les remet à zéro à chaque création de la source : la base est recréée avec son verrou, le rôle est remis à zéro (`ALTER ROLE … RESET ALL`), son mot de passe est réécrit. C'est donc le seul geste qui garantit un rôle intact ; l'empreinte, elle, voit les tables, les objets du stockage et les grands objets (`pg_largeobject_metadata`), pas les réglages du rôle.
 
 ## Les trois comptes de fixture
 
@@ -81,7 +84,8 @@ L'empreinte dit si la source a changé. Elle couvre :
 
 - le schéma : chaque table du schéma `public`, celles que la source n'a pas créées comprises, avec ses colonnes et leurs types ;
 - chaque ligne de chaque table, toutes colonnes comprises : PostgreSQL la sérialise et la hache lui-même, aucune valeur n'en sort ;
-- chaque objet que nomment les fichiers, originaux et formats dérivés : son contenu et son type, ou son absence.
+- chaque objet que nomment les fichiers, originaux et formats dérivés : son contenu et son type, ou son absence ;
+- les grands objets de la base (`pg_largeobject_metadata`, ticket 227) : leur nombre, leurs identifiants et leur propriétaire. Ils vivent hors des tables, d'où cette ligne à part.
 
 Elle se calcule par le rôle en lecture seule et n'écrit rien. Recréer la source redonne la même empreinte ; changer une ligne ou un objet la change.
 

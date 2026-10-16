@@ -224,6 +224,8 @@ export interface EmpreinteDeLaSource {
 	tables: Record<string, { lignes: number; empreinte: string }>
 	schema: string
 	objets: { cles: number; presents: number; empreinte: string }
+	/** The large objects of the database (`pg_largeobject_metadata`): they live outside the tables (ticket 227). */
+	grandsObjets: { nombre: number; empreinte: string }
 }
 
 const sha256 = (contenu: string | Uint8Array): string => createHash('sha256').update(contenu).digest('hex')
@@ -235,7 +237,7 @@ const sha256 = (contenu: string | Uint8Array): string => createHash('sha256').up
  * missing. Nothing is written anywhere.
  */
 export async function empreinteDeLaSource(source: SourceStrapi = sourceDuBanc()): Promise<EmpreinteDeLaSource> {
-	const { schema, tables, fichiers } = await avec(source.lecture, async sql => {
+	const { schema, tables, fichiers, grandsObjets } = await avec(source.lecture, async sql => {
 		const colonnes = (await sql.unsafe(`
 			SELECT c.relname AS table, a.attnum AS rang, a.attname AS colonne, format_type(a.atttypid, a.atttypmod) AS type
 			FROM pg_catalog.pg_class c
@@ -253,6 +255,12 @@ export async function empreinteDeLaSource(source: SourceStrapi = sourceDuBanc())
 			`)) as { lignes: number; empreinte: string }[]
 			empreintes[nom] = { lignes: ligne?.lignes ?? 0, empreinte: ligne?.empreinte ?? '' }
 		}
+		// Large objects are not in any table: their identifier and owner are all the role can read of them.
+		const [grands] = (await sql.unsafe(`
+			SELECT count(*)::int AS nombre,
+				coalesce(encode(sha256(convert_to(string_agg(oid::text || ':' || lomowner::text, ',' ORDER BY oid), 'UTF8')), 'hex'), '') AS empreinte
+			FROM pg_catalog.pg_largeobject_metadata
+		`)) as { nombre: number; empreinte: string }[]
 		const lignesDesFichiers = noms.includes('files')
 			? ([...(await sql.unsafe('SELECT url, formats FROM files ORDER BY id'))] as Ligne[])
 			: []
@@ -260,6 +268,7 @@ export async function empreinteDeLaSource(source: SourceStrapi = sourceDuBanc())
 			schema: sha256(colonnes.map(c => `${c.table}\t${c.rang}\t${c.colonne}\t${c.type}`).join('\n')),
 			tables: empreintes,
 			fichiers: lignesDesFichiers,
+			grandsObjets: { nombre: grands?.nombre ?? 0, empreinte: grands?.empreinte ?? '' },
 		}
 	})
 
@@ -274,5 +283,11 @@ export async function empreinteDeLaSource(source: SourceStrapi = sourceDuBanc())
 		presents: lignesDesObjets.filter(ligne => !ligne.endsWith('\tabsent')).length,
 		empreinte: sha256(lignesDesObjets.join('\n')),
 	}
-	return { empreinte: sha256(JSON.stringify({ schema, tables, objets })), tables, schema, objets }
+	return {
+		empreinte: sha256(JSON.stringify({ schema, tables, objets, grandsObjets })),
+		tables,
+		schema,
+		objets,
+		grandsObjets,
+	}
 }
