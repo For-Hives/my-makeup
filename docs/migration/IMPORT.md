@@ -217,6 +217,8 @@ L'import suit la source : chaque passage remet dans la cible ce que l'ancien sit
 
 **La date de consentement posée est gardée.** Un profil qui a déjà une date de consentement la garde, même si le passage donne une autre date de bascule (`--consentement-le`) : la date est une amorce, écrite quand la cible n'en a pas, jamais par-dessus une date posée. Le rapport compte les profils dont la date demandée diffère de la date gardée (`consentementsGardes`) ; ce n'est pas un écart inexpliqué (pas de code 4, la parité reste complète). Si la maquilleuse ferme puis rouvre ses coordonnées dans la v3, le serveur la date de nouveau lui-même.
 
+**Revenir à l'ancien site.** Ce qui a été écrit dans la v3 depuis la bascule s'exporte avant le retour : voir [`RETOUR-ARRIERE.md`](RETOUR-ARRIERE.md) (ticket 234).
+
 ## Les tests
 
 - `tests/integration/import-comptes-supprimes.test.ts` (ticket 227) : la suppression laisse l'identifiant de l'ancien site et rien d'autre ; journal purgé et date de dernière connexion partie avec le compte, le rejeu est refusé ; avec `--cible-en-service`, ni le compte ni son profil ne reviennent ; un profil dont la maquilleuse a fermé les coordonnées reste fermé.

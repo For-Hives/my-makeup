@@ -1,0 +1,78 @@
+# Le retour arrière sans perdre de comptes
+
+Ce document dit quoi faire si, après la bascule, on remet l'ancien site (ticket 234, `PLAN-PROD-DIRECT.md` §4.5). Le retour reste possible jusqu'à J+1 18:00 (ticket 193).
+
+Le problème : dès l'échange des domaines, des maquilleuses s'inscrivent, modifient leur profil, envoient des photos et reçoivent des messages **sur la v3**. L'ancien site, lui, est gelé depuis avant l'échange et ne connaît rien de tout cela. L'export du delta liste ce qui a été écrit dans la v3 depuis la bascule, pour le rejouer à la main dans l'ancien site.
+
+## Ce que l'export contient
+
+Un fichier JSON, `my-makeup-delta-1`, avec cinq rubriques :
+
+| Rubrique | Ce qu'elle liste | Champs gardés |
+|---|---|---|
+| `comptes` | Les comptes (`pros`) créés ou modifiés depuis la date | identifiant, email, nom, bloqué, adresse confirmée, dernière connexion, fournisseur d'origine, identifiant de l'ancien site, dates |
+| `profils` | Les profils créés ou modifiés | tous les champs du profil (aucun n'est secret) |
+| `photos` | Les photos (`media`) envoyées ou modifiées | nom de fichier, type, taille, dimensions, texte alternatif, propriétaire, préfixe, dates |
+| `messages` | Les messages du formulaire de contact reçus ou modifiés | tous les champs du message |
+| `comptesSupprimes` | Les comptes de l'ancien site supprimés dans la v3 depuis la date | l'identifiant de l'ancien site et le jour |
+
+Chaque enregistrement porte `depuisLaBascule` : `cree` s'il a été créé après la date, `modifie` s'il existait avant et a changé depuis.
+
+**Jamais dans le fichier :** mot de passe, hash (le hash hérité de l'ancien site non plus), sel, jeton de confirmation ou de réinitialisation, identifiant de session. Les comptes et les photos sont choisis champ par champ (une liste blanche) ; tout enregistrement passe en plus par un filtre qui retire toute clé nommée comme un mot de passe, un hash, un sel, un jeton, un secret ou une session. Un test le vérifie (`tests/integration/bascule-delta.test.ts`).
+
+**Ce que l'export ne voit pas :**
+
+- une photo supprimée dans la v3 (par sa propriétaire, ou avec son profil) ne laisse aucune ligne : l'objet est déplacé sous `deleted/` dans le compartiment, c'est la seule trace ;
+- un compte créé dans la v3 puis supprimé : l'ancien site ne l'a jamais connu, il n'a rien à rejouer ;
+- une connexion seule (`derniereConnexion`) compte comme une modification du compte : un compte importé qui s'est seulement reconnecté apparaît avec `modifie`. C'est du bruit, pas une perte.
+
+Un enregistrement importé et jamais touché porte les dates de l'ancien site (l'import les réécrit), donc plus anciennes que la bascule : il n'est pas dans le fichier.
+
+## Le lancer
+
+C'est une adresse réservée aux admins du site, sans base ouverte sur Internet et sans accès SSH (même esprit que l'import dans le conteneur, ticket 233) :
+
+1. Ouvre `https://my-makeup.fr/admin` et connecte-toi avec ton compte **admin** (pas la rédaction). Après un retour des domaines vers `https://v3.my-makeup.fr`, c'est là qu'il faut se connecter : le cookie est propre à chaque adresse.
+2. Ouvre dans le même navigateur `https://my-makeup.fr/api/bascule/delta`. Le navigateur télécharge `delta-depuis-AAAA-MM-JJ.json`.
+3. Pour une autre date de départ, ajoute `?depuis=` suivi d'un instant avec son fuseau : `/api/bascule/delta?depuis=2026-11-02T08:30:00Z`.
+
+Par défaut, le début est le jour de `BASCULE_LE` à 00:00 UTC. **Donne plutôt l'instant précis de l'échange** (ou de la fin du dernier passage réel de l'import) si l'import ou des modifications de l'ancien site ont eu lieu ce jour-là avant l'échange : sinon ils apparaissent dans le fichier.
+
+Réponses : 200 le fichier ; 401 pas de session ; 403 un compte qui n'est pas admin, ou une application qui n'est pas le site (poste de travail, banc de test : l'export ne tourne qu'en production, `APP_ENV=prod`, `NEXT_PUBLIC_SITE_URL=https://my-makeup.fr`) ; 400 sans `BASCULE_LE` ni `depuis`, ou un `depuis` illisible.
+
+Deux lancements donnent exactement le même fichier tant que rien n'a changé dans la v3 : il ne porte aucune heure de génération.
+
+**Le journal de l'application** garde une ligne par rubrique, préfixée `[bascule]` : les nombres et les identifiants numériques seulement, jamais un email, un nom ou un texte. Il sert de contrôle (« 3 comptes, 3 profils, 2 photos, 1 message »), pas de copie.
+
+## Garder le fichier
+
+Il porte des emails, des téléphones et des messages de visiteuses : c'est une donnée privée.
+
+- Écris-le **hors du dépôt**, par exemple dans `~/my-makeup-prive/bascule/`, puis `chmod 600` ;
+- ne le colle dans aucun message, ticket ni outil en ligne ;
+- supprime-le quand le retour arrière n'est plus possible et que la décision de garder la v3 est prise.
+
+## La marche à suivre
+
+1. **Exporter d'abord**, pendant que la v3 répond encore : télécharge le fichier (ci-dessus) et note les nombres du journal. Le fichier est un instantané : si des maquilleuses écrivent encore dans la v3, refais-le à la fin de l'étape 2 et prends le second.
+2. **Prod v3** : domaines ramenés à `https://v3.my-makeup.fr`, accès protégé remis, redéployer. Ou arrêter la v3 (alors `my-makeup.fr` répond 404 jusqu'à l'étape 3). Si tu arrêtes la v3 avant d'avoir exporté, l'export est perdu pour de bon : ne le fais jamais dans cet ordre.
+3. **Ancien front** : domaines `https://my-makeup.fr,https://www.my-makeup.fr`, accès protégé coupé, `noindex_domains` vide, redéployer.
+4. **Ancienne API** : retirer `LEGACY_READ_ONLY` (et `MEDIA_SWEEP=off` si tu l'avais posé) et redémarrer. Une minute. Les écritures sont de nouveau permises : c'est le moment de rejouer.
+5. **Rejouer à la main dans l'ancien site**, d'après le fichier :
+   - `comptesSupprimes` : supprimer ces comptes dans l'ancien site (leur propriétaire a demandé à être oubliée) ;
+   - `comptes` avec `cree` : recréer le compte à l'identique (même email, même nom). Il n'y a **pas de mot de passe** dans le fichier : la maquilleuse passe par « Mot de passe oublié » de l'ancien site, et il faut que le mail parte. Dis-le-lui si tu la connais ;
+   - `comptes` avec `modifie` : reporter le changement (nom, blocage) sur le compte de même identifiant d'ancien site (`strapiId`) ;
+   - `profils` : recréer ou corriger le profil du compte (la clé `pro` est l'identifiant du compte dans la v3, à rapprocher de l'email dans `comptes`) ;
+   - `photos` : le fichier d'une photo envoyée dans la v3 vit sous `media/<nom de fichier>` dans le compartiment partagé, mais l'ancien site ne la connaît pas : la renvoyer par le profil, ou ajouter la ligne dans son admin ;
+   - `messages` : les relire, et répondre à celles qui attendent.
+6. **Contrôler** : le compte des comptes de l'ancien site, l'accueil, un profil, la connexion d'un compte de test, la page de contact.
+
+## Ce qu'il ne faut pas faire
+
+- Ne jamais relancer l'import vers la v3 pour « resynchroniser » après le retour : l'ancien site a changé et la v3 aussi (garde du ticket 227, `--cible-en-service`).
+- Ne pas diffuser le fichier, ni le garder dans le dépôt, dans Coolify ou dans un ticket.
+
+## Ce qui est testé
+
+- `tests/unit/bascule-delta.test.ts` : refus hors du site, 401 et 403, 400, en-têtes, journal sans email, mêmes octets au second appel, filtre des secrets.
+- `tests/integration/bascule-delta.test.ts`, sur le banc : un profil créé après la date apparaît, un profil importé et inchangé n'apparaît pas, un compte modifié apparaît en `modifie`, aucune clé ni valeur de mot de passe, hash, sel ou session dans le fichier, et la route avec une vraie session admin, une session de maquilleuse et sans session.
