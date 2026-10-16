@@ -5,6 +5,7 @@ import { inflateSync } from 'node:zlib'
 import { BancRefuse, environnementDuBanc, RACINE } from '../outils/banc'
 import { EnvironnementRefuse } from '../outils/garde-environnement'
 import { sourceDuBanc } from '../outils/source-strapi'
+import { exigerLaRevocation } from '../outils/source-strapi/creation'
 import {
 	COMPTES_DE_FIXTURE,
 	definitionDeLaSource,
@@ -327,5 +328,30 @@ describe('La fausse base Strapi : elle n’existe que sur le banc', () => {
 		// The guard of the tests comes first: a remote source, or one outside « _test », is never opened.
 		expect(siLeBancDisait(`postgres://${lecture}@db.example.test:5443/strapi_source_test`)).toThrow(EnvironnementRefuse)
 		expect(siLeBancDisait(`postgres://${lecture}@127.0.0.1:5443/strapi_source`)).toThrow(EnvironnementRefuse)
+	})
+})
+
+describe('Le retrait du droit de créer un grand objet est vérifié, pas supposé (ticket 227)', () => {
+	test('un droit qui reste au rôle (retrait sans effet, faute de super-utilisateur) fait échouer la création, en français', async () => {
+		const questions: unknown[][] = []
+		const executer = (_texte: string, parametres: readonly unknown[] = []) => {
+			questions.push([...parametres])
+			return Promise.resolve([{ permis: parametres[1] === 'pg_catalog.lo_creat(integer)' }])
+		}
+
+		const echec = await exigerLaRevocation(executer, 'role_fictif').catch((erreur: unknown) => erreur)
+
+		expect(echec).toBeInstanceOf(Error)
+		expect((echec as Error).message).toContain('peut encore créer des grands objets')
+		expect((echec as Error).message).toContain('pg_catalog.lo_creat(integer)')
+		expect((echec as Error).message).not.toContain('lo_create(oid)')
+		expect((echec as Error).message).toContain('super-utilisateur')
+		// Every function is asked about, for the role named.
+		expect(questions).toHaveLength(5)
+		expect(questions.every(([role]) => role === 'role_fictif')).toBe(true)
+	})
+
+	test('quand le rôle n’a plus aucun de ces droits, rien ne se passe', async () => {
+		await expect(exigerLaRevocation(() => Promise.resolve([{ permis: false }]), 'role_fictif')).resolves.toBeUndefined()
 	})
 })

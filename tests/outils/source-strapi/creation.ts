@@ -58,6 +58,26 @@ const FONCTIONS_DE_GRANDS_OBJETS = [
 	'pg_catalog.lo_import(text, oid)',
 ] as const
 
+/**
+ * Checks that the role cannot run the functions that create a large object. PostgreSQL only warns
+ * (« no privileges could be revoked ») when the one who revokes is neither a superuser nor the owner
+ * of `pg_catalog`, and the role then keeps the privilege: the check reads the privilege itself.
+ */
+export async function exigerLaRevocation(executer: Executer, role: string): Promise<void> {
+	const encore: string[] = []
+	for (const fonction of FONCTIONS_DE_GRANDS_OBJETS) {
+		const [ligne] = (await executer("SELECT has_function_privilege($1::name, $2::text, 'EXECUTE') AS permis", [
+			role,
+			fonction,
+		])) as { permis?: boolean }[]
+		if (ligne?.permis !== false) encore.push(fonction)
+	}
+	if (encore.length > 0)
+		throw new Error(
+			`Fausse base Strapi : le rôle « ${role} » peut encore créer des grands objets (${encore.join(', ')}). Le retrait de ce droit demande un super-utilisateur : crée la base avec un compte qui l’est.`
+		)
+}
+
 /** A salt of bcrypt drawn from the id of the account: the same account always gets the same hash. */
 export function selBcrypt(id: number): string {
 	const octets = createHash('sha256').update(`sel-factice-${id}`).digest()
@@ -150,6 +170,7 @@ export async function remplirLaBase(executer: Executer, definition: DefinitionDe
 	// own read-only default could fill the source with objects the fingerprint of the tables never sees.
 	// The functions that create one are taken from everybody but the owner (ticket 227).
 	await executer(`REVOKE EXECUTE ON FUNCTION ${FONCTIONS_DE_GRANDS_OBJETS.join(', ')} FROM PUBLIC`)
+	await exigerLaRevocation(executer, role)
 }
 
 /** Drops the source database and its role, when they exist. Nothing else of the server is touched. */

@@ -61,6 +61,9 @@ export interface EmpreinteDeTable {
 
 export type EmpreinteDesTables = Record<string, EmpreinteDeTable>
 
+/** The entry of the fingerprint that stands for the large objects of the database. */
+export const GRANDS_OBJETS = 'pg_largeobject_metadata'
+
 const IDENTIFIANT = /^[a-z_][a-z0-9_]*$/
 
 /**
@@ -82,6 +85,14 @@ export async function empreinteDesTables(
 		)
 		empreintes[table] = { lignes: ligne?.lignes ?? 0, empreinte: ligne?.empreinte ?? '' }
 	}
+	// Large objects live outside the tables: a role that could create one would change the source
+	// without a row moving. Their identifiers are fingerprinted like a table (ticket 227).
+	const [grandsObjets] = await requete<{ lignes: number; empreinte: string }>(
+		`SELECT count(*)::int AS lignes,
+			coalesce(encode(sha256(convert_to(string_agg(oid::text, ',' ORDER BY oid), 'UTF8')), 'hex'), '') AS empreinte
+		FROM pg_catalog.pg_largeobject_metadata`
+	)
+	empreintes[GRANDS_OBJETS] = { lignes: grandsObjets?.lignes ?? 0, empreinte: grandsObjets?.empreinte ?? '' }
 	return empreintes
 }
 

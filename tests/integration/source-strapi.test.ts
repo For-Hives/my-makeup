@@ -2,6 +2,7 @@ import { afterAll, describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { SQL } from 'bun'
+import { empreinteDesTables, GRANDS_OBJETS, memesTables, type Requete } from '../../scripts/migration/import/source'
 import { RACINE } from '../outils/banc'
 import { deposerUnObjet, supprimerUnObjet } from '../outils/s3'
 import {
@@ -237,6 +238,22 @@ describe('Le rôle en lecture seule ne crée pas de grand objet, et son verrou s
 		expect(apres.tables).toEqual(avant.tables)
 		await creerLaSourceStrapi()
 		expect((await empreinteDeLaSource()).empreinte).toBe(avant.empreinte)
+	}, 60_000)
+
+	test('l’empreinte de l’import (I43) voit aussi les grands objets, que le rapport compare avant et après', async () => {
+		await creerLaSourceStrapi()
+		const requete = (texte: string, parametres?: readonly unknown[]) =>
+			lecture().unsafe(texte, parametres ? [...parametres] : undefined)
+		const avant = await empreinteDesTables(requete as Requete)
+		expect(avant[GRANDS_OBJETS]?.lignes).toBe(0)
+
+		await avecLeProprietaire(source.administration, sql => sql.unsafe('SELECT lo_create(0)'))
+		const apres = await empreinteDesTables(requete as Requete)
+
+		expect(apres[GRANDS_OBJETS]?.lignes).toBe(1)
+		expect(memesTables(avant, apres)).toBe(false)
+		await creerLaSourceStrapi()
+		expect(memesTables(avant, await empreinteDesTables(requete as Requete))).toBe(true)
 	}, 60_000)
 
 	test('ce que le rôle a réglé lui-même ne survit pas à une nouvelle création de la source', async () => {
