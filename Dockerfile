@@ -28,12 +28,17 @@ COPY . .
 ARG NEXT_PUBLIC_SITE_URL
 ARG NEXT_PUBLIC_APP_VERSION
 ARG SOURCE_COMMIT
+# The address of the photos of the environment (next.config.ts reads it when it loads, at build):
+# it sets the hosts the image optimizer accepts and the content policy. Public, like the rest.
+ARG R2_PUBLIC_URL
 ENV NEXT_TELEMETRY_DISABLED=1
 # Next freezes a NEXT_PUBLIC_* variable into the build as soon as it exists, even empty, and
 # an empty site address would then hide the one given to the container. A build argument
-# that was not given must therefore not exist at all.
+# that was not given must therefore not exist at all. R2_PUBLIC_URL is no NEXT_PUBLIC_* one, but
+# is treated the same way: absent, the photos are those of the live site.
 RUN if [ -z "${NEXT_PUBLIC_SITE_URL:-}" ]; then unset NEXT_PUBLIC_SITE_URL; fi \
 	&& if [ -z "${NEXT_PUBLIC_APP_VERSION:-}" ]; then unset NEXT_PUBLIC_APP_VERSION; fi \
+	&& if [ -z "${R2_PUBLIC_URL:-}" ]; then unset R2_PUBLIC_URL; fi \
 	&& bun run build
 
 # 3. What runs: the standalone server and its static files, nothing else.
