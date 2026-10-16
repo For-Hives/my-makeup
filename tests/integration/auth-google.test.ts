@@ -301,16 +301,25 @@ describe('091 : une personne sans compte s’inscrit avec Google', () => {
 		expect(await compterLesMails()).toBe(0)
 	})
 
-	test('deux premiers passages au même moment : un seul compte, un seul profil', async () => {
+	test('deux premiers passages au même moment : un seul compte, un seul profil, deux sessions valables', async () => {
 		const email = adresse('course')
-		const [a, b] = await Promise.all([passer({ email }), passer({ email })])
-		expect(a.issue.ok && b.issue.ok).toBe(true)
+		// Three at once: the first creates, the others find the account and open their own session.
+		// Flaky before ticket 235: the sessions of an account were read and written back whole, so two
+		// sign-ins of the same account at the same moment collided or erased each other.
+		const passages = await Promise.all([passer({ email }), passer({ email }), passer({ email })])
+		const jetons = passages.map(({ issue }) => {
+			if (!issue.ok) throw new Error(`refusé : ${issue.code}`)
+			return issue.token
+		})
 		const [pro] = await comptes(email)
 		expect(await comptes(email)).toHaveLength(1)
+		expect(passages.filter(({ issue }) => issue.ok && issue.nouveau)).toHaveLength(1)
 		const payload = await payloadDeTest()
 		expect(
 			(await payload.find({ collection: 'profils', depth: 0, where: { pro: { equals: pro?.id } } })).totalDocs
 		).toBe(1)
+		// Every token opens the account: none of the sessions was lost.
+		expect((await Promise.all(jetons.map(qui))).map(user => user?.id)).toEqual(jetons.map(() => pro?.id))
 	})
 
 	test('email non vérifié par Google : refus, aucun compte, ni pour une adresse libre ni pour un compte qui existe', async () => {

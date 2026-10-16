@@ -91,14 +91,10 @@ async function accueillir(payload: Payload, compte: CompteTrouve): Promise<Resul
 	if (compte.legacyProvider !== FOURNISSEUR_GOOGLE) return { ok: false, code: 'compte-refuse' }
 	// Google has just vouched for the address: an account still marked unconfirmed is confirmed, or
 	// Payload would ignore the session it is about to receive.
+	// Written by the adapter: `payload.update` would write the sessions back as it read them, erasing
+	// one opened at the same moment by another passage (ticket 235).
 	if (compte._verified !== true)
-		await payload.update({
-			collection: 'pros',
-			data: { _verified: true },
-			depth: 0,
-			id: compte.id,
-			overrideAccess: true,
-		})
+		await payload.db.updateOne({ collection: 'pros', data: { _verified: true }, id: compte.id, returning: false })
 	return { ok: true, id: compte.id, nouveau: false }
 }
 

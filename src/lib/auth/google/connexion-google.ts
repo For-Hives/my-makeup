@@ -157,13 +157,15 @@ export async function terminerLaConnexionGoogle({
 	}
 	// The date of the last sign-in (the `afterLogin` hook does it for a password): a failure to write
 	// it is not the sign-in's to fail.
-	await payload
-		.update({
+	// Written by the adapter, not by `payload.update`: that one reads the whole account, sessions
+	// included, and writes them back, so a session opened in between by another passage was erased
+	// (ticket 235).
+	await payload.db
+		.updateOne({
 			collection: 'pros',
 			data: { derniereConnexion: new Date().toISOString() },
-			depth: 0,
 			id: compte.id,
-			overrideAccess: true,
+			returning: false,
 		})
 		.catch(() => undefined)
 	// A session was opened: this return was no failure.

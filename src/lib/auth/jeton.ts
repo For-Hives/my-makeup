@@ -1,10 +1,15 @@
+import { type PostgresAdapter, sql } from '@payloadcms/db-postgres'
 import {
 	type AuthCollectionSlug,
+	commitTransaction,
 	createLocalReq,
 	getFieldsToSign,
+	initTransaction,
 	jwtSign,
+	killTransaction,
 	loginOperation,
 	type Payload,
+	type PayloadRequest,
 	type TypedUser,
 } from 'payload'
 import { addSessionToUser } from 'payload/shared'
@@ -45,6 +50,18 @@ export interface CompteDesigne {
 }
 
 /**
+ * Holds a lock of PostgreSQL on one account until the end of the transaction of `req`: whoever asks
+ * for the same account waits for the first to commit. Other accounts never wait for each other.
+ */
+async function reserverLeCompte(req: PayloadRequest, { collection, id }: CompteDesigne): Promise<void> {
+	const idTransaction = await req.transactionID
+	// The adapter of the configuration is the PostgreSQL one; `sessions` holds the transaction of each request.
+	const { sessions } = req.payload.db as unknown as Pick<PostgresAdapter, 'sessions'>
+	const transaction = idTransaction === undefined || idTransaction === null ? undefined : sessions?.[idTransaction]
+	await transaction?.db.execute(sql`select pg_advisory_xact_lock(hashtext(${`${collection}.sessions:${id}`}))`)
+}
+
+/**
  * Opens a session for an account without its password: the steps Payload takes once a password is
  * accepted, which the Google sign-in takes once Google has vouched for the address (ticket 090) —
  * a session recorded on the account (so that signing out can end it), then a token signed with its
@@ -52,7 +69,10 @@ export interface CompteDesigne {
  * session cookie carries it the same way.
  *
  * Nothing here checks that the account may sign in (confirmed, not blocked, Google's own): that is
- * the caller's rule. `dureeS` replaces the lifetime of the collection (tests only).
+ * the caller's rule. The sessions of an account are one list that Payload reads, extends and writes
+ * back whole: two sign-ins of the same account at the same moment (two first passages through Google,
+ * ticket 235) read the same list, and the second write collided with the first or erased it. So the
+ * read and the write happen in one transaction, behind a lock on the account. `dureeS` replaces the lifetime of the collection (tests only).
  */
 export async function ouvrirSansMotDePasse(
 	payload: Payload,
@@ -61,10 +81,22 @@ export async function ouvrirSansMotDePasse(
 ): Promise<Required<JetonDeSession>> {
 	const collectionConfig = payload.collections[collection].config
 	const req = await createLocalReq({}, payload)
-	const compte = await payload.db.findOne<TypedUser>({ collection, req, where: { id: { equals: id } } })
-	if (!compte) throw new Error(`Aucun compte « ${collection} » ne porte l’identifiant ${id}.`)
-	const user = { ...compte, collection } as TypedUser
-	const { sid } = await addSessionToUser({ collectionConfig, payload, req, user })
+	await initTransaction(req)
+	let compte: TypedUser
+	let user: TypedUser
+	let sid: string | undefined
+	try {
+		await reserverLeCompte(req, { collection, id })
+		const trouve = await payload.db.findOne<TypedUser>({ collection, req, where: { id: { equals: id } } })
+		if (!trouve) throw new Error(`Aucun compte « ${collection} » ne porte l’identifiant ${id}.`)
+		compte = trouve
+		user = { ...trouve, collection } as TypedUser
+		;({ sid } = await addSessionToUser({ collectionConfig, payload, req, user }))
+		await commitTransaction(req)
+	} catch (erreur) {
+		await killTransaction(req)
+		throw erreur
+	}
 	const { exp, token } = await jwtSign({
 		fieldsToSign: getFieldsToSign({ collectionConfig, email: String(compte.email), sid, user }),
 		secret: payload.secret,
