@@ -23,6 +23,7 @@ Les documents, sous `docs/migration/` :
 - [`GEL.md`](docs/migration/GEL.md) : le gel de l'ancien site. Il dit quand il commence (au départ de la répétition de la bascule), ce qui reste permis après (sécurité, bandeau, lecture seule, contenus), et la commande `bun run migration:gel` qui le contrôle.
 - [`IMPORT.md`](docs/migration/IMPORT.md) : l'import des données de l'ancien site. Il dit ce que l'import garantit, comment le lancer, à blanc ou pour de vrai, et ce que dit son rapport.
 - [`LECTURE-SEULE.md`](docs/migration/LECTURE-SEULE.md) : le gel de l'ancien site par un réglage (`LEGACY_READ_ONLY`), son retrait en une minute et les correctifs prêts à appliquer à l'ancienne API et à l'ancien site.
+- [`RETOUR-ARRIERE.md`](docs/migration/RETOUR-ARRIERE.md) : le retour arrière après la bascule sans perdre de comptes. Il dit comment télécharger l'export privé de ce que la v3 a reçu depuis la bascule (`/api/bascule/delta`, admins du site seulement) et quoi rejouer dans l'ancien site.
 
 ## Travailler dans ce dépôt
 
