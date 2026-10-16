@@ -1,7 +1,6 @@
 /**
  * The source of the import, opened with `pg`, the PostgreSQL client of Payload's adapter: the
- * import run by the application itself, under Node, where the client of bun does not exist (the
- * pre-production, ticket 027). Read-only twice over, as with bun (./source-bun.ts): the session
+ * import run by the application itself, under Node, where the client of bun does not exist. Read-only twice over, as with bun (./source-bun.ts): the session
  * starts every transaction read-only, and each reading is a read-only transaction of its own, on
  * one snapshot. The role that opens it should be read-only too (docs/migration/IMPORT.md).
  *

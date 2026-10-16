@@ -49,9 +49,8 @@ import { adresseAVerifier, type FamilleVerifiee } from '@/lib/urls/page-inconnue
  * - A path that does not decode (`/profil/%E0%A4%A`) answers the 404 page of the site, not Next's error; under
  *   `/api/` it answers a JSON 400 (ticket 223).
  * - A response that carries a cookie of the cleaning is `private, no-store`: no shared cache keeps it (ticket 223).
- * - Every other response gets the robots directive (ticket 070). It reads APP_ENV at run time: the
- *   pre-production gets its variables after the build. The paths of the account and of the search
- *   answer noindex everywhere.
+ * - Every other response gets the robots directive (ticket 070). The paths of the account and of the
+ *   search answer noindex everywhere.
  */
 function proxyDuSite(requete: NextRequest) {
 	const { pathname, search } = requete.nextUrl
@@ -75,14 +74,14 @@ function proxyDuSite(requete: NextRequest) {
 			new URL(`${forme.chemin}${search}`, requete.url ?? requete.nextUrl.href),
 			forme.status
 		)
-		const consigneDeForme = robotsPourChemin(pathname, { APP_ENV: process.env.APP_ENV })
+		const consigneDeForme = robotsPourChemin(pathname)
 		if (consigneDeForme) redirectionDeForme.headers.set('X-Robots-Tag', consigneDeForme)
 		return redirectionDeForme
 	}
 	const freinee = freinerLaRecherche({ chemin: pathname, methode: requete.method, entetes: requete.headers })
 	if (freinee) {
 		const reponseFreinee = new NextResponse(freinee.corps, { status: freinee.status, headers: freinee.entetes })
-		const consigneFreinee = robotsPourChemin(pathname, { APP_ENV: process.env.APP_ENV })
+		const consigneFreinee = robotsPourChemin(pathname)
 		if (consigneFreinee) reponseFreinee.headers.set('X-Robots-Tag', consigneFreinee)
 		return reponseFreinee
 	}
@@ -152,7 +151,7 @@ function proxyDuSite(requete: NextRequest) {
 		})
 		redirection.headers.set('Cache-Control', 'private, no-store')
 		redirection.headers.set('Referrer-Policy', 'no-referrer')
-		const consigneDuLien = robotsPourChemin(pathname, { APP_ENV: process.env.APP_ENV })
+		const consigneDuLien = robotsPourChemin(pathname)
 		if (consigneDuLien) redirection.headers.set('X-Robots-Tag', consigneDuLien)
 		return avecLeNettoyage(redirection)
 	}
@@ -170,7 +169,7 @@ function proxyDuSite(requete: NextRequest) {
 		cible.pathname = chemin
 		cible.search = recherche ? `?${recherche}` : ''
 		const redirection = NextResponse.redirect(cible, 307)
-		const consigneRedirection = robotsPourChemin(pathname, { APP_ENV: process.env.APP_ENV })
+		const consigneRedirection = robotsPourChemin(pathname)
 		if (consigneRedirection) redirection.headers.set('X-Robots-Tag', consigneRedirection)
 		return avecLeNettoyage(redirection)
 	}
@@ -178,12 +177,12 @@ function proxyDuSite(requete: NextRequest) {
 		// She comes from another site with a session cookie that Payload would ignore (ticket 223): the
 		// relay page restarts the navigation from this site, where the cookie counts.
 		const relais = new NextResponse(pageDeRelais(`${pathname}${search}`), { status: 200, headers: ENTETES_DE_RELAIS })
-		const consigneDuRelais = robotsPourChemin(pathname, { APP_ENV: process.env.APP_ENV })
+		const consigneDuRelais = robotsPourChemin(pathname)
 		if (consigneDuRelais) relais.headers.set('X-Robots-Tag', consigneDuRelais)
 		return avecLeNettoyage(relais)
 	}
 	const reponse = avecLeNettoyage(NextResponse.next({ request: { headers: entetes } }))
-	const consigne = robotsPourChemin(pathname, { APP_ENV: process.env.APP_ENV })
+	const consigne = robotsPourChemin(pathname)
 	if (consigne) reponse.headers.set('X-Robots-Tag', consigne)
 	return reponse
 }

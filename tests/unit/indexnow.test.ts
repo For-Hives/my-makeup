@@ -93,11 +93,9 @@ describe('où l’envoi est permis', () => {
 		expect(cleSiLEnvoiEstPermis({ ...ENV_DU_SITE, APP_ENV: 'prod' })).toBe(CLE)
 	})
 
-	test('sans clé, sur la préprod, sur un poste, sur le banc de test : non', () => {
+	test('sans clé, sur un hôte temporaire, sur un poste, sur le banc de test : non', () => {
 		expect(cleSiLEnvoiEstPermis({ NEXT_PUBLIC_SITE_URL: SITE })).toBeUndefined()
-		expect(
-			cleSiLEnvoiEstPermis({ ...ENV_DU_SITE, NEXT_PUBLIC_SITE_URL: 'https://preprod.my-makeup.fr' })
-		).toBeUndefined()
+		expect(cleSiLEnvoiEstPermis({ ...ENV_DU_SITE, NEXT_PUBLIC_SITE_URL: 'https://v3.my-makeup.fr' })).toBeUndefined()
 		expect(cleSiLEnvoiEstPermis({ ...ENV_DU_SITE, NEXT_PUBLIC_SITE_URL: 'http://127.0.0.1:3419' })).toBeUndefined()
 		expect(cleSiLEnvoiEstPermis({ INDEXNOW_KEY: CLE })).toBeUndefined()
 		expect(cleSiLEnvoiEstPermis({ ...ENV_DU_SITE, APP_ENV: 'test' })).toBeUndefined()
@@ -174,7 +172,7 @@ describe('la requête', () => {
 				`${SITE}/blog/ok`,
 				'http://my-makeup.fr/blog/http',
 				'https://www.my-makeup.fr/blog/www',
-				'https://preprod.my-makeup.fr/blog/preprod',
+				'https://v3.my-makeup.fr/blog/temporaire',
 				'https://my-makeup.fr.exemple.test/blog/piege',
 				'https://autre.test/blog/autre',
 				'pas une adresse',
@@ -324,7 +322,7 @@ describe('les crochets de Payload', () => {
 		delete process.env.INDEXNOW_KEY
 		await enregistrer(lignes(), {})
 		process.env.INDEXNOW_KEY = CLE
-		process.env.NEXT_PUBLIC_SITE_URL = 'https://preprod.my-makeup.fr'
+		process.env.NEXT_PUBLIC_SITE_URL = 'https://v3.my-makeup.fr'
 		await enregistrer(lignes(), {})
 		process.env.NEXT_PUBLIC_SITE_URL = SITE
 		process.env.APP_ENV = 'test'

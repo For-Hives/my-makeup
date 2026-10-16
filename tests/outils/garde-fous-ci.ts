@@ -794,8 +794,6 @@ export interface PlaywrightSettings {
 }
 
 const SITE_DOMAIN = 'my-makeup.fr'
-/** The one host of the site's domain a test may open, and only when the run declares it. */
-const PREPROD_HOST = `preprod.${SITE_DOMAIN}`
 const SPEC_FILES = /\.spec\.ts$/
 
 /** True when the pattern can only match `*.spec.ts` files: a text, or texts, that end that way. */
@@ -810,7 +808,7 @@ function baseUrlDefect(baseURL: string | undefined): string | undefined {
 	if (!URL.canParse(baseURL)) return 'n’est pas une adresse lisible.'
 	const host = new URL(baseURL).hostname.toLowerCase()
 	const ofTheSite = host === SITE_DOMAIN || host.endsWith(`.${SITE_DOMAIN}`)
-	return ofTheSite && host !== PREPROD_HOST ? `vise le site en ligne (${host}).` : undefined
+	return ofTheSite ? `vise le site en ligne (${host}).` : undefined
 }
 
 /**

@@ -132,8 +132,8 @@ describe('l’email de confirmation', () => {
 	const JETON = 'ab12'.repeat(10)
 
 	test('un bouton « Confirmer mon adresse » vers la page de confirmation, lien absolu, tutoiement', () => {
-		const email = composerEmail(contenuEmailConfirmation(JETON), 'https://preprod.my-makeup.fr')
-		expect(email.lien).toBe(`https://preprod.my-makeup.fr/auth/verification-complete?code=${JETON}`)
+		const email = composerEmail(contenuEmailConfirmation(JETON), 'https://v3.my-makeup.fr')
+		expect(email.lien).toBe(`https://v3.my-makeup.fr/auth/verification-complete?code=${JETON}`)
 		expect(email.texte).toContain('Confirmer mon adresse')
 		expect(email.html).toContain('Confirme')
 		expect(email.sujet).toContain('Confirme ton adresse email')

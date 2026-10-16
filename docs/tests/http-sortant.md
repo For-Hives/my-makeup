@@ -87,7 +87,7 @@ Une requête vers un hôte du banc n'est pas interceptée : elle atteint le vrai
 | `postgres`, `mailpit`, `s3mock`, `faux-google` | Les services de `compose.test.yml`, sous leur nom dans le réseau de la pile |
 
 - La liste est celle de la garde d'environnement : `HOTES_DU_BANC`, dans `tests/outils/garde-environnement.ts`. Un service ajouté au banc s'y ajoute, et nulle part ailleurs.
-- Tout autre hôte est « extérieur », la préprod et `127.0.0.2` compris.
+- Tout autre hôte est « extérieur », `127.0.0.2` compris.
 - Une adresse du banc se simule quand même si un test la déclare : c'est ainsi qu'on teste une panne du capteur de mails sans l'arrêter.
 
 ## Comment c'est fait

@@ -9,14 +9,14 @@ Les adresses et les réponses attendues sont celles de la table des URL gelées 
 ```sh
 CONTROLE_HOTE_CIBLE=http://127.0.0.1:3100 bun run bascule:controle   # le banc, un build de ce poste
 CONTROLE_HOTE_CIBLE=https://my-makeup.fr bun run bascule:controle     # le site, lectures seules
-PREPROD_BASIC_AUTH_USER=… PREPROD_BASIC_AUTH_PASSWORD=… \
-  CONTROLE_HOTE_CIBLE=https://preprod.my-makeup.fr bun run bascule:controle   # la préprod, voir ci-dessous
+CONTROLE_HOTE_ACCES_UTILISATEUR=… CONTROLE_HOTE_ACCES_MOT_DE_PASSE=… \
+  CONTROLE_HOTE_CIBLE=https://v3.my-makeup.fr bun run bascule:controle   # l'hôte temporaire, avant l'échange des domaines
 ```
 
 | Variable | Rôle |
 |---|---|
-| `CONTROLE_HOTE_CIBLE` | Obligatoire. Une origine seule : `https://` et un hôte, ou `http://` sur ce poste (`localhost`, `127.0.0.1`, `::1`). Un chemin, un paramètre ou un identifiant est refusé |
-| `PREPROD_BASIC_AUTH_USER`, `PREPROD_BASIC_AUTH_PASSWORD` | L'accès protégé de la préprod : obligatoires pour `https://preprod.my-makeup.fr`, et inutilisés ailleurs. Ils ne partent que vers cet hôte, dans un seul en-tête, et ne s'écrivent jamais |
+| `CONTROLE_HOTE_CIBLE` | Obligatoire. Une origine seule, et un hôte de **production** : `https://my-makeup.fr` ou `https://v3.my-makeup.fr` (l'hôte temporaire de la production, avant l'échange des domaines), ou `http://` sur ce poste (`localhost`, `127.0.0.1`, `::1`) pour le banc. Tout autre hôte, `www` et l'ancienne préprod compris, est refusé avant toute requête. Un chemin, un paramètre ou un identifiant est refusé |
+| `CONTROLE_HOTE_ACCES_UTILISATEUR`, `CONTROLE_HOTE_ACCES_MOT_DE_PASSE` | Facultatives : l'accès protégé de l'hôte temporaire, quand il est actif. Les deux ensemble ou aucune ; refusées pour tout autre hôte. Ils ne partent que vers `https://v3.my-makeup.fr`, dans un seul en-tête, jamais vers `my-makeup.fr`, et ne s'écrivent jamais |
 | `INDEXNOW_KEY` | Facultative. La clé IndexNow de l'hôte, pour lire son fichier de clé. Sans elle, cette adresse n'est pas lue et le rapport le dit |
 | `CONTROLE_HOTE_SORTIE` | Facultative. Un fichier où écrire aussi le rapport, en JSON |
 
@@ -48,7 +48,7 @@ Toute requête passe par `garder()` (`scripts/bascule/garde-hote.ts`), qui laiss
 - **GET seulement, sans corps.** Toute autre méthode est interrompue avant de quitter le poste.
 - **La cible seulement.** Une adresse s'écrit après l'origine telle quelle : `//x` est un chemin du site, jamais un autre hôte.
 - **Sous `/u`**, où le site relaie sa mesure d'audience, quatre adresses seulement, en GET et sans paramètre : `/u`, `/u/script.js`, `/u/api/send`, `/u/autre-chemin`. Ce sont celles de l'inventaire. Un GET n'enregistre aucun événement (un événement est un POST) ; tout autre chemin sous `/u`, avec ou sans encodage, est interrompu.
-- **Anonyme** : ni cookie, ni `Authorization` de l'appelant. La seule identité est l'accès protégé de la préprod, posé par la commande et envoyé à cet hôte seul.
+- **Anonyme** : ni cookie, ni `Authorization` de l'appelant. La seule identité est l'accès protégé de l'hôte temporaire, posé par la commande et envoyé à cet hôte seul.
 - **Aucune redirection suivie.**
 
 Une requête interdite arrête le contrôle : c'est un défaut de la commande, pas de l'hôte.

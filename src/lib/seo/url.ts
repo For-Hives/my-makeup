@@ -3,7 +3,7 @@ import { SITE_ORIGIN } from '../urls-gelees'
 /**
  * Absolute addresses of the site (ticket 070). The origin is the constant apex of the site, never
  * an environment variable: NEXT_PUBLIC_SITE_URL is inlined when the build runs, and the build runs
- * without it (the pre-production gets it at run time only).
+ * without it.
  */
 
 /** The path of an address, with no query, no fragment, no run of slashes and no final slash. */

@@ -140,10 +140,11 @@ describe('la garde : une lecture, sur la cible, et rien d’autre', () => {
 		expect(lire('/').entetes.get('user-agent')).toBe(AGENT_DU_CONTROLE)
 	})
 
-	test('l’accès protégé ne part que vers la préprod', () => {
+	test('l’accès protégé ne part que vers l’hôte temporaire, jamais vers le site', () => {
 		expect(() => lire('/', {}, 'Basic eA==')).toThrow(RequeteInterdite)
-		const preprod = new URL('https://preprod.my-makeup.fr')
-		expect(controlerRequete('/', {}, preprod, 'Basic eA==').entetes.get('authorization')).toBe('Basic eA==')
+		expect(() => controlerRequete('/', {}, new URL('https://my-makeup.fr'), 'Basic eA==')).toThrow(RequeteInterdite)
+		const temporaire = new URL('https://v3.my-makeup.fr')
+		expect(controlerRequete('/', {}, temporaire, 'Basic eA==').entetes.get('authorization')).toBe('Basic eA==')
 	})
 
 	test('aucune redirection suivie, la méthode est GET', async () => {
@@ -158,10 +159,13 @@ describe('la garde : une lecture, sur la cible, et rien d’autre', () => {
 	})
 
 	test('la cible : https, ou http sur ce poste, une origine seule', () => {
-		expect(cibleDuControle('https://preprod.my-makeup.fr').href).toBe('https://preprod.my-makeup.fr/')
+		expect(cibleDuControle('https://my-makeup.fr').href).toBe('https://my-makeup.fr/')
+		expect(cibleDuControle('https://v3.my-makeup.fr').href).toBe('https://v3.my-makeup.fr/')
 		expect(cibleDuControle('http://127.0.0.1:3373').origin).toBe('http://127.0.0.1:3373')
 		for (const mauvaise of [
 			'http://my-makeup.fr',
+			'https://www.my-makeup.fr',
+			'https://ancien.my-makeup.fr',
 			'ftp://x.test',
 			'https://x.test/chemin',
 			'https://u:p@x.test',
@@ -172,14 +176,23 @@ describe('la garde : une lecture, sur la cible, et rien d’autre', () => {
 })
 
 describe('les réglages', () => {
-	test('la préprod demande son accès protégé, un autre hôte non', () => {
-		expect(() => lireLesReglages({ CONTROLE_HOTE_CIBLE: 'https://preprod.my-makeup.fr' })).toThrow(ControleRefuse)
-		const lus = lireLesReglages({
-			CONTROLE_HOTE_CIBLE: 'https://preprod.my-makeup.fr',
-			PREPROD_BASIC_AUTH_USER: 'preprod',
-			PREPROD_BASIC_AUTH_PASSWORD: 'factice-173',
-		})
-		expect(lus.autorisation).toBe(`Basic ${btoa('preprod:factice-173')}`)
+	test('seule la production se lit en ligne : la préprod et tout autre hôte sont refusés', () => {
+		for (const hote of ['https://preprod.my-makeup.fr', 'https://x.test', 'https://not-my-makeup.fr'])
+			expect(() => lireLesReglages({ CONTROLE_HOTE_CIBLE: hote })).toThrow(CibleRefusee)
+		expect(lireLesReglages({ CONTROLE_HOTE_CIBLE: 'https://my-makeup.fr' }).cible.hostname).toBe('my-makeup.fr')
+	})
+
+	test('l’accès protégé : facultatif, jamais à moitié, et seulement pour l’hôte temporaire', () => {
+		const acces = { CONTROLE_HOTE_ACCES_UTILISATEUR: 'essai', CONTROLE_HOTE_ACCES_MOT_DE_PASSE: 'factice-173' }
+		expect(lireLesReglages({ CONTROLE_HOTE_CIBLE: 'https://v3.my-makeup.fr' }).autorisation).toBeUndefined()
+		expect(lireLesReglages({ CONTROLE_HOTE_CIBLE: 'https://v3.my-makeup.fr', ...acces }).autorisation).toBe(
+			`Basic ${btoa('essai:factice-173')}`
+		)
+		expect(() =>
+			lireLesReglages({ CONTROLE_HOTE_CIBLE: 'https://v3.my-makeup.fr', CONTROLE_HOTE_ACCES_UTILISATEUR: 'essai' })
+		).toThrow(ControleRefuse)
+		expect(() => lireLesReglages({ CONTROLE_HOTE_CIBLE: 'https://my-makeup.fr', ...acces })).toThrow(ControleRefuse)
+		expect(() => lireLesReglages({ CONTROLE_HOTE_CIBLE: 'http://127.0.0.1:3373', ...acces })).toThrow(ControleRefuse)
 		expect(lireLesReglages({ CONTROLE_HOTE_CIBLE: 'http://127.0.0.1:3373' }).autorisation).toBeUndefined()
 	})
 

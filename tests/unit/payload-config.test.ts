@@ -15,11 +15,17 @@ const SECRET = 'k'.repeat(64)
 const SENDER = 'My Makeup <ne-pas-repondre@example.test>'
 
 const development: RawEnv = { DATABASE_URI: LOCAL_URI, NODE_ENV: 'development', PAYLOAD_SECRET: SECRET, PORT: '3123' }
-const preproduction: RawEnv = {
+// The site in production: the only deployed environment (ticket 232). It holds a relay with its login (ticket 073).
+const enLigne: RawEnv = {
 	DATABASE_URI: REMOTE_URI,
-	NEXT_PUBLIC_SITE_URL: 'https://preprod.my-makeup.fr',
+	EMAIL_FROM: SENDER,
+	NEXT_PUBLIC_SITE_URL: 'https://my-makeup.fr',
 	NODE_ENV: 'production',
 	PAYLOAD_SECRET: SECRET,
+	SMTP_HOST: 'relais.exemple.test',
+	SMTP_PASSWORD: 'mot-de-passe-temoin',
+	SMTP_PORT: '465',
+	SMTP_USER: 'resend',
 }
 
 const VARIABLES = [
@@ -32,7 +38,9 @@ const VARIABLES = [
 	'PAYLOAD_SECRET',
 	'PORT',
 	'SMTP_HOST',
+	'SMTP_PASSWORD',
 	'SMTP_PORT',
+	'SMTP_USER',
 ] as const
 
 let loads = 0
@@ -97,7 +105,7 @@ describe('src/payload.config.ts is hardened', () => {
 	})
 
 	test('on any other database: no schema push, no database created, the versioned migrations instead', async () => {
-		const config = await configUnder(preproduction)
+		const config = await configUnder(enLigne)
 
 		expect(database(config)).toMatchObject({
 			disableCreateDatabase: true,
@@ -105,7 +113,7 @@ describe('src/payload.config.ts is hardened', () => {
 			push: false,
 		})
 		expect(database(config).prodMigrations).toBe(migrations)
-		expect(config.csrf).toEqual(['https://preprod.my-makeup.fr'])
+		expect(config.csrf).toEqual(['https://my-makeup.fr'])
 		expect(config.cors).toEqual([])
 	})
 
@@ -130,7 +138,6 @@ describe('src/payload.config.ts is hardened', () => {
 		// `nodemailerAdapter()` called with no transport creates an account at ethereal.email, and
 		// checks its transport when the server starts: without SMTP_HOST, it is not called at all.
 		expect((await configUnder(development)).email).toBe(adaptateurSansRelais)
-		expect((await configUnder(preproduction)).email).toBe(adaptateurSansRelais)
 		// The sender alone switches nothing on.
 		expect((await configUnder({ ...development, EMAIL_FROM: SENDER })).email).toBe(adaptateurSansRelais)
 	})
@@ -293,19 +300,19 @@ describe('a session cookie counts only when the request comes from a trusted ori
 
 	const from = (headers: Record<string, string>) => new Headers({ Cookie: 'payload-token=jeton-de-test', ...headers })
 
-	test('the pre-production accepts its own origin and ignores the cookie from anywhere else, the site included', async () => {
+	test('the site accepts its own origin and ignores the cookie from anywhere else', async () => {
 		const extractJWT = await gate()
-		const config = await configUnder(preproduction)
+		const config = await configUnder(enLigne)
 		const token = (headers: Record<string, string>) => extractJWT({ headers: from(headers), payload: { config } })
 
-		expect(token({ Origin: 'https://preprod.my-makeup.fr' })).toBe('jeton-de-test')
-		for (const origin of ['https://my-makeup.fr', 'https://exemple.test', 'http://localhost:3000', 'null'])
+		expect(token({ Origin: 'https://my-makeup.fr' })).toBe('jeton-de-test')
+		for (const origin of ['https://www.my-makeup.fr', 'https://exemple.test', 'http://localhost:3000', 'null'])
 			expect({ origin, token: token({ Origin: origin }) }).toEqual({ origin, token: null })
 	})
 
 	test('without an Origin header, the browser must say the request comes from the site itself', async () => {
 		const extractJWT = await gate()
-		const config = await configUnder(preproduction)
+		const config = await configUnder(enLigne)
 		const token = (headers: Record<string, string>) => extractJWT({ headers: from(headers), payload: { config } })
 
 		expect(token({ 'Sec-Fetch-Site': 'same-origin' })).toBe('jeton-de-test')

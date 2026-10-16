@@ -221,14 +221,14 @@ Chaque garde-fou est joué deux fois : sur les fichiers du dépôt, où il ne do
 | C04 | Des versions de Node ou de bun qui diffèrent entre `.nvmrc`, `engines`, `packageManager`, le `Dockerfile` et les workflows ; une image sans digest | En place |
 | C05 | Un test en `.only` ; un test sauté sans son ticket : `.skip`, `.fixme`, `.todo`, `.skipIf(true)`, `.if(false)`. Le ticket s'écrit `// issue #N`, sur une ligne de l'appel ou sur la ligne du dessus | En place |
 | C06 | Une attente fixe dans `tests/e2e` : `waitForTimeout`, le minuteur `setTimeout` (nu ou de la page), sa forme en promesse (`timers/promises`). `test.setTimeout`, qui fixe la durée maximale d'un essai, n'en est pas une | En place |
-| C07 | Une configuration Playwright qui peut viser la prod : `forbidOnly` faux en CI, des fichiers autres que `*.spec.ts`, une `baseURL` sur `my-makeup.fr` ou ses sous-domaines (la préprod exceptée) ; un réglage écrit dans `playwright.config.ts` au lieu de `tests/outils/e2e.ts` ; un essai qui ouvre une adresse complète au lieu d'un chemin. Playwright lancé vers la prod est joué pour de vrai : il s'arrête avant le premier essai | En place |
+| C07 | Une configuration Playwright qui peut viser la prod : `forbidOnly` faux en CI, des fichiers autres que `*.spec.ts`, une `baseURL` sur `my-makeup.fr` ou ses sous-domaines ; un réglage écrit dans `playwright.config.ts` au lieu de `tests/outils/e2e.ts` ; un essai qui ouvre une adresse complète au lieu d'un chemin. Playwright lancé vers la prod est joué pour de vrai : il s'arrête avant le premier essai | En place |
 | C08 | Un fichier JavaScript écrit à la main (seul `importMap.js`, généré par Payload, est admis) | En place |
 
 Le même fichier garde aussi :
 
 - les déclencheurs de la CI : aucun filtre de chemins, aucun filtre sur les pull requests, `v3` dans les poussées, jamais `pull_request_target` ;
 - les actions : chacune figée par un commit complet, avec sa version en commentaire ;
-- les secrets : `ci.yml` n'en lit aucun, ni par son nom, ni en bloc (`toJSON(secrets)`, un nom calculé, `secrets: inherit`). Le jeton de la CI compte comme un secret, sous ses deux noms : `secrets.GITHUB_TOKEN` et `github.token`. Les autres workflows ne lisent que les secrets de la liste admise du test : aujourd'hui le jeton du passage, que `release.yml` reçoit pour pousser la publication ([`docs/publication.md`](publication.md)), et les deux secrets de l'accès protégé de la préprod, `PREPROD_BASIC_AUTH_USER` et `PREPROD_BASIC_AUTH_PASSWORD`, que lit `preprod.yml` ([`docs/preprod.md`](preprod.md)) ;
+- les secrets : `ci.yml` n'en lit aucun, ni par son nom, ni en bloc (`toJSON(secrets)`, un nom calculé, `secrets: inherit`). Le jeton de la CI compte comme un secret, sous ses deux noms : `secrets.GITHUB_TOKEN` et `github.token`. Les autres workflows ne lisent que les secrets de la liste admise du test : aujourd'hui le jeton du passage, que `release.yml` reçoit pour pousser la publication ([`docs/publication.md`](publication.md)) ; aucun secret de la préprod : elle n'existe plus ;
 - les permissions : `ci.yml` lit le dépôt, rien de plus. Le workflow de publication donne l'écriture à son seul job ; `tests/ci/publication.test.ts` le garde, avec sa dépendance à `ci-ok` ;
 - `ci-ok` : il tourne toujours et attend tous les jobs. Aucun job n'est sous condition. Une commande (`run`) ne porte que `always()` ou `!cancelled()`, qui la font tourner plus souvent, jamais moins. `failure()` est réservé aux actions (`uses`) qui envoient un rapport : sous cette condition, une commande serait sautée quand tout va bien, et le job resterait vert sans elle ;
 - les durées : chaque job a sa limite, et la somme des limites de la plus longue chaîne reste sous 15 minutes (voir « Durée de la CI ») ;
@@ -451,7 +451,7 @@ Ce que ces relevés ne montrent pas : les actions de la CI n'ont pas été cherc
 
 ## 12. La dérive de schéma
 
-La dérive, c'est l'écart entre le schéma que décrivent les collections du code et celui que créent les migrations versionnées. Une collection changée sans sa migration, c'est une base de préprod ou de prod qui ne suit plus le code.
+La dérive, c'est l'écart entre le schéma que décrivent les collections du code et celui que créent les migrations versionnées. Une collection changée sans sa migration, c'est une base de prod qui ne suit plus le code.
 
 ```sh
 bun run schema:derive

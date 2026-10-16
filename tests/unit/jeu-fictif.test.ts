@@ -4,7 +4,7 @@ import path from 'node:path'
 import type { Field, Payload } from 'payload'
 import { Profils } from '@/collections/Profils'
 import { exigerLaCibleDuJeu, poserLesProfilsDuJeu } from '@/jeu-fictif/chargement'
-import { cibleDuJeu, JeuFictifRefuse, ORIGINE_DE_LA_PREPROD, ORIGINE_DU_SITE } from '@/jeu-fictif/garde'
+import { cibleDuJeu, JeuFictifRefuse, ORIGINE_DU_SITE } from '@/jeu-fictif/garde'
 import {
 	adresseDuProfil,
 	CONSENTEMENT_DU_JEU,
@@ -23,7 +23,7 @@ import { slugifier } from '@/lib/slug'
 import { environnementDuBanc, RACINE } from '../outils/banc'
 
 /**
- * The fictional set of the bench and of the pre-production (ticket 051), without the bench: its
+ * The fictional set of the bench (ticket 051), without the bench: its
  * twelve profile types, the state the single rule gives each one, its six photos, and the guard
  * that keeps it off the site. The same set loaded on the bench: tests/integration/banc-profils-types.test.ts.
  */
@@ -50,9 +50,10 @@ function etatSelonLaRegle({ profil, photos }: ProfilDuJeu) {
 /** The bench of `.env.test`, default instance. */
 const BANC = environnementDuBanc({ nom: 'my-makeup-test', decalage: 0 })
 
-const PREPROD = {
+// What the retired pre-production used to give: the guard must refuse it now (ticket 232).
+const ANCIENNE_PREPROD = {
 	APP_ENV: 'preprod',
-	NEXT_PUBLIC_SITE_URL: ORIGINE_DE_LA_PREPROD,
+	NEXT_PUBLIC_SITE_URL: 'https://preprod.my-makeup.fr',
 	DATABASE_URI: 'postgres://preprod:secret-de-preprod-factice@base-preprod.interne:5432/mymakeup',
 	S3_ENDPOINT: 'https://compte-factice.r2.cloudflarestorage.com',
 	S3_BUCKET: 'mymakeup-preprod',
@@ -201,9 +202,9 @@ describe('Les six photos du jeu', () => {
 	})
 })
 
-describe('Le jeu ne se charge que sur le banc ou sur la préprod', () => {
-	test('les deux adresses que la garde connaît sont celles des sites déployés', () => {
-		expect(DEPLOYED_ORIGINS).toEqual([ORIGINE_DU_SITE, ORIGINE_DE_LA_PREPROD])
+describe('Le jeu ne se charge que sur le banc', () => {
+	test('la seule adresse déployée que connaît l’application est celle du site', () => {
+		expect(DEPLOYED_ORIGINS).toEqual([ORIGINE_DU_SITE])
 	})
 
 	test('le banc de test est accepté, quelle que soit son instance', () => {
@@ -211,30 +212,26 @@ describe('Le jeu ne se charge que sur le banc ou sur la préprod', () => {
 		expect(cibleDuJeu(environnementDuBanc({ nom: 'mm-051', decalage: 451 }))).toBe('banc')
 	})
 
-	test('la préprod est acceptée, avec ses deux clés : APP_ENV=preprod et son adresse', () => {
-		expect(cibleDuJeu(PREPROD)).toBe('preprod')
-	})
-
-	test('la préprod sans stockage d’objets est acceptée : ses profils sont alors chargés sans photo (ticket 053)', () => {
-		expect(cibleDuJeu({ ...PREPROD, S3_ENDPOINT: undefined, S3_BUCKET: undefined })).toBe('preprod')
-	})
-
 	test.each([
 		['la prod déclarée', { ...BANC, APP_ENV: 'prod' }, 'APP_ENV vaut « prod »'],
 		[
+			'l’ancienne préprod : plus aucune garde ne l’accepte, avec ou sans stockage d’objets',
+			ANCIENNE_PREPROD,
+			'APP_ENV n’est pas « test »',
+		],
+		[
+			'l’ancienne préprod sans stockage',
+			{ ...ANCIENNE_PREPROD, S3_ENDPOINT: undefined, S3_BUCKET: undefined },
+			'APP_ENV n’est pas « test »',
+		],
+		[
 			'l’adresse du site en ligne, même déclarée préprod',
-			{ ...PREPROD, NEXT_PUBLIC_SITE_URL: ORIGINE_DU_SITE },
+			{ ...ANCIENNE_PREPROD, NEXT_PUBLIC_SITE_URL: ORIGINE_DU_SITE },
 			'site en ligne',
 		],
 		['l’adresse du site en ligne sur le banc', { ...BANC, NEXT_PUBLIC_SITE_URL: ORIGINE_DU_SITE }, 'site en ligne'],
 		['un environnement sans APP_ENV (un .env de développement)', { ...BANC, APP_ENV: undefined }, 'APP_ENV manque'],
-		['un APP_ENV inconnu', { ...BANC, APP_ENV: 'staging' }, 'APP_ENV n’est ni « test » ni « preprod »'],
-		['la préprod déclarée sans son adresse', { ...PREPROD, NEXT_PUBLIC_SITE_URL: undefined }, 'APP_ENV=preprod'],
-		[
-			'la préprod déclarée avec une adresse locale',
-			{ ...PREPROD, NEXT_PUBLIC_SITE_URL: 'http://localhost:3100' },
-			'APP_ENV=preprod',
-		],
+		['un APP_ENV inconnu', { ...BANC, APP_ENV: 'staging' }, 'APP_ENV n’est pas « test »'],
 		[
 			'la base de développement du poste',
 			{ ...BANC, DATABASE_URI: 'postgres://mymakeup:local-dev-only@127.0.0.1:5442/mymakeup_dev' },
@@ -259,8 +256,8 @@ describe('Le jeu ne se charge que sur le banc ou sur la préprod', () => {
 		],
 		['un espace qui n’est pas celui d’un banc', { ...BANC, S3_BUCKET: 'mymakeup' }, 'S3_BUCKET'],
 		[
-			'l’adresse de la préprod sur le banc',
-			{ ...BANC, NEXT_PUBLIC_SITE_URL: ORIGINE_DE_LA_PREPROD },
+			'l’adresse de l’ancienne préprod sur le banc',
+			{ ...BANC, NEXT_PUBLIC_SITE_URL: ANCIENNE_PREPROD.NEXT_PUBLIC_SITE_URL },
 			'NEXT_PUBLIC_SITE_URL',
 		],
 	])('refusé : %s', (_cas, variables, motif) => {
@@ -298,11 +295,11 @@ describe('Le jeu ne se charge que sur le banc ou sur la préprod', () => {
 	}
 
 	test('hors du banc, le chargement s’arrête avant de lire ou d’écrire quoi que ce soit', async () => {
-		const { appels, payload } = fauxPayload(PREPROD.DATABASE_URI)
+		const { appels, payload } = fauxPayload(ANCIENNE_PREPROD.DATABASE_URI)
 
-		await expect(poserLesProfilsDuJeu(payload, { variables: { ...PREPROD, APP_ENV: 'prod' } })).rejects.toBeInstanceOf(
-			JeuFictifRefuse
-		)
+		await expect(
+			poserLesProfilsDuJeu(payload, { variables: { ...ANCIENNE_PREPROD, APP_ENV: 'prod' } })
+		).rejects.toBeInstanceOf(JeuFictifRefuse)
 		expect(appels).toEqual([])
 	})
 

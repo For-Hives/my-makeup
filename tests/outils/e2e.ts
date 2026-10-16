@@ -75,13 +75,12 @@ export function adresseDuBanc(environnement: Environnement): string {
 
 /**
  * Where the tests point: `BASE_URL` when the run gives one, else the application of the bench.
- * Throws `EnvironnementRefuse` on anything but a local address, or the pre-production with
- * `APP_ENV=preprod`. Production is refused in every environment.
+ * Throws `EnvironnementRefuse` on anything but a local address. Production is refused in every environment.
  */
 export function cibleDesEssais(variables: Variables = process.env): Cible {
 	const environnement = lireEnvironnement(variables.APP_ENV)
 	const adresse = variables.BASE_URL || adresseDuBanc(environnementDuBanc(lireInstance(variables)))
-	verifierCible(adresse, environnement)
+	verifierCible(adresse)
 	return { adresse, environnement }
 }
 
@@ -141,7 +140,7 @@ export function environnementDeLApplication(environnement: Environnement): Envir
  *
  * It starts one only when the run is the one `bun run test:e2e` prepares: the environment is
  * the bench of this instance, and the target is its application. Started by hand in a bare
- * shell, or pointed at the pre-production, Playwright starts nothing: the global setup then
+ * shell, or pointed at another address, Playwright starts nothing: the global setup then
  * says whether something healthy answers.
  */
 export function applicationDesEssais(variables: Variables = process.env): Application | undefined {

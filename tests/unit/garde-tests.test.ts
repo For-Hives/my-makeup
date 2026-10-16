@@ -178,8 +178,7 @@ describe('U86 : refuse une BASE_URL e2e sur my-makeup.fr, www. ou api.', () => {
 		'http://MY-MAKEUP.FR:443/',
 		'https://localhost@www.my-makeup.fr/',
 	])('refuse la prod dans tout environnement : %s', adresse => {
-		expect(messageDuRefus(() => verifierCible(adresse, 'test'))).toContain('BASE_URL vise la prod')
-		expect(messageDuRefus(() => verifierCible(adresse, 'preprod'))).toContain('BASE_URL vise la prod')
+		expect(messageDuRefus(() => verifierCible(adresse))).toContain('BASE_URL vise la prod')
 	})
 
 	test.each([
@@ -187,13 +186,11 @@ describe('U86 : refuse une BASE_URL e2e sur my-makeup.fr, www. ou api.', () => {
 		'http://127.0.0.1:3100/auth',
 		'http://[::1]:3100',
 	])('accepte une adresse locale : %s', adresse => {
-		expect(() => verifierCible(adresse, 'test')).not.toThrow()
-		expect(() => verifierCible(adresse, 'preprod')).not.toThrow()
+		expect(() => verifierCible(adresse)).not.toThrow()
 	})
 
-	test('n’accepte la préprod que si l’environnement déclaré est preprod', () => {
-		expect(() => verifierCible('https://preprod.my-makeup.fr', 'preprod')).not.toThrow()
-		expect(messageDuRefus(() => verifierCible('https://preprod.my-makeup.fr', 'test'))).toContain('APP_ENV=preprod')
+	test('l’ancienne préprod est refusée comme le reste de la prod (ticket 232)', () => {
+		expect(messageDuRefus(() => verifierCible('https://preprod.my-makeup.fr'))).toContain('BASE_URL vise la prod')
 	})
 
 	test.each([
@@ -201,8 +198,7 @@ describe('U86 : refuse une BASE_URL e2e sur my-makeup.fr, www. ou api.', () => {
 		['un domaine qui finit comme le site', 'https://not-my-makeup.fr'],
 		['une adresse sans protocole web', 'localhost:3100'],
 	])('refuse %s', (_cas, adresse) => {
-		expect(() => verifierCible(adresse, 'test')).toThrow(EnvironnementRefuse)
-		expect(() => verifierCible(adresse, 'preprod')).toThrow(EnvironnementRefuse)
+		expect(() => verifierCible(adresse)).toThrow(EnvironnementRefuse)
 	})
 
 	test.each(['BASE_URL', 'NEXT_PUBLIC_SITE_URL'])('la garde lit %s dans l’environnement et nomme la variable', nom => {
@@ -381,18 +377,14 @@ describe('Connexion Google : refuse Google lui-même et tout identifiant Google 
 	})
 })
 
-describe('Trois environnements reconnus : test, preprod, prod (toujours refusée)', () => {
+describe('Deux environnements reconnus : test, prod (toujours refusée)', () => {
 	test('rien de déclaré vaut test, le plus strict', () => {
 		expect(lireEnvironnement(undefined)).toBe('test')
 		expect(lireEnvironnement('')).toBe('test')
 	})
 
-	test('test et preprod sont admis', () => {
+	test('test est admis', () => {
 		expect(lireEnvironnement('test')).toBe('test')
-		expect(lireEnvironnement('preprod')).toBe('preprod')
-		expect(verifierEnvironnement({ ...BANC, APP_ENV: 'preprod', BASE_URL: 'https://preprod.my-makeup.fr' })).toBe(
-			'preprod'
-		)
 	})
 
 	test('prod est refusée même quand tout le reste est local', () => {
@@ -401,17 +393,8 @@ describe('Trois environnements reconnus : test, preprod, prod (toujours refusée
 		expect(message).toBe('APP_ENV vaut « prod » : aucun test ne tourne en environnement de prod.')
 	})
 
-	test.each(['production', 'dev', 'PROD', 'préprod'])('un environnement inconnu est refusé : %s', valeur => {
+	test.each(['production', 'dev', 'PROD', 'preprod', 'préprod'])('un environnement inconnu est refusé : %s', valeur => {
 		expect(messageDuRefus(() => lireEnvironnement(valeur))).toContain('environnement inconnu')
-	})
-
-	test('en preprod, la base et les envois restent ceux du banc', () => {
-		const preprod = { ...BANC, APP_ENV: 'preprod', BASE_URL: 'https://preprod.my-makeup.fr' }
-
-		expect(() =>
-			verifierEnvironnement({ ...preprod, DATABASE_URI: 'postgres://u:p@db.example.test/mymakeup' })
-		).toThrow(EnvironnementRefuse)
-		expect(() => verifierEnvironnement({ ...preprod, SMTP_HOST: 'smtp.resend.com' })).toThrow(EnvironnementRefuse)
 	})
 
 	test('arrête bun avant le premier test quand l’environnement déclaré est prod', async () => {

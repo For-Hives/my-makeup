@@ -429,7 +429,7 @@ describe('Le banc lui-même n’est pas intercepté', () => {
 			'localhost.example.test',
 			'mailpit.example.test',
 			'my-makeup.fr',
-			'preprod.my-makeup.fr',
+			'v3.my-makeup.fr',
 			'api.resend.com',
 		])
 			expect(estHoteDuBanc(hote), hote).toBe(false)

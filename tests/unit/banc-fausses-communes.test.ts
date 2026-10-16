@@ -83,7 +83,7 @@ describe('l’application ne demande la fausse liste que sur ce poste, quand le 
 		expect(() => adresseDesCommunes({ COMMUNES_DU_BANC: valeur })).toThrow('COMMUNES_DU_BANC refusée')
 	})
 
-	test.each(['https://my-makeup.fr', 'https://preprod.my-makeup.fr'])('refuse toute valeur sur %s', site => {
+	test.each(['https://my-makeup.fr'])('refuse toute valeur sur %s', site => {
 		expect(() => adresseDesCommunes({ COMMUNES_DU_BANC: 'http://127.0.0.1:2050', NEXT_PUBLIC_SITE_URL: site })).toThrow(
 			'un site déployé'
 		)

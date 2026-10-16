@@ -602,7 +602,7 @@ describe('La cible des sondes', () => {
 describe('U86 : la garde des essais de bout en bout refuse toujours la prod', () => {
 	test('la prod, que les sondes lisent, reste refusée aux essais', () => {
 		expect(cibleDesSondes('https://my-makeup.fr').hostname).toBe('my-makeup.fr')
-		expect(() => verifierCible('https://my-makeup.fr', 'test')).toThrow('BASE_URL vise la prod')
+		expect(() => verifierCible('https://my-makeup.fr')).toThrow('BASE_URL vise la prod')
 		expect(() =>
 			configurationDesEssais({ SONDES_CIBLE: 'https://my-makeup.fr', BASE_URL: 'https://www.my-makeup.fr' })
 		).toThrow(EnvironnementRefuse)

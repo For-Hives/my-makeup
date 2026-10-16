@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import {
+	DEPLOYED_ORIGINS,
 	EnvError,
 	GOOGLE_ISSUER,
 	isLocalDatabase,
@@ -169,7 +170,7 @@ describe('the schema is pushed only into a database of this machine', () => {
 	})
 })
 
-describe('trusted origins: the site, its pre-production and this machine, each for itself', () => {
+describe('trusted origins: the site and this machine, each for itself', () => {
 	const production: RawEnv = { ...valid, ...RELAIS_DU_SITE, DATABASE_URI: REMOTE_URI, NODE_ENV: 'production' }
 	const origins = (env: RawEnv) => parseServerEnv(env).trustedOrigins
 
@@ -195,11 +196,8 @@ describe('trusted origins: the site, its pre-production and this machine, each f
 		])
 	})
 
-	test('in production: the site trusts itself only, the pre-production trusts itself only', () => {
+	test('in production: the site trusts itself only', () => {
 		expect(origins({ ...production, NEXT_PUBLIC_SITE_URL: 'https://my-makeup.fr' })).toEqual(['https://my-makeup.fr'])
-		expect(origins({ ...production, NEXT_PUBLIC_SITE_URL: 'https://preprod.my-makeup.fr' })).toEqual([
-			'https://preprod.my-makeup.fr',
-		])
 	})
 
 	test('in production on this machine: the stated address under both of its names, whatever PORT says', () => {
@@ -218,9 +216,8 @@ describe('trusted origins: the site, its pre-production and this machine, each f
 	test.each([
 		'https://exemple.test',
 		'https://www.my-makeup.fr',
-		// The temporary address of the production application before the switch (plan 01 §4.9).
-		// Refused on purpose until the ticket that opens that address (185) adds it to
-		// DEPLOYED_ORIGINS and moves this case to the accepted ones.
+		// The temporary address of the production application before the swap of the domains: the
+		// build is made for https://my-makeup.fr directly (PLAN-PROD-DIRECT.md), so this stays refused.
 		'https://v3.my-makeup.fr',
 		'https://my-makeup.fr.exemple.test',
 		'https://preprod.my-makeup.fr.exemple.test',
@@ -237,7 +234,7 @@ describe('trusted origins: the site, its pre-production and this machine, each f
 		for (const env of [valid, production]) {
 			const error = refusal({ ...env, NEXT_PUBLIC_SITE_URL: site })
 			expect(error.variables).toEqual(['NEXT_PUBLIC_SITE_URL'])
-			expect(error.message).toContain('- NEXT_PUBLIC_SITE_URL : refusée. Attendu : https://my-makeup.fr, ')
+			expect(error.message).toContain('- NEXT_PUBLIC_SITE_URL : refusée. Attendu : https://my-makeup.fr ou ')
 		}
 	})
 })
@@ -277,7 +274,6 @@ describe('the Google sign-in talks to Google, or on this machine to the fake Goo
 	const FAKE = 'http://127.0.0.1:7080'
 	const production: RawEnv = { ...valid, ...RELAIS_DU_SITE, DATABASE_URI: REMOTE_URI, NODE_ENV: 'production' }
 	const SITE = 'https://my-makeup.fr'
-	const PREPROD = 'https://preprod.my-makeup.fr'
 
 	test('nothing set: Google itself, in production or not', () => {
 		expect(GOOGLE_ISSUER).toBe('https://accounts.google.com')
@@ -286,7 +282,7 @@ describe('the Google sign-in talks to Google, or on this machine to the fake Goo
 		expect(parseServerEnv({ ...valid, GOOGLE_OIDC_ISSUER: '  ' }).googleIssuer).toBe(GOOGLE_ISSUER)
 	})
 
-	test('Google written out is accepted everywhere, the site and its pre-production included', () => {
+	test('Google written out is accepted everywhere, the site included', () => {
 		for (const env of [valid, { ...production, NEXT_PUBLIC_SITE_URL: SITE }])
 			expect(parseServerEnv({ ...env, GOOGLE_OIDC_ISSUER: GOOGLE_ISSUER }).googleIssuer).toBe(GOOGLE_ISSUER)
 	})
@@ -305,12 +301,7 @@ describe('the Google sign-in talks to Google, or on this machine to the fake Goo
 
 	test.each([
 		['the site, in production', { ...production, NEXT_PUBLIC_SITE_URL: SITE }],
-		['the pre-production, in production', { ...production, NEXT_PUBLIC_SITE_URL: PREPROD }],
 		['the address of the site, whatever NODE_ENV says', { ...valid, NEXT_PUBLIC_SITE_URL: SITE }],
-		[
-			'the address of the pre-production, in development',
-			{ ...valid, NEXT_PUBLIC_SITE_URL: PREPROD, NODE_ENV: 'development' },
-		],
 	])('a local provider is refused on a deployed site: %s', (_case, env) => {
 		for (const issuer of [FAKE, 'http://localhost:7080']) {
 			const error = refusal({ ...env, GOOGLE_OIDC_ISSUER: issuer })
@@ -763,9 +754,7 @@ describe('the site itself sends through an authenticated relay, or does not star
 		}
 	})
 
-	test('the pre-production, a work station and the bench may go without a relay', () => {
-		const preprod = { ...sansRelais, NEXT_PUBLIC_SITE_URL: 'https://preprod.my-makeup.fr' }
-		expect(parseServerEnv(preprod).mail).toBeUndefined()
+	test('a work station and the bench may go without a relay', () => {
 		expect(parseServerEnv(valid).mail).toBeUndefined()
 		expect(parseServerEnv({ ...sansRelais, NEXT_PUBLIC_SITE_URL: 'http://localhost:3100' }).mail).toBeUndefined()
 	})
@@ -840,7 +829,7 @@ describe('the photos go to the object storage the environment names, or nowhere 
 	})
 
 	test('the storage of this machine is refused when the site is deployed', () => {
-		const error = refusal({ ...bench, NEXT_PUBLIC_SITE_URL: 'https://preprod.my-makeup.fr' })
+		const error = refusal({ ...bench, NEXT_PUBLIC_SITE_URL: 'https://my-makeup.fr' })
 		expect(error.variables).toEqual(['S3_ENDPOINT'])
 		expect(parseServerEnv({ ...bench, NEXT_PUBLIC_SITE_URL: 'http://localhost:3100' }).storage?.local).toBe(true)
 	})
@@ -863,5 +852,39 @@ describe('the photos go to the object storage the environment names, or nowhere 
 		expect(mediaBaseUrl(undefined, parseServerEnv(r2).storage)).toBe(MEDIA_ORIGIN_DEFAULT)
 		expect(mediaBaseUrl(undefined, undefined)).toBe(MEDIA_ORIGIN_DEFAULT)
 		expect(() => mediaBaseUrl('http://photos.exemple.test', storage)).toThrow(EnvError)
+	})
+})
+
+describe('there is no pre-production: APP_ENV knows the bench and the site only (ticket 232)', () => {
+	const SITE = 'https://my-makeup.fr'
+
+	test('« preprod » is refused whatever the address, and the message names the variable, never the value', () => {
+		for (const env of [
+			{ ...valid, APP_ENV: 'preprod' },
+			{ ...valid, APP_ENV: 'preprod', NODE_ENV: 'production', NEXT_PUBLIC_SITE_URL: SITE },
+			{ ...valid, APP_ENV: 'preprod', NODE_ENV: 'production', NEXT_PUBLIC_SITE_URL: 'https://preprod.my-makeup.fr' },
+		] satisfies RawEnv[]) {
+			const error = refusal(env)
+			expect(error.variables).toContain('APP_ENV')
+			expect(error.message).toContain('- APP_ENV : illisible. Attendu : « test » sur le banc de test, « prod »')
+			expect(error.message).not.toContain('preprod')
+		}
+	})
+
+	test('test, prod and nothing are accepted', () => {
+		for (const appEnv of ['test', 'prod', undefined])
+			expect(() => parseServerEnv({ ...valid, APP_ENV: appEnv })).not.toThrow()
+	})
+
+	test('the address of the former pre-production is not a deployed origin any more', () => {
+		expect(DEPLOYED_ORIGINS).toEqual([SITE])
+		expect(
+			refusal({ ...valid, NODE_ENV: 'production', NEXT_PUBLIC_SITE_URL: 'https://preprod.my-makeup.fr' }).variables
+		).toContain('NEXT_PUBLIC_SITE_URL')
+	})
+
+	test('the reset token of the former pre-production is not a variable of the application any more', () => {
+		const env = parseServerEnv({ ...valid, PREPROD_REMISE_A_ZERO: '2026-10-15-matin' } as RawEnv)
+		expect(env).not.toHaveProperty('preprod')
 	})
 })

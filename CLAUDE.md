@@ -17,13 +17,12 @@ My Makeup est un annuaire de maquilleuses professionnelles indépendantes. Cette
 | écrire ou lancer un essai de bout en bout, contrôler l'accessibilité d'une page | [`docs/tests/e2e.md`](docs/tests/e2e.md) |
 | émettre un événement de mesure, toucher le chemin `/u` ou le faux Umami | [`docs/mesure/umami.md`](docs/mesure/umami.md) |
 | lancer ou écrire une sonde du site en ligne, en lecture seule | [`docs/tests/sondes.md`](docs/tests/sondes.md) |
-| contrôler en lecture toutes les adresses d'un hôte (jour de la bascule, préprod) | [`docs/tests/controle-hote.md`](docs/tests/controle-hote.md) |
+| contrôler en lecture toutes les adresses d'un hôte (jour de la bascule, hôte de production) | [`docs/tests/controle-hote.md`](docs/tests/controle-hote.md) |
 | appeler un service extérieur, ou le simuler dans un test | [`docs/tests/http-sortant.md`](docs/tests/http-sortant.md) |
 | toucher la CI, un workflow ou le `Dockerfile` | [`docs/qualite.md`](docs/qualite.md), §6 à §9 |
 | monter une version, toucher `renovate.json` | [`docs/qualite.md`](docs/qualite.md), §11 |
 | créer ou changer une collection, un champ, ou l'import des données | [`docs/migration/SCHEMA.md`](docs/migration/SCHEMA.md) |
 | lancer l'import des données de l'ancien site, lire son rapport, y ajouter une collection | [`docs/migration/IMPORT.md`](docs/migration/IMPORT.md) |
-| comprendre ce que fait la préprod au démarrage, la remettre à zéro, lire son contrôle par la CI | [`docs/preprod.md`](docs/preprod.md) |
 | créer, déplacer ou retirer une adresse | [`docs/migration/URLS.md`](docs/migration/URLS.md) |
 | faire autrement que le site en ligne | [`docs/migration/CHANGEMENTS-VOULUS.md`](docs/migration/CHANGEMENTS-VOULUS.md) |
 | savoir ce qui est déjà fait et vérifié | [`docs/migration/JOURNAL.md`](docs/migration/JOURNAL.md) |
@@ -92,7 +91,7 @@ Ce qui existe aujourd'hui est décrit dans le README, « Ce que contient le sque
 
 Ces règles n'ont pas d'exception. Si une tâche semble en demander une, arrête-toi et dis-le.
 
-1. **Aucune base de prod ni de préprod.** La seule base de travail est celle de `docker-compose.yml`, sur ce poste. L'adresse d'une base distante n'entre ni dans un `.env`, ni dans une commande, ni dans un test. Les tests ne connaissent qu'une base locale dont le nom finit par `_test`.
+1. **Aucune base de prod.** La v3 n'a pas de préprod : un seul environnement en ligne, la production, et le banc local (décision d'Andy du 16/10/2026, ticket 232). La seule base de travail est celle de `docker-compose.yml`, sur ce poste. L'adresse d'une base distante n'entre ni dans un `.env`, ni dans une commande, ni dans un test. Les tests ne connaissent qu'une base locale dont le nom finit par `_test`.
 2. **Aucune poussée de schéma hors de ce poste.** Payload ne pousse son schéma que dans une base locale (`localhost`, `127.0.0.1`, `::1`). Partout ailleurs, le schéma change par une migration versionnée et relue, que l'application joue à son démarrage. Aucune commande `payload` ne se lance contre une base distante.
 3. **Aucune donnée personnelle dans les tests**, ni dans les fixtures, les journaux, les documents ou les messages de commit. Tout y est fictif : noms inventés, adresses en `@example.test`, téléphones de la plage réservée à la fiction. Un vrai profil ou un vrai compte se désigne par son identifiant numérique, jamais par un nom, un email, un pseudo ou l'adresse de sa page.
 4. **Aucun secret dans le dépôt.** `.env.exemple` liste les variables sans aucune valeur. Un message d'erreur nomme la variable, jamais sa valeur.
@@ -106,7 +105,7 @@ Ces règles n'ont pas d'exception. Si une tâche semble en demander une, arrête
 - Tout changement de collection se termine par `bun run payload:types`. Le fichier généré est versionné, et relancer la commande ne le change plus.
 - Une migration s'écrit avec `bun run payload:migrate:create`. **Lis son SQL avant de la versionner** : elle contient ce que ton changement demande, rien d'autre, et aucune suppression que tu n'as pas voulue. Relancée aussitôt, la commande ne trouve plus aucun changement de schéma : c'est la preuve qu'il n'y a pas de dérive.
 - Le schéma de P3 est figé dans une seule migration, `init` (ticket 049). Depuis, **tout changement de collection vient avec sa migration, dans le même commit** : la CI le vérifie (`bun run schema:derive`), et le banc de test refuse de lancer ses tests sur une base que les migrations ne construisent pas comme le code la décrit.
-- Le banc de test ne pousse jamais le schéma : sa base est construite par les migrations versionnées seules, comme celle de la préprod. Seule la base de développement de `docker-compose.yml` reçoit encore le schéma poussé par `bun run dev`.
+- Le banc de test ne pousse jamais le schéma : sa base est construite par les migrations versionnées seules, comme celle de la production. Seule la base de développement de `docker-compose.yml` reçoit encore le schéma poussé par `bun run dev`.
 
 ## URL
 

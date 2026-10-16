@@ -44,7 +44,6 @@ export type RawEnv = Partial<
 		| 'PAYLOAD_DROP_DATABASE'
 		| 'PAYLOAD_SECRET'
 		| 'PORT'
-		| 'PREPROD_REMISE_A_ZERO'
 		| 'S3_ACCESS_KEY_ID'
 		| 'S3_BUCKET'
 		| 'S3_ENDPOINT'
@@ -83,22 +82,6 @@ export type StorageEnv = {
 	local: boolean
 }
 
-/**
- * What the pre-production does that no other environment does (ticket 027, docs/preprod.md): it
- * loads the fictional set when it starts on an empty database (ticket 053), and empties its
- * database once for each new token of PREPROD_REMISE_A_ZERO.
- */
-export type PreprodEnv = {
-	/**
-	 * True when the environment says it is the pre-production (`APP_ENV=preprod`): the fictional set
-	 * is then loaded when the database is empty (ticket 053). Without it the start loads nothing,
-	 * and says so in its log.
-	 */
-	jeuFictif: boolean
-	/** The token of the reset asked for, or nothing: the database is kept. */
-	remiseAZero?: string
-}
-
 /** The Umami instance the `/u` relay talks to. */
 export type UmamiEnv = {
 	/** An origin, with a path when the instance lives under one, and no final slash. */
@@ -111,7 +94,7 @@ export type ServerEnv = {
 	/**
 	 * Who receives the messages of the contact form (ticket 158): CONTACT_TO, else on the site itself the
 	 * public address of the team, else an address of the domain reserved for tests (nothing real is written
-	 * to on a work station, the bench or the pre-production unless CONTACT_TO says so).
+	 * to on a work station or the bench unless CONTACT_TO says so).
 	 */
 	contactTo: string
 	/**
@@ -141,11 +124,6 @@ export type ServerEnv = {
 	mail?: MailEnv
 	payloadSecret: string
 	/**
-	 * Set on the pre-production only: a production build served from its address (ticket 027).
-	 * Nothing anywhere else, the site included.
-	 */
-	preprod?: PreprodEnv
-	/**
 	 * Nothing when S3_ENDPOINT is not set: no photo can then be sent, and the application writes
 	 * nothing on its own disk.
 	 */
@@ -167,8 +145,8 @@ export type ServerEnv = {
 /** Shorter than this, a secret is refused. `openssl rand -hex 32` gives 64 characters. */
 export const SECRET_MIN_LENGTH = 32
 
-/** The two deployed addresses a build can be made for: the site and its pre-production. */
-export const DEPLOYED_ORIGINS: readonly string[] = ['https://my-makeup.fr', 'https://preprod.my-makeup.fr']
+/** The only deployed address a build can be made for: the site. There is no staging environment (ticket 232). */
+export const DEPLOYED_ORIGINS: readonly string[] = ['https://my-makeup.fr']
 
 /** The address of the site itself: the only one where a mail relay is mandatory (ticket 073). */
 export const SITE_ORIGIN = 'https://my-makeup.fr'
@@ -176,17 +154,8 @@ export const SITE_ORIGIN = 'https://my-makeup.fr'
 /** The Umami instance of the site today: the one the live site measures into. Never reached from anywhere else than the site. */
 export const UMAMI_ORIGIN_DEFAULT = 'https://umami.wadefade.fr'
 
-/** The address of the pre-production: the only one where the reset and the import at start may run. */
-export const PREPROD_ORIGIN = 'https://preprod.my-makeup.fr'
-
-/** The values of APP_ENV the application knows: the bench, the pre-production, the site. */
-const APP_ENVS: readonly string[] = ['test', 'preprod', 'prod']
-
-/**
- * A token of PREPROD_REMISE_A_ZERO: lower case letters, digits and hyphens, 8 to 64 characters,
- * such as « 2026-10-15-matin ». It is written into the database once the reset is done.
- */
-export const JETON_DE_REMISE_A_ZERO = /^[a-z0-9][a-z0-9-]{7,63}$/
+/** The values of APP_ENV the application knows: the bench and the site. Nothing else. */
+const APP_ENVS: readonly string[] = ['test', 'prod']
 
 /** Google's own OpenID Connect issuer: the only one a deployed site talks to. */
 export const GOOGLE_ISSUER = 'https://accounts.google.com'
@@ -230,8 +199,7 @@ const ABSENT = 'absente'
 const DEFAULT_SENDER_NAME = 'My Makeup'
 
 const EXPECTED = {
-	APP_ENV:
-		'« test » sur le banc de test, « preprod » sur la préprod, « prod » sur le site en ligne, ou absente sur un poste',
+	APP_ENV: '« test » sur le banc de test, « prod » sur le site en ligne, ou absente sur un poste',
 	AUTH_VERIFY: '« on » (la valeur par défaut) ou « off »',
 	BASCULE_LE: 'une date au format AAAA-MM-JJ, comme « 2027-02-01 », qui existe',
 	CONTACT_TO: 'une adresse email seule, comme « equipe@domaine »',
@@ -243,7 +211,6 @@ const EXPECTED = {
 	INDEXNOW_KEY: '32 caractères hexadécimaux en minuscules, comme la sortie de « openssl rand -hex 16 »',
 	NEXT_PUBLIC_SITE_URL: `${DEPLOYED_ORIGINS.join(', ')} ou une adresse de ce poste comme http://localhost:${DEFAULT_PORT}, sans « / » final`,
 	PAYLOAD_SECRET: `au moins ${SECRET_MIN_LENGTH} caractères, par exemple la sortie de « openssl rand -hex 32 »`,
-	PREPROD_REMISE_A_ZERO: `un jeton de 8 à 64 caractères, minuscules, chiffres et tirets, comme « 2026-10-15-matin », et seulement sur la préprod (${PREPROD_ORIGIN}, en production)`,
 	R2_PUBLIC_URL: 'une adresse https://HÔTE, sans chemin ni « / » final',
 	S3_ACCESS_KEY_ID: 'l’identifiant de la clé d’accès au stockage des photos',
 	S3_BUCKET: 'un nom d’espace : 3 à 63 caractères, minuscules, chiffres, points et tirets',
@@ -363,7 +330,7 @@ function umamiOrigin(value: string): UmamiEnv | undefined {
  *
  * - Set: that instance, once it is written in its exact form.
  * - Unset: the instance of the site today, on the site (https://my-makeup.fr) and nowhere else.
- *   The pre-production, a test and a development machine measure into nothing.
+ *   A test and a development machine measure into nothing.
  *
  * Read alone by the relay, which must not need the rest of the environment; an origin it cannot
  * read gives nothing here and stops the server when it starts (`parseServerEnv`).
@@ -485,8 +452,7 @@ function withLoopbackTwin(origin: string): string[] {
 }
 
 /**
- * In production, a build trusts the address it is served from and nothing else: the site does not
- * trust its pre-production, nor the other way round.
+ * In production, a build trusts the address it is served from and nothing else: no other address is trusted.
  * Everywhere else, only this machine is trusted: the port Next listens on, and the stated address
  * when it is a local one.
  */
@@ -578,42 +544,15 @@ function mailEnv(raw: RawEnv, problems: { variable: string; problem: string }[],
 }
 
 /**
- * The pre-production, and what it is asked to do, or nothing (ticket 027). The pre-production is a
- * production build served from its own address: `next dev`, a test or the site never are.
- *
- * PREPROD_REMISE_A_ZERO empties the whole database: it is refused anywhere else than on the
- * pre-production, the site first, and the server does not start. A token it cannot read is refused
- * too.
+ * APP_ENV says where the application believes it runs; the fictional set reads it too
+ * (src/jeu-fictif/garde.ts). Only « test » and « prod » exist: there is no staging
+ * environment (ticket 232), so any other value is unreadable. The refusal names the
+ * variable, never what it holds.
  */
-function preprodEnv(raw: RawEnv, problems: { variable: string; problem: string }[]): PreprodEnv | undefined {
-	const preprod = raw.NODE_ENV === 'production' && raw.NEXT_PUBLIC_SITE_URL === PREPROD_ORIGIN
-	// APP_ENV says where the application believes it runs; the fictional set reads it too (src/jeu-fictif/garde.ts).
+function appEnvProblem(raw: RawEnv, problems: { variable: string; problem: string }[]): void {
 	const appEnv = raw.APP_ENV?.trim()
 	if (appEnv !== undefined && !APP_ENVS.includes(appEnv))
 		problems.push({ variable: 'APP_ENV', problem: `illisible. Attendu : ${EXPECTED.APP_ENV}.` })
-	else if (appEnv === 'preprod' && !preprod)
-		problems.push({
-			variable: 'APP_ENV',
-			problem: `refusée, car ce n’est pas la préprod. Attendu : ${EXPECTED.APP_ENV}.`,
-		})
-	else if (preprod && appEnv !== undefined && appEnv !== 'preprod')
-		problems.push({
-			variable: 'APP_ENV',
-			problem: `refusée, car cette application est servie depuis la préprod. Attendu : ${EXPECTED.APP_ENV}.`,
-		})
-	const jeton = raw.PREPROD_REMISE_A_ZERO?.trim()
-	if (jeton !== undefined && !preprod)
-		problems.push({
-			variable: 'PREPROD_REMISE_A_ZERO',
-			problem: `refusée, car elle efface toute la base et ce n’est pas la préprod. Attendu : ${EXPECTED.PREPROD_REMISE_A_ZERO}.`,
-		})
-	else if (jeton !== undefined && !JETON_DE_REMISE_A_ZERO.test(jeton))
-		problems.push({
-			variable: 'PREPROD_REMISE_A_ZERO',
-			problem: `illisible. Attendu : ${EXPECTED.PREPROD_REMISE_A_ZERO}.`,
-		})
-	if (!preprod) return undefined
-	return { jeuFictif: appEnv === 'preprod', ...(jeton !== undefined && { remiseAZero: jeton }) }
 }
 
 const required = z.string({ error: ABSENT })
@@ -695,10 +634,10 @@ export function parseServerEnv(source: RawEnv): ServerEnv {
 	const inSite = production && raw.NEXT_PUBLIC_SITE_URL === SITE_ORIGIN
 	const mail = mailEnv(raw, problems, inSite)
 	const storage = storageEnv(raw, problems)
-	const preprod = preprodEnv(raw, problems)
+	appEnvProblem(raw, problems)
 
-	// A provider of this machine stands in for Google on this machine only. On the site and on
-	// its pre-production, whatever NODE_ENV says, the Google sign-in talks to Google and nobody else.
+	// A provider of this machine stands in for Google on this machine only. On the site,
+	// whatever NODE_ENV says, the Google sign-in talks to Google and nobody else.
 	const issuer = raw.GOOGLE_OIDC_ISSUER === undefined ? undefined : oidcIssuer(raw.GOOGLE_OIDC_ISSUER)
 	if (issuer?.local && raw.NEXT_PUBLIC_SITE_URL !== undefined && DEPLOYED_ORIGINS.includes(raw.NEXT_PUBLIC_SITE_URL)) {
 		problems.push({
@@ -755,7 +694,6 @@ export function parseServerEnv(source: RawEnv): ServerEnv {
 		localDatabase: isLocalDatabase(parsed.data.DATABASE_URI),
 		...(mail && { mail }),
 		payloadSecret: parsed.data.PAYLOAD_SECRET,
-		...(preprod && { preprod }),
 		...(storage && { storage }),
 		...(parsed.data.STATS_TOKEN !== undefined && { statsToken: parsed.data.STATS_TOKEN.trim() }),
 		...(umami && { umami }),
@@ -786,7 +724,6 @@ function processEnv(): RawEnv {
 		PAYLOAD_DROP_DATABASE: process.env.PAYLOAD_DROP_DATABASE,
 		PAYLOAD_SECRET: process.env.PAYLOAD_SECRET,
 		PORT: process.env.PORT,
-		PREPROD_REMISE_A_ZERO: process.env.PREPROD_REMISE_A_ZERO,
 		S3_ACCESS_KEY_ID: process.env.S3_ACCESS_KEY_ID,
 		S3_BUCKET: process.env.S3_BUCKET,
 		S3_ENDPOINT: process.env.S3_ENDPOINT,
@@ -807,7 +744,7 @@ function processEnv(): RawEnv {
  * must work with no secret and no database. Nothing is checked then, and a missing secret stays
  * empty: Payload refuses to start with an empty secret, so such a configuration cannot serve.
  * A build sends no mail either: it gets no relay, whatever its environment holds; and no storage.
- * Nor is it ever the pre-production: nothing is imported or reset while Next builds.
+ * Nothing is imported or reset while Next builds.
  */
 export function serverEnv(source: RawEnv = processEnv()): ServerEnv {
 	if (source.NEXT_PHASE !== BUILD_PHASE) return parseServerEnv(source)

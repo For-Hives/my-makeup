@@ -1,16 +1,15 @@
 /**
  * The global setup of Playwright: what must hold before the first end-to-end test.
  *
- * 1. The target is checked once more: never production, the pre-production only when the run
- *    declares it.
+ * 1. The target is checked once more: never production, only this machine.
  * 2. The application answers at that address as a healthy one. Otherwise every test would fail
  *    on a timeout, one after the other, without saying why.
  * 3. On the bench, the application has just built every table by its versioned migrations, on
- *    the database `bun run test:e2e` erased, as the pre-production does. The Payload of the tests
+ *    the database `bun run test:e2e` erased, as the production build does. The Payload of the tests
  *    reads that database without changing its schema (tests/outils/payload-test.ts), and refuses
  *    to run the tests when it carries the mark of a schema push, or when the migrations did not
  *    build it as the collections of the code describe it: a missing migration stops the run
- *    here, with what to do, instead of failing on the pre-production (ticket 049).
+ *    here, with what to do, instead of failing in production (ticket 049).
  */
 
 import { BancRefuse } from './banc'
@@ -91,7 +90,7 @@ export default async function avantLePremierEssai(): Promise<void> {
 		// A local application without the environment of the bench: no test could get an account.
 		if (!process.env.DATABASE_URI) throw new BancRefuse(messageSansBanc())
 		await sansQuestion(async () => {
-			// Loaded here and not at the top: a run against the pre-production has no Payload to load.
+			// Loaded here and not at the top: a run against an application that is not the bench has no Payload to load.
 			const [{ payloadDeTest }, { exigerLeSchemaDesMigrations }] = await Promise.all([
 				import('./payload-test'),
 				import('./schema-du-banc'),
