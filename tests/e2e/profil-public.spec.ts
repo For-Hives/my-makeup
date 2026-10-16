@@ -88,6 +88,18 @@ test.describe('E43 : le profil public, rendu par le serveur', { tag: '@mobile' }
 		expect(html).not.toMatch(CLES_PRIVEES)
 	})
 
+	// Ticket 223, constat 7: Next's router would answer its own error page; the proxy sends the site's 404.
+	test('une adresse au pourcentage mal formé répond la page 404 du site, sous /profil, /talent et /blog', async ({
+		request,
+	}) => {
+		for (const racine of ['profil', 'talent', 'blog']) {
+			const reponse = await request.get(`/${racine}/%E0%A4%A`)
+			expect(reponse.status(), racine).toBe(404)
+			expect(await reponse.text(), racine).toContain('404 - Page non trouvée')
+			expect(reponse.headers()['x-robots-tag'], racine).toContain('noindex')
+		}
+	})
+
 	test('un profil indisponible le dit', async ({ request }) => {
 		const html = await (await request.get(`/profil/${profil('indisponible').slug}`)).text()
 

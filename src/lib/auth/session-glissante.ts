@@ -7,6 +7,7 @@ import {
 	jwtSign,
 } from 'payload'
 
+import { cookieDeSessionDe, enteteSetCookie } from './cookie-de-session'
 import { DUREE_SESSION_S, dureeDuProlongement, ouverteLe, plafondAtteint } from './duree-session'
 
 // The pure rules live in ./duree-session (no server import, safe for the browser); re-exported here.
@@ -29,6 +30,11 @@ export const refuserApresLePlafond: CollectionBeforeOperationHook = ({ args, ope
  * The renewal itself: Payload's own, except that the new token lasts 14 days at most AND never goes
  * past the ceiling. It does what the default does (same fields signed, same cookie), only with the
  * shorter life when the ceiling is near.
+ *
+ * The cookie is written here, not by Payload's route (`setCookie: false`): Payload would end it with
+ * its token, and the cookie of a sign-in outlives its token (`finDeVieDuCookie`), so that a session
+ * that ended is told so (tickets 080 and 223). The token then stays out of the body as well: it is
+ * not returned.
  */
 export const prolongerSousPlafond: CollectionRefreshHook = async ({ args, user }) => {
 	const { req } = args
@@ -38,10 +44,14 @@ export const prolongerSousPlafond: CollectionRefreshHook = async ({ args, user }
 	const duree = ouverte === null ? DUREE_SESSION_S : dureeDuProlongement(ouverte, Date.now())
 	const fieldsToSign = getFieldsToSign({ collectionConfig: config, email: String(user.email), sid, user: req.user })
 	const { exp, token } = await jwtSign({ fieldsToSign, secret: req.payload.secret, tokenExpiration: duree })
+	const cookie = cookieDeSessionDe(args.collection.config.auth, req.payload.config.cookiePrefix, token, exp)
+	req.responseHeaders ??= new Headers()
+	req.responseHeaders.append('Set-Cookie', enteteSetCookie(cookie))
 	return {
 		exp,
-		refreshedToken: token,
-		setCookie: true,
+		// Payload's route would set its own cookie and then strip the token from the body: neither is wanted.
+		refreshedToken: undefined as never,
+		setCookie: false,
 		strategy: (req.user as { _strategy?: string } | null)?._strategy,
 		user,
 	}

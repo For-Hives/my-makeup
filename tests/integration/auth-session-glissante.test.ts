@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, setSystemTime, test } from 'bun:test'
 import { getFieldsToSign, jwtSign } from 'payload'
+import { finDeVieDuCookie } from '@/lib/auth/etat-session'
 import { expirationDuJeton, PLAFOND_DE_SESSION_S } from '@/lib/auth/session-glissante'
 import { creerCompte } from '../outils/fabrique-comptes'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
@@ -41,6 +42,33 @@ describe('I16 : session glissante de 14 jours, plafonnée à 90', () => {
 		setSystemTime(new Date(debut + 91 * JOUR_MS))
 		expect((await appelerRest('POST', REFRESH, { enTetes: session.enTetes })).statut).toBe(403)
 		expect((await appelerRest('POST', REFRESH, { enTetes: entetesAvec(jeton, Origin) })).statut).toBe(403)
+	})
+
+	test('ticket 223 : le cookie du renouvellement finit comme celui de la connexion, 90 jours après son jeton', async () => {
+		const debut = Date.now()
+		const { session } = await creerCompte('maquilleuse')
+		setSystemTime(new Date(debut + 13 * JOUR_MS))
+
+		const reponse = await appelerRest('POST', REFRESH, { enTetes: session.enTetes })
+		expect(reponse.statut).toBe(200)
+
+		// One cookie only: Payload's own is not added to ours.
+		const cookies = reponse.enTetes.getSetCookie()
+		expect(cookies).toHaveLength(1)
+		const ligne = cookies[0] ?? ''
+		const jeton = jetonDuCookie(reponse.enTetes)
+		const fin = expirationDuJeton(jeton)
+		expect(fin).not.toBeNull()
+		const expires = /Expires=([^;]+)/i.exec(ligne)?.[1]
+		expect(new Date(expires ?? '').getTime()).toBe(finDeVieDuCookie(fin ?? 0).getTime())
+		// The cookie outlives its token (the message « session expirée »), and keeps the attributes of the sign-in.
+		expect(new Date(expires ?? '').getTime()).toBeGreaterThan((fin ?? 0) * 1000)
+		expect(ligne).toMatch(/HttpOnly/i)
+		expect(ligne).toMatch(/SameSite=Lax/i)
+		expect(ligne).toMatch(/Path=\//)
+		// The body still carries no token.
+		expect(reponse.texte).not.toContain(jeton)
+		expect(reponse.corps).not.toHaveProperty('refreshedToken')
 	})
 
 	test('une visite tous les 13 jours prolonge la session, mais aucun jeton ne finit après J+90', async () => {

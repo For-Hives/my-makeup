@@ -1,6 +1,8 @@
 import { timingSafeEqual } from 'node:crypto'
 import type { Payload } from 'payload'
 import type { CodeErreurGoogle } from '../erreurs'
+import { type Frein, freinDuRetourGoogle } from '../frein'
+import { freinDeJournal } from '../freins-inscription'
 import { ouvrirSansMotDePasse } from '../jeton'
 import type { CodeEvenement, Journaliser } from '../journal'
 import { PAGE_D_ACCUEIL_DU_COMPTE } from '../retour'
@@ -47,6 +49,12 @@ export interface EntreesDuRetour {
 	journal?: Journaliser
 	requeter?: Requeter
 	maintenant?: () => number
+	/**
+	 * The client address (`ipClient`) the return comes from (ticket 223): it takes a place in the brake
+	 * and bounds the `retour-invalide` rows of the journal. Without it nothing is braked (tests).
+	 */
+	client?: string
+	frein?: Frein
 }
 
 const CODE_MAX = 2048
@@ -80,9 +88,19 @@ export async function terminerLaConnexionGoogle({
 	journal,
 	requeter,
 	maintenant = Date.now,
+	client,
+	frein = freinDuRetourGoogle,
 }: EntreesDuRetour): Promise<IssueDeGoogle> {
 	const debut = Date.now()
 	const noter = async (type: 'connexion' | 'inscription', code: CodeEvenement) => {
+		// A script can send returns by the thousand: the rows of refusals are 3 an hour per address and
+		// outcome, like those of the sign-up (ticket 084). The address is a key in memory, never written.
+		if (
+			client !== undefined &&
+			(code === 'retour-invalide' || code === 'trop-de-tentatives') &&
+			!freinDeJournal.prendre(`${client}|google|${type}|${code}`).autorise
+		)
+			return
 		try {
 			await journal?.({ type, code, dureeMs: Date.now() - debut, methode: 'google' })
 		} catch {
@@ -101,6 +119,9 @@ export async function terminerLaConnexionGoogle({
 			return refuser('service-indisponible', 'google-indisponible')
 		return refuser('retour-invalide', 'google-echec')
 	}
+
+	if (client !== undefined && !frein.prendre(client).autorise)
+		return refuser('trop-de-tentatives', 'trop-de-tentatives')
 
 	const demande = ouvrirLeCookie(cookie, secret, maintenant)
 	if (!demande || retour.state === null || !memeTexte(retour.state, demande.state))
@@ -145,6 +166,8 @@ export async function terminerLaConnexionGoogle({
 			overrideAccess: true,
 		})
 		.catch(() => undefined)
+	// A session was opened: this return was no failure.
+	if (client !== undefined) frein.rendre(client)
 	if (compte.nouveau) await noter('inscription', 'ok')
 	await noter('connexion', 'ok')
 	return {

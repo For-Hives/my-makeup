@@ -105,3 +105,9 @@ export const freinDeLaReinitialisation: Frein = creerFrein({
 	limite: 10,
 	fenetreMs: 15 * 60 * 1000,
 })
+
+/**
+ * The return from Google (ticket 223): 10 failed returns per address and per 15 minutes, like the
+ * sign-in. A place is taken when the return arrives and given back when it ends in a session.
+ */
+export const freinDuRetourGoogle: Frein = creerFrein({ nom: 'retour-google', limite: 10, fenetreMs: 15 * 60 * 1000 })

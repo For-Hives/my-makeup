@@ -1,5 +1,6 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, spyOn, test } from 'bun:test'
 import { fermerLaSession } from '@/lib/auth/deconnexion'
+import { creerFrein, type Frein } from '@/lib/auth/frein'
 import { type IssueDeGoogle, terminerLaConnexionGoogle } from '@/lib/auth/google/connexion-google'
 import {
 	type ConfigGoogle,
@@ -7,6 +8,7 @@ import {
 	decouvrir,
 	oublierLesDocuments,
 	preparerLeDepart,
+	type Requeter,
 	sceller,
 } from '@/lib/auth/google/oidc'
 import { journalDe } from '@/lib/auth/journal'
@@ -49,8 +51,14 @@ async function passer(
 	{
 		retourSouhaite = '/auth/profil',
 		modifier,
+		client,
+		frein,
+		requeter,
 	}: {
 		retourSouhaite?: string
+		client?: string
+		frein?: Frein
+		requeter?: Requeter
 		modifier?: (parametres: URLSearchParams, depart: { cookie: string }) => string | undefined
 	} = {}
 ): Promise<Passage> {
@@ -66,6 +74,9 @@ async function passer(
 		retour: { code: parametres.get('code'), state: parametres.get('state'), error: parametres.get('error') },
 		cookie,
 		journal: journalDe(payload),
+		client,
+		frein,
+		requeter,
 	})
 	return { issue, retour }
 }
@@ -444,3 +455,139 @@ function demandeAuHasard(): DemandeEnCours {
 		expire: Math.floor(Date.now() / 1000) + 600,
 	}
 }
+
+describe('ticket 223, constat 9 : ce que Google dit par lui-même, et sa découverte en panne', () => {
+	/** A return that carries `error` and no code, with the cookie of the real departure. */
+	const avecErreur = (erreur: string) => ({
+		modifier: (parametres: URLSearchParams, depart: { cookie: string }) => {
+			parametres.delete('code')
+			parametres.set('error', erreur)
+			return depart.cookie
+		},
+	})
+
+	test.each([
+		['server_error', 'google-indisponible', 'service-indisponible'],
+		['temporarily_unavailable', 'google-indisponible', 'service-indisponible'],
+		['access_denied', 'google-annule', 'annule'],
+		['invalid_request', 'google-echec', 'retour-invalide'],
+		['unauthorized_client', 'google-echec', 'retour-invalide'],
+		['invalid_scope', 'google-echec', 'retour-invalide'],
+		['une-valeur-que-personne-ne-connait', 'google-echec', 'retour-invalide'],
+	] as const)('error=%s : le code %s, la ligne %s, aucun compte', async (erreur, codeUrl, codeJournal) => {
+		const avant = (await lignesDuJournal()).length
+		const email = adresse('erreur-google')
+
+		const { issue } = await passer({ email }, avecErreur(erreur))
+
+		expect(issue).toEqual({ ok: false, code: codeUrl })
+		expect(await comptes(email)).toHaveLength(0)
+		const lignes = (await lignesDuJournal()).slice(avant)
+		expect(lignes.map(({ type, code, methode }) => `${type}:${code}:${methode}`)).toEqual([
+			`connexion:${codeJournal}:google`,
+		])
+		// What Google said is not written anywhere.
+		expect(JSON.stringify(lignes)).not.toContain(erreur)
+	})
+
+	test('la découverte en panne au retour : google-indisponible, une ligne service-indisponible, aucun compte', async () => {
+		const avant = (await lignesDuJournal()).length
+		const email = adresse('decouverte-retour')
+		const payload = await payloadDeTest()
+		const depart = preparerLeDepart(config, await decouvrir(config.emetteur), {
+			retour: '/auth/profil',
+			secret: SECRET,
+		})
+		const retour = await google.autoriser(depart.adresse, google.choisir({ email }))
+		oublierLesDocuments()
+
+		const issue = await terminerLaConnexionGoogle({
+			payload,
+			config,
+			secret: SECRET,
+			retour: {
+				code: retour.searchParams.get('code'),
+				state: retour.searchParams.get('state'),
+				error: null,
+			},
+			cookie: depart.cookie,
+			journal: journalDe(payload),
+			requeter: async () => {
+				throw new Error('réseau coupé')
+			},
+		})
+
+		expect(issue).toEqual({ ok: false, code: 'google-indisponible' })
+		expect(await comptes(email)).toHaveLength(0)
+		expect((await lignesDuJournal()).slice(avant).map(({ code }) => code)).toEqual(['service-indisponible'])
+	})
+
+	test('le départ, la découverte en panne : retour à la connexion avec google-indisponible, sans cookie ni exception', async () => {
+		const { GET } = await import('@/app/(front)/(espace)/auth/google/route')
+		const avant = process.env.GOOGLE_OIDC_ISSUER
+		// A local port where nothing listens: the discovery document cannot be read.
+		process.env.GOOGLE_OIDC_ISSUER = 'http://127.0.0.1:9'
+		oublierLesDocuments()
+		try {
+			const reponse = await GET(new Request(`${SITE}/auth/google?callbackUrl=%2Fauth%2Fprofil`))
+			expect(reponse.status).toBe(307)
+			expect(reponse.headers.get('location')).toBe(`${SITE}/auth/signin?error=google-indisponible`)
+			expect(reponse.headers.get('set-cookie')).toBeNull()
+		} finally {
+			if (avant === undefined) delete process.env.GOOGLE_OIDC_ISSUER
+			else process.env.GOOGLE_OIDC_ISSUER = avant
+			oublierLesDocuments()
+		}
+	})
+})
+
+describe('ticket 223, constat 3 : le retour est freiné par adresse et ses lignes de refus sont bornées', () => {
+	/** A return with a state that is not ours, from this address: the flood of a script. */
+	const retourInvalide = (client: string, frein: Frein) =>
+		passer(
+			{ email: adresse('flood') },
+			{
+				client,
+				frein,
+				modifier: parametres => {
+					parametres.set('state', 'forge')
+					return undefined
+				},
+			}
+		)
+
+	test('passé la limite, le retour est refusé (trop-de-tentatives) ; les lignes du journal restent bornées', async () => {
+		const frein = creerFrein({ nom: `retour-essai-${crypto.randomUUID()}`, limite: 5, fenetreMs: 60_000 })
+		const client = `192.0.2.${100 + Math.floor(Math.random() * 100)}`
+		const avant = (await lignesDuJournal()).length
+
+		const codes: string[] = []
+		for (let i = 0; i < 12; i++) {
+			const { issue } = await retourInvalide(client, frein)
+			codes.push(issue.ok ? 'ok' : issue.code)
+		}
+
+		expect(codes).toEqual([...Array(5).fill('google-echec'), ...Array(7).fill('trop-de-tentatives')])
+		const lignes = (await lignesDuJournal()).slice(avant)
+		const parCode = (code: string) => lignes.filter(ligne => ligne.code === code).length
+		// 3 an hour per address and outcome, like the refusals of the sign-up (ticket 084).
+		expect(parCode('retour-invalide')).toBe(3)
+		expect(parCode('trop-de-tentatives')).toBe(3)
+		expect(lignes).toHaveLength(6)
+		// The address is a key in memory: it is written nowhere.
+		expect(JSON.stringify(lignes)).not.toContain(client)
+	})
+
+	test('une autre adresse n’est pas freinée, et un retour qui ouvre une session rend sa place', async () => {
+		const frein = creerFrein({ nom: `retour-essai-${crypto.randomUUID()}`, limite: 2, fenetreMs: 60_000 })
+		const client = `192.0.2.${100 + Math.floor(Math.random() * 100)}`
+		const autre = `198.51.100.${1 + Math.floor(Math.random() * 200)}`
+
+		expect((await retourInvalide(client, frein)).issue).toEqual({ ok: false, code: 'google-echec' })
+		// A success on the same address: the place it takes is given back.
+		expect((await passer({ email: adresse('succes') }, { client, frein })).issue.ok).toBe(true)
+		expect((await retourInvalide(client, frein)).issue).toEqual({ ok: false, code: 'google-echec' })
+		expect((await retourInvalide(client, frein)).issue).toEqual({ ok: false, code: 'trop-de-tentatives' })
+		expect((await retourInvalide(autre, frein)).issue).toEqual({ ok: false, code: 'google-echec' })
+	})
+})
