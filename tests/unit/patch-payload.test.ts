@@ -30,3 +30,36 @@ describe('le patch de payload s’applique à la version installée', () => {
 		expect(lecture).toContain("req: payload.db.name === 'mongoose' ? undefined : req")
 	})
 })
+
+describe('le niveau d’un refus de Payload ne dépend pas du nom des classes (ticket 223, constat 10)', () => {
+	// A production bundle is minified: the classes are renamed, so `err.name` is `c` or `l`. The patched logError
+	// tells the three classes by their constructor. The renaming is simulated by overwriting `name`.
+	const niveaux = { APIError: 'info', AuthenticationError: 'info', UnverifiedEmail: 'info' }
+	const journalise = async (fabrique: (m: typeof import('payload')) => Error) => {
+		const payload = await import('payload')
+		const { logError } = await import(path.join(RACINE, 'node_modules/payload/dist/utilities/logError.js'))
+		const err = fabrique(payload)
+		err.name = 'c'
+		const appels: string[] = []
+		const logger = {
+			info: () => void appels.push('info'),
+			error: () => void appels.push('error'),
+			warn: () => void appels.push('warn'),
+		}
+		logError({ err, payload: { config: { loggingLevels: niveaux }, logger } } as never)
+		return appels
+	}
+
+	test('APIError renommée : une ligne info', async () => {
+		expect(await journalise(({ APIError }) => new APIError('Missing ID of document to update.', 400))).toEqual(['info'])
+	})
+	test('AuthenticationError renommée : une ligne info', async () => {
+		expect(await journalise(({ AuthenticationError }) => new AuthenticationError())).toEqual(['info'])
+	})
+	test('UnverifiedEmail renommée : une ligne info', async () => {
+		expect(await journalise(({ UnverifiedEmail }) => new UnverifiedEmail({ t: undefined } as never))).toEqual(['info'])
+	})
+	test('une autre classe renommée reste une ligne error', async () => {
+		expect(await journalise(({ Forbidden }) => new Forbidden())).toEqual(['error'])
+	})
+})

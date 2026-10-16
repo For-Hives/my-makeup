@@ -99,9 +99,16 @@ describe('constat 7 : une adresse au pourcentage mal formé répond la page 404 
 			expect(proxy(requete(chemin)).headers.get('x-middleware-rewrite')).toBeNull()
 	})
 
-	test('l’API et les fichiers de Next ne sont pas touchés', () => {
-		for (const chemin of ['/api/pros/%E0%A4%A', '/_next/static/%E0%A4%A.js'])
-			expect(proxy(requete(chemin)).headers.get('x-middleware-rewrite')).toBeNull()
+	test('les fichiers de Next ne sont pas touchés', () => {
+		expect(proxy(requete('/_next/static/%E0%A4%A.js')).headers.get('x-middleware-rewrite')).toBeNull()
+	})
+
+	test('sous l’API, une adresse illisible répond un 400 en JSON, pas la page 404', async () => {
+		const reponse = proxy(requete('/api/pros/%E0%A4%A'))
+		expect(reponse.status).toBe(400)
+		expect(reponse.headers.get('x-middleware-rewrite')).toBeNull()
+		expect(await reponse.json()).toEqual({ errors: [{ message: 'Adresse illisible.' }] })
+		expect(proxy(requete('/api/pros/%C3%A9')).status).toBe(200)
 	})
 })
 

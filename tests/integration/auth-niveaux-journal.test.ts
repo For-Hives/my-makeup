@@ -48,8 +48,8 @@ describe('constat 4 : un compte bloqué qui donne son mot de passe est une ligne
 	})
 })
 
-describe('constat 10 : « Missing ID » de Payload est déjà une ligne d’information', () => {
-	// The class thrown is a plain APIError, which `loggingLevels` already sets to info: the finding is dropped.
+describe('constat 10 : « Missing ID » de Payload est une ligne d’information', () => {
+	// A plain APIError: info on the source and, through the logError patch (patches/payload@3.90.2.patch), on the minified build too.
 	test('PATCH /api/pros/abc : 400 avant toute règle, aucune ligne error', async () => {
 		const admin = await creerCompte('admin')
 

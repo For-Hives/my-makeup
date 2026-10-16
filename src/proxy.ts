@@ -42,7 +42,8 @@ import { redirectionDeForme } from '@/lib/urls/forme'
  *   cross-site`, a link in a mail) answers the relay page of the return from Google (ticket 223): Payload
  *   ignores the cookie of a cross-site request with no `Origin`, and the relay restarts the navigation
  *   from the site itself.
- * - A path that does not decode (`/profil/%E0%A4%A`) answers the 404 page of the site, not Next's error (ticket 223).
+ * - A path that does not decode (`/profil/%E0%A4%A`) answers the 404 page of the site, not Next's error; under
+ *   `/api/` it answers a JSON 400 (ticket 223).
  * - A response that carries a cookie of the cleaning is `private, no-store`: no shared cache keeps it (ticket 223).
  * - Every other response gets the robots directive (ticket 070). It reads APP_ENV at run time: the
  *   pre-production gets its variables after the build. The paths of the account and of the search
@@ -50,6 +51,12 @@ import { redirectionDeForme } from '@/lib/urls/forme'
  */
 function proxyDuSite(requete: NextRequest) {
 	const { pathname, search } = requete.nextUrl
+	if (pathname.startsWith('/api/') && !decodable(pathname)) {
+		// Under the API Next would answer a 500 and an error-level line: a client error is a 400 in JSON.
+		const refus = NextResponse.json({ errors: [{ message: 'Adresse illisible.' }] }, { status: 400 })
+		refus.headers.set('X-Robots-Tag', 'noindex')
+		return refus
+	}
 	if (cheminIllisible(pathname)) {
 		// An address Next cannot decode answers its own error page: the 404 of the site is what a visitor expects.
 		const introuvable = NextResponse.rewrite(new URL(CHEMIN_INTROUVABLE, requete.url ?? requete.nextUrl.href))
@@ -183,11 +190,15 @@ const CHEMIN_INTROUVABLE = '/introuvable-adresse-illisible'
 /** True when the path has a percent sequence that does not decode, outside the API and Next's own files. */
 function cheminIllisible(chemin: string): boolean {
 	if (chemin.startsWith('/api/') || chemin.startsWith('/_next/')) return false
+	return !decodable(chemin)
+}
+
+function decodable(chemin: string): boolean {
 	try {
 		decodeURIComponent(chemin)
-		return false
-	} catch {
 		return true
+	} catch {
+		return false
 	}
 }
 
