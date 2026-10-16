@@ -23,6 +23,9 @@ export type GenreDeCible = 'locale' | 'distante'
 /** The flag that lets the import write into a database that is not on this machine. */
 export const DRAPEAU_CIBLE_DISTANTE = '--cible-distante'
 
+/** The flag that lets the import run on a target the v3 already uses (./garde-bascule.ts, ticket 227). */
+export const DRAPEAU_CIBLE_EN_SERVICE = '--cible-en-service'
+
 /**
  * Which kind of database the import is about to write into, or `ImportRefuse` when it must not:
  * no database named, or a database elsewhere than on this machine without the flag.

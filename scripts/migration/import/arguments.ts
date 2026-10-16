@@ -3,12 +3,14 @@
  * import writes only when it is told so, with `--reel`.
  */
 
-import { DRAPEAU_CIBLE_DISTANTE } from './cible'
+import { DRAPEAU_CIBLE_DISTANTE, DRAPEAU_CIBLE_EN_SERVICE } from './cible'
 import type { Mode } from './rapport'
 
 export interface ArgumentsDImport {
 	mode: Mode
 	cibleDistante: boolean
+	/** Run on a target the v3 already uses: the accounts it holds are left as they are (ticket 227). */
+	cibleEnService?: true
 	/** Where to write the report as JSON, besides printing it. */
 	rapport?: string
 	/** The file of the table of decisions (./decisions.ts). */
@@ -40,12 +42,13 @@ const AVEC_FICHIER = {
 } as const satisfies Record<string, keyof ArgumentsDImport>
 
 export const USAGE = [
-	'Usage : bun scripts/migration/import.ts [--reel] [--cible-distante] [--decisions <fichier.json>] [--rapport <fichier.json>]',
+	'Usage : bun scripts/migration/import.ts [--reel] [--cible-distante] [--cible-en-service] [--decisions <fichier.json>] [--rapport <fichier.json>]',
 	'                                        [--communes <fichier.json>] [--hors-ligne] [--revue <fichier.json>]',
 	'                                        [--consentement-le <date>] [--sans-photos] [--controle]',
 	'  sans option     à blanc : lit la source et la cible, dit ce qu’il écrirait, n’écrit rien',
 	'  --reel          écrit dans la base de DATABASE_URI, puis relit la cible pour prouver la parité',
 	`  ${DRAPEAU_CIBLE_DISTANTE} accepte une base qui n’est pas sur ce poste`,
+	`  ${DRAPEAU_CIBLE_EN_SERVICE} accepte une cible que la v3 utilise déjà (une connexion y a réussi) : les comptes déjà repris restent tels quels, seuls les manquants sont créés. Sans lui, une telle cible est refusée avant toute écriture`,
 	'  --decisions     la table de décision des cas que l’import ne tranche pas seul (comptes au même email, profils d’un compte écarté ou sans compte)',
 	'  --rapport       écrit aussi le rapport en JSON dans ce fichier (nombres, identifiants, empreintes)',
 	`  --communes      les réponses gardées du référentiel des communes (par défaut : ${FICHIER_DES_COMMUNES_PAR_DEFAUT})`,
@@ -66,6 +69,7 @@ export function lireLesArguments(argumentsDeLaCommande: readonly string[]): Argu
 		vus.add(option)
 		if (option === '--reel') lus.mode = 'reel'
 		else if (option === DRAPEAU_CIBLE_DISTANTE) lus.cibleDistante = true
+		else if (option === DRAPEAU_CIBLE_EN_SERVICE) lus.cibleEnService = true
 		else if (option === '--hors-ligne') lus.horsLigne = true
 		else if (option === '--sans-photos') lus.sansPhotos = true
 		else if (option === '--controle') lus.controle = true

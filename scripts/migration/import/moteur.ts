@@ -88,6 +88,12 @@ export interface Adaptateur {
 	 * writes nothing. They are left out of the fingerprint, which a later edit would change.
 	 */
 	amorces?: readonly string[]
+	/**
+	 * Compared fields of a document the target already holds that the import leaves exactly as they
+	 * are: never compared, never written, left out of the fingerprint. Only a missing document is
+	 * created, with all its fields. Used on a target the v3 is already using (ticket 227).
+	 */
+	figes?: readonly string[]
 	/** Options of the writes of one document: a draft, no confirmation email, more context. */
 	options?: (attendu: Attendu) => OptionsDEcriture
 }
@@ -196,9 +202,11 @@ export function normaliser(genre: Genre, valeur: unknown): unknown {
 /** The fields whose value in the target differs from the expected one. */
 export function champsDifferents(adaptateur: Adaptateur, attendu: Attendu, existant: Existant): string[] {
 	const amorces = new Set(adaptateur.amorces ?? [])
+	const figes = new Set(adaptateur.figes ?? [])
 	const vide = (valeur: unknown) => valeur === null || valeur === ''
 	return Object.entries(adaptateur.champs)
 		.filter(([champ, genre]) => {
+			if (figes.has(champ)) return false
 			const voulu = normaliser(genre, attendu.valeurs[champ])
 			const present = normaliser(genre, existant.valeurs[champ])
 			// A field the import only fills in differs when it is missing in the target, nothing else.
@@ -391,7 +399,7 @@ export function empreinteDesDocuments(
 	adaptateur: Adaptateur,
 	documents: readonly { strapiId: number; valeurs: Readonly<Record<string, unknown>> }[]
 ): string {
-	const amorces = new Set(adaptateur.amorces ?? [])
+	const amorces = new Set([...(adaptateur.amorces ?? []), ...(adaptateur.figes ?? [])])
 	const champs = Object.keys(adaptateur.champs)
 		.filter(champ => !amorces.has(champ))
 		.sort()

@@ -52,7 +52,7 @@ import { attribuerSlugs } from '../../../src/lib/slug'
 import type { CommuneAttendue } from './communes'
 import { REFERENCES } from './ecarts'
 import { type PhotoNonReprise, photosDeLEntree } from './medias'
-import type { Adaptateur, Attendu, Ecart } from './moteur'
+import { type Adaptateur, type Attendu, type Ecart, normaliser } from './moteur'
 import {
 	type LigneLaissee,
 	lignesDansLesBornes,
@@ -279,6 +279,31 @@ export const ADAPTATEUR_PROFILS: Adaptateur = {
 	},
 	// Computed by the server at every save (ticket 044): compared, never sent.
 	calcules: ['statut'],
+	// The date of the consent is the one of the first run that gave it: a later run with another date of
+	// the switch keeps it (ticket 227). The server dates it again when the contact details are closed
+	// then opened (src/lib/profil/coordonnees.ts), and the field is empty then, so the run fills it in.
+	amorces: ['consentiLe'],
+}
+
+/**
+ * The profiles whose date of consent differs from the date this run asks for: the target keeps the
+ * date it holds (`amorces`), the run counts the difference. Identifiers only.
+ */
+export function consentementsGardes(
+	attendus: readonly Attendu[],
+	existants: readonly { valeurs: Readonly<Record<string, unknown>> }[]
+): number[] {
+	const gardees = new Map(
+		existants.map(({ valeurs }) => [Number(valeurs.strapiId), normaliser('date', valeurs.consentiLe)] as const)
+	)
+	return attendus
+		.filter(({ strapiId, valeurs }) => {
+			const demandee = normaliser('date', valeurs.consentiLe)
+			const gardee = gardees.get(strapiId)
+			return demandee !== null && gardee !== undefined && gardee !== null && gardee !== demandee
+		})
+		.map(({ strapiId }) => strapiId)
+		.sort((a, b) => a - b)
 }
 
 /** The profiles the import does not take, and those that stop it, split by what the table says of them. */

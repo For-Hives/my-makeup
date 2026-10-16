@@ -62,6 +62,8 @@ export interface BilanDeCollection extends Bilan {
 	coordonneesARevoir?: { profil: number; champ: string }[]
 	/** Radii above 200 km (register `rayon-200-km`): the field is left empty, the profile is taken (ticket 226). */
 	rayonsARevoir?: RayonARevoir[]
+	/** Profiles whose date of consent differs from the date this run asks for: the target keeps its own (ticket 227). */
+	consentementsGardes?: number[]
 	/** Rows of a list outside a bound of the v3, left out of their profile: profile, list and rank, never the text (ticket 226). */
 	lignesLaissees?: LigneLaisseeDUnProfil[]
 }
@@ -225,6 +227,10 @@ function ligneDeBilan(nom: string, bilan: BilanDeCollection, mode: Mode): string
 			`  - coordonnées laissées de côté, que le serveur refuserait (à revoir à la main) : ${bilan.coordonneesARevoir
 				.map(({ profil, champ }) => `${profil} (${champ})`)
 				.join(', ')}`
+		)
+	if (bilan.consentementsGardes?.length)
+		lignes.push(
+			`  - date de consentement déjà posée, gardée (la date demandée est autre) : ${bilan.consentementsGardes.length} (${ids(bilan.consentementsGardes)})`
 		)
 	if (bilan.rayonsARevoir?.length)
 		lignes.push(
