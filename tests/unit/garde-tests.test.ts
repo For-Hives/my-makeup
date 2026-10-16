@@ -448,3 +448,25 @@ describe('La fausse base Strapi de l’import : STRAPI_SOURCE_URI locale, et en 
 		expect(texte).not.toContain(MARQUE_DU_TEMOIN)
 	})
 })
+
+describe('Ticket 233 : aucun test ne lance l’import à la demande', () => {
+	test.each([
+		'IMPORT_JETON',
+		'IMPORT_MODE',
+		'IMPORT_DECISIONS',
+		'IMPORT_CONSENTEMENT_LE',
+		'IMPORT_COMMUNES',
+		'IMPORT_CIBLE_EN_SERVICE',
+	])('%s réglée : refusée, sans dire sa valeur', nom => {
+		const message = messageDuRefus(() => verifierEnvironnement({ ...BANC, [nom]: 'valeur-temoin-233' }))
+
+		expect(message).toContain(nom)
+		expect(message).not.toContain('valeur-temoin-233')
+	})
+
+	test('une variable vide n’est pas réglée, et l’environnement du banc n’en porte aucune', () => {
+		expect(verifierEnvironnement({ ...BANC, IMPORT_JETON: '' })).toBe('test')
+		expect(verifierEnvironnement({ ...BANC, IMPORT_JETON: '  ' })).toBe('test')
+		expect(Object.keys(BANC).filter(nom => nom.startsWith('IMPORT_'))).toEqual([])
+	})
+})

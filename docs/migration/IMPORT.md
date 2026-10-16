@@ -35,7 +35,7 @@ bun run banc:import --reel          # écrit dans la base du banc, puis relit la
 
 `banc:import` prend l'environnement du banc de l'instance (`BANC_INSTANCE`, `BANC_DECALAGE`), comme toute commande du banc, et jamais le fichier `.env`. Il donne la table de décision du banc (`tests/fixtures/import/decisions-du-banc.json`), sauf si la commande en nomme une autre par `--decisions` : sans elle, l'import s'arrêterait, car quatre comptes de la fausse base portent le même email, et l'un des comptes écartés a un profil. Il donne aussi les réponses gardées du référentiel des communes pour les villes de la fausse base (`tests/fixtures/import/referentiel-du-banc.json`), hors ligne, sauf si la commande nomme un autre fichier par `--communes`.
 
-Ailleurs, la commande lit `DATABASE_URI` et `STRAPI_SOURCE_URI` dans l'environnement (le `.env` de travail, par `bun run`) :
+Ailleurs, la commande lit `DATABASE_URI` et `STRAPI_SOURCE_URI` dans l'environnement du terminal. Le script porte `--no-env-file` (ticket 233) : le `.env` de travail n'est jamais lu, il faut poser les deux variables sur la ligne de commande ou dans l'environnement du terminal :
 
 ```sh
 bun run migration:import                          # à blanc
@@ -48,7 +48,8 @@ bun run migration:import --revue v.json           # écrit aussi la liste de rev
 |---|---|
 | (aucune) | À blanc : lit la source et la cible, annonce les créations et les mises à jour, n'écrit rien |
 | `--reel` | Écrit dans la base de `DATABASE_URI`, puis relit la cible pour prouver la parité |
-| `--cible-distante` | Accepte une base qui n'est pas sur ce poste. Sans lui, une telle base est refusée avant toute écriture |
+| `--cible-distante` | Accepte une base qui n'est pas sur ce poste. Sans lui, une telle base est refusée avant toute écriture. Il exige `--base-attendue` (code 1 sinon) |
+| `--base-attendue <nom>` | Le nom que `current_database()` doit donner sur la cible (ticket 233). Obligatoire avec `--cible-distante`, et donné seul il vaut aussi pour une base locale. Une cible qui porte un autre nom est refusée (code 1) avant toute lecture et toute écriture : l'import n'écrit jamais, par une adresse mal copiée, dans la base d'un autre site. Le refus nomme le nom attendu, jamais celui de la base trouvée |
 | `--decisions <fichier>` | La table de décision : ce qu'une personne a tranché pour les cas que l'import ne tranche pas seul (ci-dessous) |
 | `--rapport <fichier>` | Écrit aussi le rapport en JSON dans ce fichier, lisible par son seul propriétaire |
 | `--communes <fichier>` | Les réponses gardées du référentiel des communes. Sans lui : `.migration/referentiel-communes.json`, jamais versionné. Absent, le fichier est créé ; une réponse reçue pendant le passage y est ajoutée, même si le passage s'arrête ensuite |
@@ -75,9 +76,30 @@ bun run migration:import --revue v.json           # écrit aussi la liste de rev
 | 5 | Des documents sont refusés, avant l'écriture ou par Payload : listés par identifiant et par champ, ils attendent une décision. En réel, la parité est incomplète d'autant |
 | 6 | Arrêté en cours de passage par une erreur de la base ou une erreur inattendue, nommée par son type et son code. Ce qui était écrit reste écrit ; un nouveau passage reprend à partir de là |
 
-### Pas de préprod
+## En production
 
-La v3 n'a pas de préprod (décision d'Andy du 16/10/2026, ticket 232) : l'import se répète sur le banc, contre la fausse base Strapi, puis se lance une fois en production. Le code que la préprod gardait pour importer au démarrage (`src/preprod/`) est retiré. Le lecteur `pg` de la source (`scripts/migration/import/source-pg.ts`), écrit pour s'exécuter sous Node dans l'application, reste : le ticket 233 s'en sert pour un import lancé dans le conteneur de la production, par un geste dans Coolify.
+La v3 n'a pas de préprod (décision d'Andy du 16/10/2026, tickets 232 et 233) : l'import se répète sur le banc, contre la fausse base Strapi, puis se lance en production, **sans SSH et sans ouvrir aucune base sur Internet**. L'image ne contient ni bun ni `scripts/` : l'import tourne dans le processus de l'application, sous Node, quand Andy pose un jeton nouveau dans Coolify (`src/migration/import-a-la-demande.ts`, branché dans `onInit`). Il lit la base Strapi par le réseau interne de Coolify, avec un rôle en lecture seule, et écrit dans la base de Payload par l'API locale, comme la commande.
+
+**Ce qu'Andy fait, dans l'ordre**
+
+1. Créer le rôle en lecture seule sur la base Strapi (`PLAN-PROD-DIRECT.md`, §2.1, dans le terminal Coolify de la base) : `lecture_strapi`, `SELECT` sur les seize tables de l'import et rien d'autre.
+2. Dans Coolify, sur l'application de la prod v3, poser en variables d'exécution (jamais cochées « Build Variable ») : `STRAPI_SOURCE_URI` (`postgres://lecture_strapi:…@<nom interne de la base Strapi>:5432/<base>`, une valeur secrète), puis `IMPORT_DECISIONS` si une table de décision existe, `IMPORT_CONSENTEMENT_LE` (la date de bascule, la même à chaque passage réel), `IMPORT_MODE` et enfin `IMPORT_JETON` avec un jeton qui n'a jamais servi (`2026-11-02-essai-1`). Le stockage des photos (`S3_*`) doit être réglé.
+3. Redéployer ou redémarrer l'application. Au démarrage, une fois les migrations jouées, elle lance le passage sans retenir la première requête et écrit son journal dans les logs du conteneur, lignes préfixées `[import]`.
+4. Lire les logs : le rapport, puis `Passage … fini, code N.` (les codes sont ceux du tableau plus haut). Pour un passage de plus, **changer `IMPORT_JETON`** (et `IMPORT_MODE` au besoin) et redémarrer.
+
+**Les trois modes** (`IMPORT_MODE`) : `a-blanc` (par défaut) lit la source et la cible et n'écrit rien ; `reel` écrit, puis relit la cible pour prouver la parité ; `controle` est le passage à blanc qui dit si la cible est la source (code 4 sinon, et jamais avec `IMPORT_CIBLE_EN_SERVICE`). `IMPORT_CIBLE_EN_SERVICE=oui` fait ce que `--cible-en-service` fait (voir « Jusqu'à la bascule seulement ») : à ne poser que sur une cible que personne n'a modifiée dans l'administration, car les articles et les talents sont réécrits d'après la source.
+
+**Les gardes**
+
+- **Le site seulement.** Le passage exige `NODE_ENV=production`, `APP_ENV=prod` et `NEXT_PUBLIC_SITE_URL=https://my-makeup.fr`, et le stockage des photos. Une variable `IMPORT_*` posée ailleurs (un poste, le banc, un autre domaine) arrête le démarrage de l'application, qui nomme la variable sans montrer sa valeur. Les tests refusent aussi toute variable `IMPORT_*` dans leur environnement.
+- **Jamais la base de Payload.** Une `STRAPI_SOURCE_URI` qui désigne la même base que `DATABASE_URI` (même hôte, même port, même nom) est refusée.
+- **Un jeton ne joue qu'une fois.** Il est écrit dans la base, dans le commentaire du schéma `public` (tous les jetons joués, séparés par une espace), sous un verrou, avant la première lecture de la source : un redémarrage, un déploiement qui se chevauche ou deux conteneurs avec le même jeton ne rejouent rien (`Le jeton … a déjà été joué`). Un passage arrêté (code 3 ou 6, une erreur) a utilisé son jeton. Seule exception : une variable illisible (table de décision, date, réponses gardées) refuse le passage **avant** que le jeton soit écrit.
+- **La table est celle de la v3.** L'import ne pousse ni ne joue aucune migration : l'application doit avoir démarré une fois sur la base de prod (c'est le cas : l'import se lance après ses migrations). Une base sans les tables de la v3 est refusée.
+- **Le site répond pendant le passage.** Il dure de 25 à 45 secondes sur la copie du 08/10, plus les réponses du référentiel des communes en ligne (`IMPORT_COMMUNES` en garde en réserve ; sinon chaque passage les redemande, et le disque du conteneur est perdu à chaque déploiement). Les écritures de l'import passent par le pool de l'application : le site est plus lent pendant ce temps.
+- **Le journal ne porte que des nombres.** Chaque ligne commence par `[import]` et ne contient que des nombres et des identifiants de l'ancienne base : ni email, ni hash, ni adresse de la source. Une ligne qui porterait un `@` ou un hash `$2a$` est remplacée, d'où qu'elle vienne. Une erreur de la base est dite par son type et son code, jamais par son texte.
+- **Après la bascule**, retirer `IMPORT_*` et `STRAPI_SOURCE_URI` de Coolify. Un passage relancé sur une cible que la v3 a utilisée est de toute façon refusé (code 1) sans `IMPORT_CIBLE_EN_SERVICE=oui`.
+
+**Depuis un poste (secours).** Si le passage dans le conteneur n'est pas possible, la commande tourne sur le poste d'Andy, sur une copie de la source restaurée (voir « La répétition sur une copie de la prod »), contre la base v3 ouverte **en TLS et pour quelques minutes seulement** : `DATABASE_URI=… STRAPI_SOURCE_URI=… bun run migration:import --cible-distante --base-attendue <nom de la base v3>`. La base Strapi, elle, n'est **jamais** ouverte sur Internet : elle n'a pas de TLS, et son mot de passe, ses emails et ses hash passeraient en clair.
 
 ## La table de décision
 

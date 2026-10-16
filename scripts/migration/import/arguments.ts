@@ -3,7 +3,7 @@
  * import writes only when it is told so, with `--reel`.
  */
 
-import { DRAPEAU_CIBLE_DISTANTE, DRAPEAU_CIBLE_EN_SERVICE } from './cible'
+import { DRAPEAU_BASE_ATTENDUE, DRAPEAU_CIBLE_DISTANTE, DRAPEAU_CIBLE_EN_SERVICE } from './cible'
 import type { Mode } from './rapport'
 
 export interface ArgumentsDImport {
@@ -27,6 +27,8 @@ export interface ArgumentsDImport {
 	revue?: string
 	/** The date of the switch, as written on the command line: the consent date of the contact details shown today (ticket 064). */
 	consentiLe?: string
+	/** The name `current_database()` must give on the target (`--base-attendue`). Required with `--cible-distante` (ticket 233, L9). */
+	baseAttendue?: string
 }
 
 /** The kept answers of the referential, when the command names no other file: local, never versioned. */
@@ -39,15 +41,17 @@ const AVEC_FICHIER = {
 	'--communes': 'communes',
 	'--revue': 'revue',
 	'--consentement-le': 'consentiLe',
+	'--base-attendue': 'baseAttendue',
 } as const satisfies Record<string, keyof ArgumentsDImport>
 
 export const USAGE = [
-	'Usage : bun scripts/migration/import.ts [--reel] [--cible-distante] [--cible-en-service] [--decisions <fichier.json>] [--rapport <fichier.json>]',
+	'Usage : bun scripts/migration/import.ts [--reel] [--cible-distante --base-attendue <nom>] [--cible-en-service] [--decisions <fichier.json>] [--rapport <fichier.json>]',
 	'                                        [--communes <fichier.json>] [--hors-ligne] [--revue <fichier.json>]',
 	'                                        [--consentement-le <date>] [--sans-photos] [--controle]',
 	'  sans option     à blanc : lit la source et la cible, dit ce qu’il écrirait, n’écrit rien',
 	'  --reel          écrit dans la base de DATABASE_URI, puis relit la cible pour prouver la parité',
-	`  ${DRAPEAU_CIBLE_DISTANTE} accepte une base qui n’est pas sur ce poste`,
+	`  ${DRAPEAU_CIBLE_DISTANTE} accepte une base qui n’est pas sur ce poste ; il exige ${DRAPEAU_BASE_ATTENDUE} <nom>`,
+	`  ${DRAPEAU_BASE_ATTENDUE}  le nom que la base de la cible doit donner (current_database()) : le passage est refusé avant toute lecture si elle en porte un autre. Obligatoire avec ${DRAPEAU_CIBLE_DISTANTE}`,
 	`  ${DRAPEAU_CIBLE_EN_SERVICE} accepte une cible que la v3 utilise déjà (une connexion y a réussi) : les comptes déjà repris restent tels quels, seuls les manquants sont créés. Sans lui, une telle cible est refusée avant toute écriture`,
 	'  --decisions     la table de décision des cas que l’import ne tranche pas seul (comptes au même email, profils d’un compte écarté ou sans compte)',
 	'  --rapport       écrit aussi le rapport en JSON dans ce fichier (nombres, identifiants, empreintes)',

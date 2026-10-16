@@ -23,6 +23,9 @@ export type GenreDeCible = 'locale' | 'distante'
 /** The flag that lets the import write into a database that is not on this machine. */
 export const DRAPEAU_CIBLE_DISTANTE = '--cible-distante'
 
+/** The flag that names the database the target must be (`current_database()`): required with `--cible-distante`. */
+export const DRAPEAU_BASE_ATTENDUE = '--base-attendue'
+
 /** The flag that lets the import run on a target the v3 already uses (./garde-bascule.ts, ticket 227). */
 export const DRAPEAU_CIBLE_EN_SERVICE = '--cible-en-service'
 
@@ -32,8 +35,14 @@ export const DRAPEAU_CIBLE_EN_SERVICE = '--cible-en-service'
  */
 export function verifierLaCible(
 	databaseUri: string | undefined,
-	{ cibleDistante }: { cibleDistante: boolean }
+	{ cibleDistante, baseAttendue }: { cibleDistante: boolean; baseAttendue?: string | undefined }
 ): GenreDeCible {
+	// A remote target is named twice, by its address and by its database: an address that points at
+	// the database of another site by mistake is caught by `verifierLaBaseAttendue` (ticket 233, L9).
+	if (cibleDistante && !baseAttendue)
+		throw new ImportRefuse(
+			`${DRAPEAU_CIBLE_DISTANTE} exige ${DRAPEAU_BASE_ATTENDUE} <nom> : le nom que la base de la cible doit donner. Rien n’est écrit.`
+		)
 	if (!databaseUri) throw new ImportRefuse('DATABASE_URI manque : l’import ne sait pas où écrire. Rien n’est écrit.')
 	if (isLocalDatabase(databaseUri)) return 'locale'
 	if (cibleDistante) return 'distante'
@@ -42,6 +51,19 @@ export function verifierLaCible(
 			'DATABASE_URI ne désigne pas une base de ce poste : l’import refuse d’y écrire, et rien n’est écrit.',
 			`Pour écrire dans une base distante, la commande le dit elle-même : ${DRAPEAU_CIBLE_DISTANTE}.`,
 		].join(' ')
+	)
+}
+
+/**
+ * Refuses, once Payload is connected and before anything is read or written, a target whose
+ * database is not the one `--base-attendue` names (ticket 233, L9). The refusal names the expected
+ * database only: what the target really is stays unsaid.
+ */
+export async function verifierLaBaseAttendue(payload: Payload, attendue: string): Promise<void> {
+	const { rows } = await payload.db.pool.query<{ base: string }>('SELECT current_database() AS base')
+	if (rows[0]?.base === attendue) return
+	throw new ImportRefuse(
+		`La base de DATABASE_URI n’est pas « ${attendue} » (${DRAPEAU_BASE_ATTENDUE}) : l’import refuse d’y lire ou d’y écrire. Rien n’est écrit.`
 	)
 }
 

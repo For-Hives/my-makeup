@@ -243,6 +243,19 @@ export function verifierUmami(variables: Variables): void {
 }
 
 /**
+ * No test run asks for the import of the old site: IMPORT_* variables are for the deployed site, where a
+ * token makes the container import (ticket 233). The tests of the import give their options as arguments.
+ * A value is never quoted.
+ */
+export function verifierImport(variables: Variables): void {
+	const nom = Object.keys(variables).find(cle => /^IMPORT_/.test(cle) && variables[cle]?.trim())
+	if (nom)
+		refuser(
+			`${nom} est réglé : aucun test ne lance l'import à la demande. Cette variable ne vaut que sur le site déployé.`
+		)
+}
+
+/**
  * Every check, on the given variables. Returns the environment the run works in, or throws
  * `EnvironnementRefuse` on the first refusal.
  */
@@ -258,6 +271,7 @@ export function verifierEnvironnement(variables: Variables = process.env): Envir
 	verifierStockage(variables)
 	verifierGoogle(variables)
 	verifierUmami(variables)
+	verifierImport(variables)
 	return environnement
 }
 

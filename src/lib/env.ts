@@ -37,6 +37,12 @@ export type RawEnv = Partial<
 		| 'GOOGLE_CLIENT_ID'
 		| 'GOOGLE_CLIENT_SECRET'
 		| 'GOOGLE_OIDC_ISSUER'
+		| 'IMPORT_CIBLE_EN_SERVICE'
+		| 'IMPORT_COMMUNES'
+		| 'IMPORT_CONSENTEMENT_LE'
+		| 'IMPORT_DECISIONS'
+		| 'IMPORT_JETON'
+		| 'IMPORT_MODE'
 		| 'INDEXNOW_KEY'
 		| 'NEXT_PHASE'
 		| 'NEXT_PUBLIC_SITE_URL'
@@ -53,6 +59,7 @@ export type RawEnv = Partial<
 		| 'SMTP_PORT'
 		| 'SMTP_USER'
 		| 'STATS_TOKEN'
+		| 'STRAPI_SOURCE_URI'
 		| 'UMAMI_ORIGIN',
 		string
 	>
@@ -82,6 +89,27 @@ export type StorageEnv = {
 	local: boolean
 }
 
+/**
+ * The import of the old site that the deployed container runs on demand (ticket 233,
+ * src/migration/import-a-la-demande.ts): asked for by a token, only on the site.
+ */
+export type ImportEnv = {
+	/** The token of IMPORT_JETON: a token that was already played does nothing. */
+	jeton: string
+	/** `a-blanc` writes nothing, `reel` writes and reads again, `controle` is a dry run that says whether the target is the source. */
+	mode: ImportMode
+	/** The table of decisions, as JSON text (identifiers only). Read by the import, which refuses a table it cannot read. */
+	decisions?: string
+	/** The date of the switch (`2026-11-02`, or with a time and a zone). */
+	consentiLe?: string
+	/** The kept answers of the referential of the communes, as JSON text. Optional. */
+	communes?: string
+	/** `IMPORT_CIBLE_EN_SERVICE=oui`: run on a target the v3 already uses. Never with `controle`. */
+	cibleEnService: boolean
+}
+
+export type ImportMode = 'a-blanc' | 'reel' | 'controle'
+
 /** The Umami instance the `/u` relay talks to. */
 export type UmamiEnv = {
 	/** An origin, with a path when the instance lives under one, and no final slash. */
@@ -104,6 +132,16 @@ export type ServerEnv = {
 	 */
 	authVerify: boolean
 	databaseUri: string
+	/**
+	 * Set only on the site, when IMPORT_JETON is: the import the container runs once for this token
+	 * (ticket 233). Nothing anywhere else, and never while Next builds.
+	 */
+	importation?: ImportEnv
+	/**
+	 * The Strapi database the import reads, through a read-only role on the internal network
+	 * (STRAPI_SOURCE_URI). Nothing when unset. Only the import reads it.
+	 */
+	sourceStrapi?: string
 	/**
 	 * The OpenID Connect issuer the Google sign-in talks to: Google itself, or on this machine the
 	 * fake provider of the test bench. Never a local one on a deployed site.
@@ -153,6 +191,15 @@ export const SITE_ORIGIN = 'https://my-makeup.fr'
 
 /** The Umami instance of the site today: the one the live site measures into. Never reached from anywhere else than the site. */
 export const UMAMI_ORIGIN_DEFAULT = 'https://umami.wadefade.fr'
+
+/**
+ * A token of IMPORT_JETON: lower case letters, digits and hyphens, 8 to 64 characters, such as
+ * « 2026-11-02-essai-1 ». A token that was already played does nothing (it is kept in the database).
+ */
+export const JETON_D_IMPORT = /^[a-z0-9][a-z0-9-]{7,63}$/
+
+/** The values of IMPORT_MODE. */
+const MODES_D_IMPORT: readonly string[] = ['a-blanc', 'reel', 'controle']
 
 /** The values of APP_ENV the application knows: the bench and the site. Nothing else. */
 const APP_ENVS: readonly string[] = ['test', 'prod']
@@ -208,6 +255,12 @@ const EXPECTED = {
 	GOOGLE_CLIENT_ID: 'l’identifiant du client OAuth de la console Google, avec GOOGLE_CLIENT_SECRET',
 	GOOGLE_CLIENT_SECRET: 'le secret de ce client OAuth, avec GOOGLE_CLIENT_ID',
 	GOOGLE_OIDC_ISSUER: `${GOOGLE_ISSUER}, ou sur ce poste l’adresse du faux Google du banc de test, comme http://127.0.0.1:7080, sans « / » final`,
+	IMPORT_CIBLE_EN_SERVICE: '« oui » seulement, et jamais avec IMPORT_MODE=controle',
+	IMPORT_COMMUNES: 'un texte JSON',
+	IMPORT_CONSENTEMENT_LE: 'une date comme « 2026-11-02 », ou avec heure et fuseau comme « 2026-11-02T08:00:00Z »',
+	IMPORT_DECISIONS: 'un texte JSON (la table de décision, des identifiants seulement)',
+	IMPORT_JETON: `un jeton de 8 à 64 caractères, minuscules, chiffres et tirets, comme « 2026-11-02-essai-1 », et seulement sur le site (${SITE_ORIGIN}, en production, APP_ENV=prod)`,
+	IMPORT_MODE: '« a-blanc » (la valeur par défaut), « reel » ou « controle »',
 	INDEXNOW_KEY: '32 caractères hexadécimaux en minuscules, comme la sortie de « openssl rand -hex 16 »',
 	NEXT_PUBLIC_SITE_URL: `${DEPLOYED_ORIGINS.join(', ')} ou une adresse de ce poste comme http://localhost:${DEFAULT_PORT}, sans « / » final`,
 	PAYLOAD_SECRET: `au moins ${SECRET_MIN_LENGTH} caractères, par exemple la sortie de « openssl rand -hex 32 »`,
@@ -223,6 +276,7 @@ const EXPECTED = {
 	SMTP_USER: 'l’identifiant du relais (pour Resend, « resend »), avec SMTP_PASSWORD',
 	UMAMI_ORIGIN: `une origine https://HÔTE (un chemin est permis, jamais de paramètres), ou sur ce poste celle du faux Umami du banc de test, comme http://127.0.0.1:4200`,
 	STATS_TOKEN: `au moins ${SECRET_MIN_LENGTH} caractères, par exemple la sortie de « openssl rand -hex 32 »`,
+	STRAPI_SOURCE_URI: 'postgres://UTILISATEUR:MOT_DE_PASSE@HÔTE:PORT/BASE, le rôle en lecture seule de la base Strapi',
 } as const
 
 type CheckedVariable = keyof typeof EXPECTED
@@ -555,6 +609,86 @@ function appEnvProblem(raw: RawEnv, problems: { variable: string; problem: strin
 		problems.push({ variable: 'APP_ENV', problem: `illisible. Attendu : ${EXPECTED.APP_ENV}.` })
 }
 
+/** True when the text is JSON. */
+function isJson(text: string): boolean {
+	try {
+		JSON.parse(text)
+		return true
+	} catch {
+		return false
+	}
+}
+
+/** A date written the way the import reads it: a day, or a day with a time and a zone. */
+const DATE_DE_BASCULE = /^\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?(?:Z|[+-]\d{2}:\d{2}))?$/
+
+/**
+ * The import the container runs on demand (ticket 233), or nothing. It runs on the site only:
+ * `NODE_ENV=production`, `APP_ENV=prod` and the address of the site. Any IMPORT_* variable is
+ * refused anywhere else, so that a work station or the bench can never be asked to import.
+ * The refusals name the variable, never its value.
+ */
+function importEnv(raw: RawEnv, problems: { variable: string; problem: string }[]): ImportEnv | undefined {
+	const names = [
+		'IMPORT_CIBLE_EN_SERVICE',
+		'IMPORT_COMMUNES',
+		'IMPORT_CONSENTEMENT_LE',
+		'IMPORT_DECISIONS',
+		'IMPORT_JETON',
+		'IMPORT_MODE',
+	] as const
+	const set = names.filter(name => raw[name] !== undefined)
+	if (set.length === 0) return undefined
+	const onTheSite =
+		raw.NODE_ENV === 'production' && raw.APP_ENV?.trim() === 'prod' && raw.NEXT_PUBLIC_SITE_URL === SITE_ORIGIN
+	if (!onTheSite) {
+		for (const variable of set)
+			problems.push({
+				variable,
+				problem: `refusée, car ce n’est pas le site (${SITE_ORIGIN}, en production, APP_ENV=prod). Attendu : ${EXPECTED[variable]}.`,
+			})
+		return undefined
+	}
+	const before = problems.length
+	const refuse = (variable: (typeof names)[number], problem = 'illisible') =>
+		problems.push({ variable, problem: `${problem}. Attendu : ${EXPECTED[variable]}.` })
+	const jeton = raw.IMPORT_JETON?.trim()
+	if (jeton === undefined) {
+		for (const variable of set) refuse(variable, `refusée, car IMPORT_JETON est ${ABSENT}`)
+		return undefined
+	}
+	if (!JETON_D_IMPORT.test(jeton)) refuse('IMPORT_JETON')
+	const mode = raw.IMPORT_MODE?.trim() ?? 'a-blanc'
+	if (!MODES_D_IMPORT.includes(mode)) refuse('IMPORT_MODE')
+	const cibleEnService = raw.IMPORT_CIBLE_EN_SERVICE?.trim()
+	if (cibleEnService !== undefined && cibleEnService !== 'oui') refuse('IMPORT_CIBLE_EN_SERVICE')
+	else if (cibleEnService === 'oui' && mode === 'controle')
+		refuse(
+			'IMPORT_CIBLE_EN_SERVICE',
+			'refusée avec IMPORT_MODE=controle, qui ne compare pas les comptes laissés tels quels'
+		)
+	if (raw.IMPORT_CONSENTEMENT_LE !== undefined) {
+		const date = raw.IMPORT_CONSENTEMENT_LE.trim()
+		if (!DATE_DE_BASCULE.test(date) || Number.isNaN(Date.parse(date))) refuse('IMPORT_CONSENTEMENT_LE')
+	}
+	for (const variable of ['IMPORT_DECISIONS', 'IMPORT_COMMUNES'] as const)
+		if (raw[variable] !== undefined && !isJson(raw[variable])) refuse(variable)
+	if (raw.STRAPI_SOURCE_URI === undefined)
+		problems.push({
+			variable: 'STRAPI_SOURCE_URI',
+			problem: `${ABSENT}, alors qu’IMPORT_JETON est réglée. Attendu : ${EXPECTED.STRAPI_SOURCE_URI}.`,
+		})
+	if (problems.length > before) return undefined
+	return {
+		jeton,
+		mode: mode as ImportMode,
+		...(raw.IMPORT_DECISIONS !== undefined && { decisions: raw.IMPORT_DECISIONS }),
+		...(raw.IMPORT_CONSENTEMENT_LE !== undefined && { consentiLe: raw.IMPORT_CONSENTEMENT_LE.trim() }),
+		...(raw.IMPORT_COMMUNES !== undefined && { communes: raw.IMPORT_COMMUNES }),
+		cibleEnService: cibleEnService === 'oui',
+	}
+}
+
 const required = z.string({ error: ABSENT })
 
 const schema = z.object({
@@ -580,6 +714,10 @@ const schema = z.object({
 	INDEXNOW_KEY: z
 		.string()
 		.refine(value => FORMAT_DE_LA_CLE.test(value.trim()), { error: 'illisible' })
+		.optional(),
+	STRAPI_SOURCE_URI: z
+		.string()
+		.refine(value => postgresUrl(value.trim()) !== undefined, { error: 'illisible' })
 		.optional(),
 	NEXT_PUBLIC_SITE_URL: z
 		.string()
@@ -635,6 +773,7 @@ export function parseServerEnv(source: RawEnv): ServerEnv {
 	const mail = mailEnv(raw, problems, inSite)
 	const storage = storageEnv(raw, problems)
 	appEnvProblem(raw, problems)
+	const importation = importEnv(raw, problems)
 
 	// A provider of this machine stands in for Google on this machine only. On the site,
 	// whatever NODE_ENV says, the Google sign-in talks to Google and nobody else.
@@ -687,6 +826,8 @@ export function parseServerEnv(source: RawEnv): ServerEnv {
 		contactTo: contactTo(parsed.data.CONTACT_TO, parsed.data.NEXT_PUBLIC_SITE_URL),
 		databaseUri: parsed.data.DATABASE_URI,
 		googleIssuer: issuer?.issuer ?? GOOGLE_ISSUER,
+		...(importation && { importation }),
+		...(parsed.data.STRAPI_SOURCE_URI !== undefined && { sourceStrapi: parsed.data.STRAPI_SOURCE_URI.trim() }),
 		...(raw.GOOGLE_CLIENT_ID !== undefined &&
 			raw.GOOGLE_CLIENT_SECRET !== undefined && {
 				google: { clientId: raw.GOOGLE_CLIENT_ID.trim(), clientSecret: raw.GOOGLE_CLIENT_SECRET.trim() },
@@ -717,6 +858,12 @@ function processEnv(): RawEnv {
 		GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
 		GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
 		GOOGLE_OIDC_ISSUER: process.env.GOOGLE_OIDC_ISSUER,
+		IMPORT_CIBLE_EN_SERVICE: process.env.IMPORT_CIBLE_EN_SERVICE,
+		IMPORT_COMMUNES: process.env.IMPORT_COMMUNES,
+		IMPORT_CONSENTEMENT_LE: process.env.IMPORT_CONSENTEMENT_LE,
+		IMPORT_DECISIONS: process.env.IMPORT_DECISIONS,
+		IMPORT_JETON: process.env.IMPORT_JETON,
+		IMPORT_MODE: process.env.IMPORT_MODE,
 		INDEXNOW_KEY: process.env.INDEXNOW_KEY,
 		NEXT_PHASE: process.env.NEXT_PHASE,
 		NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
@@ -733,6 +880,7 @@ function processEnv(): RawEnv {
 		SMTP_PORT: process.env.SMTP_PORT,
 		SMTP_USER: process.env.SMTP_USER,
 		STATS_TOKEN: process.env.STATS_TOKEN,
+		STRAPI_SOURCE_URI: process.env.STRAPI_SOURCE_URI,
 		UMAMI_ORIGIN: process.env.UMAMI_ORIGIN,
 	}
 }

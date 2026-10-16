@@ -1,4 +1,6 @@
 import { describe, expect, test } from 'bun:test'
+import { readFileSync } from 'node:fs'
+import path from 'node:path'
 import { appliquer } from '../../scripts/admin/clavier'
 import {
 	type Comptes,
@@ -15,6 +17,15 @@ import {
  */
 
 const MOT_DE_PASSE = 'un-mot-de-passe-fictif-094'
+
+describe('Le script ne lit pas le .env de travail (ticket 233, L1)', () => {
+	test('admin:creer porte --no-env-file : DATABASE_URI vient de l’environnement du terminal, jamais du .env', () => {
+		const { scripts } = JSON.parse(readFileSync(path.join(import.meta.dir, '../../package.json'), 'utf8')) as {
+			scripts: Record<string, string>
+		}
+		expect(scripts['admin:creer']).toBe('bun --no-env-file scripts/admin/creer-admin.ts')
+	})
+})
 
 describe('Les arguments de la commande', () => {
 	test('une adresse seule donne un admin sur la base de ce poste', () => {

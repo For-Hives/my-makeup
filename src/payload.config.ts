@@ -30,6 +30,7 @@ import { avecLEcouteDuPool, reglagesDuPool } from './lib/pool-base'
 import { requetesBornees } from './lib/requete-bornee'
 import { stockageS3 } from './lib/stockage'
 import { reserverLesVerrousAuxAdmins } from './lib/verrous-payload'
+import { lancerLImportALaDemande } from './migration/import-a-la-demande'
 import { migrations } from './migrations'
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -118,6 +119,9 @@ export default buildConfig({
 	onInit: payload => {
 		// Payload's document locks are reserved to the accounts of the admin panel (ticket 094).
 		reserverLesVerrousAuxAdmins(payload)
+		// The import of the old site, once per new IMPORT_JETON, on the site only; not awaited, so that the
+		// first request does not wait for it. Without a token nothing is read (ticket 233).
+		lancerLImportALaDemande(payload, env)
 	},
 	plugins: [
 		// The photos go to the object storage the environment names (src/lib/env.ts): R2 on the site,

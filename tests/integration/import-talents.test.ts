@@ -277,6 +277,37 @@ describe('Critère 4 : une cible non locale, sans drapeau, est refusée avant to
 		expect(await talentsDeLaCible()).toEqual([])
 	})
 
+	test('L9 (ticket 233) : --cible-distante exige --base-attendue, et la base doit porter ce nom, avant toute lecture', async () => {
+		const base = decodeURIComponent(new URL(source.maintenance).pathname.slice(1))
+
+		const sansNom = await commandeDImport(['--reel', '--cible-distante', '--decisions', FICHIER_DES_DECISIONS_DU_BANC])
+		expect(sansNom.code, sansNom.sortie).toBe(1)
+		expect(sansNom.sortie).toContain('--cible-distante exige --base-attendue')
+
+		const autreNom = await commandeDImport([
+			'--reel',
+			'--cible-distante',
+			'--base-attendue',
+			'mymakeup_une_autre_base',
+			'--decisions',
+			FICHIER_DES_DECISIONS_DU_BANC,
+		])
+		expect(autreNom.code, autreNom.sortie).toBe(1)
+		expect(autreNom.sortie).toContain('« mymakeup_une_autre_base »')
+		expect(autreNom.sortie).not.toContain(base)
+		expect(await talentsDeLaCible()).toEqual([])
+
+		const bonNom = await commandeDImport([
+			'--cible-distante',
+			'--base-attendue',
+			base,
+			'--decisions',
+			FICHIER_DES_DECISIONS_DU_BANC,
+		])
+		expect(bonNom.code, bonNom.sortie).toBe(0)
+		expect(bonNom.sortie).toContain('Import à blanc : rien n’est écrit.')
+	}, 90_000)
+
 	test('une base de ce poste sans le schéma de la v3 est refusée, et l’import n’y crée aucune table', async () => {
 		const bancDeBase = new URL(source.maintenance)
 		const nom = `${bancDeBase.pathname.slice(1).replace(/_test$/, '')}_sans_schema_test`
