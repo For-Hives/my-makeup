@@ -1,3 +1,5 @@
+import { en } from '@payloadcms/translations/languages/en'
+import { fr } from '@payloadcms/translations/languages/fr'
 import { commitTransaction, createLocalReq, initTransaction, killTransaction, type Payload } from 'payload'
 import { contenuEmailConfirmation } from '../emails/confirmation'
 import { contenuEmailDejaInscrite } from '../emails/deja-inscrite'
@@ -57,13 +59,34 @@ export interface EntreesDInscription {
 	freins?: FreinsDeBoite
 }
 
-/** True for the refusal Payload gives when the email is already the login of another account. */
-function estUneAdresseDejaPrise(erreur: unknown): boolean {
-	const erreurs = (erreur as { data?: { errors?: { path?: string }[] } } | null)?.data?.errors
-	return Array.isArray(erreurs) && erreurs.some(({ path }) => path === 'email')
+/**
+ * The sentences by which Payload says an email is taken: the one of the auth layer and the one of the
+ * unique index, in French (the language of the site) and in English (what Payload writes when no
+ * translation reaches it). A refusal of the form of the email says none of them.
+ */
+const PHRASES_D_UNICITE: ReadonlySet<string> = new Set([
+	fr.translations.error.userEmailAlreadyRegistered,
+	fr.translations.error.valueMustBeUnique,
+	en.translations.error.userEmailAlreadyRegistered,
+	en.translations.error.valueMustBeUnique,
+])
+
+/**
+ * True for the refusal Payload gives when the email is already the login of another account, and only
+ * for it: a refusal on the `email` path that is about its form (« veuillez entrer une adresse valide »)
+ * is not « déjà utilisée » (ticket 224).
+ */
+export function estUneAdresseDejaPrise(erreur: unknown): boolean {
+	const erreurs = (erreur as { data?: { errors?: { path?: string; message?: unknown }[] } } | null)?.data?.errors
+	return (
+		Array.isArray(erreurs) &&
+		erreurs.some(
+			({ path, message }) => path === 'email' && typeof message === 'string' && PHRASES_D_UNICITE.has(message)
+		)
+	)
 }
 
-function codeDeLEchec(erreur: unknown): CodeEchecInscription {
+export function codeDeLEchec(erreur: unknown): CodeEchecInscription {
 	if (estUneAdresseDejaPrise(erreur)) return 'email-deja-pris'
 	if (erreur instanceof EnvoiEmailEchoue) return 'email-non-envoye'
 	return 'service-indisponible'

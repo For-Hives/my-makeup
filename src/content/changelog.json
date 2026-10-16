@@ -160,6 +160,11 @@
 			"id": "chaque-page-de-specialite-a-un-titre-d-onglet-plus-comple",
 			"type": "amelioration",
 			"text": "Chaque page de spécialité a un titre d’onglet plus complet, pour mieux apparaître dans les résultats de recherche."
+		},
+		{
+			"id": "quand-l-equipe-est-en-train-de-modifier-ton-profil-ton-en",
+			"type": "amelioration",
+			"text": "Quand l’équipe est en train de modifier ton profil, ton enregistrement attend et te le dit, au lieu d’écraser son travail ou de se perdre."
 		}
 	],
 	"releases": []

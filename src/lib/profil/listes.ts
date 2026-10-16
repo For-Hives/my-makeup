@@ -123,6 +123,9 @@ export function messageDePrix(valeur: unknown): string | null {
 // « 2024-03-01 », alone or followed by an hour: the day as it was written.
 const DATE_ECRITE = /^(\d{4})-(\d{2})-(\d{2})(?=$|T)/
 
+/** The first year PostgreSQL stores for these four-digit dates: it has no year 0. */
+const ANNEE_MIN = 1
+
 const deuxChiffres = (nombre: number) => String(nombre).padStart(2, '0')
 
 /** « YYYY-MM-DD » of a date in UTC. */
@@ -133,7 +136,7 @@ const jourUtc = (date: Date) =>
  * The day a date of these lists stands for, « YYYY-MM-DD », or null when it is not a date. A text
  * gives the day it writes (« 2024-03-01 », or « 2024-03-01T23:30:00-05:00 », still the 1st):
  * the day typed, whatever the time zone of whoever typed it. A Date gives its day in UTC. Anything
- * else, a day that does not exist (« 2024-02-30 ») and a text in another form are not dates.
+ * else, a day that does not exist (« 2024-02-30 »), the year 0 that PostgreSQL does not store and a text in another form are not dates.
  */
 export function jourCalendaire(valeur: unknown): string | null {
 	if (valeur instanceof Date) return Number.isNaN(valeur.getTime()) ? null : jourUtc(valeur)
@@ -141,6 +144,8 @@ export function jourCalendaire(valeur: unknown): string | null {
 	const ecrit = DATE_ECRITE.exec(valeur)
 	if (ecrit === null || Number.isNaN(Date.parse(valeur))) return null
 	const [, annee, mois, jour] = ecrit.map(Number) as [number, number, number, number]
+	// PostgreSQL has no year 0 (1 BC is followed by 1 AD): « 0000-01-01 » would pass here and fail the write.
+	if (annee < ANNEE_MIN) return null
 	const date = new Date(Date.UTC(annee, mois - 1, jour))
 	date.setUTCFullYear(annee)
 	return jourUtc(date) === ecrit[0] ? ecrit[0] : null

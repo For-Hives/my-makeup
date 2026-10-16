@@ -1,5 +1,5 @@
 import type { Payload } from 'payload'
-import { identifiantDuProfil, type UtilisateurDeLEspace } from './mon-profil'
+import { identifiantDuProfilAEcrire, type UtilisateurDeLEspace } from './mon-profil'
 import { CHAMPS_DES_RESEAUX, lireLesReseaux, schemaDesReseauxStrict, type ValeursDesReseaux } from './reseaux'
 import { echecDePayload, MESSAGE_ECHEC, type ResultatDEnregistrement } from './resultat'
 
@@ -32,7 +32,7 @@ export async function enregistrerReseaux(
 			champs: lue.champs,
 		}
 	try {
-		const id = await identifiantDuProfil(payload, utilisateur)
+		const id = await identifiantDuProfilAEcrire(payload, utilisateur)
 		if (id === null) return { ok: false, message: MESSAGE_ECHEC }
 		const reseaux = Object.fromEntries(CHAMPS_DES_RESEAUX.map(champ => [champ, lue.valeurs[champ] || null]))
 		const stocke = await payload.update({

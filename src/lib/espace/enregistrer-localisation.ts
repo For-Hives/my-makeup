@@ -6,7 +6,7 @@ import {
 	schemaDeLaLocalisationStrict,
 	type ValeursDeLaLocalisation,
 } from './localisation'
-import { identifiantDuProfil, type UtilisateurDeLEspace } from './mon-profil'
+import { identifiantDuProfilAEcrire, type UtilisateurDeLEspace } from './mon-profil'
 import { type CommuneDuCode, communeDuCode } from './referentiel-communes'
 import { echecDePayload, MESSAGE_ECHEC, type ResultatDEnregistrement } from './resultat'
 
@@ -47,7 +47,7 @@ export async function enregistrerLocalisation(
 	}
 	const { codeInsee, rayonKm, aDomicile } = lue.data
 	try {
-		const id = await identifiantDuProfil(payload, utilisateur)
+		const id = await identifiantDuProfilAEcrire(payload, utilisateur)
 		if (id === null) return { ok: false, message: MESSAGE_ECHEC }
 		const actuel = await payload.findByID({
 			collection: 'profils',

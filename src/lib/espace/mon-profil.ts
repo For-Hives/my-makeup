@@ -1,6 +1,7 @@
 import type { Payload } from 'payload'
 import { COLLECTION_PROS } from '../acces'
 import type { ProfilDeLEspace } from './cartes'
+import { verifierQueLAdminNeTientPasLeProfil } from './verrou'
 
 /** The makeup artist as Payload knows her: what the access rules of a request need. */
 export type UtilisateurDeLEspace = NonNullable<Awaited<ReturnType<Payload['auth']>>['user']>
@@ -47,6 +48,20 @@ export async function identifiantDuProfil(payload: Payload, utilisateur: Utilisa
 		where: { pro: { equals: utilisateur.id } },
 	})
 	return docs[0]?.id ?? null
+}
+
+/**
+ * The identifier of her profile for a write of her space: `identifiantDuProfil`, then a refusal
+ * (`ProfilVerrouille`) while an admin has the profile open in the administration (ticket 224). Null
+ * when she has no profile, as `identifiantDuProfil`.
+ */
+export async function identifiantDuProfilAEcrire(
+	payload: Payload,
+	utilisateur: UtilisateurDeLEspace
+): Promise<number | null> {
+	const id = await identifiantDuProfil(payload, utilisateur)
+	if (id !== null) await verifierQueLAdminNeTientPasLeProfil(payload, id)
+	return id
 }
 
 /**

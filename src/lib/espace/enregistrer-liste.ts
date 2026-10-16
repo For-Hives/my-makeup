@@ -11,7 +11,7 @@ import {
 	nettoyerLaLigne,
 	schemaDeLaListe,
 } from './liste'
-import { identifiantDuProfil, type UtilisateurDeLEspace } from './mon-profil'
+import { identifiantDuProfilAEcrire, type UtilisateurDeLEspace } from './mon-profil'
 import { echecDePayload, MESSAGE_ECHEC, type ResultatDEnregistrement } from './resultat'
 
 const estUneLigne = (valeur: unknown): valeur is Record<string, unknown> =>
@@ -92,7 +92,7 @@ export async function enregistrerListe(
 	const forme = schemaDeLaListe(definition).safeParse(saisie)
 	if (!forme.success) return { ok: false, message: MESSAGE_ECHEC }
 	try {
-		const id = await identifiantDuProfil(payload, utilisateur)
+		const id = await identifiantDuProfilAEcrire(payload, utilisateur)
 		if (id === null) return { ok: false, message: MESSAGE_ECHEC }
 		const profil = await payload.findByID({
 			collection: 'profils',

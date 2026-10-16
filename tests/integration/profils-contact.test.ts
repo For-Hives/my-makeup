@@ -166,6 +166,39 @@ describe('Activer contactPublic pose la date du serveur ; la maquilleuse ne peut
 	})
 })
 
+describe('Un groupe envoyé à null vaut un groupe vide, jamais un 500 (ticket 224)', () => {
+	test.each([
+		['reseaux', { reseaux: null }],
+		['coordonnees', { coordonnees: null }],
+		['les deux', { reseaux: null, coordonnees: null }],
+	])('%s à null, par REST : 200 et le groupe est vidé', async (_cas, corps) => {
+		const { compte, id } = await maquilleusePubliee(false)
+
+		const reponse = await appelerRest('PATCH', `/api/profils/${id}`, { enTetes: compte.session.enTetes, corps })
+
+		expect(reponse.statut).toBe(200)
+		const profil = await stocke(id)
+		if ('reseaux' in corps) expect(Object.values(profil.reseaux ?? {}).filter(Boolean)).toEqual([])
+		if ('coordonnees' in corps) expect(Object.values(profil.coordonnees ?? {}).filter(Boolean)).toEqual([])
+	})
+
+	test('par l’API locale aussi', async () => {
+		const { id } = await maquilleusePubliee(false)
+		const payload = await payloadDeTest()
+
+		await payload.update({
+			collection: 'profils',
+			id,
+			data: { reseaux: null, coordonnees: null } as never,
+			overrideAccess: true,
+		})
+
+		const profil = await stocke(id)
+		expect(Object.values(profil.reseaux ?? {}).filter(Boolean)).toEqual([])
+		expect(Object.values(profil.coordonnees ?? {}).filter(Boolean)).toEqual([])
+	})
+})
+
 describe('Téléphone de plus de 20 caractères ou email mal formé : refus en français', () => {
 	test.each([
 		[

@@ -1,6 +1,6 @@
 import type { Payload } from 'payload'
 import { contenuEmailContact } from '../emails/contact'
-import type { EnvoyerEmail, Journal } from '../emails/envoi'
+import { AUCUN_RELAIS, type EnvoyerEmail, type Journal } from '../emails/envoi'
 import { composerEmail } from '../emails/gabarit'
 import { SITE_ORIGIN } from '../env'
 import type { EtatDuMail, StatutDeDemande } from './etats'
@@ -23,7 +23,8 @@ import { CHAMP_PIEGE_DU_CONTACT, type ErreursDeContact, type MessageDeContact, v
  * 3. The answer goes back, and the mail to the team leaves after it (`apres`: `after` of Next in a Server
  *    Action). The relay is never waited for by the visitor, so a relay that is silent changes nothing
  *    for her. The mail has a deadline of its own (`delaiMs`): past it, the row says `echec`.
- * 4. The row is told how the mail went: `envoye` and `transmise`, or `echec`. A mail that fails never
+ * 4. The row is told how the mail went: `envoye` and `transmise`, or `echec` (also when no relay is set: the
+ *    mail did not leave, and an admin sends it again once one is, ticket 224). A mail that fails never
  *    loses the message, and the visitor sees the confirmation all the same.
  *
  * What she typed is never in a log: a failure writes its kind, a word, and nothing that the database
@@ -131,7 +132,12 @@ export async function expedier(
 	}
 	const envoi: Promise<'envoye' | 'echec'> = (async () => {
 		const email = composerEmail(contenuEmailContact(message), SITE_ORIGIN)
-		await envoyer({ a: destinataire, repondreA: message.email, ...email })
+		const issue = await envoyer({ a: destinataire, repondreA: message.email, ...email })
+		if (issue === AUCUN_RELAIS) {
+			// Nothing failed, and nothing left: the row must not say « transmise ». An admin sends it again once a relay is set.
+			journal.erreur('L’email d’un message de contact n’est pas parti : aucun relais d’envoi n’est réglé.')
+			return 'echec' as const
+		}
 		return 'envoye' as const
 	})().catch((erreur: unknown) => {
 		// The door already wrote its own line (kind of failure only); this one says which flow it was.

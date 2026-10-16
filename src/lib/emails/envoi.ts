@@ -8,8 +8,8 @@
  *
  * - The import of the old data sends nothing: a write that carries its context (`estUnImport`) leaves
  *   before anything is read or written.
- * - Without a relay (no SMTP_HOST: a work station), the mail is not sent, and one line of the log says
- *   so. The site never gets there: its environment is refused without a relay (src/lib/env.ts).
+ * - Without a relay (no SMTP_HOST: a work station), the mail is not sent, one line of the log says
+ *   so, and the door gives back `AUCUN_RELAIS`. The site never gets there: its environment is refused without a relay (src/lib/env.ts).
  * - A failure reaches the caller as an `EnvoiEmailEchoue`, a sentence that can be shown. The log gets
  *   one line with the kind of failure; no address, no subject, no link and no token is ever written
  *   there, and the error of the relay (which names the address) is not kept.
@@ -37,8 +37,15 @@ export type OptionsDEnvoi = {
 	context?: RequestContext | undefined
 }
 
-/** The door: sends the mail, or rejects with an `EnvoiEmailEchoue`. Resolves without sending for an import. */
-export type EnvoyerEmail = (email: EmailAEnvoyer, options?: OptionsDEnvoi) => Promise<void>
+/**
+ * The door: sends the mail, or rejects with an `EnvoiEmailEchoue`. Resolves without sending for an import
+ * (nothing), and for a work station without a relay (`AUCUN_RELAIS`): a caller that tells somebody that a
+ * mail left (the contact message, ticket 224) must tell these two apart from a mail that went.
+ */
+export type EnvoyerEmail = (email: EmailAEnvoyer, options?: OptionsDEnvoi) => Promise<void | typeof AUCUN_RELAIS>
+
+/** What the door gives back when no relay is set: the mail did not leave, and nothing failed. */
+export const AUCUN_RELAIS = 'aucun-relais'
 
 /** What the relay is asked to send. */
 export type MessageDuRelais = { to: string; subject: string; text: string; html: string; replyTo?: string }
@@ -84,7 +91,7 @@ export function creerEnvoiEmail({ relais, journal }: { relais: Relais | undefine
 
 		if (!relais) {
 			journal.info('Aucun relais d’envoi n’est réglé (SMTP_HOST) : l’email n’est pas parti.')
-			return
+			return AUCUN_RELAIS
 		}
 		try {
 			await relais({
