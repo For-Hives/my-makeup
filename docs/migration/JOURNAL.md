@@ -693,3 +693,16 @@ Ce que la v3 change par rapport au site actuel est dans [`CHANGEMENTS-VOULUS.md`
   - L'auteur n'a rien changé (le reste est hors de son périmètre : appliquer les correctifs aux deux anciens dépôts et voir le message d'entretien). Les deux correctifs s'appliquent encore proprement aux têtes `ccd449d` (API) et `7f43f1b` (site).
 - **Ticket 108 fait : les 14 pages talent ont leur titre d'onglet.**
   - Titres de 50 à 60 caractères dans `src/content/talents-titres.ts`, copiés dans `titreDeLaPage` par l'import seulement quand le champ est vide (option `amorces` du moteur d'import) ; un titre saisi dans l'admin est conservé. Ligne `titre-page-talent` au registre des changements voulus. Les essais de bout en bout et I45 ne sont pas rejoués dans cette vague.
+
+## 16/10/2026
+
+- **Ticket 222 en partie : le pool de connexions à la base a un délai de 5 secondes.**
+  - `src/lib/pool-base.ts` fixe `connectionTimeoutMillis` à 5 000 ms, lu par `src/payload.config.ts` ; pas de nouvelle variable d'environnement. Essai unitaire vert ; essai d'intégration `pool-delai` : avec toutes les connexions prises, une requête de plus rend une erreur au bout d'environ 5 s, puis `/api/health` répond 200.
+  - Reste : le signalement du défaut à Payload n'est pas publié (publication publique, accord du propriétaire requis). Son adresse sera notée dans `CLAUDE.md`. Le ticket n'est pas marqué fait.
+- **Ticket 157 en partie : les sondes tournent chaque lundi à 07:00 (côté exécution).**
+  - `.github/workflows/sondes.yml` : cron `0 7 * * 1` avec fuseau `Europe/Paris`, sans secret, lecture seule ; une sonde rouge fait échouer l'exécution (essai unitaire qui lance la vraie commande contre un faux site répondant 500 : code 1). R02 reste « inconnu » (pas de jeton en ligne).
+  - Reste : la lecture par le rapport (rouge = alerte, résultat absent ou de 8 jours = « inconnu », compte des lundis verts) n'est pas écrite ; le contrat est dans `docs/tests/sondes.md`. Les exécutions planifiées ne partent que de la branche par défaut (`main`) : le décompte des quatre lundis ne commence qu'à la bascule. Pas d'exécution réelle sur GitHub vérifiée. Le ticket n'est pas marqué fait.
+- **Ticket 056 fait : la mesure Lighthouse de référence de l'ancien site est refaite seule.**
+  - Cinq passages par page, machine au repos ; 27 budgets sur 37 tenus ; le code est dans l'outil de mesure, hors de ce dépôt.
+- **Ticket 154 fait : le rapport du lundi lit l'indexation des profils publiables et le panier de requêtes.**
+  - `plans/mesures/outil` 0.8.0, source Search Console en mode `v3`. Jamais essayé contre la vraie API de Google (secret du ticket 153 non rangé).
