@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { creerCompte } from '../outils/fabrique-comptes'
+import { sansLeReseauDuDehors } from '../outils/hors-reseau'
 import { payloadDeTest } from '../outils/payload-test'
 
 /**
@@ -15,6 +16,7 @@ test.describe('L’admin liste les comptes et en bloque un', () => {
 		const sansProfil = await creerCompte('maquilleuse-sans-profil')
 		const avecProfil = await creerCompte('maquilleuse')
 		await context.addCookies(admin.session.cookies)
+		await sansLeReseauDuDehors(context)
 		const erreurs: string[] = []
 		page.on('console', message => {
 			if (message.type() === 'error') erreurs.push(message.text())
