@@ -33,10 +33,9 @@ const anciens: TitresDeLAncienSite = JSON.parse(
 	readFileSync(new URL('../fixtures/parite-urls-h1.json', import.meta.url), 'utf8')
 )
 
-// Every family of the inventory is delivered but `slug-inconnu` (ticket 228, constat 3): the 404 of an unknown
-// talent, article or profile is raised by `notFound()`, which Next sends as a stream, so the HTML of the server
-// has its 404 status, its title and its `noindex` but not the h1 of the 404 page. The fix needs the proxy to
-// know the slug; the day of the switch it is the one family that is not green.
+// Every family of the inventory is delivered. `slug-inconnu` came last (ticket 231): a 404 raised by `notFound()`
+// reaches the browser as a stream with no h1 in the HTML of the server, so the proxy answers an unknown slug itself
+// (src/proxy.ts, src/lib/urls/page-inconnue.ts).
 const LIVREES: ReadonlySet<string> = new Set([
 	'accueil',
 	'recherche',
@@ -58,6 +57,7 @@ const LIVREES: ReadonlySet<string> = new Set([
 	'profil',
 	'profil-ancien-nom',
 	'profil-non-repris',
+	'slug-inconnu',
 	'demande-envoyee',
 	'robots',
 	'mentions-legales',

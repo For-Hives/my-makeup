@@ -134,7 +134,7 @@ describe('U64 : le back-office, l’API et les fichiers statiques ne sont pas to
 
 	test.each([
 		'/',
-		'/profil/ana',
+		'/a-propos',
 		'/blog/un-article',
 		'/auth/signin',
 		'/auth/profil',
@@ -160,7 +160,7 @@ describe('le proxy : le nettoyage à la première requête', () => {
 
 	test('une page du site : chaque cookie hérité expiré, un rappel posé, pas de redirection', () => {
 		delete process.env.BASCULE_LE
-		const reponse = proxy(requete('/profil/ana', HERITES))
+		const reponse = proxy(requete('/a-propos', HERITES))
 		expect(reponse.status).toBe(200)
 		const lignes = setCookies(reponse)
 		for (const nom of HERITES) {
@@ -225,7 +225,7 @@ describe('le proxy : le nettoyage à la première requête', () => {
 
 	test('passé les 90 jours, plus rien n’est touché', () => {
 		process.env.BASCULE_LE = '2020-01-01'
-		const reponse = proxy(requete('/profil/ana', HERITES))
+		const reponse = proxy(requete('/a-propos', HERITES))
 		expect(setCookies(reponse)).toEqual([])
 	})
 

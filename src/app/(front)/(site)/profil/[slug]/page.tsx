@@ -7,6 +7,7 @@ import { VueDuProfil } from '@/components/profil/VueDuProfil'
 import { serializeJsonLd } from '@/lib/seo/json-ld'
 import { donneesStructureesDuProfil, metadonneesDuProfil } from '@/lib/seo/profil'
 import { cheminProfil } from '@/lib/slug'
+import { segmentEcrit } from '@/lib/urls/page-inconnue'
 import { lAdresseDeProfilEnCache } from '@/services/public/en-cache'
 import type { AdresseDeProfil } from '@/services/public/profils'
 
@@ -14,15 +15,6 @@ import type { AdresseDeProfil } from '@/services/public/profils'
 // Next, under its tag `profil:<slug>` (ticket 117): a save refreshes it (ticket 047), and two visits of a
 // page that did not change read nothing in the database.
 export const dynamic = 'force-dynamic'
-
-/** The segment as the visitor wrote it: Next gives it decoded or not, depending on the path. */
-function segmentEcrit(segment: string): string {
-	try {
-		return decodeURIComponent(segment)
-	} catch {
-		return segment
-	}
-}
 
 /** What the address leads to, read once for the metadata and the page of one request. */
 const adresseDeProfil = cache(async (segment: string): Promise<AdresseDeProfil> => {
