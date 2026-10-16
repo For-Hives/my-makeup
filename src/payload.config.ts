@@ -31,7 +31,6 @@ import { requetesBornees } from './lib/requete-bornee'
 import { stockageS3 } from './lib/stockage'
 import { reserverLesVerrousAuxAdmins } from './lib/verrous-payload'
 import { migrations } from './migrations'
-import { auDemarrage, avecLaRemiseAZero } from './preprod/au-demarrage'
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -84,24 +83,19 @@ export default buildConfig({
 	cors: [],
 	// A session cookie is accepted from these origins only (src/lib/env.ts).
 	csrf: env.trustedOrigins,
-	// On the pre-production only, a new reset token empties the database before Payload plays its
-	// migrations (ticket 027, docs/preprod.md). Anywhere else, the adapter as it is.
 	// A connection of the pool that PostgreSQL cuts must not kill the server (ticket 223).
 	db: avecLEcouteDuPool(
-		avecLaRemiseAZero(
-			postgresAdapter({
-				// Outside this machine, a database that does not exist is an error: Payload must not create an empty one.
-				disableCreateDatabase: !env.localDatabase,
-				migrationDir: path.resolve(dirname, 'migrations'),
-				// 5 connections per process and a wait limit for a free one (src/lib/pool-base.ts, ticket 222).
-				pool: reglagesDuPool(env.databaseUri),
-				// Everywhere else, the schema changes by these migrations: Payload plays them when it starts in production.
-				prodMigrations: migrations,
-				// The schema is pushed into a database of this machine only. Payload never pushes in production.
-				push: env.localDatabase,
-			}),
-			env
-		)
+		postgresAdapter({
+			// Outside this machine, a database that does not exist is an error: Payload must not create an empty one.
+			disableCreateDatabase: !env.localDatabase,
+			migrationDir: path.resolve(dirname, 'migrations'),
+			// 5 connections per process and a wait limit for a free one (src/lib/pool-base.ts, ticket 222).
+			pool: reglagesDuPool(env.databaseUri),
+			// Everywhere else, the schema changes by these migrations: Payload plays them when it starts in production.
+			prodMigrations: migrations,
+			// The schema is pushed into a database of this machine only. Payload never pushes in production.
+			push: env.localDatabase,
+		})
 	),
 	// Every mail leaves through the relay the environment names (src/lib/env.ts): on the test bench,
 	// the mail catcher. Without SMTP_HOST, Payload's own mails go to an adapter that logs one line, no address.
@@ -120,13 +114,10 @@ export default buildConfig({
 	// Payload speaks French only: its errors, its own messages and the admin panel, whatever
 	// language a request asks for (src/lib/langue-payload.ts, ticket 221).
 	i18n: LANGUE_DE_PAYLOAD,
-	// Once Payload has started and played its migrations: on the pre-production only, the import of
-	// the fake Strapi source into an empty database (ticket 027, docs/preprod.md). Anywhere else it
-	// does nothing.
-	onInit: async payload => {
+	// Once Payload has started and played its migrations.
+	onInit: payload => {
 		// Payload's document locks are reserved to the accounts of the admin panel (ticket 094).
 		reserverLesVerrousAuxAdmins(payload)
-		await auDemarrage(payload, env)
 	},
 	plugins: [
 		// The photos go to the object storage the environment names (src/lib/env.ts): R2 on the site,

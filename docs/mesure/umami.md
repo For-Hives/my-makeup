@@ -16,7 +16,7 @@ Le code : `src/app/u/` (trois fichiers de route) et `src/lib/analytics/relais.ts
 
 **Coupure** : une instance muette est abandonnée après 10 secondes (504), une panne répond 502. La page n'attend jamais : le traceur est ajouté en asynchrone.
 
-**Hors du site, rien ne part vers la vraie instance.** Le relais ne parle à une instance qui n'est pas de ce poste que si la requête vient de `my-makeup.fr` ou `www.my-makeup.fr` ; ailleurs, le script est un script vide et une mesure est reçue puis jetée. Côté navigateur, `data-domains` fait la même chose. Côté environnement, l'application refuse de démarrer avec l'instance du site sur la préprod, ou avec une instance de ce poste sur une adresse déployée.
+**Hors du site, rien ne part vers la vraie instance.** Le relais ne parle à une instance qui n'est pas de ce poste que si la requête vient de `my-makeup.fr` ou `www.my-makeup.fr` ; ailleurs, le script est un script vide et une mesure est reçue puis jetée. Côté navigateur, `data-domains` fait la même chose. Côté environnement, l'application refuse de démarrer avec une instance de ce poste sur une adresse déployée.
 
 ## Le réglage
 

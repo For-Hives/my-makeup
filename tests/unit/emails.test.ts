@@ -5,7 +5,7 @@ import { composerEmail, EmailInvalide, lienAbsolu, PIED_DE_EMAIL } from '@/lib/e
 import { adaptateurSansRelais, DELAI_DU_RELAIS_MS, optionsDeTransport } from '@/lib/emails/relais'
 
 // Made-up values only: the domain is reserved for tests, the token is not one.
-const SITE = 'https://preprod.exemple.test'
+const SITE = 'https://site.exemple.test'
 const ADRESSE = 'personne-temoin@example.test'
 const JETON = 'jeton-temoin-0123456789'
 
@@ -67,7 +67,7 @@ describe('le gabarit commun compose un email en français, texte et HTML', () =>
 		expect(email.html).not.toContain('<script>')
 		expect(email.html).not.toContain('<b>c</b>')
 		expect(email.html).toContain('a &amp; b &lt;b&gt;c&lt;/b&gt; &quot;d&quot;')
-		expect(email.html).toContain('href="https://preprod.exemple.test/a?b=1&amp;c=2"')
+		expect(email.html).toContain('href="https://site.exemple.test/a?b=1&amp;c=2"')
 	})
 
 	test.each([

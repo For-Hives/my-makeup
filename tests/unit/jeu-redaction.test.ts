@@ -67,7 +67,7 @@ describe('Les talents et les articles du jeu', () => {
 	})
 })
 
-describe('Le chargement de la rédaction du jeu refuse hors du banc et de la préprod', () => {
+describe('Le chargement de la rédaction du jeu refuse hors du banc', () => {
 	/** A Payload that remembers every call and fails it: nothing may be read or written. */
 	function payloadMuet() {
 		const appels: string[] = []
@@ -85,7 +85,7 @@ describe('Le chargement de la rédaction du jeu refuse hors du banc et de la pr�
 
 	test.each([
 		['la prod déclarée', { APP_ENV: 'prod', NEXT_PUBLIC_SITE_URL: 'https://my-makeup.fr' }],
-		['un environnement sans APP_ENV', { NEXT_PUBLIC_SITE_URL: 'https://preprod.my-makeup.fr' }],
+		['un environnement sans APP_ENV', { NEXT_PUBLIC_SITE_URL: 'https://v3.my-makeup.fr' }],
 	])('%s : ni lecture ni écriture, ni pour la rédaction ni pour le jeu entier', async (_cas, variables) => {
 		const { appels, payload } = payloadMuet()
 		const environnement = {

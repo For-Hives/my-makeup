@@ -66,21 +66,17 @@ describe('la cible des essais', () => {
 		'https://api.my-makeup.fr',
 	])('U86 : la prod est refusée dans tout environnement : %s', adresse => {
 		expect(messageDuRefus(() => cibleDesEssais({ BASE_URL: adresse }))).toContain('BASE_URL vise la prod')
-		expect(messageDuRefus(() => cibleDesEssais({ APP_ENV: 'preprod', BASE_URL: adresse }))).toContain(
-			'BASE_URL vise la prod'
-		)
 		// The configuration of Playwright is not even built: nothing is left to run a test with.
 		expect(() => configurationDesEssais({ BASE_URL: adresse })).toThrow(EnvironnementRefuse)
 	})
 
-	test('la préprod n’est admise que si le lancement la déclare', () => {
+	test('la préprod n’existe plus : son hôte est de la prod, et APP_ENV=preprod est inconnu (ticket 232)', () => {
 		const preprod = 'https://preprod.my-makeup.fr'
 
-		expect(cibleDesEssais({ APP_ENV: 'preprod', BASE_URL: preprod })).toEqual({
-			adresse: preprod,
-			environnement: 'preprod',
-		})
-		expect(messageDuRefus(() => cibleDesEssais({ BASE_URL: preprod }))).toContain('APP_ENV=preprod')
+		expect(messageDuRefus(() => cibleDesEssais({ BASE_URL: preprod }))).toContain('BASE_URL vise la prod')
+		expect(messageDuRefus(() => cibleDesEssais({ APP_ENV: 'preprod', BASE_URL: preprod }))).toContain(
+			'environnement inconnu'
+		)
 	})
 
 	test('un environnement de prod est refusé, même vers une adresse locale', () => {
@@ -217,12 +213,6 @@ describe('l’application des essais, démarrée par Playwright', () => {
 		['une autre cible locale', { ...SOUS_LE_BANC, BASE_URL: 'http://localhost:4000' }],
 	])('Playwright ne démarre rien hors du lancement préparé : %s', (_cas, variables) => {
 		expect(applicationDesEssais(variables)).toBeUndefined()
-		expect(configurationDesEssais(variables)).not.toHaveProperty('webServer')
-	})
-
-	test('vers la préprod, Playwright ne démarre rien non plus', () => {
-		const variables = { ...SOUS_LE_BANC, APP_ENV: 'preprod', BASE_URL: 'https://preprod.my-makeup.fr' }
-
 		expect(configurationDesEssais(variables)).not.toHaveProperty('webServer')
 	})
 

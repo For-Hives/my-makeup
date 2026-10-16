@@ -29,7 +29,7 @@ export const WAITING_ROOM_NAME = 'mmAttenteUmami'
 /** At most this many events wait for the script. */
 export const WAITING_ROOM_MAX = 20
 
-/** The hostnames Umami counts visits on. Elsewhere (a local build, the pre-production) the script sends nothing. */
+/** The hostnames Umami counts visits on. Elsewhere (a local build) the script sends nothing. */
 export const DEFAULT_UMAMI_DOMAINS: readonly string[] = ['my-makeup.fr', 'www.my-makeup.fr']
 
 /** The longest `data-tag` Umami keeps (the size of its column). */

@@ -4,8 +4,8 @@
  * host, then the sitemap, the robots file, the old authentication routes and the script of the
  * audience measurement, and writes a dated report of numbers and fingerprints.
  *
- *   CONTROLE_HOTE_CIBLE=https://preprod.my-makeup.fr \
- *   PREPROD_BASIC_AUTH_USER=… PREPROD_BASIC_AUTH_PASSWORD=… bun run bascule:controle
+ *   CONTROLE_HOTE_CIBLE=https://v3.my-makeup.fr \
+ *   CONTROLE_HOTE_ACCES_UTILISATEUR=… CONTROLE_HOTE_ACCES_MOT_DE_PASSE=… bun run bascule:controle
  *   CONTROLE_HOTE_CIBLE=http://127.0.0.1:3100 bun run bascule:controle    # the bench, a build of this machine
  *   CONTROLE_HOTE_CIBLE=https://my-makeup.fr bun run bascule:controle     # the live site, reads only
  *
@@ -40,7 +40,7 @@ import {
 	CibleRefusee,
 	cibleDuControle,
 	garder,
-	HOTE_DE_LA_PREPROD,
+	HOTE_TEMPORAIRE,
 	type LectureGardee,
 	RequeteInterdite,
 	type Transport,
@@ -51,14 +51,17 @@ export { CibleRefusee, RequeteInterdite }
 /** The variables the command reads. */
 export type Variables = Partial<
 	Record<
-		'CONTROLE_HOTE_CIBLE' | 'CONTROLE_HOTE_SORTIE' | 'PREPROD_BASIC_AUTH_PASSWORD' | 'PREPROD_BASIC_AUTH_USER',
+		| 'CONTROLE_HOTE_ACCES_MOT_DE_PASSE'
+		| 'CONTROLE_HOTE_ACCES_UTILISATEUR'
+		| 'CONTROLE_HOTE_CIBLE'
+		| 'CONTROLE_HOTE_SORTIE',
 		string
 	>
 >
 
 export interface Reglages {
 	cible: URL
-	/** The `Authorization` header of the protected access: the pre-production only. */
+	/** The `Authorization` header of the protected access: the temporary host only. */
 	autorisation?: string
 	/** Where to write the report as JSON, or nothing. */
 	sortie?: string
@@ -89,19 +92,21 @@ export const ANCIENNES_ROUTES: readonly string[] = [
 /** Reads the variables, or `CibleRefusee` / `ControleRefuse` with what to fix. */
 export function lireLesReglages(variables: Variables): Reglages {
 	const brute = variables.CONTROLE_HOTE_CIBLE?.trim()
-	if (!brute)
-		throw new CibleRefusee('CONTROLE_HOTE_CIBLE manque : l’hôte à contrôler, comme https://preprod.my-makeup.fr.')
+	if (!brute) throw new CibleRefusee('CONTROLE_HOTE_CIBLE manque : l’hôte à contrôler, comme https://my-makeup.fr.')
 	const cible = cibleDuControle(brute)
-	const utilisateur = variables.PREPROD_BASIC_AUTH_USER ?? ''
-	const motDePasse = variables.PREPROD_BASIC_AUTH_PASSWORD ?? ''
-	let autorisation: string | undefined
-	if (cible.hostname === HOTE_DE_LA_PREPROD) {
-		if (utilisateur === '' || motDePasse === '')
-			throw new ControleRefuse(
-				'PREPROD_BASIC_AUTH_USER et PREPROD_BASIC_AUTH_PASSWORD sont obligatoires pour lire la préprod : en CI, ce sont deux secrets du dépôt (docs/preprod.md).'
-			)
-		autorisation = `Basic ${btoa(`${utilisateur}:${motDePasse}`)}`
-	}
+	const utilisateur = variables.CONTROLE_HOTE_ACCES_UTILISATEUR ?? ''
+	const motDePasse = variables.CONTROLE_HOTE_ACCES_MOT_DE_PASSE ?? ''
+	// The protected access of the temporary host is optional (it may be off), but never half given, and
+	// never sent anywhere else: an access given for another host is a mistake, not something to drop.
+	if ((utilisateur === '') !== (motDePasse === ''))
+		throw new ControleRefuse(
+			'CONTROLE_HOTE_ACCES_UTILISATEUR et CONTROLE_HOTE_ACCES_MOT_DE_PASSE vont ensemble : donne les deux, ou aucun.'
+		)
+	if (utilisateur !== '' && cible.hostname !== HOTE_TEMPORAIRE)
+		throw new ControleRefuse(
+			`CONTROLE_HOTE_ACCES_UTILISATEUR et CONTROLE_HOTE_ACCES_MOT_DE_PASSE ne servent que pour https://${HOTE_TEMPORAIRE} : ils ne partent jamais vers un autre hôte.`
+		)
+	const autorisation = utilisateur !== '' ? `Basic ${btoa(`${utilisateur}:${motDePasse}`)}` : undefined
 	const sortie = variables.CONTROLE_HOTE_SORTIE?.trim()
 	return { cible, ...(autorisation ? { autorisation } : {}), ...(sortie ? { sortie } : {}) }
 }

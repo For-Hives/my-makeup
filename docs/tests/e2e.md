@@ -55,7 +55,7 @@ L'application des essais ne lit aucun fichier `.env`, ni au build ni au démarra
 
 ## La base : les migrations, puis le code
 
-- Sur la base vide, l'application joue les migrations versionnées de `src/migrations/`, comme l'image Docker à son premier démarrage et comme la préprod. Ce sont elles seules qui construisent les tables : rien ne pousse le schéma du code dans la base du banc (ticket 049).
+- Sur la base vide, l'application joue les migrations versionnées de `src/migrations/`, comme l'image Docker à son premier démarrage. Ce sont elles seules qui construisent les tables : rien ne pousse le schéma du code dans la base du banc (ticket 049).
 - Avant le premier essai, la préparation globale lit la base sans rien y changer : le Payload des essais se branche sans pousser de schéma (`sansChangementDeSchema`, `tests/outils/payload-test.ts`), comme celui de chaque essai.
 - Elle refuse de lancer les essais, avec un message qui dit quoi faire, dans deux cas (`tests/outils/schema-du-banc.ts`) :
   - la base porte la trace d'une poussée du schéma, une ligne `dev` de lot -1 dans `payload_migrations` : un Payload s'est branché en poussant le schéma, et une migration manquante y passerait inaperçue ;
@@ -180,14 +180,14 @@ bun run test:e2e --shard=1/4                   # son quart des essais ; les autr
 
 ## Ce qui empêche de viser la prod
 
-- La garde des tests (`tests/outils/garde-environnement.ts`) refuse toute cible sur `my-makeup.fr` et ses sous-domaines, dans tout environnement. La préprod n'est admise qu'avec `APP_ENV=preprod`. Elle est appelée trois fois avant le premier essai : par `bun run test:e2e` avant tout build, au chargement de la configuration de Playwright, puis par la préparation globale. Un lancement vers la prod s'arrête avant le premier essai, avec un message qui nomme la variable en cause.
+- La garde des tests (`tests/outils/garde-environnement.ts`) refuse toute cible sur `my-makeup.fr` et ses sous-domaines, dans tout environnement. Il n'y a pas de préprod (ticket 232) : les tests ne visent qu'une adresse locale. Elle est appelée trois fois avant le premier essai : par `bun run test:e2e` avant tout build, au chargement de la configuration de Playwright, puis par la préparation globale. Un lancement vers la prod s'arrête avant le premier essai, avec un message qui nomme la variable en cause.
 - Un essai n'ouvre que des chemins (garde-fou C07).
 - `playwright.config.ts` ne règle rien lui-même : tous les réglages viennent de `tests/outils/e2e.ts`, que les garde-fous de `tests/ci/` lisent (C07 : pas de `.only` en CI, seuls les `*.spec.ts`, aucune adresse de la prod dans `baseURL`).
 - Les sondes de `tests/sondes/` lisent le site en ligne, en GET seulement ([`sondes.md`](sondes.md)). Elles ne passent ni par Playwright ni par cette garde, qu'elles n'assouplissent pas : elles ont leur propre garde et leur propre variable, `SONDES_CIBLE`.
 
 ## Lancer Playwright sans la commande
 
-`bunx playwright test --list` liste les essais sans rien lancer. Sans l'environnement du banc, Playwright ne démarre aucune application : la préparation globale dit alors de passer par `bun run test:e2e`. Vers la préprod (`APP_ENV=preprod` et `BASE_URL`), il ne démarre rien non plus ; les essais qui demandent un compte de la fabrique n'y tournent pas, puisqu'elle n'écrit que dans la base du banc.
+`bunx playwright test --list` liste les essais sans rien lancer. Sans l'environnement du banc, Playwright ne démarre aucune application : la préparation globale dit alors de passer par `bun run test:e2e`. Vers une autre adresse que celle du banc (`BASE_URL`), il ne démarre rien non plus ; les essais qui demandent un compte de la fabrique n'y tournent pas, puisqu'elle n'écrit que dans la base du banc.
 
 ## Pièges
 

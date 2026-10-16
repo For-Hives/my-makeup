@@ -1,7 +1,6 @@
 /**
  * How the fake Strapi source is created, statement by statement, whatever the client that runs
- * them: bun on the bench (tests/outils/source-strapi.ts), `pg` in the pre-production, where the
- * application poses the same source next to its database when it starts (src/preprod, ticket 027).
+ * them: bun on the bench (tests/outils/source-strapi.ts), `pg` where the application poses it.
  *
  * Three steps, each one given the function that runs a statement:
  *
@@ -180,6 +179,6 @@ export async function effacerLaBase(executer: Executer, source: BaseDeLaSource):
 	await executer(`DROP ROLE IF EXISTS ${identifiant(source.role)}`)
 }
 
-/** How many rows the definition puts into the tables: what the pre-production says it posed. */
+/** How many rows the definition puts into the tables: what a run says it posed. */
 export const lignesDeLaDefinition = (definition: DefinitionDeLaSource): number =>
 	NOMS_DES_TABLES.reduce((total, table) => total + definition.lignes[table].length, 0)

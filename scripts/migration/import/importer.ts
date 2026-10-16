@@ -104,7 +104,7 @@ export interface OptionsDImport {
 	/**
 	 * The storage of the photos (./medias.ts): the public base of the photos (`mediaBaseUrl`,
 	 * src/lib/env.ts), and how the headers of an object are read (`HEAD` by default). None: the run
-	 * has no storage (the pre-production), and no file is adopted.
+	 * has no storage, and no file is adopted.
 	 */
 	medias?: OptionsDesMedias
 }

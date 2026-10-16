@@ -4,7 +4,7 @@
  *
  *   const bilan = await poserLeJeu(payload)
  *
- * The same call fills the local test bench and the pre-production, and nowhere else: the guard
+ * The call fills the local test bench, and nowhere else: the guard
  * (./garde.ts) is asked before anything is read or written.
  *
  * - A talent or an article is found by its slug. One that is there is left as it is, a draft
@@ -12,7 +12,7 @@
  * - Written like the import writes, with its context (src/lib/contexte-import.ts): no page of the
  *   site is refreshed, and no mail leaves.
  * - It holds no admin account: the admin accounts of the bench are the set of the tests
- *   (tests/fixtures/comptes.ts). On the pre-production, the first admin is the one Andy creates.
+ *   (tests/fixtures/comptes.ts).
  *
  * Relative imports on purpose: like the collections, this file must load outside of Next.
  */
@@ -51,8 +51,7 @@ async function existe(payload: Payload, collection: 'talents' | 'articles', slug
 }
 
 /**
- * Loads the talents and the articles of the set that are not there yet. Outside the bench and the
- * pre-production, it stops before it reads or writes anything (`JeuFictifRefuse`).
+ * Loads the talents and the articles of the set that are not there yet. Outside the bench, it stops before it reads or writes anything (`JeuFictifRefuse`).
  */
 export async function poserLaRedactionDuJeu(
 	payload: Payload,

@@ -177,8 +177,8 @@ describe('the content policy is in report-only mode and names no third-party dom
 })
 
 describe('the photos of an environment (ticket 230)', () => {
-	// What the build of the pre-production image gives: its own bucket, not the one of the live site.
-	const PREPROD = 'https://exemple-photos.example.test'
+	// What a build gives when R2_PUBLIC_URL names another host: its own bucket, not the one of the live site.
+	const AUTRE_BUCKET = 'https://exemple-photos.example.test'
 	const imgSources = async (env: Env) =>
 		sourcesOf(
 			(await headersSentFor(await configUnder(env), '/')).get('content-security-policy-report-only') ?? '',
@@ -186,9 +186,9 @@ describe('the photos of an environment (ticket 230)', () => {
 		)
 
 	test('the policy names the host of R2_PUBLIC_URL and not the one of the live site', async () => {
-		const sources = await imgSources({ NODE_ENV: 'production', R2_PUBLIC_URL: PREPROD })
+		const sources = await imgSources({ NODE_ENV: 'production', R2_PUBLIC_URL: AUTRE_BUCKET })
 
-		expect(sources).toContain(PREPROD)
+		expect(sources).toContain(AUTRE_BUCKET)
 		expect(sources).not.toContain(MEDIA_ORIGIN_DEFAULT)
 	})
 
@@ -197,7 +197,7 @@ describe('the photos of an environment (ticket 230)', () => {
 			const sources = await imgSources({ NODE_ENV: 'production', R2_PUBLIC_URL })
 
 			expect(sources).toContain(MEDIA_ORIGIN_DEFAULT)
-			expect(sources).not.toContain(PREPROD)
+			expect(sources).not.toContain(AUTRE_BUCKET)
 		}
 	})
 })

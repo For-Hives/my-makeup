@@ -1,7 +1,7 @@
 /**
  * Loads the twelve profile types of the fictional set (./profils.ts; ticket 051) into the database
- * Payload is connected to, with their photos in the object storage: on the test bench, or on the
- * pre-production, and nowhere else (./garde.ts).
+ * Payload is connected to, with their photos in the object storage: on the local test bench and
+ * nowhere else (./garde.ts).
  *
  *   const bilan = await poserLesProfilsDuJeu(payload)
  *
@@ -16,8 +16,6 @@
  * - Each type is written in one transaction: if it fails, none of its documents stays. An object
  *   already sent to the storage stays until the next load of that type, which writes the same key
  *   again.
- * - Without object storage (the pre-production before it has one), no photo is sent and the
- *   profiles are loaded without them.
  * - No mail leaves: the confirmation email of a new account is not sent.
  *
  * Relative imports on purpose: like the collections, this file must load outside of Next.
@@ -55,8 +53,6 @@ export interface ProfilPose {
 
 export interface BilanDesProfils {
 	cible: CibleDuJeu
-	/** True when the pre-production has no object storage: the profiles were loaded without their photos. */
-	sansPhotos: boolean
 	/** Every profile type, in the order of the set, whether this load created it or found it. */
 	profils: ProfilPose[]
 	/** The types this load created. */
@@ -122,6 +118,7 @@ export async function poserLeProfil(
 	payload: Payload,
 	type: ProfilDuJeu,
 	lire: (photo: PhotoDuJeu) => Promise<Uint8Array>,
+	// Kept for the callers of the tests; the bench always has its storage, so the loader passes false.
 	sansPhotos: boolean
 ): Promise<ProfilPose> {
 	const req = await createLocalReq({}, payload)
@@ -193,7 +190,7 @@ export async function poserLeProfil(
 
 /**
  * Loads the profile types of the set that are not in the database yet, one after the other, and
- * says what it did. Outside the bench and the pre-production, it stops before it reads or writes
+ * says what it did. Outside the bench, it stops before it reads or writes
  * anything (`JeuFictifRefuse`).
  */
 export async function poserLesProfilsDuJeu(
@@ -211,10 +208,7 @@ export async function poserLesProfilsDuJeu(
 		return lecture
 	}
 
-	// Only the pre-production may lack a storage (the guard asks the bench for one): its profiles
-	// then have no photo, and the states `attendu` promises for the bench do not hold there.
-	const sansPhotos = cible === 'preprod' && !variables.S3_ENDPOINT
-	const bilan: BilanDesProfils = { cible, sansPhotos, profils: [], crees: [], presents: [] }
+	const bilan: BilanDesProfils = { cible, profils: [], crees: [], presents: [] }
 	for (const type of PROFILS_DU_JEU) {
 		const present = await profilPresent(payload, type)
 		if (present) {
@@ -222,7 +216,7 @@ export async function poserLesProfilsDuJeu(
 			bilan.presents.push(type.cle)
 			continue
 		}
-		bilan.profils.push(await poserLeProfil(payload, type, lire, sansPhotos))
+		bilan.profils.push(await poserLeProfil(payload, type, lire, false))
 		bilan.crees.push(type.cle)
 	}
 	return bilan

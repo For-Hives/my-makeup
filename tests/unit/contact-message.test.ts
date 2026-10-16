@@ -9,7 +9,7 @@ import { composerEmail, EmailInvalide, PIED_DE_EMAIL } from '@/lib/emails/gabari
  * Made-up values only: the domain is reserved for tests, the phone number is in the fiction range.
  */
 
-const SITE = 'https://preprod.exemple.test'
+const SITE = 'https://site.exemple.test'
 
 const champs = (surcharge: Record<string, unknown> = {}) => {
 	const valeurs: Record<string, unknown> = {

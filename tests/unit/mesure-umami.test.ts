@@ -63,7 +63,7 @@ describe('UMAMI_ORIGIN (ticket 111)', () => {
 	test('unset, the live instance is the default on the site and nowhere else', () => {
 		expect(umamiFromEnv(undefined, SITE_ORIGIN)).toEqual({ origin: UMAMI_ORIGIN_DEFAULT, local: false })
 		expect(umamiFromEnv('  ', SITE_ORIGIN)).toEqual({ origin: UMAMI_ORIGIN_DEFAULT, local: false })
-		expect(umamiFromEnv(undefined, 'https://preprod.my-makeup.fr')).toBeUndefined()
+		expect(umamiFromEnv(undefined, 'https://v3.my-makeup.fr')).toBeUndefined()
 		expect(umamiFromEnv(undefined, 'http://localhost:3000')).toBeUndefined()
 		expect(umamiFromEnv(undefined, undefined)).toBeUndefined()
 	})
@@ -87,15 +87,6 @@ describe('UMAMI_ORIGIN (ticket 111)', () => {
 		expect(parseServerEnv(BASE).umami).toBeUndefined()
 		expect(parseServerEnv({ ...BASE, UMAMI_ORIGIN: INSTANCE }).umami).toEqual(REEL)
 		expect(parseServerEnv({ ...BASE, UMAMI_ORIGIN: 'http://127.0.0.1:4200' }).umami).toEqual(LOCAL)
-	})
-
-	test('on the pre-production, neither the live instance nor an instance of this machine', () => {
-		const preprod = { ...BASE, NODE_ENV: 'production', NEXT_PUBLIC_SITE_URL: 'https://preprod.my-makeup.fr' }
-		for (const origin of [UMAMI_ORIGIN_DEFAULT, 'http://127.0.0.1:4200']) {
-			expect(() => parseServerEnv({ ...preprod, UMAMI_ORIGIN: origin })).toThrow(EnvError)
-		}
-		// Unset on the pre-production: nothing is wired, and that is fine.
-		expect(parseServerEnv(preprod).umami).toBeUndefined()
 	})
 
 	test('on the site, an instance of this machine is refused; unset it is the live instance', () => {
@@ -363,7 +354,7 @@ describe('le relais /u/script.js', () => {
 				return new HttpResponse('window.umami={}')
 			})
 		)
-		for (const hote of ['preprod.my-makeup.fr', 'localhost:3000', 'my-makeup.fr.exemple.test']) {
+		for (const hote of ['v3.my-makeup.fr', 'localhost:3000', 'my-makeup.fr.exemple.test']) {
 			const reponse = await relayerLeScript(
 				new Request('https://x.exemple.test/u/script.js', { headers: { host: hote } }),
 				{ umami: REEL }
@@ -446,7 +437,7 @@ describe('le relais /u/api/send', () => {
 				return new HttpResponse('jeton')
 			})
 		)
-		const reponse = await relayerLEnvoi(envoi({ host: 'preprod.my-makeup.fr' }), {
+		const reponse = await relayerLEnvoi(envoi({ host: 'v3.my-makeup.fr' }), {
 			umami: { origin: AUTRE_INSTANCE, local: false },
 		})
 		expect(reponse.status).toBe(204)

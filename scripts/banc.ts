@@ -239,11 +239,11 @@ export async function viderCeQueLaBaseNeContientPas({ instance, environnement }:
 }
 
 /**
- * Rebuilds the bench database as the pre-production and the production build theirs: dropped,
+ * Rebuilds the bench database as the production build does its own: dropped,
  * then the versioned migrations of `src/migrations/` played on the empty database (ticket 049).
  * Then refuses, with what to do, a database the migrations did not build as the collections of
- * the code describe it: a missing migration stops here, before the first test, and not on the
- * pre-production. Gives the names of the migrations played.
+ * the code describe it: a missing migration stops here, before the first test, and not in
+ * production. Gives the names of the migrations played.
  */
 async function reconstruireLaBase(banc: Banc): Promise<string[]> {
 	await effacerLeSchema(banc)

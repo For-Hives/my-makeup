@@ -23,10 +23,6 @@ const nextConfig: NextConfig = {
 	// The build gives `.next/standalone`: a server with only the files it needs, which is all
 	// the Docker image copies (Dockerfile, last stage).
 	output: 'standalone',
-	// The photos of the fictional set are read from the disk when the pre-production loads it
-	// (src/preprod/jeu.ts, ticket 053): no import names them, so the trace of the build would
-	// leave them out of the standalone server.
-	outputFileTracingIncludes: { '/**': ['./src/jeu-fictif/photos/**'] },
 	// The commit Coolify gives to the build (SOURCE_COMMIT), frozen into the bundles: the
 	// version of /api/health is then the commit of the build, even in a container that
 	// receives no SOURCE_COMMIT. Empty when the build had none: the route reads the runtime one.

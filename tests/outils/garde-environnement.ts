@@ -19,8 +19,11 @@
 /** What the guard reads: `process.env`, or the content of an environment file. */
 export type Variables = Readonly<Record<string, string | undefined>>
 
-/** The environments a test run may declare in `APP_ENV`. `prod` is recognised, and always refused. */
-export const ENVIRONNEMENTS = ['test', 'preprod', 'prod'] as const
+/**
+ * The environments a test run may declare in `APP_ENV`. `prod` is recognised, and always refused.
+ * There is no other: the v3 has a single deployed environment, the site, and the local bench (ticket 232).
+ */
+export const ENVIRONNEMENTS = ['test', 'prod'] as const
 
 /** The environments a test run is allowed to work in. */
 export type EnvironnementAdmis = Exclude<(typeof ENVIRONNEMENTS)[number], 'prod'>
@@ -49,7 +52,6 @@ const SERVICES_DU_BANC = {
 export const HOTES_DU_BANC: readonly string[] = [...HOTES_LOCAUX, ...Object.values(SERVICES_DU_BANC)]
 
 const DOMAINE_DU_SITE = 'my-makeup.fr'
-const HOTE_PREPROD = `preprod.${DOMAINE_DU_SITE}`
 
 /**
  * The address the end-to-end tests open, and the one the application writes in its links:
@@ -98,9 +100,8 @@ const hoteDe = (url: URL): string => url.hostname.replace(/^\[|\]$/g, '').toLowe
 
 const estLocal = (hote: string, service?: string): boolean => HOTES_LOCAUX.includes(hote) || hote === service
 
-/** The site's domain and every subdomain are production, except the pre-production host. */
-const estDeProd = (hote: string): boolean =>
-	(hote === DOMAINE_DU_SITE || hote.endsWith(`.${DOMAINE_DU_SITE}`)) && hote !== HOTE_PREPROD
+/** The site's domain and every subdomain are production. */
+const estDeProd = (hote: string): boolean => hote === DOMAINE_DU_SITE || hote.endsWith(`.${DOMAINE_DU_SITE}`)
 
 /**
  * The declared environment. Nothing declared means `test`: a test run that says nothing gets
@@ -108,7 +109,7 @@ const estDeProd = (hote: string): boolean =>
  */
 export function lireEnvironnement(valeur: string | undefined): EnvironnementAdmis {
 	if (!valeur) return 'test'
-	if (valeur === 'test' || valeur === 'preprod') return valeur
+	if (valeur === 'test') return valeur
 	if (valeur === 'prod') refuser('APP_ENV vaut « prod » : aucun test ne tourne en environnement de prod.')
 	return refuser(
 		`APP_ENV vaut ${montrer(valeur)} : environnement inconnu. Reconnus : ${ENVIRONNEMENTS.join(', ')} (prod toujours refusé).`
@@ -142,21 +143,15 @@ export function verifierBase(uri: string | undefined, nom = 'DATABASE_URI'): voi
 		)
 }
 
-/**
- * The address the end-to-end tests open: local, or the pre-production host when the run declares
- * `APP_ENV=preprod`. Never production.
- */
-export function verifierCible(adresse: string, environnement: EnvironnementAdmis = 'test', nom = 'BASE_URL'): void {
+/** The address the end-to-end tests open: local, and nothing else. Never production. */
+// `_environnement` keeps the positional shape the callers have always used; there is a single environment now.
+export function verifierCible(adresse: string, _environnement: EnvironnementAdmis = 'test', nom = 'BASE_URL'): void {
 	const url = lireAdresse(adresse, ['http:', 'https:'])
 	if (!url) refuser(`${nom} n'est pas une adresse web lisible.`)
 	const hote = hoteDe(url)
 	if (estDeProd(hote)) refuser(`${nom} vise la prod (${montrer(hote)}) : aucun test ne vise la prod.`)
-	if (estLocal(hote) || (hote === HOTE_PREPROD && environnement === 'preprod')) return
-	if (hote === HOTE_PREPROD)
-		refuser(`${nom} vise la préprod alors que l'environnement est « test » : déclare APP_ENV=preprod pour la viser.`)
-	refuser(
-		`${nom} refusée (hôte ${montrer(hote)}) : les tests visent une adresse locale, ou la préprod avec APP_ENV=preprod.`
-	)
+	if (estLocal(hote)) return
+	refuser(`${nom} refusée (hôte ${montrer(hote)}) : les tests visent une adresse locale.`)
 }
 
 /**

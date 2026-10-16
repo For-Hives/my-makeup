@@ -177,8 +177,8 @@ export interface ClassementDesFichiers {
 
 /**
  * Splits the files of the source: adopted, not adopted, refused, or designated by no entry the
- * import takes. `base` is the public base of the photos, `null` when the run has no storage (the
- * pre-production): then no file is adopted.
+ * import takes. `base` is the public base of the photos, `null` when the run has no storage:
+ * then no file is adopted.
  */
 export function classerLesFichiers(
 	lus: FichiersLus,

@@ -99,7 +99,7 @@ La commande fait trois choses :
    Démarre-le d’abord : bun run banc:up
    ```
 
-2. Elle efface le schéma de la base du banc, puis y joue les migrations versionnées de `src/migrations/`, comme la préprod à son premier démarrage. Elle s'arrête avant le premier test si la base qu'elles construisent ne décrit pas les collections du code (voir « Préparer la base du banc »).
+2. Elle efface le schéma de la base du banc, puis y joue les migrations versionnées de `src/migrations/`, comme l'image de production à son premier démarrage. Elle s'arrête avant le premier test si la base qu'elles construisent ne décrit pas les collections du code (voir « Préparer la base du banc »).
 3. Elle lance `bun test` sous l'environnement du banc, sans lire le fichier `.env` de travail.
 
 Le schéma est effacé à chaque lancement : les migrations repartent d'une base vide, et rien d'un lancement précédent ne reste.
@@ -111,7 +111,7 @@ Conséquence : **lancer les tests d'intégration vide le banc**. Les données qu
 ### Les délais, la charge et la remise à zéro de la base (ticket 225)
 
 - **Un délai de 5 secondes est celui de bun par défaut, et il ne suffit pas sous charge.** Sur un poste qui fait tourner plusieurs bancs ou plusieurs agents à la fois (charge de 20 à 30 relevée le 16/10/2026), la suite complète a vu 20 tests dépasser 5 secondes. Un test qui expire laisse ses requêtes tourner : elles passent dans le fichier suivant, et le `TRUNCATE` de celui-ci tombe sur un interblocage (`deadlock detected`), d'où les rouges en cascade.
-- **Les fichiers lourds portent donc un délai explicite**, en tête de fichier : `setDefaultTimeout(30_000)` (il ne vaut que pour ce fichier, et pour ses crochets). Les fichiers concernés : les comptes (`banc-comptes-types`, `auth-comptes-sans-mot-de-passe`, `espace-suppression`, `admin-suppression-compte`), les médias (`espace-portfolio`, `espace-photo`, `envoi-photo`, `rapprochement`) et l'import et la préprod (`import-comptes`, `import-talents`, `revalidation`, `preprod-demarrage`). Le délai borne un appel qui se bloque ; il n'est pas une durée que le test promet. Un test qui promet une durée l'écrit dans son `expect` (le « moins de 5 secondes » de `banc-comptes-types.test.ts`).
+- **Les fichiers lourds portent donc un délai explicite**, en tête de fichier : `setDefaultTimeout(30_000)` (il ne vaut que pour ce fichier, et pour ses crochets). Les fichiers concernés : les comptes (`banc-comptes-types`, `auth-comptes-sans-mot-de-passe`, `espace-suppression`, `admin-suppression-compte`), les médias (`espace-portfolio`, `espace-photo`, `envoi-photo`, `rapprochement`) et l'import (`import-comptes`, `import-talents`, `revalidation`). Le délai borne un appel qui se bloque ; il n'est pas une durée que le test promet. Un test qui promet une durée l'écrit dans son `expect` (le « moins de 5 secondes » de `banc-comptes-types.test.ts`).
 - **Un test qui vide la base attend la fin de son `TRUNCATE`** (`await viderLaBase()`, dans le test ou dans `afterEach`) avant de rendre la main : aucune requête ne doit lui survivre. `viderLaBase` n'est jamais lancée sans `await`, ni dans un `Promise.all` avec d'autres requêtes de la même base.
 - **Un test d'ordre n'attend pas l'horloge.** Deux mails envoyés au même instant peuvent porter la même date : un test qui veut « le plus récent d'abord » attend le premier mail dans le capteur avant d'envoyer le second (`banc-stockage-mails.test.ts`).
 - **Aucun test n'est sauté selon la commande.** `import-puis-connexion.test.ts` (ticket 095) fait partie de la suite complète : il vide la base, le capteur et le stockage avant et après, comme les autres essais de l'import, et crée puis efface sa source.
@@ -273,7 +273,7 @@ bun run banc:prepare
 
 Efface le schéma de la base du banc, puis y joue les migrations versionnées de `src/migrations/`. La base est alors vide et à jour. À lancer avant de démarrer l'application contre le banc, ou après avoir écrit une migration. Les tests d'intégration le font d'eux-mêmes.
 
-Depuis la migration `init` (ticket 049), la base du banc n'est construite que par les migrations, comme celle de la préprod : rien ne pousse le schéma du code, ni la commande, ni le Payload des tests (`sansChangementDeSchema`, `tests/outils/payload-test.ts`). Une migration manquante se voit donc ici, et non sur la préprod. Une fois les migrations jouées, la commande refuse de continuer, avec un message qui dit quoi faire (`tests/outils/schema-du-banc.ts`) :
+Depuis la migration `init` (ticket 049), la base du banc n'est construite que par les migrations, comme celle de la production : rien ne pousse le schéma du code, ni la commande, ni le Payload des tests (`sansChangementDeSchema`, `tests/outils/payload-test.ts`). Une migration manquante se voit donc ici, et non en production. Une fois les migrations jouées, la commande refuse de continuer, avec un message qui dit quoi faire (`tests/outils/schema-du-banc.ts`) :
 
 - si la base porte la trace d'une poussée du schéma, une ligne `dev` de lot -1 dans `payload_migrations` ;
 - si la base que les migrations ont construite ne décrit pas les collections du code : une collection changée sans sa migration, ou une migration dont le SQL ne crée pas ce que son instantané déclare. Le message donne le SQL qu'une migration contiendrait pour la rattraper ;
@@ -426,11 +426,11 @@ const { profils, crees, presents } = await poserLesProfilsDuJeu(await payloadDeT
 - **Rejouer le jeu ne crée rien.** Un type se retrouve par l'adresse de son compte ; s'il est là, il est laissé tel quel (`presents`), même s'il a changé.
 - **Chaque type s'écrit dans une transaction.** Interrompu, il ne laisse ni compte, ni profil, ni média. Les photos déjà envoyées restent dans le stockage jusqu'au chargement suivant, qui réécrit les mêmes clés : il ne reste alors aucun objet orphelin.
 - **Aucun mail ne part** : la confirmation d'un compte neuf n'est pas envoyée.
-- **Hors du banc et de la préprod, rien n'est lu ni écrit** (`src/jeu-fictif/garde.ts`). Le jeu accepte `APP_ENV=test` avec une base de ce poste en `_test`, le stockage de ce poste dans un espace en `-test` et aucune adresse déployée ; ou `APP_ENV=preprod` avec l'adresse `https://preprod.my-makeup.fr` (sans stockage d'objets, la préprod reçoit les profils sans leurs photos). Il refuse `APP_ENV=prod`, l'adresse du site en ligne, un `APP_ENV` absent (comme dans un `.env` de développement) ou inconnu, l'absence de stockage d'objets sur le banc, et un Payload branché sur une autre base que `DATABASE_URI`. Le refus (`JeuFictifRefuse`) nomme la variable, jamais sa valeur.
+- **Hors du banc, rien n'est lu ni écrit** (`src/jeu-fictif/garde.ts`). Le jeu accepte `APP_ENV=test` avec une base de ce poste en `_test`, le stockage de ce poste dans un espace en `-test` et aucune adresse déployée. Il refuse `APP_ENV=prod`, l'adresse du site en ligne, un `APP_ENV` absent (comme dans un `.env` de développement) ou inconnu, l'absence de stockage d'objets sur le banc, et un Payload branché sur une autre base que `DATABASE_URI`. Le refus (`JeuFictifRefuse`) nomme la variable, jamais sa valeur.
 - **Avec les comptes du jeu, la base tient 19 profils** : les 12 types, et les profils vides des sept comptes de maquilleuse du jeu qui en ont un (voir « Le banc complet »).
 - Un chargement sur une base vide prend environ 4 secondes, et 20 à 40 millisecondes sur une base déjà remplie (mesuré le 14/10/2026, deux passages : 3,9 s et 4,0 s, puis 36 ms et 23 ms).
 
-Les données sont dans `src/jeu-fictif/profils.ts` (`PROFILS_DU_JEU`), avec, pour chaque type, ce que le serveur doit calculer (`attendu`). Le jeu vit sous `src/` et non sous `tests/`, parce que la préprod le charge aussi (ticket 053), et que l'image Docker ne contient pas `tests/`.
+Les données sont dans `src/jeu-fictif/profils.ts` (`PROFILS_DU_JEU`), avec, pour chaque type, ce que le serveur doit calculer (`attendu`). Le jeu vit sous `src/` et non sous `tests/`, parce que les collections et les outils du banc le chargent sans passer par Next, et que l'image Docker ne contient pas `tests/`.
 
 `tests/unit/jeu-fictif.test.ts` vérifie le jeu sans le banc : les douze types, l'état que leur donne la règle unique, les longueurs du profil aux textes maximaux, les six photos et la garde. `tests/integration/banc-profils-types.test.ts` le charge sur le banc : chaque profil relié à sa maquilleuse, l'état enregistré, les photos et leurs objets, le rechargement.
 
@@ -471,7 +471,7 @@ La commande dit le compte, la fin de la session et les deux chemins. **Le jeton 
 
 **3. `bun run banc:reinitialiser`** remet le banc dans l'état où `banc:complet` le laisse, application lancée ou non, en environ 10 secondes (mesuré : 9,6 s à 10 s, deux fois de suite) :
 
-- la base est effacée, puis reconstruite par les migrations versionnées, comme la préprod (voir « Préparer la base du banc ») ;
+- la base est effacée, puis reconstruite par les migrations versionnées, comme la production (voir « Préparer la base du banc ») ;
 - le stockage d'objets et le capteur de mails sont vidés ;
 - le jeu est chargé : un compte de chaque type du jeu fixe, les 12 profils types avec leurs photos, 3 talents, 3 articles dont un brouillon.
 
@@ -489,11 +489,11 @@ Les identifiants sont les mêmes à chaque fois. Les sessions ouvertes avant ne 
 | Talents | 3 | `maquillage-mariee`, `maquillage-soiree`, `maquillage-photo`, tous publiés |
 | Articles | 3 | `preparer-sa-peau-avant-un-maquillage` et `choisir-sa-maquilleuse-pour-un-mariage` (publiés), `tendances-maquillage-de-la-saison` (brouillon, jamais lu par le public) |
 
-Le critère « l'administration compte 12 profils » compte les **12 profils types**, ceux dont le compte est `jeu-profil-*`. La liste des profils en montre 19 : les 12 types, plus les profils vides que le serveur crée avec les 7 comptes de maquilleuse du jeu fixe qui en ont un (le compte « sans profil » n'en a pas). Le jeu fixe n'a pas été changé pour tomber sur 12 : ses comptes servent à essayer chaque type de session, et un compte de maquilleuse avec profil a son profil vide. Les talents et les articles du jeu sont écrits dans `src/jeu-fictif/redaction.ts`, sous `src/` comme les profils, parce que la préprod les charge aussi (ticket 053, `docs/preprod.md`). Les comptes d'administration, eux, ne sont que sur le banc : sur la préprod, le premier admin est celui qu'Andy crée.
+Le critère « l'administration compte 12 profils » compte les **12 profils types**, ceux dont le compte est `jeu-profil-*`. La liste des profils en montre 19 : les 12 types, plus les profils vides que le serveur crée avec les 7 comptes de maquilleuse du jeu fixe qui en ont un (le compte « sans profil » n'en a pas). Le jeu fixe n'a pas été changé pour tomber sur 12 : ses comptes servent à essayer chaque type de session, et un compte de maquilleuse avec profil a son profil vide. Les talents et les articles du jeu sont écrits dans `src/jeu-fictif/redaction.ts`, sous `src/` comme les profils, comme pour le reste du jeu. Les comptes d'administration, eux, ne sont que sur le banc.
 
 Rejouer le chargement ne crée rien : un talent ou un article se retrouve par son adresse, brouillon compris, et reste tel qu'il est.
 
-Les tests : `tests/integration/banc-jeu-complet.test.ts` (le jeu complet, rejoué sans doublon, les commandes `banc:reinitialiser` et `banc:session` lancées comme une personne les lance, la préprod sans stockage), `tests/e2e/jeu-du-banc.spec.ts` (l'administration, ouverte avec l'admin du jeu, compte les 12 profils types, les 3 talents et les 3 articles dont le brouillon), `tests/unit/jeu-redaction.test.ts` et `tests/unit/banc-complet.test.ts` (sans le banc).
+Les tests : `tests/integration/banc-jeu-complet.test.ts` (le jeu complet, rejoué sans doublon, les commandes `banc:reinitialiser` et `banc:session` lancées comme une personne les lance), `tests/e2e/jeu-du-banc.spec.ts` (l'administration, ouverte avec l'admin du jeu, compte les 12 profils types, les 3 talents et les 3 articles dont le brouillon), `tests/unit/jeu-redaction.test.ts` et `tests/unit/banc-complet.test.ts` (sans le banc).
 
 ## La matrice d'accès
 
@@ -548,7 +548,7 @@ La connexion Google se teste sans compte Google, sans secret Google et sans Inte
 
 Une variable suffit : `GOOGLE_OIDC_ISSUER`, l'adresse du fournisseur. `.env.test` la règle sur le faux Google, avec le client factice du banc.
 
-| Variable | Sur le banc | Sur le site et sa préprod |
+| Variable | Sur le banc | Sur le site |
 |---|---|---|
 | `GOOGLE_OIDC_ISSUER` | `http://127.0.0.1:7080` | Absente : c'est Google, `https://accounts.google.com` |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Le client et le secret factices de `.env.test` | Ceux de la console Google, donnés au conteneur, jamais dans le dépôt |
@@ -626,7 +626,7 @@ Le fournisseur se teste aussi sans le banc, appelé comme une fonction : `bun --
 - Le client et le secret de `.env.test` sont inventés et portent le mot « factice ». Le fournisseur refuse de démarrer avec une valeur qui ne le porte pas, et la garde des tests arrête tout lancement qui en contient une.
 - La garde arrête aussi un lancement qui viserait Google lui-même : `GOOGLE_OIDC_ISSUER` doit être locale, et un client Google réglé sans elle est refusé.
 - La clé qui signe les jetons est tirée au démarrage du conteneur. Elle n'est écrite nulle part et change à chaque démarrage.
-- **Le site et sa préprod refusent un fournisseur local.** Avec une adresse de site déployée dans `NEXT_PUBLIC_SITE_URL`, une `GOOGLE_OIDC_ISSUER` locale arrête l'application au démarrage (README, « Configuration durcie »).
+- **Le site refuse un fournisseur local.** Avec une adresse de site déployée dans `NEXT_PUBLIC_SITE_URL`, une `GOOGLE_OIDC_ISSUER` locale arrête l'application au démarrage (README, « Configuration durcie »).
 
 Le code est dans `tests/outils/faux-google/` : `fournisseur.ts` (le fournisseur), `identite.ts` (scénarios et identités), `serveur.ts` (ce que lance le conteneur). L'outil des tests est `tests/outils/faux-google.ts`.
 

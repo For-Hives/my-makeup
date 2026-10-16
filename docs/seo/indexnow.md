@@ -13,7 +13,7 @@ Le ticket 219 prévient Bing et les autres moteurs du protocole IndexNow (Yandex
 ## Quand rien ne part
 
 - Sans la variable `INDEXNOW_KEY` : rien n'est servi, rien n'est envoyé.
-- Hors du site : l'envoi ne part que si `NEXT_PUBLIC_SITE_URL` vaut `https://my-makeup.fr`. La préprod, un poste et le banc de test n'envoient rien, même avec une clé.
+- Hors du site : l'envoi ne part que si `NEXT_PUBLIC_SITE_URL` vaut `https://my-makeup.fr`. Un poste et le banc de test n'envoient rien, même avec une clé.
 - Pendant l'import : il ne rafraîchit rien et ne prévient personne.
 - Une adresse qui n'est pas en https sur l'hôte principal est écartée avant la requête.
 

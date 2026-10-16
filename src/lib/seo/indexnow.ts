@@ -13,7 +13,7 @@ import { urlCanonique } from './url'
  *   nothing is sent.
  * - Only the main host is ever named: every address is built from `SITE_ORIGIN`, and one that is not
  *   an https address of that host is dropped before the request.
- * - Nothing is sent from the pre-production, the test bench or a work station: the apex is not the
+ * - Nothing is sent from the test bench or a work station: the apex is not the
  *   address they are served from (`cleSiLEnvoiEstPermis`).
  * - A failed request never undoes a save: it leaves a line in the log, with no key and no address.
  *
@@ -53,7 +53,7 @@ export interface EnvDeLEnvoi {
 
 /**
  * The key to send under, or nothing when nothing must leave: no key, a server that is not the site
- * itself (the pre-production, a work station, the test bench), or an environment that says it is the bench.
+ * itself (a work station, the test bench), or an environment that says it is the bench.
  */
 export function cleSiLEnvoiEstPermis(
 	env: EnvDeLEnvoi = {

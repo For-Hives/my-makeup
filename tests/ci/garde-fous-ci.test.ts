@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { configurationDesEssais } from '../outils/e2e'
@@ -243,8 +243,8 @@ describe('.dockerignore refuses everything but what the build needs', () => {
 		'postcss.config.json',
 		'src',
 		'public',
-		// The import and the fake Strapi source of the bench, all fictional: the pre-production
-		// poses that source and imports it when it starts on an empty database (ticket 027).
+		// The import and the fake Strapi source of the bench, all fictional: the import that runs in the
+		// container of the site reads them (ticket 233).
 		'scripts/migration/import',
 		'tests/outils/source-strapi/creation.ts',
 		'tests/outils/source-strapi/donnees.ts',
@@ -573,65 +573,13 @@ describe('every action is pinned by its commit', () => {
 	})
 })
 
-describe('preprod.yml: without the two secrets of the pre-production, the check is skipped with a warning, never red', () => {
-	const PREPROD = `${WORKFLOWS}/preprod.yml`
-	const preprod = workflows.find(workflow => workflow.file === PREPROD)
-	const steps = Object.values(preprod?.jobs ?? {})[0]?.steps ?? []
-	const garde = steps.find(step => step.id === 'acces')
-	const controle = steps.find(step => step.run === 'bun run preprod:controle')
-
-	/** The very script of the step, run by bash as GitHub runs it, with the given secrets. */
-	function presence(secrets: Record<string, string>): { code: number; output: string; sortie: string } {
-		const script = garde?.run
-		if (typeof script !== 'string') throw new Error('preprod.yml has no step « acces »')
-		const dossier = mkdtempSync(path.join(tmpdir(), 'preprod-secrets-'))
-		try {
-			const fichier = path.join(dossier, 'sortie')
-			writeFileSync(fichier, '')
-			// The command line of « shell: bash », the default of the workflow.
-			const ran = Bun.spawnSync(['bash', '--noprofile', '--norc', '-eo', 'pipefail', '-c', script], {
-				env: { PATH: process.env.PATH ?? '', GITHUB_OUTPUT: fichier, ...secrets },
-			})
-			return { code: ran.exitCode, output: ran.stdout.toString(), sortie: readFileSync(fichier, 'utf8') }
-		} finally {
-			rmSync(dossier, { recursive: true, force: true })
-		}
-	}
-
-	test('the check only runs when the step says both secrets are there', () => {
-		expect(garde?.env).toEqual({
-			PREPROD_BASIC_AUTH_USER: expression('secrets.PREPROD_BASIC_AUTH_USER'),
-			PREPROD_BASIC_AUTH_PASSWORD: expression('secrets.PREPROD_BASIC_AUTH_PASSWORD'),
-		})
-		expect(steps.indexOf(garde ?? {})).toBeLessThan(steps.indexOf(controle ?? {}))
-		expect(controle?.if).toBe("steps.acces.outputs.presents == 'true'")
-	})
-
-	test('both secrets set: the check runs, without a warning', () => {
-		const { code, output, sortie } = presence({
-			PREPROD_BASIC_AUTH_USER: 'utilisateur-factice',
-			PREPROD_BASIC_AUTH_PASSWORD: 'mot-de-passe-factice',
-		})
-		expect(code).toBe(0)
-		expect(sortie).toBe('presents=true\n')
-		expect(output).not.toContain('::warning::')
-	})
-
-	test.each([
-		['no secret at all', {}],
-		[
-			'empty secrets, what GitHub gives for a secret that is not set',
-			{ PREPROD_BASIC_AUTH_USER: '', PREPROD_BASIC_AUTH_PASSWORD: '' },
-		],
-		['the user only', { PREPROD_BASIC_AUTH_USER: 'utilisateur-factice' }],
-		['the password only', { PREPROD_BASIC_AUTH_PASSWORD: 'mot-de-passe-factice' }],
-	])('%s: green, a warning that names both secrets, and the check is skipped', (_cas, secrets) => {
-		const { code, output, sortie } = presence(secrets)
-		expect(code).toBe(0)
-		expect(sortie).toBe('presents=false\n')
-		expect(output).toContain('::warning::Contrôle de la préprod sauté')
-		expect(output).toContain('PREPROD_BASIC_AUTH_USER et PREPROD_BASIC_AUTH_PASSWORD')
-		expect(output).not.toContain('factice')
+describe('there is no pre-production workflow (ticket 232)', () => {
+	test('the two workflows of the pre-production are gone, and no remaining workflow, script or file names it', () => {
+		for (const nom of ['preprod.yml', 'preprod-controles.yml'])
+			expect(existsSync(path.join(ROOT, WORKFLOWS, nom)), nom).toBe(false)
+		const texts = workflows.map(workflow => readFileSync(path.join(ROOT, workflow.file), 'utf8')).join('\n')
+		expect(texts).not.toMatch(/preprod|préprod/i)
+		expect(read('package.json')).not.toMatch(/preprod|préprod/i)
 	})
 })
 
@@ -640,14 +588,6 @@ describe('the CI reads no secret', () => {
 	const ALLOWED_SECRETS: string[] = [
 		// release.yml pushes the publication on main with the token of its own run (ticket 036).
 		'GITHUB_TOKEN',
-		// preprod.yml reads the page of the fictional profile through the protected access of the
-		// pre-production (ticket 027).
-		'PREPROD_BASIC_AUTH_USER',
-		'PREPROD_BASIC_AUTH_PASSWORD',
-		// preprod-controles.yml puts the pre-production back to its seeded state through the API of Coolify
-		// (ticket 174): the address of Coolify and a token that may write the variables of one application.
-		'COOLIFY_URL',
-		'COOLIFY_TOKEN',
 	]
 
 	test('the CI reads none, and the other workflows only the ones of the allowed list', () => {
@@ -1406,9 +1346,15 @@ describe('C07: Playwright cannot point at production, and the CI cannot skip tes
 		])
 	})
 
-	test('the pre-production and a domain that only looks like the site are not production', () => {
-		for (const baseURL of ['https://preprod.my-makeup.fr', 'https://not-my-makeup.fr', 'http://127.0.0.1:3100'])
+	test('a domain that only looks like the site is not production, an address of this machine neither', () => {
+		for (const baseURL of ['https://not-my-makeup.fr', 'http://127.0.0.1:3100'])
 			expect(playwrightSettingsProblems({ ...inCi, use: { baseURL } }), baseURL).toEqual([])
+	})
+
+	test('the former pre-production host is production like any other subdomain of the site', () => {
+		expect(playwrightSettingsProblems({ ...inCi, use: { baseURL: 'https://preprod.my-makeup.fr' } })).toEqual([
+			'baseURL vise le site en ligne (preprod.my-makeup.fr).',
+		])
 	})
 
 	test.each([

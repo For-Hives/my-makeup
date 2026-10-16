@@ -6,7 +6,7 @@
  * word of the vocabulary is held by a known share of them.
  *
  * Everything is fictional: accounts in `@example.test`, names « Générée n », communes of the official
- * list (public reference data). Not for the pre-production: it writes through the Payload of the test
+ * list (public reference data). Not for a deployed site: it writes through the Payload of the test
  * bench.
  */
 

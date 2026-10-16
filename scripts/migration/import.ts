@@ -123,7 +123,7 @@ async function principal(argumentsDeLaCommande: string[]): Promise<number> {
 	const payload = await getPayload({ config: configurationSansChangementDeSchema(await config) })
 	await verifierLeSchemaDeLaCible(payload)
 	// Where the photos are served from, as the application gives their addresses (src/payload.config.ts).
-	// `--sans-photos`: no storage at all, as in the pre-production; nothing is asked of any host.
+	// `--sans-photos`: no storage at all; nothing is asked of any host.
 	const baseDesMedias = options.sansPhotos ? null : mediaBaseUrl(process.env.R2_PUBLIC_URL, serverEnv().storage)
 	// A check without storage cannot conclude on the photos: every file is « sans-stockage », so no
 	// media document is expected and the verdict would be a false green. Refused outright.

@@ -6,7 +6,7 @@
  * username with accents, verified, hidden by an admin, every text at its longest.
  *
  * Pure data, read by the loader (./chargement.ts), the tests and the tickets that build on the set
- * (the single bench command, the pre-production). Everything is made up:
+ * (the single bench command). Everything is made up:
  *
  * - accounts in `@example.test`, contact addresses and links on `example.test`;
  * - phone numbers in the range ARCEP keeps for fiction (06 39 98 …);

@@ -191,7 +191,7 @@ describe('what the image check reads in a built image', () => {
 })
 
 describe('the photos of the environment are given to the build of the image', () => {
-	const PREPROD_PHOTOS = 'https://exemple-photos.example.test'
+	const AUTRE_PHOTOS = 'https://exemple-photos.example.test'
 
 	test('R2_PUBLIC_URL is a public build argument, dropped from the build when empty', () => {
 		const dockerfile = read('Dockerfile')
@@ -204,16 +204,16 @@ describe('the photos of the environment are given to the build of the image', ()
 	})
 
 	test('the expected origin is the one of the build, else the one of the live site', () => {
-		expect(expectedPhotosOrigin(PREPROD_PHOTOS)).toBe(PREPROD_PHOTOS)
+		expect(expectedPhotosOrigin(AUTRE_PHOTOS)).toBe(AUTRE_PHOTOS)
 		expect(expectedPhotosOrigin(undefined)).toBe(MEDIA_ORIGIN_DEFAULT)
 		expect(expectedPhotosOrigin('')).toBe(MEDIA_ORIGIN_DEFAULT)
 		expect(() => expectedPhotosOrigin('https://*.example.test')).toThrow(CheckFailed)
 	})
 
-	test('an image built for the pre-production serves its own host, and only it', () => {
-		const sent = contentSecurityPolicy({ development: false, mediaOrigin: PREPROD_PHOTOS })
+	test('an image built for another photo host serves its own host, and only it', () => {
+		const sent = contentSecurityPolicy({ development: false, mediaOrigin: AUTRE_PHOTOS })
 
-		expect(photosPolicyProblems(sent, PREPROD_PHOTOS)).toEqual([])
+		expect(photosPolicyProblems(sent, AUTRE_PHOTOS)).toEqual([])
 		expect(photosPolicyProblems(sent, MEDIA_ORIGIN_DEFAULT)).toHaveLength(1)
 	})
 
@@ -221,14 +221,12 @@ describe('the photos of the environment are given to the build of the image', ()
 		const sent = contentSecurityPolicy({ development: false, mediaOrigin: MEDIA_ORIGIN_DEFAULT })
 
 		expect(photosPolicyProblems(sent, expectedPhotosOrigin(undefined))).toEqual([])
-		expect(photosPolicyProblems(sent, PREPROD_PHOTOS)).toHaveLength(1)
+		expect(photosPolicyProblems(sent, AUTRE_PHOTOS)).toHaveLength(1)
 	})
 
 	test('a policy that names both hosts, or none, or no policy at all, is refused', () => {
-		expect(
-			photosPolicyProblems(`img-src 'self' ${PREPROD_PHOTOS} ${MEDIA_ORIGIN_DEFAULT}`, PREPROD_PHOTOS)
-		).toHaveLength(1)
-		expect(photosPolicyProblems("img-src 'self' data:", PREPROD_PHOTOS)).toHaveLength(1)
-		expect(photosPolicyProblems(null, PREPROD_PHOTOS)).toHaveLength(1)
+		expect(photosPolicyProblems(`img-src 'self' ${AUTRE_PHOTOS} ${MEDIA_ORIGIN_DEFAULT}`, AUTRE_PHOTOS)).toHaveLength(1)
+		expect(photosPolicyProblems("img-src 'self' data:", AUTRE_PHOTOS)).toHaveLength(1)
+		expect(photosPolicyProblems(null, AUTRE_PHOTOS)).toHaveLength(1)
 	})
 })

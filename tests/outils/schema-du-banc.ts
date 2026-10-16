@@ -4,7 +4,7 @@
  *
  * Out of production, on a database of this machine, Payload pushes the schema of the code when it
  * connects, and leaves its mark in `payload_migrations`: a row `dev` of batch -1. A bench built
- * that way would hide a missing migration until the pre-production, which only plays the
+ * that way would hide a missing migration until production, which only plays the
  * migrations. So:
  *
  * - the Payload of the tests never changes the schema (`sansChangementDeSchema`,

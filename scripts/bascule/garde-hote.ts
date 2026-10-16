@@ -9,7 +9,7 @@
  *    inventory names and no other (`/u`, `/u/script.js`, `/u/api/send`, `/u/autre-chemin`), without
  *    a query: a GET records no event, which is a POST; the control never sends one;
  *  - anonymous: no cookie, and no `Authorization` of the caller. The one identity is the protected
- *    access of the pre-production, set once by the command and sent to that host only;
+ *    access of the temporary production host, set once by the command and sent to that host only;
  *  - no redirect is followed: one could lead to another host or to `/u`.
  *
  * No dependency, `fetch` only: the CI runs the command without `bun install`, next to the secrets.
@@ -47,8 +47,17 @@ export const CHEMINS_LUS_SOUS_LA_MESURE: readonly string[] = [
 	'/u/autre-chemin',
 ]
 
-/** The pre-production: the only host that takes the protected access. */
-export const HOTE_DE_LA_PREPROD = 'preprod.my-makeup.fr'
+/** The site itself: the main production host. The protected access is never sent there. */
+export const HOTE_PRINCIPAL = 'my-makeup.fr'
+
+/**
+ * The temporary host of the new site before the domains are swapped (PLAN-PROD-DIRECT.md): the same
+ * production application, behind a protected access. The only host that takes the protected access.
+ */
+export const HOTE_TEMPORAIRE = 'v3.my-makeup.fr'
+
+/** The hosts of production a run may read online. There is no other online host: no staging environment (ticket 232). */
+export const HOTES_DE_PRODUCTION: readonly string[] = [HOTE_PRINCIPAL, HOTE_TEMPORAIRE]
 
 /** The check says what it is, so that its requests can be told apart in the logs of the site. */
 export const AGENT_DU_CONTROLE = 'my-makeup-controle-hote/1 (lecture seule)'
@@ -64,10 +73,14 @@ const transportReel: Transport = (adresse, init) => fetch(adresse, init)
 export function cibleDuControle(valeur: string): URL {
 	const url = URL.canParse(valeur) ? new URL(valeur) : undefined
 	if (!url || (url.protocol !== 'https:' && url.protocol !== 'http:'))
-		throw new CibleRefusee('CONTROLE_HOTE_CIBLE doit être une adresse web, comme https://preprod.my-makeup.fr.')
+		throw new CibleRefusee('CONTROLE_HOTE_CIBLE doit être une adresse web, comme https://my-makeup.fr.')
 	if (url.protocol === 'http:' && !HOTES_LOCAUX.includes(url.hostname))
 		throw new CibleRefusee(
 			`CONTROLE_HOTE_CIBLE refusée (hôte « ${url.hostname} ») : en http, seul ce poste est lu. Un hôte en ligne se lit en https.`
+		)
+	if (url.protocol === 'https:' && !HOTES_DE_PRODUCTION.includes(url.hostname))
+		throw new CibleRefusee(
+			`CONTROLE_HOTE_CIBLE refusée (hôte « ${url.hostname} ») : le contrôle ne lit que la production, ${HOTES_DE_PRODUCTION.map(hote => `https://${hote}`).join(' ou ')}, ou le banc de ce poste. La v3 n’a qu’un environnement en ligne.`
 		)
 	if (url.username || url.password || url.pathname !== '/' || url.search || url.hash)
 		throw new CibleRefusee(
@@ -135,8 +148,10 @@ export function controlerRequete(
 				`Requête interrompue : l’en-tête « ${nom} » ferait du contrôle quelqu’un. Il lit comme une visiteuse anonyme.`
 			)
 	if (autorisation !== undefined) {
-		if (cible.hostname !== HOTE_DE_LA_PREPROD)
-			throw new RequeteInterdite('Requête interrompue : l’accès protégé ne part que vers la préprod.')
+		if (cible.hostname !== HOTE_TEMPORAIRE)
+			throw new RequeteInterdite(
+				`Requête interrompue : l’accès protégé ne part que vers l’hôte temporaire (${HOTE_TEMPORAIRE}), jamais vers le site.`
+			)
 		entetes.set('authorization', autorisation)
 	}
 	if (!entetes.has('user-agent')) entetes.set('user-agent', AGENT_DU_CONTROLE)

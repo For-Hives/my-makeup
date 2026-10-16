@@ -3,7 +3,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { serializeJsonLd } from '../../src/lib/seo/json-ld'
 import { metadonnees } from '../../src/lib/seo/metadonnees'
-import { CHEMINS_NOINDEX, NOINDEX, NOINDEX_PREPROD, reglesRobots, robotsPourChemin } from '../../src/lib/seo/robots'
+import { CHEMINS_NOINDEX, NOINDEX, reglesRobots, robotsPourChemin } from '../../src/lib/seo/robots'
 import { DESCRIPTION_MAX, DESCRIPTION_MIN, descriptionMeta, TITRE_MAX, titrePage } from '../../src/lib/seo/texte'
 import { urlCanonique } from '../../src/lib/seo/url'
 import { proxy } from '../../src/proxy'
@@ -84,18 +84,16 @@ describe('robots (U52)', () => {
 	test('/auth et /search, sous-chemins compris, sans toucher aux autres', () => {
 		expect(CHEMINS_NOINDEX).toEqual(['/auth', '/search'])
 		for (const chemin of ['/auth', '/auth/signin', '/search', '/search?city=Annecy'])
-			expect(robotsPourChemin(chemin, {})).toBe(NOINDEX)
+			expect(robotsPourChemin(chemin)).toBe(NOINDEX)
 		for (const chemin of ['/', '/authentique', '/searching', '/profil/abc'])
-			expect(robotsPourChemin(chemin, {})).toBeUndefined()
+			expect(robotsPourChemin(chemin)).toBeUndefined()
 	})
 
-	test('toute la préprod, quel que soit le chemin', () => {
-		for (const chemin of ['/', '/profil/abc', '/auth', '/api/health'])
-			expect(robotsPourChemin(chemin, { APP_ENV: 'preprod' })).toBe(NOINDEX_PREPROD)
-		expect(robotsPourChemin('/', { APP_ENV: 'prod' })).toBeUndefined()
+	test('plus de noindex pour tout le site selon APP_ENV : il n’y a pas de préprod (ticket 232)', () => {
+		for (const chemin of ['/', '/profil/abc', '/api/health']) expect(robotsPourChemin(chemin)).toBeUndefined()
 	})
 
-	test('le proxy pose l’en-tête à chaque requête, selon l’environnement du moment', () => {
+	test('le proxy ne lit plus APP_ENV : même déclaré « preprod », il ne pose le noindex que sur /auth et /search', () => {
 		const avant = process.env.APP_ENV
 		try {
 			const requete = (chemin: string) =>
@@ -104,11 +102,11 @@ describe('robots (U52)', () => {
 					cookies: { get: () => ({ value: 'cookie' }), getAll: () => [] },
 					headers: new Headers(),
 				}) as unknown as Parameters<typeof proxy>[0]
-			process.env.APP_ENV = 'prod'
-			expect(proxy(requete('/')).headers.get('x-robots-tag')).toBeNull()
-			expect(proxy(requete('/search')).headers.get('x-robots-tag')).toBe(NOINDEX)
-			process.env.APP_ENV = 'preprod'
-			expect(proxy(requete('/')).headers.get('x-robots-tag')).toBe(NOINDEX_PREPROD)
+			for (const appEnv of ['prod', 'preprod']) {
+				process.env.APP_ENV = appEnv
+				expect(proxy(requete('/')).headers.get('x-robots-tag')).toBeNull()
+				expect(proxy(requete('/search')).headers.get('x-robots-tag')).toBe(NOINDEX)
+			}
 		} finally {
 			if (avant === undefined) delete process.env.APP_ENV
 			else process.env.APP_ENV = avant
