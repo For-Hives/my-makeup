@@ -706,3 +706,6 @@ Ce que la v3 change par rapport au site actuel est dans [`CHANGEMENTS-VOULUS.md`
   - Cinq passages par page, machine au repos ; 27 budgets sur 37 tenus ; le code est dans l'outil de mesure, hors de ce dépôt.
 - **Ticket 154 fait : le rapport du lundi lit l'indexation des profils publiables et le panier de requêtes.**
   - `plans/mesures/outil` 0.8.0, source Search Console en mode `v3`. Jamais essayé contre la vraie API de Google (secret du ticket 153 non rangé).
+- **Ticket 230 fait : le domaine des photos d'un environnement est donné au build de l'image.**
+  - `R2_PUBLIC_URL` est un argument de build du `Dockerfile` (retiré s'il est vide, comme les `NEXT_PUBLIC_*`) : la préprod affiche ses propres photos, sans l'hôte du site en ligne. Les gardes de la CI et `docs/qualite.md` le rangent parmi les variables publiques du build ; le README et `docs/preprod.md` disent qu'il faut cocher « Build Variable » dans Coolify en plus de l'exécution.
+  - `image:controle` a une étape de plus : avec `CONTROLE_IMAGE_PHOTOS`, elle prouve que la politique nomme cet hôte et que l'optimiseur refuse l'hôte du site en ligne (400) ; sans la variable, elle attend l'hôte du site en ligne. Image construite avec l'argument et contrôlée de bout en bout par l'auteur ; essais de bout en bout non rejoués.
