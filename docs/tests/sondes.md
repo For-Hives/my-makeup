@@ -14,7 +14,7 @@ SONDES_API=aucune bun run sondes                     # Strapi est arrêté : plu
 ```
 
 - `SONDES_CIBLE` est une origine seule : `https://` et un hôte, ou `http://` sur ce poste (`localhost`, `127.0.0.1`, `::1`). Un chemin, un paramètre ou un identifiant dans l'adresse est refusé.
-- `SONDES_STATS_TOKEN` : le jeton de service de la route `/api/stats/weekly` (variable `STATS_TOKEN` de l'application). Sans lui, R02 dit « inconnu ». Il ne part que vers cette route, sur la cible, jamais ailleurs, et le rapport ne l'écrit jamais. Le workflow du lundi n'en a pas (aucun secret de prod) : R02 y reste « inconnu » tant qu'Andy ne lance pas les sondes à la main avec le jeton.
+- `SONDES_STATS_TOKEN` : le jeton de service de la route `/api/stats/weekly` (variable `STATS_TOKEN` de l'application). Sans lui, R02 dit « inconnu ». Il ne part que vers cette route, sur la cible, jamais ailleurs, et le rapport ne l'écrit jamais. Le workflow du lundi n'en a pas (aucun secret de prod) : R02 y reste « inconnu » tant qu'Andy ne lance pas les sondes à la main avec le jeton (voir « Le lancement du lundi »).
 - `SONDES_API` : l'origine de l'API Strapi lue par R05. Par défaut `https://api.my-makeup.fr` quand la cible est le site en ligne, rien ailleurs. `aucune` retire la partie Strapi : à poser le jour où Strapi s'arrête, sinon la redirection de l'ancienne adresse de l'API la rend rouge.
 - La commande ne lit aucun fichier `.env`. Les deux variables viennent de l'environnement du shell.
 - Un lancement contre le banc fait 16 requêtes (7,7 s mesurées le 15/10/2026). Contre le site en ligne : autant sur le site, plus 3 sur l'API Strapi, 1 à 3 sur les registres de domaines (RDAP), et 5 poignées TLS sans requête.
@@ -91,6 +91,26 @@ SONDES_CIBLE=http://localhost:3120 bun run sondes                   # R03, R04, 
 
 R02 demande un jeton : le banc ne règle pas `STATS_TOKEN`. Lance l'application construite avec un jeton factice (32 caractères au moins) dans son environnement, puis donne le même à `SONDES_STATS_TOKEN` : R02 est verte (« égalité exacte »).
 
-## Ce qui vient ensuite
+## Le lancement du lundi
 
-- Le lancement automatique du lundi et sa lecture par le rapport de la semaine : ticket 157.
+Le workflow `.github/workflows/sondes.yml` lance `bun run sondes` contre le site en ligne **chaque lundi à 07:00, heure de Paris** (le cron porte son fuseau : l'heure d'été ne le décale pas). Tu peux aussi le lancer à la main (« Run workflow »). Il écrit le rapport des sondes dans le résumé de l'exécution, et n'a **aucun secret de prod** : ni jeton, ni variable.
+
+- **Une sonde rouge, ou non lancée, fait échouer l'exécution** (code de sortie 1). Rien ne l'adoucit : ni `continue-on-error`, ni `|| true`. Un test le garde et joue une sonde faussée exprès (`tests/unit/sondes-lundi-ci.test.ts`).
+- **R02 reste « inconnu »** dans ce workflow, faute du jeton de service. Ce n'est pas un échec : l'exécution est verte (décision du ticket 157). Pour comparer le sitemap aux profils publiables, lance les sondes à la main avec `SONDES_STATS_TOKEN`.
+- **Les planifications ne tournent que sur la branche par défaut** du dépôt, et GitHub les désactive après 60 jours sans activité dans un dépôt public. Tant que `main` porte l'ancien site, le lundi ne se déclenche pas : il commence à la bascule.
+- Contre le site actuel, R05 est rouge par construction (voir plus haut) : l'exécution du lundi est rouge jusqu'à la bascule.
+
+### Comment le rapport de 07:30 lit le résultat
+
+Le rapport lit l'activité GitHub en lecture seule (`gh api --method GET`, source `github`). Le contrat avec ce workflow :
+
+| Cas | Ce que le rapport écrit |
+|---|---|
+| Dernière exécution terminée du workflow `sondes.yml` en `success` | VERT |
+| Dernière exécution terminée en `failure` (une sonde rouge ou non lancée, ou le job a échoué) | ROUGE : alerte |
+| Aucune exécution, ou la dernière terminée date de 8 jours ou plus, ou elle est `cancelled` ou `skipped` | INCONNU : ni vert ni alerte de sonde, mais dit |
+| Exécution en cours | Ignorée : on lit la dernière terminée |
+
+Le compte des **lundis verts de suite** : en partant de la dernière exécution planifiée (`event=schedule`), on compte les exécutions `success` consécutives, une par lundi ; la première `failure` arrête le compte, et un lundi sans exécution aussi. Les lancements à la main n'entrent pas dans ce compte. Le critère de clôture est 4.
+
+L'écriture de cette lecture dans l'outil du rapport (`plans/mesures/outil`) se fait hors de ce dépôt.
