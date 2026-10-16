@@ -121,14 +121,23 @@ describe('ce que l’import cherche dans une ville saisie : un nom, un code post
 	})
 
 	test('un numéro de département en tête est retiré : « 74 Bourg-Fictif » est une commune, pas une adresse (ticket 226)', () => {
+		// The number is the département: the commune is looked for there only.
 		expect(rechercheDeLaVille('74 Bourg-Fictif')).toEqual({
 			nom: 'bourg-fictif',
 			codePostal: null,
-			departement: null,
+			departement: '74',
 			adresse: false,
 		})
-		expect(rechercheDeLaVille('2A Bourg-Fictif')).toMatchObject({ nom: 'bourg-fictif', adresse: false })
-		expect(rechercheDeLaVille('974  Bourg-Fictif ')).toMatchObject({ nom: 'bourg-fictif', adresse: false })
+		expect(rechercheDeLaVille('2a Bourg-Fictif')).toMatchObject({
+			nom: 'bourg-fictif',
+			departement: '2A',
+			adresse: false,
+		})
+		expect(rechercheDeLaVille('974  Bourg-Fictif ')).toMatchObject({
+			nom: 'bourg-fictif',
+			departement: '974',
+			adresse: false,
+		})
 		// Not a département (no such code), or not one place after it: read as before.
 		expect(rechercheDeLaVille('00 Bourg-Fictif')).toMatchObject({ adresse: true })
 		expect(rechercheDeLaVille('74 et alentours')).toMatchObject({ nom: null })
@@ -144,6 +153,23 @@ describe('ce que l’import cherche dans une ville saisie : un nom, un code post
 		)
 
 		expect(communes.get(1)?.codeInsee).toBe('74901')
+		expect(bilan.adresses).toEqual([])
+	})
+
+	test('le numéro de tête est un département, pas un numéro de rue : « 01 Bourg-Fictif » ne prend pas la commune du 74', async () => {
+		simulerLeReferentiel()
+		const { communes, bilan } = await communesDesProfils(
+			[
+				{ id: 1, city: '74 Bourg-Fictif', videALaSource: false },
+				{ id: 2, city: '01 Bourg-Fictif', videALaSource: false },
+			],
+			referentielGeoApi()
+		)
+
+		expect(communes.get(1)?.codeInsee).toBe('74901')
+		// Ain holds no such commune: « à revoir », never the commune of another département.
+		expect(communes.get(2)).toBeNull()
+		expect(bilan.aRevoir).toEqual([2])
 		expect(bilan.adresses).toEqual([])
 	})
 

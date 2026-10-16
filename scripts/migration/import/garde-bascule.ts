@@ -10,6 +10,8 @@
  *
  * - a sign-in or a new password that succeeded in the v3, read in the journal of authentication
  *   (`auth-evenements`), which the import never writes;
+ * - an account with a last sign-in date (`pros.derniereConnexion`, ticket 077): the journal is purged
+ *   after 90 days, this date is not, and a Google or Facebook account never had a legacy hash to lose;
  * - an account that holds no legacy hash where the source gives one: a sign-in or a reset erased it.
  *
  * `--cible-en-service` lifts the guard on purpose, and then the import leaves every account it
@@ -27,6 +29,8 @@ import { type Attendu, lireLaCible } from './moteur'
 export interface TracesDeLaBascule {
 	/** Sign-ins and new passwords that succeeded in the v3, read in the journal. */
 	connexions: number
+	/** Accounts that hold a date of last sign-in: set by the v3 only, and kept after the journal is purged. */
+	comptesConnectes: number
 	/** `strapiId` of the accounts that hold no legacy hash where the source gives one. */
 	hashEfface: number[]
 }
@@ -36,6 +40,11 @@ export async function tracesDeLaBascule(payload: Payload, comptes: readonly Atte
 	const { totalDocs } = await payload.count({
 		collection: COLLECTION_JOURNAL,
 		where: { and: [{ type: { in: ['connexion', 'reinitialisation'] } }, { code: { in: ['ok', 'heritee'] } }] },
+		overrideAccess: true,
+	})
+	const { totalDocs: comptesConnectes } = await payload.count({
+		collection: 'pros',
+		where: { derniereConnexion: { exists: true } },
 		overrideAccess: true,
 	})
 	const dansLaCible = new Map(
@@ -49,17 +58,20 @@ export async function tracesDeLaBascule(payload: Payload, comptes: readonly Atte
 		})
 		.map(({ strapiId }) => strapiId)
 		.sort((a, b) => a - b)
-	return { connexions: totalDocs, hashEfface }
+	return { connexions: totalDocs, comptesConnectes, hashEfface }
 }
 
 /** Why the run refuses the target, or `null` when it shows no trace of the v3 in use. */
-export function messageDeLaBascule({ connexions, hashEfface }: TracesDeLaBascule): string | null {
-	if (connexions === 0 && hashEfface.length === 0) return null
+export function messageDeLaBascule({ connexions, comptesConnectes, hashEfface }: TracesDeLaBascule): string | null {
+	if (connexions === 0 && comptesConnectes === 0 && hashEfface.length === 0) return null
+	const s = (nombre: number) => (nombre > 1 ? 's' : '')
 	const traces = [
 		connexions > 0 &&
-			`${connexions} connexion${connexions > 1 ? 's' : ''} ou nouveau${connexions > 1 ? 'x' : ''} mot${connexions > 1 ? 's' : ''} de passe réussi${connexions > 1 ? 's' : ''} dans la v3 (journal d’authentification)`,
+			`${connexions} connexion${s(connexions)} ou nouveau${connexions > 1 ? 'x' : ''} mot${s(connexions)} de passe réussi${s(connexions)} dans la v3 (journal d’authentification)`,
+		comptesConnectes > 0 &&
+			`${comptesConnectes} compte${s(comptesConnectes)} avec une date de dernière connexion dans la v3`,
 		hashEfface.length > 0 &&
-			`${hashEfface.length} compte${hashEfface.length > 1 ? 's' : ''} dont le hash hérité a déjà été effacé (anciens identifiants : ${hashEfface.join(', ')})`,
+			`${hashEfface.length} compte${s(hashEfface.length)} dont le hash hérité a déjà été effacé (anciens identifiants : ${hashEfface.join(', ')})`,
 	].filter(Boolean)
 	return [
 		`La cible est déjà utilisée par la v3 : ${traces.join(' ; ')}.`,

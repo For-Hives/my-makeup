@@ -185,4 +185,20 @@ describe('Un import contre une v3 en service est refusé avant toute écriture (
 		expect((refus as ImportRefuse).message).toContain('dont le hash hérité a déjà été effacé')
 		expect((refus as ImportRefuse).message).toContain(String(LOCAL?.strapiId))
 	})
+	test('la date de dernière connexion survit au journal (purgé à 90 jours) : seule, elle suffit à refuser', async () => {
+		const payload = await payloadDeTest()
+		const compte = await compteDeFixture()
+		// The legacy hash is back and the journal is empty: only the date of last sign-in is left.
+		await payload.db.updateOne({ collection: 'pros', id: compte.id, data: { legacyBcrypt: 'hash-herite-fictif' } })
+		expect((await payload.count({ collection: 'auth-evenements', overrideAccess: true })).totalDocs).toBe(0)
+		expect((await compteDeFixture()).derniereConnexion).toBeTruthy()
+
+		const refus = await importerSurLeBanc('a-blanc').catch((erreur: unknown) => erreur)
+
+		expect(refus).toBeInstanceOf(ImportRefuse)
+		const message = (refus as ImportRefuse).message
+		expect(message).toContain('1 compte avec une date de dernière connexion')
+		expect(message).not.toContain('journal d’authentification')
+		expect(message).not.toContain('hash hérité')
+	})
 })

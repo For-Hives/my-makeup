@@ -81,5 +81,7 @@ export function lireLesArguments(argumentsDeLaCommande: readonly string[]): Argu
 	}
 	// A check writes nothing: it is a dry run, and `--reel` would contradict it.
 	if (lus.controle && lus.mode === 'reel') return null
+	// With the accounts left as they are, a check would not compare them: « the target is the source » would be a false green.
+	if (lus.controle && lus.cibleEnService) return null
 	return lus
 }

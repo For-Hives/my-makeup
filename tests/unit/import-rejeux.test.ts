@@ -13,26 +13,36 @@ import { ADAPTATEUR_PROFILS, consentementsGardes } from '../../scripts/migration
 
 describe('la garde d’une cible déjà utilisée par la v3 (ticket 227)', () => {
 	test('aucune trace : aucun refus', () => {
-		expect(messageDeLaBascule({ connexions: 0, hashEfface: [] })).toBeNull()
+		expect(messageDeLaBascule({ connexions: 0, comptesConnectes: 0, hashEfface: [] })).toBeNull()
 	})
 
 	test('une connexion réussie ou un hash effacé : refus en français, avec le nom de l’option, sans valeur', () => {
-		const connexions = messageDeLaBascule({ connexions: 3, hashEfface: [] })
-		const hash = messageDeLaBascule({ connexions: 0, hashEfface: [1, 4] })
+		const connexions = messageDeLaBascule({ connexions: 3, comptesConnectes: 0, hashEfface: [] })
+		const hash = messageDeLaBascule({ connexions: 0, comptesConnectes: 0, hashEfface: [1, 4] })
 
 		expect(connexions).toContain('3 connexions')
 		expect(connexions).toContain('Rien n’est écrit')
 		expect(connexions).toContain('--cible-en-service')
 		expect(hash).toContain('2 comptes dont le hash hérité a déjà été effacé')
 		expect(hash).toContain('1, 4')
-		expect(messageDeLaBascule({ connexions: 1, hashEfface: [7] })).toMatch(/1 connexion .*1 compte /)
-		expect(`${connexions}${hash}`).not.toMatch(/\$2[aby]\$|@/)
+		expect(messageDeLaBascule({ connexions: 1, comptesConnectes: 0, hashEfface: [7] })).toMatch(
+			/1 connexion .*1 compte /
+		)
+		// The journal is purged after 90 days: the date of last sign-in of the accounts is a trace of its own.
+		const date = messageDeLaBascule({ connexions: 0, comptesConnectes: 2, hashEfface: [] })
+		expect(date).toContain('2 comptes avec une date de dernière connexion')
+		expect(`${connexions}${hash}${date}`).not.toMatch(/\$2[aby]\$|@/)
 	})
 
 	test('l’option se lit sur la ligne de commande, une seule fois', () => {
 		expect(lireLesArguments(['--reel', '--cible-en-service'])).toMatchObject({ mode: 'reel', cibleEnService: true })
 		expect(lireLesArguments(['--reel'])?.cibleEnService).toBeUndefined()
 		expect(lireLesArguments(['--cible-en-service', '--cible-en-service'])).toBeNull()
+	})
+
+	test('--controle avec --cible-en-service est refusé : les comptes ne sont pas comparés, le contrôle serait un faux vert', () => {
+		expect(lireLesArguments(['--controle', '--cible-en-service'])).toBeNull()
+		expect(lireLesArguments(['--controle'])).toMatchObject({ controle: true })
 	})
 })
 
