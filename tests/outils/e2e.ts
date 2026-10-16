@@ -80,7 +80,7 @@ export function adresseDuBanc(environnement: Environnement): string {
 export function cibleDesEssais(variables: Variables = process.env): Cible {
 	const environnement = lireEnvironnement(variables.APP_ENV)
 	const adresse = variables.BASE_URL || adresseDuBanc(environnementDuBanc(lireInstance(variables)))
-	verifierCible(adresse)
+	verifierCible(adresse, environnement)
 	return { adresse, environnement }
 }
 

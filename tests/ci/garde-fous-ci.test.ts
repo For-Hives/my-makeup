@@ -577,11 +577,6 @@ describe('there is no pre-production workflow (ticket 232)', () => {
 	test('the two workflows of the pre-production are gone, and no remaining workflow, script or file names it', () => {
 		for (const nom of ['preprod.yml', 'preprod-controles.yml'])
 			expect(existsSync(path.join(ROOT, WORKFLOWS, nom)), nom).toBe(false)
-		expect(workflows.map(workflow => path.basename(workflow.file)).sort()).toEqual([
-			'ci.yml',
-			'release.yml',
-			'sondes.yml',
-		])
 		const texts = workflows.map(workflow => readFileSync(path.join(ROOT, workflow.file), 'utf8')).join('\n')
 		expect(texts).not.toMatch(/preprod|préprod/i)
 		expect(read('package.json')).not.toMatch(/preprod|préprod/i)

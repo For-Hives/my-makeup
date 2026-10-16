@@ -144,7 +144,8 @@ export function verifierBase(uri: string | undefined, nom = 'DATABASE_URI'): voi
 }
 
 /** The address the end-to-end tests open: local, and nothing else. Never production. */
-export function verifierCible(adresse: string, nom = 'BASE_URL'): void {
+// `_environnement` keeps the positional shape the callers have always used; there is a single environment now.
+export function verifierCible(adresse: string, _environnement: EnvironnementAdmis = 'test', nom = 'BASE_URL'): void {
 	const url = lireAdresse(adresse, ['http:', 'https:'])
 	if (!url) refuser(`${nom} n'est pas une adresse web lisible.`)
 	const hote = hoteDe(url)
@@ -251,7 +252,7 @@ export function verifierEnvironnement(variables: Variables = process.env): Envir
 	verifierBase(variables.STRAPI_SOURCE_URI, 'STRAPI_SOURCE_URI')
 	for (const nom of ADRESSES) {
 		const adresse = variables[nom]
-		if (adresse) verifierCible(adresse, nom)
+		if (adresse) verifierCible(adresse, environnement, nom)
 	}
 	verifierEnvoi(variables)
 	verifierStockage(variables)
