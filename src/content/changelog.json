@@ -162,9 +162,9 @@
 			"text": "Chaque page de spécialité a un titre d’onglet plus complet, pour mieux apparaître dans les résultats de recherche."
 		},
 		{
-			"id": "quand-l-equipe-est-en-train-de-modifier-ton-profil-ton-en",
+			"id": "quand-l-equipe-a-ton-profil-ouvert-pour-le-modifier-ton-e",
 			"type": "amelioration",
-			"text": "Quand l’équipe est en train de modifier ton profil, ton enregistrement attend et te le dit, au lieu d’écraser son travail ou de se perdre."
+			"text": "Quand l’équipe a ton profil ouvert pour le modifier, ton enregistrement est refusé avec un message clair, et ce que tu as saisi reste dans le formulaire."
 		}
 	],
 	"releases": []

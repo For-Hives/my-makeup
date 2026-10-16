@@ -8,7 +8,12 @@ import { composerEmail } from '../emails/gabarit'
 import { type CompteTrouve, trouverLeCompte } from './compte-par-email'
 import { cleDeBoite } from './email-canonique'
 import { FREINS_DE_BOITE, type FreinsDeBoite, prendreUnMailPour } from './freins-inscription'
-import type { CodeEchecInscription, DonneesInscription } from './inscription'
+import {
+	type CodeEchecInscription,
+	type DonneesInscription,
+	type ErreursInscription,
+	MESSAGES_INSCRIPTION,
+} from './inscription'
 import type { CodeEvenement, Journaliser } from './journal'
 
 /**
@@ -43,7 +48,17 @@ const ESSAIS_MAX = 3
  */
 export const PLANCHER_INSCRIPTION_MS = 1500
 
-export type ResultatDInscription = { ok: true; confirmee: boolean } | { ok: false; code: CodeEchecInscription }
+/**
+ * `email-invalide`: Payload refused the form of the address (the form checks it first, so this is a rule
+ * the form does not know, ticket 224). The answer is the sentence of the field, under the field.
+ */
+export type ResultatDInscription =
+	| { ok: true; confirmee: boolean }
+	| { ok: false; code: CodeEchecInscription }
+	| { ok: false; code: 'email-invalide'; erreurs: ErreursInscription }
+
+/** Why one try failed: a code of the sign-up, or a refusal of the address by its form. */
+type CodeDeTentative = CodeEchecInscription | 'email-invalide'
 
 export interface EntreesDInscription {
 	payload: Payload
@@ -71,6 +86,12 @@ const PHRASES_D_UNICITE: ReadonlySet<string> = new Set([
 	en.translations.error.valueMustBeUnique,
 ])
 
+/** True for any refusal of Payload that names the field `email`. */
+function estUneErreurSurLEmail(erreur: unknown): boolean {
+	const erreurs = (erreur as { data?: { errors?: { path?: string }[] } } | null)?.data?.errors
+	return Array.isArray(erreurs) && erreurs.some(({ path }) => path === 'email')
+}
+
 /**
  * True for the refusal Payload gives when the email is already the login of another account, and only
  * for it: a refusal on the `email` path that is about its form (« veuillez entrer une adresse valide »)
@@ -86,8 +107,9 @@ export function estUneAdresseDejaPrise(erreur: unknown): boolean {
 	)
 }
 
-export function codeDeLEchec(erreur: unknown): CodeEchecInscription {
+export function codeDeLEchec(erreur: unknown): CodeDeTentative {
 	if (estUneAdresseDejaPrise(erreur)) return 'email-deja-pris'
+	if (estUneErreurSurLEmail(erreur)) return 'email-invalide'
 	if (erreur instanceof EnvoiEmailEchoue) return 'email-non-envoye'
 	return 'service-indisponible'
 }
@@ -130,7 +152,7 @@ export async function inscrire({
 		// Two homonyms who sign up at the same moment compute the same free slug, and the second write
 		// breaks the unicity of the slug: the whole transaction is rolled back, and the next try sees the
 		// slug taken. The address and the mail are never retried: their refusal is the answer.
-		let code: CodeEchecInscription = 'service-indisponible'
+		let code: CodeDeTentative = 'service-indisponible'
 		for (let essai = 1; essai <= ESSAIS_MAX; essai++) {
 			const echec = await tenter()
 			if (echec === undefined) {
@@ -150,6 +172,11 @@ export async function inscrire({
 				code = 'service-indisponible'
 			}
 			if (code !== 'service-indisponible') break
+		}
+		if (code === 'email-invalide') {
+			// The sentence of the field, the one the form gives for an address it refuses (never Payload's own words).
+			await noter('donnees-invalides')
+			return { ok: false, code, erreurs: { email: MESSAGES_INSCRIPTION.email.invalide } }
 		}
 		await noter(code === 'email-non-envoye' ? 'service-indisponible' : code)
 		return { ok: false, code }
@@ -171,7 +198,7 @@ export async function inscrire({
 			} catch (erreur) {
 				// The same refusal as a new address whose mail cannot leave: a relay in trouble splits nothing.
 				await noter('service-indisponible')
-				return { ok: false, code: codeDeLEchec(erreur) }
+				return { ok: false, code: erreur instanceof EnvoiEmailEchoue ? 'email-non-envoye' : 'service-indisponible' }
 			}
 		}
 		await noter('email-deja-pris')
@@ -179,7 +206,7 @@ export async function inscrire({
 	}
 
 	/** One try, in its own transaction: nothing when it succeeded, the code of its failure otherwise. */
-	async function tenter(): Promise<CodeEchecInscription | undefined> {
+	async function tenter(): Promise<CodeDeTentative | undefined> {
 		const req = await createLocalReq({}, payload)
 		await initTransaction(req)
 		try {

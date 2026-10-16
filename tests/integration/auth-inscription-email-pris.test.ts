@@ -1,6 +1,7 @@
 import { afterAll, describe, expect, test } from 'bun:test'
 import { creerFrein, type Frein } from '@/lib/auth/frein'
 import type { FreinsDeBoite } from '@/lib/auth/freins-inscription'
+import { MESSAGES_INSCRIPTION } from '@/lib/auth/inscription'
 import { inscrire, PLANCHER_INSCRIPTION_MS } from '@/lib/auth/inscription-payload'
 import { journalDe } from '@/lib/auth/journal'
 import { renvoyerLaConfirmation } from '@/lib/auth/renvoi'
@@ -131,6 +132,21 @@ describe('E03 : une adresse déjà utilisée ne révèle rien et ne crée pas de
 		const lignes = (await journal()).slice(avant)
 		expect(lignes.map(({ type, code }) => [type, code])).toEqual([['inscription', 'email-deja-pris']])
 		expect(JSON.stringify(lignes)).not.toContain('journal-pris')
+	})
+
+	test('une adresse que Payload refuse pour sa forme n’est jamais dite « déjà utilisée » : la phrase du champ, aucun compte (ticket 224)', async () => {
+		// The form checks the address first; this is what a rule of Payload that the form does not know would give.
+		const payload = await payloadDeTest()
+		const avant = (await payload.count({ collection: 'pros', overrideAccess: true })).totalDocs
+		const resultat = await inscription('pas-une-adresse')
+
+		expect(resultat).toEqual({
+			ok: false,
+			code: 'email-invalide',
+			erreurs: { email: MESSAGES_INSCRIPTION.email.invalide },
+		})
+		expect((await payload.count({ collection: 'pros', overrideAccess: true })).totalDocs).toBe(avant)
+		expect((await journal()).map(({ type, code }) => [type, code]).at(-1)).toEqual(['inscription', 'donnees-invalides'])
 	})
 
 	test('un mail de la propriétaire qui ne part pas donne la même réponse que pour une adresse neuve dont le mail ne part pas', async () => {

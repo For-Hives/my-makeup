@@ -332,3 +332,13 @@ describe('Un identifiant qu’aucun document ne peut porter : refusé avant la b
 				}
 	})
 })
+
+describe('Le champ « profil » des comptes (une jointure) dans une adresse saisie à la main : jamais une erreur 500 (ticket 224)', () => {
+	test('un admin le filtre (200) ; tout autre lecteur est refusé (400 ou 403), jamais 500', async () => {
+		const chemin = '/api/pros?where[profil][exists]=true'
+
+		expect((await lire(chemin, lecteurs.admin)).statut).toBe(200)
+		for (const lecteur of [lecteurs.anonyme, lecteurs.maquilleuse, lecteurs.redaction])
+			expect([lecteur.nom, [400, 403].includes((await lire(chemin, lecteur)).statut)]).toEqual([lecteur.nom, true])
+	})
+})

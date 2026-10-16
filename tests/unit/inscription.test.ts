@@ -227,9 +227,13 @@ describe('« adresse déjà utilisée » : seulement pour l’unicité de l’em
 	})
 
 	test('une erreur de forme sur l’email, ou l’unicité d’un autre champ, ne l’est pas', () => {
-		for (const erreur of [forme, refus('La valeur doit être unique', 'nom'), new Error('x'), null, { data: {} }]) {
+		for (const erreur of [forme, refus('La valeur doit être unique', 'nom'), new Error('x'), null, { data: {} }])
 			expect(estUneAdresseDejaPrise(erreur)).toBe(false)
+	})
+
+	test('une erreur de forme sur l’email est un refus du champ ; toute autre est un service indisponible', () => {
+		expect(codeDeLEchecDInscription(forme)).toBe('email-invalide')
+		for (const erreur of [refus('La valeur doit être unique', 'nom'), new Error('x'), null, { data: {} }])
 			expect(codeDeLEchecDInscription(erreur)).toBe('service-indisponible')
-		}
 	})
 })
