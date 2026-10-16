@@ -20,6 +20,7 @@ import {
 import { freinerLaRecherche } from '@/lib/recherche/frein'
 import { robotsPourChemin } from '@/lib/seo/robots'
 import { redirectionDeForme } from '@/lib/urls/forme'
+import { adresseAVerifier, type FamilleVerifiee } from '@/lib/urls/page-inconnue'
 
 /**
  * One proxy, no matcher: it runs for every request.
@@ -42,6 +43,9 @@ import { redirectionDeForme } from '@/lib/urls/forme'
  *   cross-site`, a link in a mail) answers the relay page of the return from Google (ticket 223): Payload
  *   ignores the cookie of a cross-site request with no `Origin`, and the relay restarts the navigation
  *   from the site itself.
+ * - An unknown slug under `/profil`, `/talent` or `/blog` is rewritten to the 404 page of the site, so that the HTML
+ *   of the server carries its h1 (ticket 231; `notFound()` in a page only sends an empty shell). The slug is read
+ *   through the same reads as the page, remembered for a minute when the page exists; a failed read lets the page answer.
  * - A path that does not decode (`/profil/%E0%A4%A`) answers the 404 page of the site, not Next's error; under
  *   `/api/` it answers a JSON 400 (ticket 223).
  * - A response that carries a cookie of the cleaning is `private, no-store`: no shared cache keeps it (ticket 223).
@@ -218,10 +222,51 @@ function cheminEcrit(url: string): string | undefined {
 export function proxy(requete: NextRequest): NextResponse
 export function proxy(requete: NextRequest): NextResponse | Promise<NextResponse> {
 	const reponse = proxyDuSite(requete)
-	if (requete.method !== 'POST' || requete.nextUrl.pathname !== CHEMIN_DU_CONTACT) return reponse
+	if (requete.method !== 'POST' || requete.nextUrl.pathname !== CHEMIN_DU_CONTACT) {
+		// An answer of its own (redirect, rewrite, brake, relay page) comes first; only a plain pass-through is checked.
+		if (!passeTelQuel(reponse)) return reponse
+		const a = adresseAVerifier(requete.nextUrl.pathname, requete.method)
+		return a ? proxyDeLAdresseInconnue(requete, reponse, a) : reponse
+	}
 	// A redirect of form (repeated or final slash) comes first, as for every other path.
 	if (reponse.headers.has('location')) return reponse
 	return proxyDuContact(requete, reponse)
+}
+
+/** True when the response lets the request through to the page: no status of its own. */
+function passeTelQuel(reponse: NextResponse): boolean {
+	return reponse.status === 200 && reponse.headers.has('x-middleware-next')
+}
+
+type ExistenceDUnePage = (famille: FamilleVerifiee, segment: string) => Promise<boolean>
+
+/** The real lookup, loaded on first use: the proxy of every other path never loads Payload. */
+const existenceReelle: ExistenceDUnePage = async (famille, segment) =>
+	(await import('@/services/public/existe')).existeUnePage(famille, segment)
+
+/**
+ * An unknown profile, talent or article answers the 404 page of the site, in full (ticket 231). The lookup is the
+ * page's own reads, and what exists is remembered for a minute (src/lib/urls/page-inconnue.ts).
+ * Any failure (a database that does not answer) leaves the page to answer, as before.
+ */
+export async function proxyDeLAdresseInconnue(
+	requete: NextRequest,
+	reponse: NextResponse,
+	{ famille, segment }: { famille: FamilleVerifiee; segment: string },
+	existe: ExistenceDUnePage = existenceReelle
+): Promise<NextResponse> {
+	try {
+		if (await existe(famille, segment)) return reponse
+	} catch {
+		return reponse
+	}
+	const introuvable = NextResponse.rewrite(new URL(CHEMIN_INTROUVABLE, requete.url ?? requete.nextUrl.href))
+	introuvable.headers.set('X-Robots-Tag', 'noindex')
+	// What the first response set (the cookies of the cleaning and their `Cache-Control`) leaves with this one.
+	for (const cookie of reponse.cookies.getAll()) introuvable.cookies.set(cookie)
+	const cache = reponse.headers.get('cache-control')
+	if (cache) introuvable.headers.set('Cache-Control', cache)
+	return introuvable
 }
 
 /** The contact POST: past a brake (ticket 161), the request is rewritten to the route that answers 429 (same device as the sign-up, ticket 084). */

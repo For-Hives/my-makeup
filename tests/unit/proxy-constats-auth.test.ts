@@ -69,7 +69,7 @@ describe('constat 1 : une arrivée depuis un autre site garde la session', () =>
 
 	test('une action serveur (POST) et les pages publiques ne passent jamais par le relais', () => {
 		expect(proxy(requete('/auth/profil', entetes('cross-site'), 'POST')).headers.get('x-middleware-next')).toBe('1')
-		for (const chemin of ['/', '/profil/ana', '/auth/signin', '/auth/google/retour'])
+		for (const chemin of ['/', '/a-propos', '/auth/signin', '/auth/google/retour'])
 			expect(proxy(requete(chemin, entetes('cross-site'))).headers.get('x-middleware-next')).toBe('1')
 	})
 
@@ -95,7 +95,7 @@ describe('constat 7 : une adresse au pourcentage mal formé répond la page 404 
 	})
 
 	test('une adresse qui se décode, accents compris, suit son chemin', () => {
-		for (const chemin of ['/profil/%C3%A9l%C3%A9a', '/blog/un-article', '/talent/ana%20b'])
+		for (const chemin of ['/profil/%C3%A9l%C3%A9a/photos', '/blog/un-article/suite', '/talent/ana%20b/x'])
 			expect(proxy(requete(chemin)).headers.get('x-middleware-rewrite')).toBeNull()
 	})
 
@@ -118,7 +118,7 @@ describe('constat 8 : une réponse qui efface des cookies n’est jamais gardée
 		requete(chemin, { cookie: noms.map(nom => `${nom}=valeur`).join('; ') })
 
 	test('une page publique qui efface un cookie hérité : private, no-store', () => {
-		const reponse = proxy(avecCookies('/profil/ana', HERITES))
+		const reponse = proxy(avecCookies('/a-propos', HERITES))
 		expect(reponse.headers.getSetCookie().length).toBeGreaterThan(0)
 		expect(reponse.headers.get('cache-control')).toBe('private, no-store')
 	})
@@ -139,7 +139,7 @@ describe('constat 8 : une réponse qui efface des cookies n’est jamais gardée
 	})
 
 	test('sans cookie à effacer, la réponse garde ses en-têtes', () => {
-		const reponse = proxy(avecCookies('/profil/ana', ['payload-token']))
+		const reponse = proxy(avecCookies('/a-propos', ['payload-token']))
 		expect(reponse.headers.getSetCookie()).toEqual([])
 		expect(reponse.headers.get('cache-control')).toBeNull()
 	})
