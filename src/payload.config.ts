@@ -25,6 +25,7 @@ import { adaptateurSansRelais, optionsDeTransport } from './lib/emails/relais'
 import { mediaBaseUrl, serverEnv } from './lib/env'
 import { LANGUE_DE_PAYLOAD } from './lib/langue-payload'
 import { adresseDuMedia, PREFIXE_DES_ENVOIS } from './lib/medias'
+import { reglagesDuPool } from './lib/pool-base'
 import { requetesBornees } from './lib/requete-bornee'
 import { stockageS3 } from './lib/stockage'
 import { reserverLesVerrousAuxAdmins } from './lib/verrous-payload'
@@ -76,8 +77,8 @@ export default buildConfig({
 			// Outside this machine, a database that does not exist is an error: Payload must not create an empty one.
 			disableCreateDatabase: !env.localDatabase,
 			migrationDir: path.resolve(dirname, 'migrations'),
-			// 5 connections per process, not the 10 of `pg`: a build and a server run several processes at once.
-			pool: { connectionString: env.databaseUri, max: 5 },
+			// 5 connections per process and a wait limit for a free one (src/lib/pool-base.ts, ticket 222).
+			pool: reglagesDuPool(env.databaseUri),
 			// Everywhere else, the schema changes by these migrations: Payload plays them when it starts in production.
 			prodMigrations: migrations,
 			// The schema is pushed into a database of this machine only. Payload never pushes in production.
