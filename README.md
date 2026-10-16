@@ -772,6 +772,7 @@ SONDES_API=aucune bun run sondes                     # Strapi est arrêté : plu
 - R06 : certificats valides plus de 21 jours, domaines plus de 30 jours (site, photos, Umami).
 - Une requête à la fois, 2 par seconde au plus. Le rapport désigne un profil par une empreinte, jamais par son adresse.
 - `SONDES_CIBLE` n'est lue que par les sondes : la garde des essais refuse toujours la prod.
+- Le lundi à 07:00 (Paris), le workflow `.github/workflows/sondes.yml` les lance sans aucun secret et écrit le rapport dans le résumé de l'exécution ; une sonde rouge fait échouer l'exécution, que le rapport de 07:30 lit par GitHub.
 
 Le détail est dans [`docs/tests/sondes.md`](docs/tests/sondes.md) : chaque sonde, la garde, lire le rapport, retrouver un profil rouge.
 
