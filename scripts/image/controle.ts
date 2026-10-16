@@ -10,6 +10,8 @@
  *   CONTROLE_IMAGE_PORT     port of the application on 127.0.0.1 (default: a free one)
  *   CONTROLE_IMAGE_COMMIT   the commit given to the build as SOURCE_COMMIT: /api/health must
  *                           then show its first 7 characters
+ *   CONTROLE_IMAGE_PHOTOS   the R2_PUBLIC_URL given to the build: the content policy must then name
+ *                           this host and not the one of the live site (default: none was given)
  *
  * It needs the `docker` command and nothing else: the database is a container without any
  * published port, its password is drawn at each run, and everything is removed at the end.
@@ -20,6 +22,7 @@ import { randomBytes } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import sharp from 'sharp'
+import { MEDIA_ORIGIN_DEFAULT, mediaOrigin } from '../../src/lib/env'
 import { migrations } from '../../src/migrations'
 import { citedVariables, HEALTH_PATH, IMAGE_ENVIRONMENT, runtimeVariables } from './regles'
 
@@ -124,6 +127,40 @@ export function expectedVersion(commit: string | undefined): string | undefined 
 	return value.slice(0, 7).toLowerCase()
 }
 
+/**
+ * The origin the photos must be served from by an image built with `built` as R2_PUBLIC_URL
+ * (nothing: the build had none, so the photos of the live site). A refused address is a mistake
+ * of whoever runs the check, not of the image.
+ */
+export function expectedPhotosOrigin(built: string | undefined): string {
+	try {
+		return mediaOrigin(built)
+	} catch {
+		throw new CheckFailed('CONTROLE_IMAGE_PHOTOS doit être une adresse https://HÔTE, sans chemin ni « / » final.')
+	}
+}
+
+/**
+ * What is wrong in the content policy an image sends, as for the photos: its `img-src` must name
+ * the expected origin, and no other remote one (the live site's own origin included, when the
+ * build was given another). Empty when nothing is.
+ */
+export function photosPolicyProblems(policy: string | null, expected: string): string[] {
+	if (policy === null || policy === '')
+		return ['la réponse ne porte pas l’en-tête Content-Security-Policy-Report-Only.']
+	const sources =
+		policy
+			.split(';')
+			.map(part => part.trim().split(/\s+/))
+			.find(([name]) => name === 'img-src')
+			?.slice(1) ?? []
+	const remote = sources.filter(source => /^https?:/.test(source))
+	if (remote.length === 1 && remote[0] === expected) return []
+	return [
+		`la politique de contenu admet les photos de « ${remote.join(' ') || 'aucun hôte'} », attendu : « ${expected} ».`,
+	]
+}
+
 interface HealthAnswer {
 	status: number
 	body: unknown
@@ -160,6 +197,7 @@ async function main(): Promise<void> {
 	if (wantedPort !== '' && !/^\d{2,5}$/.test(wantedPort))
 		throw new CheckFailed('CONTROLE_IMAGE_PORT doit être un numéro de port.')
 	const version = expectedVersion(process.env.CONTROLE_IMAGE_COMMIT)
+	const photos = expectedPhotosOrigin(process.env.CONTROLE_IMAGE_PHOTOS)
 	const names = { network: `${prefix}-net`, database: `${prefix}-pg`, first: `${prefix}-1`, second: `${prefix}-2` }
 	const read = (file: string) => readFileSync(path.join(ROOT, file), 'utf8')
 
@@ -339,6 +377,20 @@ async function main(): Promise<void> {
 		passed(
 			`optimiseur d’images : ${TEST_PICTURE} (${source.width} px, ${source.format}) revient en ${resized.width} px, webp`
 		)
+
+		// 6b. The photos of the environment the image was built for: the content policy names that host
+		// only, and the optimizer refuses the other one (a refusal answers before any request leaves).
+		const sent = await fetch(`http://127.0.0.1:${port}${HEALTH_PATH}`, { signal: AbortSignal.timeout(5000) })
+		const policyProblems = photosPolicyProblems(sent.headers.get('content-security-policy-report-only'), photos)
+		if (policyProblems.length > 0) throw new CheckFailed(policyProblems.join('\n'))
+		const refusedHost = photos === MEDIA_ORIGIN_DEFAULT ? 'https://autre-hote.example.test' : MEDIA_ORIGIN_DEFAULT
+		const refused = await fetch(
+			`http://127.0.0.1:${port}/_next/image?${new URLSearchParams({ url: `${refusedHost}/photo.webp`, w: String(RESIZED_WIDTH), q: String(RESIZED_QUALITY) })}`,
+			{ headers: { Accept: 'image/webp' }, signal: AbortSignal.timeout(20_000) }
+		)
+		if (refused.status !== 400)
+			throw new CheckFailed(`l’optimiseur répond ${refused.status} pour ${refusedHost}, au lieu de 400.`)
+		passed(`photos de l’environnement : la politique de contenu nomme ${photos} ; l’optimiseur refuse ${refusedHost}`)
 
 		// 7. Without its database: 503 at once, without a detail, then unhealthy for the engine.
 		await dockerOutput(['stop', '-t', '1', names.database])

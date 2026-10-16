@@ -233,7 +233,7 @@ Le même fichier garde aussi :
 - `ci-ok` : il tourne toujours et attend tous les jobs. Aucun job n'est sous condition. Une commande (`run`) ne porte que `always()` ou `!cancelled()`, qui la font tourner plus souvent, jamais moins. `failure()` est réservé aux actions (`uses`) qui envoient un rapport : sous cette condition, une commande serait sautée quand tout va bien, et le job resterait vert sans elle ;
 - les durées : chaque job a sa limite, et la somme des limites de la plus longue chaîne reste sous 15 minutes (voir « Durée de la CI ») ;
 - le banc de test en CI : les jobs `integration` et `e2e` existent ; chacun lance `bun run banc:up` avant ses tests, chaque commande seule dans son étape ; chacun tourne en lots, trois pour `integration`, quatre pour `e2e` (`matrix: shard: [1, …, N]`, et rien d'autre ; le même N dans le nom du job et dans le diviseur de `--shard`), sans qu'un lot en échec annule les autres (`fail-fast: false`), et la limite d'un lot ne dépasse pas 10 minutes ; `e2e` tourne sous Node, avec le Chromium de Playwright ;
-- l'image Docker : variables publiques seulement, quelle que soit la casse de leur nom, utilisateur sans droits, contrôle de santé, contexte de build en liste blanche (voir le README, « Image Docker »).
+- l'image Docker : variables publiques seulement (`NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_APP_VERSION`, `SOURCE_COMMIT` et `R2_PUBLIC_URL`, la liste de `scripts/image/regles.ts`), quelle que soit la casse de leur nom, utilisateur sans droits, contrôle de santé, contexte de build en liste blanche (voir le README, « Image Docker »).
 
 ### Ce que les garde-fous ne voient pas
 

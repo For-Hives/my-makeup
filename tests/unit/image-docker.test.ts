@@ -1,7 +1,14 @@
 import { describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
-import { CheckFailed, environmentNames, expectedVersion, imageConfigProblems } from '../../scripts/image/controle'
+import {
+	CheckFailed,
+	environmentNames,
+	expectedPhotosOrigin,
+	expectedVersion,
+	imageConfigProblems,
+	photosPolicyProblems,
+} from '../../scripts/image/controle'
 import {
 	citedVariables,
 	declaredVariables,
@@ -10,6 +17,8 @@ import {
 	readDockerfile,
 	runtimeVariables,
 } from '../../scripts/image/regles'
+import { MEDIA_ORIGIN_DEFAULT } from '../../src/lib/env'
+import { contentSecurityPolicy } from '../../src/lib/security-headers'
 
 const ROOT = path.resolve(import.meta.dir, '../..')
 const read = (file: string): string => readFileSync(path.join(ROOT, file), 'utf8')
@@ -178,5 +187,48 @@ describe('what the image check reads in a built image', () => {
 		expect(expectedVersion(undefined)).toBeUndefined()
 		expect(expectedVersion('')).toBeUndefined()
 		expect(() => expectedVersion('main')).toThrow(CheckFailed)
+	})
+})
+
+describe('the photos of the environment are given to the build of the image', () => {
+	const PREPROD_PHOTOS = 'https://exemple-photos.example.test'
+
+	test('R2_PUBLIC_URL is a public build argument, dropped from the build when empty', () => {
+		const dockerfile = read('Dockerfile')
+
+		expect(PUBLIC_BUILD_VARIABLES).toContain('R2_PUBLIC_URL')
+		expect(readDockerfile(dockerfile).stages[1]?.args).toContain('R2_PUBLIC_URL')
+		expect(dockerfile).toContain('if [ -z "${R2_PUBLIC_URL:-}" ]; then unset R2_PUBLIC_URL; fi')
+		// It is no secret: the guard of the Dockerfile and the check of the image let its name through.
+		expect(runtimeVariables(read('.env.exemple'))).not.toContain('R2_PUBLIC_URL')
+	})
+
+	test('the expected origin is the one of the build, else the one of the live site', () => {
+		expect(expectedPhotosOrigin(PREPROD_PHOTOS)).toBe(PREPROD_PHOTOS)
+		expect(expectedPhotosOrigin(undefined)).toBe(MEDIA_ORIGIN_DEFAULT)
+		expect(expectedPhotosOrigin('')).toBe(MEDIA_ORIGIN_DEFAULT)
+		expect(() => expectedPhotosOrigin('https://*.example.test')).toThrow(CheckFailed)
+	})
+
+	test('an image built for the pre-production serves its own host, and only it', () => {
+		const sent = contentSecurityPolicy({ development: false, mediaOrigin: PREPROD_PHOTOS })
+
+		expect(photosPolicyProblems(sent, PREPROD_PHOTOS)).toEqual([])
+		expect(photosPolicyProblems(sent, MEDIA_ORIGIN_DEFAULT)).toHaveLength(1)
+	})
+
+	test('an image built without the argument serves the photos of the live site', () => {
+		const sent = contentSecurityPolicy({ development: false, mediaOrigin: MEDIA_ORIGIN_DEFAULT })
+
+		expect(photosPolicyProblems(sent, expectedPhotosOrigin(undefined))).toEqual([])
+		expect(photosPolicyProblems(sent, PREPROD_PHOTOS)).toHaveLength(1)
+	})
+
+	test('a policy that names both hosts, or none, or no policy at all, is refused', () => {
+		expect(
+			photosPolicyProblems(`img-src 'self' ${PREPROD_PHOTOS} ${MEDIA_ORIGIN_DEFAULT}`, PREPROD_PHOTOS)
+		).toHaveLength(1)
+		expect(photosPolicyProblems("img-src 'self' data:", PREPROD_PHOTOS)).toHaveLength(1)
+		expect(photosPolicyProblems(null, PREPROD_PHOTOS)).toHaveLength(1)
 	})
 })

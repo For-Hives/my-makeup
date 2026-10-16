@@ -16,10 +16,11 @@ export const PUBLIC_BUILD_VARIABLES: readonly string[] = [
 	'NEXT_PUBLIC_SITE_URL',
 	'NEXT_PUBLIC_APP_VERSION',
 	'SOURCE_COMMIT',
+	'R2_PUBLIC_URL',
 ]
 
 /** A build variable is public by its name, or because it is one of these. */
-const PUBLIC_WITHOUT_PREFIX: readonly string[] = ['SOURCE_COMMIT']
+const PUBLIC_WITHOUT_PREFIX: readonly string[] = ['SOURCE_COMMIT', 'R2_PUBLIC_URL']
 
 /**
  * The environment of the image that runs: what the Node base image sets, and the four
@@ -42,7 +43,7 @@ const RUNTIME_ONLY_WITHOUT_EXAMPLE: readonly string[] = ['PAYLOAD_DROP_DATABASE'
 /** The path the health check of the image must ask. */
 export const HEALTH_PATH = '/api/health'
 
-/** True when the name says the variable is public: `NEXT_PUBLIC_*`, or the commit being built. */
+/** True when the name says the variable is public: `NEXT_PUBLIC_*`, or the commit being built, or the address of the photos. */
 export function isPublicByName(name: string): boolean {
 	return name.startsWith('NEXT_PUBLIC_') || PUBLIC_WITHOUT_PREFIX.includes(name)
 }

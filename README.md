@@ -480,6 +480,7 @@ Chaque réponse part avec cinq en-têtes, sur toutes les adresses : pages, API, 
 - L'hôte des photos est celui de `R2_PUBLIC_URL`. Sans cette variable, c'est celui des photos du site en ligne.
 - Cet hôte est aussi le seul que nomme la politique de contenu.
 - `R2_PUBLIC_URL` se donne au build et à `bun run start`, avec la même valeur : la politique de contenu garde l'hôte du build, et `/_next/image` relit la variable au démarrage.
+- Dans l'image Docker, c'est un argument de build (`--build-arg R2_PUBLIC_URL=…`). Dans Coolify, la variable doit être cochée « Build Variable » **en plus** de l'être pour l'exécution : sinon l'image de la préprod porte la règle du site en ligne, et le navigateur comme l'optimiseur refusent les photos de son propre compartiment. Vide, l'argument est ignoré : ce sont les photos du site en ligne.
 - Une image servie par `/_next/image` porte en plus la politique de Next pour les images, appliquée celle-là : ni script, ni cadre.
 
 ```sh
@@ -540,6 +541,7 @@ bun run image:controle   # la démarre contre une base jetable et vérifie le ta
 |---|---|---|
 | `NEXT_PUBLIC_SITE_URL` | Au build (`--build-arg`, « Build Variable » dans Coolify) | L'adresse du site, figée dans le build. Une image construite sans elle est une image de test : le conteneur doit alors la recevoir au démarrage. |
 | `SOURCE_COMMIT` | Au build | Le commit construit : c'est la `version` de `/api/health`. |
+| `R2_PUBLIC_URL` | Au build (`--build-arg`, « Build Variable » dans Coolify) **et** au conteneur, avec la même valeur | L'adresse publique des photos : elle fixe les hôtes que l'optimiseur d'images accepte et la politique de contenu (voir « Images »). Absente, ce sont les photos du site en ligne. |
 | `NEXT_PUBLIC_APP_VERSION` | Au build, facultative | Un libellé de version, à la place du commit. |
 | `DATABASE_URI`, `PAYLOAD_SECRET`, `S3_*` | Au conteneur seulement | Jamais au build : dans Coolify, la case « Build Variable » reste décochée. |
 
@@ -557,6 +559,7 @@ bun run image:controle   # la démarre contre une base jetable et vérifie le ta
 | `CONTROLE_IMAGE_NOM` | Préfixe des conteneurs et du réseau (défaut : `mm-controle-image`). À changer pour lancer deux contrôles en même temps. |
 | `CONTROLE_IMAGE_PORT` | Port de l'application sur `127.0.0.1` (défaut : un port libre). |
 | `CONTROLE_IMAGE_COMMIT` | Le commit donné au build en `SOURCE_COMMIT` : la `version` de `/api/health` doit en être les 7 premiers caractères. |
+| `CONTROLE_IMAGE_PHOTOS` | Le `R2_PUBLIC_URL` donné au build (défaut : aucun, donc les photos du site en ligne) : la politique de contenu doit nommer cet hôte et lui seul, et l'optimiseur doit refuser l'autre. |
 
 Pour rendre son verdict vite, le contrôle demande au moteur de jouer le contrôle de santé de l'image toutes les 2 secondes. Podman refuse ce réglage : le contrôle suit alors le rythme de l'image, et dure un peu plus de 2 minutes.
 
