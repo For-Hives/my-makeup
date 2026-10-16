@@ -8,10 +8,13 @@ import {
 	affichesALaSource,
 	coordonneesARevoir,
 	coordonneesDeLaSource,
+	offreChiffreePerdue,
 	PROFILS_DU_SPAM,
 	type ProfilLu,
 	profilsAttendus,
 	profilsLaisses,
+	rayonARevoir,
+	rayonDeLaSource,
 	statutCalcule,
 	videALaSource,
 } from '../../scripts/migration/import/profils'
@@ -202,6 +205,8 @@ describe('les profils attendus', () => {
 			specialite: 'Mariage',
 			description: null,
 			commune: null,
+			// Its radius (ticket 226): none at the source, none in the target.
+			rayonKm: null,
 			disponible: true,
 			score: 12.5,
 			superMaquilleuse: true,
@@ -324,5 +329,65 @@ describe('les coordonnées de contact sont lues comme l’ancien site les lit (t
 		// The other channel still opens the contact details.
 		expect(affichesALaSource(reseaux('0'.repeat(21), 'a@example.test'))).toBe(true)
 		expect(coordonneesARevoir(reseaux('06', 'a@example.test'))).toEqual([])
+	})
+})
+
+describe('le rayon d’action est repris de 0 à 200 km, jamais ramené à 200 en silence (ticket 226)', () => {
+	test('de 0 à 200 : repris tel quel ; sans rayon : vide', () => {
+		for (const rayon of [0, 1, 30, 200]) expect(rayonDeLaSource({ action_radius: rayon }), String(rayon)).toBe(rayon)
+		expect(rayonDeLaSource({ action_radius: null })).toBeNull()
+		expect(rayonDeLaSource({})).toBeNull()
+		expect(rayonARevoir({ id: 1, action_radius: 200 })).toBeNull()
+		expect(rayonARevoir({ id: 1, action_radius: null })).toBeNull()
+	})
+
+	test('au-dessus de 200 : le champ reste vide, le profil est repris et listé avec la valeur', () => {
+		expect(rayonDeLaSource({ action_radius: 201 })).toBeNull()
+		expect(rayonDeLaSource({ action_radius: 400 })).toBeNull()
+		expect(rayonARevoir({ id: 26, action_radius: 400 })).toEqual({ profil: 26, rayonKm: 400 })
+
+		const { attendus, rayonsARevoir } = profilsAttendus(
+			[profil(1, { action_radius: 30 }), profil(2, { action_radius: 400 }), profil(3)],
+			new Map([
+				[101, 1],
+				[102, 2],
+				[103, 3],
+			])
+		)
+
+		expect(attendus.map(({ valeurs }) => valeurs.rayonKm)).toEqual([30, null, null])
+		expect(rayonsARevoir).toEqual([{ profil: 2, rayonKm: 400 }])
+		// The difference is explained by the register, once, for the profile above the bound only.
+		expect(attendus.map(({ ecarts }) => ecarts.some(({ reference }) => reference === REFERENCES.rayon200Km))).toEqual([
+			false,
+			true,
+			false,
+		])
+	})
+
+	test('le rayon est un champ comparé : la parité le voit', () => {
+		expect(ADAPTATEUR_PROFILS.champs.rayonKm).toBe('nombre')
+		expect(normaliser('nombre', null)).toBeNull()
+		expect(normaliser('nombre', 30)).toBe(30)
+	})
+})
+
+describe('le contrôle des offres chiffrées perdues ne lit que les prestations (ticket 226)', () => {
+	test('une option chiffrée ne cache pas une offre qui a perdu son montant', () => {
+		const ecrites = [{ prixTexte: '80 €', prixAPartirDe: null, options: [{ prixTexte: '15 €', prixAPartirDe: 15 }] }]
+
+		expect(offreChiffreePerdue(['80 €'], ecrites)).toBe(true)
+	})
+
+	test('seule une option chiffrée : aucune offre chiffrée à la source, rien n’est perdu', () => {
+		const ecrites = [
+			{ prixTexte: 'Sur devis', prixAPartirDe: null, options: [{ prixTexte: '15 €', prixAPartirDe: 15 }] },
+		]
+
+		expect(offreChiffreePerdue(['Sur devis'], ecrites)).toBe(false)
+	})
+
+	test('une offre qui garde son montant n’est pas perdue', () => {
+		expect(offreChiffreePerdue(['80 €', null], [{ prixAPartirDe: 80 }, { prixAPartirDe: null }])).toBe(false)
 	})
 })

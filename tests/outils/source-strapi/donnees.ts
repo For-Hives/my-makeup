@@ -521,6 +521,9 @@ const COMPETENCES: readonly Composant[] = [
 	{ ligne: { id: 6, name: 'Maquillage invitée', description: null } },
 ]
 
+/** A text of 2 001 characters: one more than a description of the v3 takes (ticket 226). */
+const TEXTE_DE_2001_CARACTERES = 'Une phrase de remplissage. '.repeat(75).slice(0, 2001)
+
 const EXPERIENCES: readonly Composant[] = [
 	{
 		ligne: {
@@ -561,6 +564,20 @@ const EXPERIENCES: readonly Composant[] = [
 		profil: 24,
 		ordre: 1,
 	},
+	// Outside a bound of the v3 (ticket 226): the end comes before the start. Left out of the profile, listed.
+	{
+		ligne: {
+			id: 4,
+			company: 'Maison Fictive',
+			job_name: 'Maquilleuse',
+			city: 'Nantes',
+			date_start: '2023-05-01',
+			date_end: '2022-05-01',
+			description: null,
+		},
+		profil: 33,
+		ordre: 1,
+	},
 ]
 
 const FORMATIONS: readonly Composant[] = [
@@ -584,6 +601,18 @@ const FORMATIONS: readonly Composant[] = [
 			course_description: null,
 		},
 		profil: 25,
+		ordre: 1,
+	},
+	// Outside a bound of the v3 (ticket 226): obtained more than a year after any day this runs on.
+	{
+		ligne: {
+			id: 3,
+			diploma: 'Diplôme à venir',
+			school: 'École du Futur',
+			date_graduation: '2099-06-30',
+			course_description: null,
+		},
+		profil: 33,
 		ordre: 1,
 	},
 ]
@@ -664,6 +693,12 @@ const PRESTATIONS: readonly Composant[] = [
 		ordre: 1,
 	},
 	{ ligne: { id: 11, name: 'Maquillage soirée', description: null, price: '45 €' } },
+	// Outside a bound of the v3 (ticket 226): a description of more than 2 000 characters.
+	{
+		ligne: { id: 12, name: 'Forfait détaillé', description: TEXTE_DE_2001_CARACTERES, price: null },
+		profil: 33,
+		ordre: 2,
+	},
 ]
 
 /** Options of an offer: `profil` holds the id of the offer here. */
@@ -675,6 +710,12 @@ const OPTIONS: readonly Composant[] = [
 		ordre: 2,
 	},
 	{ ligne: { id: 3, name: 'Déplacement', description: null, price: '0,50 € / km' }, profil: 4, ordre: 1 },
+	// Outside a bound of the v3 (ticket 226): a name of 71 characters, on the offer 10 of the profile 33.
+	{
+		ligne: { id: 4, name: `Option au nom trop long ${'x'.repeat(47)}`, description: null, price: null },
+		profil: 10,
+		ordre: 1,
+	},
 ]
 
 /**

@@ -80,6 +80,11 @@ export interface OptionsDImport {
 	 * one profile taken does; the run stops before any write without it.
 	 */
 	consentiLe?: string
+	/**
+	 * The day the run is made, for the bound of the date a course was obtained (a year ahead at most,
+	 * as the server reads it with its own clock). The clock by default; a test gives a fixed day.
+	 */
+	maintenant?: Date
 	/** The password of a new account; random by default. Given by a test only. */
 	tirerMotDePasse?: () => string
 	/**
@@ -192,6 +197,7 @@ async function passerLImport(options: OptionsDImport): Promise<Rapport> {
 		tirerMotDePasse,
 		medias,
 		consentiLe = null,
+		maintenant = new Date(),
 	} = options
 	const avant = await source.lire(requete => empreinteDesTables(requete))
 	const lu = await source.lire(async requete => ({
@@ -311,7 +317,15 @@ async function passerLImport(options: OptionsDImport): Promise<Rapport> {
 
 		// Each photo points at its media in Payload, read once the media are written.
 		const idsDesMedias = await idsDansLaCible(payload, ADAPTATEUR_MEDIAS, lesMedias, rapport.collections.media.refuses)
-		const profils = profilsAttendus(lu.profils, idsDesComptes, laisses, communes.communes, idsDesMedias, consentiLe)
+		const profils = profilsAttendus(
+			lu.profils,
+			idsDesComptes,
+			laisses,
+			communes.communes,
+			idsDesMedias,
+			consentiLe,
+			maintenant
+		)
 		if (laisses.spam.length > 0) rapport.ecarts[REFERENCES.profilsDuSpam] = laisses.spam.length
 		const bilanDesProfils = await importerLaCollection(options, ADAPTATEUR_PROFILS, lu.profils.length, profils.attendus)
 		// Only the profiles the target holds are counted: a refused one carries no difference.
@@ -330,6 +344,8 @@ async function passerLImport(options: OptionsDImport): Promise<Rapport> {
 			liensSansLigne: profils.liensSansLigne,
 			prix: profils.prix,
 			coordonneesARevoir: profils.coordonneesARevoir,
+			rayonsARevoir: profils.rayonsARevoir,
+			lignesLaissees: profils.lignesLaissees,
 		}
 
 		const lesArticles = articlesAttendus(articles.pris, lu.fichiers.liens, idsDesMedias)

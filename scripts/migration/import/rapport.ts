@@ -13,7 +13,7 @@ import type { BilanDesCommunes } from './communes'
 import type { BilanDesFichiers, PhotoNonReprise } from './medias'
 import type { Bilan, CollectionImportee, Parite } from './moteur'
 import { pariteComplete, sansEcartInexplique } from './moteur'
-import type { BilanDesPrix } from './profils'
+import type { BilanDesPrix, LigneLaisseeDUnProfil, RayonARevoir } from './profils'
 import type { EmpreinteDesTables } from './source'
 
 export type Mode = 'a-blanc' | 'reel'
@@ -60,6 +60,10 @@ export interface BilanDeCollection extends Bilan {
 	prix?: BilanDesPrix
 	/** Contact details left out because the server would refuse them: profile and field, never the value (ticket 064). */
 	coordonneesARevoir?: { profil: number; champ: string }[]
+	/** Radii above 200 km (register `rayon-200-km`): the field is left empty, the profile is taken (ticket 226). */
+	rayonsARevoir?: RayonARevoir[]
+	/** Rows of a list outside a bound of the v3, left out of their profile: profile, list and rank, never the text (ticket 226). */
+	lignesLaissees?: LigneLaisseeDUnProfil[]
 }
 
 /** The parity of a collection, and how the target splits, read again. */
@@ -221,6 +225,22 @@ function ligneDeBilan(nom: string, bilan: BilanDeCollection, mode: Mode): string
 			`  - coordonnées laissées de côté, que le serveur refuserait (à revoir à la main) : ${bilan.coordonneesARevoir
 				.map(({ profil, champ }) => `${profil} (${champ})`)
 				.join(', ')}`
+		)
+	if (bilan.rayonsARevoir?.length)
+		lignes.push(
+			`  - rayon d’action au-dessus de 200 km, champ laissé vide, profil repris : ${bilan.rayonsARevoir.length} (${bilan.rayonsARevoir
+				.map(({ profil, rayonKm }) => `${profil} : ${rayonKm} km`)
+				.join(', ')})`
+		)
+	if (bilan.lignesLaissees?.length)
+		lignes.push(
+			`  - lignes de liste hors des bornes de la v3, laissées de côté, reste du profil repris : ${bilan.lignesLaissees.length} (${bilan.lignesLaissees
+				.map(({ profil, liste, rang, prestation }) =>
+					prestation === undefined
+						? `${profil} : ${liste} n° ${rang}`
+						: `${profil} : ${liste} n° ${rang} de la prestation n° ${prestation}`
+				)
+				.join(', ')})`
 		)
 	return lignes
 }

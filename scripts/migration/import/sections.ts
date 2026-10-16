@@ -24,7 +24,15 @@
 
 import { parsePrice } from '../../../src/lib/prix'
 import type { ReseauxDuProfil } from '../../../src/lib/profil/completude'
-import { dateDuJour } from '../../../src/lib/profil/listes'
+import {
+	dateDuJour,
+	LONGUEUR_DESCRIPTION,
+	LONGUEUR_NOM,
+	messageDeDate,
+	messageDeFin,
+	messageDeTexte,
+	messageDObtention,
+} from '../../../src/lib/profil/listes'
 import { TYPE_PROFIL } from './medias'
 import type { Requete } from './source'
 
@@ -232,6 +240,102 @@ export async function lireLesSections(requete: Requete): Promise<Map<number, Sec
 		if (profil !== undefined) de(profil).liensSansLigne += nombre
 	}
 	return sections
+}
+
+/** A list whose rows the import may leave out when one of their values is outside a bound of the v3. */
+export type ListeBornee = 'competences' | 'langues' | 'formations' | 'experiences' | 'prestations' | 'options'
+
+/**
+ * A row left out of its profile, by list and rank (1 for the first row of the list, in the order of
+ * the source). Never its text. For an option: `prestation` is the rank of its offer, `rang` its own
+ * rank among the options of that offer.
+ */
+export interface LigneLaissee {
+	liste: ListeBornee
+	rang: number
+	prestation?: number
+}
+
+const horsTexte = (valeur: string | null, maximum: number): boolean => messageDeTexte(valeur, maximum) !== null
+const horsNom = (valeur: string | null): boolean => horsTexte(valeur, LONGUEUR_NOM)
+const horsDescription = (valeur: string | null): boolean => horsTexte(valeur, LONGUEUR_DESCRIPTION)
+
+/**
+ * Whether the server (src/collections/profils-listes.ts) would refuse a row, and with it the whole
+ * profile: a text longer than its bound, a course obtained more than a year after `maintenant`,
+ * an experience that ends before it starts. These bounds are the v3's, stricter than Strapi's.
+ */
+const horsBornes = {
+	competences: (c: Competence) => horsNom(c.name) || horsDescription(c.description),
+	langues: (l: Langue) => horsNom(l.name),
+	formations: (f: Formation, maintenant: Date) =>
+		horsNom(f.diploma) ||
+		horsNom(f.school) ||
+		horsDescription(f.course_description) ||
+		messageDObtention(f.date_graduation, maintenant) !== null,
+	experiences: (e: Experience) =>
+		horsNom(e.company) ||
+		horsNom(e.job_name) ||
+		horsNom(e.city) ||
+		horsDescription(e.description) ||
+		messageDeDate(e.date_start) !== null ||
+		messageDeFin(e.date_end, e.date_start) !== null,
+	prestations: (p: Pick<OptionDePrestation, 'name' | 'description' | 'price'>) =>
+		horsNom(p.name) || horsDescription(p.description) || horsNom(p.price),
+} as const
+
+/**
+ * The sections of a profile without the rows the v3 would refuse, and those rows (rule 5: counted
+ * and listed, never corrected). The rest of the profile is taken. An offer left out takes its
+ * options with it, and each of them is listed too.
+ */
+export function lignesDansLesBornes(
+	sections: SectionsLues,
+	maintenant: Date
+): { sections: SectionsLues; laissees: LigneLaissee[] } {
+	const laissees: LigneLaissee[] = []
+	const garder = <T>(liste: ListeBornee, lignes: readonly T[], horsDesBornes: (ligne: T) => boolean): T[] =>
+		lignes.filter((ligne, rang) => {
+			const hors = horsDesBornes(ligne)
+			if (hors) laissees.push({ liste, rang: rang + 1 })
+			return !hors
+		})
+	const prestations = sections.prestations.flatMap((offre, rangDeLOffre): Prestation[] => {
+		const prestation = rangDeLOffre + 1
+		const options = offre.options.map((option, rang) => ({ option, rang: rang + 1 }))
+		if (horsBornes.prestations(offre)) {
+			laissees.push({ liste: 'prestations', rang: prestation })
+			for (const { rang } of options) laissees.push({ liste: 'options', rang, prestation })
+			return []
+		}
+		const gardees = options.filter(({ option, rang }) => {
+			const hors = horsBornes.prestations(option)
+			if (hors) laissees.push({ liste: 'options', rang, prestation })
+			return !hors
+		})
+		return [{ ...offre, options: gardees.map(({ option }) => option) }]
+	})
+	const gardees: SectionsLues = {
+		...sections,
+		competences: garder('competences', sections.competences, horsBornes.competences),
+		langues: garder('langues', sections.langues, horsBornes.langues),
+		formations: garder('formations', sections.formations, f => horsBornes.formations(f, maintenant)),
+		experiences: garder('experiences', sections.experiences, horsBornes.experiences),
+		prestations,
+	}
+	const ordre: readonly ListeBornee[] = [
+		'competences',
+		'langues',
+		'formations',
+		'experiences',
+		'prestations',
+		'options',
+	]
+	laissees.sort(
+		(a, b) =>
+			ordre.indexOf(a.liste) - ordre.indexOf(b.liste) || (a.prestation ?? 0) - (b.prestation ?? 0) || a.rang - b.rang
+	)
+	return { sections: gardees, laissees }
 }
 
 /** A day of these lists as the collection stores it, or null. */

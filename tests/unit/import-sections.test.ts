@@ -1,6 +1,11 @@
 import { describe, expect, test } from 'bun:test'
 import { type ProfilLu, profilsAttendus } from '../../scripts/migration/import/profils'
-import { SECTIONS_VIDES, type SectionsLues, valeursDesListes } from '../../scripts/migration/import/sections'
+import {
+	lignesDansLesBornes,
+	SECTIONS_VIDES,
+	type SectionsLues,
+	valeursDesListes,
+} from '../../scripts/migration/import/sections'
 
 /**
  * Ticket 060: what the import makes of the sections of a profile of the old site, before and
@@ -284,5 +289,149 @@ describe('les photos d’un profil sont les médias adoptés de ses fichiers', (
 		const { liensSansLigne } = profilsAttendus([profil(21, { liensSansLigne: 2 }), profil(22)], comptes)
 
 		expect(liensSansLigne).toEqual([21])
+	})
+})
+
+describe('une ligne hors d’une borne de la v3 est laissée de côté et listée, le profil est repris (ticket 226)', () => {
+	const AUJOURD_HUI = new Date('2026-10-16T09:00:00.000Z')
+	const experience = (debut: string | null, fin: string | null) => ({
+		company: 'Studio',
+		job_name: 'Maquilleuse',
+		city: null,
+		date_start: debut,
+		date_end: fin,
+		description: null,
+	})
+	const formation = (jour: string | null) => ({
+		diploma: 'CAP',
+		school: null,
+		date_graduation: jour,
+		course_description: null,
+	})
+	const offre = (id: number, modif: Partial<SectionsLues['prestations'][number]> = {}) => ({
+		id,
+		name: `Offre ${id}`,
+		description: null,
+		price: null,
+		options: [],
+		...modif,
+	})
+
+	test('une fin d’expérience avant son début : la ligne part, les autres restent à leur rang', () => {
+		const { sections: gardees, laissees } = lignesDansLesBornes(
+			sections({
+				experiences: [
+					experience('2020-01-01', '2021-01-01'),
+					experience('2022-05-01', '2021-01-01'),
+					experience('2023-01-01', null),
+					experience(null, '2019-01-01'),
+				],
+			}),
+			AUJOURD_HUI
+		)
+
+		expect(laissees).toEqual([{ liste: 'experiences', rang: 2 }])
+		expect(gardees.experiences.map(({ date_start }) => date_start)).toEqual(['2020-01-01', '2023-01-01', null])
+	})
+
+	test('une formation datée de plus d’un an après le jour part ; un an exactement reste', () => {
+		const { sections: gardees, laissees } = lignesDansLesBornes(
+			sections({
+				formations: [formation('2027-10-16'), formation('2027-10-17'), formation('2018-06-30'), formation(null)],
+			}),
+			AUJOURD_HUI
+		)
+
+		expect(laissees).toEqual([{ liste: 'formations', rang: 2 }])
+		expect(gardees.formations).toHaveLength(3)
+	})
+
+	test('un nom de plus de 70 caractères et une description de plus de 2 000 : à 70 et 2 000 ils restent', () => {
+		const { sections: gardees, laissees } = lignesDansLesBornes(
+			sections({
+				prestations: [
+					offre(1, { name: 'x'.repeat(70), description: 'y'.repeat(2000) }),
+					offre(2, { description: 'y'.repeat(2001) }),
+					offre(3, {
+						options: [
+							{ name: 'x'.repeat(70), description: null, price: null },
+							{ name: 'x'.repeat(71), description: null, price: null },
+							{ name: 'ok', description: 'y'.repeat(2001), price: null },
+						],
+					}),
+				],
+				competences: [{ name: 'x'.repeat(71), description: null }],
+			}),
+			AUJOURD_HUI
+		)
+
+		expect(laissees).toEqual([
+			{ liste: 'competences', rang: 1 },
+			{ liste: 'prestations', rang: 2 },
+			{ liste: 'options', rang: 2, prestation: 3 },
+			{ liste: 'options', rang: 3, prestation: 3 },
+		])
+		expect(gardees.prestations.map(({ id, options }) => [id, options.length])).toEqual([
+			[1, 0],
+			[3, 1],
+		])
+		expect(gardees.competences).toEqual([])
+	})
+
+	test('une offre laissée de côté emporte ses options, chacune listée', () => {
+		const { sections: gardees, laissees } = lignesDansLesBornes(
+			sections({
+				prestations: [
+					offre(1, {
+						description: 'y'.repeat(2001),
+						options: [{ name: 'Option', description: null, price: '15 €' }],
+					}),
+				],
+			}),
+			AUJOURD_HUI
+		)
+
+		expect(gardees.prestations).toEqual([])
+		expect(laissees).toEqual([
+			{ liste: 'prestations', rang: 1 },
+			{ liste: 'options', rang: 1, prestation: 1 },
+		])
+	})
+
+	test('rien n’est listé quand tout est dans les bornes, et la liste ne porte jamais un texte', () => {
+		const lues = sections({
+			experiences: [experience('2020-01-01', '2020-01-01')],
+			formations: [formation('2026-10-16')],
+			prestations: [offre(1)],
+		})
+
+		expect(lignesDansLesBornes(lues, AUJOURD_HUI)).toEqual({ sections: lues, laissees: [] })
+		const { laissees } = lignesDansLesBornes(sections({ langues: [{ name: 'Secret'.repeat(20) }] }), AUJOURD_HUI)
+		expect(JSON.stringify(laissees)).not.toContain('Secret')
+	})
+
+	test('le profil est repris sans la ligne ; le bilan des prix ne compte que ce qui est écrit, et le dit à part', () => {
+		const lues = sections({
+			experiences: [experience('2022-05-01', '2021-01-01')],
+			prestations: [offre(1, { description: 'y'.repeat(2001), price: '80 €' }), offre(2, { price: '60 €' })],
+		})
+		const { attendus, lignesLaissees, prix } = profilsAttendus(
+			[profil(1, lues)],
+			new Map([[101, 1]]),
+			undefined,
+			undefined,
+			undefined,
+			null,
+			AUJOURD_HUI
+		)
+
+		expect(lignesLaissees).toEqual([
+			{ profil: 1, liste: 'experiences', rang: 1 },
+			{ profil: 1, liste: 'prestations', rang: 1 },
+		])
+		expect(attendus[0]?.valeurs.experiences).toEqual([])
+		expect((attendus[0]?.valeurs.prestations as unknown[]).length).toBe(1)
+		expect(prix.prix).toBe(1)
+		expect(prix.offresChiffreesPerdues).toEqual([])
 	})
 })
