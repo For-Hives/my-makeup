@@ -12,18 +12,14 @@ import { creerContenu, rafraichirLesPagesDesProfils, supprimerContenu } from '..
  * the bench is read without waiting, so that the run stays short.
  */
 /**
- * Families of the inventory whose pages are not all built yet in this tree (the account area, the 404 page of
- * an unknown talent or article, which has no h1 in the HTML the server sends). They are reported « à venir »
- * and do not fail the run, like in tests/e2e/parite-urls.spec.ts; a family that is not in this list fails it.
- * The day of the switch the command is run with none.
+ * Families of the inventory whose pages are not all answered with an h1 yet: the 404 page of an unknown talent,
+ * article or profile. A 404 raised by `notFound()` comes to the browser as a stream (Next sends an empty shell and
+ * the browser draws the page), so the HTML the server sends holds its status, its title and its `noindex` but not
+ * the h1 of the 404 page (ticket 228, constat 3). It is reported « à venir » and does not fail the run, like in
+ * tests/e2e/parite-urls.spec.ts; a family that is not in this list fails it. The day of the switch the command is
+ * run with none.
  */
-const A_VENIR: ReadonlySet<string> = new Set([
-	'espace-connexion',
-	'espace-erreur',
-	'espace-racine',
-	'espace-verification',
-	'slug-inconnu',
-])
+const A_VENIR: ReadonlySet<string> = new Set(['slug-inconnu'])
 
 test('I45 sur un hôte : tout l’inventaire est conforme, aucun 5xx', async ({ request, baseURL }) => {
 	test.setTimeout(300_000)

@@ -185,6 +185,14 @@ function familleDe(adresse: string, statut: number): string | undefined {
 
 const sansOrigine = (adresse: string): string => splitAddress(adresse).path + splitAddress(adresse).search
 
+/** Pages of the space whose h1 was rewritten in the v3 (register line `espace-titres-tutoiement`). */
+const TITRES_DE_L_ESPACE_REECRITS: readonly string[] = [
+	'/auth/signin',
+	'/auth/signup',
+	'/auth/verification-wall',
+	'/auth/verification-complete',
+]
+
 /** The expectation for the h1 of the page an address ends on. */
 export function attenteDuTitre(
 	adresseFinale: string,
@@ -194,6 +202,8 @@ export function attenteDuTitre(
 	const chemin = splitAddress(adresseFinale).path
 	// A search page used to be the same empty shell whatever the search: its h1 now says what was searched (CHANGEMENTS-VOULUS).
 	if (chemin === '/search' && splitAddress(adresseFinale).search !== '') return { mode: 'un' }
+	// The four pages of the sign-in and of the confirmation say « tu » and drop « sur My-Makeup »: one h1, and the text of the old site is not compared (CHANGEMENTS-VOULUS, `espace-titres-tutoiement`).
+	if (TITRES_DE_L_ESPACE_REECRITS.includes(chemin)) return { mode: 'un' }
 	const ancien = anciens[adresseFinale]
 	if (ancien?.n === 1 && ancien.sha) return { mode: 'hash', sha: ancien.sha }
 	if (ancien && ancien.n === 0) return { mode: 'aucun' }
