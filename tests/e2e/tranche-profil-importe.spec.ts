@@ -3,8 +3,7 @@ import { readFileSync } from 'node:fs'
 import { expect, test } from '@playwright/test'
 import { RACINE } from '../outils/banc'
 import { ECRANS } from '../outils/e2e'
-import { creerCompte } from '../outils/fabrique-comptes'
-import { payloadDeTest, viderLaBase } from '../outils/payload-test'
+import { viderLaBase } from '../outils/payload-test'
 import { viderLeStockage } from '../outils/s3'
 
 /**
@@ -78,20 +77,6 @@ async function importer(rapport: string) {
 	}
 }
 
-/** Saves the profile with the specialty it has, through the application: its cached page is rendered again. */
-async function rafraichirLaPage(request: import('@playwright/test').APIRequestContext, slug: string) {
-	const payload = await payloadDeTest()
-	const { docs } = await payload.find({ collection: 'profils', depth: 0, where: { slug: { equals: slug } } })
-	const profil = docs[0]
-	if (!profil) throw new Error(`Le profil « ${slug} » n’est pas dans la base après l’import.`)
-	const admin = await creerCompte('admin')
-	const reponse = await request.patch(`/api/profils/${profil.id}`, {
-		headers: admin.session.enTetes,
-		data: { specialite: profil.specialite ?? '' },
-	})
-	expect(reponse.ok(), await reponse.text()).toBe(true)
-}
-
 test.afterAll(async () => {
 	await bun('scripts/source-strapi.ts', '--effacer')
 })
@@ -109,10 +94,6 @@ test('un profil repris de la fausse base Strapi s’affiche sur sa page publique
 
 	const premier = await importer(testInfo.outputPath('rapport-1.json'))
 	expect(premier.collections.profils).toMatchObject({ crees: 13, modifies: 0 })
-
-	// The pages of the application keep what it saw before the database was emptied (the set had a « zoe-lefevre »
-	// too): a save through the application, as the admin panel does it, refreshes the page of the profile.
-	await rafraichirLaPage(request, 'zoe-lefevre')
 
 	// The HTML of the server, as a search engine reads it: 200, the name in the only h1.
 	const reponse = await request.get('/profil/zoe-lefevre')

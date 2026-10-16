@@ -208,4 +208,8 @@ Relevé du 16/10/2026, sur `0833b85` : chaque cause a été trouvée, puis corri
 | Premier passage après les tests d'intégration | Ils laissent des mails, des photos aux noms du jeu et la fausse source Strapi : la base est vidée, ces restes non | Le lancement les vide aussi (point 2 de « Ce que fait un lancement ») |
 | Admin, filtre « sans profil » (`admin-comptes.spec.ts`) | Vu au passage complet : avec plus de 20 profils dans le banc, le panneau ignorait le filtre. Son lien écrivait un paramètre par propriétaire (`[0]` à `[n]`), et `qs` transforme en objet toute liste de plus de 20 entrées. C'était un défaut du site, pas de l'essai | Le lien écrit une seule valeur à virgules (`where[id][not_in]=3,7`) : `src/lib/compte/filtres-admin.ts` |
 
-Les autres essais vus intermittents (accueil E02, réseaux U28 en mobile, plan du site en mobile, mesure Umami, `jeu-du-banc`) sont verts au passage complet du 16/10 : aucune cause de leur côté à corriger, ils ne sont pas touchés.
+| Plan du site en mobile (`sitemap.spec.ts`) | Il lisait la page du plan, puis le sitemap, et exigeait les mêmes profils sur les deux, tous ceux du banc : `profil-public.spec.ts` publie et masque ses propres profils entre les deux lectures (vu : `page-juliet` dans le sitemap, pas dans le plan) | Les deux pages doivent s'accorder sur les profils de ce fichier, dans un sens et dans l'autre ; les profils des autres essais ne comptent pas |
+
+Le deuxième passage de `bun run test:e2e` redémarre l'application et vide de nouveau le cache de données du disque : il n'y retrouve pas les pages que le premier passage y a laissées (la fiche `zoe-lefevre` du jeu, par exemple).
+
+Les autres essais vus intermittents (accueil E02, réseaux U28 en mobile, mesure Umami, `jeu-du-banc`) sont verts aux deux passages complets du 16/10 : aucune cause de leur côté à corriger, ils ne sont pas touchés.

@@ -135,6 +135,9 @@ async function principal(demandes: string[]): Promise<number> {
 	let code = 0
 	for (const argumentsDuTest of [principale, finale]) {
 		if (!argumentsDuTest || arretDemande) continue
+		// The pages of the first run (« zoe-lefevre » of the set, for one) must not answer the second one, which writes
+		// its own data without going through the application: the cache on the disk is emptied again.
+		rmSync(path.join(RACINE, '.next/cache/fetch-cache'), { recursive: true, force: true })
 		const fin = await lancerPlaywright(argumentsDuTest, environnement)
 		if (code === 0) code = fin
 	}
