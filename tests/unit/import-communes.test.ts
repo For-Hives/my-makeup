@@ -138,6 +138,16 @@ describe('ce que l’import cherche dans une ville saisie : un nom, un code post
 			departement: '974',
 			adresse: false,
 		})
+		// The case of the name does not matter: « 74 annecy » is the same place as « 74 Annecy ».
+		for (const ville of ['74 bourg-fictif', '74 BOURG-FICTIF', '74 Bourg-fictif'])
+			expect(rechercheDeLaVille(ville), ville).toEqual({
+				nom: 'bourg-fictif',
+				codePostal: null,
+				departement: '74',
+				adresse: false,
+			})
+		expect(rechercheDeLaVille('2a bourg-fictif')).toMatchObject({ departement: '2A', adresse: false })
+		expect(rechercheDeLaVille('13 marseille')).toMatchObject({ nom: 'marseille', departement: '13', adresse: false })
 		// Not a département (no such code), or not one place after it: read as before.
 		expect(rechercheDeLaVille('00 Bourg-Fictif')).toMatchObject({ adresse: true })
 		expect(rechercheDeLaVille('74 et alentours')).toMatchObject({ nom: null })
