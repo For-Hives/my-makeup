@@ -12,7 +12,17 @@ import { payloadDeTest } from '../outils/payload-test'
  * the set of the bench, never a total.
  */
 
-const COLLECTIONS = ['admins', 'pros', 'profils', 'media', 'articles', 'talents', 'demandes', 'auth-evenements', 'comptes-supprimes']
+const COLLECTIONS = [
+	'admins',
+	'pros',
+	'profils',
+	'media',
+	'articles',
+	'talents',
+	'demandes',
+	'auth-evenements',
+	'comptes-supprimes',
+]
 const UNE_MINUTE = 60_000
 
 /** A profile of its own, of one of the types of the fictional set, under a name no other test reads. */
