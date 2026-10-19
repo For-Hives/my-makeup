@@ -145,7 +145,7 @@ test.describe('L’admin retrouve, corrige et masque un profil', () => {
 			expect(await statutDeLaPage()).toBe(200)
 			await enregistrerAvec('Masqué')
 			await expect.poll(statutDeLaPage, { timeout: UNE_MINUTE }).toBe(404)
-			expect((await payload.findByID({ collection: 'profiles', id: profil.id, depth: 0 })).status).toBe('masque')
+			expect((await payload.findByID({ collection: 'profiles', id: profil.id, depth: 0 })).status).toBe('hidden')
 
 			await enregistrerAvec('Automatique')
 			await expect.poll(statutDeLaPage, { timeout: UNE_MINUTE }).toBe(200)

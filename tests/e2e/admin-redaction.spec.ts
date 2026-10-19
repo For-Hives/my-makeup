@@ -44,7 +44,7 @@ test.describe('E55 : la rédaction ne voit que les articles, les talents et leur
 		await creerCompte('admin')
 		const { session } = await creerCompte('redaction')
 
-		for (const collection of ['demandes', 'pros', 'admins'] as const) {
+		for (const collection of ['contact-requests', 'pros', 'admins'] as const) {
 			const reponse = await request.get(`/api/${collection}?limit=50`, { headers: session.enTetes })
 			if (collection === 'admins') {
 				const corps = (await reponse.json()) as { docs: { role: string }[] }
@@ -53,7 +53,7 @@ test.describe('E55 : la rédaction ne voit que les articles, les talents et leur
 		}
 		const profils = await request.get('/api/profiles?limit=50&depth=0', { headers: session.enTetes })
 		const texte = await profils.text()
-		expect(texte).not.toMatch(/"(telephone|email|siret)"\s*:\s*"[^"]/)
+		expect(texte).not.toMatch(/"(telephone|phone|email|siret|internalNote)"\s*:\s*"[^"]/)
 	})
 
 	for (const [collection, chemin] of [

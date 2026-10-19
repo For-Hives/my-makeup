@@ -23,7 +23,7 @@ export type ContenuPublic = 'profiles' | 'articles' | 'talents'
 export interface EtatPublic {
 	/** The end of the address of its page. */
 	slug: string
-	/** Shown to the public: a published profile (`statut`), a published article or talent (`_status`). */
+	/** Shown to the public: a published profile (`status`), a published article or talent (`_status`). */
 	visible: boolean
 	/**
 	 * In the sitemap: a profile is there when it is publishable, a published article or talent always.

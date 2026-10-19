@@ -8,7 +8,7 @@ import { echecDePayload, MESSAGE_ECHEC, type ResultatDEnregistrement } from './r
  * 126), and tells the truth about it, like the identity:
  *
  * - the request is read by the strict schema: a key that is not one of the three fields
- *   (`consentiLe`, `sourceConsentement`, `statut`, `pro`…) refuses it whole, so she can never
+ *   (`consentedAt`, `consentSource`, `status`, `pro`…) refuses it whole, so she can never
  *   write the date of her own consent;
  * - the profile written is hers, found by her account (I02);
  * - the write goes through the access rules and the hooks of the collection, as herself: the

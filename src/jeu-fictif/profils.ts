@@ -18,7 +18,7 @@
  * What the set writes is what a makeup artist or an admin writes. What the server computes (the
  * slug, the state, the status, the département) is never written: `attendu` says what the server
  * must store, and the tests compare. The status is chosen only for the hidden profile
- * (`statutChoisi`, ticket 044): every other one follows the rule.
+ * (`chosenStatus`, ticket 044): every other one follows the rule.
  *
  * Relative imports on purpose: like the collections, this file must load outside of Next.
  */

@@ -295,7 +295,7 @@ Pour la réécrire, banc démarré (`bun run banc:up`, ou l'instance de ton lot)
 4. `bun run payload:types` et `bun run payload:importmap` : les fichiers générés ne doivent changer que si les collections ont changé.
 5. `bun run schema:derive` (aucune dérive), puis `bun run banc:prepare`.
 
-Pour vérifier qu'un regroupement ne change rien, comparer `pg_dump --schema-only` de la base bâtie par l'ancienne chaîne et de celle bâtie par la nouvelle `init`. Une seule différence est normale : l'ordre des colonnes d'une table. Une colonne ajoutée plus tard par une migration passe à la fin, alors que `init` suit l'ordre des champs de la collection. L'ordre d'une colonne ne change rien à ce qu'un programme lit.
+Pour vérifier qu'un regroupement ne change rien, comparer `pg_dump --schema-only` de la base bâtie par l'ancienne chaîne et de celle bâtie par la nouvelle `init`. Une seule différence est normale : l’ordre des colonnes de quelques tables (quatre au moment de l’écriture). Une colonne ajoutée plus tard par une migration passe à la fin, alors que `init` suit l'ordre des champs de la collection. L'ordre d'une colonne ne change rien à ce qu'un programme lit.
 
 **Vider une base** (après une réécriture de `init`, la base ne se rattrape pas par une migration) :
 

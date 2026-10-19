@@ -178,7 +178,7 @@ test.describe('U25 : les messages du formulaire', () => {
 		await expect(page).toHaveURL(/\/auth\/verification-wall$/)
 		await expect(page.getByRole('heading', { name: 'Vérifie ton adresse email My Makeup' })).toBeVisible()
 		expect((await comptesDeLAdresse()).totalDocs).toBe(1)
-		expect((await payload.count({ collection: 'pros', where: { nom: { equals: 'Autre Personne' } } })).totalDocs).toBe(
+		expect((await payload.count({ collection: 'pros', where: { name: { equals: 'Autre Personne' } } })).totalDocs).toBe(
 			0
 		)
 		await expect
@@ -356,7 +356,7 @@ test.describe('Contre les faux comptes (ticket 084)', () => {
 			(
 				await payload.count({
 					collection: 'auth-events',
-					where: { and: [{ type: { equals: 'inscription' } }, { code: { equals: 'trop-de-tentatives' } }] },
+					where: { and: [{ type: { equals: 'sign-up' } }, { code: { equals: 'trop-de-tentatives' } }] },
 				})
 			).totalDocs
 		).toBeGreaterThanOrEqual(1)

@@ -186,7 +186,7 @@ test.describe('E02 : l’accueil en trois étapes', { tag: '@mobile' }, () => {
 		await expect(page.getByRole('heading', { name: 'Mon espace' })).toBeVisible()
 		const profil = await profilDe(email)
 		expect(profil.active).toBe(true)
-		expect(profil.status).toBe('publie')
+		expect(profil.status).toBe('published')
 
 		// The onboarding has nothing left for an active profile.
 		await page.goto(PAGE)

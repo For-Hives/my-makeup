@@ -65,7 +65,7 @@ test.describe('E10 : la déconnexion', { tag: '@mobile' }, () => {
 			(
 				await payload.count({
 					collection: 'auth-events',
-					where: { and: [{ type: { equals: 'deconnexion' } }, { date: { greater_than_equal: depuis } }] },
+					where: { and: [{ type: { equals: 'sign-out' } }, { date: { greater_than_equal: depuis } }] },
 				})
 			).totalDocs
 		await seConnecter(page, compte.email)

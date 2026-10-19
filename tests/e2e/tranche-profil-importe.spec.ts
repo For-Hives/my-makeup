@@ -124,6 +124,6 @@ test('un profil repris de la fausse base Strapi s’affiche sur sa page publique
 
 	// A second run of the import writes nothing.
 	const second = await importer(testInfo.outputPath('rapport-2.json'))
-	for (const collection of ['pros', 'profils', 'talents'])
+	for (const collection of ['pros', 'profiles', 'talents'])
 		expect(second.collections[collection], collection).toMatchObject({ crees: 0, modifies: 0 })
 })
