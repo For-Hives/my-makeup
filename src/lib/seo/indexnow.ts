@@ -9,7 +9,7 @@ import { urlCanonique } from './url'
  * happens (src/collections/revalidation.ts).
  *
  * - The key is the variable INDEXNOW_KEY, never a file of the repository. The site serves it at
- *   `/<key>.txt` (src/app/api/indexnow/[cle]/route.ts). Without the variable, nothing is served and
+ *   `/<key>.txt` (src/app/api/indexnow/[key]/route.ts). Without the variable, nothing is served and
  *   nothing is sent.
  * - Only the main host is ever named: every address is built from `SITE_ORIGIN`, and one that is not
  *   an https address of that host is dropped before the request.

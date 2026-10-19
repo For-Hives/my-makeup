@@ -6,7 +6,7 @@ import { stockageDePayload } from './envoi-payload'
 import { renvoyerLEmailDUnMessage, stockageDuRenvoiDePayload } from './renvoi'
 
 /**
- * `POST /api/demandes/:id/renvoyer`: an admin sends again the mail of a contact message whose mail failed
+ * `POST /api/demandes/:id/resend`: an admin sends again the mail of a contact message whose mail failed
  * (ticket 163). The button of the panel calls it. Only the role `admin`: a `redaction` account, a makeup
  * artist and a visitor get a 403, as on every route of the collection.
  *
@@ -15,7 +15,7 @@ import { renvoyerLEmailDUnMessage, stockageDuRenvoiDePayload } from './renvoi'
  * another click).
  */
 export const renvoyerLEmail: Endpoint = {
-	path: '/:id/renvoyer',
+	path: '/:id/resend',
 	method: 'post',
 	handler: async req => {
 		if (!estAdmin(req.user)) throw new Forbidden(req.t)

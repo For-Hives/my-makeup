@@ -207,7 +207,7 @@ test.describe('E07 : connexion et inscription avec Google', { tag: '@mobile' }, 
 	}) => {
 		const compte = await creerCompte('reprise-google')
 		// 1. A return nobody asked for: no cookie of the departure.
-		const sansCookie = await request.get('/auth/google/retour?code=code-forge&state=state-forge', {
+		const sansCookie = await request.get('/auth/google/callback?code=code-forge&state=state-forge', {
 			maxRedirects: 0,
 			headers: { 'x-forwarded-for': client },
 		})
@@ -216,6 +216,12 @@ test.describe('E07 : connexion et inscription avec Google', { tag: '@mobile' }, 
 			new URL(sansCookie.headers().location ?? '').pathname + new URL(sansCookie.headers().location ?? '').search
 		).toBe('/auth/signin?error=google-echec')
 		expect(sansCookie.headers()['set-cookie'] ?? '').not.toContain('payload-token=')
+		// The old return address is gone: an ordinary 404, no redirect (an OAuth return address must be exact).
+		const ancienne = await request.get('/auth/google/retour?code=code-forge&state=state-forge', {
+			maxRedirects: 0,
+			headers: { 'x-forwarded-for': client },
+		})
+		expect(ancienne.status()).toBe(404)
 
 		// 2. The departure is real, the return carries another state: refused. With its own state, it opens.
 		const depart = await request.get('/auth/google', { maxRedirects: 0, headers: { 'x-forwarded-for': client } })

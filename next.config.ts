@@ -49,7 +49,7 @@ const nextConfig: NextConfig = {
 	},
 	// The key file of IndexNow, `/<key>.txt` at the root (ticket 219), is answered by a route that reads
 	// INDEXNOW_KEY: it is no file of the repository. Only a 32-character hexadecimal name is rewritten.
-	rewrites: async () => [{ source: '/:cle([0-9a-f]{32}).txt', destination: '/api/indexnow/:cle' }],
+	rewrites: async () => [{ source: '/:key([0-9a-f]{32}).txt', destination: '/api/indexnow/:key' }],
 	// Every path leaves with the security headers (src/lib/security-headers.ts). A ticket that
 	// needs a header on some paths adds its own entry after this one.
 	headers: async () => [

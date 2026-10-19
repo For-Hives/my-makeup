@@ -69,7 +69,7 @@ describe('constat 1 : une arrivée depuis un autre site garde la session', () =>
 
 	test('une action serveur (POST) et les pages publiques ne passent jamais par le relais', () => {
 		expect(proxy(requete('/auth/profil', entetes('cross-site'), 'POST')).headers.get('x-middleware-next')).toBe('1')
-		for (const chemin of ['/', '/a-propos', '/auth/signin', '/auth/google/retour'])
+		for (const chemin of ['/', '/a-propos', '/auth/signin', '/auth/google/callback'])
 			expect(proxy(requete(chemin, entetes('cross-site'))).headers.get('x-middleware-next')).toBe('1')
 	})
 
@@ -90,7 +90,7 @@ describe('constat 7 : une adresse au pourcentage mal formé répond la page 404 
 	])('%s est réécrite vers une adresse qui n’existe pas', chemin => {
 		const reponse = proxy(requete(chemin))
 		const cible = new URL(reponse.headers.get('x-middleware-rewrite') ?? '')
-		expect(cible.pathname).toBe('/introuvable-adresse-illisible')
+		expect(cible.pathname).toBe('/unknown-page')
 		expect(reponse.headers.get('x-robots-tag')).toBe('noindex')
 	})
 

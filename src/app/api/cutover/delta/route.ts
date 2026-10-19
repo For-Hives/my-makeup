@@ -18,7 +18,7 @@ const RIEN_A_LIRE = {
 
 /**
  * The private export of what the v3 received since the switch (ticket 234; docs/migration/RETOUR-ARRIERE.md):
- * `GET /api/bascule/delta[?depuis=<instant>]`, for an admin signed in on the site. 403 anywhere else than the
+ * `GET /api/cutover/delta[?since=<instant>]`, for an admin signed in on the site. 403 anywhere else than the
  * site. This static segment wins over the catch-all REST route of Payload.
  */
 export async function GET(request: Request): Promise<Response> {

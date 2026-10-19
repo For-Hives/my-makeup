@@ -188,7 +188,7 @@ function proxyDuSite(requete: NextRequest) {
 }
 
 /** Where an address that does not decode is sent: no page lives there, so Next answers its 404 page. */
-const CHEMIN_INTROUVABLE = '/introuvable-adresse-illisible'
+const CHEMIN_INTROUVABLE = '/unknown-page'
 
 /** True when the path has a percent sequence that does not decode, outside the API and Next's own files. */
 function cheminIllisible(chemin: string): boolean {

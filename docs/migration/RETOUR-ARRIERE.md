@@ -33,8 +33,8 @@ Un enregistrement importé et jamais touché porte les dates de l'ancien site (l
 C'est une adresse réservée aux admins du site, sans base ouverte sur Internet et sans accès SSH (même esprit que l'import dans le conteneur, ticket 233) :
 
 1. Ouvre `https://my-makeup.fr/admin` et connecte-toi avec ton compte **admin** (pas la rédaction). Après un retour des domaines vers `https://v3.my-makeup.fr`, c'est là qu'il faut se connecter : le cookie est propre à chaque adresse.
-2. Ouvre dans le même navigateur `https://my-makeup.fr/api/bascule/delta`. Le navigateur télécharge `delta-depuis-AAAA-MM-JJ.json`.
-3. Pour une autre date de départ, ajoute `?depuis=` suivi d'un instant avec son fuseau : `/api/bascule/delta?depuis=2026-11-02T08:30:00Z`.
+2. Ouvre dans le même navigateur `https://my-makeup.fr/api/cutover/delta`. Le navigateur télécharge `delta-since-AAAA-MM-JJ.json`.
+3. Pour une autre date de départ, ajoute `?since=` suivi d'un instant avec son fuseau : `/api/cutover/delta?since=2026-11-02T08:30:00Z`.
 
 Par défaut, le début est le jour de `BASCULE_LE` à 00:00 UTC. **Donne plutôt l'instant précis de l'échange** (ou de la fin du dernier passage réel de l'import) si l'import ou des modifications de l'ancien site ont eu lieu ce jour-là avant l'échange : sinon ils apparaissent dans le fichier.
 

@@ -157,7 +157,7 @@ test.describe('Me déconnecter de tous les appareils', () => {
 		await page.getByRole('button', { name: 'Oui, me déconnecter partout' }).click()
 
 		await expect(page).toHaveURL(/\/auth\/profil$/)
-		const reponse = await request.get('/api/espace/session')
+		const reponse = await request.get('/api/dashboard/session')
 		expect(reponse.status()).toBe(200)
 		await page.reload()
 		await expect(page.getByRole('heading', { name: 'Mon espace' })).toBeVisible()
@@ -227,11 +227,11 @@ test.describe('La Nav lit l’état connecté dans le navigateur', () => {
 			extraHTTPHeaders: { Cookie: compte.session.enTetes.Cookie, Origin: baseURL ?? '' },
 		})
 		try {
-			const reponse = await client.get('/api/espace/session')
+			const reponse = await client.get('/api/dashboard/session')
 			expect(reponse.headers()['cache-control']).toBe('private, no-store')
-			expect(await reponse.json()).toEqual({ connectee: true })
+			expect(await reponse.json()).toEqual({ signedIn: true })
 			const sans = await playwright.request.newContext({ baseURL: baseURL ?? '' })
-			expect(await (await sans.get('/api/espace/session')).json()).toEqual({ connectee: false })
+			expect(await (await sans.get('/api/dashboard/session')).json()).toEqual({ signedIn: false })
 			await sans.dispose()
 		} finally {
 			await client.dispose()

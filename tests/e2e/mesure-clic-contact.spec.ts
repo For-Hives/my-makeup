@@ -79,7 +79,7 @@ test.afterAll(async () => {
 
 /** Opens a page and waits for the answer about the visitor, so that a click finds it known. */
 async function ouvrir(page: Page, adresse: string) {
-	const reponse = page.waitForResponse(r => new URL(r.url()).pathname === '/api/espace/mon-pid')
+	const reponse = page.waitForResponse(r => new URL(r.url()).pathname === '/api/dashboard/my-pid')
 	await page.goto(adresse)
 	await reponse
 }

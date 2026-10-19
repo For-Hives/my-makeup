@@ -34,9 +34,9 @@ function useConnectee(chemin: string): boolean {
 	// A new page asks again: the visitor may have signed in or out since the last one.
 	useEffect(() => {
 		const arret = new AbortController()
-		fetch('/api/espace/session', { cache: 'no-store', credentials: 'same-origin', signal: arret.signal })
-			.then(reponse => (reponse.ok ? reponse.json() : { connectee: false }))
-			.then((corps: { connectee?: unknown }) => setConnectee(corps.connectee === true))
+		fetch('/api/dashboard/session', { cache: 'no-store', credentials: 'same-origin', signal: arret.signal })
+			.then(reponse => (reponse.ok ? reponse.json() : { signedIn: false }))
+			.then((corps: { signedIn?: unknown }) => setConnectee(corps.signedIn === true))
 			.catch(() => {
 				if (!arret.signal.aborted) setConnectee(false)
 			})

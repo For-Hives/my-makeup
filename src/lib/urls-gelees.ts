@@ -461,7 +461,7 @@ export const FROZEN_URL_FAMILIES: readonly FrozenUrlFamily[] = [
 	{
 		id: 'espace-google',
 		kind: 'espace',
-		patterns: ['/auth/google', '/auth/google/retour'],
+		patterns: ['/auth/google', '/auth/google/callback'],
 		statusToday: [404],
 		status: 307,
 		redirect: {
@@ -472,8 +472,8 @@ export const FROZEN_URL_FAMILIES: readonly FrozenUrlFamily[] = [
 		today:
 			"Le bouton Google passait par NextAuth (`/api/auth/signin/google`, `/api/auth/callback/google`) ; ces deux chemins n'existent plus (404)",
 		after:
-			'Nouveau : départ et retour de la connexion Google (`/auth/google`, `/auth/google/retour`), `noindex`, `private, no-store`. Adresse de retour à déclarer dans la console Google',
-		examples: [{ from: '/auth/google/retour', to: '/auth/signin?error=google-echec' }],
+			'Nouveau : départ et retour de la connexion Google (`/auth/google`, `/auth/google/callback`), `noindex`, `private, no-store`. Adresse de retour à déclarer dans la console Google',
+		examples: [{ from: '/auth/google/callback', to: '/auth/signin?error=google-echec' }],
 	},
 
 	// Routes of the old code

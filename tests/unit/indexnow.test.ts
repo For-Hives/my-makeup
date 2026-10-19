@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test'
 import type { PayloadRequest, RequestContext } from 'payload'
-import { GET as servirLaCle } from '@/app/api/indexnow/[cle]/route'
+import { GET as servirLaCle } from '@/app/api/indexnow/[key]/route'
 import { rafraichissement } from '../../src/collections/revalidation'
 import { CONTEXTE_IMPORT } from '../../src/lib/contexte-import'
 import { type EnvError, parseServerEnv } from '../../src/lib/env'
@@ -37,7 +37,7 @@ describe('le fichier de clé', () => {
 		else process.env.INDEXNOW_KEY = avant
 	})
 	const demander = (cle: string) =>
-		servirLaCle(new Request(`${SITE}/api/indexnow/${cle}`), { params: Promise.resolve({ cle }) })
+		servirLaCle(new Request(`${SITE}/api/indexnow/${cle}`), { params: Promise.resolve({ key: cle }) })
 
 	test('avec la variable : 200, la clé pour seul contenu', async () => {
 		process.env.INDEXNOW_KEY = CLE

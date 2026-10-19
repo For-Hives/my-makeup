@@ -89,7 +89,7 @@ Toutes ces pages répondent `noindex`. Les chemins ne changent pas : les liens d
 | `espace-verification` | `/auth/verification-complete`, `/auth/verification-wall` | Mur de vérification et confirmation de l'email (`/auth/verification-*`) | Mêmes chemins, `noindex` | 200 | 8 |
 | `espace-racine` | `/auth` | Page vide en 200, puis redirection par le navigateur | Redirection par le serveur : `/auth/signin` (avec une session : `/auth/profil`) | 307 en un saut | — |
 | `espace-erreur` | `/auth/error` | Page d'erreur ; sans code, une 307 vers elle-même avec `?error=erreur-inconnue` | Page d'erreur en français, `noindex`, avec ou sans code | 200 | — |
-| `espace-google` | `/auth/google`, `/auth/google/retour` | Le bouton Google passait par NextAuth (`/api/auth/signin/google`, `/api/auth/callback/google`) ; ces deux chemins n'existent plus (404) | Nouveau : départ et retour de la connexion Google (`/auth/google`, `/auth/google/retour`), `noindex`, `private, no-store`. Adresse de retour à déclarer dans la console Google : Google (`accounts.google.com`) pour le départ ; pour le retour, l'espace ou `/auth/signin?error=<code>` | 307 en un saut | — |
+| `espace-google` | `/auth/google`, `/auth/google/callback` | Le bouton Google passait par NextAuth (`/api/auth/signin/google`, `/api/auth/callback/google`) ; ces deux chemins n'existent plus (404) | Nouveau : départ et retour de la connexion Google (`/auth/google`, `/auth/google/callback`), `noindex`, `private, no-store`. Adresse de retour à déclarer dans la console Google : Google (`accounts.google.com`) pour le départ ; pour le retour, l'espace ou `/auth/signin?error=<code>` | 307 en un saut | — |
 <!-- urls:familles:espace:fin -->
 
 Un chemin inconnu sous `/auth` est une adresse inconnue : 404.
@@ -180,7 +180,7 @@ Ce tableau liste les familles dont le code change pour une visiteuse sans sessio
 | `ancienne-api` | `https://api.my-makeup.fr/*`, `http://api.my-makeup.fr/*` | 200, 302 | 301 en un saut |
 | `espace-racine` | `/auth` | 200 | 307 en un saut |
 | `espace-erreur` | `/auth/error` | 307, 200 | 200 |
-| `espace-google` | `/auth/google`, `/auth/google/retour` | 404 | 307 en un saut |
+| `espace-google` | `/auth/google`, `/auth/google/callback` | 404 | 307 en un saut |
 | `api-nextauth` | `/api/auth/*` | 200, 302, 404 | 404 |
 | `api-sendmail` | `/api/sendMail` | 405 | 404 |
 <!-- urls:ecarts:fin -->

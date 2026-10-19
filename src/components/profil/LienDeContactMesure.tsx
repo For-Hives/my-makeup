@@ -10,10 +10,10 @@ const DUREE_DE_LA_REPONSE_MS = 10_000
 
 let reponse: { lueA: number; pid: Promise<Pid | null> } | null = null
 
-/** The `pid` of the profile of the visitor, if she is an artist with one (`/api/espace/mon-pid`). */
+/** The `pid` of the profile of the visitor, if she is an artist with one (`/api/dashboard/my-pid`). */
 function monPid(): Promise<Pid | null> {
 	if (reponse && Date.now() - reponse.lueA < DUREE_DE_LA_REPONSE_MS) return reponse.pid
-	const pid = fetch('/api/espace/mon-pid', { cache: 'no-store', credentials: 'same-origin' })
+	const pid = fetch('/api/dashboard/my-pid', { cache: 'no-store', credentials: 'same-origin' })
 		.then(async r => (r.ok ? ((await r.json()) as { pid?: Pid | null }).pid : null) ?? null)
 		.catch(() => null)
 	reponse = { lueA: Date.now(), pid }

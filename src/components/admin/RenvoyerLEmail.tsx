@@ -36,7 +36,7 @@ export function RenvoyerLEmail() {
 		pris.current = true
 		setPhase('envoi')
 		try {
-			const reponse = await fetch(`/api/demandes/${id}/renvoyer`, { method: 'POST', credentials: 'same-origin' })
+			const reponse = await fetch(`/api/demandes/${id}/resend`, { method: 'POST', credentials: 'same-origin' })
 			if (reponse.status === 409) setPhase('deja')
 			else if (!reponse.ok) setPhase('echec')
 			else setPhase(((await reponse.json()) as { etatMail?: string }).etatMail === 'envoye' ? 'envoye' : 'echec')

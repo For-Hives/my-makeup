@@ -52,7 +52,7 @@ function lecture(surcharge: Partial<Parameters<typeof repondreAuDelta>[1]> = {})
 	}
 }
 
-const demander = (adresse = 'https://my-makeup.fr/api/bascule/delta') => new Request(adresse)
+const demander = (adresse = 'https://my-makeup.fr/api/cutover/delta') => new Request(adresse)
 
 describe('où tourne l’export', () => {
 	test('le site seulement', () => {
@@ -111,7 +111,7 @@ describe('la réponse', () => {
 		expect(lus.map(date => date.toISOString())).toEqual(['2026-11-02T00:00:00.000Z'])
 		expect(reponse.headers.get('cache-control')).toBe('no-store')
 		expect(reponse.headers.get('x-robots-tag')).toBe('noindex')
-		expect(reponse.headers.get('content-disposition')).toBe('attachment; filename="delta-depuis-2026-11-02.json"')
+		expect(reponse.headers.get('content-disposition')).toBe('attachment; filename="delta-since-2026-11-02.json"')
 		expect(JSON.parse(await reponse.text())).toEqual(DELTA)
 		// The log: counts and numeric identifiers, no address and no text.
 		const texte = journal.join('\n')
@@ -121,10 +121,10 @@ describe('la réponse', () => {
 		expect(texte).not.toMatch(/@|ne doit jamais|fictive/)
 	})
 
-	test('?depuis prime sur BASCULE_LE, et deux appels donnent le même texte', async () => {
+	test('?since prime sur BASCULE_LE, et deux appels donnent le même texte', async () => {
 		const un = lecture()
 		const deux = lecture({ basculeLe: undefined })
-		const adresse = 'https://my-makeup.fr/api/bascule/delta?depuis=2026-11-02T08:30:00Z'
+		const adresse = 'https://my-makeup.fr/api/cutover/delta?since=2026-11-02T08:30:00Z'
 		const premier = await (await repondreAuDelta(demander(adresse), un.options)).text()
 		const second = await (await repondreAuDelta(demander(adresse), deux.options)).text()
 		expect(un.lus.map(date => date.toISOString())).toEqual(['2026-11-02T08:30:00.000Z'])
@@ -137,7 +137,7 @@ describe('la réponse', () => {
 		expect((await repondreAuDelta(demander(), sans.options)).status).toBe(400)
 		const mauvais = lecture()
 		expect(
-			(await repondreAuDelta(demander('https://my-makeup.fr/api/bascule/delta?depuis=hier'), mauvais.options)).status
+			(await repondreAuDelta(demander('https://my-makeup.fr/api/cutover/delta?since=hier'), mauvais.options)).status
 		).toBe(400)
 		expect([...sans.lus, ...mauvais.lus]).toEqual([])
 	})

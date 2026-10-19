@@ -48,7 +48,7 @@ describe('le refus de l’inscription par le proxy (ticket 084)', () => {
 			freinDInscription.prendre('203.0.113.9')
 		}
 
-		expect(cible(proxy(post('/auth/signup', '203.0.113.9')))).toContain('/auth/signup/refus')
+		expect(cible(proxy(post('/auth/signup', '203.0.113.9')))).toContain('/auth/signup/throttled')
 		// Not a read of the page, not another address, not another page.
 		expect(cible(proxy(post('/auth/signup', '203.0.113.9', 'GET')))).toBeNull()
 		expect(cible(proxy(post('/auth/signup', '203.0.113.10')))).toBeNull()

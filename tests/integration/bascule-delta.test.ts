@@ -188,7 +188,7 @@ describe('l’export du delta, sur le banc', () => {
 		const repondre = async (enTetes: Record<string, string> | undefined) => {
 			const lignes: string[] = []
 			const reponse = await repondreAuDelta(
-				new Request(`https://my-makeup.fr/api/bascule/delta?depuis=${depuis.toISOString()}`),
+				new Request(`https://my-makeup.fr/api/cutover/delta?since=${depuis.toISOString()}`),
 				{
 					lieu: 'site',
 					basculeLe: undefined,

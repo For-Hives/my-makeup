@@ -29,7 +29,7 @@ describe('une adresse inconnue sous /profil, /talent ou /blog', () => {
 		'/blog/inconnu',
 	])('%s est réécrite vers la 404 du site', async chemin => {
 		const reponse = await repondre(chemin, async () => false)
-		expect(new URL(reponse.headers.get('x-middleware-rewrite') ?? '').pathname).toBe('/introuvable-adresse-illisible')
+		expect(new URL(reponse.headers.get('x-middleware-rewrite') ?? '').pathname).toBe('/unknown-page')
 		expect(reponse.headers.get('x-robots-tag')).toBe('noindex')
 	})
 

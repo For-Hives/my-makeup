@@ -14,7 +14,7 @@ import type { CodeEvenement, Journaliser, TypeEvenement } from './journal'
  */
 
 /** The path the proxy sends a refused sign-up to. */
-export const CHEMIN_DU_REFUS = '/auth/signup/refus'
+export const CHEMIN_DU_REFUS = '/auth/signup/throttled'
 
 /** The path of the sign-up page: a Server Action is posted to the page that holds its form. */
 export const CHEMIN_DE_L_INSCRIPTION = '/auth/signup'
