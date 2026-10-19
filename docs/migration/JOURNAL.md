@@ -773,3 +773,22 @@ Ce que la v3 change par rapport au site actuel est dans [`CHANGEMENTS-VOULUS.md`
   - `RETOUR-ARRIERE.md` donne les noms de l'ancien site à rejouer à la main (`service_offers`, `price`, `job_name`, `date_start`/`date_end`, `date_graduation`, `course_description`) ; `priceFrom` se recalcule à partir du texte du prix, il ne se rejoue pas.
   - Vérifié sur le banc `mm-w1int` : contrôle Biome, types, essais unitaires (3522), garde de CI (453), d'intégration (2151), de bout en bout (1 essai de tranche, vert) et `bun run build` verts. La vue publique (`lireLeProfilPublic`) et les modules d'aide gardent des noms français : tickets 238 à 248.
   - **La base de production v3 doit être supprimée puis recréée (vide) avant le premier déploiement de cette `init`**, comme pour 249 à 251.
+
+## 20/10/2026
+
+- **Ticket 238 fusionné : le code de l'authentification porte des noms anglais.**
+  - `src/lib/auth`, `src/lib/account`, `src/components/auth` et les actions de `/auth` passent en anglais (`signIn`, `signUp`, `signOut`, fichiers `sign-up.ts`, `sliding-session.ts`, `token.ts`, `session-cookie.ts`…). Les déplacements sont dans un commit à part, les identifiants renommés par le service de langage de TypeScript, sauf trois alias de ré-export modifiés au `sed` (aucun effet, types et tests verts). Les adresses `/auth/*`, les textes affichés et les noms des cookies hérités de l'ancien site ne changent pas.
+  - Les trois noms propres à la v3 changent : cookie `mm-reconnexion` devenu `mm-signed-out`, en-tête `x-mm-reconnexion` devenu `x-mm-signed-out`, cookie `mm-reinit` devenu `mm-reset`. Ils sont libres tant que le site n'est pas en ligne.
+  - Relu par un second agent : un bloquant (un commentaire citait encore l'ancien nom `cookie-de-session.ts`), corrigé avant la fusion.
+  - Vérifié après la fusion avec le 253 et le 254, sur le banc `mm-int-w2` : contrôle Biome, types, contrôle des noms, essais unitaires (3523), garde de CI (457), d'intégration (2151), de bout en bout (495, puis 1 essai de tranche) et `bun run build` verts.
+  - Reste : la ligne de `decisions.md` (hors de ce dépôt). La liste d'attente du contrôle des noms garde six entrées sous `/auth` (`apercu-profil`, `init-account`, `profil`, `page.tsx`, `layout.tsx`, `error.tsx`) : le ticket 239 ne nomme pas toutes ces entrées, à lui confier.
+
+- **Ticket 253 fusionné, pas clos : `/api/stats/weekly` répond en version 2, aux clés anglaises.**
+  - `version: 2`, clés anglaises (`inherited`, `byType`, `byStatus`, `byMailState`, `signIns.byCode`…), l'exemple JSON et `statistiques-hebdomadaires.md` suivent. Les chiffres comptés ne changent pas. Valeurs renommées : repli du département `inconnu` devenu `unknown`, fournisseur `autre` devenu `other` ; les clés de `byType`, `byStatus` et `byMailState` sont les valeurs anglaises des énumérations 250 à 252.
+  - Vérifié : essais unitaires de `stats-hebdo` (29) et d'intégration verts ; les mêmes comptes sous les nouvelles clés sont contrôlés par les essais unitaires et la fixture.
+  - Pas clos : l'outil du rapport du lundi (dépôt des plans) lit encore la version 1 ; le correctif est un patch que l'auteur n'a pas pu appliquer (`ticket-253-outil-hebdo.patch`, dossier temporaire de la session). **Ordre de mise en ligne : mettre l'outil à jour avant la v3 qui répond en version 2.** La ligne de `decisions.md` reste à écrire.
+
+- **Ticket 254 fusionné, pas clos : le contrôle des noms tourne dans la CI, avec la liste d'attente.**
+  - Étape « English names » (`bun run names:check`) dans le travail `qualite` de la CI, sous `ci-ok` ; aucun nouveau contrôle requis. `tests/ci/names-check.test.ts` (4 essais) prouve qu'un nom français hors liste fait échouer le contrôle et qu'une exception nommée non. Documents `CLAUDE.md`, `README.md`, `docs/noms.md`, `docs/qualite.md` mis à jour.
+  - Pas clos : la liste d'attente garde encore environ 11 281 noms français, parce que les tickets 239 à 248 ne sont pas faits. Passe finale à faire ensuite : vider la liste, écrire les chiffres, chercher les anciens chemins, retirer l'outil de renommage, ajouter le glossaire à `CLAUDE.md`.
+  - Conflits de la fusion avec le 238 résolus à la main dans `src/lib/stats-hebdo.ts` et dans `tests/integration/stats-hebdo-contact-connexions.test.ts` (noms du 238 conservés avec les clés anglaises du 253).
