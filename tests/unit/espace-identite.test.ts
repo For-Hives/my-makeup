@@ -57,14 +57,14 @@ describe('U25 : un message en français par champ', () => {
 
 describe('U32 : le schéma du serveur est strict', () => {
 	test.each([
-		'statut',
-		'verifie',
+		'status',
+		'verified',
 		'score',
 		'pro',
 		'slug',
 		'id',
-		'superMaquilleuse',
-		'statutChoisi',
+		'superArtist',
+		'chosenStatus',
 	])('la clé réservée %s refuse la requête entière', cle => {
 		expect(schemaDeLIdentiteStrict.safeParse({ ...VALIDE, [cle]: 'x' }).success).toBe(false)
 	})

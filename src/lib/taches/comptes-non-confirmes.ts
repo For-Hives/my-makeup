@@ -28,10 +28,10 @@ async function purgerUnCompte(payload: Payload, id: number): Promise<boolean> {
 		limit: 10,
 		overrideAccess: true,
 		pagination: false,
-		select: { entierementVide: true },
+		select: { fullyEmpty: true },
 		where: { pro: { equals: id } },
 	})
-	if (profils.docs.some(profil => profil.entierementVide !== true)) return false
+	if (profils.docs.some(profil => profil.fullyEmpty !== true)) return false
 	for (const profil of profils.docs) {
 		await payload.delete({ collection: 'profiles', depth: 0, id: profil.id, overrideAccess: true })
 	}

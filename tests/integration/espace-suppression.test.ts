@@ -72,7 +72,7 @@ async function compteGarni() {
 	await payload.update({
 		collection: 'profiles',
 		id: profil.id,
-		data: { photoPrincipale: principale.id, galerie: [principale.id, galerie.id] },
+		data: { mainPicture: principale.id, gallery: [principale.id, galerie.id] },
 	})
 	return { compte, profil, photos: [principale, galerie, libre] }
 }
@@ -156,7 +156,7 @@ async function garnirUnAutre() {
 	const photo = await envoyer(compte)
 	const profil = await profilDe(compte)
 	if (!profil) throw new Error('pas de profil')
-	await (await payloadDeTest()).update({ collection: 'profiles', id: profil.id, data: { photoPrincipale: photo.id } })
+	await (await payloadDeTest()).update({ collection: 'profiles', id: profil.id, data: { mainPicture: photo.id } })
 	return { compte, profil, photo }
 }
 
@@ -243,7 +243,7 @@ describe('I38 : panne du stockage, tout est encore là', () => {
 			expect((await fetch(photo.url ?? '')).status).toBe(200)
 		}
 		expect((await payload.auth({ headers: new Headers(compte.session.enTetes) })).user).not.toBeNull()
-		expect((await profilDe(compte))?.photoPrincipale).toBe(photos[0]?.id)
+		expect((await profilDe(compte))?.mainPicture).toBe(photos[0]?.id)
 
 		espion.fairePanne(() => false)
 		expect(await supprimer(payload, compte, MOT_DE_PASSE)).toEqual({ ok: true })

@@ -1,7 +1,31 @@
 import type { Payload } from 'payload'
 import { identifiantDuProfilAEcrire, type UtilisateurDeLEspace } from './mon-profil'
-import { CHAMPS_DES_RESEAUX, lireLesReseaux, schemaDesReseauxStrict, type ValeursDesReseaux } from './reseaux'
+import {
+	CHAMPS_DES_RESEAUX,
+	type ChampDeReseau,
+	lireLesReseaux,
+	schemaDesReseauxStrict,
+	type ValeursDesReseaux,
+} from './reseaux'
 import { echecDePayload, MESSAGE_ECHEC, type ResultatDEnregistrement } from './resultat'
+
+/** The field of the group `networks` each field of the form is stored in. */
+const CHAMP_STOCKE = {
+	instagram: 'instagram',
+	facebook: 'facebook',
+	youtube: 'youtube',
+	linkedin: 'linkedin',
+	siteWeb: 'website',
+} as const satisfies Record<ChampDeReseau, string>
+
+/** The field of the form that each field of the group `networks` belongs to. */
+const CHAMP_DU_CHEMIN: Readonly<Record<string, ChampDeReseau>> = {
+	instagram: 'instagram',
+	facebook: 'facebook',
+	youtube: 'youtube',
+	linkedin: 'linkedin',
+	website: 'siteWeb',
+}
 
 /**
  * Saves the networks and the website of the signed-in makeup artist (ticket 125), and tells the
@@ -34,20 +58,24 @@ export async function enregistrerReseaux(
 	try {
 		const id = await identifiantDuProfilAEcrire(payload, utilisateur)
 		if (id === null) return { ok: false, message: MESSAGE_ECHEC }
-		const reseaux = Object.fromEntries(CHAMPS_DES_RESEAUX.map(champ => [champ, lue.valeurs[champ] || null]))
+		const networks = Object.fromEntries(
+			CHAMPS_DES_RESEAUX.map(champ => [CHAMP_STOCKE[champ], lue.valeurs[champ] || null])
+		)
 		const stocke = await payload.update({
 			collection: 'profiles',
-			data: { reseaux },
+			data: { networks },
 			depth: 0,
 			id,
 			overrideAccess: false,
 			user: utilisateur,
 		})
 		const valeurs = Object.fromEntries(
-			CHAMPS_DES_RESEAUX.map(champ => [champ, stocke.reseaux?.[champ] ?? ''])
+			CHAMPS_DES_RESEAUX.map(champ => [champ, stocke.networks?.[CHAMP_STOCKE[champ]] ?? ''])
 		) as ValeursDesReseaux
 		return { ok: true, valeurs }
 	} catch (erreur) {
-		return echecDePayload(erreur, CHAMPS_DES_RESEAUX, 'reseaux.')
+		return echecDePayload(erreur, CHAMPS_DES_RESEAUX, chemin =>
+			chemin.startsWith('networks.') ? (CHAMP_DU_CHEMIN[chemin.slice('networks.'.length)] ?? '') : ''
+		)
 	}
 }

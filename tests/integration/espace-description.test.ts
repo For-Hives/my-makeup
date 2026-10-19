@@ -98,7 +98,7 @@ describe('U27 : 2 000 caractères au plus, HTML retiré', () => {
 
 describe('U32, I02 : une requête forgée est refusée, rien ne change', () => {
 	test.each([
-		['statut', 'publie'],
+		['status', 'published'],
 		['verifie', true],
 		['score', 99],
 		['pro', 1],
@@ -139,11 +139,12 @@ describe('U05 : la longueur enregistrée rend le profil publiable par la défini
 		const payload = await payloadDeTest()
 		const utilisateur = await utilisateurDe(payload, a)
 		const { conditionsPubliable } = await import('@/lib/profil/completude')
+		const { champsDuProfil } = await import('@/lib/profil/etat')
 
 		await enregistrerDescription(payload, utilisateur, { description: 'a'.repeat(199) })
-		expect(conditionsPubliable(await profilStocke(payload, a)).descriptionLongue).toBe(false)
+		expect(conditionsPubliable(champsDuProfil(await profilStocke(payload, a))).descriptionLongue).toBe(false)
 
 		await enregistrerDescription(payload, utilisateur, { description: 'a'.repeat(200) })
-		expect(conditionsPubliable(await profilStocke(payload, a)).descriptionLongue).toBe(true)
+		expect(conditionsPubliable(champsDuProfil(await profilStocke(payload, a))).descriptionLongue).toBe(true)
 	})
 })

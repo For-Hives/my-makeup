@@ -280,13 +280,13 @@ describe('la lecture de l’annuaire', () => {
 	const doc = (slug: string, extra: Record<string, unknown> = {}) => ({
 		id: 1,
 		slug,
-		prenom: 'Zoé',
-		nom: 'Fictive',
-		specialite: 'Mariage',
-		commune: { nom: 'Annecy', codeInsee: '74010', departement: '74', latitude: 45.9, longitude: 6.13 },
-		rayonKm: 30,
-		superMaquilleuse: false,
-		photoPrincipale: {
+		firstName: 'Zoé',
+		lastName: 'Fictive',
+		specialty: 'Mariage',
+		city: { name: 'Annecy', inseeCode: '74010', department: '74', latitude: 45.9, longitude: 6.13 },
+		radiusKm: 30,
+		superArtist: false,
+		mainPicture: {
 			id: 4,
 			url: 'https://photos.example.test/media/a.webp',
 			width: 400,
@@ -318,7 +318,7 @@ describe('la lecture de l’annuaire', () => {
 
 	test('la place d’un profil est sa commune et son département ; le centre de la commune n’en sort pas', async () => {
 		const { payload } = payloadEspion([
-			[doc('a'), doc('b', { commune: null, rayonKm: 30 }), doc('c', { rayonKm: null })],
+			[doc('a'), doc('b', { city: null, radiusKm: 30 }), doc('c', { radiusKm: null })],
 		])
 
 		const [a, b, c] = await lireLAnnuaire(payload)
@@ -370,7 +370,7 @@ describe('la lecture de l’annuaire', () => {
 		)
 		const select = lectures.find(lecture => lecture.collection === 'profiles')?.select as Record<string, unknown>
 		expect(Object.keys(select)).toEqual(expect.arrayContaining(['description', 'competences', 'prestations']))
-		for (const interdit of ['coordonnees', 'contactPublic', 'reseaux', 'noteInterne', 'pro'])
+		for (const interdit of ['contactDetails', 'publicContact', 'networks', 'internalNote', 'pro'])
 			expect(select).not.toHaveProperty(interdit)
 		// Without the option, the texts are neither read nor carried.
 		const sans = (await lireLAnnuaire(payload))[0]
@@ -380,7 +380,7 @@ describe('la lecture de l’annuaire', () => {
 
 	test('une photo qui n’est qu’un identifiant, ou sans adresse, donne une carte sans photo', async () => {
 		const { payload } = payloadEspion([
-			[doc('a', { photoPrincipale: 9 }), doc('b', { photoPrincipale: { id: 9 } }), doc('c', { photoPrincipale: null })],
+			[doc('a', { mainPicture: 9 }), doc('b', { mainPicture: { id: 9 } }), doc('c', { mainPicture: null })],
 		])
 		const cartes = (await lireLAnnuaire(payload)).map(({ carte }) => carte)
 		expect(cartes.map(({ photo }) => photo)).toEqual([null, null, null])

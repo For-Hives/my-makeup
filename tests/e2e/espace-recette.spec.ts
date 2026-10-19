@@ -74,7 +74,7 @@ async function maquilleusePleine(context: {
 	if (!fiche) throw new Error('pas de profil')
 	// A commune far from the cities the search specs look at.
 	const { slug: _, ...profil } = profilGenere(5, {
-		communes: [{ nom: 'Lille', codeInsee: '59350', latitude: 50.63, longitude: 3.06 }],
+		communes: [{ name: 'Lille', inseeCode: '59350', latitude: 50.63, longitude: 3.06 }],
 	})
 	const mis = await payload.update({ collection: 'profiles', id: fiche.id, data: profil })
 	await context.addCookies(compte.session.cookies)

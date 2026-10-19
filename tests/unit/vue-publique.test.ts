@@ -74,7 +74,7 @@ describe('urlReseau', () => {
 describe('contacts', () => {
 	test('dans l’ordre de la page, avec le lien de chaque canal', () => {
 		const liens = contacts({
-			reseaux: { siteWeb: 'https://studio.example.test', instagram: '@studio', facebook: '', linkedin: null },
+			reseaux: { website: 'https://studio.example.test', instagram: '@studio', facebook: '', linkedin: null },
 			telephone: '06 39 98 10 01',
 			email: 'contact@studio.example.test',
 		})

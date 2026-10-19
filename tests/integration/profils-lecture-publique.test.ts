@@ -14,11 +14,11 @@ afterEach(viderLaBase)
 
 /** What an admin decided about a profile, and what the import wrote: none of it is public. */
 const RESERVE = {
-	motif: 'Motif fictif du masquage',
-	verifie: true,
-	verifieLe: '2026-10-01T00:00:00.000Z',
+	reason: 'Motif fictif du masquage',
+	verified: true,
+	verifiedAt: '2026-10-01T00:00:00.000Z',
 	siret: '12345678901234',
-	noteInterne: 'Note interne fictive',
+	internalNote: 'Note interne fictive',
 	score: 7.5,
 	legacyUsername: 'Ancien Pseudo Fictif',
 	strapiId: 4242,
@@ -30,31 +30,31 @@ const RESERVE = {
  * of the search and Payload's dates. A new public field of the profile is added here on purpose.
  */
 const CLES_PUBLIQUES = [
-	'aDomicile',
-	'actif',
-	'commune',
+	'active',
+	'artistName',
+	'available',
+	'city',
 	'competences',
-	'completude',
+	'completeness',
 	'createdAt',
 	'description',
-	'disponible',
-	'entierementVide',
 	'experiences',
+	'firstName',
 	'formations',
-	'galerie',
+	'fullyEmpty',
+	'gallery',
+	'homeService',
 	'id',
 	'langues',
-	'nom',
-	'nomArtiste',
-	'photoPrincipale',
-	'prenom',
+	'lastName',
+	'mainPicture',
+	'networks',
 	'prestations',
-	'publiable',
-	'rayonKm',
-	'reseaux',
+	'publishable',
+	'radiusKm',
 	'slug',
-	'specialite',
-	'superMaquilleuse',
+	'specialty',
+	'superArtist',
 	'updatedAt',
 ]
 
@@ -72,7 +72,14 @@ async function maquilleuseAvecProfil(statut: StatutDuProfil) {
 	const rempli = await payload.update({
 		collection: 'profiles',
 		id: profil.id,
-		data: { ...RESERVE, strapiId: dernierStrapiId, statut, prenom: 'Prénom', nom: 'Fictif', superMaquilleuse: true },
+		data: {
+			...RESERVE,
+			strapiId: dernierStrapiId,
+			status: statut,
+			firstName: 'Prénom',
+			lastName: 'Fictif',
+			superArtist: true,
+		},
 	})
 	return { compte, profil: rempli }
 }
@@ -88,9 +95,9 @@ const identifiants = (corps: unknown) => (corps as { docs: { id: number }[] }).d
 describe('Lecture anonyme : seuls les profils publiés sortent (I01, U53)', () => {
 	test('par REST et par l’API locale, un profil publié sur trois', async () => {
 		const [publie, brouillon, masque] = await Promise.all([
-			maquilleuseAvecProfil('publie'),
-			maquilleuseAvecProfil('brouillon'),
-			maquilleuseAvecProfil('masque'),
+			maquilleuseAvecProfil('published'),
+			maquilleuseAvecProfil('draft'),
+			maquilleuseAvecProfil('hidden'),
 		])
 		const payload = await payloadDeTest()
 
@@ -107,7 +114,7 @@ describe('Lecture anonyme : seuls les profils publiés sortent (I01, U53)', () =
 
 describe('Instantané des clés : aucun champ réservé, ni compte relié, ni strapiId', () => {
 	test('un profil publié lu par un anonyme, à toutes les profondeurs, en liste et seul', async () => {
-		const { profil } = await maquilleuseAvecProfil('publie')
+		const { profil } = await maquilleuseAvecProfil('published')
 
 		for (const chemin of [
 			`/api/profiles/${profil.id}?depth=0`,
@@ -118,13 +125,13 @@ describe('Instantané des clés : aucun champ réservé, ni compte relié, ni st
 			expect(statut).toBe(200)
 			const document = 'docs' in (corps as object) ? (corps as { docs: object[] }).docs[0] : corps
 			expect(Object.keys(document as object).sort()).toEqual(CLES_PUBLIQUES)
-			for (const valeur of [RESERVE.noteInterne, RESERVE.siret, RESERVE.motif, RESERVE.legacyUsername])
+			for (const valeur of [RESERVE.internalNote, RESERVE.siret, RESERVE.reason, RESERVE.legacyUsername])
 				expect(texte).not.toContain(valeur)
 		}
 	})
 
 	test('lu par une autre maquilleuse ou par redaction : les mêmes clés', async () => {
-		const { profil } = await maquilleuseAvecProfil('publie')
+		const { profil } = await maquilleuseAvecProfil('published')
 		const [autre, redaction] = await Promise.all([creerCompte('maquilleuse'), creerCompte('redaction')])
 
 		for (const lecteur of [autre, redaction]) {
@@ -137,7 +144,7 @@ describe('Instantané des clés : aucun champ réservé, ni compte relié, ni st
 	})
 
 	test('la propriétaire lit son statut, son motif, sa vérification et son SIRET, jamais la note interne ni le score', async () => {
-		const { compte, profil } = await maquilleuseAvecProfil('masque')
+		const { compte, profil } = await maquilleuseAvecProfil('hidden')
 
 		const { statut, corps } = await appelerRest('GET', `/api/profiles/${profil.id}?depth=0`, {
 			enTetes: compte.session.enTetes,
@@ -145,70 +152,70 @@ describe('Instantané des clés : aucun champ réservé, ni compte relié, ni st
 
 		expect(statut).toBe(200)
 		expect(corps).toMatchObject({
-			statut: 'masque',
-			motif: RESERVE.motif,
-			verifie: true,
-			verifieLe: RESERVE.verifieLe,
+			status: 'hidden',
+			reason: RESERVE.reason,
+			verified: true,
+			verifiedAt: RESERVE.verifiedAt,
 			siret: RESERVE.siret,
 			pro: Number(compte.id),
 			legacyUsername: RESERVE.legacyUsername,
 			strapiId: profil.strapiId,
 		})
-		expect(corps).not.toHaveProperty('noteInterne')
+		expect(corps).not.toHaveProperty('internalNote')
 		expect(corps).not.toHaveProperty('score')
 	})
 
 	test('l’admin lit tout', async () => {
-		const { profil } = await maquilleuseAvecProfil('publie')
+		const { profil } = await maquilleuseAvecProfil('published')
 		const admin = await creerCompte('admin')
 
 		const { corps } = await appelerRest('GET', `/api/profiles/${profil.id}?depth=0`, { enTetes: admin.session.enTetes })
 
-		expect(corps).toMatchObject({ ...RESERVE, strapiId: profil.strapiId, statut: 'publie', superMaquilleuse: true })
+		expect(corps).toMatchObject({ ...RESERVE, strapiId: profil.strapiId, status: 'published', superArtist: true })
 	})
 })
 
 describe('Statut, vérifié et score envoyés par la maquilleuse restent inchangés (I03, U55)', () => {
 	test('la modification passe pour son identité, les champs réservés gardent leur valeur', async () => {
-		const { compte, profil } = await maquilleuseAvecProfil('brouillon')
+		const { compte, profil } = await maquilleuseAvecProfil('draft')
 		const autre = await creerCompte('maquilleuse-sans-profil')
 		const avant = await stocke(profil.id)
 
 		const { statut } = await appelerRest('PATCH', `/api/profiles/${profil.id}`, {
 			enTetes: compte.session.enTetes,
 			corps: {
-				prenom: 'Nouveau Prénom',
-				statut: 'publie',
-				verifie: false,
-				verifieLe: '2026-10-14T00:00:00.000Z',
+				firstName: 'Nouveau Prénom',
+				status: 'published',
+				verified: false,
+				verifiedAt: '2026-10-14T00:00:00.000Z',
 				score: 99,
-				motif: 'Envoyé par la maquilleuse',
+				reason: 'Envoyé par la maquilleuse',
 				siret: '98765432109876',
-				noteInterne: 'Envoyée par la maquilleuse',
-				superMaquilleuse: false,
+				internalNote: 'Envoyée par la maquilleuse',
+				superArtist: false,
 				pro: Number(autre.id),
 			},
 		})
 
 		expect(statut).toBe(200)
 		const apres = await stocke(profil.id)
-		expect(apres.prenom).toBe('Nouveau Prénom')
+		expect(apres.firstName).toBe('Nouveau Prénom')
 		const reserves = [
-			'statut',
-			'verifie',
-			'verifieLe',
+			'status',
+			'verified',
+			'verifiedAt',
 			'score',
-			'motif',
+			'reason',
 			'siret',
-			'noteInterne',
-			'superMaquilleuse',
+			'internalNote',
+			'superArtist',
 			'pro',
 		] as const
 		for (const champ of reserves) expect([champ, apres[champ]]).toEqual([champ, avant[champ]])
 	})
 
 	test('un SIRET mal formé est refusé en français, même pour un admin', async () => {
-		const { profil } = await maquilleuseAvecProfil('publie')
+		const { profil } = await maquilleuseAvecProfil('published')
 		const admin = await creerCompte('admin')
 
 		const { statut, texte } = await appelerRest('PATCH', `/api/profiles/${profil.id}`, {
@@ -224,13 +231,13 @@ describe('Statut, vérifié et score envoyés par la maquilleuse restent inchang
 
 describe('L’admin masque un profil : la lecture anonyme suivante ne le rend plus', () => {
 	test('lu par son identifiant et dans la liste avant ; introuvable et absent de la liste après', async () => {
-		const { profil } = await maquilleuseAvecProfil('publie')
+		const { profil } = await maquilleuseAvecProfil('published')
 		const admin = await creerCompte('admin')
 		expect((await appelerRest('GET', `/api/profiles/${profil.id}`)).statut).toBe(200)
 
 		const masquage = await appelerRest('PATCH', `/api/profiles/${profil.id}`, {
 			enTetes: admin.session.enTetes,
-			corps: { statutChoisi: 'masque', motif: 'Masqué pour le test' },
+			corps: { chosenStatus: 'hidden', reason: 'Masqué pour le test' },
 		})
 
 		expect(masquage.statut).toBe(200)

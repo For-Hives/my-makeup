@@ -114,35 +114,35 @@ describe('la date de consentement déjà posée est gardée (ticket 227)', () =>
 	const AUTRE = '2026-11-09T08:00:00.000Z'
 	const profil = (strapiId: number, consentiLe: string | null): Attendu => ({
 		strapiId,
-		valeurs: { strapiId, contactPublic: consentiLe !== null, consentiLe },
+		valeurs: { strapiId, publicContact: consentiLe !== null, consentedAt: consentiLe },
 		ecarts: [],
 	})
 
 	test('la date est une amorce : écrite sur un profil qui n’en a pas, jamais par-dessus une date posée', () => {
-		expect(ADAPTATEUR_PROFILS.amorces).toContain('consentiLe')
+		expect(ADAPTATEUR_PROFILS.amorces).toContain('consentedAt')
 		const existants = [
-			{ id: 1, valeurs: { strapiId: 1, contactPublic: true, consentiLe: PREMIERE } },
-			{ id: 2, valeurs: { strapiId: 2, contactPublic: false, consentiLe: null } },
+			{ id: 1, valeurs: { strapiId: 1, publicContact: true, consentedAt: PREMIERE } },
+			{ id: 2, valeurs: { strapiId: 2, publicContact: false, consentedAt: null } },
 		]
 
 		const plan = planifier(
-			{ ...ADAPTATEUR_PROFILS, champs: { contactPublic: 'booleen', consentiLe: 'date' } },
+			{ ...ADAPTATEUR_PROFILS, champs: { publicContact: 'booleen', consentedAt: 'date' } },
 			[profil(1, AUTRE), profil(2, AUTRE)],
 			existants
 		)
 
 		expect(plan.actions.map(action => [action.genre, 'champs' in action ? action.champs : []])).toEqual([
 			['inchange', []],
-			['modification', ['contactPublic', 'consentiLe']],
+			['modification', ['publicContact', 'consentedAt']],
 		])
 	})
 
 	test('le rapport compte les profils dont la date demandée diffère de la date gardée, par identifiant', () => {
 		const existants = [
-			{ valeurs: { strapiId: 1, consentiLe: PREMIERE } },
-			{ valeurs: { strapiId: 2, consentiLe: new Date(PREMIERE) } },
-			{ valeurs: { strapiId: 3, consentiLe: null } },
-			{ valeurs: { strapiId: 4, consentiLe: PREMIERE } },
+			{ valeurs: { strapiId: 1, consentedAt: PREMIERE } },
+			{ valeurs: { strapiId: 2, consentedAt: new Date(PREMIERE) } },
+			{ valeurs: { strapiId: 3, consentedAt: null } },
+			{ valeurs: { strapiId: 4, consentedAt: PREMIERE } },
 		]
 		const attendus = [profil(4, AUTRE), profil(1, AUTRE), profil(2, PREMIERE), profil(3, AUTRE), profil(5, AUTRE)]
 
@@ -189,23 +189,23 @@ describe('sur une cible en service, un profil déjà repris reste tel quel (tick
 		valeurs: { strapiId: 1, ...valeurs },
 		ecarts: [],
 	})
-	const existant = { id: 7, valeurs: { strapiId: 1, contactPublic: false, coordonnees: { telephone: null } } }
+	const existant = { id: 7, valeurs: { strapiId: 1, publicContact: false, contactDetails: { phone: null } } }
 
 	test('ce que la maquilleuse a fermé dans la v3 n’est pas rouvert : aucun champ n’est comparé', () => {
 		const attendu = profil({
-			contactPublic: true,
-			coordonnees: { telephone: '0100000000' },
-			sourceConsentement: 'import',
+			publicContact: true,
+			contactDetails: { phone: '0100000000' },
+			consentSource: 'import',
 		})
 
-		expect(champsDifferents(ADAPTATEUR_PROFILS, attendu, existant)).toContain('contactPublic')
+		expect(champsDifferents(ADAPTATEUR_PROFILS, attendu, existant)).toContain('publicContact')
 		expect(champsDifferents(ADAPTATEUR_PROFILS_EN_SERVICE, attendu, existant)).toEqual([])
 		const plan = planifier(ADAPTATEUR_PROFILS_EN_SERVICE, [attendu], [existant])
 		expect(plan.actions.map(({ genre }) => genre)).toEqual(['inchange'])
 	})
 
 	test('un profil qui manque est créé, avec tous ses champs', () => {
-		const plan = planifier(ADAPTATEUR_PROFILS_EN_SERVICE, [profil({ contactPublic: false })], [])
+		const plan = planifier(ADAPTATEUR_PROFILS_EN_SERVICE, [profil({ publicContact: false })], [])
 
 		expect(plan.actions.map(({ genre }) => genre)).toEqual(['creation'])
 	})

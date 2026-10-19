@@ -94,7 +94,7 @@ test.describe('L’admin retrouve, corrige et masque un profil', () => {
 			}
 
 			// The columns of the list: the address, the commune, the completeness, publishable, the status.
-			await page.goto(`/admin/collections/profiles?limit=100&where[and][0][statut][exists]=true&${siens}`)
+			await page.goto(`/admin/collections/profiles?limit=100&where[and][0][status][exists]=true&${siens}`)
 			const entete = page.locator('thead')
 			for (const colonne of ['Adresse du profil', 'Commune', 'Complétude', 'Publiable', 'Statut'])
 				await expect(entete).toContainText(colonne)
@@ -103,13 +103,13 @@ test.describe('L’admin retrouve, corrige et masque un profil', () => {
 			// The filters of the panel, as its address holds them.
 			const filtre = (champ: string, valeur: string) =>
 				`/admin/collections/profiles?limit=100&where[and][0][${champ}][equals]=${valeur}&${siens}`
-			await page.goto(filtre('publiable', 'false'))
+			await page.goto(filtre('publishable', 'false'))
 			await expect(page.locator('tbody tr')).toHaveCount(2)
-			await page.goto(filtre('entierementVide', 'true'))
+			await page.goto(filtre('fullyEmpty', 'true'))
 			await expect(page.locator('tbody tr')).toHaveCount(1)
-			await page.goto(filtre('statut', 'publie'))
+			await page.goto(filtre('status', 'published'))
 			await expect(page.locator('tbody tr')).toHaveCount(2)
-			await page.goto(filtre('statut', 'brouillon'))
+			await page.goto(filtre('status', 'draft'))
 			await expect(page.locator('tbody tr')).toHaveCount(1)
 
 			expect(erreurs).toEqual([])
@@ -134,7 +134,7 @@ test.describe('L’admin retrouve, corrige et masque un profil', () => {
 			await page.goto(`/admin/collections/profiles/${profil.id}`)
 			// The form hydrates after it shows: a click that comes too early opens nothing, so it is made again.
 			await expect(async () => {
-				await page.locator('#field-statutChoisi .rs__control').click()
+				await page.locator('#field-chosenStatus .rs__control').click()
 				await page.getByRole('option', { name: choix }).first().click({ timeout: 2_000 })
 			}).toPass({ timeout: 20_000 })
 			await page.locator('#action-save').click()
@@ -145,7 +145,7 @@ test.describe('L’admin retrouve, corrige et masque un profil', () => {
 			expect(await statutDeLaPage()).toBe(200)
 			await enregistrerAvec('Masqué')
 			await expect.poll(statutDeLaPage, { timeout: UNE_MINUTE }).toBe(404)
-			expect((await payload.findByID({ collection: 'profiles', id: profil.id, depth: 0 })).statut).toBe('masque')
+			expect((await payload.findByID({ collection: 'profiles', id: profil.id, depth: 0 })).status).toBe('masque')
 
 			await enregistrerAvec('Automatique')
 			await expect.poll(statutDeLaPage, { timeout: UNE_MINUTE }).toBe(200)

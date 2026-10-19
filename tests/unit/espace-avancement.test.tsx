@@ -20,20 +20,20 @@ const DESCRIPTION = 'Maquilleuse fictive. '.repeat(12)
 /** A profile with the 13 criteria, as the page reads it. */
 const COMPLET: ProfilDeLEspace = {
 	id: 1,
-	prenom: 'Léa',
-	nom: 'Fictive',
-	nomArtiste: 'Studio Fictif',
-	specialite: 'Mariage',
+	firstName: 'Léa',
+	lastName: 'Fictive',
+	artistName: 'Studio Fictif',
+	specialty: 'Mariage',
 	description: DESCRIPTION,
-	commune: ANNECY,
-	photoPrincipale: 5,
-	galerie: [6],
+	city: ANNECY,
+	mainPicture: 5,
+	gallery: [6],
 	competences: [{ nom: 'Teint' }],
 	formations: [{ diplome: 'Diplôme fictif' }],
 	experiences: [{ poste: 'Poste fictif' }],
 	langues: [{ nom: 'Français' }],
 	prestations: [{ nom: 'Mariée', prixAPartirDe: 120 }],
-	reseaux: { instagram: 'studio.fictif' },
+	networks: { instagram: 'studio.fictif' },
 }
 
 const sans = (...cles: (keyof ProfilDeLEspace)[]): ProfilDeLEspace => {
@@ -78,7 +78,7 @@ describe('U02 : profil complet', () => {
 })
 
 describe('U04-U06 : actif mais pas publiable, les manques exacts', () => {
-	const ACTIF: ProfilDeLEspace = { id: 3, specialite: 'Mariage', commune: ANNECY, photoPrincipale: 5 }
+	const ACTIF: ProfilDeLEspace = { id: 3, specialty: 'Mariage', city: ANNECY, mainPicture: 5 }
 
 	test('actif seul : l’offre, la description et le contact manquent, rien d’autre de requis', () => {
 		const a = avancementDuProfil(ACTIF)
@@ -103,27 +103,27 @@ describe('U04-U06 : actif mais pas publiable, les manques exacts', () => {
 	})
 
 	test('U06 : sans canal de contact, un manque requis qui mène aux réseaux', () => {
-		const a = avancementDuProfil(sans('reseaux'))
+		const a = avancementDuProfil(sans('networks'))
 		expect(a.manques).toHaveLength(1)
 		expect(a.manques[0]).toMatchObject({ critere: 'reseaux', requis: true, section: 'reseaux' })
 	})
 
 	test('le téléphone compte seulement affiché sur le profil', () => {
-		const cache = avancementDuProfil({ ...sans('reseaux'), coordonnees: { telephone: '0102030405' } })
+		const cache = avancementDuProfil({ ...sans('networks'), contactDetails: { phone: '0102030405' } })
 		expect(cache.etat).toBe('incomplet')
 		const montre = avancementDuProfil({
-			...sans('reseaux'),
-			coordonnees: { telephone: '0102030405' },
-			contactPublic: true,
+			...sans('networks'),
+			contactDetails: { phone: '0102030405' },
+			publicContact: true,
 		})
 		expect(montre.etat).toBe('publiable')
 	})
 
 	test('sans photo, spécialité ou commune : le profil n’est pas actif, chaque manque est requis', () => {
 		for (const [retrait, critere] of [
-			['photoPrincipale', 'photo'],
-			['specialite', 'specialite'],
-			['commune', 'ville'],
+			['mainPicture', 'photo'],
+			['specialty', 'specialite'],
+			['city', 'ville'],
 		] as const) {
 			const a = avancementDuProfil(sans(retrait))
 			expect(a.etat).toBe('incomplet')
@@ -132,7 +132,7 @@ describe('U04-U06 : actif mais pas publiable, les manques exacts', () => {
 	})
 
 	test('ce qui n’empêche pas d’être publiable passe après, sans être requis', () => {
-		const a = avancementDuProfil(sans('langues', 'galerie'))
+		const a = avancementDuProfil(sans('langues', 'gallery'))
 		expect(a.etat).toBe('publiable')
 		expect(a.manques.map(m => [m.critere, m.requis])).toEqual([
 			['langues', false],
@@ -144,7 +144,7 @@ describe('U04-U06 : actif mais pas publiable, les manques exacts', () => {
 
 describe('U07 : un compte interne n’est jamais publiable', () => {
 	test('complet, mais spécialité « CEO/CTO My Makeup » : état interne, pas publiable', () => {
-		const a = avancementDuProfil({ ...COMPLET, specialite: 'CEO/CTO My Makeup' })
+		const a = avancementDuProfil({ ...COMPLET, specialty: 'CEO/CTO My Makeup' })
 		expect(a.etat).toBe('interne')
 		expect(a.consequence).toContain('jamais publiable')
 	})
@@ -152,9 +152,9 @@ describe('U07 : un compte interne n’est jamais publiable', () => {
 
 describe('disponibilité', () => {
 	test('un profil publiable marqué indisponible le dit : il n’est pas dans la recherche', () => {
-		expect(avancementDuProfil({ ...COMPLET, disponible: false }).consequence).toContain('pas disponible')
-		expect(avancementDuProfil({ ...COMPLET, disponible: true }).consequence).not.toContain('pas disponible')
-		expect(avancementDuProfil({ id: 2, disponible: false }).consequence).not.toContain('pas disponible')
+		expect(avancementDuProfil({ ...COMPLET, available: false }).consequence).toContain('pas disponible')
+		expect(avancementDuProfil({ ...COMPLET, available: true }).consequence).not.toContain('pas disponible')
+		expect(avancementDuProfil({ id: 2, available: false }).consequence).not.toContain('pas disponible')
 	})
 })
 

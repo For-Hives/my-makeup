@@ -501,8 +501,8 @@ describe('Sans stockage d’objets, le ménage d’un profil ne supprime aucun m
 		return { apresEnregistrement, apresSuppression }
 	}
 
-	const avant = { id: 7, pro: 3, photoPrincipale: 11, galerie: [12, { id: 13 }] }
-	const apres = { id: 7, pro: 3, photoPrincipale: null, galerie: [] }
+	const avant = { id: 7, pro: 3, mainPicture: 11, gallery: [12, { id: 13 }] }
+	const apres = { id: 7, pro: 3, mainPicture: null, gallery: [] }
 
 	test('une photo retirée, un profil supprimé : aucune lecture, aucune suppression ; une ligne le dit', async () => {
 		const { apresEnregistrement, apresSuppression } = await crochetsDesProfils(undefined)

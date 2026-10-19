@@ -33,7 +33,7 @@ function coordonneesDeLaSource(profil: number) {
 		l => Number(l.entity_id) === profil && l.component_type === 'makeupartists.network'
 	)
 	const reseau = lignes.components_makeupartists_networks.find(r => Number(r.id) === Number(lien?.component_id))
-	return { telephone: reseau?.phone ?? null, email: reseau?.email ?? null }
+	return { phone: reseau?.phone ?? null, email: reseau?.email ?? null }
 }
 
 const AFFICHENT = PRIS.filter(id => Object.values(coordonneesDeLaSource(id)).some(valeur => valeur !== null))
@@ -90,10 +90,10 @@ describe('Les coordonnées déjà publiées restent publiques, avec un consentem
 
 		for (const id of AFFICHENT) {
 			const profil = cible.find(({ strapiId }) => strapiId === id)
-			expect(profil?.coordonnees, String(id)).toMatchObject(coordonneesDeLaSource(id))
-			expect(profil?.contactPublic, String(id)).toBe(true)
-			expect(profil?.consentiLe, String(id)).toBe(DATE_DE_BASCULE_DU_BANC)
-			expect(profil?.sourceConsentement, String(id)).toBe('import')
+			expect(profil?.contactDetails, String(id)).toMatchObject(coordonneesDeLaSource(id))
+			expect(profil?.publicContact, String(id)).toBe(true)
+			expect(profil?.consentedAt, String(id)).toBe(DATE_DE_BASCULE_DU_BANC)
+			expect(profil?.consentSource, String(id)).toBe('import')
 		}
 		expect(premier.ecarts['coordonnees-consentement']).toBe(AFFICHENT.length)
 	})
@@ -104,11 +104,11 @@ describe('Les coordonnées déjà publiées restent publiques, avec un consentem
 		expect(cible.map(({ strapiId }) => strapiId)).toEqual(PRIS)
 		for (const id of SANS) {
 			const profil = cible.find(({ strapiId }) => strapiId === id)
-			expect(profil?.contactPublic, String(id)).toBe(false)
-			expect(profil?.consentiLe ?? null, String(id)).toBeNull()
-			expect(profil?.sourceConsentement ?? null, String(id)).toBeNull()
-			expect(profil?.coordonnees?.telephone ?? null, String(id)).toBeNull()
-			expect(profil?.coordonnees?.email ?? null, String(id)).toBeNull()
+			expect(profil?.publicContact, String(id)).toBe(false)
+			expect(profil?.consentedAt ?? null, String(id)).toBeNull()
+			expect(profil?.consentSource ?? null, String(id)).toBeNull()
+			expect(profil?.contactDetails?.phone ?? null, String(id)).toBeNull()
+			expect(profil?.contactDetails?.email ?? null, String(id)).toBeNull()
 		}
 		expect(premier.parite?.profiles).toMatchObject({ differents: [], manquants: [], refuses: [] })
 	})
@@ -132,7 +132,7 @@ describe('Les coordonnées déjà publiées restent publiques, avec un consentem
 		for (const reponse of reponses) expect(reponse.statut).toBe(200)
 		for (const texte of textes) {
 			for (const secret of secrets) expect(texte).not.toContain(secret)
-			for (const cle of ['coordonnees', 'contactPublic', 'consentiLe', 'sourceConsentement'])
+			for (const cle of ['contactDetails', 'publicContact', 'consentedAt', 'consentSource'])
 				expect(texte).not.toContain(`"${cle}"`)
 		}
 	})
@@ -157,7 +157,7 @@ describe('Une source qui change après le premier passage (ticket 064)', () => {
 	afterAll(() =>
 		avecLeProprietaire(sql =>
 			sql.unsafe(
-				`UPDATE components_makeupartists_networks SET phone = '${String(coordonneesDeLaSource(21).telephone)}' WHERE id = ${Number(RESEAU_21)}`
+				`UPDATE components_makeupartists_networks SET phone = '${String(coordonneesDeLaSource(21).phone)}' WHERE id = ${Number(RESEAU_21)}`
 			)
 		)
 	)
@@ -173,11 +173,11 @@ describe('Une source qui change après le premier passage (ticket 064)', () => {
 
 		expect(rapport.collections.profiles).toMatchObject({ crees: 0, modifies: 1, refuses: [] })
 		const zoe = (await profilsDeLaCible()).find(({ strapiId }) => strapiId === 21)
-		expect(zoe?.coordonnees?.telephone).toBe('06 39 98 99 99')
+		expect(zoe?.contactDetails?.phone).toBe('06 39 98 99 99')
 		expect(zoe).toMatchObject({
-			contactPublic: true,
-			consentiLe: DATE_DE_BASCULE_DU_BANC,
-			sourceConsentement: 'import',
+			publicContact: true,
+			consentedAt: DATE_DE_BASCULE_DU_BANC,
+			consentSource: 'import',
 		})
 	})
 
@@ -194,10 +194,10 @@ describe('Une source qui change après le premier passage (ticket 064)', () => {
 
 		expect(rapport.collections.profiles).toMatchObject({ crees: 0, modifies: 1, refuses: [] })
 		const hugo = (await profilsDeLaCible()).find(({ strapiId }) => strapiId === 23)
-		expect(hugo?.contactPublic).toBe(false)
-		expect(hugo?.consentiLe ?? null).toBeNull()
-		expect(hugo?.sourceConsentement ?? null).toBeNull()
-		expect(hugo?.coordonnees?.telephone ?? null).toBeNull()
+		expect(hugo?.publicContact).toBe(false)
+		expect(hugo?.consentedAt ?? null).toBeNull()
+		expect(hugo?.consentSource ?? null).toBeNull()
+		expect(hugo?.contactDetails?.phone ?? null).toBeNull()
 	})
 })
 
@@ -225,11 +225,11 @@ describe('Une coordonnée que le serveur refuserait ne fait pas perdre le profil
 
 		expect(rapport.collections.profiles?.refuses).toEqual([])
 		const profil = await profilCible(22)
-		expect(profil?.coordonnees?.telephone ?? null).toBeNull()
-		expect(profil?.coordonnees?.email ?? null).toBeNull()
-		expect(profil?.contactPublic).toBe(false)
-		expect(profil?.consentiLe ?? null).toBeNull()
-		expect(profil?.sourceConsentement ?? null).toBeNull()
+		expect(profil?.contactDetails?.phone ?? null).toBeNull()
+		expect(profil?.contactDetails?.email ?? null).toBeNull()
+		expect(profil?.publicContact).toBe(false)
+		expect(profil?.consentedAt ?? null).toBeNull()
+		expect(profil?.consentSource ?? null).toBeNull()
 	})
 
 	test('un email avec des espaces autour est repris sans eux, et le profil s’ouvre', async () => {
@@ -239,11 +239,11 @@ describe('Une coordonnée que le serveur refuserait ne fait pas perdre le profil
 
 		expect(rapport.collections.profiles?.refuses).toEqual([])
 		const profil = await profilCible(30)
-		expect(profil?.coordonnees?.email).toBe('emma@example.test')
+		expect(profil?.contactDetails?.email).toBe('emma@example.test')
 		expect(profil).toMatchObject({
-			contactPublic: true,
-			consentiLe: DATE_DE_BASCULE_DU_BANC,
-			sourceConsentement: 'import',
+			publicContact: true,
+			consentedAt: DATE_DE_BASCULE_DU_BANC,
+			consentSource: 'import',
 		})
 	})
 
@@ -263,15 +263,15 @@ describe('Une coordonnée que le serveur refuserait ne fait pas perdre le profil
 		expect(JSON.stringify(rapport)).not.toContain('Insta')
 		const profil = await profilCible(33)
 		expect(profil).toBeDefined()
-		expect(profil?.coordonnees?.email ?? null).toBeNull()
-		expect(profil?.coordonnees?.telephone ?? null).toBeNull()
-		expect(profil?.contactPublic).toBe(false)
+		expect(profil?.contactDetails?.email ?? null).toBeNull()
+		expect(profil?.contactDetails?.phone ?? null).toBeNull()
+		expect(profil?.publicContact).toBe(false)
 	})
 
 	test('le décompte du registre ne compte que les profils écrits, et vaut le nombre de profils ouverts', async () => {
 		const rapport = await importerSurLeBanc()
 
-		const ouverts = (await profilsDeLaCible()).filter(({ contactPublic }) => contactPublic).length
+		const ouverts = (await profilsDeLaCible()).filter(({ publicContact }) => publicContact).length
 		expect(rapport.ecarts['coordonnees-consentement']).toBe(ouverts)
 	})
 })

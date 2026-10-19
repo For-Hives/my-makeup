@@ -81,29 +81,29 @@ describe('La trace du consentement : posée par le serveur', () => {
 		expect(
 			consentementApres({
 				avant: true,
-				donnees: { contactPublic: false, consentiLe: autreDate, sourceConsentement: 'maquilleuse' },
+				donnees: { publicContact: false, consentedAt: autreDate, consentSource: 'artist' },
 				compte: 'pros',
 				maintenant,
 			})
-		).toEqual({ consentiLe: null, sourceConsentement: null })
+		).toEqual({ consentedAt: null, consentSource: null })
 	})
 
 	test('ouvertes par la maquilleuse : la date du serveur, la source « maquilleuse »', () => {
 		expect(
 			consentementApres({
 				avant: false,
-				donnees: { contactPublic: true, consentiLe: null },
+				donnees: { publicContact: true, consentedAt: null },
 				compte: 'pros',
 				maintenant,
 			})
-		).toEqual({ consentiLe: maintenant.toISOString(), sourceConsentement: 'maquilleuse' })
+		).toEqual({ consentedAt: maintenant.toISOString(), consentSource: 'artist' })
 	})
 
 	test('ouvertes par un admin : la date du serveur, la source « admin »', () => {
-		expect(consentementApres({ avant: false, donnees: { contactPublic: true }, compte: 'admins', maintenant })).toEqual(
+		expect(consentementApres({ avant: false, donnees: { publicContact: true }, compte: 'admins', maintenant })).toEqual(
 			{
-				consentiLe: maintenant.toISOString(),
-				sourceConsentement: 'admin',
+				consentedAt: maintenant.toISOString(),
+				consentSource: 'admin',
 			}
 		)
 	})
@@ -112,25 +112,25 @@ describe('La trace du consentement : posée par le serveur', () => {
 		expect(
 			consentementApres({
 				avant: true,
-				donnees: { contactPublic: true, consentiLe: autreDate, sourceConsentement: 'import' },
+				donnees: { publicContact: true, consentedAt: autreDate, consentSource: 'import' },
 				compte: 'pros',
 				maintenant,
 			})
-		).toEqual({ consentiLe: autreDate, sourceConsentement: 'import' })
+		).toEqual({ consentedAt: autreDate, consentSource: 'import' })
 	})
 
 	test('ouvertes à la création par le serveur sans compte : la date et la source données, sinon l’heure et « import »', () => {
 		expect(
 			consentementApres({
 				avant: undefined,
-				donnees: { contactPublic: true, consentiLe: autreDate, sourceConsentement: 'import' },
+				donnees: { publicContact: true, consentedAt: autreDate, consentSource: 'import' },
 				compte: undefined,
 				maintenant,
 			})
-		).toEqual({ consentiLe: autreDate, sourceConsentement: 'import' })
+		).toEqual({ consentedAt: autreDate, consentSource: 'import' })
 		expect(
-			consentementApres({ avant: undefined, donnees: { contactPublic: true }, compte: undefined, maintenant })
-		).toEqual({ consentiLe: maintenant.toISOString(), sourceConsentement: 'import' })
+			consentementApres({ avant: undefined, donnees: { publicContact: true }, compte: undefined, maintenant })
+		).toEqual({ consentedAt: maintenant.toISOString(), consentSource: 'import' })
 	})
 })
 

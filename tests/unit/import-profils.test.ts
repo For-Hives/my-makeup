@@ -74,17 +74,17 @@ describe('la source dit si un profil est entièrement vide, comme l’ancien sit
 
 describe('le statut est celui que le serveur calcule de ce que l’import écrit (ticket 044)', () => {
 	test('entièrement vide : brouillon ; une condition remplie : publié', () => {
-		expect(statutCalcule({ prenom: 'Manon', nom: 'Petit' })).toBe('brouillon')
-		expect(statutCalcule({ specialite: 'Mariage' })).toBe('publie')
-		expect(statutCalcule({ description: 'x'.repeat(200) })).toBe('publie')
-		expect(statutCalcule({ description: 'Courte.' })).toBe('brouillon')
+		expect(statutCalcule({ firstName: 'Manon', lastName: 'Petit' })).toBe('draft')
+		expect(statutCalcule({ specialty: 'Mariage' })).toBe('published')
+		expect(statutCalcule({ description: 'x'.repeat(200) })).toBe('published')
+		expect(statutCalcule({ description: 'Courte.' })).toBe('draft')
 	})
 
 	test('le statut est comparé mais jamais écrit ; le choix du statut est rendu à la règle', () => {
-		expect(ADAPTATEUR_PROFILS.calcules).toEqual(['statut'])
-		expect(ADAPTATEUR_PROFILS.champs).toMatchObject({ statut: 'texte', statutChoisi: 'texte' })
+		expect(ADAPTATEUR_PROFILS.calcules).toEqual(['status'])
+		expect(ADAPTATEUR_PROFILS.champs).toMatchObject({ status: 'texte', chosenStatus: 'texte' })
 		const [attendu] = profilsAttendus([profil(21, { speciality: 'Mariage' })], new Map([[121, 501]])).attendus
-		expect(attendu?.valeurs).toMatchObject({ statut: 'publie', statutChoisi: 'automatique' })
+		expect(attendu?.valeurs).toMatchObject({ status: 'published', chosenStatus: 'automatic' })
 	})
 })
 
@@ -179,7 +179,7 @@ describe('les profils attendus', () => {
 			[22, ['disponibilite-par-defaut', 'profils-vides-brouillon']],
 			[23, ['slug-stocke', 'profils-vides-brouillon']],
 		])
-		expect(statuts).toEqual({ publie: 1, brouillon: 2 })
+		expect(statuts).toEqual({ published: 1, draft: 2 })
 		for (const reference of ['disponibilite-par-defaut', 'profils-spam-non-repris'])
 			expect(Object.values(REFERENCES) as string[]).toContain(reference)
 	})
@@ -199,42 +199,42 @@ describe('les profils attendus', () => {
 			pro: 501,
 			slug: 'zoe-lefevre-2',
 			legacyUsername: 'Zoé Lefèvre',
-			prenom: null,
-			nom: null,
-			nomArtiste: null,
-			specialite: 'Mariage',
+			firstName: null,
+			lastName: null,
+			artistName: null,
+			specialty: 'Mariage',
 			description: null,
-			commune: null,
+			city: null,
 			// Its radius (ticket 226): none at the source, none in the target.
-			rayonKm: null,
-			disponible: true,
+			radiusKm: null,
+			available: true,
 			score: 12.5,
-			superMaquilleuse: true,
+			superArtist: true,
 			// Its sections (ticket 060): none at the source, none in the target.
-			photoPrincipale: null,
-			galerie: [],
+			mainPicture: null,
+			gallery: [],
 			competences: [],
 			langues: [],
 			formations: [],
 			experiences: [],
 			prestations: [],
-			reseaux: null,
+			networks: null,
 			// Its contact details (ticket 064): none at the source, so closed, without date or source.
-			coordonnees: { telephone: null, email: null },
-			contactPublic: false,
-			consentiLe: null,
-			sourceConsentement: null,
-			statutChoisi: 'automatique',
-			statut: 'publie',
+			contactDetails: { phone: null, email: null },
+			publicContact: false,
+			consentedAt: null,
+			consentSource: null,
+			chosenStatus: 'automatic',
+			status: 'published',
 			createdAt: '2023-05-12T09:20:00.000Z',
 			updatedAt: '2026-09-28T10:11:12.131Z',
 		})
-		expect([lea?.valeurs.disponible, lea?.valeurs.score, lea?.valeurs.legacyUsername]).toEqual([
+		expect([lea?.valeurs.available, lea?.valeurs.score, lea?.valeurs.legacyUsername]).toEqual([
 			true,
 			null,
 			'lea-martin',
 		])
-		expect(ines?.valeurs.disponible).toBe(false)
+		expect(ines?.valeurs.available).toBe(false)
 	})
 
 	test('un statut que la source ne donne pas est listé : une section pas encore reprise', () => {
@@ -274,30 +274,30 @@ describe('le moteur compare un groupe de champs comme un tout', () => {
 
 describe('le nom de la page : prénom et nom, sinon le nom d’artiste, sinon un libellé neutre', () => {
 	test('comme sur l’ancien site', () => {
-		expect(nomAffiche({ prenom: 'Zoé', nom: 'Lefèvre', nomArtiste: 'Zoé Make-up' })).toBe('Zoé Lefèvre')
-		expect(nomAffiche({ prenom: ' Zoé ', nom: null })).toBe('Zoé')
-		expect(nomAffiche({ nom: 'Lefèvre' })).toBe('Lefèvre')
-		expect(nomAffiche({ prenom: '  ', nom: 'null', nomArtiste: 'Studio Lumière' })).toBe('Studio Lumière')
-		expect(nomAffiche({ nomArtiste: 'undefined' })).toBe(NOM_NEUTRE)
+		expect(nomAffiche({ firstName: 'Zoé', lastName: 'Lefèvre', artistName: 'Zoé Make-up' })).toBe('Zoé Lefèvre')
+		expect(nomAffiche({ firstName: ' Zoé ', lastName: null })).toBe('Zoé')
+		expect(nomAffiche({ lastName: 'Lefèvre' })).toBe('Lefèvre')
+		expect(nomAffiche({ firstName: '  ', lastName: 'null', artistName: 'Studio Lumière' })).toBe('Studio Lumière')
+		expect(nomAffiche({ artistName: 'undefined' })).toBe(NOM_NEUTRE)
 		expect(nomAffiche({})).toBe('Maquilleuse professionnelle')
 	})
 
 	test('jamais « undefined » ni « null »', () => {
 		expect(texte('NULL')).toBe('')
 		expect(texte(42)).toBe('')
-		expect(nomComplet({ prenom: 'Undefined', nom: 'Petit' })).toBe('Petit')
+		expect(nomComplet({ firstName: 'Undefined', lastName: 'Petit' })).toBe('Petit')
 	})
 })
 
 describe('la lecture publique choisit ses champs un par un', () => {
 	test('l’identité seulement : ni coordonnées, ni compte, ni ce qu’ont écrit l’import ou un admin', () => {
 		expect(Object.keys(CHAMPS_PUBLICS_DU_PROFIL).sort()).toEqual([
+			'artistName',
 			'description',
-			'nom',
-			'nomArtiste',
-			'prenom',
+			'firstName',
+			'lastName',
 			'slug',
-			'specialite',
+			'specialty',
 		])
 	})
 })
@@ -355,7 +355,7 @@ describe('le rayon d’action est repris de 0 à 200 km, jamais ramené à 200 e
 			])
 		)
 
-		expect(attendus.map(({ valeurs }) => valeurs.rayonKm)).toEqual([30, null, null])
+		expect(attendus.map(({ valeurs }) => valeurs.radiusKm)).toEqual([30, null, null])
 		expect(rayonsARevoir).toEqual([{ profil: 2, rayonKm: 400 }])
 		// The difference is explained by the register, once, for the profile above the bound only.
 		expect(attendus.map(({ ecarts }) => ecarts.some(({ reference }) => reference === REFERENCES.rayon200Km))).toEqual([
@@ -366,7 +366,7 @@ describe('le rayon d’action est repris de 0 à 200 km, jamais ramené à 200 e
 	})
 
 	test('le rayon est un champ comparé : la parité le voit', () => {
-		expect(ADAPTATEUR_PROFILS.champs.rayonKm).toBe('nombre')
+		expect(ADAPTATEUR_PROFILS.champs.radiusKm).toBe('nombre')
 		expect(normaliser('nombre', null)).toBeNull()
 		expect(normaliser('nombre', 30)).toBe(30)
 	})

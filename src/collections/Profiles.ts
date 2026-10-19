@@ -132,7 +132,7 @@ export const slugDeRepliApresCreation: CollectionAfterChangeHook = async ({ doc,
 }
 
 /**
- * The trace of the consent to show the contact details (ticket 042): when `contactPublic` is
+ * The trace of the consent to show the contact details (ticket 042): when `publicContact` is
  * switched on, the server writes the date and the source itself; switched off, both are emptied.
  * The rule is `consentementApres` (src/lib/profil/coordonnees.ts).
  */
@@ -140,7 +140,7 @@ export const consentementTrace: CollectionBeforeChangeHook = ({ data, originalDo
 	const compte = req.user?.collection === 'pros' || req.user?.collection === 'admins' ? req.user.collection : undefined
 	return {
 		...data,
-		...consentementApres({ avant: originalDoc?.contactPublic, donnees: data, compte, maintenant: new Date() }),
+		...consentementApres({ avant: originalDoc?.publicContact, donnees: data, compte, maintenant: new Date() }),
 	}
 }
 
@@ -149,7 +149,7 @@ const RESEAUX = [
 	['youtube', 'YouTube'],
 	['facebook', 'Facebook'],
 	['instagram', 'Instagram'],
-	['siteWeb', 'Site web'],
+	['website', 'Site web'],
 	['linkedin', 'LinkedIn'],
 ] as const
 
@@ -175,8 +175,8 @@ const validerLeChoixDuStatut: Validate = value => (estUnChoixDuStatut(value) ? t
 
 /** The statuses a filter may name: the column is an enumeration of the database, which fails with a 500 on any other. */
 const VALEURS_PAR_CHAMP: Record<string, readonly string[]> = {
-	statut: STATUTS_DU_PROFIL,
-	statutChoisi: CHOIX_DU_STATUT,
+	status: STATUTS_DU_PROFIL,
+	chosenStatus: CHOIX_DU_STATUT,
 }
 const OPERATEURS_DE_VALEUR = ['equals', 'not_equals', 'in', 'not_in', 'like', 'contains'] as const
 
@@ -218,10 +218,10 @@ export const refuserUnFiltreSurUnStatutInconnu: CollectionBeforeOperationHook = 
  * a valid choice back. What a makeup artist sends is ignored, as before.
  */
 export const refuserUnChoixInconnu: CollectionBeforeValidateHook = ({ data, req }) => {
-	if (req.user?.collection === 'admins' && !estUnChoixDuStatut(data?.statutChoisi))
+	if (req.user?.collection === 'admins' && !estUnChoixDuStatut(data?.chosenStatus))
 		throw new ValidationError({
 			collection: 'profiles',
-			errors: [{ message: MESSAGE_DU_CHOIX, path: 'statutChoisi' }],
+			errors: [{ message: MESSAGE_DU_CHOIX, path: 'chosenStatus' }],
 			req,
 		})
 	return data
@@ -247,14 +247,14 @@ const INTERNE = { read: champAdminSeulement, create: champAdminSeulement, update
  * - What the public reads of a profile is its identity: never the account it belongs to, what the
  *   import wrote, nor what an admin decided about it, except the « Super maquilleuse » badge.
  * - Nobody creates a profile through an API but an admin: the server creates it with the account.
- * - Its photos (`photoPrincipale`, `galerie`: 10 at most, in order) are media of its own account:
+ * - Its photos (`mainPicture`, `gallery`: 10 at most, in order) are media of its own account:
  *   a makeup artist never attaches the photo of another one (ticket 043). A photo a save takes out
  *   of the profile, or the photos of a deleted profile, go to the bin of the storage once nothing
  *   references them, and profiles are deleted or changed one at a time, never by a `where`
  *   (src/collections/trash.ts, added through src/payload.config.ts, ticket 045).
- * - The networks are public. The contact details (`coordonnees`) are read by the owner and an
+ * - The networks are public. The contact details (`contactDetails`) are read by the owner and an
  *   admin only, never by the public through the API, even when she chose to show them
- *   (`contactPublic`): a public page reads them through src/services/public/. The server traces
+ *   (`publicContact`): a public page reads them through src/services/public/. The server traces
  *   that choice: the date and the source of the consent (ticket 042).
  * - `pro` (the account that owns it) is written by an admin only; `slug` by the server only, at
  *   the creation; `strapiId` and `legacyUsername` by the import only; the choice of the status,
@@ -267,7 +267,7 @@ const INTERNE = { read: champAdminSeulement, create: champAdminSeulement, update
  * - At every save, the server computes and stores its completeness, whether it is active,
  *   publishable or entirely empty, and since when (src/collections/profiles/etat.ts, ticket 044).
  *   Its status follows: an entirely empty profile is a draft, any other is published, unless an
- *   admin chose another status (`statutChoisi`); a hidden profile stays hidden whatever the save.
+ *   admin chose another status (`chosenStatus`); a hidden profile stays hidden whatever the save.
  * - A save or a deletion of a profile that is or was published refreshes its page, the search and
  *   the sitemap; the import refreshes nothing (src/collections/revalidation.ts, ticket 047).
  */
@@ -278,11 +278,11 @@ export const Profiles: CollectionConfig<'profiles'> = {
 	// The list of the admin (ticket 165): where a profile stands at a glance, the last touched first. The
 	// last activity of a profile is its last save (`updatedAt`): `derniereActivite` lives on the account
 	// in the plan, not here (docs/migration/SCHEMA.md, §9). The filters of the panel read the stored
-	// flags (`publiable`, `entierementVide`, `statut`), so they cost no computation.
+	// flags (`publishable`, `fullyEmpty`, `status`), so they cost no computation.
 	admin: {
 		useAsTitle: 'slug',
-		defaultColumns: ['slug', 'commune.nom', 'completude', 'publiable', 'statut', 'updatedAt'],
-		listSearchableFields: ['slug', 'prenom', 'nom', 'nomArtiste', 'commune.nom'],
+		defaultColumns: ['slug', 'city.name', 'completeness', 'publishable', 'status', 'updatedAt'],
+		listSearchableFields: ['slug', 'firstName', 'lastName', 'artistName', 'city.name'],
 		hidden: cacheeSaufAdmin,
 	},
 	access: {
@@ -327,17 +327,17 @@ export const Profiles: CollectionConfig<'profiles'> = {
 			access: { create: jamais, update: jamais },
 			admin: { readOnly: true, description: 'Calculée à la création du profil, elle ne change plus : /profil/<slug>.' },
 		},
-		{ name: 'prenom', label: 'Prénom', type: 'text', maxLength: 70 },
-		{ name: 'nom', label: 'Nom', type: 'text', maxLength: 70 },
-		{ name: 'nomArtiste', label: 'Nom d’artiste', type: 'text', maxLength: 70 },
-		{ name: 'specialite', label: 'Spécialité', type: 'text', maxLength: 70 },
+		{ name: 'firstName', label: 'Prénom', type: 'text', maxLength: 70 },
+		{ name: 'lastName', label: 'Nom', type: 'text', maxLength: 70 },
+		{ name: 'artistName', label: 'Nom d’artiste', type: 'text', maxLength: 70 },
+		{ name: 'specialty', label: 'Spécialité', type: 'text', maxLength: 70 },
 		// Its commune, its radius and « à domicile », public with the profile (ticket 041).
 		...champsDeLaZone,
 		{ name: 'description', label: 'Description', type: 'textarea', maxLength: 2000 },
-		{ name: 'disponible', label: 'Disponible', type: 'checkbox', defaultValue: true },
+		{ name: 'available', label: 'Disponible', type: 'checkbox', defaultValue: true },
 		// Its photos, media of its own account (ticket 043).
 		{
-			name: 'photoPrincipale',
+			name: 'mainPicture',
 			label: 'Photo principale',
 			type: 'upload',
 			relationTo: 'media',
@@ -345,7 +345,7 @@ export const Profiles: CollectionConfig<'profiles'> = {
 			validate: validerPhotoPrincipale,
 		},
 		{
-			name: 'galerie',
+			name: 'gallery',
 			label: 'Galerie',
 			type: 'upload',
 			relationTo: 'media',
@@ -357,7 +357,7 @@ export const Profiles: CollectionConfig<'profiles'> = {
 		},
 		// The networks are public; the contact details are not (ticket 042).
 		{
-			name: 'reseaux',
+			name: 'networks',
 			label: 'Réseaux',
 			type: 'group',
 			// `null` empties the group (Payload stops with a 500 on it otherwise, ticket 224).
@@ -373,23 +373,23 @@ export const Profiles: CollectionConfig<'profiles'> = {
 			fields: RESEAUX.map(([name, label]) => ({ name, label, type: 'text' as const, validate: validerLienDeReseau })),
 		},
 		{
-			// Never read by the public through the API, whatever `contactPublic` says: a public page
-			// shows them through src/services/public/, and only when `contactPublic` is true.
-			name: 'coordonnees',
+			// Never read by the public through the API, whatever `publicContact` says: a public page
+			// shows them through src/services/public/, and only when `publicContact` is true.
+			name: 'contactDetails',
 			label: 'Coordonnées',
 			type: 'group',
 			access: { read: champDuProfilAdminOuProprietaire },
-			hooks: { beforeValidate: [({ value }) => groupeVideSiNul(value, ['telephone', 'email'])] },
+			hooks: { beforeValidate: [({ value }) => groupeVideSiNul(value, ['phone', 'email'])] },
 			admin: {
 				description: 'Fermées au public. La page du profil ne les montre que si « Coordonnées publiques » est cochée.',
 			},
 			fields: [
-				{ name: 'telephone', label: 'Téléphone', type: 'text', validate: validerTelephone },
+				{ name: 'phone', label: 'Téléphone', type: 'text', validate: validerTelephone },
 				{ name: 'email', label: 'Email de contact', type: 'email', validate: validerEmailDeContact },
 			],
 		},
 		{
-			name: 'contactPublic',
+			name: 'publicContact',
 			label: 'Coordonnées publiques',
 			type: 'checkbox',
 			defaultValue: false,
@@ -397,7 +397,7 @@ export const Profiles: CollectionConfig<'profiles'> = {
 			admin: { description: 'Choisi par la maquilleuse : ses coordonnées s’affichent sur la page de son profil.' },
 		},
 		{
-			name: 'consentiLe',
+			name: 'consentedAt',
 			label: 'Consentement donné le',
 			type: 'date',
 			access: { read: champDuProfilAdminOuProprietaire, create: jamais, update: jamais },
@@ -408,7 +408,7 @@ export const Profiles: CollectionConfig<'profiles'> = {
 			},
 		},
 		{
-			name: 'sourceConsentement',
+			name: 'consentSource',
 			label: 'Source du consentement',
 			type: 'select',
 			options: SOURCES_DU_CONSENTEMENT.map(source => ({ label: LIBELLES_DES_SOURCES[source], value: source })),
@@ -434,7 +434,7 @@ export const Profiles: CollectionConfig<'profiles'> = {
 		},
 		// Computed by the server at every save, from the choice of an admin and the rule (ticket 044).
 		{
-			name: 'statut',
+			name: 'status',
 			label: 'Statut',
 			type: 'select',
 			// Not `required`, so that a creation needs no status in its data: it gets the default, which
@@ -454,7 +454,7 @@ export const Profiles: CollectionConfig<'profiles'> = {
 		},
 		// Reserved to the role `admin` (tickets 021 and 044).
 		{
-			name: 'statutChoisi',
+			name: 'chosenStatus',
 			label: 'Statut choisi par l’admin',
 			type: 'select',
 			defaultValue: CHOIX_INITIAL,
@@ -469,14 +469,14 @@ export const Profiles: CollectionConfig<'profiles'> = {
 			},
 		},
 		{
-			name: 'motif',
+			name: 'reason',
 			label: 'Motif',
 			type: 'textarea',
 			access: RESERVE_LU_PAR_LA_PROPRIETAIRE,
 			admin: { position: 'sidebar', description: 'Pourquoi le profil est masqué. La maquilleuse le lit.' },
 		},
 		{
-			name: 'verifie',
+			name: 'verified',
 			label: 'Vérifiée',
 			type: 'checkbox',
 			defaultValue: false,
@@ -484,7 +484,7 @@ export const Profiles: CollectionConfig<'profiles'> = {
 			admin: { position: 'sidebar' },
 		},
 		{
-			name: 'verifieLe',
+			name: 'verifiedAt',
 			label: 'Vérifiée le',
 			type: 'date',
 			access: RESERVE_LU_PAR_LA_PROPRIETAIRE,
@@ -499,7 +499,7 @@ export const Profiles: CollectionConfig<'profiles'> = {
 			admin: { position: 'sidebar', description: '14 chiffres, sans espace.' },
 		},
 		{
-			name: 'noteInterne',
+			name: 'internalNote',
 			label: 'Note interne',
 			type: 'textarea',
 			access: INTERNE,
@@ -517,7 +517,7 @@ export const Profiles: CollectionConfig<'profiles'> = {
 		},
 		{
 			// Written by an admin only, read by everyone: the badge of the cards of the search.
-			name: 'superMaquilleuse',
+			name: 'superArtist',
 			label: 'Super maquilleuse',
 			type: 'checkbox',
 			defaultValue: false,

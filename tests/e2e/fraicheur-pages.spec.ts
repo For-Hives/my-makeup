@@ -48,7 +48,7 @@ async function poserUnProfil(): Promise<ProfilDeFraicheur> {
 		...MODELE,
 		cle: `essai-fraicheur-${suffixe}`,
 		compte: { email: `essai-fraicheur-${suffixe}@example.test`, nom: `Essai ${mot}` },
-		profil: { ...MODELE.profil, prenom: 'Essai', nom: mot, nomArtiste: `Essai ${mot} Maquillage` },
+		profil: { ...MODELE.profil, firstName: 'Essai', lastName: mot, artistName: `Essai ${mot} Maquillage` },
 		photos: { principale: MODELE.photos.principale, galerie: [] },
 	}
 	const pose = await poserLeProfil(await payloadDeTest(), type, lirePhotoDuJeu, false)
@@ -130,7 +130,7 @@ test.describe('Fraîcheur des pages publiques (117)', () => {
 			await expect.poll(() => dansLePlan(request, profil.slug), { timeout: UNE_MINUTE }).toBe(true)
 			expect((await lirePage(request, profil.slug)).statut).toBe(200)
 
-			await enregistrer(request, profil, { statutChoisi: 'masque' })
+			await enregistrer(request, profil, { chosenStatus: 'hidden' })
 
 			await expect.poll(async () => (await lirePage(request, profil.slug)).statut, { timeout: UNE_MINUTE }).toBe(404)
 			await expect.poll(() => dansLaRecherche(request, profil.mot, profil.slug), { timeout: UNE_MINUTE }).toBe(false)
@@ -191,7 +191,7 @@ test.describe('Fraîcheur des pages publiques (117)', () => {
 			}
 
 			// A save through the application refreshes it: the database is read again, and says what it holds.
-			await enregistrer(request, profil, { specialite: 'Maquillage artistique' })
+			await enregistrer(request, profil, { specialty: 'Maquillage artistique' })
 			await expect
 				.poll(async () => (await lirePage(request, profil.slug)).html.includes('Description écrite en coulisse'), {
 					timeout: UNE_MINUTE,

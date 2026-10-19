@@ -30,7 +30,7 @@ async function maquilleuse(
 	await payload.update({
 		collection: 'profiles',
 		id: fiche.id,
-		data: { prenom: 'Léa', nom: 'Fictive', ...(description === undefined ? {} : { description }) },
+		data: { firstName: 'Léa', lastName: 'Fictive', ...(description === undefined ? {} : { description }) },
 	})
 	await context.addCookies(compte.session.cookies)
 	return compte

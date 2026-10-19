@@ -156,8 +156,8 @@ export const videALaSource = (profil: ProfilLu): boolean => estEntierementVide(c
  * published otherwise.
  */
 export function statutCalcule(valeurs: Readonly<Record<string, unknown>>): StatutDuProfil {
-	const { entierementVide } = etatDuProfil(valeurs as DocumentDuProfil)
-	return statutApres({ apres: { statutChoisi: CHOIX_INITIAL }, entierementVide }).statut
+	const { fullyEmpty } = etatDuProfil(valeurs as DocumentDuProfil)
+	return statutApres({ apres: { chosenStatus: CHOIX_INITIAL }, fullyEmpty }).status
 }
 
 /** A `decimal` of Strapi as a number, or `null`. */
@@ -224,6 +224,12 @@ export function coordonneesARevoir(profil: ProfilLu): CoordonneeARevoir[] {
 		.map(champ => ({ profil: profil.id, champ }))
 }
 
+/** The contact details as the collection stores them (`contactDetails`): the phone, the email. */
+export function detailsDeContactDeLaSource(profil: ProfilLu): { phone: string | null; email: string | null } {
+	const { telephone, email } = coordonneesDeLaSource(profil)
+	return { phone: telephone, email }
+}
+
 /** Whether the old site shows a phone or an email for this profile. */
 export const affichesALaSource = (profil: ProfilLu): boolean => {
 	const { telephone, email } = coordonneesDeLaSource(profil)
@@ -250,39 +256,39 @@ export const ADAPTATEUR_PROFILS: Adaptateur = {
 		pro: 'relation',
 		slug: 'texte',
 		legacyUsername: 'texte',
-		prenom: 'texte',
-		nom: 'texte',
-		nomArtiste: 'texte',
-		specialite: 'texte',
+		firstName: 'texte',
+		lastName: 'texte',
+		artistName: 'texte',
+		specialty: 'texte',
 		description: 'texte',
-		commune: 'objet',
-		rayonKm: 'nombre',
-		disponible: 'booleen',
+		city: 'objet',
+		radiusKm: 'nombre',
+		available: 'booleen',
 		score: 'nombre',
-		superMaquilleuse: 'booleen',
-		photoPrincipale: 'relation',
-		galerie: 'relations',
-		reseaux: 'objet',
-		coordonnees: 'objet',
-		contactPublic: 'booleen',
-		consentiLe: 'date',
-		sourceConsentement: 'texte',
+		superArtist: 'booleen',
+		mainPicture: 'relation',
+		gallery: 'relations',
+		networks: 'objet',
+		contactDetails: 'objet',
+		publicContact: 'booleen',
+		consentedAt: 'date',
+		consentSource: 'texte',
 		competences: 'liste',
 		langues: 'liste',
 		formations: 'liste',
 		experiences: 'liste',
 		prestations: 'liste',
-		statutChoisi: 'texte',
-		statut: 'texte',
+		chosenStatus: 'texte',
+		status: 'texte',
 		createdAt: 'date',
 		updatedAt: 'date',
 	},
 	// Computed by the server at every save (ticket 044): compared, never sent.
-	calcules: ['statut'],
+	calcules: ['status'],
 	// The date of the consent is the one of the first run that gave it: a later run with another date of
 	// the switch keeps it (ticket 227). The server dates it again when the contact details are closed
 	// then opened (src/lib/profil/coordonnees.ts), and the field is empty then, so the run fills it in.
-	amorces: ['consentiLe'],
+	amorces: ['consentedAt'],
 }
 
 /**
@@ -305,11 +311,11 @@ export function consentementsGardes(
 	existants: readonly { valeurs: Readonly<Record<string, unknown>> }[]
 ): number[] {
 	const gardees = new Map(
-		existants.map(({ valeurs }) => [Number(valeurs.strapiId), normaliser('date', valeurs.consentiLe)] as const)
+		existants.map(({ valeurs }) => [Number(valeurs.strapiId), normaliser('date', valeurs.consentedAt)] as const)
 	)
 	return attendus
 		.filter(({ strapiId, valeurs }) => {
-			const demandee = normaliser('date', valeurs.consentiLe)
+			const demandee = normaliser('date', valeurs.consentedAt)
 			const gardee = gardees.get(strapiId)
 			return demandee !== null && gardee !== undefined && gardee !== null && gardee !== demandee
 		})
@@ -507,32 +513,32 @@ export function profilsAttendus(
 			pro: comptes.get(profil.compte) ?? null,
 			slug,
 			legacyUsername: profil.username,
-			prenom: profil.first_name,
-			nom: profil.last_name,
-			nomArtiste: profil.company_artist_name,
-			specialite: profil.speciality,
+			firstName: profil.first_name,
+			lastName: profil.last_name,
+			artistName: profil.company_artist_name,
+			specialty: profil.speciality,
 			description: profil.description,
-			commune: communes.get(profil.id) ?? null,
-			rayonKm: rayonDeLaSource(profil),
-			disponible: profil.available ?? true,
+			city: communes.get(profil.id) ?? null,
+			radiusKm: rayonDeLaSource(profil),
+			available: profil.available ?? true,
 			score: nombre(profil.score),
-			superMaquilleuse: profil.pro,
-			photoPrincipale: principale.ids[0] ?? null,
-			galerie: galerie.ids,
+			superArtist: profil.pro,
+			mainPicture: principale.ids[0] ?? null,
+			gallery: galerie.ids,
 			...valeursDesListes(bornees.sections),
-			coordonnees: coordonneesDeLaSource(profil),
-			contactPublic: affiche,
-			consentiLe: affiche ? consentiLe : null,
-			sourceConsentement: affiche ? 'import' : null,
-			statutChoisi: CHOIX_INITIAL,
+			contactDetails: detailsDeContactDeLaSource(profil),
+			publicContact: affiche,
+			consentedAt: affiche ? consentiLe : null,
+			consentSource: affiche ? 'import' : null,
+			chosenStatus: CHOIX_INITIAL,
 			createdAt: profil.created_at,
 			updatedAt: profil.updated_at,
 		}
 		// The status reads whether the main picture is adopted, even before its media exists (a dry run).
-		const statut = statutCalcule({ ...valeurs, photoPrincipale: principale.adoptees > 0 ? true : null })
-		valeurs.statut = statut
+		const statut = statutCalcule({ ...valeurs, mainPicture: principale.adoptees > 0 ? true : null })
+		valeurs.status = statut
 		statuts[statut] = (statuts[statut] ?? 0) + 1
-		if ((statut === 'brouillon') !== videALaSource(profil)) statutsDifferentsDeLaSource.push(profil.id)
+		if ((statut === 'draft') !== videALaSource(profil)) statutsDifferentsDeLaSource.push(profil.id)
 		const ecarts: Ecart[] = []
 		const ecrits = prixDesPrestations(valeurs.prestations)
 		for (const { prixTexte, prixAPartirDe } of ecrits) {
@@ -549,16 +555,16 @@ export function profilsAttendus(
 			prix.offresChiffreesPerdues.push(profil.id)
 		if (ecrits.some(({ prixTexte, prixAPartirDe }) => prixAPartirDe === null && /\d/.test(prixTexte ?? '')))
 			prix.chiffresNonLus.push(profil.id)
-		if (rayon) ecarts.push({ champ: 'rayonKm', reference: REFERENCES.rayon200Km })
+		if (rayon) ecarts.push({ champ: 'radiusKm', reference: REFERENCES.rayon200Km })
 		if (slug !== profil.username) ecarts.push({ champ: 'slug', reference: REFERENCES.slugStocke })
-		if ((profil.city?.trim() ?? '') !== '') ecarts.push({ champ: 'commune', reference: REFERENCES.villeEnCommune })
-		if (profil.available === null) ecarts.push({ champ: 'disponible', reference: REFERENCES.disponibiliteParDefaut })
-		if (statut === 'brouillon')
+		if ((profil.city?.trim() ?? '') !== '') ecarts.push({ champ: 'city', reference: REFERENCES.villeEnCommune })
+		if (profil.available === null) ecarts.push({ champ: 'available', reference: REFERENCES.disponibiliteParDefaut })
+		if (statut === 'draft')
 			ecarts.push({
-				champ: 'statut',
+				champ: 'status',
 				reference: videALaSource(profil) ? REFERENCES.profilVideEnBrouillon : REFERENCES.profilNonVideEnBrouillon,
 			})
-		if (affiche) ecarts.push({ champ: 'contactPublic', reference: REFERENCES.coordonneesConsenties })
+		if (affiche) ecarts.push({ champ: 'publicContact', reference: REFERENCES.coordonneesConsenties })
 		attendus.push({ strapiId: profil.id, valeurs, ecarts })
 	}
 	return {

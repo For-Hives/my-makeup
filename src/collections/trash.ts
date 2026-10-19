@@ -150,9 +150,9 @@ export async function corbeilleRetenue<T>(req: PayloadRequest, sujet: string, tr
 }
 
 /** The photos of a profile, main photo first, by identifier: the profile as Payload hands it, populated or not. */
-const photosDuProfil = (profil: { photoPrincipale?: unknown; galerie?: unknown } | undefined): (number | string)[] => [
-	...photosNommees(profil?.photoPrincipale),
-	...photosNommees(profil?.galerie),
+const photosDuProfil = (profil: { mainPicture?: unknown; gallery?: unknown } | undefined): (number | string)[] => [
+	...photosNommees(profil?.mainPicture),
+	...photosNommees(profil?.gallery),
 ]
 
 /**
@@ -167,8 +167,8 @@ async function encoreReferencees(req: PayloadRequest, ids: (number | string)[]):
 		req.payload.find({
 			...lecture,
 			collection: 'profiles',
-			select: { photoPrincipale: true, galerie: true },
-			where: { or: [{ photoPrincipale: { in: ids } }, { galerie: { in: ids } }] },
+			select: { mainPicture: true, gallery: true },
+			where: { or: [{ mainPicture: { in: ids } }, { gallery: { in: ids } }] },
 		}),
 		req.payload.find({
 			...lecture,

@@ -174,7 +174,7 @@ describe('Les photos référencées sont adoptées là où elles sont (ticket 05
 				overrideAccess: true,
 			})
 		).docs
-		const photo = ines?.photoPrincipale as Media | undefined
+		const photo = ines?.mainPicture as Media | undefined
 
 		expect(photo?.strapiId).toBe(107)
 		expect(premier.collections.media?.fichiers?.introuvables).toEqual([107])

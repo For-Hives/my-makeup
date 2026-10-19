@@ -180,7 +180,7 @@ describe('129 : les expériences', () => {
 		const resultat = await enregistrerListe(
 			m.payload,
 			m.utilisateur,
-			{ lignes: [{ valeurs: EXPERIENCE }], statut: 'publie' },
+			{ lignes: [{ valeurs: EXPERIENCE }], status: 'published' },
 			EXPERIENCES
 		)
 		expect(resultat).toEqual({ ok: false, message: MESSAGE_ECHEC })
@@ -352,17 +352,17 @@ describe('131 : les prestations', () => {
 				collection: 'profiles',
 				id: m.id,
 				data: {
-					photoPrincipale: photo.id,
-					commune: ANNECY,
-					specialite: 'Mariage',
-					reseaux: { instagram: 'https://www.instagram.com/studio.fictif' },
+					mainPicture: photo.id,
+					city: ANNECY,
+					specialty: 'Mariage',
+					networks: { instagram: 'https://www.instagram.com/studio.fictif' },
 					description: 'Maquilleuse fictive, pour les essais du banc. '.repeat(5),
 				},
 			})
 			return m
 		}
 		const publiable = async (m: Awaited<ReturnType<typeof maquilleuse>>) =>
-			(await profilStocke(m.payload, m.compte)).publiable
+			(await profilStocke(m.payload, m.compte)).publishable
 
 		test('« sur devis » seul ne suffit pas, un montant suffit, et le retirer ôte le critère', async () => {
 			const m = await toutSaufLOffre()

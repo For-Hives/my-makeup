@@ -10,9 +10,9 @@ async function publiableAujourdhui(payload: Payload, id: number): Promise<boolea
 			depth: 0,
 			id,
 			overrideAccess: true,
-			select: { publiable: true },
+			select: { publishable: true },
 		})
-		return profil.publiable === true
+		return profil.publishable === true
 	} catch {
 		return undefined
 	}

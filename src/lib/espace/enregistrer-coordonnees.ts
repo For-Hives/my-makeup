@@ -36,7 +36,7 @@ export async function enregistrerCoordonnees(
 		const { telephone, email, contactPublic } = lue.data
 		const stocke = await payload.update({
 			collection: 'profiles',
-			data: { coordonnees: { telephone: telephone || null, email: email || null }, contactPublic },
+			data: { contactDetails: { phone: telephone || null, email: email || null }, publicContact: contactPublic },
 			depth: 0,
 			id,
 			overrideAccess: false,
@@ -45,14 +45,16 @@ export async function enregistrerCoordonnees(
 		return {
 			ok: true,
 			valeurs: {
-				telephone: stocke.coordonnees?.telephone ?? '',
-				email: stocke.coordonnees?.email ?? '',
-				contactPublic: stocke.contactPublic === true,
-				consentiLe: stocke.consentiLe ?? null,
+				telephone: stocke.contactDetails?.phone ?? '',
+				email: stocke.contactDetails?.email ?? '',
+				contactPublic: stocke.publicContact === true,
+				consentiLe: stocke.consentedAt ?? null,
 			},
 		}
 	} catch (erreur) {
-		// Payload names the two fields of the group `coordonnees.telephone` and `coordonnees.email`.
-		return echecDePayload(erreur, ['telephone', 'email'] as const, 'coordonnees.')
+		// Payload names the two fields of the group `contactDetails.phone` and `contactDetails.email`.
+		return echecDePayload(erreur, ['telephone', 'email'] as const, chemin =>
+			chemin === 'contactDetails.phone' ? 'telephone' : chemin === 'contactDetails.email' ? 'email' : ''
+		)
 	}
 }

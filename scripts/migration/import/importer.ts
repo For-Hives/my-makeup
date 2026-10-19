@@ -185,7 +185,7 @@ async function idsDansLaCible(
 /** How many documents of the target per status. */
 function statutsDe(documents: readonly { valeurs: Readonly<Record<string, unknown>> }[]): Record<string, number> {
 	const statuts: Record<string, number> = {}
-	for (const { valeurs } of documents) statuts[String(valeurs.statut)] = (statuts[String(valeurs.statut)] ?? 0) + 1
+	for (const { valeurs } of documents) statuts[String(valeurs.status)] = (statuts[String(valeurs.status)] ?? 0) + 1
 	return statuts
 }
 

@@ -28,16 +28,18 @@ export async function enregistrerPhotoPrincipale(
 		if (id === null) return { ok: false, message: MESSAGE_ECHEC }
 		const stocke = await payload.update({
 			collection: 'profiles',
-			data: { photoPrincipale: Number(lue.data.photoPrincipale) },
+			data: { mainPicture: Number(lue.data.photoPrincipale) },
 			depth: 0,
 			id,
 			overrideAccess: false,
 			user: utilisateur,
 		})
-		const photo = identifiantDe(stocke.photoPrincipale)
+		const photo = identifiantDe(stocke.mainPicture)
 		if (photo === undefined) return { ok: false, message: MESSAGE_ECHEC }
 		return { ok: true, valeurs: { photoPrincipale: photo } }
 	} catch (erreur) {
-		return echecDePayload(erreur, ['photoPrincipale'] as const)
+		return echecDePayload(erreur, ['photoPrincipale'] as const, chemin =>
+			chemin === 'mainPicture' ? 'photoPrincipale' : ''
+		)
 	}
 }

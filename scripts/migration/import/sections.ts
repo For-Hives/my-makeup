@@ -383,12 +383,12 @@ export function valeursDesListes(sections: SectionsLues): Record<string, unknown
 				...prixDeLaSource(option.price),
 			})),
 		})),
-		reseaux: reseau
+		networks: reseau
 			? {
 					youtube: reseau.youtube ?? null,
 					facebook: reseau.facebook ?? null,
 					instagram: reseau.instagram ?? null,
-					siteWeb: reseau.website ?? null,
+					website: reseau.website ?? null,
 					linkedin: reseau.linkedin ?? null,
 				}
 			: null,

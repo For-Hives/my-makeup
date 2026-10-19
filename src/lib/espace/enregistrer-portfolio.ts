@@ -35,14 +35,14 @@ export async function enregistrerPortfolio(
 		if (id === null) return { ok: false, message: MESSAGE_ECHEC }
 		const stocke = await payload.update({
 			collection: 'profiles',
-			data: { galerie: lue.data.galerie.map(Number) },
+			data: { gallery: lue.data.galerie.map(Number) },
 			depth: 0,
 			id,
 			overrideAccess: false,
 			user: utilisateur,
 		})
-		return { ok: true, valeurs: { galerie: photosNommees(stocke.galerie) } }
+		return { ok: true, valeurs: { galerie: photosNommees(stocke.gallery) } }
 	} catch (erreur) {
-		return echecDePayload(erreur, ['galerie'] as const)
+		return echecDePayload(erreur, ['galerie'] as const, chemin => (chemin === 'gallery' ? 'galerie' : ''))
 	}
 }

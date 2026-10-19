@@ -19,9 +19,9 @@ test.beforeEach(({ context }) =>
 type Maquilleuse = CompteDeTest<'maquilleuse'>
 
 const COMPLET = {
-	prenom: 'Léa',
-	nom: 'Aperçu',
-	specialite: 'Maquillage mariée',
+	firstName: 'Léa',
+	lastName: 'Aperçu',
+	specialty: 'Maquillage mariée',
 	description: 'Je maquille pour les mariages.',
 	competences: [{ nom: 'Teint lumineux' }],
 	langues: [{ nom: 'Français' }],
@@ -103,7 +103,7 @@ test.describe('139 : voir mon profil public', { tag: '@mobile' }, () => {
 		page,
 		request,
 	}) => {
-		const { slug } = await maquilleuse(context, { prenom: 'Zoé', nom: 'Brouillon', disponible: false })
+		const { slug } = await maquilleuse(context, { firstName: 'Zoé', lastName: 'Brouillon', available: false })
 		await page.goto('/auth/apercu-profil')
 		await expect(page.getByTestId('bandeau-apercu')).toHaveAttribute('data-etat', 'indisponible')
 		await expect(page.getByRole('heading', { level: 1, name: 'Zoé Brouillon' })).toBeVisible()

@@ -19,7 +19,7 @@ test.beforeEach(({ context }) =>
 
 type Maquilleuse = CompteDeTest<'maquilleuse'>
 
-const IDENTITE = { prenom: 'Léa', nom: 'Fictive', nomArtiste: 'Studio Fictif', specialite: 'Maquillage mariée' }
+const IDENTITE = { firstName: 'Léa', lastName: 'Fictive', artistName: 'Studio Fictif', specialty: 'Maquillage mariée' }
 
 /** A makeup artist with her profile filled in, a session in the browser. */
 async function maquilleuse(
@@ -64,7 +64,7 @@ async function ouvrir(page: Page) {
 
 test.describe('118 : la page de l’espace', { tag: '@mobile' }, () => {
 	test('les valeurs enregistrées, « à compléter » pour le reste, jamais « null »', async ({ context, page }) => {
-		await maquilleuse(context, { ...IDENTITE, description: 'null', rayonKm: 0 })
+		await maquilleuse(context, { ...IDENTITE, description: 'null', radiusKm: 0 })
 
 		await page.goto('/auth/profil')
 
@@ -105,7 +105,7 @@ test.describe('118 : la page de l’espace', { tag: '@mobile' }, () => {
 		await payload.update({
 			collection: 'profiles',
 			id: ficheB.id,
-			data: { prenom: 'Zoéprivée', nom: 'Autredame', specialite: 'Secret de B' },
+			data: { firstName: 'Zoéprivée', lastName: 'Autredame', specialty: 'Secret de B' },
 		})
 		const a = await maquilleuse(context)
 
@@ -145,7 +145,7 @@ test.describe('119 : l’identité s’enregistre pour de vrai', { tag: '@mobile
 
 		await page.reload()
 		await expect(page.getByTestId('carte-identite')).toContainText('Effets spéciaux')
-		expect(await ficheDe(compte)).toMatchObject({ prenom: 'Inès', specialite: 'Effets spéciaux', slug })
+		expect(await ficheDe(compte)).toMatchObject({ firstName: 'Inès', specialty: 'Effets spéciaux', slug })
 	})
 
 	test('E30 : hors bornes, un message sous le champ et aucune requête', async ({ context, page }) => {
@@ -183,7 +183,7 @@ test.describe('119 : l’identité s’enregistre pour de vrai', { tag: '@mobile
 		await expect(page.getByRole('alert').filter({ hasText: 'L’enregistrement n’a pas abouti' })).toBeVisible()
 		await expect(page.getByLabel('Prénom')).toHaveValue('Inès')
 		await expect(page.getByTestId('carte-identite')).toContainText('Léa')
-		expect((await ficheDe(compte)).prenom).toBe('Léa')
+		expect((await ficheDe(compte)).firstName).toBe('Léa')
 		await expect(page.getByRole('status').filter({ hasText: 'enregistrée' })).toHaveCount(0)
 
 		await page.getByRole('button', { name: 'Fermer' }).click()
@@ -285,7 +285,7 @@ test.describe('120 : au doigt et au clavier', { tag: '@mobile' }, () => {
 		await expect(page.getByTestId('carte-identite')).toContainText('Maintenue')
 		await expect(modifier(page)).toBeFocused()
 		expect(envois).toHaveLength(1)
-		expect((await ficheDe(compte)).nom).toBe('Maintenue')
+		expect((await ficheDe(compte)).lastName).toBe('Maintenue')
 	})
 
 	test('Entrée maintenue sur « Modifier » : le panneau s’ouvre une fois et rien n’est enregistré', async ({
@@ -359,7 +359,7 @@ test.describe('121 : la session expire pendant l’édition', { tag: '@mobile' }
 		// One trip to the sign-in page, with the message; nothing was stored.
 		await expect(page).toHaveURL(/\/auth\/signin\?callbackUrl=%2Fauth%2Fprofil&error=session-expiree$/)
 		await expect(page.getByTestId('session-expiree')).toHaveText('Ta session a expiré, reconnecte-toi.')
-		expect((await ficheDe(compte)).prenom).toBe('Léa')
+		expect((await ficheDe(compte)).firstName).toBe('Léa')
 		expect([...depart]).toEqual([])
 
 		await page.getByLabel('Adresse email').fill(compte.email)
@@ -377,7 +377,7 @@ test.describe('121 : la session expire pendant l’édition', { tag: '@mobile' }
 		await page.getByRole('button', { name: 'Enregistrer' }).click()
 		await expect(dialogue(page)).toHaveCount(0)
 		await expect(page.getByTestId('carte-identite')).toContainText('Effets spéciaux')
-		expect(await ficheDe(compte)).toMatchObject({ prenom: 'Inès', specialite: 'Effets spéciaux' })
+		expect(await ficheDe(compte)).toMatchObject({ firstName: 'Inès', specialty: 'Effets spéciaux' })
 		// Forgotten after the success: a reload opens nothing.
 		expect(await page.evaluate(() => window.sessionStorage.length)).toBe(0)
 		await page.reload()

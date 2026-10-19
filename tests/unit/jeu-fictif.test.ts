@@ -40,11 +40,11 @@ const type = (cle: string): ProfilDuJeu => {
 function etatSelonLaRegle({ profil, photos }: ProfilDuJeu) {
 	const document = {
 		...profil,
-		photoPrincipale: photos.principale === null ? null : 1,
-		galerie: photos.galerie.map((_, rang) => rang + 2),
+		mainPicture: photos.principale === null ? null : 1,
+		gallery: photos.galerie.map((_, rang) => rang + 2),
 	}
 	const etat = etatDuProfil(document)
-	return { ...etat, statut: statutApres({ apres: profil, entierementVide: etat.entierementVide }).statut }
+	return { ...etat, status: statutApres({ apres: profil, fullyEmpty: etat.fullyEmpty }).status }
 }
 
 /** The bench of `.env.test`, default instance. */
@@ -97,13 +97,18 @@ describe('Les 12 profils types du plan 02 §6', () => {
 	})
 
 	test('la référence est publiable et publiée ; le profil vide n’est ni actif ni publiable, et reste en brouillon', () => {
-		expect(type('reference').attendu).toMatchObject({ publiable: true, actif: true, statut: 'publie', completude: 13 })
+		expect(type('reference').attendu).toMatchObject({
+			publishable: true,
+			active: true,
+			status: 'published',
+			completeness: 13,
+		})
 		expect(type('vide').attendu).toMatchObject({
-			actif: false,
-			publiable: false,
-			entierementVide: true,
-			statut: 'brouillon',
-			completude: 0,
+			active: false,
+			publishable: false,
+			fullyEmpty: true,
+			status: 'draft',
+			completeness: 0,
 		})
 		expect(type('vide').profil).toEqual({})
 		expect(type('vide').photos).toEqual({ principale: null, galerie: [] })
@@ -112,37 +117,37 @@ describe('Les 12 profils types du plan 02 §6', () => {
 	test('la référence publie son téléphone et son email ; tous les numéros sont de la plage de la fiction', () => {
 		const reference = type('reference').profil
 
-		expect(reference.contactPublic).toBe(true)
-		expect(reference.coordonnees?.telephone).toBe('06 39 98 10 01')
-		expect(reference.coordonnees?.email).toEndWith('.example.test')
-		expect(reference.consentiLe).toBe(CONSENTEMENT_DU_JEU)
-		expect(reference.sourceConsentement).toBe('maquilleuse')
+		expect(reference.publicContact).toBe(true)
+		expect(reference.contactDetails?.phone).toBe('06 39 98 10 01')
+		expect(reference.contactDetails?.email).toEndWith('.example.test')
+		expect(reference.consentedAt).toBe(CONSENTEMENT_DU_JEU)
+		expect(reference.consentSource).toBe('artist')
 		expect(type('reference').photos.galerie).toHaveLength(6)
 		expect(reference.prestations?.filter(({ prixAPartirDe }) => typeof prixAPartirDe === 'number')).toHaveLength(3)
 		for (const { profil } of PROFILS_DU_JEU) {
-			const telephone = profil.coordonnees?.telephone
+			const telephone = profil.contactDetails?.phone
 			if (telephone) expect(telephone).toMatch(/^(?:0|\+33 \(0\))6 39 98 /)
-			const email = profil.coordonnees?.email
+			const email = profil.contactDetails?.email
 			if (email) expect(email).toMatch(/[@.]example\.test$/)
-			for (const lien of Object.values(profil.reseaux ?? {}))
+			for (const lien of Object.values(profil.networks ?? {}))
 				if (lien) expect(new URL(lien).hostname).toEndWith('.example.test')
 		}
 	})
 
 	test('chaque cas a sa différence, et une seule : disponibilité, ville, contact, statut choisi, vérification', () => {
-		expect(type('indisponible').profil.disponible).toBe(false)
-		expect(type('disponibilite-inconnue').profil.disponible).toBeNull()
-		expect(type('ville-voisine').profil.commune?.nom).toBe('Annemasse')
-		expect(type('ville-eloignee').profil.commune?.nom).toBe('Nantes')
-		expect(type('reference').profil.commune?.nom).toBe('Annecy')
-		expect(type('sans-contact-public').profil.contactPublic).toBe(false)
-		expect(type('sans-contact-public').profil.reseaux).toEqual({})
-		expect(type('masquee').profil.statutChoisi).toBe('masque')
-		expect(type('verifiee').profil).toMatchObject({ verifie: true, superMaquilleuse: true })
+		expect(type('indisponible').profil.available).toBe(false)
+		expect(type('disponibilite-inconnue').profil.available).toBeNull()
+		expect(type('ville-voisine').profil.city?.name).toBe('Annemasse')
+		expect(type('ville-eloignee').profil.city?.name).toBe('Nantes')
+		expect(type('reference').profil.city?.name).toBe('Annecy')
+		expect(type('sans-contact-public').profil.publicContact).toBe(false)
+		expect(type('sans-contact-public').profil.networks).toEqual({})
+		expect(type('masquee').profil.chosenStatus).toBe('hidden')
+		expect(type('verifiee').profil).toMatchObject({ verified: true, superArtist: true })
 		// The status is chosen for the hidden profile only: every other one follows the rule (ticket 044).
-		const choisis = PROFILS_DU_JEU.filter(({ profil }) => profil.statutChoisi !== undefined).map(({ cle }) => cle)
+		const choisis = PROFILS_DU_JEU.filter(({ profil }) => profil.chosenStatus !== undefined).map(({ cle }) => cle)
 		expect(choisis).toEqual(['masquee'])
-		for (const { profil } of PROFILS_DU_JEU) expect('statut' in profil).toBe(false)
+		for (const { profil } of PROFILS_DU_JEU) expect('status' in profil).toBe(false)
 	})
 
 	test('le profil aux textes maximaux porte chaque texte à la borne du serveur', () => {
@@ -152,9 +157,9 @@ describe('Les 12 profils types du plan 02 §6', () => {
 			return champ && 'maxLength' in champ && typeof champ.maxLength === 'number' ? champ.maxLength : Number.NaN
 		}
 
-		for (const nom of ['prenom', 'nom', 'nomArtiste', 'specialite', 'description'] as const)
+		for (const nom of ['firstName', 'lastName', 'artistName', 'specialty', 'description'] as const)
 			expect({ nom, longueur: profil[nom]?.length }).toEqual({ nom, longueur: borne(nom) })
-		expect(profil.rayonKm).toBe(BORNES_DU_RAYON_KM.max)
+		expect(profil.radiusKm).toBe(BORNES_DU_RAYON_KM.max)
 		expect(photos.galerie).toHaveLength(GALERIE_MAX)
 		for (const prestation of profil.prestations ?? []) {
 			expect([prestation.nom?.length, prestation.prixTexte?.length]).toEqual([LONGUEUR_NOM, LONGUEUR_NOM])
@@ -166,10 +171,10 @@ describe('Les 12 profils types du plan 02 §6', () => {
 					LONGUEUR_DESCRIPTION,
 				])
 		}
-		for (const lien of Object.values(profil.reseaux ?? {})) expect(lien?.length).toBe(200)
+		for (const lien of Object.values(profil.networks ?? {})) expect(lien?.length).toBe(200)
 		for (const { valeur, maximum } of Object.values(LONGUEURS_DU_JEU)) expect(valeur.length).toBe(maximum)
-		expect(profil.coordonnees).toEqual({
-			telephone: LONGUEURS_DU_JEU.telephone.valeur,
+		expect(profil.contactDetails).toEqual({
+			phone: LONGUEURS_DU_JEU.telephone.valeur,
 			email: LONGUEURS_DU_JEU.email.valeur,
 		})
 		// The longest slug: the name of the account is cut at 70 characters.

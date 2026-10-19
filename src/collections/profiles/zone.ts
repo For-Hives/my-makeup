@@ -21,7 +21,7 @@ import {
  * code that is not well formed gives null, and the check of the code refuses the save anyway.
  */
 const departementDuCode: FieldHook = ({ siblingData }) =>
-	departementDuCodeInsee((siblingData as CommuneSaisie).codeInsee)
+	departementDuCodeInsee((siblingData as CommuneSaisie).inseeCode)
 
 /** The check of one field of the commune, which reads its sibling fields (src/lib/profil/zone.ts). */
 const verdictDe =
@@ -34,14 +34,14 @@ const verdictDe =
  * §5.2 and §9): its commune, its radius and « à domicile ». No postal address: there is no field
  * for one. The rules and their French messages live in src/lib/profil/zone.ts.
  *
- * - `commune`: a commune of the official list, with its name and its INSEE code, the one never
+ * - `city`: a commune of the official list, with its name and its INSEE code, the one never
  *   without the other; the coordinates of its centre if known, rounded to about 1 km. It is sent
  *   whole: what a request leaves out of it is emptied, never taken from the stored one. Empty while
  *   the makeup artist has not chosen one; `null` empties it; a text alone (a city typed freely), an
  *   array, a name that looks like an address or holds other characters than a name's is refused.
- *   `departement` is computed by the server from the code.
- * - `rayonKm`: a whole number of kilometres, from 0 to 200, or empty.
- * - `aDomicile`: empty while she has not said it (the old site does not know it).
+ *   `department` is computed by the server from the code.
+ * - `radiusKm`: a whole number of kilometres, from 0 to 200, or empty.
+ * - `homeService`: empty while she has not said it (the old site does not know it).
  *
  * These fields carry no access rule of their own: whoever reads a profile reads its zone, and
  * whoever changes a profile changes its zone. The public reads it with the published profiles
@@ -50,7 +50,7 @@ const verdictDe =
  */
 export const champsDeLaZone: Field[] = [
 	{
-		name: 'commune',
+		name: 'city',
 		label: 'Commune',
 		type: 'group',
 		admin: { description: 'Une commune de la liste officielle, avec son code INSEE. Jamais une adresse.' },
@@ -60,22 +60,22 @@ export const champsDeLaZone: Field[] = [
 		validate: verdictDeLaCommune,
 		fields: [
 			{
-				name: 'nom',
+				name: 'name',
 				label: 'Nom',
 				type: 'text',
 				maxLength: NOM_DE_COMMUNE_MAX,
 				hooks: { beforeValidate: [({ value }) => nomNormalise(value)] },
-				validate: verdictDe('nom'),
+				validate: verdictDe('name'),
 			},
 			{
-				name: 'codeInsee',
+				name: 'inseeCode',
 				label: 'Code INSEE',
 				type: 'text',
 				hooks: { beforeValidate: [({ value }) => codeInseeNormalise(value)] },
-				validate: verdictDe('codeInsee'),
+				validate: verdictDe('inseeCode'),
 			},
 			{
-				name: 'departement',
+				name: 'department',
 				label: 'Département',
 				type: 'text',
 				hooks: { beforeChange: [departementDuCode] },
@@ -99,7 +99,7 @@ export const champsDeLaZone: Field[] = [
 		],
 	},
 	{
-		name: 'rayonKm',
+		name: 'radiusKm',
 		label: 'Rayon d’action (km)',
 		type: 'number',
 		min: BORNES_DU_RAYON_KM.min,
@@ -108,7 +108,7 @@ export const champsDeLaZone: Field[] = [
 		validate: verdictDuRayon,
 	},
 	{
-		name: 'aDomicile',
+		name: 'homeService',
 		label: 'À domicile',
 		type: 'checkbox',
 		admin: { description: 'Se déplace chez la cliente. Vide tant que la maquilleuse ne l’a pas dit.' },

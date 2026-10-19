@@ -27,7 +27,7 @@ async function etatDesProfils(request: APIRequestContext) {
 	await rafraichirLesPagesDesProfils(request, premier)
 	return [...profils].map(([cle, profil]) => {
 		const attendu = PROFILS_DE_RECHERCHE.get(cle)?.attendu
-		return { cle, slug: profil.slug, indexee: attendu?.publiable === true && attendu.statut === 'publie' }
+		return { cle, slug: profil.slug, indexee: attendu?.publishable === true && attendu.status === 'published' }
 	})
 }
 
@@ -81,7 +81,7 @@ test.describe('E62 : /sitemap.xml', () => {
 			const payload = await payloadDeTest()
 			const { totalDocs } = await payload.count({
 				collection: 'profiles',
-				where: { and: [{ publiable: { equals: true } }, { statut: { equals: 'publie' } }] },
+				where: { and: [{ publishable: { equals: true } }, { status: { equals: 'published' } }] },
 				overrideAccess: true,
 			})
 			expect(adresses.filter(loc => loc.startsWith(`${SITE_ORIGIN}/profil/`))).toHaveLength(totalDocs)

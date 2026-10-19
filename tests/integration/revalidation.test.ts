@@ -61,10 +61,10 @@ async function maquilleusePubliee() {
 	const publie = await payload.update({
 		collection: 'profiles',
 		id: profil.id,
-		data: { specialite: 'Maquillage mariée' },
+		data: { specialty: 'Maquillage mariée' },
 		depth: 0,
 	})
-	expect(publie.statut).toBe('publie')
+	expect(publie.status).toBe('published')
 	return { compte, profil: publie }
 }
 
@@ -106,12 +106,12 @@ describe('Un profil publié modifié rafraîchit sa page, la recherche et le sit
 
 	test('un brouillon qui devient publié, à son premier champ rempli : ses pages', async () => {
 		const { compte, profil } = await maquilleuse()
-		expect(profil.statut).toBe('brouillon')
+		expect(profil.status).toBe('draft')
 
 		const rafraichi = await espionnerLeCache(() =>
 			ecrire('PATCH', `/api/profiles/${profil.id}`, {
 				enTetes: compte.session.enTetes,
-				corps: { specialite: 'Maquillage artistique' },
+				corps: { specialty: 'Maquillage artistique' },
 			})
 		)
 
@@ -123,12 +123,12 @@ describe('Un profil publié modifié rafraîchit sa page, la recherche et le sit
 		const enTetes = admin.session.enTetes
 
 		const masque = await espionnerLeCache(() =>
-			ecrire('PATCH', `/api/profiles/${profil.id}`, { enTetes, corps: { statutChoisi: 'masque', motif: 'Test' } })
+			ecrire('PATCH', `/api/profiles/${profil.id}`, { enTetes, corps: { chosenStatus: 'hidden', reason: 'Test' } })
 		)
 		expect(cibles(masque)).toEqual(pagesDuProfil(profil.slug))
 
 		// Shown again, then deleted while published.
-		await ecrire('PATCH', `/api/profiles/${profil.id}`, { enTetes, corps: { statutChoisi: 'automatique' } })
+		await ecrire('PATCH', `/api/profiles/${profil.id}`, { enTetes, corps: { chosenStatus: 'automatic' } })
 		const supprime = await espionnerLeCache(() => ecrire('DELETE', `/api/profiles/${profil.id}`, { enTetes }))
 		expect(cibles(supprime)).toEqual(pagesDuProfil(profil.slug))
 	})
@@ -144,7 +144,7 @@ describe('Un profil publié modifié rafraîchit sa page, la recherche et le sit
 			depth: 0,
 		})
 
-		expect(apres).toMatchObject({ statut: 'publie', description: 'Écrite par un script.' })
+		expect(apres).toMatchObject({ status: 'published', description: 'Écrite par un script.' })
 	})
 })
 
@@ -153,10 +153,10 @@ describe('Un brouillon qui reste brouillon ne rafraîchit rien', () => {
 		const { compte, profil } = await maquilleuse()
 
 		const rafraichi = await espionnerLeCache(() =>
-			ecrire('PATCH', `/api/profiles/${profil.id}`, { enTetes: compte.session.enTetes, corps: { prenom: 'Zoé' } })
+			ecrire('PATCH', `/api/profiles/${profil.id}`, { enTetes: compte.session.enTetes, corps: { firstName: 'Zoé' } })
 		)
 
-		expect((await profilDe(compte.id)).statut).toBe('brouillon')
+		expect((await profilDe(compte.id)).status).toBe('draft')
 		expect(cibles(rafraichi)).toEqual(RIEN)
 	})
 
@@ -164,7 +164,7 @@ describe('Un brouillon qui reste brouillon ne rafraîchit rien', () => {
 		const [admin, { compte, profil }] = await Promise.all([creerCompte('admin'), maquilleusePubliee()])
 		await ecrire('PATCH', `/api/profiles/${profil.id}`, {
 			enTetes: admin.session.enTetes,
-			corps: { statutChoisi: 'masque', motif: 'Test' },
+			corps: { chosenStatus: 'hidden', reason: 'Test' },
 		})
 
 		const rafraichi = await espionnerLeCache(() =>
@@ -174,7 +174,7 @@ describe('Un brouillon qui reste brouillon ne rafraîchit rien', () => {
 			})
 		)
 
-		expect((await profilDe(compte.id)).statut).toBe('masque')
+		expect((await profilDe(compte.id)).status).toBe('hidden')
 		expect(cibles(rafraichi)).toEqual(RIEN)
 	})
 
@@ -312,7 +312,7 @@ describe('Avec le contexte d’import : aucune invalidation, aucun mail capté',
 		const payload = await payloadDeTest()
 		const publics = async (collection: CollectionSlug, champ: string, valeur: string) =>
 			(await payload.count({ collection, where: { [champ]: { equals: valeur } } })).totalDocs
-		expect(await publics('profiles', 'statut', 'publie')).toBeGreaterThan(0)
+		expect(await publics('profiles', 'status', 'published')).toBeGreaterThan(0)
 		expect(await publics('talents', '_status', 'published')).toBeGreaterThan(0)
 	})
 })

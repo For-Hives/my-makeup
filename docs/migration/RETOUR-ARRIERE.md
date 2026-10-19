@@ -16,7 +16,7 @@ Un fichier JSON, `my-makeup-delta-1`, avec cinq rubriques :
 | `messages` | Les messages du formulaire de contact reçus ou modifiés | tous les champs du message |
 | `comptesSupprimes` | Les comptes de l'ancien site supprimés dans la v3 depuis la date | l'identifiant de l'ancien site et le jour |
 
-Les champs d'un enregistrement portent les noms anglais de la base (ticket 250) : `name`, `blocked` et `lastSignInAt` pour un compte ; `status`, `mailStatus`, `firstName`, `lastName` et `phone` pour un message, avec les valeurs `new`, `forwarded`, `answered`, `spam`, `pending`, `sent` et `failed`. Les noms des rubriques ci-dessus ne changent pas (ticket 245). À rejouer dans l'ancien site : `name` est son `username`, `blocked` son `blocked`.
+Les champs d'un enregistrement portent les noms anglais de la base (ticket 250) : `name`, `blocked` et `lastSignInAt` pour un compte ; `status`, `mailStatus`, `firstName`, `lastName` et `phone` pour un message, avec les valeurs `new`, `forwarded`, `answered`, `spam`, `pending`, `sent` et `failed` ; `firstName`, `lastName`, `artistName`, `specialty`, `city`, `radiusKm`, `homeService`, `available`, `networks`, `contactDetails`, `publicContact`, `mainPicture`, `gallery`, `status` (`draft`, `published`, `hidden`) pour un profil (ticket 251). Les noms des rubriques ci-dessus ne changent pas (ticket 245). À rejouer dans l'ancien site : `name` est son `username`, `blocked` son `blocked`.
 
 Chaque enregistrement porte `depuisLaBascule` : `cree` s'il a été créé après la date, `modifie` s'il existait avant et a changé depuis.
 

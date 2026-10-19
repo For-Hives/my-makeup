@@ -430,7 +430,7 @@ describe('purge des comptes jamais confirmés (ticket 084)', () => {
 			await payload.update({
 				collection: 'profiles',
 				id: profil.id,
-				data: { specialite: 'Maquillage de mariée' },
+				data: { specialty: 'Maquillage de mariée' },
 				depth: 0,
 				overrideAccess: true,
 			})

@@ -22,31 +22,31 @@ import type { StatutDuProfil } from './statut'
 
 /** What the rules read of a profile; any field may be absent or null. */
 export interface DocumentVisible {
-	readonly statut?: StatutDuProfil | string | null
-	readonly disponible?: boolean | null
-	readonly entierementVide?: boolean | null
-	readonly publiable?: boolean | null
+	readonly status?: StatutDuProfil | string | null
+	readonly available?: boolean | null
+	readonly fullyEmpty?: boolean | null
+	readonly publishable?: boolean | null
 }
 
 /** Visible at its address: not hidden by an admin. */
-export const estVisible = ({ statut }: DocumentVisible): boolean => statut !== 'masque'
+export const estVisible = ({ status }: DocumentVisible): boolean => status !== 'hidden'
 
 /** Listed: visible, available (never set counts as available) and not entirely empty. */
 export const estListe = (profil: DocumentVisible): boolean =>
-	estVisible(profil) && profil.disponible !== false && profil.entierementVide !== true
+	estVisible(profil) && profil.available !== false && profil.fullyEmpty !== true
 
 /** Indexable: publishable, and visible. */
-export const estIndexable = (profil: DocumentVisible): boolean => estVisible(profil) && profil.publiable === true
+export const estIndexable = (profil: DocumentVisible): boolean => estVisible(profil) && profil.publishable === true
 
 /**
  * The filters of `estListe` and `estIndexable`, without the status: a public read of the
- * collection already carries the reading rule (`statut` is a field the public may not filter on, and
+ * collection already carries the reading rule (`status` is a field the public may not filter on, and
  * the rule keeps the published profiles, which no hidden profile is). So « visible » is the
  * access rule itself, and a query adds the other conditions only.
  */
 export const FILTRE_LISTE: Where = {
-	and: [{ disponible: { not_equals: false } }, { entierementVide: { not_equals: true } }],
+	and: [{ available: { not_equals: false } }, { fullyEmpty: { not_equals: true } }],
 }
 
 /** The filter of `estIndexable`, without the status (see `FILTRE_LISTE`). */
-export const FILTRE_INDEXABLE: Where = { publiable: { equals: true } }
+export const FILTRE_INDEXABLE: Where = { publishable: { equals: true } }

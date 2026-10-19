@@ -167,11 +167,11 @@ describe('Ajout du 14/10 : une photo au mauvais identifiant est refusée en 400,
 	}
 
 	test.each([
-		['galerie d’un texte', { galerie: ['abc'] }],
-		['galerie d’un nombre trop grand', { galerie: [2_147_483_648] }],
-		['photo principale décimale', { photoPrincipale: '1.5' }],
-		['galerie d’un objet sans identifiant', { galerie: [{}] }],
-		['photo principale en liste', { photoPrincipale: [5] }],
+		['galerie d’un texte', { gallery: ['abc'] }],
+		['galerie d’un nombre trop grand', { gallery: [2_147_483_648] }],
+		['photo principale décimale', { mainPicture: '1.5' }],
+		['galerie d’un objet sans identifiant', { gallery: [{}] }],
+		['photo principale en liste', { mainPicture: [5] }],
 	])('%s : 400 avec le message français, le profil est inchangé', async (_nom, corps) => {
 		const compte = await creerCompte('maquilleuse')
 		const avant = await profilDe(compte)
@@ -182,9 +182,6 @@ describe('Ajout du 14/10 : une photo au mauvais identifiant est refusée en 400,
 		expect(reponse.statut).toBe(400)
 		expect(reponse.texte).toContain(MESSAGES_DES_PHOTOS.photoRefusee)
 		const apres = await profilDe(compte)
-		expect([apres.photoPrincipale ?? null, apres.galerie ?? []]).toEqual([
-			avant.photoPrincipale ?? null,
-			avant.galerie ?? [],
-		])
+		expect([apres.mainPicture ?? null, apres.gallery ?? []]).toEqual([avant.mainPicture ?? null, avant.gallery ?? []])
 	})
 })

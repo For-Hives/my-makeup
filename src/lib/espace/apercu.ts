@@ -31,13 +31,13 @@ export function etatDeLApercu(profil: DocumentVisible): EtatDeLApercu {
 			texte:
 				'Les visiteuses ne le voient pas : cette page n’existe que pour toi. Écris-nous si tu penses que c’est une erreur.',
 		}
-	if (!estListe(profil) && profil.disponible !== false)
+	if (!estListe(profil) && profil.available !== false)
 		return {
 			code: 'vide',
 			titre: 'Ton profil est encore vide.',
 			texte: 'Il n’apparaît pas dans les listes ni dans la recherche. Complète-le pour qu’il soit affiché.',
 		}
-	if (profil.disponible === false)
+	if (profil.available === false)
 		return {
 			code: 'indisponible',
 			titre: 'Tu es indisponible.',

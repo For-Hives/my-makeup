@@ -87,7 +87,7 @@ describe('Les sections en liste gardent leur ordre et l’identité de chaque li
 		// First save: the list sent back as read. Second save: another field only.
 		expect((await enregistrer(a, { prestations: premiere })).statut).toBe(200)
 		expect((await lire(a)).prestations).toEqual(premiere)
-		expect((await enregistrer(a, { prenom: 'Zoé' })).statut).toBe(200)
+		expect((await enregistrer(a, { firstName: 'Zoé' })).statut).toBe(200)
 		expect((await lire(a)).prestations).toEqual(premiere)
 	})
 

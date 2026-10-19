@@ -55,12 +55,12 @@ test.beforeAll(async () => {
 		collection: 'profiles',
 		id: fiche.id,
 		data: {
-			prenom: 'Mesure',
-			nom: 'Exemple',
-			reseaux: { instagram: INSTAGRAM },
-			coordonnees: { telephone: TELEPHONE, email: EMAIL },
-			contactPublic: true,
-			consentiLe: new Date().toISOString(),
+			firstName: 'Mesure',
+			lastName: 'Exemple',
+			networks: { instagram: INSTAGRAM },
+			contactDetails: { phone: TELEPHONE, email: EMAIL },
+			publicContact: true,
+			consentedAt: new Date().toISOString(),
 		},
 	})
 	const { fiche: sansContact } = await profilDe(autre)

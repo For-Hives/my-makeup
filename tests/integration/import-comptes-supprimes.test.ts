@@ -49,17 +49,17 @@ describe('Sur une cible en service, un profil déjà repris reste tel que la maq
 	test('coordonnées fermées dans la v3 : un passage avec l’option n’y touche pas', async () => {
 		const payload = await payloadDeTest()
 		const compte = (await comptes()).find(({ strapiId }) => strapiId === LOCAL?.strapiId)
-		const ouverts = (await profils()).filter(({ contactPublic }) => contactPublic === true)
+		const ouverts = (await profils()).filter(({ publicContact }) => publicContact === true)
 		const profil = ouverts.find(({ pro }) => pro !== compte?.id) ?? ouverts[0]
 		if (!profil) throw new Error('Aucun profil de fixture n’affiche ses coordonnées.')
 		await payload.update({
 			collection: 'profiles',
 			id: profil.id,
-			data: { contactPublic: false },
+			data: { publicContact: false },
 			overrideAccess: true,
 		})
 		const avant = await profils()
-		expect(avant.find(({ id }) => id === profil.id)?.contactPublic).toBe(false)
+		expect(avant.find(({ id }) => id === profil.id)?.publicContact).toBe(false)
 
 		const rapport = await importerSurLeBanc('reel', { cibleEnService: true })
 
@@ -67,7 +67,7 @@ describe('Sur une cible en service, un profil déjà repris reste tel que la maq
 		expect(codeDeSortie(rapport)).toBe(0)
 		const apres = await profils()
 		expect(apres).toEqual(avant)
-		expect(apres.find(({ id }) => id === profil.id)).toMatchObject({ contactPublic: false })
+		expect(apres.find(({ id }) => id === profil.id)).toMatchObject({ publicContact: false })
 		// Without the option the run, which follows the source, would open them again.
 		const sansOption = await importerSurLeBanc('a-blanc')
 		expect(sansOption.collections.profiles?.modifies).toBeGreaterThan(0)

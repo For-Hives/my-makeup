@@ -17,16 +17,16 @@ import { creerCompte } from './fabrique-comptes'
 
 /** Communes of the official list, with their INSEE code and the centre of the commune. */
 const COMMUNES = [
-	{ nom: 'Annecy', codeInsee: '74010', latitude: 45.9, longitude: 6.13 },
-	{ nom: 'Annemasse', codeInsee: '74012', latitude: 46.19, longitude: 6.25 },
-	{ nom: 'Thonon-les-Bains', codeInsee: '74281', latitude: 46.37, longitude: 6.48 },
-	{ nom: 'Nantes', codeInsee: '44109', latitude: 47.24, longitude: -1.56 },
-	{ nom: 'Lyon', codeInsee: '69123', latitude: 45.76, longitude: 4.84 },
-	{ nom: 'Lille', codeInsee: '59350', latitude: 50.63, longitude: 3.06 },
-	{ nom: 'Bordeaux', codeInsee: '33063', latitude: 44.84, longitude: -0.58 },
-	{ nom: 'Toulouse', codeInsee: '31555', latitude: 43.6, longitude: 1.44 },
-	{ nom: 'Rennes', codeInsee: '35238', latitude: 48.11, longitude: -1.68 },
-	{ nom: 'Marseille', codeInsee: '13055', latitude: 43.3, longitude: 5.37 },
+	{ name: 'Annecy', inseeCode: '74010', latitude: 45.9, longitude: 6.13 },
+	{ name: 'Annemasse', inseeCode: '74012', latitude: 46.19, longitude: 6.25 },
+	{ name: 'Thonon-les-Bains', inseeCode: '74281', latitude: 46.37, longitude: 6.48 },
+	{ name: 'Nantes', inseeCode: '44109', latitude: 47.24, longitude: -1.56 },
+	{ name: 'Lyon', inseeCode: '69123', latitude: 45.76, longitude: 4.84 },
+	{ name: 'Lille', inseeCode: '59350', latitude: 50.63, longitude: 3.06 },
+	{ name: 'Bordeaux', inseeCode: '33063', latitude: 44.84, longitude: -0.58 },
+	{ name: 'Toulouse', inseeCode: '31555', latitude: 43.6, longitude: 1.44 },
+	{ name: 'Rennes', inseeCode: '35238', latitude: 48.11, longitude: -1.68 },
+	{ name: 'Marseille', inseeCode: '13055', latitude: 43.3, longitude: 5.37 },
 ] as const
 
 export const SPECIALITES_GENEREES = [
@@ -54,8 +54,8 @@ const PHRASES = [
 export const MOT_DES_PROFILS_GENERES = 'zyglo'
 
 /** The communes far from the Haute-Savoie and from Nantes, for a run that must not change the other searches of a shared bench. */
-export const COMMUNES_ELOIGNEES = COMMUNES.filter(({ nom }) =>
-	['Lille', 'Bordeaux', 'Toulouse', 'Rennes', 'Marseille'].includes(nom)
+export const COMMUNES_ELOIGNEES = COMMUNES.filter(({ name }) =>
+	['Lille', 'Bordeaux', 'Toulouse', 'Rennes', 'Marseille'].includes(name)
 )
 
 export interface OptionsDeLaFabrique {
@@ -78,11 +78,11 @@ export function profilGenere(
 	const description = Array.from({ length: 8 }, (_, i) => PHRASES[(rang + i * 3) % PHRASES.length]).join(' ')
 	return {
 		slug: `${prefixe}-${rang}`,
-		prenom: 'Générée',
-		nom: `Numéro ${rang}`,
-		specialite: SPECIALITES_GENEREES[rang % SPECIALITES_GENEREES.length],
-		commune,
-		rayonKm: seDeplacent && rang % 3 === 0 ? 30 : null,
+		firstName: 'Générée',
+		lastName: `Numéro ${rang}`,
+		specialty: SPECIALITES_GENEREES[rang % SPECIALITES_GENEREES.length],
+		city: commune,
+		radiusKm: seDeplacent && rang % 3 === 0 ? 30 : null,
 		description: `${description} ${marqueur ?? (rang % 50 === 0 ? MOT_DES_PROFILS_GENERES : '')}`.trim(),
 		competences: [0, 1, 2].map(i => ({
 			nom: COMPETENCES[(rang + i) % COMPETENCES.length],
@@ -165,7 +165,7 @@ export async function fabriquerParLApplication(
 							data: {
 								email: `${options.prefixe}-${rang}@example.test`,
 								password: `Banc-${rang}-${crypto.randomUUID()}`,
-								nom: `${options.prefixe} ${rang}`,
+								name: `${options.prefixe} ${rang}`,
 								_verified: true,
 							},
 						}),

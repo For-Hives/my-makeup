@@ -42,7 +42,7 @@ describe('U14, U15 : la carte de la localisation ne dit jamais « & km »', () =
 	}
 
 	test('une commune, un rayon et « à domicile » enregistrés', () => {
-		expect(carte({ id: 1, commune: { nom: 'Annecy', departement: '74' }, rayonKm: 30, aDomicile: true })).toEqual([
+		expect(carte({ id: 1, city: { name: 'Annecy', department: '74' }, radiusKm: 30, homeService: true })).toEqual([
 			'Annecy (74)',
 			'30 km',
 			'Oui',
@@ -51,14 +51,19 @@ describe('U14, U15 : la carte de la localisation ne dit jamais « & km »', () =
 
 	test('un rayon de 0 ou absent n’écrit pas de kilomètres', () => {
 		for (const rayonKm of [0, null, undefined]) {
-			const valeurs = carte({ id: 1, commune: { nom: 'Annecy', departement: '74' }, rayonKm, aDomicile: false })
+			const valeurs = carte({
+				id: 1,
+				city: { name: 'Annecy', department: '74' },
+				radiusKm: rayonKm,
+				homeService: false,
+			})
 			expect(valeurs).toEqual(['Annecy (74)', null, 'Non'])
 			expect(valeurs.join(' ')).not.toMatch(/&|null km|undefined|NaN/)
 		}
 	})
 
 	test('un rayon seul, sans commune, ne dit rien', () => {
-		expect(carte({ id: 1, rayonKm: 40, aDomicile: true })).toEqual([null, '40 km', null])
+		expect(carte({ id: 1, radiusKm: 40, homeService: true })).toEqual([null, '40 km', null])
 	})
 })
 

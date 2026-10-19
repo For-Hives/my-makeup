@@ -118,7 +118,7 @@ describe('U41 : les exclus ne sont jamais là', () => {
 		const { payload, lectures } = payloadEspion({ profils: 1 })
 		await lireLesPagesIndexables(payload)
 		const [profils] = lectures.filter(({ collection }) => collection === 'profiles')
-		expect(profils).toMatchObject({ where: { publiable: { equals: true } }, overrideAccess: false })
+		expect(profils).toMatchObject({ where: { publishable: { equals: true } }, overrideAccess: false })
 		for (const lecture of lectures) expect(lecture.overrideAccess, String(lecture.collection)).toBe(false)
 	})
 
@@ -302,8 +302,8 @@ function payloadEspion({ profils, profilsBruts }: ReglagesDuSpy) {
 					profilsBruts ??
 					Array.from({ length: profils }, (_, i) => ({
 						slug: `profil-${String(i + 1).padStart(5, '0')}`,
-						prenom: 'Zoé',
-						nom: `Fictive ${i + 1}`,
+						firstName: 'Zoé',
+						lastName: `Fictive ${i + 1}`,
 						updatedAt: '2026-05-06T07:08:09.000Z',
 					}))
 				const docs = tous.slice((page - 1) * limite, page * limite)

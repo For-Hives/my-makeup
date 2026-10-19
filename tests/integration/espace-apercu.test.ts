@@ -28,15 +28,15 @@ async function utilisateurDe(payload: Payload, compte: Maquilleuse): Promise<Uti
 }
 
 const COMPLET = {
-	prenom: 'Léa',
-	nom: 'Fictive',
-	specialite: 'Maquillage mariée',
+	firstName: 'Léa',
+	lastName: 'Fictive',
+	specialty: 'Maquillage mariée',
 	description: 'Je maquille pour les mariages.\nDeuxième ligne.',
 	competences: [{ nom: 'Teint', description: 'Un teint lumineux' }],
 	langues: [{ nom: 'Français' }],
-	reseaux: { instagram: 'https://www.instagram.com/lea.fictive' },
-	coordonnees: { telephone: '06 39 98 00 01', email: 'lea@example.test' },
-	contactPublic: true,
+	networks: { instagram: 'https://www.instagram.com/lea.fictive' },
+	contactDetails: { phone: '06 39 98 00 01', email: 'lea@example.test' },
+	publicContact: true,
 }
 
 describe('139 : l’aperçu est la page publique', () => {
@@ -59,7 +59,7 @@ describe('139 : l’aperçu est la page publique', () => {
 		const compte = await creerCompte('maquilleuse')
 		const payload = await payloadDeTest()
 		const fiche = await ficheDe(payload, compte)
-		await payload.update({ collection: 'profiles', id: fiche.id, data: { ...COMPLET, contactPublic: false } })
+		await payload.update({ collection: 'profiles', id: fiche.id, data: { ...COMPLET, publicContact: false } })
 		const apercu = await lireLApercuDuProfil(payload, fiche.id)
 		expect(apercu?.profil.coordonnees).toBeNull()
 		expect(JSON.stringify(apercu?.profil)).not.toMatch(/example\.test|06 39 98/)
@@ -70,18 +70,18 @@ describe('139 : l’aperçu est la page publique', () => {
 		const payload = await payloadDeTest()
 		const fiche = await ficheDe(payload, compte)
 		const vide = await lireLApercuDuProfil(payload, fiche.id)
-		expect(vide?.etat).toMatchObject({ statut: 'brouillon', entierementVide: true })
+		expect(vide?.etat).toMatchObject({ status: 'draft', fullyEmpty: true })
 
 		await payload.update({ collection: 'profiles', id: fiche.id, data: COMPLET })
 		await payload.update({
 			collection: 'profiles',
 			id: fiche.id,
-			data: { statutChoisi: 'masque', motif: 'Masqué pour le test' },
+			data: { chosenStatus: 'hidden', reason: 'Masqué pour le test' },
 		})
 		const slug = (await ficheDe(payload, compte)).slug
 		expect((await lireLAdresseDeProfil(payload, slug)).type).toBe('inconnue')
 		const masque = await lireLApercuDuProfil(payload, fiche.id)
-		expect(masque?.etat.statut).toBe('masque')
+		expect(masque?.etat.status).toBe('hidden')
 		expect(masque?.profil.nom).toBe('Léa Fictive')
 	})
 
@@ -98,7 +98,7 @@ describe('139 : seulement le sien', () => {
 		const payload = await payloadDeTest()
 		const ficheA = await ficheDe(payload, a)
 		const ficheB = await ficheDe(payload, b)
-		await payload.update({ collection: 'profiles', id: ficheB.id, data: { prenom: 'Bea', nom: 'Autre' } })
+		await payload.update({ collection: 'profiles', id: ficheB.id, data: { firstName: 'Bea', lastName: 'Autre' } })
 
 		const idA = await identifiantDuProfil(payload, await utilisateurDe(payload, a))
 		const idB = await identifiantDuProfil(payload, await utilisateurDe(payload, b))

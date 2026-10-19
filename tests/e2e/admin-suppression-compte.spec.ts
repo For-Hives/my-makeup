@@ -34,11 +34,11 @@ test.describe('L’admin supprime un compte et tout part avec lui', () => {
 			collection: 'profiles',
 			id: fiche.id,
 			data: {
-				prenom: 'Léa',
-				nom: 'Fictive',
-				specialite: 'Mariée',
-				commune: { nom: 'Lille', codeInsee: '59350' },
-				photoPrincipale: media.id,
+				firstName: 'Léa',
+				lastName: 'Fictive',
+				specialty: 'Mariée',
+				city: { name: 'Lille', inseeCode: '59350' },
+				mainPicture: media.id,
 			},
 		})
 		const existe = async (collection: 'pros' | 'profiles' | 'media', id: number | string) =>

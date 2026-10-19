@@ -114,7 +114,7 @@ test.describe('E07 : connexion et inscription avec Google', { tag: '@mobile' }, 
 		const payload = await payloadDeTest()
 		const comptes = await payload.find({ collection: 'pros', depth: 0, where: { email: { equals: email } } })
 		expect(comptes.docs).toHaveLength(1)
-		expect(comptes.docs[0]).toMatchObject({ nom: 'Léa Fictive', _verified: true })
+		expect(comptes.docs[0]).toMatchObject({ name: 'Léa Fictive', _verified: true })
 		const profils = await payload.find({
 			collection: 'profiles',
 			depth: 0,

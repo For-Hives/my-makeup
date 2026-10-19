@@ -11,7 +11,7 @@ import { viderLeStockage } from '../outils/s3'
  * Tickets 165 and 166 (plan 01 §3.4, plan 02 §7.4): the admin finds a profile in the list with the
  * filters of the panel, which are the `where` of the REST API; the sort by last activity is right; a
  * value that is not a choice is refused with a message. The admin hides a profile from its sheet
- * (`statutChoisi`), and publishing it again brings it back; the editorial role changes no status.
+ * (`chosenStatus`), and publishing it again brings it back; the editorial role changes no status.
  * The twelve profiles of the set of the bench are the base: their expected state is in
  * src/jeu-fictif/profils.ts.
  */
@@ -27,7 +27,7 @@ afterAll(remettreAZero)
 
 interface Liste {
 	totalDocs: number
-	docs: { id: number; slug: string; statut: string; updatedAt: string }[]
+	docs: { id: number; slug: string; status: string; updatedAt: string }[]
 }
 
 /** The twelve profiles of the set, among the profiles of the fixed accounts: the way the panel counts them. */
@@ -55,10 +55,10 @@ describe('La liste des profils de l’admin (ticket 165)', () => {
 	test('la liste montre l’adresse, la commune, la complétude, le caractère publiable, le statut et la dernière activité, la plus récente d’abord', () => {
 		expect(Profiles.admin?.defaultColumns).toEqual([
 			'slug',
-			'commune.nom',
-			'completude',
-			'publiable',
-			'statut',
+			'city.name',
+			'completeness',
+			'publishable',
+			'status',
 			'updatedAt',
 		])
 		expect(Profiles.defaultSort).toBe('-updatedAt')
@@ -72,12 +72,12 @@ describe('La liste des profils de l’admin (ticket 165)', () => {
 		expect(tous.liste.totalDocs).toBe(12)
 
 		const cas: [string, string, string[]][] = [
-			['non publiables', 'where[publiable][equals]=false', attendus(p => !p.attendu.publiable)],
-			['publiables', 'where[publiable][equals]=true', attendus(p => p.attendu.publiable)],
-			['vides', 'where[entierementVide][equals]=true', attendus(p => p.attendu.entierementVide)],
-			['brouillon', 'where[statut][equals]=brouillon', attendus(p => p.attendu.statut === 'brouillon')],
-			['publié', 'where[statut][equals]=publie', attendus(p => p.attendu.statut === 'publie')],
-			['masqué', 'where[statut][equals]=masque', attendus(p => p.attendu.statut === 'masque')],
+			['non publiables', 'where[publishable][equals]=false', attendus(p => !p.attendu.publishable)],
+			['publiables', 'where[publishable][equals]=true', attendus(p => p.attendu.publishable)],
+			['vides', 'where[fullyEmpty][equals]=true', attendus(p => p.attendu.fullyEmpty)],
+			['draft', 'where[status][equals]=draft', attendus(p => p.attendu.status === 'draft')],
+			['publié', 'where[status][equals]=published', attendus(p => p.attendu.status === 'published')],
+			['masqué', 'where[status][equals]=hidden', attendus(p => p.attendu.status === 'hidden')],
 		]
 		for (const [nom, requete, slugs] of cas) {
 			const { statut, liste } = await lister(enTetes, requete)
@@ -87,8 +87,8 @@ describe('La liste des profils de l’admin (ticket 165)', () => {
 		for (const [, , slugs] of cas) expect(slugs.length).toBeGreaterThan(0)
 		// The three statuses cover the twelve profiles.
 		const parStatut = await Promise.all(
-			['brouillon', 'publie', 'masque'].map(
-				async s => (await lister(enTetes, `where[statut][equals]=${s}`)).liste.totalDocs
+			['draft', 'published', 'hidden'].map(
+				async s => (await lister(enTetes, `where[status][equals]=${s}`)).liste.totalDocs
 			)
 		)
 		expect(parStatut.reduce((a, b) => a + b, 0)).toBe(12)
@@ -102,7 +102,7 @@ describe('La liste des profils de l’admin (ticket 165)', () => {
 
 		const parAdresse = await lister(enTetes, `where[slug][like]=${reference.attendu.slug}`)
 		expect(parAdresse.liste.docs.map(({ slug }) => slug)).toEqual([reference.attendu.slug])
-		const communes = await lister(enTetes, 'where[commune.nom][like]=Nantes')
+		const communes = await lister(enTetes, 'where[city.name][like]=Nantes')
 		expect(communes.liste.totalDocs).toBeGreaterThan(0)
 		expect(communes.liste.totalDocs).toBeLessThan(12)
 	})
@@ -122,7 +122,7 @@ describe('La liste des profils de l’admin (ticket 165)', () => {
 		if (!derniere) throw new Error('La liste est vide.')
 		const correction = await appelerRest('PATCH', `/api/profiles/${derniere.id}`, {
 			enTetes,
-			corps: { noteInterne: 'Corrigé par l’admin.' },
+			corps: { internalNote: 'Corrigé par l’admin.' },
 		})
 		expect(correction.statut).toBe(200)
 		const apres = (await lister(enTetes, 'sort=-updatedAt')).liste.docs
@@ -139,19 +139,19 @@ describe('La liste des profils de l’admin (ticket 165)', () => {
 		const avant = await payload.findByID({ collection: 'profiles', id: profil.id, depth: 0 })
 		const refus = await appelerRest('PATCH', `/api/profiles/${profil.id}`, {
 			enTetes,
-			corps: { statutChoisi: 'archive' },
+			corps: { chosenStatus: 'archive' },
 		})
 		expect(refus.statut).toBe(400)
-		expect(refus.texte).toContain('statutChoisi')
+		expect(refus.texte).toContain('chosenStatus')
 		expect(refus.texte).toContain('Ce statut n’existe pas')
 		const apres = await payload.findByID({ collection: 'profiles', id: profil.id, depth: 0 })
-		expect([apres.statutChoisi, apres.statut]).toEqual([avant.statutChoisi, avant.statut])
+		expect([apres.chosenStatus, apres.status]).toEqual([avant.chosenStatus, avant.status])
 
 		// The filter on a status nobody holds is refused with a sentence, not a 500 of the database.
-		const filtre = await lister(enTetes, 'where[statut][equals]=archive')
+		const filtre = await lister(enTetes, 'where[status][equals]=archive')
 		expect(filtre.statut).toBe(400)
 		expect(filtre.texte).toContain('statut qui n’existe pas')
-		const dansOu = await appelerRest('GET', '/api/profiles?where[or][0][statut][in]=publie,archive', { enTetes })
+		const dansOu = await appelerRest('GET', '/api/profiles?where[or][0][status][in]=published,archive', { enTetes })
 		expect(dansOu.statut).toBe(400)
 	})
 })
@@ -181,20 +181,20 @@ describe('Masquer un profil depuis sa fiche (ticket 166)', () => {
 
 		const masque = await appelerRest('PATCH', `/api/profiles/${id}`, {
 			enTetes,
-			corps: { statutChoisi: 'masque', motif: 'Essai de modération.' },
+			corps: { chosenStatus: 'hidden', reason: 'Essai de modération.' },
 		})
 		expect(masque.statut).toBe(200)
 		const payload = await payloadDeTest()
-		expect((await payload.findByID({ collection: 'profiles', id, depth: 0 })).statut).toBe('masque')
+		expect((await payload.findByID({ collection: 'profiles', id, depth: 0 })).status).toBe('hidden')
 		expect(await lusParLePublic(slug)).toEqual([])
 
 		const republie = await appelerRest('PATCH', `/api/profiles/${id}`, {
 			enTetes,
-			corps: { statutChoisi: 'automatique' },
+			corps: { chosenStatus: 'automatic' },
 		})
 		expect(republie.statut).toBe(200)
 		const revenu = await payload.findByID({ collection: 'profiles', id, depth: 0 })
-		expect([revenu.statut, revenu.publiable]).toEqual(['publie', true])
+		expect([revenu.status, revenu.publishable]).toEqual(['published', true])
 		expect(await lusParLePublic(slug)).toEqual([slug])
 	}, 30_000)
 
@@ -205,10 +205,10 @@ describe('Masquer un profil depuis sa fiche (ticket 166)', () => {
 
 		const reponse = await appelerRest('PATCH', `/api/profiles/${id}`, {
 			enTetes: redaction.session.enTetes,
-			corps: { statutChoisi: 'masque' },
+			corps: { chosenStatus: 'hidden' },
 		})
 		expect(reponse.statut).toBeGreaterThanOrEqual(400)
 		const apres = await (await payloadDeTest()).findByID({ collection: 'profiles', id, depth: 0 })
-		expect([apres.statutChoisi, apres.statut]).toEqual(['automatique', 'publie'])
+		expect([apres.chosenStatus, apres.status]).toEqual(['automatic', 'published'])
 	})
 })

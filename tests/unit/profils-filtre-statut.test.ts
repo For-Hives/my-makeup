@@ -4,17 +4,17 @@ import { valeursInconnues } from '../../src/collections/Profiles'
 /** Ticket 165: a filter of the list on a status nobody holds is found before it reaches the database. */
 describe('Les valeurs de statut d’un filtre de la liste des profils', () => {
 	test('un statut connu, un autre champ, une comparaison à une présence : rien à refuser', () => {
-		expect(valeursInconnues({ statut: { equals: 'masque' } })).toEqual([])
-		expect(valeursInconnues({ slug: { equals: 'zz' }, publiable: { equals: false } })).toEqual([])
-		expect(valeursInconnues({ statut: { exists: true } })).toEqual([])
+		expect(valeursInconnues({ status: { equals: 'hidden' } })).toEqual([])
+		expect(valeursInconnues({ slug: { equals: 'zz' }, publishable: { equals: false } })).toEqual([])
+		expect(valeursInconnues({ status: { exists: true } })).toEqual([])
 		expect(valeursInconnues(undefined)).toEqual([])
 	})
 
 	test('une valeur inconnue est trouvée, dans un et, un ou, une liste', () => {
-		expect(valeursInconnues({ statut: { equals: 'archive' } })).toEqual(['statut : archive'])
-		expect(valeursInconnues({ and: [{ or: [{ statutChoisi: { in: ['masque', 'zz'] } }] }] })).toEqual([
-			'statutChoisi : zz',
+		expect(valeursInconnues({ status: { equals: 'archive' } })).toEqual(['status : archive'])
+		expect(valeursInconnues({ and: [{ or: [{ chosenStatus: { in: ['hidden', 'zz'] } }] }] })).toEqual([
+			'chosenStatus : zz',
 		])
-		expect(valeursInconnues({ statut: { equals: 12 } })).toEqual(['statut : 12'])
+		expect(valeursInconnues({ status: { equals: 12 } })).toEqual(['status : 12'])
 	})
 })

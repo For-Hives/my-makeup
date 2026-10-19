@@ -150,7 +150,7 @@ test.describe('E02 : l’accueil en trois étapes', { tag: '@mobile' }, () => {
 		await appuyer(page.getByRole('button', { name: 'Suivant' }))
 		await expect(page.getByText('Indique ton prénom.')).toBeVisible()
 		await expect(page.getByText('Indique ta spécialité.')).toBeVisible()
-		expect((await profilDe(email)).prenom ?? null).toBeNull()
+		expect((await profilDe(email)).firstName ?? null).toBeNull()
 		expect(await violationsApresLeTitre(page)).toEqual([])
 		await remplirIdentite(page)
 		await capturer(page, 'etape-1')
@@ -159,7 +159,11 @@ test.describe('E02 : l’accueil en trois étapes', { tag: '@mobile' }, () => {
 		// Step 2: the identity is stored before the zone opens, and the title has the focus.
 		await expect(titre(page)).toHaveText('Ta zone')
 		await expect(titre(page)).toBeFocused()
-		expect(await profilDe(email)).toMatchObject({ prenom: 'Léa', nom: 'Fictive', specialite: 'Maquillage mariée' })
+		expect(await profilDe(email)).toMatchObject({
+			firstName: 'Léa',
+			lastName: 'Fictive',
+			specialty: 'Maquillage mariée',
+		})
 		// A commune typed but not chosen in the list is no commune.
 		await page.getByRole('combobox', { name: 'Ta commune' }).fill('Lille')
 		await appuyer(page.getByRole('button', { name: 'Suivant' }))
@@ -171,7 +175,7 @@ test.describe('E02 : l’accueil en trois étapes', { tag: '@mobile' }, () => {
 
 		// Step 3.
 		await expect(titre(page)).toHaveText('Ta photo principale')
-		expect((await profilDe(email)).commune?.codeInsee).toBe('59350')
+		expect((await profilDe(email)).city?.inseeCode).toBe('59350')
 		await choisirLaPhoto(page)
 		await capturer(page, 'etape-3')
 		expect(await violationsApresLeTitre(page)).toEqual([])
@@ -181,8 +185,8 @@ test.describe('E02 : l’accueil en trois étapes', { tag: '@mobile' }, () => {
 		await expect(page).toHaveURL(/\/auth\/profil$/, { timeout: 60_000 })
 		await expect(page.getByRole('heading', { name: 'Mon espace' })).toBeVisible()
 		const profil = await profilDe(email)
-		expect(profil.actif).toBe(true)
-		expect(profil.statut).toBe('publie')
+		expect(profil.active).toBe(true)
+		expect(profil.status).toBe('publie')
 
 		// The onboarding has nothing left for an active profile.
 		await page.goto(PAGE)
@@ -202,7 +206,7 @@ test.describe('E02 : l’accueil en trois étapes', { tag: '@mobile' }, () => {
 		// The server has not answered: the step says so, and nothing else opens.
 		await expect(page.getByRole('button', { name: 'Enregistrement…' })).toBeDisabled()
 		await expect(titre(page)).toHaveText('Ton identité')
-		expect((await profilDe(email)).prenom ?? null).toBeNull()
+		expect((await profilDe(email)).firstName ?? null).toBeNull()
 		serveur.liberer()
 		await expect(titre(page)).toHaveText('Ta zone')
 
@@ -220,10 +224,10 @@ test.describe('E02 : l’accueil en trois étapes', { tag: '@mobile' }, () => {
 		// The last answer has not come: she is still on the step, no arrival is claimed.
 		await expect(page.getByRole('button', { name: 'Enregistrement…' })).toBeDisabled()
 		await expect(page).toHaveURL(/\/auth\/init-account$/)
-		await expect.poll(async () => (await profilDe(email)).photoPrincipale ?? null, { timeout: 5000 }).toBeNull()
+		await expect.poll(async () => (await profilDe(email)).mainPicture ?? null, { timeout: 5000 }).toBeNull()
 		serveur.liberer()
 		await expect(page).toHaveURL(/\/auth\/profil$/, { timeout: 60_000 })
-		expect((await profilDe(email)).actif).toBe(true)
+		expect((await profilDe(email)).active).toBe(true)
 	})
 
 	test('un échec reste sur l’étape, la saisie est gardée, puis ça passe ; reprise à l’étape 2 après un départ', async ({
@@ -244,7 +248,7 @@ test.describe('E02 : l’accueil en trois étapes', { tag: '@mobile' }, () => {
 		await expect(titre(page)).toHaveText('Ton identité')
 		await expect(page.getByLabel('Prénom')).toHaveValue('Léa')
 		await expect(page.getByLabel(/Spécialité/)).toHaveValue('Maquillage mariée')
-		expect((await profilDe(email)).prenom ?? null).toBeNull()
+		expect((await profilDe(email)).firstName ?? null).toBeNull()
 
 		// The network is back: the same form passes.
 		await page.unroute(`**${PAGE}`)

@@ -72,18 +72,18 @@ describe('U60 : un filtre ou un tri sur email, hash ou sessions, refusé', () =>
 	test('les chemins d’une requête : son filtre, imbriqué ou non, son tri, son champ distinct, ses jointures', () => {
 		expect(
 			cheminsDeLaRequete({
-				where: { and: [{ slug: { equals: 'a' } }, { galerie: { contains: { 'owner.email': { equals: 'x' } } } }] },
+				where: { and: [{ slug: { equals: 'a' } }, { gallery: { contains: { 'owner.email': { equals: 'x' } } } }] },
 				sort: '-score,title',
-				field: 'coordonnees.telephone',
+				field: 'contactDetails.phone',
 				joins: { liens: { where: { 'pro.hash': { exists: true } }, sort: ['-sessions.expiresAt'] } },
 			})
 		).toEqual([
 			'slug',
-			'galerie',
+			'gallery',
 			'owner.email',
 			'score',
 			'title',
-			'coordonnees.telephone',
+			'contactDetails.phone',
 			'pro.hash',
 			'sessions.expiresAt',
 		])
@@ -118,8 +118,8 @@ describe('U60 : un filtre ou un tri sur email, hash ou sessions, refusé', () =>
 	})
 
 	test('coordonnées, note interne et score : refusés à tout autre qu’un admin, en filtre comme en tri', () => {
-		expect([...CHAMPS_PRIVES].sort()).toEqual(['coordonnees', 'email', 'noteInterne', 'score'])
-		for (const chemin of ['coordonnees.telephone', 'coordonnees.email', 'coordonnees', 'noteInterne', 'score']) {
+		expect([...CHAMPS_PRIVES].sort()).toEqual(['contactDetails', 'email', 'internalNote', 'score'])
+		for (const chemin of ['contactDetails.phone', 'contactDetails.email', 'contactDetails', 'internalNote', 'score']) {
 			for (const user of NON_ADMINS) {
 				expect(refusDeLaRequete({ where: { [chemin]: { like: '06' } } }, user)).toBe(MESSAGE_CHAMP_PRIVE)
 				expect(refusDeLaRequete({ sort: `slug,-${chemin}` }, user)).toBe(MESSAGE_CHAMP_PRIVE)

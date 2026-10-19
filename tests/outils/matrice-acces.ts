@@ -282,7 +282,7 @@ const PORTRAITS: Record<CollectionDeLaMatrice, Portrait> = {
 		jetable: payload => compteSansProfil(payload, 'jetable'),
 	},
 	profiles: {
-		champ: 'prenom',
+		champ: 'firstName',
 		nouvelleValeur: () => nom('Prénom'),
 		// A profile for the actor's own account when it has none, else for a new account without one.
 		donneesDeCreation: async (acteur, payload) => ({
@@ -426,7 +426,7 @@ export async function distribuer(): Promise<Distribution> {
 		await payload.update({
 			collection: 'profiles',
 			id: profil,
-			data: { statutChoisi, photoPrincipale: acteur.documents.media },
+			data: { chosenStatus: statutChoisi, mainPicture: acteur.documents.media },
 		})
 	}
 	// One lock for each account of the admin panel, in its own name.

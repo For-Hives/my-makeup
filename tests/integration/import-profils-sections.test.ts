@@ -298,11 +298,11 @@ describe('Les sections de chaque profil sont reprises dans leur ordre (ticket 06
 				'makeupartists.network',
 				'network'
 			)
-			expect(profil.reseaux as unknown, String(profil.strapiId)).toEqual({
+			expect(profil.networks as unknown, String(profil.strapiId)).toEqual({
 				youtube: reseau?.youtube ?? null,
 				facebook: reseau?.facebook ?? null,
 				instagram: reseau?.instagram ?? null,
-				siteWeb: reseau?.website ?? null,
+				website: reseau?.website ?? null,
 				linkedin: reseau?.linkedin ?? null,
 			})
 		}
@@ -319,7 +319,7 @@ describe('Une ligne hors d’une borne de la v3 et un rayon au-dessus de 200 km 
 		expect(hugo?.prestations?.map(({ nom, options }) => [nom, options?.length ?? 0])).toEqual([
 			['Cours particulier', 0],
 		])
-		expect(hugo?.statut).toBe('publie')
+		expect(hugo?.status).toBe('published')
 		expect(premier.collections.profiles).toMatchObject({ refuses: [] })
 		expect(premier.collections.profiles?.lignesLaissees).toEqual([
 			{ profil: 33, liste: 'formations', rang: 1 },
@@ -335,7 +335,7 @@ describe('Une ligne hors d’une borne de la v3 et un rayon au-dessus de 200 km 
 
 	test('le rayon de 0 à 200 km est repris ; au-dessus, le champ reste vide et le profil est listé avec la valeur', async () => {
 		const cible = await profilsDeLaCible()
-		const rayon = (id: number) => cible.find(({ strapiId }) => strapiId === id)?.rayonKm ?? null
+		const rayon = (id: number) => cible.find(({ strapiId }) => strapiId === id)?.radiusKm ?? null
 
 		expect([21, 22, 23, 24].map(rayon)).toEqual([30, 50, 20, null])
 		// 26 holds 400 km at the source: its zone stays empty, it is taken, and listed with the value.
@@ -359,28 +359,28 @@ describe('Les photos de chaque profil (ticket 060)', () => {
 	test('la photo principale et la galerie, dans l’ordre, sont les médias adoptés de ses fichiers', async () => {
 		const medias = await mediasParFichier()
 		const parProfil = Object.fromEntries(
-			(await profilsDeLaCible()).map(({ strapiId, photoPrincipale, galerie }) => [
+			(await profilsDeLaCible()).map(({ strapiId, mainPicture, gallery }) => [
 				strapiId,
-				{ principale: photoPrincipale ?? null, galerie: galerie ?? [] },
+				{ principale: mainPicture ?? null, gallery: gallery ?? [] },
 			])
 		)
 
 		// The links of the gallery of 21 are written out of order: `order` says 102, 103, 104.
 		expect(parProfil[21]).toEqual({
 			principale: medias.get(101) ?? -1,
-			galerie: [medias.get(102), medias.get(103), medias.get(104)],
+			gallery: [medias.get(102), medias.get(103), medias.get(104)],
 		})
-		expect(parProfil[22]).toEqual({ principale: medias.get(105) ?? -1, galerie: [medias.get(106)] })
+		expect(parProfil[22]).toEqual({ principale: medias.get(105) ?? -1, gallery: [medias.get(106)] })
 		// The object of 107 is missing from the storage: adopted all the same, a « 404 connu ».
-		expect(parProfil[23]).toEqual({ principale: medias.get(107) ?? -1, galerie: [] })
-		expect(parProfil[25]).toEqual({ principale: null, galerie: [medias.get(109)] })
+		expect(parProfil[23]).toEqual({ principale: medias.get(107) ?? -1, gallery: [] })
+		expect(parProfil[25]).toEqual({ principale: null, gallery: [medias.get(109)] })
 	})
 
 	test('une photo dont le média n’est pas adopté est signalée, pas inventée', async () => {
 		const camille = (await profilsDeLaCible()).find(({ strapiId }) => strapiId === 24)
 
 		// 108 is a PDF: not adopted, so the gallery of 24 is empty in the v3.
-		expect(camille?.galerie ?? []).toEqual([])
+		expect(camille?.gallery ?? []).toEqual([])
 		expect(premier.collections.profiles?.photosNonReprises).toEqual([{ entree: 24, fichier: 108 }])
 		expect(premier.collections.profiles?.statutsDifferentsDeLaSource).toEqual([])
 	})

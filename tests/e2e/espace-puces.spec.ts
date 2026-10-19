@@ -24,7 +24,7 @@ async function maquilleuse(context: {
 }): Promise<Maquilleuse> {
 	const compte = await creerCompte('maquilleuse')
 	await context.addCookies(compte.session.cookies)
-	await modifierLaFiche(compte, { prenom: 'Léa', nom: 'Fictive', specialite: 'Maquillage mariée' })
+	await modifierLaFiche(compte, { firstName: 'Léa', lastName: 'Fictive', specialty: 'Maquillage mariée' })
 	return compte
 }
 

@@ -31,10 +31,10 @@ export const estUnIdentifiantDePhoto = (valeur: unknown): valeur is IdentifiantD
  */
 export async function lirePhotosDeLEspace(
 	payload: Payload,
-	profil: Pick<ProfilDeLEspace, 'photoPrincipale' | 'galerie'>
+	profil: Pick<ProfilDeLEspace, 'mainPicture' | 'gallery'>
 ): Promise<PhotosDeLEspace> {
-	const principale = photosNommees(profil.photoPrincipale)[0]
-	const rangee = photosNommees(profil.galerie)
+	const principale = photosNommees(profil.mainPicture)[0]
+	const rangee = photosNommees(profil.gallery)
 	const demandes = [...new Set([...(principale === undefined ? [] : [principale]), ...rangee].map(String))]
 	if (demandes.length === 0) return { photo: null, galerie: [] }
 	const { docs } = await payload.find({

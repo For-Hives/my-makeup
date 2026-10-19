@@ -31,7 +31,7 @@ const REFERENTIEL_DU_BANC = 'tests/fixtures/import/referentiel-du-banc.json'
 
 /** The keys a reading of a profile must never put into a page: what is private or reserved. */
 const CLES_PRIVEES =
-	/"(?:pro|strapiId|legacyUsername|statut|motif|verifie|verifieLe|siret|noteInterne|score|superMaquilleuse|coordonnees|telephone|contactPublic|consentiLe|sourceConsentement)"\s*:/
+	/"(?:pro|strapiId|legacyUsername|statut|status|motif|reason|verifie|verified|verifieLe|verifiedAt|siret|noteInterne|internalNote|score|superMaquilleuse|superArtist|coordonnees|contactDetails|telephone|phone|contactPublic|publicContact|consentiLe|consentedAt|sourceConsentement|consentSource)"\s*:/
 
 /**
  * Runs a command of bun in the repository, under the environment of the bench and the production

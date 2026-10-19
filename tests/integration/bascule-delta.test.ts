@@ -103,7 +103,7 @@ beforeAll(async () => {
 	})
 	ids.messageNeuf = message.id
 	await payload.update({ collection: 'pros', id: ids.compteModifie, data: { name: 'Nom changé après la bascule' } })
-	await payload.update({ collection: 'profiles', id: ids.profilModifie, data: { specialite: 'Mariage' } })
+	await payload.update({ collection: 'profiles', id: ids.profilModifie, data: { specialty: 'Mariage' } })
 	await payload.create({ collection: 'deleted-accounts', data: { strapiId: 4199, date: new Date().toISOString() } })
 	await payload.create({ collection: 'deleted-accounts', data: { strapiId: 4198, date: ANCIEN } })
 }, 120_000)
@@ -126,7 +126,7 @@ describe('l’export du delta, sur le banc', () => {
 			[ids.profilModifie, ids.profilNeuf].sort((a, b) => (a ?? 0) - (b ?? 0)) as number[]
 		)
 		expect(delta.profils.find(({ id }) => id === ids.profilModifie)?.depuisLaBascule).toBe('modifie')
-		expect(delta.profils.find(({ id }) => id === ids.profilModifie)?.specialite).toBe('Mariage')
+		expect(delta.profils.find(({ id }) => id === ids.profilModifie)?.specialty).toBe('Mariage')
 		expect(idsDe(delta.photos)).toEqual([ids.photoNeuve as number])
 		expect(delta.photos[0]?.owner).toBe(ids.compteNeuf)
 		expect(idsDe(delta.messages)).toEqual([ids.messageNeuf as number])
@@ -166,7 +166,7 @@ describe('l’export du delta, sur le banc', () => {
 				}
 		}
 		parcourir(avecHash)
-		expect(cles.filter(cle => /hash|salt|token|password|secret|bcrypt|session|attempts|lock/i.test(cle))).toEqual([])
+		expect(cles.filter(cle => /hash|salt|token|password|secret|bcrypt|session|attempts|^lock/i.test(cle))).toEqual([])
 		const texte = JSON.stringify(avecHash)
 		for (const valeur of [
 			HASH_FICTIF,

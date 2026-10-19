@@ -28,7 +28,7 @@ let payload: Payload
 const compte = (cle: string) => ({
 	email: `recherche-${cle}@example.test`,
 	password: `Banc-${cle}-${crypto.randomUUID()}`,
-	nom: `Recherche ${cle}`,
+	name: `Recherche ${cle}`,
 	_verified: true,
 })
 
@@ -42,26 +42,26 @@ async function poser(cle: string, profil: Record<string, unknown>): Promise<void
 	})
 	await payload.create({
 		collection: 'profiles',
-		data: { pro: pro.id, slug: `recherche-${cle}`, prenom: 'Essai', nom: cle, ...profil } as never,
+		data: { pro: pro.id, slug: `recherche-${cle}`, firstName: 'Essai', lastName: cle, ...profil } as never,
 	})
 }
 
-const ANNECY = { nom: 'Annecy', codeInsee: '74010', latitude: 45.9, longitude: 6.13 }
+const ANNECY = { name: 'Annecy', inseeCode: '74010', latitude: 45.9, longitude: 6.13 }
 
 beforeAll(async () => {
 	payload = await payloadDeTest()
 	await fabriquerDesProfils(payload, NOMBRE)
 	await poser('visible', {
-		specialite: 'Maquillage zyglo',
-		commune: ANNECY,
+		specialty: 'Maquillage zyglo',
+		city: ANNECY,
 		description: 'Maquilleuse qui publie ses coordonnées.',
-		coordonnees: { telephone: TELEPHONE, email: EMAIL },
-		contactPublic: true,
-		consentiLe: '2026-09-01T08:00:00.000Z',
-		sourceConsentement: 'maquilleuse',
+		contactDetails: { phone: TELEPHONE, email: EMAIL },
+		publicContact: true,
+		consentedAt: '2026-09-01T08:00:00.000Z',
+		consentSource: 'artist',
 	})
-	await poser('masque', { specialite: 'Maquillage zyglo', commune: ANNECY, statutChoisi: 'masque' })
-	await poser('indisponible', { specialite: 'Maquillage zyglo', commune: ANNECY, disponible: false })
+	await poser('masque', { specialty: 'Maquillage zyglo', city: ANNECY, chosenStatus: 'hidden' })
+	await poser('indisponible', { specialty: 'Maquillage zyglo', city: ANNECY, available: false })
 	await poser('vide', {})
 }, 240_000)
 
@@ -139,14 +139,14 @@ describe('I29 : ni email ni téléphone, et une réponse légère', () => {
 		// What reaches the browser is the cards of a page, and only them.
 		const reponse = JSON.stringify(premierePage.map(({ carte }) => carte))
 		expect(new TextEncoder().encode(reponse).length).toBeLessThan(50_000)
-		for (const interdit of [TELEPHONE, EMAIL, '@example.test', 'latitude', 'longitude', 'codeInsee', 'coordonnees'])
+		for (const interdit of [TELEPHONE, EMAIL, '@example.test', 'latitude', 'longitude', 'inseeCode', 'contactDetails'])
 			expect(reponse, interdit).not.toContain(interdit)
 	})
 
 	test('l’annuaire entier ne porte jamais les coordonnées publiées, même dans les textes cherchés', async () => {
 		const annuaire = await lireLAnnuaire(payload, { avecLesTextes: true })
 		const texte = JSON.stringify(annuaire)
-		for (const interdit of [TELEPHONE, EMAIL, 'latitude', 'longitude', 'codeInsee'])
+		for (const interdit of [TELEPHONE, EMAIL, 'latitude', 'longitude', 'inseeCode'])
 			expect(texte, interdit).not.toContain(interdit)
 		const visible = annuaire.find(({ carte }) => carte.slug === 'recherche-visible')
 		expect(Object.keys(visible?.carte ?? {}).sort()).toEqual(

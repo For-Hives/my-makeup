@@ -76,9 +76,9 @@ afterAll(async () => {
 describe('Un second passage avec une autre date de bascule garde la date de consentement posée (ticket 227)', () => {
 	test('les profils qui affichent leurs coordonnées gardent la première date ; le rapport les compte', async () => {
 		const avant = await profils()
-		const affichent = avant.filter(({ contactPublic }) => contactPublic === true)
+		const affichent = avant.filter(({ publicContact }) => publicContact === true)
 		expect(affichent.length).toBeGreaterThan(0)
-		for (const profil of affichent) expect(profil.consentiLe).toBe(DATE_DE_BASCULE_DU_BANC)
+		for (const profil of affichent) expect(profil.consentedAt).toBe(DATE_DE_BASCULE_DU_BANC)
 
 		const second = await importerSurLeBanc('reel', { consentiLe: AUTRE_DATE })
 
@@ -91,7 +91,7 @@ describe('Un second passage avec une autre date de bascule garde la date de cons
 		expect(codeDeSortie(second)).toBe(0)
 		expect(await profils()).toEqual(avant)
 		for (const profil of await profils())
-			if (profil.contactPublic === true) expect(profil.consentiLe).toBe(DATE_DE_BASCULE_DU_BANC)
+			if (profil.publicContact === true) expect(profil.consentedAt).toBe(DATE_DE_BASCULE_DU_BANC)
 		// The same date again: nothing to count.
 		expect((await importerSurLeBanc()).collections.profiles?.consentementsGardes).toEqual([])
 	}, 60_000)

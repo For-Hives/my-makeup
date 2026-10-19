@@ -175,7 +175,7 @@ export async function poserLeProfil(
 					collection: 'profiles',
 					id: cree.id,
 					// A copy: the set itself stays as it is written, whatever Payload does with its data.
-					data: { ...structuredClone(type.profil), photoPrincipale, galerie: photosDeLaGalerie },
+					data: { ...structuredClone(type.profil), mainPicture: photoPrincipale, gallery: photosDeLaGalerie },
 					depth: 0,
 					req,
 				})

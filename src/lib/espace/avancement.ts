@@ -144,7 +144,7 @@ export function avancementDuProfil(profil: ProfilDeLEspace): Avancement {
 		return [{ critere, texte: texteDuManque(critere, absent, profil), section: SECTION_DU_CRITERE[critere], requis }]
 	})
 	const etat = etatDe(lecture)
-	const cacheeParLaDisponibilite = (etat === 'incomplet' || etat === 'publiable') && !estDisponible(profil.disponible)
+	const cacheeParLaDisponibilite = (etat === 'incomplet' || etat === 'publiable') && !estDisponible(profil.available)
 	return {
 		score: lecture.score,
 		sur: lecture.sur,

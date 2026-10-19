@@ -38,16 +38,16 @@ export default async function PageDAccueilDuCompte() {
 			<Accueil
 				etapeInitiale={position}
 				identite={{
-					prenom: texte(profil.prenom),
-					nom: texte(profil.nom),
-					nomArtiste: texte(profil.nomArtiste),
-					specialite: texte(profil.specialite),
+					prenom: texte(profil.firstName),
+					nom: texte(profil.lastName),
+					nomArtiste: texte(profil.artistName),
+					specialite: texte(profil.specialty),
 				}}
 				localisation={{
-					codeInsee: texte(profil.commune?.codeInsee),
-					libelle: libelleDeLaCommune(profil.commune ?? {}),
-					rayonKm: typeof profil.rayonKm === 'number' ? profil.rayonKm : null,
-					aDomicile: profil.aDomicile === true,
+					codeInsee: texte(profil.city?.inseeCode),
+					libelle: libelleDeLaCommune({ nom: profil.city?.name, departement: profil.city?.department }),
+					rayonKm: typeof profil.radiusKm === 'number' ? profil.radiusKm : null,
+					aDomicile: profil.homeService === true,
 				}}
 				envoyerIdentite={enregistrerMonIdentiteDAccueil}
 				envoyerLocalisation={enregistrerMaLocalisation}

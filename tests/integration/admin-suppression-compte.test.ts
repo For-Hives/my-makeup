@@ -59,7 +59,7 @@ async function compteGarni() {
 	await (await payloadDeTest()).update({
 		collection: 'profiles',
 		id: profil.id,
-		data: { photoPrincipale: principale.id, galerie: [principale.id, galerie.id] },
+		data: { mainPicture: principale.id, gallery: [principale.id, galerie.id] },
 	})
 	return { compte, profil, photos: [principale, galerie, libre] }
 }

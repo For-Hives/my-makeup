@@ -27,7 +27,7 @@ import {
  */
 
 /** A commune of the official list, as the space (ticket 123) and the import (ticket 063) will give it. */
-const ANNECY = { nom: 'Annecy', codeInsee: '74010', latitude: 45.8992, longitude: 6.1294 } as const
+const ANNECY = { name: 'Annecy', inseeCode: '74010', latitude: 45.8992, longitude: 6.1294 } as const
 
 describe('le département d’un code INSEE', () => {
 	test('les deux premiers caractères en métropole et en Corse, les trois premiers outre-mer', () => {
@@ -97,10 +97,10 @@ describe('le département d’un code INSEE', () => {
 		expect(codeInseeNormalise(74010)).toBe(74010)
 		expect(codeInseeNormalise(null)).toBeNull()
 		expect(codeInseeNormalise(undefined)).toBeUndefined()
-		expect(communeEnChamps(null)).toEqual({ nom: null, codeInsee: null, latitude: null, longitude: null })
-		expect(communeEnChamps('Annecy')).toEqual({ nom: 'Annecy', codeInsee: null, latitude: null, longitude: null })
+		expect(communeEnChamps(null)).toEqual({ name: null, inseeCode: null, latitude: null, longitude: null })
+		expect(communeEnChamps('Annecy')).toEqual({ name: 'Annecy', inseeCode: null, latitude: null, longitude: null })
 		expect(erreursDeLaCommune(communeEnChamps('Annecy') as CommuneSaisie)).toEqual({
-			codeInsee: MESSAGES_DE_LA_ZONE.communeSansCodeInsee,
+			inseeCode: MESSAGES_DE_LA_ZONE.communeSansCodeInsee,
 		})
 		expect(communeEnChamps(ANNECY)).toEqual(ANNECY)
 		expect(communeEnChamps(undefined)).toBeUndefined()
@@ -112,18 +112,18 @@ describe('le département d’un code INSEE', () => {
 
 describe('une commune s’envoie entière, et seulement comme un objet', () => {
 	test('ce qu’une commune envoyée ne donne pas est vide, jamais repris de la commune déjà enregistrée', () => {
-		const vide = { nom: null, codeInsee: null, latitude: null, longitude: null }
-		expect(communeEnChamps({ nom: 'Lyon' })).toEqual({ ...vide, nom: 'Lyon' })
-		expect(communeEnChamps({ codeInsee: '69123' })).toEqual({ ...vide, codeInsee: '69123' })
-		expect(communeEnChamps({ nom: 'Lyon', codeInsee: '69123' })).toEqual({ ...vide, nom: 'Lyon', codeInsee: '69123' })
+		const vide = { name: null, inseeCode: null, latitude: null, longitude: null }
+		expect(communeEnChamps({ name: 'Lyon' })).toEqual({ ...vide, name: 'Lyon' })
+		expect(communeEnChamps({ inseeCode: '69123' })).toEqual({ ...vide, inseeCode: '69123' })
+		expect(communeEnChamps({ name: 'Lyon', inseeCode: '69123' })).toEqual({ ...vide, name: 'Lyon', inseeCode: '69123' })
 		expect(communeEnChamps({})).toEqual(vide)
 		// The département is the server's: what a request sends for it is not kept.
-		expect(communeEnChamps({ ...ANNECY, departement: '13' })).toEqual(ANNECY)
-		expect(erreursDeLaCommune(communeEnChamps({ nom: 'Lyon' }) as CommuneSaisie)).toEqual({
-			codeInsee: MESSAGES_DE_LA_ZONE.communeSansCodeInsee,
+		expect(communeEnChamps({ ...ANNECY, department: '13' })).toEqual(ANNECY)
+		expect(erreursDeLaCommune(communeEnChamps({ name: 'Lyon' }) as CommuneSaisie)).toEqual({
+			inseeCode: MESSAGES_DE_LA_ZONE.communeSansCodeInsee,
 		})
-		expect(erreursDeLaCommune(communeEnChamps({ codeInsee: '69123' }) as CommuneSaisie)).toEqual({
-			nom: MESSAGES_DE_LA_ZONE.codeInseeSansNom,
+		expect(erreursDeLaCommune(communeEnChamps({ inseeCode: '69123' }) as CommuneSaisie)).toEqual({
+			name: MESSAGES_DE_LA_ZONE.codeInseeSansNom,
 		})
 	})
 
@@ -138,7 +138,7 @@ describe('une commune s’envoie entière, et seulement comme un objet', () => {
 })
 
 describe('un nom de commune n’est jamais une adresse', () => {
-	test('un numéro, un code postal, une virgule ou une rue suivie de son nom : refusés en français', () => {
+	test('un numéro, un code postal, une virgule ou une rue suivie de son name : refusés en français', () => {
 		const adresses = [
 			'12 rue des Lilas, 74000 Annecy',
 			'12 rue des Lilas',
@@ -158,7 +158,9 @@ describe('un nom de commune n’est jamais une adresse', () => {
 		]
 		for (const nom of adresses) {
 			expect(ressembleAUneAdresse(nom), nom).toBe(true)
-			expect(erreursDeLaCommune({ nom, codeInsee: '74010' }), nom).toEqual({ nom: MESSAGES_DE_LA_ZONE.nomAdresse })
+			expect(erreursDeLaCommune({ name: nom, inseeCode: '74010' }), nom).toEqual({
+				name: MESSAGES_DE_LA_ZONE.nomAdresse,
+			})
 		}
 		expect(MESSAGES_DE_LA_ZONE.nomAdresse).toBe(
 			'Ce nom ressemble à une adresse : choisis ta commune dans la liste, jamais ton adresse.'
@@ -188,7 +190,7 @@ describe('un nom de commune n’est jamais une adresse', () => {
 		]
 		for (const nom of noms) {
 			expect(ressembleAUneAdresse(nom), nom).toBe(false)
-			expect(erreursDeLaCommune({ nom, codeInsee: '74010' }), nom).toEqual({})
+			expect(erreursDeLaCommune({ name: nom, inseeCode: '74010' }), nom).toEqual({})
 		}
 	})
 })
@@ -212,7 +214,9 @@ describe('un nom de commune n’a que les caractères d’un nom de commune', ()
 			'Annecy\u200b',
 		]
 		for (const nom of textes)
-			expect(erreursDeLaCommune({ nom, codeInsee: '74010' }), nom).toEqual({ nom: MESSAGES_DE_LA_ZONE.nomCaracteres })
+			expect(erreursDeLaCommune({ name: nom, inseeCode: '74010' }), nom).toEqual({
+				name: MESSAGES_DE_LA_ZONE.nomCaracteres,
+			})
 		expect(MESSAGES_DE_LA_ZONE.nomCaracteres).toBe(
 			'Le nom d’une commune n’a que des lettres, des espaces, des traits d’union, des apostrophes et des parenthèses : choisis ta commune dans la liste.'
 		)
@@ -229,12 +233,12 @@ describe('un nom de commune n’a que les caractères d’un nom de commune', ()
 			'Haÿ ʻO Fictif',
 			'Ville - Fictive',
 		])
-			expect(erreursDeLaCommune({ nom, codeInsee: '74010' }), nom).toEqual({})
+			expect(erreursDeLaCommune({ name: nom, inseeCode: '74010' }), nom).toEqual({})
 	})
 
 	test('le nom n’est pas comparé à celui de son code : c’est le travail de la liste de l’espace et de l’import', () => {
 		// A decision of ticket 041, written in the README: the server checks the form of the name only.
-		expect(erreursDeLaCommune({ nom: 'Lyon', codeInsee: '74010' })).toEqual({})
+		expect(erreursDeLaCommune({ name: 'Lyon', inseeCode: '74010' })).toEqual({})
 	})
 })
 
@@ -275,21 +279,23 @@ describe('la commune', () => {
 		expect(erreursDeLaCommune(null)).toEqual({})
 		expect(erreursDeLaCommune({})).toEqual({})
 		expect(
-			erreursDeLaCommune({ nom: null, codeInsee: null, departement: null, latitude: null, longitude: null })
+			erreursDeLaCommune({ name: null, inseeCode: null, department: null, latitude: null, longitude: null })
 		).toEqual({})
 		expect(erreursDeLaCommune(ANNECY)).toEqual({})
-		expect(erreursDeLaCommune({ nom: 'Annecy', codeInsee: '74010' })).toEqual({})
-		expect(erreursDeLaCommune({ nom: 'Saint-Remy-en-Bouzemont-Saint-Genest-et-Isson', codeInsee: '51513' })).toEqual({})
-		expect(erreursDeLaCommune({ nom: 'Ajaccio', codeInsee: '2A004', latitude: 0, longitude: 0 })).toEqual({})
+		expect(erreursDeLaCommune({ name: 'Annecy', inseeCode: '74010' })).toEqual({})
+		expect(erreursDeLaCommune({ name: 'Saint-Remy-en-Bouzemont-Saint-Genest-et-Isson', inseeCode: '51513' })).toEqual(
+			{}
+		)
+		expect(erreursDeLaCommune({ name: 'Ajaccio', inseeCode: '2A004', latitude: 0, longitude: 0 })).toEqual({})
 	})
 
 	test('sans code INSEE : refusée en français, sur le code', () => {
-		expect(erreursDeLaCommune({ nom: 'Annecy' })).toEqual({ codeInsee: MESSAGES_DE_LA_ZONE.communeSansCodeInsee })
-		expect(erreursDeLaCommune({ ...ANNECY, codeInsee: null })).toEqual({
-			codeInsee: MESSAGES_DE_LA_ZONE.communeSansCodeInsee,
+		expect(erreursDeLaCommune({ name: 'Annecy' })).toEqual({ inseeCode: MESSAGES_DE_LA_ZONE.communeSansCodeInsee })
+		expect(erreursDeLaCommune({ ...ANNECY, inseeCode: null })).toEqual({
+			inseeCode: MESSAGES_DE_LA_ZONE.communeSansCodeInsee,
 		})
-		expect(erreursDeLaCommune({ nom: 'Annecy', codeInsee: '  ' })).toEqual({
-			codeInsee: MESSAGES_DE_LA_ZONE.communeSansCodeInsee,
+		expect(erreursDeLaCommune({ name: 'Annecy', inseeCode: '  ' })).toEqual({
+			inseeCode: MESSAGES_DE_LA_ZONE.communeSansCodeInsee,
 		})
 		expect(MESSAGES_DE_LA_ZONE.communeSansCodeInsee).toBe(
 			'Choisis ta commune dans la liste : sans son code INSEE, elle ne peut pas être enregistrée.'
@@ -298,8 +304,8 @@ describe('la commune', () => {
 
 	test('code INSEE mal formé : refusé en français', () => {
 		for (const codeInsee of ['7401', '20004', 'ABCDE', '97001', 74010])
-			expect(erreursDeLaCommune({ nom: 'Annecy', codeInsee }), String(codeInsee)).toEqual({
-				codeInsee: MESSAGES_DE_LA_ZONE.codeInseeMalForme,
+			expect(erreursDeLaCommune({ name: 'Annecy', inseeCode: codeInsee }), String(codeInsee)).toEqual({
+				inseeCode: MESSAGES_DE_LA_ZONE.codeInseeMalForme,
 			})
 		expect(MESSAGES_DE_LA_ZONE.codeInseeMalForme).toBe(
 			'Le code INSEE de la commune est mal formé : 5 caractères, comme 74010 ou 2A004.'
@@ -307,12 +313,12 @@ describe('la commune', () => {
 	})
 
 	test('un code sans nom, un nom trop long ou qui n’est pas un texte : refusés sur le nom', () => {
-		expect(erreursDeLaCommune({ codeInsee: '74010' })).toEqual({ nom: MESSAGES_DE_LA_ZONE.codeInseeSansNom })
-		expect(erreursDeLaCommune({ nom: 'A'.repeat(71), codeInsee: '74010' })).toEqual({
-			nom: MESSAGES_DE_LA_ZONE.nomInvalide,
+		expect(erreursDeLaCommune({ inseeCode: '74010' })).toEqual({ name: MESSAGES_DE_LA_ZONE.codeInseeSansNom })
+		expect(erreursDeLaCommune({ name: 'A'.repeat(71), inseeCode: '74010' })).toEqual({
+			name: MESSAGES_DE_LA_ZONE.nomInvalide,
 		})
-		expect(erreursDeLaCommune({ nom: 'A'.repeat(70), codeInsee: '74010' })).toEqual({})
-		expect(erreursDeLaCommune({ nom: 42, codeInsee: '74010' })).toEqual({ nom: MESSAGES_DE_LA_ZONE.nomInvalide })
+		expect(erreursDeLaCommune({ name: 'A'.repeat(70), inseeCode: '74010' })).toEqual({})
+		expect(erreursDeLaCommune({ name: 42, inseeCode: '74010' })).toEqual({ name: MESSAGES_DE_LA_ZONE.nomInvalide })
 	})
 
 	test('des coordonnées hors bornes, seules ou sans commune : refusées en français', () => {
@@ -345,18 +351,18 @@ describe('les champs de la zone dans la collection des profils', () => {
 
 	test('commune, rayonKm et aDomicile, aux noms de SCHEMA.md, après la spécialité', () => {
 		const noms = champs.map(({ name }) => name)
-		expect(noms.slice(noms.indexOf('specialite'), noms.indexOf('specialite') + 4)).toEqual([
-			'specialite',
-			'commune',
-			'rayonKm',
-			'aDomicile',
+		expect(noms.slice(noms.indexOf('specialty'), noms.indexOf('specialty') + 4)).toEqual([
+			'specialty',
+			'city',
+			'radiusKm',
+			'homeService',
 		])
-		expect(champ('rayonKm')?.type).toBe('number')
-		expect(champ('aDomicile')?.type).toBe('checkbox')
+		expect(champ('radiusKm')?.type).toBe('number')
+		expect(champ('homeService')?.type).toBe('checkbox')
 	})
 
 	test('la commune n’a que ses cinq champs : aucune adresse postale', () => {
-		const commune = champ('commune')
+		const commune = champ('city')
 		expect(commune?.type).toBe('group')
 		const sousChamps = commune && 'fields' in commune ? commune.fields : []
 		expect(sousChamps.map(sousChamp => ('name' in sousChamp ? sousChamp.name : sousChamp.type))).toEqual([
@@ -368,9 +374,9 @@ describe('les champs de la zone dans la collection des profils', () => {
 		// A decision of ticket 041: the INSEE code and the coordinates of the centre of a commune are
 		// public reference data, not personal data, so the whole zone follows the reading of its
 		// profile: an anonymous reader reads it with the published profiles (ticket 021).
-		const commune = champ('commune')
+		const commune = champ('city')
 		const sousChamps = commune && 'fields' in commune ? commune.fields : []
-		for (const zone of [commune, champ('rayonKm'), champ('aDomicile'), ...sousChamps]) {
+		for (const zone of [commune, champ('radiusKm'), champ('homeService'), ...sousChamps]) {
 			// Once the configuration is built (another test file may build it), Payload gives every
 			// field an empty `access`: what matters is that no rule is in it.
 			const acces = zone && 'access' in zone ? zone.access : undefined

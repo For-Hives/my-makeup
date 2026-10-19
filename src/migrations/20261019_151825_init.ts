@@ -19,9 +19,9 @@ import { type MigrateDownArgs, type MigrateUpArgs, sql } from '@payloadcms/db-po
 export async function up({ db }: MigrateUpArgs): Promise<void> {
 	await db.execute(sql`
    CREATE TYPE "public"."enum_admins_role" AS ENUM('admin', 'editor');
-  CREATE TYPE "public"."enum_profiles_source_consentement" AS ENUM('maquilleuse', 'admin', 'import');
-  CREATE TYPE "public"."enum_profiles_statut" AS ENUM('brouillon', 'publie', 'masque');
-  CREATE TYPE "public"."enum_profiles_statut_choisi" AS ENUM('automatique', 'brouillon', 'publie', 'masque');
+  CREATE TYPE "public"."enum_profiles_consent_source" AS ENUM('artist', 'admin', 'import');
+  CREATE TYPE "public"."enum_profiles_status" AS ENUM('draft', 'published', 'hidden');
+  CREATE TYPE "public"."enum_profiles_chosen_status" AS ENUM('automatic', 'draft', 'published', 'hidden');
   CREATE TYPE "public"."enum_talents_status" AS ENUM('draft', 'published');
   CREATE TYPE "public"."enum__talents_v_version_status" AS ENUM('draft', 'published');
   CREATE TYPE "public"."enum_articles_status" AS ENUM('draft', 'published');
@@ -142,48 +142,48 @@ export async function up({ db }: MigrateUpArgs): Promise<void> {
   	"id" serial PRIMARY KEY NOT NULL,
   	"pro_id" integer NOT NULL,
   	"slug" varchar NOT NULL,
-  	"prenom" varchar,
-  	"nom" varchar,
-  	"nom_artiste" varchar,
-  	"specialite" varchar,
-  	"commune_nom" varchar,
-  	"commune_code_insee" varchar,
-  	"commune_departement" varchar,
-  	"commune_latitude" numeric,
-  	"commune_longitude" numeric,
-  	"rayon_km" numeric,
-  	"a_domicile" boolean,
+  	"first_name" varchar,
+  	"last_name" varchar,
+  	"artist_name" varchar,
+  	"specialty" varchar,
+  	"city_name" varchar,
+  	"city_insee_code" varchar,
+  	"city_department" varchar,
+  	"city_latitude" numeric,
+  	"city_longitude" numeric,
+  	"radius_km" numeric,
+  	"home_service" boolean,
   	"description" varchar,
-  	"disponible" boolean DEFAULT true,
-  	"photo_principale_id" integer,
-  	"reseaux_youtube" varchar,
-  	"reseaux_facebook" varchar,
-  	"reseaux_instagram" varchar,
-  	"reseaux_site_web" varchar,
-  	"reseaux_linkedin" varchar,
-  	"coordonnees_telephone" varchar,
-  	"coordonnees_email" varchar,
-  	"contact_public" boolean DEFAULT false,
-  	"consenti_le" timestamp(3) with time zone,
-  	"source_consentement" "enum_profiles_source_consentement",
+  	"available" boolean DEFAULT true,
+  	"main_picture_id" integer,
+  	"networks_youtube" varchar,
+  	"networks_facebook" varchar,
+  	"networks_instagram" varchar,
+  	"networks_website" varchar,
+  	"networks_linkedin" varchar,
+  	"contact_details_phone" varchar,
+  	"contact_details_email" varchar,
+  	"public_contact" boolean DEFAULT false,
+  	"consented_at" timestamp(3) with time zone,
+  	"consent_source" "enum_profiles_consent_source",
   	"legacy_username" varchar,
   	"strapi_id" numeric,
-  	"statut" "enum_profiles_statut" DEFAULT 'brouillon',
-  	"statut_choisi" "enum_profiles_statut_choisi" DEFAULT 'automatique',
-  	"motif" varchar,
-  	"verifie" boolean DEFAULT false,
-  	"verifie_le" timestamp(3) with time zone,
+  	"status" "enum_profiles_status" DEFAULT 'draft',
+  	"chosen_status" "enum_profiles_chosen_status" DEFAULT 'automatic',
+  	"reason" varchar,
+  	"verified" boolean DEFAULT false,
+  	"verified_at" timestamp(3) with time zone,
   	"siret" varchar,
-  	"note_interne" varchar,
+  	"internal_note" varchar,
   	"score" numeric,
-  	"super_maquilleuse" boolean DEFAULT false,
-  	"completude" numeric,
-  	"actif" boolean,
-  	"actif_depuis" timestamp(3) with time zone,
-  	"publiable" boolean,
-  	"publiable_depuis" timestamp(3) with time zone,
-  	"entierement_vide" boolean,
-  	"entierement_vide_depuis" timestamp(3) with time zone,
+  	"super_artist" boolean DEFAULT false,
+  	"completeness" numeric,
+  	"active" boolean,
+  	"active_since" timestamp(3) with time zone,
+  	"publishable" boolean,
+  	"publishable_since" timestamp(3) with time zone,
+  	"fully_empty" boolean,
+  	"fully_empty_since" timestamp(3) with time zone,
   	"updated_at" timestamp(3) with time zone DEFAULT now() NOT NULL,
   	"created_at" timestamp(3) with time zone DEFAULT now() NOT NULL
   );
@@ -421,7 +421,7 @@ export async function up({ db }: MigrateUpArgs): Promise<void> {
   ALTER TABLE "profiles_formations" ADD CONSTRAINT "profiles_formations_parent_id_fk" FOREIGN KEY ("_parent_id") REFERENCES "public"."profiles"("id") ON DELETE cascade ON UPDATE no action;
   ALTER TABLE "profiles_experiences" ADD CONSTRAINT "profiles_experiences_parent_id_fk" FOREIGN KEY ("_parent_id") REFERENCES "public"."profiles"("id") ON DELETE cascade ON UPDATE no action;
   ALTER TABLE "profiles" ADD CONSTRAINT "profiles_pro_id_pros_id_fk" FOREIGN KEY ("pro_id") REFERENCES "public"."pros"("id") ON DELETE set null ON UPDATE no action;
-  ALTER TABLE "profiles" ADD CONSTRAINT "profiles_photo_principale_id_media_id_fk" FOREIGN KEY ("photo_principale_id") REFERENCES "public"."media"("id") ON DELETE set null ON UPDATE no action;
+  ALTER TABLE "profiles" ADD CONSTRAINT "profiles_main_picture_id_media_id_fk" FOREIGN KEY ("main_picture_id") REFERENCES "public"."media"("id") ON DELETE set null ON UPDATE no action;
   ALTER TABLE "profiles_rels" ADD CONSTRAINT "profiles_rels_parent_fk" FOREIGN KEY ("parent_id") REFERENCES "public"."profiles"("id") ON DELETE cascade ON UPDATE no action;
   ALTER TABLE "profiles_rels" ADD CONSTRAINT "profiles_rels_media_fk" FOREIGN KEY ("media_id") REFERENCES "public"."media"("id") ON DELETE cascade ON UPDATE no action;
   ALTER TABLE "media" ADD CONSTRAINT "media_owner_id_pros_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."pros"("id") ON DELETE set null ON UPDATE no action;
@@ -469,9 +469,9 @@ export async function up({ db }: MigrateUpArgs): Promise<void> {
   CREATE INDEX "profiles_experiences_parent_id_idx" ON "profiles_experiences" USING btree ("_parent_id");
   CREATE UNIQUE INDEX "profiles_pro_idx" ON "profiles" USING btree ("pro_id");
   CREATE UNIQUE INDEX "profiles_slug_idx" ON "profiles" USING btree ("slug");
-  CREATE INDEX "profiles_photo_principale_idx" ON "profiles" USING btree ("photo_principale_id");
+  CREATE INDEX "profiles_main_picture_idx" ON "profiles" USING btree ("main_picture_id");
   CREATE UNIQUE INDEX "profiles_strapi_id_idx" ON "profiles" USING btree ("strapi_id");
-  CREATE INDEX "profiles_statut_idx" ON "profiles" USING btree ("statut");
+  CREATE INDEX "profiles_status_idx" ON "profiles" USING btree ("status");
   CREATE INDEX "profiles_updated_at_idx" ON "profiles" USING btree ("updated_at");
   CREATE INDEX "profiles_created_at_idx" ON "profiles" USING btree ("created_at");
   CREATE INDEX "profiles_rels_order_idx" ON "profiles_rels" USING btree ("order");
@@ -593,9 +593,9 @@ export async function down({ db }: MigrateDownArgs): Promise<void> {
   DROP TABLE "payload_preferences_rels" CASCADE;
   DROP TABLE "payload_migrations" CASCADE;
   DROP TYPE "public"."enum_admins_role";
-  DROP TYPE "public"."enum_profiles_source_consentement";
-  DROP TYPE "public"."enum_profiles_statut";
-  DROP TYPE "public"."enum_profiles_statut_choisi";
+  DROP TYPE "public"."enum_profiles_consent_source";
+  DROP TYPE "public"."enum_profiles_status";
+  DROP TYPE "public"."enum_profiles_chosen_status";
   DROP TYPE "public"."enum_talents_status";
   DROP TYPE "public"."enum__talents_v_version_status";
   DROP TYPE "public"."enum_articles_status";

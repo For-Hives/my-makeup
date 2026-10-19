@@ -236,61 +236,61 @@ export interface Profile {
    * Calculée à la création du profil, elle ne change plus : /profil/<slug>.
    */
   slug: string;
-  prenom?: string | null;
-  nom?: string | null;
-  nomArtiste?: string | null;
-  specialite?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  artistName?: string | null;
+  specialty?: string | null;
   /**
    * Une commune de la liste officielle, avec son code INSEE. Jamais une adresse.
    */
-  commune?: {
-    nom?: string | null;
-    codeInsee?: string | null;
+  city?: {
+    name?: string | null;
+    inseeCode?: string | null;
     /**
      * Calculé depuis le code INSEE.
      */
-    departement?: string | null;
+    department?: string | null;
     latitude?: number | null;
     longitude?: number | null;
   };
-  rayonKm?: number | null;
+  radiusKm?: number | null;
   /**
    * Se déplace chez la cliente. Vide tant que la maquilleuse ne l’a pas dit.
    */
-  aDomicile?: boolean | null;
+  homeService?: boolean | null;
   description?: string | null;
-  disponible?: boolean | null;
-  photoPrincipale?: (number | null) | Media;
+  available?: boolean | null;
+  mainPicture?: (number | null) | Media;
   /**
    * Dans l’ordre d’affichage, 10 photos au plus.
    */
-  galerie?: (number | Media)[] | null;
-  reseaux?: {
+  gallery?: (number | Media)[] | null;
+  networks?: {
     youtube?: string | null;
     facebook?: string | null;
     instagram?: string | null;
-    siteWeb?: string | null;
+    website?: string | null;
     linkedin?: string | null;
   };
   /**
    * Fermées au public. La page du profil ne les montre que si « Coordonnées publiques » est cochée.
    */
-  coordonnees?: {
-    telephone?: string | null;
+  contactDetails?: {
+    phone?: string | null;
     email?: string | null;
   };
   /**
    * Choisi par la maquilleuse : ses coordonnées s’affichent sur la page de son profil.
    */
-  contactPublic?: boolean | null;
+  publicContact?: boolean | null;
   /**
    * Posée par le serveur quand les coordonnées deviennent publiques.
    */
-  consentiLe?: string | null;
+  consentedAt?: string | null;
   /**
    * Posée par le serveur, avec la date.
    */
-  sourceConsentement?: ('maquilleuse' | 'admin' | 'import') | null;
+  consentSource?: ('artist' | 'admin' | 'import') | null;
   prestations?:
     | {
         nom?: string | null;
@@ -356,17 +356,17 @@ export interface Profile {
   /**
    * Posé par le serveur à chaque enregistrement, selon le statut choisi en dessous. Seuls les profils publiés sont lus par le public.
    */
-  statut?: ('brouillon' | 'publie' | 'masque') | null;
+  status?: ('draft' | 'published' | 'hidden') | null;
   /**
    * Automatique : le serveur pose le statut, brouillon pour un profil entièrement vide, publié sinon. Un autre choix est gardé, quoi que la maquilleuse enregistre.
    */
-  statutChoisi?: ('automatique' | 'brouillon' | 'publie' | 'masque') | null;
+  chosenStatus?: ('automatic' | 'draft' | 'published' | 'hidden') | null;
   /**
    * Pourquoi le profil est masqué. La maquilleuse le lit.
    */
-  motif?: string | null;
-  verifie?: boolean | null;
-  verifieLe?: string | null;
+  reason?: string | null;
+  verified?: boolean | null;
+  verifiedAt?: string | null;
   /**
    * 14 chiffres, sans espace.
    */
@@ -374,7 +374,7 @@ export interface Profile {
   /**
    * Lue par les admins seulement, jamais par la maquilleuse.
    */
-  noteInterne?: string | null;
+  internalNote?: string | null;
   /**
    * Repris de l’ancien site. Ce n’est pas la complétude. Lu par les admins seulement.
    */
@@ -382,35 +382,35 @@ export interface Profile {
   /**
    * Le badge des cartes de la recherche. Public.
    */
-  superMaquilleuse?: boolean | null;
+  superArtist?: boolean | null;
   /**
    * Critères remplis, sur 13. Calculée par le serveur.
    */
-  completude?: number | null;
+  completeness?: number | null;
   /**
    * Photo principale, ville et spécialité. Calculé par le serveur.
    */
-  actif?: boolean | null;
+  active?: boolean | null;
   /**
    * Date à laquelle la case du dessus a pris sa valeur. Posée par le serveur.
    */
-  actifDepuis?: string | null;
+  activeSince?: string | null;
   /**
    * Les six conditions du profil publiable. Calculé par le serveur.
    */
-  publiable?: boolean | null;
+  publishable?: boolean | null;
   /**
    * Date à laquelle la case du dessus a pris sa valeur. Posée par le serveur.
    */
-  publiableDepuis?: string | null;
+  publishableSince?: string | null;
   /**
    * Aucune des six conditions : le profil reste en brouillon. Calculé par le serveur.
    */
-  entierementVide?: boolean | null;
+  fullyEmpty?: boolean | null;
   /**
    * Date à laquelle la case du dessus a pris sa valeur. Posée par le serveur.
    */
-  entierementVideDepuis?: string | null;
+  fullyEmptySince?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -787,43 +787,43 @@ export interface ProsSelect<T extends boolean = true> {
 export interface ProfilesSelect<T extends boolean = true> {
   pro?: T;
   slug?: T;
-  prenom?: T;
-  nom?: T;
-  nomArtiste?: T;
-  specialite?: T;
-  commune?:
+  firstName?: T;
+  lastName?: T;
+  artistName?: T;
+  specialty?: T;
+  city?:
     | T
     | {
-        nom?: T;
-        codeInsee?: T;
-        departement?: T;
+        name?: T;
+        inseeCode?: T;
+        department?: T;
         latitude?: T;
         longitude?: T;
       };
-  rayonKm?: T;
-  aDomicile?: T;
+  radiusKm?: T;
+  homeService?: T;
   description?: T;
-  disponible?: T;
-  photoPrincipale?: T;
-  galerie?: T;
-  reseaux?:
+  available?: T;
+  mainPicture?: T;
+  gallery?: T;
+  networks?:
     | T
     | {
         youtube?: T;
         facebook?: T;
         instagram?: T;
-        siteWeb?: T;
+        website?: T;
         linkedin?: T;
       };
-  coordonnees?:
+  contactDetails?:
     | T
     | {
-        telephone?: T;
+        phone?: T;
         email?: T;
       };
-  contactPublic?: T;
-  consentiLe?: T;
-  sourceConsentement?: T;
+  publicContact?: T;
+  consentedAt?: T;
+  consentSource?: T;
   prestations?:
     | T
     | {
@@ -877,22 +877,22 @@ export interface ProfilesSelect<T extends boolean = true> {
       };
   legacyUsername?: T;
   strapiId?: T;
-  statut?: T;
-  statutChoisi?: T;
-  motif?: T;
-  verifie?: T;
-  verifieLe?: T;
+  status?: T;
+  chosenStatus?: T;
+  reason?: T;
+  verified?: T;
+  verifiedAt?: T;
   siret?: T;
-  noteInterne?: T;
+  internalNote?: T;
   score?: T;
-  superMaquilleuse?: T;
-  completude?: T;
-  actif?: T;
-  actifDepuis?: T;
-  publiable?: T;
-  publiableDepuis?: T;
-  entierementVide?: T;
-  entierementVideDepuis?: T;
+  superArtist?: T;
+  completeness?: T;
+  active?: T;
+  activeSince?: T;
+  publishable?: T;
+  publishableSince?: T;
+  fullyEmpty?: T;
+  fullyEmptySince?: T;
   updatedAt?: T;
   createdAt?: T;
 }

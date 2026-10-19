@@ -79,9 +79,9 @@ describe.each([
 				.totalDocs
 		).toBe(1)
 		// The journal says how: a reset (and the refusal of the replayed link), then a sign-in by password. Not « heritee »: she has no old hash.
-		const codes = (await evenements('reinitialisation')).map(l => l.code).sort()
+		const codes = (await evenements('password-reset')).map(l => l.code).sort()
 		expect(codes).toEqual(['lien-invalide', 'ok'])
-		expect((await evenements('connexion')).map(l => l.code)).toContain('ok')
+		expect((await evenements('sign-in')).map(l => l.code)).toContain('ok')
 	})
 })
 

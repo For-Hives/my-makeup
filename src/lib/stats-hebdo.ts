@@ -24,7 +24,7 @@ import { completude } from './profil/completude'
 import { champsDuProfil, type DocumentDuProfil } from './profil/etat'
 
 /** A published profile has this status; the rest is a draft or hidden. */
-const STATUT_PUBLIE = 'publie'
+const STATUT_PUBLIE = 'published'
 
 export const VERSION_STATS = 1
 
@@ -163,12 +163,12 @@ export interface ProfilPourStats extends DocumentDuProfil {
 	slug?: string | null
 	createdAt: string
 	updatedAt: string
-	statut?: string | null
-	completude?: number | null
-	actif?: boolean | null
-	publiable?: boolean | null
-	entierementVide?: boolean | null
-	commune?: { nom?: string | null; codeInsee?: string | null; departement?: string | null } | null
+	status?: string | null
+	completeness?: number | null
+	active?: boolean | null
+	publishable?: boolean | null
+	fullyEmpty?: boolean | null
+	city?: { name?: string | null; inseeCode?: string | null; department?: string | null } | null
 }
 
 const PARIS = new Intl.DateTimeFormat('en-CA', {
@@ -224,12 +224,12 @@ export function agregerStats({
 	for (const profil of profils) {
 		const lecture = completude(champsDuProfil(profil))
 		const creeLe = new Date(profil.createdAt)
-		const actif = profil.actif === true
-		const publiable = profil.publiable === true
-		const score = typeof profil.completude === 'number' ? profil.completude : lecture.score
-		if (profil.entierementVide === true) resume.entierementVides++
+		const actif = profil.active === true
+		const publiable = profil.publishable === true
+		const score = typeof profil.completeness === 'number' ? profil.completeness : lecture.score
+		if (profil.fullyEmpty === true) resume.entierementVides++
 		if (actif) resume.actifs++
-		if (profil.statut === 'masque') resume.masques++
+		if (profil.status === 'hidden') resume.masques++
 		if (score >= 11) resume.complets11++
 		if (score <= 2) resume.quasiVides++
 		if (lecture.manquants.includes('reseaux')) resume.sansCanal++
@@ -242,10 +242,10 @@ export function agregerStats({
 			cohorte.profils++
 			if (actif) cohorte.actifs++
 		}
-		if (publiable && profil.statut === STATUT_PUBLIE && typeof profil.slug === 'string') {
+		if (publiable && profil.status === STATUT_PUBLIE && typeof profil.slug === 'string') {
 			resume.publiables++
 			slugs.push(profil.slug)
-			const departement = profil.commune?.departement || 'inconnu'
+			const departement = profil.city?.department || 'inconnu'
 			parDepartement[departement] = (parDepartement[departement] ?? 0) + 1
 		}
 	}

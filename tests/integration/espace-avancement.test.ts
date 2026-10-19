@@ -45,9 +45,9 @@ describe('I20 : le bloc de l’espace égale l’état enregistré par le serveu
 
 		const egaux = async () => {
 			const { avancement, stocke } = await lectures(payload, utilisateur)
-			expect(avancement.score).toBe(stocke.completude ?? Number.NaN)
-			expect(avancement.etat === 'publiable').toBe(stocke.publiable === true)
-			expect(avancement.etat === 'vide').toBe(stocke.entierementVide === true)
+			expect(avancement.score).toBe(stocke.completeness ?? Number.NaN)
+			expect(avancement.etat === 'publiable').toBe(stocke.publishable === true)
+			expect(avancement.etat === 'vide').toBe(stocke.fullyEmpty === true)
 			return avancement
 		}
 

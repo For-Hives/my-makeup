@@ -110,8 +110,8 @@ async function mettreAJour(req: PayloadRequest, context: RequestContext, id = 7)
 describe('les crochets de Payload', () => {
 	test('un profil publié modifié : Next reçoit sa page et les listes, les étiquettes expirées tout de suite', async () => {
 		const { req, findOne } = requete([
-			{ id: 7, slug: 'zoe-lefevre', statut: 'publie' },
-			{ id: 7, slug: 'zoe-lefevre', statut: 'publie' },
+			{ id: 7, slug: 'zoe-lefevre', status: 'published' },
+			{ id: 7, slug: 'zoe-lefevre', status: 'published' },
 		])
 
 		const { appels, chemins, etiquettes } = await espionnerLeCache(() => mettreAJour(req, {}))
@@ -124,7 +124,7 @@ describe('les crochets de Payload', () => {
 	})
 
 	test('le contexte d’import : rien n’est lu, rien n’est rafraîchi, l’écriture passe telle quelle', async () => {
-		const { req, findOne } = requete([{ id: 7, slug: 'zoe-lefevre', statut: 'publie' }])
+		const { req, findOne } = requete([{ id: 7, slug: 'zoe-lefevre', status: 'published' }])
 		const context: RequestContext = { ...CONTEXTE_IMPORT }
 
 		const { appels } = await espionnerLeCache(async () => {
@@ -142,8 +142,8 @@ describe('les crochets de Payload', () => {
 
 	test('hors d’une requête de Next, l’enregistrement passe : rien n’est rafraîchi, rien n’est levé', async () => {
 		const { req, journal } = requete([
-			{ id: 7, slug: 'zoe-lefevre', statut: 'publie' },
-			{ id: 7, slug: 'zoe-lefevre', statut: 'publie' },
+			{ id: 7, slug: 'zoe-lefevre', status: 'published' },
+			{ id: 7, slug: 'zoe-lefevre', status: 'published' },
 		])
 
 		// No spy: Next's own revalidateTag, outside of one of its requests.

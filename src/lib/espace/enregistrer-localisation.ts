@@ -15,7 +15,14 @@ export type QuestionDeCommune = (codeInsee: string) => Promise<CommuneDuCode>
 
 /** The fields of the form, and the name Payload gives their paths. */
 const CHAMPS = ['codeInsee', 'rayonKm', 'aDomicile'] as const
-const champDuChemin = (chemin: string): string => (chemin.startsWith('commune') ? 'codeInsee' : chemin)
+const champDuChemin = (chemin: string): string =>
+	chemin.startsWith('city')
+		? 'codeInsee'
+		: chemin === 'radiusKm'
+			? 'rayonKm'
+			: chemin === 'homeService'
+				? 'aDomicile'
+				: chemin
 
 /**
  * Saves the location of the signed-in makeup artist (ticket 123), and tells the truth about it:
@@ -54,12 +61,12 @@ export async function enregistrerLocalisation(
 			depth: 0,
 			id,
 			overrideAccess: false,
-			select: { commune: true },
+			select: { city: true },
 			user: utilisateur,
 		})
 
-		let commune: { nom: string; codeInsee: string; latitude: number | null; longitude: number | null } | undefined
-		if (actuel.commune?.codeInsee !== codeInsee) {
+		let city: { name: string; inseeCode: string; latitude: number | null; longitude: number | null } | undefined
+		if (actuel.city?.inseeCode !== codeInsee) {
 			const reponse = await questionner(codeInsee)
 			if (reponse.genre === 'panne') return { ok: false, message: MESSAGE_SERVICE_DES_COMMUNES }
 			if (reponse.genre === 'inconnue') {
@@ -70,12 +77,12 @@ export async function enregistrerLocalisation(
 				}
 			}
 			const { nom, latitude, longitude } = reponse.commune
-			commune = { nom, codeInsee, latitude, longitude }
+			city = { name: nom, inseeCode: codeInsee, latitude, longitude }
 		}
 
 		const stocke = await payload.update({
 			collection: 'profiles',
-			data: { ...(commune ? { commune } : {}), rayonKm, aDomicile },
+			data: { ...(city ? { city } : {}), radiusKm: rayonKm, homeService: aDomicile },
 			depth: 0,
 			id,
 			overrideAccess: false,
@@ -84,10 +91,10 @@ export async function enregistrerLocalisation(
 		return {
 			ok: true,
 			valeurs: {
-				codeInsee: stocke.commune?.codeInsee ?? '',
-				libelle: libelleDeLaCommune(stocke.commune ?? {}),
-				rayonKm: stocke.rayonKm ?? null,
-				aDomicile: stocke.aDomicile === true,
+				codeInsee: stocke.city?.inseeCode ?? '',
+				libelle: libelleDeLaCommune({ nom: stocke.city?.name, departement: stocke.city?.department }),
+				rayonKm: stocke.radiusKm ?? null,
+				aDomicile: stocke.homeService === true,
 			},
 		}
 	} catch (erreur) {

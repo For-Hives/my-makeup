@@ -41,16 +41,25 @@ describe('U54 : la page ne lit que le profil de la maquilleuse connectée', () =
 		const a = await creerCompte('maquilleuse')
 		const b = await creerCompte('maquilleuse')
 		const payload = await payloadDeTest()
-		await payload.update({ collection: 'profiles', id: (await profilStocke(payload, b)).id, data: IDENTITE })
+		await payload.update({
+			collection: 'profiles',
+			id: (await profilStocke(payload, b)).id,
+			data: {
+				firstName: IDENTITE.prenom,
+				lastName: IDENTITE.nom,
+				artistName: IDENTITE.nomArtiste,
+				specialty: IDENTITE.specialite,
+			},
+		})
 
 		const profilDeA = await profilDeLaMaquilleuse(payload, await utilisateurDe(payload, a))
 
 		expect(profilDeA?.id).toBe((await profilStocke(payload, a)).id)
-		expect(profilDeA?.nom).not.toBe('Fictive')
+		expect(profilDeA?.lastName).not.toBe('Fictive')
 		expect(JSON.stringify(profilDeA)).not.toContain('Studio Fictif')
 		// Nothing the cards do not show: no account, no internal field, no slug.
 		expect(Object.keys(profilDeA ?? {}).sort()).not.toContain('pro')
-		expect(profilDeA).not.toHaveProperty('noteInterne')
+		expect(profilDeA).not.toHaveProperty('internalNote')
 		expect(profilDeA).not.toHaveProperty('score')
 	})
 
@@ -76,20 +85,25 @@ describe('E19 : l’identité enregistrée est celle de la base', () => {
 		})
 
 		expect(resultat).toEqual({ ok: true, valeurs: IDENTITE })
-		expect(await profilStocke(payload, a)).toMatchObject(IDENTITE)
-		expect(await profilStocke(payload, b)).toMatchObject({ prenom: avantB.prenom, nom: avantB.nom })
+		expect(await profilStocke(payload, a)).toMatchObject({
+			firstName: 'Léa',
+			lastName: 'Fictive',
+			artistName: 'Studio Fictif',
+			specialty: 'Maquillage mariée',
+		})
+		expect(await profilStocke(payload, b)).toMatchObject({ firstName: avantB.firstName, lastName: avantB.lastName })
 	})
 })
 
 describe('U32, I03, I02 : une requête forgée est refusée, rien ne change', () => {
 	test.each([
-		['statut', 'publie'],
-		['verifie', true],
+		['status', 'published'],
+		['verified', true],
 		['score', 99],
 		['pro', 1],
 		['slug', 'pirate'],
 		['id', 1],
-		['superMaquilleuse', true],
+		['superArtist', true],
 	])('la clé réservée %s refuse la requête entière', async (cle, valeur) => {
 		const a = await creerCompte('maquilleuse')
 		const payload = await payloadDeTest()
@@ -103,10 +117,10 @@ describe('U32, I03, I02 : une requête forgée est refusée, rien ne change', ()
 		expect(resultat).toEqual({ ok: false, message: MESSAGE_ECHEC })
 		const apres = await profilStocke(payload, a)
 		expect(apres.updatedAt).toBe(avant.updatedAt)
-		expect(apres.prenom).toBe(avant.prenom)
+		expect(apres.firstName).toBe(avant.firstName)
 		expect(apres.slug).toBe(avant.slug)
-		expect(apres.statut).toBe(avant.statut)
-		expect(apres.verifie).toBe(avant.verifie)
+		expect(apres.status).toBe(avant.status)
+		expect(apres.verified).toBe(avant.verified)
 	})
 
 	test('hors bornes : le message est sous le champ et la base ne bouge pas', async () => {
@@ -158,6 +172,6 @@ describe('I19 : changer de nom ne change pas l’adresse du profil', () => {
 
 		const apres = await profilStocke(payload, a)
 		expect(apres.slug).toBe(slug)
-		expect(['Fictive', 'Autre']).toContain(apres.nom ?? '')
+		expect(['Fictive', 'Autre']).toContain(apres.lastName ?? '')
 	})
 })

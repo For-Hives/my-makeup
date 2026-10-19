@@ -39,12 +39,12 @@ export async function rapprocherLeStockageEtLaBase(
 			})
 			return { docs: docs as MediaLu[], hasNextPage }
 		}),
-		toutLire<{ photoPrincipale?: unknown; galerie?: unknown }>(page =>
+		toutLire<{ mainPicture?: unknown; gallery?: unknown }>(page =>
 			payload.find({
 				...lecture,
 				collection: 'profiles',
 				page,
-				select: { photoPrincipale: true, galerie: true },
+				select: { mainPicture: true, gallery: true },
 				sort: 'id',
 			})
 		),
@@ -57,10 +57,7 @@ export async function rapprocherLeStockageEtLaBase(
 	])
 	const utilises = new Set(
 		[
-			...profils.flatMap(({ photoPrincipale, galerie }) => [
-				...photosNommees(photoPrincipale),
-				...photosNommees(galerie),
-			]),
+			...profils.flatMap(({ mainPicture, gallery }) => [...photosNommees(mainPicture), ...photosNommees(gallery)]),
 			...articles.flatMap(({ gallery }) => photosNommees(gallery)),
 			...versions.flatMap(({ version }) => photosNommees(version?.gallery)),
 		].map(String)

@@ -29,7 +29,7 @@ function typeDeLaGrandePhoto(base: ProfilDuJeu): ProfilDuJeu {
 		...base,
 		cle: 'og-grande-photo',
 		compte: { email: 'og-grande-photo@example.test', nom: 'Og Grande' },
-		profil: { ...base.profil, prenom: 'Og', nom: 'Grande', nomArtiste: 'Og Grande Maquillage' },
+		profil: { ...base.profil, firstName: 'Og', lastName: 'Grande', artistName: 'Og Grande Maquillage' },
 		photos: { principale: 'photo-1.webp', galerie: [] },
 	}
 }

@@ -64,7 +64,7 @@ async function maquilleuse(): Promise<Maquilleuse> {
 	await payload.update({
 		collection: 'profiles',
 		id: (await profilDe(compte)).id,
-		data: { prenom: 'Léa', nom: 'Fictive', specialite: 'Mariée', commune: ANNECY },
+		data: { firstName: 'Léa', lastName: 'Fictive', specialty: 'Mariée', city: ANNECY },
 	})
 	return compte
 }
@@ -104,8 +104,8 @@ describe('I24 : remplacer la photo principale envoie l’ancienne à la corbeill
 		})
 
 		const profil = await profilDe(compte)
-		expect(profil.photoPrincipale).toBe(nouvelle.id)
-		expect(profil.actif).toBe(true)
+		expect(profil.mainPicture).toBe(nouvelle.id)
+		expect(profil.active).toBe(true)
 		expect(await payload.findByID({ collection: 'media', id: ancienne.id, depth: 0, disableErrors: true })).toBeNull()
 		expect(await lireUnObjet(cle(ancienne))).toBeUndefined()
 		expect((await lireUnObjet(`deleted/${cle(ancienne)}`))?.octets).toEqual(avant)
@@ -136,8 +136,8 @@ describe('U03, E36 : un échec laisse l’ancienne photo, et le fichier envoyé 
 		expect(await nombreDeMedias()).toBe(1)
 		expect((await listerLesObjets()).length).toBe(objets)
 		const profil = await profilDe(compte)
-		expect(profil.photoPrincipale).toBe(ancienne.id)
-		expect(profil.actif).toBe(true)
+		expect(profil.mainPicture).toBe(ancienne.id)
+		expect(profil.active).toBe(true)
 	})
 
 	test('le média d’une autre maquilleuse est refusé ; le profil est inchangé ; le fichier envoyé se supprime sans rien effacer', async () => {
@@ -153,7 +153,7 @@ describe('U03, E36 : un échec laisse l’ancienne photo, et le fichier envoyé 
 		const resultat = await enregistrerPhotoPrincipale(payload, utilisateur, { photoPrincipale: celleDeLAutre.id })
 
 		expect(resultat).toMatchObject({ ok: false, champs: { photoPrincipale: MESSAGES_DES_PHOTOS.photoRefusee } })
-		expect((await profilDe(compte)).photoPrincipale).toBe(ancienne.id)
+		expect((await profilDe(compte)).mainPicture).toBe(ancienne.id)
 		// The browser takes its own file back, as the panel does after an explicit refusal.
 		const suppression = await appelerRest('DELETE', `/api/media/${envoyeeEnTrop.id}?depth=0`, {
 			enTetes: compte.session.enTetes,
@@ -161,14 +161,14 @@ describe('U03, E36 : un échec laisse l’ancienne photo, et le fichier envoyé 
 		expect(suppression.statut).toBe(200)
 		expect(await lireUnObjet(cle(envoyeeEnTrop))).toBeUndefined()
 		expect(await lireUnObjet(`deleted/${cle(envoyeeEnTrop)}`)).toBeDefined()
-		expect((await profilDe(compte)).photoPrincipale).toBe(ancienne.id)
+		expect((await profilDe(compte)).mainPicture).toBe(ancienne.id)
 		expect(await lireUnObjet(cle(celleDeLAutre))).toBeDefined()
 	})
 })
 
 describe('la requête de l’action est lue strictement', () => {
 	test.each([
-		['une clé réservée', (id: number) => ({ photoPrincipale: id, statut: 'publie' })],
+		['une clé réservée', (id: number) => ({ photoPrincipale: id, status: 'published' })],
 		['la galerie', (id: number) => ({ photoPrincipale: id, galerie: [id] })],
 		['un identifiant impossible', () => ({ photoPrincipale: 'abc' })],
 		['un identifiant décimal', () => ({ photoPrincipale: 1.5 })],
@@ -184,6 +184,6 @@ describe('la requête de l’action est lue strictement', () => {
 
 		expect(resultat).toMatchObject({ ok: false })
 		if (!resultat.ok) expect([MESSAGE_ECHEC, expect.any(String)]).toContain(resultat.message)
-		expect((await profilDe(compte)).photoPrincipale ?? null).toBeNull()
+		expect((await profilDe(compte)).mainPicture ?? null).toBeNull()
 	})
 })

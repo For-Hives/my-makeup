@@ -13,7 +13,7 @@ import { usagers } from '../outils/verrou'
 
 /** The keys a page must never carry in what it sends: what is private or reserved. */
 const CLES_PRIVEES =
-	/"(?:pro|strapiId|legacyUsername|statut|motif|verifie|verifieLe|siret|noteInterne|score|superMaquilleuse|coordonnees|telephone|contactPublic|consentiLe|sourceConsentement|codeInsee|latitude|longitude)"\s*:/
+	/"(?:pro|strapiId|legacyUsername|statut|status|motif|reason|verifie|verified|verifieLe|verifiedAt|siret|noteInterne|internalNote|score|superMaquilleuse|superArtist|coordonnees|contactDetails|telephone|phone|contactPublic|publicContact|consentiLe|consentedAt|sourceConsentement|consentSource|codeInsee|inseeCode|latitude|longitude)"\s*:/
 
 const MOTS_INTERDITS = /\b(?:undefined|null|NaN|Invalid Date)\b|&\s*km|\bnullkm\b/
 
@@ -187,7 +187,7 @@ test.describe('Les douze profils types du banc', () => {
 		expect(profils.size).toBe(12)
 		for (const [cle, { slug, type }] of profils) {
 			const reponse = await request.get(`/profil/${slug}`, { headers: { 'User-Agent': ROBOT } })
-			if (type.attendu.statut === 'masque') {
+			if (type.attendu.status === 'hidden') {
 				expect(reponse.status(), cle).toBe(404)
 				continue
 			}
@@ -197,7 +197,7 @@ test.describe('Les douze profils types du banc', () => {
 			expect(texteVisible(html), cle).not.toMatch(MOTS_INTERDITS)
 			expect(html, cle).not.toMatch(CLES_PRIVEES)
 			// Indexed only when the profile is publishable (E66).
-			expect(/<meta name="robots" content="noindex/.test(html), cle).toBe(type.attendu.publiable !== true)
+			expect(/<meta name="robots" content="noindex/.test(html), cle).toBe(type.attendu.publishable !== true)
 		}
 	})
 })
@@ -306,7 +306,7 @@ test.describe('E44 : la galerie du portfolio', { tag: '@mobile' }, () => {
 			depth: 1,
 			overrideAccess: true,
 		})
-		const origines = (stocke.galerie ?? []).map(photo => (typeof photo === 'object' ? photo.url : null))
+		const origines = (stocke.gallery ?? []).map(photo => (typeof photo === 'object' ? photo.url : null))
 		expect(origines).toHaveLength(6)
 
 		for (let rang = 0; rang < 6; rang++) {

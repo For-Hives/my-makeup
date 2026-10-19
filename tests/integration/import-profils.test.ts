@@ -152,10 +152,10 @@ describe('Après l’import de la source factice', () => {
 			expect(profil, String(profil.strapiId)).toMatchObject({
 				slug: SLUGS.get(Number(profil.strapiId)),
 				legacyUsername: ligne?.username ?? null,
-				prenom: ligne?.first_name ?? null,
-				nom: ligne?.last_name ?? null,
-				nomArtiste: ligne?.company_artist_name ?? null,
-				specialite: ligne?.speciality ?? null,
+				firstName: ligne?.first_name ?? null,
+				lastName: ligne?.last_name ?? null,
+				artistName: ligne?.company_artist_name ?? null,
+				specialty: ligne?.speciality ?? null,
 				description: ligne?.description ?? null,
 			})
 		}
@@ -168,19 +168,15 @@ describe('Après l’import de la source factice', () => {
 			const ligne = PRIS.find(({ id }) => Number(id) === profil.strapiId)
 			expect(profil, String(profil.strapiId)).toMatchObject({
 				score: ligne?.score ?? null,
-				superMaquilleuse: ligne?.pro ?? null,
-				disponible: ligne?.available ?? true,
+				superArtist: ligne?.pro ?? null,
+				available: ligne?.available ?? true,
 				createdAt: enIso(ligne?.created_at),
 				updatedAt: enIso(ligne?.updated_at),
 			})
 		}
 		const parId = new Map((await profilsDeLaCible()).map(profil => [profil.strapiId, profil]))
-		expect([parId.get(21)?.score, parId.get(25)?.score, parId.get(25)?.superMaquilleuse]).toEqual([12.5, 3, true])
-		expect([parId.get(22)?.disponible, parId.get(24)?.disponible, parId.get(34)?.disponible]).toEqual([
-			true,
-			false,
-			false,
-		])
+		expect([parId.get(21)?.score, parId.get(25)?.score, parId.get(25)?.superArtist]).toEqual([12.5, 3, true])
+		expect([parId.get(22)?.available, parId.get(24)?.available, parId.get(34)?.available]).toEqual([true, false, false])
 		// 2023-05-12 for its creation, 2026-09-28 for its last change, never the day of the import.
 		expect(parId.get(21)?.updatedAt).toBe('2026-09-28T10:11:12.131Z')
 		const nuls = PRIS.filter(({ available }) => available === null).length
@@ -189,16 +185,16 @@ describe('Après l’import de la source factice', () => {
 
 	test('le statut est calculé par le serveur : le profil entièrement vide en brouillon, les autres publiés, le choix laissé à la règle', async () => {
 		const cible = await profilsDeLaCible()
-		const statuts = Object.fromEntries(cible.map(({ strapiId, statut }) => [strapiId, statut]))
+		const statuts = Object.fromEntries(cible.map(({ strapiId, status }) => [strapiId, status]))
 
-		expect(statuts[27]).toBe('brouillon')
-		expect(cible.every(({ statutChoisi }) => statutChoisi === 'automatique')).toBe(true)
+		expect(statuts[27]).toBe('draft')
+		expect(cible.every(({ chosenStatus }) => chosenStatus === 'automatic')).toBe(true)
 		// 32 has a city and nothing else: published by its commune (ticket 063), as at the source.
-		expect(statuts[32]).toBe('publie')
+		expect(statuts[32]).toBe('published')
 		expect(premier.collections.profiles?.statutsDifferentsDeLaSource).toEqual([])
-		expect(Object.entries(statuts).filter(([, statut]) => statut === 'publie')).toHaveLength(12)
+		expect(Object.entries(statuts).filter(([, statut]) => statut === 'published')).toHaveLength(12)
 		expect(premier.ecarts).toMatchObject({ 'profils-vides-brouillon': 1, 'slug-stocke': 12 })
-		expect(premier.parite?.profiles).toMatchObject({ attendus: 13, egaux: 13, statuts: { publie: 12, brouillon: 1 } })
+		expect(premier.parite?.profiles).toMatchObject({ attendus: 13, egaux: 13, statuts: { published: 12, draft: 1 } })
 	})
 
 	test('second passage : 0 création, 0 mise à jour, et la source n’a pas bougé', async () => {
@@ -221,13 +217,13 @@ describe('Un choix du statut fixé par un passage précédent', () => {
 		await payload.update({
 			collection: 'profiles',
 			id: zoe?.id ?? 0,
-			data: { statut: 'brouillon' },
+			data: { status: 'draft' },
 			overrideAccess: true,
 			context: CONTEXTE_IMPORT,
 		})
 		expect((await profilsDeLaCible()).find(({ strapiId }) => strapiId === 21)).toMatchObject({
-			statut: 'brouillon',
-			statutChoisi: 'brouillon',
+			status: 'draft',
+			chosenStatus: 'draft',
 		})
 
 		const apres = await importerSurLeBanc()
@@ -235,8 +231,8 @@ describe('Un choix du statut fixé par un passage précédent', () => {
 
 		expect(apres.collections.profiles).toMatchObject({ crees: 0, modifies: 1 })
 		expect((await profilsDeLaCible()).find(({ strapiId }) => strapiId === 21)).toMatchObject({
-			statut: 'publie',
-			statutChoisi: 'automatique',
+			status: 'published',
+			chosenStatus: 'automatic',
 			updatedAt: '2026-09-28T10:11:12.131Z',
 		})
 		expect(troisieme.collections.profiles).toMatchObject({ crees: 0, modifies: 0 })
@@ -318,10 +314,10 @@ describe('La lecture publique d’un profil repris', () => {
 		// published them (ticket 071), and then they are exactly what the old site holds.
 		const cible = (await profilsDeLaCible()).find(({ strapiId }) => strapiId === 21)
 		const stocke = await payload.findByID({ collection: 'profiles', id: cible?.id ?? 0, depth: 0 })
-		if (stocke.contactPublic === true) {
+		if (stocke.publicContact === true) {
 			expect(profil?.coordonnees).toEqual({
-				telephone: stocke.coordonnees?.telephone ?? null,
-				email: stocke.coordonnees?.email ?? null,
+				telephone: stocke.contactDetails?.phone ?? null,
+				email: stocke.contactDetails?.email ?? null,
 			})
 		} else {
 			expect(profil?.coordonnees).toBeNull()
@@ -343,12 +339,12 @@ describe('La lecture publique d’un profil repris', () => {
 		const payload = await payloadDeTest()
 
 		expect(Object.keys(CHAMPS_PUBLICS_DU_PROFIL).sort()).toEqual([
+			'artistName',
 			'description',
-			'nom',
-			'nomArtiste',
-			'prenom',
+			'firstName',
+			'lastName',
 			'slug',
-			'specialite',
+			'specialty',
 		])
 		const { docs } = await payload.find({
 			collection: 'profiles',
@@ -358,13 +354,13 @@ describe('La lecture publique d’un profil repris', () => {
 			overrideAccess: false,
 		})
 		expect(Object.keys(docs[0] ?? {}).sort()).toEqual([
+			'artistName',
 			'description',
+			'firstName',
 			'id',
-			'nom',
-			'nomArtiste',
-			'prenom',
+			'lastName',
 			'slug',
-			'specialite',
+			'specialty',
 		])
 	})
 })

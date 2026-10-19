@@ -15,7 +15,7 @@ import { lireUnObjet } from '../outils/s3'
  */
 
 const MOT_DE_PASSE = 'motdepasse-fictif-141'
-const VILLE = { nom: 'Lille', codeInsee: '59350' } as const
+const VILLE = { name: 'Lille', inseeCode: '59350' } as const
 
 let compteur = 0
 test.beforeEach(({ context }) =>
@@ -37,7 +37,7 @@ async function maquilleuse(context: { addCookies: (c: never[]) => Promise<void> 
 	const profil = await payload.update({
 		collection: 'profiles',
 		id: fiche.id,
-		data: { prenom: 'Léa', nom: 'Fictive', specialite: 'Mariée', commune: VILLE, photoPrincipale: media.id },
+		data: { firstName: 'Léa', lastName: 'Fictive', specialty: 'Mariée', city: VILLE, mainPicture: media.id },
 	})
 	await context.addCookies(compte.session.cookies as never[])
 	return { compte, media, profil, slug: profil.slug ?? '' }

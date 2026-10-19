@@ -13,35 +13,35 @@ import { LIMITE_MAX_DE_LA_LISTE, listerLesProfils } from '@/services/public/prof
 
 describe('U20 : listé, indexable, visible', () => {
 	test('le masqué, l’indisponible et l’entièrement vide ne sont pas listés', () => {
-		expect(estListe({ statut: 'publie', disponible: true, entierementVide: false })).toBe(true)
-		expect(estListe({ statut: 'masque', disponible: true, entierementVide: false })).toBe(false)
-		expect(estListe({ statut: 'publie', disponible: false, entierementVide: false })).toBe(false)
-		expect(estListe({ statut: 'publie', disponible: true, entierementVide: true })).toBe(false)
+		expect(estListe({ status: 'published', available: true, fullyEmpty: false })).toBe(true)
+		expect(estListe({ status: 'hidden', available: true, fullyEmpty: false })).toBe(false)
+		expect(estListe({ status: 'published', available: false, fullyEmpty: false })).toBe(false)
+		expect(estListe({ status: 'published', available: true, fullyEmpty: true })).toBe(false)
 	})
 
 	test('une disponibilité jamais posée compte comme disponible (available=null)', () => {
-		expect(estListe({ statut: 'publie', disponible: null, entierementVide: false })).toBe(true)
-		expect(estListe({ statut: 'publie', entierementVide: false })).toBe(true)
+		expect(estListe({ status: 'published', available: null, fullyEmpty: false })).toBe(true)
+		expect(estListe({ status: 'published', fullyEmpty: false })).toBe(true)
 	})
 
 	test('indexable : publiable et pas masqué ; un profil visible mais non publiable reste hors de l’index', () => {
-		expect(estIndexable({ statut: 'publie', publiable: true })).toBe(true)
-		expect(estIndexable({ statut: 'publie', publiable: false })).toBe(false)
-		expect(estIndexable({ statut: 'publie', publiable: null })).toBe(false)
-		expect(estIndexable({ statut: 'masque', publiable: true })).toBe(false)
-		expect(estVisible({ statut: 'publie', publiable: false })).toBe(true)
+		expect(estIndexable({ status: 'published', publishable: true })).toBe(true)
+		expect(estIndexable({ status: 'published', publishable: false })).toBe(false)
+		expect(estIndexable({ status: 'published', publishable: null })).toBe(false)
+		expect(estIndexable({ status: 'hidden', publishable: true })).toBe(false)
+		expect(estVisible({ status: 'published', publishable: false })).toBe(true)
 	})
 
 	test('visible à son adresse : tout sauf le masqué, indisponible ou non', () => {
-		expect(estVisible({ statut: 'publie', disponible: false, entierementVide: true })).toBe(true)
-		expect(estVisible({ statut: 'masque' })).toBe(false)
+		expect(estVisible({ status: 'published', available: false, fullyEmpty: true })).toBe(true)
+		expect(estVisible({ status: 'hidden' })).toBe(false)
 	})
 
 	test('les filtres de la base, sans le statut que la règle de lecture pose déjà', () => {
 		expect(FILTRE_LISTE).toEqual({
-			and: [{ disponible: { not_equals: false } }, { entierementVide: { not_equals: true } }],
+			and: [{ available: { not_equals: false } }, { fullyEmpty: { not_equals: true } }],
 		})
-		expect(FILTRE_INDEXABLE).toEqual({ publiable: { equals: true } })
+		expect(FILTRE_INDEXABLE).toEqual({ publishable: { equals: true } })
 	})
 })
 
@@ -73,13 +73,13 @@ function payloadEspion() {
 					{
 						id: 1,
 						slug: 'zoe-fictive',
-						prenom: 'Zoé',
-						nom: 'Fictive',
-						specialite: 'Mariage',
-						commune: { nom: 'Annecy', codeInsee: '74010' },
-						rayonKm: 30,
-						superMaquilleuse: true,
-						photoPrincipale: 7,
+						firstName: 'Zoé',
+						lastName: 'Fictive',
+						specialty: 'Mariage',
+						city: { name: 'Annecy', inseeCode: '74010' },
+						radiusKm: 30,
+						superArtist: true,
+						mainPicture: 7,
 					},
 				],
 				page: 1,
@@ -167,7 +167,7 @@ describe('U22 : la carte d’une liste, clés figées', () => {
 		expect(grande?.limit).toBe(LIMITE_MAX_DE_LA_LISTE)
 		expect(nulle?.limit).toBe(20)
 		const champs = Object.keys(grande?.select as object).sort()
-		for (const prive of ['coordonnees', 'contactPublic', 'pro', 'score', 'noteInterne', 'statut', 'email'])
+		for (const prive of ['contactDetails', 'publicContact', 'pro', 'score', 'internalNote', 'status', 'email'])
 			expect(champs).not.toContain(prive)
 	})
 })

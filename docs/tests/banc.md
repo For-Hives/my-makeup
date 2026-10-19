@@ -425,14 +425,14 @@ const { profils, crees, presents } = await poserLesProfilsDuJeu(await payloadDeT
 | 1 | `reference` | Inès Morel, `ines-morel` | Complet, disponible, à Annecy, « Maquillage mariage », trois offres chiffrées, une photo principale et six photos en galerie. Il publie son téléphone et son email | Publiable, publié, 13 sur 13 |
 | 2 | `ville-voisine` | Léa Garnier, `lea-garnier` | Complet, à Annemasse | Publiable, publié |
 | 3 | `ville-eloignee` | Chloé Bertin, `chloe-bertin` | Complet, à Nantes | Publiable, publié |
-| 4 | `indisponible` | Manon Faure, `manon-faure` | Complet, à Annecy, `disponible` faux | Publiable, publié |
-| 5 | `disponibilite-inconnue` | Jade Roussel, `jade-roussel` | Complet, à Annecy, `disponible` vide (nul) | Publiable, publié |
+| 4 | `indisponible` | Manon Faure, `manon-faure` | Complet, à Annecy, `available` faux | Publiable, publié |
+| 5 | `disponibilite-inconnue` | Jade Roussel, `jade-roussel` | Complet, à Annecy, `available` vide (nul) | Publiable, publié |
 | 6 | `vide` | Nina Perret, `nina-perret` | Rien : le profil tel que l'inscription le crée | Ni actif ni publiable, entièrement vide, brouillon, 0 sur 13 |
 | 7 | `actif-non-publiable` | Clara Dumas, `clara-dumas` | Complet, mais ses offres sont « sur devis », sans montant | Actif, pas publiable, publié |
 | 8 | `sans-contact-public` | Louise Girard, `louise-girard` | Complet, sans réseau ; téléphone et email enregistrés mais fermés au public | Actif, pas publiable, publié, 12 sur 13 |
 | 9 | `ancien-nom-accentue` | Zoé Lefèvre, `zoe-lefevre` | Complet, à Thonon-les-Bains, avec l'ancien nom d'utilisateur « zoé lefèvre » | Publiable, publié |
 | 10 | `verifiee` | Emma Chevalier, `emma-chevalier` | Complet ; vérifiée par un admin, avec le badge des cartes de la recherche | Publiable, publié |
-| 11 | `masquee` | Alice Fontaine, `alice-fontaine` | Complet ; masqué par un admin (`statutChoisi`), avec un motif | Publiable, masqué |
+| 11 | `masquee` | Alice Fontaine, `alice-fontaine` | Complet ; masqué par un admin (`chosenStatus`), avec un motif | Publiable, masqué |
 | 12 | `textes-maximaux` | Un nom de 141 caractères, et le slug le plus long : 70 caractères | Chaque texte à la borne du serveur, le rayon à 200 km, dix photos en galerie, la commune au nom le plus long de la liste officielle | Publiable, publié |
 
 | Ce qui est fixe | Valeur |
@@ -552,7 +552,7 @@ Tout autre constat est `incoherent` : refusé mais écrit quand même, ou une li
 
 À savoir :
 
-- **La distribution est faite une fois par fichier** (`distribuer()`, `tests/outils/matrice-acces.ts`) : un compte par rôle, par la fabrique, avec ses documents. Le profil de « A » (`maquilleuse`) y est publié, celui de « B » (`autreMaquilleuse`) reste un brouillon : une ligne de lecture dit ce que le public voit, et ce qu'il ne voit pas. Les deux statuts sont choisis par un admin (`statutChoisi`) : avec sa photo, « B » serait sinon publiée par la règle du ticket 044, à la première ligne qui enregistre son profil.
+- **La distribution est faite une fois par fichier** (`distribuer()`, `tests/outils/matrice-acces.ts`) : un compte par rôle, par la fabrique, avec ses documents. Le profil de « A » (`maquilleuse`) y est publié, celui de « B » (`autreMaquilleuse`) reste un brouillon : une ligne de lecture dit ce que le public voit, et ce qu'il ne voit pas. Les deux statuts sont choisis par un admin (`chosenStatus`) : avec sa photo, « B » serait sinon publiée par la règle du ticket 044, à la première ligne qui enregistre son profil.
 - **Une ligne ne change pas la distribution.** Une valeur modifiée est remise comme avant, et une suppression qui doit réussir vise un document jetable de la même collection.
 - **Une collection nouvelle** donne à la matrice son portrait (`PORTRAITS`, même fichier) : le champ ordinaire à modifier, les données d'une création, un document jetable (qui appartient à celui qui agit, quand la collection a des propriétaires), les documents que lit le public (`publics`), et `fichier` pour une collection de fichiers, dont une création envoie une photo. **Un rôle nouveau** prend un type de la fabrique (`TYPE_DU_ROLE`).
 - **Les photos de la distribution** : « A » et « B » ont chacune un média, la photo principale de leur profil. La matrice vide le stockage d'objets après ses lignes.

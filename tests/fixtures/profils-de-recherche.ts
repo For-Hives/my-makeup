@@ -45,7 +45,9 @@ function variante(type: ProfilDuJeu): ProfilDuJeu {
 	const nom = NOMS[type.cle]
 	if (!nom) throw new Error(`Pas de nom d’essai pour le profil type « ${type.cle} ».`)
 	const identite =
-		Object.keys(type.profil).length > 0 ? { prenom: 'Essai', nom, nomArtiste: `Essai ${nom} Maquillage` } : {}
+		Object.keys(type.profil).length > 0
+			? { firstName: 'Essai', lastName: nom, artistName: `Essai ${nom} Maquillage` }
+			: {}
 	return {
 		...type,
 		cle: `essai-${type.cle}`,
@@ -54,7 +56,7 @@ function variante(type: ProfilDuJeu): ProfilDuJeu {
 			...type.profil,
 			...identite,
 			// Only a type that has a speciality gets the word: adding one would change what the profile lacks.
-			...(type.profil.specialite ? { specialite: `${type.profil.specialite} ${MOT_DES_ESSAIS}` } : {}),
+			...(type.profil.specialty ? { specialty: `${type.profil.specialty} ${MOT_DES_ESSAIS}` } : {}),
 		},
 		photos: { principale: type.photos.principale, galerie: [] },
 	}
@@ -85,8 +87,8 @@ export async function poserLesProfilsDeRecherche(): Promise<ReadonlyMap<string, 
 			posees.set(cle, {
 				id: profil.profil,
 				slug: profil.slug,
-				nom: [type.profil.prenom, type.profil.nom].filter(Boolean).join(' '),
-				specialite: type.profil.specialite ?? null,
+				nom: [type.profil.firstName, type.profil.lastName].filter(Boolean).join(' '),
+				specialite: type.profil.specialty ?? null,
 			})
 		}
 		return posees

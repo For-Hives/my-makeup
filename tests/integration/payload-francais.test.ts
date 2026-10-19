@@ -48,7 +48,7 @@ describe('REST : l’enveloppe d’un refus est en français, même pour une req
 		for (const langue of langues) {
 			const { statut, corps, texte } = await appelerRest('PATCH', `/api/profiles/${id}`, {
 				enTetes: { ...compte.session.enTetes, ...langue },
-				corps: { coordonnees: { telephone: TELEPHONE_TROP_LONG } },
+				corps: { contactDetails: { phone: TELEPHONE_TROP_LONG } },
 			})
 
 			expect([langue, statut]).toEqual([langue, 400])
@@ -58,7 +58,7 @@ describe('REST : l’enveloppe d’un refus est en français, même pour une req
 		// The cookie of the admin panel's language asks for English too: French all the same.
 		const { corps } = await appelerRest('PATCH', `/api/profiles/${id}`, {
 			enTetes: { ...compte.session.enTetes, Cookie: `${compte.session.enTetes.Cookie}; payload-lng=en` },
-			corps: { coordonnees: { telephone: TELEPHONE_TROP_LONG } },
+			corps: { contactDetails: { phone: TELEPHONE_TROP_LONG } },
 		})
 		expect((corps as Refus).errors[0]?.message).toStartWith(ENVELOPPE)
 	})
@@ -69,7 +69,7 @@ describe('REST : l’enveloppe d’un refus est en français, même pour une req
 
 		const { statut, corps, texte } = await appelerRest('PATCH', `/api/profiles/${id}`, {
 			enTetes: { ...compte.session.enTetes, 'Accept-Language': 'en' },
-			corps: { prenom: PRENOM_TROP_LONG },
+			corps: { firstName: PRENOM_TROP_LONG },
 		})
 
 		expect(statut).toBe(400)
@@ -78,7 +78,7 @@ describe('REST : l’enveloppe d’un refus est en français, même pour une req
 			'Cette valeur doit être inférieure à la longueur maximale de 70 caractères.',
 		])
 		expect(texte).not.toContain('This value must be shorter')
-		expect((await (await payloadDeTest()).findByID({ collection: 'profiles', id, depth: 0 })).prenom).not.toBe(
+		expect((await (await payloadDeTest()).findByID({ collection: 'profiles', id, depth: 0 })).firstName).not.toBe(
 			PRENOM_TROP_LONG
 		)
 	})
@@ -112,7 +112,7 @@ describe('API locale, règles actives : la même écriture lève une erreur en f
 			.update({
 				collection: 'profiles',
 				id,
-				data: { coordonnees: { telephone: TELEPHONE_TROP_LONG } },
+				data: { contactDetails: { phone: TELEPHONE_TROP_LONG } },
 				overrideAccess: false,
 				user: proprietaire,
 			})

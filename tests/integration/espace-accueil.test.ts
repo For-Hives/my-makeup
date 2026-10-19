@@ -63,7 +63,7 @@ describe('un compte importé sans profil : le profil vide est créé côté serv
 		expect(profils).toHaveLength(1)
 		expect(profils[0]?.id).toBe(id ?? undefined)
 		expect(profils[0]?.slug).toBeTruthy()
-		expect(profils[0]?.statut).toBe('brouillon')
+		expect(profils[0]?.status).toBe('draft')
 		// She reads her own empty profile now, and the onboarding starts at the first step.
 		expect(positionDAccueil(await profilDeLaMaquilleuse(payload, utilisateur))).toBe(1)
 	})
@@ -114,7 +114,7 @@ describe('E02 : les trois étapes donnent un profil actif', () => {
 		})
 		expect(sans.ok).toBe(false)
 		expect(sans.ok ? '' : sans.champs?.specialite).toBe('Indique ta spécialité.')
-		expect((await profilsDuCompte(compte))[0]?.prenom ?? null).toBeNull()
+		expect((await profilsDuCompte(compte))[0]?.firstName ?? null).toBeNull()
 
 		const identite = await enregistrerIdentiteDAccueil(payload, utilisateur, {
 			prenom: 'Léa',
@@ -126,9 +126,9 @@ describe('E02 : les trois étapes donnent un profil actif', () => {
 		expect(positionDAccueil(await profilDeLaMaquilleuse(payload, utilisateur))).toBe(2)
 
 		// The zone is saved by the save of her space; here it is written as it would be.
-		await payload.update({ collection: 'profiles', id, data: { commune: ANNECY } })
+		await payload.update({ collection: 'profiles', id, data: { city: ANNECY } })
 		expect(positionDAccueil(await profilDeLaMaquilleuse(payload, utilisateur))).toBe(3)
-		expect((await profilsDuCompte(compte))[0]?.actif).toBe(false)
+		expect((await profilsDuCompte(compte))[0]?.active).toBe(false)
 
 		const media = await envoyerUnePhoto(compte)
 		const photo = await enregistrerPhotoDAccueil(payload, utilisateur, { photoPrincipale: media.id })
@@ -136,8 +136,8 @@ describe('E02 : les trois étapes donnent un profil actif', () => {
 		expect(photo.ok).toBe(true)
 		expect(photo.ok ? photo.valeurs.position : null).toBe('terminee')
 		const profil = (await profilsDuCompte(compte))[0]
-		expect(profil?.actif).toBe(true)
-		expect(profil?.statut).toBe('publie')
+		expect(profil?.active).toBe(true)
+		expect(profil?.status).toBe('published')
 	})
 
 	test('la photo enregistrée alors qu’une étape manque dit où elle en est, pas « terminée »', async () => {
@@ -150,7 +150,7 @@ describe('E02 : les trois étapes donnent un profil actif', () => {
 
 		expect(photo.ok).toBe(true)
 		expect(photo.ok ? photo.valeurs.position : null).toBe(1)
-		expect((await profilsDuCompte(compte))[0]?.actif).toBe(false)
+		expect((await profilsDuCompte(compte))[0]?.active).toBe(false)
 	})
 
 	test('un champ réservé dans l’identité refuse toute la demande (U32)', async () => {
@@ -162,10 +162,10 @@ describe('E02 : les trois étapes donnent un profil actif', () => {
 			nom: 'Fictive',
 			nomArtiste: '',
 			specialite: 'Mariée',
-			statut: 'publie',
+			status: 'published',
 			origine: 'ia',
 		})
 		expect(refus.ok).toBe(false)
-		expect((await profilsDuCompte(compte))[0]?.prenom ?? null).toBeNull()
+		expect((await profilsDuCompte(compte))[0]?.firstName ?? null).toBeNull()
 	})
 })

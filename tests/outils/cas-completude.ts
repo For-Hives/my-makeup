@@ -13,7 +13,7 @@ import ancienSite from '../unit/fixtures/completude-ancien-site.json'
 import casPartages from '../unit/fixtures/completude-cas.json'
 
 /** A commune of the official list, with its INSEE code. */
-export const ANNECY = { nom: 'Annecy', codeInsee: '74010' } as const
+export const ANNECY = { name: 'Annecy', inseeCode: '74010' } as const
 
 /**
  * The commune each city of the shared cases becomes, as the import chooses it (ticket 063): the
@@ -72,14 +72,14 @@ export async function documentDuCas(
 	const lignes = (liste: readonly unknown[] | null | undefined, ligne: Record<string, string>) =>
 		(liste ?? []).map(() => ({ ...ligne }))
 	return {
-		prenom: profil.first_name ?? null,
-		nom: profil.last_name ?? null,
-		specialite: profil.speciality ?? null,
-		nomArtiste: profil.company_artist_name ?? null,
+		firstName: profil.first_name ?? null,
+		lastName: profil.last_name ?? null,
+		specialty: profil.speciality ?? null,
+		artistName: profil.company_artist_name ?? null,
 		description: profil.description ?? null,
-		commune: communeDeLaVille(profil.city),
-		photoPrincipale: aMedia(profil.main_picture) ? await photo() : null,
-		galerie: aMedia(profil.image_gallery) ? [await photo()] : [],
+		city: communeDeLaVille(profil.city),
+		mainPicture: aMedia(profil.main_picture) ? await photo() : null,
+		gallery: aMedia(profil.image_gallery) ? [await photo()] : [],
 		competences: lignes(profil.skills, { nom: 'Compétence fictive' }),
 		experiences: lignes(profil.experiences, { poste: 'Poste fictif' }),
 		formations: lignes(profil.courses, { diplome: 'Diplôme fictif' }),
@@ -89,16 +89,16 @@ export async function documentDuCas(
 			nom: 'Prestation fictive',
 			...parsePrice(offre?.price),
 		})),
-		reseaux: {
+		networks: {
 			youtube: network.youtube ?? null,
 			facebook: network.facebook ?? null,
 			instagram: network.instagram ?? null,
-			siteWeb: network.website ?? null,
+			website: network.website ?? null,
 			linkedin: network.linkedin ?? null,
 		},
 		// A phone or an email the old site showed stays shown (ticket 064).
-		coordonnees: { telephone, email },
-		contactPublic: Boolean(telephone || email),
+		contactDetails: { phone: telephone, email },
+		publicContact: Boolean(telephone || email),
 	}
 }
 
@@ -107,5 +107,5 @@ export async function documentDuCas(
  * commune, or nothing. Never with the quote form, which nothing turns on.
  */
 export function completudeEnV3(profil: ChampsDuProfil): Completude {
-	return completude({ ...profil, city: communeDeLaVille(profil.city)?.nom ?? null })
+	return completude({ ...profil, city: communeDeLaVille(profil.city)?.name ?? null })
 }

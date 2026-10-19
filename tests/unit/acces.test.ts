@@ -321,11 +321,11 @@ describe('La collection profils (ticket 020)', () => {
 	test('lire : les profils publiés pour l’anonyme et redaction (U53), plus le sien pour une maquilleuse, tout pour admin', () => {
 		const regle = regles.read
 		expect(regle).toBe(profilPublieOuProprietaire)
-		expect(PROFILS_PUBLIES).toEqual({ statut: { equals: 'publie' } })
-		expect(regle?.(appel(null) as never)).toEqual({ statut: { equals: 'publie' } })
-		expect(regle?.(appel(redaction) as never)).toEqual({ statut: { equals: 'publie' } })
+		expect(PROFILS_PUBLIES).toEqual({ status: { equals: 'published' } })
+		expect(regle?.(appel(null) as never)).toEqual({ status: { equals: 'published' } })
+		expect(regle?.(appel(redaction) as never)).toEqual({ status: { equals: 'published' } })
 		expect(regle?.(appel(maquilleuse) as never)).toEqual({
-			or: [{ pro: { equals: 7 } }, { statut: { equals: 'publie' } }],
+			or: [{ pro: { equals: 7 } }, { status: { equals: 'published' } }],
 		})
 		expect(regle?.(appel(admin) as never)).toBe(true)
 	})
@@ -356,24 +356,24 @@ describe('La collection profils (ticket 020)', () => {
 		// The account already stripped from the answer: the reader is not the owner.
 		expect(lire(maquilleuse, {})).toBe(false)
 
-		for (const nom of ['statut', 'motif', 'verifie', 'verifieLe', 'siret', 'pro', 'legacyUsername', 'strapiId'])
+		for (const nom of ['status', 'reason', 'verified', 'verifiedAt', 'siret', 'pro', 'legacyUsername', 'strapiId'])
 			expect(champ(Profiles.fields, nom)?.access?.read).toBe(champDuProfilAdminOuProprietaire)
-		for (const nom of ['noteInterne', 'score'])
+		for (const nom of ['internalNote', 'score'])
 			expect(champ(Profiles.fields, nom)?.access?.read).toBe(champAdminSeulement)
 		// The badge of the search is public.
-		expect(champ(Profiles.fields, 'superMaquilleuse')?.access?.read).toBeUndefined()
+		expect(champ(Profiles.fields, 'superArtist')?.access?.read).toBeUndefined()
 	})
 
 	test('choix du statut, motif, vérifiée, SIRET, note interne, score, badge et compte : seul admin les écrit (U55)', () => {
 		for (const nom of [
-			'statutChoisi',
-			'motif',
-			'verifie',
-			'verifieLe',
+			'chosenStatus',
+			'reason',
+			'verified',
+			'verifiedAt',
 			'siret',
-			'noteInterne',
+			'internalNote',
 			'score',
-			'superMaquilleuse',
+			'superArtist',
 			'pro',
 		]) {
 			const acces = champ(Profiles.fields, nom)?.access as Record<string, (args: unknown) => boolean>
@@ -386,7 +386,7 @@ describe('La collection profils (ticket 020)', () => {
 			expect(acces.create as unknown).toBe(champAdminSeulement)
 		}
 		// The status itself is computed by the server from that choice (ticket 044): no API writes it.
-		const statut = champ(Profiles.fields, 'statut')?.access as Record<string, (args: unknown) => boolean>
+		const statut = champ(Profiles.fields, 'status')?.access as Record<string, (args: unknown) => boolean>
 		for (const operation of ['create', 'update'])
 			expect([admin, redaction, maquilleuse, null].map(user => statut[operation]?.(appel(user)))).toEqual([
 				false,
@@ -397,25 +397,25 @@ describe('La collection profils (ticket 020)', () => {
 	})
 
 	test('le statut : brouillon, publié ou masqué ; un profil neuf est un brouillon', () => {
-		expect(STATUTS_DU_PROFIL).toEqual(['brouillon', 'publie', 'masque'])
-		const statut = champ(Profiles.fields, 'statut') as { defaultValue?: unknown; options?: { value: string }[] }
+		expect(STATUTS_DU_PROFIL).toEqual(['draft', 'published', 'hidden'])
+		const statut = champ(Profiles.fields, 'status') as { defaultValue?: unknown; options?: { value: string }[] }
 		// Not `required`: a profile created without one, by the server or a test, gets the default.
-		expect(statut).toMatchObject({ type: 'select', defaultValue: 'brouillon' })
-		expect(statut.options?.map(({ value }) => value)).toEqual(['brouillon', 'publie', 'masque'])
+		expect(statut).toMatchObject({ type: 'select', defaultValue: 'draft' })
+		expect(statut.options?.map(({ value }) => value)).toEqual(['draft', 'published', 'hidden'])
 	})
 
 	test('les coordonnées et le choix de les montrer : lus par admin et la propriétaire seulement, jamais par redaction (U59)', () => {
-		for (const nom of ['coordonnees', 'contactPublic', 'consentiLe', 'sourceConsentement'])
+		for (const nom of ['contactDetails', 'publicContact', 'consentedAt', 'consentSource'])
 			expect(champ(Profiles.fields, nom)?.access?.read).toBe(champDuProfilAdminOuProprietaire)
 		expect(
 			champDuProfilAdminOuProprietaire({ req: { user: redaction } as PayloadRequest, doc: { pro: 2 } } as never)
 		).toBe(false)
 		// The networks are public.
-		expect(champ(Profiles.fields, 'reseaux')?.access?.read).toBeUndefined()
+		expect(champ(Profiles.fields, 'networks')?.access?.read).toBeUndefined()
 	})
 
 	test('la date et la source du consentement : jamais écrites par une API, posées par le serveur', () => {
-		for (const nom of ['consentiLe', 'sourceConsentement'])
+		for (const nom of ['consentedAt', 'consentSource'])
 			expect(champ(Profiles.fields, nom)?.access).toMatchObject({ create: jamais, update: jamais })
 		expect(Profiles.hooks?.beforeChange).toContain(consentementTrace)
 	})
@@ -741,7 +741,7 @@ describe('La collection media (ticket 043)', () => {
 				collection: 'profiles',
 				overrideAccess: true,
 				where: {
-					and: [PROFILS_PUBLIES, { or: [{ photoPrincipale: { equals: 12 } }, { galerie: { in: [12] } }] }],
+					and: [PROFILS_PUBLIES, { or: [{ mainPicture: { equals: 12 } }, { gallery: { in: [12] } }] }],
 				},
 			}),
 		])
@@ -920,8 +920,8 @@ describe('Les photos d’un profil (ticket 043)', () => {
 	})
 
 	test('une photo principale et une galerie, vers media ; la galerie garde l’ordre, 10 au plus', () => {
-		expect(champ(Profiles.fields, 'photoPrincipale')).toMatchObject({ type: 'upload' })
-		expect(champ(Profiles.fields, 'galerie')).toMatchObject({ type: 'upload', hasMany: true, maxRows: 10 })
+		expect(champ(Profiles.fields, 'mainPicture')).toMatchObject({ type: 'upload' })
+		expect(champ(Profiles.fields, 'gallery')).toMatchObject({ type: 'upload', hasMany: true, maxRows: 10 })
 	})
 
 	test('ses propres photos passent, celles d’un autre compte sont refusées en français', async () => {

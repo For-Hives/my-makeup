@@ -267,7 +267,7 @@ describe('091 : une personne sans compte s’inscrit avec Google', () => {
 		expect(issue.nouveau).toBe(true)
 		expect(issue.destination).toBe('/auth/init-account')
 		const [pro] = await comptes(email)
-		expect(pro).toMatchObject({ nom: 'Léa Fictive', _verified: true, legacyProvider: 'google' })
+		expect(pro).toMatchObject({ name: 'Léa Fictive', _verified: true, legacyProvider: 'google' })
 		const payload = await payloadDeTest()
 		const profils = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: pro?.id } } })
 		expect(profils.totalDocs).toBe(1)
@@ -277,8 +277,8 @@ describe('091 : une personne sans compte s’inscrit avec Google', () => {
 		const lignes = (await lignesDuJournal())
 			.filter(l => l.method === 'google')
 			.map(({ type, code }) => `${type}:${code}`)
-		expect(lignes).toContain('inscription:ok')
-		expect(lignes).toContain('connexion:ok')
+		expect(lignes).toContain('sign-up:ok')
+		expect(lignes).toContain('sign-in:ok')
 	})
 
 	test('second passage : une connexion, aucun doublon, ni compte ni profil, et vers la page demandée', async () => {
@@ -414,9 +414,9 @@ describe('l’annulation et la panne de Google ne cassent rien', () => {
 		await passer({ scenario: 'email-non-verifie', email: adresse('j3') })
 		const lignes = (await lignesDuJournal()).slice(avant)
 		expect(lignes.map(({ type, code, method }) => `${type}:${code}:${method}`)).toEqual([
-			'connexion:annule:google',
-			'connexion:service-indisponible:google',
-			'connexion:email-non-verifie:google',
+			'sign-in:annule:google',
+			'sign-in:service-indisponible:google',
+			'sign-in:email-non-verifie:google',
 		])
 	})
 })
@@ -493,7 +493,7 @@ describe('ticket 223, constat 9 : ce que Google dit par lui-même, et sa découv
 		expect(await comptes(email)).toHaveLength(0)
 		const lignes = (await lignesDuJournal()).slice(avant)
 		expect(lignes.map(({ type, code, method }) => `${type}:${code}:${method}`)).toEqual([
-			`connexion:${codeJournal}:google`,
+			`sign-in:${codeJournal}:google`,
 		])
 		// What Google said is not written anywhere.
 		expect(JSON.stringify(lignes)).not.toContain(erreur)

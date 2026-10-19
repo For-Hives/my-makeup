@@ -250,7 +250,7 @@ describe('I10 : une adresse inconnue répond pareil, dans le même temps, sans m
 					depth: 0,
 					limit: 1000,
 					sort: 'id',
-					where: { type: { equals: 'mot-de-passe-oublie' } },
+					where: { type: { equals: 'forgot-password' } },
 				})
 			).docs
 		const avant = (await lire()).length
@@ -394,7 +394,7 @@ describe('085 : choisir un nouveau mot de passe', () => {
 				depth: 0,
 				limit: 100,
 				sort: 'id',
-				where: { type: { equals: 'reinitialisation' } },
+				where: { type: { equals: 'password-reset' } },
 			})
 		).docs.map(l => l.code)
 		expect(lignes.slice(-2)).toEqual(['ok', 'lien-invalide'])

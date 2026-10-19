@@ -249,10 +249,10 @@ describe('les crochets de Payload', () => {
 		await HOOKS.apresEcriture({ context, doc: { id }, operation: 'update', previousDoc: { id }, req } as never)
 	}
 
-	const ligne = (statut: string, publiable: boolean) => ({ id: 7, slug: 'zoe-lefevre', statut, publiable })
+	const ligne = (status: string, publishable: boolean) => ({ id: 7, slug: 'zoe-lefevre', status, publishable })
 
 	test('un profil publiable modifié : une seule requête, une seule adresse, après l’attente', async () => {
-		const { req, journal } = requete([ligne('publie', true), ligne('publie', true)])
+		const { req, journal } = requete([ligne('published', true), ligne('published', true)])
 		await enregistrer(req, {})
 		// Nothing leaves while the save is still running.
 		expect(faux.appels).toEqual([])
@@ -267,9 +267,9 @@ describe('les crochets de Payload', () => {
 	})
 
 	test('un profil qui devient publiable, qui cesse de l’être : son adresse part', async () => {
-		await enregistrer(requete([ligne('publie', false), ligne('publie', true)]).req, {})
+		await enregistrer(requete([ligne('published', false), ligne('published', true)]).req, {})
 		await viderLaFile()
-		await enregistrer(requete([ligne('publie', true), ligne('publie', false)]).req, {})
+		await enregistrer(requete([ligne('published', true), ligne('published', false)]).req, {})
 		await viderLaFile()
 		expect(faux.appels.map(({ corps }) => corps.urlList)).toEqual([
 			[`${SITE}/profil/zoe-lefevre`],
@@ -278,14 +278,14 @@ describe('les crochets de Payload', () => {
 	})
 
 	test('un profil qui n’est pas publiable avant ni après : rien ne part', async () => {
-		await enregistrer(requete([ligne('publie', false), ligne('publie', false)]).req, {})
+		await enregistrer(requete([ligne('published', false), ligne('published', false)]).req, {})
 		expect(adressesEnAttente()).toEqual([])
 		await viderLaFile()
 		expect(faux.appels).toEqual([])
 	})
 
 	test('plusieurs enregistrements proches : une requête pour tous', async () => {
-		await enregistrer(requete([ligne('publie', true), ligne('publie', true)]).req, {})
+		await enregistrer(requete([ligne('published', true), ligne('published', true)]).req, {})
 		const talents = rafraichissement('talents')
 		const { req } = requete([
 			{ id: 3, slug: 'mariee', _status: 'published' },
@@ -310,7 +310,7 @@ describe('les crochets de Payload', () => {
 	})
 
 	test('pendant l’import : rien dans la file, rien ne part', async () => {
-		const { req } = requete([ligne('publie', true), ligne('publie', true)])
+		const { req } = requete([ligne('published', true), ligne('published', true)])
 		await enregistrer(req, { ...CONTEXTE_IMPORT })
 		expect(adressesEnAttente()).toEqual([])
 		await viderLaFile()
@@ -318,7 +318,7 @@ describe('les crochets de Payload', () => {
 	})
 
 	test('sans clé, hors du site, sur le banc : rien ne part', async () => {
-		const lignes = () => requete([ligne('publie', true), ligne('publie', true)]).req
+		const lignes = () => requete([ligne('published', true), ligne('published', true)]).req
 		delete process.env.INDEXNOW_KEY
 		await enregistrer(lignes(), {})
 		process.env.INDEXNOW_KEY = CLE
@@ -336,7 +336,7 @@ describe('les crochets de Payload', () => {
 		globalThis.fetch = (async () => {
 			throw new Error('réseau coupé')
 		}) as unknown as typeof fetch
-		const { req, journal } = requete([ligne('publie', true), ligne('publie', true)])
+		const { req, journal } = requete([ligne('published', true), ligne('published', true)])
 		await enregistrer(req, {})
 		await viderLaFile()
 		expect(journal.error).toHaveBeenCalledTimes(1)

@@ -1084,68 +1084,68 @@
           "primaryKey": false,
           "notNull": true
         },
-        "prenom": {
-          "name": "prenom",
+        "first_name": {
+          "name": "first_name",
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
         },
-        "nom": {
-          "name": "nom",
+        "last_name": {
+          "name": "last_name",
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
         },
-        "nom_artiste": {
-          "name": "nom_artiste",
+        "artist_name": {
+          "name": "artist_name",
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
         },
-        "specialite": {
-          "name": "specialite",
+        "specialty": {
+          "name": "specialty",
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
         },
-        "commune_nom": {
-          "name": "commune_nom",
+        "city_name": {
+          "name": "city_name",
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
         },
-        "commune_code_insee": {
-          "name": "commune_code_insee",
+        "city_insee_code": {
+          "name": "city_insee_code",
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
         },
-        "commune_departement": {
-          "name": "commune_departement",
+        "city_department": {
+          "name": "city_department",
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
         },
-        "commune_latitude": {
-          "name": "commune_latitude",
+        "city_latitude": {
+          "name": "city_latitude",
           "type": "numeric",
           "primaryKey": false,
           "notNull": false
         },
-        "commune_longitude": {
-          "name": "commune_longitude",
+        "city_longitude": {
+          "name": "city_longitude",
           "type": "numeric",
           "primaryKey": false,
           "notNull": false
         },
-        "rayon_km": {
-          "name": "rayon_km",
+        "radius_km": {
+          "name": "radius_km",
           "type": "numeric",
           "primaryKey": false,
           "notNull": false
         },
-        "a_domicile": {
-          "name": "a_domicile",
+        "home_service": {
+          "name": "home_service",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false
@@ -1156,77 +1156,77 @@
           "primaryKey": false,
           "notNull": false
         },
-        "disponible": {
-          "name": "disponible",
+        "available": {
+          "name": "available",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
           "default": true
         },
-        "photo_principale_id": {
-          "name": "photo_principale_id",
+        "main_picture_id": {
+          "name": "main_picture_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
         },
-        "reseaux_youtube": {
-          "name": "reseaux_youtube",
+        "networks_youtube": {
+          "name": "networks_youtube",
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
         },
-        "reseaux_facebook": {
-          "name": "reseaux_facebook",
+        "networks_facebook": {
+          "name": "networks_facebook",
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
         },
-        "reseaux_instagram": {
-          "name": "reseaux_instagram",
+        "networks_instagram": {
+          "name": "networks_instagram",
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
         },
-        "reseaux_site_web": {
-          "name": "reseaux_site_web",
+        "networks_website": {
+          "name": "networks_website",
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
         },
-        "reseaux_linkedin": {
-          "name": "reseaux_linkedin",
+        "networks_linkedin": {
+          "name": "networks_linkedin",
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
         },
-        "coordonnees_telephone": {
-          "name": "coordonnees_telephone",
+        "contact_details_phone": {
+          "name": "contact_details_phone",
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
         },
-        "coordonnees_email": {
-          "name": "coordonnees_email",
+        "contact_details_email": {
+          "name": "contact_details_email",
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
         },
-        "contact_public": {
-          "name": "contact_public",
+        "public_contact": {
+          "name": "public_contact",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
           "default": false
         },
-        "consenti_le": {
-          "name": "consenti_le",
+        "consented_at": {
+          "name": "consented_at",
           "type": "timestamp(3) with time zone",
           "primaryKey": false,
           "notNull": false
         },
-        "source_consentement": {
-          "name": "source_consentement",
-          "type": "enum_profiles_source_consentement",
+        "consent_source": {
+          "name": "consent_source",
+          "type": "enum_profiles_consent_source",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": false
@@ -1243,37 +1243,37 @@
           "primaryKey": false,
           "notNull": false
         },
-        "statut": {
-          "name": "statut",
-          "type": "enum_profiles_statut",
+        "status": {
+          "name": "status",
+          "type": "enum_profiles_status",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": false,
-          "default": "'brouillon'"
+          "default": "'draft'"
         },
-        "statut_choisi": {
-          "name": "statut_choisi",
-          "type": "enum_profiles_statut_choisi",
+        "chosen_status": {
+          "name": "chosen_status",
+          "type": "enum_profiles_chosen_status",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": false,
-          "default": "'automatique'"
+          "default": "'automatic'"
         },
-        "motif": {
-          "name": "motif",
+        "reason": {
+          "name": "reason",
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
         },
-        "verifie": {
-          "name": "verifie",
+        "verified": {
+          "name": "verified",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
           "default": false
         },
-        "verifie_le": {
-          "name": "verifie_le",
+        "verified_at": {
+          "name": "verified_at",
           "type": "timestamp(3) with time zone",
           "primaryKey": false,
           "notNull": false
@@ -1284,8 +1284,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "note_interne": {
-          "name": "note_interne",
+        "internal_note": {
+          "name": "internal_note",
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
@@ -1296,51 +1296,51 @@
           "primaryKey": false,
           "notNull": false
         },
-        "super_maquilleuse": {
-          "name": "super_maquilleuse",
+        "super_artist": {
+          "name": "super_artist",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
           "default": false
         },
-        "completude": {
-          "name": "completude",
+        "completeness": {
+          "name": "completeness",
           "type": "numeric",
           "primaryKey": false,
           "notNull": false
         },
-        "actif": {
-          "name": "actif",
+        "active": {
+          "name": "active",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false
         },
-        "actif_depuis": {
-          "name": "actif_depuis",
+        "active_since": {
+          "name": "active_since",
           "type": "timestamp(3) with time zone",
           "primaryKey": false,
           "notNull": false
         },
-        "publiable": {
-          "name": "publiable",
+        "publishable": {
+          "name": "publishable",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false
         },
-        "publiable_depuis": {
-          "name": "publiable_depuis",
+        "publishable_since": {
+          "name": "publishable_since",
           "type": "timestamp(3) with time zone",
           "primaryKey": false,
           "notNull": false
         },
-        "entierement_vide": {
-          "name": "entierement_vide",
+        "fully_empty": {
+          "name": "fully_empty",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false
         },
-        "entierement_vide_depuis": {
-          "name": "entierement_vide_depuis",
+        "fully_empty_since": {
+          "name": "fully_empty_since",
           "type": "timestamp(3) with time zone",
           "primaryKey": false,
           "notNull": false
@@ -1391,11 +1391,11 @@
           "method": "btree",
           "with": {}
         },
-        "profiles_photo_principale_idx": {
-          "name": "profiles_photo_principale_idx",
+        "profiles_main_picture_idx": {
+          "name": "profiles_main_picture_idx",
           "columns": [
             {
-              "expression": "photo_principale_id",
+              "expression": "main_picture_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1421,11 +1421,11 @@
           "method": "btree",
           "with": {}
         },
-        "profiles_statut_idx": {
-          "name": "profiles_statut_idx",
+        "profiles_status_idx": {
+          "name": "profiles_status_idx",
           "columns": [
             {
-              "expression": "statut",
+              "expression": "status",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1481,12 +1481,12 @@
           "onDelete": "set null",
           "onUpdate": "no action"
         },
-        "profiles_photo_principale_id_media_id_fk": {
-          "name": "profiles_photo_principale_id_media_id_fk",
+        "profiles_main_picture_id_media_id_fk": {
+          "name": "profiles_main_picture_id_media_id_fk",
           "tableFrom": "profiles",
           "tableTo": "media",
           "columnsFrom": [
-            "photo_principale_id"
+            "main_picture_id"
           ],
           "columnsTo": [
             "id"
@@ -4407,32 +4407,32 @@
         "editor"
       ]
     },
-    "public.enum_profiles_source_consentement": {
-      "name": "enum_profiles_source_consentement",
+    "public.enum_profiles_consent_source": {
+      "name": "enum_profiles_consent_source",
       "schema": "public",
       "values": [
-        "maquilleuse",
+        "artist",
         "admin",
         "import"
       ]
     },
-    "public.enum_profiles_statut": {
-      "name": "enum_profiles_statut",
+    "public.enum_profiles_status": {
+      "name": "enum_profiles_status",
       "schema": "public",
       "values": [
-        "brouillon",
-        "publie",
-        "masque"
+        "draft",
+        "published",
+        "hidden"
       ]
     },
-    "public.enum_profiles_statut_choisi": {
-      "name": "enum_profiles_statut_choisi",
+    "public.enum_profiles_chosen_status": {
+      "name": "enum_profiles_chosen_status",
       "schema": "public",
       "values": [
-        "automatique",
-        "brouillon",
-        "publie",
-        "masque"
+        "automatic",
+        "draft",
+        "published",
+        "hidden"
       ]
     },
     "public.enum_talents_status": {
@@ -4551,6 +4551,6 @@
     "tables": {},
     "columns": {}
   },
-  "id": "9109b08f-1927-4710-9d2e-4a2defe07678",
+  "id": "e7b7dd3b-ed25-4cab-b768-0b1a3ddb2012",
   "prevId": "00000000-0000-0000-0000-000000000000"
 }

@@ -162,7 +162,7 @@ describe('ce que l’import cherche dans une ville saisie : un nom, un code post
 			referentielGeoApi()
 		)
 
-		expect(communes.get(1)?.codeInsee).toBe('74901')
+		expect(communes.get(1)?.inseeCode).toBe('74901')
 		expect(bilan.adresses).toEqual([])
 	})
 
@@ -176,7 +176,7 @@ describe('ce que l’import cherche dans une ville saisie : un nom, un code post
 			referentielGeoApi()
 		)
 
-		expect(communes.get(1)?.codeInsee).toBe('74901')
+		expect(communes.get(1)?.inseeCode).toBe('74901')
 		// Ain holds no such commune: « à revoir », never the commune of another département.
 		expect(communes.get(2)).toBeNull()
 		expect(bilan.aRevoir).toEqual([2])
@@ -257,7 +257,7 @@ describe('la ville devient une commune du référentiel (simulé)', () => {
 				latitude: 45.98761,
 				longitude: 6.11147,
 			})
-		).toEqual({ nom: 'Bourg-Fictif', codeInsee: '74901', departement: '74', latitude: 45.99, longitude: 6.11 })
+		).toEqual({ name: 'Bourg-Fictif', inseeCode: '74901', department: '74', latitude: 45.99, longitude: 6.11 })
 	})
 })
 
@@ -277,7 +277,7 @@ describe('les villes des profils, la liste de revue et la table de décision', (
 
 		const { communes, revue, bilan, sansObjet } = await communesDesProfils(profils, referentielGeoApi())
 
-		expect([...communes.entries()].map(([id, c]) => [id, c?.codeInsee ?? null])).toEqual([
+		expect([...communes.entries()].map(([id, c]) => [id, c?.inseeCode ?? null])).toEqual([
 			[1, '74901'],
 			[2, null],
 			[3, null],
@@ -321,13 +321,13 @@ describe('les villes des profils, la liste de revue et la table de décision', (
 		])
 
 		expect(communes.get(2)).toEqual({
-			nom: 'Saint-Exemple',
-			codeInsee: '26901',
-			departement: '26',
+			name: 'Saint-Exemple',
+			inseeCode: '26901',
+			department: '26',
 			latitude: 44.9,
 			longitude: 5,
 		})
-		expect([communes.get(1)?.codeInsee, communes.get(3), communes.get(4)?.codeInsee]).toEqual(['74901', null, '74901'])
+		expect([communes.get(1)?.inseeCode, communes.get(3), communes.get(4)?.inseeCode]).toEqual(['74901', null, '74901'])
 		expect(bilan).toMatchObject({ rattachees: 4, part: 80, aRevoir: [], decidees: [2, 3, 4] })
 		expect(revue).toEqual([])
 		expect(sansObjet).toBe(2)
@@ -413,7 +413,7 @@ describe('les réponses du référentiel sont gardées : deux passages identique
 
 		const { communes, bilan } = await communesDesProfils(profils, referentielGarde(reponses, null))
 
-		const parCode = Object.fromEntries([...communes.entries()].map(([id, c]) => [id, c?.codeInsee ?? null]))
+		const parCode = Object.fromEntries([...communes.entries()].map(([id, c]) => [id, c?.inseeCode ?? null]))
 		expect(parCode).toMatchObject({
 			21: '74010',
 			22: '74010',

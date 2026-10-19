@@ -95,9 +95,9 @@ describe('Critère 1 : autant de comptes qu’à la source, hors comptes écart�
 			expect(cible[rang]).toMatchObject({
 				strapiId: ligne.id,
 				email: String(ligne.email).trim().toLowerCase(),
-				nom: ligne.username,
+				name: ligne.username,
 				legacyProvider: ligne.provider,
-				bloque: ligne.blocked,
+				blocked: ligne.blocked,
 				_verified: true,
 				createdAt: enIso(ligne.created_at),
 				updatedAt: enIso(ligne.updated_at),

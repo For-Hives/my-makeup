@@ -60,7 +60,7 @@ async function etatSain() {
 	if (!profil) throw new Error('Pas de profil.')
 	const { statut } = await appelerRest('PATCH', `/api/profiles/${profil.id}?depth=0`, {
 		enTetes: compte.session.enTetes,
-		corps: { photoPrincipale: principale.id, galerie: [galerie1.id, galerie2.id] },
+		corps: { mainPicture: principale.id, gallery: [galerie1.id, galerie2.id] },
 	})
 	expect(statut).toBe(200)
 	return { compte, principale, galerie1, galerie2 }

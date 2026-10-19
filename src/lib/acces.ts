@@ -114,7 +114,7 @@ const identifiantImpossible = (id: number | string | null | undefined): boolean 
 	id !== undefined && id !== null && !identifiantPossible(id)
 
 /** The profiles the public reads: the published ones (U53). */
-export const PROFILS_PUBLIES: Where = { statut: { equals: STATUT_PUBLIE } }
+export const PROFILS_PUBLIES: Where = { status: { equals: STATUT_PUBLIE } }
 
 /**
  * Reading profiles (ticket 021). The role `admin` reads every profile; a makeup artist reads her
@@ -174,7 +174,7 @@ export async function rattacheAUnProfilPublie(req: PayloadRequest, media: number
 		overrideAccess: true,
 		req,
 		where: {
-			and: [PROFILS_PUBLIES, { or: [{ photoPrincipale: { equals: media } }, { galerie: { in: [media] } }] }],
+			and: [PROFILS_PUBLIES, { or: [{ mainPicture: { equals: media } }, { gallery: { in: [media] } }] }],
 		},
 	})
 	return totalDocs > 0

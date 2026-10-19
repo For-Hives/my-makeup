@@ -90,9 +90,9 @@ describe('le schéma du serveur est strict : elle n’écrit pas la date de son 
 	})
 
 	test.each([
-		['consentiLe', '2020-01-01T00:00:00.000Z'],
-		['sourceConsentement', 'import'],
-		['statut', 'publie'],
+		['consentedAt', '2020-01-01T00:00:00.000Z'],
+		['consentSource', 'import'],
+		['status', 'published'],
 		['pro', 1],
 		['id', 1],
 	])('la clé %s refuse la requête entière', (cle, valeur) => {
@@ -107,12 +107,12 @@ describe('la carte dit si les coordonnées sont affichées, et depuis quand', ()
 			?.lignes.find(l => l.libelle === 'Affichées sur ton profil')?.valeur
 
 	test('masquées : « Non », même avec une date restée d’avant', () => {
-		expect(ligne({ id: 1, contactPublic: false })).toBe('Non')
-		expect(ligne({ id: 1, contactPublic: false, consentiLe: '2026-10-15T10:00:00.000Z' })).toBe('Non')
+		expect(ligne({ id: 1, publicContact: false })).toBe('Non')
+		expect(ligne({ id: 1, publicContact: false, consentedAt: '2026-10-15T10:00:00.000Z' })).toBe('Non')
 	})
 
 	test('affichées avec la date du serveur : « Oui, depuis le … », à l’heure de Paris', () => {
-		expect(ligne({ id: 1, contactPublic: true, consentiLe: '2026-10-15T10:00:00.000Z' })).toBe(
+		expect(ligne({ id: 1, publicContact: true, consentedAt: '2026-10-15T10:00:00.000Z' })).toBe(
 			'Oui, depuis le 15 octobre 2026'
 		)
 		// 23:30 UTC the 14th is already the 15th in Paris.
@@ -120,7 +120,7 @@ describe('la carte dit si les coordonnées sont affichées, et depuis quand', ()
 	})
 
 	test('affichées sans date lisible : « Oui » seulement', () => {
-		expect(ligne({ id: 1, contactPublic: true })).toBe('Oui')
-		expect(ligne({ id: 1, contactPublic: true, consentiLe: 'pas une date' })).toBe('Oui')
+		expect(ligne({ id: 1, publicContact: true })).toBe('Oui')
+		expect(ligne({ id: 1, publicContact: true, consentedAt: 'pas une date' })).toBe('Oui')
 	})
 })

@@ -89,12 +89,12 @@ describe('Photo remplacée : ancien objet en corbeille (I24) ; photo encore réf
 	test('I24 : la photo principale remplacée par la maquilleuse : l’ancienne part à la corbeille, octet pour octet', async () => {
 		const compte = await creerCompte('maquilleuse')
 		const [ancienne, nouvelle] = [await envoyer(compte), await envoyer(compte)]
-		await enregistrerOuEchouer(compte, { photoPrincipale: ancienne.id })
+		await enregistrerOuEchouer(compte, { mainPicture: ancienne.id })
 		const avant = await octets(cle(ancienne))
 
-		await enregistrerOuEchouer(compte, { photoPrincipale: nouvelle.id })
+		await enregistrerOuEchouer(compte, { mainPicture: nouvelle.id })
 
-		expect((await profilDe(compte)).photoPrincipale).toBe(nouvelle.id)
+		expect((await profilDe(compte)).mainPicture).toBe(nouvelle.id)
 		expect(await stocke(ancienne.id)).toBeNull()
 		expect(await octets(cle(ancienne))).toBeUndefined()
 		expect(await octets(`deleted/${cle(ancienne)}`)).toEqual(avant)
@@ -107,11 +107,11 @@ describe('Photo remplacée : ancien objet en corbeille (I24) ; photo encore réf
 		const compte = await creerCompte('maquilleuse')
 		const [principale, retiree, gardee] = [await envoyer(compte), await envoyer(compte), await envoyer(compte)]
 		await enregistrerOuEchouer(compte, {
-			photoPrincipale: principale.id,
-			galerie: [principale.id, retiree.id, gardee.id],
+			mainPicture: principale.id,
+			gallery: [principale.id, retiree.id, gardee.id],
 		})
 
-		await enregistrerOuEchouer(compte, { galerie: [gardee.id] })
+		await enregistrerOuEchouer(compte, { gallery: [gardee.id] })
 
 		expect(await stocke(retiree.id)).toBeNull()
 		expect(await octets(`deleted/${cle(retiree)}`)).toBeDefined()
@@ -137,10 +137,10 @@ describe('Photo remplacée : ancien objet en corbeille (I24) ; photo encore réf
 		await payload.update({
 			collection: 'profiles',
 			id: (await profilDe(compte)).id,
-			data: { photoPrincipale: photo.id },
+			data: { mainPicture: photo.id },
 		})
 
-		await enregistrerOuEchouer(compte, { photoPrincipale: remplacante.id })
+		await enregistrerOuEchouer(compte, { mainPicture: remplacante.id })
 
 		expect(await stocke(photo.id)).not.toBeNull()
 		expect(await octets(cle(photo))).toBeDefined()
@@ -159,8 +159,8 @@ describe('Photo remplacée : ancien objet en corbeille (I24) ; photo encore réf
 			await envoyer(a),
 			await envoyer(b),
 		]
-		await enregistrerOuEchouer(a, { photoPrincipale: principale.id, galerie: [galerie.id] })
-		await enregistrerOuEchouer(b, { photoPrincipale: deB.id })
+		await enregistrerOuEchouer(a, { mainPicture: principale.id, gallery: [galerie.id] })
+		await enregistrerOuEchouer(b, { mainPicture: deB.id })
 
 		const { statut } = await appelerRest('DELETE', `/api/profiles/${(await profilDe(a)).id}`, {
 			enTetes: admin.session.enTetes,
@@ -212,10 +212,10 @@ describe('L’adresse publique d’une photo en corbeille ne répond plus 200', 
 	test('200 tant qu’elle sert ; plus 200 une fois remplacée', async () => {
 		const compte = await creerCompte('maquilleuse')
 		const [ancienne, nouvelle] = [await envoyer(compte), await envoyer(compte)]
-		await enregistrerOuEchouer(compte, { photoPrincipale: ancienne.id })
+		await enregistrerOuEchouer(compte, { mainPicture: ancienne.id })
 		expect(await statutPublic(ancienne)).toBe(200)
 
-		await enregistrerOuEchouer(compte, { photoPrincipale: nouvelle.id })
+		await enregistrerOuEchouer(compte, { mainPicture: nouvelle.id })
 
 		expect(await statutPublic(ancienne)).not.toBe(200)
 		expect(await statutPublic(nouvelle)).toBe(200)
@@ -226,14 +226,14 @@ describe('Panne du stockage : document et objet intacts, erreur remontée', () =
 	test('le stockage tombe pendant le remplacement : 503 en français ; profil, média et objet comme avant', async () => {
 		const compte = await creerCompte('maquilleuse')
 		const [ancienne, nouvelle] = [await envoyer(compte), await envoyer(compte)]
-		await enregistrerOuEchouer(compte, { photoPrincipale: ancienne.id })
+		await enregistrerOuEchouer(compte, { mainPicture: ancienne.id })
 		espion.fairePanne(commande => commande.nom === 'CopyObject')
 
-		const { statut, texte } = await enregistrer(compte, { photoPrincipale: nouvelle.id })
+		const { statut, texte } = await enregistrer(compte, { mainPicture: nouvelle.id })
 
 		expect(statut).toBe(503)
 		expect(texte).toContain(MESSAGE_PANNE_DU_STOCKAGE)
-		expect((await profilDe(compte)).photoPrincipale).toBe(ancienne.id)
+		expect((await profilDe(compte)).mainPicture).toBe(ancienne.id)
 		expect(await stocke(ancienne.id)).not.toBeNull()
 		expect(await octets(cle(ancienne))).toBeDefined()
 		expect(await corbeille()).toEqual([])
@@ -263,7 +263,7 @@ describe('Panne du stockage : plusieurs documents à la fois sont refusés, rien
 	test('la propriétaire supprime sa photo principale par un filtre, pendant une panne : refusé ; média, objet et profil intacts', async () => {
 		const compte = await creerCompte('maquilleuse')
 		const photo = await envoyer(compte)
-		await enregistrerOuEchouer(compte, { photoPrincipale: photo.id })
+		await enregistrerOuEchouer(compte, { mainPicture: photo.id })
 		espion.fairePanne(commande => commande.nom === 'HeadObject')
 		const avant = espion.journal.length
 
@@ -275,24 +275,24 @@ describe('Panne du stockage : plusieurs documents à la fois sont refusés, rien
 		expect(espion.journal.slice(avant)).toEqual([])
 		expect(await stocke(photo.id)).not.toBeNull()
 		expect(await octets(cle(photo))).toBeDefined()
-		expect((await profilDe(compte)).photoPrincipale).toBe(photo.id)
+		expect((await profilDe(compte)).mainPicture).toBe(photo.id)
 		expect(await corbeille()).toEqual([])
 	})
 
 	test('la propriétaire change sa photo principale par un filtre, pendant une panne : refusé ; le profil garde l’ancienne', async () => {
 		const compte = await creerCompte('maquilleuse')
 		const [ancienne, nouvelle] = [await envoyer(compte), await envoyer(compte)]
-		await enregistrerOuEchouer(compte, { photoPrincipale: ancienne.id })
+		await enregistrerOuEchouer(compte, { mainPicture: ancienne.id })
 		const profil = await profilDe(compte)
 		espion.fairePanne(commande => commande.nom === 'CopyObject')
 
 		const { statut } = await appelerRest('PATCH', `/api/profiles?where[id][equals]=${profil.id}&depth=0`, {
 			enTetes: compte.session.enTetes,
-			corps: { photoPrincipale: nouvelle.id },
+			corps: { mainPicture: nouvelle.id },
 		})
 
 		expect(statut).toBe(403)
-		expect((await profilDe(compte)).photoPrincipale).toBe(ancienne.id)
+		expect((await profilDe(compte)).mainPicture).toBe(ancienne.id)
 		expect(await stocke(ancienne.id)).not.toBeNull()
 		expect(await octets(cle(ancienne))).toBeDefined()
 		expect(await corbeille()).toEqual([])
@@ -305,8 +305,8 @@ describe('Panne du stockage : plusieurs documents à la fois sont refusés, rien
 			creerCompte('admin'),
 		])
 		const [a1, a2, b1, b2] = [await envoyer(a), await envoyer(a), await envoyer(b), await envoyer(b)]
-		await enregistrerOuEchouer(a, { photoPrincipale: a1.id, galerie: [a2.id] })
-		await enregistrerOuEchouer(b, { photoPrincipale: b1.id, galerie: [b2.id] })
+		await enregistrerOuEchouer(a, { mainPicture: a1.id, gallery: [a2.id] })
+		await enregistrerOuEchouer(b, { mainPicture: b1.id, gallery: [b2.id] })
 		const [profilA, profilB] = [await profilDe(a), await profilDe(b)]
 		let copiesEnCorbeille = 0
 		espion.fairePanne(
@@ -331,7 +331,7 @@ describe('Panne du stockage : plusieurs documents à la fois sont refusés, rien
 		const payload = await payloadDeTest()
 		const compte = await creerCompte('maquilleuse')
 		const photo = await envoyer(compte)
-		await enregistrerOuEchouer(compte, { photoPrincipale: photo.id })
+		await enregistrerOuEchouer(compte, { mainPicture: photo.id })
 		const profil = await profilDe(compte)
 		const media = { collection: 'media', where: { id: { equals: photo.id } } } as const
 		const profils = { collection: 'profiles', where: { id: { equals: profil.id } } } as const
@@ -340,14 +340,14 @@ describe('Panne du stockage : plusieurs documents à la fois sont refusés, rien
 			() => payload.delete(media),
 			() => payload.update({ ...media, data: { alt: 'Texte fictif' } }),
 			() => payload.delete(profils),
-			() => payload.update({ ...profils, data: { photoPrincipale: null } }),
+			() => payload.update({ ...profils, data: { mainPicture: null } }),
 		])
 			await expect(operation()).rejects.toThrow(MESSAGE_UN_A_LA_FOIS)
 
 		const gardee = await stocke(photo.id)
 		expect(gardee).not.toBeNull()
 		expect(gardee?.alt).not.toBe('Texte fictif')
-		expect((await profilDe(compte)).photoPrincipale).toBe(photo.id)
+		expect((await profilDe(compte)).mainPicture).toBe(photo.id)
 		expect(await octets(cle(photo))).toBeDefined()
 		expect(await corbeille()).toEqual([])
 	})
@@ -367,17 +367,17 @@ describe('Un test échoue si une suppression d’objet est appelée ; la remise 
 	test('la panne au milieu de deux photos : la première, déjà déplacée, est remise en place une fois ; tout est comme avant', async () => {
 		const compte = await creerCompte('maquilleuse')
 		const [premiere, seconde] = [await envoyer(compte), await envoyer(compte)]
-		await enregistrerOuEchouer(compte, { galerie: [premiere.id, seconde.id] })
+		await enregistrerOuEchouer(compte, { gallery: [premiere.id, seconde.id] })
 		let copiesEnCorbeille = 0
 		espion.fairePanne(
 			commande =>
 				commande.nom === 'CopyObject' && String(commande.entree.Key).startsWith('deleted/') && ++copiesEnCorbeille === 2
 		)
 
-		const { statut } = await enregistrer(compte, { galerie: [] })
+		const { statut } = await enregistrer(compte, { gallery: [] })
 
 		expect(statut).toBe(503)
-		expect((await profilDe(compte)).galerie).toEqual([premiere.id, seconde.id])
+		expect((await profilDe(compte)).gallery).toEqual([premiere.id, seconde.id])
 		for (const media of [premiere, seconde]) {
 			expect(await stocke(media.id)).not.toBeNull()
 			expect(await octets(cle(media))).toBeDefined()
@@ -392,8 +392,8 @@ describe('Un test échoue si une suppression d’objet est appelée ; la remise 
 	test('une photo de la corbeille se remet en place : son adresse répond de nouveau 200, sa copie reste dans la corbeille', async () => {
 		const compte = await creerCompte('maquilleuse')
 		const [ancienne, nouvelle] = [await envoyer(compte), await envoyer(compte)]
-		await enregistrerOuEchouer(compte, { photoPrincipale: ancienne.id })
-		await enregistrerOuEchouer(compte, { photoPrincipale: nouvelle.id })
+		await enregistrerOuEchouer(compte, { mainPicture: ancienne.id })
+		await enregistrerOuEchouer(compte, { mainPicture: nouvelle.id })
 		const stockage = serverEnv().storage
 		if (!stockage) throw new Error('Le banc n’a pas de stockage : lance les tests par « bun run test:integration ».')
 
@@ -411,17 +411,17 @@ describe('Avec le contexte d’import, rien n’est déplacé', () => {
 		const compte = await creerCompte('maquilleuse')
 		const [ancienne, nouvelle] = [await envoyer(compte), await envoyer(compte)]
 		const profil = await profilDe(compte)
-		await payload.update({ collection: 'profiles', id: profil.id, data: { photoPrincipale: ancienne.id } })
+		await payload.update({ collection: 'profiles', id: profil.id, data: { mainPicture: ancienne.id } })
 		const avant = espion.journal.length
 
 		await payload.update({
 			collection: 'profiles',
 			id: profil.id,
-			data: { photoPrincipale: nouvelle.id },
+			data: { mainPicture: nouvelle.id },
 			context: CONTEXTE_IMPORT,
 		})
 
-		expect((await profilDe(compte)).photoPrincipale).toBe(nouvelle.id)
+		expect((await profilDe(compte)).mainPicture).toBe(nouvelle.id)
 		expect(await stocke(ancienne.id)).not.toBeNull()
 		expect(await octets(cle(ancienne))).toBeDefined()
 		expect(espion.journal.slice(avant)).toEqual([])

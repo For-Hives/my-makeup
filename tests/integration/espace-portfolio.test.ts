@@ -66,7 +66,7 @@ async function maquilleuse(): Promise<Maquilleuse> {
 	await payload.update({
 		collection: 'profiles',
 		id: (await profilDe(compte)).id,
-		data: { prenom: 'Léa', nom: 'Fictive', specialite: 'Mariée' },
+		data: { firstName: 'Léa', lastName: 'Fictive', specialty: 'Mariée' },
 	})
 	return compte
 }
@@ -102,7 +102,7 @@ const envoyerTrois = async (compte: Maquilleuse): Promise<[Media, Media, Media]>
 	await envoyer(compte),
 ]
 
-const galerieDe = async (compte: Maquilleuse) => photosNommees((await profilDe(compte)).galerie)
+const galerieDe = async (compte: Maquilleuse) => photosNommees((await profilDe(compte)).gallery)
 const nombreDeMedias = async () => (await (await payloadDeTest()).count({ collection: 'media' })).totalDocs
 
 /** The reconciliation of the storage and the database: 0 orphan, or the list of what is wrong. */
@@ -130,7 +130,7 @@ describe('E34 : trois photos ajoutées sont dans la galerie, dans l’ordre, et 
 
 		expect(resultat).toEqual({ ok: true, valeurs: { galerie: [a.id, b.id, c.id] } })
 		const profil = await profilDe(compte)
-		expect(photosNommees(profil.galerie)).toEqual([a.id, b.id, c.id])
+		expect(photosNommees(profil.gallery)).toEqual([a.id, b.id, c.id])
 		const espace = await lirePhotosDeLEspace(payload, profil)
 		expect(espace.galerie.map(p => p.id)).toEqual([a.id, b.id, c.id])
 		const publique = await lireLeProfilPublic(payload, profil.slug ?? '')
@@ -175,7 +175,7 @@ describe('U80 : dix photos au plus', () => {
 
 describe('la requête de l’action est lue strictement', () => {
 	test.each([
-		['une clé réservée', (id: number) => ({ galerie: [id], statut: 'publie' })],
+		['une clé réservée', (id: number) => ({ galerie: [id], status: 'published' })],
 		['la photo principale', (id: number) => ({ galerie: [id], photoPrincipale: id })],
 		['un identifiant impossible', () => ({ galerie: ['abc'] })],
 		['un identifiant trop grand', () => ({ galerie: [2147483648] })],
@@ -259,7 +259,7 @@ describe('E35, I25 : une photo retirée disparaît partout, son objet part à la
 
 		expect(resultat).toEqual({ ok: true, valeurs: { galerie: [a.id, c.id] } })
 		const profil = await profilDe(compte)
-		expect(photosNommees(profil.galerie)).toEqual([a.id, c.id])
+		expect(photosNommees(profil.gallery)).toEqual([a.id, c.id])
 		expect((await lirePhotosDeLEspace(payload, profil)).galerie.map(p => p.id)).toEqual([a.id, c.id])
 		expect((await lireLeProfilPublic(payload, profil.slug ?? ''))?.galerie.map(p => p.url)).toEqual([
 			a.url,
@@ -284,14 +284,14 @@ describe('E35, I25 : une photo retirée disparaît partout, son objet part à la
 		await payload.update({
 			collection: 'profiles',
 			id: (await profilDe(compte)).id,
-			data: { photoPrincipale: principale.id },
+			data: { mainPicture: principale.id },
 		})
-		await enregistrerPortfolio(payload, utilisateur, { galerie: [principale.id, autre.id] })
+		await enregistrerPortfolio(payload, utilisateur, { gallery: [principale.id, autre.id] })
 
 		await enregistrerPortfolio(payload, utilisateur, { galerie: [autre.id] })
 
 		expect(await galerieDe(compte)).toEqual([autre.id])
-		expect((await profilDe(compte)).photoPrincipale).toBe(principale.id)
+		expect((await profilDe(compte)).mainPicture).toBe(principale.id)
 		for (const cle of clesDe(principale)) expect(await lireUnObjet(cle)).toBeDefined()
 		expect(await lireUnObjet(`deleted/media/${principale.filename}`)).toBeUndefined()
 		expect(await orphelins()).toEqual(AUCUN)

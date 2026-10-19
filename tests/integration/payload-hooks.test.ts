@@ -45,12 +45,12 @@ describe('Un compte créé reçoit son profil vide, avec un slug unique (I18)', 
 		expect(profil).toMatchObject({
 			pro: compte.id,
 			slug: 'zoe-lefevre',
-			prenom: null,
-			nom: null,
-			nomArtiste: null,
-			specialite: null,
+			firstName: null,
+			lastName: null,
+			artistName: null,
+			specialty: null,
 			description: null,
-			disponible: true,
+			available: true,
 			legacyUsername: null,
 			strapiId: null,
 		})
@@ -82,7 +82,7 @@ describe('Un compte créé reçoit son profil vide, avec un slug unique (I18)', 
 
 		const { statut, corps } = await appelerRest('POST', '/api/pros', {
 			enTetes: admin.session.enTetes,
-			corps: { email: `rest-${crypto.randomUUID()}@example.test`, password: motDePasseAleatoire(), nom: 'Inès Morel' },
+			corps: { email: `rest-${crypto.randomUUID()}@example.test`, password: motDePasseAleatoire(), name: 'Inès Morel' },
 		})
 
 		expect(statut).toBe(201)
@@ -132,12 +132,12 @@ describe('Le slug ne change plus (I19)', () => {
 		})
 		const surLeProfil = await appelerRest('PATCH', `/api/profiles/${profil?.id}`, {
 			enTetes: a.session.enTetes,
-			corps: { prenom: 'Camille', nom: 'Bernard', nomArtiste: 'Camille B.', slug: 'camille-bernard' },
+			corps: { firstName: 'Camille', lastName: 'Bernard', artistName: 'Camille B.', slug: 'camille-bernard' },
 		})
 
 		expect([surLeCompte.statut, surLeProfil.statut]).toEqual([200, 200])
 		const [apres] = await profilsDe(Number(a.id))
-		expect(apres).toMatchObject({ slug, prenom: 'Camille', nom: 'Bernard', nomArtiste: 'Camille B.' })
+		expect(apres).toMatchObject({ slug, firstName: 'Camille', lastName: 'Bernard', artistName: 'Camille B.' })
 	})
 })
 
