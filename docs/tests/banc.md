@@ -283,6 +283,27 @@ Une migration qui échoue arrête aussi la commande, avec le message de Payload.
 
 Le contrôle de la migration elle-même, sur une base effacée puis rejouée, est le test I22 : `tests/integration/migrations.test.ts`.
 
+## Réécrire la migration `init` et vider une base
+
+Le site n'est pas en production, et aucune base de production n'a joué une migration : le schéma tient donc dans **une seule migration, `init`**, réécrite à chaque changement de collection au lieu d'empiler des migrations de renommage (ticket 249, `PLAN-ANGLAIS.md` §7). Tant que ce n'est plus vrai, cette marche à suivre cesse : chaque changement de collection reprend sa propre migration, relue.
+
+Pour la réécrire, banc démarré (`bun run banc:up`, ou l'instance de ton lot) :
+
+1. Supprimer `src/migrations/*_init.ts` et `*_init.json`, et remplacer `src/migrations/index.ts` par `export const migrations = []`.
+2. Lancer `bun run payload:migrate:create init`, avec `DATABASE_URI` et `PAYLOAD_SECRET` du banc dans l'environnement (`.env.test`, port décalé de l'instance). Sans migration avant elle, Payload écrit le schéma entier.
+3. Remettre en forme le fichier généré comme l'ancien : `import { type MigrateDownArgs, type MigrateUpArgs, sql }`, arguments `{ db }` seuls, l'en-tête qui dit ce que fait `init`. Puis `bun run check`.
+4. `bun run payload:types` et `bun run payload:importmap` : les fichiers générés ne doivent changer que si les collections ont changé.
+5. `bun run schema:derive` (aucune dérive), puis `bun run banc:prepare`.
+
+Pour vérifier qu'un regroupement ne change rien, comparer `pg_dump --schema-only` de la base bâtie par l'ancienne chaîne et de celle bâtie par la nouvelle `init`. Une seule différence est normale : l'ordre des colonnes d'une table. Une colonne ajoutée plus tard par une migration passe à la fin, alors que `init` suit l'ordre des champs de la collection. L'ordre d'une colonne ne change rien à ce qu'un programme lit.
+
+**Vider une base** (après une réécriture de `init`, la base ne se rattrape pas par une migration) :
+
+| Base | Commande |
+|---|---|
+| le banc de test | `bun run banc:prepare` (le schéma est effacé, puis rejoué), ou `bun run banc:reinitialiser` pour retrouver aussi le jeu de données ; les tests d'intégration le font d'eux-mêmes |
+| la base de développement du poste (`docker-compose.yml`, port 5442) | `docker compose down -v && docker compose up -d --wait`, puis `bun run dev` : le volume `postgres-data` est effacé, et la base repart vide. Un compte admin créé là est à recréer (`bun run admin:creer`) |
+
 ## Comptes de test : la fabrique
 
 Un appel crée un compte fictif dans la base du banc et rend sa session, prête à servir. Personne ne saisit de mot de passe.

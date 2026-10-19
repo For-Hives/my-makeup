@@ -1,17 +1,20 @@
 import { type MigrateDownArgs, type MigrateUpArgs, sql } from '@payloadcms/db-postgres'
 
 /**
- * The `init` migration (ticket 049): the whole schema of P3, from an empty database, in one
- * migration. It replaces the twelve provisional migrations of tickets 010 to 047.
+ * The `init` migration: the whole schema, from an empty database, in one migration. The site
+ * is not in production, so the schema is not changed by a chain of migrations: this file is
+ * written again from the collections each time they change (PLAN-ANGLAIS.md §7, tickets 249 to
+ * 252). It replaced the fifteen migrations (the first `init` and the fourteen after it, ticket 249).
  *
  * Written by `bun run payload:migrate:create init` with no migration before it, so against an
  * empty schema; read, then tidied (unused arguments removed, formatted by Biome). `up` only
  * creates: types, tables, foreign keys and indexes, nothing dropped, altered or deleted
  * (tests/unit/migration-init.test.ts). `down` drops everything `up` created, the table of the
- * migrations included.
+ * migrations included. How to write it again: docs/tests/banc.md, « Réécrire la migration init ».
  *
- * From here on, every change of a collection comes with its own migration, in the same commit:
- * `bun run schema:derive` is a step of the CI (docs/qualite.md, « La dérive de schéma »).
+ * Once a production database has played it, this stops: every change of a collection then comes
+ * with its own migration, in the same commit. `bun run schema:derive` is a step of the CI
+ * (docs/qualite.md, « La dérive de schéma »).
  */
 export async function up({ db }: MigrateUpArgs): Promise<void> {
 	await db.execute(sql`
@@ -23,6 +26,12 @@ export async function up({ db }: MigrateUpArgs): Promise<void> {
   CREATE TYPE "public"."enum__talents_v_version_status" AS ENUM('draft', 'published');
   CREATE TYPE "public"."enum_articles_status" AS ENUM('draft', 'published');
   CREATE TYPE "public"."enum__articles_v_version_status" AS ENUM('draft', 'published');
+  CREATE TYPE "public"."enum_auth_evenements_type" AS ENUM('connexion', 'deconnexion', 'deconnexion-partout', 'inscription', 'confirmation', 'renvoi', 'mot-de-passe-oublie', 'reinitialisation', 'blocage', 'deblocage');
+  CREATE TYPE "public"."enum_auth_evenements_code" AS ENUM('ok', 'heritee', 'identifiants-invalides', 'trop-de-tentatives', 'service-indisponible', 'email-non-confirme', 'compte-bloque', 'donnees-invalides', 'email-deja-pris', 'deja-confirme', 'lien-invalide', 'email-non-verifie', 'compte-refuse', 'annule', 'retour-invalide', 'inconnu', 'champ-piege');
+  CREATE TYPE "public"."enum_auth_evenements_methode" AS ENUM('mot-de-passe', 'google');
+  CREATE TYPE "public"."enum_demandes_type" AS ENUM('contact');
+  CREATE TYPE "public"."enum_demandes_statut" AS ENUM('nouvelle', 'transmise', 'repondue', 'spam');
+  CREATE TYPE "public"."enum_demandes_etat_mail" AS ENUM('en-attente', 'envoye', 'echec');
   CREATE TABLE "admins_sessions" (
   	"_order" integer NOT NULL,
   	"_parent_id" integer NOT NULL,
@@ -41,9 +50,7 @@ export async function up({ db }: MigrateUpArgs): Promise<void> {
   	"reset_password_expiration" timestamp(3) with time zone,
   	"salt" varchar,
   	"hash" varchar,
-  	"reset_password_requested_at" timestamp(3) with time zone,
-  	"login_attempts" numeric DEFAULT 0,
-  	"lock_until" timestamp(3) with time zone
+  	"reset_password_requested_at" timestamp(3) with time zone
   );
   
   CREATE TABLE "pros_sessions" (
@@ -58,6 +65,7 @@ export async function up({ db }: MigrateUpArgs): Promise<void> {
   	"id" serial PRIMARY KEY NOT NULL,
   	"nom" varchar,
   	"bloque" boolean DEFAULT false,
+  	"derniere_connexion" timestamp(3) with time zone,
   	"legacy_provider" varchar,
   	"strapi_id" numeric,
   	"legacy_bcrypt" varchar,
@@ -70,9 +78,7 @@ export async function up({ db }: MigrateUpArgs): Promise<void> {
   	"hash" varchar,
   	"reset_password_requested_at" timestamp(3) with time zone,
   	"_verified" boolean,
-  	"_verificationtoken" varchar,
-  	"login_attempts" numeric DEFAULT 0,
-  	"lock_until" timestamp(3) with time zone
+  	"_verificationtoken" varchar
   );
   
   CREATE TABLE "profils_prestations_options" (
@@ -208,7 +214,31 @@ export async function up({ db }: MigrateUpArgs): Promise<void> {
   	"width" numeric,
   	"height" numeric,
   	"focal_x" numeric,
-  	"focal_y" numeric
+  	"focal_y" numeric,
+  	"sizes_thumbnail_url" varchar,
+  	"sizes_thumbnail_width" numeric,
+  	"sizes_thumbnail_height" numeric,
+  	"sizes_thumbnail_mime_type" varchar,
+  	"sizes_thumbnail_filesize" numeric,
+  	"sizes_thumbnail_filename" varchar,
+  	"sizes_small_url" varchar,
+  	"sizes_small_width" numeric,
+  	"sizes_small_height" numeric,
+  	"sizes_small_mime_type" varchar,
+  	"sizes_small_filesize" numeric,
+  	"sizes_small_filename" varchar,
+  	"sizes_medium_url" varchar,
+  	"sizes_medium_width" numeric,
+  	"sizes_medium_height" numeric,
+  	"sizes_medium_mime_type" varchar,
+  	"sizes_medium_filesize" numeric,
+  	"sizes_medium_filename" varchar,
+  	"sizes_large_url" varchar,
+  	"sizes_large_width" numeric,
+  	"sizes_large_height" numeric,
+  	"sizes_large_mime_type" varchar,
+  	"sizes_large_filesize" numeric,
+  	"sizes_large_filename" varchar
   );
   
   CREATE TABLE "talents" (
@@ -216,6 +246,7 @@ export async function up({ db }: MigrateUpArgs): Promise<void> {
   	"title" varchar,
   	"slug" varchar,
   	"seo_title" varchar,
+  	"titre_de_la_page" varchar,
   	"description" varchar,
   	"seo_description" varchar,
   	"content" varchar,
@@ -232,6 +263,7 @@ export async function up({ db }: MigrateUpArgs): Promise<void> {
   	"version_title" varchar,
   	"version_slug" varchar,
   	"version_seo_title" varchar,
+  	"version_titre_de_la_page" varchar,
   	"version_description" varchar,
   	"version_seo_description" varchar,
   	"version_content" varchar,
@@ -297,6 +329,35 @@ export async function up({ db }: MigrateUpArgs): Promise<void> {
   	"media_id" integer
   );
   
+  CREATE TABLE "auth_evenements" (
+  	"id" serial PRIMARY KEY NOT NULL,
+  	"type" "enum_auth_evenements_type" NOT NULL,
+  	"code" "enum_auth_evenements_code" NOT NULL,
+  	"methode" "enum_auth_evenements_methode",
+  	"duree_ms" numeric,
+  	"date" timestamp(3) with time zone NOT NULL
+  );
+  
+  CREATE TABLE "demandes" (
+  	"id" serial PRIMARY KEY NOT NULL,
+  	"type" "enum_demandes_type" DEFAULT 'contact' NOT NULL,
+  	"statut" "enum_demandes_statut" DEFAULT 'nouvelle' NOT NULL,
+  	"etat_mail" "enum_demandes_etat_mail" DEFAULT 'en-attente' NOT NULL,
+  	"prenom" varchar NOT NULL,
+  	"nom" varchar NOT NULL,
+  	"email" varchar NOT NULL,
+  	"telephone" varchar NOT NULL,
+  	"message" varchar NOT NULL,
+  	"updated_at" timestamp(3) with time zone DEFAULT now() NOT NULL,
+  	"created_at" timestamp(3) with time zone DEFAULT now() NOT NULL
+  );
+  
+  CREATE TABLE "comptes_supprimes" (
+  	"id" serial PRIMARY KEY NOT NULL,
+  	"strapi_id" numeric NOT NULL,
+  	"date" timestamp(3) with time zone NOT NULL
+  );
+  
   CREATE TABLE "payload_kv" (
   	"id" serial PRIMARY KEY NOT NULL,
   	"key" varchar NOT NULL,
@@ -320,7 +381,10 @@ export async function up({ db }: MigrateUpArgs): Promise<void> {
   	"profils_id" integer,
   	"media_id" integer,
   	"talents_id" integer,
-  	"articles_id" integer
+  	"articles_id" integer,
+  	"auth_evenements_id" integer,
+  	"demandes_id" integer,
+  	"comptes_supprimes_id" integer
   );
   
   CREATE TABLE "payload_preferences" (
@@ -374,6 +438,9 @@ export async function up({ db }: MigrateUpArgs): Promise<void> {
   ALTER TABLE "payload_locked_documents_rels" ADD CONSTRAINT "payload_locked_documents_rels_media_fk" FOREIGN KEY ("media_id") REFERENCES "public"."media"("id") ON DELETE cascade ON UPDATE no action;
   ALTER TABLE "payload_locked_documents_rels" ADD CONSTRAINT "payload_locked_documents_rels_talents_fk" FOREIGN KEY ("talents_id") REFERENCES "public"."talents"("id") ON DELETE cascade ON UPDATE no action;
   ALTER TABLE "payload_locked_documents_rels" ADD CONSTRAINT "payload_locked_documents_rels_articles_fk" FOREIGN KEY ("articles_id") REFERENCES "public"."articles"("id") ON DELETE cascade ON UPDATE no action;
+  ALTER TABLE "payload_locked_documents_rels" ADD CONSTRAINT "payload_locked_documents_rels_auth_evenements_fk" FOREIGN KEY ("auth_evenements_id") REFERENCES "public"."auth_evenements"("id") ON DELETE cascade ON UPDATE no action;
+  ALTER TABLE "payload_locked_documents_rels" ADD CONSTRAINT "payload_locked_documents_rels_demandes_fk" FOREIGN KEY ("demandes_id") REFERENCES "public"."demandes"("id") ON DELETE cascade ON UPDATE no action;
+  ALTER TABLE "payload_locked_documents_rels" ADD CONSTRAINT "payload_locked_documents_rels_comptes_supprimes_fk" FOREIGN KEY ("comptes_supprimes_id") REFERENCES "public"."comptes_supprimes"("id") ON DELETE cascade ON UPDATE no action;
   ALTER TABLE "payload_preferences_rels" ADD CONSTRAINT "payload_preferences_rels_parent_fk" FOREIGN KEY ("parent_id") REFERENCES "public"."payload_preferences"("id") ON DELETE cascade ON UPDATE no action;
   ALTER TABLE "payload_preferences_rels" ADD CONSTRAINT "payload_preferences_rels_admins_fk" FOREIGN KEY ("admins_id") REFERENCES "public"."admins"("id") ON DELETE cascade ON UPDATE no action;
   ALTER TABLE "payload_preferences_rels" ADD CONSTRAINT "payload_preferences_rels_pros_fk" FOREIGN KEY ("pros_id") REFERENCES "public"."pros"("id") ON DELETE cascade ON UPDATE no action;
@@ -416,6 +483,10 @@ export async function up({ db }: MigrateUpArgs): Promise<void> {
   CREATE INDEX "media_updated_at_idx" ON "media" USING btree ("updated_at");
   CREATE INDEX "media_created_at_idx" ON "media" USING btree ("created_at");
   CREATE UNIQUE INDEX "media_filename_idx" ON "media" USING btree ("filename");
+  CREATE INDEX "media_sizes_thumbnail_sizes_thumbnail_filename_idx" ON "media" USING btree ("sizes_thumbnail_filename");
+  CREATE INDEX "media_sizes_small_sizes_small_filename_idx" ON "media" USING btree ("sizes_small_filename");
+  CREATE INDEX "media_sizes_medium_sizes_medium_filename_idx" ON "media" USING btree ("sizes_medium_filename");
+  CREATE INDEX "media_sizes_large_sizes_large_filename_idx" ON "media" USING btree ("sizes_large_filename");
   CREATE UNIQUE INDEX "talents_slug_idx" ON "talents" USING btree ("slug");
   CREATE UNIQUE INDEX "talents_strapi_id_idx" ON "talents" USING btree ("strapi_id");
   CREATE INDEX "talents_updated_at_idx" ON "talents" USING btree ("updated_at");
@@ -452,6 +523,17 @@ export async function up({ db }: MigrateUpArgs): Promise<void> {
   CREATE INDEX "_articles_v_rels_parent_idx" ON "_articles_v_rels" USING btree ("parent_id");
   CREATE INDEX "_articles_v_rels_path_idx" ON "_articles_v_rels" USING btree ("path");
   CREATE INDEX "_articles_v_rels_media_id_idx" ON "_articles_v_rels" USING btree ("media_id");
+  CREATE INDEX "auth_evenements_type_idx" ON "auth_evenements" USING btree ("type");
+  CREATE INDEX "auth_evenements_code_idx" ON "auth_evenements" USING btree ("code");
+  CREATE INDEX "auth_evenements_methode_idx" ON "auth_evenements" USING btree ("methode");
+  CREATE INDEX "auth_evenements_date_idx" ON "auth_evenements" USING btree ("date");
+  CREATE INDEX "demandes_type_idx" ON "demandes" USING btree ("type");
+  CREATE INDEX "demandes_statut_idx" ON "demandes" USING btree ("statut");
+  CREATE INDEX "demandes_etat_mail_idx" ON "demandes" USING btree ("etat_mail");
+  CREATE INDEX "demandes_updated_at_idx" ON "demandes" USING btree ("updated_at");
+  CREATE INDEX "demandes_created_at_idx" ON "demandes" USING btree ("created_at");
+  CREATE UNIQUE INDEX "comptes_supprimes_strapi_id_idx" ON "comptes_supprimes" USING btree ("strapi_id");
+  CREATE INDEX "comptes_supprimes_date_idx" ON "comptes_supprimes" USING btree ("date");
   CREATE UNIQUE INDEX "payload_kv_key_idx" ON "payload_kv" USING btree ("key");
   CREATE INDEX "payload_locked_documents_global_slug_idx" ON "payload_locked_documents" USING btree ("global_slug");
   CREATE INDEX "payload_locked_documents_updated_at_idx" ON "payload_locked_documents" USING btree ("updated_at");
@@ -465,6 +547,9 @@ export async function up({ db }: MigrateUpArgs): Promise<void> {
   CREATE INDEX "payload_locked_documents_rels_media_id_idx" ON "payload_locked_documents_rels" USING btree ("media_id");
   CREATE INDEX "payload_locked_documents_rels_talents_id_idx" ON "payload_locked_documents_rels" USING btree ("talents_id");
   CREATE INDEX "payload_locked_documents_rels_articles_id_idx" ON "payload_locked_documents_rels" USING btree ("articles_id");
+  CREATE INDEX "payload_locked_documents_rels_auth_evenements_id_idx" ON "payload_locked_documents_rels" USING btree ("auth_evenements_id");
+  CREATE INDEX "payload_locked_documents_rels_demandes_id_idx" ON "payload_locked_documents_rels" USING btree ("demandes_id");
+  CREATE INDEX "payload_locked_documents_rels_comptes_supprimes_id_idx" ON "payload_locked_documents_rels" USING btree ("comptes_supprimes_id");
   CREATE INDEX "payload_preferences_key_idx" ON "payload_preferences" USING btree ("key");
   CREATE INDEX "payload_preferences_updated_at_idx" ON "payload_preferences" USING btree ("updated_at");
   CREATE INDEX "payload_preferences_created_at_idx" ON "payload_preferences" USING btree ("created_at");
@@ -498,6 +583,9 @@ export async function down({ db }: MigrateDownArgs): Promise<void> {
   DROP TABLE "articles_rels" CASCADE;
   DROP TABLE "_articles_v" CASCADE;
   DROP TABLE "_articles_v_rels" CASCADE;
+  DROP TABLE "auth_evenements" CASCADE;
+  DROP TABLE "demandes" CASCADE;
+  DROP TABLE "comptes_supprimes" CASCADE;
   DROP TABLE "payload_kv" CASCADE;
   DROP TABLE "payload_locked_documents" CASCADE;
   DROP TABLE "payload_locked_documents_rels" CASCADE;
@@ -511,5 +599,11 @@ export async function down({ db }: MigrateDownArgs): Promise<void> {
   DROP TYPE "public"."enum_talents_status";
   DROP TYPE "public"."enum__talents_v_version_status";
   DROP TYPE "public"."enum_articles_status";
-  DROP TYPE "public"."enum__articles_v_version_status";`)
+  DROP TYPE "public"."enum__articles_v_version_status";
+  DROP TYPE "public"."enum_auth_evenements_type";
+  DROP TYPE "public"."enum_auth_evenements_code";
+  DROP TYPE "public"."enum_auth_evenements_methode";
+  DROP TYPE "public"."enum_demandes_type";
+  DROP TYPE "public"."enum_demandes_statut";
+  DROP TYPE "public"."enum_demandes_etat_mail";`)
 }

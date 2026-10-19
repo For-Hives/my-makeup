@@ -104,7 +104,6 @@
 		"src/lib/verrous-payload.ts",
 		"src/lib/version.ts",
 		"src/migration",
-		"src/migrations",
 		"src/payload-types.ts",
 		"src/payload.config.ts",
 		"src/proxy.ts",

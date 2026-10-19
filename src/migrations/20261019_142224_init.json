@@ -2078,6 +2078,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "titre_de_la_page": {
+          "name": "titre_de_la_page",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
         "description": {
           "name": "description",
           "type": "varchar",
@@ -2245,6 +2251,12 @@
         },
         "version_seo_title": {
           "name": "version_seo_title",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "version_titre_de_la_page": {
+          "name": "version_titre_de_la_page",
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
@@ -3204,6 +3216,13 @@
           "primaryKey": false,
           "notNull": true
         },
+        "methode": {
+          "name": "methode",
+          "type": "enum_auth_evenements_methode",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
         "duree_ms": {
           "name": "duree_ms",
           "type": "numeric",
@@ -3248,8 +3267,248 @@
           "method": "btree",
           "with": {}
         },
+        "auth_evenements_methode_idx": {
+          "name": "auth_evenements_methode_idx",
+          "columns": [
+            {
+              "expression": "methode",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
         "auth_evenements_date_idx": {
           "name": "auth_evenements_date_idx",
+          "columns": [
+            {
+              "expression": "date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.demandes": {
+      "name": "demandes",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "enum_demandes_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'contact'"
+        },
+        "statut": {
+          "name": "statut",
+          "type": "enum_demandes_statut",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'nouvelle'"
+        },
+        "etat_mail": {
+          "name": "etat_mail",
+          "type": "enum_demandes_etat_mail",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'en-attente'"
+        },
+        "prenom": {
+          "name": "prenom",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nom": {
+          "name": "nom",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "telephone": {
+          "name": "telephone",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "message": {
+          "name": "message",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "demandes_type_idx": {
+          "name": "demandes_type_idx",
+          "columns": [
+            {
+              "expression": "type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "demandes_statut_idx": {
+          "name": "demandes_statut_idx",
+          "columns": [
+            {
+              "expression": "statut",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "demandes_etat_mail_idx": {
+          "name": "demandes_etat_mail_idx",
+          "columns": [
+            {
+              "expression": "etat_mail",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "demandes_updated_at_idx": {
+          "name": "demandes_updated_at_idx",
+          "columns": [
+            {
+              "expression": "updated_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "demandes_created_at_idx": {
+          "name": "demandes_created_at_idx",
+          "columns": [
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.comptes_supprimes": {
+      "name": "comptes_supprimes",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "strapi_id": {
+          "name": "strapi_id",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "date": {
+          "name": "date",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "comptes_supprimes_strapi_id_idx": {
+          "name": "comptes_supprimes_strapi_id_idx",
+          "columns": [
+            {
+              "expression": "strapi_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "comptes_supprimes_date_idx": {
+          "name": "comptes_supprimes_date_idx",
           "columns": [
             {
               "expression": "date",
@@ -3472,6 +3731,18 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": false
+        },
+        "demandes_id": {
+          "name": "demandes_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "comptes_supprimes_id": {
+          "name": "comptes_supprimes_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -3624,6 +3895,36 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "payload_locked_documents_rels_demandes_id_idx": {
+          "name": "payload_locked_documents_rels_demandes_id_idx",
+          "columns": [
+            {
+              "expression": "demandes_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "payload_locked_documents_rels_comptes_supprimes_id_idx": {
+          "name": "payload_locked_documents_rels_comptes_supprimes_id_idx",
+          "columns": [
+            {
+              "expression": "comptes_supprimes_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -3724,6 +4025,32 @@
           "tableTo": "auth_evenements",
           "columnsFrom": [
             "auth_evenements_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "payload_locked_documents_rels_demandes_fk": {
+          "name": "payload_locked_documents_rels_demandes_fk",
+          "tableFrom": "payload_locked_documents_rels",
+          "tableTo": "demandes",
+          "columnsFrom": [
+            "demandes_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "payload_locked_documents_rels_comptes_supprimes_fk": {
+          "name": "payload_locked_documents_rels_comptes_supprimes_fk",
+          "tableFrom": "payload_locked_documents_rels",
+          "tableTo": "comptes_supprimes",
+          "columnsFrom": [
+            "comptes_supprimes_id"
           ],
           "columnsTo": [
             "id"
@@ -4149,8 +4476,11 @@
         "deconnexion-partout",
         "inscription",
         "confirmation",
+        "renvoi",
         "mot-de-passe-oublie",
-        "reinitialisation"
+        "reinitialisation",
+        "blocage",
+        "deblocage"
       ]
     },
     "public.enum_auth_evenements_code": {
@@ -4158,15 +4488,56 @@
       "schema": "public",
       "values": [
         "ok",
+        "heritee",
         "identifiants-invalides",
         "trop-de-tentatives",
         "service-indisponible",
         "email-non-confirme",
+        "compte-bloque",
         "donnees-invalides",
         "email-deja-pris",
         "deja-confirme",
         "lien-invalide",
-        "inconnu"
+        "email-non-verifie",
+        "compte-refuse",
+        "annule",
+        "retour-invalide",
+        "inconnu",
+        "champ-piege"
+      ]
+    },
+    "public.enum_auth_evenements_methode": {
+      "name": "enum_auth_evenements_methode",
+      "schema": "public",
+      "values": [
+        "mot-de-passe",
+        "google"
+      ]
+    },
+    "public.enum_demandes_type": {
+      "name": "enum_demandes_type",
+      "schema": "public",
+      "values": [
+        "contact"
+      ]
+    },
+    "public.enum_demandes_statut": {
+      "name": "enum_demandes_statut",
+      "schema": "public",
+      "values": [
+        "nouvelle",
+        "transmise",
+        "repondue",
+        "spam"
+      ]
+    },
+    "public.enum_demandes_etat_mail": {
+      "name": "enum_demandes_etat_mail",
+      "schema": "public",
+      "values": [
+        "en-attente",
+        "envoye",
+        "echec"
       ]
     }
   },
@@ -4180,6 +4551,6 @@
     "tables": {},
     "columns": {}
   },
-  "id": "990064bc-5d18-44e8-9b6d-724d984eecf3",
+  "id": "15ba810f-d476-49d4-90cf-d817ef927579",
   "prevId": "00000000-0000-0000-0000-000000000000"
 }
