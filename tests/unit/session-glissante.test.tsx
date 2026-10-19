@@ -4,14 +4,14 @@ import path from 'node:path'
 import { RafraichirSession } from '@/components/espace/RafraichirSession'
 import { createExtension, EXTENSION_ROUTE } from '@/lib/auth/extend'
 import {
-	SESSION_DURATION_S,
-	shouldExtend,
-	extensionDuration,
-	tokenExpiration,
-	openedAt,
-	SESSION_CAP_S,
 	capReached,
 	EXTENSION_THRESHOLD_S,
+	extensionDuration,
+	openedAt,
+	SESSION_CAP_S,
+	SESSION_DURATION_S,
+	shouldExtend,
+	tokenExpiration,
 } from '@/lib/auth/sliding-session'
 import { ouvrirFenetre } from '../outils/dom-react'
 
@@ -136,7 +136,7 @@ describe('le composant du navigateur', () => {
 
 describe('browser bundle boundary (079 review)', () => {
 	// The client component reaches these files: none may import server code, 'payload' above all.
-	for (const file of ['src/lib/auth/prolonger.ts', 'src/lib/auth/duree-session.ts']) {
+	for (const file of ['src/lib/auth/extend.ts', 'src/lib/auth/session-duration.ts']) {
 		test(`${file} imports nothing from payload`, () => {
 			const code = readFileSync(path.join(process.cwd(), file), 'utf8')
 			const imports = [...code.matchAll(/^\s*(?:import|export)[^'"]*from\s+['"]([^'"]+)['"]/gm)].map(m => m[1] ?? '')

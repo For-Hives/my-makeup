@@ -10,7 +10,7 @@
 
 import { type AuthCollectionSlug, generatePayloadCookie, type Payload } from 'payload'
 import { cookieEndOfLife } from '../../src/lib/auth/session-state'
-import { type DesignatedAccount, openWithPassword, openWithoutPassword } from '../../src/lib/auth/token'
+import { type DesignatedAccount, openWithoutPassword, openWithPassword } from '../../src/lib/auth/token'
 import { BancRefuse, type Variables } from './banc'
 
 /** A cookie as a browser context takes it: the shape of Playwright's `context.addCookies()`. */
@@ -38,7 +38,7 @@ export interface Session {
 	expire: Date
 }
 
-export type { DesignatedAccount as CompteDesigne }
+export type { DesignatedAccount }
 
 export interface Identifiants {
 	collection: AuthCollectionSlug

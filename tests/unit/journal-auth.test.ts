@@ -1,16 +1,16 @@
 import { describe, expect, test } from 'bun:test'
 import type { Payload } from 'payload'
-import { signInWithPassword } from '@/lib/auth/sign-in'
-import { createRateLimit } from '@/lib/auth/rate-limit'
 import {
-	EVENT_CODES,
 	AUTH_LOG_RETENTION_DAYS,
 	type AuthEvent,
-	log,
 	authLogRow,
-	purgeThreshold,
+	EVENT_CODES,
 	EVENT_TYPES,
+	log,
+	purgeThreshold,
 } from '@/lib/auth/auth-log'
+import { createRateLimit } from '@/lib/auth/rate-limit'
+import { signInWithPassword } from '@/lib/auth/sign-in'
 import { demarrerLesTachesQuotidiennes } from '@/lib/taches/planificateur'
 import { lancerLesTachesQuotidiennes, type TacheQuotidienne } from '@/lib/taches/quotidiennes'
 

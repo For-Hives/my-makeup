@@ -3,26 +3,26 @@ import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 import { attributsDeLaMarque, COOKIE_DE_MARQUE_DE_CONNEXION } from '@/lib/analytics/marque-connexion'
-import { sessionCookie } from '@/lib/auth/set-session-cookie'
-import { GOOGLE_START_PATH, GOOGLE_COOKIE, configGoogle, dashboardSite } from '@/lib/auth/google/config'
-import { finishGoogleSignIn } from '@/lib/auth/google/google-sign-in'
-import { ipClient } from '@/lib/auth/client-ip'
 import { authLog } from '@/lib/auth/auth-log'
+import { ipClient } from '@/lib/auth/client-ip'
+import { configGoogle, dashboardSite, GOOGLE_COOKIE, GOOGLE_START_PATH } from '@/lib/auth/google/config'
+import { finishGoogleSignIn } from '@/lib/auth/google/google-sign-in'
 import { RELAY_HEADERS, relayPage } from '@/lib/auth/relay-page'
 import { safeReturnTo } from '@/lib/auth/return-to'
+import { sessionCookie } from '@/lib/auth/set-session-cookie'
 import { serverEnv } from '@/lib/env'
 
 // Read per request, never cached: it opens a session.
 export const dynamic = 'force-dynamic'
 
-/** The page that ends the return: the relay page (`src/lib/auth/page-de-relais.ts`), so that the first page of the space sees the cookie. */
+/** The page that ends the return: the relay page (`src/lib/auth/relay-page.ts`), so that the first page of the space sees the cookie. */
 function goThroughSite(chemin: string): NextResponse {
 	return new NextResponse(relayPage(chemin), { status: 200, headers: RELAY_HEADERS })
 }
 
 /**
  * Where Google sends the browser back (tickets 090 and 091). Everything is decided in
- * `terminerLaConnexionGoogle`; this door reads the request, puts the session in its cookie like the
+ * `finishGoogleSignIn`; this door reads the request, puts the session in its cookie like the
  * password sign-in does, and sends the browser on (a refusal: a redirection to the sign-in form;
  * a success: `passerParLeSite`). The cookie of the request is spent whatever the outcome,
  * so that a return cannot be played twice. The address of the site comes from the configuration,

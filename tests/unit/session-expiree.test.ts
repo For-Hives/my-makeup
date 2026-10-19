@@ -1,16 +1,16 @@
 import { describe, expect, test } from 'bun:test'
 import { NextRequest } from 'next/server'
-import { EXPIRED_SESSION_MESSAGE, urlMessage } from '@/lib/auth/errors'
 import { dashboardDecision } from '@/lib/auth/closed-dashboard'
+import { EXPIRED_SESSION_MESSAGE, urlMessage } from '@/lib/auth/errors'
+import { expiredSessionUrl, safeReturnTo } from '@/lib/auth/return-to'
 import {
+	COOKIE_SURVIVAL_AFTER_END_S,
 	classifySession,
-	tokenState,
 	cookieEndOfLife,
 	readExpiration,
-	COOKIE_SURVIVAL_AFTER_END_S,
+	tokenState,
 	verifySession,
 } from '@/lib/auth/session-state'
-import { safeReturnTo, expiredSessionUrl } from '@/lib/auth/return-to'
 import { proxy } from '@/proxy'
 
 /** A token shaped like Payload's, signed with nothing: only its end date is ever read here. */

@@ -1,19 +1,19 @@
 import type { CollectionAfterErrorHook, CollectionBeforeOperationHook } from 'payload'
-import { failureCode, type Clock, REFUSAL_FLOOR_MS } from './sign-in'
 import { fakeVerificationWork } from './legacy'
+import { type Clock, failureCode, REFUSAL_FLOOR_MS } from './sign-in'
 
 /**
  * The equal time of a refused sign-in on the REST door, `POST /api/pros/login` (ticket 088). The
- * form does the same in `connecter`; without it here, a script would tell an unknown address (an
+ * form does the same in `signInWithPassword`; without it here, a script would tell an unknown address (an
  * answer in a few milliseconds) from a known one (the password check, a few hundred) on the API.
  *
- * - `egaliserLeTravailRest` (before the operation, after the brake): notes the moment the answer
+ * - `equalizeRestWork` (before the operation, after the brake): notes the moment the answer
  *   may leave, and when the address has no account that can check a password, does the work Payload
  *   would have done for a known one.
- * - `retenirLesEchecsRest` (after an error): a refusal of the credentials waits for that moment.
+ * - `rememberRestFailures` (after an error): a refusal of the credentials waits for that moment.
  *
  * Only a request that comes through REST: the Server Action calls the Local API and does this in
- * `connecter`, so an attempt never waits twice.
+ * `signInWithPassword`, so an attempt never waits twice.
  */
 
 const FLOOR_KEY = 'plancherDeLaConnexion'
@@ -30,10 +30,7 @@ interface Dependencies {
 }
 
 export const equalizeRestWork =
-	({
-		horloge = realClock,
-		travailFictif = fakeVerificationWork,
-	}: Dependencies = {}): CollectionBeforeOperationHook =>
+	({ horloge = realClock, travailFictif = fakeVerificationWork }: Dependencies = {}): CollectionBeforeOperationHook =>
 	async ({ args, collection, operation, req }) => {
 		if (operation !== 'login' || req.payloadAPI !== 'REST') return
 		req.context[FLOOR_KEY] = horloge.maintenant() + REFUSAL_FLOOR_MS

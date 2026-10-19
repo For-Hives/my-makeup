@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
-import { dashboardHeaders } from '@/lib/auth/dashboard-headers'
 import { dashboardRedirection } from '@/lib/auth/closed-dashboard'
+import { dashboardHeaders } from '@/lib/auth/dashboard-headers'
 import * as moduleProxy from '@/proxy'
 
 const config = (moduleProxy as { config?: { matcher?: unknown } }).config

@@ -4,17 +4,17 @@ import config from '@payload-config'
 import { headers } from 'next/headers'
 import { getPayload } from 'payload'
 import type { ResendState } from '@/components/auth/ResendForm'
-import { resendRateLimit } from '@/lib/auth/sign-up-rate-limits'
-import { ipClient } from '@/lib/auth/client-ip'
 import { authLog } from '@/lib/auth/auth-log'
-import { logRefusal } from '@/lib/auth/sign-up-refusal'
+import { ipClient } from '@/lib/auth/client-ip'
 import { RESEND_MESSAGES, resendConfirmation } from '@/lib/auth/resend'
+import { resendRateLimit } from '@/lib/auth/sign-up-rate-limits'
+import { logRefusal } from '@/lib/auth/sign-up-refusal'
 import { envoiEmailDePayload } from '@/lib/emails/envoi'
 import { serverEnv } from '@/lib/env'
 
 /**
  * « Renvoyer l'email de confirmation », from the wall of verification (ticket 083). Braked by client
- * address here (10 an hour), and by mailbox inside `renvoyerLaConfirmation` (1 a minute, 5 a day).
+ * address here (10 an hour), and by mailbox inside `resendConfirmation` (1 a minute, 5 a day).
  * The answer is the same for an address with an account waiting, a confirmed one and an unknown one.
  */
 export async function resendEmail(_precedent: ResendState, formulaire: FormData): Promise<ResendState> {

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
 import { AuthenticationError } from 'payload'
-import { signInWithPassword } from '@/lib/auth/sign-in'
 import { createRateLimit } from '@/lib/auth/rate-limit'
+import { signInWithPassword } from '@/lib/auth/sign-in'
 
 const frein = createRateLimit({ nom: 'essai-connexion', limite: 10, fenetreMs: 15 * 60_000 })
 beforeEach(() => frein.vider())
@@ -73,7 +73,13 @@ describe('connecter', () => {
 		const { ouvrir } = faux(() => Promise.reject(new Error('base injoignable')))
 		for (let i = 0; i < 15; i++)
 			expect(
-				await signInWithPassword({ ouvrir, headers: adresse('192.0.2.2'), email: 'a@example.test', password: 'x', frein })
+				await signInWithPassword({
+					ouvrir,
+					headers: adresse('192.0.2.2'),
+					email: 'a@example.test',
+					password: 'x',
+					frein,
+				})
 			).toEqual({
 				ok: false,
 				code: 'service-indisponible',
@@ -84,7 +90,13 @@ describe('connecter', () => {
 		const { ouvrir, appels } = faux(refuse)
 		for (let i = 0; i < 10; i++)
 			expect(
-				await signInWithPassword({ ouvrir, headers: adresse('192.0.2.3'), email: 'a@example.test', password: 'x', frein })
+				await signInWithPassword({
+					ouvrir,
+					headers: adresse('192.0.2.3'),
+					email: 'a@example.test',
+					password: 'x',
+					frein,
+				})
 			).toEqual({
 				ok: false,
 				code: 'identifiants-invalides',

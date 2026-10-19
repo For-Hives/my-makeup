@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, setSystemTime, test } from 'bun:test'
 import { getFieldsToSign, jwtSign } from 'payload'
 import { cookieEndOfLife } from '@/lib/auth/session-state'
-import { tokenExpiration, SESSION_CAP_S } from '@/lib/auth/sliding-session'
+import { SESSION_CAP_S, tokenExpiration } from '@/lib/auth/sliding-session'
 import { creerCompte } from '../outils/fabrique-comptes'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
 import { appelerRest } from '../outils/rest'

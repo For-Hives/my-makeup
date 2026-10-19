@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { mailboxKey, canonicalEmail, canonicalGmailLocal } from '@/lib/auth/canonical-email'
+import { canonicalEmail, canonicalGmailLocal, mailboxKey } from '@/lib/auth/canonical-email'
 import { createRateLimit } from '@/lib/auth/rate-limit'
 import { takeMailFor } from '@/lib/auth/sign-up-rate-limits'
 

@@ -13,7 +13,7 @@ const DEFAULT_MESSAGE = 'Une erreur est survenue, réessaie dans quelques minute
 /**
  * The error page of the sign-in (ticket 228, `espace-erreur` of docs/migration/URLS.md): it answers 200
  * with or without a code, where the current site sent a code-less visit on to itself with a code. The
- * sentence comes from the closed list of `erreurDeLUrl`: the value of the address is never shown.
+ * sentence comes from the closed list of `urlError`: the value of the address is never shown.
  */
 export default async function SignInErrorPage({
 	searchParams,

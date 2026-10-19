@@ -1,17 +1,17 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, spyOn, test } from 'bun:test'
-import { closeSession } from '@/lib/auth/sign-out'
-import { createRateLimit, type RateLimit } from '@/lib/auth/rate-limit'
-import { type GoogleOutcome, finishGoogleSignIn } from '@/lib/auth/google/google-sign-in'
+import { authLog } from '@/lib/auth/auth-log'
+import { finishGoogleSignIn, type GoogleOutcome } from '@/lib/auth/google/google-sign-in'
 import {
 	type ConfigGoogle,
-	type PendingRequest,
-	discover,
 	clearDocuments,
+	discover,
+	type PendingRequest,
 	prepareStart,
 	type Query,
 	seal,
 } from '@/lib/auth/google/oidc'
-import { authLog } from '@/lib/auth/auth-log'
+import { createRateLimit, type RateLimit } from '@/lib/auth/rate-limit'
+import { closeSession } from '@/lib/auth/sign-out'
 import { creerCompte } from '../outils/fabrique-comptes'
 import { type Demande, fauxGoogle } from '../outils/faux-google'
 import { compterLesMails, viderLeCapteur } from '../outils/mailpit'

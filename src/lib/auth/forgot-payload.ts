@@ -5,9 +5,9 @@ import { APIError, type CollectionBeforeOperationHook } from 'payload'
  *
  * - The native REST doors of Payload, `POST /api/pros/forgot-password` and `/reset-password`, are
  *   closed: they would go around the brake of the client address and the floor of time that the
- *   site's own request has (`demanderUnLien`). 403 and the same sentence for everyone, whatever the
+ *   site's own request has (`requestPasswordLink`). 403 and the same sentence for everyone, whatever the
  *   address. The Local API, which the Server Actions use, has no `payloadAPI` of `REST`.
- * - `CONTEXTE_DE_REINITIALISATION` marks the transaction of the reset: the reset is no sign-in, and
+ * - `PASSWORD_RESET_CONTEXT` marks the transaction of the reset: the reset is no sign-in, and
  *   the date of the last sign-in is left alone.
  */
 

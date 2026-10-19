@@ -1,7 +1,7 @@
 import { APIError, type CollectionAfterLoginHook, type CollectionBeforeOperationHook } from 'payload'
+import { ipClient } from './client-ip'
 import { errorMessage } from './errors'
 import { type RateLimit, signInRateLimit } from './rate-limit'
-import { ipClient } from './client-ip'
 
 /**
  * The brake on the REST door of the sign-in, `POST /api/pros/login` (ticket 076): without it, the
@@ -9,7 +9,7 @@ import { ipClient } from './client-ip'
  *
  * Only a request that comes through REST is counted: it carries the headers the proxy wrote. The
  * Server Action calls the Local API, which has none; it brakes by itself with the same counters
- * (`connecter`), so an attempt is never counted twice.
+ * (`signInWithPassword`), so an attempt is never counted twice.
  *
  * A place is taken before Payload looks at the account, and given back when the sign-in succeeds.
  * 429, in French and public, and the same for every email: it says nothing about the account.

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
-import { GOOGLE_ERROR_CODES, urlError, urlMessage, errorMessage } from '@/lib/auth/errors'
 import { authLogRow, EVENT_METHODS } from '@/lib/auth/auth-log'
+import { errorMessage, GOOGLE_ERROR_CODES, urlError, urlMessage } from '@/lib/auth/errors'
 import { safeReturnTo } from '@/lib/auth/return-to'
 
 /** The messages of the Google sign-in and its place in the journal (tickets 090 and 091). */

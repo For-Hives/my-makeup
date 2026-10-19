@@ -1,5 +1,5 @@
 import type { ServerProps } from 'payload'
-import { type FilterKey, FILTER_LABELS, filterLink, filterWhere } from '../../lib/account/admin-filters'
+import { FILTER_LABELS, type FilterKey, filterLink, filterWhere } from '../../lib/account/admin-filters'
 
 const CLES: FilterKey[] = ['non-confirmes', 'sans-profil', 'bloques']
 

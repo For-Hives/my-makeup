@@ -9,7 +9,7 @@ import type { Payload } from 'payload'
  * or a token, so nothing a visitor types can reach it. A value that is not in a list is written as
  * `inconnu`, never as it came.
  *
- * Writing it never fails the event it describes: `journaliser` swallows its own errors and leaves
+ * Writing it never fails the event it describes: `log` swallows its own errors and leaves
  * one line in the application log, with no detail.
  *
  * No `next` import: the collection, the scripts and the tests load this file too.
@@ -32,7 +32,7 @@ export type EventType = (typeof EVENT_TYPES)[number]
 
 /**
  * How it ended. `inconnu` is what a value outside the list becomes. The sign-in codes are those of
- * `src/lib/auth/erreurs.ts`.
+ * `src/lib/auth/errors.ts`.
  */
 export const EVENT_CODES = [
 	'ok',
@@ -81,20 +81,21 @@ export type Log = (evenement: AuthEvent) => Promise<void>
 
 const isCode = (valeur: unknown): valeur is EventCode => (EVENT_CODES as readonly unknown[]).includes(valeur)
 
-const isMethod = (valeur: unknown): valeur is EventMethod =>
-	(EVENT_METHODS as readonly unknown[]).includes(valeur)
+const isMethod = (valeur: unknown): valeur is EventMethod => (EVENT_METHODS as readonly unknown[]).includes(valeur)
 
 /**
  * The row to write: a code outside the list becomes `inconnu`, the duration is a whole number of
  * milliseconds. Nothing else is copied. A kind outside its list is refused by the collection itself
- * (a select field), and `journaliser` then writes nothing.
+ * (a select field), and `log` then writes nothing.
  */
 export function authLogRow(evenement: AuthEvent, maintenant: Date = new Date()) {
 	const duration = evenement.durationMs
 	return {
 		type: evenement.type,
 		code: isCode(evenement.code) ? evenement.code : ('inconnu' as const),
-		...(typeof duration === 'number' && Number.isFinite(duration) && duration >= 0 && { durationMs: Math.round(duration) }),
+		...(typeof duration === 'number' &&
+			Number.isFinite(duration) &&
+			duration >= 0 && { durationMs: Math.round(duration) }),
 		...(isMethod(evenement.method) && { method: evenement.method }),
 		date: maintenant.toISOString(),
 	}
@@ -104,10 +105,7 @@ export function authLogRow(evenement: AuthEvent, maintenant: Date = new Date()) 
  * Writes one row, outside any transaction of the event (no `req`): the sign-in holds a lock on the
  * account while it runs, and a failure here must not abort it. Never throws.
  */
-export async function log(
-	payload: Pick<Payload, 'create' | 'logger'>,
-	evenement: AuthEvent
-): Promise<void> {
+export async function log(payload: Pick<Payload, 'create' | 'logger'>, evenement: AuthEvent): Promise<void> {
 	try {
 		await payload.create({
 			collection: AUTH_LOG_COLLECTION,
@@ -125,7 +123,7 @@ export async function log(
 	}
 }
 
-/** The journal wired to a Payload instance, as `connecter` and the actions receive it. */
+/** The journal wired to a Payload instance, as `signInWithPassword` and the actions receive it. */
 export const authLog =
 	(payload: Pick<Payload, 'create' | 'logger'>): Log =>
 	evenement =>

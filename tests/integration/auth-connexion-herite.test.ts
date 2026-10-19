@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, test } from 'bun:test'
-import { signInWithPassword } from '@/lib/auth/sign-in'
-import { createRateLimit } from '@/lib/auth/rate-limit'
-import { replaceLegacyHash } from '@/lib/auth/legacy'
-import { openWithPassword } from '@/lib/auth/token'
 import { authLog } from '@/lib/auth/auth-log'
+import { replaceLegacyHash } from '@/lib/auth/legacy'
+import { createRateLimit } from '@/lib/auth/rate-limit'
+import { signInWithPassword } from '@/lib/auth/sign-in'
+import { openWithPassword } from '@/lib/auth/token'
 import { creerCompte, MOT_DE_PASSE_HERITE_DE_FIXTURE } from '../outils/fabrique-comptes'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
 import { appelerRest } from '../outils/rest'
@@ -94,7 +94,13 @@ describe('I15 : un compte migré (bcrypt) se connecte, son hash est remplacé, l
 		const { entrees, frein } = await brancher('essai-int-herite-2')
 		const avant = await ligneDuCompte(compte.id)
 
-		const r = await signInWithPassword({ ...entrees, headers: adresse(22), email: compte.email, password: 'pas-le-bon', frein })
+		const r = await signInWithPassword({
+			...entrees,
+			headers: adresse(22),
+			email: compte.email,
+			password: 'pas-le-bon',
+			frein,
+		})
 
 		expect(r).toEqual({ ok: false, code: 'identifiants-invalides' })
 		const apres = await ligneDuCompte(compte.id)
@@ -177,7 +183,13 @@ describe('I15 : un compte migré (bcrypt) se connecte, son hash est remplacé, l
 			password: MOT_DE_PASSE_HERITE_DE_FIXTURE,
 			frein,
 		})
-		const choisi = await signInWithPassword({ ...entrees, headers: adresse(26), email: compte.email, password: nouveau, frein })
+		const choisi = await signInWithPassword({
+			...entrees,
+			headers: adresse(26),
+			email: compte.email,
+			password: nouveau,
+			frein,
+		})
 		expect(ancien).toEqual({ ok: false, code: 'identifiants-invalides' })
 		expect(choisi.ok).toBe(true)
 		expect(appels.herite).toBe(1)
@@ -215,7 +227,13 @@ describe('I15 : un compte migré (bcrypt) se connecte, son hash est remplacé, l
 			password: MOT_DE_PASSE_HERITE_DE_FIXTURE,
 			frein,
 		})
-		const choisi = await signInWithPassword({ ...entrees, headers: adresse(27), email: compte.email, password: nouveau, frein })
+		const choisi = await signInWithPassword({
+			...entrees,
+			headers: adresse(27),
+			email: compte.email,
+			password: nouveau,
+			frein,
+		})
 		expect(ancien).toEqual({ ok: false, code: 'identifiants-invalides' })
 		expect(choisi.ok).toBe(true)
 	})

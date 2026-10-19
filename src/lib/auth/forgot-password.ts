@@ -6,7 +6,7 @@ import { EMAIL_MAX, MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from './sign-up'
  * link, the proxy and the server share them. No `next` import, no Payload.
  *
  * - The request answers the same sentence whether the address has an account or not
- *   (`MESSAGES_MOT_DE_PASSE.envoyee`); the only refusals are ones that depend on the visitor alone
+ *   (`PASSWORD_MESSAGES.envoyee`); the only refusals are ones that depend on the visitor alone
  *   (an address that is not an address, too many tries from this client address).
  * - The link of the mail holds a token of 40 hexadecimal characters (Payload's own). It is moved from
  *   the URL to a cookie by the proxy before any page is rendered, so that it never reaches the
@@ -27,7 +27,7 @@ export const PASSWORD_RESET_TOKEN = /^[0-9a-f]{40}$/
 /** What the proxy accepts to keep in the cookie: the old site's codes too, so the page can say « plus valable ». */
 const CODE_TO_KEEP = /^[A-Za-z0-9_-]{16,512}$/
 
-export const PASSWORD_RESET_COOKIE = 'mm-reinit'
+export const PASSWORD_RESET_COOKIE = 'mm-reset'
 export const PASSWORD_RESET_PAGE = '/auth/reinitialiser'
 export const FORGOT_PASSWORD_PAGE = '/auth/mot-de-passe-oublie'
 
@@ -48,10 +48,7 @@ export const PASSWORD_MESSAGES = {
 export type PasswordCode = keyof typeof PASSWORD_MESSAGES
 
 export type ForgotPasswordFailureCode = 'email-vide' | 'email-invalide' | 'trop-de-tentatives' | 'service-indisponible'
-export type PasswordResetFailureCode = Exclude<
-	PasswordCode,
-	'envoyee' | 'email-vide' | 'email-invalide' | 'modifie'
->
+export type PasswordResetFailureCode = Exclude<PasswordCode, 'envoyee' | 'email-vide' | 'email-invalide' | 'modifie'>
 
 const text = (valeur: unknown): string => (typeof valeur === 'string' ? valeur : '')
 

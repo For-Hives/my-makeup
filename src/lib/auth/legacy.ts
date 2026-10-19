@@ -53,13 +53,8 @@ export const PAYLOAD_PBKDF2 = { iterations: 600_000, longueur: 32 } as const
 /** Does the work Payload does to check a password, on nothing: the result is of no use. */
 export function fakeVerificationWork(motDePasse: string): Promise<void> {
 	return new Promise(resolve =>
-		pbkdf2(
-			motDePasse,
-			'sel-fictif-sans-compte',
-			PAYLOAD_PBKDF2.iterations,
-			PAYLOAD_PBKDF2.longueur,
-			'sha256',
-			() => resolve()
+		pbkdf2(motDePasse, 'sel-fictif-sans-compte', PAYLOAD_PBKDF2.iterations, PAYLOAD_PBKDF2.longueur, 'sha256', () =>
+			resolve()
 		)
 	)
 }
@@ -94,7 +89,7 @@ export async function replaceLegacyHash(
 		where: { email: { equals: email.trim().toLowerCase() } },
 	})
 	// No row, or a row with no password of Payload's: Payload has checked nothing for it, so the work it
-	// does for a known account is done here (the same test as the REST door, temps-egalise-payload.ts).
+	// does for a known account is done here (the same test as the REST door, equal-time-payload.ts).
 	if (!row || typeof row.salt !== 'string' || typeof row.hash !== 'string') await travailFictif(password)
 	const hash = row?.legacyBcrypt
 	const accepted = await hashPassword(password, hash)

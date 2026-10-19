@@ -2,12 +2,12 @@ import { cookies } from 'next/headers'
 import type { Payload } from 'payload'
 import { type SessionCookie, sessionCookieFor } from './session-cookie'
 
-export type { SessionCookie as CookieDeSession }
+export type { SessionCookie }
 
 /**
  * The session cookie of a makeup artist: HttpOnly, SameSite=Lax, Secure on the deployed site, for
  * as long as the session lasts. The one place that decides what it looks like, for a Server Action
- * (`poserLeCookieDeSession`) and for a route that answers with its own response (the return from
+ * (`setSessionCookie`) and for a route that answers with its own response (the return from
  * Google). The rule itself is in `cookie-de-session.ts`, which the sliding renewal shares.
  */
 export function sessionCookie(payload: Payload, token: string): SessionCookie {

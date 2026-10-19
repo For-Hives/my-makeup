@@ -1,17 +1,17 @@
 import { type NextRequest, NextResponse } from 'next/server'
+import { ipClient } from '@/lib/auth/client-ip'
+import { dashboardDecision, isPrivatePage, SESSION_COOKIE } from '@/lib/auth/closed-dashboard'
+import { linkPlan, PASSWORD_RESET_COOKIE } from '@/lib/auth/forgot-password'
 import {
-	MESSAGE_COOKIE,
+	CUTOVER_VARIABLE,
+	cleanupPlan,
 	clearingCookie,
+	MESSAGE_COOKIE,
 	MESSAGE_DURATION_SECONDS,
 	MESSAGE_HEADER,
-	cleanupPlan,
-	CUTOVER_VARIABLE,
 } from '@/lib/auth/legacy-cookies'
-import { SESSION_COOKIE, dashboardDecision, isPrivatePage } from '@/lib/auth/closed-dashboard'
-import { ipClient } from '@/lib/auth/client-ip'
-import { PASSWORD_RESET_COOKIE, linkPlan } from '@/lib/auth/forgot-password'
-import { RELAY_HEADERS, relayPage, comesFromOtherSite } from '@/lib/auth/relay-page'
-import { SIGN_UP_PATH, REFUSAL_PATH, secondsBeforeSignUp } from '@/lib/auth/sign-up-refusal'
+import { comesFromOtherSite, RELAY_HEADERS, relayPage } from '@/lib/auth/relay-page'
+import { REFUSAL_PATH, SIGN_UP_PATH, secondsBeforeSignUp } from '@/lib/auth/sign-up-refusal'
 import {
 	CHEMIN_DU_CONTACT,
 	CHEMIN_DU_REFUS_DE_CONTACT,
@@ -28,7 +28,7 @@ import { adresseAVerifier, type FamilleVerifiee } from '@/lib/urls/page-inconnue
  *   redirect of the final slash is off (next.config.ts), so that no address makes two hops.
  * - The private pages of the space answer one redirection to the sign-in page when no session cookie
  *   comes with the request (ticket 075), or when its end date has passed (ticket 080: with the
- *   « session expirée » message). The authoritative check is the page's own (`exigerMaquilleuse`).
+ *   « session expirée » message). The authoritative check is the page's own (`requireArtist`).
  * - The link of a forgotten-password mail (`/auth/reinitialiser?code=…`) answers one redirection to the bare
  *   page, the code kept in a cookie of that page only (ticket 085): it never reaches a page, the audience
  *   measurement, the history or a Referer.

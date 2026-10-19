@@ -4,13 +4,13 @@ import config from '@payload-config'
 import { cookies, headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { getPayload } from 'payload'
-import { closeSession } from '@/lib/auth/sign-out'
 import { authLog } from '@/lib/auth/auth-log'
 import { PAGE_AFTER_SIGN_OUT } from '@/lib/auth/return-to'
+import { closeSession } from '@/lib/auth/sign-out'
 
 /**
  * The sign-out of the space (ticket 078). Both actions remove the session from the database first
- * (`fermerLaSession`), clear the cookie whatever happened, and send the visitor to a page that
+ * (`closeSession`), clear the cookie whatever happened, and send the visitor to a page that
  * exists and answers without a session: the home page.
  *
  * The origin is checked as in the sign-in (Next refuses a Server Action from another origin before

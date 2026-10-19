@@ -3,14 +3,9 @@ import { createHash } from 'node:crypto'
 import type { Payload } from 'payload'
 import { UnverifiedEmail } from 'payload'
 import { confirmEmail } from '@/lib/auth/confirmation'
-import { failureCode } from '@/lib/auth/sign-in'
 import { errorMessage } from '@/lib/auth/errors'
-import {
-	SIGN_UP_FIELDS,
-	SIGN_UP_FAILURE_MESSAGES,
-	SIGN_UP_MESSAGES,
-	validateSignUp,
-} from '@/lib/auth/sign-up'
+import { failureCode } from '@/lib/auth/sign-in'
+import { SIGN_UP_FAILURE_MESSAGES, SIGN_UP_FIELDS, SIGN_UP_MESSAGES, validateSignUp } from '@/lib/auth/sign-up'
 import { failureCode as codeDeLEchecDInscription, isAddressAlreadyTaken } from '@/lib/auth/sign-up-payload'
 import { contenuEmailConfirmation } from '@/lib/emails/confirmation'
 import { composerEmail } from '@/lib/emails/gabarit'

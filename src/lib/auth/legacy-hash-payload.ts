@@ -8,10 +8,10 @@ import type { CollectionAfterChangeHook, CollectionBeforeValidateHook } from 'pa
  * link, a Google account that defines one), the old hash must go: left in place, the old password
  * would still open the account and would then overwrite the password the person just chose.
  *
- * - `effacerLeHashHeriteAuRenouvellement` (before validation) notes an update that carries a
+ * - `clearLegacyHashOnRenewal` (before validation) notes an update that carries a
  *   password, and, for Payload's reset, which writes the hash and the salt of the whole row itself
  *   and runs only this kind of hook, erases the old hash in the row it is about to write.
- * - `effacerLeHashHeriteApresUnMotDePasse` (after a change): erases the old hash of the noted
+ * - `clearLegacyHashAfterPassword` (after a change): erases the old hash of the noted
  *   update. Written straight to the database, because the field is closed to every API (an admin's
  *   request cannot write it, so a hook through the Local API could not either).
  *
@@ -20,12 +20,7 @@ import type { CollectionAfterChangeHook, CollectionBeforeValidateHook } from 'pa
 
 const PASSWORD_KEY = 'motDePasseChoisiPourEffacerLeHashHerite'
 
-export const clearLegacyHashAfterPassword: CollectionAfterChangeHook = async ({
-	collection,
-	doc,
-	operation,
-	req,
-}) => {
+export const clearLegacyHashAfterPassword: CollectionAfterChangeHook = async ({ collection, doc, operation, req }) => {
 	if (operation !== 'update' || req.context[PASSWORD_KEY] !== true) return doc
 	delete req.context[PASSWORD_KEY]
 	await req.payload.db.updateOne({
@@ -38,12 +33,7 @@ export const clearLegacyHashAfterPassword: CollectionAfterChangeHook = async ({
 	return doc
 }
 
-export const clearLegacyHashOnRenewal: CollectionBeforeValidateHook = ({
-	data,
-	operation,
-	originalDoc,
-	req,
-}) => {
+export const clearLegacyHashOnRenewal: CollectionBeforeValidateHook = ({ data, operation, originalDoc, req }) => {
 	if (operation !== 'update' || !data) return data
 	const written = data as { password?: unknown; salt?: unknown; legacyBcrypt?: unknown }
 	// An update that carries a password: Payload hashes it later and drops it from `data`, so it is noted here

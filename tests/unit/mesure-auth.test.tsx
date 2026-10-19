@@ -1,9 +1,9 @@
 import { describe, expect, test } from 'bun:test'
 import { ConnexionReussie } from '@/components/analytics/ConnexionReussie'
-import { SignInPageEvents } from '@/components/auth/SignInPageEvents'
-import { SignInForm } from '@/components/auth/SignInForm'
-import { SignUpForm } from '@/components/auth/SignUpForm'
 import { GoogleLink } from '@/components/auth/GoogleLink'
+import { SignInForm } from '@/components/auth/SignInForm'
+import { SignInPageEvents } from '@/components/auth/SignInPageEvents'
+import { SignUpForm } from '@/components/auth/SignUpForm'
 import { CODES_D_ERREUR_D_AUTHENTIFICATION, donneesDEvenement } from '@/lib/analytics/events'
 import { methodeDeLaMarque } from '@/lib/analytics/marque-connexion'
 import type { Suivre } from '@/lib/analytics/track'
@@ -65,9 +65,7 @@ describe('connexion par email', () => {
 
 	test('rien n’est envoyé avant la première réponse', async () => {
 		const { envois, suivre } = espion()
-		await fenetre.monter(
-			<SignInForm action={(async () => null) as never} retour="/auth/profil" suivre={suivre} />
-		)
+		await fenetre.monter(<SignInForm action={(async () => null) as never} retour="/auth/profil" suivre={suivre} />)
 		expect(envois).toEqual([])
 	})
 })

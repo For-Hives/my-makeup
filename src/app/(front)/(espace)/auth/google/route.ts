@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server'
 import {
-	GOOGLE_START_PATH,
-	GOOGLE_COOKIE,
 	configGoogle,
 	dashboardSite,
+	GOOGLE_COOKIE,
 	GOOGLE_COOKIE_LIFE_S,
+	GOOGLE_START_PATH,
 } from '@/lib/auth/google/config'
 import { discover, prepareStart } from '@/lib/auth/google/oidc'
 import { safeReturnTo } from '@/lib/auth/return-to'

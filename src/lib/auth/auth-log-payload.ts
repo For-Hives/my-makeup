@@ -1,15 +1,15 @@
 import type { CollectionAfterErrorHook, CollectionAfterLoginHook, CollectionBeforeOperationHook } from 'payload'
-import { failureCode } from './sign-in'
 import { log } from './auth-log'
 import { PASSWORD_RESET_CONTEXT } from './forgot-payload'
+import { failureCode } from './sign-in'
 
 /**
  * The hooks of `pros` that write the journal of the REST door of the sign-in, `POST /api/pros/login`
  * (ticket 077), and keep the date of the last sign-in.
  *
- * As for the brake (src/lib/auth/frein-payload.ts), only a request that comes through REST is
+ * As for the brake (src/lib/auth/rate-limit-payload.ts), only a request that comes through REST is
  * written here: the Server Action calls the Local API, which has no headers, and writes its row
- * itself (`connecter`), so an attempt never leaves two rows.
+ * itself (`signInWithPassword`), so an attempt never leaves two rows.
  */
 
 const START_KEY = 'debutDeLaConnexion'

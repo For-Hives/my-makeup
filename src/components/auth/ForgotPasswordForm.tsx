@@ -4,7 +4,10 @@ import { useActionState, useEffect, useRef } from 'react'
 import { type ForgotPasswordFailureCode, PASSWORD_MESSAGES } from '@/lib/auth/forgot-password'
 
 export type ForgotPasswordState = { envoyee: true } | { code: ForgotPasswordFailureCode } | null
-export type ForgotPasswordAction = (precedent: ForgotPasswordState, formulaire: FormData) => Promise<ForgotPasswordState>
+export type ForgotPasswordAction = (
+	precedent: ForgotPasswordState,
+	formulaire: FormData
+) => Promise<ForgotPasswordState>
 
 /**
  * The first step of the forgotten password. Once sent, the form gives way to the one sentence the

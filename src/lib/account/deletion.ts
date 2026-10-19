@@ -12,7 +12,7 @@ import { corbeilleRetenue } from '../../collections/trash'
 /**
  * The deletion of an account and everything that hangs on it (ticket 141; plan 01 AUTH-13, P7.7;
  * plan 02 I36, I38). The one mechanism: the makeup artist who deletes her account uses it, and the
- * admin who deletes a fake account uses it too (ticket 167, `DELETE /api/pros/:id`, src/lib/compte/suppression-route.ts).
+ * admin who deletes a fake account uses it too (ticket 167, `DELETE /api/pros/:id`, src/lib/account/deletion-route.ts).
  *
  * In ONE transaction, under ONE hold of the bin (`corbeilleRetenue`):
  * 1. her profile, by identifier. Deleting it sends to the bin every photo of the account that
@@ -122,10 +122,7 @@ async function remove(payload: Payload, id: number | string): Promise<DeletionSu
 }
 
 /** Deletes the account and all that hangs on it (see the top of this file). Throws when it could not: nothing was changed. */
-export function deleteAccountAndDependents(
-	payload: Payload,
-	id: number | string
-): Promise<DeletionSummary> {
+export function deleteAccountAndDependents(payload: Payload, id: number | string): Promise<DeletionSummary> {
 	const key = String(id)
 	const already = inProgress().get(key)
 	if (already) return already

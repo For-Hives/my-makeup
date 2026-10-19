@@ -1,18 +1,18 @@
 import { describe, expect, test } from 'bun:test'
 import type { Payload } from 'payload'
-import { createRateLimit } from '@/lib/auth/rate-limit'
 import {
-	PASSWORD_RESET_COOKIE,
-	LINK_DURATION_MS,
-	passwordResetToken,
-	PASSWORD_MESSAGES,
 	FORGOT_PASSWORD_FLOOR_MS,
+	LINK_DURATION_MS,
 	linkPlan,
+	PASSWORD_MESSAGES,
+	PASSWORD_RESET_COOKIE,
+	passwordResetToken,
 	validateAddress,
 	validateNewPassword,
 } from '@/lib/auth/forgot-password'
 import { closeForgotPasswordRestDoors } from '@/lib/auth/forgot-payload'
 import { requestPasswordLink } from '@/lib/auth/password-reset-payload'
+import { createRateLimit } from '@/lib/auth/rate-limit'
 import { composerEmail } from '@/lib/emails/gabarit'
 import { contenuEmailReinitialisation } from '@/lib/emails/reinitialisation'
 
@@ -99,7 +99,7 @@ describe('le lien du mail sort de l’adresse (proxy)', () => {
 		expect(linkPlan('/auth/reinitialiser/autre', params(`code=${JETON}`))).toBeNull()
 	})
 	test('le cookie a le nom des anciennes pages', () => {
-		expect(PASSWORD_RESET_COOKIE).toBe('mm-reinit')
+		expect(PASSWORD_RESET_COOKIE).toBe('mm-reset')
 	})
 })
 
@@ -158,7 +158,11 @@ describe('demanderUnLien avec un Payload de pacotille', () => {
 	}
 	const lancer = async (
 		email: unknown,
-		options: { echec?: boolean; frein?: ReturnType<typeof createRateLimit>; apres?: (t: () => Promise<void>) => void } = {}
+		options: {
+			echec?: boolean
+			frein?: ReturnType<typeof createRateLimit>
+			apres?: (t: () => Promise<void>) => void
+		} = {}
 	) => {
 		const travaux: Promise<void>[] = []
 		const debut = Date.now()

@@ -1,8 +1,8 @@
 import { afterAll, describe, expect, test } from 'bun:test'
-import { signInWithPassword } from '@/lib/auth/sign-in'
+import { authLog, EVENT_CODES, EVENT_TYPES, log } from '@/lib/auth/auth-log'
 import { createRateLimit } from '@/lib/auth/rate-limit'
+import { signInWithPassword } from '@/lib/auth/sign-in'
 import { openWithPassword } from '@/lib/auth/token'
-import { EVENT_CODES, authLog, log, EVENT_TYPES } from '@/lib/auth/auth-log'
 import { lancerLesTachesQuotidiennes } from '@/lib/taches/quotidiennes'
 import { creerCompte } from '../outils/fabrique-comptes'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
@@ -129,10 +129,7 @@ describe('aucune donnée personnelle dans le journal, même glissée dans la sai
 				enTetes: { 'x-forwarded-for': '198.51.100.204', 'user-agent': glisse, referer: `https://x.test/${glisse}` },
 			})
 		// Written directly, with a value out of the list in each field.
-		await log(
-			(await payloadDeTest()) as never,
-			{ type: 'sign-in', code: glisses[0] as never, durationMs: 3 } as never
-		)
+		await log((await payloadDeTest()) as never, { type: 'sign-in', code: glisses[0] as never, durationMs: 3 } as never)
 
 		const nouvelles = (await lignes()).slice(avant)
 		expect(nouvelles.length).toBeGreaterThanOrEqual(20)

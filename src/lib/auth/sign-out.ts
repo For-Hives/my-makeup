@@ -28,12 +28,7 @@ export interface SignOutInputs {
 	journal?: Log
 }
 
-export async function closeSession({
-	payload,
-	headers,
-	toutes,
-	journal,
-}: SignOutInputs): Promise<SignOutResult> {
+export async function closeSession({ payload, headers, toutes, journal }: SignOutInputs): Promise<SignOutResult> {
 	const start = Date.now()
 	const type = toutes ? 'sign-out-everywhere' : 'sign-out'
 	const record = async (code: 'ok' | 'service-indisponible') => {

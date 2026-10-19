@@ -34,8 +34,7 @@ export function safeReturnTo(brut: unknown, origine: string, defaut: string = DE
 }
 
 /** The sign-in page that brings the visitor back to `chemin` (path and query of the closed page). */
-export const signInUrl = (chemin: string): string =>
-	`${SIGN_IN_PAGE}?callbackUrl=${encodeURIComponent(chemin)}`
+export const signInUrl = (chemin: string): string => `${SIGN_IN_PAGE}?callbackUrl=${encodeURIComponent(chemin)}`
 
 /** Where a sign-out leads: the home page, public and always there (AUTH-07: it was a 404). */
 export const PAGE_AFTER_SIGN_OUT = '/'

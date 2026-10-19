@@ -1,8 +1,8 @@
 import config from '@payload-config'
 import { getPayload } from 'payload'
-import { SIGN_UP_FAILURE_MESSAGES } from '@/lib/auth/sign-up'
-import { ipClient } from '@/lib/auth/client-ip'
 import { authLog } from '@/lib/auth/auth-log'
+import { ipClient } from '@/lib/auth/client-ip'
+import { SIGN_UP_FAILURE_MESSAGES } from '@/lib/auth/sign-up'
 import { logRefusal, secondsBeforeSignUp } from '@/lib/auth/sign-up-refusal'
 
 export const dynamic = 'force-dynamic'
@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic'
  * sign-ups of the hour, and the route checks it again: for any other client it is a 404.
  *
  * The body is plain text for a Server Action on purpose: the client script of Next throws it as the
- * message of the failed action, and the form shows it under its fields (`FormulaireDInscription`).
+ * message of the failed action, and the form shows it under its fields (`SignUpForm`).
  */
 export async function POST(requete: Request): Promise<Response> {
 	const client = ipClient(requete.headers)

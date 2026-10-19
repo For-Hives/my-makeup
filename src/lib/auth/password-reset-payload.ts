@@ -9,24 +9,24 @@ import {
 import type { EnvoyerEmail } from '../emails/envoi'
 import { composerEmail } from '../emails/gabarit'
 import { contenuEmailReinitialisation } from '../emails/reinitialisation'
-import { type RateLimit, passwordResetRateLimit, forgotPasswordRateLimit } from './rate-limit'
-import { ipClient } from './client-ip'
 import type { EventCode, Log } from './auth-log'
+import { ipClient } from './client-ip'
 import {
+	FORGOT_PASSWORD_FLOOR_MS,
 	type ForgotPasswordFailureCode,
 	type PasswordResetFailureCode,
 	passwordResetToken,
-	FORGOT_PASSWORD_FLOOR_MS,
 	validateAddress,
 	validateNewPassword,
 } from './forgot-password'
 import { PASSWORD_RESET_CONTEXT } from './forgot-payload'
+import { forgotPasswordRateLimit, passwordResetRateLimit, type RateLimit } from './rate-limit'
 
 /**
  * The forgotten password, server side (tickets 085 and 086). Two steps, and no `next` import: the
  * Server Actions call them, and so do the tests.
  *
- * The request (`demanderUnLien`)
+ * The request (`requestPasswordLink`)
  * - Takes a place in the brake of the client address first, and never gives it back: a place given
  *   back only for a known address would tell which ones are known.
  * - Answers the same, in the same time, for an address with an account and one without. Payload's
@@ -38,7 +38,7 @@ import { PASSWORD_RESET_CONTEXT } from './forgot-payload'
  *   keeps it, with the same atomic write as Payload's.
  * - Writes one journal row, `ok` whatever the address: the journal holds nothing that tells them apart.
  *
- * The choice of the new password (`reinitialiserLeMotDePasse`)
+ * The choice of the new password (`resetPassword`)
  * - One transaction: Payload's reset (new hash, all the sessions of the account emptied, the link
  *   spent), then the session that reset opens is dropped (she signs in with her new password, as on
  *   the old site), the hash of the old site is dropped (the old password must not work through the

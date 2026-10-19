@@ -2,18 +2,11 @@
 
 import Link from 'next/link'
 import { useActionState, useEffect, useRef } from 'react'
+import { FORGOT_PASSWORD_PAGE, PASSWORD_MESSAGES, type PasswordResetFailureCode } from '@/lib/auth/forgot-password'
 import { MIN_PASSWORD_LENGTH } from '@/lib/auth/sign-up'
-import {
-	type PasswordResetFailureCode,
-	PASSWORD_MESSAGES,
-	FORGOT_PASSWORD_PAGE,
-} from '@/lib/auth/forgot-password'
 
 export type PasswordResetState = { modifie: true } | { code: PasswordResetFailureCode } | null
-export type PasswordResetAction = (
-	precedent: PasswordResetState,
-	formulaire: FormData
-) => Promise<PasswordResetState>
+export type PasswordResetAction = (precedent: PasswordResetState, formulaire: FormData) => Promise<PasswordResetState>
 
 const FIELD = 'rounded-md border border-neutral-300 bg-white px-3 py-2 font-normal text-base'
 

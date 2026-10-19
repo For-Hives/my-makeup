@@ -13,7 +13,7 @@
 /** The header the relay and the proxy are about. */
 export const FETCH_SITE_HEADER = 'sec-fetch-site'
 
-const escape = (texte: string): string =>
+const escapeHtml = (texte: string): string =>
 	texte.replace(
 		/[&<>"']/g,
 		lettre => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[lettre] ?? lettre
@@ -21,7 +21,7 @@ const escape = (texte: string): string =>
 
 /** The HTML of the relay page that continues to `chemin` (a path of this site, with its query). */
 export function relayPage(chemin: string): string {
-	const target = escape(chemin)
+	const target = escapeHtml(chemin)
 	return `<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><meta http-equiv="refresh" content="0;url=${target}"><title>Connexion en cours</title></head><body><p>Connexion en cours… <a href="${target}">Continuer</a></p></body></html>`
 }
 

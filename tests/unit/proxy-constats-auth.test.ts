@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 import { NextRequest } from 'next/server'
 import { MESSAGE_COOKIE } from '@/lib/auth/legacy-cookies'
-import { relayPage, comesFromOtherSite } from '@/lib/auth/relay-page'
+import { comesFromOtherSite, relayPage } from '@/lib/auth/relay-page'
 import { proxy } from '@/proxy'
 
 /** The findings 1, 7 and 8 of ticket 223, on the proxy. Made-up host and token: only the end date of a token is read. */

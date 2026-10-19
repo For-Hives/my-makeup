@@ -4,9 +4,9 @@ import { estUneAdresseLocale } from '../recherche/frein'
 
 /**
  * The brakes of the contact form (ticket 161; plan 02 U77), the protection kept for the switch-over,
- * without any third-party service. Two counters, each with its own name (`creerFrein`):
+ * without any third-party service. Two counters, each with its own name (`createRateLimit`):
  * - by client address (`ipClient`): 5 messages an hour;
- * - by mailbox (the hashed canonical form, `cleDeBoite`): 20 messages a day, whatever the address
+ * - by mailbox (the hashed canonical form, `mailboxKey`): 20 messages a day, whatever the address
  *   they come from.
  *
  * What is counted is every message that got past the checks of the form, as the sign-up does. A

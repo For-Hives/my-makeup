@@ -46,10 +46,10 @@ const METHOD_LABELS: Record<(typeof EVENT_METHODS)[number], string> = {
  *
  * - One row for each sign-in, sign-out, sign-up and email confirmation: its kind, its outcome, how
  *   long it took, and when. The kind and the outcome are taken from closed lists
- *   (src/lib/auth/journal.ts), and no field holds text: there is nowhere to put an IP, an email, a
+ *   (src/lib/auth/auth-log.ts), and no field holds text: there is nowhere to put an IP, an email, a
  *   name or a token, so none ever lands here, whatever was typed.
  * - Only an admin reads it. Nobody writes it through an API, an admin included: the server writes
- *   it (`journaliser`), and purges it after 90 days (src/lib/taches/).
+ *   it (`log`), and purges it after 90 days (src/lib/taches/).
  * - No `createdAt` or `updatedAt`: `date` is the one date, and the purge reads it.
  */
 export const AuthEvents: CollectionConfig<'auth-events'> = {

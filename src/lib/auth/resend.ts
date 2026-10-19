@@ -5,11 +5,11 @@ import { contenuEmailDejaInscrite } from '../emails/deja-inscrite'
 import type { EnvoyerEmail } from '../emails/envoi'
 import { composerEmail } from '../emails/gabarit'
 import { findAccount } from './account-by-email'
-import { mailboxKey } from './canonical-email'
-import { MAILBOX_RATE_LIMITS, type MailboxRateLimits, takeMailFor } from './sign-up-rate-limits'
-import { EMAIL_MAX, SIGN_UP_MESSAGES } from './sign-up'
-import { waitUntil, SIGN_UP_FLOOR_MS } from './sign-up-payload'
 import type { EventCode, Log } from './auth-log'
+import { mailboxKey } from './canonical-email'
+import { EMAIL_MAX, SIGN_UP_MESSAGES } from './sign-up'
+import { SIGN_UP_FLOOR_MS, waitUntil } from './sign-up-payload'
+import { MAILBOX_RATE_LIMITS, type MailboxRateLimits, takeMailFor } from './sign-up-rate-limits'
 
 /**
  * The resending of the confirmation mail, from the wall of verification (ticket 083; plan 02 E04).
@@ -24,7 +24,7 @@ import type { EventCode, Log } from './auth-log'
  *   nothing.
  * - One mail a minute and 5 a day for a mailbox (the canonical form: the Gmail variants of an
  *   address are one mailbox), counted for every address, known or not, so that a refusal says
- *   nothing about the account. The brake by client address is the caller's (`freinDeRenvoi`).
+ *   nothing about the account. The brake by client address is the caller's (`resendRateLimit`).
  * - The answer leaves no sooner than the floor of the sign-up, whatever was sent.
  *
  * No `next` import.

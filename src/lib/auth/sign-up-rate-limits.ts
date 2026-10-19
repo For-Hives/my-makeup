@@ -2,7 +2,7 @@ import { createRateLimit, type RateLimit } from './rate-limit'
 
 /**
  * The brakes of the sign-up and of the resending of the confirmation (tickets 083 and 084), each
- * with its own counters (`creerFrein` shares the counters of a name, never between names).
+ * with its own counters (`createRateLimit` shares the counters of a name, never between names).
  *
  * By client address (`ipClient`):
  * - the sign-up: 5 a hour. What is counted is every attempt that got past the form's checks, taken
@@ -11,7 +11,7 @@ import { createRateLimit, type RateLimit } from './rate-limit'
  * - following the link of the confirmation mail: 30 an hour (ticket 084, which closes the note of
  *   ticket 082 on the page that wrote a journal row for every visit).
  *
- * By mailbox (the canonical form of the address, hashed: `cleDeBoite`), for every mail
+ * By mailbox (the canonical form of the address, hashed: `mailboxKey`), for every mail
  * the resending and the sign-up send to an address: 1 a minute and 5 a day. The sign-up of a NEW address
  * takes its place too (its result ignored: that mail always leaves), exactly as the « tu as déjà un
  * compte » mail of a taken one does, so a resend asked right after a sign-up reads the same answer
@@ -20,13 +20,21 @@ import { createRateLimit, type RateLimit } from './rate-limit'
 
 export const signUpRateLimit: RateLimit = createRateLimit({ nom: 'inscription', limite: 5, fenetreMs: 60 * 60 * 1000 })
 
-/** The rows of refusals the journal takes: 3 an hour for a client address and an outcome (`journaliserUnRefus`). */
-export const authLogRateLimit: RateLimit = createRateLimit({ nom: 'journal-refus', limite: 3, fenetreMs: 60 * 60 * 1000 })
+/** The rows of refusals the journal takes: 3 an hour for a client address and an outcome (`logRefusal`). */
+export const authLogRateLimit: RateLimit = createRateLimit({
+	nom: 'journal-refus',
+	limite: 3,
+	fenetreMs: 60 * 60 * 1000,
+})
 
 export const resendRateLimit: RateLimit = createRateLimit({ nom: 'renvoi', limite: 10, fenetreMs: 60 * 60 * 1000 })
 
 /** Following the link of the confirmation mail: 30 an hour per client address (a person follows it once). */
-export const confirmationRateLimit: RateLimit = createRateLimit({ nom: 'confirmation', limite: 30, fenetreMs: 60 * 60 * 1000 })
+export const confirmationRateLimit: RateLimit = createRateLimit({
+	nom: 'confirmation',
+	limite: 30,
+	fenetreMs: 60 * 60 * 1000,
+})
 
 export const minuteMailboxRateLimit: RateLimit = createRateLimit({
 	nom: 'boite-minute',
@@ -45,7 +53,10 @@ export interface MailboxRateLimits {
 	parJour: RateLimit
 }
 
-export const MAILBOX_RATE_LIMITS: MailboxRateLimits = { parMinute: minuteMailboxRateLimit, parJour: dailyMailboxRateLimit }
+export const MAILBOX_RATE_LIMITS: MailboxRateLimits = {
+	parMinute: minuteMailboxRateLimit,
+	parJour: dailyMailboxRateLimit,
+}
 
 export type MailboxDecision =
 	| { autorise: true }

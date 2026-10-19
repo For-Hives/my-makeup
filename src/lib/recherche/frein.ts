@@ -1,6 +1,6 @@
 /**
  * The brake on the search (ticket 100; plan 02 I30): 60 searches a minute from one address, then a 429
- * in French until the minute has passed. It is the brick of ticket 076 (`creerFrein`, `ipClient`), with
+ * in French until the minute has passed. It is the brick of ticket 076 (`createRateLimit`, `ipClient`), with
  * its own counters, played by the proxy: a page of the App Router cannot answer 429.
  *
  * - Only the search page is counted. The home page, the profiles and everything else are cached or
@@ -16,8 +16,8 @@
  * No `next` import: read by the proxy and by the tests.
  */
 
-import { createRateLimit, type RateLimit } from '@/lib/auth/rate-limit'
 import { ipClient, NO_PROXY } from '@/lib/auth/client-ip'
+import { createRateLimit, type RateLimit } from '@/lib/auth/rate-limit'
 
 export const RECHERCHES_PAR_MINUTE = 60
 

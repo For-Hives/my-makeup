@@ -3,12 +3,12 @@
 import { useActionState, useEffect, useRef } from 'react'
 import { type Suivre, track } from '@/lib/analytics/track'
 import {
-	TRAP_FIELD,
-	type SignUpField,
-	type SignUpFailureCode,
-	type SignUpErrors,
-	SIGN_UP_FAILURE_MESSAGES,
 	MIN_PASSWORD_LENGTH,
+	SIGN_UP_FAILURE_MESSAGES,
+	type SignUpErrors,
+	type SignUpFailureCode,
+	type SignUpField,
+	TRAP_FIELD,
 } from '@/lib/auth/sign-up'
 
 export type SignUpState = {

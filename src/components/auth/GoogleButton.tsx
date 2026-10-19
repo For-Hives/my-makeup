@@ -9,9 +9,7 @@ import { GoogleLink } from './GoogleLink'
  * site; the sign-up page gives none, and a click there starts a sign-up (`signup_start`).
  */
 export function GoogleButton({ libelle, retour }: { libelle: string; retour?: string }) {
-	const address = retour
-		? `${GOOGLE_START_PATH}?callbackUrl=${encodeURIComponent(retour)}`
-		: GOOGLE_START_PATH
+	const address = retour ? `${GOOGLE_START_PATH}?callbackUrl=${encodeURIComponent(retour)}` : GOOGLE_START_PATH
 	return (
 		<div className="flex w-full max-w-sm flex-col items-center gap-4">
 			<GoogleLink

@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { GET } from '@/app/api/stats/weekly/route'
-import { replaceLegacyHash } from '@/lib/auth/legacy'
 import { type AuthEvent, log } from '@/lib/auth/auth-log'
+import { replaceLegacyHash } from '@/lib/auth/legacy'
 import { stockageDePayload } from '@/lib/contact/envoi-payload'
 import { StatsHebdo } from '@/lib/stats-hebdo'
 import { adresseDuJeu, TYPES_DU_JEU } from '../fixtures/comptes'

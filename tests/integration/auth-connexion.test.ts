@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, test } from 'bun:test'
-import { signInWithPassword } from '@/lib/auth/sign-in'
 import { createRateLimit } from '@/lib/auth/rate-limit'
+import { signInWithPassword } from '@/lib/auth/sign-in'
 import { openWithPassword } from '@/lib/auth/token'
 import { creerCompte } from '../outils/fabrique-comptes'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
@@ -69,7 +69,13 @@ describe('connecter, avec la vraie base', () => {
 		const ouvrir = (data: { email: string; password: string }) => openWithPassword(payload, 'pros', data)
 		const frein = createRateLimit({ nom: 'essai-int-regle', limite: 10, fenetreMs: 60_000 })
 
-		const juste = await signInWithPassword({ ouvrir, headers: adresse(13), email: compte.email, password: MOT_DE_PASSE, frein })
+		const juste = await signInWithPassword({
+			ouvrir,
+			headers: adresse(13),
+			email: compte.email,
+			password: MOT_DE_PASSE,
+			frein,
+		})
 		const faux = await signInWithPassword({ ouvrir, headers: adresse(13), email: compte.email, password: 'b', frein })
 
 		expect(juste.ok).toBe(true)

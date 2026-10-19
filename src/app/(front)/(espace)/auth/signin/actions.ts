@@ -5,13 +5,13 @@ import { cookies, headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { getPayload } from 'payload'
 import { attributsDeLaMarque, COOKIE_DE_MARQUE_DE_CONNEXION } from '@/lib/analytics/marque-connexion'
-import { signInWithPassword } from '@/lib/auth/sign-in'
-import { setSessionCookie } from '@/lib/auth/set-session-cookie'
+import { authLog } from '@/lib/auth/auth-log'
 import type { ErrorCode } from '@/lib/auth/errors'
 import { replaceLegacyHash } from '@/lib/auth/legacy'
-import { openWithPassword } from '@/lib/auth/token'
-import { authLog } from '@/lib/auth/auth-log'
 import { safeReturnTo } from '@/lib/auth/return-to'
+import { setSessionCookie } from '@/lib/auth/set-session-cookie'
+import { signInWithPassword } from '@/lib/auth/sign-in'
+import { openWithPassword } from '@/lib/auth/token'
 
 export type SignInState = { code: ErrorCode } | null
 

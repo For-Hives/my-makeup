@@ -1,5 +1,5 @@
+import { expiredSessionUrl, signInUrl } from './return-to'
 import { tokenState } from './session-state'
-import { signInUrl, expiredSessionUrl } from './return-to'
 
 /** The name of Payload's session cookie (`<cookiePrefix>-token`, prefix `payload` by default). */
 export const SESSION_COOKIE = 'payload-token'
@@ -14,7 +14,7 @@ export const isPrivatePage = (chemin: string): boolean =>
  * What the proxy does with a request for the space: the sign-in page that brings the visitor back
  * (one redirection), or nothing. It looks at the presence of the cookie only: it is the quick,
  * optimistic gate. Whether the token is valid is decided by the page itself, with the same rule as
- * the sign-in page (`maquilleuseConnectee`), so a stale cookie ends on the sign-in form after one
+ * the sign-in page (`signedInArtist`), so a stale cookie ends on the sign-in form after one
  * redirection and never loops.
  */
 export function dashboardRedirection(chemin: string, recherche: string, aLeCookie: boolean): string | null {

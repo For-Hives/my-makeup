@@ -1,15 +1,15 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
-import { normalizedAddress, accountName } from '@/lib/auth/google/account'
+import { accountName, normalizedAddress } from '@/lib/auth/google/account'
 import {
 	type ConfigGoogle,
-	type PendingRequest,
+	clearDocuments,
+	codeClaims,
 	discover,
 	GoogleUnavailable,
-	RefusedToken,
-	clearDocuments,
 	openCookie,
+	type PendingRequest,
 	prepareStart,
-	codeClaims,
+	RefusedToken,
 	seal,
 	verifyToken,
 } from '@/lib/auth/google/oidc'

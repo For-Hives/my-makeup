@@ -3,16 +3,10 @@ import { cookies, headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { getPayload } from 'payload'
 import { COLLECTION_PROS } from '../acces'
-import { tokenExpiration } from './session-duration'
 import { SESSION_COOKIE } from './closed-dashboard'
-import {
-	classifySession,
-	type SessionState,
-	tokenState,
-	type Verification,
-	verifySession,
-} from './session-state'
-import { signInUrl, expiredSessionUrl } from './return-to'
+import { expiredSessionUrl, signInUrl } from './return-to'
+import { tokenExpiration } from './session-duration'
+import { classifySession, type SessionState, tokenState, type Verification, verifySession } from './session-state'
 
 /** What a page of the space may know about the makeup artist: never the account document. */
 export interface Artist {
@@ -64,7 +58,7 @@ async function verify(): Promise<
 }
 
 /**
- * The session of the request, told apart (see `etat-session.ts`). The cookie's end date answers
+ * The session of the request, told apart (see `session-state.ts`). The cookie's end date answers
  * `expiree` without any database; a token that has not ended is checked by Payload.
  */
 export async function readSession(): Promise<ReadSession> {

@@ -1,15 +1,15 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 import { NextRequest } from 'next/server'
 import {
-	setAttributes,
-	MESSAGE_COOKIE,
-	pathWithoutCleanup,
+	activeCleanup,
+	cleanupEnd,
+	cleanupPlan,
 	clearingCookie,
 	legacyCookiesPresent,
+	MESSAGE_COOKIE,
 	MESSAGE_HEADER,
-	cleanupEnd,
-	activeCleanup,
-	cleanupPlan,
+	pathWithoutCleanup,
+	setAttributes,
 } from '@/lib/auth/legacy-cookies'
 import { EnvError, parseServerEnv } from '@/lib/env'
 import { proxy } from '@/proxy'
@@ -44,7 +44,7 @@ describe('U65 : la liste des cookies hérités effacés', () => {
 			'x-next-auth.csrf-token',
 			'next-auth.pkce.code_verifier',
 			'__Secure-payload-token',
-			'mm-reconnexion',
+			'mm-signed-out',
 		]
 		expect(legacyCookiesPresent(autres)).toEqual([])
 	})
@@ -179,7 +179,7 @@ describe('le proxy : le nettoyage à la première requête', () => {
 		delete process.env.BASCULE_LE
 		const reponse = proxy(requete('/auth/signin', HERITES))
 		expect(reponse.status).toBe(200)
-		expect(reponse.headers.get('x-middleware-request-x-mm-reconnexion')).toBe('1')
+		expect(reponse.headers.get('x-middleware-request-x-mm-signed-out')).toBe('1')
 		expect(setCookies(reponse).some(l => l.startsWith(`${MESSAGE_COOKIE}=1`))).toBe(false)
 	})
 
@@ -192,7 +192,7 @@ describe('le proxy : le nettoyage à la première requête', () => {
 		// The next request carries no old cookie any more: the sign-in page answers, with the reminder.
 		const suite = proxy(requete('/auth/signin', [MESSAGE_COOKIE]))
 		expect(suite.status).toBe(200)
-		expect(suite.headers.get('x-middleware-request-x-mm-reconnexion')).toBe('1')
+		expect(suite.headers.get('x-middleware-request-x-mm-signed-out')).toBe('1')
 	})
 
 	test('le message ne s’affiche qu’une fois : le rappel est effacé en le servant, et sans rappel rien ne s’affiche', () => {
@@ -200,21 +200,21 @@ describe('le proxy : le nettoyage à la première requête', () => {
 		const premiere = proxy(requete('/auth/signin', [MESSAGE_COOKIE]))
 		expect(setCookies(premiere).find(l => l.startsWith(`${MESSAGE_COOKIE}=;`))).toContain('Max-Age=0')
 		const seconde = proxy(requete('/auth/signin', []))
-		expect(seconde.headers.get('x-middleware-request-x-mm-reconnexion')).toBeNull()
+		expect(seconde.headers.get('x-middleware-request-x-mm-signed-out')).toBeNull()
 		expect(setCookies(seconde)).toEqual([])
 	})
 
 	test('un préchargement ne montre pas le message et ne l’use pas', () => {
 		delete process.env.BASCULE_LE
 		const reponse = proxy(requete('/auth/signin', [MESSAGE_COOKIE], { 'next-router-prefetch': '1' }))
-		expect(reponse.headers.get('x-middleware-request-x-mm-reconnexion')).toBeNull()
+		expect(reponse.headers.get('x-middleware-request-x-mm-signed-out')).toBeNull()
 		expect(setCookies(reponse)).toEqual([])
 	})
 
 	test('l’en-tête du message envoyé par un visiteur est retiré', () => {
 		delete process.env.BASCULE_LE
 		const reponse = proxy(requete('/auth/signin', [], { [MESSAGE_HEADER]: '1' }))
-		expect(reponse.headers.get('x-middleware-request-x-mm-reconnexion')).toBeNull()
+		expect(reponse.headers.get('x-middleware-request-x-mm-signed-out')).toBeNull()
 	})
 
 	test('le back-office, l’API et les fichiers : aucun Set-Cookie', () => {

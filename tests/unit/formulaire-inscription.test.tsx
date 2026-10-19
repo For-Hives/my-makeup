@@ -1,10 +1,6 @@
 import { expect, test } from 'bun:test'
-import {
-	withProxyRefusal,
-	type SignUpState,
-	SignUpForm,
-} from '@/components/auth/SignUpForm'
-import { TRAP_FIELD, SIGN_UP_FAILURE_MESSAGES, SIGN_UP_MESSAGES } from '@/lib/auth/sign-up'
+import { SignUpForm, type SignUpState, withProxyRefusal } from '@/components/auth/SignUpForm'
+import { SIGN_UP_FAILURE_MESSAGES, SIGN_UP_MESSAGES, TRAP_FIELD } from '@/lib/auth/sign-up'
 import { ouvrirFenetre } from '../outils/dom-react'
 
 const fenetre = ouvrirFenetre()

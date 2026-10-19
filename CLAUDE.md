@@ -169,6 +169,10 @@ Le même mot français a le même mot anglais partout (source : `PLAN-ANGLAIS.md
 | accueil (onboarding de l'espace) | `onboarding` | aperçu | `preview` |
 | adresse (URL) | `url` ou `path` | notes de version | `releaseNotes` |
 | hôte / en-têtes | `host` / `headers` | verrou | `lock` |
+| plancher (temps minimal d'une réponse) / plafond (de session) | `floor` / `cap` | prolonger / prolongement | `extend` / `extension` |
+| boîte (email) | `mailbox` | page de relais | `relay` |
+| nettoyage (des cookies hérités) | `cleanup` | session expirée (message de reconnexion) | `signedOut` |
+| revendications (jeton Google) | `claims` | compte bloqué | `blockedAccount` |
 
 ## Pièges
 

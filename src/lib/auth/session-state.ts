@@ -9,7 +9,7 @@
  * Nothing in this file reads a request, a cookie jar or a database: it decides from what the caller
  * observed. The token is read for its end date only, to choose the message. It is never trusted for
  * anything else: whether a session is valid is Payload's answer (signature, expiry, session in the
- * database), obtained by `maquilleuseConnectee`.
+ * database), obtained by `signedInArtist`.
  */
 
 /** The token as it can be told apart without a database. */
@@ -80,7 +80,7 @@ export function classifySession(jeton: TokenState, verification?: Verification):
 	return 'indisponible'
 }
 
-/** What `verifierUneSession` needs from the outside: Payload's check and a small query on the database. */
+/** What `verifySession` needs from the outside: Payload's check and a small query on the database. */
 export interface VerificationTools<Utilisateur> {
 	/** Payload's own check of the request: the user, or null when it refuses (it swallows its own errors into null). */
 	authentifier: () => Promise<Utilisateur | null>
@@ -104,8 +104,7 @@ export async function verifySession<Utilisateur>({
 > {
 	try {
 		const user = await authentifier()
-		if (user)
-			return convient(user) ? { verification: 'acceptee', utilisateur: user } : { verification: 'refusee' }
+		if (user) return convient(user) ? { verification: 'acceptee', utilisateur: user } : { verification: 'refusee' }
 		await sonder()
 		return { verification: 'refusee' }
 	} catch {

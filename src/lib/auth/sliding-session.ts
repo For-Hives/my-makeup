@@ -8,14 +8,14 @@ import {
 } from 'payload'
 
 import { sessionCookieFor, setCookieHeader } from './session-cookie'
-import { SESSION_DURATION_S, extensionDuration, openedAt, capReached } from './session-duration'
+import { capReached, extensionDuration, openedAt, SESSION_DURATION_S } from './session-duration'
 
 // The pure rules live in ./duree-session (no server import, safe for the browser); re-exported here.
 export * from './session-duration'
 
 /**
  * U68, on the REST door: a renewal is refused once the session is 90 days old. 403, in French, and
- * public. The token of a session renewed by this code never outlives the ceiling (`prolongerSousPlafond`),
+ * public. The token of a session renewed by this code never outlives the ceiling (`extendUnderCap`),
  * so this refuses only a token signed before that, or by hand.
  */
 export const refuseAfterCap: CollectionBeforeOperationHook = ({ args, operation }) => {
@@ -32,7 +32,7 @@ export const refuseAfterCap: CollectionBeforeOperationHook = ({ args, operation 
  * shorter life when the ceiling is near.
  *
  * The cookie is written here, not by Payload's route (`setCookie: false`): Payload would end it with
- * its token, and the cookie of a sign-in outlives its token (`finDeVieDuCookie`), so that a session
+ * its token, and the cookie of a sign-in outlives its token (`cookieEndOfLife`), so that a session
  * that ended is told so (tickets 080 and 223). The token then stays out of the body as well: it is
  * not returned.
  */

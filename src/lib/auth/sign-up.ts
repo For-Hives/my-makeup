@@ -63,9 +63,7 @@ export interface SignUpData {
 	password: string
 }
 
-export type SignUpValidation =
-	| { ok: true; donnees: SignUpData }
-	| { ok: false; erreurs: SignUpErrors }
+export type SignUpValidation = { ok: true; donnees: SignUpData } | { ok: false; erreurs: SignUpErrors }
 
 /** A checkbox sent by a form is « on » (or its value) when checked, and absent otherwise. */
 const checked = (valeur: unknown): boolean => valeur === 'on' || valeur === 'true' || valeur === true

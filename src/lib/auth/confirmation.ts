@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto'
 import type { Payload } from 'payload'
-import type { RateLimit } from './rate-limit'
 import type { Log } from './auth-log'
+import type { RateLimit } from './rate-limit'
 
 /**
  * The confirmation of an email by the link of the mail (ticket 082).
@@ -30,11 +30,7 @@ const traceDUsage = (jeton: string): string => `${USED_PREFIX}${createHash('sha2
 
 type Row = { id: number; _verified?: boolean | null; _verificationToken?: string | null }
 
-export async function confirmEmail(
-	payload: Payload,
-	code: unknown,
-	journal?: Log
-): Promise<ConfirmationResult> {
+export async function confirmEmail(payload: Payload, code: unknown, journal?: Log): Promise<ConfirmationResult> {
 	const start = Date.now()
 	const result = await confirm(payload, code)
 	try {
@@ -46,7 +42,7 @@ export async function confirmEmail(
 }
 
 /**
- * `confirmerLEmail` behind a brake by client address (ticket 084): past the limit, the answer is
+ * `confirmEmail` behind a brake by client address (ticket 084): past the limit, the answer is
  * « lien invalide » with no read of the table and no row in the journal, so that a script knocking
  * on the page with random codes fills neither.
  */

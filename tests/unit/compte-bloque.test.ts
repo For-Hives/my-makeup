@@ -1,9 +1,9 @@
 import { describe, expect, test } from 'bun:test'
 import { APIError, AuthenticationError } from 'payload'
-import { BlockedAccount, closeSessionsOnBlock, refuseBlockedAccount } from '@/lib/auth/blocked-account'
-import { failureCode } from '@/lib/auth/sign-in'
-import { ERROR_CODES, errorMessage } from '@/lib/auth/errors'
 import { EVENT_CODES, EVENT_TYPES } from '@/lib/auth/auth-log'
+import { BlockedAccount, closeSessionsOnBlock, refuseBlockedAccount } from '@/lib/auth/blocked-account'
+import { ERROR_CODES, errorMessage } from '@/lib/auth/errors'
+import { failureCode } from '@/lib/auth/sign-in'
 
 const t = ((cle: string) => cle) as never
 

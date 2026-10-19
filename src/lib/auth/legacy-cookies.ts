@@ -16,10 +16,10 @@ export const CLEANUP_DAYS = 90
 export const CUTOVER_VARIABLE = 'BASCULE_LE'
 
 /** A short-lived cookie of this site, set when the old cookies are expired away from the sign-in page. */
-export const MESSAGE_COOKIE = 'mm-reconnexion'
+export const MESSAGE_COOKIE = 'mm-signed-out'
 
 /** The request header the proxy gives the sign-in page when the message is due. The proxy strips it from every request first. */
-export const MESSAGE_HEADER = 'x-mm-reconnexion'
+export const MESSAGE_HEADER = 'x-mm-signed-out'
 
 /** How long the message waits for the visitor to reach the sign-in page. */
 export const MESSAGE_DURATION_SECONDS = 60 * 60

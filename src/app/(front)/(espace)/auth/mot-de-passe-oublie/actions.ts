@@ -16,7 +16,10 @@ import { serverEnv } from '@/lib/env'
  * Action called from another origin before this code runs; the origin is checked here as well,
  * as for the sign-in.
  */
-export async function forgotPassword(_precedent: ForgotPasswordState, formulaire: FormData): Promise<ForgotPasswordState> {
+export async function forgotPassword(
+	_precedent: ForgotPasswordState,
+	formulaire: FormData
+): Promise<ForgotPasswordState> {
 	const payload = await getPayload({ config })
 	const requestHeaders = await headers()
 	const requestOrigin = requestHeaders.get('origin')

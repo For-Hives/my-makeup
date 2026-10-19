@@ -5,7 +5,7 @@ import Link from 'next/link'
  * the ones that came from Facebook, which the site no longer offers, and the ones made with Google
  * that want a password too. Shown to everyone, whether Google is on or not, and whoever the visitor
  * is: it says nothing about any address. The way out is the forgotten password, which sends a link
- * to the address of the account and lets her choose one (src/lib/auth/reinitialisation-payload.ts).
+ * to the address of the account and lets her choose one (src/lib/auth/password-reset-payload.ts).
  */
 export function PasswordlessHelp() {
 	return (

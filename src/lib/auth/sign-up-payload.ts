@@ -6,15 +6,10 @@ import { contenuEmailDejaInscrite } from '../emails/deja-inscrite'
 import { EnvoiEmailEchoue, type EnvoyerEmail } from '../emails/envoi'
 import { composerEmail } from '../emails/gabarit'
 import { type AccountFound, findAccount } from './account-by-email'
-import { mailboxKey } from './canonical-email'
-import { MAILBOX_RATE_LIMITS, type MailboxRateLimits, takeMailFor } from './sign-up-rate-limits'
-import {
-	type SignUpFailureCode,
-	type SignUpData,
-	type SignUpErrors,
-	SIGN_UP_MESSAGES,
-} from './sign-up'
 import type { EventCode, Log } from './auth-log'
+import { mailboxKey } from './canonical-email'
+import { SIGN_UP_MESSAGES, type SignUpData, type SignUpErrors, type SignUpFailureCode } from './sign-up'
+import { MAILBOX_RATE_LIMITS, type MailboxRateLimits, takeMailFor } from './sign-up-rate-limits'
 
 /**
  * The sign-up of a makeup artist, once the form has been checked (tickets 082, 083 and 084).
@@ -190,7 +185,7 @@ export async function signUpAccount({
 		}
 		if (takeMailFor(mailboxKey(compte.email), freins).autorise) {
 			// An account still waiting for its confirmation gets its link again (she lost the first mail);
-			// a confirmed one is told she has an account. The same choice as the resend (`renvoi.ts`).
+			// a confirmed one is told she has an account. The same choice as the resend (`resend.ts`).
 			const content =
 				!compte.verifie && compte.jeton ? contenuEmailConfirmation(compte.jeton) : contenuEmailDejaInscrite()
 			try {

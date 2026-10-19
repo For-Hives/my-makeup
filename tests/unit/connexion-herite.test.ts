@@ -2,18 +2,18 @@ import { beforeEach, describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import bcrypt from 'bcryptjs'
 import { AuthenticationError } from 'payload'
-import { signInWithPassword, type Clock, REFUSAL_FLOOR_MS } from '@/lib/auth/sign-in'
-import { createRateLimit } from '@/lib/auth/rate-limit'
-import {
-	isBcryptHash,
-	FAKE_HASH,
-	hashPassword,
-	PAYLOAD_PBKDF2,
-	replaceLegacyHash,
-	fakeVerificationWork,
-} from '@/lib/auth/legacy'
 import type { AuthEvent } from '@/lib/auth/auth-log'
 import { equalizeRestWork, rememberRestFailures } from '@/lib/auth/equal-time-payload'
+import {
+	FAKE_HASH,
+	fakeVerificationWork,
+	hashPassword,
+	isBcryptHash,
+	PAYLOAD_PBKDF2,
+	replaceLegacyHash,
+} from '@/lib/auth/legacy'
+import { createRateLimit } from '@/lib/auth/rate-limit'
+import { type Clock, REFUSAL_FLOOR_MS, signInWithPassword } from '@/lib/auth/sign-in'
 
 /**
  * The sign-in of an account of the old site (ticket 087; plan 02 U72, U74) and the equal time of
@@ -33,7 +33,7 @@ interface Ecriture {
 	data: Record<string, unknown>
 }
 
-/** The two things `remplacerLeHashHerite` touches: the raw read of the account, and the update. */
+/** The two things `replaceLegacyHash` touches: the raw read of the account, and the update. */
 function fauxPayload(ligne: { id: number; legacyBcrypt?: unknown; hash?: unknown; salt?: unknown } | undefined) {
 	const lectures: unknown[] = []
 	const ecritures: Ecriture[] = []
@@ -208,7 +208,7 @@ describe('connecter : le chemin du hash hérité', () => {
 	})
 })
 
-/** A clock that never waits: `connecter` only asks it for the time. */
+/** A clock that never waits: `signInWithPassword` only asks it for the time. */
 function instantanee(): Clock {
 	let maintenant = 0
 	return {
@@ -330,11 +330,7 @@ describe('U73 : l’adresse sans compte paie le travail de Payload', () => {
 			return Promise.resolve()
 		}
 
-		await replaceLegacyHash(
-			fauxPayload(undefined).payload,
-			{ email: 'a@example.test', password: 'un' },
-			travailFictif
-		)
+		await replaceLegacyHash(fauxPayload(undefined).payload, { email: 'a@example.test', password: 'un' }, travailFictif)
 		await replaceLegacyHash(
 			fauxPayload({ id: 1, legacyBcrypt: HASH }).payload,
 			{ email: 'a@example.test', password: 'deux' },

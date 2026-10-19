@@ -1,5 +1,5 @@
 import type { Payload } from 'payload'
-import { GMAIL_DOMAINS, canonicalGmailLocal } from './canonical-email'
+import { canonicalGmailLocal, GMAIL_DOMAINS } from './canonical-email'
 
 /**
  * Finds the account of an address, or of a Gmail variant of it (ticket 084): the dots and the

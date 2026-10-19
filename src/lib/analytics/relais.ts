@@ -33,7 +33,7 @@ const ADRESSE_LISIBLE = /^[0-9a-f:.]{2,45}$/i
 /**
  * The address of the visitor as the proxy in front of the application saw it: the last entry of
  * `X-Forwarded-For`, the one the closest proxy added. Nothing the browser wrote can replace it.
- * `X-Real-IP` is never read: a client can send it. Not `ipClient` (src/lib/auth/ip-client.ts),
+ * `X-Real-IP` is never read: a client can send it. Not `ipClient` (src/lib/auth/client-ip.ts),
  * which gives a counting key (an IPv6 address reduced to its /64 block), not an address.
  */
 export function adresseDuVisiteur(entetes: Headers): string | undefined {

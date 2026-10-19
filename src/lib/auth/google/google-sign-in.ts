@@ -1,22 +1,22 @@
 import { timingSafeEqual } from 'node:crypto'
 import type { Payload } from 'payload'
+import type { EventCode, Log } from '../auth-log'
 import type { GoogleErrorCode } from '../errors'
-import { type RateLimit, googleCallbackRateLimit } from '../rate-limit'
+import { googleCallbackRateLimit, type RateLimit } from '../rate-limit'
+import { ACCOUNT_ONBOARDING_PAGE } from '../return-to'
 import { authLogRateLimit } from '../sign-up-rate-limits'
 import { openWithoutPassword } from '../token'
-import type { EventCode, Log } from '../auth-log'
-import { ACCOUNT_ONBOARDING_PAGE } from '../return-to'
 import { type AccountRefusalCode, googleAccount } from './account'
-import { type ConfigGoogle, discover, RefusedToken, openCookie, type Query, codeClaims } from './oidc'
+import { type ConfigGoogle, codeClaims, discover, openCookie, type Query, RefusedToken } from './oidc'
 
 /**
  * The return from Google (tickets 090 and 091), from the address it called to the session.
  *
- * `terminerLaConnexionGoogle` believes nothing it has not checked: the cookie sealed at the
+ * `finishGoogleSignIn` believes nothing it has not checked: the cookie sealed at the
  * departure must come back, and its `state` must be the address's; only then is the code exchanged,
  * the ID token checked, the account found or made, and a session opened for it. Every refusal is
  * written to the journal (type « connexion », method « google ») and answered with one code of the
- * closed list of `erreurs.ts`: nothing Google sent, no address and no token is ever shown or kept.
+ * closed list of `errors.ts`: nothing Google sent, no address and no token is ever shown or kept.
  *
  * No `next` import: the route calls it with what it read from the request.
  */
@@ -120,8 +120,7 @@ export async function finishGoogleSignIn({
 		return refuse('retour-invalide', 'google-echec')
 	}
 
-	if (client !== undefined && !frein.prendre(client).autorise)
-		return refuse('trop-de-tentatives', 'trop-de-tentatives')
+	if (client !== undefined && !frein.prendre(client).autorise) return refuse('trop-de-tentatives', 'trop-de-tentatives')
 
 	const request = openCookie(cookie, secret, maintenant)
 	if (!request || retour.state === null || !sameText(retour.state, request.state))
@@ -134,12 +133,7 @@ export async function finishGoogleSignIn({
 	let claims: Awaited<ReturnType<typeof codeClaims>>
 	try {
 		const discovery = await discover(config.emetteur, { requeter, maintenant })
-		claims = await codeClaims(
-			config,
-			discovery,
-			{ code: retour.code, demande: request },
-			{ requeter, maintenant }
-		)
+		claims = await codeClaims(config, discovery, { code: retour.code, demande: request }, { requeter, maintenant })
 	} catch (error) {
 		if (error instanceof RefusedToken) return refuse('retour-invalide', 'google-echec')
 		// GoogleIndisponible, or anything unforeseen: the provider or the network, not the visitor.

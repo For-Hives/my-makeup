@@ -1,5 +1,5 @@
+import type { EventCode, EventType, Log } from './auth-log'
 import { authLogRateLimit, signUpRateLimit } from './sign-up-rate-limits'
-import type { EventCode, Log, EventType } from './auth-log'
 
 /**
  * The refusals of the sign-up that the proxy answers with a real 429 (ticket 084), and the way the
@@ -34,12 +34,7 @@ export function secondsBeforeSignUp(client: string, maintenant = Date.now()): nu
  * refused requests must not fill the journal. The address is the key of a counter in memory; it is
  * never written.
  */
-export async function logRefusal(
-	journal: Log,
-	client: string,
-	type: EventType,
-	code: EventCode
-): Promise<boolean> {
+export async function logRefusal(journal: Log, client: string, type: EventType, code: EventCode): Promise<boolean> {
 	if (!authLogRateLimit.prendre(`${client}|${type}|${code}`).autorise) return false
 	await journal({ type, code, method: 'password' })
 	return true

@@ -8,7 +8,7 @@ import { EXPIRED_SESSION_ERROR } from '@/lib/auth/return-to'
 
 /**
  * What the sign-in page tells the measure when it opens with an `?error=` (ticket 146). `code` is
- * the one the server found in the closed list (`erreurDeLUrl`), never the raw value of the address.
+ * the one the server found in the closed list (`urlError`), never the raw value of the address.
  *
  * - `session-expiree`: `session_expired`, once. Every redirection that says the session ended comes
  *   from a token that ran out, so `where` is `jwt_expire`.

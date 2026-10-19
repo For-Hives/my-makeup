@@ -22,7 +22,7 @@ import {
 	versLAdressePublique,
 } from '@/collections/Media'
 import { CONTEXTE_SANS_PROFIL, consentementTrace, Profiles, profilALaCreationDuCompte } from '@/collections/Profiles'
-import { compteSansProfilAvantSuppression, Pros, premierCompteFerme } from '@/collections/Pros'
+import { compteSansProfilAvantSuppression, firstClosedAccount, Pros } from '@/collections/Pros'
 import { Talents } from '@/collections/Talents'
 import {
 	AUCUN_DOCUMENT,
@@ -225,9 +225,9 @@ describe('La collection admins (ticket 018)', () => {
 	})
 
 	test('l’écran du premier compte est fermé sur admins comme sur pros, et rien ne force plus le rôle (ticket 094)', () => {
-		expect(Admins.endpoints).toContain(premierCompteFerme)
-		expect(Pros.endpoints).toContain(premierCompteFerme)
-		expect(() => premierCompteFerme.handler({ t: (cle: string) => cle } as never)).toThrow()
+		expect(Admins.endpoints).toContain(firstClosedAccount)
+		expect(Pros.endpoints).toContain(firstClosedAccount)
+		expect(() => firstClosedAccount.handler({ t: (cle: string) => cle } as never)).toThrow()
 		const role = Admins.fields.find(champ => 'name' in champ && champ.name === 'role')
 		// Once Payload has sanitized the configuration the field may carry empty hook lists: none holds a hook.
 		expect(Object.values((role as { hooks?: Record<string, unknown[]> }).hooks ?? {}).flat()).toEqual([])
@@ -300,9 +300,9 @@ describe('La collection pros (ticket 019)', () => {
 	})
 
 	test('l’écran du premier compte est fermé : la route refuse avant de rien créer', () => {
-		expect(premierCompteFerme).toMatchObject({ path: '/first-register', method: 'post' })
-		expect(() => premierCompteFerme.handler({ t: (cle: string) => cle } as never)).toThrow()
-		expect(Pros.endpoints).toContain(premierCompteFerme)
+		expect(firstClosedAccount).toMatchObject({ path: '/first-register', method: 'post' })
+		expect(() => firstClosedAccount.handler({ t: (cle: string) => cle } as never)).toThrow()
+		expect(Pros.endpoints).toContain(firstClosedAccount)
 	})
 })
 

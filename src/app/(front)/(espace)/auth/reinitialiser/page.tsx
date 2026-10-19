@@ -4,7 +4,7 @@ import { cookies } from 'next/headers'
 import Link from 'next/link'
 import { getPayload } from 'payload'
 import { PasswordResetForm } from '@/components/auth/PasswordResetForm'
-import { PASSWORD_RESET_COOKIE, PASSWORD_MESSAGES, FORGOT_PASSWORD_PAGE } from '@/lib/auth/forgot-password'
+import { FORGOT_PASSWORD_PAGE, PASSWORD_MESSAGES, PASSWORD_RESET_COOKIE } from '@/lib/auth/forgot-password'
 import { linkStillValid } from '@/lib/auth/password-reset-payload'
 import { choosePassword } from './actions'
 

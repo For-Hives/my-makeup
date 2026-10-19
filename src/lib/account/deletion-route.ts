@@ -7,7 +7,7 @@ import { deleteAccountAndDependents } from './deletion'
  * (ticket 167; plan 01 AUTH-13; plan 02 I37, E57). A collection's own routes come before Payload's,
  * so this one answers in place of the native deletion, and the panel's button « Supprimer » (which
  * asks for a confirmation first) calls it: the same cascade as the deletion by the makeup artist
- * (`supprimerLeCompteEtToutCeQuiEnDepend`), in one transaction. The native deletion of Payload
+ * (`deleteAccountAndDependents`), in one transaction. The native deletion of Payload
  * would leave the profile and the photos of the account behind, which is why the Local API refuses
  * an account that still has a profile (`compteSansProfilAvantSuppression`).
  *

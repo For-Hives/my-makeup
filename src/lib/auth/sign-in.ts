@@ -1,10 +1,10 @@
 import { AuthenticationError, UnverifiedEmail } from 'payload'
+import type { EventCode, Log } from './auth-log'
 import { BlockedAccount } from './blocked-account'
+import { ipClient } from './client-ip'
 import type { ErrorCode } from './errors'
 import { type RateLimit, signInRateLimit } from './rate-limit'
-import { ipClient } from './client-ip'
 import type { SessionToken } from './token'
-import type { EventCode, Log } from './auth-log'
 
 /** A password longer than this is refused as wrong: hashing it would cost more than it proves. */
 export const MAX_PASSWORD_LENGTH = 1024
@@ -26,7 +26,7 @@ const realClock: Clock = {
 export type SignInResult = { ok: true; token: string } | { ok: false; code: ErrorCode }
 
 export interface SignInInputs {
-	/** Signs the makeup artist in and gives the token back (`ouvrirParMotDePasse`). */
+	/** Signs the makeup artist in and gives the token back (`openWithPassword`). */
 	ouvrir: (data: { email: string; password: string }) => Promise<SessionToken>
 	headers: Headers
 	email: unknown
@@ -63,7 +63,7 @@ const isText = (valeur: unknown): valeur is string => typeof valeur === 'string'
  *   Payload's format, loses the old hash, and is signed in (ticket 087). The journal says `heritee`.
  * - A refusal of the credentials takes the same time whatever the cause (unknown address, wrong
  *   password, old account, account with no password): the same work, and no answer before
- *   `PLANCHER_DE_REFUS_MS` (ticket 088).
+ *   `REFUSAL_FLOOR_MS` (ticket 088).
  * - Gives back the token for the caller to put in the cookie. It never gives back the account.
  */
 export async function signInWithPassword(entrees: SignInInputs): Promise<SignInResult> {
@@ -76,16 +76,12 @@ export async function signInWithPassword(entrees: SignInInputs): Promise<SignInR
 }
 
 /** One row for the attempt. A journal that fails changes nothing for the visitor. */
-async function recordAttempt(
-	journal: Log | undefined,
-	code: EventCode,
-	durationMs: number
-): Promise<void> {
+async function recordAttempt(journal: Log | undefined, code: EventCode, durationMs: number): Promise<void> {
 	if (!journal) return
 	try {
 		await journal({ type: 'sign-in', code, durationMs, method: 'password' })
 	} catch {
-		// `journaliser` never throws; a double might. The sign-in is not the journal's to fail.
+		// `log` never throws; a double might. The sign-in is not the journal's to fail.
 	}
 }
 

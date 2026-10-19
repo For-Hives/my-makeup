@@ -121,7 +121,6 @@ export function ipClient(entetes: Headers): string {
 		.filter(e => e !== '')
 	if (inputs.length === 0) return NO_PROXY
 	const ranges = trustedRanges()
-	const client =
-		ranges.length === 0 ? inputs.at(-1) : (inputs.findLast(e => !isTrusted(e, ranges)) ?? inputs[0])
+	const client = ranges.length === 0 ? inputs.at(-1) : (inputs.findLast(e => !isTrusted(e, ranges)) ?? inputs[0])
 	return client ? addressKey(client) : NO_PROXY
 }
