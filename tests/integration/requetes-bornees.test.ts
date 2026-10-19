@@ -45,13 +45,13 @@ beforeAll(async () => {
 		collection: 'profiles',
 		id: profilA,
 		data: {
-			statut: 'publie',
-			coordonnees: { telephone: PRIVE_DE_A.telephone, email: PRIVE_DE_A.email },
-			noteInterne: PRIVE_DE_A.note,
+			status: 'published',
+			contactDetails: { phone: PRIVE_DE_A.telephone, email: PRIVE_DE_A.email },
+			internalNote: PRIVE_DE_A.note,
 			score: 4.5,
 		},
 	})
-	await payload.update({ collection: 'profiles', id: profilB, data: { statut: 'publie', score: 2 } })
+	await payload.update({ collection: 'profiles', id: profilB, data: { status: 'published', score: 2 } })
 	await payload.create({
 		collection: 'talents',
 		data: { title: 'Talent fictif', slug: 'talent-fictif', _status: 'published' },
@@ -98,7 +98,7 @@ describe('21 conditions : refus ; 20 : réponse (U60)', () => {
 	test('par REST, pour l’anonyme, une maquilleuse et la rédaction, sur chaque collection publique', async () => {
 		expect(CONDITIONS_MAX).toBe(20)
 		for (const lecteur of [lecteurs.anonyme, lecteurs.maquilleuse, lecteurs.redaction])
-			for (const collection of ['profils', 'talents', 'articles'] as const) {
+			for (const collection of ['profiles', 'talents', 'articles'] as const) {
 				const vingt = await lire(`/api/${collection}?${conditions(20)}`, lecteur)
 				expect([lecteur.nom, collection, vingt.statut]).toEqual([lecteur.nom, collection, 200])
 				const vingtEtUne = await lire(`/api/${collection}?${conditions(21)}`, lecteur)
@@ -240,9 +240,9 @@ describe('Filtre anonyme sur email, hash ou sessions, même par relation : refus
 describe('Filtre ou tri sur coordonnées, note interne ou score : refus sans fuite ; un admin passe', () => {
 	/** Each filter twice: on the stored value, and on a value nobody has. */
 	const FILTRES: [string, string, string][] = [
-		['coordonnees.telephone', PRIVE_DE_A.telephone, '01 00 00 00 00'],
-		['coordonnees.email', PRIVE_DE_A.email, 'personne@example.test'],
-		['noteInterne', PRIVE_DE_A.note, 'Aucune note'],
+		['contactDetails.phone', PRIVE_DE_A.telephone, '01 00 00 00 00'],
+		['contactDetails.email', PRIVE_DE_A.email, 'personne@example.test'],
+		['internalNote', PRIVE_DE_A.note, 'Aucune note'],
 		['score', '4.5', '1'],
 	]
 
@@ -264,7 +264,7 @@ describe('Filtre ou tri sur coordonnées, note interne ou score : refus sans fui
 
 	test('un tri sur le score ou les coordonnées : refusé, rien de l’ordre ne sort', async () => {
 		for (const lecteur of [lecteurs.anonyme, lecteurs.maquilleuse, lecteurs.redaction])
-			for (const tri of ['score', '-score', 'coordonnees.telephone', 'noteInterne', 'slug,-score'])
+			for (const tri of ['score', '-score', 'contactDetails.phone', 'internalNote', 'slug,-score'])
 				expect([lecteur.nom, tri, (await lire(`/api/profiles?sort=${tri}`, lecteur)).statut]).toEqual([
 					lecteur.nom,
 					tri,
@@ -273,7 +273,16 @@ describe('Filtre ou tri sur coordonnées, note interne ou score : refus sans fui
 	})
 
 	test('les autres champs privés du profil ne servent pas non plus de filtre ni de tri au public (Payload)', async () => {
-		for (const champ of ['statut', 'motif', 'verifie', 'siret', 'pro', 'strapiId', 'legacyUsername', 'contactPublic']) {
+		for (const champ of [
+			'status',
+			'reason',
+			'verified',
+			'siret',
+			'pro',
+			'strapiId',
+			'legacyUsername',
+			'publicContact',
+		]) {
 			expect([champ, (await lire(`/api/profiles?where[${champ}][exists]=true`)).statut]).toEqual([champ, 400])
 			expect([champ, (await lire(`/api/profiles?sort=-${champ}`)).statut]).toEqual([champ, 400])
 		}
@@ -296,9 +305,9 @@ describe('Filtre ou tri sur coordonnées, note interne ou score : refus sans fui
 		expect(await idsDe('/api/profiles?sort=-score&where[score][exists]=true')).toEqual([profilA, profilB])
 		expect(await idsDe('/api/profiles?sort=score&where[score][exists]=true')).toEqual([profilB, profilA])
 		expect(
-			await idsDe(`/api/profiles?where[coordonnees.telephone][equals]=${encodeURIComponent(PRIVE_DE_A.telephone)}`)
+			await idsDe(`/api/profiles?where[contactDetails.phone][equals]=${encodeURIComponent(PRIVE_DE_A.telephone)}`)
 		).toEqual([profilA])
-		expect(await idsDe('/api/profiles?where[noteInterne][like]=fictive')).toEqual([profilA])
+		expect(await idsDe('/api/profiles?where[internalNote][like]=fictive')).toEqual([profilA])
 	})
 })
 
@@ -320,7 +329,7 @@ describe('Un identifiant qu’aucun document ne peut porter : refusé avant la b
 	test('modifier ou supprimer par cet identifiant : refusé (403), ou par Payload lui-même (400) quand il n’y lit aucun nombre', async () => {
 		const ecrivains = [lecteurs.maquilleuse, lecteurs.redaction, lecteurs.admin]
 		for (const lecteur of ecrivains)
-			for (const collection of ['profils', 'pros', 'admins', 'talents', 'articles'])
+			for (const collection of ['profiles', 'pros', 'admins', 'talents', 'articles'])
 				for (const id of IMPOSSIBLES) {
 					const modification = await appelerRest('PATCH', `/api/${collection}/${id}`, {
 						enTetes: lecteur.enTetes,
@@ -340,7 +349,7 @@ describe('Un identifiant qu’aucun document ne peut porter : refusé avant la b
 
 describe('Le champ « profil » des comptes (une jointure) dans une adresse saisie à la main : jamais une erreur 500 (ticket 224)', () => {
 	test('un admin le filtre (200) ; tout autre lecteur est refusé (400 ou 403), jamais 500', async () => {
-		const chemin = '/api/pros?where[profil][exists]=true'
+		const chemin = '/api/pros?where[profile][exists]=true'
 
 		expect((await lire(chemin, lecteurs.admin)).statut).toBe(200)
 		for (const lecteur of [lecteurs.anonyme, lecteurs.maquilleuse, lecteurs.redaction])

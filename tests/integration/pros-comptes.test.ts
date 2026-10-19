@@ -148,7 +148,7 @@ describe('Les comptes des maquilleuses', () => {
 			collection: 'pros',
 			where: { id: { equals: a.id } },
 		})
-		for (const champ of ['bloque', '_verified', 'legacyProvider', 'strapiId', 'legacyBcrypt', 'hash', 'salt'])
+		for (const champ of ['blocked', '_verified', 'legacyProvider', 'strapiId', 'legacyBcrypt', 'hash', 'salt'])
 			expect({ champ, valeur: apres?.[champ] }).toEqual({ champ, valeur: avant?.[champ] })
 		// Her session still opens her account: neither her password nor her confirmation moved.
 		const { corps } = await appelerRest('GET', '/api/pros/me', { enTetes: a.session.enTetes })

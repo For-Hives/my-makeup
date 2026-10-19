@@ -50,7 +50,7 @@ beforeAll(async () => {
 		})
 		const profil = await payload.create({
 			collection: 'profiles',
-			data: { pro: pro.id, slug: `borne-${i}`, prenom: 'Prénom', nom: `Fictive ${i}`, specialite: 'Mariage' },
+			data: { pro: pro.id, slug: `borne-${i}`, firstName: 'Prénom', lastName: `Fictive ${i}`, specialty: 'Mariage' },
 		})
 		return profil.id
 	})
@@ -175,13 +175,13 @@ describe('Les relations ne sont pas touchées par le plafond', () => {
 
 		const reponse = await appelerRest('PATCH', `/api/profiles/${profil?.id}?depth=0`, {
 			enTetes,
-			corps: { photoPrincipale: principale, galerie },
+			corps: { mainPicture: principale, gallery: galerie },
 		})
 
 		expect(reponse.statut).toBe(200)
 		const stocke = await payload.findByID({ collection: 'profiles', id: profil?.id ?? 0, depth: 0 })
-		expect(stocke.photoPrincipale).toBe(principale ?? -1)
-		expect(stocke.galerie).toEqual(galerie)
+		expect(stocke.mainPicture).toBe(principale ?? -1)
+		expect(stocke.gallery).toEqual(galerie)
 	}, 60_000)
 
 	test('la rédaction publie un article dont la galerie compte plus de 100 images, et une lecture en depth=1 les peuple toutes', async () => {
@@ -233,7 +233,7 @@ describe('Hors REST, rien n’est plafonné', () => {
 
 	test('après onInit, l’endpoint borné est le premier GET / de chaque collection, celles de Payload comprises', () => {
 		const slugs = Object.keys(payload.collections)
-		expect(slugs).toEqual(expect.arrayContaining(['profils', 'articles', 'talents', 'payload-locked-documents']))
+		expect(slugs).toEqual(expect.arrayContaining(['profiles', 'articles', 'talents', 'payload-locked-documents']))
 		for (const [slug, { config }] of Object.entries(payload.collections)) {
 			// A collection without any REST endpoint (the bookkeeping of the migrations) has no list to bound.
 			if (config.endpoints === false) continue

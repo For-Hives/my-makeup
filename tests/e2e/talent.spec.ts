@@ -26,7 +26,7 @@ test.beforeAll(async ({ request }) => {
 				title: `Talent ${suffixe}`,
 				slug: publie,
 				seo_title: `Le maquillage fictif ${suffixe}`,
-				titreDeLaPage: TITRE_DE_LA_PAGE,
+				pageTitle: TITRE_DE_LA_PAGE,
 				description: 'Une présentation écrite pour l’essai de la page d’un talent.',
 				seo_description: 'Une description écrite pour les moteurs de recherche, pour l’essai.',
 				content: '# Un titre du texte\n\nUn paragraphe avec du **gras**.\n\n<script>window.__glisse = true</script>\n',
