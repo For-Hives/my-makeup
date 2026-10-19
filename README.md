@@ -652,6 +652,8 @@ Rien ne se publie avant la fusion de `v3` dans `main`. Le détail, et ce qu'il r
 | `bun run image:build` | Construit l'image Docker `my-makeup:local` |
 | `bun run image:controle` | Vérifie l'image construite contre une base jetable (voir « Image Docker ») |
 | `bun run notes:ajouter` | Ajoute une note de version en attente : un type (`ajout`, `amelioration`, `correction`), puis la phrase entre guillemets (voir « Notes de version et publication ») |
+| `bun run names:check [dossier…]` | Liste les noms du code qui sont encore français (fichiers, dossiers, noms déclarés, scripts, variables d'environnement lues, options des scripts) et sort avec le code 1 s'il en trouve hors de la liste d'attente et des exceptions. `--no-waiting`, `--summary`, `--json` (voir [`docs/noms.md`](docs/noms.md)). Pas encore dans la CI (ticket 254) |
+| `bun run names:rename <table.json>` | Déplace des fichiers et des dossiers et renomme des noms par le service de langage de TypeScript, importeurs compris. `--dry-run` n'écrit rien. Outil des lots de renommage, retiré au ticket 254 (voir [`docs/noms.md`](docs/noms.md)) |
 | `bun run release:publier` | Avec `--a-blanc` : montre la prochaine publication sans rien écrire. Avec `--pousser` : publie, dans le workflow `release.yml` seulement |
 
 Biome se lance par ces scripts ou par `bunx @biomejs/biome`, jamais par `npx biome` : c'est un paquet homonyme.
