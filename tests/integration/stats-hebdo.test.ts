@@ -47,23 +47,21 @@ describe('Les statistiques hebdomadaires sur le jeu du banc', () => {
 		const stats = StatsHebdo.parse(await reponse.json())
 
 		expect(reponse.status).toBe(200)
-		expect(stats.comptes.total).toBe(types.length + profilsDesComptes)
+		expect(stats.accounts.total).toBe(types.length + profilsDesComptes)
 		// Every account of makeup artist but the one without profile has an empty profile, created with it.
 		const videsDesComptes = profilsDesComptes - sansProfil
-		expect(stats.profils.total).toBe(types.length + videsDesComptes)
-		expect(stats.profils.entierementVides).toBe(
-			types.filter(({ attendu }) => attendu.fullyEmpty).length + videsDesComptes
-		)
-		expect(stats.profils.actifs).toBe(types.filter(({ attendu }) => attendu.active).length)
-		expect(stats.profils.publiables).toBe(vusParLeServeur.length)
-		expect(stats.profils.masques).toBe(types.filter(({ attendu }) => attendu.status === 'hidden').length)
-		expect(stats.publiables.slugs).toEqual(vusParLeServeur.map(({ attendu }) => attendu.slug).sort())
-		expect(Object.values(stats.publiables.parDepartement).reduce((a, b) => a + b, 0)).toBe(vusParLeServeur.length)
+		expect(stats.profiles.total).toBe(types.length + videsDesComptes)
+		expect(stats.profiles.fullyEmpty).toBe(types.filter(({ attendu }) => attendu.fullyEmpty).length + videsDesComptes)
+		expect(stats.profiles.active).toBe(types.filter(({ attendu }) => attendu.active).length)
+		expect(stats.profiles.publishable).toBe(vusParLeServeur.length)
+		expect(stats.profiles.hidden).toBe(types.filter(({ attendu }) => attendu.status === 'hidden').length)
+		expect(stats.publishable.slugs).toEqual(vusParLeServeur.map(({ attendu }) => attendu.slug).sort())
+		expect(Object.values(stats.publishable.byDepartment).reduce((a, b) => a + b, 0)).toBe(vusParLeServeur.length)
 		// The set was created now: nothing in 2020.
-		expect(stats.profils.crees).toBe(0)
-		expect(stats.comptes.nouveaux).toBe(0)
-		expect(stats.inscriptions).toEqual([])
-		expect(stats.cohorte).toEqual({ profils: 0, actifs: 0 })
+		expect(stats.profiles.created).toBe(0)
+		expect(stats.accounts.new).toBe(0)
+		expect(stats.signUps).toEqual([])
+		expect(stats.cohort).toEqual({ profiles: 0, active: 0 })
 		expect(Object.keys(COMPTES_DU_JEU).length).toBeGreaterThan(0)
 	}, 60_000)
 
@@ -72,14 +70,14 @@ describe('Les statistiques hebdomadaires sur le jeu du banc', () => {
 		const fin = new Date(Date.now() + 3_600_000).toISOString()
 		const stats = StatsHebdo.parse(await (await appeler(`from=${debut}&to=${fin}`)).json())
 
-		expect(stats.profils.crees).toBe(stats.profils.total)
-		expect(stats.inscriptions).toHaveLength(stats.profils.total)
-		expect(stats.comptes.nouveaux).toBe(stats.comptes.total)
+		expect(stats.profiles.created).toBe(stats.profiles.total)
+		expect(stats.signUps).toHaveLength(stats.profiles.total)
+		expect(stats.accounts.new).toBe(stats.accounts.total)
 	}, 60_000)
 
 	test('ni « @ », ni 9 chiffres, ni nom du jeu hors de la liste des adresses publiques', async () => {
 		const stats = StatsHebdo.parse(await (await appeler(SEMAINE)).json())
-		const sansAdresses = JSON.stringify({ ...stats, publiables: { ...stats.publiables, slugs: [] } })
+		const sansAdresses = JSON.stringify({ ...stats, publishable: { ...stats.publishable, slugs: [] } })
 		const noms = PROFILS_DU_JEU.flatMap(({ profil, compte }) => [
 			profil.firstName,
 			profil.lastName,

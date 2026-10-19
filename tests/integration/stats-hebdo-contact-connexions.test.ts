@@ -86,19 +86,19 @@ describe('Les statistiques hebdomadaires : messages de contact, connexions, comp
 		const stats = await lire(...autour())
 		expect(stats.contact).toEqual({
 			total: 4,
-			parStatut: { nouvelle: 1, transmise: 1, repondue: 1, spam: 1 },
-			parEtatMail: { 'en-attente': 1, envoye: 2, echec: 1 },
+			byStatus: { new: 1, forwarded: 1, answered: 1, spam: 1 },
+			byMailState: { pending: 1, sent: 2, failed: 1 },
 		})
 		const ancien = await lire(new Date('2020-02-01T00:00:00Z'), new Date('2020-02-08T00:00:00Z'))
 		expect(ancien.contact?.total).toBe(0)
-		expect(Object.values(ancien.contact?.parStatut ?? {}).every(n => n === 0)).toBe(true)
+		expect(Object.values(ancien.contact?.byStatus ?? {}).every(n => n === 0)).toBe(true)
 	}, 60_000)
 
 	test('les connexions par code et leur 95e centile ; les autres événements à part', async () => {
 		const { auth } = await lire(...autour())
-		const connexions = auth?.connexions
+		const connexions = auth?.signIns
 		expect(connexions?.total).toBe(CONNEXIONS.length + 1)
-		expect(connexions?.parCode).toMatchObject({
+		expect(connexions?.byCode).toMatchObject({
 			ok: 6,
 			heritee: 1,
 			'identifiants-invalides': 2,
@@ -108,23 +108,23 @@ describe('Les statistiques hebdomadaires : messages de contact, connexions, comp
 		})
 		// Ten durations, 100 to 1 000: the nearest rank of the 95th percentile is the tenth. The row of 2020, the
 		// sign-out and the sign-in with no duration do not move it.
-		expect(connexions?.dureeP95Ms).toBe(1000)
-		expect(auth?.parType.connexion).toBe(CONNEXIONS.length + 1)
-		expect(auth?.parType.deconnexion).toBe(1)
-		expect(auth?.parType.inscription).toBe(0)
+		expect(connexions?.durationP95Ms).toBe(1000)
+		expect(auth?.byType['sign-in']).toBe(CONNEXIONS.length + 1)
+		expect(auth?.byType['sign-out']).toBe(1)
+		expect(auth?.byType['sign-up']).toBe(0)
 	}, 60_000)
 
 	test('une période sans connexion : zéro, et pas de centile', async () => {
 		const { auth } = await lire(new Date('2020-02-01T00:00:00Z'), new Date('2020-02-08T00:00:00Z'))
-		expect(auth?.connexions.total).toBe(0)
-		expect(auth?.connexions.dureeP95Ms).toBeNull()
+		expect(auth?.signIns.total).toBe(0)
+		expect(auth?.signIns.durationP95Ms).toBeNull()
 		const du2janvier = await lire(new Date('2020-01-02T00:00:00Z'), new Date('2020-01-03T00:00:00Z'))
-		expect(du2janvier.auth?.connexions).toMatchObject({ total: 1, dureeP95Ms: 60_000 })
+		expect(du2janvier.auth?.signIns).toMatchObject({ total: 1, durationP95Ms: 60_000 })
 	}, 60_000)
 
 	test('ni IP, ni email, ni 9 chiffres dans les nouvelles clés', async () => {
-		const { contact, auth, herites } = await lire(...autour())
-		const texte = JSON.stringify({ contact, auth, herites })
+		const { contact, auth, inherited } = await lire(...autour())
+		const texte = JSON.stringify({ contact, auth, inherited })
 		expect(texte).not.toContain('@')
 		expect(texte).not.toMatch(/\d{9}/)
 		expect(texte).not.toMatch(/\d+\.\d+\.\d+\.\d+/)
@@ -138,12 +138,12 @@ describe('Les statistiques hebdomadaires : messages de contact, connexions, comp
 		const attenduSansHash = (fournisseur: 'google' | 'facebook') =>
 			promis.filter(reprise => reprise.fournisseur === fournisseur && !reprise.hashHerite).length
 
-		const { herites } = await lire(...autour())
-		expect(herites?.hashRestants).toBe(promis.filter(reprise => reprise.hashHerite).length)
-		expect(herites?.sansMotDePasseParFournisseur).toEqual({
+		const { inherited } = await lire(...autour())
+		expect(inherited?.remainingHashes).toBe(promis.filter(reprise => reprise.hashHerite).length)
+		expect(inherited?.withoutPasswordByProvider).toEqual({
 			google: attenduSansHash('google'),
 			facebook: attenduSansHash('facebook'),
-			autre: 0,
+			other: 0,
 		})
 		// The fixed set holds every type of account once.
 		expect(TYPES_DU_JEU.length).toBe(Object.keys(TYPES_DE_COMPTE).length)
@@ -151,14 +151,14 @@ describe('Les statistiques hebdomadaires : messages de contact, connexions, comp
 
 	test('la première connexion avec l’ancien mot de passe fait baisser le nombre de hash restants, et rien d’autre', async () => {
 		const payload = await payloadDeTest()
-		const avantLaConnexion = (await lire(...autour())).herites
+		const avantLaConnexion = (await lire(...autour())).inherited
 		const accepte = await replaceLegacyHash(payload, {
 			email: adresseDuJeu('reprise-avec-hash'),
 			password: MOT_DE_PASSE_HERITE_DE_FIXTURE,
 		})
 		expect(accepte).toBe(true)
-		const apres = (await lire(...autour())).herites
-		expect(apres?.hashRestants).toBe((avantLaConnexion?.hashRestants ?? 0) - 1)
-		expect(apres?.sansMotDePasseParFournisseur).toEqual(avantLaConnexion?.sansMotDePasseParFournisseur)
+		const apres = (await lire(...autour())).inherited
+		expect(apres?.remainingHashes).toBe((avantLaConnexion?.remainingHashes ?? 0) - 1)
+		expect(apres?.withoutPasswordByProvider).toEqual(avantLaConnexion?.withoutPasswordByProvider)
 	}, 60_000)
 })

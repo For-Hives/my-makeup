@@ -28,7 +28,7 @@ Un mot anglais qui s'écrit comme un mot français (`table`, `page`, `image`, `m
 | `bun run names:check --summary` | Les nombres par famille (français / total) en plus. |
 | `bun run names:check --json` | Le rapport complet : échecs, noms en attente, noms excusés, entrées de la liste d'attente qui ne désignent plus rien. |
 
-La sortie groupe les noms par fichier, avec les mots français trouvés. Le contrôle ne tourne pas encore dans la CI : il y entre au ticket 254, quand la liste d'attente est vide.
+La sortie groupe les noms par fichier, avec les mots français trouvés. Le contrôle tourne dans la CI, dans le job `qualite` (étape « English names »), donc sous `ci-ok` sans nouveau check requis : un nom français hors de la liste d'attente et des exceptions rend la CI rouge. Tant que la liste d'attente n'est pas vide (lots 238 à 248), il tourne avec elle ; la passe finale du ticket 254 (liste vide, décompte final) reste à faire quand ces lots sont fusionnés.
 
 ## 3. La liste d'attente et les exceptions
 
@@ -73,7 +73,7 @@ C'est la méthode du plan, §8 :
 - À la fin, l'outil liste (par `git grep`) les fichiers qui citent encore un ancien chemin ou un ancien nom : ce sont des textes que le service de langage ne suit pas, à corriger à la main. Il ne touche ni aux adresses, ni aux valeurs de chaînes, ni aux colonnes de la base.
 - Durées mesurées sur ce poste, sur tout le dépôt : un déplacement coûte environ 45 secondes (le programme TypeScript est reconstruit à chaque déplacement), une table de deux noms avec leurs 38 références environ 4 secondes. Préférer une entrée par dossier à une entrée par fichier.
 
-Un nom qui change de casse seule (`Profile` → `profile`) n'est pas supporté sur un système de fichiers qui ignore la casse ; c'est sans objet sous Linux. L'outil est retiré au ticket 254, ou gardé avec sa raison écrite.
+Un nom qui change de casse seule (`Profile` → `profile`) n'est pas supporté sur un système de fichiers qui ignore la casse ; c'est sans objet sous Linux. **Gardé, avec sa raison** (ticket 254, passe partielle) : les lots 238 à 248 n'ont pas encore tourné, et ils renomment par cet outil ; le retirer maintenant les ferait renommer à la main ou par `sed`. Il se retire dans la passe finale, quand la liste d'attente est vide.
 
 Son test : `tests/unit/naming/rename.test.ts` (un petit projet dans un dossier temporaire). Celui du contrôle : `tests/unit/naming/check.test.ts`.
 

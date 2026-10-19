@@ -45,7 +45,7 @@ jobs:
           bun-version-file: package.json
       - name: Install
         run: bun install --frozen-lockfile
-      # The five checks below run even when an earlier one failed: one push shows every
+      # The six checks below run even when an earlier one failed: one push shows every
       # fault at once. The job is red as soon as one of them is.
       - name: Generated files are up to date
         if: ${{ !cancelled() }}
@@ -69,6 +69,12 @@ jobs:
       - name: Guard rails of the CI
         if: ${{ !cancelled() }}
         run: bun run test:ci-garde
+      # A French name in the code (files, folders, declared names, scripts, variables, options) makes
+      # this step, then ci-ok, red. The waiting list and the named exceptions are in
+      # scripts/naming/config.json (docs/noms.md). No new required check: the step is in `qualite`.
+      - name: English names
+        if: ${{ !cancelled() }}
+        run: bun run names:check
 
   unit:
     name: unit

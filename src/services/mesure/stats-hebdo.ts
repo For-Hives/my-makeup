@@ -82,7 +82,7 @@ export async function lireLesStatsHebdo(
 			FOURNISSEURS_HERITES.map(async fournisseur => {
 				const sansHash = { legacyBcrypt: { exists: false } }
 				const where =
-					fournisseur === 'autre'
+					fournisseur === 'other'
 						? {
 								and: [
 									sansHash,
@@ -108,6 +108,6 @@ export async function lireLesStatsHebdo(
 		...stats,
 		contact: agregerContact(demandes.docs),
 		auth: agregerAuth(evenements.docs),
-		herites: { hashRestants: hashRestants.totalDocs, sansMotDePasseParFournisseur: Object.fromEntries(sansHash) },
+		inherited: { remainingHashes: hashRestants.totalDocs, withoutPasswordByProvider: Object.fromEntries(sansHash) },
 	}
 }

@@ -1,148 +1,148 @@
 {
-  "version": 1,
-  "periode": {
-    "debut": "2026-10-04T22:00:00.000Z",
-    "fin": "2026-10-11T22:00:00.000Z"
+  "version": 2,
+  "period": {
+    "start": "2026-10-04T22:00:00.000Z",
+    "end": "2026-10-11T22:00:00.000Z"
   },
-  "genereLe": "2026-10-12T05:30:00.000Z",
-  "comptes": {
+  "generatedAt": "2026-10-12T05:30:00.000Z",
+  "accounts": {
     "total": 20,
-    "nouveaux": 20
+    "new": 20
   },
-  "profils": {
+  "profiles": {
     "total": 19,
-    "entierementVides": 8,
-    "actifs": 11,
-    "publiables": 8,
-    "masques": 1,
-    "complets11": 11,
-    "quasiVides": 8,
-    "sansCanal": 9,
-    "modifies90j": 19,
-    "crees": 19
+    "fullyEmpty": 8,
+    "active": 11,
+    "publishable": 8,
+    "hidden": 1,
+    "complete11": 11,
+    "nearlyEmpty": 8,
+    "noChannel": 9,
+    "modified90d": 19,
+    "created": 19
   },
-  "cohorte": {
-    "profils": 4,
-    "actifs": 2
+  "cohort": {
+    "profiles": 4,
+    "active": 2
   },
-  "inscriptions": [
+  "signUps": [
     {
-      "creeLe": "2026-10-05",
-      "completude": 0,
-      "actif": false,
-      "publiable": false
+      "createdOn": "2026-10-05",
+      "completeness": 0,
+      "active": false,
+      "publishable": false
     },
     {
-      "creeLe": "2026-10-05",
-      "completude": 0,
-      "actif": false,
-      "publiable": false
+      "createdOn": "2026-10-05",
+      "completeness": 0,
+      "active": false,
+      "publishable": false
     },
     {
-      "creeLe": "2026-10-05",
-      "completude": 13,
-      "actif": true,
-      "publiable": true
+      "createdOn": "2026-10-05",
+      "completeness": 13,
+      "active": true,
+      "publishable": true
     },
     {
-      "creeLe": "2026-10-06",
-      "completude": 0,
-      "actif": false,
-      "publiable": false
+      "createdOn": "2026-10-06",
+      "completeness": 0,
+      "active": false,
+      "publishable": false
     },
     {
-      "creeLe": "2026-10-06",
-      "completude": 12,
-      "actif": true,
-      "publiable": false
+      "createdOn": "2026-10-06",
+      "completeness": 12,
+      "active": true,
+      "publishable": false
     },
     {
-      "creeLe": "2026-10-06",
-      "completude": 13,
-      "actif": true,
-      "publiable": true
+      "createdOn": "2026-10-06",
+      "completeness": 13,
+      "active": true,
+      "publishable": true
     },
     {
-      "creeLe": "2026-10-07",
-      "completude": 0,
-      "actif": false,
-      "publiable": false
+      "createdOn": "2026-10-07",
+      "completeness": 0,
+      "active": false,
+      "publishable": false
     },
     {
-      "creeLe": "2026-10-07",
-      "completude": 13,
-      "actif": true,
-      "publiable": false
+      "createdOn": "2026-10-07",
+      "completeness": 13,
+      "active": true,
+      "publishable": false
     },
     {
-      "creeLe": "2026-10-07",
-      "completude": 13,
-      "actif": true,
-      "publiable": true
+      "createdOn": "2026-10-07",
+      "completeness": 13,
+      "active": true,
+      "publishable": true
     },
     {
-      "creeLe": "2026-10-08",
-      "completude": 0,
-      "actif": false,
-      "publiable": false
+      "createdOn": "2026-10-08",
+      "completeness": 0,
+      "active": false,
+      "publishable": false
     },
     {
-      "creeLe": "2026-10-08",
-      "completude": 13,
-      "actif": true,
-      "publiable": true
+      "createdOn": "2026-10-08",
+      "completeness": 13,
+      "active": true,
+      "publishable": true
     },
     {
-      "creeLe": "2026-10-08",
-      "completude": 13,
-      "actif": true,
-      "publiable": true
+      "createdOn": "2026-10-08",
+      "completeness": 13,
+      "active": true,
+      "publishable": true
     },
     {
-      "creeLe": "2026-10-09",
-      "completude": 0,
-      "actif": false,
-      "publiable": false
+      "createdOn": "2026-10-09",
+      "completeness": 0,
+      "active": false,
+      "publishable": false
     },
     {
-      "creeLe": "2026-10-09",
-      "completude": 13,
-      "actif": true,
-      "publiable": true
+      "createdOn": "2026-10-09",
+      "completeness": 13,
+      "active": true,
+      "publishable": true
     },
     {
-      "creeLe": "2026-10-09",
-      "completude": 13,
-      "actif": true,
-      "publiable": true
+      "createdOn": "2026-10-09",
+      "completeness": 13,
+      "active": true,
+      "publishable": true
     },
     {
-      "creeLe": "2026-10-10",
-      "completude": 0,
-      "actif": false,
-      "publiable": false
+      "createdOn": "2026-10-10",
+      "completeness": 0,
+      "active": false,
+      "publishable": false
     },
     {
-      "creeLe": "2026-10-10",
-      "completude": 13,
-      "actif": true,
-      "publiable": true
+      "createdOn": "2026-10-10",
+      "completeness": 13,
+      "active": true,
+      "publishable": true
     },
     {
-      "creeLe": "2026-10-11",
-      "completude": 0,
-      "actif": false,
-      "publiable": false
+      "createdOn": "2026-10-11",
+      "completeness": 0,
+      "active": false,
+      "publishable": false
     },
     {
-      "creeLe": "2026-10-11",
-      "completude": 13,
-      "actif": true,
-      "publiable": true
+      "createdOn": "2026-10-11",
+      "completeness": 13,
+      "active": true,
+      "publishable": true
     }
   ],
-  "publiables": {
-    "parDepartement": {
+  "publishable": {
+    "byDepartment": {
       "44": 1,
       "51": 1,
       "74": 6
@@ -160,34 +160,34 @@
   },
   "contact": {
     "total": 3,
-    "parStatut": {
-      "nouvelle": 1,
-      "transmise": 1,
-      "repondue": 1,
+    "byStatus": {
+      "new": 1,
+      "forwarded": 1,
+      "answered": 1,
       "spam": 0
     },
-    "parEtatMail": {
-      "en-attente": 0,
-      "envoye": 2,
-      "echec": 1
+    "byMailState": {
+      "pending": 0,
+      "sent": 2,
+      "failed": 1
     }
   },
   "auth": {
-    "parType": {
-      "connexion": 47,
-      "deconnexion": 12,
-      "deconnexion-partout": 0,
-      "inscription": 19,
+    "byType": {
+      "sign-in": 47,
+      "sign-out": 12,
+      "sign-out-everywhere": 0,
+      "sign-up": 19,
       "confirmation": 15,
-      "renvoi": 2,
-      "mot-de-passe-oublie": 4,
-      "reinitialisation": 3,
-      "blocage": 0,
-      "deblocage": 0
+      "resend": 2,
+      "forgot-password": 4,
+      "password-reset": 3,
+      "block": 0,
+      "unblock": 0
     },
-    "connexions": {
+    "signIns": {
       "total": 47,
-      "parCode": {
+      "byCode": {
         "ok": 31,
         "heritee": 6,
         "identifiants-invalides": 9,
@@ -206,15 +206,15 @@
         "inconnu": 0,
         "champ-piege": 0
       },
-      "dureeP95Ms": 412
+      "durationP95Ms": 412
     }
   },
-  "herites": {
-    "hashRestants": 37,
-    "sansMotDePasseParFournisseur": {
+  "inherited": {
+    "remainingHashes": 37,
+    "withoutPasswordByProvider": {
       "google": 38,
       "facebook": 9,
-      "autre": 0
+      "other": 0
     }
   }
 }
