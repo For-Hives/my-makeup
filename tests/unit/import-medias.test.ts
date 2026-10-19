@@ -314,7 +314,7 @@ describe('la comparaison des listes, des galeries et des valeurs gardées telles
 
 		expect(normaliser('liste', relue)).toBe(normaliser('liste', ecrite))
 		expect(normaliser('liste', [...relue].reverse())).not.toBe(normaliser('liste', ecrite))
-		expect(normaliser('liste', [{ prixTexte: '' }])).not.toBe(normaliser('liste', [{ prixTexte: null }]))
+		expect(normaliser('liste', [{ priceText: '' }])).not.toBe(normaliser('liste', [{ priceText: null }]))
 		expect(normaliser('liste', [{ options: [{ id: 'x', nom: 'A' }] }])).toBe(
 			normaliser('liste', [{ options: [{ nom: 'A' }] }])
 		)

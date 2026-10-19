@@ -480,8 +480,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.profiles_prestations_options": {
-      "name": "profiles_prestations_options",
+    "public.profiles_service_offers_options": {
+      "name": "profiles_service_offers_options",
       "schema": "",
       "columns": {
         "_order": {
@@ -502,8 +502,8 @@
           "primaryKey": true,
           "notNull": true
         },
-        "nom": {
-          "name": "nom",
+        "name": {
+          "name": "name",
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
@@ -514,22 +514,22 @@
           "primaryKey": false,
           "notNull": false
         },
-        "prix_texte": {
-          "name": "prix_texte",
+        "price_text": {
+          "name": "price_text",
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
         },
-        "prix_a_partir_de": {
-          "name": "prix_a_partir_de",
+        "price_from": {
+          "name": "price_from",
           "type": "numeric",
           "primaryKey": false,
           "notNull": false
         }
       },
       "indexes": {
-        "profiles_prestations_options_order_idx": {
-          "name": "profiles_prestations_options_order_idx",
+        "profiles_service_offers_options_order_idx": {
+          "name": "profiles_service_offers_options_order_idx",
           "columns": [
             {
               "expression": "_order",
@@ -543,8 +543,8 @@
           "method": "btree",
           "with": {}
         },
-        "profiles_prestations_options_parent_id_idx": {
-          "name": "profiles_prestations_options_parent_id_idx",
+        "profiles_service_offers_options_parent_id_idx": {
+          "name": "profiles_service_offers_options_parent_id_idx",
           "columns": [
             {
               "expression": "_parent_id",
@@ -560,10 +560,10 @@
         }
       },
       "foreignKeys": {
-        "profiles_prestations_options_parent_id_fk": {
-          "name": "profiles_prestations_options_parent_id_fk",
-          "tableFrom": "profiles_prestations_options",
-          "tableTo": "profiles_prestations",
+        "profiles_service_offers_options_parent_id_fk": {
+          "name": "profiles_service_offers_options_parent_id_fk",
+          "tableFrom": "profiles_service_offers_options",
+          "tableTo": "profiles_service_offers",
           "columnsFrom": [
             "_parent_id"
           ],
@@ -580,8 +580,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.profiles_prestations": {
-      "name": "profiles_prestations",
+    "public.profiles_service_offers": {
+      "name": "profiles_service_offers",
       "schema": "",
       "columns": {
         "_order": {
@@ -602,8 +602,8 @@
           "primaryKey": true,
           "notNull": true
         },
-        "nom": {
-          "name": "nom",
+        "name": {
+          "name": "name",
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
@@ -614,22 +614,22 @@
           "primaryKey": false,
           "notNull": false
         },
-        "prix_texte": {
-          "name": "prix_texte",
+        "price_text": {
+          "name": "price_text",
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
         },
-        "prix_a_partir_de": {
-          "name": "prix_a_partir_de",
+        "price_from": {
+          "name": "price_from",
           "type": "numeric",
           "primaryKey": false,
           "notNull": false
         }
       },
       "indexes": {
-        "profiles_prestations_order_idx": {
-          "name": "profiles_prestations_order_idx",
+        "profiles_service_offers_order_idx": {
+          "name": "profiles_service_offers_order_idx",
           "columns": [
             {
               "expression": "_order",
@@ -643,8 +643,8 @@
           "method": "btree",
           "with": {}
         },
-        "profiles_prestations_parent_id_idx": {
-          "name": "profiles_prestations_parent_id_idx",
+        "profiles_service_offers_parent_id_idx": {
+          "name": "profiles_service_offers_parent_id_idx",
           "columns": [
             {
               "expression": "_parent_id",
@@ -660,9 +660,9 @@
         }
       },
       "foreignKeys": {
-        "profiles_prestations_parent_id_fk": {
-          "name": "profiles_prestations_parent_id_fk",
-          "tableFrom": "profiles_prestations",
+        "profiles_service_offers_parent_id_fk": {
+          "name": "profiles_service_offers_parent_id_fk",
+          "tableFrom": "profiles_service_offers",
           "tableTo": "profiles",
           "columnsFrom": [
             "_parent_id"
@@ -680,8 +680,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.profiles_competences": {
-      "name": "profiles_competences",
+    "public.profiles_skills": {
+      "name": "profiles_skills",
       "schema": "",
       "columns": {
         "_order": {
@@ -702,8 +702,8 @@
           "primaryKey": true,
           "notNull": true
         },
-        "nom": {
-          "name": "nom",
+        "name": {
+          "name": "name",
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
@@ -716,8 +716,8 @@
         }
       },
       "indexes": {
-        "profiles_competences_order_idx": {
-          "name": "profiles_competences_order_idx",
+        "profiles_skills_order_idx": {
+          "name": "profiles_skills_order_idx",
           "columns": [
             {
               "expression": "_order",
@@ -731,8 +731,8 @@
           "method": "btree",
           "with": {}
         },
-        "profiles_competences_parent_id_idx": {
-          "name": "profiles_competences_parent_id_idx",
+        "profiles_skills_parent_id_idx": {
+          "name": "profiles_skills_parent_id_idx",
           "columns": [
             {
               "expression": "_parent_id",
@@ -748,9 +748,9 @@
         }
       },
       "foreignKeys": {
-        "profiles_competences_parent_id_fk": {
-          "name": "profiles_competences_parent_id_fk",
-          "tableFrom": "profiles_competences",
+        "profiles_skills_parent_id_fk": {
+          "name": "profiles_skills_parent_id_fk",
+          "tableFrom": "profiles_skills",
           "tableTo": "profiles",
           "columnsFrom": [
             "_parent_id"
@@ -768,8 +768,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.profiles_langues": {
-      "name": "profiles_langues",
+    "public.profiles_languages": {
+      "name": "profiles_languages",
       "schema": "",
       "columns": {
         "_order": {
@@ -790,16 +790,16 @@
           "primaryKey": true,
           "notNull": true
         },
-        "nom": {
-          "name": "nom",
+        "name": {
+          "name": "name",
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
         }
       },
       "indexes": {
-        "profiles_langues_order_idx": {
-          "name": "profiles_langues_order_idx",
+        "profiles_languages_order_idx": {
+          "name": "profiles_languages_order_idx",
           "columns": [
             {
               "expression": "_order",
@@ -813,8 +813,8 @@
           "method": "btree",
           "with": {}
         },
-        "profiles_langues_parent_id_idx": {
-          "name": "profiles_langues_parent_id_idx",
+        "profiles_languages_parent_id_idx": {
+          "name": "profiles_languages_parent_id_idx",
           "columns": [
             {
               "expression": "_parent_id",
@@ -830,9 +830,9 @@
         }
       },
       "foreignKeys": {
-        "profiles_langues_parent_id_fk": {
-          "name": "profiles_langues_parent_id_fk",
-          "tableFrom": "profiles_langues",
+        "profiles_languages_parent_id_fk": {
+          "name": "profiles_languages_parent_id_fk",
+          "tableFrom": "profiles_languages",
           "tableTo": "profiles",
           "columnsFrom": [
             "_parent_id"
@@ -850,8 +850,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.profiles_formations": {
-      "name": "profiles_formations",
+    "public.profiles_courses": {
+      "name": "profiles_courses",
       "schema": "",
       "columns": {
         "_order": {
@@ -872,20 +872,20 @@
           "primaryKey": true,
           "notNull": true
         },
-        "diplome": {
-          "name": "diplome",
+        "diploma": {
+          "name": "diploma",
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
         },
-        "ecole": {
-          "name": "ecole",
+        "school": {
+          "name": "school",
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
         },
-        "obtenu_le": {
-          "name": "obtenu_le",
+        "graduated_at": {
+          "name": "graduated_at",
           "type": "timestamp(3) with time zone",
           "primaryKey": false,
           "notNull": false
@@ -898,8 +898,8 @@
         }
       },
       "indexes": {
-        "profiles_formations_order_idx": {
-          "name": "profiles_formations_order_idx",
+        "profiles_courses_order_idx": {
+          "name": "profiles_courses_order_idx",
           "columns": [
             {
               "expression": "_order",
@@ -913,8 +913,8 @@
           "method": "btree",
           "with": {}
         },
-        "profiles_formations_parent_id_idx": {
-          "name": "profiles_formations_parent_id_idx",
+        "profiles_courses_parent_id_idx": {
+          "name": "profiles_courses_parent_id_idx",
           "columns": [
             {
               "expression": "_parent_id",
@@ -930,9 +930,9 @@
         }
       },
       "foreignKeys": {
-        "profiles_formations_parent_id_fk": {
-          "name": "profiles_formations_parent_id_fk",
-          "tableFrom": "profiles_formations",
+        "profiles_courses_parent_id_fk": {
+          "name": "profiles_courses_parent_id_fk",
+          "tableFrom": "profiles_courses",
           "tableTo": "profiles",
           "columnsFrom": [
             "_parent_id"
@@ -972,32 +972,32 @@
           "primaryKey": true,
           "notNull": true
         },
-        "entreprise": {
-          "name": "entreprise",
+        "company": {
+          "name": "company",
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
         },
-        "poste": {
-          "name": "poste",
+        "job_title": {
+          "name": "job_title",
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
         },
-        "ville": {
-          "name": "ville",
+        "city": {
+          "name": "city",
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
         },
-        "debut": {
-          "name": "debut",
+        "start_date": {
+          "name": "start_date",
           "type": "timestamp(3) with time zone",
           "primaryKey": false,
           "notNull": false
         },
-        "fin": {
-          "name": "fin",
+        "end_date": {
+          "name": "end_date",
           "type": "timestamp(3) with time zone",
           "primaryKey": false,
           "notNull": false
@@ -4551,6 +4551,6 @@
     "tables": {},
     "columns": {}
   },
-  "id": "e7b7dd3b-ed25-4cab-b768-0b1a3ddb2012",
+  "id": "f00ccda8-3b7d-4325-9c4a-20ebb18d7bdb",
   "prevId": "00000000-0000-0000-0000-000000000000"
 }

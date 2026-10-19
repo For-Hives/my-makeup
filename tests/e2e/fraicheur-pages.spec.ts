@@ -124,7 +124,7 @@ test.describe('Fraîcheur des pages publiques (117)', () => {
 		const profil = await poserUnProfil()
 		try {
 			// Publishable: it is in the three lists.
-			await enregistrer(request, profil, { prestations: REFERENCE.profil.prestations })
+			await enregistrer(request, profil, { serviceOffers: REFERENCE.profil.serviceOffers })
 			await expect.poll(() => dansLeSitemap(request, profil.slug), { timeout: UNE_MINUTE }).toBe(true)
 			await expect.poll(() => dansLaRecherche(request, profil.mot, profil.slug), { timeout: UNE_MINUTE }).toBe(true)
 			await expect.poll(() => dansLePlan(request, profil.slug), { timeout: UNE_MINUTE }).toBe(true)
@@ -152,7 +152,7 @@ test.describe('Fraîcheur des pages publiques (117)', () => {
 			expect(avant.canonique).toBeNull()
 			expect(await dansLeSitemap(request, profil.slug)).toBe(false)
 
-			await enregistrer(request, profil, { prestations: REFERENCE.profil.prestations })
+			await enregistrer(request, profil, { serviceOffers: REFERENCE.profil.serviceOffers })
 
 			await expect.poll(() => dansLeSitemap(request, profil.slug), { timeout: UNE_MINUTE }).toBe(true)
 			await expect.poll(async () => (await lirePage(request, profil.slug)).noindex, { timeout: UNE_MINUTE }).toBe(false)
@@ -166,7 +166,7 @@ test.describe('Fraîcheur des pages publiques (117)', () => {
 		test.setTimeout(180_000)
 		const profil = await poserUnProfil()
 		try {
-			await enregistrer(request, profil, { prestations: REFERENCE.profil.prestations })
+			await enregistrer(request, profil, { serviceOffers: REFERENCE.profil.serviceOffers })
 			const nom = (await lirePage(request, profil.slug)).html.match(/<h1[^>]*>([^<]*)<\/h1>/)?.[1]
 			expect(nom).toContain(profil.mot)
 

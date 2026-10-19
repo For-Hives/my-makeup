@@ -84,13 +84,16 @@ export function profilGenere(
 		city: commune,
 		radiusKm: seDeplacent && rang % 3 === 0 ? 30 : null,
 		description: `${description} ${marqueur ?? (rang % 50 === 0 ? MOT_DES_PROFILS_GENERES : '')}`.trim(),
-		competences: [0, 1, 2].map(i => ({
-			nom: COMPETENCES[(rang + i) % COMPETENCES.length],
+		skills: [0, 1, 2].map(i => ({
+			name: COMPETENCES[(rang + i) % COMPETENCES.length],
 			description: `Savoir-faire ${COMPETENCES[(rang + i) % COMPETENCES.length]?.toLowerCase()}, appris en école puis en studio.`,
 		})),
-		prestations: [
-			{ nom: 'Forfait journée', description: `Prestation ${rang % 2 === 0 ? 'journée' : 'soirée'} avec essai inclus.` },
-			{ nom: 'Séance', description: 'Une séance de maquillage de deux heures.' },
+		serviceOffers: [
+			{
+				name: 'Forfait journée',
+				description: `Prestation ${rang % 2 === 0 ? 'journée' : 'soirée'} avec essai inclus.`,
+			},
+			{ name: 'Séance', description: 'Une séance de maquillage de deux heures.' },
 		],
 	}
 }

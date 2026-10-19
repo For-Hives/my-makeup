@@ -81,48 +81,48 @@ export async function up({ db }: MigrateUpArgs): Promise<void> {
   	"_verificationtoken" varchar
   );
   
-  CREATE TABLE "profiles_prestations_options" (
+  CREATE TABLE "profiles_service_offers_options" (
   	"_order" integer NOT NULL,
   	"_parent_id" varchar NOT NULL,
   	"id" varchar PRIMARY KEY NOT NULL,
-  	"nom" varchar,
+  	"name" varchar,
   	"description" varchar,
-  	"prix_texte" varchar,
-  	"prix_a_partir_de" numeric
+  	"price_text" varchar,
+  	"price_from" numeric
   );
   
-  CREATE TABLE "profiles_prestations" (
+  CREATE TABLE "profiles_service_offers" (
   	"_order" integer NOT NULL,
   	"_parent_id" integer NOT NULL,
   	"id" varchar PRIMARY KEY NOT NULL,
-  	"nom" varchar,
+  	"name" varchar,
   	"description" varchar,
-  	"prix_texte" varchar,
-  	"prix_a_partir_de" numeric
+  	"price_text" varchar,
+  	"price_from" numeric
   );
   
-  CREATE TABLE "profiles_competences" (
+  CREATE TABLE "profiles_skills" (
   	"_order" integer NOT NULL,
   	"_parent_id" integer NOT NULL,
   	"id" varchar PRIMARY KEY NOT NULL,
-  	"nom" varchar,
+  	"name" varchar,
   	"description" varchar
   );
   
-  CREATE TABLE "profiles_langues" (
+  CREATE TABLE "profiles_languages" (
   	"_order" integer NOT NULL,
   	"_parent_id" integer NOT NULL,
   	"id" varchar PRIMARY KEY NOT NULL,
-  	"nom" varchar
+  	"name" varchar
   );
   
-  CREATE TABLE "profiles_formations" (
+  CREATE TABLE "profiles_courses" (
   	"_order" integer NOT NULL,
   	"_parent_id" integer NOT NULL,
   	"id" varchar PRIMARY KEY NOT NULL,
-  	"diplome" varchar,
-  	"ecole" varchar,
-  	"obtenu_le" timestamp(3) with time zone,
+  	"diploma" varchar,
+  	"school" varchar,
+  	"graduated_at" timestamp(3) with time zone,
   	"description" varchar
   );
   
@@ -130,11 +130,11 @@ export async function up({ db }: MigrateUpArgs): Promise<void> {
   	"_order" integer NOT NULL,
   	"_parent_id" integer NOT NULL,
   	"id" varchar PRIMARY KEY NOT NULL,
-  	"entreprise" varchar,
-  	"poste" varchar,
-  	"ville" varchar,
-  	"debut" timestamp(3) with time zone,
-  	"fin" timestamp(3) with time zone,
+  	"company" varchar,
+  	"job_title" varchar,
+  	"city" varchar,
+  	"start_date" timestamp(3) with time zone,
+  	"end_date" timestamp(3) with time zone,
   	"description" varchar
   );
   
@@ -414,11 +414,11 @@ export async function up({ db }: MigrateUpArgs): Promise<void> {
   
   ALTER TABLE "admins_sessions" ADD CONSTRAINT "admins_sessions_parent_id_fk" FOREIGN KEY ("_parent_id") REFERENCES "public"."admins"("id") ON DELETE cascade ON UPDATE no action;
   ALTER TABLE "pros_sessions" ADD CONSTRAINT "pros_sessions_parent_id_fk" FOREIGN KEY ("_parent_id") REFERENCES "public"."pros"("id") ON DELETE cascade ON UPDATE no action;
-  ALTER TABLE "profiles_prestations_options" ADD CONSTRAINT "profiles_prestations_options_parent_id_fk" FOREIGN KEY ("_parent_id") REFERENCES "public"."profiles_prestations"("id") ON DELETE cascade ON UPDATE no action;
-  ALTER TABLE "profiles_prestations" ADD CONSTRAINT "profiles_prestations_parent_id_fk" FOREIGN KEY ("_parent_id") REFERENCES "public"."profiles"("id") ON DELETE cascade ON UPDATE no action;
-  ALTER TABLE "profiles_competences" ADD CONSTRAINT "profiles_competences_parent_id_fk" FOREIGN KEY ("_parent_id") REFERENCES "public"."profiles"("id") ON DELETE cascade ON UPDATE no action;
-  ALTER TABLE "profiles_langues" ADD CONSTRAINT "profiles_langues_parent_id_fk" FOREIGN KEY ("_parent_id") REFERENCES "public"."profiles"("id") ON DELETE cascade ON UPDATE no action;
-  ALTER TABLE "profiles_formations" ADD CONSTRAINT "profiles_formations_parent_id_fk" FOREIGN KEY ("_parent_id") REFERENCES "public"."profiles"("id") ON DELETE cascade ON UPDATE no action;
+  ALTER TABLE "profiles_service_offers_options" ADD CONSTRAINT "profiles_service_offers_options_parent_id_fk" FOREIGN KEY ("_parent_id") REFERENCES "public"."profiles_service_offers"("id") ON DELETE cascade ON UPDATE no action;
+  ALTER TABLE "profiles_service_offers" ADD CONSTRAINT "profiles_service_offers_parent_id_fk" FOREIGN KEY ("_parent_id") REFERENCES "public"."profiles"("id") ON DELETE cascade ON UPDATE no action;
+  ALTER TABLE "profiles_skills" ADD CONSTRAINT "profiles_skills_parent_id_fk" FOREIGN KEY ("_parent_id") REFERENCES "public"."profiles"("id") ON DELETE cascade ON UPDATE no action;
+  ALTER TABLE "profiles_languages" ADD CONSTRAINT "profiles_languages_parent_id_fk" FOREIGN KEY ("_parent_id") REFERENCES "public"."profiles"("id") ON DELETE cascade ON UPDATE no action;
+  ALTER TABLE "profiles_courses" ADD CONSTRAINT "profiles_courses_parent_id_fk" FOREIGN KEY ("_parent_id") REFERENCES "public"."profiles"("id") ON DELETE cascade ON UPDATE no action;
   ALTER TABLE "profiles_experiences" ADD CONSTRAINT "profiles_experiences_parent_id_fk" FOREIGN KEY ("_parent_id") REFERENCES "public"."profiles"("id") ON DELETE cascade ON UPDATE no action;
   ALTER TABLE "profiles" ADD CONSTRAINT "profiles_pro_id_pros_id_fk" FOREIGN KEY ("pro_id") REFERENCES "public"."pros"("id") ON DELETE set null ON UPDATE no action;
   ALTER TABLE "profiles" ADD CONSTRAINT "profiles_main_picture_id_media_id_fk" FOREIGN KEY ("main_picture_id") REFERENCES "public"."media"("id") ON DELETE set null ON UPDATE no action;
@@ -455,16 +455,16 @@ export async function up({ db }: MigrateUpArgs): Promise<void> {
   CREATE INDEX "pros_updated_at_idx" ON "pros" USING btree ("updated_at");
   CREATE INDEX "pros_created_at_idx" ON "pros" USING btree ("created_at");
   CREATE UNIQUE INDEX "pros_email_idx" ON "pros" USING btree ("email");
-  CREATE INDEX "profiles_prestations_options_order_idx" ON "profiles_prestations_options" USING btree ("_order");
-  CREATE INDEX "profiles_prestations_options_parent_id_idx" ON "profiles_prestations_options" USING btree ("_parent_id");
-  CREATE INDEX "profiles_prestations_order_idx" ON "profiles_prestations" USING btree ("_order");
-  CREATE INDEX "profiles_prestations_parent_id_idx" ON "profiles_prestations" USING btree ("_parent_id");
-  CREATE INDEX "profiles_competences_order_idx" ON "profiles_competences" USING btree ("_order");
-  CREATE INDEX "profiles_competences_parent_id_idx" ON "profiles_competences" USING btree ("_parent_id");
-  CREATE INDEX "profiles_langues_order_idx" ON "profiles_langues" USING btree ("_order");
-  CREATE INDEX "profiles_langues_parent_id_idx" ON "profiles_langues" USING btree ("_parent_id");
-  CREATE INDEX "profiles_formations_order_idx" ON "profiles_formations" USING btree ("_order");
-  CREATE INDEX "profiles_formations_parent_id_idx" ON "profiles_formations" USING btree ("_parent_id");
+  CREATE INDEX "profiles_service_offers_options_order_idx" ON "profiles_service_offers_options" USING btree ("_order");
+  CREATE INDEX "profiles_service_offers_options_parent_id_idx" ON "profiles_service_offers_options" USING btree ("_parent_id");
+  CREATE INDEX "profiles_service_offers_order_idx" ON "profiles_service_offers" USING btree ("_order");
+  CREATE INDEX "profiles_service_offers_parent_id_idx" ON "profiles_service_offers" USING btree ("_parent_id");
+  CREATE INDEX "profiles_skills_order_idx" ON "profiles_skills" USING btree ("_order");
+  CREATE INDEX "profiles_skills_parent_id_idx" ON "profiles_skills" USING btree ("_parent_id");
+  CREATE INDEX "profiles_languages_order_idx" ON "profiles_languages" USING btree ("_order");
+  CREATE INDEX "profiles_languages_parent_id_idx" ON "profiles_languages" USING btree ("_parent_id");
+  CREATE INDEX "profiles_courses_order_idx" ON "profiles_courses" USING btree ("_order");
+  CREATE INDEX "profiles_courses_parent_id_idx" ON "profiles_courses" USING btree ("_parent_id");
   CREATE INDEX "profiles_experiences_order_idx" ON "profiles_experiences" USING btree ("_order");
   CREATE INDEX "profiles_experiences_parent_id_idx" ON "profiles_experiences" USING btree ("_parent_id");
   CREATE UNIQUE INDEX "profiles_pro_idx" ON "profiles" USING btree ("pro_id");
@@ -568,11 +568,11 @@ export async function down({ db }: MigrateDownArgs): Promise<void> {
   DROP TABLE "admins" CASCADE;
   DROP TABLE "pros_sessions" CASCADE;
   DROP TABLE "pros" CASCADE;
-  DROP TABLE "profiles_prestations_options" CASCADE;
-  DROP TABLE "profiles_prestations" CASCADE;
-  DROP TABLE "profiles_competences" CASCADE;
-  DROP TABLE "profiles_langues" CASCADE;
-  DROP TABLE "profiles_formations" CASCADE;
+  DROP TABLE "profiles_service_offers_options" CASCADE;
+  DROP TABLE "profiles_service_offers" CASCADE;
+  DROP TABLE "profiles_skills" CASCADE;
+  DROP TABLE "profiles_languages" CASCADE;
+  DROP TABLE "profiles_courses" CASCADE;
   DROP TABLE "profiles_experiences" CASCADE;
   DROP TABLE "profiles" CASCADE;
   DROP TABLE "profiles_rels" CASCADE;

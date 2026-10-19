@@ -173,11 +173,11 @@ describe('E44 : les sections du profil', () => {
 	test('une section vide n’est pas affichée, titre compris', () => {
 		const html = rendre(
 			lireLeType(type('sans-contact-public'), {
-				competences: [{ nom: '  ' }, { nom: 'null' }],
-				langues: [],
-				formations: [{ diplome: null, ecole: '', obtenuLe: '2014-06-30' }],
+				skills: [{ name: '  ' }, { name: 'null' }],
+				languages: [],
+				courses: [{ diploma: null, school: '', graduatedAt: '2014-06-30' }],
 				experiences: null,
-				prestations: [{ nom: 'undefined', prixTexte: '50 €' }],
+				serviceOffers: [{ name: 'undefined', priceText: '50 €' }],
 				networks: {},
 			})
 		)

@@ -18,7 +18,7 @@ export type EnvoiDesPuces = (saisie: {
 	puces: { id?: string; nom: string }[]
 }) => Promise<ResultatDEnregistrement<ValeursDesPuces>>
 
-const SORTES: Record<ChampDePuces, SorteDePuces> = { langues: LANGUES, competences: COMPETENCES }
+const SORTES: Record<ChampDePuces, SorteDePuces> = { languages: LANGUES, skills: COMPETENCES }
 
 const BOUTON = 'min-h-11 rounded-md px-4 py-2 font-medium'
 const CHAMP = 'min-h-11 w-full rounded-md border border-neutral-400 bg-white px-3 py-2 text-base'
@@ -172,7 +172,7 @@ function FormulaireDePuces({
 			const resultat: ResultatDEnregistrement<ValeursDesPuces> = await envoyer({
 				puces: liste.map(({ id, nom }) => (id.startsWith(LOCAL) ? { nom } : { id, nom })),
 			}).catch(() => ({ ok: false, message: MESSAGE_ECHEC }))
-			mesurerLEnregistrement(sorte.champ, resultat)
+			mesurerLEnregistrement(sorte.mesure, resultat)
 			if (resultat.ok) {
 				onEnregistre(resultat.valeurs.puces)
 				return

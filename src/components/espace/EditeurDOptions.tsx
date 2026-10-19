@@ -279,10 +279,10 @@ export function EditeurDOptions({
 							requis={definition.requis[champ.nom] !== undefined}
 							valeur={saisie[champ.nom] ?? ''}
 							erreur={erreursDeLAjout[champ.nom]}
-							aide={champ.nom === 'prix' ? champ.aide : undefined}
+							aide={champ.nom === 'price' ? champ.aide : undefined}
 							onChange={valeur => saisir(champ.nom, valeur)}
 						/>
-						{champ.nom === 'prix' && indice ? <p className="text-neutral-700 text-sm">{indice}</p> : null}
+						{champ.nom === 'price' && indice ? <p className="text-neutral-700 text-sm">{indice}</p> : null}
 					</div>
 				))}
 				{refus ? (

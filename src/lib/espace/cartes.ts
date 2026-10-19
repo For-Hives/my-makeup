@@ -63,11 +63,11 @@ export type ProfilDeLEspace = Pick<
 	| 'available'
 	| 'mainPicture'
 	| 'gallery'
-	| 'competences'
-	| 'formations'
+	| 'skills'
+	| 'courses'
 	| 'experiences'
-	| 'langues'
-	| 'prestations'
+	| 'languages'
+	| 'serviceOffers'
 	| 'networks'
 	| 'contactDetails'
 	| 'publicContact'
@@ -164,14 +164,14 @@ export function cartesDuProfil(profil: ProfilDeLEspace): Carte[] {
 		{
 			section: 'competences',
 			titre: 'Compétences',
-			lignes: lignesDeListe((profil.competences ?? []).map(({ nom }) => ou(nom))),
+			lignes: lignesDeListe((profil.skills ?? []).map(({ name }) => ou(name))),
 		},
 		{
 			section: 'formations',
 			titre: 'Formations',
 			lignes: lignesDeListe(
-				(profil.formations ?? []).map(({ diplome, ecole, obtenuLe }) =>
-					rassembler([diplome, ecole, moisAnnee(obtenuLe)], ' - ')
+				(profil.courses ?? []).map(({ diploma, school, graduatedAt }) =>
+					rassembler([diploma, school, moisAnnee(graduatedAt)], ' - ')
 				)
 			),
 		},
@@ -179,22 +179,22 @@ export function cartesDuProfil(profil: ProfilDeLEspace): Carte[] {
 			section: 'experiences',
 			titre: 'Expériences',
 			lignes: lignesDeListe(
-				(profil.experiences ?? []).map(({ poste, entreprise, ville, debut, fin }) =>
-					rassembler([poste, entreprise, ville, periode({ debut, fin })], ' - ')
+				(profil.experiences ?? []).map(({ jobTitle, company, city, startDate, endDate }) =>
+					rassembler([jobTitle, company, city, periode({ startDate, endDate })], ' - ')
 				)
 			),
 		},
 		{
 			section: 'langues',
 			titre: 'Langues',
-			lignes: lignesDeListe((profil.langues ?? []).map(({ nom }) => ou(nom))),
+			lignes: lignesDeListe((profil.languages ?? []).map(({ name }) => ou(name))),
 		},
 		{
 			section: 'prestations',
 			titre: 'Prestations',
 			lignes: lignesDeListe(
-				(profil.prestations ?? []).map(({ nom, prixTexte, prixAPartirDe }) =>
-					rassembler([nom, formatPrix({ prixTexte, prixAPartirDe }).replace(/\n/g, ', ')], ' - ')
+				(profil.serviceOffers ?? []).map(({ name, priceText, priceFrom }) =>
+					rassembler([name, formatPrix({ priceText, priceFrom }).replace(/\n/g, ', ')], ' - ')
 				)
 			),
 		},

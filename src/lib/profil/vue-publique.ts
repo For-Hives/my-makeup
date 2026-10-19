@@ -49,9 +49,9 @@ export function moisAnnee(date: unknown): string {
  * « janvier 2020 - aujourd’hui », « janvier 2020 - mars 2022 »; '' when the start is unknown (an end
  * alone says nothing).
  */
-export function periode(experience: { debut?: unknown; fin?: unknown } | null | undefined): string {
-	const debut = moisAnnee(experience?.debut)
-	return debut === '' ? '' : `${debut} - ${moisAnnee(experience?.fin) || 'aujourd’hui'}`
+export function periode(experience: { startDate?: unknown; endDate?: unknown } | null | undefined): string {
+	const debut = moisAnnee(experience?.startDate)
+	return debut === '' ? '' : `${debut} - ${moisAnnee(experience?.endDate) || 'aujourd’hui'}`
 }
 
 /* ------------------------------------------------------------------------------------------
@@ -175,8 +175,8 @@ export interface PrestationPublique extends OptionPublique {
 
 /** A course, as the page shows it. */
 export interface FormationPublique {
-	diplome: string
-	ecole: string
+	diploma: string
+	school: string
 	/** « juin 2016 », or '' without a date. */
 	obtenu: string
 	description: string[]
@@ -184,9 +184,9 @@ export interface FormationPublique {
 
 /** A professional experience, as the page shows it. */
 export interface ExperiencePublique {
-	entreprise: string
-	poste: string
-	ville: string
+	company: string
+	jobTitle: string
+	city: string
 	/** « janvier 2020 - aujourd’hui », or '' without a start. */
 	periode: string
 	description: string[]
@@ -197,14 +197,14 @@ type Ligne = Record<string, unknown> | null | undefined
 const lignesDe = (valeur: unknown): Ligne[] => (Array.isArray(valeur) ? valeur : [])
 
 function optionPublique(ligne: Ligne): OptionPublique | null {
-	const nom = texte(ligne?.nom)
+	const nom = texte(ligne?.name)
 	if (nom === '') return null
 	return {
 		nom,
 		description: lignes(ligne?.description),
 		prix: lignesDePrix({
-			prixAPartirDe: typeof ligne?.prixAPartirDe === 'number' ? ligne.prixAPartirDe : null,
-			prixTexte: typeof ligne?.prixTexte === 'string' ? ligne.prixTexte : null,
+			priceFrom: typeof ligne?.priceFrom === 'number' ? ligne.priceFrom : null,
+			priceText: typeof ligne?.priceText === 'string' ? ligne.priceText : null,
 		}),
 	}
 }
@@ -220,30 +220,30 @@ export function prestations(stockees: unknown): PrestationPublique[] {
 
 /** The names of a list that has a name per row (skills, languages), blank rows left out. */
 export function noms(stockees: unknown): string[] {
-	return lignesDe(stockees).flatMap(ligne => texte(ligne?.nom) || [])
+	return lignesDe(stockees).flatMap(ligne => texte(ligne?.name) || [])
 }
 
 /** The courses with a diploma or a school. */
 export function formations(stockees: unknown): FormationPublique[] {
 	return lignesDe(stockees).flatMap(ligne => {
-		const diplome = texte(ligne?.diplome)
-		const ecole = texte(ligne?.ecole)
-		if (diplome === '' && ecole === '') return []
-		return [{ diplome, ecole, obtenu: moisAnnee(ligne?.obtenuLe), description: lignes(ligne?.description) }]
+		const diploma = texte(ligne?.diploma)
+		const school = texte(ligne?.school)
+		if (diploma === '' && school === '') return []
+		return [{ diploma, school, obtenu: moisAnnee(ligne?.graduatedAt), description: lignes(ligne?.description) }]
 	})
 }
 
 /** The experiences with a company or a job. */
 export function experiences(stockees: unknown): ExperiencePublique[] {
 	return lignesDe(stockees).flatMap(ligne => {
-		const entreprise = texte(ligne?.entreprise)
-		const poste = texte(ligne?.poste)
-		if (entreprise === '' && poste === '') return []
+		const company = texte(ligne?.company)
+		const jobTitle = texte(ligne?.jobTitle)
+		if (company === '' && jobTitle === '') return []
 		return [
 			{
-				entreprise,
-				poste,
-				ville: texte(ligne?.ville),
+				company,
+				jobTitle,
+				city: texte(ligne?.city),
 				periode: periode(ligne),
 				description: lignes(ligne?.description),
 			},

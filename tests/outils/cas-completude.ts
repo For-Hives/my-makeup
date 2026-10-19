@@ -80,13 +80,13 @@ export async function documentDuCas(
 		city: communeDeLaVille(profil.city),
 		mainPicture: aMedia(profil.main_picture) ? await photo() : null,
 		gallery: aMedia(profil.image_gallery) ? [await photo()] : [],
-		competences: lignes(profil.skills, { nom: 'Compétence fictive' }),
-		experiences: lignes(profil.experiences, { poste: 'Poste fictif' }),
-		formations: lignes(profil.courses, { diplome: 'Diplôme fictif' }),
-		langues: lignes(profil.language, { nom: 'Langue fictive' }),
+		skills: lignes(profil.skills, { name: 'Compétence fictive' }),
+		experiences: lignes(profil.experiences, { jobTitle: 'Poste fictif' }),
+		courses: lignes(profil.courses, { diploma: 'Diplôme fictif' }),
+		languages: lignes(profil.language, { name: 'Langue fictive' }),
 		// The price typed is kept, with the amount the single price rule reads in it (ticket 062).
-		prestations: (profil.service_offers ?? []).map(offre => ({
-			nom: 'Prestation fictive',
+		serviceOffers: (profil.service_offers ?? []).map(offre => ({
+			name: 'Prestation fictive',
 			...parsePrice(offre?.price),
 		})),
 		networks: {

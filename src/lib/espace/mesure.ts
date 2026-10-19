@@ -33,10 +33,13 @@ type ReponseDeLEnregistrement = Pick<ResultatDEnregistrement<Record<string, unkn
 	devenuPublicable?: true
 }
 
-/** The section of the event for a list of her space: her « prestations » are the « offres » of the plan. */
+/** The section of the event for a list of her space: her service offers are the « offres » of the plan, her courses the « formations ». */
 export const sectionMesureeDeLaListe = (
-	section: 'experiences' | 'formations' | 'prestations' | 'options'
-): SectionMesuree => (section === 'prestations' || section === 'options' ? 'offres' : section)
+	section: 'experiences' | 'courses' | 'serviceOffers' | 'options'
+): SectionMesuree => {
+	if (section === 'serviceOffers' || section === 'options') return 'offres'
+	return section === 'courses' ? 'formations' : section
+}
 
 /** Counts one save: its section and outcome, then the passage to « publiable » when the server reports it. */
 export function mesurerLEnregistrement(

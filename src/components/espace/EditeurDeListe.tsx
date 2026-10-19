@@ -448,7 +448,7 @@ function PanneauDeListe({
 						const identifiant = `${section}-${champ.nom}`
 						const erreur = erreurs[champ.nom]
 						const decrit = [champ.aide ? `${identifiant}-aide` : '', erreur ? `${identifiant}-erreur` : '']
-							.concat(champ.nom === 'prix' && indice ? [`${identifiant}-indice`] : [])
+							.concat(champ.nom === 'price' && indice ? [`${identifiant}-indice`] : [])
 							.filter(Boolean)
 							.join(' ')
 						const commun = {
@@ -481,7 +481,7 @@ function PanneauDeListe({
 										{champ.aide}
 									</p>
 								) : null}
-								{champ.nom === 'prix' && indice ? (
+								{champ.nom === 'price' && indice ? (
 									<p id={`${identifiant}-indice`} className="text-neutral-700 text-sm">
 										{indice}
 									</p>

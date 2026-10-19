@@ -336,16 +336,16 @@ describe('la lecture de l’annuaire', () => {
 			[
 				doc('a', {
 					description: '  Je fais le maquillage de mariage.  ',
-					competences: [{ nom: 'Teint', description: 'Peau mate' }, { nom: ' ' }, { description: 'Sans nom' }],
-					prestations: [
+					skills: [{ name: 'Teint', description: 'Peau mate' }, { name: ' ' }, { description: 'Sans nom' }],
+					serviceOffers: [
 						{
-							nom: 'Mariée',
+							name: 'Mariée',
 							description: 'Essai inclus',
-							prixTexte: '150 €',
-							prixAPartirDe: 150,
-							options: [{ nom: 'Cils' }],
+							priceText: '150 €',
+							priceFrom: 150,
+							options: [{ name: 'Cils' }],
 						},
-						{ nom: 'Soirée', description: null },
+						{ name: 'Soirée', description: null },
 					],
 				}),
 			],
@@ -369,7 +369,7 @@ describe('la lecture de l’annuaire', () => {
 			Object.keys((await lireLAnnuaire(payload))[0]?.carte ?? {}).sort()
 		)
 		const select = lectures.find(lecture => lecture.collection === 'profiles')?.select as Record<string, unknown>
-		expect(Object.keys(select)).toEqual(expect.arrayContaining(['description', 'competences', 'prestations']))
+		expect(Object.keys(select)).toEqual(expect.arrayContaining(['description', 'skills', 'serviceOffers']))
 		for (const interdit of ['contactDetails', 'publicContact', 'networks', 'internalNote', 'pro'])
 			expect(select).not.toHaveProperty(interdit)
 		// Without the option, the texts are neither read nor carried.

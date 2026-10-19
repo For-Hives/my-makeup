@@ -37,7 +37,7 @@ const PUBLIABLE: DocumentDuProfil = {
 	city: ANNECY,
 	description: DESCRIPTION,
 	mainPicture: 12,
-	prestations: [{ prixAPartirDe: 80 }],
+	serviceOffers: [{ priceFrom: 80 }],
 	networks: { instagram: '@compte.fictif' },
 }
 
@@ -100,14 +100,14 @@ describe('un document de profils lu par la règle unique', () => {
 	})
 
 	test('le prix chiffré d’une offre est son montant : un texte sans montant n’en est pas un', () => {
-		const offre = (prestations: DocumentDuProfil['prestations']) =>
-			conditionsPubliable(champsDuProfil({ prestations })).offreChiffree
-		expect(offre([{ prixAPartirDe: 80 }])).toBe(true)
-		expect(offre([{ prixAPartirDe: 5 }, { prixAPartirDe: null }])).toBe(true)
-		expect(offre([{ prixAPartirDe: 10_000 }])).toBe(true)
-		expect(offre([{ prixAPartirDe: 49.5 }])).toBe(true)
-		expect(offre([{ prixAPartirDe: null }])).toBe(false)
-		expect(offre([{ prixAPartirDe: 4 }, { prixAPartirDe: 10_001 }])).toBe(false)
+		const offre = (serviceOffers: DocumentDuProfil['serviceOffers']) =>
+			conditionsPubliable(champsDuProfil({ serviceOffers })).offreChiffree
+		expect(offre([{ priceFrom: 80 }])).toBe(true)
+		expect(offre([{ priceFrom: 5 }, { priceFrom: null }])).toBe(true)
+		expect(offre([{ priceFrom: 10_000 }])).toBe(true)
+		expect(offre([{ priceFrom: 49.5 }])).toBe(true)
+		expect(offre([{ priceFrom: null }])).toBe(false)
+		expect(offre([{ priceFrom: 4 }, { priceFrom: 10_001 }])).toBe(false)
 		expect(offre([null])).toBe(false)
 		expect(offre([])).toBe(false)
 	})

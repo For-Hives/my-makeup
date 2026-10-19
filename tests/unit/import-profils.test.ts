@@ -213,11 +213,11 @@ describe('les profils attendus', () => {
 			// Its sections (ticket 060): none at the source, none in the target.
 			mainPicture: null,
 			gallery: [],
-			competences: [],
-			langues: [],
-			formations: [],
+			skills: [],
+			languages: [],
+			courses: [],
 			experiences: [],
-			prestations: [],
+			serviceOffers: [],
 			networks: null,
 			// Its contact details (ticket 064): none at the source, so closed, without date or source.
 			contactDetails: { phone: null, email: null },
@@ -374,20 +374,18 @@ describe('le rayon d’action est repris de 0 à 200 km, jamais ramené à 200 e
 
 describe('le contrôle des offres chiffrées perdues ne lit que les prestations (ticket 226)', () => {
 	test('une option chiffrée ne cache pas une offre qui a perdu son montant', () => {
-		const ecrites = [{ prixTexte: '80 €', prixAPartirDe: null, options: [{ prixTexte: '15 €', prixAPartirDe: 15 }] }]
+		const ecrites = [{ priceText: '80 €', priceFrom: null, options: [{ priceText: '15 €', priceFrom: 15 }] }]
 
 		expect(offreChiffreePerdue(['80 €'], ecrites)).toBe(true)
 	})
 
 	test('seule une option chiffrée : aucune offre chiffrée à la source, rien n’est perdu', () => {
-		const ecrites = [
-			{ prixTexte: 'Sur devis', prixAPartirDe: null, options: [{ prixTexte: '15 €', prixAPartirDe: 15 }] },
-		]
+		const ecrites = [{ priceText: 'Sur devis', priceFrom: null, options: [{ priceText: '15 €', priceFrom: 15 }] }]
 
 		expect(offreChiffreePerdue(['Sur devis'], ecrites)).toBe(false)
 	})
 
 	test('une offre qui garde son montant n’est pas perdue', () => {
-		expect(offreChiffreePerdue(['80 €', null], [{ prixAPartirDe: 80 }, { prixAPartirDe: null }])).toBe(false)
+		expect(offreChiffreePerdue(['80 €', null], [{ priceFrom: 80 }, { priceFrom: null }])).toBe(false)
 	})
 })

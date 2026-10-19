@@ -28,11 +28,11 @@ const COMPLET: ProfilDeLEspace = {
 	city: ANNECY,
 	mainPicture: 5,
 	gallery: [6],
-	competences: [{ nom: 'Teint' }],
-	formations: [{ diplome: 'Diplôme fictif' }],
-	experiences: [{ poste: 'Poste fictif' }],
-	langues: [{ nom: 'Français' }],
-	prestations: [{ nom: 'Mariée', prixAPartirDe: 120 }],
+	skills: [{ name: 'Teint' }],
+	courses: [{ diploma: 'Diplôme fictif' }],
+	experiences: [{ jobTitle: 'Poste fictif' }],
+	languages: [{ name: 'Français' }],
+	serviceOffers: [{ name: 'Mariée', priceFrom: 120 }],
 	networks: { instagram: 'studio.fictif' },
 }
 
@@ -87,7 +87,7 @@ describe('U04-U06 : actif mais pas publiable, les manques exacts', () => {
 	})
 
 	test('U04 : une offre sans prix en chiffres reste un manque, et le dit', () => {
-		const a = avancementDuProfil({ ...COMPLET, prestations: [{ nom: 'Sur devis', prixTexte: 'Sur devis' }] })
+		const a = avancementDuProfil({ ...COMPLET, serviceOffers: [{ name: 'Sur devis', priceText: 'Sur devis' }] })
 		expect(a.etat).toBe('incomplet')
 		expect(a.manques).toHaveLength(1)
 		expect(a.manques[0]).toMatchObject({ critere: 'offres', requis: true, section: 'prestations' })
@@ -132,7 +132,7 @@ describe('U04-U06 : actif mais pas publiable, les manques exacts', () => {
 	})
 
 	test('ce qui n’empêche pas d’être publiable passe après, sans être requis', () => {
-		const a = avancementDuProfil(sans('langues', 'gallery'))
+		const a = avancementDuProfil(sans('languages', 'gallery'))
 		expect(a.etat).toBe('publiable')
 		expect(a.manques.map(m => [m.critere, m.requis])).toEqual([
 			['langues', false],

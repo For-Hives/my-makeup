@@ -3,7 +3,7 @@
  * an artist typed, showing a price, and the lowest price of a profile. The import, the public
  * profile, the cards, the JSON-LD and the artist's space all go through this file.
  *
- * A price is two values: `prixAPartirDe`, an amount in euros or nothing, and `prixTexte`, what
+ * A price is two values: `priceFrom`, an amount in euros or nothing, and `priceText`, what
  * was typed, kept as it is.
  *
  * The amount is read as on the old site (prixNumerique of src/lib/profil/completude.js, branch
@@ -20,15 +20,15 @@ export const PRIX_MAX = 10_000
 /** A price as a profile stores it, for an offer or for one of its options. */
 export type Prix = {
 	/** Amount in euros, null when there is none (« Sur devis ») */
-	prixAPartirDe: number | null
+	priceFrom: number | null
 	/** The text as typed, trimmed; null when nothing was typed */
-	prixTexte: string | null
+	priceText: string | null
 }
 
 /** What the display reads: the two fields, absent or not, whatever the data holds. */
 export type PrixStocke = {
-	readonly prixAPartirDe?: number | null
-	readonly prixTexte?: string | null
+	readonly priceFrom?: number | null
+	readonly priceText?: string | null
 }
 
 const ESPACE_INSECABLE = '\u00a0'
@@ -71,9 +71,9 @@ function premierNombre(texte: string): number | null {
  * Anything but a text is nothing typed.
  */
 export function parsePrice(saisie: unknown): Prix {
-	const prixTexte = texteSaisi(saisie)
-	const nombre = prixTexte === null ? null : premierNombre(prixTexte)
-	return { prixAPartirDe: estMontantDePrix(nombre) ? nombre : null, prixTexte }
+	const priceText = texteSaisi(saisie)
+	const nombre = priceText === null ? null : premierNombre(priceText)
+	return { priceFrom: estMontantDePrix(nombre) ? nombre : null, priceText }
 }
 
 /**
@@ -126,10 +126,10 @@ function ligneAffichee(ligne: string): string {
  * text). Empty when there is nothing to show: no entry is ever blank, « null » or « NaN € ».
  */
 export function lignesDePrix(prix: PrixStocke | null | undefined): string[] {
-	const texte = texteSaisi(prix?.prixTexte)
+	const texte = texteSaisi(prix?.priceText)
 	const lignes = (texte ?? '').split('\n').flatMap(ligne => texteSaisi(ligne) ?? [])
-	const montant = formatMontant(prix?.prixAPartirDe)
-	const dejaDit = texte !== null && premierNombre(texte) === prix?.prixAPartirDe
+	const montant = formatMontant(prix?.priceFrom)
+	const dejaDit = texte !== null && premierNombre(texte) === prix?.priceFrom
 	return [...(montant === '' || dejaDit ? [] : [montant]), ...lignes.map(ligneAffichee)]
 }
 
@@ -144,11 +144,11 @@ export function formatPrix(prix: PrixStocke | null | undefined): string {
  * of an offer do not count: an option is not sold alone. Null when no offer has an amount.
  */
 export function prixMinimal(
-	prestations: ReadonlyArray<{ readonly prixAPartirDe?: number | null } | null | undefined> | null | undefined
+	prestations: ReadonlyArray<{ readonly priceFrom?: number | null } | null | undefined> | null | undefined
 ): number | null {
 	let minimal: number | null = null
 	for (const prestation of prestations ?? []) {
-		const montant = prestation?.prixAPartirDe
+		const montant = prestation?.priceFrom
 		if (estMontantDePrix(montant) && (minimal === null || montant < minimal)) minimal = montant
 	}
 	return minimal

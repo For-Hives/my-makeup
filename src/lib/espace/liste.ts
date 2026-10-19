@@ -66,7 +66,7 @@ export type ErreursDeLigne = Readonly<Record<string, string>>
 
 export interface DefinitionDeListe {
 	/** The field of the profile, and the prefix of the identifiers of the panel. */
-	readonly section: 'experiences' | 'formations' | 'prestations' | 'options'
+	readonly section: 'experiences' | 'courses' | 'serviceOffers' | 'options'
 	/** « expérience », « expériences », « l’expérience »: the words of the sentences. */
 	readonly singulier: string
 	readonly pluriel: string

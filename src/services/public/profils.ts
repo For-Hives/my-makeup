@@ -95,10 +95,10 @@ export const CHAMPS_DE_LA_PAGE_DU_PROFIL = {
 	mainPicture: true,
 	gallery: true,
 	networks: true,
-	prestations: true,
-	competences: true,
-	langues: true,
-	formations: true,
+	serviceOffers: true,
+	skills: true,
+	languages: true,
+	courses: true,
 	experiences: true,
 } as const
 
@@ -449,10 +449,10 @@ export type ProfilDeLaPage = Pick<
 	| 'mainPicture'
 	| 'gallery'
 	| 'networks'
-	| 'prestations'
-	| 'competences'
-	| 'langues'
-	| 'formations'
+	| 'serviceOffers'
+	| 'skills'
+	| 'languages'
+	| 'courses'
 	| 'experiences'
 	| 'status'
 	| 'publishable'
@@ -481,10 +481,10 @@ export function profilPublicDe(
 		galerie: lu.galerie,
 		lieu: villeAffichee(profil.city?.name) || null,
 		seDeplace: villeAffichee(profil.city?.name) !== '' && rayonKm(profil.radiusKm) !== null,
-		prestations: prestations(profil.prestations),
-		competences: noms(profil.competences),
-		langues: noms(profil.langues),
-		formations: formations(profil.formations),
+		prestations: prestations(profil.serviceOffers),
+		competences: noms(profil.skills),
+		langues: noms(profil.languages),
+		formations: formations(profil.courses),
 		experiences: experiences(profil.experiences),
 		liens: contacts({
 			reseaux: profil.networks,
@@ -494,17 +494,17 @@ export function profilPublicDe(
 		description: texte(profil.description) || null,
 		indexable: estIndexable(profil),
 		coordonnees: lu.coordonnees,
-		offres: offresChiffrees(profil.prestations),
-		prixMinimal: prixMinimal(profil.prestations),
+		offres: offresChiffrees(profil.serviceOffers),
+		prixMinimal: prixMinimal(profil.serviceOffers),
 	}
 }
 
 /** The offers with a name, each with its amount when it is one the site counts as a price. */
-function offresChiffrees(stockees: ProfilDeLaPage['prestations']): OffreChiffree[] {
+function offresChiffrees(stockees: ProfilDeLaPage['serviceOffers']): OffreChiffree[] {
 	return (stockees ?? []).flatMap(ligne => {
-		const nom = texte(ligne?.nom)
+		const nom = texte(ligne?.name)
 		if (nom === '') return []
-		const montant = ligne?.prixAPartirDe
+		const montant = ligne?.priceFrom
 		return [
 			{
 				nom,
@@ -559,25 +559,25 @@ export interface ProfilDeLAnnuaire extends PlaceDuProfil {
 const CHAMPS_DE_LA_RECHERCHE = {
 	...CHAMPS_DE_LA_CARTE,
 	description: true,
-	competences: true,
-	prestations: true,
+	skills: true,
+	serviceOffers: true,
 } as const
 
-type ProfilCherche = ProfilDeLaCarte & Pick<Profile, 'description' | 'competences' | 'prestations'>
+type ProfilCherche = ProfilDeLaCarte & Pick<Profile, 'description' | 'skills' | 'serviceOffers'>
 
 /** The texts a search by a word looks into (the commune, the speciality, the description, the skills and the offers), normalised. */
 function textesDe(profil: ProfilCherche): TextesNormalises {
-	const noms = <T extends { nom?: string | null }>(liste: readonly T[] | null | undefined): string[] =>
-		(liste ?? []).map(element => texte(element.nom)).filter(nom => nom !== '')
+	const noms = <T extends { name?: string | null }>(liste: readonly T[] | null | undefined): string[] =>
+		(liste ?? []).map(element => texte(element.name)).filter(nom => nom !== '')
 	const descriptions = <T extends { description?: string | null }>(liste: readonly T[] | null | undefined): string[] =>
 		(liste ?? []).map(element => texte(element.description)).filter(description => description !== '')
 	return normaliserLesTextes({
 		ville: texte(profil.city?.name),
 		specialite: texte(profil.specialty),
 		description: texte(profil.description),
-		competences: noms(profil.competences),
-		descriptionsDesCompetences: descriptions(profil.competences),
-		descriptionsDesPrestations: descriptions(profil.prestations),
+		competences: noms(profil.skills),
+		descriptionsDesCompetences: descriptions(profil.skills),
+		descriptionsDesPrestations: descriptions(profil.serviceOffers),
 		nom: texte(profil.lastName),
 		prenom: texte(profil.firstName),
 	})

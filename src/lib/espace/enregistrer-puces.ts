@@ -13,7 +13,7 @@ import {
 import { MESSAGE_ECHEC, type ResultatDEnregistrement } from './resultat'
 import { MESSAGE_PROFIL_VERROUILLE, ProfilVerrouille } from './verrou'
 
-type LigneStockee = { id?: string | null; nom?: string | null; description?: string | null }
+type LigneStockee = { id?: string | null; name?: string | null; description?: string | null }
 
 /**
  * Saves a list of chips of the signed-in makeup artist (languages: ticket 127, skills: ticket 128),
@@ -58,15 +58,15 @@ async function enregistrerLesPuces(
 			stockees.flatMap(ligne => (typeof ligne.id === 'string' ? [[ligne.id, ligne] as const] : []))
 		)
 
-		const lignes: { id?: string; nom: string; description?: string }[] = []
+		const lignes: { id?: string; name: string; description?: string }[] = []
 		for (const [rang, puce] of lue.puces.entries()) {
 			const stockee = puce.id === undefined ? undefined : connues.get(puce.id)
 			const autres = lue.puces.filter((_, autre) => autre !== rang)
 			if (stockee === undefined && dejaDansLaListe(autres, puce.nom)) return { ok: false, message: sorte.doublon }
 			lignes.push({
 				...(stockee === undefined ? {} : { id: puce.id }),
-				nom: puce.nom,
-				...(sorte.champ === 'competences' && stockee?.description ? { description: stockee.description } : {}),
+				name: puce.nom,
+				...(sorte.champ === 'skills' && stockee?.description ? { description: stockee.description } : {}),
 			})
 		}
 		const stocke = await payload.update({

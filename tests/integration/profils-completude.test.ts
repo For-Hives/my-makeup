@@ -87,7 +87,7 @@ const SIX_CONDITIONS: [string, (compte: Maquilleuse) => Promise<Record<string, u
 	['photo principale', async compte => ({ mainPicture: await envoyerUnePhoto(compte) })],
 	['ville exploitable', async () => ({ city: ANNECY })],
 	['spécialité', async () => ({ specialty: 'Mariage' })],
-	['offre avec un prix chiffré', async () => ({ prestations: [{ nom: 'Prestation fictive', prixAPartirDe: 80 }] })],
+	['offre avec un prix chiffré', async () => ({ serviceOffers: [{ name: 'Prestation fictive', priceFrom: 80 }] })],
 	['description de 200 caractères', async () => ({ description: DESCRIPTION })],
 	['canal de contact', async () => ({ networks: { instagram: '@compte.fictif' } })],
 ]
@@ -103,7 +103,7 @@ const RIEN = {
 	mainPicture: null,
 	city: null,
 	specialty: null,
-	prestations: [],
+	serviceOffers: [],
 	description: null,
 	networks: { instagram: null },
 }
@@ -168,11 +168,11 @@ describe('Valeurs stockées égales à la fonction unique sur les cas partagés 
 
 		await modifier(compte, profil, {
 			description: DESCRIPTION,
-			prestations: [{ nom: 'Prestation fictive', prixTexte: 'Sur devis' }],
+			serviceOffers: [{ name: 'Prestation fictive', priceText: 'Sur devis' }],
 			networks: { website: 'https://example.test' },
 		})
 		expect((await etat(profil)).publishable).toBe(false)
-		await modifier(compte, profil, { prestations: [{ nom: 'Prestation fictive', prixAPartirDe: 80 }] })
+		await modifier(compte, profil, { serviceOffers: [{ name: 'Prestation fictive', priceFrom: 80 }] })
 		expect(await etat(profil)).toEqual({
 			completeness: 6,
 			active: true,
@@ -292,11 +292,11 @@ describe('Un profil qui n’a qu’un nom reste entièrement vide', () => {
 		await modifier(compte, profil, {
 			firstName: 'Prénom',
 			lastName: 'Fictif',
-			competences: [{ nom: 'Compétence fictive' }],
-			langues: [{ nom: 'Langue fictive' }],
-			formations: [{ diplome: 'Diplôme fictif' }],
-			experiences: [{ poste: 'Poste fictif' }],
-			prestations: [{ nom: 'Prestation fictive', prixTexte: 'Sur devis' }],
+			skills: [{ name: 'Compétence fictive' }],
+			languages: [{ name: 'Langue fictive' }],
+			courses: [{ diploma: 'Diplôme fictif' }],
+			experiences: [{ jobTitle: 'Poste fictif' }],
+			serviceOffers: [{ name: 'Prestation fictive', priceText: 'Sur devis' }],
 			gallery: [await envoyerUnePhoto(compte)],
 			rayonKm: 30,
 			homeService: true,

@@ -23,8 +23,8 @@ const COMPLET = {
 	lastName: 'Aperçu',
 	specialty: 'Maquillage mariée',
 	description: 'Je maquille pour les mariages.',
-	competences: [{ nom: 'Teint lumineux' }],
-	langues: [{ nom: 'Français' }],
+	skills: [{ name: 'Teint lumineux' }],
+	languages: [{ name: 'Français' }],
 }
 
 async function maquilleuse(

@@ -17,51 +17,51 @@ import { type DefinitionDeListe, type ErreursDeLigne, jourDuFormulaire, type Val
 function bornes(valeurs: ValeursDeLigne, maintenant: Date): ErreursDeLigne {
 	const erreurs: Record<string, string> = {}
 	for (const [champ, maximum] of [
-		['diplome', LONGUEUR_NOM],
-		['ecole', LONGUEUR_NOM],
+		['diploma', LONGUEUR_NOM],
+		['school', LONGUEUR_NOM],
 		['description', LONGUEUR_DESCRIPTION],
 	] as const) {
 		const message = messageDeTexte(valeurs[champ], maximum)
 		if (message !== null) erreurs[champ] = message
 	}
-	const message = messageDObtention(valeurs.obtenuLe ? valeurs.obtenuLe : null, maintenant)
-	if (message !== null) erreurs.obtenuLe = message
+	const message = messageDObtention(valeurs.graduatedAt ? valeurs.graduatedAt : null, maintenant)
+	if (message !== null) erreurs.graduatedAt = message
 	return erreurs
 }
 
 const enNull = (valeur: string | undefined): string | null => (valeur ? valeur : null)
 
 export const FORMATIONS: DefinitionDeListe = {
-	section: 'formations',
+	section: 'courses',
 	singulier: 'formation',
 	pluriel: 'formations',
 	designation: 'la formation',
 	champs: [
-		{ nom: 'diplome', libelle: 'Diplôme', genre: 'texte', exemple: 'CAP esthétique' },
-		{ nom: 'ecole', libelle: 'École', genre: 'texte' },
-		{ nom: 'obtenuLe', libelle: 'Date d’obtention', genre: 'date' },
+		{ nom: 'diploma', libelle: 'Diplôme', genre: 'texte', exemple: 'CAP esthétique' },
+		{ nom: 'school', libelle: 'École', genre: 'texte' },
+		{ nom: 'graduatedAt', libelle: 'Date d’obtention', genre: 'date' },
 		{ nom: 'description', libelle: 'Description', genre: 'long' },
 	],
 	requis: {
-		diplome: 'Le nom du diplôme est requis.',
-		ecole: 'Le nom de l’école est requis.',
+		diploma: 'Le nom du diplôme est requis.',
+		school: 'Le nom de l’école est requis.',
 	},
 	doublon: 'Une formation identique est déjà dans la liste.',
 	bornes,
 	resume: valeurs =>
-		[valeurs.diplome, valeurs.ecole, moisAnnee(valeurs.obtenuLe)].map(texte).filter(Boolean).join(' - '),
-	nom: valeurs => texte(valeurs.diplome) || texte(valeurs.ecole),
+		[valeurs.diploma, valeurs.school, moisAnnee(valeurs.graduatedAt)].map(texte).filter(Boolean).join(' - '),
+	nom: valeurs => texte(valeurs.diploma) || texte(valeurs.school),
 	retrait: nom => `Formation ${nom} retirée`.replace(/\s+/g, ' '),
 	depuisLeStockage: stockee => ({
-		diplome: texte(stockee.diplome),
-		ecole: texte(stockee.ecole),
-		obtenuLe: jourDuFormulaire(stockee.obtenuLe),
+		diploma: texte(stockee.diploma),
+		school: texte(stockee.school),
+		graduatedAt: jourDuFormulaire(stockee.graduatedAt),
 		description: typeof stockee.description === 'string' ? stockee.description.trim() : '',
 	}),
 	versLeStockage: valeurs => ({
-		diplome: enNull(valeurs.diplome),
-		ecole: enNull(valeurs.ecole),
-		obtenuLe: enNull(valeurs.obtenuLe),
+		diploma: enNull(valeurs.diploma),
+		school: enNull(valeurs.school),
+		graduatedAt: enNull(valeurs.graduatedAt),
 		description: enNull(valeurs.description),
 	}),
 }

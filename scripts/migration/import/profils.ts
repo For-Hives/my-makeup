@@ -273,11 +273,11 @@ export const ADAPTATEUR_PROFILS: Adaptateur = {
 		publicContact: 'booleen',
 		consentedAt: 'date',
 		consentSource: 'texte',
-		competences: 'liste',
-		langues: 'liste',
-		formations: 'liste',
+		skills: 'liste',
+		languages: 'liste',
+		courses: 'liste',
 		experiences: 'liste',
-		prestations: 'liste',
+		serviceOffers: 'liste',
 		chosenStatus: 'texte',
 		status: 'texte',
 		createdAt: 'date',
@@ -395,7 +395,7 @@ export interface BilanDesPrix {
 	chiffresNonLus: number[]
 }
 
-type PrixEcrit = { prixTexte?: string | null; prixAPartirDe?: number | null }
+type PrixEcrit = { priceText?: string | null; priceFrom?: number | null }
 
 /** The prices written for one profile: its offers, then their options. */
 function prixDesPrestations(prestations: unknown): PrixEcrit[] {
@@ -411,7 +411,7 @@ function prixDesPrestations(prestations: unknown): PrixEcrit[] {
  * option with an amount does not hide an offer that lost its own.
  */
 export function offreChiffreePerdue(prixDuSource: readonly (string | null)[], ecrites: readonly PrixEcrit[]): boolean {
-	const chiffreeALaSource = prixDuSource.some(price => parsePrice(price).prixAPartirDe !== null)
+	const chiffreeALaSource = prixDuSource.some(price => parsePrice(price).priceFrom !== null)
 	return chiffreeALaSource && prixMinimal(ecrites) === null
 }
 
@@ -540,20 +540,20 @@ export function profilsAttendus(
 		statuts[statut] = (statuts[statut] ?? 0) + 1
 		if ((statut === 'draft') !== videALaSource(profil)) statutsDifferentsDeLaSource.push(profil.id)
 		const ecarts: Ecart[] = []
-		const ecrits = prixDesPrestations(valeurs.prestations)
-		for (const { prixTexte, prixAPartirDe } of ecrits) {
+		const ecrits = prixDesPrestations(valeurs.serviceOffers)
+		for (const { priceText, priceFrom } of ecrits) {
 			prix.prix += 1
-			if (prixAPartirDe !== null && prixAPartirDe !== undefined) prix.avecMontant += 1
-			else if ((prixTexte?.trim() ?? '') === '') prix.sansTexte += 1
+			if (priceFrom !== null && priceFrom !== undefined) prix.avecMontant += 1
+			else if ((priceText?.trim() ?? '') === '') prix.sansTexte += 1
 			else prix.textesLibres += 1
 		}
-		if (ecrits.some(({ prixAPartirDe }) => estMontantDePrix(prixAPartirDe)))
-			ecarts.push({ champ: 'prestations', reference: REFERENCES.prixNumerique })
+		if (ecrits.some(({ priceFrom }) => estMontantDePrix(priceFrom)))
+			ecarts.push({ champ: 'serviceOffers', reference: REFERENCES.prixNumerique })
 		const prixDesOffres = sections.prestations.map(({ price }) => price)
-		if (prixDesOffres.some(price => parsePrice(price).prixAPartirDe !== null)) prix.profilsAvecOffreChiffree += 1
-		if (offreChiffreePerdue(prixDesOffres, (valeurs.prestations ?? []) as PrixEcrit[]))
+		if (prixDesOffres.some(price => parsePrice(price).priceFrom !== null)) prix.profilsAvecOffreChiffree += 1
+		if (offreChiffreePerdue(prixDesOffres, (valeurs.serviceOffers ?? []) as PrixEcrit[]))
 			prix.offresChiffreesPerdues.push(profil.id)
-		if (ecrits.some(({ prixTexte, prixAPartirDe }) => prixAPartirDe === null && /\d/.test(prixTexte ?? '')))
+		if (ecrits.some(({ priceText, priceFrom }) => priceFrom === null && /\d/.test(priceText ?? '')))
 			prix.chiffresNonLus.push(profil.id)
 		if (rayon) ecarts.push({ champ: 'radiusKm', reference: REFERENCES.rayon200Km })
 		if (slug !== profil.username) ecarts.push({ champ: 'slug', reference: REFERENCES.slugStocke })

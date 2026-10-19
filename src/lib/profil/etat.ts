@@ -49,11 +49,11 @@ export interface DocumentDuProfil {
 	readonly city?: { readonly name?: string | null; readonly inseeCode?: string | null } | null
 	readonly mainPicture?: unknown
 	readonly gallery?: readonly unknown[] | null
-	readonly competences?: readonly unknown[] | null
+	readonly skills?: readonly unknown[] | null
 	readonly experiences?: readonly unknown[] | null
-	readonly formations?: readonly unknown[] | null
-	readonly langues?: readonly unknown[] | null
-	readonly prestations?: readonly ({ readonly prixAPartirDe?: number | null } | null)[] | null
+	readonly courses?: readonly unknown[] | null
+	readonly languages?: readonly unknown[] | null
+	readonly serviceOffers?: readonly ({ readonly priceFrom?: number | null } | null)[] | null
 	readonly networks?: ReseauxDuDocument | null
 	readonly contactDetails?: { readonly phone?: string | null; readonly email?: string | null } | null
 	readonly publicContact?: boolean | null
@@ -80,7 +80,7 @@ function villeDeLaCommune(commune: DocumentDuProfil['city']): string | null {
  *   server stores no other (`villeDeLaCommune`).
  * - A photo is passed as an object, never as a bare identifier, which the rule would count as no
  *   photo; the gallery as its list.
- * - The price of an offer is its amount (`prixAPartirDe`, read from the text typed by the same
+ * - The price of an offer is its amount (`priceFrom`, read from the text typed by the same
  *   rule, src/lib/prix.ts): an offer with a text and no amount (« Sur devis ») has no numeric price,
  *   as for the cards (`prixMinimal`). The options of an offer do not count, as on the old site.
  * - The phone and the email count as contact channels only when she shows them (`publicContact`):
@@ -99,12 +99,12 @@ export function champsDuProfil(document: DocumentDuProfil | null | undefined): C
 		description: d.description,
 		main_picture: d.mainPicture === null || d.mainPicture === undefined ? null : { id: d.mainPicture },
 		image_gallery: d.gallery ?? null,
-		skills: d.competences,
+		skills: d.skills,
 		experiences: d.experiences,
-		courses: d.formations,
-		language: d.langues,
-		service_offers: (d.prestations ?? []).map(prestation => {
-			const montant = prestation?.prixAPartirDe
+		courses: d.courses,
+		language: d.languages,
+		service_offers: (d.serviceOffers ?? []).map(offre => {
+			const montant = offre?.priceFrom
 			return { price: estMontantDePrix(montant) ? String(montant) : null }
 		}),
 		network: {

@@ -176,13 +176,13 @@ export function SectionFormations({ formations }: { formations: readonly Formati
 	return (
 		<SectionDuProfil titre="Formations & diplômes">
 			<ul className="flex flex-col gap-5">
-				{formations.map(({ diplome, ecole, obtenu, description }, rang) => (
+				{formations.map(({ diploma, school, obtenu, description }, rang) => (
 					// biome-ignore lint/suspicious/noArrayIndexKey: the rows never move
-					<li key={`${rang}-${diplome}-${ecole}`} className="flex min-w-0 flex-col gap-1">
-						{diplome && <p className="break-words font-semibold text-gray-700">{diplome}</p>}
-						{(ecole || obtenu) && (
+					<li key={`${rang}-${diploma}-${school}`} className="flex min-w-0 flex-col gap-1">
+						{diploma && <p className="break-words font-semibold text-gray-700">{diploma}</p>}
+						{(school || obtenu) && (
 							<p className="flex flex-wrap justify-between gap-x-4 text-gray-600 text-sm italic">
-								{ecole && <span className="break-words">{ecole}</span>}
+								{school && <span className="break-words">{school}</span>}
 								{obtenu && <span>{obtenu}</span>}
 							</p>
 						)}
@@ -268,17 +268,17 @@ export function SectionExperiences({ experiences }: { experiences: readonly Expe
 	return (
 		<SectionDuProfil titre="Expériences professionnelles">
 			<ul className="flex flex-col gap-5">
-				{experiences.map(({ entreprise, poste, ville, periode, description }, rang) => (
+				{experiences.map(({ company, jobTitle, city, periode, description }, rang) => (
 					// biome-ignore lint/suspicious/noArrayIndexKey: the rows never move
-					<li key={`${rang}-${entreprise}-${poste}`} className="flex min-w-0 flex-col gap-1">
-						{entreprise && <p className="break-words font-semibold text-gray-700">{entreprise}</p>}
-						{(poste || periode) && (
+					<li key={`${rang}-${company}-${jobTitle}`} className="flex min-w-0 flex-col gap-1">
+						{company && <p className="break-words font-semibold text-gray-700">{company}</p>}
+						{(jobTitle || periode) && (
 							<p className="flex flex-wrap justify-between gap-x-4 text-gray-600 text-sm italic">
-								{poste && <span className="break-words">{poste}</span>}
+								{jobTitle && <span className="break-words">{jobTitle}</span>}
 								{periode && <span>{periode}</span>}
 							</p>
 						)}
-						{ville && <p className="break-words text-gray-600 text-sm italic">à {ville}</p>}
+						{city && <p className="break-words text-gray-600 text-sm italic">à {city}</p>}
 						<Paragraphes lignes={description} className="text-gray-500 text-sm italic" />
 					</li>
 				))}

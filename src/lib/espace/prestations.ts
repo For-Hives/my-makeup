@@ -39,12 +39,12 @@ export const MESSAGES_DES_PRESTATIONS = {
 
 function bornes(valeurs: ValeursDeLigne): ErreursDeLigne {
 	const erreurs: Record<string, string> = {}
-	const nom = messageDeTexte(valeurs.nom, LONGUEUR_NOM)
-	if (nom !== null) erreurs.nom = nom
+	const nom = messageDeTexte(valeurs.name, LONGUEUR_NOM)
+	if (nom !== null) erreurs.name = nom
 	const description = messageDeTexte(valeurs.description, LONGUEUR_DESCRIPTION)
 	if (description !== null) erreurs.description = description
-	const prix = messageDeTexte(prixDeLaSaisie(valeurs.prix ?? ''), LONGUEUR_NOM)
-	if (prix !== null) erreurs.prix = prix
+	const prix = messageDeTexte(prixDeLaSaisie(valeurs.price ?? ''), LONGUEUR_NOM)
+	if (prix !== null) erreurs.price = prix
 	return erreurs
 }
 
@@ -54,10 +54,10 @@ const prixStocke = (saisie: string | undefined) => parsePrice(prixDeLaSaisie(sai
 /** What an offer and an option share: their three fields, bounds, price reading and storage. */
 const COMMUN = {
 	champs: [
-		{ nom: 'nom', libelle: 'Nom', genre: 'texte' },
+		{ nom: 'name', libelle: 'Nom', genre: 'texte' },
 		{ nom: 'description', libelle: 'Description', genre: 'long' },
 		{
-			nom: 'prix',
+			nom: 'price',
 			libelle: 'Prix',
 			genre: 'texte',
 			exemple: 'à partir de 80 €',
@@ -66,30 +66,30 @@ const COMMUN = {
 	],
 	bornes,
 	resume: (valeurs: ValeursDeLigne) =>
-		[valeurs.nom, formatPrix(prixStocke(valeurs.prix)).replace(/\n/g, ', ')].map(texte).filter(Boolean).join(' - '),
-	nom: (valeurs: ValeursDeLigne) => texte(valeurs.nom),
+		[valeurs.name, formatPrix(prixStocke(valeurs.price)).replace(/\n/g, ', ')].map(texte).filter(Boolean).join(' - '),
+	nom: (valeurs: ValeursDeLigne) => texte(valeurs.name),
 	depuisLeStockage: (stockee: Readonly<Record<string, unknown>>) => ({
-		nom: texte(stockee.nom),
+		name: texte(stockee.name),
 		description: typeof stockee.description === 'string' ? stockee.description.trim() : '',
-		prix: prixEnSaisie(
+		price: prixEnSaisie(
 			// An amount stored without its text (an imported offer) is typed back as the amount.
-			texte(stockee.prixTexte) !== ''
-				? stockee.prixTexte
-				: typeof stockee.prixAPartirDe === 'number'
-					? String(stockee.prixAPartirDe)
+			texte(stockee.priceText) !== ''
+				? stockee.priceText
+				: typeof stockee.priceFrom === 'number'
+					? String(stockee.priceFrom)
 					: ''
 		),
 	}),
 	versLeStockage: (valeurs: ValeursDeLigne) => {
-		const { prixTexte, prixAPartirDe } = prixStocke(valeurs.prix)
-		return { nom: valeurs.nom || null, description: valeurs.description || null, prixTexte, prixAPartirDe }
+		const { priceText, priceFrom } = prixStocke(valeurs.price)
+		return { name: valeurs.name || null, description: valeurs.description || null, priceText, priceFrom }
 	},
 	indice: (valeurs: ValeursDeLigne) => {
-		if (prixDeLaSaisie(valeurs.prix ?? '') === '') return ''
-		const { prixAPartirDe } = prixStocke(valeurs.prix)
-		return prixAPartirDe === null
+		if (prixDeLaSaisie(valeurs.price ?? '') === '') return ''
+		const { priceFrom } = prixStocke(valeurs.price)
+		return priceFrom === null
 			? MESSAGES_DES_PRESTATIONS.sansMontant
-			: MESSAGES_DES_PRESTATIONS.montant(formatMontant(prixAPartirDe))
+			: MESSAGES_DES_PRESTATIONS.montant(formatMontant(priceFrom))
 	},
 } as const
 
@@ -104,14 +104,14 @@ export const OPTIONS_DE_PRESTATION: DefinitionDeListe = {
 		{ ...COMMUN.champs[0], libelle: 'Nom de l’option', exemple: 'Essai avant le jour J' },
 		...COMMUN.champs.slice(1),
 	],
-	requis: { nom: 'Le nom de l’option est requis.' },
+	requis: { name: 'Le nom de l’option est requis.' },
 	doublon: 'Une option identique est déjà dans la liste.',
 	retrait: nom => `Option ${nom} retirée`.replace(/\s+/g, ' '),
 }
 
 export const PRESTATIONS: DefinitionDeListe = {
 	...COMMUN,
-	section: 'prestations',
+	section: 'serviceOffers',
 	singulier: 'prestation',
 	pluriel: 'prestations',
 	designation: 'la prestation',
@@ -119,7 +119,7 @@ export const PRESTATIONS: DefinitionDeListe = {
 		{ ...COMMUN.champs[0], libelle: 'Nom de la prestation', exemple: 'Maquillage de mariée' },
 		...COMMUN.champs.slice(1),
 	],
-	requis: { nom: 'Le nom de la prestation est requis.' },
+	requis: { name: 'Le nom de la prestation est requis.' },
 	doublon: 'Une prestation identique est déjà dans la liste.',
 	retrait: nom => `Prestation ${nom} retirée`.replace(/\s+/g, ' '),
 	options: OPTIONS_DE_PRESTATION,

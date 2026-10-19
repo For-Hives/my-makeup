@@ -28,92 +28,92 @@ const O1 = '6710b0000000000000000001'
 const O2 = '6710b0000000000000000002'
 
 const stocke = {
-	prestations: [
-		{ id: A, nom: 'Mariée', options: [{ id: O1, nom: 'Essai' }] },
-		{ id: B, nom: 'Soirée', options: [{ id: O2, nom: 'Faux cils' }] },
+	serviceOffers: [
+		{ id: A, name: 'Mariée', options: [{ id: O1, name: 'Essai' }] },
+		{ id: B, name: 'Soirée', options: [{ id: O2, name: 'Faux cils' }] },
 	],
-	langues: [{ id: C, nom: 'Anglais' }],
+	languages: [{ id: C, name: 'Anglais' }],
 }
 
 describe('L1. Un identifiant par ligne : le serveur le donne et le garde', () => {
 	test('une ligne renvoyée avec son identifiant le garde, dans l’ordre envoyé', () => {
 		const recu = {
-			prestations: [
-				{ id: B, nom: 'Soirée' },
-				{ id: A, nom: 'Mariée' },
+			serviceOffers: [
+				{ id: B, name: 'Soirée' },
+				{ id: A, name: 'Mariée' },
 			],
 		}
 
-		expect(identitesDesLignes(recu, stocke).prestations).toEqual([
-			{ id: B, nom: 'Soirée' },
-			{ id: A, nom: 'Mariée' },
+		expect(identitesDesLignes(recu, stocke).serviceOffers).toEqual([
+			{ id: B, name: 'Soirée' },
+			{ id: A, name: 'Mariée' },
 		])
 	})
 
 	test('une ligne nouvelle, ou venue avec un identifiant tiré de son contenu, n’en a plus : Payload lui en donnera un', () => {
-		const recu = { langues: [{ nom: 'Italien' }, { id: 'italien', nom: 'Italien' }, { id: C, nom: 'Anglais' }] }
+		const recu = { languages: [{ name: 'Italien' }, { id: 'italien', name: 'Italien' }, { id: C, name: 'Anglais' }] }
 
-		expect(identitesDesLignes(recu, stocke).langues).toEqual([
-			{ nom: 'Italien' },
-			{ nom: 'Italien' },
-			{ id: C, nom: 'Anglais' },
+		expect(identitesDesLignes(recu, stocke).languages).toEqual([
+			{ name: 'Italien' },
+			{ name: 'Italien' },
+			{ id: C, name: 'Anglais' },
 		])
 	})
 
 	test('deux lignes de même contenu et de même identifiant : la seconde est une ligne nouvelle', () => {
 		const recu = {
-			langues: [
-				{ id: C, nom: 'Anglais' },
-				{ id: C, nom: 'Anglais' },
+			languages: [
+				{ id: C, name: 'Anglais' },
+				{ id: C, name: 'Anglais' },
 			],
 		}
 
-		expect(identitesDesLignes(recu, stocke).langues).toEqual([{ id: C, nom: 'Anglais' }, { nom: 'Anglais' }])
+		expect(identitesDesLignes(recu, stocke).languages).toEqual([{ id: C, name: 'Anglais' }, { name: 'Anglais' }])
 	})
 
 	test('un identifiant d’une autre liste, ou d’un autre profil, n’est pas repris', () => {
-		const recu = { langues: [{ id: A, nom: 'Anglais' }], competences: [{ id: C, nom: 'Mariage' }] }
+		const recu = { languages: [{ id: A, name: 'Anglais' }], skills: [{ id: C, name: 'Mariage' }] }
 
 		expect(identitesDesLignes(recu, stocke)).toEqual({
-			langues: [{ nom: 'Anglais' }],
-			competences: [{ nom: 'Mariage' }],
+			languages: [{ name: 'Anglais' }],
+			skills: [{ name: 'Mariage' }],
 		})
 	})
 
 	test('à la création, aucun profil n’est stocké : toutes les lignes sont nouvelles', () => {
-		expect(identitesDesLignes({ langues: [{ id: C, nom: 'Anglais' }] }, undefined).langues).toEqual([
-			{ nom: 'Anglais' },
+		expect(identitesDesLignes({ languages: [{ id: C, name: 'Anglais' }] }, undefined).languages).toEqual([
+			{ name: 'Anglais' },
 		])
 	})
 
 	test('les options gardent leur identifiant une fois dans tout le profil, même déplacées vers une autre prestation', () => {
 		const recu = {
-			prestations: [
-				{ id: A, options: [{ id: O2, nom: 'Faux cils' }, { id: O1 }] },
+			serviceOffers: [
+				{ id: A, options: [{ id: O2, name: 'Faux cils' }, { id: O1 }] },
 				{ id: B, options: [{ id: O1 }, { id: 'essai' }] },
-				{ nom: 'Nouvelle', options: [{ id: O1 }] },
+				{ name: 'Nouvelle', options: [{ id: O1 }] },
 			],
 		}
 
-		expect(identitesDesLignes(recu, stocke).prestations).toEqual([
-			{ id: A, options: [{ id: O2, nom: 'Faux cils' }, { id: O1 }] },
+		expect(identitesDesLignes(recu, stocke).serviceOffers).toEqual([
+			{ id: A, options: [{ id: O2, name: 'Faux cils' }, { id: O1 }] },
 			{ id: B, options: [{}, {}] },
-			{ nom: 'Nouvelle', options: [{}] },
+			{ name: 'Nouvelle', options: [{}] },
 		])
 	})
 
 	test('une liste qui n’est pas envoyée, les autres champs et ce qui n’est pas une ligne restent tels quels', () => {
-		const recu = { prenom: 'Zoé', langues: null, competences: [null, 'texte'] }
+		const recu = { prenom: 'Zoé', languages: null, skills: [null, 'texte'] }
 
-		expect(identitesDesLignes(recu, stocke)).toEqual({ prenom: 'Zoé', langues: null, competences: [null, 'texte'] })
+		expect(identitesDesLignes(recu, stocke)).toEqual({ prenom: 'Zoé', languages: null, skills: [null, 'texte'] })
 	})
 
 	test('les données reçues ne sont pas modifiées en place', () => {
-		const recu = { langues: [{ id: 'italien', nom: 'Italien' }] }
+		const recu = { languages: [{ id: 'italien', name: 'Italien' }] }
 
 		identitesDesLignes(recu, stocke)
 
-		expect(recu).toEqual({ langues: [{ id: 'italien', nom: 'Italien' }] })
+		expect(recu).toEqual({ languages: [{ id: 'italien', name: 'Italien' }] })
 	})
 })
 
@@ -134,7 +134,7 @@ describe('Les textes sont bornés, et le refus est en français', () => {
 		expect(messageDeTexte(undefined, LONGUEUR_NOM)).toBeNull()
 		expect(messageDeTexte('', LONGUEUR_NOM)).toBeNull()
 		expect(messageDeTexte(42, LONGUEUR_NOM)).toBe(MESSAGES.pasUnTexte)
-		expect(messageDeTexte({ nom: 'x' }, LONGUEUR_NOM)).toBe(MESSAGES.pasUnTexte)
+		expect(messageDeTexte({ name: 'x' }, LONGUEUR_NOM)).toBe(MESSAGES.pasUnTexte)
 	})
 })
 

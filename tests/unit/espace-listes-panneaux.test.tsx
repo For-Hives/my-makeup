@@ -16,7 +16,7 @@ import { ouvrirFenetre } from '../outils/dom-react'
 const fenetre = ouvrirFenetre()
 
 interface Cas {
-	readonly nom: string
+	readonly name: string
 	readonly ouvrir: string
 	readonly monter: (lignes: readonly LigneEnregistree[], envoyer: EnvoiDeLaListe) => ReactElement
 	/** The texts of a row, by field. */
@@ -36,23 +36,23 @@ interface Cas {
 
 const CAS: readonly Cas[] = [
 	{
-		nom: 'expériences',
+		name: 'expériences',
 		ouvrir: 'Modifier mes expériences',
 		monter: (lignes, envoyer) => <EditeurDExperiences lignes={lignes} envoyer={envoyer} />,
 		ligne: {
-			poste: 'Maquilleuse',
-			entreprise: 'Studio Fictif',
-			ville: 'Lyon',
-			debut: '2020-03-01',
-			fin: '',
+			jobTitle: 'Maquilleuse',
+			company: 'Studio Fictif',
+			city: 'Lyon',
+			startDate: '2020-03-01',
+			endDate: '',
 			description: '',
 		},
 		autre: {
-			poste: 'Cheffe maquilleuse',
-			entreprise: 'Studio Fictif',
-			ville: 'Lyon',
-			debut: '2020-03-01',
-			fin: '',
+			jobTitle: 'Cheffe maquilleuse',
+			company: 'Studio Fictif',
+			city: 'Lyon',
+			startDate: '2020-03-01',
+			endDate: '',
 			description: '',
 		},
 		champTexte: 'Poste',
@@ -62,17 +62,17 @@ const CAS: readonly Cas[] = [
 		enregistre: 'Tes expériences sont enregistrées.',
 		designation: 'l’expérience',
 		vide: {
-			'experiences-entreprise-erreur': 'Le nom de l’entreprise est requis.',
-			'experiences-poste-erreur': 'Le nom du poste est requis.',
-			'experiences-debut-erreur': 'La date de début de l’expérience est requise.',
+			'experiences-company-erreur': 'Le nom de l’entreprise est requis.',
+			'experiences-jobTitle-erreur': 'Le nom du poste est requis.',
+			'experiences-startDate-erreur': 'La date de début de l’expérience est requise.',
 		},
 	},
 	{
-		nom: 'formations',
+		name: 'courses',
 		ouvrir: 'Modifier mes formations',
 		monter: (lignes, envoyer) => <EditeurDeFormations lignes={lignes} envoyer={envoyer} />,
-		ligne: { diplome: 'CAP esthétique', ecole: 'École Fictive', obtenuLe: '2018-06-30', description: '' },
-		autre: { diplome: 'BP esthétique', ecole: 'École Fictive', obtenuLe: '2018-06-30', description: '' },
+		ligne: { diploma: 'CAP esthétique', school: 'École Fictive', graduatedAt: '2018-06-30', description: '' },
+		autre: { diploma: 'BP esthétique', school: 'École Fictive', graduatedAt: '2018-06-30', description: '' },
 		champTexte: 'Diplôme',
 		champLong: 'Description',
 		doublon: 'Une formation identique est déjà dans la liste.',
@@ -80,23 +80,23 @@ const CAS: readonly Cas[] = [
 		enregistre: 'Tes formations sont enregistrées.',
 		designation: 'la formation',
 		vide: {
-			'formations-diplome-erreur': 'Le nom du diplôme est requis.',
-			'formations-ecole-erreur': 'Le nom de l’école est requis.',
+			'courses-diploma-erreur': 'Le nom du diplôme est requis.',
+			'courses-school-erreur': 'Le nom de l’école est requis.',
 		},
 	},
 	{
-		nom: 'prestations',
+		name: 'serviceOffers',
 		ouvrir: 'Modifier mes prestations',
 		monter: (lignes, envoyer) => <EditeurDePrestations lignes={lignes} envoyer={envoyer} />,
-		ligne: { nom: 'Maquillage de mariée', description: '', prix: 'à partir de 80 €' },
-		autre: { nom: 'Maquillage de soirée', description: '', prix: 'à partir de 80 €' },
+		ligne: { name: 'Maquillage de mariée', description: '', price: 'à partir de 80 €' },
+		autre: { name: 'Maquillage de soirée', description: '', price: 'à partir de 80 €' },
 		champTexte: 'Nom de la prestation',
 		champLong: 'Description',
 		doublon: 'Une prestation identique est déjà dans la liste.',
 		retrait: 'Prestation Maquillage de mariée retirée',
 		enregistre: 'Tes prestations sont enregistrées.',
 		designation: 'la prestation',
-		vide: { 'prestations-nom-erreur': 'Le nom de la prestation est requis.' },
+		vide: { 'serviceOffers-name-erreur': 'Le nom de la prestation est requis.' },
 	},
 ]
 
@@ -115,7 +115,7 @@ const zoneDAnnonce = (): HTMLElement => {
 
 /** The labels of the fields, from the id the editor gives them: `<section>-<champ>`. */
 const identifiantDe = (cas: Cas, champ: string): string =>
-	`${cas.nom === 'expériences' ? 'experiences' : cas.nom}-${champ}`
+	`${cas.name === 'expériences' ? 'experiences' : cas.name}-${champ}`
 const champParNom = (cas: Cas, champ: string): HTMLInputElement | HTMLTextAreaElement => {
 	const element = dialogue().querySelector<HTMLInputElement | HTMLTextAreaElement>(`#${identifiantDe(cas, champ)}`)
 	if (!element) throw new Error(`pas de champ ${champ}`)
@@ -123,7 +123,7 @@ const champParNom = (cas: Cas, champ: string): HTMLInputElement | HTMLTextAreaEl
 }
 
 /** A section with options always sends them, empty when the row has none (ticket 132). */
-const sansOptions = (cas: Cas): { options?: [] } => (cas.nom === 'prestations' ? { options: [] } : {})
+const sansOptions = (cas: Cas): { options?: [] } => (cas.name === 'serviceOffers' ? { options: [] } : {})
 
 async function remplir(cas: Cas, valeurs: Record<string, string>) {
 	for (const [champ, valeur] of Object.entries(valeurs)) await fenetre.saisir(champParNom(cas, champ), valeur)
@@ -189,7 +189,7 @@ async function ouvrir(cas: Cas, lignes: readonly LigneEnregistree[], envoyer: En
 }
 
 for (const cas of CAS) {
-	describe(`${cas.nom} : le panneau`, () => {
+	describe(`${cas.name} : le panneau`, () => {
 		test('il s’ouvre avec les lignes enregistrées, dans un dialogue nommé', async () => {
 			await ouvrir(cas, [{ id: 'aaa', valeurs: cas.ligne }])
 			expect(dialogue().getAttribute('aria-modal')).toBe('true')
@@ -469,18 +469,18 @@ describe('129, U30 : la fin d’une expérience ne précède pas son début', ()
 	const cas = CAS[0] as Cas
 	test('une fin avant le début est refusée sous le champ « Fin », rien n’est ajouté', async () => {
 		await ouvrir(cas, [])
-		await ajouter(cas, { ...cas.ligne, debut: '2022-05-01', fin: '2021-01-01' })
+		await ajouter(cas, { ...cas.ligne, startDate: '2022-05-01', endDate: '2021-01-01' })
 		expect(lignesAffichees()).toHaveLength(0)
-		expect(fenetre.w.document.getElementById('experiences-fin-erreur')?.textContent).toBe(
+		expect(fenetre.w.document.getElementById('experiences-endDate-erreur')?.textContent).toBe(
 			'La fin d’une expérience ne peut pas précéder son début.'
 		)
-		expect(champParNom(cas, 'fin').getAttribute('aria-invalid')).toBe('true')
+		expect(champParNom(cas, 'endDate').getAttribute('aria-invalid')).toBe('true')
 	})
 
 	test('une fin le jour du début est acceptée, et une expérience en cours n’a pas de fin', async () => {
 		await ouvrir(cas, [])
-		await ajouter(cas, { ...cas.ligne, debut: '2022-05-01', fin: '2022-05-01' })
-		await ajouter(cas, { ...cas.autre, debut: '2023-01-01', fin: '' })
+		await ajouter(cas, { ...cas.ligne, startDate: '2022-05-01', endDate: '2022-05-01' })
+		await ajouter(cas, { ...cas.autre, startDate: '2023-01-01', endDate: '' })
 		expect(lignesAffichees()).toHaveLength(2)
 		expect(lignesAffichees()[1]?.textContent).toContain('aujourd’hui')
 	})
@@ -490,9 +490,9 @@ describe('130, U30 : une date d’obtention à plus d’un an dans le futur est 
 	const cas = CAS[1] as Cas
 	test('le refus est sous le champ, la ligne n’est pas ajoutée', async () => {
 		await ouvrir(cas, [])
-		await ajouter(cas, { ...cas.ligne, obtenuLe: '2099-01-01' })
+		await ajouter(cas, { ...cas.ligne, graduatedAt: '2099-01-01' })
 		expect(lignesAffichees()).toHaveLength(0)
-		expect(fenetre.w.document.getElementById('formations-obtenuLe-erreur')?.textContent).toBe(
+		expect(fenetre.w.document.getElementById('courses-graduatedAt-erreur')?.textContent).toBe(
 			'Une date d’obtention ne peut pas dépasser d’un an la date du jour.'
 		)
 	})
@@ -500,46 +500,46 @@ describe('130, U30 : une date d’obtention à plus d’un an dans le futur est 
 	test('une date passée, ou sans date, est acceptée', async () => {
 		await ouvrir(cas, [])
 		await ajouter(cas, cas.ligne)
-		await ajouter(cas, { ...cas.autre, obtenuLe: '' })
+		await ajouter(cas, { ...cas.autre, graduatedAt: '' })
 		expect(lignesAffichees()).toHaveLength(2)
 	})
 })
 
 describe('131, U29 : le prix, sous le champ, dit le montant retenu', () => {
 	const cas = CAS[2] as Cas
-	const indice = (): string => fenetre.w.document.getElementById('prestations-prix-indice')?.textContent ?? ''
+	const indice = (): string => fenetre.w.document.getElementById('serviceOffers-price-indice')?.textContent ?? ''
 
 	for (const saisie of ['80', '80 €', 'à partir de 80']) {
 		test(`« ${saisie} » donne un montant de 80 €`, async () => {
 			await ouvrir(cas, [])
-			await fenetre.saisir(champParNom(cas, 'prix'), saisie)
+			await fenetre.saisir(champParNom(cas, 'price'), saisie)
 			expect(indice()).toBe('Montant retenu pour ton profil : 80 €.')
 		})
 	}
 
 	test('« sur devis » est gardé tel quel, sans montant, et le dit', async () => {
 		await ouvrir(cas, [])
-		await fenetre.saisir(champParNom(cas, 'prix'), 'sur devis')
+		await fenetre.saisir(champParNom(cas, 'price'), 'sur devis')
 		expect(indice()).toContain('Aucun montant retenu')
-		await ajouter(cas, { nom: 'Maquillage de mariée', prix: 'sur devis' })
+		await ajouter(cas, { name: 'Maquillage de mariée', price: 'sur devis' })
 		expect(lignesAffichees()[0]?.querySelector('span')?.textContent).toBe('Maquillage de mariée - Sur devis')
 	})
 
 	test('plusieurs formules se séparent par un point-virgule', async () => {
 		await ouvrir(cas, [])
-		await ajouter(cas, { nom: 'Cours', prix: '60 € ; sur devis' })
+		await ajouter(cas, { name: 'Cours', price: '60 € ; sur devis' })
 		expect(lignesAffichees()[0]?.textContent).toContain('60')
 		expect(lignesAffichees()[0]?.textContent).toContain('Sur devis')
 	})
 
 	test('un nom est requis, et un prix de plus de 70 caractères est refusé', async () => {
 		await ouvrir(cas, [])
-		await ajouter(cas, { prix: '80' })
-		expect(fenetre.w.document.getElementById('prestations-nom-erreur')?.textContent).toBe(
+		await ajouter(cas, { price: '80' })
+		expect(fenetre.w.document.getElementById('serviceOffers-name-erreur')?.textContent).toBe(
 			'Le nom de la prestation est requis.'
 		)
-		await ajouter(cas, { nom: 'Cours', prix: 'a'.repeat(71) })
-		expect(fenetre.w.document.getElementById('prestations-prix-erreur')?.textContent).toBe(
+		await ajouter(cas, { name: 'Cours', price: 'a'.repeat(71) })
+		expect(fenetre.w.document.getElementById('serviceOffers-price-erreur')?.textContent).toBe(
 			'Ce texte ne doit pas dépasser 70 caractères.'
 		)
 		expect(lignesAffichees()).toHaveLength(0)
@@ -548,11 +548,11 @@ describe('131, U29 : le prix, sous le champ, dit le montant retenu', () => {
 
 describe('132 : les options d’une prestation', () => {
 	const cas = CAS[2] as Cas
-	const ESSAI = { nom: 'Essai', description: '', prix: '30' }
-	const CILS = { nom: 'Cils', description: 'Pose de cils', prix: 'sur devis' }
+	const ESSAI = { name: 'Essai', description: '', price: '30' }
+	const CILS = { name: 'Cils', description: 'Pose de cils', price: 'sur devis' }
 	const mariee = (options: LigneEnregistree[]): LigneEnregistree => ({
 		id: 'p1',
-		valeurs: { nom: 'Maquillage de mariée', description: '', prix: 'à partir de 80 €' },
+		valeurs: { name: 'Maquillage de mariée', description: '', price: 'à partir de 80 €' },
 		options,
 	})
 	const deux = (): LigneEnregistree[] => [
@@ -599,10 +599,10 @@ describe('132 : les options d’une prestation', () => {
 		expect(lignesAffichees()[0]?.textContent).toContain('2 options')
 		await modifierLaPrestation()
 		expect(options()).toHaveLength(2)
-		expect(champDOption(0, 'nom').value).toBe('Essai')
-		expect(champDOption(1, 'nom').value).toBe('Cils')
+		expect(champDOption(0, 'name').value).toBe('Essai')
+		expect(champDOption(1, 'name').value).toBe('Cils')
 		expect(champDOption(1, 'description').value).toBe('Pose de cils')
-		expect(champDOption(1, 'prix').value).toBe('sur devis')
+		expect(champDOption(1, 'price').value).toBe('sur devis')
 	})
 
 	test('L2 : juste après un enregistrement, vingt caractères d’affilée dans chaque champ de chaque option, focus fixe', async () => {
@@ -616,7 +616,7 @@ describe('132 : les options d’une prestation', () => {
 		await fenetre.cliquer(fenetre.bouton(cas.ouvrir))
 		await modifierLaPrestation()
 		for (const rang of [0, 1]) {
-			for (const nom of ['nom', 'description', 'prix']) {
+			for (const nom of ['name', 'description', 'price']) {
 				await taperVingtCaracteres(champDOption(rang, nom), () => champDOption(rang, nom))
 			}
 		}
@@ -626,11 +626,11 @@ describe('132 : les options d’une prestation', () => {
 		await ouvrir(cas, [mariee([])])
 		await modifierLaPrestation()
 		await ajouterUneOption(ESSAI)
-		for (const nom of ['nom', 'description', 'prix']) {
+		for (const nom of ['name', 'description', 'price']) {
 			await taperVingtCaracteres(champDOption(0, nom), () => champDOption(0, nom))
 		}
 		// And the small form that adds one.
-		await taperVingtCaracteres(champDAjout('nom'), () => champDAjout('nom'))
+		await taperVingtCaracteres(champDAjout('name'), () => champDAjout('name'))
 	}, 60_000)
 
 	test('L1 : deux options identiques se retirent séparément, chacune garde son identifiant', async () => {
@@ -658,8 +658,8 @@ describe('132 : les options d’une prestation', () => {
 		const { appels, envoyer } = fauxEnvoi()
 		const autre: LigneEnregistree = {
 			id: 'p2',
-			valeurs: { nom: 'Maquillage de soirée', description: '', prix: '60' },
-			options: [{ id: 'o9', valeurs: { nom: 'Retouches', description: '', prix: '' } }],
+			valeurs: { name: 'Maquillage de soirée', description: '', price: '60' },
+			options: [{ id: 'o9', valeurs: { name: 'Retouches', description: '', price: '' } }],
 		}
 		await ouvrir(cas, [mariee([{ id: 'o1', valeurs: ESSAI }]), autre], envoyer)
 		await modifierLaPrestation(1)
@@ -669,7 +669,7 @@ describe('132 : les options d’une prestation', () => {
 		await fenetre.attendre(() => appels.length === 1)
 		expect(appels[0]?.lignes.map(ligne => [ligne.id, ligne.options])).toEqual([
 			['p1', [{ id: 'o1', valeurs: ESSAI }]],
-			['p2', [{ id: 'o9', valeurs: { nom: 'Retouches', description: '', prix: '' } }, { valeurs: CILS }]],
+			['p2', [{ id: 'o9', valeurs: { name: 'Retouches', description: '', price: '' } }, { valeurs: CILS }]],
 		])
 	})
 
@@ -680,16 +680,16 @@ describe('132 : les options d’une prestation', () => {
 		expect(options()).toHaveLength(1)
 		expect(alerte()).toBe('Une option identique est déjà dans la liste.')
 		// Typing again takes the message away.
-		await fenetre.saisir(champDAjout('nom'), 'Essai 2')
+		await fenetre.saisir(champDAjout('name'), 'Essai 2')
 		expect(alerte()).toBe('')
 	})
 
 	test('L6 : deux options rendues identiques par la saisie refusent la prestation, qui n’est pas validée', async () => {
 		await ouvrir(cas, deux())
 		await modifierLaPrestation()
-		await fenetre.saisir(champDOption(1, 'nom'), 'Essai')
+		await fenetre.saisir(champDOption(1, 'name'), 'Essai')
 		await fenetre.saisir(champDOption(1, 'description'), '')
-		await fenetre.saisir(champDOption(1, 'prix'), '30')
+		await fenetre.saisir(champDOption(1, 'price'), '30')
 		await fenetre.cliquer(fenetre.bouton('Valider la modification'))
 		expect(alerte()).toBe('Une option identique est déjà dans la liste.')
 		expect(fenetre.bouton('Valider la modification')).toBeTruthy()
@@ -698,12 +698,12 @@ describe('132 : les options d’une prestation', () => {
 	test('L7 : Entrée maintenue sur « Ajouter l’option » ajoute une seule option', async () => {
 		await ouvrir(cas, [mariee([])])
 		await modifierLaPrestation()
-		await fenetre.saisir(champDAjout('nom'), 'Essai')
+		await fenetre.saisir(champDAjout('name'), 'Essai')
 		const bouton = fenetre.bouton('Ajouter l’option')
 		expect(await activerAuClavier(bouton)).toBe(true)
 		expect(options()).toHaveLength(1)
 		// The fields are empty again: the repeats do nothing, and would not add a second option anyway.
-		await fenetre.saisir(champDAjout('nom'), 'Cils')
+		await fenetre.saisir(champDAjout('name'), 'Cils')
 		expect(await activerAuClavier(bouton, { repeat: true })).toBe(false)
 		expect(options()).toHaveLength(1)
 	})
@@ -711,16 +711,16 @@ describe('132 : les options d’une prestation', () => {
 	test('L7 : Entrée maintenue dans un champ de l’ajout ajoute une seule option, et ne valide pas la prestation', async () => {
 		await ouvrir(cas, [mariee([])])
 		await modifierLaPrestation()
-		await fenetre.saisir(champDAjout('nom'), 'Essai')
+		await fenetre.saisir(champDAjout('name'), 'Essai')
 		const envoyer = async (repeat: boolean) =>
 			act(async () => {
-				champDAjout('nom').dispatchEvent(
+				champDAjout('name').dispatchEvent(
 					new fenetre.w.KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true, repeat })
 				)
 			})
 		await envoyer(false)
 		expect(options()).toHaveLength(1)
-		await fenetre.saisir(champDAjout('nom'), 'Cils')
+		await fenetre.saisir(champDAjout('name'), 'Cils')
 		await envoyer(true)
 		expect(options()).toHaveLength(1)
 		expect(fenetre.bouton('Valider la modification')).toBeTruthy()
@@ -740,7 +740,7 @@ describe('132 : les options d’une prestation', () => {
 			mariee([
 				{ id: 'a', valeurs: ESSAI },
 				{ id: 'b', valeurs: CILS },
-				{ id: 'c', valeurs: { nom: 'Retouches', description: '', prix: '' } },
+				{ id: 'c', valeurs: { name: 'Retouches', description: '', price: '' } },
 			]),
 		]
 		await ouvrir(cas, trois)
@@ -751,7 +751,7 @@ describe('132 : les options d’une prestation', () => {
 		expect(actif()).toBe(retraitsDOptions()[0] as HTMLElement)
 		await activerAuClavier(retraitsDOptions()[0] as HTMLElement)
 		expect(options()).toHaveLength(0)
-		expect(actif()).toBe(champDAjout('nom'))
+		expect(actif()).toBe(champDAjout('name'))
 		expect(dialogue().contains(actif())).toBe(true)
 	})
 
@@ -786,11 +786,11 @@ describe('132 : les options d’une prestation', () => {
 	test('une option sans nom n’est pas ajoutée, et une option laissée en cours de saisie n’est pas perdue en silence', async () => {
 		await ouvrir(cas, [mariee([])])
 		await modifierLaPrestation()
-		await ajouterUneOption({ prix: '30' })
+		await ajouterUneOption({ price: '30' })
 		expect(options()).toHaveLength(0)
-		expect(dialogue().querySelector('#options-nom-erreur')?.textContent).toBe('Le nom de l’option est requis.')
+		expect(dialogue().querySelector('#options-name-erreur')?.textContent).toBe('Le nom de l’option est requis.')
 
-		await fenetre.saisir(champDAjout('nom'), 'Essai')
+		await fenetre.saisir(champDAjout('name'), 'Essai')
 		await fenetre.cliquer(fenetre.bouton('Valider la modification'))
 		expect(alerte()).toContain('option en cours de saisie')
 		expect(fenetre.bouton('Valider la modification')).toBeTruthy()
@@ -799,17 +799,17 @@ describe('132 : les options d’une prestation', () => {
 	test('une option dont on a vidé le nom est signalée sous son champ, et la prestation n’est pas validée', async () => {
 		await ouvrir(cas, deux())
 		await modifierLaPrestation()
-		await fenetre.saisir(champDOption(0, 'nom'), '')
+		await fenetre.saisir(champDOption(0, 'name'), '')
 		expect(options()[0]?.textContent).toContain('Le nom de l’option est requis.')
 		await fenetre.cliquer(fenetre.bouton('Valider la modification'))
 		expect(fenetre.bouton('Valider la modification')).toBeTruthy()
-		expect(actif()).toBe(champDOption(0, 'nom'))
+		expect(actif()).toBe(champDOption(0, 'name'))
 	})
 
 	test('le prix d’une option dit le montant retenu comme celui d’une prestation', async () => {
 		await ouvrir(cas, [mariee([])])
 		await modifierLaPrestation()
-		await fenetre.saisir(champDAjout('prix'), '30 €')
+		await fenetre.saisir(champDAjout('price'), '30 €')
 		expect(dialogue().textContent).toMatch(/Montant retenu pour ton profil : 30\s€\./)
 	})
 

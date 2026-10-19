@@ -90,35 +90,40 @@ describe('les listes d’un profil, sous les noms de Payload', () => {
 		)
 
 		expect(valeurs).toEqual({
-			competences: [
-				{ nom: 'Maquillage mariée', description: null },
-				{ nom: 'Coiffure', description: 'Chignons.' },
-				{ nom: 'Maquillage mariée', description: null },
+			skills: [
+				{ name: 'Maquillage mariée', description: null },
+				{ name: 'Coiffure', description: 'Chignons.' },
+				{ name: 'Maquillage mariée', description: null },
 			],
-			langues: [{ nom: 'Français' }, { nom: 'Anglais' }],
-			formations: [
-				{ diplome: 'CAP Esthétique', ecole: 'École fictive', obtenuLe: '2018-06-30T12:00:00.000Z', description: null },
+			languages: [{ name: 'Français' }, { name: 'Anglais' }],
+			courses: [
+				{
+					diploma: 'CAP Esthétique',
+					school: 'École fictive',
+					graduatedAt: '2018-06-30T12:00:00.000Z',
+					description: null,
+				},
 			],
 			experiences: [
 				{
-					entreprise: 'Studio fictif',
-					poste: 'Maquilleuse',
-					ville: 'Lyon',
-					debut: '2019-09-01T12:00:00.000Z',
-					fin: null,
+					company: 'Studio fictif',
+					jobTitle: 'Maquilleuse',
+					city: 'Lyon',
+					startDate: '2019-09-01T12:00:00.000Z',
+					endDate: null,
 					description: null,
 				},
 			],
 			// The price typed, byte for byte: spaces, an empty text and nothing at all stay as they are.
-			prestations: [
+			serviceOffers: [
 				{
-					nom: 'Mariage',
+					name: 'Mariage',
 					description: null,
-					prixTexte: '  à partir de 120 € ',
-					prixAPartirDe: 120,
+					priceText: '  à partir de 120 € ',
+					priceFrom: 120,
 					options: [
-						{ nom: 'Retouche', description: null, prixTexte: '', prixAPartirDe: null },
-						{ nom: 'Essai', description: 'Une heure.', prixTexte: null, prixAPartirDe: null },
+						{ name: 'Retouche', description: null, priceText: '', priceFrom: null },
+						{ name: 'Essai', description: 'Une heure.', priceText: null, priceFrom: null },
 					],
 				},
 			],
@@ -147,7 +152,7 @@ describe('les listes d’un profil, sous les noms de Payload', () => {
 			'',
 			null,
 		]
-		const { prestations } = valeursDesListes(
+		const { serviceOffers: prestations } = valeursDesListes(
 			sections({
 				prestations: saisies.map((price, i) => ({
 					id: i + 1,
@@ -158,14 +163,14 @@ describe('les listes d’un profil, sous les noms de Payload', () => {
 				})),
 			})
 		) as {
-			prestations: {
-				prixTexte: string | null
-				prixAPartirDe: number | null
-				options: { prixAPartirDe: number | null }[]
+			serviceOffers: {
+				priceText: string | null
+				priceFrom: number | null
+				options: { priceFrom: number | null }[]
 			}[]
 		}
 
-		expect(prestations.map(({ prixTexte, prixAPartirDe }) => [prixTexte, prixAPartirDe])).toEqual([
+		expect(prestations.map(({ priceText, priceFrom }) => [priceText, priceFrom])).toEqual([
 			['50', 50],
 			['50€', 50],
 			[' 1 200 € ', 1200],
@@ -181,9 +186,7 @@ describe('les listes d’un profil, sous les noms de Payload', () => {
 		])
 		// An option goes through the same rule as its offer.
 		const options = prestations.flatMap(({ options }) => options)
-		expect(options.map(({ prixAPartirDe }) => prixAPartirDe)).toEqual(
-			prestations.map(({ prixAPartirDe }) => prixAPartirDe)
-		)
+		expect(options.map(({ priceFrom }) => priceFrom)).toEqual(prestations.map(({ priceFrom }) => priceFrom))
 	})
 
 	test('le bilan des prix compte en nombres et liste les profils, sans jamais citer un texte', () => {
@@ -224,11 +227,11 @@ describe('les listes d’un profil, sous les noms de Payload', () => {
 
 	test('un profil sans section n’a que des listes vides, et pas de réseaux', () => {
 		expect(valeursDesListes(sections())).toEqual({
-			competences: [],
-			langues: [],
-			formations: [],
+			skills: [],
+			languages: [],
+			courses: [],
 			experiences: [],
-			prestations: [],
+			serviceOffers: [],
 			networks: null,
 		})
 	})
@@ -430,7 +433,7 @@ describe('une ligne hors d’une borne de la v3 est laissée de côté et listé
 			{ profil: 1, liste: 'prestations', rang: 1 },
 		])
 		expect(attendus[0]?.valeurs.experiences).toEqual([])
-		expect((attendus[0]?.valeurs.prestations as unknown[]).length).toBe(1)
+		expect((attendus[0]?.valeurs.serviceOffers as unknown[]).length).toBe(1)
 		expect(prix.prix).toBe(1)
 		expect(prix.offresChiffreesPerdues).toEqual([])
 	})
