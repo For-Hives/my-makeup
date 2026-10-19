@@ -164,25 +164,25 @@ describe('agregerStats', () => {
 	})
 
 	test('exact counts', () => {
-		expect(stats.profils).toEqual({
+		expect(stats.profiles).toEqual({
 			total: 4,
-			entierementVides: 1,
-			actifs: 3,
-			publiables: 1,
-			masques: 1,
-			complets11: 2,
-			quasiVides: 1,
-			sansCanal: 3,
-			modifies90j: 1,
-			crees: 2,
+			fullyEmpty: 1,
+			active: 3,
+			publishable: 1,
+			hidden: 1,
+			complete11: 2,
+			nearlyEmpty: 1,
+			noChannel: 3,
+			modified90d: 1,
+			created: 2,
 		})
-		expect(stats.cohorte).toEqual({ profils: 1, actifs: 1 })
-		expect(stats.comptes).toEqual({ total: 3, nouveaux: 2 })
-		expect(stats.inscriptions).toEqual([
-			{ creeLe: '2026-10-06', completude: 13, actif: true, publiable: true },
-			{ creeLe: '2026-10-08', completude: 1, actif: false, publiable: false },
+		expect(stats.cohort).toEqual({ profiles: 1, active: 1 })
+		expect(stats.accounts).toEqual({ total: 3, new: 2 })
+		expect(stats.signUps).toEqual([
+			{ createdOn: '2026-10-06', completeness: 13, active: true, publishable: true },
+			{ createdOn: '2026-10-08', completeness: 1, active: false, publishable: false },
 		])
-		expect(stats.publiables).toEqual({ parDepartement: { '74': 1 }, slugs: ['ada-fictive'] })
+		expect(stats.publishable).toEqual({ byDepartment: { '74': 1 }, slugs: ['ada-fictive'] })
 	})
 
 	test('a hidden publishable profile has no slug in the answer', () => {
@@ -191,7 +191,7 @@ describe('agregerStats', () => {
 	})
 
 	test('no personal data outside the slugs: no @, no run of 9 digits, no name', () => {
-		const sansSlugs = JSON.stringify({ ...stats, publiables: { ...stats.publiables, slugs: [] } })
+		const sansSlugs = JSON.stringify({ ...stats, publishable: { ...stats.publishable, slugs: [] } })
 		expect(sansSlugs).not.toContain('@')
 		expect(sansSlugs).not.toMatch(/\d{9}/)
 		for (const nom of ['Ada', 'Fictive', 'Annecy', 'example.test']) expect(sansSlugs).not.toContain(nom)
@@ -200,7 +200,18 @@ describe('agregerStats', () => {
 	test('the answer fits the schema, and the schema refuses an extra key', () => {
 		expect(StatsHebdo.safeParse(stats).success).toBe(true)
 		expect(StatsHebdo.safeParse({ ...stats, email: 'x' }).success).toBe(false)
-		expect(StatsHebdo.safeParse({ ...stats, comptes: { ...stats.comptes, nom: 'x' } }).success).toBe(false)
+		expect(StatsHebdo.safeParse({ ...stats, accounts: { ...stats.accounts, nom: 'x' } }).success).toBe(false)
+	})
+
+	test('the answer is version 2, with English keys only: a version 1 answer is refused', () => {
+		expect(stats.version).toBe(2)
+		expect(StatsHebdo.safeParse({ ...stats, version: 1 }).success).toBe(false)
+		const cles = (valeur: unknown): string[] =>
+			valeur !== null && typeof valeur === 'object'
+				? Object.entries(valeur).flatMap(([cle, v]) => [cle, ...cles(v)])
+				: []
+		for (const ancienne of ['periode', 'genereLe', 'comptes', 'profils', 'entierementVides', 'inscriptions', 'parCode'])
+			expect(cles(stats)).not.toContain(ancienne)
 	})
 })
 
@@ -210,7 +221,7 @@ describe('the published example', () => {
 	})
 
 	test('carries no personal data', () => {
-		const sansSlugs = JSON.stringify({ ...exemple, publiables: { ...exemple.publiables, slugs: [] } })
+		const sansSlugs = JSON.stringify({ ...exemple, publishable: { ...exemple.publishable, slugs: [] } })
 		expect(sansSlugs).not.toContain('@')
 		expect(sansSlugs).not.toMatch(/\d{9}/)
 	})
@@ -226,9 +237,9 @@ describe('ticket 169: contact messages, sign-ins and inherited hashes', () => {
 			{ status: 'inconnu', mailStatus: null },
 		])
 		expect(contact.total).toBe(5)
-		expect(contact.parStatut).toEqual({ nouvelle: 1, transmise: 1, repondue: 1, spam: 1 })
-		expect(contact.parEtatMail).toEqual({ 'en-attente': 1, envoye: 2, echec: 1 })
-		expect(agregerContact([]).parStatut).toEqual({ nouvelle: 0, transmise: 0, repondue: 0, spam: 0 })
+		expect(contact.byStatus).toEqual({ new: 1, forwarded: 1, answered: 1, spam: 1 })
+		expect(contact.byMailState).toEqual({ pending: 1, sent: 2, failed: 1 })
+		expect(agregerContact([]).byStatus).toEqual({ new: 0, forwarded: 0, answered: 0, spam: 0 })
 	})
 
 	test('centile: nearest rank, null when empty', () => {
@@ -254,24 +265,24 @@ describe('ticket 169: contact messages, sign-ins and inherited hashes', () => {
 			{ type: 'sign-up', code: 'champ-piege' },
 			{ type: 'pirate', code: 'ok' },
 		])
-		expect(auth.parType.connexion).toBe(4)
-		expect(auth.parType.deconnexion).toBe(1)
-		expect(auth.parType.inscription).toBe(1)
-		expect(Object.values(auth.parType).reduce((a, b) => a + b, 0)).toBe(6)
-		expect(auth.connexions.total).toBe(4)
-		expect(auth.connexions.parCode.ok).toBe(2)
-		expect(auth.connexions.parCode.heritee).toBe(1)
-		expect(auth.connexions.parCode['champ-piege']).toBe(0)
-		expect(auth.connexions.dureeP95Ms).toBe(900)
-		expect(agregerAuth([]).connexions.dureeP95Ms).toBeNull()
+		expect(auth.byType['sign-in']).toBe(4)
+		expect(auth.byType['sign-out']).toBe(1)
+		expect(auth.byType['sign-up']).toBe(1)
+		expect(Object.values(auth.byType).reduce((a, b) => a + b, 0)).toBe(6)
+		expect(auth.signIns.total).toBe(4)
+		expect(auth.signIns.byCode.ok).toBe(2)
+		expect(auth.signIns.byCode.heritee).toBe(1)
+		expect(auth.signIns.byCode['champ-piege']).toBe(0)
+		expect(auth.signIns.durationP95Ms).toBe(900)
+		expect(agregerAuth([]).signIns.durationP95Ms).toBeNull()
 	})
 
 	test('the new keys are optional: an answer without them, the old example, still fits; a stray key does not', () => {
-		const { contact: _c, auth: _a, herites: _h, ...ancien } = exemple as unknown as StatsHebdo
+		const { contact: _c, auth: _a, inherited: _h, ...ancien } = exemple as unknown as StatsHebdo
 		expect(StatsHebdo.safeParse(ancien).success).toBe(true)
 		const avec = StatsHebdo.parse(exemple)
 		expect(avec.contact?.total).toBe(3)
 		expect(StatsHebdo.safeParse({ ...avec, contact: { ...avec.contact, email: 'x' } }).success).toBe(false)
-		expect(StatsHebdo.safeParse({ ...avec, herites: { hashRestants: 1 } }).success).toBe(false)
+		expect(StatsHebdo.safeParse({ ...avec, inherited: { remainingHashes: 1 } }).success).toBe(false)
 	})
 })

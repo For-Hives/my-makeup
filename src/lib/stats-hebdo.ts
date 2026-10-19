@@ -10,8 +10,13 @@
  * - `lirePeriode`, the period asked for.
  * - `agregerStats`, the counts, from the profiles and the account dates the caller read.
  *
+ * Version 2 (ticket 253): the keys are English, and so are the keys of the counters that are values of
+ * the closed lists of the database (renamed by tickets 250 to 252). The codes of the sign-in
+ * outcomes (`byCode`) are those of the journal and stay as they are. Version 1 is gone: a reader that
+ * does not know `version: 2` must refuse the answer, not read zeros.
+ *
  * Optional keys came later (169: contact messages, sign-ins, inherited hashes; 212 and 213 next):
- * a reader that knows `version: 1` must keep working on an answer that has fewer of them.
+ * a reader of `version: 2` must keep working on an answer that has fewer of them.
  *
  * Relative imports on purpose, like the rest of src/lib: no `next` import.
  */
@@ -26,7 +31,7 @@ import { champsDuProfil, type DocumentDuProfil } from './profil/etat'
 /** A published profile has this status; the rest is a draft or hidden. */
 const STATUT_PUBLIE = 'published'
 
-export const VERSION_STATS = 1
+export const VERSION_STATS = 2
 
 /** 28 days: the window of the cohort of chiffre 6, before the week. */
 const JOURS_DE_LA_COHORTE = 28
@@ -43,72 +48,72 @@ const instant = z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,
 
 export const StatsHebdo = z.strictObject({
 	version: z.literal(VERSION_STATS),
-	/** The period asked for, `debut` included, `fin` excluded, as UTC instants. */
-	periode: z.strictObject({ debut: instant, fin: instant }),
-	genereLe: instant,
-	comptes: z.strictObject({
+	/** The period asked for, `start` included, `end` excluded, as UTC instants. */
+	period: z.strictObject({ start: instant, end: instant }),
+	generatedAt: instant,
+	accounts: z.strictObject({
 		total: compte,
 		/** Created in the period. */
-		nouveaux: compte,
+		new: compte,
 	}),
-	profils: z.strictObject({
+	profiles: z.strictObject({
 		total: compte,
 		/** None of the six conditions: counted apart, and inside `total`. */
-		entierementVides: compte,
+		fullyEmpty: compte,
 		/** Main photo, usable city and speciality. */
-		actifs: compte,
+		active: compte,
 		/** The six conditions AND shown on the site: a hidden or draft profile is not counted. */
-		publiables: compte,
+		publishable: compte,
 		/** Hidden by an admin. */
-		masques: compte,
+		hidden: compte,
 		/** At least 11 criteria out of 13. */
-		complets11: compte,
+		complete11: compte,
 		/** 2 criteria out of 13, or fewer. */
-		quasiVides: compte,
+		nearlyEmpty: compte,
 		/** No contact channel. */
-		sansCanal: compte,
+		noChannel: compte,
 		/** Modified in the 90 days before the end of the period. */
-		modifies90j: compte,
+		modified90d: compte,
 		/** Created in the period. */
-		crees: compte,
+		created: compte,
 	}),
 	/** The profiles created in the 28 days before the period, and how many are active today. */
-	cohorte: z.strictObject({ profils: compte, actifs: compte }),
+	cohort: z.strictObject({ profiles: compte, active: compte }),
 	/** The profiles created in the period, one by one: no name, only the state. */
-	inscriptions: z.array(
+	signUps: z.array(
 		z.strictObject({
-			creeLe: jour,
-			completude: z.number().int().min(0).max(13),
-			actif: z.boolean(),
-			publiable: z.boolean(),
+			createdOn: jour,
+			completeness: z.number().int().min(0).max(13),
+			active: z.boolean(),
+			publishable: z.boolean(),
 		})
 	),
 	/** The only detail that is given on a profile, and only for those a visitor can see. */
-	publiables: z.strictObject({
-		/** Count by department code; `inconnu` when the commune has none. */
-		parDepartement: z.record(z.string(), compte),
+	publishable: z.strictObject({
+		/** Count by department code; `unknown` when the commune has none. */
+		byDepartment: z.record(z.string(), compte),
 		slugs: z.array(z.string()),
 	}),
 	/** Ticket 169. The contact messages received in the period: counts by status and by mail state. */
 	contact: z
 		.strictObject({
 			total: compte,
-			parStatut: z.record(z.string(), compte),
-			parEtatMail: z.record(z.string(), compte),
+			byStatus: z.record(z.string(), compte),
+			byMailState: z.record(z.string(), compte),
 		})
 		.optional(),
 	/**
 	 * Ticket 169. The authentication events of the period, from the journal (no IP, no email: the
-	 * journal holds none). `connexions` is the `connexion` events alone.
+	 * journal holds none). `signIns` is the `sign-in` events alone.
 	 */
 	auth: z
 		.strictObject({
-			parType: z.record(z.string(), compte),
-			connexions: z.strictObject({
+			byType: z.record(z.string(), compte),
+			signIns: z.strictObject({
 				total: compte,
-				parCode: z.record(z.string(), compte),
+				byCode: z.record(z.string(), compte),
 				/** 95th percentile of the duration of a sign-in, in ms (nearest rank); null without any duration. */
-				dureeP95Ms: compte.nullable(),
+				durationP95Ms: compte.nullable(),
 			}),
 		})
 		.optional(),
@@ -117,14 +122,14 @@ export const StatsHebdo = z.strictObject({
 	 * the hashes of the old site still stored, and the accounts that never had a password of their
 	 * own, by provider of the old site.
 	 */
-	herites: z
+	inherited: z
 		.strictObject({
-			hashRestants: compte,
+			remainingHashes: compte,
 			/**
 			 * Accounts of a provider other than `local` with no inherited hash, by `legacyProvider` (`google`,
-			 * `facebook`, `autre`). Payload keeps no mark of a password set later (reset link): those stay counted.
+			 * `facebook`, `other`). Payload keeps no mark of a password set later (reset link): those stay counted.
 			 */
-			sansMotDePasseParFournisseur: z.record(z.string(), compte),
+			withoutPasswordByProvider: z.record(z.string(), compte),
 		})
 		.optional(),
 })
@@ -206,18 +211,18 @@ export function agregerStats({
 
 	const resume = {
 		total: profils.length,
-		entierementVides: 0,
-		actifs: 0,
-		publiables: 0,
-		masques: 0,
-		complets11: 0,
-		quasiVides: 0,
-		sansCanal: 0,
-		modifies90j: 0,
-		crees: 0,
+		fullyEmpty: 0,
+		active: 0,
+		publishable: 0,
+		hidden: 0,
+		complete11: 0,
+		nearlyEmpty: 0,
+		noChannel: 0,
+		modified90d: 0,
+		created: 0,
 	}
-	const cohorte = { profils: 0, actifs: 0 }
-	const inscriptions: StatsHebdo['inscriptions'] = []
+	const cohorte = { profiles: 0, active: 0 }
+	const inscriptions: StatsHebdo['signUps'] = []
 	const parDepartement: Record<string, number> = {}
 	const slugs: string[] = []
 
@@ -227,42 +232,42 @@ export function agregerStats({
 		const actif = profil.active === true
 		const publiable = profil.publishable === true
 		const score = typeof profil.completeness === 'number' ? profil.completeness : lecture.score
-		if (profil.fullyEmpty === true) resume.entierementVides++
-		if (actif) resume.actifs++
-		if (profil.status === 'hidden') resume.masques++
-		if (score >= 11) resume.complets11++
-		if (score <= 2) resume.quasiVides++
-		if (lecture.manquants.includes('reseaux')) resume.sansCanal++
-		if (dans(new Date(profil.updatedAt), debutFraicheur, finFraicheur)) resume.modifies90j++
+		if (profil.fullyEmpty === true) resume.fullyEmpty++
+		if (actif) resume.active++
+		if (profil.status === 'hidden') resume.hidden++
+		if (score >= 11) resume.complete11++
+		if (score <= 2) resume.nearlyEmpty++
+		if (lecture.manquants.includes('reseaux')) resume.noChannel++
+		if (dans(new Date(profil.updatedAt), debutFraicheur, finFraicheur)) resume.modified90d++
 		if (dans(creeLe, periode.debut, periode.fin)) {
-			resume.crees++
-			inscriptions.push({ creeLe: jourParis(creeLe), completude: score, actif, publiable })
+			resume.created++
+			inscriptions.push({ createdOn: jourParis(creeLe), completeness: score, active: actif, publishable: publiable })
 		}
 		if (dans(creeLe, debutCohorte, periode.debut)) {
-			cohorte.profils++
-			if (actif) cohorte.actifs++
+			cohorte.profiles++
+			if (actif) cohorte.active++
 		}
 		if (publiable && profil.status === STATUT_PUBLIE && typeof profil.slug === 'string') {
-			resume.publiables++
+			resume.publishable++
 			slugs.push(profil.slug)
-			const departement = profil.city?.department || 'inconnu'
+			const departement = profil.city?.department || 'unknown'
 			parDepartement[departement] = (parDepartement[departement] ?? 0) + 1
 		}
 	}
 
 	return {
 		version: VERSION_STATS,
-		periode: { debut: periode.debut.toISOString(), fin: periode.fin.toISOString() },
-		genereLe: maintenant.toISOString(),
-		comptes: {
+		period: { start: periode.debut.toISOString(), end: periode.fin.toISOString() },
+		generatedAt: maintenant.toISOString(),
+		accounts: {
 			total: datesDesComptes.length,
-			nouveaux: datesDesComptes.filter(date => dans(new Date(date), periode.debut, periode.fin)).length,
+			new: datesDesComptes.filter(date => dans(new Date(date), periode.debut, periode.fin)).length,
 		},
-		profils: resume,
-		cohorte,
-		inscriptions: inscriptions.sort((a, b) => a.creeLe.localeCompare(b.creeLe) || a.completude - b.completude),
-		publiables: {
-			parDepartement: Object.fromEntries(Object.entries(parDepartement).sort(([a], [b]) => a.localeCompare(b))),
+		profiles: resume,
+		cohort: cohorte,
+		signUps: inscriptions.sort((a, b) => a.createdOn.localeCompare(b.createdOn) || a.completeness - b.completeness),
+		publishable: {
+			byDepartment: Object.fromEntries(Object.entries(parDepartement).sort(([a], [b]) => a.localeCompare(b))),
 			slugs: slugs.sort(),
 		},
 	}
@@ -278,30 +283,6 @@ function ajouter(compteur: Record<string, number>, cle: unknown): boolean {
 	return true
 }
 
-/**
- * The keys of the answer for the values of the closed lists of the database. The values of the lists are
- * English since ticket 250; the keys of the answer are those of the report tool, which reads them as they
- * are (ticket 253 renames them with it).
- */
-const CLE_DU_STATUT = { new: 'nouvelle', forwarded: 'transmise', answered: 'repondue', spam: 'spam' } as const
-const CLE_DE_L_ETAT_DU_MAIL = { pending: 'en-attente', sent: 'envoye', failed: 'echec' } as const
-const CLE_DU_TYPE = {
-	'sign-in': 'connexion',
-	'sign-out': 'deconnexion',
-	'sign-out-everywhere': 'deconnexion-partout',
-	'sign-up': 'inscription',
-	confirmation: 'confirmation',
-	resend: 'renvoi',
-	'forgot-password': 'mot-de-passe-oublie',
-	'password-reset': 'reinitialisation',
-	block: 'blocage',
-	unblock: 'deblocage',
-} as const
-
-/** A value of a closed list as a key of the answer; a value outside the list has none. */
-const cleDe = (cles: Readonly<Record<string, string>>, valeur: unknown): string | undefined =>
-	typeof valeur === 'string' && Object.hasOwn(cles, valeur) ? cles[valeur] : undefined
-
 /** What the count of the messages reads of a row of `contact-requests`: two closed lists, nothing typed by a visitor. */
 export interface DemandePourStats {
 	status?: string | null
@@ -310,13 +291,13 @@ export interface DemandePourStats {
 
 /** Contact messages received in the period (the caller read them): counts by status and by mail state. */
 export function agregerContact(demandes: readonly DemandePourStats[]): NonNullable<StatsHebdo['contact']> {
-	const parStatut = compteurs(STATUTS_DE_DEMANDE.map(statut => CLE_DU_STATUT[statut]))
-	const parEtatMail = compteurs(ETATS_DU_MAIL.map(etat => CLE_DE_L_ETAT_DU_MAIL[etat]))
+	const byStatus = compteurs(STATUTS_DE_DEMANDE)
+	const byMailState = compteurs(ETATS_DU_MAIL)
 	for (const { status, mailStatus } of demandes) {
-		ajouter(parStatut, cleDe(CLE_DU_STATUT, status))
-		ajouter(parEtatMail, cleDe(CLE_DE_L_ETAT_DU_MAIL, mailStatus))
+		ajouter(byStatus, status)
+		ajouter(byMailState, mailStatus)
 	}
-	return { total: demandes.length, parStatut, parEtatMail }
+	return { total: demandes.length, byStatus, byMailState }
 }
 
 /** What the count of the sign-ins reads of a row of the journal. */
@@ -335,26 +316,26 @@ export function centile(valeurs: readonly number[], p: number): number | null {
 
 /** Authentication events of the period (the caller read them): by kind, and the sign-ins by outcome with their 95th percentile. */
 export function agregerAuth(evenements: readonly EvenementPourStats[]): NonNullable<StatsHebdo['auth']> {
-	const parType = compteurs(TYPES_EVENEMENT.map(type => CLE_DU_TYPE[type]))
-	const parCode = compteurs(CODES_EVENEMENT)
+	const byType = compteurs(TYPES_EVENEMENT)
+	const byCode = compteurs(CODES_EVENEMENT)
 	const durees: number[] = []
 	let total = 0
 	for (const { type, code, durationMs } of evenements) {
-		if (!ajouter(parType, cleDe(CLE_DU_TYPE, type)) || type !== 'sign-in') continue
+		if (!ajouter(byType, type) || type !== 'sign-in') continue
 		total++
-		ajouter(parCode, code)
+		ajouter(byCode, code)
 		if (typeof durationMs === 'number') durees.push(durationMs)
 	}
 	const p95 = centile(durees, 0.95)
-	return { parType, connexions: { total, parCode, dureeP95Ms: p95 === null ? null : Math.round(p95) } }
+	return { byType, signIns: { total, byCode, durationP95Ms: p95 === null ? null : Math.round(p95) } }
 }
 
 /**
  * The providers of the old site whose accounts the report counts without a password; any other value
- * but `local` is `autre`. A `local` account has no place here: it had a password on the old site, so
+ * but `local` is `other`. A `local` account has no place here: it had a password on the old site, so
  * once its hash is gone it has signed in and has a password of Payload's.
  */
-export const FOURNISSEURS_HERITES = ['google', 'facebook', 'autre'] as const
+export const FOURNISSEURS_HERITES = ['google', 'facebook', 'other'] as const
 
 /** The token of an `Authorization: Bearer` header, or nothing. */
 export function jetonDeLEntete(entete: string | null): string | undefined {
