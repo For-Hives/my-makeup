@@ -29,8 +29,8 @@ const creees: number[] = []
 test.afterEach(async () => {
 	const payload = await payloadDeTest()
 	for (const compte of creees.splice(0)) {
-		const { docs } = await payload.find({ collection: 'profils', depth: 0, where: { pro: { equals: compte } } })
-		for (const { id } of docs) await payload.delete({ collection: 'profils', id }).catch(() => undefined)
+		const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte } } })
+		for (const { id } of docs) await payload.delete({ collection: 'profiles', id }).catch(() => undefined)
 		await payload.delete({ collection: 'pros', id: compte }).catch(() => undefined)
 	}
 })
@@ -50,7 +50,7 @@ async function maquilleuse(
 	const compte = await creerCompte('maquilleuse')
 	creees.push(Number(compte.id))
 	const payload = await payloadDeTest()
-	const { docs } = await payload.find({ collection: 'profils', depth: 0, where: { pro: { equals: compte.id } } })
+	const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })
 	const [fiche] = docs
 	if (!fiche) throw new Error('pas de profil')
 	const galerie: number[] = []
@@ -63,7 +63,7 @@ async function maquilleuse(
 		galerie.push(media.id)
 	}
 	const profil = await payload.update({
-		collection: 'profils',
+		collection: 'profiles',
 		id: fiche.id,
 		data: { prenom: 'Léa', nom: 'Fictive', specialite: 'Mariée', commune: VILLE, galerie },
 	})
@@ -73,7 +73,7 @@ async function maquilleuse(
 
 async function profilStocke(compte: Maquilleuse) {
 	const payload = await payloadDeTest()
-	const { docs } = await payload.find({ collection: 'profils', depth: 0, where: { pro: { equals: compte.id } } })
+	const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })
 	const profil = docs[0]
 	if (!profil) throw new Error('pas de profil')
 	return profil

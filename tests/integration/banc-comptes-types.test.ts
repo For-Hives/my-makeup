@@ -101,7 +101,7 @@ async function ligneDu(compte: CompteFixe): Promise<Ligne> {
 async function etatDeLaMaquilleuse(compte: CompteFixe) {
 	const payload = await payloadDeTest()
 	const ligne = await ligneDu(compte)
-	const { totalDocs } = await payload.count({ collection: 'profils', where: { pro: { equals: compte.id } } })
+	const { totalDocs } = await payload.count({ collection: 'profiles', where: { pro: { equals: compte.id } } })
 	return {
 		verifie: ligne._verified === true,
 		bloque: ligne.bloque === true,

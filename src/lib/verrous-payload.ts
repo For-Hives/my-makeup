@@ -17,7 +17,7 @@ export const verrouAuNomDeLaSession: CollectionBeforeChangeHook = ({ data, req: 
 /**
  * Payload's collection of document locks is open to any logged-in account by default: a makeup
  * artist listed the locks, put one in the name of an admin or removed one. It is reserved here to
- * the accounts of the admin panel, `admin` and `redaction` (the panel reads the locks as the
+ * the accounts of the admin panel, `admin` and `editor` (the panel reads the locks as the
  * account, rules active), and every lock carries the account of the session.
  *
  * Payload builds this collection itself, after the plugins: it is changed once Payload is built

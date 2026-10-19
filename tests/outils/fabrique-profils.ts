@@ -119,13 +119,13 @@ export async function fabriquerDesProfils(
 			data: {
 				email: `${prefixe}-${rang}@example.test`,
 				password: `Banc-${rang}-${crypto.randomUUID()}`,
-				nom: `Générée ${rang}`,
+				name: `Générée ${rang}`,
 				_verified: true,
 			},
 			context: CONTEXTE_SANS_PROFIL,
 			disableVerificationEmail: true,
 		})
-		await payload.create({ collection: 'profils', data: { ...profil, slug, pro: pro.id } })
+		await payload.create({ collection: 'profiles', data: { ...profil, slug, pro: pro.id } })
 		return slug
 	})
 }
@@ -174,14 +174,14 @@ export async function fabriquerParLApplication(
 				).json()) as { doc: { id: number } }
 				const { docs } = (await (
 					await verifie(
-						await request.get(`/api/profils?where[pro][equals]=${pro.doc.id}&depth=0&limit=1`, { headers: entetes }),
+						await request.get(`/api/profiles?where[pro][equals]=${pro.doc.id}&depth=0&limit=1`, { headers: entetes }),
 						'La lecture d’un profil'
 					)
 				).json()) as { docs: { id: number }[] }
 				const cree = docs[0]
 				if (!cree) throw new Error('Le compte créé n’a pas son profil.')
 				await verifie(
-					await request.patch(`/api/profils/${cree.id}`, { headers: entetes, data: profil }),
+					await request.patch(`/api/profiles/${cree.id}`, { headers: entetes, data: profil }),
 					'L’écriture d’un profil'
 				)
 				return { pro: pro.doc.id, profil: cree.id }
@@ -201,14 +201,14 @@ export async function retirerParLApplication(
 	{ pros, profils }: { pros: readonly number[]; profils: readonly number[] }
 ): Promise<void> {
 	const entetes = await entetesDeLAdmin()
-	for (const id of profils) await request.delete(`/api/profils/${id}`, { headers: entetes })
+	for (const id of profils) await request.delete(`/api/profiles/${id}`, { headers: entetes })
 	for (const id of pros) await request.delete(`/api/pros/${id}`, { headers: entetes })
 }
 
 /** Deletes the profiles of a run and their accounts, by the prefix of their slug. */
 export async function retirerLesProfilsFabriques(payload: Payload, prefixe: string): Promise<void> {
 	const { docs } = await payload.find({
-		collection: 'profils',
+		collection: 'profiles',
 		where: { slug: { like: `${prefixe}-` } },
 		depth: 0,
 		limit: 1000,
@@ -216,7 +216,7 @@ export async function retirerLesProfilsFabriques(payload: Payload, prefixe: stri
 		select: { pro: true },
 	})
 	for (const { id, pro } of docs) {
-		await payload.delete({ collection: 'profils', id })
+		await payload.delete({ collection: 'profiles', id })
 		await payload.delete({ collection: 'pros', id: typeof pro === 'object' ? pro.id : pro })
 	}
 }

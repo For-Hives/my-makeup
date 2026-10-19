@@ -23,7 +23,7 @@ test.describe('Le jeu du banc dans l’administration', () => {
 		const session = await ouvrirSessionSansMotDePasse(await payloadDeTest(), admin)
 		await context.addCookies(session.cookies)
 
-		await page.goto('/admin/collections/profils?limit=100')
+		await page.goto('/admin/collections/profiles?limit=100')
 		// The list shows the slug of a profile, no longer the address of its account (ticket 165).
 		for (const { attendu } of PROFILS_DU_JEU)
 			await expect(page.getByRole('link', { name: attendu.slug, exact: true })).toHaveCount(1)

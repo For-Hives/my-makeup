@@ -25,18 +25,18 @@ async function maquilleuse(
 	const compte = await creerCompte('maquilleuse')
 	const payload = await payloadDeTest()
 	const fiche = await ficheDe(compte)
-	await payload.update({ collection: 'profils', id: fiche.id, data: { prenom: 'Léa', nom: 'Fictive' } })
+	await payload.update({ collection: 'profiles', id: fiche.id, data: { prenom: 'Léa', nom: 'Fictive' } })
 	// An imported profile has no value: written under the hooks, as the import does.
 	if (disponible === null)
-		await payload.db.updateOne({ collection: 'profils', id: fiche.id, data: { disponible: null }, returning: false })
-	else await payload.update({ collection: 'profils', id: fiche.id, data: { disponible } })
+		await payload.db.updateOne({ collection: 'profiles', id: fiche.id, data: { disponible: null }, returning: false })
+	else await payload.update({ collection: 'profiles', id: fiche.id, data: { disponible } })
 	await context.addCookies(compte.session.cookies)
 	return compte
 }
 
 async function ficheDe(compte: Maquilleuse) {
 	const payload = await payloadDeTest()
-	const { docs } = await payload.find({ collection: 'profils', depth: 0, where: { pro: { equals: compte.id } } })
+	const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })
 	const [fiche] = docs
 	if (!fiche) throw new Error('pas de profil')
 	return fiche

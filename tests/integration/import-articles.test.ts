@@ -171,8 +171,8 @@ describe('Les articles sont repris à l’identique, brouillons compris (ticket 
 
 		expect(medias.map(({ strapiId }) => strapiId)).toEqual([IMAGE])
 		expect(image).toMatchObject({ owner: null, mimeType: 'image/png', url: `${source.medias}/${CLE_DE_L_IMAGE}` })
-		expect(cible.find(({ strapiId }) => strapiId === 1)?.galerie).toEqual([image?.id ?? -1])
-		expect(cible.find(({ strapiId }) => strapiId === 7)?.galerie ?? []).toEqual([])
+		expect(cible.find(({ strapiId }) => strapiId === 1)?.gallery).toEqual([image?.id ?? -1])
+		expect(cible.find(({ strapiId }) => strapiId === 7)?.gallery ?? []).toEqual([])
 		expect(premier.collections.articles?.photosNonReprises).toEqual([{ entree: 7, fichier: PDF }])
 		expect(premier.collections.media?.fichiers?.nonAdoptes).toContainEqual({ fichier: PDF, motif: 'pas-une-image' })
 	})

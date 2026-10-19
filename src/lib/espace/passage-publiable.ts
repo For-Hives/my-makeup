@@ -6,7 +6,7 @@ import type { ResultatDEnregistrement } from './resultat'
 async function publiableAujourdhui(payload: Payload, id: number): Promise<boolean | undefined> {
 	try {
 		const profil = await payload.findByID({
-			collection: 'profils',
+			collection: 'profiles',
 			depth: 0,
 			id,
 			overrideAccess: true,

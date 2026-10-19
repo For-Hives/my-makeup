@@ -51,7 +51,7 @@ async function creerUnCompte(email: string, options: { confirme: boolean }) {
 	await payload.create({
 		collection: 'pros',
 		// A name of its own: two accounts made at once with the same name would fight for the same slug.
-		data: { email, password: MOT_DE_PASSE, nom: `Compte ${aleatoireEnLettres()}`, _verified: options.confirme },
+		data: { email, password: MOT_DE_PASSE, name: `Compte ${aleatoireEnLettres()}`, _verified: options.confirme },
 		disableVerificationEmail: true,
 		overrideAccess: true,
 	})
@@ -89,7 +89,7 @@ test.describe('E01 : inscription, mur, lien, connexion, onboarding', { tag: '@mo
 		// Her profile and its address were made by the server, with the account.
 		const payload = await payloadDeTest()
 		const compte = (await payload.find({ collection: 'pros', depth: 0, where: { email: { equals: email } } })).docs[0]
-		const profil = (await payload.find({ collection: 'profils', depth: 0, where: { pro: { equals: compte?.id } } }))
+		const profil = (await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte?.id } } }))
 			.docs[0]
 		expect(profil?.slug).toMatch(/^lea-fictive(-\d+)?$/)
 	})
@@ -296,7 +296,7 @@ test.describe('Contre les faux comptes (ticket 084)', () => {
 		const lignes = async () =>
 			(
 				await payload.find({
-					collection: 'auth-evenements',
+					collection: 'auth-events',
 					depth: 0,
 					limit: 1000,
 					where: { code: { equals: 'champ-piege' } },
@@ -355,7 +355,7 @@ test.describe('Contre les faux comptes (ticket 084)', () => {
 		expect(
 			(
 				await payload.count({
-					collection: 'auth-evenements',
+					collection: 'auth-events',
 					where: { and: [{ type: { equals: 'inscription' } }, { code: { equals: 'trop-de-tentatives' } }] },
 				})
 			).totalDocs

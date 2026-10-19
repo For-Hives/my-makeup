@@ -21,8 +21,8 @@ function banc(etatDeDepart: EtatDuMail | null, envoyer?: EnvoyerEmail) {
 	const relecture: StockageDuRenvoi = {
 		lire: async () => (etat === null ? null : { message: MESSAGE, etatMail: etat }),
 		reserver: async () => {
-			if (etat !== 'echec') return false
-			etat = 'en-attente'
+			if (etat !== 'failed') return false
+			etat = 'pending'
 			return true
 		},
 	}
@@ -50,15 +50,15 @@ function banc(etatDeDepart: EtatDuMail | null, envoyer?: EnvoyerEmail) {
 
 describe('Le renvoi de l’email d’un message de contact', () => {
 	test('un message en échec repart : un mail vers l’équipe, réponse vers la visiteuse, la ligne passe à envoyé et transmise', async () => {
-		const b = banc('echec')
+		const b = banc('failed')
 		expect(await b.appel()).toEqual({ ok: true, etatMail: 'envoye' })
 		expect(b.mails).toHaveLength(1)
 		expect(b.mails[0]).toMatchObject({ a: 'equipe@example.test', repondreA: 'renvoi@example.test' })
-		expect(b.marques).toEqual(['envoye:transmise'])
+		expect(b.marques).toEqual(['sent:forwarded'])
 	})
 
 	test('deux clics en même temps : un seul mail, l’autre clic apprend que le message n’est plus en échec', async () => {
-		const b = banc('echec')
+		const b = banc('failed')
 		const [a, c] = await Promise.all([b.appel(), b.appel()])
 		expect([a.ok, c.ok].sort()).toEqual([false, true])
 		expect([a, c]).toContainEqual({ ok: false, code: 'pas-en-echec' })
@@ -66,7 +66,7 @@ describe('Le renvoi de l’email d’un message de contact', () => {
 	})
 
 	test('un message déjà envoyé, ou en cours d’envoi, ne repart pas', async () => {
-		for (const etat of ['envoye', 'en-attente'] as const) {
+		for (const etat of ['sent', 'pending'] as const) {
 			const b = banc(etat)
 			expect(await b.appel()).toEqual({ ok: false, code: 'pas-en-echec' })
 			expect(b.mails).toEqual([])
@@ -81,12 +81,12 @@ describe('Le renvoi de l’email d’un message de contact', () => {
 
 	test('le fournisseur échoue encore : le résultat dit « échec », la ligne reste en échec et se renvoie plus tard', async () => {
 		let appels = 0
-		const b = banc('echec', async () => {
+		const b = banc('failed', async () => {
 			appels += 1
 			if (appels === 1) throw new EnvoiEmailEchoue()
 		})
 		expect(await b.appel()).toEqual({ ok: true, etatMail: 'echec' })
-		expect(b.etat()).toBe('echec')
+		expect(b.etat()).toBe('failed')
 		expect(await b.appel()).toEqual({ ok: true, etatMail: 'envoye' })
 		expect(appels).toBe(2)
 	})

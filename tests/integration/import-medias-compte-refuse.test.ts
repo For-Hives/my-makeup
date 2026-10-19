@@ -13,7 +13,7 @@ import { definitionDeLaSource } from '../outils/source-strapi/donnees'
 
 /**
  * Ticket 058: the photos of an account Payload refuses are not adopted. Written without an owner,
- * they would pass for newsroom photos: the `redaction` role could read, change and delete them,
+ * they would pass for newsroom photos: the `editor` role could read, change and delete them,
  * and attach them to an article, which makes them public.
  */
 

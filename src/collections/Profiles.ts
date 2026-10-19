@@ -48,7 +48,7 @@ import { champsDeLaZone } from './profiles/zone'
 import { rafraichissement } from './revalidation'
 
 /** The refresh of the page of a profile, the search and the sitemap (ticket 047). */
-const RAFRAICHISSEMENT = rafraichissement('profils')
+const RAFRAICHISSEMENT = rafraichissement('profiles')
 
 /**
  * What a creation of an account hands to Payload (`context`) when the account must stay without a
@@ -68,7 +68,7 @@ const slugsPris =
 	(req: PayloadRequest) =>
 	async (candidats: string[]): Promise<ReadonlySet<string>> => {
 		const { docs } = await req.payload.find({
-			collection: 'profils',
+			collection: 'profiles',
 			depth: 0,
 			limit: candidats.length,
 			overrideAccess: true,
@@ -117,7 +117,7 @@ export const slugALaCreation: CollectionBeforeChangeHook = async ({ data, operat
 				req,
 			})
 		: null
-	const base = slugifier(compte?.nom)
+	const base = slugifier(compte?.name)
 	if (!base) return { ...data, slug: `${PREFIXE_PROVISOIRE}${randomUUID()}` }
 	await reserverLaBase(req, base)
 	return { ...data, slug: await premierSlugLibre(base, slugsPris(req)) }
@@ -127,7 +127,7 @@ export const slugALaCreation: CollectionBeforeChangeHook = async ({ data, operat
 export const slugDeRepliApresCreation: CollectionAfterChangeHook = async ({ doc, operation, req }) => {
 	if (operation !== 'create' || !String(doc.slug).startsWith(PREFIXE_PROVISOIRE)) return doc
 	const slug = await premierSlugLibre(slugDeRepli(doc.id), slugsPris(req))
-	await req.payload.update({ collection: 'profils', data: { slug }, depth: 0, id: doc.id, overrideAccess: true, req })
+	await req.payload.update({ collection: 'profiles', data: { slug }, depth: 0, id: doc.id, overrideAccess: true, req })
 	return { ...doc, slug }
 }
 
@@ -160,8 +160,8 @@ const RESEAUX = [
 export const profilALaCreationDuCompte: CollectionAfterChangeHook = async ({ context, doc, operation, req }) => {
 	if (operation !== 'create' || context.profilAutomatique === false) return doc
 	// The slug is not given: the collection computes it (`slugALaCreation`).
-	const profil = { pro: doc.id } as RequiredDataFromCollectionSlug<'profils'>
-	await req.payload.create({ collection: 'profils', data: profil, depth: 0, overrideAccess: true, req })
+	const profil = { pro: doc.id } as RequiredDataFromCollectionSlug<'profiles'>
+	await req.payload.create({ collection: 'profiles', data: profil, depth: 0, overrideAccess: true, req })
 	return doc
 }
 
@@ -220,7 +220,7 @@ export const refuserUnFiltreSurUnStatutInconnu: CollectionBeforeOperationHook = 
 export const refuserUnChoixInconnu: CollectionBeforeValidateHook = ({ data, req }) => {
 	if (req.user?.collection === 'admins' && !estUnChoixDuStatut(data?.statutChoisi))
 		throw new ValidationError({
-			collection: 'profils',
+			collection: 'profiles',
 			errors: [{ message: MESSAGE_DU_CHOIX, path: 'statutChoisi' }],
 			req,
 		})
@@ -242,7 +242,7 @@ const INTERNE = { read: champAdminSeulement, create: champAdminSeulement, update
  * one account and one only.
  *
  * - She reads and changes her own profile; an admin reaches every profile; anyone else, anonymous
- *   or `redaction`, reads the published profiles only, and a makeup artist reads them too
+ *   or `editor`, reads the published profiles only, and a makeup artist reads them too
  *   (ticket 021, U53, I01).
  * - What the public reads of a profile is its identity: never the account it belongs to, what the
  *   import wrote, nor what an admin decided about it, except the « Super maquilleuse » badge.
@@ -271,8 +271,8 @@ const INTERNE = { read: champAdminSeulement, create: champAdminSeulement, update
  * - A save or a deletion of a profile that is or was published refreshes its page, the search and
  *   the sitemap; the import refreshes nothing (src/collections/revalidation.ts, ticket 047).
  */
-export const Profils: CollectionConfig<'profils'> = {
-	slug: 'profils',
+export const Profiles: CollectionConfig<'profiles'> = {
+	slug: 'profiles',
 	defaultSort: '-updatedAt',
 	labels: { singular: 'Profil', plural: 'Profils' },
 	// The list of the admin (ticket 165): where a profile stands at a glance, the last touched first. The

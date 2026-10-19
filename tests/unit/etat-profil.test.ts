@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import type { Field } from 'payload'
-import { Profils } from '@/collections/Profiles'
+import { Profiles } from '@/collections/Profiles'
 import { CHAMPS_DE_L_ETAT } from '@/collections/profiles/etat'
 import { completude, conditionsPubliable } from '@/lib/profil/completude'
 import {
@@ -354,7 +354,7 @@ describe('ce qu’une sauvegarde écrit : l’état, ses dates de passage, le st
 })
 
 describe('les champs de l’état dans la collection des profils', () => {
-	const champs = Profils.fields.filter((champ): champ is Field & { name: string } => 'name' in champ)
+	const champs = Profiles.fields.filter((champ): champ is Field & { name: string } => 'name' in champ)
 	const noms = champs.map(({ name }) => name)
 
 	test('la complétude, les trois cases, leurs dates, et le statut choisi par l’admin à côté du statut', () => {

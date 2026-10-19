@@ -56,10 +56,10 @@ describe('sur une cible en service, un compte déjà repris reste tel quel (tick
 		valeurs: {
 			strapiId,
 			email: 'ancien@example.test',
-			nom: 'Ancien nom',
+			name: 'Ancien nom',
 			legacyProvider: 'local',
 			legacyBcrypt: 'hash-herite-fictif',
-			bloque: false,
+			blocked: false,
 			_verified: true,
 			createdAt: '2024-01-01T10:00:00.000Z',
 			updatedAt: '2024-02-01T10:00:00.000Z',
@@ -70,7 +70,7 @@ describe('sur une cible en service, un compte déjà repris reste tel quel (tick
 	const devenu = compte({
 		email: 'nouveau@example.test',
 		legacyBcrypt: null,
-		bloque: true,
+		blocked: true,
 		updatedAt: '2026-11-03T10:00:00.000Z',
 	})
 
@@ -80,7 +80,7 @@ describe('sur une cible en service, un compte déjà repris reste tel quel (tick
 		expect(champsDifferents(ADAPTATEUR_COMPTES, attendu, { id: 5, valeurs: devenu.valeurs })).toEqual([
 			'email',
 			'legacyBcrypt',
-			'bloque',
+			'blocked',
 			'updatedAt',
 		])
 	})

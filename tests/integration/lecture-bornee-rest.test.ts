@@ -45,11 +45,11 @@ beforeAll(async () => {
 	identifiantsDesProfils = await repeter(TOTAL, async i => {
 		const pro = await payload.create({
 			collection: 'pros',
-			data: { email: `bornes-${i}@example.test`, password: `Banc-${i}-${crypto.randomUUID()}`, nom: `Bornée ${i}` },
+			data: { email: `bornes-${i}@example.test`, password: `Banc-${i}-${crypto.randomUUID()}`, name: `Bornée ${i}` },
 			context: CONTEXTE_SANS_PROFIL,
 		})
 		const profil = await payload.create({
-			collection: 'profils',
+			collection: 'profiles',
 			data: { pro: pro.id, slug: `borne-${i}`, prenom: 'Prénom', nom: `Fictive ${i}`, specialite: 'Mariage' },
 		})
 		return profil.id
@@ -66,7 +66,7 @@ beforeAll(async () => {
 		await payload.create({
 			collection: 'payload-locked-documents',
 			data: {
-				document: { relationTo: 'profils', value: identifiantsDesProfils[i] ?? 0 },
+				document: { relationTo: 'profiles', value: identifiantsDesProfils[i] ?? 0 },
 				user: { relationTo: 'admins', value: Number(admin.id) },
 			},
 		})
@@ -90,7 +90,7 @@ async function lire(chemin: string, enTetes: Record<string, string> = {}) {
 
 describe('Anonyme : au plus 100 profils par lecture REST, 10 sans limit', () => {
 	test('limit=0&pagination=false : 100 documents sur 101, une page suivante', async () => {
-		const { statut, liste } = await lire('/api/profils?limit=0&pagination=false&depth=0')
+		const { statut, liste } = await lire('/api/profiles?limit=0&pagination=false&depth=0')
 		expect(statut).toBe(200)
 		expect(liste.docs).toHaveLength(LIMITE_REST_MAX)
 		expect(liste.hasNextPage).toBe(true)
@@ -99,14 +99,14 @@ describe('Anonyme : au plus 100 profils par lecture REST, 10 sans limit', () => 
 
 	test('limit=1000 puis limit=-1 : 100 au plus ; sans limit : 10 ; une limite entre les deux est respectée', async () => {
 		for (const limite of [1000, -1, 101])
-			expect((await lire(`/api/profils?limit=${limite}&depth=0`)).liste.docs, String(limite)).toHaveLength(100)
-		expect((await lire('/api/profils?depth=0')).liste.docs).toHaveLength(LIMITE_REST_PAR_DEFAUT)
-		expect((await lire('/api/profils?limit=7&depth=0')).liste.docs).toHaveLength(7)
-		expect((await lire('/api/profils?limit=abc&depth=0')).liste.docs).toHaveLength(LIMITE_REST_PAR_DEFAUT)
+			expect((await lire(`/api/profiles?limit=${limite}&depth=0`)).liste.docs, String(limite)).toHaveLength(100)
+		expect((await lire('/api/profiles?depth=0')).liste.docs).toHaveLength(LIMITE_REST_PAR_DEFAUT)
+		expect((await lire('/api/profiles?limit=7&depth=0')).liste.docs).toHaveLength(7)
+		expect((await lire('/api/profiles?limit=abc&depth=0')).liste.docs).toHaveLength(LIMITE_REST_PAR_DEFAUT)
 	})
 
 	test('la page 2 donne le reste : la lecture reste complète, page après page', async () => {
-		const { liste } = await lire('/api/profils?limit=100&page=2&depth=0&sort=id')
+		const { liste } = await lire('/api/profiles?limit=100&page=2&depth=0&sort=id')
 		expect(liste.docs).toHaveLength(1)
 		expect(liste.hasNextPage).toBe(false)
 	})
@@ -141,16 +141,16 @@ describe('Les verrous de Payload et l’admin', () => {
 	})
 
 	test('l’admin lit tous les profils, sans plafond', async () => {
-		const { statut, liste } = await lire('/api/profils?limit=0&pagination=false&depth=0', admin.session.enTetes)
+		const { statut, liste } = await lire('/api/profiles?limit=0&pagination=false&depth=0', admin.session.enTetes)
 		expect(statut).toBe(200)
 		// The 101 profiles of this file, and the one of the makeup artist of the bench.
 		expect(liste.docs).toHaveLength(TOTAL + 1)
 		expect(liste.hasNextPage).toBe(false)
-		expect((await lire('/api/profils?limit=1000&depth=0', admin.session.enTetes)).liste.docs).toHaveLength(TOTAL + 1)
+		expect((await lire('/api/profiles?limit=1000&depth=0', admin.session.enTetes)).liste.docs).toHaveLength(TOTAL + 1)
 	})
 
 	test('la rédaction, qui n’est pas admin, est plafonnée comme tout le monde', async () => {
-		const { liste } = await lire('/api/profils?limit=0&pagination=false&depth=0', redaction.session.enTetes)
+		const { liste } = await lire('/api/profiles?limit=0&pagination=false&depth=0', redaction.session.enTetes)
 		expect(liste.docs).toHaveLength(LIMITE_REST_MAX)
 	})
 })
@@ -169,17 +169,17 @@ describe('Les relations ne sont pas touchées par le plafond', () => {
 		const photos = await repeter(11, envoyer)
 		const [principale, ...galerie] = photos
 		const profil = (
-			await payload.find({ collection: 'profils', depth: 0, limit: 1, where: { pro: { equals: maquilleuse.id } } })
+			await payload.find({ collection: 'profiles', depth: 0, limit: 1, where: { pro: { equals: maquilleuse.id } } })
 		).docs[0]
 		expect(profil).toBeDefined()
 
-		const reponse = await appelerRest('PATCH', `/api/profils/${profil?.id}?depth=0`, {
+		const reponse = await appelerRest('PATCH', `/api/profiles/${profil?.id}?depth=0`, {
 			enTetes,
 			corps: { photoPrincipale: principale, galerie },
 		})
 
 		expect(reponse.statut).toBe(200)
-		const stocke = await payload.findByID({ collection: 'profils', id: profil?.id ?? 0, depth: 0 })
+		const stocke = await payload.findByID({ collection: 'profiles', id: profil?.id ?? 0, depth: 0 })
 		expect(stocke.photoPrincipale).toBe(principale ?? -1)
 		expect(stocke.galerie).toEqual(galerie)
 	}, 60_000)
@@ -197,32 +197,32 @@ describe('Les relations ne sont pas touchées par le plafond', () => {
 
 		const cree = await appelerRest('POST', '/api/articles?depth=0', {
 			enTetes,
-			corps: { title: 'Article à grande galerie', slug: 'grande-galerie', galerie: identifiants, _status: 'published' },
+			corps: { title: 'Article à grande galerie', slug: 'grande-galerie', gallery: identifiants, _status: 'published' },
 		})
 		expect(cree.statut).toBe(201)
 		const id = (cree.corps as { doc: Article }).doc.id
 		const maj = await appelerRest('PATCH', `/api/articles/${id}?depth=0`, {
 			enTetes,
-			corps: { galerie: identifiants, _status: 'published' },
+			corps: { gallery: identifiants, _status: 'published' },
 		})
 		expect(maj.statut).toBe(200)
 
 		const lue = await appelerRest('GET', `/api/articles/${id}?depth=1`, { enTetes })
-		const galerie = (lue.corps as Article).galerie ?? []
+		const galerie = (lue.corps as Article).gallery ?? []
 		expect(galerie).toHaveLength(TOTAL)
 		expect(galerie.every(media => typeof media === 'object' && typeof media.url === 'string')).toBe(true)
 		// In a list too: the cap bounds the documents of the page, not what they hold.
 		const liste = await appelerRest('GET', '/api/articles?depth=1&where[slug][equals]=grande-galerie', { enTetes })
 		const document = (liste.corps as { docs: Article[] }).docs[0]
-		expect(document?.galerie?.every(media => typeof media === 'object')).toBe(true)
-		expect(document?.galerie).toHaveLength(TOTAL)
+		expect(document?.gallery?.every(media => typeof media === 'object')).toBe(true)
+		expect(document?.gallery).toHaveLength(TOTAL)
 	}, 120_000)
 })
 
 describe('Hors REST, rien n’est plafonné', () => {
 	test('une lecture par l’API locale, comme celle du sitemap, rend tous les profils publiés', async () => {
 		const profils = await payload.find({
-			collection: 'profils',
+			collection: 'profiles',
 			depth: 0,
 			limit: 0,
 			pagination: false,

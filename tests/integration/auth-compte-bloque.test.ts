@@ -53,7 +53,7 @@ const journal = async () =>
 	(
 		await (
 			await payloadDeTest()
-		).find({ collection: 'auth-evenements', depth: 0, limit: 1000, pagination: false, sort: 'id' })
+		).find({ collection: 'auth-events', depth: 0, limit: 1000, pagination: false, sort: 'id' })
 	).docs
 
 /** What an admin does in the panel: the update goes through the access rules of her account. */
@@ -64,7 +64,7 @@ async function bloquerParUnAdmin(id: number | string, bloque: boolean) {
 	await payload.update({
 		collection: 'pros',
 		id,
-		data: { bloque },
+		data: { blocked: bloque },
 		depth: 0,
 		overrideAccess: false,
 		user: { ...user, collection: 'admins' },
@@ -108,9 +108,7 @@ describe('un compte bloqué ne peut pas se connecter', () => {
 		expect(statut).toBe(403)
 		expect(enTetes.get('set-cookie') ?? '').not.toContain('payload-token=')
 		expect(texte).toContain(messageErreur('compte-bloque'))
-		expect((await journal()).slice(avant).map(({ type, code }) => [type, code])).toEqual([
-			['connexion', 'compte-bloque'],
-		])
+		expect((await journal()).slice(avant).map(({ type, code }) => [type, code])).toEqual([['sign-in', 'compte-bloque']])
 	})
 
 	test('le formulaire laisse la même ligne au journal', async () => {
@@ -119,9 +117,7 @@ describe('un compte bloqué ne peut pas se connecter', () => {
 
 		await seConnecter(compte.email, MOT_DE_PASSE)
 
-		expect((await journal()).slice(avant).map(({ type, code }) => [type, code])).toEqual([
-			['connexion', 'compte-bloque'],
-		])
+		expect((await journal()).slice(avant).map(({ type, code }) => [type, code])).toEqual([['sign-in', 'compte-bloque']])
 	})
 })
 
@@ -146,10 +142,10 @@ describe('bloquer ferme les sessions, débloquer rend l’accès', () => {
 		const rouverte = await seConnecter(compte.email, MOT_DE_PASSE)
 		expect(rouverte.ok).toBe(true)
 		expect((await journal()).slice(avant).map(({ type, code }) => [type, code])).toEqual([
-			['blocage', 'ok'],
-			['connexion', 'compte-bloque'],
-			['deblocage', 'ok'],
-			['connexion', 'ok'],
+			['block', 'ok'],
+			['sign-in', 'compte-bloque'],
+			['unblock', 'ok'],
+			['sign-in', 'ok'],
 		])
 	}, 30_000)
 
@@ -178,7 +174,7 @@ describe('seul l’admin change le blocage', () => {
 			.update({
 				collection: 'pros',
 				id: bloquee.id,
-				data: { bloque: false },
+				data: { blocked: false },
 				depth: 0,
 				overrideAccess: false,
 				user: await comme(bloquee.id),
@@ -187,7 +183,7 @@ describe('seul l’admin change le blocage', () => {
 		await payload.update({
 			collection: 'pros',
 			id: libre.id,
-			data: { bloque: true, nom: 'Nom changé' },
+			data: { blocked: true, name: 'Nom changé' },
 			depth: 0,
 			overrideAccess: false,
 			user: await comme(libre.id),
@@ -195,10 +191,10 @@ describe('seul l’admin change le blocage', () => {
 
 		const lu = async (id: number | string) =>
 			payload.findByID({ collection: 'pros', id, depth: 0, overrideAccess: true })
-		expect((await lu(bloquee.id)).bloque).toBe(true)
+		expect((await lu(bloquee.id)).blocked).toBe(true)
 		const apres = await lu(libre.id)
-		expect(apres.bloque).toBe(false)
-		expect(apres.nom).toBe('Nom changé')
+		expect(apres.blocked).toBe(false)
+		expect(apres.name).toBe('Nom changé')
 		expect(await sessionsEnBase(libre.id)).toBeGreaterThan(0)
 	})
 })

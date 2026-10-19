@@ -38,14 +38,14 @@ export const cookiesDeSession = (production: boolean) => ({ secure: production, 
 
 /**
  * An account that still has a profile is not deleted by the Local API: the profile goes first, then
- * the account. The profile cannot exist without its account (`profils.pro` is required). The deletion
+ * the account. The profile cannot exist without its account (`profiles.pro` is required). The deletion
  * of an account with everything that hangs on it (profile, photos, sessions) is the one cascade of
  * `src/lib/compte/suppression.ts`, which the makeup artist (ticket 141) and the admin (ticket 167,
  * `DELETE /api/pros/:id`) both call.
  */
 export const compteSansProfilAvantSuppression: CollectionBeforeDeleteHook = async ({ id, req }) => {
 	const { totalDocs } = await req.payload.count({
-		collection: 'profils',
+		collection: 'profiles',
 		overrideAccess: true,
 		req,
 		where: { pro: { equals: id } },
@@ -60,15 +60,15 @@ export const compteSansProfilAvantSuppression: CollectionBeforeDeleteHook = asyn
  * - She reads and changes her own account only, and never opens the admin panel.
  * - The email is the login: unique, stored in lower case (Payload's own rule), so two addresses
  *   that differ only by their case are the same account.
- * - `bloque` and `_verified` are written by an admin only; `legacyProvider` and `strapiId` by
+ * - `blocked` and `_verified` are written by an admin only; `legacyProvider` and `strapiId` by
  *   the import only, never through an API.
  * - `legacyBcrypt`, the password hash of the old site, never leaves the server, not even for an
  *   admin: no API reads or writes it, and Payload strips it from every read.
  * - Nobody creates an account through REST without being an admin: the sign-up of the site goes
  *   through the server (P5 tickets).
- * - A blocked account (`bloque`) is turned away at the sign-in once its password is right, and blocking
+ * - A blocked account (`blocked`) is turned away at the sign-in once its password is right, and blocking
  *   closes its sessions (ticket 089, src/lib/auth/compte-bloque.ts).
- * - Creating an account creates its empty profile (collection `profils`), unless the creation
+ * - Creating an account creates its empty profile (collection `profiles`), unless the creation
  *   says otherwise (`CONTEXTE_SANS_PROFIL`).
  *
  * `auth.verify` is on for good: `_verified` exists only while it is (SCHEMA.md, §5.1). Whether a
@@ -85,7 +85,7 @@ export const Pros: CollectionConfig<'pros'> = {
 	// a profile exists, the newest account first. The filters are above the table (FiltresDesComptes).
 	admin: {
 		useAsTitle: 'email',
-		defaultColumns: ['email', 'createdAt', '_verified', 'bloque', 'derniereConnexion', 'profil'],
+		defaultColumns: ['email', 'createdAt', '_verified', 'blocked', 'lastSignInAt', 'profile'],
 		hidden: cacheeSaufAdmin,
 		components: { beforeListTable: ['/components/admin/FiltresDesComptes#FiltresDesComptes'] },
 	},
@@ -143,13 +143,13 @@ export const Pros: CollectionConfig<'pros'> = {
 	},
 	fields: [
 		{
-			name: 'nom',
+			name: 'name',
 			label: 'Nom',
 			type: 'text',
 			admin: { description: 'Nom d’affichage, choisi à l’inscription. Plusieurs comptes peuvent porter le même.' },
 		},
 		{
-			name: 'bloque',
+			name: 'blocked',
 			label: 'Bloqué',
 			type: 'checkbox',
 			defaultValue: false,
@@ -161,7 +161,7 @@ export const Pros: CollectionConfig<'pros'> = {
 		},
 		{
 			// Written by the server at each sign-in, through the Local API: no request writes it (ticket 077).
-			name: 'derniereConnexion',
+			name: 'lastSignInAt',
 			label: 'Dernière connexion',
 			type: 'date',
 			access: { create: jamais, update: jamais },
@@ -201,11 +201,11 @@ export const Pros: CollectionConfig<'pros'> = {
 		},
 		sessionsFermees,
 		{
-			// Virtual: no column, no migration. It reads `profils.pro`, so the list can tell an account that has a profile.
-			name: 'profil',
+			// Virtual: no column, no migration. It reads `profiles.pro`, so the list can tell an account that has a profile.
+			name: 'profile',
 			label: 'Profil',
 			type: 'join',
-			collection: 'profils',
+			collection: 'profiles',
 			on: 'pro',
 			maxDepth: 0,
 			access: { read: champAdminSeulement },

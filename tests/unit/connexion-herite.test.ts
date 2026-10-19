@@ -166,7 +166,7 @@ describe('connecter : le chemin du hash hérité', () => {
 		})
 		expect(await connecter(e)).toEqual({ ok: true, token: 'jeton' })
 		expect(appels).toBe(2)
-		expect(evenements).toMatchObject([{ type: 'connexion', code: 'heritee' }])
+		expect(evenements).toMatchObject([{ type: 'sign-in', code: 'heritee' }])
 	})
 
 	test('un mot de passe juste pour Payload ne passe pas par le hash hérité', async () => {
@@ -301,7 +301,7 @@ describe('U73 : un refus prend le même temps, quel que soit le compte', () => {
 			password: 'x',
 			frein,
 			horloge,
-			journal: e => (durees.push(e.dureeMs), Promise.resolve()),
+			journal: e => (durees.push(e.durationMs), Promise.resolve()),
 		})
 		expect(durees[0]).toBe(PLANCHER_DE_REFUS_MS)
 	})

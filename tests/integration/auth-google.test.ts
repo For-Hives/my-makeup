@@ -90,7 +90,7 @@ async function comptes(email: string) {
 
 async function lignesDuJournal() {
 	const payload = await payloadDeTest()
-	return (await payload.find({ collection: 'auth-evenements', depth: 0, limit: 1000, sort: 'id' })).docs
+	return (await payload.find({ collection: 'auth-events', depth: 0, limit: 1000, sort: 'id' })).docs
 }
 
 /** Who Payload says is behind this token, the way a page of the space asks. */
@@ -104,7 +104,7 @@ describe('E07 : un compte venu de Google se retrouve par son email vérifié', (
 		const compte = await creerCompte('reprise-google')
 		const payload = await payloadDeTest()
 		const avant = await payload.count({ collection: 'pros' })
-		const profilsAvant = await payload.find({ collection: 'profils', depth: 0, where: { pro: { equals: compte.id } } })
+		const profilsAvant = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })
 
 		const { issue } = await passer({ email: compte.email })
 
@@ -113,7 +113,7 @@ describe('E07 : un compte venu de Google se retrouve par son email vérifié', (
 		expect(issue.destination).toBe('/auth/profil')
 		expect((await qui(issue.token))?.id).toBe(Number(compte.id))
 		expect((await payload.count({ collection: 'pros' })).totalDocs).toBe(avant.totalDocs)
-		const profils = await payload.find({ collection: 'profils', depth: 0, where: { pro: { equals: compte.id } } })
+		const profils = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })
 		expect(profils.docs.map(p => p.id)).toEqual(profilsAvant.docs.map(p => p.id))
 		expect(await comptes(compte.email)).toHaveLength(1)
 		expect(await compterLesMails()).toBe(0)
@@ -139,12 +139,12 @@ describe('E07 : un compte venu de Google se retrouve par son email vérifié', (
 		const payload = await payloadDeTest()
 		const entetes = new Headers({ Cookie: `payload-token=${issue.token}`, Origin: SITE })
 		expect((await qui(issue.token))?.id).toBe(Number(compte.id))
-		const ligne = await payload.db.findOne<{ id: number; sessions?: unknown[]; derniereConnexion?: string }>({
+		const ligne = await payload.db.findOne<{ id: number; sessions?: unknown[]; lastSignInAt?: string }>({
 			collection: 'pros',
 			where: { id: { equals: compte.id } },
 		})
 		expect(ligne?.sessions?.length).toBeGreaterThan(0)
-		expect(ligne?.derniereConnexion).toBeDefined()
+		expect(ligne?.lastSignInAt).toBeDefined()
 
 		expect(await fermerLaSession({ payload, headers: entetes, toutes: false })).toEqual({ ok: true, fermee: true })
 
@@ -158,10 +158,10 @@ describe('E07 : un compte venu de Google se retrouve par son email vérifié', (
 		await passer({ email: compte.email })
 
 		const nouvelles = (await lignesDuJournal()).slice(avant)
-		expect(nouvelles.map(({ type, code, methode }) => ({ type, code, methode }))).toEqual([
-			{ type: 'connexion', code: 'ok', methode: 'google' },
+		expect(nouvelles.map(({ type, code, method }) => ({ type, code, method }))).toEqual([
+			{ type: 'sign-in', code: 'ok', method: 'google' },
 		])
-		expect(Object.keys(nouvelles[0] ?? {}).sort()).toEqual(['code', 'date', 'dureeMs', 'id', 'methode', 'type'])
+		expect(Object.keys(nouvelles[0] ?? {}).sort()).toEqual(['code', 'date', 'durationMs', 'id', 'method', 'type'])
 	})
 })
 
@@ -269,13 +269,13 @@ describe('091 : une personne sans compte s’inscrit avec Google', () => {
 		const [pro] = await comptes(email)
 		expect(pro).toMatchObject({ nom: 'Léa Fictive', _verified: true, legacyProvider: 'google' })
 		const payload = await payloadDeTest()
-		const profils = await payload.find({ collection: 'profils', depth: 0, where: { pro: { equals: pro?.id } } })
+		const profils = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: pro?.id } } })
 		expect(profils.totalDocs).toBe(1)
 		expect(profils.docs[0]?.slug).toMatch(/^lea-fictive(-\d+)?$/)
 		expect((await qui(issue.token))?.id).toBe(pro?.id)
 		expect(await compterLesMails()).toBe(0)
 		const lignes = (await lignesDuJournal())
-			.filter(l => l.methode === 'google')
+			.filter(l => l.method === 'google')
 			.map(({ type, code }) => `${type}:${code}`)
 		expect(lignes).toContain('inscription:ok')
 		expect(lignes).toContain('connexion:ok')
@@ -296,7 +296,7 @@ describe('091 : une personne sans compte s’inscrit avec Google', () => {
 		expect(await comptes(email)).toHaveLength(1)
 		expect((await qui(second.issue.token))?.id).toBe(pro?.id)
 		expect(
-			(await payload.find({ collection: 'profils', depth: 0, where: { pro: { equals: pro?.id } } })).totalDocs
+			(await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: pro?.id } } })).totalDocs
 		).toBe(1)
 		expect(await compterLesMails()).toBe(0)
 	})
@@ -316,7 +316,7 @@ describe('091 : une personne sans compte s’inscrit avec Google', () => {
 		expect(passages.filter(({ issue }) => issue.ok && issue.nouveau)).toHaveLength(1)
 		const payload = await payloadDeTest()
 		expect(
-			(await payload.find({ collection: 'profils', depth: 0, where: { pro: { equals: pro?.id } } })).totalDocs
+			(await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: pro?.id } } })).totalDocs
 		).toBe(1)
 		// Every token opens the account: none of the sessions was lost.
 		expect((await Promise.all(jetons.map(qui))).map(user => user?.id)).toEqual(jetons.map(() => pro?.id))
@@ -367,7 +367,7 @@ describe('un compte qui ne vient pas de Google n’est jamais ouvert ni lié', (
 	test('un compte Google bloqué est refusé, avec son propre code', async () => {
 		const compte = await creerCompte('reprise-google')
 		const payload = await payloadDeTest()
-		await payload.update({ collection: 'pros', id: compte.id, data: { bloque: true }, overrideAccess: true })
+		await payload.update({ collection: 'pros', id: compte.id, data: { blocked: true }, overrideAccess: true })
 
 		const { issue } = await passer({ email: compte.email })
 
@@ -378,7 +378,7 @@ describe('un compte qui ne vient pas de Google n’est jamais ouvert ni lié', (
 	test('un compte à mot de passe bloqué est dit bloqué, et rien n’est lié', async () => {
 		const compte = await creerCompte('maquilleuse')
 		const payload = await payloadDeTest()
-		await payload.update({ collection: 'pros', id: compte.id, data: { bloque: true }, overrideAccess: true })
+		await payload.update({ collection: 'pros', id: compte.id, data: { blocked: true }, overrideAccess: true })
 
 		const { issue } = await passer({ email: compte.email })
 
@@ -413,7 +413,7 @@ describe('l’annulation et la panne de Google ne cassent rien', () => {
 		await passer({ scenario: 'panne', email: adresse('j2') })
 		await passer({ scenario: 'email-non-verifie', email: adresse('j3') })
 		const lignes = (await lignesDuJournal()).slice(avant)
-		expect(lignes.map(({ type, code, methode }) => `${type}:${code}:${methode}`)).toEqual([
+		expect(lignes.map(({ type, code, method }) => `${type}:${code}:${method}`)).toEqual([
 			'connexion:annule:google',
 			'connexion:service-indisponible:google',
 			'connexion:email-non-verifie:google',
@@ -444,7 +444,7 @@ describe('rien de ce que Google envoie n’est écrit', () => {
 		expect(secrets.every(secret => secret.length > 10)).toBe(true)
 		const surface = JSON.stringify([
 			sorties,
-			(await lignesDuJournal()).map(({ type, code, methode, dureeMs }) => ({ type, code, methode, dureeMs })),
+			(await lignesDuJournal()).map(({ type, code, method, durationMs }) => ({ type, code, method, durationMs })),
 			{ ...refuse.issue },
 			{ ...reussi.issue, token: undefined },
 		])
@@ -492,7 +492,7 @@ describe('ticket 223, constat 9 : ce que Google dit par lui-même, et sa découv
 		expect(issue).toEqual({ ok: false, code: codeUrl })
 		expect(await comptes(email)).toHaveLength(0)
 		const lignes = (await lignesDuJournal()).slice(avant)
-		expect(lignes.map(({ type, code, methode }) => `${type}:${code}:${methode}`)).toEqual([
+		expect(lignes.map(({ type, code, method }) => `${type}:${code}:${method}`)).toEqual([
 			`connexion:${codeJournal}:google`,
 		])
 		// What Google said is not written anywhere.

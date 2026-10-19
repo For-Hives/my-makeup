@@ -47,7 +47,7 @@ import {
 import type { PlaceDuProfil } from '@/lib/recherche/lieu'
 import { normaliserLesTextes, type TextesNormalises } from '@/lib/recherche/pertinence'
 import { estUnSlug } from '@/lib/slug'
-import type { Profil } from '@/payload-types'
+import type { Profile } from '@/payload-types'
 
 /** The fields of a profile a public page reads, and nothing else. */
 export const CHAMPS_PUBLICS_DU_PROFIL = {
@@ -189,7 +189,7 @@ export interface PageDeProfils {
 }
 
 type ProfilDeLaCarte = Pick<
-	Profil,
+	Profile,
 	| 'id'
 	| 'slug'
 	| 'prenom'
@@ -245,7 +245,7 @@ async function lireLesPid(payload: Payload, profils: readonly { id: number }[]):
 	const pid = new Map<number, Pid>()
 	if (profils.length === 0) return pid
 	const { docs } = await payload.find({
-		collection: 'profils',
+		collection: 'profiles',
 		where: { id: { in: profils.map(({ id }) => id) } },
 		select: { strapiId: true },
 		depth: 0,
@@ -274,7 +274,7 @@ function carteDe(profil: ProfilDeLaCarte, photos: PhotosParIdentifiant, pids: Re
 /** The contact details of this profile if its owner published them, else `null`. */
 async function lireLesCoordonneesPubliees(payload: Payload, id: number): Promise<CoordonneesPubliques | null> {
 	const { docs } = await payload.find({
-		collection: 'profils',
+		collection: 'profiles',
 		where: { id: { equals: id } },
 		select: { contactPublic: true, coordonnees: true },
 		depth: 0,
@@ -342,7 +342,7 @@ export async function lireLAdresseDeProfil(payload: Payload, segment: string): P
 	const valeurs = valeursARechercher(segment)
 	if (!valeurs) return { type: 'inconnue' }
 	const { docs } = await payload.find({
-		collection: 'profils',
+		collection: 'profiles',
 		where: {
 			or: [
 				{ slug: { equals: valeurs.segment } },
@@ -389,7 +389,7 @@ async function profilPublicLu(payload: Payload, profil: ProfilDeLaPage & { id: n
 }
 
 /** Where her profile stands, as the preview banner says it (src/lib/espace/apercu.ts). */
-export type EtatDuProfilApercu = Pick<Profil, 'statut' | 'disponible' | 'entierementVide' | 'publiable'>
+export type EtatDuProfilApercu = Pick<Profile, 'statut' | 'disponible' | 'entierementVide' | 'publiable'>
 
 /**
  * Her own page as a visitor sees it (ticket 139): the same `ProfilPublic` as `lireLAdresseDeProfil`,
@@ -403,7 +403,7 @@ export async function lireLApercuDuProfil(
 	id: number
 ): Promise<{ profil: ProfilPublic; etat: EtatDuProfilApercu } | null> {
 	const { docs } = await payload.find({
-		collection: 'profils',
+		collection: 'profiles',
 		where: { id: { equals: id } },
 		select: { ...CHAMPS_DE_LA_PAGE_DU_PROFIL, id: true, statut: true, publiable: true, entierementVide: true },
 		depth: 0,
@@ -436,7 +436,7 @@ export async function lireLeProfilPublic(payload: Payload, slug: string): Promis
 
 /** What a profile read for its page holds: the fields of `CHAMPS_DE_LA_PAGE_DU_PROFIL` and the state. */
 export type ProfilDeLaPage = Pick<
-	Profil,
+	Profile,
 	| 'slug'
 	| 'prenom'
 	| 'nom'
@@ -525,7 +525,7 @@ export async function listerLesProfils(
 	{ page = 1, limite = LIMITE_PAR_DEFAUT }: { page?: number; limite?: number } = {}
 ): Promise<PageDeProfils> {
 	const resultat = await payload.find({
-		collection: 'profils',
+		collection: 'profiles',
 		where: FILTRE_LISTE,
 		select: CHAMPS_DE_LA_CARTE,
 		sort: 'slug',
@@ -563,7 +563,7 @@ const CHAMPS_DE_LA_RECHERCHE = {
 	prestations: true,
 } as const
 
-type ProfilCherche = ProfilDeLaCarte & Pick<Profil, 'description' | 'competences' | 'prestations'>
+type ProfilCherche = ProfilDeLaCarte & Pick<Profile, 'description' | 'competences' | 'prestations'>
 
 /** The texts a search by a word looks into (the commune, the speciality, the description, the skills and the offers), normalised. */
 function textesDe(profil: ProfilCherche): TextesNormalises {
@@ -600,7 +600,7 @@ export async function lireLAnnuaire(
 	const annuaire: ProfilDeLAnnuaire[] = []
 	for (let page = 1; page <= PAGES_MAX_DE_L_ANNUAIRE; page += 1) {
 		const resultat = await payload.find({
-			collection: 'profils',
+			collection: 'profiles',
 			where: FILTRE_LISTE,
 			select: avecLesTextes ? CHAMPS_DE_LA_RECHERCHE : CHAMPS_DE_LA_CARTE,
 			sort: ['-completude', '-updatedAt', 'slug'],

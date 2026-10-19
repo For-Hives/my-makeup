@@ -25,8 +25,7 @@ const adresse = () => new Headers({ 'x-forwarded-for': `192.0.2.${100 + (n++ % 1
 
 async function lignes() {
 	const payload = await payloadDeTest()
-	return (await payload.find({ collection: 'auth-evenements', depth: 0, limit: 1000, pagination: false, sort: 'id' }))
-		.docs
+	return (await payload.find({ collection: 'auth-events', depth: 0, limit: 1000, pagination: false, sort: 'id' })).docs
 }
 
 async function ouvrirPar(payloadHeaders: Headers, email: unknown, password: unknown) {
@@ -54,17 +53,17 @@ describe('une ligne par connexion, réussie ou refusée', () => {
 		expect(refusee).toEqual({ ok: false, code: 'identifiants-invalides' })
 		const nouvelles = (await lignes()).slice(avant)
 		expect(nouvelles.map(({ type, code }) => [type, code])).toEqual([
-			['connexion', 'ok'],
-			['connexion', 'identifiants-invalides'],
+			['sign-in', 'ok'],
+			['sign-in', 'identifiants-invalides'],
 		])
 		for (const ligne of nouvelles) {
-			expect(typeof ligne.dureeMs).toBe('number')
+			expect(typeof ligne.durationMs).toBe('number')
 			expect(Number.isNaN(Date.parse(ligne.date))).toBe(false)
 			expect(CODES_EVENEMENT).toContain(ligne.code)
 			expect(TYPES_EVENEMENT).toContain(ligne.type)
 		}
 		const lecture = await payload.findByID({ collection: 'pros', id: compte.id, depth: 0 })
-		expect(Date.now() - Date.parse(lecture.derniereConnexion ?? '')).toBeLessThan(60_000)
+		expect(Date.now() - Date.parse(lecture.lastSignInAt ?? '')).toBeLessThan(60_000)
 	})
 
 	test('par l’API REST : une ligne « ok », une « identifiants-invalides », une « trop-de-tentatives » quand le frein ferme', async () => {
@@ -91,7 +90,7 @@ describe('une ligne par connexion, réussie ou refusée', () => {
 	test('la date de dernière connexion est mise à jour par l’API REST aussi', async () => {
 		const compte = await creerCompte('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
 		const payload = await payloadDeTest()
-		await payload.update({ collection: 'pros', id: compte.id, data: { derniereConnexion: '2020-01-01T00:00:00.000Z' } })
+		await payload.update({ collection: 'pros', id: compte.id, data: { lastSignInAt: '2020-01-01T00:00:00.000Z' } })
 
 		const reponse = await appelerRest('POST', '/api/pros/login', {
 			corps: { email: compte.email, password: MOT_DE_PASSE },
@@ -100,7 +99,7 @@ describe('une ligne par connexion, réussie ou refusée', () => {
 
 		expect(reponse.statut).toBe(200)
 		const lecture = await payload.findByID({ collection: 'pros', id: compte.id, depth: 0 })
-		expect(Date.now() - Date.parse(lecture.derniereConnexion ?? '')).toBeLessThan(60_000)
+		expect(Date.now() - Date.parse(lecture.lastSignInAt ?? '')).toBeLessThan(60_000)
 	})
 })
 
@@ -132,7 +131,7 @@ describe('aucune donnée personnelle dans le journal, même glissée dans la sai
 		// Written directly, with a value out of the list in each field.
 		await journaliser(
 			(await payloadDeTest()) as never,
-			{ type: 'connexion', code: glisses[0] as never, dureeMs: 3 } as never
+			{ type: 'sign-in', code: glisses[0] as never, durationMs: 3 } as never
 		)
 
 		const nouvelles = (await lignes()).slice(avant)
@@ -142,7 +141,7 @@ describe('aucune donnée personnelle dans le journal, même glissée dans la sai
 			expect(texte).not.toContain(glisse)
 		for (const ligne of nouvelles)
 			expect(Object.keys(ligne).sort()).toEqual(
-				['code', 'date', 'dureeMs', 'id', 'methode', 'type'].filter(cle => cle in ligne)
+				['code', 'date', 'durationMs', 'id', 'method', 'type'].filter(cle => cle in ligne)
 			)
 		expect(nouvelles.some(({ code }) => code === 'inconnu')).toBe(true)
 		// About thirty sign-in attempts, each held back by the 300 ms floor: more than the 5 s default of bun.
@@ -180,7 +179,7 @@ describe('la purge à 90 jours, sur une horloge simulée', () => {
 		const payload = await payloadDeTest()
 		const maintenant = new Date()
 		const ecrire = (date: string) =>
-			payload.create({ collection: 'auth-evenements', data: { type: 'connexion', code: 'ok', date } })
+			payload.create({ collection: 'auth-events', data: { type: 'sign-in', code: 'ok', date } })
 		const vieille = await ecrire(joursAvant(maintenant, 91))
 		const limite = await ecrire(joursAvant(maintenant, 90, 1))
 		const recente = await ecrire(joursAvant(maintenant, 89))

@@ -33,12 +33,12 @@ async function maquilleuse(
 ): Promise<{ compte: Maquilleuse; slug: string }> {
 	const compte = await creerCompte('maquilleuse')
 	const payload = await payloadDeTest()
-	const { docs } = await payload.find({ collection: 'profils', depth: 0, where: { pro: { equals: compte.id } } })
+	const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })
 	const [fiche] = docs
 	if (!fiche) throw new Error('pas de profil')
-	await payload.update({ collection: 'profils', id: fiche.id, data: profil })
+	await payload.update({ collection: 'profiles', id: fiche.id, data: profil })
 	await context.addCookies(compte.session.cookies)
-	return { compte, slug: (await payload.findByID({ collection: 'profils', id: fiche.id, depth: 0 })).slug }
+	return { compte, slug: (await payload.findByID({ collection: 'profiles', id: fiche.id, depth: 0 })).slug }
 }
 
 const debordement = (page: Page) =>

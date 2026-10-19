@@ -28,17 +28,17 @@ async function maquilleuse(
 ): Promise<Maquilleuse> {
 	const compte = await creerCompte('maquilleuse')
 	const payload = await payloadDeTest()
-	const { docs } = await payload.find({ collection: 'profils', depth: 0, where: { pro: { equals: compte.id } } })
+	const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })
 	const [fiche] = docs
 	if (!fiche) throw new Error('pas de profil')
-	await payload.update({ collection: 'profils', id: fiche.id, data: profil })
+	await payload.update({ collection: 'profiles', id: fiche.id, data: profil })
 	await context.addCookies(compte.session.cookies)
 	return compte
 }
 
 async function ficheDe(compte: Maquilleuse) {
 	const payload = await payloadDeTest()
-	const { docs } = await payload.find({ collection: 'profils', depth: 0, where: { pro: { equals: compte.id } } })
+	const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })
 	const [fiche] = docs
 	if (!fiche) throw new Error('pas de profil')
 	return fiche
@@ -103,7 +103,7 @@ test.describe('118 : la page de l’espace', { tag: '@mobile' }, () => {
 		const payload = await payloadDeTest()
 		const ficheB = await ficheDe(b)
 		await payload.update({
-			collection: 'profils',
+			collection: 'profiles',
 			id: ficheB.id,
 			data: { prenom: 'Zoéprivée', nom: 'Autredame', specialite: 'Secret de B' },
 		})
@@ -334,7 +334,7 @@ test.describe('121 : la session expire pendant l’édition', { tag: '@mobile' }
 		const compte = await creerCompte('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
 		const payload = await payloadDeTest()
 		const fiche = await ficheDe(compte)
-		await payload.update({ collection: 'profils', id: fiche.id, data: IDENTITE })
+		await payload.update({ collection: 'profiles', id: fiche.id, data: IDENTITE })
 		await context.addCookies(compte.session.cookies)
 		const depart = new Set<string>()
 		page.on('response', reponse => {

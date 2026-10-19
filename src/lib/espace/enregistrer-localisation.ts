@@ -50,7 +50,7 @@ export async function enregistrerLocalisation(
 		const id = await identifiantDuProfilAEcrire(payload, utilisateur)
 		if (id === null) return { ok: false, message: MESSAGE_ECHEC }
 		const actuel = await payload.findByID({
-			collection: 'profils',
+			collection: 'profiles',
 			depth: 0,
 			id,
 			overrideAccess: false,
@@ -74,7 +74,7 @@ export async function enregistrerLocalisation(
 		}
 
 		const stocke = await payload.update({
-			collection: 'profils',
+			collection: 'profiles',
 			data: { ...(commune ? { commune } : {}), rayonKm, aDomicile },
 			depth: 0,
 			id,

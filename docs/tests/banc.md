@@ -249,7 +249,7 @@ Un enregistrement d'un profil, d'un article ou d'un talent dit à Next quelles p
 import { espionnerLeCache } from '../outils/espion-cache'
 
 const { chemins, etiquettes, appels } = await espionnerLeCache(() =>
-	appelerRest('PATCH', `/api/profils/${profil.id}`, { enTetes: compte.session.enTetes, corps: { description } })
+	appelerRest('PATCH', `/api/profiles/${profil.id}`, { enTetes: compte.session.enTetes, corps: { description } })
 )
 
 expect(chemins).toEqual([`/profil/${profil.slug}`, '/search', '/site-map', '/sitemap.xml'])
@@ -339,11 +339,11 @@ Les types de compte sont déclarés dans `TYPES_DE_COMPTE` (`tests/outils/fabriq
 | Type | Collection | Ce que c'est |
 |---|---|---|
 | `admin` | `admins` | Un compte de l'administration avec le rôle `admin` : il peut tout |
-| `redaction` | `admins` | Un compte de l'administration avec le rôle `redaction` : articles et talents, et son propre compte |
+| `redaction` | `admins` | Un compte de l'administration avec le rôle `editor` : articles et talents, et son propre compte |
 | `maquilleuse` | `pros` | Le compte d'une maquilleuse, adresse confirmée, avec son profil vide, comme à l'inscription. Deux appels donnent « A » et « B » |
 | `maquilleuse-non-verifiee` | `pros` | Le compte d'une maquilleuse qui n'a pas confirmé son adresse. Il ne peut pas se connecter : `session` vaut `null` |
 | `maquilleuse-sans-profil` | `pros` | Le compte d'une maquilleuse sans profil, comme certains comptes de l'ancien site. Sa création porte `CONTEXTE_SANS_PROFIL` (`src/collections/Profiles.ts`) |
-| `maquilleuse-bloquee` | `pros` | Le compte d'une maquilleuse bloquée par l'admin (`bloque` vrai), avec son profil. `session` vaut `null` : bloquer ferme les sessions, et la connexion la refusera (ticket 089) |
+| `maquilleuse-bloquee` | `pros` | Le compte d'une maquilleuse bloquée par l'admin (`blocked` vrai), avec son profil. `session` vaut `null` : bloquer ferme les sessions, et la connexion la refusera (ticket 089) |
 | `reprise-avec-hash` | `pros` | Un compte repris de l'ancien site avec son hash bcrypt, le hash de fixture. Il se connectera par le chemin hérité du site (ticket 087) : d'ici là, `session` vaut `null` |
 | `reprise-google` | `pros` | Un ancien compte Google, sans mot de passe. Sa session est ouverte sans mot de passe, comme par la connexion Google |
 | `reprise-google-avec-hash` | `pros` | Un ancien compte Google qui a aussi un hash, comme un compte réel. Session ouverte comme par Google |
@@ -504,7 +504,7 @@ Les identifiants sont les mêmes à chaque fois. Les sessions ouvertes avant ne 
 
 | Quoi | Combien | Détail |
 |---|---|---|
-| Comptes d'administration | 2 | `jeu-admin@example.test` (rôle `admin`), `jeu-redaction@example.test` (rôle `redaction`) |
+| Comptes d'administration | 2 | `jeu-admin@example.test` (rôle `admin`), `jeu-redaction@example.test` (rôle `editor`) |
 | Comptes de maquilleuses | 20 | 8 du jeu fixe (voir « Le jeu du banc : un compte fixe de chaque type ») et 12 des profils types |
 | Profils types | 12 | Les douze du tableau « Le jeu du banc : les 12 profils types », avec leurs photos |
 | Talents | 3 | `maquillage-mariee`, `maquillage-soiree`, `maquillage-photo`, tous publiés |

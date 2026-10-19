@@ -37,7 +37,7 @@ const profilsDuCompte = async (compte: { id: number | string }) =>
 	(
 		await (
 			await payloadDeTest()
-		).find({ collection: 'profils', depth: 0, pagination: false, where: { pro: { equals: compte.id } } })
+		).find({ collection: 'profiles', depth: 0, pagination: false, where: { pro: { equals: compte.id } } })
 	).docs
 
 async function envoyerUnePhoto(compte: CompteDeTest<'maquilleuse'>): Promise<Media> {
@@ -126,7 +126,7 @@ describe('E02 : les trois étapes donnent un profil actif', () => {
 		expect(positionDAccueil(await profilDeLaMaquilleuse(payload, utilisateur))).toBe(2)
 
 		// The zone is saved by the save of her space; here it is written as it would be.
-		await payload.update({ collection: 'profils', id, data: { commune: ANNECY } })
+		await payload.update({ collection: 'profiles', id, data: { commune: ANNECY } })
 		expect(positionDAccueil(await profilDeLaMaquilleuse(payload, utilisateur))).toBe(3)
 		expect((await profilsDuCompte(compte))[0]?.actif).toBe(false)
 

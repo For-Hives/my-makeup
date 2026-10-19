@@ -30,7 +30,7 @@ import { CONTEXTE_IMPORT } from '../../../src/lib/contexte-import'
 export type Genre = 'texte' | 'date' | 'booleen' | 'nombre' | 'relation' | 'relations' | 'objet' | 'liste' | 'json'
 
 /** The collections the import writes. */
-export type CollectionImportee = Extract<CollectionSlug, 'pros' | 'media' | 'profils' | 'articles' | 'talents'>
+export type CollectionImportee = Extract<CollectionSlug, 'pros' | 'media' | 'profiles' | 'articles' | 'talents'>
 
 /**
  * A transformation made on purpose: the field, and where the rule is written. A key of the

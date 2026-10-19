@@ -39,7 +39,7 @@ const CHAMPS_LUS = {
 export async function identifiantDuProfil(payload: Payload, utilisateur: UtilisateurDeLEspace): Promise<number | null> {
 	if (utilisateur.collection !== COLLECTION_PROS) return null
 	const { docs } = await payload.find({
-		collection: 'profils',
+		collection: 'profiles',
 		depth: 0,
 		limit: 1,
 		overrideAccess: true,
@@ -79,7 +79,7 @@ export async function profilDeLaMaquilleuse(
 	// account in `pro` of the document it is given: a selection without it would strip those fields
 	// from her own page. `pro` is read for the rule and dropped before the page gets the profile.
 	const profil = await payload.findByID({
-		collection: 'profils',
+		collection: 'profiles',
 		depth: 0,
 		disableErrors: true,
 		id,

@@ -1,12 +1,12 @@
 /**
  * Who may do what: the roles of the account collections, and the access rules built on them.
  *
- * - `admins` opens the admin panel. Its role is `admin` (everything) or `redaction` (articles
+ * - `admins` opens the admin panel. Its role is `admin` (everything) or `editor` (articles
  *   and talents only: it reads and changes its own account, nothing else of the accounts).
  * - `pros` holds the accounts of the makeup artists. A makeup artist never enters the admin
  *   panel; she reads and changes her own account, and her own profile.
  * - The editorial collections (talents and articles) are written by the newsroom, `admin` and
- *   `redaction`; everyone else reads their published documents only. The photos of the articles
+ *   `editor`; everyone else reads their published documents only. The photos of the articles
  *   belong to nobody: the newsroom sends them and changes them.
  *
  * One rule per subject: the collections call these functions and never test a role themselves.
@@ -22,7 +22,7 @@ import type { Access, FieldAccess, PayloadRequest, Where } from 'payload'
 import { STATUT_PUBLIE } from './profil/statut'
 
 /** The roles of an `admins` account, in the order the admin panel lists them. */
-export const ROLES_ADMIN = ['admin', 'redaction'] as const
+export const ROLES_ADMIN = ['admin', 'editor'] as const
 export type RoleAdmin = (typeof ROLES_ADMIN)[number]
 
 /** The collections of accounts. */
@@ -34,16 +34,16 @@ type Utilisateur = PayloadRequest['user'] | undefined
 /** An account of the admin panel with the role `admin`: it may do everything. */
 export const estAdmin = (user: Utilisateur): boolean => user?.collection === COLLECTION_ADMINS && user.role === 'admin'
 
-/** An account of the admin panel with the role `redaction`: articles and talents only. */
+/** An account of the admin panel with the role `editor`: articles and talents only. */
 export const estRedaction = (user: Utilisateur): boolean =>
-	user?.collection === COLLECTION_ADMINS && user.role === 'redaction'
+	user?.collection === COLLECTION_ADMINS && user.role === 'editor'
 
 /** The account of a makeup artist. */
 export const estMaquilleuse = (user: Utilisateur): boolean => user?.collection === COLLECTION_PROS
 
 /**
  * Hides a collection from the admin panel unless the account has the role `admin`: the newsroom
- * (`redaction`) sees the articles, the talents and their images, and nothing else (ticket 164). It
+ * (`editor`) sees the articles, the talents and their images, and nothing else (ticket 164). It
  * is a matter of what the panel shows; what an account reads and writes is said by the access
  * rules of the collection, which hold whatever the panel shows.
  */
@@ -71,7 +71,7 @@ const soiMeme = (collection: string, user: Utilisateur): Where | false =>
  * collection reaches its own document only; everyone else, nothing. An identifier no account can
  * have is refused to all, before any query (ticket 048).
  *
- * On `admins`: a `redaction` account reads and changes itself only. On `pros`: a makeup artist
+ * On `admins`: a `editor` account reads and changes itself only. On `pros`: a makeup artist
  * reads and changes her own account only.
  */
 export const adminOuSoiMeme =
@@ -118,7 +118,7 @@ export const PROFILS_PUBLIES: Where = { statut: { equals: STATUT_PUBLIE } }
 
 /**
  * Reading profiles (ticket 021). The role `admin` reads every profile; a makeup artist reads her
- * own profile, whatever its status, and the published ones; anyone else, anonymous or `redaction`,
+ * own profile, whatever its status, and the published ones; anyone else, anonymous or `editor`,
  * the published ones only (U53, I01). A session never shows less than the public sees. An
  * identifier no profile can have is refused to all (`identifiantImpossible`).
  *
@@ -170,7 +170,7 @@ export const MEDIAS_DE_LA_REDACTION: Where = { owner: { exists: false } }
 /** True when this media is the main photo, or a photo of the gallery, of a published profile. */
 export async function rattacheAUnProfilPublie(req: PayloadRequest, media: number | string): Promise<boolean> {
 	const { totalDocs } = await req.payload.count({
-		collection: 'profils',
+		collection: 'profiles',
 		overrideAccess: true,
 		req,
 		where: {
@@ -189,7 +189,7 @@ export async function rattacheAUnArticlePublie(req: PayloadRequest, media: numbe
 		collection: 'articles',
 		overrideAccess: true,
 		req,
-		where: { and: [SEULEMENT_PUBLIES, { galerie: { in: [media] } }] },
+		where: { and: [SEULEMENT_PUBLIES, { gallery: { in: [media] } }] },
 	})
 	return totalDocs > 0
 }
@@ -198,11 +198,11 @@ export async function rattacheAUnArticlePublie(req: PayloadRequest, media: numbe
  * Reading media (tickets 043 and 046, U56, I04).
  *
  * - The role `admin` reads every media.
- * - A list is closed to the public: a makeup artist lists her own media, the role `redaction` the
+ * - A list is closed to the public: a makeup artist lists her own media, the role `editor` the
  *   media of the newsroom (`MEDIAS_DE_LA_REDACTION`), anyone else is refused.
  * - One media, read by its identifier, is read by anyone when it belongs to a published profile or
  *   when it is a photo of the newsroom in the gallery of a published article; a makeup artist also
- *   reads her own, `redaction` those of the newsroom. Any other media is not found, as if it did not
+ *   reads her own, `editor` those of the newsroom. Any other media is not found, as if it did not
  *   exist: the photo of a draft too.
  * - A published article never opens the photo of a makeup artist: its gallery takes only photos of
  *   the newsroom (src/lib/articles.ts), and should one get an owner afterwards, the article no
@@ -227,7 +227,7 @@ export const lectureDesMedias: Access = async ({ req, id }) => {
 
 /**
  * The media an account reaches without them being public: hers for a makeup artist, those of the
- * newsroom for `redaction`; none for anyone else.
+ * newsroom for `editor`; none for anyone else.
  */
 const mediasDe = (user: Utilisateur): Where | undefined => {
 	if (user && estMaquilleuse(user)) return { owner: { equals: user.id } }
@@ -236,14 +236,14 @@ const mediasDe = (user: Utilisateur): Where | undefined => {
 }
 
 /**
- * Sending a photo: a makeup artist, the newsroom (`admin` and `redaction`, for the articles). The
+ * Sending a photo: a makeup artist, the newsroom (`admin` and `editor`, for the articles). The
  * server makes a makeup artist the owner; the photo of the newsroom belongs to nobody.
  */
 export const adminRedactionOuMaquilleuse: Access = ({ req: { user } }) =>
 	estAdminOuRedaction(user) || estMaquilleuse(user)
 
 /**
- * Changing or deleting a media: the role `admin`; the makeup artist who owns it; `redaction` for a
+ * Changing or deleting a media: the role `admin`; the makeup artist who owns it; `editor` for a
  * media of the newsroom, never the photo of a makeup artist. Never by an impossible identifier.
  */
 export const adminOuProprietaireDuMedia: Access = ({ req: { user }, id }) => {
@@ -256,7 +256,7 @@ export const adminOuProprietaireDuMedia: Access = ({ req: { user }, id }) => {
 export const champDuMediaAdminOuProprietaire: FieldAccess = champAdminOuProprietaire('owner')
 
 /**
- * The newsroom: an account of the admin panel with the role `admin` or `redaction`. It writes the
+ * The newsroom: an account of the admin panel with the role `admin` or `editor`. It writes the
  * editorial collections, talents (ticket 022) and articles (ticket 046).
  */
 export const estAdminOuRedaction = (user: Utilisateur): boolean => estAdmin(user) || estRedaction(user)

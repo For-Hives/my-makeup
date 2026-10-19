@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
-import { Profils } from '../../src/collections/Profiles'
+import { Profiles } from '../../src/collections/Profiles'
 import { PROFILS_DU_JEU } from '../../src/jeu-fictif/profils'
 import { poserLeJeuDuBanc } from '../fixtures/jeu-du-banc'
 import { creerCompte } from '../outils/fabrique-comptes'
@@ -37,7 +37,7 @@ const DU_JEU = 'where[and][0][pro.email][like]=jeu-profil-'
 async function lister(enTetes: Record<string, string>, requete: string) {
 	const reponse = await appelerRest(
 		'GET',
-		`/api/profils?limit=50&depth=0&${DU_JEU}&${requete.replace(/^where\[/, 'where[and][1][')}`,
+		`/api/profiles?limit=50&depth=0&${DU_JEU}&${requete.replace(/^where\[/, 'where[and][1][')}`,
 		{
 			enTetes,
 		}
@@ -53,7 +53,7 @@ const attendus = (garde: (profil: (typeof PROFILS_DU_JEU)[number]) => boolean) =
 
 describe('La liste des profils de l’admin (ticket 165)', () => {
 	test('la liste montre l’adresse, la commune, la complétude, le caractère publiable, le statut et la dernière activité, la plus récente d’abord', () => {
-		expect(Profils.admin?.defaultColumns).toEqual([
+		expect(Profiles.admin?.defaultColumns).toEqual([
 			'slug',
 			'commune.nom',
 			'completude',
@@ -61,7 +61,7 @@ describe('La liste des profils de l’admin (ticket 165)', () => {
 			'statut',
 			'updatedAt',
 		])
-		expect(Profils.defaultSort).toBe('-updatedAt')
+		expect(Profiles.defaultSort).toBe('-updatedAt')
 	})
 
 	test('chaque filtre rend le nombre attendu sur les 12 profils du banc', async () => {
@@ -120,7 +120,7 @@ describe('La liste des profils de l’admin (ticket 165)', () => {
 		// She who is corrected is the oldest one: after the correction, she is the first.
 		const derniere = recentes.at(-1)
 		if (!derniere) throw new Error('La liste est vide.')
-		const correction = await appelerRest('PATCH', `/api/profils/${derniere.id}`, {
+		const correction = await appelerRest('PATCH', `/api/profiles/${derniere.id}`, {
 			enTetes,
 			corps: { noteInterne: 'Corrigé par l’admin.' },
 		})
@@ -136,22 +136,22 @@ describe('La liste des profils de l’admin (ticket 165)', () => {
 		if (!profil) throw new Error('La liste est vide.')
 
 		const payload = await payloadDeTest()
-		const avant = await payload.findByID({ collection: 'profils', id: profil.id, depth: 0 })
-		const refus = await appelerRest('PATCH', `/api/profils/${profil.id}`, {
+		const avant = await payload.findByID({ collection: 'profiles', id: profil.id, depth: 0 })
+		const refus = await appelerRest('PATCH', `/api/profiles/${profil.id}`, {
 			enTetes,
 			corps: { statutChoisi: 'archive' },
 		})
 		expect(refus.statut).toBe(400)
 		expect(refus.texte).toContain('statutChoisi')
 		expect(refus.texte).toContain('Ce statut n’existe pas')
-		const apres = await payload.findByID({ collection: 'profils', id: profil.id, depth: 0 })
+		const apres = await payload.findByID({ collection: 'profiles', id: profil.id, depth: 0 })
 		expect([apres.statutChoisi, apres.statut]).toEqual([avant.statutChoisi, avant.statut])
 
 		// The filter on a status nobody holds is refused with a sentence, not a 500 of the database.
 		const filtre = await lister(enTetes, 'where[statut][equals]=archive')
 		expect(filtre.statut).toBe(400)
 		expect(filtre.texte).toContain('statut qui n’existe pas')
-		const dansOu = await appelerRest('GET', '/api/profils?where[or][0][statut][in]=publie,archive', { enTetes })
+		const dansOu = await appelerRest('GET', '/api/profiles?where[or][0][statut][in]=publie,archive', { enTetes })
 		expect(dansOu.statut).toBe(400)
 	})
 })
@@ -167,7 +167,7 @@ describe('Masquer un profil depuis sa fiche (ticket 166)', () => {
 	/** What an anonymous visitor reads: the public list of profiles, by slug. */
 	const lusParLePublic = async (slug: string) =>
 		(
-			(await appelerRest('GET', `/api/profils?depth=0&where[slug][equals]=${slug}`)).corps as {
+			(await appelerRest('GET', `/api/profiles?depth=0&where[slug][equals]=${slug}`)).corps as {
 				docs: { slug: string }[]
 			}
 		).docs.map(d => d.slug)
@@ -179,21 +179,21 @@ describe('Masquer un profil depuis sa fiche (ticket 166)', () => {
 		const id = (await lister(enTetes, `where[slug][equals]=${slug}`)).liste.docs[0]?.id ?? 0
 		expect(await lusParLePublic(slug)).toEqual([slug])
 
-		const masque = await appelerRest('PATCH', `/api/profils/${id}`, {
+		const masque = await appelerRest('PATCH', `/api/profiles/${id}`, {
 			enTetes,
 			corps: { statutChoisi: 'masque', motif: 'Essai de modération.' },
 		})
 		expect(masque.statut).toBe(200)
 		const payload = await payloadDeTest()
-		expect((await payload.findByID({ collection: 'profils', id, depth: 0 })).statut).toBe('masque')
+		expect((await payload.findByID({ collection: 'profiles', id, depth: 0 })).statut).toBe('masque')
 		expect(await lusParLePublic(slug)).toEqual([])
 
-		const republie = await appelerRest('PATCH', `/api/profils/${id}`, {
+		const republie = await appelerRest('PATCH', `/api/profiles/${id}`, {
 			enTetes,
 			corps: { statutChoisi: 'automatique' },
 		})
 		expect(republie.statut).toBe(200)
-		const revenu = await payload.findByID({ collection: 'profils', id, depth: 0 })
+		const revenu = await payload.findByID({ collection: 'profiles', id, depth: 0 })
 		expect([revenu.statut, revenu.publiable]).toEqual(['publie', true])
 		expect(await lusParLePublic(slug)).toEqual([slug])
 	}, 30_000)
@@ -203,12 +203,12 @@ describe('Masquer un profil depuis sa fiche (ticket 166)', () => {
 		const slug = reference()
 		const id = (await lister(admin.session.enTetes, `where[slug][equals]=${slug}`)).liste.docs[0]?.id ?? 0
 
-		const reponse = await appelerRest('PATCH', `/api/profils/${id}`, {
+		const reponse = await appelerRest('PATCH', `/api/profiles/${id}`, {
 			enTetes: redaction.session.enTetes,
 			corps: { statutChoisi: 'masque' },
 		})
 		expect(reponse.statut).toBeGreaterThanOrEqual(400)
-		const apres = await (await payloadDeTest()).findByID({ collection: 'profils', id, depth: 0 })
+		const apres = await (await payloadDeTest()).findByID({ collection: 'profiles', id, depth: 0 })
 		expect([apres.statutChoisi, apres.statut]).toEqual(['automatique', 'publie'])
 	})
 })

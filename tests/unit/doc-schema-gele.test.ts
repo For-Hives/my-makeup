@@ -25,7 +25,7 @@ type StrapiType = {
 	/** Path of the schema file inside the old API repository. */
 	schemaFile: string
 	/** Collection that receives the attributes. */
-	collection: 'pros' | 'profils' | 'articles' | 'talents'
+	collection: 'pros' | 'profiles' | 'articles' | 'talents'
 	/** [name, type], in the order of the schema file. */
 	attributes: ReadonlyArray<readonly [string, string]>
 }
@@ -53,7 +53,7 @@ const STRAPI_INVENTORY: readonly StrapiType[] = [
 		uid: 'api::makeup-artiste.makeup-artiste',
 		kind: 'contentType',
 		schemaFile: 'src/api/makeup-artiste/content-types/makeup-artiste/schema.json',
-		collection: 'profils',
+		collection: 'profiles',
 		attributes: [
 			['last_name', 'string'],
 			['first_name', 'string'],
@@ -111,7 +111,7 @@ const STRAPI_INVENTORY: readonly StrapiType[] = [
 		uid: 'makeupartists.skills',
 		kind: 'component',
 		schemaFile: 'src/components/makeupartists/skills.json',
-		collection: 'profils',
+		collection: 'profiles',
 		attributes: [
 			['name', 'string'],
 			['description', 'text'],
@@ -121,7 +121,7 @@ const STRAPI_INVENTORY: readonly StrapiType[] = [
 		uid: 'makeupartists.experiences',
 		kind: 'component',
 		schemaFile: 'src/components/makeupartists/experiences.json',
-		collection: 'profils',
+		collection: 'profiles',
 		attributes: [
 			['company', 'string'],
 			['job_name', 'string'],
@@ -135,7 +135,7 @@ const STRAPI_INVENTORY: readonly StrapiType[] = [
 		uid: 'makeupartists.courses',
 		kind: 'component',
 		schemaFile: 'src/components/makeupartists/courses.json',
-		collection: 'profils',
+		collection: 'profiles',
 		attributes: [
 			['diploma', 'string'],
 			['school', 'string'],
@@ -147,14 +147,14 @@ const STRAPI_INVENTORY: readonly StrapiType[] = [
 		uid: 'makeupartists.language',
 		kind: 'component',
 		schemaFile: 'src/components/makeupartists/language.json',
-		collection: 'profils',
+		collection: 'profiles',
 		attributes: [['name', 'string']],
 	},
 	{
 		uid: 'makeupartists.network',
 		kind: 'component',
 		schemaFile: 'src/components/makeupartists/network.json',
-		collection: 'profils',
+		collection: 'profiles',
 		attributes: [
 			['youtube', 'string'],
 			['facebook', 'string'],
@@ -169,7 +169,7 @@ const STRAPI_INVENTORY: readonly StrapiType[] = [
 		uid: 'makeupartists.service-offers',
 		kind: 'component',
 		schemaFile: 'src/components/makeupartists/service-offers.json',
-		collection: 'profils',
+		collection: 'profiles',
 		attributes: [
 			['name', 'string'],
 			['description', 'text'],
@@ -181,7 +181,7 @@ const STRAPI_INVENTORY: readonly StrapiType[] = [
 		uid: 'service-offers.options',
 		kind: 'component',
 		schemaFile: 'src/components/service-offers/options.json',
-		collection: 'profils',
+		collection: 'profiles',
 		attributes: [
 			['name', 'string'],
 			['description', 'text'],
@@ -302,7 +302,7 @@ describe('docs/migration/SCHEMA.md', () => {
 					if (isDropped(row)) {
 						expect(rule, attribute).toMatch(/^Abandonné : .{20,}/)
 					} else {
-						expect(target, attribute).toMatch(/^`(pros|profils|articles|talents)\.[A-Za-z_][\w.]*`/)
+						expect(target, attribute).toMatch(/^`(pros|profiles|articles|talents)\.[A-Za-z_][\w.]*`/)
 						expect(rule.length, attribute).toBeGreaterThan(10)
 					}
 				}

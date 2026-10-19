@@ -35,9 +35,9 @@ export const validerTitreDeLaPage: TextFieldSingleValidation = (valeur, args) =>
 /**
  * The pages of a speciality, `/talent/<slug>` (plan 01 §6.1; docs/migration/SCHEMA.md, §5.4).
  *
- * - Written by the newsroom (`admin` and `redaction`), which creates, publishes, unpublishes and
- *   deletes; everyone else reads the published talents only (`./redaction`).
- * - The fields keep their names from the old site, but `titreDeLaPage` is new (ticket 108). Each talent keeps its slug: the import copies
+ * - Written by the newsroom (`admin` and `editor`), which creates, publishes, unpublishes and
+ *   deletes; everyone else reads the published talents only (`./editor`).
+ * - The fields keep their names from the old site, but `pageTitle` is new (ticket 108). Each talent keeps its slug: the import copies
  *   it as it is, so the 14 addresses of today stay the same, and two talents never share one.
  * - `content` is markdown, in a `code` field: Payload limits `text` and `textarea` to 40 000
  *   characters.
@@ -61,7 +61,7 @@ export const Talents: CollectionConfig<'talents'> = {
 		champSlug('/talent'),
 		{ name: 'seo_title', label: 'Titre pour les moteurs de recherche', type: 'text' },
 		{
-			name: 'titreDeLaPage',
+			name: 'pageTitle',
 			label: 'Titre de la page (onglet et résultats de recherche)',
 			type: 'text',
 			validate: validerTitreDeLaPage,

@@ -20,7 +20,7 @@ export async function enregistrerDisponibilite(
 		const id = await identifiantDuProfilAEcrire(payload, utilisateur)
 		if (id === null) return { ok: false, message: MESSAGE_ECHEC }
 		const stocke = await payload.update({
-			collection: 'profils',
+			collection: 'profiles',
 			data: lue.data,
 			depth: 0,
 			id,

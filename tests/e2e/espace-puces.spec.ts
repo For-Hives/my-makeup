@@ -30,7 +30,7 @@ async function maquilleuse(context: {
 
 async function ficheDe(compte: Maquilleuse) {
 	const payload = await payloadDeTest()
-	const { docs } = await payload.find({ collection: 'profils', depth: 0, where: { pro: { equals: compte.id } } })
+	const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })
 	const [fiche] = docs
 	if (!fiche) throw new Error('pas de profil')
 	return fiche
@@ -38,7 +38,7 @@ async function ficheDe(compte: Maquilleuse) {
 
 async function modifierLaFiche(compte: Maquilleuse, data: Record<string, unknown>) {
 	const payload = await payloadDeTest()
-	await payload.update({ collection: 'profils', id: (await ficheDe(compte)).id, data })
+	await payload.update({ collection: 'profiles', id: (await ficheDe(compte)).id, data })
 }
 
 test.describe('127 : les langues', { tag: '@mobile' }, () => {

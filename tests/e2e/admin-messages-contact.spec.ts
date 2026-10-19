@@ -15,20 +15,20 @@ const EQUIPE = 'contact@example.test'
 const unique = () => `visiteuse-${crypto.randomUUID()}@example.test`
 
 /** A stored message, the way the form stores it, with the state of its mail. */
-async function messageEnBase(etatMail: 'echec' | 'envoye', nom = 'Témoin') {
+async function messageEnBase(mailStatus: 'failed' | 'sent', nom = 'Témoin') {
 	const email = unique()
 	// A name of its own: the list of another test of the same run may hold the same word.
 	const nomUnique = `${nom}${crypto.randomUUID().slice(0, 8)}`
 	const { id } = await (await payloadDeTest()).create({
-		collection: 'demandes',
+		collection: 'contact-requests',
 		data: {
 			type: 'contact',
-			statut: etatMail === 'envoye' ? 'transmise' : 'nouvelle',
-			etatMail,
-			prenom: 'Léa',
-			nom: nomUnique,
+			status: mailStatus === 'sent' ? 'forwarded' : 'new',
+			mailStatus,
+			firstName: 'Léa',
+			lastName: nomUnique,
 			email,
-			telephone: '01 99 00 12 34',
+			phone: '01 99 00 12 34',
 			message: 'Bonjour, une question sur le site.',
 		},
 		depth: 0,
@@ -53,18 +53,18 @@ test.describe('E58 : l’admin filtre les messages dont l’email a échoué et 
 		context,
 		page,
 	}, testInfo) => {
-		const [echoue, parti] = [await messageEnBase('echec', 'Echoue'), await messageEnBase('envoye', 'Parti')]
+		const [echoue, parti] = [await messageEnBase('failed', 'Echoue'), await messageEnBase('sent', 'Parti')]
 		await ouvrirEnAdmin(context)
 
-		await page.goto('/admin/collections/demandes')
+		await page.goto('/admin/collections/contact-requests')
 		await expect(page.getByTestId('echecs-d-envoi')).toContainText('en échec')
 		await page.waitForLoadState('networkidle')
 		await page.getByTestId('echecs-d-envoi').getByRole('link').click()
-		await expect(page).toHaveURL(/where(\[|%5B)etatMail(\]|%5D)(\[|%5B)equals(\]|%5D)=echec/)
+		await expect(page).toHaveURL(/where(\[|%5B)mailStatus(\]|%5D)(\[|%5B)equals(\]|%5D)=failed/)
 		await expect(page.getByText(echoue.nom, { exact: true })).toBeVisible()
 		await expect(page.getByText(parti.nom, { exact: true })).toHaveCount(0)
 
-		await page.goto(`/admin/collections/demandes/${echoue.id}`)
+		await page.goto(`/admin/collections/contact-requests/${echoue.id}`)
 		await page.waitForLoadState('networkidle')
 		const bouton = page.getByRole('button', { name: 'Renvoyer l’email' })
 		await expect(bouton).toBeVisible()
@@ -84,11 +84,11 @@ test.describe('E58 : l’admin filtre les messages dont l’email a échoué et 
 				.poll(async () => (await mailsDe(echoue.email)).length, { timeout: 2000, intervals: [200] })
 				.toBeGreaterThan(1)
 		).rejects.toThrow()
-		const ligne = await (await payloadDeTest()).findByID({ collection: 'demandes', id: echoue.id, depth: 0 })
-		expect(ligne).toMatchObject({ etatMail: 'envoye', statut: 'transmise' })
+		const ligne = await (await payloadDeTest()).findByID({ collection: 'contact-requests', id: echoue.id, depth: 0 })
+		expect(ligne).toMatchObject({ mailStatus: 'sent', status: 'forwarded' })
 
 		// A message whose mail left shows no button.
-		await page.goto(`/admin/collections/demandes/${parti.id}`)
+		await page.goto(`/admin/collections/contact-requests/${parti.id}`)
 		await page.waitForLoadState('networkidle')
 		await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
 		await expect(page.getByRole('button', { name: 'Renvoyer l’email' })).toHaveCount(0)
@@ -98,40 +98,42 @@ test.describe('E58 : l’admin filtre les messages dont l’email a échoué et 
 		context,
 		page,
 	}) => {
-		const message = await messageEnBase('envoye', 'Reponse')
+		const message = await messageEnBase('sent', 'Reponse')
 		await ouvrirEnAdmin(context)
 
-		await page.goto(`/admin/collections/demandes/${message.id}`)
+		await page.goto(`/admin/collections/contact-requests/${message.id}`)
 		await page.waitForLoadState('networkidle')
 		await expect(page.locator('#field-message')).toBeDisabled()
 		await expect(page.locator('#field-email')).toBeDisabled()
 
-		await page.locator('#field-statut').click()
+		await page.locator('#field-status').click()
 		await page.getByRole('option', { name: 'Répondue' }).click()
 		await page.getByRole('button', { name: 'Sauvegarder' }).first().click()
 
 		await expect
-			.poll(async () => (await (await payloadDeTest()).findByID({ collection: 'demandes', id: message.id })).statut)
-			.toBe('repondue')
+			.poll(
+				async () => (await (await payloadDeTest()).findByID({ collection: 'contact-requests', id: message.id })).status
+			)
+			.toBe('answered')
 	})
 })
 
 test.describe('E55 : la rédaction ne voit pas les messages de contact', () => {
 	test('ni dans le menu, ni par l’adresse de la collection, ni par l’API', async ({ context, page }) => {
-		const message = await messageEnBase('envoye', 'Cache')
+		const message = await messageEnBase('sent', 'Cache')
 		const redaction = await creerCompte('redaction')
 		await context.addCookies(redaction.session.cookies)
 
 		await page.goto('/admin')
 		await expect(page.getByRole('link', { name: 'Talents' }).first()).toBeVisible()
-		await expect(page.locator('a[href="/admin/collections/demandes"]')).toHaveCount(0)
+		await expect(page.locator('a[href="/admin/collections/contact-requests"]')).toHaveCount(0)
 		await expect(page.getByText('Messages de contact')).toHaveCount(0)
 
-		await page.goto('/admin/collections/demandes')
+		await page.goto('/admin/collections/contact-requests')
 		await expect(page.getByText(message.nom, { exact: true })).toHaveCount(0)
 		await expect(page.getByRole('heading', { name: 'Rien n’a été trouvé' })).toBeVisible()
 
-		const api = await context.request.get(`/api/demandes/${message.id}`)
+		const api = await context.request.get(`/api/contact-requests/${message.id}`)
 		expect(api.status()).toBe(403)
 	})
 })
@@ -153,12 +155,12 @@ test.describe('E53 : l’admin ouvre chaque collection sans erreur', () => {
 		for (const collection of [
 			'admins',
 			'pros',
-			'profils',
+			'profiles',
 			'media',
 			'talents',
 			'articles',
-			'auth-evenements',
-			'demandes',
+			'auth-events',
+			'contact-requests',
 		]) {
 			await page.goto(`/admin/collections/${collection}`)
 			await page.waitForLoadState('networkidle')

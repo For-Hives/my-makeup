@@ -2,10 +2,10 @@ import { describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import { Admins } from '@/collections/Admins'
 import { Articles } from '@/collections/Articles'
-import { AuthEvenements } from '@/collections/AuthEvents'
-import { Demandes } from '@/collections/ContactRequests'
+import { AuthEvents } from '@/collections/AuthEvents'
+import { ContactRequests } from '@/collections/ContactRequests'
 import { Media } from '@/collections/Media'
-import { Profils } from '@/collections/Profiles'
+import { Profiles } from '@/collections/Profiles'
 import { Pros } from '@/collections/Pros'
 import { Talents } from '@/collections/Talents'
 import { Accueil } from '@/components/espace/accueil/Accueil'
@@ -247,7 +247,7 @@ describe('la réponse n’est stockée nulle part', () => {
 				for (const bloc of c.blocks ?? []) parcourir(bloc.fields)
 			}
 		}
-		const collections = [Admins, Articles, AuthEvenements, Demandes, Media, Profils, Pros, Talents]
+		const collections = [Admins, Articles, AuthEvents, ContactRequests, Media, Profiles, Pros, Talents]
 		for (const collection of collections) parcourir(collection.fields as unknown[])
 		expect(noms.length).toBeGreaterThan(50)
 		expect(noms.filter(nom => /origine|\bconnu\b|onboarding|acquisition|how.?heard/i.test(nom))).toEqual([])

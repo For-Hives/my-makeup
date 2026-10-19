@@ -122,9 +122,9 @@ export async function demanderUnLien({
 	plancherMs = PLANCHER_DE_LA_DEMANDE_MS,
 }: EntreesDeLaDemande): Promise<ResultatDeLaDemande> {
 	const debut = Date.now()
-	const noter = async (code: CodeEvenement, dureeMs: number) => {
+	const noter = async (code: CodeEvenement, durationMs: number) => {
 		try {
-			await journal?.({ type: 'mot-de-passe-oublie', code, dureeMs })
+			await journal?.({ type: 'forgot-password', code, durationMs })
 		} catch {
 			// The journal is not the request's to fail.
 		}
@@ -203,7 +203,7 @@ export async function reinitialiserLeMotDePasse({
 	const debut = Date.now()
 	const noter = async (code: CodeEvenement) => {
 		try {
-			await journal?.({ type: 'reinitialisation', code, dureeMs: Date.now() - debut })
+			await journal?.({ type: 'password-reset', code, durationMs: Date.now() - debut })
 		} catch {
 			// The journal is not the reset's to fail.
 		}

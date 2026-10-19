@@ -6,7 +6,7 @@ import { payloadDeTest, viderLaBase } from '../outils/payload-test'
 import { appelerRest } from '../outils/rest'
 
 const MonCompte = z.object({
-	user: z.object({ id: z.number(), email: z.string(), role: z.enum(['admin', 'redaction']) }).nullable(),
+	user: z.object({ id: z.number(), email: z.string(), role: z.enum(['admin', 'editor']) }).nullable(),
 	exp: z.number().optional(),
 })
 
@@ -34,7 +34,7 @@ describe('Les comptes admins : deux rôles, une session de 8 heures', () => {
 		expect((await monCompte(redaction.session.enTetes)).user).toEqual({
 			id: Number(redaction.id),
 			email: redaction.email,
-			role: 'redaction',
+			role: 'editor',
 		})
 	})
 
@@ -63,7 +63,7 @@ describe('Les comptes admins : deux rôles, une session de 8 heures', () => {
 
 		expect(Math.abs((exp ?? 0) - Math.floor(debut / 1000) - 8 * 3600)).toBeLessThanOrEqual(5)
 		setSystemTime(new Date((exp ?? 0) * 1000 - 60_000))
-		expect((await monCompte(session.enTetes)).user?.role).toBe('redaction')
+		expect((await monCompte(session.enTetes)).user?.role).toBe('editor')
 
 		setSystemTime(new Date((exp ?? 0) * 1000 + 1000))
 		expect((await monCompte(session.enTetes)).user).toBeNull()
@@ -88,9 +88,9 @@ describe('Les comptes admins : deux rôles, une session de 8 heures', () => {
 		const payload = await payloadDeTest()
 
 		for (const corps of [
-			{ role: 'redaction' },
+			{ role: 'editor' },
 			{ role: 'admin' },
-			// Without a role: the default would be `redaction`.
+			// Without a role: the default would be `editor`.
 			{},
 		]) {
 			const { statut } = await appelerRest('POST', '/api/admins/first-register', {
@@ -136,7 +136,7 @@ describe('Les comptes admins : deux rôles, une session de 8 heures', () => {
 		})
 
 		expect(statut).toBe(201)
-		expect((corps as { doc?: { role?: string } }).doc?.role).toBe('redaction')
+		expect((corps as { doc?: { role?: string } }).doc?.role).toBe('editor')
 	})
 })
 

@@ -15,7 +15,12 @@ async function creerMaquilleuse(nom: string | undefined, contexte?: typeof CONTE
 	const payload = await payloadDeTest()
 	return payload.create({
 		collection: 'pros',
-		data: { email: `hook-${crypto.randomUUID()}@example.test`, password: motDePasseAleatoire(), nom, _verified: true },
+		data: {
+			email: `hook-${crypto.randomUUID()}@example.test`,
+			password: motDePasseAleatoire(),
+			name: nom,
+			_verified: true,
+		},
 		context: contexte,
 		disableVerificationEmail: true,
 	})
@@ -24,7 +29,7 @@ async function creerMaquilleuse(nom: string | undefined, contexte?: typeof CONTE
 /** The profiles of an account. */
 async function profilsDe(compte: number) {
 	const payload = await payloadDeTest()
-	return (await payload.find({ collection: 'profils', depth: 0, where: { pro: { equals: compte } } })).docs
+	return (await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte } } })).docs
 }
 
 afterEach(async () => {
@@ -96,7 +101,7 @@ describe('Un compte créé reçoit son profil vide, avec un slug unique (I18)', 
 		const payload = await payloadDeTest()
 
 		await expect(
-			payload.create({ collection: 'profils', data: { pro: compte.id, slug: 'une-seule-bis' } })
+			payload.create({ collection: 'profiles', data: { pro: compte.id, slug: 'une-seule-bis' } })
 		).rejects.toThrow()
 		expect((await profilsDe(compte.id)).length).toBe(1)
 	})
@@ -106,7 +111,7 @@ describe('Un compte créé reçoit son profil vide, avec un slug unique (I18)', 
 		const payload = await payloadDeTest()
 
 		const profil = await payload.create({
-			collection: 'profils',
+			collection: 'profiles',
 			data: { pro: compte.id, slug: 'ancien-slug', legacyUsername: 'Ancien Slug', strapiId: 12 },
 		})
 
@@ -125,7 +130,7 @@ describe('Le slug ne change plus (I19)', () => {
 			enTetes: a.session.enTetes,
 			corps: { nom: 'Camille Bernard' },
 		})
-		const surLeProfil = await appelerRest('PATCH', `/api/profils/${profil?.id}`, {
+		const surLeProfil = await appelerRest('PATCH', `/api/profiles/${profil?.id}`, {
 			enTetes: a.session.enTetes,
 			corps: { prenom: 'Camille', nom: 'Bernard', nomArtiste: 'Camille B.', slug: 'camille-bernard' },
 		})
@@ -157,9 +162,9 @@ describe('Un compte qui a encore un profil n’est pas supprimé tout seul', () 
 
 		// A profile deleted first leaves an account without a profile, which goes as well.
 		const [profil] = await profilsDe(Number(b.id))
-		expect((await appelerRest('DELETE', `/api/profils/${profil?.id}`, { enTetes: admin.session.enTetes })).statut).toBe(
-			200
-		)
+		expect(
+			(await appelerRest('DELETE', `/api/profiles/${profil?.id}`, { enTetes: admin.session.enTetes })).statut
+		).toBe(200)
 		expect((await appelerRest('DELETE', `/api/pros/${b.id}`, { enTetes: admin.session.enTetes })).statut).toBe(200)
 		expect((await payload.count({ collection: 'pros', where: { id: { equals: b.id } } })).totalDocs).toBe(0)
 	})

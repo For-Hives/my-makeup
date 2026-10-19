@@ -76,10 +76,14 @@ export async function connecter(entrees: EntreesDeConnexion): Promise<ResultatCo
 }
 
 /** One row for the attempt. A journal that fails changes nothing for the visitor. */
-async function noterLaTentative(journal: Journaliser | undefined, code: CodeEvenement, dureeMs: number): Promise<void> {
+async function noterLaTentative(
+	journal: Journaliser | undefined,
+	code: CodeEvenement,
+	durationMs: number
+): Promise<void> {
 	if (!journal) return
 	try {
-		await journal({ type: 'connexion', code, dureeMs, methode: 'mot-de-passe' })
+		await journal({ type: 'sign-in', code, durationMs, method: 'password' })
 	} catch {
 		// `journaliser` never throws; a double might. The sign-in is not the journal's to fail.
 	}

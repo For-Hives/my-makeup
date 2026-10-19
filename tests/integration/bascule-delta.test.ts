@@ -21,7 +21,7 @@ let depuis: Date
 const ids: Record<string, number> = {}
 
 /** Gives a record the dates of the old site, as the import writes them back. */
-async function vieillir(collection: 'pros' | 'profils' | 'media' | 'demandes', id: number) {
+async function vieillir(collection: 'pros' | 'profiles' | 'media' | 'contact-requests', id: number) {
 	const payload = await payloadDeTest()
 	await payload.db.updateOne({ collection, id, data: { createdAt: ANCIEN, updatedAt: ANCIEN } })
 }
@@ -38,19 +38,19 @@ beforeAll(async () => {
 		id: ids.compteImporte,
 		data: { legacyBcrypt: HASH_FICTIF, strapiId: 4101 },
 	})
-	const profilImporte = await payload.find({ collection: 'profils', where: { pro: { equals: ids.compteImporte } } })
+	const profilImporte = await payload.find({ collection: 'profiles', where: { pro: { equals: ids.compteImporte } } })
 	ids.profilImporte = profilImporte.docs[0]?.id as number
 	const photoImportee = await payload.create({ collection: 'media', data: {}, file: fichierPourPayload() })
 	ids.photoImportee = photoImportee.id
 	const messageImporte = await payload.create({
-		collection: 'demandes',
+		collection: 'contact-requests',
 		data: {
 			type: 'contact',
-			statut: 'nouvelle',
-			etatMail: 'envoye',
-			telephone: '0199001234',
-			prenom: 'Ancienne',
-			nom: 'Visiteuse',
+			status: 'new',
+			mailStatus: 'sent',
+			phone: '0199001234',
+			firstName: 'Ancienne',
+			lastName: 'Visiteuse',
 			email: 'ancienne@example.test',
 			message: 'Écrit avant la bascule.',
 		},
@@ -60,16 +60,16 @@ beforeAll(async () => {
 	const modifie = await creerCompte('maquilleuse')
 	ids.compteModifie = Number(modifie.id)
 	await payload.update({ collection: 'pros', id: ids.compteModifie, data: { strapiId: 4102 } })
-	const profilModifie = await payload.find({ collection: 'profils', where: { pro: { equals: ids.compteModifie } } })
+	const profilModifie = await payload.find({ collection: 'profiles', where: { pro: { equals: ids.compteModifie } } })
 	ids.profilModifie = profilModifie.docs[0]?.id as number
 
 	for (const [collection, id] of [
 		['pros', ids.compteImporte],
-		['profils', ids.profilImporte],
+		['profiles', ids.profilImporte],
 		['media', ids.photoImportee],
-		['demandes', ids.messageImporte],
+		['contact-requests', ids.messageImporte],
 		['pros', ids.compteModifie],
-		['profils', ids.profilModifie],
+		['profiles', ids.profilModifie],
 	] as const)
 		await vieillir(collection, id as number)
 
@@ -80,7 +80,7 @@ beforeAll(async () => {
 	// After it: an account and its profile, a photo, a message, a change to an imported account and profile, a deleted account.
 	const neuf = await creerCompte('maquilleuse', { motDePasse: () => MOT_DE_PASSE_FICTIF })
 	ids.compteNeuf = Number(neuf.id)
-	const profilNeuf = await payload.find({ collection: 'profils', where: { pro: { equals: ids.compteNeuf } } })
+	const profilNeuf = await payload.find({ collection: 'profiles', where: { pro: { equals: ids.compteNeuf } } })
 	ids.profilNeuf = profilNeuf.docs[0]?.id as number
 	const photo = await payload.create({
 		collection: 'media',
@@ -89,23 +89,23 @@ beforeAll(async () => {
 	})
 	ids.photoNeuve = photo.id
 	const message = await payload.create({
-		collection: 'demandes',
+		collection: 'contact-requests',
 		data: {
 			type: 'contact',
-			statut: 'nouvelle',
-			etatMail: 'envoye',
-			telephone: '0199001234',
-			prenom: 'Nouvelle',
-			nom: 'Visiteuse',
+			status: 'new',
+			mailStatus: 'sent',
+			phone: '0199001234',
+			firstName: 'Nouvelle',
+			lastName: 'Visiteuse',
 			email: 'nouvelle@example.test',
 			message: 'Écrit après la bascule.',
 		},
 	})
 	ids.messageNeuf = message.id
-	await payload.update({ collection: 'pros', id: ids.compteModifie, data: { nom: 'Nom changé après la bascule' } })
-	await payload.update({ collection: 'profils', id: ids.profilModifie, data: { specialite: 'Mariage' } })
-	await payload.create({ collection: 'comptes-supprimes', data: { strapiId: 4199, date: new Date().toISOString() } })
-	await payload.create({ collection: 'comptes-supprimes', data: { strapiId: 4198, date: ANCIEN } })
+	await payload.update({ collection: 'pros', id: ids.compteModifie, data: { name: 'Nom changé après la bascule' } })
+	await payload.update({ collection: 'profiles', id: ids.profilModifie, data: { specialite: 'Mariage' } })
+	await payload.create({ collection: 'deleted-accounts', data: { strapiId: 4199, date: new Date().toISOString() } })
+	await payload.create({ collection: 'deleted-accounts', data: { strapiId: 4198, date: ANCIEN } })
 }, 120_000)
 
 afterAll(async () => {

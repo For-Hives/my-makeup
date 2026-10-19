@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test'
-import type { Profil } from '@/payload-types'
+import type { Profile } from '@/payload-types'
 import {
 	ANNECY,
 	CAS_PARTAGES,
@@ -36,15 +36,16 @@ const DATES = ['actifDepuis', 'publiableDepuis', 'entierementVideDepuis'] as con
 async function maquilleuseEtSonProfil(): Promise<{ compte: Maquilleuse; profil: number }> {
 	const compte = await creerCompte('maquilleuse')
 	const payload = await payloadDeTest()
-	const [profil] = (await payload.find({ collection: 'profils', depth: 0, where: { pro: { equals: compte.id } } })).docs
+	const [profil] = (await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } }))
+		.docs
 	if (!profil) throw new Error('La fabrique n’a pas créé le profil de la maquilleuse.')
 	return { compte, profil: profil.id }
 }
 
 /** The profile as the database holds it, read without access control. */
-async function stocke(id: number): Promise<Profil> {
+async function stocke(id: number): Promise<Profile> {
 	const payload = await payloadDeTest()
-	return payload.findByID({ collection: 'profils', id, depth: 0 })
+	return payload.findByID({ collection: 'profiles', id, depth: 0 })
 }
 
 /** The state of a stored profile, and its status. */
@@ -61,7 +62,7 @@ async function etat(id: number) {
 
 /** She changes her own profile through REST, as her space will. */
 async function modifier(compte: Maquilleuse | CompteDeTest<'admin'>, profil: number, corps: Record<string, unknown>) {
-	const reponse = await appelerRest('PATCH', `/api/profils/${profil}?depth=0`, {
+	const reponse = await appelerRest('PATCH', `/api/profiles/${profil}?depth=0`, {
 		enTetes: compte.session.enTetes,
 		corps,
 	})
@@ -115,7 +116,7 @@ describe('Valeurs stockées égales à la fonction unique sur les cas partagés 
 			const photo = async () =>
 				(await payload.create({ collection: 'media', data: { owner: Number(compte.id) }, file: fichierPourPayload() }))
 					.id
-			await payload.update({ collection: 'profils', id: profil, data: await documentDuCas(cas.profil, photo) })
+			await payload.update({ collection: 'profiles', id: profil, data: await documentDuCas(cas.profil, photo) })
 
 			const stockee = await etat(profil)
 			const regle = completudeEnV3(cas.profil)
@@ -179,7 +180,7 @@ describe('Valeurs stockées égales à la fonction unique sur les cas partagés 
 	})
 })
 
-describe('Profil créé vide : brouillon ; première des six conditions remplie : publié', () => {
+describe('Profile créé vide : brouillon ; première des six conditions remplie : publié', () => {
 	test('le profil créé avec le compte est vide, en brouillon, avec ses trois dates', async () => {
 		const avant = Date.now()
 		const { profil } = await maquilleuseEtSonProfil()
@@ -197,7 +198,7 @@ describe('Profil créé vide : brouillon ; première des six conditions remplie 
 			expect([date, Date.parse(String(cree[date])) >= avant - 1000]).toEqual([date, true])
 			expect([date, Date.parse(String(cree[date])) <= Date.now()]).toEqual([date, true])
 		}
-		expect((await appelerRest('GET', `/api/profils/${profil}`)).statut).toBe(404)
+		expect((await appelerRest('GET', `/api/profiles/${profil}`)).statut).toBe(404)
 	})
 
 	test('chacune des six conditions, seule, publie le profil, et le public le lit', async () => {
@@ -207,7 +208,7 @@ describe('Profil créé vide : brouillon ; première des six conditions remplie 
 			await modifier(compte, profil, await remplir(compte))
 
 			expect([condition, await etat(profil)]).toMatchObject([condition, { entierementVide: false, statut: 'publie' }])
-			expect([condition, (await appelerRest('GET', `/api/profils/${profil}`)).statut]).toEqual([condition, 200])
+			expect([condition, (await appelerRest('GET', `/api/profiles/${profil}`)).statut]).toEqual([condition, 200])
 		}
 	}, 30_000)
 
@@ -236,7 +237,7 @@ describe('Profil créé vide : brouillon ; première des six conditions remplie 
 		await modifier(compte, profil, RIEN)
 
 		expect(await etat(profil)).toMatchObject({ entierementVide: true, publiable: false, statut: 'brouillon' })
-		expect((await appelerRest('GET', `/api/profils/${profil}`)).statut).toBe(404)
+		expect((await appelerRest('GET', `/api/profiles/${profil}`)).statut).toBe(404)
 	})
 
 	test('un téléphone qu’elle ne montre pas n’est pas un canal de contact ; montré, il l’est', async () => {
@@ -281,7 +282,7 @@ describe('Un profil qui n’a qu’un nom reste entièrement vide', () => {
 			entierementVide: true,
 			statut: 'brouillon',
 		})
-		expect((await appelerRest('GET', `/api/profils/${profil}`)).statut).toBe(404)
+		expect((await appelerRest('GET', `/api/profiles/${profil}`)).statut).toBe(404)
 	})
 
 	test('ni les listes, ni la galerie, ni le rayon ne sont une des six conditions', async () => {
@@ -322,9 +323,9 @@ describe('Un profil masqué reste masqué quelle que soit la sauvegarde', () => 
 		await modifier(admin, profil, { statut: 'publie', statutChoisi: 'masque', noteInterne: 'Relue encore' })
 		expect((await etat(profil)).statut).toBe('masque')
 		const payload = await payloadDeTest()
-		await payload.update({ collection: 'profils', id: profil, data: { prenom: 'Par le serveur' } })
+		await payload.update({ collection: 'profiles', id: profil, data: { prenom: 'Par le serveur' } })
 		expect((await etat(profil)).statut).toBe('masque')
-		expect((await appelerRest('GET', `/api/profils/${profil}`)).statut).toBe(404)
+		expect((await appelerRest('GET', `/api/profiles/${profil}`)).statut).toBe(404)
 
 		// Only an admin shows it again, by handing it back to the rule.
 		await modifier(admin, profil, { statutChoisi: 'automatique' })
@@ -371,7 +372,7 @@ describe('Un statut posé par l’admin n’est jamais écrasé', () => {
 		const admin = await creerCompte('admin')
 		const { compte, profil } = await maquilleuseEtSonProfil()
 		// The admin panel sends every field of the form it loaded.
-		const { corps } = await appelerRest('GET', `/api/profils/${profil}?depth=0`, { enTetes: admin.session.enTetes })
+		const { corps } = await appelerRest('GET', `/api/profiles/${profil}?depth=0`, { enTetes: admin.session.enTetes })
 		const { id: _id, createdAt: _cree, updatedAt: _modifie, ...formulaire } = corps as Record<string, unknown>
 		await modifier(compte, profil, { specialite: 'Mariage' })
 
@@ -440,14 +441,14 @@ describe('Valeurs envoyées par la maquilleuse ignorées et recalculées', () =>
 		const envoye = { completude: 13, actif: true, publiable: true, entierementVide: false }
 
 		await payload.update({
-			collection: 'profils',
+			collection: 'profiles',
 			id: profil,
 			data: envoye,
 			overrideAccess: false,
 			user: utilisateur as never,
 		})
 		expect(await etat(profil)).toMatchObject({ completude: 0, actif: false, publiable: false, entierementVide: true })
-		await payload.update({ collection: 'profils', id: profil, data: envoye })
+		await payload.update({ collection: 'profiles', id: profil, data: envoye })
 		expect(await etat(profil)).toMatchObject({ completude: 0, actif: false, publiable: false, entierementVide: true })
 	})
 })

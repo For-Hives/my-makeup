@@ -48,7 +48,7 @@ test.describe('L’admin liste les comptes et en bloque un', () => {
 		// Block from the sheet: tick the box, save, the account is blocked and its session closed.
 		const compte = await creerCompte('maquilleuse')
 		await page.goto(`/admin/collections/pros/${compte.id}`)
-		const case_ = page.locator('#field-bloque')
+		const case_ = page.locator('#field-blocked')
 		await expect(async () => {
 			await case_.check({ timeout: 2_000 })
 			await expect(case_).toBeChecked({ timeout: 2_000 })
@@ -56,7 +56,7 @@ test.describe('L’admin liste les comptes et en bloque un', () => {
 		await page.locator('#action-save').click()
 		await expect(page.getByText('Mis à jour avec succès').first()).toBeVisible()
 		const payload = await payloadDeTest()
-		expect((await payload.findByID({ collection: 'pros', id: compte.id, depth: 0 })).bloque).toBe(true)
+		expect((await payload.findByID({ collection: 'pros', id: compte.id, depth: 0 })).blocked).toBe(true)
 		const moi = await payload.auth({ headers: new Headers(compte.session.enTetes) })
 		expect(moi.user).toBeNull()
 

@@ -2,7 +2,7 @@
  * Command line that creates an account of the admin panel (README « Créer un compte admin »).
  *
  *   bun run admin:creer <email>                   an `admin`, in the database of DATABASE_URI
- *   bun run admin:creer <email> --role=redaction  a `redaction` account
+ *   bun run admin:creer <email> --role=editor     an `editor` account
  *   bun run admin:creer <email> --cible-distante  when DATABASE_URI is not on this machine
  *
  * The first screen of the admin panel does not create the first account any more

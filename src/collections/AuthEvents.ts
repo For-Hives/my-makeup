@@ -3,20 +3,20 @@ import type { CollectionConfig } from 'payload'
 import { adminSeulement, cacheeSaufAdmin } from '../lib/acces'
 import { CODES_EVENEMENT, METHODES_EVENEMENT, TYPES_EVENEMENT } from '../lib/auth/journal'
 
-const LIBELLES_DES_TYPES: Record<(typeof TYPES_EVENEMENT)[number], string> = {
-	connexion: 'Connexion',
-	deconnexion: 'Déconnexion',
-	'deconnexion-partout': 'Déconnexion de tous les appareils',
-	inscription: 'Inscription',
+const TYPE_LABELS: Record<(typeof TYPES_EVENEMENT)[number], string> = {
+	'sign-in': 'Connexion',
+	'sign-out': 'Déconnexion',
+	'sign-out-everywhere': 'Déconnexion de tous les appareils',
+	'sign-up': 'Inscription',
 	confirmation: 'Confirmation de l’email',
-	renvoi: 'Renvoi de l’email de confirmation',
-	'mot-de-passe-oublie': 'Demande de lien de mot de passe oublié',
-	reinitialisation: 'Nouveau mot de passe',
-	blocage: 'Compte bloqué par un admin',
-	deblocage: 'Compte débloqué par un admin',
+	resend: 'Renvoi de l’email de confirmation',
+	'forgot-password': 'Demande de lien de mot de passe oublié',
+	'password-reset': 'Nouveau mot de passe',
+	block: 'Compte bloqué par un admin',
+	unblock: 'Compte débloqué par un admin',
 }
 
-const LIBELLES_DES_CODES: Record<(typeof CODES_EVENEMENT)[number], string> = {
+const CODE_LABELS: Record<(typeof CODES_EVENEMENT)[number], string> = {
 	ok: 'Réussi',
 	heritee: 'Réussi, mot de passe de l’ancien site',
 	'identifiants-invalides': 'Identifiants invalides',
@@ -36,8 +36,8 @@ const LIBELLES_DES_CODES: Record<(typeof CODES_EVENEMENT)[number], string> = {
 	'champ-piege': 'Champ piège rempli',
 }
 
-const LIBELLES_DES_METHODES: Record<(typeof METHODES_EVENEMENT)[number], string> = {
-	'mot-de-passe': 'Mot de passe',
+const METHOD_LABELS: Record<(typeof METHODES_EVENEMENT)[number], string> = {
+	password: 'Mot de passe',
 	google: 'Google',
 }
 
@@ -52,11 +52,11 @@ const LIBELLES_DES_METHODES: Record<(typeof METHODES_EVENEMENT)[number], string>
  *   it (`journaliser`), and purges it after 90 days (src/lib/taches/).
  * - No `createdAt` or `updatedAt`: `date` is the one date, and the purge reads it.
  */
-export const AuthEvenements: CollectionConfig<'auth-evenements'> = {
-	slug: 'auth-evenements',
+export const AuthEvents: CollectionConfig<'auth-events'> = {
+	slug: 'auth-events',
 	labels: { singular: 'Événement d’authentification', plural: 'Journal d’authentification' },
 	admin: {
-		defaultColumns: ['date', 'type', 'methode', 'code', 'dureeMs'],
+		defaultColumns: ['date', 'type', 'method', 'code', 'durationMs'],
 		hidden: cacheeSaufAdmin,
 	},
 	defaultSort: '-date',
@@ -74,7 +74,7 @@ export const AuthEvenements: CollectionConfig<'auth-evenements'> = {
 			type: 'select',
 			required: true,
 			index: true,
-			options: TYPES_EVENEMENT.map(type => ({ label: LIBELLES_DES_TYPES[type], value: type })),
+			options: TYPES_EVENEMENT.map(type => ({ label: TYPE_LABELS[type], value: type })),
 		},
 		{
 			name: 'code',
@@ -82,17 +82,17 @@ export const AuthEvenements: CollectionConfig<'auth-evenements'> = {
 			type: 'select',
 			required: true,
 			index: true,
-			options: CODES_EVENEMENT.map(code => ({ label: LIBELLES_DES_CODES[code], value: code })),
+			options: CODES_EVENEMENT.map(code => ({ label: CODE_LABELS[code], value: code })),
 		},
 		{
 			// Ticket 090. Rows older than the Google sign-in have none.
-			name: 'methode',
+			name: 'method',
 			label: 'Méthode',
 			type: 'select',
 			index: true,
-			options: METHODES_EVENEMENT.map(methode => ({ label: LIBELLES_DES_METHODES[methode], value: methode })),
+			options: METHODES_EVENEMENT.map(methode => ({ label: METHOD_LABELS[methode], value: methode })),
 		},
-		{ name: 'dureeMs', label: 'Durée (ms)', type: 'number', min: 0 },
+		{ name: 'durationMs', label: 'Durée (ms)', type: 'number', min: 0 },
 		{
 			name: 'date',
 			label: 'Date',

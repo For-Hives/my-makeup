@@ -16,13 +16,13 @@ import { payloadDeTest } from '../outils/payload-test'
 const COLLECTIONS = [
 	'admins',
 	'pros',
-	'profils',
+	'profiles',
 	'media',
 	'articles',
 	'talents',
-	'demandes',
-	'auth-evenements',
-	'comptes-supprimes',
+	'contact-requests',
+	'auth-events',
+	'deleted-accounts',
 ]
 const UNE_MINUTE = 60_000
 
@@ -53,7 +53,7 @@ async function retirer(suffixe: string): Promise<void> {
 	for (const { id, email } of comptes.docs) {
 		if (!email.includes(`-${suffixe}@`)) continue
 		await payload.delete({ collection: 'media', where: { owner: { equals: id } } }).catch(() => undefined)
-		await payload.delete({ collection: 'profils', where: { pro: { equals: id } } }).catch(() => undefined)
+		await payload.delete({ collection: 'profiles', where: { pro: { equals: id } } }).catch(() => undefined)
 		await payload.delete({ collection: 'pros', id }).catch(() => undefined)
 	}
 }
@@ -94,7 +94,7 @@ test.describe('L’admin retrouve, corrige et masque un profil', () => {
 			}
 
 			// The columns of the list: the address, the commune, the completeness, publishable, the status.
-			await page.goto(`/admin/collections/profils?limit=100&where[and][0][statut][exists]=true&${siens}`)
+			await page.goto(`/admin/collections/profiles?limit=100&where[and][0][statut][exists]=true&${siens}`)
 			const entete = page.locator('thead')
 			for (const colonne of ['Adresse du profil', 'Commune', 'Complétude', 'Publiable', 'Statut'])
 				await expect(entete).toContainText(colonne)
@@ -102,7 +102,7 @@ test.describe('L’admin retrouve, corrige et masque un profil', () => {
 
 			// The filters of the panel, as its address holds them.
 			const filtre = (champ: string, valeur: string) =>
-				`/admin/collections/profils?limit=100&where[and][0][${champ}][equals]=${valeur}&${siens}`
+				`/admin/collections/profiles?limit=100&where[and][0][${champ}][equals]=${valeur}&${siens}`
 			await page.goto(filtre('publiable', 'false'))
 			await expect(page.locator('tbody tr')).toHaveCount(2)
 			await page.goto(filtre('entierementVide', 'true'))
@@ -145,7 +145,7 @@ test.describe('L’admin retrouve, corrige et masque un profil', () => {
 			expect(await statutDeLaPage()).toBe(200)
 			await enregistrerAvec('Masqué')
 			await expect.poll(statutDeLaPage, { timeout: UNE_MINUTE }).toBe(404)
-			expect((await payload.findByID({ collection: 'profils', id: profil.id, depth: 0 })).statut).toBe('masque')
+			expect((await payload.findByID({ collection: 'profiles', id: profil.id, depth: 0 })).statut).toBe('masque')
 
 			await enregistrerAvec('Automatique')
 			await expect.poll(statutDeLaPage, { timeout: UNE_MINUTE }).toBe(200)

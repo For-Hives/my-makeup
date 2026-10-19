@@ -87,19 +87,19 @@ const nomFictif = (prefixe: string) => `${prefixe} ${randomUUID().slice(0, 8)}`
 export const TYPES_DE_COMPTE = {
 	/** An account of the admin panel with the role `admin`: it may do everything. */
 	admin: declarer({ collection: 'admins', donnees: () => ({ role: 'admin' as const }) }),
-	/** An account of the admin panel with the role `redaction`: articles and talents, and its own account. */
-	redaction: declarer({ collection: 'admins', donnees: () => ({ role: 'redaction' as const }) }),
+	/** An account of the admin panel with the role `editor`: articles and talents, and its own account. */
+	redaction: declarer({ collection: 'admins', donnees: () => ({ role: 'editor' as const }) }),
 	/** The account of a makeup artist, address confirmed, with its empty profile. Call it twice for « A » and « B ». */
-	maquilleuse: declarer({ collection: 'pros', donnees: () => ({ nom: nomFictif('Maquilleuse'), _verified: true }) }),
+	maquilleuse: declarer({ collection: 'pros', donnees: () => ({ name: nomFictif('Maquilleuse'), _verified: true }) }),
 	/** The account of a makeup artist who has not confirmed her address: it cannot log in. */
 	'maquilleuse-non-verifiee': declarerSansSession({
 		collection: 'pros',
-		donnees: () => ({ nom: nomFictif('Non vérifiée'), _verified: false }),
+		donnees: () => ({ name: nomFictif('Non vérifiée'), _verified: false }),
 	}),
 	/** The account of a makeup artist without a profile, as some accounts of the old site come. */
 	'maquilleuse-sans-profil': declarer({
 		collection: 'pros',
-		donnees: () => ({ nom: nomFictif('Sans profil'), _verified: true }),
+		donnees: () => ({ name: nomFictif('Sans profil'), _verified: true }),
 		contexte: CONTEXTE_SANS_PROFIL,
 	}),
 	/**
@@ -109,7 +109,7 @@ export const TYPES_DE_COMPTE = {
 	 */
 	'maquilleuse-bloquee': declarerSansSession({
 		collection: 'pros',
-		donnees: () => ({ nom: nomFictif('Bloquée'), _verified: true, bloque: true }),
+		donnees: () => ({ name: nomFictif('Bloquée'), _verified: true, blocked: true }),
 	}),
 	/**
 	 * An account of the old site with its bcrypt hash, and its profile. She logs in with her old
@@ -117,19 +117,19 @@ export const TYPES_DE_COMPTE = {
 	 */
 	'reprise-avec-hash': declarerSansSession({
 		collection: 'pros',
-		donnees: () => ({ nom: nomFictif('Reprise'), _verified: true }),
+		donnees: () => ({ name: nomFictif('Reprise'), _verified: true }),
 		reprise: { fournisseur: 'local', hashHerite: true },
 	}),
 	/** An old Google account without a password, and its profile: she logs in by Google. */
 	'reprise-google': declarerSansMotDePasse({
 		collection: 'pros',
-		donnees: () => ({ nom: nomFictif('Reprise Google'), _verified: true }),
+		donnees: () => ({ name: nomFictif('Reprise Google'), _verified: true }),
 		reprise: { fournisseur: 'google', hashHerite: false },
 	}),
 	/** An old Google account that also has a bcrypt hash, as one real account has: by Google, or by her old password. */
 	'reprise-google-avec-hash': declarerSansMotDePasse({
 		collection: 'pros',
-		donnees: () => ({ nom: nomFictif('Reprise Google avec hash'), _verified: true }),
+		donnees: () => ({ name: nomFictif('Reprise Google avec hash'), _verified: true }),
 		reprise: { fournisseur: 'google', hashHerite: true },
 	}),
 	/**
@@ -138,7 +138,7 @@ export const TYPES_DE_COMPTE = {
 	 */
 	'reprise-facebook': declarerSansSession({
 		collection: 'pros',
-		donnees: () => ({ nom: nomFictif('Reprise Facebook'), _verified: true }),
+		donnees: () => ({ name: nomFictif('Reprise Facebook'), _verified: true }),
 		reprise: { fournisseur: 'facebook', hashHerite: false },
 	}),
 }
@@ -288,7 +288,7 @@ async function ecrireLeCompte(
 		collection,
 		data: {
 			...donnees(),
-			...(valeurs.nom === undefined ? {} : { nom: valeurs.nom }),
+			...(valeurs.nom === undefined ? {} : { name: valeurs.nom }),
 			...heritage,
 			email: valeurs.email,
 			password: motDePasse,

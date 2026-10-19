@@ -106,7 +106,7 @@ export interface Rapport {
 export const NOMS_DES_COLLECTIONS: Readonly<Record<CollectionImportee, string>> = {
 	pros: 'Comptes',
 	media: 'Médias',
-	profils: 'Profils',
+	profiles: 'Profils',
 	articles: 'Articles',
 	talents: 'Talents',
 }

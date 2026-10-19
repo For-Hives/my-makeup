@@ -50,7 +50,7 @@ export function nomDuCompte(revendications: Revendications, adresse: string): st
 
 interface CompteTrouve {
 	id: number | string
-	bloque?: boolean | null
+	blocked?: boolean | null
 	legacyProvider?: string | null
 	_verified?: boolean | null
 }
@@ -87,7 +87,7 @@ export async function compteDeGoogle(payload: Payload, revendications: Revendica
 /** An account that exists: it opens a session if it came from Google and is not blocked. */
 async function accueillir(payload: Payload, compte: CompteTrouve): Promise<ResultatDuCompte> {
 	// Blocked first: whoever proves the address on Google is told why the account stays shut.
-	if (compte.bloque === true) return { ok: false, code: 'compte-bloque' }
+	if (compte.blocked === true) return { ok: false, code: 'compte-bloque' }
 	if (compte.legacyProvider !== FOURNISSEUR_GOOGLE) return { ok: false, code: 'compte-refuse' }
 	// Google has just vouched for the address: an account still marked unconfirmed is confirmed, or
 	// Payload would ignore the session it is about to receive.
@@ -112,7 +112,7 @@ async function creer(
 				email: adresse,
 				// Nobody knows it. Payload needs one; « Mot de passe oublié » gives her her own.
 				password: randomBytes(48).toString('base64url'),
-				nom,
+				name: nom,
 				_verified: true,
 				legacyProvider: FOURNISSEUR_GOOGLE,
 			},

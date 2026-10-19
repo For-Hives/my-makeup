@@ -5,7 +5,7 @@ import { type BilanDesProfils, lirePhotoDuJeu, nomDuFichier, poserLesProfilsDuJe
 import { type PhotoDuJeu, POIDS_MAX_D_UNE_PHOTO, PROFILS_DU_JEU, type ProfilDuJeu } from '@/jeu-fictif/profils'
 import { cleDuMedia, PREFIXE_DES_ENVOIS } from '@/lib/medias'
 import { etatDuProfil } from '@/lib/profil/etat'
-import type { Media, Pro, Profil } from '@/payload-types'
+import type { Media, Pro, Profile } from '@/payload-types'
 import { compterLesDocuments, compterLesLignes, payloadDeTest, viderLaBase } from '../outils/payload-test'
 import { lireUnObjet, listerLesObjets, viderLeStockage } from '../outils/s3'
 
@@ -31,11 +31,11 @@ const remettreAZero = () => Promise.all([viderLaBase(), viderLeStockage()])
 const empreinte = (octets: Uint8Array) => createHash('sha256').update(octets).digest('hex')
 
 /** The profile of a type, as the database holds it, read with every right. */
-async function profilDu(bilan: BilanDesProfils, type: ProfilDuJeu): Promise<Profil> {
+async function profilDu(bilan: BilanDesProfils, type: ProfilDuJeu): Promise<Profile> {
 	const pose = bilan.profils.find(({ cle }) => cle === type.cle)
 	if (!pose) throw new Error(`le profil type « ${type.cle} » manque au bilan`)
 	const payload = await payloadDeTest()
-	return payload.findByID({ collection: 'profils', id: pose.profil, depth: 0 })
+	return payload.findByID({ collection: 'profiles', id: pose.profil, depth: 0 })
 }
 
 /** Every media of the bench, read with every right. */
@@ -86,7 +86,7 @@ async function contenuDuJeu(bilan: BilanDesProfils) {
 			const profil = await profilDu(bilan, type)
 			const compte: Pro = await payload.findByID({ collection: 'pros', id: Number(idDe(profil.pro)), depth: 0 })
 			return {
-				compte: { email: compte.email, nom: compte.nom, verifie: compte._verified },
+				compte: { email: compte.email, nom: compte.name, verifie: compte._verified },
 				profil: { ...(sansIdentite(profil) as object), pro: undefined, photoPrincipale: undefined, galerie: undefined },
 				photoPrincipale: await photo(idDe(profil.photoPrincipale)),
 				galerie: await Promise.all((profil.galerie ?? []).map(id => photo(idDe(id)))),
@@ -116,12 +116,12 @@ describe('Le jeu du banc : les 12 profils types', () => {
 		expect(bilan.cible).toBe('banc')
 		expect(bilan.crees).toEqual(CLES)
 		expect(bilan.presents).toEqual([])
-		expect((await payload.count({ collection: 'profils' })).totalDocs).toBe(12)
+		expect((await payload.count({ collection: 'profiles' })).totalDocs).toBe(12)
 		expect((await payload.count({ collection: 'pros' })).totalDocs).toBe(12)
 		for (const type of PROFILS_DU_JEU) {
 			const profil = await profilDu(bilan, type)
 			const compte = await payload.findByID({ collection: 'pros', id: Number(idDe(profil.pro)), depth: 0 })
-			expect({ cle: type.cle, email: compte.email, nom: compte.nom, confirme: compte._verified }).toEqual({
+			expect({ cle: type.cle, email: compte.email, nom: compte.name, confirme: compte._verified }).toEqual({
 				cle: type.cle,
 				...type.compte,
 				confirme: true,

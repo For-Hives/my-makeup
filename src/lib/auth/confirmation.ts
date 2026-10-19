@@ -38,7 +38,7 @@ export async function confirmerLEmail(
 	const debut = Date.now()
 	const resultat = await confirmer(payload, code)
 	try {
-		await journal?.({ type: 'confirmation', code: resultat === 'ok' ? 'ok' : resultat, dureeMs: Date.now() - debut })
+		await journal?.({ type: 'confirmation', code: resultat === 'ok' ? 'ok' : resultat, durationMs: Date.now() - debut })
 	} catch {
 		// The journal is not the confirmation's to fail.
 	}

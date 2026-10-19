@@ -19,7 +19,7 @@ export async function GET(): Promise<Response> {
 	const contexte = await utilisatriceDeLaRequete()
 	if (contexte === null) return Response.json({ pid: null }, { headers: entetes })
 	const { docs } = await contexte.payload.find({
-		collection: 'profils',
+		collection: 'profiles',
 		depth: 0,
 		limit: 1,
 		overrideAccess: true,

@@ -41,7 +41,7 @@ export const ADAPTATEUR_TALENTS: Adaptateur = {
 		seo_title: 'texte',
 		description: 'texte',
 		seo_description: 'texte',
-		titreDeLaPage: 'texte',
+		pageTitle: 'texte',
 		content: 'texte',
 		_status: 'texte',
 		publishedAt: 'date',
@@ -49,7 +49,7 @@ export const ADAPTATEUR_TALENTS: Adaptateur = {
 		updatedAt: 'date',
 	},
 	// The source has no title for the tab: the import fills it in, and keeps what the newsroom typed.
-	amorces: ['titreDeLaPage'],
+	amorces: ['pageTitle'],
 	options: attendu => ({ brouillon: attendu.valeurs._status === 'draft' }),
 }
 
@@ -70,9 +70,9 @@ export function talentAttendu(ligne: LigneTalent): Attendu {
 			publishedAt: ligne.published_at,
 			createdAt: ligne.created_at,
 			updatedAt: ligne.updated_at,
-			...(titreDeLaPage === undefined ? {} : { titreDeLaPage }),
+			...(titreDeLaPage === undefined ? {} : { pageTitle: titreDeLaPage }),
 		},
-		ecarts: titreDeLaPage === undefined ? [] : [{ champ: 'titreDeLaPage', reference: REFERENCES.titreDesPagesTalent }],
+		ecarts: titreDeLaPage === undefined ? [] : [{ champ: 'pageTitle', reference: REFERENCES.titreDesPagesTalent }],
 	}
 }
 

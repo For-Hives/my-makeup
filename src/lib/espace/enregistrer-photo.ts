@@ -27,7 +27,7 @@ export async function enregistrerPhotoPrincipale(
 		const id = await identifiantDuProfilAEcrire(payload, utilisateur)
 		if (id === null) return { ok: false, message: MESSAGE_ECHEC }
 		const stocke = await payload.update({
-			collection: 'profils',
+			collection: 'profiles',
 			data: { photoPrincipale: Number(lue.data.photoPrincipale) },
 			depth: 0,
 			id,

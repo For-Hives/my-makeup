@@ -9,11 +9,11 @@
  * one changed in the v3. So the run refuses, before any write, a target that carries such a trace:
  *
  * - a sign-in or a new password that succeeded in the v3, read in the journal of authentication
- *   (`auth-evenements`), which the import never writes;
- * - an account with a last sign-in date (`pros.derniereConnexion`, ticket 077): the journal is purged
+ *   (`auth-events`), which the import never writes;
+ * - an account with a last sign-in date (`pros.lastSignInAt`, ticket 077): the journal is purged
  *   after 90 days, this date is not, and a Google or Facebook account never had a legacy hash to lose;
  * - an account that holds no legacy hash where the source gives one: a sign-in or a reset erased it;
- * - an account of the source that was deleted in the v3 (collection `comptes-supprimes`, written by the
+ * - an account of the source that was deleted in the v3 (collection `deleted-accounts`, written by the
  *   deletion itself and never purged): the source still holds it, and a run would bring it back with its
  *   public profile.
  *
@@ -44,7 +44,7 @@ export interface TracesDeLaBascule {
 /** The identifiers on the old site of the accounts deleted in the v3: all that is left of them. */
 export async function comptesSupprimesDansLaV3(payload: Payload): Promise<Set<number>> {
 	const { docs } = await payload.find({
-		collection: 'comptes-supprimes',
+		collection: 'deleted-accounts',
 		depth: 0,
 		limit: 0,
 		pagination: false,
@@ -62,12 +62,12 @@ export async function tracesDeLaBascule(
 ): Promise<TracesDeLaBascule> {
 	const { totalDocs } = await payload.count({
 		collection: COLLECTION_JOURNAL,
-		where: { and: [{ type: { in: ['connexion', 'reinitialisation'] } }, { code: { in: ['ok', 'heritee'] } }] },
+		where: { and: [{ type: { in: ['sign-in', 'password-reset'] } }, { code: { in: ['ok', 'heritee'] } }] },
 		overrideAccess: true,
 	})
 	const { totalDocs: comptesConnectes } = await payload.count({
 		collection: 'pros',
-		where: { derniereConnexion: { exists: true } },
+		where: { lastSignInAt: { exists: true } },
 		overrideAccess: true,
 	})
 	const dansLaCible = new Map(

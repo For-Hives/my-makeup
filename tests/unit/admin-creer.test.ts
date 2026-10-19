@@ -37,9 +37,9 @@ describe('Les arguments de la commande', () => {
 	})
 
 	test('le rôle et la cible distante se disent par des options', () => {
-		expect(lireLesArguments(['a@example.test', '--role=redaction', '--cible-distante'])).toEqual({
+		expect(lireLesArguments(['a@example.test', '--role=editor', '--cible-distante'])).toEqual({
 			email: 'a@example.test',
-			role: 'redaction',
+			role: 'editor',
 			cibleDistante: true,
 		})
 	})

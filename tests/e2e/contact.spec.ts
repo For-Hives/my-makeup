@@ -49,7 +49,9 @@ async function remplir(page: Page, s: Saisie) {
 
 async function lignesDe(email: string) {
 	const payload = await payloadDeTest()
-	return (await payload.find({ collection: 'demandes', where: { email: { equals: email } }, depth: 0, limit: 30 })).docs
+	return (
+		await payload.find({ collection: 'contact-requests', where: { email: { equals: email } }, depth: 0, limit: 30 })
+	).docs
 }
 
 async function mailsDe(email: string): Promise<Mail[]> {
@@ -86,8 +88,8 @@ test.describe('E50 : le message est écrit en base et envoyé à l’équipe', {
 
 		const lignes = await lignesDe(s.email)
 		expect(lignes).toHaveLength(1)
-		expect(lignes[0]).toMatchObject({ type: 'contact', prenom: s.prenom, nom: s.nom, telephone: s.telephone })
-		await expect.poll(async () => (await lignesDe(s.email))[0]?.statut).toBe('transmise')
+		expect(lignes[0]).toMatchObject({ type: 'contact', firstName: s.prenom, lastName: s.nom, phone: s.telephone })
+		await expect.poll(async () => (await lignesDe(s.email))[0]?.status).toBe('forwarded')
 	})
 
 	test('aucune violation grave d’accessibilité, avec le formulaire vide et avec ses erreurs', async ({ page }) => {

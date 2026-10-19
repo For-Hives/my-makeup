@@ -5,9 +5,9 @@ import { lienDuFiltre, whereDuFiltre } from '../../src/lib/compte/filtres-admin'
 describe('Les filtres de la liste des comptes', () => {
 	test('« non confirmés » et « bloqués » lisent les cases stockées', () => {
 		expect(whereDuFiltre('non-confirmes', [])).toEqual({ _verified: { equals: false } })
-		expect(whereDuFiltre('bloques', [1])).toEqual({ bloque: { equals: true } })
+		expect(whereDuFiltre('bloques', [1])).toEqual({ blocked: { equals: true } })
 		expect(lienDuFiltre('non-confirmes', [])).toBe('/admin/collections/pros?where[_verified][equals]=false')
-		expect(lienDuFiltre('bloques', [])).toBe('/admin/collections/pros?where[bloque][equals]=true')
+		expect(lienDuFiltre('bloques', [])).toBe('/admin/collections/pros?where[blocked][equals]=true')
 	})
 
 	test('« sans profil » écarte les propriétaires de profils, en une valeur à virgules (la forme que le panneau lit)', () => {

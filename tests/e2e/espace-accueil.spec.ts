@@ -29,8 +29,8 @@ test.afterEach(async () => {
 	for (const email of creees.splice(0)) {
 		const { docs } = await payload.find({ collection: 'pros', depth: 0, where: { email: { equals: email } } })
 		for (const compte of docs) {
-			const profils = await payload.find({ collection: 'profils', depth: 0, where: { pro: { equals: compte.id } } })
-			for (const { id } of profils.docs) await payload.delete({ collection: 'profils', id }).catch(() => undefined)
+			const profils = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })
+			for (const { id } of profils.docs) await payload.delete({ collection: 'profiles', id }).catch(() => undefined)
 			await payload.delete({ collection: 'pros', id: compte.id }).catch(() => undefined)
 		}
 	}
@@ -48,7 +48,7 @@ async function nouveauCompte(): Promise<string> {
 	const payload = await payloadDeTest()
 	await payload.create({
 		collection: 'pros',
-		data: { email, password: MOT_DE_PASSE, nom: `Accueil ${aleatoireEnLettres()}`, _verified: true },
+		data: { email, password: MOT_DE_PASSE, name: `Accueil ${aleatoireEnLettres()}`, _verified: true },
 		disableVerificationEmail: true,
 		overrideAccess: true,
 	})
@@ -86,7 +86,7 @@ const titre = (page: Page) => page.locator('#accueil-titre-etape')
 async function profilDe(email: string) {
 	const payload = await payloadDeTest()
 	const compte = (await payload.find({ collection: 'pros', depth: 0, where: { email: { equals: email } } })).docs[0]
-	const profil = (await payload.find({ collection: 'profils', depth: 0, where: { pro: { equals: compte?.id } } }))
+	const profil = (await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte?.id } } }))
 		.docs[0]
 	if (!profil) throw new Error('pas de profil')
 	return profil
@@ -300,7 +300,7 @@ test.describe('E02 : l’accueil en trois étapes', { tag: '@mobile' }, () => {
 		await context.addCookies(compte.session.cookies)
 		const payload = await payloadDeTest()
 		const profils = () =>
-			payload.find({ collection: 'profils', depth: 0, where: { pro: { equals: compte.id } } }).then(r => r.docs)
+			payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } }).then(r => r.docs)
 		expect(await profils()).toHaveLength(0)
 		try {
 			await page.goto('/auth/profil')
@@ -312,7 +312,7 @@ test.describe('E02 : l’accueil en trois étapes', { tag: '@mobile' }, () => {
 			await page.reload()
 			expect(await profils()).toHaveLength(1)
 		} finally {
-			for (const { id } of await profils()) await payload.delete({ collection: 'profils', id }).catch(() => undefined)
+			for (const { id } of await profils()) await payload.delete({ collection: 'profiles', id }).catch(() => undefined)
 			await payload.delete({ collection: 'pros', id: compte.id }).catch(() => undefined)
 		}
 	})

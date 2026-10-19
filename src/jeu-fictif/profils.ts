@@ -29,7 +29,7 @@ import { LONGUEUR_MAX_EMAIL, LONGUEUR_MAX_LIEN, LONGUEUR_MAX_TELEPHONE } from '.
 import { LONGUEUR_DESCRIPTION, LONGUEUR_NOM } from '../lib/profil/listes'
 import type { StatutDuProfil } from '../lib/profil/statut'
 import { BORNES_DU_RAYON_KM } from '../lib/profil/zone'
-import type { Profil } from '../payload-types'
+import type { Profile } from '../payload-types'
 
 /** The photos of the set, in ./photos/: 400 × 400, WebP, under 30 KB each. */
 export const PHOTOS_DU_JEU = [
@@ -68,7 +68,7 @@ type ChampsDuServeur =
 	| 'updatedAt'
 
 /** What the set writes on a profile: what a makeup artist or an admin writes. */
-export type DonneesDuProfil = Partial<Omit<Profil, ChampsDuServeur>>
+export type DonneesDuProfil = Partial<Omit<Profile, ChampsDuServeur>>
 
 /** What the server must compute and store for a profile of the set (ticket 044). */
 export interface EtatAttendu {

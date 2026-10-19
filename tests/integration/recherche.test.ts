@@ -41,7 +41,7 @@ async function poser(cle: string, profil: Record<string, unknown>): Promise<void
 		disableVerificationEmail: true,
 	})
 	await payload.create({
-		collection: 'profils',
+		collection: 'profiles',
 		data: { pro: pro.id, slug: `recherche-${cle}`, prenom: 'Essai', nom: cle, ...profil } as never,
 	})
 }

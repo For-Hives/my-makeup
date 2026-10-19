@@ -166,7 +166,7 @@ describe('Payload speaks French only, whatever the request asks for (ticket 221)
 		const { t } = await initI18n({ config: (await configUnder(development)).i18n, context: 'api', language: 'fr' })
 
 		const refus = new ValidationError(
-			{ collection: 'profils', errors: [{ label: 'Téléphone', message: 'Trop long.', path: 'telephone' }] },
+			{ collection: 'profiles', errors: [{ label: 'Téléphone', message: 'Trop long.', path: 'telephone' }] },
 			t
 		)
 		// Payload's French puts a no-break space before the colon.

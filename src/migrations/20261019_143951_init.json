@@ -106,7 +106,7 @@
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
-          "default": "'redaction'"
+          "default": "'editor'"
         },
         "updated_at": {
           "name": "updated_at",
@@ -311,21 +311,21 @@
           "primaryKey": true,
           "notNull": true
         },
-        "nom": {
-          "name": "nom",
+        "name": {
+          "name": "name",
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
         },
-        "bloque": {
-          "name": "bloque",
+        "blocked": {
+          "name": "blocked",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
           "default": false
         },
-        "derniere_connexion": {
-          "name": "derniere_connexion",
+        "last_sign_in_at": {
+          "name": "last_sign_in_at",
           "type": "timestamp(3) with time zone",
           "primaryKey": false,
           "notNull": false
@@ -480,8 +480,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.profils_prestations_options": {
-      "name": "profils_prestations_options",
+    "public.profiles_prestations_options": {
+      "name": "profiles_prestations_options",
       "schema": "",
       "columns": {
         "_order": {
@@ -528,8 +528,8 @@
         }
       },
       "indexes": {
-        "profils_prestations_options_order_idx": {
-          "name": "profils_prestations_options_order_idx",
+        "profiles_prestations_options_order_idx": {
+          "name": "profiles_prestations_options_order_idx",
           "columns": [
             {
               "expression": "_order",
@@ -543,8 +543,8 @@
           "method": "btree",
           "with": {}
         },
-        "profils_prestations_options_parent_id_idx": {
-          "name": "profils_prestations_options_parent_id_idx",
+        "profiles_prestations_options_parent_id_idx": {
+          "name": "profiles_prestations_options_parent_id_idx",
           "columns": [
             {
               "expression": "_parent_id",
@@ -560,10 +560,10 @@
         }
       },
       "foreignKeys": {
-        "profils_prestations_options_parent_id_fk": {
-          "name": "profils_prestations_options_parent_id_fk",
-          "tableFrom": "profils_prestations_options",
-          "tableTo": "profils_prestations",
+        "profiles_prestations_options_parent_id_fk": {
+          "name": "profiles_prestations_options_parent_id_fk",
+          "tableFrom": "profiles_prestations_options",
+          "tableTo": "profiles_prestations",
           "columnsFrom": [
             "_parent_id"
           ],
@@ -580,8 +580,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.profils_prestations": {
-      "name": "profils_prestations",
+    "public.profiles_prestations": {
+      "name": "profiles_prestations",
       "schema": "",
       "columns": {
         "_order": {
@@ -628,8 +628,8 @@
         }
       },
       "indexes": {
-        "profils_prestations_order_idx": {
-          "name": "profils_prestations_order_idx",
+        "profiles_prestations_order_idx": {
+          "name": "profiles_prestations_order_idx",
           "columns": [
             {
               "expression": "_order",
@@ -643,8 +643,8 @@
           "method": "btree",
           "with": {}
         },
-        "profils_prestations_parent_id_idx": {
-          "name": "profils_prestations_parent_id_idx",
+        "profiles_prestations_parent_id_idx": {
+          "name": "profiles_prestations_parent_id_idx",
           "columns": [
             {
               "expression": "_parent_id",
@@ -660,10 +660,10 @@
         }
       },
       "foreignKeys": {
-        "profils_prestations_parent_id_fk": {
-          "name": "profils_prestations_parent_id_fk",
-          "tableFrom": "profils_prestations",
-          "tableTo": "profils",
+        "profiles_prestations_parent_id_fk": {
+          "name": "profiles_prestations_parent_id_fk",
+          "tableFrom": "profiles_prestations",
+          "tableTo": "profiles",
           "columnsFrom": [
             "_parent_id"
           ],
@@ -680,8 +680,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.profils_competences": {
-      "name": "profils_competences",
+    "public.profiles_competences": {
+      "name": "profiles_competences",
       "schema": "",
       "columns": {
         "_order": {
@@ -716,8 +716,8 @@
         }
       },
       "indexes": {
-        "profils_competences_order_idx": {
-          "name": "profils_competences_order_idx",
+        "profiles_competences_order_idx": {
+          "name": "profiles_competences_order_idx",
           "columns": [
             {
               "expression": "_order",
@@ -731,8 +731,8 @@
           "method": "btree",
           "with": {}
         },
-        "profils_competences_parent_id_idx": {
-          "name": "profils_competences_parent_id_idx",
+        "profiles_competences_parent_id_idx": {
+          "name": "profiles_competences_parent_id_idx",
           "columns": [
             {
               "expression": "_parent_id",
@@ -748,10 +748,10 @@
         }
       },
       "foreignKeys": {
-        "profils_competences_parent_id_fk": {
-          "name": "profils_competences_parent_id_fk",
-          "tableFrom": "profils_competences",
-          "tableTo": "profils",
+        "profiles_competences_parent_id_fk": {
+          "name": "profiles_competences_parent_id_fk",
+          "tableFrom": "profiles_competences",
+          "tableTo": "profiles",
           "columnsFrom": [
             "_parent_id"
           ],
@@ -768,8 +768,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.profils_langues": {
-      "name": "profils_langues",
+    "public.profiles_langues": {
+      "name": "profiles_langues",
       "schema": "",
       "columns": {
         "_order": {
@@ -798,8 +798,8 @@
         }
       },
       "indexes": {
-        "profils_langues_order_idx": {
-          "name": "profils_langues_order_idx",
+        "profiles_langues_order_idx": {
+          "name": "profiles_langues_order_idx",
           "columns": [
             {
               "expression": "_order",
@@ -813,8 +813,8 @@
           "method": "btree",
           "with": {}
         },
-        "profils_langues_parent_id_idx": {
-          "name": "profils_langues_parent_id_idx",
+        "profiles_langues_parent_id_idx": {
+          "name": "profiles_langues_parent_id_idx",
           "columns": [
             {
               "expression": "_parent_id",
@@ -830,10 +830,10 @@
         }
       },
       "foreignKeys": {
-        "profils_langues_parent_id_fk": {
-          "name": "profils_langues_parent_id_fk",
-          "tableFrom": "profils_langues",
-          "tableTo": "profils",
+        "profiles_langues_parent_id_fk": {
+          "name": "profiles_langues_parent_id_fk",
+          "tableFrom": "profiles_langues",
+          "tableTo": "profiles",
           "columnsFrom": [
             "_parent_id"
           ],
@@ -850,8 +850,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.profils_formations": {
-      "name": "profils_formations",
+    "public.profiles_formations": {
+      "name": "profiles_formations",
       "schema": "",
       "columns": {
         "_order": {
@@ -898,8 +898,8 @@
         }
       },
       "indexes": {
-        "profils_formations_order_idx": {
-          "name": "profils_formations_order_idx",
+        "profiles_formations_order_idx": {
+          "name": "profiles_formations_order_idx",
           "columns": [
             {
               "expression": "_order",
@@ -913,8 +913,8 @@
           "method": "btree",
           "with": {}
         },
-        "profils_formations_parent_id_idx": {
-          "name": "profils_formations_parent_id_idx",
+        "profiles_formations_parent_id_idx": {
+          "name": "profiles_formations_parent_id_idx",
           "columns": [
             {
               "expression": "_parent_id",
@@ -930,10 +930,10 @@
         }
       },
       "foreignKeys": {
-        "profils_formations_parent_id_fk": {
-          "name": "profils_formations_parent_id_fk",
-          "tableFrom": "profils_formations",
-          "tableTo": "profils",
+        "profiles_formations_parent_id_fk": {
+          "name": "profiles_formations_parent_id_fk",
+          "tableFrom": "profiles_formations",
+          "tableTo": "profiles",
           "columnsFrom": [
             "_parent_id"
           ],
@@ -950,8 +950,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.profils_experiences": {
-      "name": "profils_experiences",
+    "public.profiles_experiences": {
+      "name": "profiles_experiences",
       "schema": "",
       "columns": {
         "_order": {
@@ -1010,8 +1010,8 @@
         }
       },
       "indexes": {
-        "profils_experiences_order_idx": {
-          "name": "profils_experiences_order_idx",
+        "profiles_experiences_order_idx": {
+          "name": "profiles_experiences_order_idx",
           "columns": [
             {
               "expression": "_order",
@@ -1025,8 +1025,8 @@
           "method": "btree",
           "with": {}
         },
-        "profils_experiences_parent_id_idx": {
-          "name": "profils_experiences_parent_id_idx",
+        "profiles_experiences_parent_id_idx": {
+          "name": "profiles_experiences_parent_id_idx",
           "columns": [
             {
               "expression": "_parent_id",
@@ -1042,10 +1042,10 @@
         }
       },
       "foreignKeys": {
-        "profils_experiences_parent_id_fk": {
-          "name": "profils_experiences_parent_id_fk",
-          "tableFrom": "profils_experiences",
-          "tableTo": "profils",
+        "profiles_experiences_parent_id_fk": {
+          "name": "profiles_experiences_parent_id_fk",
+          "tableFrom": "profiles_experiences",
+          "tableTo": "profiles",
           "columnsFrom": [
             "_parent_id"
           ],
@@ -1062,8 +1062,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.profils": {
-      "name": "profils",
+    "public.profiles": {
+      "name": "profiles",
       "schema": "",
       "columns": {
         "id": {
@@ -1226,7 +1226,7 @@
         },
         "source_consentement": {
           "name": "source_consentement",
-          "type": "enum_profils_source_consentement",
+          "type": "enum_profiles_source_consentement",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": false
@@ -1245,7 +1245,7 @@
         },
         "statut": {
           "name": "statut",
-          "type": "enum_profils_statut",
+          "type": "enum_profiles_statut",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": false,
@@ -1253,7 +1253,7 @@
         },
         "statut_choisi": {
           "name": "statut_choisi",
-          "type": "enum_profils_statut_choisi",
+          "type": "enum_profiles_statut_choisi",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": false,
@@ -1361,8 +1361,8 @@
         }
       },
       "indexes": {
-        "profils_pro_idx": {
-          "name": "profils_pro_idx",
+        "profiles_pro_idx": {
+          "name": "profiles_pro_idx",
           "columns": [
             {
               "expression": "pro_id",
@@ -1376,8 +1376,8 @@
           "method": "btree",
           "with": {}
         },
-        "profils_slug_idx": {
-          "name": "profils_slug_idx",
+        "profiles_slug_idx": {
+          "name": "profiles_slug_idx",
           "columns": [
             {
               "expression": "slug",
@@ -1391,8 +1391,8 @@
           "method": "btree",
           "with": {}
         },
-        "profils_photo_principale_idx": {
-          "name": "profils_photo_principale_idx",
+        "profiles_photo_principale_idx": {
+          "name": "profiles_photo_principale_idx",
           "columns": [
             {
               "expression": "photo_principale_id",
@@ -1406,8 +1406,8 @@
           "method": "btree",
           "with": {}
         },
-        "profils_strapi_id_idx": {
-          "name": "profils_strapi_id_idx",
+        "profiles_strapi_id_idx": {
+          "name": "profiles_strapi_id_idx",
           "columns": [
             {
               "expression": "strapi_id",
@@ -1421,8 +1421,8 @@
           "method": "btree",
           "with": {}
         },
-        "profils_statut_idx": {
-          "name": "profils_statut_idx",
+        "profiles_statut_idx": {
+          "name": "profiles_statut_idx",
           "columns": [
             {
               "expression": "statut",
@@ -1436,8 +1436,8 @@
           "method": "btree",
           "with": {}
         },
-        "profils_updated_at_idx": {
-          "name": "profils_updated_at_idx",
+        "profiles_updated_at_idx": {
+          "name": "profiles_updated_at_idx",
           "columns": [
             {
               "expression": "updated_at",
@@ -1451,8 +1451,8 @@
           "method": "btree",
           "with": {}
         },
-        "profils_created_at_idx": {
-          "name": "profils_created_at_idx",
+        "profiles_created_at_idx": {
+          "name": "profiles_created_at_idx",
           "columns": [
             {
               "expression": "created_at",
@@ -1468,9 +1468,9 @@
         }
       },
       "foreignKeys": {
-        "profils_pro_id_pros_id_fk": {
-          "name": "profils_pro_id_pros_id_fk",
-          "tableFrom": "profils",
+        "profiles_pro_id_pros_id_fk": {
+          "name": "profiles_pro_id_pros_id_fk",
+          "tableFrom": "profiles",
           "tableTo": "pros",
           "columnsFrom": [
             "pro_id"
@@ -1481,9 +1481,9 @@
           "onDelete": "set null",
           "onUpdate": "no action"
         },
-        "profils_photo_principale_id_media_id_fk": {
-          "name": "profils_photo_principale_id_media_id_fk",
-          "tableFrom": "profils",
+        "profiles_photo_principale_id_media_id_fk": {
+          "name": "profiles_photo_principale_id_media_id_fk",
+          "tableFrom": "profiles",
           "tableTo": "media",
           "columnsFrom": [
             "photo_principale_id"
@@ -1501,8 +1501,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.profils_rels": {
-      "name": "profils_rels",
+    "public.profiles_rels": {
+      "name": "profiles_rels",
       "schema": "",
       "columns": {
         "id": {
@@ -1537,8 +1537,8 @@
         }
       },
       "indexes": {
-        "profils_rels_order_idx": {
-          "name": "profils_rels_order_idx",
+        "profiles_rels_order_idx": {
+          "name": "profiles_rels_order_idx",
           "columns": [
             {
               "expression": "order",
@@ -1552,8 +1552,8 @@
           "method": "btree",
           "with": {}
         },
-        "profils_rels_parent_idx": {
-          "name": "profils_rels_parent_idx",
+        "profiles_rels_parent_idx": {
+          "name": "profiles_rels_parent_idx",
           "columns": [
             {
               "expression": "parent_id",
@@ -1567,8 +1567,8 @@
           "method": "btree",
           "with": {}
         },
-        "profils_rels_path_idx": {
-          "name": "profils_rels_path_idx",
+        "profiles_rels_path_idx": {
+          "name": "profiles_rels_path_idx",
           "columns": [
             {
               "expression": "path",
@@ -1582,8 +1582,8 @@
           "method": "btree",
           "with": {}
         },
-        "profils_rels_media_id_idx": {
-          "name": "profils_rels_media_id_idx",
+        "profiles_rels_media_id_idx": {
+          "name": "profiles_rels_media_id_idx",
           "columns": [
             {
               "expression": "media_id",
@@ -1599,10 +1599,10 @@
         }
       },
       "foreignKeys": {
-        "profils_rels_parent_fk": {
-          "name": "profils_rels_parent_fk",
-          "tableFrom": "profils_rels",
-          "tableTo": "profils",
+        "profiles_rels_parent_fk": {
+          "name": "profiles_rels_parent_fk",
+          "tableFrom": "profiles_rels",
+          "tableTo": "profiles",
           "columnsFrom": [
             "parent_id"
           ],
@@ -1612,9 +1612,9 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "profils_rels_media_fk": {
-          "name": "profils_rels_media_fk",
-          "tableFrom": "profils_rels",
+        "profiles_rels_media_fk": {
+          "name": "profiles_rels_media_fk",
+          "tableFrom": "profiles_rels",
           "tableTo": "media",
           "columnsFrom": [
             "media_id"
@@ -2078,8 +2078,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "titre_de_la_page": {
-          "name": "titre_de_la_page",
+        "page_title": {
+          "name": "page_title",
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
@@ -2255,8 +2255,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "version_titre_de_la_page": {
-          "name": "version_titre_de_la_page",
+        "version_page_title": {
+          "name": "version_page_title",
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
@@ -3192,8 +3192,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.auth_evenements": {
-      "name": "auth_evenements",
+    "public.auth_events": {
+      "name": "auth_events",
       "schema": "",
       "columns": {
         "id": {
@@ -3204,27 +3204,27 @@
         },
         "type": {
           "name": "type",
-          "type": "enum_auth_evenements_type",
+          "type": "enum_auth_events_type",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
         },
         "code": {
           "name": "code",
-          "type": "enum_auth_evenements_code",
+          "type": "enum_auth_events_code",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
         },
-        "methode": {
-          "name": "methode",
-          "type": "enum_auth_evenements_methode",
+        "method": {
+          "name": "method",
+          "type": "enum_auth_events_method",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": false
         },
-        "duree_ms": {
-          "name": "duree_ms",
+        "duration_ms": {
+          "name": "duration_ms",
           "type": "numeric",
           "primaryKey": false,
           "notNull": false
@@ -3237,8 +3237,8 @@
         }
       },
       "indexes": {
-        "auth_evenements_type_idx": {
-          "name": "auth_evenements_type_idx",
+        "auth_events_type_idx": {
+          "name": "auth_events_type_idx",
           "columns": [
             {
               "expression": "type",
@@ -3252,8 +3252,8 @@
           "method": "btree",
           "with": {}
         },
-        "auth_evenements_code_idx": {
-          "name": "auth_evenements_code_idx",
+        "auth_events_code_idx": {
+          "name": "auth_events_code_idx",
           "columns": [
             {
               "expression": "code",
@@ -3267,11 +3267,11 @@
           "method": "btree",
           "with": {}
         },
-        "auth_evenements_methode_idx": {
-          "name": "auth_evenements_methode_idx",
+        "auth_events_method_idx": {
+          "name": "auth_events_method_idx",
           "columns": [
             {
-              "expression": "methode",
+              "expression": "method",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -3282,8 +3282,8 @@
           "method": "btree",
           "with": {}
         },
-        "auth_evenements_date_idx": {
-          "name": "auth_evenements_date_idx",
+        "auth_events_date_idx": {
+          "name": "auth_events_date_idx",
           "columns": [
             {
               "expression": "date",
@@ -3305,8 +3305,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.demandes": {
-      "name": "demandes",
+    "public.contact_requests": {
+      "name": "contact_requests",
       "schema": "",
       "columns": {
         "id": {
@@ -3317,36 +3317,36 @@
         },
         "type": {
           "name": "type",
-          "type": "enum_demandes_type",
+          "type": "enum_contact_requests_type",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
           "default": "'contact'"
         },
-        "statut": {
-          "name": "statut",
-          "type": "enum_demandes_statut",
+        "status": {
+          "name": "status",
+          "type": "enum_contact_requests_status",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
-          "default": "'nouvelle'"
+          "default": "'new'"
         },
-        "etat_mail": {
-          "name": "etat_mail",
-          "type": "enum_demandes_etat_mail",
+        "mail_status": {
+          "name": "mail_status",
+          "type": "enum_contact_requests_mail_status",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
-          "default": "'en-attente'"
+          "default": "'pending'"
         },
-        "prenom": {
-          "name": "prenom",
+        "first_name": {
+          "name": "first_name",
           "type": "varchar",
           "primaryKey": false,
           "notNull": true
         },
-        "nom": {
-          "name": "nom",
+        "last_name": {
+          "name": "last_name",
           "type": "varchar",
           "primaryKey": false,
           "notNull": true
@@ -3357,8 +3357,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "telephone": {
-          "name": "telephone",
+        "phone": {
+          "name": "phone",
           "type": "varchar",
           "primaryKey": false,
           "notNull": true
@@ -3385,8 +3385,8 @@
         }
       },
       "indexes": {
-        "demandes_type_idx": {
-          "name": "demandes_type_idx",
+        "contact_requests_type_idx": {
+          "name": "contact_requests_type_idx",
           "columns": [
             {
               "expression": "type",
@@ -3400,11 +3400,11 @@
           "method": "btree",
           "with": {}
         },
-        "demandes_statut_idx": {
-          "name": "demandes_statut_idx",
+        "contact_requests_status_idx": {
+          "name": "contact_requests_status_idx",
           "columns": [
             {
-              "expression": "statut",
+              "expression": "status",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -3415,11 +3415,11 @@
           "method": "btree",
           "with": {}
         },
-        "demandes_etat_mail_idx": {
-          "name": "demandes_etat_mail_idx",
+        "contact_requests_mail_status_idx": {
+          "name": "contact_requests_mail_status_idx",
           "columns": [
             {
-              "expression": "etat_mail",
+              "expression": "mail_status",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -3430,8 +3430,8 @@
           "method": "btree",
           "with": {}
         },
-        "demandes_updated_at_idx": {
-          "name": "demandes_updated_at_idx",
+        "contact_requests_updated_at_idx": {
+          "name": "contact_requests_updated_at_idx",
           "columns": [
             {
               "expression": "updated_at",
@@ -3445,8 +3445,8 @@
           "method": "btree",
           "with": {}
         },
-        "demandes_created_at_idx": {
-          "name": "demandes_created_at_idx",
+        "contact_requests_created_at_idx": {
+          "name": "contact_requests_created_at_idx",
           "columns": [
             {
               "expression": "created_at",
@@ -3468,8 +3468,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.comptes_supprimes": {
-      "name": "comptes_supprimes",
+    "public.deleted_accounts": {
+      "name": "deleted_accounts",
       "schema": "",
       "columns": {
         "id": {
@@ -3492,8 +3492,8 @@
         }
       },
       "indexes": {
-        "comptes_supprimes_strapi_id_idx": {
-          "name": "comptes_supprimes_strapi_id_idx",
+        "deleted_accounts_strapi_id_idx": {
+          "name": "deleted_accounts_strapi_id_idx",
           "columns": [
             {
               "expression": "strapi_id",
@@ -3507,8 +3507,8 @@
           "method": "btree",
           "with": {}
         },
-        "comptes_supprimes_date_idx": {
-          "name": "comptes_supprimes_date_idx",
+        "deleted_accounts_date_idx": {
+          "name": "deleted_accounts_date_idx",
           "columns": [
             {
               "expression": "date",
@@ -3702,8 +3702,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "profils_id": {
-          "name": "profils_id",
+        "profiles_id": {
+          "name": "profiles_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
@@ -3726,20 +3726,20 @@
           "primaryKey": false,
           "notNull": false
         },
-        "auth_evenements_id": {
-          "name": "auth_evenements_id",
+        "auth_events_id": {
+          "name": "auth_events_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
         },
-        "demandes_id": {
-          "name": "demandes_id",
+        "contact_requests_id": {
+          "name": "contact_requests_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
         },
-        "comptes_supprimes_id": {
-          "name": "comptes_supprimes_id",
+        "deleted_accounts_id": {
+          "name": "deleted_accounts_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
@@ -3821,11 +3821,11 @@
           "method": "btree",
           "with": {}
         },
-        "payload_locked_documents_rels_profils_id_idx": {
-          "name": "payload_locked_documents_rels_profils_id_idx",
+        "payload_locked_documents_rels_profiles_id_idx": {
+          "name": "payload_locked_documents_rels_profiles_id_idx",
           "columns": [
             {
-              "expression": "profils_id",
+              "expression": "profiles_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -3881,11 +3881,11 @@
           "method": "btree",
           "with": {}
         },
-        "payload_locked_documents_rels_auth_evenements_id_idx": {
-          "name": "payload_locked_documents_rels_auth_evenements_id_idx",
+        "payload_locked_documents_rels_auth_events_id_idx": {
+          "name": "payload_locked_documents_rels_auth_events_id_idx",
           "columns": [
             {
-              "expression": "auth_evenements_id",
+              "expression": "auth_events_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -3896,11 +3896,11 @@
           "method": "btree",
           "with": {}
         },
-        "payload_locked_documents_rels_demandes_id_idx": {
-          "name": "payload_locked_documents_rels_demandes_id_idx",
+        "payload_locked_documents_rels_contact_requests_id_idx": {
+          "name": "payload_locked_documents_rels_contact_requests_id_idx",
           "columns": [
             {
-              "expression": "demandes_id",
+              "expression": "contact_requests_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -3911,11 +3911,11 @@
           "method": "btree",
           "with": {}
         },
-        "payload_locked_documents_rels_comptes_supprimes_id_idx": {
-          "name": "payload_locked_documents_rels_comptes_supprimes_id_idx",
+        "payload_locked_documents_rels_deleted_accounts_id_idx": {
+          "name": "payload_locked_documents_rels_deleted_accounts_id_idx",
           "columns": [
             {
-              "expression": "comptes_supprimes_id",
+              "expression": "deleted_accounts_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -3967,12 +3967,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "payload_locked_documents_rels_profils_fk": {
-          "name": "payload_locked_documents_rels_profils_fk",
+        "payload_locked_documents_rels_profiles_fk": {
+          "name": "payload_locked_documents_rels_profiles_fk",
           "tableFrom": "payload_locked_documents_rels",
-          "tableTo": "profils",
+          "tableTo": "profiles",
           "columnsFrom": [
-            "profils_id"
+            "profiles_id"
           ],
           "columnsTo": [
             "id"
@@ -4019,12 +4019,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "payload_locked_documents_rels_auth_evenements_fk": {
-          "name": "payload_locked_documents_rels_auth_evenements_fk",
+        "payload_locked_documents_rels_auth_events_fk": {
+          "name": "payload_locked_documents_rels_auth_events_fk",
           "tableFrom": "payload_locked_documents_rels",
-          "tableTo": "auth_evenements",
+          "tableTo": "auth_events",
           "columnsFrom": [
-            "auth_evenements_id"
+            "auth_events_id"
           ],
           "columnsTo": [
             "id"
@@ -4032,12 +4032,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "payload_locked_documents_rels_demandes_fk": {
-          "name": "payload_locked_documents_rels_demandes_fk",
+        "payload_locked_documents_rels_contact_requests_fk": {
+          "name": "payload_locked_documents_rels_contact_requests_fk",
           "tableFrom": "payload_locked_documents_rels",
-          "tableTo": "demandes",
+          "tableTo": "contact_requests",
           "columnsFrom": [
-            "demandes_id"
+            "contact_requests_id"
           ],
           "columnsTo": [
             "id"
@@ -4045,12 +4045,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "payload_locked_documents_rels_comptes_supprimes_fk": {
-          "name": "payload_locked_documents_rels_comptes_supprimes_fk",
+        "payload_locked_documents_rels_deleted_accounts_fk": {
+          "name": "payload_locked_documents_rels_deleted_accounts_fk",
           "tableFrom": "payload_locked_documents_rels",
-          "tableTo": "comptes_supprimes",
+          "tableTo": "deleted_accounts",
           "columnsFrom": [
-            "comptes_supprimes_id"
+            "deleted_accounts_id"
           ],
           "columnsTo": [
             "id"
@@ -4404,11 +4404,11 @@
       "schema": "public",
       "values": [
         "admin",
-        "redaction"
+        "editor"
       ]
     },
-    "public.enum_profils_source_consentement": {
-      "name": "enum_profils_source_consentement",
+    "public.enum_profiles_source_consentement": {
+      "name": "enum_profiles_source_consentement",
       "schema": "public",
       "values": [
         "maquilleuse",
@@ -4416,8 +4416,8 @@
         "import"
       ]
     },
-    "public.enum_profils_statut": {
-      "name": "enum_profils_statut",
+    "public.enum_profiles_statut": {
+      "name": "enum_profiles_statut",
       "schema": "public",
       "values": [
         "brouillon",
@@ -4425,8 +4425,8 @@
         "masque"
       ]
     },
-    "public.enum_profils_statut_choisi": {
-      "name": "enum_profils_statut_choisi",
+    "public.enum_profiles_statut_choisi": {
+      "name": "enum_profiles_statut_choisi",
       "schema": "public",
       "values": [
         "automatique",
@@ -4467,24 +4467,24 @@
         "published"
       ]
     },
-    "public.enum_auth_evenements_type": {
-      "name": "enum_auth_evenements_type",
+    "public.enum_auth_events_type": {
+      "name": "enum_auth_events_type",
       "schema": "public",
       "values": [
-        "connexion",
-        "deconnexion",
-        "deconnexion-partout",
-        "inscription",
+        "sign-in",
+        "sign-out",
+        "sign-out-everywhere",
+        "sign-up",
         "confirmation",
-        "renvoi",
-        "mot-de-passe-oublie",
-        "reinitialisation",
-        "blocage",
-        "deblocage"
+        "resend",
+        "forgot-password",
+        "password-reset",
+        "block",
+        "unblock"
       ]
     },
-    "public.enum_auth_evenements_code": {
-      "name": "enum_auth_evenements_code",
+    "public.enum_auth_events_code": {
+      "name": "enum_auth_events_code",
       "schema": "public",
       "values": [
         "ok",
@@ -4506,38 +4506,38 @@
         "champ-piege"
       ]
     },
-    "public.enum_auth_evenements_methode": {
-      "name": "enum_auth_evenements_methode",
+    "public.enum_auth_events_method": {
+      "name": "enum_auth_events_method",
       "schema": "public",
       "values": [
-        "mot-de-passe",
+        "password",
         "google"
       ]
     },
-    "public.enum_demandes_type": {
-      "name": "enum_demandes_type",
+    "public.enum_contact_requests_type": {
+      "name": "enum_contact_requests_type",
       "schema": "public",
       "values": [
         "contact"
       ]
     },
-    "public.enum_demandes_statut": {
-      "name": "enum_demandes_statut",
+    "public.enum_contact_requests_status": {
+      "name": "enum_contact_requests_status",
       "schema": "public",
       "values": [
-        "nouvelle",
-        "transmise",
-        "repondue",
+        "new",
+        "forwarded",
+        "answered",
         "spam"
       ]
     },
-    "public.enum_demandes_etat_mail": {
-      "name": "enum_demandes_etat_mail",
+    "public.enum_contact_requests_mail_status": {
+      "name": "enum_contact_requests_mail_status",
       "schema": "public",
       "values": [
-        "en-attente",
-        "envoye",
-        "echec"
+        "pending",
+        "sent",
+        "failed"
       ]
     }
   },
@@ -4551,6 +4551,6 @@
     "tables": {},
     "columns": {}
   },
-  "id": "15ba810f-d476-49d4-90cf-d817ef927579",
+  "id": "9109b08f-1927-4710-9d2e-4a2defe07678",
   "prevId": "00000000-0000-0000-0000-000000000000"
 }

@@ -11,7 +11,7 @@ const CLES: CleDeFiltre[] = ['non-confirmes', 'sans-profil', 'bloques']
  */
 export async function FiltresDesComptes({ payload }: ServerProps) {
 	const profils = await payload.find({
-		collection: 'profils',
+		collection: 'profiles',
 		depth: 0,
 		limit: 0,
 		pagination: false,

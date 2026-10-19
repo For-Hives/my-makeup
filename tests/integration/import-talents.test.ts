@@ -195,23 +195,21 @@ describe('Ticket 108 : le titre d’onglet des pages talent', () => {
 		await importerSurLeBanc()
 		const payload = await payloadDeTest()
 		const parSlug = async (slug: string) => (await talentsDeLaCible()).find(talent => talent.slug === slug)
-		expect((await parSlug('maquillage-artistique'))?.titreDeLaPage).toBe(
-			TITRES_DES_PAGES_TALENT['maquillage-artistique']
-		)
+		expect((await parSlug('maquillage-artistique'))?.pageTitle).toBe(TITRES_DES_PAGES_TALENT['maquillage-artistique'])
 		// A talent that is not one of the 14 has none.
-		expect((await parSlug('effets-speciaux'))?.titreDeLaPage ?? null).toBeNull()
+		expect((await parSlug('effets-speciaux'))?.pageTitle ?? null).toBeNull()
 
 		// The newsroom rewrites the title; the import keeps it.
 		const saisi = 'Un titre de remplacement saisi par la rédaction ici'
 		const artistique = await parSlug('maquillage-artistique')
-		await payload.update({ collection: 'talents', id: Number(artistique?.id), data: { titreDeLaPage: saisi } })
+		await payload.update({ collection: 'talents', id: Number(artistique?.id), data: { pageTitle: saisi } })
 		const second = await importerSurLeBanc()
 		// The edit moved the date of the update, which the import puts back; the title is not touched.
 		expect(second.collections.talents).toMatchObject({ crees: 0, modifies: 1, inchanges: 2, refuses: [] })
-		expect((await parSlug('maquillage-artistique'))?.titreDeLaPage).toBe(saisi)
+		expect((await parSlug('maquillage-artistique'))?.pageTitle).toBe(saisi)
 		const troisieme = await importerSurLeBanc()
 		expect(troisieme.collections.talents).toMatchObject({ crees: 0, modifies: 0, inchanges: 3, refuses: [] })
-		expect((await parSlug('maquillage-artistique'))?.titreDeLaPage).toBe(saisi)
+		expect((await parSlug('maquillage-artistique'))?.pageTitle).toBe(saisi)
 	}, 60_000)
 })
 

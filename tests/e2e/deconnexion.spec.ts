@@ -64,7 +64,7 @@ test.describe('E10 : la déconnexion', { tag: '@mobile' }, () => {
 		const compter = async () =>
 			(
 				await payload.count({
-					collection: 'auth-evenements',
+					collection: 'auth-events',
 					where: { and: [{ type: { equals: 'deconnexion' } }, { date: { greater_than_equal: depuis } }] },
 				})
 			).totalDocs

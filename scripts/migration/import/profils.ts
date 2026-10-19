@@ -245,7 +245,7 @@ export function dateDeBascule(texte: string): string | null {
 }
 
 export const ADAPTATEUR_PROFILS: Adaptateur = {
-	collection: 'profils',
+	collection: 'profiles',
 	champs: {
 		pro: 'relation',
 		slug: 'texte',

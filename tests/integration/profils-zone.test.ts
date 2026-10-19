@@ -27,7 +27,7 @@ async function maquilleuseEtSonProfil(): Promise<{ compte: Maquilleuse; profil: 
 	const compte = await creerCompte('maquilleuse')
 	const payload = await payloadDeTest()
 	const { docs } = await payload.find({
-		collection: 'profils',
+		collection: 'profiles',
 		depth: 0,
 		limit: 1,
 		where: { pro: { equals: compte.id } },
@@ -39,12 +39,12 @@ async function maquilleuseEtSonProfil(): Promise<{ compte: Maquilleuse; profil: 
 
 /** She changes her own profile through REST. */
 const modifier = (compte: Maquilleuse, profil: number, corps: Record<string, unknown>) =>
-	appelerRest('PATCH', `/api/profils/${profil}?depth=0`, { enTetes: compte.session.enTetes, corps })
+	appelerRest('PATCH', `/api/profiles/${profil}?depth=0`, { enTetes: compte.session.enTetes, corps })
 
 /** The zone as the database holds it, read without access control. */
 async function zoneStockee(profil: number) {
 	const payload = await payloadDeTest()
-	const { commune, rayonKm, aDomicile } = await payload.findByID({ collection: 'profils', depth: 0, id: profil })
+	const { commune, rayonKm, aDomicile } = await payload.findByID({ collection: 'profiles', depth: 0, id: profil })
 	return { commune, rayonKm, aDomicile }
 }
 
@@ -62,7 +62,7 @@ describe('La zone enregistrée se relit telle quelle', () => {
 		expect(enregistre.statut).toBe(200)
 
 		const attendu = { commune: ANNECY_STOCKEE, rayonKm: 30, aDomicile: true }
-		const relu = await appelerRest('GET', `/api/profils/${profil}?depth=0`, { enTetes: compte.session.enTetes })
+		const relu = await appelerRest('GET', `/api/profiles/${profil}?depth=0`, { enTetes: compte.session.enTetes })
 		expect(relu.statut).toBe(200)
 		expect(relu.corps).toMatchObject(attendu)
 		expect(await zoneStockee(profil)).toEqual(attendu)
@@ -212,7 +212,7 @@ describe('Une zone mal formée est refusée en français, et rien ne change', ()
 		// The import's path, the local API, is held by the same rule.
 		const payload = await payloadDeTest()
 		const parLeServeur = await payload
-			.update({ collection: 'profils', id: profil, data: { commune: [] as never } })
+			.update({ collection: 'profiles', id: profil, data: { commune: [] as never } })
 			.catch((erreur: unknown) => erreur)
 		expect(parLeServeur).toBeInstanceOf(ValidationError)
 		expect((await zoneStockee(profil)).commune).toEqual(ANNECY_STOCKEE)
@@ -285,16 +285,16 @@ describe('Une zone mal formée est refusée en français, et rien ne change', ()
 		})
 
 		const refus = await payload
-			.create({ collection: 'profils', data: { pro: compte.id, slug: 'zone-importee', rayonKm: 400 } })
+			.create({ collection: 'profiles', data: { pro: compte.id, slug: 'zone-importee', rayonKm: 400 } })
 			.catch((erreur: unknown) => erreur)
 		expect(refus).toBeInstanceOf(ValidationError)
 		expect((refus as ValidationError).data.errors).toEqual([
 			expect.objectContaining({ path: 'rayonKm', message: MESSAGES_DE_LA_ZONE.rayon }),
 		])
-		expect((await payload.count({ collection: 'profils' })).totalDocs).toBe(0)
+		expect((await payload.count({ collection: 'profiles' })).totalDocs).toBe(0)
 
 		const importe = await payload.create({
-			collection: 'profils',
+			collection: 'profiles',
 			data: { pro: compte.id, slug: 'zone-importee', commune: ANNECY, rayonKm: 30 },
 		})
 		expect(importe).toMatchObject({ commune: ANNECY_STOCKEE, rayonKm: 30, aDomicile: null })
@@ -311,7 +311,7 @@ describe('Les coordonnées de la commune sont celles de son centre, à environ 1
 		const arrondies = { latitude: 48.85, longitude: 2.35 }
 		expect((await zoneStockee(profil)).commune).toMatchObject(arrondies)
 		// With a commune, the profile is published (ticket 044): what the public reads.
-		const publique = await appelerRest('GET', `/api/profils/${profil}?depth=0`)
+		const publique = await appelerRest('GET', `/api/profiles/${profil}?depth=0`)
 		expect(publique.statut).toBe(200)
 		expect((publique.corps as { commune: unknown }).commune).toMatchObject(arrondies)
 	})
@@ -320,7 +320,7 @@ describe('Les coordonnées de la commune sont celles de son centre, à environ 1
 		const { profil } = await maquilleuseEtSonProfil()
 		const payload = await payloadDeTest()
 
-		await payload.update({ collection: 'profils', id: profil, data: { commune: { ...ANNECY, latitude: 45.899247 } } })
+		await payload.update({ collection: 'profiles', id: profil, data: { commune: { ...ANNECY, latitude: 45.899247 } } })
 
 		expect((await zoneStockee(profil)).commune).toEqual(ANNECY_STOCKEE)
 	})
@@ -334,19 +334,19 @@ describe('Lecture anonyme : la commune et son département sortent avec le profi
 		await modifier(brouillon.compte, brouillon.profil, { commune: ANNECY })
 		const payload = await payloadDeTest()
 		// With a commune, the rule of ticket 044 publishes the first; an admin holds the other as a draft.
-		await payload.update({ collection: 'profils', id: brouillon.profil, data: { statutChoisi: 'brouillon' } })
+		await payload.update({ collection: 'profiles', id: brouillon.profil, data: { statutChoisi: 'brouillon' } })
 
 		const attendu = { commune: ANNECY_STOCKEE, rayonKm: 30, aDomicile: true }
-		const seul = await appelerRest('GET', `/api/profils/${profil}?depth=0`)
+		const seul = await appelerRest('GET', `/api/profiles/${profil}?depth=0`)
 		expect(seul.statut).toBe(200)
 		expect(seul.corps).toMatchObject(attendu)
-		const liste = (await appelerRest('GET', '/api/profils?depth=0')).corps as { docs: { id: number }[] }
-		const locale = await payload.find({ collection: 'profils', depth: 0, overrideAccess: false })
+		const liste = (await appelerRest('GET', '/api/profiles?depth=0')).corps as { docs: { id: number }[] }
+		const locale = await payload.find({ collection: 'profiles', depth: 0, overrideAccess: false })
 		for (const docs of [liste.docs, locale.docs]) {
 			expect(docs.map(({ id }) => id)).toEqual([profil])
 			expect(docs[0]).toMatchObject(attendu)
 		}
 
-		expect((await appelerRest('GET', `/api/profils/${brouillon.profil}`)).statut).toBe(404)
+		expect((await appelerRest('GET', `/api/profiles/${brouillon.profil}`)).statut).toBe(404)
 	})
 })

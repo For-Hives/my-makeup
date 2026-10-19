@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test'
-import type { Profil } from '@/payload-types'
+import type { Profile } from '@/payload-types'
 import { creerCompte } from '../outils/fabrique-comptes'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
 import { appelerRest } from '../outils/rest'
@@ -25,10 +25,11 @@ const RESEAUX = {
 async function maquilleusePubliee(contactPublic: boolean) {
 	const compte = await creerCompte('maquilleuse')
 	const payload = await payloadDeTest()
-	const [profil] = (await payload.find({ collection: 'profils', depth: 0, where: { pro: { equals: compte.id } } })).docs
+	const [profil] = (await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } }))
+		.docs
 	if (!profil) throw new Error('La fabrique n’a pas créé de profil.')
-	await payload.update({ collection: 'profils', id: profil.id, data: { statut: 'publie' } })
-	const { statut } = await appelerRest('PATCH', `/api/profils/${profil.id}`, {
+	await payload.update({ collection: 'profiles', id: profil.id, data: { statut: 'publie' } })
+	const { statut } = await appelerRest('PATCH', `/api/profiles/${profil.id}`, {
 		enTetes: compte.session.enTetes,
 		corps: { reseaux: RESEAUX, coordonnees: COORDONNEES, contactPublic },
 	})
@@ -37,9 +38,9 @@ async function maquilleusePubliee(contactPublic: boolean) {
 }
 
 /** The profile as the database holds it, read without access control. */
-async function stocke(id: number): Promise<Profil> {
+async function stocke(id: number): Promise<Profile> {
 	const payload = await payloadDeTest()
-	return payload.findByID({ collection: 'profils', id, depth: 0 })
+	return payload.findByID({ collection: 'profiles', id, depth: 0 })
 }
 
 /** Everything that says how to reach her, or that she chose to be reached. */
@@ -60,7 +61,7 @@ describe('Lecture REST anonyme : réseaux lus, coordonnées absentes même avec 
 		const { id } = await maquilleusePubliee(true)
 		expect((await stocke(id)).contactPublic).toBe(true)
 
-		for (const chemin of [`/api/profils/${id}?depth=0`, '/api/profils?depth=0']) {
+		for (const chemin of [`/api/profiles/${id}?depth=0`, '/api/profiles?depth=0']) {
 			const { statut, corps, texte } = await appelerRest('GET', chemin)
 			expect(statut).toBe(200)
 			const document = ('docs' in (corps as object) ? (corps as { docs: object[] }).docs[0] : corps) as object
@@ -74,10 +75,10 @@ describe('Lecture REST anonyme : réseaux lus, coordonnées absentes même avec 
 	test('la propriétaire lit ses coordonnées, son choix et la trace du consentement', async () => {
 		const { compte, id } = await maquilleusePubliee(true)
 
-		const { corps } = await appelerRest('GET', `/api/profils/${id}?depth=0`, { enTetes: compte.session.enTetes })
+		const { corps } = await appelerRest('GET', `/api/profiles/${id}?depth=0`, { enTetes: compte.session.enTetes })
 
 		expect(corps).toMatchObject({ coordonnees: COORDONNEES, contactPublic: true, sourceConsentement: 'maquilleuse' })
-		expect((corps as Profil).consentiLe).toBeString()
+		expect((corps as Profile).consentiLe).toBeString()
 	})
 })
 
@@ -86,8 +87,8 @@ describe('Un compte redaction est refusé sur les coordonnées (I07, U59)', () =
 		const { id } = await maquilleusePubliee(true)
 		const redaction = await creerCompte('redaction')
 
-		const lecture = await appelerRest('GET', `/api/profils/${id}?depth=0`, { enTetes: redaction.session.enTetes })
-		const ecriture = await appelerRest('PATCH', `/api/profils/${id}`, {
+		const lecture = await appelerRest('GET', `/api/profiles/${id}?depth=0`, { enTetes: redaction.session.enTetes })
+		const ecriture = await appelerRest('PATCH', `/api/profiles/${id}`, {
 			enTetes: redaction.session.enTetes,
 			corps: { coordonnees: { telephone: '06 39 98 00 00', email: 'autre@example.test' } },
 		})
@@ -105,7 +106,7 @@ describe('Activer contactPublic pose la date du serveur ; la maquilleuse ne peut
 		expect(await stocke(id)).toMatchObject({ contactPublic: false, consentiLe: null, sourceConsentement: null })
 
 		const avant = Date.now()
-		const activation = await appelerRest('PATCH', `/api/profils/${id}`, {
+		const activation = await appelerRest('PATCH', `/api/profiles/${id}`, {
 			enTetes: compte.session.enTetes,
 			corps: { contactPublic: true, consentiLe: '2020-01-01T00:00:00.000Z', sourceConsentement: 'import' },
 		})
@@ -119,7 +120,7 @@ describe('Activer contactPublic pose la date du serveur ; la maquilleuse ne peut
 		expect(date).toBeLessThanOrEqual(apres + 1000)
 
 		// A later save that sends another date changes nothing of the trace.
-		await appelerRest('PATCH', `/api/profils/${id}`, {
+		await appelerRest('PATCH', `/api/profiles/${id}`, {
 			enTetes: compte.session.enTetes,
 			corps: { prenom: 'Autre Prénom', consentiLe: '2021-01-01T00:00:00.000Z', sourceConsentement: 'admin' },
 		})
@@ -130,7 +131,7 @@ describe('Activer contactPublic pose la date du serveur ; la maquilleuse ne peut
 		})
 
 		// Switched off: no consent left.
-		await appelerRest('PATCH', `/api/profils/${id}`, {
+		await appelerRest('PATCH', `/api/profiles/${id}`, {
 			enTetes: compte.session.enTetes,
 			corps: { contactPublic: false },
 		})
@@ -141,7 +142,7 @@ describe('Activer contactPublic pose la date du serveur ; la maquilleuse ne peut
 		const { id } = await maquilleusePubliee(false)
 		const admin = await creerCompte('admin')
 
-		const { statut } = await appelerRest('PATCH', `/api/profils/${id}`, {
+		const { statut } = await appelerRest('PATCH', `/api/profiles/${id}`, {
 			enTetes: admin.session.enTetes,
 			corps: { contactPublic: true, sourceConsentement: 'maquilleuse' },
 		})
@@ -153,11 +154,11 @@ describe('Activer contactPublic pose la date du serveur ; la maquilleuse ne peut
 	test('l’import, sans compte, garde la date de la bascule et sa source', async () => {
 		const compte = await creerCompte('maquilleuse')
 		const payload = await payloadDeTest()
-		const [profil] = (await payload.find({ collection: 'profils', where: { pro: { equals: compte.id } } })).docs
+		const [profil] = (await payload.find({ collection: 'profiles', where: { pro: { equals: compte.id } } })).docs
 		const bascule = '2027-02-01T06:00:00.000Z'
 
 		await payload.update({
-			collection: 'profils',
+			collection: 'profiles',
 			id: profil?.id ?? -1,
 			data: { contactPublic: true, consentiLe: bascule, sourceConsentement: 'import' },
 		})
@@ -174,7 +175,7 @@ describe('Un groupe envoyé à null vaut un groupe vide, jamais un 500 (ticket 2
 	])('%s à null, par REST : 200 et le groupe est vidé', async (_cas, corps) => {
 		const { compte, id } = await maquilleusePubliee(false)
 
-		const reponse = await appelerRest('PATCH', `/api/profils/${id}`, { enTetes: compte.session.enTetes, corps })
+		const reponse = await appelerRest('PATCH', `/api/profiles/${id}`, { enTetes: compte.session.enTetes, corps })
 
 		expect(reponse.statut).toBe(200)
 		const profil = await stocke(id)
@@ -187,7 +188,7 @@ describe('Un groupe envoyé à null vaut un groupe vide, jamais un 500 (ticket 2
 		const payload = await payloadDeTest()
 
 		await payload.update({
-			collection: 'profils',
+			collection: 'profiles',
 			id,
 			data: { reseaux: null, coordonnees: null } as never,
 			overrideAccess: true,
@@ -210,7 +211,7 @@ describe('Téléphone de plus de 20 caractères ou email mal formé : refus en f
 	])('%s : 400, le message du champ, rien d’écrit', async (_cas, coordonnees, message) => {
 		const { compte, id } = await maquilleusePubliee(false)
 
-		const { statut, corps } = await appelerRest('PATCH', `/api/profils/${id}`, {
+		const { statut, corps } = await appelerRest('PATCH', `/api/profiles/${id}`, {
 			enTetes: compte.session.enTetes,
 			corps: { coordonnees: { ...COORDONNEES, ...coordonnees } },
 		})
@@ -229,7 +230,7 @@ describe('Un lien de réseau ne nomme que http ou https : la page publique en fa
 	])('%s = %s : 400, le message du champ, rien d’écrit', async (reseau, lien) => {
 		const { compte, id } = await maquilleusePubliee(false)
 
-		const { statut, corps } = await appelerRest('PATCH', `/api/profils/${id}`, {
+		const { statut, corps } = await appelerRest('PATCH', `/api/profiles/${id}`, {
 			enTetes: compte.session.enTetes,
 			corps: { reseaux: { ...RESEAUX, [reseau]: lien } },
 		})
@@ -243,7 +244,7 @@ describe('Un lien de réseau ne nomme que http ou https : la page publique en fa
 		const { compte, id } = await maquilleusePubliee(false)
 		const reseaux = { ...RESEAUX, instagram: '@pseudo_fictif', siteWeb: 'www.example.test' }
 
-		const { statut } = await appelerRest('PATCH', `/api/profils/${id}`, {
+		const { statut } = await appelerRest('PATCH', `/api/profiles/${id}`, {
 			enTetes: compte.session.enTetes,
 			corps: { reseaux },
 		})

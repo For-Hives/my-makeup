@@ -80,7 +80,7 @@ test.describe('E62 : /sitemap.xml', () => {
 			// As many profiles as publishable ones.
 			const payload = await payloadDeTest()
 			const { totalDocs } = await payload.count({
-				collection: 'profils',
+				collection: 'profiles',
 				where: { and: [{ publiable: { equals: true } }, { statut: { equals: 'publie' } }] },
 				overrideAccess: true,
 			})

@@ -160,7 +160,7 @@ describe('Anonyme refusé', () => {
 describe('Ajout du 14/10 : une photo au mauvais identifiant est refusée en 400, jamais en 500', () => {
 	async function profilDe(compte: Compte) {
 		const payload = await payloadDeTest()
-		const [profil] = (await payload.find({ collection: 'profils', depth: 0, where: { pro: { equals: compte.id } } }))
+		const [profil] = (await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } }))
 			.docs
 		if (!profil) throw new Error('La fabrique n’a pas créé de profil.')
 		return profil
@@ -175,7 +175,7 @@ describe('Ajout du 14/10 : une photo au mauvais identifiant est refusée en 400,
 	])('%s : 400 avec le message français, le profil est inchangé', async (_nom, corps) => {
 		const compte = await creerCompte('maquilleuse')
 		const avant = await profilDe(compte)
-		const reponse = await appelerRest('PATCH', `/api/profils/${avant.id}?depth=0`, {
+		const reponse = await appelerRest('PATCH', `/api/profiles/${avant.id}?depth=0`, {
 			enTetes: compte.session.enTetes,
 			corps,
 		})

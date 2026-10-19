@@ -27,7 +27,7 @@ async function lectures(payload: Payload, utilisateur: UtilisateurDeLEspace) {
 	const profil = await profilDeLaMaquilleuse(payload, utilisateur)
 	if (profil === null) throw new Error('pas de profil')
 	const { docs } = await payload.find({
-		collection: 'profils',
+		collection: 'profiles',
 		depth: 0,
 		overrideAccess: true,
 		where: { id: { equals: profil.id } },

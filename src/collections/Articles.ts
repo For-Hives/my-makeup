@@ -17,10 +17,10 @@ const RAFRAICHISSEMENT = rafraichissement('articles')
 /**
  * The articles of the blog, `/blog/<slug>` (plan 01 §6.1; docs/migration/SCHEMA.md, §5.3).
  *
- * - The rules of the talents (`./redaction`): written by the newsroom (`admin` and `redaction`),
+ * - The rules of the talents (`./editor`): written by the newsroom (`admin` and `editor`),
  *   which creates, publishes, unpublishes and deletes; everyone else reads the published articles
  *   only, drafts and versions closed.
- * - The fields keep their names from the old site, but `galery`, a typo, becomes `galerie`. Each
+ * - The fields keep their names from the old site, but `galery`, a typo, becomes `gallery`. Each
  *   article keeps its slug: the import copies it as it is, so the addresses of today stay the same.
  * - `content` is markdown, in a `code` field, without a length limit: Payload limits `text` and
  *   `textarea` to 40 000 characters.
@@ -62,7 +62,7 @@ export const Articles: CollectionConfig<'articles'> = {
 			admin: { language: 'markdown', description: 'En markdown.' },
 		},
 		{
-			name: 'galerie',
+			name: 'gallery',
 			label: 'Galerie',
 			type: 'upload',
 			relationTo: 'media',

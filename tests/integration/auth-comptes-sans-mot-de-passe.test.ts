@@ -30,20 +30,19 @@ async function identite(id: number | string) {
 	const payload = await payloadDeTest()
 	const compte = await payload.findByID({ collection: 'pros', id, depth: 0, overrideAccess: true })
 	const profils = await payload.find({
-		collection: 'profils',
+		collection: 'profiles',
 		depth: 0,
 		overrideAccess: true,
 		where: { pro: { equals: id } },
 	})
 	return {
-		compte: { id: compte.id, email: compte.email, nom: compte.nom, provider: compte.legacyProvider },
+		compte: { id: compte.id, email: compte.email, nom: compte.name, provider: compte.legacyProvider },
 		profils: profils.docs.map(profil => ({ id: profil.id, slug: profil.slug })),
 	}
 }
 
 const evenements = async (type: string) =>
-	(await (await payloadDeTest()).find({ collection: 'auth-evenements', depth: 0, where: { type: { equals: type } } }))
-		.docs
+	(await (await payloadDeTest()).find({ collection: 'auth-events', depth: 0, where: { type: { equals: type } } })).docs
 
 describe.each([
 	['reprise-google', 'google'],

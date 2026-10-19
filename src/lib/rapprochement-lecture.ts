@@ -42,16 +42,16 @@ export async function rapprocherLeStockageEtLaBase(
 		toutLire<{ photoPrincipale?: unknown; galerie?: unknown }>(page =>
 			payload.find({
 				...lecture,
-				collection: 'profils',
+				collection: 'profiles',
 				page,
 				select: { photoPrincipale: true, galerie: true },
 				sort: 'id',
 			})
 		),
-		toutLire<{ galerie?: unknown }>(page =>
-			payload.find({ ...lecture, collection: 'articles', page, select: { galerie: true }, sort: 'id' })
+		toutLire<{ gallery?: unknown }>(page =>
+			payload.find({ ...lecture, collection: 'articles', page, select: { gallery: true }, sort: 'id' })
 		),
-		toutLire<{ version?: { galerie?: unknown } }>(page =>
+		toutLire<{ version?: { gallery?: unknown } }>(page =>
 			payload.findVersions({ ...lecture, collection: 'articles', page, sort: 'id' })
 		),
 	])
@@ -61,8 +61,8 @@ export async function rapprocherLeStockageEtLaBase(
 				...photosNommees(photoPrincipale),
 				...photosNommees(galerie),
 			]),
-			...articles.flatMap(({ galerie }) => photosNommees(galerie)),
-			...versions.flatMap(({ version }) => photosNommees(version?.galerie)),
+			...articles.flatMap(({ gallery }) => photosNommees(gallery)),
+			...versions.flatMap(({ version }) => photosNommees(version?.gallery)),
 		].map(String)
 	)
 	return rapprocher({ objets, medias, mediasUtilises: utilises })

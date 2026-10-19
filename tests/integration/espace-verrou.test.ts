@@ -29,7 +29,7 @@ async function utilisateurDe(payload: Payload, compte: Maquilleuse): Promise<Uti
 
 async function profilStocke(payload: Payload, compte: Maquilleuse) {
 	const { docs } = await payload.find({
-		collection: 'profils',
+		collection: 'profiles',
 		depth: 0,
 		overrideAccess: true,
 		where: { pro: { equals: compte.id } },
@@ -44,7 +44,7 @@ async function ouvrirDansLAdministration(payload: Payload, profil: number, admin
 	return payload.create({
 		collection: 'payload-locked-documents',
 		overrideAccess: true,
-		data: { document: { relationTo: 'profils', value: profil }, user: { relationTo: 'admins', value: Number(admin) } },
+		data: { document: { relationTo: 'profiles', value: profil }, user: { relationTo: 'admins', value: Number(admin) } },
 	})
 }
 

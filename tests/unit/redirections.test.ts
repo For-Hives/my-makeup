@@ -69,7 +69,7 @@ describe('U64 : ce que la forme ne touche pas', () => {
 		}
 		expect(redirectionDeForme('/api/health')).toBeNull()
 		expect(redirectionDeForme('/_next/static/chunks/a.js')).toBeNull()
-		expect(redirectionDeForme('/admin/collections/profils')).toBeNull()
+		expect(redirectionDeForme('/admin/collections/profiles')).toBeNull()
 	})
 
 	test('les fichiers statiques de `public/` ne sont pas interceptés', () => {

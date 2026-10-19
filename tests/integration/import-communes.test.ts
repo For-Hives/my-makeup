@@ -62,7 +62,7 @@ afterAll(async () => {
 async function profils(overrideAccess = true) {
 	const payload = await payloadDeTest()
 	const { docs } = await payload.find({
-		collection: 'profils',
+		collection: 'profiles',
 		depth: 0,
 		pagination: false,
 		overrideAccess,
@@ -104,7 +104,7 @@ describe('Commune simple, avec code postal, et adresse postale : la bonne commun
 		const tout = JSON.stringify(await profils())
 
 		for (const morceau of ['impasse', 'Pinceaux', '74000']) expect(tout).not.toContain(morceau)
-		expect(premier.collections.profils?.communes?.adresses).toEqual([23])
+		expect(premier.collections.profiles?.communes?.adresses).toEqual([23])
 		// The public reads the commune of a published profile, and no street.
 		const publics = await profils(false)
 		expect(publics.find(({ slug }) => slug === 'zoe-lefevre')?.commune).toMatchObject({
@@ -115,7 +115,7 @@ describe('Commune simple, avec code postal, et adresse postale : la bonne commun
 	})
 
 	test('la part des villes renseignées rattachées à une commune est donnée en nombres (cible 90 %)', () => {
-		expect(premier.collections.profils?.communes).toEqual({
+		expect(premier.collections.profiles?.communes).toEqual({
 			villesRenseignees: 11,
 			rattachees: 9,
 			part: 81.8,
@@ -126,7 +126,7 @@ describe('Commune simple, avec code postal, et adresse postale : la bonne commun
 			decidees: [],
 		})
 		expect(premier.ecarts['ville-en-commune']).toBe(11)
-		expect(premier.parite?.profils).toMatchObject({ attendus: 13, egaux: 13, differents: [] })
+		expect(premier.parite?.profiles).toMatchObject({ attendus: 13, egaux: 13, differents: [] })
 	})
 })
 
@@ -147,7 +147,7 @@ describe('Cas ambigu : zone vide, profil « à revoir » ; avec sa ligne de déc
 	test('avec sa ligne de décision : la commune choisie, ou aucune, et le profil n’est plus à revoir', async () => {
 		const rapport = await importerSurLeBanc('reel', { decisions: DECISIONS_DES_COMMUNES })
 
-		expect(rapport.collections.profils).toMatchObject({ crees: 0, modifies: 1 })
+		expect(rapport.collections.profiles).toMatchObject({ crees: 0, modifies: 1 })
 		expect(await communeDe(28)).toEqual({
 			nom: 'Saint-Julien',
 			codeInsee: '69215',
@@ -155,7 +155,7 @@ describe('Cas ambigu : zone vide, profil « à revoir » ; avec sa ligne de déc
 			latitude: 46.03,
 			longitude: 4.65,
 		})
-		expect(rapport.collections.profils?.communes).toMatchObject({
+		expect(rapport.collections.profiles?.communes).toMatchObject({
 			rattachees: 10,
 			part: 90.9,
 			aRevoir: [],
@@ -169,7 +169,7 @@ describe('Cas ambigu : zone vide, profil « à revoir » ; avec sa ligne de déc
 
 		const second = await importerSurLeBanc('reel', { decisions: DECISIONS_DES_COMMUNES })
 
-		expect(second.collections.profils).toMatchObject({ crees: 0, modifies: 0, refuses: [] })
+		expect(second.collections.profiles).toMatchObject({ crees: 0, modifies: 0, refuses: [] })
 		expect(await profils()).toEqual(avant)
 	})
 })
@@ -210,8 +210,8 @@ describe('Le référentiel simulé, et ses réponses gardées pour deux passages
 		expect(demandes).toBe(8)
 		expect(garde.nouvelles()).toBe(8)
 		expect(journal).toHaveLength(demandes)
-		expect(deux.collections.profils).toEqual(un.collections.profils)
-		expect(un.collections.profils).toMatchObject({ crees: 0, modifies: 0 })
+		expect(deux.collections.profiles).toEqual(un.collections.profiles)
+		expect(un.collections.profiles).toMatchObject({ crees: 0, modifies: 0 })
 	})
 })
 

@@ -106,7 +106,7 @@ type GestionnaireDeFichier = NonNullable<UploadConfig['handlers']>[number]
  * of the server, and the address the site gives is the direct one anyway.
  *
  * Payload checks the reading first (`lectureDesMedias`, without an identifier): the public and
- * `redaction` are refused, a makeup artist reaches her own media only, and Payload hands it here.
+ * `editor` are refused, a makeup artist reaches her own media only, and Payload hands it here.
  * For `admin` it looks for nothing: the media is found by its name, and its prefix when the query
  * gives one. A name no media has is not found.
  */
@@ -168,7 +168,7 @@ export const UPLOAD_DES_MEDIAS: UploadConfig = {
  *   reads her own; `admin` reads everything.
  * - A makeup artist sends photos; the server makes her the owner (`owner`), whatever her request
  *   says. She changes and deletes her own media only; `admin` reaches every one.
- * - The newsroom sends the photos of the articles: they belong to nobody, and `redaction` lists,
+ * - The newsroom sends the photos of the articles: they belong to nobody, and `editor` lists,
  *   reads, changes and deletes them, never the photo of a makeup artist (ticket 046).
  * - The owner, the identifier and the formats of the old site are not public.
  * - Payload's route for the file sends to the public address (`versLAdressePublique`, added by

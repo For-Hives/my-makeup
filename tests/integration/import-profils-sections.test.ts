@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { SQL } from 'bun'
 import type { Rapport } from '../../scripts/migration/import/rapport'
 import { parsePrice, prixMinimal } from '../../src/lib/prix'
-import type { Profil } from '../../src/payload-types'
+import type { Profile } from '../../src/payload-types'
 import { importerSurLeBanc } from '../outils/import'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
 import { viderLeStockage } from '../outils/s3'
@@ -136,7 +136,7 @@ const sansIdentifiants = (valeur: unknown): unknown =>
 			: valeur
 
 /** The identifiers Payload gave the rows of every list of every profile, options included. */
-const identifiantsDesLignes = (profils: Profil[]): string[] =>
+const identifiantsDesLignes = (profils: Profile[]): string[] =>
 	profils.flatMap(profil =>
 		[
 			...(profil.competences ?? []),
@@ -147,10 +147,10 @@ const identifiantsDesLignes = (profils: Profil[]): string[] =>
 		].map(ligne => `${profil.strapiId}:${ligne.id}`)
 	)
 
-async function profilsDeLaCible(): Promise<Profil[]> {
+async function profilsDeLaCible(): Promise<Profile[]> {
 	const payload = await payloadDeTest()
 	const { docs } = await payload.find({
-		collection: 'profils',
+		collection: 'profiles',
 		depth: 0,
 		pagination: false,
 		overrideAccess: true,
@@ -209,8 +209,8 @@ describe('Les sections de chaque profil sont reprises dans leur ordre (ticket 06
 				String(profil.strapiId)
 			).toEqual(attendues)
 		}
-		expect(premier.parite?.profils).toMatchObject({ attendus: 13, egaux: 13, differents: [], manquants: [] })
-		expect(premier.collections.profils).toMatchObject({ refuses: [], liensSansLigne: [] })
+		expect(premier.parite?.profiles).toMatchObject({ attendus: 13, egaux: 13, differents: [], manquants: [] })
+		expect(premier.collections.profiles).toMatchObject({ refuses: [], liensSansLigne: [] })
 	})
 
 	test('l’ordre est celui de la table de liens, jamais celui des identifiants ; une ligne en double reste en double', async () => {
@@ -228,7 +228,7 @@ describe('Les sections de chaque profil sont reprises dans leur ordre (ticket 06
 		])
 		// A row no link names belongs to no profile: skill 6, language 4, offer 11.
 		const cible = await profilsDeLaCible()
-		const noms = (liste: (p: Profil) => { nom?: string | null }[] | null | undefined) =>
+		const noms = (liste: (p: Profile) => { nom?: string | null }[] | null | undefined) =>
 			cible.flatMap(profil => (liste(profil) ?? []).map(({ nom }) => nom))
 		expect(noms(p => p.competences)).not.toContain('Maquillage invitée')
 		expect(noms(p => p.langues)).not.toContain('Italien')
@@ -273,7 +273,7 @@ describe('Les sections de chaque profil sont reprises dans leur ordre (ticket 06
 			const chiffreeALaSource = offres.some(({ prixAPartirDe }) => prixAPartirDe !== null)
 			expect(prixMinimal(profil.prestations) !== null, String(profil.strapiId)).toBe(chiffreeALaSource)
 		}
-		const { prix } = premier.collections.profils ?? {}
+		const { prix } = premier.collections.profiles ?? {}
 		const lignesDePrix = cible.flatMap(({ prestations }) => (prestations ?? []).flatMap(o => [o, ...(o.options ?? [])]))
 		expect(prix).toMatchObject({
 			prix: lignesDePrix.length,
@@ -320,8 +320,8 @@ describe('Une ligne hors d’une borne de la v3 et un rayon au-dessus de 200 km 
 			['Cours particulier', 0],
 		])
 		expect(hugo?.statut).toBe('publie')
-		expect(premier.collections.profils).toMatchObject({ refuses: [] })
-		expect(premier.collections.profils?.lignesLaissees).toEqual([
+		expect(premier.collections.profiles).toMatchObject({ refuses: [] })
+		expect(premier.collections.profiles?.lignesLaissees).toEqual([
 			{ profil: 33, liste: 'formations', rang: 1 },
 			{ profil: 33, liste: 'experiences', rang: 1 },
 			{ profil: 33, liste: 'prestations', rang: 2 },
@@ -341,17 +341,17 @@ describe('Une ligne hors d’une borne de la v3 et un rayon au-dessus de 200 km 
 		// 26 holds 400 km at the source: its zone stays empty, it is taken, and listed with the value.
 		expect(rayon(26)).toBeNull()
 		expect(cible.some(({ strapiId }) => strapiId === 26)).toBe(true)
-		expect(premier.collections.profils?.rayonsARevoir).toEqual([{ profil: 26, rayonKm: 400 }])
+		expect(premier.collections.profiles?.rayonsARevoir).toEqual([{ profil: 26, rayonKm: 400 }])
 		expect(premier.ecarts['rayon-200-km']).toBe(1)
 		// Parity: the radius is a compared field, and explained.
-		expect(premier.parite?.profils).toMatchObject({ differents: [], manquants: [], enTrop: [] })
+		expect(premier.parite?.profiles).toMatchObject({ differents: [], manquants: [], enTrop: [] })
 	})
 
 	test('un second passage ne crée ni ne modifie rien', async () => {
 		const second = await importerSurLeBanc()
 
-		expect(second.collections.profils).toMatchObject({ crees: 0, modifies: 0, refuses: [] })
-		expect(second.collections.profils?.lignesLaissees).toHaveLength(4)
+		expect(second.collections.profiles).toMatchObject({ crees: 0, modifies: 0, refuses: [] })
+		expect(second.collections.profiles?.lignesLaissees).toHaveLength(4)
 	})
 })
 
@@ -381,8 +381,8 @@ describe('Les photos de chaque profil (ticket 060)', () => {
 
 		// 108 is a PDF: not adopted, so the gallery of 24 is empty in the v3.
 		expect(camille?.galerie ?? []).toEqual([])
-		expect(premier.collections.profils?.photosNonReprises).toEqual([{ entree: 24, fichier: 108 }])
-		expect(premier.collections.profils?.statutsDifferentsDeLaSource).toEqual([])
+		expect(premier.collections.profiles?.photosNonReprises).toEqual([{ entree: 24, fichier: 108 }])
+		expect(premier.collections.profiles?.statutsDifferentsDeLaSource).toEqual([])
 	})
 })
 
@@ -393,7 +393,7 @@ describe('Un second passage (ticket 060)', () => {
 
 		const second = await importerSurLeBanc()
 
-		expect(second.collections.profils).toMatchObject({ crees: 0, modifies: 0, inchanges: 13, refuses: [] })
+		expect(second.collections.profiles).toMatchObject({ crees: 0, modifies: 0, inchanges: 13, refuses: [] })
 		expect(identifiantsDesLignes(await profilsDeLaCible())).toEqual(identifiants)
 		expect(identifiants.length).toBeGreaterThan(10)
 		expect(await profilsDeLaCible()).toEqual(avant)
@@ -419,7 +419,7 @@ describe('Un lien de liste qui ne nomme aucune ligne (SCHEMA.md §7)', () => {
 
 		const rapport = await importerSurLeBanc()
 
-		expect(rapport.collections.profils).toMatchObject({ crees: 0, modifies: 0, liensSansLigne: [22] })
+		expect(rapport.collections.profiles).toMatchObject({ crees: 0, modifies: 0, liensSansLigne: [22] })
 		expect(await profilsDeLaCible()).toEqual(avant)
 	})
 })

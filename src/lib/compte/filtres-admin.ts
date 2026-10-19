@@ -17,7 +17,7 @@ export const LIBELLES_DES_FILTRES: Record<CleDeFiltre, string> = {
  */
 export function whereDuFiltre(cle: CleDeFiltre, proprietaires: readonly (number | string)[]): Where {
 	if (cle === 'non-confirmes') return { _verified: { equals: false } }
-	if (cle === 'bloques') return { bloque: { equals: true } }
+	if (cle === 'bloques') return { blocked: { equals: true } }
 	return proprietaires.length > 0 ? { id: { not_in: [...proprietaires] } } : { id: { exists: true } }
 }
 
@@ -25,7 +25,7 @@ export function whereDuFiltre(cle: CleDeFiltre, proprietaires: readonly (number 
 export function lienDuFiltre(cle: CleDeFiltre, proprietaires: readonly (number | string)[]): string {
 	const base = '/admin/collections/pros'
 	if (cle === 'non-confirmes') return `${base}?where[_verified][equals]=false`
-	if (cle === 'bloques') return `${base}?where[bloque][equals]=true`
+	if (cle === 'bloques') return `${base}?where[blocked][equals]=true`
 	if (proprietaires.length === 0) return `${base}?where[id][exists]=true`
 	// One value with commas, as the REST API reads `in` and `not_in`: the panel parses its address with `qs`, which
 	// turns an array of more than 20 entries (`[21]=…`) into an object, and the filter then drops them all.

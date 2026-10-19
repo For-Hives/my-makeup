@@ -59,7 +59,7 @@ async function envoyer(compte: Maquilleuse): Promise<Media> {
 
 async function profilDe(compte: { id: number | string }) {
 	const payload = await payloadDeTest()
-	return (await payload.find({ collection: 'profils', depth: 0, where: { pro: { equals: compte.id } } })).docs[0]
+	return (await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })).docs[0]
 }
 
 /** An account with a profile that names a main photo and a gallery photo, and one more photo nobody names. */
@@ -70,7 +70,7 @@ async function compteGarni() {
 	if (!profil) throw new Error('pas de profil')
 	const payload = await payloadDeTest()
 	await payload.update({
-		collection: 'profils',
+		collection: 'profiles',
 		id: profil.id,
 		data: { photoPrincipale: principale.id, galerie: [principale.id, galerie.id] },
 	})
@@ -78,7 +78,7 @@ async function compteGarni() {
 }
 
 const cle = (media: Media) => `media/${media.filename}`
-const present = async (collection: 'pros' | 'profils' | 'media', id: number | string) =>
+const present = async (collection: 'pros' | 'profiles' | 'media', id: number | string) =>
 	(await (await payloadDeTest()).findByID({ collection, id, depth: 0, disableErrors: true, overrideAccess: true })) !==
 	null
 const enPlace = async (media: Media) => (await lireUnObjet(cle(media))) !== undefined
@@ -96,7 +96,7 @@ describe('I36 : tout part avec le compte', () => {
 		expect(await supprimer(payload, compte, MOT_DE_PASSE)).toEqual({ ok: true })
 
 		expect(await present('pros', compte.id)).toBe(false)
-		expect(await present('profils', profil.id)).toBe(false)
+		expect(await present('profiles', profil.id)).toBe(false)
 		for (const photo of photos) {
 			expect(await present('media', photo.id)).toBe(false)
 			expect(await enPlace(photo)).toBe(false)
@@ -104,12 +104,12 @@ describe('I36 : tout part avec le compte', () => {
 			expect((await fetch(photo.url ?? '')).status).not.toBe(200)
 		}
 		expect((await payload.auth({ headers: new Headers(compte.session.enTetes) })).user).toBeNull()
-		const slugs = await payload.find({ collection: 'profils', depth: 0, where: { slug: { equals: profil.slug } } })
+		const slugs = await payload.find({ collection: 'profiles', depth: 0, where: { slug: { equals: profil.slug } } })
 		expect(slugs.totalDocs).toBe(0)
 		expect((await listerLesObjets('deleted/')).length).toBe(photos.length)
 		// The others are untouched.
 		expect(await present('pros', autre.compte.id)).toBe(true)
-		expect(await present('profils', autre.profil.id)).toBe(true)
+		expect(await present('profiles', autre.profil.id)).toBe(true)
 		expect(await present('media', autre.photo.id)).toBe(true)
 		expect(await enPlace(autre.photo)).toBe(true)
 	})
@@ -156,7 +156,7 @@ async function garnirUnAutre() {
 	const photo = await envoyer(compte)
 	const profil = await profilDe(compte)
 	if (!profil) throw new Error('pas de profil')
-	await (await payloadDeTest()).update({ collection: 'profils', id: profil.id, data: { photoPrincipale: photo.id } })
+	await (await payloadDeTest()).update({ collection: 'profiles', id: profil.id, data: { photoPrincipale: photo.id } })
 	return { compte, profil, photo }
 }
 
@@ -179,7 +179,7 @@ describe('Mot de passe faux : rien de supprimé ; essais freinés', () => {
 		expect(enTrop.ok).toBe(false)
 
 		expect(await present('pros', compte.id)).toBe(true)
-		expect(await present('profils', profil.id)).toBe(true)
+		expect(await present('profiles', profil.id)).toBe(true)
 		for (const photo of photos) expect(await enPlace(photo)).toBe(true)
 		expect((await payload.auth({ headers: new Headers(compte.session.enTetes) })).user).not.toBeNull()
 		expect(espion.journal.filter(({ nom }) => nom === 'CopyObject')).toEqual([])
@@ -236,7 +236,7 @@ describe('I38 : panne du stockage, tout est encore là', () => {
 		expect(resultat).toEqual({ ok: false, message: MESSAGES_DE_SUPPRESSION.stockage })
 		expect(MESSAGE_PANNE_DU_STOCKAGE).toContain('Le stockage des photos ne répond pas')
 		expect(await present('pros', compte.id)).toBe(true)
-		expect(await present('profils', profil.id)).toBe(true)
+		expect(await present('profiles', profil.id)).toBe(true)
 		for (const photo of photos) {
 			expect(await present('media', photo.id)).toBe(true)
 			expect(await enPlace(photo)).toBe(true)
@@ -273,15 +273,15 @@ describe('Entrée maintenue : une seule suppression', () => {
 })
 
 describe('La suppression reste fermée à la maquilleuse par l’API', () => {
-	test('DELETE /api/pros/<id> et /api/profils/<id> par la propriétaire : 403, rien n’est supprimé', async () => {
+	test('DELETE /api/pros/<id> et /api/profiles/<id> par la propriétaire : 403, rien n’est supprimé', async () => {
 		const { compte, profil } = await compteGarni()
 
-		for (const chemin of [`/api/pros/${compte.id}`, `/api/profils/${profil.id}`]) {
+		for (const chemin of [`/api/pros/${compte.id}`, `/api/profiles/${profil.id}`]) {
 			const { statut } = await appelerRest('DELETE', chemin, { enTetes: compte.session.enTetes })
 			expect(statut).toBe(403)
 		}
 
 		expect(await present('pros', compte.id)).toBe(true)
-		expect(await present('profils', profil.id)).toBe(true)
+		expect(await present('profiles', profil.id)).toBe(true)
 	})
 })

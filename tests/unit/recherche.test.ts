@@ -302,17 +302,17 @@ describe('la lecture de l’annuaire', () => {
 		const annuaire = await lireLAnnuaire(payload)
 
 		expect(annuaire.map(({ carte }) => carte.slug)).toEqual(['a', 'b', 'c'])
-		const profils = lectures.filter(lecture => lecture.collection === 'profils' && lecture.overrideAccess === false)
+		const profils = lectures.filter(lecture => lecture.collection === 'profiles' && lecture.overrideAccess === false)
 		expect(profils.map(({ page }) => page)).toEqual([1, 2, 3])
 		for (const lecture of profils)
-			expect(lecture).toMatchObject({ collection: 'profils', limit: 100, overrideAccess: false, depth: 0 })
+			expect(lecture).toMatchObject({ collection: 'profiles', limit: 100, overrideAccess: false, depth: 0 })
 	})
 
 	test('il ne lit jamais plus de dix pages', async () => {
 		const { payload, lectures } = payloadEspion(Array.from({ length: 50 }, () => [doc('x')]))
 		await lireLAnnuaire(payload)
 		expect(
-			lectures.filter(lecture => lecture.collection === 'profils' && lecture.overrideAccess === false)
+			lectures.filter(lecture => lecture.collection === 'profiles' && lecture.overrideAccess === false)
 		).toHaveLength(10)
 	})
 
@@ -368,7 +368,7 @@ describe('la lecture de l’annuaire', () => {
 		expect(Object.keys(a?.carte ?? {}).sort()).toEqual(
 			Object.keys((await lireLAnnuaire(payload))[0]?.carte ?? {}).sort()
 		)
-		const select = lectures.find(lecture => lecture.collection === 'profils')?.select as Record<string, unknown>
+		const select = lectures.find(lecture => lecture.collection === 'profiles')?.select as Record<string, unknown>
 		expect(Object.keys(select)).toEqual(expect.arrayContaining(['description', 'competences', 'prestations']))
 		for (const interdit of ['coordonnees', 'contactPublic', 'reseaux', 'noteInterne', 'pro'])
 			expect(select).not.toHaveProperty(interdit)

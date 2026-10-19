@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import path from 'node:path'
 import type { Field, Payload } from 'payload'
-import { Profils } from '@/collections/Profiles'
+import { Profiles } from '@/collections/Profiles'
 import { exigerLaCibleDuJeu, poserLesProfilsDuJeu } from '@/jeu-fictif/chargement'
 import { cibleDuJeu, JeuFictifRefuse, ORIGINE_DU_SITE } from '@/jeu-fictif/garde'
 import {
@@ -148,7 +148,7 @@ describe('Les 12 profils types du plan 02 §6', () => {
 	test('le profil aux textes maximaux porte chaque texte à la borne du serveur', () => {
 		const { profil, photos } = type('textes-maximaux')
 		const borne = (nom: string): number => {
-			const champ = Profils.fields.find((field: Field) => 'name' in field && field.name === nom)
+			const champ = Profiles.fields.find((field: Field) => 'name' in field && field.name === nom)
 			return champ && 'maxLength' in champ && typeof champ.maxLength === 'number' ? champ.maxLength : Number.NaN
 		}
 

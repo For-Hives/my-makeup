@@ -16,7 +16,7 @@ afterEach(viderLaBase)
 type Maquilleuse = CompteDeTest<'maquilleuse'>
 
 async function ficheDe(payload: Payload, compte: Maquilleuse) {
-	const { docs } = await payload.find({ collection: 'profils', depth: 0, where: { pro: { equals: compte.id } } })
+	const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })
 	const [fiche] = docs
 	if (!fiche) throw new Error('pas de profil')
 	return fiche
@@ -44,7 +44,7 @@ describe('139 : l’aperçu est la page publique', () => {
 		const compte = await creerCompte('maquilleuse')
 		const payload = await payloadDeTest()
 		const fiche = await ficheDe(payload, compte)
-		await payload.update({ collection: 'profils', id: fiche.id, data: COMPLET })
+		await payload.update({ collection: 'profiles', id: fiche.id, data: COMPLET })
 		const slug = (await ficheDe(payload, compte)).slug
 
 		const apercu = await lireLApercuDuProfil(payload, fiche.id)
@@ -59,7 +59,7 @@ describe('139 : l’aperçu est la page publique', () => {
 		const compte = await creerCompte('maquilleuse')
 		const payload = await payloadDeTest()
 		const fiche = await ficheDe(payload, compte)
-		await payload.update({ collection: 'profils', id: fiche.id, data: { ...COMPLET, contactPublic: false } })
+		await payload.update({ collection: 'profiles', id: fiche.id, data: { ...COMPLET, contactPublic: false } })
 		const apercu = await lireLApercuDuProfil(payload, fiche.id)
 		expect(apercu?.profil.coordonnees).toBeNull()
 		expect(JSON.stringify(apercu?.profil)).not.toMatch(/example\.test|06 39 98/)
@@ -72,9 +72,9 @@ describe('139 : l’aperçu est la page publique', () => {
 		const vide = await lireLApercuDuProfil(payload, fiche.id)
 		expect(vide?.etat).toMatchObject({ statut: 'brouillon', entierementVide: true })
 
-		await payload.update({ collection: 'profils', id: fiche.id, data: COMPLET })
+		await payload.update({ collection: 'profiles', id: fiche.id, data: COMPLET })
 		await payload.update({
-			collection: 'profils',
+			collection: 'profiles',
 			id: fiche.id,
 			data: { statutChoisi: 'masque', motif: 'Masqué pour le test' },
 		})
@@ -98,7 +98,7 @@ describe('139 : seulement le sien', () => {
 		const payload = await payloadDeTest()
 		const ficheA = await ficheDe(payload, a)
 		const ficheB = await ficheDe(payload, b)
-		await payload.update({ collection: 'profils', id: ficheB.id, data: { prenom: 'Bea', nom: 'Autre' } })
+		await payload.update({ collection: 'profiles', id: ficheB.id, data: { prenom: 'Bea', nom: 'Autre' } })
 
 		const idA = await identifiantDuProfil(payload, await utilisateurDe(payload, a))
 		const idB = await identifiantDuProfil(payload, await utilisateurDe(payload, b))

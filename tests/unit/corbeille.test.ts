@@ -348,7 +348,7 @@ describe('Le greffon de stockage perd ses suppressions ; media et profils reçoi
 
 	const collections = (): CollectionConfig[] => [
 		{ slug: 'media', upload: true, fields: [], hooks: { afterChange: [propre], afterDelete: [propreALaSuppression] } },
-		{ slug: 'profils', fields: [], hooks: { afterChange: [propre] } },
+		{ slug: 'profiles', fields: [], hooks: { afterChange: [propre] } },
 		{ slug: 'talents', fields: [] },
 	]
 
@@ -492,7 +492,7 @@ describe('Sans stockage d’objets, le ménage d’un profil ne supprime aucun m
 
 	/** The hooks of the bin on `profils`, as src/payload.config.ts sets them, with this storage or none. */
 	async function crochetsDesProfils(stockage: StockageDesObjets | undefined) {
-		const profilsSeuls: CollectionConfig[] = [{ slug: 'profils', fields: [] }]
+		const profilsSeuls: CollectionConfig[] = [{ slug: 'profiles', fields: [] }]
 		const config = await avecLaCorbeille(config => config, stockage)({ collections: profilsSeuls } as Config)
 		const [profils] = config.collections as CollectionConfig[]
 		const [apresEnregistrement] = profils?.hooks?.afterChange ?? []
@@ -542,7 +542,7 @@ describe('Sans stockage d’objets, le ménage d’un profil ne supprime aucun m
 			req,
 		})
 
-		expect(appels).toEqual(['find profils', 'find articles', 'findVersions articles', 'find media'])
+		expect(appels).toEqual(['find profiles', 'find articles', 'findVersions articles', 'find media'])
 		expect(avertissements).toEqual([])
 	})
 })

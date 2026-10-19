@@ -22,24 +22,24 @@ const PHRASES: Record<Exclude<Phase, 'repos' | 'envoi'>, string> = {
 
 export function RenvoyerLEmail() {
 	const { id } = useDocumentInfo()
-	const etatMail = useFormFields(([champs]) => champs.etatMail?.value)
+	const mailStatus = useFormFields(([champs]) => champs.mailStatus?.value)
 	const router = useRouter()
 	const pris = useRef(false)
 	const [phase, setPhase] = useState<Phase>('repos')
 
 	if (id === undefined) return null
 	// After a result, the panel keeps the answer on screen even though the state has changed under it.
-	if (etatMail !== 'echec' && phase === 'repos') return null
+	if (mailStatus !== 'failed' && phase === 'repos') return null
 
 	async function renvoyer() {
 		if (pris.current) return
 		pris.current = true
 		setPhase('envoi')
 		try {
-			const reponse = await fetch(`/api/demandes/${id}/resend`, { method: 'POST', credentials: 'same-origin' })
+			const reponse = await fetch(`/api/contact-requests/${id}/resend`, { method: 'POST', credentials: 'same-origin' })
 			if (reponse.status === 409) setPhase('deja')
 			else if (!reponse.ok) setPhase('echec')
-			else setPhase(((await reponse.json()) as { etatMail?: string }).etatMail === 'envoye' ? 'envoye' : 'echec')
+			else setPhase(((await reponse.json()) as { mailStatus?: string }).mailStatus === 'sent' ? 'envoye' : 'echec')
 		} catch {
 			setPhase('echec')
 		}

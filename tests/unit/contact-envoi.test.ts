@@ -35,7 +35,7 @@ function banc(options: { creer?: () => Promise<number>; envoyer?: EnvoyerEmail; 
 		creer: async message => {
 			evenements.push('creer')
 			const id = (await options.creer?.()) ?? lignesDeLaBase.size + 1
-			lignesDeLaBase.set(id, { message, etatMail: 'en-attente', statut: 'nouvelle' })
+			lignesDeLaBase.set(id, { message, etatMail: 'pending', statut: 'new' })
 			return id
 		},
 		marquer: async (id, etatMail, statut) => {
@@ -72,8 +72,8 @@ describe('I32 adapté : la ligne est écrite avant l’envoi, puis marquée tran
 		await b.termine()
 
 		expect(resultat).toEqual({ ok: true })
-		expect(b.evenements).toEqual(['creer', 'envoyer', 'marquer:envoye'])
-		expect([...b.lignesDeLaBase.values()]).toEqual([{ message: MARQUEURS, etatMail: 'envoye', statut: 'transmise' }])
+		expect(b.evenements).toEqual(['creer', 'envoyer', 'marquer:sent'])
+		expect([...b.lignesDeLaBase.values()]).toEqual([{ message: MARQUEURS, etatMail: 'sent', statut: 'forwarded' }])
 	})
 
 	test('un seul mail, à l’équipe, avec l’adresse saisie en réponse, et le sujet sans rien de saisi', async () => {
@@ -129,7 +129,7 @@ describe('I33 adapté : un email en panne ne perd pas le message', () => {
 		await b.termine()
 
 		expect(resultat).toEqual({ ok: true })
-		expect([...b.lignesDeLaBase.values()]).toEqual([{ message: MARQUEURS, etatMail: 'echec', statut: 'nouvelle' }])
+		expect([...b.lignesDeLaBase.values()]).toEqual([{ message: MARQUEURS, etatMail: 'failed', statut: 'new' }])
 		expect(b.mails).toEqual([])
 	})
 
@@ -145,7 +145,7 @@ describe('I33 adapté : un email en panne ne perd pas le message', () => {
 		expect(reponseEn).toBeLessThan(40)
 		expect(tout).toBeGreaterThanOrEqual(45)
 		expect(tout).toBeLessThan(1000)
-		expect([...b.lignesDeLaBase.values()][0]).toMatchObject({ etatMail: 'echec', statut: 'nouvelle' })
+		expect([...b.lignesDeLaBase.values()][0]).toMatchObject({ etatMail: 'failed', statut: 'new' })
 	})
 
 	test('le délai par défaut est sous les 10 secondes qu’une visiteuse attend au plus', async () => {
@@ -164,11 +164,11 @@ describe('I33 adapté : un email en panne ne perd pas le message', () => {
 		})
 		await enregistrerUnMessageDeContact(b.entrees())
 		await b.termine()
-		expect([...b.lignesDeLaBase.values()][0]).toMatchObject({ etatMail: 'echec' })
+		expect([...b.lignesDeLaBase.values()][0]).toMatchObject({ etatMail: 'failed' })
 
 		partir()
 		await new Promise(r => setTimeout(r, 20))
-		expect([...b.lignesDeLaBase.values()][0]).toMatchObject({ etatMail: 'envoye', statut: 'transmise' })
+		expect([...b.lignesDeLaBase.values()][0]).toMatchObject({ etatMail: 'sent', statut: 'forwarded' })
 	})
 
 	test('l’état qui ne peut pas s’écrire ne fait pas échouer la réponse', async () => {
@@ -191,7 +191,7 @@ describe('ticket 224 : sans relais d’envoi, le message n’est pas dit transmi
 		await b.termine()
 
 		expect(resultat).toEqual({ ok: true })
-		expect([...b.lignesDeLaBase.values()]).toEqual([{ message: MARQUEURS, etatMail: 'echec', statut: 'nouvelle' }])
+		expect([...b.lignesDeLaBase.values()]).toEqual([{ message: MARQUEURS, etatMail: 'failed', statut: 'new' }])
 		expect(b.lignes.join('\n')).toContain('aucun relais')
 		for (const marqueur of Object.values(MARQUEURS)) expect(b.lignes.join('\n')).not.toContain(marqueur)
 	})
@@ -201,7 +201,7 @@ describe('ticket 224 : sans relais d’envoi, le message n’est pas dit transmi
 		const etat = await expedier(1, MARQUEURS, { ...b.entrees(), stockage: b.entrees().stockage })
 
 		expect(etat).toBe('echec')
-		expect(b.evenements).not.toContain('marquer:envoye')
+		expect(b.evenements).not.toContain('marquer:sent')
 	})
 })
 

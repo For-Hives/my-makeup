@@ -51,7 +51,8 @@ async function utilisateurDe(payload: Payload, compte: Maquilleuse): Promise<Uti
 
 async function profilDe(compte: Maquilleuse) {
 	const payload = await payloadDeTest()
-	const [profil] = (await payload.find({ collection: 'profils', depth: 0, where: { pro: { equals: compte.id } } })).docs
+	const [profil] = (await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } }))
+		.docs
 	if (!profil) throw new Error('pas de profil')
 	return profil
 }
@@ -61,7 +62,7 @@ async function maquilleuse(): Promise<Maquilleuse> {
 	const compte = await creerCompte('maquilleuse')
 	const payload = await payloadDeTest()
 	await payload.update({
-		collection: 'profils',
+		collection: 'profiles',
 		id: (await profilDe(compte)).id,
 		data: { prenom: 'Léa', nom: 'Fictive', specialite: 'Mariée', commune: ANNECY },
 	})

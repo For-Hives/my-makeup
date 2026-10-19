@@ -49,10 +49,10 @@ describe('un compte de l’ancien site, tel que l’import le reprend', () => {
 			valeurs: {
 				strapiId: 7,
 				email: 'compte.sept@example.test',
-				nom: 'Compte 7',
+				name: 'Compte 7',
 				legacyProvider: 'google',
 				legacyBcrypt: FORME_DE_HASH,
-				bloque: false,
+				blocked: false,
 				_verified: true,
 				createdAt: '2023-05-12T09:14:03.211Z',
 				updatedAt: '2023-05-12T09:14:03.211Z',
@@ -78,7 +78,7 @@ describe('un compte de l’ancien site, tel que l’import le reprend', () => {
 	test('un compte non confirmé à la source arrive confirmé ; nul reste nul ailleurs', () => {
 		const attendu = compteAttendu(ligne(2, { confirmed: false, blocked: null, username: null }))
 
-		expect(attendu.valeurs).toMatchObject({ _verified: true, bloque: null, nom: null })
+		expect(attendu.valeurs).toMatchObject({ _verified: true, blocked: null, name: null })
 		expect(attendu.ecarts).toEqual([{ champ: '_verified', reference: 'confirmation-email' }])
 	})
 

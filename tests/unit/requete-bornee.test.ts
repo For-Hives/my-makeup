@@ -26,7 +26,7 @@ import {
 type Utilisateur = PayloadRequest['user']
 
 const admin = { id: 1, collection: 'admins', role: 'admin', email: 'admin@example.test' } as unknown as Utilisateur
-const redaction = { id: 2, collection: 'admins', role: 'redaction' } as unknown as Utilisateur
+const redaction = { id: 2, collection: 'admins', role: 'editor' } as unknown as Utilisateur
 const maquilleuse = { id: 7, collection: 'pros', email: 'a@example.test' } as unknown as Utilisateur
 const NON_ADMINS = [null, maquilleuse, redaction]
 
@@ -202,14 +202,14 @@ describe('La borne, posée sur chaque collection et jouée avant la base', () =>
 		const borne = await requetesBornees(config)
 		const collection = (beforeOperation: unknown[]) => ({ config: { hooks: { beforeOperation } } })
 		const collections = {
-			profils: collection([requeteBornee, autre]),
+			profiles: collection([requeteBornee, autre]),
 			'payload-locked-documents': collection([]),
 			'payload-preferences': collection([autre]),
 		}
 		await borne.onInit?.({ collections } as unknown as Payload)
 		await borne.onInit?.({ collections } as unknown as Payload)
 		expect(Object.entries(collections).map(([slug, { config }]) => [slug, config.hooks.beforeOperation])).toEqual([
-			['profils', [requeteBornee, autre]],
+			['profiles', [requeteBornee, autre]],
 			['payload-locked-documents', [requeteBornee]],
 			['payload-preferences', [requeteBornee, autre]],
 		])

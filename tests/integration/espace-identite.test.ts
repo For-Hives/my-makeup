@@ -24,7 +24,7 @@ async function utilisateurDe(payload: Payload, compte: Maquilleuse): Promise<Uti
 
 async function profilStocke(payload: Payload, compte: Maquilleuse) {
 	const { docs } = await payload.find({
-		collection: 'profils',
+		collection: 'profiles',
 		depth: 0,
 		overrideAccess: true,
 		where: { pro: { equals: compte.id } },
@@ -41,7 +41,7 @@ describe('U54 : la page ne lit que le profil de la maquilleuse connectée', () =
 		const a = await creerCompte('maquilleuse')
 		const b = await creerCompte('maquilleuse')
 		const payload = await payloadDeTest()
-		await payload.update({ collection: 'profils', id: (await profilStocke(payload, b)).id, data: IDENTITE })
+		await payload.update({ collection: 'profiles', id: (await profilStocke(payload, b)).id, data: IDENTITE })
 
 		const profilDeA = await profilDeLaMaquilleuse(payload, await utilisateurDe(payload, a))
 
@@ -140,7 +140,7 @@ describe('U32, I03, I02 : une requête forgée est refusée, rien ne change', ()
 			IDENTITE
 		)
 		expect(resultat).toEqual({ ok: false, message: MESSAGE_ECHEC })
-		expect((await payload.count({ collection: 'profils', overrideAccess: true })).totalDocs).toBe(0)
+		expect((await payload.count({ collection: 'profiles', overrideAccess: true })).totalDocs).toBe(0)
 	})
 })
 

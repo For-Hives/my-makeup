@@ -33,7 +33,8 @@ async function envoyer(compte: Compte, champs: Record<string, unknown> = {}): Pr
 /** The profile of an account. */
 async function profilDe(compte: Compte) {
 	const payload = await payloadDeTest()
-	const [profil] = (await payload.find({ collection: 'profils', depth: 0, where: { pro: { equals: compte.id } } })).docs
+	const [profil] = (await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } }))
+		.docs
 	if (!profil) throw new Error('La fabrique n’a pas créé de profil.')
 	return profil
 }
@@ -45,7 +46,7 @@ async function maquilleuseAvecPhotos(statut: 'publie' | 'masque' | 'brouillon') 
 	const profil = await profilDe(compte)
 	const payload = await payloadDeTest()
 	await payload.update({
-		collection: 'profils',
+		collection: 'profiles',
 		id: profil.id,
 		data: { statut, photoPrincipale: principale.id, galerie: [galerie.id] },
 	})
@@ -81,7 +82,7 @@ describe('Liste anonyme refusée ; média d’un profil publié lu ; d’un prof
 		expect((await appelerRest('GET', `/api/media/${principale.id}`)).statut).toBe(200)
 
 		// The admin hides it by her choice of status: the status itself is the server's (ticket 044).
-		await appelerRest('PATCH', `/api/profils/${profil.id}`, {
+		await appelerRest('PATCH', `/api/profiles/${profil.id}`, {
 			enTetes: admin.session.enTetes,
 			corps: { statutChoisi: 'masque' },
 		})
@@ -153,7 +154,7 @@ describe('A ne rattache ni ne supprime un média de B ; galerie de 11 photos ref
 		const profil = await profilDe(a)
 
 		for (const corps of [{ photoPrincipale: deB.id }, { galerie: [sienne.id, deB.id] }]) {
-			const { statut, texte } = await appelerRest('PATCH', `/api/profils/${profil.id}`, {
+			const { statut, texte } = await appelerRest('PATCH', `/api/profiles/${profil.id}`, {
 				enTetes: a.session.enTetes,
 				corps,
 			})
@@ -181,7 +182,7 @@ describe('A ne rattache ni ne supprime un média de B ; galerie de 11 photos ref
 		const profil = await profilDe(a)
 		const ids = photos.map(({ id }) => id)
 
-		const onze = await appelerRest('PATCH', `/api/profils/${profil.id}`, {
+		const onze = await appelerRest('PATCH', `/api/profiles/${profil.id}`, {
 			enTetes: a.session.enTetes,
 			corps: { galerie: ids },
 		})
@@ -190,7 +191,7 @@ describe('A ne rattache ni ne supprime un média de B ; galerie de 11 photos ref
 		expect((await profilDe(a)).galerie).toEqual([])
 
 		const dix = ids.slice(0, 10).reverse()
-		const enregistre = await appelerRest('PATCH', `/api/profils/${profil.id}`, {
+		const enregistre = await appelerRest('PATCH', `/api/profiles/${profil.id}`, {
 			enTetes: a.session.enTetes,
 			corps: { galerie: dix },
 		})

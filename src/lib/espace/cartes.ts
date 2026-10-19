@@ -9,7 +9,7 @@
  *   Payload (no account, no internal field, no token).
  */
 
-import type { Profil } from '@/payload-types'
+import type { Profile } from '@/payload-types'
 import { rayonKm } from '../format-zone'
 import { formatPrix } from '../prix'
 import { texte } from '../profil/nom-affiche'
@@ -50,7 +50,7 @@ export interface Carte {
 
 /** What the cards read of a profile: the fields of the owner, as `payload.find` gives them. */
 export type ProfilDeLEspace = Pick<
-	Profil,
+	Profile,
 	| 'id'
 	| 'prenom'
 	| 'nom'

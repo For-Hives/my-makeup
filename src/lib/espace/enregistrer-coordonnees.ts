@@ -35,7 +35,7 @@ export async function enregistrerCoordonnees(
 		if (id === null) return { ok: false, message: MESSAGE_ECHEC }
 		const { telephone, email, contactPublic } = lue.data
 		const stocke = await payload.update({
-			collection: 'profils',
+			collection: 'profiles',
 			data: { coordonnees: { telephone: telephone || null, email: email || null }, contactPublic },
 			depth: 0,
 			id,

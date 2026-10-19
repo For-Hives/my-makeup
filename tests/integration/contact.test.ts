@@ -38,7 +38,9 @@ function visiteuse(surcharge: Record<string, string> = {}) {
 
 async function lignesDe(email: string) {
 	const payload = await payloadDeTest()
-	return (await payload.find({ collection: 'demandes', where: { email: { equals: email } }, limit: 30, depth: 0 })).docs
+	return (
+		await payload.find({ collection: 'contact-requests', where: { email: { equals: email } }, limit: 30, depth: 0 })
+	).docs
 }
 
 async function envoyerLeFormulaire(
@@ -78,7 +80,7 @@ describe('I32 adapté : le message est écrit avant l’envoi, puis marqué tran
 
 		expect(resultat).toEqual({ ok: true })
 		expect(ligneAuDepart).toHaveLength(1)
-		expect(ligneAuDepart[0]).toMatchObject({ statut: 'nouvelle', etatMail: 'en-attente', type: 'contact' })
+		expect(ligneAuDepart[0]).toMatchObject({ status: 'new', mailStatus: 'pending', type: 'contact' })
 
 		const mail = await attendreLeMail({ pour: v.equipe })
 		expect(await mailsRecus(v.equipe)).toHaveLength(1)
@@ -90,11 +92,11 @@ describe('I32 adapté : le message est écrit avant l’envoi, puis marqué tran
 		const lignes = await lignesDe(v.champs.email as string)
 		expect(lignes).toHaveLength(1)
 		expect(lignes[0]).toMatchObject({
-			prenom: 'Léa',
-			nom: 'Témoin',
-			telephone: '01 99 00 12 34',
-			statut: 'transmise',
-			etatMail: 'envoye',
+			firstName: 'Léa',
+			lastName: 'Témoin',
+			phone: '01 99 00 12 34',
+			status: 'forwarded',
+			mailStatus: 'sent',
 		})
 	})
 
@@ -109,13 +111,13 @@ describe('I32 adapté : le message est écrit avant l’envoi, puis marqué tran
 
 	test('un envoi direct invalide ne crée aucune ligne et ne sort aucun mail', async () => {
 		const payload = await payloadDeTest()
-		const avant = (await payload.count({ collection: 'demandes' })).totalDocs
+		const avant = (await payload.count({ collection: 'contact-requests' })).totalDocs
 		const v = visiteuse({ nom: '', telephone: '' })
 		const { resultat, termine } = await envoyerLeFormulaire(v)
 		await termine()
 
 		expect(resultat).toMatchObject({ ok: false, code: 'donnees-invalides' })
-		expect((await payload.count({ collection: 'demandes' })).totalDocs).toBe(avant)
+		expect((await payload.count({ collection: 'contact-requests' })).totalDocs).toBe(avant)
 		expect(await mailsRecus(v.equipe)).toEqual([])
 	})
 
@@ -153,7 +155,7 @@ describe('I33 adapté : un email en panne ne perd pas le message', () => {
 		expect(resultat).toEqual({ ok: true })
 		const stockees = await lignesDe(v.champs.email as string)
 		expect(stockees).toHaveLength(1)
-		expect(stockees[0]).toMatchObject({ statut: 'nouvelle', etatMail: 'echec' })
+		expect(stockees[0]).toMatchObject({ status: 'new', mailStatus: 'failed' })
 		expect(await mailsRecus(v.equipe)).toEqual([])
 		// The log holds no field she typed, and no address.
 		const journal = [...lignes, ...lignesDuJournal].join('\n')
@@ -200,7 +202,7 @@ describe('I33 adapté : un email en panne ne perd pas le message', () => {
 			expect(reponseEn).toBeLessThan(2000)
 			expect(toutEn).toBeLessThan(10_000)
 			const stockees = await lignesDe(v.champs.email as string)
-			expect(stockees[0]).toMatchObject({ statut: 'nouvelle', etatMail: 'echec' })
+			expect(stockees[0]).toMatchObject({ status: 'new', mailStatus: 'failed' })
 			expect(lignes.join('\n')).not.toContain(v.champs.email as string)
 		} finally {
 			for (const socket of sockets) socket.destroy()

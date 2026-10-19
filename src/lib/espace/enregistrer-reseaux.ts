@@ -36,7 +36,7 @@ export async function enregistrerReseaux(
 		if (id === null) return { ok: false, message: MESSAGE_ECHEC }
 		const reseaux = Object.fromEntries(CHAMPS_DES_RESEAUX.map(champ => [champ, lue.valeurs[champ] || null]))
 		const stocke = await payload.update({
-			collection: 'profils',
+			collection: 'profiles',
 			data: { reseaux },
 			depth: 0,
 			id,

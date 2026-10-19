@@ -33,7 +33,7 @@ async function qui(enTetes: Record<string, string>) {
 }
 
 const journal = async () =>
-	(await (await payloadDeTest()).find({ collection: 'auth-evenements', depth: 0, limit: 500, sort: 'id' })).docs
+	(await (await payloadDeTest()).find({ collection: 'auth-events', depth: 0, limit: 500, sort: 'id' })).docs
 
 async function nouvelleSession(compte: { email: string }) {
 	return ouvrirSession(await payloadDeTest(), {
@@ -144,8 +144,8 @@ describe('le journal et ses pannes', () => {
 		await fermerLaSession({ payload, headers: new Headers(autre.enTetes), toutes: true, journal: journalDe(payload) })
 
 		expect((await journal()).slice(avant).map(({ type, code }) => [type, code])).toEqual([
-			['deconnexion', 'ok'],
-			['deconnexion-partout', 'ok'],
+			['sign-out', 'ok'],
+			['sign-out-everywhere', 'ok'],
 		])
 	})
 

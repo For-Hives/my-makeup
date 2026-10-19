@@ -131,7 +131,7 @@ export async function inscrire({
 	const debut = Date.now()
 	const noter = async (code: CodeEvenement) => {
 		try {
-			await journal?.({ type: 'inscription', code, dureeMs: Date.now() - debut, methode: 'mot-de-passe' })
+			await journal?.({ type: 'sign-up', code, durationMs: Date.now() - debut, method: 'password' })
 		} catch {
 			// The journal is not the sign-up's to fail.
 		}
@@ -212,7 +212,7 @@ export async function inscrire({
 		try {
 			const compte = await payload.create({
 				collection: 'pros',
-				data: { email: donnees.email, password: donnees.password, nom: donnees.nom, _verified: !verifier },
+				data: { email: donnees.email, password: donnees.password, name: donnees.nom, _verified: !verifier },
 				depth: 0,
 				disableVerificationEmail: true,
 				overrideAccess: true,

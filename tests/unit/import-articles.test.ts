@@ -47,7 +47,7 @@ describe('les articles attendus', () => {
 					seo_title: 'Article 1',
 					seo_description: 'Une description fictive.',
 					content: '## Titre\r\n\nUn texte fictif.  \n',
-					galerie: [],
+					gallery: [],
 					_status: 'published',
 					publishedAt: '2024-01-01T10:00:00.000Z',
 					createdAt: '2024-01-01T10:00:00.000Z',
@@ -85,7 +85,7 @@ describe('les articles attendus', () => {
 			])
 		)
 
-		expect(attendus[0]?.valeurs.galerie).toEqual([310, 300])
+		expect(attendus[0]?.valeurs.gallery).toEqual([310, 300])
 		expect(photosNonReprises).toEqual([{ entree: 1, fichier: 32 }])
 	})
 

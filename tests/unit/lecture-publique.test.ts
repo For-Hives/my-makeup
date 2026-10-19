@@ -66,7 +66,7 @@ function payloadEspion() {
 					],
 				}
 			// The id of the old site, read apart (it is a field the public does not read).
-			if (options.collection === 'profils' && (options.select as Record<string, unknown>)?.strapiId === true)
+			if (options.collection === 'profiles' && (options.select as Record<string, unknown>)?.strapiId === true)
 				return { docs: [{ id: 1, strapiId: 4242 }] }
 			return {
 				docs: [
@@ -124,7 +124,7 @@ describe('U22 : la carte d’une liste, clés figées', () => {
 		await listerLesProfils(payload)
 
 		const lecturesDesIdentifiants = lectures.filter(
-			lecture => lecture.collection === 'profils' && (lecture.select as Record<string, unknown>)?.strapiId === true
+			lecture => lecture.collection === 'profiles' && (lecture.select as Record<string, unknown>)?.strapiId === true
 		)
 		expect(lecturesDesIdentifiants).toHaveLength(1)
 		expect(lecturesDesIdentifiants[0]).toMatchObject({
@@ -161,9 +161,9 @@ describe('U22 : la carte d’une liste, clés figées', () => {
 		await listerLesProfils(payload, { limite: 0 })
 
 		const [grande, nulle] = lectures.filter(
-			lecture => lecture.collection === 'profils' && lecture.overrideAccess === false
+			lecture => lecture.collection === 'profiles' && lecture.overrideAccess === false
 		)
-		expect(grande).toMatchObject({ collection: 'profils', where: FILTRE_LISTE, overrideAccess: false, page: 3 })
+		expect(grande).toMatchObject({ collection: 'profiles', where: FILTRE_LISTE, overrideAccess: false, page: 3 })
 		expect(grande?.limit).toBe(LIMITE_MAX_DE_LA_LISTE)
 		expect(nulle?.limit).toBe(20)
 		const champs = Object.keys(grande?.select as object).sort()
@@ -222,7 +222,7 @@ describe('Un seul point de lecture publique', () => {
 	})
 
 	test('le contrôle voit une lecture sans limite', () => {
-		const appels = appelsDe("await payload.find({ collection: 'profils', depth: 0 })", 'find')
+		const appels = appelsDe("await payload.find({ collection: 'profiles', depth: 0 })", 'find')
 		expect(appels).toHaveLength(1)
 		expect(appels[0]).not.toMatch(/\blimit:/)
 		expect(appelsDe('payload.find({ where: { a: { equals: 1 } }, limit: 3 })', 'find')[0]).toMatch(/\blimit:/)

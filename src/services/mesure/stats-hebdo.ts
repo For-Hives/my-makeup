@@ -31,7 +31,7 @@ export async function lireLesStatsHebdo(
 	const dansLaPeriode = { greater_than_equal: periode.debut.toISOString(), less_than: periode.fin.toISOString() }
 	const [profils, comptes, demandes, evenements, hashRestants, sansHash] = await Promise.all([
 		payload.find({
-			collection: 'profils',
+			collection: 'profiles',
 			select: {
 				slug: true,
 				createdAt: true,
@@ -58,17 +58,17 @@ export async function lireLesStatsHebdo(
 			overrideAccess: true,
 		}),
 		payload.find({
-			collection: 'demandes',
+			collection: 'contact-requests',
 			where: { createdAt: dansLaPeriode },
-			select: { statut: true, etatMail: true },
+			select: { status: true, mailStatus: true },
 			depth: 0,
 			pagination: false,
 			overrideAccess: true,
 		}),
 		payload.find({
-			collection: 'auth-evenements',
+			collection: 'auth-events',
 			where: { date: dansLaPeriode },
-			select: { type: true, code: true, dureeMs: true },
+			select: { type: true, code: true, durationMs: true },
 			depth: 0,
 			pagination: false,
 			overrideAccess: true,

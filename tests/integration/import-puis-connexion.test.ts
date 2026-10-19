@@ -62,7 +62,7 @@ async function compteParStrapiId(strapiId: number) {
 async function profilsDe(id: number | string) {
 	const payload = await payloadDeTest()
 	return (
-		await payload.find({ collection: 'profils', depth: 0, overrideAccess: true, where: { pro: { equals: id } } })
+		await payload.find({ collection: 'profiles', depth: 0, overrideAccess: true, where: { pro: { equals: id } } })
 	).docs.map(({ id: profil, slug }) => ({ id: profil, slug }))
 }
 

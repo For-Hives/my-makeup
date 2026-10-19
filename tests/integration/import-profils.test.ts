@@ -84,7 +84,7 @@ afterAll(async () => {
 async function profilsDeLaCible() {
 	const payload = await payloadDeTest()
 	const { docs } = await payload.find({
-		collection: 'profils',
+		collection: 'profiles',
 		depth: 1,
 		pagination: false,
 		overrideAccess: true,
@@ -114,7 +114,7 @@ describe('Après l’import de la source factice', () => {
 		expect(comptes.filter(({ id }) => !relies.has(id)).map(({ strapiId }) => strapiId)).toEqual([8])
 		// Profile 29, whose account the table sets aside, is set aside by its own decision; the 13
 		// profiles of the spam have no account at all, and are set aside by the import itself.
-		expect(premier.collections.profils).toMatchObject({
+		expect(premier.collections.profiles).toMatchObject({
 			source: 27,
 			crees: 13,
 			refuses: [],
@@ -127,7 +127,7 @@ describe('Après l’import de la source factice', () => {
 
 	test('profils de la source = profils repris + profils écartés ; les 13 du spam sont absents de la cible (I39)', async () => {
 		const cible = await profilsDeLaCible()
-		const bilan = premier.collections.profils
+		const bilan = premier.collections.profiles
 
 		expect(lignes.makeup_artistes).toHaveLength(27)
 		expect((bilan?.ecartes?.length ?? 0) + (bilan?.spam?.length ?? 0) + cible.length).toBe(bilan?.source ?? -1)
@@ -137,7 +137,7 @@ describe('Après l’import de la source factice', () => {
 				String(id)
 			).toBe(false)
 		expect(premier.ecarts['profils-spam-non-repris']).toBe(13)
-		expect(premier.parite?.profils).toMatchObject({
+		expect(premier.parite?.profiles).toMatchObject({
 			attendus: 13,
 			egaux: 13,
 			differents: [],
@@ -195,10 +195,10 @@ describe('Après l’import de la source factice', () => {
 		expect(cible.every(({ statutChoisi }) => statutChoisi === 'automatique')).toBe(true)
 		// 32 has a city and nothing else: published by its commune (ticket 063), as at the source.
 		expect(statuts[32]).toBe('publie')
-		expect(premier.collections.profils?.statutsDifferentsDeLaSource).toEqual([])
+		expect(premier.collections.profiles?.statutsDifferentsDeLaSource).toEqual([])
 		expect(Object.entries(statuts).filter(([, statut]) => statut === 'publie')).toHaveLength(12)
 		expect(premier.ecarts).toMatchObject({ 'profils-vides-brouillon': 1, 'slug-stocke': 12 })
-		expect(premier.parite?.profils).toMatchObject({ attendus: 13, egaux: 13, statuts: { publie: 12, brouillon: 1 } })
+		expect(premier.parite?.profiles).toMatchObject({ attendus: 13, egaux: 13, statuts: { publie: 12, brouillon: 1 } })
 	})
 
 	test('second passage : 0 création, 0 mise à jour, et la source n’a pas bougé', async () => {
@@ -206,7 +206,7 @@ describe('Après l’import de la source factice', () => {
 
 		const second = await importerSurLeBanc()
 
-		for (const collection of ['pros', 'profils', 'talents'] as const)
+		for (const collection of ['pros', 'profiles', 'talents'] as const)
 			expect(second.collections[collection], collection).toMatchObject({ crees: 0, modifies: 0, refuses: [] })
 		expect(await profilsDeLaCible()).toEqual(cible)
 		expect((await empreinteDeLaSource()).empreinte).toBe(empreinteAvant)
@@ -219,7 +219,7 @@ describe('Un choix du statut fixé par un passage précédent', () => {
 		const [zoe] = (await profilsDeLaCible()).filter(({ strapiId }) => strapiId === 21)
 		// What the first slice left: a status written by server code becomes the admin's choice.
 		await payload.update({
-			collection: 'profils',
+			collection: 'profiles',
 			id: zoe?.id ?? 0,
 			data: { statut: 'brouillon' },
 			overrideAccess: true,
@@ -233,13 +233,13 @@ describe('Un choix du statut fixé par un passage précédent', () => {
 		const apres = await importerSurLeBanc()
 		const troisieme = await importerSurLeBanc()
 
-		expect(apres.collections.profils).toMatchObject({ crees: 0, modifies: 1 })
+		expect(apres.collections.profiles).toMatchObject({ crees: 0, modifies: 1 })
 		expect((await profilsDeLaCible()).find(({ strapiId }) => strapiId === 21)).toMatchObject({
 			statut: 'publie',
 			statutChoisi: 'automatique',
 			updatedAt: '2026-09-28T10:11:12.131Z',
 		})
-		expect(troisieme.collections.profils).toMatchObject({ crees: 0, modifies: 0 })
+		expect(troisieme.collections.profiles).toMatchObject({ crees: 0, modifies: 0 })
 	})
 })
 
@@ -276,7 +276,7 @@ describe('Un profil sans compte, hors des 13 profils du spam (SCHEMA.md §4.1)',
 		})
 
 		expect(rapport.arret).toBeNull()
-		expect(rapport.collections.profils).toMatchObject({ source: 28, crees: 0, modifies: 0, ecartes: [29, ORPHELIN] })
+		expect(rapport.collections.profiles).toMatchObject({ source: 28, crees: 0, modifies: 0, ecartes: [29, ORPHELIN] })
 		expect((await profilsDeLaCible()).some(({ strapiId }) => strapiId === ORPHELIN)).toBe(false)
 	})
 })
@@ -317,7 +317,7 @@ describe('La lecture publique d’un profil repris', () => {
 		// Profile 21 has a phone and an email on the old site: they leave this reading only when she
 		// published them (ticket 071), and then they are exactly what the old site holds.
 		const cible = (await profilsDeLaCible()).find(({ strapiId }) => strapiId === 21)
-		const stocke = await payload.findByID({ collection: 'profils', id: cible?.id ?? 0, depth: 0 })
+		const stocke = await payload.findByID({ collection: 'profiles', id: cible?.id ?? 0, depth: 0 })
 		if (stocke.contactPublic === true) {
 			expect(profil?.coordonnees).toEqual({
 				telephone: stocke.coordonnees?.telephone ?? null,
@@ -351,7 +351,7 @@ describe('La lecture publique d’un profil repris', () => {
 			'specialite',
 		])
 		const { docs } = await payload.find({
-			collection: 'profils',
+			collection: 'profiles',
 			where: { slug: { equals: 'zoe-lefevre' } },
 			select: CHAMPS_PUBLICS_DU_PROFIL,
 			depth: 0,

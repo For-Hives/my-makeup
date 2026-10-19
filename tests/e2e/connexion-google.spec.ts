@@ -116,7 +116,7 @@ test.describe('E07 : connexion et inscription avec Google', { tag: '@mobile' }, 
 		expect(comptes.docs).toHaveLength(1)
 		expect(comptes.docs[0]).toMatchObject({ nom: 'Léa Fictive', _verified: true })
 		const profils = await payload.find({
-			collection: 'profils',
+			collection: 'profiles',
 			depth: 0,
 			where: { pro: { equals: comptes.docs[0]?.id } },
 		})
@@ -133,7 +133,7 @@ test.describe('E07 : connexion et inscription avec Google', { tag: '@mobile' }, 
 			1
 		)
 		expect(
-			(await payload.find({ collection: 'profils', depth: 0, where: { pro: { equals: comptes.docs[0]?.id } } }))
+			(await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: comptes.docs[0]?.id } } }))
 				.totalDocs
 		).toBe(1)
 		expect(await mailsRecus(email)).toEqual([])
@@ -174,7 +174,7 @@ test.describe('E07 : connexion et inscription avec Google', { tag: '@mobile' }, 
 	test('un compte Google bloqué lit le message du compte bloqué', async ({ context, page }) => {
 		const compte = await creerCompte('reprise-google')
 		const payload = await payloadDeTest()
-		await payload.update({ collection: 'pros', id: compte.id, data: { bloque: true }, overrideAccess: true })
+		await payload.update({ collection: 'pros', id: compte.id, data: { blocked: true }, overrideAccess: true })
 		await choisir(context, { email: compte.email })
 
 		await cliquerSurGoogle(page, '/auth/signin', 'Se connecter avec Google')

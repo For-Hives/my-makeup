@@ -25,7 +25,7 @@ afterAll(remettreAZero)
 
 interface Liste {
 	totalDocs: number
-	docs: { id: number; email: string; createdAt: string; bloque?: boolean; profil?: { docs?: unknown[] } }[]
+	docs: { id: number; email: string; createdAt: string; blocked?: boolean; profile?: { docs?: unknown[] } }[]
 }
 
 const MOT_DE_PASSE = 'aaaaaaaa'
@@ -41,9 +41,9 @@ describe('La liste des comptes de l’admin (ticket 168)', () => {
 			'email',
 			'createdAt',
 			'_verified',
-			'bloque',
-			'derniereConnexion',
-			'profil',
+			'blocked',
+			'lastSignInAt',
+			'profile',
 		])
 		expect(Pros.defaultSort).toBe('-createdAt')
 	})
@@ -59,13 +59,13 @@ describe('La liste des comptes de l’admin (ticket 168)', () => {
 			(await lister(session.enTetes, requete)).liste.docs.map(({ email }) => email).sort()
 
 		expect(await emails('where[_verified][equals]=false')).toEqual(['jeu-maquilleuse-non-verifiee@example.test'])
-		expect(await emails('where[profil][exists]=false')).toEqual(['jeu-maquilleuse-sans-profil@example.test'])
-		expect(await emails('where[bloque][equals]=true')).toEqual(['jeu-maquilleuse-bloquee@example.test'])
-		expect((await lister(session.enTetes, 'where[profil][exists]=true')).liste.totalDocs).toBe(19)
+		expect(await emails('where[profile][exists]=false')).toEqual(['jeu-maquilleuse-sans-profil@example.test'])
+		expect(await emails('where[blocked][equals]=true')).toEqual(['jeu-maquilleuse-bloquee@example.test'])
+		expect((await lister(session.enTetes, 'where[profile][exists]=true')).liste.totalDocs).toBe(19)
 		// The link of the panel (« without profile » by the owners of the profiles) holds the same account.
 		const payload = await payloadDeTest()
 		const profils = await payload.find({
-			collection: 'profils',
+			collection: 'profiles',
 			depth: 0,
 			limit: 0,
 			pagination: false,
@@ -76,7 +76,7 @@ describe('La liste des comptes de l’admin (ticket 168)', () => {
 		expect((await emails(lien)).join()).toBe('jeu-maquilleuse-sans-profil@example.test')
 		// Combined: an unconfirmed account that is also blocked does not exist in the set.
 		expect(
-			(await lister(session.enTetes, 'where[_verified][equals]=false&where[bloque][equals]=true')).liste.totalDocs
+			(await lister(session.enTetes, 'where[_verified][equals]=false&where[blocked][equals]=true')).liste.totalDocs
 		).toBe(0)
 	}, 30_000)
 
@@ -84,7 +84,7 @@ describe('La liste des comptes de l’admin (ticket 168)', () => {
 		const { session } = await creerCompte('admin')
 		const { liste } = await lister(session.enTetes, 'where[email][like]=jeu-maquilleuse')
 		const aUnProfil = (email: string) =>
-			(liste.docs.find(autre => autre.email === email)?.profil?.docs?.length ?? 0) > 0
+			(liste.docs.find(autre => autre.email === email)?.profile?.docs?.length ?? 0) > 0
 		expect(aUnProfil('jeu-maquilleuse-sans-profil@example.test')).toBe(false)
 		expect(aUnProfil('jeu-maquilleuse@example.test')).toBe(true)
 	})
@@ -92,17 +92,17 @@ describe('La liste des comptes de l’admin (ticket 168)', () => {
 	test('la rédaction ne voit pas les comptes ; une maquilleuse ne voit que le sien, filtres compris', async () => {
 		const redaction = await creerCompte('redaction')
 		expect((await lister(redaction.session.enTetes, 'sort=-createdAt')).statut).toBe(403)
-		expect((await lister(redaction.session.enTetes, 'where[bloque][equals]=true')).statut).toBe(403)
+		expect((await lister(redaction.session.enTetes, 'where[blocked][equals]=true')).statut).toBe(403)
 
 		const maquilleuse = await creerCompte('maquilleuse')
 		const siens = await lister(maquilleuse.session.enTetes, 'where[_verified][equals]=true')
 		expect(siens.liste.docs.map(({ id }) => String(id))).toEqual([String(maquilleuse.id)])
-		const bloques = await lister(maquilleuse.session.enTetes, 'where[bloque][equals]=true')
+		const bloques = await lister(maquilleuse.session.enTetes, 'where[blocked][equals]=true')
 		expect(bloques.liste.totalDocs).toBe(0)
 		// The join is the admin's: the account holder does not read it.
-		expect(siens.liste.docs[0]?.profil).toBeUndefined()
+		expect(siens.liste.docs[0]?.profile).toBeUndefined()
 		// ... and she cannot filter on it either: that would tell her what she may not read.
-		expect((await lister(maquilleuse.session.enTetes, 'where[profil][exists]=false')).statut).not.toBe(200)
+		expect((await lister(maquilleuse.session.enTetes, 'where[profile][exists]=false')).statut).not.toBe(200)
 	})
 })
 
@@ -119,18 +119,18 @@ describe('L’admin bloque un compte depuis sa fiche (ticket 168)', () => {
 		expect(((await moi()).corps as { user: unknown }).user).not.toBeNull()
 
 		const bloquer = await appelerRest('PATCH', `/api/pros/${compte.id}`, {
-			corps: { bloque: true },
+			corps: { blocked: true },
 			enTetes: admin.session.enTetes,
 		})
 		expect(bloquer.statut).toBe(200)
 
 		expect(((await moi()).corps as { user: unknown }).user).toBeNull()
 		expect((await connexion()).statut).toBe(403)
-		const bloques = await lister(admin.session.enTetes, 'where[bloque][equals]=true')
+		const bloques = await lister(admin.session.enTetes, 'where[blocked][equals]=true')
 		expect(bloques.liste.docs.map(({ id }) => String(id))).toContain(String(compte.id))
 
 		const debloquer = await appelerRest('PATCH', `/api/pros/${compte.id}`, {
-			corps: { bloque: false },
+			corps: { blocked: false },
 			enTetes: admin.session.enTetes,
 		})
 		expect(debloquer.statut).toBe(200)
@@ -141,11 +141,11 @@ describe('L’admin bloque un compte depuis sa fiche (ticket 168)', () => {
 		const redaction = await creerCompte('redaction')
 		const compte = await creerCompte('maquilleuse')
 		const reponse = await appelerRest('PATCH', `/api/pros/${compte.id}`, {
-			corps: { bloque: true },
+			corps: { blocked: true },
 			enTetes: redaction.session.enTetes,
 		})
 		expect(reponse.statut).toBeGreaterThanOrEqual(400)
 		const lu = await (await payloadDeTest()).findByID({ collection: 'pros', id: compte.id, depth: 0 })
-		expect(lu.bloque).toBe(false)
+		expect(lu.blocked).toBe(false)
 	})
 })

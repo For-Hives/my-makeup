@@ -325,15 +325,15 @@ async function remettreLeBancAZero(banc: Banc): Promise<Contenu> {
 	await Promise.all([viderLeStockage(), viderLeCapteur()])
 	await poserLeJeuDuBanc()
 	const payload = await payloadDeTest()
-	const compter = async (collection: 'profils' | 'talents' | 'articles' | 'pros' | 'admins') =>
+	const compter = async (collection: 'profiles' | 'talents' | 'articles' | 'pros' | 'admins') =>
 		(await payload.count({ collection, overrideAccess: true })).totalDocs
 	const types = await payload.count({
-		collection: 'profils',
+		collection: 'profiles',
 		overrideAccess: true,
 		where: { 'pro.email': { like: 'jeu-profil-' } },
 	})
 	return {
-		profils: await compter('profils'),
+		profils: await compter('profiles'),
 		profilsTypes: types.totalDocs,
 		talents: await compter('talents'),
 		articles: await compter('articles'),

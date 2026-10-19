@@ -92,7 +92,7 @@ export async function terminerLaConnexionGoogle({
 	frein = freinDuRetourGoogle,
 }: EntreesDuRetour): Promise<IssueDeGoogle> {
 	const debut = Date.now()
-	const noter = async (type: 'connexion' | 'inscription', code: CodeEvenement) => {
+	const noter = async (type: 'sign-in' | 'sign-up', code: CodeEvenement) => {
 		// A script can send returns by the thousand: the rows of refusals are 3 an hour per address and
 		// outcome, like those of the sign-up (ticket 084). The address is a key in memory, never written.
 		if (
@@ -102,13 +102,13 @@ export async function terminerLaConnexionGoogle({
 		)
 			return
 		try {
-			await journal?.({ type, code, dureeMs: Date.now() - debut, methode: 'google' })
+			await journal?.({ type, code, durationMs: Date.now() - debut, method: 'google' })
 		} catch {
 			// The journal is not the sign-in's to fail.
 		}
 	}
 	const refuser = async (code: CodeEvenement, url: CodeErreurGoogle): Promise<IssueDeGoogle> => {
-		await noter('connexion', code)
+		await noter('sign-in', code)
 		return { ok: false, code: url }
 	}
 
@@ -163,15 +163,15 @@ export async function terminerLaConnexionGoogle({
 	await payload.db
 		.updateOne({
 			collection: 'pros',
-			data: { derniereConnexion: new Date().toISOString() },
+			data: { lastSignInAt: new Date().toISOString() },
 			id: compte.id,
 			returning: false,
 		})
 		.catch(() => undefined)
 	// A session was opened: this return was no failure.
 	if (client !== undefined) frein.rendre(client)
-	if (compte.nouveau) await noter('inscription', 'ok')
-	await noter('connexion', 'ok')
+	if (compte.nouveau) await noter('sign-up', 'ok')
+	await noter('sign-in', 'ok')
 	return {
 		ok: true,
 		token,

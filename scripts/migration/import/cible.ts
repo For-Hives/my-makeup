@@ -90,7 +90,7 @@ export function configurationSansChangementDeSchema(config: SanitizedConfig): Sa
  * The collections the import writes, in the order it writes them (plan 01 §5, P4). Their tables
  * keep the name Payload gives them from their slug. A database where all of them are empty is an empty one.
  */
-export const COLLECTIONS_ECRITES: readonly CollectionImportee[] = ['pros', 'media', 'profils', 'articles', 'talents']
+export const COLLECTIONS_ECRITES: readonly CollectionImportee[] = ['pros', 'media', 'profiles', 'articles', 'talents']
 
 /**
  * Refuses a target that does not hold the tables the import writes: the import creates none

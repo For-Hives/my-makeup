@@ -38,7 +38,7 @@ async function utilisateurDe(payload: Payload, compte: Maquilleuse): Promise<Uti
 
 async function profilStocke(payload: Payload, compte: Maquilleuse) {
 	const { docs } = await payload.find({
-		collection: 'profils',
+		collection: 'profiles',
 		depth: 0,
 		overrideAccess: true,
 		where: { pro: { equals: compte.id } },
@@ -54,7 +54,7 @@ async function maquilleuse() {
 	const payload = await payloadDeTest()
 	const utilisateur = await utilisateurDe(payload, compte)
 	const profil = await profilStocke(payload, compte)
-	await payload.update({ collection: 'profils', id: profil.id, data: { specialite: 'Mariage' } })
+	await payload.update({ collection: 'profiles', id: profil.id, data: { specialite: 'Mariage' } })
 	return { compte, payload, utilisateur, id: profil.id, slug: profil.slug }
 }
 
@@ -151,7 +151,7 @@ describe('125, E30 et E31 : une adresse d’un autre site est refusée, un champ
 		})
 
 		expect(resultat).toEqual({ ok: false, message: MESSAGE_ECHEC })
-		expect((await payload.count({ collection: 'profils', overrideAccess: true })).totalDocs).toBe(0)
+		expect((await payload.count({ collection: 'profiles', overrideAccess: true })).totalDocs).toBe(0)
 	})
 
 	test.each([
@@ -305,7 +305,7 @@ describe('126 : la maquilleuse choisit d’afficher son téléphone et son email
 		expect(html).not.toContain('39 98')
 		expect(html).not.toContain('tel:')
 
-		const rest = await appelerRest('GET', `/api/profils?depth=0`)
+		const rest = await appelerRest('GET', `/api/profiles?depth=0`)
 		expect(rest.texte).not.toContain(EMAIL)
 		expect(rest.texte).not.toContain('39 98')
 	})
@@ -321,7 +321,7 @@ describe('126 : la maquilleuse choisit d’afficher son téléphone et son email
 		expect(texte).not.toContain(EMAIL)
 		expect(texte).not.toContain('39 98')
 		expect(texte).not.toMatch(/coordonnees|contactPublic|consenti/)
-		const rest = await appelerRest('GET', '/api/profils?depth=0')
+		const rest = await appelerRest('GET', '/api/profiles?depth=0')
 		expect(rest.texte).not.toContain(EMAIL)
 		expect(rest.texte).not.toContain('contactPublic')
 	})
@@ -347,7 +347,7 @@ describe('126 : masquées et aucun réseau, le profil n’est pas publiable', ()
 			file: fichierPourPayload(),
 		})
 		await m.payload.update({
-			collection: 'profils',
+			collection: 'profiles',
 			id: m.id,
 			data: {
 				photoPrincipale: photo.id,

@@ -25,7 +25,7 @@ async function utilisateurDe(payload: Payload, compte: Maquilleuse): Promise<Uti
 
 async function profilStocke(payload: Payload, compte: { id: number | string }) {
 	const { docs } = await payload.find({
-		collection: 'profils',
+		collection: 'profiles',
 		depth: 0,
 		overrideAccess: true,
 		where: { pro: { equals: compte.id } },
@@ -64,7 +64,7 @@ describe('127 : les langues', () => {
 		const { payload, utilisateur, compte } = await maquilleuse()
 		const profil = await profilStocke(payload, compte)
 		await payload.update({
-			collection: 'profils',
+			collection: 'profiles',
 			id: profil.id,
 			data: { langues: [{ nom: 'Anglais' }, { nom: 'Anglais' }, { nom: 'Russe' }] },
 		})
@@ -86,7 +86,7 @@ describe('127 : les langues', () => {
 		const { payload, utilisateur, compte } = await maquilleuse()
 		const profil = await profilStocke(payload, compte)
 		await payload.update({
-			collection: 'profils',
+			collection: 'profiles',
 			id: profil.id,
 			data: { langues: [{ nom: 'Anglais' }, { nom: 'anglais' }] },
 		})
@@ -104,7 +104,7 @@ describe('127 : les langues', () => {
 		const { payload, utilisateur } = await maquilleuse()
 		const autre = await maquilleuse()
 		const profilAutre = await profilStocke(payload, autre.compte)
-		await payload.update({ collection: 'profils', id: profilAutre.id, data: { langues: [{ nom: 'Basque' }] } })
+		await payload.update({ collection: 'profiles', id: profilAutre.id, data: { langues: [{ nom: 'Basque' }] } })
 		const idAutre = ((await profilStocke(payload, autre.compte)).langues ?? [])[0]?.id as string
 
 		const resultat = await enregistrerLangues(payload, utilisateur, {
@@ -178,7 +178,7 @@ describe('127 : les langues', () => {
 			ok: false,
 			message: MESSAGE_ECHEC,
 		})
-		const { totalDocs } = await payload.count({ collection: 'profils', overrideAccess: true })
+		const { totalDocs } = await payload.count({ collection: 'profiles', overrideAccess: true })
 		expect(totalDocs).toBe(0)
 	})
 
@@ -226,7 +226,7 @@ describe('128 : les compétences', () => {
 		const { payload, utilisateur, compte } = await maquilleuse()
 		const profil = await profilStocke(payload, compte)
 		await payload.update({
-			collection: 'profils',
+			collection: 'profiles',
 			id: profil.id,
 			data: { competences: [{ nom: 'Teint', description: 'Peaux mates et matures.' }, { nom: 'Yeux' }] },
 		})

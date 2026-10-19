@@ -66,7 +66,7 @@ const date = (valeur: unknown): string | null => (typeof valeur === 'string' && 
 export async function lireLesProfilsIndexables(payload: Payload): Promise<ProfilIndexable[]> {
 	const docs = await toutesLesPages(page =>
 		payload.find({
-			collection: 'profils',
+			collection: 'profiles',
 			where: FILTRE_INDEXABLE,
 			select: { slug: true, prenom: true, nom: true, nomArtiste: true, updatedAt: true },
 			sort: ['slug', 'id'],

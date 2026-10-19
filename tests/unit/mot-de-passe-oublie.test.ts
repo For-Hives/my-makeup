@@ -220,7 +220,7 @@ describe('demanderUnLien avec un Payload de pacotille', () => {
 		journal.length = 0
 		const { resultat } = await lancer('connue@example.test', { echec: true })
 		expect(resultat).toEqual({ ok: true })
-		expect(journal).toEqual([{ type: 'mot-de-passe-oublie', code: 'service-indisponible' }])
+		expect(journal).toEqual([{ type: 'forgot-password', code: 'service-indisponible' }])
 		// The place of the mail is given back, so that she can ask again at once.
 		expect(rendus.length).toBe(1)
 	})

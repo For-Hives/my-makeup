@@ -81,9 +81,9 @@ async function renvoi(email: string, freins: FreinsDeBoite) {
 }
 
 const comptes = async () => (await (await payloadDeTest()).count({ collection: 'pros' })).totalDocs
-const profils = async () => (await (await payloadDeTest()).count({ collection: 'profils' })).totalDocs
+const profils = async () => (await (await payloadDeTest()).count({ collection: 'profiles' })).totalDocs
 const journal = async () =>
-	(await (await payloadDeTest()).find({ collection: 'auth-evenements', depth: 0, limit: 1000, sort: 'id' })).docs
+	(await (await payloadDeTest()).find({ collection: 'auth-events', depth: 0, limit: 1000, sort: 'id' })).docs
 const lienDuMail = (liens: string[]) => liens.find(l => l.includes('/auth/verification-complete'))
 const mediane = (valeurs: number[]) => [...valeurs].sort((a, b) => a - b)[Math.floor(valeurs.length / 2)] ?? 0
 
@@ -130,7 +130,7 @@ describe('E03 : une adresse déjà utilisée ne révèle rien et ne crée pas de
 		await inscription(email)
 
 		const lignes = (await journal()).slice(avant)
-		expect(lignes.map(({ type, code }) => [type, code])).toEqual([['inscription', 'email-deja-pris']])
+		expect(lignes.map(({ type, code }) => [type, code])).toEqual([['sign-up', 'email-deja-pris']])
 		expect(JSON.stringify(lignes)).not.toContain('journal-pris')
 	})
 
@@ -146,7 +146,7 @@ describe('E03 : une adresse déjà utilisée ne révèle rien et ne crée pas de
 			erreurs: { email: MESSAGES_INSCRIPTION.email.invalide },
 		})
 		expect((await payload.count({ collection: 'pros', overrideAccess: true })).totalDocs).toBe(avant)
-		expect((await journal()).map(({ type, code }) => [type, code]).at(-1)).toEqual(['inscription', 'donnees-invalides'])
+		expect((await journal()).map(({ type, code }) => [type, code]).at(-1)).toEqual(['sign-up', 'donnees-invalides'])
 	})
 
 	test('un mail de la propriétaire qui ne part pas donne la même réponse que pour une adresse neuve dont le mail ne part pas', async () => {
@@ -390,9 +390,9 @@ describe('E04 : le renvoi de la confirmation est limité', () => {
 
 		const lignes = (await journal()).slice(avant)
 		expect(lignes.map(({ type, code }) => [type, code])).toEqual([
-			['renvoi', 'ok'],
-			['renvoi', 'trop-de-tentatives'],
-			['renvoi', 'ok'],
+			['resend', 'ok'],
+			['resend', 'trop-de-tentatives'],
+			['resend', 'ok'],
 		])
 		expect(JSON.stringify(lignes)).not.toContain('journal-renvoi')
 	})
@@ -414,7 +414,7 @@ describe('purge des comptes jamais confirmés (ticket 084)', () => {
 			data: {
 				email: courriel('purge'),
 				password: MOT_DE_PASSE,
-				nom: 'Compte Fictif',
+				name: 'Compte Fictif',
 				_verified: options.verifie ?? false,
 				createdAt: joursAvant(options.jours),
 				...(options.strapiId !== undefined && { strapiId: options.strapiId }),
@@ -424,11 +424,11 @@ describe('purge des comptes jamais confirmés (ticket 084)', () => {
 			disableVerificationEmail: true,
 			overrideAccess: true,
 		})
-		const profil = (await payload.find({ collection: 'profils', depth: 0, where: { pro: { equals: compte.id } } }))
+		const profil = (await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } }))
 			.docs[0]
 		if (options.profilRempli && profil)
 			await payload.update({
-				collection: 'profils',
+				collection: 'profiles',
 				id: profil.id,
 				data: { specialite: 'Maquillage de mariée' },
 				depth: 0,
@@ -436,7 +436,7 @@ describe('purge des comptes jamais confirmés (ticket 084)', () => {
 			})
 		return { compte, profil }
 	}
-	const existe = async (collection: 'pros' | 'profils', id: number) =>
+	const existe = async (collection: 'pros' | 'profiles', id: number) =>
 		(await (await payloadDeTest()).count({ collection, where: { id: { equals: id } } })).totalDocs === 1
 
 	test('un compte non confirmé de 8 jours part avec son profil vide ; tout le reste est gardé', async () => {
@@ -453,10 +453,10 @@ describe('purge des comptes jamais confirmés (ticket 084)', () => {
 
 		expect(supprimes).toBe(1)
 		expect(await existe('pros', perime.compte.id)).toBe(false)
-		expect(await existe('profils', perime.profil?.id ?? 0)).toBe(false)
+		expect(await existe('profiles', perime.profil?.id ?? 0)).toBe(false)
 		for (const gardee of [recent, confirme, importe, ancienFournisseur, rempli]) {
 			expect(await existe('pros', gardee.compte.id)).toBe(true)
-			expect(await existe('profils', gardee.profil?.id ?? 0)).toBe(true)
+			expect(await existe('profiles', gardee.profil?.id ?? 0)).toBe(true)
 		}
 	})
 

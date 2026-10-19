@@ -115,8 +115,8 @@ describe('Les statistiques hebdomadaires sur le jeu du banc', () => {
 	}, 60_000)
 
 	test('le jeton ne vaut rien sur une autre route : l’API de Payload le lit comme une visiteuse', async () => {
-		const profils = await appelerRest('GET', '/api/profils?limit=100', { enTetes: ENTETES })
-		const anonyme = await appelerRest('GET', '/api/profils?limit=100')
+		const profils = await appelerRest('GET', '/api/profiles?limit=100', { enTetes: ENTETES })
+		const anonyme = await appelerRest('GET', '/api/profiles?limit=100')
 		expect(profils.statut).toBe(anonyme.statut)
 		expect(profils.texte).toBe(anonyme.texte)
 		const comptes = await appelerRest('GET', '/api/pros', { enTetes: ENTETES })

@@ -31,7 +31,7 @@ import { adressesDuChangement, cleSiLEnvoiEstPermis, signalerPlusTard } from '..
 
 /** The field of the stored row that says whether the document is shown, and its public value. */
 const VISIBILITE: Readonly<Record<ContenuPublic, { champ: 'statut' | '_status'; valeur: string }>> = {
-	profils: { champ: 'statut', valeur: STATUT_PUBLIE },
+	profiles: { champ: 'statut', valeur: STATUT_PUBLIE },
 	articles: { champ: '_status', valeur: 'published' },
 	talents: { champ: '_status', valeur: 'published' },
 }
@@ -50,7 +50,7 @@ async function lireEtatPublic(
 	const ligne = await req.payload.db.findOne<LigneStockee>({
 		collection: contenu,
 		req,
-		select: { slug: true, [champ]: true, ...(contenu === 'profils' && { publiable: true }) },
+		select: { slug: true, [champ]: true, ...(contenu === 'profiles' && { publiable: true }) },
 		where: { id: { equals: id } },
 	})
 	if (!ligne) return null
@@ -59,7 +59,7 @@ async function lireEtatPublic(
 	return {
 		slug: String(ligne.slug ?? ''),
 		visible,
-		indexable: contenu === 'profils' ? ligne.publiable === true : visible,
+		indexable: contenu === 'profiles' ? ligne.publiable === true : visible,
 	}
 }
 

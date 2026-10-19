@@ -18,7 +18,7 @@ test.describe('E54 : une maquilleuse connectée n’entre pas dans l’administr
 		const maquilleuse = await creerCompte('maquilleuse')
 		await context.addCookies(maquilleuse.session.cookies)
 
-		for (const chemin of ['/admin', '/admin/collections/admins', '/admin/collections/profils', '/admin/account']) {
+		for (const chemin of ['/admin', '/admin/collections/admins', '/admin/collections/profiles', '/admin/account']) {
 			await page.goto(chemin)
 
 			await expect(page).toHaveURL(/\/admin\/unauthorized(?:\?|$)/)

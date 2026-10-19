@@ -10,7 +10,7 @@ import type { Payload } from 'payload'
  *   `retirerLesSecrets`, which drops any key that looks like a password, a hash, a salt or a token.
  * - **Deterministic**: no clock, no random value. The same database and the same `depuis` give the same text.
  * - **What a deletion leaves**: an account of the old site deleted on the v3 leaves its old identifier in
- *   `comptes-supprimes`. A photo or an account that came from the v3 alone and was deleted leaves nothing, and
+ *   `deleted-accounts`. A photo or an account that came from the v3 alone and was deleted leaves nothing, and
  *   the old site never knew it.
  * - An imported record keeps the dates of the old site (the import writes them back), so an imported record
  *   nobody touched is older than the day of the switch and is not exported.
@@ -56,10 +56,10 @@ export function retirerLesSecrets(valeur: unknown): unknown {
 /** The fields of an account that are exported: what is needed to make it again on the old site, nothing of its credentials. */
 const CHAMPS_DU_COMPTE = {
 	email: true,
-	nom: true,
-	bloque: true,
+	name: true,
+	blocked: true,
 	_verified: true,
-	derniereConnexion: true,
+	lastSignInAt: true,
 	legacyProvider: true,
 	strapiId: true,
 	createdAt: true,
@@ -97,12 +97,12 @@ export async function lireLeDelta(payload: Payload, depuis: Date): Promise<Expor
 	const lecture = { depth: 0, limit: 0, pagination: false, overrideAccess: true, sort: 'id' } as const
 	const [comptes, profils, photos, messages, supprimes] = await Promise.all([
 		payload.find({ ...lecture, collection: 'pros', select: CHAMPS_DU_COMPTE, where: recent }),
-		payload.find({ ...lecture, collection: 'profils', where: recent }),
+		payload.find({ ...lecture, collection: 'profiles', where: recent }),
 		payload.find({ ...lecture, collection: 'media', select: CHAMPS_DE_LA_PHOTO, where: recent }),
-		payload.find({ ...lecture, collection: 'demandes', where: recent }),
+		payload.find({ ...lecture, collection: 'contact-requests', where: recent }),
 		payload.find({
 			...lecture,
-			collection: 'comptes-supprimes',
+			collection: 'deleted-accounts',
 			select: { strapiId: true, date: true },
 			where: { date: { greater_than_equal: instant } },
 		}),

@@ -26,7 +26,7 @@ test.beforeEach(({ context }) =>
 async function maquilleuse(context: { addCookies: (c: never[]) => Promise<void> }) {
 	const compte = await creerCompte('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
 	const payload = await payloadDeTest()
-	const { docs } = await payload.find({ collection: 'profils', depth: 0, where: { pro: { equals: compte.id } } })
+	const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })
 	const [fiche] = docs
 	if (!fiche) throw new Error('pas de profil')
 	const media = await payload.create({
@@ -35,7 +35,7 @@ async function maquilleuse(context: { addCookies: (c: never[]) => Promise<void> 
 		file: fichierPourPayload(),
 	})
 	const profil = await payload.update({
-		collection: 'profils',
+		collection: 'profiles',
 		id: fiche.id,
 		data: { prenom: 'Léa', nom: 'Fictive', specialite: 'Mariée', commune: VILLE, photoPrincipale: media.id },
 	})
@@ -43,7 +43,7 @@ async function maquilleuse(context: { addCookies: (c: never[]) => Promise<void> 
 	return { compte, media, profil, slug: profil.slug ?? '' }
 }
 
-const existe = async (collection: 'pros' | 'profils' | 'media', id: number | string) =>
+const existe = async (collection: 'pros' | 'profiles' | 'media', id: number | string) =>
 	(await (await payloadDeTest()).findByID({ collection, id, depth: 0, disableErrors: true, overrideAccess: true })) !==
 	null
 
@@ -74,7 +74,7 @@ test.describe('141 : supprimer mon compte', { tag: '@mobile' }, () => {
 		await expect(page.getByRole('dialog').getByRole('alert')).toContainText('Ce n’est pas le bon mot de passe')
 		await expect(page.getByRole('dialog')).toBeVisible()
 		expect(await existe('pros', compte.id)).toBe(true)
-		expect(await existe('profils', profil.id)).toBe(true)
+		expect(await existe('profiles', profil.id)).toBe(true)
 		expect((await page.request.get(`/profil/${slug}`)).status()).toBe(200)
 
 		await champ(page).fill(MOT_DE_PASSE)
@@ -83,7 +83,7 @@ test.describe('141 : supprimer mon compte', { tag: '@mobile' }, () => {
 		await expect(page).toHaveURL(/\/$/)
 		expect((await context.cookies()).filter(c => c.name === 'payload-token')).toEqual([])
 		expect(await existe('pros', compte.id)).toBe(false)
-		expect(await existe('profils', profil.id)).toBe(false)
+		expect(await existe('profiles', profil.id)).toBe(false)
 		expect(await existe('media', media.id)).toBe(false)
 		expect(await lireUnObjet(`media/${media.filename}`)).toBeUndefined()
 		expect(await lireUnObjet(`deleted/media/${media.filename}`)).toBeDefined()

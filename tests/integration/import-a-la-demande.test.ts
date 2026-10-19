@@ -74,11 +74,11 @@ async function passer(importation: Partial<ImportEnv> = {}, options: OptionsDeLI
 
 async function nombres() {
 	const payload = await payloadDeTest()
-	const compter = async (collection: 'pros' | 'profils' | 'articles' | 'talents' | 'media') =>
+	const compter = async (collection: 'pros' | 'profiles' | 'articles' | 'talents' | 'media') =>
 		(await payload.count({ collection, overrideAccess: true })).totalDocs
 	return {
 		pros: await compter('pros'),
-		profils: await compter('profils'),
+		profils: await compter('profiles'),
 		articles: await compter('articles'),
 		talents: await compter('talents'),
 		media: await compter('media'),

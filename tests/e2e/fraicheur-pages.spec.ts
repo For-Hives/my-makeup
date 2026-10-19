@@ -58,14 +58,14 @@ async function poserUnProfil(): Promise<ProfilDeFraicheur> {
 
 /** Takes the profile away through the application, and its photo: the lists forget it at once. */
 async function retirerLeProfil(request: APIRequestContext, profil: ProfilDeFraicheur): Promise<void> {
-	await request.delete(`/api/profils/${profil.id}`, { headers: profil.entetes })
+	await request.delete(`/api/profiles/${profil.id}`, { headers: profil.entetes })
 	await request.delete(`/api/pros/${profil.pro}`, { headers: profil.entetes })
 	const payload = await payloadDeTest()
 	await payload.delete({ collection: 'media', where: { owner: { equals: profil.pro } } }).catch(() => undefined)
 }
 
 async function enregistrer(request: APIRequestContext, profil: ProfilDeFraicheur, data: Record<string, unknown>) {
-	const reponse = await request.patch(`/api/profils/${profil.id}`, { headers: profil.entetes, data })
+	const reponse = await request.patch(`/api/profiles/${profil.id}`, { headers: profil.entetes, data })
 	if (!reponse.ok()) throw new Error(`L’enregistrement a répondu ${reponse.status()} : ${await reponse.text()}`)
 }
 
@@ -175,9 +175,9 @@ test.describe('Fraîcheur des pages publiques (117)', () => {
 			// again would show it.
 			const payload = await payloadDeTest()
 			const silencieux = `Description écrite en coulisse ${profil.mot}, que la base a et que la page ne doit pas montrer.`
-			await payload.update({ collection: 'profils', id: profil.id, data: { description: silencieux }, depth: 0 })
+			await payload.update({ collection: 'profiles', id: profil.id, data: { description: silencieux }, depth: 0 })
 			const enBase = await payload.findByID({
-				collection: 'profils',
+				collection: 'profiles',
 				id: profil.id,
 				depth: 0,
 				select: { description: true },

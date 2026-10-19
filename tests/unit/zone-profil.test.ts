@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import type { Field } from 'payload'
-import { Profils } from '@/collections/Profiles'
+import { Profiles } from '@/collections/Profiles'
 import { DEPARTEMENTS } from '@/lib/departements'
 import {
 	BORNES_DU_RAYON_KM,
@@ -340,7 +340,7 @@ describe('la commune', () => {
 })
 
 describe('les champs de la zone dans la collection des profils', () => {
-	const champs = Profils.fields.filter((champ): champ is Field & { name: string } => 'name' in champ)
+	const champs = Profiles.fields.filter((champ): champ is Field & { name: string } => 'name' in champ)
 	const champ = (nom: string) => champs.find(({ name }) => name === nom)
 
 	test('commune, rayonKm et aDomicile, aux noms de SCHEMA.md, après la spécialité', () => {

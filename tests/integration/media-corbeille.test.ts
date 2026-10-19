@@ -48,14 +48,15 @@ async function envoyer(compte: Compte): Promise<Media> {
 /** The profile of an account, read without access control. */
 async function profilDe(compte: { id: number | string }) {
 	const payload = await payloadDeTest()
-	const [profil] = (await payload.find({ collection: 'profils', depth: 0, where: { pro: { equals: compte.id } } })).docs
+	const [profil] = (await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } }))
+		.docs
 	if (!profil) throw new Error('La fabrique n’a pas créé de profil.')
 	return profil
 }
 
 /** She saves her own profile through REST, as her space will. */
 const enregistrer = async (compte: Compte, corps: Record<string, unknown>) =>
-	appelerRest('PATCH', `/api/profils/${(await profilDe(compte)).id}?depth=0`, {
+	appelerRest('PATCH', `/api/profiles/${(await profilDe(compte)).id}?depth=0`, {
 		enTetes: compte.session.enTetes,
 		corps,
 	})
@@ -129,12 +130,12 @@ describe('Photo remplacée : ancien objet en corbeille (I24) ; photo encore réf
 		const photo = await payload.create({ collection: 'media', data: {}, file: fichierPourPayload() })
 		const article = await payload.create({
 			collection: 'articles',
-			data: { title: 'Article fictif', slug: 'article-fictif', galerie: [photo.id], _status: 'published' },
+			data: { title: 'Article fictif', slug: 'article-fictif', gallery: [photo.id], _status: 'published' },
 		})
-		await payload.update({ collection: 'articles', id: article.id, data: { galerie: [] } })
+		await payload.update({ collection: 'articles', id: article.id, data: { gallery: [] } })
 		await payload.update({ collection: 'media', id: photo.id, data: { owner: Number(compte.id) } })
 		await payload.update({
-			collection: 'profils',
+			collection: 'profiles',
 			id: (await profilDe(compte)).id,
 			data: { photoPrincipale: photo.id },
 		})
@@ -161,7 +162,7 @@ describe('Photo remplacée : ancien objet en corbeille (I24) ; photo encore réf
 		await enregistrerOuEchouer(a, { photoPrincipale: principale.id, galerie: [galerie.id] })
 		await enregistrerOuEchouer(b, { photoPrincipale: deB.id })
 
-		const { statut } = await appelerRest('DELETE', `/api/profils/${(await profilDe(a)).id}`, {
+		const { statut } = await appelerRest('DELETE', `/api/profiles/${(await profilDe(a)).id}`, {
 			enTetes: admin.session.enTetes,
 		})
 
@@ -285,7 +286,7 @@ describe('Panne du stockage : plusieurs documents à la fois sont refusés, rien
 		const profil = await profilDe(compte)
 		espion.fairePanne(commande => commande.nom === 'CopyObject')
 
-		const { statut } = await appelerRest('PATCH', `/api/profils?where[id][equals]=${profil.id}&depth=0`, {
+		const { statut } = await appelerRest('PATCH', `/api/profiles?where[id][equals]=${profil.id}&depth=0`, {
 			enTetes: compte.session.enTetes,
 			corps: { photoPrincipale: nouvelle.id },
 		})
@@ -313,7 +314,7 @@ describe('Panne du stockage : plusieurs documents à la fois sont refusés, rien
 				commande.nom === 'CopyObject' && String(commande.entree.Key).startsWith('deleted/') && ++copiesEnCorbeille === 3
 		)
 
-		const { statut } = await appelerRest('DELETE', `/api/profils?where[id][in]=${profilA.id},${profilB.id}`, {
+		const { statut } = await appelerRest('DELETE', `/api/profiles?where[id][in]=${profilA.id},${profilB.id}`, {
 			enTetes: admin.session.enTetes,
 		})
 
@@ -333,7 +334,7 @@ describe('Panne du stockage : plusieurs documents à la fois sont refusés, rien
 		await enregistrerOuEchouer(compte, { photoPrincipale: photo.id })
 		const profil = await profilDe(compte)
 		const media = { collection: 'media', where: { id: { equals: photo.id } } } as const
-		const profils = { collection: 'profils', where: { id: { equals: profil.id } } } as const
+		const profils = { collection: 'profiles', where: { id: { equals: profil.id } } } as const
 
 		for (const operation of [
 			() => payload.delete(media),
@@ -410,11 +411,11 @@ describe('Avec le contexte d’import, rien n’est déplacé', () => {
 		const compte = await creerCompte('maquilleuse')
 		const [ancienne, nouvelle] = [await envoyer(compte), await envoyer(compte)]
 		const profil = await profilDe(compte)
-		await payload.update({ collection: 'profils', id: profil.id, data: { photoPrincipale: ancienne.id } })
+		await payload.update({ collection: 'profiles', id: profil.id, data: { photoPrincipale: ancienne.id } })
 		const avant = espion.journal.length
 
 		await payload.update({
-			collection: 'profils',
+			collection: 'profiles',
 			id: profil.id,
 			data: { photoPrincipale: nouvelle.id },
 			context: CONTEXTE_IMPORT,

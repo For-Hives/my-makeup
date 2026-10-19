@@ -93,7 +93,7 @@ test('un profil repris de la fausse base Strapi s’affiche sur sa page publique
 	expect(source.code, source.sortie).toBe(0)
 
 	const premier = await importer(testInfo.outputPath('rapport-1.json'))
-	expect(premier.collections.profils).toMatchObject({ crees: 13, modifies: 0 })
+	expect(premier.collections.profiles).toMatchObject({ crees: 13, modifies: 0 })
 
 	// The HTML of the server, as a search engine reads it: 200, the name in the only h1.
 	const reponse = await request.get('/profil/zoe-lefevre')

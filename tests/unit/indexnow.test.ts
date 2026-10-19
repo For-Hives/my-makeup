@@ -105,17 +105,17 @@ describe('où l’envoi est permis', () => {
 describe('les adresses d’un enregistrement', () => {
 	test('un profil qui devient publiable, qui cesse de l’être, qui change : son adresse définitive', () => {
 		const attendu = [`${SITE}/profil/zoe-lefevre`]
-		expect(adressesDuChangement('profils', cache('zoe-lefevre'), publie('zoe-lefevre'))).toEqual(attendu)
-		expect(adressesDuChangement('profils', publie('zoe-lefevre'), cache('zoe-lefevre'))).toEqual(attendu)
-		expect(adressesDuChangement('profils', publie('zoe-lefevre'), publie('zoe-lefevre'))).toEqual(attendu)
-		expect(adressesDuChangement('profils', null, publie('zoe-lefevre'))).toEqual(attendu)
-		expect(adressesDuChangement('profils', publie('zoe-lefevre'), null)).toEqual(attendu)
+		expect(adressesDuChangement('profiles', cache('zoe-lefevre'), publie('zoe-lefevre'))).toEqual(attendu)
+		expect(adressesDuChangement('profiles', publie('zoe-lefevre'), cache('zoe-lefevre'))).toEqual(attendu)
+		expect(adressesDuChangement('profiles', publie('zoe-lefevre'), publie('zoe-lefevre'))).toEqual(attendu)
+		expect(adressesDuChangement('profiles', null, publie('zoe-lefevre'))).toEqual(attendu)
+		expect(adressesDuChangement('profiles', publie('zoe-lefevre'), null)).toEqual(attendu)
 	})
 
 	test('un profil publié mais pas publiable, ou masqué qui le reste : rien', () => {
-		expect(adressesDuChangement('profils', publie('zoe', false), publie('zoe', false))).toEqual([])
-		expect(adressesDuChangement('profils', cache('zoe'), cache('zoe'))).toEqual([])
-		expect(adressesDuChangement('profils', null, null)).toEqual([])
+		expect(adressesDuChangement('profiles', publie('zoe', false), publie('zoe', false))).toEqual([])
+		expect(adressesDuChangement('profiles', cache('zoe'), cache('zoe'))).toEqual([])
+		expect(adressesDuChangement('profiles', null, null)).toEqual([])
 	})
 
 	test('une adresse qui change : l’ancienne et la nouvelle, une seule fois chacune', () => {
@@ -133,7 +133,7 @@ describe('les adresses d’un enregistrement', () => {
 	})
 
 	test('un slug qui n’en est pas un (slug provisoire d’un profil en création) : rien', () => {
-		expect(adressesDuChangement('profils', null, publie('_provisoire-1234'))).toEqual([])
+		expect(adressesDuChangement('profiles', null, publie('_provisoire-1234'))).toEqual([])
 	})
 })
 
@@ -242,7 +242,7 @@ describe('les crochets de Payload', () => {
 		}
 	})
 
-	const HOOKS = rafraichissement('profils')
+	const HOOKS = rafraichissement('profiles')
 
 	async function enregistrer(req: PayloadRequest, context: RequestContext, id = 7) {
 		await HOOKS.avantEcriture({ context, data: {}, operation: 'update', originalDoc: { id }, req } as never)

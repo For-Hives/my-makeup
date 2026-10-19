@@ -219,11 +219,11 @@ describe('the published example', () => {
 describe('ticket 169: contact messages, sign-ins and inherited hashes', () => {
 	test('agregerContact: one message per state, every state of the closed lists present', () => {
 		const contact = agregerContact([
-			{ statut: 'nouvelle', etatMail: 'en-attente' },
-			{ statut: 'transmise', etatMail: 'envoye' },
-			{ statut: 'repondue', etatMail: 'envoye' },
-			{ statut: 'spam', etatMail: 'echec' },
-			{ statut: 'inconnu', etatMail: null },
+			{ status: 'new', mailStatus: 'pending' },
+			{ status: 'forwarded', mailStatus: 'sent' },
+			{ status: 'answered', mailStatus: 'sent' },
+			{ status: 'spam', mailStatus: 'failed' },
+			{ status: 'inconnu', mailStatus: null },
 		])
 		expect(contact.total).toBe(5)
 		expect(contact.parStatut).toEqual({ nouvelle: 1, transmise: 1, repondue: 1, spam: 1 })
@@ -246,12 +246,12 @@ describe('ticket 169: contact messages, sign-ins and inherited hashes', () => {
 
 	test('agregerAuth: by kind, the sign-ins by code, the 95th percentile of their durations only', () => {
 		const auth = agregerAuth([
-			{ type: 'connexion', code: 'ok', dureeMs: 100 },
-			{ type: 'connexion', code: 'ok', dureeMs: 300 },
-			{ type: 'connexion', code: 'heritee', dureeMs: 900 },
-			{ type: 'connexion', code: 'identifiants-invalides' },
-			{ type: 'deconnexion', code: 'ok', dureeMs: 5000 },
-			{ type: 'inscription', code: 'champ-piege' },
+			{ type: 'sign-in', code: 'ok', durationMs: 100 },
+			{ type: 'sign-in', code: 'ok', durationMs: 300 },
+			{ type: 'sign-in', code: 'heritee', durationMs: 900 },
+			{ type: 'sign-in', code: 'identifiants-invalides' },
+			{ type: 'sign-out', code: 'ok', durationMs: 5000 },
+			{ type: 'sign-up', code: 'champ-piege' },
 			{ type: 'pirate', code: 'ok' },
 		])
 		expect(auth.parType.connexion).toBe(4)

@@ -82,10 +82,10 @@ test.afterAll(async ({ request }) => {
 	const payload = await payloadDeTest()
 	for (const { id } of [...(profils?.values() ?? []), ...(grande ? [grande] : [])]) {
 		const profil = await payload
-			.findByID({ collection: 'profils', id, depth: 0, select: { pro: true } })
+			.findByID({ collection: 'profiles', id, depth: 0, select: { pro: true } })
 			.catch(() => null)
 		if (!profil) continue
-		await payload.delete({ collection: 'profils', id })
+		await payload.delete({ collection: 'profiles', id })
 		const pro = typeof profil.pro === 'object' ? profil.pro.id : profil.pro
 		if (pro !== undefined && pro !== null) await payload.delete({ collection: 'pros', id: pro }).catch(() => undefined)
 	}

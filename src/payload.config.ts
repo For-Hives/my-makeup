@@ -8,9 +8,9 @@ import sharp from 'sharp'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import { Admins } from './collections/Admins'
 import { Articles } from './collections/Articles'
-import { AuthEvenements } from './collections/AuthEvents'
-import { Demandes } from './collections/ContactRequests'
-import { ComptesSupprimes } from './collections/DeletedAccounts'
+import { AuthEvents } from './collections/AuthEvents'
+import { ContactRequests } from './collections/ContactRequests'
+import { DeletedAccounts } from './collections/DeletedAccounts'
 import {
 	aucunEnvoiSansStockage,
 	champsDuStockageFermes,
@@ -18,7 +18,7 @@ import {
 	UPLOAD_DES_MEDIAS,
 	versLAdressePublique,
 } from './collections/Media'
-import { Profils } from './collections/Profiles'
+import { Profiles } from './collections/Profiles'
 import { Pros } from './collections/Pros'
 import { Talents } from './collections/Talents'
 import { avecLaCorbeille } from './collections/trash'
@@ -79,7 +79,7 @@ export default buildConfig({
 		// 'off' closes /api/og: an image rendered on demand, for anyone, with or without a session.
 		meta: { defaultOGImageType: 'off' },
 	},
-	collections: [Admins, Pros, Profils, media, Talents, Articles, AuthEvenements, Demandes, ComptesSupprimes],
+	collections: [Admins, Pros, Profiles, media, Talents, Articles, AuthEvents, ContactRequests, DeletedAccounts],
 	// The site and the API share one origin: no other site may read this API from a browser.
 	cors: [],
 	// A session cookie is accepted from these origins only (src/lib/env.ts).

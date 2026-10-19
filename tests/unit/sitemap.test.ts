@@ -103,7 +103,7 @@ describe('U41 : les exclus ne sont jamais là', () => {
 	test('/auth, /api, /admin, /search, le plan du site et la page de remerciement', () => {
 		const pages = [
 			...PAGES_FIXES,
-			...['/auth', '/auth/signin', '/api/health', '/admin', '/admin/collections/profils', '/search', '/site-map'].map(
+			...['/auth', '/auth/signin', '/api/health', '/admin', '/admin/collections/profiles', '/search', '/site-map'].map(
 				chemin => ({ chemin, titre: chemin, groupe: null })
 			),
 			{ chemin: '/demande-envoyee', titre: 'x', groupe: null },
@@ -117,7 +117,7 @@ describe('U41 : les exclus ne sont jamais là', () => {
 	test('la lecture ne demande que les profils publiables, avec les règles d’accès actives', async () => {
 		const { payload, lectures } = payloadEspion({ profils: 1 })
 		await lireLesPagesIndexables(payload)
-		const [profils] = lectures.filter(({ collection }) => collection === 'profils')
+		const [profils] = lectures.filter(({ collection }) => collection === 'profiles')
 		expect(profils).toMatchObject({ where: { publiable: { equals: true } }, overrideAccess: false })
 		for (const lecture of lectures) expect(lecture.overrideAccess, String(lecture.collection)).toBe(false)
 	})
@@ -297,7 +297,7 @@ function payloadEspion({ profils, profilsBruts }: ReglagesDuSpy) {
 			lectures.push(options)
 			const page = Number(options.page ?? 1)
 			const limite = Number(options.limit)
-			if (options.collection === 'profils') {
+			if (options.collection === 'profiles') {
 				const tous =
 					profilsBruts ??
 					Array.from({ length: profils }, (_, i) => ({

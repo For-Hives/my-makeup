@@ -48,7 +48,7 @@ export async function rafraichirLesPagesDesProfils(
 	profil: { id: number; specialite: string | null }
 ): Promise<void> {
 	if (rafraichie) return
-	const reponse = await request.patch(`/api/profils/${profil.id}`, {
+	const reponse = await request.patch(`/api/profiles/${profil.id}`, {
 		headers: await enTetesDeLAdmin(),
 		data: { specialite: profil.specialite ?? '' },
 	})
