@@ -150,14 +150,14 @@ La CI se lance à chaque pull request et à chaque poussée sur `v3`. Cinq jobs 
 
 | Job | Ce qu'il lance | Limite |
 |---|---|---|
-| `qualite` | Les fichiers générés par Payload sont à jour ; aucune dérive de schéma (`bun run schema:derive`) ; `bun run typecheck` ; `bun run ci:biome` ; `bun run test:ci-garde` | 10 min |
+| `qualite` | Les fichiers générés par Payload sont à jour ; aucune dérive de schéma (`bun run schema:derive`) ; `bun run typecheck` ; `bun run ci:biome` ; `bun run test:ci-garde` ; `bun run names:check` (aucun nom français hors liste d'attente et exceptions, `docs/noms.md`) | 10 min |
 | `unit` | `bun run test:unit` | 10 min |
 | `build` | `bun run image:build`, sans secret ni base, puis `bun run image:controle` | 12 min |
 | `integration` | En trois lots côte à côte, de `integration (1/3)` à `integration (3/3)`. Chacun lance `bun run banc:up`, puis `bun run test:integration --shard=N/3` : un tiers des fichiers de tests d'intégration, sur son propre banc de test ([`docs/tests/banc.md`](tests/banc.md)) | 10 min par lot |
 | `e2e` | En quatre lots côte à côte, de `e2e (1/4)` à `e2e (4/4)`. Chacun installe le Chromium de Playwright, lance `bun run banc:up`, puis `bun run test:e2e --shard=N/4` sur son quart des essais ([`docs/tests/e2e.md`](tests/e2e.md)) | 10 min par lot |
 | `ci-ok` | Rouge si l'un des cinq a échoué, a été annulé ou a été sauté | 2 min |
 
-- Dans `qualite`, les cinq contrôles sont tous joués, même quand l'un échoue : une seule poussée montre toutes les fautes.
+- Dans `qualite`, les six contrôles sont tous joués, même quand l'un échoue : une seule poussée montre toutes les fautes.
 - Un lot en échec n'arrête pas les autres (`fail-fast: false`). Pour `ci-ok`, les lots d'un job ne font qu'un : il est en échec dès qu'un lot l'est, annulé dès qu'un lot atteint sa limite. `needs` de `ci-ok` nomme donc les jobs, pas les lots.
 - Un lot `e2e` en échec envoie son rapport, ses traces, ses vidéos et ses captures : l'artefact `e2e-1` à `e2e-4` du passage, gardé 14 jours.
 - Le nombre de lots de chaque job est `SHARDS`, dans `tests/outils/garde-fous-ci.ts`. Pour le changer : la matrice (`shard: [1, …, N]`), le nom du job (`… (${{ matrix.shard }}/N)`), le diviseur de la commande (`--shard=${{ matrix.shard }}/N`) et `SHARDS`, dans le même commit. La garde refuse qu'un des quatre dise un autre nombre : une matrice et un diviseur différents perdraient des tests sans rien dire.
