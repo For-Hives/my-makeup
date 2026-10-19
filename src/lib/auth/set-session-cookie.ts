@@ -8,7 +8,7 @@ export type { SessionCookie }
  * The session cookie of a makeup artist: HttpOnly, SameSite=Lax, Secure on the deployed site, for
  * as long as the session lasts. The one place that decides what it looks like, for a Server Action
  * (`setSessionCookie`) and for a route that answers with its own response (the return from
- * Google). The rule itself is in `cookie-de-session.ts`, which the sliding renewal shares.
+ * Google). The rule itself is in `session-cookie.ts`, which the sliding renewal shares.
  */
 export function sessionCookie(payload: Payload, token: string): SessionCookie {
 	return sessionCookieFor(payload.collections.pros.config.auth, payload.config.cookiePrefix, token)
