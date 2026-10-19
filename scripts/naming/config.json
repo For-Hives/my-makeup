@@ -1,0 +1,208 @@
+{
+	"waiting": [
+		"=src/app/(front)/(espace)",
+		"package.json",
+		"scripts/admin",
+		"scripts/banc.ts",
+		"scripts/bascule",
+		"scripts/ci",
+		"scripts/e2e.ts",
+		"scripts/image",
+		"scripts/medias",
+		"scripts/migration",
+		"scripts/release",
+		"scripts/seo",
+		"scripts/source-strapi.ts",
+		"src/app/(front)/(espace)/auth",
+		"src/app/(front)/(site)/a-propos",
+		"src/app/(front)/(site)/blog",
+		"src/app/(front)/(site)/cgu",
+		"src/app/(front)/(site)/contact",
+		"src/app/(front)/(site)/demande-envoyee",
+		"src/app/(front)/(site)/error.tsx",
+		"src/app/(front)/(site)/layout.tsx",
+		"src/app/(front)/(site)/maquilleuse",
+		"src/app/(front)/(site)/mentions-legales",
+		"src/app/(front)/(site)/not-found.tsx",
+		"src/app/(front)/(site)/page.tsx",
+		"src/app/(front)/(site)/particulier",
+		"src/app/(front)/(site)/politique-de-confidentialite",
+		"src/app/(front)/(site)/pourquoi-rejoindre-my-makeup-en-tant-que-maquilleuse",
+		"src/app/(front)/(site)/pourquoi-utiliser-my-makeup-en-tant-que-particulier",
+		"src/app/(front)/(site)/profil",
+		"src/app/(front)/(site)/search",
+		"src/app/(front)/(site)/site-map",
+		"src/app/(front)/(site)/solutions",
+		"src/app/(front)/(site)/talent",
+		"src/app/(front)/globals.css",
+		"src/app/(front)/layout.tsx",
+		"src/app/(payload)",
+		"src/app/api",
+		"src/app/global-error.tsx",
+		"src/app/global-not-found.tsx",
+		"src/app/robots.ts",
+		"src/app/sitemap.xml",
+		"src/app/u",
+		"src/collections",
+		"src/components/accueil",
+		"src/components/admin",
+		"src/components/analytics",
+		"src/components/auth",
+		"src/components/blocs",
+		"src/components/blog",
+		"src/components/contact",
+		"src/components/contenu",
+		"src/components/espace",
+		"src/components/gabarit",
+		"src/components/legal",
+		"src/components/pages-fixes",
+		"src/components/profil",
+		"src/components/recherche",
+		"src/content",
+		"src/instrumentation-node.ts",
+		"src/instrumentation.ts",
+		"src/jeu-fictif",
+		"src/lib/acces.ts",
+		"src/lib/analytics",
+		"src/lib/articles.ts",
+		"src/lib/auth",
+		"src/lib/bascule",
+		"src/lib/compte",
+		"src/lib/contact",
+		"src/lib/contexte-import.ts",
+		"src/lib/corbeille.ts",
+		"src/lib/departements.ts",
+		"src/lib/emails",
+		"src/lib/env.ts",
+		"src/lib/envoi-photo.ts",
+		"src/lib/espace",
+		"src/lib/format-zone.ts",
+		"src/lib/health.ts",
+		"src/lib/langue-payload.ts",
+		"src/lib/legal.ts",
+		"src/lib/markdown.ts",
+		"src/lib/medias.ts",
+		"src/lib/notes-de-version.ts",
+		"src/lib/pool-base.ts",
+		"src/lib/prestataires.ts",
+		"src/lib/prix.ts",
+		"src/lib/profil",
+		"src/lib/rapprochement-lecture.ts",
+		"src/lib/rapprochement.ts",
+		"src/lib/recherche",
+		"src/lib/requete-bornee.ts",
+		"src/lib/revalidation.ts",
+		"src/lib/security-headers.ts",
+		"src/lib/seo",
+		"src/lib/slug.ts",
+		"src/lib/stats-hebdo.ts",
+		"src/lib/stockage.ts",
+		"src/lib/taches",
+		"src/lib/taille-image.ts",
+		"src/lib/urls",
+		"src/lib/urls-gelees.ts",
+		"src/lib/verrous-payload.ts",
+		"src/lib/version.ts",
+		"src/migration",
+		"src/migrations",
+		"src/payload-types.ts",
+		"src/payload.config.ts",
+		"src/proxy.ts",
+		"src/services",
+		"tests/ci",
+		"tests/e2e",
+		"tests/fixtures",
+		"tests/integration",
+		"tests/outils",
+		"tests/sondes",
+		"tests/unit",
+		"!tests/unit/naming"
+	],
+	"exceptions": {
+		"paths": [
+			{
+				"path": "src/app/(front)/(site)/a-propos",
+				"reason": "Frozen public address: the folder name is the URL (src/lib/urls-gelees.ts, docs/migration/URLS.md)."
+			},
+			{
+				"path": "src/app/(front)/(site)/demande-envoyee",
+				"reason": "Frozen public address: the folder name is the URL (src/lib/urls-gelees.ts, docs/migration/URLS.md)."
+			},
+			{
+				"path": "src/app/(front)/(site)/maquilleuse",
+				"reason": "Frozen public address: the folder name is the URL (src/lib/urls-gelees.ts, docs/migration/URLS.md)."
+			},
+			{
+				"path": "src/app/(front)/(site)/maquilleuse/partenariats",
+				"reason": "Frozen public address: the folder name is the URL (src/lib/urls-gelees.ts, docs/migration/URLS.md)."
+			},
+			{
+				"path": "src/app/(front)/(site)/mentions-legales",
+				"reason": "Frozen public address: the folder name is the URL (src/lib/urls-gelees.ts, docs/migration/URLS.md)."
+			},
+			{
+				"path": "src/app/(front)/(site)/particulier",
+				"reason": "Frozen public address: the folder name is the URL (src/lib/urls-gelees.ts, docs/migration/URLS.md)."
+			},
+			{
+				"path": "src/app/(front)/(site)/particulier/centraliser-ses-recherches",
+				"reason": "Frozen public address: the folder name is the URL (src/lib/urls-gelees.ts, docs/migration/URLS.md)."
+			},
+			{
+				"path": "src/app/(front)/(site)/particulier/explorer-les-profils",
+				"reason": "Frozen public address: the folder name is the URL (src/lib/urls-gelees.ts, docs/migration/URLS.md)."
+			},
+			{
+				"path": "src/app/(front)/(site)/particulier/trouver-une-maquilleuse",
+				"reason": "Frozen public address: the folder name is the URL (src/lib/urls-gelees.ts, docs/migration/URLS.md)."
+			},
+			{
+				"path": "src/app/(front)/(site)/politique-de-confidentialite",
+				"reason": "Frozen public address: the folder name is the URL (src/lib/urls-gelees.ts, docs/migration/URLS.md)."
+			},
+			{
+				"path": "src/app/(front)/(site)/pourquoi-rejoindre-my-makeup-en-tant-que-maquilleuse",
+				"reason": "Frozen public address: the folder name is the URL (src/lib/urls-gelees.ts, docs/migration/URLS.md)."
+			},
+			{
+				"path": "src/app/(front)/(site)/pourquoi-utiliser-my-makeup-en-tant-que-particulier",
+				"reason": "Frozen public address: the folder name is the URL (src/lib/urls-gelees.ts, docs/migration/URLS.md)."
+			},
+			{
+				"path": "src/app/(front)/(site)/profil",
+				"reason": "Frozen public address: the folder name is the URL (src/lib/urls-gelees.ts, docs/migration/URLS.md)."
+			},
+			{
+				"path": "src/app/(front)/(site)/solutions/pour-les-maquilleuses",
+				"reason": "Frozen public address: the folder name is the URL (src/lib/urls-gelees.ts, docs/migration/URLS.md)."
+			},
+			{
+				"path": "src/app/(front)/(site)/solutions/pour-les-particuliers",
+				"reason": "Frozen public address: the folder name is the URL (src/lib/urls-gelees.ts, docs/migration/URLS.md)."
+			},
+			{
+				"path": "src/app/(front)/(espace)/auth/apercu-profil",
+				"reason": "Frozen public address: the folder name is the URL (src/lib/urls-gelees.ts, docs/migration/URLS.md)."
+			},
+			{
+				"path": "src/app/(front)/(espace)/auth/mot-de-passe-oublie",
+				"reason": "Frozen public address: the folder name is the URL (src/lib/urls-gelees.ts, docs/migration/URLS.md)."
+			},
+			{
+				"path": "src/app/(front)/(espace)/auth/profil",
+				"reason": "Frozen public address: the folder name is the URL (src/lib/urls-gelees.ts, docs/migration/URLS.md)."
+			},
+			{
+				"path": "src/app/(front)/(espace)/auth/reinitialiser",
+				"reason": "Frozen public address: the folder name is the URL (src/lib/urls-gelees.ts, docs/migration/URLS.md)."
+			}
+		],
+		"words": [
+			{
+				"word": "specialite",
+				"in": ["src/lib/recherche/saisie.ts"],
+				"reason": "The ?specialite= parameter of /search: links of the old site carry it."
+			}
+		]
+	}
+}

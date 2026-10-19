@@ -27,6 +27,7 @@ My Makeup est un annuaire de maquilleuses professionnelles indépendantes. Cette
 | faire autrement que le site en ligne | [`docs/migration/CHANGEMENTS-VOULUS.md`](docs/migration/CHANGEMENTS-VOULUS.md) |
 | savoir ce qui est déjà fait et vérifié | [`docs/migration/JOURNAL.md`](docs/migration/JOURNAL.md) |
 | écrire une note de version, comprendre la publication d'une version | [`docs/publication.md`](docs/publication.md) |
+| nommer un fichier, un dossier, une fonction, une variable ou une option ; renommer du code ; lire le contrôle des noms | « Conventions » et « Glossaire des noms » ci-dessous, puis [`docs/noms.md`](docs/noms.md) |
 
 Les tickets et les plans cités par leur numéro vivent dans le dépôt des plans, hors de ce dépôt.
 
@@ -60,6 +61,8 @@ Tout se lance depuis la racine du dépôt. La table complète est dans le README
 | `bun run schema:derive` | Dit s'il manque une migration aux collections du code, sans base ni secret. Bloquant en CI depuis la migration `init` (ticket 049) : une collection changée sans sa migration rend le job `qualite` rouge. |
 | `bun scripts/migration/urls-doc.ts` | Après un changement de la table des URL (voir « URL »). Avec `--check`, il dit seulement si le document suit la table. |
 | `bun run notes:ajouter <type> "<phrase>"` | Un changement qui se remarque par rapport au site en ligne : sa note de version, dans le même commit. Type `ajout`, `amelioration` ou `correction` (voir `docs/publication.md`). |
+| `bun run names:check [dossier…]` | Liste les noms encore français (fichiers, dossiers, noms déclarés, scripts, variables d'environnement, options), hors liste d'attente et exceptions. Code de sortie 1 s'il en reste. `--no-waiting` ignore la liste d'attente, `--summary` donne les nombres (voir « Conventions » et [`docs/noms.md`](docs/noms.md)). Pas encore dans la CI (ticket 254). |
+| `bun run names:rename <table.json>` | Déplace des fichiers ou des dossiers et renomme des noms par le service de langage de TypeScript : tous les importeurs suivent. `--dry-run` montre sans écrire. Outil des lots de renommage, retiré au ticket 254 ([`docs/noms.md`](docs/noms.md)). |
 | `bun run release:publier --a-blanc` | Montre ce que ferait la prochaine publication : le numéro, les notes rangées dessous. N'écrit rien. Seul le workflow `release.yml` publie. |
 
 ### Un compte en ligne n'est jamais nécessaire : les quatre gestes du banc
@@ -117,9 +120,55 @@ Ces règles n'ont pas d'exception. Si une tâche semble en demander une, arrête
 ## Conventions
 
 - **Langues.** Le code, les commentaires et les messages de commit sont en anglais. Les textes affichés et les documents sont en français, avec leurs accents.
+- **Noms en anglais.** Le code est en anglais jusque dans ses noms : fichiers, dossiers, identifiants (fonctions, types, constantes, variables), scripts de `package.json`, variables d'environnement lues, options de nos scripts. Un mot du glossaire ci-dessous s'écrit toujours de la même façon ; un mot qui n'y est pas s'y ajoute, dans ce fichier, au lieu d'en inventer un second. Les titres des tests, les lignes de journal, les messages et les textes affichés sont des phrases : ils restent en français. `bun run names:check` liste les noms encore français. Une partie du dépôt est encore sur sa **liste d'attente** (`scripts/naming/config.json`, clé `waiting`) : les lots de renommage (tickets 238 à 253) la raccourcissent, et le contrôle entre dans la CI quand elle est vide (ticket 254). Un dossier hors de la liste n'a aucun nom français ; ne lui en ajoute pas.
+- **Ce qui garde son nom français** (les exceptions, et leur raison) :
+  - les dossiers des **adresses gelées** (avec Next.js, le nom du dossier est l'adresse) : `/a-propos`, `/demande-envoyee`, `/mentions-legales`, `/politique-de-confidentialite`, `/maquilleuse/partenariats`, `/particulier/…`, `/solutions/pour-les-…`, les deux `/pourquoi-…`, `/profil/<slug>`, `/auth/profil`, `/auth/apercu-profil`, `/auth/mot-de-passe-oublie`, `/auth/reinitialiser`. Les autres adresses `/auth/*` du registre (familles `espace-*`) restent comme elles sont : les emails déjà envoyés par l'ancien site et les favoris y mènent ;
+  - le **catalogue Umami** (noms d'événements, propriétés, valeurs) : renommer une valeur coupe sa série de mesure. Les constantes qui le portent changent de nom, pas ses valeurs ;
+  - les **codes d'erreur de l'authentification** (`identifiants-invalides`, `google-echec`…) : une seule famille de chaînes sert à la fois de valeur Umami, de `?error=`, de code du journal et de clé des statistiques ;
+  - le paramètre **`?specialite=`** de `/search` : des liens de l'ancien site le portent ;
+  - les **noms de la base Strapi** que l'import lit : ils sont déjà en anglais ;
+  - les **clés des registres** (familles d'adresses, registre des changements voulus) : ce sont des identifiants de documents ;
+  - les fichiers **`sondes.yml`** et **`ci.yml`**, et le check requis **`ci-ok`** : l'historique de GitHub et le rapport du lundi les lisent par leur nom ;
+  - les **titres des tests** et les **lignes de journal** : ce sont des phrases.
+
+  Les chaînes de caractères ne sont jamais lues par le contrôle : seules les exceptions qui sont des noms (dossiers gelés, `specialite`) sont écrites dans `scripts/naming/config.json`, chacune avec sa raison. Les workflows de `.github/` sont hors du périmètre du contrôle.
 - **Textes du site.** Un texte repris du site en ligne se copie au mot près ; le changer est un changement visible. Un texte nouveau prend le ton du site : il tutoie la maquilleuse dans son espace et vouvoie sur les pages publiques.
 - **Commits.** Format conventionnel, portée `v3`, avec le numéro du ticket : `feat(v3): … (033)`.
 - **TypeScript partout.** Le seul fichier JavaScript du dépôt est `importMap.js`, généré.
+
+## Glossaire des noms
+
+Le même mot français a le même mot anglais partout (source : `PLAN-ANGLAIS.md` §5, dans le dépôt des plans). Pour un mot absent de la table, ajoute une ligne ici, dans le même changement, sans inventer un second mot. La liste des mots français que le contrôle reconnaît est `scripts/naming/french-words.txt` : un mot français nouveau y entre aussi.
+
+| Français | Anglais | Français | Anglais |
+|---|---|---|---|
+| maquilleuse | `artist` | prestation | `serviceOffer` (Strapi `service_offers`) |
+| profil | `profile` | compétence | `skill` |
+| espace (de la maquilleuse) | `dashboard` | langue | `language` |
+| compte | `account` | formation | `course` (Strapi `courses`) |
+| connexion / déconnexion | `signIn` / `signOut` | expérience | `experience` |
+| inscription | `signUp` | réseaux | `networks` (Strapi `network`) |
+| mot de passe oublié / réinitialisation | `forgotPassword` / `passwordReset` | coordonnées | `contactDetails` |
+| renvoi (d'un email) | `resend` | galerie / photo principale | `gallery` / `mainPicture` |
+| jeton | `token` | commune / département | `city` / `department` |
+| frein, refus pour excès | `rateLimit`, `throttled` | rayon | `radius` |
+| journal (d'authentification) | `authLog` | complétude / publiable | `completeness` / `publishable` |
+| événement | `event` | statut / brouillon / publié / masqué | `status` / `draft` / `published` / `hidden` |
+| demande (de contact) | `contactRequest` | actif / entièrement vide | `active` / `fullyEmpty` |
+| hérité (de l'ancien site) | `legacy` | corbeille | `trash` |
+| bascule | `cutover` | rédaction (rôle) | `editor` |
+| banc (de test) | `bench` | tâche quotidienne | `dailyTask` |
+| jeu fictif | `demoData` (dossier `src/demo-data`) | mesure (Umami) | `analytics` |
+| outils (des tests) | `support` (dossier `tests/support`) | santé | `health` |
+| sonde | `probe` | gel / gelé | `freeze` / `frozen` |
+| faux (Google, Umami, communes) | `fake` | registre des changements voulus | `intendedChanges` |
+| témoin (de test) | `sentinel` | parité / écart | `parity` / `gap` |
+| garde | `guard` | rapprochement (des médias) | `reconciliation` |
+| recherche / résultat | `search` / `result` | à blanc / réel / contrôle (import) | `dry-run` / `real` / `check` |
+| lire / enregistrer / chercher | `read` / `save` / `find` | cible / source / empreinte | `target` / `source` / `fingerprint` |
+| accueil (onboarding de l'espace) | `onboarding` | aperçu | `preview` |
+| adresse (URL) | `url` ou `path` | notes de version | `releaseNotes` |
+| hôte / en-têtes | `host` / `headers` | verrou | `lock` |
 
 ## Pièges
 
