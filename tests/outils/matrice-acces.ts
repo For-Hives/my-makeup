@@ -37,7 +37,7 @@
 
 import { randomUUID } from 'node:crypto'
 import type { Payload, RequiredDataFromCollectionSlug, Where } from 'payload'
-import { CONTEXTE_SANS_PROFIL } from '@/collections/Profils'
+import { CONTEXTE_SANS_PROFIL } from '@/collections/Profiles'
 import { PROFILS_PUBLIES } from '@/lib/acces'
 import { STATUT_INITIAL, STATUT_PUBLIE } from '@/lib/profil/statut'
 import { creerCompte, DOMAINE_DES_COMPTES, motDePasseAleatoire, type TypeAvecSession } from './fabrique-comptes'
@@ -82,7 +82,7 @@ export const COLLECTIONS = [
 export type CollectionDeLaMatrice = (typeof COLLECTIONS)[number]
 
 /**
- * The editorial collections (src/collections/redaction.ts): written by the newsroom, read by the
+ * The editorial collections (src/collections/editor.ts): written by the newsroom, read by the
  * public when published. Nobody owns their documents.
  */
 export const COLLECTIONS_EDITORIALES = ['talents', 'articles'] as const satisfies readonly CollectionDeLaMatrice[]

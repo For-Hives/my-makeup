@@ -3,8 +3,15 @@ import { initI18n } from '@payloadcms/translations'
 import { type PayloadRequest, ValidationError } from 'payload'
 import { Admins, DUREE_SESSION_ADMIN_S, sessionsFermees } from '@/collections/Admins'
 import { Articles } from '@/collections/Articles'
-import { AuthEvenements } from '@/collections/AuthEvenements'
-import { Demandes } from '@/collections/Demandes'
+import { AuthEvenements } from '@/collections/AuthEvents'
+import { Demandes } from '@/collections/ContactRequests'
+import {
+	ACCES_REDACTION,
+	champPublieLe,
+	champStrapiId,
+	datePremierePublication,
+	VERSIONS_REDACTION,
+} from '@/collections/editor'
 import {
 	aucunEnvoiSansStockage,
 	COORDONNEES_DU_FICHIER,
@@ -14,15 +21,8 @@ import {
 	proprietaireALEnvoi,
 	versLAdressePublique,
 } from '@/collections/Media'
-import { CONTEXTE_SANS_PROFIL, consentementTrace, Profils, profilALaCreationDuCompte } from '@/collections/Profils'
+import { CONTEXTE_SANS_PROFIL, consentementTrace, Profils, profilALaCreationDuCompte } from '@/collections/Profiles'
 import { compteSansProfilAvantSuppression, Pros, premierCompteFerme } from '@/collections/Pros'
-import {
-	ACCES_REDACTION,
-	champPublieLe,
-	champStrapiId,
-	datePremierePublication,
-	VERSIONS_REDACTION,
-} from '@/collections/redaction'
 import { Talents } from '@/collections/Talents'
 import {
 	AUCUN_DOCUMENT,

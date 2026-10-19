@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test'
-import { CONTEXTE_SANS_PROFIL } from '@/collections/Profils'
+import { CONTEXTE_SANS_PROFIL } from '@/collections/Profiles'
 import { creerCompte, motDePasseAleatoire } from '../outils/fabrique-comptes'
 import { viderLeCapteur } from '../outils/mailpit'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'

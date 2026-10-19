@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { valeursInconnues } from '../../src/collections/Profils'
+import { valeursInconnues } from '../../src/collections/Profiles'
 
 /** Ticket 165: a filter of the list on a status nobody holds is found before it reaches the database. */
 describe('Les valeurs de statut d’un filtre de la liste des profils', () => {

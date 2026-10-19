@@ -8,7 +8,7 @@ import {
 	champStrapiId,
 	datePremierePublication,
 	VERSIONS_REDACTION,
-} from './redaction'
+} from './editor'
 import { rafraichissement } from './revalidation'
 
 /** The refresh of its page, of the pages that list the articles and of the sitemap (ticket 047). */

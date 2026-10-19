@@ -9,7 +9,7 @@ import type {
 	Config,
 	Plugin,
 } from 'payload'
-import { avecLaCorbeille, MESSAGE_UN_A_LA_FOIS, sansSuppressionDuGreffon, unALaFois } from '@/collections/corbeille'
+import { avecLaCorbeille, MESSAGE_UN_A_LA_FOIS, sansSuppressionDuGreffon, unALaFois } from '@/collections/trash'
 import { CONTEXTE_IMPORT } from '@/lib/contexte-import'
 import {
 	cleEnCorbeille,

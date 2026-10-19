@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, setDefaultTimeout, test } from 'bun:test'
-import { MESSAGE_PANNE_DU_STOCKAGE } from '@/collections/corbeille'
+import { MESSAGE_PANNE_DU_STOCKAGE } from '@/collections/trash'
 import type { Media } from '@/payload-types'
 import { type Espion, espionnerLeStockage, suppressionsSansCorbeille } from '../outils/espion-s3'
 import { creerCompte } from '../outils/fabrique-comptes'

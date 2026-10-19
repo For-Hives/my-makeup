@@ -22,7 +22,7 @@ import { supprimerUnCompte } from '../lib/compte/suppression-route'
 import { contenuEmailConfirmation, SUJET_DE_CONFIRMATION } from '../lib/emails/confirmation'
 import { composerEmail } from '../lib/emails/gabarit'
 import { sessionsFermees } from './Admins'
-import { profilALaCreationDuCompte } from './Profils'
+import { profilALaCreationDuCompte } from './Profiles'
 
 // Kept exported from here: the tests and the earlier tickets import it from this file.
 export { premierCompteFerme }

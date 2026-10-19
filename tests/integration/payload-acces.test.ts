@@ -52,7 +52,7 @@ const lecturesDesChamps = (collection: CollectionDeLaMatrice, lecteurs: [string,
 	)
 
 /**
- * The rules of the newsroom on one editorial collection (src/collections/redaction.ts): the
+ * The rules of the newsroom on one editorial collection (src/collections/editor.ts): the
  * newsroom (`redaction` and `admin`) creates, changes, publishes, unpublishes and deletes, and reads
  * drafts too; everyone else, a makeup artist as an anonymous visitor, reads the published documents
  * only and writes nothing (U59). Nobody writes `strapiId`. Talents (ticket 022), articles (046).

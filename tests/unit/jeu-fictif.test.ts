@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import path from 'node:path'
 import type { Field, Payload } from 'payload'
-import { Profils } from '@/collections/Profils'
+import { Profils } from '@/collections/Profiles'
 import { exigerLaCibleDuJeu, poserLesProfilsDuJeu } from '@/jeu-fictif/chargement'
 import { cibleDuJeu, JeuFictifRefuse, ORIGINE_DU_SITE } from '@/jeu-fictif/garde'
 import {

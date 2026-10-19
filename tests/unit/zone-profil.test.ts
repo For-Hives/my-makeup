@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import type { Field } from 'payload'
-import { Profils } from '@/collections/Profils'
+import { Profils } from '@/collections/Profiles'
 import { DEPARTEMENTS } from '@/lib/departements'
 import {
 	BORNES_DU_RAYON_KM,

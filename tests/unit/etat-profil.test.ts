@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import type { Field } from 'payload'
-import { Profils } from '@/collections/Profils'
-import { CHAMPS_DE_L_ETAT } from '@/collections/profils/etat'
+import { Profils } from '@/collections/Profiles'
+import { CHAMPS_DE_L_ETAT } from '@/collections/profiles/etat'
 import { completude, conditionsPubliable } from '@/lib/profil/completude'
 import {
 	champsDuProfil,

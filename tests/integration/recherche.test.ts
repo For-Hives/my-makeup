@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import type { Payload } from 'payload'
-import { CONTEXTE_SANS_PROFIL } from '@/collections/Profils'
+import { CONTEXTE_SANS_PROFIL } from '@/collections/Profiles'
 import { PAR_PAGE, paginer, sectionsDeLaPage } from '@/lib/recherche/pagination'
 import { chercher } from '@/lib/recherche/resultats'
 import { lireLaRecherche } from '@/lib/recherche/saisie'

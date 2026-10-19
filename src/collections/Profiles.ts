@@ -42,9 +42,9 @@ import {
 	STATUTS_DU_PROFIL,
 } from '../lib/profil/statut'
 import { premierSlugLibre, slugDeRepli, slugifier } from '../lib/slug'
-import { CHAMPS_DE_L_ETAT, etatAvantEcriture } from './profils/etat'
-import { champsDeLaZone } from './profils/zone'
-import { CHAMPS_LISTES, identitesDesLignesAvantEcriture } from './profils-listes'
+import { CHAMPS_LISTES, identitesDesLignesAvantEcriture } from './profile-lists'
+import { CHAMPS_DE_L_ETAT, etatAvantEcriture } from './profiles/etat'
+import { champsDeLaZone } from './profiles/zone'
 import { rafraichissement } from './revalidation'
 
 /** The refresh of the page of a profile, the search and the sitemap (ticket 047). */
@@ -251,7 +251,7 @@ const INTERNE = { read: champAdminSeulement, create: champAdminSeulement, update
  *   a makeup artist never attaches the photo of another one (ticket 043). A photo a save takes out
  *   of the profile, or the photos of a deleted profile, go to the bin of the storage once nothing
  *   references them, and profiles are deleted or changed one at a time, never by a `where`
- *   (src/collections/corbeille.ts, added through src/payload.config.ts, ticket 045).
+ *   (src/collections/trash.ts, added through src/payload.config.ts, ticket 045).
  * - The networks are public. The contact details (`coordonnees`) are read by the owner and an
  *   admin only, never by the public through the API, even when she chose to show them
  *   (`contactPublic`): a public page reads them through src/services/public/. The server traces
@@ -261,11 +261,11 @@ const INTERNE = { read: champAdminSeulement, create: champAdminSeulement, update
  *   the reason, the verification, the SIRET, the internal note, the score and the badge by an
  *   admin only (I03, U55): what a makeup artist sends on them is ignored. The status itself is
  *   computed by the server (ticket 044).
- * - Its lists keep their order and the identifier of each row (src/collections/profils-listes.ts).
+ * - Its lists keep their order and the identifier of each row (src/collections/profile-lists.ts).
  * - Its zone is a commune with its INSEE code, a radius of 0 to 200 km and « à domicile », never a
- *   postal address (src/collections/profils/zone.ts, ticket 041).
+ *   postal address (src/collections/profiles/zone.ts, ticket 041).
  * - At every save, the server computes and stores its completeness, whether it is active,
- *   publishable or entirely empty, and since when (src/collections/profils/etat.ts, ticket 044).
+ *   publishable or entirely empty, and since when (src/collections/profiles/etat.ts, ticket 044).
  *   Its status follows: an entirely empty profile is a draft, any other is published, unless an
  *   admin chose another status (`statutChoisi`); a hidden profile stays hidden whatever the save.
  * - A save or a deletion of a profile that is or was published refreshes its page, the search and

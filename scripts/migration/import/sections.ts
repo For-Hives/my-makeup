@@ -261,7 +261,7 @@ const horsNom = (valeur: string | null): boolean => horsTexte(valeur, LONGUEUR_N
 const horsDescription = (valeur: string | null): boolean => horsTexte(valeur, LONGUEUR_DESCRIPTION)
 
 /**
- * Whether the server (src/collections/profils-listes.ts) would refuse a row, and with it the whole
+ * Whether the server (src/collections/profile-lists.ts) would refuse a row, and with it the whole
  * profile: a text longer than its bound, a course obtained more than a year after `maintenant`,
  * an experience that ends before it starts. These bounds are the v3's, stricter than Strapi's.
  */

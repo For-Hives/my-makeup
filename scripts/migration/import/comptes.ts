@@ -13,7 +13,7 @@
  */
 
 import { randomBytes } from 'node:crypto'
-import { CONTEXTE_SANS_PROFIL } from '../../../src/collections/Profils'
+import { CONTEXTE_SANS_PROFIL } from '../../../src/collections/Profiles'
 import { type ApplicationDesDecisions, appliquerLesDecisions, type Decisions } from './decisions'
 import { REFERENCES } from './ecarts'
 import type { Adaptateur, Attendu, Ecart } from './moteur'

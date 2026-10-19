@@ -7,7 +7,7 @@
  * the overseas collectivities of the official list too.
  *
  * The rules of the server, in one place: the département an INSEE code names, and what is wrong
- * with a value, in French. The collection (src/collections/Profils.ts) calls them; the zone of
+ * with a value, in French. The collection (src/collections/Profiles.ts) calls them; the zone of
  * the makeup artist's space (ticket 123) shows the same messages.
  *
  * Checking that a commune is really on the official list (geo.api.gouv.fr), and that its name is

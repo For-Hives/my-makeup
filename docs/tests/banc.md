@@ -342,7 +342,7 @@ Les types de compte sont déclarés dans `TYPES_DE_COMPTE` (`tests/outils/fabriq
 | `redaction` | `admins` | Un compte de l'administration avec le rôle `redaction` : articles et talents, et son propre compte |
 | `maquilleuse` | `pros` | Le compte d'une maquilleuse, adresse confirmée, avec son profil vide, comme à l'inscription. Deux appels donnent « A » et « B » |
 | `maquilleuse-non-verifiee` | `pros` | Le compte d'une maquilleuse qui n'a pas confirmé son adresse. Il ne peut pas se connecter : `session` vaut `null` |
-| `maquilleuse-sans-profil` | `pros` | Le compte d'une maquilleuse sans profil, comme certains comptes de l'ancien site. Sa création porte `CONTEXTE_SANS_PROFIL` (`src/collections/Profils.ts`) |
+| `maquilleuse-sans-profil` | `pros` | Le compte d'une maquilleuse sans profil, comme certains comptes de l'ancien site. Sa création porte `CONTEXTE_SANS_PROFIL` (`src/collections/Profiles.ts`) |
 | `maquilleuse-bloquee` | `pros` | Le compte d'une maquilleuse bloquée par l'admin (`bloque` vrai), avec son profil. `session` vaut `null` : bloquer ferme les sessions, et la connexion la refusera (ticket 089) |
 | `reprise-avec-hash` | `pros` | Un compte repris de l'ancien site avec son hash bcrypt, le hash de fixture. Il se connectera par le chemin hérité du site (ticket 087) : d'ici là, `session` vaut `null` |
 | `reprise-google` | `pros` | Un ancien compte Google, sans mot de passe. Sa session est ouverte sans mot de passe, comme par la connexion Google |

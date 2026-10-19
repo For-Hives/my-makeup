@@ -7,7 +7,7 @@ import {
 	type PayloadRequest,
 } from 'payload'
 // Relative import on purpose: the bin is the one in the collections, and this file may be loaded outside of Next.
-import { corbeilleRetenue } from '../../collections/corbeille'
+import { corbeilleRetenue } from '../../collections/trash'
 
 /**
  * The deletion of an account and everything that hangs on it (ticket 141; plan 01 AUTH-13, P7.7;
@@ -44,7 +44,7 @@ import { corbeilleRetenue } from '../../collections/corbeille'
  * The ticket that adds requests to a makeup artist adds their anonymisation here.
  *
  * The photos of an account without a profile are taken by the `beforeDelete` hook of `pros`
- * (`menageAvantSuppressionDuCompte`, src/collections/corbeille.ts), under the same hold of the bin.
+ * (`menageAvantSuppressionDuCompte`, src/collections/trash.ts), under the same hold of the bin.
  */
 
 /** What the deletion did. `supprime: false`: the account did not exist (any more). */

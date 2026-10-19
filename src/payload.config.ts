@@ -8,10 +8,9 @@ import sharp from 'sharp'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import { Admins } from './collections/Admins'
 import { Articles } from './collections/Articles'
-import { AuthEvenements } from './collections/AuthEvenements'
-import { ComptesSupprimes } from './collections/ComptesSupprimes'
-import { avecLaCorbeille } from './collections/corbeille'
-import { Demandes } from './collections/Demandes'
+import { AuthEvenements } from './collections/AuthEvents'
+import { Demandes } from './collections/ContactRequests'
+import { ComptesSupprimes } from './collections/DeletedAccounts'
 import {
 	aucunEnvoiSansStockage,
 	champsDuStockageFermes,
@@ -19,9 +18,10 @@ import {
 	UPLOAD_DES_MEDIAS,
 	versLAdressePublique,
 } from './collections/Media'
-import { Profils } from './collections/Profils'
+import { Profils } from './collections/Profiles'
 import { Pros } from './collections/Pros'
 import { Talents } from './collections/Talents'
+import { avecLaCorbeille } from './collections/trash'
 import { adaptateurSansRelais, optionsDeTransport } from './lib/emails/relais'
 import { mediaBaseUrl, serverEnv } from './lib/env'
 import { LANGUE_DE_PAYLOAD } from './lib/langue-payload'
@@ -132,7 +132,7 @@ export default buildConfig({
 		// environment.
 		// The plugin never deletes an object: a photo that no longer serves goes to the bin of the
 		// storage, `deleted/`, and the profiles clean up the photos they no longer reference
-		// (src/collections/corbeille.ts, ticket 045).
+		// (src/collections/trash.ts, ticket 045).
 		avecLaCorbeille(
 			s3Storage({
 				enabled: env.storage !== undefined,

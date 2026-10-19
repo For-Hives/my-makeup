@@ -18,7 +18,7 @@
 
 import { randomBytes, randomInt, randomUUID } from 'node:crypto'
 import type { AuthCollectionSlug, Payload, RequestContext, RequiredDataFromCollectionSlug } from 'payload'
-import { CONTEXTE_SANS_PROFIL } from '../../src/collections/Profils'
+import { CONTEXTE_SANS_PROFIL } from '../../src/collections/Profiles'
 import type { Variables } from './banc'
 import { exigerBanc, exigerConnexionDuBanc, payloadDeTest } from './payload-test'
 import { ouvrirSession, ouvrirSessionSansMotDePasse, type Session } from './session'

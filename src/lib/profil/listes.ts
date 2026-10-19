@@ -1,7 +1,7 @@
 /**
  * The rules of the list sections of a profile (plans/01 §6.1, docs/migration/SCHEMA.md §6):
  * offers with their options, skills, languages, courses and experiences. One rule per subject,
- * called by the collection (src/collections/profils-listes.ts) and, later, by the forms of the
+ * called by the collection (src/collections/profile-lists.ts) and, later, by the forms of the
  * artist's space, which must not compute them again.
  *
  * - The identity of a row: the server gives it, once, and keeps it (`identitesDesLignes`).

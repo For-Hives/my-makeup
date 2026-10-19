@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
-import { Profils } from '../../src/collections/Profils'
+import { Profils } from '../../src/collections/Profiles'
 import { PROFILS_DU_JEU } from '../../src/jeu-fictif/profils'
 import { poserLeJeuDuBanc } from '../fixtures/jeu-du-banc'
 import { creerCompte } from '../outils/fabrique-comptes'

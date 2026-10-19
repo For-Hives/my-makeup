@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import type { Payload } from 'payload'
-import { CONTEXTE_SANS_PROFIL } from '@/collections/Profils'
+import { CONTEXTE_SANS_PROFIL } from '@/collections/Profiles'
 import { LIMITE_REST_MAX, LIMITE_REST_PAR_DEFAUT, lectureEnListeBornee } from '@/lib/requete-bornee'
 import type { Article, Media } from '@/payload-types'
 import { creerCompte } from '../outils/fabrique-comptes'

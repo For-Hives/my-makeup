@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
-import { MESSAGE_PANNE_DU_STOCKAGE, MESSAGE_UN_A_LA_FOIS } from '@/collections/corbeille'
+import { MESSAGE_PANNE_DU_STOCKAGE, MESSAGE_UN_A_LA_FOIS } from '@/collections/trash'
 import { CONTEXTE_IMPORT } from '@/lib/contexte-import'
 import { remettreEnPlace } from '@/lib/corbeille'
 import { serverEnv } from '@/lib/env'

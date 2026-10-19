@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, setDefaultTimeout, test } from 'bun:test'
 import type { Payload } from 'payload'
-import { MESSAGE_PANNE_DU_STOCKAGE } from '@/collections/corbeille'
+import { MESSAGE_PANNE_DU_STOCKAGE } from '@/collections/trash'
 import { supprimerLeCompteEtToutCeQuiEnDepend } from '@/lib/compte/suppression'
 import { MESSAGES_DE_SUPPRESSION } from '@/lib/espace/confirmation-suppression'
 import { freinDeLaSuppression, supprimerMonCompte } from '@/lib/espace/supprimer-compte'

@@ -131,7 +131,7 @@ test.describe('L’admin retrouve, corrige et masque un profil', () => {
 		const slug = profil.slug
 		const statutDeLaPage = async () => (await request.get(`/profil/${slug}`)).status()
 		const enregistrerAvec = async (choix: string) => {
-			await page.goto(`/admin/collections/profils/${profil.id}`)
+			await page.goto(`/admin/collections/profiles/${profil.id}`)
 			// The form hydrates after it shows: a click that comes too early opens nothing, so it is made again.
 			await expect(async () => {
 				await page.locator('#field-statutChoisi .rs__control').click()
