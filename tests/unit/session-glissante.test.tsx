@@ -141,7 +141,7 @@ describe('browser bundle boundary (079 review)', () => {
 			const code = readFileSync(path.join(process.cwd(), file), 'utf8')
 			const imports = [...code.matchAll(/^\s*(?:import|export)[^'"]*from\s+['"]([^'"]+)['"]/gm)].map(m => m[1] ?? '')
 			expect(imports.filter(i => !i.startsWith('./'))).toEqual([])
-			expect(imports.filter(i => i.startsWith('./') && !i.endsWith('duree-session'))).toEqual([])
+			expect(imports.filter(i => i.startsWith('./') && !i.endsWith('session-duration'))).toEqual([])
 		})
 	}
 })
