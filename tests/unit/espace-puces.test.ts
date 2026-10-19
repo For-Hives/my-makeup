@@ -9,7 +9,7 @@ import {
 	NOMBRE_MAX_DE_PUCES,
 	pucesDeLaListe,
 	refusDuNom,
-} from '@/lib/espace/puces'
+} from '@/lib/dashboard/puces'
 
 /**
  * The rules of the chips of her space (tickets 127 and 128; plan 02 E30): a name, its bound, the

@@ -7,7 +7,7 @@ import {
 	oublierLaSaisie,
 	peutRediriger,
 	type Stockage,
-} from '@/lib/espace/saisie-gardee'
+} from '@/lib/dashboard/saisie-gardee'
 
 /** The typing kept while the session ends (ticket 121): kept, read back, forgotten, never trusted blindly. */
 

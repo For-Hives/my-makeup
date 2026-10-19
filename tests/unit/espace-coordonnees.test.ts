@@ -1,11 +1,11 @@
 import { describe, expect, test } from 'bun:test'
-import { cartesDuProfil, type ProfilDeLEspace } from '@/lib/espace/cartes'
+import { cartesDuProfil, type ProfilDeLEspace } from '@/lib/dashboard/cartes'
 import {
 	dateLongue,
 	erreursDesCoordonnees,
 	schemaDesCoordonnees,
 	schemaDesCoordonneesStrict,
-} from '@/lib/espace/coordonnees'
+} from '@/lib/dashboard/coordonnees'
 
 /**
  * The contact details she edits in her space (ticket 126; plan 02 U28, E30): the bounds, the French

@@ -7,7 +7,7 @@ import {
 	retirerLeHtml,
 	schemaDeLaDescription,
 	schemaDeLaDescriptionStrict,
-} from '@/lib/espace/description'
+} from '@/lib/dashboard/description'
 import { longueurDescription } from '@/lib/profil/completude'
 
 /** The rules of the description form (ticket 122; plan 02 U05, U27, U32). */

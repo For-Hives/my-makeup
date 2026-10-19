@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 import type { Payload } from 'payload'
-import { enregistrerIdentite } from '@/lib/espace/enregistrer-identite'
-import { profilDeLaMaquilleuse, type UtilisateurDeLEspace } from '@/lib/espace/mon-profil'
-import { MESSAGE_ECHEC } from '@/lib/espace/resultat'
+import { enregistrerIdentite } from '@/lib/dashboard/enregistrer-identite'
+import { profilDeLaMaquilleuse, type UtilisateurDeLEspace } from '@/lib/dashboard/mon-profil'
+import { MESSAGE_ECHEC } from '@/lib/dashboard/resultat'
 import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
 

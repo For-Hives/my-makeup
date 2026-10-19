@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
-import { ADRESSE_DES_COMMUNES, adresseDesCommunes } from '@/lib/espace/referentiel-communes'
+import { ADRESSE_DES_COMMUNES, adresseDesCommunes } from '@/lib/dashboard/referentiel-communes'
 import { creerFaussesCommunes } from '../outils/faux-communes/fournisseur'
 
 /**

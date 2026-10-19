@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers'
 import { SESSION_COOKIE } from '@/lib/auth/closed-dashboard'
-import { utilisatriceDeLaRequete } from '@/lib/espace/requete'
+import { utilisatriceDeLaRequete } from '@/lib/dashboard/requete'
 import { pidDuProfil } from '@/lib/profil/pid'
 
 // Read per request: it depends on the session, and the build has no database.

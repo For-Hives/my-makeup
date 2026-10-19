@@ -1,14 +1,14 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 import type { Payload } from 'payload'
-import { enregistrerCoordonnees } from '@/lib/espace/enregistrer-coordonnees'
-import { enregistrerIdentite } from '@/lib/espace/enregistrer-identite'
-import { enregistrerReseaux } from '@/lib/espace/enregistrer-reseaux'
-import type { UtilisateurDeLEspace } from '@/lib/espace/mon-profil'
+import { enregistrerCoordonnees } from '@/lib/dashboard/enregistrer-coordonnees'
+import { enregistrerIdentite } from '@/lib/dashboard/enregistrer-identite'
+import { enregistrerReseaux } from '@/lib/dashboard/enregistrer-reseaux'
+import type { UtilisateurDeLEspace } from '@/lib/dashboard/mon-profil'
 import {
 	DUREE_DU_VERROU_PAR_DEFAUT_S,
 	MESSAGE_PROFIL_VERROUILLE,
 	verifierQueLAdminNeTientPasLeProfil,
-} from '@/lib/espace/verrou'
+} from '@/lib/dashboard/verrou'
 import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
 

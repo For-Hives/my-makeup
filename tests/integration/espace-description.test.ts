@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 import type { Payload } from 'payload'
-import { enregistrerDescription } from '@/lib/espace/enregistrer-description'
-import type { UtilisateurDeLEspace } from '@/lib/espace/mon-profil'
-import { MESSAGE_ECHEC } from '@/lib/espace/resultat'
+import { enregistrerDescription } from '@/lib/dashboard/enregistrer-description'
+import type { UtilisateurDeLEspace } from '@/lib/dashboard/mon-profil'
+import { MESSAGE_ECHEC } from '@/lib/dashboard/resultat'
 import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
 

@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test'
 import sharp from 'sharp'
-import { MESSAGES_PHOTO } from '@/lib/espace/photo'
+import { MESSAGES_PHOTO } from '@/lib/dashboard/photo'
 import { photosNommees } from '@/lib/profil/photos'
 import { violationsGraves } from '../outils/axe'
 import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'

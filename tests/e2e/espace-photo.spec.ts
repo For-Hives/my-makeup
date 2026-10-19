@@ -1,5 +1,5 @@
 import { expect, type Page, test } from '@playwright/test'
-import { MESSAGES_PHOTO } from '@/lib/espace/photo'
+import { MESSAGES_PHOTO } from '@/lib/dashboard/photo'
 import { violationsGraves } from '../outils/axe'
 import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
 import { payloadDeTest } from '../outils/payload-test'

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { positionDAccueil, schemaDeLIdentiteDAccueil, schemaDeLIdentiteDAccueilStrict } from '@/lib/espace/onboarding'
+import { positionDAccueil, schemaDeLIdentiteDAccueil, schemaDeLIdentiteDAccueilStrict } from '@/lib/dashboard/onboarding'
 
 /**
  * The onboarding (ticket 140; plan 02 E02): the step shown is read from the stored profile, by the

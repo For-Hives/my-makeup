@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 import type { Payload } from 'payload'
-import { enregistrerCompetences, enregistrerLangues } from '@/lib/espace/enregistrer-puces'
-import { profilDeLaMaquilleuse, type UtilisateurDeLEspace } from '@/lib/espace/mon-profil'
-import { COMPETENCES, LANGUES, pucesDeLaListe } from '@/lib/espace/puces'
-import { MESSAGE_ECHEC } from '@/lib/espace/resultat'
+import { enregistrerCompetences, enregistrerLangues } from '@/lib/dashboard/enregistrer-puces'
+import { profilDeLaMaquilleuse, type UtilisateurDeLEspace } from '@/lib/dashboard/mon-profil'
+import { COMPETENCES, LANGUES, pucesDeLaListe } from '@/lib/dashboard/puces'
+import { MESSAGE_ECHEC } from '@/lib/dashboard/resultat'
 import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
 

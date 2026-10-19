@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
-import { EXPERIENCES } from '@/lib/espace/experiences'
-import { FORMATIONS } from '@/lib/espace/formations'
+import { EXPERIENCES } from '@/lib/dashboard/experiences'
+import { FORMATIONS } from '@/lib/dashboard/formations'
 import {
 	erreursDeLaLigne,
 	LIGNES_MAX,
@@ -10,8 +10,8 @@ import {
 	OPTIONS_MAX,
 	rangApresRetrait,
 	schemaDeLaListe,
-} from '@/lib/espace/liste'
-import { OPTIONS_DE_PRESTATION, PRESTATIONS, prixDeLaSaisie } from '@/lib/espace/prestations'
+} from '@/lib/dashboard/liste'
+import { OPTIONS_DE_PRESTATION, PRESTATIONS, prixDeLaSaisie } from '@/lib/dashboard/prestations'
 
 /**
  * The rules of the lists of her space (tickets 129 to 131; plan 02 U29, U30): what the form and the

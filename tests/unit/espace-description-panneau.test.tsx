@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
-import { EditeurDeDescription, type EnvoiDeLaDescription } from '@/components/espace/EditeurDeDescription'
-import type { ValeursDeLaDescription } from '@/lib/espace/description'
-import { MESSAGE_ECHEC } from '@/lib/espace/resultat'
+import { EditeurDeDescription, type EnvoiDeLaDescription } from '@/components/dashboard/EditeurDeDescription'
+import type { ValeursDeLaDescription } from '@/lib/dashboard/description'
+import { MESSAGE_ECHEC } from '@/lib/dashboard/resultat'
 import { ouvrirFenetre } from '../outils/dom-react'
 
 /**

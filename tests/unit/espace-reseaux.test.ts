@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { CHAMPS_DES_RESEAUX, lireLesReseaux, normaliserReseau, schemaDesReseauxStrict } from '@/lib/espace/reseaux'
+import { CHAMPS_DES_RESEAUX, lireLesReseaux, normaliserReseau, schemaDesReseauxStrict } from '@/lib/dashboard/reseaux'
 import { urlReseau } from '@/lib/profil/vue-publique'
 
 /** The networks she edits in her space (ticket 125; plan 02 U28, E30): one stored address per network. */

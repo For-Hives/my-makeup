@@ -5,7 +5,7 @@ import {
 	MESSAGE_RESULTAT_INCERTAIN,
 	type PhotoAEnvoyer,
 	televerserLaPhoto,
-} from '@/lib/espace/envoi-des-photos'
+} from '@/lib/dashboard/envoi-des-photos'
 import {
 	compresserPhoto,
 	dimensionsCibles,
@@ -16,8 +16,8 @@ import {
 	TAILLE_MAX_CHOIX,
 	TAILLE_MAX_ENVOI,
 	verifierPhoto,
-} from '@/lib/espace/photo'
-import { MESSAGE_ECHEC, MESSAGE_SESSION, type ResultatDEnregistrement } from '@/lib/espace/resultat'
+} from '@/lib/dashboard/photo'
+import { MESSAGE_ECHEC, MESSAGE_SESSION, type ResultatDEnregistrement } from '@/lib/dashboard/resultat'
 
 /**
  * The photos she sends from her space (tickets 134 and 135; plan 02 U79, U80, E36): what is refused

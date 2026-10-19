@@ -6,7 +6,7 @@ import {
 	PROPOSITIONS_MAX,
 	proposition,
 	questionDeLaRecherche,
-} from '@/lib/espace/referentiel-communes'
+} from '@/lib/dashboard/referentiel-communes'
 import { delay, HttpResponse, http, simuler } from '../outils/http-sortant'
 
 /**

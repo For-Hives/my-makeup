@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test'
 import { act } from 'react'
-import { EditeurDePuces, type EnvoiDesPuces } from '@/components/espace/EditeurDePuces'
-import { COMPETENCES, LANGUES, type Puce, type SorteDePuces } from '@/lib/espace/puces'
-import { MESSAGE_ECHEC } from '@/lib/espace/resultat'
+import { EditeurDePuces, type EnvoiDesPuces } from '@/components/dashboard/EditeurDePuces'
+import { COMPETENCES, LANGUES, type Puce, type SorteDePuces } from '@/lib/dashboard/puces'
+import { MESSAGE_ECHEC } from '@/lib/dashboard/resultat'
 import { ouvrirFenetre } from '../outils/dom-react'
 
 /**
