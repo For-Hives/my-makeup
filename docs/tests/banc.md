@@ -285,7 +285,7 @@ Le contrôle de la migration elle-même, sur une base effacée puis rejouée, es
 
 ## Réécrire la migration `init` et vider une base
 
-Le site n'est pas en production, et aucune base de production n'a joué une migration : le schéma tient donc dans **une seule migration, `init`**, réécrite à chaque changement de collection au lieu d'empiler des migrations de renommage (ticket 249, `PLAN-ANGLAIS.md` §7). Tant que ce n'est plus vrai, cette marche à suivre cesse : chaque changement de collection reprend sa propre migration, relue.
+Le site n'est pas en production et la base de production v3 est vide : elle a joué les migrations de `6a151dc`, donc elle est supprimée puis recréée (vide) avant le premier déploiement de cette `init`, et `DATABASE_URI` est reposée. Le schéma tient donc dans **une seule migration, `init`**, réécrite à chaque changement de collection au lieu d'empiler des migrations de renommage (ticket 249, `PLAN-ANGLAIS.md` §7). Tant que ce n'est plus vrai, cette marche à suivre cesse : chaque changement de collection reprend sa propre migration, relue.
 
 Pour la réécrire, banc démarré (`bun run banc:up`, ou l'instance de ton lot) :
 
@@ -358,7 +358,7 @@ Une collection de comptes y ajoute son type par une déclaration :
 ```ts
 export const TYPES_DE_COMPTE = {
 	admin: declarer({ collection: 'admins', donnees: () => ({ role: 'admin' }) }),
-	redaction: declarer({ collection: 'admins', donnees: () => ({ role: 'redaction' }) }),
+	redaction: declarer({ collection: 'admins', donnees: () => ({ role: 'editor' }) }),
 }
 ```
 

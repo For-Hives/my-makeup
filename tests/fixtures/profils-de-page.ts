@@ -46,7 +46,7 @@ function variante(type: ProfilDuJeu, prefixe = 'Page'): ProfilDuJeu {
 	const identite =
 		Object.keys(type.profil).length === 0 || type.cle === 'textes-maximaux'
 			? {}
-			: { prenom: prefixe, nom, nomArtiste: `${prefixe} ${nom} Maquillage` }
+			: { firstName: prefixe, lastName: nom, artistName: `${prefixe} ${nom} Maquillage` }
 	return {
 		...type,
 		cle: `${minuscule}-${type.cle}`,
