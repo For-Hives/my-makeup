@@ -1,9 +1,9 @@
 import type { CollectionConfig } from 'payload'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import { adminSeulement, cacheeSaufAdmin } from '../lib/acces'
-import { CODES_EVENEMENT, METHODES_EVENEMENT, TYPES_EVENEMENT } from '../lib/auth/auth-log'
+import { EVENT_CODES, EVENT_METHODS, EVENT_TYPES } from '../lib/auth/auth-log'
 
-const TYPE_LABELS: Record<(typeof TYPES_EVENEMENT)[number], string> = {
+const TYPE_LABELS: Record<(typeof EVENT_TYPES)[number], string> = {
 	'sign-in': 'Connexion',
 	'sign-out': 'Déconnexion',
 	'sign-out-everywhere': 'Déconnexion de tous les appareils',
@@ -16,7 +16,7 @@ const TYPE_LABELS: Record<(typeof TYPES_EVENEMENT)[number], string> = {
 	unblock: 'Compte débloqué par un admin',
 }
 
-const CODE_LABELS: Record<(typeof CODES_EVENEMENT)[number], string> = {
+const CODE_LABELS: Record<(typeof EVENT_CODES)[number], string> = {
 	ok: 'Réussi',
 	heritee: 'Réussi, mot de passe de l’ancien site',
 	'identifiants-invalides': 'Identifiants invalides',
@@ -36,7 +36,7 @@ const CODE_LABELS: Record<(typeof CODES_EVENEMENT)[number], string> = {
 	'champ-piege': 'Champ piège rempli',
 }
 
-const METHOD_LABELS: Record<(typeof METHODES_EVENEMENT)[number], string> = {
+const METHOD_LABELS: Record<(typeof EVENT_METHODS)[number], string> = {
 	password: 'Mot de passe',
 	google: 'Google',
 }
@@ -74,7 +74,7 @@ export const AuthEvents: CollectionConfig<'auth-events'> = {
 			type: 'select',
 			required: true,
 			index: true,
-			options: TYPES_EVENEMENT.map(type => ({ label: TYPE_LABELS[type], value: type })),
+			options: EVENT_TYPES.map(type => ({ label: TYPE_LABELS[type], value: type })),
 		},
 		{
 			name: 'code',
@@ -82,7 +82,7 @@ export const AuthEvents: CollectionConfig<'auth-events'> = {
 			type: 'select',
 			required: true,
 			index: true,
-			options: CODES_EVENEMENT.map(code => ({ label: CODE_LABELS[code], value: code })),
+			options: EVENT_CODES.map(code => ({ label: CODE_LABELS[code], value: code })),
 		},
 		{
 			// Ticket 090. Rows older than the Google sign-in have none.
@@ -90,7 +90,7 @@ export const AuthEvents: CollectionConfig<'auth-events'> = {
 			label: 'Méthode',
 			type: 'select',
 			index: true,
-			options: METHODES_EVENEMENT.map(methode => ({ label: METHOD_LABELS[methode], value: methode })),
+			options: EVENT_METHODS.map(methode => ({ label: METHOD_LABELS[methode], value: methode })),
 		},
 		{ name: 'durationMs', label: 'Durée (ms)', type: 'number', min: 0 },
 		{

@@ -16,12 +16,12 @@
  * The key is used to count, never to write: it must not appear in a log.
  */
 
-export const SANS_PROXY = 'local'
+export const NO_PROXY = 'local'
 
-const LONGUEUR_MAX = 100
+const MAX_LENGTH = 100
 
 /** The eight 16-bit groups of an IPv6 address in any spelling; `null` when it is not one. */
-function groupesIPv6(adresse: string): number[] | null {
+function ipv6Groups(adresse: string): number[] | null {
 	let a = adresse.toLowerCase()
 	if (a.startsWith('[') && a.endsWith(']')) a = a.slice(1, -1)
 	// A zone (`fe80::1%eth0`) does not name another machine.
@@ -32,22 +32,22 @@ function groupesIPv6(adresse: string): number[] | null {
 		if (o.some(x => x > 255)) return null
 		a = `${v4[1]}${((o[0] << 8) | o[1]).toString(16)}:${((o[2] << 8) | o[3]).toString(16)}`
 	}
-	const moities = a.split('::')
-	if (moities.length > 2) return null
-	const groupes = (s: string | undefined) => (s ? s.split(':') : [])
-	const tete = groupes(moities[0])
-	const queue = moities.length === 2 ? groupes(moities[1]) : []
-	const manquants = 8 - tete.length - queue.length
-	if (moities.length === 2 ? manquants < 1 : manquants !== 0) return null
-	const tous = [...tete, ...Array<string>(moities.length === 2 ? manquants : 0).fill('0'), ...queue]
-	if (!tous.every(g => /^[0-9a-f]{1,4}$/.test(g))) return null
-	return tous.map(g => Number.parseInt(g, 16))
+	const halves = a.split('::')
+	if (halves.length > 2) return null
+	const groups = (s: string | undefined) => (s ? s.split(':') : [])
+	const head = groups(halves[0])
+	const queue = halves.length === 2 ? groups(halves[1]) : []
+	const missing = 8 - head.length - queue.length
+	if (halves.length === 2 ? missing < 1 : missing !== 0) return null
+	const all = [...head, ...Array<string>(halves.length === 2 ? missing : 0).fill('0'), ...queue]
+	if (!all.every(g => /^[0-9a-f]{1,4}$/.test(g))) return null
+	return all.map(g => Number.parseInt(g, 16))
 }
 
 /** The key of an address: its /64 block for an IPv6, itself otherwise. */
-export function cleDeAdresse(adresse: string): string {
+export function addressKey(adresse: string): string {
 	if (!adresse.includes(':')) return adresse
-	const g = groupesIPv6(adresse)
+	const g = ipv6Groups(adresse)
 	if (!g) return adresse
 	if (g.slice(0, 5).every(x => x === 0) && g[5] === 0xffff) {
 		const [h, b] = [g[6] ?? 0, g[7] ?? 0]
@@ -60,49 +60,49 @@ export function cleDeAdresse(adresse: string): string {
 }
 
 /** The 128-bit value of an address (IPv4 as an IPv4-mapped IPv6), or `null` when it is not one. */
-function valeurDAdresse(adresse: string): bigint | null {
+function addressValue(adresse: string): bigint | null {
 	const a = adresse.trim()
-	let groupes: number[] | null = null
-	if (/^\d{1,3}(\.\d{1,3}){3}$/.test(a)) groupes = groupesIPv6(`::ffff:${a}`)
-	else if (a.includes(':')) groupes = groupesIPv6(a)
-	if (!groupes) return null
-	return groupes.reduce((acc, x) => (acc << 16n) | BigInt(x), 0n)
+	let groups: number[] | null = null
+	if (/^\d{1,3}(\.\d{1,3}){3}$/.test(a)) groups = ipv6Groups(`::ffff:${a}`)
+	else if (a.includes(':')) groups = ipv6Groups(a)
+	if (!groups) return null
+	return groups.reduce((acc, x) => (acc << 16n) | BigInt(x), 0n)
 }
 
-type Plage = { debut: bigint; bits: number }
+type IpRange = { debut: bigint; bits: number }
 
 /** `TRUSTED_PROXY_CIDRS`: comma-separated addresses or CIDR ranges. An invalid item is ignored. */
-export function plagesDeConfiguration(brut: string | undefined): Plage[] {
-	const plages: Plage[] = []
+export function configuredRanges(brut: string | undefined): IpRange[] {
+	const ranges: IpRange[] = []
 	for (const item of (brut ?? '').split(',')) {
-		const [adresse = '', masque] = item.trim().split('/')
-		if (adresse === '') continue
-		const v4 = !adresse.includes(':')
-		const valeur = valeurDAdresse(adresse)
-		if (valeur === null) continue
+		const [ip = '', masked] = item.trim().split('/')
+		if (ip === '') continue
+		const v4 = !ip.includes(':')
+		const value = addressValue(ip)
+		if (value === null) continue
 		const max = v4 ? 32 : 128
-		const longueur = masque === undefined ? max : /^\d{1,3}$/.test(masque) ? Number(masque) : Number.NaN
-		if (!(longueur >= 0 && longueur <= max)) continue
-		const bits = 128 - max + longueur
-		const decalage = BigInt(128 - bits)
-		plages.push({ bits, debut: (valeur >> decalage) << decalage })
+		const length = masked === undefined ? max : /^\d{1,3}$/.test(masked) ? Number(masked) : Number.NaN
+		if (!(length >= 0 && length <= max)) continue
+		const bits = 128 - max + length
+		const offset = BigInt(128 - bits)
+		ranges.push({ bits, debut: (value >> offset) << offset })
 	}
-	return plages
+	return ranges
 }
 
-function estDeConfiance(adresse: string, plages: Plage[]): boolean {
-	const valeur = valeurDAdresse(adresse.replace(/^\[|\]$/g, ''))
-	if (valeur === null) return false
+function isTrusted(adresse: string, plages: IpRange[]): boolean {
+	const value = addressValue(adresse.replace(/^\[|\]$/g, ''))
+	if (value === null) return false
 	return plages.some(({ debut, bits }) => {
-		const decalage = BigInt(128 - bits)
-		return (valeur >> decalage) << decalage === debut
+		const offset = BigInt(128 - bits)
+		return (value >> offset) << offset === debut
 	})
 }
 
-let memo: { brut: string | undefined; plages: Plage[] } | undefined
-const plagesDeConfiance = (): Plage[] => {
-	const brut = process.env.TRUSTED_PROXY_CIDRS
-	if (!memo || memo.brut !== brut) memo = { brut, plages: plagesDeConfiguration(brut) }
+let memo: { brut: string | undefined; plages: IpRange[] } | undefined
+const trustedRanges = (): IpRange[] => {
+	const raw = process.env.TRUSTED_PROXY_CIDRS
+	if (!memo || memo.brut !== raw) memo = { brut: raw, plages: configuredRanges(raw) }
 	return memo.plages
 }
 
@@ -115,13 +115,13 @@ const plagesDeConfiance = (): Plage[] => {
  * When every entry is trusted, the leftmost one is used.
  */
 export function ipClient(entetes: Headers): string {
-	const entrees = (entetes.get('x-forwarded-for') ?? '')
+	const inputs = (entetes.get('x-forwarded-for') ?? '')
 		.split(',')
-		.map(e => e.trim().slice(0, LONGUEUR_MAX))
+		.map(e => e.trim().slice(0, MAX_LENGTH))
 		.filter(e => e !== '')
-	if (entrees.length === 0) return SANS_PROXY
-	const plages = plagesDeConfiance()
+	if (inputs.length === 0) return NO_PROXY
+	const ranges = trustedRanges()
 	const client =
-		plages.length === 0 ? entrees.at(-1) : (entrees.findLast(e => !estDeConfiance(e, plages)) ?? entrees[0])
-	return client ? cleDeAdresse(client) : SANS_PROXY
+		ranges.length === 0 ? inputs.at(-1) : (inputs.findLast(e => !isTrusted(e, ranges)) ?? inputs[0])
+	return client ? addressKey(client) : NO_PROXY
 }

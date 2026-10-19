@@ -1,10 +1,10 @@
 'use client'
 
 import { useEffect } from 'react'
-import { creerProlongement } from '@/lib/auth/extend'
+import { createExtension } from '@/lib/auth/extend'
 
 // One renewal per page load, even if the component mounts twice (React strict mode, client navigation).
-const prolonger = creerProlongement(route => fetch(route, { method: 'POST', credentials: 'same-origin' }))
+const prolonger = createExtension(route => fetch(route, { method: 'POST', credentials: 'same-origin' }))
 
 /**
  * Renews the session of a makeup artist who visits her space and whose session ends in less than

@@ -48,22 +48,22 @@ import { corbeilleRetenue } from '../../collections/trash'
  */
 
 /** What the deletion did. `supprime: false`: the account did not exist (any more). */
-export interface BilanDeSuppression {
+export interface DeletionSummary {
 	supprime: boolean
 	/** How many profiles went with the account. */
 	profils: number
 }
 
-const REGISTRE = Symbol.for('my-makeup.suppressions-en-cours')
+const REGISTRY = Symbol.for('my-makeup.suppressions-en-cours')
 
 /** Keyed by account: Next loads a module once per bundle layer, and the deletions must be one for the process. */
-function enCours(): Map<string, Promise<BilanDeSuppression>> {
-	const g = globalThis as { [REGISTRE]?: Map<string, Promise<BilanDeSuppression>> }
-	g[REGISTRE] ??= new Map()
-	return g[REGISTRE]
+function inProgress(): Map<string, Promise<DeletionSummary>> {
+	const g = globalThis as { [REGISTRY]?: Map<string, Promise<DeletionSummary>> }
+	g[REGISTRY] ??= new Map()
+	return g[REGISTRY]
 }
 
-async function retenirLaSuppression(payload: Payload, strapiId: number, req: PayloadRequest): Promise<void> {
+async function rememberDeletion(payload: Payload, strapiId: number, req: PayloadRequest): Promise<void> {
 	const { totalDocs } = await payload.count({
 		collection: 'deleted-accounts',
 		overrideAccess: true,
@@ -80,12 +80,12 @@ async function retenirLaSuppression(payload: Payload, strapiId: number, req: Pay
 		})
 }
 
-async function supprimer(payload: Payload, id: number | string): Promise<BilanDeSuppression> {
+async function remove(payload: Payload, id: number | string): Promise<DeletionSummary> {
 	const req = await createLocalReq({}, payload)
-	const proprietaire = await initTransaction(req)
+	const owner = await initTransaction(req)
 	try {
-		const bilan = await corbeilleRetenue(req, `account ${id}`, async (): Promise<BilanDeSuppression> => {
-			const compte = await payload.findByID({
+		const summary = await corbeilleRetenue(req, `account ${id}`, async (): Promise<DeletionSummary> => {
+			const account = await payload.findByID({
 				collection: 'pros',
 				depth: 0,
 				disableErrors: true,
@@ -94,7 +94,7 @@ async function supprimer(payload: Payload, id: number | string): Promise<BilanDe
 				req,
 				select: { strapiId: true },
 			})
-			if (compte === null) return { supprime: false, profils: 0 }
+			if (account === null) return { supprime: false, profils: 0 }
 			const { docs } = await payload.find({
 				collection: 'profiles',
 				depth: 0,
@@ -105,31 +105,31 @@ async function supprimer(payload: Payload, id: number | string): Promise<BilanDe
 				where: { pro: { equals: id } },
 			})
 			// One by one, by identifier: the bin refuses a deletion by `where`, and never runs side by side.
-			for (const profil of docs)
-				await payload.delete({ collection: 'profiles', depth: 0, id: profil.id, overrideAccess: true, req })
+			for (const profile of docs)
+				await payload.delete({ collection: 'profiles', depth: 0, id: profile.id, overrideAccess: true, req })
 			await payload.delete({ collection: 'pros', depth: 0, id, overrideAccess: true, req })
 			// She came from the old site, which the import still reads: her identifier is kept so that a
 			// rerun never brings her back. Same transaction: both happen or neither.
-			if (typeof compte.strapiId === 'number') await retenirLaSuppression(payload, compte.strapiId, req)
+			if (typeof account.strapiId === 'number') await rememberDeletion(payload, account.strapiId, req)
 			return { supprime: true, profils: docs.length }
 		})
-		if (proprietaire) await commitTransaction(req)
-		return bilan
-	} catch (erreur) {
-		if (proprietaire) await killTransaction(req)
-		throw erreur
+		if (owner) await commitTransaction(req)
+		return summary
+	} catch (error) {
+		if (owner) await killTransaction(req)
+		throw error
 	}
 }
 
 /** Deletes the account and all that hangs on it (see the top of this file). Throws when it could not: nothing was changed. */
-export function supprimerLeCompteEtToutCeQuiEnDepend(
+export function deleteAccountAndDependents(
 	payload: Payload,
 	id: number | string
-): Promise<BilanDeSuppression> {
-	const cle = String(id)
-	const deja = enCours().get(cle)
-	if (deja) return deja
-	const travail = supprimer(payload, id).finally(() => enCours().delete(cle))
-	enCours().set(cle, travail)
-	return travail
+): Promise<DeletionSummary> {
+	const key = String(id)
+	const already = inProgress().get(key)
+	if (already) return already
+	const work = remove(payload, id).finally(() => inProgress().delete(key))
+	inProgress().set(key, work)
+	return work
 }

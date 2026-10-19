@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
 import { AuthenticationError } from 'payload'
-import { connecter } from '@/lib/auth/sign-in'
-import { creerFrein } from '@/lib/auth/rate-limit'
+import { signInWithPassword } from '@/lib/auth/sign-in'
+import { createRateLimit } from '@/lib/auth/rate-limit'
 
-const frein = creerFrein({ nom: 'essai-connexion', limite: 10, fenetreMs: 15 * 60_000 })
+const frein = createRateLimit({ nom: 'essai-connexion', limite: 10, fenetreMs: 15 * 60_000 })
 beforeEach(() => frein.vider())
 
 const adresse = (ip: string) => new Headers({ 'x-forwarded-for': ip })
@@ -24,7 +24,7 @@ function faux(login: () => Promise<{ token?: string }>) {
 describe('connecter', () => {
 	test('un mot de passe juste rend le jeton', async () => {
 		const { ouvrir, appels } = faux(() => Promise.resolve({ token: 'jeton' }))
-		const r = await connecter({
+		const r = await signInWithPassword({
 			ouvrir,
 			headers: adresse('192.0.2.1'),
 			email: 'Lea@Example.test ',
@@ -37,13 +37,13 @@ describe('connecter', () => {
 
 	test('aucune règle de composition : un mot de passe d’une lettre part chez Payload', async () => {
 		const { ouvrir, appels } = faux(() => Promise.resolve({ token: 'jeton' }))
-		await connecter({ ouvrir, headers: adresse('192.0.2.1'), email: 'a@example.test', password: 'a', frein })
+		await signInWithPassword({ ouvrir, headers: adresse('192.0.2.1'), email: 'a@example.test', password: 'a', frein })
 		expect(appels.length).toBe(1)
 	})
 
 	test('un refus de Payload donne le message générique, sans dire pourquoi', async () => {
 		const { ouvrir } = faux(refuse)
-		const r = await connecter({
+		const r = await signInWithPassword({
 			ouvrir,
 			headers: adresse('192.0.2.1'),
 			email: 'a@example.test',
@@ -62,7 +62,7 @@ describe('connecter', () => {
 			['a@example.test', null],
 			['a@example.test', 'x'.repeat(2000)],
 		])
-			expect(await connecter({ ouvrir, headers: adresse('192.0.2.1'), email, password, frein })).toEqual({
+			expect(await signInWithPassword({ ouvrir, headers: adresse('192.0.2.1'), email, password, frein })).toEqual({
 				ok: false,
 				code: 'identifiants-invalides',
 			})
@@ -73,7 +73,7 @@ describe('connecter', () => {
 		const { ouvrir } = faux(() => Promise.reject(new Error('base injoignable')))
 		for (let i = 0; i < 15; i++)
 			expect(
-				await connecter({ ouvrir, headers: adresse('192.0.2.2'), email: 'a@example.test', password: 'x', frein })
+				await signInWithPassword({ ouvrir, headers: adresse('192.0.2.2'), email: 'a@example.test', password: 'x', frein })
 			).toEqual({
 				ok: false,
 				code: 'service-indisponible',
@@ -84,13 +84,13 @@ describe('connecter', () => {
 		const { ouvrir, appels } = faux(refuse)
 		for (let i = 0; i < 10; i++)
 			expect(
-				await connecter({ ouvrir, headers: adresse('192.0.2.3'), email: 'a@example.test', password: 'x', frein })
+				await signInWithPassword({ ouvrir, headers: adresse('192.0.2.3'), email: 'a@example.test', password: 'x', frein })
 			).toEqual({
 				ok: false,
 				code: 'identifiants-invalides',
 			})
 		expect(
-			await connecter({ ouvrir, headers: adresse('192.0.2.3'), email: 'a@example.test', password: 'x', frein })
+			await signInWithPassword({ ouvrir, headers: adresse('192.0.2.3'), email: 'a@example.test', password: 'x', frein })
 		).toEqual({
 			ok: false,
 			code: 'trop-de-tentatives',
@@ -99,7 +99,7 @@ describe('connecter', () => {
 		const bon = faux(() => Promise.resolve({ token: 'jeton' }))
 		expect(
 			(
-				await connecter({
+				await signInWithPassword({
 					ouvrir: bon.ouvrir,
 					headers: adresse('192.0.2.4'),
 					email: 'a@example.test',
@@ -113,14 +113,14 @@ describe('connecter', () => {
 	test('l’adresse écrite en tête de X-Forwarded-For ne change pas le compte', async () => {
 		const { ouvrir } = faux(refuse)
 		for (let i = 0; i < 10; i++)
-			await connecter({
+			await signInWithPassword({
 				ouvrir,
 				headers: adresse(`10.0.0.${i}, 192.0.2.5`),
 				email: 'a@example.test',
 				password: 'x',
 				frein,
 			})
-		const r = await connecter({
+		const r = await signInWithPassword({
 			ouvrir,
 			headers: adresse('10.9.9.9, 192.0.2.5'),
 			email: 'a@example.test',
@@ -135,7 +135,7 @@ describe('connecter', () => {
 		for (let i = 0; i < 30; i++)
 			expect(
 				(
-					await connecter({
+					await signInWithPassword({
 						ouvrir: bon.ouvrir,
 						headers: adresse('192.0.2.6'),
 						email: 'a@example.test',

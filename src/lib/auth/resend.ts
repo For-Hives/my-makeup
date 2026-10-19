@@ -4,12 +4,12 @@ import { contenuEmailConfirmation } from '../emails/confirmation'
 import { contenuEmailDejaInscrite } from '../emails/deja-inscrite'
 import type { EnvoyerEmail } from '../emails/envoi'
 import { composerEmail } from '../emails/gabarit'
-import { trouverLeCompte } from './account-by-email'
-import { cleDeBoite } from './canonical-email'
-import { FREINS_DE_BOITE, type FreinsDeBoite, prendreUnMailPour } from './sign-up-rate-limits'
-import { EMAIL_MAX, MESSAGES_INSCRIPTION } from './sign-up'
-import { attendreJusqua, PLANCHER_INSCRIPTION_MS } from './sign-up-payload'
-import type { CodeEvenement, Journaliser } from './auth-log'
+import { findAccount } from './account-by-email'
+import { mailboxKey } from './canonical-email'
+import { MAILBOX_RATE_LIMITS, type MailboxRateLimits, takeMailFor } from './sign-up-rate-limits'
+import { EMAIL_MAX, SIGN_UP_MESSAGES } from './sign-up'
+import { waitUntil, SIGN_UP_FLOOR_MS } from './sign-up-payload'
+import type { EventCode, Log } from './auth-log'
 
 /**
  * The resending of the confirmation mail, from the wall of verification (ticket 083; plan 02 E04).
@@ -30,13 +30,13 @@ import type { CodeEvenement, Journaliser } from './auth-log'
  * No `next` import.
  */
 
-export type ResultatDeRenvoi =
+export type ResendResult =
 	| { ok: true }
 	| { ok: false; code: 'email-invalide'; message: string }
 	| { ok: false; code: 'trop-de-renvois'; raison: 'minute' | 'jour'; reessayerDansS: number }
 	| { ok: false; code: 'email-non-envoye' }
 
-export const MESSAGES_RENVOI = {
+export const RESEND_MESSAGES = {
 	ok: 'Si un compte attend d’être confirmé avec cette adresse, un email vient de repartir. Regarde aussi dans tes spams.',
 	minute: 'Un seul email par minute : attends un instant avant d’en demander un autre.',
 	jour: 'Tu as déjà demandé 5 emails aujourd’hui. Réessaie demain, ou écris-nous si rien n’arrive.',
@@ -47,66 +47,66 @@ export const MESSAGES_RENVOI = {
 const schemaEmail = z
 	.string()
 	.trim()
-	.min(1, MESSAGES_INSCRIPTION.email.vide)
-	.max(EMAIL_MAX, MESSAGES_INSCRIPTION.email.long)
-	.pipe(z.email(MESSAGES_INSCRIPTION.email.invalide))
+	.min(1, SIGN_UP_MESSAGES.email.vide)
+	.max(EMAIL_MAX, SIGN_UP_MESSAGES.email.long)
+	.pipe(z.email(SIGN_UP_MESSAGES.email.invalide))
 
-export interface EntreesDeRenvoi {
+export interface ResendInputs {
 	payload: Payload
 	email: unknown
 	envoyer: EnvoyerEmail
 	site: string
-	journal?: Journaliser
+	journal?: Log
 	plancherMs?: number
-	freins?: FreinsDeBoite
+	freins?: MailboxRateLimits
 }
 
-export async function renvoyerLaConfirmation({
+export async function resendConfirmation({
 	payload,
 	email,
 	envoyer,
 	site,
 	journal,
-	plancherMs = PLANCHER_INSCRIPTION_MS,
-	freins = FREINS_DE_BOITE,
-}: EntreesDeRenvoi): Promise<ResultatDeRenvoi> {
-	const debut = Date.now()
-	const noter = async (code: CodeEvenement) => {
+	plancherMs = SIGN_UP_FLOOR_MS,
+	freins = MAILBOX_RATE_LIMITS,
+}: ResendInputs): Promise<ResendResult> {
+	const start = Date.now()
+	const record = async (code: EventCode) => {
 		try {
-			await journal?.({ type: 'resend', code, durationMs: Date.now() - debut })
+			await journal?.({ type: 'resend', code, durationMs: Date.now() - start })
 		} catch {
 			// The journal is not the resending's to fail.
 		}
 	}
-	const lecture = schemaEmail.safeParse(typeof email === 'string' ? email : '')
-	if (!lecture.success) {
-		await noter('donnees-invalides')
+	const read = schemaEmail.safeParse(typeof email === 'string' ? email : '')
+	if (!read.success) {
+		await record('donnees-invalides')
 		return {
 			ok: false,
 			code: 'email-invalide',
-			message: lecture.error.issues[0]?.message ?? MESSAGES_INSCRIPTION.email.invalide,
+			message: read.error.issues[0]?.message ?? SIGN_UP_MESSAGES.email.invalide,
 		}
 	}
-	const adresse = lecture.data.toLowerCase()
+	const address = read.data.toLowerCase()
 
-	const place = prendreUnMailPour(cleDeBoite(adresse), freins)
+	const place = takeMailFor(mailboxKey(address), freins)
 	if (!place.autorise) {
-		await noter('trop-de-tentatives')
+		await record('trop-de-tentatives')
 		return { ok: false, code: 'trop-de-renvois', raison: place.raison, reessayerDansS: place.reessayerDansS }
 	}
 
-	const resultat = await envoyerLeMail(adresse)
-	await noter(resultat.ok ? 'ok' : 'service-indisponible')
-	await attendreJusqua(debut + plancherMs)
-	return resultat
+	const result = await sendMail(address)
+	await record(result.ok ? 'ok' : 'service-indisponible')
+	await waitUntil(start + plancherMs)
+	return result
 
-	async function envoyerLeMail(destinataire: string): Promise<ResultatDeRenvoi> {
+	async function sendMail(destinataire: string): Promise<ResendResult> {
 		try {
-			const compte = await trouverLeCompte(payload, destinataire)
-			if (!compte) return { ok: true }
-			const contenu =
-				!compte.verifie && compte.jeton ? contenuEmailConfirmation(compte.jeton) : contenuEmailDejaInscrite()
-			await envoyer({ a: compte.email, ...composerEmail(contenu, site) })
+			const account = await findAccount(payload, destinataire)
+			if (!account) return { ok: true }
+			const content =
+				!account.verifie && account.jeton ? contenuEmailConfirmation(account.jeton) : contenuEmailDejaInscrite()
+			await envoyer({ a: account.email, ...composerEmail(content, site) })
 			return { ok: true }
 		} catch {
 			return { ok: false, code: 'email-non-envoye' }

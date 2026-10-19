@@ -1,13 +1,13 @@
 import { timingSafeEqual } from 'node:crypto'
 import type { Payload } from 'payload'
-import type { CodeErreurGoogle } from '../errors'
-import { type Frein, freinDuRetourGoogle } from '../rate-limit'
-import { freinDeJournal } from '../sign-up-rate-limits'
-import { ouvrirSansMotDePasse } from '../token'
-import type { CodeEvenement, Journaliser } from '../auth-log'
-import { PAGE_D_ACCUEIL_DU_COMPTE } from '../return-to'
-import { type CodeRefusDuCompte, compteDeGoogle } from './account'
-import { type ConfigGoogle, decouvrir, JetonRefuse, ouvrirLeCookie, type Requeter, revendicationsDuCode } from './oidc'
+import type { GoogleErrorCode } from '../errors'
+import { type RateLimit, googleCallbackRateLimit } from '../rate-limit'
+import { authLogRateLimit } from '../sign-up-rate-limits'
+import { openWithoutPassword } from '../token'
+import type { EventCode, Log } from '../auth-log'
+import { ACCOUNT_ONBOARDING_PAGE } from '../return-to'
+import { type AccountRefusalCode, googleAccount } from './account'
+import { type ConfigGoogle, discover, RefusedToken, openCookie, type Query, codeClaims } from './oidc'
 
 /**
  * The return from Google (tickets 090 and 091), from the address it called to the session.
@@ -21,13 +21,13 @@ import { type ConfigGoogle, decouvrir, JetonRefuse, ouvrirLeCookie, type Requete
  * No `next` import: the route calls it with what it read from the request.
  */
 
-export interface RetourDeGoogle {
+export interface GoogleCallback {
 	code: string | null
 	state: string | null
 	error: string | null
 }
 
-export type IssueDeGoogle =
+export type GoogleOutcome =
 	| {
 			ok: true
 			token: string
@@ -36,50 +36,50 @@ export type IssueDeGoogle =
 			/** Where she goes: the onboarding for a new account, else the page she asked for. */
 			destination: string
 	  }
-	| { ok: false; code: CodeErreurGoogle }
+	| { ok: false; code: GoogleErrorCode }
 
-export interface EntreesDuRetour {
+export interface CallbackInputs {
 	payload: Payload
 	config: ConfigGoogle
 	/** The key the departure's cookie was sealed with. */
 	secret: string
-	retour: RetourDeGoogle
+	retour: GoogleCallback
 	/** The value of the sealed cookie, if the browser sent it. */
 	cookie: string | undefined
-	journal?: Journaliser
-	requeter?: Requeter
+	journal?: Log
+	requeter?: Query
 	maintenant?: () => number
 	/**
 	 * The client address (`ipClient`) the return comes from (ticket 223): it takes a place in the brake
 	 * and bounds the `retour-invalide` rows of the journal. Without it nothing is braked (tests).
 	 */
 	client?: string
-	frein?: Frein
+	frein?: RateLimit
 }
 
 const CODE_MAX = 2048
 
-const memeTexte = (a: string, b: string): boolean => {
+const sameText = (a: string, b: string): boolean => {
 	const x = Buffer.from(a)
 	const y = Buffer.from(b)
 	return x.length === y.length && timingSafeEqual(x, y)
 }
 
-const CODE_URL_DU_REFUS: Record<CodeRefusDuCompte, CodeErreurGoogle> = {
+const URL_REFUSAL_CODE: Record<AccountRefusalCode, GoogleErrorCode> = {
 	'email-non-verifie': 'google-email-non-verifie',
 	'compte-refuse': 'email-deja-avec-mot-de-passe',
 	'compte-bloque': 'compte-bloque',
 	'service-indisponible': 'google-indisponible',
 }
 
-const CODE_JOURNAL_DU_REFUS: Record<CodeRefusDuCompte, CodeEvenement> = {
+const AUTH_LOG_REFUSAL_CODE: Record<AccountRefusalCode, EventCode> = {
 	'email-non-verifie': 'email-non-verifie',
 	'compte-refuse': 'compte-refuse',
 	'compte-bloque': 'compte-bloque',
 	'service-indisponible': 'service-indisponible',
 }
 
-export async function terminerLaConnexionGoogle({
+export async function finishGoogleSignIn({
 	payload,
 	config,
 	secret,
@@ -89,71 +89,71 @@ export async function terminerLaConnexionGoogle({
 	requeter,
 	maintenant = Date.now,
 	client,
-	frein = freinDuRetourGoogle,
-}: EntreesDuRetour): Promise<IssueDeGoogle> {
-	const debut = Date.now()
-	const noter = async (type: 'sign-in' | 'sign-up', code: CodeEvenement) => {
+	frein = googleCallbackRateLimit,
+}: CallbackInputs): Promise<GoogleOutcome> {
+	const start = Date.now()
+	const record = async (type: 'sign-in' | 'sign-up', code: EventCode) => {
 		// A script can send returns by the thousand: the rows of refusals are 3 an hour per address and
 		// outcome, like those of the sign-up (ticket 084). The address is a key in memory, never written.
 		if (
 			client !== undefined &&
 			(code === 'retour-invalide' || code === 'trop-de-tentatives') &&
-			!freinDeJournal.prendre(`${client}|google|${type}|${code}`).autorise
+			!authLogRateLimit.prendre(`${client}|google|${type}|${code}`).autorise
 		)
 			return
 		try {
-			await journal?.({ type, code, durationMs: Date.now() - debut, method: 'google' })
+			await journal?.({ type, code, durationMs: Date.now() - start, method: 'google' })
 		} catch {
 			// The journal is not the sign-in's to fail.
 		}
 	}
-	const refuser = async (code: CodeEvenement, url: CodeErreurGoogle): Promise<IssueDeGoogle> => {
-		await noter('sign-in', code)
+	const refuse = async (code: EventCode, url: GoogleErrorCode): Promise<GoogleOutcome> => {
+		await record('sign-in', code)
 		return { ok: false, code: url }
 	}
 
 	// What Google said by itself (RFC 6749 §4.1.2.1): a refusal, an outage, or something else.
-	const refuserLeRetour = (erreur: string): Promise<IssueDeGoogle> => {
-		if (erreur === 'access_denied') return refuser('annule', 'google-annule')
+	const refuseCallback = (erreur: string): Promise<GoogleOutcome> => {
+		if (erreur === 'access_denied') return refuse('annule', 'google-annule')
 		if (erreur === 'server_error' || erreur === 'temporarily_unavailable')
-			return refuser('service-indisponible', 'google-indisponible')
-		return refuser('retour-invalide', 'google-echec')
+			return refuse('service-indisponible', 'google-indisponible')
+		return refuse('retour-invalide', 'google-echec')
 	}
 
 	if (client !== undefined && !frein.prendre(client).autorise)
-		return refuser('trop-de-tentatives', 'trop-de-tentatives')
+		return refuse('trop-de-tentatives', 'trop-de-tentatives')
 
-	const demande = ouvrirLeCookie(cookie, secret, maintenant)
-	if (!demande || retour.state === null || !memeTexte(retour.state, demande.state))
-		return refuser('retour-invalide', 'google-echec')
+	const request = openCookie(cookie, secret, maintenant)
+	if (!request || retour.state === null || !sameText(retour.state, request.state))
+		return refuse('retour-invalide', 'google-echec')
 	// She closed Google's screen, or refused: the state was ours, so this is a real answer.
-	if (retour.error !== null) return refuserLeRetour(retour.error)
+	if (retour.error !== null) return refuseCallback(retour.error)
 	if (retour.code === null || retour.code === '' || retour.code.length > CODE_MAX)
-		return refuser('retour-invalide', 'google-echec')
+		return refuse('retour-invalide', 'google-echec')
 
-	let revendications: Awaited<ReturnType<typeof revendicationsDuCode>>
+	let claims: Awaited<ReturnType<typeof codeClaims>>
 	try {
-		const decouverte = await decouvrir(config.emetteur, { requeter, maintenant })
-		revendications = await revendicationsDuCode(
+		const discovery = await discover(config.emetteur, { requeter, maintenant })
+		claims = await codeClaims(
 			config,
-			decouverte,
-			{ code: retour.code, demande },
+			discovery,
+			{ code: retour.code, demande: request },
 			{ requeter, maintenant }
 		)
-	} catch (erreur) {
-		if (erreur instanceof JetonRefuse) return refuser('retour-invalide', 'google-echec')
+	} catch (error) {
+		if (error instanceof RefusedToken) return refuse('retour-invalide', 'google-echec')
 		// GoogleIndisponible, or anything unforeseen: the provider or the network, not the visitor.
-		return refuser('service-indisponible', 'google-indisponible')
+		return refuse('service-indisponible', 'google-indisponible')
 	}
 
-	const compte = await compteDeGoogle(payload, revendications)
-	if (!compte.ok) return refuser(CODE_JOURNAL_DU_REFUS[compte.code], CODE_URL_DU_REFUS[compte.code])
+	const account = await googleAccount(payload, claims)
+	if (!account.ok) return refuse(AUTH_LOG_REFUSAL_CODE[account.code], URL_REFUSAL_CODE[account.code])
 
 	let token: string
 	try {
-		;({ token } = await ouvrirSansMotDePasse(payload, { collection: 'pros', id: compte.id }))
+		;({ token } = await openWithoutPassword(payload, { collection: 'pros', id: account.id }))
 	} catch {
-		return refuser('service-indisponible', 'google-indisponible')
+		return refuse('service-indisponible', 'google-indisponible')
 	}
 	// The date of the last sign-in (the `afterLogin` hook does it for a password): a failure to write
 	// it is not the sign-in's to fail.
@@ -164,18 +164,18 @@ export async function terminerLaConnexionGoogle({
 		.updateOne({
 			collection: 'pros',
 			data: { lastSignInAt: new Date().toISOString() },
-			id: compte.id,
+			id: account.id,
 			returning: false,
 		})
 		.catch(() => undefined)
 	// A session was opened: this return was no failure.
 	if (client !== undefined) frein.rendre(client)
-	if (compte.nouveau) await noter('sign-up', 'ok')
-	await noter('sign-in', 'ok')
+	if (account.nouveau) await record('sign-up', 'ok')
+	await record('sign-in', 'ok')
 	return {
 		ok: true,
 		token,
-		nouveau: compte.nouveau,
-		destination: compte.nouveau ? PAGE_D_ACCUEIL_DU_COMPTE : demande.retour,
+		nouveau: account.nouveau,
+		destination: account.nouveau ? ACCOUNT_ONBOARDING_PAGE : request.retour,
 	}
 }

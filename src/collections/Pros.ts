@@ -1,34 +1,34 @@
 import { APIError, type CollectionBeforeDeleteHook, type CollectionConfig } from 'payload'
 import { adminOuSoiMeme, adminSeulement, cacheeSaufAdmin, champAdminSeulement, jamais } from '../lib/acces'
-import { fermerLesSessionsAuBlocage, noterLeBlocage, refuserUnCompteBloque } from '../lib/auth/blocked-account'
+import { closeSessionsOnBlock, recordBlock, refuseBlockedAccount } from '../lib/auth/blocked-account'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
-import { freinerLaConnexion, rendreLaPlaceDeLaConnexion } from '../lib/auth/rate-limit-payload'
+import { rateLimitSignIn, releaseSignInSlot } from '../lib/auth/rate-limit-payload'
 import {
-	effacerLeHashHeriteApresUnMotDePasse,
-	effacerLeHashHeriteAuRenouvellement,
+	clearLegacyHashAfterPassword,
+	clearLegacyHashOnRenewal,
 } from '../lib/auth/legacy-hash-payload'
 import {
-	noterLaConnexionRest,
-	noterLEchecDeConnexionRest,
-	noterLeDebutDeLaConnexion,
-	retenirLaDerniereConnexion,
+	recordRestSignIn,
+	recordRestSignInFailure,
+	recordSignInStart,
+	recordLastSignIn,
 } from '../lib/auth/auth-log-payload'
-import { DUREE_DU_LIEN_MS } from '../lib/auth/forgot-password'
-import { fermerLesPortesRestDeLOubli } from '../lib/auth/forgot-payload'
-import { premierCompteFerme } from '../lib/auth/closed-first-account'
-import { DUREE_SESSION_S, prolongerSousPlafond, refuserApresLePlafond } from '../lib/auth/sliding-session'
-import { egaliserLeTravailRest, retenirLesEchecsRest } from '../lib/auth/equal-time-payload'
-import { supprimerUnCompte } from '../lib/account/deletion-route'
+import { LINK_DURATION_MS } from '../lib/auth/forgot-password'
+import { closeForgotPasswordRestDoors } from '../lib/auth/forgot-payload'
+import { firstClosedAccount } from '../lib/auth/closed-first-account'
+import { SESSION_DURATION_S, extendUnderCap, refuseAfterCap } from '../lib/auth/sliding-session'
+import { equalizeRestWork, rememberRestFailures } from '../lib/auth/equal-time-payload'
+import { deleteAccount } from '../lib/account/deletion-route'
 import { contenuEmailConfirmation, SUJET_DE_CONFIRMATION } from '../lib/emails/confirmation'
 import { composerEmail } from '../lib/emails/gabarit'
 import { sessionsFermees } from './Admins'
 import { profilALaCreationDuCompte } from './Profiles'
 
 // Kept exported from here: the tests and the earlier tickets import it from this file.
-export { premierCompteFerme }
+export { firstClosedAccount as premierCompteFerme }
 
 /** How long a session of a makeup artist lasts: 14 days (plan 01 §2.3). */
-export const DUREE_SESSION_PRO_S = DUREE_SESSION_S
+export const DUREE_SESSION_PRO_S = SESSION_DURATION_S
 
 /**
  * The attributes of the session cookie (I09): HttpOnly always (Payload sets it), SameSite=Lax, and
@@ -101,7 +101,7 @@ export const Pros: CollectionConfig<'pros'> = {
 		// The link of a forgotten password lives one hour and serves once (tickets 085 and 086). The request
 		// goes through the site (`demanderUnLien`), which sends the mail by the one door of the site; the native REST doors are closed (`fermerLesPortesRestDeLOubli`).
 		forgotPassword: {
-			expiration: DUREE_DU_LIEN_MS,
+			expiration: LINK_DURATION_MS,
 		},
 		// No lock of the account: the brake is by client address (`freinerLaConnexion`), so that
 		// ten wrong passwords typed by anyone never lock the account they aimed at (AUTH-05).
@@ -123,23 +123,23 @@ export const Pros: CollectionConfig<'pros'> = {
 	},
 	// The admin's deletion is the cascade of the account (ticket 167); several accounts at once would skip it.
 	disableBulkDelete: true,
-	endpoints: [premierCompteFerme, supprimerUnCompte],
+	endpoints: [firstClosedAccount, deleteAccount],
 	hooks: {
-		afterChange: [profilALaCreationDuCompte, effacerLeHashHeriteApresUnMotDePasse, noterLeBlocage],
-		afterLogin: [rendreLaPlaceDeLaConnexion(), retenirLaDerniereConnexion, noterLaConnexionRest],
-		afterError: [retenirLesEchecsRest(), noterLEchecDeConnexionRest],
-		beforeChange: [fermerLesSessionsAuBlocage],
-		beforeLogin: [refuserUnCompteBloque],
+		afterChange: [profilALaCreationDuCompte, clearLegacyHashAfterPassword, recordBlock],
+		afterLogin: [releaseSignInSlot(), recordLastSignIn, recordRestSignIn],
+		afterError: [rememberRestFailures(), recordRestSignInFailure],
+		beforeChange: [closeSessionsOnBlock],
+		beforeLogin: [refuseBlockedAccount],
 		beforeDelete: [compteSansProfilAvantSuppression],
-		beforeValidate: [effacerLeHashHeriteAuRenouvellement],
+		beforeValidate: [clearLegacyHashOnRenewal],
 		beforeOperation: [
-			noterLeDebutDeLaConnexion,
-			freinerLaConnexion(),
-			egaliserLeTravailRest(),
-			refuserApresLePlafond,
-			fermerLesPortesRestDeLOubli,
+			recordSignInStart,
+			rateLimitSignIn(),
+			equalizeRestWork(),
+			refuseAfterCap,
+			closeForgotPasswordRestDoors,
 		],
-		refresh: [prolongerSousPlafond],
+		refresh: [extendUnderCap],
 	},
 	fields: [
 		{

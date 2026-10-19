@@ -1,6 +1,6 @@
 import { APIError, type CollectionAfterLoginHook, type CollectionBeforeOperationHook } from 'payload'
-import { messageErreur } from './errors'
-import { type Frein, freinDeConnexion } from './rate-limit'
+import { errorMessage } from './errors'
+import { type RateLimit, signInRateLimit } from './rate-limit'
 import { ipClient } from './client-ip'
 
 /**
@@ -15,17 +15,17 @@ import { ipClient } from './client-ip'
  * 429, in French and public, and the same for every email: it says nothing about the account.
  * Nothing is logged: the address is a key, never a line of a log.
  */
-export const freinerLaConnexion =
-	(frein: Frein = freinDeConnexion): CollectionBeforeOperationHook =>
+export const rateLimitSignIn =
+	(frein: RateLimit = signInRateLimit): CollectionBeforeOperationHook =>
 	({ operation, req }) => {
 		if (operation !== 'login' || req.payloadAPI !== 'REST') return
 		const decision = frein.prendre(ipClient(req.headers))
-		if (!decision.autorise) throw new APIError(messageErreur('trop-de-tentatives'), 429, null, true)
+		if (!decision.autorise) throw new APIError(errorMessage('trop-de-tentatives'), 429, null, true)
 	}
 
 /** A sign-in that succeeded gives its place back: only the failures are counted. */
-export const rendreLaPlaceDeLaConnexion =
-	(frein: Frein = freinDeConnexion): CollectionAfterLoginHook =>
+export const releaseSignInSlot =
+	(frein: RateLimit = signInRateLimit): CollectionAfterLoginHook =>
 	({ req, user }) => {
 		if (req.payloadAPI === 'REST') frein.rendre(ipClient(req.headers))
 		return user

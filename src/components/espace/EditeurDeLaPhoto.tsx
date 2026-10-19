@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { urlSessionExpiree } from '@/lib/auth/return-to'
+import { expiredSessionUrl } from '@/lib/auth/return-to'
 import {
 	envoyerPuisEnregistrer,
 	type PhotoAEnvoyer,
@@ -287,7 +287,7 @@ function FormulaireDeLaPhoto({
 									{' '}
 									<a
 										className="font-medium underline"
-										href={urlSessionExpiree(PAGE_DE_L_ESPACE)}
+										href={expiredSessionUrl(PAGE_DE_L_ESPACE)}
 										target="_blank"
 										rel="noopener"
 									>

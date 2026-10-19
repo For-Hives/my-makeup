@@ -3,21 +3,21 @@ import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 import { attributsDeLaMarque, COOKIE_DE_MARQUE_DE_CONNEXION } from '@/lib/analytics/marque-connexion'
-import { cookieDeSession } from '@/lib/auth/set-session-cookie'
-import { CHEMIN_DU_DEPART_GOOGLE, COOKIE_DE_GOOGLE, configGoogle, siteDeLEspace } from '@/lib/auth/google/config'
-import { terminerLaConnexionGoogle } from '@/lib/auth/google/google-sign-in'
+import { sessionCookie } from '@/lib/auth/set-session-cookie'
+import { GOOGLE_START_PATH, GOOGLE_COOKIE, configGoogle, dashboardSite } from '@/lib/auth/google/config'
+import { finishGoogleSignIn } from '@/lib/auth/google/google-sign-in'
 import { ipClient } from '@/lib/auth/client-ip'
-import { journalDe } from '@/lib/auth/auth-log'
-import { ENTETES_DE_RELAIS, pageDeRelais } from '@/lib/auth/relay-page'
-import { retourSur } from '@/lib/auth/return-to'
+import { authLog } from '@/lib/auth/auth-log'
+import { RELAY_HEADERS, relayPage } from '@/lib/auth/relay-page'
+import { safeReturnTo } from '@/lib/auth/return-to'
 import { serverEnv } from '@/lib/env'
 
 // Read per request, never cached: it opens a session.
 export const dynamic = 'force-dynamic'
 
 /** The page that ends the return: the relay page (`src/lib/auth/page-de-relais.ts`), so that the first page of the space sees the cookie. */
-function passerParLeSite(chemin: string): NextResponse {
-	return new NextResponse(pageDeRelais(chemin), { status: 200, headers: ENTETES_DE_RELAIS })
+function goThroughSite(chemin: string): NextResponse {
+	return new NextResponse(relayPage(chemin), { status: 200, headers: RELAY_HEADERS })
 }
 
 /**
@@ -29,43 +29,43 @@ function passerParLeSite(chemin: string): NextResponse {
  * never from the request.
  */
 export async function GET(requete: Request) {
-	const site = siteDeLEspace()
-	const vers = (chemin: string) => {
-		const reponse = NextResponse.redirect(new URL(chemin, site), 307)
-		reponse.headers.set('Cache-Control', 'private, no-store')
-		return reponse
+	const site = dashboardSite()
+	const toPath = (chemin: string) => {
+		const response = NextResponse.redirect(new URL(chemin, site), 307)
+		response.headers.set('Cache-Control', 'private, no-store')
+		return response
 	}
-	const depenser = (reponse: NextResponse) => {
-		reponse.cookies.set({ name: COOKIE_DE_GOOGLE, value: '', maxAge: 0, path: CHEMIN_DU_DEPART_GOOGLE })
+	const spend = (reponse: NextResponse) => {
+		reponse.cookies.set({ name: GOOGLE_COOKIE, value: '', maxAge: 0, path: GOOGLE_START_PATH })
 		return reponse
 	}
 
 	const client = configGoogle()
-	if (!client) return depenser(vers('/auth/signin?error=google-echec'))
+	if (!client) return spend(toPath('/auth/signin?error=google-echec'))
 
-	const parametres = new URL(requete.url).searchParams
+	const params = new URL(requete.url).searchParams
 	const payload = await getPayload({ config })
-	const issue = await terminerLaConnexionGoogle({
+	const issue = await finishGoogleSignIn({
 		payload,
 		config: client,
 		secret: serverEnv().payloadSecret,
-		retour: { code: parametres.get('code'), state: parametres.get('state'), error: parametres.get('error') },
-		cookie: (await cookies()).get(COOKIE_DE_GOOGLE)?.value,
-		journal: journalDe(payload),
+		retour: { code: params.get('code'), state: params.get('state'), error: params.get('error') },
+		cookie: (await cookies()).get(GOOGLE_COOKIE)?.value,
+		journal: authLog(payload),
 		// The brake by address and the bound on the journal rows (ticket 223).
 		client: ipClient(requete.headers),
 	})
-	if (!issue.ok) return depenser(vers(`/auth/signin?error=${issue.code}`))
+	if (!issue.ok) return spend(toPath(`/auth/signin?error=${issue.code}`))
 
 	// Already reduced at the departure; reduced again, because the cookie is a place a value waits.
-	const reponse = depenser(passerParLeSite(retourSur(issue.destination, site)))
+	const response = spend(goThroughSite(safeReturnTo(issue.destination, site)))
 	// On the response itself: a cookie set through `cookies()` is not carried by a response we build.
-	reponse.cookies.set(cookieDeSession(payload, issue.token))
+	response.cookies.set(sessionCookie(payload, issue.token))
 	// Tells the next page to send `login_result` (ticket 146).
-	reponse.cookies.set(
+	response.cookies.set(
 		COOKIE_DE_MARQUE_DE_CONNEXION,
 		'google',
 		attributsDeLaMarque(process.env.NODE_ENV === 'production')
 	)
-	return reponse
+	return response
 }

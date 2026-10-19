@@ -3,44 +3,44 @@
 import Link from 'next/link'
 import { useActionState, useEffect, useRef } from 'react'
 import { type Suivre, track } from '@/lib/analytics/track'
-import { type CodeErreur, messageErreur } from '@/lib/auth/errors'
+import { type ErrorCode, errorMessage } from '@/lib/auth/errors'
 
-export type EtatDeConnexion = { code: CodeErreur } | null
-export type ActionDeConnexion = (precedent: EtatDeConnexion, formulaire: FormData) => Promise<EtatDeConnexion>
+export type SignInState = { code: ErrorCode } | null
+export type SignInAction = (precedent: SignInState, formulaire: FormData) => Promise<SignInState>
 
 /**
  * The sign-in form. The error is a `role="alert"` under the form: it is announced by a screen
  * reader, and the address does not change. A key held down sends one request: React would queue
  * every submit, so the form refuses the next one until the first has answered.
  */
-export function FormulaireDeConnexion({
+export function SignInForm({
 	action,
 	retour,
 	suivre = track,
 }: {
-	action: ActionDeConnexion
+	action: SignInAction
 	retour: string
 	suivre?: Suivre
 }) {
-	const [etat, envoyer, enCours] = useActionState(action, null)
-	const verrou = useRef(false)
+	const [state, send, inProgress] = useActionState(action, null)
+	const lock = useRef(false)
 
 	useEffect(() => {
-		if (!enCours) verrou.current = false
-	}, [enCours, etat])
+		if (!inProgress) lock.current = false
+	}, [inProgress, state])
 
 	// A refusal is a new state each time, so each one is sent once (ticket 146). A success ends in a
 	// redirection and never comes back here: the next page sends it (`ConnexionReussie`).
 	useEffect(() => {
-		if (etat) suivre('login_result', { method: 'email', ok: false, code: etat.code })
-	}, [etat, suivre])
+		if (state) suivre('login_result', { method: 'email', ok: false, code: state.code })
+	}, [state, suivre])
 
 	return (
 		<form
-			action={envoyer}
+			action={send}
 			onSubmit={evenement => {
-				if (verrou.current) evenement.preventDefault()
-				else verrou.current = true
+				if (lock.current) evenement.preventDefault()
+				else lock.current = true
 			}}
 			className="flex w-full max-w-sm flex-col gap-4 text-left"
 		>
@@ -73,15 +73,15 @@ export function FormulaireDeConnexion({
 				</Link>
 			</p>
 			<div role="alert" data-testid="erreur-connexion">
-				{etat ? <p className="rounded-md bg-red-50 p-3 text-red-800 text-sm">{messageErreur(etat.code)}</p> : null}
+				{state ? <p className="rounded-md bg-red-50 p-3 text-red-800 text-sm">{errorMessage(state.code)}</p> : null}
 			</div>
 			<button
 				type="submit"
-				disabled={enCours}
-				aria-busy={enCours}
+				disabled={inProgress}
+				aria-busy={inProgress}
 				className="min-h-11 rounded-md bg-neutral-900 px-4 py-2 font-medium text-white disabled:cursor-wait disabled:opacity-60"
 			>
-				{enCours ? 'Connexion…' : 'Se connecter'}
+				{inProgress ? 'Connexion…' : 'Se connecter'}
 			</button>
 		</form>
 	)

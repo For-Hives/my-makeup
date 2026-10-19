@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { finDuNettoyage } from './auth/legacy-cookies'
+import { cleanupEnd } from './auth/legacy-cookies'
 import { FORMAT_DE_LA_CLE } from './seo/indexnow'
 import type { VersionSources } from './version'
 
@@ -698,7 +698,7 @@ const schema = z.object({
 		.optional(),
 	BASCULE_LE: z
 		.string()
-		.refine(value => finDuNettoyage(value) !== undefined, { error: 'illisible' })
+		.refine(value => cleanupEnd(value) !== undefined, { error: 'illisible' })
 		.optional(),
 	CONTACT_TO: z
 		.string()

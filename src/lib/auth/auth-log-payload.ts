@@ -1,7 +1,7 @@
 import type { CollectionAfterErrorHook, CollectionAfterLoginHook, CollectionBeforeOperationHook } from 'payload'
-import { codeDeLEchec } from './sign-in'
-import { journaliser } from './auth-log'
-import { CONTEXTE_DE_REINITIALISATION } from './forgot-payload'
+import { failureCode } from './sign-in'
+import { log } from './auth-log'
+import { PASSWORD_RESET_CONTEXT } from './forgot-payload'
 
 /**
  * The hooks of `pros` that write the journal of the REST door of the sign-in, `POST /api/pros/login`
@@ -12,19 +12,19 @@ import { CONTEXTE_DE_REINITIALISATION } from './forgot-payload'
  * itself (`connecter`), so an attempt never leaves two rows.
  */
 
-const CLE_DU_DEBUT = 'debutDeLaConnexion'
+const START_KEY = 'debutDeLaConnexion'
 
-const estLaConnexionRest = (req: { payloadAPI?: string }, operation?: string): boolean =>
+const isRestSignIn = (req: { payloadAPI?: string }, operation?: string): boolean =>
 	req.payloadAPI === 'REST' && (operation === undefined || operation === 'login')
 
 /** Notes when a sign-in starts, to give its duration. It runs before the brake: a braked attempt has a duration too. */
-export const noterLeDebutDeLaConnexion: CollectionBeforeOperationHook = ({ operation, req }) => {
-	if (operation === 'login') req.context[CLE_DU_DEBUT] = Date.now()
+export const recordSignInStart: CollectionBeforeOperationHook = ({ operation, req }) => {
+	if (operation === 'login') req.context[START_KEY] = Date.now()
 }
 
-const dureeDepuis = (contexte: Record<string, unknown>): number | undefined => {
-	const debut = contexte[CLE_DU_DEBUT]
-	return typeof debut === 'number' ? Date.now() - debut : undefined
+const durationSince = (contexte: Record<string, unknown>): number | undefined => {
+	const start = contexte[START_KEY]
+	return typeof start === 'number' ? Date.now() - start : undefined
 }
 
 /**
@@ -32,9 +32,9 @@ const dureeDepuis = (contexte: Record<string, unknown>): number | undefined => {
  * transaction of the sign-in, which holds the account: an update outside of it would wait for the
  * sign-in to finish. A failure of this write is not the sign-in's to fail.
  */
-export const retenirLaDerniereConnexion: CollectionAfterLoginHook = async ({ req, user }) => {
+export const recordLastSignIn: CollectionAfterLoginHook = async ({ req, user }) => {
 	// The reset of a password opens a session of its own, which is dropped at once: it is no sign-in.
-	if (req.context[CONTEXTE_DE_REINITIALISATION]) return user
+	if (req.context[PASSWORD_RESET_CONTEXT]) return user
 	try {
 		await req.payload.update({
 			collection: 'pros',
@@ -51,31 +51,31 @@ export const retenirLaDerniereConnexion: CollectionAfterLoginHook = async ({ req
 }
 
 /** A REST sign-in that succeeded: one row. */
-export const noterLaConnexionRest: CollectionAfterLoginHook = async ({ req, user }) => {
-	if (estLaConnexionRest(req))
-		await journaliser(req.payload, {
+export const recordRestSignIn: CollectionAfterLoginHook = async ({ req, user }) => {
+	if (isRestSignIn(req))
+		await log(req.payload, {
 			type: 'sign-in',
 			code: 'ok',
-			durationMs: dureeDepuis(req.context),
+			durationMs: durationSince(req.context),
 			method: 'password',
 		})
 	return user
 }
 
 /** A REST sign-in that failed, for whatever reason (wrong password, brake, address not confirmed, outage): one row. */
-export const noterLEchecDeConnexionRest: CollectionAfterErrorHook = async ({ error, req }) => {
-	const chemin = (() => {
+export const recordRestSignInFailure: CollectionAfterErrorHook = async ({ error, req }) => {
+	const path = (() => {
 		try {
 			return new URL(req.url ?? '', 'http://localhost').pathname
 		} catch {
 			return ''
 		}
 	})()
-	if (req.method !== 'POST' || !chemin.endsWith('/pros/login')) return
-	await journaliser(req.payload, {
+	if (req.method !== 'POST' || !path.endsWith('/pros/login')) return
+	await log(req.payload, {
 		type: 'sign-in',
-		code: codeDeLEchec(error),
-		durationMs: dureeDepuis(req.context),
+		code: failureCode(error),
+		durationMs: durationSince(req.context),
 		method: 'password',
 	})
 }

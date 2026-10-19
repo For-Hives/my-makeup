@@ -57,7 +57,7 @@ describe('139 : le bandeau', () => {
 	})
 
 	test('l’aperçu est une page de l’espace : privée et sans cache comme lui', async () => {
-		const { estPagePrivee } = await import('@/lib/auth/closed-dashboard')
+		const { isPrivatePage: estPagePrivee } = await import('@/lib/auth/closed-dashboard')
 		expect(CHEMIN_DE_L_APERCU.startsWith('/auth/')).toBe(true)
 		expect(estPagePrivee(CHEMIN_DE_L_APERCU)).toBe(true)
 	})

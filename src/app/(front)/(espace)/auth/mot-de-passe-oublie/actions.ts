@@ -4,9 +4,9 @@ import config from '@payload-config'
 import { headers } from 'next/headers'
 import { after } from 'next/server'
 import { getPayload } from 'payload'
-import type { EtatDeLaDemande } from '@/components/auth/ForgotPasswordForm'
-import { journalDe } from '@/lib/auth/auth-log'
-import { demanderUnLien } from '@/lib/auth/password-reset-payload'
+import type { ForgotPasswordState } from '@/components/auth/ForgotPasswordForm'
+import { authLog } from '@/lib/auth/auth-log'
+import { requestPasswordLink } from '@/lib/auth/password-reset-payload'
 import { envoiEmailDePayload } from '@/lib/emails/envoi'
 import { serverEnv } from '@/lib/env'
 
@@ -16,20 +16,20 @@ import { serverEnv } from '@/lib/env'
  * Action called from another origin before this code runs; the origin is checked here as well,
  * as for the sign-in.
  */
-export async function demanderLeLien(_precedent: EtatDeLaDemande, formulaire: FormData): Promise<EtatDeLaDemande> {
+export async function forgotPassword(_precedent: ForgotPasswordState, formulaire: FormData): Promise<ForgotPasswordState> {
 	const payload = await getPayload({ config })
-	const entetes = await headers()
-	const origine = entetes.get('origin')
-	if (origine !== null && !payload.config.csrf.includes(origine)) return { code: 'service-indisponible' }
+	const requestHeaders = await headers()
+	const requestOrigin = requestHeaders.get('origin')
+	if (requestOrigin !== null && !payload.config.csrf.includes(requestOrigin)) return { code: 'service-indisponible' }
 
-	const resultat = await demanderUnLien({
+	const result = await requestPasswordLink({
 		payload,
-		headers: entetes,
+		headers: requestHeaders,
 		email: formulaire.get('email'),
 		apres: travail => after(travail),
 		envoyer: envoiEmailDePayload(payload, serverEnv()),
-		site: process.env.NEXT_PUBLIC_SITE_URL ?? origine ?? 'http://localhost',
-		journal: journalDe(payload),
+		site: process.env.NEXT_PUBLIC_SITE_URL ?? requestOrigin ?? 'http://localhost',
+		journal: authLog(payload),
 	})
-	return resultat.ok ? { envoyee: true } : { code: resultat.code }
+	return result.ok ? { envoyee: true } : { code: result.code }
 }

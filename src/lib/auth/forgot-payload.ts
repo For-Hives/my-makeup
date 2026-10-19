@@ -11,9 +11,9 @@ import { APIError, type CollectionBeforeOperationHook } from 'payload'
  *   the date of the last sign-in is left alone.
  */
 
-export const CONTEXTE_DE_REINITIALISATION = 'reinitialisationDuMotDePasse'
+export const PASSWORD_RESET_CONTEXT = 'reinitialisationDuMotDePasse'
 
-export const fermerLesPortesRestDeLOubli: CollectionBeforeOperationHook = ({ operation, req }) => {
+export const closeForgotPasswordRestDoors: CollectionBeforeOperationHook = ({ operation, req }) => {
 	if (req.payloadAPI !== 'REST') return
 	if (operation === 'forgotPassword' || operation === 'resetPassword')
 		throw new APIError('Cette opération passe par les pages du site.', 403, null, true)

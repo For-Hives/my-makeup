@@ -14,30 +14,30 @@ import { createHash } from 'node:crypto'
  * Pure: no `next` import, no Payload.
  */
 
-export const DOMAINES_GMAIL = ['gmail.com', 'googlemail.com'] as const
+export const GMAIL_DOMAINS = ['gmail.com', 'googlemail.com'] as const
 
 /** The local part and the domain of an address, or `null` when it has no single `@`. */
-function couper(email: string): { local: string; domaine: string } | null {
-	const adresse = email.trim().toLowerCase()
-	const arobase = adresse.lastIndexOf('@')
-	if (arobase <= 0 || arobase === adresse.length - 1) return null
-	return { local: adresse.slice(0, arobase), domaine: adresse.slice(arobase + 1) }
+function splitAt(email: string): { local: string; domaine: string } | null {
+	const address = email.trim().toLowerCase()
+	const atSign = address.lastIndexOf('@')
+	if (atSign <= 0 || atSign === address.length - 1) return null
+	return { local: address.slice(0, atSign), domaine: address.slice(atSign + 1) }
 }
 
 /** The key of the mailbox: the address itself, or the one form shared by the variants of a Gmail box. */
-export function emailCanonique(email: string): string {
-	const morceaux = couper(email)
-	if (!morceaux) return email.trim().toLowerCase()
-	if (!(DOMAINES_GMAIL as readonly string[]).includes(morceaux.domaine)) return `${morceaux.local}@${morceaux.domaine}`
-	const sansEtiquette = morceaux.local.split('+')[0] ?? ''
-	return `${sansEtiquette.replaceAll('.', '')}@gmail.com`
+export function canonicalEmail(email: string): string {
+	const parts = splitAt(email)
+	if (!parts) return email.trim().toLowerCase()
+	if (!(GMAIL_DOMAINS as readonly string[]).includes(parts.domaine)) return `${parts.local}@${parts.domaine}`
+	const withoutTag = parts.local.split('+')[0] ?? ''
+	return `${withoutTag.replaceAll('.', '')}@gmail.com`
 }
 
 /** The local part of the canonical form of a Gmail address, or `null` for any other provider. */
-export function localGmailCanonique(email: string): string | null {
-	const morceaux = couper(email)
-	if (!morceaux || !(DOMAINES_GMAIL as readonly string[]).includes(morceaux.domaine)) return null
-	const local = (morceaux.local.split('+')[0] ?? '').replaceAll('.', '')
+export function canonicalGmailLocal(email: string): string | null {
+	const parts = splitAt(email)
+	if (!parts || !(GMAIL_DOMAINS as readonly string[]).includes(parts.domaine)) return null
+	const local = (parts.local.split('+')[0] ?? '').replaceAll('.', '')
 	return local === '' ? null : local
 }
 
@@ -45,4 +45,4 @@ export function localGmailCanonique(email: string): string | null {
  * What a counter in memory is keyed by: a hash of the canonical form, so that no address sits in
  * the process memory as text and a variant of an address shares its mailbox's counter.
  */
-export const cleDeBoite = (email: string): string => createHash('sha256').update(emailCanonique(email)).digest('hex')
+export const mailboxKey = (email: string): string => createHash('sha256').update(canonicalEmail(email)).digest('hex')

@@ -1,14 +1,14 @@
-import { etatDuJeton } from './session-state'
-import { urlDeConnexion, urlSessionExpiree } from './return-to'
+import { tokenState } from './session-state'
+import { signInUrl, expiredSessionUrl } from './return-to'
 
 /** The name of Payload's session cookie (`<cookiePrefix>-token`, prefix `payload` by default). */
-export const COOKIE_DE_SESSION = 'payload-token'
+export const SESSION_COOKIE = 'payload-token'
 
 /** The private pages of the space. Their sub-paths are private too. */
-export const PAGES_PRIVEES = ['/auth/profil', '/auth/apercu-profil', '/auth/init-account'] as const
+export const PRIVATE_PAGES = ['/auth/profil', '/auth/apercu-profil', '/auth/init-account'] as const
 
-export const estPagePrivee = (chemin: string): boolean =>
-	PAGES_PRIVEES.some(page => chemin === page || chemin.startsWith(`${page}/`))
+export const isPrivatePage = (chemin: string): boolean =>
+	PRIVATE_PAGES.some(page => chemin === page || chemin.startsWith(`${page}/`))
 
 /**
  * What the proxy does with a request for the space: the sign-in page that brings the visitor back
@@ -17,9 +17,9 @@ export const estPagePrivee = (chemin: string): boolean =>
  * the sign-in page (`maquilleuseConnectee`), so a stale cookie ends on the sign-in form after one
  * redirection and never loops.
  */
-export function redirectionDeLEspace(chemin: string, recherche: string, aLeCookie: boolean): string | null {
-	if (!estPagePrivee(chemin) || aLeCookie) return null
-	return urlDeConnexion(`${chemin}${recherche}`)
+export function dashboardRedirection(chemin: string, recherche: string, aLeCookie: boolean): string | null {
+	if (!isPrivatePage(chemin) || aLeCookie) return null
+	return signInUrl(`${chemin}${recherche}`)
 }
 
 /**
@@ -35,17 +35,17 @@ export function redirectionDeLEspace(chemin: string, recherche: string, aLeCooki
  * - Any other cookie: nothing, the page decides (it is the one that asks Payload).
  * - A request that is not a GET or HEAD (a Server Action): nothing, whatever the cookie (ticket 121).
  */
-export function decisionDeLEspace(
+export function dashboardDecision(
 	chemin: string,
 	recherche: string,
 	jeton: string | undefined,
 	maintenantS: number,
 	methode = 'GET'
 ): string | null {
-	if (!estPagePrivee(chemin)) return null
+	if (!isPrivatePage(chemin)) return null
 	// A save is a POST (a Server Action): a redirection would swallow it and the form would lose
 	// what was typed (ticket 121). The action reads the session again and answers « expired » itself.
 	if (methode !== 'GET' && methode !== 'HEAD') return null
-	if (etatDuJeton(jeton, maintenantS) === 'expire') return urlSessionExpiree(`${chemin}${recherche}`)
-	return redirectionDeLEspace(chemin, recherche, jeton !== undefined && jeton !== '')
+	if (tokenState(jeton, maintenantS) === 'expire') return expiredSessionUrl(`${chemin}${recherche}`)
+	return dashboardRedirection(chemin, recherche, jeton !== undefined && jeton !== '')
 }

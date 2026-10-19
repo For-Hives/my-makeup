@@ -1,4 +1,4 @@
-import { creerFrein, type Frein } from './rate-limit'
+import { createRateLimit, type RateLimit } from './rate-limit'
 
 /**
  * The brakes of the sign-up and of the resending of the confirmation (tickets 083 and 084), each
@@ -18,36 +18,36 @@ import { creerFrein, type Frein } from './rate-limit'
  * whether the address had an account or not. A mailbox that is not an account is counted like one.
  */
 
-export const freinDInscription: Frein = creerFrein({ nom: 'inscription', limite: 5, fenetreMs: 60 * 60 * 1000 })
+export const signUpRateLimit: RateLimit = createRateLimit({ nom: 'inscription', limite: 5, fenetreMs: 60 * 60 * 1000 })
 
 /** The rows of refusals the journal takes: 3 an hour for a client address and an outcome (`journaliserUnRefus`). */
-export const freinDeJournal: Frein = creerFrein({ nom: 'journal-refus', limite: 3, fenetreMs: 60 * 60 * 1000 })
+export const authLogRateLimit: RateLimit = createRateLimit({ nom: 'journal-refus', limite: 3, fenetreMs: 60 * 60 * 1000 })
 
-export const freinDeRenvoi: Frein = creerFrein({ nom: 'renvoi', limite: 10, fenetreMs: 60 * 60 * 1000 })
+export const resendRateLimit: RateLimit = createRateLimit({ nom: 'renvoi', limite: 10, fenetreMs: 60 * 60 * 1000 })
 
 /** Following the link of the confirmation mail: 30 an hour per client address (a person follows it once). */
-export const freinDeConfirmation: Frein = creerFrein({ nom: 'confirmation', limite: 30, fenetreMs: 60 * 60 * 1000 })
+export const confirmationRateLimit: RateLimit = createRateLimit({ nom: 'confirmation', limite: 30, fenetreMs: 60 * 60 * 1000 })
 
-export const freinDeBoiteParMinute: Frein = creerFrein({
+export const minuteMailboxRateLimit: RateLimit = createRateLimit({
 	nom: 'boite-minute',
 	limite: 1,
 	fenetreMs: 60 * 1000,
 })
 
-export const freinDeBoiteParJour: Frein = creerFrein({
+export const dailyMailboxRateLimit: RateLimit = createRateLimit({
 	nom: 'boite-jour',
 	limite: 5,
 	fenetreMs: 24 * 60 * 60 * 1000,
 })
 
-export interface FreinsDeBoite {
-	parMinute: Frein
-	parJour: Frein
+export interface MailboxRateLimits {
+	parMinute: RateLimit
+	parJour: RateLimit
 }
 
-export const FREINS_DE_BOITE: FreinsDeBoite = { parMinute: freinDeBoiteParMinute, parJour: freinDeBoiteParJour }
+export const MAILBOX_RATE_LIMITS: MailboxRateLimits = { parMinute: minuteMailboxRateLimit, parJour: dailyMailboxRateLimit }
 
-export type DecisionDeBoite =
+export type MailboxDecision =
 	| { autorise: true }
 	| { autorise: false; raison: 'minute' | 'jour'; reessayerDansS: number }
 
@@ -55,17 +55,17 @@ export type DecisionDeBoite =
  * Takes a place for this mailbox in both brakes, or says which one refuses. A place taken in the
  * minute brake is given back when the day brake refuses: a refused mail is no mail.
  */
-export function prendreUnMailPour(
+export function takeMailFor(
 	cle: string,
-	freins: FreinsDeBoite = FREINS_DE_BOITE,
+	freins: MailboxRateLimits = MAILBOX_RATE_LIMITS,
 	maintenant = Date.now()
-): DecisionDeBoite {
+): MailboxDecision {
 	const minute = freins.parMinute.prendre(cle, maintenant)
 	if (!minute.autorise) return { autorise: false, raison: 'minute', reessayerDansS: minute.reessayerDansS }
-	const jour = freins.parJour.prendre(cle, maintenant)
-	if (!jour.autorise) {
+	const day = freins.parJour.prendre(cle, maintenant)
+	if (!day.autorise) {
 		freins.parMinute.rendre(cle, maintenant)
-		return { autorise: false, raison: 'jour', reessayerDansS: jour.reessayerDansS }
+		return { autorise: false, raison: 'jour', reessayerDansS: day.reessayerDansS }
 	}
 	return { autorise: true }
 }

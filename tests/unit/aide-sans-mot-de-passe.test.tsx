@@ -1,10 +1,10 @@
 import { describe, expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { AideSansMotDePasse } from '@/components/auth/PasswordlessHelp'
+import { PasswordlessHelp } from '@/components/auth/PasswordlessHelp'
 
 /** Ticket 093: the help line of the sign-in page names Facebook and sends to « Mot de passe oublié ». */
 describe('la ligne d’aide de la connexion', () => {
-	const html = renderToStaticMarkup(<AideSansMotDePasse />)
+	const html = renderToStaticMarkup(<PasswordlessHelp />)
 
 	test('elle dit aux anciennes inscrites Facebook de passer par « Mot de passe oublié »', () => {
 		expect(html).toContain('Facebook')

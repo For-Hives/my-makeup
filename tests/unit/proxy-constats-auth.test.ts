@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 import { NextRequest } from 'next/server'
-import { COOKIE_DE_MESSAGE } from '@/lib/auth/legacy-cookies'
-import { pageDeRelais, venueDUnAutreSite } from '@/lib/auth/relay-page'
+import { MESSAGE_COOKIE } from '@/lib/auth/legacy-cookies'
+import { relayPage, comesFromOtherSite } from '@/lib/auth/relay-page'
 import { proxy } from '@/proxy'
 
 /** The findings 1, 7 and 8 of ticket 223, on the proxy. Made-up host and token: only the end date of a token is read. */
@@ -42,7 +42,7 @@ describe('constat 1 : une arrivée depuis un autre site garde la session', () =>
 		const page = await reponse.text()
 		// The navigation restarts from the site, to the very same address, query kept and escaped.
 		expect(page).toContain(`url=${chemin}?a=1&amp;b=2"`)
-		expect(page).toBe(pageDeRelais(`${chemin}?a=1&b=2`))
+		expect(page).toBe(relayPage(`${chemin}?a=1&b=2`))
 	})
 
 	test.each(['same-origin', 'same-site', 'none'])('Sec-Fetch-Site %s : la page répond elle-même', provenance => {
@@ -74,9 +74,9 @@ describe('constat 1 : une arrivée depuis un autre site garde la session', () =>
 	})
 
 	test('seule la valeur cross-site compte', () => {
-		expect(venueDUnAutreSite(new Headers({ 'sec-fetch-site': 'cross-site' }))).toBe(true)
-		expect(venueDUnAutreSite(new Headers({ 'sec-fetch-site': 'same-site' }))).toBe(false)
-		expect(venueDUnAutreSite(new Headers())).toBe(false)
+		expect(comesFromOtherSite(new Headers({ 'sec-fetch-site': 'cross-site' }))).toBe(true)
+		expect(comesFromOtherSite(new Headers({ 'sec-fetch-site': 'same-site' }))).toBe(false)
+		expect(comesFromOtherSite(new Headers())).toBe(false)
 	})
 })
 
@@ -125,10 +125,10 @@ describe('constat 8 : une réponse qui efface des cookies n’est jamais gardée
 
 	test('le rappel du message : private, no-store aussi, qu’on le pose ou qu’on l’efface', () => {
 		const pose = proxy(avecCookies('/', HERITES))
-		expect(pose.headers.getSetCookie().some(ligne => ligne.startsWith(`${COOKIE_DE_MESSAGE}=1`))).toBe(true)
+		expect(pose.headers.getSetCookie().some(ligne => ligne.startsWith(`${MESSAGE_COOKIE}=1`))).toBe(true)
 		expect(pose.headers.get('cache-control')).toBe('private, no-store')
-		const efface = proxy(avecCookies('/auth/signin', [COOKIE_DE_MESSAGE]))
-		expect(efface.headers.getSetCookie().some(ligne => ligne.startsWith(`${COOKIE_DE_MESSAGE}=;`))).toBe(true)
+		const efface = proxy(avecCookies('/auth/signin', [MESSAGE_COOKIE]))
+		expect(efface.headers.getSetCookie().some(ligne => ligne.startsWith(`${MESSAGE_COOKIE}=;`))).toBe(true)
 		expect(efface.headers.get('cache-control')).toBe('private, no-store')
 	})
 

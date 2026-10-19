@@ -1,10 +1,10 @@
 import type { Payload } from 'payload'
-import { codeDeLEchec, MOT_DE_PASSE_MAX } from '../auth/sign-in'
-import { emailCanonique } from '../auth/canonical-email'
-import { creerFrein } from '../auth/rate-limit'
+import { failureCode, MAX_PASSWORD_LENGTH } from '../auth/sign-in'
+import { canonicalEmail } from '../auth/canonical-email'
+import { createRateLimit } from '../auth/rate-limit'
 import { ipClient } from '../auth/client-ip'
-import { ouvrirParMotDePasse } from '../auth/token'
-import { supprimerLeCompteEtToutCeQuiEnDepend } from '../account/deletion'
+import { openWithPassword } from '../auth/token'
+import { deleteAccountAndDependents } from '../account/deletion'
 import {
 	MESSAGES_DE_SUPPRESSION,
 	modeDeConfirmation,
@@ -33,7 +33,7 @@ import {
  */
 
 /** Wrong confirmations: 10 per address and per 15 minutes, and 10 per account (ticket 141). */
-export const freinDeLaSuppression = creerFrein({ nom: 'suppression-compte', limite: 10, fenetreMs: 15 * 60 * 1000 })
+export const freinDeLaSuppression = createRateLimit({ nom: 'suppression-compte', limite: 10, fenetreMs: 15 * 60 * 1000 })
 
 export interface EntreesDeLaSuppression {
 	payload: Payload
@@ -91,13 +91,13 @@ export async function supprimerMonCompte({
 		const mode = modeDeConfirmation(stocke)
 		const juste =
 			mode === 'email'
-				? emailCanonique(lue.data.confirmation) === emailCanonique(String(stocke.email))
+				? canonicalEmail(lue.data.confirmation) === canonicalEmail(String(stocke.email))
 				: await motDePasseJuste(payload, String(stocke.email), lue.data.confirmation)
 		if (!juste) return { ok: false, message: MESSAGES_DE_SUPPRESSION[mode === 'email' ? 'email' : 'motDePasse'] }
 		// The confirmation was right: the places go back, whatever happens next.
 		rendre()
 		try {
-			await supprimerLeCompteEtToutCeQuiEnDepend(payload, compte.id)
+			await deleteAccountAndDependents(payload, compte.id)
 		} catch (erreur) {
 			payload.logger.error(`[suppression] account ${compte.id}: the deletion failed, nothing was deleted`)
 			return {
@@ -121,12 +121,12 @@ class ErreurDeVerification extends Error {}
  * not confirmed yet answers after the password was checked and found right.
  */
 async function motDePasseJuste(payload: Payload, email: string, motDePasse: string): Promise<boolean> {
-	if (motDePasse === '' || motDePasse.length > MOT_DE_PASSE_MAX) return false
+	if (motDePasse === '' || motDePasse.length > MAX_PASSWORD_LENGTH) return false
 	try {
-		await ouvrirParMotDePasse(payload, 'pros', { email, password: motDePasse })
+		await openWithPassword(payload, 'pros', { email, password: motDePasse })
 		return true
 	} catch (erreur) {
-		const code = codeDeLEchec(erreur)
+		const code = failureCode(erreur)
 		if (code === 'email-non-confirme') return true
 		if (code === 'service-indisponible') throw new ErreurDeVerification()
 		return false

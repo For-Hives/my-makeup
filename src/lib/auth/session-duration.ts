@@ -10,40 +10,40 @@
  * with any clock.
  */
 
-const JOUR_S = 24 * 60 * 60
+const DAY_S = 24 * 60 * 60
 
 /** The length of a session, and of every renewal. */
-export const DUREE_SESSION_S = 14 * JOUR_S
+export const SESSION_DURATION_S = 14 * DAY_S
 /** A visit renews the session when it ends in less than this. */
-export const SEUIL_DE_PROLONGEMENT_S = 7 * JOUR_S
+export const EXTENSION_THRESHOLD_S = 7 * DAY_S
 /** No session lives longer than this, counted from the day it was opened. */
-export const PLAFOND_DE_SESSION_S = 90 * JOUR_S
+export const SESSION_CAP_S = 90 * DAY_S
 
 /** U67: does a visit renew a session that ends at `exp` (Unix seconds)? Strictly under 7 days left. */
-export const doitProlonger = (exp: number, maintenantS: number): boolean => exp - maintenantS < SEUIL_DE_PROLONGEMENT_S
+export const shouldExtend = (exp: number, maintenantS: number): boolean => exp - maintenantS < EXTENSION_THRESHOLD_S
 
 /** Seconds left before the ceiling of a session opened at `ouverteLeMs` (can be zero or negative). */
-export const secondesAvantLePlafond = (ouverteLeMs: number, maintenantMs: number): number =>
-	Math.floor((ouverteLeMs + PLAFOND_DE_SESSION_S * 1000 - maintenantMs) / 1000)
+export const secondsBeforeCap = (ouverteLeMs: number, maintenantMs: number): number =>
+	Math.floor((ouverteLeMs + SESSION_CAP_S * 1000 - maintenantMs) / 1000)
 
 /** U68: a session that reached 90 days is refused a renewal. */
-export const plafondAtteint = (ouverteLeMs: number, maintenantMs: number): boolean =>
-	secondesAvantLePlafond(ouverteLeMs, maintenantMs) <= 0
+export const capReached = (ouverteLeMs: number, maintenantMs: number): boolean =>
+	secondsBeforeCap(ouverteLeMs, maintenantMs) <= 0
 
 /** How long a renewal at `maintenantMs` lasts: 14 days, cut short by the ceiling. */
-export const dureeDuProlongement = (ouverteLeMs: number, maintenantMs: number): number =>
-	Math.min(DUREE_SESSION_S, secondesAvantLePlafond(ouverteLeMs, maintenantMs))
+export const extensionDuration = (ouverteLeMs: number, maintenantMs: number): number =>
+	Math.min(SESSION_DURATION_S, secondsBeforeCap(ouverteLeMs, maintenantMs))
 
 /**
  * When the session ends (`exp`, Unix seconds) according to the token in the cookie, or nothing. The
  * signature is NOT checked here: the caller has already had Payload accept the token. It only tells
  * the page whether it is worth asking for a renewal.
  */
-export function expirationDuJeton(jeton: string | undefined): number | null {
-	const milieu = jeton?.split('.')[1]
-	if (!milieu) return null
+export function tokenExpiration(jeton: string | undefined): number | null {
+	const middle = jeton?.split('.')[1]
+	if (!middle) return null
 	try {
-		const charge: unknown = JSON.parse(Buffer.from(milieu, 'base64url').toString('utf8'))
+		const charge: unknown = JSON.parse(Buffer.from(middle, 'base64url').toString('utf8'))
 		const exp = typeof charge === 'object' && charge !== null && 'exp' in charge ? charge.exp : undefined
 		return typeof exp === 'number' && Number.isFinite(exp) ? exp : null
 	} catch {
@@ -52,15 +52,15 @@ export function expirationDuJeton(jeton: string | undefined): number | null {
 }
 
 /** The shape of a session on an account: Payload records the instant it was opened. */
-interface SessionEnregistree {
+interface StoredSession {
 	id?: string
 	createdAt?: string | Date
 }
 
 /** When the session `sid` of this account was opened, in milliseconds, or nothing if it is unknown. */
-export function ouverteLe(sessions: unknown, sid: unknown): number | null {
+export function openedAt(sessions: unknown, sid: unknown): number | null {
 	if (!Array.isArray(sessions) || typeof sid !== 'string') return null
-	const session = (sessions as SessionEnregistree[]).find(s => s?.id === sid)
+	const session = (sessions as StoredSession[]).find(s => s?.id === sid)
 	if (!session?.createdAt) return null
 	const ms = new Date(session.createdAt).getTime()
 	return Number.isFinite(ms) ? ms : null

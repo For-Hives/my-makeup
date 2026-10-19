@@ -5,7 +5,7 @@
 
 import { describe, expect, test } from 'bun:test'
 import { NextRequest } from 'next/server'
-import { creerFrein } from '@/lib/auth/rate-limit'
+import { createRateLimit } from '@/lib/auth/rate-limit'
 import { freinerLaRecherche, RECHERCHES_PAR_MINUTE } from '@/lib/recherche/frein'
 import { DELAI_DE_LECTURE_MS, lireSansBloquer } from '@/lib/recherche/lecture'
 import { PAR_PAGE, paginer, sectionsDeLaPage } from '@/lib/recherche/pagination'
@@ -58,7 +58,7 @@ const requete = (chemin: string, adresse?: string, methode = 'GET') =>
 	})
 
 const unFrein = (limite: number) =>
-	creerFrein({ nom: `essai-recherche-${crypto.randomUUID()}`, limite, fenetreMs: 60_000 })
+	createRateLimit({ nom: `essai-recherche-${crypto.randomUUID()}`, limite, fenetreMs: 60_000 })
 
 describe('le frein de la recherche (I30 côté unité)', () => {
 	test('la 61e requête d’une adresse est refusée en 429, en français, avec Retry-After', () => {

@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { BandeauDApercu } from '@/components/espace/BandeauDApercu'
 import { VueDuProfil } from '@/components/profil/VueDuProfil'
-import { exigerMaquilleuse } from '@/lib/auth/session'
+import { requireArtist } from '@/lib/auth/session'
 import { CHEMIN_DE_L_APERCU, CHEMIN_DE_L_ESPACE, etatDeLApercu } from '@/lib/espace/apercu'
 import { identifiantDuProfil } from '@/lib/espace/mon-profil'
 import { utilisatriceDeLaRequete } from '@/lib/espace/requete'
@@ -22,7 +22,7 @@ export const metadata: Metadata = { title: 'Aperçu de mon profil', robots: { in
  * data and no canonical address: the page is not for a search engine.
  */
 export default async function PageDApercu() {
-	await exigerMaquilleuse(CHEMIN_DE_L_APERCU)
+	await requireArtist(CHEMIN_DE_L_APERCU)
 	const contexte = await utilisatriceDeLaRequete()
 	const id = contexte === null ? null : await identifiantDuProfil(contexte.payload, contexte.utilisateur)
 	const apercu = contexte === null || id === null ? null : await lireLApercuDuProfil(contexte.payload, id)

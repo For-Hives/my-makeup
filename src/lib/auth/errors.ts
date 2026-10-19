@@ -4,18 +4,18 @@
  * error, or anything typed in the URL, is never displayed.
  */
 
-import { ERREUR_SESSION_EXPIREE } from './return-to'
+import { EXPIRED_SESSION_ERROR } from './return-to'
 
-export const CODES_ERREUR = [
+export const ERROR_CODES = [
 	'identifiants-invalides',
 	'email-non-confirme',
 	'compte-bloque',
 	'trop-de-tentatives',
 	'service-indisponible',
 ] as const
-export type CodeErreur = (typeof CODES_ERREUR)[number]
+export type ErrorCode = (typeof ERROR_CODES)[number]
 
-const MESSAGES: Record<CodeErreur, string> = {
+const MESSAGES: Record<ErrorCode, string> = {
 	'identifiants-invalides': 'Email ou mot de passe incorrect.',
 	'email-non-confirme':
 		'Ton adresse email n’est pas encore confirmée. Regarde ta boîte mail (et tes spams) : le lien du mail active ton compte.',
@@ -25,7 +25,7 @@ const MESSAGES: Record<CodeErreur, string> = {
 	'service-indisponible': 'Le service est momentanément indisponible, réessaie dans quelques minutes.',
 }
 
-export const messageErreur = (code: CodeErreur): string => MESSAGES[code]
+export const errorMessage = (code: ErrorCode): string => MESSAGES[code]
 
 /**
  * The codes the Google sign-in sends the visitor back to the sign-in page with (`?error=`), and
@@ -33,7 +33,7 @@ export const messageErreur = (code: CodeErreur): string => MESSAGES[code]
  * and neither is the address of the account. `email-deja-avec-mot-de-passe` is the code of the
  * current site; `compte-bloque` is the one of the password sign-in (ticket 089), with its message.
  */
-export const CODES_ERREUR_GOOGLE = [
+export const GOOGLE_ERROR_CODES = [
 	'google-echec',
 	'google-annule',
 	'google-indisponible',
@@ -43,9 +43,9 @@ export const CODES_ERREUR_GOOGLE = [
 	// The return was braked (ticket 223): too many returns from this address.
 	'trop-de-tentatives',
 ] as const
-export type CodeErreurGoogle = (typeof CODES_ERREUR_GOOGLE)[number]
+export type GoogleErrorCode = (typeof GOOGLE_ERROR_CODES)[number]
 
-const MESSAGES_GOOGLE: Record<CodeErreurGoogle, string> = {
+const MESSAGES_GOOGLE: Record<GoogleErrorCode, string> = {
 	'google-echec':
 		'La connexion avec Google n’a pas abouti. Réessaie dans un instant, ou connecte-toi avec ton email et ton mot de passe.',
 	'google-annule':
@@ -61,7 +61,7 @@ const MESSAGES_GOOGLE: Record<CodeErreurGoogle, string> = {
 }
 
 /** What the sign-in page says when the session ended (the words of the current site). */
-export const MESSAGE_SESSION_EXPIREE = 'Ta session a expiré, reconnecte-toi.'
+export const EXPIRED_SESSION_MESSAGE = 'Ta session a expiré, reconnecte-toi.'
 
 /** What the pages of the space say when the session cannot be checked for now. */
 export const MESSAGE_VERIFICATION_IMPOSSIBLE =
@@ -72,14 +72,14 @@ export const MESSAGE_VERIFICATION_IMPOSSIBLE =
  * the address is compared with it and never copied to the screen, so a code nobody knows (or a
  * line of text in the link) shows nothing.
  */
-export function messageDeLUrl(brut: unknown): string | null {
-	return erreurDeLUrl(brut)?.message ?? null
+export function urlMessage(brut: unknown): string | null {
+	return urlError(brut)?.message ?? null
 }
 
 /** The same, with the code that was asked for: only a code of the closed list, never the value typed in the address. */
-export function erreurDeLUrl(brut: unknown): { code: string; message: string } | null {
-	const valeur = Array.isArray(brut) ? brut[0] : brut
-	if (valeur === ERREUR_SESSION_EXPIREE) return { code: valeur, message: MESSAGE_SESSION_EXPIREE }
-	const google = CODES_ERREUR_GOOGLE.find(code => code === valeur)
+export function urlError(brut: unknown): { code: string; message: string } | null {
+	const value = Array.isArray(brut) ? brut[0] : brut
+	if (value === EXPIRED_SESSION_ERROR) return { code: value, message: EXPIRED_SESSION_MESSAGE }
+	const google = GOOGLE_ERROR_CODES.find(code => code === value)
 	return google ? { code: google, message: MESSAGES_GOOGLE[google] } : null
 }

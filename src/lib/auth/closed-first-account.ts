@@ -13,7 +13,7 @@ import { type Endpoint, Forbidden } from 'payload'
  *
  * A collection's own routes come before Payload's.
  */
-export const premierCompteFerme: Endpoint = {
+export const firstClosedAccount: Endpoint = {
 	path: '/first-register',
 	method: 'post',
 	handler: req => {

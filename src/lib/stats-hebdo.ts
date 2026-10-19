@@ -18,7 +18,7 @@
 
 import { createHash, timingSafeEqual } from 'node:crypto'
 import { z } from 'zod'
-import { CODES_EVENEMENT, TYPES_EVENEMENT } from './auth/auth-log'
+import { EVENT_CODES, EVENT_TYPES } from './auth/auth-log'
 import { ETATS_DU_MAIL, STATUTS_DE_DEMANDE } from './contact/etats'
 import { completude } from './profil/completude'
 import { champsDuProfil, type DocumentDuProfil } from './profil/etat'
@@ -335,8 +335,8 @@ export function centile(valeurs: readonly number[], p: number): number | null {
 
 /** Authentication events of the period (the caller read them): by kind, and the sign-ins by outcome with their 95th percentile. */
 export function agregerAuth(evenements: readonly EvenementPourStats[]): NonNullable<StatsHebdo['auth']> {
-	const parType = compteurs(TYPES_EVENEMENT.map(type => CLE_DU_TYPE[type]))
-	const parCode = compteurs(CODES_EVENEMENT)
+	const parType = compteurs(EVENT_TYPES.map(type => CLE_DU_TYPE[type]))
+	const parCode = compteurs(EVENT_CODES)
 	const durees: number[] = []
 	let total = 0
 	for (const { type, code, durationMs } of evenements) {

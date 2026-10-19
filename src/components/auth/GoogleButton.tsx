@@ -1,6 +1,6 @@
 import Image from 'next/image'
-import { CHEMIN_DU_DEPART_GOOGLE } from '@/lib/auth/google/config'
-import { LienGoogle } from './GoogleLink'
+import { GOOGLE_START_PATH } from '@/lib/auth/google/config'
+import { GoogleLink } from './GoogleLink'
 
 /**
  * The Google button of the sign-in and sign-up pages (tickets 090 and 091), with the words and the
@@ -8,14 +8,14 @@ import { LienGoogle } from './GoogleLink'
  * must not be loaded ahead of a click. `retour` is the page to come back to, already a path of this
  * site; the sign-up page gives none, and a click there starts a sign-up (`signup_start`).
  */
-export function BoutonGoogle({ libelle, retour }: { libelle: string; retour?: string }) {
-	const adresse = retour
-		? `${CHEMIN_DU_DEPART_GOOGLE}?callbackUrl=${encodeURIComponent(retour)}`
-		: CHEMIN_DU_DEPART_GOOGLE
+export function GoogleButton({ libelle, retour }: { libelle: string; retour?: string }) {
+	const address = retour
+		? `${GOOGLE_START_PATH}?callbackUrl=${encodeURIComponent(retour)}`
+		: GOOGLE_START_PATH
 	return (
 		<div className="flex w-full max-w-sm flex-col items-center gap-4">
-			<LienGoogle
-				adresse={adresse}
+			<GoogleLink
+				adresse={address}
 				debutDInscription={retour === undefined}
 				className="flex min-h-11 w-full flex-nowrap items-center justify-center gap-6 rounded-md bg-white px-3 shadow-sm ring-1 ring-gray-300 ring-inset hover:bg-gray-50"
 			>
@@ -29,7 +29,7 @@ export function BoutonGoogle({ libelle, retour }: { libelle: string; retour?: st
 				<span className="font-[family-name:Roboto,ui-sans-serif,system-ui,sans-serif] font-medium text-[14px] text-black/[54%]">
 					{libelle}
 				</span>
-			</LienGoogle>
+			</GoogleLink>
 			<div className="flex w-full items-center gap-3 text-neutral-500 text-sm">
 				<span className="h-px flex-1 bg-neutral-300" />
 				<span>Ou</span>

@@ -1,7 +1,7 @@
 import type { ServerProps } from 'payload'
-import { type CleDeFiltre, LIBELLES_DES_FILTRES, lienDuFiltre, whereDuFiltre } from '../../lib/account/admin-filters'
+import { type FilterKey, FILTER_LABELS, filterLink, filterWhere } from '../../lib/account/admin-filters'
 
-const CLES: CleDeFiltre[] = ['non-confirmes', 'sans-profil', 'bloques']
+const CLES: FilterKey[] = ['non-confirmes', 'sans-profil', 'bloques']
 
 /**
  * Above the list of the accounts (ticket 168): how many accounts are unconfirmed, without a profile
@@ -22,7 +22,7 @@ export async function FiltresDesComptes({ payload }: ServerProps) {
 	const nombres = await Promise.all(
 		CLES.map(cle =>
 			payload
-				.count({ collection: 'pros', where: whereDuFiltre(cle, proprietaires), overrideAccess: true })
+				.count({ collection: 'pros', where: filterWhere(cle, proprietaires), overrideAccess: true })
 				.then(({ totalDocs }) => totalDocs)
 		)
 	)
@@ -32,8 +32,8 @@ export async function FiltresDesComptes({ payload }: ServerProps) {
 			style={{ margin: '0 0 var(--base)', display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}
 		>
 			{CLES.map((cle, i) => (
-				<a data-testid={`filtre-${cle}`} href={lienDuFiltre(cle, proprietaires)} key={cle}>
-					{nombres[i]} {LIBELLES_DES_FILTRES[cle]}
+				<a data-testid={`filtre-${cle}`} href={filterLink(cle, proprietaires)} key={cle}>
+					{nombres[i]} {FILTER_LABELS[cle]}
 				</a>
 			))}
 		</p>

@@ -20,15 +20,15 @@ import { z } from 'zod'
  * No `next` import: the tests load this file too.
  */
 
-const DELAI_MAX_MS = 10_000
-const VIE_DE_LA_DEMANDE_S = 10 * 60
-const TOLERANCE_HORLOGE_S = 60
-const DUREE_DES_DOCUMENTS_MS = 60 * 60 * 1000
+const MAX_DELAY_MS = 10_000
+const REQUEST_LIFE_S = 10 * 60
+const CLOCK_TOLERANCE_S = 60
+const DOCUMENTS_TTL_MS = 60 * 60 * 1000
 
 /** Sends a request and gives the answer: `fetch`, or a double in a test. */
-export type Requeter = (url: string, init?: RequestInit) => Promise<Response>
+export type Query = (url: string, init?: RequestInit) => Promise<Response>
 
-const requeterParDefaut: Requeter = (url, init) => fetch(url, { ...init, signal: AbortSignal.timeout(DELAI_MAX_MS) })
+const queryByDefault: Query = (url, init) => fetch(url, { ...init, signal: AbortSignal.timeout(MAX_DELAY_MS) })
 
 export interface ConfigGoogle {
 	/** The issuer: `https://accounts.google.com`, or the fake Google of the bench. */
@@ -40,7 +40,7 @@ export interface ConfigGoogle {
 }
 
 /** The sign-in cannot go on, for a reason that is the provider's or the network's, not the visitor's. */
-export class GoogleIndisponible extends Error {
+export class GoogleUnavailable extends Error {
 	constructor(message = 'Google ne répond pas comme prévu.') {
 		super(message)
 		this.name = 'GoogleIndisponible'
@@ -51,105 +51,105 @@ export class GoogleIndisponible extends Error {
 // Discovery and keys
 // ---------------------------------------------------------------------------------------------
 
-const Decouverte = z.object({
+const Discovery = z.object({
 	issuer: z.string(),
 	authorization_endpoint: z.string(),
 	token_endpoint: z.string(),
 	jwks_uri: z.string(),
 })
-export type Decouverte = z.infer<typeof Decouverte>
+export type Discovery = z.infer<typeof Discovery>
 
-const Cles = z.object({
+const JwkSet = z.object({
 	keys: z.array(
 		z.looseObject({ kty: z.string(), kid: z.string().optional(), n: z.string().optional(), e: z.string().optional() })
 	),
 })
-type CleJwk = z.infer<typeof Cles>['keys'][number]
+type JwkKey = z.infer<typeof JwkSet>['keys'][number]
 
-const estLocal = (emetteur: string): boolean => !emetteur.startsWith('https://')
+const isLocal = (emetteur: string): boolean => !emetteur.startsWith('https://')
 
 /** An endpoint is believed when it is https, or on the host of a local issuer. */
-function adresseDeConfiance(valeur: string, emetteur: string): boolean {
+function trustedAddress(valeur: string, emetteur: string): boolean {
 	if (!URL.canParse(valeur)) return false
 	const url = new URL(valeur)
-	if (estLocal(emetteur)) return url.origin === new URL(emetteur).origin
+	if (isLocal(emetteur)) return url.origin === new URL(emetteur).origin
 	return url.protocol === 'https:' && url.username === '' && url.password === ''
 }
 
 const documents = new Map<string, { jusqua: number; valeur: unknown }>()
 
-async function documentEnCache<T>(
+async function cachedDocument<T>(
 	cle: string,
 	maintenant: number,
 	lire: () => Promise<T>,
 	conserver: boolean
 ): Promise<T> {
-	const garde = documents.get(cle)
-	if (conserver && garde && garde.jusqua > maintenant) return garde.valeur as T
-	const valeur = await lire()
-	documents.set(cle, { jusqua: maintenant + DUREE_DES_DOCUMENTS_MS, valeur })
-	return valeur
+	const guard = documents.get(cle)
+	if (conserver && guard && guard.jusqua > maintenant) return guard.valeur as T
+	const value = await lire()
+	documents.set(cle, { jusqua: maintenant + DOCUMENTS_TTL_MS, valeur: value })
+	return value
 }
 
 /** Forgets what was read about the providers: the tests start from nothing. */
-export const oublierLesDocuments = (): void => documents.clear()
+export const clearDocuments = (): void => documents.clear()
 
-async function lireJson(reponse: Response): Promise<unknown> {
-	if (!reponse.ok) throw new GoogleIndisponible()
+async function readJson(reponse: Response): Promise<unknown> {
+	if (!reponse.ok) throw new GoogleUnavailable()
 	try {
 		return await reponse.json()
 	} catch {
-		throw new GoogleIndisponible()
+		throw new GoogleUnavailable()
 	}
 }
 
 /** The discovery document of the issuer, kept for an hour. */
-export async function decouvrir(
+export async function discover(
 	emetteur: string,
-	{ requeter = requeterParDefaut, maintenant = Date.now }: { requeter?: Requeter; maintenant?: () => number } = {}
-): Promise<Decouverte> {
-	return documentEnCache(
+	{ requeter = queryByDefault, maintenant = Date.now }: { requeter?: Query; maintenant?: () => number } = {}
+): Promise<Discovery> {
+	return cachedDocument(
 		`decouverte:${emetteur}`,
 		maintenant(),
 		async () => {
-			const lu = Decouverte.safeParse(await lireJson(await requeter(`${emetteur}/.well-known/openid-configuration`)))
-			if (!lu.success || lu.data.issuer !== emetteur) throw new GoogleIndisponible()
-			const adresses = [lu.data.authorization_endpoint, lu.data.token_endpoint, lu.data.jwks_uri]
-			if (!adresses.every(adresse => adresseDeConfiance(adresse, emetteur))) throw new GoogleIndisponible()
-			return lu.data
+			const parsed = Discovery.safeParse(await readJson(await requeter(`${emetteur}/.well-known/openid-configuration`)))
+			if (!parsed.success || parsed.data.issuer !== emetteur) throw new GoogleUnavailable()
+			const addresses = [parsed.data.authorization_endpoint, parsed.data.token_endpoint, parsed.data.jwks_uri]
+			if (!addresses.every(adresse => trustedAddress(adresse, emetteur))) throw new GoogleUnavailable()
+			return parsed.data
 		},
 		true
 	)
 }
 
-async function cleDeSignature(
-	decouverte: Decouverte,
+async function signatureKey(
+	decouverte: Discovery,
 	kid: string,
-	{ requeter, maintenant }: { requeter: Requeter; maintenant: () => number }
-): Promise<CleJwk | undefined> {
-	const chercher = (cles: CleJwk[]) => cles.find(cle => cle.kid === kid && cle.kty === 'RSA' && cle.n && cle.e)
-	const lire = async () => {
-		const lu = Cles.safeParse(await lireJson(await requeter(decouverte.jwks_uri)))
-		if (!lu.success) throw new GoogleIndisponible()
-		return lu.data.keys
+	{ requeter, maintenant }: { requeter: Query; maintenant: () => number }
+): Promise<JwkKey | undefined> {
+	const find = (cles: JwkKey[]) => cles.find(cle => cle.kid === kid && cle.kty === 'RSA' && cle.n && cle.e)
+	const read = async () => {
+		const parsed = JwkSet.safeParse(await readJson(await requeter(decouverte.jwks_uri)))
+		if (!parsed.success) throw new GoogleUnavailable()
+		return parsed.data.keys
 	}
-	const cle = `cles:${decouverte.jwks_uri}`
-	const connue = chercher(await documentEnCache(cle, maintenant(), lire, true))
-	if (connue) return connue
+	const key = `cles:${decouverte.jwks_uri}`
+	const known = find(await cachedDocument(key, maintenant(), read, true))
+	if (known) return known
 	// A key published since: read the set again once, then give up.
-	return chercher(await documentEnCache(cle, maintenant(), lire, false))
+	return find(await cachedDocument(key, maintenant(), read, false))
 }
 
 // ---------------------------------------------------------------------------------------------
 // The request, and the sealed cookie that keeps its secrets until the return
 // ---------------------------------------------------------------------------------------------
 
-const aleatoire = (octets = 32): string => randomBytes(octets).toString('base64url')
+const random = (octets = 32): string => randomBytes(octets).toString('base64url')
 
 const sha256Base64Url = (texte: string): string => createHash('sha256').update(texte).digest('base64url')
 
 /** What the browser's cookie keeps between the departure and the return. */
-export interface DemandeEnCours {
+export interface PendingRequest {
 	state: string
 	nonce: string
 	/** The PKCE verifier. */
@@ -160,7 +160,7 @@ export interface DemandeEnCours {
 	expire: number
 }
 
-export interface Depart {
+export interface GoogleStart {
 	/** The address of the consent screen of the provider. */
 	adresse: string
 	/** The value of the sealed cookie. */
@@ -168,42 +168,42 @@ export interface Depart {
 }
 
 /** Builds the request and the cookie that must come back with the answer. */
-export function preparerLeDepart(
+export function prepareStart(
 	config: ConfigGoogle,
-	decouverte: Decouverte,
+	decouverte: Discovery,
 	{ retour, secret, maintenant = Date.now }: { retour: string; secret: string; maintenant?: () => number }
-): Depart {
-	const demande: DemandeEnCours = {
-		state: aleatoire(),
-		nonce: aleatoire(),
-		verifier: aleatoire(),
+): GoogleStart {
+	const pendingRequest: PendingRequest = {
+		state: random(),
+		nonce: random(),
+		verifier: random(),
 		retour,
-		expire: Math.floor(maintenant() / 1000) + VIE_DE_LA_DEMANDE_S,
+		expire: Math.floor(maintenant() / 1000) + REQUEST_LIFE_S,
 	}
-	const adresse = new URL(decouverte.authorization_endpoint)
-	adresse.search = new URLSearchParams({
+	const address = new URL(decouverte.authorization_endpoint)
+	address.search = new URLSearchParams({
 		client_id: config.clientId,
 		redirect_uri: config.redirectUri,
 		response_type: 'code',
 		scope: 'openid email profile',
-		state: demande.state,
-		nonce: demande.nonce,
-		code_challenge: sha256Base64Url(demande.verifier),
+		state: pendingRequest.state,
+		nonce: pendingRequest.nonce,
+		code_challenge: sha256Base64Url(pendingRequest.verifier),
 		code_challenge_method: 'S256',
 	}).toString()
-	return { adresse: adresse.toString(), cookie: sceller(demande, secret) }
+	return { adresse: address.toString(), cookie: seal(pendingRequest, secret) }
 }
 
 const signature = (charge: string, secret: string): string =>
 	createHmac('sha256', secret).update(`google-oidc:${charge}`).digest('base64url')
 
 /** `charge.signature`, the charge being the request in base64url JSON. */
-export function sceller(demande: DemandeEnCours, secret: string): string {
+export function seal(demande: PendingRequest, secret: string): string {
 	const charge = Buffer.from(JSON.stringify(demande)).toString('base64url')
 	return `${charge}.${signature(charge, secret)}`
 }
 
-const Demande = z.object({
+const ForgotPasswordRequest = z.object({
 	state: z.string().min(1),
 	nonce: z.string().min(1),
 	verifier: z.string().min(1),
@@ -212,21 +212,21 @@ const Demande = z.object({
 })
 
 /** The request a cookie holds, if our signature is on it and it has not ended; nothing otherwise. */
-export function ouvrirLeCookie(
+export function openCookie(
 	valeur: string | undefined,
 	secret: string,
 	maintenant: () => number = Date.now
-): DemandeEnCours | undefined {
+): PendingRequest | undefined {
 	if (!valeur) return undefined
-	const [charge = '', recue = '', reste] = valeur.split('.')
-	if (reste !== undefined || charge === '' || recue === '') return undefined
-	const attendue = signature(charge, secret)
+	const [charge = '', recue = '', remaining] = valeur.split('.')
+	if (remaining !== undefined || charge === '' || recue === '') return undefined
+	const expected = signature(charge, secret)
 	const a = Buffer.from(recue)
-	const b = Buffer.from(attendue)
+	const b = Buffer.from(expected)
 	if (a.length !== b.length || !timingSafeEqual(a, b)) return undefined
 	try {
-		const demande = Demande.parse(JSON.parse(Buffer.from(charge, 'base64url').toString('utf8')))
-		return demande.expire * 1000 > maintenant() ? demande : undefined
+		const pendingRequest = ForgotPasswordRequest.parse(JSON.parse(Buffer.from(charge, 'base64url').toString('utf8')))
+		return pendingRequest.expire * 1000 > maintenant() ? pendingRequest : undefined
 	} catch {
 		return undefined
 	}
@@ -237,16 +237,16 @@ export function ouvrirLeCookie(
 // ---------------------------------------------------------------------------------------------
 
 /** What Google says about the person, once its ID token has been checked. */
-export interface Revendications {
+export interface Claims {
 	sub: string
 	email?: string
 	emailVerifie: boolean
 	nom?: string
 }
 
-const Jetons = z.object({ id_token: z.string().min(1) })
+const Tokens = z.object({ id_token: z.string().min(1) })
 
-const Entete = z.object({ alg: z.string(), kid: z.string() })
+const Header = z.object({ alg: z.string(), kid: z.string() })
 
 const Charge = z.looseObject({
 	iss: z.string(),
@@ -265,12 +265,12 @@ const Charge = z.looseObject({
 const decoder = (morceau: string): unknown => JSON.parse(Buffer.from(morceau, 'base64url').toString('utf8'))
 
 /** The issuers an ID token may name: the configured one, and Google's short spelling of its own. */
-function emetteursAcceptes(emetteur: string): string[] {
+function acceptedIssuers(emetteur: string): string[] {
 	return emetteur === 'https://accounts.google.com' ? [emetteur, 'accounts.google.com'] : [emetteur]
 }
 
-export interface DependancesDuRetour {
-	requeter?: Requeter
+export interface CallbackDependencies {
+	requeter?: Query
 	maintenant?: () => number
 }
 
@@ -278,15 +278,15 @@ export interface DependancesDuRetour {
  * Exchanges the code for the ID token and checks it. Throws `GoogleIndisponible` when the provider
  * fails, and `JetonRefuse` when what it sent cannot be believed.
  */
-export async function revendicationsDuCode(
+export async function codeClaims(
 	config: ConfigGoogle,
-	decouverte: Decouverte,
-	{ code, demande }: { code: string; demande: DemandeEnCours },
-	{ requeter = requeterParDefaut, maintenant = Date.now }: DependancesDuRetour = {}
-): Promise<Revendications> {
-	let reponse: Response
+	decouverte: Discovery,
+	{ code, demande: pendingRequest }: { code: string; demande: PendingRequest },
+	{ requeter = queryByDefault, maintenant = Date.now }: CallbackDependencies = {}
+): Promise<Claims> {
+	let response: Response
 	try {
-		reponse = await requeter(decouverte.token_endpoint, {
+		response = await requeter(decouverte.token_endpoint, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
 			body: new URLSearchParams({
@@ -295,88 +295,88 @@ export async function revendicationsDuCode(
 				redirect_uri: config.redirectUri,
 				client_id: config.clientId,
 				client_secret: config.clientSecret,
-				code_verifier: demande.verifier,
+				code_verifier: pendingRequest.verifier,
 			}).toString(),
 			redirect: 'error',
 		})
 	} catch {
-		throw new GoogleIndisponible()
+		throw new GoogleUnavailable()
 	}
 	// A 4xx is the provider refusing a code it does not know (used twice, forged): not an outage.
-	if (reponse.status >= 400 && reponse.status < 500) throw new JetonRefuse()
-	const jetons = Jetons.safeParse(await lireJson(reponse))
-	if (!jetons.success) throw new JetonRefuse()
-	return verifierLeJeton(jetons.data.id_token, config, decouverte, demande.nonce, { requeter, maintenant })
+	if (response.status >= 400 && response.status < 500) throw new RefusedToken()
+	const tokens = Tokens.safeParse(await readJson(response))
+	if (!tokens.success) throw new RefusedToken()
+	return verifyToken(tokens.data.id_token, config, decouverte, pendingRequest.nonce, { requeter, maintenant })
 }
 
 /** What the provider sent cannot be believed: a bad signature, issuer, audience, nonce or date. */
-export class JetonRefuse extends Error {
+export class RefusedToken extends Error {
 	constructor() {
 		super('Le jeton d’identité est refusé.')
 		this.name = 'JetonRefuse'
 	}
 }
 
-export async function verifierLeJeton(
+export async function verifyToken(
 	jeton: string,
 	config: ConfigGoogle,
-	decouverte: Decouverte,
+	decouverte: Discovery,
 	nonce: string,
-	{ requeter = requeterParDefaut, maintenant = Date.now }: DependancesDuRetour = {}
-): Promise<Revendications> {
-	const morceaux = jeton.split('.')
-	if (morceaux.length !== 3) throw new JetonRefuse()
-	const [enteteBrut = '', chargeBrute = '', signatureBrute = ''] = morceaux
-	let entete: z.infer<typeof Entete>
+	{ requeter = queryByDefault, maintenant = Date.now }: CallbackDependencies = {}
+): Promise<Claims> {
+	const parts = jeton.split('.')
+	if (parts.length !== 3) throw new RefusedToken()
+	const [rawHeader = '', chargeBrute = '', signatureBrute = ''] = parts
+	let header: z.infer<typeof Header>
 	let charge: z.infer<typeof Charge>
 	try {
-		entete = Entete.parse(decoder(enteteBrut))
+		header = Header.parse(decoder(rawHeader))
 		charge = Charge.parse(decoder(chargeBrute))
 	} catch {
-		throw new JetonRefuse()
+		throw new RefusedToken()
 	}
 	// Only RS256: a token that asks for `none` or for a symmetric algorithm is a forgery.
-	if (entete.alg !== 'RS256') throw new JetonRefuse()
-	const jwk = await cleDeSignature(decouverte, entete.kid, { requeter, maintenant })
-	if (!jwk) throw new JetonRefuse()
-	let signe = false
+	if (header.alg !== 'RS256') throw new RefusedToken()
+	const jwk = await signatureKey(decouverte, header.kid, { requeter, maintenant })
+	if (!jwk) throw new RefusedToken()
+	let signed = false
 	try {
-		const cle = await crypto.subtle.importKey(
+		const key = await crypto.subtle.importKey(
 			'jwk',
 			{ kty: 'RSA', n: jwk.n, e: jwk.e, alg: 'RS256', ext: true },
 			{ name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
 			false,
 			['verify']
 		)
-		signe = await crypto.subtle.verify(
+		signed = await crypto.subtle.verify(
 			'RSASSA-PKCS1-v1_5',
-			cle,
+			key,
 			Buffer.from(signatureBrute, 'base64url'),
-			new TextEncoder().encode(`${enteteBrut}.${chargeBrute}`)
+			new TextEncoder().encode(`${rawHeader}.${chargeBrute}`)
 		)
 	} catch {
-		throw new JetonRefuse()
+		throw new RefusedToken()
 	}
-	if (!signe) throw new JetonRefuse()
+	if (!signed) throw new RefusedToken()
 
-	const maintenantS = Math.floor(maintenant() / 1000)
+	const nowS = Math.floor(maintenant() / 1000)
 	const audiences = Array.isArray(charge.aud) ? charge.aud : [charge.aud]
-	const azp = typeof charge.azp === 'string' ? charge.azp : undefined
-	const fautes =
-		!emetteursAcceptes(config.emetteur).includes(charge.iss) ||
+	const authorizedParty = typeof charge.azp === 'string' ? charge.azp : undefined
+	const invalid =
+		!acceptedIssuers(config.emetteur).includes(charge.iss) ||
 		!audiences.includes(config.clientId) ||
-		(audiences.length > 1 && azp !== config.clientId) ||
-		charge.exp + TOLERANCE_HORLOGE_S <= maintenantS ||
-		(charge.iat !== undefined && charge.iat - TOLERANCE_HORLOGE_S > maintenantS) ||
+		(audiences.length > 1 && authorizedParty !== config.clientId) ||
+		charge.exp + CLOCK_TOLERANCE_S <= nowS ||
+		(charge.iat !== undefined && charge.iat - CLOCK_TOLERANCE_S > nowS) ||
 		charge.nonce !== nonce
-	if (fautes) throw new JetonRefuse()
+	if (invalid) throw new RefusedToken()
 
-	const nom =
+	const name =
 		charge.name?.trim() || [charge.given_name, charge.family_name].filter(Boolean).join(' ').trim() || undefined
 	return {
 		sub: charge.sub,
 		...(charge.email !== undefined && { email: charge.email }),
 		emailVerifie: charge.email_verified === true || charge.email_verified === 'true',
-		...(nom !== undefined && { nom }),
+		...(name !== undefined && { nom: name }),
 	}
 }

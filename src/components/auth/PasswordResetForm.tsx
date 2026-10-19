@@ -2,31 +2,31 @@
 
 import Link from 'next/link'
 import { useActionState, useEffect, useRef } from 'react'
-import { MOT_DE_PASSE_MIN } from '@/lib/auth/sign-up'
+import { MIN_PASSWORD_LENGTH } from '@/lib/auth/sign-up'
 import {
-	type CodeEchecDeLaReinitialisation,
-	MESSAGES_MOT_DE_PASSE,
-	PAGE_DE_LA_DEMANDE,
+	type PasswordResetFailureCode,
+	PASSWORD_MESSAGES,
+	FORGOT_PASSWORD_PAGE,
 } from '@/lib/auth/forgot-password'
 
-export type EtatDeLaReinitialisation = { modifie: true } | { code: CodeEchecDeLaReinitialisation } | null
-export type ActionDeLaReinitialisation = (
-	precedent: EtatDeLaReinitialisation,
+export type PasswordResetState = { modifie: true } | { code: PasswordResetFailureCode } | null
+export type PasswordResetAction = (
+	precedent: PasswordResetState,
 	formulaire: FormData
-) => Promise<EtatDeLaReinitialisation>
+) => Promise<PasswordResetState>
 
-const CHAMP = 'rounded-md border border-neutral-300 bg-white px-3 py-2 font-normal text-base'
+const FIELD = 'rounded-md border border-neutral-300 bg-white px-3 py-2 font-normal text-base'
 
 /** The second step: the new password twice. The code is not in the form; the server reads it from the cookie of the link. */
-export function FormulaireDeReinitialisation({ action }: { action: ActionDeLaReinitialisation }) {
-	const [etat, envoyer, enCours] = useActionState(action, null)
-	const verrou = useRef(false)
+export function PasswordResetForm({ action }: { action: PasswordResetAction }) {
+	const [state, send, inProgress] = useActionState(action, null)
+	const lock = useRef(false)
 
 	useEffect(() => {
-		if (!enCours) verrou.current = false
-	}, [enCours, etat])
+		if (!inProgress) lock.current = false
+	}, [inProgress, state])
 
-	if (etat && 'modifie' in etat)
+	if (state && 'modifie' in state)
 		return (
 			<>
 				<p
@@ -34,7 +34,7 @@ export function FormulaireDeReinitialisation({ action }: { action: ActionDeLaRei
 					data-testid="mot-de-passe-modifie"
 					className="max-w-sm rounded-md bg-indigo-50 p-3 text-indigo-900 text-sm"
 				>
-					{MESSAGES_MOT_DE_PASSE.modifie}
+					{PASSWORD_MESSAGES.modifie}
 				</p>
 				<Link
 					className="inline-flex min-h-11 items-center rounded-md bg-neutral-900 px-4 py-2 font-medium text-white"
@@ -45,15 +45,15 @@ export function FormulaireDeReinitialisation({ action }: { action: ActionDeLaRei
 			</>
 		)
 
-	const code = etat && 'code' in etat ? etat.code : null
+	const code = state && 'code' in state ? state.code : null
 	return (
 		<>
 			<form
-				action={envoyer}
+				action={send}
 				noValidate
 				onSubmit={evenement => {
-					if (verrou.current) evenement.preventDefault()
-					else verrou.current = true
+					if (lock.current) evenement.preventDefault()
+					else lock.current = true
 				}}
 				className="flex w-full max-w-sm flex-col gap-4 text-left"
 			>
@@ -66,11 +66,11 @@ export function FormulaireDeReinitialisation({ action }: { action: ActionDeLaRei
 						autoComplete="new-password"
 						required
 						aria-describedby="aide-password"
-						className={CHAMP}
+						className={FIELD}
 					/>
 				</label>
 				<p id="aide-password" className="-mt-2 text-neutral-600 text-xs">
-					{MOT_DE_PASSE_MIN} caractères au moins.
+					{MIN_PASSWORD_LENGTH} caractères au moins.
 				</p>
 				<label className="flex flex-col gap-1 font-medium text-sm" htmlFor="password-confirmation">
 					Confirme le mot de passe
@@ -80,27 +80,27 @@ export function FormulaireDeReinitialisation({ action }: { action: ActionDeLaRei
 						type="password"
 						autoComplete="new-password"
 						required
-						className={CHAMP}
+						className={FIELD}
 					/>
 				</label>
 				<div role="alert" data-testid="erreur-reinitialisation">
-					{code ? <p className="rounded-md bg-red-50 p-3 text-red-800 text-sm">{MESSAGES_MOT_DE_PASSE[code]}</p> : null}
+					{code ? <p className="rounded-md bg-red-50 p-3 text-red-800 text-sm">{PASSWORD_MESSAGES[code]}</p> : null}
 				</div>
 				{code === 'code-invalide' || code === 'code-absent' ? (
 					<Link
 						className="inline-flex min-h-11 items-center justify-center rounded-md bg-neutral-900 px-4 py-2 font-medium text-white"
-						href={PAGE_DE_LA_DEMANDE}
+						href={FORGOT_PASSWORD_PAGE}
 					>
 						Demander un nouveau lien
 					</Link>
 				) : (
 					<button
 						type="submit"
-						disabled={enCours}
-						aria-busy={enCours}
+						disabled={inProgress}
+						aria-busy={inProgress}
 						className="min-h-11 rounded-md bg-neutral-900 px-4 py-2 font-medium text-white disabled:cursor-wait disabled:opacity-60"
 					>
-						{enCours ? 'Enregistrement…' : 'Enregistrer'}
+						{inProgress ? 'Enregistrement…' : 'Enregistrer'}
 					</button>
 				)}
 			</form>

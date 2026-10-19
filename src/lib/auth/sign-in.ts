@@ -1,40 +1,40 @@
 import { AuthenticationError, UnverifiedEmail } from 'payload'
-import { CompteBloque } from './blocked-account'
-import type { CodeErreur } from './errors'
-import { type Frein, freinDeConnexion } from './rate-limit'
+import { BlockedAccount } from './blocked-account'
+import type { ErrorCode } from './errors'
+import { type RateLimit, signInRateLimit } from './rate-limit'
 import { ipClient } from './client-ip'
-import type { JetonDeSession } from './token'
-import type { CodeEvenement, Journaliser } from './auth-log'
+import type { SessionToken } from './token'
+import type { EventCode, Log } from './auth-log'
 
 /** A password longer than this is refused as wrong: hashing it would cost more than it proves. */
-export const MOT_DE_PASSE_MAX = 1024
+export const MAX_PASSWORD_LENGTH = 1024
 
 /** The shortest time a refusal of the credentials takes, whoever the account is (ticket 088). */
-export const PLANCHER_DE_REFUS_MS = 300
+export const REFUSAL_FLOOR_MS = 300
 
 /** The clock of the sign-in. A test hands it a fake one, so that it measures without waiting. */
-export interface Horloge {
+export interface Clock {
 	maintenant: () => number
 	attendre: (ms: number) => Promise<void>
 }
 
-const horlogeReelle: Horloge = {
+const realClock: Clock = {
 	maintenant: () => Date.now(),
 	attendre: ms => new Promise(resolve => setTimeout(resolve, ms)),
 }
 
-export type ResultatConnexion = { ok: true; token: string } | { ok: false; code: CodeErreur }
+export type SignInResult = { ok: true; token: string } | { ok: false; code: ErrorCode }
 
-export interface EntreesDeConnexion {
+export interface SignInInputs {
 	/** Signs the makeup artist in and gives the token back (`ouvrirParMotDePasse`). */
-	ouvrir: (data: { email: string; password: string }) => Promise<JetonDeSession>
+	ouvrir: (data: { email: string; password: string }) => Promise<SessionToken>
 	headers: Headers
 	email: unknown
 	password: unknown
-	frein?: Frein
+	frein?: RateLimit
 	maintenant?: number
 	/** Writes the journal row of the attempt (ticket 077). Its failure never changes the outcome. */
-	journal?: Journaliser
+	journal?: Log
 	/**
 	 * The old-hash path (ticket 087): called when Payload refuses the credentials, with the email and
 	 * the password as typed. It does the same work whatever the account, and gives back `true` when
@@ -42,10 +42,10 @@ export interface EntreesDeConnexion {
 	 */
 	herite?: (data: { email: string; password: string }) => Promise<boolean>
 	/** The clock and the pause of the floor on a refusal (ticket 088). */
-	horloge?: Horloge
+	horloge?: Clock
 }
 
-const estTexte = (valeur: unknown): valeur is string => typeof valeur === 'string'
+const isText = (valeur: unknown): valeur is string => typeof valeur === 'string'
 
 /**
  * The sign-in of a makeup artist by email and password.
@@ -66,19 +66,19 @@ const estTexte = (valeur: unknown): valeur is string => typeof valeur === 'strin
  *   `PLANCHER_DE_REFUS_MS` (ticket 088).
  * - Gives back the token for the caller to put in the cookie. It never gives back the account.
  */
-export async function connecter(entrees: EntreesDeConnexion): Promise<ResultatConnexion> {
-	const horloge = entrees.horloge ?? horlogeReelle
-	const debut = horloge.maintenant()
-	const { resultat, heritee } = await tenterLaConnexion(entrees, horloge, debut)
-	const code = resultat.ok ? (heritee ? 'heritee' : 'ok') : resultat.code
-	await noterLaTentative(entrees.journal, code, horloge.maintenant() - debut)
-	return resultat
+export async function signInWithPassword(entrees: SignInInputs): Promise<SignInResult> {
+	const clock = entrees.horloge ?? realClock
+	const start = clock.maintenant()
+	const { resultat: result, heritee: legacy } = await attemptSignIn(entrees, clock, start)
+	const code = result.ok ? (legacy ? 'heritee' : 'ok') : result.code
+	await recordAttempt(entrees.journal, code, clock.maintenant() - start)
+	return result
 }
 
 /** One row for the attempt. A journal that fails changes nothing for the visitor. */
-async function noterLaTentative(
-	journal: Journaliser | undefined,
-	code: CodeEvenement,
+async function recordAttempt(
+	journal: Log | undefined,
+	code: EventCode,
 	durationMs: number
 ): Promise<void> {
 	if (!journal) return
@@ -93,51 +93,51 @@ async function noterLaTentative(
  * The code of the sign-in error that Payload raised, as the visitor may be told: a refusal of the
  * account (4xx) is the generic one, a brake (429) says so, anything else is ours to report.
  */
-export function codeDeLEchec(erreur: unknown): CodeErreur {
-	const statut = (erreur as { status?: number } | null)?.status
+export function failureCode(erreur: unknown): ErrorCode {
+	const status = (erreur as { status?: number } | null)?.status
 	// Payload raises this one only after the password has been checked and found right: saying so
 	// tells nothing to someone who does not hold the password.
 	if (erreur instanceof UnverifiedEmail) return 'email-non-confirme'
-	if (erreur instanceof CompteBloque) return 'compte-bloque'
-	if (statut === 429) return 'trop-de-tentatives'
-	if (erreur instanceof AuthenticationError || (statut !== undefined && statut >= 400 && statut < 500))
+	if (erreur instanceof BlockedAccount) return 'compte-bloque'
+	if (status === 429) return 'trop-de-tentatives'
+	if (erreur instanceof AuthenticationError || (status !== undefined && status >= 400 && status < 500))
 		return 'identifiants-invalides'
 	return 'service-indisponible'
 }
 
 interface Tentative {
-	resultat: ResultatConnexion
+	resultat: SignInResult
 	/** The sign-in went through the old hash. */
 	heritee: boolean
 }
 
-async function tenterLaConnexion(
-	{ ouvrir, headers, email, password, frein = freinDeConnexion, maintenant, herite }: EntreesDeConnexion,
-	horloge: Horloge,
+async function attemptSignIn(
+	{ ouvrir, headers, email, password, frein = signInRateLimit, maintenant, herite }: SignInInputs,
+	horloge: Clock,
 	debut: number
 ): Promise<Tentative> {
-	const cle = ipClient(headers)
-	const decision = frein.prendre(cle, maintenant)
+	const key = ipClient(headers)
+	const decision = frein.prendre(key, maintenant)
 	if (!decision.autorise) return { resultat: { ok: false, code: 'trop-de-tentatives' }, heritee: false }
 
 	if (
-		!estTexte(email) ||
-		!estTexte(password) ||
+		!isText(email) ||
+		!isText(password) ||
 		email.trim() === '' ||
 		password === '' ||
-		password.length > MOT_DE_PASSE_MAX
+		password.length > MAX_PASSWORD_LENGTH
 	)
 		return { resultat: { ok: false, code: 'identifiants-invalides' }, heritee: false }
 
-	const heritee = false
-	let code: CodeErreur
+	const legacy = false
+	let code: ErrorCode
 	try {
 		const { token } = await ouvrir({ email, password })
-		if (!token) return { resultat: { ok: false, code: 'service-indisponible' }, heritee }
-		frein.rendre(cle, maintenant)
-		return { resultat: { ok: true, token }, heritee }
-	} catch (erreur) {
-		code = codeDeLEchec(erreur)
+		if (!token) return { resultat: { ok: false, code: 'service-indisponible' }, heritee: legacy }
+		frein.rendre(key, maintenant)
+		return { resultat: { ok: true, token }, heritee: legacy }
+	} catch (error) {
+		code = failureCode(error)
 	}
 
 	// Payload refused the credentials: the account may still hold its password in the old hash.
@@ -146,13 +146,13 @@ async function tenterLaConnexion(
 			if (await herite({ email, password })) {
 				const { token } = await ouvrir({ email, password })
 				if (token) {
-					frein.rendre(cle, maintenant)
+					frein.rendre(key, maintenant)
 					return { resultat: { ok: true, token }, heritee: true }
 				}
 				code = 'service-indisponible'
 			}
-		} catch (erreur) {
-			code = codeDeLEchec(erreur)
+		} catch (error) {
+			code = failureCode(error)
 			// Our own failure, not a refusal: it is not told as one.
 			if (code === 'identifiants-invalides') code = 'service-indisponible'
 		}
@@ -160,13 +160,13 @@ async function tenterLaConnexion(
 
 	// Not the visitor's failure, or a right password: the place goes back.
 	if (code === 'service-indisponible' || code === 'email-non-confirme' || code === 'compte-bloque')
-		frein.rendre(cle, maintenant)
-	if (code === 'identifiants-invalides') await attendreLePlancher(horloge, debut)
-	return { resultat: { ok: false, code }, heritee }
+		frein.rendre(key, maintenant)
+	if (code === 'identifiants-invalides') await waitForFloor(horloge, debut)
+	return { resultat: { ok: false, code }, heritee: legacy }
 }
 
 /** Waits until the floor is reached since `debut`: a refusal never comes back sooner. */
-async function attendreLePlancher(horloge: Horloge, debut: number): Promise<void> {
-	const reste = PLANCHER_DE_REFUS_MS - (horloge.maintenant() - debut)
-	if (reste > 0) await horloge.attendre(reste)
+async function waitForFloor(horloge: Clock, debut: number): Promise<void> {
+	const remaining = REFUSAL_FLOOR_MS - (horloge.maintenant() - debut)
+	if (remaining > 0) await horloge.attendre(remaining)
 }

@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto'
 import type { Payload } from 'payload'
-import type { Frein } from './rate-limit'
-import type { Journaliser } from './auth-log'
+import type { RateLimit } from './rate-limit'
+import type { Log } from './auth-log'
 
 /**
  * The confirmation of an email by the link of the mail (ticket 082).
@@ -19,30 +19,30 @@ import type { Journaliser } from './auth-log'
  * The journal gets one row, with the outcome only. No `next` import.
  */
 
-export type ResultatDeConfirmation = 'ok' | 'deja-confirme' | 'lien-invalide'
+export type ConfirmationResult = 'ok' | 'deja-confirme' | 'lien-invalide'
 
-const JETON = /^[0-9a-f]{40}$/
+const TOKEN = /^[0-9a-f]{40}$/
 
-const PREFIXE_UTILISE = 'utilise:'
+const USED_PREFIX = 'utilise:'
 
 /** What stands in the token column once the link has been used. */
-const traceDUsage = (jeton: string): string => `${PREFIXE_UTILISE}${createHash('sha256').update(jeton).digest('hex')}`
+const traceDUsage = (jeton: string): string => `${USED_PREFIX}${createHash('sha256').update(jeton).digest('hex')}`
 
-type Ligne = { id: number; _verified?: boolean | null; _verificationToken?: string | null }
+type Row = { id: number; _verified?: boolean | null; _verificationToken?: string | null }
 
-export async function confirmerLEmail(
+export async function confirmEmail(
 	payload: Payload,
 	code: unknown,
-	journal?: Journaliser
-): Promise<ResultatDeConfirmation> {
-	const debut = Date.now()
-	const resultat = await confirmer(payload, code)
+	journal?: Log
+): Promise<ConfirmationResult> {
+	const start = Date.now()
+	const result = await confirm(payload, code)
 	try {
-		await journal?.({ type: 'confirmation', code: resultat === 'ok' ? 'ok' : resultat, durationMs: Date.now() - debut })
+		await journal?.({ type: 'confirmation', code: result === 'ok' ? 'ok' : result, durationMs: Date.now() - start })
 	} catch {
 		// The journal is not the confirmation's to fail.
 	}
-	return resultat
+	return result
 }
 
 /**
@@ -50,32 +50,32 @@ export async function confirmerLEmail(
  * « lien invalide » with no read of the table and no row in the journal, so that a script knocking
  * on the page with random codes fills neither.
  */
-export async function confirmerSousFrein(
+export async function confirmWithRateLimit(
 	payload: Payload,
 	code: unknown,
-	frein: Frein,
+	frein: RateLimit,
 	cle: string,
-	journal?: Journaliser
-): Promise<ResultatDeConfirmation> {
+	journal?: Log
+): Promise<ConfirmationResult> {
 	if (!frein.prendre(cle).autorise) return 'lien-invalide'
-	return confirmerLEmail(payload, code, journal)
+	return confirmEmail(payload, code, journal)
 }
 
-async function confirmer(payload: Payload, code: unknown): Promise<ResultatDeConfirmation> {
-	const jeton = Array.isArray(code) ? code[0] : code
-	if (typeof jeton !== 'string' || !JETON.test(jeton)) return 'lien-invalide'
-	const trace = traceDUsage(jeton)
-	const ligne = await payload.db.findOne<Ligne>({
+async function confirm(payload: Payload, code: unknown): Promise<ConfirmationResult> {
+	const token = Array.isArray(code) ? code[0] : code
+	if (typeof token !== 'string' || !TOKEN.test(token)) return 'lien-invalide'
+	const trace = traceDUsage(token)
+	const row = await payload.db.findOne<Row>({
 		collection: 'pros',
-		where: { or: [{ _verificationToken: { equals: jeton } }, { _verificationToken: { equals: trace } }] },
+		where: { or: [{ _verificationToken: { equals: token } }, { _verificationToken: { equals: trace } }] },
 	})
-	if (!ligne) return 'lien-invalide'
-	if (ligne._verificationToken === trace || ligne._verified === true) return 'deja-confirme'
+	if (!row) return 'lien-invalide'
+	if (row._verificationToken === trace || row._verified === true) return 'deja-confirme'
 	await payload.db.updateOne({
 		collection: 'pros',
 		data: { _verified: true, _verificationToken: trace, updatedAt: new Date().toISOString() },
 		returning: false,
-		where: { id: { equals: ligne.id } },
+		where: { id: { equals: row.id } },
 	})
 	return 'ok'
 }

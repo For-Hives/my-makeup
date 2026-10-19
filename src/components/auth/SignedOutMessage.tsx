@@ -5,7 +5,7 @@ import Link from 'next/link'
  * (ticket 081). It replaces the announcement emails: it says what happened, what to do, and how to
  * get back in: with Google when the site has the button, or with a new password.
  */
-export function MessageReconnexion({ google }: { google: boolean }) {
+export function SignedOutMessage({ google }: { google: boolean }) {
 	return (
 		<section
 			role="status"

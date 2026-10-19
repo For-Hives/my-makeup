@@ -18,16 +18,16 @@ import type { CollectionAfterChangeHook, CollectionBeforeValidateHook } from 'pa
  * The creation is left alone: the import creates the account with its old hash and a random password.
  */
 
-const CLE_DU_MOT_DE_PASSE = 'motDePasseChoisiPourEffacerLeHashHerite'
+const PASSWORD_KEY = 'motDePasseChoisiPourEffacerLeHashHerite'
 
-export const effacerLeHashHeriteApresUnMotDePasse: CollectionAfterChangeHook = async ({
+export const clearLegacyHashAfterPassword: CollectionAfterChangeHook = async ({
 	collection,
 	doc,
 	operation,
 	req,
 }) => {
-	if (operation !== 'update' || req.context[CLE_DU_MOT_DE_PASSE] !== true) return doc
-	delete req.context[CLE_DU_MOT_DE_PASSE]
+	if (operation !== 'update' || req.context[PASSWORD_KEY] !== true) return doc
+	delete req.context[PASSWORD_KEY]
 	await req.payload.db.updateOne({
 		collection: collection.slug,
 		id: doc.id,
@@ -38,18 +38,18 @@ export const effacerLeHashHeriteApresUnMotDePasse: CollectionAfterChangeHook = a
 	return doc
 }
 
-export const effacerLeHashHeriteAuRenouvellement: CollectionBeforeValidateHook = ({
+export const clearLegacyHashOnRenewal: CollectionBeforeValidateHook = ({
 	data,
 	operation,
 	originalDoc,
 	req,
 }) => {
 	if (operation !== 'update' || !data) return data
-	const ecrit = data as { password?: unknown; salt?: unknown; legacyBcrypt?: unknown }
+	const written = data as { password?: unknown; salt?: unknown; legacyBcrypt?: unknown }
 	// An update that carries a password: Payload hashes it later and drops it from `data`, so it is noted here
 	// for the hook after the change. (In an update, `data` also carries the row's own salt: not a signal.)
-	if (typeof ecrit.password === 'string') req.context[CLE_DU_MOT_DE_PASSE] = true
+	if (typeof written.password === 'string') req.context[PASSWORD_KEY] = true
 	// Payload's reset: no original document, the whole row with its new salt and hash.
-	else if (!originalDoc && typeof ecrit.salt === 'string') ecrit.legacyBcrypt = null
+	else if (!originalDoc && typeof written.salt === 'string') written.legacyBcrypt = null
 	return data
 }

@@ -9,18 +9,18 @@ import {
 import type { EnvoyerEmail } from '../emails/envoi'
 import { composerEmail } from '../emails/gabarit'
 import { contenuEmailReinitialisation } from '../emails/reinitialisation'
-import { type Frein, freinDeLaReinitialisation, freinDeLOubli } from './rate-limit'
+import { type RateLimit, passwordResetRateLimit, forgotPasswordRateLimit } from './rate-limit'
 import { ipClient } from './client-ip'
-import type { CodeEvenement, Journaliser } from './auth-log'
+import type { EventCode, Log } from './auth-log'
 import {
-	type CodeEchecDeLaDemande,
-	type CodeEchecDeLaReinitialisation,
-	jetonDeReinitialisation,
-	PLANCHER_DE_LA_DEMANDE_MS,
-	validerLAdresse,
-	validerLeNouveauMotDePasse,
+	type ForgotPasswordFailureCode,
+	type PasswordResetFailureCode,
+	passwordResetToken,
+	FORGOT_PASSWORD_FLOOR_MS,
+	validateAddress,
+	validateNewPassword,
 } from './forgot-password'
-import { CONTEXTE_DE_REINITIALISATION } from './forgot-payload'
+import { PASSWORD_RESET_CONTEXT } from './forgot-payload'
 
 /**
  * The forgotten password, server side (tickets 085 and 086). Two steps, and no `next` import: the
@@ -46,9 +46,9 @@ import { CONTEXTE_DE_REINITIALISATION } from './forgot-payload'
  * - A code that is not ours, or whose link is spent or past its hour, is `code-invalide`.
  */
 
-export type ResultatDeLaDemande = { ok: true } | { ok: false; code: CodeEchecDeLaDemande }
+export type ForgotPasswordResult = { ok: true } | { ok: false; code: ForgotPasswordFailureCode }
 
-export interface EntreesDeLaDemande {
+export interface ForgotPasswordInputs {
 	payload: Payload
 	headers: Headers
 	email: unknown
@@ -60,25 +60,25 @@ export interface EntreesDeLaDemande {
 	site: string
 	/** Minimum time between two mails to the same account. */
 	intervalleMs?: number
-	frein?: Frein
-	journal?: Journaliser
+	frein?: RateLimit
+	journal?: Log
 	plancherMs?: number
 }
 
 /** As Payload's own `minRequestInterval`: one mail per account every 15 seconds. */
-export const INTERVALLE_PAR_COMPTE_MS = 15_000
+export const INTERVAL_PER_ACCOUNT_MS = 15_000
 
 /**
  * Takes the place of the mail for this account, in one atomic write: the account is found only if no
  * request is recorded in the last `intervalleMs`. Gives the stored address and a way to give the place
  * back (when the mail did not leave), or nothing: unknown account, or a mail left a moment ago.
  */
-async function reserverLaDemande(payload: Payload, email: string, intervalleMs: number) {
-	const maintenant = Date.now()
-	const demandeLe = new Date(maintenant).toISOString()
-	const compte = (await payload.db.updateOne({
+async function reserveRequest(payload: Payload, email: string, intervalleMs: number) {
+	const now = Date.now()
+	const requestedAt = new Date(now).toISOString()
+	const account = (await payload.db.updateOne({
 		collection: 'pros',
-		data: { resetPasswordRequestedAt: demandeLe },
+		data: { resetPasswordRequestedAt: requestedAt },
 		options: { atomic: true },
 		where: {
 			and: [
@@ -87,42 +87,42 @@ async function reserverLaDemande(payload: Payload, email: string, intervalleMs: 
 					or: [
 						{ resetPasswordRequestedAt: { exists: false } },
 						{ resetPasswordRequestedAt: { equals: null } },
-						{ resetPasswordRequestedAt: { less_than_equal: new Date(maintenant - intervalleMs).toISOString() } },
+						{ resetPasswordRequestedAt: { less_than_equal: new Date(now - intervalleMs).toISOString() } },
 					],
 				},
 			],
 		},
 	})) as { id: number | string; email?: string } | null
-	if (!compte?.email) return null
-	const id = compte.id
+	if (!account?.email) return null
+	const id = account.id
 	return {
-		email: compte.email,
+		email: account.email,
 		rendre: () =>
 			payload.db.updateOne({
 				collection: 'pros',
 				data: { resetPasswordRequestedAt: null },
 				options: { atomic: true },
-				where: { and: [{ id: { equals: id } }, { resetPasswordRequestedAt: { equals: demandeLe } }] },
+				where: { and: [{ id: { equals: id } }, { resetPasswordRequestedAt: { equals: requestedAt } }] },
 			}),
 	}
 }
 
-const attendre = (ms: number) => new Promise<void>(fin => setTimeout(fin, Math.max(0, ms)))
+const wait = (ms: number) => new Promise<void>(fin => setTimeout(fin, Math.max(0, ms)))
 
-export async function demanderUnLien({
+export async function requestPasswordLink({
 	payload,
 	headers,
 	email,
 	apres,
 	envoyer,
 	site,
-	intervalleMs = INTERVALLE_PAR_COMPTE_MS,
-	frein = freinDeLOubli,
+	intervalleMs = INTERVAL_PER_ACCOUNT_MS,
+	frein = forgotPasswordRateLimit,
 	journal,
-	plancherMs = PLANCHER_DE_LA_DEMANDE_MS,
-}: EntreesDeLaDemande): Promise<ResultatDeLaDemande> {
-	const debut = Date.now()
-	const noter = async (code: CodeEvenement, durationMs: number) => {
+	plancherMs = FORGOT_PASSWORD_FLOOR_MS,
+}: ForgotPasswordInputs): Promise<ForgotPasswordResult> {
+	const start = Date.now()
+	const record = async (code: EventCode, durationMs: number) => {
 		try {
 			await journal?.({ type: 'forgot-password', code, durationMs })
 		} catch {
@@ -131,27 +131,27 @@ export async function demanderUnLien({
 	}
 
 	if (!frein.prendre(ipClient(headers)).autorise) {
-		await noter('trop-de-tentatives', Date.now() - debut)
+		await record('trop-de-tentatives', Date.now() - start)
 		return { ok: false, code: 'trop-de-tentatives' }
 	}
-	const adresse = validerLAdresse(email)
-	if (!adresse.ok) {
-		await noter('donnees-invalides', Date.now() - debut)
-		return { ok: false, code: adresse.code }
+	const address = validateAddress(email)
+	if (!address.ok) {
+		await record('donnees-invalides', Date.now() - start)
+		return { ok: false, code: address.code }
 	}
 
-	const travail = async () => {
-		let code: CodeEvenement = 'ok'
-		let reservation: Awaited<ReturnType<typeof reserverLaDemande>> = null
+	const work = async () => {
+		let code: EventCode = 'ok'
+		let reservation: Awaited<ReturnType<typeof reserveRequest>> = null
 		try {
-			reservation = await reserverLaDemande(payload, adresse.email, intervalleMs)
+			reservation = await reserveRequest(payload, address.email, intervalleMs)
 			if (reservation) {
-				const jeton = await payload.forgotPassword({
+				const token = await payload.forgotPassword({
 					collection: 'pros',
 					data: { email: reservation.email },
 					disableEmail: true,
 				})
-				if (jeton) await envoyer({ a: reservation.email, ...composerEmail(contenuEmailReinitialisation(jeton), site) })
+				if (token) await envoyer({ a: reservation.email, ...composerEmail(contenuEmailReinitialisation(token), site) })
 			}
 		} catch {
 			// The mail did not leave: the place is given back, so that she can ask again at once.
@@ -165,76 +165,76 @@ export async function demanderUnLien({
 				// The log itself failed.
 			}
 		}
-		await noter(code, Date.now() - debut)
+		await record(code, Date.now() - start)
 	}
 	try {
-		apres(travail)
+		apres(work)
 	} catch {
 		// Outside a request, `after` refuses: the work then runs here, in the background of this call.
-		void travail()
+		void work()
 	}
 
-	await attendre(debut + plancherMs - Date.now())
+	await wait(start + plancherMs - Date.now())
 	return { ok: true }
 }
 
-export type ResultatDeLaReinitialisation = { ok: true } | { ok: false; code: CodeEchecDeLaReinitialisation }
+export type PasswordResetResult = { ok: true } | { ok: false; code: PasswordResetFailureCode }
 
-export interface EntreesDeLaReinitialisation {
+export interface PasswordResetInputs {
 	payload: Payload
 	headers: Headers
 	/** The token of the cookie of the page, as it came. */
 	jeton: unknown
 	motDePasse: unknown
 	confirmation: unknown
-	frein?: Frein
-	journal?: Journaliser
+	frein?: RateLimit
+	journal?: Log
 }
 
-export async function reinitialiserLeMotDePasse({
+export async function resetPassword({
 	payload,
 	headers,
-	jeton,
+	jeton: token,
 	motDePasse,
 	confirmation,
-	frein = freinDeLaReinitialisation,
+	frein = passwordResetRateLimit,
 	journal,
-}: EntreesDeLaReinitialisation): Promise<ResultatDeLaReinitialisation> {
-	const debut = Date.now()
-	const noter = async (code: CodeEvenement) => {
+}: PasswordResetInputs): Promise<PasswordResetResult> {
+	const start = Date.now()
+	const record = async (code: EventCode) => {
 		try {
-			await journal?.({ type: 'password-reset', code, durationMs: Date.now() - debut })
+			await journal?.({ type: 'password-reset', code, durationMs: Date.now() - start })
 		} catch {
 			// The journal is not the reset's to fail.
 		}
 	}
-	const cle = ipClient(headers)
-	if (!frein.prendre(cle).autorise) {
-		await noter('trop-de-tentatives')
+	const key = ipClient(headers)
+	if (!frein.prendre(key).autorise) {
+		await record('trop-de-tentatives')
 		return { ok: false, code: 'trop-de-tentatives' }
 	}
 
-	if (typeof jeton !== 'string' || jeton === '') {
-		await noter('lien-invalide')
+	if (typeof token !== 'string' || token === '') {
+		await record('lien-invalide')
 		return { ok: false, code: 'code-absent' }
 	}
-	const code = jetonDeReinitialisation(jeton)
+	const code = passwordResetToken(token)
 	if (!code) {
-		await noter('lien-invalide')
+		await record('lien-invalide')
 		return { ok: false, code: 'code-invalide' }
 	}
-	const nouveau = validerLeNouveauMotDePasse(motDePasse, confirmation)
-	if (!nouveau.ok) {
-		await noter('donnees-invalides')
-		return { ok: false, code: nouveau.code }
+	const isNew = validateNewPassword(motDePasse, confirmation)
+	if (!isNew.ok) {
+		await record('donnees-invalides')
+		return { ok: false, code: isNew.code }
 	}
 
-	const req = await createLocalReq({ context: { [CONTEXTE_DE_REINITIALISATION]: true } }, payload)
+	const req = await createLocalReq({ context: { [PASSWORD_RESET_CONTEXT]: true } }, payload)
 	await initTransaction(req)
 	try {
 		// Claims the link first, in this transaction: the write locks the row, so that a second submit of
 		// the same link waits for this one to commit, then finds the token gone and is refused.
-		const reclame = await payload.db.updateOne({
+		const claimed = await payload.db.updateOne({
 			collection: 'pros',
 			data: { resetPasswordRequestedAt: null },
 			options: { atomic: true },
@@ -246,10 +246,10 @@ export async function reinitialiserLeMotDePasse({
 				],
 			},
 		})
-		if (!reclame) throw Object.assign(new Error('Lien refusé.'), { status: 403 })
+		if (!claimed) throw Object.assign(new Error('Lien refusé.'), { status: 403 })
 		const { user } = await resetPasswordOperation({
 			collection: payload.collections.pros,
-			data: { token: code, password: nouveau.motDePasse },
+			data: { token: code, password: isNew.motDePasse },
 			depth: 0,
 			overrideAccess: true,
 			req,
@@ -257,29 +257,29 @@ export async function reinitialiserLeMotDePasse({
 		// Through the adapter: these fields are written by no request. Emptying the sessions drops the
 		// one the reset has just opened; she signs in with her new password. A write that holds an array
 		// is a full upsert in the adapter, which needs the whole row (as Payload's own session writes do).
-		const ligne = await payload.db.findOne<Record<string, unknown> & { id: number }>({
+		const row = await payload.db.findOne<Record<string, unknown> & { id: number }>({
 			collection: 'pros',
 			req,
 			where: { id: { equals: user.id } },
 		})
-		if (!ligne) throw new Error('Le compte a disparu pendant la réinitialisation.')
+		if (!row) throw new Error('Le compte a disparu pendant la réinitialisation.')
 		await payload.db.updateOne({
 			collection: 'pros',
-			data: { ...ligne, sessions: [], legacyBcrypt: null, resetPasswordToken: null },
+			data: { ...row, sessions: [], legacyBcrypt: null, resetPasswordToken: null },
 			id: user.id as number,
 			req,
 			returning: false,
 		})
 		await commitTransaction(req)
-	} catch (erreur) {
+	} catch (error) {
 		await killTransaction(req)
-		const statut = (erreur as { status?: number } | null)?.status
-		const refus = statut === 403 || statut === 400
-		await noter(refus ? 'lien-invalide' : 'service-indisponible')
-		return { ok: false, code: refus ? 'code-invalide' : 'service-indisponible' }
+		const status = (error as { status?: number } | null)?.status
+		const refusal = status === 403 || status === 400
+		await record(refusal ? 'lien-invalide' : 'service-indisponible')
+		return { ok: false, code: refusal ? 'code-invalide' : 'service-indisponible' }
 	}
-	frein.rendre(cle)
-	await noter('ok')
+	frein.rendre(key)
+	await record('ok')
 	return { ok: true }
 }
 
@@ -288,11 +288,11 @@ export async function reinitialiserLeMotDePasse({
  * of the link asks it to say « plus valable » at once, instead of after the form. A failure of the
  * database says « yes »: the form then answers for itself.
  */
-export async function lienEncoreValable(payload: Payload, jeton: unknown): Promise<boolean> {
-	const code = jetonDeReinitialisation(jeton)
+export async function linkStillValid(payload: Payload, jeton: unknown): Promise<boolean> {
+	const code = passwordResetToken(jeton)
 	if (!code) return false
 	try {
-		const ligne = await payload.db.findOne({
+		const row = await payload.db.findOne({
 			collection: 'pros',
 			where: {
 				and: [
@@ -301,7 +301,7 @@ export async function lienEncoreValable(payload: Payload, jeton: unknown): Promi
 				],
 			},
 		})
-		return Boolean(ligne)
+		return Boolean(row)
 	} catch {
 		return true
 	}

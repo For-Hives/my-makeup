@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
 import { NextRequest } from 'next/server'
 import { POST as refuser } from '@/app/(front)/(site)/contact/throttled/route'
-import { cleDeBoite } from '@/lib/auth/canonical-email'
+import { mailboxKey } from '@/lib/auth/canonical-email'
 import { enregistrerUnMessageDeContact, type StockageDesDemandes } from '@/lib/contact/envoi-payload'
 import {
 	creerFreinsDeContact,
@@ -215,7 +215,7 @@ describe('le proxy renvoie un 429 en français à la sixième demande', () => {
 	})
 
 	test('la vingt et unième demande du jour pour une boîte est réécrite vers la route de refus, d’où qu’elle vienne', async () => {
-		for (let i = 0; i < 20; i++) freinDeContactParEmail.prendre(cleDeBoite('boite.pleine@example.test'))
+		for (let i = 0; i < 20; i++) freinDeContactParEmail.prendre(mailboxKey('boite.pleine@example.test'))
 		// The same mailbox, written otherwise, from an address that has sent nothing.
 		const refusee = await proxyDuContact(action('203.0.113.5', ' Boite.Pleine@Example.test '))
 		expect(refusee.headers.get('x-middleware-rewrite')).toContain('/contact/throttled')
@@ -226,7 +226,7 @@ describe('le proxy renvoie un 429 en français à la sixième demande', () => {
 	})
 
 	test('une adresse locale ou sans corps lisible n’est refusée par la boîte que si le corps le permet', async () => {
-		for (let i = 0; i < 20; i++) freinDeContactParEmail.prendre(cleDeBoite('boite.pleine@example.test'))
+		for (let i = 0; i < 20; i++) freinDeContactParEmail.prendre(mailboxKey('boite.pleine@example.test'))
 		const sansCorps = await proxyDuContact(requete('POST', '127.0.0.1'))
 		expect(sansCorps.headers.get('x-middleware-rewrite')).toBeNull()
 		const pleine = await proxyDuContact(action('127.0.0.1', 'boite.pleine@example.test'))
@@ -234,7 +234,7 @@ describe('le proxy renvoie un 429 en français à la sixième demande', () => {
 	})
 
 	test('la route de refus répond 429 pour une boîte pleine dont le corps est celui d’une action', async () => {
-		for (let i = 0; i < 20; i++) freinDeContactParEmail.prendre(cleDeBoite('boite.pleine@example.test'))
+		for (let i = 0; i < 20; i++) freinDeContactParEmail.prendre(mailboxKey('boite.pleine@example.test'))
 		const corps = new FormData()
 		corps.set('1_email', 'boite.pleine@example.test')
 		const reponse = await refuser(

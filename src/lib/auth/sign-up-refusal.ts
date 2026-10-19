@@ -1,5 +1,5 @@
-import { freinDeJournal, freinDInscription } from './sign-up-rate-limits'
-import type { CodeEvenement, Journaliser, TypeEvenement } from './auth-log'
+import { authLogRateLimit, signUpRateLimit } from './sign-up-rate-limits'
+import type { EventCode, Log, EventType } from './auth-log'
 
 /**
  * The refusals of the sign-up that the proxy answers with a real 429 (ticket 084), and the way the
@@ -14,16 +14,16 @@ import type { CodeEvenement, Journaliser, TypeEvenement } from './auth-log'
  */
 
 /** The path the proxy sends a refused sign-up to. */
-export const CHEMIN_DU_REFUS = '/auth/signup/throttled'
+export const REFUSAL_PATH = '/auth/signup/throttled'
 
 /** The path of the sign-up page: a Server Action is posted to the page that holds its form. */
-export const CHEMIN_DE_L_INSCRIPTION = '/auth/signup'
+export const SIGN_UP_PATH = '/auth/signup'
 
 /** Seconds before this client may sign up again, or `undefined` when it may. Reads, takes nothing. */
-export function secondesAvantUneInscription(client: string, maintenant = Date.now()): number | undefined {
-	const decision = freinDInscription.prendre(client, maintenant)
+export function secondsBeforeSignUp(client: string, maintenant = Date.now()): number | undefined {
+	const decision = signUpRateLimit.prendre(client, maintenant)
 	if (decision.autorise) {
-		freinDInscription.rendre(client, maintenant)
+		signUpRateLimit.rendre(client, maintenant)
 		return undefined
 	}
 	return decision.reessayerDansS
@@ -34,13 +34,13 @@ export function secondesAvantUneInscription(client: string, maintenant = Date.no
  * refused requests must not fill the journal. The address is the key of a counter in memory; it is
  * never written.
  */
-export async function journaliserUnRefus(
-	journal: Journaliser,
+export async function logRefusal(
+	journal: Log,
 	client: string,
-	type: TypeEvenement,
-	code: CodeEvenement
+	type: EventType,
+	code: EventCode
 ): Promise<boolean> {
-	if (!freinDeJournal.prendre(`${client}|${type}|${code}`).autorise) return false
+	if (!authLogRateLimit.prendre(`${client}|${type}|${code}`).autorise) return false
 	await journal({ type, code, method: 'password' })
 	return true
 }

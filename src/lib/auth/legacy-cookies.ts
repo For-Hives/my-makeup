@@ -10,34 +10,34 @@
  */
 
 /** How long, from the day of the switch, the old cookies are expired. */
-export const JOURS_DE_NETTOYAGE = 90
+export const CLEANUP_DAYS = 90
 
 /** The day of the switch, `YYYY-MM-DD`, read by the proxy. Unset: the cleaning has no end date. */
-export const VARIABLE_DE_BASCULE = 'BASCULE_LE'
+export const CUTOVER_VARIABLE = 'BASCULE_LE'
 
 /** A short-lived cookie of this site, set when the old cookies are expired away from the sign-in page. */
-export const COOKIE_DE_MESSAGE = 'mm-reconnexion'
+export const MESSAGE_COOKIE = 'mm-reconnexion'
 
 /** The request header the proxy gives the sign-in page when the message is due. The proxy strips it from every request first. */
-export const ENTETE_DE_MESSAGE = 'x-mm-reconnexion'
+export const MESSAGE_HEADER = 'x-mm-reconnexion'
 
 /** How long the message waits for the visitor to reach the sign-in page. */
-export const DUREE_DU_MESSAGE_EN_SECONDES = 60 * 60
+export const MESSAGE_DURATION_SECONDS = 60 * 60
 
 /**
  * The cookies NextAuth v4 sets: the session token (cut into `.0`, `.1`… chunks when it is long),
  * the CSRF token and the callback URL. With `useSecureCookies` (an https site) the names carry
  * `__Secure-`, and `__Host-` for the CSRF token; without it (http) they carry nothing.
  */
-const COOKIE_HERITE = /^(?:__Secure-|__Host-)?next-auth\.(?:session-token(?:\.\d+)?|csrf-token|callback-url)$/
+const LEGACY_COOKIE = /^(?:__Secure-|__Host-)?next-auth\.(?:session-token(?:\.\d+)?|csrf-token|callback-url)$/
 
-export const estCookieHerite = (nom: string): boolean => COOKIE_HERITE.test(nom)
+export const isLegacyCookie = (nom: string): boolean => LEGACY_COOKIE.test(nom)
 
 /** The names, among those a request carries, that belong to the old authentication. */
-export const cookiesHeritesPresents = (noms: Iterable<string>): string[] => [...noms].filter(estCookieHerite)
+export const legacyCookiesPresent = (noms: Iterable<string>): string[] => [...noms].filter(isLegacyCookie)
 
 /** What NextAuth set the cookie with, and so what its expiry must repeat: any other attribute and the browser keeps the cookie. */
-export type AttributsDeCookie = {
+export type CookieAttributes = {
 	path: '/'
 	httpOnly: true
 	sameSite: 'lax'
@@ -47,7 +47,7 @@ export type AttributsDeCookie = {
 }
 
 /** `Secure` goes with the prefixes, which a browser refuses without it. */
-export const attributsDePose = (nom: string): AttributsDeCookie => ({
+export const setAttributes = (nom: string): CookieAttributes => ({
 	path: '/',
 	httpOnly: true,
 	sameSite: 'lax',
@@ -56,31 +56,31 @@ export const attributsDePose = (nom: string): AttributsDeCookie => ({
 })
 
 /** The cookie that expires `nom`: an empty value, `Max-Age=0`, the attributes of its setting. */
-export const cookieDEffacement = (nom: string) => {
-	const { domain: _domain, ...attributs } = attributsDePose(nom)
-	return { name: nom, value: '', maxAge: 0, expires: new Date(0), ...attributs }
+export const clearingCookie = (nom: string) => {
+	const { domain: _domain, ...attributes } = setAttributes(nom)
+	return { name: nom, value: '', maxAge: 0, expires: new Date(0), ...attributes }
 }
 
 /** The last day of the cleaning: the day of the switch plus 90 days (UTC), or nothing when it is unset or unreadable. */
-export function finDuNettoyage(basculeLe: string | undefined): Date | undefined {
-	const texte = basculeLe?.trim()
-	if (!texte || !/^\d{4}-\d{2}-\d{2}$/.test(texte)) return undefined
-	const debut = new Date(`${texte}T00:00:00Z`)
-	if (Number.isNaN(debut.getTime()) || debut.toISOString().slice(0, 10) !== texte) return undefined
-	return new Date(debut.getTime() + JOURS_DE_NETTOYAGE * 24 * 3600 * 1000)
+export function cleanupEnd(basculeLe: string | undefined): Date | undefined {
+	const text = basculeLe?.trim()
+	if (!text || !/^\d{4}-\d{2}-\d{2}$/.test(text)) return undefined
+	const start = new Date(`${text}T00:00:00Z`)
+	if (Number.isNaN(start.getTime()) || start.toISOString().slice(0, 10) !== text) return undefined
+	return new Date(start.getTime() + CLEANUP_DAYS * 24 * 3600 * 1000)
 }
 
 /** Whether the proxy still expires the old cookies. Unset: yes, without end (the window starts with the switch). */
-export function nettoyageActif(maintenant: Date, basculeLe: string | undefined): boolean {
-	const fin = finDuNettoyage(basculeLe)
-	return fin === undefined || maintenant.getTime() < fin.getTime()
+export function activeCleanup(maintenant: Date, basculeLe: string | undefined): boolean {
+	const end = cleanupEnd(basculeLe)
+	return end === undefined || maintenant.getTime() < end.getTime()
 }
 
 /**
  * The paths the cleaning does not touch: the back-office, the API, the files of Next and every
  * file with an extension. A cookie set there would also reach a cache (U64).
  */
-export function cheminSansNettoyage(chemin: string): boolean {
+export function pathWithoutCleanup(chemin: string): boolean {
 	if (chemin === '/admin' || chemin.startsWith('/admin/')) return true
 	if (chemin === '/api' || chemin.startsWith('/api/')) return true
 	if (chemin === '/_next' || chemin.startsWith('/_next/')) return true
@@ -88,7 +88,7 @@ export function cheminSansNettoyage(chemin: string): boolean {
 }
 
 /** What the proxy does with a request for the cleaning. */
-export type PlanDeNettoyage = {
+export type CleanupPlan = {
 	/** The old cookies to expire. */
 	aEffacer: string[]
 	/** Give the sign-in page the header that shows the message. */
@@ -103,29 +103,29 @@ export type PlanDeNettoyage = {
  * The message is shown once: on the sign-in page, when the old cookies come with this very request or when an
  * earlier request left the reminder. A prefetch (Next fetching a link in advance) neither shows it nor uses it up.
  */
-export function planDeNettoyage(requete: {
+export function cleanupPlan(requete: {
 	chemin: string
 	noms: Iterable<string>
 	prechargement: boolean
 	maintenant: Date
 	basculeLe: string | undefined
-}): PlanDeNettoyage {
-	const rien: PlanDeNettoyage = {
+}): CleanupPlan {
+	const nothing: CleanupPlan = {
 		aEffacer: [],
 		afficherLeMessage: false,
 		retenirLeMessage: false,
 		oublierLeMessage: false,
 	}
-	const noms = [...requete.noms]
-	const rappel = noms.includes(COOKIE_DE_MESSAGE)
-	if (cheminSansNettoyage(requete.chemin) || !nettoyageActif(requete.maintenant, requete.basculeLe)) return rien
-	const aEffacer = cookiesHeritesPresents(noms)
-	if (aEffacer.length === 0 && !rappel) return rien
-	const surLaConnexion = requete.chemin === '/auth/signin' && !requete.prechargement
+	const names = [...requete.noms]
+	const hasMessageCookie = names.includes(MESSAGE_COOKIE)
+	if (pathWithoutCleanup(requete.chemin) || !activeCleanup(requete.maintenant, requete.basculeLe)) return nothing
+	const toClear = legacyCookiesPresent(names)
+	if (toClear.length === 0 && !hasMessageCookie) return nothing
+	const onSignIn = requete.chemin === '/auth/signin' && !requete.prechargement
 	return {
-		aEffacer,
-		afficherLeMessage: surLaConnexion,
-		retenirLeMessage: aEffacer.length > 0 && !surLaConnexion,
-		oublierLeMessage: rappel && surLaConnexion,
+		aEffacer: toClear,
+		afficherLeMessage: onSignIn,
+		retenirLeMessage: toClear.length > 0 && !onSignIn,
+		oublierLeMessage: hasMessageCookie && onSignIn,
 	}
 }

@@ -2,7 +2,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { withPayload } from '@payloadcms/next/withPayload'
 import type { NextConfig } from 'next'
-import { enTetesEspace } from './src/lib/auth/dashboard-headers'
+import { dashboardHeaders } from './src/lib/auth/dashboard-headers'
 import { mediaOrigin } from './src/lib/env'
 import { imagesDuBanc, mediaRemotePattern, securityHeaders } from './src/lib/security-headers'
 
@@ -55,7 +55,7 @@ const nextConfig: NextConfig = {
 	headers: async () => [
 		{ source: '/:path*', headers: securityHeaders({ development, mediaOrigin: media }) },
 		// The authentication pages and the space: never cached, never indexed (tickets 074 and 075).
-		{ source: '/auth/:path*', headers: enTetesEspace() },
+		{ source: '/auth/:path*', headers: dashboardHeaders() },
 	],
 }
 

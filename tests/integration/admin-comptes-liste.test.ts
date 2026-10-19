@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { Pros } from '../../src/collections/Pros'
-import { lienDuFiltre } from '../../src/lib/account/admin-filters'
+import { filterLink } from '../../src/lib/account/admin-filters'
 import { poserLeJeuDuBanc } from '../fixtures/jeu-du-banc'
 import { creerCompte } from '../outils/fabrique-comptes'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
@@ -72,7 +72,7 @@ describe('La liste des comptes de l’admin (ticket 168)', () => {
 			select: { pro: true },
 		})
 		const proprietaires = profils.docs.map(({ pro }) => (typeof pro === 'object' ? pro.id : pro))
-		const lien = lienDuFiltre('sans-profil', proprietaires).split('?')[1] ?? ''
+		const lien = filterLink('sans-profil', proprietaires).split('?')[1] ?? ''
 		expect((await emails(lien)).join()).toBe('jeu-maquilleuse-sans-profil@example.test')
 		// Combined: an unconfirmed account that is also blocked does not exist in the set.
 		expect(

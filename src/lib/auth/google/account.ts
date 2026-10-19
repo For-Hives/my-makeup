@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto'
 import { commitTransaction, createLocalReq, initTransaction, killTransaction, type Payload } from 'payload'
-import { EMAIL_MAX, NOM_MAX } from '../sign-up'
-import type { Revendications } from './oidc'
+import { EMAIL_MAX, MAX_NAME_LENGTH } from '../sign-up'
+import type { Claims } from './oidc'
 
 /**
  * The account behind a Google identity (tickets 090 and 091).
@@ -24,38 +24,38 @@ import type { Revendications } from './oidc'
  * Nothing here logs. No `next` import.
  */
 
-export type CodeRefusDuCompte = 'email-non-verifie' | 'compte-refuse' | 'compte-bloque' | 'service-indisponible'
+export type AccountRefusalCode = 'email-non-verifie' | 'compte-refuse' | 'compte-bloque' | 'service-indisponible'
 
-export type ResultatDuCompte =
+export type AccountResult =
 	| { ok: true; id: number | string; nouveau: boolean }
-	| { ok: false; code: CodeRefusDuCompte }
+	| { ok: false; code: AccountRefusalCode }
 
 /** How many times a creation is tried when only a collision of slugs stands in its way. */
-const ESSAIS_MAX = 3
+const MAX_ATTEMPTS = 3
 
-const FOURNISSEUR_GOOGLE = 'google'
+const GOOGLE_PROVIDER = 'google'
 
 /** The address as the account stores it, or nothing when it is not one we accept. */
-export function adresseNormalisee(brute: string | undefined): string | undefined {
-	const adresse = brute?.trim().toLowerCase()
-	if (!adresse || adresse.length > EMAIL_MAX || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adresse)) return undefined
-	return adresse
+export function normalizedAddress(brute: string | undefined): string | undefined {
+	const address = brute?.trim().toLowerCase()
+	if (!address || address.length > EMAIL_MAX || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address)) return undefined
+	return address
 }
 
 /** The name shown for the account: Google's, else the part of the address before the @. */
-export function nomDuCompte(revendications: Revendications, adresse: string): string {
-	const nom = revendications.nom?.replace(/\s+/g, ' ').trim() || (adresse.split('@')[0] ?? '')
-	return Array.from(nom).slice(0, NOM_MAX).join('')
+export function accountName(revendications: Claims, adresse: string): string {
+	const name = revendications.nom?.replace(/\s+/g, ' ').trim() || (adresse.split('@')[0] ?? '')
+	return Array.from(name).slice(0, MAX_NAME_LENGTH).join('')
 }
 
-interface CompteTrouve {
+interface AccountFound {
 	id: number | string
 	blocked?: boolean | null
 	legacyProvider?: string | null
 	_verified?: boolean | null
 }
 
-async function chercher(payload: Payload, adresse: string): Promise<CompteTrouve | undefined> {
+async function find(payload: Payload, adresse: string): Promise<AccountFound | undefined> {
 	const { docs } = await payload.find({
 		collection: 'pros',
 		depth: 0,
@@ -64,19 +64,19 @@ async function chercher(payload: Payload, adresse: string): Promise<CompteTrouve
 		pagination: false,
 		where: { email: { equals: adresse } },
 	})
-	return docs[0] as CompteTrouve | undefined
+	return docs[0] as AccountFound | undefined
 }
 
-export async function compteDeGoogle(payload: Payload, revendications: Revendications): Promise<ResultatDuCompte> {
-	const adresse = adresseNormalisee(revendications.email)
-	if (!revendications.emailVerifie || adresse === undefined) return { ok: false, code: 'email-non-verifie' }
+export async function googleAccount(payload: Payload, revendications: Claims): Promise<AccountResult> {
+	const address = normalizedAddress(revendications.email)
+	if (!revendications.emailVerifie || address === undefined) return { ok: false, code: 'email-non-verifie' }
 
 	try {
-		for (let essai = 1; essai <= ESSAIS_MAX; essai++) {
-			const connu = await chercher(payload, adresse)
-			if (connu) return await accueillir(payload, connu)
-			const cree = await creer(payload, adresse, nomDuCompte(revendications, adresse))
-			if (cree.ok) return cree
+		for (let trial = 1; trial <= MAX_ATTEMPTS; trial++) {
+			const known = await find(payload, address)
+			if (known) return await welcome(payload, known)
+			const created = await create(payload, address, accountName(revendications, address))
+			if (created.ok) return created
 		}
 	} catch {
 		// Not the visitor's to see: she is told the service is down.
@@ -85,10 +85,10 @@ export async function compteDeGoogle(payload: Payload, revendications: Revendica
 }
 
 /** An account that exists: it opens a session if it came from Google and is not blocked. */
-async function accueillir(payload: Payload, compte: CompteTrouve): Promise<ResultatDuCompte> {
+async function welcome(payload: Payload, compte: AccountFound): Promise<AccountResult> {
 	// Blocked first: whoever proves the address on Google is told why the account stays shut.
 	if (compte.blocked === true) return { ok: false, code: 'compte-bloque' }
-	if (compte.legacyProvider !== FOURNISSEUR_GOOGLE) return { ok: false, code: 'compte-refuse' }
+	if (compte.legacyProvider !== GOOGLE_PROVIDER) return { ok: false, code: 'compte-refuse' }
 	// Google has just vouched for the address: an account still marked unconfirmed is confirmed, or
 	// Payload would ignore the session it is about to receive.
 	// Written by the adapter: `payload.update` would write the sessions back as it read them, erasing
@@ -98,15 +98,15 @@ async function accueillir(payload: Payload, compte: CompteTrouve): Promise<Resul
 	return { ok: true, id: compte.id, nouveau: false }
 }
 
-async function creer(
+async function create(
 	payload: Payload,
 	adresse: string,
 	nom: string
-): Promise<ResultatDuCompte | { ok: false; code: 'service-indisponible' }> {
+): Promise<AccountResult | { ok: false; code: 'service-indisponible' }> {
 	const req = await createLocalReq({}, payload)
 	await initTransaction(req)
 	try {
-		const compte = await payload.create({
+		const account = await payload.create({
 			collection: 'pros',
 			data: {
 				email: adresse,
@@ -114,7 +114,7 @@ async function creer(
 				password: randomBytes(48).toString('base64url'),
 				name: nom,
 				_verified: true,
-				legacyProvider: FOURNISSEUR_GOOGLE,
+				legacyProvider: GOOGLE_PROVIDER,
 			},
 			depth: 0,
 			disableVerificationEmail: true,
@@ -122,7 +122,7 @@ async function creer(
 			req,
 		})
 		await commitTransaction(req)
-		return { ok: true, id: compte.id, nouveau: true }
+		return { ok: true, id: account.id, nouveau: true }
 	} catch {
 		await killTransaction(req)
 		// The address was taken a moment ago (the next try finds that account), or the slug was.

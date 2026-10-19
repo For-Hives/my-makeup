@@ -1,5 +1,5 @@
 import { expect, type Page, test } from '@playwright/test'
-import { lireExpiration, SURVIE_DU_COOKIE_APRES_FIN_S } from '../../src/lib/auth/session-state'
+import { readExpiration, COOKIE_SURVIVAL_AFTER_END_S } from '../../src/lib/auth/session-state'
 import { creerCompte } from '../outils/fabrique-comptes'
 import { payloadDeTest } from '../outils/payload-test'
 import { ouvrirSessionSansMotDePasse } from '../outils/session'
@@ -169,9 +169,9 @@ test.describe('le cookie posé par la connexion', () => {
 
 		const cookie = (await context.cookies()).find(c => c.name === 'payload-token')
 		if (!cookie) throw new Error('pas de cookie de session')
-		const finDuJeton = lireExpiration(cookie.value)
+		const finDuJeton = readExpiration(cookie.value)
 		if (finDuJeton === null) throw new Error('jeton illisible')
 		// 90 days of grace, give or take the clock of the browser.
-		expect(cookie.expires - finDuJeton).toBeGreaterThan(SURVIE_DU_COOKIE_APRES_FIN_S - 60)
+		expect(cookie.expires - finDuJeton).toBeGreaterThan(COOKIE_SURVIVAL_AFTER_END_S - 60)
 	})
 })

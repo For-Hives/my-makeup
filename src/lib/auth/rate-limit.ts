@@ -20,7 +20,7 @@
  * Keys come from `ipClient` and are never logged.
  */
 
-export interface ReglesDuFrein {
+export interface RateLimitRules {
 	/** Names the counters: two brakes of the same name share them. */
 	nom: string
 	/** Places per key and per window. */
@@ -32,7 +32,7 @@ export interface ReglesDuFrein {
 
 export type Decision = { autorise: true } | { autorise: false; reessayerDansS: number }
 
-export interface Frein {
+export interface RateLimit {
 	/** Takes a place for this key, or says when to come back. */
 	prendre(cle: string, maintenant?: number): Decision
 	/** Gives back the latest place of this key: the attempt succeeded. */
@@ -41,66 +41,66 @@ export interface Frein {
 	vider(): void
 }
 
-const CLES_PAR_DEFAUT = 50_000
+const DEFAULT_KEYS = 50_000
 
-const REGISTRE = Symbol.for('my-makeup.freins')
-type Registre = Map<string, Map<string, number[]>>
+const REGISTRY = Symbol.for('my-makeup.freins')
+type Registry = Map<string, Map<string, number[]>>
 
-function compteurs(nom: string): Map<string, number[]> {
-	const g = globalThis as { [REGISTRE]?: Registre }
-	g[REGISTRE] ??= new Map()
-	let table = g[REGISTRE].get(nom)
+function counters(nom: string): Map<string, number[]> {
+	const g = globalThis as { [REGISTRY]?: Registry }
+	g[REGISTRY] ??= new Map()
+	let table = g[REGISTRY].get(nom)
 	if (!table) {
 		table = new Map()
-		g[REGISTRE].set(nom, table)
+		g[REGISTRY].set(nom, table)
 	}
 	return table
 }
 
-export function creerFrein({ nom, limite, fenetreMs, clesMax = CLES_PAR_DEFAUT }: ReglesDuFrein): Frein {
+export function createRateLimit({ nom, limite, fenetreMs, clesMax = DEFAULT_KEYS }: RateLimitRules): RateLimit {
 	// Looked up at each call: `vider` and a second brake of the same name see the same table.
-	const recents = (cle: string, maintenant: number): number[] => {
-		const table = compteurs(nom)
-		const gardes = (table.get(cle) ?? []).filter(t => t > maintenant - fenetreMs)
-		if (gardes.length === 0) table.delete(cle)
-		else table.set(cle, gardes)
-		return gardes
+	const recent = (cle: string, maintenant: number): number[] => {
+		const table = counters(nom)
+		const guards = (table.get(cle) ?? []).filter(t => t > maintenant - fenetreMs)
+		if (guards.length === 0) table.delete(cle)
+		else table.set(cle, guards)
+		return guards
 	}
 	return {
 		prendre(cle, maintenant = Date.now()) {
-			const gardes = recents(cle, maintenant)
-			const premier = gardes[0]
-			if (gardes.length >= limite && premier !== undefined)
-				return { autorise: false, reessayerDansS: Math.max(1, Math.ceil((premier + fenetreMs - maintenant) / 1000)) }
-			const table = compteurs(nom)
-			if (gardes.length === 0 && table.size >= clesMax) {
+			const guards = recent(cle, maintenant)
+			const first = guards[0]
+			if (guards.length >= limite && first !== undefined)
+				return { autorise: false, reessayerDansS: Math.max(1, Math.ceil((first + fenetreMs - maintenant) / 1000)) }
+			const table = counters(nom)
+			if (guards.length === 0 && table.size >= clesMax) {
 				// Refusing the newcomer would give whoever fills the table the very lockout this brick avoids.
-				const plusAncienne = table.keys().next().value
-				if (plusAncienne !== undefined) table.delete(plusAncienne)
+				const oldest = table.keys().next().value
+				if (oldest !== undefined) table.delete(oldest)
 			}
-			table.set(cle, [...gardes, maintenant])
+			table.set(cle, [...guards, maintenant])
 			return { autorise: true }
 		},
 		rendre(cle, maintenant = Date.now()) {
-			const gardes = recents(cle, maintenant)
-			if (gardes.length === 0) return
-			compteurs(nom).set(cle, gardes.slice(0, -1))
-			if (gardes.length === 1) compteurs(nom).delete(cle)
+			const guards = recent(cle, maintenant)
+			if (guards.length === 0) return
+			counters(nom).set(cle, guards.slice(0, -1))
+			if (guards.length === 1) counters(nom).delete(cle)
 		},
 		vider() {
-			compteurs(nom).clear()
+			counters(nom).clear()
 		},
 	}
 }
 
 /** The sign-in: 10 failures per address and per 15 minutes (plan 01 §2.3). */
-export const freinDeConnexion: Frein = creerFrein({ nom: 'connexion', limite: 10, fenetreMs: 15 * 60 * 1000 })
+export const signInRateLimit: RateLimit = createRateLimit({ nom: 'connexion', limite: 10, fenetreMs: 15 * 60 * 1000 })
 
 /** The request of a link for a forgotten password: 10 per address and per 15 minutes, every request counted (ticket 086). */
-export const freinDeLOubli: Frein = creerFrein({ nom: 'mot-de-passe-oublie', limite: 10, fenetreMs: 15 * 60 * 1000 })
+export const forgotPasswordRateLimit: RateLimit = createRateLimit({ nom: 'mot-de-passe-oublie', limite: 10, fenetreMs: 15 * 60 * 1000 })
 
 /** The choice of the new password: 10 failures per address and per 15 minutes (ticket 086). */
-export const freinDeLaReinitialisation: Frein = creerFrein({
+export const passwordResetRateLimit: RateLimit = createRateLimit({
 	nom: 'reinitialisation',
 	limite: 10,
 	fenetreMs: 15 * 60 * 1000,
@@ -110,4 +110,4 @@ export const freinDeLaReinitialisation: Frein = creerFrein({
  * The return from Google (ticket 223): 10 failed returns per address and per 15 minutes, like the
  * sign-in. A place is taken when the return arrives and given back when it ends in a session.
  */
-export const freinDuRetourGoogle: Frein = creerFrein({ nom: 'retour-google', limite: 10, fenetreMs: 15 * 60 * 1000 })
+export const googleCallbackRateLimit: RateLimit = createRateLimit({ nom: 'retour-google', limite: 10, fenetreMs: 15 * 60 * 1000 })

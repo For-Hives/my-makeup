@@ -5,16 +5,16 @@ import { contenuEmailConfirmation } from '../emails/confirmation'
 import { contenuEmailDejaInscrite } from '../emails/deja-inscrite'
 import { EnvoiEmailEchoue, type EnvoyerEmail } from '../emails/envoi'
 import { composerEmail } from '../emails/gabarit'
-import { type CompteTrouve, trouverLeCompte } from './account-by-email'
-import { cleDeBoite } from './canonical-email'
-import { FREINS_DE_BOITE, type FreinsDeBoite, prendreUnMailPour } from './sign-up-rate-limits'
+import { type AccountFound, findAccount } from './account-by-email'
+import { mailboxKey } from './canonical-email'
+import { MAILBOX_RATE_LIMITS, type MailboxRateLimits, takeMailFor } from './sign-up-rate-limits'
 import {
-	type CodeEchecInscription,
-	type DonneesInscription,
-	type ErreursInscription,
-	MESSAGES_INSCRIPTION,
+	type SignUpFailureCode,
+	type SignUpData,
+	type SignUpErrors,
+	SIGN_UP_MESSAGES,
 } from './sign-up'
-import type { CodeEvenement, Journaliser } from './auth-log'
+import type { EventCode, Log } from './auth-log'
 
 /**
  * The sign-up of a makeup artist, once the form has been checked (tickets 082, 083 and 084).
@@ -39,39 +39,39 @@ import type { CodeEvenement, Journaliser } from './auth-log'
  */
 
 /** How many times a sign-up is tried when only a collision of slugs stands in its way. */
-const ESSAIS_MAX = 3
+const MAX_ATTEMPTS = 3
 
 /**
  * The least time a sign-up takes, whatever its outcome. A new address creates an account and sends
  * a mail; a taken one only sends a mail: the floor hides the difference. It must stay above what
  * the slower of the two takes with the relay in use.
  */
-export const PLANCHER_INSCRIPTION_MS = 1500
+export const SIGN_UP_FLOOR_MS = 1500
 
 /**
  * `email-invalide`: Payload refused the form of the address (the form checks it first, so this is a rule
  * the form does not know, ticket 224). The answer is the sentence of the field, under the field.
  */
-export type ResultatDInscription =
+export type SignUpResult =
 	| { ok: true; confirmee: boolean }
-	| { ok: false; code: CodeEchecInscription }
-	| { ok: false; code: 'email-invalide'; erreurs: ErreursInscription }
+	| { ok: false; code: SignUpFailureCode }
+	| { ok: false; code: 'email-invalide'; erreurs: SignUpErrors }
 
 /** Why one try failed: a code of the sign-up, or a refusal of the address by its form. */
-type CodeDeTentative = CodeEchecInscription | 'email-invalide'
+type AttemptCode = SignUpFailureCode | 'email-invalide'
 
-export interface EntreesDInscription {
+export interface SignUpInputs {
 	payload: Payload
-	donnees: DonneesInscription
+	donnees: SignUpData
 	verifier: boolean
 	envoyer: EnvoyerEmail
 	/** The origin the links of the mail are built on: the address of the site. */
 	site: string
-	journal?: Journaliser
+	journal?: Log
 	/** The floor of the duration, in milliseconds. */
 	plancherMs?: number
 	/** The brakes by mailbox; a test hands its own. */
-	freins?: FreinsDeBoite
+	freins?: MailboxRateLimits
 }
 
 /**
@@ -79,7 +79,7 @@ export interface EntreesDInscription {
  * unique index, in French (the language of the site) and in English (what Payload writes when no
  * translation reaches it). A refusal of the form of the email says none of them.
  */
-const PHRASES_D_UNICITE: ReadonlySet<string> = new Set([
+const UNIQUENESS_PHRASES: ReadonlySet<string> = new Set([
 	fr.translations.error.userEmailAlreadyRegistered,
 	fr.translations.error.valueMustBeUnique,
 	en.translations.error.userEmailAlreadyRegistered,
@@ -87,9 +87,9 @@ const PHRASES_D_UNICITE: ReadonlySet<string> = new Set([
 ])
 
 /** True for any refusal of Payload that names the field `email`. */
-function estUneErreurSurLEmail(erreur: unknown): boolean {
-	const erreurs = (erreur as { data?: { errors?: { path?: string }[] } } | null)?.data?.errors
-	return Array.isArray(erreurs) && erreurs.some(({ path }) => path === 'email')
+function isEmailError(erreur: unknown): boolean {
+	const errors = (erreur as { data?: { errors?: { path?: string }[] } } | null)?.data?.errors
+	return Array.isArray(errors) && errors.some(({ path }) => path === 'email')
 }
 
 /**
@@ -97,120 +97,120 @@ function estUneErreurSurLEmail(erreur: unknown): boolean {
  * for it: a refusal on the `email` path that is about its form (« veuillez entrer une adresse valide »)
  * is not « déjà utilisée » (ticket 224).
  */
-export function estUneAdresseDejaPrise(erreur: unknown): boolean {
-	const erreurs = (erreur as { data?: { errors?: { path?: string; message?: unknown }[] } } | null)?.data?.errors
+export function isAddressAlreadyTaken(erreur: unknown): boolean {
+	const errors = (erreur as { data?: { errors?: { path?: string; message?: unknown }[] } } | null)?.data?.errors
 	return (
-		Array.isArray(erreurs) &&
-		erreurs.some(
-			({ path, message }) => path === 'email' && typeof message === 'string' && PHRASES_D_UNICITE.has(message)
+		Array.isArray(errors) &&
+		errors.some(
+			({ path, message }) => path === 'email' && typeof message === 'string' && UNIQUENESS_PHRASES.has(message)
 		)
 	)
 }
 
-export function codeDeLEchec(erreur: unknown): CodeDeTentative {
-	if (estUneAdresseDejaPrise(erreur)) return 'email-deja-pris'
-	if (estUneErreurSurLEmail(erreur)) return 'email-invalide'
+export function failureCode(erreur: unknown): AttemptCode {
+	if (isAddressAlreadyTaken(erreur)) return 'email-deja-pris'
+	if (isEmailError(erreur)) return 'email-invalide'
 	if (erreur instanceof EnvoiEmailEchoue) return 'email-non-envoye'
 	return 'service-indisponible'
 }
 
 /** Waits until `instant` (a clock reading in milliseconds); nothing when it is past. */
-export const attendreJusqua = (instant: number): Promise<void> =>
+export const waitUntil = (instant: number): Promise<void> =>
 	new Promise(resolve => setTimeout(resolve, Math.max(0, instant - Date.now())))
 
-export async function inscrire({
+export async function signUpAccount({
 	payload,
 	donnees,
 	verifier,
 	envoyer,
 	site,
 	journal,
-	plancherMs = PLANCHER_INSCRIPTION_MS,
-	freins = FREINS_DE_BOITE,
-}: EntreesDInscription): Promise<ResultatDInscription> {
-	const debut = Date.now()
-	const noter = async (code: CodeEvenement) => {
+	plancherMs = SIGN_UP_FLOOR_MS,
+	freins = MAILBOX_RATE_LIMITS,
+}: SignUpInputs): Promise<SignUpResult> {
+	const start = Date.now()
+	const record = async (code: EventCode) => {
 		try {
-			await journal?.({ type: 'sign-up', code, durationMs: Date.now() - debut, method: 'password' })
+			await journal?.({ type: 'sign-up', code, durationMs: Date.now() - start, method: 'password' })
 		} catch {
 			// The journal is not the sign-up's to fail.
 		}
 	}
-	const resultat = await traiter()
+	const result = await handle()
 	// Last, after the journal: whatever happened, the answer leaves no sooner than the floor.
-	await attendreJusqua(debut + plancherMs)
-	return resultat
+	await waitUntil(start + plancherMs)
+	return result
 
-	async function traiter(): Promise<ResultatDInscription> {
+	async function handle(): Promise<SignUpResult> {
 		try {
-			const existant = await trouverLeCompte(payload, donnees.email)
-			if (existant) return await dejaPris(existant)
+			const existing = await findAccount(payload, donnees.email)
+			if (existing) return await alreadyTaken(existing)
 		} catch {
-			await noter('service-indisponible')
+			await record('service-indisponible')
 			return { ok: false, code: 'service-indisponible' }
 		}
 		// Two homonyms who sign up at the same moment compute the same free slug, and the second write
 		// breaks the unicity of the slug: the whole transaction is rolled back, and the next try sees the
 		// slug taken. The address and the mail are never retried: their refusal is the answer.
-		let code: CodeDeTentative = 'service-indisponible'
-		for (let essai = 1; essai <= ESSAIS_MAX; essai++) {
-			const echec = await tenter()
-			if (echec === undefined) {
+		let code: AttemptCode = 'service-indisponible'
+		for (let trial = 1; trial <= MAX_ATTEMPTS; trial++) {
+			const failure = await attempt()
+			if (failure === undefined) {
 				// The new address takes a place in the mailbox brakes, exactly as the « déjà un compte » mail
 				// of a taken one does: a resend asked right after reads the same answer for both, so the
 				// wall cannot be used to tell them apart. The result does not matter, this mail has left.
-				if (verifier) prendreUnMailPour(cleDeBoite(donnees.email), freins)
-				await noter('ok')
+				if (verifier) takeMailFor(mailboxKey(donnees.email), freins)
+				await record('ok')
 				return { ok: true, confirmee: !verifier }
 			}
-			code = echec
+			code = failure
 			if (code === 'email-deja-pris') {
 				// Two sign-ups with the same address at the same moment: the other one won. Told only if
 				// the address really has an account now (any other refusal on the email is not that).
-				const gagnant = await trouverLeCompte(payload, donnees.email).catch(() => undefined)
-				if (gagnant) return await dejaPris(gagnant)
+				const winner = await findAccount(payload, donnees.email).catch(() => undefined)
+				if (winner) return await alreadyTaken(winner)
 				code = 'service-indisponible'
 			}
 			if (code !== 'service-indisponible') break
 		}
 		if (code === 'email-invalide') {
 			// The sentence of the field, the one the form gives for an address it refuses (never Payload's own words).
-			await noter('donnees-invalides')
-			return { ok: false, code, erreurs: { email: MESSAGES_INSCRIPTION.email.invalide } }
+			await record('donnees-invalides')
+			return { ok: false, code, erreurs: { email: SIGN_UP_MESSAGES.email.invalide } }
 		}
-		await noter(code === 'email-non-envoye' ? 'service-indisponible' : code)
+		await record(code === 'email-non-envoye' ? 'service-indisponible' : code)
 		return { ok: false, code }
 	}
 
 	/** The address has an account. Neutral when the confirmation is on, honest when it is off. */
-	async function dejaPris(compte: CompteTrouve): Promise<ResultatDInscription> {
+	async function alreadyTaken(compte: AccountFound): Promise<SignUpResult> {
 		if (!verifier) {
-			await noter('email-deja-pris')
+			await record('email-deja-pris')
 			return { ok: false, code: 'email-deja-pris' }
 		}
-		if (prendreUnMailPour(cleDeBoite(compte.email), freins).autorise) {
+		if (takeMailFor(mailboxKey(compte.email), freins).autorise) {
 			// An account still waiting for its confirmation gets its link again (she lost the first mail);
 			// a confirmed one is told she has an account. The same choice as the resend (`renvoi.ts`).
-			const contenu =
+			const content =
 				!compte.verifie && compte.jeton ? contenuEmailConfirmation(compte.jeton) : contenuEmailDejaInscrite()
 			try {
-				await envoyer({ a: compte.email, ...composerEmail(contenu, site) })
-			} catch (erreur) {
+				await envoyer({ a: compte.email, ...composerEmail(content, site) })
+			} catch (error) {
 				// The same refusal as a new address whose mail cannot leave: a relay in trouble splits nothing.
-				await noter('service-indisponible')
-				return { ok: false, code: erreur instanceof EnvoiEmailEchoue ? 'email-non-envoye' : 'service-indisponible' }
+				await record('service-indisponible')
+				return { ok: false, code: error instanceof EnvoiEmailEchoue ? 'email-non-envoye' : 'service-indisponible' }
 			}
 		}
-		await noter('email-deja-pris')
+		await record('email-deja-pris')
 		return { ok: true, confirmee: false }
 	}
 
 	/** One try, in its own transaction: nothing when it succeeded, the code of its failure otherwise. */
-	async function tenter(): Promise<CodeDeTentative | undefined> {
+	async function attempt(): Promise<AttemptCode | undefined> {
 		const req = await createLocalReq({}, payload)
 		await initTransaction(req)
 		try {
-			const compte = await payload.create({
+			const account = await payload.create({
 				collection: 'pros',
 				data: { email: donnees.email, password: donnees.password, name: donnees.nom, _verified: !verifier },
 				depth: 0,
@@ -220,22 +220,22 @@ export async function inscrire({
 			})
 			if (verifier) {
 				// The token is hidden from every read: the adapter gives it to the server alone.
-				const ligne = await payload.db.findOne<{ id: number; _verificationToken?: string | null }>({
+				const row = await payload.db.findOne<{ id: number; _verificationToken?: string | null }>({
 					collection: 'pros',
 					req,
-					where: { id: { equals: compte.id } },
+					where: { id: { equals: account.id } },
 				})
-				if (!ligne?._verificationToken) throw new Error('Le jeton de confirmation manque.')
+				if (!row?._verificationToken) throw new Error('Le jeton de confirmation manque.')
 				await envoyer(
-					{ a: donnees.email, ...composerEmail(contenuEmailConfirmation(ligne._verificationToken), site) },
+					{ a: donnees.email, ...composerEmail(contenuEmailConfirmation(row._verificationToken), site) },
 					{ context: req.context }
 				)
 			}
 			await commitTransaction(req)
 			return undefined
-		} catch (erreur) {
+		} catch (error) {
 			await killTransaction(req)
-			return codeDeLEchec(erreur)
+			return failureCode(error)
 		}
 	}
 }

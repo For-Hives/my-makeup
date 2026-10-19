@@ -1,6 +1,6 @@
 import { createLocalReq, logoutOperation, type Payload } from 'payload'
 import { COLLECTION_PROS } from '../acces'
-import type { Journaliser } from './auth-log'
+import type { Log } from './auth-log'
 
 /**
  * The sign-out of a makeup artist (ticket 078): the session is removed from the database, so the
@@ -18,27 +18,27 @@ import type { Journaliser } from './auth-log'
  * No `next` import: the tests load this file too. The Server Action that calls it clears the cookie.
  */
 
-export type ResultatDeDeconnexion = { ok: true; fermee: boolean } | { ok: false }
+export type SignOutResult = { ok: true; fermee: boolean } | { ok: false }
 
-export interface EntreesDeDeconnexion {
+export interface SignOutInputs {
 	payload: Payload
 	headers: Headers
 	/** Every session of the account instead of this one. */
 	toutes: boolean
-	journal?: Journaliser
+	journal?: Log
 }
 
-export async function fermerLaSession({
+export async function closeSession({
 	payload,
 	headers,
 	toutes,
 	journal,
-}: EntreesDeDeconnexion): Promise<ResultatDeDeconnexion> {
-	const debut = Date.now()
+}: SignOutInputs): Promise<SignOutResult> {
+	const start = Date.now()
 	const type = toutes ? 'sign-out-everywhere' : 'sign-out'
-	const noter = async (code: 'ok' | 'service-indisponible') => {
+	const record = async (code: 'ok' | 'service-indisponible') => {
 		try {
-			await journal?.({ type, code, durationMs: Date.now() - debut })
+			await journal?.({ type, code, durationMs: Date.now() - start })
 		} catch {
 			// The journal is not the sign-out's to fail.
 		}
@@ -46,19 +46,19 @@ export async function fermerLaSession({
 	try {
 		const { user } = await payload.auth({ headers })
 		if (!user || user.collection !== COLLECTION_PROS) return { ok: true, fermee: false }
-		const ferme = await logoutOperation({
+		const closed = await logoutOperation({
 			allSessions: toutes,
 			collection: payload.collections[COLLECTION_PROS],
 			req: await createLocalReq({ user }, payload),
 		})
-		if (!ferme) {
-			await noter('service-indisponible')
+		if (!closed) {
+			await record('service-indisponible')
 			return { ok: false }
 		}
-		await noter('ok')
+		await record('ok')
 		return { ok: true, fermee: true }
 	} catch {
-		await noter('service-indisponible')
+		await record('service-indisponible')
 		return { ok: false }
 	}
 }

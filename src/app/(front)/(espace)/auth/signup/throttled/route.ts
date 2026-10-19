@@ -1,9 +1,9 @@
 import config from '@payload-config'
 import { getPayload } from 'payload'
-import { MESSAGES_ECHEC_INSCRIPTION } from '@/lib/auth/sign-up'
+import { SIGN_UP_FAILURE_MESSAGES } from '@/lib/auth/sign-up'
 import { ipClient } from '@/lib/auth/client-ip'
-import { journalDe } from '@/lib/auth/auth-log'
-import { journaliserUnRefus, secondesAvantUneInscription } from '@/lib/auth/sign-up-refusal'
+import { authLog } from '@/lib/auth/auth-log'
+import { logRefusal, secondsBeforeSignUp } from '@/lib/auth/sign-up-refusal'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,19 +17,19 @@ export const dynamic = 'force-dynamic'
  */
 export async function POST(requete: Request): Promise<Response> {
 	const client = ipClient(requete.headers)
-	const attente = secondesAvantUneInscription(client)
+	const wait = secondsBeforeSignUp(client)
 	// Only a client past its 5 sign-ups finds this route: for anyone else it does not exist.
-	if (attente === undefined) return new Response(null, { status: 404 })
+	if (wait === undefined) return new Response(null, { status: 404 })
 	const payload = await getPayload({ config })
-	await journaliserUnRefus(journalDe(payload), client, 'sign-up', 'trop-de-tentatives')
-	const message = MESSAGES_ECHEC_INSCRIPTION['trop-de-tentatives']
-	const entetes = { 'cache-control': 'no-store', 'retry-after': String(attente) }
+	await logRefusal(authLog(payload), client, 'sign-up', 'trop-de-tentatives')
+	const message = SIGN_UP_FAILURE_MESSAGES['trop-de-tentatives']
+	const requestHeaders = { 'cache-control': 'no-store', 'retry-after': String(wait) }
 	// The script of Next reads the message of a failed action only from a response typed exactly
 	// `text/plain`; a form posted without script gets a small page instead, in UTF-8.
 	if (requete.headers.has('next-action'))
-		return new Response(message, { status: 429, headers: { ...entetes, 'content-type': 'text/plain' } })
+		return new Response(message, { status: 429, headers: { ...requestHeaders, 'content-type': 'text/plain' } })
 	return new Response(
 		`<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="robots" content="noindex"><title>Trop d’inscriptions</title></head><body><p>${message}</p></body></html>`,
-		{ status: 429, headers: { ...entetes, 'content-type': 'text/html; charset=utf-8' } }
+		{ status: 429, headers: { ...requestHeaders, 'content-type': 'text/html; charset=utf-8' } }
 	)
 }

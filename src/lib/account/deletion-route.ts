@@ -1,6 +1,6 @@
 import { type Endpoint, Forbidden } from 'payload'
 import { estAdmin, identifiantPossible } from '../acces'
-import { supprimerLeCompteEtToutCeQuiEnDepend } from './deletion'
+import { deleteAccountAndDependents } from './deletion'
 
 /**
  * `DELETE /api/pros/:id`: the admin deletes the account of a makeup artist, a fake one for example
@@ -16,15 +16,15 @@ import { supprimerLeCompteEtToutCeQuiEnDepend } from './deletion'
  * not exist (any more). When the storage fails nothing is deleted and the answer is a 503 in French.
  * The shape of a success is Payload's own, which the panel reads.
  */
-export const supprimerUnCompte: Endpoint = {
+export const deleteAccount: Endpoint = {
 	path: '/:id',
 	method: 'delete',
 	handler: async req => {
 		const id = req.routeParams?.id
 		if (!estAdmin(req.user) || typeof id !== 'string' || !identifiantPossible(id)) throw new Forbidden(req.t)
-		const bilan = await supprimerLeCompteEtToutCeQuiEnDepend(req.payload, Number(id))
-		if (!bilan.supprime) return Response.json({ errors: [{ message: 'Ce compte n’existe plus.' }] }, { status: 404 })
-		req.payload.logger.info(`[suppression] account ${id} deleted by an admin, ${bilan.profils} profile(s) with it`)
+		const summary = await deleteAccountAndDependents(req.payload, Number(id))
+		if (!summary.supprime) return Response.json({ errors: [{ message: 'Ce compte n’existe plus.' }] }, { status: 404 })
+		req.payload.logger.info(`[suppression] account ${id} deleted by an admin, ${summary.profils} profile(s) with it`)
 		return Response.json({
 			doc: { id: Number(id) },
 			message: 'Le compte a été supprimé avec son profil et ses photos.',

@@ -1,23 +1,23 @@
 import { describe, expect, test } from 'bun:test'
-import { lienDuFiltre, whereDuFiltre } from '../../src/lib/account/admin-filters'
+import { filterLink, filterWhere } from '../../src/lib/account/admin-filters'
 
 /** Ticket 168: the three filters of the list of accounts of the admin panel. */
 describe('Les filtres de la liste des comptes', () => {
 	test('« non confirmés » et « bloqués » lisent les cases stockées', () => {
-		expect(whereDuFiltre('non-confirmes', [])).toEqual({ _verified: { equals: false } })
-		expect(whereDuFiltre('bloques', [1])).toEqual({ blocked: { equals: true } })
-		expect(lienDuFiltre('non-confirmes', [])).toBe('/admin/collections/pros?where[_verified][equals]=false')
-		expect(lienDuFiltre('bloques', [])).toBe('/admin/collections/pros?where[blocked][equals]=true')
+		expect(filterWhere('non-confirmes', [])).toEqual({ _verified: { equals: false } })
+		expect(filterWhere('bloques', [1])).toEqual({ blocked: { equals: true } })
+		expect(filterLink('non-confirmes', [])).toBe('/admin/collections/pros?where[_verified][equals]=false')
+		expect(filterLink('bloques', [])).toBe('/admin/collections/pros?where[blocked][equals]=true')
 	})
 
 	test('« sans profil » écarte les propriétaires de profils, en une valeur à virgules (la forme que le panneau lit)', () => {
-		expect(whereDuFiltre('sans-profil', [3, 7])).toEqual({ id: { not_in: [3, 7] } })
-		expect(lienDuFiltre('sans-profil', [3, 7])).toBe('/admin/collections/pros?where[id][not_in]=3,7')
+		expect(filterWhere('sans-profil', [3, 7])).toEqual({ id: { not_in: [3, 7] } })
+		expect(filterLink('sans-profil', [3, 7])).toBe('/admin/collections/pros?where[id][not_in]=3,7')
 	})
 
 	test('au-delà de 20 propriétaires, le lien les garde tous : le panneau lit une liste d’adresse de 21 entrées ou plus comme un objet (ticket 225)', () => {
 		const proprietaires = Array.from({ length: 190 }, (_, i) => i + 1)
-		const lien = lienDuFiltre('sans-profil', proprietaires)
+		const lien = filterLink('sans-profil', proprietaires)
 		const valeurs = new URLSearchParams(lien.split('?')[1]).getAll('where[id][not_in]')
 
 		// A single parameter, no `[0]`, `[21]`… indices: nothing for `qs` to cut at 20 entries.
@@ -27,7 +27,7 @@ describe('Les filtres de la liste des comptes', () => {
 	})
 
 	test('sans aucun propriétaire, tous les comptes sont sans profil', () => {
-		expect(whereDuFiltre('sans-profil', [])).toEqual({ id: { exists: true } })
-		expect(lienDuFiltre('sans-profil', [])).toBe('/admin/collections/pros?where[id][exists]=true')
+		expect(filterWhere('sans-profil', [])).toEqual({ id: { exists: true } })
+		expect(filterLink('sans-profil', [])).toBe('/admin/collections/pros?where[id][exists]=true')
 	})
 })

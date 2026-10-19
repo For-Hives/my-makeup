@@ -15,17 +15,17 @@ import { z } from 'zod'
  * problem and what to do, in the tone of the space (« tu »). No `next` import.
  */
 
-export const CHAMPS_INSCRIPTION = ['nom', 'email', 'password', 'cgu'] as const
-export type ChampInscription = (typeof CHAMPS_INSCRIPTION)[number]
-export type ErreursInscription = Partial<Record<ChampInscription, string>>
+export const SIGN_UP_FIELDS = ['nom', 'email', 'password', 'cgu'] as const
+export type SignUpField = (typeof SIGN_UP_FIELDS)[number]
+export type SignUpErrors = Partial<Record<SignUpField, string>>
 
-export const MOT_DE_PASSE_MIN = 8
-export const MOT_DE_PASSE_MAX = 255
-export const NOM_MAX = 100
+export const MIN_PASSWORD_LENGTH = 8
+export const MAX_PASSWORD_LENGTH = 255
+export const MAX_NAME_LENGTH = 100
 export const EMAIL_MAX = 255
 
-export const MESSAGES_INSCRIPTION = {
-	nom: { vide: 'Indique ton nom.', long: `Ton nom est trop long (${NOM_MAX} caractères au plus).` },
+export const SIGN_UP_MESSAGES = {
+	nom: { vide: 'Indique ton nom.', long: `Ton nom est trop long (${MAX_NAME_LENGTH} caractères au plus).` },
 	email: {
 		vide: 'Indique ton adresse email.',
 		invalide: 'Cette adresse email n’est pas valide.',
@@ -33,81 +33,81 @@ export const MESSAGES_INSCRIPTION = {
 	},
 	password: {
 		vide: 'Choisis un mot de passe.',
-		court: `Ton mot de passe doit faire au moins ${MOT_DE_PASSE_MIN} caractères.`,
-		long: `Ton mot de passe est trop long (${MOT_DE_PASSE_MAX} caractères au plus).`,
+		court: `Ton mot de passe doit faire au moins ${MIN_PASSWORD_LENGTH} caractères.`,
+		long: `Ton mot de passe est trop long (${MAX_PASSWORD_LENGTH} caractères au plus).`,
 	},
 	cgu: { refusees: 'Pour t’inscrire, accepte les conditions générales.' },
 } as const
 
-const texte = (valeur: unknown): string => (typeof valeur === 'string' ? valeur : '')
+const text = (valeur: unknown): string => (typeof valeur === 'string' ? valeur : '')
 
 const schema = z.object({
-	nom: z.string().trim().min(1, MESSAGES_INSCRIPTION.nom.vide).max(NOM_MAX, MESSAGES_INSCRIPTION.nom.long),
+	nom: z.string().trim().min(1, SIGN_UP_MESSAGES.nom.vide).max(MAX_NAME_LENGTH, SIGN_UP_MESSAGES.nom.long),
 	email: z
 		.string()
 		.trim()
-		.min(1, MESSAGES_INSCRIPTION.email.vide)
-		.max(EMAIL_MAX, MESSAGES_INSCRIPTION.email.long)
-		.pipe(z.email(MESSAGES_INSCRIPTION.email.invalide)),
+		.min(1, SIGN_UP_MESSAGES.email.vide)
+		.max(EMAIL_MAX, SIGN_UP_MESSAGES.email.long)
+		.pipe(z.email(SIGN_UP_MESSAGES.email.invalide)),
 	password: z
 		.string()
-		.min(1, MESSAGES_INSCRIPTION.password.vide)
-		.min(MOT_DE_PASSE_MIN, MESSAGES_INSCRIPTION.password.court)
-		.max(MOT_DE_PASSE_MAX, MESSAGES_INSCRIPTION.password.long),
-	cgu: z.literal(true, MESSAGES_INSCRIPTION.cgu.refusees),
+		.min(1, SIGN_UP_MESSAGES.password.vide)
+		.min(MIN_PASSWORD_LENGTH, SIGN_UP_MESSAGES.password.court)
+		.max(MAX_PASSWORD_LENGTH, SIGN_UP_MESSAGES.password.long),
+	cgu: z.literal(true, SIGN_UP_MESSAGES.cgu.refusees),
 })
 
-export interface DonneesInscription {
+export interface SignUpData {
 	nom: string
 	email: string
 	password: string
 }
 
-export type ValidationInscription =
-	| { ok: true; donnees: DonneesInscription }
-	| { ok: false; erreurs: ErreursInscription }
+export type SignUpValidation =
+	| { ok: true; donnees: SignUpData }
+	| { ok: false; erreurs: SignUpErrors }
 
 /** A checkbox sent by a form is « on » (or its value) when checked, and absent otherwise. */
-const coche = (valeur: unknown): boolean => valeur === 'on' || valeur === 'true' || valeur === true
+const checked = (valeur: unknown): boolean => valeur === 'on' || valeur === 'true' || valeur === true
 
 /** Checks what the form sent (a `FormData` read field by field, or any record). */
-export function validerInscription(entree: {
+export function validateSignUp(entree: {
 	nom?: unknown
 	email?: unknown
 	password?: unknown
 	cgu?: unknown
-}): ValidationInscription {
-	const resultat = schema.safeParse({
-		nom: texte(entree.nom),
-		email: texte(entree.email),
-		password: texte(entree.password),
-		cgu: coche(entree.cgu),
+}): SignUpValidation {
+	const result = schema.safeParse({
+		nom: text(entree.nom),
+		email: text(entree.email),
+		password: text(entree.password),
+		cgu: checked(entree.cgu),
 	})
-	if (resultat.success) {
-		const { nom, email, password } = resultat.data
-		return { ok: true, donnees: { nom, email, password } }
+	if (result.success) {
+		const { nom: name, email, password } = result.data
+		return { ok: true, donnees: { nom: name, email, password } }
 	}
-	const erreurs: ErreursInscription = {}
-	for (const probleme of resultat.error.issues) {
-		const champ = probleme.path[0]
-		if (typeof champ === 'string' && (CHAMPS_INSCRIPTION as readonly string[]).includes(champ)) {
-			const connu = champ as ChampInscription
-			erreurs[connu] ??= probleme.message
+	const errors: SignUpErrors = {}
+	for (const problem of result.error.issues) {
+		const field = problem.path[0]
+		if (typeof field === 'string' && (SIGN_UP_FIELDS as readonly string[]).includes(field)) {
+			const known = field as SignUpField
+			errors[known] ??= problem.message
 		}
 	}
-	return { ok: false, erreurs }
+	return { ok: false, erreurs: errors }
 }
 
 /** The codes of a sign-up that failed for a reason that is not one field, and what each says. The code « email-deja-pris » is the answer only when the confirmation is off (ticket 083). */
-export const CODES_ECHEC_INSCRIPTION = [
+export const SIGN_UP_FAILURE_CODES = [
 	'email-deja-pris',
 	'email-non-envoye',
 	'service-indisponible',
 	'trop-de-tentatives',
 ] as const
-export type CodeEchecInscription = (typeof CODES_ECHEC_INSCRIPTION)[number]
+export type SignUpFailureCode = (typeof SIGN_UP_FAILURE_CODES)[number]
 
-export const MESSAGES_ECHEC_INSCRIPTION: Record<CodeEchecInscription, string> = {
+export const SIGN_UP_FAILURE_MESSAGES: Record<SignUpFailureCode, string> = {
 	'email-deja-pris': 'Cette adresse email est déjà utilisée.',
 	'email-non-envoye':
 		'L’email de confirmation n’a pas pu partir. Ton compte n’est pas créé : réessaie dans un instant.',
@@ -120,4 +120,4 @@ export const MESSAGES_ECHEC_INSCRIPTION: Record<CodeEchecInscription, string> = 
  * fills it is a script. Its name is not one a browser fills by itself (no « url », « phone »,
  * « company », « address »).
  */
-export const CHAMP_PIEGE = 'commentaire'
+export const TRAP_FIELD = 'commentaire'

@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { maquilleuseConnectee } from '@/lib/auth/session'
+import { signedInArtist } from '@/lib/auth/session'
 
 // Read per request: it depends on the session, and the build has no database.
 export const dynamic = 'force-dynamic'
@@ -10,5 +10,5 @@ export const dynamic = 'force-dynamic'
  * current site showed an empty page that the browser then sent on.
  */
 export default async function RacineDeLEspace() {
-	redirect((await maquilleuseConnectee()) ? '/auth/profil' : '/auth/signin')
+	redirect((await signedInArtist()) ? '/auth/profil' : '/auth/signin')
 }

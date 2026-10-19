@@ -1,18 +1,18 @@
 import { describe, expect, test } from 'bun:test'
 import type { Payload } from 'payload'
-import { creerFrein } from '@/lib/auth/rate-limit'
+import { createRateLimit } from '@/lib/auth/rate-limit'
 import {
-	COOKIE_DE_REINITIALISATION,
-	DUREE_DU_LIEN_MS,
-	jetonDeReinitialisation,
-	MESSAGES_MOT_DE_PASSE,
-	PLANCHER_DE_LA_DEMANDE_MS,
-	planDuLien,
-	validerLAdresse,
-	validerLeNouveauMotDePasse,
+	PASSWORD_RESET_COOKIE,
+	LINK_DURATION_MS,
+	passwordResetToken,
+	PASSWORD_MESSAGES,
+	FORGOT_PASSWORD_FLOOR_MS,
+	linkPlan,
+	validateAddress,
+	validateNewPassword,
 } from '@/lib/auth/forgot-password'
-import { fermerLesPortesRestDeLOubli } from '@/lib/auth/forgot-payload'
-import { demanderUnLien } from '@/lib/auth/password-reset-payload'
+import { closeForgotPasswordRestDoors } from '@/lib/auth/forgot-payload'
+import { requestPasswordLink } from '@/lib/auth/password-reset-payload'
 import { composerEmail } from '@/lib/emails/gabarit'
 import { contenuEmailReinitialisation } from '@/lib/emails/reinitialisation'
 
@@ -22,7 +22,7 @@ const JETON = 'a1b2c3d4e5f60718293a4b5c6d7e8f9012345678'
 
 describe('l’adresse de la demande', () => {
 	test('une adresse est rognée et acceptée', () => {
-		expect(validerLAdresse('  lea@example.test ')).toEqual({ ok: true, email: 'lea@example.test' })
+		expect(validateAddress('  lea@example.test ')).toEqual({ ok: true, email: 'lea@example.test' })
 	})
 	test.each<[unknown, 'email-vide' | 'email-invalide']>([
 		['', 'email-vide'],
@@ -33,32 +33,32 @@ describe('l’adresse de la demande', () => {
 		['a@b', 'email-invalide'],
 		[`${'a'.repeat(250)}@example.test`, 'email-invalide'],
 	])('%p est refusée : %s', (brut, code) => {
-		expect(validerLAdresse(brut)).toEqual({ ok: false, code })
+		expect(validateAddress(brut)).toEqual({ ok: false, code })
 	})
 })
 
 describe('le nouveau mot de passe', () => {
 	test('8 caractères, aucune règle de composition, jamais rogné', () => {
-		expect(validerLeNouveauMotDePasse('aaaaaaaa', 'aaaaaaaa')).toEqual({ ok: true, motDePasse: 'aaaaaaaa' })
-		expect(validerLeNouveauMotDePasse('  aaaaaa  ', '  aaaaaa  ')).toEqual({ ok: true, motDePasse: '  aaaaaa  ' })
+		expect(validateNewPassword('aaaaaaaa', 'aaaaaaaa')).toEqual({ ok: true, motDePasse: 'aaaaaaaa' })
+		expect(validateNewPassword('  aaaaaa  ', '  aaaaaa  ')).toEqual({ ok: true, motDePasse: '  aaaaaa  ' })
 	})
 	test('trop court, trop long, confirmation différente', () => {
-		expect(validerLeNouveauMotDePasse('1234567', '1234567')).toEqual({ ok: false, code: 'mot-de-passe-trop-court' })
-		expect(validerLeNouveauMotDePasse(undefined, undefined)).toEqual({ ok: false, code: 'mot-de-passe-trop-court' })
-		expect(validerLeNouveauMotDePasse('a'.repeat(256), 'a'.repeat(256))).toEqual({
+		expect(validateNewPassword('1234567', '1234567')).toEqual({ ok: false, code: 'mot-de-passe-trop-court' })
+		expect(validateNewPassword(undefined, undefined)).toEqual({ ok: false, code: 'mot-de-passe-trop-court' })
+		expect(validateNewPassword('a'.repeat(256), 'a'.repeat(256))).toEqual({
 			ok: false,
 			code: 'mot-de-passe-trop-long',
 		})
-		expect(validerLeNouveauMotDePasse('aaaaaaaa', 'aaaaaaab')).toEqual({ ok: false, code: 'mots-de-passe-differents' })
-		expect(validerLeNouveauMotDePasse('aaaaaaaa', undefined)).toEqual({ ok: false, code: 'mots-de-passe-differents' })
+		expect(validateNewPassword('aaaaaaaa', 'aaaaaaab')).toEqual({ ok: false, code: 'mots-de-passe-differents' })
+		expect(validateNewPassword('aaaaaaaa', undefined)).toEqual({ ok: false, code: 'mots-de-passe-differents' })
 	})
 })
 
 describe('le jeton du lien', () => {
 	test('40 caractères hexadécimaux, ou rien', () => {
-		expect(jetonDeReinitialisation(JETON)).toBe(JETON)
-		expect(jetonDeReinitialisation(` ${JETON} `)).toBe(JETON)
-		expect(jetonDeReinitialisation([JETON, 'x'])).toBe(JETON)
+		expect(passwordResetToken(JETON)).toBe(JETON)
+		expect(passwordResetToken(` ${JETON} `)).toBe(JETON)
+		expect(passwordResetToken([JETON, 'x'])).toBe(JETON)
 		for (const faux of [
 			undefined,
 			null,
@@ -69,7 +69,7 @@ describe('le jeton du lien', () => {
 			'a1'.repeat(64),
 			"' or 1=1",
 		])
-			expect(jetonDeReinitialisation(faux)).toBeNull()
+			expect(passwordResetToken(faux)).toBeNull()
 	})
 })
 
@@ -77,29 +77,29 @@ describe('le lien du mail sort de l’adresse (proxy)', () => {
 	const params = (requete: string) => new URLSearchParams(requete)
 
 	test('le lien du mail : un cookie d’une heure, et l’adresse sans code', () => {
-		const plan = planDuLien('/auth/reinitialiser', params(`code=${JETON}`))
+		const plan = linkPlan('/auth/reinitialiser', params(`code=${JETON}`))
 		expect(plan).toEqual({ aller: '/auth/reinitialiser', cookie: { valeur: JETON, maxAgeS: 3600 } })
-		expect(DUREE_DU_LIEN_MS / 1000).toBe(3600)
+		expect(LINK_DURATION_MS / 1000).toBe(3600)
 	})
 	test('un lien de l’ancien site (128 caractères) est gardé : la page dira « plus valable »', () => {
 		const ancien = 'a1'.repeat(64)
-		expect(planDuLien('/auth/reinitialiser', params(`code=${ancien}`))?.cookie.valeur).toBe(ancien)
-		expect(jetonDeReinitialisation(ancien)).toBeNull()
+		expect(linkPlan('/auth/reinitialiser', params(`code=${ancien}`))?.cookie.valeur).toBe(ancien)
+		expect(passwordResetToken(ancien)).toBeNull()
 	})
 	test('un code qui n’en est pas un efface le cookie et ne le remplace pas', () => {
 		for (const code of ['', 'x', '<script>alert(1)</script>', 'a b c d e f g h i j k l'])
-			expect(planDuLien('/auth/reinitialiser', params(`code=${encodeURIComponent(code)}`))?.cookie).toEqual({
+			expect(linkPlan('/auth/reinitialiser', params(`code=${encodeURIComponent(code)}`))?.cookie).toEqual({
 				valeur: '',
 				maxAgeS: 0,
 			})
 	})
 	test('rien d’autre n’est concerné : sans code, ou une autre page', () => {
-		expect(planDuLien('/auth/reinitialiser', params(''))).toBeNull()
-		expect(planDuLien('/auth/signin', params(`code=${JETON}`))).toBeNull()
-		expect(planDuLien('/auth/reinitialiser/autre', params(`code=${JETON}`))).toBeNull()
+		expect(linkPlan('/auth/reinitialiser', params(''))).toBeNull()
+		expect(linkPlan('/auth/signin', params(`code=${JETON}`))).toBeNull()
+		expect(linkPlan('/auth/reinitialiser/autre', params(`code=${JETON}`))).toBeNull()
 	})
 	test('le cookie a le nom des anciennes pages', () => {
-		expect(COOKIE_DE_REINITIALISATION).toBe('mm-reinit')
+		expect(PASSWORD_RESET_COOKIE).toBe('mm-reinit')
 	})
 })
 
@@ -117,11 +117,11 @@ describe('le mail', () => {
 
 describe('les textes sont ceux du site actuel', () => {
 	test('trois phrases reprises au mot près', () => {
-		expect(MESSAGES_MOT_DE_PASSE.envoyee).toBe(
+		expect(PASSWORD_MESSAGES.envoyee).toBe(
 			'Si un compte existe avec cette adresse, tu vas recevoir un email avec un lien pour choisir un nouveau mot de passe. Pense à regarder dans tes courriers indésirables.'
 		)
-		expect(MESSAGES_MOT_DE_PASSE['code-invalide']).toStartWith('Ce lien n’est plus valable')
-		expect(MESSAGES_MOT_DE_PASSE.modifie).toBe(
+		expect(PASSWORD_MESSAGES['code-invalide']).toStartWith('Ce lien n’est plus valable')
+		expect(PASSWORD_MESSAGES.modifie).toBe(
 			'Ton mot de passe est modifié. Tu peux te connecter avec ton email et ce nouveau mot de passe.'
 		)
 	})
@@ -158,18 +158,18 @@ describe('demanderUnLien avec un Payload de pacotille', () => {
 	}
 	const lancer = async (
 		email: unknown,
-		options: { echec?: boolean; frein?: ReturnType<typeof creerFrein>; apres?: (t: () => Promise<void>) => void } = {}
+		options: { echec?: boolean; frein?: ReturnType<typeof createRateLimit>; apres?: (t: () => Promise<void>) => void } = {}
 	) => {
 		const travaux: Promise<void>[] = []
 		const debut = Date.now()
-		const resultat = await demanderUnLien({
+		const resultat = await requestPasswordLink({
 			payload: payload(),
 			envoyer: envoyer(options.echec ?? false),
 			site: 'https://my-makeup.fr',
 			headers: new Headers({ 'x-forwarded-for': '203.0.113.7' }),
 			email,
 			apres: options.apres ?? (t => void travaux.push(t())),
-			frein: options.frein ?? creerFrein({ nom: `unit-${Math.random()}`, limite: 100, fenetreMs: 1000 }),
+			frein: options.frein ?? createRateLimit({ nom: `unit-${Math.random()}`, limite: 100, fenetreMs: 1000 }),
 			journal: async e => void journal.push({ type: e.type, code: e.code }),
 		})
 		const duree = Date.now() - debut
@@ -186,8 +186,8 @@ describe('demanderUnLien avec un Payload de pacotille', () => {
 		expect(envoyes[0]?.texte).toContain('/auth/reinitialiser?code=')
 		expect(envoyes[0]?.html).toContain('/auth/reinitialiser?code=')
 		for (const { duree } of [connue, inconnue]) {
-			expect(duree).toBeGreaterThanOrEqual(PLANCHER_DE_LA_DEMANDE_MS - 20)
-			expect(duree).toBeLessThan(PLANCHER_DE_LA_DEMANDE_MS + 200)
+			expect(duree).toBeGreaterThanOrEqual(FORGOT_PASSWORD_FLOOR_MS - 20)
+			expect(duree).toBeLessThan(FORGOT_PASSWORD_FLOOR_MS + 200)
 		}
 	})
 
@@ -227,7 +227,7 @@ describe('demanderUnLien avec un Payload de pacotille', () => {
 
 	test('la 11e demande est refusée avant tout travail, connue ou non', async () => {
 		appels.length = 0
-		const frein = creerFrein({ nom: `unit-frein-${Math.random()}`, limite: 10, fenetreMs: 60_000 })
+		const frein = createRateLimit({ nom: `unit-frein-${Math.random()}`, limite: 10, fenetreMs: 60_000 })
 		for (let i = 0; i < 10; i++) await lancer(`inconnue${i}@example.test`, { frein })
 		const avant = appels.length
 		expect((await lancer('connue@example.test', { frein })).resultat).toEqual({ ok: false, code: 'trop-de-tentatives' })
@@ -241,7 +241,7 @@ describe('demanderUnLien avec un Payload de pacotille', () => {
 
 describe('les portes REST de Payload', () => {
 	const hook = (operation: string, payloadAPI: string) =>
-		fermerLesPortesRestDeLOubli({ operation, req: { payloadAPI } } as never)
+		closeForgotPasswordRestDoors({ operation, req: { payloadAPI } } as never)
 
 	test('fermées en REST pour les deux opérations, ouvertes en API locale et pour les autres', () => {
 		expect(() => hook('forgotPassword', 'REST')).toThrow('Cette opération passe par les pages du site.')

@@ -7,7 +7,7 @@ import Link from 'next/link'
  * is: it says nothing about any address. The way out is the forgotten password, which sends a link
  * to the address of the account and lets her choose one (src/lib/auth/reinitialisation-payload.ts).
  */
-export function AideSansMotDePasse() {
+export function PasswordlessHelp() {
 	return (
 		<p data-testid="aide-sans-mot-de-passe" className="max-w-sm rounded-md bg-neutral-100 p-3 text-left text-sm">
 			Tu t’étais inscrite avec Facebook ? Ce bouton n’existe plus : clique sur{' '}

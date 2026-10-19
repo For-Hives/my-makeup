@@ -1,5 +1,5 @@
-import { cleDeBoite } from '../auth/canonical-email'
-import { creerFrein, type Frein } from '../auth/rate-limit'
+import { mailboxKey } from '../auth/canonical-email'
+import { createRateLimit, type RateLimit } from '../auth/rate-limit'
 import { estUneAdresseLocale } from '../recherche/frein'
 
 /**
@@ -31,21 +31,21 @@ export const CHEMIN_DU_CONTACT = '/contact'
 /** The path the proxy sends a refused message to. */
 export const CHEMIN_DU_REFUS_DE_CONTACT = '/contact/throttled'
 
-export const freinDeContactParAdresse: Frein = creerFrein({
+export const freinDeContactParAdresse: RateLimit = createRateLimit({
 	nom: 'contact-adresse',
 	limite: MESSAGES_PAR_HEURE_ET_ADRESSE,
 	fenetreMs: 60 * 60 * 1000,
 })
 
-export const freinDeContactParEmail: Frein = creerFrein({
+export const freinDeContactParEmail: RateLimit = createRateLimit({
 	nom: 'contact-email',
 	limite: MESSAGES_PAR_JOUR_ET_EMAIL,
 	fenetreMs: 24 * 60 * 60 * 1000,
 })
 
 export interface FreinsDeContact {
-	parAdresse: Frein
-	parEmail: Frein
+	parAdresse: RateLimit
+	parEmail: RateLimit
 }
 
 export const FREINS_DE_CONTACT: FreinsDeContact = {
@@ -56,12 +56,12 @@ export const FREINS_DE_CONTACT: FreinsDeContact = {
 /** Two brakes with the same numbers and counters of their own (named after `nom`): for a test that must not share the process's. */
 export function creerFreinsDeContact(nom: string): FreinsDeContact {
 	return {
-		parAdresse: creerFrein({
+		parAdresse: createRateLimit({
 			nom: `contact-adresse-${nom}`,
 			limite: MESSAGES_PAR_HEURE_ET_ADRESSE,
 			fenetreMs: 60 * 60 * 1000,
 		}),
-		parEmail: creerFrein({
+		parEmail: createRateLimit({
 			nom: `contact-email-${nom}`,
 			limite: MESSAGES_PAR_JOUR_ET_EMAIL,
 			fenetreMs: 24 * 60 * 60 * 1000,
@@ -88,7 +88,7 @@ export function prendreUnePlaceDeContact(
 		const adresse = freins.parAdresse.prendre(client, maintenant)
 		if (!adresse.autorise) return { autorise: false, raison: 'adresse', reessayerDansS: adresse.reessayerDansS }
 	}
-	const boite = freins.parEmail.prendre(cleDeBoite(email), maintenant)
+	const boite = freins.parEmail.prendre(mailboxKey(email), maintenant)
 	if (!boite.autorise) {
 		if (compteLAdresse) freins.parAdresse.rendre(client, maintenant)
 		return { autorise: false, raison: 'email', reessayerDansS: boite.reessayerDansS }
@@ -147,7 +147,7 @@ export function secondesAvantUneBoite(
 	freins: FreinsDeContact = FREINS_DE_CONTACT,
 	maintenant = Date.now()
 ): number | undefined {
-	const cle = cleDeBoite(email)
+	const cle = mailboxKey(email)
 	const decision = freins.parEmail.prendre(cle, maintenant)
 	if (decision.autorise) {
 		freins.parEmail.rendre(cle, maintenant)

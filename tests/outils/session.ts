@@ -9,8 +9,8 @@
  */
 
 import { type AuthCollectionSlug, generatePayloadCookie, type Payload } from 'payload'
-import { finDeVieDuCookie } from '../../src/lib/auth/session-state'
-import { type CompteDesigne, ouvrirParMotDePasse, ouvrirSansMotDePasse } from '../../src/lib/auth/token'
+import { cookieEndOfLife } from '../../src/lib/auth/session-state'
+import { type DesignatedAccount, openWithPassword, openWithoutPassword } from '../../src/lib/auth/token'
 import { BancRefuse, type Variables } from './banc'
 
 /** A cookie as a browser context takes it: the shape of Playwright's `context.addCookies()`. */
@@ -38,7 +38,7 @@ export interface Session {
 	expire: Date
 }
 
-export type { CompteDesigne }
+export type { DesignatedAccount as CompteDesigne }
 
 export interface Identifiants {
 	collection: AuthCollectionSlug
@@ -67,7 +67,7 @@ export async function ouvrirSession(
 	variables: Variables = process.env
 ): Promise<Session> {
 	const origine = origineDuSite(payload, variables)
-	const { exp, token } = await ouvrirParMotDePasse(payload, collection, { email, password: motDePasse })
+	const { exp, token } = await openWithPassword(payload, collection, { email, password: motDePasse })
 	if (!token || !exp) throw new Error(`Payload n’a ouvert aucune session pour ce compte « ${collection} ».`)
 	return sessionDuJeton(payload, collection, { exp, token }, origine)
 }
@@ -88,12 +88,12 @@ export interface OptionsDeSession {
  */
 export async function ouvrirSessionSansMotDePasse(
 	payload: Payload,
-	{ collection, id }: CompteDesigne,
+	{ collection, id }: DesignatedAccount,
 	variables: Variables = process.env,
 	options: OptionsDeSession = {}
 ): Promise<Session> {
 	const origine = origineDuSite(payload, variables)
-	const { exp, token } = await ouvrirSansMotDePasse(payload, { collection, id }, options.dureeS)
+	const { exp, token } = await openWithoutPassword(payload, { collection, id }, options.dureeS)
 	return sessionDuJeton(payload, collection, { exp, token }, origine)
 }
 
@@ -119,7 +119,7 @@ function sessionDuJeton(
 				value: token,
 				url: origine,
 				// As the site sets it: the cookie outlives its token (ticket 080).
-				expires: Math.floor(finDeVieDuCookie(exp).getTime() / 1000),
+				expires: Math.floor(cookieEndOfLife(exp).getTime() / 1000),
 				httpOnly: cookie.httpOnly ?? false,
 				secure: cookie.secure ?? false,
 				sameSite: cookie.sameSite ?? 'Lax',

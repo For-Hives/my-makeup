@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, test } from 'bun:test'
-import { fermerLaSession } from '@/lib/auth/sign-out'
-import { journalDe } from '@/lib/auth/auth-log'
+import { closeSession } from '@/lib/auth/sign-out'
+import { authLog } from '@/lib/auth/auth-log'
 import { creerCompte } from '../outils/fabrique-comptes'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
 import { appelerRest } from '../outils/rest'
@@ -56,7 +56,7 @@ describe('I11 : la déconnexion retire la session en base, l’ancien jeton est 
 		expect((await qui(enTetes))?.id).toBe(Number(compte.id))
 		const avant = await sessionsEnBase(compte.id)
 
-		const resultat = await fermerLaSession({ payload, headers: new Headers(enTetes), toutes: false })
+		const resultat = await closeSession({ payload, headers: new Headers(enTetes), toutes: false })
 
 		expect(resultat).toEqual({ ok: true, fermee: true })
 		expect(await sessionsEnBase(compte.id)).toBe(avant - 1)
@@ -72,7 +72,7 @@ describe('I11 : la déconnexion retire la session en base, l’ancien jeton est 
 		const [a, b] = [await nouvelleSession(compte), await nouvelleSession(compte)]
 		const payload = await payloadDeTest()
 
-		await fermerLaSession({ payload, headers: new Headers(a.enTetes), toutes: false })
+		await closeSession({ payload, headers: new Headers(a.enTetes), toutes: false })
 
 		expect(await qui(a.enTetes)).toBeNull()
 		expect((await qui(b.enTetes))?.id).toBe(Number(compte.id))
@@ -82,10 +82,10 @@ describe('I11 : la déconnexion retire la session en base, l’ancien jeton est 
 		const compte = await creerCompte('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
 		const payload = await payloadDeTest()
 		const entetes = new Headers(compte.session.enTetes)
-		await fermerLaSession({ payload, headers: entetes, toutes: false })
+		await closeSession({ payload, headers: entetes, toutes: false })
 
-		expect(await fermerLaSession({ payload, headers: entetes, toutes: false })).toEqual({ ok: true, fermee: false })
-		expect(await fermerLaSession({ payload, headers: new Headers(), toutes: true })).toEqual({
+		expect(await closeSession({ payload, headers: entetes, toutes: false })).toEqual({ ok: true, fermee: false })
+		expect(await closeSession({ payload, headers: new Headers(), toutes: true })).toEqual({
 			ok: true,
 			fermee: false,
 		})
@@ -95,7 +95,7 @@ describe('I11 : la déconnexion retire la session en base, l’ancien jeton est 
 		const admin = await creerCompte('admin')
 		const payload = await payloadDeTest()
 
-		const resultat = await fermerLaSession({ payload, headers: new Headers(admin.session.enTetes), toutes: true })
+		const resultat = await closeSession({ payload, headers: new Headers(admin.session.enTetes), toutes: true })
 
 		expect(resultat).toEqual({ ok: true, fermee: false })
 		expect((await qui(admin.session.enTetes))?.id).toBe(Number(admin.id))
@@ -114,7 +114,7 @@ describe('I13 : « me déconnecter de tous les appareils »', () => {
 		expect(await sessionsEnBase(moi.id)).toBeGreaterThanOrEqual(3)
 		const siennes = await sessionsEnBase(autre.id)
 
-		const resultat = await fermerLaSession({
+		const resultat = await closeSession({
 			payload,
 			headers: new Headers(mesSessions[1]?.enTetes),
 			toutes: true,
@@ -135,13 +135,13 @@ describe('le journal et ses pannes', () => {
 		const autre = await nouvelleSession(compte)
 		const avant = (await journal()).length
 
-		await fermerLaSession({
+		await closeSession({
 			payload,
 			headers: new Headers(compte.session.enTetes),
 			toutes: false,
-			journal: journalDe(payload),
+			journal: authLog(payload),
 		})
-		await fermerLaSession({ payload, headers: new Headers(autre.enTetes), toutes: true, journal: journalDe(payload) })
+		await closeSession({ payload, headers: new Headers(autre.enTetes), toutes: true, journal: authLog(payload) })
 
 		expect((await journal()).slice(avant).map(({ type, code }) => [type, code])).toEqual([
 			['sign-out', 'ok'],
@@ -153,7 +153,7 @@ describe('le journal et ses pannes', () => {
 		const compte = await creerCompte('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
 		const payload = await payloadDeTest()
 
-		const resultat = await fermerLaSession({
+		const resultat = await closeSession({
 			payload,
 			headers: new Headers(compte.session.enTetes),
 			toutes: false,

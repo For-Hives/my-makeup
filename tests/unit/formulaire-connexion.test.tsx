@@ -1,11 +1,11 @@
 import { expect, test } from 'bun:test'
-import { FormulaireDeConnexion } from '@/components/auth/SignInForm'
+import { SignInForm } from '@/components/auth/SignInForm'
 import { ouvrirFenetre } from '../outils/dom-react'
 
 const fenetre = ouvrirFenetre()
 
 function formulaire(action: (p: null, f: FormData) => Promise<{ code: 'identifiants-invalides' } | null>) {
-	return <FormulaireDeConnexion action={action as never} retour="/auth/profil" />
+	return <SignInForm action={action as never} retour="/auth/profil" />
 }
 
 test('une saisie fausse annonce l’erreur dans une zone role=alert', async () => {

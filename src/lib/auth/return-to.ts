@@ -3,51 +3,51 @@
  */
 
 /** The page a makeup artist lands on after signing in. */
-export const ESPACE_PAR_DEFAUT = '/auth/profil'
+export const DEFAULT_DASHBOARD = '/auth/profil'
 
-export const PAGE_DE_CONNEXION = '/auth/signin'
+export const SIGN_IN_PAGE = '/auth/signin'
 
 /** Pages and routes a sign-in must not send back to: they would loop, or are not pages. */
-const PAGES_SANS_RETOUR = ['/auth/signin', '/auth/signup', '/auth/error', '/auth/google', '/api/']
+const PAGES_WITHOUT_RETURN_TO = ['/auth/signin', '/auth/signup', '/auth/error', '/auth/google', '/api/']
 
 /**
  * The page to come back to after signing in: the requested one when it is on this site, the
  * default otherwise (another site, `//host`, `/\host`, `javascript:`, an authentication page).
  * The value is parsed, not compared as text: every trick ends up with another origin.
  */
-export function retourSur(brut: unknown, origine: string, defaut: string = ESPACE_PAR_DEFAUT): string {
-	const valeur = Array.isArray(brut) ? brut[0] : brut
-	if (typeof valeur !== 'string' || valeur.trim() === '') return defaut
+export function safeReturnTo(brut: unknown, origine: string, defaut: string = DEFAULT_DASHBOARD): string {
+	const value = Array.isArray(brut) ? brut[0] : brut
+	if (typeof value !== 'string' || value.trim() === '') return defaut
 	try {
 		const base = new URL(origine)
-		const url = new URL(valeur.trim(), base)
+		const url = new URL(value.trim(), base)
 		if (url.origin !== base.origin) return defaut
-		if (PAGES_SANS_RETOUR.some(page => url.pathname === page.replace(/\/$/, '') || url.pathname.startsWith(page)))
+		if (PAGES_WITHOUT_RETURN_TO.some(page => url.pathname === page.replace(/\/$/, '') || url.pathname.startsWith(page)))
 			return defaut
-		const sortie = `${url.pathname}${url.search}${url.hash}`
+		const output = `${url.pathname}${url.search}${url.hash}`
 		// A dot segment can leave a path that starts with `//` (`/.//host`): a browser reads it as another site.
-		if (/^[/\\]{2}/.test(sortie) || new URL(sortie, base).origin !== base.origin) return defaut
-		return sortie
+		if (/^[/\\]{2}/.test(output) || new URL(output, base).origin !== base.origin) return defaut
+		return output
 	} catch {
 		return defaut
 	}
 }
 
 /** The sign-in page that brings the visitor back to `chemin` (path and query of the closed page). */
-export const urlDeConnexion = (chemin: string): string =>
-	`${PAGE_DE_CONNEXION}?callbackUrl=${encodeURIComponent(chemin)}`
+export const signInUrl = (chemin: string): string =>
+	`${SIGN_IN_PAGE}?callbackUrl=${encodeURIComponent(chemin)}`
 
 /** Where a sign-out leads: the home page, public and always there (AUTH-07: it was a 404). */
-export const PAGE_APRES_DECONNEXION = '/'
+export const PAGE_AFTER_SIGN_OUT = '/'
 
 /** The wall of verification: the page that tells a new account to look in its mailbox (ticket 082). */
-export const PAGE_DU_MUR = '/auth/verification-wall'
+export const VERIFICATION_WALL_PAGE = '/auth/verification-wall'
 
 /** The onboarding: where a new, confirmed and signed-in account lands (ticket 082). */
-export const PAGE_D_ACCUEIL_DU_COMPTE = '/auth/init-account'
+export const ACCOUNT_ONBOARDING_PAGE = '/auth/init-account'
 
 /** The `error` of the sign-in page that says the session ended. The only code of the address that is ever shown. */
-export const ERREUR_SESSION_EXPIREE = 'session-expiree'
+export const EXPIRED_SESSION_ERROR = 'session-expiree'
 
 /** The sign-in page that says the session ended, and brings the visitor back to `chemin` (one redirection). */
-export const urlSessionExpiree = (chemin: string): string => `${urlDeConnexion(chemin)}&error=${ERREUR_SESSION_EXPIREE}`
+export const expiredSessionUrl = (chemin: string): string => `${signInUrl(chemin)}&error=${EXPIRED_SESSION_ERROR}`

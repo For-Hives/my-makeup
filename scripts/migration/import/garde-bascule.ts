@@ -24,7 +24,7 @@
  */
 
 import type { Payload } from 'payload'
-import { COLLECTION_JOURNAL } from '../../../src/lib/auth/auth-log'
+import { AUTH_LOG_COLLECTION } from '../../../src/lib/auth/auth-log'
 import { DRAPEAU_CIBLE_EN_SERVICE, ImportRefuse } from './cible'
 import { ADAPTATEUR_COMPTES } from './comptes'
 import { type Attendu, lireLaCible } from './moteur'
@@ -61,7 +61,7 @@ export async function tracesDeLaBascule(
 	idsDeLaSource: readonly number[] = comptes.map(({ strapiId }) => strapiId)
 ): Promise<TracesDeLaBascule> {
 	const { totalDocs } = await payload.count({
-		collection: COLLECTION_JOURNAL,
+		collection: AUTH_LOG_COLLECTION,
 		where: { and: [{ type: { in: ['sign-in', 'password-reset'] } }, { code: { in: ['ok', 'heritee'] } }] },
 		overrideAccess: true,
 	})

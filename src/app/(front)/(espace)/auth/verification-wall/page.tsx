@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { FormulaireDeRenvoi } from '@/components/auth/ResendForm'
-import { renvoyerLEmail } from './actions'
+import { ResendForm } from '@/components/auth/ResendForm'
+import { resendEmail } from './actions'
 
 export const metadata: Metadata = {
 	title: 'Vérifie ton adresse email',
@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 // The wall of verification (ticket 082): where a new account lands, signed out, until she has
 // followed the link of her mail. It shows nothing of the account. It offers to send the mail again
 // (ticket 083): the same answer whatever the address.
-export default function MurDeVerification() {
+export default function VerificationWall() {
 	return (
 		<main className="flex min-h-dvh flex-col items-center justify-center gap-6 p-6 text-center">
 			<h1 className="font-semibold text-3xl">Vérifie ton adresse email My Makeup</h1>
@@ -22,7 +22,7 @@ export default function MurDeVerification() {
 				<h2 id="titre-renvoi" className="font-semibold text-lg">
 					Le mail n’arrive pas ?
 				</h2>
-				<FormulaireDeRenvoi action={renvoyerLEmail} />
+				<ResendForm action={resendEmail} />
 			</section>
 			<p>
 				<Link className="underline" href="/auth/signin">

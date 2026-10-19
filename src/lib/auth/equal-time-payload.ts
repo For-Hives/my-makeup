@@ -1,6 +1,6 @@
 import type { CollectionAfterErrorHook, CollectionBeforeOperationHook } from 'payload'
-import { codeDeLEchec, type Horloge, PLANCHER_DE_REFUS_MS } from './sign-in'
-import { travailDeVerificationFictif } from './legacy'
+import { failureCode, type Clock, REFUSAL_FLOOR_MS } from './sign-in'
+import { fakeVerificationWork } from './legacy'
 
 /**
  * The equal time of a refused sign-in on the REST door, `POST /api/pros/login` (ticket 088). The
@@ -16,49 +16,49 @@ import { travailDeVerificationFictif } from './legacy'
  * `connecter`, so an attempt never waits twice.
  */
 
-const CLE_DU_PLANCHER = 'plancherDeLaConnexion'
+const FLOOR_KEY = 'plancherDeLaConnexion'
 
-const horlogeReelle: Horloge = {
+const realClock: Clock = {
 	maintenant: () => Date.now(),
 	attendre: ms => new Promise(resolve => setTimeout(resolve, ms)),
 }
 
-interface Dependances {
-	horloge?: Horloge
+interface Dependencies {
+	horloge?: Clock
 	/** The work done for an address with no account; a test hands a double. */
 	travailFictif?: (motDePasse: string) => Promise<void>
 }
 
-export const egaliserLeTravailRest =
+export const equalizeRestWork =
 	({
-		horloge = horlogeReelle,
-		travailFictif = travailDeVerificationFictif,
-	}: Dependances = {}): CollectionBeforeOperationHook =>
+		horloge = realClock,
+		travailFictif = fakeVerificationWork,
+	}: Dependencies = {}): CollectionBeforeOperationHook =>
 	async ({ args, collection, operation, req }) => {
 		if (operation !== 'login' || req.payloadAPI !== 'REST') return
-		req.context[CLE_DU_PLANCHER] = horloge.maintenant() + PLANCHER_DE_REFUS_MS
+		req.context[FLOOR_KEY] = horloge.maintenant() + REFUSAL_FLOOR_MS
 
 		const data = (args as { data?: { email?: unknown; password?: unknown } }).data
 		const email = typeof data?.email === 'string' ? data.email.toLowerCase().trim() : ''
 		// Payload answers 400 to these before any lookup: nothing to equalise.
 		if (!email || typeof data?.password !== 'string' || data.password.trim() === '') return
 
-		const compte = (await req.payload.db.findOne({
+		const account = (await req.payload.db.findOne({
 			collection: collection.slug,
 			req,
 			where: { email: { equals: email } },
 		})) as { hash?: unknown; salt?: unknown } | null
 		// Payload checks the password of this row itself.
-		if (typeof compte?.salt === 'string' && typeof compte?.hash === 'string') return
+		if (typeof account?.salt === 'string' && typeof account?.hash === 'string') return
 		await travailFictif(data.password)
 	}
 
-export const retenirLesEchecsRest =
-	({ horloge = horlogeReelle }: Dependances = {}): CollectionAfterErrorHook =>
+export const rememberRestFailures =
+	({ horloge = realClock }: Dependencies = {}): CollectionAfterErrorHook =>
 	async ({ error, req }) => {
-		const plancher = req.context[CLE_DU_PLANCHER]
-		if (typeof plancher !== 'number' || codeDeLEchec(error) !== 'identifiants-invalides') return
+		const floor = req.context[FLOOR_KEY]
+		if (typeof floor !== 'number' || failureCode(error) !== 'identifiants-invalides') return
 		// A timer may fire a hair early: wait again until the floor is really behind us.
-		for (let reste = plancher - horloge.maintenant(); reste > 0; reste = plancher - horloge.maintenant())
-			await horloge.attendre(Math.ceil(reste))
+		for (let remaining = floor - horloge.maintenant(); remaining > 0; remaining = floor - horloge.maintenant())
+			await horloge.attendre(Math.ceil(remaining))
 	}

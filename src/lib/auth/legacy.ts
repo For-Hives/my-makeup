@@ -16,27 +16,27 @@ import type { Payload } from 'payload'
  */
 
 /** A bcrypt hash as the old site wrote it: `$2a$10$` and 53 characters (`$2b$` and `$2y$` too). */
-const FORME_D_UN_HASH_BCRYPT = /^\$2[aby]\$(?:0[4-9]|[12]\d|3[01])\$[./A-Za-z0-9]{53}$/
+const BCRYPT_HASH_SHAPE = /^\$2[aby]\$(?:0[4-9]|[12]\d|3[01])\$[./A-Za-z0-9]{53}$/
 
 /**
  * A well-formed bcrypt hash (cost 10, like those of the old site) of a random text nobody keeps,
  * worked out when the module loads: no hash is written in the repository. An account with no old
  * hash is compared to it, so that it costs the same work as an account that has one (ticket 088).
  */
-export const HASH_FICTIF: Promise<string> = bcrypt.hash(randomUUID(), 10)
+export const FAKE_HASH: Promise<string> = bcrypt.hash(randomUUID(), 10)
 
-export const estUnHashBcrypt = (valeur: unknown): valeur is string =>
-	typeof valeur === 'string' && FORME_D_UN_HASH_BCRYPT.test(valeur)
+export const isBcryptHash = (valeur: unknown): valeur is string =>
+	typeof valeur === 'string' && BCRYPT_HASH_SHAPE.test(valeur)
 
 /**
  * Does the password match the hash? Always does one bcrypt comparison, to the dummy hash when there
  * is no usable hash (none, or one that is badly formed), and never throws.
  */
-export async function motDePasseDuHash(motDePasse: string, hash: unknown): Promise<boolean> {
-	const utilisable = estUnHashBcrypt(hash)
+export async function hashPassword(motDePasse: string, hash: unknown): Promise<boolean> {
+	const usable = isBcryptHash(hash)
 	try {
-		const accepte = await bcrypt.compare(motDePasse, utilisable ? hash : await HASH_FICTIF)
-		return utilisable && accepte
+		const accepted = await bcrypt.compare(motDePasse, usable ? hash : await FAKE_HASH)
+		return usable && accepted
 	} catch {
 		return false
 	}
@@ -48,23 +48,23 @@ export async function motDePasseDuHash(motDePasse: string, hash: unknown): Promi
  * sign-in does the same work for the unknown address so that no answer comes sooner (ticket 088).
  * A test reads Payload's source and fails if these numbers change there.
  */
-export const PBKDF2_DE_PAYLOAD = { iterations: 600_000, longueur: 32 } as const
+export const PAYLOAD_PBKDF2 = { iterations: 600_000, longueur: 32 } as const
 
 /** Does the work Payload does to check a password, on nothing: the result is of no use. */
-export function travailDeVerificationFictif(motDePasse: string): Promise<void> {
+export function fakeVerificationWork(motDePasse: string): Promise<void> {
 	return new Promise(resolve =>
 		pbkdf2(
 			motDePasse,
 			'sel-fictif-sans-compte',
-			PBKDF2_DE_PAYLOAD.iterations,
-			PBKDF2_DE_PAYLOAD.longueur,
+			PAYLOAD_PBKDF2.iterations,
+			PAYLOAD_PBKDF2.longueur,
 			'sha256',
 			() => resolve()
 		)
 	)
 }
 
-interface LigneDuCompte {
+interface AccountRow {
 	id: number | string
 	legacyBcrypt?: string | null
 	hash?: unknown
@@ -84,25 +84,25 @@ interface LigneDuCompte {
  * Gives back `true` when the account now holds the password, so that the caller signs it in.
  * A failure of the database is the caller's to treat: it raises.
  */
-export async function remplacerLeHashHerite(
+export async function replaceLegacyHash(
 	payload: Pick<Payload, 'db' | 'update'>,
 	{ email, password }: { email: string; password: string },
-	travailFictif: (motDePasse: string) => Promise<void> = travailDeVerificationFictif
+	travailFictif: (motDePasse: string) => Promise<void> = fakeVerificationWork
 ): Promise<boolean> {
-	const ligne = await payload.db.findOne<LigneDuCompte>({
+	const row = await payload.db.findOne<AccountRow>({
 		collection: 'pros',
 		where: { email: { equals: email.trim().toLowerCase() } },
 	})
 	// No row, or a row with no password of Payload's: Payload has checked nothing for it, so the work it
 	// does for a known account is done here (the same test as the REST door, temps-egalise-payload.ts).
-	if (!ligne || typeof ligne.salt !== 'string' || typeof ligne.hash !== 'string') await travailFictif(password)
-	const hash = ligne?.legacyBcrypt
-	const accepte = await motDePasseDuHash(password, hash)
-	if (!accepte || !ligne) return false
+	if (!row || typeof row.salt !== 'string' || typeof row.hash !== 'string') await travailFictif(password)
+	const hash = row?.legacyBcrypt
+	const accepted = await hashPassword(password, hash)
+	if (!accepted || !row) return false
 
 	await payload.update({
 		collection: 'pros',
-		id: ligne.id,
+		id: row.id,
 		data: { password, legacyBcrypt: null },
 		depth: 0,
 		overrideAccess: true,

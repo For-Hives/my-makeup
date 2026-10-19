@@ -11,26 +11,26 @@
  */
 
 /** The header the relay and the proxy are about. */
-export const ENTETE_DE_PROVENANCE = 'sec-fetch-site'
+export const FETCH_SITE_HEADER = 'sec-fetch-site'
 
-const echapper = (texte: string): string =>
+const escape = (texte: string): string =>
 	texte.replace(
 		/[&<>"']/g,
 		lettre => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[lettre] ?? lettre
 	)
 
 /** The HTML of the relay page that continues to `chemin` (a path of this site, with its query). */
-export function pageDeRelais(chemin: string): string {
-	const cible = echapper(chemin)
-	return `<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><meta http-equiv="refresh" content="0;url=${cible}"><title>Connexion en cours</title></head><body><p>Connexion en cours… <a href="${cible}">Continuer</a></p></body></html>`
+export function relayPage(chemin: string): string {
+	const target = escape(chemin)
+	return `<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><meta http-equiv="refresh" content="0;url=${target}"><title>Connexion en cours</title></head><body><p>Connexion en cours… <a href="${target}">Continuer</a></p></body></html>`
 }
 
 /** The headers of the relay page: never kept by a cache, whoever it is shared with. */
-export const ENTETES_DE_RELAIS = {
+export const RELAY_HEADERS = {
 	'Content-Type': 'text/html; charset=utf-8',
 	'Cache-Control': 'private, no-store',
 } as const
 
 /** True for a navigation that another site started: the session cookie would be ignored by Payload. */
-export const venueDUnAutreSite = (entetes: { get(nom: string): string | null }): boolean =>
-	entetes.get(ENTETE_DE_PROVENANCE) === 'cross-site'
+export const comesFromOtherSite = (entetes: { get(nom: string): string | null }): boolean =>
+	entetes.get(FETCH_SITE_HEADER) === 'cross-site'

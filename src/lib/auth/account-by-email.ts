@@ -1,5 +1,5 @@
 import type { Payload } from 'payload'
-import { DOMAINES_GMAIL, localGmailCanonique } from './canonical-email'
+import { GMAIL_DOMAINS, canonicalGmailLocal } from './canonical-email'
 
 /**
  * Finds the account of an address, or of a Gmail variant of it (ticket 084): the dots and the
@@ -17,7 +17,7 @@ import { DOMAINES_GMAIL, localGmailCanonique } from './canonical-email'
  * No `next` import.
  */
 
-export interface CompteTrouve {
+export interface AccountFound {
 	/** The address as stored (lower case). */
 	email: string
 	verifie: boolean
@@ -27,14 +27,14 @@ export interface CompteTrouve {
 	parVariante: boolean
 }
 
-type Ligne = { email: string; verifie: boolean | null; jeton: string | null }
+type Row = { email: string; verifie: boolean | null; jeton: string | null }
 
-const PREFIXE_UTILISE = 'utilise:'
+const USED_PREFIX = 'utilise:'
 
-export async function trouverLeCompte(payload: Pick<Payload, 'db'>, email: string): Promise<CompteTrouve | undefined> {
-	const adresse = email.trim().toLowerCase()
-	const local = localGmailCanonique(adresse)
-	const { rows } = await payload.db.pool.query<Ligne>(
+export async function findAccount(payload: Pick<Payload, 'db'>, email: string): Promise<AccountFound | undefined> {
+	const address = email.trim().toLowerCase()
+	const local = canonicalGmailLocal(address)
+	const { rows } = await payload.db.pool.query<Row>(
 		`SELECT lower("email") AS "email", "_verified" AS "verifie", "_verificationtoken" AS "jeton"
 		   FROM "pros"
 		  WHERE "email" = $1
@@ -43,10 +43,10 @@ export async function trouverLeCompte(payload: Pick<Payload, 'db'>, email: strin
 		         AND replace(split_part(split_part(lower("email"), '@', 1), '+', 1), '.', '') = $2)
 		  ORDER BY ("email" = $1) DESC, "id"
 		  LIMIT 1`,
-		[adresse, local, [...DOMAINES_GMAIL]]
+		[address, local, [...GMAIL_DOMAINS]]
 	)
-	const ligne = rows[0]
-	if (!ligne) return undefined
-	const jeton = ligne.jeton && !ligne.jeton.startsWith(PREFIXE_UTILISE) ? ligne.jeton : null
-	return { email: ligne.email, verifie: ligne.verifie === true, jeton, parVariante: ligne.email !== adresse }
+	const row = rows[0]
+	if (!row) return undefined
+	const token = row.jeton && !row.jeton.startsWith(USED_PREFIX) ? row.jeton : null
+	return { email: row.email, verifie: row.verifie === true, jeton: token, parVariante: row.email !== address }
 }

@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, test } from 'bun:test'
-import { connecter } from '@/lib/auth/sign-in'
-import { creerFrein } from '@/lib/auth/rate-limit'
-import { ouvrirParMotDePasse } from '@/lib/auth/token'
+import { signInWithPassword } from '@/lib/auth/sign-in'
+import { createRateLimit } from '@/lib/auth/rate-limit'
+import { openWithPassword } from '@/lib/auth/token'
 import { creerCompte } from '../outils/fabrique-comptes'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
 import { appelerRest } from '../outils/rest'
@@ -49,10 +49,10 @@ describe('connecter, avec la vraie base', () => {
 	test('l’email est insensible à la casse et aux espaces de bord', async () => {
 		const compte = await creerCompte('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
 		const payload = await payloadDeTest()
-		const ouvrir = (data: { email: string; password: string }) => ouvrirParMotDePasse(payload, 'pros', data)
-		const frein = creerFrein({ nom: 'essai-int-casse', limite: 10, fenetreMs: 60_000 })
+		const ouvrir = (data: { email: string; password: string }) => openWithPassword(payload, 'pros', data)
+		const frein = createRateLimit({ nom: 'essai-int-casse', limite: 10, fenetreMs: 60_000 })
 
-		const r = await connecter({
+		const r = await signInWithPassword({
 			ouvrir,
 			headers: adresse(12),
 			email: `  ${compte.email.toUpperCase()} `,
@@ -66,11 +66,11 @@ describe('connecter, avec la vraie base', () => {
 	test('un mot de passe sans majuscule, chiffre ni symbole est accepté à la connexion : aucune règle de composition', async () => {
 		const compte = await creerCompte('maquilleuse', { motDePasse: () => MOT_DE_PASSE })
 		const payload = await payloadDeTest()
-		const ouvrir = (data: { email: string; password: string }) => ouvrirParMotDePasse(payload, 'pros', data)
-		const frein = creerFrein({ nom: 'essai-int-regle', limite: 10, fenetreMs: 60_000 })
+		const ouvrir = (data: { email: string; password: string }) => openWithPassword(payload, 'pros', data)
+		const frein = createRateLimit({ nom: 'essai-int-regle', limite: 10, fenetreMs: 60_000 })
 
-		const juste = await connecter({ ouvrir, headers: adresse(13), email: compte.email, password: MOT_DE_PASSE, frein })
-		const faux = await connecter({ ouvrir, headers: adresse(13), email: compte.email, password: 'b', frein })
+		const juste = await signInWithPassword({ ouvrir, headers: adresse(13), email: compte.email, password: MOT_DE_PASSE, frein })
+		const faux = await signInWithPassword({ ouvrir, headers: adresse(13), email: compte.email, password: 'b', frein })
 
 		expect(juste.ok).toBe(true)
 		expect(faux).toEqual({ ok: false, code: 'identifiants-invalides' })
@@ -82,10 +82,10 @@ describe('connecter, avec la vraie base', () => {
 			creerCompte('maquilleuse-non-verifiee', { motDePasse: () => MOT_DE_PASSE }),
 		])
 		const payload = await payloadDeTest()
-		const ouvrir = (data: { email: string; password: string }) => ouvrirParMotDePasse(payload, 'pros', data)
-		const frein = creerFrein({ nom: 'essai-int-generique', limite: 50, fenetreMs: 60_000 })
+		const ouvrir = (data: { email: string; password: string }) => openWithPassword(payload, 'pros', data)
+		const frein = createRateLimit({ nom: 'essai-int-generique', limite: 50, fenetreMs: 60_000 })
 		const essayer = (email: string, password: string) =>
-			connecter({ ouvrir, headers: adresse(14), email, password, frein })
+			signInWithPassword({ ouvrir, headers: adresse(14), email, password, frein })
 
 		const reponses = await Promise.all([
 			essayer('personne@example.test', MOT_DE_PASSE),
@@ -99,10 +99,10 @@ describe('connecter, avec la vraie base', () => {
 	test('un compte non confirmé qui donne le bon mot de passe reçoit le message dédié (ticket 082)', async () => {
 		const nonConfirme = await creerCompte('maquilleuse-non-verifiee', { motDePasse: () => MOT_DE_PASSE })
 		const payload = await payloadDeTest()
-		const ouvrir = (data: { email: string; password: string }) => ouvrirParMotDePasse(payload, 'pros', data)
-		const frein = creerFrein({ nom: 'essai-int-non-confirme', limite: 50, fenetreMs: 60_000 })
+		const ouvrir = (data: { email: string; password: string }) => openWithPassword(payload, 'pros', data)
+		const frein = createRateLimit({ nom: 'essai-int-non-confirme', limite: 50, fenetreMs: 60_000 })
 
-		const reponse = await connecter({
+		const reponse = await signInWithPassword({
 			ouvrir,
 			headers: adresse(15),
 			email: nonConfirme.email,

@@ -1,42 +1,42 @@
 'use client'
 
 import { useActionState, useEffect, useRef } from 'react'
-import { type CodeEchecDeLaDemande, MESSAGES_MOT_DE_PASSE } from '@/lib/auth/forgot-password'
+import { type ForgotPasswordFailureCode, PASSWORD_MESSAGES } from '@/lib/auth/forgot-password'
 
-export type EtatDeLaDemande = { envoyee: true } | { code: CodeEchecDeLaDemande } | null
-export type ActionDeLaDemande = (precedent: EtatDeLaDemande, formulaire: FormData) => Promise<EtatDeLaDemande>
+export type ForgotPasswordState = { envoyee: true } | { code: ForgotPasswordFailureCode } | null
+export type ForgotPasswordAction = (precedent: ForgotPasswordState, formulaire: FormData) => Promise<ForgotPasswordState>
 
 /**
  * The first step of the forgotten password. Once sent, the form gives way to the one sentence the
  * site always answers: it says nothing about the address. A key held down sends one request, as in
  * the sign-in form.
  */
-export function FormulaireMotDePasseOublie({ action }: { action: ActionDeLaDemande }) {
-	const [etat, envoyer, enCours] = useActionState(action, null)
-	const verrou = useRef(false)
+export function ForgotPasswordForm({ action }: { action: ForgotPasswordAction }) {
+	const [state, send, inProgress] = useActionState(action, null)
+	const lock = useRef(false)
 
 	useEffect(() => {
-		if (!enCours) verrou.current = false
-	}, [enCours, etat])
+		if (!inProgress) lock.current = false
+	}, [inProgress, state])
 
-	if (etat && 'envoyee' in etat)
+	if (state && 'envoyee' in state)
 		return (
 			<p
 				role="status"
 				data-testid="oubli-envoye"
 				className="max-w-sm rounded-md bg-indigo-50 p-3 text-indigo-900 text-sm"
 			>
-				{MESSAGES_MOT_DE_PASSE.envoyee}
+				{PASSWORD_MESSAGES.envoyee}
 			</p>
 		)
 
 	return (
 		<form
-			action={envoyer}
+			action={send}
 			noValidate
 			onSubmit={evenement => {
-				if (verrou.current) evenement.preventDefault()
-				else verrou.current = true
+				if (lock.current) evenement.preventDefault()
+				else lock.current = true
 			}}
 			className="flex w-full max-w-sm flex-col gap-4 text-left"
 		>
@@ -56,17 +56,17 @@ export function FormulaireMotDePasseOublie({ action }: { action: ActionDeLaDeman
 				/>
 			</label>
 			<div role="alert" data-testid="erreur-oubli">
-				{etat && 'code' in etat ? (
-					<p className="rounded-md bg-red-50 p-3 text-red-800 text-sm">{MESSAGES_MOT_DE_PASSE[etat.code]}</p>
+				{state && 'code' in state ? (
+					<p className="rounded-md bg-red-50 p-3 text-red-800 text-sm">{PASSWORD_MESSAGES[state.code]}</p>
 				) : null}
 			</div>
 			<button
 				type="submit"
-				disabled={enCours}
-				aria-busy={enCours}
+				disabled={inProgress}
+				aria-busy={inProgress}
 				className="min-h-11 rounded-md bg-neutral-900 px-4 py-2 font-medium text-white disabled:cursor-wait disabled:opacity-60"
 			>
-				{enCours ? 'Envoi…' : 'Recevoir un lien'}
+				{inProgress ? 'Envoi…' : 'Recevoir un lien'}
 			</button>
 		</form>
 	)

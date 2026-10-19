@@ -3,8 +3,8 @@
 import { useEffect, useRef } from 'react'
 import { CODES_D_ERREUR_D_AUTHENTIFICATION } from '@/lib/analytics/events'
 import { type Suivre, track } from '@/lib/analytics/track'
-import { CODES_ERREUR_GOOGLE } from '@/lib/auth/errors'
-import { ERREUR_SESSION_EXPIREE } from '@/lib/auth/return-to'
+import { GOOGLE_ERROR_CODES } from '@/lib/auth/errors'
+import { EXPIRED_SESSION_ERROR } from '@/lib/auth/return-to'
 
 /**
  * What the sign-in page tells the measure when it opens with an `?error=` (ticket 146). `code` is
@@ -17,20 +17,20 @@ import { ERREUR_SESSION_EXPIREE } from '@/lib/auth/return-to'
  *
  * Renders nothing.
  */
-export function EvenementsDeLaPageDeConnexion({ code, suivre = track }: { code: string | null; suivre?: Suivre }) {
-	const emis = useRef<string | null>(null)
+export function SignInPageEvents({ code, suivre = track }: { code: string | null; suivre?: Suivre }) {
+	const emitted = useRef<string | null>(null)
 	useEffect(() => {
-		if (code === null || emis.current === code) return
-		emis.current = code
-		if (code === ERREUR_SESSION_EXPIREE) {
+		if (code === null || emitted.current === code) return
+		emitted.current = code
+		if (code === EXPIRED_SESSION_ERROR) {
 			suivre('session_expired', { where: 'jwt_expire' })
 			return
 		}
-		const google = CODES_ERREUR_GOOGLE.find(candidat => candidat === code)
-		const connu = CODES_D_ERREUR_D_AUTHENTIFICATION.find(candidat => candidat === code)
-		if (google === undefined || connu === undefined) return
-		suivre('login_result', { method: 'google', ok: false, code: connu })
-		suivre('auth_error', { code: connu })
+		const google = GOOGLE_ERROR_CODES.find(candidat => candidat === code)
+		const known = CODES_D_ERREUR_D_AUTHENTIFICATION.find(candidat => candidat === code)
+		if (google === undefined || known === undefined) return
+		suivre('login_result', { method: 'google', ok: false, code: known })
+		suivre('auth_error', { code: known })
 	}, [code, suivre])
 	return null
 }

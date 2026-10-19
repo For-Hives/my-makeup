@@ -1,11 +1,11 @@
 import { afterAll, describe, expect, test } from 'bun:test'
-import { confirmerLEmail } from '@/lib/auth/confirmation'
-import { connecter } from '@/lib/auth/sign-in'
-import { creerFrein } from '@/lib/auth/rate-limit'
-import type { FreinsDeBoite } from '@/lib/auth/sign-up-rate-limits'
-import { inscrire } from '@/lib/auth/sign-up-payload'
-import { ouvrirParMotDePasse } from '@/lib/auth/token'
-import { journalDe } from '@/lib/auth/auth-log'
+import { confirmEmail } from '@/lib/auth/confirmation'
+import { signInWithPassword } from '@/lib/auth/sign-in'
+import { createRateLimit } from '@/lib/auth/rate-limit'
+import type { MailboxRateLimits } from '@/lib/auth/sign-up-rate-limits'
+import { signUpAccount } from '@/lib/auth/sign-up-payload'
+import { openWithPassword } from '@/lib/auth/token'
+import { authLog } from '@/lib/auth/auth-log'
 import { EnvoiEmailEchoue, envoiEmailDePayload } from '@/lib/emails/envoi'
 import { parseServerEnv, serverEnv } from '@/lib/env'
 import { creerCompte } from '../outils/fabrique-comptes'
@@ -24,12 +24,12 @@ afterAll(async () => {
 
 const MOT_DE_PASSE = 'aaaaaaaa'
 const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3100'
-const frein = creerFrein({ nom: 'essai-inscription', limite: 1000, fenetreMs: 60_000 })
+const frein = createRateLimit({ nom: 'essai-inscription', limite: 1000, fenetreMs: 60_000 })
 let n = 0
 // The sign-ups of this file are many and fast: no floor, and brakes by mailbox wide open unless a test says otherwise.
-const largesFreins = (): FreinsDeBoite => ({
-	parMinute: creerFrein({ nom: `essai-boite-minute-${crypto.randomUUID()}`, limite: 1000, fenetreMs: 60_000 }),
-	parJour: creerFrein({ nom: `essai-boite-jour-${crypto.randomUUID()}`, limite: 1000, fenetreMs: 60_000 }),
+const largesFreins = (): MailboxRateLimits => ({
+	parMinute: createRateLimit({ nom: `essai-boite-minute-${crypto.randomUUID()}`, limite: 1000, fenetreMs: 60_000 }),
+	parJour: createRateLimit({ nom: `essai-boite-jour-${crypto.randomUUID()}`, limite: 1000, fenetreMs: 60_000 }),
 })
 const adresse = () => new Headers({ 'x-forwarded-for': `192.0.2.${150 + (n++ % 90)}` })
 const courriel = (prefixe: string) => `${prefixe}-${crypto.randomUUID()}@example.test`
@@ -38,19 +38,19 @@ async function inscription(options: {
 	email?: string
 	nom?: string
 	verifier?: boolean
-	envoyer?: Parameters<typeof inscrire>[0]['envoyer']
+	envoyer?: Parameters<typeof signUpAccount>[0]['envoyer']
 	plancherMs?: number
-	freins?: FreinsDeBoite
+	freins?: MailboxRateLimits
 }) {
 	const payload = await payloadDeTest()
 	const email = options.email ?? courriel('nouvelle')
-	const resultat = await inscrire({
+	const resultat = await signUpAccount({
 		payload,
 		donnees: { nom: options.nom ?? 'Léa Fictive', email, password: MOT_DE_PASSE },
 		verifier: options.verifier ?? true,
 		envoyer: options.envoyer ?? envoiEmailDePayload(payload, serverEnv()),
 		site: SITE,
-		journal: journalDe(payload),
+		journal: authLog(payload),
 		plancherMs: options.plancherMs ?? 0,
 		freins: options.freins ?? largesFreins(),
 	})
@@ -59,13 +59,13 @@ async function inscription(options: {
 
 async function seConnecter(email: string, password: string) {
 	const payload = await payloadDeTest()
-	return connecter({
-		ouvrir: data => ouvrirParMotDePasse(payload, 'pros', data),
+	return signInWithPassword({
+		ouvrir: data => openWithPassword(payload, 'pros', data),
 		headers: adresse(),
 		email,
 		password,
 		frein,
-		journal: journalDe(payload),
+		journal: authLog(payload),
 	})
 }
 
@@ -197,11 +197,11 @@ describe('connexion avant confirmation', () => {
 
 	test('un refus « non confirmé » rend sa place au frein : ce n’est pas un essai de mot de passe', async () => {
 		const { email } = await inscription({})
-		const petitFrein = creerFrein({ nom: 'essai-non-confirme', limite: 2, fenetreMs: 60_000 })
+		const petitFrein = createRateLimit({ nom: 'essai-non-confirme', limite: 2, fenetreMs: 60_000 })
 		const payload = await payloadDeTest()
 		const essayer = () =>
-			connecter({
-				ouvrir: data => ouvrirParMotDePasse(payload, 'pros', data),
+			signInWithPassword({
+				ouvrir: data => openWithPassword(payload, 'pros', data),
 				headers: adresse(),
 				email,
 				password: MOT_DE_PASSE,
@@ -221,10 +221,10 @@ describe('le lien du mail : à usage unique', () => {
 		const payload = await payloadDeTest()
 		const avant = (await journal()).length
 
-		expect(await confirmerLEmail(payload, code, journalDe(payload))).toBe('ok')
+		expect(await confirmEmail(payload, code, authLog(payload))).toBe('ok')
 		expect((await compte(email))?._verified).toBe(true)
-		expect(await confirmerLEmail(payload, code, journalDe(payload))).toBe('deja-confirme')
-		expect(await confirmerLEmail(payload, 'f'.repeat(40), journalDe(payload))).toBe('lien-invalide')
+		expect(await confirmEmail(payload, code, authLog(payload))).toBe('deja-confirme')
+		expect(await confirmEmail(payload, 'f'.repeat(40), authLog(payload))).toBe('lien-invalide')
 
 		expect((await seConnecter(email, MOT_DE_PASSE)).ok).toBe(true)
 		expect((await journal()).slice(avant).map(({ type, code }) => [type, code])).toEqual([
@@ -240,7 +240,7 @@ describe('le lien du mail : à usage unique', () => {
 		const mail = await attendreLeMail({ pour: email })
 		const code = codeDuLien(mail.liens.find(l => l.includes('verification-complete')) ?? '')
 		const payload = await payloadDeTest()
-		await confirmerLEmail(payload, code)
+		await confirmEmail(payload, code)
 
 		const ligne = await payload.db.findOne<{ id: number; _verificationToken?: string }>({
 			collection: 'pros',
@@ -255,7 +255,7 @@ describe('le lien du mail : à usage unique', () => {
 		const mailA = await attendreLeMail({ pour: a.email })
 		const payload = await payloadDeTest()
 
-		await confirmerLEmail(payload, codeDuLien(mailA.liens.find(l => l.includes('verification-complete')) ?? ''))
+		await confirmEmail(payload, codeDuLien(mailA.liens.find(l => l.includes('verification-complete')) ?? ''))
 
 		expect((await compte(a.email))?._verified).toBe(true)
 		expect((await compte(b.email))?._verified).toBe(false)

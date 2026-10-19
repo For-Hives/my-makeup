@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, setDefaultTimeout, test } from 'bun:test'
-import { oublierLesDocuments } from '@/lib/auth/google/oidc'
+import { clearDocuments } from '@/lib/auth/google/oidc'
 import { creerCompte, type TypeDeCompte } from '../outils/fabrique-comptes'
 import { viderLeCapteur } from '../outils/mailpit'
 import { CHOIX, choisirUnMotDePasse, connecterParGoogle, demanderLeLien, seConnecter } from '../outils/parcours-herites'
@@ -17,7 +17,7 @@ setDefaultTimeout(30_000)
  * The pages and the whole path in a browser are played by tests/e2e/comptes-sans-mot-de-passe.spec.ts.
  */
 
-beforeAll(() => oublierLesDocuments())
+beforeAll(() => clearDocuments())
 beforeEach(async () => {
 	await Promise.all([viderLaBase(), viderLeCapteur()])
 })

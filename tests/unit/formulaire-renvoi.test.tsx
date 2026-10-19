@@ -1,11 +1,11 @@
 import { expect, test } from 'bun:test'
-import { type EtatDeRenvoi, FormulaireDeRenvoi } from '@/components/auth/ResendForm'
+import { type ResendState, ResendForm } from '@/components/auth/ResendForm'
 import { ouvrirFenetre } from '../outils/dom-react'
 
 const fenetre = ouvrirFenetre()
 
-const formulaire = (action: (p: EtatDeRenvoi, f: FormData) => Promise<EtatDeRenvoi>) => (
-	<FormulaireDeRenvoi action={action as never} />
+const formulaire = (action: (p: ResendState, f: FormData) => Promise<ResendState>) => (
+	<ResendForm action={action as never} />
 )
 
 test('le renvoi de la confirmation : le champ est étiqueté, la réponse se lit dans une zone d’état', async () => {

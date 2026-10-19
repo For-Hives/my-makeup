@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { headers } from 'next/headers'
-import { creerFrein } from '@/lib/auth/rate-limit'
+import { createRateLimit } from '@/lib/auth/rate-limit'
 import { enregistrerLocalisation } from '@/lib/espace/enregistrer-localisation'
 import {
 	MESSAGE_SERVICE_DES_COMMUNES,
@@ -16,7 +16,7 @@ import { MESSAGE_ECHEC, MESSAGE_SESSION, type ResultatDEnregistrement } from '@/
 
 /** Searches of communes a minute for one account: far above what typing needs, below a script's pace. */
 const RECHERCHES_PAR_MINUTE = 120
-const freinDesRecherches = creerFrein({ nom: 'communes-espace', limite: RECHERCHES_PAR_MINUTE, fenetreMs: 60_000 })
+const freinDesRecherches = createRateLimit({ nom: 'communes-espace', limite: RECHERCHES_PAR_MINUTE, fenetreMs: 60_000 })
 
 /** Whether the origin of the request is one Payload trusts (an action is a public endpoint). */
 async function origineDeConfiance(trusted: readonly string[]): Promise<boolean> {

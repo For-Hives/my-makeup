@@ -4,8 +4,8 @@ import {
 	type CollectionBeforeChangeHook,
 	type CollectionBeforeLoginHook,
 } from 'payload'
-import { messageErreur } from './errors'
-import { journaliser } from './auth-log'
+import { errorMessage } from './errors'
+import { log } from './auth-log'
 
 /**
  * The blocked account (ticket 089, plan 01 §6.1, `pros.blocked`): an admin blocks a makeup artist,
@@ -25,31 +25,31 @@ import { journaliser } from './auth-log'
  */
 
 /** The refusal of a blocked account that gave the right password. 403, in French, public. */
-export class CompteBloque extends APIError {
+export class BlockedAccount extends APIError {
 	constructor() {
-		super(messageErreur('compte-bloque'), 403, null, true)
+		super(errorMessage('compte-bloque'), 403, null, true)
 		this.name = 'CompteBloque'
 	}
 }
 
 /** Turns a blocked account away once its password is right. */
-export const refuserUnCompteBloque: CollectionBeforeLoginHook = ({ user }) => {
-	if ((user as { blocked?: boolean | null }).blocked === true) throw new CompteBloque()
+export const refuseBlockedAccount: CollectionBeforeLoginHook = ({ user }) => {
+	if ((user as { blocked?: boolean | null }).blocked === true) throw new BlockedAccount()
 	return user
 }
 
-const estBloque = (doc: { blocked?: boolean | null } | undefined): boolean => doc?.blocked === true
+const isBlocked = (doc: { blocked?: boolean | null } | undefined): boolean => doc?.blocked === true
 
 /** Blocking an account closes its sessions: the write that sets the flag also empties them. */
-export const fermerLesSessionsAuBlocage: CollectionBeforeChangeHook = ({ data, operation, originalDoc }) => {
-	if (operation !== 'update' || data.blocked !== true || estBloque(originalDoc)) return data
+export const closeSessionsOnBlock: CollectionBeforeChangeHook = ({ data, operation, originalDoc }) => {
+	if (operation !== 'update' || data.blocked !== true || isBlocked(originalDoc)) return data
 	return { ...data, sessions: [] }
 }
 
 /** One journal row when the flag changes (an account created blocked counts as blocked). */
-export const noterLeBlocage: CollectionAfterChangeHook = async ({ doc, operation, previousDoc, req }) => {
-	const avant = operation === 'create' ? false : estBloque(previousDoc)
-	const apres = estBloque(doc)
-	if (avant !== apres) await journaliser(req.payload, { type: apres ? 'block' : 'unblock', code: 'ok' })
+export const recordBlock: CollectionAfterChangeHook = async ({ doc, operation, previousDoc, req }) => {
+	const before = operation === 'create' ? false : isBlocked(previousDoc)
+	const after = isBlocked(doc)
+	if (before !== after) await log(req.payload, { type: after ? 'block' : 'unblock', code: 'ok' })
 	return doc
 }

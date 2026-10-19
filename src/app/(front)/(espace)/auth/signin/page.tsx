@@ -2,17 +2,17 @@ import type { Metadata } from 'next'
 import { headers } from 'next/headers'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { AideSansMotDePasse } from '@/components/auth/PasswordlessHelp'
-import { BoutonGoogle } from '@/components/auth/GoogleButton'
-import { EvenementsDeLaPageDeConnexion } from '@/components/auth/SignInPageEvents'
-import { FormulaireDeConnexion } from '@/components/auth/SignInForm'
-import { MessageReconnexion } from '@/components/auth/SignedOutMessage'
-import { ENTETE_DE_MESSAGE } from '@/lib/auth/legacy-cookies'
-import { erreurDeLUrl } from '@/lib/auth/errors'
-import { googleEstActif } from '@/lib/auth/google/config'
-import { retourSur } from '@/lib/auth/return-to'
-import { maquilleuseConnectee } from '@/lib/auth/session'
-import { seConnecter } from './actions'
+import { PasswordlessHelp } from '@/components/auth/PasswordlessHelp'
+import { GoogleButton } from '@/components/auth/GoogleButton'
+import { SignInPageEvents } from '@/components/auth/SignInPageEvents'
+import { SignInForm } from '@/components/auth/SignInForm'
+import { SignedOutMessage } from '@/components/auth/SignedOutMessage'
+import { MESSAGE_HEADER } from '@/lib/auth/legacy-cookies'
+import { urlError } from '@/lib/auth/errors'
+import { isGoogleActive } from '@/lib/auth/google/config'
+import { safeReturnTo } from '@/lib/auth/return-to'
+import { signedInArtist } from '@/lib/auth/session'
+import { signIn } from './actions'
 
 // Read per request: it depends on the session, and the build has no database.
 export const dynamic = 'force-dynamic'
@@ -22,41 +22,41 @@ export const metadata: Metadata = {
 	description: 'Connecte-toi à ton espace maquilleuse My Makeup.',
 }
 
-export default async function PageDeConnexion({
+export default async function SignInPage({
 	searchParams,
 }: {
 	searchParams: Promise<{ callbackUrl?: string | string[]; error?: string | string[] }>
 }) {
 	const { callbackUrl, error } = await searchParams
 	const site = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost'
-	const retour = retourSur(callbackUrl, site)
+	const returnTo = safeReturnTo(callbackUrl, site)
 	// A closed list: the code of the address is never copied to the screen.
-	const erreurUrl = erreurDeLUrl(error)
-	const message = erreurUrl?.message ?? null
-	const google = googleEstActif()
+	const urlFailure = urlError(error)
+	const message = urlFailure?.message ?? null
+	const google = isGoogleActive()
 	// Already signed in: the space, not a form (same predicate as the guard of the private pages).
-	if (await maquilleuseConnectee()) redirect(retour)
+	if (await signedInArtist()) redirect(returnTo)
 
 	// Set by the proxy alone, on the first visit after the old cookies were expired (ticket 081).
-	const reconnexion = (await headers()).get(ENTETE_DE_MESSAGE) === '1'
+	const signedOut = (await headers()).get(MESSAGE_HEADER) === '1'
 
 	return (
 		<main className="flex min-h-dvh flex-col items-center justify-center gap-6 p-6 text-center">
-			<EvenementsDeLaPageDeConnexion code={erreurUrl?.code ?? null} />
+			<SignInPageEvents code={urlFailure?.code ?? null} />
 			<h1 className="font-semibold text-3xl">Se connecter</h1>
 			{message ? (
 				<p
 					role="status"
-					data-testid={erreurUrl?.code === 'session-expiree' ? 'session-expiree' : 'erreur-google'}
+					data-testid={urlFailure?.code === 'session-expiree' ? 'session-expiree' : 'erreur-google'}
 					className="max-w-sm rounded-md bg-amber-50 p-3 text-amber-900 text-sm"
 				>
 					{message}
 				</p>
 			) : null}
-			{reconnexion ? <MessageReconnexion google={google} /> : null}
-			{google ? <BoutonGoogle libelle="Se connecter avec Google" retour={retour} /> : null}
-			<FormulaireDeConnexion action={seConnecter} retour={retour} />
-			<AideSansMotDePasse />
+			{signedOut ? <SignedOutMessage google={google} /> : null}
+			{google ? <GoogleButton libelle="Se connecter avec Google" retour={returnTo} /> : null}
+			<SignInForm action={signIn} retour={returnTo} />
+			<PasswordlessHelp />
 			<p>
 				Pas encore de compte ?{' '}
 				<Link className="underline" href="/auth/signup">

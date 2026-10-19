@@ -13,7 +13,7 @@
  */
 
 /** The token as it can be told apart without a database. */
-export type EtatDuJeton = 'absent' | 'illisible' | 'expire' | 'en-cours'
+export type TokenState = 'absent' | 'illisible' | 'expire' | 'en-cours'
 
 /** What the check of a token that has not ended gave. */
 export type Verification = 'acceptee' | 'refusee' | 'panne'
@@ -24,18 +24,18 @@ export type Verification = 'acceptee' | 'refusee' | 'panne'
  * - `expiree`: the token has reached its end date.
  * - `indisponible`: the check could not be made. Nobody is signed out, nothing is cleared.
  */
-export type EtatDeSession = 'connectee' | 'anonyme' | 'expiree' | 'indisponible'
+export type SessionState = 'connectee' | 'anonyme' | 'expiree' | 'indisponible'
 
 /** The `exp` claim (Unix seconds) of a JWT, read without checking the signature; null when there is none. */
-export function lireExpiration(jeton: string): number | null {
-	const [entete, charge, signature, ...reste] = jeton.split('.')
-	if (!entete || !charge || !signature || reste.length > 0) return null
+export function readExpiration(jeton: string): number | null {
+	const [header, charge, signature, ...remaining] = jeton.split('.')
+	if (!header || !charge || !signature || remaining.length > 0) return null
 	try {
 		const base64 = charge.replace(/-/g, '+').replace(/_/g, '/')
-		const octets = Uint8Array.from(atob(base64.padEnd(Math.ceil(base64.length / 4) * 4, '=')), c => c.charCodeAt(0))
-		const lu: unknown = JSON.parse(new TextDecoder().decode(octets))
-		if (typeof lu !== 'object' || lu === null || !('exp' in lu)) return null
-		const { exp } = lu
+		const bytes = Uint8Array.from(atob(base64.padEnd(Math.ceil(base64.length / 4) * 4, '=')), c => c.charCodeAt(0))
+		const parsed: unknown = JSON.parse(new TextDecoder().decode(bytes))
+		if (typeof parsed !== 'object' || parsed === null || !('exp' in parsed)) return null
+		const { exp } = parsed
 		return typeof exp === 'number' && Number.isFinite(exp) ? exp : null
 	} catch {
 		return null
@@ -48,21 +48,21 @@ export function lireExpiration(jeton: string): number | null {
  * token ends, the server sees « never signed in », and the « session expirée » message could never
  * be shown (finding of the review of 080). The stale cookie is harmless: Payload refuses the token.
  */
-export const SURVIE_DU_COOKIE_APRES_FIN_S = 90 * 24 * 3600
+export const COOKIE_SURVIVAL_AFTER_END_S = 90 * 24 * 3600
 
 /**
  * When the browser may forget the session cookie, for a token that ends at `exp` (Unix seconds): later
  * than the token itself. The one rule for every place that sets the cookie (sign-in; the sliding
  * renewal of ticket 079 must use it too).
  */
-export function finDeVieDuCookie(exp: number): Date {
-	return new Date((exp + SURVIE_DU_COOKIE_APRES_FIN_S) * 1000)
+export function cookieEndOfLife(exp: number): Date {
+	return new Date((exp + COOKIE_SURVIVAL_AFTER_END_S) * 1000)
 }
 
 /** Where a token stands at `maintenantS` (Unix seconds). A token that says nothing of its end date is unreadable. */
-export function etatDuJeton(jeton: string | undefined, maintenantS: number): EtatDuJeton {
+export function tokenState(jeton: string | undefined, maintenantS: number): TokenState {
 	if (jeton === undefined || jeton === '') return 'absent'
-	const exp = lireExpiration(jeton)
+	const exp = readExpiration(jeton)
 	if (exp === null) return 'illisible'
 	return exp <= maintenantS ? 'expire' : 'en-cours'
 }
@@ -72,7 +72,7 @@ export function etatDuJeton(jeton: string | undefined, maintenantS: number): Eta
  * is not needed (and not asked for) for the other states. A failed check never becomes `anonyme`:
  * that is the rule that keeps a passing outage from signing anyone out (U70).
  */
-export function classerLaSession(jeton: EtatDuJeton, verification?: Verification): EtatDeSession {
+export function classifySession(jeton: TokenState, verification?: Verification): SessionState {
 	if (jeton === 'absent' || jeton === 'illisible') return 'anonyme'
 	if (jeton === 'expire') return 'expiree'
 	if (verification === 'acceptee') return 'connectee'
@@ -81,7 +81,7 @@ export function classerLaSession(jeton: EtatDuJeton, verification?: Verification
 }
 
 /** What `verifierUneSession` needs from the outside: Payload's check and a small query on the database. */
-export interface OutilsDeVerification<Utilisateur> {
+export interface VerificationTools<Utilisateur> {
 	/** Payload's own check of the request: the user, or null when it refuses (it swallows its own errors into null). */
 	authentifier: () => Promise<Utilisateur | null>
 	/** Whether this user is one the space accepts (not an admin's token, which has the same cookie name). */
@@ -95,17 +95,17 @@ export interface OutilsDeVerification<Utilisateur> {
  * user is believed only when the database answers right after; otherwise the check could not be made
  * and nobody is signed out (AUTH-01, U70). Any throw is an outage.
  */
-export async function verifierUneSession<Utilisateur>({
+export async function verifySession<Utilisateur>({
 	authentifier,
 	convient,
 	sonder,
-}: OutilsDeVerification<Utilisateur>): Promise<
+}: VerificationTools<Utilisateur>): Promise<
 	{ verification: 'acceptee'; utilisateur: Utilisateur } | { verification: Exclude<Verification, 'acceptee'> }
 > {
 	try {
-		const utilisateur = await authentifier()
-		if (utilisateur)
-			return convient(utilisateur) ? { verification: 'acceptee', utilisateur } : { verification: 'refusee' }
+		const user = await authentifier()
+		if (user)
+			return convient(user) ? { verification: 'acceptee', utilisateur: user } : { verification: 'refusee' }
 		await sonder()
 		return { verification: 'refusee' }
 	} catch {

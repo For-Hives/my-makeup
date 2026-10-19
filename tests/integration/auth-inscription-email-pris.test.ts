@@ -1,10 +1,10 @@
 import { afterAll, describe, expect, test } from 'bun:test'
-import { creerFrein, type Frein } from '@/lib/auth/rate-limit'
-import type { FreinsDeBoite } from '@/lib/auth/sign-up-rate-limits'
-import { MESSAGES_INSCRIPTION } from '@/lib/auth/sign-up'
-import { inscrire, PLANCHER_INSCRIPTION_MS } from '@/lib/auth/sign-up-payload'
-import { journalDe } from '@/lib/auth/auth-log'
-import { renvoyerLaConfirmation } from '@/lib/auth/resend'
+import { createRateLimit, type RateLimit } from '@/lib/auth/rate-limit'
+import type { MailboxRateLimits } from '@/lib/auth/sign-up-rate-limits'
+import { SIGN_UP_MESSAGES } from '@/lib/auth/sign-up'
+import { signUpAccount, SIGN_UP_FLOOR_MS } from '@/lib/auth/sign-up-payload'
+import { authLog } from '@/lib/auth/auth-log'
+import { resendConfirmation } from '@/lib/auth/resend'
 import { envoiEmailDePayload } from '@/lib/emails/envoi'
 import { serverEnv } from '@/lib/env'
 import { purgeDesComptesNonConfirmes } from '@/lib/taches/comptes-non-confirmes'
@@ -27,9 +27,9 @@ const unique = () => crypto.randomUUID().slice(0, 8)
 const courriel = (prefixe: string) => `${prefixe}-${crypto.randomUUID()}@example.test`
 
 /** Brakes by mailbox on a clock the test moves. */
-function freinsAvecHorloge(): { freins: FreinsDeBoite; avancer: (ms: number) => void } {
+function freinsAvecHorloge(): { freins: MailboxRateLimits; avancer: (ms: number) => void } {
 	let maintenant = Date.now()
-	const monter = (frein: Frein): Frein => ({
+	const monter = (frein: RateLimit): RateLimit => ({
 		prendre: cle => frein.prendre(cle, maintenant),
 		rendre: cle => frein.rendre(cle, maintenant),
 		vider: () => frein.vider(),
@@ -37,44 +37,44 @@ function freinsAvecHorloge(): { freins: FreinsDeBoite; avancer: (ms: number) => 
 	const nom = crypto.randomUUID()
 	return {
 		freins: {
-			parMinute: monter(creerFrein({ nom: `minute-${nom}`, limite: 1, fenetreMs: 60_000 })),
-			parJour: monter(creerFrein({ nom: `jour-${nom}`, limite: 5, fenetreMs: 24 * 60 * 60 * 1000 })),
+			parMinute: monter(createRateLimit({ nom: `minute-${nom}`, limite: 1, fenetreMs: 60_000 })),
+			parJour: monter(createRateLimit({ nom: `jour-${nom}`, limite: 5, fenetreMs: 24 * 60 * 60 * 1000 })),
 		},
 		avancer: ms => {
 			maintenant += ms
 		},
 	}
 }
-const freinsLarges = (): FreinsDeBoite => ({
-	parMinute: creerFrein({ nom: `larges-minute-${unique()}`, limite: 1000, fenetreMs: 60_000 }),
-	parJour: creerFrein({ nom: `larges-jour-${unique()}`, limite: 1000, fenetreMs: 60_000 }),
+const freinsLarges = (): MailboxRateLimits => ({
+	parMinute: createRateLimit({ nom: `larges-minute-${unique()}`, limite: 1000, fenetreMs: 60_000 }),
+	parJour: createRateLimit({ nom: `larges-jour-${unique()}`, limite: 1000, fenetreMs: 60_000 }),
 })
 
 async function inscription(
 	email: string,
-	options: { plancherMs?: number; freins?: FreinsDeBoite; verifier?: boolean } = {}
+	options: { plancherMs?: number; freins?: MailboxRateLimits; verifier?: boolean } = {}
 ) {
 	const payload = await payloadDeTest()
-	return inscrire({
+	return signUpAccount({
 		payload,
 		donnees: { nom: 'Léa Fictive', email, password: MOT_DE_PASSE },
 		verifier: options.verifier ?? true,
 		envoyer: envoiEmailDePayload(payload, serverEnv()),
 		site: SITE,
-		journal: journalDe(payload),
+		journal: authLog(payload),
 		plancherMs: options.plancherMs ?? 0,
 		freins: options.freins ?? freinsLarges(),
 	})
 }
 
-async function renvoi(email: string, freins: FreinsDeBoite) {
+async function renvoi(email: string, freins: MailboxRateLimits) {
 	const payload = await payloadDeTest()
-	return renvoyerLaConfirmation({
+	return resendConfirmation({
 		payload,
 		email,
 		envoyer: envoiEmailDePayload(payload, serverEnv()),
 		site: SITE,
-		journal: journalDe(payload),
+		journal: authLog(payload),
 		plancherMs: 0,
 		freins,
 	})
@@ -143,7 +143,7 @@ describe('E03 : une adresse déjà utilisée ne révèle rien et ne crée pas de
 		expect(resultat).toEqual({
 			ok: false,
 			code: 'email-invalide',
-			erreurs: { email: MESSAGES_INSCRIPTION.email.invalide },
+			erreurs: { email: SIGN_UP_MESSAGES.email.invalide },
 		})
 		expect((await payload.count({ collection: 'pros', overrideAccess: true })).totalDocs).toBe(avant)
 		expect((await journal()).map(({ type, code }) => [type, code]).at(-1)).toEqual(['sign-up', 'donnees-invalides'])
@@ -155,7 +155,7 @@ describe('E03 : une adresse déjà utilisée ne révèle rien et ne crée pas de
 		const payload = await payloadDeTest()
 		const enPanne = () => Promise.reject(new Error('relais en feu'))
 		const appel = (adresse: string) =>
-			inscrire({
+			signUpAccount({
 				payload,
 				donnees: { nom: 'Léa Fictive', email: adresse, password: MOT_DE_PASSE },
 				verifier: true,
@@ -184,7 +184,7 @@ describe('E03 : une adresse déjà utilisée ne révèle rien et ne crée pas de
 		await inscription(prise)
 		const mesurer = async (email: string) => {
 			const debut = performance.now()
-			await inscription(email, { plancherMs: PLANCHER_INSCRIPTION_MS })
+			await inscription(email, { plancherMs: SIGN_UP_FLOOR_MS })
 			return performance.now() - debut
 		}
 		// Warm up (first connection, first render of the mail), then alternate the two cases.
@@ -198,7 +198,7 @@ describe('E03 : une adresse déjà utilisée ne révèle rien et ne crée pas de
 		}
 
 		expect(Math.abs(mediane(neuves) - mediane(prises))).toBeLessThan(50)
-		expect(Math.min(...neuves, ...prises)).toBeGreaterThanOrEqual(PLANCHER_INSCRIPTION_MS - 5)
+		expect(Math.min(...neuves, ...prises)).toBeGreaterThanOrEqual(SIGN_UP_FLOOR_MS - 5)
 	}, 60_000)
 
 	test('une propriétaire submergée : au plus un mail « déjà un compte » par minute et par boîte', async () => {
@@ -307,7 +307,7 @@ describe('E04 : le renvoi de la confirmation est limité', () => {
 		const { freins, avancer } = freinsAvecHorloge()
 		const { freins: freinsDeLaPrise, avancer: avancerLaPrise } = freinsAvecHorloge()
 		// The taken address has an old account: its sign-up and resend run on their own clock.
-		const sequence = async (email: string, f: FreinsDeBoite, avance: (ms: number) => void) => {
+		const sequence = async (email: string, f: MailboxRateLimits, avance: (ms: number) => void) => {
 			const inscrite = await inscription(email, { freins: f })
 			const premier = await renvoi(email, f)
 			avance(61_000)

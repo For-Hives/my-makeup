@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
-import { BoutonsDeDeconnexion } from '@/components/auth/SignOutButtons'
+import { SignOutButtons } from '@/components/auth/SignOutButtons'
 import { AvancementDuProfil } from '@/components/espace/AvancementDuProfil'
 import { CarteDeSection } from '@/components/espace/CarteDeSection'
 import { EditeurDeCoordonnees } from '@/components/espace/EditeurDeCoordonnees'
@@ -16,8 +16,8 @@ import { InterrupteurDeDisponibilite } from '@/components/espace/InterrupteurDeD
 import { LienDeVue } from '@/components/espace/LienDeVue'
 import { RafraichirSession } from '@/components/espace/RafraichirSession'
 import { SuppressionDuCompte } from '@/components/espace/SuppressionDuCompte'
-import { PAGE_D_ACCUEIL_DU_COMPTE } from '@/lib/auth/return-to'
-import { exigerMaquilleuse } from '@/lib/auth/session'
+import { ACCOUNT_ONBOARDING_PAGE } from '@/lib/auth/return-to'
+import { requireArtist } from '@/lib/auth/session'
 import { CHEMIN_DE_L_APERCU } from '@/lib/espace/apercu'
 import { avancementDuProfil } from '@/lib/espace/avancement'
 import { cartesDuProfil } from '@/lib/espace/cartes'
@@ -61,11 +61,11 @@ export const metadata: Metadata = { title: 'Mon espace' }
  * account nor of the session.
  */
 export default async function PageProfil() {
-	const maquilleuse = await exigerMaquilleuse('/auth/profil')
+	const maquilleuse = await requireArtist('/auth/profil')
 	const contexte = await utilisatriceDeLaRequete()
 	const profil = contexte === null ? null : await profilDeLaMaquilleuse(contexte.payload, contexte.utilisateur)
 	// An account that came without a profile (some accounts of the old site) gets one in the onboarding (ticket 140).
-	if (contexte === null || profil === null) return redirect(PAGE_D_ACCUEIL_DU_COMPTE)
+	if (contexte === null || profil === null) return redirect(ACCOUNT_ONBOARDING_PAGE)
 	const photos = await lirePhotosDeLEspace(contexte.payload, profil)
 
 	return (
@@ -176,7 +176,7 @@ export default async function PageProfil() {
 				</>
 			)}
 			<div className="mt-4 flex justify-center">
-				<BoutonsDeDeconnexion />
+				<SignOutButtons />
 			</div>
 			<SuppressionDuCompte
 				mode={contexte === null ? 'mot-de-passe' : modeDeConfirmation(contexte.utilisateur)}

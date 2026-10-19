@@ -16,12 +16,12 @@
  * No `next` import: read by the proxy and by the tests.
  */
 
-import { creerFrein, type Frein } from '@/lib/auth/rate-limit'
-import { ipClient, SANS_PROXY } from '@/lib/auth/client-ip'
+import { createRateLimit, type RateLimit } from '@/lib/auth/rate-limit'
+import { ipClient, NO_PROXY } from '@/lib/auth/client-ip'
 
 export const RECHERCHES_PAR_MINUTE = 60
 
-export const freinDeRecherche: Frein = creerFrein({
+export const freinDeRecherche: RateLimit = createRateLimit({
 	nom: 'recherche',
 	limite: RECHERCHES_PAR_MINUTE,
 	fenetreMs: 60_000,
@@ -31,7 +31,7 @@ export const CHEMIN_DE_LA_RECHERCHE = '/search'
 
 /** The key of a loopback address, as `ipClient` gives it: `127.x.y.z`, or the /64 block of `::1`. */
 export const estUneAdresseLocale = (cle: string): boolean =>
-	cle === SANS_PROXY || cle.startsWith('127.') || cle === '0:0:0:0::/64'
+	cle === NO_PROXY || cle.startsWith('127.') || cle === '0:0:0:0::/64'
 
 /** The page that answers a braked address: plain HTML, in French, with a way back. */
 export function pageDeFrein(reessayerDansS: number): string {
@@ -58,7 +58,7 @@ export function pageDeFrein(reessayerDansS: number): string {
  */
 export function freinerLaRecherche(
 	{ chemin, methode, entetes }: { chemin: string; methode: string; entetes: Headers },
-	frein: Frein = freinDeRecherche
+	frein: RateLimit = freinDeRecherche
 ): { status: 429; corps: string; entetes: Record<string, string> } | null {
 	if (chemin !== CHEMIN_DE_LA_RECHERCHE) return null
 	if (methode !== 'GET' && methode !== 'HEAD') return null

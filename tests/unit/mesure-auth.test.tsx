@@ -1,14 +1,14 @@
 import { describe, expect, test } from 'bun:test'
 import { ConnexionReussie } from '@/components/analytics/ConnexionReussie'
-import { EvenementsDeLaPageDeConnexion } from '@/components/auth/SignInPageEvents'
-import { FormulaireDeConnexion } from '@/components/auth/SignInForm'
-import { FormulaireDInscription } from '@/components/auth/SignUpForm'
-import { LienGoogle } from '@/components/auth/GoogleLink'
+import { SignInPageEvents } from '@/components/auth/SignInPageEvents'
+import { SignInForm } from '@/components/auth/SignInForm'
+import { SignUpForm } from '@/components/auth/SignUpForm'
+import { GoogleLink } from '@/components/auth/GoogleLink'
 import { CODES_D_ERREUR_D_AUTHENTIFICATION, donneesDEvenement } from '@/lib/analytics/events'
 import { methodeDeLaMarque } from '@/lib/analytics/marque-connexion'
 import type { Suivre } from '@/lib/analytics/track'
-import { CODES_ERREUR, CODES_ERREUR_GOOGLE } from '@/lib/auth/errors'
-import { CODES_ECHEC_INSCRIPTION } from '@/lib/auth/sign-up'
+import { ERROR_CODES, GOOGLE_ERROR_CODES } from '@/lib/auth/errors'
+import { SIGN_UP_FAILURE_CODES } from '@/lib/auth/sign-up'
 import { ouvrirFenetre } from '../outils/dom-react'
 
 /**
@@ -30,7 +30,7 @@ function espion() {
 describe('le catalogue couvre tous les codes que les pages peuvent montrer', () => {
 	test('chaque code de connexion, de Google et d’inscription est dans la liste fermée', () => {
 		const liste: readonly string[] = CODES_D_ERREUR_D_AUTHENTIFICATION
-		for (const code of [...CODES_ERREUR, ...CODES_ERREUR_GOOGLE, ...CODES_ECHEC_INSCRIPTION])
+		for (const code of [...ERROR_CODES, ...GOOGLE_ERROR_CODES, ...SIGN_UP_FAILURE_CODES])
 			expect(liste, code).toContain(code)
 	})
 
@@ -45,7 +45,7 @@ describe('connexion par email', () => {
 	test('un refus envoie login_result une fois, avec le code affiché', async () => {
 		const { envois, suivre } = espion()
 		const zone = await fenetre.monter(
-			<FormulaireDeConnexion
+			<SignInForm
 				action={(async () => ({ code: 'identifiants-invalides' })) as never}
 				retour="/auth/profil"
 				suivre={suivre}
@@ -66,7 +66,7 @@ describe('connexion par email', () => {
 	test('rien n’est envoyé avant la première réponse', async () => {
 		const { envois, suivre } = espion()
 		await fenetre.monter(
-			<FormulaireDeConnexion action={(async () => null) as never} retour="/auth/profil" suivre={suivre} />
+			<SignInForm action={(async () => null) as never} retour="/auth/profil" suivre={suivre} />
 		)
 		expect(envois).toEqual([])
 	})
@@ -98,14 +98,14 @@ describe('connexion réussie (email ou Google), sur la page d’arrivée', () =>
 describe('page de connexion avec ?error=', () => {
 	test('session expirée : session_expired une fois, ni login_result ni auth_error (E12 reste vert)', async () => {
 		const { envois, suivre } = espion()
-		await fenetre.monter(<EvenementsDeLaPageDeConnexion code="session-expiree" suivre={suivre} />)
+		await fenetre.monter(<SignInPageEvents code="session-expiree" suivre={suivre} />)
 		expect(envois).toEqual([{ nom: 'session_expired', proprietes: { where: 'jwt_expire' } }])
 	})
 
-	for (const code of CODES_ERREUR_GOOGLE) {
+	for (const code of GOOGLE_ERROR_CODES) {
 		test(`retour de Google en échec ${code} : login_result google et auth_error, une fois`, async () => {
 			const { envois, suivre } = espion()
-			await fenetre.monter(<EvenementsDeLaPageDeConnexion code={code} suivre={suivre} />)
+			await fenetre.monter(<SignInPageEvents code={code} suivre={suivre} />)
 			expect(envois).toEqual([
 				{ nom: 'login_result', proprietes: { method: 'google', ok: false, code } },
 				{ nom: 'auth_error', proprietes: { code } },
@@ -115,8 +115,8 @@ describe('page de connexion avec ?error=', () => {
 
 	test('sans code, ou avec un code hors liste, rien ne part', async () => {
 		const { envois, suivre } = espion()
-		await fenetre.monter(<EvenementsDeLaPageDeConnexion code={null} suivre={suivre} />)
-		await fenetre.monter(<EvenementsDeLaPageDeConnexion code="texte-libre" suivre={suivre} />)
+		await fenetre.monter(<SignInPageEvents code={null} suivre={suivre} />)
+		await fenetre.monter(<SignInPageEvents code="texte-libre" suivre={suivre} />)
 		expect(envois).toEqual([])
 	})
 })
@@ -125,7 +125,7 @@ describe('inscription', () => {
 	test('signup_start part au premier envoi seulement, method email', async () => {
 		const { envois, suivre } = espion()
 		const zone = await fenetre.monter(
-			<FormulaireDInscription action={(async () => ({ erreurs: { nom: 'Trop court.' } })) as never} suivre={suivre} />
+			<SignUpForm action={(async () => ({ erreurs: { nom: 'Trop court.' } })) as never} suivre={suivre} />
 		)
 		await fenetre.cliquer(fenetre.bouton('S’inscrire'))
 		await fenetre.attendre(() => zone.querySelector('#erreur-nom')?.textContent)
@@ -136,7 +136,7 @@ describe('inscription', () => {
 	test('un refus du serveur envoie auth_error avec son code', async () => {
 		const { envois, suivre } = espion()
 		const zone = await fenetre.monter(
-			<FormulaireDInscription action={(async () => ({ echec: 'service-indisponible' })) as never} suivre={suivre} />
+			<SignUpForm action={(async () => ({ echec: 'service-indisponible' })) as never} suivre={suivre} />
 		)
 		await fenetre.cliquer(fenetre.bouton('S’inscrire'))
 		await fenetre.attendre(() => zone.querySelector('[role="alert"] p'))
@@ -147,12 +147,12 @@ describe('inscription', () => {
 		const { envois, suivre } = espion()
 		const zone = await fenetre.monter(
 			<div>
-				<LienGoogle adresse="#a" debutDInscription={true} className="x" suivre={suivre}>
+				<GoogleLink adresse="#a" debutDInscription={true} className="x" suivre={suivre}>
 					a
-				</LienGoogle>
-				<LienGoogle adresse="#b" debutDInscription={false} className="x" suivre={suivre}>
+				</GoogleLink>
+				<GoogleLink adresse="#b" debutDInscription={false} className="x" suivre={suivre}>
 					b
-				</LienGoogle>
+				</GoogleLink>
 			</div>
 		)
 		const liens = zone.querySelectorAll('a')
