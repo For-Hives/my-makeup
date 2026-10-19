@@ -15,6 +15,6 @@ export const dynamic = 'force-dynamic'
  */
 export async function GET(): Promise<Response> {
 	const aLeCookie = (await cookies()).has(COOKIE_DE_SESSION)
-	const connectee = aLeCookie && (await maquilleuseConnectee()) !== null
-	return Response.json({ connectee }, { headers: { 'Cache-Control': 'private, no-store' } })
+	const signedIn = aLeCookie && (await maquilleuseConnectee()) !== null
+	return Response.json({ signedIn }, { headers: { 'Cache-Control': 'private, no-store' } })
 }

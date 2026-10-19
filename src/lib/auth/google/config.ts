@@ -5,7 +5,7 @@ import type { ConfigGoogle } from './oidc'
 export const CHEMIN_DU_DEPART_GOOGLE = '/auth/google'
 
 /** Where Google sends the browser back. This address is the one registered in the Google console. */
-export const CHEMIN_DU_RETOUR_GOOGLE = '/auth/google/retour'
+export const CHEMIN_DU_RETOUR_GOOGLE = '/auth/google/callback'
 
 /** The sealed cookie that holds the secrets of the request between the departure and the return. */
 export const COOKIE_DE_GOOGLE = 'google-oidc'

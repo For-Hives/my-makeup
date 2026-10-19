@@ -27,7 +27,7 @@ const config: ConfigGoogle = {
 	emetteur: EMETTEUR,
 	clientId: CLIENT,
 	clientSecret: SECRET,
-	redirectUri: 'https://my-makeup.example.test/auth/google/retour',
+	redirectUri: 'https://my-makeup.example.test/auth/google/callback',
 }
 const MAINTENANT = Date.UTC(2026, 9, 14, 12, 0, 0)
 const maintenant = () => MAINTENANT

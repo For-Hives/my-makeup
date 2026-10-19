@@ -30,7 +30,7 @@ const config: ConfigGoogle = {
 	emetteur: google.emetteur,
 	clientId: google.clientId,
 	clientSecret: google.secret,
-	redirectUri: `${SITE}/auth/google/retour`,
+	redirectUri: `${SITE}/auth/google/callback`,
 }
 
 beforeAll(() => oublierLesDocuments())

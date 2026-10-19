@@ -465,7 +465,7 @@ describe('le relais /u/api/send', () => {
 		const racine = path.join(process.cwd(), 'src/app/u')
 		const envoyer = await import('@/app/u/api/send/route')
 		const servir = await import('@/app/u/script.js/route')
-		const reste = await import('@/app/u/[[...reste]]/route')
+		const reste = await import('@/app/u/[[...rest]]/route')
 		expect(Object.keys(envoyer).filter(nom => /^[A-Z]+$/.test(nom))).toEqual(['POST'])
 		expect(Object.keys(servir).filter(nom => /^[A-Z]+$/.test(nom))).toEqual(['GET'])
 		const reponse = await reste.GET()
@@ -476,7 +476,7 @@ describe('le relais /u/api/send', () => {
 			.map(entree => path.relative(racine, path.join(entree.parentPath, entree.name)))
 			.sort()
 		expect(fichiers).toEqual([
-			path.join('[[...reste]]', 'route.ts'),
+			path.join('[[...rest]]', 'route.ts'),
 			path.join('api', 'send', 'route.ts'),
 			path.join('script.js', 'route.ts'),
 		])

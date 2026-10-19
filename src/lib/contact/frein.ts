@@ -29,7 +29,7 @@ export const MESSAGES_PAR_JOUR_ET_EMAIL = 20
 /** The path of the contact page: a Server Action is posted to the page that holds its form. */
 export const CHEMIN_DU_CONTACT = '/contact'
 /** The path the proxy sends a refused message to. */
-export const CHEMIN_DU_REFUS_DE_CONTACT = '/contact/refus'
+export const CHEMIN_DU_REFUS_DE_CONTACT = '/contact/throttled'
 
 export const freinDeContactParAdresse: Frein = creerFrein({
 	nom: 'contact-adresse',

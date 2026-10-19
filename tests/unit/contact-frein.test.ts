@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
 import { NextRequest } from 'next/server'
-import { POST as refuser } from '@/app/(front)/(site)/contact/refus/route'
+import { POST as refuser } from '@/app/(front)/(site)/contact/throttled/route'
 import { cleDeBoite } from '@/lib/auth/email-canonique'
 import { enregistrerUnMessageDeContact, type StockageDesDemandes } from '@/lib/contact/envoi-payload'
 import {
@@ -177,7 +177,7 @@ describe('le proxy renvoie un 429 en français à la sixième demande', () => {
 	test('POST /contact passe tant que l’adresse a des places, puis est réécrit vers la route de refus', async () => {
 		for (let i = 0; i < 5; i++) freinDeContactParAdresse.prendre('198.51.100.1')
 		const refuse = await proxy(requete('POST', '198.51.100.1'))
-		expect(refuse.headers.get('x-middleware-rewrite')).toContain('/contact/refus')
+		expect(refuse.headers.get('x-middleware-rewrite')).toContain('/contact/throttled')
 		expect((await proxy(requete('POST', '198.51.100.2'))).headers.get('x-middleware-rewrite')).toBeNull()
 		// Reading the page is never braked.
 		expect(proxy(requete('GET', '198.51.100.1')).headers.get('x-middleware-rewrite')).toBeNull()
@@ -186,7 +186,7 @@ describe('le proxy renvoie un 429 en français à la sixième demande', () => {
 	test('la route de refus répond 429 avec la phrase et Retry-After pour une action, 404 pour une adresse libre', async () => {
 		for (let i = 0; i < 5; i++) freinDeContactParAdresse.prendre('198.51.100.1')
 		const action = await refuser(
-			new Request('http://localhost/contact/refus', {
+			new Request('http://localhost/contact/throttled', {
 				method: 'POST',
 				headers: { 'x-forwarded-for': '198.51.100.1', 'next-action': 'abc' },
 			})
@@ -197,13 +197,19 @@ describe('le proxy renvoie un 429 en français à la sixième demande', () => {
 		expect(await action.text()).toBe(MESSAGE_TROP_DE_MESSAGES)
 
 		const formulaire = await refuser(
-			new Request('http://localhost/contact/refus', { method: 'POST', headers: { 'x-forwarded-for': '198.51.100.1' } })
+			new Request('http://localhost/contact/throttled', {
+				method: 'POST',
+				headers: { 'x-forwarded-for': '198.51.100.1' },
+			})
 		)
 		expect(formulaire.status).toBe(429)
 		expect(await formulaire.text()).toContain('Ce que vous avez écrit est conservé')
 
 		const libre = await refuser(
-			new Request('http://localhost/contact/refus', { method: 'POST', headers: { 'x-forwarded-for': '198.51.100.9' } })
+			new Request('http://localhost/contact/throttled', {
+				method: 'POST',
+				headers: { 'x-forwarded-for': '198.51.100.9' },
+			})
 		)
 		expect(libre.status).toBe(404)
 	})
@@ -212,7 +218,7 @@ describe('le proxy renvoie un 429 en français à la sixième demande', () => {
 		for (let i = 0; i < 20; i++) freinDeContactParEmail.prendre(cleDeBoite('boite.pleine@example.test'))
 		// The same mailbox, written otherwise, from an address that has sent nothing.
 		const refusee = await proxyDuContact(action('203.0.113.5', ' Boite.Pleine@Example.test '))
-		expect(refusee.headers.get('x-middleware-rewrite')).toContain('/contact/refus')
+		expect(refusee.headers.get('x-middleware-rewrite')).toContain('/contact/throttled')
 		const libre = await proxyDuContact(action('203.0.113.5', 'autre@example.test'))
 		expect(libre.headers.get('x-middleware-rewrite')).toBeNull()
 		// The proxy only reads: the brake still holds 20 places for the pleine mailbox, none for the other.
@@ -224,7 +230,7 @@ describe('le proxy renvoie un 429 en français à la sixième demande', () => {
 		const sansCorps = await proxyDuContact(requete('POST', '127.0.0.1'))
 		expect(sansCorps.headers.get('x-middleware-rewrite')).toBeNull()
 		const pleine = await proxyDuContact(action('127.0.0.1', 'boite.pleine@example.test'))
-		expect(pleine.headers.get('x-middleware-rewrite')).toContain('/contact/refus')
+		expect(pleine.headers.get('x-middleware-rewrite')).toContain('/contact/throttled')
 	})
 
 	test('la route de refus répond 429 pour une boîte pleine dont le corps est celui d’une action', async () => {
@@ -232,7 +238,7 @@ describe('le proxy renvoie un 429 en français à la sixième demande', () => {
 		const corps = new FormData()
 		corps.set('1_email', 'boite.pleine@example.test')
 		const reponse = await refuser(
-			new Request('http://localhost/contact/refus', {
+			new Request('http://localhost/contact/throttled', {
 				method: 'POST',
 				headers: { 'x-forwarded-for': '203.0.113.5', 'next-action': 'abc' },
 				body: corps,

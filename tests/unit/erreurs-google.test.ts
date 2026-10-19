@@ -60,6 +60,6 @@ describe('le journal garde la méthode, dans une liste fermée', () => {
 describe('le retour après Google', () => {
 	test('la porte de départ de Google n’est jamais une page de retour : elle ferait une boucle', () => {
 		expect(retourSur('/auth/google', 'https://my-makeup.fr')).toBe('/auth/profil')
-		expect(retourSur('/auth/google/retour?code=x', 'https://my-makeup.fr')).toBe('/auth/profil')
+		expect(retourSur('/auth/google/callback?code=x', 'https://my-makeup.fr')).toBe('/auth/profil')
 	})
 })

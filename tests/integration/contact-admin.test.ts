@@ -103,7 +103,7 @@ describe('E58 (côté serveur) : le renvoi de l’email d’un message en échec
 		const { id, email, payload } = await messageEnBase('echec')
 		const { session } = await creerCompte('admin')
 
-		const reponse = await appelerRest('POST', `/api/demandes/${id}/renvoyer`, { enTetes: session.enTetes })
+		const reponse = await appelerRest('POST', `/api/demandes/${id}/resend`, { enTetes: session.enTetes })
 
 		expect(reponse.statut).toBe(200)
 		expect(reponse.corps).toEqual({ etatMail: 'envoye' })
@@ -122,14 +122,14 @@ describe('E58 (côté serveur) : le renvoi de l’email d’un message en échec
 		const { session } = await creerCompte('admin')
 
 		const [a, b] = await Promise.all([
-			appelerRest('POST', `/api/demandes/${id}/renvoyer`, { enTetes: session.enTetes }),
-			appelerRest('POST', `/api/demandes/${id}/renvoyer`, { enTetes: session.enTetes }),
+			appelerRest('POST', `/api/demandes/${id}/resend`, { enTetes: session.enTetes }),
+			appelerRest('POST', `/api/demandes/${id}/resend`, { enTetes: session.enTetes }),
 		])
 
 		expect([a.statut, b.statut].sort()).toEqual([200, 409])
 		expect(await mailsPour(email)).toHaveLength(1)
 		// A click that comes later still sends nothing.
-		expect((await appelerRest('POST', `/api/demandes/${id}/renvoyer`, { enTetes: session.enTetes })).statut).toBe(409)
+		expect((await appelerRest('POST', `/api/demandes/${id}/resend`, { enTetes: session.enTetes })).statut).toBe(409)
 		expect(await mailsPour(email)).toHaveLength(1)
 	})
 
@@ -137,11 +137,11 @@ describe('E58 (côté serveur) : le renvoi de l’email d’un message en échec
 		const { id, email } = await messageEnBase('envoye')
 		const { session } = await creerCompte('admin')
 
-		expect((await appelerRest('POST', `/api/demandes/${id}/renvoyer`, { enTetes: session.enTetes })).statut).toBe(409)
+		expect((await appelerRest('POST', `/api/demandes/${id}/resend`, { enTetes: session.enTetes })).statut).toBe(409)
 		expect(
-			(await appelerRest('POST', `/api/demandes/${id + 100000}/renvoyer`, { enTetes: session.enTetes })).statut
+			(await appelerRest('POST', `/api/demandes/${id + 100000}/resend`, { enTetes: session.enTetes })).statut
 		).toBe(404)
-		expect((await appelerRest('POST', '/api/demandes/abc/renvoyer', { enTetes: session.enTetes })).statut).toBe(404)
+		expect((await appelerRest('POST', '/api/demandes/abc/resend', { enTetes: session.enTetes })).statut).toBe(404)
 		expect(await mailsPour(email)).toEqual([])
 	})
 
@@ -150,7 +150,7 @@ describe('E58 (côté serveur) : le renvoi de l’email d’un message en échec
 		const [redaction, maquilleuse] = await Promise.all([creerCompte('redaction'), creerCompte('maquilleuse')])
 
 		for (const enTetes of [redaction.session.enTetes, maquilleuse.session.enTetes, undefined])
-			expect((await appelerRest('POST', `/api/demandes/${id}/renvoyer`, enTetes ? { enTetes } : {})).statut).toBe(403)
+			expect((await appelerRest('POST', `/api/demandes/${id}/resend`, enTetes ? { enTetes } : {})).statut).toBe(403)
 
 		expect(await mailsPour(email)).toEqual([])
 		const ligne = await (await payloadDeTest()).findByID({ collection: 'demandes', id, depth: 0 })

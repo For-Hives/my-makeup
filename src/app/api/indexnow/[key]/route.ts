@@ -8,10 +8,10 @@ export const dynamic = 'force-dynamic'
  * rewrites here. 200 with the key as the whole body when the address names the key of INDEXNOW_KEY,
  * 404 for any other key and for every key when the variable is not set: nothing is served without it.
  */
-export async function GET(_requete: Request, { params }: { params: Promise<{ cle: string }> }): Promise<Response> {
-	const { cle } = await params
+export async function GET(_requete: Request, { params }: { params: Promise<{ key: string }> }): Promise<Response> {
+	const { key } = await params
 	const attendue = cleIndexNow()
-	if (attendue === undefined || cle !== attendue) return new Response('Page introuvable', { status: 404 })
+	if (attendue === undefined || key !== attendue) return new Response('Page introuvable', { status: 404 })
 	return new Response(attendue, {
 		headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'public, max-age=300' },
 	})

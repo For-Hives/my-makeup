@@ -2,14 +2,14 @@ import { SITE_ORIGIN } from '../env'
 import { deltaEnTexte, type ExportDuDelta, journalDuDelta } from './export-delta'
 
 /**
- * The answer of GET /api/bascule/delta (ticket 234): the private export of what the v3 received since the
+ * The answer of GET /api/cutover/delta (ticket 234): the private export of what the v3 received since the
  * switch, for an admin signed in on the site, and for nobody else. What it reads and who is asking are given
  * by the caller: the route wires the real database and the real session, a test wires its own.
  *
  * - **The site only**: `NODE_ENV=production`, `APP_ENV=prod` and `NEXT_PUBLIC_SITE_URL` the site. Anywhere
  *   else (a workstation, the test bench, a build served locally) the answer is a 403 and nothing is read.
  * - **No database opened, no SSH**: the admin downloads it with the browser she is already signed in with.
- * - **The start**: `?depuis=<instant ISO 8601>`, else the start (00:00 UTC) of the day `BASCULE_LE`.
+ * - **The start**: `?since=<instant ISO 8601>`, else the start (00:00 UTC) of the day `BASCULE_LE`.
  * - Never cached, never indexed; the file is an attachment. The log holds counts and numeric identifiers only.
  */
 
@@ -65,14 +65,14 @@ export async function repondreAuDelta(request: Request, lecture: LectureDuDelta)
 	const admin = await lecture.estAdmin()
 	if (admin === 'anonyme') return refus(401, 'Connecte-toi à /admin avec un compte admin, puis recharge cette adresse.')
 	if (!admin) return refus(403, 'Seul un compte admin peut télécharger cet export.')
-	const demande = new URL(request.url).searchParams.get('depuis')
+	const demande = new URL(request.url).searchParams.get('since')
 	const depuis = demande === null ? debutDeLaBascule(lecture.basculeLe) : lireLInstant(demande)
 	if (!depuis)
 		return refus(
 			400,
 			demande === null
-				? 'BASCULE_LE n’est pas réglée : donne le début avec ?depuis=<instant ISO 8601, avec son fuseau>.'
-				: 'depuis est un instant ISO 8601 avec son fuseau, comme 2026-11-02T08:30:00Z.'
+				? 'BASCULE_LE n’est pas réglée : donne le début avec ?since=<instant ISO 8601, avec son fuseau>.'
+				: 'since est un instant ISO 8601 avec son fuseau, comme 2026-11-02T08:30:00Z.'
 		)
 	const delta = await lecture.lire(depuis)
 	for (const ligne of journalDuDelta(delta)) lecture.journal(ligne)
@@ -81,7 +81,7 @@ export async function repondreAuDelta(request: Request, lecture: LectureDuDelta)
 		headers: {
 			...ENTETES_DU_DELTA,
 			'Content-Type': 'application/json; charset=utf-8',
-			'Content-Disposition': `attachment; filename="delta-depuis-${jour}.json"`,
+			'Content-Disposition': `attachment; filename="delta-since-${jour}.json"`,
 		},
 	})
 }

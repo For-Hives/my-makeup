@@ -555,7 +555,7 @@ Une variable suffit : `GOOGLE_OIDC_ISSUER`, l'adresse du fournisseur. `.env.test
 
 Le fournisseur publie ses adresses dans son document de découverte, `<GOOGLE_OIDC_ISSUER>/.well-known/openid-configuration`, comme Google. Ses chemins sont ceux de Google : `/o/oauth2/v2/auth`, `/token`, `/v1/userinfo`, `/oauth2/v3/certs`.
 
-La connexion Google de l'application (tickets 090 et 091) lit cette variable (`googleIssuer`, dans `src/lib/env.ts`) avec le client et son secret. Son code est dans `src/lib/auth/google/` : un client OpenID Connect écrit à la main (code d'autorisation, PKCE, `state` et `nonce` dans un cookie scellé, jeton d'identité vérifié RS256), la règle du compte, et le retour. Deux adresses : `/auth/google` (le départ, derrière le bouton) et `/auth/google/retour`.
+La connexion Google de l'application (tickets 090 et 091) lit cette variable (`googleIssuer`, dans `src/lib/env.ts`) avec le client et son secret. Son code est dans `src/lib/auth/google/` : un client OpenID Connect écrit à la main (code d'autorisation, PKCE, `state` et `nonce` dans un cookie scellé, jeton d'identité vérifié RS256), la règle du compte, et le retour. Deux adresses : `/auth/google` (le départ, derrière le bouton) et `/auth/google/callback`.
 
 Deux tests la jouent contre ce fournisseur :
 
