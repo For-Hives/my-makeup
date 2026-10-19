@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { urlSessionExpiree } from '@/lib/auth/retour'
+import { urlSessionExpiree } from '@/lib/auth/return-to'
 
 /** The page of the onboarding: where the sign-in page brings her back. */
 export const PAGE_DE_L_ACCUEIL = '/auth/init-account'

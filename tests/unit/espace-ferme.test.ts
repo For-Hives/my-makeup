@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
-import { enTetesEspace } from '@/lib/auth/entetes-espace'
-import { redirectionDeLEspace } from '@/lib/auth/espace-ferme'
+import { enTetesEspace } from '@/lib/auth/dashboard-headers'
+import { redirectionDeLEspace } from '@/lib/auth/closed-dashboard'
 import * as moduleProxy from '@/proxy'
 
 const config = (moduleProxy as { config?: { matcher?: unknown } }).config

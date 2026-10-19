@@ -1,4 +1,4 @@
-import { creerFrein, type Frein } from './frein'
+import { creerFrein, type Frein } from './rate-limit'
 
 /**
  * The brakes of the sign-up and of the resending of the confirmation (tickets 083 and 084), each

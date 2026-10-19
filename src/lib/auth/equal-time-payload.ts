@@ -1,6 +1,6 @@
 import type { CollectionAfterErrorHook, CollectionBeforeOperationHook } from 'payload'
-import { codeDeLEchec, type Horloge, PLANCHER_DE_REFUS_MS } from './connexion'
-import { travailDeVerificationFictif } from './herite'
+import { codeDeLEchec, type Horloge, PLANCHER_DE_REFUS_MS } from './sign-in'
+import { travailDeVerificationFictif } from './legacy'
 
 /**
  * The equal time of a refused sign-in on the REST door, `POST /api/pros/login` (ticket 088). The

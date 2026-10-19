@@ -1,9 +1,9 @@
 import config from '@payload-config'
 import { getPayload } from 'payload'
-import { MESSAGES_ECHEC_INSCRIPTION } from '@/lib/auth/inscription'
-import { ipClient } from '@/lib/auth/ip-client'
-import { journalDe } from '@/lib/auth/journal'
-import { journaliserUnRefus, secondesAvantUneInscription } from '@/lib/auth/refus-inscription'
+import { MESSAGES_ECHEC_INSCRIPTION } from '@/lib/auth/sign-up'
+import { ipClient } from '@/lib/auth/client-ip'
+import { journalDe } from '@/lib/auth/auth-log'
+import { journaliserUnRefus, secondesAvantUneInscription } from '@/lib/auth/sign-up-refusal'
 
 export const dynamic = 'force-dynamic'
 

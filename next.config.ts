@@ -2,7 +2,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { withPayload } from '@payloadcms/next/withPayload'
 import type { NextConfig } from 'next'
-import { enTetesEspace } from './src/lib/auth/entetes-espace'
+import { enTetesEspace } from './src/lib/auth/dashboard-headers'
 import { mediaOrigin } from './src/lib/env'
 import { imagesDuBanc, mediaRemotePattern, securityHeaders } from './src/lib/security-headers'
 

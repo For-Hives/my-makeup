@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, setDefaultTimeout, test } from 'bun:test'
 import type { Payload } from 'payload'
 import { MESSAGE_PANNE_DU_STOCKAGE } from '@/collections/trash'
-import { supprimerLeCompteEtToutCeQuiEnDepend } from '@/lib/compte/suppression'
+import { supprimerLeCompteEtToutCeQuiEnDepend } from '@/lib/account/deletion'
 import { MESSAGES_DE_SUPPRESSION } from '@/lib/espace/confirmation-suppression'
 import { freinDeLaSuppression, supprimerMonCompte } from '@/lib/espace/supprimer-compte'
 import type { Media } from '@/payload-types'
@@ -206,7 +206,7 @@ describe('Mot de passe faux : rien de supprimé ; essais freinés', () => {
 		const { compte } = await compteGarni()
 		for (let i = 0; i < 11; i++) await supprimer(payload, compte, `faux-${i}`, depuis('192.0.2.9'))
 
-		const { ouvrirParMotDePasse } = await import('@/lib/auth/jeton')
+		const { ouvrirParMotDePasse } = await import('@/lib/auth/token')
 		const { token } = await ouvrirParMotDePasse(payload, 'pros', { email: compte.email, password: MOT_DE_PASSE })
 		expect(token).toBeTruthy()
 	})

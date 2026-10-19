@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { NextRequest } from 'next/server'
-import { MESSAGE_SESSION_EXPIREE, messageDeLUrl } from '@/lib/auth/erreurs'
-import { decisionDeLEspace } from '@/lib/auth/espace-ferme'
+import { MESSAGE_SESSION_EXPIREE, messageDeLUrl } from '@/lib/auth/errors'
+import { decisionDeLEspace } from '@/lib/auth/closed-dashboard'
 import {
 	classerLaSession,
 	etatDuJeton,
@@ -9,8 +9,8 @@ import {
 	lireExpiration,
 	SURVIE_DU_COOKIE_APRES_FIN_S,
 	verifierUneSession,
-} from '@/lib/auth/etat-session'
-import { retourSur, urlSessionExpiree } from '@/lib/auth/retour'
+} from '@/lib/auth/session-state'
+import { retourSur, urlSessionExpiree } from '@/lib/auth/return-to'
 import { proxy } from '@/proxy'
 
 /** A token shaped like Payload's, signed with nothing: only its end date is ever read here. */

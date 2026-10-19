@@ -3,8 +3,8 @@ import {
 	avecLeRefusDuProxy,
 	type EtatDInscription,
 	FormulaireDInscription,
-} from '@/components/auth/FormulaireDInscription'
-import { CHAMP_PIEGE, MESSAGES_ECHEC_INSCRIPTION, MESSAGES_INSCRIPTION } from '@/lib/auth/inscription'
+} from '@/components/auth/SignUpForm'
+import { CHAMP_PIEGE, MESSAGES_ECHEC_INSCRIPTION, MESSAGES_INSCRIPTION } from '@/lib/auth/sign-up'
 import { ouvrirFenetre } from '../outils/dom-react'
 
 const fenetre = ouvrirFenetre()

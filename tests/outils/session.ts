@@ -9,8 +9,8 @@
  */
 
 import { type AuthCollectionSlug, generatePayloadCookie, type Payload } from 'payload'
-import { finDeVieDuCookie } from '../../src/lib/auth/etat-session'
-import { type CompteDesigne, ouvrirParMotDePasse, ouvrirSansMotDePasse } from '../../src/lib/auth/jeton'
+import { finDeVieDuCookie } from '../../src/lib/auth/session-state'
+import { type CompteDesigne, ouvrirParMotDePasse, ouvrirSansMotDePasse } from '../../src/lib/auth/token'
 import { BancRefuse, type Variables } from './banc'
 
 /** A cookie as a browser context takes it: the shape of Playwright's `context.addCookies()`. */

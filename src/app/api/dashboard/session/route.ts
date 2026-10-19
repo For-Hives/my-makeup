@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers'
-import { COOKIE_DE_SESSION } from '@/lib/auth/espace-ferme'
+import { COOKIE_DE_SESSION } from '@/lib/auth/closed-dashboard'
 import { maquilleuseConnectee } from '@/lib/auth/session'
 
 // Read per request: it depends on the session, and the build has no database.

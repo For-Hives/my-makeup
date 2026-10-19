@@ -1,7 +1,7 @@
 'use client'
 
 import { useActionState, useEffect, useRef } from 'react'
-import { type CodeEchecDeLaDemande, MESSAGES_MOT_DE_PASSE } from '@/lib/auth/mot-de-passe-oublie'
+import { type CodeEchecDeLaDemande, MESSAGES_MOT_DE_PASSE } from '@/lib/auth/forgot-password'
 
 export type EtatDeLaDemande = { envoyee: true } | { code: CodeEchecDeLaDemande } | null
 export type ActionDeLaDemande = (precedent: EtatDeLaDemande, formulaire: FormData) => Promise<EtatDeLaDemande>

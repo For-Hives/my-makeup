@@ -4,8 +4,8 @@ import {
 	type CollectionBeforeChangeHook,
 	type CollectionBeforeLoginHook,
 } from 'payload'
-import { messageErreur } from './erreurs'
-import { journaliser } from './journal'
+import { messageErreur } from './errors'
+import { journaliser } from './auth-log'
 
 /**
  * The blocked account (ticket 089, plan 01 §6.1, `pros.blocked`): an admin blocks a makeup artist,

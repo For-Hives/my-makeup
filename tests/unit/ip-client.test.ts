@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test'
-import { cleDeAdresse, ipClient } from '@/lib/auth/ip-client'
+import { cleDeAdresse, ipClient } from '@/lib/auth/client-ip'
 
 const avec = (entetes: Record<string, string>) => new Headers(entetes)
 

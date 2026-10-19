@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
-import { cleDeBoite, emailCanonique, localGmailCanonique } from '@/lib/auth/email-canonique'
-import { creerFrein } from '@/lib/auth/frein'
-import { prendreUnMailPour } from '@/lib/auth/freins-inscription'
+import { cleDeBoite, emailCanonique, localGmailCanonique } from '@/lib/auth/canonical-email'
+import { creerFrein } from '@/lib/auth/rate-limit'
+import { prendreUnMailPour } from '@/lib/auth/sign-up-rate-limits'
 
 describe('emailCanonique : les variantes Gmail sont une boîte (ticket 084)', () => {
 	test.each([

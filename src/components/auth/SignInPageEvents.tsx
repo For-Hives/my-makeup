@@ -3,8 +3,8 @@
 import { useEffect, useRef } from 'react'
 import { CODES_D_ERREUR_D_AUTHENTIFICATION } from '@/lib/analytics/events'
 import { type Suivre, track } from '@/lib/analytics/track'
-import { CODES_ERREUR_GOOGLE } from '@/lib/auth/erreurs'
-import { ERREUR_SESSION_EXPIREE } from '@/lib/auth/retour'
+import { CODES_ERREUR_GOOGLE } from '@/lib/auth/errors'
+import { ERREUR_SESSION_EXPIREE } from '@/lib/auth/return-to'
 
 /**
  * What the sign-in page tells the measure when it opens with an `?error=` (ticket 146). `code` is

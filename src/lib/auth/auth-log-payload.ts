@@ -1,7 +1,7 @@
 import type { CollectionAfterErrorHook, CollectionAfterLoginHook, CollectionBeforeOperationHook } from 'payload'
-import { codeDeLEchec } from './connexion'
-import { journaliser } from './journal'
-import { CONTEXTE_DE_REINITIALISATION } from './oubli-payload'
+import { codeDeLEchec } from './sign-in'
+import { journaliser } from './auth-log'
+import { CONTEXTE_DE_REINITIALISATION } from './forgot-payload'
 
 /**
  * The hooks of `pros` that write the journal of the REST door of the sign-in, `POST /api/pros/login`

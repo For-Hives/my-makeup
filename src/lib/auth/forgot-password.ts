@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { EMAIL_MAX, MOT_DE_PASSE_MAX, MOT_DE_PASSE_MIN } from './inscription'
+import { EMAIL_MAX, MOT_DE_PASSE_MAX, MOT_DE_PASSE_MIN } from './sign-up'
 
 /**
  * The rules of the forgotten password (tickets 085 and 086), pure: the request form, the page of the

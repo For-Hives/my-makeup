@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import bcrypt from 'bcryptjs'
 import { AuthenticationError } from 'payload'
-import { connecter, type Horloge, PLANCHER_DE_REFUS_MS } from '@/lib/auth/connexion'
-import { creerFrein } from '@/lib/auth/frein'
+import { connecter, type Horloge, PLANCHER_DE_REFUS_MS } from '@/lib/auth/sign-in'
+import { creerFrein } from '@/lib/auth/rate-limit'
 import {
 	estUnHashBcrypt,
 	HASH_FICTIF,
@@ -11,9 +11,9 @@ import {
 	PBKDF2_DE_PAYLOAD,
 	remplacerLeHashHerite,
 	travailDeVerificationFictif,
-} from '@/lib/auth/herite'
-import type { EvenementAuth } from '@/lib/auth/journal'
-import { egaliserLeTravailRest, retenirLesEchecsRest } from '@/lib/auth/temps-egalise-payload'
+} from '@/lib/auth/legacy'
+import type { EvenementAuth } from '@/lib/auth/auth-log'
+import { egaliserLeTravailRest, retenirLesEchecsRest } from '@/lib/auth/equal-time-payload'
 
 /**
  * The sign-in of an account of the old site (ticket 087; plan 02 U72, U74) and the equal time of

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
 import { AuthenticationError } from 'payload'
-import { connecter } from '@/lib/auth/connexion'
-import { creerFrein } from '@/lib/auth/frein'
+import { connecter } from '@/lib/auth/sign-in'
+import { creerFrein } from '@/lib/auth/rate-limit'
 
 const frein = creerFrein({ nom: 'essai-connexion', limite: 10, fenetreMs: 15 * 60_000 })
 beforeEach(() => frein.vider())

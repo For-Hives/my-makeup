@@ -1,5 +1,5 @@
-import { etatDuJeton } from './etat-session'
-import { urlDeConnexion, urlSessionExpiree } from './retour'
+import { etatDuJeton } from './session-state'
+import { urlDeConnexion, urlSessionExpiree } from './return-to'
 
 /** The name of Payload's session cookie (`<cookiePrefix>-token`, prefix `payload` by default). */
 export const COOKIE_DE_SESSION = 'payload-token'

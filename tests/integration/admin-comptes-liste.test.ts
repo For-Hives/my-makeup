@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { Pros } from '../../src/collections/Pros'
-import { lienDuFiltre } from '../../src/lib/compte/filtres-admin'
+import { lienDuFiltre } from '../../src/lib/account/admin-filters'
 import { poserLeJeuDuBanc } from '../fixtures/jeu-du-banc'
 import { creerCompte } from '../outils/fabrique-comptes'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'

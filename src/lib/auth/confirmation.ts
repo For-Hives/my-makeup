@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto'
 import type { Payload } from 'payload'
-import type { Frein } from './frein'
-import type { Journaliser } from './journal'
+import type { Frein } from './rate-limit'
+import type { Journaliser } from './auth-log'
 
 /**
  * The confirmation of an email by the link of the mail (ticket 082).

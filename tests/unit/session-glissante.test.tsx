@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { RafraichirSession } from '@/components/espace/RafraichirSession'
-import { creerProlongement, ROUTE_DE_PROLONGEMENT } from '@/lib/auth/prolonger'
+import { creerProlongement, ROUTE_DE_PROLONGEMENT } from '@/lib/auth/extend'
 import {
 	DUREE_SESSION_S,
 	doitProlonger,
@@ -12,7 +12,7 @@ import {
 	PLAFOND_DE_SESSION_S,
 	plafondAtteint,
 	SEUIL_DE_PROLONGEMENT_S,
-} from '@/lib/auth/session-glissante'
+} from '@/lib/auth/sliding-session'
 import { ouvrirFenetre } from '../outils/dom-react'
 
 const JOUR = 86_400

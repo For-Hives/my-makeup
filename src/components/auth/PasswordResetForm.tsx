@@ -2,12 +2,12 @@
 
 import Link from 'next/link'
 import { useActionState, useEffect, useRef } from 'react'
-import { MOT_DE_PASSE_MIN } from '@/lib/auth/inscription'
+import { MOT_DE_PASSE_MIN } from '@/lib/auth/sign-up'
 import {
 	type CodeEchecDeLaReinitialisation,
 	MESSAGES_MOT_DE_PASSE,
 	PAGE_DE_LA_DEMANDE,
-} from '@/lib/auth/mot-de-passe-oublie'
+} from '@/lib/auth/forgot-password'
 
 export type EtatDeLaReinitialisation = { modifie: true } | { code: CodeEchecDeLaReinitialisation } | null
 export type ActionDeLaReinitialisation = (

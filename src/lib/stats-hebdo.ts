@@ -18,7 +18,7 @@
 
 import { createHash, timingSafeEqual } from 'node:crypto'
 import { z } from 'zod'
-import { CODES_EVENEMENT, TYPES_EVENEMENT } from './auth/journal'
+import { CODES_EVENEMENT, TYPES_EVENEMENT } from './auth/auth-log'
 import { ETATS_DU_MAIL, STATUTS_DE_DEMANDE } from './contact/etats'
 import { completude } from './profil/completude'
 import { champsDuProfil, type DocumentDuProfil } from './profil/etat'

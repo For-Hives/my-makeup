@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { FormulaireMotDePasseOublie } from '@/components/auth/FormulaireMotDePasseOublie'
+import { FormulaireMotDePasseOublie } from '@/components/auth/ForgotPasswordForm'
 import { demanderLeLien } from './actions'
 
 export const metadata: Metadata = {

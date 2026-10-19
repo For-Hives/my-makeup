@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test'
-import { FormulaireDeConnexion } from '@/components/auth/FormulaireDeConnexion'
+import { FormulaireDeConnexion } from '@/components/auth/SignInForm'
 import { ouvrirFenetre } from '../outils/dom-react'
 
 const fenetre = ouvrirFenetre()

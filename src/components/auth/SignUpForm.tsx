@@ -9,7 +9,7 @@ import {
 	type ErreursInscription,
 	MESSAGES_ECHEC_INSCRIPTION,
 	MOT_DE_PASSE_MIN,
-} from '@/lib/auth/inscription'
+} from '@/lib/auth/sign-up'
 
 export type EtatDInscription = {
 	erreurs?: ErreursInscription

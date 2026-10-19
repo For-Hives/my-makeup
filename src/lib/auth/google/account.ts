@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto'
 import { commitTransaction, createLocalReq, initTransaction, killTransaction, type Payload } from 'payload'
-import { EMAIL_MAX, NOM_MAX } from '../inscription'
+import { EMAIL_MAX, NOM_MAX } from '../sign-up'
 import type { Revendications } from './oidc'
 
 /**

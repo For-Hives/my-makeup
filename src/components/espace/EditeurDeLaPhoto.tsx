@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { urlSessionExpiree } from '@/lib/auth/retour'
+import { urlSessionExpiree } from '@/lib/auth/return-to'
 import {
 	envoyerPuisEnregistrer,
 	type PhotoAEnvoyer,

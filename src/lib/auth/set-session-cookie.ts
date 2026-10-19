@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers'
 import type { Payload } from 'payload'
-import { type CookieDeSession, cookieDeSessionDe } from './cookie-de-session'
+import { type CookieDeSession, cookieDeSessionDe } from './session-cookie'
 
 export type { CookieDeSession }
 

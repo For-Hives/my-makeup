@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { retourSur, urlDeConnexion } from '@/lib/auth/retour'
+import { retourSur, urlDeConnexion } from '@/lib/auth/return-to'
 
 const SITE = 'https://my-makeup.fr'
 

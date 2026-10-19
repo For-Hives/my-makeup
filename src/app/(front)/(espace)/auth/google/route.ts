@@ -7,7 +7,7 @@ import {
 	VIE_DU_COOKIE_DE_GOOGLE_S,
 } from '@/lib/auth/google/config'
 import { decouvrir, preparerLeDepart } from '@/lib/auth/google/oidc'
-import { retourSur } from '@/lib/auth/retour'
+import { retourSur } from '@/lib/auth/return-to'
 import { serverEnv } from '@/lib/env'
 
 // Read per request, never cached: it builds a request that belongs to one visitor.

@@ -1,10 +1,10 @@
 import type { Payload } from 'payload'
-import { codeDeLEchec, MOT_DE_PASSE_MAX } from '../auth/connexion'
-import { emailCanonique } from '../auth/email-canonique'
-import { creerFrein } from '../auth/frein'
-import { ipClient } from '../auth/ip-client'
-import { ouvrirParMotDePasse } from '../auth/jeton'
-import { supprimerLeCompteEtToutCeQuiEnDepend } from '../compte/suppression'
+import { codeDeLEchec, MOT_DE_PASSE_MAX } from '../auth/sign-in'
+import { emailCanonique } from '../auth/canonical-email'
+import { creerFrein } from '../auth/rate-limit'
+import { ipClient } from '../auth/client-ip'
+import { ouvrirParMotDePasse } from '../auth/token'
+import { supprimerLeCompteEtToutCeQuiEnDepend } from '../account/deletion'
 import {
 	MESSAGES_DE_SUPPRESSION,
 	modeDeConfirmation,

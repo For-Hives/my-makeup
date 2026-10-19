@@ -7,11 +7,11 @@ import {
 	jwtSign,
 } from 'payload'
 
-import { cookieDeSessionDe, enteteSetCookie } from './cookie-de-session'
-import { DUREE_SESSION_S, dureeDuProlongement, ouverteLe, plafondAtteint } from './duree-session'
+import { cookieDeSessionDe, enteteSetCookie } from './session-cookie'
+import { DUREE_SESSION_S, dureeDuProlongement, ouverteLe, plafondAtteint } from './session-duration'
 
 // The pure rules live in ./duree-session (no server import, safe for the browser); re-exported here.
-export * from './duree-session'
+export * from './session-duration'
 
 /**
  * U68, on the REST door: a renewal is refused once the session is 90 days old. 403, in French, and

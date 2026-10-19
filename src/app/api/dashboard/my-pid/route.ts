@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers'
-import { COOKIE_DE_SESSION } from '@/lib/auth/espace-ferme'
+import { COOKIE_DE_SESSION } from '@/lib/auth/closed-dashboard'
 import { utilisatriceDeLaRequete } from '@/lib/espace/requete'
 import { pidDuProfil } from '@/lib/profil/pid'
 

@@ -4,12 +4,12 @@ import { contenuEmailConfirmation } from '../emails/confirmation'
 import { contenuEmailDejaInscrite } from '../emails/deja-inscrite'
 import type { EnvoyerEmail } from '../emails/envoi'
 import { composerEmail } from '../emails/gabarit'
-import { trouverLeCompte } from './compte-par-email'
-import { cleDeBoite } from './email-canonique'
-import { FREINS_DE_BOITE, type FreinsDeBoite, prendreUnMailPour } from './freins-inscription'
-import { EMAIL_MAX, MESSAGES_INSCRIPTION } from './inscription'
-import { attendreJusqua, PLANCHER_INSCRIPTION_MS } from './inscription-payload'
-import type { CodeEvenement, Journaliser } from './journal'
+import { trouverLeCompte } from './account-by-email'
+import { cleDeBoite } from './canonical-email'
+import { FREINS_DE_BOITE, type FreinsDeBoite, prendreUnMailPour } from './sign-up-rate-limits'
+import { EMAIL_MAX, MESSAGES_INSCRIPTION } from './sign-up'
+import { attendreJusqua, PLANCHER_INSCRIPTION_MS } from './sign-up-payload'
+import type { CodeEvenement, Journaliser } from './auth-log'
 
 /**
  * The resending of the confirmation mail, from the wall of verification (ticket 083; plan 02 E04).

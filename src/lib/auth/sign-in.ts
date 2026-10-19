@@ -1,10 +1,10 @@
 import { AuthenticationError, UnverifiedEmail } from 'payload'
-import { CompteBloque } from './compte-bloque'
-import type { CodeErreur } from './erreurs'
-import { type Frein, freinDeConnexion } from './frein'
-import { ipClient } from './ip-client'
-import type { JetonDeSession } from './jeton'
-import type { CodeEvenement, Journaliser } from './journal'
+import { CompteBloque } from './blocked-account'
+import type { CodeErreur } from './errors'
+import { type Frein, freinDeConnexion } from './rate-limit'
+import { ipClient } from './client-ip'
+import type { JetonDeSession } from './token'
+import type { CodeEvenement, Journaliser } from './auth-log'
 
 /** A password longer than this is refused as wrong: hashing it would cost more than it proves. */
 export const MOT_DE_PASSE_MAX = 1024

@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
-import { CODES_ERREUR_GOOGLE, erreurDeLUrl, messageDeLUrl, messageErreur } from '@/lib/auth/erreurs'
-import { ligneDeJournal, METHODES_EVENEMENT } from '@/lib/auth/journal'
-import { retourSur } from '@/lib/auth/retour'
+import { CODES_ERREUR_GOOGLE, erreurDeLUrl, messageDeLUrl, messageErreur } from '@/lib/auth/errors'
+import { ligneDeJournal, METHODES_EVENEMENT } from '@/lib/auth/auth-log'
+import { retourSur } from '@/lib/auth/return-to'
 
 /** The messages of the Google sign-in and its place in the journal (tickets 090 and 091). */
 

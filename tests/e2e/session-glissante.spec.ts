@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { getFieldsToSign, jwtSign } from 'payload'
-import { expirationDuJeton } from '@/lib/auth/session-glissante'
+import { expirationDuJeton } from '@/lib/auth/sliding-session'
 import { creerCompte } from '../outils/fabrique-comptes'
 import { payloadDeTest } from '../outils/payload-test'
 

@@ -1,7 +1,7 @@
 import type { CollectionConfig } from 'payload'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import { adminSeulement, cacheeSaufAdmin } from '../lib/acces'
-import { CODES_EVENEMENT, METHODES_EVENEMENT, TYPES_EVENEMENT } from '../lib/auth/journal'
+import { CODES_EVENEMENT, METHODES_EVENEMENT, TYPES_EVENEMENT } from '../lib/auth/auth-log'
 
 const TYPE_LABELS: Record<(typeof TYPES_EVENEMENT)[number], string> = {
 	'sign-in': 'Connexion',

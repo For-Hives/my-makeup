@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { Accueil } from '@/components/espace/accueil/Accueil'
-import { PAGE_D_ACCUEIL_DU_COMPTE, urlDeConnexion } from '@/lib/auth/retour'
+import { PAGE_D_ACCUEIL_DU_COMPTE, urlDeConnexion } from '@/lib/auth/return-to'
 import { exigerMaquilleuse } from '@/lib/auth/session'
 import { libelleDeLaCommune } from '@/lib/espace/localisation'
 import { profilDeLaMaquilleuse } from '@/lib/espace/mon-profil'

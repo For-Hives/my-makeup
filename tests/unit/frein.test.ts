@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
-import { creerFrein } from '@/lib/auth/frein'
+import { creerFrein } from '@/lib/auth/rate-limit'
 
 const MIN = 60_000
 const frein = creerFrein({ nom: 'essai-frein', limite: 10, fenetreMs: 15 * MIN })

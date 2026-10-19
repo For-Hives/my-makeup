@@ -1,5 +1,5 @@
 import type { ServerProps } from 'payload'
-import { type CleDeFiltre, LIBELLES_DES_FILTRES, lienDuFiltre, whereDuFiltre } from '../../lib/compte/filtres-admin'
+import { type CleDeFiltre, LIBELLES_DES_FILTRES, lienDuFiltre, whereDuFiltre } from '../../lib/account/admin-filters'
 
 const CLES: CleDeFiltre[] = ['non-confirmes', 'sans-profil', 'bloques']
 

@@ -10,7 +10,7 @@ import {
 	finDuNettoyage,
 	nettoyageActif,
 	planDeNettoyage,
-} from '@/lib/auth/cookies-herites'
+} from '@/lib/auth/legacy-cookies'
 import { EnvError, parseServerEnv } from '@/lib/env'
 import { proxy } from '@/proxy'
 

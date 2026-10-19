@@ -5,7 +5,7 @@
 
 import { describe, expect, test } from 'bun:test'
 import { NextRequest } from 'next/server'
-import { creerFrein } from '@/lib/auth/frein'
+import { creerFrein } from '@/lib/auth/rate-limit'
 import { freinerLaRecherche, RECHERCHES_PAR_MINUTE } from '@/lib/recherche/frein'
 import { DELAI_DE_LECTURE_MS, lireSansBloquer } from '@/lib/recherche/lecture'
 import { PAR_PAGE, paginer, sectionsDeLaPage } from '@/lib/recherche/pagination'

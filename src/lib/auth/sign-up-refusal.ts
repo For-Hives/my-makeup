@@ -1,5 +1,5 @@
-import { freinDeJournal, freinDInscription } from './freins-inscription'
-import type { CodeEvenement, Journaliser, TypeEvenement } from './journal'
+import { freinDeJournal, freinDInscription } from './sign-up-rate-limits'
+import type { CodeEvenement, Journaliser, TypeEvenement } from './auth-log'
 
 /**
  * The refusals of the sign-up that the proxy answers with a real 429 (ticket 084), and the way the

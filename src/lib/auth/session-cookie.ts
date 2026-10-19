@@ -1,5 +1,5 @@
 import { generateCookie, generatePayloadCookie, type Payload } from 'payload'
-import { finDeVieDuCookie, lireExpiration } from './etat-session'
+import { finDeVieDuCookie, lireExpiration } from './session-state'
 
 /**
  * The session cookie of a makeup artist, as `cookies().set` and `NextResponse.cookies.set` take it.

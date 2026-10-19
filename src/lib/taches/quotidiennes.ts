@@ -1,5 +1,5 @@
 import type { Payload } from 'payload'
-import { COLLECTION_JOURNAL, seuilDePurge } from '../auth/journal'
+import { COLLECTION_JOURNAL, seuilDePurge } from '../auth/auth-log'
 import { purgeDesComptesNonConfirmes } from './comptes-non-confirmes'
 import { repriseDesMessagesBloques } from './messages-bloques'
 import { purgeDesMessagesDeContact } from './messages-de-contact'

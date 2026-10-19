@@ -1,6 +1,6 @@
 import Image from 'next/image'
 import { CHEMIN_DU_DEPART_GOOGLE } from '@/lib/auth/google/config'
-import { LienGoogle } from './LienGoogle'
+import { LienGoogle } from './GoogleLink'
 
 /**
  * The Google button of the sign-in and sign-up pages (tickets 090 and 091), with the words and the

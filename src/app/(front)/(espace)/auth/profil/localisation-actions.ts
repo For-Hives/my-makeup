@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { headers } from 'next/headers'
-import { creerFrein } from '@/lib/auth/frein'
+import { creerFrein } from '@/lib/auth/rate-limit'
 import { enregistrerLocalisation } from '@/lib/espace/enregistrer-localisation'
 import {
 	MESSAGE_SERVICE_DES_COMMUNES,

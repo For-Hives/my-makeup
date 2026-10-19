@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useActionState, useEffect, useRef } from 'react'
 import { type Suivre, track } from '@/lib/analytics/track'
-import { type CodeErreur, messageErreur } from '@/lib/auth/erreurs'
+import { type CodeErreur, messageErreur } from '@/lib/auth/errors'
 
 export type EtatDeConnexion = { code: CodeErreur } | null
 export type ActionDeConnexion = (precedent: EtatDeConnexion, formulaire: FormData) => Promise<EtatDeConnexion>

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
 import { NextRequest } from 'next/server'
-import { freinDeJournal, freinDInscription } from '@/lib/auth/freins-inscription'
-import { journaliserUnRefus, secondesAvantUneInscription } from '@/lib/auth/refus-inscription'
+import { freinDeJournal, freinDInscription } from '@/lib/auth/sign-up-rate-limits'
+import { journaliserUnRefus, secondesAvantUneInscription } from '@/lib/auth/sign-up-refusal'
 import { proxy } from '@/proxy'
 
 beforeEach(() => {

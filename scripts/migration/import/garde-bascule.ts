@@ -24,7 +24,7 @@
  */
 
 import type { Payload } from 'payload'
-import { COLLECTION_JOURNAL } from '../../../src/lib/auth/journal'
+import { COLLECTION_JOURNAL } from '../../../src/lib/auth/auth-log'
 import { DRAPEAU_CIBLE_EN_SERVICE, ImportRefuse } from './cible'
 import { ADAPTATEUR_COMPTES } from './comptes'
 import { type Attendu, lireLaCible } from './moteur'

@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, test } from 'bun:test'
-import { fermerLaSession } from '@/lib/auth/deconnexion'
-import { journalDe } from '@/lib/auth/journal'
+import { fermerLaSession } from '@/lib/auth/sign-out'
+import { journalDe } from '@/lib/auth/auth-log'
 import { creerCompte } from '../outils/fabrique-comptes'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
 import { appelerRest } from '../outils/rest'

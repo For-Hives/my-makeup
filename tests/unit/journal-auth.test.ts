@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import type { Payload } from 'payload'
-import { connecter } from '@/lib/auth/connexion'
-import { creerFrein } from '@/lib/auth/frein'
+import { connecter } from '@/lib/auth/sign-in'
+import { creerFrein } from '@/lib/auth/rate-limit'
 import {
 	CODES_EVENEMENT,
 	CONSERVATION_JOURNAL_JOURS,
@@ -10,7 +10,7 @@ import {
 	ligneDeJournal,
 	seuilDePurge,
 	TYPES_EVENEMENT,
-} from '@/lib/auth/journal'
+} from '@/lib/auth/auth-log'
 import { demarrerLesTachesQuotidiennes } from '@/lib/taches/planificateur'
 import { lancerLesTachesQuotidiennes, type TacheQuotidienne } from '@/lib/taches/quotidiennes'
 

@@ -3,10 +3,10 @@
 import config from '@payload-config'
 import { cookies, headers } from 'next/headers'
 import { getPayload } from 'payload'
-import type { EtatDeLaReinitialisation } from '@/components/auth/FormulaireDeReinitialisation'
-import { journalDe } from '@/lib/auth/journal'
-import { COOKIE_DE_REINITIALISATION } from '@/lib/auth/mot-de-passe-oublie'
-import { reinitialiserLeMotDePasse } from '@/lib/auth/reinitialisation-payload'
+import type { EtatDeLaReinitialisation } from '@/components/auth/PasswordResetForm'
+import { journalDe } from '@/lib/auth/auth-log'
+import { COOKIE_DE_REINITIALISATION } from '@/lib/auth/forgot-password'
+import { reinitialiserLeMotDePasse } from '@/lib/auth/password-reset-payload'
 
 /**
  * The second step of the forgotten password (tickets 085 and 086): the code comes from the cookie

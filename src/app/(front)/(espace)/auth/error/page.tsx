@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { erreurDeLUrl } from '@/lib/auth/erreurs'
+import { erreurDeLUrl } from '@/lib/auth/errors'
 
 // Read per request: the sentence depends on the address.
 export const dynamic = 'force-dynamic'

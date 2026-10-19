@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
 import { NextRequest } from 'next/server'
 import { POST as refuser } from '@/app/(front)/(site)/contact/throttled/route'
-import { cleDeBoite } from '@/lib/auth/email-canonique'
+import { cleDeBoite } from '@/lib/auth/canonical-email'
 import { enregistrerUnMessageDeContact, type StockageDesDemandes } from '@/lib/contact/envoi-payload'
 import {
 	creerFreinsDeContact,

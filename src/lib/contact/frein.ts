@@ -1,5 +1,5 @@
-import { cleDeBoite } from '../auth/email-canonique'
-import { creerFrein, type Frein } from '../auth/frein'
+import { cleDeBoite } from '../auth/canonical-email'
+import { creerFrein, type Frein } from '../auth/rate-limit'
 import { estUneAdresseLocale } from '../recherche/frein'
 
 /**

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { FormulaireDeRenvoi } from '@/components/auth/FormulaireDeRenvoi'
+import { FormulaireDeRenvoi } from '@/components/auth/ResendForm'
 import { renvoyerLEmail } from './actions'
 
 export const metadata: Metadata = {

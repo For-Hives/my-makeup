@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test'
-import { messageErreur } from '@/lib/auth/erreurs'
+import { messageErreur } from '@/lib/auth/errors'
 import { creerCompte } from '../outils/fabrique-comptes'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
 import { appelerRest } from '../outils/rest'

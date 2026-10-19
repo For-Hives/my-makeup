@@ -9,9 +9,9 @@ import {
 import type { EnvoyerEmail } from '../emails/envoi'
 import { composerEmail } from '../emails/gabarit'
 import { contenuEmailReinitialisation } from '../emails/reinitialisation'
-import { type Frein, freinDeLaReinitialisation, freinDeLOubli } from './frein'
-import { ipClient } from './ip-client'
-import type { CodeEvenement, Journaliser } from './journal'
+import { type Frein, freinDeLaReinitialisation, freinDeLOubli } from './rate-limit'
+import { ipClient } from './client-ip'
+import type { CodeEvenement, Journaliser } from './auth-log'
 import {
 	type CodeEchecDeLaDemande,
 	type CodeEchecDeLaReinitialisation,
@@ -19,8 +19,8 @@ import {
 	PLANCHER_DE_LA_DEMANDE_MS,
 	validerLAdresse,
 	validerLeNouveauMotDePasse,
-} from './mot-de-passe-oublie'
-import { CONTEXTE_DE_REINITIALISATION } from './oubli-payload'
+} from './forgot-password'
+import { CONTEXTE_DE_REINITIALISATION } from './forgot-payload'
 
 /**
  * The forgotten password, server side (tickets 085 and 086). Two steps, and no `next` import: the

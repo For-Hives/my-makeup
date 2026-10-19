@@ -1,24 +1,24 @@
 import { APIError, type CollectionBeforeDeleteHook, type CollectionConfig } from 'payload'
 import { adminOuSoiMeme, adminSeulement, cacheeSaufAdmin, champAdminSeulement, jamais } from '../lib/acces'
-import { fermerLesSessionsAuBlocage, noterLeBlocage, refuserUnCompteBloque } from '../lib/auth/compte-bloque'
+import { fermerLesSessionsAuBlocage, noterLeBlocage, refuserUnCompteBloque } from '../lib/auth/blocked-account'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
-import { freinerLaConnexion, rendreLaPlaceDeLaConnexion } from '../lib/auth/frein-payload'
+import { freinerLaConnexion, rendreLaPlaceDeLaConnexion } from '../lib/auth/rate-limit-payload'
 import {
 	effacerLeHashHeriteApresUnMotDePasse,
 	effacerLeHashHeriteAuRenouvellement,
-} from '../lib/auth/hash-herite-payload'
+} from '../lib/auth/legacy-hash-payload'
 import {
 	noterLaConnexionRest,
 	noterLEchecDeConnexionRest,
 	noterLeDebutDeLaConnexion,
 	retenirLaDerniereConnexion,
-} from '../lib/auth/journal-payload'
-import { DUREE_DU_LIEN_MS } from '../lib/auth/mot-de-passe-oublie'
-import { fermerLesPortesRestDeLOubli } from '../lib/auth/oubli-payload'
-import { premierCompteFerme } from '../lib/auth/premier-compte-ferme'
-import { DUREE_SESSION_S, prolongerSousPlafond, refuserApresLePlafond } from '../lib/auth/session-glissante'
-import { egaliserLeTravailRest, retenirLesEchecsRest } from '../lib/auth/temps-egalise-payload'
-import { supprimerUnCompte } from '../lib/compte/suppression-route'
+} from '../lib/auth/auth-log-payload'
+import { DUREE_DU_LIEN_MS } from '../lib/auth/forgot-password'
+import { fermerLesPortesRestDeLOubli } from '../lib/auth/forgot-payload'
+import { premierCompteFerme } from '../lib/auth/closed-first-account'
+import { DUREE_SESSION_S, prolongerSousPlafond, refuserApresLePlafond } from '../lib/auth/sliding-session'
+import { egaliserLeTravailRest, retenirLesEchecsRest } from '../lib/auth/equal-time-payload'
+import { supprimerUnCompte } from '../lib/account/deletion-route'
 import { contenuEmailConfirmation, SUJET_DE_CONFIRMATION } from '../lib/emails/confirmation'
 import { composerEmail } from '../lib/emails/gabarit'
 import { sessionsFermees } from './Admins'

@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test'
-import { type EtatDeRenvoi, FormulaireDeRenvoi } from '@/components/auth/FormulaireDeRenvoi'
+import { type EtatDeRenvoi, FormulaireDeRenvoi } from '@/components/auth/ResendForm'
 import { ouvrirFenetre } from '../outils/dom-react'
 
 const fenetre = ouvrirFenetre()

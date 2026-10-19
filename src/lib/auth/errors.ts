@@ -4,7 +4,7 @@
  * error, or anything typed in the URL, is never displayed.
  */
 
-import { ERREUR_SESSION_EXPIREE } from './retour'
+import { ERREUR_SESSION_EXPIREE } from './return-to'
 
 export const CODES_ERREUR = [
 	'identifiants-invalides',

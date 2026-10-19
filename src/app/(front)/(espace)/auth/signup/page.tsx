@@ -1,10 +1,10 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { BoutonGoogle } from '@/components/auth/BoutonGoogle'
-import { FormulaireDInscription } from '@/components/auth/FormulaireDInscription'
+import { BoutonGoogle } from '@/components/auth/GoogleButton'
+import { FormulaireDInscription } from '@/components/auth/SignUpForm'
 import { googleEstActif } from '@/lib/auth/google/config'
-import { ESPACE_PAR_DEFAUT } from '@/lib/auth/retour'
+import { ESPACE_PAR_DEFAUT } from '@/lib/auth/return-to'
 import { maquilleuseConnectee } from '@/lib/auth/session'
 import { sInscrire } from './actions'
 

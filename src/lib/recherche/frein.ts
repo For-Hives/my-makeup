@@ -16,8 +16,8 @@
  * No `next` import: read by the proxy and by the tests.
  */
 
-import { creerFrein, type Frein } from '@/lib/auth/frein'
-import { ipClient, SANS_PROXY } from '@/lib/auth/ip-client'
+import { creerFrein, type Frein } from '@/lib/auth/rate-limit'
+import { ipClient, SANS_PROXY } from '@/lib/auth/client-ip'
 
 export const RECHERCHES_PAR_MINUTE = 60
 

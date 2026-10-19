@@ -3,16 +3,16 @@ import { cookies, headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { getPayload } from 'payload'
 import { COLLECTION_PROS } from '../acces'
-import { expirationDuJeton } from './duree-session'
-import { COOKIE_DE_SESSION } from './espace-ferme'
+import { expirationDuJeton } from './session-duration'
+import { COOKIE_DE_SESSION } from './closed-dashboard'
 import {
 	classerLaSession,
 	type EtatDeSession,
 	etatDuJeton,
 	type Verification,
 	verifierUneSession,
-} from './etat-session'
-import { urlDeConnexion, urlSessionExpiree } from './retour'
+} from './session-state'
+import { urlDeConnexion, urlSessionExpiree } from './return-to'
 
 /** What a page of the space may know about the makeup artist: never the account document. */
 export interface Maquilleuse {

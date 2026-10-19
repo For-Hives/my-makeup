@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { ImportRefuse } from '../../scripts/migration/import/cible'
 import { codeDeSortie } from '../../scripts/migration/import/rapport'
-import { supprimerLeCompteEtToutCeQuiEnDepend } from '../../src/lib/compte/suppression'
+import { supprimerLeCompteEtToutCeQuiEnDepend } from '../../src/lib/account/deletion'
 import { importerSurLeBanc } from '../outils/import'
 import { seConnecter } from '../outils/parcours-herites'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'

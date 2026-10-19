@@ -3,9 +3,9 @@ import type { Metadata } from 'next'
 import { cookies } from 'next/headers'
 import Link from 'next/link'
 import { getPayload } from 'payload'
-import { FormulaireDeReinitialisation } from '@/components/auth/FormulaireDeReinitialisation'
-import { COOKIE_DE_REINITIALISATION, MESSAGES_MOT_DE_PASSE, PAGE_DE_LA_DEMANDE } from '@/lib/auth/mot-de-passe-oublie'
-import { lienEncoreValable } from '@/lib/auth/reinitialisation-payload'
+import { FormulaireDeReinitialisation } from '@/components/auth/PasswordResetForm'
+import { COOKIE_DE_REINITIALISATION, MESSAGES_MOT_DE_PASSE, PAGE_DE_LA_DEMANDE } from '@/lib/auth/forgot-password'
+import { lienEncoreValable } from '@/lib/auth/password-reset-payload'
 import { choisirLeMotDePasse } from './actions'
 
 // Read per request: it depends on the cookie of the link, and the build has no database.

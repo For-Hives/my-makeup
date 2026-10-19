@@ -4,9 +4,9 @@ import config from '@payload-config'
 import { cookies, headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { getPayload } from 'payload'
-import { fermerLaSession } from '@/lib/auth/deconnexion'
-import { journalDe } from '@/lib/auth/journal'
-import { PAGE_APRES_DECONNEXION } from '@/lib/auth/retour'
+import { fermerLaSession } from '@/lib/auth/sign-out'
+import { journalDe } from '@/lib/auth/auth-log'
+import { PAGE_APRES_DECONNEXION } from '@/lib/auth/return-to'
 
 /**
  * The sign-out of the space (ticket 078). Both actions remove the session from the database first

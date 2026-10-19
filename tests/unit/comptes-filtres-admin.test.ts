@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { lienDuFiltre, whereDuFiltre } from '../../src/lib/compte/filtres-admin'
+import { lienDuFiltre, whereDuFiltre } from '../../src/lib/account/admin-filters'
 
 /** Ticket 168: the three filters of the list of accounts of the admin panel. */
 describe('Les filtres de la liste des comptes', () => {

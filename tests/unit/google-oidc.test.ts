@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
-import { adresseNormalisee, nomDuCompte } from '@/lib/auth/google/compte'
+import { adresseNormalisee, nomDuCompte } from '@/lib/auth/google/account'
 import {
 	type ConfigGoogle,
 	type DemandeEnCours,

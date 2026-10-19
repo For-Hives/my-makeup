@@ -1,5 +1,5 @@
 import { expect, type Page, test } from '@playwright/test'
-import { lireExpiration, SURVIE_DU_COOKIE_APRES_FIN_S } from '../../src/lib/auth/etat-session'
+import { lireExpiration, SURVIE_DU_COOKIE_APRES_FIN_S } from '../../src/lib/auth/session-state'
 import { creerCompte } from '../outils/fabrique-comptes'
 import { payloadDeTest } from '../outils/payload-test'
 import { ouvrirSessionSansMotDePasse } from '../outils/session'

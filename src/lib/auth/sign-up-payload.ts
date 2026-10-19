@@ -5,16 +5,16 @@ import { contenuEmailConfirmation } from '../emails/confirmation'
 import { contenuEmailDejaInscrite } from '../emails/deja-inscrite'
 import { EnvoiEmailEchoue, type EnvoyerEmail } from '../emails/envoi'
 import { composerEmail } from '../emails/gabarit'
-import { type CompteTrouve, trouverLeCompte } from './compte-par-email'
-import { cleDeBoite } from './email-canonique'
-import { FREINS_DE_BOITE, type FreinsDeBoite, prendreUnMailPour } from './freins-inscription'
+import { type CompteTrouve, trouverLeCompte } from './account-by-email'
+import { cleDeBoite } from './canonical-email'
+import { FREINS_DE_BOITE, type FreinsDeBoite, prendreUnMailPour } from './sign-up-rate-limits'
 import {
 	type CodeEchecInscription,
 	type DonneesInscription,
 	type ErreursInscription,
 	MESSAGES_INSCRIPTION,
-} from './inscription'
-import type { CodeEvenement, Journaliser } from './journal'
+} from './sign-up'
+import type { CodeEvenement, Journaliser } from './auth-log'
 
 /**
  * The sign-up of a makeup artist, once the form has been checked (tickets 082, 083 and 084).

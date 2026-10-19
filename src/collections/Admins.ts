@@ -9,8 +9,8 @@ import {
 	type RoleAdmin,
 } from '../lib/acces'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
-import { freinerLaConnexion, rendreLaPlaceDeLaConnexion } from '../lib/auth/frein-payload'
-import { premierCompteFerme } from '../lib/auth/premier-compte-ferme'
+import { freinerLaConnexion, rendreLaPlaceDeLaConnexion } from '../lib/auth/rate-limit-payload'
+import { premierCompteFerme } from '../lib/auth/closed-first-account'
 
 /** How long a session of the admin panel lasts: 8 hours, then the account logs in again (plan 01 §2.3). */
 export const DUREE_SESSION_ADMIN_S = 8 * 60 * 60

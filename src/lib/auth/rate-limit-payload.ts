@@ -1,7 +1,7 @@
 import { APIError, type CollectionAfterLoginHook, type CollectionBeforeOperationHook } from 'payload'
-import { messageErreur } from './erreurs'
-import { type Frein, freinDeConnexion } from './frein'
-import { ipClient } from './ip-client'
+import { messageErreur } from './errors'
+import { type Frein, freinDeConnexion } from './rate-limit'
+import { ipClient } from './client-ip'
 
 /**
  * The brake on the REST door of the sign-in, `POST /api/pros/login` (ticket 076): without it, the

@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { finDuNettoyage } from './auth/cookies-herites'
+import { finDuNettoyage } from './auth/legacy-cookies'
 import { FORMAT_DE_LA_CLE } from './seo/indexnow'
 import type { VersionSources } from './version'
 

@@ -6,12 +6,12 @@ import {
 	ENTETE_DE_MESSAGE,
 	planDeNettoyage,
 	VARIABLE_DE_BASCULE,
-} from '@/lib/auth/cookies-herites'
-import { COOKIE_DE_SESSION, decisionDeLEspace, estPagePrivee } from '@/lib/auth/espace-ferme'
-import { ipClient } from '@/lib/auth/ip-client'
-import { COOKIE_DE_REINITIALISATION, planDuLien } from '@/lib/auth/mot-de-passe-oublie'
-import { ENTETES_DE_RELAIS, pageDeRelais, venueDUnAutreSite } from '@/lib/auth/page-de-relais'
-import { CHEMIN_DE_L_INSCRIPTION, CHEMIN_DU_REFUS, secondesAvantUneInscription } from '@/lib/auth/refus-inscription'
+} from '@/lib/auth/legacy-cookies'
+import { COOKIE_DE_SESSION, decisionDeLEspace, estPagePrivee } from '@/lib/auth/closed-dashboard'
+import { ipClient } from '@/lib/auth/client-ip'
+import { COOKIE_DE_REINITIALISATION, planDuLien } from '@/lib/auth/forgot-password'
+import { ENTETES_DE_RELAIS, pageDeRelais, venueDUnAutreSite } from '@/lib/auth/relay-page'
+import { CHEMIN_DE_L_INSCRIPTION, CHEMIN_DU_REFUS, secondesAvantUneInscription } from '@/lib/auth/sign-up-refusal'
 import {
 	CHEMIN_DU_CONTACT,
 	CHEMIN_DU_REFUS_DE_CONTACT,

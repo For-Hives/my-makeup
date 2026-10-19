@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import type { Payload } from 'payload'
-import { creerFrein } from '@/lib/auth/frein'
+import { creerFrein } from '@/lib/auth/rate-limit'
 import {
 	COOKIE_DE_REINITIALISATION,
 	DUREE_DU_LIEN_MS,
@@ -10,9 +10,9 @@ import {
 	planDuLien,
 	validerLAdresse,
 	validerLeNouveauMotDePasse,
-} from '@/lib/auth/mot-de-passe-oublie'
-import { fermerLesPortesRestDeLOubli } from '@/lib/auth/oubli-payload'
-import { demanderUnLien } from '@/lib/auth/reinitialisation-payload'
+} from '@/lib/auth/forgot-password'
+import { fermerLesPortesRestDeLOubli } from '@/lib/auth/forgot-payload'
+import { demanderUnLien } from '@/lib/auth/password-reset-payload'
 import { composerEmail } from '@/lib/emails/gabarit'
 import { contenuEmailReinitialisation } from '@/lib/emails/reinitialisation'
 

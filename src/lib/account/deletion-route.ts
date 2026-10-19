@@ -1,6 +1,6 @@
 import { type Endpoint, Forbidden } from 'payload'
 import { estAdmin, identifiantPossible } from '../acces'
-import { supprimerLeCompteEtToutCeQuiEnDepend } from './suppression'
+import { supprimerLeCompteEtToutCeQuiEnDepend } from './deletion'
 
 /**
  * `DELETE /api/pros/:id`: the admin deletes the account of a makeup artist, a fake one for example

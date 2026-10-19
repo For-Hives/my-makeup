@@ -3,15 +3,15 @@ import { createHash } from 'node:crypto'
 import type { Payload } from 'payload'
 import { UnverifiedEmail } from 'payload'
 import { confirmerLEmail } from '@/lib/auth/confirmation'
-import { codeDeLEchec } from '@/lib/auth/connexion'
-import { messageErreur } from '@/lib/auth/erreurs'
+import { codeDeLEchec } from '@/lib/auth/sign-in'
+import { messageErreur } from '@/lib/auth/errors'
 import {
 	CHAMPS_INSCRIPTION,
 	MESSAGES_ECHEC_INSCRIPTION,
 	MESSAGES_INSCRIPTION,
 	validerInscription,
-} from '@/lib/auth/inscription'
-import { codeDeLEchec as codeDeLEchecDInscription, estUneAdresseDejaPrise } from '@/lib/auth/inscription-payload'
+} from '@/lib/auth/sign-up'
+import { codeDeLEchec as codeDeLEchecDInscription, estUneAdresseDejaPrise } from '@/lib/auth/sign-up-payload'
 import { contenuEmailConfirmation } from '@/lib/emails/confirmation'
 import { composerEmail } from '@/lib/emails/gabarit'
 

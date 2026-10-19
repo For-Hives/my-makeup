@@ -1,9 +1,9 @@
 import { describe, expect, test } from 'bun:test'
 import { APIError, AuthenticationError } from 'payload'
-import { CompteBloque, fermerLesSessionsAuBlocage, refuserUnCompteBloque } from '@/lib/auth/compte-bloque'
-import { codeDeLEchec } from '@/lib/auth/connexion'
-import { CODES_ERREUR, messageErreur } from '@/lib/auth/erreurs'
-import { CODES_EVENEMENT, TYPES_EVENEMENT } from '@/lib/auth/journal'
+import { CompteBloque, fermerLesSessionsAuBlocage, refuserUnCompteBloque } from '@/lib/auth/blocked-account'
+import { codeDeLEchec } from '@/lib/auth/sign-in'
+import { CODES_ERREUR, messageErreur } from '@/lib/auth/errors'
+import { CODES_EVENEMENT, TYPES_EVENEMENT } from '@/lib/auth/auth-log'
 
 const t = ((cle: string) => cle) as never
 

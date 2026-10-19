@@ -1,6 +1,6 @@
 import { createLocalReq, logoutOperation, type Payload } from 'payload'
 import { COLLECTION_PROS } from '../acces'
-import type { Journaliser } from './journal'
+import type { Journaliser } from './auth-log'
 
 /**
  * The sign-out of a makeup artist (ticket 078): the session is removed from the database, so the

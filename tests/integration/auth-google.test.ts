@@ -1,7 +1,7 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, spyOn, test } from 'bun:test'
-import { fermerLaSession } from '@/lib/auth/deconnexion'
-import { creerFrein, type Frein } from '@/lib/auth/frein'
-import { type IssueDeGoogle, terminerLaConnexionGoogle } from '@/lib/auth/google/connexion-google'
+import { fermerLaSession } from '@/lib/auth/sign-out'
+import { creerFrein, type Frein } from '@/lib/auth/rate-limit'
+import { type IssueDeGoogle, terminerLaConnexionGoogle } from '@/lib/auth/google/google-sign-in'
 import {
 	type ConfigGoogle,
 	type DemandeEnCours,
@@ -11,7 +11,7 @@ import {
 	type Requeter,
 	sceller,
 } from '@/lib/auth/google/oidc'
-import { journalDe } from '@/lib/auth/journal'
+import { journalDe } from '@/lib/auth/auth-log'
 import { creerCompte } from '../outils/fabrique-comptes'
 import { type Demande, fauxGoogle } from '../outils/faux-google'
 import { compterLesMails, viderLeCapteur } from '../outils/mailpit'
