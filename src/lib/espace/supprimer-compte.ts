@@ -1,10 +1,10 @@
 import type { Payload } from 'payload'
-import { codeDeLEchec, MOT_DE_PASSE_MAX } from '../auth/connexion'
-import { emailCanonique } from '../auth/email-canonique'
-import { creerFrein } from '../auth/frein'
-import { ipClient } from '../auth/ip-client'
-import { ouvrirParMotDePasse } from '../auth/jeton'
-import { supprimerLeCompteEtToutCeQuiEnDepend } from '../compte/suppression'
+import { deleteAccountAndDependents } from '../account/deletion'
+import { canonicalEmail } from '../auth/canonical-email'
+import { ipClient } from '../auth/client-ip'
+import { createRateLimit } from '../auth/rate-limit'
+import { failureCode, MAX_PASSWORD_LENGTH } from '../auth/sign-in'
+import { openWithPassword } from '../auth/token'
 import {
 	MESSAGES_DE_SUPPRESSION,
 	modeDeConfirmation,
@@ -25,7 +25,7 @@ import {
  *   minutes, by client address AND by account, so that a stolen session cannot guess the password
  *   from many addresses. The brake never touches the sign-in, so nobody is locked out of her
  *   account by it. A place is given back when the failure is ours (the database, the storage).
- * - The deletion is the common cascade (`src/lib/compte/suppression.ts`). When the storage fails,
+ * - The deletion is the common cascade (`src/lib/account/deletion.ts`). When the storage fails,
  *   nothing is deleted (I38) and she is told so.
  * - Two requests at once (a key held down, a double click) delete once.
  *
@@ -33,7 +33,11 @@ import {
  */
 
 /** Wrong confirmations: 10 per address and per 15 minutes, and 10 per account (ticket 141). */
-export const freinDeLaSuppression = creerFrein({ nom: 'suppression-compte', limite: 10, fenetreMs: 15 * 60 * 1000 })
+export const freinDeLaSuppression = createRateLimit({
+	nom: 'suppression-compte',
+	limite: 10,
+	fenetreMs: 15 * 60 * 1000,
+})
 
 export interface EntreesDeLaSuppression {
 	payload: Payload
@@ -91,13 +95,13 @@ export async function supprimerMonCompte({
 		const mode = modeDeConfirmation(stocke)
 		const juste =
 			mode === 'email'
-				? emailCanonique(lue.data.confirmation) === emailCanonique(String(stocke.email))
+				? canonicalEmail(lue.data.confirmation) === canonicalEmail(String(stocke.email))
 				: await motDePasseJuste(payload, String(stocke.email), lue.data.confirmation)
 		if (!juste) return { ok: false, message: MESSAGES_DE_SUPPRESSION[mode === 'email' ? 'email' : 'motDePasse'] }
 		// The confirmation was right: the places go back, whatever happens next.
 		rendre()
 		try {
-			await supprimerLeCompteEtToutCeQuiEnDepend(payload, compte.id)
+			await deleteAccountAndDependents(payload, compte.id)
 		} catch (erreur) {
 			payload.logger.error(`[suppression] account ${compte.id}: the deletion failed, nothing was deleted`)
 			return {
@@ -121,12 +125,12 @@ class ErreurDeVerification extends Error {}
  * not confirmed yet answers after the password was checked and found right.
  */
 async function motDePasseJuste(payload: Payload, email: string, motDePasse: string): Promise<boolean> {
-	if (motDePasse === '' || motDePasse.length > MOT_DE_PASSE_MAX) return false
+	if (motDePasse === '' || motDePasse.length > MAX_PASSWORD_LENGTH) return false
 	try {
-		await ouvrirParMotDePasse(payload, 'pros', { email, password: motDePasse })
+		await openWithPassword(payload, 'pros', { email, password: motDePasse })
 		return true
 	} catch (erreur) {
-		const code = codeDeLEchec(erreur)
+		const code = failureCode(erreur)
 		if (code === 'email-non-confirme') return true
 		if (code === 'service-indisponible') throw new ErreurDeVerification()
 		return false

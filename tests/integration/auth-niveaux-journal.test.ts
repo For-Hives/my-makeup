@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test'
-import { messageErreur } from '@/lib/auth/erreurs'
+import { errorMessage } from '@/lib/auth/errors'
 import { creerCompte } from '../outils/fabrique-comptes'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
 import { appelerRest } from '../outils/rest'
@@ -43,7 +43,7 @@ describe('constat 4 : un compte bloqué qui donne son mot de passe est une ligne
 		})
 
 		expect(statut).toBe(403)
-		expect(texte(appels.info)).toContain(messageErreur('compte-bloque'))
+		expect(texte(appels.info)).toContain(errorMessage('compte-bloque'))
 		expect(appels.error).toEqual([])
 	})
 })

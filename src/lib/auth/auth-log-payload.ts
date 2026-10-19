@@ -1,0 +1,81 @@
+import type { CollectionAfterErrorHook, CollectionAfterLoginHook, CollectionBeforeOperationHook } from 'payload'
+import { log } from './auth-log'
+import { PASSWORD_RESET_CONTEXT } from './forgot-payload'
+import { failureCode } from './sign-in'
+
+/**
+ * The hooks of `pros` that write the journal of the REST door of the sign-in, `POST /api/pros/login`
+ * (ticket 077), and keep the date of the last sign-in.
+ *
+ * As for the brake (src/lib/auth/rate-limit-payload.ts), only a request that comes through REST is
+ * written here: the Server Action calls the Local API, which has no headers, and writes its row
+ * itself (`signInWithPassword`), so an attempt never leaves two rows.
+ */
+
+const START_KEY = 'debutDeLaConnexion'
+
+const isRestSignIn = (req: { payloadAPI?: string }, operation?: string): boolean =>
+	req.payloadAPI === 'REST' && (operation === undefined || operation === 'login')
+
+/** Notes when a sign-in starts, to give its duration. It runs before the brake: a braked attempt has a duration too. */
+export const recordSignInStart: CollectionBeforeOperationHook = ({ operation, req }) => {
+	if (operation === 'login') req.context[START_KEY] = Date.now()
+}
+
+const durationSince = (contexte: Record<string, unknown>): number | undefined => {
+	const start = contexte[START_KEY]
+	return typeof start === 'number' ? Date.now() - start : undefined
+}
+
+/**
+ * The date of the last sign-in, kept on the account for both doors. It is written in the
+ * transaction of the sign-in, which holds the account: an update outside of it would wait for the
+ * sign-in to finish. A failure of this write is not the sign-in's to fail.
+ */
+export const recordLastSignIn: CollectionAfterLoginHook = async ({ req, user }) => {
+	// The reset of a password opens a session of its own, which is dropped at once: it is no sign-in.
+	if (req.context[PASSWORD_RESET_CONTEXT]) return user
+	try {
+		await req.payload.update({
+			collection: 'pros',
+			data: { lastSignInAt: new Date().toISOString() },
+			depth: 0,
+			id: user.id,
+			overrideAccess: true,
+			req,
+		})
+	} catch {
+		req.payload.logger.error({ msg: 'La date de dernière connexion n’a pas pu être écrite.' })
+	}
+	return user
+}
+
+/** A REST sign-in that succeeded: one row. */
+export const recordRestSignIn: CollectionAfterLoginHook = async ({ req, user }) => {
+	if (isRestSignIn(req))
+		await log(req.payload, {
+			type: 'sign-in',
+			code: 'ok',
+			durationMs: durationSince(req.context),
+			method: 'password',
+		})
+	return user
+}
+
+/** A REST sign-in that failed, for whatever reason (wrong password, brake, address not confirmed, outage): one row. */
+export const recordRestSignInFailure: CollectionAfterErrorHook = async ({ error, req }) => {
+	const path = (() => {
+		try {
+			return new URL(req.url ?? '', 'http://localhost').pathname
+		} catch {
+			return ''
+		}
+	})()
+	if (req.method !== 'POST' || !path.endsWith('/pros/login')) return
+	await log(req.payload, {
+		type: 'sign-in',
+		code: failureCode(error),
+		durationMs: durationSince(req.context),
+		method: 'password',
+	})
+}

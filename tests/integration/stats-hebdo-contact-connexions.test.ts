@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { GET } from '@/app/api/stats/weekly/route'
-import { remplacerLeHashHerite } from '@/lib/auth/herite'
-import { type EvenementAuth, journaliser } from '@/lib/auth/journal'
+import { type AuthEvent, log } from '@/lib/auth/auth-log'
+import { replaceLegacyHash } from '@/lib/auth/legacy'
 import { stockageDePayload } from '@/lib/contact/envoi-payload'
 import { StatsHebdo } from '@/lib/stats-hebdo'
 import { adresseDuJeu, TYPES_DU_JEU } from '../fixtures/comptes'
@@ -30,8 +30,8 @@ const lire = async (debut: Date, fin: Date) => {
 const autour = () => [new Date(Date.now() - 3_600_000), new Date(Date.now() + 3_600_000)] as const
 
 /** The sign-ins written below: one duration each, 100 to 1 000 ms. */
-const CONNEXIONS: EvenementAuth[] = [
-	...Array.from({ length: 6 }, (_, i): EvenementAuth => ({ type: 'sign-in', code: 'ok', durationMs: 100 * (i + 1) })),
+const CONNEXIONS: AuthEvent[] = [
+	...Array.from({ length: 6 }, (_, i): AuthEvent => ({ type: 'sign-in', code: 'ok', durationMs: 100 * (i + 1) })),
 	{ type: 'sign-in', code: 'heritee', durationMs: 700 },
 	{ type: 'sign-in', code: 'identifiants-invalides', durationMs: 800 },
 	{ type: 'sign-in', code: 'identifiants-invalides', durationMs: 900 },
@@ -65,14 +65,14 @@ beforeAll(async () => {
 	expect(nouvelle).toBeGreaterThan(0)
 
 	for (const evenement of [...CONNEXIONS, { type: 'sign-out', code: 'ok', durationMs: 20_000 } as const])
-		await journaliser(payload, evenement)
+		await log(payload, evenement)
 	// A row of 2020 and a sign-in with no duration: the first is out of the period, the second counts without a duration.
 	await payload.create({
 		collection: 'auth-events',
 		data: { type: 'sign-in', code: 'ok', durationMs: 60_000, date: '2020-01-02T10:00:00.000Z' },
 		overrideAccess: true,
 	})
-	await journaliser(payload, { type: 'sign-in', code: 'service-indisponible' })
+	await log(payload, { type: 'sign-in', code: 'service-indisponible' })
 }, 120_000)
 
 afterAll(async () => {
@@ -152,7 +152,7 @@ describe('Les statistiques hebdomadaires : messages de contact, connexions, comp
 	test('la première connexion avec l’ancien mot de passe fait baisser le nombre de hash restants, et rien d’autre', async () => {
 		const payload = await payloadDeTest()
 		const avantLaConnexion = (await lire(...autour())).herites
-		const accepte = await remplacerLeHashHerite(payload, {
+		const accepte = await replaceLegacyHash(payload, {
 			email: adresseDuJeu('reprise-avec-hash'),
 			password: MOT_DE_PASSE_HERITE_DE_FIXTURE,
 		})

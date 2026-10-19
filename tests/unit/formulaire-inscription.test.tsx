@@ -1,26 +1,22 @@
 import { expect, test } from 'bun:test'
-import {
-	avecLeRefusDuProxy,
-	type EtatDInscription,
-	FormulaireDInscription,
-} from '@/components/auth/FormulaireDInscription'
-import { CHAMP_PIEGE, MESSAGES_ECHEC_INSCRIPTION, MESSAGES_INSCRIPTION } from '@/lib/auth/inscription'
+import { SignUpForm, type SignUpState, withProxyRefusal } from '@/components/auth/SignUpForm'
+import { SIGN_UP_FAILURE_MESSAGES, SIGN_UP_MESSAGES, TRAP_FIELD } from '@/lib/auth/sign-up'
 import { ouvrirFenetre } from '../outils/dom-react'
 
 const fenetre = ouvrirFenetre()
 
-const formulaire = (action: (p: EtatDInscription, f: FormData) => Promise<EtatDInscription>) => (
-	<FormulaireDInscription action={action as never} />
+const formulaire = (action: (p: SignUpState, f: FormData) => Promise<SignUpState>) => (
+	<SignUpForm action={action as never} />
 )
 
 test('U25 : un message par champ, sous le champ, relié à lui pour un lecteur d’écran', async () => {
 	const zone = await fenetre.monter(
 		formulaire(async () => ({
 			erreurs: {
-				nom: MESSAGES_INSCRIPTION.nom.vide,
-				email: MESSAGES_INSCRIPTION.email.invalide,
-				password: MESSAGES_INSCRIPTION.password.court,
-				cgu: MESSAGES_INSCRIPTION.cgu.refusees,
+				nom: SIGN_UP_MESSAGES.nom.vide,
+				email: SIGN_UP_MESSAGES.email.invalide,
+				password: SIGN_UP_MESSAGES.password.court,
+				cgu: SIGN_UP_MESSAGES.cgu.refusees,
 			},
 			valeurs: { nom: '', email: 'lea', cgu: false },
 		}))
@@ -29,10 +25,10 @@ test('U25 : un message par champ, sous le champ, relié à lui pour un lecteur d
 	await fenetre.cliquer(fenetre.bouton('S’inscrire'))
 
 	await fenetre.attendre(() => zone.querySelector('#erreur-nom')?.textContent)
-	expect(zone.querySelector('#erreur-nom')?.textContent).toBe(MESSAGES_INSCRIPTION.nom.vide)
-	expect(zone.querySelector('#erreur-email')?.textContent).toBe(MESSAGES_INSCRIPTION.email.invalide)
-	expect(zone.querySelector('#erreur-password')?.textContent).toBe(MESSAGES_INSCRIPTION.password.court)
-	expect(zone.querySelector('#erreur-cgu')?.textContent).toBe(MESSAGES_INSCRIPTION.cgu.refusees)
+	expect(zone.querySelector('#erreur-nom')?.textContent).toBe(SIGN_UP_MESSAGES.nom.vide)
+	expect(zone.querySelector('#erreur-email')?.textContent).toBe(SIGN_UP_MESSAGES.email.invalide)
+	expect(zone.querySelector('#erreur-password')?.textContent).toBe(SIGN_UP_MESSAGES.password.court)
+	expect(zone.querySelector('#erreur-cgu')?.textContent).toBe(SIGN_UP_MESSAGES.cgu.refusees)
 	for (const [id, champ] of [
 		['nom', 'nom'],
 		['email', 'email'],
@@ -48,7 +44,7 @@ test('U25 : un message par champ, sous le champ, relié à lui pour un lecteur d
 test('ce qu’elle a tapé revient, le mot de passe jamais', async () => {
 	const zone = await fenetre.monter(
 		formulaire(async () => ({
-			erreurs: { password: MESSAGES_INSCRIPTION.password.court },
+			erreurs: { password: SIGN_UP_MESSAGES.password.court },
 			valeurs: { nom: 'Léa Fictive', email: 'lea@example.test', cgu: true },
 		}))
 	)
@@ -69,7 +65,7 @@ test('un refus du serveur qui n’est pas un champ (adresse déjà utilisée) s�
 	await fenetre.cliquer(fenetre.bouton('S’inscrire'))
 
 	const alerte = await fenetre.attendre(() => zone.querySelector('[role="alert"] p'))
-	expect(alerte.textContent).toBe(MESSAGES_ECHEC_INSCRIPTION['email-deja-pris'])
+	expect(alerte.textContent).toBe(SIGN_UP_FAILURE_MESSAGES['email-deja-pris'])
 })
 
 test('les attributs des gestionnaires de mots de passe : nom, email, nouveau mot de passe', async () => {
@@ -104,7 +100,7 @@ test('Entrée maintenue : un seul envoi tant que le premier n’a pas répondu',
 test('le champ piège existe, hors de vue, hors du clavier et caché des lecteurs d’écran (ticket 084)', async () => {
 	const zone = await fenetre.monter(formulaire(async () => null))
 
-	const piege = zone.querySelector(`input[name="${CHAMP_PIEGE}"]`)
+	const piege = zone.querySelector(`input[name="${TRAP_FIELD}"]`)
 	expect(piege).not.toBeNull()
 	expect(piege?.getAttribute('tabindex')).toBe('-1')
 	expect(piege?.getAttribute('autocomplete')).toBe('off')
@@ -119,14 +115,14 @@ test('le refus du frein par adresse se lit en français sous le formulaire', asy
 	await fenetre.attendre(() => zone.querySelector('[data-testid="erreur-inscription"]')?.textContent)
 
 	expect(zone.querySelector('[data-testid="erreur-inscription"]')?.textContent).toBe(
-		MESSAGES_ECHEC_INSCRIPTION['trop-de-tentatives']
+		SIGN_UP_FAILURE_MESSAGES['trop-de-tentatives']
 	)
 })
 
 test('le 429 du proxy, que le script de Next jette comme une erreur, redevient un refus montré sous le formulaire', async () => {
 	const zone = await fenetre.monter(
 		formulaire(async () => {
-			throw new Error(MESSAGES_ECHEC_INSCRIPTION['trop-de-tentatives'])
+			throw new Error(SIGN_UP_FAILURE_MESSAGES['trop-de-tentatives'])
 		})
 	)
 	await fenetre.saisir(fenetre.champ('Adresse email'), 'lea@example.test')
@@ -134,12 +130,12 @@ test('le 429 du proxy, que le script de Next jette comme une erreur, redevient u
 	await fenetre.cliquer(fenetre.bouton('S’inscrire'))
 
 	const alerte = await fenetre.attendre(() => zone.querySelector('[role="alert"] p'))
-	expect(alerte.textContent).toBe(MESSAGES_ECHEC_INSCRIPTION['trop-de-tentatives'])
+	expect(alerte.textContent).toBe(SIGN_UP_FAILURE_MESSAGES['trop-de-tentatives'])
 	expect((fenetre.champ('Adresse email') as HTMLInputElement).value).toBe('lea@example.test')
 })
 
 test('une autre erreur n’est pas avalée', async () => {
-	const action = avecLeRefusDuProxy(async () => {
+	const action = withProxyRefusal(async () => {
 		throw new Error('panne')
 	})
 

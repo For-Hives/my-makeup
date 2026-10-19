@@ -1,16 +1,16 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 import { NextRequest } from 'next/server'
 import {
-	attributsDePose,
-	COOKIE_DE_MESSAGE,
-	cheminSansNettoyage,
-	cookieDEffacement,
-	cookiesHeritesPresents,
-	ENTETE_DE_MESSAGE,
-	finDuNettoyage,
-	nettoyageActif,
-	planDeNettoyage,
-} from '@/lib/auth/cookies-herites'
+	activeCleanup,
+	cleanupEnd,
+	cleanupPlan,
+	clearingCookie,
+	legacyCookiesPresent,
+	MESSAGE_COOKIE,
+	MESSAGE_HEADER,
+	pathWithoutCleanup,
+	setAttributes,
+} from '@/lib/auth/legacy-cookies'
 import { EnvError, parseServerEnv } from '@/lib/env'
 import { proxy } from '@/proxy'
 
@@ -32,7 +32,7 @@ describe('U65 : la liste des cookies hérités effacés', () => {
 			'next-auth.csrf-token',
 			'next-auth.callback-url',
 		]
-		expect(cookiesHeritesPresents(noms)).toEqual(noms)
+		expect(legacyCookiesPresent(noms)).toEqual(noms)
 	})
 
 	test('rien d’autre : ni le cookie de Payload, ni un nom voisin', () => {
@@ -44,16 +44,16 @@ describe('U65 : la liste des cookies hérités effacés', () => {
 			'x-next-auth.csrf-token',
 			'next-auth.pkce.code_verifier',
 			'__Secure-payload-token',
-			'mm-reconnexion',
+			'mm-signed-out',
 		]
-		expect(cookiesHeritesPresents(autres)).toEqual([])
+		expect(legacyCookiesPresent(autres)).toEqual([])
 	})
 })
 
 describe('U66 : chaque effacement répète les attributs de la pose', () => {
 	test.each(HERITES)('%s : Max-Age=0, même Path, Secure, SameSite, pas de Domain', nom => {
-		const pose = attributsDePose(nom)
-		const effacement = cookieDEffacement(nom)
+		const pose = setAttributes(nom)
+		const effacement = clearingCookie(nom)
 		expect(effacement).toMatchObject({
 			name: nom,
 			value: '',
@@ -69,30 +69,30 @@ describe('U66 : chaque effacement répète les attributs de la pose', () => {
 
 	test('les valeurs de NextAuth v4 : Path=/, HttpOnly, Lax, Secure avec les préfixes seulement', () => {
 		for (const nom of HERITES)
-			expect(attributsDePose(nom)).toMatchObject({ path: '/', httpOnly: true, sameSite: 'lax', secure: true })
-		expect(attributsDePose('next-auth.session-token').secure).toBe(false)
-		expect(attributsDePose('next-auth.csrf-token').secure).toBe(false)
+			expect(setAttributes(nom)).toMatchObject({ path: '/', httpOnly: true, sameSite: 'lax', secure: true })
+		expect(setAttributes('next-auth.session-token').secure).toBe(false)
+		expect(setAttributes('next-auth.csrf-token').secure).toBe(false)
 	})
 })
 
 describe('la durée de 90 jours, comptée depuis la date de bascule', () => {
 	test('fin = bascule + 90 jours', () => {
-		expect(finDuNettoyage('2027-02-01')?.toISOString()).toBe('2027-05-02T00:00:00.000Z')
+		expect(cleanupEnd('2027-02-01')?.toISOString()).toBe('2027-05-02T00:00:00.000Z')
 	})
 
 	test('actif jusqu’à la fin, inactif ensuite', () => {
-		expect(nettoyageActif(new Date('2027-05-01T23:59:59Z'), '2027-02-01')).toBe(true)
-		expect(nettoyageActif(new Date('2027-05-02T00:00:00Z'), '2027-02-01')).toBe(false)
+		expect(activeCleanup(new Date('2027-05-01T23:59:59Z'), '2027-02-01')).toBe(true)
+		expect(activeCleanup(new Date('2027-05-02T00:00:00Z'), '2027-02-01')).toBe(false)
 	})
 
 	test('la date règle la fin : une autre date, une autre fin', () => {
-		expect(nettoyageActif(new Date('2027-05-02T00:00:00Z'), '2027-03-01')).toBe(true)
+		expect(activeCleanup(new Date('2027-05-02T00:00:00Z'), '2027-03-01')).toBe(true)
 	})
 
 	test('sans date, le nettoyage est actif (sans fin) ; une date illisible ne compte pas', () => {
-		expect(nettoyageActif(new Date('2030-01-01T00:00:00Z'), undefined)).toBe(true)
-		expect(finDuNettoyage('2027-02-30')).toBeUndefined()
-		expect(finDuNettoyage('demain')).toBeUndefined()
+		expect(activeCleanup(new Date('2030-01-01T00:00:00Z'), undefined)).toBe(true)
+		expect(cleanupEnd('2027-02-30')).toBeUndefined()
+		expect(cleanupEnd('demain')).toBeUndefined()
 	})
 
 	test('BASCULE_LE illisible arrête le démarrage, par son nom', () => {
@@ -121,8 +121,8 @@ describe('U64 : le back-office, l’API et les fichiers statiques ne sont pas to
 		'/sitemap.xml',
 		'/img/logo.webp',
 	])('%s', chemin => {
-		expect(cheminSansNettoyage(chemin)).toBe(true)
-		const plan = planDeNettoyage({
+		expect(pathWithoutCleanup(chemin)).toBe(true)
+		const plan = cleanupPlan({
 			chemin,
 			noms: HERITES,
 			prechargement: false,
@@ -140,7 +140,7 @@ describe('U64 : le back-office, l’API et les fichiers statiques ne sont pas to
 		'/auth/profil',
 		'/administration',
 	])('%s est une page du site', chemin => {
-		expect(cheminSansNettoyage(chemin)).toBe(false)
+		expect(pathWithoutCleanup(chemin)).toBe(false)
 	})
 })
 
@@ -172,15 +172,15 @@ describe('le proxy : le nettoyage à la première requête', () => {
 			expect(ligne).not.toContain('Domain')
 		}
 		expect(lignes.find(l => l.startsWith('__Host-next-auth.csrf-token='))).toContain('Secure')
-		expect(lignes.find(l => l.startsWith(`${COOKIE_DE_MESSAGE}=1`))).toContain('HttpOnly')
+		expect(lignes.find(l => l.startsWith(`${MESSAGE_COOKIE}=1`))).toContain('HttpOnly')
 	})
 
 	test('la connexion directement : le message est dû tout de suite, sans rappel', () => {
 		delete process.env.BASCULE_LE
 		const reponse = proxy(requete('/auth/signin', HERITES))
 		expect(reponse.status).toBe(200)
-		expect(reponse.headers.get('x-middleware-request-x-mm-reconnexion')).toBe('1')
-		expect(setCookies(reponse).some(l => l.startsWith(`${COOKIE_DE_MESSAGE}=1`))).toBe(false)
+		expect(reponse.headers.get('x-middleware-request-x-mm-signed-out')).toBe('1')
+		expect(setCookies(reponse).some(l => l.startsWith(`${MESSAGE_COOKIE}=1`))).toBe(false)
 	})
 
 	test('une page privée : une seule redirection vers la connexion, les cookies expirés au passage (pas de boucle)', () => {
@@ -190,31 +190,31 @@ describe('le proxy : le nettoyage à la première requête', () => {
 		expect(reponse.headers.get('location')).toBe(`${SITE}/auth/signin?callbackUrl=%2Fauth%2Fprofil`)
 		expect(setCookies(reponse).filter(l => l.includes('Max-Age=0'))).toHaveLength(HERITES.length)
 		// The next request carries no old cookie any more: the sign-in page answers, with the reminder.
-		const suite = proxy(requete('/auth/signin', [COOKIE_DE_MESSAGE]))
+		const suite = proxy(requete('/auth/signin', [MESSAGE_COOKIE]))
 		expect(suite.status).toBe(200)
-		expect(suite.headers.get('x-middleware-request-x-mm-reconnexion')).toBe('1')
+		expect(suite.headers.get('x-middleware-request-x-mm-signed-out')).toBe('1')
 	})
 
 	test('le message ne s’affiche qu’une fois : le rappel est effacé en le servant, et sans rappel rien ne s’affiche', () => {
 		delete process.env.BASCULE_LE
-		const premiere = proxy(requete('/auth/signin', [COOKIE_DE_MESSAGE]))
-		expect(setCookies(premiere).find(l => l.startsWith(`${COOKIE_DE_MESSAGE}=;`))).toContain('Max-Age=0')
+		const premiere = proxy(requete('/auth/signin', [MESSAGE_COOKIE]))
+		expect(setCookies(premiere).find(l => l.startsWith(`${MESSAGE_COOKIE}=;`))).toContain('Max-Age=0')
 		const seconde = proxy(requete('/auth/signin', []))
-		expect(seconde.headers.get('x-middleware-request-x-mm-reconnexion')).toBeNull()
+		expect(seconde.headers.get('x-middleware-request-x-mm-signed-out')).toBeNull()
 		expect(setCookies(seconde)).toEqual([])
 	})
 
 	test('un préchargement ne montre pas le message et ne l’use pas', () => {
 		delete process.env.BASCULE_LE
-		const reponse = proxy(requete('/auth/signin', [COOKIE_DE_MESSAGE], { 'next-router-prefetch': '1' }))
-		expect(reponse.headers.get('x-middleware-request-x-mm-reconnexion')).toBeNull()
+		const reponse = proxy(requete('/auth/signin', [MESSAGE_COOKIE], { 'next-router-prefetch': '1' }))
+		expect(reponse.headers.get('x-middleware-request-x-mm-signed-out')).toBeNull()
 		expect(setCookies(reponse)).toEqual([])
 	})
 
 	test('l’en-tête du message envoyé par un visiteur est retiré', () => {
 		delete process.env.BASCULE_LE
-		const reponse = proxy(requete('/auth/signin', [], { [ENTETE_DE_MESSAGE]: '1' }))
-		expect(reponse.headers.get('x-middleware-request-x-mm-reconnexion')).toBeNull()
+		const reponse = proxy(requete('/auth/signin', [], { [MESSAGE_HEADER]: '1' }))
+		expect(reponse.headers.get('x-middleware-request-x-mm-signed-out')).toBeNull()
 	})
 
 	test('le back-office, l’API et les fichiers : aucun Set-Cookie', () => {

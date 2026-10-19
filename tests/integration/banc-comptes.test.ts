@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from 'bun:test'
 import type { BrowserContext } from '@playwright/test'
 import { z } from 'zod'
 import { GET } from '@/app/(payload)/api/[...slug]/route'
-import { SURVIE_DU_COOKIE_APRES_FIN_S } from '@/lib/auth/etat-session'
+import { COOKIE_SURVIVAL_AFTER_END_S } from '@/lib/auth/session-state'
 import { RACINE } from '../outils/banc'
 import { type CompteDeTest, creerCompte } from '../outils/fabrique-comptes'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
@@ -67,7 +67,7 @@ describe('La fabrique de comptes : un compte de test et sa session, sans mot de 
 			sameSite: 'Lax',
 		})
 		// The cookie outlives its token by the grace period of ticket 080, so that « session expirée » can be told.
-		expect(cookie.expires).toBe(compte.session.expire.getTime() / 1000 + SURVIE_DU_COOKIE_APRES_FIN_S)
+		expect(cookie.expires).toBe(compte.session.expire.getTime() / 1000 + COOKIE_SURVIVAL_AFTER_END_S)
 		expect(compte.session.expire.getTime()).toBeGreaterThan(Date.now())
 		// What a browser sends once the cookie is set: no Origin on a page of the site itself, but
 		// the header that says where the request comes from.

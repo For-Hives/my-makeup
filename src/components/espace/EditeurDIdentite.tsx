@@ -3,7 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { urlSessionExpiree } from '@/lib/auth/retour'
+import { expiredSessionUrl } from '@/lib/auth/return-to'
 import {
 	CHAMPS_DE_L_IDENTITE,
 	LIBELLES_DE_L_IDENTITE,
@@ -202,7 +202,7 @@ function FormulaireDIdentite({
 				const gardeeAvecSucces = garderLaSaisie(stockage(), 'identite', proprietaire, gardee)
 				if (redirige && gardeeAvecSucces) {
 					partie = true
-					naviguer(urlSessionExpiree(PAGE_DE_L_ESPACE))
+					naviguer(expiredSessionUrl(PAGE_DE_L_ESPACE))
 					return
 				}
 				setSessionExpiree(true)
@@ -282,7 +282,7 @@ function FormulaireDIdentite({
 									{' '}
 									<a
 										className="font-medium underline"
-										href={urlSessionExpiree(PAGE_DE_L_ESPACE)}
+										href={expiredSessionUrl(PAGE_DE_L_ESPACE)}
 										target="_blank"
 										rel="noopener"
 									>

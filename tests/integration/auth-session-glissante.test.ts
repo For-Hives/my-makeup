@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, setSystemTime, test } from 'bun:test'
 import { getFieldsToSign, jwtSign } from 'payload'
-import { finDeVieDuCookie } from '@/lib/auth/etat-session'
-import { expirationDuJeton, PLAFOND_DE_SESSION_S } from '@/lib/auth/session-glissante'
+import { cookieEndOfLife } from '@/lib/auth/session-state'
+import { SESSION_CAP_S, tokenExpiration } from '@/lib/auth/sliding-session'
 import { creerCompte } from '../outils/fabrique-comptes'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
 import { appelerRest } from '../outils/rest'
@@ -34,7 +34,7 @@ describe('I16 : session glissante de 14 jours, plafonnée à 90', () => {
 		const accepte = await appelerRest('POST', REFRESH, { enTetes: session.enTetes })
 		expect(accepte.statut).toBe(200)
 		const jeton = jetonDuCookie(accepte.enTetes)
-		expect(expirationDuJeton(jeton)).toBe(Math.floor((debut + 27 * JOUR_MS) / 1000))
+		expect(tokenExpiration(jeton)).toBe(Math.floor((debut + 27 * JOUR_MS) / 1000))
 		// removeTokenFromResponses: the body does not carry the new token.
 		expect(accepte.texte).not.toContain(jeton)
 
@@ -57,10 +57,10 @@ describe('I16 : session glissante de 14 jours, plafonnée à 90', () => {
 		expect(cookies).toHaveLength(1)
 		const ligne = cookies[0] ?? ''
 		const jeton = jetonDuCookie(reponse.enTetes)
-		const fin = expirationDuJeton(jeton)
+		const fin = tokenExpiration(jeton)
 		expect(fin).not.toBeNull()
 		const expires = /Expires=([^;]+)/i.exec(ligne)?.[1]
-		expect(new Date(expires ?? '').getTime()).toBe(finDeVieDuCookie(fin ?? 0).getTime())
+		expect(new Date(expires ?? '').getTime()).toBe(cookieEndOfLife(fin ?? 0).getTime())
 		// The cookie outlives its token (the message « session expirée »), and keeps the attributes of the sign-in.
 		expect(new Date(expires ?? '').getTime()).toBeGreaterThan((fin ?? 0) * 1000)
 		expect(ligne).toMatch(/HttpOnly/i)
@@ -74,7 +74,7 @@ describe('I16 : session glissante de 14 jours, plafonnée à 90', () => {
 	test('une visite tous les 13 jours prolonge la session, mais aucun jeton ne finit après J+90', async () => {
 		const debut = Date.now()
 		const { session } = await creerCompte('maquilleuse')
-		const plafond = Math.floor((debut + PLAFOND_DE_SESSION_S * 1000) / 1000)
+		const plafond = Math.floor((debut + SESSION_CAP_S * 1000) / 1000)
 		let enTetes = session.enTetes
 		let derniere = 0
 
@@ -83,7 +83,7 @@ describe('I16 : session glissante de 14 jours, plafonnée à 90', () => {
 			const reponse = await appelerRest('POST', REFRESH, { enTetes })
 			expect(reponse.statut, `jour ${jour}`).toBe(200)
 			const jeton = jetonDuCookie(reponse.enTetes)
-			derniere = expirationDuJeton(jeton) ?? 0
+			derniere = tokenExpiration(jeton) ?? 0
 			expect(derniere, `jour ${jour}`).toBeLessThanOrEqual(plafond + 1)
 			enTetes = entetesAvec(jeton, session.enTetes.Origin)
 		}

@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers'
-import { COOKIE_DE_SESSION } from '@/lib/auth/espace-ferme'
-import { maquilleuseConnectee } from '@/lib/auth/session'
+import { SESSION_COOKIE } from '@/lib/auth/closed-dashboard'
+import { signedInArtist } from '@/lib/auth/session'
 
 // Read per request: it depends on the session, and the build has no database.
 export const dynamic = 'force-dynamic'
@@ -14,7 +14,7 @@ export const dynamic = 'force-dynamic'
  * is answered without touching the database.
  */
 export async function GET(): Promise<Response> {
-	const aLeCookie = (await cookies()).has(COOKIE_DE_SESSION)
-	const signedIn = aLeCookie && (await maquilleuseConnectee()) !== null
+	const aLeCookie = (await cookies()).has(SESSION_COOKIE)
+	const signedIn = aLeCookie && (await signedInArtist()) !== null
 	return Response.json({ signedIn }, { headers: { 'Cache-Control': 'private, no-store' } })
 }

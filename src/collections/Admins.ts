@@ -8,9 +8,9 @@ import {
 	ROLES_ADMIN,
 	type RoleAdmin,
 } from '../lib/acces'
+import { firstClosedAccount } from '../lib/auth/closed-first-account'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
-import { freinerLaConnexion, rendreLaPlaceDeLaConnexion } from '../lib/auth/frein-payload'
-import { premierCompteFerme } from '../lib/auth/premier-compte-ferme'
+import { rateLimitSignIn, releaseSignInSlot } from '../lib/auth/rate-limit-payload'
 
 /** How long a session of the admin panel lasts: 8 hours, then the account logs in again (plan 01 §2.3). */
 export const DUREE_SESSION_ADMIN_S = 8 * 60 * 60
@@ -51,12 +51,12 @@ export const Admins: CollectionConfig<'admins'> = {
 	labels: { singular: 'Compte admin', plural: 'Comptes admin' },
 	admin: { useAsTitle: 'email', defaultColumns: ['email', 'role'], hidden: cacheeSaufAdmin },
 	// No lock of the account (AUTH-05, like `pros`): wrong passwords must never shut the owner out
-	// for every address. The brake by address is the only one (`freinerLaConnexion`).
+	// for every address. The brake by address is the only one (`rateLimitSignIn`).
 	auth: { tokenExpiration: DUREE_SESSION_ADMIN_S, maxLoginAttempts: 0 },
-	endpoints: [premierCompteFerme],
+	endpoints: [firstClosedAccount],
 	hooks: {
-		afterLogin: [rendreLaPlaceDeLaConnexion()],
-		beforeOperation: [freinerLaConnexion()],
+		afterLogin: [releaseSignInSlot()],
+		beforeOperation: [rateLimitSignIn()],
 	},
 	access: {
 		read: adminOuSoiMeme('admins'),

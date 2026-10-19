@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server'
 import {
-	CHEMIN_DU_DEPART_GOOGLE,
-	COOKIE_DE_GOOGLE,
 	configGoogle,
-	siteDeLEspace,
-	VIE_DU_COOKIE_DE_GOOGLE_S,
+	dashboardSite,
+	GOOGLE_COOKIE,
+	GOOGLE_COOKIE_LIFE_S,
+	GOOGLE_START_PATH,
 } from '@/lib/auth/google/config'
-import { decouvrir, preparerLeDepart } from '@/lib/auth/google/oidc'
-import { retourSur } from '@/lib/auth/retour'
+import { discover, prepareStart } from '@/lib/auth/google/oidc'
+import { safeReturnTo } from '@/lib/auth/return-to'
 import { serverEnv } from '@/lib/env'
 
 // Read per request, never cached: it builds a request that belongs to one visitor.
@@ -22,32 +22,32 @@ export const dynamic = 'force-dynamic'
  * client, or if Google cannot be reached, the visitor goes back to the sign-in form with a message.
  */
 export async function GET(requete: Request) {
-	const site = siteDeLEspace()
-	const retourAuFormulaire = (code: string) => NextResponse.redirect(new URL(`/auth/signin?error=${code}`, site), 307)
+	const site = dashboardSite()
+	const returnToForm = (code: string) => NextResponse.redirect(new URL(`/auth/signin?error=${code}`, site), 307)
 
 	try {
 		const config = configGoogle()
-		if (!config) return retourAuFormulaire('google-echec')
-		const retour = retourSur(new URL(requete.url).searchParams.get('callbackUrl'), site)
-		const depart = preparerLeDepart(config, await decouvrir(config.emetteur), {
-			retour,
+		if (!config) return returnToForm('google-echec')
+		const returnTo = safeReturnTo(new URL(requete.url).searchParams.get('callbackUrl'), site)
+		const start = prepareStart(config, await discover(config.emetteur), {
+			retour: returnTo,
 			secret: serverEnv().payloadSecret,
 		})
-		const reponse = NextResponse.redirect(depart.adresse, 307)
-		reponse.cookies.set({
-			name: COOKIE_DE_GOOGLE,
-			value: depart.cookie,
+		const response = NextResponse.redirect(start.adresse, 307)
+		response.cookies.set({
+			name: GOOGLE_COOKIE,
+			value: start.cookie,
 			httpOnly: true,
 			// Lax: the cookie must come back with the top-level navigation that Google makes.
 			sameSite: 'lax',
 			secure: process.env.NODE_ENV === 'production',
-			path: CHEMIN_DU_DEPART_GOOGLE,
-			maxAge: VIE_DU_COOKIE_DE_GOOGLE_S,
+			path: GOOGLE_START_PATH,
+			maxAge: GOOGLE_COOKIE_LIFE_S,
 		})
-		reponse.headers.set('Cache-Control', 'private, no-store')
-		return reponse
+		response.headers.set('Cache-Control', 'private, no-store')
+		return response
 	} catch {
 		// Google cannot be reached (its discovery document): an outage, not the visitor's doing.
-		return retourAuFormulaire('google-indisponible')
+		return returnToForm('google-indisponible')
 	}
 }

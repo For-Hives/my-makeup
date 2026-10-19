@@ -1,10 +1,10 @@
 import { afterAll, beforeEach, describe, expect, test } from 'bun:test'
-import { connecter } from '@/lib/auth/connexion'
-import { creerFrein } from '@/lib/auth/frein'
-import { ouvrirParMotDePasse } from '@/lib/auth/jeton'
-import { journalDe } from '@/lib/auth/journal'
-import { DUREE_DU_LIEN_MS, PLANCHER_DE_LA_DEMANDE_MS } from '@/lib/auth/mot-de-passe-oublie'
-import { demanderUnLien, lienEncoreValable, reinitialiserLeMotDePasse } from '@/lib/auth/reinitialisation-payload'
+import { authLog } from '@/lib/auth/auth-log'
+import { FORGOT_PASSWORD_FLOOR_MS, LINK_DURATION_MS } from '@/lib/auth/forgot-password'
+import { linkStillValid, requestPasswordLink, resetPassword } from '@/lib/auth/password-reset-payload'
+import { createRateLimit } from '@/lib/auth/rate-limit'
+import { signInWithPassword } from '@/lib/auth/sign-in'
+import { openWithPassword } from '@/lib/auth/token'
 import { envoiEmailDePayload } from '@/lib/emails/envoi'
 import { serverEnv } from '@/lib/env'
 import { creerCompte } from '../outils/fabrique-comptes'
@@ -30,14 +30,14 @@ const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3100'
 
 let n = 0
 const adresseCliente = () => new Headers({ 'x-forwarded-for': `198.51.100.${1 + (n++ % 250)}` })
-const libre = () => creerFrein({ nom: `essai-oubli-${n++}`, limite: 1000, fenetreMs: 60_000 })
+const libre = () => createRateLimit({ nom: `essai-oubli-${n++}`, limite: 1000, fenetreMs: 60_000 })
 
 /** The work after the answer is awaited, so that a test can read the mail it causes. */
-function demande(email: unknown, options: { frein?: ReturnType<typeof creerFrein>; headers?: Headers } = {}) {
+function demande(email: unknown, options: { frein?: ReturnType<typeof createRateLimit>; headers?: Headers } = {}) {
 	const travaux: Promise<void>[] = []
 	return payloadDeTest().then(async payload => {
 		const debut = Date.now()
-		const resultat = await demanderUnLien({
+		const resultat = await requestPasswordLink({
 			payload,
 			headers: options.headers ?? adresseCliente(),
 			email,
@@ -47,7 +47,7 @@ function demande(email: unknown, options: { frein?: ReturnType<typeof creerFrein
 				travaux.push(travail())
 			},
 			frein: options.frein ?? libre(),
-			journal: journalDe(payload),
+			journal: authLog(payload),
 		})
 		const duree = Date.now() - debut
 		await Promise.all(travaux)
@@ -69,14 +69,14 @@ const reinit = async (
 	confirmation: unknown = motDePasse,
 	frein = libre()
 ) =>
-	reinitialiserLeMotDePasse({
+	resetPassword({
 		payload: await payloadDeTest(),
 		headers: adresseCliente(),
 		jeton,
 		motDePasse,
 		confirmation,
 		frein,
-		journal: journalDe(await payloadDeTest()),
+		journal: authLog(await payloadDeTest()),
 	})
 
 const ligne = async (id: number | string) => {
@@ -93,8 +93,8 @@ const ligne = async (id: number | string) => {
 
 const seConnecter = async (email: string, password: string) => {
 	const payload = await payloadDeTest()
-	return connecter({
-		ouvrir: data => ouvrirParMotDePasse(payload, 'pros', data),
+	return signInWithPassword({
+		ouvrir: data => openWithPassword(payload, 'pros', data),
 		headers: adresseCliente(),
 		email,
 		password,
@@ -124,16 +124,16 @@ describe('I10 : la demande envoie un mail avec un lien d’une heure', () => {
 		const stocke = await ligne(compte.id)
 		expect(stocke?.resetPasswordToken).toBe(jeton)
 		const fin = new Date(stocke?.resetPasswordExpiration ?? 0).getTime()
-		expect(fin).toBeGreaterThan(avant + DUREE_DU_LIEN_MS - 1000)
-		expect(fin).toBeLessThan(Date.now() + DUREE_DU_LIEN_MS + 1000)
-		expect(DUREE_DU_LIEN_MS).toBe(3_600_000)
+		expect(fin).toBeGreaterThan(avant + LINK_DURATION_MS - 1000)
+		expect(fin).toBeLessThan(Date.now() + LINK_DURATION_MS + 1000)
+		expect(LINK_DURATION_MS).toBe(3_600_000)
 	})
 
 	test('le lien est refusé une fois l’heure passée', async () => {
 		const compte = await compteConnu()
 		await demande(compte.email)
 		const jeton = await jetonDuMail(compte.email)
-		expect(await lienEncoreValable(await payloadDeTest(), jeton)).toBe(true)
+		expect(await linkStillValid(await payloadDeTest(), jeton)).toBe(true)
 
 		// The hour has passed: the expiration is set in the past, the clock is not faked.
 		const payload = await payloadDeTest()
@@ -144,7 +144,7 @@ describe('I10 : la demande envoie un mail avec un lien d’une heure', () => {
 			where: { id: { equals: compte.id } },
 		})
 
-		expect(await lienEncoreValable(payload, jeton)).toBe(false)
+		expect(await linkStillValid(payload, jeton)).toBe(false)
 		expect(await reinit(jeton)).toEqual({ ok: false, code: 'code-invalide' })
 		// Nothing changed: she still signs in with her password.
 		expect((await seConnecter(compte.email, ANCIEN)).ok).toBe(true)
@@ -203,8 +203,8 @@ describe('I10 : une adresse inconnue répond pareil, dans le même temps, sans m
 		expect(autre.resultat).toEqual({ ok: true })
 		// Both wait for the floor, and neither goes far past it: the work is after the answer.
 		for (const { duree } of [connue, autre]) {
-			expect(duree).toBeGreaterThanOrEqual(PLANCHER_DE_LA_DEMANDE_MS - 20)
-			expect(duree).toBeLessThan(PLANCHER_DE_LA_DEMANDE_MS + 400)
+			expect(duree).toBeGreaterThanOrEqual(FORGOT_PASSWORD_FLOOR_MS - 20)
+			expect(duree).toBeLessThan(FORGOT_PASSWORD_FLOOR_MS + 400)
 		}
 		expect(Math.abs(connue.duree - autre.duree)).toBeLessThan(150)
 		await attendreLeMail({ pour: compte.email })
@@ -221,7 +221,7 @@ describe('I10 : une adresse inconnue répond pareil, dans le même temps, sans m
 
 	test('le frein par adresse cliente : la 11e demande est refusée, connue ou non, et ne part pas', async () => {
 		const compte = await compteConnu()
-		const frein = creerFrein({ nom: `essai-frein-oubli-${n++}`, limite: 10, fenetreMs: 60_000 })
+		const frein = createRateLimit({ nom: `essai-frein-oubli-${n++}`, limite: 10, fenetreMs: 60_000 })
 		const headers = adresseCliente()
 		for (let i = 0; i < 10; i++) {
 			const email = i % 2 === 0 ? `inconnue-${i}@example.test` : compte.email
@@ -333,7 +333,7 @@ describe('085 : choisir un nouveau mot de passe', () => {
 		expect(await reinit(jeton, 'court')).toEqual({ ok: false, code: 'mot-de-passe-trop-court' })
 		expect(await reinit(jeton, 'x'.repeat(256))).toEqual({ ok: false, code: 'mot-de-passe-trop-long' })
 		expect(await reinit(jeton, NOUVEAU, 'autre-chose-fictif')).toEqual({ ok: false, code: 'mots-de-passe-differents' })
-		expect(await lienEncoreValable(await payloadDeTest(), jeton)).toBe(true)
+		expect(await linkStillValid(await payloadDeTest(), jeton)).toBe(true)
 		expect(await reinit(jeton)).toEqual({ ok: true })
 	})
 
@@ -345,19 +345,19 @@ describe('085 : choisir un nouveau mot de passe', () => {
 		expect(await reinit('f'.repeat(40))).toEqual({ ok: false, code: 'code-invalide' })
 		expect(await reinit("' or 1=1 --")).toEqual({ ok: false, code: 'code-invalide' })
 		const payload = await payloadDeTest()
-		expect(await lienEncoreValable(payload, ancien)).toBe(false)
-		expect(await lienEncoreValable(payload, 'f'.repeat(40))).toBe(false)
-		expect(await lienEncoreValable(payload, undefined)).toBe(false)
+		expect(await linkStillValid(payload, ancien)).toBe(false)
+		expect(await linkStillValid(payload, 'f'.repeat(40))).toBe(false)
+		expect(await linkStillValid(payload, undefined)).toBe(false)
 	})
 
 	test('le frein de la réinitialisation : la 11e tentative est refusée, une réussite rend sa place', async () => {
 		const compte = await compteConnu()
 		await demande(compte.email)
 		const jeton = await jetonDuMail(compte.email)
-		const frein = creerFrein({ nom: `essai-frein-reinit-${n++}`, limite: 10, fenetreMs: 60_000 })
+		const frein = createRateLimit({ nom: `essai-frein-reinit-${n++}`, limite: 10, fenetreMs: 60_000 })
 		const headers = adresseCliente()
 		const tenter = async (code: unknown) =>
-			reinitialiserLeMotDePasse({
+			resetPassword({
 				payload: await payloadDeTest(),
 				headers,
 				jeton: code,

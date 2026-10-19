@@ -1,8 +1,8 @@
 import { afterAll, describe, expect, test } from 'bun:test'
-import { connecter } from '@/lib/auth/connexion'
-import { creerFrein } from '@/lib/auth/frein'
-import { ouvrirParMotDePasse } from '@/lib/auth/jeton'
-import { CODES_EVENEMENT, journalDe, journaliser, TYPES_EVENEMENT } from '@/lib/auth/journal'
+import { authLog, EVENT_CODES, EVENT_TYPES, log } from '@/lib/auth/auth-log'
+import { createRateLimit } from '@/lib/auth/rate-limit'
+import { signInWithPassword } from '@/lib/auth/sign-in'
+import { openWithPassword } from '@/lib/auth/token'
 import { lancerLesTachesQuotidiennes } from '@/lib/taches/quotidiennes'
 import { creerCompte } from '../outils/fabrique-comptes'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
@@ -19,7 +19,7 @@ afterAll(async () => {
 })
 
 const MOT_DE_PASSE = 'aaaaaaaa'
-const frein = creerFrein({ nom: 'essai-journal-int', limite: 1000, fenetreMs: 60_000 })
+const frein = createRateLimit({ nom: 'essai-journal-int', limite: 1000, fenetreMs: 60_000 })
 let n = 0
 const adresse = () => new Headers({ 'x-forwarded-for': `192.0.2.${100 + (n++ % 100)}` })
 
@@ -30,13 +30,13 @@ async function lignes() {
 
 async function ouvrirPar(payloadHeaders: Headers, email: unknown, password: unknown) {
 	const payload = await payloadDeTest()
-	return connecter({
-		ouvrir: data => ouvrirParMotDePasse(payload, 'pros', data),
+	return signInWithPassword({
+		ouvrir: data => openWithPassword(payload, 'pros', data),
 		headers: payloadHeaders,
 		email,
 		password,
 		frein,
-		journal: journalDe(payload),
+		journal: authLog(payload),
 	})
 }
 
@@ -59,8 +59,8 @@ describe('une ligne par connexion, réussie ou refusée', () => {
 		for (const ligne of nouvelles) {
 			expect(typeof ligne.durationMs).toBe('number')
 			expect(Number.isNaN(Date.parse(ligne.date))).toBe(false)
-			expect(CODES_EVENEMENT).toContain(ligne.code)
-			expect(TYPES_EVENEMENT).toContain(ligne.type)
+			expect(EVENT_CODES).toContain(ligne.code)
+			expect(EVENT_TYPES).toContain(ligne.type)
 		}
 		const lecture = await payload.findByID({ collection: 'pros', id: compte.id, depth: 0 })
 		expect(Date.now() - Date.parse(lecture.lastSignInAt ?? '')).toBeLessThan(60_000)
@@ -129,10 +129,7 @@ describe('aucune donnée personnelle dans le journal, même glissée dans la sai
 				enTetes: { 'x-forwarded-for': '198.51.100.204', 'user-agent': glisse, referer: `https://x.test/${glisse}` },
 			})
 		// Written directly, with a value out of the list in each field.
-		await journaliser(
-			(await payloadDeTest()) as never,
-			{ type: 'sign-in', code: glisses[0] as never, durationMs: 3 } as never
-		)
+		await log((await payloadDeTest()) as never, { type: 'sign-in', code: glisses[0] as never, durationMs: 3 } as never)
 
 		const nouvelles = (await lignes()).slice(avant)
 		expect(nouvelles.length).toBeGreaterThanOrEqual(20)
@@ -157,13 +154,13 @@ describe('un échec d’écriture du journal ne fait pas échouer la connexion',
 		}) as typeof payload
 		const avant = (await lignes()).length
 
-		const resultat = await connecter({
-			ouvrir: data => ouvrirParMotDePasse(payload, 'pros', data),
+		const resultat = await signInWithPassword({
+			ouvrir: data => openWithPassword(payload, 'pros', data),
 			headers: adresse(),
 			email: compte.email,
 			password: MOT_DE_PASSE,
 			frein,
-			journal: journalDe(enPanne),
+			journal: authLog(enPanne),
 		})
 
 		expect(resultat.ok).toBe(true)

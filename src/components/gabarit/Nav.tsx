@@ -4,7 +4,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
-import { seDeconnecter } from '@/app/(front)/(espace)/auth/actions'
+import { signOut } from '@/app/(front)/(espace)/auth/actions'
 import { LienSuivi } from '@/components/analytics/LienSuivi'
 import { LIEN_CONNEXION, LIEN_ESPACE, LIEN_RECHERCHE, NAVIGATION } from './liens'
 
@@ -182,7 +182,7 @@ export function Nav() {
 								<Link href={LIEN_ESPACE.href} className={`${LIEN} ${ANNEAU}`}>
 									{LIEN_ESPACE.nom}
 								</Link>
-								<form action={seDeconnecter}>
+								<form action={signOut}>
 									<button type="submit" className={`btn-primary-simple ${ANNEAU}`}>
 										Me déconnecter
 									</button>

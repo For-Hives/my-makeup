@@ -3,19 +3,13 @@ import { cookies, headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { getPayload } from 'payload'
 import { COLLECTION_PROS } from '../acces'
-import { expirationDuJeton } from './duree-session'
-import { COOKIE_DE_SESSION } from './espace-ferme'
-import {
-	classerLaSession,
-	type EtatDeSession,
-	etatDuJeton,
-	type Verification,
-	verifierUneSession,
-} from './etat-session'
-import { urlDeConnexion, urlSessionExpiree } from './retour'
+import { SESSION_COOKIE } from './closed-dashboard'
+import { expiredSessionUrl, signInUrl } from './return-to'
+import { tokenExpiration } from './session-duration'
+import { classifySession, type SessionState, tokenState, type Verification, verifySession } from './session-state'
 
 /** What a page of the space may know about the makeup artist: never the account document. */
-export interface Maquilleuse {
+export interface Artist {
 	id: number | string
 	nom: string
 	email: string
@@ -32,7 +26,7 @@ export class VerificationImpossible extends Error {
 }
 
 /** The state of the session and, when it is valid, who she is. */
-export type SessionLue = { etat: 'connectee'; maquilleuse: Maquilleuse } | { etat: Exclude<EtatDeSession, 'connectee'> }
+export type ReadSession = { etat: 'connectee'; maquilleuse: Artist } | { etat: Exclude<SessionState, 'connectee'> }
 
 /**
  * Asks Payload about a token that has not ended. A refusal (signature, session removed from the
@@ -40,14 +34,14 @@ export type SessionLue = { etat: 'connectee'; maquilleuse: Maquilleuse } | { eta
  * error into « no user », so a refusal is only believed when the database answers a small query
  * right after. Otherwise the check could not be made, and nobody is signed out (U70).
  */
-async function verifier(): Promise<
-	{ verification: 'acceptee'; maquilleuse: Maquilleuse } | { verification: Exclude<Verification, 'acceptee'> }
+async function verify(): Promise<
+	{ verification: 'acceptee'; maquilleuse: Artist } | { verification: Exclude<Verification, 'acceptee'> }
 > {
-	const resultat = await verifierUneSession({
+	const result = await verifySession({
 		authentifier: async () => {
-			const entetes = await headers()
+			const requestHeaders = await headers()
 			const payload = await getPayload({ config })
-			return (await payload.auth({ headers: entetes })).user
+			return (await payload.auth({ headers: requestHeaders })).user
 		},
 		convient: user => user.collection === COLLECTION_PROS,
 		sonder: async () => {
@@ -55,8 +49,8 @@ async function verifier(): Promise<
 			await payload.find({ collection: COLLECTION_PROS, depth: 0, limit: 1, pagination: false, select: {} })
 		},
 	})
-	if (resultat.verification !== 'acceptee') return resultat
-	const user = resultat.utilisateur as { id: number | string; nom?: string | null; email: unknown }
+	if (result.verification !== 'acceptee') return result
+	const user = result.utilisateur as { id: number | string; nom?: string | null; email: unknown }
 	return {
 		verification: 'acceptee',
 		maquilleuse: { id: user.id, nom: user.nom ?? '', email: String(user.email), expire: null },
@@ -64,18 +58,18 @@ async function verifier(): Promise<
 }
 
 /**
- * The session of the request, told apart (see `etat-session.ts`). The cookie's end date answers
+ * The session of the request, told apart (see `session-state.ts`). The cookie's end date answers
  * `expiree` without any database; a token that has not ended is checked by Payload.
  */
-export async function lireLaSession(): Promise<SessionLue> {
+export async function readSession(): Promise<ReadSession> {
 	// Headers first: reading them makes the page dynamic, so that the build never starts Payload.
-	const jeton = (await cookies()).get(COOKIE_DE_SESSION)?.value
-	const etatDuToken = etatDuJeton(jeton, Math.floor(Date.now() / 1000))
-	if (etatDuToken !== 'en-cours') return { etat: classerLaSession(etatDuToken) as Exclude<EtatDeSession, 'connectee'> }
-	const verifie = await verifier()
-	if (verifie.verification === 'acceptee')
-		return { etat: 'connectee', maquilleuse: { ...verifie.maquilleuse, expire: expirationDuJeton(jeton) } }
-	return { etat: classerLaSession(etatDuToken, verifie.verification) as Exclude<EtatDeSession, 'connectee'> }
+	const token = (await cookies()).get(SESSION_COOKIE)?.value
+	const tokenStateOf = tokenState(token, Math.floor(Date.now() / 1000))
+	if (tokenStateOf !== 'en-cours') return { etat: classifySession(tokenStateOf) as Exclude<SessionState, 'connectee'> }
+	const verified = await verify()
+	if (verified.verification === 'acceptee')
+		return { etat: 'connectee', maquilleuse: { ...verified.maquilleuse, expire: tokenExpiration(token) } }
+	return { etat: classifySession(tokenStateOf, verified.verification) as Exclude<SessionState, 'connectee'> }
 }
 
 /**
@@ -85,8 +79,8 @@ export async function lireLaSession(): Promise<SessionLue> {
  * accepts it (signature, expiry, session in the database) AND it belongs to a makeup artist: an
  * admin's token, which has the same cookie name, is no session of the space.
  */
-export async function maquilleuseConnectee(): Promise<Maquilleuse | null> {
-	const session = await lireLaSession()
+export async function signedInArtist(): Promise<Artist | null> {
+	const session = await readSession()
 	return session.etat === 'connectee' ? session.maquilleuse : null
 }
 
@@ -97,16 +91,16 @@ export async function maquilleuseConnectee(): Promise<Maquilleuse | null> {
  * nobody is signed out: the error page of the space answers. Call it first in every page of the
  * space: a layout does not run again on a client-side navigation.
  */
-export async function exigerMaquilleuse(chemin: string): Promise<Maquilleuse> {
-	const session = await lireLaSession()
+export async function requireArtist(chemin: string): Promise<Artist> {
+	const session = await readSession()
 	switch (session.etat) {
 		case 'connectee':
 			return session.maquilleuse
 		case 'expiree':
-			return redirect(urlSessionExpiree(chemin))
+			return redirect(expiredSessionUrl(chemin))
 		case 'indisponible':
 			throw new VerificationImpossible()
 		default:
-			return redirect(urlDeConnexion(chemin))
+			return redirect(signInUrl(chemin))
 	}
 }

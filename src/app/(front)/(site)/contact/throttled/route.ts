@@ -1,4 +1,4 @@
-import { ipClient } from '@/lib/auth/ip-client'
+import { ipClient } from '@/lib/auth/client-ip'
 import { secondesAvantUnMessageDeCetteRequete } from '@/lib/contact/frein'
 import { MESSAGE_TROP_DE_MESSAGES } from '@/lib/contact/message'
 

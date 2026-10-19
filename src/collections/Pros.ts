@@ -1,34 +1,31 @@
 import { APIError, type CollectionBeforeDeleteHook, type CollectionConfig } from 'payload'
 import { adminOuSoiMeme, adminSeulement, cacheeSaufAdmin, champAdminSeulement, jamais } from '../lib/acces'
-import { fermerLesSessionsAuBlocage, noterLeBlocage, refuserUnCompteBloque } from '../lib/auth/compte-bloque'
+import { deleteAccount } from '../lib/account/deletion-route'
+import {
+	recordLastSignIn,
+	recordRestSignIn,
+	recordRestSignInFailure,
+	recordSignInStart,
+} from '../lib/auth/auth-log-payload'
+import { closeSessionsOnBlock, recordBlock, refuseBlockedAccount } from '../lib/auth/blocked-account'
+import { firstClosedAccount } from '../lib/auth/closed-first-account'
+import { equalizeRestWork, rememberRestFailures } from '../lib/auth/equal-time-payload'
+import { LINK_DURATION_MS } from '../lib/auth/forgot-password'
+import { closeForgotPasswordRestDoors } from '../lib/auth/forgot-payload'
+import { clearLegacyHashAfterPassword, clearLegacyHashOnRenewal } from '../lib/auth/legacy-hash-payload'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
-import { freinerLaConnexion, rendreLaPlaceDeLaConnexion } from '../lib/auth/frein-payload'
-import {
-	effacerLeHashHeriteApresUnMotDePasse,
-	effacerLeHashHeriteAuRenouvellement,
-} from '../lib/auth/hash-herite-payload'
-import {
-	noterLaConnexionRest,
-	noterLEchecDeConnexionRest,
-	noterLeDebutDeLaConnexion,
-	retenirLaDerniereConnexion,
-} from '../lib/auth/journal-payload'
-import { DUREE_DU_LIEN_MS } from '../lib/auth/mot-de-passe-oublie'
-import { fermerLesPortesRestDeLOubli } from '../lib/auth/oubli-payload'
-import { premierCompteFerme } from '../lib/auth/premier-compte-ferme'
-import { DUREE_SESSION_S, prolongerSousPlafond, refuserApresLePlafond } from '../lib/auth/session-glissante'
-import { egaliserLeTravailRest, retenirLesEchecsRest } from '../lib/auth/temps-egalise-payload'
-import { supprimerUnCompte } from '../lib/compte/suppression-route'
+import { rateLimitSignIn, releaseSignInSlot } from '../lib/auth/rate-limit-payload'
+import { extendUnderCap, refuseAfterCap, SESSION_DURATION_S } from '../lib/auth/sliding-session'
 import { contenuEmailConfirmation, SUJET_DE_CONFIRMATION } from '../lib/emails/confirmation'
 import { composerEmail } from '../lib/emails/gabarit'
 import { sessionsFermees } from './Admins'
 import { profilALaCreationDuCompte } from './Profiles'
 
 // Kept exported from here: the tests and the earlier tickets import it from this file.
-export { premierCompteFerme }
+export { firstClosedAccount }
 
 /** How long a session of a makeup artist lasts: 14 days (plan 01 §2.3). */
-export const DUREE_SESSION_PRO_S = DUREE_SESSION_S
+export const DUREE_SESSION_PRO_S = SESSION_DURATION_S
 
 /**
  * The attributes of the session cookie (I09): HttpOnly always (Payload sets it), SameSite=Lax, and
@@ -40,7 +37,7 @@ export const cookiesDeSession = (production: boolean) => ({ secure: production, 
  * An account that still has a profile is not deleted by the Local API: the profile goes first, then
  * the account. The profile cannot exist without its account (`profiles.pro` is required). The deletion
  * of an account with everything that hangs on it (profile, photos, sessions) is the one cascade of
- * `src/lib/compte/suppression.ts`, which the makeup artist (ticket 141) and the admin (ticket 167,
+ * `src/lib/account/deletion.ts`, which the makeup artist (ticket 141) and the admin (ticket 167,
  * `DELETE /api/pros/:id`) both call.
  */
 export const compteSansProfilAvantSuppression: CollectionBeforeDeleteHook = async ({ id, req }) => {
@@ -67,13 +64,13 @@ export const compteSansProfilAvantSuppression: CollectionBeforeDeleteHook = asyn
  * - Nobody creates an account through REST without being an admin: the sign-up of the site goes
  *   through the server (P5 tickets).
  * - A blocked account (`blocked`) is turned away at the sign-in once its password is right, and blocking
- *   closes its sessions (ticket 089, src/lib/auth/compte-bloque.ts).
+ *   closes its sessions (ticket 089, src/lib/auth/blocked-account.ts).
  * - Creating an account creates its empty profile (collection `profiles`), unless the creation
  *   says otherwise (`CONTEXTE_SANS_PROFIL`).
  *
  * `auth.verify` is on for good: `_verified` exists only while it is (SCHEMA.md, §5.1). Whether a
  * new account must confirm its email is the switch AUTH_VERIFY, read by the sign-up
- * (src/lib/auth/inscription-payload.ts); the mail of the sign-up leaves through the door of ticket
+ * (src/lib/auth/sign-up-payload.ts); the mail of the sign-up leaves through the door of ticket
  * 073. The mail Payload sends itself, for an account an admin creates in the panel, reads the same
  * and links to the page of the site that confirms the account, not to the admin panel.
  */
@@ -99,11 +96,11 @@ export const Pros: CollectionConfig<'pros'> = {
 				).html,
 		},
 		// The link of a forgotten password lives one hour and serves once (tickets 085 and 086). The request
-		// goes through the site (`demanderUnLien`), which sends the mail by the one door of the site; the native REST doors are closed (`fermerLesPortesRestDeLOubli`).
+		// goes through the site (`requestPasswordLink`), which sends the mail by the one door of the site; the native REST doors are closed (`closeForgotPasswordRestDoors`).
 		forgotPassword: {
-			expiration: DUREE_DU_LIEN_MS,
+			expiration: LINK_DURATION_MS,
 		},
-		// No lock of the account: the brake is by client address (`freinerLaConnexion`), so that
+		// No lock of the account: the brake is by client address (`rateLimitSignIn`), so that
 		// ten wrong passwords typed by anyone never lock the account they aimed at (AUTH-05).
 		maxLoginAttempts: 0,
 		// 14 days (plan 01 §2.3), renewed by a visit to the space (`RafraichirSession`) and never past 90 days
@@ -123,23 +120,23 @@ export const Pros: CollectionConfig<'pros'> = {
 	},
 	// The admin's deletion is the cascade of the account (ticket 167); several accounts at once would skip it.
 	disableBulkDelete: true,
-	endpoints: [premierCompteFerme, supprimerUnCompte],
+	endpoints: [firstClosedAccount, deleteAccount],
 	hooks: {
-		afterChange: [profilALaCreationDuCompte, effacerLeHashHeriteApresUnMotDePasse, noterLeBlocage],
-		afterLogin: [rendreLaPlaceDeLaConnexion(), retenirLaDerniereConnexion, noterLaConnexionRest],
-		afterError: [retenirLesEchecsRest(), noterLEchecDeConnexionRest],
-		beforeChange: [fermerLesSessionsAuBlocage],
-		beforeLogin: [refuserUnCompteBloque],
+		afterChange: [profilALaCreationDuCompte, clearLegacyHashAfterPassword, recordBlock],
+		afterLogin: [releaseSignInSlot(), recordLastSignIn, recordRestSignIn],
+		afterError: [rememberRestFailures(), recordRestSignInFailure],
+		beforeChange: [closeSessionsOnBlock],
+		beforeLogin: [refuseBlockedAccount],
 		beforeDelete: [compteSansProfilAvantSuppression],
-		beforeValidate: [effacerLeHashHeriteAuRenouvellement],
+		beforeValidate: [clearLegacyHashOnRenewal],
 		beforeOperation: [
-			noterLeDebutDeLaConnexion,
-			freinerLaConnexion(),
-			egaliserLeTravailRest(),
-			refuserApresLePlafond,
-			fermerLesPortesRestDeLOubli,
+			recordSignInStart,
+			rateLimitSignIn(),
+			equalizeRestWork(),
+			refuseAfterCap,
+			closeForgotPasswordRestDoors,
 		],
-		refresh: [prolongerSousPlafond],
+		refresh: [extendUnderCap],
 	},
 	fields: [
 		{

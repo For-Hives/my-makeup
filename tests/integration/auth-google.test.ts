@@ -1,17 +1,17 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, spyOn, test } from 'bun:test'
-import { fermerLaSession } from '@/lib/auth/deconnexion'
-import { creerFrein, type Frein } from '@/lib/auth/frein'
-import { type IssueDeGoogle, terminerLaConnexionGoogle } from '@/lib/auth/google/connexion-google'
+import { authLog } from '@/lib/auth/auth-log'
+import { finishGoogleSignIn, type GoogleOutcome } from '@/lib/auth/google/google-sign-in'
 import {
 	type ConfigGoogle,
-	type DemandeEnCours,
-	decouvrir,
-	oublierLesDocuments,
-	preparerLeDepart,
-	type Requeter,
-	sceller,
+	clearDocuments,
+	discover,
+	type PendingRequest,
+	prepareStart,
+	type Query,
+	seal,
 } from '@/lib/auth/google/oidc'
-import { journalDe } from '@/lib/auth/journal'
+import { createRateLimit, type RateLimit } from '@/lib/auth/rate-limit'
+import { closeSession } from '@/lib/auth/sign-out'
 import { creerCompte } from '../outils/fabrique-comptes'
 import { type Demande, fauxGoogle } from '../outils/faux-google'
 import { compterLesMails, viderLeCapteur } from '../outils/mailpit'
@@ -33,14 +33,14 @@ const config: ConfigGoogle = {
 	redirectUri: `${SITE}/auth/google/callback`,
 }
 
-beforeAll(() => oublierLesDocuments())
+beforeAll(() => clearDocuments())
 beforeEach(() => viderLeCapteur())
 afterAll(async () => {
 	await viderLaBase()
 })
 
 interface Passage {
-	issue: IssueDeGoogle
+	issue: GoogleOutcome
 	/** The address Google sent the browser back to: it carries the code. */
 	retour: URL
 }
@@ -57,23 +57,23 @@ async function passer(
 	}: {
 		retourSouhaite?: string
 		client?: string
-		frein?: Frein
-		requeter?: Requeter
+		frein?: RateLimit
+		requeter?: Query
 		modifier?: (parametres: URLSearchParams, depart: { cookie: string }) => string | undefined
 	} = {}
 ): Promise<Passage> {
 	const payload = await payloadDeTest()
-	const depart = preparerLeDepart(config, await decouvrir(config.emetteur), { retour: retourSouhaite, secret: SECRET })
+	const depart = prepareStart(config, await discover(config.emetteur), { retour: retourSouhaite, secret: SECRET })
 	const retour = await google.autoriser(depart.adresse, google.choisir(demande))
 	const parametres = new URLSearchParams(retour.searchParams)
 	const cookie = modifier ? modifier(parametres, depart) : depart.cookie
-	const issue = await terminerLaConnexionGoogle({
+	const issue = await finishGoogleSignIn({
 		payload,
 		config,
 		secret: SECRET,
 		retour: { code: parametres.get('code'), state: parametres.get('state'), error: parametres.get('error') },
 		cookie,
-		journal: journalDe(payload),
+		journal: authLog(payload),
 		client,
 		frein,
 		requeter,
@@ -146,7 +146,7 @@ describe('E07 : un compte venu de Google se retrouve par son email vérifié', (
 		expect(ligne?.sessions?.length).toBeGreaterThan(0)
 		expect(ligne?.lastSignInAt).toBeDefined()
 
-		expect(await fermerLaSession({ payload, headers: entetes, toutes: false })).toEqual({ ok: true, fermee: true })
+		expect(await closeSession({ payload, headers: entetes, toutes: false })).toEqual({ ok: true, fermee: true })
 
 		expect(await qui(issue.token)).toBeNull()
 	})
@@ -173,7 +173,7 @@ describe('tout ce qui vient de Google est vérifié avant d’être cru', () => 
 			{
 				modifier: parametres => {
 					parametres.set('state', 'forge')
-					return sceller(demandeAuHasard(), SECRET)
+					return seal(demandeAuHasard(), SECRET)
 				},
 			}
 		)
@@ -202,7 +202,7 @@ describe('tout ce qui vient de Google est vérifié avant d’être cru', () => 
 			undefined,
 			'',
 			'abc',
-			sceller(demandeAuHasard(), 'une-autre-cle-qui-fait-plus-de-32-caracteres'),
+			seal(demandeAuHasard(), 'une-autre-cle-qui-fait-plus-de-32-caracteres'),
 		]) {
 			const { issue } = await passer({ email }, { modifier: () => cookie })
 			expect(issue).toEqual({ ok: false, code: 'google-echec' })
@@ -217,7 +217,7 @@ describe('tout ce qui vient de Google est vérifié avant d’être cru', () => 
 			{
 				modifier: (_parametres, depart) => {
 					const demande = JSON.parse(Buffer.from(depart.cookie.split('.')[0] ?? '', 'base64url').toString('utf8'))
-					return sceller({ ...demande, expire: 1 }, SECRET)
+					return seal({ ...demande, expire: 1 }, SECRET)
 				},
 			}
 		)
@@ -455,7 +455,7 @@ describe('rien de ce que Google envoie n’est écrit', () => {
 	})
 })
 
-function demandeAuHasard(): DemandeEnCours {
+function demandeAuHasard(): PendingRequest {
 	return {
 		state: 'autre',
 		nonce: 'autre',
@@ -503,14 +503,14 @@ describe('ticket 223, constat 9 : ce que Google dit par lui-même, et sa découv
 		const avant = (await lignesDuJournal()).length
 		const email = adresse('decouverte-retour')
 		const payload = await payloadDeTest()
-		const depart = preparerLeDepart(config, await decouvrir(config.emetteur), {
+		const depart = prepareStart(config, await discover(config.emetteur), {
 			retour: '/auth/profil',
 			secret: SECRET,
 		})
 		const retour = await google.autoriser(depart.adresse, google.choisir({ email }))
-		oublierLesDocuments()
+		clearDocuments()
 
-		const issue = await terminerLaConnexionGoogle({
+		const issue = await finishGoogleSignIn({
 			payload,
 			config,
 			secret: SECRET,
@@ -520,7 +520,7 @@ describe('ticket 223, constat 9 : ce que Google dit par lui-même, et sa découv
 				error: null,
 			},
 			cookie: depart.cookie,
-			journal: journalDe(payload),
+			journal: authLog(payload),
 			requeter: async () => {
 				throw new Error('réseau coupé')
 			},
@@ -536,7 +536,7 @@ describe('ticket 223, constat 9 : ce que Google dit par lui-même, et sa découv
 		const avant = process.env.GOOGLE_OIDC_ISSUER
 		// A local port where nothing listens: the discovery document cannot be read.
 		process.env.GOOGLE_OIDC_ISSUER = 'http://127.0.0.1:9'
-		oublierLesDocuments()
+		clearDocuments()
 		try {
 			const reponse = await GET(new Request(`${SITE}/auth/google?callbackUrl=%2Fauth%2Fprofil`))
 			expect(reponse.status).toBe(307)
@@ -545,14 +545,14 @@ describe('ticket 223, constat 9 : ce que Google dit par lui-même, et sa découv
 		} finally {
 			if (avant === undefined) delete process.env.GOOGLE_OIDC_ISSUER
 			else process.env.GOOGLE_OIDC_ISSUER = avant
-			oublierLesDocuments()
+			clearDocuments()
 		}
 	})
 })
 
 describe('ticket 223, constat 3 : le retour est freiné par adresse et ses lignes de refus sont bornées', () => {
 	/** A return with a state that is not ours, from this address: the flood of a script. */
-	const retourInvalide = (client: string, frein: Frein) =>
+	const retourInvalide = (client: string, frein: RateLimit) =>
 		passer(
 			{ email: adresse('flood') },
 			{
@@ -566,7 +566,7 @@ describe('ticket 223, constat 3 : le retour est freiné par adresse et ses ligne
 		)
 
 	test('passé la limite, le retour est refusé (trop-de-tentatives) ; les lignes du journal restent bornées', async () => {
-		const frein = creerFrein({ nom: `retour-essai-${crypto.randomUUID()}`, limite: 5, fenetreMs: 60_000 })
+		const frein = createRateLimit({ nom: `retour-essai-${crypto.randomUUID()}`, limite: 5, fenetreMs: 60_000 })
 		const client = `192.0.2.${100 + Math.floor(Math.random() * 100)}`
 		const avant = (await lignesDuJournal()).length
 
@@ -588,7 +588,7 @@ describe('ticket 223, constat 3 : le retour est freiné par adresse et ses ligne
 	})
 
 	test('une autre adresse n’est pas freinée, et un retour qui ouvre une session rend sa place', async () => {
-		const frein = creerFrein({ nom: `retour-essai-${crypto.randomUUID()}`, limite: 2, fenetreMs: 60_000 })
+		const frein = createRateLimit({ nom: `retour-essai-${crypto.randomUUID()}`, limite: 2, fenetreMs: 60_000 })
 		const client = `192.0.2.${100 + Math.floor(Math.random() * 100)}`
 		const autre = `198.51.100.${1 + Math.floor(Math.random() * 200)}`
 

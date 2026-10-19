@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { Accueil } from '@/components/espace/accueil/Accueil'
-import { PAGE_D_ACCUEIL_DU_COMPTE, urlDeConnexion } from '@/lib/auth/retour'
-import { exigerMaquilleuse } from '@/lib/auth/session'
+import { ACCOUNT_ONBOARDING_PAGE, signInUrl } from '@/lib/auth/return-to'
+import { requireArtist } from '@/lib/auth/session'
 import { libelleDeLaCommune } from '@/lib/espace/localisation'
 import { profilDeLaMaquilleuse } from '@/lib/espace/mon-profil'
 import { positionDAccueil } from '@/lib/espace/onboarding'
@@ -24,9 +24,9 @@ export const metadata: Metadata = { title: 'Prépare ton profil' }
  * already active has nothing left to do here: she goes to her space.
  */
 export default async function PageDAccueilDuCompte() {
-	await exigerMaquilleuse(PAGE_D_ACCUEIL_DU_COMPTE)
+	await requireArtist(ACCOUNT_ONBOARDING_PAGE)
 	const contexte = await utilisatriceDeLaRequete()
-	if (contexte === null) return redirect(urlDeConnexion(PAGE_D_ACCUEIL_DU_COMPTE))
+	if (contexte === null) return redirect(signInUrl(ACCOUNT_ONBOARDING_PAGE))
 	await garantirLeProfil(contexte.payload, contexte.utilisateur)
 	const profil = await profilDeLaMaquilleuse(contexte.payload, contexte.utilisateur)
 	if (profil === null) throw new Error('Le profil de la maquilleuse n’a pas pu être créé.')

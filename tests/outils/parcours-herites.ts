@@ -1,12 +1,12 @@
 import { expect } from 'bun:test'
-import { connecter } from '@/lib/auth/connexion'
-import { creerFrein } from '@/lib/auth/frein'
-import { terminerLaConnexionGoogle } from '@/lib/auth/google/connexion-google'
-import { type ConfigGoogle, decouvrir, preparerLeDepart } from '@/lib/auth/google/oidc'
-import { remplacerLeHashHerite } from '@/lib/auth/herite'
-import { ouvrirParMotDePasse } from '@/lib/auth/jeton'
-import { journalDe } from '@/lib/auth/journal'
-import { demanderUnLien, reinitialiserLeMotDePasse } from '@/lib/auth/reinitialisation-payload'
+import { authLog } from '@/lib/auth/auth-log'
+import { finishGoogleSignIn } from '@/lib/auth/google/google-sign-in'
+import { type ConfigGoogle, discover, prepareStart } from '@/lib/auth/google/oidc'
+import { replaceLegacyHash } from '@/lib/auth/legacy'
+import { requestPasswordLink, resetPassword } from '@/lib/auth/password-reset-payload'
+import { createRateLimit } from '@/lib/auth/rate-limit'
+import { signInWithPassword } from '@/lib/auth/sign-in'
+import { openWithPassword } from '@/lib/auth/token'
 import { envoiEmailDePayload } from '@/lib/emails/envoi'
 import { serverEnv } from '@/lib/env'
 import { fauxGoogle } from './faux-google'
@@ -27,7 +27,7 @@ export const CHOIX = 'mot-de-passe-choisi-fictif'
 
 let n = 0
 const adresseCliente = () => new Headers({ 'x-forwarded-for': `203.0.113.${1 + (n++ % 250)}` })
-const libre = () => creerFrein({ nom: `essai-parcours-${n++}`, limite: 1000, fenetreMs: 60_000 })
+const libre = () => createRateLimit({ nom: `essai-parcours-${n++}`, limite: 1000, fenetreMs: 60_000 })
 
 export const configGoogle = (): ConfigGoogle => {
 	const google = fauxGoogle()
@@ -43,7 +43,7 @@ export const configGoogle = (): ConfigGoogle => {
 export async function demanderLeLien(email: string): Promise<string> {
 	const payload = await payloadDeTest()
 	const travaux: Promise<void>[] = []
-	const resultat = await demanderUnLien({
+	const resultat = await requestPasswordLink({
 		payload,
 		headers: adresseCliente(),
 		email,
@@ -53,7 +53,7 @@ export async function demanderLeLien(email: string): Promise<string> {
 			travaux.push(travail())
 		},
 		frein: libre(),
-		journal: journalDe(payload),
+		journal: authLog(payload),
 	})
 	expect(resultat).toEqual({ ok: true })
 	await Promise.all(travaux)
@@ -65,27 +65,27 @@ export async function demanderLeLien(email: string): Promise<string> {
 
 export async function choisirUnMotDePasse(jeton: string, motDePasse: string = CHOIX) {
 	const payload = await payloadDeTest()
-	return reinitialiserLeMotDePasse({
+	return resetPassword({
 		payload,
 		headers: adresseCliente(),
 		jeton,
 		motDePasse,
 		confirmation: motDePasse,
 		frein: libre(),
-		journal: journalDe(payload),
+		journal: authLog(payload),
 	})
 }
 
 export async function seConnecter(email: string, password: string) {
 	const payload = await payloadDeTest()
-	return connecter({
-		ouvrir: data => ouvrirParMotDePasse(payload, 'pros', data),
-		herite: data => remplacerLeHashHerite(payload, data),
+	return signInWithPassword({
+		ouvrir: data => openWithPassword(payload, 'pros', data),
+		herite: data => replaceLegacyHash(payload, data),
 		headers: adresseCliente(),
 		email,
 		password,
 		frein: libre(),
-		journal: journalDe(payload),
+		journal: authLog(payload),
 	})
 }
 
@@ -93,9 +93,9 @@ export async function seConnecter(email: string, password: string) {
 export async function connecterParGoogle(email: string) {
 	const payload = await payloadDeTest()
 	const config = configGoogle()
-	const depart = preparerLeDepart(config, await decouvrir(config.emetteur), { retour: '/auth/profil', secret: SECRET })
+	const depart = prepareStart(config, await discover(config.emetteur), { retour: '/auth/profil', secret: SECRET })
 	const retour = await fauxGoogle().autoriser(depart.adresse, fauxGoogle().choisir({ email }))
-	return terminerLaConnexionGoogle({
+	return finishGoogleSignIn({
 		payload,
 		config,
 		secret: SECRET,
@@ -105,6 +105,6 @@ export async function connecterParGoogle(email: string) {
 			error: retour.searchParams.get('error'),
 		},
 		cookie: depart.cookie,
-		journal: journalDe(payload),
+		journal: authLog(payload),
 	})
 }

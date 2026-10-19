@@ -1,9 +1,9 @@
 import { afterAll, describe, expect, test } from 'bun:test'
-import { connecter } from '@/lib/auth/connexion'
-import { messageErreur } from '@/lib/auth/erreurs'
-import { creerFrein } from '@/lib/auth/frein'
-import { ouvrirParMotDePasse } from '@/lib/auth/jeton'
-import { journalDe } from '@/lib/auth/journal'
+import { authLog } from '@/lib/auth/auth-log'
+import { errorMessage } from '@/lib/auth/errors'
+import { createRateLimit } from '@/lib/auth/rate-limit'
+import { signInWithPassword } from '@/lib/auth/sign-in'
+import { openWithPassword } from '@/lib/auth/token'
 import { creerCompte } from '../outils/fabrique-comptes'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
 import { appelerRest } from '../outils/rest'
@@ -19,19 +19,19 @@ afterAll(async () => {
 })
 
 const MOT_DE_PASSE = 'aaaaaaaa'
-const frein = creerFrein({ nom: 'essai-int-bloque', limite: 1000, fenetreMs: 60_000 })
+const frein = createRateLimit({ nom: 'essai-int-bloque', limite: 1000, fenetreMs: 60_000 })
 let n = 0
 const adresse = () => new Headers({ 'x-forwarded-for': `192.0.2.${150 + (n++ % 100)}` })
 
 async function seConnecter(email: string, password: string) {
 	const payload = await payloadDeTest()
-	return connecter({
-		ouvrir: data => ouvrirParMotDePasse(payload, 'pros', data),
+	return signInWithPassword({
+		ouvrir: data => openWithPassword(payload, 'pros', data),
 		headers: adresse(),
 		email,
 		password,
 		frein,
-		journal: journalDe(payload),
+		journal: authLog(payload),
 	})
 }
 
@@ -79,7 +79,7 @@ describe('un compte bloqué ne peut pas se connecter', () => {
 		const reponse = await seConnecter(compte.email, MOT_DE_PASSE)
 
 		expect(reponse).toEqual({ ok: false, code: 'compte-bloque' })
-		expect(messageErreur('compte-bloque')).toContain('bloqué')
+		expect(errorMessage('compte-bloque')).toContain('bloqué')
 		expect(await sessionsEnBase(compte.id)).toBe(0)
 	})
 
@@ -107,7 +107,7 @@ describe('un compte bloqué ne peut pas se connecter', () => {
 
 		expect(statut).toBe(403)
 		expect(enTetes.get('set-cookie') ?? '').not.toContain('payload-token=')
-		expect(texte).toContain(messageErreur('compte-bloque'))
+		expect(texte).toContain(errorMessage('compte-bloque'))
 		expect((await journal()).slice(avant).map(({ type, code }) => [type, code])).toEqual([['sign-in', 'compte-bloque']])
 	})
 

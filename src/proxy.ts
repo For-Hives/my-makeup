@@ -1,17 +1,17 @@
 import { type NextRequest, NextResponse } from 'next/server'
+import { ipClient } from '@/lib/auth/client-ip'
+import { dashboardDecision, isPrivatePage, SESSION_COOKIE } from '@/lib/auth/closed-dashboard'
+import { linkPlan, PASSWORD_RESET_COOKIE } from '@/lib/auth/forgot-password'
 import {
-	COOKIE_DE_MESSAGE,
-	cookieDEffacement,
-	DUREE_DU_MESSAGE_EN_SECONDES,
-	ENTETE_DE_MESSAGE,
-	planDeNettoyage,
-	VARIABLE_DE_BASCULE,
-} from '@/lib/auth/cookies-herites'
-import { COOKIE_DE_SESSION, decisionDeLEspace, estPagePrivee } from '@/lib/auth/espace-ferme'
-import { ipClient } from '@/lib/auth/ip-client'
-import { COOKIE_DE_REINITIALISATION, planDuLien } from '@/lib/auth/mot-de-passe-oublie'
-import { ENTETES_DE_RELAIS, pageDeRelais, venueDUnAutreSite } from '@/lib/auth/page-de-relais'
-import { CHEMIN_DE_L_INSCRIPTION, CHEMIN_DU_REFUS, secondesAvantUneInscription } from '@/lib/auth/refus-inscription'
+	CUTOVER_VARIABLE,
+	cleanupPlan,
+	clearingCookie,
+	MESSAGE_COOKIE,
+	MESSAGE_DURATION_SECONDS,
+	MESSAGE_HEADER,
+} from '@/lib/auth/legacy-cookies'
+import { comesFromOtherSite, RELAY_HEADERS, relayPage } from '@/lib/auth/relay-page'
+import { REFUSAL_PATH, SIGN_UP_PATH, secondsBeforeSignUp } from '@/lib/auth/sign-up-refusal'
 import {
 	CHEMIN_DU_CONTACT,
 	CHEMIN_DU_REFUS_DE_CONTACT,
@@ -28,7 +28,7 @@ import { adresseAVerifier, type FamilleVerifiee } from '@/lib/urls/page-inconnue
  *   redirect of the final slash is off (next.config.ts), so that no address makes two hops.
  * - The private pages of the space answer one redirection to the sign-in page when no session cookie
  *   comes with the request (ticket 075), or when its end date has passed (ticket 080: with the
- *   « session expirée » message). The authoritative check is the page's own (`exigerMaquilleuse`).
+ *   « session expirée » message). The authoritative check is the page's own (`requireArtist`).
  * - The link of a forgotten-password mail (`/auth/reinitialiser?code=…`) answers one redirection to the bare
  *   page, the code kept in a cookie of that page only (ticket 085): it never reaches a page, the audience
  *   measurement, the history or a Referer.
@@ -85,36 +85,36 @@ function proxyDuSite(requete: NextRequest) {
 		if (consigneFreinee) reponseFreinee.headers.set('X-Robots-Tag', consigneFreinee)
 		return reponseFreinee
 	}
-	const nettoyage = planDeNettoyage({
+	const nettoyage = cleanupPlan({
 		chemin: pathname,
 		noms: requete.cookies.getAll().map(cookie => cookie.name),
 		prechargement: requete.headers.has('next-router-prefetch') || requete.headers.get('purpose') === 'prefetch',
 		maintenant: new Date(),
-		basculeLe: process.env[VARIABLE_DE_BASCULE],
+		basculeLe: process.env[CUTOVER_VARIABLE],
 	})
 	// The header is the proxy's alone: whatever a visitor sends under that name is dropped.
 	const entetes = new Headers(requete.headers)
-	entetes.delete(ENTETE_DE_MESSAGE)
-	if (nettoyage.afficherLeMessage) entetes.set(ENTETE_DE_MESSAGE, '1')
+	entetes.delete(MESSAGE_HEADER)
+	if (nettoyage.afficherLeMessage) entetes.set(MESSAGE_HEADER, '1')
 	if (
 		requete.method === 'POST' &&
-		pathname === CHEMIN_DE_L_INSCRIPTION &&
-		secondesAvantUneInscription(ipClient(requete.headers)) !== undefined
+		pathname === SIGN_UP_PATH &&
+		secondsBeforeSignUp(ipClient(requete.headers)) !== undefined
 	) {
 		// Past 5 sign-ups an hour from this address (ticket 084): a Server Action cannot answer 429
 		// itself, so the request is sent to the route that does, before the action runs.
-		return NextResponse.rewrite(new URL(CHEMIN_DU_REFUS, requete.url ?? requete.nextUrl.href))
+		return NextResponse.rewrite(new URL(REFUSAL_PATH, requete.url ?? requete.nextUrl.href))
 	}
 	const avecLeNettoyage = (reponse: NextResponse): NextResponse => {
 		if (nettoyage.aEffacer.length > 0 || nettoyage.retenirLeMessage || nettoyage.oublierLeMessage)
 			// A page that sets a cookie is for this visitor alone (ticket 223).
 			reponse.headers.set('Cache-Control', 'private, no-store')
-		for (const nom of nettoyage.aEffacer) reponse.cookies.set(cookieDEffacement(nom))
+		for (const nom of nettoyage.aEffacer) reponse.cookies.set(clearingCookie(nom))
 		if (nettoyage.retenirLeMessage)
 			reponse.cookies.set({
-				name: COOKIE_DE_MESSAGE,
+				name: MESSAGE_COOKIE,
 				value: '1',
-				maxAge: DUREE_DU_MESSAGE_EN_SECONDES,
+				maxAge: MESSAGE_DURATION_SECONDS,
 				path: '/',
 				httpOnly: true,
 				sameSite: 'lax',
@@ -122,7 +122,7 @@ function proxyDuSite(requete: NextRequest) {
 			})
 		if (nettoyage.oublierLeMessage)
 			reponse.cookies.set({
-				name: COOKIE_DE_MESSAGE,
+				name: MESSAGE_COOKIE,
 				value: '',
 				maxAge: 0,
 				expires: new Date(0),
@@ -133,7 +133,7 @@ function proxyDuSite(requete: NextRequest) {
 			})
 		return reponse
 	}
-	const lien = planDuLien(pathname, requete.nextUrl.searchParams)
+	const lien = linkPlan(pathname, requete.nextUrl.searchParams)
 	if (lien) {
 		const cible = requete.nextUrl.clone()
 		cible.pathname = lien.aller
@@ -141,7 +141,7 @@ function proxyDuSite(requete: NextRequest) {
 		// 303: whatever the method, the next request is a GET of the bare page.
 		const redirection = NextResponse.redirect(cible, 303)
 		redirection.cookies.set({
-			name: COOKIE_DE_REINITIALISATION,
+			name: PASSWORD_RESET_COOKIE,
 			value: lien.cookie.valeur,
 			maxAge: lien.cookie.maxAgeS,
 			path: lien.aller,
@@ -155,10 +155,10 @@ function proxyDuSite(requete: NextRequest) {
 		if (consigneDuLien) redirection.headers.set('X-Robots-Tag', consigneDuLien)
 		return avecLeNettoyage(redirection)
 	}
-	const vers = decisionDeLEspace(
+	const vers = dashboardDecision(
 		pathname,
 		search,
-		requete.cookies.get(COOKIE_DE_SESSION)?.value,
+		requete.cookies.get(SESSION_COOKIE)?.value,
 		Math.floor(Date.now() / 1000),
 		requete.method
 	)
@@ -173,10 +173,10 @@ function proxyDuSite(requete: NextRequest) {
 		if (consigneRedirection) redirection.headers.set('X-Robots-Tag', consigneRedirection)
 		return avecLeNettoyage(redirection)
 	}
-	if (requete.method === 'GET' && estPagePrivee(pathname) && venueDUnAutreSite(requete.headers)) {
+	if (requete.method === 'GET' && isPrivatePage(pathname) && comesFromOtherSite(requete.headers)) {
 		// She comes from another site with a session cookie that Payload would ignore (ticket 223): the
 		// relay page restarts the navigation from this site, where the cookie counts.
-		const relais = new NextResponse(pageDeRelais(`${pathname}${search}`), { status: 200, headers: ENTETES_DE_RELAIS })
+		const relais = new NextResponse(relayPage(`${pathname}${search}`), { status: 200, headers: RELAY_HEADERS })
 		const consigneDuRelais = robotsPourChemin(pathname)
 		if (consigneDuRelais) relais.headers.set('X-Robots-Tag', consigneDuRelais)
 		return avecLeNettoyage(relais)

@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { getFieldsToSign, jwtSign } from 'payload'
-import { expirationDuJeton } from '@/lib/auth/session-glissante'
+import { tokenExpiration } from '@/lib/auth/sliding-session'
 import { creerCompte } from '../outils/fabrique-comptes'
 import { payloadDeTest } from '../outils/payload-test'
 
@@ -67,7 +67,7 @@ test.describe('E14 : une activité régulière prolonge la session', { tag: '@le
 		await expect(page.getByRole('heading', { name: 'Mon espace' })).toBeVisible()
 
 		const apres = (await context.cookies()).find(c => c.name === 'payload-token')
-		const exp = expirationDuJeton(apres?.value) ?? 0
+		const exp = tokenExpiration(apres?.value) ?? 0
 		expect(exp - Math.floor(Date.now() / 1000)).toBeGreaterThan(13 * JOUR)
 		expect(apres?.httpOnly).toBe(true)
 

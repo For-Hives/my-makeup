@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test'
-import { cleDeAdresse, ipClient } from '@/lib/auth/ip-client'
+import { addressKey, ipClient } from '@/lib/auth/client-ip'
 
 const avec = (entetes: Record<string, string>) => new Headers(entetes)
 
@@ -36,20 +36,20 @@ describe('cleDeAdresse : une IPv6 compte par bloc /64', () => {
 			'[2001:db8::ffff:1]',
 			'2001:db8::1%eth0',
 		])
-			expect(cleDeAdresse(ecriture)).toBe(cle)
+			expect(addressKey(ecriture)).toBe(cle)
 	})
 
 	test('deux /64 différents ont deux clés', () => {
-		expect(cleDeAdresse('2001:db8:0:1::1')).not.toBe(cleDeAdresse('2001:db8:0:2::1'))
+		expect(addressKey('2001:db8:0:1::1')).not.toBe(addressKey('2001:db8:0:2::1'))
 	})
 
 	test('une IPv4 reste elle-même, et une IPv4 vue par une socket IPv6 la retrouve', () => {
-		expect(cleDeAdresse('203.0.113.7')).toBe('203.0.113.7')
-		expect(cleDeAdresse('::ffff:203.0.113.7')).toBe('203.0.113.7')
+		expect(addressKey('203.0.113.7')).toBe('203.0.113.7')
+		expect(addressKey('::ffff:203.0.113.7')).toBe('203.0.113.7')
 	})
 
 	test('ce qui n’est pas une adresse passe tel quel', () => {
-		expect(cleDeAdresse('pas:une:adresse')).toBe('pas:une:adresse')
+		expect(addressKey('pas:une:adresse')).toBe('pas:une:adresse')
 	})
 })
 

@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { ImportRefuse } from '../../scripts/migration/import/cible'
 import { codeDeSortie } from '../../scripts/migration/import/rapport'
-import { supprimerLeCompteEtToutCeQuiEnDepend } from '../../src/lib/compte/suppression'
+import { deleteAccountAndDependents } from '../../src/lib/account/deletion'
 import { importerSurLeBanc } from '../outils/import'
 import { seConnecter } from '../outils/parcours-herites'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
@@ -83,14 +83,14 @@ describe('Un compte supprimé dans la v3 ne revient pas à un rejeu (ticket 227)
 
 		profilSupprime = (await profils()).find(({ pro }) => pro === compte.id)?.strapiId ?? null
 		expect(profilSupprime).not.toBeNull()
-		const bilan = await supprimerLeCompteEtToutCeQuiEnDepend(payload, compte.id)
+		const bilan = await deleteAccountAndDependents(payload, compte.id)
 
 		expect(bilan).toMatchObject({ supprime: true, profils: 1 })
 		const { docs } = await payload.find({ collection: 'deleted-accounts', overrideAccess: true, depth: 0 })
 		expect(docs.map(({ strapiId }) => strapiId)).toEqual([Number(LOCAL?.strapiId)])
 		expect(Object.keys(docs[0] ?? {}).sort()).toEqual(['date', 'id', 'strapiId'])
 		// A second call finds nothing: no second row.
-		await supprimerLeCompteEtToutCeQuiEnDepend(payload, compte.id)
+		await deleteAccountAndDependents(payload, compte.id)
 		expect((await payload.count({ collection: 'deleted-accounts', overrideAccess: true })).totalDocs).toBe(1)
 	}, 60_000)
 

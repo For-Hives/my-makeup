@@ -10,7 +10,7 @@ import { adminSeulement, cacheeSaufAdmin } from '../lib/acces'
  *   of her behind but the fact that she asked to be forgotten.
  * - The import reads it (scripts/migration/import/garde-bascule.ts) so that a rerun never brings her
  *   account and her profile back from the source, which still holds them.
- * - The server writes it, in the transaction of the deletion (src/lib/compte/suppression.ts). Only an
+ * - The server writes it, in the transaction of the deletion (src/lib/account/deletion.ts). Only an
  *   admin reads it, and nobody writes it through an API, an admin included. It is never purged.
  */
 export const DeletedAccounts: CollectionConfig<'deleted-accounts'> = {

@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
-import { oublierLesDocuments } from '@/lib/auth/google/oidc'
+import { clearDocuments } from '@/lib/auth/google/oidc'
 import { importerSurLeBanc } from '../outils/import'
 import { viderLeCapteur } from '../outils/mailpit'
 import { CHOIX, choisirUnMotDePasse, connecterParGoogle, demanderLeLien, seConnecter } from '../outils/parcours-herites'
@@ -68,7 +68,7 @@ async function profilsDe(id: number | string) {
 
 describe('095 : après l’import, trois comptes de fixture se connectent par leur parcours', () => {
 	beforeAll(async () => {
-		oublierLesDocuments()
+		clearDocuments()
 		await Promise.all([viderLaBase(), viderLeCapteur()])
 		// Before the source: emptying the bucket would take its objects away.
 		await viderLeStockage()

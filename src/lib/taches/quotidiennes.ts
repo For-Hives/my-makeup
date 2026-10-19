@@ -1,5 +1,5 @@
 import type { Payload } from 'payload'
-import { COLLECTION_JOURNAL, seuilDePurge } from '../auth/journal'
+import { AUTH_LOG_COLLECTION, purgeThreshold } from '../auth/auth-log'
 import { purgeDesComptesNonConfirmes } from './comptes-non-confirmes'
 import { repriseDesMessagesBloques } from './messages-bloques'
 import { purgeDesMessagesDeContact } from './messages-de-contact'
@@ -30,11 +30,11 @@ export const purgeDuJournalDAuthentification: TacheQuotidienne = {
 	nom: 'purge-journal-authentification',
 	executer: async (payload, maintenant) => {
 		const { docs } = await payload.delete({
-			collection: COLLECTION_JOURNAL,
+			collection: AUTH_LOG_COLLECTION,
 			depth: 0,
 			overrideAccess: true,
 			select: { type: true },
-			where: { date: { less_than: seuilDePurge(maintenant).toISOString() } },
+			where: { date: { less_than: purgeThreshold(maintenant).toISOString() } },
 		})
 		return docs.length
 	},

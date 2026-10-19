@@ -3,10 +3,10 @@ import type { Metadata } from 'next'
 import { cookies } from 'next/headers'
 import Link from 'next/link'
 import { getPayload } from 'payload'
-import { FormulaireDeReinitialisation } from '@/components/auth/FormulaireDeReinitialisation'
-import { COOKIE_DE_REINITIALISATION, MESSAGES_MOT_DE_PASSE, PAGE_DE_LA_DEMANDE } from '@/lib/auth/mot-de-passe-oublie'
-import { lienEncoreValable } from '@/lib/auth/reinitialisation-payload'
-import { choisirLeMotDePasse } from './actions'
+import { PasswordResetForm } from '@/components/auth/PasswordResetForm'
+import { FORGOT_PASSWORD_PAGE, PASSWORD_MESSAGES, PASSWORD_RESET_COOKIE } from '@/lib/auth/forgot-password'
+import { linkStillValid } from '@/lib/auth/password-reset-payload'
+import { choosePassword } from './actions'
 
 // Read per request: it depends on the cookie of the link, and the build has no database.
 export const dynamic = 'force-dynamic'
@@ -23,24 +23,24 @@ export const metadata: Metadata = {
  * by the proxy and this page is reached without its code. A link that is past its hour, spent, or
  * from the old site says so here, before any form (ticket 086), and never ends in an error page.
  */
-export default async function PageDeReinitialisation() {
-	const jeton = (await cookies()).get(COOKIE_DE_REINITIALISATION)?.value
+export default async function PasswordResetPage() {
+	const token = (await cookies()).get(PASSWORD_RESET_COOKIE)?.value
 	const payload = await getPayload({ config })
-	const etat = !jeton ? 'code-absent' : (await lienEncoreValable(payload, jeton)) ? 'valable' : 'code-invalide'
+	const state = !token ? 'code-absent' : (await linkStillValid(payload, token)) ? 'valable' : 'code-invalide'
 
 	return (
 		<main className="flex min-h-dvh flex-col items-center justify-center gap-6 p-6 text-center">
 			<h1 className="font-semibold text-3xl">Nouveau mot de passe</h1>
-			{etat === 'valable' ? (
-				<FormulaireDeReinitialisation action={choisirLeMotDePasse} />
+			{state === 'valable' ? (
+				<PasswordResetForm action={choosePassword} />
 			) : (
 				<>
 					<p role="alert" data-testid="lien-perime" className="max-w-sm rounded-md bg-red-50 p-3 text-red-800 text-sm">
-						{MESSAGES_MOT_DE_PASSE[etat]}
+						{PASSWORD_MESSAGES[state]}
 					</p>
 					<Link
 						className="inline-flex min-h-11 items-center rounded-md bg-neutral-900 px-4 py-2 font-medium text-white"
-						href={PAGE_DE_LA_DEMANDE}
+						href={FORGOT_PASSWORD_PAGE}
 					>
 						Demander un nouveau lien
 					</Link>

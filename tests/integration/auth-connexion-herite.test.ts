@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, test } from 'bun:test'
-import { connecter } from '@/lib/auth/connexion'
-import { creerFrein } from '@/lib/auth/frein'
-import { remplacerLeHashHerite } from '@/lib/auth/herite'
-import { ouvrirParMotDePasse } from '@/lib/auth/jeton'
-import { journalDe } from '@/lib/auth/journal'
+import { authLog } from '@/lib/auth/auth-log'
+import { replaceLegacyHash } from '@/lib/auth/legacy'
+import { createRateLimit } from '@/lib/auth/rate-limit'
+import { signInWithPassword } from '@/lib/auth/sign-in'
+import { openWithPassword } from '@/lib/auth/token'
 import { creerCompte, MOT_DE_PASSE_HERITE_DE_FIXTURE } from '../outils/fabrique-comptes'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
 import { appelerRest } from '../outils/rest'
@@ -23,14 +23,14 @@ async function brancher(nomDuFrein: string) {
 	return {
 		payload,
 		appels,
-		frein: creerFrein({ nom: nomDuFrein, limite: 100, fenetreMs: 60_000 }),
+		frein: createRateLimit({ nom: nomDuFrein, limite: 100, fenetreMs: 60_000 }),
 		entrees: {
-			ouvrir: (data: { email: string; password: string }) => ouvrirParMotDePasse(payload, 'pros', data),
+			ouvrir: (data: { email: string; password: string }) => openWithPassword(payload, 'pros', data),
 			herite: (data: { email: string; password: string }) => {
 				appels.herite++
-				return remplacerLeHashHerite(payload, data)
+				return replaceLegacyHash(payload, data)
 			},
-			journal: journalDe(payload),
+			journal: authLog(payload),
 		},
 	}
 }
@@ -58,7 +58,7 @@ describe('I15 : un compte migré (bcrypt) se connecte, son hash est remplacé, l
 		const avant = await ligneDuCompte(compte.id)
 		expect(avant.legacyBcrypt).toStartWith('$2a$10$')
 
-		const premiere = await connecter({
+		const premiere = await signInWithPassword({
 			...entrees,
 			headers: adresse(21),
 			email: compte.email,
@@ -76,7 +76,7 @@ describe('I15 : un compte migré (bcrypt) se connecte, son hash est remplacé, l
 		expect(await rangees('heritee')).toHaveLength(1)
 
 		// The second sign-in is Payload's own: the old-hash path is not asked.
-		const seconde = await connecter({
+		const seconde = await signInWithPassword({
 			...entrees,
 			headers: adresse(21),
 			email: compte.email,
@@ -94,7 +94,13 @@ describe('I15 : un compte migré (bcrypt) se connecte, son hash est remplacé, l
 		const { entrees, frein } = await brancher('essai-int-herite-2')
 		const avant = await ligneDuCompte(compte.id)
 
-		const r = await connecter({ ...entrees, headers: adresse(22), email: compte.email, password: 'pas-le-bon', frein })
+		const r = await signInWithPassword({
+			...entrees,
+			headers: adresse(22),
+			email: compte.email,
+			password: 'pas-le-bon',
+			frein,
+		})
 
 		expect(r).toEqual({ ok: false, code: 'identifiants-invalides' })
 		const apres = await ligneDuCompte(compte.id)
@@ -106,7 +112,7 @@ describe('I15 : un compte migré (bcrypt) se connecte, son hash est remplacé, l
 	test('l’adresse s’écrit comme on veut : casse et espaces de bord', async () => {
 		const compte = await creerCompte('reprise-avec-hash')
 		const { entrees, frein } = await brancher('essai-int-herite-3')
-		const r = await connecter({
+		const r = await signInWithPassword({
 			...entrees,
 			headers: adresse(23),
 			email: ` ${compte.email.toUpperCase()} `,
@@ -122,14 +128,14 @@ describe('I15 : un compte migré (bcrypt) se connecte, son hash est remplacé, l
 			creerCompte('reprise-google'),
 		])
 		const { entrees, frein } = await brancher('essai-int-herite-4')
-		const juste = await connecter({
+		const juste = await signInWithPassword({
 			...entrees,
 			headers: adresse(24),
 			email: avecHash.email,
 			password: MOT_DE_PASSE_HERITE_DE_FIXTURE,
 			frein,
 		})
-		const refus = await connecter({
+		const refus = await signInWithPassword({
 			...entrees,
 			headers: adresse(24),
 			email: sansHash.email,
@@ -170,14 +176,20 @@ describe('I15 : un compte migré (bcrypt) se connecte, son hash est remplacé, l
 		await payload.update({ collection: 'pros', id: compte.id, data: { password: nouveau }, overrideAccess: true })
 
 		expect((await ligneDuCompte(compte.id)).legacyBcrypt ?? null).toBeNull()
-		const ancien = await connecter({
+		const ancien = await signInWithPassword({
 			...entrees,
 			headers: adresse(26),
 			email: compte.email,
 			password: MOT_DE_PASSE_HERITE_DE_FIXTURE,
 			frein,
 		})
-		const choisi = await connecter({ ...entrees, headers: adresse(26), email: compte.email, password: nouveau, frein })
+		const choisi = await signInWithPassword({
+			...entrees,
+			headers: adresse(26),
+			email: compte.email,
+			password: nouveau,
+			frein,
+		})
 		expect(ancien).toEqual({ ok: false, code: 'identifiants-invalides' })
 		expect(choisi.ok).toBe(true)
 		expect(appels.herite).toBe(1)
@@ -208,14 +220,20 @@ describe('I15 : un compte migré (bcrypt) se connecte, son hash est remplacé, l
 		await payload.resetPassword({ collection: 'pros', data: { token: jeton, password: nouveau }, overrideAccess: true })
 
 		expect((await ligneDuCompte(compte.id)).legacyBcrypt ?? null).toBeNull()
-		const ancien = await connecter({
+		const ancien = await signInWithPassword({
 			...entrees,
 			headers: adresse(27),
 			email: compte.email,
 			password: MOT_DE_PASSE_HERITE_DE_FIXTURE,
 			frein,
 		})
-		const choisi = await connecter({ ...entrees, headers: adresse(27), email: compte.email, password: nouveau, frein })
+		const choisi = await signInWithPassword({
+			...entrees,
+			headers: adresse(27),
+			email: compte.email,
+			password: nouveau,
+			frein,
+		})
 		expect(ancien).toEqual({ ok: false, code: 'identifiants-invalides' })
 		expect(choisi.ok).toBe(true)
 	})

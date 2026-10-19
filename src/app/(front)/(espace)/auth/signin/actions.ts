@@ -5,15 +5,15 @@ import { cookies, headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { getPayload } from 'payload'
 import { attributsDeLaMarque, COOKIE_DE_MARQUE_DE_CONNEXION } from '@/lib/analytics/marque-connexion'
-import { connecter } from '@/lib/auth/connexion'
-import { poserLeCookieDeSession } from '@/lib/auth/cookie-session'
-import type { CodeErreur } from '@/lib/auth/erreurs'
-import { remplacerLeHashHerite } from '@/lib/auth/herite'
-import { ouvrirParMotDePasse } from '@/lib/auth/jeton'
-import { journalDe } from '@/lib/auth/journal'
-import { retourSur } from '@/lib/auth/retour'
+import { authLog } from '@/lib/auth/auth-log'
+import type { ErrorCode } from '@/lib/auth/errors'
+import { replaceLegacyHash } from '@/lib/auth/legacy'
+import { safeReturnTo } from '@/lib/auth/return-to'
+import { setSessionCookie } from '@/lib/auth/set-session-cookie'
+import { signInWithPassword } from '@/lib/auth/sign-in'
+import { openWithPassword } from '@/lib/auth/token'
 
-export type EtatDeConnexion = { code: CodeErreur } | null
+export type SignInState = { code: ErrorCode } | null
 
 /**
  * The sign-in form (ticket 074). Gives back an error code, never the account nor the token; on
@@ -23,23 +23,23 @@ export type EtatDeConnexion = { code: CodeErreur } | null
  * checked here as well against the origins Payload trusts, so that the rule is written down and
  * does not depend on a Next setting.
  */
-export async function seConnecter(_precedent: EtatDeConnexion, formulaire: FormData): Promise<EtatDeConnexion> {
+export async function signIn(_precedent: SignInState, formulaire: FormData): Promise<SignInState> {
 	const payload = await getPayload({ config })
-	const entetes = await headers()
-	const origine = entetes.get('origin')
-	if (origine !== null && !payload.config.csrf.includes(origine)) return { code: 'identifiants-invalides' }
+	const requestHeaders = await headers()
+	const requestOrigin = requestHeaders.get('origin')
+	if (requestOrigin !== null && !payload.config.csrf.includes(requestOrigin)) return { code: 'identifiants-invalides' }
 
-	const resultat = await connecter({
-		ouvrir: data => ouvrirParMotDePasse(payload, 'pros', data),
-		headers: entetes,
+	const result = await signInWithPassword({
+		ouvrir: data => openWithPassword(payload, 'pros', data),
+		headers: requestHeaders,
 		email: formulaire.get('email'),
 		password: formulaire.get('password'),
-		journal: journalDe(payload),
-		herite: data => remplacerLeHashHerite(payload, data),
+		journal: authLog(payload),
+		herite: data => replaceLegacyHash(payload, data),
 	})
-	if (!resultat.ok) return { code: resultat.code }
+	if (!result.ok) return { code: result.code }
 
-	await poserLeCookieDeSession(payload, resultat.token)
+	await setSessionCookie(payload, result.token)
 	// Tells the next page to send `login_result` (ticket 146).
 	;(await cookies()).set(
 		COOKIE_DE_MARQUE_DE_CONNEXION,
@@ -47,8 +47,8 @@ export async function seConnecter(_precedent: EtatDeConnexion, formulaire: FormD
 		attributsDeLaMarque(process.env.NODE_ENV === 'production')
 	)
 
-	const site = process.env.NEXT_PUBLIC_SITE_URL ?? origine ?? 'http://localhost'
-	const destination = retourSur(formulaire.get('callbackUrl'), site)
+	const site = process.env.NEXT_PUBLIC_SITE_URL ?? requestOrigin ?? 'http://localhost'
+	const destination = safeReturnTo(formulaire.get('callbackUrl'), site)
 	// `redirect` throws: it stays outside any try/catch.
 	redirect(destination)
 }

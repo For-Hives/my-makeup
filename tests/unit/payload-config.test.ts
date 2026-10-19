@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import { createServer } from 'node:net'
 import { initI18n } from '@payloadcms/translations'
 import { Forbidden, getRequestLanguage, type Payload, type SanitizedConfig, ValidationError } from 'payload'
-import { CompteBloque } from '@/lib/auth/compte-bloque'
+import { BlockedAccount } from '@/lib/auth/blocked-account'
 import { adaptateurSansRelais } from '@/lib/emails/relais'
 import { EnvError, type RawEnv } from '@/lib/env'
 import { migrations } from '@/migrations'
@@ -101,7 +101,7 @@ describe('src/payload.config.ts is hardened', () => {
 		expect(config.admin.avatar).toBe('default')
 		// CompteBloque sets its own `name`: `APIError` does not cover it. Payload reads the level by that name.
 		expect(config.loggingLevels).toMatchObject({ APIError: 'info', CompteBloque: 'info' })
-		expect(new CompteBloque().name).toBe('CompteBloque')
+		expect(new BlockedAccount().name).toBe('CompteBloque')
 	})
 
 	test('on any other database: no schema push, no database created, the versioned migrations instead', async () => {

@@ -201,7 +201,7 @@ test.describe('les pages', () => {
 		expect(new URL(reponse.headers().location ?? '', 'http://x').pathname).toBe('/auth/reinitialiser')
 		expect(new URL(reponse.headers().location ?? '', 'http://x').search).toBe('')
 		const cookie = reponse.headers()['set-cookie'] ?? ''
-		expect(cookie).toContain('mm-reinit=')
+		expect(cookie).toContain('mm-reset=')
 		expect(cookie).toContain('HttpOnly')
 		expect(cookie).toContain('Path=/auth/reinitialiser')
 		expect(cookie).toContain('SameSite=lax')

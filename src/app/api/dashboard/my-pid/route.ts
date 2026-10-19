@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers'
-import { COOKIE_DE_SESSION } from '@/lib/auth/espace-ferme'
+import { SESSION_COOKIE } from '@/lib/auth/closed-dashboard'
 import { utilisatriceDeLaRequete } from '@/lib/espace/requete'
 import { pidDuProfil } from '@/lib/profil/pid'
 
@@ -15,7 +15,7 @@ export const dynamic = 'force-dynamic'
  */
 export async function GET(): Promise<Response> {
 	const entetes = { 'Cache-Control': 'private, no-store' }
-	if (!(await cookies()).has(COOKIE_DE_SESSION)) return Response.json({ pid: null }, { headers: entetes })
+	if (!(await cookies()).has(SESSION_COOKIE)) return Response.json({ pid: null }, { headers: entetes })
 	const contexte = await utilisatriceDeLaRequete()
 	if (contexte === null) return Response.json({ pid: null }, { headers: entetes })
 	const { docs } = await contexte.payload.find({

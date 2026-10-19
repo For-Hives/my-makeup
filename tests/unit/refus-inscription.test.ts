@@ -1,22 +1,22 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
 import { NextRequest } from 'next/server'
-import { freinDeJournal, freinDInscription } from '@/lib/auth/freins-inscription'
-import { journaliserUnRefus, secondesAvantUneInscription } from '@/lib/auth/refus-inscription'
+import { authLogRateLimit, signUpRateLimit } from '@/lib/auth/sign-up-rate-limits'
+import { logRefusal, secondsBeforeSignUp } from '@/lib/auth/sign-up-refusal'
 import { proxy } from '@/proxy'
 
 beforeEach(() => {
-	freinDInscription.vider()
-	freinDeJournal.vider()
+	signUpRateLimit.vider()
+	authLogRateLimit.vider()
 })
 
 describe('le refus de l’inscription par le proxy (ticket 084)', () => {
 	test('secondesAvantUneInscription lit le frein sans rien prendre', () => {
-		for (let i = 0; i < 20; i++) expect(secondesAvantUneInscription('a')).toBeUndefined()
-		for (let i = 0; i < 5; i++) expect(freinDInscription.prendre('a').autorise).toBe(true)
-		expect(secondesAvantUneInscription('a')).toBeGreaterThan(0)
+		for (let i = 0; i < 20; i++) expect(secondsBeforeSignUp('a')).toBeUndefined()
+		for (let i = 0; i < 5; i++) expect(signUpRateLimit.prendre('a').autorise).toBe(true)
+		expect(secondsBeforeSignUp('a')).toBeGreaterThan(0)
 		// Reading again changes nothing, and another address is free.
-		expect(secondesAvantUneInscription('a')).toBeGreaterThan(0)
-		expect(secondesAvantUneInscription('b')).toBeUndefined()
+		expect(secondsBeforeSignUp('a')).toBeGreaterThan(0)
+		expect(secondsBeforeSignUp('b')).toBeUndefined()
 	})
 
 	test('le journal prend 3 lignes par heure pour une adresse et une issue, pas plus', async () => {
@@ -25,9 +25,9 @@ describe('le refus de l’inscription par le proxy (ticket 084)', () => {
 			lignes.push(`${type}/${code}`)
 		}
 
-		for (let i = 0; i < 10; i++) await journaliserUnRefus(journal, 'a', 'sign-up', 'trop-de-tentatives')
-		await journaliserUnRefus(journal, 'a', 'sign-up', 'donnees-invalides')
-		await journaliserUnRefus(journal, 'b', 'sign-up', 'trop-de-tentatives')
+		for (let i = 0; i < 10; i++) await logRefusal(journal, 'a', 'sign-up', 'trop-de-tentatives')
+		await logRefusal(journal, 'a', 'sign-up', 'donnees-invalides')
+		await logRefusal(journal, 'b', 'sign-up', 'trop-de-tentatives')
 
 		expect(lignes).toEqual([
 			'sign-up/trop-de-tentatives',
@@ -45,7 +45,7 @@ describe('le refus de l’inscription par le proxy (ticket 084)', () => {
 		const cible = (r: Response) => r.headers.get('x-middleware-rewrite')
 		for (let i = 0; i < 5; i++) {
 			expect(cible(proxy(post('/auth/signup', '203.0.113.9')))).toBeNull()
-			freinDInscription.prendre('203.0.113.9')
+			signUpRateLimit.prendre('203.0.113.9')
 		}
 
 		expect(cible(proxy(post('/auth/signup', '203.0.113.9')))).toContain('/auth/signup/throttled')

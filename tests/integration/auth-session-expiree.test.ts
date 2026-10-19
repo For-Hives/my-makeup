@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, test } from 'bun:test'
-import { lireExpiration } from '@/lib/auth/etat-session'
+import { readExpiration } from '@/lib/auth/session-state'
 import { creerCompte } from '../outils/fabrique-comptes'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
 import { appelerRest } from '../outils/rest'
@@ -20,7 +20,7 @@ describe('I12 : un jeton dont la date de fin est passée est refusé', () => {
 		})
 		const jeton = /payload-token=(.+)$/.exec(expiree.enTetes.Cookie)?.[1] ?? ''
 		// The fixture is what it says: an end date in the past, and the session is still in the database.
-		expect(lireExpiration(jeton)).toBeLessThan(Math.floor(Date.now() / 1000))
+		expect(readExpiration(jeton)).toBeLessThan(Math.floor(Date.now() / 1000))
 
 		const moi = (enTetes: Record<string, string>) => appelerRest('GET', '/api/pros/me', { enTetes })
 		const compteLu = (enTetes: Record<string, string>) => appelerRest('GET', `/api/pros/${compte.id}`, { enTetes })

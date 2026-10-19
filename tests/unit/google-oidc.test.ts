@@ -1,17 +1,17 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
-import { adresseNormalisee, nomDuCompte } from '@/lib/auth/google/compte'
+import { accountName, normalizedAddress } from '@/lib/auth/google/account'
 import {
 	type ConfigGoogle,
-	type DemandeEnCours,
-	decouvrir,
-	GoogleIndisponible,
-	JetonRefuse,
-	oublierLesDocuments,
-	ouvrirLeCookie,
-	preparerLeDepart,
-	revendicationsDuCode,
-	sceller,
-	verifierLeJeton,
+	clearDocuments,
+	codeClaims,
+	discover,
+	GoogleUnavailable,
+	openCookie,
+	type PendingRequest,
+	prepareStart,
+	RefusedToken,
+	seal,
+	verifyToken,
 } from '@/lib/auth/google/oidc'
 
 /**
@@ -95,7 +95,7 @@ function fournisseur(idToken: () => Promise<string>, decouverte: Record<string, 
 	return { requeter, vues }
 }
 
-const demande: DemandeEnCours = {
+const demande: PendingRequest = {
 	state: 'state',
 	nonce: 'nonce-attendu',
 	verifier: 'verifier-fictif',
@@ -103,11 +103,11 @@ const demande: DemandeEnCours = {
 	expire: dans(600),
 }
 
-beforeEach(() => oublierLesDocuments())
+beforeEach(() => clearDocuments())
 
 describe('le départ vers Google', () => {
 	test('la demande porte le client, le retour, le state, le nonce et le défi PKCE S256, sans le secret', () => {
-		const { adresse } = preparerLeDepart(config, decouverteValide as never, {
+		const { adresse } = prepareStart(config, decouverteValide as never, {
 			retour: '/auth/profil',
 			secret: CLE_DE_SCEAU,
 			maintenant,
@@ -127,41 +127,41 @@ describe('le départ vers Google', () => {
 	})
 
 	test('le cookie rend ce que le départ a gardé, et le state du cookie est celui de l’adresse', () => {
-		const depart = preparerLeDepart(config, decouverteValide as never, {
+		const depart = prepareStart(config, decouverteValide as never, {
 			retour: '/blog',
 			secret: CLE_DE_SCEAU,
 			maintenant,
 		})
-		const garde = ouvrirLeCookie(depart.cookie, CLE_DE_SCEAU, maintenant)
+		const garde = openCookie(depart.cookie, CLE_DE_SCEAU, maintenant)
 		expect(garde?.retour).toBe('/blog')
 		expect(garde?.state).toBe(new URL(depart.adresse).searchParams.get('state') ?? undefined)
 		expect(garde?.expire).toBe(dans(600))
 	})
 
 	test('le cookie ne vaut rien : changé, signé par une autre clé, périmé, ou sans signature', () => {
-		const bon = sceller(demande, CLE_DE_SCEAU)
+		const bon = seal(demande, CLE_DE_SCEAU)
 		const [charge = '', signature = ''] = bon.split('.')
 		const autre = base64url(JSON.stringify({ ...demande, retour: '//autre.example.test' }))
-		expect(ouvrirLeCookie(bon, CLE_DE_SCEAU, maintenant)).toEqual(demande)
+		expect(openCookie(bon, CLE_DE_SCEAU, maintenant)).toEqual(demande)
 		for (const mauvais of [
 			`${autre}.${signature}`,
-			sceller(demande, 'une-autre-cle-de-sceau-de-plus-de-32-caracteres'),
-			sceller({ ...demande, expire: dans(-1) }, CLE_DE_SCEAU),
+			seal(demande, 'une-autre-cle-de-sceau-de-plus-de-32-caracteres'),
+			seal({ ...demande, expire: dans(-1) }, CLE_DE_SCEAU),
 			charge,
 			`${charge}.`,
 			`${charge}.${signature}.x`,
 			'',
 			undefined,
 		])
-			expect(ouvrirLeCookie(mauvais, CLE_DE_SCEAU, maintenant)).toBeUndefined()
+			expect(openCookie(mauvais, CLE_DE_SCEAU, maintenant)).toBeUndefined()
 	})
 })
 
 describe('la découverte', () => {
 	test('elle est gardée : une seule lecture', async () => {
 		const { requeter, vues } = fournisseur(async () => '')
-		await decouvrir(EMETTEUR, { requeter, maintenant })
-		await decouvrir(EMETTEUR, { requeter, maintenant })
+		await discover(EMETTEUR, { requeter, maintenant })
+		await discover(EMETTEUR, { requeter, maintenant })
 		expect(vues).toHaveLength(1)
 	})
 
@@ -172,7 +172,7 @@ describe('la découverte', () => {
 		['un document incomplet', { issuer: EMETTEUR }],
 	])('%s : refusé', async (_nom, document) => {
 		const { requeter } = fournisseur(async () => '', document)
-		await expect(decouvrir(EMETTEUR, { requeter, maintenant })).rejects.toBeInstanceOf(GoogleIndisponible)
+		await expect(discover(EMETTEUR, { requeter, maintenant })).rejects.toBeInstanceOf(GoogleUnavailable)
 	})
 
 	test('un émetteur local ne peut pas renvoyer vers un autre hôte', async () => {
@@ -185,19 +185,19 @@ describe('la découverte', () => {
 				token_endpoint: 'http://127.0.0.1:9999/token',
 				jwks_uri: `${local}/certs`,
 			})
-		await expect(decouvrir(local, { requeter, maintenant })).rejects.toBeInstanceOf(GoogleIndisponible)
+		await expect(discover(local, { requeter, maintenant })).rejects.toBeInstanceOf(GoogleUnavailable)
 	})
 
 	test('une panne de Google est une panne, pas un plantage', async () => {
 		const requeter = async () => new Response('<html>503</html>', { status: 503 })
-		await expect(decouvrir(EMETTEUR, { requeter, maintenant })).rejects.toBeInstanceOf(GoogleIndisponible)
+		await expect(discover(EMETTEUR, { requeter, maintenant })).rejects.toBeInstanceOf(GoogleUnavailable)
 	})
 })
 
 describe('le jeton d’identité', () => {
 	const verifier = async (jeton: string) => {
 		const { requeter } = fournisseur(async () => '')
-		return verifierLeJeton(jeton, config, decouverteValide as never, 'nonce-attendu', { requeter, maintenant })
+		return verifyToken(jeton, config, decouverteValide as never, 'nonce-attendu', { requeter, maintenant })
 	}
 
 	test('un jeton juste rend ce que Google dit de la personne', async () => {
@@ -224,7 +224,7 @@ describe('le jeton d’identité', () => {
 			[1, false],
 		] as const) {
 			const jeton = await signer(chargeValide({ email_verified: valeur }))
-			if (valeur === 1) await expect(verifier(jeton)).rejects.toBeInstanceOf(JetonRefuse)
+			if (valeur === 1) await expect(verifier(jeton)).rejects.toBeInstanceOf(RefusedToken)
 			else expect((await verifier(jeton)).emailVerifie).toBe(attendu)
 		}
 	})
@@ -243,7 +243,7 @@ describe('le jeton d’identité', () => {
 		['pas de nonce', { nonce: undefined }],
 		['pas de sujet', { sub: undefined }],
 	])('%s : refusé', async (_nom, changement) => {
-		await expect(verifier(await signer(chargeValide(changement)))).rejects.toBeInstanceOf(JetonRefuse)
+		await expect(verifier(await signer(chargeValide(changement)))).rejects.toBeInstanceOf(RefusedToken)
 	})
 
 	test('plusieurs publics dont le nôtre, avec notre azp : accepté', async () => {
@@ -252,16 +252,16 @@ describe('le jeton d’identité', () => {
 	})
 
 	test('une signature faite par une autre clé, une clé inconnue, ou un algorithme autre que RS256 : refusé', async () => {
-		await expect(verifier(await signer(chargeValide(), { avec: autreCle.privee }))).rejects.toBeInstanceOf(JetonRefuse)
-		await expect(verifier(await signer(chargeValide(), { kid: 'inconnue' }))).rejects.toBeInstanceOf(JetonRefuse)
+		await expect(verifier(await signer(chargeValide(), { avec: autreCle.privee }))).rejects.toBeInstanceOf(RefusedToken)
+		await expect(verifier(await signer(chargeValide(), { kid: 'inconnue' }))).rejects.toBeInstanceOf(RefusedToken)
 		for (const alg of ['none', 'HS256', 'RS512'])
-			await expect(verifier(await signer(chargeValide(), { alg }))).rejects.toBeInstanceOf(JetonRefuse)
+			await expect(verifier(await signer(chargeValide(), { alg }))).rejects.toBeInstanceOf(RefusedToken)
 	})
 
 	test('un jeton dont la charge a été changée après la signature : refusé', async () => {
 		const [entete, , signature] = (await signer(chargeValide())).split('.')
 		const charge = base64url(JSON.stringify(chargeValide({ email: 'autre@example.test' })))
-		await expect(verifier(`${entete}.${charge}.${signature}`)).rejects.toBeInstanceOf(JetonRefuse)
+		await expect(verifier(`${entete}.${charge}.${signature}`)).rejects.toBeInstanceOf(RefusedToken)
 	})
 
 	test.each([
@@ -271,14 +271,14 @@ describe('le jeton d’identité', () => {
 		'a.b.c',
 		'a.b.c.d',
 	])('un texte qui n’est pas un jeton (« %s ») : refusé', async texte => {
-		await expect(verifier(texte)).rejects.toBeInstanceOf(JetonRefuse)
+		await expect(verifier(texte)).rejects.toBeInstanceOf(RefusedToken)
 	})
 })
 
 describe('l’échange du code', () => {
 	test('le code part avec le secret du client et le vérificateur PKCE, par POST, et le jeton est vérifié', async () => {
 		const { requeter, vues } = fournisseur(async () => signer(chargeValide()))
-		const r = await revendicationsDuCode(
+		const r = await codeClaims(
 			config,
 			decouverteValide as never,
 			{ code: 'code-fictif', demande },
@@ -305,10 +305,10 @@ describe('l’échange du code', () => {
 			throw new TypeError('fetch failed')
 		}
 		const essai = (requeter: () => Promise<Response>) =>
-			revendicationsDuCode(config, decouverteValide as never, { code: 'c', demande }, { requeter, maintenant })
-		await expect(essai(refus)).rejects.toBeInstanceOf(JetonRefuse)
-		await expect(essai(panne)).rejects.toBeInstanceOf(GoogleIndisponible)
-		await expect(essai(coupe)).rejects.toBeInstanceOf(GoogleIndisponible)
+			codeClaims(config, decouverteValide as never, { code: 'c', demande }, { requeter, maintenant })
+		await expect(essai(refus)).rejects.toBeInstanceOf(RefusedToken)
+		await expect(essai(panne)).rejects.toBeInstanceOf(GoogleUnavailable)
+		await expect(essai(coupe)).rejects.toBeInstanceOf(GoogleUnavailable)
 	})
 })
 
@@ -321,16 +321,16 @@ describe('le compte vu de Google', () => {
 		[undefined, undefined],
 		[`${'a'.repeat(250)}@example.test`, undefined],
 	])('l’adresse « %s » devient %p', (brute, attendu) => {
-		expect(adresseNormalisee(brute)).toBe(attendu)
+		expect(normalizedAddress(brute)).toBe(attendu)
 	})
 
 	test('le nom est celui de Google, sinon le début de l’adresse, borné à 100 caractères', () => {
-		expect(nomDuCompte({ sub: 'x', emailVerifie: true, nom: '  Léa   Fictive ' }, 'lea@example.test')).toBe(
+		expect(accountName({ sub: 'x', emailVerifie: true, nom: '  Léa   Fictive ' }, 'lea@example.test')).toBe(
 			'Léa Fictive'
 		)
-		expect(nomDuCompte({ sub: 'x', emailVerifie: true }, 'lea.fictive@example.test')).toBe('lea.fictive')
+		expect(accountName({ sub: 'x', emailVerifie: true }, 'lea.fictive@example.test')).toBe('lea.fictive')
 		expect(
-			Array.from(nomDuCompte({ sub: 'x', emailVerifie: true, nom: 'é'.repeat(300) }, 'a@example.test'))
+			Array.from(accountName({ sub: 'x', emailVerifie: true, nom: 'é'.repeat(300) }, 'a@example.test'))
 		).toHaveLength(100)
 	})
 })
