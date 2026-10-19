@@ -5,7 +5,7 @@ import { type BilanDesProfils, lirePhotoDuJeu, nomDuFichier, poserLesProfilsDuJe
 import { type PhotoDuJeu, POIDS_MAX_D_UNE_PHOTO, PROFILS_DU_JEU, type ProfilDuJeu } from '@/jeu-fictif/profils'
 import { cleDuMedia, PREFIXE_DES_ENVOIS } from '@/lib/medias'
 import { etatDuProfil } from '@/lib/profil/etat'
-import type { Media, Pro, Profil } from '@/payload-types'
+import type { Media, Pro, Profile } from '@/payload-types'
 import { compterLesDocuments, compterLesLignes, payloadDeTest, viderLaBase } from '../outils/payload-test'
 import { lireUnObjet, listerLesObjets, viderLeStockage } from '../outils/s3'
 
@@ -31,11 +31,11 @@ const remettreAZero = () => Promise.all([viderLaBase(), viderLeStockage()])
 const empreinte = (octets: Uint8Array) => createHash('sha256').update(octets).digest('hex')
 
 /** The profile of a type, as the database holds it, read with every right. */
-async function profilDu(bilan: BilanDesProfils, type: ProfilDuJeu): Promise<Profil> {
+async function profilDu(bilan: BilanDesProfils, type: ProfilDuJeu): Promise<Profile> {
 	const pose = bilan.profils.find(({ cle }) => cle === type.cle)
 	if (!pose) throw new Error(`le profil type « ${type.cle} » manque au bilan`)
 	const payload = await payloadDeTest()
-	return payload.findByID({ collection: 'profils', id: pose.profil, depth: 0 })
+	return payload.findByID({ collection: 'profiles', id: pose.profil, depth: 0 })
 }
 
 /** Every media of the bench, read with every right. */
@@ -47,14 +47,7 @@ async function lesMedias(): Promise<Media[]> {
 const idDe = (valeur: number | { id: number } | null | undefined) => (typeof valeur === 'object' ? valeur?.id : valeur)
 
 /** What the server writes itself at each save: its dates are not the content of the set. */
-const HORS_CONTENU = new Set([
-	'id',
-	'createdAt',
-	'updatedAt',
-	'actifDepuis',
-	'publiableDepuis',
-	'entierementVideDepuis',
-])
+const HORS_CONTENU = new Set(['id', 'createdAt', 'updatedAt', 'activeSince', 'publishableSince', 'fullyEmptySince'])
 
 /** A document without its identifiers and its dates, at every depth: the rows of its lists included. */
 function sansIdentite(valeur: unknown): unknown {
@@ -86,10 +79,10 @@ async function contenuDuJeu(bilan: BilanDesProfils) {
 			const profil = await profilDu(bilan, type)
 			const compte: Pro = await payload.findByID({ collection: 'pros', id: Number(idDe(profil.pro)), depth: 0 })
 			return {
-				compte: { email: compte.email, nom: compte.nom, verifie: compte._verified },
-				profil: { ...(sansIdentite(profil) as object), pro: undefined, photoPrincipale: undefined, galerie: undefined },
-				photoPrincipale: await photo(idDe(profil.photoPrincipale)),
-				galerie: await Promise.all((profil.galerie ?? []).map(id => photo(idDe(id)))),
+				compte: { email: compte.email, nom: compte.name, verified: compte._verified },
+				profil: { ...(sansIdentite(profil) as object), pro: undefined, mainPicture: undefined, gallery: undefined },
+				mainPicture: await photo(idDe(profil.mainPicture)),
+				gallery: await Promise.all((profil.gallery ?? []).map(id => photo(idDe(id)))),
 			}
 		})
 	)
@@ -116,12 +109,12 @@ describe('Le jeu du banc : les 12 profils types', () => {
 		expect(bilan.cible).toBe('banc')
 		expect(bilan.crees).toEqual(CLES)
 		expect(bilan.presents).toEqual([])
-		expect((await payload.count({ collection: 'profils' })).totalDocs).toBe(12)
+		expect((await payload.count({ collection: 'profiles' })).totalDocs).toBe(12)
 		expect((await payload.count({ collection: 'pros' })).totalDocs).toBe(12)
 		for (const type of PROFILS_DU_JEU) {
 			const profil = await profilDu(bilan, type)
 			const compte = await payload.findByID({ collection: 'pros', id: Number(idDe(profil.pro)), depth: 0 })
-			expect({ cle: type.cle, email: compte.email, nom: compte.nom, confirme: compte._verified }).toEqual({
+			expect({ cle: type.cle, email: compte.email, nom: compte.name, confirme: compte._verified }).toEqual({
 				cle: type.cle,
 				...type.compte,
 				confirme: true,
@@ -141,31 +134,34 @@ describe('Le jeu du banc : les 12 profils types', () => {
 			const profil = await profilDu(bilan, type)
 			const { slug: _slug, ...attendu } = type.attendu
 			const stocke = {
-				completude: profil.completude,
-				actif: profil.actif,
-				publiable: profil.publiable,
-				entierementVide: profil.entierementVide,
-				statut: profil.statut,
+				completeness: profil.completeness,
+				active: profil.active,
+				publishable: profil.publishable,
+				fullyEmpty: profil.fullyEmpty,
+				status: profil.status,
 			}
 
 			expect({ cle: type.cle, etat: stocke }).toEqual({ cle: type.cle, etat: attendu })
 			// What the server stored is what the single rule reads in what it stored.
-			const { completude, actif, publiable, entierementVide } = etatDuProfil(profil)
+			const { completeness, active, publishable, fullyEmpty } = etatDuProfil(profil)
 			expect({
-				completude: stocke.completude,
-				actif: stocke.actif,
-				publiable: stocke.publiable,
-				entierementVide: stocke.entierementVide,
-			}).toEqual({ completude, actif, publiable, entierementVide })
+				completeness: stocke.completeness,
+				active: stocke.active,
+				publishable: stocke.publishable,
+				fullyEmpty: stocke.fullyEmpty,
+			}).toEqual({ completeness, active, publishable, fullyEmpty })
 		}
 
 		const reference = await profilDu(bilan, PROFILS_DU_JEU[0] as ProfilDuJeu)
-		expect({ publiable: reference.publiable, statut: reference.statut }).toEqual({ publiable: true, statut: 'publie' })
+		expect({ publishable: reference.publishable, status: reference.status }).toEqual({
+			publishable: true,
+			status: 'published',
+		})
 		const vide = await profilDu(bilan, PROFILS_DU_JEU[5] as ProfilDuJeu)
-		expect({ actif: vide.actif, publiable: vide.publiable, statut: vide.statut }).toEqual({
-			actif: false,
-			publiable: false,
-			statut: 'brouillon',
+		expect({ active: vide.active, publishable: vide.publishable, status: vide.status }).toEqual({
+			active: false,
+			publishable: false,
+			status: 'draft',
 		})
 	})
 
@@ -181,31 +177,31 @@ describe('Le jeu du banc : les 12 profils types', () => {
 
 		// The reference publishes its phone and its email, with the trace of the consent of the set.
 		expect(lire('reference')).toMatchObject({
-			contactPublic: true,
-			coordonnees: { telephone: '06 39 98 10 01', email: 'contact@ines-morel.example.test' },
-			consentiLe: '2026-09-01T08:00:00.000Z',
-			sourceConsentement: 'maquilleuse',
+			publicContact: true,
+			contactDetails: { phone: '06 39 98 10 01', email: 'contact@ines-morel.example.test' },
+			consentedAt: '2026-09-01T08:00:00.000Z',
+			consentSource: 'artist',
 		})
 		expect(lire('reference').prestations?.map(({ prixAPartirDe }) => prixAPartirDe)).toEqual([180, 60, 45])
-		expect(lire('reference').galerie).toHaveLength(6)
-		expect(lire('indisponible').disponible).toBe(false)
-		expect(lire('disponibilite-inconnue').disponible).toBeNull()
-		expect(lire('ville-voisine').commune).toMatchObject({ nom: 'Annemasse', codeInsee: '74012', departement: '74' })
-		expect(lire('ville-eloignee').commune).toMatchObject({ nom: 'Nantes', codeInsee: '44109', departement: '44' })
-		expect(lire('sans-contact-public')).toMatchObject({ contactPublic: false, consentiLe: null })
+		expect(lire('reference').gallery).toHaveLength(6)
+		expect(lire('indisponible').available).toBe(false)
+		expect(lire('disponibilite-inconnue').available).toBeNull()
+		expect(lire('ville-voisine').city).toMatchObject({ name: 'Annemasse', inseeCode: '74012', department: '74' })
+		expect(lire('ville-eloignee').city).toMatchObject({ name: 'Nantes', inseeCode: '44109', department: '44' })
+		expect(lire('sans-contact-public')).toMatchObject({ publicContact: false, consentedAt: null })
 		expect(lire('ancien-nom-accentue')).toMatchObject({ slug: 'zoe-lefevre', legacyUsername: 'zoé lefèvre' })
-		expect(lire('verifiee')).toMatchObject({ verifie: true, superMaquilleuse: true })
-		expect(lire('masquee')).toMatchObject({ statutChoisi: 'masque', statut: 'masque', publiable: true })
-		expect(lire('vide')).toMatchObject({ statutChoisi: 'automatique', prenom: null, galerie: [] })
+		expect(lire('verifiee')).toMatchObject({ verified: true, superArtist: true })
+		expect(lire('masquee')).toMatchObject({ chosenStatus: 'hidden', status: 'hidden', publishable: true })
+		expect(lire('vide')).toMatchObject({ chosenStatus: 'automatic', firstName: null, gallery: [] })
 		// Every text of the longest profile went through the bounds of the server, and kept its length.
 		const longue = lire('textes-maximaux')
 		const fixture = PROFILS_DU_JEU[11]?.profil
-		expect([longue.prenom, longue.description, longue.coordonnees?.email]).toEqual([
-			fixture?.prenom,
+		expect([longue.firstName, longue.description, longue.contactDetails?.email]).toEqual([
+			fixture?.firstName,
 			fixture?.description,
-			fixture?.coordonnees?.email,
+			fixture?.contactDetails?.email,
 		])
-		expect(longue.galerie).toHaveLength(10)
+		expect(longue.gallery).toHaveLength(10)
 	})
 
 	test('photos fictives de moins de 30 Ko, chacune servie par son profil ; 0 objet orphelin', async () => {
@@ -213,7 +209,7 @@ describe('Le jeu du banc : les 12 profils types', () => {
 		const objets = await listerLesObjets()
 		const profils = await Promise.all(PROFILS_DU_JEU.map(type => profilDu(bilan, type)))
 		const servies = profils.flatMap(profil =>
-			[profil.photoPrincipale, ...(profil.galerie ?? [])]
+			[profil.mainPicture, ...(profil.gallery ?? [])]
 				.filter(photo => photo !== null && photo !== undefined)
 				.map(photo => ({ media: idDe(photo), pro: idDe(profil.pro) }))
 		)
@@ -251,7 +247,7 @@ describe('Le jeu du banc : les 12 profils types', () => {
 					: []),
 				...type.photos.galerie.map((photo, rang) => ({ photo, nom: nomDuFichier(type.cle, rang + 1) })),
 			]
-			const montrees = [profil?.photoPrincipale, ...(profil?.galerie ?? [])].filter(
+			const montrees = [profil?.mainPicture, ...(profil?.gallery ?? [])].filter(
 				photo => photo !== null && photo !== undefined
 			)
 			expect(montrees).toHaveLength(attendues.length)
@@ -327,7 +323,7 @@ describe('Rejouer le jeu', () => {
 			await expect(poserLesProfilsDuJeu(payload, { lirePhoto })).rejects.toBe(panne)
 
 			// Its account, its profile and its media went with the transaction…
-			expect(await compterLesDocuments()).toMatchObject({ pros: 0, profils: 0, media: 0 })
+			expect(await compterLesDocuments()).toMatchObject({ pros: 0, profiles: 0, media: 0 })
 			// …but the objects already sent are still in the storage.
 			const envoyes = await listerLesObjets()
 			// Each photo with its derived size (ticket 133).

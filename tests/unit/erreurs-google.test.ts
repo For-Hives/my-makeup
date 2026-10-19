@@ -49,11 +49,11 @@ describe('?error= : une liste fermée, jamais ce qui est écrit dans l’adresse
 
 describe('le journal garde la méthode, dans une liste fermée', () => {
 	test('google et mot de passe sont écrits, tout le reste est ignoré', () => {
-		expect(METHODES_EVENEMENT).toEqual(['mot-de-passe', 'google'])
-		expect(ligneDeJournal({ type: 'connexion', code: 'ok', methode: 'google' }).methode).toBe('google')
+		expect(METHODES_EVENEMENT).toEqual(['password', 'google'])
+		expect(ligneDeJournal({ type: 'sign-in', code: 'ok', method: 'google' }).method).toBe('google')
 		const glisse = 'lea@example.test' as unknown as 'google'
-		expect('methode' in ligneDeJournal({ type: 'connexion', code: 'ok', methode: glisse })).toBe(false)
-		expect('methode' in ligneDeJournal({ type: 'deconnexion', code: 'ok' })).toBe(false)
+		expect('method' in ligneDeJournal({ type: 'sign-in', code: 'ok', method: glisse })).toBe(false)
+		expect('method' in ligneDeJournal({ type: 'sign-out', code: 'ok' })).toBe(false)
 	})
 })
 

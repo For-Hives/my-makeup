@@ -1,7 +1,7 @@
 /**
  * The title of the tab and of the search results of the 14 pages `/talent/<slug>` (ticket 108): 50 to 60
  * characters each, different from each other and from the title shown at the top of the page. Bing flags the
- * short titles of these pages. The import copies them into `titreDeLaPage` when a talent has none; a title
+ * short titles of these pages. The import copies them into `pageTitle` when a talent has none; a title
  * typed in the admin is never overwritten.
  */
 export const TITRES_DES_PAGES_TALENT: Readonly<Record<string, string>> = {

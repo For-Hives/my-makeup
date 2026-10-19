@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test'
-import type { Profil } from '@/payload-types'
+import type { Profile } from '@/payload-types'
 import { creerCompte } from '../outils/fabrique-comptes'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
 import { appelerRest } from '../outils/rest'
@@ -13,7 +13,7 @@ import { appelerRest } from '../outils/rest'
 
 afterEach(viderLaBase)
 
-type Listes = Pick<Profil, 'prestations' | 'competences' | 'langues' | 'formations' | 'experiences'>
+type Listes = Pick<Profile, 'prestations' | 'competences' | 'langues' | 'formations' | 'experiences'>
 
 /** Identifiers as Payload gives them to a row. */
 const IDENTIFIANT = /^[0-9a-f]{24}$/
@@ -22,7 +22,7 @@ const IDENTIFIANT = /^[0-9a-f]{24}$/
 async function maquilleuse() {
 	const compte = await creerCompte('maquilleuse')
 	const payload = await payloadDeTest()
-	const { docs } = await payload.find({ collection: 'profils', depth: 0, where: { pro: { equals: compte.id } } })
+	const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })
 	const profil = docs[0]
 	if (!profil) throw new Error('La fabrique devait créer le profil de la maquilleuse.')
 	return { compte, profil: profil.id }
@@ -31,21 +31,21 @@ async function maquilleuse() {
 type Maquilleuse = Awaited<ReturnType<typeof maquilleuse>>
 
 /** Her profile as she reads it, by REST. */
-async function lire({ compte, profil }: Maquilleuse): Promise<Profil> {
-	const { statut, corps } = await appelerRest('GET', `/api/profils/${profil}?depth=0`, {
+async function lire({ compte, profil }: Maquilleuse): Promise<Profile> {
+	const { statut, corps } = await appelerRest('GET', `/api/profiles/${profil}?depth=0`, {
 		enTetes: compte.session.enTetes,
 	})
 	expect(statut).toBe(200)
-	return corps as Profil
+	return corps as Profile
 }
 
 /** A save of her profile, by REST, as her space will send it. */
-const enregistrer = ({ compte, profil }: Maquilleuse, donnees: Partial<Profil>) =>
-	appelerRest('PATCH', `/api/profils/${profil}?depth=0`, { enTetes: compte.session.enTetes, corps: donnees })
+const enregistrer = ({ compte, profil }: Maquilleuse, donnees: Partial<Profile>) =>
+	appelerRest('PATCH', `/api/profiles/${profil}?depth=0`, { enTetes: compte.session.enTetes, corps: donnees })
 
 /** The profile as stored, read without access control. */
 const stocke = async (profil: number) =>
-	(await payloadDeTest()).findByID({ collection: 'profils', id: profil, depth: 0 })
+	(await payloadDeTest()).findByID({ collection: 'profiles', id: profil, depth: 0 })
 
 /** The refusals of a REST answer: where, and what the artist reads. */
 function refus(corps: unknown): { path: string; message: string }[] {
@@ -57,7 +57,7 @@ const identifiants = (lignes: readonly { id?: string | null }[] | null | undefin
 	(lignes ?? []).map(({ id }) => id)
 
 /** Three offers, the second with two options, in an order no sort would give. */
-const TROIS_PRESTATIONS: NonNullable<Profil['prestations']> = [
+const TROIS_PRESTATIONS: NonNullable<Profile['prestations']> = [
 	{ nom: 'Mariée', description: 'Essai compris.', prixTexte: 'à partir de 180 €', prixAPartirDe: 180 },
 	{
 		nom: 'Soirée',
@@ -87,7 +87,7 @@ describe('Les sections en liste gardent leur ordre et l’identité de chaque li
 		// First save: the list sent back as read. Second save: another field only.
 		expect((await enregistrer(a, { prestations: premiere })).statut).toBe(200)
 		expect((await lire(a)).prestations).toEqual(premiere)
-		expect((await enregistrer(a, { prenom: 'Zoé' })).statut).toBe(200)
+		expect((await enregistrer(a, { firstName: 'Zoé' })).statut).toBe(200)
 		expect((await lire(a)).prestations).toEqual(premiere)
 	})
 
@@ -146,7 +146,7 @@ describe('Les sections en liste gardent leur ordre et l’identité de chaque li
 			collection: 'pros',
 		}
 		await payload.update({
-			collection: 'profils',
+			collection: 'profiles',
 			id: a.profil,
 			data: relues,
 			overrideAccess: false,
@@ -226,7 +226,7 @@ describe('Les sections en liste gardent leur ordre et l’identité de chaque li
 		await enregistrer(a, { langues: [{ nom: 'Anglais' }] })
 		const avant = (await stocke(a.profil)).langues
 
-		const essai = await appelerRest('PATCH', `/api/profils/${a.profil}`, {
+		const essai = await appelerRest('PATCH', `/api/profiles/${a.profil}`, {
 			enTetes: b.compte.session.enTetes,
 			corps: { langues: [] },
 		})

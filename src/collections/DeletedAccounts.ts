@@ -13,8 +13,8 @@ import { adminSeulement, cacheeSaufAdmin } from '../lib/acces'
  * - The server writes it, in the transaction of the deletion (src/lib/compte/suppression.ts). Only an
  *   admin reads it, and nobody writes it through an API, an admin included. It is never purged.
  */
-export const ComptesSupprimes: CollectionConfig<'comptes-supprimes'> = {
-	slug: 'comptes-supprimes',
+export const DeletedAccounts: CollectionConfig<'deleted-accounts'> = {
+	slug: 'deleted-accounts',
 	labels: { singular: 'Compte supprimé', plural: 'Comptes supprimés' },
 	admin: {
 		defaultColumns: ['strapiId', 'date'],

@@ -19,14 +19,14 @@ const RIEN = { chemins: [], etiquettes: [] }
 
 describe('les pages qu’un enregistrement rend périmées', () => {
 	test('un profil publié modifié : sa page, la recherche, le plan du site et le sitemap (I21)', () => {
-		expect(ciblesDuChangement('profils', publie('zoe-lefevre'), publie('zoe-lefevre'))).toEqual({
+		expect(ciblesDuChangement('profiles', publie('zoe-lefevre'), publie('zoe-lefevre'))).toEqual({
 			chemins: ['/profil/zoe-lefevre', '/search', '/site-map', '/sitemap.xml'],
 			etiquettes: ['profil:zoe-lefevre', 'profils'],
 		})
 	})
 
 	test('un brouillon qui reste brouillon, un profil masqué qui le reste : rien', () => {
-		expect(ciblesDuChangement('profils', cache('zoe-lefevre'), cache('zoe-lefevre'))).toEqual(RIEN)
+		expect(ciblesDuChangement('profiles', cache('zoe-lefevre'), cache('zoe-lefevre'))).toEqual(RIEN)
 		expect(ciblesDuChangement('articles', cache('un-article'), cache('un-article'))).toEqual(RIEN)
 		expect(ciblesDuChangement('talents', null, cache('un-talent'))).toEqual(RIEN)
 		expect(ciblesDuChangement('talents', cache('un-talent'), null)).toEqual(RIEN)
@@ -38,10 +38,10 @@ describe('les pages qu’un enregistrement rend périmées', () => {
 			etiquettes: ['profil:zoe-lefevre', 'profils'],
 		}
 		// Published, created published, hidden, deleted.
-		expect(ciblesDuChangement('profils', cache('zoe-lefevre'), publie('zoe-lefevre'))).toEqual(attendu)
-		expect(ciblesDuChangement('profils', null, publie('zoe-lefevre'))).toEqual(attendu)
-		expect(ciblesDuChangement('profils', publie('zoe-lefevre'), cache('zoe-lefevre'))).toEqual(attendu)
-		expect(ciblesDuChangement('profils', publie('zoe-lefevre'), null)).toEqual(attendu)
+		expect(ciblesDuChangement('profiles', cache('zoe-lefevre'), publie('zoe-lefevre'))).toEqual(attendu)
+		expect(ciblesDuChangement('profiles', null, publie('zoe-lefevre'))).toEqual(attendu)
+		expect(ciblesDuChangement('profiles', publie('zoe-lefevre'), cache('zoe-lefevre'))).toEqual(attendu)
+		expect(ciblesDuChangement('profiles', publie('zoe-lefevre'), null)).toEqual(attendu)
 	})
 
 	test('un article : sa page, le blog, le plan du site et le sitemap ; un talent : sa page, l’accueil, les deux plans', () => {
@@ -70,7 +70,7 @@ describe('les pages qu’un enregistrement rend périmées', () => {
 	})
 
 	test('un slug qui n’en est pas un, comme le slug provisoire d’un profil en création, ne donne aucune page', () => {
-		expect(ciblesDuChangement('profils', null, publie('_provisoire-1234'))).toEqual({
+		expect(ciblesDuChangement('profiles', null, publie('_provisoire-1234'))).toEqual({
 			chemins: ['/search', '/site-map', '/sitemap.xml'],
 			etiquettes: ['profils'],
 		})
@@ -91,7 +91,7 @@ function requete(lignes: Record<string, unknown>[] = []) {
 	return { req, findOne, journal }
 }
 
-const HOOKS = rafraichissement('profils')
+const HOOKS = rafraichissement('profiles')
 
 /** An update of a profile through the hooks, as Payload runs them: before the write, then after. */
 async function mettreAJour(req: PayloadRequest, context: RequestContext, id = 7) {
@@ -110,8 +110,8 @@ async function mettreAJour(req: PayloadRequest, context: RequestContext, id = 7)
 describe('les crochets de Payload', () => {
 	test('un profil publié modifié : Next reçoit sa page et les listes, les étiquettes expirées tout de suite', async () => {
 		const { req, findOne } = requete([
-			{ id: 7, slug: 'zoe-lefevre', statut: 'publie' },
-			{ id: 7, slug: 'zoe-lefevre', statut: 'publie' },
+			{ id: 7, slug: 'zoe-lefevre', status: 'published' },
+			{ id: 7, slug: 'zoe-lefevre', status: 'published' },
 		])
 
 		const { appels, chemins, etiquettes } = await espionnerLeCache(() => mettreAJour(req, {}))
@@ -124,7 +124,7 @@ describe('les crochets de Payload', () => {
 	})
 
 	test('le contexte d’import : rien n’est lu, rien n’est rafraîchi, l’écriture passe telle quelle', async () => {
-		const { req, findOne } = requete([{ id: 7, slug: 'zoe-lefevre', statut: 'publie' }])
+		const { req, findOne } = requete([{ id: 7, slug: 'zoe-lefevre', status: 'published' }])
 		const context: RequestContext = { ...CONTEXTE_IMPORT }
 
 		const { appels } = await espionnerLeCache(async () => {
@@ -142,8 +142,8 @@ describe('les crochets de Payload', () => {
 
 	test('hors d’une requête de Next, l’enregistrement passe : rien n’est rafraîchi, rien n’est levé', async () => {
 		const { req, journal } = requete([
-			{ id: 7, slug: 'zoe-lefevre', statut: 'publie' },
-			{ id: 7, slug: 'zoe-lefevre', statut: 'publie' },
+			{ id: 7, slug: 'zoe-lefevre', status: 'published' },
+			{ id: 7, slug: 'zoe-lefevre', status: 'published' },
 		])
 
 		// No spy: Next's own revalidateTag, outside of one of its requests.

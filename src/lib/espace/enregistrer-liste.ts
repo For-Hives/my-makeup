@@ -1,5 +1,5 @@
 import type { Payload } from 'payload'
-import type { Profil } from '@/payload-types'
+import type { Profile } from '@/payload-types'
 import {
 	type DefinitionDeListe,
 	erreursDeLaLigne,
@@ -95,7 +95,7 @@ export async function enregistrerListe(
 		const id = await identifiantDuProfilAEcrire(payload, utilisateur)
 		if (id === null) return { ok: false, message: MESSAGE_ECHEC }
 		const profil = await payload.findByID({
-			collection: 'profils',
+			collection: 'profiles',
 			depth: 0,
 			disableErrors: true,
 			id,
@@ -134,8 +134,8 @@ export async function enregistrerListe(
 		}
 
 		const stocke = await payload.update({
-			collection: 'profils',
-			data: { [definition.section]: lignes } as Partial<Profil>,
+			collection: 'profiles',
+			data: { [definition.section]: lignes } as Partial<Profile>,
 			depth: 0,
 			id,
 			overrideAccess: false,

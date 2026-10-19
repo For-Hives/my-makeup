@@ -17,8 +17,8 @@ const ADRESSE_DE_PHOTO = 'https://photos.example.test/media'
 function lireLeType(type: ProfilDuJeu, surcharge: Partial<ProfilDeLaPage> = {}): ProfilPublic {
 	const doc: ProfilDeLaPage = {
 		slug: type.attendu.slug,
-		statut: type.attendu.statut,
-		publiable: type.attendu.publiable,
+		status: type.attendu.status,
+		publishable: type.attendu.publishable,
 		...type.profil,
 		...surcharge,
 	}
@@ -31,8 +31,8 @@ function lireLeType(type: ProfilDuJeu, surcharge: Partial<ProfilDeLaPage> = {}):
 		height: 400,
 	}))
 	// What the public reading does: the contact details leave only when she published them.
-	const { telephone = null, email = null } = type.profil.coordonnees ?? {}
-	const coordonnees = type.profil.contactPublic === true && (telephone || email) ? { telephone, email } : null
+	const { phone: telephone = null, email = null } = type.profil.contactDetails ?? {}
+	const coordonnees = type.profil.publicContact === true && (telephone || email) ? { telephone, email } : null
 	return profilPublicDe(doc, { photo, galerie, coordonnees })
 }
 
@@ -86,9 +86,9 @@ describe('E43 : l’en-tête du profil, dans le HTML du serveur', () => {
 	})
 
 	test('une ville sans rayon : la ville seule ; un rayon sans ville : aucune zone', () => {
-		expect(lireLeType(type('reference'), { rayonKm: null }).zone).toBe('Annecy')
-		expect(lireLeType(type('reference'), { commune: {} }).zone).toBeNull()
-		expect(lireLeType(type('reference'), { commune: { nom: 'null' }, rayonKm: 30 }).zone).toBeNull()
+		expect(lireLeType(type('reference'), { radiusKm: null }).zone).toBe('Annecy')
+		expect(lireLeType(type('reference'), { city: {} }).zone).toBeNull()
+		expect(lireLeType(type('reference'), { city: { name: 'null' }, radiusKm: 30 }).zone).toBeNull()
 	})
 
 	test('la description s’affiche une ligne par paragraphe, sans ligne vide', () => {
@@ -102,13 +102,15 @@ describe('E43 : l’en-tête du profil, dans le HTML du serveur', () => {
 	})
 
 	test('le nom d’artiste ne s’affiche que s’il ajoute quelque chose', () => {
-		expect(nomDArtisteAffiche({ prenom: 'Léa', nom: 'Garnier', nomArtiste: 'Léa Garnier' }, 'Léa Garnier')).toBeNull()
-		expect(nomDArtisteAffiche({ prenom: 'Léa', nom: 'Garnier', nomArtiste: 'Léa Garnier Beauté' }, 'Léa Garnier')).toBe(
-			'Léa Garnier Beauté'
-		)
+		expect(
+			nomDArtisteAffiche({ firstName: 'Léa', lastName: 'Garnier', artistName: 'Léa Garnier' }, 'Léa Garnier')
+		).toBeNull()
+		expect(
+			nomDArtisteAffiche({ firstName: 'Léa', lastName: 'Garnier', artistName: 'Léa Garnier Beauté' }, 'Léa Garnier')
+		).toBe('Léa Garnier Beauté')
 		// Without a first or last name, the artist name is the h1 already.
-		expect(nomDArtisteAffiche({ nomArtiste: 'Studio Fictif' }, 'Studio Fictif')).toBeNull()
-		expect(nomDArtisteAffiche({ prenom: 'Léa', nomArtiste: 'undefined' }, 'Léa')).toBeNull()
+		expect(nomDArtisteAffiche({ artistName: 'Studio Fictif' }, 'Studio Fictif')).toBeNull()
+		expect(nomDArtisteAffiche({ firstName: 'Léa', artistName: 'undefined' }, 'Léa')).toBeNull()
 	})
 
 	test('aucune adresse postale : seule la commune est lue', () => {
@@ -176,7 +178,7 @@ describe('E44 : les sections du profil', () => {
 				formations: [{ diplome: null, ecole: '', obtenuLe: '2014-06-30' }],
 				experiences: null,
 				prestations: [{ nom: 'undefined', prixTexte: '50 €' }],
-				reseaux: {},
+				networks: {},
 			})
 		)
 
@@ -204,12 +206,12 @@ describe('E44 : les sections du profil', () => {
 	test('les liens sont ceux que la maquilleuse a saisis, jamais un schéma dangereux', () => {
 		const html = rendre(
 			lireLeType(type('reference'), {
-				reseaux: {
+				networks: {
 					instagram: 'ines.morel',
 					facebook: 'javascript:alert(1)',
 					linkedin: 'instagram.com',
 					youtube: '@ines',
-					siteWeb: 'ines-morel.example.test/portfolio',
+					website: 'ines-morel.example.test/portfolio',
 				},
 			})
 		)

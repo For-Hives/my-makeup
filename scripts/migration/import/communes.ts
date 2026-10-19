@@ -31,11 +31,11 @@ import {
 import { ImportRefuse } from './cible'
 import type { CommuneDuReferentiel, Referentiel } from './referentiel'
 
-/** The commune a profile must hold, as the collection stores it (`profils.commune`). */
+/** The commune a profile must hold, as the collection stores it (`profiles.city`). */
 export interface CommuneAttendue {
-	nom: string
-	codeInsee: string
-	departement: string | null
+	name: string
+	inseeCode: string
+	department: string | null
 	latitude: number | null
 	longitude: number | null
 }
@@ -203,9 +203,9 @@ export function communeAttendue(commune: CommuneDuReferentiel): CommuneAttendue 
 	const arrondie = (valeur: number | null): number | null =>
 		valeur === null ? null : (coordonneeArrondie(valeur) as number)
 	return {
-		nom: commune.nom,
-		codeInsee: commune.code,
-		departement: departementDuCodeInsee(commune.code),
+		name: commune.nom,
+		inseeCode: commune.code,
+		department: departementDuCodeInsee(commune.code),
 		latitude: arrondie(commune.latitude),
 		longitude: arrondie(commune.longitude),
 	}

@@ -49,7 +49,7 @@ describe('lireLeTalent : la lecture publique d’un talent', () => {
 
 	test('les champs lus sont figés : ni identifiant de l’ancien site, ni état de brouillon', () => {
 		expect(Object.keys(CHAMPS_DE_LA_PAGE_DU_TALENT).sort()).toEqual(
-			['content', 'description', 'seo_description', 'seo_title', 'slug', 'title', 'titreDeLaPage'].sort()
+			['content', 'description', 'seo_description', 'seo_title', 'slug', 'title', 'pageTitle'].sort()
 		)
 	})
 

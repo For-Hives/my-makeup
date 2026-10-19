@@ -16,7 +16,7 @@ import { premierCompteFerme } from '../lib/auth/premier-compte-ferme'
 export const DUREE_SESSION_ADMIN_S = 8 * 60 * 60
 
 /** What the admin panel shows for each role. */
-const LIBELLES_DES_ROLES: Record<RoleAdmin, string> = { admin: 'Admin', redaction: 'Rédaction' }
+const LIBELLES_DES_ROLES: Record<RoleAdmin, string> = { admin: 'Admin', editor: 'Rédaction' }
 
 /**
  * The sessions of an account never leave the server, not even for the account itself (plan 02
@@ -36,7 +36,7 @@ export const sessionsFermees: Field = {
 /**
  * The accounts that open the admin panel.
  *
- * - The role `admin` does everything. The role `redaction` reads and changes its own account
+ * - The role `admin` does everything. The role `editor` reads and changes its own account
  *   only, never its role; the other collections say what it may do there (articles and talents).
  * - A makeup artist has no account here and never opens the panel (collection `pros`).
  * - A session lasts 8 hours.
@@ -72,7 +72,7 @@ export const Admins: CollectionConfig<'admins'> = {
 			type: 'select',
 			required: true,
 			// The narrowest role: an account created without choosing one reaches no account but its own.
-			defaultValue: 'redaction' satisfies RoleAdmin,
+			defaultValue: 'editor' satisfies RoleAdmin,
 			options: ROLES_ADMIN.map(role => ({ label: LIBELLES_DES_ROLES[role], value: role })),
 			access: { create: champAdminSeulement, update: champAdminSeulement },
 		},

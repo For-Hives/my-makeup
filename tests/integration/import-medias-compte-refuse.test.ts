@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { randomBytes } from 'node:crypto'
 import { TYPE_PROFIL } from '../../scripts/migration/import/medias'
 import type { Rapport } from '../../scripts/migration/import/rapport'
-import { CONTEXTE_SANS_PROFIL } from '../../src/collections/Profils'
+import { CONTEXTE_SANS_PROFIL } from '../../src/collections/Profiles'
 import { creerCompte } from '../outils/fabrique-comptes'
 import { importerSurLeBanc } from '../outils/import'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
@@ -13,7 +13,7 @@ import { definitionDeLaSource } from '../outils/source-strapi/donnees'
 
 /**
  * Ticket 058: the photos of an account Payload refuses are not adopted. Written without an owner,
- * they would pass for newsroom photos: the `redaction` role could read, change and delete them,
+ * they would pass for newsroom photos: the `editor` role could read, change and delete them,
  * and attach them to an article, which makes them public.
  */
 

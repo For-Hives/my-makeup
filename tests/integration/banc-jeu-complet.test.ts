@@ -22,14 +22,14 @@ let payload: Payload
 
 const remettreAZero = () => Promise.all([viderLaBase(), viderLeStockage()])
 
-const nombreDe = async (collection: 'pros' | 'profils' | 'admins' | 'talents' | 'articles'): Promise<number> =>
+const nombreDe = async (collection: 'pros' | 'profiles' | 'admins' | 'talents' | 'articles'): Promise<number> =>
 	(await payload.count({ collection, overrideAccess: true })).totalDocs
 
 /** Profiles whose account is one of the twelve profile types: the way the admin panel counts them. */
 const profilsTypes = async (): Promise<number> =>
 	(
 		await payload.count({
-			collection: 'profils',
+			collection: 'profiles',
 			overrideAccess: true,
 			where: { 'pro.email': { like: 'jeu-profil-' } },
 		})
@@ -114,9 +114,9 @@ describe('Les commandes du banc', () => {
 		const premiere = await commande('reinitialiser')
 		expect(premiere.code, premiere.erreurs).toBe(0)
 		expect(premiere.secondes).toBeLessThan(30)
-		const profils = await nombreDe('profils')
+		const profils = await nombreDe('profiles')
 		const identifiants = (
-			await payload.find({ collection: 'profils', depth: 0, sort: 'id', pagination: false })
+			await payload.find({ collection: 'profiles', depth: 0, sort: 'id', pagination: false })
 		).docs.map(({ id, slug }) => `${id}:${slug}`)
 
 		const seconde = await commande('reinitialiser')
@@ -126,9 +126,9 @@ describe('Les commandes du banc', () => {
 		expect(await profilsTypes()).toBe(12)
 		expect(await nombreDe('talents')).toBe(3)
 		expect(await nombreDe('articles')).toBe(3)
-		expect(await nombreDe('profils')).toBe(profils)
+		expect(await nombreDe('profiles')).toBe(profils)
 		expect(
-			(await payload.find({ collection: 'profils', depth: 0, sort: 'id', pagination: false })).docs.map(
+			(await payload.find({ collection: 'profiles', depth: 0, sort: 'id', pagination: false })).docs.map(
 				({ id, slug }) => `${id}:${slug}`
 			)
 		).toEqual(identifiants)

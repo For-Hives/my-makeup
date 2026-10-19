@@ -7,7 +7,7 @@ import {
 	type PayloadRequest,
 } from 'payload'
 // Relative import on purpose: the bin is the one in the collections, and this file may be loaded outside of Next.
-import { corbeilleRetenue } from '../../collections/corbeille'
+import { corbeilleRetenue } from '../../collections/trash'
 
 /**
  * The deletion of an account and everything that hangs on it (ticket 141; plan 01 AUTH-13, P7.7;
@@ -36,15 +36,15 @@ import { corbeilleRetenue } from '../../collections/corbeille'
  * first and gives its answer. An account that is already gone is no error.
  *
  * An account that came from the old site leaves one row behind, its identifier on the old site and the day
- * (collection `comptes-supprimes`, same transaction): the import reads the old site again, and without
+ * (collection `deleted-accounts`, same transaction): the import reads the old site again, and without
  * this row a rerun would bring the account and its public profile back.
  *
- * The messages of the contact form (collection `demandes`) hold no link to an account: they are
+ * The messages of the contact form (collection `contact-requests`) hold no link to an account: they are
  * addressed to the team, not to a makeup artist, so there is nothing of hers in them to anonymise.
  * The ticket that adds requests to a makeup artist adds their anonymisation here.
  *
  * The photos of an account without a profile are taken by the `beforeDelete` hook of `pros`
- * (`menageAvantSuppressionDuCompte`, src/collections/corbeille.ts), under the same hold of the bin.
+ * (`menageAvantSuppressionDuCompte`, src/collections/trash.ts), under the same hold of the bin.
  */
 
 /** What the deletion did. `supprime: false`: the account did not exist (any more). */
@@ -65,14 +65,14 @@ function enCours(): Map<string, Promise<BilanDeSuppression>> {
 
 async function retenirLaSuppression(payload: Payload, strapiId: number, req: PayloadRequest): Promise<void> {
 	const { totalDocs } = await payload.count({
-		collection: 'comptes-supprimes',
+		collection: 'deleted-accounts',
 		overrideAccess: true,
 		req,
 		where: { strapiId: { equals: strapiId } },
 	})
 	if (totalDocs === 0)
 		await payload.create({
-			collection: 'comptes-supprimes',
+			collection: 'deleted-accounts',
 			data: { strapiId, date: new Date().toISOString() },
 			depth: 0,
 			overrideAccess: true,
@@ -96,7 +96,7 @@ async function supprimer(payload: Payload, id: number | string): Promise<BilanDe
 			})
 			if (compte === null) return { supprime: false, profils: 0 }
 			const { docs } = await payload.find({
-				collection: 'profils',
+				collection: 'profiles',
 				depth: 0,
 				overrideAccess: true,
 				pagination: false,
@@ -106,7 +106,7 @@ async function supprimer(payload: Payload, id: number | string): Promise<BilanDe
 			})
 			// One by one, by identifier: the bin refuses a deletion by `where`, and never runs side by side.
 			for (const profil of docs)
-				await payload.delete({ collection: 'profils', depth: 0, id: profil.id, overrideAccess: true, req })
+				await payload.delete({ collection: 'profiles', depth: 0, id: profil.id, overrideAccess: true, req })
 			await payload.delete({ collection: 'pros', depth: 0, id, overrideAccess: true, req })
 			// She came from the old site, which the import still reads: her identifier is kept so that a
 			// rerun never brings her back. Same transaction: both happen or neither.

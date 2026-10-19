@@ -10,7 +10,7 @@ import type { TacheQuotidienne } from './quotidiennes'
  * - The age is counted from the reception (`createdAt`), 12 calendar months back from the clock of
  *   the run: a message of 12 months and a day goes, one of 11 months stays, one of exactly 12 months
  *   stays until the next day.
- * - Only the type `contact`: the next types of `demandes` have their own promise and their own ticket.
+ * - Only the type `contact`: the next types of `contact-requests` have their own promise and their own ticket.
  * - It does nothing while an import runs in this process (`importEnCours`): the next day's run takes
  *   what is past its date, since the task is idempotent.
  * - It reports a number, never a row.
@@ -35,7 +35,7 @@ export const purgeDesMessagesDeContact: TacheQuotidienne = {
 	executer: async (payload: Payload, maintenant) => {
 		if (importEnCours()) return 0
 		const { docs } = await payload.delete({
-			collection: 'demandes',
+			collection: 'contact-requests',
 			depth: 0,
 			overrideAccess: true,
 			select: { type: true },

@@ -17,7 +17,7 @@ import { type NomsDuProfil, nomComplet, texte } from './nom-affiche'
  * `null` otherwise.
  */
 export function nomDArtisteAffiche(profil: NomsDuProfil, nomDuTitre: string): string | null {
-	const nomArtiste = texte(profil.nomArtiste)
+	const nomArtiste = texte(profil.artistName)
 	return nomArtiste !== '' && nomArtiste !== nomDuTitre && nomComplet(profil) !== '' ? nomArtiste : null
 }
 
@@ -136,7 +136,7 @@ function lienDuCanal(canal: Canal, valeur: string): string | null {
  * function never decides that.
  */
 export function contacts(publies: {
-	reseaux?: { instagram?: unknown; facebook?: unknown; linkedin?: unknown; youtube?: unknown; siteWeb?: unknown } | null
+	reseaux?: { instagram?: unknown; facebook?: unknown; linkedin?: unknown; youtube?: unknown; website?: unknown } | null
 	telephone?: unknown
 	email?: unknown
 }): LienDeContact[] {
@@ -147,7 +147,7 @@ export function contacts(publies: {
 		youtube: texte(publies.reseaux?.youtube),
 		email: texte(publies.email),
 		phone: texte(publies.telephone),
-		website: texte(publies.reseaux?.siteWeb),
+		website: texte(publies.reseaux?.website),
 	}
 	return CANAUX.flatMap(canal => {
 		const libelle = valeurs[canal]

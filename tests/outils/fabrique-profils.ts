@@ -12,21 +12,21 @@
 
 import type { APIRequestContext, APIResponse } from '@playwright/test'
 import type { Payload } from 'payload'
-import { CONTEXTE_SANS_PROFIL } from '../../src/collections/Profils'
+import { CONTEXTE_SANS_PROFIL } from '../../src/collections/Profiles'
 import { creerCompte } from './fabrique-comptes'
 
 /** Communes of the official list, with their INSEE code and the centre of the commune. */
 const COMMUNES = [
-	{ nom: 'Annecy', codeInsee: '74010', latitude: 45.9, longitude: 6.13 },
-	{ nom: 'Annemasse', codeInsee: '74012', latitude: 46.19, longitude: 6.25 },
-	{ nom: 'Thonon-les-Bains', codeInsee: '74281', latitude: 46.37, longitude: 6.48 },
-	{ nom: 'Nantes', codeInsee: '44109', latitude: 47.24, longitude: -1.56 },
-	{ nom: 'Lyon', codeInsee: '69123', latitude: 45.76, longitude: 4.84 },
-	{ nom: 'Lille', codeInsee: '59350', latitude: 50.63, longitude: 3.06 },
-	{ nom: 'Bordeaux', codeInsee: '33063', latitude: 44.84, longitude: -0.58 },
-	{ nom: 'Toulouse', codeInsee: '31555', latitude: 43.6, longitude: 1.44 },
-	{ nom: 'Rennes', codeInsee: '35238', latitude: 48.11, longitude: -1.68 },
-	{ nom: 'Marseille', codeInsee: '13055', latitude: 43.3, longitude: 5.37 },
+	{ name: 'Annecy', inseeCode: '74010', latitude: 45.9, longitude: 6.13 },
+	{ name: 'Annemasse', inseeCode: '74012', latitude: 46.19, longitude: 6.25 },
+	{ name: 'Thonon-les-Bains', inseeCode: '74281', latitude: 46.37, longitude: 6.48 },
+	{ name: 'Nantes', inseeCode: '44109', latitude: 47.24, longitude: -1.56 },
+	{ name: 'Lyon', inseeCode: '69123', latitude: 45.76, longitude: 4.84 },
+	{ name: 'Lille', inseeCode: '59350', latitude: 50.63, longitude: 3.06 },
+	{ name: 'Bordeaux', inseeCode: '33063', latitude: 44.84, longitude: -0.58 },
+	{ name: 'Toulouse', inseeCode: '31555', latitude: 43.6, longitude: 1.44 },
+	{ name: 'Rennes', inseeCode: '35238', latitude: 48.11, longitude: -1.68 },
+	{ name: 'Marseille', inseeCode: '13055', latitude: 43.3, longitude: 5.37 },
 ] as const
 
 export const SPECIALITES_GENEREES = [
@@ -54,8 +54,8 @@ const PHRASES = [
 export const MOT_DES_PROFILS_GENERES = 'zyglo'
 
 /** The communes far from the Haute-Savoie and from Nantes, for a run that must not change the other searches of a shared bench. */
-export const COMMUNES_ELOIGNEES = COMMUNES.filter(({ nom }) =>
-	['Lille', 'Bordeaux', 'Toulouse', 'Rennes', 'Marseille'].includes(nom)
+export const COMMUNES_ELOIGNEES = COMMUNES.filter(({ name }) =>
+	['Lille', 'Bordeaux', 'Toulouse', 'Rennes', 'Marseille'].includes(name)
 )
 
 export interface OptionsDeLaFabrique {
@@ -78,11 +78,11 @@ export function profilGenere(
 	const description = Array.from({ length: 8 }, (_, i) => PHRASES[(rang + i * 3) % PHRASES.length]).join(' ')
 	return {
 		slug: `${prefixe}-${rang}`,
-		prenom: 'Générée',
-		nom: `Numéro ${rang}`,
-		specialite: SPECIALITES_GENEREES[rang % SPECIALITES_GENEREES.length],
-		commune,
-		rayonKm: seDeplacent && rang % 3 === 0 ? 30 : null,
+		firstName: 'Générée',
+		lastName: `Numéro ${rang}`,
+		specialty: SPECIALITES_GENEREES[rang % SPECIALITES_GENEREES.length],
+		city: commune,
+		radiusKm: seDeplacent && rang % 3 === 0 ? 30 : null,
 		description: `${description} ${marqueur ?? (rang % 50 === 0 ? MOT_DES_PROFILS_GENERES : '')}`.trim(),
 		competences: [0, 1, 2].map(i => ({
 			nom: COMPETENCES[(rang + i) % COMPETENCES.length],
@@ -119,13 +119,13 @@ export async function fabriquerDesProfils(
 			data: {
 				email: `${prefixe}-${rang}@example.test`,
 				password: `Banc-${rang}-${crypto.randomUUID()}`,
-				nom: `Générée ${rang}`,
+				name: `Générée ${rang}`,
 				_verified: true,
 			},
 			context: CONTEXTE_SANS_PROFIL,
 			disableVerificationEmail: true,
 		})
-		await payload.create({ collection: 'profils', data: { ...profil, slug, pro: pro.id } })
+		await payload.create({ collection: 'profiles', data: { ...profil, slug, pro: pro.id } })
 		return slug
 	})
 }
@@ -165,7 +165,7 @@ export async function fabriquerParLApplication(
 							data: {
 								email: `${options.prefixe}-${rang}@example.test`,
 								password: `Banc-${rang}-${crypto.randomUUID()}`,
-								nom: `${options.prefixe} ${rang}`,
+								name: `${options.prefixe} ${rang}`,
 								_verified: true,
 							},
 						}),
@@ -174,14 +174,14 @@ export async function fabriquerParLApplication(
 				).json()) as { doc: { id: number } }
 				const { docs } = (await (
 					await verifie(
-						await request.get(`/api/profils?where[pro][equals]=${pro.doc.id}&depth=0&limit=1`, { headers: entetes }),
+						await request.get(`/api/profiles?where[pro][equals]=${pro.doc.id}&depth=0&limit=1`, { headers: entetes }),
 						'La lecture d’un profil'
 					)
 				).json()) as { docs: { id: number }[] }
 				const cree = docs[0]
 				if (!cree) throw new Error('Le compte créé n’a pas son profil.')
 				await verifie(
-					await request.patch(`/api/profils/${cree.id}`, { headers: entetes, data: profil }),
+					await request.patch(`/api/profiles/${cree.id}`, { headers: entetes, data: profil }),
 					'L’écriture d’un profil'
 				)
 				return { pro: pro.doc.id, profil: cree.id }
@@ -201,14 +201,14 @@ export async function retirerParLApplication(
 	{ pros, profils }: { pros: readonly number[]; profils: readonly number[] }
 ): Promise<void> {
 	const entetes = await entetesDeLAdmin()
-	for (const id of profils) await request.delete(`/api/profils/${id}`, { headers: entetes })
+	for (const id of profils) await request.delete(`/api/profiles/${id}`, { headers: entetes })
 	for (const id of pros) await request.delete(`/api/pros/${id}`, { headers: entetes })
 }
 
 /** Deletes the profiles of a run and their accounts, by the prefix of their slug. */
 export async function retirerLesProfilsFabriques(payload: Payload, prefixe: string): Promise<void> {
 	const { docs } = await payload.find({
-		collection: 'profils',
+		collection: 'profiles',
 		where: { slug: { like: `${prefixe}-` } },
 		depth: 0,
 		limit: 1000,
@@ -216,7 +216,7 @@ export async function retirerLesProfilsFabriques(payload: Payload, prefixe: stri
 		select: { pro: true },
 	})
 	for (const { id, pro } of docs) {
-		await payload.delete({ collection: 'profils', id })
+		await payload.delete({ collection: 'profiles', id })
 		await payload.delete({ collection: 'pros', id: typeof pro === 'object' ? pro.id : pro })
 	}
 }

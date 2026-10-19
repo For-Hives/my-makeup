@@ -17,7 +17,7 @@ import { ouvrirFenetre } from '../outils/dom-react'
 
 const fenetre = ouvrirFenetre()
 
-const profil = (disponible: boolean | null | undefined) => ({ id: 1, disponible }) as ProfilDeLEspace
+const profil = (disponible: boolean | null | undefined) => ({ id: 1, available: disponible }) as ProfilDeLEspace
 const ligneDeLaCarte = (disponible: boolean | null | undefined) =>
 	cartesDuProfil(profil(disponible))
 		.find(carte => carte.section === 'disponibilite')

@@ -51,7 +51,7 @@ const profils = async (id: number | string) =>
 		await (
 			await payloadDeTest()
 		).find({
-			collection: 'profils',
+			collection: 'profiles',
 			depth: 0,
 			overrideAccess: true,
 			where: { pro: { equals: id } },

@@ -98,7 +98,7 @@ export async function profilPresent(payload: Payload, type: ProfilDuJeu): Promis
 	const compte = comptes[0]
 	if (!compte) return null
 	const { docs: profils } = await payload.find({
-		collection: 'profils',
+		collection: 'profiles',
 		depth: 0,
 		limit: 1,
 		pagination: false,
@@ -128,7 +128,7 @@ export async function poserLeProfil(
 			collection: 'pros',
 			data: {
 				email: type.compte.email,
-				nom: type.compte.nom,
+				name: type.compte.nom,
 				password: randomBytes(24).toString('base64url'),
 				_verified: true,
 			},
@@ -137,7 +137,7 @@ export async function poserLeProfil(
 			req,
 		})
 		const { docs } = await payload.find({
-			collection: 'profils',
+			collection: 'profiles',
 			depth: 0,
 			limit: 1,
 			pagination: false,
@@ -172,10 +172,10 @@ export async function poserLeProfil(
 		const aEcrire = Object.keys(type.profil).length > 0 || photoPrincipale !== null || photosDeLaGalerie.length > 0
 		const profil = aEcrire
 			? await payload.update({
-					collection: 'profils',
+					collection: 'profiles',
 					id: cree.id,
 					// A copy: the set itself stays as it is written, whatever Payload does with its data.
-					data: { ...structuredClone(type.profil), photoPrincipale, galerie: photosDeLaGalerie },
+					data: { ...structuredClone(type.profil), mainPicture: photoPrincipale, gallery: photosDeLaGalerie },
 					depth: 0,
 					req,
 				})

@@ -7,7 +7,7 @@
  * the overseas collectivities of the official list too.
  *
  * The rules of the server, in one place: the département an INSEE code names, and what is wrong
- * with a value, in French. The collection (src/collections/Profils.ts) calls them; the zone of
+ * with a value, in French. The collection (src/collections/Profiles.ts) calls them; the zone of
  * the makeup artist's space (ticket 123) shows the same messages.
  *
  * Checking that a commune is really on the official list (geo.api.gouv.fr), and that its name is
@@ -38,12 +38,12 @@ export const NOM_DE_COMMUNE_MAX = 70
 export const DECIMALES_DES_COORDONNEES = 2
 
 /** The fields of the commune of a profile, in the order of SCHEMA.md §5.2. */
-export const CHAMPS_DE_LA_COMMUNE = ['nom', 'codeInsee', 'departement', 'latitude', 'longitude'] as const
+export const CHAMPS_DE_LA_COMMUNE = ['name', 'inseeCode', 'department', 'latitude', 'longitude'] as const
 
 /**
  * The overseas collectivities whose communes the official list holds (geo.api.gouv.fr, 14/10/2026),
  * besides the 101 départements of src/lib/departements.ts: code → name. Their INSEE codes start
- * with these three characters, and `commune.departement` holds them.
+ * with these three characters, and `city.department` holds them.
  */
 export const COLLECTIVITES_D_OUTRE_MER: Readonly<Record<string, string>> = {
 	975: 'Saint-Pierre-et-Miquelon',
@@ -117,7 +117,7 @@ function objetSimple(valeur: unknown): valeur is Record<string, unknown> {
  *
  * - An object is the whole commune: what it does not give is empty, never taken from the commune
  *   already stored. A name is so never saved next to the code of another commune, nor a commune
- *   next to the coordinates of the former one. Its `departement` is the server's: not kept.
+ *   next to the coordinates of the former one. Its `department` is the server's: not kept.
  * - `null` is the empty commune: it empties a stored one.
  * - A text, a number… is a name without an INSEE code, which the check refuses: free text is
  *   never a commune.
@@ -127,11 +127,11 @@ function objetSimple(valeur: unknown): valeur is Record<string, unknown> {
 export function communeEnChamps(commune: unknown): unknown {
 	if (commune === undefined) return commune
 	if (objetSimple(commune)) {
-		const { nom = null, codeInsee = null, latitude = null, longitude = null } = commune
-		return { nom, codeInsee, latitude, longitude }
+		const { name = null, inseeCode = null, latitude = null, longitude = null } = commune
+		return { name, inseeCode, latitude, longitude }
 	}
 	if (typeof commune === 'object' && commune !== null) return commune
-	return { nom: commune ?? null, codeInsee: null, latitude: null, longitude: null }
+	return { name: commune ?? null, inseeCode: null, latitude: null, longitude: null }
 }
 
 /**
@@ -260,7 +260,7 @@ export function verdictDuRayon(rayon: unknown): true | string {
 export type CommuneSaisie = Partial<Record<(typeof CHAMPS_DE_LA_COMMUNE)[number], unknown>>
 
 /** The fields of a commune that can be wrong, each with the message of its refusal. */
-export type ErreursDeLaCommune = Partial<Record<'nom' | 'codeInsee' | 'latitude' | 'longitude', string>>
+export type ErreursDeLaCommune = Partial<Record<'name' | 'inseeCode' | 'latitude' | 'longitude', string>>
 
 /** A coordinate: absent, in its bounds, or out of them (not a number, or too far). */
 function coordonnee(valeur: unknown, borne: number): 'absente' | 'valide' | 'invalide' {
@@ -280,18 +280,18 @@ function coordonnee(valeur: unknown, borne: number): 'absente' | 'valide' | 'inv
  * The département is not checked: the server computes it from the code, whatever was sent.
  */
 export function erreursDeLaCommune(commune: CommuneSaisie | null | undefined): ErreursDeLaCommune {
-	const { nom, codeInsee, latitude, longitude } = commune ?? {}
+	const { name: nom, inseeCode: codeInsee, latitude, longitude } = commune ?? {}
 	const erreurs: ErreursDeLaCommune = {}
 
 	if (!vide(codeInsee) && departementDuCodeInsee(codeInsee) === null)
-		erreurs.codeInsee = MESSAGES_DE_LA_ZONE.codeInseeMalForme
-	else if (vide(codeInsee) && !vide(nom)) erreurs.codeInsee = MESSAGES_DE_LA_ZONE.communeSansCodeInsee
+		erreurs.inseeCode = MESSAGES_DE_LA_ZONE.codeInseeMalForme
+	else if (vide(codeInsee) && !vide(nom)) erreurs.inseeCode = MESSAGES_DE_LA_ZONE.communeSansCodeInsee
 
 	if (!vide(nom) && (typeof nom !== 'string' || nom.trim().length > NOM_DE_COMMUNE_MAX))
-		erreurs.nom = MESSAGES_DE_LA_ZONE.nomInvalide
-	else if (typeof nom === 'string' && ressembleAUneAdresse(nom)) erreurs.nom = MESSAGES_DE_LA_ZONE.nomAdresse
-	else if (typeof nom === 'string' && !aLesCaracteresDUnNom(nom)) erreurs.nom = MESSAGES_DE_LA_ZONE.nomCaracteres
-	else if (vide(nom) && !vide(codeInsee)) erreurs.nom = MESSAGES_DE_LA_ZONE.codeInseeSansNom
+		erreurs.name = MESSAGES_DE_LA_ZONE.nomInvalide
+	else if (typeof nom === 'string' && ressembleAUneAdresse(nom)) erreurs.name = MESSAGES_DE_LA_ZONE.nomAdresse
+	else if (typeof nom === 'string' && !aLesCaracteresDUnNom(nom)) erreurs.name = MESSAGES_DE_LA_ZONE.nomCaracteres
+	else if (vide(nom) && !vide(codeInsee)) erreurs.name = MESSAGES_DE_LA_ZONE.codeInseeSansNom
 
 	const lat = coordonnee(latitude, 90)
 	const lng = coordonnee(longitude, 180)

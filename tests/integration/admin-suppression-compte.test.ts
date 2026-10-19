@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, setDefaultTimeout, test } from 'bun:test'
-import { MESSAGE_PANNE_DU_STOCKAGE } from '@/collections/corbeille'
+import { MESSAGE_PANNE_DU_STOCKAGE } from '@/collections/trash'
 import type { Media } from '@/payload-types'
 import { type Espion, espionnerLeStockage, suppressionsSansCorbeille } from '../outils/espion-s3'
 import { creerCompte } from '../outils/fabrique-comptes'
@@ -47,7 +47,7 @@ async function envoyer(compte: Maquilleuse): Promise<Media> {
 
 async function profilDe(compte: { id: number | string }) {
 	const payload = await payloadDeTest()
-	return (await payload.find({ collection: 'profils', depth: 0, where: { pro: { equals: compte.id } } })).docs[0]
+	return (await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })).docs[0]
 }
 
 /** An account with a profile that names a main photo and a gallery photo, and one more photo nobody names. */
@@ -57,14 +57,14 @@ async function compteGarni() {
 	const profil = await profilDe(compte)
 	if (!profil) throw new Error('pas de profil')
 	await (await payloadDeTest()).update({
-		collection: 'profils',
+		collection: 'profiles',
 		id: profil.id,
-		data: { photoPrincipale: principale.id, galerie: [principale.id, galerie.id] },
+		data: { mainPicture: principale.id, gallery: [principale.id, galerie.id] },
 	})
 	return { compte, profil, photos: [principale, galerie, libre] }
 }
 
-const present = async (collection: 'pros' | 'profils' | 'media', id: number | string) =>
+const present = async (collection: 'pros' | 'profiles' | 'media', id: number | string) =>
 	(await (await payloadDeTest()).findByID({ collection, id, depth: 0, disableErrors: true, overrideAccess: true })) !==
 	null
 const cle = (media: Media) => `media/${media.filename}`
@@ -84,7 +84,7 @@ describe('I37 : l’admin supprime un compte, le même résultat que la maquille
 
 		expect(statut).toBe(200)
 		expect(await present('pros', compte.id)).toBe(false)
-		expect(await present('profils', profil.id)).toBe(false)
+		expect(await present('profiles', profil.id)).toBe(false)
 		for (const photo of photos) {
 			expect(await present('media', photo.id)).toBe(false)
 			expect(await enPlace(photo)).toBe(false)
@@ -95,12 +95,12 @@ describe('I37 : l’admin supprime un compte, le même résultat que la maquille
 			user: null,
 		})
 		expect(
-			(await payload.find({ collection: 'profils', depth: 0, where: { slug: { equals: profil.slug } } })).totalDocs
+			(await payload.find({ collection: 'profiles', depth: 0, where: { slug: { equals: profil.slug } } })).totalDocs
 		).toBe(0)
 		expect((await listerLesObjets('deleted/')).length).toBe(photos.length)
 
 		// No profile without an owner, no photo without one: what remains is the other account's.
-		const profils = await payload.find({ collection: 'profils', depth: 0, pagination: false })
+		const profils = await payload.find({ collection: 'profiles', depth: 0, pagination: false })
 		expect(profils.docs.map(({ id }) => id)).toEqual([autre.profil.id])
 		const media = await payload.find({ collection: 'media', depth: 0, pagination: false })
 		expect(media.docs.map(({ id }) => id).sort()).toEqual(autre.photos.map(({ id }) => id).sort())
@@ -154,7 +154,7 @@ describe('Seul l’admin supprime un compte', () => {
 
 		expect(essais.map(({ statut }) => statut)).toEqual([403, 403, 403, 403, 403])
 		expect(await present('pros', compte.id)).toBe(true)
-		expect(await present('profils', profil.id)).toBe(true)
+		expect(await present('profiles', profil.id)).toBe(true)
 		for (const photo of photos) expect(await enPlace(photo)).toBe(true)
 		expect(espion.journal.filter(({ nom }) => nom === 'CopyObject')).toEqual([])
 	})
@@ -171,7 +171,7 @@ describe('Seul l’admin supprime un compte', () => {
 		})
 
 		expect(await present('pros', compte.id)).toBe(true)
-		expect(await present('profils', profil.id)).toBe(true)
+		expect(await present('profiles', profil.id)).toBe(true)
 	})
 })
 
@@ -190,7 +190,7 @@ describe('Panne du stockage : tout est encore là', () => {
 		expect(statut).toBe(503)
 		expect(texte).toContain(MESSAGE_PANNE_DU_STOCKAGE)
 		expect(await present('pros', compte.id)).toBe(true)
-		expect(await present('profils', profil.id)).toBe(true)
+		expect(await present('profiles', profil.id)).toBe(true)
 		for (const photo of photos) {
 			expect(await present('media', photo.id)).toBe(true)
 			expect(await enPlace(photo)).toBe(true)

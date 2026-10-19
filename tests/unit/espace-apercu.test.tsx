@@ -9,35 +9,31 @@ import { CHEMIN_DE_L_APERCU, CHEMIN_DE_L_ESPACE, etatDeLApercu } from '@/lib/esp
  * on the bench (tests/integration/espace-apercu.test.ts, tests/e2e/espace-apercu.spec.ts).
  */
 
-const COMPLET = { statut: 'publie', disponible: true, entierementVide: false, publiable: true } as const
+const COMPLET = { status: 'published', available: true, fullyEmpty: false, publishable: true } as const
 
 describe('139 : l’état que dit le bandeau', () => {
-	test('profil complet, publié, disponible : « ta page telle que les visiteuses la voient »', () => {
+	test('profil complet, publié, available : « ta page telle que les visiteuses la voient »', () => {
 		expect(etatDeLApercu(COMPLET).code).toBe('complet')
 	})
 
 	test('un profil dont la disponibilité n’a jamais été donnée compte comme disponible', () => {
-		expect(etatDeLApercu({ ...COMPLET, disponible: null }).code).toBe('complet')
+		expect(etatDeLApercu({ ...COMPLET, available: null }).code).toBe('complet')
 	})
 
 	test('masqué par l’équipe : le dit, avant tout le reste', () => {
-		expect(etatDeLApercu({ ...COMPLET, statut: 'masque', entierementVide: true, disponible: false }).code).toBe(
-			'masque'
-		)
+		expect(etatDeLApercu({ ...COMPLET, status: 'hidden', fullyEmpty: true, available: false }).code).toBe('masque')
 	})
 
 	test('entièrement vide : pas listé', () => {
-		expect(etatDeLApercu({ statut: 'brouillon', disponible: true, entierementVide: true, publiable: false }).code).toBe(
-			'vide'
-		)
+		expect(etatDeLApercu({ status: 'draft', available: true, fullyEmpty: true, publishable: false }).code).toBe('vide')
 	})
 
 	test('indisponible : écarté de la recherche', () => {
-		expect(etatDeLApercu({ ...COMPLET, disponible: false }).code).toBe('indisponible')
+		expect(etatDeLApercu({ ...COMPLET, available: false }).code).toBe('indisponible')
 	})
 
-	test('rempli mais pas publiable : visible, pas référencé', () => {
-		expect(etatDeLApercu({ ...COMPLET, publiable: false }).code).toBe('non-publiable')
+	test('rempli mais pas publishable : visible, pas référencé', () => {
+		expect(etatDeLApercu({ ...COMPLET, publishable: false }).code).toBe('non-publiable')
 	})
 })
 
@@ -45,10 +41,10 @@ describe('139 : le bandeau', () => {
 	test('dit l’état, ne contient ni « null » ni « undefined », et mène à l’espace', () => {
 		for (const profil of [
 			COMPLET,
-			{ ...COMPLET, statut: 'masque' },
-			{ ...COMPLET, entierementVide: true },
-			{ ...COMPLET, disponible: false },
-			{ ...COMPLET, publiable: false },
+			{ ...COMPLET, status: 'hidden' },
+			{ ...COMPLET, fullyEmpty: true },
+			{ ...COMPLET, available: false },
+			{ ...COMPLET, publishable: false },
 		]) {
 			const etat = etatDeLApercu(profil)
 			const html = renderToStaticMarkup(<BandeauDApercu etat={etat} />)

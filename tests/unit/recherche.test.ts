@@ -280,13 +280,13 @@ describe('la lecture de l’annuaire', () => {
 	const doc = (slug: string, extra: Record<string, unknown> = {}) => ({
 		id: 1,
 		slug,
-		prenom: 'Zoé',
-		nom: 'Fictive',
-		specialite: 'Mariage',
-		commune: { nom: 'Annecy', codeInsee: '74010', departement: '74', latitude: 45.9, longitude: 6.13 },
-		rayonKm: 30,
-		superMaquilleuse: false,
-		photoPrincipale: {
+		firstName: 'Zoé',
+		lastName: 'Fictive',
+		specialty: 'Mariage',
+		city: { name: 'Annecy', inseeCode: '74010', department: '74', latitude: 45.9, longitude: 6.13 },
+		radiusKm: 30,
+		superArtist: false,
+		mainPicture: {
 			id: 4,
 			url: 'https://photos.example.test/media/a.webp',
 			width: 400,
@@ -302,23 +302,23 @@ describe('la lecture de l’annuaire', () => {
 		const annuaire = await lireLAnnuaire(payload)
 
 		expect(annuaire.map(({ carte }) => carte.slug)).toEqual(['a', 'b', 'c'])
-		const profils = lectures.filter(lecture => lecture.collection === 'profils' && lecture.overrideAccess === false)
+		const profils = lectures.filter(lecture => lecture.collection === 'profiles' && lecture.overrideAccess === false)
 		expect(profils.map(({ page }) => page)).toEqual([1, 2, 3])
 		for (const lecture of profils)
-			expect(lecture).toMatchObject({ collection: 'profils', limit: 100, overrideAccess: false, depth: 0 })
+			expect(lecture).toMatchObject({ collection: 'profiles', limit: 100, overrideAccess: false, depth: 0 })
 	})
 
 	test('il ne lit jamais plus de dix pages', async () => {
 		const { payload, lectures } = payloadEspion(Array.from({ length: 50 }, () => [doc('x')]))
 		await lireLAnnuaire(payload)
 		expect(
-			lectures.filter(lecture => lecture.collection === 'profils' && lecture.overrideAccess === false)
+			lectures.filter(lecture => lecture.collection === 'profiles' && lecture.overrideAccess === false)
 		).toHaveLength(10)
 	})
 
 	test('la place d’un profil est sa commune et son département ; le centre de la commune n’en sort pas', async () => {
 		const { payload } = payloadEspion([
-			[doc('a'), doc('b', { commune: null, rayonKm: 30 }), doc('c', { rayonKm: null })],
+			[doc('a'), doc('b', { city: null, radiusKm: 30 }), doc('c', { radiusKm: null })],
 		])
 
 		const [a, b, c] = await lireLAnnuaire(payload)
@@ -368,9 +368,9 @@ describe('la lecture de l’annuaire', () => {
 		expect(Object.keys(a?.carte ?? {}).sort()).toEqual(
 			Object.keys((await lireLAnnuaire(payload))[0]?.carte ?? {}).sort()
 		)
-		const select = lectures.find(lecture => lecture.collection === 'profils')?.select as Record<string, unknown>
+		const select = lectures.find(lecture => lecture.collection === 'profiles')?.select as Record<string, unknown>
 		expect(Object.keys(select)).toEqual(expect.arrayContaining(['description', 'competences', 'prestations']))
-		for (const interdit of ['coordonnees', 'contactPublic', 'reseaux', 'noteInterne', 'pro'])
+		for (const interdit of ['contactDetails', 'publicContact', 'networks', 'internalNote', 'pro'])
 			expect(select).not.toHaveProperty(interdit)
 		// Without the option, the texts are neither read nor carried.
 		const sans = (await lireLAnnuaire(payload))[0]
@@ -380,7 +380,7 @@ describe('la lecture de l’annuaire', () => {
 
 	test('une photo qui n’est qu’un identifiant, ou sans adresse, donne une carte sans photo', async () => {
 		const { payload } = payloadEspion([
-			[doc('a', { photoPrincipale: 9 }), doc('b', { photoPrincipale: { id: 9 } }), doc('c', { photoPrincipale: null })],
+			[doc('a', { mainPicture: 9 }), doc('b', { mainPicture: { id: 9 } }), doc('c', { mainPicture: null })],
 		])
 		const cartes = (await lireLAnnuaire(payload)).map(({ carte }) => carte)
 		expect(cartes.map(({ photo }) => photo)).toEqual([null, null, null])

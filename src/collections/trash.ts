@@ -150,9 +150,9 @@ export async function corbeilleRetenue<T>(req: PayloadRequest, sujet: string, tr
 }
 
 /** The photos of a profile, main photo first, by identifier: the profile as Payload hands it, populated or not. */
-const photosDuProfil = (profil: { photoPrincipale?: unknown; galerie?: unknown } | undefined): (number | string)[] => [
-	...photosNommees(profil?.photoPrincipale),
-	...photosNommees(profil?.galerie),
+const photosDuProfil = (profil: { mainPicture?: unknown; gallery?: unknown } | undefined): (number | string)[] => [
+	...photosNommees(profil?.mainPicture),
+	...photosNommees(profil?.gallery),
 ]
 
 /**
@@ -166,23 +166,23 @@ async function encoreReferencees(req: PayloadRequest, ids: (number | string)[]):
 	const [profils, articles, versions] = await Promise.all([
 		req.payload.find({
 			...lecture,
-			collection: 'profils',
-			select: { photoPrincipale: true, galerie: true },
-			where: { or: [{ photoPrincipale: { in: ids } }, { galerie: { in: ids } }] },
+			collection: 'profiles',
+			select: { mainPicture: true, gallery: true },
+			where: { or: [{ mainPicture: { in: ids } }, { gallery: { in: ids } }] },
 		}),
 		req.payload.find({
 			...lecture,
 			collection: 'articles',
-			select: { galerie: true },
-			where: { galerie: { in: ids } },
+			select: { gallery: true },
+			where: { gallery: { in: ids } },
 		}),
-		req.payload.findVersions({ ...lecture, collection: 'articles', where: { 'version.galerie': { in: ids } } }),
+		req.payload.findVersions({ ...lecture, collection: 'articles', where: { 'version.gallery': { in: ids } } }),
 	])
 	return new Set(
 		[
 			...profils.docs.flatMap(photosDuProfil),
-			...articles.docs.flatMap(({ galerie }) => photosNommees(galerie)),
-			...versions.docs.flatMap(({ version }) => photosNommees(version?.galerie)),
+			...articles.docs.flatMap(({ gallery }) => photosNommees(gallery)),
+			...versions.docs.flatMap(({ version }) => photosNommees(version?.gallery)),
 		].map(String)
 	)
 }
@@ -396,7 +396,7 @@ export const avecLaCorbeille =
 						afterChange: [auRemplacement(stockage)],
 						afterDelete: [aLaSuppression(stockage)],
 					})
-				if (sans.slug === 'profils')
+				if (sans.slug === 'profiles')
 					return avecLesCrochets(sans, {
 						afterChange: [menageApresEnregistrement(stockage)],
 						afterDelete: [menageApresSuppression(stockage)],

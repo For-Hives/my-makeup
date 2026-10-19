@@ -40,22 +40,22 @@ const depuis = (name: string, label: string): Field => ({
  */
 export const CHAMPS_DE_L_ETAT: Field[] = [
 	{
-		name: 'completude',
+		name: 'completeness',
 		label: 'Complétude',
 		type: 'number',
 		access: CALCULE,
 		admin: { readOnly: true, position: 'sidebar', description: 'Critères remplis, sur 13. Calculée par le serveur.' },
 	},
-	drapeau('actif', 'Actif', 'Photo principale, ville et spécialité. Calculé par le serveur.'),
-	depuis('actifDepuis', 'Actif ou non depuis le'),
-	drapeau('publiable', 'Publiable', 'Les six conditions du profil publiable. Calculé par le serveur.'),
-	depuis('publiableDepuis', 'Publiable ou non depuis le'),
+	drapeau('active', 'Actif', 'Photo principale, ville et spécialité. Calculé par le serveur.'),
+	depuis('activeSince', 'Actif ou non depuis le'),
+	drapeau('publishable', 'Publiable', 'Les six conditions du profil publiable. Calculé par le serveur.'),
+	depuis('publishableSince', 'Publiable ou non depuis le'),
 	drapeau(
-		'entierementVide',
+		'fullyEmpty',
 		'Entièrement vide',
 		'Aucune des six conditions : le profil reste en brouillon. Calculé par le serveur.'
 	),
-	depuis('entierementVideDepuis', 'Entièrement vide ou non depuis le'),
+	depuis('fullyEmptySince', 'Entièrement vide ou non depuis le'),
 ]
 
 /**

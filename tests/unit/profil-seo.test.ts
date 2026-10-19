@@ -16,16 +16,16 @@ import { schemaDuProfil } from '../outils/schema-profil-json-ld'
 function lireLeType(type: ProfilDuJeu, surcharge: Partial<ProfilDeLaPage> = {}): ProfilPublic {
 	const doc: ProfilDeLaPage = {
 		slug: type.attendu.slug,
-		statut: type.attendu.statut,
-		publiable: type.attendu.publiable,
+		status: type.attendu.status,
+		publishable: type.attendu.publishable,
 		...type.profil,
 		...surcharge,
 	}
 	const photo = type.photos.principale
 		? { url: `https://photos.example.test/media/${type.photos.principale}`, width: 400, height: 400 }
 		: null
-	const { telephone = null, email = null } = type.profil.coordonnees ?? {}
-	const coordonnees = type.profil.contactPublic === true && (telephone || email) ? { telephone, email } : null
+	const { phone: telephone = null, email = null } = type.profil.contactDetails ?? {}
+	const coordonnees = type.profil.publicContact === true && (telephone || email) ? { telephone, email } : null
 	return profilPublicDe(doc, { photo, galerie: [], coordonnees })
 }
 
@@ -157,8 +157,8 @@ describe('U48 : rien de non public, rien de nul', () => {
 		const profil = lireLeType(profilType)
 		expect(profil.coordonnees).toBeNull()
 		const texte = JSON.stringify(donneesStructureesDuProfil(profil))
-		expect(texte).not.toContain(profilType.profil.coordonnees?.email ?? 'absent')
-		expect(texte).not.toContain(profilType.profil.coordonnees?.telephone ?? 'absent')
+		expect(texte).not.toContain(profilType.profil.contactDetails?.email ?? 'absent')
+		expect(texte).not.toContain(profilType.profil.contactDetails?.phone ?? 'absent')
 	})
 
 	test('un profil non publiable n’a que son fil d’Ariane, pas de personne', () => {
@@ -183,10 +183,10 @@ describe('U50 : un texte avec une balise de fermeture de script', () => {
 	test('la description, le nom et les offres ne ferment pas la balise, et se relisent à l’identique', () => {
 		const piege = '</script><img src=x onerror=alert(1)> & fin'
 		const profil = lireLeType(type('reference'), {
-			prenom: 'Léa',
-			nom: piege,
+			firstName: 'Léa',
+			lastName: piege,
 			description: `${piege} ${'texte '.repeat(30)}`,
-			specialite: piege,
+			specialty: piege,
 			competences: [{ nom: piege }],
 			prestations: [{ nom: piege, description: piege, prixAPartirDe: 50, prixTexte: '50 €' }],
 		})

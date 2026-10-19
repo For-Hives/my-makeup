@@ -43,7 +43,7 @@ async function photosDeLaCible(): Promise<{ principales: number; liens: number; 
 	const sql = new SQL({ url: source.maintenance, max: 1 })
 	try {
 		const [ligne] = await sql.unsafe(
-			'SELECT (SELECT count(*)::int FROM profils WHERE photo_principale_id IS NOT NULL) AS principales, (SELECT count(*)::int FROM profils_rels WHERE media_id IS NOT NULL) AS liens, (SELECT count(*)::int FROM media) AS medias'
+			'SELECT (SELECT count(*)::int FROM profiles WHERE main_picture_id IS NOT NULL) AS principales, (SELECT count(*)::int FROM profiles_rels WHERE media_id IS NOT NULL) AS liens, (SELECT count(*)::int FROM media) AS medias'
 		)
 		return ligne
 	} finally {
@@ -154,7 +154,7 @@ describe('le contrôle de la parité (I39, I40, I43)', () => {
 	test('un profil ajouté à la main fait échouer le contrôle', async () => {
 		await importerSurLeBanc()
 		await ecrireDansLaCible(
-			"INSERT INTO profils (pro_id, slug) SELECT id, 'ajoute-a-la-main' FROM pros WHERE strapi_id = 8"
+			"INSERT INTO profiles (pro_id, slug) SELECT id, 'ajoute-a-la-main' FROM pros WHERE strapi_id = 8"
 		)
 
 		const { code, sortie } = await controler()

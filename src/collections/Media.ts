@@ -106,7 +106,7 @@ type GestionnaireDeFichier = NonNullable<UploadConfig['handlers']>[number]
  * of the server, and the address the site gives is the direct one anyway.
  *
  * Payload checks the reading first (`lectureDesMedias`, without an identifier): the public and
- * `redaction` are refused, a makeup artist reaches her own media only, and Payload hands it here.
+ * `editor` are refused, a makeup artist reaches her own media only, and Payload hands it here.
  * For `admin` it looks for nothing: the media is found by its name, and its prefix when the query
  * gives one. A name no media has is not found.
  */
@@ -168,7 +168,7 @@ export const UPLOAD_DES_MEDIAS: UploadConfig = {
  *   reads her own; `admin` reads everything.
  * - A makeup artist sends photos; the server makes her the owner (`owner`), whatever her request
  *   says. She changes and deletes her own media only; `admin` reaches every one.
- * - The newsroom sends the photos of the articles: they belong to nobody, and `redaction` lists,
+ * - The newsroom sends the photos of the articles: they belong to nobody, and `editor` lists,
  *   reads, changes and deletes them, never the photo of a makeup artist (ticket 046).
  * - The owner, the identifier and the formats of the old site are not public.
  * - Payload's route for the file sends to the public address (`versLAdressePublique`, added by
@@ -177,7 +177,7 @@ export const UPLOAD_DES_MEDIAS: UploadConfig = {
  * The types, the size, the unpredictable name and the derived sizes of a photo sent in the v3 are
  * those of ticket 133 (`photoValideEtRenommee`, `UPLOAD_DES_MEDIAS`). A media deleted, or whose file is replaced, sends its objects to the bin
  * of the storage, never erased, and media are deleted or changed one at a time, never by a
- * `where`: the hooks of the bin are added by src/collections/corbeille.ts (ticket 045), through
+ * `where`: the hooks of the bin are added by src/collections/trash.ts (ticket 045), through
  * src/payload.config.ts.
  */
 export const Media: CollectionConfig<'media'> = {

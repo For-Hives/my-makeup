@@ -8,7 +8,7 @@ import { messageErreur } from './erreurs'
 import { journaliser } from './journal'
 
 /**
- * The blocked account (ticket 089, plan 01 §6.1, `pros.bloque`): an admin blocks a makeup artist,
+ * The blocked account (ticket 089, plan 01 §6.1, `pros.blocked`): an admin blocks a makeup artist,
  * and from then on she cannot sign in; the sessions she had open are closed; unblocking gives the
  * access back. Only an admin changes the flag (the field access of `pros`).
  *
@@ -18,8 +18,8 @@ import { journaliser } from './journal'
  *   the same as for an account that does not exist.
  * - Blocking empties the `sessions` of the account in the same write: every token already issued
  *   is refused from then on, on every device, like a sign-out of all devices.
- * - Each change of the flag leaves one row in the authentication journal (kinds `blocage` and
- *   `deblocage`); a refused sign-in leaves a `connexion` row with the code `compte-bloque`.
+ * - Each change of the flag leaves one row in the authentication journal (kinds `block` and
+ *   `unblock`); a refused sign-in leaves a `sign-in` row with the code `compte-bloque`.
  *
  * No `next` import: the collection, the scripts and the tests load this file too.
  */
@@ -34,15 +34,15 @@ export class CompteBloque extends APIError {
 
 /** Turns a blocked account away once its password is right. */
 export const refuserUnCompteBloque: CollectionBeforeLoginHook = ({ user }) => {
-	if ((user as { bloque?: boolean | null }).bloque === true) throw new CompteBloque()
+	if ((user as { blocked?: boolean | null }).blocked === true) throw new CompteBloque()
 	return user
 }
 
-const estBloque = (doc: { bloque?: boolean | null } | undefined): boolean => doc?.bloque === true
+const estBloque = (doc: { blocked?: boolean | null } | undefined): boolean => doc?.blocked === true
 
 /** Blocking an account closes its sessions: the write that sets the flag also empties them. */
 export const fermerLesSessionsAuBlocage: CollectionBeforeChangeHook = ({ data, operation, originalDoc }) => {
-	if (operation !== 'update' || data.bloque !== true || estBloque(originalDoc)) return data
+	if (operation !== 'update' || data.blocked !== true || estBloque(originalDoc)) return data
 	return { ...data, sessions: [] }
 }
 
@@ -50,6 +50,6 @@ export const fermerLesSessionsAuBlocage: CollectionBeforeChangeHook = ({ data, o
 export const noterLeBlocage: CollectionAfterChangeHook = async ({ doc, operation, previousDoc, req }) => {
 	const avant = operation === 'create' ? false : estBloque(previousDoc)
 	const apres = estBloque(doc)
-	if (avant !== apres) await journaliser(req.payload, { type: apres ? 'blocage' : 'deblocage', code: 'ok' })
+	if (avant !== apres) await journaliser(req.payload, { type: apres ? 'block' : 'unblock', code: 'ok' })
 	return doc
 }

@@ -41,6 +41,6 @@ export async function journaliserUnRefus(
 	code: CodeEvenement
 ): Promise<boolean> {
 	if (!freinDeJournal.prendre(`${client}|${type}|${code}`).autorise) return false
-	await journal({ type, code, methode: 'mot-de-passe' })
+	await journal({ type, code, method: 'password' })
 	return true
 }

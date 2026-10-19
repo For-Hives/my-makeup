@@ -33,21 +33,22 @@ async function envoyer(compte: Compte, champs: Record<string, unknown> = {}): Pr
 /** The profile of an account. */
 async function profilDe(compte: Compte) {
 	const payload = await payloadDeTest()
-	const [profil] = (await payload.find({ collection: 'profils', depth: 0, where: { pro: { equals: compte.id } } })).docs
+	const [profil] = (await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } }))
+		.docs
 	if (!profil) throw new Error('La fabrique n’a pas créé de profil.')
 	return profil
 }
 
 /** A makeup artist, her profile in this status, with a main photo and a gallery of her own. */
-async function maquilleuseAvecPhotos(statut: 'publie' | 'masque' | 'brouillon') {
+async function maquilleuseAvecPhotos(status: 'published' | 'hidden' | 'draft') {
 	const compte = await creerCompte('maquilleuse')
 	const [principale, galerie] = [await envoyer(compte), await envoyer(compte)]
 	const profil = await profilDe(compte)
 	const payload = await payloadDeTest()
 	await payload.update({
-		collection: 'profils',
+		collection: 'profiles',
 		id: profil.id,
-		data: { statut, photoPrincipale: principale.id, galerie: [galerie.id] },
+		data: { status, mainPicture: principale.id, gallery: [galerie.id] },
 	})
 	return { compte, profil, principale, galerie }
 }
@@ -60,8 +61,8 @@ async function stocke(id: number): Promise<Media | null> {
 
 describe('Liste anonyme refusée ; média d’un profil publié lu ; d’un profil masqué introuvable (I04, U56)', () => {
 	test('la liste : 403 ; la photo principale et la galerie d’un profil publié : 200 ; d’un profil masqué : 404', async () => {
-		const publie = await maquilleuseAvecPhotos('publie')
-		const masque = await maquilleuseAvecPhotos('masque')
+		const publie = await maquilleuseAvecPhotos('published')
+		const masque = await maquilleuseAvecPhotos('hidden')
 
 		expect((await appelerRest('GET', '/api/media')).statut).toBe(403)
 		for (const media of [publie.principale, publie.galerie]) {
@@ -76,14 +77,14 @@ describe('Liste anonyme refusée ; média d’un profil publié lu ; d’un prof
 	})
 
 	test('un profil publié puis masqué : sa photo devient introuvable', async () => {
-		const { profil, principale } = await maquilleuseAvecPhotos('publie')
+		const { profil, principale } = await maquilleuseAvecPhotos('published')
 		const admin = await creerCompte('admin')
 		expect((await appelerRest('GET', `/api/media/${principale.id}`)).statut).toBe(200)
 
 		// The admin hides it by her choice of status: the status itself is the server's (ticket 044).
-		await appelerRest('PATCH', `/api/profils/${profil.id}`, {
+		await appelerRest('PATCH', `/api/profiles/${profil.id}`, {
 			enTetes: admin.session.enTetes,
-			corps: { statutChoisi: 'masque' },
+			corps: { chosenStatus: 'hidden' },
 		})
 
 		expect((await appelerRest('GET', `/api/media/${principale.id}`)).statut).toBe(404)
@@ -152,15 +153,15 @@ describe('A ne rattache ni ne supprime un média de B ; galerie de 11 photos ref
 		const [sienne, deB] = [await envoyer(a), await envoyer(b)]
 		const profil = await profilDe(a)
 
-		for (const corps of [{ photoPrincipale: deB.id }, { galerie: [sienne.id, deB.id] }]) {
-			const { statut, texte } = await appelerRest('PATCH', `/api/profils/${profil.id}`, {
+		for (const corps of [{ mainPicture: deB.id }, { gallery: [sienne.id, deB.id] }]) {
+			const { statut, texte } = await appelerRest('PATCH', `/api/profiles/${profil.id}`, {
 				enTetes: a.session.enTetes,
 				corps,
 			})
 			expect(statut).toBe(400)
 			expect(texte).toContain('Choisis à nouveau ta photo')
 		}
-		expect(await profilDe(a)).toMatchObject({ photoPrincipale: null, galerie: [] })
+		expect(await profilDe(a)).toMatchObject({ mainPicture: null, gallery: [] })
 	})
 
 	test('A supprime la photo de B : refusé, la photo et son objet restent', async () => {
@@ -174,28 +175,28 @@ describe('A ne rattache ni ne supprime un média de B ; galerie de 11 photos ref
 		expect(await lireUnObjet(`media/${deB.filename}`)).toBeDefined()
 	})
 
-	test('11 photos dans la galerie : refusé ; 10 : enregistrées dans l’ordre donné, gardé à la relecture', async () => {
+	test('11 photos dans la gallery : refusé ; 10 : enregistrées dans l’ordre donné, gardé à la relecture', async () => {
 		const a = await creerCompte('maquilleuse')
 		const photos: Media[] = []
 		for (let i = 0; i < 11; i += 1) photos.push(await envoyer(a))
 		const profil = await profilDe(a)
 		const ids = photos.map(({ id }) => id)
 
-		const onze = await appelerRest('PATCH', `/api/profils/${profil.id}`, {
+		const onze = await appelerRest('PATCH', `/api/profiles/${profil.id}`, {
 			enTetes: a.session.enTetes,
-			corps: { galerie: ids },
+			corps: { gallery: ids },
 		})
 		expect(onze.statut).toBe(400)
 		expect(onze.texte).toContain('Ton portfolio contient déjà 10 photos')
-		expect((await profilDe(a)).galerie).toEqual([])
+		expect((await profilDe(a)).gallery).toEqual([])
 
 		const dix = ids.slice(0, 10).reverse()
-		const enregistre = await appelerRest('PATCH', `/api/profils/${profil.id}`, {
+		const enregistre = await appelerRest('PATCH', `/api/profiles/${profil.id}`, {
 			enTetes: a.session.enTetes,
-			corps: { galerie: dix },
+			corps: { gallery: dix },
 		})
 		expect(enregistre.statut).toBe(200)
-		expect((await profilDe(a)).galerie).toEqual(dix)
+		expect((await profilDe(a)).gallery).toEqual(dix)
 	})
 })
 
@@ -238,7 +239,7 @@ describe('Adresse publique = préfixe du document + nom de fichier, à la racine
 	})
 
 	test('la route de fichier de Payload renvoie vers l’adresse publique, jamais vers le disque du serveur', async () => {
-		const { compte, principale } = await maquilleuseAvecPhotos('publie')
+		const { compte, principale } = await maquilleuseAvecPhotos('published')
 		const [admin, autre] = await Promise.all([creerCompte('admin'), creerCompte('maquilleuse')])
 		const chemin = `/api/media/file/${principale.filename}`
 

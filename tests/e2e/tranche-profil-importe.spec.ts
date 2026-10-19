@@ -31,7 +31,7 @@ const REFERENTIEL_DU_BANC = 'tests/fixtures/import/referentiel-du-banc.json'
 
 /** The keys a reading of a profile must never put into a page: what is private or reserved. */
 const CLES_PRIVEES =
-	/"(?:pro|strapiId|legacyUsername|statut|motif|verifie|verifieLe|siret|noteInterne|score|superMaquilleuse|coordonnees|telephone|contactPublic|consentiLe|sourceConsentement)"\s*:/
+	/"(?:pro|strapiId|legacyUsername|statut|status|motif|reason|verifie|verified|verifieLe|verifiedAt|siret|noteInterne|internalNote|score|superMaquilleuse|superArtist|coordonnees|contactDetails|telephone|phone|contactPublic|publicContact|consentiLe|consentedAt|sourceConsentement|consentSource)"\s*:/
 
 /**
  * Runs a command of bun in the repository, under the environment of the bench and the production
@@ -93,7 +93,7 @@ test('un profil repris de la fausse base Strapi s’affiche sur sa page publique
 	expect(source.code, source.sortie).toBe(0)
 
 	const premier = await importer(testInfo.outputPath('rapport-1.json'))
-	expect(premier.collections.profils).toMatchObject({ crees: 13, modifies: 0 })
+	expect(premier.collections.profiles).toMatchObject({ crees: 13, modifies: 0 })
 
 	// The HTML of the server, as a search engine reads it: 200, the name in the only h1.
 	const reponse = await request.get('/profil/zoe-lefevre')
@@ -124,6 +124,6 @@ test('un profil repris de la fausse base Strapi s’affiche sur sa page publique
 
 	// A second run of the import writes nothing.
 	const second = await importer(testInfo.outputPath('rapport-2.json'))
-	for (const collection of ['pros', 'profils', 'talents'])
+	for (const collection of ['pros', 'profiles', 'talents'])
 		expect(second.collections[collection], collection).toMatchObject({ crees: 0, modifies: 0 })
 })

@@ -22,7 +22,7 @@ test.describe('L’admin supprime un compte et tout part avec lui', () => {
 		const payload = await payloadDeTest()
 		const admin = await creerCompte('admin')
 		const compte = await creerCompte('maquilleuse')
-		const { docs } = await payload.find({ collection: 'profils', depth: 0, where: { pro: { equals: compte.id } } })
+		const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })
 		const [fiche] = docs
 		if (!fiche) throw new Error('pas de profil')
 		const media = await payload.create({
@@ -31,17 +31,17 @@ test.describe('L’admin supprime un compte et tout part avec lui', () => {
 			file: fichierPourPayload(),
 		})
 		const profil = await payload.update({
-			collection: 'profils',
+			collection: 'profiles',
 			id: fiche.id,
 			data: {
-				prenom: 'Léa',
-				nom: 'Fictive',
-				specialite: 'Mariée',
-				commune: { nom: 'Lille', codeInsee: '59350' },
-				photoPrincipale: media.id,
+				firstName: 'Léa',
+				lastName: 'Fictive',
+				specialty: 'Mariée',
+				city: { name: 'Lille', inseeCode: '59350' },
+				mainPicture: media.id,
 			},
 		})
-		const existe = async (collection: 'pros' | 'profils' | 'media', id: number | string) =>
+		const existe = async (collection: 'pros' | 'profiles' | 'media', id: number | string) =>
 			(await payload.findByID({ collection, id, depth: 0, disableErrors: true, overrideAccess: true })) !== null
 		const cle = `media/${media.filename}`
 
@@ -60,14 +60,14 @@ test.describe('L’admin supprime un compte et tout part avec lui', () => {
 		await ouvrir()
 		await page.getByRole('button', { name: 'Annuler' }).click()
 		expect(await existe('pros', compte.id)).toBe(true)
-		expect(await existe('profils', profil.id)).toBe(true)
+		expect(await existe('profiles', profil.id)).toBe(true)
 
 		await ouvrir()
 		await page.getByRole('button', { name: 'Confirmer' }).click()
 		await page.waitForURL(/\/admin\/collections\/pros(\?.*)?$/, { timeout: 30_000 })
 
 		expect(await existe('pros', compte.id)).toBe(false)
-		expect(await existe('profils', profil.id)).toBe(false)
+		expect(await existe('profiles', profil.id)).toBe(false)
 		expect(await existe('media', media.id)).toBe(false)
 		expect(await lireUnObjet(cle)).toBeUndefined()
 		expect(await lireUnObjet(`deleted/${cle}`)).toBeDefined()

@@ -24,7 +24,7 @@ async function utilisateurDe(payload: Payload, compte: Maquilleuse): Promise<Uti
 
 async function profilStocke(payload: Payload, compte: Maquilleuse) {
 	const { docs } = await payload.find({
-		collection: 'profils',
+		collection: 'profiles',
 		depth: 0,
 		overrideAccess: true,
 		where: { pro: { equals: compte.id } },
@@ -47,17 +47,17 @@ describe('E19-E29 : la disponibilité enregistrée est celle de la base', () => 
 			ok: true,
 			valeurs: { disponible: false },
 		})
-		expect((await profilStocke(payload, a)).disponible).toBe(false)
+		expect((await profilStocke(payload, a)).available).toBe(false)
 
 		expect(await enregistrerDisponibilite(payload, utilisateur, { disponible: true })).toEqual({
 			ok: true,
 			valeurs: { disponible: true },
 		})
 		const apres = await profilStocke(payload, a)
-		expect(apres.disponible).toBe(true)
+		expect(apres.available).toBe(true)
 		expect(apres.slug).toBe(slug)
 		const apresB = await profilStocke(payload, b)
-		expect(apresB.disponible).toBe(avantB.disponible)
+		expect(apresB.available).toBe(avantB.available)
 		expect(apresB.updatedAt).toBe(avantB.updatedAt)
 	})
 
@@ -65,8 +65,8 @@ describe('E19-E29 : la disponibilité enregistrée est celle de la base', () => 
 		const a = await creerCompte('maquilleuse')
 		const payload = await payloadDeTest()
 		const profil = await profilStocke(payload, a)
-		await payload.db.updateOne({ collection: 'profils', id: profil.id, data: { disponible: null }, returning: false })
-		expect((await profilStocke(payload, a)).disponible ?? null).toBeNull()
+		await payload.db.updateOne({ collection: 'profiles', id: profil.id, data: { available: null }, returning: false })
+		expect((await profilStocke(payload, a)).available ?? null).toBeNull()
 
 		const resultat = await enregistrerDisponibilite(payload, await utilisateurDe(payload, a), { disponible: true })
 		expect(resultat).toEqual({ ok: true, valeurs: { disponible: true } })
@@ -80,20 +80,20 @@ describe('E19-E29 : indisponible, le profil sort de la liste publique', () => {
 		const utilisateur = await utilisateurDe(payload, a)
 		const id = (await profilStocke(payload, a)).id
 		await payload.update({
-			collection: 'profils',
+			collection: 'profiles',
 			id,
 			data: {
-				prenom: 'Léa',
-				nom: 'Fictive',
+				firstName: 'Léa',
+				lastName: 'Fictive',
 				description: 'Maquillage fictif pour les mariages et les soirées. '.repeat(4),
-				specialite: 'Mariée',
+				specialty: 'Mariée',
 				competences: [{ nom: 'Teint' }],
 			},
 		})
 		const listee = async () =>
 			(
 				await payload.find({
-					collection: 'profils',
+					collection: 'profiles',
 					depth: 0,
 					limit: 1,
 					overrideAccess: false,
@@ -112,7 +112,7 @@ describe('E19-E29 : indisponible, le profil sort de la liste publique', () => {
 
 describe('U32, I02 : une requête forgée est refusée, rien ne change', () => {
 	test.each([
-		['clé réservée', { disponible: false, statut: 'publie' }],
+		['clé réservée', { disponible: false, status: 'published' }],
 		['clé d’identifiant', { disponible: false, id: 1 }],
 		['texte au lieu d’un booléen', { disponible: 'false' }],
 		['rien', {}],
@@ -127,7 +127,7 @@ describe('U32, I02 : une requête forgée est refusée, rien ne change', () => {
 		expect(resultat).toEqual({ ok: false, message: MESSAGE_ECHEC })
 		const apres = await profilStocke(payload, a)
 		expect(apres.updatedAt).toBe(avant.updatedAt)
-		expect(apres.disponible).toBe(avant.disponible)
+		expect(apres.available).toBe(avant.available)
 	})
 
 	test('un compte sans profil ne crée rien', async () => {
@@ -138,6 +138,6 @@ describe('U32, I02 : une requête forgée est refusée, rien ne change', () => {
 			disponible: false,
 		})
 		expect(resultat).toEqual({ ok: false, message: MESSAGE_ECHEC })
-		expect((await payload.count({ collection: 'profils', overrideAccess: true })).totalDocs).toBe(0)
+		expect((await payload.count({ collection: 'profiles', overrideAccess: true })).totalDocs).toBe(0)
 	})
 })

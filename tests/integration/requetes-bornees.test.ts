@@ -39,19 +39,19 @@ beforeAll(async () => {
 		admin: { nom: 'admin', enTetes: admin.session.enTetes },
 	}
 	const profilDe = async (compte: Compte) =>
-		(await payload.find({ collection: 'profils', depth: 0, where: { pro: { equals: compte.id } } })).docs[0]?.id ?? 0
+		(await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })).docs[0]?.id ?? 0
 	;[profilA, profilB] = [await profilDe(a), await profilDe(b)]
 	await payload.update({
-		collection: 'profils',
+		collection: 'profiles',
 		id: profilA,
 		data: {
-			statut: 'publie',
-			coordonnees: { telephone: PRIVE_DE_A.telephone, email: PRIVE_DE_A.email },
-			noteInterne: PRIVE_DE_A.note,
+			status: 'published',
+			contactDetails: { phone: PRIVE_DE_A.telephone, email: PRIVE_DE_A.email },
+			internalNote: PRIVE_DE_A.note,
 			score: 4.5,
 		},
 	})
-	await payload.update({ collection: 'profils', id: profilB, data: { statut: 'publie', score: 2 } })
+	await payload.update({ collection: 'profiles', id: profilB, data: { status: 'published', score: 2 } })
 	await payload.create({
 		collection: 'talents',
 		data: { title: 'Talent fictif', slug: 'talent-fictif', _status: 'published' },
@@ -98,7 +98,7 @@ describe('21 conditions : refus ; 20 : réponse (U60)', () => {
 	test('par REST, pour l’anonyme, une maquilleuse et la rédaction, sur chaque collection publique', async () => {
 		expect(CONDITIONS_MAX).toBe(20)
 		for (const lecteur of [lecteurs.anonyme, lecteurs.maquilleuse, lecteurs.redaction])
-			for (const collection of ['profils', 'talents', 'articles'] as const) {
+			for (const collection of ['profiles', 'talents', 'articles'] as const) {
 				const vingt = await lire(`/api/${collection}?${conditions(20)}`, lecteur)
 				expect([lecteur.nom, collection, vingt.statut]).toEqual([lecteur.nom, collection, 200])
 				const vingtEtUne = await lire(`/api/${collection}?${conditions(21)}`, lecteur)
@@ -110,38 +110,38 @@ describe('21 conditions : refus ; 20 : réponse (U60)', () => {
 	test('les conditions se comptent dans les « et » et les « ou » imbriqués, et sur le décompte aussi', async () => {
 		const imbriquees = (n: number) =>
 			Array.from({ length: n }, (_, i) => `where[and][0][or][${i % 2}][and][${i}][slug][equals]=s-${i}`).join('&')
-		expect((await lire(`/api/profils?${imbriquees(20)}`)).statut).toBe(200)
-		expect((await lire(`/api/profils?${imbriquees(21)}`)).statut).toBe(400)
+		expect((await lire(`/api/profiles?${imbriquees(20)}`)).statut).toBe(200)
+		expect((await lire(`/api/profiles?${imbriquees(21)}`)).statut).toBe(400)
 		// Two operators on one field are two conditions.
 		const deuxParChamp = Array.from(
 			{ length: 11 },
 			(_, i) => `where[or][${i}][slug][equals]=s-${i}&where[or][${i}][slug][not_equals]=t-${i}`
 		).join('&')
-		expect((await lire(`/api/profils?${deuxParChamp}`)).statut).toBe(400)
-		expect((await lire(`/api/profils/count?${conditions(21)}`)).statut).toBe(400)
-		expect((await lire(`/api/profils/count?${conditions(20)}`)).statut).toBe(200)
+		expect((await lire(`/api/profiles?${deuxParChamp}`)).statut).toBe(400)
+		expect((await lire(`/api/profiles/count?${conditions(21)}`)).statut).toBe(400)
+		expect((await lire(`/api/profiles/count?${conditions(20)}`)).statut).toBe(200)
 	})
 
 	test('refusée avant la base : aucune requête ne part', async () => {
-		expect(await appelsALaBase(() => lire(`/api/profils?${conditions(21)}`))).toBe(0)
+		expect(await appelsALaBase(() => lire(`/api/profiles?${conditions(21)}`))).toBe(0)
 		expect(await appelsALaBase(() => lire(`/api/talents?${conditions(21)}`))).toBe(0)
 		// The control: the same request with 20 conditions reaches the database.
-		expect(await appelsALaBase(() => lire(`/api/profils?${conditions(20)}`))).toBeGreaterThan(0)
+		expect(await appelsALaBase(() => lire(`/api/profiles?${conditions(20)}`))).toBeGreaterThan(0)
 	})
 
 	test('par l’API locale avec les règles actives : de même ; le code du serveur, sans règles, n’est pas borné', async () => {
 		const ou = (n: number): Where => ({ or: Array.from({ length: n }, (_, i) => ({ slug: { equals: `s-${i}` } })) })
-		await expect(payload.find({ collection: 'profils', overrideAccess: false, where: ou(21) })).rejects.toMatchObject({
+		await expect(payload.find({ collection: 'profiles', overrideAccess: false, where: ou(21) })).rejects.toMatchObject({
 			status: 400,
 			message: MESSAGE_TROP_DE_CONDITIONS,
 		})
-		expect((await payload.find({ collection: 'profils', overrideAccess: false, where: ou(20) })).totalDocs).toBe(0)
-		expect((await payload.find({ collection: 'profils', where: ou(21) })).totalDocs).toBe(0)
+		expect((await payload.find({ collection: 'profiles', overrideAccess: false, where: ou(20) })).totalDocs).toBe(0)
+		expect((await payload.find({ collection: 'profiles', where: ou(21) })).totalDocs).toBe(0)
 	})
 
 	test('un admin passe : la borne est celle de la lecture publique', async () => {
-		expect((await lire(`/api/profils?${conditions(21)}`, lecteurs.admin)).statut).toBe(200)
-		expect((await lire(`/api/profils?${conditions(60)}`, lecteurs.admin)).statut).toBe(200)
+		expect((await lire(`/api/profiles?${conditions(21)}`, lecteurs.admin)).statut).toBe(200)
+		expect((await lire(`/api/profiles?${conditions(60)}`, lecteurs.admin)).statut).toBe(200)
 	})
 
 	test('chaque collection porte la borne, en premier, celles que Payload ajoute lui-même comprises', () => {
@@ -153,7 +153,7 @@ describe('21 conditions : refus ; 20 : réponse (U60)', () => {
 			expect.arrayContaining([
 				'admins',
 				'pros',
-				'profils',
+				'profiles',
 				'media',
 				'talents',
 				'articles',
@@ -189,25 +189,25 @@ describe('Filtre anonyme sur email, hash ou sessions, même par relation : refus
 			'pro.legacyBcrypt',
 			'pro.resetPasswordToken',
 		]) {
-			const vise = await lire(`/api/profils?where[${chemin}][equals]=${encodeURIComponent(a.email)}`)
-			const autre = await lire(`/api/profils?where[${chemin}][equals]=personne%40example.test`)
+			const vise = await lire(`/api/profiles?where[${chemin}][equals]=${encodeURIComponent(a.email)}`)
+			const autre = await lire(`/api/profiles?where[${chemin}][equals]=personne%40example.test`)
 			expect([chemin, vise.statut]).toEqual([chemin, 400])
 			// The same answer whether the value matches or not: nothing to learn from it.
 			expect(vise.texte).toBe(autre.texte)
 			expect(vise.texte).not.toContain(a.email)
 		}
-		expect((await lire(`/api/profils?where[pro.sessions.expiresAt][exists]=true`)).statut).toBe(400)
+		expect((await lire(`/api/profiles?where[pro.sessions.expiresAt][exists]=true`)).statut).toBe(400)
 		expect((await lire(`/api/media?where[owner.email][equals]=${encodeURIComponent(a.email)}`)).statut).toBe(400)
 		// Through the gallery: a filter nested in a photo of the profile.
 		expect(
-			(await lire(`/api/profils?where[galerie][contains][owner.email][equals]=${encodeURIComponent(a.email)}`)).statut
+			(await lire(`/api/profiles?where[galerie][contains][owner.email][equals]=${encodeURIComponent(a.email)}`)).statut
 		).toBe(400)
 		expect((await lire(`/api/pros?where[email][equals]=${encodeURIComponent(a.email)}`)).statut).toBe(400)
 	})
 
 	test('un tri sur l’un d’eux : refusé de même', async () => {
 		for (const tri of ['pro.email', '-pro.email', 'pro.hash', 'title,pro.sessions.id'])
-			expect([tri, (await lire(`/api/profils?sort=${tri}`)).statut]).toEqual([tri, 400])
+			expect([tri, (await lire(`/api/profiles?sort=${tri}`)).statut]).toEqual([tri, 400])
 	})
 
 	test('une maquilleuse ne filtre ni ne trie son propre compte sur son hash, son sel ou ses sessions', async () => {
@@ -240,9 +240,9 @@ describe('Filtre anonyme sur email, hash ou sessions, même par relation : refus
 describe('Filtre ou tri sur coordonnées, note interne ou score : refus sans fuite ; un admin passe', () => {
 	/** Each filter twice: on the stored value, and on a value nobody has. */
 	const FILTRES: [string, string, string][] = [
-		['coordonnees.telephone', PRIVE_DE_A.telephone, '01 00 00 00 00'],
-		['coordonnees.email', PRIVE_DE_A.email, 'personne@example.test'],
-		['noteInterne', PRIVE_DE_A.note, 'Aucune note'],
+		['contactDetails.phone', PRIVE_DE_A.telephone, '01 00 00 00 00'],
+		['contactDetails.email', PRIVE_DE_A.email, 'personne@example.test'],
+		['internalNote', PRIVE_DE_A.note, 'Aucune note'],
 		['score', '4.5', '1'],
 	]
 
@@ -250,8 +250,11 @@ describe('Filtre ou tri sur coordonnées, note interne ou score : refus sans fui
 		for (const lecteur of [lecteurs.anonyme, lecteurs.maquilleuse, lecteurs.redaction])
 			for (const [champ, existe, absente] of FILTRES)
 				for (const operateur of ['equals', 'like']) {
-					const vise = await lire(`/api/profils?where[${champ}][${operateur}]=${encodeURIComponent(existe)}`, lecteur)
-					const autre = await lire(`/api/profils?where[${champ}][${operateur}]=${encodeURIComponent(absente)}`, lecteur)
+					const vise = await lire(`/api/profiles?where[${champ}][${operateur}]=${encodeURIComponent(existe)}`, lecteur)
+					const autre = await lire(
+						`/api/profiles?where[${champ}][${operateur}]=${encodeURIComponent(absente)}`,
+						lecteur
+					)
 					expect([lecteur.nom, champ, operateur, vise.statut]).toEqual([lecteur.nom, champ, operateur, 400])
 					expect(vise.texte).toBe(autre.texte)
 					expect(vise.corps.errors?.[0]?.message).toBe(MESSAGE_CHAMP_PRIVE)
@@ -261,8 +264,8 @@ describe('Filtre ou tri sur coordonnées, note interne ou score : refus sans fui
 
 	test('un tri sur le score ou les coordonnées : refusé, rien de l’ordre ne sort', async () => {
 		for (const lecteur of [lecteurs.anonyme, lecteurs.maquilleuse, lecteurs.redaction])
-			for (const tri of ['score', '-score', 'coordonnees.telephone', 'noteInterne', 'slug,-score'])
-				expect([lecteur.nom, tri, (await lire(`/api/profils?sort=${tri}`, lecteur)).statut]).toEqual([
+			for (const tri of ['score', '-score', 'contactDetails.phone', 'internalNote', 'slug,-score'])
+				expect([lecteur.nom, tri, (await lire(`/api/profiles?sort=${tri}`, lecteur)).statut]).toEqual([
 					lecteur.nom,
 					tri,
 					400,
@@ -270,30 +273,41 @@ describe('Filtre ou tri sur coordonnées, note interne ou score : refus sans fui
 	})
 
 	test('les autres champs privés du profil ne servent pas non plus de filtre ni de tri au public (Payload)', async () => {
-		for (const champ of ['statut', 'motif', 'verifie', 'siret', 'pro', 'strapiId', 'legacyUsername', 'contactPublic']) {
-			expect([champ, (await lire(`/api/profils?where[${champ}][exists]=true`)).statut]).toEqual([champ, 400])
-			expect([champ, (await lire(`/api/profils?sort=-${champ}`)).statut]).toEqual([champ, 400])
+		for (const champ of [
+			'status',
+			'reason',
+			'verified',
+			'siret',
+			'pro',
+			'strapiId',
+			'legacyUsername',
+			'publicContact',
+		]) {
+			expect([champ, (await lire(`/api/profiles?where[${champ}][exists]=true`)).statut]).toEqual([champ, 400])
+			expect([champ, (await lire(`/api/profiles?sort=-${champ}`)).statut]).toEqual([champ, 400])
 		}
 	})
 
 	test('par l’API locale avec les règles actives : de même', async () => {
 		await expect(
-			payload.find({ collection: 'profils', overrideAccess: false, where: { score: { greater_than: 3 } } })
+			payload.find({ collection: 'profiles', overrideAccess: false, where: { score: { greater_than: 3 } } })
 		).rejects.toMatchObject({ status: 400 })
-		await expect(payload.find({ collection: 'profils', overrideAccess: false, sort: '-score' })).rejects.toMatchObject({
-			status: 400,
-		})
+		await expect(payload.find({ collection: 'profiles', overrideAccess: false, sort: '-score' })).rejects.toMatchObject(
+			{
+				status: 400,
+			}
+		)
 	})
 
 	test('un admin filtre et trie sur eux', async () => {
 		const idsDe = async (chemin: string) => (await lire(chemin, lecteurs.admin)).corps.docs?.map(({ id }) => id)
-		expect(await idsDe('/api/profils?where[score][greater_than]=3')).toEqual([profilA])
-		expect(await idsDe('/api/profils?sort=-score&where[score][exists]=true')).toEqual([profilA, profilB])
-		expect(await idsDe('/api/profils?sort=score&where[score][exists]=true')).toEqual([profilB, profilA])
+		expect(await idsDe('/api/profiles?where[score][greater_than]=3')).toEqual([profilA])
+		expect(await idsDe('/api/profiles?sort=-score&where[score][exists]=true')).toEqual([profilA, profilB])
+		expect(await idsDe('/api/profiles?sort=score&where[score][exists]=true')).toEqual([profilB, profilA])
 		expect(
-			await idsDe(`/api/profils?where[coordonnees.telephone][equals]=${encodeURIComponent(PRIVE_DE_A.telephone)}`)
+			await idsDe(`/api/profiles?where[contactDetails.phone][equals]=${encodeURIComponent(PRIVE_DE_A.telephone)}`)
 		).toEqual([profilA])
-		expect(await idsDe('/api/profils?where[noteInterne][like]=fictive')).toEqual([profilA])
+		expect(await idsDe('/api/profiles?where[internalNote][like]=fictive')).toEqual([profilA])
 	})
 })
 
@@ -315,7 +329,7 @@ describe('Un identifiant qu’aucun document ne peut porter : refusé avant la b
 	test('modifier ou supprimer par cet identifiant : refusé (403), ou par Payload lui-même (400) quand il n’y lit aucun nombre', async () => {
 		const ecrivains = [lecteurs.maquilleuse, lecteurs.redaction, lecteurs.admin]
 		for (const lecteur of ecrivains)
-			for (const collection of ['profils', 'pros', 'admins', 'talents', 'articles'])
+			for (const collection of ['profiles', 'pros', 'admins', 'talents', 'articles'])
 				for (const id of IMPOSSIBLES) {
 					const modification = await appelerRest('PATCH', `/api/${collection}/${id}`, {
 						enTetes: lecteur.enTetes,
@@ -335,7 +349,7 @@ describe('Un identifiant qu’aucun document ne peut porter : refusé avant la b
 
 describe('Le champ « profil » des comptes (une jointure) dans une adresse saisie à la main : jamais une erreur 500 (ticket 224)', () => {
 	test('un admin le filtre (200) ; tout autre lecteur est refusé (400 ou 403), jamais 500', async () => {
-		const chemin = '/api/pros?where[profil][exists]=true'
+		const chemin = '/api/pros?where[profile][exists]=true'
 
 		expect((await lire(chemin, lecteurs.admin)).statut).toBe(200)
 		for (const lecteur of [lecteurs.anonyme, lecteurs.maquilleuse, lecteurs.redaction])

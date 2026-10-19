@@ -39,30 +39,27 @@ export async function rapprocherLeStockageEtLaBase(
 			})
 			return { docs: docs as MediaLu[], hasNextPage }
 		}),
-		toutLire<{ photoPrincipale?: unknown; galerie?: unknown }>(page =>
+		toutLire<{ mainPicture?: unknown; gallery?: unknown }>(page =>
 			payload.find({
 				...lecture,
-				collection: 'profils',
+				collection: 'profiles',
 				page,
-				select: { photoPrincipale: true, galerie: true },
+				select: { mainPicture: true, gallery: true },
 				sort: 'id',
 			})
 		),
-		toutLire<{ galerie?: unknown }>(page =>
-			payload.find({ ...lecture, collection: 'articles', page, select: { galerie: true }, sort: 'id' })
+		toutLire<{ gallery?: unknown }>(page =>
+			payload.find({ ...lecture, collection: 'articles', page, select: { gallery: true }, sort: 'id' })
 		),
-		toutLire<{ version?: { galerie?: unknown } }>(page =>
+		toutLire<{ version?: { gallery?: unknown } }>(page =>
 			payload.findVersions({ ...lecture, collection: 'articles', page, sort: 'id' })
 		),
 	])
 	const utilises = new Set(
 		[
-			...profils.flatMap(({ photoPrincipale, galerie }) => [
-				...photosNommees(photoPrincipale),
-				...photosNommees(galerie),
-			]),
-			...articles.flatMap(({ galerie }) => photosNommees(galerie)),
-			...versions.flatMap(({ version }) => photosNommees(version?.galerie)),
+			...profils.flatMap(({ mainPicture, gallery }) => [...photosNommees(mainPicture), ...photosNommees(gallery)]),
+			...articles.flatMap(({ gallery }) => photosNommees(gallery)),
+			...versions.flatMap(({ version }) => photosNommees(version?.gallery)),
 		].map(String)
 	)
 	return rapprocher({ objets, medias, mediasUtilises: utilises })

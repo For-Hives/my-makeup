@@ -70,13 +70,13 @@ export interface Config {
   collections: {
     admins: Admin;
     pros: Pro;
-    profils: Profil;
+    profiles: Profile;
     media: Media;
     talents: Talent;
     articles: Article;
-    'auth-evenements': AuthEvenement;
-    demandes: Demande;
-    'comptes-supprimes': ComptesSupprime;
+    'auth-events': AuthEvent;
+    'contact-requests': ContactRequest;
+    'deleted-accounts': DeletedAccount;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -84,19 +84,19 @@ export interface Config {
   };
   collectionsJoins: {
     pros: {
-      profil: 'profils';
+      profile: 'profiles';
     };
   };
   collectionsSelect: {
     admins: AdminsSelect<false> | AdminsSelect<true>;
     pros: ProsSelect<false> | ProsSelect<true>;
-    profils: ProfilsSelect<false> | ProfilsSelect<true>;
+    profiles: ProfilesSelect<false> | ProfilesSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
     talents: TalentsSelect<false> | TalentsSelect<true>;
     articles: ArticlesSelect<false> | ArticlesSelect<true>;
-    'auth-evenements': AuthEvenementsSelect<false> | AuthEvenementsSelect<true>;
-    demandes: DemandesSelect<false> | DemandesSelect<true>;
-    'comptes-supprimes': ComptesSupprimesSelect<false> | ComptesSupprimesSelect<true>;
+    'auth-events': AuthEventsSelect<false> | AuthEventsSelect<true>;
+    'contact-requests': ContactRequestsSelect<false> | ContactRequestsSelect<true>;
+    'deleted-accounts': DeletedAccountsSelect<false> | DeletedAccountsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -160,7 +160,7 @@ export interface ProAuthOperations {
  */
 export interface Admin {
   id: number;
-  role: 'admin' | 'redaction';
+  role: 'admin' | 'editor';
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -188,20 +188,20 @@ export interface Pro {
   /**
    * Nom d’affichage, choisi à l’inscription. Plusieurs comptes peuvent porter le même.
    */
-  nom?: string | null;
+  name?: string | null;
   /**
    * Bloquer ferme les sessions ouvertes du compte et refuse sa connexion. Débloquer rend l’accès.
    */
-  bloque?: boolean | null;
-  derniereConnexion?: string | null;
+  blocked?: boolean | null;
+  lastSignInAt?: string | null;
   /**
    * Comment le compte se connectait sur l’ancien site : local, google ou facebook. « google » aussi pour un compte créé par la connexion Google, qui ne s’ouvre que pour ceux-là.
    */
   legacyProvider?: string | null;
   strapiId?: number | null;
   legacyBcrypt?: string | null;
-  profil?: {
-    docs?: (number | Profil)[];
+  profile?: {
+    docs?: (number | Profile)[];
     hasNextPage?: boolean;
     totalDocs?: number;
   };
@@ -227,70 +227,70 @@ export interface Pro {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "profils".
+ * via the `definition` "profiles".
  */
-export interface Profil {
+export interface Profile {
   id: number;
   pro: number | Pro;
   /**
    * Calculée à la création du profil, elle ne change plus : /profil/<slug>.
    */
   slug: string;
-  prenom?: string | null;
-  nom?: string | null;
-  nomArtiste?: string | null;
-  specialite?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  artistName?: string | null;
+  specialty?: string | null;
   /**
    * Une commune de la liste officielle, avec son code INSEE. Jamais une adresse.
    */
-  commune?: {
-    nom?: string | null;
-    codeInsee?: string | null;
+  city?: {
+    name?: string | null;
+    inseeCode?: string | null;
     /**
      * Calculé depuis le code INSEE.
      */
-    departement?: string | null;
+    department?: string | null;
     latitude?: number | null;
     longitude?: number | null;
   };
-  rayonKm?: number | null;
+  radiusKm?: number | null;
   /**
    * Se déplace chez la cliente. Vide tant que la maquilleuse ne l’a pas dit.
    */
-  aDomicile?: boolean | null;
+  homeService?: boolean | null;
   description?: string | null;
-  disponible?: boolean | null;
-  photoPrincipale?: (number | null) | Media;
+  available?: boolean | null;
+  mainPicture?: (number | null) | Media;
   /**
    * Dans l’ordre d’affichage, 10 photos au plus.
    */
-  galerie?: (number | Media)[] | null;
-  reseaux?: {
+  gallery?: (number | Media)[] | null;
+  networks?: {
     youtube?: string | null;
     facebook?: string | null;
     instagram?: string | null;
-    siteWeb?: string | null;
+    website?: string | null;
     linkedin?: string | null;
   };
   /**
    * Fermées au public. La page du profil ne les montre que si « Coordonnées publiques » est cochée.
    */
-  coordonnees?: {
-    telephone?: string | null;
+  contactDetails?: {
+    phone?: string | null;
     email?: string | null;
   };
   /**
    * Choisi par la maquilleuse : ses coordonnées s’affichent sur la page de son profil.
    */
-  contactPublic?: boolean | null;
+  publicContact?: boolean | null;
   /**
    * Posée par le serveur quand les coordonnées deviennent publiques.
    */
-  consentiLe?: string | null;
+  consentedAt?: string | null;
   /**
    * Posée par le serveur, avec la date.
    */
-  sourceConsentement?: ('maquilleuse' | 'admin' | 'import') | null;
+  consentSource?: ('artist' | 'admin' | 'import') | null;
   prestations?:
     | {
         nom?: string | null;
@@ -356,17 +356,17 @@ export interface Profil {
   /**
    * Posé par le serveur à chaque enregistrement, selon le statut choisi en dessous. Seuls les profils publiés sont lus par le public.
    */
-  statut?: ('brouillon' | 'publie' | 'masque') | null;
+  status?: ('draft' | 'published' | 'hidden') | null;
   /**
    * Automatique : le serveur pose le statut, brouillon pour un profil entièrement vide, publié sinon. Un autre choix est gardé, quoi que la maquilleuse enregistre.
    */
-  statutChoisi?: ('automatique' | 'brouillon' | 'publie' | 'masque') | null;
+  chosenStatus?: ('automatic' | 'draft' | 'published' | 'hidden') | null;
   /**
    * Pourquoi le profil est masqué. La maquilleuse le lit.
    */
-  motif?: string | null;
-  verifie?: boolean | null;
-  verifieLe?: string | null;
+  reason?: string | null;
+  verified?: boolean | null;
+  verifiedAt?: string | null;
   /**
    * 14 chiffres, sans espace.
    */
@@ -374,7 +374,7 @@ export interface Profil {
   /**
    * Lue par les admins seulement, jamais par la maquilleuse.
    */
-  noteInterne?: string | null;
+  internalNote?: string | null;
   /**
    * Repris de l’ancien site. Ce n’est pas la complétude. Lu par les admins seulement.
    */
@@ -382,35 +382,35 @@ export interface Profil {
   /**
    * Le badge des cartes de la recherche. Public.
    */
-  superMaquilleuse?: boolean | null;
+  superArtist?: boolean | null;
   /**
    * Critères remplis, sur 13. Calculée par le serveur.
    */
-  completude?: number | null;
+  completeness?: number | null;
   /**
    * Photo principale, ville et spécialité. Calculé par le serveur.
    */
-  actif?: boolean | null;
+  active?: boolean | null;
   /**
    * Date à laquelle la case du dessus a pris sa valeur. Posée par le serveur.
    */
-  actifDepuis?: string | null;
+  activeSince?: string | null;
   /**
    * Les six conditions du profil publiable. Calculé par le serveur.
    */
-  publiable?: boolean | null;
+  publishable?: boolean | null;
   /**
    * Date à laquelle la case du dessus a pris sa valeur. Posée par le serveur.
    */
-  publiableDepuis?: string | null;
+  publishableSince?: string | null;
   /**
    * Aucune des six conditions : le profil reste en brouillon. Calculé par le serveur.
    */
-  entierementVide?: boolean | null;
+  fullyEmpty?: boolean | null;
   /**
    * Date à laquelle la case du dessus a pris sa valeur. Posée par le serveur.
    */
-  entierementVideDepuis?: string | null;
+  fullyEmptySince?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -501,7 +501,7 @@ export interface Talent {
   /**
    * De 50 à 60 caractères, différent du titre affiché en haut de la page. Vide : le titre du talent, suivi du nom du site.
    */
-  titreDeLaPage?: string | null;
+  pageTitle?: string | null;
   description?: string | null;
   seo_description?: string | null;
   /**
@@ -539,7 +539,7 @@ export interface Article {
   /**
    * Des images de la rédaction, jamais la photo d’une maquilleuse : JPEG, PNG, WebP, GIF ou AVIF.
    */
-  galerie?: (number | Media)[] | null;
+  gallery?: (number | Media)[] | null;
   publishedAt?: string | null;
   strapiId?: number | null;
   updatedAt: string;
@@ -548,21 +548,21 @@ export interface Article {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "auth-evenements".
+ * via the `definition` "auth-events".
  */
-export interface AuthEvenement {
+export interface AuthEvent {
   id: number;
   type:
-    | 'connexion'
-    | 'deconnexion'
-    | 'deconnexion-partout'
-    | 'inscription'
+    | 'sign-in'
+    | 'sign-out'
+    | 'sign-out-everywhere'
+    | 'sign-up'
     | 'confirmation'
-    | 'renvoi'
-    | 'mot-de-passe-oublie'
-    | 'reinitialisation'
-    | 'blocage'
-    | 'deblocage';
+    | 'resend'
+    | 'forgot-password'
+    | 'password-reset'
+    | 'block'
+    | 'unblock';
   code:
     | 'ok'
     | 'heritee'
@@ -581,26 +581,26 @@ export interface AuthEvenement {
     | 'retour-invalide'
     | 'inconnu'
     | 'champ-piege';
-  methode?: ('mot-de-passe' | 'google') | null;
-  dureeMs?: number | null;
+  method?: ('password' | 'google') | null;
+  durationMs?: number | null;
   date: string;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "demandes".
+ * via the `definition` "contact-requests".
  */
-export interface Demande {
+export interface ContactRequest {
   id: number;
   type: 'contact';
   /**
    * Passe le message à « Répondue » quand tu as répondu à la personne, ou à « Spam » si ce n’est pas un vrai message.
    */
-  statut: 'nouvelle' | 'transmise' | 'repondue' | 'spam';
-  etatMail: 'en-attente' | 'envoye' | 'echec';
-  prenom: string;
-  nom: string;
+  status: 'new' | 'forwarded' | 'answered' | 'spam';
+  mailStatus: 'pending' | 'sent' | 'failed';
+  firstName: string;
+  lastName: string;
   email: string;
-  telephone: string;
+  phone: string;
   message: string;
   updatedAt: string;
   createdAt: string;
@@ -609,9 +609,9 @@ export interface Demande {
  * Les comptes de l’ancien site supprimés dans la v3. L’import ne les reprend jamais : leur identifiant seul est gardé.
  *
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "comptes-supprimes".
+ * via the `definition` "deleted-accounts".
  */
-export interface ComptesSupprime {
+export interface DeletedAccount {
   id: number;
   strapiId: number;
   date: string;
@@ -649,8 +649,8 @@ export interface PayloadLockedDocument {
         value: number | Pro;
       } | null)
     | ({
-        relationTo: 'profils';
-        value: number | Profil;
+        relationTo: 'profiles';
+        value: number | Profile;
       } | null)
     | ({
         relationTo: 'media';
@@ -665,16 +665,16 @@ export interface PayloadLockedDocument {
         value: number | Article;
       } | null)
     | ({
-        relationTo: 'auth-evenements';
-        value: number | AuthEvenement;
+        relationTo: 'auth-events';
+        value: number | AuthEvent;
       } | null)
     | ({
-        relationTo: 'demandes';
-        value: number | Demande;
+        relationTo: 'contact-requests';
+        value: number | ContactRequest;
       } | null)
     | ({
-        relationTo: 'comptes-supprimes';
-        value: number | ComptesSupprime;
+        relationTo: 'deleted-accounts';
+        value: number | DeletedAccount;
       } | null);
   globalSlug?: string | null;
   user:
@@ -755,13 +755,13 @@ export interface AdminsSelect<T extends boolean = true> {
  * via the `definition` "pros_select".
  */
 export interface ProsSelect<T extends boolean = true> {
-  nom?: T;
-  bloque?: T;
-  derniereConnexion?: T;
+  name?: T;
+  blocked?: T;
+  lastSignInAt?: T;
   legacyProvider?: T;
   strapiId?: T;
   legacyBcrypt?: T;
-  profil?: T;
+  profile?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -782,48 +782,48 @@ export interface ProsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "profils_select".
+ * via the `definition` "profiles_select".
  */
-export interface ProfilsSelect<T extends boolean = true> {
+export interface ProfilesSelect<T extends boolean = true> {
   pro?: T;
   slug?: T;
-  prenom?: T;
-  nom?: T;
-  nomArtiste?: T;
-  specialite?: T;
-  commune?:
+  firstName?: T;
+  lastName?: T;
+  artistName?: T;
+  specialty?: T;
+  city?:
     | T
     | {
-        nom?: T;
-        codeInsee?: T;
-        departement?: T;
+        name?: T;
+        inseeCode?: T;
+        department?: T;
         latitude?: T;
         longitude?: T;
       };
-  rayonKm?: T;
-  aDomicile?: T;
+  radiusKm?: T;
+  homeService?: T;
   description?: T;
-  disponible?: T;
-  photoPrincipale?: T;
-  galerie?: T;
-  reseaux?:
+  available?: T;
+  mainPicture?: T;
+  gallery?: T;
+  networks?:
     | T
     | {
         youtube?: T;
         facebook?: T;
         instagram?: T;
-        siteWeb?: T;
+        website?: T;
         linkedin?: T;
       };
-  coordonnees?:
+  contactDetails?:
     | T
     | {
-        telephone?: T;
+        phone?: T;
         email?: T;
       };
-  contactPublic?: T;
-  consentiLe?: T;
-  sourceConsentement?: T;
+  publicContact?: T;
+  consentedAt?: T;
+  consentSource?: T;
   prestations?:
     | T
     | {
@@ -877,22 +877,22 @@ export interface ProfilsSelect<T extends boolean = true> {
       };
   legacyUsername?: T;
   strapiId?: T;
-  statut?: T;
-  statutChoisi?: T;
-  motif?: T;
-  verifie?: T;
-  verifieLe?: T;
+  status?: T;
+  chosenStatus?: T;
+  reason?: T;
+  verified?: T;
+  verifiedAt?: T;
   siret?: T;
-  noteInterne?: T;
+  internalNote?: T;
   score?: T;
-  superMaquilleuse?: T;
-  completude?: T;
-  actif?: T;
-  actifDepuis?: T;
-  publiable?: T;
-  publiableDepuis?: T;
-  entierementVide?: T;
-  entierementVideDepuis?: T;
+  superArtist?: T;
+  completeness?: T;
+  active?: T;
+  activeSince?: T;
+  publishable?: T;
+  publishableSince?: T;
+  fullyEmpty?: T;
+  fullyEmptySince?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -971,7 +971,7 @@ export interface TalentsSelect<T extends boolean = true> {
   title?: T;
   slug?: T;
   seo_title?: T;
-  titreDeLaPage?: T;
+  pageTitle?: T;
   description?: T;
   seo_description?: T;
   content?: T;
@@ -993,7 +993,7 @@ export interface ArticlesSelect<T extends boolean = true> {
   seo_title?: T;
   seo_description?: T;
   content?: T;
-  galerie?: T;
+  gallery?: T;
   publishedAt?: T;
   strapiId?: T;
   updatedAt?: T;
@@ -1002,36 +1002,36 @@ export interface ArticlesSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "auth-evenements_select".
+ * via the `definition` "auth-events_select".
  */
-export interface AuthEvenementsSelect<T extends boolean = true> {
+export interface AuthEventsSelect<T extends boolean = true> {
   type?: T;
   code?: T;
-  methode?: T;
-  dureeMs?: T;
+  method?: T;
+  durationMs?: T;
   date?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "demandes_select".
+ * via the `definition` "contact-requests_select".
  */
-export interface DemandesSelect<T extends boolean = true> {
+export interface ContactRequestsSelect<T extends boolean = true> {
   type?: T;
-  statut?: T;
-  etatMail?: T;
-  prenom?: T;
-  nom?: T;
+  status?: T;
+  mailStatus?: T;
+  firstName?: T;
+  lastName?: T;
   email?: T;
-  telephone?: T;
+  phone?: T;
   message?: T;
   updatedAt?: T;
   createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "comptes-supprimes_select".
+ * via the `definition` "deleted-accounts_select".
  */
-export interface ComptesSupprimesSelect<T extends boolean = true> {
+export interface DeletedAccountsSelect<T extends boolean = true> {
   strapiId?: T;
   date?: T;
 }

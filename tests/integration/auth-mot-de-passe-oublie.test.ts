@@ -87,7 +87,7 @@ const ligne = async (id: number | string) => {
 		resetPasswordExpiration?: string | null
 		legacyBcrypt?: string | null
 		sessions?: unknown[] | null
-		derniereConnexion?: string | null
+		lastSignInAt?: string | null
 	}>({ collection: 'pros', where: { id: { equals: id } } })
 }
 
@@ -246,11 +246,11 @@ describe('I10 : une adresse inconnue répond pareil, dans le même temps, sans m
 		const lire = async () =>
 			(
 				await payload.find({
-					collection: 'auth-evenements',
+					collection: 'auth-events',
 					depth: 0,
 					limit: 1000,
 					sort: 'id',
-					where: { type: { equals: 'mot-de-passe-oublie' } },
+					where: { type: { equals: 'forgot-password' } },
 				})
 			).docs
 		const avant = (await lire()).length
@@ -374,10 +374,10 @@ describe('085 : choisir un nouveau mot de passe', () => {
 
 	test('la réinitialisation n’est pas une connexion : la date de dernière connexion ne bouge pas', async () => {
 		const compte = await compteConnu()
-		const avant = (await ligne(compte.id))?.derniereConnexion ?? null
+		const avant = (await ligne(compte.id))?.lastSignInAt ?? null
 		await demande(compte.email)
 		await reinit(await jetonDuMail(compte.email))
-		expect((await ligne(compte.id))?.derniereConnexion ?? null).toBe(avant)
+		expect((await ligne(compte.id))?.lastSignInAt ?? null).toBe(avant)
 	})
 
 	test('le journal : une ligne « reinitialisation » par essai, sans jeton ni adresse', async () => {
@@ -390,11 +390,11 @@ describe('085 : choisir un nouveau mot de passe', () => {
 
 		const lignes = (
 			await payload.find({
-				collection: 'auth-evenements',
+				collection: 'auth-events',
 				depth: 0,
 				limit: 100,
 				sort: 'id',
-				where: { type: { equals: 'reinitialisation' } },
+				where: { type: { equals: 'password-reset' } },
 			})
 		).docs.map(l => l.code)
 		expect(lignes.slice(-2)).toEqual(['ok', 'lien-invalide'])

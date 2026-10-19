@@ -20,15 +20,15 @@ export async function enregistrerDisponibilite(
 		const id = await identifiantDuProfilAEcrire(payload, utilisateur)
 		if (id === null) return { ok: false, message: MESSAGE_ECHEC }
 		const stocke = await payload.update({
-			collection: 'profils',
-			data: lue.data,
+			collection: 'profiles',
+			data: { available: lue.data.disponible },
 			depth: 0,
 			id,
 			overrideAccess: false,
 			user: utilisateur,
 		})
-		return { ok: true, valeurs: { disponible: estDisponible(stocke.disponible) } }
+		return { ok: true, valeurs: { disponible: estDisponible(stocke.available) } }
 	} catch (erreur) {
-		return echecDePayload(erreur, ['disponible'] as const)
+		return echecDePayload(erreur, ['disponible'] as const, chemin => (chemin === 'available' ? 'disponible' : ''))
 	}
 }

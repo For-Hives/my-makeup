@@ -8,12 +8,12 @@ import { echecDePayload, MESSAGE_ECHEC, type ResultatDEnregistrement } from './r
  * 126), and tells the truth about it, like the identity:
  *
  * - the request is read by the strict schema: a key that is not one of the three fields
- *   (`consentiLe`, `sourceConsentement`, `statut`, `pro`…) refuses it whole, so she can never
+ *   (`consentedAt`, `consentSource`, `status`, `pro`…) refuses it whole, so she can never
  *   write the date of her own consent;
  * - the profile written is hers, found by her account (I02);
  * - the write goes through the access rules and the hooks of the collection, as herself: the
  *   server dates the choice when she shows them, and empties the date when she hides them
- *   (`consentementTrace`, src/collections/Profils.ts); it recomputes whether the profile is
+ *   (`consentementTrace`, src/collections/Profiles.ts); it recomputes whether the profile is
  *   publishable, since a phone or an email counts as a channel of contact only while shown;
  * - the values given back, the date included, are those the database stored. A failure gives back
  *   a message in French and no value.
@@ -35,8 +35,8 @@ export async function enregistrerCoordonnees(
 		if (id === null) return { ok: false, message: MESSAGE_ECHEC }
 		const { telephone, email, contactPublic } = lue.data
 		const stocke = await payload.update({
-			collection: 'profils',
-			data: { coordonnees: { telephone: telephone || null, email: email || null }, contactPublic },
+			collection: 'profiles',
+			data: { contactDetails: { phone: telephone || null, email: email || null }, publicContact: contactPublic },
 			depth: 0,
 			id,
 			overrideAccess: false,
@@ -45,14 +45,16 @@ export async function enregistrerCoordonnees(
 		return {
 			ok: true,
 			valeurs: {
-				telephone: stocke.coordonnees?.telephone ?? '',
-				email: stocke.coordonnees?.email ?? '',
-				contactPublic: stocke.contactPublic === true,
-				consentiLe: stocke.consentiLe ?? null,
+				telephone: stocke.contactDetails?.phone ?? '',
+				email: stocke.contactDetails?.email ?? '',
+				contactPublic: stocke.publicContact === true,
+				consentiLe: stocke.consentedAt ?? null,
 			},
 		}
 	} catch (erreur) {
-		// Payload names the two fields of the group `coordonnees.telephone` and `coordonnees.email`.
-		return echecDePayload(erreur, ['telephone', 'email'] as const, 'coordonnees.')
+		// Payload names the two fields of the group `contactDetails.phone` and `contactDetails.email`.
+		return echecDePayload(erreur, ['telephone', 'email'] as const, chemin =>
+			chemin === 'contactDetails.phone' ? 'telephone' : chemin === 'contactDetails.email' ? 'email' : ''
+		)
 	}
 }

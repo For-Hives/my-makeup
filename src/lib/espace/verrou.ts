@@ -31,7 +31,7 @@ export class ProfilVerrouille extends Error {
 
 /** The duration of a lock on the profiles, in seconds; null when the collection has no lock at all. */
 function dureeDuVerrouS(payload: Payload): number | null {
-	const reglage = payload.collections.profils?.config.lockDocuments
+	const reglage = payload.collections.profiles?.config.lockDocuments
 	if (reglage === false) return null
 	return typeof reglage === 'object' ? reglage.duration : DUREE_DU_VERROU_PAR_DEFAUT_S
 }
@@ -53,7 +53,7 @@ export async function verifierQueLAdminNeTientPasLeProfil(
 		overrideAccess: true,
 		where: {
 			and: [
-				{ 'document.relationTo': { equals: 'profils' } },
+				{ 'document.relationTo': { equals: 'profiles' } },
 				{ 'document.value': { equals: idDuProfil } },
 				{ 'user.relationTo': { equals: 'admins' } },
 				{ updatedAt: { greater_than: new Date(maintenant.getTime() - duree * 1000).toISOString() } },

@@ -16,15 +16,15 @@ const MAINTENANT = new Date('2026-10-15T10:00:00.000Z')
 async function ecrire(createdAt: string) {
 	const payload = await payloadDeTest()
 	return payload.create({
-		collection: 'demandes',
+		collection: 'contact-requests',
 		data: {
 			type: 'contact',
-			statut: 'nouvelle',
-			etatMail: 'envoye',
-			prenom: 'Léa',
-			nom: 'Témoin',
+			status: 'new',
+			mailStatus: 'sent',
+			firstName: 'Léa',
+			lastName: 'Témoin',
 			email: `purge-${crypto.randomUUID()}@example.test`,
-			telephone: '01 99 00 12 34',
+			phone: '01 99 00 12 34',
 			message: 'Un message de test.',
 			createdAt,
 		},
@@ -33,7 +33,7 @@ async function ecrire(createdAt: string) {
 
 async function ids() {
 	const payload = await payloadDeTest()
-	const { docs } = await payload.find({ collection: 'demandes', depth: 0, limit: 100, pagination: false })
+	const { docs } = await payload.find({ collection: 'contact-requests', depth: 0, limit: 100, pagination: false })
 	return docs.map(({ id }) => id)
 }
 

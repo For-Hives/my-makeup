@@ -34,7 +34,7 @@ interface Attendu {
 	/** For a makeup artist: what the database holds besides her address and her password. */
 	pro?: {
 		verifie: boolean
-		bloque: boolean
+		blocked: boolean
 		fournisseur: FournisseurHerite | null
 		hashHerite: boolean
 		profils: 0 | 1
@@ -43,7 +43,7 @@ interface Attendu {
 
 const maquilleuse = (pro: Partial<NonNullable<Attendu['pro']>> = {}): NonNullable<Attendu['pro']> => ({
 	verifie: true,
-	bloque: false,
+	blocked: false,
 	fournisseur: null,
 	hashHerite: false,
 	profils: 1,
@@ -56,7 +56,7 @@ const ATTENDU: Record<TypeDeCompte, Attendu> = {
 	maquilleuse: { collection: 'pros', acces: 'mot-de-passe', pro: maquilleuse() },
 	'maquilleuse-non-verifiee': { collection: 'pros', acces: 'aucun', pro: maquilleuse({ verifie: false }) },
 	'maquilleuse-sans-profil': { collection: 'pros', acces: 'mot-de-passe', pro: maquilleuse({ profils: 0 }) },
-	'maquilleuse-bloquee': { collection: 'pros', acces: 'aucun', pro: maquilleuse({ bloque: true }) },
+	'maquilleuse-bloquee': { collection: 'pros', acces: 'aucun', pro: maquilleuse({ blocked: true }) },
 	'reprise-avec-hash': {
 		collection: 'pros',
 		acces: 'aucun',
@@ -79,12 +79,12 @@ const MonCompte = z.object({ user: z.object({ id: z.number(), email: z.string() 
 interface Ligne {
 	id: number
 	email: string
-	nom?: string | null
+	name?: string | null
 	hash?: string | null
 	salt?: string | null
 	sessions?: { id: string }[] | null
 	_verified?: boolean | null
-	bloque?: boolean | null
+	blocked?: boolean | null
 	legacyProvider?: string | null
 	legacyBcrypt?: string | null
 	strapiId?: number | null
@@ -101,10 +101,10 @@ async function ligneDu(compte: CompteFixe): Promise<Ligne> {
 async function etatDeLaMaquilleuse(compte: CompteFixe) {
 	const payload = await payloadDeTest()
 	const ligne = await ligneDu(compte)
-	const { totalDocs } = await payload.count({ collection: 'profils', where: { pro: { equals: compte.id } } })
+	const { totalDocs } = await payload.count({ collection: 'profiles', where: { pro: { equals: compte.id } } })
 	return {
 		verifie: ligne._verified === true,
-		bloque: ligne.bloque === true,
+		blocked: ligne.blocked === true,
 		fournisseur: (ligne.legacyProvider ?? null) as FournisseurHerite | null,
 		hashHerite: typeof ligne.legacyBcrypt === 'string',
 		profils: totalDocs,
@@ -240,7 +240,7 @@ describe('Le jeu du banc : un compte fixe de chaque type', () => {
 				etat: attendu.pro,
 			})
 			const { nom, strapiId } = COMPTES_DU_JEU[compte.type]
-			expect({ nom: ligne.nom, strapiId: ligne.strapiId ?? undefined }).toEqual({ nom, strapiId })
+			expect({ nom: ligne.name, strapiId: ligne.strapiId ?? undefined }).toEqual({ nom, strapiId })
 		}
 	})
 

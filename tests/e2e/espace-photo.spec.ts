@@ -19,7 +19,7 @@ import { lireUnObjet } from '../outils/s3'
  * A commune of the official list, far from the cities the search specs look at (Annecy, Nantes,
  * Annemasse…): the city a profile needs to be active, without crowding their lists.
  */
-const VILLE = { nom: 'Lille', codeInsee: '59350' } as const
+const VILLE = { name: 'Lille', inseeCode: '59350' } as const
 
 /** The accounts a test made: their active, published profiles would crowd the lists of the search specs. */
 const creees: number[] = []
@@ -27,8 +27,8 @@ const creees: number[] = []
 test.afterEach(async () => {
 	const payload = await payloadDeTest()
 	for (const compte of creees.splice(0)) {
-		const { docs } = await payload.find({ collection: 'profils', depth: 0, where: { pro: { equals: compte } } })
-		for (const { id } of docs) await payload.delete({ collection: 'profils', id }).catch(() => undefined)
+		const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte } } })
+		for (const { id } of docs) await payload.delete({ collection: 'profiles', id }).catch(() => undefined)
 		await payload.delete({ collection: 'pros', id: compte }).catch(() => undefined)
 	}
 })
@@ -48,7 +48,7 @@ async function maquilleuse(
 	const compte = await creerCompte('maquilleuse')
 	creees.push(Number(compte.id))
 	const payload = await payloadDeTest()
-	const { docs } = await payload.find({ collection: 'profils', depth: 0, where: { pro: { equals: compte.id } } })
+	const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })
 	const [fiche] = docs
 	if (!fiche) throw new Error('pas de profil')
 	let ancienne: number | null = null
@@ -61,14 +61,14 @@ async function maquilleuse(
 		ancienne = media.id
 	}
 	const profil = await payload.update({
-		collection: 'profils',
+		collection: 'profiles',
 		id: fiche.id,
 		data: {
-			prenom: 'Léa',
-			nom: 'Fictive',
-			specialite: 'Mariée',
-			commune: VILLE,
-			...(ancienne === null ? {} : { photoPrincipale: ancienne }),
+			firstName: 'Léa',
+			lastName: 'Fictive',
+			specialty: 'Mariée',
+			city: VILLE,
+			...(ancienne === null ? {} : { mainPicture: ancienne }),
 		},
 	})
 	await context.addCookies(compte.session.cookies)
@@ -77,7 +77,7 @@ async function maquilleuse(
 
 async function profilStocke(compte: Maquilleuse) {
 	const payload = await payloadDeTest()
-	const { docs } = await payload.find({ collection: 'profils', depth: 0, where: { pro: { equals: compte.id } } })
+	const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })
 	const profil = docs[0]
 	if (!profil) throw new Error('pas de profil')
 	return profil
@@ -131,9 +131,9 @@ test.describe('134 : la photo principale', { tag: '@mobile' }, () => {
 
 		// The object is the reduced file, under 1 MiB, though the server would have taken 8 MiB.
 		const profil = await profilStocke(compte)
-		expect(profil.actif).toBe(true)
+		expect(profil.active).toBe(true)
 		const payload = await payloadDeTest()
-		const media = await payload.findByID({ collection: 'media', id: Number(profil.photoPrincipale), depth: 0 })
+		const media = await payload.findByID({ collection: 'media', id: Number(profil.mainPicture), depth: 0 })
 		expect(media.filesize ?? 0).toBeGreaterThan(0)
 		expect(media.filesize ?? Number.POSITIVE_INFINITY).toBeLessThan(1024 * 1024)
 		const objet = await lireUnObjet(`media/${media.filename}`)
@@ -173,7 +173,7 @@ test.describe('134 : la photo principale', { tag: '@mobile' }, () => {
 		await expect(dialogue(page)).toHaveCount(0)
 		expect(envoyes).toHaveLength(0)
 		expect(await nombreDeMedias(compte)).toBe(0)
-		expect((await profilStocke(compte)).photoPrincipale ?? null).toBeNull()
+		expect((await profilStocke(compte)).mainPicture ?? null).toBeNull()
 	})
 
 	test('I24 : remplacer la photo : l’ancien objet part en corbeille, la nouvelle est celle du profil', async ({
@@ -200,7 +200,7 @@ test.describe('134 : la photo principale', { tag: '@mobile' }, () => {
 		await expect(dialogue(page)).toHaveCount(0, { timeout: 60_000 })
 
 		const profil = await profilStocke(compte)
-		expect(profil.photoPrincipale).not.toBe(ancienne)
+		expect(profil.mainPicture).not.toBe(ancienne)
 		expect(await lireUnObjet(cleAncienne)).toBeUndefined()
 		expect((await lireUnObjet(`deleted/${cleAncienne}`))?.octets).toEqual(octetsAvant)
 		expect(
@@ -224,7 +224,7 @@ test.describe('134 : la photo principale', { tag: '@mobile' }, () => {
 		await expect(page.getByRole('button', { name: 'Enregistrer' })).toBeDisabled()
 		expect(envoyes).toHaveLength(0)
 		expect(await nombreDeMedias(compte)).toBe(0)
-		expect((await profilStocke(compte)).photoPrincipale ?? null).toBeNull()
+		expect((await profilStocke(compte)).mainPicture ?? null).toBeNull()
 	})
 
 	test('U03 : coupure pendant l’envoi : l’ancienne photo reste en place, le profil reste actif', async ({
@@ -248,8 +248,8 @@ test.describe('134 : la photo principale', { tag: '@mobile' }, () => {
 		await expect(page.getByRole('alert').filter({ hasText: MESSAGES_PHOTO['envoi-impossible'] })).toBeVisible()
 		await expect(dialogue(page)).toBeVisible()
 		const profil = await profilStocke(compte)
-		expect(profil.photoPrincipale).toBe(ancienne)
-		expect(profil.actif).toBe(true)
+		expect(profil.mainPicture).toBe(ancienne)
+		expect(profil.active).toBe(true)
 		expect(await nombreDeMedias(compte)).toBe(1)
 	})
 })

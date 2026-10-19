@@ -249,7 +249,7 @@ Un enregistrement d'un profil, d'un article ou d'un talent dit à Next quelles p
 import { espionnerLeCache } from '../outils/espion-cache'
 
 const { chemins, etiquettes, appels } = await espionnerLeCache(() =>
-	appelerRest('PATCH', `/api/profils/${profil.id}`, { enTetes: compte.session.enTetes, corps: { description } })
+	appelerRest('PATCH', `/api/profiles/${profil.id}`, { enTetes: compte.session.enTetes, corps: { description } })
 )
 
 expect(chemins).toEqual([`/profil/${profil.slug}`, '/search', '/site-map', '/sitemap.xml'])
@@ -282,6 +282,27 @@ Depuis la migration `init` (ticket 049), la base du banc n'est construite que pa
 Une migration qui échoue arrête aussi la commande, avec le message de Payload.
 
 Le contrôle de la migration elle-même, sur une base effacée puis rejouée, est le test I22 : `tests/integration/migrations.test.ts`.
+
+## Réécrire la migration `init` et vider une base
+
+Le site n'est pas en production, et aucune base de production n'a joué une migration : le schéma tient donc dans **une seule migration, `init`**, réécrite à chaque changement de collection au lieu d'empiler des migrations de renommage (ticket 249, `PLAN-ANGLAIS.md` §7). Tant que ce n'est plus vrai, cette marche à suivre cesse : chaque changement de collection reprend sa propre migration, relue.
+
+Pour la réécrire, banc démarré (`bun run banc:up`, ou l'instance de ton lot) :
+
+1. Supprimer `src/migrations/*_init.ts` et `*_init.json`, et remplacer `src/migrations/index.ts` par `export const migrations = []`.
+2. Lancer `bun run payload:migrate:create init`, avec `DATABASE_URI` et `PAYLOAD_SECRET` du banc dans l'environnement (`.env.test`, port décalé de l'instance). Sans migration avant elle, Payload écrit le schéma entier.
+3. Remettre en forme le fichier généré comme l'ancien : `import { type MigrateDownArgs, type MigrateUpArgs, sql }`, arguments `{ db }` seuls, l'en-tête qui dit ce que fait `init`. Puis `bun run check`.
+4. `bun run payload:types` et `bun run payload:importmap` : les fichiers générés ne doivent changer que si les collections ont changé.
+5. `bun run schema:derive` (aucune dérive), puis `bun run banc:prepare`.
+
+Pour vérifier qu'un regroupement ne change rien, comparer `pg_dump --schema-only` de la base bâtie par l'ancienne chaîne et de celle bâtie par la nouvelle `init`. Une seule différence est normale : l’ordre des colonnes de quelques tables (quatre au moment de l’écriture). Une colonne ajoutée plus tard par une migration passe à la fin, alors que `init` suit l'ordre des champs de la collection. L'ordre d'une colonne ne change rien à ce qu'un programme lit.
+
+**Vider une base** (après une réécriture de `init`, la base ne se rattrape pas par une migration) :
+
+| Base | Commande |
+|---|---|
+| le banc de test | `bun run banc:prepare` (le schéma est effacé, puis rejoué), ou `bun run banc:reinitialiser` pour retrouver aussi le jeu de données ; les tests d'intégration le font d'eux-mêmes |
+| la base de développement du poste (`docker-compose.yml`, port 5442) | `docker compose down -v && docker compose up -d --wait`, puis `bun run dev` : le volume `postgres-data` est effacé, et la base repart vide. Un compte admin créé là est à recréer (`bun run admin:creer`) |
 
 ## Comptes de test : la fabrique
 
@@ -318,11 +339,11 @@ Les types de compte sont déclarés dans `TYPES_DE_COMPTE` (`tests/outils/fabriq
 | Type | Collection | Ce que c'est |
 |---|---|---|
 | `admin` | `admins` | Un compte de l'administration avec le rôle `admin` : il peut tout |
-| `redaction` | `admins` | Un compte de l'administration avec le rôle `redaction` : articles et talents, et son propre compte |
+| `redaction` | `admins` | Un compte de l'administration avec le rôle `editor` : articles et talents, et son propre compte |
 | `maquilleuse` | `pros` | Le compte d'une maquilleuse, adresse confirmée, avec son profil vide, comme à l'inscription. Deux appels donnent « A » et « B » |
 | `maquilleuse-non-verifiee` | `pros` | Le compte d'une maquilleuse qui n'a pas confirmé son adresse. Il ne peut pas se connecter : `session` vaut `null` |
-| `maquilleuse-sans-profil` | `pros` | Le compte d'une maquilleuse sans profil, comme certains comptes de l'ancien site. Sa création porte `CONTEXTE_SANS_PROFIL` (`src/collections/Profils.ts`) |
-| `maquilleuse-bloquee` | `pros` | Le compte d'une maquilleuse bloquée par l'admin (`bloque` vrai), avec son profil. `session` vaut `null` : bloquer ferme les sessions, et la connexion la refusera (ticket 089) |
+| `maquilleuse-sans-profil` | `pros` | Le compte d'une maquilleuse sans profil, comme certains comptes de l'ancien site. Sa création porte `CONTEXTE_SANS_PROFIL` (`src/collections/Profiles.ts`) |
+| `maquilleuse-bloquee` | `pros` | Le compte d'une maquilleuse bloquée par l'admin (`blocked` vrai), avec son profil. `session` vaut `null` : bloquer ferme les sessions, et la connexion la refusera (ticket 089) |
 | `reprise-avec-hash` | `pros` | Un compte repris de l'ancien site avec son hash bcrypt, le hash de fixture. Il se connectera par le chemin hérité du site (ticket 087) : d'ici là, `session` vaut `null` |
 | `reprise-google` | `pros` | Un ancien compte Google, sans mot de passe. Sa session est ouverte sans mot de passe, comme par la connexion Google |
 | `reprise-google-avec-hash` | `pros` | Un ancien compte Google qui a aussi un hash, comme un compte réel. Session ouverte comme par Google |
@@ -404,14 +425,14 @@ const { profils, crees, presents } = await poserLesProfilsDuJeu(await payloadDeT
 | 1 | `reference` | Inès Morel, `ines-morel` | Complet, disponible, à Annecy, « Maquillage mariage », trois offres chiffrées, une photo principale et six photos en galerie. Il publie son téléphone et son email | Publiable, publié, 13 sur 13 |
 | 2 | `ville-voisine` | Léa Garnier, `lea-garnier` | Complet, à Annemasse | Publiable, publié |
 | 3 | `ville-eloignee` | Chloé Bertin, `chloe-bertin` | Complet, à Nantes | Publiable, publié |
-| 4 | `indisponible` | Manon Faure, `manon-faure` | Complet, à Annecy, `disponible` faux | Publiable, publié |
-| 5 | `disponibilite-inconnue` | Jade Roussel, `jade-roussel` | Complet, à Annecy, `disponible` vide (nul) | Publiable, publié |
+| 4 | `indisponible` | Manon Faure, `manon-faure` | Complet, à Annecy, `available` faux | Publiable, publié |
+| 5 | `disponibilite-inconnue` | Jade Roussel, `jade-roussel` | Complet, à Annecy, `available` vide (nul) | Publiable, publié |
 | 6 | `vide` | Nina Perret, `nina-perret` | Rien : le profil tel que l'inscription le crée | Ni actif ni publiable, entièrement vide, brouillon, 0 sur 13 |
 | 7 | `actif-non-publiable` | Clara Dumas, `clara-dumas` | Complet, mais ses offres sont « sur devis », sans montant | Actif, pas publiable, publié |
 | 8 | `sans-contact-public` | Louise Girard, `louise-girard` | Complet, sans réseau ; téléphone et email enregistrés mais fermés au public | Actif, pas publiable, publié, 12 sur 13 |
 | 9 | `ancien-nom-accentue` | Zoé Lefèvre, `zoe-lefevre` | Complet, à Thonon-les-Bains, avec l'ancien nom d'utilisateur « zoé lefèvre » | Publiable, publié |
 | 10 | `verifiee` | Emma Chevalier, `emma-chevalier` | Complet ; vérifiée par un admin, avec le badge des cartes de la recherche | Publiable, publié |
-| 11 | `masquee` | Alice Fontaine, `alice-fontaine` | Complet ; masqué par un admin (`statutChoisi`), avec un motif | Publiable, masqué |
+| 11 | `masquee` | Alice Fontaine, `alice-fontaine` | Complet ; masqué par un admin (`chosenStatus`), avec un motif | Publiable, masqué |
 | 12 | `textes-maximaux` | Un nom de 141 caractères, et le slug le plus long : 70 caractères | Chaque texte à la borne du serveur, le rayon à 200 km, dix photos en galerie, la commune au nom le plus long de la liste officielle | Publiable, publié |
 
 | Ce qui est fixe | Valeur |
@@ -483,7 +504,7 @@ Les identifiants sont les mêmes à chaque fois. Les sessions ouvertes avant ne 
 
 | Quoi | Combien | Détail |
 |---|---|---|
-| Comptes d'administration | 2 | `jeu-admin@example.test` (rôle `admin`), `jeu-redaction@example.test` (rôle `redaction`) |
+| Comptes d'administration | 2 | `jeu-admin@example.test` (rôle `admin`), `jeu-redaction@example.test` (rôle `editor`) |
 | Comptes de maquilleuses | 20 | 8 du jeu fixe (voir « Le jeu du banc : un compte fixe de chaque type ») et 12 des profils types |
 | Profils types | 12 | Les douze du tableau « Le jeu du banc : les 12 profils types », avec leurs photos |
 | Talents | 3 | `maquillage-mariee`, `maquillage-soiree`, `maquillage-photo`, tous publiés |
@@ -531,7 +552,7 @@ Tout autre constat est `incoherent` : refusé mais écrit quand même, ou une li
 
 À savoir :
 
-- **La distribution est faite une fois par fichier** (`distribuer()`, `tests/outils/matrice-acces.ts`) : un compte par rôle, par la fabrique, avec ses documents. Le profil de « A » (`maquilleuse`) y est publié, celui de « B » (`autreMaquilleuse`) reste un brouillon : une ligne de lecture dit ce que le public voit, et ce qu'il ne voit pas. Les deux statuts sont choisis par un admin (`statutChoisi`) : avec sa photo, « B » serait sinon publiée par la règle du ticket 044, à la première ligne qui enregistre son profil.
+- **La distribution est faite une fois par fichier** (`distribuer()`, `tests/outils/matrice-acces.ts`) : un compte par rôle, par la fabrique, avec ses documents. Le profil de « A » (`maquilleuse`) y est publié, celui de « B » (`autreMaquilleuse`) reste un brouillon : une ligne de lecture dit ce que le public voit, et ce qu'il ne voit pas. Les deux statuts sont choisis par un admin (`chosenStatus`) : avec sa photo, « B » serait sinon publiée par la règle du ticket 044, à la première ligne qui enregistre son profil.
 - **Une ligne ne change pas la distribution.** Une valeur modifiée est remise comme avant, et une suppression qui doit réussir vise un document jetable de la même collection.
 - **Une collection nouvelle** donne à la matrice son portrait (`PORTRAITS`, même fichier) : le champ ordinaire à modifier, les données d'une création, un document jetable (qui appartient à celui qui agit, quand la collection a des propriétaires), les documents que lit le public (`publics`), et `fichier` pour une collection de fichiers, dont une création envoie une photo. **Un rôle nouveau** prend un type de la fabrique (`TYPE_DU_ROLE`).
 - **Les photos de la distribution** : « A » et « B » ont chacune un média, la photo principale de leur profil. La matrice vide le stockage d'objets après ses lignes.

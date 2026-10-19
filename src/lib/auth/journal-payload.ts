@@ -38,7 +38,7 @@ export const retenirLaDerniereConnexion: CollectionAfterLoginHook = async ({ req
 	try {
 		await req.payload.update({
 			collection: 'pros',
-			data: { derniereConnexion: new Date().toISOString() },
+			data: { lastSignInAt: new Date().toISOString() },
 			depth: 0,
 			id: user.id,
 			overrideAccess: true,
@@ -54,10 +54,10 @@ export const retenirLaDerniereConnexion: CollectionAfterLoginHook = async ({ req
 export const noterLaConnexionRest: CollectionAfterLoginHook = async ({ req, user }) => {
 	if (estLaConnexionRest(req))
 		await journaliser(req.payload, {
-			type: 'connexion',
+			type: 'sign-in',
 			code: 'ok',
-			dureeMs: dureeDepuis(req.context),
-			methode: 'mot-de-passe',
+			durationMs: dureeDepuis(req.context),
+			method: 'password',
 		})
 	return user
 }
@@ -73,9 +73,9 @@ export const noterLEchecDeConnexionRest: CollectionAfterErrorHook = async ({ err
 	})()
 	if (req.method !== 'POST' || !chemin.endsWith('/pros/login')) return
 	await journaliser(req.payload, {
-		type: 'connexion',
+		type: 'sign-in',
 		code: codeDeLEchec(error),
-		dureeMs: dureeDepuis(req.context),
-		methode: 'mot-de-passe',
+		durationMs: dureeDepuis(req.context),
+		method: 'password',
 	})
 }

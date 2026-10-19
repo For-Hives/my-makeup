@@ -124,7 +124,7 @@ function compterLesEcarts(ecarts: Record<string, number>, attendus: readonly Att
  * The collections whose documents are all the import's: one that holds no `strapiId` was added by hand.
  * Media is left out on purpose: a photo uploaded in the v3 legitimately has none (IMPORT.md).
  */
-const COLLECTIONS_SANS_ORIGINE = new Set<string>(['pros', 'profils', 'articles', 'talents'])
+const COLLECTIONS_SANS_ORIGINE = new Set<string>(['pros', 'profiles', 'articles', 'talents'])
 
 /** Plans one collection, writes it when the run is real, and gives what it did or would do. */
 async function importerLaCollection(
@@ -185,7 +185,7 @@ async function idsDansLaCible(
 /** How many documents of the target per status. */
 function statutsDe(documents: readonly { valeurs: Readonly<Record<string, unknown>> }[]): Record<string, number> {
 	const statuts: Record<string, number> = {}
-	for (const { valeurs } of documents) statuts[String(valeurs.statut)] = (statuts[String(valeurs.statut)] ?? 0) + 1
+	for (const { valeurs } of documents) statuts[String(valeurs.status)] = (statuts[String(valeurs.status)] ?? 0) + 1
 	return statuts
 }
 
@@ -372,7 +372,7 @@ async function passerLImport(options: OptionsDImport): Promise<Rapport> {
 			rapport.ecarts,
 			profils.attendus.filter(({ strapiId }) => !bilanDesProfils.refuses.some(refus => refus.strapiId === strapiId))
 		)
-		rapport.collections.profils = {
+		rapport.collections.profiles = {
 			...bilanDesProfils,
 			ecartes: laisses.ecartes,
 			spam: laisses.spam,
@@ -410,11 +410,11 @@ async function passerLImport(options: OptionsDImport): Promise<Rapport> {
 
 		if (mode === 'reel') {
 			const pros = await pariteDe(payload, adaptateurDesComptes, comptes.attendus, rapport.collections.pros)
-			const lesProfils = await pariteDe(payload, adaptateurDesProfils, profils.attendus, rapport.collections.profils)
+			const lesProfils = await pariteDe(payload, adaptateurDesProfils, profils.attendus, rapport.collections.profiles)
 			rapport.parite = {
 				pros: { ...pros.parite, repartition: repartitionDesComptes(pros.cible) },
 				media: (await pariteDe(payload, ADAPTATEUR_MEDIAS, lesMedias, rapport.collections.media)).parite,
-				profils: { ...lesProfils.parite, statuts: statutsDe(lesProfils.cible) },
+				profiles: { ...lesProfils.parite, statuts: statutsDe(lesProfils.cible) },
 				articles: (await pariteDe(payload, ADAPTATEUR_ARTICLES, lesArticles.attendus, rapport.collections.articles))
 					.parite,
 				talents: (await pariteDe(payload, ADAPTATEUR_TALENTS, talents.attendus, rapport.collections.talents)).parite,

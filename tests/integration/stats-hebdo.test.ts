@@ -41,7 +41,7 @@ describe('Les statistiques hebdomadaires sur le jeu du banc', () => {
 		const profilsDesComptes = TYPES_DU_JEU.filter(type => TYPES_DE_COMPTE[type].collection === 'pros').length
 		const sansProfil = TYPES_DU_JEU.filter(type => type === 'maquilleuse-sans-profil').length
 		const types = PROFILS_DU_JEU
-		const vusParLeServeur = types.filter(({ attendu }) => attendu.statut === 'publie' && attendu.publiable)
+		const vusParLeServeur = types.filter(({ attendu }) => attendu.status === 'published' && attendu.publishable)
 
 		const reponse = await appeler(SEMAINE)
 		const stats = StatsHebdo.parse(await reponse.json())
@@ -52,11 +52,11 @@ describe('Les statistiques hebdomadaires sur le jeu du banc', () => {
 		const videsDesComptes = profilsDesComptes - sansProfil
 		expect(stats.profils.total).toBe(types.length + videsDesComptes)
 		expect(stats.profils.entierementVides).toBe(
-			types.filter(({ attendu }) => attendu.entierementVide).length + videsDesComptes
+			types.filter(({ attendu }) => attendu.fullyEmpty).length + videsDesComptes
 		)
-		expect(stats.profils.actifs).toBe(types.filter(({ attendu }) => attendu.actif).length)
+		expect(stats.profils.actifs).toBe(types.filter(({ attendu }) => attendu.active).length)
 		expect(stats.profils.publiables).toBe(vusParLeServeur.length)
-		expect(stats.profils.masques).toBe(types.filter(({ attendu }) => attendu.statut === 'masque').length)
+		expect(stats.profils.masques).toBe(types.filter(({ attendu }) => attendu.status === 'hidden').length)
 		expect(stats.publiables.slugs).toEqual(vusParLeServeur.map(({ attendu }) => attendu.slug).sort())
 		expect(Object.values(stats.publiables.parDepartement).reduce((a, b) => a + b, 0)).toBe(vusParLeServeur.length)
 		// The set was created now: nothing in 2020.
@@ -81,13 +81,13 @@ describe('Les statistiques hebdomadaires sur le jeu du banc', () => {
 		const stats = StatsHebdo.parse(await (await appeler(SEMAINE)).json())
 		const sansAdresses = JSON.stringify({ ...stats, publiables: { ...stats.publiables, slugs: [] } })
 		const noms = PROFILS_DU_JEU.flatMap(({ profil, compte }) => [
-			profil.prenom,
-			profil.nom,
-			profil.nomArtiste,
+			profil.firstName,
+			profil.lastName,
+			profil.artistName,
 			compte.nom,
-			profil.coordonnees?.telephone,
-			profil.coordonnees?.email,
-			profil.commune?.nom,
+			profil.contactDetails?.phone,
+			profil.contactDetails?.email,
+			profil.city?.name,
 		]).filter((nom): nom is string => typeof nom === 'string' && nom !== '')
 
 		expect(sansAdresses).not.toContain('@')
@@ -115,8 +115,8 @@ describe('Les statistiques hebdomadaires sur le jeu du banc', () => {
 	}, 60_000)
 
 	test('le jeton ne vaut rien sur une autre route : l’API de Payload le lit comme une visiteuse', async () => {
-		const profils = await appelerRest('GET', '/api/profils?limit=100', { enTetes: ENTETES })
-		const anonyme = await appelerRest('GET', '/api/profils?limit=100')
+		const profils = await appelerRest('GET', '/api/profiles?limit=100', { enTetes: ENTETES })
+		const anonyme = await appelerRest('GET', '/api/profiles?limit=100')
 		expect(profils.statut).toBe(anonyme.statut)
 		expect(profils.texte).toBe(anonyme.texte)
 		const comptes = await appelerRest('GET', '/api/pros', { enTetes: ENTETES })

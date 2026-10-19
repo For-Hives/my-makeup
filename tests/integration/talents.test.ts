@@ -233,23 +233,23 @@ describe('Le titre de la page d’un talent (ticket 108)', () => {
 		const talent = await ecrireTalent({
 			slug: 'maquillage-fictif',
 			seo_title: 'Maquillage fictif',
-			titreDeLaPage: TITRE_DE_55,
+			pageTitle: TITRE_DE_55,
 		})
 		const payload = await payloadDeTest()
 		const lu = await lireLeTalent(payload, 'maquillage-fictif')
 		expect(lu).toMatchObject({ titreDeLaPage: TITRE_DE_55, titreAffiche: 'Maquillage fictif' })
 
 		await expect(
-			payload.update({ collection: 'talents', id: talent.id, data: { titreDeLaPage: 'Trop court' } })
+			payload.update({ collection: 'talents', id: talent.id, data: { pageTitle: 'Trop court' } })
 		).rejects.toThrow()
 		await expect(
-			payload.update({ collection: 'talents', id: talent.id, data: { titreDeLaPage: 'x'.repeat(61) } })
+			payload.update({ collection: 'talents', id: talent.id, data: { pageTitle: 'x'.repeat(61) } })
 		).rejects.toThrow()
 		await expect(
 			payload.update({ collection: 'talents', id: talent.id, data: { seo_title: TITRE_DE_55 } })
 		).rejects.toThrow()
 		// Left empty, nothing is refused: the page keeps the title of the site online.
-		await payload.update({ collection: 'talents', id: talent.id, data: { titreDeLaPage: '' } })
+		await payload.update({ collection: 'talents', id: talent.id, data: { pageTitle: '' } })
 		expect((await lireLeTalent(payload, 'maquillage-fictif'))?.titreDeLaPage).toBe('')
 	})
 

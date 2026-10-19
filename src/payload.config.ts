@@ -8,10 +8,9 @@ import sharp from 'sharp'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import { Admins } from './collections/Admins'
 import { Articles } from './collections/Articles'
-import { AuthEvenements } from './collections/AuthEvenements'
-import { ComptesSupprimes } from './collections/ComptesSupprimes'
-import { avecLaCorbeille } from './collections/corbeille'
-import { Demandes } from './collections/Demandes'
+import { AuthEvents } from './collections/AuthEvents'
+import { ContactRequests } from './collections/ContactRequests'
+import { DeletedAccounts } from './collections/DeletedAccounts'
 import {
 	aucunEnvoiSansStockage,
 	champsDuStockageFermes,
@@ -19,9 +18,10 @@ import {
 	UPLOAD_DES_MEDIAS,
 	versLAdressePublique,
 } from './collections/Media'
-import { Profils } from './collections/Profils'
+import { Profiles } from './collections/Profiles'
 import { Pros } from './collections/Pros'
 import { Talents } from './collections/Talents'
+import { avecLaCorbeille } from './collections/trash'
 import { adaptateurSansRelais, optionsDeTransport } from './lib/emails/relais'
 import { mediaBaseUrl, serverEnv } from './lib/env'
 import { LANGUE_DE_PAYLOAD } from './lib/langue-payload'
@@ -79,7 +79,7 @@ export default buildConfig({
 		// 'off' closes /api/og: an image rendered on demand, for anyone, with or without a session.
 		meta: { defaultOGImageType: 'off' },
 	},
-	collections: [Admins, Pros, Profils, media, Talents, Articles, AuthEvenements, Demandes, ComptesSupprimes],
+	collections: [Admins, Pros, Profiles, media, Talents, Articles, AuthEvents, ContactRequests, DeletedAccounts],
 	// The site and the API share one origin: no other site may read this API from a browser.
 	cors: [],
 	// A session cookie is accepted from these origins only (src/lib/env.ts).
@@ -132,7 +132,7 @@ export default buildConfig({
 		// environment.
 		// The plugin never deletes an object: a photo that no longer serves goes to the bin of the
 		// storage, `deleted/`, and the profiles clean up the photos they no longer reference
-		// (src/collections/corbeille.ts, ticket 045).
+		// (src/collections/trash.ts, ticket 045).
 		avecLaCorbeille(
 			s3Storage({
 				enabled: env.storage !== undefined,

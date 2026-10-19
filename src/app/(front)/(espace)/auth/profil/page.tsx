@@ -92,10 +92,10 @@ export default async function PageProfil() {
 								carte.section === 'identite' ? (
 									<EditeurDIdentite
 										valeurs={{
-											prenom: texte(profil.prenom),
-											nom: texte(profil.nom),
-											nomArtiste: texte(profil.nomArtiste),
-											specialite: texte(profil.specialite),
+											prenom: texte(profil.firstName),
+											nom: texte(profil.lastName),
+											nomArtiste: texte(profil.artistName),
+											specialite: texte(profil.specialty),
 										}}
 										envoyer={enregistrerMonIdentite}
 										proprietaire={String(maquilleuse.id)}
@@ -108,17 +108,17 @@ export default async function PageProfil() {
 								) : carte.section === 'localisation' ? (
 									<EditeurDeLocalisation
 										valeurs={{
-											codeInsee: texte(profil.commune?.codeInsee),
-											libelle: libelleDeLaCommune(profil.commune ?? {}),
-											rayonKm: typeof profil.rayonKm === 'number' ? profil.rayonKm : null,
-											aDomicile: profil.aDomicile === true,
+											codeInsee: texte(profil.city?.inseeCode),
+											libelle: libelleDeLaCommune({ nom: profil.city?.name, departement: profil.city?.department }),
+											rayonKm: typeof profil.radiusKm === 'number' ? profil.radiusKm : null,
+											aDomicile: profil.homeService === true,
 										}}
 										envoyer={enregistrerMaLocalisation}
 										chercher={chercherMesCommunes}
 									/>
 								) : carte.section === 'disponibilite' ? (
 									<InterrupteurDeDisponibilite
-										disponible={estDisponible(profil.disponible)}
+										disponible={estDisponible(profil.available)}
 										envoyer={enregistrerMaDisponibilite}
 									/>
 								) : carte.section === 'langues' ? (
@@ -140,20 +140,20 @@ export default async function PageProfil() {
 								) : carte.section === 'reseaux' ? (
 									<EditeurDeReseaux
 										valeurs={{
-											instagram: texte(profil.reseaux?.instagram),
-											facebook: texte(profil.reseaux?.facebook),
-											youtube: texte(profil.reseaux?.youtube),
-											linkedin: texte(profil.reseaux?.linkedin),
-											siteWeb: texte(profil.reseaux?.siteWeb),
+											instagram: texte(profil.networks?.instagram),
+											facebook: texte(profil.networks?.facebook),
+											youtube: texte(profil.networks?.youtube),
+											linkedin: texte(profil.networks?.linkedin),
+											siteWeb: texte(profil.networks?.website),
 										}}
 										envoyer={enregistrerMesReseaux}
 									/>
 								) : carte.section === 'coordonnees' ? (
 									<EditeurDeCoordonnees
 										valeurs={{
-											telephone: texte(profil.coordonnees?.telephone),
-											email: texte(profil.coordonnees?.email),
-											contactPublic: profil.contactPublic === true,
+											telephone: texte(profil.contactDetails?.phone),
+											email: texte(profil.contactDetails?.email),
+											contactPublic: profil.publicContact === true,
 										}}
 										envoyer={enregistrerMesCoordonnees}
 									/>

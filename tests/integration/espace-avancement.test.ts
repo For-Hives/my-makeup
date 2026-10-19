@@ -27,7 +27,7 @@ async function lectures(payload: Payload, utilisateur: UtilisateurDeLEspace) {
 	const profil = await profilDeLaMaquilleuse(payload, utilisateur)
 	if (profil === null) throw new Error('pas de profil')
 	const { docs } = await payload.find({
-		collection: 'profils',
+		collection: 'profiles',
 		depth: 0,
 		overrideAccess: true,
 		where: { id: { equals: profil.id } },
@@ -45,9 +45,9 @@ describe('I20 : le bloc de l’espace égale l’état enregistré par le serveu
 
 		const egaux = async () => {
 			const { avancement, stocke } = await lectures(payload, utilisateur)
-			expect(avancement.score).toBe(stocke.completude ?? Number.NaN)
-			expect(avancement.etat === 'publiable').toBe(stocke.publiable === true)
-			expect(avancement.etat === 'vide').toBe(stocke.entierementVide === true)
+			expect(avancement.score).toBe(stocke.completeness ?? Number.NaN)
+			expect(avancement.etat === 'publiable').toBe(stocke.publishable === true)
+			expect(avancement.etat === 'vide').toBe(stocke.fullyEmpty === true)
 			return avancement
 		}
 

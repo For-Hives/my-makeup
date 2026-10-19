@@ -231,7 +231,7 @@ describe('Ce que la fabrique tire au sort', () => {
 
 	test('une maquilleuse bloquée : confirmée, bloquée, sans session, avec le mot de passe tiré', () => {
 		const bloquee: DeclarationDeCompte<'pros'> = TYPES_DE_COMPTE['maquilleuse-bloquee']
-		expect(bloquee.donnees()).toMatchObject({ _verified: true, bloque: true })
+		expect(bloquee.donnees()).toMatchObject({ _verified: true, blocked: true })
 		expect(bloquee.connexion).toBe(false)
 		expect(bloquee.reprise).toBeUndefined()
 	})
@@ -295,12 +295,12 @@ describe('Ce que la fabrique tire au sort', () => {
 		expect(TYPES_DE_COMPTE['maquilleuse-non-verifiee'].connexion).toBe(false)
 		expect('connexion' in TYPES_DE_COMPTE.maquilleuse).toBe(false)
 		// Two accounts made side by side never share a display name.
-		expect(TYPES_DE_COMPTE.maquilleuse.donnees().nom).not.toBe(TYPES_DE_COMPTE.maquilleuse.donnees().nom)
+		expect(TYPES_DE_COMPTE.maquilleuse.donnees().name).not.toBe(TYPES_DE_COMPTE.maquilleuse.donnees().name)
 	})
 
 	test('les deux rôles de l’administration : admin et redaction', () => {
 		expect(TYPES_DE_COMPTE.admin.donnees()).toEqual({ role: 'admin' })
-		expect(TYPES_DE_COMPTE.redaction.donnees()).toEqual({ role: 'redaction' })
+		expect(TYPES_DE_COMPTE.redaction.donnees()).toEqual({ role: 'editor' })
 	})
 
 	test('une adresse en @example.test, jamais deux fois la même', () => {

@@ -372,7 +372,7 @@ describe('le rapport des fichiers et des photos', () => {
 					envoyesParUnAutreCompte: [109],
 				},
 			},
-			profils: {
+			profiles: {
 				source: 27,
 				crees: 13,
 				modifies: 0,

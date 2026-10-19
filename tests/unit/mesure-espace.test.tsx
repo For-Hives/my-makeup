@@ -163,7 +163,7 @@ describe('le passage à publiable est dit par le serveur, une seule fois', () =>
 		const lectures: boolean[] = [...etats]
 		const payload = {
 			find: async () => ({ docs: [{ id: 7 }] }),
-			findByID: async () => ({ publiable: lectures.shift() }),
+			findByID: async () => ({ publishable: lectures.shift() }),
 		} as unknown as Payload
 		return avecPassagePublicable(payload, { collection: 'pros', id: 1 } as never, async () => resultat)
 	}

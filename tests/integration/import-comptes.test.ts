@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { SQL } from 'bun'
 import { AUCUNE_DECISION } from '../../scripts/migration/import/decisions'
-import { CONTEXTE_SANS_PROFIL } from '../../src/collections/Profils'
+import { CONTEXTE_SANS_PROFIL } from '../../src/collections/Profiles'
 import { commandeDImport, DECISIONS_DU_BANC, FICHIER_DES_DECISIONS_DU_BANC, importerSurLeBanc } from '../outils/import'
 import { compterLesMails, viderLeCapteur } from '../outils/mailpit'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
@@ -95,9 +95,9 @@ describe('Critère 1 : autant de comptes qu’à la source, hors comptes écart�
 			expect(cible[rang]).toMatchObject({
 				strapiId: ligne.id,
 				email: String(ligne.email).trim().toLowerCase(),
-				nom: ligne.username,
+				name: ligne.username,
 				legacyProvider: ligne.provider,
-				bloque: ligne.blocked,
+				blocked: ligne.blocked,
 				_verified: true,
 				createdAt: enIso(ligne.created_at),
 				updatedAt: enIso(ligne.updated_at),
@@ -310,14 +310,14 @@ describe('Critère 3 : un compte sans profil reste sans profil (I41)', () => {
 		const sansProfilALaSource = (await comptesDeLaCible()).find(({ strapiId }) => strapiId === 8)
 		expect(sansProfilALaSource).toBeDefined()
 		const deCeCompte = await payload.count({
-			collection: 'profils',
+			collection: 'profiles',
 			overrideAccess: true,
 			where: { pro: { equals: sansProfilALaSource?.id } },
 		})
 		expect(deCeCompte.totalDocs).toBe(0)
 		// An automatic profile has no `strapiId`: none was created.
 		const automatiques = await payload.count({
-			collection: 'profils',
+			collection: 'profiles',
 			overrideAccess: true,
 			where: { strapiId: { exists: false } },
 		})
@@ -361,7 +361,7 @@ describe('Critère 4 : même email sans décision, arrêt et rapport par identif
 
 		const groupe = (await comptesDeLaCible()).filter(({ strapiId }) => [9, 10, 11, 12].includes(Number(strapiId)))
 		expect(groupe.map(({ strapiId }) => strapiId)).toEqual([11])
-		expect(rapport.collections.profils?.ecartes).toEqual([28])
+		expect(rapport.collections.profiles?.ecartes).toEqual([28])
 	})
 
 	test('une décision qui ne nomme pas exactement le groupe ne vaut pas : l’import s’arrête', async () => {

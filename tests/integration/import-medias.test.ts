@@ -167,9 +167,14 @@ describe('Les photos référencées sont adoptées là où elles sont (ticket 05
 	test('l’objet manquant est listé en « 404 connus » sans bloquer le reste : le profil garde sa photo', async () => {
 		const payload = await payloadDeTest()
 		const [ines] = (
-			await payload.find({ collection: 'profils', depth: 1, where: { strapiId: { equals: 23 } }, overrideAccess: true })
+			await payload.find({
+				collection: 'profiles',
+				depth: 1,
+				where: { strapiId: { equals: 23 } },
+				overrideAccess: true,
+			})
 		).docs
-		const photo = ines?.photoPrincipale as Media | undefined
+		const photo = ines?.mainPicture as Media | undefined
 
 		expect(photo?.strapiId).toBe(107)
 		expect(premier.collections.media?.fichiers?.introuvables).toEqual([107])

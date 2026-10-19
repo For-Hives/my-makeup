@@ -39,7 +39,7 @@ test.beforeEach(async ({ context, userAgent }) => {
 
 async function profilDe(c: CompteDeTest<'maquilleuse'>) {
 	const payload = await payloadDeTest()
-	const { docs } = await payload.find({ collection: 'profils', depth: 0, where: { pro: { equals: c.id } } })
+	const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: c.id } } })
 	const [fiche] = docs
 	if (!fiche) throw new Error('pas de profil')
 	return { payload, fiche }
@@ -52,15 +52,15 @@ test.beforeAll(async () => {
 	const { payload, fiche } = await profilDe(compte)
 	slug = fiche.slug
 	await payload.update({
-		collection: 'profils',
+		collection: 'profiles',
 		id: fiche.id,
 		data: {
-			prenom: 'Mesure',
-			nom: 'Exemple',
-			reseaux: { instagram: INSTAGRAM },
-			coordonnees: { telephone: TELEPHONE, email: EMAIL },
-			contactPublic: true,
-			consentiLe: new Date().toISOString(),
+			firstName: 'Mesure',
+			lastName: 'Exemple',
+			networks: { instagram: INSTAGRAM },
+			contactDetails: { phone: TELEPHONE, email: EMAIL },
+			publicContact: true,
+			consentedAt: new Date().toISOString(),
 		},
 	})
 	const { fiche: sansContact } = await profilDe(autre)
@@ -71,8 +71,8 @@ test.afterAll(async () => {
 	test.setTimeout(120_000)
 	const payload = await payloadDeTest()
 	for (const c of [compte, autre]) {
-		const { docs } = await payload.find({ collection: 'profils', depth: 0, where: { pro: { equals: c.id } } })
-		for (const { id } of docs) await payload.delete({ collection: 'profils', id })
+		const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: c.id } } })
+		for (const { id } of docs) await payload.delete({ collection: 'profiles', id })
 		await payload.delete({ collection: 'pros', id: c.id }).catch(() => undefined)
 	}
 })

@@ -51,7 +51,7 @@ async function creerUnCompte(email: string, options: { confirme: boolean }) {
 	await payload.create({
 		collection: 'pros',
 		// A name of its own: two accounts made at once with the same name would fight for the same slug.
-		data: { email, password: MOT_DE_PASSE, nom: `Compte ${aleatoireEnLettres()}`, _verified: options.confirme },
+		data: { email, password: MOT_DE_PASSE, name: `Compte ${aleatoireEnLettres()}`, _verified: options.confirme },
 		disableVerificationEmail: true,
 		overrideAccess: true,
 	})
@@ -89,7 +89,7 @@ test.describe('E01 : inscription, mur, lien, connexion, onboarding', { tag: '@mo
 		// Her profile and its address were made by the server, with the account.
 		const payload = await payloadDeTest()
 		const compte = (await payload.find({ collection: 'pros', depth: 0, where: { email: { equals: email } } })).docs[0]
-		const profil = (await payload.find({ collection: 'profils', depth: 0, where: { pro: { equals: compte?.id } } }))
+		const profil = (await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte?.id } } }))
 			.docs[0]
 		expect(profil?.slug).toMatch(/^lea-fictive(-\d+)?$/)
 	})
@@ -178,7 +178,7 @@ test.describe('U25 : les messages du formulaire', () => {
 		await expect(page).toHaveURL(/\/auth\/verification-wall$/)
 		await expect(page.getByRole('heading', { name: 'Vérifie ton adresse email My Makeup' })).toBeVisible()
 		expect((await comptesDeLAdresse()).totalDocs).toBe(1)
-		expect((await payload.count({ collection: 'pros', where: { nom: { equals: 'Autre Personne' } } })).totalDocs).toBe(
+		expect((await payload.count({ collection: 'pros', where: { name: { equals: 'Autre Personne' } } })).totalDocs).toBe(
 			0
 		)
 		await expect
@@ -296,7 +296,7 @@ test.describe('Contre les faux comptes (ticket 084)', () => {
 		const lignes = async () =>
 			(
 				await payload.find({
-					collection: 'auth-evenements',
+					collection: 'auth-events',
 					depth: 0,
 					limit: 1000,
 					where: { code: { equals: 'champ-piege' } },
@@ -355,8 +355,8 @@ test.describe('Contre les faux comptes (ticket 084)', () => {
 		expect(
 			(
 				await payload.count({
-					collection: 'auth-evenements',
-					where: { and: [{ type: { equals: 'inscription' } }, { code: { equals: 'trop-de-tentatives' } }] },
+					collection: 'auth-events',
+					where: { and: [{ type: { equals: 'sign-up' } }, { code: { equals: 'trop-de-tentatives' } }] },
 				})
 			).totalDocs
 		).toBeGreaterThanOrEqual(1)

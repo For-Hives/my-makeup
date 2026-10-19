@@ -13,7 +13,7 @@
  */
 
 import { randomBytes } from 'node:crypto'
-import { CONTEXTE_SANS_PROFIL } from '../../../src/collections/Profils'
+import { CONTEXTE_SANS_PROFIL } from '../../../src/collections/Profiles'
 import { type ApplicationDesDecisions, appliquerLesDecisions, type Decisions } from './decisions'
 import { REFERENCES } from './ecarts'
 import type { Adaptateur, Attendu, Ecart } from './moteur'
@@ -52,10 +52,10 @@ export const ADAPTATEUR_COMPTES: Adaptateur = {
 	collection: 'pros',
 	champs: {
 		email: 'texte',
-		nom: 'texte',
+		name: 'texte',
 		legacyProvider: 'texte',
 		legacyBcrypt: 'texte',
-		bloque: 'booleen',
+		blocked: 'booleen',
 		_verified: 'booleen',
 		createdAt: 'date',
 		updatedAt: 'date',
@@ -88,10 +88,10 @@ export function compteAttendu(ligne: LigneCompte, tirer: () => string = motDePas
 		valeurs: {
 			strapiId: ligne.id,
 			email,
-			nom: ligne.username,
+			name: ligne.username,
 			legacyProvider: ligne.provider,
 			legacyBcrypt,
-			bloque: ligne.blocked,
+			blocked: ligne.blocked,
 			_verified: true,
 			createdAt: ligne.created_at,
 			updatedAt: ligne.updated_at,

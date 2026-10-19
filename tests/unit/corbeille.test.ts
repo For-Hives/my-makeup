@@ -9,7 +9,7 @@ import type {
 	Config,
 	Plugin,
 } from 'payload'
-import { avecLaCorbeille, MESSAGE_UN_A_LA_FOIS, sansSuppressionDuGreffon, unALaFois } from '@/collections/corbeille'
+import { avecLaCorbeille, MESSAGE_UN_A_LA_FOIS, sansSuppressionDuGreffon, unALaFois } from '@/collections/trash'
 import { CONTEXTE_IMPORT } from '@/lib/contexte-import'
 import {
 	cleEnCorbeille,
@@ -348,7 +348,7 @@ describe('Le greffon de stockage perd ses suppressions ; media et profils reçoi
 
 	const collections = (): CollectionConfig[] => [
 		{ slug: 'media', upload: true, fields: [], hooks: { afterChange: [propre], afterDelete: [propreALaSuppression] } },
-		{ slug: 'profils', fields: [], hooks: { afterChange: [propre] } },
+		{ slug: 'profiles', fields: [], hooks: { afterChange: [propre] } },
 		{ slug: 'talents', fields: [] },
 	]
 
@@ -492,7 +492,7 @@ describe('Sans stockage d’objets, le ménage d’un profil ne supprime aucun m
 
 	/** The hooks of the bin on `profils`, as src/payload.config.ts sets them, with this storage or none. */
 	async function crochetsDesProfils(stockage: StockageDesObjets | undefined) {
-		const profilsSeuls: CollectionConfig[] = [{ slug: 'profils', fields: [] }]
+		const profilsSeuls: CollectionConfig[] = [{ slug: 'profiles', fields: [] }]
 		const config = await avecLaCorbeille(config => config, stockage)({ collections: profilsSeuls } as Config)
 		const [profils] = config.collections as CollectionConfig[]
 		const [apresEnregistrement] = profils?.hooks?.afterChange ?? []
@@ -501,8 +501,8 @@ describe('Sans stockage d’objets, le ménage d’un profil ne supprime aucun m
 		return { apresEnregistrement, apresSuppression }
 	}
 
-	const avant = { id: 7, pro: 3, photoPrincipale: 11, galerie: [12, { id: 13 }] }
-	const apres = { id: 7, pro: 3, photoPrincipale: null, galerie: [] }
+	const avant = { id: 7, pro: 3, mainPicture: 11, gallery: [12, { id: 13 }] }
+	const apres = { id: 7, pro: 3, mainPicture: null, gallery: [] }
 
 	test('une photo retirée, un profil supprimé : aucune lecture, aucune suppression ; une ligne le dit', async () => {
 		const { apresEnregistrement, apresSuppression } = await crochetsDesProfils(undefined)
@@ -542,7 +542,7 @@ describe('Sans stockage d’objets, le ménage d’un profil ne supprime aucun m
 			req,
 		})
 
-		expect(appels).toEqual(['find profils', 'find articles', 'findVersions articles', 'find media'])
+		expect(appels).toEqual(['find profiles', 'find articles', 'findVersions articles', 'find media'])
 		expect(avertissements).toEqual([])
 	})
 })

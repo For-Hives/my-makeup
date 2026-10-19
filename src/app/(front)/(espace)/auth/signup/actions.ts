@@ -55,8 +55,7 @@ export async function sInscrire(_precedent: EtatDInscription, formulaire: FormDa
 	if (typeof piege === 'string' && piege.trim() !== '') {
 		// A script. It is counted by the same brake so that a flood cannot fill the journal, and it is
 		// shown the screen of a success, which it cannot tell from a real one.
-		if (freinDInscription.prendre(client).autorise)
-			await journaliserUnRefus(journal, client, 'inscription', 'champ-piege')
+		if (freinDInscription.prendre(client).autorise) await journaliserUnRefus(journal, client, 'sign-up', 'champ-piege')
 		redirect(PAGE_DU_MUR)
 	}
 	const saisie = {
@@ -68,13 +67,13 @@ export async function sInscrire(_precedent: EtatDInscription, formulaire: FormDa
 	const valeurs = { nom: texte(saisie.nom), email: texte(saisie.email), cgu: saisie.cgu === 'on' }
 	const validation = validerInscription(saisie)
 	if (!validation.ok) {
-		await journaliserUnRefus(journal, client, 'inscription', 'donnees-invalides')
+		await journaliserUnRefus(journal, client, 'sign-up', 'donnees-invalides')
 		return { erreurs: validation.erreurs, valeurs }
 	}
 
 	const place = freinDInscription.prendre(client)
 	if (!place.autorise) {
-		await journaliserUnRefus(journal, client, 'inscription', 'trop-de-tentatives')
+		await journaliserUnRefus(journal, client, 'sign-up', 'trop-de-tentatives')
 		return { echec: 'trop-de-tentatives', valeurs }
 	}
 

@@ -13,7 +13,7 @@ import { usagers } from '../outils/verrou'
 
 /** The keys a page must never carry in what it sends: what is private or reserved. */
 const CLES_PRIVEES =
-	/"(?:pro|strapiId|legacyUsername|statut|motif|verifie|verifieLe|siret|noteInterne|score|superMaquilleuse|coordonnees|telephone|contactPublic|consentiLe|sourceConsentement|codeInsee|latitude|longitude)"\s*:/
+	/"(?:pro|strapiId|legacyUsername|statut|status|motif|reason|verifie|verified|verifieLe|verifiedAt|siret|noteInterne|internalNote|score|superMaquilleuse|superArtist|coordonnees|contactDetails|telephone|phone|contactPublic|publicContact|consentiLe|consentedAt|sourceConsentement|consentSource|codeInsee|inseeCode|latitude|longitude)"\s*:/
 
 const MOTS_INTERDITS = /\b(?:undefined|null|NaN|Invalid Date)\b|&\s*km|\bnullkm\b/
 
@@ -38,10 +38,10 @@ test.afterAll(async () => {
 	const payload = await payloadDeTest()
 	for (const { id } of profils.values()) {
 		const profil = await payload
-			.findByID({ collection: 'profils', id, depth: 0, select: { pro: true } })
+			.findByID({ collection: 'profiles', id, depth: 0, select: { pro: true } })
 			.catch(() => null)
 		if (!profil) continue
-		await payload.delete({ collection: 'profils', id })
+		await payload.delete({ collection: 'profiles', id })
 		const pro = typeof profil.pro === 'object' ? profil.pro.id : profil.pro
 		if (pro !== undefined && pro !== null) await payload.delete({ collection: 'pros', id: pro }).catch(() => undefined)
 	}
@@ -187,7 +187,7 @@ test.describe('Les douze profils types du banc', () => {
 		expect(profils.size).toBe(12)
 		for (const [cle, { slug, type }] of profils) {
 			const reponse = await request.get(`/profil/${slug}`, { headers: { 'User-Agent': ROBOT } })
-			if (type.attendu.statut === 'masque') {
+			if (type.attendu.status === 'hidden') {
 				expect(reponse.status(), cle).toBe(404)
 				continue
 			}
@@ -197,7 +197,7 @@ test.describe('Les douze profils types du banc', () => {
 			expect(texteVisible(html), cle).not.toMatch(MOTS_INTERDITS)
 			expect(html, cle).not.toMatch(CLES_PRIVEES)
 			// Indexed only when the profile is publishable (E66).
-			expect(/<meta name="robots" content="noindex/.test(html), cle).toBe(type.attendu.publiable !== true)
+			expect(/<meta name="robots" content="noindex/.test(html), cle).toBe(type.attendu.publishable !== true)
 		}
 	})
 })
@@ -212,13 +212,13 @@ test.describe('E46 : l’ancienne adresse par nom d’utilisateur', () => {
 		// The old username is written by the import only: the test writes it as the import does, without the access rules.
 		const payload = await payloadDeTest()
 		await payload.update({
-			collection: 'profils',
+			collection: 'profiles',
 			id: profil('indisponible').id,
 			data: { legacyUsername: ANCIEN_NOM },
 			context: { import: true },
 		})
 		await payload.update({
-			collection: 'profils',
+			collection: 'profiles',
 			id: profil('masquee').id,
 			data: { legacyUsername: `${ANCIEN_NOM} masquée` },
 			context: { import: true },
@@ -300,8 +300,13 @@ test.describe('E44 : la galerie du portfolio', { tag: '@mobile' }, () => {
 		await expect(images).toHaveCount(6)
 
 		// The addresses the portfolio is made from, as the database holds them, in the order she gave.
-		const stocke = await (await payloadDeTest()).findByID({ collection: 'profils', id, depth: 1, overrideAccess: true })
-		const origines = (stocke.galerie ?? []).map(photo => (typeof photo === 'object' ? photo.url : null))
+		const stocke = await (await payloadDeTest()).findByID({
+			collection: 'profiles',
+			id,
+			depth: 1,
+			overrideAccess: true,
+		})
+		const origines = (stocke.gallery ?? []).map(photo => (typeof photo === 'object' ? photo.url : null))
 		expect(origines).toHaveLength(6)
 
 		for (let rang = 0; rang < 6; rang++) {

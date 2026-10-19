@@ -155,7 +155,7 @@ describe('la page du profil', () => {
 	const base = { slug: 'lea-exemple', prenom: 'Léa', nom: 'Exemple', statut: 'publie', publiable: true } as const
 	const profil = (surcharge: Partial<Parameters<typeof profilPublicDe>[0]>, coordonnees: ProfilPublic['coordonnees']) =>
 		profilPublicDe(
-			{ ...base, id: 8, strapiId: 77, reseaux: { instagram: 'https://instagram.com/lea.exemple' }, ...surcharge },
+			{ ...base, id: 8, strapiId: 77, networks: { instagram: 'https://instagram.com/lea.exemple' }, ...surcharge },
 			{ photo: null, galerie: [], coordonnees }
 		)
 	const rendre = (p: ProfilPublic, mesure?: boolean) =>
@@ -174,7 +174,7 @@ describe('la page du profil', () => {
 	})
 
 	test('un profil sans contact public : ni lien de téléphone ni d’email, et aucune section de contacts', () => {
-		const html = rendre(profil({ reseaux: {} }, null))
+		const html = rendre(profil({ networks: {} }, null))
 		expect(html).not.toContain('tel:')
 		expect(html).not.toContain('mailto:')
 		expect(html).not.toContain('Réseaux sociaux &amp; contacts')

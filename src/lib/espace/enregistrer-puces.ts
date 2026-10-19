@@ -44,7 +44,7 @@ async function enregistrerLesPuces(
 		const id = await identifiantDuProfilAEcrire(payload, utilisateur)
 		if (id === null) return { ok: false, message: MESSAGE_ECHEC }
 		const actuel = await payload.findByID({
-			collection: 'profils',
+			collection: 'profiles',
 			depth: 0,
 			disableErrors: true,
 			id,
@@ -70,7 +70,7 @@ async function enregistrerLesPuces(
 			})
 		}
 		const stocke = await payload.update({
-			collection: 'profils',
+			collection: 'profiles',
 			data: { [sorte.champ]: lignes },
 			depth: 0,
 			id,

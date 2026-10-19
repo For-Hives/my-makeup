@@ -17,16 +17,16 @@ import type { Payload } from 'payload'
 
 /** What happened. */
 export const TYPES_EVENEMENT = [
-	'connexion',
-	'deconnexion',
-	'deconnexion-partout',
-	'inscription',
+	'sign-in',
+	'sign-out',
+	'sign-out-everywhere',
+	'sign-up',
 	'confirmation',
-	'renvoi',
-	'mot-de-passe-oublie',
-	'reinitialisation',
-	'blocage',
-	'deblocage',
+	'resend',
+	'forgot-password',
+	'password-reset',
+	'block',
+	'unblock',
 ] as const
 export type TypeEvenement = (typeof TYPES_EVENEMENT)[number]
 
@@ -59,21 +59,21 @@ export type CodeEvenement = (typeof CODES_EVENEMENT)[number]
  * How the person proved who she is (ticket 090). Older rows have none. Closed list, like the others:
  * a value outside it is not written.
  */
-export const METHODES_EVENEMENT = ['mot-de-passe', 'google'] as const
+export const METHODES_EVENEMENT = ['password', 'google'] as const
 export type MethodeEvenement = (typeof METHODES_EVENEMENT)[number]
 
 /** How long a row is kept, in days (plan 01 §2.3). */
 export const CONSERVATION_JOURNAL_JOURS = 90
 
-export const COLLECTION_JOURNAL = 'auth-evenements'
+export const COLLECTION_JOURNAL = 'auth-events'
 
 export interface EvenementAuth {
 	type: TypeEvenement
 	code: CodeEvenement
 	/** How long the event took, in milliseconds. */
-	dureeMs?: number
+	durationMs?: number
 	/** How she signed in or up. Left out for the events that have no such thing (sign-out, confirmation). */
-	methode?: MethodeEvenement
+	method?: MethodeEvenement
 }
 
 /** The one door the code writes the journal through: a test hands it a double. */
@@ -90,12 +90,12 @@ const estMethode = (valeur: unknown): valeur is MethodeEvenement =>
  * (a select field), and `journaliser` then writes nothing.
  */
 export function ligneDeJournal(evenement: EvenementAuth, maintenant: Date = new Date()) {
-	const duree = evenement.dureeMs
+	const duree = evenement.durationMs
 	return {
 		type: evenement.type,
 		code: estCode(evenement.code) ? evenement.code : ('inconnu' as const),
-		...(typeof duree === 'number' && Number.isFinite(duree) && duree >= 0 && { dureeMs: Math.round(duree) }),
-		...(estMethode(evenement.methode) && { methode: evenement.methode }),
+		...(typeof duree === 'number' && Number.isFinite(duree) && duree >= 0 && { durationMs: Math.round(duree) }),
+		...(estMethode(evenement.method) && { method: evenement.method }),
 		date: maintenant.toISOString(),
 	}
 }

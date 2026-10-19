@@ -106,7 +106,7 @@
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
-          "default": "'redaction'"
+          "default": "'editor'"
         },
         "updated_at": {
           "name": "updated_at",
@@ -311,21 +311,21 @@
           "primaryKey": true,
           "notNull": true
         },
-        "nom": {
-          "name": "nom",
+        "name": {
+          "name": "name",
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
         },
-        "bloque": {
-          "name": "bloque",
+        "blocked": {
+          "name": "blocked",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
           "default": false
         },
-        "derniere_connexion": {
-          "name": "derniere_connexion",
+        "last_sign_in_at": {
+          "name": "last_sign_in_at",
           "type": "timestamp(3) with time zone",
           "primaryKey": false,
           "notNull": false
@@ -480,8 +480,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.profils_prestations_options": {
-      "name": "profils_prestations_options",
+    "public.profiles_prestations_options": {
+      "name": "profiles_prestations_options",
       "schema": "",
       "columns": {
         "_order": {
@@ -528,8 +528,8 @@
         }
       },
       "indexes": {
-        "profils_prestations_options_order_idx": {
-          "name": "profils_prestations_options_order_idx",
+        "profiles_prestations_options_order_idx": {
+          "name": "profiles_prestations_options_order_idx",
           "columns": [
             {
               "expression": "_order",
@@ -543,8 +543,8 @@
           "method": "btree",
           "with": {}
         },
-        "profils_prestations_options_parent_id_idx": {
-          "name": "profils_prestations_options_parent_id_idx",
+        "profiles_prestations_options_parent_id_idx": {
+          "name": "profiles_prestations_options_parent_id_idx",
           "columns": [
             {
               "expression": "_parent_id",
@@ -560,10 +560,10 @@
         }
       },
       "foreignKeys": {
-        "profils_prestations_options_parent_id_fk": {
-          "name": "profils_prestations_options_parent_id_fk",
-          "tableFrom": "profils_prestations_options",
-          "tableTo": "profils_prestations",
+        "profiles_prestations_options_parent_id_fk": {
+          "name": "profiles_prestations_options_parent_id_fk",
+          "tableFrom": "profiles_prestations_options",
+          "tableTo": "profiles_prestations",
           "columnsFrom": [
             "_parent_id"
           ],
@@ -580,8 +580,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.profils_prestations": {
-      "name": "profils_prestations",
+    "public.profiles_prestations": {
+      "name": "profiles_prestations",
       "schema": "",
       "columns": {
         "_order": {
@@ -628,8 +628,8 @@
         }
       },
       "indexes": {
-        "profils_prestations_order_idx": {
-          "name": "profils_prestations_order_idx",
+        "profiles_prestations_order_idx": {
+          "name": "profiles_prestations_order_idx",
           "columns": [
             {
               "expression": "_order",
@@ -643,8 +643,8 @@
           "method": "btree",
           "with": {}
         },
-        "profils_prestations_parent_id_idx": {
-          "name": "profils_prestations_parent_id_idx",
+        "profiles_prestations_parent_id_idx": {
+          "name": "profiles_prestations_parent_id_idx",
           "columns": [
             {
               "expression": "_parent_id",
@@ -660,10 +660,10 @@
         }
       },
       "foreignKeys": {
-        "profils_prestations_parent_id_fk": {
-          "name": "profils_prestations_parent_id_fk",
-          "tableFrom": "profils_prestations",
-          "tableTo": "profils",
+        "profiles_prestations_parent_id_fk": {
+          "name": "profiles_prestations_parent_id_fk",
+          "tableFrom": "profiles_prestations",
+          "tableTo": "profiles",
           "columnsFrom": [
             "_parent_id"
           ],
@@ -680,8 +680,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.profils_competences": {
-      "name": "profils_competences",
+    "public.profiles_competences": {
+      "name": "profiles_competences",
       "schema": "",
       "columns": {
         "_order": {
@@ -716,8 +716,8 @@
         }
       },
       "indexes": {
-        "profils_competences_order_idx": {
-          "name": "profils_competences_order_idx",
+        "profiles_competences_order_idx": {
+          "name": "profiles_competences_order_idx",
           "columns": [
             {
               "expression": "_order",
@@ -731,8 +731,8 @@
           "method": "btree",
           "with": {}
         },
-        "profils_competences_parent_id_idx": {
-          "name": "profils_competences_parent_id_idx",
+        "profiles_competences_parent_id_idx": {
+          "name": "profiles_competences_parent_id_idx",
           "columns": [
             {
               "expression": "_parent_id",
@@ -748,10 +748,10 @@
         }
       },
       "foreignKeys": {
-        "profils_competences_parent_id_fk": {
-          "name": "profils_competences_parent_id_fk",
-          "tableFrom": "profils_competences",
-          "tableTo": "profils",
+        "profiles_competences_parent_id_fk": {
+          "name": "profiles_competences_parent_id_fk",
+          "tableFrom": "profiles_competences",
+          "tableTo": "profiles",
           "columnsFrom": [
             "_parent_id"
           ],
@@ -768,8 +768,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.profils_langues": {
-      "name": "profils_langues",
+    "public.profiles_langues": {
+      "name": "profiles_langues",
       "schema": "",
       "columns": {
         "_order": {
@@ -798,8 +798,8 @@
         }
       },
       "indexes": {
-        "profils_langues_order_idx": {
-          "name": "profils_langues_order_idx",
+        "profiles_langues_order_idx": {
+          "name": "profiles_langues_order_idx",
           "columns": [
             {
               "expression": "_order",
@@ -813,8 +813,8 @@
           "method": "btree",
           "with": {}
         },
-        "profils_langues_parent_id_idx": {
-          "name": "profils_langues_parent_id_idx",
+        "profiles_langues_parent_id_idx": {
+          "name": "profiles_langues_parent_id_idx",
           "columns": [
             {
               "expression": "_parent_id",
@@ -830,10 +830,10 @@
         }
       },
       "foreignKeys": {
-        "profils_langues_parent_id_fk": {
-          "name": "profils_langues_parent_id_fk",
-          "tableFrom": "profils_langues",
-          "tableTo": "profils",
+        "profiles_langues_parent_id_fk": {
+          "name": "profiles_langues_parent_id_fk",
+          "tableFrom": "profiles_langues",
+          "tableTo": "profiles",
           "columnsFrom": [
             "_parent_id"
           ],
@@ -850,8 +850,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.profils_formations": {
-      "name": "profils_formations",
+    "public.profiles_formations": {
+      "name": "profiles_formations",
       "schema": "",
       "columns": {
         "_order": {
@@ -898,8 +898,8 @@
         }
       },
       "indexes": {
-        "profils_formations_order_idx": {
-          "name": "profils_formations_order_idx",
+        "profiles_formations_order_idx": {
+          "name": "profiles_formations_order_idx",
           "columns": [
             {
               "expression": "_order",
@@ -913,8 +913,8 @@
           "method": "btree",
           "with": {}
         },
-        "profils_formations_parent_id_idx": {
-          "name": "profils_formations_parent_id_idx",
+        "profiles_formations_parent_id_idx": {
+          "name": "profiles_formations_parent_id_idx",
           "columns": [
             {
               "expression": "_parent_id",
@@ -930,10 +930,10 @@
         }
       },
       "foreignKeys": {
-        "profils_formations_parent_id_fk": {
-          "name": "profils_formations_parent_id_fk",
-          "tableFrom": "profils_formations",
-          "tableTo": "profils",
+        "profiles_formations_parent_id_fk": {
+          "name": "profiles_formations_parent_id_fk",
+          "tableFrom": "profiles_formations",
+          "tableTo": "profiles",
           "columnsFrom": [
             "_parent_id"
           ],
@@ -950,8 +950,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.profils_experiences": {
-      "name": "profils_experiences",
+    "public.profiles_experiences": {
+      "name": "profiles_experiences",
       "schema": "",
       "columns": {
         "_order": {
@@ -1010,8 +1010,8 @@
         }
       },
       "indexes": {
-        "profils_experiences_order_idx": {
-          "name": "profils_experiences_order_idx",
+        "profiles_experiences_order_idx": {
+          "name": "profiles_experiences_order_idx",
           "columns": [
             {
               "expression": "_order",
@@ -1025,8 +1025,8 @@
           "method": "btree",
           "with": {}
         },
-        "profils_experiences_parent_id_idx": {
-          "name": "profils_experiences_parent_id_idx",
+        "profiles_experiences_parent_id_idx": {
+          "name": "profiles_experiences_parent_id_idx",
           "columns": [
             {
               "expression": "_parent_id",
@@ -1042,10 +1042,10 @@
         }
       },
       "foreignKeys": {
-        "profils_experiences_parent_id_fk": {
-          "name": "profils_experiences_parent_id_fk",
-          "tableFrom": "profils_experiences",
-          "tableTo": "profils",
+        "profiles_experiences_parent_id_fk": {
+          "name": "profiles_experiences_parent_id_fk",
+          "tableFrom": "profiles_experiences",
+          "tableTo": "profiles",
           "columnsFrom": [
             "_parent_id"
           ],
@@ -1062,8 +1062,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.profils": {
-      "name": "profils",
+    "public.profiles": {
+      "name": "profiles",
       "schema": "",
       "columns": {
         "id": {
@@ -1084,68 +1084,68 @@
           "primaryKey": false,
           "notNull": true
         },
-        "prenom": {
-          "name": "prenom",
+        "first_name": {
+          "name": "first_name",
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
         },
-        "nom": {
-          "name": "nom",
+        "last_name": {
+          "name": "last_name",
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
         },
-        "nom_artiste": {
-          "name": "nom_artiste",
+        "artist_name": {
+          "name": "artist_name",
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
         },
-        "specialite": {
-          "name": "specialite",
+        "specialty": {
+          "name": "specialty",
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
         },
-        "commune_nom": {
-          "name": "commune_nom",
+        "city_name": {
+          "name": "city_name",
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
         },
-        "commune_code_insee": {
-          "name": "commune_code_insee",
+        "city_insee_code": {
+          "name": "city_insee_code",
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
         },
-        "commune_departement": {
-          "name": "commune_departement",
+        "city_department": {
+          "name": "city_department",
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
         },
-        "commune_latitude": {
-          "name": "commune_latitude",
+        "city_latitude": {
+          "name": "city_latitude",
           "type": "numeric",
           "primaryKey": false,
           "notNull": false
         },
-        "commune_longitude": {
-          "name": "commune_longitude",
+        "city_longitude": {
+          "name": "city_longitude",
           "type": "numeric",
           "primaryKey": false,
           "notNull": false
         },
-        "rayon_km": {
-          "name": "rayon_km",
+        "radius_km": {
+          "name": "radius_km",
           "type": "numeric",
           "primaryKey": false,
           "notNull": false
         },
-        "a_domicile": {
-          "name": "a_domicile",
+        "home_service": {
+          "name": "home_service",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false
@@ -1156,77 +1156,77 @@
           "primaryKey": false,
           "notNull": false
         },
-        "disponible": {
-          "name": "disponible",
+        "available": {
+          "name": "available",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
           "default": true
         },
-        "photo_principale_id": {
-          "name": "photo_principale_id",
+        "main_picture_id": {
+          "name": "main_picture_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
         },
-        "reseaux_youtube": {
-          "name": "reseaux_youtube",
+        "networks_youtube": {
+          "name": "networks_youtube",
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
         },
-        "reseaux_facebook": {
-          "name": "reseaux_facebook",
+        "networks_facebook": {
+          "name": "networks_facebook",
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
         },
-        "reseaux_instagram": {
-          "name": "reseaux_instagram",
+        "networks_instagram": {
+          "name": "networks_instagram",
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
         },
-        "reseaux_site_web": {
-          "name": "reseaux_site_web",
+        "networks_website": {
+          "name": "networks_website",
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
         },
-        "reseaux_linkedin": {
-          "name": "reseaux_linkedin",
+        "networks_linkedin": {
+          "name": "networks_linkedin",
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
         },
-        "coordonnees_telephone": {
-          "name": "coordonnees_telephone",
+        "contact_details_phone": {
+          "name": "contact_details_phone",
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
         },
-        "coordonnees_email": {
-          "name": "coordonnees_email",
+        "contact_details_email": {
+          "name": "contact_details_email",
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
         },
-        "contact_public": {
-          "name": "contact_public",
+        "public_contact": {
+          "name": "public_contact",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
           "default": false
         },
-        "consenti_le": {
-          "name": "consenti_le",
+        "consented_at": {
+          "name": "consented_at",
           "type": "timestamp(3) with time zone",
           "primaryKey": false,
           "notNull": false
         },
-        "source_consentement": {
-          "name": "source_consentement",
-          "type": "enum_profils_source_consentement",
+        "consent_source": {
+          "name": "consent_source",
+          "type": "enum_profiles_consent_source",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": false
@@ -1243,37 +1243,37 @@
           "primaryKey": false,
           "notNull": false
         },
-        "statut": {
-          "name": "statut",
-          "type": "enum_profils_statut",
+        "status": {
+          "name": "status",
+          "type": "enum_profiles_status",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": false,
-          "default": "'brouillon'"
+          "default": "'draft'"
         },
-        "statut_choisi": {
-          "name": "statut_choisi",
-          "type": "enum_profils_statut_choisi",
+        "chosen_status": {
+          "name": "chosen_status",
+          "type": "enum_profiles_chosen_status",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": false,
-          "default": "'automatique'"
+          "default": "'automatic'"
         },
-        "motif": {
-          "name": "motif",
+        "reason": {
+          "name": "reason",
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
         },
-        "verifie": {
-          "name": "verifie",
+        "verified": {
+          "name": "verified",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
           "default": false
         },
-        "verifie_le": {
-          "name": "verifie_le",
+        "verified_at": {
+          "name": "verified_at",
           "type": "timestamp(3) with time zone",
           "primaryKey": false,
           "notNull": false
@@ -1284,8 +1284,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "note_interne": {
-          "name": "note_interne",
+        "internal_note": {
+          "name": "internal_note",
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
@@ -1296,51 +1296,51 @@
           "primaryKey": false,
           "notNull": false
         },
-        "super_maquilleuse": {
-          "name": "super_maquilleuse",
+        "super_artist": {
+          "name": "super_artist",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
           "default": false
         },
-        "completude": {
-          "name": "completude",
+        "completeness": {
+          "name": "completeness",
           "type": "numeric",
           "primaryKey": false,
           "notNull": false
         },
-        "actif": {
-          "name": "actif",
+        "active": {
+          "name": "active",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false
         },
-        "actif_depuis": {
-          "name": "actif_depuis",
+        "active_since": {
+          "name": "active_since",
           "type": "timestamp(3) with time zone",
           "primaryKey": false,
           "notNull": false
         },
-        "publiable": {
-          "name": "publiable",
+        "publishable": {
+          "name": "publishable",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false
         },
-        "publiable_depuis": {
-          "name": "publiable_depuis",
+        "publishable_since": {
+          "name": "publishable_since",
           "type": "timestamp(3) with time zone",
           "primaryKey": false,
           "notNull": false
         },
-        "entierement_vide": {
-          "name": "entierement_vide",
+        "fully_empty": {
+          "name": "fully_empty",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false
         },
-        "entierement_vide_depuis": {
-          "name": "entierement_vide_depuis",
+        "fully_empty_since": {
+          "name": "fully_empty_since",
           "type": "timestamp(3) with time zone",
           "primaryKey": false,
           "notNull": false
@@ -1361,8 +1361,8 @@
         }
       },
       "indexes": {
-        "profils_pro_idx": {
-          "name": "profils_pro_idx",
+        "profiles_pro_idx": {
+          "name": "profiles_pro_idx",
           "columns": [
             {
               "expression": "pro_id",
@@ -1376,8 +1376,8 @@
           "method": "btree",
           "with": {}
         },
-        "profils_slug_idx": {
-          "name": "profils_slug_idx",
+        "profiles_slug_idx": {
+          "name": "profiles_slug_idx",
           "columns": [
             {
               "expression": "slug",
@@ -1391,11 +1391,11 @@
           "method": "btree",
           "with": {}
         },
-        "profils_photo_principale_idx": {
-          "name": "profils_photo_principale_idx",
+        "profiles_main_picture_idx": {
+          "name": "profiles_main_picture_idx",
           "columns": [
             {
-              "expression": "photo_principale_id",
+              "expression": "main_picture_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1406,8 +1406,8 @@
           "method": "btree",
           "with": {}
         },
-        "profils_strapi_id_idx": {
-          "name": "profils_strapi_id_idx",
+        "profiles_strapi_id_idx": {
+          "name": "profiles_strapi_id_idx",
           "columns": [
             {
               "expression": "strapi_id",
@@ -1421,11 +1421,11 @@
           "method": "btree",
           "with": {}
         },
-        "profils_statut_idx": {
-          "name": "profils_statut_idx",
+        "profiles_status_idx": {
+          "name": "profiles_status_idx",
           "columns": [
             {
-              "expression": "statut",
+              "expression": "status",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1436,8 +1436,8 @@
           "method": "btree",
           "with": {}
         },
-        "profils_updated_at_idx": {
-          "name": "profils_updated_at_idx",
+        "profiles_updated_at_idx": {
+          "name": "profiles_updated_at_idx",
           "columns": [
             {
               "expression": "updated_at",
@@ -1451,8 +1451,8 @@
           "method": "btree",
           "with": {}
         },
-        "profils_created_at_idx": {
-          "name": "profils_created_at_idx",
+        "profiles_created_at_idx": {
+          "name": "profiles_created_at_idx",
           "columns": [
             {
               "expression": "created_at",
@@ -1468,9 +1468,9 @@
         }
       },
       "foreignKeys": {
-        "profils_pro_id_pros_id_fk": {
-          "name": "profils_pro_id_pros_id_fk",
-          "tableFrom": "profils",
+        "profiles_pro_id_pros_id_fk": {
+          "name": "profiles_pro_id_pros_id_fk",
+          "tableFrom": "profiles",
           "tableTo": "pros",
           "columnsFrom": [
             "pro_id"
@@ -1481,12 +1481,12 @@
           "onDelete": "set null",
           "onUpdate": "no action"
         },
-        "profils_photo_principale_id_media_id_fk": {
-          "name": "profils_photo_principale_id_media_id_fk",
-          "tableFrom": "profils",
+        "profiles_main_picture_id_media_id_fk": {
+          "name": "profiles_main_picture_id_media_id_fk",
+          "tableFrom": "profiles",
           "tableTo": "media",
           "columnsFrom": [
-            "photo_principale_id"
+            "main_picture_id"
           ],
           "columnsTo": [
             "id"
@@ -1501,8 +1501,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.profils_rels": {
-      "name": "profils_rels",
+    "public.profiles_rels": {
+      "name": "profiles_rels",
       "schema": "",
       "columns": {
         "id": {
@@ -1537,8 +1537,8 @@
         }
       },
       "indexes": {
-        "profils_rels_order_idx": {
-          "name": "profils_rels_order_idx",
+        "profiles_rels_order_idx": {
+          "name": "profiles_rels_order_idx",
           "columns": [
             {
               "expression": "order",
@@ -1552,8 +1552,8 @@
           "method": "btree",
           "with": {}
         },
-        "profils_rels_parent_idx": {
-          "name": "profils_rels_parent_idx",
+        "profiles_rels_parent_idx": {
+          "name": "profiles_rels_parent_idx",
           "columns": [
             {
               "expression": "parent_id",
@@ -1567,8 +1567,8 @@
           "method": "btree",
           "with": {}
         },
-        "profils_rels_path_idx": {
-          "name": "profils_rels_path_idx",
+        "profiles_rels_path_idx": {
+          "name": "profiles_rels_path_idx",
           "columns": [
             {
               "expression": "path",
@@ -1582,8 +1582,8 @@
           "method": "btree",
           "with": {}
         },
-        "profils_rels_media_id_idx": {
-          "name": "profils_rels_media_id_idx",
+        "profiles_rels_media_id_idx": {
+          "name": "profiles_rels_media_id_idx",
           "columns": [
             {
               "expression": "media_id",
@@ -1599,10 +1599,10 @@
         }
       },
       "foreignKeys": {
-        "profils_rels_parent_fk": {
-          "name": "profils_rels_parent_fk",
-          "tableFrom": "profils_rels",
-          "tableTo": "profils",
+        "profiles_rels_parent_fk": {
+          "name": "profiles_rels_parent_fk",
+          "tableFrom": "profiles_rels",
+          "tableTo": "profiles",
           "columnsFrom": [
             "parent_id"
           ],
@@ -1612,9 +1612,9 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "profils_rels_media_fk": {
-          "name": "profils_rels_media_fk",
-          "tableFrom": "profils_rels",
+        "profiles_rels_media_fk": {
+          "name": "profiles_rels_media_fk",
+          "tableFrom": "profiles_rels",
           "tableTo": "media",
           "columnsFrom": [
             "media_id"
@@ -2078,6 +2078,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "page_title": {
+          "name": "page_title",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
         "description": {
           "name": "description",
           "type": "varchar",
@@ -2245,6 +2251,12 @@
         },
         "version_seo_title": {
           "name": "version_seo_title",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "version_page_title": {
+          "name": "version_page_title",
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
@@ -3180,8 +3192,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.auth_evenements": {
-      "name": "auth_evenements",
+    "public.auth_events": {
+      "name": "auth_events",
       "schema": "",
       "columns": {
         "id": {
@@ -3192,20 +3204,27 @@
         },
         "type": {
           "name": "type",
-          "type": "enum_auth_evenements_type",
+          "type": "enum_auth_events_type",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
         },
         "code": {
           "name": "code",
-          "type": "enum_auth_evenements_code",
+          "type": "enum_auth_events_code",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
         },
-        "duree_ms": {
-          "name": "duree_ms",
+        "method": {
+          "name": "method",
+          "type": "enum_auth_events_method",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "duration_ms": {
+          "name": "duration_ms",
           "type": "numeric",
           "primaryKey": false,
           "notNull": false
@@ -3218,8 +3237,8 @@
         }
       },
       "indexes": {
-        "auth_evenements_type_idx": {
-          "name": "auth_evenements_type_idx",
+        "auth_events_type_idx": {
+          "name": "auth_events_type_idx",
           "columns": [
             {
               "expression": "type",
@@ -3233,8 +3252,8 @@
           "method": "btree",
           "with": {}
         },
-        "auth_evenements_code_idx": {
-          "name": "auth_evenements_code_idx",
+        "auth_events_code_idx": {
+          "name": "auth_events_code_idx",
           "columns": [
             {
               "expression": "code",
@@ -3248,8 +3267,248 @@
           "method": "btree",
           "with": {}
         },
-        "auth_evenements_date_idx": {
-          "name": "auth_evenements_date_idx",
+        "auth_events_method_idx": {
+          "name": "auth_events_method_idx",
+          "columns": [
+            {
+              "expression": "method",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "auth_events_date_idx": {
+          "name": "auth_events_date_idx",
+          "columns": [
+            {
+              "expression": "date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.contact_requests": {
+      "name": "contact_requests",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "enum_contact_requests_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'contact'"
+        },
+        "status": {
+          "name": "status",
+          "type": "enum_contact_requests_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'new'"
+        },
+        "mail_status": {
+          "name": "mail_status",
+          "type": "enum_contact_requests_mail_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "first_name": {
+          "name": "first_name",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "last_name": {
+          "name": "last_name",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "phone": {
+          "name": "phone",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "message": {
+          "name": "message",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "contact_requests_type_idx": {
+          "name": "contact_requests_type_idx",
+          "columns": [
+            {
+              "expression": "type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "contact_requests_status_idx": {
+          "name": "contact_requests_status_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "contact_requests_mail_status_idx": {
+          "name": "contact_requests_mail_status_idx",
+          "columns": [
+            {
+              "expression": "mail_status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "contact_requests_updated_at_idx": {
+          "name": "contact_requests_updated_at_idx",
+          "columns": [
+            {
+              "expression": "updated_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "contact_requests_created_at_idx": {
+          "name": "contact_requests_created_at_idx",
+          "columns": [
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.deleted_accounts": {
+      "name": "deleted_accounts",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "strapi_id": {
+          "name": "strapi_id",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "date": {
+          "name": "date",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "deleted_accounts_strapi_id_idx": {
+          "name": "deleted_accounts_strapi_id_idx",
+          "columns": [
+            {
+              "expression": "strapi_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "deleted_accounts_date_idx": {
+          "name": "deleted_accounts_date_idx",
           "columns": [
             {
               "expression": "date",
@@ -3443,8 +3702,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "profils_id": {
-          "name": "profils_id",
+        "profiles_id": {
+          "name": "profiles_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
@@ -3467,8 +3726,20 @@
           "primaryKey": false,
           "notNull": false
         },
-        "auth_evenements_id": {
-          "name": "auth_evenements_id",
+        "auth_events_id": {
+          "name": "auth_events_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "contact_requests_id": {
+          "name": "contact_requests_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "deleted_accounts_id": {
+          "name": "deleted_accounts_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
@@ -3550,11 +3821,11 @@
           "method": "btree",
           "with": {}
         },
-        "payload_locked_documents_rels_profils_id_idx": {
-          "name": "payload_locked_documents_rels_profils_id_idx",
+        "payload_locked_documents_rels_profiles_id_idx": {
+          "name": "payload_locked_documents_rels_profiles_id_idx",
           "columns": [
             {
-              "expression": "profils_id",
+              "expression": "profiles_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -3610,11 +3881,41 @@
           "method": "btree",
           "with": {}
         },
-        "payload_locked_documents_rels_auth_evenements_id_idx": {
-          "name": "payload_locked_documents_rels_auth_evenements_id_idx",
+        "payload_locked_documents_rels_auth_events_id_idx": {
+          "name": "payload_locked_documents_rels_auth_events_id_idx",
           "columns": [
             {
-              "expression": "auth_evenements_id",
+              "expression": "auth_events_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "payload_locked_documents_rels_contact_requests_id_idx": {
+          "name": "payload_locked_documents_rels_contact_requests_id_idx",
+          "columns": [
+            {
+              "expression": "contact_requests_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "payload_locked_documents_rels_deleted_accounts_id_idx": {
+          "name": "payload_locked_documents_rels_deleted_accounts_id_idx",
+          "columns": [
+            {
+              "expression": "deleted_accounts_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -3666,12 +3967,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "payload_locked_documents_rels_profils_fk": {
-          "name": "payload_locked_documents_rels_profils_fk",
+        "payload_locked_documents_rels_profiles_fk": {
+          "name": "payload_locked_documents_rels_profiles_fk",
           "tableFrom": "payload_locked_documents_rels",
-          "tableTo": "profils",
+          "tableTo": "profiles",
           "columnsFrom": [
-            "profils_id"
+            "profiles_id"
           ],
           "columnsTo": [
             "id"
@@ -3718,12 +4019,38 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "payload_locked_documents_rels_auth_evenements_fk": {
-          "name": "payload_locked_documents_rels_auth_evenements_fk",
+        "payload_locked_documents_rels_auth_events_fk": {
+          "name": "payload_locked_documents_rels_auth_events_fk",
           "tableFrom": "payload_locked_documents_rels",
-          "tableTo": "auth_evenements",
+          "tableTo": "auth_events",
           "columnsFrom": [
-            "auth_evenements_id"
+            "auth_events_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "payload_locked_documents_rels_contact_requests_fk": {
+          "name": "payload_locked_documents_rels_contact_requests_fk",
+          "tableFrom": "payload_locked_documents_rels",
+          "tableTo": "contact_requests",
+          "columnsFrom": [
+            "contact_requests_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "payload_locked_documents_rels_deleted_accounts_fk": {
+          "name": "payload_locked_documents_rels_deleted_accounts_fk",
+          "tableFrom": "payload_locked_documents_rels",
+          "tableTo": "deleted_accounts",
+          "columnsFrom": [
+            "deleted_accounts_id"
           ],
           "columnsTo": [
             "id"
@@ -4077,35 +4404,35 @@
       "schema": "public",
       "values": [
         "admin",
-        "redaction"
+        "editor"
       ]
     },
-    "public.enum_profils_source_consentement": {
-      "name": "enum_profils_source_consentement",
+    "public.enum_profiles_consent_source": {
+      "name": "enum_profiles_consent_source",
       "schema": "public",
       "values": [
-        "maquilleuse",
+        "artist",
         "admin",
         "import"
       ]
     },
-    "public.enum_profils_statut": {
-      "name": "enum_profils_statut",
+    "public.enum_profiles_status": {
+      "name": "enum_profiles_status",
       "schema": "public",
       "values": [
-        "brouillon",
-        "publie",
-        "masque"
+        "draft",
+        "published",
+        "hidden"
       ]
     },
-    "public.enum_profils_statut_choisi": {
-      "name": "enum_profils_statut_choisi",
+    "public.enum_profiles_chosen_status": {
+      "name": "enum_profiles_chosen_status",
       "schema": "public",
       "values": [
-        "automatique",
-        "brouillon",
-        "publie",
-        "masque"
+        "automatic",
+        "draft",
+        "published",
+        "hidden"
       ]
     },
     "public.enum_talents_status": {
@@ -4140,33 +4467,77 @@
         "published"
       ]
     },
-    "public.enum_auth_evenements_type": {
-      "name": "enum_auth_evenements_type",
+    "public.enum_auth_events_type": {
+      "name": "enum_auth_events_type",
       "schema": "public",
       "values": [
-        "connexion",
-        "deconnexion",
-        "deconnexion-partout",
-        "inscription",
+        "sign-in",
+        "sign-out",
+        "sign-out-everywhere",
+        "sign-up",
         "confirmation",
-        "mot-de-passe-oublie",
-        "reinitialisation"
+        "resend",
+        "forgot-password",
+        "password-reset",
+        "block",
+        "unblock"
       ]
     },
-    "public.enum_auth_evenements_code": {
-      "name": "enum_auth_evenements_code",
+    "public.enum_auth_events_code": {
+      "name": "enum_auth_events_code",
       "schema": "public",
       "values": [
         "ok",
+        "heritee",
         "identifiants-invalides",
         "trop-de-tentatives",
         "service-indisponible",
         "email-non-confirme",
+        "compte-bloque",
         "donnees-invalides",
         "email-deja-pris",
         "deja-confirme",
         "lien-invalide",
-        "inconnu"
+        "email-non-verifie",
+        "compte-refuse",
+        "annule",
+        "retour-invalide",
+        "inconnu",
+        "champ-piege"
+      ]
+    },
+    "public.enum_auth_events_method": {
+      "name": "enum_auth_events_method",
+      "schema": "public",
+      "values": [
+        "password",
+        "google"
+      ]
+    },
+    "public.enum_contact_requests_type": {
+      "name": "enum_contact_requests_type",
+      "schema": "public",
+      "values": [
+        "contact"
+      ]
+    },
+    "public.enum_contact_requests_status": {
+      "name": "enum_contact_requests_status",
+      "schema": "public",
+      "values": [
+        "new",
+        "forwarded",
+        "answered",
+        "spam"
+      ]
+    },
+    "public.enum_contact_requests_mail_status": {
+      "name": "enum_contact_requests_mail_status",
+      "schema": "public",
+      "values": [
+        "pending",
+        "sent",
+        "failed"
       ]
     }
   },
@@ -4180,6 +4551,6 @@
     "tables": {},
     "columns": {}
   },
-  "id": "990064bc-5d18-44e8-9b6d-724d984eecf3",
+  "id": "e7b7dd3b-ed25-4cab-b768-0b1a3ddb2012",
   "prevId": "00000000-0000-0000-0000-000000000000"
 }

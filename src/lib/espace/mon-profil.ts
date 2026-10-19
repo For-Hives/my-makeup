@@ -8,26 +8,26 @@ export type UtilisateurDeLEspace = NonNullable<Awaited<ReturnType<Payload['auth'
 
 /** What the page reads of her profile: nothing the cards do not show. */
 const CHAMPS_LUS = {
-	prenom: true,
-	nom: true,
-	nomArtiste: true,
-	specialite: true,
+	firstName: true,
+	lastName: true,
+	artistName: true,
+	specialty: true,
 	description: true,
-	commune: true,
-	rayonKm: true,
-	aDomicile: true,
-	disponible: true,
-	photoPrincipale: true,
-	galerie: true,
+	city: true,
+	radiusKm: true,
+	homeService: true,
+	available: true,
+	mainPicture: true,
+	gallery: true,
 	competences: true,
 	formations: true,
 	experiences: true,
 	langues: true,
 	prestations: true,
-	reseaux: true,
-	coordonnees: true,
-	contactPublic: true,
-	consentiLe: true,
+	networks: true,
+	contactDetails: true,
+	publicContact: true,
+	consentedAt: true,
 } as const
 
 /**
@@ -39,7 +39,7 @@ const CHAMPS_LUS = {
 export async function identifiantDuProfil(payload: Payload, utilisateur: UtilisateurDeLEspace): Promise<number | null> {
 	if (utilisateur.collection !== COLLECTION_PROS) return null
 	const { docs } = await payload.find({
-		collection: 'profils',
+		collection: 'profiles',
 		depth: 0,
 		limit: 1,
 		overrideAccess: true,
@@ -75,11 +75,11 @@ export async function profilDeLaMaquilleuse(
 ): Promise<ProfilDeLEspace | null> {
 	const id = await identifiantDuProfil(payload, utilisateur)
 	if (id === null) return null
-	// The rule of a field closed to the public (`coordonnees`, `contactPublic`, `consentiLe`) reads the
+	// The rule of a field closed to the public (`contactDetails`, `publicContact`, `consentedAt`) reads the
 	// account in `pro` of the document it is given: a selection without it would strip those fields
 	// from her own page. `pro` is read for the rule and dropped before the page gets the profile.
 	const profil = await payload.findByID({
-		collection: 'profils',
+		collection: 'profiles',
 		depth: 0,
 		disableErrors: true,
 		id,

@@ -29,7 +29,7 @@ async function utilisateurDe(payload: Payload, compte: Maquilleuse): Promise<Uti
 
 async function profilStocke(payload: Payload, compte: Maquilleuse) {
 	const { docs } = await payload.find({
-		collection: 'profils',
+		collection: 'profiles',
 		depth: 0,
 		overrideAccess: true,
 		where: { pro: { equals: compte.id } },
@@ -44,7 +44,7 @@ async function ouvrirDansLAdministration(payload: Payload, profil: number, admin
 	return payload.create({
 		collection: 'payload-locked-documents',
 		overrideAccess: true,
-		data: { document: { relationTo: 'profils', value: profil }, user: { relationTo: 'admins', value: Number(admin) } },
+		data: { document: { relationTo: 'profiles', value: profil }, user: { relationTo: 'admins', value: Number(admin) } },
 	})
 }
 
@@ -65,13 +65,13 @@ describe('un admin tient le profil : l’espace ne l’écrase pas', () => {
 		expect(MESSAGE_PROFIL_VERROUILLE).toBe(
 			'Ton profil est en cours de modification par l’équipe, réessaie dans quelques minutes.'
 		)
-		expect((await profilStocke(payload, compte)).nom).not.toBe('Fictive')
+		expect((await profilStocke(payload, compte)).lastName).not.toBe('Fictive')
 
 		await payload.delete({ collection: 'payload-locked-documents', id: verrou.id, overrideAccess: true })
 		const passe = await enregistrerIdentite(payload, utilisateur, IDENTITE)
 
 		expect(passe.ok).toBe(true)
-		expect((await profilStocke(payload, compte)).nom).toBe('Fictive')
+		expect((await profilStocke(payload, compte)).lastName).toBe('Fictive')
 	})
 
 	test('les autres enregistrements de l’espace passent par la même porte', async () => {
@@ -96,7 +96,7 @@ describe('un admin tient le profil : l’espace ne l’écrase pas', () => {
 
 		expect(reseaux).toEqual({ ok: false, message: MESSAGE_PROFIL_VERROUILLE })
 		expect(coordonnees).toEqual({ ok: false, message: MESSAGE_PROFIL_VERROUILLE })
-		expect((await profilStocke(payload, compte)).reseaux?.instagram ?? null).toBeNull()
+		expect((await profilStocke(payload, compte)).networks?.instagram ?? null).toBeNull()
 	})
 
 	test('un verrou plus vieux que sa durée n’en est plus un ; le profil d’une autre n’est pas tenu', async () => {

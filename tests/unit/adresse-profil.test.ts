@@ -11,7 +11,7 @@ import { slugifier } from '@/lib/slug'
 const profil = (id: number, slug: string, reste: Partial<CandidatDeLAdresse> = {}): CandidatDeLAdresse => ({
 	id,
 	slug,
-	statut: 'publie',
+	status: 'published',
 	createdAt: `2024-0${id}-01T00:00:00.000Z`,
 	...reste,
 })
@@ -25,8 +25,8 @@ const candidatsPour = (segment: string, profils: readonly CandidatDeLAdresse[]):
 const jeu = [
 	profil(1, 'zoe-lefevre', { legacyUsername: 'Zoé Lefèvre' }),
 	profil(2, 'zoe-lefevre-2', { legacyUsername: 'ZOE LEFEVRE' }),
-	profil(3, 'lea-nantes', { legacyUsername: 'LeaNantes', statut: 'masque' }),
-	profil(4, 'camille', { statut: 'brouillon', publiable: false }),
+	profil(3, 'lea-nantes', { legacyUsername: 'LeaNantes', status: 'hidden' }),
+	profil(4, 'camille', { status: 'draft', publishable: false }),
 ]
 
 const cible = (segment: string, profils = jeu) => cibleDeLAdresse(segment, candidatsPour(segment, profils))

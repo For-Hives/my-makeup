@@ -41,7 +41,7 @@ async function comptes() {
 async function profils() {
 	const payload = await payloadDeTest()
 	const { docs } = await payload.find({
-		collection: 'profils',
+		collection: 'profiles',
 		depth: 0,
 		pagination: false,
 		overrideAccess: true,
@@ -76,24 +76,24 @@ afterAll(async () => {
 describe('Un second passage avec une autre date de bascule garde la date de consentement posée (ticket 227)', () => {
 	test('les profils qui affichent leurs coordonnées gardent la première date ; le rapport les compte', async () => {
 		const avant = await profils()
-		const affichent = avant.filter(({ contactPublic }) => contactPublic === true)
+		const affichent = avant.filter(({ publicContact }) => publicContact === true)
 		expect(affichent.length).toBeGreaterThan(0)
-		for (const profil of affichent) expect(profil.consentiLe).toBe(DATE_DE_BASCULE_DU_BANC)
+		for (const profil of affichent) expect(profil.consentedAt).toBe(DATE_DE_BASCULE_DU_BANC)
 
 		const second = await importerSurLeBanc('reel', { consentiLe: AUTRE_DATE })
 
-		expect(second.collections.profils).toMatchObject({ crees: 0, modifies: 0, refuses: [] })
-		expect(second.collections.profils?.consentementsGardes).toEqual(
+		expect(second.collections.profiles).toMatchObject({ crees: 0, modifies: 0, refuses: [] })
+		expect(second.collections.profiles?.consentementsGardes).toEqual(
 			affichent.map(({ strapiId }) => Number(strapiId)).sort((a, b) => a - b)
 		)
 		// Not an unexplained difference: the parity is complete and the exit code is 0.
-		expect(second.parite?.profils).toMatchObject({ differents: [], manquants: [], enTrop: [] })
+		expect(second.parite?.profiles).toMatchObject({ differents: [], manquants: [], enTrop: [] })
 		expect(codeDeSortie(second)).toBe(0)
 		expect(await profils()).toEqual(avant)
 		for (const profil of await profils())
-			if (profil.contactPublic === true) expect(profil.consentiLe).toBe(DATE_DE_BASCULE_DU_BANC)
+			if (profil.publicContact === true) expect(profil.consentedAt).toBe(DATE_DE_BASCULE_DU_BANC)
 		// The same date again: nothing to count.
-		expect((await importerSurLeBanc()).collections.profils?.consentementsGardes).toEqual([])
+		expect((await importerSurLeBanc()).collections.profiles?.consentementsGardes).toEqual([])
 	}, 60_000)
 })
 
@@ -113,7 +113,7 @@ describe('Un import contre une v3 en service est refusé avant toute écriture (
 		expect(
 			(
 				await payload.count({
-					collection: 'auth-evenements',
+					collection: 'auth-events',
 					where: { code: { in: ['ok', 'heritee'] } },
 					overrideAccess: true,
 				})
@@ -163,7 +163,7 @@ describe('Un import contre une v3 en service est refusé avant toute écriture (
 		expect(apres.legacyBcrypt ?? null).toBeNull()
 		expect(apres.email).toBe('nouvelle.adresse.fictive@example.test')
 		// A profile of the source is still compared and kept equal.
-		expect(rapport.collections.profils).toMatchObject({ crees: 0, modifies: 0, refuses: [] })
+		expect(rapport.collections.profiles).toMatchObject({ crees: 0, modifies: 0, refuses: [] })
 		expect(rapport.parite?.pros).toMatchObject({ differents: [], manquants: [], enTrop: [] })
 		const commande = await commandeDImport([
 			'--reel',
@@ -176,8 +176,8 @@ describe('Un import contre une v3 en service est refusé avant toute écriture (
 
 	test('un hash hérité déjà effacé suffit à refuser, même sans trace au journal', async () => {
 		const payload = await payloadDeTest()
-		await payload.delete({ collection: 'auth-evenements', where: { id: { exists: true } }, overrideAccess: true })
-		expect((await payload.count({ collection: 'auth-evenements', overrideAccess: true })).totalDocs).toBe(0)
+		await payload.delete({ collection: 'auth-events', where: { id: { exists: true } }, overrideAccess: true })
+		expect((await payload.count({ collection: 'auth-events', overrideAccess: true })).totalDocs).toBe(0)
 
 		const refus = await importerSurLeBanc('a-blanc').catch((erreur: unknown) => erreur)
 
@@ -190,8 +190,8 @@ describe('Un import contre une v3 en service est refusé avant toute écriture (
 		const compte = await compteDeFixture()
 		// The legacy hash is back and the journal is empty: only the date of last sign-in is left.
 		await payload.db.updateOne({ collection: 'pros', id: compte.id, data: { legacyBcrypt: 'hash-herite-fictif' } })
-		expect((await payload.count({ collection: 'auth-evenements', overrideAccess: true })).totalDocs).toBe(0)
-		expect((await compteDeFixture()).derniereConnexion).toBeTruthy()
+		expect((await payload.count({ collection: 'auth-events', overrideAccess: true })).totalDocs).toBe(0)
+		expect((await compteDeFixture()).lastSignInAt).toBeTruthy()
 
 		const refus = await importerSurLeBanc('a-blanc').catch((erreur: unknown) => erreur)
 

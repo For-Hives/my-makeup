@@ -31,11 +31,11 @@ const autour = () => [new Date(Date.now() - 3_600_000), new Date(Date.now() + 3_
 
 /** The sign-ins written below: one duration each, 100 to 1 000 ms. */
 const CONNEXIONS: EvenementAuth[] = [
-	...Array.from({ length: 6 }, (_, i): EvenementAuth => ({ type: 'connexion', code: 'ok', dureeMs: 100 * (i + 1) })),
-	{ type: 'connexion', code: 'heritee', dureeMs: 700 },
-	{ type: 'connexion', code: 'identifiants-invalides', dureeMs: 800 },
-	{ type: 'connexion', code: 'identifiants-invalides', dureeMs: 900 },
-	{ type: 'connexion', code: 'trop-de-tentatives', dureeMs: 1000 },
+	...Array.from({ length: 6 }, (_, i): EvenementAuth => ({ type: 'sign-in', code: 'ok', durationMs: 100 * (i + 1) })),
+	{ type: 'sign-in', code: 'heritee', durationMs: 700 },
+	{ type: 'sign-in', code: 'identifiants-invalides', durationMs: 800 },
+	{ type: 'sign-in', code: 'identifiants-invalides', durationMs: 900 },
+	{ type: 'sign-in', code: 'trop-de-tentatives', durationMs: 1000 },
 ]
 
 beforeAll(async () => {
@@ -44,8 +44,8 @@ beforeAll(async () => {
 	await Promise.all([viderLaBase(), viderLeStockage()])
 	await poserLeJeuDuBanc()
 	// Creating the accounts of the set opened sessions: the journal and the messages start from zero.
-	await payload.delete({ collection: 'auth-evenements', where: { id: { exists: true } }, overrideAccess: true })
-	await payload.delete({ collection: 'demandes', where: { id: { exists: true } }, overrideAccess: true })
+	await payload.delete({ collection: 'auth-events', where: { id: { exists: true } }, overrideAccess: true })
+	await payload.delete({ collection: 'contact-requests', where: { id: { exists: true } }, overrideAccess: true })
 
 	const stockage = stockageDePayload(payload)
 	const message = {
@@ -59,20 +59,20 @@ beforeAll(async () => {
 	const transmise = await stockage.creer(message)
 	const repondue = await stockage.creer(message)
 	const spam = await stockage.creer(message)
-	await stockage.marquer(transmise, 'envoye', 'transmise')
-	await stockage.marquer(repondue, 'envoye', 'repondue')
-	await stockage.marquer(spam, 'echec', 'spam')
+	await stockage.marquer(transmise, 'sent', 'forwarded')
+	await stockage.marquer(repondue, 'sent', 'answered')
+	await stockage.marquer(spam, 'failed', 'spam')
 	expect(nouvelle).toBeGreaterThan(0)
 
-	for (const evenement of [...CONNEXIONS, { type: 'deconnexion', code: 'ok', dureeMs: 20_000 } as const])
+	for (const evenement of [...CONNEXIONS, { type: 'sign-out', code: 'ok', durationMs: 20_000 } as const])
 		await journaliser(payload, evenement)
 	// A row of 2020 and a sign-in with no duration: the first is out of the period, the second counts without a duration.
 	await payload.create({
-		collection: 'auth-evenements',
-		data: { type: 'connexion', code: 'ok', dureeMs: 60_000, date: '2020-01-02T10:00:00.000Z' },
+		collection: 'auth-events',
+		data: { type: 'sign-in', code: 'ok', durationMs: 60_000, date: '2020-01-02T10:00:00.000Z' },
 		overrideAccess: true,
 	})
-	await journaliser(payload, { type: 'connexion', code: 'service-indisponible' })
+	await journaliser(payload, { type: 'sign-in', code: 'service-indisponible' })
 }, 120_000)
 
 afterAll(async () => {

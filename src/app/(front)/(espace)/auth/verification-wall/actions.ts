@@ -29,7 +29,7 @@ export async function renvoyerLEmail(_precedent: EtatDeRenvoi, formulaire: FormD
 	const journal = journalDe(payload)
 	const client = ipClient(entetes)
 	if (!freinDeRenvoi.prendre(client).autorise) {
-		await journaliserUnRefus(journal, client, 'renvoi', 'trop-de-tentatives')
+		await journaliserUnRefus(journal, client, 'resend', 'trop-de-tentatives')
 		return { erreur: MESSAGES_RENVOI['trop-de-tentatives'], valeur }
 	}
 

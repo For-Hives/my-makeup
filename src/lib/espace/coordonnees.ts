@@ -6,7 +6,7 @@
  * - The phone number is 20 characters at most (the bound of the collection), made of digits and
  *   the usual separators, with 9 to 15 digits: a French number, with or without its international
  *   prefix. The email is a well-formed address of 200 characters at most. Both may stay empty.
- * - `contactPublic` is her choice. The server dates it itself (`consentiLe`, src/collections/Profils.ts):
+ * - `contactPublic` is her choice. The server dates it itself (`consentiLe`, src/collections/Profiles.ts):
  *   the request holds no date, and the strict schema refuses one.
  * - Every message is in French, under the field it is about.
  */

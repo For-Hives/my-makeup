@@ -23,13 +23,13 @@ const PROPRIETAIRE_ET_ADMIN: readonly Role[] = ['maquilleuse', 'admin']
  * value differs from what the server computes, so that a write that took would show.
  */
 const ETAT_ENVOYE = [
-	['completude', 13],
-	['actif', true],
-	['publiable', true],
-	['entierementVide', true],
-	['actifDepuis', '2020-01-01T00:00:00.000Z'],
-	['publiableDepuis', '2020-01-01T00:00:00.000Z'],
-	['entierementVideDepuis', '2020-01-01T00:00:00.000Z'],
+	['completeness', 13],
+	['active', true],
+	['publishable', true],
+	['fullyEmpty', true],
+	['activeSince', '2020-01-01T00:00:00.000Z'],
+	['publishableSince', '2020-01-01T00:00:00.000Z'],
+	['fullyEmptySince', '2020-01-01T00:00:00.000Z'],
 ] as const
 
 /**
@@ -52,8 +52,8 @@ const lecturesDesChamps = (collection: CollectionDeLaMatrice, lecteurs: [string,
 	)
 
 /**
- * The rules of the newsroom on one editorial collection (src/collections/redaction.ts): the
- * newsroom (`redaction` and `admin`) creates, changes, publishes, unpublishes and deletes, and reads
+ * The rules of the newsroom on one editorial collection (src/collections/editor.ts): the
+ * newsroom (`editor` and `admin`) creates, changes, publishes, unpublishes and deletes, and reads
  * drafts too; everyone else, a makeup artist as an anonymous visitor, reads the published documents
  * only and writes nothing (U59). Nobody writes `strapiId`. Talents (ticket 022), articles (046).
  */
@@ -132,7 +132,7 @@ const lignesDeLaRedaction = (collection: CollectionEditoriale): Ligne[] => [
  * gives one test per way in. A rule added without its lines is a rule nobody checks.
  */
 const MATRICE: Ligne[] = [
-	// admins (ticket 018): the role `admin` does everything; `redaction` reaches its own account
+	// admins (ticket 018): the role `admin` does everything; `editor` reaches its own account
 	// only, and never its role; nobody else reaches any account.
 	{ role: 'anonyme', collection: 'admins', operation: 'lister', attendu: 'refuse' },
 	{ role: 'anonyme', collection: 'admins', operation: 'lire', document: 'admin', attendu: 'refuse' },
@@ -194,7 +194,7 @@ const MATRICE: Ligne[] = [
 	{ role: 'maquilleuse', collection: 'pros', operation: 'supprimer', document: 'autreMaquilleuse', attendu: 'refuse' },
 	...(
 		[
-			['bloque', true],
+			['blocked', true],
 			['_verified', false],
 			['legacyProvider', 'facebook'],
 			['strapiId', 999],
@@ -225,7 +225,7 @@ const MATRICE: Ligne[] = [
 	{ role: 'admin', collection: 'pros', operation: 'supprimer', document: 'maquilleuse', attendu: 'autorise' },
 	...(
 		[
-			['bloque', true, 'autorise'],
+			['blocked', true, 'autorise'],
 			['_verified', false, 'autorise'],
 			['legacyProvider', 'facebook', 'ignore'],
 			['strapiId', 999, 'ignore'],
@@ -248,28 +248,28 @@ const MATRICE: Ligne[] = [
 	// her own profile and the published ones; anyone else reads the published profiles only (U53,
 	// I01); an account without a profile gets the published ones and a refusal on any write;
 	// `admin` reaches every profile. In the cast, A's profile is published and B's is a draft.
-	{ role: 'anonyme', collection: 'profils', operation: 'lister', attendu: 'publies' },
-	{ role: 'anonyme', collection: 'profils', operation: 'lire', document: 'maquilleuse', attendu: 'autorise' },
-	{ role: 'anonyme', collection: 'profils', operation: 'lire', document: 'autreMaquilleuse', attendu: 'refuse' },
-	{ role: 'anonyme', collection: 'profils', operation: 'creer', attendu: 'refuse' },
-	{ role: 'anonyme', collection: 'profils', operation: 'modifier', document: 'maquilleuse', attendu: 'refuse' },
-	{ role: 'anonyme', collection: 'profils', operation: 'supprimer', document: 'maquilleuse', attendu: 'refuse' },
-	{ role: 'maquilleuse', collection: 'profils', operation: 'lister', attendu: 'soi' },
-	{ role: 'maquilleuse', collection: 'profils', operation: 'lire', document: 'maquilleuse', attendu: 'autorise' },
-	{ role: 'maquilleuse', collection: 'profils', operation: 'lire', document: 'autreMaquilleuse', attendu: 'refuse' },
-	{ role: 'maquilleuse', collection: 'profils', operation: 'creer', attendu: 'refuse' },
-	{ role: 'maquilleuse', collection: 'profils', operation: 'modifier', document: 'maquilleuse', attendu: 'autorise' },
+	{ role: 'anonyme', collection: 'profiles', operation: 'lister', attendu: 'publies' },
+	{ role: 'anonyme', collection: 'profiles', operation: 'lire', document: 'maquilleuse', attendu: 'autorise' },
+	{ role: 'anonyme', collection: 'profiles', operation: 'lire', document: 'autreMaquilleuse', attendu: 'refuse' },
+	{ role: 'anonyme', collection: 'profiles', operation: 'creer', attendu: 'refuse' },
+	{ role: 'anonyme', collection: 'profiles', operation: 'modifier', document: 'maquilleuse', attendu: 'refuse' },
+	{ role: 'anonyme', collection: 'profiles', operation: 'supprimer', document: 'maquilleuse', attendu: 'refuse' },
+	{ role: 'maquilleuse', collection: 'profiles', operation: 'lister', attendu: 'soi' },
+	{ role: 'maquilleuse', collection: 'profiles', operation: 'lire', document: 'maquilleuse', attendu: 'autorise' },
+	{ role: 'maquilleuse', collection: 'profiles', operation: 'lire', document: 'autreMaquilleuse', attendu: 'refuse' },
+	{ role: 'maquilleuse', collection: 'profiles', operation: 'creer', attendu: 'refuse' },
+	{ role: 'maquilleuse', collection: 'profiles', operation: 'modifier', document: 'maquilleuse', attendu: 'autorise' },
 	{
 		role: 'maquilleuse',
-		collection: 'profils',
+		collection: 'profiles',
 		operation: 'modifier',
 		document: 'autreMaquilleuse',
 		attendu: 'refuse',
 	},
-	{ role: 'maquilleuse', collection: 'profils', operation: 'supprimer', document: 'maquilleuse', attendu: 'refuse' },
+	{ role: 'maquilleuse', collection: 'profiles', operation: 'supprimer', document: 'maquilleuse', attendu: 'refuse' },
 	{
 		role: 'maquilleuse',
-		collection: 'profils',
+		collection: 'profiles',
 		operation: 'supprimer',
 		document: 'autreMaquilleuse',
 		attendu: 'refuse',
@@ -281,25 +281,25 @@ const MATRICE: Ligne[] = [
 			['legacyUsername', 'Ancien Pseudo'],
 			['pro', { compteDe: 'sansProfil' }],
 			// Reserved to the role `admin` (ticket 021, I03, U55).
-			['statut', 'masque'],
-			['motif', 'Motif envoyé par la maquilleuse'],
-			['verifie', true],
-			['verifieLe', '2026-10-14T00:00:00.000Z'],
+			['status', 'hidden'],
+			['reason', 'Motif envoyé par la maquilleuse'],
+			['verified', true],
+			['verifiedAt', '2026-10-14T00:00:00.000Z'],
 			['siret', '12345678901234'],
-			['noteInterne', 'Note envoyée par la maquilleuse'],
+			['internalNote', 'Note envoyée par la maquilleuse'],
 			['score', 99],
-			['superMaquilleuse', true],
+			['superArtist', true],
 			// Traced by the server only (ticket 042).
-			['consentiLe', '2020-01-01T00:00:00.000Z'],
-			['sourceConsentement', 'import'],
+			['consentedAt', '2020-01-01T00:00:00.000Z'],
+			['consentSource', 'import'],
 			// Computed by the server at every save (ticket 044); its choice, by an admin only.
-			['statutChoisi', 'masque'],
+			['chosenStatus', 'hidden'],
 			...ETAT_ENVOYE,
 		] as const
 	).map(
 		([champ, valeur]): Ligne => ({
 			role: 'maquilleuse',
-			collection: 'profils',
+			collection: 'profiles',
 			operation: 'modifier',
 			document: 'maquilleuse',
 			champ,
@@ -310,13 +310,13 @@ const MATRICE: Ligne[] = [
 	// Her contact details, and her choice to show them, are hers to write (ticket 042).
 	...(
 		[
-			['coordonnees', { telephone: '06 39 98 11 11', email: 'contact-a@example.test' }],
-			['contactPublic', true],
+			['contactDetails', { phone: '06 39 98 11 11', email: 'contact-a@example.test' }],
+			['publicContact', true],
 		] as const
 	).map(
 		([champ, valeur]): Ligne => ({
 			role: 'maquilleuse',
-			collection: 'profils',
+			collection: 'profiles',
 			operation: 'modifier',
 			document: 'maquilleuse',
 			champ,
@@ -326,89 +326,89 @@ const MATRICE: Ligne[] = [
 	),
 	{
 		role: 'autreMaquilleuse',
-		collection: 'profils',
+		collection: 'profiles',
 		operation: 'modifier',
 		document: 'maquilleuse',
-		champ: 'coordonnees',
-		valeur: { telephone: '06 39 98 22 22', email: 'contact-b@example.test' },
+		champ: 'contactDetails',
+		valeur: { phone: '06 39 98 22 22', email: 'contact-b@example.test' },
 		attendu: 'refuse',
 	},
-	{ role: 'autreMaquilleuse', collection: 'profils', operation: 'lister', attendu: 'soiEtPublies' },
-	{ role: 'autreMaquilleuse', collection: 'profils', operation: 'lire', document: 'maquilleuse', attendu: 'autorise' },
+	{ role: 'autreMaquilleuse', collection: 'profiles', operation: 'lister', attendu: 'soiEtPublies' },
+	{ role: 'autreMaquilleuse', collection: 'profiles', operation: 'lire', document: 'maquilleuse', attendu: 'autorise' },
 	{
 		role: 'autreMaquilleuse',
-		collection: 'profils',
+		collection: 'profiles',
 		operation: 'modifier',
 		document: 'maquilleuse',
 		attendu: 'refuse',
 	},
 	{
 		role: 'autreMaquilleuse',
-		collection: 'profils',
+		collection: 'profiles',
 		operation: 'supprimer',
 		document: 'maquilleuse',
 		attendu: 'refuse',
 	},
-	{ role: 'sansProfil', collection: 'profils', operation: 'lister', attendu: 'publies' },
-	{ role: 'sansProfil', collection: 'profils', operation: 'lire', document: 'maquilleuse', attendu: 'autorise' },
-	{ role: 'sansProfil', collection: 'profils', operation: 'lire', document: 'autreMaquilleuse', attendu: 'refuse' },
-	{ role: 'sansProfil', collection: 'profils', operation: 'creer', attendu: 'refuse' },
-	{ role: 'sansProfil', collection: 'profils', operation: 'modifier', document: 'maquilleuse', attendu: 'refuse' },
-	{ role: 'sansProfil', collection: 'profils', operation: 'supprimer', document: 'maquilleuse', attendu: 'refuse' },
-	{ role: 'redaction', collection: 'profils', operation: 'lister', attendu: 'publies' },
-	{ role: 'redaction', collection: 'profils', operation: 'lire', document: 'maquilleuse', attendu: 'autorise' },
-	{ role: 'redaction', collection: 'profils', operation: 'lire', document: 'autreMaquilleuse', attendu: 'refuse' },
-	{ role: 'redaction', collection: 'profils', operation: 'creer', attendu: 'refuse' },
-	{ role: 'redaction', collection: 'profils', operation: 'modifier', document: 'maquilleuse', attendu: 'refuse' },
+	{ role: 'sansProfil', collection: 'profiles', operation: 'lister', attendu: 'publies' },
+	{ role: 'sansProfil', collection: 'profiles', operation: 'lire', document: 'maquilleuse', attendu: 'autorise' },
+	{ role: 'sansProfil', collection: 'profiles', operation: 'lire', document: 'autreMaquilleuse', attendu: 'refuse' },
+	{ role: 'sansProfil', collection: 'profiles', operation: 'creer', attendu: 'refuse' },
+	{ role: 'sansProfil', collection: 'profiles', operation: 'modifier', document: 'maquilleuse', attendu: 'refuse' },
+	{ role: 'sansProfil', collection: 'profiles', operation: 'supprimer', document: 'maquilleuse', attendu: 'refuse' },
+	{ role: 'redaction', collection: 'profiles', operation: 'lister', attendu: 'publies' },
+	{ role: 'redaction', collection: 'profiles', operation: 'lire', document: 'maquilleuse', attendu: 'autorise' },
+	{ role: 'redaction', collection: 'profiles', operation: 'lire', document: 'autreMaquilleuse', attendu: 'refuse' },
+	{ role: 'redaction', collection: 'profiles', operation: 'creer', attendu: 'refuse' },
+	{ role: 'redaction', collection: 'profiles', operation: 'modifier', document: 'maquilleuse', attendu: 'refuse' },
 	{
 		role: 'redaction',
-		collection: 'profils',
+		collection: 'profiles',
 		operation: 'modifier',
 		document: 'maquilleuse',
-		champ: 'coordonnees',
-		valeur: { telephone: '06 39 98 33 33', email: 'contact-redaction@example.test' },
+		champ: 'contactDetails',
+		valeur: { phone: '06 39 98 33 33', email: 'contact-redaction@example.test' },
 		attendu: 'refuse',
 	},
-	{ role: 'redaction', collection: 'profils', operation: 'supprimer', document: 'maquilleuse', attendu: 'refuse' },
+	{ role: 'redaction', collection: 'profiles', operation: 'supprimer', document: 'maquilleuse', attendu: 'refuse' },
 	// What each role reads of A's published profile, field by field (tickets 021, 042 and 043).
-	...lecturesDesChamps('profils', [
+	...lecturesDesChamps('profiles', [
 		// Public: her networks (042), her photos (043), the badge of the search (021).
-		['reseaux', ROLES],
-		['photoPrincipale', ROLES],
-		['galerie', ROLES],
-		['superMaquilleuse', ROLES],
+		['networks', ROLES],
+		['mainPicture', ROLES],
+		['gallery', ROLES],
+		['superArtist', ROLES],
 		// Her account, what the import wrote, what an admin decided (021, I01).
 		['pro', PROPRIETAIRE_ET_ADMIN],
 		['strapiId', PROPRIETAIRE_ET_ADMIN],
 		['legacyUsername', PROPRIETAIRE_ET_ADMIN],
-		['statut', PROPRIETAIRE_ET_ADMIN],
-		['motif', PROPRIETAIRE_ET_ADMIN],
-		['verifie', PROPRIETAIRE_ET_ADMIN],
-		['verifieLe', PROPRIETAIRE_ET_ADMIN],
+		['status', PROPRIETAIRE_ET_ADMIN],
+		['reason', PROPRIETAIRE_ET_ADMIN],
+		['verified', PROPRIETAIRE_ET_ADMIN],
+		['verifiedAt', PROPRIETAIRE_ET_ADMIN],
 		['siret', PROPRIETAIRE_ET_ADMIN],
 		// For the admin panel only (021).
-		['noteInterne', ['admin']],
+		['internalNote', ['admin']],
 		['score', ['admin']],
 		// Her contact details, her choice to show them and its trace (042, U59, I07).
-		['coordonnees', PROPRIETAIRE_ET_ADMIN],
-		['contactPublic', PROPRIETAIRE_ET_ADMIN],
-		['consentiLe', PROPRIETAIRE_ET_ADMIN],
-		['sourceConsentement', PROPRIETAIRE_ET_ADMIN],
+		['contactDetails', PROPRIETAIRE_ET_ADMIN],
+		['publicContact', PROPRIETAIRE_ET_ADMIN],
+		['consentedAt', PROPRIETAIRE_ET_ADMIN],
+		['consentSource', PROPRIETAIRE_ET_ADMIN],
 		// Its state, public; since when, and the status an admin chose, for her and the admin (044).
-		['completude', ROLES],
-		['actif', ROLES],
-		['publiable', ROLES],
-		['entierementVide', ROLES],
-		['actifDepuis', PROPRIETAIRE_ET_ADMIN],
-		['publiableDepuis', PROPRIETAIRE_ET_ADMIN],
-		['entierementVideDepuis', PROPRIETAIRE_ET_ADMIN],
-		['statutChoisi', PROPRIETAIRE_ET_ADMIN],
+		['completeness', ROLES],
+		['active', ROLES],
+		['publishable', ROLES],
+		['fullyEmpty', ROLES],
+		['activeSince', PROPRIETAIRE_ET_ADMIN],
+		['publishableSince', PROPRIETAIRE_ET_ADMIN],
+		['fullyEmptySince', PROPRIETAIRE_ET_ADMIN],
+		['chosenStatus', PROPRIETAIRE_ET_ADMIN],
 	]),
-	{ role: 'admin', collection: 'profils', operation: 'lister', attendu: 'tous' },
-	{ role: 'admin', collection: 'profils', operation: 'lire', document: 'maquilleuse', attendu: 'autorise' },
-	{ role: 'admin', collection: 'profils', operation: 'creer', attendu: 'autorise' },
-	{ role: 'admin', collection: 'profils', operation: 'modifier', document: 'maquilleuse', attendu: 'autorise' },
-	{ role: 'admin', collection: 'profils', operation: 'supprimer', document: 'maquilleuse', attendu: 'autorise' },
+	{ role: 'admin', collection: 'profiles', operation: 'lister', attendu: 'tous' },
+	{ role: 'admin', collection: 'profiles', operation: 'lire', document: 'maquilleuse', attendu: 'autorise' },
+	{ role: 'admin', collection: 'profiles', operation: 'creer', attendu: 'autorise' },
+	{ role: 'admin', collection: 'profiles', operation: 'modifier', document: 'maquilleuse', attendu: 'autorise' },
+	{ role: 'admin', collection: 'profiles', operation: 'supprimer', document: 'maquilleuse', attendu: 'autorise' },
 	...(
 		[
 			['slug', 'une-autre-adresse', 'ignore'],
@@ -416,24 +416,24 @@ const MATRICE: Ligne[] = [
 			['legacyUsername', 'Ancien Pseudo', 'ignore'],
 			['pro', { compteDe: 'sansProfil' }, 'autorise'],
 			// The admin chooses the status; the server computes it, from her choice (ticket 044).
-			['statut', 'masque', 'ignore'],
-			['statutChoisi', 'masque', 'autorise'],
-			['motif', 'Photos sans rapport avec le maquillage', 'autorise'],
-			['verifie', true, 'autorise'],
+			['status', 'hidden', 'ignore'],
+			['chosenStatus', 'hidden', 'autorise'],
+			['reason', 'Photos sans rapport avec le maquillage', 'autorise'],
+			['verified', true, 'autorise'],
 			['siret', '12345678901234', 'autorise'],
-			['noteInterne', 'Relancée par téléphone', 'autorise'],
+			['internalNote', 'Relancée par téléphone', 'autorise'],
 			['score', 4.5, 'autorise'],
-			['superMaquilleuse', true, 'autorise'],
-			['coordonnees', { telephone: '06 39 98 44 44', email: 'contact-admin@example.test' }, 'autorise'],
-			['consentiLe', '2020-01-01T00:00:00.000Z', 'ignore'],
-			['sourceConsentement', 'import', 'ignore'],
+			['superArtist', true, 'autorise'],
+			['contactDetails', { phone: '06 39 98 44 44', email: 'contact-admin@example.test' }, 'autorise'],
+			['consentedAt', '2020-01-01T00:00:00.000Z', 'ignore'],
+			['consentSource', 'import', 'ignore'],
 			// The state stays the server's (ticket 044).
 			...ETAT_ENVOYE.map(([champ, valeur]) => [champ, valeur, 'ignore'] as const),
 		] as const
 	).map(
 		([champ, valeur, attendu]): Ligne => ({
 			role: 'admin',
-			collection: 'profils',
+			collection: 'profiles',
 			operation: 'modifier',
 			document: 'maquilleuse',
 			champ,
@@ -557,7 +557,7 @@ const MATRICE: Ligne[] = [
 		collection: 'pros',
 		operation: 'lire',
 		document: 'maquilleuse',
-		champ: 'derniereConnexion',
+		champ: 'lastSignInAt',
 		attendu: 'visible',
 	},
 	{
@@ -565,7 +565,7 @@ const MATRICE: Ligne[] = [
 		collection: 'pros',
 		operation: 'lire',
 		document: 'maquilleuse',
-		champ: 'derniereConnexion',
+		champ: 'lastSignInAt',
 		attendu: 'visible',
 	},
 	{
@@ -573,7 +573,7 @@ const MATRICE: Ligne[] = [
 		collection: 'pros',
 		operation: 'modifier',
 		document: 'maquilleuse',
-		champ: 'derniereConnexion',
+		champ: 'lastSignInAt',
 		valeur: '2020-01-01T00:00:00.000Z',
 		attendu: 'ignore',
 	},
@@ -582,7 +582,7 @@ const MATRICE: Ligne[] = [
 		collection: 'pros',
 		operation: 'modifier',
 		document: 'maquilleuse',
-		champ: 'derniereConnexion',
+		champ: 'lastSignInAt',
 		valeur: '2020-01-01T00:00:00.000Z',
 		attendu: 'ignore',
 	},
@@ -594,7 +594,7 @@ const MATRICE: Ligne[] = [
 		collection: 'pros',
 		operation: 'lire',
 		document: 'maquilleuse',
-		champ: 'profil',
+		champ: 'profile',
 		attendu: 'visible',
 	},
 	{
@@ -602,7 +602,7 @@ const MATRICE: Ligne[] = [
 		collection: 'pros',
 		operation: 'lire',
 		document: 'maquilleuse',
-		champ: 'profil',
+		champ: 'profile',
 		attendu: 'absent',
 	},
 	{
@@ -610,7 +610,7 @@ const MATRICE: Ligne[] = [
 		collection: 'pros',
 		operation: 'modifier',
 		document: 'maquilleuse',
-		champ: 'profil',
+		champ: 'profile',
 		valeur: [],
 		attendu: 'ignore',
 	},
@@ -618,7 +618,7 @@ const MATRICE: Ligne[] = [
 	// The authentication journal (ticket 077): only an admin reads it, and nobody writes it through
 	// an API, an admin included. The server writes it, and purges it after 90 days.
 	...ROLES.flatMap((role): Ligne[] => {
-		const collection = 'auth-evenements'
+		const collection = 'auth-events'
 		const lit = role === 'admin'
 		return [
 			{ role, collection, operation: 'lister', attendu: lit ? 'tous' : 'refuse' },
@@ -632,7 +632,7 @@ const MATRICE: Ligne[] = [
 	// The accounts of the old site deleted in the v3 (ticket 227): only an admin reads them, and nobody
 	// writes them through an API, an admin included. The server writes the row when an account goes.
 	...ROLES.flatMap((role): Ligne[] => {
-		const collection = 'comptes-supprimes'
+		const collection = 'deleted-accounts'
 		const lit = role === 'admin'
 		return [
 			{ role, collection, operation: 'lister', attendu: lit ? 'tous' : 'refuse' },
@@ -646,10 +646,10 @@ const MATRICE: Ligne[] = [
 	// Contact messages (tickets 158 and 163; plan 02 U58 adapted): only an admin reads them, and nobody
 	// creates or deletes them through an API, an admin included. The form has no account: the server writes
 	// the row. An admin changes its status (answered, spam) and nothing else: what the visitor typed and the
-	// state of the mail are frozen. An anonymous visitor and a makeup artist reach nothing, and `redaction`
+	// state of the mail are frozen. An anonymous visitor and a makeup artist reach nothing, and `editor`
 	// does not see this collection.
 	...ROLES.flatMap((role): Ligne[] => {
-		const collection = 'demandes'
+		const collection = 'contact-requests'
 		const lit = role === 'admin'
 		return [
 			{ role, collection, operation: 'lister', attendu: lit ? 'tous' : 'refuse' },
@@ -661,7 +661,7 @@ const MATRICE: Ligne[] = [
 			...(lit
 				? ([
 						{ role, collection, operation: 'modifier', champ: 'message', valeur: 'Texte réécrit', attendu: 'ignore' },
-						{ role, collection, operation: 'modifier', champ: 'etatMail', valeur: 'envoye', attendu: 'ignore' },
+						{ role, collection, operation: 'modifier', champ: 'mailStatus', valeur: 'sent', attendu: 'ignore' },
 						{
 							role,
 							collection,
@@ -687,7 +687,7 @@ const MATRICE: Ligne[] = [
 	...lignesDeLaRedaction('talents'),
 	...lignesDeLaRedaction('articles'),
 	// Payload's document locks (ticket 094): reserved to the accounts of the admin panel. A makeup
-	// artist, a visitor and an account without a profile reach nothing; `redaction` and `admin` list,
+	// artist, a visitor and an account without a profile reach nothing; `editor` and `admin` list,
 	// read, take, change and release a lock, the lock of the other admin included (a take-over).
 	...(['anonyme', 'maquilleuse', 'autreMaquilleuse', 'sansProfil'] as const).flatMap((role): Ligne[] => [
 		{ role, collection: 'payload-locked-documents', operation: 'lister', attendu: 'refuse' },

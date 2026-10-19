@@ -17,13 +17,13 @@
 import { estUnSlug } from './slug'
 
 /** The collections whose documents have a public page. */
-export type ContenuPublic = 'profils' | 'articles' | 'talents'
+export type ContenuPublic = 'profiles' | 'articles' | 'talents'
 
 /** What the public sees of a document, read from its stored row. */
 export interface EtatPublic {
 	/** The end of the address of its page. */
 	slug: string
-	/** Shown to the public: a published profile (`statut`), a published article or talent (`_status`). */
+	/** Shown to the public: a published profile (`status`), a published article or talent (`_status`). */
 	visible: boolean
 	/**
 	 * In the sitemap: a profile is there when it is publishable, a published article or talent always.
@@ -66,7 +66,7 @@ const PLANS = ['/site-map', '/sitemap.xml'] as const
  * sitemap; an article by the blog; a talent by the home page. The search lists profiles only.
  */
 export const PAGES_PUBLIQUES: Readonly<Record<ContenuPublic, PagesDuContenu>> = {
-	profils: {
+	profiles: {
 		page: slug => `/profil/${slug}`,
 		etiquette: ETIQUETTES.profil,
 		etiquetteDeLaListe: ETIQUETTES.profils,

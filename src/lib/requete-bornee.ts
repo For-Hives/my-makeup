@@ -24,7 +24,7 @@ import { estAdmin } from './acces'
  * - **Never a private field** (`CHAMPS_PRIVES`) for anyone but `admin`: the address of an account,
  *   the contact details, the internal note and the score of a profile.
  *
- * A field is named by any segment of a path: `pro.email`, `coordonnees.telephone`,
+ * A field is named by any segment of a path: `pro.email`, `contactDetails.phone`,
  * `-sessions.expiresAt` all name one. The refusal is a 400 with the same French sentence whatever
  * the data: it says nothing of what the database holds, since it never asks it.
  *
@@ -68,7 +68,7 @@ export const CHAMPS_SECRETS = [
 ] as const
 
 /** What only `admin` filters or sorts on. */
-export const CHAMPS_PRIVES = ['email', 'coordonnees', 'noteInterne', 'score'] as const
+export const CHAMPS_PRIVES = ['email', 'contactDetails', 'internalNote', 'score'] as const
 
 export const MESSAGE_TROP_DE_CONDITIONS = `Cette recherche compte trop de conditions : ${CONDITIONS_MAX} au plus.`
 export const MESSAGE_CHAMP_PRIVE = 'Cette recherche porte sur un champ qui ne sert ni de filtre ni de tri.'

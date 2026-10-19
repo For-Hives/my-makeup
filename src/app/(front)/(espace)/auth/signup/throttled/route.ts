@@ -21,7 +21,7 @@ export async function POST(requete: Request): Promise<Response> {
 	// Only a client past its 5 sign-ups finds this route: for anyone else it does not exist.
 	if (attente === undefined) return new Response(null, { status: 404 })
 	const payload = await getPayload({ config })
-	await journaliserUnRefus(journalDe(payload), client, 'inscription', 'trop-de-tentatives')
+	await journaliserUnRefus(journalDe(payload), client, 'sign-up', 'trop-de-tentatives')
 	const message = MESSAGES_ECHEC_INSCRIPTION['trop-de-tentatives']
 	const entetes = { 'cache-control': 'no-store', 'retry-after': String(attente) }
 	// The script of Next reads the message of a failed action only from a response typed exactly

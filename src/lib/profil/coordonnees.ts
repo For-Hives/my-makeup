@@ -70,32 +70,32 @@ export function validerEmailDeContact(valeur: Valeur): true | string {
 }
 
 /**
- * Who switched `contactPublic` on, as the server records it: the makeup artist herself, an admin
+ * Who switched `publicContact` on, as the server records it: the makeup artist herself, an admin
  * on her behalf, or the import, for a profile that showed its contact details on the old site
  * (plan 01 §6.2, « Coordonnées »).
  */
-export const SOURCES_DU_CONSENTEMENT = ['maquilleuse', 'admin', 'import'] as const
+export const SOURCES_DU_CONSENTEMENT = ['artist', 'admin', 'import'] as const
 export type SourceDuConsentement = (typeof SOURCES_DU_CONSENTEMENT)[number]
 
 export const LIBELLES_DES_SOURCES: Record<SourceDuConsentement, string> = {
-	maquilleuse: 'La maquilleuse',
+	artist: 'La maquilleuse',
 	admin: 'Un admin, à sa demande',
 	import: 'L’import : coordonnées affichées sur l’ancien site',
 }
 
 /** The trace of the consent: when, and who gave it. Both empty while the contact details are closed. */
 export interface Consentement {
-	consentiLe: string | null
-	sourceConsentement: SourceDuConsentement | null
+	consentedAt: string | null
+	consentSource: SourceDuConsentement | null
 }
 
 /**
- * The trace of the consent after a save, from `contactPublic` before and after it.
+ * The trace of the consent after a save, from `publicContact` before and after it.
  *
  * - Closed: no consent, no date, no source.
  * - Open, and already open before: the trace stays as it was.
  * - Opened by this save: the date of the server, and the source of the account behind the
- *   request (`maquilleuse` or `admin`). A write of the server without an account (the import)
+ *   request (`artist` or `admin`). A write of the server without an account (the import)
  *   may give its own date and source, for a consent given on the old site; without them, the
  *   date of the server and `import`.
  *
@@ -108,24 +108,23 @@ export function consentementApres({
 	compte,
 	maintenant,
 }: {
-	/** `contactPublic` as stored before the save; `undefined` for a creation. */
+	/** `publicContact` as stored before the save; `undefined` for a creation. */
 	avant: boolean | null | undefined
-	donnees: { contactPublic?: boolean | null } & Partial<Consentement>
+	donnees: { publicContact?: boolean | null } & Partial<Consentement>
 	/** The collection of the account behind the request, if any. */
 	compte: 'admins' | 'pros' | undefined
 	maintenant: Date
 }): Consentement {
-	if (donnees.contactPublic !== true) return { consentiLe: null, sourceConsentement: null }
-	if (avant === true)
-		return { consentiLe: donnees.consentiLe ?? null, sourceConsentement: donnees.sourceConsentement ?? null }
+	if (donnees.publicContact !== true) return { consentedAt: null, consentSource: null }
+	if (avant === true) return { consentedAt: donnees.consentedAt ?? null, consentSource: donnees.consentSource ?? null }
 	if (compte !== undefined)
 		return {
-			consentiLe: maintenant.toISOString(),
-			sourceConsentement: compte === 'pros' ? 'maquilleuse' : 'admin',
+			consentedAt: maintenant.toISOString(),
+			consentSource: compte === 'pros' ? 'artist' : 'admin',
 		}
 	return {
-		consentiLe: donnees.consentiLe ?? maintenant.toISOString(),
-		sourceConsentement: donnees.sourceConsentement ?? 'import',
+		consentedAt: donnees.consentedAt ?? maintenant.toISOString(),
+		consentSource: donnees.consentSource ?? 'import',
 	}
 }
 

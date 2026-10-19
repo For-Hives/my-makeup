@@ -16,6 +16,8 @@ Un fichier JSON, `my-makeup-delta-1`, avec cinq rubriques :
 | `messages` | Les messages du formulaire de contact reçus ou modifiés | tous les champs du message |
 | `comptesSupprimes` | Les comptes de l'ancien site supprimés dans la v3 depuis la date | l'identifiant de l'ancien site et le jour |
 
+Les champs d'un enregistrement portent les noms anglais de la base (ticket 250) : `name`, `blocked` et `lastSignInAt` pour un compte ; `status`, `mailStatus`, `firstName`, `lastName` et `phone` pour un message, avec les valeurs `new`, `forwarded`, `answered`, `spam`, `pending`, `sent` et `failed` ; `firstName`, `lastName`, `artistName`, `specialty`, `city`, `radiusKm`, `homeService`, `available`, `networks`, `contactDetails`, `publicContact`, `mainPicture`, `gallery`, `status` (`draft`, `published`, `hidden`) pour un profil (ticket 251). Les noms des rubriques ci-dessus ne changent pas (ticket 245). À rejouer dans l'ancien site : `name` est son `username`, `blocked` son `blocked`.
+
 Chaque enregistrement porte `depuisLaBascule` : `cree` s'il a été créé après la date, `modifie` s'il existait avant et a changé depuis.
 
 **Jamais dans le fichier :** mot de passe, hash (le hash hérité de l'ancien site non plus), sel, jeton de confirmation ou de réinitialisation, identifiant de session. Les comptes et les photos sont choisis champ par champ (une liste blanche) ; tout enregistrement passe en plus par un filtre qui retire toute clé nommée comme un mot de passe, un hash, un sel, un jeton, un secret ou une session. Un test le vérifie (`tests/integration/bascule-delta.test.ts`).
@@ -24,7 +26,7 @@ Chaque enregistrement porte `depuisLaBascule` : `cree` s'il a été créé aprè
 
 - une photo supprimée dans la v3 (par sa propriétaire, ou avec son profil) ne laisse aucune ligne : l'objet est déplacé sous `deleted/` dans le compartiment, c'est la seule trace ;
 - un compte créé dans la v3 puis supprimé : l'ancien site ne l'a jamais connu, il n'a rien à rejouer ;
-- une connexion seule (`derniereConnexion`) compte comme une modification du compte : un compte importé qui s'est seulement reconnecté apparaît avec `modifie`. C'est du bruit, pas une perte.
+- une connexion seule (`lastSignInAt`) compte comme une modification du compte : un compte importé qui s'est seulement reconnecté apparaît avec `modifie`. C'est du bruit, pas une perte.
 
 Un enregistrement importé et jamais touché porte les dates de l'ancien site (l'import les réécrit), donc plus anciennes que la bascule : il n'est pas dans le fichier.
 

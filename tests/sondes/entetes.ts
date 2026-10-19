@@ -5,7 +5,7 @@
  * Everything is a GET of an address a visitor could type, answered at its first answer (a redirect is
  * not followed). Nothing is written, nothing is signed in.
  *
- * The addresses are those of the v3: `/api/admins`, `/api/pros` and `/api/auth-evenements` are lists
+ * The addresses are those of the v3: `/api/admins`, `/api/pros` and `/api/auth-events` are lists
  * of accounts and of their journal, closed to anyone who is not signed in as an admin. The routes of
  * the old site (`/api/upload/files`, `/api/users`, `/documentation`) must be gone.
  */
@@ -24,7 +24,7 @@ export const ENTETES_DE_SECURITE = [
 ] as const
 
 /** Lists of accounts and of their journal: an anonymous visitor gets neither a list nor a 404. */
-export const LISTES_PRIVEES = ['/api/admins', '/api/pros', '/api/auth-evenements'] as const
+export const LISTES_PRIVEES = ['/api/admins', '/api/pros', '/api/auth-events'] as const
 
 /** Routes of the old site that the v3 does not have. */
 export const ANCIENNES_ROUTES = ['/api/upload/files', '/api/users', '/documentation'] as const

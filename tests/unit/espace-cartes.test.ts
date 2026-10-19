@@ -27,25 +27,25 @@ describe('une carte par section, dans l’ordre de la page', () => {
 describe('les valeurs enregistrées', () => {
 	const PROFIL: ProfilDeLEspace = {
 		id: 2,
-		prenom: 'Léa',
-		nom: 'Fictive',
-		nomArtiste: 'Studio Fictif',
-		specialite: 'Maquillage mariée',
+		firstName: 'Léa',
+		lastName: 'Fictive',
+		artistName: 'Studio Fictif',
+		specialty: 'Maquillage mariée',
 		description: 'Une ligne\nUne autre',
-		commune: { nom: 'Annecy', departement: '74' },
-		rayonKm: 30,
-		aDomicile: true,
-		disponible: false,
+		city: { name: 'Annecy', department: '74' },
+		radiusKm: 30,
+		homeService: true,
+		available: false,
 		competences: [{ nom: 'Teint' }, { nom: 'Regard' }],
 		langues: [{ nom: 'Français' }],
 		formations: [{ diplome: 'CAP esthétique', ecole: 'École fictive', obtenuLe: '2020-01-15T12:00:00.000Z' }],
 		experiences: [{ poste: 'Maquilleuse', entreprise: 'Studio', debut: '2021-03-01T12:00:00.000Z' }],
 		prestations: [{ nom: 'Mariée', prixTexte: 'à partir de 80 €', prixAPartirDe: 80 }],
-		reseaux: { instagram: '@studio.fictif', siteWeb: 'https://studio.example.test' },
-		coordonnees: { telephone: '0100000000', email: 'lea@example.test' },
-		contactPublic: true,
-		galerie: [1, 2, 3],
-		photoPrincipale: 7,
+		networks: { instagram: '@studio.fictif', website: 'https://studio.example.test' },
+		contactDetails: { phone: '0100000000', email: 'lea@example.test' },
+		publicContact: true,
+		gallery: [1, 2, 3],
+		mainPicture: 7,
 	}
 
 	test('chaque carte porte ce qui est stocké', () => {
@@ -71,12 +71,12 @@ describe('les valeurs enregistrées', () => {
 	test('les mots « null » et « undefined » enregistrés par erreur ne s’affichent jamais', () => {
 		const sale: ProfilDeLEspace = {
 			id: 3,
-			prenom: 'null',
-			nom: ' undefined ',
-			specialite: '   ',
+			firstName: 'null',
+			lastName: ' undefined ',
+			specialty: '   ',
 			description: 'null',
 			competences: [{ nom: 'null' }, { nom: null }],
-			reseaux: { instagram: 'undefined' },
+			networks: { instagram: 'undefined' },
 		}
 		const textes = cartesDuProfil(sale).flatMap(c => c.lignes.map(l => l.valeur))
 		for (const valeur of textes) expect(valeur === null || !/null|undefined/i.test(valeur)).toBe(true)

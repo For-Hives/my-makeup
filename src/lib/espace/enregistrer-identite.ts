@@ -1,7 +1,21 @@
 import type { Payload } from 'payload'
-import { CHAMPS_DE_L_IDENTITE, erreursParChamp, schemaDeLIdentiteStrict, type ValeursDeLIdentite } from './identite'
+import {
+	CHAMPS_DE_L_IDENTITE,
+	type ChampDeLIdentite,
+	erreursParChamp,
+	schemaDeLIdentiteStrict,
+	type ValeursDeLIdentite,
+} from './identite'
 import { identifiantDuProfilAEcrire, type UtilisateurDeLEspace } from './mon-profil'
 import { echecDePayload, MESSAGE_ECHEC, type ResultatDEnregistrement } from './resultat'
+
+/** The field of the form that each field of the profile belongs to: Payload names the paths of a refusal. */
+const CHAMP_DU_CHEMIN: Readonly<Record<string, ChampDeLIdentite>> = {
+	firstName: 'prenom',
+	lastName: 'nom',
+	artistName: 'nomArtiste',
+	specialty: 'specialite',
+}
 
 /**
  * Saves the identity of the signed-in makeup artist (ticket 119), and tells the truth about it:
@@ -32,18 +46,26 @@ export async function enregistrerIdentite(
 		const id = await identifiantDuProfilAEcrire(payload, utilisateur)
 		if (id === null) return { ok: false, message: MESSAGE_ECHEC }
 		const stocke = await payload.update({
-			collection: 'profils',
-			data: lue.data,
+			collection: 'profiles',
+			data: {
+				firstName: lue.data.prenom,
+				lastName: lue.data.nom,
+				artistName: lue.data.nomArtiste,
+				specialty: lue.data.specialite,
+			},
 			depth: 0,
 			id,
 			overrideAccess: false,
 			user: utilisateur,
 		})
-		const valeurs = Object.fromEntries(
-			CHAMPS_DE_L_IDENTITE.map(champ => [champ, stocke[champ] ?? ''])
-		) as ValeursDeLIdentite
+		const valeurs: ValeursDeLIdentite = {
+			prenom: stocke.firstName ?? '',
+			nom: stocke.lastName ?? '',
+			nomArtiste: stocke.artistName ?? '',
+			specialite: stocke.specialty ?? '',
+		}
 		return { ok: true, valeurs }
 	} catch (erreur) {
-		return echecDePayload(erreur, CHAMPS_DE_L_IDENTITE)
+		return echecDePayload(erreur, CHAMPS_DE_L_IDENTITE, chemin => CHAMP_DU_CHEMIN[chemin] ?? '')
 	}
 }

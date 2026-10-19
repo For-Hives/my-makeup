@@ -70,27 +70,27 @@ describe('l’import des titres d’onglet', () => {
 
 	test('un talent des 14 reçoit son titre et l’écart est annoncé ; un autre talent n’en reçoit pas', () => {
 		const connu = talentAttendu(ligne(1, 'maquillage-mariee'))
-		expect(connu.valeurs.titreDeLaPage).toBe(TITRES_DES_PAGES_TALENT['maquillage-mariee'])
-		expect(connu.ecarts).toEqual([{ champ: 'titreDeLaPage', reference: 'titre-page-talent' }])
+		expect(connu.valeurs.pageTitle).toBe(TITRES_DES_PAGES_TALENT['maquillage-mariee'])
+		expect(connu.ecarts).toEqual([{ champ: 'pageTitle', reference: 'titre-page-talent' }])
 		const inconnu = talentAttendu(ligne(2, 'effets-speciaux'))
-		expect(inconnu.valeurs).not.toHaveProperty('titreDeLaPage')
+		expect(inconnu.valeurs).not.toHaveProperty('pageTitle')
 		expect(inconnu.ecarts).toEqual([])
 	})
 
 	test('le titre n’est écrit que s’il manque : jamais par-dessus un titre saisi dans l’administration', () => {
 		const attendu = talentAttendu(ligne(1, 'maquillage-mariee'))
 		const valeurs = { ...attendu.valeurs }
-		const existant = (titreDeLaPage: unknown) => ({ id: 7, valeurs: { ...valeurs, titreDeLaPage } })
-		expect(champsDifferents(ADAPTATEUR_TALENTS, attendu, existant(null))).toEqual(['titreDeLaPage'])
-		expect(champsDifferents(ADAPTATEUR_TALENTS, attendu, existant(''))).toEqual(['titreDeLaPage'])
+		const existant = (titreDeLaPage: unknown) => ({ id: 7, valeurs: { ...valeurs, pageTitle: titreDeLaPage } })
+		expect(champsDifferents(ADAPTATEUR_TALENTS, attendu, existant(null))).toEqual(['pageTitle'])
+		expect(champsDifferents(ADAPTATEUR_TALENTS, attendu, existant(''))).toEqual(['pageTitle'])
 		expect(
 			champsDifferents(ADAPTATEUR_TALENTS, attendu, existant('Un titre saisi par la rédaction, de bonne longueur'))
 		).toEqual([])
-		expect(champsDifferents(ADAPTATEUR_TALENTS, attendu, existant(valeurs.titreDeLaPage))).toEqual([])
+		expect(champsDifferents(ADAPTATEUR_TALENTS, attendu, existant(valeurs.pageTitle))).toEqual([])
 		// A talent with no title to give leaves an empty one alone.
 		const sans = talentAttendu(ligne(2, 'effets-speciaux'))
 		expect(
-			champsDifferents(ADAPTATEUR_TALENTS, sans, { id: 8, valeurs: { ...sans.valeurs, titreDeLaPage: null } })
+			champsDifferents(ADAPTATEUR_TALENTS, sans, { id: 8, valeurs: { ...sans.valeurs, pageTitle: null } })
 		).toEqual([])
 		expect(planifier(ADAPTATEUR_TALENTS, [attendu], [existant('Saisi')]).actions[0]?.genre).toBe('inchange')
 	})

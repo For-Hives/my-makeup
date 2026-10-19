@@ -73,7 +73,7 @@ export async function renvoyerLaConfirmation({
 	const debut = Date.now()
 	const noter = async (code: CodeEvenement) => {
 		try {
-			await journal?.({ type: 'renvoi', code, dureeMs: Date.now() - debut })
+			await journal?.({ type: 'resend', code, durationMs: Date.now() - debut })
 		} catch {
 			// The journal is not the resending's to fail.
 		}

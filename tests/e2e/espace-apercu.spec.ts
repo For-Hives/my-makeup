@@ -19,9 +19,9 @@ test.beforeEach(({ context }) =>
 type Maquilleuse = CompteDeTest<'maquilleuse'>
 
 const COMPLET = {
-	prenom: 'Léa',
-	nom: 'Aperçu',
-	specialite: 'Maquillage mariée',
+	firstName: 'Léa',
+	lastName: 'Aperçu',
+	specialty: 'Maquillage mariée',
 	description: 'Je maquille pour les mariages.',
 	competences: [{ nom: 'Teint lumineux' }],
 	langues: [{ nom: 'Français' }],
@@ -33,12 +33,12 @@ async function maquilleuse(
 ): Promise<{ compte: Maquilleuse; slug: string }> {
 	const compte = await creerCompte('maquilleuse')
 	const payload = await payloadDeTest()
-	const { docs } = await payload.find({ collection: 'profils', depth: 0, where: { pro: { equals: compte.id } } })
+	const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })
 	const [fiche] = docs
 	if (!fiche) throw new Error('pas de profil')
-	await payload.update({ collection: 'profils', id: fiche.id, data: profil })
+	await payload.update({ collection: 'profiles', id: fiche.id, data: profil })
 	await context.addCookies(compte.session.cookies)
-	return { compte, slug: (await payload.findByID({ collection: 'profils', id: fiche.id, depth: 0 })).slug }
+	return { compte, slug: (await payload.findByID({ collection: 'profiles', id: fiche.id, depth: 0 })).slug }
 }
 
 const debordement = (page: Page) =>
@@ -103,7 +103,7 @@ test.describe('139 : voir mon profil public', { tag: '@mobile' }, () => {
 		page,
 		request,
 	}) => {
-		const { slug } = await maquilleuse(context, { prenom: 'Zoé', nom: 'Brouillon', disponible: false })
+		const { slug } = await maquilleuse(context, { firstName: 'Zoé', lastName: 'Brouillon', available: false })
 		await page.goto('/auth/apercu-profil')
 		await expect(page.getByTestId('bandeau-apercu')).toHaveAttribute('data-etat', 'indisponible')
 		await expect(page.getByRole('heading', { level: 1, name: 'Zoé Brouillon' })).toBeVisible()

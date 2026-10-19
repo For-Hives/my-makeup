@@ -20,26 +20,26 @@ const MOMENT = new Date('2026-10-14T10:00:00.000Z')
 
 describe('ligneDeJournal : un type, une issue, une durée, une date, rien d’autre', () => {
 	test('une ligne porte quatre champs', () => {
-		const ligne = ligneDeJournal({ type: 'connexion', code: 'ok', dureeMs: 41.6 }, MOMENT)
-		expect(ligne).toEqual({ type: 'connexion', code: 'ok', dureeMs: 42, date: MOMENT.toISOString() })
+		const ligne = ligneDeJournal({ type: 'sign-in', code: 'ok', durationMs: 41.6 }, MOMENT)
+		expect(ligne).toEqual({ type: 'sign-in', code: 'ok', durationMs: 42, date: MOMENT.toISOString() })
 	})
 
 	test('un code hors de la liste devient « inconnu », jamais copié tel quel', () => {
 		const glisse = 'intruse@example.test 203.0.113.9 jeton-secret' as unknown as EvenementAuth['code']
-		const ligne = ligneDeJournal({ type: 'connexion', code: glisse }, MOMENT)
+		const ligne = ligneDeJournal({ type: 'sign-in', code: glisse }, MOMENT)
 		expect(ligne.code).toBe('inconnu')
 		expect(JSON.stringify(ligne)).not.toMatch(/intruse|203\.0\.113|jeton/)
 	})
 
 	test('un champ de plus dans l’événement n’entre pas dans la ligne', () => {
-		const evenement = { type: 'connexion', code: 'ok', email: 'a@example.test', ip: '192.0.2.1', nom: 'Léa' }
+		const evenement = { type: 'sign-in', code: 'ok', email: 'a@example.test', ip: '192.0.2.1', nom: 'Léa' }
 		const ligne = ligneDeJournal(evenement as EvenementAuth, MOMENT)
 		expect(Object.keys(ligne).sort()).toEqual(['code', 'date', 'type'])
 	})
 
 	test('une durée absente, négative ou illisible est omise', () => {
-		for (const dureeMs of [undefined, -1, Number.NaN, Number.POSITIVE_INFINITY, '12' as unknown as number])
-			expect('dureeMs' in ligneDeJournal({ type: 'deconnexion', code: 'ok', dureeMs }, MOMENT)).toBe(false)
+		for (const durationMs of [undefined, -1, Number.NaN, Number.POSITIVE_INFINITY, '12' as unknown as number])
+			expect('durationMs' in ligneDeJournal({ type: 'sign-out', code: 'ok', durationMs }, MOMENT)).toBe(false)
 	})
 
 	test('les deux listes sont fermées et sans doublon', () => {
@@ -53,12 +53,12 @@ describe('ligneDeJournal : un type, une issue, une durée, une date, rien d’au
 describe('journaliser : un échec du journal ne remonte jamais', () => {
 	const ecrits: string[] = []
 	const payloadEnPanne = {
-		create: () => Promise.reject(new Error('insert into auth_evenements : intruse@example.test')),
+		create: () => Promise.reject(new Error('insert into auth_events : intruse@example.test')),
 		logger: { error: (ligne: { msg: string }) => ecrits.push(ligne.msg) },
 	} as unknown as Pick<Payload, 'create' | 'logger'>
 
 	test('l’erreur est avalée, la ligne de log ne dit rien de la ligne ni de l’erreur', async () => {
-		await journaliser(payloadEnPanne, { type: 'connexion', code: 'ok' })
+		await journaliser(payloadEnPanne, { type: 'sign-in', code: 'ok' })
 		expect(ecrits).toHaveLength(1)
 		expect(ecrits[0]).not.toContain('intruse')
 		expect(ecrits[0]).not.toContain('insert')
@@ -73,7 +73,7 @@ describe('journaliser : un échec du journal ne remonte jamais', () => {
 				},
 			},
 		} as unknown as Pick<Payload, 'create' | 'logger'>
-		await journaliser(casse, { type: 'connexion', code: 'ok' })
+		await journaliser(casse, { type: 'sign-in', code: 'ok' })
 	})
 })
 
@@ -104,10 +104,10 @@ describe('connecter : une ligne pour chaque tentative, et le journal ne décide 
 			journal,
 		})
 		expect(lignes.map(({ type, code }) => [type, code])).toEqual([
-			['connexion', 'ok'],
-			['connexion', 'identifiants-invalides'],
+			['sign-in', 'ok'],
+			['sign-in', 'identifiants-invalides'],
 		])
-		for (const ligne of lignes) expect(typeof ligne.dureeMs).toBe('number')
+		for (const ligne of lignes) expect(typeof ligne.durationMs).toBe('number')
 	})
 
 	test('un échec d’écriture du journal ne fait pas échouer la connexion', async () => {

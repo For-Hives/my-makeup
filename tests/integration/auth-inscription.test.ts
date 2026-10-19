@@ -75,7 +75,7 @@ const compte = async (email: string) => {
 }
 
 const journal = async () =>
-	(await (await payloadDeTest()).find({ collection: 'auth-evenements', depth: 0, limit: 1000, sort: 'id' })).docs
+	(await (await payloadDeTest()).find({ collection: 'auth-events', depth: 0, limit: 1000, sort: 'id' })).docs
 
 const codeDuLien = (lien: string): string => new URL(lien).searchParams.get('code') ?? ''
 
@@ -86,9 +86,9 @@ describe('I08 : l’inscription envoie le mail de confirmation, et le compte att
 		expect(resultat).toEqual({ ok: true, confirmee: false })
 		const pro = await compte(email)
 		expect(pro?._verified).toBe(false)
-		expect(pro?.nom).toBe('Léa Fictive')
+		expect(pro?.name).toBe('Léa Fictive')
 		const payload = await payloadDeTest()
-		const profils = await payload.find({ collection: 'profils', depth: 0, where: { pro: { equals: pro?.id } } })
+		const profils = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: pro?.id } } })
 		expect(profils.totalDocs).toBe(1)
 		expect(profils.docs[0]?.slug).toMatch(/^lea-fictive(-\d+)?$/)
 		const mail = await attendreLeMail({ pour: email })
@@ -115,7 +115,7 @@ describe('I08 : l’inscription envoie le mail de confirmation, et le compte att
 		const payload = await payloadDeTest()
 		const slugs = (
 			await payload.find({
-				collection: 'profils',
+				collection: 'profiles',
 				depth: 0,
 				where: { pro: { in: [(await compte(a.email))?.id, (await compte(b.email))?.id] } },
 			})
@@ -137,7 +137,7 @@ describe('des homonymes qui s’inscrivent au même instant', () => {
 		const payload = await payloadDeTest()
 		const pros = await Promise.all(toutes.map(({ email }) => compte(email)))
 		const slugs = (
-			await payload.find({ collection: 'profils', depth: 0, where: { pro: { in: pros.map(p => p?.id) } } })
+			await payload.find({ collection: 'profiles', depth: 0, where: { pro: { in: pros.map(p => p?.id) } } })
 		).docs.map(({ slug }) => slug)
 		expect(new Set(slugs).size).toBe(HOMONYMES)
 	})
@@ -191,7 +191,7 @@ describe('connexion avant confirmation', () => {
 		expect(reponse.statut).toBe(403)
 		expect(reponse.enTetes.get('set-cookie') ?? '').not.toContain('payload-token=')
 		expect((await journal()).slice(avant).map(({ type, code }) => [type, code])).toEqual([
-			['connexion', 'email-non-confirme'],
+			['sign-in', 'email-non-confirme'],
 		])
 	})
 
@@ -231,7 +231,7 @@ describe('le lien du mail : à usage unique', () => {
 			['confirmation', 'ok'],
 			['confirmation', 'deja-confirme'],
 			['confirmation', 'lien-invalide'],
-			['connexion', 'ok'],
+			['sign-in', 'ok'],
 		])
 	})
 
@@ -275,13 +275,13 @@ describe('quand l’inscription ne peut pas aboutir', () => {
 	test('le mail ne part pas : rien n’est gardé (ni compte, ni profil), et elle peut réessayer avec la même adresse', async () => {
 		const email = courriel('retente')
 		const payload = await payloadDeTest()
-		const profils = (await payload.count({ collection: 'profils' })).totalDocs
+		const profils = (await payload.count({ collection: 'profiles' })).totalDocs
 
 		const raté = await inscription({ email, envoyer: () => Promise.reject(new EnvoiEmailEchoue()) })
 
 		expect(raté.resultat).toEqual({ ok: false, code: 'email-non-envoye' })
 		expect(await compte(email)).toBeUndefined()
-		expect((await payload.count({ collection: 'profils' })).totalDocs).toBe(profils)
+		expect((await payload.count({ collection: 'profiles' })).totalDocs).toBe(profils)
 		const nouvelle = await inscription({ email })
 		expect(nouvelle.resultat).toEqual({ ok: true, confirmee: false })
 		await attendreLeMail({ pour: email })
@@ -304,9 +304,9 @@ describe('le journal de l’inscription', () => {
 
 		const lignes = (await journal()).slice(avant)
 		expect(lignes.map(({ type, code }) => [type, code])).toEqual([
-			['inscription', 'ok'],
-			['inscription', 'email-deja-pris'],
-			['inscription', 'service-indisponible'],
+			['sign-up', 'ok'],
+			['sign-up', 'email-deja-pris'],
+			['sign-up', 'service-indisponible'],
 		])
 		expect(JSON.stringify(lignes)).not.toMatch(/Distinctif|journal-/)
 	})

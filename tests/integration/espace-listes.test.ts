@@ -27,7 +27,7 @@ type Maquilleuse = CompteDeTest<'maquilleuse'>
 
 async function profilStocke(payload: Payload, compte: Maquilleuse) {
 	const { docs } = await payload.find({
-		collection: 'profils',
+		collection: 'profiles',
 		depth: 0,
 		overrideAccess: true,
 		where: { pro: { equals: compte.id } },
@@ -145,7 +145,7 @@ describe('129 : les expériences', () => {
 
 		// A row of the old site with empty fields (SCHEMA.md §2, rule 2), written as the import writes it.
 		await m.payload.update({
-			collection: 'profils',
+			collection: 'profiles',
 			id: m.id,
 			data: { experiences: [{ poste: 'Reprise', entreprise: null }] },
 		})
@@ -180,7 +180,7 @@ describe('129 : les expériences', () => {
 		const resultat = await enregistrerListe(
 			m.payload,
 			m.utilisateur,
-			{ lignes: [{ valeurs: EXPERIENCE }], statut: 'publie' },
+			{ lignes: [{ valeurs: EXPERIENCE }], status: 'published' },
 			EXPERIENCES
 		)
 		expect(resultat).toEqual({ ok: false, message: MESSAGE_ECHEC })
@@ -294,7 +294,7 @@ describe('131 : les prestations', () => {
 	test('les options d’une prestation sont gardées quand on change la prestation, avec leurs identifiants', async () => {
 		const m = await maquilleuse()
 		await m.payload.update({
-			collection: 'profils',
+			collection: 'profiles',
 			id: m.id,
 			data: {
 				prestations: [
@@ -349,20 +349,20 @@ describe('131 : les prestations', () => {
 				file: fichierPourPayload(),
 			})
 			await m.payload.update({
-				collection: 'profils',
+				collection: 'profiles',
 				id: m.id,
 				data: {
-					photoPrincipale: photo.id,
-					commune: ANNECY,
-					specialite: 'Mariage',
-					reseaux: { instagram: 'https://www.instagram.com/studio.fictif' },
+					mainPicture: photo.id,
+					city: ANNECY,
+					specialty: 'Mariage',
+					networks: { instagram: 'https://www.instagram.com/studio.fictif' },
 					description: 'Maquilleuse fictive, pour les essais du banc. '.repeat(5),
 				},
 			})
 			return m
 		}
 		const publiable = async (m: Awaited<ReturnType<typeof maquilleuse>>) =>
-			(await profilStocke(m.payload, m.compte)).publiable
+			(await profilStocke(m.payload, m.compte)).publishable
 
 		test('« sur devis » seul ne suffit pas, un montant suffit, et le retirer ôte le critère', async () => {
 			const m = await toutSaufLOffre()

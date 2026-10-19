@@ -23,10 +23,10 @@ export const LONGUEUR_MINIMALE_DU_MOT_DE_PASSE = 12
 export const LONGUEUR_MAXIMALE_DU_MOT_DE_PASSE = 200
 
 export const USAGE = [
-	'Usage : bun run admin:creer <email> [--role=admin|redaction] [--cible-distante]',
+	'Usage : bun run admin:creer <email> [--role=admin|editor] [--cible-distante]',
 	'',
 	'  <email>             l’adresse du compte, en argument (ce n’est pas un secret)',
-	'  --role=…            admin (par défaut) ou redaction',
+	'  --role=…            admin (par défaut) ou editor (la rédaction)',
 	`  ${DRAPEAU_CIBLE_DISTANTE}   écrire dans une base qui n’est pas sur ce poste (DATABASE_URI)`,
 	'',
 	'Le mot de passe se tape au clavier, deux fois, sans s’afficher. Il n’existe aucune option pour le donner.',

@@ -25,16 +25,16 @@ describe('le refus de l’inscription par le proxy (ticket 084)', () => {
 			lignes.push(`${type}/${code}`)
 		}
 
-		for (let i = 0; i < 10; i++) await journaliserUnRefus(journal, 'a', 'inscription', 'trop-de-tentatives')
-		await journaliserUnRefus(journal, 'a', 'inscription', 'donnees-invalides')
-		await journaliserUnRefus(journal, 'b', 'inscription', 'trop-de-tentatives')
+		for (let i = 0; i < 10; i++) await journaliserUnRefus(journal, 'a', 'sign-up', 'trop-de-tentatives')
+		await journaliserUnRefus(journal, 'a', 'sign-up', 'donnees-invalides')
+		await journaliserUnRefus(journal, 'b', 'sign-up', 'trop-de-tentatives')
 
 		expect(lignes).toEqual([
-			'inscription/trop-de-tentatives',
-			'inscription/trop-de-tentatives',
-			'inscription/trop-de-tentatives',
-			'inscription/donnees-invalides',
-			'inscription/trop-de-tentatives',
+			'sign-up/trop-de-tentatives',
+			'sign-up/trop-de-tentatives',
+			'sign-up/trop-de-tentatives',
+			'sign-up/donnees-invalides',
+			'sign-up/trop-de-tentatives',
 		])
 	})
 

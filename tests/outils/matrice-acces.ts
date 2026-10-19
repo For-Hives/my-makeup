@@ -37,7 +37,7 @@
 
 import { randomUUID } from 'node:crypto'
 import type { Payload, RequiredDataFromCollectionSlug, Where } from 'payload'
-import { CONTEXTE_SANS_PROFIL } from '@/collections/Profils'
+import { CONTEXTE_SANS_PROFIL } from '@/collections/Profiles'
 import { PROFILS_PUBLIES } from '@/lib/acces'
 import { STATUT_INITIAL, STATUT_PUBLIE } from '@/lib/profil/statut'
 import { creerCompte, DOMAINE_DES_COMPTES, motDePasseAleatoire, type TypeAvecSession } from './fabrique-comptes'
@@ -70,19 +70,19 @@ const TYPE_DU_ROLE: Record<RoleAvecCompte, TypeAvecSession> = {
 export const COLLECTIONS = [
 	'admins',
 	'pros',
-	'profils',
+	'profiles',
 	'media',
 	'talents',
 	'articles',
-	'auth-evenements',
-	'demandes',
-	'comptes-supprimes',
+	'auth-events',
+	'contact-requests',
+	'deleted-accounts',
 	'payload-locked-documents',
 ] as const
 export type CollectionDeLaMatrice = (typeof COLLECTIONS)[number]
 
 /**
- * The editorial collections (src/collections/redaction.ts): written by the newsroom, read by the
+ * The editorial collections (src/collections/editor.ts): written by the newsroom, read by the
  * public when published. Nobody owns their documents.
  */
 export const COLLECTIONS_EDITORIALES = ['talents', 'articles'] as const satisfies readonly CollectionDeLaMatrice[]
@@ -189,7 +189,7 @@ const compteSansProfil = async (payload: Payload, prefixe: string): Promise<numb
 
 /** The profile of an account, if it has one. */
 const profilDe = async (payload: Payload, compte: number): Promise<number | undefined> =>
-	(await payload.find({ collection: 'profils', depth: 0, limit: 1, where: { pro: { equals: compte } } })).docs[0]?.id
+	(await payload.find({ collection: 'profiles', depth: 0, limit: 1, where: { pro: { equals: compte } } })).docs[0]?.id
 
 /** A talent with made-up content, in the state asked for: what the newsroom writes. */
 const talent = (etat: Etat): RequiredDataFromCollectionSlug<'talents'> => ({
@@ -201,13 +201,13 @@ const talent = (etat: Etat): RequiredDataFromCollectionSlug<'talents'> => ({
 })
 
 /** An article with made-up content, in the state asked for, with these photos in its gallery. */
-const article = (etat: Etat, galerie: number[] = []): RequiredDataFromCollectionSlug<'articles'> => ({
+const article = (etat: Etat, gallery: number[] = []): RequiredDataFromCollectionSlug<'articles'> => ({
 	title: nom('Article'),
 	slug: `article-${randomUUID()}`,
 	author: 'Rédaction fictive',
 	excerpt: 'Un article fictif de la matrice d’accès.',
 	content: '## Un article\n\nUn article fictif de la matrice d’accès.\n',
-	galerie,
+	gallery,
 	_status: etat === 'publie' ? 'published' : 'draft',
 })
 
@@ -215,32 +215,32 @@ const article = (etat: Etat, galerie: number[] = []): RequiredDataFromCollection
 const evenement = async (payload: Payload): Promise<number> =>
 	(
 		await payload.create({
-			collection: 'auth-evenements',
-			data: { type: 'connexion', code: 'ok', dureeMs: 12, date: new Date().toISOString() },
+			collection: 'auth-events',
+			data: { type: 'sign-in', code: 'ok', durationMs: 12, date: new Date().toISOString() },
 		})
 	).id
 
 /** The data of a contact message, as the server writes it: made-up values only. */
 const donneesDeDemande = () => ({
 	type: 'contact' as const,
-	statut: 'nouvelle' as const,
-	etatMail: 'envoye' as const,
-	prenom: 'Léa',
-	nom: nom('Témoin'),
+	status: 'new' as const,
+	mailStatus: 'sent' as const,
+	firstName: 'Léa',
+	lastName: nom('Témoin'),
 	email: adresse('demande'),
-	telephone: '01 99 00 12 34',
+	phone: '01 99 00 12 34',
 	message: 'Un message fictif de la matrice d’accès.',
 })
 
 /** A contact message, written by the server as it writes them: without access control. */
 const demande = async (payload: Payload): Promise<number> =>
-	(await payload.create({ collection: 'demandes', data: donneesDeDemande() })).id
+	(await payload.create({ collection: 'contact-requests', data: donneesDeDemande() })).id
 
 /** The identifier of a deleted account, written by the server as it writes it: a made-up one, never reused. */
 const compteSupprime = async (payload: Payload): Promise<number> =>
 	(
 		await payload.create({
-			collection: 'comptes-supprimes',
+			collection: 'deleted-accounts',
 			data: { strapiId: 9_000_000 + Math.floor(Math.random() * 1_000_000_000), date: new Date().toISOString() },
 		})
 	).id
@@ -265,38 +265,38 @@ const PORTRAITS: Record<CollectionDeLaMatrice, Portrait> = {
 		champ: 'email',
 		nouvelleValeur: () => adresse('modifie'),
 		donneesDeCreation: () =>
-			Promise.resolve({ email: adresse('cree'), password: motDePasseAleatoire(), role: 'redaction' }),
+			Promise.resolve({ email: adresse('cree'), password: motDePasseAleatoire(), role: 'editor' }),
 		jetable: async payload =>
 			(
 				await payload.create({
 					collection: 'admins',
-					data: { email: adresse('jetable'), password: motDePasseAleatoire(), role: 'redaction' },
+					data: { email: adresse('jetable'), password: motDePasseAleatoire(), role: 'editor' },
 				})
 			).id,
 	},
 	pros: {
-		champ: 'nom',
+		champ: 'name',
 		nouvelleValeur: () => nom('Renommée'),
 		donneesDeCreation: () => Promise.resolve(compteDeMaquilleuse('cree')),
 		// Without a profile: an account that still has one is not deleted (its profile goes first).
 		jetable: payload => compteSansProfil(payload, 'jetable'),
 	},
-	profils: {
-		champ: 'prenom',
+	profiles: {
+		champ: 'firstName',
 		nouvelleValeur: () => nom('Prénom'),
 		// A profile for the actor's own account when it has none, else for a new account without one.
 		donneesDeCreation: async (acteur, payload) => ({
 			pro:
-				acteur.utilisateur?.collection === 'pros' && acteur.documents.profils === undefined
+				acteur.utilisateur?.collection === 'pros' && acteur.documents.profiles === undefined
 					? acteur.utilisateur.id
 					: await compteSansProfil(payload, 'cree'),
 		}),
 		jetable: async payload =>
 			(
 				await payload.create({
-					collection: 'profils',
+					collection: 'profiles',
 					// The slug is not given: the collection computes it.
-					data: { pro: await compteSansProfil(payload, 'jetable') } as RequiredDataFromCollectionSlug<'profils'>,
+					data: { pro: await compteSansProfil(payload, 'jetable') } as RequiredDataFromCollectionSlug<'profiles'>,
 				})
 			).id,
 		publics: PROFILS_PUBLIES,
@@ -309,22 +309,22 @@ const PORTRAITS: Record<CollectionDeLaMatrice, Portrait> = {
 			mediaDe(payload, acteur.utilisateur?.collection === 'pros' ? acteur.utilisateur.id : undefined),
 		fichier: true,
 	},
-	'auth-evenements': {
-		champ: 'dureeMs',
+	'auth-events': {
+		champ: 'durationMs',
 		nouvelleValeur: () => 999,
-		donneesDeCreation: () => Promise.resolve({ type: 'connexion', code: 'ok', dureeMs: 1 }),
+		donneesDeCreation: () => Promise.resolve({ type: 'sign-in', code: 'ok', durationMs: 1 }),
 		jetable: evenement,
 	},
-	'comptes-supprimes': {
+	'deleted-accounts': {
 		champ: 'strapiId',
 		nouvelleValeur: () => 1,
 		donneesDeCreation: () => Promise.resolve({ strapiId: 8_000_000 + Math.floor(Math.random() * 1_000_000_000) }),
 		jetable: compteSupprime,
 	},
 	// Contact messages (ticket 158): the server writes them, an admin reads them, nobody else reaches them.
-	demandes: {
-		champ: 'statut',
-		nouvelleValeur: () => 'transmise',
+	'contact-requests': {
+		champ: 'status',
+		nouvelleValeur: () => 'forwarded',
 		donneesDeCreation: () => Promise.resolve(donneesDeDemande()),
 		jetable: demande,
 	},
@@ -407,7 +407,7 @@ export async function distribuer(): Promise<Distribution> {
 				collection: compte.collection,
 			}
 			const profil = compte.collection === 'pros' ? await profilDe(payload, id) : undefined
-			const documents = { [compte.collection]: id, ...(profil === undefined ? {} : { profils: profil }) }
+			const documents = { [compte.collection]: id, ...(profil === undefined ? {} : { profiles: profil }) }
 			return { role, enTetes: compte.session.enTetes, utilisateur, documents }
 		})
 	)
@@ -419,14 +419,14 @@ export async function distribuer(): Promise<Distribution> {
 	// Each of them has a photo of her own, the main photo of her profile (ticket 043).
 	for (const role of ['maquilleuse', 'autreMaquilleuse'] as const) {
 		const acteur = parRole[role]
-		const profil = acteur.documents.profils
+		const profil = acteur.documents.profiles
 		if (profil === undefined) throw new Error(`La distribution n’a pas de profil pour « ${role} ».`)
 		acteur.documents.media = await mediaDe(payload, acteur.documents.pros)
 		const statutChoisi = role === 'maquilleuse' ? STATUT_PUBLIE : STATUT_INITIAL
 		await payload.update({
-			collection: 'profils',
+			collection: 'profiles',
 			id: profil,
-			data: { statutChoisi, photoPrincipale: acteur.documents.media },
+			data: { chosenStatus: statutChoisi, mainPicture: acteur.documents.media },
 		})
 	}
 	// One lock for each account of the admin panel, in its own name.
@@ -526,9 +526,9 @@ const identifiants = (corps: unknown): number[] =>
  */
 function documentDe(distribution: Distribution, ligne: Ligne): number {
 	const { collection, document } = ligne
-	if (collection === 'auth-evenements') return distribution.evenement
-	if (collection === 'demandes') return distribution.demande
-	if (collection === 'comptes-supprimes') return distribution.compteSupprime
+	if (collection === 'auth-events') return distribution.evenement
+	if (collection === 'contact-requests') return distribution.demande
+	if (collection === 'deleted-accounts') return distribution.compteSupprime
 	const deLEtat = (etat: Etat) =>
 		estEditoriale(collection)
 			? distribution.contenus[collection][etat]
@@ -574,9 +574,9 @@ async function lister(voie: Voie, acteur: Acteur, ligne: Ligne, distribution: Di
 		...ROLES.flatMap(role => distribution[role].documents[collection] ?? []),
 		...contenus,
 		...sansProprietaire,
-		...(collection === 'auth-evenements' ? [distribution.evenement] : []),
-		...(collection === 'demandes' ? [distribution.demande] : []),
-		...(collection === 'comptes-supprimes' ? [distribution.compteSupprime] : []),
+		...(collection === 'auth-events' ? [distribution.evenement] : []),
+		...(collection === 'contact-requests' ? [distribution.demande] : []),
+		...(collection === 'deleted-accounts' ? [distribution.compteSupprime] : []),
 	]
 	const publics = await publicsDe(collection, distribues)
 	const siensEtPublics = [...new Set([...siens, ...publics])].sort((a, b) => a - b)

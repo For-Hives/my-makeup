@@ -11,29 +11,29 @@ import {
 import { LIMITES_DU_CONTACT } from '../lib/contact/message'
 import { renvoyerLEmail } from '../lib/contact/renvoi-route'
 
-const LIBELLES_DES_TYPES: Record<(typeof TYPES_DE_DEMANDE)[number], string> = { contact: 'Message de contact' }
+const TYPE_LABELS: Record<(typeof TYPES_DE_DEMANDE)[number], string> = { contact: 'Message de contact' }
 
-const LIBELLES_DES_STATUTS: Record<(typeof STATUTS_DE_DEMANDE)[number], string> = {
-	nouvelle: 'Nouvelle',
-	transmise: 'Transmise à l’équipe',
-	repondue: 'Répondue',
+const STATUS_LABELS: Record<(typeof STATUTS_DE_DEMANDE)[number], string> = {
+	new: 'Nouvelle',
+	forwarded: 'Transmise à l’équipe',
+	answered: 'Répondue',
 	spam: 'Spam',
 }
 
-const LIBELLES_DES_ETATS_DU_MAIL: Record<(typeof ETATS_DU_MAIL)[number], string> = {
-	'en-attente': 'En cours d’envoi',
-	envoye: 'Envoyé',
-	echec: 'Échec de l’envoi',
+const MAIL_STATUS_LABELS: Record<(typeof ETATS_DU_MAIL)[number], string> = {
+	pending: 'En cours d’envoi',
+	sent: 'Envoyé',
+	failed: 'Échec de l’envoi',
 }
 
 /**
  * The cycle of the status (src/lib/contact/etats.ts, plan 02 U78), kept by the collection itself.
  * - An admin who asks for a move the cycle does not allow gets a sentence in French, and nothing changes.
- * - The server (no account on the request) only ever moves `nouvelle` to `transmise`, once the mail has left.
+ * - The server (no account on the request) only ever moves `new` to `forwarded`, once the mail has left.
  *   A late « the mail left » that arrives after an admin marked the message answered or spam changes nothing
  *   of its status.
  */
-const garderLeCycle: CollectionBeforeChangeHook = ({ data: recu, originalDoc, operation, req }) => {
+const keepTheCycle: CollectionBeforeChangeHook = ({ data: recu, originalDoc, operation, req }) => {
 	if (operation !== 'update' || !originalDoc) return recu
 	// The date of reception is the server's: the retention purge keys on it, so no request rewrites it.
 	const data = { ...recu }
@@ -41,25 +41,26 @@ const garderLeCycle: CollectionBeforeChangeHook = ({ data: recu, originalDoc, op
 		if (originalDoc.createdAt === undefined) delete data.createdAt
 		else data.createdAt = originalDoc.createdAt
 	}
-	const de: unknown = originalDoc.statut
-	const vers: unknown = data.statut
-	if (!estUnStatutDeDemande(de) || !estUnStatutDeDemande(vers) || de === vers) return data
+	const previousStatus: unknown = originalDoc.status
+	const nextStatus: unknown = data.status
+	if (!estUnStatutDeDemande(previousStatus) || !estUnStatutDeDemande(nextStatus) || previousStatus === nextStatus)
+		return data
 	if (req.user) {
-		if (!transitionPermise(de, vers))
+		if (!transitionPermise(previousStatus, nextStatus))
 			throw new ValidationError({
 				errors: [
 					{
-						path: 'statut',
-						message: `Un message « ${LIBELLES_DES_STATUTS[de]} » ne peut pas passer à « ${LIBELLES_DES_STATUTS[vers]} ».`,
+						path: 'status',
+						message: `Un message « ${STATUS_LABELS[previousStatus]} » ne peut pas passer à « ${STATUS_LABELS[nextStatus]} ».`,
 					},
 				],
 			})
-		// `transmise` is the server's word for « the mail left »: an admin cannot say it while it did not.
-		if (vers === 'transmise' && originalDoc.etatMail !== 'envoye')
+		// `forwarded` is the server's word for « the mail left »: an admin cannot say it while it did not.
+		if (nextStatus === 'forwarded' && originalDoc.mailStatus !== 'sent')
 			throw new ValidationError({
 				errors: [
 					{
-						path: 'statut',
+						path: 'status',
 						message:
 							'Le message n’est « Transmis à l’équipe » que lorsque son email est parti. Renvoie l’email, ou marque le message « Répondu ».',
 					},
@@ -67,17 +68,17 @@ const garderLeCycle: CollectionBeforeChangeHook = ({ data: recu, originalDoc, op
 			})
 		return data
 	}
-	return vers === 'transmise' && de !== 'nouvelle' ? { ...data, statut: de } : data
+	return nextStatus === 'forwarded' && previousStatus !== 'new' ? { ...data, status: previousStatus } : data
 }
 
 /** Everything but the status is what the visitor typed, or what the server wrote: no request changes it. */
-const figee = { update: jamais }
+const frozen = { update: jamais }
 
 /**
  * The messages sent through the contact form (tickets 158 and 159; plan 01 §5 P8; docs/migration/SCHEMA.md).
  *
  * - The server stores the message first, then sends the mail to the team: a mail that does not leave
- *   never loses the message (`etatMail` is then `echec`).
+ *   never loses the message (`mailStatus` is then `failed`).
  * - Only an admin reads it. Nobody creates or deletes it through an API, an admin included: the server
  *   writes it, through the Local API. A visitor has no account, so the form cannot be an API call of hers.
  *   An admin changes its status (answered, spam) and nothing else: every other field is frozen. The rules
@@ -86,17 +87,17 @@ const figee = { update: jamais }
  *   of the message sends it again (src/lib/contact/renvoi.ts), once however many times it is clicked.
  * - It holds what the visitor typed, so it is never in a log, a mail subject or a measure event.
  */
-export const Demandes: CollectionConfig<'demandes'> = {
-	slug: 'demandes',
+export const ContactRequests: CollectionConfig<'contact-requests'> = {
+	slug: 'contact-requests',
 	labels: { singular: 'Message de contact', plural: 'Messages de contact' },
 	admin: {
-		defaultColumns: ['createdAt', 'type', 'statut', 'etatMail', 'prenom', 'nom'],
+		defaultColumns: ['createdAt', 'type', 'status', 'mailStatus', 'firstName', 'lastName'],
 		hidden: cacheeSaufAdmin,
-		useAsTitle: 'nom',
+		useAsTitle: 'lastName',
 		components: { beforeListTable: ['/components/admin/EchecsDEnvoi#EchecsDEnvoi'] },
 	},
 	endpoints: [renvoyerLEmail],
-	hooks: { beforeChange: [garderLeCycle] },
+	hooks: { beforeChange: [keepTheCycle] },
 	defaultSort: '-createdAt',
 	access: {
 		read: adminSeulement,
@@ -112,49 +113,56 @@ export const Demandes: CollectionConfig<'demandes'> = {
 			required: true,
 			defaultValue: 'contact',
 			index: true,
-			access: figee,
-			options: TYPES_DE_DEMANDE.map(type => ({ label: LIBELLES_DES_TYPES[type], value: type })),
+			access: frozen,
+			options: TYPES_DE_DEMANDE.map(type => ({ label: TYPE_LABELS[type], value: type })),
 		},
 		{
-			name: 'statut',
+			name: 'status',
 			label: 'Statut',
 			type: 'select',
 			required: true,
-			defaultValue: 'nouvelle',
+			defaultValue: 'new',
 			index: true,
-			options: STATUTS_DE_DEMANDE.map(statut => ({ label: LIBELLES_DES_STATUTS[statut], value: statut })),
+			options: STATUTS_DE_DEMANDE.map(statut => ({ label: STATUS_LABELS[statut], value: statut })),
 			admin: {
 				description:
 					'Passe le message à « Répondue » quand tu as répondu à la personne, ou à « Spam » si ce n’est pas un vrai message.',
 			},
 		},
 		{
-			name: 'etatMail',
+			name: 'mailStatus',
 			label: 'Email à l’équipe',
 			type: 'select',
 			required: true,
-			defaultValue: 'en-attente',
+			defaultValue: 'pending',
 			index: true,
-			access: figee,
-			options: ETATS_DU_MAIL.map(etat => ({ label: LIBELLES_DES_ETATS_DU_MAIL[etat], value: etat })),
+			access: frozen,
+			options: ETATS_DU_MAIL.map(etat => ({ label: MAIL_STATUS_LABELS[etat], value: etat })),
 		},
 		{
-			name: 'prenom',
+			name: 'firstName',
 			label: 'Prénom',
 			type: 'text',
 			required: true,
 			maxLength: LIMITES_DU_CONTACT.prenom,
-			access: figee,
+			access: frozen,
 		},
-		{ name: 'nom', label: 'Nom', type: 'text', required: true, maxLength: LIMITES_DU_CONTACT.nom, access: figee },
-		{ name: 'email', label: 'Email', type: 'text', required: true, maxLength: LIMITES_DU_CONTACT.email, access: figee },
+		{ name: 'lastName', label: 'Nom', type: 'text', required: true, maxLength: LIMITES_DU_CONTACT.nom, access: frozen },
 		{
-			name: 'telephone',
+			name: 'email',
+			label: 'Email',
+			type: 'text',
+			required: true,
+			maxLength: LIMITES_DU_CONTACT.email,
+			access: frozen,
+		},
+		{
+			name: 'phone',
 			label: 'Numéro de téléphone',
 			type: 'text',
 			required: true,
 			maxLength: LIMITES_DU_CONTACT.telephone,
-			access: figee,
+			access: frozen,
 		},
 		{
 			name: 'message',
@@ -162,10 +170,10 @@ export const Demandes: CollectionConfig<'demandes'> = {
 			type: 'textarea',
 			required: true,
 			maxLength: LIMITES_DU_CONTACT.message,
-			access: figee,
+			access: frozen,
 		},
 		{
-			name: 'renvoi',
+			name: 'resend',
 			type: 'ui',
 			admin: { components: { Field: '/components/admin/RenvoyerLEmail#RenvoyerLEmail' } },
 		},

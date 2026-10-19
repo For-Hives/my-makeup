@@ -26,18 +26,18 @@ async function maquilleuse(context: {
 }): Promise<Maquilleuse> {
 	const compte = await creerCompte('maquilleuse')
 	await context.addCookies(compte.session.cookies)
-	await modifierLaFiche(compte, { prenom: 'Léa', nom: 'Fictive', specialite: 'Maquillage mariée' })
+	await modifierLaFiche(compte, { firstName: 'Léa', lastName: 'Fictive', specialty: 'Maquillage mariée' })
 	return compte
 }
 
 async function modifierLaFiche(compte: Maquilleuse, data: Record<string, unknown>) {
 	const payload = await payloadDeTest()
-	await payload.update({ collection: 'profils', id: (await ficheDe(compte)).id, data })
+	await payload.update({ collection: 'profiles', id: (await ficheDe(compte)).id, data })
 }
 
 async function ficheDe(compte: Maquilleuse) {
 	const payload = await payloadDeTest()
-	const { docs } = await payload.find({ collection: 'profils', depth: 0, where: { pro: { equals: compte.id } } })
+	const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })
 	const [fiche] = docs
 	if (!fiche) throw new Error('pas de profil')
 	return fiche
@@ -55,7 +55,7 @@ test.describe('125 : les réseaux', { tag: '@mobile' }, () => {
 		await expect(page.getByRole('dialog')).toHaveCount(0)
 		await expect(page.getByRole('status').filter({ hasText: 'Tes réseaux sont enregistrés.' })).toBeVisible()
 		await expect(page.getByTestId('carte-reseaux')).toContainText('https://www.instagram.com/studio.fictif')
-		expect((await ficheDe(compte)).reseaux?.instagram).toBe('https://www.instagram.com/studio.fictif')
+		expect((await ficheDe(compte)).networks?.instagram).toBe('https://www.instagram.com/studio.fictif')
 		expect(await violationsGraves(page)).toEqual([])
 	})
 
@@ -73,7 +73,7 @@ test.describe('125 : les réseaux', { tag: '@mobile' }, () => {
 
 		await expect(page.getByText('Cette adresse n’est pas celle d’Instagram')).toBeVisible()
 		expect(envois).toHaveLength(0)
-		expect((await ficheDe(compte)).reseaux?.instagram ?? null).toBeNull()
+		expect((await ficheDe(compte)).networks?.instagram ?? null).toBeNull()
 	})
 
 	test('E31 : vider un champ retire le réseau ; un échec du serveur laisse l’ancienne valeur et le dit', async ({
@@ -81,7 +81,7 @@ test.describe('125 : les réseaux', { tag: '@mobile' }, () => {
 		page,
 	}) => {
 		const compte = await maquilleuse(context)
-		await modifierLaFiche(compte, { reseaux: { instagram: 'https://www.instagram.com/studio.fictif' } })
+		await modifierLaFiche(compte, { networks: { instagram: 'https://www.instagram.com/studio.fictif' } })
 		await page.goto('/auth/profil')
 		await page.getByRole('button', { name: 'Modifier mes réseaux' }).click()
 		await page.route('**/auth/profil', route =>
@@ -93,13 +93,13 @@ test.describe('125 : les réseaux', { tag: '@mobile' }, () => {
 
 		await expect(page.getByRole('alert').filter({ hasText: 'L’enregistrement n’a pas abouti' })).toBeVisible()
 		await expect(page.getByTestId('carte-reseaux')).toContainText('instagram.com/studio.fictif')
-		expect((await ficheDe(compte)).reseaux?.instagram).toBe('https://www.instagram.com/studio.fictif')
+		expect((await ficheDe(compte)).networks?.instagram).toBe('https://www.instagram.com/studio.fictif')
 
 		await page.unroute('**/auth/profil')
 		await page.getByRole('button', { name: 'Enregistrer' }).click()
 		await expect(page.getByRole('dialog')).toHaveCount(0)
 		await expect(page.getByTestId('carte-reseaux')).toContainText('à compléter')
-		expect((await ficheDe(compte)).reseaux?.instagram ?? null).toBeNull()
+		expect((await ficheDe(compte)).networks?.instagram ?? null).toBeNull()
 	})
 })
 
@@ -135,7 +135,7 @@ test.describe('126 : les coordonnées', { tag: '@mobile' }, () => {
 		await expect(page.getByRole('dialog')).toHaveCount(0)
 		await expect(page.getByRole('status').filter({ hasText: 'elles s’affichent sur ton profil' })).toBeVisible()
 		await expect(page.getByTestId('carte-coordonnees')).toContainText('Oui, depuis le')
-		expect(typeof (await ficheDe(compte)).consentiLe).toBe('string')
+		expect(typeof (await ficheDe(compte)).consentedAt).toBe('string')
 		const affiche = await page.context().request.get(`/profil/${slug}`)
 		expect(await affiche.text()).toContain('tel:0639981234')
 
@@ -145,7 +145,7 @@ test.describe('126 : les coordonnées', { tag: '@mobile' }, () => {
 
 		await expect(page.getByRole('dialog')).toHaveCount(0)
 		await expect(page.getByTestId('carte-coordonnees')).toContainText('Non')
-		expect((await ficheDe(compte)).consentiLe ?? null).toBeNull()
+		expect((await ficheDe(compte)).consentedAt ?? null).toBeNull()
 		await expect
 			.poll(async () => (await (await page.context().request.get(`/profil/${slug}`)).text()).includes('39 98'))
 			.toBe(false)

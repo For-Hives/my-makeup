@@ -25,16 +25,16 @@ describe('le compte bloqué (ticket 089)', () => {
 
 	test('le journal connaît le refus et les deux changements du blocage', () => {
 		expect(CODES_EVENEMENT).toContain('compte-bloque')
-		expect(TYPES_EVENEMENT).toContain('blocage')
-		expect(TYPES_EVENEMENT).toContain('deblocage')
+		expect(TYPES_EVENEMENT).toContain('block')
+		expect(TYPES_EVENEMENT).toContain('unblock')
 	})
 
 	test('beforeLogin refuse un compte bloqué et laisse passer les autres', async () => {
 		const appel = (bloque: unknown) =>
-			(refuserUnCompteBloque as unknown as (args: unknown) => unknown)({ user: { id: 1, bloque } })
+			(refuserUnCompteBloque as unknown as (args: unknown) => unknown)({ user: { id: 1, blocked: bloque } })
 		expect(() => appel(true)).toThrow(CompteBloque)
-		expect(appel(false)).toEqual({ id: 1, bloque: false })
-		expect(appel(undefined)).toEqual({ id: 1, bloque: undefined })
+		expect(appel(false)).toEqual({ id: 1, blocked: false })
+		expect(appel(undefined)).toEqual({ id: 1, blocked: undefined })
 	})
 
 	test('le blocage vide les sessions une seule fois, au passage de libre à bloqué', () => {
@@ -44,9 +44,9 @@ describe('le compte bloqué (ticket 089)', () => {
 				operation,
 				originalDoc,
 			})
-		expect(jouer({ bloque: true }, 'update', { bloque: false })).toEqual({ bloque: true, sessions: [] })
-		expect(jouer({ bloque: true }, 'update', { bloque: true })).toEqual({ bloque: true })
-		expect(jouer({ nom: 'x' }, 'update', { bloque: false })).toEqual({ nom: 'x' })
-		expect(jouer({ bloque: false }, 'update', { bloque: true })).toEqual({ bloque: false })
+		expect(jouer({ blocked: true }, 'update', { blocked: false })).toEqual({ blocked: true, sessions: [] })
+		expect(jouer({ blocked: true }, 'update', { blocked: true })).toEqual({ blocked: true })
+		expect(jouer({ nom: 'x' }, 'update', { blocked: false })).toEqual({ nom: 'x' })
+		expect(jouer({ blocked: false }, 'update', { blocked: true })).toEqual({ blocked: false })
 	})
 })

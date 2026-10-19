@@ -24,7 +24,7 @@ import { completude } from './profil/completude'
 import { champsDuProfil, type DocumentDuProfil } from './profil/etat'
 
 /** A published profile has this status; the rest is a draft or hidden. */
-const STATUT_PUBLIE = 'publie'
+const STATUT_PUBLIE = 'published'
 
 export const VERSION_STATS = 1
 
@@ -163,12 +163,12 @@ export interface ProfilPourStats extends DocumentDuProfil {
 	slug?: string | null
 	createdAt: string
 	updatedAt: string
-	statut?: string | null
-	completude?: number | null
-	actif?: boolean | null
-	publiable?: boolean | null
-	entierementVide?: boolean | null
-	commune?: { nom?: string | null; codeInsee?: string | null; departement?: string | null } | null
+	status?: string | null
+	completeness?: number | null
+	active?: boolean | null
+	publishable?: boolean | null
+	fullyEmpty?: boolean | null
+	city?: { name?: string | null; inseeCode?: string | null; department?: string | null } | null
 }
 
 const PARIS = new Intl.DateTimeFormat('en-CA', {
@@ -224,12 +224,12 @@ export function agregerStats({
 	for (const profil of profils) {
 		const lecture = completude(champsDuProfil(profil))
 		const creeLe = new Date(profil.createdAt)
-		const actif = profil.actif === true
-		const publiable = profil.publiable === true
-		const score = typeof profil.completude === 'number' ? profil.completude : lecture.score
-		if (profil.entierementVide === true) resume.entierementVides++
+		const actif = profil.active === true
+		const publiable = profil.publishable === true
+		const score = typeof profil.completeness === 'number' ? profil.completeness : lecture.score
+		if (profil.fullyEmpty === true) resume.entierementVides++
 		if (actif) resume.actifs++
-		if (profil.statut === 'masque') resume.masques++
+		if (profil.status === 'hidden') resume.masques++
 		if (score >= 11) resume.complets11++
 		if (score <= 2) resume.quasiVides++
 		if (lecture.manquants.includes('reseaux')) resume.sansCanal++
@@ -242,10 +242,10 @@ export function agregerStats({
 			cohorte.profils++
 			if (actif) cohorte.actifs++
 		}
-		if (publiable && profil.statut === STATUT_PUBLIE && typeof profil.slug === 'string') {
+		if (publiable && profil.status === STATUT_PUBLIE && typeof profil.slug === 'string') {
 			resume.publiables++
 			slugs.push(profil.slug)
-			const departement = profil.commune?.departement || 'inconnu'
+			const departement = profil.city?.department || 'inconnu'
 			parDepartement[departement] = (parDepartement[departement] ?? 0) + 1
 		}
 	}
@@ -278,19 +278,43 @@ function ajouter(compteur: Record<string, number>, cle: unknown): boolean {
 	return true
 }
 
-/** What the count of the messages reads of a row of `demandes`: two closed lists, nothing typed by a visitor. */
+/**
+ * The keys of the answer for the values of the closed lists of the database. The values of the lists are
+ * English since ticket 250; the keys of the answer are those of the report tool, which reads them as they
+ * are (ticket 253 renames them with it).
+ */
+const CLE_DU_STATUT = { new: 'nouvelle', forwarded: 'transmise', answered: 'repondue', spam: 'spam' } as const
+const CLE_DE_L_ETAT_DU_MAIL = { pending: 'en-attente', sent: 'envoye', failed: 'echec' } as const
+const CLE_DU_TYPE = {
+	'sign-in': 'connexion',
+	'sign-out': 'deconnexion',
+	'sign-out-everywhere': 'deconnexion-partout',
+	'sign-up': 'inscription',
+	confirmation: 'confirmation',
+	resend: 'renvoi',
+	'forgot-password': 'mot-de-passe-oublie',
+	'password-reset': 'reinitialisation',
+	block: 'blocage',
+	unblock: 'deblocage',
+} as const
+
+/** A value of a closed list as a key of the answer; a value outside the list has none. */
+const cleDe = (cles: Readonly<Record<string, string>>, valeur: unknown): string | undefined =>
+	typeof valeur === 'string' && Object.hasOwn(cles, valeur) ? cles[valeur] : undefined
+
+/** What the count of the messages reads of a row of `contact-requests`: two closed lists, nothing typed by a visitor. */
 export interface DemandePourStats {
-	statut?: string | null
-	etatMail?: string | null
+	status?: string | null
+	mailStatus?: string | null
 }
 
 /** Contact messages received in the period (the caller read them): counts by status and by mail state. */
 export function agregerContact(demandes: readonly DemandePourStats[]): NonNullable<StatsHebdo['contact']> {
-	const parStatut = compteurs(STATUTS_DE_DEMANDE)
-	const parEtatMail = compteurs(ETATS_DU_MAIL)
-	for (const { statut, etatMail } of demandes) {
-		ajouter(parStatut, statut)
-		ajouter(parEtatMail, etatMail)
+	const parStatut = compteurs(STATUTS_DE_DEMANDE.map(statut => CLE_DU_STATUT[statut]))
+	const parEtatMail = compteurs(ETATS_DU_MAIL.map(etat => CLE_DE_L_ETAT_DU_MAIL[etat]))
+	for (const { status, mailStatus } of demandes) {
+		ajouter(parStatut, cleDe(CLE_DU_STATUT, status))
+		ajouter(parEtatMail, cleDe(CLE_DE_L_ETAT_DU_MAIL, mailStatus))
 	}
 	return { total: demandes.length, parStatut, parEtatMail }
 }
@@ -299,7 +323,7 @@ export function agregerContact(demandes: readonly DemandePourStats[]): NonNullab
 export interface EvenementPourStats {
 	type?: string | null
 	code?: string | null
-	dureeMs?: number | null
+	durationMs?: number | null
 }
 
 /** Nearest-rank percentile of a list of durations; null for an empty list. */
@@ -311,15 +335,15 @@ export function centile(valeurs: readonly number[], p: number): number | null {
 
 /** Authentication events of the period (the caller read them): by kind, and the sign-ins by outcome with their 95th percentile. */
 export function agregerAuth(evenements: readonly EvenementPourStats[]): NonNullable<StatsHebdo['auth']> {
-	const parType = compteurs(TYPES_EVENEMENT)
+	const parType = compteurs(TYPES_EVENEMENT.map(type => CLE_DU_TYPE[type]))
 	const parCode = compteurs(CODES_EVENEMENT)
 	const durees: number[] = []
 	let total = 0
-	for (const { type, code, dureeMs } of evenements) {
-		if (!ajouter(parType, type) || type !== 'connexion') continue
+	for (const { type, code, durationMs } of evenements) {
+		if (!ajouter(parType, cleDe(CLE_DU_TYPE, type)) || type !== 'sign-in') continue
 		total++
 		ajouter(parCode, code)
-		if (typeof dureeMs === 'number') durees.push(dureeMs)
+		if (typeof durationMs === 'number') durees.push(durationMs)
 	}
 	const p95 = centile(durees, 0.95)
 	return { parType, connexions: { total, parCode, dureeP95Ms: p95 === null ? null : Math.round(p95) } }

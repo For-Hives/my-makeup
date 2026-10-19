@@ -51,8 +51,8 @@ const creees: number[] = []
 test.afterEach(async () => {
 	const payload = await payloadDeTest()
 	for (const compte of creees.splice(0)) {
-		const { docs } = await payload.find({ collection: 'profils', depth: 0, where: { pro: { equals: compte } } })
-		for (const { id } of docs) await payload.delete({ collection: 'profils', id }).catch(() => undefined)
+		const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte } } })
+		for (const { id } of docs) await payload.delete({ collection: 'profiles', id }).catch(() => undefined)
 		await payload.delete({ collection: 'pros', id: compte }).catch(() => undefined)
 	}
 })
@@ -69,14 +69,14 @@ async function maquilleusePleine(context: {
 	const compte = await creerCompte('maquilleuse')
 	creees.push(Number(compte.id))
 	const payload = await payloadDeTest()
-	const { docs } = await payload.find({ collection: 'profils', depth: 0, where: { pro: { equals: compte.id } } })
+	const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })
 	const [fiche] = docs
 	if (!fiche) throw new Error('pas de profil')
 	// A commune far from the cities the search specs look at.
 	const { slug: _, ...profil } = profilGenere(5, {
-		communes: [{ nom: 'Lille', codeInsee: '59350', latitude: 50.63, longitude: 3.06 }],
+		communes: [{ name: 'Lille', inseeCode: '59350', latitude: 50.63, longitude: 3.06 }],
 	})
-	const mis = await payload.update({ collection: 'profils', id: fiche.id, data: profil })
+	const mis = await payload.update({ collection: 'profiles', id: fiche.id, data: profil })
 	await context.addCookies(compte.session.cookies)
 	return { compte, slug: mis.slug ?? '' }
 }
@@ -178,8 +178,8 @@ test.describe('142 : la recette de l’espace', { tag: '@mobile' }, () => {
 		const compte = await creerCompte('maquilleuse')
 		creees.push(Number(compte.id))
 		const payload = await payloadDeTest()
-		const { docs } = await payload.find({ collection: 'profils', depth: 0, where: { pro: { equals: compte.id } } })
-		for (const { id } of docs) await payload.delete({ collection: 'profils', id })
+		const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })
+		for (const { id } of docs) await payload.delete({ collection: 'profiles', id })
 		await context.addCookies(compte.session.cookies)
 
 		await page.goto('/auth/init-account')

@@ -11,9 +11,9 @@
 
 /** What the name is read from: the fields of a profile of the v3. */
 export interface NomsDuProfil {
-	readonly prenom?: string | null
-	readonly nom?: string | null
-	readonly nomArtiste?: string | null
+	readonly firstName?: string | null
+	readonly lastName?: string | null
+	readonly artistName?: string | null
 }
 
 /** The name shown when the profile gives none. */
@@ -30,10 +30,10 @@ export function texte(valeur: unknown): string {
 
 /** « Prénom Nom », with whichever of the two is filled; '' when neither is. */
 export function nomComplet(profil: NomsDuProfil): string {
-	return [texte(profil.prenom), texte(profil.nom)].filter(Boolean).join(' ')
+	return [texte(profil.firstName), texte(profil.lastName)].filter(Boolean).join(' ')
 }
 
 /** The name of the h1: the full name, else the artist name, else the neutral label. */
 export function nomAffiche(profil: NomsDuProfil): string {
-	return nomComplet(profil) || texte(profil.nomArtiste) || NOM_NEUTRE
+	return nomComplet(profil) || texte(profil.artistName) || NOM_NEUTRE
 }

@@ -55,11 +55,12 @@ async function etatSain() {
 	const compte = await creerCompte('maquilleuse')
 	const [principale, galerie1, galerie2] = [await envoyer(compte), await envoyer(compte), await envoyer(compte)]
 	const payload = await payloadDeTest()
-	const [profil] = (await payload.find({ collection: 'profils', depth: 0, where: { pro: { equals: compte.id } } })).docs
+	const [profil] = (await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } }))
+		.docs
 	if (!profil) throw new Error('Pas de profil.')
-	const { statut } = await appelerRest('PATCH', `/api/profils/${profil.id}?depth=0`, {
+	const { statut } = await appelerRest('PATCH', `/api/profiles/${profil.id}?depth=0`, {
 		enTetes: compte.session.enTetes,
-		corps: { photoPrincipale: principale.id, galerie: [galerie1.id, galerie2.id] },
+		corps: { mainPicture: principale.id, gallery: [galerie1.id, galerie2.id] },
 	})
 	expect(statut).toBe(200)
 	return { compte, principale, galerie1, galerie2 }
@@ -156,7 +157,7 @@ describe('Stockage et base inchangés ; aucun mode de suppression', () => {
 		const instantane = async () => ({
 			objets: await listerLesObjets(),
 			medias: (await payload.find({ collection: 'media', depth: 0, pagination: false, sort: 'id' })).docs,
-			profils: (await payload.find({ collection: 'profils', depth: 0, pagination: false, sort: 'id' })).docs,
+			profils: (await payload.find({ collection: 'profiles', depth: 0, pagination: false, sort: 'id' })).docs,
 		})
 		const avant = await instantane()
 		espion.journal.length = 0

@@ -35,10 +35,10 @@ export async function fermerLaSession({
 	journal,
 }: EntreesDeDeconnexion): Promise<ResultatDeDeconnexion> {
 	const debut = Date.now()
-	const type = toutes ? 'deconnexion-partout' : 'deconnexion'
+	const type = toutes ? 'sign-out-everywhere' : 'sign-out'
 	const noter = async (code: 'ok' | 'service-indisponible') => {
 		try {
-			await journal?.({ type, code, dureeMs: Date.now() - debut })
+			await journal?.({ type, code, durationMs: Date.now() - debut })
 		} catch {
 			// The journal is not the sign-out's to fail.
 		}

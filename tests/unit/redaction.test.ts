@@ -1,9 +1,9 @@
 import { describe, expect, test } from 'bun:test'
-import { champSlug, datePremierePublication, validerSlug } from '@/collections/redaction'
+import { champSlug, datePremierePublication, validerSlug } from '@/collections/editor'
 import { estUnSlug, SLUG_MAX } from '@/lib/slug'
 
 /**
- * The rules of writing of the newsroom (src/collections/redaction.ts), without a database: the
+ * The rules of writing of the newsroom (src/collections/editor.ts), without a database: the
  * form of a slug, and the date of the first publication. The integration tests play them through
  * the APIs (tests/integration/talents.test.ts).
  */

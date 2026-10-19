@@ -25,18 +25,18 @@ async function maquilleuse(
 	const compte = await creerCompte('maquilleuse')
 	const payload = await payloadDeTest()
 	const fiche = await ficheDe(compte)
-	await payload.update({ collection: 'profils', id: fiche.id, data: { prenom: 'Léa', nom: 'Fictive' } })
+	await payload.update({ collection: 'profiles', id: fiche.id, data: { firstName: 'Léa', lastName: 'Fictive' } })
 	// An imported profile has no value: written under the hooks, as the import does.
 	if (disponible === null)
-		await payload.db.updateOne({ collection: 'profils', id: fiche.id, data: { disponible: null }, returning: false })
-	else await payload.update({ collection: 'profils', id: fiche.id, data: { disponible } })
+		await payload.db.updateOne({ collection: 'profiles', id: fiche.id, data: { available: null }, returning: false })
+	else await payload.update({ collection: 'profiles', id: fiche.id, data: { available: disponible } })
 	await context.addCookies(compte.session.cookies)
 	return compte
 }
 
 async function ficheDe(compte: Maquilleuse) {
 	const payload = await payloadDeTest()
-	const { docs } = await payload.find({ collection: 'profils', depth: 0, where: { pro: { equals: compte.id } } })
+	const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })
 	const [fiche] = docs
 	if (!fiche) throw new Error('pas de profil')
 	return fiche
@@ -70,7 +70,7 @@ test.describe('124 : disponible ou indisponible', { tag: '@mobile' }, () => {
 		await expect(carte(page)).toContainText('Pas disponible en ce moment')
 		await expect(carte(page)).toContainText('n’apparaît plus dans les résultats de recherche')
 		await expect(page.getByRole('status').filter({ hasText: 'Tu es indisponible' })).toBeVisible()
-		expect((await ficheDe(compte)).disponible).toBe(false)
+		expect((await ficheDe(compte)).available).toBe(false)
 
 		await page.reload()
 		await expect(interrupteur(page)).toHaveAttribute('aria-checked', 'false')
@@ -79,7 +79,7 @@ test.describe('124 : disponible ou indisponible', { tag: '@mobile' }, () => {
 		await interrupteur(page).click()
 		await expect(interrupteur(page)).toHaveAttribute('aria-checked', 'true')
 		await expect(carte(page)).not.toContainText('Pas disponible')
-		expect((await ficheDe(compte)).disponible).toBe(true)
+		expect((await ficheDe(compte)).available).toBe(true)
 		expect(await violationsGraves(page)).toEqual([])
 	})
 
@@ -105,7 +105,7 @@ test.describe('124 : disponible ou indisponible', { tag: '@mobile' }, () => {
 		await expect(page.getByRole('alert').filter({ hasText: 'L’enregistrement n’a pas abouti' })).toBeVisible()
 		await expect(interrupteur(page)).toHaveAttribute('aria-checked', 'true')
 		await expect(carte(page)).toContainText('Disponible')
-		expect((await ficheDe(compte)).disponible).toBe(true)
+		expect((await ficheDe(compte)).available).toBe(true)
 	})
 
 	test('un double clic, une touche maintenue : une seule bascule', async ({ context, page }) => {
@@ -127,7 +127,7 @@ test.describe('124 : disponible ou indisponible', { tag: '@mobile' }, () => {
 		await expect(interrupteur(page)).toHaveAttribute('aria-checked', 'true')
 		await expect(interrupteur(page)).toBeEnabled()
 		expect(envois).toHaveLength(2)
-		expect((await ficheDe(compte)).disponible).toBe(true)
+		expect((await ficheDe(compte)).available).toBe(true)
 	})
 
 	test('l’interrupteur est atteignable au clavier, assez grand pour un doigt', async ({ context, page }) => {

@@ -23,17 +23,17 @@ const seuil = (maintenant: Date): Date => new Date(maintenant.getTime() - DELAI_
 
 async function purgerUnCompte(payload: Payload, id: number): Promise<boolean> {
 	const profils = await payload.find({
-		collection: 'profils',
+		collection: 'profiles',
 		depth: 0,
 		limit: 10,
 		overrideAccess: true,
 		pagination: false,
-		select: { entierementVide: true },
+		select: { fullyEmpty: true },
 		where: { pro: { equals: id } },
 	})
-	if (profils.docs.some(profil => profil.entierementVide !== true)) return false
+	if (profils.docs.some(profil => profil.fullyEmpty !== true)) return false
 	for (const profil of profils.docs) {
-		await payload.delete({ collection: 'profils', depth: 0, id: profil.id, overrideAccess: true })
+		await payload.delete({ collection: 'profiles', depth: 0, id: profil.id, overrideAccess: true })
 	}
 	await payload.delete({ collection: 'pros', depth: 0, id, overrideAccess: true })
 	return true

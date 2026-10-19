@@ -123,11 +123,11 @@ describe('les listes d’un profil, sous les noms de Payload', () => {
 				},
 			],
 			// The five links, under their names in Payload; the phone stays out (ticket 064).
-			reseaux: {
+			networks: {
 				youtube: null,
 				facebook: null,
 				instagram: 'https://instagram.example.test/fictif',
-				siteWeb: '@fictif',
+				website: '@fictif',
 				linkedin: null,
 			},
 		})
@@ -229,7 +229,7 @@ describe('les listes d’un profil, sous les noms de Payload', () => {
 			formations: [],
 			experiences: [],
 			prestations: [],
-			reseaux: null,
+			networks: null,
 		})
 	})
 })
@@ -256,7 +256,7 @@ describe('les photos d’un profil sont les médias adoptés de ses fichiers', (
 			medias
 		)
 
-		expect(attendus.map(({ valeurs }) => [valeurs.photoPrincipale, valeurs.galerie])).toEqual([
+		expect(attendus.map(({ valeurs }) => [valeurs.mainPicture, valeurs.gallery])).toEqual([
 			[11, [13, 12]],
 			[null, []],
 		])
@@ -275,12 +275,12 @@ describe('les photos d’un profil sont les médias adoptés de ses fichiers', (
 			new Map([[1, null]])
 		)
 
-		expect(attendus.map(({ valeurs }) => [valeurs.photoPrincipale, valeurs.statut])).toEqual([
-			[null, 'publie'],
-			[null, 'brouillon'],
-			[null, 'brouillon'],
+		expect(attendus.map(({ valeurs }) => [valeurs.mainPicture, valeurs.status])).toEqual([
+			[null, 'published'],
+			[null, 'draft'],
+			[null, 'draft'],
 		])
-		expect(statuts).toEqual({ publie: 1, brouillon: 2 })
+		expect(statuts).toEqual({ published: 1, draft: 2 })
 		// 22 has a main picture at the source, whose file is not adopted: its status says so.
 		expect(statutsDifferentsDeLaSource).toEqual([22])
 	})

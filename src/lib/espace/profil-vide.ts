@@ -18,8 +18,8 @@ export async function garantirLeProfil(payload: Payload, utilisateur: Utilisateu
 	if (existant !== null) return existant
 	try {
 		const cree = await payload.create({
-			collection: 'profils',
-			data: { pro: Number(utilisateur.id) } as RequiredDataFromCollectionSlug<'profils'>,
+			collection: 'profiles',
+			data: { pro: Number(utilisateur.id) } as RequiredDataFromCollectionSlug<'profiles'>,
 			depth: 0,
 			overrideAccess: true,
 			select: {},

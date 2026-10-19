@@ -20,11 +20,11 @@ const maintenant = new Date('2026-10-14T10:00:00Z')
 const profil = (surcharge: Partial<ProfilPourStats> & { slug: string }): ProfilPourStats => ({
 	createdAt: '2026-01-10T10:00:00.000Z',
 	updatedAt: '2026-01-10T10:00:00.000Z',
-	statut: 'publie',
-	completude: 0,
-	actif: false,
-	publiable: false,
-	entierementVide: true,
+	status: 'published',
+	completeness: 0,
+	active: false,
+	publishable: false,
+	fullyEmpty: true,
 	...surcharge,
 })
 
@@ -125,36 +125,36 @@ describe('agregerStats', () => {
 	const profils: ProfilPourStats[] = [
 		profil({
 			slug: 'ada-fictive',
-			prenom: 'Ada',
-			nom: 'Fictive',
+			firstName: 'Ada',
+			lastName: 'Fictive',
 			createdAt: '2026-10-06T08:00:00.000Z',
 			updatedAt: '2026-10-07T08:00:00.000Z',
-			completude: 13,
-			actif: true,
-			publiable: true,
-			entierementVide: false,
-			commune: { nom: 'Annecy', codeInsee: '74010', departement: '74' },
-			coordonnees: { telephone: '0639980001', email: 'ada@example.test' },
-			contactPublic: true,
+			completeness: 13,
+			active: true,
+			publishable: true,
+			fullyEmpty: false,
+			city: { name: 'Annecy', inseeCode: '74010', department: '74' },
+			contactDetails: { phone: '0639980001', email: 'ada@example.test' },
+			publicContact: true,
 		}),
 		profil({
 			slug: 'brouillon-fictif',
 			createdAt: '2026-09-20T08:00:00.000Z',
-			completude: 3,
-			actif: true,
-			entierementVide: false,
-			statut: 'brouillon',
+			completeness: 3,
+			active: true,
+			fullyEmpty: false,
+			status: 'draft',
 		}),
 		profil({
 			slug: 'masquee-fictive',
-			completude: 12,
-			actif: true,
-			publiable: true,
-			entierementVide: false,
-			statut: 'masque',
-			commune: { departement: '44' },
+			completeness: 12,
+			active: true,
+			publishable: true,
+			fullyEmpty: false,
+			status: 'hidden',
+			city: { department: '44' },
 		}),
-		profil({ slug: 'vide-fictive', createdAt: '2026-10-08T08:00:00.000Z', completude: 1 }),
+		profil({ slug: 'vide-fictive', createdAt: '2026-10-08T08:00:00.000Z', completeness: 1 }),
 	]
 	const stats = agregerStats({
 		profils,
@@ -219,11 +219,11 @@ describe('the published example', () => {
 describe('ticket 169: contact messages, sign-ins and inherited hashes', () => {
 	test('agregerContact: one message per state, every state of the closed lists present', () => {
 		const contact = agregerContact([
-			{ statut: 'nouvelle', etatMail: 'en-attente' },
-			{ statut: 'transmise', etatMail: 'envoye' },
-			{ statut: 'repondue', etatMail: 'envoye' },
-			{ statut: 'spam', etatMail: 'echec' },
-			{ statut: 'inconnu', etatMail: null },
+			{ status: 'new', mailStatus: 'pending' },
+			{ status: 'forwarded', mailStatus: 'sent' },
+			{ status: 'answered', mailStatus: 'sent' },
+			{ status: 'spam', mailStatus: 'failed' },
+			{ status: 'inconnu', mailStatus: null },
 		])
 		expect(contact.total).toBe(5)
 		expect(contact.parStatut).toEqual({ nouvelle: 1, transmise: 1, repondue: 1, spam: 1 })
@@ -246,12 +246,12 @@ describe('ticket 169: contact messages, sign-ins and inherited hashes', () => {
 
 	test('agregerAuth: by kind, the sign-ins by code, the 95th percentile of their durations only', () => {
 		const auth = agregerAuth([
-			{ type: 'connexion', code: 'ok', dureeMs: 100 },
-			{ type: 'connexion', code: 'ok', dureeMs: 300 },
-			{ type: 'connexion', code: 'heritee', dureeMs: 900 },
-			{ type: 'connexion', code: 'identifiants-invalides' },
-			{ type: 'deconnexion', code: 'ok', dureeMs: 5000 },
-			{ type: 'inscription', code: 'champ-piege' },
+			{ type: 'sign-in', code: 'ok', durationMs: 100 },
+			{ type: 'sign-in', code: 'ok', durationMs: 300 },
+			{ type: 'sign-in', code: 'heritee', durationMs: 900 },
+			{ type: 'sign-in', code: 'identifiants-invalides' },
+			{ type: 'sign-out', code: 'ok', durationMs: 5000 },
+			{ type: 'sign-up', code: 'champ-piege' },
 			{ type: 'pirate', code: 'ok' },
 		])
 		expect(auth.parType.connexion).toBe(4)

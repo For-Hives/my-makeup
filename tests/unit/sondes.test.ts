@@ -102,7 +102,7 @@ const ENTETES_DU_SITE: Record<string, string> = {
 	'permissions-policy': 'camera=()',
 	'content-security-policy-report-only': "default-src 'self'",
 }
-const LISTES_FERMEES = ['/api/admins', '/api/pros', '/api/auth-evenements']
+const LISTES_FERMEES = ['/api/admins', '/api/pros', '/api/auth-events']
 
 const MAINTENANT = new Date('2026-10-15T08:00:00Z')
 const dans = (joursACompter: number): Date => new Date(MAINTENANT.getTime() + joursACompter * 86_400_000)
@@ -879,7 +879,7 @@ describe('R05 : en-têtes présents, listes privées fermées, anciennes routes 
 			'GET /',
 			'GET /api/admins',
 			'GET /api/pros',
-			'GET /api/auth-evenements',
+			'GET /api/auth-events',
 			`GET ${CHEMIN_DES_STATS}`,
 			'GET /api/upload/files',
 			'GET /api/users',
@@ -922,7 +922,7 @@ describe('R05 : en-têtes présents, listes privées fermées, anciennes routes 
 	test.each([
 		'/api/admins',
 		'/api/pros',
-		'/api/auth-evenements',
+		'/api/auth-events',
 	])('la liste privée %s qui répond 200 : rouge', async chemin => {
 		simulerLeSite({ [chemin]: () => HttpResponse.json({ docs: [] }) })
 

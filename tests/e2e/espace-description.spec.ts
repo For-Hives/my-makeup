@@ -24,13 +24,13 @@ async function maquilleuse(
 ): Promise<Maquilleuse> {
 	const compte = await creerCompte('maquilleuse')
 	const payload = await payloadDeTest()
-	const { docs } = await payload.find({ collection: 'profils', depth: 0, where: { pro: { equals: compte.id } } })
+	const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })
 	const [fiche] = docs
 	if (!fiche) throw new Error('pas de profil')
 	await payload.update({
-		collection: 'profils',
+		collection: 'profiles',
 		id: fiche.id,
-		data: { prenom: 'Léa', nom: 'Fictive', ...(description === undefined ? {} : { description }) },
+		data: { firstName: 'Léa', lastName: 'Fictive', ...(description === undefined ? {} : { description }) },
 	})
 	await context.addCookies(compte.session.cookies)
 	return compte
@@ -38,7 +38,7 @@ async function maquilleuse(
 
 async function descriptionStockee(compte: Maquilleuse): Promise<string> {
 	const payload = await payloadDeTest()
-	const { docs } = await payload.find({ collection: 'profils', depth: 0, where: { pro: { equals: compte.id } } })
+	const { docs } = await payload.find({ collection: 'profiles', depth: 0, where: { pro: { equals: compte.id } } })
 	return docs[0]?.description ?? ''
 }
 

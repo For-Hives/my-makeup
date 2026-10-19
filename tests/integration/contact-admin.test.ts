@@ -20,8 +20,8 @@ afterAll(async () => {
 
 const unique = () => `visiteuse-${crypto.randomUUID()}@example.test`
 
-/** A stored message, the way the form stores it. `echec`: its mail did not leave. */
-async function messageEnBase(etatMail: 'echec' | 'envoye' = 'echec') {
+/** A stored message, the way the form stores it. `failed`: its mail did not leave. */
+async function messageEnBase(etatMail: 'failed' | 'sent' = 'failed') {
 	const payload = await payloadDeTest()
 	const stockage = stockageDePayload(payload)
 	const email = unique()
@@ -41,119 +41,136 @@ const mailsPour = async (email: string) =>
 
 describe('Le cycle des statuts, tenu par la collection', () => {
 	test('un admin marque un message répondu, puis spam ; il ne revient pas de « répondue » à « transmise »', async () => {
-		const { id } = await messageEnBase('envoye')
+		const { id } = await messageEnBase('sent')
 		const { session } = await creerCompte('admin')
 		const enTetes = session.enTetes
 		const statut = async () =>
-			((await (await payloadDeTest()).findByID({ collection: 'demandes', id, depth: 0 })) as { statut: string }).statut
+			((await (await payloadDeTest()).findByID({ collection: 'contact-requests', id, depth: 0 })) as { status: string })
+				.status
 
-		expect((await appelerRest('PATCH', `/api/demandes/${id}`, { enTetes, corps: { statut: 'repondue' } })).statut).toBe(
-			200
-		)
-		expect(await statut()).toBe('repondue')
+		expect(
+			(await appelerRest('PATCH', `/api/contact-requests/${id}`, { enTetes, corps: { status: 'answered' } })).statut
+		).toBe(200)
+		expect(await statut()).toBe('answered')
 
-		const refus = await appelerRest('PATCH', `/api/demandes/${id}`, { enTetes, corps: { statut: 'transmise' } })
+		const refus = await appelerRest('PATCH', `/api/contact-requests/${id}`, { enTetes, corps: { status: 'forwarded' } })
 		expect(refus.statut).toBe(400)
 		expect(refus.texte).toContain('ne peut pas passer à')
-		expect(await statut()).toBe('repondue')
+		expect(await statut()).toBe('answered')
 
-		expect((await appelerRest('PATCH', `/api/demandes/${id}`, { enTetes, corps: { statut: 'spam' } })).statut).toBe(200)
+		expect(
+			(await appelerRest('PATCH', `/api/contact-requests/${id}`, { enTetes, corps: { status: 'spam' } })).statut
+		).toBe(200)
 		expect(await statut()).toBe('spam')
 	})
 
 	test('un admin ne réécrit pas la date de réception, ni ne dit « transmise » pour un email en échec', async () => {
-		const { id, payload } = await messageEnBase('echec')
+		const { id, payload } = await messageEnBase('failed')
 		const { session } = await creerCompte('admin')
 		const enTetes = session.enTetes
-		const avant = (await payload.findByID({ collection: 'demandes', id, depth: 0 })).createdAt
+		const avant = (await payload.findByID({ collection: 'contact-requests', id, depth: 0 })).createdAt
 
-		const date = await appelerRest('PATCH', `/api/demandes/${id}`, {
+		const date = await appelerRest('PATCH', `/api/contact-requests/${id}`, {
 			enTetes,
-			corps: { createdAt: '2000-01-01T00:00:00.000Z', statut: 'repondue' },
+			corps: { createdAt: '2000-01-01T00:00:00.000Z', status: 'answered' },
 		})
 		expect(date.statut).toBe(200)
-		const apres = await payload.findByID({ collection: 'demandes', id, depth: 0 })
+		const apres = await payload.findByID({ collection: 'contact-requests', id, depth: 0 })
 		expect(apres.createdAt).toBe(avant)
-		expect(apres.statut).toBe('repondue')
+		expect(apres.status).toBe('answered')
 
-		const autre = await messageEnBase('echec')
-		const refus = await appelerRest('PATCH', `/api/demandes/${autre.id}`, { enTetes, corps: { statut: 'transmise' } })
+		const autre = await messageEnBase('failed')
+		const refus = await appelerRest('PATCH', `/api/contact-requests/${autre.id}`, {
+			enTetes,
+			corps: { status: 'forwarded' },
+		})
 		expect(refus.statut).toBe(400)
 		expect(refus.texte).toContain('que lorsque son email est parti')
-		expect(await autre.payload.findByID({ collection: 'demandes', id: autre.id, depth: 0 })).toMatchObject({
-			statut: 'nouvelle',
-			etatMail: 'echec',
+		expect(await autre.payload.findByID({ collection: 'contact-requests', id: autre.id, depth: 0 })).toMatchObject({
+			status: 'new',
+			mailStatus: 'failed',
 		})
 	})
 
 	test('un « le mail est parti » tardif du serveur ne ramène pas un message répondu à « transmise »', async () => {
-		const { id, payload } = await messageEnBase('echec')
+		const { id, payload } = await messageEnBase('failed')
 		const { session } = await creerCompte('admin')
-		await appelerRest('PATCH', `/api/demandes/${id}`, { enTetes: session.enTetes, corps: { statut: 'repondue' } })
+		await appelerRest('PATCH', `/api/contact-requests/${id}`, {
+			enTetes: session.enTetes,
+			corps: { status: 'answered' },
+		})
 
-		await stockageDePayload(payload).marquer(id, 'envoye', 'transmise')
+		await stockageDePayload(payload).marquer(id, 'sent', 'forwarded')
 
-		const ligne = await payload.findByID({ collection: 'demandes', id, depth: 0 })
-		expect(ligne).toMatchObject({ statut: 'repondue', etatMail: 'envoye' })
+		const ligne = await payload.findByID({ collection: 'contact-requests', id, depth: 0 })
+		expect(ligne).toMatchObject({ status: 'answered', mailStatus: 'sent' })
 	})
 })
 
 describe('E58 (côté serveur) : le renvoi de l’email d’un message en échec', () => {
 	test('l’admin renvoie : un mail vers l’équipe, réponse vers la visiteuse, la ligne passe à envoyé et transmise', async () => {
-		const { id, email, payload } = await messageEnBase('echec')
+		const { id, email, payload } = await messageEnBase('failed')
 		const { session } = await creerCompte('admin')
 
-		const reponse = await appelerRest('POST', `/api/demandes/${id}/resend`, { enTetes: session.enTetes })
+		const reponse = await appelerRest('POST', `/api/contact-requests/${id}/resend`, { enTetes: session.enTetes })
 
 		expect(reponse.statut).toBe(200)
-		expect(reponse.corps).toEqual({ etatMail: 'envoye' })
+		expect(reponse.corps).toEqual({ mailStatus: 'sent' })
 		const mails = await mailsPour(email)
 		expect(mails).toHaveLength(1)
 		expect(mails[0]?.sujet).toBe('Nouveau message de contact')
 		expect(mails[0]?.texte).toContain('une question sur le site.')
-		expect(await payload.findByID({ collection: 'demandes', id, depth: 0 })).toMatchObject({
-			statut: 'transmise',
-			etatMail: 'envoye',
+		expect(await payload.findByID({ collection: 'contact-requests', id, depth: 0 })).toMatchObject({
+			status: 'forwarded',
+			mailStatus: 'sent',
 		})
 	})
 
 	test('double clic : deux demandes en même temps, un seul email, l’autre apprend que le message n’est plus en échec', async () => {
-		const { id, email } = await messageEnBase('echec')
+		const { id, email } = await messageEnBase('failed')
 		const { session } = await creerCompte('admin')
 
 		const [a, b] = await Promise.all([
-			appelerRest('POST', `/api/demandes/${id}/resend`, { enTetes: session.enTetes }),
-			appelerRest('POST', `/api/demandes/${id}/resend`, { enTetes: session.enTetes }),
+			appelerRest('POST', `/api/contact-requests/${id}/resend`, { enTetes: session.enTetes }),
+			appelerRest('POST', `/api/contact-requests/${id}/resend`, { enTetes: session.enTetes }),
 		])
 
 		expect([a.statut, b.statut].sort()).toEqual([200, 409])
 		expect(await mailsPour(email)).toHaveLength(1)
 		// A click that comes later still sends nothing.
-		expect((await appelerRest('POST', `/api/demandes/${id}/resend`, { enTetes: session.enTetes })).statut).toBe(409)
+		expect((await appelerRest('POST', `/api/contact-requests/${id}/resend`, { enTetes: session.enTetes })).statut).toBe(
+			409
+		)
 		expect(await mailsPour(email)).toHaveLength(1)
 	})
 
 	test('un message dont l’email est déjà parti ne repart pas ; un message inconnu répond 404', async () => {
-		const { id, email } = await messageEnBase('envoye')
+		const { id, email } = await messageEnBase('sent')
 		const { session } = await creerCompte('admin')
 
-		expect((await appelerRest('POST', `/api/demandes/${id}/resend`, { enTetes: session.enTetes })).statut).toBe(409)
+		expect((await appelerRest('POST', `/api/contact-requests/${id}/resend`, { enTetes: session.enTetes })).statut).toBe(
+			409
+		)
 		expect(
-			(await appelerRest('POST', `/api/demandes/${id + 100000}/resend`, { enTetes: session.enTetes })).statut
+			(await appelerRest('POST', `/api/contact-requests/${id + 100000}/resend`, { enTetes: session.enTetes })).statut
 		).toBe(404)
-		expect((await appelerRest('POST', '/api/demandes/abc/resend', { enTetes: session.enTetes })).statut).toBe(404)
+		expect((await appelerRest('POST', '/api/contact-requests/abc/resend', { enTetes: session.enTetes })).statut).toBe(
+			404
+		)
 		expect(await mailsPour(email)).toEqual([])
 	})
 
 	test('ni la rédaction, ni une maquilleuse, ni un visiteur ne renvoient : 403, aucun mail', async () => {
-		const { id, email } = await messageEnBase('echec')
+		const { id, email } = await messageEnBase('failed')
 		const [redaction, maquilleuse] = await Promise.all([creerCompte('redaction'), creerCompte('maquilleuse')])
 
 		for (const enTetes of [redaction.session.enTetes, maquilleuse.session.enTetes, undefined])
-			expect((await appelerRest('POST', `/api/demandes/${id}/resend`, enTetes ? { enTetes } : {})).statut).toBe(403)
+			expect((await appelerRest('POST', `/api/contact-requests/${id}/resend`, enTetes ? { enTetes } : {})).statut).toBe(
+				403
+			)
 
 		expect(await mailsPour(email)).toEqual([])
-		const ligne = await (await payloadDeTest()).findByID({ collection: 'demandes', id, depth: 0 })
-		expect(ligne.etatMail).toBe('echec')
+		const ligne = await (await payloadDeTest()).findByID({ collection: 'contact-requests', id, depth: 0 })
+		expect(ligne.mailStatus).toBe('failed')
 	})
 })

@@ -3,7 +3,7 @@
  * they are, drafts included.
  *
  * - Every field as it is, byte for byte: the markdown stays markdown, the slug stays the slug, so
- *   that the addresses of today stay the same. `galery`, a typo of Strapi, becomes `galerie`.
+ *   that the addresses of today stay the same. `galery`, a typo of Strapi, becomes `gallery`.
  * - Published when the source has a publication date, with that date; a draft otherwise (§7).
  * - A slug that does not already have the form of an address, or that two articles share, is
  *   refused before any write and listed (rule 5), as for the talents: it is never corrected.
@@ -50,7 +50,7 @@ export const ADAPTATEUR_ARTICLES: Adaptateur = {
 		seo_title: 'texte',
 		seo_description: 'texte',
 		content: 'texte',
-		galerie: 'relations',
+		gallery: 'relations',
 		_status: 'texte',
 		publishedAt: 'date',
 		createdAt: 'date',
@@ -91,7 +91,7 @@ export function articlesAttendus(
 				seo_title: ligne.seo_title,
 				seo_description: ligne.seo_description,
 				content: ligne.content,
-				galerie: galerie.ids,
+				gallery: galerie.ids,
 				_status: ligne.published_at === null ? 'draft' : 'published',
 				publishedAt: ligne.published_at,
 				createdAt: ligne.created_at,

@@ -247,14 +247,14 @@ describe('Contenu de 60 000 caractères relu à l’identique ; PDF refusé dans
 
 	test('un PDF dans la galerie : refusé, publié comme en brouillon, par REST comme par l’API locale ; rien ne change', async () => {
 		const [image, pdf] = [await mediaDuType('image/png'), await mediaDuType('application/pdf')]
-		const article = await ecrireArticle({ slug: 'un-article-fictif', galerie: [image.id] })
+		const article = await ecrireArticle({ slug: 'un-article-fictif', gallery: [image.id] })
 		const redaction = await creerCompte('redaction')
 		const enTetes = redaction.session.enTetes
 
 		for (const chemin of [`/api/articles/${article.id}`, `/api/articles/${article.id}?draft=true`]) {
 			const { statut, corps, texte } = await appelerRest('PATCH', chemin, {
 				enTetes,
-				corps: { galerie: [image.id, pdf.id] },
+				corps: { gallery: [image.id, pdf.id] },
 			})
 			expect(statut).toBe(400)
 			expect(texte).toContain('La galerie d’un article ne prend que des images')
@@ -265,45 +265,45 @@ describe('Contenu de 60 000 caractères relu à l’identique ; PDF refusé dans
 		}
 		const creation = await appelerRest('POST', '/api/articles?draft=true', {
 			enTetes,
-			corps: { title: 'Avec un PDF', slug: 'avec-un-pdf', galerie: [pdf.id] },
+			corps: { title: 'Avec un PDF', slug: 'avec-un-pdf', gallery: [pdf.id] },
 		})
 		expect(creation.statut).toBe(400)
 
 		const payload = await payloadDeTest()
 		// The import too: the Local API, without access control, refuses it.
-		await expect(ecrireArticle({ slug: 'import-avec-un-pdf', galerie: [pdf.id] })).rejects.toMatchObject({
+		await expect(ecrireArticle({ slug: 'import-avec-un-pdf', gallery: [pdf.id] })).rejects.toMatchObject({
 			status: 400,
 		})
-		expect((await payload.findByID({ collection: 'articles', id: article.id, depth: 0 })).galerie).toEqual([image.id])
+		expect((await payload.findByID({ collection: 'articles', id: article.id, depth: 0 })).gallery).toEqual([image.id])
 		expect((await payload.count({ collection: 'articles' })).totalDocs).toBe(1)
 	})
 
 	test('un identifiant qu’aucun média ne peut porter : refusé avec le message, jamais une erreur du serveur', async () => {
 		const image = await mediaDuType('image/png')
-		const article = await ecrireArticle({ slug: 'un-article-fictif', galerie: [image.id] })
+		const article = await ecrireArticle({ slug: 'un-article-fictif', gallery: [image.id] })
 		const redaction = await creerCompte('redaction')
 		const enTetes = redaction.session.enTetes
 
 		for (const impossible of ['abc', '99999999999', 99_999_999_999, 1.5, -1, '', { id: 'x' }]) {
-			const galerie = [image.id, impossible]
+			const gallery = [image.id, impossible]
 			for (const [methode, chemin] of [
 				['PATCH', `/api/articles/${article.id}`],
 				['PATCH', `/api/articles/${article.id}?draft=true`],
 				['POST', '/api/articles'],
 				['POST', '/api/articles?draft=true'],
 			] as const) {
-				const corps = methode === 'POST' ? { title: 'Fictif', slug: 'fictif', galerie } : { galerie }
+				const corps = methode === 'POST' ? { title: 'Fictif', slug: 'fictif', gallery } : { gallery }
 				const { statut, texte } = await appelerRest(methode, chemin, { enTetes, corps })
 				expect([impossible, chemin, statut]).toEqual([impossible, chemin, 400])
 				expect(texte).toContain('La galerie d’un article ne prend que des images')
 			}
 			// The import too: a validation error, never a failed query.
-			await expect(ecrireArticle({ slug: 'import-fictif', galerie: galerie as never })).rejects.toMatchObject({
+			await expect(ecrireArticle({ slug: 'import-fictif', gallery: gallery as never })).rejects.toMatchObject({
 				status: 400,
 			})
 		}
 		const payload = await payloadDeTest()
-		expect((await payload.findByID({ collection: 'articles', id: article.id, depth: 0 })).galerie).toEqual([image.id])
+		expect((await payload.findByID({ collection: 'articles', id: article.id, depth: 0 })).gallery).toEqual([image.id])
 		expect((await payload.count({ collection: 'articles' })).totalDocs).toBe(1)
 	})
 
@@ -315,11 +315,11 @@ describe('Contenu de 60 000 caractères relu à l’identique ; PDF refusé dans
 
 		const { statut } = await appelerRest('PATCH', `/api/articles/${article.id}`, {
 			enTetes: redaction.session.enTetes,
-			corps: { galerie: ordre },
+			corps: { gallery: ordre },
 		})
 		expect(statut).toBe(200)
 		const payload = await payloadDeTest()
-		expect((await payload.findByID({ collection: 'articles', id: article.id, depth: 0 })).galerie).toEqual(ordre)
+		expect((await payload.findByID({ collection: 'articles', id: article.id, depth: 0 })).gallery).toEqual(ordre)
 	})
 })
 
@@ -343,7 +343,7 @@ describe('Média d’un article publié lisible, d’un brouillon non', () => {
 
 		const cree = await appelerRest('POST', '/api/articles?draft=true', {
 			enTetes,
-			corps: { title: 'Un article fictif', slug: 'un-article-fictif', galerie: [photo.id] },
+			corps: { title: 'Un article fictif', slug: 'un-article-fictif', gallery: [photo.id] },
 		})
 		expect(cree.statut).toBe(201)
 		const id = (cree.corps as { doc: Article }).doc.id
@@ -364,13 +364,13 @@ describe('Média d’un article publié lisible, d’un brouillon non', () => {
 
 	test('une photo qu’un brouillon ajoute à un article publié reste introuvable jusqu’à la publication', async () => {
 		const [premiere, ajoutee] = [await mediaDuType('image/png'), await mediaDuType('image/png')]
-		const article = await ecrireArticle({ slug: 'un-article-fictif', galerie: [premiere.id] })
+		const article = await ecrireArticle({ slug: 'un-article-fictif', gallery: [premiere.id] })
 		const redaction = await creerCompte('redaction')
 		const enTetes = redaction.session.enTetes
 
 		const brouillon = await appelerRest('PATCH', `/api/articles/${article.id}?draft=true`, {
 			enTetes,
-			corps: { galerie: [premiere.id, ajoutee.id] },
+			corps: { gallery: [premiere.id, ajoutee.id] },
 		})
 		expect(brouillon.statut).toBe(200)
 		expect((await appelerRest('GET', `/api/media/${premiere.id}`)).statut).toBe(200)
@@ -389,7 +389,7 @@ describe('Média d’un article publié lisible, d’un brouillon non', () => {
 		expect(envoi.statut).toBe(201)
 		const privee = (envoi.corps as { doc: Media }).doc.id
 		const image = await mediaDuType('image/png')
-		const article = await ecrireArticle({ slug: 'un-article-fictif', galerie: [image.id] })
+		const article = await ecrireArticle({ slug: 'un-article-fictif', gallery: [image.id] })
 		const [redaction, admin] = [await creerCompte('redaction'), await creerCompte('admin')]
 
 		for (const enTetes of [redaction.session.enTetes, admin.session.enTetes]) {
@@ -399,25 +399,25 @@ describe('Média d’un article publié lisible, d’un brouillon non', () => {
 				['POST', '/api/articles'],
 				['POST', '/api/articles?draft=true'],
 			] as const) {
-				const galerie = [image.id, privee]
-				const corps = methode === 'POST' ? { title: 'Fictif', slug: 'fictif', galerie } : { galerie }
+				const gallery = [image.id, privee]
+				const corps = methode === 'POST' ? { title: 'Fictif', slug: 'fictif', gallery } : { gallery }
 				const { statut, texte } = await appelerRest(methode, chemin, { enTetes, corps })
 				expect([chemin, statut]).toEqual([chemin, 400])
 				expect(texte).toContain('jamais la photo d’une maquilleuse')
 			}
 		}
-		await expect(ecrireArticle({ slug: 'import-fictif', galerie: [privee] })).rejects.toMatchObject({ status: 400 })
+		await expect(ecrireArticle({ slug: 'import-fictif', gallery: [privee] })).rejects.toMatchObject({ status: 400 })
 
 		// What a published article would have opened: her photo stays out of reach of the public.
 		const payload = await payloadDeTest()
-		expect((await payload.findByID({ collection: 'articles', id: article.id, depth: 0 })).galerie).toEqual([image.id])
+		expect((await payload.findByID({ collection: 'articles', id: article.id, depth: 0 })).gallery).toEqual([image.id])
 		expect((await payload.count({ collection: 'articles' })).totalDocs).toBe(1)
 		expect((await appelerRest('GET', `/api/media/${privee}`)).statut).toBe(404)
 	})
 
 	test('une photo d’article qu’un admin donne ensuite à une maquilleuse n’est plus ouverte par l’article', async () => {
 		const photo = await mediaDuType('image/png')
-		await ecrireArticle({ slug: 'un-article-fictif', galerie: [photo.id] })
+		await ecrireArticle({ slug: 'un-article-fictif', gallery: [photo.id] })
 		const [maquilleuse, autre, redaction, admin] = [
 			await creerCompte('maquilleuse'),
 			await creerCompte('maquilleuse'),
@@ -447,7 +447,7 @@ describe('Média d’un article publié lisible, d’un brouillon non', () => {
 
 	test('la liste des médias reste fermée au public ; la rédaction ne liste que les siens, jamais les photos d’une maquilleuse', async () => {
 		const photo = await mediaDuType('image/png')
-		await ecrireArticle({ slug: 'un-article-fictif', galerie: [photo.id] })
+		await ecrireArticle({ slug: 'un-article-fictif', gallery: [photo.id] })
 		const [redaction, maquilleuse] = [await creerCompte('redaction'), await creerCompte('maquilleuse')]
 		const sienne = await appelerRest('POST', '/api/media?depth=0', {
 			enTetes: maquilleuse.session.enTetes,

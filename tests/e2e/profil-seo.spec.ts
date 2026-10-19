@@ -26,10 +26,10 @@ test.afterAll(async () => {
 	const payload = await payloadDeTest()
 	for (const { id } of profils.values()) {
 		const profil = await payload
-			.findByID({ collection: 'profils', id, depth: 0, select: { pro: true } })
+			.findByID({ collection: 'profiles', id, depth: 0, select: { pro: true } })
 			.catch(() => null)
 		if (!profil) continue
-		await payload.delete({ collection: 'profils', id })
+		await payload.delete({ collection: 'profiles', id })
 		const pro = typeof profil.pro === 'object' ? profil.pro.id : profil.pro
 		if (pro !== undefined && pro !== null) await payload.delete({ collection: 'pros', id: pro }).catch(() => undefined)
 	}
@@ -55,11 +55,11 @@ test.describe('E64 : les profils, titre, description, adresse canonique, un seul
 		for (const [cle, { slug, type }] of profils) {
 			const reponse = await request.get(`/profil/${slug}`)
 			// A hidden profile is a 404; a draft is a page in noindex without a canonical address (ticket 104).
-			if (type.attendu.statut === 'masque') {
+			if (type.attendu.status === 'hidden') {
 				expect(reponse.status(), cle).toBe(404)
 				continue
 			}
-			if (type.attendu.statut !== 'publie') {
+			if (type.attendu.status !== 'published') {
 				expect(reponse.status(), cle).toBe(200)
 				const brouillon = entetes(await reponse.text())
 				expect(brouillon.canonique, cle).toBeNull()
@@ -75,7 +75,7 @@ test.describe('E64 : les profils, titre, description, adresse canonique, un seul
 			expect(tetes.titre, cle).not.toMatch(/\b(?:null|undefined)\b/)
 			expect(tetes.description.length, cle).toBeGreaterThanOrEqual(70)
 			expect(tetes.description.length, cle).toBeLessThanOrEqual(155)
-			if (type.attendu.publiable) {
+			if (type.attendu.publishable) {
 				expect(tetes.canonique, cle).toBe(`https://my-makeup.fr/profil/${slug}`)
 				expect(tetes.robots, cle).toBeNull()
 			} else {
@@ -94,7 +94,7 @@ test.describe('E65 : les données structurées du profil, valides et cohérentes
 		request,
 	}) => {
 		for (const [cle, { slug, type }] of profils) {
-			if (type.attendu.statut !== 'publie') continue
+			if (type.attendu.status !== 'published') continue
 			const html = await (await request.get(`/profil/${slug}`)).text()
 			const blocs = donneesStructurees(html)
 			expect(blocs, cle).toHaveLength(1)
@@ -103,14 +103,14 @@ test.describe('E65 : les données structurées du profil, valides et cohérentes
 			expect(html.match(/<script type="application\/ld\+json">/g), cle).toHaveLength(1)
 			const texte = JSON.stringify(donnees)
 			expect(texte, cle).not.toMatch(/AggregateRating|PostalAddress|"(?:telephone|email)"|mailto:|tel:/)
-			const { telephone, email } = type.profil.coordonnees ?? {}
-			if (type.profil.contactPublic !== true)
+			const { phone: telephone, email } = type.profil.contactDetails ?? {}
+			if (type.profil.publicContact !== true)
 				for (const coordonnee of [telephone, email]) if (coordonnee) expect(html, cle).not.toContain(coordonnee)
 			if (donnees['@graph'].length === 2) {
 				const [page] = donnees['@graph']
 				const nom = page?.mainEntity.name ?? ''
 				expect(html, cle).toMatch(new RegExp(`<h1[^>]*>${nom.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}</h1>`))
-			} else expect(type.attendu.publiable, cle).toBe(false)
+			} else expect(type.attendu.publishable, cle).toBe(false)
 		}
 	})
 

@@ -9,7 +9,7 @@
  *   Payload (no account, no internal field, no token).
  */
 
-import type { Profil } from '@/payload-types'
+import type { Profile } from '@/payload-types'
 import { rayonKm } from '../format-zone'
 import { formatPrix } from '../prix'
 import { texte } from '../profil/nom-affiche'
@@ -50,28 +50,28 @@ export interface Carte {
 
 /** What the cards read of a profile: the fields of the owner, as `payload.find` gives them. */
 export type ProfilDeLEspace = Pick<
-	Profil,
+	Profile,
 	| 'id'
-	| 'prenom'
-	| 'nom'
-	| 'nomArtiste'
-	| 'specialite'
+	| 'firstName'
+	| 'lastName'
+	| 'artistName'
+	| 'specialty'
 	| 'description'
-	| 'commune'
-	| 'rayonKm'
-	| 'aDomicile'
-	| 'disponible'
-	| 'photoPrincipale'
-	| 'galerie'
+	| 'city'
+	| 'radiusKm'
+	| 'homeService'
+	| 'available'
+	| 'mainPicture'
+	| 'gallery'
 	| 'competences'
 	| 'formations'
 	| 'experiences'
 	| 'langues'
 	| 'prestations'
-	| 'reseaux'
-	| 'coordonnees'
-	| 'contactPublic'
-	| 'consentiLe'
+	| 'networks'
+	| 'contactDetails'
+	| 'publicContact'
+	| 'consentedAt'
 >
 
 const ou = (valeur: unknown): string | null => texte(valeur) || null
@@ -91,14 +91,17 @@ const rassembler = (parties: readonly unknown[], separateur: string): string | n
 	ou(parties.map(texte).filter(Boolean).join(separateur))
 
 function carteLocalisation(profil: ProfilDeLEspace): Carte {
-	const commune = texte(profil.commune?.nom)
-	const km = rayonKm(profil.rayonKm)
-	const domicile = profil.aDomicile === true ? 'Oui' : profil.aDomicile === false ? 'Non' : null
+	const commune = texte(profil.city?.name)
+	const km = rayonKm(profil.radiusKm)
+	const domicile = profil.homeService === true ? 'Oui' : profil.homeService === false ? 'Non' : null
 	return {
 		section: 'localisation',
 		titre: 'Localisation',
 		lignes: [
-			{ libelle: 'Commune', valeur: ou(libelleDeLaCommune(profil.commune ?? {})) },
+			{
+				libelle: 'Commune',
+				valeur: ou(libelleDeLaCommune({ nom: profil.city?.name, departement: profil.city?.department })),
+			},
 			{ libelle: 'Rayon', valeur: km === null ? null : `${km} km` },
 			{ libelle: 'Se déplace à domicile', valeur: commune === '' ? null : domicile },
 		],
@@ -110,32 +113,32 @@ const RESEAUX = [
 	['facebook', 'Facebook'],
 	['linkedin', 'LinkedIn'],
 	['youtube', 'YouTube'],
-	['siteWeb', 'Site web'],
+	['website', 'Site web'],
 ] as const
 
 /** « Oui, depuis le 15 octobre 2026 » when the server dated her choice, « Oui » without a date, else « Non ». */
 function affichage(profil: ProfilDeLEspace): string {
-	if (profil.contactPublic !== true) return 'Non'
-	const depuis = dateLongue(profil.consentiLe)
+	if (profil.publicContact !== true) return 'Non'
+	const depuis = dateLongue(profil.consentedAt)
 	return depuis === null ? 'Oui' : `Oui, depuis le ${depuis}`
 }
 
 /** The cards of a profile, one per section, in the order of the page. */
 export function cartesDuProfil(profil: ProfilDeLEspace): Carte[] {
 	const reseaux = RESEAUX.flatMap(([cle, libelle]) => {
-		const valeur = ou(profil.reseaux?.[cle])
+		const valeur = ou(profil.networks?.[cle])
 		return valeur === null ? [] : [{ libelle, valeur }]
 	})
-	const photos = profil.galerie?.length ?? 0
+	const photos = profil.gallery?.length ?? 0
 	return [
 		{
 			section: 'identite',
 			titre: 'Identité',
 			lignes: [
-				ligne('Prénom', profil.prenom),
-				ligne('Nom', profil.nom),
-				ligne('Nom d’artiste', profil.nomArtiste),
-				ligne('Spécialité', profil.specialite),
+				ligne('Prénom', profil.firstName),
+				ligne('Nom', profil.lastName),
+				ligne('Nom d’artiste', profil.artistName),
+				ligne('Spécialité', profil.specialty),
 			],
 		},
 		{ section: 'description', titre: 'Description', lignes: [ligne(undefined, profil.description)] },
@@ -144,14 +147,14 @@ export function cartesDuProfil(profil: ProfilDeLEspace): Carte[] {
 			section: 'disponibilite',
 			titre: 'Disponibilité',
 			// No value stored (an imported profile) reads « Disponible », as the public list does.
-			lignes: estDisponible(profil.disponible)
+			lignes: estDisponible(profil.available)
 				? [{ valeur: TEXTE_DISPONIBLE }]
 				: [{ valeur: TEXTE_INDISPONIBLE }, { valeur: TEXTE_HORS_RECHERCHE }],
 		},
 		{
 			section: 'photo',
 			titre: 'Photo principale',
-			lignes: [{ valeur: profil.photoPrincipale ? 'Photo ajoutée' : null }],
+			lignes: [{ valeur: profil.mainPicture ? 'Photo ajoutée' : null }],
 		},
 		{
 			section: 'portfolio',
@@ -200,8 +203,8 @@ export function cartesDuProfil(profil: ProfilDeLEspace): Carte[] {
 			section: 'coordonnees',
 			titre: 'Coordonnées',
 			lignes: [
-				ligne('Téléphone', profil.coordonnees?.telephone),
-				ligne('Email de contact', profil.coordonnees?.email),
+				ligne('Téléphone', profil.contactDetails?.phone),
+				ligne('Email de contact', profil.contactDetails?.email),
 				{ libelle: 'Affichées sur ton profil', valeur: affichage(profil) },
 			],
 		},

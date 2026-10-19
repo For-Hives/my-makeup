@@ -18,7 +18,7 @@
  * What the set writes is what a makeup artist or an admin writes. What the server computes (the
  * slug, the state, the status, the département) is never written: `attendu` says what the server
  * must store, and the tests compare. The status is chosen only for the hidden profile
- * (`statutChoisi`, ticket 044): every other one follows the rule.
+ * (`chosenStatus`, ticket 044): every other one follows the rule.
  *
  * Relative imports on purpose: like the collections, this file must load outside of Next.
  */
@@ -29,7 +29,7 @@ import { LONGUEUR_MAX_EMAIL, LONGUEUR_MAX_LIEN, LONGUEUR_MAX_TELEPHONE } from '.
 import { LONGUEUR_DESCRIPTION, LONGUEUR_NOM } from '../lib/profil/listes'
 import type { StatutDuProfil } from '../lib/profil/statut'
 import { BORNES_DU_RAYON_KM } from '../lib/profil/zone'
-import type { Profil } from '../payload-types'
+import type { Profile } from '../payload-types'
 
 /** The photos of the set, in ./photos/: 400 × 400, WebP, under 30 KB each. */
 export const PHOTOS_DU_JEU = [
@@ -54,32 +54,32 @@ type ChampsDuServeur =
 	| 'id'
 	| 'pro'
 	| 'slug'
-	| 'photoPrincipale'
-	| 'galerie'
-	| 'statut'
-	| 'completude'
-	| 'actif'
-	| 'actifDepuis'
-	| 'publiable'
-	| 'publiableDepuis'
-	| 'entierementVide'
-	| 'entierementVideDepuis'
+	| 'mainPicture'
+	| 'gallery'
+	| 'status'
+	| 'completeness'
+	| 'active'
+	| 'activeSince'
+	| 'publishable'
+	| 'publishableSince'
+	| 'fullyEmpty'
+	| 'fullyEmptySince'
 	| 'createdAt'
 	| 'updatedAt'
 
 /** What the set writes on a profile: what a makeup artist or an admin writes. */
-export type DonneesDuProfil = Partial<Omit<Profil, ChampsDuServeur>>
+export type DonneesDuProfil = Partial<Omit<Profile, ChampsDuServeur>>
 
 /** What the server must compute and store for a profile of the set (ticket 044). */
 export interface EtatAttendu {
 	/** Computed from the name of the account at the creation (src/lib/slug.ts). */
 	readonly slug: string
 	/** Criteria met, out of 13. */
-	readonly completude: number
-	readonly actif: boolean
-	readonly publiable: boolean
-	readonly entierementVide: boolean
-	readonly statut: StatutDuProfil
+	readonly completeness: number
+	readonly active: boolean
+	readonly publishable: boolean
+	readonly fullyEmpty: boolean
+	readonly status: StatutDuProfil
 }
 
 export interface ProfilDuJeu {
@@ -108,14 +108,14 @@ export const VERIFICATION_DU_JEU = '2026-09-15T12:00:00.000Z'
 
 /** Communes of the official list (geo.api.gouv.fr, 14/10/2026), the centre rounded as the server keeps it. */
 const COMMUNES = {
-	annecy: { nom: 'Annecy', codeInsee: '74010', latitude: 45.9, longitude: 6.13 },
-	annemasse: { nom: 'Annemasse', codeInsee: '74012', latitude: 46.19, longitude: 6.25 },
-	thonon: { nom: 'Thonon-les-Bains', codeInsee: '74281', latitude: 46.37, longitude: 6.48 },
-	nantes: { nom: 'Nantes', codeInsee: '44109', latitude: 47.24, longitude: -1.56 },
+	annecy: { name: 'Annecy', inseeCode: '74010', latitude: 45.9, longitude: 6.13 },
+	annemasse: { name: 'Annemasse', inseeCode: '74012', latitude: 46.19, longitude: 6.25 },
+	thonon: { name: 'Thonon-les-Bains', inseeCode: '74281', latitude: 46.37, longitude: 6.48 },
+	nantes: { name: 'Nantes', inseeCode: '44109', latitude: 47.24, longitude: -1.56 },
 	// The longest name of the official list: 45 characters.
 	laPlusLongue: {
-		nom: 'Saint-Remy-en-Bouzemont-Saint-Genest-et-Isson',
-		codeInsee: '51513',
+		name: 'Saint-Remy-en-Bouzemont-Saint-Genest-et-Isson',
+		inseeCode: '51513',
 		latitude: 48.61,
 		longitude: 4.64,
 	},
@@ -136,10 +136,10 @@ const instagram = (pseudo: string) => ({ instagram: `https://instagram.example.t
 
 /** The contact details she shows, with the trace of her consent. */
 const coordonneesPubliques = (telephone: string, email: string): DonneesDuProfil => ({
-	coordonnees: { telephone, email },
-	contactPublic: true,
-	consentiLe: CONSENTEMENT_DU_JEU,
-	sourceConsentement: 'maquilleuse',
+	contactDetails: { phone: telephone, email },
+	publicContact: true,
+	consentedAt: CONSENTEMENT_DU_JEU,
+	consentSource: 'artist',
 })
 
 /** The lists of a complete profile: one row or more in each, as the space fills them. */
@@ -184,34 +184,34 @@ const OFFRES_CHIFFREES: DonneesDuProfil['prestations'] = [
 
 /** Everything a complete profile holds: the six conditions of a publishable profile, and the 13 criteria. */
 function profilComplet(identite: {
-	prenom: string
-	nom: string
-	nomArtiste: string
-	specialite: string
-	commune: (typeof COMMUNES)[keyof typeof COMMUNES]
+	firstName: string
+	lastName: string
+	artistName: string
+	specialty: string
+	city: (typeof COMMUNES)[keyof typeof COMMUNES]
 	description: string
 	pseudo: string
 }): DonneesDuProfil {
-	const { pseudo, commune, ...reste } = identite
+	const { pseudo, city, ...reste } = identite
 	return {
 		...reste,
-		commune,
-		rayonKm: 30,
-		aDomicile: true,
-		disponible: true,
+		city,
+		radiusKm: 30,
+		homeService: true,
+		available: true,
 		prestations: OFFRES_CHIFFREES,
-		reseaux: instagram(pseudo),
-		...listesCompletes(commune.nom),
+		networks: instagram(pseudo),
+		...listesCompletes(city.name),
 	}
 }
 
 /** A state of the set: what the rule gives each kind of profile. */
 const PUBLIE_COMPLET = {
-	completude: 13,
-	actif: true,
-	publiable: true,
-	entierementVide: false,
-	statut: 'publie',
+	completeness: 13,
+	active: true,
+	publishable: true,
+	fullyEmpty: false,
+	status: 'published',
 } as const satisfies Omit<EtatAttendu, 'slug'>
 
 /** The longest texts of the profile with every text at its longest. */
@@ -247,14 +247,14 @@ export const PROFILS_DU_JEU: readonly ProfilDuJeu[] = [
 			'Référence : complet, disponible, Annecy, mariage, trois offres chiffrées, six photos ; il publie téléphone et email (SEO, performance, visuel).',
 		compte: { email: adresseDuProfil('reference'), nom: 'Inès Morel' },
 		profil: {
-			prenom: 'Inès',
-			nom: 'Morel',
-			nomArtiste: 'Inès Morel Maquillage',
-			specialite: 'Maquillage mariage',
-			commune: COMMUNES.annecy,
-			rayonKm: 30,
-			aDomicile: true,
-			disponible: true,
+			firstName: 'Inès',
+			lastName: 'Morel',
+			artistName: 'Inès Morel Maquillage',
+			specialty: 'Maquillage mariage',
+			city: COMMUNES.annecy,
+			radiusKm: 30,
+			homeService: true,
+			available: true,
 			description:
 				'Maquilleuse professionnelle installée à Annecy depuis dix ans, je prépare les mariées du lac et des montagnes alentour. Je viens chez vous le jour J, avec un maquillage pensé pour tenir de la cérémonie jusqu’à la fin de la soirée, en photo comme à l’œil nu.',
 			prestations: [
@@ -313,7 +313,7 @@ export const PROFILS_DU_JEU: readonly ProfilDuJeu[] = [
 					description: null,
 				},
 			],
-			reseaux: { instagram: 'https://instagram.example.test/ines.morel', siteWeb: 'https://ines-morel.example.test' },
+			networks: { instagram: 'https://instagram.example.test/ines.morel', website: 'https://ines-morel.example.test' },
 			...coordonneesPubliques('06 39 98 10 01', 'contact@ines-morel.example.test'),
 		},
 		photos: {
@@ -328,11 +328,11 @@ export const PROFILS_DU_JEU: readonly ProfilDuJeu[] = [
 		sertA: 'Complet, à Annemasse, ville voisine d’Annecy : la recherche par zone, le JSON-LD.',
 		compte: { email: adresseDuProfil('ville-voisine'), nom: 'Léa Garnier' },
 		profil: profilComplet({
-			prenom: 'Léa',
-			nom: 'Garnier',
-			nomArtiste: 'Léa Garnier Beauté',
-			specialite: 'Maquillage mariage et soirée',
-			commune: COMMUNES.annemasse,
+			firstName: 'Léa',
+			lastName: 'Garnier',
+			artistName: 'Léa Garnier Beauté',
+			specialty: 'Maquillage mariage et soirée',
+			city: COMMUNES.annemasse,
 			description:
 				'Je maquille les mariées et leurs invitées entre Annemasse, le Chablais et le pays de Gex. Teint lumineux, regard travaillé, je prends le temps d’un essai pour que le jour J se passe sans surprise, et je me déplace avec tout mon matériel.',
 			pseudo: 'lea.garnier',
@@ -346,11 +346,11 @@ export const PROFILS_DU_JEU: readonly ProfilDuJeu[] = [
 		sertA: 'Complet, à Nantes, loin d’Annecy : une recherche par ville hors de la zone ne le trouve pas.',
 		compte: { email: adresseDuProfil('ville-eloignee'), nom: 'Chloé Bertin' },
 		profil: profilComplet({
-			prenom: 'Chloé',
-			nom: 'Bertin',
-			nomArtiste: 'Chloé Bertin Make-up',
-			specialite: 'Maquillage événementiel',
-			commune: COMMUNES.nantes,
+			firstName: 'Chloé',
+			lastName: 'Bertin',
+			artistName: 'Chloé Bertin Make-up',
+			specialty: 'Maquillage événementiel',
+			city: COMMUNES.nantes,
 			description:
 				'Maquilleuse à Nantes, je travaille pour les mariages, les séances photo et les soirées d’entreprise. J’aime les maquillages naturels comme les looks plus audacieux, et je m’adapte à chaque peau, à chaque lumière et à chaque tenue.',
 			pseudo: 'chloe.bertin',
@@ -365,16 +365,16 @@ export const PROFILS_DU_JEU: readonly ProfilDuJeu[] = [
 		compte: { email: adresseDuProfil('indisponible'), nom: 'Manon Faure' },
 		profil: {
 			...profilComplet({
-				prenom: 'Manon',
-				nom: 'Faure',
-				nomArtiste: 'Manon Faure Maquillage',
-				specialite: 'Maquillage mariage',
-				commune: COMMUNES.annecy,
+				firstName: 'Manon',
+				lastName: 'Faure',
+				artistName: 'Manon Faure Maquillage',
+				specialty: 'Maquillage mariage',
+				city: COMMUNES.annecy,
 				description:
 					'Maquilleuse à Annecy, je suis en pause pour quelques mois et je ne prends plus de nouvelles dates pour l’instant. Mon portfolio reste en ligne : vous y trouverez mes mariées de l’été dernier et les séances photo de l’hiver.',
 				pseudo: 'manon.faure',
 			}),
-			disponible: false,
+			available: false,
 		},
 		photos: { principale: 'photo-4.webp', galerie: ['photo-5.webp'] },
 		attendu: { slug: 'manon-faure', ...PUBLIE_COMPLET },
@@ -386,16 +386,16 @@ export const PROFILS_DU_JEU: readonly ProfilDuJeu[] = [
 		compte: { email: adresseDuProfil('disponibilite-inconnue'), nom: 'Jade Roussel' },
 		profil: {
 			...profilComplet({
-				prenom: 'Jade',
-				nom: 'Roussel',
-				nomArtiste: 'Jade Roussel Make-up',
-				specialite: 'Maquillage mariage',
-				commune: COMMUNES.annecy,
+				firstName: 'Jade',
+				lastName: 'Roussel',
+				artistName: 'Jade Roussel Make-up',
+				specialty: 'Maquillage mariage',
+				city: COMMUNES.annecy,
 				description:
 					'Je maquille à Annecy et dans toute la Haute-Savoie depuis six ans : mariées, invitées, séances photo et spectacles. Je travaille avec des produits de qualité professionnelle et je prends soin des peaux sensibles comme des peaux mixtes.',
 				pseudo: 'jade.roussel',
 			}),
-			disponible: null,
+			available: null,
 		},
 		photos: { principale: 'photo-5.webp', galerie: ['photo-6.webp'] },
 		attendu: { slug: 'jade-roussel', ...PUBLIE_COMPLET },
@@ -409,11 +409,11 @@ export const PROFILS_DU_JEU: readonly ProfilDuJeu[] = [
 		photos: { principale: null, galerie: [] },
 		attendu: {
 			slug: 'nina-perret',
-			completude: 0,
-			actif: false,
-			publiable: false,
-			entierementVide: true,
-			statut: 'brouillon',
+			completeness: 0,
+			active: false,
+			publishable: false,
+			fullyEmpty: true,
+			status: 'draft',
 		},
 	},
 	{
@@ -423,11 +423,11 @@ export const PROFILS_DU_JEU: readonly ProfilDuJeu[] = [
 		compte: { email: adresseDuProfil('actif-non-publiable'), nom: 'Clara Dumas' },
 		profil: {
 			...profilComplet({
-				prenom: 'Clara',
-				nom: 'Dumas',
-				nomArtiste: 'Clara Dumas Maquillage',
-				specialite: 'Maquillage mariage',
-				commune: COMMUNES.annecy,
+				firstName: 'Clara',
+				lastName: 'Dumas',
+				artistName: 'Clara Dumas Maquillage',
+				specialty: 'Maquillage mariage',
+				city: COMMUNES.annecy,
 				description:
 					'Maquilleuse à Annecy, je compose chaque maquillage avec vous : mariage, soirée ou séance photo. Chaque demande est différente, alors je préfère en parler avant de donner un prix, selon le lieu, l’heure et le nombre de personnes à maquiller.',
 				pseudo: 'clara.dumas',
@@ -438,7 +438,7 @@ export const PROFILS_DU_JEU: readonly ProfilDuJeu[] = [
 			],
 		},
 		photos: { principale: 'photo-6.webp', galerie: ['photo-1.webp'] },
-		attendu: { slug: 'clara-dumas', ...PUBLIE_COMPLET, publiable: false },
+		attendu: { slug: 'clara-dumas', ...PUBLIE_COMPLET, publishable: false },
 	},
 	{
 		numero: 8,
@@ -448,21 +448,21 @@ export const PROFILS_DU_JEU: readonly ProfilDuJeu[] = [
 		compte: { email: adresseDuProfil('sans-contact-public'), nom: 'Louise Girard' },
 		profil: {
 			...profilComplet({
-				prenom: 'Louise',
-				nom: 'Girard',
-				nomArtiste: 'Louise Girard Beauté',
-				specialite: 'Maquillage mariage',
-				commune: COMMUNES.annecy,
+				firstName: 'Louise',
+				lastName: 'Girard',
+				artistName: 'Louise Girard Beauté',
+				specialty: 'Maquillage mariage',
+				city: COMMUNES.annecy,
 				description:
 					'Maquilleuse à Annecy, je prépare les mariées et leurs proches, chez elles ou sur le lieu de la fête. Pour me joindre, passez par la demande de devis : je vous réponds avec une proposition adaptée à votre journée et à votre budget.',
 				pseudo: 'louise.girard',
 			}),
-			reseaux: {},
-			coordonnees: { telephone: '06 39 98 10 08', email: 'contact@louise-girard.example.test' },
-			contactPublic: false,
+			networks: {},
+			contactDetails: { phone: '06 39 98 10 08', email: 'contact@louise-girard.example.test' },
+			publicContact: false,
 		},
 		photos: { principale: 'photo-2.webp', galerie: ['photo-4.webp'] },
-		attendu: { slug: 'louise-girard', ...PUBLIE_COMPLET, completude: 12, publiable: false },
+		attendu: { slug: 'louise-girard', ...PUBLIE_COMPLET, completeness: 12, publishable: false },
 	},
 	{
 		numero: 9,
@@ -471,11 +471,11 @@ export const PROFILS_DU_JEU: readonly ProfilDuJeu[] = [
 		compte: { email: adresseDuProfil('ancien-nom-accentue'), nom: 'Zoé Lefèvre' },
 		profil: {
 			...profilComplet({
-				prenom: 'Zoé',
-				nom: 'Lefèvre',
-				nomArtiste: 'Zoé Lefèvre Maquillage',
-				specialite: 'Maquillage mariage',
-				commune: COMMUNES.thonon,
+				firstName: 'Zoé',
+				lastName: 'Lefèvre',
+				artistName: 'Zoé Lefèvre Maquillage',
+				specialty: 'Maquillage mariage',
+				city: COMMUNES.thonon,
 				description:
 					'Maquilleuse au bord du Léman depuis 2019, j’accompagne les mariées de Thonon, d’Évian et du Chablais. J’aime les maquillages lumineux et naturels, qui révèlent sans transformer, et je me déplace jusqu’à vous avec tout mon matériel.',
 				pseudo: 'zoe.lefevre',
@@ -492,18 +492,18 @@ export const PROFILS_DU_JEU: readonly ProfilDuJeu[] = [
 		compte: { email: adresseDuProfil('verifiee'), nom: 'Emma Chevalier' },
 		profil: {
 			...profilComplet({
-				prenom: 'Emma',
-				nom: 'Chevalier',
-				nomArtiste: 'Emma Chevalier Make-up',
-				specialite: 'Maquillage mariage',
-				commune: COMMUNES.annecy,
+				firstName: 'Emma',
+				lastName: 'Chevalier',
+				artistName: 'Emma Chevalier Make-up',
+				specialty: 'Maquillage mariage',
+				city: COMMUNES.annecy,
 				description:
 					'Maquilleuse diplômée, installée à Annecy, je travaille pour les mariages, les tournages et les défilés. Mon activité a été vérifiée : je vous accompagne de l’essai au jour J, avec un maquillage qui tient et qui vous ressemble.',
 				pseudo: 'emma.chevalier',
 			}),
-			verifie: true,
-			verifieLe: VERIFICATION_DU_JEU,
-			superMaquilleuse: true,
+			verified: true,
+			verifiedAt: VERIFICATION_DU_JEU,
+			superArtist: true,
 		},
 		photos: { principale: 'photo-4.webp', galerie: ['photo-6.webp'] },
 		attendu: { slug: 'emma-chevalier', ...PUBLIE_COMPLET },
@@ -515,20 +515,20 @@ export const PROFILS_DU_JEU: readonly ProfilDuJeu[] = [
 		compte: { email: adresseDuProfil('masquee'), nom: 'Alice Fontaine' },
 		profil: {
 			...profilComplet({
-				prenom: 'Alice',
-				nom: 'Fontaine',
-				nomArtiste: 'Alice Fontaine Maquillage',
-				specialite: 'Maquillage mariage',
-				commune: COMMUNES.annecy,
+				firstName: 'Alice',
+				lastName: 'Fontaine',
+				artistName: 'Alice Fontaine Maquillage',
+				specialty: 'Maquillage mariage',
+				city: COMMUNES.annecy,
 				description:
 					'Maquilleuse à Annecy, je travaille surtout pour les mariages d’été au bord du lac et pour les séances photo en montagne. Je vous propose un essai chez vous, puis le maquillage du jour J, avec des retouches jusqu’au début de la soirée.',
 				pseudo: 'alice.fontaine',
 			}),
-			statutChoisi: 'masque',
-			motif: 'Masqué le temps de vérifier les photos du portfolio.',
+			chosenStatus: 'hidden',
+			reason: 'Masqué le temps de vérifier les photos du portfolio.',
 		},
 		photos: { principale: 'photo-5.webp', galerie: ['photo-2.webp'] },
-		attendu: { slug: 'alice-fontaine', ...PUBLIE_COMPLET, statut: 'masque' },
+		attendu: { slug: 'alice-fontaine', ...PUBLIE_COMPLET, status: 'hidden' },
 	},
 	{
 		numero: 12,
@@ -536,14 +536,14 @@ export const PROFILS_DU_JEU: readonly ProfilDuJeu[] = [
 		sertA: 'Chaque texte à sa longueur maximale, le rayon et la galerie au plus : la mise en page.',
 		compte: { email: adresseDuProfil('textes-maximaux'), nom: `${PRENOM_LE_PLUS_LONG} ${NOM_LE_PLUS_LONG}` },
 		profil: {
-			prenom: PRENOM_LE_PLUS_LONG,
-			nom: NOM_LE_PLUS_LONG,
-			nomArtiste: texteDeLongueur('Maison de maquillage des mariées du lac et des montagnes', LONGUEUR_NOM),
-			specialite: texteDeLongueur('Maquillage mariage, soirée, mode, cinéma et effets spéciaux', LONGUEUR_NOM),
-			commune: COMMUNES.laPlusLongue,
-			rayonKm: BORNES_DU_RAYON_KM.max,
-			aDomicile: true,
-			disponible: true,
+			firstName: PRENOM_LE_PLUS_LONG,
+			lastName: NOM_LE_PLUS_LONG,
+			artistName: texteDeLongueur('Maison de maquillage des mariées du lac et des montagnes', LONGUEUR_NOM),
+			specialty: texteDeLongueur('Maquillage mariage, soirée, mode, cinéma et effets spéciaux', LONGUEUR_NOM),
+			city: COMMUNES.laPlusLongue,
+			radiusKm: BORNES_DU_RAYON_KM.max,
+			homeService: true,
+			available: true,
 			description: texteDeLongueur(LONGUE_DESCRIPTION, LONGUEUR_DESCRIPTION),
 			prestations: [1, 2, 3].map(prestationLaPlusLongue),
 			competences: [1, 2, 3].map(numero => ({
@@ -567,11 +567,11 @@ export const PROFILS_DU_JEU: readonly ProfilDuJeu[] = [
 				fin: `201${numero + 1}-12-31`,
 				description: texteDeLongueur(LONGUE_DESCRIPTION, LONGUEUR_DESCRIPTION),
 			})),
-			reseaux: {
+			networks: {
 				youtube: lienLePlusLong('youtube'),
 				facebook: lienLePlusLong('facebook'),
 				instagram: lienLePlusLong('instagram'),
-				siteWeb: lienLePlusLong('www'),
+				website: lienLePlusLong('www'),
 				linkedin: lienLePlusLong('linkedin'),
 			},
 			...coordonneesPubliques(TELEPHONE_LE_PLUS_LONG, EMAIL_LE_PLUS_LONG),

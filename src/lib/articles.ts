@@ -28,7 +28,7 @@ export const IMAGES: Where = { mimeType: { in: [...TYPES_D_IMAGE] } }
  * In the admin panel, the media offered for the gallery: the images of the newsroom, those that
  * belong to nobody. The photo of a makeup artist is never offered.
  *
- * `admin` reads every media: the owner is part of the filter. `redaction` reads only the media of
+ * `admin` reads every media: the owner is part of the filter. `editor` reads only the media of
  * the newsroom (`lectureDesMedias`), and may not filter on the owner, a field it does not read:
  * Payload would find nothing, and refuse every photo. Payload plays the same filter again when it
  * validates a published save, with the access rules of the request.
@@ -82,7 +82,7 @@ export const galerieDImages: FieldHook = async ({ field, value, req }) => {
 		throw new ValidationError(
 			{
 				collection: 'articles',
-				errors: [{ label: field.label || undefined, message: MESSAGE_GALERIE_IMAGES, path: 'galerie' }],
+				errors: [{ label: field.label || undefined, message: MESSAGE_GALERIE_IMAGES, path: 'gallery' }],
 			},
 			req.t
 		)

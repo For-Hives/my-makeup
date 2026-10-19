@@ -2,14 +2,14 @@ import { expect, test } from '@playwright/test'
 import { creerCompte } from '../outils/fabrique-comptes'
 
 /**
- * E55 (plan 02 §7.4; ticket 164): an account of the newsroom (`redaction`) sees the articles, the
+ * E55 (plan 02 §7.4; ticket 164): an account of the newsroom (`editor`) sees the articles, the
  * talents and their images in the admin panel, and nothing else; it publishes and unpublishes, and
  * the public page follows at once; it never changes its own role. The documents are made up and
  * taken away at the end.
  */
 
 const suffixe = Date.now().toString(36)
-const COLLECTIONS_FERMEES = ['demandes', 'profils', 'pros', 'admins', 'auth-evenements'] as const
+const COLLECTIONS_FERMEES = ['contact-requests', 'profiles', 'pros', 'admins', 'auth-events'] as const
 
 test.describe.configure({ mode: 'serial' })
 
@@ -44,16 +44,16 @@ test.describe('E55 : la rédaction ne voit que les articles, les talents et leur
 		await creerCompte('admin')
 		const { session } = await creerCompte('redaction')
 
-		for (const collection of ['demandes', 'pros', 'admins'] as const) {
+		for (const collection of ['contact-requests', 'pros', 'admins'] as const) {
 			const reponse = await request.get(`/api/${collection}?limit=50`, { headers: session.enTetes })
 			if (collection === 'admins') {
 				const corps = (await reponse.json()) as { docs: { role: string }[] }
-				expect(corps.docs.every(compte => compte.role === 'redaction')).toBe(true)
+				expect(corps.docs.every(compte => compte.role === 'editor')).toBe(true)
 			} else expect(reponse.status()).toBe(403)
 		}
-		const profils = await request.get('/api/profils?limit=50&depth=0', { headers: session.enTetes })
+		const profils = await request.get('/api/profiles?limit=50&depth=0', { headers: session.enTetes })
 		const texte = await profils.text()
-		expect(texte).not.toMatch(/"(telephone|email|siret)"\s*:\s*"[^"]/)
+		expect(texte).not.toMatch(/"(telephone|phone|email|siret|internalNote)"\s*:\s*"[^"]/)
 	})
 
 	for (const [collection, chemin] of [
@@ -110,6 +110,6 @@ test.describe('E55 : la rédaction ne voit que les articles, les talents et leur
 		const moi = (await (await request.get('/api/admins/me', { headers: session.enTetes })).json()) as {
 			user: { role: string }
 		}
-		expect(moi.user.role).toBe('redaction')
+		expect(moi.user.role).toBe('editor')
 	})
 })

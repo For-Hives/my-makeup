@@ -41,7 +41,7 @@ describe('la tâche', () => {
 		expect(await purgeDesMessagesDeContact.executer(payload, MOMENT)).toBe(2)
 		expect(appels).toHaveLength(1)
 		expect(appels[0]).toMatchObject({
-			collection: 'demandes',
+			collection: 'contact-requests',
 			where: {
 				and: [{ type: { equals: 'contact' } }, { createdAt: { less_than: '2025-10-15T10:00:00.000Z' } }],
 			},
@@ -104,15 +104,15 @@ describe('la reprise des messages restés en cours d’envoi (ticket 224)', () =
 		expect(DELAI_DE_REPRISE_MS).toBe(15 * 60 * 1000)
 		expect(appels).toEqual([
 			{
-				collection: 'demandes',
+				collection: 'contact-requests',
 				depth: 0,
 				overrideAccess: true,
-				select: { etatMail: true },
-				data: { etatMail: 'echec' },
+				select: { mailStatus: true },
+				data: { mailStatus: 'failed' },
 				where: {
 					and: [
 						{ type: { equals: 'contact' } },
-						{ etatMail: { equals: 'en-attente' } },
+						{ mailStatus: { equals: 'pending' } },
 						{ updatedAt: { less_than: '2026-10-16T09:45:00.000Z' } },
 					],
 				},

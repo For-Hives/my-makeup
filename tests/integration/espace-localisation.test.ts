@@ -54,7 +54,7 @@ async function utilisateurDe(payload: Payload, compte: Maquilleuse): Promise<Uti
 
 async function profilStocke(payload: Payload, compte: Maquilleuse) {
 	const { docs } = await payload.find({
-		collection: 'profils',
+		collection: 'profiles',
 		depth: 0,
 		overrideAccess: true,
 		where: { pro: { equals: compte.id } },
@@ -81,17 +81,17 @@ describe('U16 : « Annecy » choisie, enregistrée', () => {
 		})
 		expect(demandes).toEqual(['74010'])
 		const stocke = await profilStocke(payload, a)
-		expect(stocke.commune).toMatchObject({ nom: 'Annecy', codeInsee: '74010', departement: '74' })
+		expect(stocke.city).toMatchObject({ name: 'Annecy', inseeCode: '74010', department: '74' })
 		// The centre of the commune, to about 1 km.
-		expect(stocke.commune?.latitude).toBe(45.9)
-		expect(stocke.commune?.longitude).toBe(6.13)
-		expect(stocke.rayonKm).toBe(30)
-		expect(stocke.aDomicile).toBe(true)
+		expect(stocke.city?.latitude).toBe(45.9)
+		expect(stocke.city?.longitude).toBe(6.13)
+		expect(stocke.radiusKm).toBe(30)
+		expect(stocke.homeService).toBe(true)
 		// I19: the slug does not move.
 		expect(stocke.slug).toBe(avant.slug)
 		// What the page reads next is the same commune.
 		const lu = await profilDeLaMaquilleuse(payload, await utilisateurDe(payload, a))
-		expect(lu?.commune).toMatchObject({ nom: 'Annecy', codeInsee: '74010', departement: '74' })
+		expect(lu?.city).toMatchObject({ name: 'Annecy', inseeCode: '74010', department: '74' })
 	})
 
 	test('changer de commune remplace tout : nom, code, département et centre', async () => {
@@ -104,8 +104,8 @@ describe('U16 : « Annecy » choisie, enregistrée', () => {
 		const resultat = await enregistrerLocalisation(payload, utilisateur, { ...SAISIE, codeInsee: '69123' })
 
 		expect(resultat.ok && resultat.valeurs.libelle).toBe('Lyon (69)')
-		const { commune } = await profilStocke(payload, a)
-		expect(commune).toMatchObject({ nom: 'Lyon', codeInsee: '69123', departement: '69' })
+		const { city: commune } = await profilStocke(payload, a)
+		expect(commune).toMatchObject({ name: 'Lyon', inseeCode: '69123', department: '69' })
 		expect(commune?.latitude).toBe(45.76)
 		expect(commune?.longitude).toBe(4.84)
 	})
@@ -120,8 +120,8 @@ describe('U16 : « Annecy » choisie, enregistrée', () => {
 		await enregistrerLocalisation(payload, await utilisateurDe(payload, a), SAISIE)
 
 		const apresB = await profilStocke(payload, b)
-		expect(apresB.commune?.codeInsee ?? null).toBe(avantB.commune?.codeInsee ?? null)
-		expect(apresB.rayonKm ?? null).toBe(avantB.rayonKm ?? null)
+		expect(apresB.city?.inseeCode ?? null).toBe(avantB.city?.inseeCode ?? null)
+		expect(apresB.radiusKm ?? null).toBe(avantB.radiusKm ?? null)
 	})
 })
 
@@ -137,8 +137,8 @@ describe('le rayon est borné de 0 à 200 km, jamais « & km »', () => {
 		if (resultat.ok) return
 		expect(resultat.champs?.rayonKm).toContain('de 0 à 200 km')
 		const stocke = await profilStocke(payload, a)
-		expect(stocke.rayonKm ?? null).toBeNull()
-		expect(stocke.commune?.codeInsee ?? null).toBeNull()
+		expect(stocke.radiusKm ?? null).toBeNull()
+		expect(stocke.city?.inseeCode ?? null).toBeNull()
 	})
 
 	test('0 et 200 sont acceptés ; null efface le rayon', async () => {
@@ -153,7 +153,7 @@ describe('le rayon est borné de 0 à 200 km, jamais « & km »', () => {
 		] as const) {
 			const resultat = await enregistrerLocalisation(payload, utilisateur, { ...SAISIE, rayonKm })
 			expect(resultat.ok && resultat.valeurs.rayonKm).toBe(attendu)
-			expect((await profilStocke(payload, a)).rayonKm ?? null).toBe(attendu)
+			expect((await profilStocke(payload, a)).radiusKm ?? null).toBe(attendu)
 		}
 	})
 })
@@ -179,8 +179,8 @@ describe('un texte libre n’est jamais une commune, côté serveur non plus', (
 		expect(resultat.ok).toBe(false)
 		expect(demandes).toEqual([])
 		const stocke = await profilStocke(payload, a)
-		expect(stocke.commune).toMatchObject({ nom: 'Annecy', codeInsee: '74010' })
-		expect(stocke.rayonKm).toBe(30)
+		expect(stocke.city).toMatchObject({ name: 'Annecy', inseeCode: '74010' })
+		expect(stocke.radiusKm).toBe(30)
 	})
 
 	test('un nom, des coordonnées ou un champ réservé dans la requête la refusent en bloc', async () => {
@@ -194,7 +194,7 @@ describe('un texte libre n’est jamais une commune, côté serveur non plus', (
 			{ commune: { nom: 'Paris', codeInsee: '75056' } },
 			{ latitude: 48.85, longitude: 2.35 },
 			{ departement: '75' },
-			{ statut: 'publie' },
+			{ status: 'published' },
 			{ pro: 999 },
 			{ adresse: '12 rue des Lilas' },
 		]) {
@@ -202,7 +202,7 @@ describe('un texte libre n’est jamais une commune, côté serveur non plus', (
 			expect(resultat).toEqual({ ok: false, message: MESSAGE_ECHEC })
 		}
 		expect(demandes).toEqual([])
-		expect((await profilStocke(payload, a)).commune?.codeInsee ?? null).toBeNull()
+		expect((await profilStocke(payload, a)).city?.inseeCode ?? null).toBeNull()
 	})
 
 	test('un code que la liste ne connaît pas (404) est refusé sous le champ de la commune', async () => {
@@ -218,7 +218,7 @@ describe('un texte libre n’est jamais une commune, côté serveur non plus', (
 		expect(resultat.ok).toBe(false)
 		if (resultat.ok) return
 		expect(resultat.champs?.codeInsee).toContain('pas dans la liste officielle')
-		expect((await profilStocke(payload, a)).commune?.codeInsee ?? null).toBeNull()
+		expect((await profilStocke(payload, a)).city?.inseeCode ?? null).toBeNull()
 	})
 
 	test('le nom stocké est celui de la liste, pas un autre : un code ne s’enregistre pas avec le nom d’une autre commune', async () => {
@@ -227,7 +227,7 @@ describe('un texte libre n’est jamais une commune, côté serveur non plus', (
 		const a = await creerCompte('maquilleuse')
 		const payload = await payloadDeTest()
 		await enregistrerLocalisation(payload, await utilisateurDe(payload, a), SAISIE)
-		expect((await profilStocke(payload, a)).commune?.nom).toBe('Annecy')
+		expect((await profilStocke(payload, a)).city?.name).toBe('Annecy')
 	})
 })
 
@@ -248,9 +248,9 @@ describe('le service des communes en panne : message clair, ancienne commune gar
 
 		expect(resultat).toEqual({ ok: false, message: MESSAGE_SERVICE_DES_COMMUNES })
 		const stocke = await profilStocke(payload, a)
-		expect(stocke.commune).toMatchObject({ nom: 'Annecy', codeInsee: '74010', departement: '74' })
+		expect(stocke.city).toMatchObject({ name: 'Annecy', inseeCode: '74010', department: '74' })
 		// Nothing of the refused save was kept: not the radius either.
-		expect(stocke.rayonKm).toBe(30)
+		expect(stocke.radiusKm).toBe(30)
 	})
 
 	test('la commune qu’elle a déjà ne demande rien à la liste : son rayon se change même en panne', async () => {
@@ -269,8 +269,8 @@ describe('le service des communes en panne : message clair, ancienne commune gar
 			valeurs: { codeInsee: '74010', libelle: 'Annecy (74)', rayonKm: 45, aDomicile: false },
 		})
 		const stocke = await profilStocke(payload, a)
-		expect(stocke.commune).toMatchObject({ nom: 'Annecy', codeInsee: '74010', departement: '74' })
-		expect(stocke.rayonKm).toBe(45)
+		expect(stocke.city).toMatchObject({ name: 'Annecy', inseeCode: '74010', department: '74' })
+		expect(stocke.radiusKm).toBe(45)
 	})
 })
 

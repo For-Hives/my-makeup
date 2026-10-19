@@ -62,7 +62,7 @@ afterAll(async () => {
 async function profils(overrideAccess = true) {
 	const payload = await payloadDeTest()
 	const { docs } = await payload.find({
-		collection: 'profils',
+		collection: 'profiles',
 		depth: 0,
 		pagination: false,
 		overrideAccess,
@@ -72,16 +72,14 @@ async function profils(overrideAccess = true) {
 	return docs
 }
 
-const communeDe = async (strapiId: number) => (await profils()).find(profil => profil.strapiId === strapiId)?.commune
+const communeDe = async (strapiId: number) => (await profils()).find(profil => profil.strapiId === strapiId)?.city
 
 describe('Commune simple, avec code postal, et adresse postale : la bonne commune', () => {
 	test('chaque ville devient sa commune, avec son code INSEE, son département et son centre à 1 km', async () => {
-		const annecy = { nom: 'Annecy', codeInsee: '74010', departement: '74', latitude: 45.9, longitude: 6.13 }
+		const annecy = { name: 'Annecy', inseeCode: '74010', department: '74', latitude: 45.9, longitude: 6.13 }
 
 		for (const id of [21, 22, 23, 30]) expect(await communeDe(id), String(id)).toEqual(annecy)
-		const codes = Object.fromEntries(
-			(await profils()).map(({ strapiId, commune }) => [strapiId, commune?.codeInsee ?? null])
-		)
+		const codes = Object.fromEntries((await profils()).map(({ strapiId, city }) => [strapiId, city?.inseeCode ?? null]))
 		expect(codes).toEqual({
 			21: '74010',
 			22: '74010',
@@ -97,25 +95,25 @@ describe('Commune simple, avec code postal, et adresse postale : la bonne commun
 			33: '44109',
 			34: '74012',
 		})
-		expect(await communeDe(25)).toMatchObject({ nom: 'Paris', departement: '75' })
+		expect(await communeDe(25)).toMatchObject({ name: 'Paris', department: '75' })
 	})
 
 	test('l’adresse postale n’est jamais importée : aucune rue dans aucun champ, public ou non ; le profil est signalé', async () => {
 		const tout = JSON.stringify(await profils())
 
 		for (const morceau of ['impasse', 'Pinceaux', '74000']) expect(tout).not.toContain(morceau)
-		expect(premier.collections.profils?.communes?.adresses).toEqual([23])
+		expect(premier.collections.profiles?.communes?.adresses).toEqual([23])
 		// The public reads the commune of a published profile, and no street.
 		const publics = await profils(false)
-		expect(publics.find(({ slug }) => slug === 'zoe-lefevre')?.commune).toMatchObject({
-			nom: 'Annecy',
-			codeInsee: '74010',
+		expect(publics.find(({ slug }) => slug === 'zoe-lefevre')?.city).toMatchObject({
+			name: 'Annecy',
+			inseeCode: '74010',
 		})
 		expect(JSON.stringify(publics)).not.toContain('Pinceaux')
 	})
 
 	test('la part des villes renseignées rattachées à une commune est donnée en nombres (cible 90 %)', () => {
-		expect(premier.collections.profils?.communes).toEqual({
+		expect(premier.collections.profiles?.communes).toEqual({
 			villesRenseignees: 11,
 			rattachees: 9,
 			part: 81.8,
@@ -126,15 +124,15 @@ describe('Commune simple, avec code postal, et adresse postale : la bonne commun
 			decidees: [],
 		})
 		expect(premier.ecarts['ville-en-commune']).toBe(11)
-		expect(premier.parite?.profils).toMatchObject({ attendus: 13, egaux: 13, differents: [] })
+		expect(premier.parite?.profiles).toMatchObject({ attendus: 13, egaux: 13, differents: [] })
 	})
 })
 
 describe('Cas ambigu : zone vide, profil « à revoir » ; avec sa ligne de décision, la commune choisie', () => {
 	test('sans décision : la zone reste vide, le profil part dans la liste de revue privée, avec ses communes possibles', async () => {
 		expect([await communeDe(26), await communeDe(28)]).toEqual([
-			{ nom: null, codeInsee: null, departement: null, latitude: null, longitude: null },
-			{ nom: null, codeInsee: null, departement: null, latitude: null, longitude: null },
+			{ name: null, inseeCode: null, department: null, latitude: null, longitude: null },
+			{ name: null, inseeCode: null, department: null, latitude: null, longitude: null },
 		])
 		expect(revue.map(({ profil, motif }) => [profil, motif])).toEqual([
 			[26, 'pas-une-commune'],
@@ -147,15 +145,15 @@ describe('Cas ambigu : zone vide, profil « à revoir » ; avec sa ligne de déc
 	test('avec sa ligne de décision : la commune choisie, ou aucune, et le profil n’est plus à revoir', async () => {
 		const rapport = await importerSurLeBanc('reel', { decisions: DECISIONS_DES_COMMUNES })
 
-		expect(rapport.collections.profils).toMatchObject({ crees: 0, modifies: 1 })
+		expect(rapport.collections.profiles).toMatchObject({ crees: 0, modifies: 1 })
 		expect(await communeDe(28)).toEqual({
-			nom: 'Saint-Julien',
-			codeInsee: '69215',
-			departement: '69',
+			name: 'Saint-Julien',
+			inseeCode: '69215',
+			department: '69',
 			latitude: 46.03,
 			longitude: 4.65,
 		})
-		expect(rapport.collections.profils?.communes).toMatchObject({
+		expect(rapport.collections.profiles?.communes).toMatchObject({
 			rattachees: 10,
 			part: 90.9,
 			aRevoir: [],
@@ -169,7 +167,7 @@ describe('Cas ambigu : zone vide, profil « à revoir » ; avec sa ligne de déc
 
 		const second = await importerSurLeBanc('reel', { decisions: DECISIONS_DES_COMMUNES })
 
-		expect(second.collections.profils).toMatchObject({ crees: 0, modifies: 0, refuses: [] })
+		expect(second.collections.profiles).toMatchObject({ crees: 0, modifies: 0, refuses: [] })
 		expect(await profils()).toEqual(avant)
 	})
 })
@@ -187,8 +185,8 @@ describe('Le référentiel simulé, et ses réponses gardées pour deux passages
 					? ['nom', parametres.get('nom')]
 					: ['codePostal', parametres.get('codePostal')]
 				return HttpResponse.json(
-					(reponses.get(`${genre}:${valeur}`) ?? []).map(({ departement, latitude, longitude, ...commune }) => ({
-						...commune,
+					(reponses.get(`${genre}:${valeur}`) ?? []).map(({ departement, latitude, longitude, ...city }) => ({
+						...city,
 						codeDepartement: departement,
 						centre: { type: 'Point', coordinates: [longitude, latitude] },
 					}))
@@ -210,8 +208,8 @@ describe('Le référentiel simulé, et ses réponses gardées pour deux passages
 		expect(demandes).toBe(8)
 		expect(garde.nouvelles()).toBe(8)
 		expect(journal).toHaveLength(demandes)
-		expect(deux.collections.profils).toEqual(un.collections.profils)
-		expect(un.collections.profils).toMatchObject({ crees: 0, modifies: 0 })
+		expect(deux.collections.profiles).toEqual(un.collections.profiles)
+		expect(un.collections.profiles).toMatchObject({ crees: 0, modifies: 0 })
 	})
 })
 

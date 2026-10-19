@@ -49,8 +49,7 @@ async function ligneDuCompte(id: number | string): Promise<Ligne> {
 }
 
 const rangees = async (code: string) =>
-	(await (await payloadDeTest()).find({ collection: 'auth-evenements', depth: 0, where: { code: { equals: code } } }))
-		.docs
+	(await (await payloadDeTest()).find({ collection: 'auth-events', depth: 0, where: { code: { equals: code } } })).docs
 
 describe('I15 : un compte migré (bcrypt) se connecte, son hash est remplacé, la seconde connexion est en pbkdf2', () => {
 	test('le mot de passe habituel ouvre le compte, une fois, puis le hash hérité n’existe plus', async () => {

@@ -18,15 +18,15 @@ afterAll(viderLaBase)
 async function ecrire(etatMail: EtatDuMail) {
 	const payload = await payloadDeTest()
 	return payload.create({
-		collection: 'demandes',
+		collection: 'contact-requests',
 		data: {
 			type: 'contact',
-			statut: 'nouvelle',
-			etatMail,
-			prenom: 'Léa',
-			nom: 'Témoin',
+			status: 'new',
+			mailStatus: etatMail,
+			firstName: 'Léa',
+			lastName: 'Témoin',
 			email: `reprise-${crypto.randomUUID()}@example.test`,
-			telephone: '01 99 00 12 34',
+			phone: '01 99 00 12 34',
 			message: 'Un message de test.',
 		},
 	})
@@ -34,8 +34,8 @@ async function ecrire(etatMail: EtatDuMail) {
 
 async function etatDe(id: number) {
 	const payload = await payloadDeTest()
-	const { etatMail, statut } = await payload.findByID({ collection: 'demandes', id, depth: 0 })
-	return { etatMail, statut }
+	const { mailStatus, status } = await payload.findByID({ collection: 'contact-requests', id, depth: 0 })
+	return { mailStatus, status }
 }
 
 const apres = (ms: number) => new Date(Date.now() + ms)
@@ -43,23 +43,23 @@ const apres = (ms: number) => new Date(Date.now() + ms)
 describe('la reprise des messages restés en cours d’envoi, sur une horloge simulée', () => {
 	test('avant le délai rien ne bouge ; après, seul « en cours d’envoi » passe en échec, le statut intact', async () => {
 		const payload = await payloadDeTest()
-		const bloque = await ecrire('en-attente')
-		const envoye = await ecrire('envoye')
-		const echoue = await ecrire('echec')
+		const bloque = await ecrire('pending')
+		const envoye = await ecrire('sent')
+		const echoue = await ecrire('failed')
 
 		const tot = await lancerLesTachesQuotidiennes(payload, apres(DELAI_DE_REPRISE_MS - 60_000), [
 			repriseDesMessagesBloques,
 		])
 		expect(tot).toEqual([{ nom: 'reprise-messages-contact-bloques', supprimes: 0 }])
-		expect(await etatDe(bloque.id)).toEqual({ etatMail: 'en-attente', statut: 'nouvelle' })
+		expect(await etatDe(bloque.id)).toEqual({ mailStatus: 'pending', status: 'new' })
 
 		const tard = await lancerLesTachesQuotidiennes(payload, apres(DELAI_DE_REPRISE_MS + 60_000), [
 			repriseDesMessagesBloques,
 		])
 		expect(tard).toEqual([{ nom: 'reprise-messages-contact-bloques', supprimes: 1 }])
-		expect(await etatDe(bloque.id)).toEqual({ etatMail: 'echec', statut: 'nouvelle' })
-		expect(await etatDe(envoye.id)).toEqual({ etatMail: 'envoye', statut: 'nouvelle' })
-		expect(await etatDe(echoue.id)).toEqual({ etatMail: 'echec', statut: 'nouvelle' })
+		expect(await etatDe(bloque.id)).toEqual({ mailStatus: 'failed', status: 'new' })
+		expect(await etatDe(envoye.id)).toEqual({ mailStatus: 'sent', status: 'new' })
+		expect(await etatDe(echoue.id)).toEqual({ mailStatus: 'failed', status: 'new' })
 
 		const encore = await lancerLesTachesQuotidiennes(payload, apres(DELAI_DE_REPRISE_MS + 120_000), [
 			repriseDesMessagesBloques,
@@ -69,7 +69,7 @@ describe('la reprise des messages restés en cours d’envoi, sur une horloge si
 
 	test('le message repris est renvoyable par l’admin, une fois', async () => {
 		const payload = await payloadDeTest()
-		const bloque = await ecrire('en-attente')
+		const bloque = await ecrire('pending')
 		await lancerLesTachesQuotidiennes(payload, apres(DELAI_DE_REPRISE_MS + 60_000), [repriseDesMessagesBloques])
 		const mails: string[] = []
 
@@ -83,18 +83,18 @@ describe('la reprise des messages restés en cours d’envoi, sur une horloge si
 
 		expect(rendu).toEqual({ ok: true, etatMail: 'envoye' })
 		expect(mails).toEqual(['equipe@example.test'])
-		expect(await etatDe(bloque.id)).toEqual({ etatMail: 'envoye', statut: 'transmise' })
+		expect(await etatDe(bloque.id)).toEqual({ mailStatus: 'sent', status: 'forwarded' })
 	})
 
 	test('pendant un import rien ne bouge', async () => {
 		const payload = await payloadDeTest()
-		const bloque = await ecrire('en-attente')
+		const bloque = await ecrire('pending')
 		const fin = marquerUnImportEnCours()
 		const pendant = await lancerLesTachesQuotidiennes(payload, apres(DELAI_DE_REPRISE_MS + 60_000), [
 			repriseDesMessagesBloques,
 		])
 		fin()
 		expect(pendant).toEqual([{ nom: 'reprise-messages-contact-bloques', supprimes: 0 }])
-		expect(await etatDe(bloque.id)).toEqual({ etatMail: 'en-attente', statut: 'nouvelle' })
+		expect(await etatDe(bloque.id)).toEqual({ mailStatus: 'pending', status: 'new' })
 	})
 })

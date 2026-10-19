@@ -8,7 +8,7 @@ import { estUnSlug, SLUG_MAX, slugifier } from '../lib/slug'
  * The rules of writing of the newsroom, shared by its collections: the talents (ticket 022), then
  * the articles (ticket 046), which take the same ones.
  *
- * - The newsroom (`admin` and `redaction`) creates, changes, publishes, unpublishes and deletes,
+ * - The newsroom (`admin` and `editor`) creates, changes, publishes, unpublishes and deletes,
  *   and reads every document, drafts and versions included.
  * - Everyone else, a makeup artist as an anonymous visitor, reads the published documents only.
  * - A document is a draft or published (`_status`); its slug, typed by the newsroom, is unique.

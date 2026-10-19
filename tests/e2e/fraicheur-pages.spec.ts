@@ -48,7 +48,7 @@ async function poserUnProfil(): Promise<ProfilDeFraicheur> {
 		...MODELE,
 		cle: `essai-fraicheur-${suffixe}`,
 		compte: { email: `essai-fraicheur-${suffixe}@example.test`, nom: `Essai ${mot}` },
-		profil: { ...MODELE.profil, prenom: 'Essai', nom: mot, nomArtiste: `Essai ${mot} Maquillage` },
+		profil: { ...MODELE.profil, firstName: 'Essai', lastName: mot, artistName: `Essai ${mot} Maquillage` },
 		photos: { principale: MODELE.photos.principale, galerie: [] },
 	}
 	const pose = await poserLeProfil(await payloadDeTest(), type, lirePhotoDuJeu, false)
@@ -58,14 +58,14 @@ async function poserUnProfil(): Promise<ProfilDeFraicheur> {
 
 /** Takes the profile away through the application, and its photo: the lists forget it at once. */
 async function retirerLeProfil(request: APIRequestContext, profil: ProfilDeFraicheur): Promise<void> {
-	await request.delete(`/api/profils/${profil.id}`, { headers: profil.entetes })
+	await request.delete(`/api/profiles/${profil.id}`, { headers: profil.entetes })
 	await request.delete(`/api/pros/${profil.pro}`, { headers: profil.entetes })
 	const payload = await payloadDeTest()
 	await payload.delete({ collection: 'media', where: { owner: { equals: profil.pro } } }).catch(() => undefined)
 }
 
 async function enregistrer(request: APIRequestContext, profil: ProfilDeFraicheur, data: Record<string, unknown>) {
-	const reponse = await request.patch(`/api/profils/${profil.id}`, { headers: profil.entetes, data })
+	const reponse = await request.patch(`/api/profiles/${profil.id}`, { headers: profil.entetes, data })
 	if (!reponse.ok()) throw new Error(`L’enregistrement a répondu ${reponse.status()} : ${await reponse.text()}`)
 }
 
@@ -130,7 +130,7 @@ test.describe('Fraîcheur des pages publiques (117)', () => {
 			await expect.poll(() => dansLePlan(request, profil.slug), { timeout: UNE_MINUTE }).toBe(true)
 			expect((await lirePage(request, profil.slug)).statut).toBe(200)
 
-			await enregistrer(request, profil, { statutChoisi: 'masque' })
+			await enregistrer(request, profil, { chosenStatus: 'hidden' })
 
 			await expect.poll(async () => (await lirePage(request, profil.slug)).statut, { timeout: UNE_MINUTE }).toBe(404)
 			await expect.poll(() => dansLaRecherche(request, profil.mot, profil.slug), { timeout: UNE_MINUTE }).toBe(false)
@@ -175,9 +175,9 @@ test.describe('Fraîcheur des pages publiques (117)', () => {
 			// again would show it.
 			const payload = await payloadDeTest()
 			const silencieux = `Description écrite en coulisse ${profil.mot}, que la base a et que la page ne doit pas montrer.`
-			await payload.update({ collection: 'profils', id: profil.id, data: { description: silencieux }, depth: 0 })
+			await payload.update({ collection: 'profiles', id: profil.id, data: { description: silencieux }, depth: 0 })
 			const enBase = await payload.findByID({
-				collection: 'profils',
+				collection: 'profiles',
 				id: profil.id,
 				depth: 0,
 				select: { description: true },
@@ -191,7 +191,7 @@ test.describe('Fraîcheur des pages publiques (117)', () => {
 			}
 
 			// A save through the application refreshes it: the database is read again, and says what it holds.
-			await enregistrer(request, profil, { specialite: 'Maquillage artistique' })
+			await enregistrer(request, profil, { specialty: 'Maquillage artistique' })
 			await expect
 				.poll(async () => (await lirePage(request, profil.slug)).html.includes('Description écrite en coulisse'), {
 					timeout: UNE_MINUTE,
