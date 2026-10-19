@@ -119,11 +119,11 @@ describe('127, 128 : les puces d’une liste stockée', () => {
 	test('une ligne sans nom ou sans identifiant ne fait pas de puce', () => {
 		expect(
 			pucesDeLaListe([
-				{ id: 'a', nom: 'Anglais' },
-				{ id: 'b', nom: '  ' },
+				{ id: 'a', name: 'Anglais' },
+				{ id: 'b', name: '  ' },
 				{ id: 'c' },
-				{ nom: 'Sans id' },
-				{ id: 'd', nom: null },
+				{ name: 'Sans id' },
+				{ id: 'd', name: null },
 			])
 		).toEqual([{ id: 'a', nom: 'Anglais' }])
 		expect(pucesDeLaListe(null)).toEqual([])
@@ -132,8 +132,8 @@ describe('127, 128 : les puces d’une liste stockée', () => {
 	test('deux puces de même nom gardent chacune la leur', () => {
 		expect(
 			pucesDeLaListe([
-				{ id: 'a', nom: 'Anglais' },
-				{ id: 'b', nom: 'Anglais' },
+				{ id: 'a', name: 'Anglais' },
+				{ id: 'b', name: 'Anglais' },
 			])
 		).toEqual([
 			{ id: 'a', nom: 'Anglais' },

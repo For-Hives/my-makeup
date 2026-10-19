@@ -123,7 +123,7 @@ describe('Les 12 profils types du plan 02 §6', () => {
 		expect(reference.consentedAt).toBe(CONSENTEMENT_DU_JEU)
 		expect(reference.consentSource).toBe('artist')
 		expect(type('reference').photos.galerie).toHaveLength(6)
-		expect(reference.prestations?.filter(({ prixAPartirDe }) => typeof prixAPartirDe === 'number')).toHaveLength(3)
+		expect(reference.serviceOffers?.filter(({ priceFrom }) => typeof priceFrom === 'number')).toHaveLength(3)
 		for (const { profil } of PROFILS_DU_JEU) {
 			const telephone = profil.contactDetails?.phone
 			if (telephone) expect(telephone).toMatch(/^(?:0|\+33 \(0\))6 39 98 /)
@@ -161,11 +161,11 @@ describe('Les 12 profils types du plan 02 §6', () => {
 			expect({ nom, longueur: profil[nom]?.length }).toEqual({ nom, longueur: borne(nom) })
 		expect(profil.radiusKm).toBe(BORNES_DU_RAYON_KM.max)
 		expect(photos.galerie).toHaveLength(GALERIE_MAX)
-		for (const prestation of profil.prestations ?? []) {
-			expect([prestation.nom?.length, prestation.prixTexte?.length]).toEqual([LONGUEUR_NOM, LONGUEUR_NOM])
+		for (const prestation of profil.serviceOffers ?? []) {
+			expect([prestation.name?.length, prestation.priceText?.length]).toEqual([LONGUEUR_NOM, LONGUEUR_NOM])
 			expect(prestation.description?.length).toBe(LONGUEUR_DESCRIPTION)
 			for (const option of prestation.options ?? [])
-				expect([option.nom?.length, option.prixTexte?.length, option.description?.length]).toEqual([
+				expect([option.name?.length, option.priceText?.length, option.description?.length]).toEqual([
 					LONGUEUR_NOM,
 					LONGUEUR_NOM,
 					LONGUEUR_DESCRIPTION,

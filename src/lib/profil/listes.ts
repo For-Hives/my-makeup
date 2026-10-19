@@ -23,10 +23,10 @@ export const LONGUEUR_DESCRIPTION = 2000
  * nesting exists: the options of an offer.
  */
 export const LISTES_DU_PROFIL = {
-	prestations: ['options'],
-	competences: [],
-	langues: [],
-	formations: [],
+	serviceOffers: ['options'],
+	skills: [],
+	languages: [],
+	courses: [],
 	experiences: [],
 } as const satisfies Readonly<Record<string, readonly string[]>>
 
@@ -193,9 +193,9 @@ export function dernierJourDObtention(maintenant: Date): string {
  * Null when the date a course was obtained is absent, or one year from `maintenant` at the latest
  * (plans/02 U30), else the refusal. A course to come may be listed, not one invented far ahead.
  */
-export function messageDObtention(obtenuLe: unknown, maintenant: Date): string | null {
-	const pasUneDate = messageDeDate(obtenuLe)
+export function messageDObtention(graduatedAt: unknown, maintenant: Date): string | null {
+	const pasUneDate = messageDeDate(graduatedAt)
 	if (pasUneDate !== null) return pasUneDate
-	const jour = jourCalendaire(obtenuLe)
+	const jour = jourCalendaire(graduatedAt)
 	return jour !== null && jour > dernierJourDObtention(maintenant) ? MESSAGES.obtentionTropLointaine : null
 }

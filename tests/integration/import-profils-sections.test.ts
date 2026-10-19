@@ -68,32 +68,32 @@ const jour = (date: unknown) => (date === null ? null : `${String(date)}T12:00:0
 /** What each list of a profile must hold, row by row, without the identifiers Payload gives. */
 function listesAttendues(id: number) {
 	return {
-		competences: deProfil(id, lignes.components_makeupartists_skills, 'makeupartists.skills', 'skills').map(c => ({
-			nom: c.name,
+		skills: deProfil(id, lignes.components_makeupartists_skills, 'makeupartists.skills', 'skills').map(c => ({
+			name: c.name,
 			description: c.description,
 		})),
-		langues: deProfil(id, lignes.components_makeupartists_languages, 'makeupartists.language', 'language').map(c => ({
-			nom: c.name,
+		languages: deProfil(id, lignes.components_makeupartists_languages, 'makeupartists.language', 'language').map(c => ({
+			name: c.name,
 		})),
-		formations: deProfil(id, lignes.components_makeupartists_courses, 'makeupartists.courses', 'courses')
+		courses: deProfil(id, lignes.components_makeupartists_courses, 'makeupartists.courses', 'courses')
 			.filter(sauf(HORS_BORNES.formations))
 			.map(c => ({
-				diplome: c.diploma,
-				ecole: c.school,
-				obtenuLe: jour(c.date_graduation),
+				diploma: c.diploma,
+				school: c.school,
+				graduatedAt: jour(c.date_graduation),
 				description: c.course_description,
 			})),
 		experiences: deProfil(id, lignes.components_makeupartists_experiences, 'makeupartists.experiences', 'experiences')
 			.filter(sauf(HORS_BORNES.experiences))
 			.map(c => ({
-				entreprise: c.company,
-				poste: c.job_name,
-				ville: c.city,
-				debut: jour(c.date_start),
-				fin: jour(c.date_end),
+				company: c.company,
+				jobTitle: c.job_name,
+				city: c.city,
+				startDate: jour(c.date_start),
+				endDate: jour(c.date_end),
 				description: c.description,
 			})),
-		prestations: deProfil(
+		serviceOffers: deProfil(
 			id,
 			lignes.components_makeupartists_service_offers,
 			'makeupartists.service-offers',
@@ -101,10 +101,10 @@ function listesAttendues(id: number) {
 		)
 			.filter(sauf(HORS_BORNES.prestations))
 			.map(offre => ({
-				nom: offre.name,
+				name: offre.name,
 				description: offre.description,
-				prixTexte: offre.price,
-				prixAPartirDe: parsePrice(offre.price).prixAPartirDe,
+				priceText: offre.price,
+				priceFrom: parsePrice(offre.price).priceFrom,
 				options: lignesDe(
 					lignes.components_makeupartists_service_offers_components,
 					lignes.components_service_offers_options,
@@ -114,10 +114,10 @@ function listesAttendues(id: number) {
 				)
 					.filter(sauf(HORS_BORNES.options))
 					.map(option => ({
-						nom: option.name,
+						name: option.name,
 						description: option.description,
-						prixTexte: option.price,
-						prixAPartirDe: parsePrice(option.price).prixAPartirDe,
+						priceText: option.price,
+						priceFrom: parsePrice(option.price).priceFrom,
 					})),
 			})),
 	}
@@ -139,11 +139,11 @@ const sansIdentifiants = (valeur: unknown): unknown =>
 const identifiantsDesLignes = (profils: Profile[]): string[] =>
 	profils.flatMap(profil =>
 		[
-			...(profil.competences ?? []),
-			...(profil.langues ?? []),
-			...(profil.formations ?? []),
+			...(profil.skills ?? []),
+			...(profil.languages ?? []),
+			...(profil.courses ?? []),
 			...(profil.experiences ?? []),
-			...(profil.prestations ?? []).flatMap(offre => [offre, ...(offre.options ?? [])]),
+			...(profil.serviceOffers ?? []).flatMap(offre => [offre, ...(offre.options ?? [])]),
 		].map(ligne => `${profil.strapiId}:${ligne.id}`)
 	)
 
@@ -200,11 +200,11 @@ describe('Les sections de chaque profil sont reprises dans leur ordre (ticket 06
 			const attendues = listesAttendues(Number(profil.strapiId))
 			expect(
 				sansIdentifiants({
-					competences: profil.competences,
-					langues: profil.langues,
-					formations: profil.formations,
+					skills: profil.skills,
+					languages: profil.languages,
+					courses: profil.courses,
 					experiences: profil.experiences,
-					prestations: profil.prestations,
+					serviceOffers: profil.serviceOffers,
 				}),
 				String(profil.strapiId)
 			).toEqual(attendues)
@@ -217,22 +217,22 @@ describe('Les sections de chaque profil sont reprises dans leur ordre (ticket 06
 		const zoe = (await profilsDeLaCible()).find(({ strapiId }) => strapiId === 21)
 
 		// The links of these skills are written backwards: their `order` says 1, 2, 3.
-		expect(zoe?.competences?.map(({ nom }) => nom)).toEqual(['Maquillage mariée', 'Coiffure', 'Maquillage mariée'])
-		expect(zoe?.prestations?.[0]?.options?.map(({ nom }) => nom)).toEqual([
+		expect(zoe?.skills?.map(({ name }) => name)).toEqual(['Maquillage mariée', 'Coiffure', 'Maquillage mariée'])
+		expect(zoe?.serviceOffers?.[0]?.options?.map(({ name }) => name)).toEqual([
 			'Retouche en journée',
 			'Maquillage d’une demoiselle d’honneur',
 		])
-		expect(zoe?.experiences?.map(({ debut, fin }) => [debut, fin])).toEqual([
+		expect(zoe?.experiences?.map(({ startDate, endDate }) => [startDate, endDate])).toEqual([
 			['2019-09-01T12:00:00.000Z', '2022-06-30T12:00:00.000Z'],
 			['2022-09-01T12:00:00.000Z', null],
 		])
 		// A row no link names belongs to no profile: skill 6, language 4, offer 11.
 		const cible = await profilsDeLaCible()
-		const noms = (liste: (p: Profile) => { nom?: string | null }[] | null | undefined) =>
-			cible.flatMap(profil => (liste(profil) ?? []).map(({ nom }) => nom))
-		expect(noms(p => p.competences)).not.toContain('Maquillage invitée')
-		expect(noms(p => p.langues)).not.toContain('Italien')
-		expect(noms(p => p.prestations)).not.toContain('Maquillage soirée')
+		const noms = (liste: (p: Profile) => { name?: string | null }[] | null | undefined) =>
+			cible.flatMap(profil => (liste(profil) ?? []).map(({ name }) => name))
+		expect(noms(p => p.skills)).not.toContain('Maquillage invitée')
+		expect(noms(p => p.languages)).not.toContain('Italien')
+		expect(noms(p => p.serviceOffers)).not.toContain('Maquillage soirée')
 	})
 
 	test('le texte de prix est la saisie, à l’octet près ; le montant est lu par la règle unique (062)', async () => {
@@ -241,50 +241,52 @@ describe('Les sections de chaque profil sont reprises dans leur ordre (ticket 06
 			...lignes.components_service_offers_options.filter(sauf(HORS_BORNES.options)),
 		].map(({ price }) => price)
 		const prixDeLaCible = (await profilsDeLaCible())
-			.flatMap(({ prestations }) => prestations ?? [])
+			.flatMap(({ serviceOffers }) => serviceOffers ?? [])
 			.flatMap(offre => [offre, ...(offre.options ?? [])])
 
-		expect(prixDeLaCible.map(({ prixTexte }) => prixTexte).sort()).toEqual(
+		expect(prixDeLaCible.map(({ priceText }) => priceText).sort()).toEqual(
 			[...prixDeLaSource].sort() as (string | null)[]
 		)
-		for (const { prixTexte } of prixDeLaCible)
-			if (typeof prixTexte === 'string') expect(prixDeLaSource.some(prix => prix === prixTexte)).toBe(true)
+		for (const { priceText } of prixDeLaCible)
+			if (typeof priceText === 'string') expect(prixDeLaSource.some(prix => prix === priceText)).toBe(true)
 		const encode = (texte: unknown) => [...new TextEncoder().encode(String(texte))]
 		const kaci = (await profilsDeLaCible()).find(({ strapiId }) => strapiId === 25)
 		// A null price stays null, an empty one stays empty (rule 2).
-		expect(kaci?.prestations?.map(({ prixTexte }) => prixTexte)).toEqual([null, ''])
+		expect(kaci?.serviceOffers?.map(({ priceText }) => priceText)).toEqual([null, ''])
 		const zoe = (await profilsDeLaCible()).find(({ strapiId }) => strapiId === 21)
-		expect(encode(zoe?.prestations?.[0]?.prixTexte)).toEqual(encode('à partir de 120 €'))
+		expect(encode(zoe?.serviceOffers?.[0]?.priceText)).toEqual(encode('à partir de 120 €'))
 		// 062: the amount is there when the text reads, empty otherwise (the text stays either way).
-		for (const { prixTexte, prixAPartirDe } of prixDeLaCible)
-			expect(prixAPartirDe ?? null, String(prixTexte)).toBe(parsePrice(prixTexte).prixAPartirDe)
-		expect(zoe?.prestations?.map(({ prixAPartirDe }) => prixAPartirDe)).toEqual([120, 80, null])
-		expect(zoe?.prestations?.[0]?.options?.map(({ prixAPartirDe }) => prixAPartirDe)).toEqual([15, null])
+		for (const { priceText, priceFrom } of prixDeLaCible)
+			expect(priceFrom ?? null, String(priceText)).toBe(parsePrice(priceText).priceFrom)
+		expect(zoe?.serviceOffers?.map(({ priceFrom }) => priceFrom)).toEqual([120, 80, null])
+		expect(zoe?.serviceOffers?.[0]?.options?.map(({ priceFrom }) => priceFrom)).toEqual([15, null])
 		// A free text keeps its text and has no amount; digits the rule does not read stay readable.
-		const libres = prixDeLaCible.filter(({ prixAPartirDe }) => prixAPartirDe === null)
-		expect(libres.map(({ prixTexte }) => prixTexte)).toContain('Sur devis')
-		expect(libres.map(({ prixTexte }) => prixTexte)).toContain('2 h : 150 €')
+		const libres = prixDeLaCible.filter(({ priceFrom }) => priceFrom === null)
+		expect(libres.map(({ priceText }) => priceText)).toContain('Sur devis')
+		expect(libres.map(({ priceText }) => priceText)).toContain('2 h : 150 €')
 	})
 
 	test('aucun profil ne perd son offre chiffrée, et le rapport le dit en nombres (062)', async () => {
 		const cible = await profilsDeLaCible()
 		for (const profil of cible) {
-			const offres = listesAttendues(Number(profil.strapiId)).prestations
-			const chiffreeALaSource = offres.some(({ prixAPartirDe }) => prixAPartirDe !== null)
-			expect(prixMinimal(profil.prestations) !== null, String(profil.strapiId)).toBe(chiffreeALaSource)
+			const offres = listesAttendues(Number(profil.strapiId)).serviceOffers
+			const chiffreeALaSource = offres.some(({ priceFrom }) => priceFrom !== null)
+			expect(prixMinimal(profil.serviceOffers) !== null, String(profil.strapiId)).toBe(chiffreeALaSource)
 		}
 		const { prix } = premier.collections.profiles ?? {}
-		const lignesDePrix = cible.flatMap(({ prestations }) => (prestations ?? []).flatMap(o => [o, ...(o.options ?? [])]))
+		const lignesDePrix = cible.flatMap(({ serviceOffers }) =>
+			(serviceOffers ?? []).flatMap(o => [o, ...(o.options ?? [])])
+		)
 		expect(prix).toMatchObject({
 			prix: lignesDePrix.length,
-			avecMontant: lignesDePrix.filter(({ prixAPartirDe }) => prixAPartirDe !== null).length,
+			avecMontant: lignesDePrix.filter(({ priceFrom }) => priceFrom !== null).length,
 			offresChiffreesPerdues: [],
 		})
 		// Profile 23 (60 is read) is no écart; 22 (an option at 0,50 € / km, under 5 €) and 24 (« 2 h : 150 € ») are listed.
 		expect(prix?.chiffresNonLus).toEqual([22, 24])
 		expect(premier.ecarts['prix-numerique']).toBe(
-			cible.filter(({ prestations }) =>
-				(prestations ?? []).some(o => [o, ...(o.options ?? [])].some(({ prixAPartirDe }) => prixAPartirDe !== null))
+			cible.filter(({ serviceOffers }) =>
+				(serviceOffers ?? []).some(o => [o, ...(o.options ?? [])].some(({ priceFrom }) => priceFrom !== null))
 			).length
 		)
 		expect(JSON.stringify(premier)).not.toContain('Sur devis')
@@ -314,9 +316,9 @@ describe('Une ligne hors d’une borne de la v3 et un rayon au-dessus de 200 km 
 		const hugo = (await profilsDeLaCible()).find(({ strapiId }) => strapiId === 33)
 
 		expect(hugo?.experiences ?? []).toEqual([])
-		expect(hugo?.formations ?? []).toEqual([])
+		expect(hugo?.courses ?? []).toEqual([])
 		// The offer 12 is out (its description), the offer 10 stays, and loses its option (its name).
-		expect(hugo?.prestations?.map(({ nom, options }) => [nom, options?.length ?? 0])).toEqual([
+		expect(hugo?.serviceOffers?.map(({ name, options }) => [name, options?.length ?? 0])).toEqual([
 			['Cours particulier', 0],
 		])
 		expect(hugo?.status).toBe('published')

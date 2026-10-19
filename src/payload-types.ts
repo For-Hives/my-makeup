@@ -291,59 +291,59 @@ export interface Profile {
    * Posée par le serveur, avec la date.
    */
   consentSource?: ('artist' | 'admin' | 'import') | null;
-  prestations?:
+  serviceOffers?:
     | {
-        nom?: string | null;
+        name?: string | null;
         description?: string | null;
-        prixTexte?: string | null;
+        priceText?: string | null;
         /**
          * De 5 à 10 000 €. Vide quand le prix saisi n’a pas de montant (« Sur devis »).
          */
-        prixAPartirDe?: number | null;
+        priceFrom?: number | null;
         options?:
           | {
-              nom?: string | null;
+              name?: string | null;
               description?: string | null;
-              prixTexte?: string | null;
+              priceText?: string | null;
               /**
                * De 5 à 10 000 €. Vide quand le prix saisi n’a pas de montant (« Sur devis »).
                */
-              prixAPartirDe?: number | null;
+              priceFrom?: number | null;
               id?: string | null;
             }[]
           | null;
         id?: string | null;
       }[]
     | null;
-  competences?:
+  skills?:
     | {
-        nom?: string | null;
+        name?: string | null;
         description?: string | null;
         id?: string | null;
       }[]
     | null;
-  langues?:
+  languages?:
     | {
-        nom?: string | null;
+        name?: string | null;
         id?: string | null;
       }[]
     | null;
-  formations?:
+  courses?:
     | {
-        diplome?: string | null;
-        ecole?: string | null;
-        obtenuLe?: string | null;
+        diploma?: string | null;
+        school?: string | null;
+        graduatedAt?: string | null;
         description?: string | null;
         id?: string | null;
       }[]
     | null;
   experiences?:
     | {
-        entreprise?: string | null;
-        poste?: string | null;
-        ville?: string | null;
-        debut?: string | null;
-        fin?: string | null;
+        company?: string | null;
+        jobTitle?: string | null;
+        city?: string | null;
+        startDate?: string | null;
+        endDate?: string | null;
         description?: string | null;
         id?: string | null;
       }[]
@@ -824,54 +824,54 @@ export interface ProfilesSelect<T extends boolean = true> {
   publicContact?: T;
   consentedAt?: T;
   consentSource?: T;
-  prestations?:
+  serviceOffers?:
     | T
     | {
-        nom?: T;
+        name?: T;
         description?: T;
-        prixTexte?: T;
-        prixAPartirDe?: T;
+        priceText?: T;
+        priceFrom?: T;
         options?:
           | T
           | {
-              nom?: T;
+              name?: T;
               description?: T;
-              prixTexte?: T;
-              prixAPartirDe?: T;
+              priceText?: T;
+              priceFrom?: T;
               id?: T;
             };
         id?: T;
       };
-  competences?:
+  skills?:
     | T
     | {
-        nom?: T;
+        name?: T;
         description?: T;
         id?: T;
       };
-  langues?:
+  languages?:
     | T
     | {
-        nom?: T;
+        name?: T;
         id?: T;
       };
-  formations?:
+  courses?:
     | T
     | {
-        diplome?: T;
-        ecole?: T;
-        obtenuLe?: T;
+        diploma?: T;
+        school?: T;
+        graduatedAt?: T;
         description?: T;
         id?: T;
       };
   experiences?:
     | T
     | {
-        entreprise?: T;
-        poste?: T;
-        ville?: T;
-        debut?: T;
-        fin?: T;
+        company?: T;
+        jobTitle?: T;
+        city?: T;
+        startDate?: T;
+        endDate?: T;
         description?: T;
         id?: T;
       };

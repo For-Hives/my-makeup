@@ -150,16 +150,16 @@ Table `makeup_artistes`, 101 lignes, sans brouillon dans Strapi : 88 profils à 
 | `action_radius` | `integer`, 0 à 2 147 483 647 | `profiles.radiusKm` (`number`, 0 à 200) | Repris tel quel de 0 à 200. L'ancien site accepte jusqu'à 1 000 km : une valeur au-dessus de 200 est comptée et listée (règle 5), jamais ramenée à 200 en silence : le champ reste vide, le profil est repris, le rapport donne son identifiant et la valeur (ticket 226, registre `rayon-200-km`). |
 | `score` | `decimal` | `profiles.score` (`number`, réservé à l'admin) | Repris tel quel. Jamais dans une lecture publique. Ce n'est pas la complétude, qui est calculée (§9). |
 | `available` | `boolean` | `profiles.available` (`checkbox`) | Transformé (plan `01` §6.2) : vrai et faux repris tels quels, **nul devient vrai** (48 profils). Seule exception à la règle 2. |
-| `skills` | `component` répétable `makeupartists.skills` | `profiles.competences` (`array`) | Lignes du §6.1, dans l'ordre. |
+| `skills` | `component` répétable `makeupartists.skills` | `profiles.skills` (`array`) | Lignes du §6.1, dans l'ordre. |
 | `description` | `text`, 2 000 caractères au plus | `profiles.description` (`textarea`, 2 000 au plus) | Repris tel quel. |
 | `network` | `component` simple `makeupartists.network` | `profiles.networks` et `profiles.contactDetails` (groupes) | Champs du §6.5 : les réseaux d'un côté, le téléphone et l'email de contact de l'autre, fermés au public. |
 | `user` | `relation` un-à-un vers `plugin::users-permissions.user` | `profiles.pro` (`relationship` vers `pros`, unique, requis) | Lu dans `makeup_artistes_user_links` (88 liens) : le profil est relié au compte de même `strapiId`. Profil sans compte : écarté s'il est dans la liste du §4.1, sinon l'import s'arrête. |
 | `experiences` | `component` répétable `makeupartists.experiences` | `profiles.experiences` (`array`) | Lignes du §6.2, dans l'ordre. |
-| `courses` | `component` répétable `makeupartists.courses` | `profiles.formations` (`array`) | Lignes du §6.3, dans l'ordre. |
-| `service_offers` | `component` répétable `makeupartists.service-offers` | `profiles.prestations` (`array`) | Lignes du §6.6, dans l'ordre, avec leurs options (§6.7). |
+| `courses` | `component` répétable `makeupartists.courses` | `profiles.courses` (`array`) | Lignes du §6.3, dans l'ordre. |
+| `service_offers` | `component` répétable `makeupartists.service-offers` | `profiles.serviceOffers` (`array`) | Lignes du §6.6, dans l'ordre, avec leurs options (§6.7). |
 | `image_gallery` | `media` multiple, images | `profiles.gallery` (`upload` vers `media`, plusieurs, 10 au plus) | Fichiers et ordre lus dans `files_related_morphs`. Une photo dont le média n'est pas adopté est signalée, pas inventée. Une galerie de plus de 10 photos est comptée et listée (règle 5). |
 | `main_picture` | `media` simple, images | `profiles.mainPicture` (`upload` vers `media`) | Fichier lu dans `files_related_morphs`. Une photo dont le média n'est pas adopté est signalée, pas inventée. 49 profils en ont une ; l'objet de l'une d'elles manque dans le stockage (§4.3). |
-| `language` | `component` répétable `makeupartists.language` | `profiles.langues` (`array`) | Lignes du §6.4, dans l'ordre. |
+| `language` | `component` répétable `makeupartists.language` | `profiles.languages` (`array`) | Lignes du §6.4, dans l'ordre. |
 | `username` | `string`, 70 caractères au plus | `profiles.legacyUsername` (`text`, lecture seule) et `profiles.slug` (`text`, unique) | `legacyUsername` : repris tel quel, il sert la redirection 308 de l'ancienne adresse. `slug` : calculé par la règle portée de l'ancien site (`src/lib/slug.ts`, ticket 016), suffixes `-2`, `-3` en cas de collision. |
 | `pro` | `boolean`, faux par défaut | `profiles.superArtist` (`checkbox`, réservé à l'admin) | Repris tel quel : 1 vrai, 100 faux. C'est le badge « Super maquilleuse » des cartes de la recherche. À ne pas confondre avec `profiles.pro`, le compte propriétaire. Défaut pris ici, en attente de la question ouverte 14 (§11). |
 | `company_artist_name` | `string`, 70 caractères au plus | `profiles.artistName` (`text`) | Repris tel quel. |
@@ -198,14 +198,14 @@ Un champ de plus, qui n'existe pas dans Strapi (ticket 108) : `talents.pageTitle
 
 Chaque composant répétable devient un champ `array` du profil. L'identifiant d'une ligne de composant n'est pas repris (§7).
 
-### 6.1 Compétence : `makeupartists.skills` → `profiles.competences`
+### 6.1 Compétence : `makeupartists.skills` → `profiles.skills`
 
 Table `components_makeupartists_skills`, 200 lignes.
 
 | Attribut Strapi | Type Strapi | Champ Payload | Règle |
 |---|---|---|---|
-| `name` | `string`, 70 caractères au plus | `profiles.competences.nom` (`text`) | Repris tel quel. |
-| `description` | `text`, 2 000 caractères au plus | `profiles.competences.description` (`textarea`) | Repris tel quel. |
+| `name` | `string`, 70 caractères au plus | `profiles.skills.name` (`text`) | Repris tel quel. |
+| `description` | `text`, 2 000 caractères au plus | `profiles.skills.description` (`textarea`) | Repris tel quel. |
 
 ### 6.2 Expérience : `makeupartists.experiences` → `profiles.experiences`
 
@@ -213,31 +213,31 @@ Table `components_makeupartists_experiences`, 57 lignes.
 
 | Attribut Strapi | Type Strapi | Champ Payload | Règle |
 |---|---|---|---|
-| `company` | `string`, 70 caractères au plus | `profiles.experiences.entreprise` (`text`) | Repris tel quel. |
-| `job_name` | `string`, 70 caractères au plus | `profiles.experiences.poste` (`text`) | Repris tel quel. |
-| `city` | `string`, 70 caractères au plus | `profiles.experiences.ville` (`text`) | Repris tel quel. C'est la ville d'un ancien poste, en texte libre : elle ne passe pas par le référentiel des communes. |
-| `date_start` | `date` | `profiles.experiences.debut` (`date`) | Repris tel quel : une date sans heure, qui reste au même jour quel que soit le fuseau. |
-| `date_end` | `date` | `profiles.experiences.fin` (`date`) | Même règle. Une fin antérieure au début est listée (règle 5), pas corrigée : le serveur refuserait le profil entier, donc la ligne est laissée de côté et listée par profil et par rang, le reste du profil est repris (ticket 226, §11). |
+| `company` | `string`, 70 caractères au plus | `profiles.experiences.company` (`text`) | Repris tel quel. |
+| `job_name` | `string`, 70 caractères au plus | `profiles.experiences.jobTitle` (`text`) | Repris tel quel. |
+| `city` | `string`, 70 caractères au plus | `profiles.experiences.city` (`text`) | Repris tel quel. C'est la ville d'un ancien poste, en texte libre : elle ne passe pas par le référentiel des communes. |
+| `date_start` | `date` | `profiles.experiences.startDate` (`date`) | Repris tel quel : une date sans heure, qui reste au même jour quel que soit le fuseau. |
+| `date_end` | `date` | `profiles.experiences.endDate` (`date`) | Même règle. Une fin antérieure au début est listée (règle 5), pas corrigée : le serveur refuserait le profil entier, donc la ligne est laissée de côté et listée par profil et par rang, le reste du profil est repris (ticket 226, §11). |
 | `description` | `text`, 2 000 caractères au plus | `profiles.experiences.description` (`textarea`) | Repris tel quel. |
 
-### 6.3 Formation : `makeupartists.courses` → `profiles.formations`
+### 6.3 Formation : `makeupartists.courses` → `profiles.courses`
 
 Table `components_makeupartists_courses`, 47 lignes.
 
 | Attribut Strapi | Type Strapi | Champ Payload | Règle |
 |---|---|---|---|
-| `diploma` | `string`, 70 caractères au plus | `profiles.formations.diplome` (`text`) | Repris tel quel. |
-| `school` | `string`, 70 caractères au plus | `profiles.formations.ecole` (`text`) | Repris tel quel. |
-| `date_graduation` | `date` | `profiles.formations.obtenuLe` (`date`) | Repris tel quel : une date sans heure, qui reste au même jour. Le serveur refuse une date de plus d'un an après le jour de l'enregistrement : cette ligne est laissée de côté et listée par profil et par rang, le reste du profil est repris (ticket 226, §11). |
-| `course_description` | `text`, 2 000 caractères au plus | `profiles.formations.description` (`textarea`) | Repris tel quel. |
+| `diploma` | `string`, 70 caractères au plus | `profiles.courses.diploma` (`text`) | Repris tel quel. |
+| `school` | `string`, 70 caractères au plus | `profiles.courses.school` (`text`) | Repris tel quel. |
+| `date_graduation` | `date` | `profiles.courses.graduatedAt` (`date`) | Repris tel quel : une date sans heure, qui reste au même jour. Le serveur refuse une date de plus d'un an après le jour de l'enregistrement : cette ligne est laissée de côté et listée par profil et par rang, le reste du profil est repris (ticket 226, §11). |
+| `course_description` | `text`, 2 000 caractères au plus | `profiles.courses.description` (`textarea`) | Repris tel quel. |
 
-### 6.4 Langue : `makeupartists.language` → `profiles.langues`
+### 6.4 Langue : `makeupartists.language` → `profiles.languages`
 
 Table `components_makeupartists_languages`, 65 lignes.
 
 | Attribut Strapi | Type Strapi | Champ Payload | Règle |
 |---|---|---|---|
-| `name` | `string`, 70 caractères au plus | `profiles.langues.nom` (`text`) | Repris tel quel. |
+| `name` | `string`, 70 caractères au plus | `profiles.languages.name` (`text`) | Repris tel quel. |
 
 ### 6.5 Réseaux et coordonnées : `makeupartists.network` → `profiles.networks` et `profiles.contactDetails`
 
@@ -255,26 +255,26 @@ Table `components_makeupartists_networks`, 101 lignes. Composant simple : une li
 
 Un lien de `profiles.networks` qui nomme un protocole autre que `http` ou `https` (`javascript:`, `data:`…) est refusé à toute écriture, import compris : la page publique en fait un lien (registre des changements voulus, `liens-reseaux-web`). Un lien sans protocole, comme `@pseudo`, est repris tel quel.
 
-### 6.6 Prestation : `makeupartists.service-offers` → `profiles.prestations`
+### 6.6 Prestation : `makeupartists.service-offers` → `profiles.serviceOffers`
 
 Table `components_makeupartists_service_offers`, 118 lignes.
 
 | Attribut Strapi | Type Strapi | Champ Payload | Règle |
 |---|---|---|---|
-| `name` | `string`, 70 caractères au plus | `profiles.prestations.nom` (`text`) | Repris tel quel. |
-| `description` | `text` | `profiles.prestations.description` (`textarea`, 2 000 caractères au plus) | Repris tel quel. Strapi ne borne pas ce texte, le serveur de la v3 le borne à 2 000 : une prestation plus longue est laissée de côté avec ses options et listée par profil et par rang, le reste du profil est repris (ticket 226, §11). |
-| `options` | `component` répétable `service-offers.options` | `profiles.prestations.options` (`array` imbriqué) | Lignes du §6.7, dans l'ordre de `components_makeupartists_service_offers_components`. |
-| `price` | `text`, 70 caractères au plus | `profiles.prestations.prixTexte` (`text`) et `profiles.prestations.prixAPartirDe` (`number`) | `prixTexte` : repris tel quel, à l'octet près. `prixAPartirDe` : transformé (plan `01` §6.2, ticket 062), le nombre lu par la règle de prix unique (`src/lib/prix.ts`, ticket 032), nul quand le texte n'a pas de nombre lisible. |
+| `name` | `string`, 70 caractères au plus | `profiles.serviceOffers.name` (`text`) | Repris tel quel. |
+| `description` | `text` | `profiles.serviceOffers.description` (`textarea`, 2 000 caractères au plus) | Repris tel quel. Strapi ne borne pas ce texte, le serveur de la v3 le borne à 2 000 : une prestation plus longue est laissée de côté avec ses options et listée par profil et par rang, le reste du profil est repris (ticket 226, §11). |
+| `options` | `component` répétable `service-offers.options` | `profiles.serviceOffers.options` (`array` imbriqué) | Lignes du §6.7, dans l'ordre de `components_makeupartists_service_offers_components`. |
+| `price` | `text`, 70 caractères au plus | `profiles.serviceOffers.priceText` (`text`) et `profiles.serviceOffers.priceFrom` (`number`) | `priceText` : repris tel quel, à l'octet près. `priceFrom` : transformé (plan `01` §6.2, ticket 062), le nombre lu par la règle de prix unique (`src/lib/prix.ts`, ticket 032), nul quand le texte n'a pas de nombre lisible. |
 
-### 6.7 Option d'une prestation : `service-offers.options` → `profiles.prestations.options`
+### 6.7 Option d'une prestation : `service-offers.options` → `profiles.serviceOffers.options`
 
 Table `components_service_offers_options`, 23 lignes.
 
 | Attribut Strapi | Type Strapi | Champ Payload | Règle |
 |---|---|---|---|
-| `name` | `string` | `profiles.prestations.options.nom` (`text`, 70 caractères au plus) | Repris tel quel. Strapi ne borne pas ce nom, le serveur de la v3 le borne à 70 : une option plus longue est laissée de côté et listée par profil, par rang de sa prestation et par son rang, le reste du profil est repris (ticket 226, §11). |
-| `description` | `text`, 2 000 caractères au plus | `profiles.prestations.options.description` (`textarea`) | Repris tel quel. |
-| `price` | `text`, 70 caractères au plus | `profiles.prestations.options.prixTexte` (`text`) et `profiles.prestations.options.prixAPartirDe` (`number`) | Même règle que le prix d'une prestation (§6.6). |
+| `name` | `string` | `profiles.serviceOffers.options.name` (`text`, 70 caractères au plus) | Repris tel quel. Strapi ne borne pas ce nom, le serveur de la v3 le borne à 70 : une option plus longue est laissée de côté et listée par profil, par rang de sa prestation et par son rang, le reste du profil est repris (ticket 226, §11). |
+| `description` | `text`, 2 000 caractères au plus | `profiles.serviceOffers.options.description` (`textarea`) | Repris tel quel. |
+| `price` | `text`, 70 caractères au plus | `profiles.serviceOffers.options.priceText` (`text`) et `profiles.serviceOffers.options.priceFrom` (`number`) | Même règle que le prix d'une prestation (§6.6). |
 
 ## 7. Colonnes système et tables de liens
 
@@ -473,5 +473,6 @@ Noms fixés par ce document, parce que le plan ne les donnait pas : `profiles.le
 | 19/10/2026 | Ticket 249, sans changer un nom de champ ni une colonne : les quinze migrations (`init` et les quatorze qui la suivent ; le ticket en comptait seize) deviennent une seule `init` (l'`init` réécrite, aujourd'hui `20261019_151825_init`), qui produit le même schéma que la chaîne (comparaison de `pg_dump --schema-only`, à l'ordre des colonnes près (quatre tables : `pros`, `talents`, `_talents_v`, `auth_evenements`, dont des colonnes ajoutées plus tard par une migration passaient en dernier)). Les lots 250 à 252 la réécrivent (`docs/tests/banc.md`, « Réécrire la migration `init` et vider une base »). |
 | 19/10/2026 | Ticket 250 (noms anglais de la base, `PLAN-ANGLAIS.md` §7) : les collections `profils`, `auth-evenements`, `demandes` et `comptes-supprimes` deviennent `profiles`, `auth-events`, `contact-requests` et `deleted-accounts` (tables `profiles`, `auth_events`, `contact_requests`, `deleted_accounts`) ; `pros.nom`, `pros.bloque`, `pros.derniereConnexion` et `pros.profil` deviennent `pros.name`, `pros.blocked`, `pros.lastSignInAt` et `pros.profile` ; `talents.titreDeLaPage` devient `talents.pageTitle` et `articles.galerie` `articles.gallery` ; `auth-events.methode` et `auth-events.dureeMs` deviennent `method` (`mot-de-passe` → `password`) et `durationMs`, les valeurs de `type` passent en anglais, `code` ne change pas ; `contact-requests` : `statut` → `status` (`nouvelle`, `transmise`, `repondue` → `new`, `forwarded`, `answered`), `etatMail` → `mailStatus` (`en-attente`, `envoye`, `echec` → `pending`, `sent`, `failed`), `prenom`, `nom`, `telephone` → `firstName`, `lastName`, `phone` ; le rôle `redaction` de `admins` devient `editor`. Les libellés de l'administration ne changent pas. `status` et `name` ne heurtent aucun nom réservé de Payload 3.90.2 (`reservedFieldNames` : `salt` et `hash` pour un compte, `file` pour un envoi ; `_status` n'existe que sur les collections à brouillons, `talents` et `articles`, qui n'ont pas de champ `status`). L'adresse d'administration passe de `/admin/collections/profils` à `/admin/collections/profiles`, et le renvoi d'un email de `/api/demandes/:id/resend` à `/api/contact-requests/:id/resend`. Le schéma est réécrit dans `init` (ticket 249). Les champs des profils restent pour les tickets 251 et 252. |
 | 19/10/2026 | Ticket 251 (noms anglais des champs simples des profils, `PLAN-ANGLAIS.md` §7) : identité `prenom`, `nom`, `nomArtiste`, `specialite`, `disponible`, `aDomicile` → `firstName`, `lastName`, `artistName`, `specialty`, `available`, `homeService` ; lieu `commune` (`nom`, `codeInsee`, `departement`) → `city` (`name`, `inseeCode`, `department`), `rayonKm` → `radiusKm` ; contact `reseaux` (`siteWeb`) → `networks` (`website`), `coordonnees` (`telephone`) → `contactDetails` (`phone`), `contactPublic` → `publicContact`, `consentiLe` → `consentedAt`, `sourceConsentement` → `consentSource` (valeur `maquilleuse` → `artist`) ; photos `photoPrincipale`, `galerie` → `mainPicture`, `gallery` ; état `statut` → `status` (`brouillon`, `publie`, `masque` → `draft`, `published`, `hidden`), `statutChoisi` → `chosenStatus` (`automatique` → `automatic`), `completude`, `actif`, `publiable`, `entierementVide`, leurs dates et `superMaquilleuse` → `completeness`, `active`, `publishable`, `fullyEmpty`, `activeSince`, `publishableSince`, `fullyEmptySince`, `superArtist` ; vérification `motif`, `verifie`, `verifieLe`, `noteInterne` → `reason`, `verified`, `verifiedAt`, `internalNote`. Les listes (`prestations`, `competences`, `langues`, `formations`, `experiences`) restent pour le ticket 252. Les noms de la base Strapi lus par l'import ne changent pas ; les clés JSON de `/api/stats/weekly` non plus (ticket 253). Les libellés de l'administration ne changent pas. Le schéma est réécrit dans `init` (ticket 249). |
+| 19/10/2026 | Ticket 252 (noms anglais des listes des profils, `PLAN-ANGLAIS.md` §7) : `prestations` → `serviceOffers` (`nom`, `prixTexte`, `prixAPartirDe` → `name`, `priceText`, `priceFrom`, et pour ses `options` aussi), `competences` → `skills` et `langues` → `languages` (`nom` → `name`), `formations` → `courses` (`diplome`, `ecole`, `obtenuLe` → `diploma`, `school`, `graduatedAt`), `experiences` (`entreprise`, `poste`, `ville`, `debut`, `fin` → `company`, `jobTitle`, `city`, `startDate`, `endDate`). Les tables suivent : `profiles_service_offers`, `profiles_service_offers_options`, `profiles_skills`, `profiles_languages`, `profiles_courses` (colonnes `name`, `price_text`, `price_from`, `diploma`, `school`, `graduated_at`, `company`, `job_title`, `city`, `start_date`, `end_date`). Les noms de la base Strapi lus par l'import ne changent pas, les libellés de l'administration non plus. Le schéma est réécrit dans `init` (ticket 249). |
 
 Note d'intégration (tickets 085 et 086, historique : ces migrations sont regroupées dans `init` depuis le ticket 249) : la migration `20261014_203454_auth_oubli_journal` reconstruit l'énumération `enum_auth_evenements_type` à la descente à partir de la liste des cinq types qui la précèdent. Quand plusieurs lots ajoutent des types au journal, régénérer leurs migrations dans l'ordre de fusion ; une descente dans le désordre échouerait ou ferait perdre des valeurs.

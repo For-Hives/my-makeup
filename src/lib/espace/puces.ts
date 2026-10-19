@@ -23,8 +23,8 @@ export const LONGUEUR_PUCE = LONGUEUR_NOM
 /** More chips than any makeup artist lists: a request beyond it is not a list she edited. */
 export const NOMBRE_MAX_DE_PUCES = 100
 
-/** The two lists that are edited as chips. `champ` is the field of the collection `profils`. */
-export type ChampDePuces = 'langues' | 'competences'
+/** The two lists that are edited as chips. `champ` is the field of the collection `profiles`. */
+export type ChampDePuces = 'languages' | 'skills'
 
 /** A chip as the editor holds it: a name and an identifier that no other chip shares. */
 export interface Puce {
@@ -39,6 +39,8 @@ export interface ValeursDesPuces extends Record<string, unknown> {
 
 export interface SorteDePuces {
 	readonly champ: ChampDePuces
+	/** The value of `section` of the event `profile_save` (the catalogue of the measure keeps its French words). */
+	readonly mesure: 'langues' | 'competences'
 	/** The name of the field, in the label and the title of the panel. */
 	readonly libelle: string
 	readonly titre: string
@@ -56,7 +58,8 @@ export interface SorteDePuces {
 }
 
 export const LANGUES: SorteDePuces = {
-	champ: 'langues',
+	champ: 'languages',
+	mesure: 'langues',
 	libelle: 'Langue',
 	titre: 'Modifier mes langues',
 	bouton: 'Modifier mes langues',
@@ -73,7 +76,8 @@ export const LANGUES: SorteDePuces = {
 }
 
 export const COMPETENCES: SorteDePuces = {
-	champ: 'competences',
+	champ: 'skills',
+	mesure: 'competences',
 	libelle: 'Compétence',
 	titre: 'Modifier mes compétences',
 	bouton: 'Modifier mes compétences',
@@ -171,9 +175,9 @@ export function lireLesPuces(sorte: SorteDePuces, saisie: unknown): LectureDesPu
 }
 
 /** The chips of a stored list: a row without a name says nothing and is left out. */
-export function pucesDeLaListe(lignes: readonly { nom?: unknown; id?: unknown }[] | null | undefined): Puce[] {
-	return (lignes ?? []).flatMap(({ id, nom }) => {
-		const propre = texte(nom).trim()
+export function pucesDeLaListe(lignes: readonly { name?: unknown; id?: unknown }[] | null | undefined): Puce[] {
+	return (lignes ?? []).flatMap(({ id, name }) => {
+		const propre = texte(name).trim()
 		return propre === '' || typeof id !== 'string' || id === '' ? [] : [{ id, nom: propre }]
 	})
 }

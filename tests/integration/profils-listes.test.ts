@@ -13,7 +13,7 @@ import { appelerRest } from '../outils/rest'
 
 afterEach(viderLaBase)
 
-type Listes = Pick<Profile, 'prestations' | 'competences' | 'langues' | 'formations' | 'experiences'>
+type Listes = Pick<Profile, 'serviceOffers' | 'skills' | 'languages' | 'courses' | 'experiences'>
 
 /** Identifiers as Payload gives them to a row. */
 const IDENTIFIANT = /^[0-9a-f]{24}$/
@@ -57,57 +57,63 @@ const identifiants = (lignes: readonly { id?: string | null }[] | null | undefin
 	(lignes ?? []).map(({ id }) => id)
 
 /** Three offers, the second with two options, in an order no sort would give. */
-const TROIS_PRESTATIONS: NonNullable<Profile['prestations']> = [
-	{ nom: 'Mariée', description: 'Essai compris.', prixTexte: 'à partir de 180 €', prixAPartirDe: 180 },
+const TROIS_PRESTATIONS: NonNullable<Profile['serviceOffers']> = [
+	{ name: 'Mariée', description: 'Essai compris.', priceText: 'à partir de 180 €', priceFrom: 180 },
 	{
-		nom: 'Soirée',
-		prixTexte: '80',
-		prixAPartirDe: 80,
+		name: 'Soirée',
+		priceText: '80',
+		priceFrom: 80,
 		options: [
-			{ nom: 'Faux cils', prixTexte: '15 €', prixAPartirDe: 15 },
-			{ nom: 'Déplacement', prixTexte: 'Sur devis', prixAPartirDe: null },
+			{ name: 'Faux cils', priceText: '15 €', priceFrom: 15 },
+			{ name: 'Déplacement', priceText: 'Sur devis', priceFrom: null },
 		],
 	},
-	{ nom: 'Cours d’auto-maquillage', prixTexte: 'Sur devis', prixAPartirDe: null },
+	{ name: 'Cours d’auto-maquillage', priceText: 'Sur devis', priceFrom: null },
 ]
 
 describe('Les sections en liste gardent leur ordre et l’identité de chaque ligne', () => {
 	test('3 prestations dont une à 2 options : même ordre et mêmes identifiants après deux sauvegardes', async () => {
 		const a = await maquilleuse()
 
-		expect((await enregistrer(a, { prestations: TROIS_PRESTATIONS })).statut).toBe(200)
-		const premiere = (await lire(a)).prestations ?? []
+		expect((await enregistrer(a, { serviceOffers: TROIS_PRESTATIONS })).statut).toBe(200)
+		const premiere = (await lire(a)).serviceOffers ?? []
 
-		expect(premiere.map(({ nom }) => nom)).toEqual(['Mariée', 'Soirée', 'Cours d’auto-maquillage'])
-		expect(premiere[1]?.options?.map(({ nom }) => nom)).toEqual(['Faux cils', 'Déplacement'])
+		expect(premiere.map(({ name }) => name)).toEqual(['Mariée', 'Soirée', 'Cours d’auto-maquillage'])
+		expect(premiere[1]?.options?.map(({ name }) => name)).toEqual(['Faux cils', 'Déplacement'])
 		const tous = [...identifiants(premiere), ...identifiants(premiere[1]?.options)]
 		for (const id of tous) expect(id).toMatch(IDENTIFIANT)
 		expect(new Set(tous).size).toBe(5)
 
 		// First save: the list sent back as read. Second save: another field only.
-		expect((await enregistrer(a, { prestations: premiere })).statut).toBe(200)
-		expect((await lire(a)).prestations).toEqual(premiere)
+		expect((await enregistrer(a, { serviceOffers: premiere })).statut).toBe(200)
+		expect((await lire(a)).serviceOffers).toEqual(premiere)
 		expect((await enregistrer(a, { firstName: 'Zoé' })).statut).toBe(200)
-		expect((await lire(a)).prestations).toEqual(premiere)
+		expect((await lire(a)).serviceOffers).toEqual(premiere)
 	})
 
 	test('les cinq listes gardent leurs lignes, leur ordre et leurs identifiants, par REST puis par l’API locale', async () => {
 		const a = await maquilleuse()
 		const listes: Listes = {
-			prestations: TROIS_PRESTATIONS,
-			competences: [{ nom: 'Mariage', description: 'Depuis 2015.' }, { nom: 'Effets spéciaux' }],
-			langues: [{ nom: 'Italien' }, { nom: 'Anglais' }, { nom: 'Espagnol' }],
-			formations: [
+			serviceOffers: TROIS_PRESTATIONS,
+			skills: [{ name: 'Mariage', description: 'Depuis 2015.' }, { name: 'Effets spéciaux' }],
+			languages: [{ name: 'Italien' }, { name: 'Anglais' }, { name: 'Espagnol' }],
+			courses: [
 				{
-					diplome: 'CAP Esthétique',
-					ecole: 'École fictive',
-					obtenuLe: '2012-06-30',
+					diploma: 'CAP Esthétique',
+					school: 'École fictive',
+					graduatedAt: '2012-06-30',
 					description: 'Option maquillage.',
 				},
 			],
 			experiences: [
-				{ entreprise: 'Théâtre fictif', poste: 'Maquilleuse', ville: 'Annecy', debut: '2018-09-01', fin: '2020-06-30' },
-				{ entreprise: 'Studio fictif', poste: 'Cheffe maquilleuse', debut: '2020-07-01', fin: null },
+				{
+					company: 'Théâtre fictif',
+					jobTitle: 'Maquilleuse',
+					city: 'Annecy',
+					startDate: '2018-09-01',
+					endDate: '2020-06-30',
+				},
+				{ company: 'Studio fictif', jobTitle: 'Cheffe maquilleuse', startDate: '2020-07-01', endDate: null },
 			],
 		}
 
@@ -115,28 +121,28 @@ describe('Les sections en liste gardent leur ordre et l’identité de chaque li
 		const lu = await lire(a)
 
 		expect(lu).toMatchObject({
-			competences: [
-				{ nom: 'Mariage', description: 'Depuis 2015.' },
-				{ nom: 'Effets spéciaux', description: null },
+			skills: [
+				{ name: 'Mariage', description: 'Depuis 2015.' },
+				{ name: 'Effets spéciaux', description: null },
 			],
-			langues: [{ nom: 'Italien' }, { nom: 'Anglais' }, { nom: 'Espagnol' }],
+			languages: [{ name: 'Italien' }, { name: 'Anglais' }, { name: 'Espagnol' }],
 			// A day without an hour, stored at noon UTC: the same day in every time zone of France.
-			formations: [{ diplome: 'CAP Esthétique', obtenuLe: '2012-06-30T12:00:00.000Z' }],
+			courses: [{ diploma: 'CAP Esthétique', graduatedAt: '2012-06-30T12:00:00.000Z' }],
 			experiences: [
 				{
-					entreprise: 'Théâtre fictif',
-					ville: 'Annecy',
-					debut: '2018-09-01T12:00:00.000Z',
-					fin: '2020-06-30T12:00:00.000Z',
+					company: 'Théâtre fictif',
+					city: 'Annecy',
+					startDate: '2018-09-01T12:00:00.000Z',
+					endDate: '2020-06-30T12:00:00.000Z',
 				},
-				{ entreprise: 'Studio fictif', ville: null, debut: '2020-07-01T12:00:00.000Z', fin: null },
+				{ company: 'Studio fictif', city: null, startDate: '2020-07-01T12:00:00.000Z', endDate: null },
 			],
 		})
 		const relues: Listes = {
-			prestations: lu.prestations,
-			competences: lu.competences,
-			langues: lu.langues,
-			formations: lu.formations,
+			serviceOffers: lu.serviceOffers,
+			skills: lu.skills,
+			languages: lu.languages,
+			courses: lu.courses,
 			experiences: lu.experiences,
 		}
 
@@ -159,12 +165,12 @@ describe('Les sections en liste gardent leur ordre et l’identité de chaque li
 	test('retirer une ligne ne décale aucun identifiant', async () => {
 		const a = await maquilleuse()
 		await enregistrer(a, {
-			prestations: TROIS_PRESTATIONS,
-			langues: [{ nom: 'Italien' }, { nom: 'Anglais' }, { nom: 'Espagnol' }],
+			serviceOffers: TROIS_PRESTATIONS,
+			languages: [{ name: 'Italien' }, { name: 'Anglais' }, { name: 'Espagnol' }],
 		})
 		const avant = await lire(a)
-		const [mariee, soiree, cours] = avant.prestations ?? []
-		const [italien, anglais, espagnol] = avant.langues ?? []
+		const [mariee, soiree, cours] = avant.serviceOffers ?? []
+		const [italien, anglais, espagnol] = avant.languages ?? []
 		if (!mariee || !soiree || !cours || !italien || !anglais || !espagnol) throw new Error('Lignes attendues.')
 		const [, deplacement] = soiree.options ?? []
 
@@ -172,50 +178,50 @@ describe('Les sections en liste gardent leur ordre et l’identité de chaque li
 		expect(
 			(
 				await enregistrer(a, {
-					prestations: [mariee, { ...soiree, options: deplacement ? [deplacement] : [] }, cours],
-					langues: [anglais, espagnol],
+					serviceOffers: [mariee, { ...soiree, options: deplacement ? [deplacement] : [] }, cours],
+					languages: [anglais, espagnol],
 				})
 			).statut
 		).toBe(200)
-		expect((await enregistrer(a, { prestations: [mariee, cours] })).statut).toBe(200)
+		expect((await enregistrer(a, { serviceOffers: [mariee, cours] })).statut).toBe(200)
 
 		const apres = await lire(a)
-		expect(apres.prestations).toEqual([mariee, cours])
-		expect(apres.langues).toEqual([anglais, espagnol])
+		expect(apres.serviceOffers).toEqual([mariee, cours])
+		expect(apres.languages).toEqual([anglais, espagnol])
 	})
 
 	test('L1. deux lignes de même contenu ont chacune leur identifiant : retirer l’une laisse l’autre', async () => {
 		const a = await maquilleuse()
-		await enregistrer(a, { langues: [{ nom: 'Anglais' }, { nom: 'Anglais' }] })
-		const [premiere, seconde] = (await lire(a)).langues ?? []
+		await enregistrer(a, { languages: [{ name: 'Anglais' }, { name: 'Anglais' }] })
+		const [premiere, seconde] = (await lire(a)).languages ?? []
 		expect(premiere?.id).not.toBe(seconde?.id)
 
-		await enregistrer(a, { langues: seconde ? [seconde] : [] })
+		await enregistrer(a, { languages: seconde ? [seconde] : [] })
 
-		expect((await lire(a)).langues).toEqual(seconde ? [seconde] : [])
+		expect((await lire(a)).languages).toEqual(seconde ? [seconde] : [])
 	})
 
 	test('L1. un identifiant tiré du contenu, copié d’une autre ligne ou pris à un autre profil n’est pas repris', async () => {
 		const [a, b] = await Promise.all([maquilleuse(), maquilleuse()])
-		await enregistrer(a, { langues: [{ nom: 'Anglais' }] })
-		const [anglaisDeA] = (await lire(a)).langues ?? []
+		await enregistrer(a, { languages: [{ name: 'Anglais' }] })
+		const [anglaisDeA] = (await lire(a)).languages ?? []
 		if (!anglaisDeA?.id) throw new Error('Ligne attendue.')
 
 		const deB = await enregistrer(b, {
-			langues: [
-				{ id: anglaisDeA.id, nom: 'Anglais' },
-				{ id: 'italien', nom: 'Italien' },
+			languages: [
+				{ id: anglaisDeA.id, name: 'Anglais' },
+				{ id: 'italien', name: 'Italien' },
 			],
 		})
 		expect(deB.statut).toBe(200)
-		const [anglaisDeB, italienDeB] = (await lire(b)).langues ?? []
+		const [anglaisDeB, italienDeB] = (await lire(b)).languages ?? []
 		for (const ligne of [anglaisDeB, italienDeB]) expect(ligne?.id).toMatch(IDENTIFIANT)
 		expect(anglaisDeB?.id).not.toBe(anglaisDeA.id)
-		expect((await lire(a)).langues).toEqual([anglaisDeA])
+		expect((await lire(a)).languages).toEqual([anglaisDeA])
 
 		// The same row twice in one save: the copy becomes a new row.
-		await enregistrer(a, { langues: [anglaisDeA, anglaisDeA] })
-		const [garde, copie] = (await lire(a)).langues ?? []
+		await enregistrer(a, { languages: [anglaisDeA, anglaisDeA] })
+		const [garde, copie] = (await lire(a)).languages ?? []
 		expect(garde).toEqual(anglaisDeA)
 		expect(copie?.id).toMatch(IDENTIFIANT)
 		expect(copie?.id).not.toBe(anglaisDeA.id)
@@ -223,48 +229,48 @@ describe('Les sections en liste gardent leur ordre et l’identité de chaque li
 
 	test('une autre maquilleuse ne touche pas aux listes d’un profil qui n’est pas le sien', async () => {
 		const [a, b] = await Promise.all([maquilleuse(), maquilleuse()])
-		await enregistrer(a, { langues: [{ nom: 'Anglais' }] })
-		const avant = (await stocke(a.profil)).langues
+		await enregistrer(a, { languages: [{ name: 'Anglais' }] })
+		const avant = (await stocke(a.profil)).languages
 
 		const essai = await appelerRest('PATCH', `/api/profiles/${a.profil}`, {
 			enTetes: b.compte.session.enTetes,
-			corps: { langues: [] },
+			corps: { languages: [] },
 		})
 
 		expect([403, 404]).toContain(essai.statut)
-		expect((await stocke(a.profil)).langues).toEqual(avant)
+		expect((await stocke(a.profil)).languages).toEqual(avant)
 	})
 })
 
 describe('Le serveur valide les bornes, et refuse en français', () => {
 	test('un prix négatif est refusé en français, pour une prestation comme pour une option ; rien n’est écrit', async () => {
 		const a = await maquilleuse()
-		await enregistrer(a, { prestations: TROIS_PRESTATIONS })
-		const avant = (await stocke(a.profil)).prestations
+		await enregistrer(a, { serviceOffers: TROIS_PRESTATIONS })
+		const avant = (await stocke(a.profil)).serviceOffers
 
-		const prestation = await enregistrer(a, { prestations: [{ nom: 'Mariée', prixTexte: '-50', prixAPartirDe: -50 }] })
+		const prestation = await enregistrer(a, { serviceOffers: [{ name: 'Mariée', priceText: '-50', priceFrom: -50 }] })
 		const option = await enregistrer(a, {
-			prestations: [{ nom: 'Soirée', options: [{ nom: 'Faux cils', prixAPartirDe: -15 }] }],
+			serviceOffers: [{ name: 'Soirée', options: [{ name: 'Faux cils', priceFrom: -15 }] }],
 		})
 
 		const message = 'Le prix doit être un montant entre 5 € et 10 000 €.'
 		expect(prestation.statut).toBe(400)
-		expect(refus(prestation.corps)).toEqual([{ path: 'prestations.0.prixAPartirDe', message }])
+		expect(refus(prestation.corps)).toEqual([{ path: 'serviceOffers.0.priceFrom', message }])
 		expect(option.statut).toBe(400)
-		expect(refus(option.corps)).toEqual([{ path: 'prestations.0.options.0.prixAPartirDe', message }])
-		expect((await stocke(a.profil)).prestations).toEqual(avant)
+		expect(refus(option.corps)).toEqual([{ path: 'serviceOffers.0.options.0.priceFrom', message }])
+		expect((await stocke(a.profil)).serviceOffers).toEqual(avant)
 	})
 
 	test('un prix vide avec un texte libre est accepté', async () => {
 		const a = await maquilleuse()
 
 		const reponse = await enregistrer(a, {
-			prestations: [{ nom: 'Maquillage artistique', prixTexte: 'Sur devis, selon le projet', prixAPartirDe: null }],
+			serviceOffers: [{ name: 'Maquillage artistique', priceText: 'Sur devis, selon le projet', priceFrom: null }],
 		})
 
 		expect(reponse.statut).toBe(200)
-		expect((await lire(a)).prestations).toMatchObject([
-			{ nom: 'Maquillage artistique', prixTexte: 'Sur devis, selon le projet', prixAPartirDe: null },
+		expect((await lire(a)).serviceOffers).toMatchObject([
+			{ name: 'Maquillage artistique', priceText: 'Sur devis, selon le projet', priceFrom: null },
 		])
 	})
 
@@ -272,21 +278,21 @@ describe('Le serveur valide les bornes, et refuse en français', () => {
 		const a = await maquilleuse()
 
 		const avantLeDebut = await enregistrer(a, {
-			experiences: [{ entreprise: 'Studio fictif', debut: '2023-06-01', fin: '2023-05-31' }],
+			experiences: [{ company: 'Studio fictif', startDate: '2023-06-01', endDate: '2023-05-31' }],
 		})
 		const leMemeJour = await enregistrer(a, {
 			experiences: [
-				{ entreprise: 'Studio fictif', debut: '2023-06-01T20:00:00+02:00', fin: '2023-06-01T08:00:00+02:00' },
+				{ company: 'Studio fictif', startDate: '2023-06-01T20:00:00+02:00', endDate: '2023-06-01T08:00:00+02:00' },
 			],
 		})
 
 		expect(avantLeDebut.statut).toBe(400)
 		expect(refus(avantLeDebut.corps)).toEqual([
-			{ path: 'experiences.0.fin', message: 'La fin d’une expérience ne peut pas précéder son début.' },
+			{ path: 'experiences.0.endDate', message: 'La fin d’une expérience ne peut pas précéder son début.' },
 		])
 		expect(leMemeJour.statut).toBe(200)
 		expect((await lire(a)).experiences).toMatchObject([
-			{ debut: '2023-06-01T12:00:00.000Z', fin: '2023-06-01T12:00:00.000Z' },
+			{ startDate: '2023-06-01T12:00:00.000Z', endDate: '2023-06-01T12:00:00.000Z' },
 		])
 	})
 
@@ -295,19 +301,19 @@ describe('Le serveur valide les bornes, et refuse en français', () => {
 		const dansDeuxAns = `${new Date().getUTCFullYear() + 2}-01-15`
 
 		const reponse = await enregistrer(a, {
-			competences: [{ nom: 'a'.repeat(71) }],
-			langues: [{ nom: 'a'.repeat(70) }],
-			prestations: [{ nom: 'Mariée', description: 'a'.repeat(2001) }],
-			experiences: [{ entreprise: 'Studio fictif', debut: '2023-02-30' }],
-			formations: [{ diplome: 'CAP Esthétique', obtenuLe: dansDeuxAns }],
+			skills: [{ name: 'a'.repeat(71) }],
+			languages: [{ name: 'a'.repeat(70) }],
+			serviceOffers: [{ name: 'Mariée', description: 'a'.repeat(2001) }],
+			experiences: [{ company: 'Studio fictif', startDate: '2023-02-30' }],
+			courses: [{ diploma: 'CAP Esthétique', graduatedAt: dansDeuxAns }],
 		})
 
 		expect(reponse.statut).toBe(400)
 		expect(refus(reponse.corps).sort((x, y) => x.path.localeCompare(y.path))).toEqual([
-			{ path: 'competences.0.nom', message: 'Ce texte ne doit pas dépasser 70 caractères.' },
-			{ path: 'experiences.0.debut', message: 'Cette date n’est pas valide.' },
-			{ path: 'formations.0.obtenuLe', message: 'Une date d’obtention ne peut pas dépasser d’un an la date du jour.' },
-			{ path: 'prestations.0.description', message: 'Ce texte ne doit pas dépasser 2000 caractères.' },
+			{ path: 'courses.0.graduatedAt', message: 'Une date d’obtention ne peut pas dépasser d’un an la date du jour.' },
+			{ path: 'experiences.0.startDate', message: 'Cette date n’est pas valide.' },
+			{ path: 'serviceOffers.0.description', message: 'Ce texte ne doit pas dépasser 2000 caractères.' },
+			{ path: 'skills.0.name', message: 'Ce texte ne doit pas dépasser 70 caractères.' },
 		])
 	})
 
@@ -315,31 +321,31 @@ describe('Le serveur valide les bornes, et refuse en français', () => {
 		const a = await maquilleuse()
 
 		const reponse = await enregistrer(a, {
-			experiences: [{ entreprise: 'Studio fictif', debut: '0000-01-01' }],
-			formations: [{ diplome: 'CAP Esthétique', obtenuLe: '0000-12-31T00:00:00.000Z' }],
+			experiences: [{ company: 'Studio fictif', startDate: '0000-01-01' }],
+			courses: [{ diploma: 'CAP Esthétique', graduatedAt: '0000-12-31T00:00:00.000Z' }],
 		})
 
 		expect(reponse.statut).toBe(400)
 		expect(refus(reponse.corps).sort((x, y) => x.path.localeCompare(y.path))).toEqual([
-			{ path: 'experiences.0.debut', message: 'Cette date n’est pas valide.' },
-			{ path: 'formations.0.obtenuLe', message: 'Cette date n’est pas valide.' },
+			{ path: 'courses.0.graduatedAt', message: 'Cette date n’est pas valide.' },
+			{ path: 'experiences.0.startDate', message: 'Cette date n’est pas valide.' },
 		])
 		expect((await stocke(a.profil)).experiences ?? []).toEqual([])
 	})
 
 	test('une sauvegarde refusée ne vide aucune section déjà enregistrée', async () => {
 		const a = await maquilleuse()
-		await enregistrer(a, { prestations: TROIS_PRESTATIONS, langues: [{ nom: 'Anglais' }] })
+		await enregistrer(a, { serviceOffers: TROIS_PRESTATIONS, languages: [{ name: 'Anglais' }] })
 		const avant = await stocke(a.profil)
 
 		const reponse = await enregistrer(a, {
-			prestations: [{ nom: 'Nouvelle' }],
-			langues: [],
-			experiences: [{ entreprise: 'Studio fictif', debut: '2023-06-01', fin: '2022-01-01' }],
+			serviceOffers: [{ name: 'Nouvelle' }],
+			languages: [],
+			experiences: [{ company: 'Studio fictif', startDate: '2023-06-01', endDate: '2022-01-01' }],
 		})
 
 		expect(reponse.statut).toBe(400)
 		const apres = await stocke(a.profil)
-		expect([apres.prestations, apres.langues]).toEqual([avant.prestations, avant.langues])
+		expect([apres.serviceOffers, apres.languages]).toEqual([avant.serviceOffers, avant.languages])
 	})
 })

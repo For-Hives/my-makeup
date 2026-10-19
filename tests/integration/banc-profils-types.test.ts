@@ -182,7 +182,7 @@ describe('Le jeu du banc : les 12 profils types', () => {
 			consentedAt: '2026-09-01T08:00:00.000Z',
 			consentSource: 'artist',
 		})
-		expect(lire('reference').prestations?.map(({ prixAPartirDe }) => prixAPartirDe)).toEqual([180, 60, 45])
+		expect(lire('reference').serviceOffers?.map(({ priceFrom }) => priceFrom)).toEqual([180, 60, 45])
 		expect(lire('reference').gallery).toHaveLength(6)
 		expect(lire('indisponible').available).toBe(false)
 		expect(lire('disponibilite-inconnue').available).toBeNull()

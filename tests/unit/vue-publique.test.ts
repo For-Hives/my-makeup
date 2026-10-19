@@ -36,11 +36,11 @@ describe('dates', () => {
 	})
 
 	test('une période : la fin absente veut dire aujourd’hui, un début absent ne dit rien', () => {
-		expect(periode({ debut: '2020-01-15', fin: '2022-03-02' })).toBe('janvier 2020 - mars 2022')
-		expect(periode({ debut: '2020-01-15', fin: null })).toBe('janvier 2020 - aujourd’hui')
-		expect(periode({ debut: null, fin: '2022-03-02' })).toBe('')
+		expect(periode({ startDate: '2020-01-15', endDate: '2022-03-02' })).toBe('janvier 2020 - mars 2022')
+		expect(periode({ startDate: '2020-01-15', endDate: null })).toBe('janvier 2020 - aujourd’hui')
+		expect(periode({ startDate: null, endDate: '2022-03-02' })).toBe('')
 		expect(periode(undefined)).toBe('')
-		expect(periode({ debut: 'n’importe quoi', fin: 'x' })).toBe('')
+		expect(periode({ startDate: 'n’importe quoi', endDate: 'x' })).toBe('')
 	})
 })
 
@@ -107,13 +107,13 @@ describe('les listes', () => {
 	test('les prestations sans nom disparaissent, les options sans nom aussi, l’ordre est gardé', () => {
 		const lues = prestations([
 			{
-				nom: 'B',
-				prixAPartirDe: 50,
-				prixTexte: '50 €',
-				options: [{ nom: 'o2', prixTexte: 'Sur devis' }, { nom: ' ' }, { nom: 'o1' }],
+				name: 'B',
+				priceFrom: 50,
+				priceText: '50 €',
+				options: [{ name: 'o2', priceText: 'Sur devis' }, { name: ' ' }, { name: 'o1' }],
 			},
-			{ nom: 'null', prixTexte: '10 €' },
-			{ nom: 'A', description: 'l1\n\nl2', prixTexte: null, prixAPartirDe: 1200 },
+			{ name: 'null', priceText: '10 €' },
+			{ name: 'A', description: 'l1\n\nl2', priceText: null, priceFrom: 1200 },
 			null,
 		])
 
@@ -127,7 +127,7 @@ describe('les listes', () => {
 	})
 
 	test('compétences et langues : les noms qui disent quelque chose', () => {
-		expect(noms([{ nom: 'Teint' }, { nom: '' }, { nom: 'undefined' }, null, { nom: ' Yeux ' }])).toEqual([
+		expect(noms([{ name: 'Teint' }, { name: '' }, { name: 'undefined' }, null, { name: ' Yeux ' }])).toEqual([
 			'Teint',
 			'Yeux',
 		])
@@ -137,17 +137,17 @@ describe('les listes', () => {
 	test('formations et expériences : une ligne avec un diplôme, une école, une entreprise ou un poste', () => {
 		expect(
 			formations([
-				{ diplome: '', ecole: '', obtenuLe: '2020-01-01' },
-				{ diplome: 'CAP', obtenuLe: '2014-06-30' },
+				{ diploma: '', school: '', graduatedAt: '2020-01-01' },
+				{ diploma: 'CAP', graduatedAt: '2014-06-30' },
 			])
-		).toEqual([{ diplome: 'CAP', ecole: '', obtenu: 'juin 2014', description: [] }])
+		).toEqual([{ diploma: 'CAP', school: '', obtenu: 'juin 2014', description: [] }])
 		expect(
 			experiences([
-				{ entreprise: '', poste: '', ville: 'Annecy' },
-				{ poste: 'Maquilleuse', debut: '2018-09-03', fin: null, ville: 'null' },
+				{ company: '', jobTitle: '', city: 'Annecy' },
+				{ jobTitle: 'Maquilleuse', startDate: '2018-09-03', endDate: null, city: 'null' },
 			])
 		).toEqual([
-			{ entreprise: '', poste: 'Maquilleuse', ville: '', periode: 'septembre 2018 - aujourd’hui', description: [] },
+			{ company: '', jobTitle: 'Maquilleuse', city: '', periode: 'septembre 2018 - aujourd’hui', description: [] },
 		])
 	})
 })

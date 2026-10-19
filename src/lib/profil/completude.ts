@@ -183,7 +183,7 @@ export function villeExploitable(city: unknown): boolean {
  * out of 5 to 10 000). The reading itself is the single price rule of src/lib/prix.ts.
  */
 export function prixNumerique(price: unknown): number | null {
-	return parsePrice(price).prixAPartirDe
+	return parsePrice(price).priceFrom
 }
 
 /** Length of the description, leading and trailing spaces ignored, runs of spaces counted once. */

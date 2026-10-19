@@ -145,41 +145,47 @@ const coordonneesPubliques = (telephone: string, email: string): DonneesDuProfil
 /** The lists of a complete profile: one row or more in each, as the space fills them. */
 function listesCompletes(ville: string): DonneesDuProfil {
 	return {
-		competences: [
-			{ nom: 'Maquillage longue tenue', description: 'Un teint qui tient de la cérémonie jusqu’au bout de la nuit.' },
-			{ nom: 'Peaux sensibles', description: 'Produits choisis pour les peaux réactives.' },
+		skills: [
+			{ name: 'Maquillage longue tenue', description: 'Un teint qui tient de la cérémonie jusqu’au bout de la nuit.' },
+			{ name: 'Peaux sensibles', description: 'Produits choisis pour les peaux réactives.' },
 		],
-		langues: [{ nom: 'Français' }, { nom: 'Anglais' }],
-		formations: [
+		languages: [{ name: 'Français' }, { name: 'Anglais' }],
+		courses: [
 			{
-				diplome: 'CAP Esthétique, cosmétique, parfumerie',
-				ecole: 'École fictive des métiers de la beauté',
-				obtenuLe: '2016-06-30',
+				diploma: 'CAP Esthétique, cosmétique, parfumerie',
+				school: 'École fictive des métiers de la beauté',
+				graduatedAt: '2016-06-30',
 				description: 'Formation générale, avec un module de maquillage de jour et de soirée.',
 			},
 		],
 		experiences: [
 			{
-				entreprise: 'Studio fictif du maquillage',
-				poste: 'Maquilleuse',
-				ville,
-				debut: '2017-01-09',
-				fin: '2020-12-31',
+				company: 'Studio fictif du maquillage',
+				jobTitle: 'Maquilleuse',
+				city: ville,
+				startDate: '2017-01-09',
+				endDate: '2020-12-31',
 				description: 'Maquillage des mariées et des invitées, essais en studio.',
 			},
-			{ entreprise: 'À son compte', poste: 'Maquilleuse indépendante', ville, debut: '2021-01-04', fin: null },
+			{
+				company: 'À son compte',
+				jobTitle: 'Maquilleuse indépendante',
+				city: ville,
+				startDate: '2021-01-04',
+				endDate: null,
+			},
 		],
 	}
 }
 
 /** Two offers with an amount: what makes a profile publishable, with the five other conditions. */
-const OFFRES_CHIFFREES: DonneesDuProfil['prestations'] = [
+const OFFRES_CHIFFREES: DonneesDuProfil['serviceOffers'] = [
 	{
-		nom: 'Maquillage de la mariée',
+		name: 'Maquillage de la mariée',
 		description: 'Essai compris, et retouches avant la cérémonie.',
 		...prix('À partir de 150 €'),
 	},
-	{ nom: 'Maquillage invitée', description: 'Pour la famille et les témoins.', ...prix('45 €') },
+	{ name: 'Maquillage invitée', description: 'Pour la famille et les témoins.', ...prix('45 €') },
 ]
 
 /** Everything a complete profile holds: the six conditions of a publishable profile, and the 13 criteria. */
@@ -199,7 +205,7 @@ function profilComplet(identite: {
 		radiusKm: 30,
 		homeService: true,
 		available: true,
-		prestations: OFFRES_CHIFFREES,
+		serviceOffers: OFFRES_CHIFFREES,
 		networks: instagram(pseudo),
 		...listesCompletes(city.name),
 	}
@@ -228,11 +234,11 @@ const EMAIL_LE_PLUS_LONG = `${'contact-textes-maximaux-'.padEnd(64, 'm')}@${'m'.
 const TELEPHONE_LE_PLUS_LONG = '+33 (0)6 39 98 10 12'
 
 const prestationLaPlusLongue = (numero: number) => ({
-	nom: texteDeLongueur(`Prestation ${numero} : maquillage complet de la mariée et de son cortège`, LONGUEUR_NOM),
+	name: texteDeLongueur(`Prestation ${numero} : maquillage complet de la mariée et de son cortège`, LONGUEUR_NOM),
 	description: texteDeLongueur(LONGUE_DESCRIPTION, LONGUEUR_DESCRIPTION),
 	...prix(texteDeLongueur('À partir de 10 000 €, essai, déplacement et retouches compris', LONGUEUR_NOM)),
 	options: [1, 2].map(option => ({
-		nom: texteDeLongueur(`Option ${option} : retouches jusqu’à la fin de la soirée`, LONGUEUR_NOM),
+		name: texteDeLongueur(`Option ${option} : retouches jusqu’à la fin de la soirée`, LONGUEUR_NOM),
 		description: texteDeLongueur(LONGUE_DESCRIPTION, LONGUEUR_DESCRIPTION),
 		...prix(texteDeLongueur('Sur devis, selon le nombre de personnes et le lieu', LONGUEUR_NOM)),
 	})),
@@ -257,59 +263,62 @@ export const PROFILS_DU_JEU: readonly ProfilDuJeu[] = [
 			available: true,
 			description:
 				'Maquilleuse professionnelle installée à Annecy depuis dix ans, je prépare les mariées du lac et des montagnes alentour. Je viens chez vous le jour J, avec un maquillage pensé pour tenir de la cérémonie jusqu’à la fin de la soirée, en photo comme à l’œil nu.',
-			prestations: [
+			serviceOffers: [
 				{
-					nom: 'Maquillage de la mariée',
+					name: 'Maquillage de la mariée',
 					description: 'Le jour J, chez vous ou sur le lieu de la cérémonie, retouches comprises.',
 					...prix('À partir de 180 €'),
-					options: [{ nom: 'Retouches jusqu’au dîner', description: 'Je reste jusqu’au repas.', ...prix('60 €') }],
+					options: [{ name: 'Retouches jusqu’au dîner', description: 'Je reste jusqu’au repas.', ...prix('60 €') }],
 				},
 				{
-					nom: 'Essai maquillage',
+					name: 'Essai maquillage',
 					description: 'Une séance pour choisir ensemble le maquillage du jour J.',
 					...prix('60 €'),
 				},
 				{
-					nom: 'Maquillage des invitées',
+					name: 'Maquillage des invitées',
 					description: 'Pour la famille et les témoins, le matin du mariage.',
 					...prix('À partir de 45 €'),
 				},
 			],
-			competences: [
-				{ nom: 'Maquillage longue tenue', description: 'Un teint qui tient de la cérémonie jusqu’au bout de la nuit.' },
-				{ nom: 'Peaux sensibles', description: 'Produits choisis pour les peaux réactives.' },
-				{ nom: 'Coiffure de mariée', description: 'Chignons et ondulations, en accord avec le maquillage.' },
-			],
-			langues: [{ nom: 'Français' }, { nom: 'Anglais' }, { nom: 'Italien' }],
-			formations: [
+			skills: [
 				{
-					diplome: 'CAP Esthétique, cosmétique, parfumerie',
-					ecole: 'École fictive des métiers de la beauté',
-					obtenuLe: '2014-06-30',
+					name: 'Maquillage longue tenue',
+					description: 'Un teint qui tient de la cérémonie jusqu’au bout de la nuit.',
+				},
+				{ name: 'Peaux sensibles', description: 'Produits choisis pour les peaux réactives.' },
+				{ name: 'Coiffure de mariée', description: 'Chignons et ondulations, en accord avec le maquillage.' },
+			],
+			languages: [{ name: 'Français' }, { name: 'Anglais' }, { name: 'Italien' }],
+			courses: [
+				{
+					diploma: 'CAP Esthétique, cosmétique, parfumerie',
+					school: 'École fictive des métiers de la beauté',
+					graduatedAt: '2014-06-30',
 					description: 'Formation générale, avec un module de maquillage de jour et de soirée.',
 				},
 				{
-					diplome: 'Certificat de maquillage professionnel',
-					ecole: 'Atelier fictif du maquillage',
-					obtenuLe: '2015-11-15',
+					diploma: 'Certificat de maquillage professionnel',
+					school: 'Atelier fictif du maquillage',
+					graduatedAt: '2015-11-15',
 					description: null,
 				},
 			],
 			experiences: [
 				{
-					entreprise: 'Institut fictif du Lac',
-					poste: 'Esthéticienne maquilleuse',
-					ville: 'Annecy',
-					debut: '2015-09-01',
-					fin: '2018-08-31',
+					company: 'Institut fictif du Lac',
+					jobTitle: 'Esthéticienne maquilleuse',
+					city: 'Annecy',
+					startDate: '2015-09-01',
+					endDate: '2018-08-31',
 					description: 'Soins, maquillage de jour et préparation des mariées.',
 				},
 				{
-					entreprise: 'Inès Morel Maquillage',
-					poste: 'Maquilleuse indépendante',
-					ville: 'Annecy',
-					debut: '2018-09-03',
-					fin: null,
+					company: 'Inès Morel Maquillage',
+					jobTitle: 'Maquilleuse indépendante',
+					city: 'Annecy',
+					startDate: '2018-09-03',
+					endDate: null,
 					description: null,
 				},
 			],
@@ -432,9 +441,9 @@ export const PROFILS_DU_JEU: readonly ProfilDuJeu[] = [
 					'Maquilleuse à Annecy, je compose chaque maquillage avec vous : mariage, soirée ou séance photo. Chaque demande est différente, alors je préfère en parler avant de donner un prix, selon le lieu, l’heure et le nombre de personnes à maquiller.',
 				pseudo: 'clara.dumas',
 			}),
-			prestations: [
-				{ nom: 'Maquillage de la mariée', description: 'Essai compris.', ...prix('Sur devis') },
-				{ nom: 'Maquillage de groupe', description: 'Pour le cortège.', ...prix('Selon le nombre de personnes') },
+			serviceOffers: [
+				{ name: 'Maquillage de la mariée', description: 'Essai compris.', ...prix('Sur devis') },
+				{ name: 'Maquillage de groupe', description: 'Pour le cortège.', ...prix('Selon le nombre de personnes') },
 			],
 		},
 		photos: { principale: 'photo-6.webp', galerie: ['photo-1.webp'] },
@@ -545,26 +554,26 @@ export const PROFILS_DU_JEU: readonly ProfilDuJeu[] = [
 			homeService: true,
 			available: true,
 			description: texteDeLongueur(LONGUE_DESCRIPTION, LONGUEUR_DESCRIPTION),
-			prestations: [1, 2, 3].map(prestationLaPlusLongue),
-			competences: [1, 2, 3].map(numero => ({
-				nom: texteDeLongueur(`Compétence ${numero} : maquillage longue tenue pour peaux sensibles`, LONGUEUR_NOM),
+			serviceOffers: [1, 2, 3].map(prestationLaPlusLongue),
+			skills: [1, 2, 3].map(numero => ({
+				name: texteDeLongueur(`Compétence ${numero} : maquillage longue tenue pour peaux sensibles`, LONGUEUR_NOM),
 				description: texteDeLongueur(LONGUE_DESCRIPTION, LONGUEUR_DESCRIPTION),
 			})),
-			langues: [1, 2, 3].map(numero => ({
-				nom: texteDeLongueur(`Langue ${numero} : français, anglais, italien, espagnol, allemand`, LONGUEUR_NOM),
+			languages: [1, 2, 3].map(numero => ({
+				name: texteDeLongueur(`Langue ${numero} : français, anglais, italien, espagnol, allemand`, LONGUEUR_NOM),
 			})),
-			formations: [1, 2, 3].map(numero => ({
-				diplome: texteDeLongueur(`Diplôme ${numero} : certificat de maquillage artistique et de scène`, LONGUEUR_NOM),
-				ecole: texteDeLongueur('École fictive supérieure des métiers du maquillage et de la beauté', LONGUEUR_NOM),
-				obtenuLe: `201${numero}-06-30`,
+			courses: [1, 2, 3].map(numero => ({
+				diploma: texteDeLongueur(`Diplôme ${numero} : certificat de maquillage artistique et de scène`, LONGUEUR_NOM),
+				school: texteDeLongueur('École fictive supérieure des métiers du maquillage et de la beauté', LONGUEUR_NOM),
+				graduatedAt: `201${numero}-06-30`,
 				description: texteDeLongueur(LONGUE_DESCRIPTION, LONGUEUR_DESCRIPTION),
 			})),
 			experiences: [1, 2, 3].map(numero => ({
-				entreprise: texteDeLongueur(`Entreprise ${numero} : studio fictif de maquillage et de coiffure`, LONGUEUR_NOM),
-				poste: texteDeLongueur('Maquilleuse principale, cheffe d’équipe maquillage et coiffure', LONGUEUR_NOM),
-				ville: texteDeLongueur('Saint-Remy-en-Bouzemont-Saint-Genest-et-Isson', LONGUEUR_NOM),
-				debut: `201${numero}-01-02`,
-				fin: `201${numero + 1}-12-31`,
+				company: texteDeLongueur(`Entreprise ${numero} : studio fictif de maquillage et de coiffure`, LONGUEUR_NOM),
+				jobTitle: texteDeLongueur('Maquilleuse principale, cheffe d’équipe maquillage et coiffure', LONGUEUR_NOM),
+				city: texteDeLongueur('Saint-Remy-en-Bouzemont-Saint-Genest-et-Isson', LONGUEUR_NOM),
+				startDate: `201${numero}-01-02`,
+				endDate: `201${numero + 1}-12-31`,
 				description: texteDeLongueur(LONGUE_DESCRIPTION, LONGUEUR_DESCRIPTION),
 			})),
 			networks: {

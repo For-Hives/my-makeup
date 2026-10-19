@@ -107,16 +107,14 @@ describe('U47 : ProfilePage → Person, avec des Offer en euros', () => {
 		expect(prix.length).toBeGreaterThan(1)
 		expect(Math.min(...prix)).toBe(profil.prixMinimal ?? Number.NaN)
 		expect(profil.prixMinimal).toBe(45)
-		expect(profil.prixMinimal).toBe(
-			prixMinimal([{ prixAPartirDe: 150 }, { prixAPartirDe: 45 }, { prixAPartirDe: null }])
-		)
+		expect(profil.prixMinimal).toBe(prixMinimal([{ priceFrom: 150 }, { priceFrom: 45 }, { priceFrom: null }]))
 	})
 
 	test('une offre sans montant reste une offre, sans prix ni devise', () => {
 		const profil = lireLeType(type('reference'), {
-			prestations: [
-				{ nom: 'Sur mesure', prixTexte: 'Sur devis', prixAPartirDe: null },
-				{ nom: 'Soirée', prixTexte: '60 €', prixAPartirDe: 60 },
+			serviceOffers: [
+				{ name: 'Sur mesure', priceText: 'Sur devis', priceFrom: null },
+				{ name: 'Soirée', priceText: '60 €', priceFrom: 60 },
 			],
 		})
 		const personne = (donneesStructureesDuProfil(profil) as { '@graph': { mainEntity: { makesOffer: object[] } }[] })[
@@ -187,8 +185,8 @@ describe('U50 : un texte avec une balise de fermeture de script', () => {
 			lastName: piege,
 			description: `${piege} ${'texte '.repeat(30)}`,
 			specialty: piege,
-			competences: [{ nom: piege }],
-			prestations: [{ nom: piege, description: piege, prixAPartirDe: 50, prixTexte: '50 €' }],
+			skills: [{ name: piege }],
+			serviceOffers: [{ name: piege, description: piege, priceFrom: 50, priceText: '50 €' }],
 		})
 		const donnees = donneesStructureesDuProfil(profil)
 		const sortie = serializeJsonLd(donnees)

@@ -16,9 +16,9 @@ import { periode } from '../profil/vue-publique'
 import { type DefinitionDeListe, type ErreursDeLigne, jourDuFormulaire, type ValeursDeLigne } from './liste'
 
 const TEXTES: readonly [string, number][] = [
-	['entreprise', LONGUEUR_NOM],
-	['poste', LONGUEUR_NOM],
-	['ville', LONGUEUR_NOM],
+	['company', LONGUEUR_NOM],
+	['jobTitle', LONGUEUR_NOM],
+	['city', LONGUEUR_NOM],
 	['description', LONGUEUR_DESCRIPTION],
 ]
 
@@ -30,12 +30,12 @@ function bornes(valeurs: ValeursDeLigne): ErreursDeLigne {
 		const message = messageDeTexte(valeurs[champ], maximum)
 		if (message !== null) erreurs[champ] = message
 	}
-	const debut = apresVide(valeurs.debut)
-	const fin = apresVide(valeurs.fin)
-	const messageDebut = messageDeDate(debut)
-	if (messageDebut !== null) erreurs.debut = messageDebut
-	const messageFin = messageDeFin(fin, messageDebut === null ? debut : null)
-	if (messageFin !== null) erreurs.fin = messageFin
+	const startDate = apresVide(valeurs.startDate)
+	const endDate = apresVide(valeurs.endDate)
+	const messageDebut = messageDeDate(startDate)
+	if (messageDebut !== null) erreurs.startDate = messageDebut
+	const messageFin = messageDeFin(endDate, messageDebut === null ? startDate : null)
+	if (messageFin !== null) erreurs.endDate = messageFin
 	return erreurs
 }
 
@@ -47,41 +47,46 @@ export const EXPERIENCES: DefinitionDeListe = {
 	pluriel: 'expériences',
 	designation: 'l’expérience',
 	champs: [
-		{ nom: 'poste', libelle: 'Poste', genre: 'texte', exemple: 'Maquilleuse mariage' },
-		{ nom: 'entreprise', libelle: 'Entreprise', genre: 'texte', exemple: 'Studio Fictif' },
-		{ nom: 'ville', libelle: 'Ville', genre: 'texte' },
-		{ nom: 'debut', libelle: 'Début', genre: 'date' },
-		{ nom: 'fin', libelle: 'Fin', genre: 'date', aide: 'Laisse vide si tu y es encore.' },
+		{ nom: 'jobTitle', libelle: 'Poste', genre: 'texte', exemple: 'Maquilleuse mariage' },
+		{ nom: 'company', libelle: 'Entreprise', genre: 'texte', exemple: 'Studio Fictif' },
+		{ nom: 'city', libelle: 'Ville', genre: 'texte' },
+		{ nom: 'startDate', libelle: 'Début', genre: 'date' },
+		{ nom: 'endDate', libelle: 'Fin', genre: 'date', aide: 'Laisse vide si tu y es encore.' },
 		{ nom: 'description', libelle: 'Description', genre: 'long' },
 	],
 	requis: {
-		entreprise: 'Le nom de l’entreprise est requis.',
-		poste: 'Le nom du poste est requis.',
-		debut: 'La date de début de l’expérience est requise.',
+		company: 'Le nom de l’entreprise est requis.',
+		jobTitle: 'Le nom du poste est requis.',
+		startDate: 'La date de début de l’expérience est requise.',
 	},
 	doublon: 'Une expérience identique est déjà dans la liste.',
 	bornes,
 	resume: valeurs =>
-		[valeurs.poste, valeurs.entreprise, valeurs.ville, periode({ debut: valeurs.debut, fin: valeurs.fin })]
+		[
+			valeurs.jobTitle,
+			valeurs.company,
+			valeurs.city,
+			periode({ startDate: valeurs.startDate, endDate: valeurs.endDate }),
+		]
 			.map(texte)
 			.filter(Boolean)
 			.join(' - '),
-	nom: valeurs => texte(valeurs.entreprise) || texte(valeurs.poste),
+	nom: valeurs => texte(valeurs.company) || texte(valeurs.jobTitle),
 	retrait: nom => `Expérience ${nom} retirée`.replace(/\s+/g, ' '),
 	depuisLeStockage: stockee => ({
-		poste: texte(stockee.poste),
-		entreprise: texte(stockee.entreprise),
-		ville: texte(stockee.ville),
-		debut: jourDuFormulaire(stockee.debut),
-		fin: jourDuFormulaire(stockee.fin),
+		jobTitle: texte(stockee.jobTitle),
+		company: texte(stockee.company),
+		city: texte(stockee.city),
+		startDate: jourDuFormulaire(stockee.startDate),
+		endDate: jourDuFormulaire(stockee.endDate),
 		description: typeof stockee.description === 'string' ? stockee.description.trim() : '',
 	}),
 	versLeStockage: valeurs => ({
-		poste: enNull(valeurs.poste),
-		entreprise: enNull(valeurs.entreprise),
-		ville: enNull(valeurs.ville),
-		debut: enNull(valeurs.debut),
-		fin: enNull(valeurs.fin),
+		jobTitle: enNull(valeurs.jobTitle),
+		company: enNull(valeurs.company),
+		city: enNull(valeurs.city),
+		startDate: enNull(valeurs.startDate),
+		endDate: enNull(valeurs.endDate),
 		description: enNull(valeurs.description),
 	}),
 }

@@ -56,9 +56,9 @@ const jour = (name: string, label: string, validate: DateField['validate']): Dat
 
 /** The two fields of a price (SCHEMA.md §6.6): the text as typed, and the amount it gives, if any. */
 const prix = (): Field[] => [
-	texte('prixTexte', 'Prix, tel que saisi'),
+	texte('priceText', 'Prix, tel que saisi'),
 	{
-		name: 'prixAPartirDe',
+		name: 'priceFrom',
 		label: 'Prix à partir de (€)',
 		type: 'number',
 		min: PRIX_MIN,
@@ -70,12 +70,12 @@ const prix = (): Field[] => [
 
 export const CHAMPS_LISTES: Field[] = [
 	{
-		name: 'prestations',
+		name: 'serviceOffers',
 		label: 'Prestations',
 		labels: { singular: 'Prestation', plural: 'Prestations' },
 		type: 'array',
 		fields: [
-			texte('nom', 'Nom'),
+			texte('name', 'Nom'),
 			description(),
 			...prix(),
 			{
@@ -83,33 +83,33 @@ export const CHAMPS_LISTES: Field[] = [
 				label: 'Options',
 				labels: { singular: 'Option', plural: 'Options' },
 				type: 'array',
-				fields: [texte('nom', 'Nom'), description(), ...prix()],
+				fields: [texte('name', 'Nom'), description(), ...prix()],
 			},
 		],
 	},
 	{
-		name: 'competences',
+		name: 'skills',
 		label: 'Compétences',
 		labels: { singular: 'Compétence', plural: 'Compétences' },
 		type: 'array',
-		fields: [texte('nom', 'Nom'), description()],
+		fields: [texte('name', 'Nom'), description()],
 	},
 	{
-		name: 'langues',
+		name: 'languages',
 		label: 'Langues',
 		labels: { singular: 'Langue', plural: 'Langues' },
 		type: 'array',
-		fields: [texte('nom', 'Nom')],
+		fields: [texte('name', 'Nom')],
 	},
 	{
-		name: 'formations',
+		name: 'courses',
 		label: 'Formations',
 		labels: { singular: 'Formation', plural: 'Formations' },
 		type: 'array',
 		fields: [
-			texte('diplome', 'Diplôme'),
-			texte('ecole', 'École'),
-			jour('obtenuLe', 'Obtenu le', valeur => messageDObtention(valeur, new Date()) ?? true),
+			texte('diploma', 'Diplôme'),
+			texte('school', 'École'),
+			jour('graduatedAt', 'Obtenu le', valeur => messageDObtention(valeur, new Date()) ?? true),
 			description(),
 		],
 	},
@@ -119,14 +119,14 @@ export const CHAMPS_LISTES: Field[] = [
 		labels: { singular: 'Expérience', plural: 'Expériences' },
 		type: 'array',
 		fields: [
-			texte('entreprise', 'Entreprise'),
-			texte('poste', 'Poste'),
-			texte('ville', 'Ville'),
-			jour('debut', 'Début', valeur => messageDeDate(valeur) ?? true),
+			texte('company', 'Entreprise'),
+			texte('jobTitle', 'Poste'),
+			texte('city', 'Ville'),
+			jour('startDate', 'Début', valeur => messageDeDate(valeur) ?? true),
 			jour(
-				'fin',
+				'endDate',
 				'Fin',
-				(valeur, { siblingData }) => messageDeFin(valeur, (siblingData as { debut?: unknown }).debut) ?? true
+				(valeur, { siblingData }) => messageDeFin(valeur, (siblingData as { startDate?: unknown }).startDate) ?? true
 			),
 			description(),
 		],

@@ -123,14 +123,14 @@ export default async function PageProfil() {
 									/>
 								) : carte.section === 'langues' ? (
 									<EditeurDePuces
-										liste="langues"
-										puces={pucesDeLaListe(profil.langues)}
+										liste="languages"
+										puces={pucesDeLaListe(profil.languages)}
 										envoyer={enregistrerMesLangues}
 									/>
 								) : carte.section === 'competences' ? (
 									<EditeurDePuces
-										liste="competences"
-										puces={pucesDeLaListe(profil.competences)}
+										liste="skills"
+										puces={pucesDeLaListe(profil.skills)}
 										envoyer={enregistrerMesCompetences}
 									/>
 								) : carte.section === 'photo' ? (

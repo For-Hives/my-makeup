@@ -57,17 +57,17 @@ const enregistrer = (
 ) => enregistrerListe(m.payload, m.utilisateur, { lignes }, definition)
 
 const EXPERIENCE: ValeursDeLigne = {
-	poste: 'Maquilleuse',
-	entreprise: 'Studio Fictif',
-	ville: 'Lyon',
-	debut: '2020-03-01',
-	fin: '',
+	jobTitle: 'Maquilleuse',
+	company: 'Studio Fictif',
+	city: 'Lyon',
+	startDate: '2020-03-01',
+	endDate: '',
 	description: '',
 }
 const FORMATION: ValeursDeLigne = {
-	diplome: 'CAP esthétique',
-	ecole: 'École Fictive',
-	obtenuLe: '2018-06-30',
+	diploma: 'CAP esthétique',
+	school: 'École Fictive',
+	graduatedAt: '2018-06-30',
 	description: '',
 }
 
@@ -84,16 +84,16 @@ describe('129 : les expériences', () => {
 		// Changing the second leaves the first; the order and the identifiers stay.
 		const second = await enregistrer(m, EXPERIENCES, [
 			{ id: a?.id, valeurs: EXPERIENCE },
-			{ id: b?.id, valeurs: { ...EXPERIENCE, poste: 'Cheffe maquilleuse' } },
+			{ id: b?.id, valeurs: { ...EXPERIENCE, jobTitle: 'Cheffe maquilleuse' } },
 		])
-		expect(second.ok && second.valeurs.lignes.map(ligne => [ligne.id, ligne.valeurs.poste])).toEqual([
+		expect(second.ok && second.valeurs.lignes.map(ligne => [ligne.id, ligne.valeurs.jobTitle])).toEqual([
 			[a?.id, 'Maquilleuse'],
 			[b?.id, 'Cheffe maquilleuse'],
 		])
 
 		// Removing the first leaves the second, with its identifier.
 		const troisieme = await enregistrer(m, EXPERIENCES, [
-			{ id: b?.id, valeurs: { ...EXPERIENCE, poste: 'Cheffe maquilleuse' } },
+			{ id: b?.id, valeurs: { ...EXPERIENCE, jobTitle: 'Cheffe maquilleuse' } },
 		])
 		expect(troisieme.ok && troisieme.valeurs.lignes.map(ligne => ligne.id)).toEqual([b?.id as string])
 		expect((await profilStocke(m.payload, m.compte)).experiences).toHaveLength(1)
@@ -102,8 +102,8 @@ describe('129 : les expériences', () => {
 	test('les jours sont gardés tels qu’écrits, l’ordre est celui de l’envoi, la page lit la même chose', async () => {
 		const m = await maquilleuse()
 		const lignes = [
-			{ valeurs: { ...EXPERIENCE, poste: 'Troisième', debut: '2022-01-15', fin: '2022-12-31' } },
-			{ valeurs: { ...EXPERIENCE, poste: 'Première', debut: '2018-01-01' } },
+			{ valeurs: { ...EXPERIENCE, jobTitle: 'Troisième', startDate: '2022-01-15', endDate: '2022-12-31' } },
+			{ valeurs: { ...EXPERIENCE, jobTitle: 'Première', startDate: '2018-01-01' } },
 		]
 		const resultat = await enregistrer(m, EXPERIENCES, lignes)
 
@@ -111,11 +111,11 @@ describe('129 : les expériences', () => {
 			lignes.map(ligne => ligne.valeurs)
 		)
 		const stocke = (await profilStocke(m.payload, m.compte)).experiences
-		expect(stocke?.map(ligne => ligne.poste)).toEqual(['Troisième', 'Première'])
-		expect(stocke?.[0]).toMatchObject({ debut: '2022-01-15T12:00:00.000Z', fin: '2022-12-31T12:00:00.000Z' })
-		expect(stocke?.[1]?.fin ?? null).toBeNull()
+		expect(stocke?.map(ligne => ligne.jobTitle)).toEqual(['Troisième', 'Première'])
+		expect(stocke?.[0]).toMatchObject({ startDate: '2022-01-15T12:00:00.000Z', endDate: '2022-12-31T12:00:00.000Z' })
+		expect(stocke?.[1]?.endDate ?? null).toBeNull()
 		const page = await profilDeLaMaquilleuse(m.payload, m.utilisateur)
-		expect(page?.experiences?.map(ligne => ligne.poste)).toEqual(['Troisième', 'Première'])
+		expect(page?.experiences?.map(ligne => ligne.jobTitle)).toEqual(['Troisième', 'Première'])
 	})
 
 	test('U30, E31 : une fin avant le début est refusée avec le nom de la ligne, la base ne bouge pas', async () => {
@@ -125,7 +125,7 @@ describe('129 : les expériences', () => {
 
 		const resultat = await enregistrer(m, EXPERIENCES, [
 			{ valeurs: EXPERIENCE },
-			{ valeurs: { ...EXPERIENCE, entreprise: 'Autre Studio', debut: '2022-05-01', fin: '2021-01-01' } },
+			{ valeurs: { ...EXPERIENCE, company: 'Autre Studio', startDate: '2022-05-01', endDate: '2021-01-01' } },
 		])
 
 		expect(resultat).toEqual({
@@ -139,7 +139,7 @@ describe('129 : les expériences', () => {
 
 	test('une ligne neuve sans son entreprise est refusée ; une ligne importée vide ne bloque pas l’enregistrement des autres', async () => {
 		const m = await maquilleuse()
-		const sansEntreprise = await enregistrer(m, EXPERIENCES, [{ valeurs: { ...EXPERIENCE, entreprise: '' } }])
+		const sansEntreprise = await enregistrer(m, EXPERIENCES, [{ valeurs: { ...EXPERIENCE, company: '' } }])
 		expect(sansEntreprise).toMatchObject({ ok: false })
 		expect((await profilStocke(m.payload, m.compte)).experiences ?? []).toHaveLength(0)
 
@@ -147,13 +147,13 @@ describe('129 : les expériences', () => {
 		await m.payload.update({
 			collection: 'profiles',
 			id: m.id,
-			data: { experiences: [{ poste: 'Reprise', entreprise: null }] },
+			data: { experiences: [{ jobTitle: 'Reprise', company: null }] },
 		})
 		const stockee = (await profilStocke(m.payload, m.compte)).experiences?.[0]
 		const lignes = [
 			{
 				id: stockee?.id ?? undefined,
-				valeurs: { ...EXPERIENCE, poste: 'Reprise', entreprise: '', debut: '', ville: '' },
+				valeurs: { ...EXPERIENCE, jobTitle: 'Reprise', company: '', startDate: '', city: '' },
 			},
 			{ valeurs: EXPERIENCE },
 		]
@@ -169,10 +169,10 @@ describe('129 : les expériences', () => {
 		if (!chez.ok) throw new Error(chez.message)
 		const idDeA = chez.valeurs.lignes[0]?.id
 
-		const resultat = await enregistrer(b, EXPERIENCES, [{ id: idDeA, valeurs: { ...EXPERIENCE, poste: 'Chez b' } }])
+		const resultat = await enregistrer(b, EXPERIENCES, [{ id: idDeA, valeurs: { ...EXPERIENCE, jobTitle: 'Chez b' } }])
 
 		expect(resultat.ok && resultat.valeurs.lignes[0]?.id).not.toBe(idDeA)
-		expect((await profilStocke(a.payload, a.compte)).experiences?.[0]?.poste).toBe('Maquilleuse')
+		expect((await profilStocke(a.payload, a.compte)).experiences?.[0]?.jobTitle).toBe('Maquilleuse')
 	})
 
 	test('une clé de plus refuse la requête entière, un compte sans profil reçoit le message du site', async () => {
@@ -205,17 +205,17 @@ describe('130 : les formations', () => {
 		const resultat = await enregistrer(m, FORMATIONS, [
 			{ valeurs: FORMATION },
 			{ valeurs: FORMATION },
-			{ valeurs: { ...FORMATION, diplome: 'BP esthétique' } },
+			{ valeurs: { ...FORMATION, diploma: 'BP esthétique' } },
 		])
 		if (!resultat.ok) throw new Error(resultat.message)
 		const ids = resultat.valeurs.lignes.map(ligne => ligne.id)
 		expect(new Set(ids).size).toBe(3)
-		expect((await profilStocke(m.payload, m.compte)).formations?.map(ligne => ligne.diplome)).toEqual([
+		expect((await profilStocke(m.payload, m.compte)).courses?.map(ligne => ligne.diploma)).toEqual([
 			'CAP esthétique',
 			'CAP esthétique',
 			'BP esthétique',
 		])
-		expect((await profilStocke(m.payload, m.compte)).formations?.[0]?.obtenuLe).toBe('2018-06-30T12:00:00.000Z')
+		expect((await profilStocke(m.payload, m.compte)).courses?.[0]?.graduatedAt).toBe('2018-06-30T12:00:00.000Z')
 	})
 
 	test('U30, E31 : une date à plus d’un an dans le futur est refusée, la base ne bouge pas', async () => {
@@ -225,7 +225,7 @@ describe('130 : les formations', () => {
 
 		const resultat = await enregistrer(m, FORMATIONS, [
 			{ valeurs: FORMATION },
-			{ valeurs: { ...FORMATION, diplome: 'Futur', obtenuLe: '2099-01-01' } },
+			{ valeurs: { ...FORMATION, diploma: 'Futur', graduatedAt: '2099-01-01' } },
 		])
 
 		expect(resultat).toEqual({
@@ -240,7 +240,7 @@ describe('130 : les formations', () => {
 		const m = await maquilleuse()
 		const premier = await enregistrer(m, FORMATIONS, [
 			{ valeurs: FORMATION },
-			{ valeurs: { ...FORMATION, diplome: 'BP esthétique' } },
+			{ valeurs: { ...FORMATION, diploma: 'BP esthétique' } },
 		])
 		if (!premier.ok) throw new Error(premier.message)
 		const [a, b] = premier.valeurs.lignes
@@ -251,32 +251,34 @@ describe('130 : les formations', () => {
 		expect(inverse.ok && inverse.valeurs.lignes.map(ligne => ligne.id)).toEqual([b?.id as string, a?.id as string])
 
 		await enregistrer(m, FORMATIONS, [])
-		expect((await profilStocke(m.payload, m.compte)).formations ?? []).toHaveLength(0)
+		expect((await profilStocke(m.payload, m.compte)).courses ?? []).toHaveLength(0)
 	})
 })
 
 describe('131 : les prestations', () => {
 	test.each(['80', '80 €', 'à partir de 80'])('U29 : « %s » donne un prix de 80, le texte est gardé', async saisie => {
 		const m = await maquilleuse()
-		const resultat = await enregistrer(m, PRESTATIONS, [{ valeurs: { nom: 'Mariée', description: '', prix: saisie } }])
+		const resultat = await enregistrer(m, PRESTATIONS, [
+			{ valeurs: { name: 'Mariée', description: '', price: saisie } },
+		])
 
-		expect(resultat.ok && resultat.valeurs.lignes[0]?.valeurs.prix).toBe(saisie)
-		expect((await profilStocke(m.payload, m.compte)).prestations?.[0]).toMatchObject({
-			nom: 'Mariée',
-			prixAPartirDe: 80,
-			prixTexte: saisie,
+		expect(resultat.ok && resultat.valeurs.lignes[0]?.valeurs.price).toBe(saisie)
+		expect((await profilStocke(m.payload, m.compte)).serviceOffers?.[0]).toMatchObject({
+			name: 'Mariée',
+			priceFrom: 80,
+			priceText: saisie,
 		})
 	})
 
 	test('U29 : « sur devis » garde son texte sans montant, plusieurs formules sont rangées une par ligne', async () => {
 		const m = await maquilleuse()
 		await enregistrer(m, PRESTATIONS, [
-			{ valeurs: { nom: 'Mariée', description: '', prix: 'sur devis' } },
-			{ valeurs: { nom: 'Cours', description: 'Deux heures.', prix: '60 € ; sur devis' } },
+			{ valeurs: { name: 'Mariée', description: '', price: 'sur devis' } },
+			{ valeurs: { name: 'Cours', description: 'Deux heures.', price: '60 € ; sur devis' } },
 		])
-		const [devis, cours] = (await profilStocke(m.payload, m.compte)).prestations ?? []
-		expect(devis).toMatchObject({ prixAPartirDe: null, prixTexte: 'sur devis' })
-		expect(cours).toMatchObject({ prixAPartirDe: 60, prixTexte: '60 €\nsur devis', description: 'Deux heures.' })
+		const [devis, cours] = (await profilStocke(m.payload, m.compte)).serviceOffers ?? []
+		expect(devis).toMatchObject({ priceFrom: null, priceText: 'sur devis' })
+		expect(cours).toMatchObject({ priceFrom: 60, priceText: '60 €\nsur devis', description: 'Deux heures.' })
 	})
 
 	test('un montant envoyé par la requête refuse la requête entière : le serveur le lit lui-même', async () => {
@@ -284,11 +286,11 @@ describe('131 : les prestations', () => {
 		const resultat = await enregistrerListe(
 			m.payload,
 			m.utilisateur,
-			{ lignes: [{ valeurs: { nom: 'Mariée', description: '', prix: 'sur devis', prixAPartirDe: 5000 } }] },
+			{ lignes: [{ valeurs: { name: 'Mariée', description: '', price: 'sur devis', priceFrom: 5000 } }] },
 			PRESTATIONS
 		)
 		expect(resultat).toEqual({ ok: false, message: MESSAGE_ECHEC })
-		expect((await profilStocke(m.payload, m.compte)).prestations ?? []).toHaveLength(0)
+		expect((await profilStocke(m.payload, m.compte)).serviceOffers ?? []).toHaveLength(0)
 	})
 
 	test('les options d’une prestation sont gardées quand on change la prestation, avec leurs identifiants', async () => {
@@ -297,31 +299,31 @@ describe('131 : les prestations', () => {
 			collection: 'profiles',
 			id: m.id,
 			data: {
-				prestations: [
+				serviceOffers: [
 					{
-						nom: 'Mariée',
-						prixTexte: '80',
-						prixAPartirDe: 80,
+						name: 'Mariée',
+						priceText: '80',
+						priceFrom: 80,
 						options: [
-							{ nom: 'Essai', prixTexte: '30', prixAPartirDe: 30 },
-							{ nom: 'Cils', prixTexte: 'sur devis' },
+							{ name: 'Essai', priceText: '30', priceFrom: 30 },
+							{ name: 'Cils', priceText: 'sur devis' },
 						],
 					},
 				],
 			},
 		})
-		const avant = (await profilStocke(m.payload, m.compte)).prestations?.[0]
+		const avant = (await profilStocke(m.payload, m.compte)).serviceOffers?.[0]
 		const idsAvant = avant?.options?.map(option => option.id)
 		expect(idsAvant).toHaveLength(2)
 
 		const resultat = await enregistrer(m, PRESTATIONS, [
-			{ id: avant?.id ?? undefined, valeurs: { nom: 'Mariée du soir', description: '', prix: '90' } },
+			{ id: avant?.id ?? undefined, valeurs: { name: 'Mariée du soir', description: '', price: '90' } },
 		])
 
-		expect(resultat.ok && resultat.valeurs.lignes[0]?.valeurs.nom).toBe('Mariée du soir')
-		const apres = (await profilStocke(m.payload, m.compte)).prestations?.[0]
-		expect(apres).toMatchObject({ nom: 'Mariée du soir', prixAPartirDe: 90 })
-		expect(apres?.options?.map(option => [option.id, option.nom, option.prixAPartirDe ?? null])).toEqual([
+		expect(resultat.ok && resultat.valeurs.lignes[0]?.valeurs.name).toBe('Mariée du soir')
+		const apres = (await profilStocke(m.payload, m.compte)).serviceOffers?.[0]
+		expect(apres).toMatchObject({ name: 'Mariée du soir', priceFrom: 90 })
+		expect(apres?.options?.map(option => [option.id, option.name, option.priceFrom ?? null])).toEqual([
 			[idsAvant?.[0], 'Essai', 30],
 			[idsAvant?.[1], 'Cils', null],
 		])
@@ -329,11 +331,13 @@ describe('131 : les prestations', () => {
 
 	test('E31 : un nom trop long ou vide est refusé, la base ne bouge pas', async () => {
 		const m = await maquilleuse()
-		await enregistrer(m, PRESTATIONS, [{ valeurs: { nom: 'Mariée', description: '', prix: '80' } }])
+		await enregistrer(m, PRESTATIONS, [{ valeurs: { name: 'Mariée', description: '', price: '80' } }])
 		const avant = await profilStocke(m.payload, m.compte)
 
-		const vide = await enregistrer(m, PRESTATIONS, [{ valeurs: { nom: '', description: '', prix: '80' } }])
-		const long = await enregistrer(m, PRESTATIONS, [{ valeurs: { nom: 'a'.repeat(71), description: '', prix: '80' } }])
+		const vide = await enregistrer(m, PRESTATIONS, [{ valeurs: { name: '', description: '', price: '80' } }])
+		const long = await enregistrer(m, PRESTATIONS, [
+			{ valeurs: { name: 'a'.repeat(71), description: '', price: '80' } },
+		])
 
 		expect(vide).toMatchObject({ ok: false })
 		expect(long).toMatchObject({ ok: false })
@@ -367,11 +371,11 @@ describe('131 : les prestations', () => {
 		test('« sur devis » seul ne suffit pas, un montant suffit, et le retirer ôte le critère', async () => {
 			const m = await toutSaufLOffre()
 
-			await enregistrer(m, PRESTATIONS, [{ valeurs: { nom: 'Mariée', description: '', prix: 'sur devis' } }])
+			await enregistrer(m, PRESTATIONS, [{ valeurs: { name: 'Mariée', description: '', price: 'sur devis' } }])
 			expect(await publiable(m)).toBe(false)
 
 			const chiffree = await enregistrer(m, PRESTATIONS, [
-				{ valeurs: { nom: 'Mariée', description: '', prix: 'à partir de 80' } },
+				{ valeurs: { name: 'Mariée', description: '', price: 'à partir de 80' } },
 			])
 			expect(chiffree.ok).toBe(true)
 			expect(await publiable(m)).toBe(true)
@@ -383,11 +387,11 @@ describe('131 : les prestations', () => {
 })
 
 describe('132 : les options d’une prestation', () => {
-	const MARIEE: ValeursDeLigne = { nom: 'Mariée', description: '', prix: '80' }
-	const SOIREE: ValeursDeLigne = { nom: 'Soirée', description: '', prix: '60' }
-	const ESSAI: ValeursDeLigne = { nom: 'Essai', description: 'Une heure', prix: '30' }
-	const CILS: ValeursDeLigne = { nom: 'Cils', description: '', prix: 'sur devis' }
-	const RETOUCHES: ValeursDeLigne = { nom: 'Retouches', description: '', prix: '' }
+	const MARIEE: ValeursDeLigne = { name: 'Mariée', description: '', price: '80' }
+	const SOIREE: ValeursDeLigne = { name: 'Soirée', description: '', price: '60' }
+	const ESSAI: ValeursDeLigne = { name: 'Essai', description: 'Une heure', price: '30' }
+	const CILS: ValeursDeLigne = { name: 'Cils', description: '', price: 'sur devis' }
+	const RETOUCHES: ValeursDeLigne = { name: 'Retouches', description: '', price: '' }
 
 	test('les options sont stockées sous la bonne prestation, dans l’ordre, avec le montant lu par le serveur', async () => {
 		const m = await maquilleuse()
@@ -396,9 +400,9 @@ describe('132 : les options d’une prestation', () => {
 			{ valeurs: SOIREE, options: [{ valeurs: RETOUCHES }] },
 		])
 		expect(resultat.ok).toBe(true)
-		const stockees = (await profilStocke(m.payload, m.compte)).prestations ?? []
+		const stockees = (await profilStocke(m.payload, m.compte)).serviceOffers ?? []
 		expect(
-			stockees.map(p => [p.nom, p.options?.map(o => [o.nom, o.prixAPartirDe ?? null, o.prixTexte ?? null])])
+			stockees.map(p => [p.name, p.options?.map(o => [o.name, o.priceFrom ?? null, o.priceText ?? null])])
 		).toEqual([
 			[
 				'Mariée',
@@ -411,7 +415,7 @@ describe('132 : les options d’une prestation', () => {
 		])
 		// Given back with an identifier each, in order, for the next save.
 		const donnees = resultat.ok ? resultat.valeurs.lignes : []
-		expect(donnees.map(l => l.options?.map(o => o.valeurs.nom))).toEqual([['Essai', 'Cils'], ['Retouches']])
+		expect(donnees.map(l => l.options?.map(o => o.valeurs.name))).toEqual([['Essai', 'Cils'], ['Retouches']])
 		expect(new Set(donnees.flatMap(l => l.options?.map(o => o.id) ?? [])).size).toBe(3)
 	})
 
@@ -431,7 +435,7 @@ describe('132 : les options d’une prestation', () => {
 			},
 		])
 		const options = seconde.ok ? (seconde.valeurs.lignes[0]?.options ?? []) : []
-		expect(options.map(o => o.valeurs.nom)).toEqual(['Cils', 'Retouches', 'Essai'])
+		expect(options.map(o => o.valeurs.name)).toEqual(['Cils', 'Retouches', 'Essai'])
 		expect(options[0]?.id).toBe(cils?.id ?? 'x')
 		expect(options[2]?.id).toBe(essai?.id ?? 'x')
 		expect(options[1]?.id).not.toBe(essai?.id)
@@ -444,10 +448,10 @@ describe('132 : les options d’une prestation', () => {
 		const id = premiere.ok ? premiere.valeurs.lignes[0]?.id : undefined
 
 		await enregistrer(m, PRESTATIONS, [{ id, valeurs: MARIEE }])
-		expect((await profilStocke(m.payload, m.compte)).prestations?.[0]?.options).toHaveLength(1)
+		expect((await profilStocke(m.payload, m.compte)).serviceOffers?.[0]?.options).toHaveLength(1)
 
 		await enregistrer(m, PRESTATIONS, [{ id, valeurs: MARIEE, options: [] }])
-		expect((await profilStocke(m.payload, m.compte)).prestations?.[0]?.options ?? []).toHaveLength(0)
+		expect((await profilStocke(m.payload, m.compte)).serviceOffers?.[0]?.options ?? []).toHaveLength(0)
 	})
 
 	test('un identifiant d’option qui n’est pas celui de cette prestation est remplacé, jamais repris', async () => {
@@ -472,27 +476,29 @@ describe('132 : les options d’une prestation', () => {
 		await enregistrer(m, PRESTATIONS, [{ valeurs: MARIEE, options: [{ valeurs: ESSAI }] }])
 		const avant = await profilStocke(m.payload, m.compte)
 		const resultat = await enregistrer(m, PRESTATIONS, [
-			{ valeurs: MARIEE, options: [{ valeurs: ESSAI }, { valeurs: { ...ESSAI, nom: ' Essai ' } }] },
+			{ valeurs: MARIEE, options: [{ valeurs: ESSAI }, { valeurs: { ...ESSAI, name: ' Essai ' } }] },
 		])
 		expect(resultat).toMatchObject({ ok: false, message: expect.stringContaining('deux options identiques') })
-		expect((await profilStocke(m.payload, m.compte)).prestations).toEqual(avant.prestations)
+		expect((await profilStocke(m.payload, m.compte)).serviceOffers).toEqual(avant.serviceOffers)
 	})
 
 	test('E31 : une option sans nom, ou trop longue, est refusée avec son nom dans le message', async () => {
 		const m = await maquilleuse()
-		const vide = await enregistrer(m, PRESTATIONS, [{ valeurs: MARIEE, options: [{ valeurs: { ...ESSAI, nom: '' } }] }])
+		const vide = await enregistrer(m, PRESTATIONS, [
+			{ valeurs: MARIEE, options: [{ valeurs: { ...ESSAI, name: '' } }] },
+		])
 		const longue = await enregistrer(m, PRESTATIONS, [
-			{ valeurs: MARIEE, options: [{ valeurs: { ...ESSAI, prix: 'a'.repeat(71) } }] },
+			{ valeurs: MARIEE, options: [{ valeurs: { ...ESSAI, price: 'a'.repeat(71) } }] },
 		])
 		expect(vide).toMatchObject({ ok: false, message: expect.stringContaining('Le nom de l’option est requis.') })
 		expect(longue).toMatchObject({ ok: false, message: expect.stringContaining('« Essai »') })
-		expect((await profilStocke(m.payload, m.compte)).prestations ?? []).toHaveLength(0)
+		expect((await profilStocke(m.payload, m.compte)).serviceOffers ?? []).toHaveLength(0)
 	})
 
 	test('une requête qui porte un montant d’option, ou des options hors prestation, est refusée en entier', async () => {
 		const m = await maquilleuse()
 		const montant = await enregistrer(m, PRESTATIONS, [
-			{ valeurs: MARIEE, options: [{ valeurs: { ...ESSAI, prixAPartirDe: '30' } as ValeursDeLigne }] },
+			{ valeurs: MARIEE, options: [{ valeurs: { ...ESSAI, priceFrom: '30' } as ValeursDeLigne }] },
 		])
 		const horsPrestation = await enregistrer(m, EXPERIENCES, [{ valeurs: EXPERIENCE, options: [{ valeurs: ESSAI }] }])
 		expect(montant).toEqual({ ok: false, message: MESSAGE_ECHEC })

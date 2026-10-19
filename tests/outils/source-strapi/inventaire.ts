@@ -397,9 +397,9 @@ export const CAS: readonly Cas[] = [
 		L,
 		'Prix écrits sans nombre lisible (prestations et options)',
 		'—',
-		l => prix(l).filter(p => p.prixTexte !== null && p.prixAPartirDe === null).length,
+		l => prix(l).filter(p => p.priceText !== null && p.priceFrom === null).length,
 	],
-	[L, 'Prix vides ou nuls (prestations et options)', '—', l => prix(l).filter(p => p.prixTexte === null).length],
+	[L, 'Prix vides ou nuls (prestations et options)', '—', l => prix(l).filter(p => p.priceText === null).length],
 	[
 		L,
 		'Expériences dont la fin précède le début (hors des bornes de la v3)',

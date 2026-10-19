@@ -47,7 +47,7 @@ test.describe('127 : les langues', { tag: '@mobile' }, () => {
 		page,
 	}) => {
 		const compte = await maquilleuse(context)
-		await modifierLaFiche(compte, { langues: [{ nom: 'Français' }, { nom: 'Anglais' }] })
+		await modifierLaFiche(compte, { languages: [{ name: 'Français' }, { name: 'Anglais' }] })
 		await page.goto('/auth/profil')
 
 		await page.getByRole('button', { name: 'Modifier mes langues' }).click()
@@ -75,7 +75,7 @@ test.describe('127 : les langues', { tag: '@mobile' }, () => {
 		await expect(page.getByRole('dialog')).toHaveCount(0)
 		await expect(page.getByRole('status').filter({ hasText: 'Tes langues sont enregistrées.' })).toBeVisible()
 		await expect(page.getByTestId('carte-langues')).toContainText('Espagnol')
-		expect(((await ficheDe(compte)).langues ?? []).map(({ nom }) => nom)).toEqual(['Français', 'Espagnol'])
+		expect(((await ficheDe(compte)).languages ?? []).map(({ name }) => name)).toEqual(['Français', 'Espagnol'])
 	})
 
 	test('E31 : un échec du serveur laisse l’ancienne liste, garde ce qui a été fait, et le dit', async ({
@@ -83,7 +83,7 @@ test.describe('127 : les langues', { tag: '@mobile' }, () => {
 		page,
 	}) => {
 		const compte = await maquilleuse(context)
-		await modifierLaFiche(compte, { langues: [{ nom: 'Français' }] })
+		await modifierLaFiche(compte, { languages: [{ name: 'Français' }] })
 		await page.goto('/auth/profil')
 		await page.getByRole('button', { name: 'Modifier mes langues' }).click()
 		await page.route('**/auth/profil', route =>
@@ -96,7 +96,7 @@ test.describe('127 : les langues', { tag: '@mobile' }, () => {
 		await expect(page.getByRole('alert').filter({ hasText: 'L’enregistrement n’a pas abouti' })).toBeVisible()
 		await expect(page.getByRole('button', { name: 'Retirer Russe' })).toBeVisible()
 		await expect(page.getByRole('dialog')).toBeVisible()
-		expect(((await ficheDe(compte)).langues ?? []).map(({ nom }) => nom)).toEqual(['Français'])
+		expect(((await ficheDe(compte)).languages ?? []).map(({ name }) => name)).toEqual(['Français'])
 	})
 })
 
@@ -106,7 +106,7 @@ test.describe('128 : les compétences', { tag: '@mobile' }, () => {
 		page,
 	}) => {
 		const compte = await maquilleuse(context)
-		await modifierLaFiche(compte, { competences: [{ nom: 'Teint', description: 'Peaux mates.' }] })
+		await modifierLaFiche(compte, { skills: [{ name: 'Teint', description: 'Peaux mates.' }] })
 		const envois: string[] = []
 		page.on('request', requete => {
 			if (requete.method() === 'POST' && new URL(requete.url()).pathname === '/auth/profil') envois.push(requete.url())
@@ -127,8 +127,8 @@ test.describe('128 : les compétences', { tag: '@mobile' }, () => {
 		await page.getByRole('button', { name: 'Enregistrer' }).click()
 		await expect(page.getByRole('dialog')).toHaveCount(0)
 		await expect(page.getByTestId('carte-competences')).toContainText('Yeux')
-		const stockees = (await ficheDe(compte)).competences ?? []
-		expect(stockees.map(({ nom, description }) => [nom, description ?? null])).toEqual([
+		const stockees = (await ficheDe(compte)).skills ?? []
+		expect(stockees.map(({ name, description }) => [name, description ?? null])).toEqual([
 			['Teint', 'Peaux mates.'],
 			['Yeux', null],
 		])

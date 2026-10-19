@@ -55,8 +55,8 @@ describe('127 : les langues', () => {
 		expect(resultat.ok).toBe(true)
 		expect(puces(resultat).map(({ nom }) => nom)).toEqual(['Français', 'Anglais', 'Espagnol'])
 		expect(new Set(puces(resultat).map(({ id }) => id)).size).toBe(3)
-		const stockees = (await profilStocke(payload, compte)).langues ?? []
-		expect(stockees.map(({ nom }) => nom)).toEqual(['Français', 'Anglais', 'Espagnol'])
+		const stockees = (await profilStocke(payload, compte)).languages ?? []
+		expect(stockees.map(({ name }) => name)).toEqual(['Français', 'Anglais', 'Espagnol'])
 		expect(stockees.map(({ id }) => id)).toEqual(puces(resultat).map(({ id }) => id))
 	})
 
@@ -66,13 +66,13 @@ describe('127 : les langues', () => {
 		await payload.update({
 			collection: 'profiles',
 			id: profil.id,
-			data: { langues: [{ nom: 'Anglais' }, { nom: 'Anglais' }, { nom: 'Russe' }] },
+			data: { languages: [{ name: 'Anglais' }, { name: 'Anglais' }, { name: 'Russe' }] },
 		})
-		const avant = (await profilStocke(payload, compte)).langues ?? []
+		const avant = (await profilStocke(payload, compte)).languages ?? []
 		expect(new Set(avant.map(({ id }) => id)).size).toBe(3)
 
 		const resultat = await enregistrerLangues(payload, utilisateur, {
-			puces: avant.filter((_, rang) => rang !== 0).map(({ id, nom }) => ({ id, nom })),
+			puces: avant.filter((_, rang) => rang !== 0).map(({ id, name }) => ({ id, nom: name })),
 		})
 
 		expect(resultat.ok).toBe(true)
@@ -88,12 +88,12 @@ describe('127 : les langues', () => {
 		await payload.update({
 			collection: 'profiles',
 			id: profil.id,
-			data: { langues: [{ nom: 'Anglais' }, { nom: 'anglais' }] },
+			data: { languages: [{ name: 'Anglais' }, { name: 'anglais' }] },
 		})
-		const avant = (await profilStocke(payload, compte)).langues ?? []
+		const avant = (await profilStocke(payload, compte)).languages ?? []
 
 		const resultat = await enregistrerLangues(payload, utilisateur, {
-			puces: [...avant.map(({ id, nom }) => ({ id, nom })), { nom: 'Russe' }],
+			puces: [...avant.map(({ id, name }) => ({ id, nom: name })), { nom: 'Russe' }],
 		})
 
 		expect(resultat.ok).toBe(true)
@@ -104,8 +104,8 @@ describe('127 : les langues', () => {
 		const { payload, utilisateur } = await maquilleuse()
 		const autre = await maquilleuse()
 		const profilAutre = await profilStocke(payload, autre.compte)
-		await payload.update({ collection: 'profiles', id: profilAutre.id, data: { langues: [{ nom: 'Basque' }] } })
-		const idAutre = ((await profilStocke(payload, autre.compte)).langues ?? [])[0]?.id as string
+		await payload.update({ collection: 'profiles', id: profilAutre.id, data: { languages: [{ name: 'Basque' }] } })
+		const idAutre = ((await profilStocke(payload, autre.compte)).languages ?? [])[0]?.id as string
 
 		const resultat = await enregistrerLangues(payload, utilisateur, {
 			puces: [
@@ -117,7 +117,7 @@ describe('127 : les langues', () => {
 		expect(resultat.ok).toBe(true)
 		expect(puces(resultat).map(({ id }) => id)).not.toContain(idAutre)
 		expect(puces(resultat).map(({ id }) => id)).not.toContain('inventé')
-		expect(((await profilStocke(payload, autre.compte)).langues ?? []).map(({ nom }) => nom)).toEqual(['Basque'])
+		expect(((await profilStocke(payload, autre.compte)).languages ?? []).map(({ name }) => name)).toEqual(['Basque'])
 	})
 
 	test('E30 : un nom de 71 caractères est refusé en français, et rien n’est écrit', async () => {
@@ -129,7 +129,7 @@ describe('127 : les langues', () => {
 		})
 
 		expect(resultat).toEqual({ ok: false, message: LANGUES.tropLong })
-		expect(((await profilStocke(payload, compte)).langues ?? []).map(({ nom }) => nom)).toEqual(['Anglais'])
+		expect(((await profilStocke(payload, compte)).languages ?? []).map(({ name }) => name)).toEqual(['Anglais'])
 		const limite = await enregistrerLangues(payload, utilisateur, { puces: [{ nom: 'é'.repeat(70) }] })
 		expect(limite.ok).toBe(true)
 	})
@@ -158,14 +158,14 @@ describe('127 : les langues', () => {
 		]) {
 			expect(await enregistrerLangues(payload, utilisateur, saisie)).toEqual({ ok: false, message: LANGUES.invalide })
 		}
-		expect((await profilStocke(payload, compte)).langues ?? []).toEqual([])
+		expect((await profilStocke(payload, compte)).languages ?? []).toEqual([])
 	})
 
 	test('I02 : elle n’écrit que dans son profil, trouvé par son compte', async () => {
 		const { payload, utilisateur } = await maquilleuse()
 		const autre = await maquilleuse()
 		await enregistrerLangues(payload, utilisateur, { puces: [{ nom: 'Anglais' }] })
-		expect((await profilStocke(payload, autre.compte)).langues ?? []).toEqual([])
+		expect((await profilStocke(payload, autre.compte)).languages ?? []).toEqual([])
 	})
 
 	test('un compte sans profil ne crée rien : message du site', async () => {
@@ -197,14 +197,14 @@ describe('127 : les langues', () => {
 			ok: false,
 			message: MESSAGE_ECHEC,
 		})
-		expect(((await profilStocke(payload, compte)).langues ?? []).map(({ nom }) => nom)).toEqual(['Anglais'])
+		expect(((await profilStocke(payload, compte)).languages ?? []).map(({ name }) => name)).toEqual(['Anglais'])
 	})
 
 	test('la page de son espace lit ce qui a été stocké, dans l’ordre', async () => {
 		const { payload, utilisateur } = await maquilleuse()
 		await enregistrerLangues(payload, utilisateur, { puces: [{ nom: 'Russe' }, { nom: 'Anglais' }] })
 		const profil = await profilDeLaMaquilleuse(payload, utilisateur)
-		expect(pucesDeLaListe(profil?.langues).map(({ nom }) => nom)).toEqual(['Russe', 'Anglais'])
+		expect(pucesDeLaListe(profil?.languages).map(({ nom }) => nom)).toEqual(['Russe', 'Anglais'])
 	})
 })
 
@@ -217,8 +217,8 @@ describe('128 : les compétences', () => {
 		})
 
 		expect(resultat.ok).toBe(true)
-		const stockees = (await profilStocke(payload, compte)).competences ?? []
-		expect(stockees.map(({ nom }) => nom)).toEqual(['Teint', 'Yeux'])
+		const stockees = (await profilStocke(payload, compte)).skills ?? []
+		expect(stockees.map(({ name }) => name)).toEqual(['Teint', 'Yeux'])
 		expect(stockees.map(({ id }) => id)).toEqual(puces(resultat).map(({ id }) => id))
 	})
 
@@ -228,16 +228,16 @@ describe('128 : les compétences', () => {
 		await payload.update({
 			collection: 'profiles',
 			id: profil.id,
-			data: { competences: [{ nom: 'Teint', description: 'Peaux mates et matures.' }, { nom: 'Yeux' }] },
+			data: { skills: [{ name: 'Teint', description: 'Peaux mates et matures.' }, { name: 'Yeux' }] },
 		})
-		const avant = (await profilStocke(payload, compte)).competences ?? []
+		const avant = (await profilStocke(payload, compte)).skills ?? []
 
 		await enregistrerCompetences(payload, utilisateur, {
-			puces: [...avant.map(({ id, nom }) => ({ id, nom })), { nom: 'Ongles' }],
+			puces: [...avant.map(({ id, name }) => ({ id, nom: name })), { nom: 'Ongles' }],
 		})
 
-		const apres = (await profilStocke(payload, compte)).competences ?? []
-		expect(apres.map(({ nom, description }) => [nom, description ?? null])).toEqual([
+		const apres = (await profilStocke(payload, compte)).skills ?? []
+		expect(apres.map(({ name, description }) => [name, description ?? null])).toEqual([
 			['Teint', 'Peaux mates et matures.'],
 			['Yeux', null],
 			['Ongles', null],
@@ -253,7 +253,7 @@ describe('128 : les compétences', () => {
 			message: COMPETENCES.tropLong,
 		})
 		expect((await enregistrerCompetences(payload, utilisateur, { puces: [{ nom: 'Teint' }] })).ok).toBe(true)
-		expect((await profilStocke(payload, compte)).langues?.map(({ nom }) => nom)).toEqual(['Teint'])
+		expect((await profilStocke(payload, compte)).languages?.map(({ name }) => name)).toEqual(['Teint'])
 	})
 
 	test('une puce neuve qui double une autre est refusée avec le message des compétences', async () => {

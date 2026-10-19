@@ -7,8 +7,8 @@
  *   link table of Strapi (`order`, then the link), never in the order of their identifiers. A row
  *   two links name twice stays twice, as on the old site (§11, open question 15). A row no link
  *   names belongs to no profile and is not taken; a link that names no row is reported.
- * - **Every value is taken as it is**, the price above all: `prixTexte` is the text typed, byte
- *   for byte, and `prixAPartirDe` stays empty here (ticket 062 fills it). A date of these lists is
+ * - **Every value is taken as it is**, the price above all: `priceText` is the text typed, byte
+ *   for byte, and `priceFrom` stays empty here (ticket 062 fills it). A date of these lists is
  *   a day: the day typed, stored at 12:00 UTC as the collection stores every day
  *   (src/lib/profil/listes.ts). Empty stays empty (rule 2).
  * - **The identifier of a row** is not taken (§7): Payload gives one, and keeps it as long as the
@@ -346,8 +346,8 @@ const leJour = (date: string | null): unknown => (date === null ? null : dateDuJ
  * rule reads in it, or null.
  */
 const prixDeLaSource = (saisie: string | null) => ({
-	prixTexte: saisie,
-	prixAPartirDe: parsePrice(saisie).prixAPartirDe,
+	priceText: saisie,
+	priceFrom: parsePrice(saisie).priceFrom,
 })
 
 /**
@@ -357,28 +357,28 @@ const prixDeLaSource = (saisie: string | null) => ({
 export function valeursDesListes(sections: SectionsLues): Record<string, unknown> {
 	const reseau = sections.reseau
 	return {
-		competences: sections.competences.map(({ name, description }) => ({ nom: name, description })),
-		langues: sections.langues.map(({ name }) => ({ nom: name })),
-		formations: sections.formations.map(({ diploma, school, date_graduation, course_description }) => ({
-			diplome: diploma,
-			ecole: school,
-			obtenuLe: leJour(date_graduation),
+		skills: sections.competences.map(({ name, description }) => ({ name, description })),
+		languages: sections.langues.map(({ name }) => ({ name })),
+		courses: sections.formations.map(({ diploma, school, date_graduation, course_description }) => ({
+			diploma,
+			school,
+			graduatedAt: leJour(date_graduation),
 			description: course_description,
 		})),
 		experiences: sections.experiences.map(({ company, job_name, city, date_start, date_end, description }) => ({
-			entreprise: company,
-			poste: job_name,
-			ville: city,
-			debut: leJour(date_start),
-			fin: leJour(date_end),
+			company,
+			jobTitle: job_name,
+			city,
+			startDate: leJour(date_start),
+			endDate: leJour(date_end),
 			description,
 		})),
-		prestations: sections.prestations.map(({ name, description, price, options }) => ({
-			nom: name,
+		serviceOffers: sections.prestations.map(({ name, description, price, options }) => ({
+			name,
 			description,
 			...prixDeLaSource(price),
 			options: options.map(option => ({
-				nom: option.name,
+				name: option.name,
 				description: option.description,
 				...prixDeLaSource(option.price),
 			})),

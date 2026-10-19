@@ -357,7 +357,7 @@ describe('126 : masquées et aucun réseau, le profil n’est pas publiable', ()
 				mainPicture: photo.id,
 				city: ANNECY,
 				specialty: 'Mariage',
-				prestations: [{ nom: 'Prestation fictive', prixAPartirDe: 80 }],
+				serviceOffers: [{ name: 'Prestation fictive', priceFrom: 80 }],
 				description: 'Maquilleuse fictive, pour les essais du banc. '.repeat(5),
 			},
 		})

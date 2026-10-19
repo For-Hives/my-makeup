@@ -87,7 +87,7 @@ describe('E19-E29 : indisponible, le profil sort de la liste publique', () => {
 				lastName: 'Fictive',
 				description: 'Maquillage fictif pour les mariages et les soirées. '.repeat(4),
 				specialty: 'Mariée',
-				competences: [{ nom: 'Teint' }],
+				skills: [{ name: 'Teint' }],
 			},
 		})
 		const listee = async () =>
