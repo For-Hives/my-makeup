@@ -109,9 +109,7 @@
 		"words": [
 			{
 				"word": "specialite",
-				"in": [
-					"src/lib/search/input.ts"
-				],
+				"in": ["src/lib/search/input.ts"],
 				"reason": "The ?specialite= parameter of /search: links of the old site carry it."
 			}
 		]
