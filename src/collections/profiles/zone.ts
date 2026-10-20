@@ -125,7 +125,11 @@ export const zoneFields: Field[] = [
 				label: 'Codes postaux',
 				type: 'text',
 				hasMany: true,
-				hooks: { beforeValidate: [({ value }) => normalizedPostalCodes(value)] },
+				hooks: {
+					beforeValidate: [({ value }) => normalizedPostalCodes(value)],
+					// A commune with no postal code reads as before ticket 259: the group holds no empty list.
+					afterRead: [({ value }) => (Array.isArray(value) && value.length === 0 ? undefined : value)],
+				},
 				validate: (value: unknown) => postalCodesErrors(value)[0] ?? true,
 				admin: { description: 'Donnés par la liste officielle avec la commune.' },
 			},

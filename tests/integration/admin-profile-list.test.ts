@@ -52,13 +52,15 @@ const expected = (garde: (profil: (typeof DEMO_PROFILES)[number]) => boolean) =>
 		.sort()
 
 describe('La liste des profils de l’admin (ticket 165)', () => {
-	test('la liste montre l’adresse, la commune, la complétude, le caractère publiable, le statut et la dernière activité, la plus récente d’abord', () => {
+	test('la liste montre l’adresse, la commune, la complétude, le caractère publiable, le statut, la zone à revoir et la dernière activité, la plus récente d’abord', () => {
 		expect(Profiles.admin?.defaultColumns).toEqual([
 			'slug',
 			'city.name',
 			'completeness',
 			'publishable',
 			'status',
+			// The zone the import could not decide (ticket 259).
+			'zoneReview.reason',
 			'updatedAt',
 		])
 		expect(Profiles.defaultSort).toBe('-updatedAt')

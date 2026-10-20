@@ -42,15 +42,11 @@ async function artistAndItsProfile(): Promise<{ compte: Artist; profil: number }
 const modify = (compte: Artist, profil: number, corps: Record<string, unknown>) =>
 	callRest('PATCH', `/api/profiles/${profil}?depth=0`, { enTetes: compte.session.enTetes, corps })
 
-/**
- * The zone of a commune as the database holds it, read without access control. The postal codes of
- * the commune (ticket 259) are read apart, by `storedPostalCodes`: this view is the one of ticket 041.
- */
+/** The zone as the database holds it, read without access control. */
 async function storedZone(profil: number) {
 	const payload = await testPayload()
 	const { city, radiusKm, homeService } = await payload.findByID({ collection: 'profiles', depth: 0, id: profil })
-	const { postalCodes: _postalCodes, ...cityFields } = city ?? {}
-	return { city: cityFields, radiusKm, homeService }
+	return { city, radiusKm, homeService }
 }
 
 /** What a REST refusal says, field by field. */
@@ -358,7 +354,7 @@ async function storedAbroad(profil: number) {
 		depth: 0,
 		id: profil,
 	})
-	return { zoneKind, countries, town, cityName: city?.name ?? null, postalCodes: city?.postalCodes, zoneReview }
+	return { zoneKind, countries, town, cityName: city?.name ?? null, postalCodes: city?.postalCodes ?? [], zoneReview }
 }
 
 const NO_REVIEW = { reason: null, postalCode: null, candidates: null } as const
