@@ -8,7 +8,7 @@ import type {
 	RequestContext,
 } from 'payload'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
-import { estUnImport } from '../lib/contexte-import'
+import { estUnImport } from '../lib/import-context'
 import { PUBLISHED_STATUS } from '../lib/profile/status'
 import { changeTargets, type PublicContent, type PublicState, type Targets } from '../lib/revalidate'
 import { changedUrls, keyIfSubmitAllowed, reportLater } from '../lib/seo/indexnow'

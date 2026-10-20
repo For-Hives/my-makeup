@@ -3,8 +3,8 @@
  * import writes only when it is told so, with `--reel`.
  */
 
-import { DRAPEAU_BASE_ATTENDUE, DRAPEAU_CIBLE_DISTANTE, DRAPEAU_CIBLE_EN_SERVICE } from './cible'
-import type { Mode } from './rapport'
+import { DRAPEAU_BASE_ATTENDUE, DRAPEAU_CIBLE_DISTANTE, DRAPEAU_CIBLE_EN_SERVICE } from './target'
+import type { Mode } from './report'
 
 export interface ArgumentsDImport {
 	mode: Mode

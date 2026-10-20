@@ -16,7 +16,7 @@
  */
 
 import { isLocalDatabase } from '../../src/lib/env'
-import { configurationSansChangementDeSchema } from '../migration/import/cible'
+import { configurationSansChangementDeSchema } from '../migration/import/target'
 import { lireUnSecret } from './clavier'
 import { type Comptes, CreationRefusee, creerLeCompte, DRAPEAU_CIBLE_DISTANTE, lireLesArguments, USAGE } from './compte'
 

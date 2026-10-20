@@ -45,12 +45,12 @@ import {
 	verifierLaBaseAttendue,
 	verifierLaCible,
 	verifierLeSchemaDeLaCible,
-} from './import/cible'
+} from './import/target'
 import { AUCUNE_DECISION, type Decisions, lireLesDecisions } from './import/decisions'
 import { importer } from './import/importer'
-import { ImportInterrompu, messageDUneErreurInattendue } from './import/moteur'
-import { dateDeBascule } from './import/profils'
-import { codeDeSortie, codeDuControle, controleEnTexte, rapportEnTexte } from './import/rapport'
+import { ImportInterrompu, messageDUneErreurInattendue } from './import/engine'
+import { dateDeBascule } from './import/profiles'
+import { codeDeSortie, codeDuControle, controleEnTexte, rapportEnTexte } from './import/report'
 import {
 	lireLesReponses,
 	type ReferentielGarde,
@@ -58,7 +58,7 @@ import {
 	referentielGarde,
 	referentielGeoApi,
 	reponsesEnTexte,
-} from './import/referentiel'
+} from './import/reference'
 import { ouvrirLaSourceBun } from './import/source-bun'
 
 /** The table of decisions from its file. The file is not printed: an error says what is wrong in it. */

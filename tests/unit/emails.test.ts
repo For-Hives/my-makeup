@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { CONTEXTE_IMPORT } from '@/lib/contexte-import'
+import { CONTEXTE_IMPORT } from '@/lib/import-context'
 import { absoluteLink, composerEmail, EMAIL_FOOTER, InvalidEmail } from '@/lib/emails/layout'
 import { adapterWithoutRelay, RELAY_TIMEOUT_MS, transportOptions } from '@/lib/emails/relay'
 import { createSendEmail, EmailSendFailed, type Log, NO_RELAY, type RelayMessage } from '@/lib/emails/send'

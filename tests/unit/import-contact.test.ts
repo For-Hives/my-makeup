@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { lireLesArguments } from '../../scripts/migration/import/arguments'
-import { dateDeBascule } from '../../scripts/migration/import/profils'
+import { dateDeBascule } from '../../scripts/migration/import/profiles'
 
 /**
  * Ticket 064: the date of the switch, the consent date of the contact details shown on the old

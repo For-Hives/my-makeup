@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
-import { ImportRefuse } from '../../scripts/migration/import/cible'
-import { codeDeSortie } from '../../scripts/migration/import/rapport'
+import { ImportRefuse } from '../../scripts/migration/import/target'
+import { codeDeSortie } from '../../scripts/migration/import/report'
 import { deleteAccountAndDependents } from '../../src/lib/account/deletion'
 import { importerSurLeBanc } from '../outils/import'
 import { seConnecter } from '../outils/parcours-herites'

@@ -21,7 +21,7 @@
 
 import { z } from 'zod'
 import { departmentOfInseeCode } from '../../../src/lib/profile/zone'
-import { ImportRefuse } from './cible'
+import { ImportRefuse } from './target'
 
 /** The public address of the referential. */
 export const ADRESSE_DU_REFERENTIEL = 'https://geo.api.gouv.fr'

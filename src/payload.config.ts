@@ -24,7 +24,7 @@ import { PAYLOAD_LANGUAGE } from './lib/payload-language'
 import { reserveLocksToAdmins } from './lib/payload-locks'
 import { poolSettings, withPoolListener } from './lib/pool-base'
 import { createObjectStorage } from './lib/storage'
-import { lancerLImportALaDemande } from './migration/import-a-la-demande'
+import { lancerLImportALaDemande } from './migration/on-demand-import'
 import { migrations } from './migrations'
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))

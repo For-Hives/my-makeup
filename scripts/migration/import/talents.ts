@@ -9,8 +9,8 @@
 
 import { TALENT_PAGE_TITLES } from '../../../src/content/talent-titles'
 import { isSlug } from '../../../src/lib/slug'
-import { REFERENCES } from './ecarts'
-import type { Adaptateur, Attendu, Refus } from './moteur'
+import { REFERENCES } from './gaps'
+import type { Adaptateur, Attendu, Refus } from './engine'
 import { iso, type Requete } from './source'
 
 /** A row of `talents`, as the import reads it. */

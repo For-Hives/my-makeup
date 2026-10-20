@@ -13,8 +13,8 @@
  * No `bun` import here: the import can run under Node too.
  */
 
-import { type LienDeFichier, type PhotoNonReprise, photosDeLEntree, TYPE_ARTICLE } from './medias'
-import type { Adaptateur, Attendu, Refus } from './moteur'
+import { type LienDeFichier, type PhotoNonReprise, photosDeLEntree, TYPE_ARTICLE } from './media'
+import type { Adaptateur, Attendu, Refus } from './engine'
 import { iso, type Requete } from './source'
 import { repartirParSlug } from './talents'
 

@@ -15,8 +15,8 @@
 import { randomBytes } from 'node:crypto'
 import { NO_PROFILE_CONTEXT } from '../../../src/collections/Profiles'
 import { type ApplicationDesDecisions, appliquerLesDecisions, type Decisions } from './decisions'
-import { REFERENCES } from './ecarts'
-import type { Adaptateur, Attendu, Ecart } from './moteur'
+import { REFERENCES } from './gaps'
+import type { Adaptateur, Attendu, Ecart } from './engine'
 import { iso, type Requete } from './source'
 
 /** A row of `up_users`, as the import reads it: never its tokens. */

@@ -11,7 +11,7 @@ import {
 	lireLeJournalGit,
 	verifierLesReferences,
 	verifierLHistorique,
-} from '../../scripts/migration/gel-regles'
+} from '../../scripts/migration/freeze-rules'
 
 const DEBUT = '2026-12-01T09:00:00Z'
 const commit = (subject: string, date: string, extra: Partial<CommitDeLAncienSite> = {}): CommitDeLAncienSite => ({

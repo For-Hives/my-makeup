@@ -28,8 +28,8 @@ import {
 	looksLikeAnAddress,
 	roundedCoordinate,
 } from '../../../src/lib/profile/zone'
-import { ImportRefuse } from './cible'
-import type { CommuneDuReferentiel, Referentiel } from './referentiel'
+import { ImportRefuse } from './target'
+import type { CommuneDuReferentiel, Referentiel } from './reference'
 
 /** The commune a profile must hold, as the collection stores it (`profiles.city`). */
 export interface CommuneAttendue {

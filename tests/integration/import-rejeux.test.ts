@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
-import { ImportRefuse } from '../../scripts/migration/import/cible'
-import { codeDeSortie, type Rapport } from '../../scripts/migration/import/rapport'
+import { ImportRefuse } from '../../scripts/migration/import/target'
+import { codeDeSortie, type Rapport } from '../../scripts/migration/import/report'
 import { DATE_DE_BASCULE_DU_BANC } from '../outils/banc'
 import { commandeDImport, FICHIER_DES_DECISIONS_DU_BANC, importerSurLeBanc } from '../outils/import'
 import { seConnecter } from '../outils/parcours-herites'

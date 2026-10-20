@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { createServer } from 'node:net'
 import { nodemailerAdapter } from '@payloadcms/email-nodemailer'
-import { CONTEXTE_IMPORT } from '@/lib/contexte-import'
+import { CONTEXTE_IMPORT } from '@/lib/import-context'
 import { composerEmail } from '@/lib/emails/layout'
 import { transportOptions } from '@/lib/emails/relay'
 import { createSendEmail, EmailSendFailed, payloadSendEmail } from '@/lib/emails/send'

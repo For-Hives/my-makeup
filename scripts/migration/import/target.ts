@@ -11,7 +11,7 @@
 
 import type { Payload, SanitizedConfig } from 'payload'
 import { isLocalDatabase } from '../../../src/lib/env'
-import type { CollectionImportee } from './moteur'
+import type { CollectionImportee } from './engine'
 
 /** The import does not start: the message says why and what to do, never a value. */
 export class ImportRefuse extends Error {

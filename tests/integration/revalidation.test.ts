@@ -1,6 +1,6 @@
 import { afterAll, afterEach, describe, expect, setDefaultTimeout, test } from 'bun:test'
 import type { CollectionSlug } from 'payload'
-import { CONTEXTE_IMPORT } from '@/lib/contexte-import'
+import { CONTEXTE_IMPORT } from '@/lib/import-context'
 import type { Profile } from '@/payload-types'
 import { espionnerLeCache, type Rafraichi } from '../outils/espion-cache'
 import { creerCompte } from '../outils/fabrique-comptes'

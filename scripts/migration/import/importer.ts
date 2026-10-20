@@ -19,20 +19,20 @@
  */
 
 import type { Payload } from 'payload'
-import { marquerUnImportEnCours } from '../../../src/lib/contexte-import'
+import { marquerUnImportEnCours } from '../../../src/lib/import-context'
 import { ADAPTATEUR_ARTICLES, articlesAttendus, articlesRepartis, lireLesArticles } from './articles'
-import { type GenreDeCible, ImportRefuse } from './cible'
-import { type CasARevoir, communesDesProfils } from './communes'
+import { type GenreDeCible, ImportRefuse } from './target'
+import { type CasARevoir, communesDesProfils } from './cities'
 import {
 	ADAPTATEUR_COMPTES,
 	ADAPTATEUR_COMPTES_EN_SERVICE,
 	comptesAttendus,
 	lireLesComptes,
 	repartitionDesComptes,
-} from './comptes'
+} from './accounts'
 import { AUCUNE_DECISION, type Decisions } from './decisions'
-import { REFERENCES } from './ecarts'
-import { comptesSupprimesDansLaV3, refuserUneCibleEnService, sansLesComptesSupprimes } from './garde-bascule'
+import { REFERENCES } from './gaps'
+import { comptesSupprimesDansLaV3, refuserUneCibleEnService, sansLesComptesSupprimes } from './cutover-guard'
 import {
 	ADAPTATEUR_MEDIAS,
 	bilanDesFichiers,
@@ -43,7 +43,7 @@ import {
 	type Sonde,
 	sondeHttp,
 	sonderLesObjets,
-} from './medias'
+} from './media'
 import {
 	type Adaptateur,
 	type Attendu,
@@ -53,7 +53,7 @@ import {
 	parite,
 	planifier,
 	type Refus,
-} from './moteur'
+} from './engine'
 import {
 	ADAPTATEUR_PROFILS,
 	ADAPTATEUR_PROFILS_EN_SERVICE,
@@ -63,9 +63,9 @@ import {
 	profilsAttendus,
 	profilsLaisses,
 	videALaSource,
-} from './profils'
-import type { BilanDeCollection, Mode, PariteDeCollection, Rapport } from './rapport'
-import type { Referentiel } from './referentiel'
+} from './profiles'
+import type { BilanDeCollection, Mode, PariteDeCollection, Rapport } from './report'
+import type { Referentiel } from './reference'
 import { empreinteDesTables, memesTables, type Source } from './source'
 import { ADAPTATEUR_TALENTS, lireLesTalents, talentsAttendus } from './talents'
 

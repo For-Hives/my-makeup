@@ -18,7 +18,7 @@
  */
 
 import type { Payload } from 'payload'
-import { CONTEXTE_IMPORT } from '../lib/contexte-import'
+import { CONTEXTE_IMPORT } from '../lib/import-context'
 import { DEMO_ARTICLES, DEMO_TALENTS } from './editorial'
 import { type LoadingOptions, type ProfilesSummary, placeDemoProfiles, requireDemoTarget } from './loading'
 

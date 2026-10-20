@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
-import { ImportRefuse } from '../../scripts/migration/import/cible'
+import { ImportRefuse } from '../../scripts/migration/import/target'
 import {
 	compteAttendu,
 	comptesAttendus,
@@ -9,9 +9,9 @@ import {
 	groupesDEmailPartage,
 	type LigneCompte,
 	repartitionDesComptes,
-} from '../../scripts/migration/import/comptes'
+} from '../../scripts/migration/import/accounts'
 import { AUCUNE_DECISION, appliquerLesDecisions, lireLesDecisions } from '../../scripts/migration/import/decisions'
-import { REFERENCES } from '../../scripts/migration/import/ecarts'
+import { REFERENCES } from '../../scripts/migration/import/gaps'
 
 /**
  * Ticket 025: what the import makes of an account of the old site, and the table of decisions of

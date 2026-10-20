@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import type { Payload } from 'payload'
-import { ImportRefuse } from '../../scripts/migration/import/cible'
+import { ImportRefuse } from '../../scripts/migration/import/target'
 import type { ImportEnv } from '../../src/lib/env'
 import {
 	type EnvDeLImport,
@@ -11,7 +11,7 @@ import {
 	lireLesJetons,
 	MARQUE_DES_JETONS,
 	reserverLeJeton,
-} from '../../src/migration/import-a-la-demande'
+} from '../../src/migration/on-demand-import'
 
 /**
  * Ticket 233: what the import run on demand refuses and remembers, with no database. The passes
@@ -328,7 +328,7 @@ describe('importALaDemande : ce qu’elle refuse, sans rien lire quand il n’y 
 	test('une ligne qui porterait un @ ou un hash est retenue, d’où qu’elle vienne', async () => {
 		const { pool } = fausseBase()
 		const { lignes, options } = avecJournal()
-		const { ImportRefuse: Refus } = await import('../../scripts/migration/import/cible')
+		const { ImportRefuse: Refus } = await import('../../scripts/migration/import/target')
 
 		await importALaDemande(payloadAvecSchema(pool), ENV, {
 			...options,

@@ -18,7 +18,7 @@
 
 import { createHash } from 'node:crypto'
 import { type CollectionSlug, type Payload, type RequestContext, ValidationError } from 'payload'
-import { CONTEXTE_IMPORT } from '../../../src/lib/contexte-import'
+import { CONTEXTE_IMPORT } from '../../../src/lib/import-context'
 
 /**
  * How two values of a field are said equal. `objet` is a group of fields (the commune of a

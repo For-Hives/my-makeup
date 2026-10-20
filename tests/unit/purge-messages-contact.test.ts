@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import type { Payload } from 'payload'
-import { importEnCours, marquerUnImportEnCours } from '@/lib/contexte-import'
+import { importEnCours, marquerUnImportEnCours } from '@/lib/import-context'
 import { contactPurgeThreshold, purgeContactMessages } from '@/lib/tasks/contact-messages'
 import { DAILY_TASKS, runDailyTasks } from '@/lib/tasks/daily'
 

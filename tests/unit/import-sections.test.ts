@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { type ProfilLu, profilsAttendus } from '../../scripts/migration/import/profils'
+import { type ProfilLu, profilsAttendus } from '../../scripts/migration/import/profiles'
 import {
 	lignesDansLesBornes,
 	SECTIONS_VIDES,

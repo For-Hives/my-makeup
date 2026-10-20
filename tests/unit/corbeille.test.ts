@@ -10,7 +10,7 @@ import type {
 	Plugin,
 } from 'payload'
 import { ONE_AT_A_TIME_MESSAGE, oneAtATime, withoutPluginDeletion, withTrash } from '@/collections/trash'
-import { CONTEXTE_IMPORT } from '@/lib/contexte-import'
+import { CONTEXTE_IMPORT } from '@/lib/import-context'
 import { copySource } from '@/lib/storage'
 import { isInTrash, moveToTrash, type ObjectStorage, objectKeys, restore, StorageOutage, trashKey } from '@/lib/trash'
 import { type CommandeS3, suppressionsSansCorbeille } from '../outils/espion-s3'

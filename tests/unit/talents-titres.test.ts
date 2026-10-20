@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
-import { champsDifferents, planifier } from '../../scripts/migration/import/moteur'
+import { champsDifferents, planifier } from '../../scripts/migration/import/engine'
 import { ADAPTATEUR_TALENTS, type LigneTalent, talentAttendu } from '../../scripts/migration/import/talents'
 import { validatePageTitle } from '../../src/collections/Talents'
 import { TALENT_PAGE_TITLES } from '../../src/content/talent-titles'

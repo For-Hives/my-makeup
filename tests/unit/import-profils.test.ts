@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
-import { REFERENCES } from '../../scripts/migration/import/ecarts'
-import { normaliser } from '../../scripts/migration/import/moteur'
+import { REFERENCES } from '../../scripts/migration/import/gaps'
+import { normaliser } from '../../scripts/migration/import/engine'
 import {
 	ADAPTATEUR_PROFILS,
 	affichesALaSource,
@@ -17,7 +17,7 @@ import {
 	rayonDeLaSource,
 	statutCalcule,
 	videALaSource,
-} from '../../scripts/migration/import/profils'
+} from '../../scripts/migration/import/profiles'
 import { SECTIONS_VIDES } from '../../scripts/migration/import/sections'
 import { displayName, fullName, NEUTRAL_NAME, text } from '../../src/lib/profile/display-name'
 import { PUBLIC_PROFILE_FIELDS } from '../../src/services/public/profiles'

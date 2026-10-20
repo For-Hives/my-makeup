@@ -1,13 +1,13 @@
 import { describe, expect, test } from 'bun:test'
 import { lireLesArguments } from '../../scripts/migration/import/arguments'
-import { ADAPTATEUR_COMPTES, ADAPTATEUR_COMPTES_EN_SERVICE } from '../../scripts/migration/import/comptes'
-import { messageDeLaBascule, sansLesComptesSupprimes } from '../../scripts/migration/import/garde-bascule'
-import { type Attendu, champsDifferents, empreinteDesDocuments, planifier } from '../../scripts/migration/import/moteur'
+import { ADAPTATEUR_COMPTES, ADAPTATEUR_COMPTES_EN_SERVICE } from '../../scripts/migration/import/accounts'
+import { messageDeLaBascule, sansLesComptesSupprimes } from '../../scripts/migration/import/cutover-guard'
+import { type Attendu, champsDifferents, empreinteDesDocuments, planifier } from '../../scripts/migration/import/engine'
 import {
 	ADAPTATEUR_PROFILS,
 	ADAPTATEUR_PROFILS_EN_SERVICE,
 	consentementsGardes,
-} from '../../scripts/migration/import/profils'
+} from '../../scripts/migration/import/profiles'
 
 /**
  * Ticket 227: a run of the import does not undo what the v3 wrote. The guard of a target in service,

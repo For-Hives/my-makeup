@@ -24,7 +24,7 @@
 
 import { z } from 'zod'
 import { departmentOfInseeCode } from '../../../src/lib/profile/zone'
-import { ImportRefuse } from './cible'
+import { ImportRefuse } from './target'
 
 const identifiant = z.number().int().positive()
 

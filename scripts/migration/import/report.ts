@@ -8,12 +8,12 @@
  * difference that has no reference is a defect: the parity lists it.
  */
 
-import type { GenreDeCible } from './cible'
-import type { BilanDesCommunes } from './communes'
-import type { BilanDesFichiers, PhotoNonReprise } from './medias'
-import type { Bilan, CollectionImportee, Parite } from './moteur'
-import { pariteComplete, sansEcartInexplique } from './moteur'
-import type { BilanDesPrix, LigneLaisseeDUnProfil, RayonARevoir } from './profils'
+import type { GenreDeCible } from './target'
+import type { BilanDesCommunes } from './cities'
+import type { BilanDesFichiers, PhotoNonReprise } from './media'
+import type { Bilan, CollectionImportee, Parite } from './engine'
+import { pariteComplete, sansEcartInexplique } from './engine'
+import type { BilanDesPrix, LigneLaisseeDUnProfil, RayonARevoir } from './profiles'
 import type { EmpreinteDesTables } from './source'
 
 export type Mode = 'a-blanc' | 'reel'

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import { ONE_AT_A_TIME_MESSAGE, STORAGE_OUTAGE_MESSAGE } from '@/collections/trash'
-import { CONTEXTE_IMPORT } from '@/lib/contexte-import'
+import { CONTEXTE_IMPORT } from '@/lib/import-context'
 import { serverEnv } from '@/lib/env'
 import { createObjectStorage } from '@/lib/storage'
 import { restore } from '@/lib/trash'

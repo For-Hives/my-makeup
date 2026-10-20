@@ -31,9 +31,9 @@
 
 import { isImage } from '../../../src/lib/articles'
 import { mediaUrl } from '../../../src/lib/media'
-import { ImportRefuse } from './cible'
-import { REFERENCES } from './ecarts'
-import type { Adaptateur, Attendu, Ecart, Refus } from './moteur'
+import { ImportRefuse } from './target'
+import { REFERENCES } from './gaps'
+import type { Adaptateur, Attendu, Ecart, Refus } from './engine'
 import { iso, type Requete } from './source'
 
 /** The type Strapi gives a profile, then an article, in the links of its files. */

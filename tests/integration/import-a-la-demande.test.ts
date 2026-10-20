@@ -8,7 +8,7 @@ import {
 	lireLesJetons,
 	type OptionsDeLImport,
 	reserverLeJeton,
-} from '../../src/migration/import-a-la-demande'
+} from '../../src/migration/on-demand-import'
 import { DATE_DE_BASCULE_DU_BANC, RACINE } from '../outils/banc'
 import { FICHIER_DES_DECISIONS_DU_BANC, referentielDuBanc } from '../outils/import'
 import { seConnecter } from '../outils/parcours-herites'

@@ -33,7 +33,7 @@ import {
 	obtainMessage,
 	textMessage,
 } from '../../../src/lib/profile/lists'
-import { TYPE_PROFIL } from './medias'
+import { TYPE_PROFIL } from './media'
 import type { Requete } from './source'
 
 export interface Competence {

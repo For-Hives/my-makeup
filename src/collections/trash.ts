@@ -9,7 +9,7 @@ import {
 	type Plugin,
 } from 'payload'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
-import { estUnImport } from '../lib/contexte-import'
+import { estUnImport } from '../lib/import-context'
 import { idOf, namedPhotos } from '../lib/profile/photos'
 import { type MediaObjects, moveToTrash, type ObjectStorage, objectKeys, StorageOutage } from '../lib/trash'
 

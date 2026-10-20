@@ -2,14 +2,14 @@ import { describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { lireLesArguments } from '../../scripts/migration/import/arguments'
-import { ImportRefuse } from '../../scripts/migration/import/cible'
+import { ImportRefuse } from '../../scripts/migration/import/target'
 import {
 	communeAttendue,
 	communesDesProfils,
 	nomCompare,
 	rechercheDeLaVille,
 	resoudreLaVille,
-} from '../../scripts/migration/import/communes'
+} from '../../scripts/migration/import/cities'
 import { lireLesDecisions } from '../../scripts/migration/import/decisions'
 import {
 	ADRESSE_DU_REFERENTIEL,
@@ -18,7 +18,7 @@ import {
 	referentielGarde,
 	referentielGeoApi,
 	reponsesEnTexte,
-} from '../../scripts/migration/import/referentiel'
+} from '../../scripts/migration/import/reference'
 import { delay, HttpResponse, http, simuler } from '../outils/http-sortant'
 import { definitionDeLaSource } from '../outils/source-strapi/donnees'
 

@@ -49,10 +49,10 @@ import { type ProfileDocument, profileState, statusAfter } from '../../../src/li
 import { INITIAL_CHOICE, type ProfileStatus } from '../../../src/lib/profile/status'
 import { RADIUS_BOUNDS_KM } from '../../../src/lib/profile/zone'
 import { assignSlugs } from '../../../src/lib/slug'
-import type { CommuneAttendue } from './communes'
-import { REFERENCES } from './ecarts'
-import { type PhotoNonReprise, photosDeLEntree } from './medias'
-import { type Adaptateur, type Attendu, type Ecart, normaliser } from './moteur'
+import type { CommuneAttendue } from './cities'
+import { REFERENCES } from './gaps'
+import { type PhotoNonReprise, photosDeLEntree } from './media'
+import { type Adaptateur, type Attendu, type Ecart, normaliser } from './engine'
 import {
 	type LigneLaissee,
 	lignesDansLesBornes,

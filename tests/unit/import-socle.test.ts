@@ -8,7 +8,7 @@ import {
 	ImportRefuse,
 	verifierLaBaseAttendue,
 	verifierLaCible,
-} from '../../scripts/migration/import/cible'
+} from '../../scripts/migration/import/target'
 import {
 	type Adaptateur,
 	type Attendu,
@@ -22,17 +22,17 @@ import {
 	pariteComplete,
 	planifier,
 	sansEcartInexplique,
-} from '../../scripts/migration/import/moteur'
+} from '../../scripts/migration/import/engine'
 import {
 	codeDeSortie,
 	codeDuControle,
 	controleEnTexte,
 	type Rapport,
 	rapportEnTexte,
-} from '../../scripts/migration/import/rapport'
+} from '../../scripts/migration/import/report'
 import { memesTables } from '../../scripts/migration/import/source'
 import { type LigneTalent, talentAttendu, talentsAttendus } from '../../scripts/migration/import/talents'
-import { CONTEXTE_IMPORT, estUnImport } from '../../src/lib/contexte-import'
+import { CONTEXTE_IMPORT, estUnImport } from '../../src/lib/import-context'
 
 /**
  * Ticket 024: the parts of the import that need no database. The runs themselves are in

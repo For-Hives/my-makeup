@@ -10,7 +10,7 @@
 
 import { spawnSync } from 'node:child_process'
 import { parseArgs } from 'node:util'
-import { lireLeJournalGit, verifierLesReferences, verifierLHistorique } from './gel-regles'
+import { lireLeJournalGit, verifierLesReferences, verifierLHistorique } from './freeze-rules'
 
 const { values } = parseArgs({
 	options: {

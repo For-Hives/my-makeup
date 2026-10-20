@@ -2,9 +2,9 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
-import type { CasARevoir } from '../../scripts/migration/import/communes'
+import type { CasARevoir } from '../../scripts/migration/import/cities'
 import type { Decisions } from '../../scripts/migration/import/decisions'
-import { ADRESSE_DU_REFERENTIEL, referentielGarde, referentielGeoApi } from '../../scripts/migration/import/referentiel'
+import { ADRESSE_DU_REFERENTIEL, referentielGarde, referentielGeoApi } from '../../scripts/migration/import/reference'
 import { HttpResponse, http, simuler } from '../outils/http-sortant'
 import {
 	commandeDImport,

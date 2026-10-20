@@ -2,7 +2,7 @@ import { describe, expect, mock, test } from 'bun:test'
 import { revalidateTag } from 'next/cache.js'
 import type { PayloadRequest, RequestContext } from 'payload'
 import { outsideNextRequest, refresh } from '../../src/collections/revalidate'
-import { CONTEXTE_IMPORT } from '../../src/lib/contexte-import'
+import { CONTEXTE_IMPORT } from '../../src/lib/import-context'
 import { changeTargets, PUBLIC_PAGES, type PublicState, TAGS } from '../../src/lib/revalidate'
 import { espionnerLeCache } from '../outils/espion-cache'
 

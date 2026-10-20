@@ -25,9 +25,9 @@
 
 import type { Payload } from 'payload'
 import { AUTH_LOG_COLLECTION } from '../../../src/lib/auth/auth-log'
-import { DRAPEAU_CIBLE_EN_SERVICE, ImportRefuse } from './cible'
-import { ADAPTATEUR_COMPTES } from './comptes'
-import { type Attendu, lireLaCible } from './moteur'
+import { DRAPEAU_CIBLE_EN_SERVICE, ImportRefuse } from './target'
+import { ADAPTATEUR_COMPTES } from './accounts'
+import { type Attendu, lireLaCible } from './engine'
 
 /** What the target shows of its use by the v3. */
 export interface TracesDeLaBascule {

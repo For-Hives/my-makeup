@@ -5,7 +5,7 @@ import {
 	articlesRepartis,
 	type LigneArticle,
 } from '../../scripts/migration/import/articles'
-import { TYPE_ARTICLE, TYPE_PROFIL } from '../../scripts/migration/import/medias'
+import { TYPE_ARTICLE, TYPE_PROFIL } from '../../scripts/migration/import/media'
 
 /**
  * Ticket 061: what the import makes of an article of the old site, before and without the database.

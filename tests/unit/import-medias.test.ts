@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { ImportRefuse } from '../../scripts/migration/import/cible'
+import { ImportRefuse } from '../../scripts/migration/import/target'
 import {
 	ADAPTATEUR_MEDIAS,
 	type Adoptable,
@@ -15,9 +15,9 @@ import {
 	sonderLesObjets,
 	TYPE_ARTICLE,
 	TYPE_PROFIL,
-} from '../../scripts/migration/import/medias'
-import { normaliser } from '../../scripts/migration/import/moteur'
-import { codeDeSortie, type Rapport, rapportEnTexte } from '../../scripts/migration/import/rapport'
+} from '../../scripts/migration/import/media'
+import { normaliser } from '../../scripts/migration/import/engine'
+import { codeDeSortie, type Rapport, rapportEnTexte } from '../../scripts/migration/import/report'
 import { fileOnCreate } from '../../src/collections/Media'
 import { HttpResponse, http, simuler } from '../outils/http-sortant'
 

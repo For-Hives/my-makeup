@@ -28,11 +28,11 @@
  */
 
 import type { Payload } from 'payload'
-import { ImportRefuse, verifierLeSchemaDeLaCible } from '../../scripts/migration/import/cible'
+import { ImportRefuse, verifierLeSchemaDeLaCible } from '../../scripts/migration/import/target'
 import { AUCUNE_DECISION, type Decisions, lireLesDecisions } from '../../scripts/migration/import/decisions'
-import type { Sonde } from '../../scripts/migration/import/medias'
-import { codeDeLErreur, ImportInterrompu } from '../../scripts/migration/import/moteur'
-import type { Referentiel } from '../../scripts/migration/import/referentiel'
+import type { Sonde } from '../../scripts/migration/import/media'
+import { codeDeLErreur, ImportInterrompu } from '../../scripts/migration/import/engine'
+import type { Referentiel } from '../../scripts/migration/import/reference'
 import type { Source } from '../../scripts/migration/import/source'
 import { EnvError, type ImportEnv, isLocalDatabase, mediaBaseUrl, type ServerEnv, SITE_ORIGIN } from '../lib/env'
 
@@ -207,7 +207,7 @@ function lireLesDecisionsDeLEnvironnement(texte: string | undefined): Decisions 
 /** The date of the switch, as the import reads it (`--consentement-le`). */
 async function lireLaDateDeBascule(texte: string | undefined): Promise<string | undefined> {
 	if (texte === undefined) return undefined
-	const { dateDeBascule } = await import('../../scripts/migration/import/profils')
+	const { dateDeBascule } = await import('../../scripts/migration/import/profiles')
 	const date = dateDeBascule(texte)
 	if (date === null) throw new ImportRefuse('La date de IMPORT_CONSENTEMENT_LE n’est pas une date : rien n’est écrit.')
 	return date
@@ -217,7 +217,7 @@ async function lireLaDateDeBascule(texte: string | undefined): Promise<string | 
 async function lireLeReferentiel(importation: ImportEnv, donne: Referentiel | undefined): Promise<Referentiel> {
 	if (donne) return donne
 	const { lireLesReponses, referentielGarde, referentielGeoApi } = await import(
-		'../../scripts/migration/import/referentiel'
+		'../../scripts/migration/import/reference'
 	)
 	let reponses: ReturnType<typeof lireLesReponses>
 	try {
@@ -289,7 +289,7 @@ export async function importALaDemande(
 		ecrire(`Jeton « ${importation.jeton} » : passage ${importation.mode} commencé.`)
 		const { importer } = await import('../../scripts/migration/import/importer')
 		const { codeDeSortie, codeDuControle, controleEnTexte, rapportEnTexte } = await import(
-			'../../scripts/migration/import/rapport'
+			'../../scripts/migration/import/report'
 		)
 		source = await (options.ouvrirLaSource ?? ouvrirLaSourceDeLApplication)(env.sourceStrapi, payload)
 		const rapport = await importer({
