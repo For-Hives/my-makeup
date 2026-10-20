@@ -147,9 +147,9 @@ test.describe('Recherche par mot, par pages', () => {
 	}) => {
 		test.setTimeout(120_000)
 		// One address of the documentation range per run: the two projects of a run never share a counter.
-		const url = `203.0.113.${randomInt(1, 255)}`
+		const ipAddress = `203.0.113.${randomInt(1, 255)}`
 		const other = `198.51.100.${randomInt(1, 255)}`
-		const headers = { 'x-forwarded-for': url }
+		const headers = { 'x-forwarded-for': ipAddress }
 		for (let i = 1; i <= 60; i += 1) {
 			const response = await request.get(`/search?city=Annecy&page=${i}`, { headers: headers })
 			expect(response.status(), `recherche ${i}`).toBe(200)
@@ -202,8 +202,8 @@ test.describe('Pages de résultats', () => {
 
 	// E41
 	test('E41 : 45 résultats en trois pages de 20, 20 et 5, sans doublon', async ({ page }) => {
-		const url = `/search?search=${marker}`
-		await page.goto(url)
+		const resultsPath = `/search?search=${marker}`
+		await page.goto(resultsPath)
 		const seen: string[] = []
 		const cards = () =>
 			page
@@ -217,7 +217,7 @@ test.describe('Pages de résultats', () => {
 		expect(seen).toHaveLength(20)
 
 		await page.getByRole('link', { name: 'Page suivante' }).click()
-		await expect(page).toHaveURL(url => url.pathname + url.search === `${url}&page=2`)
+		await expect(page).toHaveURL(current => current.pathname + current.search === `${resultsPath}&page=2`)
 		await expect(page.getByText('Page 2 sur 3')).toBeVisible()
 		// The title still counts everything, and the form keeps the word.
 		await expect(page.getByRole('heading', { level: 1 })).toHaveText(`${GENERATED} résultats pour « ${marker} »`)
