@@ -13,8 +13,8 @@ import {
 import { closeForgotPasswordRestDoors } from '@/lib/auth/forgot-payload'
 import { requestPasswordLink } from '@/lib/auth/password-reset-payload'
 import { createRateLimit } from '@/lib/auth/rate-limit'
-import { composerEmail } from '@/lib/emails/gabarit'
-import { contenuEmailReinitialisation } from '@/lib/emails/reinitialisation'
+import { composerEmail } from '@/lib/emails/layout'
+import { passwordResetEmailContent } from '@/lib/emails/password-reset'
 
 /** Tickets 085 and 086: the rules of the forgotten password that need no database. */
 
@@ -105,7 +105,7 @@ describe('le lien du mail sort de l’adresse (proxy)', () => {
 
 describe('le mail', () => {
 	test('un bouton vers la page du site avec le jeton, une heure, un seul usage, « tu »', () => {
-		const email = composerEmail(contenuEmailReinitialisation(JETON), 'https://my-makeup.fr')
+		const email = composerEmail(passwordResetEmailContent(JETON), 'https://my-makeup.fr')
 		expect(email.sujet).toBe('Réinitialise ton mot de passe My Makeup')
 		expect(email.lien).toBe(`https://my-makeup.fr/auth/reinitialiser?code=${JETON}`)
 		expect(email.texte).toContain(email.lien ?? 'x')

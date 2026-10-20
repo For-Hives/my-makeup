@@ -23,7 +23,7 @@ Toutes les réponses portent `Cache-Control: no-store` et `X-Robots-Tag: noindex
 
 ## Ce que la réponse contient
 
-Le schéma est `StatsHebdo` (`src/lib/stats-hebdo.ts`), strict : une clé inconnue est refusée. L'exemple publié est [`stats-hebdo.exemple.json`](stats-hebdo.exemple.json). L'outil du rapport, qui n'a aucune dépendance, relit la même forme à la main, et chaque côté teste cet exemple.
+Le schéma est `WeeklyStats` (`src/lib/weekly-stats.ts`), strict : une clé inconnue est refusée. L'exemple publié est [`stats-hebdo.exemple.json`](stats-hebdo.exemple.json). L'outil du rapport, qui n'a aucune dépendance, relit la même forme à la main, et chaque côté teste cet exemple.
 
 ### Version 2 (ticket 253)
 

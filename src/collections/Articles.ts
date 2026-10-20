@@ -1,18 +1,18 @@
 import type { CollectionConfig } from 'payload'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
-import { galerieDImages, imagesDeLaRedaction } from '../lib/articles'
+import { editorialImages, imageGallery } from '../lib/articles'
 import {
-	ACCES_REDACTION,
-	champPublieLe,
-	champSlug,
-	champStrapiId,
-	datePremierePublication,
-	VERSIONS_REDACTION,
+	EDITOR_ACCESS,
+	EDITOR_VERSIONS,
+	firstPublicationDate,
+	publishedAtFieldDef,
+	slugFieldDef,
+	strapiIdFieldDef,
 } from './editor'
-import { rafraichissement } from './revalidation'
+import { refresh } from './revalidate'
 
 /** The refresh of its page, of the pages that list the articles and of the sitemap (ticket 047). */
-const RAFRAICHISSEMENT = rafraichissement('articles')
+const REFRESH = refresh('articles')
 
 /**
  * The articles of the blog, `/blog/<slug>` (plan 01 §6.1; docs/migration/SCHEMA.md, §5.3).
@@ -25,27 +25,27 @@ const RAFRAICHISSEMENT = rafraichissement('articles')
  * - `content` is markdown, in a `code` field, without a length limit: Payload limits `text` and
  *   `textarea` to 40 000 characters.
  * - The gallery holds images of the newsroom only, never a PDF nor the photo of a makeup artist
- *   (`galerieDImages`), drafts and the import included. Its photos belong to nobody: the newsroom
+ *   (`imageGallery`), drafts and the import included. Its photos belong to nobody: the newsroom
  *   sends them, and the public reads one when it is in the gallery of a published article
- *   (`lectureDesMedias`, src/lib/acces.ts).
+ *   (`mediaRead`, src/lib/access.ts).
  * - A save or a deletion of an article that is or was published refreshes its page, the blog and
- *   the sitemap; the import refreshes nothing (src/collections/revalidation.ts, ticket 047).
+ *   the sitemap; the import refreshes nothing (src/collections/revalidate.ts, ticket 047).
  */
 export const Articles: CollectionConfig<'articles'> = {
 	slug: 'articles',
 	labels: { singular: 'Article', plural: 'Articles' },
 	admin: { useAsTitle: 'title', defaultColumns: ['title', 'slug', '_status', 'updatedAt'] },
-	access: ACCES_REDACTION,
-	versions: VERSIONS_REDACTION,
+	access: EDITOR_ACCESS,
+	versions: EDITOR_VERSIONS,
 	hooks: {
-		beforeChange: [RAFRAICHISSEMENT.avantEcriture, datePremierePublication],
-		afterChange: [RAFRAICHISSEMENT.apresEcriture],
-		beforeDelete: [RAFRAICHISSEMENT.avantSuppression],
-		afterDelete: [RAFRAICHISSEMENT.apresSuppression],
+		beforeChange: [REFRESH.avantEcriture, firstPublicationDate],
+		afterChange: [REFRESH.apresEcriture],
+		beforeDelete: [REFRESH.avantSuppression],
+		afterDelete: [REFRESH.apresSuppression],
 	},
 	fields: [
 		{ name: 'title', label: 'Titre', type: 'text', required: true },
-		champSlug('/blog'),
+		slugFieldDef('/blog'),
 		{ name: 'author', label: 'Auteur', type: 'text', admin: { description: 'Signature affichée sous le titre.' } },
 		{ name: 'excerpt', label: 'Extrait', type: 'textarea' },
 		{ name: 'seo_title', label: 'Titre pour les moteurs de recherche', type: 'text', maxLength: 70 },
@@ -67,13 +67,13 @@ export const Articles: CollectionConfig<'articles'> = {
 			type: 'upload',
 			relationTo: 'media',
 			hasMany: true,
-			filterOptions: imagesDeLaRedaction,
-			hooks: { beforeChange: [galerieDImages] },
+			filterOptions: editorialImages,
+			hooks: { beforeChange: [imageGallery] },
 			admin: {
 				description: 'Des images de la rédaction, jamais la photo d’une maquilleuse : JPEG, PNG, WebP, GIF ou AVIF.',
 			},
 		},
-		champPublieLe,
-		champStrapiId,
+		publishedAtFieldDef,
+		strapiIdFieldDef,
 	],
 }

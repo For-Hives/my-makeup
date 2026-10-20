@@ -29,8 +29,8 @@
  * No `bun` import here: the import can run under Node too.
  */
 
-import { estUneImage } from '../../../src/lib/articles'
-import { adresseDuMedia } from '../../../src/lib/medias'
+import { isImage } from '../../../src/lib/articles'
+import { mediaUrl } from '../../../src/lib/media'
 import { ImportRefuse } from './cible'
 import { REFERENCES } from './ecarts'
 import type { Adaptateur, Attendu, Ecart, Refus } from './moteur'
@@ -110,7 +110,7 @@ export interface Emplacement {
 /**
  * The prefix and the name of the object an address names, read after the base of the photos: the
  * folders, then the name. Null when the address does not start with the base, or when the address
- * the v3 composes again from them (`adresseDuMedia`) is not the same, character for character: a
+ * the v3 composes again from them (`mediaUrl`) is not the same, character for character: a
  * query, an empty folder, a character the v3 would write another way.
  */
 export function emplacementDansLAdresse(adresse: string | null, base: string): Emplacement | null {
@@ -127,7 +127,7 @@ export function emplacementDansLAdresse(adresse: string | null, base: string): E
 	const filename = segments.at(-1) ?? ''
 	if (filename === '' || segments.some(segment => segment === '')) return null
 	const prefix = segments.slice(0, -1).join('/')
-	return adresseDuMedia(base, prefix, filename) === adresse ? { prefix, filename } : null
+	return mediaUrl(base, prefix, filename) === adresse ? { prefix, filename } : null
 }
 
 /** Why a designated file is not adopted. */
@@ -216,7 +216,7 @@ export function classerLesFichiers(
 			continue
 		}
 		classement.designes++
-		if (!estUneImage(fichier.mime)) {
+		if (!isImage(fichier.mime)) {
 			classement.nonAdoptes.push({ fichier: fichier.id, motif: 'pas-une-image' })
 			continue
 		}
@@ -302,7 +302,7 @@ export async function sonderLesObjets(
 	for (let debut = 0; debut < adoptables.length; debut += SONDES_DE_FRONT) {
 		const lot = adoptables.slice(debut, debut + SONDES_DE_FRONT)
 		const lues = await Promise.all(
-			lot.map(({ emplacement }) => sonde(adresseDuMedia(base, emplacement.prefix, emplacement.filename)))
+			lot.map(({ emplacement }) => sonde(mediaUrl(base, emplacement.prefix, emplacement.filename)))
 		)
 		lot.forEach(({ fichier }, rang) => {
 			const presence = lues[rang]

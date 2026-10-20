@@ -176,7 +176,7 @@ describe('les listes d’un profil, sous les noms de Payload', () => {
 			[' 1 200 € ', 1200],
 			['à partir de 80', 80],
 			['Sur devis', null],
-			// The old site reads the first number of the text: ported as it is (src/lib/prix.ts).
+			// The old site reads the first number of the text: ported as it is (src/lib/price.ts).
 			['Entre 60 et 90 €', 60],
 			['2 h : 150 €', null],
 			// Out of bounds (5 to 10 000 €): no amount, the text stays.

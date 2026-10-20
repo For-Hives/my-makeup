@@ -7,10 +7,10 @@
  *
  * - slugifier: lower case ASCII, accents removed, every other character turned into a dash,
  *   dashes merged and trimmed, 70 characters at most;
- * - attribuerSlugs: unique slugs; when two usernames give the same slug, the oldest profile
+ * - assignSlugs: unique slugs; when two usernames give the same slug, the oldest profile
  *   (createdAt, then id) keeps it and the next ones get -2, -3… A new profile never changes the
  *   slug of an older one;
- * - resoudreProfil: what /profil/<segment> serves: the profile of that slug, or a 308 to the slug
+ * - resolveProfile: what /profil/<segment> serves: the profile of that slug, or a 308 to the slug
  *   from the old URL (raw username, spaces, capitals).
  *
  * Limits of a table computed from the list of the profiles, the same as on the old site:
@@ -22,7 +22,7 @@
 
 export const SLUG_MAX = 70
 
-const LETTRES_SANS_DECOMPOSITION: Record<string, string> = {
+const LETTERS_WITHOUT_DECOMPOSITION: Record<string, string> = {
 	œ: 'oe',
 	Œ: 'oe',
 	æ: 'ae',
@@ -40,68 +40,68 @@ const LETTRES_SANS_DECOMPOSITION: Record<string, string> = {
 	Þ: 'th',
 }
 
-const couper = (slug: string, max: number): string => (slug.length > max ? slug.slice(0, max).replace(/-+$/, '') : slug)
+const cut = (slug: string, max: number): string => (slug.length > max ? slug.slice(0, max).replace(/-+$/, '') : slug)
 
 /**
  * @param texte - a username, a title
  * @returns '' when nothing usable is left
  */
-export function slugifier(texte: unknown): string {
+export function slugify(texte: unknown): string {
 	if (typeof texte !== 'string' && typeof texte !== 'number') return ''
 	const slug = String(texte)
-		.replace(/[œŒæÆßøØłŁđĐðÐþÞ]/g, c => LETTRES_SANS_DECOMPOSITION[c] ?? c)
+		.replace(/[œŒæÆßøØłŁđĐðÐþÞ]/g, c => LETTERS_WITHOUT_DECOMPOSITION[c] ?? c)
 		.normalize('NFKD')
 		// the combining marks left by the decomposition (accents, cedillas)
 		.replace(/[̀-ͯ]/g, '')
 		.toLowerCase()
 		.replace(/[^a-z0-9]+/g, '-')
 		.replace(/^-+|-+$/g, '')
-	return couper(slug, SLUG_MAX)
+	return cut(slug, SLUG_MAX)
 }
 
-export type IdProfil = number | string
+export type ProfileId = number | string
 
 /** Slug of a profile whose username gives nothing (only emojis, empty). */
-export const slugDeRepli = (id: IdProfil): string => `maquilleuse-${id}`
+export const fallbackSlug = (id: ProfileId): string => `maquilleuse-${id}`
 
 /**
  * The n-th candidate of a slug that is already taken: « -2 », « -3 »… The base is cut so that the
  * whole stays within 70 characters.
  */
-export function slugAvecSuffixe(base: string, n: number): string {
-	const suffixe = `-${n}`
-	return couper(base, SLUG_MAX - suffixe.length) + suffixe
+export function slugWithSuffix(base: string, n: number): string {
+	const suffix = `-${n}`
+	return cut(base, SLUG_MAX - suffix.length) + suffix
 }
 
-/** How many candidates `premierSlugLibre` asks about at once. */
-const CANDIDATS_PAR_DEMANDE = 20
+/** How many candidates `firstFreeSlug` asks about at once. */
+const CANDIDATES_PER_REQUEST = 20
 
 /**
  * The slug a new profile takes when the slugs are stored: `base` if it is free, else the first
  * free of « -2 », « -3 »… The new profile is always the newest one, so this is the rule of
- * `attribuerSlugs` (the oldest keeps the base, the next ones get the next suffix), applied to the
+ * `assignSlugs` (the oldest keeps the base, the next ones get the next suffix), applied to the
  * slugs already given instead of the whole list.
  *
- * @param base - a non-empty slug (`slugifier` of the name, or `slugDeRepli`)
+ * @param base - a non-empty slug (`slugifier` of the name, or `fallbackSlug`)
  * @param lesquelsSontPris - which of these candidates are already taken (one query for several)
  */
-export async function premierSlugLibre(
+export async function firstFreeSlug(
 	base: string,
 	lesquelsSontPris: (candidats: string[]) => Promise<ReadonlySet<string>>
 ): Promise<string> {
-	for (let premier = 1; ; premier += CANDIDATS_PAR_DEMANDE) {
-		const candidats = Array.from({ length: CANDIDATS_PAR_DEMANDE }, (_, i) =>
-			premier + i === 1 ? base : slugAvecSuffixe(base, premier + i)
+	for (let first = 1; ; first += CANDIDATES_PER_REQUEST) {
+		const candidates = Array.from({ length: CANDIDATES_PER_REQUEST }, (_, i) =>
+			first + i === 1 ? base : slugWithSuffix(base, first + i)
 		)
-		const pris = await lesquelsSontPris(candidats)
-		const libre = candidats.find(candidat => !pris.has(candidat))
-		if (libre) return libre
+		const taken = await lesquelsSontPris(candidates)
+		const free = candidates.find(candidat => !taken.has(candidat))
+		if (free) return free
 	}
 }
 
 /** What a slug is computed from. An entry without id is ignored. */
-export interface ProfilSansSlug {
-	id?: IdProfil | null
+export interface ProfileWithoutSlug {
+	id?: ProfileId | null
 	username?: string | null
 	/**
 	 * ISO date string, as the old API returns it. A Date goes through toISOString() first: parsed
@@ -111,14 +111,14 @@ export interface ProfilSansSlug {
 	createdAt?: string | null
 }
 
-export interface ProfilSlug {
-	id: IdProfil
+export interface ProfileSlug {
+	id: ProfileId
 	username: string
 	createdAt: string | null
 	slug: string
 }
 
-const horodatage = (date: string | null): number => {
+const timestamp = (date: string | null): number => {
 	const t = date === null ? Number.NaN : Date.parse(date)
 	return Number.isNaN(t) ? Number.POSITIVE_INFINITY : t
 }
@@ -127,12 +127,12 @@ const horodatage = (date: string | null): number => {
  * Unique slugs for all the profiles (the whole list: a missing profile could change a -2).
  * @returns in creation order
  */
-export function attribuerSlugs(
-	profils: ReadonlyArray<ProfilSansSlug | null | undefined> | null | undefined
-): ProfilSlug[] {
-	const liste: ReadonlyArray<ProfilSansSlug | null | undefined> = Array.isArray(profils) ? profils : []
-	const tries: Omit<ProfilSlug, 'slug'>[] = []
-	for (const p of liste) {
+export function assignSlugs(
+	profils: ReadonlyArray<ProfileWithoutSlug | null | undefined> | null | undefined
+): ProfileSlug[] {
+	const list: ReadonlyArray<ProfileWithoutSlug | null | undefined> = Array.isArray(profils) ? profils : []
+	const tries: Omit<ProfileSlug, 'slug'>[] = []
+	for (const p of list) {
 		if (!p || p.id === undefined || p.id === null) continue
 		tries.push({
 			id: p.id,
@@ -142,44 +142,44 @@ export function attribuerSlugs(
 	}
 	tries.sort(
 		(a, b) =>
-			horodatage(a.createdAt) - horodatage(b.createdAt) ||
+			timestamp(a.createdAt) - timestamp(b.createdAt) ||
 			Number(a.id) - Number(b.id) ||
 			String(a.id).localeCompare(String(b.id))
 	)
-	const pris = new Set<string>()
+	const taken = new Set<string>()
 	return tries.map(profil => {
-		const base = slugifier(profil.username) || slugDeRepli(profil.id)
+		const base = slugify(profil.username) || fallbackSlug(profil.id)
 		let slug = base
-		for (let n = 2; pris.has(slug); n++) slug = slugAvecSuffixe(base, n)
-		pris.add(slug)
+		for (let n = 2; taken.has(slug); n++) slug = slugWithSuffix(base, n)
+		taken.add(slug)
 		return { ...profil, slug }
 	})
 }
 
-export interface TableDesSlugs {
-	parSlug: Map<string, ProfilSlug>
+export interface SlugTable {
+	parSlug: Map<string, ProfileSlug>
 	/** the oldest one first */
-	parUsername: Map<string, ProfilSlug>
+	parUsername: Map<string, ProfileSlug>
 	/** String(id) → slug */
 	slugParId: Map<string, string>
 }
 
-export function tableDesSlugs(profils: Parameters<typeof attribuerSlugs>[0]): TableDesSlugs {
-	const table: TableDesSlugs = {
+export function slugTable(profils: Parameters<typeof assignSlugs>[0]): SlugTable {
+	const table: SlugTable = {
 		parSlug: new Map(),
 		parUsername: new Map(),
 		slugParId: new Map(),
 	}
-	for (const profil of attribuerSlugs(profils)) {
-		table.parSlug.set(profil.slug, profil)
-		if (profil.username && !table.parUsername.has(profil.username)) table.parUsername.set(profil.username, profil)
-		table.slugParId.set(String(profil.id), profil.slug)
+	for (const profile of assignSlugs(profils)) {
+		table.parSlug.set(profile.slug, profile)
+		if (profile.username && !table.parUsername.has(profile.username)) table.parUsername.set(profile.username, profile)
+		table.slugParId.set(String(profile.id), profile.slug)
 	}
 	return table
 }
 
-export interface ProfilResolu {
-	profil: ProfilSlug
+export interface ResolvedProfile {
+	profil: ProfileSlug
 	slug: string
 	/** true: answer with a 308 to the slug */
 	redirection: boolean
@@ -194,17 +194,17 @@ export interface ProfilResolu {
  * - anything else → null (404).
  * @param segment - decoded path segment (params of the page)
  */
-export function resoudreProfil(segment: unknown, table: TableDesSlugs): ProfilResolu | null {
+export function resolveProfile(segment: unknown, table: SlugTable): ResolvedProfile | null {
 	if (typeof segment !== 'string' || segment === '') return null
 	const direct = table.parSlug.get(segment)
 	if (direct) return { profil: direct, slug: direct.slug, redirection: false }
-	const ancien = table.parUsername.get(segment) ?? table.parSlug.get(slugifier(segment))
-	if (ancien) return { profil: ancien, slug: ancien.slug, redirection: true }
+	const previous = table.parUsername.get(segment) ?? table.parSlug.get(slugify(segment))
+	if (previous) return { profil: previous, slug: previous.slug, redirection: true }
 	return null
 }
 
 /** Path of a profile page. */
-export const cheminProfil = (slug: string): string => `/profil/${encodeURIComponent(slug)}`
+export const profilePath = (slug: string): string => `/profil/${encodeURIComponent(slug)}`
 
 /**
  * A slug as `slugifier` writes it, the form of every address of the site: lower case ASCII
@@ -212,5 +212,5 @@ export const cheminProfil = (slug: string): string => `/profil/${encodeURICompon
  * an article is written by the newsroom and must already have this form: it is refused, never
  * corrected in silence, so that an address never differs from the slug that was typed.
  */
-export const estUnSlug = (texte: unknown): texte is string =>
-	typeof texte === 'string' && texte !== '' && slugifier(texte) === texte
+export const isSlug = (texte: unknown): texte is string =>
+	typeof texte === 'string' && texte !== '' && slugify(texte) === texte

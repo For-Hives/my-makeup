@@ -21,7 +21,7 @@ let importsEnCours = 0
 
 /**
  * Marks an import as running in this process; gives the function that ends the mark. The daily
- * tasks (src/lib/taches/) read it and wait for the next day rather than delete under the import.
+ * tasks (src/lib/tasks/) read it and wait for the next day rather than delete under the import.
  */
 export function marquerUnImportEnCours(): () => void {
 	importsEnCours++

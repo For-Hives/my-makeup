@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { GET, POST } from '@/app/api/stats/weekly/route'
-import { StatsHebdo } from '@/lib/stats-hebdo'
-import { PROFILS_DU_JEU } from '../../src/jeu-fictif/profils'
+import { WeeklyStats } from '@/lib/weekly-stats'
+import { DEMO_PROFILES } from '../../src/demo-data/profiles'
 import { COMPTES_DU_JEU, TYPES_DU_JEU } from '../fixtures/comptes'
 import { poserLeJeuDuBanc } from '../fixtures/jeu-du-banc'
 import { TYPES_DE_COMPTE } from '../outils/fabrique-comptes'
@@ -40,11 +40,11 @@ describe('Les statistiques hebdomadaires sur le jeu du banc', () => {
 	test('les nombres exacts, tirés de ce que le jeu promet de chaque profil', async () => {
 		const profilsDesComptes = TYPES_DU_JEU.filter(type => TYPES_DE_COMPTE[type].collection === 'pros').length
 		const sansProfil = TYPES_DU_JEU.filter(type => type === 'maquilleuse-sans-profil').length
-		const types = PROFILS_DU_JEU
+		const types = DEMO_PROFILES
 		const vusParLeServeur = types.filter(({ attendu }) => attendu.status === 'published' && attendu.publishable)
 
 		const reponse = await appeler(SEMAINE)
-		const stats = StatsHebdo.parse(await reponse.json())
+		const stats = WeeklyStats.parse(await reponse.json())
 
 		expect(reponse.status).toBe(200)
 		expect(stats.accounts.total).toBe(types.length + profilsDesComptes)
@@ -68,7 +68,7 @@ describe('Les statistiques hebdomadaires sur le jeu du banc', () => {
 	test('une période qui contient la création : les inscriptions et les comptes nouveaux', async () => {
 		const debut = new Date(Date.now() - 3_600_000).toISOString()
 		const fin = new Date(Date.now() + 3_600_000).toISOString()
-		const stats = StatsHebdo.parse(await (await appeler(`from=${debut}&to=${fin}`)).json())
+		const stats = WeeklyStats.parse(await (await appeler(`from=${debut}&to=${fin}`)).json())
 
 		expect(stats.profiles.created).toBe(stats.profiles.total)
 		expect(stats.signUps).toHaveLength(stats.profiles.total)
@@ -76,9 +76,9 @@ describe('Les statistiques hebdomadaires sur le jeu du banc', () => {
 	}, 60_000)
 
 	test('ni « @ », ni 9 chiffres, ni nom du jeu hors de la liste des adresses publiques', async () => {
-		const stats = StatsHebdo.parse(await (await appeler(SEMAINE)).json())
+		const stats = WeeklyStats.parse(await (await appeler(SEMAINE)).json())
 		const sansAdresses = JSON.stringify({ ...stats, publishable: { ...stats.publishable, slugs: [] } })
-		const noms = PROFILS_DU_JEU.flatMap(({ profil, compte }) => [
+		const noms = DEMO_PROFILES.flatMap(({ profil, compte }) => [
 			profil.firstName,
 			profil.lastName,
 			profil.artistName,

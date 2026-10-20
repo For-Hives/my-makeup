@@ -1,5 +1,5 @@
 import { createLocalReq, logoutOperation, type Payload } from 'payload'
-import { COLLECTION_PROS } from '../acces'
+import { COLLECTION_PROS } from '../access'
 import type { Log } from './auth-log'
 
 /**

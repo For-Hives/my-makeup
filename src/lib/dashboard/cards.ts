@@ -10,8 +10,8 @@
  */
 
 import type { Profile } from '@/payload-types'
-import { rayonKm } from '../format-zone'
-import { formatPrix } from '../prix'
+import { radiusKm } from '../format-zone'
+import { formatPrice } from '../price'
 import { text } from '../profile/display-name'
 import { monthYear, period } from '../profile/public-view'
 import { AVAILABLE_TEXT, isAvailable, OUT_OF_SEARCH_TEXT, UNAVAILABLE_TEXT } from './availability'
@@ -92,7 +92,7 @@ const gather = (parties: readonly unknown[], separateur: string): string | null 
 
 function locationCard(profil: DashboardProfile): Card {
 	const cityName = text(profil.city?.name)
-	const km = rayonKm(profil.radiusKm)
+	const km = radiusKm(profil.radiusKm)
 	const home = profil.homeService === true ? 'Oui' : profil.homeService === false ? 'Non' : null
 	return {
 		section: 'localisation',
@@ -194,7 +194,7 @@ export function profileCards(profil: DashboardProfile): Card[] {
 			titre: 'Prestations',
 			lignes: listRows(
 				(profil.serviceOffers ?? []).map(({ name, priceText, priceFrom }) =>
-					gather([name, formatPrix({ priceText, priceFrom }).replace(/\n/g, ', ')], ' - ')
+					gather([name, formatPrice({ priceText, priceFrom }).replace(/\n/g, ', ')], ' - ')
 				)
 			),
 		},

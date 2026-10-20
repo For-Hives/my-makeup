@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
-import { lirePhotoDuJeu, poserLeProfil } from '../../src/jeu-fictif/chargement'
-import { PROFILS_DU_JEU, type ProfilDuJeu } from '../../src/jeu-fictif/profils'
+import { placeProfile, readDemoPhoto } from '../../src/demo-data/loading'
+import { DEMO_PROFILES, type DemoProfile } from '../../src/demo-data/profiles'
 import { creerCompte } from '../outils/fabrique-comptes'
 import { sansLeReseauDuDehors } from '../outils/hors-reseau'
 import { payloadDeTest } from '../outils/payload-test'
@@ -28,15 +28,15 @@ const UNE_MINUTE = 60_000
 
 /** A profile of its own, of one of the types of the fictional set, under a name no other test reads. */
 async function poserUnProfil(cle: string, suffixe: string) {
-	const modele = PROFILS_DU_JEU.find(autre => autre.cle === cle)
+	const modele = DEMO_PROFILES.find(autre => autre.cle === cle)
 	if (!modele) throw new Error(`Le profil type « ${cle} » du jeu fictif manque.`)
-	const type: ProfilDuJeu = {
+	const type: DemoProfile = {
 		...modele,
 		cle: `essai-admin-${cle}-${suffixe}`,
 		compte: { email: `essai-admin-${cle}-${suffixe}@example.test`, nom: `Essai Admin ${suffixe} ${cle}` },
 		photos: { principale: modele.photos.principale, galerie: [] },
 	}
-	const pose = await poserLeProfil(await payloadDeTest(), type, lirePhotoDuJeu, false)
+	const pose = await placeProfile(await payloadDeTest(), type, readDemoPhoto, false)
 	return { id: pose.profil, pro: pose.compte, slug: pose.slug }
 }
 

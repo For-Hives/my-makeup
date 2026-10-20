@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import type { CollectionSlug, Payload, Where } from 'payload'
-import { CONDITIONS_MAX, MESSAGE_CHAMP_PRIVE, MESSAGE_TROP_DE_CONDITIONS, requeteBornee } from '@/lib/requete-bornee'
+import { boundedQuery, CONDITIONS_MAX, PRIVATE_FIELD_MESSAGE, TOO_MANY_CONDITIONS_MESSAGE } from '@/lib/bounded-query'
 import { creerCompte } from '../outils/fabrique-comptes'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
 import { appelerRest } from '../outils/rest'
@@ -103,7 +103,7 @@ describe('21 conditions : refus ; 20 : réponse (U60)', () => {
 				expect([lecteur.nom, collection, vingt.statut]).toEqual([lecteur.nom, collection, 200])
 				const vingtEtUne = await lire(`/api/${collection}?${conditions(21)}`, lecteur)
 				expect([lecteur.nom, collection, vingtEtUne.statut]).toEqual([lecteur.nom, collection, 400])
-				expect(vingtEtUne.corps.errors?.[0]?.message).toBe(MESSAGE_TROP_DE_CONDITIONS)
+				expect(vingtEtUne.corps.errors?.[0]?.message).toBe(TOO_MANY_CONDITIONS_MESSAGE)
 			}
 	})
 
@@ -133,7 +133,7 @@ describe('21 conditions : refus ; 20 : réponse (U60)', () => {
 		const ou = (n: number): Where => ({ or: Array.from({ length: n }, (_, i) => ({ slug: { equals: `s-${i}` } })) })
 		await expect(payload.find({ collection: 'profiles', overrideAccess: false, where: ou(21) })).rejects.toMatchObject({
 			status: 400,
-			message: MESSAGE_TROP_DE_CONDITIONS,
+			message: TOO_MANY_CONDITIONS_MESSAGE,
 		})
 		expect((await payload.find({ collection: 'profiles', overrideAccess: false, where: ou(20) })).totalDocs).toBe(0)
 		expect((await payload.find({ collection: 'profiles', where: ou(21) })).totalDocs).toBe(0)
@@ -146,8 +146,8 @@ describe('21 conditions : refus ; 20 : réponse (U60)', () => {
 
 	test('chaque collection porte la borne, en premier, celles que Payload ajoute lui-même comprises', () => {
 		for (const { config } of Object.values(payload.collections)) {
-			expect([config.slug, config.hooks.beforeOperation[0]]).toEqual([config.slug, requeteBornee])
-			expect(config.hooks.beforeOperation.filter(crochet => crochet === requeteBornee)).toHaveLength(1)
+			expect([config.slug, config.hooks.beforeOperation[0]]).toEqual([config.slug, boundedQuery])
+			expect(config.hooks.beforeOperation.filter(crochet => crochet === boundedQuery)).toHaveLength(1)
 		}
 		expect(Object.keys(payload.collections)).toEqual(
 			expect.arrayContaining([
@@ -174,7 +174,7 @@ describe('21 conditions : refus ; 20 : réponse (U60)', () => {
 		expect((await lire(`${verrous}?${surLId(20)}`, lecteurs.redaction)).statut).toBe(200)
 		const refus = await lire(`${verrous}?${surLId(21)}`, lecteurs.redaction)
 		expect(refus.statut).toBe(400)
-		expect(refus.corps.errors?.[0]?.message).toBe(MESSAGE_TROP_DE_CONDITIONS)
+		expect(refus.corps.errors?.[0]?.message).toBe(TOO_MANY_CONDITIONS_MESSAGE)
 		expect((await lire(`${verrous}?${surLId(30)}`, lecteurs.admin)).statut).toBe(200)
 	})
 })
@@ -257,7 +257,7 @@ describe('Filtre ou tri sur coordonnées, note interne ou score : refus sans fui
 					)
 					expect([lecteur.nom, champ, operateur, vise.statut]).toEqual([lecteur.nom, champ, operateur, 400])
 					expect(vise.texte).toBe(autre.texte)
-					expect(vise.corps.errors?.[0]?.message).toBe(MESSAGE_CHAMP_PRIVE)
+					expect(vise.corps.errors?.[0]?.message).toBe(PRIVATE_FIELD_MESSAGE)
 					for (const valeur of Object.values(PRIVE_DE_A)) expect(vise.texte).not.toContain(valeur)
 				}
 	})

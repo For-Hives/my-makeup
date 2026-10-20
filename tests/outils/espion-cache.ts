@@ -6,7 +6,7 @@
  * `next/cache` is replaced as soon as this file is loaded, for the rest of the run: while
  * `espionnerLeCache` runs, `revalidatePath` and `revalidateTag` are recorded instead of being called;
  * the rest of the time they are Next's own, which refuse to run outside of one of its requests
- * (src/collections/revalidation.ts). Every other export of `next/cache` stays Next's own.
+ * (src/collections/revalidate.ts). Every other export of `next/cache` stays Next's own.
  *
  * A test calls the spy around the write it looks at, never around another spy.
  */

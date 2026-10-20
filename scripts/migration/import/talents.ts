@@ -8,7 +8,7 @@
  */
 
 import { TALENT_PAGE_TITLES } from '../../../src/content/talent-titles'
-import { estUnSlug } from '../../../src/lib/slug'
+import { isSlug } from '../../../src/lib/slug'
 import { REFERENCES } from './ecarts'
 import type { Adaptateur, Attendu, Refus } from './moteur'
 import { iso, type Requete } from './source'
@@ -89,7 +89,7 @@ export function repartirParSlug<Ligne extends { id: number; slug: string | null 
 	const refuses: Refus[] = []
 	const slugs = new Set<string>()
 	for (const ligne of [...lignes].sort((a, b) => a.id - b.id)) {
-		if (!estUnSlug(ligne.slug)) refuses.push({ strapiId: ligne.id, motif: 'slug-pas-une-adresse', champs: ['slug'] })
+		if (!isSlug(ligne.slug)) refuses.push({ strapiId: ligne.id, motif: 'slug-pas-une-adresse', champs: ['slug'] })
 		else if (slugs.has(ligne.slug)) refuses.push({ strapiId: ligne.id, motif: 'slug-en-double', champs: ['slug'] })
 		else {
 			slugs.add(ligne.slug)

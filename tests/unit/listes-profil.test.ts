@@ -143,7 +143,7 @@ describe('Le montant d’un prix suit la règle de prix unique (U29)', () => {
 		expect(priceMessage(-50)).toBe('Le prix doit être un montant entre 5 € et 10 000 €.')
 	})
 
-	test('les bornes de src/lib/prix.ts : de 5 à 10 000 €', () => {
+	test('les bornes de src/lib/price.ts : de 5 à 10 000 €', () => {
 		for (const refuse of [0, 4.99, 10_000.01, Number.NaN, Number.POSITIVE_INFINITY, '80', true])
 			expect(priceMessage(refuse)).toBe(MESSAGES.prixHorsBornes)
 		for (const accepte of [5, 80, 49.5, 10_000]) expect(priceMessage(accepte)).toBeNull()

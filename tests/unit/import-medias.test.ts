@@ -18,7 +18,7 @@ import {
 } from '../../scripts/migration/import/medias'
 import { normaliser } from '../../scripts/migration/import/moteur'
 import { codeDeSortie, type Rapport, rapportEnTexte } from '../../scripts/migration/import/rapport'
-import { unFichierALaCreation } from '../../src/collections/Media'
+import { fileOnCreate } from '../../src/collections/Media'
 import { HttpResponse, http, simuler } from '../outils/http-sortant'
 
 /**
@@ -331,7 +331,7 @@ describe('la comparaison des listes, des galeries et des valeurs gardées telles
 
 describe('un média nomme toujours son objet', () => {
 	const appel = (operation: 'create' | 'update', data: Record<string, unknown>) =>
-		Promise.resolve().then(() => unFichierALaCreation({ data, operation, req: { t: (cle: string) => cle } } as never))
+		Promise.resolve().then(() => fileOnCreate({ data, operation, req: { t: (cle: string) => cle } } as never))
 
 	test('une création sans nom de fichier est refusée ; avec son nom (l’adoption de l’import), elle passe', async () => {
 		await expect(appel('create', { alt: 'Sans fichier' })).rejects.toThrow()

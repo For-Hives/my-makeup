@@ -2,9 +2,9 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { createServer } from 'node:net'
 import { nodemailerAdapter } from '@payloadcms/email-nodemailer'
 import { CONTEXTE_IMPORT } from '@/lib/contexte-import'
-import { creerEnvoiEmail, EnvoiEmailEchoue, envoiEmailDePayload } from '@/lib/emails/envoi'
-import { composerEmail } from '@/lib/emails/gabarit'
-import { optionsDeTransport } from '@/lib/emails/relais'
+import { composerEmail } from '@/lib/emails/layout'
+import { transportOptions } from '@/lib/emails/relay'
+import { createSendEmail, EmailSendFailed, payloadSendEmail } from '@/lib/emails/send'
 import { serverEnv } from '@/lib/env'
 import { attendreLeMail, compterLesMails, lienDuMail, mailsRecus, viderLeCapteur } from '../outils/mailpit'
 import { payloadDeTest } from '../outils/payload-test'
@@ -39,7 +39,7 @@ describe('un email transactionnel part de la v3 et se lit dans le capteur du ban
 	test('objet, expéditeur, lien absolu, texte et HTML se relisent tels qu’ils sont partis', async () => {
 		const payload = await payloadDeTest()
 		const env = serverEnv()
-		const envoyer = envoiEmailDePayload(payload, env)
+		const envoyer = payloadSendEmail(payload, env)
 		const adresse = adresseFictive('envoi')
 
 		await envoyer({ a: adresse, ...composerEmail(contenu, SITE) })
@@ -62,7 +62,7 @@ describe('un email transactionnel part de la v3 et se lit dans le capteur du ban
 
 	test('avec le contexte d’import, rien ne part', async () => {
 		const payload = await payloadDeTest()
-		const envoyer = envoiEmailDePayload(payload, serverEnv())
+		const envoyer = payloadSendEmail(payload, serverEnv())
 		const adresse = adresseFictive('import')
 		const avant = await compterLesMails()
 
@@ -82,7 +82,7 @@ describe('un email transactionnel part de la v3 et se lit dans le capteur du ban
 			defaultFromAddress: 'ne-pas-repondre@example.test',
 			defaultFromName: 'My Makeup',
 			skipVerify: true,
-			transportOptions: optionsDeTransport({
+			transportOptions: transportOptions({
 				host: '127.0.0.1',
 				port: await portFerme(),
 				fromAddress: 'ne-pas-repondre@example.test',
@@ -91,7 +91,7 @@ describe('un email transactionnel part de la v3 et se lit dans le capteur du ban
 		})
 		const adaptateur = (await mort)({ payload })
 		const lignes: string[] = []
-		const envoyer = creerEnvoiEmail({
+		const envoyer = createSendEmail({
 			relais: message => adaptateur.sendEmail(message),
 			journal: { info: ligne => lignes.push(ligne), erreur: ligne => lignes.push(ligne) },
 		})
@@ -102,7 +102,7 @@ describe('un email transactionnel part de la v3 et se lit dans le capteur du ban
 			(e: unknown) => e
 		)
 
-		expect(erreur).toBeInstanceOf(EnvoiEmailEchoue)
+		expect(erreur).toBeInstanceOf(EmailSendFailed)
 		const tout = [(erreur as Error).message, ...lignes].join('\n')
 		for (const secret of [adresse, 'jeton-factice', '127.0.0.1', 'Confirme']) expect(tout).not.toContain(secret)
 		expect(lignes).toHaveLength(1)
@@ -126,7 +126,7 @@ describe('un relais qui se tait en route', () => {
 				defaultFromName: 'My Makeup',
 				skipVerify: true,
 				transportOptions: {
-					...optionsDeTransport({
+					...transportOptions({
 						host: '127.0.0.1',
 						port,
 						fromAddress: 'ne-pas-repondre@example.test',
@@ -138,7 +138,7 @@ describe('un relais qui se tait en route', () => {
 			})
 			const adaptateur = adapter({ payload })
 			const lignes: string[] = []
-			const envoyer = creerEnvoiEmail({
+			const envoyer = createSendEmail({
 				relais: message => adaptateur.sendEmail(message),
 				journal: { info: ligne => lignes.push(ligne), erreur: ligne => lignes.push(ligne) },
 			})
@@ -148,7 +148,7 @@ describe('un relais qui se tait en route', () => {
 				() => undefined,
 				(e: unknown) => e
 			)
-			expect(erreur).toBeInstanceOf(EnvoiEmailEchoue)
+			expect(erreur).toBeInstanceOf(EmailSendFailed)
 			expect(Date.now() - debut).toBeLessThan(8000)
 			expect(lignes).toHaveLength(1)
 			for (const secret of [adresse, '127.0.0.1', 'Confirme']) expect(lignes.join('\n')).not.toContain(secret)

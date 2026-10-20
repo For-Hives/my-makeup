@@ -30,7 +30,7 @@
  *   (./sections.ts, ticket 060): a photo whose file is not adopted (./medias.ts) is reported, never
  *   invented.
  *
- * - Its prices keep the text typed and gain the amount the single rule reads in it (src/lib/prix.ts,
+ * - Its prices keep the text typed and gain the amount the single rule reads in it (src/lib/price.ts,
  *   ticket 062): `bilanDesPrix` counts them, and lists the profiles that would lose their priced
  *   offer or hold digits the rule does not read.
  *
@@ -42,13 +42,13 @@
  *   no date, no source. The report counts them, never shows them.
  */
 
-import { estMontantDePrix, parsePrice, prixMinimal } from '../../../src/lib/prix'
+import { isPriceAmount, minimumPrice, parsePrice } from '../../../src/lib/price'
 import { isFullyEmpty, type ProfileFields, type ProfileNetworks } from '../../../src/lib/profile/completeness'
 import { validateContactEmail, validatePhone } from '../../../src/lib/profile/contact-details'
 import { type ProfileDocument, profileState, statusAfter } from '../../../src/lib/profile/state'
 import { INITIAL_CHOICE, type ProfileStatus } from '../../../src/lib/profile/status'
 import { RADIUS_BOUNDS_KM } from '../../../src/lib/profile/zone'
-import { attribuerSlugs } from '../../../src/lib/slug'
+import { assignSlugs } from '../../../src/lib/slug'
 import type { CommuneAttendue } from './communes'
 import { REFERENCES } from './ecarts'
 import { type PhotoNonReprise, photosDeLEntree } from './medias'
@@ -407,12 +407,12 @@ function prixDesPrestations(prestations: unknown): PrixEcrit[] {
 
 /**
  * Whether the source gives a priced offer to a profile and the target holds none: the smallest
- * price of a card counts the offers only, never their options (`prixMinimal`, ticket 032). So an
+ * price of a card counts the offers only, never their options (`minimumPrice`, ticket 032). So an
  * option with an amount does not hide an offer that lost its own.
  */
 export function offreChiffreePerdue(prixDuSource: readonly (string | null)[], ecrites: readonly PrixEcrit[]): boolean {
 	const chiffreeALaSource = prixDuSource.some(price => parsePrice(price).priceFrom !== null)
-	return chiffreeALaSource && prixMinimal(ecrites) === null
+	return chiffreeALaSource && minimumPrice(ecrites) === null
 }
 
 export interface ProfilsAttendus {
@@ -464,7 +464,7 @@ export function profilsAttendus(
 	const nonPris = new Set([...laisses.ecartes, ...laisses.spam])
 	// The slugs of the old site, computed on every profile of the source, as the old site did.
 	const slugs = new Map(
-		attribuerSlugs(profils.map(({ id, username, created_at }) => ({ id, username, createdAt: created_at }))).map(
+		assignSlugs(profils.map(({ id, username, created_at }) => ({ id, username, createdAt: created_at }))).map(
 			({ id, slug }) => [Number(id), slug]
 		)
 	)
@@ -547,7 +547,7 @@ export function profilsAttendus(
 			else if ((priceText?.trim() ?? '') === '') prix.sansTexte += 1
 			else prix.textesLibres += 1
 		}
-		if (ecrits.some(({ priceFrom }) => estMontantDePrix(priceFrom)))
+		if (ecrits.some(({ priceFrom }) => isPriceAmount(priceFrom)))
 			ecarts.push({ champ: 'serviceOffers', reference: REFERENCES.prixNumerique })
 		const prixDesOffres = sections.prestations.map(({ price }) => price)
 		if (prixDesOffres.some(price => parsePrice(price).priceFrom !== null)) prix.profilsAvecOffreChiffree += 1

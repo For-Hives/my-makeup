@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import type { Field } from 'payload'
 import { Profiles } from '@/collections/Profiles'
-import { DEPARTEMENTS } from '@/lib/departements'
+import { DEPARTMENTS } from '@/lib/departments'
 import {
 	CITY_FIELDS,
 	type CityInput,
@@ -56,7 +56,7 @@ describe('le département d’un code INSEE', () => {
 	})
 
 	test('chacun des 101 départements et des 8 collectivités d’outre-mer a des codes de communes bien formés', () => {
-		for (const departement of [...Object.keys(DEPARTEMENTS), ...Object.keys(OVERSEAS_COLLECTIVITIES)]) {
+		for (const departement of [...Object.keys(DEPARTMENTS), ...Object.keys(OVERSEAS_COLLECTIVITIES)]) {
 			const code = departement.length === 3 ? `${departement}01` : `${departement}001`
 			expect(departmentOfInseeCode(code), code).toBe(departement)
 		}

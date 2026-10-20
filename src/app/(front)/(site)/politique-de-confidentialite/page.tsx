@@ -1,10 +1,10 @@
 import Link from 'next/link'
-import { OppositionMesure } from '@/components/analytics/OppositionMesure'
+import { AnalyticsOptOut } from '@/components/analytics/AnalyticsOptOut'
 import { LegalPage } from '@/components/legal/LegalPage'
-import { EDITEUR, formatSiret } from '@/lib/legal'
-import { JOURS_AVANT_EFFACEMENT_DES_PHOTOS, PRESTATAIRES } from '@/lib/prestataires'
+import { formatSiret, PUBLISHER } from '@/lib/legal'
+import { PHOTO_ERASURE_DAYS, PROVIDERS } from '@/lib/providers'
 import { pageMetadata } from '@/lib/seo/metadata'
-import { DELAI_AVANT_PURGE_JOURS } from '@/lib/taches/comptes-non-confirmes'
+import { PURGE_DELAY_DAYS } from '@/lib/tasks/unconfirmed-accounts'
 
 // Static: the text is in the code, and the page reads no cookie and no data (ticket 112).
 export const metadata = pageMetadata({
@@ -35,8 +35,8 @@ export default function PrivacyPolicyPage() {
 
 			<h2>Responsable du traitement</h2>
 			<p>
-				{`${EDITEUR.nom}, ${EDITEUR.forme} (SIRET ${formatSiret(EDITEUR.siret)}), ${EDITEUR.adresse}. Contact : `}
-				<a href={`mailto:${EDITEUR.email}`}>{EDITEUR.email}</a>
+				{`${PUBLISHER.nom}, ${PUBLISHER.forme} (SIRET ${formatSiret(PUBLISHER.siret)}), ${PUBLISHER.adresse}. Contact : `}
+				<a href={`mailto:${PUBLISHER.email}`}>{PUBLISHER.email}</a>
 				{'. Voir aussi les '}
 				<Link href={'/mentions-legales'}>mentions légales</Link>
 				{'.'}
@@ -53,10 +53,10 @@ export default function PrivacyPolicyPage() {
 				{`Base légale : l'exécution des conditions d'utilisation que vous acceptez à l'inscription ; notre intérêt légitime pour les emails liés au service.`}
 			</p>
 			<p>
-				{`Confirmation de l'adresse email : à l'inscription, nous envoyons à l'adresse indiquée un email contenant un lien. Tant que vous ne l'avez pas suivi, le compte ne permet pas de se connecter, et un compte jamais confirmé est supprimé, avec son profil vide, au bout de ${DELAI_AVANT_PURGE_JOURS} jours.`}
+				{`Confirmation de l'adresse email : à l'inscription, nous envoyons à l'adresse indiquée un email contenant un lien. Tant que vous ne l'avez pas suivi, le compte ne permet pas de se connecter, et un compte jamais confirmé est supprimé, avec son profil vide, au bout de ${PURGE_DELAY_DAYS} jours.`}
 			</p>
 			<p>
-				{`Durée : tant que votre compte existe. Vous pouvez supprimer votre compte et votre profil depuis votre espace : votre profil, vos informations et vos photos disparaissent du site aussitôt. Une photo retirée ou remplacée, comme celles d'un compte supprimé, est ensuite effacée définitivement de notre stockage au bout de ${JOURS_AVANT_EFFACEMENT_DES_PHOTOS} jours ; pendant ce délai, elle n'est plus affichée (le cache du service de stockage peut cependant la servir encore quelques heures).`}
+				{`Durée : tant que votre compte existe. Vous pouvez supprimer votre compte et votre profil depuis votre espace : votre profil, vos informations et vos photos disparaissent du site aussitôt. Une photo retirée ou remplacée, comme celles d'un compte supprimé, est ensuite effacée définitivement de notre stockage au bout de ${PHOTO_ERASURE_DAYS} jours ; pendant ce délai, elle n'est plus affichée (le cache du service de stockage peut cependant la servir encore quelques heures).`}
 			</p>
 			<p>
 				{`Si vous choisissez « Se connecter avec Google », Google nous transmet votre nom et votre adresse email pour créer ou ouvrir votre compte.`}
@@ -90,7 +90,7 @@ export default function PrivacyPolicyPage() {
 				{`Pourquoi : savoir ce qui aide vraiment les maquilleuses à être contactées (intérêt légitime). Cette mesure est limitée à des statistiques anonymes et ne nécessite donc pas votre consentement. Durée : les statistiques sont conservées 25 mois au plus, puis supprimées. Nous n'utilisons plus Google Analytics. Vous pouvez vous y opposer sur ce navigateur :`}
 			</p>
 			<div>
-				<OppositionMesure />
+				<AnalyticsOptOut />
 			</div>
 
 			<h2>Journaux techniques</h2>
@@ -104,10 +104,10 @@ export default function PrivacyPolicyPage() {
 			</p>
 
 			<h2>Hébergement et prestataires</h2>
-			{/* The list comes from src/lib/prestataires.ts, which a test compares to the configured
+			{/* The list comes from src/lib/providers.ts, which a test compares to the configured
 			    services: edit it there, never here. */}
 			<ul>
-				{PRESTATAIRES.map(({ id, nom, phrase }) => (
+				{PROVIDERS.map(({ id, nom, phrase }) => (
 					<li key={id}>{`${nom} : ${phrase}`}</li>
 				))}
 			</ul>
@@ -118,7 +118,7 @@ export default function PrivacyPolicyPage() {
 			<h2>Vos droits</h2>
 			<p>
 				{`Vous pouvez accéder à vos données, les rectifier, les faire effacer, en recevoir une copie, vous opposer à un traitement, en demander la limitation ou retirer votre consentement à tout moment. Écrivez-nous à `}
-				<a href={`mailto:${EDITEUR.email}`}>{EDITEUR.email}</a>
+				<a href={`mailto:${PUBLISHER.email}`}>{PUBLISHER.email}</a>
 				{` : nous répondons dans un délai d'un mois. Vous pouvez aussi adresser une réclamation à la CNIL (`}
 				<a href={'https://www.cnil.fr'} rel={'noopener nofollow noreferrer'} target={'_blank'}>
 					www.cnil.fr

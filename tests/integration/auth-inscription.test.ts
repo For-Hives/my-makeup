@@ -6,7 +6,7 @@ import { signInWithPassword } from '@/lib/auth/sign-in'
 import { signUpAccount } from '@/lib/auth/sign-up-payload'
 import type { MailboxRateLimits } from '@/lib/auth/sign-up-rate-limits'
 import { openWithPassword } from '@/lib/auth/token'
-import { EnvoiEmailEchoue, envoiEmailDePayload } from '@/lib/emails/envoi'
+import { EmailSendFailed, payloadSendEmail } from '@/lib/emails/send'
 import { parseServerEnv, serverEnv } from '@/lib/env'
 import { creerCompte } from '../outils/fabrique-comptes'
 import { attendreLeMail, mailsRecus, viderLeCapteur } from '../outils/mailpit'
@@ -48,7 +48,7 @@ async function inscription(options: {
 		payload,
 		donnees: { nom: options.nom ?? 'Léa Fictive', email, password: MOT_DE_PASSE },
 		verifier: options.verifier ?? true,
-		envoyer: options.envoyer ?? envoiEmailDePayload(payload, serverEnv()),
+		envoyer: options.envoyer ?? payloadSendEmail(payload, serverEnv()),
 		site: SITE,
 		journal: authLog(payload),
 		plancherMs: options.plancherMs ?? 0,
@@ -277,7 +277,7 @@ describe('quand l’inscription ne peut pas aboutir', () => {
 		const payload = await payloadDeTest()
 		const profils = (await payload.count({ collection: 'profiles' })).totalDocs
 
-		const raté = await inscription({ email, envoyer: () => Promise.reject(new EnvoiEmailEchoue()) })
+		const raté = await inscription({ email, envoyer: () => Promise.reject(new EmailSendFailed()) })
 
 		expect(raté.resultat).toEqual({ ok: false, code: 'email-non-envoye' })
 		expect(await compte(email)).toBeUndefined()
@@ -300,7 +300,7 @@ describe('le journal de l’inscription', () => {
 		const email = courriel('journal')
 		await inscription({ email, nom })
 		await inscription({ email, nom })
-		await inscription({ envoyer: () => Promise.reject(new EnvoiEmailEchoue()) })
+		await inscription({ envoyer: () => Promise.reject(new EmailSendFailed()) })
 
 		const lignes = (await journal()).slice(avant)
 		expect(lignes.map(({ type, code }) => [type, code])).toEqual([

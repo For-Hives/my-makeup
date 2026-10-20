@@ -89,7 +89,7 @@ export function mediaRemotePattern(mediaOrigin: string): {
  * `http://127.0.0.1:<port>/<bucket>` (or `localhost`) throws, so that nothing wider than one local
  * folder can be opened by mistake. Empty or missing: nothing is opened.
  */
-export function imagesDuBanc(raw: string | undefined): {
+export function benchImages(raw: string | undefined): {
 	dangerouslyAllowLocalIP: true
 	remotePattern: { hostname: string; pathname: string; port: string; protocol: 'http' }
 } | null {

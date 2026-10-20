@@ -1,5 +1,5 @@
 import { SITE_ORIGIN } from '../frozen-urls'
-import { cheminProfil } from '../slug'
+import { profilePath } from '../slug'
 import { cleanPath } from './url'
 
 /**
@@ -156,7 +156,7 @@ export function sitemapEntries({
 		if (!entries.has(loc)) entries.set(loc, { loc, lastmod: lastmod(date) })
 	}
 	for (const page of pages) add(page.chemin, null)
-	for (const profile of profils) if (profile.slug) add(cheminProfil(profile.slug), profile.misAJourLe)
+	for (const profile of profils) if (profile.slug) add(profilePath(profile.slug), profile.misAJourLe)
 	for (const talent of talents) if (talent.slug) add(`/talent/${encodeURIComponent(talent.slug)}`, talent.misAJourLe)
 	for (const article of articles) if (article.slug) add(`/blog/${encodeURIComponent(article.slug)}`, article.misAJourLe)
 	return [...entries.values()]

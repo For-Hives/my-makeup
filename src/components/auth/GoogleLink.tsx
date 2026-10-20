@@ -1,7 +1,7 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { type Suivre, track } from '@/lib/analytics/track'
+import { type Track, track } from '@/lib/analytics/track'
 
 /**
  * The link of the Google button. On the sign-up page, a click is the start of a sign-up
@@ -18,7 +18,7 @@ export function GoogleLink({
 	debutDInscription: boolean
 	className: string
 	children: ReactNode
-	suivre?: Suivre
+	suivre?: Track
 }) {
 	return (
 		<a

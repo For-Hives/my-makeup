@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test'
-import { CONTEXTE_SANS_PROFIL } from '@/collections/Profiles'
+import { NO_PROFILE_CONTEXT } from '@/collections/Profiles'
 import { creerCompte, motDePasseAleatoire } from '../outils/fabrique-comptes'
 import { viderLeCapteur } from '../outils/mailpit'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
@@ -11,7 +11,7 @@ import { appelerRest } from '../outils/rest'
  */
 
 /** Creates the account of a makeup artist with this name, as the server will at the sign-up. */
-async function creerMaquilleuse(nom: string | undefined, contexte?: typeof CONTEXTE_SANS_PROFIL) {
+async function creerMaquilleuse(nom: string | undefined, contexte?: typeof NO_PROFILE_CONTEXT) {
 	const payload = await payloadDeTest()
 	return payload.create({
 		collection: 'pros',
@@ -91,7 +91,7 @@ describe('Un compte créé reçoit son profil vide, avec un slug unique (I18)', 
 	})
 
 	test('la création porte CONTEXTE_SANS_PROFIL : le compte reste sans profil', async () => {
-		const compte = await creerMaquilleuse('Sans Profil', CONTEXTE_SANS_PROFIL)
+		const compte = await creerMaquilleuse('Sans Profil', NO_PROFILE_CONTEXT)
 
 		expect(await profilsDe(compte.id)).toEqual([])
 	})
@@ -107,7 +107,7 @@ describe('Un compte créé reçoit son profil vide, avec un slug unique (I18)', 
 	})
 
 	test('un slug donné par le serveur lui-même, comme à l’import, est gardé tel quel', async () => {
-		const compte = await creerMaquilleuse('Nouveau Nom', CONTEXTE_SANS_PROFIL)
+		const compte = await creerMaquilleuse('Nouveau Nom', NO_PROFILE_CONTEXT)
 		const payload = await payloadDeTest()
 
 		const profil = await payload.create({

@@ -19,11 +19,11 @@
  * CLI, outside of Next.
  */
 
-import { DEPARTEMENTS } from '../departements'
+import { DEPARTMENTS } from '../departments'
 
 /**
  * The radius a profile accepts, in whole kilometres (plan 01 §3.3 P7.4). The display keeps its
- * own bound (`RAYON_MAX_KM`, src/lib/format-zone.ts, 1 000 km as on the old site), which is not
+ * own bound (`RADIUS_MAX_KM`, src/lib/format-zone.ts, 1 000 km as on the old site), which is not
  * this one.
  */
 export const RADIUS_BOUNDS_KM = { min: 0, max: 200 } as const
@@ -42,7 +42,7 @@ export const CITY_FIELDS = ['name', 'inseeCode', 'department', 'latitude', 'long
 
 /**
  * The overseas collectivities whose communes the official list holds (geo.api.gouv.fr, 14/10/2026),
- * besides the 101 départements of src/lib/departements.ts: code → name. Their INSEE codes start
+ * besides the 101 départements of src/lib/departments.ts: code → name. Their INSEE codes start
  * with these three characters, and `city.department` holds them.
  */
 export const OVERSEAS_COLLECTIVITIES: Readonly<Record<string, string>> = {
@@ -83,7 +83,7 @@ const CODE_INSEE = /^(?:(9[78]\d)(\d{2})|(\d{2}|2[AB])(\d{3}))$/
 /**
  * The département an INSEE code names, or null when the code is not well formed: « 74010 » →
  * « 74 », « 2A004 » → « 2A », « 97411 » → « 974 », « 97701 » → « 977 ». The 101 départements of
- * src/lib/departements.ts and the overseas collectivities of the official list
+ * src/lib/departments.ts and the overseas collectivities of the official list
  * (`OVERSEAS_COLLECTIVITIES`) exist here, nothing else: « 20004 » (Corsica is 2A and 2B),
  * « 97001 » and a commune numbered 0 are refused. The code is read as written: no space, A and B
  * in capitals (the collection writes it so before it checks it).
@@ -94,7 +94,7 @@ export function departmentOfInseeCode(code: unknown): string | null {
 	const department = overseas ?? metropole
 	const number = overseasNumber ?? mainlandNumber
 	if (department === undefined || number === undefined || /^0+$/.test(number)) return null
-	return Object.hasOwn(DEPARTEMENTS, department) || Object.hasOwn(OVERSEAS_COLLECTIVITIES, department)
+	return Object.hasOwn(DEPARTMENTS, department) || Object.hasOwn(OVERSEAS_COLLECTIVITIES, department)
 		? department
 		: null
 }

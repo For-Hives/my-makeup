@@ -6,7 +6,7 @@ import { cache } from 'react'
 import { ProfileView } from '@/components/profile/ProfileView'
 import { serializeJsonLd } from '@/lib/seo/json-ld'
 import { profileMetadata, profileStructuredData } from '@/lib/seo/profile'
-import { cheminProfil } from '@/lib/slug'
+import { profilePath } from '@/lib/slug'
 import { writtenSegment } from '@/lib/urls/unknown-page'
 import { cachedProfileUrl } from '@/services/public/cached'
 import type { ProfileUrlTarget } from '@/services/public/profiles'
@@ -47,7 +47,7 @@ export async function generateMetadata({ params }: PageProps<'/profil/[slug]'>):
 export default async function ProfilePage({ params }: PageProps<'/profil/[slug]'>) {
 	const { slug } = await params
 	const target = await profileUrlTarget(slug)
-	if (target.type === 'redirection') permanentRedirect(cheminProfil(target.slug))
+	if (target.type === 'redirection') permanentRedirect(profilePath(target.slug))
 	if (target.type === 'inconnue') notFound()
 	return (
 		<>

@@ -4,14 +4,14 @@
  *   bun run notes:ajouter ajout "Tu peux ajouter une vidéo à ta galerie."
  *
  * The type is `ajout`, `amelioration` or `correction`. The sentence is checked by the rule of
- * src/lib/notes-de-version.ts, the same one the unit tests apply to the whole file. The note
+ * src/lib/release-notes.ts, the same one the unit tests apply to the whole file. The note
  * waits in src/content/changelog.json until the next publication moves it under its number.
  * Run from the root of the repository.
  */
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
-import { addNote, CHANGELOG_FILE, NOTE_TYPES, parseChangelog, serializeChangelog } from '../../src/lib/notes-de-version'
+import { addNote, CHANGELOG_FILE, NOTE_TYPES, parseChangelog, serializeChangelog } from '../../src/lib/release-notes'
 
 /** Adds the note to the changelog under `root`. Gives back the note, throws in French when it is refused. */
 export function addNoteToFile(root: string, type: string, text: string) {

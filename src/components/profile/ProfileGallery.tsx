@@ -2,8 +2,8 @@
 
 import Image from 'next/image'
 import { type KeyboardEvent, useCallback, useEffect, useRef, useState } from 'react'
+import { DEFAULT_RATIO, ratioMedia, sizesBox } from '@/lib/image-size'
 import { altWork } from '@/lib/profile/public-view'
-import { RATIO_PAR_DEFAUT, ratioMedia, sizesBoite } from '@/lib/taille-image'
 
 /** The height of a photo of the portfolio, in px: its width follows the shape of the photo. */
 const PHOTO_HEIGHT = 500
@@ -44,7 +44,7 @@ function Arrow({ vers }: { vers: 'gauche' | 'droite' }) {
  * (« Photo 2 sur 6 », a polite live region). Without JavaScript the row still scrolls.
  *
  * Every photo has its alternative text, « Réalisation de <nom> (n/N) », and is asked to the image
- * optimizer at the width it is drawn at (`sizesBoite`), from its original address.
+ * optimizer at the width it is drawn at (`sizesBox`), from its original address.
  */
 export function ProfileGallery({ photos, nom }: { photos: readonly GalleryPhoto[]; nom: string }) {
 	const track = useRef<HTMLDivElement>(null)
@@ -151,14 +151,14 @@ export function ProfileGallery({ photos, nom }: { photos: readonly GalleryPhoto[
 						role="group"
 						aria-roledescription="photo"
 						aria-label={`${rang + 1} sur ${total}`}
-						style={{ aspectRatio: ratioMedia(photo) ?? RATIO_PAR_DEFAUT, height: PHOTO_HEIGHT }}
+						style={{ aspectRatio: ratioMedia(photo) ?? DEFAULT_RATIO, height: PHOTO_HEIGHT }}
 						className="relative max-w-full shrink-0 snap-start"
 					>
 						<Image
 							src={photo.url}
 							alt={altWork(nom, rang + 1, total)}
 							fill
-							sizes={sizesBoite({ hauteur: PHOTO_HEIGHT, ratio: ratioMedia(photo) })}
+							sizes={sizesBox({ hauteur: PHOTO_HEIGHT, ratio: ratioMedia(photo) })}
 							className="rounded object-cover"
 						/>
 					</div>

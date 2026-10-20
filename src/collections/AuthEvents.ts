@@ -1,6 +1,6 @@
 import type { CollectionConfig } from 'payload'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
-import { adminSeulement, cacheeSaufAdmin } from '../lib/acces'
+import { adminOnly, hiddenExceptAdmin } from '../lib/access'
 import { EVENT_CODES, EVENT_METHODS, EVENT_TYPES } from '../lib/auth/auth-log'
 
 const TYPE_LABELS: Record<(typeof EVENT_TYPES)[number], string> = {
@@ -49,7 +49,7 @@ const METHOD_LABELS: Record<(typeof EVENT_METHODS)[number], string> = {
  *   (src/lib/auth/auth-log.ts), and no field holds text: there is nowhere to put an IP, an email, a
  *   name or a token, so none ever lands here, whatever was typed.
  * - Only an admin reads it. Nobody writes it through an API, an admin included: the server writes
- *   it (`log`), and purges it after 90 days (src/lib/taches/).
+ *   it (`log`), and purges it after 90 days (src/lib/tasks/).
  * - No `createdAt` or `updatedAt`: `date` is the one date, and the purge reads it.
  */
 export const AuthEvents: CollectionConfig<'auth-events'> = {
@@ -57,12 +57,12 @@ export const AuthEvents: CollectionConfig<'auth-events'> = {
 	labels: { singular: 'Événement d’authentification', plural: 'Journal d’authentification' },
 	admin: {
 		defaultColumns: ['date', 'type', 'method', 'code', 'durationMs'],
-		hidden: cacheeSaufAdmin,
+		hidden: hiddenExceptAdmin,
 	},
 	defaultSort: '-date',
 	timestamps: false,
 	access: {
-		read: adminSeulement,
+		read: adminOnly,
 		create: () => false,
 		update: () => false,
 		delete: () => false,

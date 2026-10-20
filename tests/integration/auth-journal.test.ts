@@ -3,7 +3,7 @@ import { authLog, EVENT_CODES, EVENT_TYPES, log } from '@/lib/auth/auth-log'
 import { createRateLimit } from '@/lib/auth/rate-limit'
 import { signInWithPassword } from '@/lib/auth/sign-in'
 import { openWithPassword } from '@/lib/auth/token'
-import { lancerLesTachesQuotidiennes } from '@/lib/taches/quotidiennes'
+import { runDailyTasks } from '@/lib/tasks/daily'
 import { creerCompte } from '../outils/fabrique-comptes'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
 import { appelerRest } from '../outils/rest'
@@ -182,7 +182,7 @@ describe('la purge à 90 jours, sur une horloge simulée', () => {
 		const recente = await ecrire(joursAvant(maintenant, 89))
 		const aujourdhui = await ecrire(maintenant.toISOString())
 
-		const premiere = await lancerLesTachesQuotidiennes(payload, maintenant)
+		const premiere = await runDailyTasks(payload, maintenant)
 		const restantes = (await lignes()).map(({ id }) => id)
 
 		expect(premiere).toContainEqual({ nom: 'purge-journal-authentification', supprimes: 2 })
@@ -190,7 +190,7 @@ describe('la purge à 90 jours, sur une horloge simulée', () => {
 		expect(restantes).not.toContain(limite.id)
 		expect(restantes).toContain(recente.id)
 		expect(restantes).toContain(aujourdhui.id)
-		const seconde = await lancerLesTachesQuotidiennes(payload, maintenant)
+		const seconde = await runDailyTasks(payload, maintenant)
 		expect(seconde).toContainEqual({ nom: 'purge-journal-authentification', supprimes: 0 })
 	})
 })

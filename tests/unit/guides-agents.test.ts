@@ -443,7 +443,7 @@ describe('CLAUDE.md', () => {
 			/toute règle d['’]accès ajoute ses lignes à `tests\/integration\/payload-acces\.test\.ts`/i
 		)
 		expect(existsSync(path.join(ROOT, 'tests/integration/payload-acces.test.ts'))).toBe(true)
-		expect(existsSync(path.join(ROOT, 'src/lib/acces.ts'))).toBe(true)
+		expect(existsSync(path.join(ROOT, 'src/lib/access.ts'))).toBe(true)
 	})
 
 	test('it loads AGENTS.md and points to the documents an agent needs', () => {

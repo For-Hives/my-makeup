@@ -7,7 +7,7 @@
 import { describe, expect, test } from 'bun:test'
 import { readdirSync, readFileSync } from 'node:fs'
 import Fuse from 'fuse.js'
-import { CATALOGUE } from '@/lib/analytics/events'
+import { CATALOG } from '@/lib/analytics/events'
 import {
 	normalizeTexts,
 	rankByRelevance,
@@ -297,7 +297,7 @@ describe('chercher : le mot filtre, la ville place', () => {
 describe('le texte saisi n’est ni journalisé ni mesuré', () => {
 	test('aucun événement de mesure de la recherche ne porte de texte', () => {
 		for (const nom of ['search_submit', 'search_result_click'] as const)
-			for (const spec of Object.values(CATALOGUE[nom]))
+			for (const spec of Object.values(CATALOG[nom]))
 				expect(['boolean', 'enum', 'int', 'pid'], nom).toContain(spec.type)
 	})
 

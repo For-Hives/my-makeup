@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
-import { type BilanDesProfils, poserLesProfilsDuJeu } from '@/jeu-fictif/chargement'
+import { type ProfilesSummary, placeDemoProfiles } from '@/demo-data/loading'
 import { listProfiles, readProfileUrlTarget, readPublicProfile } from '@/services/public/profiles'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
 import { viderLeStockage } from '../outils/s3'
@@ -10,10 +10,10 @@ import { viderLeStockage } from '../outils/s3'
  * when their owner published them; a hidden profile gives nothing.
  */
 
-let bilan: BilanDesProfils
+let bilan: ProfilesSummary
 
 beforeAll(async () => {
-	bilan = await poserLesProfilsDuJeu(await payloadDeTest())
+	bilan = await placeDemoProfiles(await payloadDeTest())
 }, 120_000)
 
 afterAll(async () => {

@@ -4,7 +4,7 @@ import { createServer } from 'node:net'
 import { initI18n } from '@payloadcms/translations'
 import { Forbidden, getRequestLanguage, type Payload, type SanitizedConfig, ValidationError } from 'payload'
 import { BlockedAccount } from '@/lib/auth/blocked-account'
-import { adaptateurSansRelais } from '@/lib/emails/relais'
+import { adapterWithoutRelay } from '@/lib/emails/relay'
 import { EnvError, type RawEnv } from '@/lib/env'
 import { migrations } from '@/migrations'
 
@@ -137,9 +137,9 @@ describe('src/payload.config.ts is hardened', () => {
 	test('no relay when nothing is set: the mails of Payload go to an adapter that writes a line with no address, and opens no connection', async () => {
 		// `nodemailerAdapter()` called with no transport creates an account at ethereal.email, and
 		// checks its transport when the server starts: without SMTP_HOST, it is not called at all.
-		expect((await configUnder(development)).email).toBe(adaptateurSansRelais)
+		expect((await configUnder(development)).email).toBe(adapterWithoutRelay)
 		// The sender alone switches nothing on.
-		expect((await configUnder({ ...development, EMAIL_FROM: SENDER })).email).toBe(adaptateurSansRelais)
+		expect((await configUnder({ ...development, EMAIL_FROM: SENDER })).email).toBe(adapterWithoutRelay)
 	})
 })
 
@@ -260,7 +260,7 @@ describe('the mails leave through the adapter of Payload, set by the environment
 			SMTP_PORT: '1025',
 		})
 
-		expect(config.email).toBe(adaptateurSansRelais)
+		expect(config.email).toBe(adapterWithoutRelay)
 	})
 })
 

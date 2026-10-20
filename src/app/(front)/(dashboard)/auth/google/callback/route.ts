@@ -2,7 +2,7 @@ import config from '@payload-config'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { getPayload } from 'payload'
-import { attributsDeLaMarque, COOKIE_DE_MARQUE_DE_CONNEXION } from '@/lib/analytics/marque-connexion'
+import { markAttributes, SIGN_IN_MARK_COOKIE } from '@/lib/analytics/sign-in-mark'
 import { authLog } from '@/lib/auth/auth-log'
 import { ipClient } from '@/lib/auth/client-ip'
 import { configGoogle, dashboardSite, GOOGLE_COOKIE, GOOGLE_START_PATH } from '@/lib/auth/google/config'
@@ -62,10 +62,6 @@ export async function GET(requete: Request) {
 	// On the response itself: a cookie set through `cookies()` is not carried by a response we build.
 	response.cookies.set(sessionCookie(payload, issue.token))
 	// Tells the next page to send `login_result` (ticket 146).
-	response.cookies.set(
-		COOKIE_DE_MARQUE_DE_CONNEXION,
-		'google',
-		attributsDeLaMarque(process.env.NODE_ENV === 'production')
-	)
+	response.cookies.set(SIGN_IN_MARK_COOKIE, 'google', markAttributes(process.env.NODE_ENV === 'production'))
 	return response
 }

@@ -2,10 +2,10 @@ import { describe, expect, test } from 'bun:test'
 import { readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { OppositionMesure } from '@/components/analytics/OppositionMesure'
+import { AnalyticsOptOut } from '@/components/analytics/AnalyticsOptOut'
 import { FOOTER_COLUMNS } from '@/components/layout/links'
-import { CLE_D_OPPOSITION, mesureRefusee, refuserLaMesure } from '@/lib/analytics/opposition'
-import { EDITEUR, formatSiren, formatSiret, HEBERGEUR, luhnValid } from '@/lib/legal'
+import { analyticsRefused, OPT_OUT_KEY, refuseAnalytics } from '@/lib/analytics/opt-out'
+import { formatSiren, formatSiret, HOST, luhnValid, PUBLISHER } from '@/lib/legal'
 import { ouvrirFenetre } from '../outils/dom-react'
 import { empreinteDuTexte, texteDePage } from '../outils/texte-de-page'
 
@@ -76,12 +76,12 @@ describe('le texte des trois pages', () => {
 
 describe('l’identité légale vient d’une seule source', () => {
 	test('les numéros sont valides et s’impriment à la française', () => {
-		expect(luhnValid(EDITEUR.siren)).toBe(true)
-		expect(luhnValid(EDITEUR.siret)).toBe(true)
-		expect(EDITEUR.siret.startsWith(EDITEUR.siren)).toBe(true)
-		expect(formatSiren(EDITEUR.siren)).toMatch(/^\d{3} \d{3} \d{3}$/)
-		expect(formatSiret(EDITEUR.siret)).toMatch(/^\d{3} \d{3} \d{3} \d{5}$/)
-		expect(formatSiret(EDITEUR.siret).replaceAll(' ', '')).toBe(EDITEUR.siret)
+		expect(luhnValid(PUBLISHER.siren)).toBe(true)
+		expect(luhnValid(PUBLISHER.siret)).toBe(true)
+		expect(PUBLISHER.siret.startsWith(PUBLISHER.siren)).toBe(true)
+		expect(formatSiren(PUBLISHER.siren)).toMatch(/^\d{3} \d{3} \d{3}$/)
+		expect(formatSiret(PUBLISHER.siret)).toMatch(/^\d{3} \d{3} \d{3} \d{5}$/)
+		expect(formatSiret(PUBLISHER.siret).replaceAll(' ', '')).toBe(PUBLISHER.siret)
 		expect(luhnValid('12a')).toBe(false)
 	})
 
@@ -93,12 +93,12 @@ describe('l’identité légale vient d’une seule source', () => {
 			.filter(entree => entree.isFile() && /\.tsx?$/.test(entree.name))
 			.map(entree => readFileSync(path.join(entree.parentPath, entree.name), 'utf8'))
 		const valeurs = [
-			EDITEUR.siren,
-			EDITEUR.siret,
-			EDITEUR.adresse,
-			EDITEUR.telephone,
-			HEBERGEUR.adresse,
-			HEBERGEUR.telephone,
+			PUBLISHER.siren,
+			PUBLISHER.siret,
+			PUBLISHER.adresse,
+			PUBLISHER.telephone,
+			HOST.adresse,
+			HOST.telephone,
 		]
 		for (const source of sources) for (const valeur of valeurs) expect(source).not.toContain(valeur)
 	})
@@ -108,16 +108,16 @@ describe('l’identité légale vient d’une seule source', () => {
 		const texte = texteDePage(renderToStaticMarkup(<Page />))
 
 		for (const ligne of [
-			`SIREN : ${formatSiren(EDITEUR.siren)}`,
-			`SIRET : ${formatSiret(EDITEUR.siret)}`,
-			`Adresse : ${EDITEUR.adresse}`,
-			`Email : ${EDITEUR.email}`,
-			`Téléphone : ${EDITEUR.telephone}`,
-			HEBERGEUR.adresse,
-			`Téléphone : ${HEBERGEUR.telephone}`,
+			`SIREN : ${formatSiren(PUBLISHER.siren)}`,
+			`SIRET : ${formatSiret(PUBLISHER.siret)}`,
+			`Adresse : ${PUBLISHER.adresse}`,
+			`Email : ${PUBLISHER.email}`,
+			`Téléphone : ${PUBLISHER.telephone}`,
+			HOST.adresse,
+			`Téléphone : ${HOST.telephone}`,
 		])
 			expect(texte).toContain(ligne)
-		expect(texte).toContain(`édité par ${EDITEUR.nom}, ${EDITEUR.forme}.`)
+		expect(texte).toContain(`édité par ${PUBLISHER.nom}, ${PUBLISHER.forme}.`)
 	})
 })
 
@@ -126,24 +126,24 @@ describe('l’opposition à la mesure', () => {
 
 	test('un clic coupe la mesure sur ce navigateur, un second la rétablit', async () => {
 		fenetre.w.localStorage.clear()
-		const zone = await fenetre.monter(<OppositionMesure />)
+		const zone = await fenetre.monter(<AnalyticsOptOut />)
 		const etat = () => zone.querySelector('[role="status"]')?.textContent
 
 		expect(etat()).toBe("La mesure d'audience est active sur ce navigateur.")
-		expect(fenetre.w.localStorage.getItem(CLE_D_OPPOSITION)).toBeNull()
+		expect(fenetre.w.localStorage.getItem(OPT_OUT_KEY)).toBeNull()
 
 		await fenetre.cliquer(fenetre.bouton('Ne plus mesurer mes visites'))
-		expect(fenetre.w.localStorage.getItem(CLE_D_OPPOSITION)).not.toBeNull()
+		expect(fenetre.w.localStorage.getItem(OPT_OUT_KEY)).not.toBeNull()
 		expect(etat()).toBe("La mesure d'audience est désactivée sur ce navigateur.")
 
 		await fenetre.cliquer(fenetre.bouton("Réactiver la mesure d'audience"))
-		expect(fenetre.w.localStorage.getItem(CLE_D_OPPOSITION)).toBeNull()
+		expect(fenetre.w.localStorage.getItem(OPT_OUT_KEY)).toBeNull()
 		expect(etat()).toBe("La mesure d'audience est active sur ce navigateur.")
 	})
 
 	test('une opposition déjà posée se lit à l’ouverture de la page', async () => {
-		fenetre.w.localStorage.setItem(CLE_D_OPPOSITION, '1')
-		const zone = await fenetre.monter(<OppositionMesure />)
+		fenetre.w.localStorage.setItem(OPT_OUT_KEY, '1')
+		const zone = await fenetre.monter(<AnalyticsOptOut />)
 		await fenetre.attendre(() => zone.querySelector('button'))
 
 		expect(zone.querySelector('[role="status"]')?.textContent).toBe(
@@ -165,17 +165,17 @@ describe('la clé d’opposition', () => {
 	}
 
 	test('c’est la clé qu’Umami lit lui-même, et le filtre de la page la lit aussi', () => {
-		expect(CLE_D_OPPOSITION).toBe('umami.disabled')
+		expect(OPT_OUT_KEY).toBe('umami.disabled')
 		const filtre = readFileSync(path.join(process.cwd(), 'src/lib/analytics/umami.ts'), 'utf8')
-		expect(filtre).toContain(`getItem('${CLE_D_OPPOSITION}')`)
+		expect(filtre).toContain(`getItem('${OPT_OUT_KEY}')`)
 	})
 
 	test('poser puis retirer la clé change l’état, et l’état se relit dans le stockage', () => {
 		const stockage = memoire()
-		expect(mesureRefusee(stockage)).toBe(false)
-		expect(refuserLaMesure(stockage, true)).toBe(true)
-		expect(mesureRefusee(stockage)).toBe(true)
-		expect(refuserLaMesure(stockage, false)).toBe(false)
+		expect(analyticsRefused(stockage)).toBe(false)
+		expect(refuseAnalytics(stockage, true)).toBe(true)
+		expect(analyticsRefused(stockage)).toBe(true)
+		expect(refuseAnalytics(stockage, false)).toBe(false)
 	})
 
 	test('un stockage absent ou qui refuse ne casse rien et ne compte pas pour une opposition', () => {
@@ -190,9 +190,9 @@ describe('la clé d’opposition', () => {
 				throw new Error('bloqué')
 			},
 		}
-		expect(mesureRefusee(undefined)).toBe(false)
-		expect(mesureRefusee(casse)).toBe(false)
-		expect(refuserLaMesure(casse, true)).toBe(false)
-		expect(refuserLaMesure(undefined, true)).toBe(false)
+		expect(analyticsRefused(undefined)).toBe(false)
+		expect(analyticsRefused(casse)).toBe(false)
+		expect(refuseAnalytics(casse, true)).toBe(false)
+		expect(refuseAnalytics(undefined, true)).toBe(false)
 	})
 })

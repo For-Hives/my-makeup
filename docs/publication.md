@@ -28,7 +28,7 @@ La phrase dit ce que la personne peut faire, ou ce qui s'améliore pour elle. El
 
 - une phrase vide, de plus de 280 caractères, sans majuscule au début ou sans point à la fin ;
 - un nom de fichier, un dossier du dépôt ou du code entre accents graves ;
-- un mot de technicien : `commit`, `API`, `Payload`… (la liste est dans `src/lib/notes-de-version.ts`) ;
+- un mot de technicien : `commit`, `API`, `Payload`… (la liste est dans `src/lib/release-notes.ts`) ;
 - une adresse email ou un numéro de téléphone : aucune donnée personnelle.
 
 Les tests unitaires relisent tout le journal avec la même règle : une note fautive, même écrite à la main, fait échouer la CI de sa pull request.

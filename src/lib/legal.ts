@@ -9,7 +9,7 @@
  * Host: netcup GmbH legal notice (netcup.de/kontakt/impressum.php), 2026-10-08.
  */
 
-export const EDITEUR = {
+export const PUBLISHER = {
 	nom: 'Andy Cinquin',
 	forme: 'entreprise individuelle',
 	siren: '880505276',
@@ -21,7 +21,7 @@ export const EDITEUR = {
 	directeurPublication: 'Andy Cinquin',
 } as const
 
-export const HEBERGEUR = {
+export const HOST = {
 	nom: 'netcup GmbH',
 	adresse: 'Emmy-Noether-Straße 10, 76131 Karlsruhe, Allemagne',
 	telephone: '+49 721 7540755-0',
@@ -31,16 +31,16 @@ export const HEBERGEUR = {
 /** Luhn checksum used by SIREN and SIRET numbers. */
 export function luhnValid(chiffres: string): boolean {
 	if (!/^\d+$/.test(chiffres)) return false
-	let somme = 0
+	let sum = 0
 	;[...chiffres].reverse().forEach((caractere, rang) => {
-		let valeur = Number(caractere)
+		let value = Number(caractere)
 		if (rang % 2 === 1) {
-			valeur *= 2
-			if (valeur > 9) valeur -= 9
+			value *= 2
+			if (value > 9) value -= 9
 		}
-		somme += valeur
+		sum += value
 	})
-	return somme % 10 === 0
+	return sum % 10 === 0
 }
 
 /** The SIREN printed the usual way: three groups of three digits. */

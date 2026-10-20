@@ -1,9 +1,9 @@
 import { describe, expect, test } from 'bun:test'
-import { enregistrerUnMessageDeContact, expedier, type StockageDesDemandes } from '@/lib/contact/envoi-payload'
-import type { EtatDuMail, StatutDeDemande } from '@/lib/contact/etats'
-import { creerFreinsDeContact } from '@/lib/contact/frein'
-import type { MessageDeContact } from '@/lib/contact/message'
-import { AUCUN_RELAIS, type EmailAEnvoyer, EnvoiEmailEchoue, type EnvoyerEmail } from '@/lib/emails/envoi'
+import type { ContactMessage } from '@/lib/contact/message'
+import { dispatch, type RequestStorage, saveContactMessage } from '@/lib/contact/payload-send'
+import { createContactRateLimits } from '@/lib/contact/rate-limit'
+import type { MailState, RequestStatus } from '@/lib/contact/states'
+import { EmailSendFailed, type EmailToSend, NO_RELAY, type SendEmail } from '@/lib/emails/send'
 
 /**
  * The contact message, server side, with doubles for the store and the mail door (tickets 158 and 159; plan 02
@@ -25,13 +25,13 @@ const formulaire = (surcharge: Record<string, unknown> = {}) => {
 	return { get: (nom: string) => valeurs[nom] }
 }
 
-function banc(options: { creer?: () => Promise<number>; envoyer?: EnvoyerEmail; delaiMs?: number } = {}) {
+function banc(options: { creer?: () => Promise<number>; envoyer?: SendEmail; delaiMs?: number } = {}) {
 	const evenements: string[] = []
 	const lignes: string[] = []
-	const lignesDeLaBase = new Map<number, { message: MessageDeContact; etatMail: EtatDuMail; statut: StatutDeDemande }>()
-	const mails: EmailAEnvoyer[] = []
+	const lignesDeLaBase = new Map<number, { message: ContactMessage; etatMail: MailState; statut: RequestStatus }>()
+	const mails: EmailToSend[] = []
 	const travaux: Promise<void>[] = []
-	const stockage: StockageDesDemandes = {
+	const stockage: RequestStorage = {
 		creer: async message => {
 			evenements.push('creer')
 			const id = (await options.creer?.()) ?? lignesDeLaBase.size + 1
@@ -44,13 +44,13 @@ function banc(options: { creer?: () => Promise<number>; envoyer?: EnvoyerEmail; 
 			if (ligne) lignesDeLaBase.set(id, { ...ligne, etatMail, statut: statut ?? ligne.statut })
 		},
 	}
-	const envoyer: EnvoyerEmail =
+	const envoyer: SendEmail =
 		options.envoyer ??
 		(async email => {
 			evenements.push('envoyer')
 			mails.push(email)
 		})
-	const freins = creerFreinsDeContact(crypto.randomUUID())
+	const freins = createContactRateLimits(crypto.randomUUID())
 	const entrees = (surcharge: Record<string, unknown> = {}) => ({
 		formulaire: formulaire(surcharge),
 		stockage,
@@ -68,7 +68,7 @@ function banc(options: { creer?: () => Promise<number>; envoyer?: EnvoyerEmail; 
 describe('I32 adapté : la ligne est écrite avant l’envoi, puis marquée transmise', () => {
 	test('l’ordre : la ligne, puis le mail, puis l’état', async () => {
 		const b = banc()
-		const resultat = await enregistrerUnMessageDeContact(b.entrees())
+		const resultat = await saveContactMessage(b.entrees())
 		await b.termine()
 
 		expect(resultat).toEqual({ ok: true })
@@ -78,7 +78,7 @@ describe('I32 adapté : la ligne est écrite avant l’envoi, puis marquée tran
 
 	test('un seul mail, à l’équipe, avec l’adresse saisie en réponse, et le sujet sans rien de saisi', async () => {
 		const b = banc()
-		await enregistrerUnMessageDeContact(b.entrees())
+		await saveContactMessage(b.entrees())
 		await b.termine()
 
 		expect(b.mails).toHaveLength(1)
@@ -92,7 +92,7 @@ describe('I32 adapté : la ligne est écrite avant l’envoi, puis marquée tran
 	test('la réponse part avant le mail : le visiteur n’attend jamais le relais', async () => {
 		const b = banc()
 		const entrees = { ...b.entrees(), apres: () => {} }
-		await enregistrerUnMessageDeContact(entrees)
+		await saveContactMessage(entrees)
 		expect(b.evenements).toEqual(['creer'])
 	})
 })
@@ -108,7 +108,7 @@ describe('un message invalide ne crée aucune ligne et n’envoie rien', () => {
 		],
 	])('%s', async (_cas, surcharge) => {
 		const b = banc()
-		const resultat = await enregistrerUnMessageDeContact(b.entrees(surcharge))
+		const resultat = await saveContactMessage(b.entrees(surcharge))
 		await b.termine()
 
 		expect(resultat.ok).toBe(false)
@@ -119,13 +119,13 @@ describe('un message invalide ne crée aucune ligne et n’envoie rien', () => {
 })
 
 describe('I33 adapté : un email en panne ne perd pas le message', () => {
-	const enPanne: EnvoyerEmail = async () => {
-		throw new EnvoiEmailEchoue()
+	const enPanne: SendEmail = async () => {
+		throw new EmailSendFailed()
 	}
 
 	test('la porte échoue : la ligne reste, marquée en échec, la visiteuse a sa confirmation', async () => {
 		const b = banc({ envoyer: enPanne })
-		const resultat = await enregistrerUnMessageDeContact(b.entrees())
+		const resultat = await saveContactMessage(b.entrees())
 		await b.termine()
 
 		expect(resultat).toEqual({ ok: true })
@@ -136,7 +136,7 @@ describe('I33 adapté : un email en panne ne perd pas le message', () => {
 	test('un relais muet : la réponse n’attend pas, et passé le délai la ligne est en échec', async () => {
 		const b = banc({ envoyer: () => new Promise(() => {}), delaiMs: 50 })
 		const debut = Date.now()
-		const resultat = await enregistrerUnMessageDeContact(b.entrees())
+		const resultat = await saveContactMessage(b.entrees())
 		const reponseEn = Date.now() - debut
 		await b.termine()
 		const tout = Date.now() - debut
@@ -149,7 +149,7 @@ describe('I33 adapté : un email en panne ne perd pas le message', () => {
 	})
 
 	test('le délai par défaut est sous les 10 secondes qu’une visiteuse attend au plus', async () => {
-		const { DELAI_DE_L_ENVOI_MS } = await import('@/lib/contact/envoi-payload')
+		const { SEND_TIMEOUT_MS: DELAI_DE_L_ENVOI_MS } = await import('@/lib/contact/payload-send')
 		expect(DELAI_DE_L_ENVOI_MS).toBeLessThan(10_000)
 	})
 
@@ -162,7 +162,7 @@ describe('I33 adapté : un email en panne ne perd pas le message', () => {
 				}),
 			delaiMs: 20,
 		})
-		await enregistrerUnMessageDeContact(b.entrees())
+		await saveContactMessage(b.entrees())
 		await b.termine()
 		expect([...b.lignesDeLaBase.values()][0]).toMatchObject({ etatMail: 'failed' })
 
@@ -177,17 +177,17 @@ describe('I33 adapté : un email en panne ne perd pas le message', () => {
 		entrees.stockage.marquer = async () => {
 			throw new Error('base en panne')
 		}
-		expect(await enregistrerUnMessageDeContact(entrees)).toEqual({ ok: true })
+		expect(await saveContactMessage(entrees)).toEqual({ ok: true })
 		await b.termine()
 	})
 })
 
 describe('ticket 224 : sans relais d’envoi, le message n’est pas dit transmis', () => {
-	const sansRelais: EnvoyerEmail = async () => AUCUN_RELAIS
+	const sansRelais: SendEmail = async () => NO_RELAY
 
 	test('la porte signale qu’il n’y a pas de relais : la ligne reste en échec, jamais transmise, et le journal le dit', async () => {
 		const b = banc({ envoyer: sansRelais })
-		const resultat = await enregistrerUnMessageDeContact(b.entrees())
+		const resultat = await saveContactMessage(b.entrees())
 		await b.termine()
 
 		expect(resultat).toEqual({ ok: true })
@@ -198,7 +198,7 @@ describe('ticket 224 : sans relais d’envoi, le message n’est pas dit transmi
 
 	test('l’envoi de l’admin sans relais rend « echec » aussi, et rien n’est marqué envoyé', async () => {
 		const b = banc({ envoyer: sansRelais })
-		const etat = await expedier(1, MARQUEURS, { ...b.entrees(), stockage: b.entrees().stockage })
+		const etat = await dispatch(1, MARQUEURS, { ...b.entrees(), stockage: b.entrees().stockage })
 
 		expect(etat).toBe('echec')
 		expect(b.evenements).not.toContain('marquer:sent')
@@ -212,7 +212,7 @@ describe('une ligne qui ne s’enregistre pas : rien ne part, la visiteuse l’a
 				throw Object.assign(new Error('insert into demandes (...) values (MESSAGEMARQUEUR)'), { code: '08006' })
 			},
 		})
-		const resultat = await enregistrerUnMessageDeContact(b.entrees())
+		const resultat = await saveContactMessage(b.entrees())
 		await b.termine()
 
 		expect(resultat).toEqual({ ok: false, code: 'enregistrement-impossible' })
@@ -246,7 +246,7 @@ describe('le journal ne garde rien de ce qui a été saisi', () => {
 	]
 	test.each(cas)('%s', async (_nom, options) => {
 		const b = banc(options)
-		await enregistrerUnMessageDeContact(b.entrees())
+		await saveContactMessage(b.entrees())
 		await b.termine()
 
 		for (const ligne of b.lignes) for (const saisi of Object.values(MARQUEURS)) expect(ligne).not.toContain(saisi)

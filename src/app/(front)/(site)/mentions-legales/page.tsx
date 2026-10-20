@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { LegalPage } from '@/components/legal/LegalPage'
-import { EDITEUR, formatSiren, formatSiret, HEBERGEUR } from '@/lib/legal'
+import { formatSiren, formatSiret, HOST, PUBLISHER } from '@/lib/legal'
 import { pageMetadata } from '@/lib/seo/metadata'
 
 // Static: the text is in the code, and the page reads no cookie and no data (ticket 112).
@@ -25,31 +25,31 @@ export default function LegalNoticePage() {
 		>
 			<h2>Éditeur du site</h2>
 			<p>
-				{`Le site my-makeup.fr est édité par ${EDITEUR.nom}, ${EDITEUR.forme}.`}
+				{`Le site my-makeup.fr est édité par ${PUBLISHER.nom}, ${PUBLISHER.forme}.`}
 				<br />
-				{`SIREN : ${formatSiren(EDITEUR.siren)}`}
+				{`SIREN : ${formatSiren(PUBLISHER.siren)}`}
 				<br />
-				{`SIRET : ${formatSiret(EDITEUR.siret)}`}
+				{`SIRET : ${formatSiret(PUBLISHER.siret)}`}
 				<br />
-				{`Adresse : ${EDITEUR.adresse}`}
+				{`Adresse : ${PUBLISHER.adresse}`}
 				<br />
 				{'Email : '}
-				<a href={`mailto:${EDITEUR.email}`}>{EDITEUR.email}</a>
+				<a href={`mailto:${PUBLISHER.email}`}>{PUBLISHER.email}</a>
 				<br />
-				{`Téléphone : ${EDITEUR.telephone}`}
+				{`Téléphone : ${PUBLISHER.telephone}`}
 			</p>
 			<h2>Directeur de la publication</h2>
-			<p>{EDITEUR.directeurPublication}</p>
+			<p>{PUBLISHER.directeurPublication}</p>
 			<h2>Hébergement</h2>
 			<p>
-				{HEBERGEUR.nom}
+				{HOST.nom}
 				<br />
-				{HEBERGEUR.adresse}
+				{HOST.adresse}
 				<br />
-				{`Téléphone : ${HEBERGEUR.telephone}`}
+				{`Téléphone : ${HOST.telephone}`}
 				<br />
-				<a href={HEBERGEUR.site} rel={'noopener nofollow noreferrer'} target={'_blank'}>
-					{HEBERGEUR.site.replace('https://', '')}
+				<a href={HOST.site} rel={'noopener nofollow noreferrer'} target={'_blank'}>
+					{HOST.site.replace('https://', '')}
 				</a>
 			</p>
 			<h2>Contenus publiés par les maquilleuses</h2>
@@ -59,7 +59,7 @@ export default function LegalNoticePage() {
 			<h2>Signaler un contenu</h2>
 			<p>
 				{`Pour signaler un contenu illicite, une photo publiée sans autorisation ou une utilisation frauduleuse du site, écrivez à `}
-				<a href={`mailto:${EDITEUR.email}`}>{EDITEUR.email}</a>
+				<a href={`mailto:${PUBLISHER.email}`}>{PUBLISHER.email}</a>
 				{` en indiquant l'adresse de la page concernée et le motif du signalement. Le contenu est examiné et retiré s'il est manifestement illicite.`}
 			</p>
 			<h2>Propriété intellectuelle</h2>

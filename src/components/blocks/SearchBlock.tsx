@@ -1,4 +1,4 @@
-import { SuiviDeLaSoumission } from '@/components/analytics/SuiviDeLaSoumission'
+import { SubmissionTracking } from '@/components/analytics/SubmissionTracking'
 import { MagnifierIcon, PlaceIcon } from './icons'
 
 const FIELD =
@@ -36,7 +36,7 @@ export function SearchBlock({ search = '', city = '', surLaPageDeRecherche = fal
 					role="search"
 					className="flex w-full flex-col items-center justify-between gap-6 sm:gap-4 md:flex-row md:flex-wrap lg:gap-6"
 				>
-					<SuiviDeLaSoumission />
+					<SubmissionTracking />
 					<div className="flex w-full flex-col gap-4 px-2 md:w-full md:flex-row lg:w-auto lg:gap-6 lg:px-0">
 						<div className="relative w-full md:w-full lg:w-auto">
 							<label htmlFor={`${prefix}-prestation`} className="sr-only">

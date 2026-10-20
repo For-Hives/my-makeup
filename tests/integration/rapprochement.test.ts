@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, setDefaultTimeout, test } from 'bun:test'
 import sharp from 'sharp'
 import { serverEnv } from '@/lib/env'
-import { rapprocherLeStockageEtLaBase } from '@/lib/rapprochement-lecture'
-import { listerLeStockage } from '@/lib/stockage'
+import { reconcileStorageAndDatabase } from '@/lib/reconciliation-read'
+import { listStorage } from '@/lib/storage'
 import type { Media } from '@/payload-types'
 import { RACINE } from '../outils/banc'
 import { type Espion, espionnerLeStockage } from '../outils/espion-s3'
@@ -74,7 +74,7 @@ const cles = (media: Media) => [
 const rapprocher = async () => {
 	const storage = serverEnv().storage
 	if (!storage) throw new Error('Pas de stockage sur le banc.')
-	return rapprocherLeStockageEtLaBase(await payloadDeTest(), () => listerLeStockage(storage))
+	return reconcileStorageAndDatabase(await payloadDeTest(), () => listStorage(storage))
 }
 
 /** The command, in its own process, as the CI step runs it. */

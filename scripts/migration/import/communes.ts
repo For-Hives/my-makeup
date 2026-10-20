@@ -18,7 +18,7 @@
  *   INSEE code, or none. A line that names a profile not « à revoir » is without effect.
  */
 
-import { DEPARTEMENTS } from '../../../src/lib/departements'
+import { DEPARTMENTS } from '../../../src/lib/departments'
 import { usableCity } from '../../../src/lib/profile/completeness'
 import { publicPlace } from '../../../src/lib/profile/public-place'
 import {
@@ -106,7 +106,7 @@ export function departementEnTete(texte: string): { texte: string; departement: 
 	const inchange = { texte, departement: null }
 	const trouve = DEPARTEMENT_EN_TETE.exec(texte)
 	const departement = (trouve?.[1] ?? '').toUpperCase()
-	if (!trouve || !Object.hasOwn(DEPARTEMENTS, departement)) return inchange
+	if (!trouve || !Object.hasOwn(DEPARTMENTS, departement)) return inchange
 	const reste = (trouve[2] ?? '').trim()
 	if (/[,;:/|+()[\]]/.test(reste)) return inchange
 	const avecLeNumero = publicPlace(texte)

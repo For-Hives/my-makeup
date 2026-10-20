@@ -1,10 +1,10 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { createServer } from 'node:net'
 import { nodemailerAdapter } from '@payloadcms/email-nodemailer'
-import { enregistrerUnMessageDeContact, stockageDePayload } from '@/lib/contact/envoi-payload'
-import { creerFreinsDeContact, type FreinsDeContact } from '@/lib/contact/frein'
-import { creerEnvoiEmail, type EnvoyerEmail, envoiEmailDePayload } from '@/lib/emails/envoi'
-import { optionsDeTransport } from '@/lib/emails/relais'
+import { payloadStorage, saveContactMessage } from '@/lib/contact/payload-send'
+import { type ContactRateLimits, createContactRateLimits } from '@/lib/contact/rate-limit'
+import { transportOptions } from '@/lib/emails/relay'
+import { createSendEmail, payloadSendEmail, type SendEmail } from '@/lib/emails/send'
 import { serverEnv } from '@/lib/env'
 import { attendreLeMail, mailsRecus, viderLeCapteur } from '../outils/mailpit'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
@@ -45,17 +45,17 @@ async function lignesDe(email: string) {
 
 async function envoyerLeFormulaire(
 	v: ReturnType<typeof visiteuse>,
-	options: { envoyer?: EnvoyerEmail; delaiMs?: number; client?: string; freins?: FreinsDeContact } = {}
+	options: { envoyer?: SendEmail; delaiMs?: number; client?: string; freins?: ContactRateLimits } = {}
 ) {
 	const payload = await payloadDeTest()
 	const travaux: Promise<void>[] = []
 	const lignes: string[] = []
-	const resultat = await enregistrerUnMessageDeContact({
+	const resultat = await saveContactMessage({
 		formulaire: v.formulaire,
 		client: options.client ?? '203.0.113.9',
-		freins: options.freins ?? creerFreinsDeContact(v.equipe),
-		stockage: stockageDePayload(payload),
-		envoyer: options.envoyer ?? envoiEmailDePayload(payload, serverEnv()),
+		freins: options.freins ?? createContactRateLimits(v.equipe),
+		stockage: payloadStorage(payload),
+		envoyer: options.envoyer ?? payloadSendEmail(payload, serverEnv()),
 		destinataire: v.equipe,
 		apres: travail => void travaux.push(travail()),
 		journal: { info: l => void lignes.push(l), erreur: l => void lignes.push(l) },
@@ -68,9 +68,9 @@ describe('I32 adapté : le message est écrit avant l’envoi, puis marqué tran
 	test('la ligne existe quand le mail part ; un seul mail, réponse vers l’adresse saisie', async () => {
 		const v = visiteuse()
 		const payload = await payloadDeTest()
-		const porte = envoiEmailDePayload(payload, serverEnv())
+		const porte = payloadSendEmail(payload, serverEnv())
 		let ligneAuDepart: unknown[] = []
-		const envoyer: EnvoyerEmail = async (email, options) => {
+		const envoyer: SendEmail = async (email, options) => {
 			ligneAuDepart = await lignesDe(v.champs.email as string)
 			await porte(email, options)
 		}
@@ -125,7 +125,7 @@ describe('I32 adapté : le message est écrit avant l’envoi, puis marqué tran
 		const payload = await payloadDeTest()
 		const v = visiteuse()
 		await expect(
-			stockageDePayload(payload).creer({
+			payloadStorage(payload).creer({
 				prenom: 'Léa',
 				nom: 'Témoin',
 				email: v.champs.email as string,
@@ -142,7 +142,7 @@ describe('I33 adapté : un email en panne ne perd pas le message', () => {
 		const v = visiteuse()
 		const lignesDuJournal: string[] = []
 		// The real door, wired to a relay nobody answers on: the failure of the provider.
-		const envoyer = creerEnvoiEmail({
+		const envoyer = createSendEmail({
 			relais: async () => {
 				throw Object.assign(new Error(`connect ECONNREFUSED ${v.equipe}`), { code: 'ECONNREFUSED' })
 			},
@@ -179,7 +179,7 @@ describe('I33 adapté : un email en panne ne perd pas le message', () => {
 				defaultFromAddress: 'ne-pas-repondre@example.test',
 				defaultFromName: 'My Makeup',
 				skipVerify: true,
-				transportOptions: optionsDeTransport({
+				transportOptions: transportOptions({
 					host: '127.0.0.1',
 					port,
 					fromAddress: 'ne-pas-repondre@example.test',
@@ -187,7 +187,7 @@ describe('I33 adapté : un email en panne ne perd pas le message', () => {
 				}),
 			})
 			const adaptateur = adapter({ payload })
-			const envoyer = creerEnvoiEmail({
+			const envoyer = createSendEmail({
 				relais: message => adaptateur.sendEmail(message),
 				journal: { info: () => {}, erreur: () => {} },
 			})
@@ -223,7 +223,7 @@ describe('I34 : champ piège rempli, demande invalide ou limite atteinte : aucun
 	})
 
 	test('la sixième demande de l’heure d’une adresse est refusée : une ligne et un mail pour chacune des cinq, aucun pour la sixième', async () => {
-		const freins = creerFreinsDeContact(crypto.randomUUID())
+		const freins = createContactRateLimits(crypto.randomUUID())
 		const client = '198.51.100.7'
 		const envois = []
 		for (let i = 0; i < 6; i++) {
@@ -250,7 +250,7 @@ describe('I34 : champ piège rempli, demande invalide ou limite atteinte : aucun
 	})
 
 	test('la vingt et unième demande du jour pour un même email est refusée, d’où qu’elle vienne', async () => {
-		const freins = creerFreinsDeContact(crypto.randomUUID())
+		const freins = createContactRateLimits(crypto.randomUUID())
 		const email = unique('insistante')
 		for (let i = 0; i < 20; i++) {
 			const { resultat, termine } = await envoyerLeFormulaire(visiteuse({ email }), {

@@ -1,5 +1,5 @@
 import { APIError, type CollectionBeforeDeleteHook, type CollectionConfig } from 'payload'
-import { adminOuSoiMeme, adminSeulement, cacheeSaufAdmin, champAdminSeulement, jamais } from '../lib/acces'
+import { adminOnly, adminOrSelf, fieldAdminOnly, hiddenExceptAdmin, neverAllowed } from '../lib/access'
 import { deleteAccount } from '../lib/account/deletion-route'
 import {
 	recordLastSignIn,
@@ -16,22 +16,22 @@ import { clearLegacyHashAfterPassword, clearLegacyHashOnRenewal } from '../lib/a
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import { rateLimitSignIn, releaseSignInSlot } from '../lib/auth/rate-limit-payload'
 import { extendUnderCap, refuseAfterCap, SESSION_DURATION_S } from '../lib/auth/sliding-session'
-import { contenuEmailConfirmation, SUJET_DE_CONFIRMATION } from '../lib/emails/confirmation'
-import { composerEmail } from '../lib/emails/gabarit'
-import { sessionsFermees } from './Admins'
-import { profilALaCreationDuCompte } from './Profiles'
+import { CONFIRMATION_SUBJECT, confirmationEmailContent } from '../lib/emails/confirmation'
+import { composerEmail } from '../lib/emails/layout'
+import { closedSessions } from './Admins'
+import { profileOnAccountCreation } from './Profiles'
 
 // Kept exported from here: the tests and the earlier tickets import it from this file.
 export { firstClosedAccount }
 
 /** How long a session of a makeup artist lasts: 14 days (plan 01 §2.3). */
-export const DUREE_SESSION_PRO_S = SESSION_DURATION_S
+export const PRO_SESSION_DURATION_S = SESSION_DURATION_S
 
 /**
  * The attributes of the session cookie (I09): HttpOnly always (Payload sets it), SameSite=Lax, and
  * Secure on the deployed site. The sign-in sets it with these same attributes.
  */
-export const cookiesDeSession = (production: boolean) => ({ secure: production, sameSite: 'Lax' as const })
+export const sessionCookies = (production: boolean) => ({ secure: production, sameSite: 'Lax' as const })
 
 /**
  * An account that still has a profile is not deleted by the Local API: the profile goes first, then
@@ -40,7 +40,7 @@ export const cookiesDeSession = (production: boolean) => ({ secure: production, 
  * `src/lib/account/deletion.ts`, which the makeup artist (ticket 141) and the admin (ticket 167,
  * `DELETE /api/pros/:id`) both call.
  */
-export const compteSansProfilAvantSuppression: CollectionBeforeDeleteHook = async ({ id, req }) => {
+export const accountWithoutProfileBeforeDeletion: CollectionBeforeDeleteHook = async ({ id, req }) => {
 	const { totalDocs } = await req.payload.count({
 		collection: 'profiles',
 		overrideAccess: true,
@@ -66,7 +66,7 @@ export const compteSansProfilAvantSuppression: CollectionBeforeDeleteHook = asyn
  * - A blocked account (`blocked`) is turned away at the sign-in once its password is right, and blocking
  *   closes its sessions (ticket 089, src/lib/auth/blocked-account.ts).
  * - Creating an account creates its empty profile (collection `profiles`), unless the creation
- *   says otherwise (`CONTEXTE_SANS_PROFIL`).
+ *   says otherwise (`NO_PROFILE_CONTEXT`).
  *
  * `auth.verify` is on for good: `_verified` exists only while it is (SCHEMA.md, §5.1). Whether a
  * new account must confirm its email is the switch AUTH_VERIFY, read by the sign-up
@@ -79,19 +79,19 @@ export const Pros: CollectionConfig<'pros'> = {
 	labels: { singular: 'Compte maquilleuse', plural: 'Comptes maquilleuses' },
 	defaultSort: '-createdAt',
 	// The list of the admin (ticket 168): creation date, confirmed address, block, last sign-in and whether
-	// a profile exists, the newest account first. The filters are above the table (FiltresDesComptes).
+	// a profile exists, the newest account first. The filters are above the table (AccountFilters).
 	admin: {
 		useAsTitle: 'email',
 		defaultColumns: ['email', 'createdAt', '_verified', 'blocked', 'lastSignInAt', 'profile'],
-		hidden: cacheeSaufAdmin,
-		components: { beforeListTable: ['/components/admin/FiltresDesComptes#FiltresDesComptes'] },
+		hidden: hiddenExceptAdmin,
+		components: { beforeListTable: ['/components/admin/AccountFilters#AccountFilters'] },
 	},
 	auth: {
 		verify: {
-			generateEmailSubject: () => SUJET_DE_CONFIRMATION,
+			generateEmailSubject: () => CONFIRMATION_SUBJECT,
 			generateEmailHTML: ({ token }) =>
 				composerEmail(
-					contenuEmailConfirmation(String(token)),
+					confirmationEmailContent(String(token)),
 					process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
 				).html,
 		},
@@ -105,29 +105,29 @@ export const Pros: CollectionConfig<'pros'> = {
 		maxLoginAttempts: 0,
 		// 14 days (plan 01 §2.3), renewed by a visit to the space (`RefreshSession`) and never past 90 days
 		// from the opening of the session (ticket 079: the `refresh` hook and the `beforeOperation` one below).
-		tokenExpiration: DUREE_SESSION_PRO_S,
+		tokenExpiration: PRO_SESSION_DURATION_S,
 		// The token lives in the cookie only: no response of the API carries it (ticket 075).
 		removeTokenFromResponses: true,
-		cookies: cookiesDeSession(process.env.NODE_ENV === 'production'),
+		cookies: sessionCookies(process.env.NODE_ENV === 'production'),
 	},
 	access: {
 		admin: () => false,
-		read: adminOuSoiMeme('pros'),
-		create: adminSeulement,
-		update: adminOuSoiMeme('pros'),
-		delete: adminSeulement,
-		unlock: adminSeulement,
+		read: adminOrSelf('pros'),
+		create: adminOnly,
+		update: adminOrSelf('pros'),
+		delete: adminOnly,
+		unlock: adminOnly,
 	},
 	// The admin's deletion is the cascade of the account (ticket 167); several accounts at once would skip it.
 	disableBulkDelete: true,
 	endpoints: [firstClosedAccount, deleteAccount],
 	hooks: {
-		afterChange: [profilALaCreationDuCompte, clearLegacyHashAfterPassword, recordBlock],
+		afterChange: [profileOnAccountCreation, clearLegacyHashAfterPassword, recordBlock],
 		afterLogin: [releaseSignInSlot(), recordLastSignIn, recordRestSignIn],
 		afterError: [rememberRestFailures(), recordRestSignInFailure],
 		beforeChange: [closeSessionsOnBlock],
 		beforeLogin: [refuseBlockedAccount],
-		beforeDelete: [compteSansProfilAvantSuppression],
+		beforeDelete: [accountWithoutProfileBeforeDeletion],
 		beforeValidate: [clearLegacyHashOnRenewal],
 		beforeOperation: [
 			recordSignInStart,
@@ -150,7 +150,7 @@ export const Pros: CollectionConfig<'pros'> = {
 			label: 'Bloqué',
 			type: 'checkbox',
 			defaultValue: false,
-			access: { create: champAdminSeulement, update: champAdminSeulement },
+			access: { create: fieldAdminOnly, update: fieldAdminOnly },
 			admin: {
 				position: 'sidebar',
 				description: 'Bloquer ferme les sessions ouvertes du compte et refuse sa connexion. Débloquer rend l’accès.',
@@ -161,14 +161,14 @@ export const Pros: CollectionConfig<'pros'> = {
 			name: 'lastSignInAt',
 			label: 'Dernière connexion',
 			type: 'date',
-			access: { create: jamais, update: jamais },
+			access: { create: neverAllowed, update: neverAllowed },
 			admin: { readOnly: true, date: { pickerAppearance: 'dayAndTime' } },
 		},
 		{
 			name: 'legacyProvider',
 			label: 'Fournisseur d’origine',
 			type: 'text',
-			access: { create: jamais, update: jamais },
+			access: { create: neverAllowed, update: neverAllowed },
 			admin: {
 				readOnly: true,
 				description:
@@ -180,23 +180,23 @@ export const Pros: CollectionConfig<'pros'> = {
 			label: 'Identifiant sur l’ancien site',
 			type: 'number',
 			unique: true,
-			access: { create: jamais, update: jamais },
+			access: { create: neverAllowed, update: neverAllowed },
 			admin: { readOnly: true },
 		},
 		{
 			name: 'legacyBcrypt',
 			type: 'text',
 			hidden: true,
-			access: { read: jamais, create: jamais, update: jamais },
+			access: { read: neverAllowed, create: neverAllowed, update: neverAllowed },
 		},
 		{
 			// Merged into Payload's own field: only an admin confirms an account by hand.
 			name: '_verified',
 			label: 'Adresse confirmée',
 			type: 'checkbox',
-			access: { create: champAdminSeulement, update: champAdminSeulement },
+			access: { create: fieldAdminOnly, update: fieldAdminOnly },
 		},
-		sessionsFermees,
+		closedSessions,
 		{
 			// Virtual: no column, no migration. It reads `profiles.pro`, so the list can tell an account that has a profile.
 			name: 'profile',
@@ -205,9 +205,9 @@ export const Pros: CollectionConfig<'pros'> = {
 			collection: 'profiles',
 			on: 'pro',
 			maxDepth: 0,
-			access: { read: champAdminSeulement },
+			access: { read: fieldAdminOnly },
 			// The panel's filter builder cannot build a filter on a join field (it crashes): the filters are above the table.
-			admin: { components: { Cell: '/components/admin/ProfilDuCompte#ProfilDuCompte' }, disableListFilter: true },
+			admin: { components: { Cell: '/components/admin/AccountProfile#AccountProfile' }, disableListFilter: true },
 		},
 	],
 }

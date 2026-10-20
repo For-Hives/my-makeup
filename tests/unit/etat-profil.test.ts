@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import type { Field } from 'payload'
 import { Profiles } from '@/collections/Profiles'
-import { CHAMPS_DE_L_ETAT } from '@/collections/profiles/etat'
+import { STATE_FIELDS } from '@/collections/profiles/state'
 import { completeness, publishableConditions } from '@/lib/profile/completeness'
 import {
 	type ProfileDocument,
@@ -362,7 +362,7 @@ describe('les champs de l’état dans la collection des profils', () => {
 	test('aucune API n’écrit l’état ni le statut : création et modification fermées à tous', () => {
 		const statut = champs.find(({ name }) => name === 'status')
 		if (!statut) throw new Error('Le champ « status » manque à la collection des profils.')
-		for (const champ of [...CHAMPS_DE_L_ETAT, statut]) {
+		for (const champ of [...STATE_FIELDS, statut]) {
 			const acces = 'access' in champ ? champ.access : undefined
 			const nom = 'name' in champ ? champ.name : ''
 			for (const operation of ['create', 'update'] as const)

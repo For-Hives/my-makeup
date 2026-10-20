@@ -5,7 +5,7 @@ import { linkStillValid, requestPasswordLink, resetPassword } from '@/lib/auth/p
 import { createRateLimit } from '@/lib/auth/rate-limit'
 import { signInWithPassword } from '@/lib/auth/sign-in'
 import { openWithPassword } from '@/lib/auth/token'
-import { envoiEmailDePayload } from '@/lib/emails/envoi'
+import { payloadSendEmail } from '@/lib/emails/send'
 import { serverEnv } from '@/lib/env'
 import { creerCompte } from '../outils/fabrique-comptes'
 import { attendreLeMail, compterLesMails, mailsRecus, viderLeCapteur } from '../outils/mailpit'
@@ -41,7 +41,7 @@ function demande(email: unknown, options: { frein?: ReturnType<typeof createRate
 			payload,
 			headers: options.headers ?? adresseCliente(),
 			email,
-			envoyer: envoiEmailDePayload(payload, serverEnv()),
+			envoyer: payloadSendEmail(payload, serverEnv()),
 			site: SITE,
 			apres: travail => {
 				travaux.push(travail())

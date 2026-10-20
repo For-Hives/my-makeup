@@ -23,9 +23,9 @@
  */
 
 import type { Payload } from 'payload'
-import { type Pid, pidDuProfil } from '@/lib/analytics/pid'
-import { formatZone, rayonKm, villeAffichee } from '@/lib/format-zone'
-import { estMontantDePrix, prixMinimal } from '@/lib/prix'
+import { type Pid, profilePid } from '@/lib/analytics/pid'
+import { displayedCity, formatZone, radiusKm } from '@/lib/format-zone'
+import { isPriceAmount, minimumPrice } from '@/lib/price'
 import { displayName, text } from '@/lib/profile/display-name'
 import { profilePid as pidDeLaPage } from '@/lib/profile/pid'
 import {
@@ -46,7 +46,7 @@ import { urlTarget, valuesToSearch } from '@/lib/profile/url'
 import { isIndexable, LISTED_FILTER } from '@/lib/profile/visibility'
 import type { ProfilePlace } from '@/lib/search/place'
 import { type NormalizedTexts, normalizeTexts } from '@/lib/search/relevance'
-import { estUnSlug } from '@/lib/slug'
+import { isSlug } from '@/lib/slug'
 import type { Profile } from '@/payload-types'
 
 /** The fields of a profile a public page reads, and nothing else. */
@@ -149,7 +149,7 @@ export interface PublicProfile {
 	coordonnees: PublicContactDetails | null
 	/** The offers with a name, with their amount in euros (what the structured data prices; no option). */
 	offres: PricedOffer[]
-	/** The lowest amount of her offers (src/lib/prix.ts, `prixMinimal`, U37), or `null`. */
+	/** The lowest amount of her offers (src/lib/price.ts, `minimumPrice`, U37), or `null`. */
 	prixMinimal: number | null
 }
 
@@ -253,7 +253,7 @@ async function readPids(payload: Payload, profils: readonly { id: number }[]): P
 		pagination: false,
 		overrideAccess: true,
 	})
-	for (const { id, strapiId } of docs) pid.set(id, pidDuProfil({ id, strapiId }))
+	for (const { id, strapiId } of docs) pid.set(id, profilePid({ id, strapiId }))
 	return pid
 }
 
@@ -262,7 +262,7 @@ function cardOf(profil: CardProfile, photos: PhotosById, pids: ReadonlyMap<numbe
 	const identifier = photoId(profil.mainPicture)
 	return {
 		slug: profil.slug,
-		pid: pids.get(profil.id) ?? pidDuProfil({ id: profil.id }),
+		pid: pids.get(profil.id) ?? profilePid({ id: profil.id }),
 		nom: displayName(profil),
 		specialite: text(profil.specialty) || null,
 		lieu: formatZone({ city: profil.city?.name, radius: profil.radiusKm }) || null,
@@ -369,7 +369,7 @@ export async function readProfileUrlTarget(payload: Payload, segment: string): P
 	if (target.type !== 'profil') return target
 	return {
 		type: 'profil',
-		// Only a published profile is refreshed by a save (src/lib/revalidation.ts): the page keeps it in the cache.
+		// Only a published profile is refreshed by a save (src/lib/revalidate.ts): the page keeps it in the cache.
 		publie: target.profil.status === PUBLISHED_STATUS,
 		profil: await publicProfileRead(payload, target.profil),
 	}
@@ -429,7 +429,7 @@ const CANDIDATES_LIMIT = 20
 
 /** The profile at this slug, or `null`: unknown, hidden, or a slug that is not the profile's own. */
 export async function readPublicProfile(payload: Payload, slug: string): Promise<PublicProfile | null> {
-	if (!estUnSlug(slug)) return null
+	if (!isSlug(slug)) return null
 	const target = await readProfileUrlTarget(payload, slug)
 	return target.type === 'profil' ? target.profil : null
 }
@@ -479,8 +479,8 @@ export function publicProfileOf(
 		disponible: profil.available !== false,
 		photo: lu.photo,
 		galerie: lu.galerie,
-		lieu: villeAffichee(profil.city?.name) || null,
-		seDeplace: villeAffichee(profil.city?.name) !== '' && rayonKm(profil.radiusKm) !== null,
+		lieu: displayedCity(profil.city?.name) || null,
+		seDeplace: displayedCity(profil.city?.name) !== '' && radiusKm(profil.radiusKm) !== null,
 		prestations: serviceOffers(profil.serviceOffers),
 		competences: names(profil.skills),
 		langues: names(profil.languages),
@@ -495,7 +495,7 @@ export function publicProfileOf(
 		indexable: isIndexable(profil),
 		coordonnees: lu.coordonnees,
 		offres: pricedOffers(profil.serviceOffers),
-		prixMinimal: prixMinimal(profil.serviceOffers),
+		prixMinimal: minimumPrice(profil.serviceOffers),
 	}
 }
 
@@ -509,7 +509,7 @@ function pricedOffers(stockees: ProfilePageData['serviceOffers']): PricedOffer[]
 			{
 				nom: name,
 				description: rows(ligne?.description).join(' '),
-				montant: estMontantDePrix(amount) ? amount : null,
+				montant: isPriceAmount(amount) ? amount : null,
 			},
 		]
 	})
@@ -617,7 +617,7 @@ export async function readDirectory(
 				carte: cardOf(profile, photos, pids),
 				ville: text(profile.city?.name) || null,
 				departement: text(profile.city?.department) || null,
-				seDeplace: text(profile.city?.name) !== '' && rayonKm(profile.radiusKm) !== null,
+				seDeplace: text(profile.city?.name) !== '' && radiusKm(profile.radiusKm) !== null,
 				...(avecLesTextes && { textes: textsOf(profile) }),
 			})
 		if (!result.hasNextPage) break

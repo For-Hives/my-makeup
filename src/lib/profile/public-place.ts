@@ -41,8 +41,8 @@
  */
 
 // Relative imports on purpose: read by the completeness rule, which the collection `profils` calls.
-import { DEPARTEMENTS, departementDuCodePostal, normaliserLieu } from '../departements'
-import { villeAffichee } from '../format-zone'
+import { DEPARTMENTS, departmentOfPostalCode, normalizePlace } from '../departments'
+import { displayedCity } from '../format-zone'
 
 /** Types of street and parts of an address (lower case, no accents) */
 const STREETS = new Set([
@@ -257,8 +257,8 @@ function lastPostalCode(texte: string): FoundPostalCode | null {
 
 /** Name of the département of a code, as compared */
 function departmentName(code: string): string | null {
-	const name = DEPARTEMENTS[code]
-	return name ? normaliserLieu(name) : null
+	const name = DEPARTMENTS[code]
+	return name ? normalizePlace(name) : null
 }
 
 // « ANNECY-LE-VIEUX » → « Annecy-le-Vieux », « l'isle-d'abeau » →
@@ -419,7 +419,7 @@ const NONE: PublicPlace = { texte: '', commune: '', departement: null, adresse: 
 
 /** The public place of a city field, as typed in the profile or already public. */
 export function publicPlace(city: unknown): PublicPlace {
-	const raw = villeAffichee(city).replace(POSTAL_CODE_SPACE, '$1$2')
+	const raw = displayedCity(city).replace(POSTAL_CODE_SPACE, '$1$2')
 	if (!raw) return NONE
 
 	if (isAddress(raw)) return addressPlace(raw)
@@ -442,7 +442,7 @@ export function publicPlace(city: unknown): PublicPlace {
 	return {
 		texte: t,
 		commune: t,
-		departement: cp ? departementDuCodePostal(cp.code) : null,
+		departement: cp ? departmentOfPostalCode(cp.code) : null,
 		adresse: false,
 	}
 }
@@ -471,8 +471,8 @@ function cityWithPostalCode(t: string, cp: FoundPostalCode): AddressCity {
 	let city = placeName(after.join(' '))
 	// « …, 74160 Haute-Savoie »: a département is no commune (Paris is
 	// both)
-	const department = departementDuCodePostal(cp.code)
-	if (city && department && department !== '75' && normaliserLieu(city) === departmentName(department)) city = ''
+	const department = departmentOfPostalCode(cp.code)
+	if (city && department && department !== '75' && normalizePlace(city) === departmentName(department)) city = ''
 	if (!city) {
 		const chunks = t.slice(0, cp.index).split(/[,;]/)
 		const before = chunks.at(-1) ?? ''
@@ -486,7 +486,7 @@ function cityWithPostalCode(t: string, cp: FoundPostalCode): AddressCity {
 
 function addressPlace(brut: string): PublicPlace {
 	const { commune: city, codePostal } = addressCity(brut)
-	const department = codePostal ? departementDuCodePostal(codePostal) : null
+	const department = codePostal ? departmentOfPostalCode(codePostal) : null
 	let text = ''
 	if (city) text = department ? `${city} (${department})` : city
 	else if (department) text = codePostal
@@ -500,7 +500,7 @@ function placeWithNumber(t: string): PublicPlace | null {
 		if (isPlace(place)) {
 			const name = placeName(place)
 			const code = number[0].replace(/\s/g, '').toUpperCase()
-			if (departmentName(code) === normaliserLieu(place))
+			if (departmentName(code) === normalizePlace(place))
 				return {
 					texte: `${name} (${code})`,
 					commune: name,
@@ -519,7 +519,7 @@ function placeWithPostalCode(t: string): PublicPlace | null {
 		const [, first = '', second = ''] = withCode
 		const [codePostal, name] = /^\d/.test(first) ? [first, second] : [second, first]
 		const city = placeName(name)
-		const department = departementDuCodePostal(codePostal)
+		const department = departmentOfPostalCode(codePostal)
 		if (city)
 			return {
 				texte: department ? `${city} (${department})` : city,

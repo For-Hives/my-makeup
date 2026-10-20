@@ -10,10 +10,10 @@
  * nothing of where; a country or a region only counts when nothing more precise was typed.
  */
 
-import { DEPARTEMENTS, departementDuCodePostal, normaliserLieu } from '../departements'
+import { DEPARTMENTS, departmentOfPostalCode, normalizePlace } from '../departments'
 
 const DEPARTMENT_NAMES = new Map<string, string[]>([
-	...Object.entries(DEPARTEMENTS).map(([code, nom]): [string, string[]] => [normaliserLieu(nom), [code]]),
+	...Object.entries(DEPARTMENTS).map(([code, nom]): [string, string[]] => [normalizePlace(nom), [code]]),
 	['corse', ['2A', '2B']],
 	['reunion', ['974']],
 ])
@@ -109,7 +109,7 @@ export interface Place {
 function segmentCodes(segment: string): string[] {
 	if (segment === '20') return ['2A', '2B']
 	const code = segment.toUpperCase()
-	return DEPARTMENT_CODE.test(code) && DEPARTEMENTS[code] ? [code] : []
+	return DEPARTMENT_CODE.test(code) && DEPARTMENTS[code] ? [code] : []
 }
 
 /** What a city field says of where: the places written and the départements named. */
@@ -117,12 +117,12 @@ export function readPlace(valeur: unknown): Place {
 	const raw = typeof valeur === 'string' ? valeur : ''
 	const departments = new Set<string>()
 	for (const [code] of raw.matchAll(/(?<!\d)\d{5}(?!\d)/g)) {
-		const department = departementDuCodePostal(code)
+		const department = departmentOfPostalCode(code)
 		if (department) departments.add(department)
 	}
 	const segments: PlaceSegment[] = []
 	for (const chunk of raw.split(SEPARATORS)) {
-		const segment = normaliserLieu(chunk)
+		const segment = normalizePlace(chunk)
 		const codes = segmentCodes(segment)
 		for (const code of codes) departments.add(code)
 		const words = codes.length
@@ -200,7 +200,7 @@ export function searchDepartments(locaux: readonly ProfilePlace[], city: string)
 
 /** « du 74 (Haute-Savoie) », « du 2A (Corse-du-Sud) et du 2B (Haute-Corse) ». */
 export const inDepartment = (codes: readonly string[]): string =>
-	codes.map(code => `du ${code}${DEPARTEMENTS[code] ? ` (${DEPARTEMENTS[code]})` : ''}`).join(' et ')
+	codes.map(code => `du ${code}${DEPARTMENTS[code] ? ` (${DEPARTMENTS[code]})` : ''}`).join(' et ')
 
 export interface OthersSection<T> {
 	cle: 'departement' | 'deplacent' | 'autres'

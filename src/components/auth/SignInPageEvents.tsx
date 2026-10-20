@@ -1,8 +1,8 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import { CODES_D_ERREUR_D_AUTHENTIFICATION } from '@/lib/analytics/events'
-import { type Suivre, track } from '@/lib/analytics/track'
+import { AUTH_ERROR_CODES } from '@/lib/analytics/events'
+import { type Track, track } from '@/lib/analytics/track'
 import { GOOGLE_ERROR_CODES } from '@/lib/auth/errors'
 import { EXPIRED_SESSION_ERROR } from '@/lib/auth/return-to'
 
@@ -17,7 +17,7 @@ import { EXPIRED_SESSION_ERROR } from '@/lib/auth/return-to'
  *
  * Renders nothing.
  */
-export function SignInPageEvents({ code, suivre = track }: { code: string | null; suivre?: Suivre }) {
+export function SignInPageEvents({ code, suivre = track }: { code: string | null; suivre?: Track }) {
 	const emitted = useRef<string | null>(null)
 	useEffect(() => {
 		if (code === null || emitted.current === code) return
@@ -27,7 +27,7 @@ export function SignInPageEvents({ code, suivre = track }: { code: string | null
 			return
 		}
 		const google = GOOGLE_ERROR_CODES.find(candidat => candidat === code)
-		const known = CODES_D_ERREUR_D_AUTHENTIFICATION.find(candidat => candidat === code)
+		const known = AUTH_ERROR_CODES.find(candidat => candidat === code)
 		if (google === undefined || known === undefined) return
 		suivre('login_result', { method: 'google', ok: false, code: known })
 		suivre('auth_error', { code: known })

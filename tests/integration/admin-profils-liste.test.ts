@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { Profiles } from '../../src/collections/Profiles'
-import { PROFILS_DU_JEU } from '../../src/jeu-fictif/profils'
+import { DEMO_PROFILES } from '../../src/demo-data/profiles'
 import { poserLeJeuDuBanc } from '../fixtures/jeu-du-banc'
 import { creerCompte } from '../outils/fabrique-comptes'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
@@ -13,7 +13,7 @@ import { viderLeStockage } from '../outils/s3'
  * value that is not a choice is refused with a message. The admin hides a profile from its sheet
  * (`chosenStatus`), and publishing it again brings it back; the editorial role changes no status.
  * The twelve profiles of the set of the bench are the base: their expected state is in
- * src/jeu-fictif/profils.ts.
+ * src/demo-data/profiles.ts.
  */
 
 const remettreAZero = () => Promise.all([viderLaBase(), viderLeStockage()])
@@ -46,8 +46,8 @@ async function lister(enTetes: Record<string, string>, requete: string) {
 }
 
 /** The slugs the set expects for a filter on the expected state. */
-const attendus = (garde: (profil: (typeof PROFILS_DU_JEU)[number]) => boolean) =>
-	PROFILS_DU_JEU.filter(garde)
+const attendus = (garde: (profil: (typeof DEMO_PROFILES)[number]) => boolean) =>
+	DEMO_PROFILES.filter(garde)
 		.map(({ attendu }) => attendu.slug)
 		.sort()
 
@@ -97,7 +97,7 @@ describe('La liste des profils de l’admin (ticket 165)', () => {
 	test('la recherche du panneau retrouve un profil par son adresse ou sa commune', async () => {
 		const admin = await creerCompte('admin')
 		const { enTetes } = admin.session
-		const reference = PROFILS_DU_JEU.find(({ cle }) => cle === 'reference')
+		const reference = DEMO_PROFILES.find(({ cle }) => cle === 'reference')
 		if (!reference) throw new Error('Le jeu n’a pas de profil de référence.')
 
 		const parAdresse = await lister(enTetes, `where[slug][like]=${reference.attendu.slug}`)
@@ -159,7 +159,7 @@ describe('La liste des profils de l’admin (ticket 165)', () => {
 describe('Masquer un profil depuis sa fiche (ticket 166)', () => {
 	/** The slug of the profile of the set that is published and publishable: the reference one. */
 	const reference = () => {
-		const profil = PROFILS_DU_JEU.find(({ cle }) => cle === 'reference')
+		const profil = DEMO_PROFILES.find(({ cle }) => cle === 'reference')
 		if (!profil) throw new Error('Le jeu n’a pas de profil de référence.')
 		return profil.attendu.slug
 	}

@@ -1,8 +1,8 @@
 /**
  * The public reads that a page keeps in Next's cache (tickets 097 and 098): the build runs without a
  * database, so a page renders on its first request and reads these. Each one carries the tag of the
- * list it reads (`ETIQUETTES`, src/lib/revalidation.ts): a save of a profile or of a talent refreshes
- * it (src/collections/revalidation.ts), and the import refreshes nothing. The time is only a net: a
+ * list it reads (`TAGS`, src/lib/revalidate.ts): a save of a profile or of a talent refreshes
+ * it (src/collections/revalidate.ts), and the import refreshes nothing. The time is only a net: a
  * change made outside of a request of Next (a script) is seen within the hour.
  *
  * Ticket 117 adds the reads of one page: a profile, a talent, an article. Each is kept under the tag of
@@ -16,8 +16,8 @@ import config from '@payload-config'
 import { unstable_cache } from 'next/cache'
 import { getPayload, type Payload } from 'payload'
 import { valuesToSearch } from '@/lib/profile/url'
-import { ETIQUETTES } from '@/lib/revalidation'
-import { estUnSlug } from '@/lib/slug'
+import { TAGS } from '@/lib/revalidate'
+import { isSlug } from '@/lib/slug'
 import { listArticles } from './article-list'
 import { type ArticlePublic, readPublicArticle } from './articles'
 import { readIndexablePages } from './indexable-pages'
@@ -28,7 +28,7 @@ const ONE_HOUR = 60 * 60
 
 /** The talents of the home page. */
 export const cachedTalents = unstable_cache(async () => listTalents(await getPayload({ config })), ['public:talents'], {
-	tags: [ETIQUETTES.talents],
+	tags: [TAGS.talents],
 	revalidate: ONE_HOUR,
 })
 
@@ -36,7 +36,7 @@ export const cachedTalents = unstable_cache(async () => listTalents(await getPay
 export const cachedDirectory = unstable_cache(
 	async () => readDirectory(await getPayload({ config })),
 	['public:annuaire'],
-	{ tags: [ETIQUETTES.profils], revalidate: ONE_HOUR }
+	{ tags: [TAGS.profils], revalidate: ONE_HOUR }
 )
 
 /**
@@ -48,14 +48,14 @@ export const cachedDirectory = unstable_cache(
 export const cachedDirectoryWithTexts = unstable_cache(
 	async () => readDirectory(await getPayload({ config }), { avecLesTextes: true }),
 	['public:annuaire-textes'],
-	{ tags: [ETIQUETTES.profils], revalidate: ONE_HOUR }
+	{ tags: [TAGS.profils], revalidate: ONE_HOUR }
 )
 
 /** The articles of the blog list (ticket 107): refreshed by a save of an article. */
 export const cachedArticles = unstable_cache(
 	async () => listArticles(await getPayload({ config })),
 	['public:articles'],
-	{ tags: [ETIQUETTES.articles], revalidate: ONE_HOUR }
+	{ tags: [TAGS.articles], revalidate: ONE_HOUR }
 )
 
 /**
@@ -65,7 +65,7 @@ export const cachedArticles = unstable_cache(
 export const cachedIndexablePages = unstable_cache(
 	async () => readIndexablePages(await getPayload({ config })),
 	['public:pages-indexables'],
-	{ tags: [ETIQUETTES.profils, ETIQUETTES.talents, ETIQUETTES.articles], revalidate: ONE_HOUR }
+	{ tags: [TAGS.profils, TAGS.talents, TAGS.articles], revalidate: ONE_HOUR }
 )
 
 /** What a read of one page gives: the document to keep, or what to answer without keeping anything. */
@@ -109,10 +109,10 @@ async function cachedIfFound<T, E>(
  */
 export async function cachedProfileUrl(payload: Payload, segment: string): Promise<ProfileUrlTarget> {
 	const slug = valuesToSearch(segment)?.segment
-	if (slug === undefined || !estUnSlug(slug)) return readProfileUrlTarget(payload, segment)
+	if (slug === undefined || !isSlug(slug)) return readProfileUrlTarget(payload, segment)
 	const reading = await cachedIfFound<ProfileUrlTarget & { type: 'profil' }, ProfileUrlTarget>(
 		['public:profil', slug],
-		ETIQUETTES.profil(slug),
+		TAGS.profil(slug),
 		async () => {
 			const target = await readProfileUrlTarget(payload, slug)
 			return target.type === 'profil' && target.publie && target.profil.slug === slug
@@ -125,28 +125,20 @@ export async function cachedProfileUrl(payload: Payload, segment: string): Promi
 
 /** The published talent of this slug, kept under `talent:<slug>`; `null` (unknown, a draft) is not kept. */
 export async function cachedTalent(payload: Payload, slug: string): Promise<TalentPageData | null> {
-	if (!estUnSlug(slug)) return null
-	const reading = await cachedIfFound<TalentPageData, null>(
-		['public:talent', slug],
-		ETIQUETTES.talent(slug),
-		async () => {
-			const talent = await readTalent(payload, slug)
-			return talent ? { garder: talent } : { ecart: null }
-		}
-	)
+	if (!isSlug(slug)) return null
+	const reading = await cachedIfFound<TalentPageData, null>(['public:talent', slug], TAGS.talent(slug), async () => {
+		const talent = await readTalent(payload, slug)
+		return talent ? { garder: talent } : { ecart: null }
+	})
 	return 'garder' in reading ? reading.garder : null
 }
 
 /** The published article of this slug, kept under `article:<slug>`; `null` (unknown, a draft) is not kept. */
 export async function cachedArticle(payload: Payload, slug: string): Promise<ArticlePublic | null> {
-	if (!estUnSlug(slug)) return null
-	const reading = await cachedIfFound<ArticlePublic, null>(
-		['public:article', slug],
-		ETIQUETTES.article(slug),
-		async () => {
-			const article = await readPublicArticle(payload, slug)
-			return article ? { garder: article } : { ecart: null }
-		}
-	)
+	if (!isSlug(slug)) return null
+	const reading = await cachedIfFound<ArticlePublic, null>(['public:article', slug], TAGS.article(slug), async () => {
+		const article = await readPublicArticle(payload, slug)
+		return article ? { garder: article } : { ecart: null }
+	})
 	return 'garder' in reading ? reading.garder : null
 }

@@ -13,15 +13,15 @@ import type {
 import { APIError, ValidationError } from 'payload'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import {
-	adminOuProprietaire,
-	adminSeulement,
-	cacheeSaufAdmin,
-	champAdminSeulement,
-	champDuProfilAdminOuProprietaire,
-	jamais,
-	profilPublieOuProprietaire,
-} from '../lib/acces'
-import { GALERIE_MAX } from '../lib/medias'
+	adminOnly,
+	adminOrOwner,
+	fieldAdminOnly,
+	hiddenExceptAdmin,
+	neverAllowed,
+	profileFieldAdminOrOwner,
+	publishedProfileOrOwner,
+} from '../lib/access'
+import { GALLERY_MAX } from '../lib/media'
 import {
 	CONSENT_SOURCES,
 	consentAfter,
@@ -41,30 +41,30 @@ import {
 	STATUS_CHOICES,
 	STATUS_LABELS,
 } from '../lib/profile/status'
-import { premierSlugLibre, slugDeRepli, slugifier } from '../lib/slug'
-import { CHAMPS_LISTES, identitesDesLignesAvantEcriture } from './profile-lists'
-import { CHAMPS_DE_L_ETAT, etatAvantEcriture } from './profiles/etat'
-import { champsDeLaZone } from './profiles/zone'
-import { rafraichissement } from './revalidation'
+import { fallbackSlug, firstFreeSlug, slugify } from '../lib/slug'
+import { LIST_FIELDS, rowIdentitiesBeforeWrite } from './profile-lists'
+import { STATE_FIELDS, stateBeforeWrite } from './profiles/state'
+import { zoneFields } from './profiles/zone'
+import { refresh } from './revalidate'
 
 /** The refresh of the page of a profile, the search and the sitemap (ticket 047). */
-const RAFRAICHISSEMENT = rafraichissement('profiles')
+const REFRESH = refresh('profiles')
 
 /**
  * What a creation of an account hands to Payload (`context`) when the account must stay without a
  * profile: the import, for the accounts that have none on the old site (ticket 025), and a test.
  */
-export const CONTEXTE_SANS_PROFIL = { profilAutomatique: false } as const
+export const NO_PROFILE_CONTEXT = { profilAutomatique: false } as const
 
 /**
  * The slug a profile holds between its creation and the moment its identifier is known. It starts
  * with a character `slugifier` never writes, so it can never be taken for a real slug, and it never
  * leaves the transaction of the creation.
  */
-const PREFIXE_PROVISOIRE = '_provisoire-'
+const PROVISIONAL_PREFIX = '_provisoire-'
 
 /** Which of these slugs a profile already has, read in the transaction of the request. */
-const slugsPris =
+const takenSlugs =
 	(req: PayloadRequest) =>
 	async (candidats: string[]): Promise<ReadonlySet<string>> => {
 		const { docs } = await req.payload.find({
@@ -87,7 +87,7 @@ const slugsPris =
  * A lock of PostgreSQL held until the end of the transaction of the creation, on the base alone: two
  * other names never wait for each other. Outside a transaction there is nothing to wait for.
  */
-async function reserverLaBase(req: PayloadRequest, base: string): Promise<void> {
+async function reserveBase(req: PayloadRequest, base: string): Promise<void> {
 	const id = await req.transactionID
 	// The adapter of the configuration is the PostgreSQL one; `sessions` holds the transaction of each request.
 	const { sessions } = req.payload.db as unknown as Pick<PostgresAdapter, 'sessions'>
@@ -99,15 +99,15 @@ async function reserverLaBase(req: PayloadRequest, base: string): Promise<void> 
  * A new profile gets its slug from the name of its account, computed by the server with the rule
  * of the old site (src/lib/slug.ts): the first free of `base`, `base-2`, `base-3`… A name that
  * gives no slug (only emojis, or no name) gives `maquilleuse-<identifier of the profile>`, once
- * the identifier is known (`slugDeRepliApresCreation`).
+ * the identifier is known (`fallbackSlugAfterCreate`).
  *
  * The slug is computed once, at the creation: changing a name never changes it (I19), and no API
  * writes it. A slug given by the server itself (the import, with the slug of the old site) is kept.
  */
-export const slugALaCreation: CollectionBeforeChangeHook = async ({ data, operation, req }) => {
+export const slugOnCreate: CollectionBeforeChangeHook = async ({ data, operation, req }) => {
 	if (operation !== 'create' || data.slug) return data
 	const pro = Number(typeof data.pro === 'object' && data.pro !== null ? data.pro.id : data.pro)
-	const compte = Number.isInteger(pro)
+	const account = Number.isInteger(pro)
 		? await req.payload.findByID({
 				collection: 'pros',
 				depth: 0,
@@ -117,16 +117,16 @@ export const slugALaCreation: CollectionBeforeChangeHook = async ({ data, operat
 				req,
 			})
 		: null
-	const base = slugifier(compte?.name)
-	if (!base) return { ...data, slug: `${PREFIXE_PROVISOIRE}${randomUUID()}` }
-	await reserverLaBase(req, base)
-	return { ...data, slug: await premierSlugLibre(base, slugsPris(req)) }
+	const base = slugify(account?.name)
+	if (!base) return { ...data, slug: `${PROVISIONAL_PREFIX}${randomUUID()}` }
+	await reserveBase(req, base)
+	return { ...data, slug: await firstFreeSlug(base, takenSlugs(req)) }
 }
 
 /** The fallback slug, `maquilleuse-<id>`, written as soon as the profile has its identifier. */
-export const slugDeRepliApresCreation: CollectionAfterChangeHook = async ({ doc, operation, req }) => {
-	if (operation !== 'create' || !String(doc.slug).startsWith(PREFIXE_PROVISOIRE)) return doc
-	const slug = await premierSlugLibre(slugDeRepli(doc.id), slugsPris(req))
+export const fallbackSlugAfterCreate: CollectionAfterChangeHook = async ({ doc, operation, req }) => {
+	if (operation !== 'create' || !String(doc.slug).startsWith(PROVISIONAL_PREFIX)) return doc
+	const slug = await firstFreeSlug(fallbackSlug(doc.id), takenSlugs(req))
 	await req.payload.update({ collection: 'profiles', data: { slug }, depth: 0, id: doc.id, overrideAccess: true, req })
 	return { ...doc, slug }
 }
@@ -136,16 +136,16 @@ export const slugDeRepliApresCreation: CollectionAfterChangeHook = async ({ doc,
  * switched on, the server writes the date and the source itself; switched off, both are emptied.
  * The rule is `consentAfter` (src/lib/profile/contact-details.ts).
  */
-export const consentementTrace: CollectionBeforeChangeHook = ({ data, originalDoc, req }) => {
-	const compte = req.user?.collection === 'pros' || req.user?.collection === 'admins' ? req.user.collection : undefined
+export const consentTrace: CollectionBeforeChangeHook = ({ data, originalDoc, req }) => {
+	const account = req.user?.collection === 'pros' || req.user?.collection === 'admins' ? req.user.collection : undefined
 	return {
 		...data,
-		...consentAfter({ avant: originalDoc?.publicContact, donnees: data, compte, maintenant: new Date() }),
+		...consentAfter({ avant: originalDoc?.publicContact, donnees: data, compte: account, maintenant: new Date() }),
 	}
 }
 
 /** The networks of a profile, as on the old site: a link each, public. */
-const RESEAUX = [
+const NETWORKS = [
 	['youtube', 'YouTube'],
 	['facebook', 'Facebook'],
 	['instagram', 'Instagram'],
@@ -155,46 +155,46 @@ const RESEAUX = [
 
 /**
  * Creating an account creates its empty profile, in the same transaction: if the profile cannot
- * be created, neither is the account. `CONTEXTE_SANS_PROFIL` leaves the account without one.
+ * be created, neither is the account. `NO_PROFILE_CONTEXT` leaves the account without one.
  */
-export const profilALaCreationDuCompte: CollectionAfterChangeHook = async ({ context, doc, operation, req }) => {
+export const profileOnAccountCreation: CollectionAfterChangeHook = async ({ context, doc, operation, req }) => {
 	if (operation !== 'create' || context.profilAutomatique === false) return doc
-	// The slug is not given: the collection computes it (`slugALaCreation`).
-	const profil = { pro: doc.id } as RequiredDataFromCollectionSlug<'profiles'>
-	await req.payload.create({ collection: 'profiles', data: profil, depth: 0, overrideAccess: true, req })
+	// The slug is not given: the collection computes it (`slugOnCreate`).
+	const profile = { pro: doc.id } as RequiredDataFromCollectionSlug<'profiles'>
+	await req.payload.create({ collection: 'profiles', data: profile, depth: 0, overrideAccess: true, req })
 	return doc
 }
 
 /** The choice of status must be one of the choices; empty is the default. */
-const MESSAGE_DU_CHOIX = 'Ce statut n’existe pas : choisis automatique, brouillon, publié ou masqué.'
+const CHOICE_MESSAGE = 'Ce statut n’existe pas : choisis automatique, brouillon, publié ou masqué.'
 
-const estUnChoixDuStatut = (value: unknown): boolean =>
+const isStatusChoice = (value: unknown): boolean =>
 	value === undefined || value === null || (STATUS_CHOICES as readonly unknown[]).includes(value)
 
-const validerLeChoixDuStatut: Validate = value => (estUnChoixDuStatut(value) ? true : MESSAGE_DU_CHOIX)
+const validateStatusChoice: Validate = value => (isStatusChoice(value) ? true : CHOICE_MESSAGE)
 
 /** The statuses a filter may name: the column is an enumeration of the database, which fails with a 500 on any other. */
-const VALEURS_PAR_CHAMP: Record<string, readonly string[]> = {
+const VALUES_BY_FIELD: Record<string, readonly string[]> = {
 	status: PROFILE_STATUSES,
 	chosenStatus: STATUS_CHOICES,
 }
-const OPERATEURS_DE_VALEUR = ['equals', 'not_equals', 'in', 'not_in', 'like', 'contains'] as const
+const VALUE_OPERATORS = ['equals', 'not_equals', 'in', 'not_in', 'like', 'contains'] as const
 
 /** Every value a `where` compares a status field with, whatever the nesting of `and` and `or`. */
-export function valeursInconnues(where: unknown, trouvees: string[] = []): string[] {
+export function unknownValues(where: unknown, trouvees: string[] = []): string[] {
 	if (Array.isArray(where)) {
-		for (const element of where) valeursInconnues(element, trouvees)
+		for (const element of where) unknownValues(element, trouvees)
 		return trouvees
 	}
 	if (typeof where !== 'object' || where === null) return trouvees
-	for (const [cle, valeur] of Object.entries(where)) {
-		if (cle === 'and' || cle === 'or') valeursInconnues(valeur, trouvees)
-		else if (cle in VALEURS_PAR_CHAMP && typeof valeur === 'object' && valeur !== null) {
-			const permises = VALEURS_PAR_CHAMP[cle] ?? []
-			for (const operateur of OPERATEURS_DE_VALEUR) {
-				const compare: unknown = (valeur as Record<string, unknown>)[operateur]
+	for (const [key, candidate] of Object.entries(where)) {
+		if (key === 'and' || key === 'or') unknownValues(candidate, trouvees)
+		else if (key in VALUES_BY_FIELD && typeof candidate === 'object' && candidate !== null) {
+			const allowed = VALUES_BY_FIELD[key] ?? []
+			for (const operator of VALUE_OPERATORS) {
+				const compare: unknown = (candidate as Record<string, unknown>)[operator]
 				for (const v of Array.isArray(compare) ? compare : compare === undefined ? [] : [compare])
-					if (typeof v !== 'string' || !permises.includes(v)) trouvees.push(`${cle} : ${String(v)}`)
+					if (typeof v !== 'string' || !allowed.includes(v)) trouvees.push(`${key} : ${String(v)}`)
 			}
 		}
 	}
@@ -205,9 +205,9 @@ export function valeursInconnues(where: unknown, trouvees: string[] = []): strin
  * A filter on a status nobody holds is refused with a sentence (ticket 165), not answered by a 500
  * of the database: the admin panel builds such a filter from its address.
  */
-export const refuserUnFiltreSurUnStatutInconnu: CollectionBeforeOperationHook = ({ args, operation }) => {
+export const refuseFilterOnUnknownStatus: CollectionBeforeOperationHook = ({ args, operation }) => {
 	if (operation !== 'read' && operation !== 'count') return args
-	if (valeursInconnues((args as { where?: unknown }).where).length > 0)
+	if (unknownValues((args as { where?: unknown }).where).length > 0)
 		throw new APIError('Ce filtre nomme un statut qui n’existe pas : brouillon, publié ou masqué.', 400)
 	return args
 }
@@ -217,25 +217,25 @@ export const refuserUnFiltreSurUnStatutInconnu: CollectionBeforeOperationHook = 
  * comes too late to see it: the hooks of `beforeChange` (the state of ticket 044) have already put
  * a valid choice back. What a makeup artist sends is ignored, as before.
  */
-export const refuserUnChoixInconnu: CollectionBeforeValidateHook = ({ data, req }) => {
-	if (req.user?.collection === 'admins' && !estUnChoixDuStatut(data?.chosenStatus))
+export const refuseUnknownChoice: CollectionBeforeValidateHook = ({ data, req }) => {
+	if (req.user?.collection === 'admins' && !isStatusChoice(data?.chosenStatus))
 		throw new ValidationError({
 			collection: 'profiles',
-			errors: [{ message: MESSAGE_DU_CHOIX, path: 'chosenStatus' }],
+			errors: [{ message: CHOICE_MESSAGE, path: 'chosenStatus' }],
 			req,
 		})
 	return data
 }
 
 /** What only the role `admin` writes, and only `admin` and the owner read (ticket 021). */
-const RESERVE_LU_PAR_LA_PROPRIETAIRE = {
-	read: champDuProfilAdminOuProprietaire,
-	create: champAdminSeulement,
-	update: champAdminSeulement,
+const OWNER_READ_RESERVED = {
+	read: profileFieldAdminOrOwner,
+	create: fieldAdminOnly,
+	update: fieldAdminOnly,
 }
 
 /** What only the role `admin` reads and writes, never the makeup artist herself (ticket 021). */
-const INTERNE = { read: champAdminSeulement, create: champAdminSeulement, update: champAdminSeulement }
+const INTERNAL = { read: fieldAdminOnly, create: fieldAdminOnly, update: fieldAdminOnly }
 
 /**
  * The public identity of a makeup artist (plan 01 §6.1; docs/migration/SCHEMA.md, §5.2), tied to
@@ -265,11 +265,11 @@ const INTERNE = { read: champAdminSeulement, create: champAdminSeulement, update
  * - Its zone is a commune with its INSEE code, a radius of 0 to 200 km and « à domicile », never a
  *   postal address (src/collections/profiles/zone.ts, ticket 041).
  * - At every save, the server computes and stores its completeness, whether it is active,
- *   publishable or entirely empty, and since when (src/collections/profiles/etat.ts, ticket 044).
+ *   publishable or entirely empty, and since when (src/collections/profiles/state.ts, ticket 044).
  *   Its status follows: an entirely empty profile is a draft, any other is published, unless an
  *   admin chose another status (`chosenStatus`); a hidden profile stays hidden whatever the save.
  * - A save or a deletion of a profile that is or was published refreshes its page, the search and
- *   the sitemap; the import refreshes nothing (src/collections/revalidation.ts, ticket 047).
+ *   the sitemap; the import refreshes nothing (src/collections/revalidate.ts, ticket 047).
  */
 export const Profiles: CollectionConfig<'profiles'> = {
 	slug: 'profiles',
@@ -283,30 +283,24 @@ export const Profiles: CollectionConfig<'profiles'> = {
 		useAsTitle: 'slug',
 		defaultColumns: ['slug', 'city.name', 'completeness', 'publishable', 'status', 'updatedAt'],
 		listSearchableFields: ['slug', 'firstName', 'lastName', 'artistName', 'city.name'],
-		hidden: cacheeSaufAdmin,
+		hidden: hiddenExceptAdmin,
 	},
 	access: {
-		read: profilPublieOuProprietaire,
-		create: adminSeulement,
-		update: adminOuProprietaire,
-		delete: adminSeulement,
+		read: publishedProfileOrOwner,
+		create: adminOnly,
+		update: adminOrOwner,
+		delete: adminOnly,
 	},
 	hooks: {
-		beforeOperation: [refuserUnFiltreSurUnStatutInconnu],
-		beforeValidate: [refuserUnChoixInconnu],
+		beforeOperation: [refuseFilterOnUnknownStatus],
+		beforeValidate: [refuseUnknownChoice],
 		// The state comes last: it reads the save as the other hooks leave it (ticket 044). The refresh
 		// reads the stored row, which no hook changes before the write.
-		beforeChange: [
-			RAFRAICHISSEMENT.avantEcriture,
-			identitesDesLignesAvantEcriture,
-			slugALaCreation,
-			consentementTrace,
-			etatAvantEcriture,
-		],
+		beforeChange: [REFRESH.avantEcriture, rowIdentitiesBeforeWrite, slugOnCreate, consentTrace, stateBeforeWrite],
 		// The refresh comes after the fallback slug: a profile created public gets its final address.
-		afterChange: [slugDeRepliApresCreation, RAFRAICHISSEMENT.apresEcriture],
-		beforeDelete: [RAFRAICHISSEMENT.avantSuppression],
-		afterDelete: [RAFRAICHISSEMENT.apresSuppression],
+		afterChange: [fallbackSlugAfterCreate, REFRESH.apresEcriture],
+		beforeDelete: [REFRESH.avantSuppression],
+		afterDelete: [REFRESH.apresSuppression],
 	},
 	fields: [
 		{
@@ -316,7 +310,7 @@ export const Profiles: CollectionConfig<'profiles'> = {
 			relationTo: 'pros',
 			required: true,
 			unique: true,
-			access: { read: champDuProfilAdminOuProprietaire, create: champAdminSeulement, update: champAdminSeulement },
+			access: { read: profileFieldAdminOrOwner, create: fieldAdminOnly, update: fieldAdminOnly },
 		},
 		{
 			name: 'slug',
@@ -324,7 +318,7 @@ export const Profiles: CollectionConfig<'profiles'> = {
 			type: 'text',
 			required: true,
 			unique: true,
-			access: { create: jamais, update: jamais },
+			access: { create: neverAllowed, update: neverAllowed },
 			admin: { readOnly: true, description: 'Calculée à la création du profil, elle ne change plus : /profil/<slug>.' },
 		},
 		{ name: 'firstName', label: 'Prénom', type: 'text', maxLength: 70 },
@@ -332,7 +326,7 @@ export const Profiles: CollectionConfig<'profiles'> = {
 		{ name: 'artistName', label: 'Nom d’artiste', type: 'text', maxLength: 70 },
 		{ name: 'specialty', label: 'Spécialité', type: 'text', maxLength: 70 },
 		// Its commune, its radius and « à domicile », public with the profile (ticket 041).
-		...champsDeLaZone,
+		...zoneFields,
 		{ name: 'description', label: 'Description', type: 'textarea', maxLength: 2000 },
 		{ name: 'available', label: 'Disponible', type: 'checkbox', defaultValue: true },
 		// Its photos, media of its own account (ticket 043).
@@ -350,7 +344,7 @@ export const Profiles: CollectionConfig<'profiles'> = {
 			type: 'upload',
 			relationTo: 'media',
 			hasMany: true,
-			maxRows: GALERIE_MAX,
+			maxRows: GALLERY_MAX,
 			filterOptions: ownerPhotos,
 			validate: validateGallery,
 			admin: { description: 'Dans l’ordre d’affichage, 10 photos au plus.' },
@@ -366,11 +360,11 @@ export const Profiles: CollectionConfig<'profiles'> = {
 					({ value }) =>
 						emptyGroupIfNull(
 							value,
-							RESEAUX.map(([name]) => name)
+							NETWORKS.map(([name]) => name)
 						),
 				],
 			},
-			fields: RESEAUX.map(([name, label]) => ({ name, label, type: 'text' as const, validate: validateNetworkLink })),
+			fields: NETWORKS.map(([name, label]) => ({ name, label, type: 'text' as const, validate: validateNetworkLink })),
 		},
 		{
 			// Never read by the public through the API, whatever `publicContact` says: a public page
@@ -378,7 +372,7 @@ export const Profiles: CollectionConfig<'profiles'> = {
 			name: 'contactDetails',
 			label: 'Coordonnées',
 			type: 'group',
-			access: { read: champDuProfilAdminOuProprietaire },
+			access: { read: profileFieldAdminOrOwner },
 			hooks: { beforeValidate: [({ value }) => emptyGroupIfNull(value, ['phone', 'email'])] },
 			admin: {
 				description: 'Fermées au public. La page du profil ne les montre que si « Coordonnées publiques » est cochée.',
@@ -393,14 +387,14 @@ export const Profiles: CollectionConfig<'profiles'> = {
 			label: 'Coordonnées publiques',
 			type: 'checkbox',
 			defaultValue: false,
-			access: { read: champDuProfilAdminOuProprietaire },
+			access: { read: profileFieldAdminOrOwner },
 			admin: { description: 'Choisi par la maquilleuse : ses coordonnées s’affichent sur la page de son profil.' },
 		},
 		{
 			name: 'consentedAt',
 			label: 'Consentement donné le',
 			type: 'date',
-			access: { read: champDuProfilAdminOuProprietaire, create: jamais, update: jamais },
+			access: { read: profileFieldAdminOrOwner, create: neverAllowed, update: neverAllowed },
 			admin: {
 				readOnly: true,
 				date: { pickerAppearance: 'dayAndTime' },
@@ -412,16 +406,16 @@ export const Profiles: CollectionConfig<'profiles'> = {
 			label: 'Source du consentement',
 			type: 'select',
 			options: CONSENT_SOURCES.map(source => ({ label: SOURCE_LABELS[source], value: source })),
-			access: { read: champDuProfilAdminOuProprietaire, create: jamais, update: jamais },
+			access: { read: profileFieldAdminOrOwner, create: neverAllowed, update: neverAllowed },
 			admin: { readOnly: true, description: 'Posée par le serveur, avec la date.' },
 		},
 		// Offers with their options, skills, languages, courses, experiences (ticket 040).
-		...CHAMPS_LISTES,
+		...LIST_FIELDS,
 		{
 			name: 'legacyUsername',
 			label: 'Nom d’utilisateur sur l’ancien site',
 			type: 'text',
-			access: { read: champDuProfilAdminOuProprietaire, create: jamais, update: jamais },
+			access: { read: profileFieldAdminOrOwner, create: neverAllowed, update: neverAllowed },
 			admin: { readOnly: true, description: 'Sert à rediriger l’ancienne adresse du profil vers la nouvelle.' },
 		},
 		{
@@ -429,7 +423,7 @@ export const Profiles: CollectionConfig<'profiles'> = {
 			label: 'Identifiant sur l’ancien site',
 			type: 'number',
 			unique: true,
-			access: { read: champDuProfilAdminOuProprietaire, create: jamais, update: jamais },
+			access: { read: profileFieldAdminOrOwner, create: neverAllowed, update: neverAllowed },
 			admin: { readOnly: true },
 		},
 		// Computed by the server at every save, from the choice of an admin and the rule (ticket 044).
@@ -444,7 +438,7 @@ export const Profiles: CollectionConfig<'profiles'> = {
 			index: true,
 			options: PROFILE_STATUSES.map(statut => ({ label: STATUS_LABELS[statut], value: statut })),
 			// No API writes it: what a request sends, an admin's included, is ignored (src/lib/profile/state.ts).
-			access: { read: champDuProfilAdminOuProprietaire, create: jamais, update: jamais },
+			access: { read: profileFieldAdminOrOwner, create: neverAllowed, update: neverAllowed },
 			admin: {
 				readOnly: true,
 				position: 'sidebar',
@@ -460,8 +454,8 @@ export const Profiles: CollectionConfig<'profiles'> = {
 			defaultValue: INITIAL_CHOICE,
 			options: STATUS_CHOICES.map(choix => ({ label: CHOICE_LABELS[choix], value: choix })),
 			// A value that is no choice is refused with a sentence, never ignored (ticket 165).
-			validate: validerLeChoixDuStatut,
-			access: RESERVE_LU_PAR_LA_PROPRIETAIRE,
+			validate: validateStatusChoice,
+			access: OWNER_READ_RESERVED,
 			admin: {
 				position: 'sidebar',
 				description:
@@ -472,7 +466,7 @@ export const Profiles: CollectionConfig<'profiles'> = {
 			name: 'reason',
 			label: 'Motif',
 			type: 'textarea',
-			access: RESERVE_LU_PAR_LA_PROPRIETAIRE,
+			access: OWNER_READ_RESERVED,
 			admin: { position: 'sidebar', description: 'Pourquoi le profil est masqué. La maquilleuse le lit.' },
 		},
 		{
@@ -480,14 +474,14 @@ export const Profiles: CollectionConfig<'profiles'> = {
 			label: 'Vérifiée',
 			type: 'checkbox',
 			defaultValue: false,
-			access: RESERVE_LU_PAR_LA_PROPRIETAIRE,
+			access: OWNER_READ_RESERVED,
 			admin: { position: 'sidebar' },
 		},
 		{
 			name: 'verifiedAt',
 			label: 'Vérifiée le',
 			type: 'date',
-			access: RESERVE_LU_PAR_LA_PROPRIETAIRE,
+			access: OWNER_READ_RESERVED,
 			admin: { position: 'sidebar' },
 		},
 		{
@@ -495,21 +489,21 @@ export const Profiles: CollectionConfig<'profiles'> = {
 			label: 'SIRET',
 			type: 'text',
 			validate: validateSiret,
-			access: RESERVE_LU_PAR_LA_PROPRIETAIRE,
+			access: OWNER_READ_RESERVED,
 			admin: { position: 'sidebar', description: '14 chiffres, sans espace.' },
 		},
 		{
 			name: 'internalNote',
 			label: 'Note interne',
 			type: 'textarea',
-			access: INTERNE,
+			access: INTERNAL,
 			admin: { position: 'sidebar', description: 'Lue par les admins seulement, jamais par la maquilleuse.' },
 		},
 		{
 			name: 'score',
 			label: 'Score',
 			type: 'number',
-			access: INTERNE,
+			access: INTERNAL,
 			admin: {
 				position: 'sidebar',
 				description: 'Repris de l’ancien site. Ce n’est pas la complétude. Lu par les admins seulement.',
@@ -521,10 +515,10 @@ export const Profiles: CollectionConfig<'profiles'> = {
 			label: 'Super maquilleuse',
 			type: 'checkbox',
 			defaultValue: false,
-			access: { create: champAdminSeulement, update: champAdminSeulement },
+			access: { create: fieldAdminOnly, update: fieldAdminOnly },
 			admin: { position: 'sidebar', description: 'Le badge des cartes de la recherche. Public.' },
 		},
 		// Computed by the server at every save (ticket 044).
-		...CHAMPS_DE_L_ETAT,
+		...STATE_FIELDS,
 	],
 }

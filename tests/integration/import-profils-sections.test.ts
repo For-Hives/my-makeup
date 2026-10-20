@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { SQL } from 'bun'
 import type { Rapport } from '../../scripts/migration/import/rapport'
-import { parsePrice, prixMinimal } from '../../src/lib/prix'
+import { minimumPrice, parsePrice } from '../../src/lib/price'
 import type { Profile } from '../../src/payload-types'
 import { importerSurLeBanc } from '../outils/import'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
@@ -271,7 +271,7 @@ describe('Les sections de chaque profil sont reprises dans leur ordre (ticket 06
 		for (const profil of cible) {
 			const offres = listesAttendues(Number(profil.strapiId)).serviceOffers
 			const chiffreeALaSource = offres.some(({ priceFrom }) => priceFrom !== null)
-			expect(prixMinimal(profil.serviceOffers) !== null, String(profil.strapiId)).toBe(chiffreeALaSource)
+			expect(minimumPrice(profil.serviceOffers) !== null, String(profil.strapiId)).toBe(chiffreeALaSource)
 		}
 		const { prix } = premier.collections.profiles ?? {}
 		const lignesDePrix = cible.flatMap(({ serviceOffers }) =>

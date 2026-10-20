@@ -1,6 +1,6 @@
 import { EnvError, serverEnv } from './lib/env'
-import { demarrerLesTachesQuotidiennes } from './lib/taches/planificateur'
-import { lancerLesTachesQuotidiennes } from './lib/taches/quotidiennes'
+import { runDailyTasks } from './lib/tasks/daily'
+import { scheduleDailyTasks } from './lib/tasks/scheduler'
 
 /**
  * Ends the process when the environment is not valid. Loaded by src/instrumentation.ts on the
@@ -26,10 +26,10 @@ export function stopOnInvalidEnv(): void {
  */
 export function startDailyTasks(): void {
 	if (process.env.NEXT_PHASE === 'phase-production-build' || process.env.NODE_ENV !== 'production') return
-	demarrerLesTachesQuotidiennes({
+	scheduleDailyTasks({
 		lancer: async () => {
 			const [{ getPayload }, { default: config }] = await Promise.all([import('payload'), import('./payload.config')])
-			await lancerLesTachesQuotidiennes(await getPayload({ config }))
+			await runDailyTasks(await getPayload({ config }))
 		},
 	})
 }

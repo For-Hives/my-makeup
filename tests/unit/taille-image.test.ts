@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { ECRAN_TRES_DENSE, FACTEUR_TRES_DENSE, RATIO_PAR_DEFAUT, ratioMedia, sizesBoite } from '@/lib/taille-image'
+import { DEFAULT_RATIO, ratioMedia, sizesBox, VERY_DENSE_FACTOR, VERY_DENSE_SCREEN } from '@/lib/image-size'
 
 /**
  * The width the photos of the makeup artists are asked at (plan 01 §3.2 UI-09): ported from
@@ -22,24 +22,24 @@ describe('taille-image', () => {
 	})
 
 	test('les écrans très denses demandent les trois quarts de la largeur dessinée', () => {
-		expect(ECRAN_TRES_DENSE).toBe('(min-resolution: 2.5dppx)')
-		expect(FACTEUR_TRES_DENSE).toBe(0.75)
-		expect(sizesBoite({ largeur: 200, hauteur: 200, ratio: 1 })).toBe('(min-resolution: 2.5dppx) 150px, 200px')
-		expect(sizesBoite({ largeur: 200, hauteur: 200, ratio: 4 / 3 })).toBe('(min-resolution: 2.5dppx) 201px, 267px')
+		expect(VERY_DENSE_SCREEN).toBe('(min-resolution: 2.5dppx)')
+		expect(VERY_DENSE_FACTOR).toBe(0.75)
+		expect(sizesBox({ largeur: 200, hauteur: 200, ratio: 1 })).toBe('(min-resolution: 2.5dppx) 150px, 200px')
+		expect(sizesBox({ largeur: 200, hauteur: 200, ratio: 4 / 3 })).toBe('(min-resolution: 2.5dppx) 201px, 267px')
 	})
 
 	test('une photo plus étroite que sa boîte est demandée à la largeur de la boîte', () => {
-		expect(sizesBoite({ largeur: 200, hauteur: 200, ratio: 0.5 })).toBe('(min-resolution: 2.5dppx) 150px, 200px')
+		expect(sizesBox({ largeur: 200, hauteur: 200, ratio: 0.5 })).toBe('(min-resolution: 2.5dppx) 150px, 200px')
 	})
 
 	test('la photo du portfolio : 500 px de haut, aussi large que sa photo', () => {
-		expect(sizesBoite({ hauteur: 500, ratio: 0.75 })).toBe('(min-resolution: 2.5dppx) 282px, 375px')
-		expect(sizesBoite({ hauteur: 500, ratio: 16 / 9 })).toBe('(min-resolution: 2.5dppx) 667px, 889px')
+		expect(sizesBox({ hauteur: 500, ratio: 0.75 })).toBe('(min-resolution: 2.5dppx) 282px, 375px')
+		expect(sizesBox({ hauteur: 500, ratio: 16 / 9 })).toBe('(min-resolution: 2.5dppx) 667px, 889px')
 	})
 
 	test('sans dimensions : un paysage 4:3, le plus coûteux des formats courants', () => {
-		expect(RATIO_PAR_DEFAUT).toBe(4 / 3)
-		expect(sizesBoite({ hauteur: 500, ratio: null })).toBe('(min-resolution: 2.5dppx) 501px, 667px')
-		expect(sizesBoite({ largeur: 200, hauteur: 200 })).toBe(sizesBoite({ largeur: 200, hauteur: 200, ratio: 4 / 3 }))
+		expect(DEFAULT_RATIO).toBe(4 / 3)
+		expect(sizesBox({ hauteur: 500, ratio: null })).toBe('(min-resolution: 2.5dppx) 501px, 667px')
+		expect(sizesBox({ largeur: 200, hauteur: 200 })).toBe(sizesBox({ largeur: 200, hauteur: 200, ratio: 4 / 3 }))
 	})
 })

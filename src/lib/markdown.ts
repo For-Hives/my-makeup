@@ -20,18 +20,18 @@ import remarkRehype from 'remark-rehype'
 import { unified } from 'unified'
 
 /** Walks the tree and gives each element to `visiteur`. */
-function parcourir(noeud: Root | Element, visiteur: (element: Element) => void): void {
-	for (const enfant of noeud.children) {
-		if (enfant.type !== 'element') continue
-		visiteur(enfant)
-		parcourir(enfant, visiteur)
+function walk(noeud: Root | Element, visiteur: (element: Element) => void): void {
+	for (const child of noeud.children) {
+		if (child.type !== 'element') continue
+		visiteur(child)
+		walk(child, visiteur)
 	}
 }
 
 /** The last step before the HTML is written: h1 become h2, images load lazily. */
-function ajusterLeHtml() {
+function adjustHtml() {
 	return (arbre: Root): void => {
-		parcourir(arbre, element => {
+		walk(arbre, element => {
 			if (element.tagName === 'h1') element.tagName = 'h2'
 			else if (element.tagName === 'img')
 				element.properties = { ...element.properties, loading: 'lazy', decoding: 'async' }
@@ -39,18 +39,13 @@ function ajusterLeHtml() {
 	}
 }
 
-const convertisseur = unified()
-	.use(remarkParse)
-	.use(remarkRehype)
-	.use(rehypeSanitize)
-	.use(ajusterLeHtml)
-	.use(rehypeStringify)
+const converter = unified().use(remarkParse).use(remarkRehype).use(rehypeSanitize).use(adjustHtml).use(rehypeStringify)
 
 /**
  * The HTML of a markdown text, sanitized, with no h1. Anything that is not a text (a field never filled in:
  * `null`, `undefined`) gives an empty string, never the word « null ».
  */
-export async function markdownEnHtml(source: unknown): Promise<string> {
+export async function markdownToHtml(source: unknown): Promise<string> {
 	if (typeof source !== 'string' || source.trim() === '') return ''
-	return String(await convertisseur.process(source))
+	return String(await converter.process(source))
 }

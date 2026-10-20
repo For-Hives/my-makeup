@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, setDefaultTimeout, test } from 'bun:test'
 import type { Payload } from 'payload'
-import { MESSAGE_PANNE_DU_STOCKAGE } from '@/collections/trash'
+import { STORAGE_OUTAGE_MESSAGE } from '@/collections/trash'
 import { deleteAccountAndDependents } from '@/lib/account/deletion'
 import { deleteMyAccount, deletionRateLimit } from '@/lib/dashboard/delete-account'
 import { DELETION_MESSAGES } from '@/lib/dashboard/deletion-confirmation'
@@ -234,7 +234,7 @@ describe('I38 : panne du stockage, tout est encore là', () => {
 		const resultat = await supprimer(payload, compte, MOT_DE_PASSE)
 
 		expect(resultat).toEqual({ ok: false, message: DELETION_MESSAGES.stockage })
-		expect(MESSAGE_PANNE_DU_STOCKAGE).toContain('Le stockage des photos ne répond pas')
+		expect(STORAGE_OUTAGE_MESSAGE).toContain('Le stockage des photos ne répond pas')
 		expect(await present('pros', compte.id)).toBe(true)
 		expect(await present('profiles', profil.id)).toBe(true)
 		for (const photo of photos) {

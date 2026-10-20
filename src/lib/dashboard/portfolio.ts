@@ -1,7 +1,7 @@
 /**
  * The portfolio, as the server takes it from her space (tickets 135 and 136; plan 02 U80, E34,
  * E35): the whole list of her photos, in the order she wants, as identifiers of photos she already
- * sent. At most 10 (`GALERIE_MAX`), none twice. The server reads the same strict schema as the
+ * sent. At most 10 (`GALLERY_MAX`), none twice. The server reads the same strict schema as the
  * form: a key that is not `galerie` (`statut`, `photoPrincipale`, `pro`…) refuses the whole request.
  *
  * Which of these photos are hers, and which were already in the portfolio, is the rule of the
@@ -9,7 +9,7 @@
  */
 
 import { z } from 'zod'
-import { GALERIE_MAX } from '../medias'
+import { GALLERY_MAX } from '../media'
 import { PHOTO_MESSAGES } from '../profile/photos'
 import { isPhotoId, type PhotoId } from './photos'
 
@@ -22,6 +22,6 @@ const id = z.custom<PhotoId>(isPhotoId, { error: PHOTO_MESSAGES.photoRefusee })
 export const portfolioSchema = z.strictObject({
 	galerie: z
 		.array(id)
-		.max(GALERIE_MAX, PHOTO_MESSAGES.galeriePleine)
+		.max(GALLERY_MAX, PHOTO_MESSAGES.galeriePleine)
 		.refine(ids => new Set(ids.map(String)).size === ids.length, PHOTO_MESSAGES.photoRefusee),
 })

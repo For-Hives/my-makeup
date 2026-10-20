@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, setDefaultTimeout, test } from 'bun:test'
-import { MESSAGE_PANNE_DU_STOCKAGE } from '@/collections/trash'
+import { STORAGE_OUTAGE_MESSAGE } from '@/collections/trash'
 import type { Media } from '@/payload-types'
 import { type Espion, espionnerLeStockage, suppressionsSansCorbeille } from '../outils/espion-s3'
 import { creerCompte } from '../outils/fabrique-comptes'
@@ -188,7 +188,7 @@ describe('Panne du stockage : tout est encore là', () => {
 		const { statut, texte } = await supprimerParAdmin(admin, compte.id)
 
 		expect(statut).toBe(503)
-		expect(texte).toContain(MESSAGE_PANNE_DU_STOCKAGE)
+		expect(texte).toContain(STORAGE_OUTAGE_MESSAGE)
 		expect(await present('pros', compte.id)).toBe(true)
 		expect(await present('profiles', profil.id)).toBe(true)
 		for (const photo of photos) {

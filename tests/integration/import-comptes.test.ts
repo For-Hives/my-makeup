@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { SQL } from 'bun'
 import { AUCUNE_DECISION } from '../../scripts/migration/import/decisions'
-import { CONTEXTE_SANS_PROFIL } from '../../src/collections/Profiles'
+import { NO_PROFILE_CONTEXT } from '../../src/collections/Profiles'
 import { commandeDImport, DECISIONS_DU_BANC, FICHIER_DES_DECISIONS_DU_BANC, importerSurLeBanc } from '../outils/import'
 import { compterLesMails, viderLeCapteur } from '../outils/mailpit'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
@@ -285,7 +285,7 @@ describe('Un compte que la cible refuse : listé, et la parité le dit (I39)', (
 		await payload.create({
 			collection: 'pros',
 			data: { email: String(ligne?.email).trim().toLowerCase(), password: randomBytes(24).toString('base64url') },
-			context: CONTEXTE_SANS_PROFIL,
+			context: NO_PROFILE_CONTEXT,
 			disableVerificationEmail: true,
 			overrideAccess: true,
 		})

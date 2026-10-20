@@ -1,22 +1,22 @@
 import type { CollectionConfig, Field } from 'payload'
 import {
-	adminOuSoiMeme,
-	adminSeulement,
-	cacheeSaufAdmin,
-	champAdminSeulement,
-	jamais,
+	adminOnly,
+	adminOrSelf,
+	fieldAdminOnly,
+	hiddenExceptAdmin,
+	neverAllowed,
 	ROLES_ADMIN,
 	type RoleAdmin,
-} from '../lib/acces'
+} from '../lib/access'
 import { firstClosedAccount } from '../lib/auth/closed-first-account'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import { rateLimitSignIn, releaseSignInSlot } from '../lib/auth/rate-limit-payload'
 
 /** How long a session of the admin panel lasts: 8 hours, then the account logs in again (plan 01 §2.3). */
-export const DUREE_SESSION_ADMIN_S = 8 * 60 * 60
+export const ADMIN_SESSION_DURATION_S = 8 * 60 * 60
 
 /** What the admin panel shows for each role. */
-const LIBELLES_DES_ROLES: Record<RoleAdmin, string> = { admin: 'Admin', editor: 'Rédaction' }
+const ROLE_LABELS: Record<RoleAdmin, string> = { admin: 'Admin', editor: 'Rédaction' }
 
 /**
  * The sessions of an account never leave the server, not even for the account itself (plan 02
@@ -26,10 +26,10 @@ const LIBELLES_DES_ROLES: Record<RoleAdmin, string> = { admin: 'Admin', editor: 
  * read rule changes. Payload's own rule compares the identifier only, so an account of one
  * collection would read the sessions of the account with the same number in the other one.
  */
-export const sessionsFermees: Field = {
+export const closedSessions: Field = {
 	name: 'sessions',
 	type: 'array',
-	access: { read: jamais },
+	access: { read: neverAllowed },
 	fields: [],
 }
 
@@ -49,21 +49,21 @@ export const sessionsFermees: Field = {
 export const Admins: CollectionConfig<'admins'> = {
 	slug: 'admins',
 	labels: { singular: 'Compte admin', plural: 'Comptes admin' },
-	admin: { useAsTitle: 'email', defaultColumns: ['email', 'role'], hidden: cacheeSaufAdmin },
+	admin: { useAsTitle: 'email', defaultColumns: ['email', 'role'], hidden: hiddenExceptAdmin },
 	// No lock of the account (AUTH-05, like `pros`): wrong passwords must never shut the owner out
 	// for every address. The brake by address is the only one (`rateLimitSignIn`).
-	auth: { tokenExpiration: DUREE_SESSION_ADMIN_S, maxLoginAttempts: 0 },
+	auth: { tokenExpiration: ADMIN_SESSION_DURATION_S, maxLoginAttempts: 0 },
 	endpoints: [firstClosedAccount],
 	hooks: {
 		afterLogin: [releaseSignInSlot()],
 		beforeOperation: [rateLimitSignIn()],
 	},
 	access: {
-		read: adminOuSoiMeme('admins'),
-		create: adminSeulement,
-		update: adminOuSoiMeme('admins'),
-		delete: adminSeulement,
-		unlock: adminSeulement,
+		read: adminOrSelf('admins'),
+		create: adminOnly,
+		update: adminOrSelf('admins'),
+		delete: adminOnly,
+		unlock: adminOnly,
 	},
 	fields: [
 		{
@@ -73,9 +73,9 @@ export const Admins: CollectionConfig<'admins'> = {
 			required: true,
 			// The narrowest role: an account created without choosing one reaches no account but its own.
 			defaultValue: 'editor' satisfies RoleAdmin,
-			options: ROLES_ADMIN.map(role => ({ label: LIBELLES_DES_ROLES[role], value: role })),
-			access: { create: champAdminSeulement, update: champAdminSeulement },
+			options: ROLES_ADMIN.map(role => ({ label: ROLE_LABELS[role], value: role })),
+			access: { create: fieldAdminOnly, update: fieldAdminOnly },
 		},
-		sessionsFermees,
+		closedSessions,
 	],
 }

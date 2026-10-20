@@ -26,7 +26,7 @@ import {
 	PutObjectCommand,
 	S3Client,
 } from '@aws-sdk/client-s3'
-import { cleEnCorbeille, estEnCorbeille } from '@/lib/corbeille'
+import { isInTrash, trashKey } from '@/lib/trash'
 
 /** One request to the storage, as the spy saw it. */
 export interface CommandeS3 {
@@ -117,12 +117,12 @@ export function suppressionsSansCorbeille(journal: readonly CommandeS3[]): strin
 	const copiees = new Set<string>()
 	const fautes: string[] = []
 	for (const commande of journal) {
-		if (commande.nom === 'CopyObject' && commande.reussie && commande.entree.Key === cleEnCorbeille(sourceDe(commande)))
+		if (commande.nom === 'CopyObject' && commande.reussie && commande.entree.Key === trashKey(sourceDe(commande)))
 			copiees.add(sourceDe(commande))
 		if (commande.nom === 'DeleteObjects') fautes.push('(plusieurs objets à la fois)')
 		if (commande.nom === 'DeleteObject') {
 			const cle = String(commande.entree.Key)
-			if (estEnCorbeille(cle) || !copiees.has(cle)) fautes.push(cle)
+			if (isInTrash(cle) || !copiees.has(cle)) fautes.push(cle)
 		}
 	}
 	return fautes

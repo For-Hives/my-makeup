@@ -49,7 +49,7 @@ const FERME = ['contactDetails', 'publicContact', 'consentedAt', 'consentSource'
 /**
  * The messages of the fields a 400 refuses, in French. Payload wraps them in a general message of its
  * own, in French too (« Le champ suivant n’est pas valide : … »): Payload speaks French only
- * (src/lib/langue-payload.ts, ticket 221; tests/integration/payload-francais.test.ts).
+ * (src/lib/payload-language.ts, ticket 221; tests/integration/payload-francais.test.ts).
  */
 const messagesDesChamps = (corps: unknown): string[] =>
 	(corps as { errors: { data?: { errors?: { message: string }[] } }[] }).errors

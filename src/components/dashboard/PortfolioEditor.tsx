@@ -15,7 +15,7 @@ import {
 } from '@/lib/dashboard/photos-upload'
 import type { PortfolioValues } from '@/lib/dashboard/portfolio'
 import type { SaveResult } from '@/lib/dashboard/result'
-import { GALERIE_MAX } from '@/lib/medias'
+import { GALLERY_MAX } from '@/lib/media'
 import { EditingPanel } from './EditingPanel'
 import { localPreview, releasePreview } from './PhotoEditor'
 
@@ -228,7 +228,7 @@ function PortfolioForm({
 			const accepted: Row[] = []
 			const knownById = new Set(currentRows.current.map(ligne => ligne.signature).filter(Boolean))
 			for (const file of fichiers) {
-				if (currentRows.current.length + accepted.length >= GALERIE_MAX) {
+				if (currentRows.current.length + accepted.length >= GALLERY_MAX) {
 					refuse(file, MESSAGES_PHOTO['limite-galerie'])
 					continue
 				}
@@ -326,7 +326,7 @@ function PortfolioForm({
 				className="flex flex-col gap-4"
 			>
 				<h3 ref={title} tabIndex={-1} className="font-medium outline-none">
-					Photos de ton portfolio ({rows.length} / {GALERIE_MAX})
+					Photos de ton portfolio ({rows.length} / {GALLERY_MAX})
 				</h3>
 				<p role="status" data-testid="annonce-retrait" className="text-sm">
 					{announcement}
@@ -386,7 +386,7 @@ function PortfolioForm({
 						className="min-h-11 rounded-md border border-neutral-400 bg-white px-3 py-2 text-base"
 					/>
 					<p id="portfolio-aide" className="text-neutral-700 text-sm">
-						JPEG, PNG ou WebP, {GALERIE_MAX} photos au plus. Les photos sont réduites avant l’envoi, et rien n’est
+						JPEG, PNG ou WebP, {GALLERY_MAX} photos au plus. Les photos sont réduites avant l’envoi, et rien n’est
 						envoyé avant « Enregistrer ».
 					</p>
 					{preparation ? (

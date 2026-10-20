@@ -3,10 +3,10 @@ import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { champsDifferents, planifier } from '../../scripts/migration/import/moteur'
 import { ADAPTATEUR_TALENTS, type LigneTalent, talentAttendu } from '../../scripts/migration/import/talents'
-import { validerTitreDeLaPage } from '../../src/collections/Talents'
+import { validatePageTitle } from '../../src/collections/Talents'
 import { TALENT_PAGE_TITLES } from '../../src/content/talent-titles'
 import { MAX_TITLE, pageTitle, TALENT_MIN_TITLE } from '../../src/lib/seo/text'
-import { estUnSlug } from '../../src/lib/slug'
+import { isSlug } from '../../src/lib/slug'
 import { defautsDuTitreDeTalent } from '../outils/parite-urls'
 
 /** Ticket 108: the 14 titles of the talent tabs, written by the project, and how the import fills them in. */
@@ -19,7 +19,7 @@ describe('les 14 titres d’onglet des pages talent', () => {
 		expect(entrees).toHaveLength(14)
 		const inventaire = readFileSync(path.join(racine, 'docs/migration/urls-inventaire.json'), 'utf8')
 		for (const [slug] of entrees) {
-			expect(estUnSlug(slug), slug).toBe(true)
+			expect(isSlug(slug), slug).toBe(true)
 			expect(inventaire, slug).toContain(`/talent/${slug}`)
 		}
 	})
@@ -32,7 +32,7 @@ describe('les 14 titres d’onglet des pages talent', () => {
 			expect(titre.length, titre).toBeLessThanOrEqual(MAX_TITLE)
 			expect(titre).toBe(titre.trim())
 			expect(
-				validerTitreDeLaPage(titre, {
+				validatePageTitle(titre, {
 					required: false,
 					siblingData: { seo_title: 'Court' },
 					req: { payload: { config: {} }, t: (cle: string) => cle },

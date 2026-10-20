@@ -7,7 +7,7 @@ import { getPayload } from 'payload'
 import type { ForgotPasswordState } from '@/components/auth/ForgotPasswordForm'
 import { authLog } from '@/lib/auth/auth-log'
 import { requestPasswordLink } from '@/lib/auth/password-reset-payload'
-import { envoiEmailDePayload } from '@/lib/emails/envoi'
+import { payloadSendEmail } from '@/lib/emails/send'
 import { serverEnv } from '@/lib/env'
 
 /**
@@ -30,7 +30,7 @@ export async function forgotPassword(
 		headers: requestHeaders,
 		email: formulaire.get('email'),
 		apres: travail => after(travail),
-		envoyer: envoiEmailDePayload(payload, serverEnv()),
+		envoyer: payloadSendEmail(payload, serverEnv()),
 		site: process.env.NEXT_PUBLIC_SITE_URL ?? requestOrigin ?? 'http://localhost',
 		journal: authLog(payload),
 	})

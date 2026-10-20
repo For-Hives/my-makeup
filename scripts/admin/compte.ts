@@ -6,7 +6,7 @@
  * keyboard (`scripts/admin/clavier.ts`), twice. Nothing printed holds an email or a password.
  */
 
-import { ROLES_ADMIN, type RoleAdmin } from '../../src/lib/acces'
+import { ROLES_ADMIN, type RoleAdmin } from '../../src/lib/access'
 
 /** The command does not go on: the message says why, never a value typed by the person. */
 export class CreationRefusee extends Error {

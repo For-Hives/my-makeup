@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test'
 import type { PayloadRequest, RequestContext } from 'payload'
 import { GET as servirLaCle } from '@/app/api/indexnow/[key]/route'
-import { rafraichissement } from '../../src/collections/revalidation'
+import { refresh } from '../../src/collections/revalidate'
 import { CONTEXTE_IMPORT } from '../../src/lib/contexte-import'
 import { type EnvError, parseServerEnv } from '../../src/lib/env'
 import {
@@ -242,7 +242,7 @@ describe('les crochets de Payload', () => {
 		}
 	})
 
-	const HOOKS = rafraichissement('profiles')
+	const HOOKS = refresh('profiles')
 
 	async function enregistrer(req: PayloadRequest, context: RequestContext, id = 7) {
 		await HOOKS.avantEcriture({ context, data: {}, operation: 'update', originalDoc: { id }, req } as never)
@@ -286,7 +286,7 @@ describe('les crochets de Payload', () => {
 
 	test('plusieurs enregistrements proches : une requête pour tous', async () => {
 		await enregistrer(requete([ligne('published', true), ligne('published', true)]).req, {})
-		const talents = rafraichissement('talents')
+		const talents = refresh('talents')
 		const { req } = requete([
 			{ id: 3, slug: 'mariee', _status: 'published' },
 			{ id: 3, slug: 'mariee', _status: 'published' },
@@ -300,7 +300,7 @@ describe('les crochets de Payload', () => {
 	})
 
 	test('un article publié, puis retiré (supprimé) : son adresse part', async () => {
-		const articles = rafraichissement('articles')
+		const articles = refresh('articles')
 		const { req } = requete([{ id: 4, slug: 'un-article', _status: 'published' }])
 		const context = {}
 		await articles.avantSuppression({ context, id: 4, req } as never)

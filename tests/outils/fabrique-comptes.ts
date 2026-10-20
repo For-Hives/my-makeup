@@ -18,7 +18,7 @@
 
 import { randomBytes, randomInt, randomUUID } from 'node:crypto'
 import type { AuthCollectionSlug, Payload, RequestContext, RequiredDataFromCollectionSlug } from 'payload'
-import { CONTEXTE_SANS_PROFIL } from '../../src/collections/Profiles'
+import { NO_PROFILE_CONTEXT } from '../../src/collections/Profiles'
 import type { Variables } from './banc'
 import { exigerBanc, exigerConnexionDuBanc, payloadDeTest } from './payload-test'
 import { ouvrirSession, ouvrirSessionSansMotDePasse, type Session } from './session'
@@ -100,7 +100,7 @@ export const TYPES_DE_COMPTE = {
 	'maquilleuse-sans-profil': declarer({
 		collection: 'pros',
 		donnees: () => ({ name: nomFictif('Sans profil'), _verified: true }),
-		contexte: CONTEXTE_SANS_PROFIL,
+		contexte: NO_PROFILE_CONTEXT,
 	}),
 	/**
 	 * A makeup artist an admin has blocked, with her profile. No session: blocking closes them, and

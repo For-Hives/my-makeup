@@ -8,7 +8,7 @@
 
 import type { Payload } from 'payload'
 import { text } from '@/lib/profile/display-name'
-import { estUnSlug } from '@/lib/slug'
+import { isSlug } from '@/lib/slug'
 
 /** The fields of an article the list reads, and nothing else. */
 export const LIST_FIELDS = { slug: true, title: true, excerpt: true, publishedAt: true } as const
@@ -61,7 +61,7 @@ export async function listArticles(payload: Payload): Promise<ListedArticle[]> {
 	})
 	return docs
 		.flatMap(article =>
-			estUnSlug(article.slug) && text(article.title)
+			isSlug(article.slug) && text(article.title)
 				? [
 						{
 							slug: article.slug,

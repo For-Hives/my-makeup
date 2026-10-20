@@ -12,15 +12,15 @@ import {
 } from 'payload'
 // Relative imports on purpose: this file is also loaded by the Payload CLI, outside of Next.
 import {
-	adminOuProprietaireDuMedia,
-	adminRedactionOuMaquilleuse,
-	champAdminSeulement,
-	champDuMediaAdminOuProprietaire,
-	estMaquilleuse,
-	jamais,
-	lectureDesMedias,
-} from '../lib/acces'
-import { adresseDuMedia } from '../lib/medias'
+	adminEditorOrArtist,
+	adminOrMediaOwner,
+	fieldAdminOnly,
+	isArtist,
+	mediaFieldAdminOrOwner,
+	mediaRead,
+	neverAllowed,
+} from '../lib/access'
+import { mediaUrl } from '../lib/media'
 import { judge, NAMED_FILE_CONTEXT, unpredictableName } from '../lib/photo-upload'
 
 /**
@@ -28,7 +28,7 @@ import { judge, NAMED_FILE_CONTEXT, unpredictableName } from '../lib/photo-uploa
  * receives (Payload and the storage plugin), or by the import, never by a request. A request that
  * sends them has them dropped, so that a document always names its own object.
  */
-export const COORDONNEES_DU_FICHIER = [
+export const FILE_METADATA_FIELDS = [
 	'filename',
 	'prefix',
 	'_objectKey',
@@ -43,33 +43,33 @@ export const COORDONNEES_DU_FICHIER = [
 	'sizes',
 ] as const
 
-/** Drops what a request sends about the object itself, before Payload reads the file (`COORDONNEES_DU_FICHIER`). */
-export const coordonneesParLeServeur: CollectionBeforeOperationHook = ({ args, operation, req }) => {
+/** Drops what a request sends about the object itself, before Payload reads the file (`FILE_METADATA_FIELDS`). */
+export const fileMetadataSetByServer: CollectionBeforeOperationHook = ({ args, operation, req }) => {
 	if ((operation !== 'create' && operation !== 'update') || !req.user) return args
 	const data = args.data as Record<string, unknown> | undefined
 	if (!data) return args
-	for (const champ of COORDONNEES_DU_FICHIER) delete data[champ]
+	for (const field of FILE_METADATA_FIELDS) delete data[field]
 	return args
 }
 
 /** The makeup artist who sends a photo owns it, whatever owner her request names (ticket 043). */
-export const proprietaireALEnvoi: CollectionBeforeChangeHook = ({ data, operation, req: { user } }) =>
-	operation === 'create' && user && estMaquilleuse(user) ? { ...data, owner: user.id } : data
+export const ownerOnUpload: CollectionBeforeChangeHook = ({ data, operation, req: { user } }) =>
+	operation === 'create' && user && isArtist(user) ? { ...data, owner: user.id } : data
 
 /** The message of a photo sent while the application has no object storage. */
-export const MESSAGE_SANS_STOCKAGE =
+export const NO_STORAGE_MESSAGE =
 	'Le stockage des photos n’est pas configuré sur ce serveur : la photo n’a pas été enregistrée.'
 
 /**
  * Without an object storage (S3_ENDPOINT not set), no photo is received: the application never
  * writes one on its own disk. src/payload.config.ts adds this hook only then.
  */
-export const aucunEnvoiSansStockage: CollectionBeforeOperationHook = ({ args, operation, req }) => {
-	if ((operation === 'create' || operation === 'update') && req.file) throw new APIError(MESSAGE_SANS_STOCKAGE, 503)
+export const noUploadWithoutStorage: CollectionBeforeOperationHook = ({ args, operation, req }) => {
+	if ((operation === 'create' || operation === 'update') && req.file) throw new APIError(NO_STORAGE_MESSAGE, 503)
 	return args
 }
 
-const fichierNommeParLeServeur = (req: { context?: Record<string, unknown> }): boolean =>
+const fileNamedByServer = (req: { context?: Record<string, unknown> }): boolean =>
 	req.context?.[NAMED_FILE_CONTEXT] === true || req.context?.skipCloudStorage === true
 
 /**
@@ -80,38 +80,38 @@ const fichierNommeParLeServeur = (req: { context?: Record<string, unknown> }): b
  *
  * The import sends no file (it adopts photos where they are) and is not concerned.
  */
-export const photoValideEtRenommee: CollectionBeforeOperationHook = ({ args, operation, req }) => {
-	const fichier = req.file
-	if ((operation !== 'create' && operation !== 'update') || !fichier) return args
-	if (fichierNommeParLeServeur(req)) {
+export const photoValidatedAndRenamed: CollectionBeforeOperationHook = ({ args, operation, req }) => {
+	const file = req.file
+	if ((operation !== 'create' && operation !== 'update') || !file) return args
+	if (fileNamedByServer(req)) {
 		// Trusted server code names its file: the type is still read in the content.
-		const verdict = judge(fichier.data, Math.max(fichier.size ?? 0, fichier.data.length))
+		const verdict = judge(file.data, Math.max(file.size ?? 0, file.data.length))
 		if (!verdict.accepte) throw new APIError(verdict.message, 400)
 		return args
 	}
-	const octets = fichier.data
-	const verdict = judge(octets, Math.max(fichier.size ?? 0, octets.length))
+	const bytes = file.data
+	const verdict = judge(bytes, Math.max(file.size ?? 0, bytes.length))
 	if (!verdict.accepte) throw new APIError(verdict.message, 400)
-	fichier.name = unpredictableName(verdict.type)
-	fichier.mimetype = verdict.type
+	file.name = unpredictableName(verdict.type)
+	file.mimetype = verdict.type
 	return args
 }
 
 /** A handler of Payload's own route for the file of a media. */
-type GestionnaireDeFichier = NonNullable<UploadConfig['handlers']>[number]
+type FileHandler = NonNullable<UploadConfig['handlers']>[number]
 
 /**
  * Payload's own route for the file of a media, `/api/media/file/<name>`, answers by a redirection
- * to the public address of the photo (`adresseDuMedia`, from `base`): no photo is ever on the disk
+ * to the public address of the photo (`mediaUrl`, from `base`): no photo is ever on the disk
  * of the server, and the address the site gives is the direct one anyway.
  *
- * Payload checks the reading first (`lectureDesMedias`, without an identifier): the public and
+ * Payload checks the reading first (`mediaRead`, without an identifier): the public and
  * `editor` are refused, a makeup artist reaches her own media only, and Payload hands it here.
  * For `admin` it looks for nothing: the media is found by its name, and its prefix when the query
  * gives one. A name no media has is not found.
  */
-export const versLAdressePublique =
-	(base: string): GestionnaireDeFichier =>
+export const toPublicUrl =
+	(base: string): FileHandler =>
 	async (req, { doc, params: { filename, prefix } }) => {
 		const conditions: Where[] = [{ filename: { equals: filename } }]
 		if (prefix !== undefined) conditions.push({ prefix: { equals: prefix } })
@@ -120,7 +120,7 @@ export const versLAdressePublique =
 			prefix?: string | null
 		} | null
 		if (!media?.filename) throw new NotFound(req.t)
-		return Response.redirect(adresseDuMedia(base, media.prefix, media.filename), 302)
+		return Response.redirect(mediaUrl(base, media.prefix, media.filename), 302)
 	}
 
 /**
@@ -130,10 +130,10 @@ export const versLAdressePublique =
  * Payload's own check (`filesRequiredOnCreate`) is off, for one case only: the import adopts a
  * photo of the old site where it already is, without copying it (ticket 058). It creates the
  * document through the Local API with the name and the prefix read in the address of the file,
- * and no file. A request never gets there: Payload and `coordonneesParLeServeur` drop the name it
+ * and no file. A request never gets there: Payload and `fileMetadataSetByServer` drop the name it
  * sends, so without a file it has none, and it is refused here.
  */
-export const unFichierALaCreation: CollectionBeforeChangeHook = ({ data, operation, req }) => {
+export const fileOnCreate: CollectionBeforeChangeHook = ({ data, operation, req }) => {
 	if (operation === 'create' && (typeof data.filename !== 'string' || data.filename === ''))
 		throw new MissingFile(req.t)
 	return data
@@ -141,14 +141,14 @@ export const unFichierALaCreation: CollectionBeforeChangeHook = ({ data, operati
 
 /**
  * Nothing is ever written on the disk of the server: with a storage, the object goes there;
- * without one, nowhere. A creation without a file is left to `unFichierALaCreation`.
+ * without one, nowhere. A creation without a file is left to `fileOnCreate`.
  */
-export const UPLOAD_DES_MEDIAS: UploadConfig = {
+export const MEDIA_UPLOAD: UploadConfig = {
 	disableLocalStorage: true,
 	filesRequiredOnCreate: false,
 	// No `mimeTypes` here: Payload would also refuse the GIF or AVIF media the import adopts for the
 	// galleries of articles (their `mimeType` is validated against it). The file check is
-	// `photoValideEtRenommee`.
+	// `photoValidatedAndRenamed`.
 	// Derived sizes, stored next to the original (same folder, same unpredictable base name).
 	// Payload makes only the sizes the photo is large enough for; the bin moves them with it.
 	imageSizes: [
@@ -171,11 +171,11 @@ export const UPLOAD_DES_MEDIAS: UploadConfig = {
  * - The newsroom sends the photos of the articles: they belong to nobody, and `editor` lists,
  *   reads, changes and deletes them, never the photo of a makeup artist (ticket 046).
  * - The owner, the identifier and the formats of the old site are not public.
- * - Payload's route for the file sends to the public address (`versLAdressePublique`, added by
+ * - Payload's route for the file sends to the public address (`toPublicUrl`, added by
  *   src/payload.config.ts, which knows the base of the photos).
  *
  * The types, the size, the unpredictable name and the derived sizes of a photo sent in the v3 are
- * those of ticket 133 (`photoValideEtRenommee`, `UPLOAD_DES_MEDIAS`). A media deleted, or whose file is replaced, sends its objects to the bin
+ * those of ticket 133 (`photoValidatedAndRenamed`, `MEDIA_UPLOAD`). A media deleted, or whose file is replaced, sends its objects to the bin
  * of the storage, never erased, and media are deleted or changed one at a time, never by a
  * `where`: the hooks of the bin are added by src/collections/trash.ts (ticket 045), through
  * src/payload.config.ts.
@@ -185,15 +185,15 @@ export const Media: CollectionConfig<'media'> = {
 	labels: { singular: 'Média', plural: 'Médias' },
 	admin: { useAsTitle: 'filename', defaultColumns: ['filename', 'owner', 'alt'] },
 	access: {
-		read: lectureDesMedias,
-		create: adminRedactionOuMaquilleuse,
-		update: adminOuProprietaireDuMedia,
-		delete: adminOuProprietaireDuMedia,
+		read: mediaRead,
+		create: adminEditorOrArtist,
+		update: adminOrMediaOwner,
+		delete: adminOrMediaOwner,
 	},
-	upload: UPLOAD_DES_MEDIAS,
+	upload: MEDIA_UPLOAD,
 	hooks: {
-		beforeOperation: [coordonneesParLeServeur, photoValideEtRenommee],
-		beforeChange: [unFichierALaCreation, proprietaireALEnvoi],
+		beforeOperation: [fileMetadataSetByServer, photoValidatedAndRenamed],
+		beforeChange: [fileOnCreate, ownerOnUpload],
 	},
 	fields: [
 		{ name: 'alt', label: 'Texte alternatif', type: 'text' },
@@ -203,7 +203,7 @@ export const Media: CollectionConfig<'media'> = {
 			type: 'relationship',
 			relationTo: 'pros',
 			index: true,
-			access: { read: champDuMediaAdminOuProprietaire, create: champAdminSeulement, update: champAdminSeulement },
+			access: { read: mediaFieldAdminOrOwner, create: fieldAdminOnly, update: fieldAdminOnly },
 			admin: {
 				description: 'La maquilleuse qui a envoyé la photo, posée par le serveur. Vide pour une photo d’article.',
 			},
@@ -213,14 +213,14 @@ export const Media: CollectionConfig<'media'> = {
 			label: 'Identifiant sur l’ancien site',
 			type: 'number',
 			unique: true,
-			access: { read: champAdminSeulement, create: jamais, update: jamais },
+			access: { read: fieldAdminOnly, create: neverAllowed, update: neverAllowed },
 			admin: { readOnly: true },
 		},
 		{
 			name: 'strapiFormats',
 			label: 'Formats de l’ancien site',
 			type: 'json',
-			access: { read: champAdminSeulement, create: jamais, update: jamais },
+			access: { read: fieldAdminOnly, create: neverAllowed, update: neverAllowed },
 			admin: { readOnly: true, description: 'Archive : les vignettes de l’ancien site, restées où elles sont.' },
 		},
 	],
@@ -229,10 +229,10 @@ export const Media: CollectionConfig<'media'> = {
 /**
  * The storage plugin adds `prefix` and `_objectKey` to the media after the collection is written,
  * without any access rule, and says itself that a request may write them. This plugin, placed after
- * it, closes both to every API: only the server writes them (`coordonneesParLeServeur` already
+ * it, closes both to every API: only the server writes them (`fileMetadataSetByServer` already
  * drops them from a request; this is the second lock). A new photo gets the default prefix.
  */
-export const champsDuStockageFermes: Plugin = config => ({
+export const closedStorageFields: Plugin = config => ({
 	...config,
 	collections: config.collections?.map(collection =>
 		collection.slug !== Media.slug
@@ -242,7 +242,7 @@ export const champsDuStockageFermes: Plugin = config => ({
 					fields: collection.fields.map((field): Field => {
 						if (!('name' in field) || (field.name !== '_objectKey' && field.name !== 'prefix')) return field
 						const access = 'access' in field ? field.access : undefined
-						return { ...field, access: { ...access, create: jamais, update: jamais } } as Field
+						return { ...field, access: { ...access, create: neverAllowed, update: neverAllowed } } as Field
 					}),
 				}
 	),

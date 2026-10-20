@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import type { Payload } from 'payload'
-import { CONTEXTE_SANS_PROFIL } from '@/collections/Profiles'
+import { NO_PROFILE_CONTEXT } from '@/collections/Profiles'
 import { readSearch } from '@/lib/search/input'
 import { PER_PAGE, paginate, sectionsOfPage } from '@/lib/search/pagination'
 import { find } from '@/lib/search/results'
@@ -37,7 +37,7 @@ async function poser(cle: string, profil: Record<string, unknown>): Promise<void
 	const pro = await payload.create({
 		collection: 'pros',
 		data: compte(cle),
-		context: CONTEXTE_SANS_PROFIL,
+		context: NO_PROFILE_CONTEXT,
 		disableVerificationEmail: true,
 	})
 	await payload.create({

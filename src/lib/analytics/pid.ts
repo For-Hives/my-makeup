@@ -9,6 +9,6 @@ import type { Pid } from './events'
 
 export type { Pid }
 
-export function pidDuProfil({ id, strapiId }: { id: number; strapiId?: number | null | undefined }): Pid {
+export function profilePid({ id, strapiId }: { id: number; strapiId?: number | null | undefined }): Pid {
 	return pidOuNul({ id, strapiId }) ?? `v3-${id}`
 }

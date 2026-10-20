@@ -9,7 +9,7 @@ import { buildCustomRoute } from 'next/dist/server/lib/router-utils/filesystem'
 import { hasRemoteMatch } from 'next/dist/shared/lib/match-remote-pattern'
 import { compileNonPath } from 'next/dist/shared/lib/router/utils/prepare-destination'
 import { EnvError, MEDIA_ORIGIN_DEFAULT, mediaOrigin } from '@/lib/env'
-import { contentSecurityPolicy, imagesDuBanc, mediaRemotePattern, securityHeaders } from '@/lib/security-headers'
+import { benchImages, contentSecurityPolicy, mediaRemotePattern, securityHeaders } from '@/lib/security-headers'
 
 // Made-up hosts only: a name in `.test` never resolves.
 const OTHER_MEDIA = 'https://medias.exemple.test'
@@ -330,12 +330,12 @@ describe('the register of intended changes', () => {
 
 describe('the storage of the bench, for the image optimizer (ticket 103)', () => {
 	test('nothing is opened without the variable', () => {
-		expect(imagesDuBanc(undefined)).toBeNull()
-		expect(imagesDuBanc('  ')).toBeNull()
+		expect(benchImages(undefined)).toBeNull()
+		expect(benchImages('  ')).toBeNull()
 	})
 
 	test('the bench opens one local folder, over http, and the photos of it only', () => {
-		const banc = imagesDuBanc('http://127.0.0.1:9110/mymakeup-test')
+		const banc = benchImages('http://127.0.0.1:9110/mymakeup-test')
 
 		expect(banc?.remotePattern).toEqual({
 			hostname: '127.0.0.1',
@@ -361,7 +361,7 @@ describe('the storage of the bench, for the image optimizer (ticket 103)', () =>
 		['a wildcard', 'http://127.0.0.1:9090/*'],
 		['not an address', 'espace'],
 	])('%s is refused', (_cas, valeur) => {
-		expect(() => imagesDuBanc(valeur)).toThrow('IMAGES_DU_BANC')
+		expect(() => benchImages(valeur)).toThrow('IMAGES_DU_BANC')
 	})
 
 	test('the production configuration opens nothing local', async () => {

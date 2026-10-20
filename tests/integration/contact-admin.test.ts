@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
-import { stockageDePayload } from '@/lib/contact/envoi-payload'
+import { payloadStorage } from '@/lib/contact/payload-send'
 import { serverEnv } from '@/lib/env'
 import { creerCompte } from '../outils/fabrique-comptes'
 import { mailsRecus, viderLeCapteur } from '../outils/mailpit'
@@ -23,7 +23,7 @@ const unique = () => `visiteuse-${crypto.randomUUID()}@example.test`
 /** A stored message, the way the form stores it. `failed`: its mail did not leave. */
 async function messageEnBase(etatMail: 'failed' | 'sent' = 'failed') {
 	const payload = await payloadDeTest()
-	const stockage = stockageDePayload(payload)
+	const stockage = payloadStorage(payload)
 	const email = unique()
 	const id = await stockage.creer({
 		prenom: 'Léa',
@@ -100,7 +100,7 @@ describe('Le cycle des statuts, tenu par la collection', () => {
 			corps: { status: 'answered' },
 		})
 
-		await stockageDePayload(payload).marquer(id, 'sent', 'forwarded')
+		await payloadStorage(payload).marquer(id, 'sent', 'forwarded')
 
 		const ligne = await payload.findByID({ collection: 'contact-requests', id, depth: 0 })
 		expect(ligne).toMatchObject({ status: 'answered', mailStatus: 'sent' })

@@ -1,4 +1,4 @@
-import type { ContenuEmail } from './gabarit'
+import type { EmailContent } from './layout'
 
 /**
  * The confirmation mail of a new account (ticket 082): what it says, and where its button leads.
@@ -11,18 +11,18 @@ import type { ContenuEmail } from './gabarit'
  */
 
 /** The page the link of the mail opens: it confirms the account, then offers to sign in. */
-export const PAGE_DE_CONFIRMATION = '/auth/verification-complete'
+export const CONFIRMATION_PAGE = '/auth/verification-complete'
 
-export const SUJET_DE_CONFIRMATION = 'Confirme ton adresse email pour activer ton compte My Makeup'
+export const CONFIRMATION_SUBJECT = 'Confirme ton adresse email pour activer ton compte My Makeup'
 
-export function contenuEmailConfirmation(jeton: string): ContenuEmail {
+export function confirmationEmailContent(jeton: string): EmailContent {
 	return {
-		sujet: SUJET_DE_CONFIRMATION,
+		sujet: CONFIRMATION_SUBJECT,
 		titre: 'Bienvenue sur My Makeup',
 		paragraphes: [
 			'Plus qu’un clic pour activer ton compte : confirme que cette adresse email est bien la tienne.',
 			'Une fois confirmée, tu pourras te connecter et remplir ton profil.',
 		],
-		action: { libelle: 'Confirmer mon adresse', chemin: `${PAGE_DE_CONFIRMATION}?code=${encodeURIComponent(jeton)}` },
+		action: { libelle: 'Confirmer mon adresse', chemin: `${CONFIRMATION_PAGE}?code=${encodeURIComponent(jeton)}` },
 	}
 }

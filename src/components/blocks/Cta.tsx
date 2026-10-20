@@ -1,5 +1,5 @@
 import Image from 'next/image'
-import { LienSuivi } from '@/components/analytics/LienSuivi'
+import { TrackedLink } from '@/components/analytics/TrackedLink'
 
 /** The call to action that closes the pages: look for a makeup artist, or be one. */
 export function Cta() {
@@ -19,20 +19,20 @@ export function Cta() {
 						Rejoignez&nbsp;My-Makeup, la communauté qui fait la différence.
 					</h2>
 					<div className="flex flex-col items-center justify-center gap-6 px-8 md:flex-row md:items-start md:gap-8">
-						<LienSuivi
+						<TrackedLink
 							suivi={{ nom: 'cta_click', proprietes: { where: 'cta_recherche' } }}
 							href="/search"
 							className="btn-secondary-white flex w-full items-center justify-center text-center sm:w-2/3 md:w-auto"
 						>
 							Je cherche des maquilleuses
-						</LienSuivi>
-						<LienSuivi
+						</TrackedLink>
+						<TrackedLink
 							suivi={{ nom: 'cta_click', proprietes: { where: 'cta_inscription' } }}
 							href="/auth/signup"
 							className="btn-secondary-white-bordered flex w-full items-center justify-center text-center sm:w-2/3 md:w-auto"
 						>
 							Je suis maquilleuse
-						</LienSuivi>
+						</TrackedLink>
 					</div>
 				</div>
 			</div>

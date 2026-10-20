@@ -7,7 +7,7 @@
  * Every value is made up, but for the commune, which is public reference data.
  */
 
-import { parsePrice } from '@/lib/prix'
+import { parsePrice } from '@/lib/price'
 import { aMedia, type Completeness, completeness, type ProfileFields } from '@/lib/profile/completeness'
 import ancienSite from '../unit/fixtures/completude-ancien-site.json'
 import casPartages from '../unit/fixtures/completude-cas.json'

@@ -9,7 +9,7 @@
  * no server code: the page and the tests call them.
  */
 
-import { PRIX_MAX, PRIX_MIN } from '../prix'
+import { PRICE_MAX, PRICE_MIN } from '../price'
 import {
 	type Completeness,
 	CRITERIA,
@@ -99,7 +99,7 @@ function missingText(critere: Criterion, absent: boolean, profil: DashboardProfi
 		return `Allonge ta description : ${DESCRIPTION_MIN} caractères au moins pour être publiable (${descriptionLength(profil.description)} aujourd’hui).`
 	}
 	if (critere === 'offres') {
-		return `Donne un prix en chiffres, entre ${PRIX_MIN} et ${PRIX_MAX.toLocaleString('fr-FR')} €, à l’une de tes prestations.`
+		return `Donne un prix en chiffres, entre ${PRICE_MIN} et ${PRICE_MAX.toLocaleString('fr-FR')} €, à l’une de tes prestations.`
 	}
 	return MISSING_TEXT[critere]
 }

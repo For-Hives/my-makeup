@@ -14,8 +14,8 @@
  * Nothing typed ever travels: the properties are words of closed lists (events.ts).
  */
 
-import type { EvenementsMyMakeup } from '../analytics/events'
-import { type Suivre, track } from '../analytics/track'
+import type { MyMakeupEvents } from '../analytics/events'
+import { type Track, track } from '../analytics/track'
 import type { PhotoRefusal } from './photo'
 import type { RefusalCause } from './photos-upload'
 import type { SaveResult } from './result'
@@ -24,9 +24,9 @@ import type { SaveResult } from './result'
  * Where the events go. Always `track` in the pages; a test swaps `porte.suivre` for a spy (and puts
  * it back), which is how the components of the space are tested without giving each a property.
  */
-export const holder: { suivre: Suivre } = { suivre: track }
+export const holder: { suivre: Track } = { suivre: track }
 
-export type TrackedSection = EvenementsMyMakeup['profile_save']['section']
+export type TrackedSection = MyMakeupEvents['profile_save']['section']
 
 /** The answer of the server to a save, as the event sees it. */
 type SaveResponse = Pick<SaveResult<Record<string, unknown>>, 'ok'> & {
@@ -42,13 +42,13 @@ export const trackedListSection = (
 }
 
 /** Counts one save: its section and outcome, then the passage to « publiable » when the server reports it. */
-export function trackSave(section: TrackedSection, reponse: SaveResponse, suivre: Suivre = holder.suivre): void {
+export function trackSave(section: TrackedSection, reponse: SaveResponse, suivre: Track = holder.suivre): void {
 	suivre('profile_save', { section, ok: reponse.ok })
 	if (reponse.ok && reponse.devenuPublicable === true) suivre('profile_publiable')
 }
 
 /** Counts a refused photo. A session that ended is not a refusal of the photo: nothing is counted. */
-export function trackPhotoRefusal(cause: RefusalCause, suivre: Suivre = holder.suivre): void {
+export function trackPhotoRefusal(cause: RefusalCause, suivre: Track = holder.suivre): void {
 	suivre('upload_error', { kind: cause })
 }
 
@@ -57,11 +57,11 @@ export const localRefusalCause = (refus: Pick<PhotoRefusal, 'raison'>): RefusalC
 	refus.raison === 'taille' ? 'size' : 'type'
 
 /** Counts the deletion of the account, which the server has done. */
-export function trackAccountDeletion(suivre: Suivre = holder.suivre): void {
+export function trackAccountDeletion(suivre: Track = holder.suivre): void {
 	suivre('account_delete')
 }
 
 /** Counts a switch of view: `true` towards her public page, `false` back to her space. */
-export function trackViewChange(publique: boolean, suivre: Suivre = holder.suivre): void {
+export function trackViewChange(publique: boolean, suivre: Track = holder.suivre): void {
 	suivre('profile_visibility', { public: publique })
 }

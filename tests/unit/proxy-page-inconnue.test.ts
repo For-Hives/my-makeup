@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { NextRequest } from 'next/server'
-import { proxy, proxyDeLAdresseInconnue } from '@/proxy'
+import { proxy, unknownAddressProxy } from '@/proxy'
 
 /** Ticket 231, on the proxy: the lookup is made only for a plain pass-through, and a failure lets the page answer. */
 
@@ -14,7 +14,7 @@ async function repondre(chemin: string, existe: (famille: string, segment: strin
 	const premiere = proxy(demande)
 	// A plain pass-through is the one answer the lookup may replace.
 	const adresse = chemin.split('/')
-	return proxyDeLAdresseInconnue(
+	return unknownAddressProxy(
 		demande,
 		await premiere,
 		{ famille: adresse[1] as 'profil' | 'talent' | 'blog', segment: decodeURIComponent(adresse[2] ?? '') },

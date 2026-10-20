@@ -11,7 +11,7 @@
  * Every message is in French: it is what the artist reads when the server refuses a value.
  */
 
-import { estMontantDePrix, formatMontant, PRIX_MAX, PRIX_MIN } from '../prix'
+import { formatAmount, isPriceAmount, PRICE_MAX, PRICE_MIN } from '../price'
 
 /** Longest name, title or price text of a row (the bounds of the old API and of its forms). */
 export const NAME_MAX_LENGTH = 70
@@ -97,7 +97,7 @@ export function rowIdentities(recu: Row, stocke: Row | null | undefined): Row {
 export const MESSAGES = {
 	pasUnTexte: 'Ce champ attend un texte.',
 	texteTropLong: (maximum: number) => `Ce texte ne doit pas dépasser ${maximum} caractères.`,
-	prixHorsBornes: `Le prix doit être un montant entre ${formatMontant(PRIX_MIN)} et ${formatMontant(PRIX_MAX)}.`,
+	prixHorsBornes: `Le prix doit être un montant entre ${formatAmount(PRICE_MIN)} et ${formatAmount(PRICE_MAX)}.`,
 	dateInvalide: 'Cette date n’est pas valide.',
 	finAvantDebut: 'La fin d’une expérience ne peut pas précéder son début.',
 	obtentionTropLointaine: 'Une date d’obtention ne peut pas dépasser d’un an la date du jour.',
@@ -112,12 +112,12 @@ export function textMessage(valeur: unknown, maximum: number): string | null {
 
 /**
  * Null when the amount of a price is absent (an offer « sur devis », in free text) or counts as a
- * price (src/lib/prix.ts: between PRIX_MIN and PRIX_MAX), else the refusal: a negative amount,
+ * price (src/lib/price.ts: between PRICE_MIN and PRICE_MAX), else the refusal: a negative amount,
  * zero, an amount out of bounds, anything that is not a number.
  */
 export function priceMessage(valeur: unknown): string | null {
 	if (valeur === null || valeur === undefined) return null
-	return estMontantDePrix(valeur) ? null : MESSAGES.prixHorsBornes
+	return isPriceAmount(valeur) ? null : MESSAGES.prixHorsBornes
 }
 
 // « 2024-03-01 », alone or followed by an hour: the day as it was written.

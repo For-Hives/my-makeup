@@ -4,7 +4,7 @@ import config from '@payload-config'
 import { cookies, headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { getPayload } from 'payload'
-import { attributsDeLaMarque, COOKIE_DE_MARQUE_DE_CONNEXION } from '@/lib/analytics/marque-connexion'
+import { markAttributes, SIGN_IN_MARK_COOKIE } from '@/lib/analytics/sign-in-mark'
 import { authLog } from '@/lib/auth/auth-log'
 import type { ErrorCode } from '@/lib/auth/errors'
 import { replaceLegacyHash } from '@/lib/auth/legacy'
@@ -41,11 +41,7 @@ export async function signIn(_precedent: SignInState, formulaire: FormData): Pro
 
 	await setSessionCookie(payload, result.token)
 	// Tells the next page to send `login_result` (ticket 146).
-	;(await cookies()).set(
-		COOKIE_DE_MARQUE_DE_CONNEXION,
-		'email',
-		attributsDeLaMarque(process.env.NODE_ENV === 'production')
-	)
+	;(await cookies()).set(SIGN_IN_MARK_COOKIE, 'email', markAttributes(process.env.NODE_ENV === 'production'))
 
 	const site = process.env.NEXT_PUBLIC_SITE_URL ?? requestOrigin ?? 'http://localhost'
 	const destination = safeReturnTo(formulaire.get('callbackUrl'), site)

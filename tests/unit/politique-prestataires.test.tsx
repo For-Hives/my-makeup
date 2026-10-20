@@ -4,39 +4,39 @@ import path from 'node:path'
 import { renderToStaticMarkup } from 'react-dom/server'
 import Page from '@/app/(front)/(site)/politique-de-confidentialite/page'
 import { GOOGLE_ISSUER, UMAMI_ORIGIN_DEFAULT } from '@/lib/env'
-import { HEBERGEUR } from '@/lib/legal'
-import { JOURS_AVANT_EFFACEMENT_DES_PHOTOS, PRESTATAIRES } from '@/lib/prestataires'
-import { DELAI_AVANT_PURGE_JOURS } from '@/lib/taches/comptes-non-confirmes'
+import { HOST } from '@/lib/legal'
+import { PHOTO_ERASURE_DAYS, PROVIDERS } from '@/lib/providers'
+import { PURGE_DELAY_DAYS } from '@/lib/tasks/unconfirmed-accounts'
 import { texteDePage } from '../outils/texte-de-page'
 
 /**
  * The privacy policy says what is true on the day of the switch (ticket 189): the providers come
- * from one list (src/lib/prestataires.ts), compared here to the services the code is configured
+ * from one list (src/lib/providers.ts), compared here to the services the code is configured
  * for; the old email provider and the quote tool are gone; the confirmation of the email and the
  * delay of the photos are the ones the code applies.
  */
 
 const lire = (fichier: string): string => readFileSync(path.join(process.cwd(), fichier), 'utf8')
 const texte = texteDePage(renderToStaticMarkup(<Page />))
-const parId = (id: string) => PRESTATAIRES.find(prestataire => prestataire.id === id)
+const parId = (id: string) => PROVIDERS.find(prestataire => prestataire.id === id)
 
 describe('la liste des sous-traitants', () => {
 	test('la page montre chaque entrée de la liste, et rien d’autre', () => {
 		const lignes = texte.split('\n')
 		const debut = lignes.findIndex(ligne => ligne === 'Hébergement et prestataires')
-		const liste = lignes.slice(debut + 1, debut + 1 + PRESTATAIRES.length)
+		const liste = lignes.slice(debut + 1, debut + 1 + PROVIDERS.length)
 
-		expect(liste).toEqual(PRESTATAIRES.map(({ nom, phrase }) => `${nom} : ${phrase}`))
-		expect(renderToStaticMarkup(<Page />).match(/<li[\s>]/g)).toHaveLength(PRESTATAIRES.length)
+		expect(liste).toEqual(PROVIDERS.map(({ nom, phrase }) => `${nom} : ${phrase}`))
+		expect(renderToStaticMarkup(<Page />).match(/<li[\s>]/g)).toHaveLength(PROVIDERS.length)
 	})
 
 	test('une seule entrée par rôle, les cinq rôles du site', () => {
-		expect(PRESTATAIRES.map(({ id }) => id).sort()).toEqual(['email', 'google', 'hebergement', 'mesure', 'photos'])
+		expect(PROVIDERS.map(({ id }) => id).sort()).toEqual(['email', 'google', 'hebergement', 'mesure', 'photos'])
 	})
 
 	test('l’hébergeur est celui des mentions légales', () => {
-		expect(parId('hebergement')?.configuration).toBe(HEBERGEUR.nom)
-		expect(parId('hebergement')?.nom.startsWith(HEBERGEUR.nom)).toBe(true)
+		expect(parId('hebergement')?.configuration).toBe(HOST.nom)
+		expect(parId('hebergement')?.nom.startsWith(HOST.nom)).toBe(true)
 	})
 
 	test('la mesure est l’instance Umami que le site relaie', () => {
@@ -80,15 +80,13 @@ describe('ce que la politique ne dit plus', () => {
 describe('les engagements que le code tient', () => {
 	test('l’email est confirmé à l’inscription, et un compte jamais confirmé part au bout du délai de la tâche', () => {
 		expect(texte).toContain("Confirmation de l'adresse email : à l'inscription, nous envoyons")
-		expect(texte).toContain(`au bout de ${DELAI_AVANT_PURGE_JOURS} jours`)
-		expect(DELAI_AVANT_PURGE_JOURS).toBe(7)
+		expect(texte).toContain(`au bout de ${PURGE_DELAY_DAYS} jours`)
+		expect(PURGE_DELAY_DAYS).toBe(7)
 	})
 
 	test('une photo retirée est effacée du stockage au bout de 30 jours, comme la règle de la corbeille', () => {
-		expect(texte).toContain(
-			`effacée définitivement de notre stockage au bout de ${JOURS_AVANT_EFFACEMENT_DES_PHOTOS} jours`
-		)
-		expect(lire('src/lib/corbeille.ts')).toContain('erases what is there 30 days later')
+		expect(texte).toContain(`effacée définitivement de notre stockage au bout de ${PHOTO_ERASURE_DAYS} jours`)
+		expect(lire('src/lib/trash.ts')).toContain('erases what is there 30 days later')
 		expect(lire('README.md')).toContain('efface la corbeille au bout de 30 jours')
 	})
 

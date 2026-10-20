@@ -1,7 +1,7 @@
 'use client'
 
 import { useActionState, useEffect, useRef } from 'react'
-import { type Suivre, track } from '@/lib/analytics/track'
+import { type Track, track } from '@/lib/analytics/track'
 import {
 	MIN_PASSWORD_LENGTH,
 	SIGN_UP_FAILURE_MESSAGES,
@@ -60,7 +60,7 @@ export function withProxyRefusal(action: SignUpAction): SignUpAction {
  * rules and answers one message per field, under the field, so that the wording is the same with or
  * without scripts. A key held down sends one request, as in the sign-in form.
  */
-export function SignUpForm({ action, suivre = track }: { action: SignUpAction; suivre?: Suivre }) {
+export function SignUpForm({ action, suivre = track }: { action: SignUpAction; suivre?: Track }) {
 	const [state, send, inProgress] = useActionState(withProxyRefusal(action), null)
 	const lock = useRef(false)
 	const started = useRef(false)

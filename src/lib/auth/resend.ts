@@ -1,9 +1,9 @@
 import type { Payload } from 'payload'
 import { z } from 'zod'
-import { contenuEmailConfirmation } from '../emails/confirmation'
-import { contenuEmailDejaInscrite } from '../emails/deja-inscrite'
-import type { EnvoyerEmail } from '../emails/envoi'
-import { composerEmail } from '../emails/gabarit'
+import { alreadyRegisteredEmailContent } from '../emails/already-registered'
+import { confirmationEmailContent } from '../emails/confirmation'
+import { composerEmail } from '../emails/layout'
+import type { SendEmail } from '../emails/send'
 import { findAccount } from './account-by-email'
 import type { EventCode, Log } from './auth-log'
 import { mailboxKey } from './canonical-email'
@@ -54,7 +54,7 @@ const schemaEmail = z
 export interface ResendInputs {
 	payload: Payload
 	email: unknown
-	envoyer: EnvoyerEmail
+	envoyer: SendEmail
 	site: string
 	journal?: Log
 	plancherMs?: number
@@ -105,7 +105,7 @@ export async function resendConfirmation({
 			const account = await findAccount(payload, destinataire)
 			if (!account) return { ok: true }
 			const content =
-				!account.verifie && account.jeton ? contenuEmailConfirmation(account.jeton) : contenuEmailDejaInscrite()
+				!account.verifie && account.jeton ? confirmationEmailContent(account.jeton) : alreadyRegisteredEmailContent()
 			await envoyer({ a: account.email, ...composerEmail(content, site) })
 			return { ok: true }
 		} catch {

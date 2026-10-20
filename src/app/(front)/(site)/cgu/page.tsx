@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { LegalPage } from '@/components/legal/LegalPage'
-import { EDITEUR } from '@/lib/legal'
+import { PUBLISHER } from '@/lib/legal'
 import { pageMetadata } from '@/lib/seo/metadata'
 
 // Static: the text is in the code, and the page reads no cookie and no data (ticket 112).
@@ -29,7 +29,7 @@ export default function Cgu() {
 
 			<h2>1. Objet</h2>
 			<p>
-				{`My-Makeup (my-makeup.fr) est un annuaire en ligne de maquilleuses professionnelles, édité par ${EDITEUR.nom} (voir les `}
+				{`My-Makeup (my-makeup.fr) est un annuaire en ligne de maquilleuses professionnelles, édité par ${PUBLISHER.nom} (voir les `}
 				<Link href={'/mentions-legales'}>mentions légales</Link>
 				{`). Ces conditions s'appliquent à toute personne qui consulte le site ou y crée un compte. Créer un compte vaut acceptation de ces conditions.`}
 			</p>
@@ -87,7 +87,7 @@ export default function Cgu() {
 			<h2>8. Signalement</h2>
 			<p>
 				{`Pour signaler un contenu ou un comportement contraire à ces conditions, écrivez à `}
-				<a href={`mailto:${EDITEUR.email}`}>{EDITEUR.email}</a>
+				<a href={`mailto:${PUBLISHER.email}`}>{PUBLISHER.email}</a>
 				{` en indiquant l'adresse de la page concernée et le motif.`}
 			</p>
 

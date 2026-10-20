@@ -8,12 +8,12 @@
  */
 
 import type { Pid } from './events'
-import type { Suivre } from './track'
+import type { Track } from './track'
 
-export type CanalDeContact = 'email' | 'phone' | 'instagram' | 'facebook' | 'linkedin' | 'youtube' | 'website'
+export type ContactChannel = 'email' | 'phone' | 'instagram' | 'facebook' | 'linkedin' | 'youtube' | 'website'
 
 /** Where the click happens, as the browser tells it. */
-export interface LieuDuClic {
+export interface ClickPlace {
 	/** `location.search` */
 	recherche: string
 	/** `document.referrer` */
@@ -23,26 +23,26 @@ export interface LieuDuClic {
 }
 
 /** True when the page was reached from the space of an artist (a same-site `/auth/...` page). */
-function vientDeLEspace({ referent, origine }: Pick<LieuDuClic, 'referent' | 'origine'>): boolean {
+function comesFromDashboard({ referent, origine }: Pick<ClickPlace, 'referent' | 'origine'>): boolean {
 	if (referent === '' || !URL.canParse(referent)) return false
-	const adresse = new URL(referent)
-	return adresse.origin === origine && (adresse.pathname === '/auth' || adresse.pathname.startsWith('/auth/'))
+	const address = new URL(referent)
+	return address.origin === origine && (address.pathname === '/auth' || address.pathname.startsWith('/auth/'))
 }
 
 /** True when the address carries the campaign of the reminder emails. */
-function vientDUneRelance(recherche: string): boolean {
+function comesFromFollowUp(recherche: string): boolean {
 	return new URLSearchParams(recherche).get('utm_campaign')?.toLowerCase() === 'relance'
 }
 
 /** U84: whether a click on a contact of the profile `pid` is to be counted. */
-export function clicAMesurer({
+export function clickToMeasure({
 	pid,
-	pidDeLaVisiteuse,
-	...lieu
-}: LieuDuClic & { pid: Pid | null; pidDeLaVisiteuse: Pid | null }): boolean {
+	pidDeLaVisiteuse: visitorPid,
+	...place
+}: ClickPlace & { pid: Pid | null; pidDeLaVisiteuse: Pid | null }): boolean {
 	if (pid === null) return false
-	if (pidDeLaVisiteuse !== null && pidDeLaVisiteuse === pid) return false
-	return !vientDeLEspace(lieu) && !vientDUneRelance(lieu.recherche)
+	if (visitorPid !== null && visitorPid === pid) return false
+	return !comesFromDashboard(place) && !comesFromFollowUp(place.recherche)
 }
 
 /**
@@ -50,16 +50,16 @@ export function clicAMesurer({
  * way when the click comes: the click waits for it. A visitor the server cannot tell is counted as
  * anyone. True when the event was handed to Umami.
  */
-export async function mesurerUnClicDeContact(clic: {
+export async function measureContactClick(clic: {
 	pid: Pid | null
-	canal: CanalDeContact
-	lieu: LieuDuClic
+	canal: ContactChannel
+	lieu: ClickPlace
 	monPid: Promise<Pid | null>
-	suivre: Suivre
+	suivre: Track
 }): Promise<boolean> {
-	const { pid, canal, lieu, suivre } = clic
+	const { pid, canal: channel, lieu: place, suivre: track } = clic
 	if (pid === null) return false
-	const pidDeLaVisiteuse = await clic.monPid.catch(() => null)
-	if (!clicAMesurer({ pid, pidDeLaVisiteuse, ...lieu })) return false
-	return suivre('contact_click', { pid, channel: canal })
+	const visitorPid = await clic.monPid.catch(() => null)
+	if (!clickToMeasure({ pid, pidDeLaVisiteuse: visitorPid, ...place })) return false
+	return track('contact_click', { pid, channel: channel })
 }

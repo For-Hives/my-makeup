@@ -2,10 +2,10 @@ import { describe, expect, test } from 'bun:test'
 import type { Payload } from 'payload'
 import { Articles } from '@/collections/Articles'
 import { Talents } from '@/collections/Talents'
-import { JeuFictifRefuse } from '@/jeu-fictif/garde'
-import { poserLaRedactionDuJeu, poserLeJeu } from '@/jeu-fictif/jeu'
-import { ARTICLES_DU_JEU, TALENTS_DU_JEU } from '@/jeu-fictif/redaction'
-import { estUnSlug } from '@/lib/slug'
+import { placeDemoData, placeDemoEditorial } from '@/demo-data/dataset'
+import { DEMO_ARTICLES, DEMO_TALENTS } from '@/demo-data/editorial'
+import { DemoDataRefused } from '@/demo-data/guard'
+import { isSlug } from '@/lib/slug'
 import { definitionDeLaSource } from '../outils/source-strapi/donnees'
 
 /**
@@ -22,16 +22,16 @@ const maxLength = (collection: typeof Articles, nom: string): number | undefined
 
 describe('Les talents et les articles du jeu', () => {
 	test('trois talents et trois articles, dont un seul brouillon', () => {
-		expect(TALENTS_DU_JEU).toHaveLength(3)
-		expect(ARTICLES_DU_JEU).toHaveLength(3)
-		expect(ARTICLES_DU_JEU.filter(({ statut }) => statut === 'draft')).toHaveLength(1)
-		expect(ARTICLES_DU_JEU.filter(({ statut }) => statut === 'published')).toHaveLength(2)
+		expect(DEMO_TALENTS).toHaveLength(3)
+		expect(DEMO_ARTICLES).toHaveLength(3)
+		expect(DEMO_ARTICLES.filter(({ statut }) => statut === 'draft')).toHaveLength(1)
+		expect(DEMO_ARTICLES.filter(({ statut }) => statut === 'published')).toHaveLength(2)
 	})
 
 	test('chaque adresse est une adresse que le serveur accepte telle quelle, et aucune n’est partagée', () => {
-		for (const liste of [TALENTS_DU_JEU, ARTICLES_DU_JEU]) {
+		for (const liste of [DEMO_TALENTS, DEMO_ARTICLES]) {
 			const slugs = liste.map(({ slug }) => slug)
-			for (const slug of slugs) expect(estUnSlug(slug), slug).toBe(true)
+			for (const slug of slugs) expect(isSlug(slug), slug).toBe(true)
 			expect(new Set(slugs).size).toBe(slugs.length)
 		}
 	})
@@ -41,7 +41,7 @@ describe('Les talents et les articles du jeu', () => {
 		const prises = new Set([...(lignes.talents ?? []), ...(lignes.articles ?? [])].map(ligne => String(ligne.slug)))
 
 		expect(prises.size).toBeGreaterThan(0)
-		for (const { slug } of [...TALENTS_DU_JEU, ...ARTICLES_DU_JEU]) expect(prises.has(slug), slug).toBe(false)
+		for (const { slug } of [...DEMO_TALENTS, ...DEMO_ARTICLES]) expect(prises.has(slug), slug).toBe(false)
 	})
 
 	test('les textes pour les moteurs de recherche tiennent dans les bornes du serveur', () => {
@@ -49,7 +49,7 @@ describe('Les talents et les articles du jeu', () => {
 		const description = maxLength(Articles, 'seo_description')
 		expect(titre).toBe(70)
 		expect(description).toBe(155)
-		for (const { seo_title, seo_description } of ARTICLES_DU_JEU) {
+		for (const { seo_title, seo_description } of DEMO_ARTICLES) {
 			expect(seo_title?.length ?? 0).toBeLessThanOrEqual(titre ?? 0)
 			expect(seo_description?.length ?? 0).toBeLessThanOrEqual(description ?? 0)
 		}
@@ -57,12 +57,12 @@ describe('Les talents et les articles du jeu', () => {
 	})
 
 	test('tout dit qu’il est fictif : signature, textes ; aucune adresse de messagerie, aucun lien', () => {
-		for (const article of ARTICLES_DU_JEU) {
+		for (const article of DEMO_ARTICLES) {
 			expect(article.author).toContain('fictive')
 			expect(article.content).toMatch(/fictif/)
 		}
-		for (const talent of TALENTS_DU_JEU) expect(talent.content).toMatch(/fictif/)
-		const tout = JSON.stringify([TALENTS_DU_JEU, ARTICLES_DU_JEU])
+		for (const talent of DEMO_TALENTS) expect(talent.content).toMatch(/fictif/)
+		const tout = JSON.stringify([DEMO_TALENTS, DEMO_ARTICLES])
 		expect(tout).not.toMatch(/@|https?:\/\//)
 	})
 })
@@ -94,8 +94,8 @@ describe('Le chargement de la rédaction du jeu refuse hors du banc', () => {
 			S3_ENDPOINT: 'https://compte-factice.r2.cloudflarestorage.com',
 		}
 
-		await expect(poserLaRedactionDuJeu(payload, { variables: environnement })).rejects.toBeInstanceOf(JeuFictifRefuse)
-		await expect(poserLeJeu(payload, { variables: environnement })).rejects.toBeInstanceOf(JeuFictifRefuse)
+		await expect(placeDemoEditorial(payload, { variables: environnement })).rejects.toBeInstanceOf(DemoDataRefused)
+		await expect(placeDemoData(payload, { variables: environnement })).rejects.toBeInstanceOf(DemoDataRefused)
 		expect(appels).toEqual([])
 	})
 })

@@ -7,8 +7,8 @@ import { FAILURE_MESSAGE } from '@/lib/dashboard/result'
 import { savePortfolio } from '@/lib/dashboard/save-portfolio'
 import { serverEnv } from '@/lib/env'
 import { namedPhotos, PHOTO_MESSAGES } from '@/lib/profile/photos'
-import { rapprocherLeStockageEtLaBase } from '@/lib/rapprochement-lecture'
-import { listerLeStockage } from '@/lib/stockage'
+import { reconcileStorageAndDatabase } from '@/lib/reconciliation-read'
+import { listStorage } from '@/lib/storage'
 import type { Media } from '@/payload-types'
 import { readPublicProfile } from '@/services/public/profiles'
 import { type Espion, espionnerLeStockage, suppressionsSansCorbeille } from '../outils/espion-s3'
@@ -109,7 +109,7 @@ const nombreDeMedias = async () => (await (await payloadDeTest()).count({ collec
 async function orphelins() {
 	const storage = serverEnv().storage
 	if (!storage) throw new Error('Pas de stockage sur le banc.')
-	const rapport = await rapprocherLeStockageEtLaBase(await payloadDeTest(), () => listerLeStockage(storage))
+	const rapport = await reconcileStorageAndDatabase(await payloadDeTest(), () => listStorage(storage))
 	return {
 		objetsSansMedia: rapport.objetsSansMedia,
 		mediasSansObjet: rapport.mediasSansObjet,

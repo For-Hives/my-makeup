@@ -1,13 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
-import {
-	adresseDuVisiteur,
-	DELAI_DU_RELAIS_MS,
-	enTetesDuRelais,
-	relayerLEnvoi,
-	relayerLeScript,
-} from '@/lib/analytics/relais'
+import { RELAY_TIMEOUT_MS, relayHeaders, relayScript, relaySend, visitorAddress } from '@/lib/analytics/relay'
 import {
 	BEFORE_SEND_NAME,
 	DEFAULT_UMAMI_DOMAINS,
@@ -273,15 +267,15 @@ describe('le script de l’en-tête de chaque page', () => {
 
 describe('l’adresse du visiteur et les en-têtes du relais', () => {
 	test('l’adresse est la dernière entrée de X-Forwarded-For, jamais X-Real-IP', () => {
-		expect(adresseDuVisiteur(new Headers({ 'x-forwarded-for': '1.2.3.4, 203.0.113.7' }))).toBe('203.0.113.7')
-		expect(adresseDuVisiteur(new Headers({ 'x-forwarded-for': '2001:db8::7' }))).toBe('2001:db8::7')
-		expect(adresseDuVisiteur(new Headers({ 'x-real-ip': '203.0.113.7' }))).toBeUndefined()
-		expect(adresseDuVisiteur(new Headers({ 'x-forwarded-for': 'pas une adresse' }))).toBeUndefined()
-		expect(adresseDuVisiteur(new Headers())).toBeUndefined()
+		expect(visitorAddress(new Headers({ 'x-forwarded-for': '1.2.3.4, 203.0.113.7' }))).toBe('203.0.113.7')
+		expect(visitorAddress(new Headers({ 'x-forwarded-for': '2001:db8::7' }))).toBe('2001:db8::7')
+		expect(visitorAddress(new Headers({ 'x-real-ip': '203.0.113.7' }))).toBeUndefined()
+		expect(visitorAddress(new Headers({ 'x-forwarded-for': 'pas une adresse' }))).toBeUndefined()
+		expect(visitorAddress(new Headers())).toBeUndefined()
 	})
 
 	test('le relais retient une liste d’en-têtes : ni cookie, ni Referer, ni adresse écrite par le navigateur', () => {
-		const sortants = enTetesDuRelais(
+		const sortants = relayHeaders(
 			new Headers({
 				cookie: 'session=abc',
 				authorization: 'Bearer x',
@@ -319,8 +313,8 @@ const script = (entetes: Record<string, string> = {}) =>
 
 describe('le relais /u/script.js', () => {
 	test('sans instance réglée, 404', async () => {
-		expect((await relayerLeScript(script(), { umami: undefined })).status).toBe(404)
-		expect((await relayerLEnvoi(envoi(), { umami: undefined })).status).toBe(404)
+		expect((await relayScript(script(), { umami: undefined })).status).toBe(404)
+		expect((await relaySend(envoi(), { umami: undefined })).status).toBe(404)
 	})
 
 	test('le script de l’instance est relayé sans cookie ni Referer', async () => {
@@ -333,7 +327,7 @@ describe('le relais /u/script.js', () => {
 				})
 			})
 		)
-		const reponse = await relayerLeScript(
+		const reponse = await relayScript(
 			script({ cookie: 'session=abc', referer: 'https://my-makeup.fr/auth/profil', 'x-forwarded-for': '203.0.113.7' }),
 			{ umami: REEL }
 		)
@@ -355,7 +349,7 @@ describe('le relais /u/script.js', () => {
 			})
 		)
 		for (const hote of ['v3.my-makeup.fr', 'localhost:3000', 'my-makeup.fr.exemple.test']) {
-			const reponse = await relayerLeScript(
+			const reponse = await relayScript(
 				new Request('https://x.exemple.test/u/script.js', { headers: { host: hote } }),
 				{ umami: REEL }
 			)
@@ -364,19 +358,19 @@ describe('le relais /u/script.js', () => {
 		}
 		expect(appels).toBe(0)
 		// www is a host of the site.
-		const www = await relayerLeScript(script({ host: 'www.my-makeup.fr' }), { umami: REEL })
+		const www = await relayScript(script({ host: 'www.my-makeup.fr' }), { umami: REEL })
 		expect(await www.text()).toContain('umami={}')
 		expect(appels).toBe(1)
 	})
 
 	test('l’instance de ce poste (le faux Umami) est relayée depuis n’importe quel hôte', async () => {
 		simuler(http.get('http://127.0.0.1:4200/script.js', () => new HttpResponse('faux')))
-		const reponse = await relayerLeScript(script({ host: 'localhost:3311' }), { umami: LOCAL })
+		const reponse = await relayScript(script({ host: 'localhost:3311' }), { umami: LOCAL })
 		expect(await reponse.text()).toBe('faux')
 	})
 
 	test('une instance muette est coupée au délai, 504', async () => {
-		expect(DELAI_DU_RELAIS_MS).toBe(10_000)
+		expect(RELAY_TIMEOUT_MS).toBe(10_000)
 		simuler(
 			http.get(`${INSTANCE}/script.js`, async () => {
 				await delay('infinite')
@@ -384,21 +378,21 @@ describe('le relais /u/script.js', () => {
 			})
 		)
 		const debut = Date.now()
-		const reponse = await relayerLeScript(script(), { umami: REEL, delaiMs: 150 })
+		const reponse = await relayScript(script(), { umami: REEL, delaiMs: 150 })
 		expect(reponse.status).toBe(504)
 		expect(Date.now() - debut).toBeLessThan(2000)
 	})
 
 	test('une panne, une redirection : 502, jamais suivie', async () => {
 		simuler(http.get(`${INSTANCE}/script.js`, () => HttpResponse.error()))
-		expect((await relayerLeScript(script(), { umami: REEL })).status).toBe(502)
+		expect((await relayScript(script(), { umami: REEL })).status).toBe(502)
 		simuler(
 			http.get(
 				`${INSTANCE}/script.js`,
 				() => new HttpResponse(null, { status: 302, headers: { Location: 'https://autre.exemple.test/' } })
 			)
 		)
-		expect((await relayerLeScript(script(), { umami: REEL })).status).toBe(502)
+		expect((await relayScript(script(), { umami: REEL })).status).toBe(502)
 	})
 })
 
@@ -411,7 +405,7 @@ describe('le relais /u/api/send', () => {
 				return new HttpResponse('jeton', { headers: { 'Set-Cookie': 'a=b' } })
 			})
 		)
-		const reponse = await relayerLEnvoi(
+		const reponse = await relaySend(
 			envoi({
 				cookie: 'session=abc',
 				referer: 'https://my-makeup.fr/auth/profil',
@@ -437,7 +431,7 @@ describe('le relais /u/api/send', () => {
 				return new HttpResponse('jeton')
 			})
 		)
-		const reponse = await relayerLEnvoi(envoi({ host: 'v3.my-makeup.fr' }), {
+		const reponse = await relaySend(envoi({ host: 'v3.my-makeup.fr' }), {
 			umami: { origin: AUTRE_INSTANCE, local: false },
 		})
 		expect(reponse.status).toBe(204)
@@ -446,7 +440,7 @@ describe('le relais /u/api/send', () => {
 
 	test('un corps trop gros n’est pas une mesure : 413', async () => {
 		const gros = 'x'.repeat(40 * 1024)
-		expect((await relayerLEnvoi(envoi({}, gros), { umami: { origin: AUTRE_INSTANCE, local: false } })).status).toBe(413)
+		expect((await relaySend(envoi({}, gros), { umami: { origin: AUTRE_INSTANCE, local: false } })).status).toBe(413)
 	})
 
 	test('une instance muette est coupée au délai, 504', async () => {
@@ -456,9 +450,9 @@ describe('le relais /u/api/send', () => {
 				return new HttpResponse('jamais')
 			})
 		)
-		expect(
-			(await relayerLEnvoi(envoi(), { umami: { origin: AUTRE_INSTANCE, local: false }, delaiMs: 150 })).status
-		).toBe(504)
+		expect((await relaySend(envoi(), { umami: { origin: AUTRE_INSTANCE, local: false }, delaiMs: 150 })).status).toBe(
+			504
+		)
 	})
 
 	test('la route ne répond qu’au POST, le script qu’au GET, et le reste de /u par un 404', async () => {

@@ -1,5 +1,5 @@
 import type { Payload } from 'payload'
-import { identifiantPossible } from '../acces'
+import { possibleId } from '../access'
 import { namedPhotos } from '../profile/photos'
 import type { DashboardProfile } from './cards'
 
@@ -23,7 +23,7 @@ export interface DashboardPhotos {
 
 /** The identifier of a photo in a request: a whole number, or its digits. Nothing else. */
 export const isPhotoId = (valeur: unknown): valeur is PhotoId =>
-	(typeof valeur === 'number' || typeof valeur === 'string') && identifiantPossible(valeur)
+	(typeof valeur === 'number' || typeof valeur === 'string') && possibleId(valeur)
 
 /**
  * The photos her profile names, read by the identifiers of that profile (never by the request): a

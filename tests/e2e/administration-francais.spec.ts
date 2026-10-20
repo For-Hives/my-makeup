@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 import { creerCompte } from '../outils/fabrique-comptes'
 
 /**
- * The admin panel speaks French (ticket 221; src/lib/langue-payload.ts). Payload offers no other
+ * The admin panel speaks French (ticket 221; src/lib/payload-language.ts). Payload offers no other
  * language, so a browser set to English, which asks for English in every request, gets French too.
  */
 test.describe('L’administration s’affiche en français', { tag: '@mobile' }, () => {

@@ -11,8 +11,8 @@
  * Loaded alone (a lock between the processes of the run) and for good: a second load creates nothing.
  */
 
-import { lirePhotoDuJeu, poserLeProfil, profilPresent } from '../../src/jeu-fictif/chargement'
-import { PROFILS_DU_JEU, type ProfilDuJeu } from '../../src/jeu-fictif/profils'
+import { placeProfile, profilePresent, readDemoPhoto } from '../../src/demo-data/loading'
+import { DEMO_PROFILES, type DemoProfile } from '../../src/demo-data/profiles'
 import { payloadDeTest } from '../outils/payload-test'
 import { sousVerrou } from '../outils/verrou'
 
@@ -41,7 +41,7 @@ const NOMS: Readonly<Record<string, string>> = {
 	masquee: 'Juliet',
 }
 
-function variante(type: ProfilDuJeu): ProfilDuJeu {
+function variante(type: DemoProfile): DemoProfile {
 	const nom = NOMS[type.cle]
 	if (!nom) throw new Error(`Pas de nom d’essai pour le profil type « ${type.cle} ».`)
 	const identite =
@@ -63,8 +63,8 @@ function variante(type: ProfilDuJeu): ProfilDuJeu {
 }
 
 /** The profile types of the search, by the key of the type of the set they come from. */
-export const PROFILS_DE_RECHERCHE: ReadonlyMap<string, ProfilDuJeu> = new Map(
-	PROFILS_DU_JEU.filter(({ cle }) => cle !== ECARTE).map(type => [type.cle, variante(type)])
+export const PROFILS_DE_RECHERCHE: ReadonlyMap<string, DemoProfile> = new Map(
+	DEMO_PROFILES.filter(({ cle }) => cle !== ECARTE).map(type => [type.cle, variante(type)])
 )
 
 /** A profile type as it is in the bench: its address, and the name its card shows. */
@@ -83,7 +83,7 @@ export async function poserLesProfilsDeRecherche(): Promise<ReadonlyMap<string, 
 		const payload = await payloadDeTest()
 		const posees = new Map<string, ProfilDeRecherche>()
 		for (const [cle, type] of PROFILS_DE_RECHERCHE) {
-			const profil = (await profilPresent(payload, type)) ?? (await poserLeProfil(payload, type, lirePhotoDuJeu, false))
+			const profil = (await profilePresent(payload, type)) ?? (await placeProfile(payload, type, readDemoPhoto, false))
 			posees.set(cle, {
 				id: profil.profil,
 				slug: profil.slug,

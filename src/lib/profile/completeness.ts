@@ -28,7 +28,7 @@
 
 // Relative imports on purpose: the collection `profils` calls this file at every save (ticket 044),
 // and the collections are also loaded by the Payload CLI, outside of Next.
-import { parsePrice } from '../prix'
+import { parsePrice } from '../price'
 import { publicCity } from './public-place'
 
 /** The 13 criteria of the progress bar, in display order */
@@ -180,7 +180,7 @@ export function usableCity(city: unknown): boolean {
 
 /**
  * First amount read in a text price (« à partir de 80 € », « 1 200 € »), or null (« Sur devis »,
- * out of 5 to 10 000). The reading itself is the single price rule of src/lib/prix.ts.
+ * out of 5 to 10 000). The reading itself is the single price rule of src/lib/price.ts.
  */
 export function numericPrice(price: unknown): number | null {
 	return parsePrice(price).priceFrom

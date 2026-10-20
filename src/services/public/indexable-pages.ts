@@ -16,7 +16,7 @@
 import type { Payload } from 'payload'
 import { displayName, text } from '@/lib/profile/display-name'
 import { INDEXABLE_FILTER } from '@/lib/profile/visibility'
-import { estUnSlug } from '@/lib/slug'
+import { isSlug } from '@/lib/slug'
 
 /** The size of a page of the reading, and the number of pages past which it fails: 10 000 documents. */
 export const PAGE_SIZE = 100
@@ -78,7 +78,7 @@ export async function readIndexableProfiles(payload: Payload): Promise<Indexable
 		})
 	)
 	return docs.flatMap(profil =>
-		estUnSlug(profil.slug) ? [{ slug: profil.slug, nom: displayName(profil), misAJourLe: date(profil.updatedAt) }] : []
+		isSlug(profil.slug) ? [{ slug: profil.slug, nom: displayName(profil), misAJourLe: date(profil.updatedAt) }] : []
 	)
 }
 
@@ -97,7 +97,7 @@ export async function readIndexableTalents(payload: Payload): Promise<IndexableC
 		})
 	)
 	return docs.flatMap(talent =>
-		estUnSlug(talent.slug) && text(talent.title)
+		isSlug(talent.slug) && text(talent.title)
 			? [{ slug: talent.slug, titre: text(talent.title), misAJourLe: date(talent.updatedAt) }]
 			: []
 	)
@@ -118,7 +118,7 @@ export async function readIndexableArticles(payload: Payload): Promise<Indexable
 		})
 	)
 	return docs.flatMap(article =>
-		estUnSlug(article.slug) && text(article.title)
+		isSlug(article.slug) && text(article.title)
 			? [{ slug: article.slug, titre: text(article.title), misAJourLe: date(article.updatedAt) }]
 			: []
 	)

@@ -10,11 +10,11 @@
  * completeness. No rule is written again here.
  */
 
-import { parsePrice } from '@/lib/prix'
+import { parsePrice } from '@/lib/price'
 import { completeness, type ProfileFields, usableCity } from '@/lib/profile/completeness'
 import { DESCRIPTION_MAX_LENGTH, endMessage, NAME_MAX_LENGTH, obtainMessage, textMessage } from '@/lib/profile/lists'
 import { publicPlace } from '@/lib/profile/public-place'
-import { attribuerSlugs, slugDeRepli, slugifier } from '@/lib/slug'
+import { assignSlugs, fallbackSlug, slugify } from '@/lib/slug'
 import {
 	COMPTES_DE_FIXTURE,
 	type Ligne,
@@ -317,16 +317,16 @@ export const CAS: readonly Cas[] = [
 		P,
 		'`username` qui n’est pas déjà son slug',
 		'73',
-		l => l.profils.filter(p => !rempli(p.username) || slugifier(p.username) !== p.username).length,
+		l => l.profils.filter(p => !rempli(p.username) || slugify(p.username) !== p.username).length,
 	],
 	[
 		P,
 		'Slugs de profil en collision (suffixe `-2`)',
 		'0',
 		l =>
-			attribuerSlugs(
+			assignSlugs(
 				l.profils.map(p => ({ id: idDe(p), username: texte(p.username), createdAt: String(p.created_at) }))
-			).filter(p => p.slug !== (slugifier(p.username) || slugDeRepli(p.id))).length,
+			).filter(p => p.slug !== (slugify(p.username) || fallbackSlug(p.id))).length,
 	],
 	[
 		P,

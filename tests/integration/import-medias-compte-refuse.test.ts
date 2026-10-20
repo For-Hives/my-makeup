@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { randomBytes } from 'node:crypto'
 import { TYPE_PROFIL } from '../../scripts/migration/import/medias'
 import type { Rapport } from '../../scripts/migration/import/rapport'
-import { CONTEXTE_SANS_PROFIL } from '../../src/collections/Profiles'
+import { NO_PROFILE_CONTEXT } from '../../src/collections/Profiles'
 import { creerCompte } from '../outils/fabrique-comptes'
 import { importerSurLeBanc } from '../outils/import'
 import { payloadDeTest, viderLaBase } from '../outils/payload-test'
@@ -45,7 +45,7 @@ beforeAll(async () => {
 	await payload.create({
 		collection: 'pros',
 		data: { email: String(ligne?.email).trim().toLowerCase(), password: randomBytes(24).toString('base64url') },
-		context: CONTEXTE_SANS_PROFIL,
+		context: NO_PROFILE_CONTEXT,
 		disableVerificationEmail: true,
 		overrideAccess: true,
 	})

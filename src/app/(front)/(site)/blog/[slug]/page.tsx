@@ -6,7 +6,7 @@ import { getPayload } from 'payload'
 import { cache } from 'react'
 import { Cta } from '@/components/blocks/Cta'
 import { MarkdownContent } from '@/components/content/MarkdownContent'
-import { markdownEnHtml } from '@/lib/markdown'
+import { markdownToHtml } from '@/lib/markdown'
 import { articleStructuredData, breadcrumbStructuredData, SITE_NAME, serializeJsonLd } from '@/lib/seo/json-ld'
 import { editorialMetadata } from '@/lib/seo/metadata'
 import { canonicalUrl } from '@/lib/seo/url'
@@ -71,7 +71,7 @@ export default async function ArticlePage({ params }: PageProps<'/blog/[slug]'>)
 	const { slug } = await params
 	const article = await readArticle(slug)
 	if (!article) notFound()
-	const html = await markdownEnHtml(article.contenu)
+	const html = await markdownToHtml(article.contenu)
 	const articleUrl = canonicalUrl(`/blog/${article.slug}`)
 	const data = [
 		articleStructuredData({

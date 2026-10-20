@@ -2,8 +2,8 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { GET } from '@/app/api/stats/weekly/route'
 import { type AuthEvent, log } from '@/lib/auth/auth-log'
 import { replaceLegacyHash } from '@/lib/auth/legacy'
-import { stockageDePayload } from '@/lib/contact/envoi-payload'
-import { StatsHebdo } from '@/lib/stats-hebdo'
+import { payloadStorage } from '@/lib/contact/payload-send'
+import { WeeklyStats } from '@/lib/weekly-stats'
 import { adresseDuJeu, TYPES_DU_JEU } from '../fixtures/comptes'
 import { poserLeJeuDuBanc } from '../fixtures/jeu-du-banc'
 import { MOT_DE_PASSE_HERITE_DE_FIXTURE, TYPES_DE_COMPTE } from '../outils/fabrique-comptes'
@@ -24,7 +24,7 @@ const lire = async (debut: Date, fin: Date) => {
 	const url = `http://localhost/api/stats/weekly?from=${debut.toISOString()}&to=${fin.toISOString()}`
 	const reponse = await GET(new Request(url, { headers: ENTETES }))
 	expect(reponse.status).toBe(200)
-	return StatsHebdo.parse(await reponse.json())
+	return WeeklyStats.parse(await reponse.json())
 }
 
 const autour = () => [new Date(Date.now() - 3_600_000), new Date(Date.now() + 3_600_000)] as const
@@ -47,7 +47,7 @@ beforeAll(async () => {
 	await payload.delete({ collection: 'auth-events', where: { id: { exists: true } }, overrideAccess: true })
 	await payload.delete({ collection: 'contact-requests', where: { id: { exists: true } }, overrideAccess: true })
 
-	const stockage = stockageDePayload(payload)
+	const stockage = payloadStorage(payload)
 	const message = {
 		prenom: 'Léa',
 		nom: 'Témoin',
