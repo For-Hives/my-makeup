@@ -25,7 +25,7 @@ import { PUBLIC_PROFILE_FIELDS } from '../../src/services/public/profiles'
 /**
  * Tickets 026 and 059: what the import makes of a profile of the old site, the name of its page,
  * and the fields the public reading chooses. No database: the runs are in
- * tests/integration/import-profils.test.ts. Every value here is fictional.
+ * tests/integration/import-profiles.test.ts. Every value here is fictional.
  */
 
 const profile = (id: number, modif: Partial<ReadProfile> = {}): ReadProfile => ({

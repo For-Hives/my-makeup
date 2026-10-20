@@ -10,7 +10,7 @@
  *   belong to nobody: the newsroom sends them and changes them.
  *
  * One rule per subject: the collections call these functions and never test a role themselves.
- * Every rule here has its lines in the access matrix (tests/integration/payload-acces.test.ts),
+ * Every rule here has its lines in the access matrix (tests/integration/payload-access.test.ts),
  * played through REST and through the Local API with the rules active.
  *
  * A rule that answers a `Where` limits the documents to those that match it: Payload adds it to

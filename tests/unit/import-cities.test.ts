@@ -25,7 +25,7 @@ import { sourceDefinition } from '../support/source-strapi/data'
 /**
  * Ticket 063: the city typed in a profile becomes a commune of the official list, with its INSEE
  * code, never an address. The referential (geo.api.gouv.fr) is simulated: invented communes, with
- * well-formed INSEE codes. No database: the runs are in tests/integration/import-profils.test.ts.
+ * well-formed INSEE codes. No database: the runs are in tests/integration/import-profiles.test.ts.
  */
 
 const ROOT = path.resolve(import.meta.dir, '../..')

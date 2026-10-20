@@ -25,7 +25,7 @@ import { benchCase } from '../support/url-parity'
 /**
  * Ticket 173: the check of a host (scripts/cutover/host-check.ts). No request leaves this machine:
  * the host is played by a fake transport that answers what the frozen table promises. The run on a
- * real host is tests/e2e/controle-hote.spec.ts (I45, U61 to U64).
+ * real host is tests/e2e/host-check.spec.ts (I45, U61 to U64).
  */
 
 const SLUG_PROFILE = 'essai-controle-hote'

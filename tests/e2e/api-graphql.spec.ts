@@ -9,9 +9,9 @@ import { expect, test } from '@playwright/test'
  */
 test.describe('L’API servie par l’application : GraphQL est coupé (I05)', () => {
 	test('/api/graphql et /api/graphql-playground répondent 404, sans rien lire', async ({ request }) => {
-		const requete = await request.post('/api/graphql', { data: { query: '{ __typename }' } })
-		expect(requete.status()).toBe(404)
-		expect(await requete.text()).toBe('')
+		const httpRequest = await request.post('/api/graphql', { data: { query: '{ __typename }' } })
+		expect(httpRequest.status()).toBe(404)
+		expect(await httpRequest.text()).toBe('')
 
 		expect((await request.get('/api/graphql')).status()).toBe(404)
 		expect((await request.get('/api/graphql-playground')).status()).toBe(404)

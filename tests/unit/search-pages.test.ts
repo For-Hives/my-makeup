@@ -1,6 +1,6 @@
 /**
  * The pages of the results, the brake and the failing read (ticket 100; plan 02 U18, E41 and I30 on
- * the logic). Unit tests: no database, no server. The page is tests/e2e/recherche-mot-cle.spec.ts.
+ * the logic). Unit tests: no database, no server. The page is tests/e2e/keyword-search.spec.ts.
  */
 
 import { describe, expect, test } from 'bun:test'

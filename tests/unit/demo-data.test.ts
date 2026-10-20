@@ -25,7 +25,7 @@ import { benchEnvironment, ROOT } from '../support/bench'
 /**
  * The fictional set of the bench (ticket 051), without the bench: its
  * twelve profile types, the state the single rule gives each one, its six photos, and the guard
- * that keeps it off the site. The same set loaded on the bench: tests/integration/banc-profils-types.test.ts.
+ * that keeps it off the site. The same set loaded on the bench: tests/integration/bench-profile-types.test.ts.
  */
 
 const PHOTO_FOLDER = path.join(ROOT, 'src/demo-data/photos')

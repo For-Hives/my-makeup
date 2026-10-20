@@ -20,7 +20,7 @@ import {
 /**
  * The bound of every request (ticket 048; plan 02 §7.2, U60), without a database: what a filter
  * counts, which paths it names, who is refused. The integration tests play it through the real
- * APIs (tests/integration/requetes-bornees.test.ts).
+ * APIs (tests/integration/bounded-queries.test.ts).
  */
 
 type User = PayloadRequest['user']

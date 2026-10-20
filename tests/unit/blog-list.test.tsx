@@ -10,7 +10,7 @@ import {
 	listArticles,
 } from '../../src/services/public/article-list'
 
-/** The list of the blog (ticket 107), without a database. The run on the bench: tests/integration/blog-liste.test.ts. */
+/** The list of the blog (ticket 107), without a database. The run on the bench: tests/integration/blog-list.test.ts. */
 
 const article = (slug: string, publieLe: string | null, extra: Partial<ListedArticle> = {}): ListedArticle => ({
 	slug,

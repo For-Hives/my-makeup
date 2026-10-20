@@ -15,7 +15,7 @@ import {
 
 /**
  * Ticket 233: what the import run on demand refuses and remembers, with no database. The passes
- * themselves, on the bench with the fake Strapi source, are in tests/integration/import-a-la-demande.test.ts.
+ * themselves, on the bench with the fake Strapi source, are in tests/integration/import-on-demand.test.ts.
  */
 
 const TARGET = 'postgres://app:mot-de-passe-factice@payload.interne.example.test:5432/mymakeup'

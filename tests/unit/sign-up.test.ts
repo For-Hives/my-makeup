@@ -204,7 +204,7 @@ describe('confirmerLEmail : la logique du lien, sans base', () => {
 })
 
 describe('« adresse déjà utilisée » : seulement pour l’unicité de l’email (ticket 224)', () => {
-	// The two shapes Payload gives, as the real ones read on the bench (tests/integration/auth-inscription-email-pris.test.ts).
+	// The two shapes Payload gives, as the real ones read on the bench (tests/integration/auth-sign-up-email-taken.test.ts).
 	const refusal = (message: string, path = 'email') => ({ data: { errors: [{ message, path }] } })
 	const uniqueness = refusal("Un utilisateur avec l'email donné est déjà enregistré.")
 	const shape = refusal('S’il vous plaît, veuillez entrer une adresse e-mail valide.')

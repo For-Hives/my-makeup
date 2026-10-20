@@ -21,12 +21,12 @@ import { pngPlain } from '../support/source-strapi/images'
  */
 
 const source = benchSource()
-const { lignes } = sourceDefinition(source.medias)
+const { lignes: lines } = sourceDefinition(source.medias)
 
-const BROUILLON = 12
+const DRAFT = 12
 const IMAGE = 120
 const PDF = 121
-const CLE_DE_L_IMAGE = '1/image_article_fictive_0a1b2c3d4e.png'
+const IMAGE_KEY = '1/image_article_fictive_0a1b2c3d4e.png'
 
 /**
  * A markdown of more than 60 000 characters that a careless copy would change: line ends of both
@@ -45,20 +45,20 @@ const MARKDOWN = [
 ].join('')
 
 /** As the owner of the bench, the only one who may write into the source. */
-async function avecLeProprietaire<T>(travail: (sql: SQL) => Promise<T>): Promise<T> {
-	const proprietaire = new SQL({ url: source.administration, max: 1 })
+async function withOwner<T>(travail: (sql: SQL) => Promise<T>): Promise<T> {
+	const owner = new SQL({ url: source.administration, max: 1 })
 	try {
-		return await travail(proprietaire)
+		return await travail(owner)
 	} finally {
-		await proprietaire.close()
+		await owner.close()
 	}
 }
 
 /** The articles of the source, the draft this file adds included. */
-const ARTICLES_DE_LA_SOURCE = [
-	...lignes.articles,
+const SOURCE_ARTICLES = [
+	...lines.articles,
 	{
-		id: BROUILLON,
+		id: DRAFT,
 		title: 'Un brouillon fictif',
 		content: MARKDOWN,
 		author: 'La rédaction',
@@ -72,10 +72,10 @@ const ARTICLES_DE_LA_SOURCE = [
 	},
 ]
 
-const enIso = (horodatage: unknown): string | null =>
+const inIso = (horodatage: unknown): string | null =>
 	horodatage === null ? null : `${String(horodatage).replace(' ', 'T')}Z`
 
-async function articlesDeLaCible(): Promise<Article[]> {
+async function targetArticles(): Promise<Article[]> {
 	const payload = await testPayload()
 	const { docs } = await payload.find({
 		collection: 'articles',
@@ -87,23 +87,23 @@ async function articlesDeLaCible(): Promise<Article[]> {
 	return docs
 }
 
-let premier: Report
+let first: Report
 
 beforeAll(async () => {
 	await emptyBase()
 	// Before the source: emptying the bucket would take its objects away.
 	await emptyStorage()
 	await createSourceStrapi()
-	await dropObject(CLE_DE_L_IMAGE, pngPlain(32, 24, { rouge: 200, vert: 120, bleu: 160 }), { type: 'image/png' })
-	await avecLeProprietaire(async sql => {
+	await dropObject(IMAGE_KEY, pngPlain(32, 24, { rouge: 200, vert: 120, bleu: 160 }), { type: 'image/png' })
+	await withOwner(async sql => {
 		await sql`INSERT INTO articles (id, title, content, author, seo_title, seo_description, slug, excerpt,
 			created_at, updated_at, published_at)
-			VALUES (${BROUILLON}, 'Un brouillon fictif', ${MARKDOWN}, 'La rédaction', 'Un brouillon fictif',
+			VALUES (${DRAFT}, 'Un brouillon fictif', ${MARKDOWN}, 'La rédaction', 'Un brouillon fictif',
 			'Une description fictive.', 'un-brouillon-fictif', NULL, '2026-10-10 08:00:00', '2026-10-11 09:30:00', NULL)`
 		await sql.unsafe(
 			`INSERT INTO files (id, name, width, height, hash, ext, mime, size, url, created_at, updated_at)
 			VALUES (${IMAGE}, 'image-article.png', 32, 24, 'image_article_fictive_0a1b2c3d4e', '.png', 'image/png', 0.2,
-				'${source.medias}/${CLE_DE_L_IMAGE}', '2026-10-09 00:40:00', '2026-10-09 00:40:00'),
+				'${source.medias}/${IMAGE_KEY}', '2026-10-09 00:40:00', '2026-10-09 00:40:00'),
 			(${PDF}, 'fiche.pdf', NULL, NULL, 'fiche_fictive_9f8e7d6c5b', '.pdf', 'application/pdf', 1.1,
 				'${source.medias}/1/fiche_fictive_9f8e7d6c5b.pdf', '2026-10-09 00:41:00', '2026-10-09 00:41:00')`
 		)
@@ -112,77 +112,77 @@ beforeAll(async () => {
 			VALUES (900, ${IMAGE}, 1, '${TYPE_ARTICLE}', 'galery', 1), (901, ${PDF}, 7, '${TYPE_ARTICLE}', 'galery', 1)`
 		)
 	})
-	premier = await importOnBench()
+	first = await importOnBench()
 }, 60_000)
 
 afterAll(async () => {
 	await emptyBase()
 	await eraseSourceStrapi()
-	await deleteObject(CLE_DE_L_IMAGE)
+	await deleteObject(IMAGE_KEY)
 })
 
 describe('Les articles sont repris à l’identique, brouillons compris (ticket 061)', () => {
 	test('autant d’articles qu’à la source, le même slug, le markdown égal à l’octet près (I39, I40)', async () => {
-		const cible = await articlesDeLaCible()
+		const target = await targetArticles()
 
-		expect(cible.map(({ strapiId }) => strapiId)).toEqual([1, 7, BROUILLON])
-		expect(premier.collections.articles).toMatchObject({ source: 3, created: 3, updated: 0, refused: [] })
-		expect(premier.parity?.articles).toMatchObject({ expected: 3, equal: 3, different: [], missing: [], extra: [] })
-		const octets = (texte: unknown) => Buffer.from(String(texte), 'utf8')
-		for (const article of cible) {
-			const ligne = ARTICLES_DE_LA_SOURCE.find(({ id }) => id === article.strapiId)
+		expect(target.map(({ strapiId }) => strapiId)).toEqual([1, 7, DRAFT])
+		expect(first.collections.articles).toMatchObject({ source: 3, created: 3, updated: 0, refused: [] })
+		expect(first.parity?.articles).toMatchObject({ expected: 3, equal: 3, different: [], missing: [], extra: [] })
+		const bytes = (texte: unknown) => Buffer.from(String(texte), 'utf8')
+		for (const article of target) {
+			const line = SOURCE_ARTICLES.find(({ id }) => id === article.strapiId)
 			expect(article, String(article.strapiId)).toMatchObject({
-				title: ligne?.title,
-				slug: ligne?.slug,
-				author: ligne?.author,
-				excerpt: ligne?.excerpt ?? null,
-				seo_title: ligne?.seo_title,
-				seo_description: ligne?.seo_description,
+				title: line?.title,
+				slug: line?.slug,
+				author: line?.author,
+				excerpt: line?.excerpt ?? null,
+				seo_title: line?.seo_title,
+				seo_description: line?.seo_description,
 			})
-			expect(octets(article.content).equals(octets(ligne?.content)), String(article.strapiId)).toBe(true)
+			expect(bytes(article.content).equals(bytes(line?.content)), String(article.strapiId)).toBe(true)
 		}
-		expect(cible.find(({ strapiId }) => strapiId === BROUILLON)?.content?.length).toBeGreaterThan(60_000)
+		expect(target.find(({ strapiId }) => strapiId === DRAFT)?.content?.length).toBeGreaterThan(60_000)
 	})
 
 	test('l’état publié ou brouillon et la date de publication sont conservés, et les dates d’origine', async () => {
-		for (const article of await articlesDeLaCible()) {
-			const ligne = ARTICLES_DE_LA_SOURCE.find(({ id }) => id === article.strapiId)
+		for (const article of await targetArticles()) {
+			const line = SOURCE_ARTICLES.find(({ id }) => id === article.strapiId)
 			expect(article, String(article.strapiId)).toMatchObject({
-				_status: ligne?.published_at === null ? 'draft' : 'published',
-				publishedAt: enIso(ligne?.published_at ?? null),
-				createdAt: enIso(ligne?.created_at),
-				updatedAt: enIso(ligne?.updated_at),
+				_status: line?.published_at === null ? 'draft' : 'published',
+				publishedAt: inIso(line?.published_at ?? null),
+				createdAt: inIso(line?.created_at),
+				updatedAt: inIso(line?.updated_at),
 			})
 		}
-		const brouillon = (await articlesDeLaCible()).find(({ strapiId }) => strapiId === BROUILLON)
-		expect([brouillon?._status, brouillon?.publishedAt]).toEqual(['draft', null])
+		const draft = (await targetArticles()).find(({ strapiId }) => strapiId === DRAFT)
+		expect([draft?._status, draft?.publishedAt]).toEqual(['draft', null])
 	})
 
 	test('une image de galerie est rattachée si son média est adopté ; un PDF est signalé, pas inventé', async () => {
 		const payload = await testPayload()
-		const cible = await articlesDeLaCible()
-		const { docs: medias } = await payload.find({
+		const target = await targetArticles()
+		const { docs: media } = await payload.find({
 			collection: 'media',
 			depth: 0,
 			pagination: false,
 			where: { strapiId: { in: [IMAGE, PDF] } },
 		})
-		const image = medias.find(({ strapiId }) => strapiId === IMAGE) as Media | undefined
+		const image = media.find(({ strapiId }) => strapiId === IMAGE) as Media | undefined
 
-		expect(medias.map(({ strapiId }) => strapiId)).toEqual([IMAGE])
-		expect(image).toMatchObject({ owner: null, mimeType: 'image/png', url: `${source.medias}/${CLE_DE_L_IMAGE}` })
-		expect(cible.find(({ strapiId }) => strapiId === 1)?.gallery).toEqual([image?.id ?? -1])
-		expect(cible.find(({ strapiId }) => strapiId === 7)?.gallery ?? []).toEqual([])
-		expect(premier.collections.articles?.photosNotCarriedOver).toEqual([{ entry: 7, file: PDF }])
-		expect(premier.collections.media?.files?.notAdopted).toContainEqual({ file: PDF, reason: 'pas-une-image' })
+		expect(media.map(({ strapiId }) => strapiId)).toEqual([IMAGE])
+		expect(image).toMatchObject({ owner: null, mimeType: 'image/png', url: `${source.medias}/${IMAGE_KEY}` })
+		expect(target.find(({ strapiId }) => strapiId === 1)?.gallery).toEqual([image?.id ?? -1])
+		expect(target.find(({ strapiId }) => strapiId === 7)?.gallery ?? []).toEqual([])
+		expect(first.collections.articles?.photosNotCarriedOver).toEqual([{ entry: 7, file: PDF }])
+		expect(first.collections.media?.files?.notAdopted).toContainEqual({ file: PDF, reason: 'pas-une-image' })
 	})
 
 	test('second passage : 0 création, 0 mise à jour', async () => {
-		const avant = await articlesDeLaCible()
+		const before = await targetArticles()
 
 		const second = await importOnBench()
 
 		expect(second.collections.articles).toMatchObject({ created: 0, updated: 0, unchanged: 3, refused: [] })
-		expect(await articlesDeLaCible()).toEqual(avant)
+		expect(await targetArticles()).toEqual(before)
 	})
 })

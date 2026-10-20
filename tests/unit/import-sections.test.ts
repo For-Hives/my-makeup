@@ -5,7 +5,7 @@ import { EMPTY_SECTIONS, listsValues, type ReadSections, rowsInBounds } from '..
 /**
  * Ticket 060: what the import makes of the sections of a profile of the old site, before and
  * without the database: each list in its order, each value as it is, the photos of the media
- * adopted. The runs on the bench are in tests/integration/import-profils-sections.test.ts. Every
+ * adopted. The runs on the bench are in tests/integration/import-profile-sections.test.ts. Every
  * value here is fictional.
  */
 

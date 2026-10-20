@@ -13,7 +13,7 @@ import { keptConsents, PROFILES_ADAPTER, PROFILES_IN_SERVICE_ADAPTER } from '../
 /**
  * Ticket 227: a run of the import does not undo what the v3 wrote. The guard of a target in service,
  * the accounts left as they are with `--target-in-service`, and the date of consent kept. No database:
- * the runs are in tests/integration/import-rejeux.test.ts. Every value here is fictional.
+ * the runs are in tests/integration/import-replays.test.ts. Every value here is fictional.
  */
 
 describe('la garde d’une cible déjà utilisée par la v3 (ticket 227)', () => {

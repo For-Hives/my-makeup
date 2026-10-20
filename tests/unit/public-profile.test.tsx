@@ -8,7 +8,7 @@ import { type ProfilePageData, type PublicProfile, publicProfileOf } from '@/ser
 /**
  * The page of a public profile, rendered from the profile the public reading gives, on the twelve
  * profile types of the fictional set and without a database (tickets 101 to 103; plan 02 E43 and E44
- * run the same page in a browser: tests/e2e/profil-public.spec.ts).
+ * run the same page in a browser: tests/e2e/public-profile.spec.ts).
  */
 
 const PHOTO_URL = 'https://photos.example.test/media'

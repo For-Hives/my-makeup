@@ -9,7 +9,7 @@ import { spyCache } from '../support/cache-spy'
 /**
  * Ticket 047: which pages a save makes stale (src/lib/revalidate.ts), and the hooks that tell
  * Next (src/collections/revalidate.ts), without a database. The same, through Payload and the
- * REST API on the bench: tests/integration/revalidation.test.ts (I21).
+ * REST API on the bench: tests/integration/revalidate.test.ts (I21).
  */
 
 const published = (slug: string): PublicState => ({ slug, visible: true })

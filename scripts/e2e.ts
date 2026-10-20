@@ -2,7 +2,7 @@
  * Command line of the end-to-end tests (docs/tests/e2e.md).
  *
  *   bun run test:e2e                              every test of tests/e2e, at both screen sizes
- *   bun run test:e2e tests/e2e/coquille.spec.ts   one file
+ *   bun run test:e2e tests/e2e/shell.spec.ts   one file
  *   bun run test:e2e --project=mobile --headed    any option of `playwright test`
  *
  * One run, in this order:

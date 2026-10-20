@@ -128,7 +128,7 @@ describe('la configuration de Playwright', () => {
 		expect(bureau?.grep).toBeUndefined()
 		expect(mobile?.grep).toBeInstanceOf(RegExp)
 		const kept = (titre: string) => (mobile?.grep as RegExp).test(titre)
-		expect(kept('coquille.spec.ts Essai coquille @mobile l’accueil s’ouvre')).toBe(true)
+		expect(kept('shell.spec.ts Essai coquille @mobile l’accueil s’ouvre')).toBe(true)
 		expect(kept('admin.spec.ts Liste des profils')).toBe(false)
 		expect(mobile?.use).toMatchObject({ isMobile: true, hasTouch: true })
 	})
@@ -140,7 +140,7 @@ describe('la configuration de Playwright', () => {
 		expect(only?.testMatch).toBe(TEST_ONLY_ON_BENCH)
 		expect(bureau?.testIgnore).toBe(TEST_ONLY_ON_BENCH)
 		expect(mobile?.testIgnore).toBe(TEST_ONLY_ON_BENCH)
-		expect(only?.testMatch).toMatch(/tranche-profil-importe\.spec\.ts$/)
+		expect(only?.testMatch).toMatch(/imported-profile-slice\.spec\.ts$/)
 	})
 
 	test('trace, vidéo et capture sont gardées pour un essai en échec, dès la première tentative', () => {
@@ -279,18 +279,18 @@ describe('ce que « bun run test:e2e » donne au build et à Playwright', () => 
 	})
 
 	test('ce qui est demandé passe tel quel dans les deux passages : un fichier, une option, un quart', () => {
-		const { principale: main, finale } = playwrightPhases(['tests/e2e/coquille.spec.ts', '--workers=1', '--shard=2/4'])
+		const { principale: main, finale } = playwrightPhases(['tests/e2e/shell.spec.ts', '--workers=1', '--shard=2/4'])
 
 		expect(main).toEqual([
 			'test',
-			'tests/e2e/coquille.spec.ts',
+			'tests/e2e/shell.spec.ts',
 			'--workers=1',
 			'--shard=2/4',
 			'--project=chromium',
 			'--project=mobile',
 			'--pass-with-no-tests',
 		])
-		expect(finale?.slice(0, 4)).toEqual(['test', 'tests/e2e/coquille.spec.ts', '--workers=1', '--shard=2/4'])
+		expect(finale?.slice(0, 4)).toEqual(['test', 'tests/e2e/shell.spec.ts', '--workers=1', '--shard=2/4'])
 	})
 
 	test('un projet demandé, sous ses deux écritures, choisit son passage et ne se répète pas dans l’autre', () => {

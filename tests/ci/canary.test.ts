@@ -18,10 +18,10 @@ const fault = (file: string) => {
 	if (!found) throw new Error(`no canary fault for ${file}`)
 	return found
 }
-const FALSE_TEST = fault('tests/unit/canari.test.ts')
-const TYPE_ERROR = fault('tests/ci/canari-types.ts')
-const BIOME_ERROR = fault('tests/ci/canari-biome.ts')
-const FALSE_E2E = fault('tests/e2e/canari.spec.ts')
+const FALSE_TEST = fault('tests/unit/canary.test.ts')
+const TYPE_ERROR = fault('tests/ci/canary-types.ts')
+const BIOME_ERROR = fault('tests/ci/canary-biome.ts')
+const FALSE_E2E = fault('tests/e2e/canary.spec.ts')
 
 let folder = ''
 
@@ -54,10 +54,10 @@ afterAll(() => {
 describe('the canary plants four faults, one per tool', () => {
 	test('four files, under tests/ only: nothing of the canary enters the Docker image', () => {
 		expect(CANARY_FAULTS.map(({ file, command, red }) => [file, command, red])).toEqual([
-			['tests/unit/canari.test.ts', 'bun run test:unit', 'unit › Unit tests'],
-			['tests/ci/canari-types.ts', 'bun run typecheck', 'qualite › Types'],
-			['tests/ci/canari-biome.ts', 'bun run ci:biome', 'qualite › Biome'],
-			['tests/e2e/canari.spec.ts', 'bun run test:e2e', 'e2e, one of the shards › End-to-end tests'],
+			['tests/unit/canary.test.ts', 'bun run test:unit', 'unit › Unit tests'],
+			['tests/ci/canary-types.ts', 'bun run typecheck', 'qualite › Types'],
+			['tests/ci/canary-biome.ts', 'bun run ci:biome', 'qualite › Biome'],
+			['tests/e2e/canary.spec.ts', 'bun run test:e2e', 'e2e, one of the shards › End-to-end tests'],
 		])
 	})
 

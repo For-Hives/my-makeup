@@ -11,7 +11,7 @@ import { type PublicProfile, publicProfileOf } from '@/services/public/profiles'
 
 /**
  * The click on a contact of a public profile (ticket 144; plan 02 U84, and E52 in a browser:
- * tests/e2e/mesure-clic-contact.spec.ts): counted once, with the profile and the channel, and not for
+ * tests/e2e/analytics-contact-click.spec.ts): counted once, with the profile and the channel, and not for
  * the artist herself, nor from her space, nor from a reminder link.
  */
 

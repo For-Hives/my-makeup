@@ -979,7 +979,7 @@ describe('the CI runs the integration tests and the end-to-end tests on the test
 		[
 			'one integration file instead of its shard of the folder',
 			INTEGRATION_TESTS,
-			'run: bun run test:integration tests/integration/banc-base.test.ts',
+			'run: bun run test:integration tests/integration/bench-base.test.ts',
 			`job integration : il doit lancer « bun run test:integration --shard=${SHARD}/3 », seule dans son étape`,
 		],
 		[
@@ -1234,7 +1234,7 @@ describe('C06: no end-to-end test waits for a fixed time', () => {
 	test('no file of tests/e2e waits for a duration', () => {
 		const files = e2eFiles()
 
-		expect(files.map(({ file }) => file)).toContain(`${E2E}/coquille.spec.ts`)
+		expect(files.map(({ file }) => file)).toContain(`${E2E}/shell.spec.ts`)
 		expect(fixedWaits(files)).toEqual([])
 	})
 
@@ -1450,8 +1450,8 @@ describe('C07: Playwright cannot point at production, and the CI cannot skip tes
 		test('with a local target it reads its configuration and lists the tests at both screen sizes', async () => {
 			const { code, printed } = await playwright('http://localhost:3100', '--list')
 
-			expect(printed).toContain('[chromium] › coquille.spec.ts')
-			expect(printed).toContain('[mobile] › coquille.spec.ts')
+			expect(printed).toContain('[chromium] › shell.spec.ts')
+			expect(printed).toContain('[mobile] › shell.spec.ts')
 			expect(code).toBe(0)
 		}, 30_000)
 	})

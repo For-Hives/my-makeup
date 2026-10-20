@@ -15,7 +15,7 @@ import PageSolutions, {
 } from '../../src/app/(front)/(site)/solutions/pour-les-maquilleuses/page'
 import { type OldSiteTitles, titleFingerprint } from '../support/url-parity'
 
-/** The four fixed pages for makeup artists and « À propos » (ticket 110), without a database. Their run in a browser: tests/e2e/pages-maquilleuses.spec.ts. */
+/** The four fixed pages for makeup artists and « À propos » (ticket 110), without a database. Their run in a browser: tests/e2e/artist-pages.spec.ts. */
 
 const old: OldSiteTitles = JSON.parse(readFileSync(new URL('../fixtures/url-parity-h1.json', import.meta.url), 'utf8'))
 

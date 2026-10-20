@@ -11,14 +11,14 @@ import { testPayload } from '../support/payload-test'
  * team lands in the same box, so a test reads the mail whose Reply-To is the address it gave its message.
  */
 
-const EQUIPE = 'contact@example.test'
+const TEAM = 'contact@example.test'
 const unique = () => `visiteuse-${crypto.randomUUID()}@example.test`
 
 /** A stored message, the way the form stores it, with the state of its mail. */
-async function messageEnBase(mailStatus: 'failed' | 'sent', nom = 'Témoin') {
+async function messageInBase(mailStatus: 'failed' | 'sent', nom = 'Témoin') {
 	const email = unique()
 	// A name of its own: the list of another test of the same run may hold the same word.
-	const nomUnique = `${nom}${crypto.randomUUID().slice(0, 8)}`
+	const uniqueName = `${nom}${crypto.randomUUID().slice(0, 8)}`
 	const { id } = await (await testPayload()).create({
 		collection: 'contact-requests',
 		data: {
@@ -26,26 +26,26 @@ async function messageEnBase(mailStatus: 'failed' | 'sent', nom = 'Témoin') {
 			status: mailStatus === 'sent' ? 'forwarded' : 'new',
 			mailStatus,
 			firstName: 'Léa',
-			lastName: nomUnique,
+			lastName: uniqueName,
 			email,
 			phone: '01 99 00 12 34',
 			message: 'Bonjour, une question sur le site.',
 		},
 		depth: 0,
 	})
-	return { id, email, nom: nomUnique }
+	return { id, email, nom: uniqueName }
 }
 
-const mailsDe = async (email: string): Promise<Mail[]> =>
-	(await mailReceived(EQUIPE)).filter(mail => mail.repondreA.some(({ adresse }) => adresse === email))
+const mailsOf = async (email: string): Promise<Mail[]> =>
+	(await mailReceived(TEAM)).filter(mail => mail.repondreA.some(({ adresse }) => adresse === email))
 
-async function ouvrirEnAdmin(context: BrowserContext) {
+async function openInAdmin(context: BrowserContext) {
 	const admin = await createAccount('admin')
 	await context.addCookies(admin.session.cookies)
 }
 
 /** The panel is a long page: no horizontal scroll at the width of the screen. */
-const sansDefilementHorizontal = (page: Page) =>
+const withoutScrollHorizontal = (page: Page) =>
 	page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
 
 test.describe('E58 : l’admin filtre les messages dont l’email a échoué et le renvoie', { tag: '@mobile' }, () => {
@@ -53,39 +53,39 @@ test.describe('E58 : l’admin filtre les messages dont l’email a échoué et 
 		context,
 		page,
 	}, testInfo) => {
-		const [echoue, parti] = [await messageEnBase('failed', 'Echoue'), await messageEnBase('sent', 'Parti')]
-		await ouvrirEnAdmin(context)
+		const [failed, parti] = [await messageInBase('failed', 'Echoue'), await messageInBase('sent', 'Parti')]
+		await openInAdmin(context)
 
 		await page.goto('/admin/collections/contact-requests')
 		await expect(page.getByTestId('echecs-d-envoi')).toContainText('en échec')
 		await page.waitForLoadState('networkidle')
 		await page.getByTestId('echecs-d-envoi').getByRole('link').click()
 		await expect(page).toHaveURL(/where(\[|%5B)mailStatus(\]|%5D)(\[|%5B)equals(\]|%5D)=failed/)
-		await expect(page.getByText(echoue.nom, { exact: true })).toBeVisible()
+		await expect(page.getByText(failed.nom, { exact: true })).toBeVisible()
 		await expect(page.getByText(parti.nom, { exact: true })).toHaveCount(0)
 
-		await page.goto(`/admin/collections/contact-requests/${echoue.id}`)
+		await page.goto(`/admin/collections/contact-requests/${failed.id}`)
 		await page.waitForLoadState('networkidle')
-		const bouton = page.getByRole('button', { name: 'Renvoyer l’email' })
-		await expect(bouton).toBeVisible()
-		expect(await sansDefilementHorizontal(page)).toBe(true)
+		const button = page.getByRole('button', { name: 'Renvoyer l’email' })
+		await expect(button).toBeVisible()
+		expect(await withoutScrollHorizontal(page)).toBe(true)
 		await testInfo.attach(`message-en-echec-${testInfo.project.name}`, {
 			body: await page.screenshot({ fullPage: true }),
 			contentType: 'image/png',
 		})
 
-		await bouton.dblclick()
+		await button.dblclick()
 
 		await expect(page.getByTestId('resultat-du-renvoi')).toHaveText('L’email a été renvoyé à l’équipe.')
-		await expect.poll(async () => (await mailsDe(echoue.email)).length, { timeout: 15_000 }).toBe(1)
+		await expect.poll(async () => (await mailsOf(failed.email)).length, { timeout: 15_000 }).toBe(1)
 		// Nothing more comes after the result.
 		await expect(
 			expect
-				.poll(async () => (await mailsDe(echoue.email)).length, { timeout: 2000, intervals: [200] })
+				.poll(async () => (await mailsOf(failed.email)).length, { timeout: 2000, intervals: [200] })
 				.toBeGreaterThan(1)
 		).rejects.toThrow()
-		const ligne = await (await testPayload()).findByID({ collection: 'contact-requests', id: echoue.id, depth: 0 })
-		expect(ligne).toMatchObject({ mailStatus: 'sent', status: 'forwarded' })
+		const line = await (await testPayload()).findByID({ collection: 'contact-requests', id: failed.id, depth: 0 })
+		expect(line).toMatchObject({ mailStatus: 'sent', status: 'forwarded' })
 
 		// A message whose mail left shows no button.
 		await page.goto(`/admin/collections/contact-requests/${parti.id}`)
@@ -98,8 +98,8 @@ test.describe('E58 : l’admin filtre les messages dont l’email a échoué et 
 		context,
 		page,
 	}) => {
-		const message = await messageEnBase('sent', 'Reponse')
-		await ouvrirEnAdmin(context)
+		const message = await messageInBase('sent', 'Reponse')
+		await openInAdmin(context)
 
 		await page.goto(`/admin/collections/contact-requests/${message.id}`)
 		await page.waitForLoadState('networkidle')
@@ -120,9 +120,9 @@ test.describe('E58 : l’admin filtre les messages dont l’email a échoué et 
 
 test.describe('E55 : la rédaction ne voit pas les messages de contact', () => {
 	test('ni dans le menu, ni par l’adresse de la collection, ni par l’API', async ({ context, page }) => {
-		const message = await messageEnBase('sent', 'Cache')
-		const redaction = await createAccount('redaction')
-		await context.addCookies(redaction.session.cookies)
+		const message = await messageInBase('sent', 'Cache')
+		const editor = await createAccount('redaction')
+		await context.addCookies(editor.session.cookies)
 
 		await page.goto('/admin')
 		await expect(page.getByRole('link', { name: 'Talents' }).first()).toBeVisible()
@@ -141,15 +141,15 @@ test.describe('E55 : la rédaction ne voit pas les messages de contact', () => {
 test.describe('E53 : l’admin ouvre chaque collection sans erreur', () => {
 	test('aucune erreur de console ni réponse 500 sur les huit listes', async ({ context, page }) => {
 		test.setTimeout(90_000)
-		await ouvrirEnAdmin(context)
+		await openInAdmin(context)
 		await withoutOutsideNetwork(context)
-		const erreurs: string[] = []
-		page.on('pageerror', erreur => erreurs.push(`pageerror : ${erreur.message}`))
+		const errors: string[] = []
+		page.on('pageerror', erreur => errors.push(`pageerror : ${erreur.message}`))
 		page.on('console', message => {
-			if (message.type() === 'error') erreurs.push(`console : ${message.text()}`)
+			if (message.type() === 'error') errors.push(`console : ${message.text()}`)
 		})
 		page.on('response', reponse => {
-			if (reponse.status() >= 500) erreurs.push(`${reponse.status()} ${new URL(reponse.url()).pathname}`)
+			if (reponse.status() >= 500) errors.push(`${reponse.status()} ${new URL(reponse.url()).pathname}`)
 		})
 
 		for (const collection of [
@@ -168,6 +168,6 @@ test.describe('E53 : l’admin ouvre chaque collection sans erreur', () => {
 			await expect(page).toHaveURL(new RegExp(`/admin/collections/${collection}`))
 		}
 
-		expect(erreurs).toEqual([])
+		expect(errors).toEqual([])
 	})
 })

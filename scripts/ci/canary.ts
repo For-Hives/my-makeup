@@ -34,26 +34,26 @@ const HEADER = '// Canary of the CI (docs/qualite.md): this file is wrong on pur
 
 export const CANARY_FAULTS: readonly CanaryFault[] = [
 	{
-		file: 'tests/unit/canari.test.ts',
+		file: 'tests/unit/canary.test.ts',
 		command: 'bun run test:unit',
 		red: 'unit › Unit tests',
 		content: `${HEADER}import { expect, test } from 'bun:test'\n\ntest('canary: a false test', () => {\n\texpect(1 + 1).toBe(3)\n})\n`,
 	},
 	{
-		file: 'tests/ci/canari-types.ts',
+		file: 'tests/ci/canary-types.ts',
 		command: 'bun run typecheck',
 		red: 'qualite › Types',
 		content: `${HEADER}export const canaryOfTypes: number = 'not a number'\n`,
 	},
 	{
-		file: 'tests/ci/canari-biome.ts',
+		file: 'tests/ci/canary-biome.ts',
 		command: 'bun run ci:biome',
 		red: 'qualite › Biome',
 		content: `${HEADER}const neverRead = 'canary'\n\nexport const canaryOfBiome = 1\n`,
 	},
 	// No page is opened: the fault is the same in every shard, and it is replayed without a browser.
 	{
-		file: 'tests/e2e/canari.spec.ts',
+		file: 'tests/e2e/canary.spec.ts',
 		command: 'bun run test:e2e',
 		red: 'e2e, one of the shards › End-to-end tests',
 		content: `${HEADER}import { expect, test } from '@playwright/test'\n\ntest('canary: a false end-to-end test', () => {\n\texpect(1 + 1).toBe(3)\n})\n`,

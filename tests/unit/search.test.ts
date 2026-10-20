@@ -1,7 +1,7 @@
 /**
  * The search by city (ticket 098; plan 02 U17 and U19): what the visitor types, where the profiles of a
  * search are, and the sections of the page. Unit tests: no database, no server (the page itself is
- * tests/e2e/recherche-ville.spec.ts).
+ * tests/e2e/city-search.spec.ts).
  */
 
 import { describe, expect, test } from 'bun:test'
